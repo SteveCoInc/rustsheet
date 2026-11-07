@@ -48,27 +48,15 @@ KINDS = ROOT / "eval/suites/probes/cases/t4857-f-kinds.case.json"
 
 # Each df class's draw range (truncated values); singletons are the edge values themselves.
 DF_RANGE: dict[str, tuple[float, float]] = {
-    "1": (1, 1),
-    "frac1-2": (1.01, 1.99),
-    "2": (2, 2),
-    "3-15": (3, 15),
-    "16": (16, 16),
-    "17-29": (17, 29),
-    "30": (30, 30),
-    "31": (31, 31),
-    "32-78": (32, 78),
-    "79": (79, 79),
-    "80": (80, 80),
-    "81": (81, 81),
-    "82-199": (82, 199),
-    "200": (200, 200),
-    "201": (201, 201),
-    "202-1e5": (202, 99999),
-    "1e5-2e6": (1e5, 1999999),
-    "2e6-2e7": (2e6, 2e7),
-    "2e7-1e9": (20000001, 999999999),
-    "1e9-1e10": (1e9, 9999999999),
-    "1e10": (1e10, 1e10),
+    name: (float(lo), float(hi))
+    for name, lo, hi in (
+        item.split(":")
+        for item in (
+            "1:1:1 frac1-2:1.01:1.99 2:2:2 3-15:3:15 16:16:16 17-29:17:29 30:30:30 31:31:31 32-78:32:78 79:79:79"
+            " 80:80:80 81:81:81 82-199:82:199 200:200:200 201:201:201 202-1e5:202:99999 1e5-2e6:1e5:1999999"
+            " 2e6-2e7:2e6:2e7 2e7-1e9:20000001:999999999 1e9-1e10:1e9:9999999999 1e10:1e10:1e10"
+        ).split()
+    )
 }
 NUMERIC_DF = tuple(DF_RANGE)
 # Representative tail probabilities (log10 range) of each position band.
@@ -434,29 +422,16 @@ def pdf_label(d1: float, d2: float):
     return label
 
 
-EDGE_DF = (
-    (1, 1),
-    (1, 7),
-    (1, 400),
-    (3, 5),
-    (3, 2000),
-    (5, 1),
-    (6, 31),
-    (9, 60),
-    (12, 100),
-    (20, 9),
-    (24, 79),
-    (31, 79),
-    (40, 12),
-    (60, 30),
-    (79, 79),
-    (80, 80),
-    (100, 300),
-    (150, 31),
-    (201, 201),
-    (300, 1000),
-    (1000, 3),
-    (2000, 50),
+# The df pairs `find_edges` walks (a spread over the df classes, the shape edges and the large-shape corners).
+EDGE_DF = tuple(
+    (int(a), int(b))
+    for a, b in (
+        pair.split(",")
+        for pair in (
+            "1,1 1,7 1,400 3,5 3,2000 5,1 6,31 9,60 12,100 20,9 24,79 31,79 40,12 60,30 79,79 80,80 100,300"
+            " 150,31 201,201 300,1000 1000,3 2000,50"
+        ).split()
+    )
 )
 STEPS = (1e-9, 1e-3)
 
@@ -652,55 +627,51 @@ def numeric_case(pool: ProcessPoolExecutor) -> dict:
     }
 
 
+def bar_table(text: str) -> tuple[tuple[str, str], ...]:
+    """The rows of a `name|text` table, one per line (the text after the first bar, "" without one)."""
+    return tuple((name, rest) for name, _, rest in (line.partition("|") for line in text.strip("\n").splitlines()))
+
+
 # --------------------------------------------------------------------------- kinds
 
 
-DATA = {
-    "A1": 2.5,  # number
-    "A2": "2.5",  # numeric text
-    "A3": "abc",  # text
-    "A4": "",  # empty text (written as ="")
-    "A5": True,
-    "A6": False,
-    # A7 is left empty
-    "A8": "=NA()",
-    "A9": "=1/0",
-    "A10": 1.5,
-    "A11": 2.5,
-    "A12": 3.5,
-    "A13": "5",
-    "A14": 7,
-    "A15": "x",
-    "A16": True,
-    "B1": 0.3,
-    "B2": "0.3",
-    "B10": 0.1,
-    "B11": 0.3,
-    "B12": 0.7,
-}
-KIND_ARGS = (
-    ("number", None),
-    ("numeric-text", '"{v}"'),
-    ("text", '"abc"'),
-    ("empty-text", '""'),
-    ("true", "TRUE"),
-    ("false", "FALSE"),
-    ("ref-number", "Data!{num}"),
-    ("ref-numeric-text", "Data!{numtext}"),
-    ("ref-text", "Data!A3"),
-    ("ref-empty-text", "Data!A4"),
-    ("ref-true", "Data!A5"),
-    ("ref-false", "Data!A6"),
-    ("ref-empty", "Data!A7"),
-    ("error-literal", "#N/A"),
-    ("error-ref-na", "Data!A8"),
-    ("error-ref-div0", "Data!A9"),
-    ("range-1", "Data!{num}:{num}"),
-    ("array-1", "{{{v}}}"),
-    ("omitted", ""),
-    ("text-padded", '" {v} "'),
-    ("computed-text", 'TEXT({v},"0.0")'),
-    ("computed-bool", "(1=1)"),
+# The Data sheet: A1 a number, A2 numeric text, A3 text, A4 empty text (written as =""), A5/A6 booleans, A7 left
+# empty, A8/A9 errors, A10:A12 and B10:B12 numbers for the lifts, A13 numeric text, A14 a number, B1/B2 a p.
+DATA: dict[str, object] = {
+    "A1": 2.5, "A2": "2.5", "A3": "abc", "A4": "", "A5": True, "A6": False, "A8": "=NA()", "A9": "=1/0",
+    "A10": 1.5, "A11": 2.5, "A12": 3.5, "A13": "5", "A14": 7, "A15": "x", "A16": True,
+    "B1": 0.3, "B2": "0.3", "B10": 0.1, "B11": 0.3, "B12": 0.7,
+}  # fmt: skip
+# One scalar kind per line: its name, then after a bar the argument text (`{v}` the value, `{num}`/`{numtext}` its Data cells;
+# none for the baseline number).
+KIND_ARGS = tuple(
+    (name, text if text or name == "omitted" else None)
+    for name, text in bar_table(
+        """
+number
+numeric-text|"{v}"
+text|"abc"
+empty-text|""
+true|TRUE
+false|FALSE
+ref-number|Data!{num}
+ref-numeric-text|Data!{numtext}
+ref-text|Data!A3
+ref-empty-text|Data!A4
+ref-true|Data!A5
+ref-false|Data!A6
+ref-empty|Data!A7
+error-literal|#N/A
+error-ref-na|Data!A8
+error-ref-div0|Data!A9
+range-1|Data!{num}:{num}
+array-1|{{{v}}}
+omitted|
+text-padded|" {v} "
+computed-text|TEXT({v},"0.0")
+computed-bool|(1=1)
+"""
+    )
 )
 # Per function: its arguments' baseline values and the Data cells holding the same number as a number and as text.
 BASE = {
@@ -757,32 +728,34 @@ def kinds_case() -> dict:
             )
             case.add(f"=ROWS({fn}({','.join(args)}))", f"kind/{fn}/arg{pos + 1}/lift-rows")
     # F.DIST's cumulative flag.
-    for text, kind in (
-        ("TRUE", "true"),
-        ("FALSE", "false"),
-        ("1", "1"),
-        ("0", "0"),
-        ("2", "2"),
-        ("-1", "-1"),
-        ("0.5", "0.5"),
-        ("1E-300", "tiny"),
-        ('"TRUE"', "text-TRUE"),
-        ('"FALSE"', "text-FALSE"),
-        ('"1"', "text-1"),
-        ('"0"', "text-0"),
-        ('"abc"', "text"),
-        ('""', "empty-text"),
-        ("Data!A5", "ref-true"),
-        ("Data!A6", "ref-false"),
-        ("Data!A1", "ref-number"),
-        ("Data!A2", "ref-numeric-text"),
-        ("Data!A3", "ref-text"),
-        ("Data!A7", "ref-empty"),
-        ("Data!A8", "ref-error"),
-        ("#N/A", "error-literal"),
-        ("", "omitted"),
-        ("{TRUE}", "array-1"),
-        ("Data!A5:A5", "range-1"),
+    for kind, text in bar_table(
+        """
+true|TRUE
+false|FALSE
+1|1
+0|0
+2|2
+-1|-1
+0.5|0.5
+tiny|1E-300
+text-TRUE|"TRUE"
+text-FALSE|"FALSE"
+text-1|"1"
+text-0|"0"
+text|"abc"
+empty-text|""
+ref-true|Data!A5
+ref-false|Data!A6
+ref-number|Data!A1
+ref-numeric-text|Data!A2
+ref-text|Data!A3
+ref-empty|Data!A7
+ref-error|Data!A8
+error-literal|#N/A
+omitted|
+array-1|{TRUE}
+range-1|Data!A5:A5
+"""
     ):
         case.add(f"=F.DIST(2.5,5,10,{text})", f"kind/F.DIST/arg4/{kind}")
     for k in (1, 2):
@@ -805,34 +778,36 @@ def kinds_case() -> dict:
     DATA["G1"], DATA["H1"], DATA["G2"], DATA["H2"] = 1, 3, 4, 8
     DATA["C7"], DATA["C8"] = 5, 5  # zero variance
     other = "{2;3;3;9}"
-    shapes = (
-        ("range", "Data!C1:C5"),
-        ("range-text-bool", "Data!E1:E5"),
-        ("range-blanks", "Data!F1:F5"),
-        ("range-2d", "Data!G1:H2"),
-        ("row-array", "{1,2,4,7,11}"),
-        ("col-array", "{1;2;4;7;11}"),
-        ("2d-array", "{1,2;4,7}"),
-        ("array-text-bool", '{1;"2";TRUE;4;7}'),
-        ("two-points", "{1;3}"),
-        ("one-point", "{1}"),
-        ("zero-variance", "Data!C7:C8"),
-        ("number", "5"),
-        ("numeric-text", '"5"'),
-        ("text", '"abc"'),
-        ("empty-text", '""'),
-        ("true", "TRUE"),
-        ("ref-true", "Data!A5"),
-        ("ref-empty", "Data!A7"),
-        ("range-1-empty", "Data!A7:A7"),
-        ("range-1-number", "Data!A1:A1"),
-        ("error-literal", "#N/A"),
-        ("error-ref", "Data!A8"),
-        ("error-element", "{1;#N/A;3}"),
-        ("omitted", ""),
-        ("sequence", "SEQUENCE(5)^2"),
-        ("huge", "{1E+200;2E+200;-1E+200}"),
-        ("tiny", "{1E-200;2E-200;4E-200}"),
+    shapes = bar_table(
+        """
+range|Data!C1:C5
+range-text-bool|Data!E1:E5
+range-blanks|Data!F1:F5
+range-2d|Data!G1:H2
+row-array|{1,2,4,7,11}
+col-array|{1;2;4;7;11}
+2d-array|{1,2;4,7}
+array-text-bool|{1;"2";TRUE;4;7}
+two-points|{1;3}
+one-point|{1}
+zero-variance|Data!C7:C8
+number|5
+numeric-text|"5"
+text|"abc"
+empty-text|""
+true|TRUE
+ref-true|Data!A5
+ref-empty|Data!A7
+range-1-empty|Data!A7:A7
+range-1-number|Data!A1:A1
+error-literal|#N/A
+error-ref|Data!A8
+error-element|{1;#N/A;3}
+omitted|
+sequence|SEQUENCE(5)^2
+huge|{1E+200;2E+200;-1E+200}
+tiny|{1E-200;2E-200;4E-200}
+"""
     )
     for fn in ("F.TEST", "FTEST"):
         for kind, text in shapes:

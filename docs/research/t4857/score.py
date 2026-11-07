@@ -217,21 +217,12 @@ def accumulate(s: Stat, r: dict, v: dict) -> None:
     s.n += 1
     s.types += v["type_ok"]
     a1 = r["cell"].split("!")[1]
-    if "ge13" in v:
-        s.c["ge_n"] += 1
-        s.add("ge15", v["ge15"])
-        s.add("ge13", v["ge13"])
-        s.worse("ge", v["ge_rel"], a1)
-    if "em13" in v:
-        s.c["em_n"] += 1
-        s.add("em15", v["em15"])
-        s.add("em13", v["em13"])
-        s.worse("em", v["em_rel"], a1)
-    if "gm13" in v:
-        s.c["gm_n"] += 1
-        s.add("gm15", v["gm15"])
-        s.add("gm13", v["gm13"])
-        s.worse("gm", v["gm_rel"], a1)
+    for key in ("ge", "em", "gm"):
+        if f"{key}13" in v:
+            s.c[f"{key}_n"] += 1
+            s.add(f"{key}15", v[f"{key}15"])
+            s.add(f"{key}13", v[f"{key}13"])
+            s.worse(key, v[f"{key}_rel"], a1)
 
 
 SERIES_KEYS = ("sweep-", "edge-x/", "edge-df/", "edge-p/", "zero/")
@@ -245,7 +236,7 @@ def series_of(tag: str) -> str | None:
         return "/".join(parts[:4])
     if tag.startswith("edge-df/"):
         return "/".join(parts[:5])
-    return "/".join(parts[:3]) if tag.startswith(("edge-p/", "zero/")) else "/".join(parts[:2])
+    return "/".join(parts[:3]) if tag.startswith(("edge-p/", "zero/")) else tag
 
 
 def regime_changes(rows: list[dict], verdicts: list[dict]) -> list[str]:

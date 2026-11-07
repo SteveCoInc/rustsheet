@@ -13,6 +13,7 @@ import json
 import sys
 
 import fclasses as F
+from audit import PAIRS
 
 THIN = 3
 DIMS = {
@@ -28,25 +29,7 @@ GROUP_DIMS = {
     "pdf": ("xmag", "xpos", "df1", "df2", "density", "centre"),
     "inv": ("p", "df1", "df2", "path"),
 }
-PAIR_DIMS = {
-    "tail": (
-        ("df1", "df2"),
-        ("xmag", "df1"),
-        ("xmag", "df2"),
-        ("xpos", "df1"),
-        ("xpos", "df2"),
-        ("kernel", "xpos"),
-    ),
-    "pdf": (
-        ("df1", "df2"),
-        ("xmag", "df1"),
-        ("xmag", "df2"),
-        ("xpos", "df1"),
-        ("xpos", "df2"),
-        ("density", "xpos"),
-    ),
-    "inv": (("df1", "df2"), ("p", "df1"), ("p", "df2"), ("path", "p")),
-}
+PAIR_DIMS = PAIRS  # audit.py's pair tables, one definition
 KINDS = (
     "number-literal",
     "number-arith",

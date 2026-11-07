@@ -4254,11 +4254,84 @@ zeros, not Graph hiding a kept subnormal (decision 0042).
   B751, B824, B848; t3567-r5-fdf1-hold B1003, B1307), all 0 with a TRUE companion. Rows 73-105 at (377, 1.123) were
   solved for the untruncated df, but F truncates it to (377, 1), so their cdf stays at 1.1E-295 to 1.3E-302 and they
   only show the engine within a unit of Excel's 15th digit away from the edge.
-- Unprobed: F.DIST.RT and FDIST at a subnormal right tail away from T-4045's L140 prefactor cut, and BETA.DIST's cdf
-  at a subnormal result. The density keeps a subnormal Y ("F density is not the beta density" below).
+- F.DIST.RT and FDIST flush a subnormal right tail too (T-4857, "F tails at the edges of the double range" below).
+  Unprobed: BETA.DIST's cdf at a subnormal result. The density keeps a subnormal Y ("F density is not the beta density" below).
 Ours: `fisher.rs` `f_dist_of` flushes the cdf with `arithmetic::flush_subnormal`.
 Status: VERIFIED (excel-graph)
 Tasks: T-4026
+
+## F tails at the edges of the double range: a subnormal beta argument gives 0, F.DIST.RT flushes too, a subnormal x is #DIV/0! (T-4857)
+Rule: three cuts of F.DIST's cdf, F.DIST.RT and FDIST at the ends of the double range, found by T-4857's boundary
+points (probes-numeric/t4857-f-classes, excel-graph 2026-11-07; exact doubles in constant cells):
+- **A subnormal beta argument makes the tail 0.** Excel's smaller incomplete-beta argument is fl(1/fl(1 + r)) ("F's
+  incomplete-beta arguments keep r >= 1"). Where r is finite but above 1/DBL_MIN that argument is subnormal, and the
+  tail computed on it is exactly 0, not the small normal number the math gives: at (1, 400),
+  `F.DIST(2.2250738585072014E-306,1,400,TRUE)` is `#NUM!` (r overflows, "The F cdf is #NUM! where df2/(df1 x)
+  overflows"), and one double up, 2.2250738585072017E-306, the cdf is 0 where the math is 1.19E-153 (A1481, A1482;
+  A1483:A1485 to x 2.2272989E-306 are 0 too). The upper side alike: `F.DIST.RT(2.27556092792985E+306,79,1.6063)` is
+  0 (math 5.3E-154; A191) and `FDIST(8.28578930344434E+302,216961.75,2)` is 0 (math 1.2E-303; A339), both with
+  r = fl(df1 x/df2) near DBL_MAX. Where the true tail is itself below the double range the 0 is the same either way
+  (A1530:A1533 at (3, 2000)). Where the band ends (r back below 1/DBL_MIN, x about 4 times the first non-`#NUM!`
+  double) is unprobed.
+- **F.DIST.RT and FDIST flush a subnormal result to 0**, as F.DIST's cdf does (T-4026): `=(F.DIST.RT(..))=0` is TRUE
+  at `F.DIST.RT(8.81984169432969E+123,3,5)`, `F.DIST.RT(5676182.21063918,100,100)` and
+  `F.DIST.RT(3120.25523056629,1,1000)`, whose math tails are 1E-309 (C3187, C3197, C3207); also
+  `FDIST(1.02268409931391,13898982,9559857)` (A375), and A260 and A284 (math 8.9E-310 and 4.0E-314).
+- **A subnormal x is `#DIV/0!`** for the cdf and both tails, as for the density (T-2586 round 5):
+  `F.DIST(EXP(-720),3,7,TRUE)`, `F.DIST.RT(EXP(-720),3,7)` and `FDIST(EXP(-720),3,7)` (A1341, A1379, A1398), though
+  fl(7/(3 x)) overflows there, which elsewhere is `#NUM!`. A typed `1E-308`, `2^-1074` or `2^-1022/2` reads as 0
+  (cdf 0, tails 1; A1339, A1340, A1342 and their F.DIST.RT and FDIST rows).
+Ours: none of the three yet (T-4881): the engine keeps the subnormal argument and the subnormal tail, and returns
+`#NUM!` at a subnormal x.
+Status: VERIFIED (excel-graph) for the cells; the end of the first band UNVERIFIED
+Tasks: T-4857, T-4881
+
+## F family argument kinds, every position (T-4857)
+Rule: every argument of F.DIST, F.DIST.RT, FDIST, F.INV, F.INV.RT and FINV reads a value the same way
+(probes/t4857-f-kinds, 666 cells, excel-graph 2026-11-07; 22 scalar kinds per position):
+- numeric text, padded numeric text `" 2.5 "`, a `TEXT()` result, a one-cell range, a one-element array, a number
+  through a reference and numeric text through a reference are the number;
+- TRUE, FALSE, `(1=1)` and a boolean through a reference are 1 and 0 (so a df of FALSE, of an empty cell or of an
+  omitted argument is `#NUM!`, and F.INV's p of TRUE is `#NUM!`); an empty cell and an omitted argument are 0;
+- non-numeric text and empty text, typed or through a reference, are `#VALUE!`; an error, typed or through a
+  reference (`#N/A`, `#DIV/0!`), is that error;
+- a multi-cell range, an array, `SEQUENCE(3)/2` and a mixed array `{1.5;"2.5";TRUE}` lift element by element, each
+  element read as above (the text element is the number).
+- F.DIST's `cumulative` is different: any nonzero number (2, -1, 0.5, 1E-300) is TRUE; the texts `"TRUE"` and
+  `"FALSE"` are the booleans, but `"1"`, `"0"`, `"abc"`, `""` and numeric text through a reference are `#VALUE!`, and
+  so is the text element `"2.5"` of a lifted array; an empty cell and an omitted flag are FALSE.
+- F.TEST and FTEST: every sample kind of "F.TEST of a single value (T-2455)" and its neighbours holds in both
+  positions; an omitted sample is `#VALUE!` (see that entry).
+Ours: matches every kind cell except the omitted F.TEST sample (T-4882); some kind cells are off at the 15th digit
+through the quantiles' own values (T-4883).
+Status: VERIFIED (excel-graph)
+Tasks: T-4857, T-4882
+
+## F quantiles at a tiny p leave the math abruptly, and at a huge df stay off it (T-4857)
+Rule (excel-graph, probes-numeric/t4857-f-classes, 2026-11-07, against `rustsheet-accuracy`'s 50-digit math):
+- **A jump in p.** `F.INV(1E-k,30,3)` is within 3E-15 of the math for k = 1 to 172 (sweep-p A2758:A2777) and
+  10 orders of magnitude below it from k = 181 (`F.INV(1E-181,30,3)` = 3.664905678607796E-24, math 7.76E-14; A2778),
+  the gap growing to 21 orders at k = 307. `F.INV.RT(1E-k,3,30)` is its reciprocal at every k (A2793:A2827). At
+  (5, 7) the sweep stays within 3E-14 of the math to k = 289, 7E-13 off at 298, and 6% (F.INV) and 0.4% (F.INV.RT)
+  off at 1E-307 (A2722, A2757). So the cut depends on the df.
+- **p at DBL_MIN, and a subnormal p.** `F.INV(2.2250738585072014E-308,5,7)` is 6.3% off the math,
+  `F.INV.RT`/`FINV` 5.8%, `FINV(DBL_MIN,30,3)` 24 orders of magnitude (A2219:A2230). A subnormal p made by
+  `EXP(-720)` is not read as 0 by the quantiles (a typed `1E-308` or `2^-1074` is): `F.INV(EXP(-720),5,7)` is
+  1.169307705097078E-124 where the math is 4.5E-126 (A1417), `F.INV.RT(EXP(-720),5,7)` 2.3991226329524575E+89
+  (A1435, FINV A1453).
+- **Tiny-p `#NUM!`** where the math is a normal number: `F.INV.RT(2.29499489338186E-230,16,80)` (A977),
+  `FINV(2.09953717878393E-16,79,1E10)` (A1092) and `F.INV(0.00149502660982554,1E10,79)` (A1312, the df pair of
+  T-4044's band, through BETA.INV).
+- **At a huge df** (the BETA.INV mapping, "F quantile at a huge df goes through Excel's BETA.INV (T-1538)") Excel is
+  1E-13 to 1E-5 off the math on pairs T-1538 did not probe: `F.INV.RT(0.05,1E10,5)` = 4.364995965811329 against
+  4.364996746946 (1.8E-7; A2063, with A2059, A2067, A2075 the same at df 9999999999 and 1E10 plus a fraction),
+  `FINV(0.5,1E10,21)` 5.4E-8 (A1308). T-4885 owns them.
+- More pairwise cells with Excel over 1E-4 off the math are listed in T-4884; the F.INV.RT saturation at a df2 below 2
+  also holds at a fractional df2 (`F.INV.RT(2.15282544087598E-276,1,1.1375)` = 3.696066238512854E+150, A884).
+Excel is the target here (decisions 0300 and 0267: the R3 ruling of 0267 item 3 does not cover F).
+Ours: the math on most of these cells (T-4884, T-4885); where Excel is on the math and the engine is not, T-4883.
+Status: VERIFIED (excel-graph) for the cells; the mechanism UNVERIFIED
+Tasks: T-4857, T-4883, T-4884, T-4885
 
 ## F density is not the beta density, R's df or a GAMMALN formula (T-2513)
 Rule (PARTIAL): F.DIST(x,d1,d2,FALSE) is its own formula. With m = d1, n = d2, a = m/2, b = n/2, h = a + b and
@@ -6476,8 +6549,9 @@ error is that error (`FTEST(1/0,..)` `#DIV/0!`, A29). A one-cell reference to a 
 blank two-cell range is `#DIV/0!` (`FTEST(B10:B11,{1;2;3})`, A33).
 F.TEST checks its samples in order, each one's error or blank one-cell reference before the next: `FTEST(1/0,B10)` is
 `#DIV/0!` and `FTEST(NA(),B10:B10)` `#N/A` (A77, A78), so for F.TEST the blank does not beat an earlier sample's error; a
-computed blank (`FTEST(IF(TRUE,B10),{1;2;3})`) is `#VALUE!` too (A79). An omitted sample (`FTEST(,{1;2;3})`) is unprobed
-(ours: the one-value `#DIV/0!`).
+computed blank (`FTEST(IF(TRUE,B10),{1;2;3})`) is `#VALUE!` too (A79). An omitted sample is `#VALUE!` in either
+position, for both names: `F.TEST(,{2;3;3;9})`, `F.TEST({2;3;3;9},)`, `FTEST(,{2;3;3;9})` and `FTEST({2;3;3;9},)`
+(probes/t4857-f-kinds A605, A606, A659, A660, excel-graph 2026-11-07); ours is the one-value `#DIV/0!` (T-4882).
 Ours: since T-2455 (`fn_f_test`, `f_test_sample`, `is_blank_one_cell` in functions/statistical/fisher.rs). The paired
 functions' blank-cell `#VALUE!` followed in T-2426.
 Status: VERIFIED (excel-graph)
