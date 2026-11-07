@@ -3,7 +3,7 @@ id: T-4628
 title: "A loaded #REF!C4:C7 keeps its range: FORMULATEXT after an xlsx round trip of a deleted-sheet reference (probe first)"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -55,29 +55,15 @@ FORMULATEXT of the loaded file is unprobed: it may keep `=SUM(#REF!C4:C7)`.
   Excel's file form of a deleted-sheet reference, cell and defined name, M14).
 - Eval delta: +9 passing cells (new case); no regressions.
 
-## Blocked because
+## Review
 Resumed after the review-round limit (step 5c).
-- Round 3 (head 8485758bc, after a merge of origin/main that resolved a sheet_undo.rs conflict): security APPROVE,
-  design APPROVE (3 MINOR: `Lexer::typed` always equals `double_star_exponent`, two flags for one concept; a
-  hand-written print-by-context dispatch in sheet_undo.rs, now gone with the revert below; an over-long doc line),
-  excel-fidelity REQUEST_CHANGES: [MAJOR] `delete_sheet_in_name_node` stored a defined name over a deleted sheet as
-  the bare `#REF!` with no evidence, and no longer needed since round 3 limits the refusal to typed text; [MINOR] stale
-  "typed, external and loaded" comments; [MINOR] no follow-up for the M14 desktop file form.
-- Fixed after round 3, in the commit that blocks (not yet reviewed): `delete_sheet_in_name_node` dropped, sheet_undo.rs
-  and stringify.rs back to main's `rewrite_formulas_edited` call (names keep `#REF!$C$4`); the comments in
-  test_autofill_rows.rs and wrong_reference.rs say typed text only; references.md says the name keeps `#REF!$C$4`
-  and a stored `<definedName>` of that form is unprobed; T-4794 filed (M14, desktop Excel's file form).
-- Next (work-loop step 5c, after 2 h idle): run the full panel on the current head. Open design MINOR to settle or
-  file: merge `typed` and `double_star_exponent` in the lexer.
-
-## Landing notes
-Resumed 2026-11-07 05:55 UTC by an opus run (worker step 2, branch idle 2 h): round 3 reviewers next.
-- PR #3823, branch agent/engine/T-4628-loaded-ref-range. State when the session's landing window closed (2026-11-07
-  03:22): round 3 pushed (this commit) with `make check-fast` green and `cargo test -p rustsheet_engine -p rustsheet_xlsx
-  -p rustsheet` passing locally; CI not yet run on this head; the reviewer panel has not run on it.
-- Review history: round 1 (head 2b41b538): security, design APPROVE; excel-fidelity REQUEST_CHANGES (autofill/paste of a
-  deleted-sheet reference became `#ERROR!`). Round 2 (head c1e38624): security, design APPROVE; excel-fidelity
-  REQUEST_CHANGES (loaded-file text changed without evidence). Round 3 narrows the lexer refusal to typed text only
-  (`Lexer::typed`), which is what the round-2 finding asked for.
-- Next step: run all three reviewers on this head (round 3 of 3, work-loop step 5), wait for green CI, then enqueue.
-  Do not widen the refusal to loaded or external text again without desktop-Excel evidence (M14).
+- Rounds 1-3 (heads 2b41b538, c1e38624, 8485758bc): security and design approved each round. Excel fidelity requested
+  changes three times:
+  - autofill/paste gave `#ERROR!`;
+  - loaded-file text was changed without evidence;
+  - an unevidenced bare-`#REF!` rewrite of defined names.
+  Each was fixed (see Outcome).
+- Step 5c re-review on head a7e3eb4af (2026-11-07, full panel): security, design and excel-fidelity APPROVE. The
+  round-3 design MINOR is settled on that head: the lexer's `double_star_exponent` and `typed` were one concept and
+  are now the single `typed` flag. The remaining MINORs (a design note on one doc line; a fidelity wish to commit
+  the one-cell specs of the refused workbooks for re-checking, which T-4794 can carry) are noted on PR #3823.
