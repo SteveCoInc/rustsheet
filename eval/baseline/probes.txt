@@ -2712,6 +2712,11 @@ C	probes/t4755-two-criteria-filtered-table-delete-one.case.json	22
 C	probes/t4757-later-mark-sheet-names.case.json	20
 C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/t4765-growth-factor-edges.case.json	24
+C	probes/t4766-array-subnormal-boundary.case.json	264
+C	probes/t4766-array-subnormal-compare.case.json	51
+C	probes/t4766-array-subnormal-exp-boundary.case.json	264
+C	probes/t4766-array-subnormal-fresh.case.json	94
+C	probes/t4766-array-subnormal-order.case.json	165
 C	probes/t4767-pivot-group-items.case.json	171
 C	probes/t4767-pivot-record-tuples.case.json	41
 C	probes/t4767-pivot-slicers.case.json	47
@@ -4614,7 +4619,6 @@ F	probes/stat-test-lift.case.json	Sheet1!P67
 F	probes/stats-evidence-floor-t1623.case.json	S!Q36
 F	probes/subexpr-05d44f6dd6cfc567-calc-a178.case.json	Subexpr!A6
 F	probes/subnormal-saved-negative-and-array.case.json	S!A3
-F	probes/subnormal-saved-negative-and-array.case.json	S!D1
 F	probes/t1689-chisq-test-blanks-text-booleans.case.json	F!A1
 F	probes/t2085-getpivotdata-items.case.json	Q!A1
 F	probes/t2085-getpivotdata-items.case.json	Q!A2
@@ -9567,6 +9571,7 @@ F	probes/t4765-growth-factor-edges.case.json	Cut!A1
 F	probes/t4765-growth-factor-edges.case.json	Cut!A5
 F	probes/t4765-growth-factor-edges.case.json	SmallB!A1
 F	probes/t4765-growth-factor-edges.case.json	SmallB!A3
+F	probes/t4766-array-subnormal-compare.case.json	S!A30
 F	probes/t4793-growth-one-factor-underflow.case.json	One!A2
 F	probes/t4793-growth-several-x.case.json	Multi!A4
 F	probes/t4793-growth-several-x.case.json	SubProd!A5

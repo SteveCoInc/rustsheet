@@ -1,0 +1,675 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "b",
+    "v": true
+   },
+   "A10": {
+    "t": "b",
+    "v": false
+   },
+   "A11": {
+    "t": "b",
+    "v": false
+   },
+   "A12": {
+    "t": "b",
+    "v": false
+   },
+   "A13": {
+    "t": "b",
+    "v": false
+   },
+   "A14": {
+    "t": "b",
+    "v": false
+   },
+   "A15": {
+    "t": "b",
+    "v": false
+   },
+   "A16": {
+    "t": "b",
+    "v": false
+   },
+   "A17": {
+    "t": "b",
+    "v": false
+   },
+   "A18": {
+    "t": "b",
+    "v": false
+   },
+   "A19": {
+    "t": "b",
+    "v": false
+   },
+   "A2": {
+    "t": "b",
+    "v": true
+   },
+   "A20": {
+    "t": "b",
+    "v": false
+   },
+   "A21": {
+    "t": "b",
+    "v": false
+   },
+   "A3": {
+    "t": "b",
+    "v": true
+   },
+   "A4": {
+    "t": "b",
+    "v": true
+   },
+   "A5": {
+    "t": "b",
+    "v": false
+   },
+   "A6": {
+    "t": "b",
+    "v": false
+   },
+   "A7": {
+    "t": "b",
+    "v": false
+   },
+   "A8": {
+    "t": "b",
+    "v": false
+   },
+   "A9": {
+    "t": "b",
+    "v": false
+   },
+   "C1": {
+    "t": "b",
+    "v": true
+   },
+   "C10": {
+    "t": "b",
+    "v": true
+   },
+   "C11": {
+    "t": "b",
+    "v": true
+   },
+   "C12": {
+    "t": "b",
+    "v": false
+   },
+   "C13": {
+    "t": "b",
+    "v": false
+   },
+   "C14": {
+    "t": "b",
+    "v": false
+   },
+   "C15": {
+    "t": "b",
+    "v": false
+   },
+   "C16": {
+    "t": "b",
+    "v": true
+   },
+   "C2": {
+    "t": "b",
+    "v": false
+   },
+   "C3": {
+    "t": "b",
+    "v": false
+   },
+   "C4": {
+    "t": "b",
+    "v": false
+   },
+   "C5": {
+    "t": "b",
+    "v": true
+   },
+   "C6": {
+    "t": "b",
+    "v": true
+   },
+   "C7": {
+    "t": "b",
+    "v": false
+   },
+   "C8": {
+    "t": "b",
+    "v": false
+   },
+   "C9": {
+    "t": "b",
+    "v": true
+   },
+   "D1": {
+    "t": "b",
+    "v": false
+   },
+   "D10": {
+    "t": "b",
+    "v": false
+   },
+   "D11": {
+    "t": "b",
+    "v": false
+   },
+   "D12": {
+    "t": "b",
+    "v": true
+   },
+   "D13": {
+    "t": "b",
+    "v": false
+   },
+   "D14": {
+    "t": "b",
+    "v": false
+   },
+   "D15": {
+    "t": "b",
+    "v": false
+   },
+   "D16": {
+    "t": "b",
+    "v": false
+   },
+   "D2": {
+    "t": "b",
+    "v": true
+   },
+   "D3": {
+    "t": "b",
+    "v": true
+   },
+   "D4": {
+    "t": "b",
+    "v": true
+   },
+   "D5": {
+    "t": "b",
+    "v": false
+   },
+   "D6": {
+    "t": "b",
+    "v": false
+   },
+   "D7": {
+    "t": "b",
+    "v": true
+   },
+   "D8": {
+    "t": "b",
+    "v": true
+   },
+   "D9": {
+    "t": "b",
+    "v": false
+   },
+   "E1": {
+    "t": "b",
+    "v": false
+   },
+   "E10": {
+    "t": "b",
+    "v": false
+   },
+   "E11": {
+    "t": "b",
+    "v": false
+   },
+   "E12": {
+    "t": "b",
+    "v": false
+   },
+   "E13": {
+    "t": "b",
+    "v": true
+   },
+   "E14": {
+    "t": "b",
+    "v": true
+   },
+   "E15": {
+    "t": "b",
+    "v": true
+   },
+   "E16": {
+    "t": "b",
+    "v": false
+   },
+   "E2": {
+    "t": "b",
+    "v": false
+   },
+   "E3": {
+    "t": "b",
+    "v": false
+   },
+   "E4": {
+    "t": "b",
+    "v": false
+   },
+   "E5": {
+    "t": "b",
+    "v": false
+   },
+   "E6": {
+    "t": "b",
+    "v": false
+   },
+   "E7": {
+    "t": "b",
+    "v": false
+   },
+   "E8": {
+    "t": "b",
+    "v": false
+   },
+   "E9": {
+    "t": "b",
+    "v": false
+   },
+   "F1": {
+    "t": "b",
+    "v": true
+   },
+   "F10": {
+    "t": "b",
+    "v": true
+   },
+   "F11": {
+    "t": "b",
+    "v": true
+   },
+   "F12": {
+    "t": "b",
+    "v": false
+   },
+   "F13": {
+    "t": "b",
+    "v": false
+   },
+   "F14": {
+    "t": "b",
+    "v": false
+   },
+   "F15": {
+    "t": "b",
+    "v": false
+   },
+   "F16": {
+    "t": "b",
+    "v": true
+   },
+   "F2": {
+    "t": "b",
+    "v": false
+   },
+   "F3": {
+    "t": "b",
+    "v": false
+   },
+   "F4": {
+    "t": "b",
+    "v": false
+   },
+   "F5": {
+    "t": "b",
+    "v": true
+   },
+   "F6": {
+    "t": "b",
+    "v": true
+   },
+   "F7": {
+    "t": "b",
+    "v": false
+   },
+   "F8": {
+    "t": "b",
+    "v": false
+   },
+   "F9": {
+    "t": "b",
+    "v": true
+   },
+   "G1": {
+    "t": "b",
+    "v": false
+   },
+   "G10": {
+    "t": "b",
+    "v": false
+   },
+   "G11": {
+    "t": "b",
+    "v": false
+   },
+   "G12": {
+    "t": "b",
+    "v": true
+   },
+   "G13": {
+    "t": "b",
+    "v": false
+   },
+   "G14": {
+    "t": "b",
+    "v": false
+   },
+   "G15": {
+    "t": "b",
+    "v": false
+   },
+   "G16": {
+    "t": "b",
+    "v": false
+   },
+   "G2": {
+    "t": "b",
+    "v": true
+   },
+   "G3": {
+    "t": "b",
+    "v": true
+   },
+   "G4": {
+    "t": "b",
+    "v": true
+   },
+   "G5": {
+    "t": "b",
+    "v": false
+   },
+   "G6": {
+    "t": "b",
+    "v": false
+   },
+   "G7": {
+    "t": "b",
+    "v": true
+   },
+   "G8": {
+    "t": "b",
+    "v": true
+   },
+   "G9": {
+    "t": "b",
+    "v": false
+   },
+   "H1": {
+    "t": "b",
+    "v": false
+   },
+   "H10": {
+    "t": "b",
+    "v": false
+   },
+   "H11": {
+    "t": "b",
+    "v": false
+   },
+   "H12": {
+    "t": "b",
+    "v": false
+   },
+   "H13": {
+    "t": "b",
+    "v": true
+   },
+   "H14": {
+    "t": "b",
+    "v": true
+   },
+   "H15": {
+    "t": "b",
+    "v": true
+   },
+   "H16": {
+    "t": "b",
+    "v": false
+   },
+   "H2": {
+    "t": "b",
+    "v": false
+   },
+   "H3": {
+    "t": "b",
+    "v": false
+   },
+   "H4": {
+    "t": "b",
+    "v": false
+   },
+   "H5": {
+    "t": "b",
+    "v": false
+   },
+   "H6": {
+    "t": "b",
+    "v": false
+   },
+   "H7": {
+    "t": "b",
+    "v": false
+   },
+   "H8": {
+    "t": "b",
+    "v": false
+   },
+   "H9": {
+    "t": "b",
+    "v": false
+   },
+   "I1": {
+    "t": "b",
+    "v": true
+   },
+   "I10": {
+    "t": "b",
+    "v": true
+   },
+   "I11": {
+    "t": "b",
+    "v": true
+   },
+   "I12": {
+    "t": "b",
+    "v": false
+   },
+   "I13": {
+    "t": "b",
+    "v": false
+   },
+   "I14": {
+    "t": "b",
+    "v": false
+   },
+   "I15": {
+    "t": "b",
+    "v": false
+   },
+   "I16": {
+    "t": "b",
+    "v": true
+   },
+   "I2": {
+    "t": "b",
+    "v": false
+   },
+   "I3": {
+    "t": "b",
+    "v": false
+   },
+   "I4": {
+    "t": "b",
+    "v": false
+   },
+   "I5": {
+    "t": "b",
+    "v": true
+   },
+   "I6": {
+    "t": "b",
+    "v": true
+   },
+   "I7": {
+    "t": "b",
+    "v": false
+   },
+   "I8": {
+    "t": "b",
+    "v": false
+   },
+   "I9": {
+    "t": "b",
+    "v": true
+   },
+   "J1": {
+    "t": "b",
+    "v": false
+   },
+   "J10": {
+    "t": "b",
+    "v": false
+   },
+   "J11": {
+    "t": "b",
+    "v": false
+   },
+   "J12": {
+    "t": "b",
+    "v": true
+   },
+   "J13": {
+    "t": "b",
+    "v": false
+   },
+   "J14": {
+    "t": "b",
+    "v": false
+   },
+   "J15": {
+    "t": "b",
+    "v": false
+   },
+   "J16": {
+    "t": "b",
+    "v": false
+   },
+   "J2": {
+    "t": "b",
+    "v": true
+   },
+   "J3": {
+    "t": "b",
+    "v": true
+   },
+   "J4": {
+    "t": "b",
+    "v": true
+   },
+   "J5": {
+    "t": "b",
+    "v": false
+   },
+   "J6": {
+    "t": "b",
+    "v": false
+   },
+   "J7": {
+    "t": "b",
+    "v": true
+   },
+   "J8": {
+    "t": "b",
+    "v": true
+   },
+   "J9": {
+    "t": "b",
+    "v": false
+   },
+   "K1": {
+    "t": "b",
+    "v": false
+   },
+   "K10": {
+    "t": "b",
+    "v": false
+   },
+   "K11": {
+    "t": "b",
+    "v": false
+   },
+   "K12": {
+    "t": "b",
+    "v": false
+   },
+   "K13": {
+    "t": "b",
+    "v": true
+   },
+   "K14": {
+    "t": "b",
+    "v": true
+   },
+   "K15": {
+    "t": "b",
+    "v": true
+   },
+   "K16": {
+    "t": "b",
+    "v": false
+   },
+   "K2": {
+    "t": "b",
+    "v": false
+   },
+   "K3": {
+    "t": "b",
+    "v": false
+   },
+   "K4": {
+    "t": "b",
+    "v": false
+   },
+   "K5": {
+    "t": "b",
+    "v": false
+   },
+   "K6": {
+    "t": "b",
+    "v": false
+   },
+   "K7": {
+    "t": "b",
+    "v": false
+   },
+   "K8": {
+    "t": "b",
+    "v": false
+   },
+   "K9": {
+    "t": "b",
+    "v": false
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "75275a904d331d2dad73f773d749a8f5524603be46553adf56a210e8f5ea5b2e",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-07T21:37:53+00:00",
+  "version": null,
+  "workbook_name": "473bef8f6f8d0345db45433607c28be85aa479c9ea5a360e1ed1b9b0bb292d8c.xlsx"
+ }
+}
