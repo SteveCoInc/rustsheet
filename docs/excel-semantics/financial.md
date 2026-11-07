@@ -1541,6 +1541,14 @@ Evidence (excel-graph, 2026-11-02, T-3698):
   noise (pv + pmt = 0 at t = 0). Excel returns the guess, 1.74874265618351. The model returned `#NUM!` until T-3876
   found the cause: a zero residual at the guess steps up, not down (entry "RATE steps up from a zero residual").
 Ours: `compute_rate` and `rate_secant` (functions/financial/financial_util.rs), T-3698.
+- **A restart without a root falls back to the hold (T-4975 audit 6).** probes/t3906-rate-restart-oos A194
+  `RATE(1,-57090142708.1999,57155400514.2199,-66085711.1548055,1,-0.0413434246245947)` is 0.012686683557386938 in
+  Excel; its restarted run meets a second flat secant at step 92 (|f| 1.65E-4, past the cap test) and was `#NUM!`, the
+  finite-root loss T-3850/T-3916 recorded (decision 0265 accepted it). Falling back to the first run's hold gives
+  0.012686683564913244, Excel's type, 6E-10 relative off. The fallback needs the hold's own step converged
+  (|r1 - r0| < 1e-7; A194's iterates are 6.7E-16 apart): A26 `RATE(1,65619121.9595683,-65619121.9595674,0,1,
+  0.0414411258870795)`, whose flat secant comes at step 3 on iterates 0.078 apart, is `#NUM!` in Excel and stays so
+  (falling back there regressed it).
 Status: VERIFIED (excel-graph, on the cells above) / UNVERIFIED (the step bound's position in 16..17; late
 restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0 <= -1)
 Tasks: T-3698, T-3424, T-3876, T-3916, T-3963
@@ -5874,6 +5882,10 @@ Where Excel's error exceeds G: from the cut up to 1E-13 on the probe. The cells 
 (A99 to A125) are 7.0E-4 to 6.9E-3 off. At 3E-13 and 1E-12 the error falls below G (5.8E-5 to 9.1E-5). The error is
 about 1E-16/rate, from the rounding of the doubles 1 + rate and ratio before their logarithms. The approved region
 stops at 1E-14, so the engine keeps Excel's value from 1E-14 up. The owner ruled not to widen it (decision 0300, T-4285).
+- **No overflow of `fv + pv` (T-4975 audit 6).** Where `fv + pv` passes the double range but the ratio has a value, the
+  excess sums the products with the rate instead: `NPER(1E-15,-1E+294,9E+307,9E+307)` is about 1.807E+14 (the math,
+  log1p(18/91)/log1p(1E-15)), where the overflow made it `#NUM!`; Excel's ln of the finite ratio has a value there too.
+  Elsewhere the operation order and so the probed bits are unchanged.
 Status: MATH-OVER-EXCEL (decision 0188)
 Ours: below 1E-14, and where 1 + rate is not 1, `nper_of` (functions/financial/annuity.rs, `NPER_MATH_RATE`) returns
 log1p(-(fv+pv)·rate/(pmt·k+pv·rate)) / log1p(rate). That is within 1e-14 of the math on every probe cell. Excel's

@@ -838,8 +838,17 @@ impl Model {
             // (probes-numeric/t3367-nper-tiny-rate), so the value is the math, from the exact
             // difference ratio - 1 = -(fv+pv)·rate / (pmt·k + pv·rate) and log1p; Excel's errors
             // above still decide which cells are errors.
-            let excess =
-                -(future_value + present_value) * rate / (payment_k + present_value * rate);
+            // `fv + pv` can overflow where the ratio has a value (both near 1E+308 at a rate of
+            // 1E-15: `NPER(1E-15,-1E+294,9E+307,9E+307)` is about 1.807E+14); each times the rate
+            // cannot, so the sum is then taken after the products (T-4975 audit 6). Elsewhere the
+            // order stays, keeping the probed bits.
+            let owed = future_value + present_value;
+            let owed_interest = if owed.is_finite() {
+                owed * rate
+            } else {
+                future_value * rate + present_value * rate
+            };
+            let excess = -owed_interest / (payment_k + present_value * rate);
             excess.ln_1p() / rate.ln_1p()
         } else {
             // The final division is Excel's `/`, rounded twice (A9 `NPER(0.2,-1000,-1000,20000)`)

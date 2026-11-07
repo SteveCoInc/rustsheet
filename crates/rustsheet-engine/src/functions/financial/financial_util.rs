@@ -155,14 +155,26 @@ fn rate_secant(
                 return Err(Error::NUM);
             }
             // The restart (T-3698): a fresh run from r0, as if r0 were the guess
-            // (probes/t3579-rate-residual-nper1: A1's run is A6's, whose guess is A1's r0).
+            // (probes/t3579-rate-residual-nper1: A1's run is A6's, whose guess is A1's r0). A
+            // restarted run that finds no root falls back to this run's hold when the hold's step
+            // has converged, |r1 - r0| < 1e-7, and only its residual is noise (T-4975 audit 6):
+            // probes/t3906-rate-restart-oos A194 `RATE(1,-57090142708.1999,57155400514.2199,
+            // -66085711.1548055,1,-0.0413434246245947)` is 0.012686683557386938 in Excel, where the
+            // restarted run meets a second flat secant at step 92 (|f| 1.65E-4) and was `#NUM!`;
+            // the hold gives 0.012686683564913244, Excel's type and inside Gate A's envelope (its
+            // iterates are 6.7E-16 apart). A26 `RATE(1,65619121.9595683,-65619121.9595674,0,1,
+            // 0.0414411258870795)`, whose flat secant comes at step 3 on iterates 0.078 apart, stays
+            // `#NUM!` as in Excel.
             if restart
                 && r1 != r0
                 && (RATE_RESTART_FIRST..=RATE_RESTART_STEPS).contains(&step)
                 && (RATE_RESTART_F_MIN..RATE_RESTART_F_MAX).contains(&f1.abs())
                 && r0 > -1.0
             {
-                return rate_secant(args, period_start, r0, false);
+                let restarted = rate_secant(args, period_start, r0, false);
+                if restarted.is_ok() || (r1 - r0).abs() >= TOLERANCE {
+                    return restarted;
+                }
             }
             (r1, f1)
         } else {

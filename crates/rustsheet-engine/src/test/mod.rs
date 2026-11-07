@@ -213,6 +213,7 @@ mod test_fn_mmult;
 mod test_fn_oddfprice;
 mod test_fn_percentof;
 mod test_fn_pivotby;
+mod test_fn_rate_nper_audit;
 mod test_fn_round;
 mod test_fn_scan;
 mod test_fn_sort_lift;
