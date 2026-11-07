@@ -3503,12 +3503,16 @@ the second, fl(a0 + b0) = a0 after bratio's swap (`NEGBINOM.DIST(40,6E+17,0.3232
   to a0 = 6E+17, is `#NUM!`, as are `(0.1|0.5|0.9,41,6E+17,TRUE)` and `NEGBINOM.DIST(6E+17,40,..,TRUE)`. Where the
   first shape is the one absorbed and no swap gives it back, Excel answers:
   `BETA.DIST(2.84921687181174E-198,25002804469.8703,7.87993781085058E+38,TRUE)` is 0 (Gate A accuracy/BETA.DIST/s1
-  A183, r4-T-3879 A181, A182), and `(1E-19,41,6E+17,TRUE)` is 2.2611819787179575E-100.
+  A183, r4-T-3879 A181, A182), and `(1E-19,41,6E+17,TRUE)` is 2.2611819787179575E-100. Not always: Gate A
+  accuracy/BETA.DIST/s1 A186 `BETA.DIST(1.16481965482714E-239,11670.8736712835,1.83368089638147E+214,TRUE)`, on bfrac
+  with the first shape absorbed, is `#NUM!` in Excel (ours 0; T-4733 owns it), so that orientation has its own,
+  unknown rule.
 - A whole or fractional b0 alike (`(0.5,7E+17,57.5,TRUE)`, `(0.5,6E+17,41.25,TRUE)` and `(0.5,1E+19,1000.5,TRUE)` are
   `#NUM!`).
 - Still open (T-4824): x0 near 1 answers. `(0.999,6E+17,41,TRUE)`, `(0.999,7E+17,57,TRUE)` and `(0.999,7E+17,57.5,TRUE)`
   are 0 and the swapped `(0.001,41,6E+17,TRUE)` is 1, while `(0.99,6E+17,41,TRUE)` is `#NUM!`. The mechanism of the cut
-  in x0 (0.99, 0.999) is UNVERIFIED; ours is `#NUM!` there.
+  in x0 (0.99, 0.999) is UNVERIFIED. Before T-4238 the engine matched these six cells (0 and 1); the absorption rule,
+  which has no x0 cut, makes them `#NUM!`, a disclosed loss (decision 0082's precedent) that T-4824 is to restore.
 - BETA.DIST's density is `#NUM!` where alpha absorbs beta and both shapes exceed 1 (Excel's Loader density):
   `BETA.DIST(0.323212154487823,6E+17,41,FALSE)`, `(0.9|0.5,6E+17,41,FALSE)` and `BETA.DIST(0.1,1E+200,2,FALSE)` (t3007
   A20) are `#NUM!`. The density has no swap: `(0.5,41,6E+17,FALSE)` is 0, and so is
@@ -3533,7 +3537,8 @@ A fill, where `NEGBINOM.DIST(28,999999999999999,0.323212154487823,TRUE)` was `#N
 `(14,999999999999999,0.0712044717475044,TRUE)` and `(6,1E+15,0.847418271232675,TRUE)`. probes/t3576-negbinom-cdf-huge-s
 A1:A89 (excel-graph, 2026-11-04). `docs/research/t3576/bup_partial_sum.py` prints the branch, ln R and the partial-sum log of each of its
 cells. probes/t3576-r2-ratio-overflow-sweep A1:A54 (excel-graph, 2026-11-04).
-Ours: `#NUM!` at every L140 cell above (T-3576) and at every absorbed bfrac cell (T-4238), x0 0.999 included (T-4824).
+Ours: `#NUM!` at every L140 cell above (T-3576) and at every absorbed bfrac cell (T-4238). That includes x0 0.999, where
+Excel answers and main matched before T-4238 (six cells, T-4824).
 Status: VERIFIED (excel-graph) for the probed cells, the L140 rule (fresh sweep) and the bfrac absorption rule up to x0
 0.99 (T-4238's three predicted rounds); x0 near 1 UNVERIFIED
 Tasks: T-3576

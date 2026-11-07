@@ -50,8 +50,12 @@ a rule backed by a probe, recorded in statistics.md.
      then probes/t4238-r2-absorb-orientation (38 cells): every cell separating H_oriented from H_raw matched H_oriented.
   3. r2 A12, A13 (x0 0.999) broke it, so probes/t4238-r3-absorb-whole-shape (12 cells) tested H_frac (whole b0)
      against H_x (x0 near 1): H_x on all 12, x0 0.99 `#NUM!` and 0.999 a value.
-- Not implemented: the x0 cut in (0.99, 0.999). No mechanism is known, and a threshold would be a fit, so ours stays
-  `#NUM!` there. Six cells are known failures owned by T-4824 (r2 A12, A13; r3 A1, A2, A6, A10). r2 A14, B14 are
+- Not implemented: the x0 cut in (0.99, 0.999). No mechanism is known, and a threshold would be a fit. **Disclosed
+  loss (decision 0082's precedent):** main matched Excel at six x0 0.999 / 0.001 cells (r2 A12, A13; r3 A1, A2, A6,
+  A10: 0 or 1), and this rule, which has no x0 cut, makes them `#NUM!`. They are new-case known failures owned by
+  T-4824, whose acceptance restores them. Net on Excel-evidenced cells: 4 gated fixes (t3576 A50:A52, t3007 A20), Gate
+  A BETADIST A184, 54 more cells of the new probes; 6 lost. The fidelity review's per-cell diff against the merge base
+  found no other changed cell. r2 A14, B14 are
   close-digit Tier B, also noted in T-4824.
 - Eval: probes/t3576-negbinom-cdf-huge-s A50:A52 pass (88/89; A75 stays Tier B), t3007 A20 fixed and A6 kept,
   t4238 126/126, r2 34/38, r3 8/12; Gate A: BETADIST s1 A184 (T-4733's, alpha 2.2E+114 absorbing beta 2.0E+66) now

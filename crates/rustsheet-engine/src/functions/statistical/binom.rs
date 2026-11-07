@@ -327,8 +327,8 @@ impl Model {
             if let Some((lower, _)) = closed {
                 return Ok(lower);
             }
-            // Excel's kernel is `#NUM!` where bratio's L140 bup sum overflows (T-3576).
-            // ... and on bfrac where the sum of the shapes absorbs the failures' shape (T-4238).
+            // Excel's kernel is `#NUM!` where bratio's L140 bup sum overflows (T-3576), and on bfrac where
+            // the oriented first shape absorbs the second (T-4238).
             if l140_overflows(a, b, x, y) || bfrac_shapes_absorbed(a, b, x, y) {
                 return Err(num_error(cell));
             }
