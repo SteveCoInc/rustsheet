@@ -309,6 +309,25 @@ impl RefGrid {
         })
     }
 
+    /// The grid of an array's elements, none of them a reference: an error is an error element,
+    /// anything else a value element (as a lift keeps its scalar results). `None` for an empty or
+    /// ragged array.
+    pub(crate) fn of_values(rows: &[Vec<ArrayNode>]) -> Option<RefGrid> {
+        let columns = rows.first()?.len();
+        if rows.iter().any(|row| row.len() != columns) {
+            return None;
+        }
+        let elements = rows
+            .iter()
+            .flatten()
+            .map(|node| match node {
+                ArrayNode::Error(error) => RefElement::Error(error.clone()),
+                node => RefElement::Value(node.clone()),
+            })
+            .collect();
+        RefGrid::new(rows.len(), columns, elements)
+    }
+
     /// Rows and columns of elements.
     pub(crate) fn dims(&self) -> (usize, usize) {
         (self.rows, self.columns)

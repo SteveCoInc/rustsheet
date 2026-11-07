@@ -6,8 +6,8 @@ use crate::{
     cf_types::CfRule,
     formula_rewrite::{RewrittenCell, RewrittenFormula},
     types::{
-        Cell, Col, Color, Link, MergedCell, Row, SheetState, Style, StyleIncludes, Table,
-        TableExtent, Theme, Worksheet,
+        Cell, Col, Color, DataTable, Link, MergedCell, Row, SheetState, Style, StyleIncludes,
+        Table, TableExtent, Theme, Worksheet,
     },
 };
 
@@ -378,6 +378,16 @@ pub(crate) enum Diff {
         sheet: u32,
         old_value: Vec<MergedCell>,
         new_value: Vec<MergedCell>,
+    },
+    /// Sets the full list of data tables of a sheet: apply installs `new_value`, undo installs
+    /// `old_value`. Row and column deletes and range clears move or delete data tables in ways
+    /// their undo cannot reconstruct (an input made `#REF!`, a deleted table), so they push this
+    /// diff with `old_value == new_value` (a no-op on apply) before the edit, as
+    /// [`Diff::SetMergedCells`] does (T-4940).
+    SetDataTables {
+        sheet: u32,
+        old_value: Vec<DataTable>,
+        new_value: Vec<DataTable>,
     },
     // FIXME: we are missing SetViewDiffs
 }

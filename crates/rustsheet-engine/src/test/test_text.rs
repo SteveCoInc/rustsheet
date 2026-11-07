@@ -299,7 +299,7 @@ fn decode_rejects_bad_bytes_without_panicking() {
     }
     let mut rng = Rng(0x1234_5678_9ABC_DEF1);
     for _ in 0..2_000 {
-        let garbage: Vec<u8> = (0..rng.below(24)).map(|_| rng.next() as u8).collect();
+        let garbage: Vec<u8> = (0..rng.below(24)).map(|_| rng.next_u64() as u8).collect();
         // Any outcome but a panic; a decoded value is normalized.
         if let Ok(texts) = bitcode::decode::<Vec<Text>>(&garbage) {
             for text in texts {

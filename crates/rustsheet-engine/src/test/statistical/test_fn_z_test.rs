@@ -36,7 +36,7 @@ fn arrays() {
 }
 
 /// A data sum that overflows makes the omitted sigma NaN; the result is an error, never a NaN
-/// number. `#NUM!` is not probed yet (T-1942).
+/// number: `#NUM!` (probes/t1942-ztest-numeric-edges A4:A5).
 #[test]
 fn overflowing_data_is_an_error() {
     let mut model = new_empty_model();

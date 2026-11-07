@@ -122,6 +122,10 @@ pub enum LexerMode {
 
 /// Tokenize an input
 #[derive(Clone)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "independent lexing modes, each set by its own setter"
+)]
 pub struct Lexer {
     position: usize,
     next_token_position: Option<usize>,
@@ -152,6 +156,8 @@ pub struct Lexer {
     /// The text of the number being read, reused from number to number (T-3384); it holds
     /// nothing between tokens.
     number_text: String,
+    /// Whether a quoted name not followed by `!` is a name ([`Lexer::set_quoted_names`]).
+    quoted_names: bool,
 }
 
 impl Lexer {
@@ -177,7 +183,18 @@ impl Lexer {
             refused_whitespace: false,
             peeked: None,
             number_text: String::new(),
+            quoted_names: false,
         }
+    }
+
+    /// Whether the next formulas read a quoted text not followed by `!` as a name, its doubled
+    /// quotes undone: a pivot calculated field's formula names a field with a space or an
+    /// apostrophe so, `'Unit Cost'*2`, `'Bob''s'+1` (docs/excel-semantics/pivots.md "Calculated
+    /// fields as Excel for the web renders them", probes/t4505-pivot-calc-fields NM, T-4174).
+    /// Off (the default), such text is a sheet prefix and must be followed by `!`.
+    pub(crate) fn set_quoted_names(&mut self, quoted_names: bool) {
+        self.quoted_names = quoted_names;
+        self.peeked = None;
     }
 
     /// Whether the next formulas are text a user types, where Excel reads `**` in a number as
@@ -886,6 +903,9 @@ impl Lexer {
                 return TokenType::Illegal(error);
             }
         };
+        if self.quoted_names && self.peek_char() != Some('!') {
+            return TokenType::Ident(sheet_name);
+        }
         if self.next_token() != TokenType::Bang {
             return TokenType::Illegal(self.set_error("Expected '!'", self.position));
         }

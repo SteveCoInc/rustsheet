@@ -155,6 +155,12 @@ pub(crate) enum ValueWork {
     /// a blank may read as any number, so it refuses nothing; nor does a date, whose calendar
     /// check depends on the workbook's date system. See [`amortization_refused`].
     Amortization { degressive: bool, weight: u32 },
+    /// BETA.INV's quantile search (T-2607): `weight` units, the flat bound of a search, or 1 for an
+    /// element `Model::beta_inv_of` refuses before it searches: an error in any argument, a
+    /// probability outside (0, 1), an alpha or beta of 0 or less, or bounds with B <= A. A logical
+    /// reads as 1 or 0 and a blank as 0 there, so they are judged as those numbers; a text may read
+    /// as any number, so it refuses nothing. See [`beta_quantile_refused`].
+    BetaQuantile { weight: u32 },
 }
 
 /// How a [`ValueWork::IncompleteGamma`] element's shape follows from its shape argument's value
@@ -256,7 +262,8 @@ impl ValueWork {
             // The sum at its cap.
             ValueWork::HypergeometricSum { weight, .. }
             | ValueWork::IncompleteGamma { weight, .. }
-            | ValueWork::Amortization { weight, .. } => u64::from(weight),
+            | ValueWork::Amortization { weight, .. }
+            | ValueWork::BetaQuantile { weight } => u64::from(weight),
         }
     }
 
@@ -415,8 +422,39 @@ impl ValueWork {
                     u64::from(weight)
                 }
             }
+            ValueWork::BetaQuantile { weight } => {
+                if beta_quantile_refused(&value) {
+                    1
+                } else {
+                    u64::from(weight)
+                }
+            }
         }
     }
+}
+
+/// Whether BETA.INV (`Model::beta_inv_of`) returns before its quantile search on these argument
+/// values (probability, alpha, beta, A, B; A and B default to 0 and 1): it reads all five as
+/// numbers, an error refusing at once, then refuses alpha or beta <= 0, a probability outside
+/// (0, 1) and B <= A. Only what reads as a known number is judged (a logical as 1 or 0, a blank as
+/// 0); a text may read as any number. `BETAINV(1+2^-52,-1,..)` over 4 x 51,638 elements is refused
+/// in every element (gen-m9/4250f880ab640c49 Calc!A237, T-2607).
+fn beta_quantile_refused(value: &impl Fn(usize) -> Option<ArgValue>) -> bool {
+    let number = |arg: usize, default: f64| match value(arg) {
+        None => Some(default),
+        Some(ArgValue::Number(n)) => Some(n),
+        Some(ArgValue::Boolean(b)) => Some(f64::from(u8::from(b))),
+        Some(ArgValue::Blank) => Some(0.0),
+        Some(ArgValue::Text(_) | ArgValue::Error) => None,
+    };
+    let error = (0..5).any(|arg| matches!(value(arg), Some(ArgValue::Error)));
+    let [p, alpha, beta, a, b] = [(0, 0.0), (1, 0.0), (2, 0.0), (3, 0.0), (4, 1.0)]
+        .map(|(arg, default)| number(arg, default));
+    error
+        || p.is_some_and(|p| p <= 0.0 || p >= 1.0)
+        || alpha.is_some_and(|alpha| alpha <= 0.0)
+        || beta.is_some_and(|beta| beta <= 0.0)
+        || matches!((a, b), (Some(a), Some(b)) if b <= a)
 }
 
 /// Whether AMORLINC (AMORDEGRC with `degressive`) returns before its walk on these argument

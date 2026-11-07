@@ -18,121 +18,42 @@
 //!   Product) pair, compared case-folded, stays; which casing labels an item (first seen) and
 //!   the item order may change.
 //!
-//! Import, export and import as a fixed point is not here: the export is T-4176's, in the xlsx
-//! crate, which this crate's tests cannot reach.
+//! Import, export and import as a fixed point is in the xlsx crate
+//! (`export/pivots/tests.rs`, T-4756), which reuses this generator through `test_support`.
 
 use std::collections::BTreeMap;
 
-use crate::pivot::{
-    refresh, Aggregate, Axis, AxisField, CacheSource, CellArea, DataField, PivotBudget, PivotCache,
-    PivotField, PivotTable, MAX_RECORD_VALUES,
-};
 use crate::test::util::{new_empty_model, Rng};
+use crate::test_support::{
+    add_sum_pivot, pivot_records, pivot_sheet_text, refresh_first_pivot, PivotRecord,
+};
 use crate::Model;
 
 /// Seeds per property: enough to vary item counts, empty intersections and case variants,
 /// small enough for the CI time budget (each model is a few dozen cells).
 const SEEDS: u64 = 48;
 
-const REGIONS: [&str; 5] = ["East", "West", "North", "South", "Mid"];
-const PRODUCTS: [&str; 6] = ["A", "B", "C", "D", "E", "F"];
-
 /// The label the renderer writes for a grand-total line.
 const GRAND_TOTAL: &str = "Grand Total";
 
-type Record = (String, String, i64);
+type Record = PivotRecord;
 
-/// 1 to 30 records over a seed-chosen subset of regions and products; about one text in eight
-/// is written in lower case, the variant a refresh folds into the first-seen item.
+/// The seeded records of `seed` (shared with the xlsx crate's round-trip test, T-4756).
 fn records(seed: u64) -> Vec<Record> {
-    let mut rng = Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1);
-    let regions = 1 + rng.below(REGIONS.len() as u64);
-    let products = 1 + rng.below(PRODUCTS.len() as u64);
-    let count = 1 + rng.below(30);
-    let cased = |rng: &mut Rng, text: &str| {
-        if rng.below(8) == 0 {
-            text.to_lowercase()
-        } else {
-            text.to_string()
-        }
-    };
-    (0..count)
-        .map(|_| {
-            let region = REGIONS[usize::try_from(rng.below(regions)).unwrap()];
-            let product = PRODUCTS[usize::try_from(rng.below(products)).unwrap()];
-            let sales = i64::try_from(rng.below(250)).unwrap() - 50;
-            (cased(&mut rng, region), cased(&mut rng, product), sales)
-        })
-        .collect()
+    pivot_records(seed)
 }
 
-/// A model with `records` at Data!A1:C(n+1) and a Sum of Sales pivot over them anchored at
-/// Sheet1!A3 (Region rows, Product columns), refreshed once so it is rendered.
+/// A model with `records` and a rendered Sum of Sales pivot over them ([`add_sum_pivot`]).
 fn pivot_model(records: &[Record]) -> Model {
-    let mut model = new_empty_model();
-    model.add_sheet("Data").unwrap();
-    for (column, header) in ["A", "B", "C"].iter().zip(["Region", "Product", "Sales"]) {
-        model.set_a1(&format!("Data!{column}1"), header);
-    }
-    for (i, (region, product, sales)) in records.iter().enumerate() {
-        let row = i + 2;
-        model.set_a1(&format!("Data!A{row}"), region);
-        model.set_a1(&format!("Data!B{row}"), product);
-        model.set_a1(&format!("Data!C{row}"), &sales.to_string());
-    }
-    model.evaluate();
-    let source = PivotCache {
-        source: Some(CacheSource {
-            sheet_name: "Data".into(),
-            range: format!("A1:C{}", records.len() + 1),
-        }),
-        ..PivotCache::default()
-    };
-    let cache = refresh(&source, &model, MAX_RECORD_VALUES).unwrap();
-    let fields = [Some(Axis::Row), Some(Axis::Column), None]
-        .into_iter()
-        .zip(&cache.fields)
-        .map(|(axis, field)| PivotField::new(axis, field.items.len()))
-        .collect();
-    let sheet_id = model.workbook.worksheet(0).unwrap().sheet_id;
-    let anchor = CellArea {
-        top: 2,
-        left: 0,
-        bottom: 2,
-        right: 0,
-    };
-    let table = PivotTable {
-        fields,
-        row_fields: vec![AxisField::Field(0)],
-        column_fields: vec![AxisField::Field(1)],
-        data_fields: vec![DataField {
-            caption: "Sum of Sales".to_string(),
-            field: 2,
-            function: Aggregate::Sum,
-            ..DataField::default()
-        }],
-        ..PivotTable::new("P".to_string(), sheet_id, anchor, 0)
-    };
-    model.workbook.pivot_caches.push(cache);
-    model.workbook.pivot_tables.push(table);
-    refresh_pivot(&mut model);
-    model
+    add_sum_pivot(new_empty_model(), records).unwrap()
 }
 
 fn refresh_pivot(model: &mut Model) {
-    let plan = model
-        .plan_pivot_refresh(0, &mut PivotBudget::default())
-        .unwrap();
-    model.apply_pivot_refresh(plan).unwrap();
-    model.evaluate();
+    refresh_first_pivot(model).unwrap();
 }
 
-/// Every cell of Sheet1!A1:Z60 as text: the rendered pivot and what is around it.
 fn sheet_text(model: &Model) -> Vec<String> {
-    (1..=60)
-        .flat_map(|row| (1..=26).map(move |column| (row, column)))
-        .map(|(row, column)| model.get_text_by_index(0, row, column))
-        .collect()
+    pivot_sheet_text(model).unwrap()
 }
 
 /// One value cell of the rendered pivot: its 1-based sheet position, its row and column labels

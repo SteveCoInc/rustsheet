@@ -94,7 +94,7 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        self.numbers_fn(
+        self.numbers_fn_empty_omitted(
             Function::CeilingMath,
             args,
             [0.0, 1.0, 0.0],
@@ -121,7 +121,7 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        self.numbers_fn(
+        self.numbers_fn_empty_omitted(
             Function::CeilingPrecise,
             args,
             [0.0, 1.0],
@@ -142,7 +142,7 @@ impl Model {
     }
 
     pub(crate) fn fn_floor_math(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.numbers_fn(
+        self.numbers_fn_empty_omitted(
             Function::FloorMath,
             args,
             [0.0, 1.0, 0.0],
@@ -168,7 +168,7 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        self.numbers_fn(
+        self.numbers_fn_empty_omitted(
             Function::FloorPrecise,
             args,
             [0.0, 1.0],

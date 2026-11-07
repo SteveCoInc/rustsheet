@@ -507,6 +507,33 @@ pub(crate) fn is_indirect_unquoted_sheet(prefix: &str) -> bool {
         .all(|c| c.is_alphanumeric() || c == '_' || c == '.')
 }
 
+/// Whether INDIRECT text refuses an unquoted sheet prefix as an R1C1 reference followed by more text
+/// (`C1D`, `R1_`, `C1`+U+0301: `#REF!`), while a bare R1C1 reference or an out-of-range one still
+/// names its sheet (`R`, `C`, `RC`, `R1`, `C1`, `R1C1`, `R0`). `RC1` and `R1C` are not probed, so
+/// they read their sheet (probes/t4861-indirect-r1c1-shaped-sheet-prefix, excel-graph, T-4861;
+/// docs/excel-semantics/references.md "R1C1-shaped sheet and defined names").
+fn is_indirect_r1c1_tail_sheet(prefix: &str) -> bool {
+    let upper = prefix.to_ascii_uppercase();
+    let digits = |s: &str| s.bytes().all(|c| c.is_ascii_digit());
+    let bare = match upper.strip_prefix('R') {
+        Some(rest) => match rest.split_once('C') {
+            Some((row, column)) => digits(row) && digits(column),
+            None => digits(rest),
+        },
+        None => upper.strip_prefix('C').is_some_and(digits),
+    };
+    is_r1c1_shaped(prefix) && !bare
+}
+
+/// Whether INDIRECT A1 text has an unquoted sheet prefix [`is_indirect_r1c1_tail_sheet`] refuses.
+pub(crate) fn indirect_r1c1_tail_sheet_prefix(text: &str) -> bool {
+    text.rsplit_once('!').is_some_and(|(prefix, _)| {
+        // Not `is_indirect_unquoted_sheet`: a mark (`C1`+U+0301) is no letter or digit, and
+        // the junk before the last `!` of a two-prefix text is the only thing to leave out.
+        !prefix.contains(['!', ':', '\'']) && is_indirect_r1c1_tail_sheet(prefix)
+    })
+}
+
 /// INDIRECT text whose unquoted sheet prefix starts with a digit (`2024!B1`) with the prefix
 /// quoted (`'2024'!B1`), which the lexer reads; any other text is returned as it is.
 pub(crate) fn quote_digit_leading_sheet(text: &str) -> std::borrow::Cow<'_, str> {
@@ -666,6 +693,28 @@ mod tests {
         for bad in ["Co A", "P&L", "O'B", "'CoB'"] {
             assert!(!is_indirect_unquoted_sheet(bad), "{bad}");
         }
+    }
+
+    #[test]
+    fn indirect_r1c1_tail_sheet_prefixes() {
+        for tail in ["C1D", "R1_", "c1\u{301}", "R1C1D"] {
+            assert!(
+                indirect_r1c1_tail_sheet_prefix(&format!("{tail}!B1")),
+                "{tail}"
+            );
+        }
+        for ok in [
+            "R", "C", "RC", "R1", "C1", "R1C1", "R0", "RC1", "R1C", "R0D", "C16385D", "RC16385D",
+            "Sheet1", "'C1D'",
+        ] {
+            assert!(
+                !indirect_r1c1_tail_sheet_prefix(&format!("{ok}!B1")),
+                "{ok}"
+            );
+        }
+        assert!(!indirect_r1c1_tail_sheet_prefix("C1D"));
+        // Two prefixes: the junk text before the last `!` is no sheet name.
+        assert!(!indirect_r1c1_tail_sheet_prefix("R1!B1:R1D!B2"));
     }
 
     #[test]

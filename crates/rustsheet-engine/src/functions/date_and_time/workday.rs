@@ -23,6 +23,7 @@ use crate::{
     formatter::dates::DATE_OUT_OF_RANGE_MESSAGE,
     functions::{
         lift::{number_or_error, LiftCost},
+        util::empty_args::{written_empty_na, written_empty_or},
         Function,
     },
     model::Model,
@@ -97,11 +98,13 @@ impl Model {
         holidays_at: usize,
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        if !(2..=holidays_at + 1).contains(&args.len()) {
-            return CalcResult::new_args_number_error(cell);
-        }
+        let empty = self.empty_arguments::<2>(args);
+        let holidays_arg = match self.holidays_arg(args, holidays_at, cell) {
+            Ok(arg) => arg,
+            Err(error) => return error,
+        };
         let holidays = self
-            .workday_holidays(args.get(holidays_at), cell)
+            .workday_holidays(holidays_arg, cell)
             .map_err(|error| HolidaysError {
                 error: bare_error(&error.error, cell),
                 ..error
@@ -113,7 +116,7 @@ impl Model {
             LiftCost::Prepared(read),
             cell,
             &mut |model, values| {
-                number_or_error(model.workday_of(values, holidays_at, &holidays, cell))
+                number_or_error(model.workday_of(values, empty, holidays_at, &holidays, cell))
             },
         )
     }
@@ -148,6 +151,7 @@ impl Model {
     fn workday_of(
         &self,
         values: &[CalcResult],
+        empty: [bool; 2],
         holidays_at: usize,
         holidays: &Result<Holidays, HolidaysError>,
         cell: CellReferenceIndex,
@@ -155,6 +159,8 @@ impl Model {
         let [start, days, rest @ ..] = values else {
             return Err(CalcResult::new_args_number_error(cell));
         };
+        let na = written_empty_na(cell);
+        let [start, days] = written_empty_or([start, days], empty, &na);
         let start = self.cast_number_no_bools_ref(start, cell)?.floor() as i64;
         let date = self.excel_date(start, cell)?;
         let days = self.cast_number_no_bools_ref(days, cell)?.floor() as i32;

@@ -283,7 +283,7 @@ impl Model {
         // An empty slot, `(1,)` or `(,2)`, is omitted like a missing argument (arrays.md
         // ISOMITTED, A24-A25 and A34), and a variable bound to an omitted parameter hands the
         // omission on, so ISOMITTED of a LET name for it stays TRUE as before T-2649.
-        if matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node) {
+        if self.is_empty_argument(node) {
             return Binding::Omitted;
         }
         let is_span = matches!(node, Node::SheetSpanKind { .. });

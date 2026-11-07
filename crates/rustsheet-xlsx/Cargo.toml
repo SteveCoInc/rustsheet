@@ -32,6 +32,7 @@ zeroize = { version = "=1.8.2", default-features = false, features = ["alloc"] }
 subtle = { version = "=2.6.1", default-features = false }
 
 [dev-dependencies]
+rustsheet_engine = { path = "../rustsheet-engine", features = ["test-support"] }
 uuid = { version = "1.2.2", features = ["serde", "v4"] }
 
 [lib]

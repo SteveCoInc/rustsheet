@@ -683,7 +683,7 @@ mod tests {
 
     /// A double in [0, 1) from the seeded test generator.
     fn spread(rng: &mut Rng) -> f64 {
-        (rng.next() >> 11) as f64 / (1u64 << 53) as f64
+        (rng.next_u64() >> 11) as f64 / (1u64 << 53) as f64
     }
 
     #[test]

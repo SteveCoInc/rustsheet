@@ -761,8 +761,10 @@ impl UserModel {
         }
         // Clearing the cells also removes their links: capture them for undo
         let link_diffs = self.range_link_diffs(range)?;
+        let old_data_tables = self.model.data_tables_of(sheet)?;
         self.model.range_clear_all(range)?;
-        let mut diff_list = vec![Diff::RangeClearAll {
+        let mut diff_list = self.data_tables_snapshot_diffs(sheet, old_data_tables)?;
+        diff_list.push(Diff::RangeClearAll {
             sheet,
             row: range.row,
             column: range.column,
@@ -770,7 +772,7 @@ impl UserModel {
             height: range.height,
             old_value,
             old_style,
-        }];
+        });
         diff_list.extend(link_diffs);
 
         self.push_diff_list(diff_list);
@@ -810,15 +812,17 @@ impl UserModel {
         }
         // Clearing the cells also removes their links: capture them for undo
         let link_diffs = self.range_link_diffs(range)?;
+        let old_data_tables = self.model.data_tables_of(sheet)?;
         self.model.range_clear_contents(range)?;
-        let mut diff_list = vec![Diff::RangeClearContents {
+        let mut diff_list = self.data_tables_snapshot_diffs(sheet, old_data_tables)?;
+        diff_list.push(Diff::RangeClearContents {
             sheet,
             row: range.row,
             column: range.column,
             width: range.width,
             height: range.height,
             old_value,
-        }];
+        });
         diff_list.extend(link_diffs);
         Ok(diff_list)
     }
@@ -1164,11 +1168,13 @@ impl UserModel {
 
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
         let old_tables = self.model.table_extents(sheet)?;
+        let old_data_tables = self.model.data_tables_of(sheet)?;
         let snapshot = self.rewrite_snapshot(sheet)?;
         let rewritten = self.model.delete_rows_rewriting(sheet, row, row_count)?;
         let tables = self.model.changed_table_extents(sheet, old_tables)?;
 
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
+        diff_list.extend(self.data_tables_snapshot_diffs(sheet, old_data_tables)?);
         diff_list.extend(link_diffs);
         diff_list.extend(self.rewritten_snapshot_diffs(sheet, snapshot)?);
         diff_list.push(Diff::DeleteRows {
@@ -1242,10 +1248,12 @@ impl UserModel {
         })?;
 
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
+        let old_data_tables = self.model.data_tables_of(sheet)?;
         let snapshot = self.rewrite_snapshot(sheet)?;
         let (tables, rewritten, shown) =
             (self.model).delete_columns_keeping_tables(sheet, column, column_count)?;
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
+        diff_list.extend(self.data_tables_snapshot_diffs(sheet, old_data_tables)?);
         diff_list.extend(link_diffs);
         diff_list.extend(self.rewritten_snapshot_diffs(sheet, snapshot)?);
         diff_list.push(Diff::DeleteColumns {

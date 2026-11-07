@@ -15,6 +15,7 @@ use rustsheet_engine::pivot::{
 };
 
 use super::super::package::ImportLimits;
+use super::super::{parse_relationships, xml::XmlNode};
 use super::*;
 
 const REL: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -294,16 +295,12 @@ fn olap_and_other_sources_are_skipped() {
 }
 
 #[test]
-fn a_group_without_items_and_calculated_fields_are_skipped() {
+fn a_group_without_items_is_skipped() {
     let grouped = definition(FIELDS).replace(
         "<sharedItems/></cacheField>",
         r#"<sharedItems/><fieldGroup base="1"/></cacheField>"#,
     );
     assert_no_cache(&with(parts(), DEFINITION_PART, grouped));
-    let calculated = definition(&format!(
-        r#"{FIELDS}<cacheField name="Double" formula="Sales*2" databaseField="0"/>"#
-    ));
-    assert_no_cache(&with(parts(), DEFINITION_PART, calculated));
 }
 
 #[test]
@@ -950,3 +947,5 @@ fn parts_on_load() -> Vec<(String, String)> {
         definition(FIELDS).replacen(r#" r:id="rId1">"#, r#" r:id="rId1" refreshOnLoad="1">"#, 1);
     with(parts(), DEFINITION_PART, definition)
 }
+
+mod calculated;

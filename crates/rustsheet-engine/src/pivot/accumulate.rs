@@ -159,6 +159,11 @@ impl Accumulator {
         }
     }
 
+    /// Whether every record fed was blank: the cell holds no value at all.
+    pub(crate) fn is_blank(&self) -> bool {
+        self.values == 0
+    }
+
     /// The order-dependent folds (sum, sum of squares, product) of this cell.
     pub(crate) fn folds(&self) -> Folds {
         Folds {

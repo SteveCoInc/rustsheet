@@ -82,6 +82,8 @@ pub(super) struct CaseRun {
     pub(super) items: Vec<Item>,
     pub(super) checked: BTreeMap<&'static str, usize>,
     pub(super) skipped: BTreeMap<&'static str, (usize, usize)>,
+    /// The packages each scenario saved, when the caller asked to keep them.
+    pub(super) outputs: Vec<(&'static str, Vec<u8>)>,
 }
 
 /// Runs R0 and then each further scenario of `scenarios` on one case. Only R0 failing makes the
@@ -91,6 +93,7 @@ pub(super) fn run_scenarios(
     bytes: &[u8],
     name: Option<&str>,
     scenarios: &[String],
+    keep: bool,
 ) -> Result<CaseRun, R0Error> {
     let source = Package::read(bytes).map_err(|e| R0Error::Source(e.to_string()))?;
     let (mut items, checked, out) = r0(&source, bytes, name)?;
@@ -98,7 +101,11 @@ pub(super) fn run_scenarios(
         items: Vec::new(),
         checked: BTreeMap::from([(R0, checked)]),
         skipped: BTreeMap::new(),
+        outputs: Vec::new(),
     };
+    if keep {
+        run.outputs.push((R0, out.clone()));
+    }
     let plain = items.clone();
     for (label, kind) in scenarios.iter().filter_map(|s| find(s)) {
         let result = match kind {
@@ -106,9 +113,12 @@ pub(super) fn run_scenarios(
             Run::Plain => continue,
             Run::Again => again(&out, name, label),
             Run::Edits(edits) => {
-                run_r1(&source, bytes, name, label, edits, &plain).map(|(found, outcome)| {
+                run_r1(&source, bytes, name, label, edits, &plain).map(|(found, outcome, saved)| {
                     run.skipped
                         .insert(label, (outcome.refused, outcome.missing));
+                    if let (true, Some(saved)) = (keep, saved) {
+                        run.outputs.push((label, saved));
+                    }
                     found
                 })
             }
@@ -151,7 +161,15 @@ fn again(out: &[u8], name: Option<&str>, label: &'static str) -> Result<Scored, 
 }
 
 /// Loads `bytes` with the harness clock and recalculates, as every scenario starts.
-fn load(bytes: &[u8], name: Option<&str>) -> Result<Workbook, R0Error> {
+pub(super) fn load(bytes: &[u8], name: Option<&str>) -> Result<Workbook, R0Error> {
+    let mut workbook = load_stored(bytes, name)?;
+    workbook.recalculate();
+    Ok(workbook)
+}
+
+/// The workbook as `bytes` store it, with the harness clock and no recalculation: its values are
+/// the cached ones (`package-diff`, T-4890, compares two packages, not our engine against one).
+pub(super) fn load_stored(bytes: &[u8], name: Option<&str>) -> Result<Workbook, R0Error> {
     let opts = LoadOptions {
         recalc: false,
         workbook: harness_options(name).map_err(R0Error::Engine)?,
@@ -160,7 +178,6 @@ fn load(bytes: &[u8], name: Option<&str>) -> Result<Workbook, R0Error> {
     let mut workbook = Workbook::from_xlsx_bytes(bytes, &opts)
         .map_err(|e| R0Error::Engine(format!("import failed: {e}")))?;
     workbook.pin_clock_from_metadata();
-    workbook.recalculate();
     Ok(workbook)
 }
 
@@ -200,11 +217,11 @@ fn run_r1(
     label: &'static str,
     edits: &[Edit],
     plain: &[Item],
-) -> Result<(Scored, r1::Outcome), R0Error> {
+) -> Result<(Scored, r1::Outcome, Option<Vec<u8>>), R0Error> {
     let mut workbook = load(bytes, name)?;
     let (delta, outcome) = r1::apply(&mut workbook, edits).map_err(R0Error::Engine)?;
     let Some(delta) = delta else {
-        return Ok((None, outcome));
+        return Ok((None, outcome, None));
     };
     let out = save(&workbook)?;
     let sides = Sides {
@@ -215,5 +232,27 @@ fn run_r1(
     };
     let (items, checked) = score(label, &sides, &out);
     let found = r1::violations(label, plain, items, &delta);
-    Ok((Some((found, checked)), outcome))
+    Ok((Some((found, checked)), outcome, Some(out)))
+}
+
+/// The file name `--save-dir` gives a case's output of scenario `label`: `<case id>.<label>.xlsx`,
+/// with each path separator of the id as `__` and each `/` of the label as `-`, so the file lands in
+/// the directory itself (T-4890's `resave_probe.py` parses these names back).
+pub(super) fn save_name(case_id: &str, label: &str) -> String {
+    format!(
+        "{}.{}.xlsx",
+        case_id.replace(['/', '\\'], "__"),
+        label.replace('/', "-")
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn a_save_name_has_no_path_separator() {
+        assert_eq!(
+            super::save_name("roundtrip-poi/a\\b.xlsx", "R1/all"),
+            "roundtrip-poi__a__b.xlsx.R1-all.xlsx"
+        );
+    }
 }

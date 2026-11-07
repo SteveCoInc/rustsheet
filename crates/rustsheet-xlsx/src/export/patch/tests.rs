@@ -4,6 +4,7 @@ use rustsheet_engine::expressions::token::Error;
 use rustsheet_engine::types::{Cell, FormulaValue};
 
 use super::strings::{append_strings, count_si, set_count};
+use super::tag::set_attr;
 use super::{index_sheet, patch_value, rich_value};
 
 const SHEET: &str = r#"<worksheet><sheetData><row r="1" spans="1:3"><c r="A1"><v>1</v></c><c r="C1" s="2"><f>A1*2</f><v>0</v></c></row><row r="3"><c r="B3" t="s"><v>0</v></c></row></sheetData><extLst><ext uri="{X}"/></extLst></worksheet>"#;
@@ -122,6 +123,34 @@ fn a_single_quoted_attribute_is_requoted_and_a_rich_error_keeps_only_its_own_kin
 }
 
 #[test]
+fn an_attribute_is_found_in_either_quote_and_never_inside_another_value() {
+    assert_eq!(
+        set_attr("<fonts count='2'", "count", |n| n + 1),
+        "<fonts count='3'"
+    );
+    assert_eq!(
+        set_attr("<fonts\tcount = \"2\"", "count", |_| 5),
+        "<fonts\tcount = \"5\""
+    );
+    assert_eq!(
+        set_attr(r#"<fonts x='a count="9"' count="2""#, "count", |_| 3),
+        r#"<fonts x='a count="9"' count="3""#
+    );
+    assert_eq!(
+        set_attr(r#"<fonts recount="2""#, "count", |_| 3),
+        r#"<fonts recount="2""#
+    );
+    assert_eq!(
+        set_attr(r#"<fonts count="x""#, "count", |_| 3),
+        r#"<fonts count="x""#
+    );
+    assert_eq!(
+        set_attr(r#"<fonts é="1" count="2""#, "count", |_| 3),
+        r#"<fonts é="1" count="3""#
+    );
+}
+
+#[test]
 fn counts_are_set_in_the_sst_tag_only() {
     let sst = r#"<sst uniqueCount="1"><si><t>x count="7"</t></si>"#;
     assert_eq!(set_count(sst, "count", |n| n + 1), sst);
@@ -133,4 +162,130 @@ fn counts_are_set_in_the_sst_tag_only() {
         count_si(r"<sst><si><t>a</t></si><si/><si><r><t>b</t></r></si></sst>"),
         Ok(3)
     );
+}
+
+mod styles {
+    use rustsheet_engine::types::{Border, Dxf, NumFmt, Styles};
+
+    use super::super::styles::{appended, patch};
+
+    #[test]
+    fn only_a_prefix_stable_table_is_patched() {
+        let pristine = Styles::default();
+        let mut live = pristine.clone();
+        live.num_fmts.push(NumFmt {
+            num_fmt_id: 164,
+            format_code: "0.000".into(),
+        });
+        live.cell_xfs.push(live.cell_xfs[0].clone());
+        assert!(appended(&pristine, &live).is_some());
+        // A record the source had, changed in place: every `s=` naming it would change meaning.
+        let mut moved = live.clone();
+        moved.cell_xfs[0].num_fmt_id = 164;
+        assert!(appended(&pristine, &moved).is_none());
+        // A named style, a cell style xf or a dxf: none of them is written by the patch.
+        let mut named = live.clone();
+        named.cell_styles.clear();
+        assert!(appended(&pristine, &named).is_none());
+        let mut style_xf = live.clone();
+        style_xf
+            .cell_style_xfs
+            .push(style_xf.cell_style_xfs[0].clone());
+        assert!(appended(&pristine, &style_xf).is_none());
+        let mut dxf = live.clone();
+        dxf.dxfs.push(Dxf::default());
+        assert!(appended(&pristine, &dxf).is_none());
+    }
+
+    #[test]
+    fn records_are_appended_with_their_counts_and_a_missing_num_fmts_is_created() {
+        let mut pristine = Styles::default();
+        pristine.num_fmts.clear();
+        let mut live = pristine.clone();
+        live.num_fmts.push(NumFmt {
+            num_fmt_id: 164,
+            format_code: "0.000".into(),
+        });
+        live.cell_xfs.push(live.cell_xfs[0].clone());
+        let xfs = pristine.cell_xfs.len();
+        let fonts = pristine.fonts.len();
+        let source = format!(
+            r#"<styleSheet xmlns="m"><fonts count="{fonts}">{}</fonts><fills count="0"/><borders count="0"/><cellXfs count="{xfs}">{}</cellXfs></styleSheet>"#,
+            "<font/>".repeat(fonts),
+            "<xf/>".repeat(xfs)
+        );
+        let added = appended(&pristine, &live).expect("prefix-stable");
+        let out = patch(&source, &pristine, &added).expect("patches");
+        assert!(out.starts_with(r#"<styleSheet xmlns="m"><numFmts count="1"><numFmt numFmtId="164" formatCode="0.000"/></numFmts>"#), "{out}");
+        assert!(
+            out.contains(&format!(r#"<cellXfs count="{}">"#, xfs + 1)),
+            "{out}"
+        );
+        // A section that holds other than what the importer read is refused.
+        let short = source.replacen("<xf/>", "", 1);
+        assert!(patch(&short, &pristine, &added).is_err());
+    }
+
+    /// A source `styles.xml` whose sections hold the pristine table's records, `borders` as given.
+    fn source(pristine: &Styles, bom: &str, borders: &str) -> String {
+        format!(
+            r#"{bom}<styleSheet xmlns="m"><numFmts count="1"><numFmt numFmtId="164" formatCode="€ 0"/></numFmts><fonts count="{}">{}</fonts><fills count="{}">{}</fills>{borders}<cellXfs count="{}">{}</cellXfs></styleSheet>"#,
+            pristine.fonts.len(),
+            "<font/>".repeat(pristine.fonts.len()),
+            pristine.fills.len(),
+            "<fill/>".repeat(pristine.fills.len()),
+            pristine.cell_xfs.len(),
+            "<xf/>".repeat(pristine.cell_xfs.len()),
+        )
+    }
+
+    #[test]
+    fn fills_and_borders_append_after_a_bom_into_an_empty_single_quoted_section() {
+        let pristine = Styles {
+            num_fmts: vec![NumFmt {
+                num_fmt_id: 164,
+                format_code: "€ 0".into(),
+            }],
+            borders: Vec::new(),
+            ..Styles::default()
+        };
+        let mut live = pristine.clone();
+        live.fills.push(live.fills[0].clone());
+        live.borders.push(Border::default());
+        live.num_fmts.push(NumFmt {
+            num_fmt_id: 165,
+            format_code: "€ 0.0".into(),
+        });
+        let source = source(&pristine, "\u{feff}", "<borders count='0'/>");
+        let added = appended(&pristine, &live).expect("prefix-stable");
+        let out = patch(&source, &pristine, &added).expect("patches");
+        assert!(out.starts_with("\u{feff}<styleSheet"), "{out}");
+        assert!(
+            out.contains(r#"<numFmts count="2"><numFmt numFmtId="164" formatCode="€ 0"/><numFmt numFmtId="165""#),
+            "{out}"
+        );
+        let fills = pristine.fills.len();
+        assert!(
+            out.contains(&format!(r#"<fills count="{}">"#, fills + 1)),
+            "{out}"
+        );
+        assert!(out.contains("<borders count='1'><border>"), "{out}");
+        // Every source byte before the first appended record is kept.
+        let first = source.find("</numFmts>").expect("numFmts");
+        assert_eq!(
+            out[..first].replace("count=\"2\"", "count=\"1\""),
+            source[..first]
+        );
+    }
+
+    #[test]
+    fn a_new_fill_in_a_reserved_slot_regenerates() {
+        let mut pristine = Styles::default();
+        pristine.fills.truncate(1);
+        let mut live = pristine.clone();
+        live.fills.push(live.fills[0].clone());
+        let source = source(&pristine, "", "<borders count=\"1\"><border/></borders>");
+        let added = appended(&pristine, &live).expect("prefix-stable");
+        assert!(patch(&source, &pristine, &added).is_err());
+    }
 }

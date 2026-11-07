@@ -11,7 +11,9 @@ use crate::arithmetic::bcast_get;
 use crate::cast::NumberOrArray;
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
-use crate::expressions::utils::{indirect_reference_text, quote_digit_leading_sheet};
+use crate::expressions::utils::{
+    indirect_r1c1_tail_sheet_prefix, indirect_reference_text, quote_digit_leading_sheet,
+};
 use crate::external_reference::{one_external_area, PickedReference};
 use crate::functions::util::array_node_to_calc_result;
 use crate::functions::Function;
@@ -846,6 +848,11 @@ impl Model {
         // allowed"). The name and structured-reference fallbacks still see the text as written.
         let parsed_reference = match indirect_reference_text(&ref_text) {
             None => Err("Invalid reference. Whitespace is not allowed there.".to_string()),
+            // An unquoted R1C1-shaped prefix with more text (`C1D!B1`) names no sheet
+            // (probes/t4861-indirect-r1c1-shaped-sheet-prefix, excel-graph, T-4861).
+            Some(reference_text) if a1 && indirect_r1c1_tail_sheet_prefix(&reference_text) => {
+                Err("Invalid reference. R1C1-shaped sheet prefix.".to_string())
+            }
             Some(reference_text) if a1 => {
                 // The lexer takes no unquoted sheet name that starts with a digit; INDIRECT text
                 // does (`INDIRECT("2024!B1")` reads sheet `2024`; probes/indirect-sheet-scoped-name

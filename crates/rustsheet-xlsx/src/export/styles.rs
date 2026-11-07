@@ -1,7 +1,7 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
 #![expect(clippy::if_not_else)]
 // LINT-DEBT-END
-use rustsheet_engine::types::{Styles, Workbook};
+use rustsheet_engine::types::{CellXfs, Font, NumFmt, Styles, Workbook};
 
 use crate::export::{
     dxfs_styles::get_dxfs_xml,
@@ -10,33 +10,35 @@ use crate::export::{
 
 use super::{escape::escape_xml, xml_constants::XML_DECLARATION};
 
+/// One `<font>` record, as a full save and the patch tier both write it.
+pub(crate) fn font_xml(font: &Font) -> String {
+    let size = format!("<sz val=\"{}\"/>", font.sz);
+    let color = get_color_xml(&font.color, "color");
+    let name = format!("<name val=\"{}\"/>", escape_xml(&font.name));
+    let bold = if font.b { "<b/>" } else { "" };
+    let italic = if font.i { "<i/>" } else { "" };
+    let underline = if font.u { "<u/>" } else { "" };
+    let strike = if font.strike { "<strike/>" } else { "" };
+    let family = format!("<family val=\"{}\"/>", font.family);
+    let scheme = format!("<scheme val=\"{}\"/>", font.scheme);
+    format!(
+        "<font>\
+            {size}\
+            {color}\
+            {name}\
+            {bold}\
+            {italic}\
+            {underline}\
+            {strike}\
+            {family}\
+            {scheme}\
+         </font>"
+    )
+}
+
 fn get_fonts_xml(styles: &Styles) -> String {
     let fonts = &styles.fonts;
-    let mut fonts_str: Vec<String> = vec![];
-    for font in fonts {
-        let size = format!("<sz val=\"{}\"/>", font.sz);
-        let color = get_color_xml(&font.color, "color");
-        let name = format!("<name val=\"{}\"/>", escape_xml(&font.name));
-        let bold = if font.b { "<b/>" } else { "" };
-        let italic = if font.i { "<i/>" } else { "" };
-        let underline = if font.u { "<u/>" } else { "" };
-        let strike = if font.strike { "<strike/>" } else { "" };
-        let family = format!("<family val=\"{}\"/>", font.family);
-        let scheme = format!("<scheme val=\"{}\"/>", font.scheme);
-        fonts_str.push(format!(
-            "<font>\
-                {size}\
-                {color}\
-                {name}\
-                {bold}\
-                {italic}\
-                {underline}\
-                {strike}\
-                {family}\
-                {scheme}\
-             </font>"
-        ));
-    }
+    let fonts_str: Vec<String> = fonts.iter().map(font_xml).collect();
     let font_count = fonts.len();
     format!(
         "<fonts count=\"{font_count}\">{}</fonts>",
@@ -83,18 +85,17 @@ fn get_borders_xml(styles: &Styles) -> String {
 // <numFmts count="1">
 //   <numFmt numFmtId="164" formatCode="##,#00;[Blue]\-\-#,##0"/>
 // </numFmts>
+/// One `<numFmt>` record, as a full save and the patch tier both write it.
+pub(crate) fn num_fmt_xml(num_fmt: &NumFmt) -> String {
+    let num_fmt_id = num_fmt.num_fmt_id;
+    let format_code = escape_xml(&num_fmt.format_code);
+    format!("<numFmt numFmtId=\"{num_fmt_id}\" formatCode=\"{format_code}\"/>")
+}
+
 fn get_cell_number_formats_xml(styles: &Styles) -> String {
     let num_fmts = &styles.num_fmts;
-    let mut num_fmts_str: Vec<String> = vec![];
+    let num_fmts_str: Vec<String> = num_fmts.iter().map(num_fmt_xml).collect();
     let num_fmt_count = num_fmts.len();
-    for num_fmt in num_fmts {
-        let num_fmt_id = num_fmt.num_fmt_id;
-        let format_code = &num_fmt.format_code;
-        let format_code = escape_xml(format_code);
-        num_fmts_str.push(format!(
-            "<numFmt numFmtId=\"{num_fmt_id}\" formatCode=\"{format_code}\"/>"
-        ));
-    }
     if num_fmt_count == 0 {
         return String::new();
     }
@@ -157,65 +158,42 @@ fn get_cell_style_xfs_xml(styles: &Styles) -> String {
     )
 }
 
+/// One `<xf>` record of `cellXfs`, as a full save and the patch tier both write it.
+pub(crate) fn cell_xf_xml(cell_xf: &CellXfs) -> String {
+    let xf_id = cell_xf.xf_id;
+    let border_id = cell_xf.border_id;
+    let fill_id = cell_xf.fill_id;
+    let font_id = cell_xf.font_id;
+    let num_fmt_id = cell_xf.num_fmt_id;
+    let flag = |on: bool, attr: &'static str| if on { attr } else { "" };
+    let quote_prefix_str = flag(cell_xf.quote_prefix, r#" quotePrefix="1""#);
+    let apply_alignment_str = flag(cell_xf.apply_alignment, r#" applyAlignment="1""#);
+    let apply_font_str = flag(cell_xf.apply_font, r#" applyFont="1""#);
+    let apply_fill_str = flag(cell_xf.apply_fill, r#" applyFill="1""#);
+    let apply_number_format_str = flag(cell_xf.apply_number_format, r#" applyNumberFormat="1""#);
+    let apply_border_str = flag(cell_xf.apply_border, r#" applyBorder="1""#);
+    let properties = format!(
+        "xfId=\"{xf_id}\" \
+            borderId=\"{border_id}\" \
+            fillId=\"{fill_id}\" \
+            fontId=\"{font_id}\" \
+            numFmtId=\"{num_fmt_id}\"\
+            {quote_prefix_str}\
+            {apply_alignment_str}\
+            {apply_font_str}\
+            {apply_fill_str}\
+            {apply_number_format_str}\
+            {apply_border_str}"
+    );
+    match &cell_xf.alignment {
+        Some(alignment) => format!("<xf {properties}>{}</xf>", get_alignment(alignment)),
+        None => format!("<xf {properties}/>"),
+    }
+}
+
 fn get_cell_xfs_xml(styles: &Styles) -> String {
     let cell_xfs = &styles.cell_xfs;
-    let mut cell_xfs_str: Vec<String> = vec![];
-    for cell_xf in cell_xfs {
-        let xf_id = cell_xf.xf_id;
-        let border_id = cell_xf.border_id;
-        let fill_id = cell_xf.fill_id;
-        let font_id = cell_xf.font_id;
-        let num_fmt_id = cell_xf.num_fmt_id;
-        let quote_prefix_str = if cell_xf.quote_prefix {
-            r#" quotePrefix="1""#
-        } else {
-            ""
-        };
-        let apply_alignment_str = if cell_xf.apply_alignment {
-            r#" applyAlignment="1""#
-        } else {
-            ""
-        };
-        let apply_font_str = if cell_xf.apply_font {
-            r#" applyFont="1""#
-        } else {
-            ""
-        };
-        let apply_fill_str = if cell_xf.apply_fill {
-            r#" applyFill="1""#
-        } else {
-            ""
-        };
-        let apply_number_format_str = if cell_xf.apply_number_format {
-            r#" applyNumberFormat="1""#
-        } else {
-            ""
-        };
-        let apply_border_str = if cell_xf.apply_border {
-            r#" applyBorder="1""#
-        } else {
-            ""
-        };
-        let properties = format!(
-            "xfId=\"{xf_id}\" \
-                borderId=\"{border_id}\" \
-                fillId=\"{fill_id}\" \
-                fontId=\"{font_id}\" \
-                numFmtId=\"{num_fmt_id}\"\
-                {quote_prefix_str}\
-                {apply_alignment_str}\
-                {apply_font_str}\
-                {apply_fill_str}\
-                {apply_number_format_str}\
-                {apply_border_str}"
-        );
-        if let Some(alignment) = &cell_xf.alignment {
-            let alignment = get_alignment(alignment);
-            cell_xfs_str.push(format!("<xf {properties}>{alignment}</xf>"));
-        } else {
-            cell_xfs_str.push(format!("<xf {properties}/>"));
-        }
-    }
+    let cell_xfs_str: Vec<String> = cell_xfs.iter().map(cell_xf_xml).collect();
     let style_count = cell_xfs.len();
     format!(
         "<cellXfs count=\"{style_count}\">{}</cellXfs>",

@@ -217,6 +217,48 @@ fn order_statistics_over_an_error_and_a_reference_follow_the_first_element() {
     }
 }
 
+// A lifted XLOOKUP in a per-element caller's range argument is a grid of its elements whatever
+// its if_not_found: each value element is #VALUE!, an error element its error, a 1x1 lookup a 1x1
+// result and a scalar lookup the reference it picks (T-4742; t4704 A64:C74, t4742 A10:C37).
+#[test]
+fn criteria_calls_lift_over_every_xlookup_element() {
+    let mut model = data();
+    model.set_a1(
+        "K1",
+        "=COUNTIF(XLOOKUP({2;9},$A$1:$A$3,$B$1:$B$3,\"x\"),\">0\")",
+    );
+    model.set_a1(
+        "L1",
+        "=ROWS(SUMIF(XLOOKUP({2;3},$A$1:$A$3,$B$1:$B$3,\"x\"),\">0\"))",
+    );
+    model.set_a1("M1", "=COUNTIF(XLOOKUP({2;9},$A$1:$A$3,$B$1:$B$3),\">0\")");
+    model.set_a1(
+        "N1",
+        "=COLUMNS(COUNTIF(XLOOKUP({2},$A$1:$A$3,$B$1:$B$3,\"x\"),\">0\"))",
+    );
+    model.set_a1(
+        "O1",
+        "=COUNTIF(XLOOKUP(2,$A$1:$A$3,$B$1:$B$3,\"x\"),\">0\")",
+    );
+    model.set_a1(
+        "P1",
+        "=ROWS(SUMIF($A$1:$A$2,\">0\",XLOOKUP({2;3},$A$1:$A$3,$B$1:$B$3,\"x\")))",
+    );
+    model.evaluate();
+    for (cell, expected) in [
+        ("K1", "#VALUE!"),
+        ("K2", "#VALUE!"),
+        ("L1", "2"),
+        ("M1", "#VALUE!"),
+        ("M2", "#N/A"),
+        ("N1", "1"),
+        ("O1", "1"),
+        ("P1", "2"),
+    ] {
+        assert_eq!(model.get_text_a1(cell), expected, "{cell}");
+    }
+}
+
 // A lift with no miss builds no grid: the hits are an ordinary array, so ISREF of an element is
 // FALSE (SPEC-0014 amendment "Producer").
 #[test]
