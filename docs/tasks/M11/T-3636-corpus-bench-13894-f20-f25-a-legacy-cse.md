@@ -3,7 +3,7 @@ id: T-3636
 title: "corpus-bench 13894 F20:F25: a legacy CSE array formula's cells past its 6-row result are #N/A (M11 owner of T-0950's corpus cells)"
 milestone: M11
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -25,9 +25,18 @@ as Excel shows them, so M11 has no unowned exit cell.
   allowance), so only the owners criterion of the Phase 1 exit waits on these cells.
 
 ## Acceptance criteria
-- [ ] corpus-bench/13894/1_13894_input.xlsx Sheet1!F20:F25 pass, and the case leaves eval/baseline/corpus-bench.txt
+- [x] corpus-bench/13894/1_13894_input.xlsx Sheet1!F20:F25 pass, and the case leaves eval/baseline/corpus-bench.txt
       if no other cell fails.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The rest of T-0950 (poi/MatrixFormulaEvalTestData.xlsx).
+
+## Outcome
+- No code change: T-0950 (#3889) already makes Sheet1!F20:F25 `#N/A`. On origin/main c709e9d20 (2026-11-07, corpus-bench
+  fetched), `rustsheet-eval show corpus-bench/13894/1_13894_input.xlsx` reports `status=Pass checked=28 passed=28`, and
+  eval/baseline/corpus-bench.txt has no `F` line for the case (only its `C ... 28` count line, which every case has).
+  The cells no longer fail, so M11 needs no owner for them.
+- Eval delta: 0 (the fix was recorded by T-0950's PR).
+- Also filed T-5012 (M15, harness, sonnet): remove the legacy per-case round-trip baseline path after T-4961 (#4007)
+  lands, the follow-up of #4007's design and security MINOR findings.
