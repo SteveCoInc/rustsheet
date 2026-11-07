@@ -3,10 +3,10 @@ id: T-4807
 title: "Pivot date items show in the source field's date number format"
 milestone: M16
 lane: engine
-status: in-progress
+status: todo
 priority: P3
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -29,3 +29,13 @@ Owner of these visibly-off cells (decision 0245):
 
 ## Out of scope
 - GETPIVOTDATA with date items (T-4805).
+
+## Handoff
+Tried (sonnet run): read the render path. Date labels render in `item_cell` (crates/rustsheet-engine/src/pivot/layout/render.rs:125) as
+`PivotCell::Number`; `RenderedCell.number_format` is a `numFmtId` applied by `set_pivot_number_format` (pivot/grid.rs ~700), so
+label cells could already carry a format. The blocker: `CacheField` (pivot.rs:104) keeps no source number format, and
+`refresh.rs::read_source` / `is_date_style` (~line 105-130) only tests date-ness through `SourceCells::value`.
+Plan: add `number_format: Option<u32>` to `CacheField` (OOXML `cacheField numFmtId`), fill it in `read_source` from the first date
+source cell's xf `num_fmt_id` (extend `SourceCells`), render date-item labels with it via `put_formatted`, and read it on
+xlsx import. About 25 `CacheField { .. }` construction sites need the new field (`..Default` where possible). Persisted model plus
+trait change, so judged beyond sonnet. Nothing implemented; `make eval-show` was not completed.
