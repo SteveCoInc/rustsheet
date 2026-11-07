@@ -3,7 +3,7 @@ id: T-4232
 title: "IRR on T-4213's near-zero-root sweep: 45 cells #NUM! where Excel returns a root, and A53/A149 at the noise floor (decision 0267)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
