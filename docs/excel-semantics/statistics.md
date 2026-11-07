@@ -2980,6 +2980,24 @@ Status: VERIFIED (excel-graph) for the dispatch, computed tail, complement and a
 arithmetic is in the entries below
 Tasks: T-2464, T-2504, T-2505, T-3665
 
+## Incomplete beta at two vanishing shapes: bratio's w = b/(a + b) (T-3577)
+Rule: where both shapes are below eps/1000 (eps = 1e-15), Excel's incomplete beta is bratio's first branch, `w = b/(a + b)`
+and `w1 = a/(a + b)` in doubles, before bratio looks at x. Every evidence point has x at or below 8.1E-43; that the
+same holds at moderate x follows from TOMS's structure and is not oracle-confirmed yet. So BETA.DIST's cdf is about b/a,
+not 0:
+`BETA.DIST(2.65510449055274E-229,1.22900757873089E-163,2.29413050210964E-185,TRUE)` is 1.8666528521155483E-22, and
+`BETADIST(4.03359750605285E-148,4.41754879662325E-300,5.09204162393239E-226)` is 1. This matches the true value at these
+shapes too (50-digit mpmath).
+Evidence: accuracy/BETA.DIST/s1 A184, A187, A193; BETADIST/s1 A183, A187, A193, A198; BETA.DIST/r4-T-4437 A185, A189,
+A192, A194 (excel-graph). All eleven are to the bit, from three batches. Seven are nontrivial; four are 1. BETADIST/s1
+A191, a twelfth such point, already passed and still does. BETA.INV/s1 A189, A195, A199 (both shapes tiny) are `#NUM!` in
+Excel, as they are in the engine, which fits a cdf that does not move with x. Before T-3577 the engine had no Tiny branch and
+gave 0 through its fallback kernel. These points were first read as fpser/apser shapes, but both shapes are tiny, so
+bratio stops before those tests. Where only one shape is tiny, Excel has no fpser, and no apser (or a narrower one) ("Incomplete beta bpser").
+Status: VERIFIED (excel-graph)
+Implemented (T-3577): `bratio::ported_tails_with`'s `Branch::Tiny`.
+Tasks: T-3577
+
 ## Incomplete beta closed forms act on the oriented arguments (T-2464)
 Rule: after bratio's swap, on (a0, b0, x0, y0), with Excel's EXP and LN: b0 = 1 gives w = EXP(a0·LN(x0)); a0 = 1 with
 y0 <= 0.9 gives w1 = EXP(b0·LN(fl(1 - x0))), 1 - x0 recomputed in the kernel (not the caller's y); a0 = 1 with y0 > 0.9
@@ -7415,11 +7433,11 @@ whose df is above 1E10 are left out: the cumulative T.DIST is `#NUM!` there for 
   no number above 3.3E+35 at a positive x.
 - Cumulative, x < 0: 0 up to |x| 2.0E+153 (r4-T-2585 A223, `T.DIST(-2.01264664929796E+153,43530,TRUE)`), `#NUM!` from
   5.4E+196 (e-T-3425 A88, `T.DIST(-5.43165733249003E+196,3768,TRUE)`, and 5 more cells).
-- The density's brackets are in "T.DIST's density is #NUM! at a huge x" below.
+- The density's cut (exactly 2^512, T-3554) is in "T.DIST's density is #NUM! at a huge x" below.
 
-The T.DIST definition encodes the four brackets (per `cumulative` and per sign), and decision 0321 moved its 34
-committed table points at or past each `#NUM!` from a math number to a domain error.
-Status: VERIFIED (excel-graph), the cuts UNVERIFIED
+The T.DIST definition encodes the two cumulative brackets (per sign) and the density's exact cut (T-3554), and
+decision 0321 moved its 34 committed table points at or past each `#NUM!` from a math number to a domain error.
+Status: VERIFIED (excel-graph), the cumulative cuts UNVERIFIED
 Tasks: T-2256, T-2474, T-4102, T-4580
 
 ## Student t quantile at p = 0 with df below 2 is #DIV/0! (T-2256)
@@ -7985,7 +8003,27 @@ Rule:
     0 up to |x| 1.1E+153 (`T.DIST(-1.12173766596864E+153,8,FALSE)`, A236) and `#NUM!` from 9.7E+176
     (`T.DIST(-9.72379926420781E+176,5,FALSE)`, A266), so its cut lies between 1.1E+153 and 9.7E+176.
   - Every density cell of the three tables at or past these `#NUM!` points is `#NUM!`: 11 at a positive x and 7 at a
-    negative x. The T.DIST definition encodes both brackets (`student_t.T_DIST_CUTS`, decision 0321).
+    negative x. The T.DIST definition encoded both brackets (`student_t.T_DIST_CUTS`, decision 0321).
+  - T-3554 pins the cut: the density is `#NUM!` exactly when fl(x·x) overflows a double, |x| ≥ 2^512
+    (1.3407807929942597E+154), at every df and either sign; `2^512*(1-2^-52)` = 2^512 - 2^460, two doubles below 2^512
+    (the ulp there is 2^459), is not `#NUM!` (a number, or `#DIV/0!` at df 1, below). The probed bracket is
+    [2^512 - 2^460, 2^512]; 2^512's true predecessor 2^512 - 2^459 is unprobed (the rule gives it a number). The probe's
+    `=H1-H2` and `H2<H1` helper cells cannot tell the gap (numbers.md "Near-zero snapping" and "Comparison tolerance"). This
+    is the first step of Excel's density (xx = fl(t t), "Student t density is Loader's dt"). Probed at df 1, 2, 24,
+    1E+10, 1E+15 and 1E+300 on both sides of 2^512 and at 4 and 8 times it. Rules the probe ruled out, each by cells
+    its predictions (written before the fill, in the task file) got wrong: `#NUM!` where the density underflows to 0
+    (`T.DIST(1E+120,2,FALSE)` and `T.DIST(1E+120,9,FALSE)` are 0) or below DBL_MIN (`T.DIST(2E+153,1,FALSE)` is
+    7.957747154594767E-308 while `T.DIST(3.8E+153,1,FALSE)` is 0); a ln-space density (`T.DIST(1E+160,1,FALSE)`,
+    whose density 3.2E-321 is a nonzero double, is `#NUM!`); where x²/df overflows (`T.DIST(2^512,2,FALSE)` and
+    `T.DIST(1E+200,1E+300,FALSE)` are `#NUM!`); where x·x + df does (`T.DIST(1.339E+154,1E+307,FALSE)` and
+    `T.DIST(2^512*(1-2^-52),1E+300,FALSE)` are 0).
+  - df 1 (a df truncating to 1 too) has a second cut below it: the density fl(1/fl(pi fl(1 + fl(x x)))) is `#DIV/0!`
+    where fl(x x) is finite and the denominator overflows, |x| from about 7.565E+153 to 2^512:
+    `T.DIST(7.6E+153,1,FALSE)`, `T.DIST(1E+154,1,FALSE)`, `T.DIST(2^512*(1-2^-52),1,FALSE)` and `T.DIST(7.6E+153,1.5,FALSE)` are `#DIV/0!`, while
+    `T.DIST(7.55E+153,1,FALSE)` is 0. Below that the quotient is a number, and a subnormal one is 0 (as `/` flushes
+    it, numbers.md "Subnormal results become 0"): `T.DIST(3.75E+153,1,FALSE)` is 2.2635369684180667E-308, the normal
+    double, and `T.DIST(3.8E+153,1,FALSE)` to `T.DIST(7.55E+153,1,FALSE)` are 0. Negative x gives the same.
+    The T.DIST definition encodes both cuts (`student_t.DENSITY_X_SQUARED_CUT`, `_df_one_denominator_overflows`).
 - `T.INV.2T(2.22507385850721E-308,df)` and `TINV(2.22507385850721E-308,df)` are `#NUM!` at df 8, 9, 12 and 14, although
   the quantile is a finite double (about 3.2E+22 to 6.9E+38). T.INV accepts p down to 1E-300 (T-1531).
   `CONFIDENCE.T(2.22507385850721E-308,sd,n)`, which is T.INV.2T at df n - 1, is `#NUM!` too, at n 38, 68 and 79 (df 37,
@@ -8006,17 +8044,21 @@ Rule:
 
 - The legacy `FINV(0,2,5)` is `#NUM!` (probes-numeric/m9-legacy-finv A65), so the 0 is F.INV's only.
 
-The exact x where T.DIST's density turns `#NUM!` is not yet probed; the two-tailed quantile's p cut is 2·DBL_MIN (T-4541).
-Evidence: Gate A tables, excel-graph:
+T.DIST's density cut is 2^512 (T-3554); the two-tailed quantile's p cut is 2·DBL_MIN (T-4541).
+Evidence: probes/t3554-tdist-density-huge-x (A1:B24, I1:I6) and probes/t3554-tdist-density-df1-div0 (A1:C4),
+excel-graph, 2026-11-06, each written with its predictions before the fill; probes/t4541-t-inv-2t-tiny-p (above); Gate A
+tables, excel-graph:
 - accuracy/T.DIST/s1 A85, A95, A105 and A110, and accuracy/T.DIST/e-T-3425 A90, A103 and A116 (T-3425);
 - accuracy/T.INV.2T/s1 A68 and A78, and accuracy/TINV/s1 A68 and A78;
 - accuracy/CONFIDENCE.T/s1 A112, A123 and A134 (T-4102);
 - accuracy/T.DIST/s1 A94 and A97 (density 0 below the cut);
 - accuracy/T.DIST/r4-T-2585 A236 (density 0), and A266 and A267 (`#NUM!`; T-4580);
 - accuracy/F.INV/s1 A111 (`F.INV(0,38,10)`) and A125 (`F.INV(0,9,50)`), and probes-numeric/t1049-finv A16 (`F.INV(0,3,7)`).
-Status: VERIFIED (excel-graph) for the cited cells and the two-tailed quantile's p cut (T-4541); T.DIST's x cut points are UNVERIFIED.
-Ours: T.DIST returns 0, a Gate A known failure owned by T-3554. T.INV.2T, TINV and CONFIDENCE.T as Excel since T-4541
-(`two_tailed_half_underflows`: a p whose half `flush_subnormal` makes 0 is p = 0).
+Status: VERIFIED (excel-graph) for the cited cells, T.DIST's density cuts (T-3554) and the two-tailed quantile's p cut
+(T-4541).
+Ours: T.DIST's density as Excel since T-3554 (`t_x_overflows` and `excel_t_density_df_one_overflows` in `t_dist_of`).
+T.INV.2T, TINV and CONFIDENCE.T as Excel since T-4541 (`two_tailed_half_underflows`: a p whose half `flush_subnormal`
+makes 0 is p = 0).
 Tasks: T-3554, T-3386, T-3358, T-4541, T-4102, T-4580
 
 ## A text scalar argument is #VALUE! before an error cell as the data (T-3781)

@@ -367,6 +367,11 @@ fn ported_tails_with(
     let d = dispatch(a, b, x, y)?;
     let other = half_complement;
     let (w, w1) = match d.branch {
+        // Both shapes below eps/1000: bratio's w = b/(a + b), w1 = a/(a + b) (TOMS 708 L230).
+        // Excel's cdf to the bit on all eleven Gate A points there (accuracy/BETA.DIST/s1 A184,
+        // A187, A193; BETADIST/s1 A183, A187, A193, A198; BETA.DIST/r4-T-4437 A185, A189, A192,
+        // A194), where the kernel this replaces gave 0 (T-3577).
+        Branch::Tiny => (b / (a + b), a / (a + b)),
         Branch::WBpser | Branch::BpserLarge => {
             let w = bpser(d.a0, d.b0, d.x0)?;
             (w, other(w))

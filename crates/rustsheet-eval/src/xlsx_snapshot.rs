@@ -595,6 +595,10 @@ struct PendingCell {
     f_attrs: Option<(Option<String>, Option<String>, Option<String>)>, // (t, si, ref)
     v_text: Option<String>,
     is_text: Option<String>,
+    /// The cell has a `<v>` or an `<is>` child, even an empty one: a `t="str"` or `t="inlineStr"`
+    /// constant without one stores no value and is blank (T-4148).
+    has_v: bool,
+    has_is: bool,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -638,11 +642,17 @@ fn parse_sheet(
                     cur.f_attrs = Some((attr(&e, "t"), attr(&e, "si"), attr(&e, "ref")));
                     field = Field::F;
                 }
-                "v" if in_cell => field = Field::V,
+                "v" if in_cell => {
+                    cur.has_v = true;
+                    field = Field::V;
+                }
+                "is" if in_cell => cur.has_is = true,
                 "t" if in_cell => field = Field::IsT,
                 _ => {}
             },
             Event::Empty(e) => match e.local_name().as_ref() {
+                "v" if in_cell => cur.has_v = true,
+                "is" if in_cell => cur.has_is = true,
                 "c" => {
                     let c = start_cell(&e, row_num, &mut next_col);
                     finish_cell(
@@ -800,6 +810,18 @@ fn finish_cell(
             }
         }
     };
+    // Excel reads a constant `t="str"` cell with no `<v>`, or an inline string with no `<is>`, as
+    // blank, while an empty `<v>` or `<is>` is the empty string (fixtures/valueless-cell-forms;
+    // docs/excel-semantics/xlsx-storage.md "A cell that stores no value is blank").
+    let valueless = formula_kind.is_none()
+        && match c.t.as_deref() {
+            Some("str") => !c.has_v,
+            Some("inlineStr") => !c.has_is,
+            _ => false,
+        };
+    if valueless {
+        return;
+    }
     let mut value = decode_value(
         c.t.as_deref(),
         c.v_text.as_deref(),

@@ -272,6 +272,20 @@ fn loader_t_constant(n: f64) -> Dd {
     dd_add(sum, stirling)
 }
 
+/// The denominator fl(pi fl(1 + xx)) of Excel's df-1 density, xx = fl(t t).
+fn df_one_denominator(xx: f64) -> f64 {
+    extended_product(std::f64::consts::PI, extended_sum(1.0, xx))
+}
+
+/// Whether Excel's T.DIST(t, 1, FALSE) is `#DIV/0!`: fl(t t) is finite but the denominator
+/// fl(pi fl(1 + fl(t t))) overflows, |t| from about 7.56E+153 to 2^512 (`T.DIST(7.6E+153,1,FALSE)`
+/// is `#DIV/0!`, `T.DIST(7.55E+153,1,FALSE)` is 0; probes/t3554-tdist-density-df1-div0 A8:A10,
+/// probes/t3554-tdist-density-huge-x A1, A18; statistics.md "T.DIST's density is #NUM! at a huge x").
+pub(crate) fn excel_t_density_df_one_overflows(t: f64) -> bool {
+    let xx = extended_product(t, t);
+    xx.is_finite() && !df_one_denominator(xx).is_finite()
+}
+
 /// Excel's T.DIST(t, n, FALSE) for a truncated df n >= 1 (statistics.md "Student t density is
 /// Loader's dt", T-2513, T-2585), every operation an x87 one stored to a double:
 /// - df 1: `fl(1/fl(pi fl(1 + fl(t t))))`; df 2: `EXP(fl(-1.5 LN(fl(2 + fl(t t)))))`;
@@ -294,8 +308,9 @@ pub(crate) fn excel_t_density(t: f64, n: f64) -> Option<f64> {
         return None;
     }
     if n == 1.0 {
-        let denominator = extended_product(std::f64::consts::PI, extended_sum(1.0, xx));
-        let density = extended_quotient(1.0, denominator);
+        // A subnormal quotient is 0 (probes/t3554-tdist-density-df1-div0 A3:A8, |t| 3.8E+153 to
+        // 7.55E+153), as Excel's `/` flushes one (numbers.md "Subnormal results become 0").
+        let density = flush_subnormal(extended_quotient(1.0, df_one_denominator(xx)));
         return density.is_finite().then_some(density);
     }
     if n == 2.0 {
@@ -604,5 +619,26 @@ mod tests {
         // Gate A T.DIST/r4-T-2585 A138: the subnormal product is flushed, as Excel's `*` does.
         assert_eq!(excel_t_density(-1.1002374143529E+20, 15.0), Some(0.0));
         assert_eq!(excel_t_density(f64::NAN, 5.0), None);
+        // probes/t3554-tdist-density-df1-div0 A1, A2 (normal) and A3 (subnormal, flushed).
+        assert_eq!(
+            excel_t_density(3.7e153, 1.0),
+            Some(2.325_126_999_151_137_3e-308)
+        );
+        assert_eq!(
+            excel_t_density(-3.75e153, 1.0),
+            Some(2.263_536_968_418_066_7e-308)
+        );
+        assert_eq!(excel_t_density(3.8e153, 1.0), Some(0.0));
+    }
+
+    #[test]
+    fn df_one_denominator_overflow_brackets_excel() {
+        // probes/t3554-tdist-density-df1-div0 A8:A10 and probes/t3554-tdist-density-huge-x A1, A2.
+        // 2^512 - 2^460, two doubles below 2^512 (the probed H2; 2^512's predecessor is unprobed).
+        let two_below = 2f64.powi(512) * (1.0 - f64::EPSILON);
+        assert!(!excel_t_density_df_one_overflows(7.55e153));
+        assert!(excel_t_density_df_one_overflows(7.6e153));
+        assert!(excel_t_density_df_one_overflows(-two_below));
+        assert!(!excel_t_density_df_one_overflows(2f64.powi(512)));
     }
 }

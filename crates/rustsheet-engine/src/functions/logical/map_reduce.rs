@@ -141,62 +141,58 @@ impl Model {
             ));
         }
 
-        let (mut accumulator, start) = if has_initial {
-            (self.lambda_initial_reference(&args[0], cell), 0)
-        } else {
-            (RefArg::Value(data.at(0, 0)), 1)
-        };
-
         // A reference the LAMBDA returns stays one, as the next step's accumulator and as the
         // result: `REDUCE(A1,A2:A3,LAMBDA(a,v,IF(ISREF(a),v,"no")))` is A3 (3), and ISREF of a
         // REDUCE that ends on a reference is TRUE (probes/t4478-reduce-scan-reference-accumulator
         // Calc!E2:E3, H2, E8, E11, E20:H21). SCAN reads it instead (`fn_scan`, Calc!H13).
         let mut caller = caller.keeping_trimrange_references().keeping_references();
-        for index in start..count {
-            let accumulated = accumulator_binding(accumulator, cell);
-            let value = Binding::Value(data.at(index / columns, index % columns));
+        // The first call takes `initial_value` bound as a LAMBDA argument
+        // (`Model::lambda_initial_value`), a union as its areas.
+        let mut accumulator = if has_initial {
+            let initial = self.lambda_initial_value(&args[0], cell);
+            let value = (Binding::Value(data.at(0, 0)), false);
+            self.call_lambda_caller_binding(&mut caller, [initial, value], cell)
+        } else {
+            RefArg::Value(data.at(0, 0))
+        };
+        for index in 1..count {
+            let accumulated = (accumulator_binding(accumulator, cell), false);
+            let value = (
+                Binding::Value(data.at(index / columns, index % columns)),
+                false,
+            );
             accumulator = self.call_lambda_caller_binding(&mut caller, [accumulated, value], cell);
         }
 
         accumulator
     }
 
-    /// [`Model::lambda_initial_value`] keeping a union as its areas, REDUCE's first accumulator
-    /// ([`Model::reduce_reference`]).
-    fn lambda_initial_reference(&mut self, node: &Node, cell: CellReferenceIndex) -> RefArg {
-        if self.is_multi_area(node) && !matches!(node.ungrouped(), Node::SheetSpanKind { .. }) {
-            return self.evaluate_picked_reference_arg(node, cell);
-        }
-        RefArg::Value(self.lambda_initial_value(node, cell))
-    }
-
-    /// SCAN's and REDUCE's `initial_value` as the LAMBDA's first accumulator. A cell or range
-    /// reference stays a reference, a single cell too, as in the common case of a LAMBDA call's
-    /// argument ([`Model::bind_argument`], whose OFFSET, INDIRECT, TRIMRANGE and grid-variable
-    /// forms are not taken here): `REDUCE(Data!C7,Data!E12,COUNT)` with C7 the text "1" is 1, and
-    /// `REDUCE(Data!A12,Data!C11,PRODUCT)` with both cells TRUE is 0 (gen-m7/2c5ea078f25443a2
-    /// A1767, 18b80d3fd292d63a A467; docs/excel-semantics/arrays.md "SCAN and REDUCE keep errors
-    /// in the LAMBDA", T-2307). An error goes to the LAMBDA like any value (same entry). A 3-D
-    /// span is `#VALUE!` (`REDUCE(Sheet2:Sheet3!A1,{1},LAMBDA(a,v,a))`, and ISREF of it FALSE:
-    /// probes/t4478-reduce-scan-reference-accumulator Calc!G18:H19). A union is read in value
-    /// context here; REDUCE keeps it a reference ([`Model::lambda_initial_reference`], Calc!H17,
-    /// T-4494), and SCAN's union initial value is not probed.
+    /// SCAN's and REDUCE's `initial_value` as the LAMBDA's first accumulator: bound as a LAMBDA
+    /// call's argument is ([`Model::bind_argument`]), so a cell, and an IF, CHOOSE, INDEX,
+    /// XLOOKUP, OFFSET or INDIRECT that picks one, a LET variable bound to any of them and a union
+    /// reach the LAMBDA as references, and IFERROR as a value: `REDUCE(IF(TRUE,A2),A3,
+    /// LAMBDA(a,v,COUNT(a)))` with A2 the text "1" is 0, `REDUCE((A1,A3),A1,LAMBDA(a,v,PRODUCT(a)))`
+    /// with A1 TRUE and A3 2.5 is 2.5 and ISREF(a) is TRUE (probes/t4475-scan-reduce-reference-
+    /// initial D2:I9, probes/t4478-reduce-scan-reference-accumulator Calc!H17; gen-m7/
+    /// 2c5ea078f25443a2 A1767, T-2307); REDUCE keeps a union from step to step
+    /// ([`Model::reduce_reference`], T-4494). A 3-D span is `#VALUE!`, not a reference
+    /// (D10:I10: COUNT(a) 0, PRODUCT(a) `#VALUE!`, ISREF(a) FALSE). An empty `initial_value`
+    /// is read as before, not as an omitted parameter (T-2670). docs/excel-semantics/arrays.md
+    /// "SCAN and REDUCE keep errors in the LAMBDA" (probes/t4478-reduce-scan-reference-accumulator
+    /// Calc!G17:H19 agree).
     pub(super) fn lambda_initial_value(
         &mut self,
         node: &Node,
         cell: CellReferenceIndex,
-    ) -> CalcResult {
-        if matches!(node.ungrouped(), Node::SheetSpanKind { .. }) {
-            return CalcResult::new_error(
-                Error::VALUE,
-                cell,
-                "a 3-D reference is not an initial value".to_string(),
-            );
+    ) -> (Binding, bool) {
+        match self.bind_argument(node, cell) {
+            (Binding::Omitted, _) => (
+                Binding::Value(self.evaluate_node_in_context(node, cell)),
+                false,
+            ),
+            (span @ Binding::Span(_), marked) => (Binding::Value(span.value(cell)), marked),
+            bound => bound,
         }
-        if self.is_multi_area(node) {
-            return self.evaluate_node_in_context(node, cell);
-        }
-        self.eval_ref_or_index(node, cell)
     }
 }
 
