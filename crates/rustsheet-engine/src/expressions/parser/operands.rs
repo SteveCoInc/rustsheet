@@ -785,6 +785,7 @@ impl Parser {
             .functions
             .lookup_stored(&name)
             .filter(|_| !self.calls_bound_name(&name))
+            .filter(|kind| !self.needs_stored_prefix(&name, kind))
         {
             self.note_argument_count(&function_kind, &display_name, args.len());
             if self.loaded && function_kind == Function::Let {
@@ -825,6 +826,12 @@ impl Parser {
             args,
             id: None,
         })
+    }
+
+    /// Whether `name`, read from a file ([`Parser::set_file_names`]), calls `kind` without the
+    /// `_xlfn.` prefix Excel needs there: such a call is an unknown name, `#NAME?`.
+    fn needs_stored_prefix(&self, name: &str, kind: &Function) -> bool {
+        self.file_names && !name.starts_with('_') && kind.to_xlsx_string().starts_with("_xlfn.")
     }
 
     /// `TRUE` or `FALSE`, or the calls `TRUE()` and `FALSE()`.
