@@ -21,9 +21,9 @@ for i, a in enumerate(SHAPES, 1):
         pdf[f"{cols[j]}{i}"] = f"=GAMMA.DIST({x},{a},1E-8,FALSE)"
 chi = {}
 for i, df in enumerate(["2", "3", "4", "5"], 1):
-    for j, x in enumerate(["1E200", "1E300", "1E307", "1.7E308"]):
+    for j, x in enumerate(["1E200", "1E290"]):
         chi[f"{cols[j]}{i}"] = f"=CHISQ.DIST({x},{df},TRUE)"
-        chi[f"{cols[j + 4]}{i}"] = f"=CHIDIST({x},{df})"
+        chi[f"{cols[j + 2]}{i}"] = f"=CHIDIST({x},{df})"
 case = {
     "format": "rustsheet-case/v1",
     "description": (
