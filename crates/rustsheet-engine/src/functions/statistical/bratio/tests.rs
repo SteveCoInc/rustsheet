@@ -633,3 +633,26 @@ fn l140_sum_flush_is_beta_dists_zero_at_three_terms() {
     assert_eq!(zero(0.999_900_664_487_516, 7e6, 5.0), Some((0.0, 1.0)));
     assert_eq!(zero(0.999_772_564_701_615, 3e6, 2.5), None);
 }
+
+// Both shapes below eps/1000: bratio's w = b/(a + b), Excel's cdf to the bit (T-3577;
+// accuracy/BETA.DIST/s1 A184, A187, BETADIST/s1 A183, BETA.DIST/r4-T-4437 A185).
+#[test]
+fn tiny_shapes_are_b_over_a_plus_b() {
+    let cdf = |x: f64, a: f64, b: f64| beta_dist_lower_tail(x, 1.0 - x, a, b).to_bits();
+    assert_eq!(
+        cdf(2.655_104_490_552_74e-229, 1.229_007_578_730_89e-163, 2.294_130_502_109_64e-185),
+        1.866_652_852_115_548_3e-22_f64.to_bits()
+    );
+    assert_eq!(
+        cdf(2.082_764_766_560_38e-168, 6.756_482_513_675_39e-92, 5.689_839_675_962_67e-231),
+        8.421_304_524_131_021e-140_f64.to_bits()
+    );
+    assert_eq!(
+        cdf(4.033_597_506_052_85e-148, 4.417_548_796_623_25e-300, 5.092_041_623_932_39e-226),
+        1.0_f64.to_bits()
+    );
+    assert_eq!(
+        cdf(2.274_575_339_211_87e-260, 6.244_858_989_082_16e-159, 2.182_356_307_649_34e-191),
+        3.494_644_653_249_556e-33_f64.to_bits()
+    );
+}

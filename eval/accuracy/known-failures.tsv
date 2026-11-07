@@ -23,10 +23,7 @@ accuracy/T.INV/s1!Calc!A75	T-3363	quantile at df near 1E8 to 1E10: the engine an
 accuracy/T.INV/s1!Calc!A102	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
 accuracy/T.INV.2T/s1!Calc!A75	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
 accuracy/T.INV.2T/s1!Calc!A91	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
-accuracy/BETA.DIST/s1!Calc!A184	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
-accuracy/BETA.DIST/s1!Calc!A186	T-3577	cdf at a huge beta: Excel #NUM!, the engine and the math 0
-accuracy/BETA.DIST/s1!Calc!A187	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
-accuracy/BETA.DIST/s1!Calc!A193	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETA.DIST/s1!Calc!A186	T-4733	cdf at a huge beta: Excel #NUM!, the engine and the math 0
 accuracy/BETA.INV/s1!Calc!A83	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
 accuracy/BETA.INV/s1!Calc!A86	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
 accuracy/BETA.INV/s1!Calc!A88	T-3351	p above 1/2 at a tiny alpha: Excel 2^-53 (1 minus the flipped search's 1-2^-53), the engine #NUM!
@@ -315,11 +312,7 @@ accuracy/TTEST/s1!Calc!A136	T-4579	Excel #DIV/0! for a paired test whose one-pas
 accuracy/TTEST/s1!Calc!A101	T-4579	Excel keeps the exact differences of offset pairs; the engine's double differences put the deep tail 1.6e-9 off
 accuracy/CONFIDENCE.T/s1!Calc!A155	T-3363	quantile at df 2.3E9: the engine and Excel are both off the math, differently
 accuracy/CONFIDENCE.T/s1!Calc!A163	T-3363	quantile at df 6.2E6: the engine and Excel are both off the math, differently
-accuracy/BETADIST/s1!Calc!A183	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
-accuracy/BETADIST/s1!Calc!A184	T-3577	BETADIST (as BETA.DIST) cdf at huge shapes (alpha 2.2E114, beta 2.0E66): Excel #NUM!, the engine and the math 0
-accuracy/BETADIST/s1!Calc!A187	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
-accuracy/BETADIST/s1!Calc!A193	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
-accuracy/BETADIST/s1!Calc!A198	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETADIST/s1!Calc!A184	T-4733	BETADIST (as BETA.DIST) cdf at huge shapes (alpha 2.2E114, beta 2.0E66): Excel #NUM!, the engine and the math 0
 accuracy/BETAINV/s1!Calc!A100	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
 accuracy/BETAINV/s1!Calc!A103	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
 accuracy/BETAINV/s1!Calc!A105	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
@@ -361,7 +354,3 @@ accuracy/TREND/s1!Calc!A98	T-2006	the engine's normal-equations solve on an ill-
 accuracy/TREND/s1!Calc!A193	T-2006	the engine's normal-equations solve is #NUM! on data from 1E-45 to 1E+49 (absolute pivot test); Excel matches the math
 accuracy/GROWTH/s1!Calc!A97	T-2006	the engine's normal-equations solve on an ill-conditioned design is 2e-09 relative off the math; Excel is 1e-15 off it
 accuracy/GROWTH/s1!Calc!A104	T-4590	Excel #NUM! where the ln fit's intercept e^1289.95 is past the double range; the engine and the math are 8.1E-18
-accuracy/BETA.DIST/r4-T-4437!Calc!A185	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
-accuracy/BETA.DIST/r4-T-4437!Calc!A189	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
-accuracy/BETA.DIST/r4-T-4437!Calc!A192	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
-accuracy/BETA.DIST/r4-T-4437!Calc!A194	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
