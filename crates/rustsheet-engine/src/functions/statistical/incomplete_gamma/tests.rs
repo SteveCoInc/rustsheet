@@ -570,6 +570,8 @@ fn huge_shape_quantile_has_excels_three_regimes() {
         ((ours - 10_003_008_821.701_774) / ours).abs() <= 1e-14,
         "{ours}"
     );
+    // Where Excel's start times the scale overflows, Excel is `#NUM!` though the math fits.
+    assert!(huge_shape_quantile(1e300, 1.7975e8, 0.5, Tail::Lower, 0.0).is_nan());
 }
 
 /// The T-2860 cells by name: chi-squared at df 2 is the shape-1 quantile at scale 2, and

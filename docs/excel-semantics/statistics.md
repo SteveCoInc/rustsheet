@@ -7062,8 +7062,9 @@ whose region starts at shape 1E9. The owner ruled (2026-10-31, T-3409) not to wi
 but not overfit. Can you just explore further and crack how Excel works in this region?" So the target here is Excel's
 value (directive 1). They are the closed-form rule itself: the density at x0 is below the smallest normal double
 from df 5E6 (ln -709.9 at 5E6, -707.9 at 2E6), and across all probed cells from shape 1E5 that rule picks exactly the
-197 cells where Excel is its start (T-3409). Ours applies the step limit from shape 1E5 (T-3409), but the start rule only from 1E9: below it the start's fitted
-terms are 1E-9 to 3.4E-9 off, outside Gate A's envelope, so these cells keep the true quantile (T-4205).
+197 cells where Excel is its start (T-3409). Ours applies the step limit from shape 1E5 (T-3409). Where the start underflows it returns the true quantile at any
+shape (from 1E9 as R3, T-3364); below 1E9 the start's fitted terms are 1E-9 to 3.4E-9 off, outside Gate A's
+envelope, so these cells keep the true quantile until T-4205 finds Excel's start digits.
 From df 1E6 to 1E9, at every other probed p from 1E-300 to 1-1E-15, Excel's CHISQ.INV, CHISQ.INV.RT and CHIINV are the
 true quantile to within 4 ulps (probes/t3350-chisq-inv-huge-df, 372 cells; the fresh sweep
 probes-numeric/t3350-r4-chisq-inv-sweep, 240 cells, log-uniform over df 1 to 1E10).
@@ -8079,7 +8080,7 @@ CHISQ.DIST.RT and stay `#NUM!` in Excel; CHIINV
 and CHISQ.INV.RT from 2E13 to 1E15 degrees of freedom), probes/t2982-gamma-inv-huge-shape A7-A23 (`GAMMA.INV(0.5,a,1)`
 for a = 1E13 to 1E300), A92 and A93 (`CHIINV(0.5,2E13)`, `CHISQ.INV.RT(0.5,2E13)`), all excel-graph; the factor is
 measured against the accurate cdf (`GAMMA.DIST(1E12,1E12,1,TRUE)` correctly rounded, probes/incomplete-gamma-cap E9).
-The 50-digit math values for these cells are committed in the probe cases' math sidecars (T-4329), and their 214
+The 50-digit math values for these cells are committed in the probe cases' math sidecars (T-4329), and their 206
 probe cells from shape 1E9 are marked R3 in eval/accuracy/math-over-excel.tsv (T-3364, decision 0337). Below shape
 1E9 (`CHISQ.INV.RT(1E-300,df)` for df 5E6 to 1E9, probes/t3350-chisq-inv-huge-df A205-A289) the start also underflows
 and Excel is also 2.63e-4 off the math, but the owner ruled (T-3409) that R3 is not widened there: Excel's start is the

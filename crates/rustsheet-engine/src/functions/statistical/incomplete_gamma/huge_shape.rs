@@ -115,6 +115,12 @@ pub(crate) fn huge_shape_quantile(shape: f64, scale: f64, p: f64, tail: Tail, z:
     // start and its fitted terms still pick the branches, so `#NUM!` stays where Excel's is. Below
     // shape 1E9, outside R3's case, Excel's start is the target (TODO(T-4205)).
     if underflows {
+        // Excel's value here is its start, so where the start times the scale overflows Excel is
+        // `#NUM!` even if the true quantile fits (`GAMMA.INV(0.5,1E300,1.7975E8)`): R3 never trades
+        // an error for a number, and this keeps main's guard.
+        if !(start * scale).is_finite() {
+            return f64::NAN;
+        }
         // The unit quantile times the scale: refined at the scale itself, a quantile near
         // f64::MAX (`GAMMAINV(0.5,1E300,1E8)`) is lost, where Excel's start is 1.000266E308.
         let x = gamma_quantile(shape, 1.0, p, tail) * scale;
