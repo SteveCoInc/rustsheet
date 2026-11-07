@@ -1,0 +1,104 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4130: what does GETPIVOTDATA return against a pivot collapsed to #SPILL!? Data!A1:C6 has Region, Product and Sales: East A 10, West A 20, East B 5, West B 7, East C 3 (East 18, West 27, total 45). N and S each hold one builder-v2 pivot at A3, rows Region, Sum of Sales; S also holds the constant `blocker` at B5, inside the pivot's layout (A3:B6), so it collapses to #SPILL! at A3 (pivots.md). Q column A asks N (the control) and column B asks S: row 1 GETPIVOTDATA(\"Sales\", A3); 2 by the data field's name Sum of Sales; 3 Region East; 4 Region Nope (no such item); 5 the pivot named by B4, a cell inside its layout but not its anchor; 6 Region West with A1:D10 as the reference; 7 ERROR.TYPE(A3); 8 ISREF(A3).",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4130",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0782"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Sales",
+    "A2": "East",
+    "B2": "A",
+    "C2": 10,
+    "A3": "West",
+    "B3": "A",
+    "C3": 20,
+    "A4": "East",
+    "B4": "B",
+    "C4": 5,
+    "A5": "West",
+    "B5": "B",
+    "C5": 7,
+    "A6": "East",
+    "B6": "C",
+    "C6": 3
+   }
+  },
+  {
+   "name": "N",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_N",
+     "source": "Data!A1:C6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "S",
+   "cells": {
+    "B5": "blocker"
+   },
+   "pivot_tables": [
+    {
+     "name": "P_S",
+     "source": "Data!A1:C6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=GETPIVOTDATA(\"Sales\",N!$A$3)",
+    "A2": "=GETPIVOTDATA(\"Sum of Sales\",N!$A$3)",
+    "A3": "=GETPIVOTDATA(\"Sales\",N!$A$3,\"Region\",\"East\")",
+    "A4": "=GETPIVOTDATA(\"Sales\",N!$A$3,\"Region\",\"Nope\")",
+    "A5": "=GETPIVOTDATA(\"Sales\",N!$B$4)",
+    "A6": "=GETPIVOTDATA(\"Sales\",N!$A$1:$D$10,\"Region\",\"West\")",
+    "A7": "=ERROR.TYPE(N!A3)",
+    "A8": "=ISREF(N!A3)",
+    "B1": "=GETPIVOTDATA(\"Sales\",S!$A$3)",
+    "B2": "=GETPIVOTDATA(\"Sum of Sales\",S!$A$3)",
+    "B3": "=GETPIVOTDATA(\"Sales\",S!$A$3,\"Region\",\"East\")",
+    "B4": "=GETPIVOTDATA(\"Sales\",S!$A$3,\"Region\",\"Nope\")",
+    "B5": "=GETPIVOTDATA(\"Sales\",S!$B$4)",
+    "B6": "=GETPIVOTDATA(\"Sales\",S!$A$1:$D$10,\"Region\",\"West\")",
+    "B7": "=ERROR.TYPE(S!A3)",
+    "B8": "=ISREF(S!A3)"
+   }
+  }
+ ],
+ "expected": {}
+}

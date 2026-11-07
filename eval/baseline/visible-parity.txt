@@ -234,6 +234,15 @@ probes/t4128-pivot-spike.case.json	60
 probes/t4129-pivot-layout-flags.case.json	32
 probes/t4129-pivot-show-as-x14.case.json	138
 probes/t4129-pivot-show-as.case.json	278
+probes/t4130-pivot-calc-items.case.json	16
+probes/t4130-pivot-date-filters.case.json	161
+probes/t4130-pivot-field-filters.case.json	10
+probes/t4130-pivot-filter-attrs.case.json	54
+probes/t4130-pivot-label-filters.case.json	94
+probes/t4130-pivot-relative-date-filters.case.json	49
+probes/t4130-pivot-sort.case.json	66
+probes/t4130-pivot-spill-getpivotdata.case.json	4
+probes/t4130-pivot-value-filters.case.json	74
 probes/t4134-pivot-items.case.json	54
 probes/t4135-pivot-aggregates.case.json	852
 probes/t4137-pivot-captions.case.json	120
