@@ -6,7 +6,7 @@ use super::ArgKind::{
     Lift, LiftArrays, LiftArraysRangeWhole, ReferenceByCaller, Whole, WholeByCaller,
 };
 use super::KernelWork::{ByValue, Constant, Weighted};
-use super::ValueWork::{HypergeometricSum, IncompleteGamma};
+use super::ValueWork::{BetaQuantile, HypergeometricSum, IncompleteGamma};
 use super::{
     ArgKinds, GammaShape, KernelWork, LIFT_1, LIFT_2, LIFT_3, LIFT_3_OF_5, LIFT_4, LIFT_4_OF_6,
 };
@@ -113,10 +113,13 @@ const BINOM_INV_WEIGHT: u32 = 1 << 14;
 /// `BETA.INV(0.4,2,3)`).
 const QUANTILE_WEIGHT: u32 = 1 << 18;
 /// `BETA.INV(probability, alpha, beta, [A], [B])` and BETAINV.
+/// An element the kernel refuses before its search is charged 1 (`ValueWork::BetaQuantile`, T-2607).
 const BETA_INV: ArgKinds = ArgKinds::fixed(
     3,
     &[Lift, Lift, Lift, Lift, Lift],
-    Weighted(QUANTILE_WEIGHT),
+    ByValue(BetaQuantile {
+        weight: QUANTILE_WEIGHT,
+    }),
 );
 /// `F.INV(probability, deg_freedom1, deg_freedom2)`, F.INV.RT and FINV.
 const F_INV: ArgKinds = ArgKinds::fixed(3, &[Lift, Lift, Lift], Weighted(QUANTILE_WEIGHT));

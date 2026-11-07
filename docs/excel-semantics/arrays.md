@@ -291,9 +291,11 @@ refuses MAKEARRAY's columns with `#VALUE!` only from 2^31, as its rows, and the 
 (DEVIATION, decision 0113). Unprobed: where between 16,385 and 123,456,789 columns SEQUENCE's own `#VALUE!` starts, and where
 between 1,048,577 and 1E15 (rows) or 2^31 (columns) MAKEARRAY's does. The lifting
 driver's broadcast (`lift::driver::broadcast_shape`) checks the cell count only (`check_array_cells`), so B26 is the
-spill's `#SPILL!`. A237 is `#ERROR!`: its 206,552 BETAINV elements pass the quantile's lift cost cap (statistics.md), T-2607.
+spill's `#SPILL!`. So is A237: each of its 206,552 BETAINV elements is refused before the quantile search (a
+probability past 1, an alpha of -1, an error), and a refused element is charged 1 against the lift cost cap rather
+than the search's flat weight (`ValueWork::BetaQuantile`, T-2607); it was `#ERROR!` before.
 Status: VERIFIED (excel-graph)
-Tasks: T-2579, T-2600, T-2452
+Tasks: T-2579, T-2600, T-2452, T-2607
 
 ## Array results above 1,048,576 cells are #ERROR!
 Rule: Excel builds any array that fits the grid: `ROWS(SEQUENCE(1000,1001))` = 1000,
