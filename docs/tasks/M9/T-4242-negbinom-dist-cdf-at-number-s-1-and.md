@@ -3,7 +3,7 @@ id: T-4242
 title: "NEGBINOM.DIST cdf at number_s 1 and a tiny p is 9.4E-8 relative off (Gate A r4-T-3576 A125)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
