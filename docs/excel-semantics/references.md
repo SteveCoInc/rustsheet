@@ -641,10 +641,10 @@ How Excel spells a rewritten name in Name Manager is unprobed. The engine stores
 Rule: a name in a formula (a LET or LAMBDA name, or an unbound use) may not start with a mark (`\p{M}`) or an
 uppercase circled letter Ⓐ–Ⓩ (U+24B6–U+24CF): Excel refuses the workbook at load. Every other alphabetic first
 character loads, lowercase circled and astral squared letters included, and after the first character every mark
-loads, alphabetic or not. Probed points: Ⓐ, Ⓑ, Ⓜ, Ⓩ and Ⓐx; marks U+0301, U+0307 (Mn), U+0345 (Mn, alphabetic) and
-U+093E (Mc). The rest of Ⓐ–Ⓩ, enclosing marks (Me) and the negative squared letters U+1F170–U+1F189 are inferred, not
-probed. A sheet name starting with such a character is quoted when the engine writes a reference (`'Ⓐ'!A1`), so it
-reads back; how Excel writes or reads one is unprobed (T-4446).
+loads, alphabetic or not. Probed points: Ⓐ, Ⓑ, Ⓜ, Ⓩ and Ⓐx; marks U+0301, U+0307 (Mn), U+0345 (Mn, alphabetic),
+U+093E (Mc) and, for defined names, U+20DD (Me, refused first, loaded later; T-4446). The negative squared letter U+1F170
+loads first (a defined name, T-4446). The rest of Ⓐ–Ⓩ is inferred, not probed. The same rule holds for defined names,
+table names used in a structured reference, and unquoted sheet names (below, T-4446).
 
 Evidence: single-cell workbooks, `rustsheet-oracle recalc -b excel-graph`, 2026-11-06 (T-1856), each LET or LAMBDA name
 written `_xlpm.` by hand: spec2xlsx's `_IDENT` (Python `[^\W\d][\w.]*`) leaves out names holding `Ⓐ`, a mark or `İ`, and
@@ -658,16 +658,38 @@ fails createSession with 501 `FileCorruptTryRepair` and has no oracle cells, so 
   combining marks for `ǰ` and `ΐ`), `שם`, `اسم`, `a²`, `a٣`, `a①` and `aⅫ`; `LAMBDA(İ,İ+1)(1)` is 2. `LET(İ,1,i+1)` is
   `#NAME?` (`İ` folds to neither `i` nor `I`, like `ı`). Unbound: `LET(x,1,aⒶ)`, `=ⓩ+1`, `=aⒶ+1`, `=İ+1` and `=नाम+1`
   are `#NAME?`, and `ISREF(aⒶ)` is FALSE.
-- Defined names (not covered by this rule: T-4446): a defined name `İ` (and `İx`) works, `=İ+1` 6, and the decomposed
-  use `i` + U+0307 reads it (6). Whether Excel keeps a defined name starting with `Ⓐ` or a mark is unprobed: xlsxwriter
-  drops such a name from workbook.xml, so the probes so far never defined one.
+- Defined names follow the same rule (T-4446). A workbook whose workbook.xml defines a name starting with `Ⓐ` (`Ⓐ`,
+  `Ⓐx`) or a mark (U+0301 Mn, U+093E Mc, U+20DD Me) is refused at load, even when no formula uses the name (only
+  `INDIRECT("Ⓐ")`) (`rustsheet-oracle recalc -b excel-graph`, 2026-11-07, hand-built workbooks). Loaded,
+  probes/t4446-defined-name-characters (excel-graph, 26 cells, each definition checked in workbook.xml): defined `ⓐ`,
+  U+1F130, U+1F170 (negative squared A, first: the inferred refusal above does not hold for it), `नाम`, `aⒶ`, `a` +
+  U+20DD, `a` + U+0301 and `İ` each read their cell (`=name+1` 6, `INDIRECT("ⓐ")` 5, `ISREF(INDIRECT("🅰"))` TRUE), and
+  the decomposed use `i` + U+0307 reads the defined `İ` (6). A cell address followed by a mark is a name, not a
+  reference: a defined `B1` + U+0301 reads 4 (`=B1́+1`, defined 3), and an unbound `B2` + U+0301 is `#NAME?` (`ISREF`
+  FALSE). The R1C1-shaped `C1` + U+0301 is refused at load, bound or not (hand-built workbooks, 2026-11-07).
+- Sheet names (T-4446): a sheet named `Ⓐ` loads; `='Ⓐ'!B1` reads it and FORMULATEXT keeps the quotes, while a stored
+  `Ⓐ!B1` (unquoted) is refused at load, as is an unquoted reference to a sheet starting with U+0301. A sheet named `ⓑ`
+  is referenced unquoted: `=ⓑ!B1` and `='ⓑ'!B1` both read it and FORMULATEXT shows `=ⓑ!B1` for both. A mark after
+  the first character needs no quotes: FORMULATEXT of a quoted reference to sheet `a` + U+0301 or `x` + U+20DD shows
+  `=á!B1`, `=x⃝!B1` (probes/t4446-defined-name-characters A12:A23). The engine matches: `name_needs_quoting` takes
+  a later mark as a name character (T-4446). Whether INDIRECT text `á!B1` (unquoted, `is_indirect_unquoted_sheet`)
+  reads the sheet is unprobed.
+- Table names (T-4446): a table named `Ⓐ`, `ⓐ` or U+0301 + `a` loads while no formula uses it; `SUM(ⓐ[h])` reads it
+  (3), while `SUM(Ⓐ[h])` and a structured reference to U+0301 + `a` are refused at load (hand-built workbooks,
+  2026-11-07). The engine's table-name check (`is_valid_identifier`) refuses `Ⓐ` and a first mark; how its xlsx import
+  treats such a table is untested (T-4753). spec2xlsx cannot write these tables (XlsxWriter's `add_table` refuses the
+  names), so they are not in a case. The lexer's `is_alphanumeric` checks after a reference (`lexer/ranges.rs`) were
+  left as they are: the B1/B2 + U+0301 cells above pass with them.
+- spec2xlsx writes a defined name that XlsxWriter's Python `\w` check refuses (`ⓐ`, a mark, `नाम`) into workbook.xml
+  itself (T-4446); before, XlsxWriter dropped it with only a warning. It still drops cell-like names (`NA1`, `R0C1`):
+  T-4752.
 
 Implemented in: `is_letter_name_start` and `is_mark` (expressions/utils/mod.rs), used by `is_name_text` and the
 lexer's identifier start and `is_name_char`: a refused first character is a parse error (`#ERROR!`). `is_name_text`
 checks the characters as typed, not their uppercase (before T-1856 `ǰ` and `ΐ` were refused). Unit test
 `names_starting_with_a_mark_or_an_uppercase_circled_letter_are_refused`.
 
-Tasks: T-1856, T-4446
+Tasks: T-1856, T-4446, T-4752, T-4753
 
 ## Names, LET/LAMBDA variables and @ are references; FILTER's scalar if_empty is a value
 Rule: a defined name for a single cell, a LET variable or LAMBDA parameter bound to a reference, and `@range`

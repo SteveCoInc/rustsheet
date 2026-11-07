@@ -2465,6 +2465,7 @@ C	probes/t4437-beta-t-zero-bracket.case.json	333
 C	probes/t4437-beta-zero-fresh.case.json	102
 C	probes/t4437-beta-zero-fresh2.case.json	220
 C	probes/t4444-dfunction-text-equal-one.case.json	52
+C	probes/t4446-defined-name-characters.case.json	26
 C	probes/t4447-sort-fractional-keys.case.json	84
 C	probes/t4448-lone-blank-reshapers.case.json	135
 C	probes/t4449-groupby-function-array-edges.case.json	145
