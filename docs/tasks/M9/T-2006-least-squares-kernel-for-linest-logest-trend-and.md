@@ -219,3 +219,5 @@ b·xm is 1024 to 2048. The values:
 
 The table has no slope point for this formula, so Excel's b is not known to the last bit. A table point holding this
 call's slope (index 1,1) would decide between the reflector forms. I would probe it before fitting further.
+
+Resumed 2026-11-07 00:20 UTC by an opus run (work-loop step (2): branch idle 9 h).
