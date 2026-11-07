@@ -390,25 +390,25 @@ The realistic risk: the long-series regime may come down to Excel's exact NPV no
 the oracle can see only through outcomes. If Phase 4 ends there, the plan still lands Phases 2, 3 and 5, about 150 to
 250 cells from the feasibility numbers, and records the long-series behaviour as the remaining open quirk.
 
-## 10. Proposed tasks
+## 10. Tasks
 
-Not filed yet. Each would be one task file in docs/tasks/M9 on lane functions-financial.
+Filed in docs/tasks/M9 (lane functions-financial, T-4835 research). The long-series phase is split in two.
 
-| # | Task | Size | Depends on | Absorbs or supersedes |
+| Task | What | Size | Depends on | Absorbs or supersedes |
 |---|---|---|---|---|
-| 1 | Fit lab: `irr-type` fit, event tracer and path-invariant transforms | M | | the feasibility script |
-| 2 | IRR solver lineage table (Phase 1) | S | | |
-| 3 | IRR hypothesis bank, offline (Phase 2) | M | 1, 2 | T-3117's analysis part |
-| 4 | Discriminating-probe designer | M | 1 | |
-| 5 | Engineered-event probes, round 1 (flat, pole) | M | 3, 4 | T-1686 (IRR side), T-4027 |
-| 6 | Engineered-event probes, round 2 (cap, scale ladders) | M | 5 | T-3117, T-4038 |
-| 7 | The long-series regime (Phase 4) | L, split if needed | 5 | T-3548, T-3347 |
-| 8 | Implement the chosen driver in `compute_irr`, retire subsumed cuts | M | 5, 6 | T-3548, T-4027 |
-| 9 | IRR error codes from terminal events (Phase 5) | S | 8 | T-3900, T-3407's proxy |
-| 10 | IRR last digits under the new model (Phase 6) | M | 8 | T-2131, T-2928, T-4213, T-4232, T-4338 |
-| 11 | Freeze, fresh sweep, Gate A, financial.md rewrite (Phase 7) | M | 8, 9 | |
+| T-4834 | Fit lab: `irr-type` fit, event tracer and path-invariant transforms | M | | the feasibility script |
+| T-4835 | IRR solver lineage table (Phase 1) | S | | |
+| T-4836 | IRR hypothesis bank, offline (Phase 2) | M | T-4834, T-4835 | T-3117's analysis part |
+| T-4837 | Discriminating-probe designer | M | T-4834 | |
+| T-4838 | Engineered-event probes, round 1 (flat, pole) | M | T-4836, T-4837 | T-1686 (IRR side), T-4027 |
+| T-4839 | Engineered-event probes, round 2 (cap, scale ladders) | M | T-4838 | T-3117, T-4038 |
+| T-4844, T-4845 | The long-series regime (Phase 4) | M each | T-4838 | T-3548, T-3347 |
+| T-4840 | Implement the chosen driver in `compute_irr`, retire subsumed cuts | M | T-4838, T-4839 | T-3548, T-4027 |
+| T-4841 | IRR error codes from terminal events (Phase 5) | S | T-4840 | T-3900, T-3407's proxy |
+| T-4842 | IRR last digits under the new model (Phase 6) | M | T-4840 | T-2131, T-2928, T-4213, T-4232, T-4338 |
+| T-4843 | Freeze, fresh sweep, Gate A, financial.md rewrite (Phase 7) | M | T-4840, T-4841 | |
 
-Tasks 1, 2 and 4 can run in parallel. The first oracle spend is task 5.
+T-4834, T-4835 and T-4837 can run in parallel. The first oracle spend is T-4838.
 
 ## Appendix A: Microsoft.VisualBasic.Financial.IRR in brief
 
