@@ -2691,7 +2691,7 @@ C	probes/t4765-growth-factor-edges.case.json	24
 C	probes/t4772-blank-y-offset-indirect-let-xlookup.case.json	32
 C	probes/t4793-growth-one-factor-underflow.case.json	4
 C	probes/t4793-growth-several-x.case.json	10
-C	probes/t4861-indirect-r1c1-shaped-sheet-prefix.case.json	16
+C	probes/t4861-indirect-r1c1-shaped-sheet-prefix.case.json	42
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
