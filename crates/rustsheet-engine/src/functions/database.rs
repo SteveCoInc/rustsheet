@@ -725,6 +725,16 @@ impl Model {
         if other_sheet {
             retarget_unqualified_references(Arc::make_mut(&mut node), query.left.sheet);
         }
+        // The criterion is evaluated as if it sat `offset` rows lower, which moves its relative
+        // references to the record, but `ROW()` and a `#This Row` reference stay the criteria
+        // cell's: `ISODD(ROW())` matches no record from row 2, and `=DbT[@Col]<0` reads the
+        // table row of the criteria cell for every record (probes/t3002-db-computed-criteria-
+        // absolute-mixed Calc B6:E14; criteria.md "D* computed criteria"). `COLUMN()` needs no
+        // pin: the moved cell keeps the criteria column. After the retarget, which leaves a table
+        // reference on its table's sheet.
+        if offset != 0 && node.reads_cell_row() {
+            Arc::make_mut(&mut node).pin_cell_row(criteria_cell.row);
+        }
         if !reads_records(&node, context, query) {
             return CalcResult::Boolean(false);
         }
