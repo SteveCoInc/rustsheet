@@ -315,6 +315,10 @@ impl Model {
         cell: CellReferenceIndex,
         op: impl Fn([f64; N]) -> Result<f64, Error>,
     ) -> CalcResult {
+        let omitted = match empty {
+            EmptyOptional::Zero => [false; N],
+            EmptyOptional::Default => self.empty_arguments::<N>(args),
+        };
         // The driver's shortcut (T-1932): the arguments written, all numbers, then the defaults.
         let shortcut = |present: &[f64]| {
             let mut numbers = defaults;
@@ -332,7 +336,7 @@ impl Model {
                         *slot = *number;
                         continue;
                     }
-                    Some(CalcResult::EmptyArg) if empty == EmptyOptional::Default => continue,
+                    _ if omitted[index] => continue,
                     _ => {}
                 }
                 match model.kernel_number_or(values.get(index), *slot, cell) {
@@ -402,15 +406,16 @@ impl Model {
     /// (probes/t4873-empty-arg-quotient-ceiling Calc!A1:A6, A9:A10, t4873-empty-arg-let-lambda
     /// Calc!A1:A3).
     pub(crate) fn fn_quotient(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let [value_empty, divisor_empty] = self.empty_arguments(args);
         self.lift_call(Function::Quotient, args, cell, &mut |model, values| {
             let [value, divisor] = values else {
                 return CalcResult::new_args_number_error(cell);
             };
-            let value = match model.atp_number(value, cell) {
+            let value = match model.atp_number(value, value_empty, cell) {
                 Ok(number) => number,
                 Err(error) => return error,
             };
-            let divisor = match model.atp_number(divisor, cell) {
+            let divisor = match model.atp_number(divisor, divisor_empty, cell) {
                 Ok(number) => number,
                 Err(error) => return error,
             };
@@ -426,6 +431,7 @@ impl Model {
     /// it lifts over an array and refuses a multi-cell range (probes/ceiling-floor-mround-array-lift
     /// A21, A43:A49, A55, date-math-lift-driver-edges G19-G20).
     pub(crate) fn fn_mround(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let empty: [bool; 2] = self.empty_arguments(args);
         self.lift_call(Function::Mround, args, cell, &mut |model, values| {
             // Excel: the arguments are judged left to right. A missing one is #N/A and a boolean
             // #VALUE!, unlike most numeric functions (an array element and a referenced cell too);
@@ -435,8 +441,8 @@ impl Model {
             // lift A19:A20, A23, A27:A42, date-math-lift-driver-edges G44-G47, G51-G52;
             // docs/excel-semantics/arrays.md).
             let mut numbers = [0.0; 2];
-            for (slot, value) in numbers.iter_mut().zip(values) {
-                match model.atp_number(value, cell) {
+            for ((slot, value), empty) in numbers.iter_mut().zip(values).zip(empty) {
+                match model.atp_number(value, empty, cell) {
                     Ok(number) => *slot = number,
                     Err(error) => return error,
                 }

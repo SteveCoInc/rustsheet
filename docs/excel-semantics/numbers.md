@@ -2840,11 +2840,14 @@ RANDBETWEEN's and IMSUB's are: `QUOTIENT(,5)`, `QUOTIENT(7,)`, `QUOTIENT(,)`, `Q
 `#N/A` (A1:A6, B1:B7), where most numeric functions read an empty argument as 0. An error or a boolean in an earlier
 argument wins: `QUOTIENT(1/0,)` is `#DIV/0!`, `QUOTIENT(TRUE,)` `#VALUE!` (A9:A10). A LET value or LAMBDA parameter left
 empty hands the emptiness on: `LET(e,,QUOTIENT(7,e))`, `LET(e,,QUOTIENT(e,2))`, `LAMBDA(a,b,QUOTIENT(a,b))(7,)` and
-`LET(e,,SERIESSUM(2,e,1,{1,2}))` are `#N/A` (-let-lambda A1:A4). UNVERIFIED: where empty coefficients rank against an `x`,
+`LET(e,,SERIESSUM(2,e,1,{1,2}))` are `#N/A` (-let-lambda A1:A4). Only the argument as written counts: a formula that
+gives a blank (an IFERROR or VLOOKUP of an empty cell) is read as 0, not `#N/A` (gen-m5/6efa59fc1257c475 Calc!A229,
+gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). UNVERIFIED: where empty coefficients rank against an `x`,
 `n` or `m` error (ours checks them after, as every coefficient error).
 Evidence: probes/t4873-empty-arg-quotient-ceiling Calc!A1:B8, probes/t4873-empty-arg-let-lambda Calc!A1:A4 (excel-graph,
 2026-11-07, T-4873; predictions committed before the fill).
-Ours: `Model::atp_number` (functions/lift/mod.rs) reads MROUND's, QUOTIENT's and SERIESSUM's numbers; `series_coefficients`
+Ours: `Model::atp_number` (functions/lift/mod.rs) reads MROUND's, QUOTIENT's and SERIESSUM's numbers, told which
+arguments are empty by `Model::empty_arguments` (logical/let.rs); `series_coefficients`
 refuses empty coefficients. Before T-4873 QUOTIENT and SERIESSUM read an empty argument as 0.
 Status: VERIFIED (excel-graph)
 Tasks: T-4873

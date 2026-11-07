@@ -2702,6 +2702,8 @@ C	probes/t4793-growth-several-x.case.json	10
 C	probes/t4844-irr-guess-ladder.case.json	468
 C	probes/t4844-irr-pad-ladder.case.json	48
 C	probes/t4844-irr-stage-invariance.case.json	60
+C	probes/t4873-empty-arg-let-lambda.case.json	11
+C	probes/t4873-empty-arg-quotient-ceiling.case.json	55
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10

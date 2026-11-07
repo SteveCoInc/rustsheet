@@ -73,17 +73,21 @@ impl Model {
     }
 
     /// A number argument of an Analysis `ToolPak` kernel (MROUND, QUOTIENT, SERIESSUM's x, n and
-    /// m): [`Model::kernel_number`], except that a written-empty argument is `#N/A` and a boolean
-    /// `#VALUE!`, where most numeric functions read them as 0 and 0/1 (`MROUND(5,)`,
-    /// `QUOTIENT(7,)`, `SERIESSUM(2,,1,{1,2})`: docs/excel-semantics/numbers.md "A written-empty
-    /// argument of a `ToolPak` function is #N/A").
+    /// m): [`Model::kernel_number`], except that an argument empty as written (`empty`, from
+    /// [`Model::empty_arguments`]) is `#N/A` and a boolean `#VALUE!`, where most numeric functions
+    /// read them as 0 and 0/1 (`MROUND(5,)`, `QUOTIENT(7,)`, `SERIESSUM(2,,1,{1,2})`:
+    /// docs/excel-semantics/numbers.md "A written-empty argument of a `ToolPak` function is #N/A").
+    /// The flag comes from the call's nodes, not the value: a formula that evaluates to a blank,
+    /// `IFERROR(<blank>,0)` or a VLOOKUP of a blank cell, is no empty argument (gen-m5/
+    /// 6efa59fc1257c475 Calc!A229, gen-m5/74b183ca6fc1d190 Calc!A16).
     pub(crate) fn atp_number(
         &self,
         value: &CalcResult,
+        empty: bool,
         cell: CellReferenceIndex,
     ) -> Result<f64, CalcResult> {
         match value {
-            CalcResult::EmptyArg => Err(CalcResult::new_error(Error::NA, cell, String::new())),
+            _ if empty => Err(CalcResult::new_error(Error::NA, cell, String::new())),
             CalcResult::Boolean(_) => Err(value_error(cell)),
             other => self.kernel_number(other, cell),
         }
