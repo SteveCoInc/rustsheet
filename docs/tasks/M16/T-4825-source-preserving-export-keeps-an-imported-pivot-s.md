@@ -3,7 +3,7 @@ id: T-4825
 title: "Source-preserving export keeps an imported pivot's cache and records unchanged (roundtrip-poi 54436 regressed by T-4176)"
 milestone: M16
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: opus
