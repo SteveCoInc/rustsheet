@@ -5,8 +5,8 @@ use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error, value_error};
 use crate::functions::statistical::beta_density::beta_density_small_shape;
 use crate::functions::statistical::bratio::{
-    beta_dist_cdf, beta_search_tails, bfrac_shapes_absorbed, dispatch, l140_overflows,
-    first_shape_absorbs, Branch,
+    beta_dist_cdf, beta_search_tails, bfrac_shapes_absorbed, dispatch, first_shape_absorbs,
+    l140_overflows, Branch,
 };
 use crate::functions::statistical::incomplete_beta::beta_density;
 use crate::functions::statistical::inverse_beta::{beta_inverse_cdf, beta_quantile_crossing};

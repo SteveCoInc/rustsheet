@@ -1,7 +1,7 @@
 use super::{
     beta_dist_l140_zero, beta_dist_lower_tail, bfrac_shapes_absorbed, closed_or_ported_tails,
-    dispatch, half_complement, l140_bup_prefactor_underflows, l140_overflows, l140_zero_tails,
-    first_shape_absorbs, Branch,
+    dispatch, first_shape_absorbs, half_complement, l140_bup_prefactor_underflows, l140_overflows,
+    l140_zero_tails, Branch,
 };
 
 fn branch(a: f64, b: f64, x: f64) -> (Branch, bool) {
@@ -621,7 +621,10 @@ fn bfrac_absorbed_shape_is_excels_num_error() {
     assert!(first_shape_absorbs(1e200, 2.0));
     assert!(!first_shape_absorbs(1e15, 41.0));
     // The first shape absorbed is a value in Excel (Gate A accuracy/BETA.DIST/s1 A183).
-    assert!(!first_shape_absorbs(25_002_804_469.870_3, 7.879_937_810_850_58e38));
+    assert!(!first_shape_absorbs(
+        25_002_804_469.870_3,
+        7.879_937_810_850_58e38
+    ));
     assert!(!bfrac_shapes_absorbed(
         25_002_804_469.870_3,
         7.879_937_810_850_58e38,
