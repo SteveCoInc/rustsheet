@@ -3,7 +3,7 @@ id: T-2940
 title: "Give owners to the 38 visibly-off probes/t2436, ftest-decomposition and t2829-ftest-a306-shapes cells that no open task names (22 of them unattributed)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
