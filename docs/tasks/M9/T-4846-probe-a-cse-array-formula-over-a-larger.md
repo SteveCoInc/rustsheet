@@ -3,11 +3,11 @@ id: T-4846
 title: "Probe a CSE array formula over a larger range in-repo: 1x1, row, column, 2-D #N/A fill and IFERROR (T-0950 follow-up)"
 milestone: M9
 lane: engine
-status: in-progress
+status: blocked
 priority: P3
 size: S
 tier: sonnet
-depends_on: []
+depends_on: [T-4227]
 ---
 
 ## Goal
@@ -31,3 +31,11 @@ regression in it without the external poi and corpus-bench suites, which only ni
 
 ## Out of scope
 - Dynamic-array spills (`#SPILL!`).
+
+## Blocked because
+The case builder cannot write a multi-cell legacy array formula: `spec2xlsx.py` only calls
+`write_dynamic_array_formula(row, col, row, col, ..)` (single anchor) or `write_formula` for `legacy_formulas`
+(single cell), and `rg array_formulas` finds nothing in `tools/` or `crates/rustsheet-eval`. The builder change is
+already filed as T-4227 (`array_formulas` key, spec2xlsx writer plus engine-adapter entry). Unblock this task once
+T-4227 lands, then write the probe case (1x1, row, column, 2x2 and IFERROR-wrapped column results over 3x3 / taller
+ranges), predictions first, and run `rustsheet-oracle fill -b excel-graph --suite probes` (status: excel-graph OK).
