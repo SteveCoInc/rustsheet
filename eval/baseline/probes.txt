@@ -2645,6 +2645,7 @@ C	probes/t4698-pivot-repeat-labels.case.json	651
 C	probes/t4701-index-one-index-ref-grid.case.json	16
 C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/t4765-growth-factor-edges.case.json	24
+C	probes/t4793-growth-one-factor-underflow.case.json	4
 C	probes/t4793-growth-several-x.case.json	10
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
@@ -9314,6 +9315,7 @@ F	probes/t4765-growth-factor-edges.case.json	Cut!A1
 F	probes/t4765-growth-factor-edges.case.json	Cut!A5
 F	probes/t4765-growth-factor-edges.case.json	SmallB!A1
 F	probes/t4765-growth-factor-edges.case.json	SmallB!A3
+F	probes/t4793-growth-one-factor-underflow.case.json	One!A2
 F	probes/t4793-growth-several-x.case.json	Multi!A4
 F	probes/t4793-growth-several-x.case.json	SubProd!A5
 F	probes/table-edits/t4274-calc-column-delete-row-2.case.json	F!A1

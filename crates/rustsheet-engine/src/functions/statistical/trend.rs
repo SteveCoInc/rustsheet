@@ -254,29 +254,32 @@ impl Model {
     }
 }
 
-/// GROWTH's prediction `e^(intercept + Σ m_j x_j)` at the edges of LOGEST's factors `b = e^intercept`
-/// and each variable's `e^(m_j x_j)` (statistics.md "GROWTH is #NUM! once LOGEST's b or a slope's
-/// factor overflows ..."):
-/// - `#NUM!` where b or any variable's factor overflows, though the prediction may be finite
-///   (probes/t4590-growth-overflow `Int!`, t4765-growth-factor-edges `Over!`, t4793-growth-several-x
-///   `Multi!`: factors e^-720 and e^720 are `#NUM!`, not e^0);
-/// - 0 where a variable's factor is below `DBL_MIN` (t4765 `Cut!`, `NoConst!`), or where the
-///   prediction itself is subnormal (t4793 `SubProd!`). A subnormal b alone is no zero (t4765 `SmallB!A3`).
+/// GROWTH's prediction `e^(intercept + Σ m_j x_j)` at the edges of LOGEST's factors, `b = e^intercept`
+/// and each variable's `e^(m_j x_j)`. Excel multiplies the variables' factors left to right in
+/// doubles, each partial product flushed to 0 once subnormal (statistics.md "GROWTH is #NUM! once
+/// LOGEST's b or a slope's factor overflows ..."):
+/// - `#NUM!` where b overflows (probes/t4590-growth-overflow `Int!`), a factor overflows
+///   (t4765-growth-factor-edges `Over!`), or a zero partial product meets an overflowing factor
+///   (t4793-growth-several-x `Multi!`);
+/// - 0 where a partial product is subnormal: the first factor alone (t4765 `Cut!`, `NoConst!`,
+///   t4793-growth-one-factor-underflow `One!A1`, `One!A3`), but not a later subnormal factor that
+///   the product before it lifts back (`One!A2`); and 0 where the prediction is subnormal
+///   (t4793 `SubProd!`).
 ///
-/// `beta` holds the intercept first when `const_term`, as for [`predict`].
+/// Between the edges the value is the single exponential. `beta` holds the intercept first when
+/// `const_term`, as for [`predict`].
 fn growth_prediction(beta: &[f64], point: &[f64], const_term: bool) -> ArrayNode {
     if const_term && beta[0].exp().is_infinite() {
         return ArrayNode::Error(Error::NUM);
     }
-    let mut factor_underflows = false;
+    let mut product = 1.0;
     for (m, x) in beta[usize::from(const_term)..].iter().zip(point) {
-        let factor = (m * x).exp();
-        if factor.is_infinite() {
-            return ArrayNode::Error(Error::NUM);
-        }
-        factor_underflows |= factor < f64::MIN_POSITIVE;
+        product = flush_subnormal(product * (m * x).exp());
     }
-    if factor_underflows {
+    if !product.is_finite() {
+        return ArrayNode::Error(Error::NUM);
+    }
+    if product == 0.0 {
         return ArrayNode::Number(0.0);
     }
     ArrayNode::Number(flush_subnormal(predict(beta, point, const_term).exp()))
