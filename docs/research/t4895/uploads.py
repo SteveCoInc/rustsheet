@@ -19,9 +19,9 @@ import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-import gen  # noqa: E402
+import gen  # noqa: E402 (gen.py sits beside this script; the path is set just above)
 
-from rustsheet_tools.spec2xlsx import build_xlsx  # noqa: E402
+from rustsheet_tools.spec2xlsx import build_xlsx  # noqa: E402 (kept after the gen import it pairs with)
 
 CAT = '<filterColumn colId="0"><filters><filter val="a"/><filter val="c"/></filters></filterColumn>'
 A6 = '<c r="A6" t="s"><v>3</v></c>'

@@ -2394,7 +2394,7 @@ to every data row** (T-4895, excel-graph 2026-11-07; predictions committed befor
   delete of `Cat` hides **every** data row, rows 2, 4 and 6 that were visible included (3 = 103 = 9 = 109 = 0; two
   fills). The engine leaves rows 2-4, 6 and 7 visible: a gap owned by T-4939.
 - Uploads of patched spec2xlsx workbooks (Cat keeps a and c, Ext rejects 40, delete_column C; sha256 of each in
-  docs/research/t4895/predictions-uploads.tsv): kept values "A" and "C" over cells a and c keep them (case is
+  docs/research/t4895/predictions-uploads.tsv, the recalculated values in docs/research/t4895/uploads/): kept values "A" and "C" over cells a and c keep them (case is
   ignored); a visible row whose kept cell is blank stays visible under `blank="1"` and is hidden without it; a kept
   custom filter (equals a, or equals c) shows row 5, which only the deleted criterion hid. The engine matches the
   first two and differs on the last two (it leaves the blank row visible and keeps row 5 hidden; T-4939).
