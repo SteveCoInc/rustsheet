@@ -5,6 +5,7 @@ use super::linest::{flag_range_value, linear_regression, predict, reconstruct_be
 use super::regression::{
     given, known_points, layout, shape_error, Element, Grid, KnownPoints, Layout,
 };
+use crate::arithmetic::flush_subnormal;
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{LiftCost, LiftOptions};
@@ -254,24 +255,29 @@ impl Model {
 }
 
 /// GROWTH's prediction `e^(intercept + Σ m_j x_j)` at the edges of LOGEST's factors `b = e^intercept`
-/// and the slopes' factor `F = e^(Σ m_j x_j)` (statistics.md "GROWTH is #NUM! once LOGEST's b or
-/// slopes' factor overflows ..."):
-/// - `#NUM!` where b overflows (probes/t4590-growth-overflow Int!, accuracy/GROWTH/s1 A104) or F
-///   overflows (probes/t4765-growth-factor-edges Over!), though the prediction may be finite;
-/// - 0 where F is below `DBL_MIN`, const TRUE or FALSE (`Cut!`: -708.39 is 1, -708.4 is 0;
-///   `NoConst!`), though the prediction may be about 1. A subnormal b is no zero (`SmallB!A3`).
+/// and each variable's `e^(m_j x_j)` (statistics.md "GROWTH is #NUM! once LOGEST's b or a slope's
+/// factor overflows ..."):
+/// - `#NUM!` where b or any variable's factor overflows, though the prediction may be finite
+///   (probes/t4590-growth-overflow `Int!`, t4765-growth-factor-edges `Over!`, t4793-growth-several-x
+///   `Multi!`: factors e^-720 and e^720 are `#NUM!`, not e^0);
+/// - 0 where a variable's factor is below `DBL_MIN` (t4765 `Cut!`, `NoConst!`), or where the
+///   prediction itself is subnormal (t4793 `SubProd!`). A subnormal b alone is no zero (t4765 `SmallB!A3`).
 ///
 /// `beta` holds the intercept first when `const_term`, as for [`predict`].
 fn growth_prediction(beta: &[f64], point: &[f64], const_term: bool) -> ArrayNode {
     if const_term && beta[0].exp().is_infinite() {
         return ArrayNode::Error(Error::NUM);
     }
-    let slopes = predict(&beta[usize::from(const_term)..], point, false).exp();
-    if slopes.is_infinite() {
-        return ArrayNode::Error(Error::NUM);
+    let mut factor_underflows = false;
+    for (m, x) in beta[usize::from(const_term)..].iter().zip(point) {
+        let factor = (m * x).exp();
+        if factor.is_infinite() {
+            return ArrayNode::Error(Error::NUM);
+        }
+        factor_underflows |= factor < f64::MIN_POSITIVE;
     }
-    if slopes < f64::MIN_POSITIVE {
+    if factor_underflows {
         return ArrayNode::Number(0.0);
     }
-    ArrayNode::Number(predict(beta, point, const_term).exp())
+    ArrayNode::Number(flush_subnormal(predict(beta, point, const_term).exp()))
 }

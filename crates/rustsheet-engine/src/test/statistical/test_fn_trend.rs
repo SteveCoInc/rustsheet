@@ -188,3 +188,23 @@ fn growth_slopes_factor_edges() {
     assert_eq!(model._get_text("A2"), "0");
     assert_eq!(model._get_text("A3"), "#NUM!");
 }
+
+// GROWTH forms each variable's factor e^(m_j x_j) on its own: factors e^-720 and e^720 are #NUM!,
+// not e^0; and a subnormal prediction from normal factors is 0 (probes/t4793-growth-several-x
+// Multi A1, SubProd A2; statistics.md "GROWTH is #NUM! once LOGEST's b or a slope's factor
+// overflows ...", T-4793).
+#[test]
+fn growth_per_variable_factors_and_subnormal_result() {
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        "=GROWTH({2.71828182845905;1.22540880546404e-156;6.02987024900035e+156;6.02987024900035e+156},{1,1;2,1;1,2;2,3},{2,2},TRUE)",
+    );
+    model._set(
+        "A2",
+        "=GROWTH({5.40702666934513e-208,1.52654561001656e-241,4.30983910745731e-275},{0.5,1,1.5},2,TRUE)",
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#NUM!");
+    assert_eq!(model._get_text("A2"), "0");
+}

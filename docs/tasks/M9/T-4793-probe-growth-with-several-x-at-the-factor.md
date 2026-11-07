@@ -3,7 +3,7 @@ id: T-4793
 title: "Probe GROWTH with several x at the factor edges, and a subnormal product of normal factors"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -26,8 +26,25 @@ the engine follows it.
 - Code: `growth_prediction` in functions/statistical/trend.rs.
 
 ## Acceptance criteria
-- [ ] The probe is filled and recorded in statistics.md, and the engine follows it.
+- [x] The probe is filled and recorded in statistics.md, and the engine follows it.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The least-squares digits (T-4763, T-2006).
+
+## Outcome
+- Probe: probes/t4793-growth-several-x (excel-graph, 2026-11-07). The predictions were committed before the fill
+  (8b1cc66f2, docs/research/t4793). H1 was the engine as T-4765 left it.
+  - Multi: with known_y a column against a 4x2 known_x, the factors are per variable (H3), not one summed factor
+    (H1). Opposing slope terms of ±720 to ±800 give `#NUM!` on 3 of 3 rows; the ±200 control gives e^1.
+  - SubProd: a subnormal prediction from normal b and F is flushed to 0 (H4) on 4 of 4 rows; the normal controls
+    match.
+- Code: `growth_prediction` (functions/statistical/trend.rs) forms each variable's factor e^(m_j x_j) separately.
+  - `#NUM!` if any of them overflows.
+  - 0 if any is below DBL_MIN.
+  - The prediction e^(sum) is flushed to 0 when subnormal.
+  - With one x this is T-4765's rule unchanged. No constants are involved: the cuts are the double range.
+- Docs: the statistics.md entry is rewritten. A single factor's zero with two x is marked as inferred from the one-x
+  rows.
+- Eval delta: the new probe passes 8 of 10. Multi A4 and SubProd A5 are least-squares digits, now listed in T-4763.
+  The t4765 and t4590 probes are unchanged (20 of 24, 47 of 61).
