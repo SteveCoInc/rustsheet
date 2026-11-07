@@ -11,6 +11,7 @@
 use bitcode::{Decode, Encode};
 
 use super::filter::{AutoShow, PivotFilter};
+use super::sort::AutoSortScope;
 
 /// `dataField@baseItem` when absent: no base item (MS-OI29500 §18.10.1.22, §18.10.1.44).
 pub const NO_BASE_ITEM: u32 = 1_048_832;
@@ -219,6 +220,10 @@ pub struct PivotField {
     /// the field's attributes it keeps in [`PivotTable::opaque`], which is what the export writes
     /// (T-4165).
     pub auto_show: Option<AutoShow>,
+    /// The `autoSortScope`: under an ascending or descending `sortType`, the field shows its items
+    /// ordered by the value this scope names (`pivot::sort`). The importer reads it from the
+    /// element it keeps in [`PivotTable::opaque`], which is what the export writes (T-4827).
+    pub auto_sort: Option<AutoSortScope>,
 }
 
 impl Default for PivotField {
@@ -248,6 +253,7 @@ impl PivotField {
             subtotal_caption: None,
             items: Vec::new(),
             auto_show: None,
+            auto_sort: None,
         }
     }
 

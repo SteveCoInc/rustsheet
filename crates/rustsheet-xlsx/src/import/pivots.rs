@@ -14,6 +14,7 @@
 
 mod filters;
 mod groups;
+mod sort;
 mod table;
 
 use std::cell::Cell;
