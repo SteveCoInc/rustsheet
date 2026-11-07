@@ -12,28 +12,24 @@ use crate::{
     formatter::dates::{
         excel_serial_to_ymd, real_date_to_serial, shift_displayed_date, shift_months,
     },
-    functions::Function,
+    functions::{util::empty_args::na_at_written_empty, Function},
     model::Model,
 };
 
 impl Model {
     /// `EDATE(start_date, months)`.
     pub(crate) fn fn_edate(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        if let Some(empty) = self.toolpak_empty_required(args, 2, cell) {
-            return empty;
-        }
+        let empty = self.written_empty_required(args, 2);
         self.lift_call(Function::Edate, args, cell, &mut |model, values| {
-            model.edate_of(values, cell)
+            model.edate_of(&na_at_written_empty(values, &empty, cell), cell)
         })
     }
 
     /// `EOMONTH(start_date, months)`.
     pub(crate) fn fn_eomonth(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        if let Some(empty) = self.toolpak_empty_required(args, 2, cell) {
-            return empty;
-        }
+        let empty = self.written_empty_required(args, 2);
         self.lift_call(Function::Eomonth, args, cell, &mut |model, values| {
-            model.eomonth_of(values, cell)
+            model.eomonth_of(&na_at_written_empty(values, &empty, cell), cell)
         })
     }
 

@@ -79,20 +79,26 @@ committed before the fill, so the engine no longer reads an empty argument as 0 
   "an optional empty argument is omitted", with H_omitted committed in bf24d2c55 before its fill: 14/14.
 - **No fit:** each cell is `#N/A` or the omitted call's value, and nothing numeric is tuned.
 - **Code:**
-  - `Model::is_written_empty` (new functions/util/empty_args.rs) is the one definition of an empty argument node or a
-    variable bound to nothing. `complex_pair_of` and LET's `bind_argument_value` now use it. `Model::toolpak_empty_required`
-    (same file) gives the `#N/A` from the argument nodes, before lifting, so T-4872 and T-4873 can reuse it. The design
-    review moved both out of let.rs.
-  - The check is on the nodes, not the values. A first draft checked lifted values, and that regressed gen-m6/
-    b54448af3fde07ca A297: there `IFNA(<blank>,..)` evaluates to an empty value, and Excel keeps the start's
-    `#VALUE!`.
-  - `Model::holidays_arg` (date_and_time/holidays.rs) holds the argument-count check, the `#N/A` check and the
-    empty-holidays filter that WORKDAY(.INTL) and NETWORKDAYS(.INTL) share.
-  - WEEKNUM drops a written-empty return_type node, so it reads as type 1.
+  - `Model::is_written_empty` (functions/util/empty_args.rs) is the one definition of an empty argument node or a
+    variable bound to nothing. `complex_pair_of` and LET's `bind_argument_value` now use it. The design review moved
+    it out of let.rs.
+  - `Model::written_empty_required` finds the written-empty required arguments once, from the nodes, before lifting.
+    `na_at_written_empty` then reads those arguments as `#N/A` inside each function's per-element kernel. The kernel
+    meets the `#N/A` at that argument's own turn, and a lifted call gives one result per element. T-4872 and T-4873
+    can reuse both.
+  - Two earlier drafts failed review or gates and were replaced:
+    - The first checked the lifted values. It regressed gen-m6/b54448af3fde07ca A297, where `IFNA(<blank>,..)`
+      evaluates to an empty value and Excel keeps the start's `#VALUE!`.
+    - The second checked the nodes before everything, as one scalar. The fidelity review found that unevidenced
+      (MROUND and GCD read left to right and spread). Round 3 then confirmed the in-order, per-element shape.
+  - `Model::holidays_arg` (date_and_time/holidays.rs) holds the argument-count check and the empty-holidays filter
+    shared by WORKDAY(.INTL) and NETWORKDAYS(.INTL). WEEKNUM drops a written-empty return_type node, so the
+    return_type is read as type 1.
   - Unit test: test/test_toolpak_empty_date_args.rs.
+- **Round 3:** probes/t4870-r3-order-and-lift has 24 cells. The predictions were committed in 9213a82eb, before the
+  fill. H_order scored 23/24 and H_first 6/24. The one miss, A18, was a slip in the hand-written TSV: H_order's rule
+  reads the start first, which gives `#VALUE!`, as in A2.
 - **Docs:** dates.md "A written-empty argument of the ToolPak date functions: required is `#N/A`, optional is omitted
   (T-4870)".
-- **Unprobed:** Excel's order between this `#N/A` and another argument's error. The engine checks the empty argument
-  first.
-- **Eval:** 2 new cases, 45/45.
+- **Eval:** 3 new cases, 69/69.
 - **Follow-ups:** none filed. The financial ToolPak functions and the generator are named in the task's Out of scope.

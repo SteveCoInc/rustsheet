@@ -15,6 +15,7 @@ use crate::{
     formatter::dates::DATE_OUT_OF_RANGE_MESSAGE,
     functions::{
         lift::{number_or_error, LiftCost},
+        util::empty_args::na_at_written_empty,
         Function,
     },
     model::Model,
@@ -89,6 +90,7 @@ impl Model {
         holidays_at: usize,
         cell: CellReferenceIndex,
     ) -> CalcResult {
+        let empty = self.written_empty_required(args, 2);
         let holidays_arg = match self.holidays_arg(args, holidays_at, cell) {
             Ok(arg) => arg,
             Err(error) => return error,
@@ -106,7 +108,12 @@ impl Model {
             LiftCost::Prepared(read),
             cell,
             &mut |model, values| {
-                number_or_error(model.workday_of(values, holidays_at, &holidays, cell))
+                number_or_error(model.workday_of(
+                    &na_at_written_empty(values, &empty, cell),
+                    holidays_at,
+                    &holidays,
+                    cell,
+                ))
             },
         )
     }

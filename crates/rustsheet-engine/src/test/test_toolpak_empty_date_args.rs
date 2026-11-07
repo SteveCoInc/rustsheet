@@ -26,6 +26,13 @@ fn empty_required_is_na_and_empty_optional_is_omitted() {
         ("B7", "=LAMBDA(a,r,WEEKNUM(a,r))(45010,)", "12"),
         // DAYS is not a `ToolPak` function: its empty argument is still read as 0 (control row A31).
         ("C1", "=DAYS(10,)", "10"),
+        // In read order and per element (probes/t4870-r3-order-and-lift A1, A3, A13, A16, A18).
+        ("D1", "=EDATE(1/0,)", "#DIV/0!"),
+        ("D2", "=EDATE(,1/0)", "#N/A"),
+        ("D3", "=YEARFRAC(,1,9)", "#NUM!"),
+        ("D4", "=ROWS(EDATE({1;2},))", "2"),
+        ("D5", "=INDEX(EDATE({1;\"x\"},),2)", "#VALUE!"),
+        ("D6", "=EDATE(1/0,IFNA(Z1,1))", "#DIV/0!"),
     ];
     for (cell, formula, _) in cells {
         model._set(cell, formula);

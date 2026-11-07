@@ -5,7 +5,10 @@ use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
     formatter::dates::from_excel_date,
-    functions::{util::near_integer::near_integer_whole, Function},
+    functions::{
+        util::{empty_args::na_at_written_empty, near_integer::near_integer_whole},
+        Function,
+    },
     model::Model,
     tailed_array::range_corners,
 };
@@ -135,9 +138,6 @@ impl Model {
     /// Both arguments lift over arrays and refuse a multi-cell range (SPEC-0011 `LiftArrays`,
     /// probes/date-argument-modes).
     pub(crate) fn fn_weeknum(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        if let Some(empty) = self.toolpak_empty_required(args, 1, cell) {
-            return empty;
-        }
         // A written-empty return_type is omitted, type 1 (`WEEKNUM(45000,)` is 11:
         // probes/t4870-empty-date-args A16, t4870-r2-empty-optional A5, A6, A14; T-4870).
         let args = match args {
@@ -146,8 +146,9 @@ impl Model {
             }
             _ => args,
         };
+        let empty = self.written_empty_required(args, 1);
         let result = self.lift_call(Function::Weeknum, args, cell, &mut |model, values| {
-            model.weeknum_of(values, cell)
+            model.weeknum_of(&na_at_written_empty(values, &empty, cell), cell)
         });
         if matches!(result, CalcResult::Array(_)) {
             // A WEEKNUM that lifts over an array empties the state, whatever its types
