@@ -2395,6 +2395,7 @@ C	probes/t4245-cjk-numeral-past-1e16.case.json	35
 C	probes/t4248-getpivotdata-recordless-item.case.json	10
 C	probes/t4249-pivot-range-group-edges.case.json	252
 C	probes/t4249-pivot-range-group-labels.case.json	212
+C	probes/t4251-xirr-no-root-bracket.case.json	17
 C	probes/t4253-pivot-decimal-relabel.case.json	196
 C	probes/t4253-pivot-relabel-order.case.json	224
 C	probes/t4254-beta-t-l140-zero-cut.case.json	132
@@ -8064,6 +8065,18 @@ F	probes/t4238-r3-absorb-whole-shape.case.json	Calc!A1
 F	probes/t4238-r3-absorb-whole-shape.case.json	Calc!A10
 F	probes/t4238-r3-absorb-whole-shape.case.json	Calc!A2
 F	probes/t4238-r3-absorb-whole-shape.case.json	Calc!A6
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A1
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A10
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A11
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A13
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A16
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A2
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A3
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A4
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A5
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A7
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A8
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A9
 F	probes/t4254-beta-t-l140-zero-cut.case.json	Calc!A1
 F	probes/t4254-beta-t-l140-zero-cut.case.json	Calc!A10
 F	probes/t4254-beta-t-l140-zero-cut.case.json	Calc!A11
