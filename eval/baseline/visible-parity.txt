@@ -172,7 +172,7 @@ probes/stat-quantile-lift.case.json	9
 probes/subexpr-05d44f6dd6cfc567-calc-a178.case.json	1
 probes/subnormal-saved-negative-and-array.case.json	1
 probes/t2085-getpivotdata-data-fields.case.json	24
-probes/t2085-getpivotdata-items.case.json	24
+probes/t2085-getpivotdata-items.case.json	28
 probes/t2085-getpivotdata-layouts.case.json	38
 probes/t2311-pivotby-value-columns-error-refill-1106.case.json	1
 probes/t2360-array-lambda-holidays-refill-1106.case.json	5

@@ -21,7 +21,10 @@ field name lifts per SPEC-0011 and spills, as an array item already does.
 
 Owner of these visibly-off cells (decision 0245):
 - probes/t2085-getpivotdata-items Q!A1:A6, Q!A8, Q!A9, Q!B3, Q!C1:C3, Q!C5, Q!E1:E3, Q!E9, Q!E12:E15, Q!E17, Q!F9,
-  Q!F10
+  Q!F10, Q!E20:E23
+
+An error cell of the pivot given as pivot_table only picks the pivot (Q!E20:E23). Q!E11 passes today only because
+the pivot's grand total is the same `#N/A` that the engine passes through.
 
 ## Acceptance criteria
 - [ ] The cells above pass, and no other case regresses (`make eval-baseline`).

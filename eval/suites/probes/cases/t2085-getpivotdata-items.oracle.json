@@ -1206,6 +1206,22 @@
     "t": "n",
     "v": 21.0
    },
+   "E20": {
+    "t": "n",
+    "v": 5.0
+   },
+   "E21": {
+    "t": "n",
+    "v": 5.0
+   },
+   "E22": {
+    "t": "n",
+    "v": 5.0
+   },
+   "E23": {
+    "t": "n",
+    "v": 7.0
+   },
    "E3": {
     "t": "e",
     "v": "#N/A"
@@ -1248,10 +1264,10 @@
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "47624118765f5e344761643bcb3d6f5fff2eef5472a94b655bcc951fc54822f7",
+  "input_sha256": "4f230cb4f0aceacab18de0040390fc7fadc0656de753ccf7cef87b293cd40316",
   "kind": "excel-graph",
-  "produced_at": "2026-11-07T07:29:21+00:00",
+  "produced_at": "2026-11-07T07:54:19+00:00",
   "version": null,
-  "workbook_name": "2fd5d209e8441e47dfe65b91dd68ac6162b33cfbf5105f2a426b52bf9d543109.xlsx"
+  "workbook_name": "ac73679d9d1c51e0411ea59c5b59e605f3ef6a9564241f344c63d81545eb3670.xlsx"
  }
 }

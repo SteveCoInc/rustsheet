@@ -24,7 +24,7 @@ Owner of these visibly-off cells (decision 0245):
 
 ## Acceptance criteria
 - [ ] The cells above pass, and no other case regresses (`make eval-baseline`).
-- [ ] The rule is recorded in pivots.md.
+- [ ] pivots.md "Item casing when cache and source disagree, and date items" says the engine now matches.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

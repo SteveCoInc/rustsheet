@@ -1364,7 +1364,7 @@ C	probes/t2065-lift-stdevs.case.json	1
 C	probes/t2065-lift-sumsq.case.json	1
 C	probes/t2065-lift-vars.case.json	1
 C	probes/t2085-getpivotdata-data-fields.case.json	365
-C	probes/t2085-getpivotdata-items.case.json	126
+C	probes/t2085-getpivotdata-items.case.json	130
 C	probes/t2085-getpivotdata-layouts.case.json	220
 C	probes/t2127-trimrange-blank-shapes.case.json	63
 C	probes/t2135-fractional-second-edges-1900.case.json	50
@@ -4586,6 +4586,10 @@ F	probes/t2085-getpivotdata-items.case.json	Q!E14
 F	probes/t2085-getpivotdata-items.case.json	Q!E15
 F	probes/t2085-getpivotdata-items.case.json	Q!E17
 F	probes/t2085-getpivotdata-items.case.json	Q!E2
+F	probes/t2085-getpivotdata-items.case.json	Q!E20
+F	probes/t2085-getpivotdata-items.case.json	Q!E21
+F	probes/t2085-getpivotdata-items.case.json	Q!E22
+F	probes/t2085-getpivotdata-items.case.json	Q!E23
 F	probes/t2085-getpivotdata-items.case.json	Q!E3
 F	probes/t2085-getpivotdata-items.case.json	Q!E9
 F	probes/t2085-getpivotdata-items.case.json	Q!F10

@@ -139,7 +139,10 @@ Structural edits: see "Pivot tables and structural edits" below. xlsx export wri
 
 ## GETPIVOTDATA on other pivot shapes (T-2085)
 Rule: GETPIVOTDATA answers the value the pivot shows, for every shape SPEC-0015 left unprobed. It reads the shown
-value even where the cache disagrees, and an item, total or data field the pivot does not show is `#REF!`.
+value even where the cache disagrees, and an item, total or data field the pivot does not show is `#REF!`. "Shows"
+means a cell of the grid. A blank intersection cell, as when a row field crosses a column field, exists and is 0 (DF
+B6:J6). A row or column the pivot has no line for is `#REF!`, as with an inner row item missing under its outer item
+(LY B6:D6).
 Cell ids are sheet Q of each case. The cases are probes/t2085-getpivotdata-data-fields (DF),
 -items (IT) and -layouts (LY). The pivots are builder-v2 pivots that Excel renders on open.
 
@@ -184,7 +187,11 @@ blank: Nord is 3. An error record is the error: Mid is `#N/A`, and so is the gra
 
 **Errors in the arguments.** An error as a field name is that error (`NA()` gives `#N/A`, IT E3). An error as an
 item is `#REF!` (E4, E5). A number, boolean or referenced number as data_field is `#REF!` (E6:E8). An error held by
-the pivot cell given as pivot_table is that error. So is a range over the pivot that holds the error cell (E11, E12).
+the pivot cell given as pivot_table is not passed through: the cell only picks the pivot, like any cell of it. So
+`GETPIVOTDATA("Val",E!B6,"Region","East")` with E!B6 holding `#N/A` is 5, the same as with the non-error cell E!A4,
+and with West it is 7. A range holding the error cell answers the same way (E20:E23). Without pairs both give the
+pivot's grand total, which is itself `#N/A` here (E11, E12). The engine passes the cell's error through today (T-1703's
+rule for a pivot_table with no pivot), which is wrong inside a pivot.
 
 **Arrays.** An array data_field lifts: `{"Sales","Units"}` spills 46 and `#REF!`, since Units is not a data field
 (IT E9:F9). So does an array field name: `{"Region","Product"},"A"` spills `#REF!` and 30 (E10:F10).
@@ -212,8 +219,11 @@ decides is UNVERIFIED.
 - With the outer field's subtotals off, the Region subtotal is `#REF!` and inner items still answer (E1:E6).
 
 **Summation order.** The answer is the shown cell, so it follows pivots.md "Summation order of Sum, Average and
-Product totals", not record order. East = A's cell (0.2 + 0.1) + B's 0.3 = 0.6000000000000001. The grand total is
-East + West = 1.3, where record order gives 1.2999999999999998 (LY F1:F5).
+Product totals", not record order. That rule adds the leaf cells in display order, here first-seen: East/B, then
+East/A (SO!A5:A6). East is 0.3 + 0.30000000000000004 (A's cell, 0.2 + 0.1) = 0.6000000000000001. The grand total adds
+the leaf cells East/B 0.3, East/A 0.30000000000000004 and West/A 0.7, which gives 1.3. Record order gives
+1.2999999999999998 (LY F1:F5). Adding the subtotals East + West would also give 1.3 here, so this probe does not
+tell the two apart; the leaf rule is pivots.md's evidence.
 
 **A saved render.** On the T-4586 pivot (refreshOnLoad off, saved cells East 99 and Grand Total 99, no West row),
 GETPIVOTDATA reads the saved cells: the grand total and East are 99, while West, which has records in the cache but

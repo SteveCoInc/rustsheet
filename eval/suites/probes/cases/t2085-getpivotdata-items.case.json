@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-2085 (SPEC-0015 unknowns 3, 5, 6, 7, 13, 14): GETPIVOTDATA item and argument kinds on builder-v2 pivots Excel renders on open. Items!A1:E5: Num (1, 2.5, 1, 10), When (date serials 45292, 45293, 45292, 45323 as m/d/yyyy), Flag (TRUE, FALSE, TRUE, FALSE), Code (\u00c9t\u00e9, \u00d8st, \u00c9t\u00e9, \u00c4rger) and Sales (1, 2, 4, 8, so a sum names its records). N, D, B, U pivot each of those fields as rows with Sum of Sales; Q columns A:D ask them with a number, a text, a date, a reference and other spellings, and U with non-ASCII case variants. T (rows Region, columns Product over Data): Q!E1:E10 ask the same field twice (same item, case variants), an error as field or item, a number, boolean or referenced number (Q!Z2 = 1) as data_field, an array data_field and an array field name. E pivots Odd!A1:B7 (Val: East 5 and \"abc\", West 7, Mid #N/A, Nord 3 and a blank) with Sum of Val; Q!E11:E19 ask a single error-holding pivot cell and a range holding it as pivot_table, and Val per region (text, error and blank records), and read E!B6 itself.",
+  "description": "T-2085 (SPEC-0015 unknowns 3, 5, 6, 7, 13, 14): GETPIVOTDATA item and argument kinds on builder-v2 pivots Excel renders on open. Items!A1:E5: Num (1, 2.5, 1, 10), When (date serials 45292, 45293, 45292, 45323 as m/d/yyyy), Flag (TRUE, FALSE, TRUE, FALSE), Code (\u00c9t\u00e9, \u00d8st, \u00c9t\u00e9, \u00c4rger) and Sales (1, 2, 4, 8, so a sum names its records). N, D, B, U pivot each of those fields as rows with Sum of Sales; Q columns A:D ask them with a number, a text, a date, a reference and other spellings, and U with non-ASCII case variants. T (rows Region, columns Product over Data): Q!E1:E10 ask the same field twice (same item, case variants), an error as field or item, a number, boolean or referenced number (Q!Z2 = 1) as data_field, an array data_field and an array field name. E pivots Odd!A1:B7 (Val: East 5 and \"abc\", West 7, Mid #N/A, Nord 3 and a blank) with Sum of Val; Q!E11:E19 ask a single error-holding pivot cell and a range holding it as pivot_table, and Val per region (text, error and blank records), and read E!B6 itself. Q!E20:E23 separate an error passed through from a pivot lookup: the error cell E!B6, and the range holding it, as pivot_table with the pair Region East (5 if the pivot is looked up), the non-error cell E!A4 with the same pair, and E!B6 with West.",
   "tags": [
     "probe",
     "getpivotdata",
@@ -299,6 +299,10 @@
         "E17": "=GETPIVOTDATA(\"Val\",E!$A$3)",
         "E18": "=E!$B$6",
         "E19": "=ISERROR(E!$B$6)",
+        "E20": "=GETPIVOTDATA(\"Val\",E!$B$6,\"Region\",\"East\")",
+        "E21": "=GETPIVOTDATA(\"Val\",E!$A$3:$B$9,\"Region\",\"East\")",
+        "E22": "=GETPIVOTDATA(\"Val\",E!$A$4,\"Region\",\"East\")",
+        "E23": "=GETPIVOTDATA(\"Val\",E!$B$6,\"Region\",\"West\")",
         "Z2": 1
       }
     }

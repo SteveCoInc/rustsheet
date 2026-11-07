@@ -28,7 +28,7 @@ The numbered unknowns of SPEC-0015 "Excel behavior to match" (that list is the s
 ## Outcome
 Three probe cases cover the SPEC-0015 unknowns the case builder (builder v2, `definition`) can express:
 probes/t2085-getpivotdata-data-fields, -items and -layouts (excel-graph, 2026-11-07). No builder change was needed.
-The findings are in web.md "GETPIVOTDATA on other pivot shapes (T-2085)". The headline rule is that GETPIVOTDATA
+The findings are in web.md "GETPIVOTDATA on other pivot shapes (T-2085)", a new section beside "GETPIVOTDATA against a pivot table", which points to it. The headline rule is that GETPIVOTDATA
 answers what the pivot shows: a saved render wins over the cache, totals follow the rendered summation order, and a
 total or item the pivot does not show is `#REF!`.
 
