@@ -5163,15 +5163,16 @@ F.DIST.RT in region 1 (df1 3 to 79, df2 1E4 to 2E6, tails 1E-200 to 0.5). B1:B30
 60-digit math (a positive-term 2F1 sum, `mathref.py`; for F at the exact ratio d1 x/(d2 + d1 x)). Excel's accuracy
 per region:
 - **Region 1, the upper F tail at a0 = df2/2 of 5E3 to 1E6 and b0 = df1/2 below 40 (bratio's L140 bup+bgrat): Excel is
-  as accurate as double arithmetic allows.** Its relative error is at most 1.3E-13 and has a median of 109 ulp. In
+  as accurate as double arithmetic allows.** Its relative error is at most 1.3E-13 and has a median of 121 ulp. In
   units of |ln tail|·2^-53, though, it is a median of 0.9 and at most 9.5, uniform over the three decades of a0. A
   double kernel ends in exp(-L) with L = |ln tail| up to 460 here, and an ulp of L alone is L ulp of the tail. The
   error does not come from rounding the F ratio: against the math at the double ratio fl(d1 x/(d1 x + d2)), Excel's
-  median is still 117 ulp. Ours (Cephes' fraction where the L140 port stops, df1 of 20 and up) reaches 7,870 of those
+  median is still 117 ulp. Ours (Cephes' fraction where the L140 port stops, df1 of 21 and up) reaches 7,870 of those
   units and 1.4E-11 relative at a0 of 1E5 to 1E6. This region is T-4435's `accuracy` target. Excel's digits are its
-  own, though: the correctly rounded math is within 15 digits of Excel on only 22 of the 300 cells. At df1 below 20,
+  own, though: the correctly rounded math is within 15 digits of Excel on only 22 of the 300 cells. At df1 of 20 or less,
   where ours is T-3754's L140 port in Excel's arithmetic, ours matches Excel on 158 of 170 cells.
-- **Region 2 above the mean, and BETA.DIST above the mean at a >= 40: Excel is off the math, increasingly with a0.**
+- **Region 2 above the mean from a0 of 1E5 up, and BETA.DIST above the mean at a >= 40: Excel is off the math,
+  increasingly with a0** (at a0 of 5E4 to 1E5, 9 of the 10 F.DIST.RT cells above the mean are within 1E-13).
   These cells take bfrac with b0 >= 40, after bratio's swap where it applies. For F.DIST.RT the worst relative error
   per decade of a0 = df2/2 is 1.4E-13 (5E4 to 1E5), 3.4E-12 (1E5 to 1E6), 5.8E-11, 1.7E-10, 7.7E-9 and 8.5E-9 (1E9 to
   5E9). BETA.DIST reaches 3.5E-9 at b of 1E8 to 1E9. This is T-4214's subject, Excel's own bfrac arithmetic. Ours is

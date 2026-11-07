@@ -20,7 +20,7 @@ tell, region by region, whether Excel is near correctly rounded (its `accuracy` 
 ## Context
 - Gap triage 2026-11-06 (`make eval` on origin/main 39f04d556, all suites fetched). Every failing cell of the run has
   an open owner, so this gap is an evidence gap. The engine was measured on a scratch case through
-  `rustsheet-eval show --all`, against mpmath 1.4 `betainc` at 40 to 60 digits, with the exact ratio
+  `rustsheet-eval show --all`, against mpmath 1.3 `betainc` at 40 to 60 digits, with the exact ratio
   d2/(d2 + d1·x) for the F calls:
   - **Region 1, upper F tails at df2 1E5 to 2E6 and df1 3 to 79.** Here a0 = df2/2 is below
     `large_shape_beta.rs` `MIN_SHAPE` (1E6). Measured errors:
@@ -67,9 +67,12 @@ tell, region by region, whether Excel is near correctly rounded (its `accuracy` 
       double arguments, and for F calls the exact ratio. It reports, per region and per decade of the huge shape,
       the counts within 1E-15, 1E-14 and 1E-12 relative for each side, and the worst error of each side. The table is
       in this task's Outcome and in T-4435's Context.
-- [x] The case's failing cells are added to eval/baseline/probes-numeric.txt through `make eval-baseline` (new
-      known failures of a new case, decision 0083). Each visibly-off cell is listed in T-4435, or, where Excel is the
-      side off the math by more than 1E-13, in T-4214 (b0 >= 40) or T-4076 (both sides within 1E-9 of the math).
+- [x] The case's failing cells are recorded through `make eval-baseline` (new known failures of a new case,
+      decision 0083); probes-numeric has no baseline file (decision 0203), so it adds no line. Each visibly-off cell is
+      listed in T-4435 where the correctly rounded math is within 15 digits of Excel, else, where Excel is the side
+      off the math, in T-4214 (b0 >= 40) or T-3209 (b0 < 40). Amended at review (the Outcome says why): the criterion
+      first sent cells away from T-4435 only where Excel is more than 1E-13 off, and named T-4076 for cells both
+      sides have within 1E-9.
 - [x] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -90,7 +93,7 @@ tell, region by region, whether Excel is near correctly rounded (its `accuracy` 
 
 | region | huge shape | cells | Excel <=1E-15/1E-14/1E-12, worst | engine <=1E-15/1E-14/1E-12, worst |
 |---|---|---:|---|---|
-| region 1 F.DIST.RT | 5E3 to 1E4 | 35 | 3/ 17/ 35 of 35, worst 9.1e-14 | 2/ 14/ 35 of 35, worst 9.1e-14 |
+| region 1 F.DIST.RT | 1E3 to 1E4 | 35 | 3/ 17/ 35 of 35, worst 9.1e-14 | 2/ 14/ 35 of 35, worst 9.1e-14 |
 | region 1 F.DIST.RT | 1E4 to 1E5 | 150 | 4/ 53/150 of 150, worst 1.3e-13 | 4/ 41/150 of 150, worst 6.2e-13 |
 | region 1 F.DIST.RT | 1E5 to 1E6 | 115 | 1/ 29/115 of 115, worst 1.2e-13 | 0/ 20/103 of 115, worst 1.4e-11 |
 | region 1 F.DIST.RT | **all** | 300 | 8/ 99/300 of 300, worst 1.3e-13 | 6/ 75/288 of 300, worst 1.4e-11 |
@@ -120,7 +123,7 @@ Error in units of max(1, |ln value|)·2^-53 (median / 90th percentile / worst fo
 
 | region | huge shape | cells | Excel median | Excel 90th pct | Excel worst | engine median | engine worst |
 |---|---|---:|---:|---:|---:|---:|---:|
-| region 1 F.DIST.RT | 5E3 to 1E4 | 35 | 0.585 | 2.11 | 4.14 | 0.743 | 8.26 |
+| region 1 F.DIST.RT | 1E3 to 1E4 | 35 | 0.585 | 2.11 | 4.14 | 0.743 | 8.26 |
 | region 1 F.DIST.RT | 1E4 to 1E5 | 150 | 0.935 | 2.36 | 9.49 | 1.24 | 1.86e+03 |
 | region 1 F.DIST.RT | 1E5 to 1E6 | 115 | 0.914 | 2.09 | 4.91 | 1.41 | 7.87e+03 |
 | region 2 F.DIST.RT | 1E4 to 1E5 | 15 | 3.87 | 202 | 498 | 151 | 962 |
@@ -141,17 +144,16 @@ Error in units of max(1, |ln value|)·2^-53 (median / 90th percentile / worst fo
 | BETA.DIST | 1E7 to 1E8 | 32 | 6.77 | 3.54e+04 | 6.53e+06 | 5.49 | 4.45e+05 |
 | BETA.DIST | 1E8 to 1E9 | 35 | 10.6 | 3.76e+05 | 3.11e+07 | 3.89 | 4.05e+06 |
 | BETA.DIST | 1E9 to 1E10 | 14 | 3.12e+05 | 1.51e+07 | 2.43e+07 | 2e+06 | 5.32e+07 |
-| cell | call | Excel rel | engine rel |
 
 Per region, is Excel near correctly rounded (the `accuracy` stage's premise)?
 - **Region 1 (F.DIST.RT at a0 = df2/2 of 5E3 to 1E6, b0 = df1/2 below 40; L140 bup+bgrat): yes, as near as double
-  arithmetic allows.** Excel is at most 1.3E-13 relative off, with a median of 109 ulp. In units of |ln tail|·2^-53
+  arithmetic allows.** Excel is at most 1.3E-13 relative off, with a median of 121 ulp (117 against the math at the double ratio). In units of |ln tail|·2^-53
   (a double kernel ends in exp(-L), L = |ln tail| up to 460, and an ulp of L is L ulp of the tail) its median is 0.9
   and its worst 9.5, flat over the three decades. Rounding the F ratio does not explain it: against the math at the
   double ratio Excel's median is still 117 ulp. Ours reaches 7,870 units, 1.4E-11 relative (Cephes' fraction where the
-  L140 port stops at 9 bup terms, df1 of 20 and up). The correctly rounded math is within 15 digits of Excel on only
-  22 of the 300 cells. At df1 below 20 (170 cells) ours is T-3754's L140 port in Excel's arithmetic and matches Excel
-  on 158 (worst 5.2 units): those must stay on the port. At df1 of 20 and up (130 cells) ours matches none and the
+  L140 port stops at 9 bup terms, df1 of 21 and up). The correctly rounded math is within 15 digits of Excel on only
+  22 of the 300 cells. At df1 of 20 or less (170 cells) ours is T-3754's L140 port in Excel's arithmetic and matches Excel
+  on 158 (worst 5.2 units): those must stay on the port. At df1 of 21 and up (130 cells) ours matches none and the
   math 8. So an accurate kernel there brings 8 cells to Excel and moves the rest to the math; what is left is Excel's
   own bgrat digits (T-3209).
 - **Region 2 above the mean (F.DIST.RT and F.DIST at df1 80 to 400, df2 1E5 to 1E10; bfrac, b0 >= 40, swapped so the
@@ -164,11 +166,19 @@ Per region, is Excel near correctly rounded (the `accuracy` stage's premise)?
   Ours is up to 1.6E-12 off at a < 40 above the mean (Cephes again), and up to 5.9E-9 at a >= 40.
 - No Excel cell is `#NUM!` or 0. T-4044's band (df1 61 to 79 at df2 1E10) is outside both regions.
 
-Owners (`score.py`'s rule, the cells where ours is not within 15 digits of Excel):
+Owners (`score.py` `owner`, the cells where ours is not within 15 digits of Excel). Review choice (b): the
+criterion's rule (away from T-4435 only where Excel is more than 1E-13 off) is amended. T-4435 is the `accuracy`
+stage and can bring a cell within 15 digits of Excel only where the correctly rounded math is; a cell where Excel is
+1E-14 to 1E-13 off and the math not within 15 digits of Excel is Excel's own digits, which only a model of Excel's
+arithmetic reaches. So T-4435's acceptance lists exactly the cells an accurate kernel can match. How far Excel is off
+the math on each list (`score.py`'s last block):
+- T-4435: all 29 within 1E-14 (worst 3.5E-15).
+- T-4214: 261 of the 342 more than 1E-13 off, 42 from 1E-14 to 1E-13, 39 within 1E-14 (Excel's bfrac digits).
+- T-3209: 2 of the 146 more than 1E-13 off, 100 from 1E-14 to 1E-13, 44 within 1E-14; worst 1.2E-13.
 - T-4435 (29): the correctly rounded math is within 15 digits of Excel, so an accurate kernel matches.
 - T-4214 (342): Excel is the side off the math and bratio's b0 is 40 or more (bfrac). Listed in its "T-4434 cells".
 - T-3209 (146, deferred): Excel is the side off the math at b0 below 40 (bgrat digits, mostly 1E-14 to
-  1.3E-13). Listed in its Evidence. Both sides are within 1E-9 of the math on every one of them, so they are Phase 1b
+  1.2E-13). Listed in its Evidence. Both sides are within 1E-9 of the math on every one of them, so they are Phase 1b
   evidence (decision 0188 R1(c)) and not counted.
 - The owner gate (`scripts/new_case_owners.py`) counts 82 cells once the math sidecar is in (the rest are R1(c)
   evidence), all in T-4214's list. The task's text named T-4076 for cells both sides have within 1E-9; the owner

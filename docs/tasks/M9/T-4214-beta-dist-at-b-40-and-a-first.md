@@ -102,11 +102,13 @@ Gap triage 2026-11-06 (origin/main 39f04d556) adds `FDIST(1.5,80,1E10)`, which i
 - probes-numeric/t4045-f-dist-rt-zero-cut.case.json (1): Calc!E3
 
 ## T-4434 cells
-T-4434's sweep (docs/research/t4434, `score.py`'s owner rule) gives this task the 342 cells where ours is not within 15
+T-4434's sweep (docs/research/t4434, `score.py` `owner`) gives this task the 342 cells where ours is not within 15
 digits of Excel, the correctly rounded math is not either (so Excel is the side off the math), and bratio's b0 is 40
 or more (bfrac). They are region 2's F tails above the mean (df1 80 to 400, df2 1E5 to 1E10), F.DIST at the same
 points, and BETA.DIST above the mean at a of 40 and more, where bfrac runs swapped with the huge shape as a0. Excel
-is up to 8.5E-9 off the math there (B), 1.3E-9 (C) and 3.5E-9 (D), growing with a0 (statistics.md "Incomplete beta at
+is more than 1E-13 off the math on 261 of the 342, from 1E-14 to 1E-13 on 42 and within 1E-14 on 39 (its bfrac
+digits, which the correctly rounded math does not match to 15 digits); up to 8.5E-9 (B), 1.3E-9 (C) and 3.5E-9 (D),
+growing with a0 (statistics.md "Incomplete beta at
 a huge first shape", T-4434 item). T-4435 moves ours toward the math first. These are evidence cells, not Decision
 0267 cells: decision 0267's tiers and time-box do not extend to them.
 - probes-numeric/t4434-huge-shape-outside-large-shape-beta.case.json (342): Calc!B1:B11, B13, B15:B16, B18, B22:B25, B27, B29:B31, B33, B36:B39, B41, B44:B51, B53:B58, B60:B61, B63:B64, B66:B71, B73:B74, B76:B77, B79, B82:B84, B86:B88, B90:B93, B96:B97, B99, B101:B106, B108:B112, B114:B116, B118:B119, B122:B123, B125:B127, B130:B131, B133:B139, B141:B142, B144, B146:B151, B153, B155:B160, B163:B189, B191:B192, B194:B197, B199:B209, B211:B212, B214, B217, B219:B229, B231:B237, B239:B241, B243:B244, B248:B251, B253:B255, B257, B260:B263, B267:B272, B274:B275, B277:B278, B281, B283, B285:B291, B293:B294, B296:B300, C2, C9:C10, C15, C18, C20, C23, C30:C31, C33, C36:C38, C41, C44:C46, C48:C49, C56, C61, C67:C68, C74:C75, C77, C79:C80, C83:C84, C88:C89, C91, C93, C102, C105:C106, C108, C112, C115, C120, C125, C129, C131, C134:C136, C140:C141, C149:C150, D1:D2, D5, D7, D9, D12, D14:D16, D22, D24:D26, D28, D34:D36, D39:D43, D46, D55:D56, D62, D64, D69:D70, D74:D75, D78:D79, D81, D87, D90:D91, D94, D98:D101, D103:D104, D106:D107, D109:D111, D113, D119:D123, D130, D133, D135, D137:D139, D142, D147:D148, D150
