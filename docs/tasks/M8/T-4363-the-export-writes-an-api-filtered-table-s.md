@@ -3,7 +3,7 @@ id: T-4363
 title: "The export writes an API-filtered table's filter as a criterion Excel reads as filtered"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
