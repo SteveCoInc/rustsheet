@@ -325,9 +325,10 @@ pub enum DropReason {
    - `save_xlsx` and `to_xlsx_bytes` keep their signatures and discard the report.
    - The Python binding returns the report as a list of `(item, reason)` tuples from
      `save_xlsx(..., report=True)`.
-   - Until T-4562 lands, the report is filled coarsely: one `NotPreserved` entry per source part the
-     export does not write, which needs the part inventory the importer already builds (`PartNames`). Element-level
-     entries come with fragments.
+   - Until stage 5, the report is filled coarsely (T-4562): one `NotPreserved` entry per source part of a
+     relationship type the export does not model, and calcChain as `Policy`. A part of a modelled type the export
+     fails to write (a dropped pivot cache) is not reported until T-4999 compares the output's inventory.
+     Element-level entries come with fragments.
 2. **What a `dropped` verdict accepts.** An item in the report is `dropped` (pass) only for these reasons:
    - `Policy` or `ActiveContentInPlainFormat`, in any scenario;
    - `StaleAfterStructuralEdit` or `OwnerDeleted`, in an R2 run whose edit explains it;

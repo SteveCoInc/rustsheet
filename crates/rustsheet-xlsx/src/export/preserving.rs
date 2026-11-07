@@ -12,6 +12,7 @@ use rustsheet_engine::Model;
 use super::report::{self, SaveReport};
 use super::save_regenerated;
 use crate::error::XlsxError;
+use crate::import::ImportLimits;
 
 /// How a save wrote the package (SPEC-0034 D4).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -37,7 +38,8 @@ pub enum SaveTier {
 /// load (D2). An unchanged workbook is the source's bytes, untouched; a change the patch cannot
 /// write regenerates, as [`save_xlsx_to_writer`](super::save_xlsx_to_writer) always did,
 /// keeping the source's `PivotChart` drawings where it can (T-4950). The report says which tier
-/// wrote the package and which source parts it left out (SPEC-0033 D7, T-4562).
+/// wrote the package and which source parts it left out (SPEC-0033 D7, T-4562); `limits` are the
+/// ones `source` was loaded with, which bound the report's own read of it.
 ///
 /// # Errors
 /// When writing fails, or the regenerating export does.
@@ -45,31 +47,28 @@ pub fn save_preserving<W: Write + Seek>(
     model: &Model,
     pristine: &Model,
     source: &[u8],
+    limits: &ImportLimits,
     mut writer: W,
 ) -> Result<(W, SaveReport), XlsxError> {
     if model.workbook == pristine.workbook {
         writer.write_all(source)?;
-        let report = SaveReport {
-            tier: SaveTier::Verbatim,
-            dropped: Vec::new(),
-        };
-        return Ok((writer, report));
+        return Ok((writer, SaveReport::new(SaveTier::Verbatim, Vec::new())));
     }
     let reason = match super::patch::patch(model, pristine, source)? {
         Ok((bytes, sheets)) => {
             writer.write_all(&bytes)?;
-            let report = SaveReport {
-                tier: SaveTier::Patched { sheets },
-                dropped: report::patched(source, &bytes),
-            };
-            return Ok((writer, report));
+            let dropped = report::patched(source, &bytes, limits);
+            return Ok((
+                writer,
+                SaveReport::new(SaveTier::Patched { sheets }, dropped),
+            ));
         }
         Err(reason) => reason,
     };
     let (writer, kept) = save_regenerated(model, pristine, source, writer)?;
-    let report = SaveReport {
-        tier: SaveTier::Regenerated { reason },
-        dropped: report::regenerated(source, &kept),
-    };
-    Ok((writer, report))
+    let dropped = report::regenerated(source, &kept, limits);
+    Ok((
+        writer,
+        SaveReport::new(SaveTier::Regenerated { reason }, dropped),
+    ))
 }

@@ -11,7 +11,7 @@ use std::io::{Cursor, Read, Write};
 use rustsheet_engine::expressions::types::Area;
 use rustsheet_engine::Model;
 use rustsheet_xlsx::export::{save_preserving, save_xlsx_to_writer, SaveReport, SaveTier};
-use rustsheet_xlsx::import::load_from_xlsx_bytes;
+use rustsheet_xlsx::import::{load_from_xlsx_bytes, ImportLimits};
 
 const SHEET: &str = "xl/worksheets/sheet1.xml";
 const STYLES: &str = "xl/styles.xml";
@@ -43,7 +43,14 @@ fn save_after(bytes: &[u8], edit: impl FnOnce(&mut Model)) -> (Vec<u8>, SaveTier
     let mut model = load(bytes);
     edit(&mut model);
     model.evaluate();
-    let (out, report) = save_preserving(&model, &pristine, bytes, Cursor::new(Vec::new())).unwrap();
+    let (out, report) = save_preserving(
+        &model,
+        &pristine,
+        bytes,
+        &ImportLimits::default(),
+        Cursor::new(Vec::new()),
+    )
+    .unwrap();
     (out.into_inner(), report.tier)
 }
 
@@ -512,9 +519,15 @@ fn report_after(bytes: &[u8], edit: impl FnOnce(&mut Model)) -> SaveReport {
     let mut model = load(bytes);
     edit(&mut model);
     model.evaluate();
-    save_preserving(&model, &pristine, bytes, Cursor::new(Vec::new()))
-        .unwrap()
-        .1
+    save_preserving(
+        &model,
+        &pristine,
+        bytes,
+        &ImportLimits::default(),
+        Cursor::new(Vec::new()),
+    )
+    .unwrap()
+    .1
 }
 
 /// The report's drops as (item, reason name) pairs.
@@ -576,4 +589,21 @@ fn the_save_report_names_what_each_tier_left_out() {
             ("xl/calcChain.xml".to_string(), "Policy"),
         ]
     );
+}
+
+/// The report reads the source within the limits it was loaded with (directive 5): over them it
+/// says so, rather than reporting that nothing was dropped.
+#[test]
+fn a_source_the_report_cannot_read_within_the_load_limits_is_reported() {
+    let src = source();
+    let pristine = load(&src);
+    let mut model = load(&src);
+    model.workbook.worksheets[0].name = "Renamed".into();
+    let tight = ImportLimits {
+        max_zip_entries: 1,
+        ..ImportLimits::default()
+    };
+    let (_, report) =
+        save_preserving(&model, &pristine, &src, &tight, Cursor::new(Vec::new())).unwrap();
+    assert_eq!(drops(&report), [(String::new(), "LimitExceeded")]);
 }

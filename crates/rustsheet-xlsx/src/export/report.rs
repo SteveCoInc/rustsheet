@@ -1,9 +1,14 @@
 //! What a save left out of the package, and why (SPEC-0033 D7, SPEC-0034 D4, T-4562).
 //!
-//! The report is coarse until stage 5 (SPEC-0034 D5): a regenerated save names each source part
-//! the regenerating export does not write and did not keep, one `NotPreserved` entry each, and
-//! calcChain, which no tier ever writes once it would be stale, as `Policy`. The Patched tier names
-//! the calcChain it dropped. The Verbatim tier drops nothing.
+//! The report is coarse until stage 5 (SPEC-0034 D5):
+//! - a regenerated save names each source part of a relationship type the export does not model
+//!   and that it did not keep, one `NotPreserved` entry each, and calcChain as `Policy`;
+//! - a part of a modelled relationship type is assumed written. One the export cannot write (a
+//!   pivot cache `PivotPlan` drops, rich values that are not rich errors) is not reported yet:
+//!   T-4999's ownership matrix compares the output's own inventory;
+//! - the Patched tier names the calcChain it dropped, and the Verbatim tier drops nothing;
+//! - a source the report cannot inventory within the load's limits gives one `LimitExceeded`
+//!   entry with an empty item, never an empty list that would claim nothing was dropped.
 
 use std::collections::{BTreeSet, HashMap};
 use std::io::Cursor;
@@ -144,11 +149,15 @@ const CALC_CHAIN: &str = "calcChain";
 
 /// The source parts a regenerated save left out: every content part reached by a relationship
 /// type the export does not model, that `kept` (part keys) does not hold, or that no
-/// relationship reaches. A source the importer's reader cannot open reports nothing, since the
-/// save itself still succeeded.
-pub(super) fn regenerated(source: &[u8], kept: &BTreeSet<String>) -> Vec<Dropped> {
-    let Some((entries, kinds)) = inventory(source) else {
-        return Vec::new();
+/// relationship reaches. `limits` are the ones the workbook was loaded with.
+pub(super) fn regenerated(
+    source: &[u8],
+    kept: &BTreeSet<String>,
+    limits: &ImportLimits,
+) -> Vec<Dropped> {
+    let (entries, kinds) = match inventory(source, limits) {
+        Ok(found) => found,
+        Err(drop) => return vec![drop],
     };
     entries
         .into_iter()
@@ -169,9 +178,13 @@ pub(super) fn regenerated(source: &[u8], kept: &BTreeSet<String>) -> Vec<Dropped
 }
 
 /// The calcChain a patched save dropped: the source's, when `output` no longer holds it.
-pub(super) fn patched(source: &[u8], output: &[u8]) -> Vec<Dropped> {
-    let (Some((entries, kinds)), Some(out)) = (inventory(source), entry_names(output)) else {
-        return Vec::new();
+pub(super) fn patched(source: &[u8], output: &[u8], limits: &ImportLimits) -> Vec<Dropped> {
+    let (entries, kinds) = match inventory(source, limits) {
+        Ok(found) => found,
+        Err(drop) => return vec![drop],
+    };
+    let Some(out) = entry_names(output) else {
+        return vec![unreadable("the saved package")];
     };
     let out = PartNames::new(out.iter().map(String::as_str));
     entries
@@ -186,10 +199,17 @@ pub(super) fn patched(source: &[u8], output: &[u8]) -> Vec<Dropped> {
 }
 
 /// The source's content parts in entry order (no `.rels`, no `[Content_Types].xml`, no folders),
-/// and each part's key mapped to the last segment of the relationship type that reaches it.
-fn inventory(source: &[u8]) -> Option<(Vec<String>, HashMap<String, String>)> {
-    let names = entry_names(source)?;
-    let mut package = Package::new(Cursor::new(source), ImportLimits::default()).ok()?;
+/// and each part's key mapped to the last segment of the relationship type that reaches it. The
+/// source is read within `limits`, the load's (directive 5). A `.rels` part that does not parse,
+/// or passes the budget, is skipped: the parts only it reaches then count as unreached, so they are
+/// reported `NotPreserved` unless kept.
+fn inventory(
+    source: &[u8],
+    limits: &ImportLimits,
+) -> Result<(Vec<String>, HashMap<String, String>), Dropped> {
+    let names = entry_names(source).ok_or_else(|| unreadable("the source package"))?;
+    let mut package =
+        Package::new(Cursor::new(source), *limits).map_err(|_| unreadable("the source package"))?;
     let mut kinds = HashMap::new();
     for rels in names.iter().filter(|n| is_rels(n)) {
         let Some(base) = rels_owner_folder(rels) else {
@@ -218,7 +238,18 @@ fn inventory(source: &[u8]) -> Option<(Vec<String>, HashMap<String, String>)> {
         .filter(|n| !n.ends_with('/') && !is_rels(n))
         .filter(|n| part_key(n) != part_key("[Content_Types].xml"))
         .collect();
-    Some((content, kinds))
+    Ok((content, kinds))
+}
+
+/// The entry for a package the report could not inventory within the load's limits: an empty
+/// item, so it names no part, and the reason.
+fn unreadable(what: &str) -> Dropped {
+    Dropped::new(
+        "",
+        DropReason::LimitExceeded {
+            limit: format!("{what} could not be inventoried within the load's limits"),
+        },
+    )
 }
 
 /// The zip entry names of `bytes`, in directory order.
@@ -235,7 +266,14 @@ fn entry_names(bytes: &[u8]) -> Option<Vec<String>> {
 /// `xl/_rels/workbook.xml.rels` from `xl`. `None` for a `.rels` outside a `_rels` folder.
 fn rels_owner_folder(rels: &str) -> Option<String> {
     let rels = rels.replace('\\', "/");
-    let (folder, _) = rels.rsplit_once("_rels/")?;
+    // A `_rels` segment, never a folder that merely ends in `_rels` (`foo_rels/x.rels`).
+    if let Some(rest) = rels.strip_prefix("_rels/") {
+        return (!rest.contains('/')).then(String::new);
+    }
+    let (folder, rest) = rels.rsplit_once("/_rels/")?;
+    if rest.contains('/') {
+        return None;
+    }
     Some(folder.trim_end_matches('/').to_string())
 }
 
@@ -249,4 +287,25 @@ fn is_rels(name: &str) -> bool {
         || std::path::Path::new(file)
             .extension()
             .is_some_and(|e| e == "rels")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::rels_owner_folder;
+
+    #[test]
+    fn a_rels_part_resolves_from_the_folder_above_its_rels_segment() {
+        assert_eq!(rels_owner_folder("_rels/.rels").as_deref(), Some(""));
+        assert_eq!(
+            rels_owner_folder("xl/_rels/workbook.xml.rels").as_deref(),
+            Some("xl")
+        );
+        assert_eq!(
+            rels_owner_folder("xl\\worksheets\\_rels\\sheet1.xml.rels").as_deref(),
+            Some("xl/worksheets")
+        );
+        // A folder that only ends in `_rels`, or a `.rels` below a `_rels` subfolder, is none.
+        assert_eq!(rels_owner_folder("foo_rels/x.rels"), None);
+        assert_eq!(rels_owner_folder("xl/_rels/sub/x.rels"), None);
+    }
 }

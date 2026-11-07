@@ -36,6 +36,11 @@ SPEC-0033 D7 defines `SaveReport`, `Dropped` and `DropReason`, and SPEC-0034 D4 
   returns the report.
   - The report is coarse until stage 5. A regenerated save names each source part reached by a relationship type the
     export does not model, unless T-4950's pivot drawings kept it, as `NotPreserved`. calcChain is `Policy`.
+  - A part of a modelled type is assumed written. One the export cannot write is not reported yet: a pivot cache
+    `PivotPlan` drops (calipers pv23_045), rich values that are not rich errors, or a table (poi SingleCellTable).
+    T-4999 now has that acceptance criterion.
+  - The report reads the source within the load's `ImportLimits`, passed to `save_preserving`. A source it cannot
+    inventory gives one `LimitExceeded` entry with an empty item, never an empty list.
   - A patched save names the calcChain it dropped. A verbatim save drops nothing.
   - `Dropped.item` is the source part's name, which the suite resolves to its key (SPEC-0033 D7 now says so).
 - **Facade.** `to_xlsx_bytes_with_report` and `save_xlsx_with_report` are added; `to_xlsx_bytes` and `save_xlsx` keep
@@ -49,5 +54,9 @@ SPEC-0033 D7 defines `SaveReport`, `Dropped` and `DropReason`, and SPEC-0034 D4 
   - Facade: `the_save_report_names_the_tier`.
   - Eval: `an_accepted_drop_passes_and_a_reported_kept_part_is_changed`.
   - Python: `test_save_report_lists_what_the_save_left_out`.
-- **Baselines.** Rerecorded; 94 entries shrank and none grew. R1 kept rates: calipers 98.81% → 99.10%, corpus-bench
-  99.06% → 99.17%, poi 98.89% → 99.30%. R0 is unchanged.
+- **Baselines.** Rerecorded; 94 entries shrank, one was removed, and none grew.
+  - R1 kept rates: calipers 98.81% → 99.10%, corpus-bench 99.06% → 99.17%, poi 98.89% → 99.30%.
+  - Three R0 entries shrank too, all calcChain drops now `dropped`: calipers formulas_information golden and init,
+    and poi 54436. excel-saved t4187's calcChain line went.
+- **Review round 1.** The security reviewer found the report read the source with default limits instead of the load's.
+  The fidelity reviewer found modelled parts the export loses unreported. Fixed and narrowed as above.

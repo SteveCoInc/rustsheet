@@ -49,6 +49,7 @@ impl Workbook {
             &self.model,
             &pristine,
             &source.bytes,
+            &source.limits,
             Cursor::new(Vec::new()),
         )
         .map(|(w, report)| (w.into_inner(), report))
