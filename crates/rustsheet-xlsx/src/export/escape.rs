@@ -88,6 +88,23 @@ pub fn escape_xml(s: &'_ str) -> Cow<'_, str> {
     Cow::Owned(result)
 }
 
+/// Escapes `s` for a plain XML attribute value: the markup characters only, with no `_xHHHH_`
+/// convention. For attributes whose readers (relationship targets, `sheetName@val`,
+/// `definedName`) do not decode `_xHHHH_`, so a literal `_x0041_` must stay as written.
+pub fn escape_attribute(s: &'_ str) -> Cow<'_, str> {
+    if !s.chars().any(|c| matches!(escape_char(c), Value::Str(_))) {
+        return Cow::Borrowed(s);
+    }
+    let mut result = String::with_capacity(s.len() + 8);
+    for c in s.chars() {
+        match escape_char(c) {
+            Value::Str(esc) => result.push_str(esc),
+            Value::Char(ch) => result.push(ch),
+        }
+    }
+    Cow::Owned(result)
+}
+
 /// [`escape_xml`] for engine text that may hold a lone surrogate: each well-formed run is
 /// escaped as by `escape_xml` and each lone unit is written as `_xHHHH_` (upper-case hex), the
 /// way Excel writes it (the oracle file of probes/text-surrogate-positions A6 holds
@@ -128,6 +145,15 @@ mod tests {
 
     fn roundtrip(s: &str) -> String {
         decode_xlsx_escapes(&escape_xml(s))
+    }
+
+    #[test]
+    fn attribute_escape_keeps_underscore_lookalike_escapes() {
+        assert_eq!(
+            escape_attribute("_x0041_<&>").as_ref(),
+            "_x0041_&lt;&amp;&gt;"
+        );
+        assert!(matches!(escape_attribute("plain"), Cow::Borrowed(_)));
     }
 
     // --- export output ---

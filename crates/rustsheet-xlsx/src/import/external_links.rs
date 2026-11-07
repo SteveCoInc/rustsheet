@@ -89,6 +89,9 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
     let mut cells = HashMap::new();
     let mut refresh_error_sheets = Vec::new();
     let mut data_sheets = Vec::new();
+    // Sets keep the dedup linear in the untrusted count of `sheetData` elements.
+    let mut seen_data = std::collections::HashSet::new();
+    let mut seen_errors = std::collections::HashSet::new();
     for sheet_data in book.descendants().filter(|n| n.has_tag_name("sheetData")) {
         let Some(sheet) = sheet_data
             .attribute("sheetId")
@@ -96,12 +99,12 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
         else {
             continue;
         };
-        if !data_sheets.contains(&sheet) {
+        if seen_data.insert(sheet) {
             data_sheets.push(sheet);
         }
         // The fixture shows "1"; "true" is the other xsd:boolean spelling of it.
         if matches!(sheet_data.attribute("refreshError"), Some("1" | "true"))
-            && !refresh_error_sheets.contains(&sheet)
+            && seen_errors.insert(sheet)
         {
             refresh_error_sheets.push(sheet);
         }
