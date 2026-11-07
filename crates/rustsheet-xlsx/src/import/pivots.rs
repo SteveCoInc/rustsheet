@@ -9,6 +9,7 @@
 //! rest of the workbook loads as usual (docs/excel-semantics/web.md "GETPIVOTDATA against a pivot
 //! table"). A grouped field imports as its group items ([`groups`], T-4225).
 
+mod filters;
 mod groups;
 mod table;
 
