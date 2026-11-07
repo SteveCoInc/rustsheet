@@ -164,76 +164,45 @@ fn kind(node: &Node) -> SubexpressionKind {
 fn absolutize(tree: &mut Node, context: &CellReferenceRC) {
     let mut pending = vec![tree];
     while let Some(node) = pending.pop() {
-        match node {
-            Node::ReferenceKind {
-                sheet_name,
-                absolute_row,
-                absolute_column,
-                row,
-                column,
-                ..
-            }
-            | Node::WrongReferenceKind {
-                sheet_name,
-                absolute_row,
-                absolute_column,
-                row,
-                column,
-            } => {
-                anchor(absolute_row, row, context.row);
-                anchor(absolute_column, column, context.column);
-                sheet_name.get_or_insert_with(|| context.sheet.clone());
-            }
-            Node::RangeKind {
-                sheet_name,
-                absolute_row1,
-                absolute_column1,
-                row1,
-                column1,
-                absolute_row2,
-                absolute_column2,
-                row2,
-                column2,
-                ..
-            }
-            | Node::WrongRangeKind {
-                sheet_name,
-                absolute_row1,
-                absolute_column1,
-                row1,
-                column1,
-                absolute_row2,
-                absolute_column2,
-                row2,
-                column2,
-            } => {
-                anchor(absolute_row1, row1, context.row);
-                anchor(absolute_column1, column1, context.column);
-                anchor(absolute_row2, row2, context.row);
-                anchor(absolute_column2, column2, context.column);
-                sheet_name.get_or_insert_with(|| context.sheet.clone());
-            }
+        if let Node::SheetSpanKind { reference, .. } = node {
             // A 3-D reference names its sheets itself; only its rows and columns are anchored.
-            Node::SheetSpanKind { reference, .. } => anchor_span(reference, context),
-            other => other.push_children_mut(&mut pending),
+            anchor_reference(reference, context);
+        } else if let Some(sheet_name) = anchor_reference(node, context) {
+            sheet_name.get_or_insert_with(|| context.sheet.clone());
+        } else {
+            node.push_children_mut(&mut pending);
         }
     }
 }
 
-/// The rows and columns of a 3-D reference's cell or range, anchored at `context`.
-fn anchor_span(reference: &mut Node, context: &CellReferenceRC) {
-    match reference {
+/// Anchors the rows and columns of a cell or range reference at `context` and returns its sheet
+/// name; `None` (and nothing changed) for any other node.
+fn anchor_reference<'a>(
+    node: &'a mut Node,
+    context: &CellReferenceRC,
+) -> Option<&'a mut Option<String>> {
+    match node {
         Node::ReferenceKind {
+            sheet_name,
             absolute_row,
             absolute_column,
             row,
             column,
             ..
+        }
+        | Node::WrongReferenceKind {
+            sheet_name,
+            absolute_row,
+            absolute_column,
+            row,
+            column,
         } => {
             anchor(absolute_row, row, context.row);
             anchor(absolute_column, column, context.column);
+            Some(sheet_name)
         }
         Node::RangeKind {
+            sheet_name,
             absolute_row1,
             absolute_column1,
             row1,
@@ -243,13 +212,25 @@ fn anchor_span(reference: &mut Node, context: &CellReferenceRC) {
             row2,
             column2,
             ..
+        }
+        | Node::WrongRangeKind {
+            sheet_name,
+            absolute_row1,
+            absolute_column1,
+            row1,
+            column1,
+            absolute_row2,
+            absolute_column2,
+            row2,
+            column2,
         } => {
             anchor(absolute_row1, row1, context.row);
             anchor(absolute_column1, column1, context.column);
             anchor(absolute_row2, row2, context.row);
             anchor(absolute_column2, column2, context.column);
+            Some(sheet_name)
         }
-        _ => {}
+        _ => None,
     }
 }
 
