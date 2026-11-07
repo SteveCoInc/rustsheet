@@ -86,7 +86,7 @@ impl Model {
     /// is 1-based, negative from the end; 0 or past `count` is `#VALUE!`, and an error element is
     /// itself. An error in any argument beats that `#VALUE!`, so the scan goes on past a bad index
     /// (docs/excel-semantics/lookup.md "CHOOSEROWS and CHOOSECOLS: an error argument beats an
-    /// out-of-range index"). The result is bounded before it is built (CLAUDE.md directive 5).
+    /// out-of-range index"; first problem in argument order wins, "CHOOSECOLS/CHOOSEROWS: the index list"). The result is bounded before it is built (CLAUDE.md directive 5).
     fn chosen_indices(
         &mut self,
         args: &[Node],
@@ -106,6 +106,13 @@ impl Model {
             scanned = scanned.saturating_add(added);
             if let Some((error, message)) = check_array_cells(scanned, other) {
                 return Err(CalcResult::new_error(error, cell, message));
+            }
+            // Excel: docs/excel-semantics/lookup.md "CHOOSECOLS/CHOOSEROWS: the index list" - an index
+            // array of more than one row and more than one column is `#VALUE!` whatever its elements,
+            // errors included (probes/t4718-choose-index-error-order H5, H6, H29, H30).
+            if list.len() > 1 && list.first().is_some_and(|row| row.len() > 1) {
+                out_of_range = true;
+                continue;
             }
             for node in list.iter().flatten() {
                 let n = self.cast_number_ref(&array_node_to_calc_result(node, cell), cell)? as i64;

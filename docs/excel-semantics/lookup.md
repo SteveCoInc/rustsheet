@@ -936,9 +936,8 @@ reference-lift-consumers E201), XLOOKUP/XMATCH search_mode (probes/xlookup-array
 T-1958 XMATCH entry), INDIRECT's a1 (`INDIRECT("B1",{1})`, probes/t2577-indirect-ref-array A1:A22), TRIMRANGE's trim_cols
 (`TRIMRANGE(A1:B3,0,{0;1})`, probes/reference-lift-pass-through-b E7, E8), XLOOKUP's if_not_found and ADDRESS's
 sheet_text (probes/t4543-xlookup-not-found-address-sheet-lift; the entry "XLOOKUP's if_not_found and ADDRESS's
-sheet_text over an array" below). UNVERIFIED (not probed): which problem wins inside a
-CHOOSECOLS/CHOOSEROWS index list between uncoercible text and a later error, or between two errors (an error beats an
-out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible text's `#VALUE!` or the first error found at once).
+sheet_text over an array" below). Which problem wins inside a
+CHOOSECOLS/CHOOSEROWS index list is VERIFIED (T-4718): see the entry "CHOOSECOLS/CHOOSEROWS: the index list" below T-2273's.
 
 - **XLOOKUP's if_not_found and ADDRESS's sheet_text over an array** (T-4543; probes/t4543-xlookup-not-found-address-sheet-lift,
   excel-graph, 2026-11-06; Data A1:A3 = 1, 2, 3, B1:B3 = 10, 20, 30, D1:D2 = "x", "y"). XLOOKUP's if_not_found does
@@ -1545,11 +1544,24 @@ earlier index is 0 or out of range: `CHOOSECOLS(Data!A1,1E+15,ACOSH(-0.3))` is `
 `#NUM!`, `CHOOSECOLS(SQRT(2958465),2,-2,INDEX(Data!A8:D12,6,2))` `#REF!`, `CHOOSEROWS(CHOOSEROWS(Data!D11:E12,1),1E-15,6,2-FLOOR(7,0))`
 `#DIV/0!`, `CHOOSEROWS(Data!B11:E11,2,-1,..SUMX2MY2(<mismatched>))` `#N/A` (gen-m6/121a7c17092038d9 Calc!A298, 07171fa3f7493f51 A333,
 ee56a4ed5a612a0d A19, 535caabe1e635e2d A136, 7ac4ea222977f3b4 A391; 26 cells in T-2273). This answers the UNVERIFIED "which problem
-wins inside a CHOOSECOLS/CHOOSEROWS index list" above for errors against bad indexes; which of two errors wins is still unprobed.
+wins inside a CHOOSECOLS/CHOOSEROWS index list" above for errors against bad indexes; which of two errors wins is the next entry.
 Ours: implemented (T-2273): an out-of-range index is remembered and the scan goes on, so an error in any later argument wins and
-the `#VALUE!` is returned only if none is found. Between two errors, ours keeps the first in argument order (UNVERIFIED).
+the `#VALUE!` is returned only if none is found. Between two errors, see the next entry.
 Status: VERIFIED
 Tasks: T-2273
+
+## CHOOSECOLS/CHOOSEROWS: the index list (T-4718)
+Rule (probes/t4718-choose-index-error-order, excel-graph, 2026-11-07; same for both functions, H1:H14 CHOOSECOLS, H15:H28 CHOOSEROWS):
+- The first problem in argument order wins, errors and uncoercible text alike: `(A1:C2,1/0,NA())` `#DIV/0!`, `(A1:C2,NA(),1/0)` `#N/A`;
+  `(A1:C2,"x",NA())` `#VALUE!`, `(A1:C2,NA(),"x")` `#N/A`; after an out-of-range 9 the same holds (`9,"x",NA()` `#VALUE!`, `9,NA(),"x"` `#N/A`).
+- Inside one row or column index array the order is the array's own order (`{#N/A,#DIV/0!}` `#N/A`, `{"x",#N/A}` `#VALUE!`, `{#N/A,"x"}` `#N/A`).
+- An error in the array argument beats an error in an index (`CHOOSECOLS(NA(),1/0)` `#N/A`, `CHOOSECOLS(1/0,NA())` `#DIV/0!`).
+- An index array of more than one row and more than one column is `#VALUE!` even when every element is valid (`{1,2;3,1}`), and its
+  error elements do not show through (`{1,#N/A;#DIV/0!,2}` and `{1,#DIV/0!;#N/A,2}` both `#VALUE!`; H5, H6, H19, H20, H29:H38). This
+  refines "an index array adds its elements in row-major order, whatever its orientation" above, which holds for one row or one column.
+Ours: implemented (T-4718) in `chosen_indices`. UNVERIFIED: whether a later error argument beats a 2-D index array (ours: yes, as for a bad index).
+Status: VERIFIED
+Tasks: T-4718
 
 ## ADDRESS: argument errors first, sheet_text "TRUE"/"FALSE" quoted, bounds (T-2274, T-2275)
 Rule (excel-graph, gen-m6, 2026-10-21):
