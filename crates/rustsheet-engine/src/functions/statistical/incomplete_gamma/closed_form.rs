@@ -173,3 +173,6 @@ pub(super) fn excel_newton_quantile(a: f64, p: f64) -> Option<f64> {
     }
     (best.1 <= NEWTON_CONVERGED * p).then_some(best.0)
 }
+
+#[cfg(test)]
+mod tests;
