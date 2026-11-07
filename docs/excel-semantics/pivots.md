@@ -2294,7 +2294,8 @@ Status: VERIFIED (excel-graph) that a Graph range write does not refresh; VERIFI
 that the saved file carries no Auto Refresh setting. Whether desktop Excel, where Auto Refresh is an Insider feature on by
 default for new local-data pivots (excel-docs.md AUTOREFRESH), stores a flag in the file, and whether a UI edit on
 the web would trigger it, is UNVERIFIED: the oracle cannot create a pivot through the UI or reach desktop Excel
-(decision 0266). T-4182 records this and is dropped unless a desktop-saved file shows a flag.
+(decision 0266). T-4182 recorded this and was dropped (2026-11-07): the engine, like the web, never refreshes a
+pivot on a source edit; a desktop-saved file with a flag would need a new task.
 
 ## Excel for the web rewrites a PivotChart's caches when it renders the pivot
 Rule: when Excel for the web renders a pivot on open, it rewrites the series of a chart bound to it (`c:pivotSource`),
