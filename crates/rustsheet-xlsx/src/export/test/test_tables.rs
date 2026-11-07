@@ -662,7 +662,7 @@ fn a_color_filter_past_the_dxfs_drops_its_dxf_id() {
 
 /// A table filtered by a criterion from its file stays filtered while a criterion is left inside
 /// it, and stops being filtered when a column delete takes the last one, as the export then
-/// writes no filterColumn (T-4003).
+/// writes no filterColumn (T-4003), and shows the rows the filter hid, as Excel does (T-4371).
 #[test]
 fn deleting_the_filtered_column_unfilters_the_table() {
     let mut model = new_empty_model();
@@ -687,12 +687,16 @@ fn deleting_the_filtered_column_unfilters_the_table() {
             },
         }];
     }
+    model.set_row_hidden(0, 3, true).unwrap();
     model.delete_columns(0, 3, 1).unwrap();
     assert!(model.workbook.tables["Sales"].has_filters);
+    assert!(model.is_row_hidden(0, 3).unwrap());
     model.delete_columns(0, 1, 1).unwrap();
     let table = &model.workbook.tables["Sales"];
     assert!(table.filter_columns.is_empty());
     assert!(!table.has_filters);
+    // Excel shows the rows the filter hid (probes/t4371-filtered-table-delete-filtered-column).
+    assert!(!model.is_row_hidden(0, 3).unwrap());
 
     let temp_file_name = "temp_file_test_deleted_filter_column.xlsx";
     save_to_xlsx(&model, temp_file_name).unwrap();

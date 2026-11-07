@@ -24,6 +24,17 @@ pub(crate) struct ColumnData {
 }
 
 impl Diff {
+    /// A `SetRowHidden` that shows a hidden row. A column delete's diff list ends with these
+    /// for the rows it showed (T-4371), so an undo hides them before it restores the filter.
+    pub(crate) fn row_shown(sheet: u32, row: i32) -> Self {
+        Diff::SetRowHidden {
+            sheet,
+            row,
+            new_value: false,
+            old_value: true,
+        }
+    }
+
     /// A `SetCellValue` of the user input `value` from outside the engine, typed rather than
     /// written through the legacy entry.
     pub(crate) fn set_cell_value(
