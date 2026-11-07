@@ -990,10 +990,9 @@ out-of-range index: the T-2273 entry).
       sheet `#VALUE!` (H7, H13), all Data `#N/A` (H8). `MAX` is 50 either order (H11, H12). A mixed XLOOKUP grid has
       a value hit, so only its reference element has a sheet: a reference on the formula's sheet is `#VALUE!` (H14)
       and one on Data `#N/A` (H15). `LARGE(CHOOSE({1;2},A1,Data!G1),1)` makes values, not references: 50 (H10).
-    - A `#REF!` element from a failed INDIRECT (bad sheet name) is not an error value a cell holds: it does not outrank
-      the off-sheet `#N/A`. `LARGE(INDIRECT({"nosuch!A1";"A1";"Data!G1"}),1)`, SMALL and MEDIAN are `#N/A`
+    - A `#REF!` element from a failed INDIRECT (bad sheet name) does not outrank the off-sheet `#N/A`. `LARGE(INDIRECT({"nosuch!A1";"A1";"Data!G1"}),1)`, SMALL and MEDIAN are `#N/A`
       (probes/t4791-large-small-median-mixed-first-element H4:H6, excel-graph, T-4862), where a `#DIV/0!` element still
-      propagates (t4704). Only INDIRECT's `#REF!` is evidenced; other error origins keep the first-error rule.
+      propagates (t4704). The implementation skips every `#REF!` element by kind; a cell-held `#REF!` (XLOOKUP hit on a `#REF!` cell) beside an off-sheet reference is UNEVIDENCED (follow-up probe task).
     - A first element that is an error or a value (probes/t4791-large-small-median-mixed-first-element, excel-graph
       2026-11-07, T-4791; Local formulas, `INDIRECT` with `nosuch!A1` as the error element): `{"A1";"nosuch!A1";"Data!G1"}`
       (own, error, off) is `#VALUE!` for LARGE, SMALL and MEDIAN (H1:H3), as the first-element rule says. With the error
