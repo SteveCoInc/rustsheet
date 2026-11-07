@@ -3,7 +3,7 @@ id: T-4804
 title: "GETPIVOTDATA: several data fields, the Values field, blank and empty data_field, one- and no-record aggregates, overflow (T-2085 evidence)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P3
 size: M
 tier: opus
@@ -25,9 +25,21 @@ Owner of these visibly-off cells (decision 0245):
   Q!I5, Q!I6, Q!J6, Q!K1:K3, Q!L1:L3
 
 ## Acceptance criteria
-- [ ] The cells above pass, and no other case regresses (`make eval-baseline`).
-- [ ] SPEC-0015's resolution rules and web.md's "Ours" line say what the engine now does.
+- [x] The cells above pass, and no other case regresses (`make eval-baseline`).
+- [x] SPEC-0015's resolution rules and web.md's "Ours" line say what the engine now does.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Item kinds and argument errors (T-4805), and pivot shapes and shown values (T-4806).
+
+## Outcome
+GETPIVOTDATA now answers pivots with several data fields (the Values field on an axis), with the Values field as a
+pair whose only item is the chosen data field's caption, and a source name shared by two data fields picks the first
+(`getpivotdata.rs` `pivot_data_field`, `pivot_index.rs` `supported`/`values_on_axis`). A blank-cell data_field picks
+the only data field only when the cell is inside the pivot's location. Every aggregate over no records is 0, and Var and
+StdDev over one record are `#DIV/0!` (`pivot/layout.rs` `aggregate`, with a unit test). Overflow is `#NUM!` on the
+two-data-field pivot as on one. Which data field wins when one's caption is another's source name is unprobed; the
+caption does (SPEC-0015 GETPIVOTDATA step 2, web.md "Ours").
+
+Eval delta: probes 24 fixed (every owned cell of probes/t2085-getpivotdata-data-fields, which now passes 365/365),
+0 regressions in every suite; `eval/baseline/probes.txt` re-recorded with `make eval-baseline`.
