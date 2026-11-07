@@ -62,6 +62,61 @@ As a result, the cells of T-4434's sweep where Excel is near correctly rounded p
   shape); T-4053 (df1 = 2 closed-form tail); T-4119 (done, the bound widening this follows).
   docs/excel-semantics/statistics.md "Incomplete beta at a huge first shape".
 
+- **T-4434's sweep (done)**: probes-numeric/t4434-huge-shape-outside-large-shape-beta.case.json, 900 cells, excel-graph 2026-11-07. The scoring table
+  (docs/research/t4434/score.py; 60-digit math, F at the exact ratio):
+
+| region | huge shape | cells | Excel <=1E-15/1E-14/1E-12, worst | engine <=1E-15/1E-14/1E-12, worst |
+|---|---|---:|---|---|
+| region 1 F.DIST.RT | 5E3 to 1E4 | 35 | 3/ 17/ 35 of 35, worst 9.1e-14 | 2/ 14/ 35 of 35, worst 9.1e-14 |
+| region 1 F.DIST.RT | 1E4 to 1E5 | 150 | 4/ 53/150 of 150, worst 1.3e-13 | 4/ 41/150 of 150, worst 6.2e-13 |
+| region 1 F.DIST.RT | 1E5 to 1E6 | 115 | 1/ 29/115 of 115, worst 1.2e-13 | 0/ 20/103 of 115, worst 1.4e-11 |
+| region 1 F.DIST.RT | **all** | 300 | 8/ 99/300 of 300, worst 1.3e-13 | 6/ 75/288 of 300, worst 1.4e-11 |
+| region 2 F.DIST.RT | 1E4 to 1E5 | 15 | 4/ 6/ 15 of 15, worst 1.4e-13 | 6/ 6/ 10 of 15, worst 1.9e-12 |
+| region 2 F.DIST.RT | 1E5 to 1E6 | 68 | 14/ 17/ 61 of 68, worst 3.4e-12 | 14/ 15/ 22 of 68, worst 1.9e-11 |
+| region 2 F.DIST.RT | 1E6 to 1E7 | 58 | 17/ 18/ 32 of 58, worst 5.8e-11 | 18/ 18/ 19 of 58, worst 2.5e-10 |
+| region 2 F.DIST.RT | 1E7 to 1E8 | 55 | 10/ 13/ 13 of 55, worst 1.7e-10 | 10/ 13/ 14 of 55, worst 2.5e-09 |
+| region 2 F.DIST.RT | 1E8 to 1E9 | 69 | 15/ 17/ 18 of 69, worst 7.7e-09 | 17/ 19/ 19 of 69, worst 1.4e-08 |
+| region 2 F.DIST.RT | 1E9 to 1E10 | 35 | 8/ 8/ 8 of 35, worst 8.5e-09 | 8/ 8/ 8 of 35, worst 1.4e-07 |
+| region 2 F.DIST.RT | **all** | 300 | 68/ 79/147 of 300, worst 8.5e-09 | 73/ 79/ 92 of 300, worst 1.4e-07 |
+| region 2 F.DIST | 1E4 to 1E5 | 3 | 2/ 3/ 3 of 3, worst 1.4e-15 | 1/ 3/ 3 of 3, worst 6.5e-15 |
+| region 2 F.DIST | 1E5 to 1E6 | 34 | 19/ 30/ 34 of 34, worst 2.3e-13 | 19/ 30/ 34 of 34, worst 3.1e-13 |
+| region 2 F.DIST | 1E6 to 1E7 | 30 | 18/ 25/ 27 of 30, worst 3.8e-11 | 17/ 26/ 26 of 30, worst 9.3e-12 |
+| region 2 F.DIST | 1E7 to 1E8 | 26 | 14/ 20/ 22 of 26, worst 2.3e-11 | 15/ 20/ 20 of 26, worst 1.5e-11 |
+| region 2 F.DIST | 1E8 to 1E9 | 37 | 16/ 25/ 29 of 37, worst 8.0e-10 | 13/ 23/ 25 of 37, worst 7.7e-10 |
+| region 2 F.DIST | 1E9 to 1E10 | 20 | 10/ 12/ 13 of 20, worst 1.3e-09 | 10/ 12/ 13 of 20, worst 2.6e-09 |
+| region 2 F.DIST | **all** | 150 | 79/115/128 of 150, worst 1.3e-09 | 75/114/121 of 150, worst 2.6e-09 |
+| BETA.DIST | 1E4 to 1E5 | 5 | 3/ 5/ 5 of 5, worst 9.9e-15 | 2/ 4/ 5 of 5, worst 1.1e-14 |
+| BETA.DIST | 1E5 to 1E6 | 25 | 10/ 18/ 25 of 25, worst 8.9e-13 | 10/ 15/ 24 of 25, worst 1.6e-12 |
+| BETA.DIST | 1E6 to 1E7 | 39 | 17/ 28/ 37 of 39, worst 1.5e-11 | 20/ 27/ 33 of 39, worst 3.0e-12 |
+| BETA.DIST | 1E7 to 1E8 | 32 | 11/ 24/ 26 of 32, worst 7.3e-10 | 16/ 25/ 28 of 32, worst 4.9e-11 |
+| BETA.DIST | 1E8 to 1E9 | 35 | 12/ 25/ 28 of 35, worst 3.5e-09 | 18/ 23/ 25 of 35, worst 4.5e-10 |
+| BETA.DIST | 1E9 to 1E10 | 14 | 1/ 3/ 4 of 14, worst 2.7e-09 | 1/ 3/ 3 of 14, worst 5.9e-09 |
+| BETA.DIST | **all** | 150 | 54/103/125 of 150, worst 3.5e-09 | 67/ 97/118 of 150, worst 5.9e-09 |
+
+Per region, is Excel near correctly rounded (the `accuracy` stage's premise)?
+- **Region 1 (F.DIST.RT at a0 = df2/2 of 5E3 to 1E6, b0 = df1/2 below 40; L140 bup+bgrat): yes, as near as double
+  arithmetic allows.** Excel is at most 1.3E-13 relative off, with a median of 109 ulp. In units of |ln tail|·2^-53
+  (a double kernel ends in exp(-L), L = |ln tail| up to 460, and an ulp of L is L ulp of the tail) its median is 0.9
+  and its worst 9.5, flat over the three decades. Rounding the F ratio does not explain it: against the math at the
+  double ratio Excel's median is still 117 ulp. Ours reaches 7,870 units, 1.4E-11 relative (Cephes' fraction where the
+  L140 port stops at 9 bup terms, df1 of 20 and up). The correctly rounded math is within 15 digits of Excel on only
+  22 of the 300 cells. At df1 below 20 (170 cells) ours is T-3754's L140 port in Excel's arithmetic and matches Excel
+  on 158 (worst 5.2 units): those must stay on the port. At df1 of 20 and up (130 cells) ours matches none and the
+  math 8. So an accurate kernel there brings 8 cells to Excel and moves the rest to the math; what is left is Excel's
+  own bgrat digits (T-3209).
+- **Region 2 above the mean (F.DIST.RT and F.DIST at df1 80 to 400, df2 1E5 to 1E10; bfrac, b0 >= 40, swapped so the
+  huge df2/2 is a0): no.** Excel's worst per decade of a0 is 1.4E-13 at 5E4 to 1E5, then 3.4E-12, 5.8E-11, 1.7E-10,
+  7.7E-9 and 8.5E-9. That is T-4214's subject (Excel's bfrac arithmetic). Ours is worse, up to 1.4E-7.
+- **Below the mean in region 2 (unswapped bfrac, a0 = df1/2): yes.** 75 F.DIST.RT and 42 F.DIST cells, Excel within
+  23 units (1.6E-15 and 6.1E-15 relative).
+- **BETA.DIST (a 20 to 200, b 5E4 to 5E9): yes below the mean (within 23 units, 1.1E-14); yes above it at a < 40 (L140
+  after the swap; 47 units, 5.2E-15); no above it at a >= 40** (bfrac swapped, a0 = b; Excel up to 3.5E-9, T-4214).
+  Ours is up to 1.6E-12 off at a < 40 above the mean (Cephes again), and up to 5.9E-9 at a >= 40.
+- No Excel cell is `#NUM!` or 0. T-4044's band (df1 61 to 79 at df2 1E10) is outside both regions.
+- Cells of T-4434's case this task owns (ours not within 15 digits of Excel, while the correctly rounded math is), to
+  bring within half a unit of Excel's 15th digit:
+  - probes-numeric/t4434-huge-shape-outside-large-shape-beta.case.json (29): Calc!A21, A29, A58, A75, A77, A104, A152, A230, B143, C14, C19, C40, C42, C63, C66, C82, C119, D17, D32:D33, D57, D59, D85, D95, D97, D108, D115, D129, D132
+
 ## Acceptance criteria
 - [ ] A grid under docs/research/t4435/ (seeded, committed, 60-digit mpmath at the double arguments and the exact F
       ratio) has at least 600 F tails and 150 BETA.DIST points over both regions. Its worst relative error goes from
