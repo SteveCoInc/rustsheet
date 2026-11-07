@@ -167,6 +167,8 @@ probes/irr-guess-edges-2.case.json	3
 probes/irr-guess-edges.case.json	3
 probes/linest-modes.case.json	42
 probes/logest-modes.case.json	51
+probes/sheet-ops/t4747-name-relative-delete-row.case.json	2
+probes/sheet-ops/t4747-name-relative-insert-row.case.json	2
 probes/stat-argument-modes.case.json	9
 probes/stat-quantile-lift.case.json	9
 probes/t2311-pivotby-value-columns-error-refill-1106.case.json	1

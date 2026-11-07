@@ -1258,6 +1258,8 @@ C	probes/sheet-ops/t4702-names-delete-column.case.json	6
 C	probes/sheet-ops/t4702-names-delete-row.case.json	6
 C	probes/sheet-ops/t4702-names-insert-column.case.json	4
 C	probes/sheet-ops/t4702-names-insert-row.case.json	4
+C	probes/sheet-ops/t4747-name-relative-delete-row.case.json	2
+C	probes/sheet-ops/t4747-name-relative-insert-row.case.json	2
 C	probes/sheet-qualified-both-corners.case.json	9
 C	probes/sheet-qualified-corner-order.case.json	13
 C	probes/sheet-qualified-ref-error-forms.case.json	10
@@ -4434,6 +4436,10 @@ F	probes/regression-trend.case.json	Sheet1!O4
 F	probes/regression-trend.case.json	Sheet1!O5
 F	probes/regression-trend.case.json	Sheet1!O6
 F	probes/regression-trend.case.json	Sheet1!O7
+F	probes/sheet-ops/t4747-name-relative-delete-row.case.json	Calc!A1
+F	probes/sheet-ops/t4747-name-relative-delete-row.case.json	Calc!A3
+F	probes/sheet-ops/t4747-name-relative-insert-row.case.json	Calc!A1
+F	probes/sheet-ops/t4747-name-relative-insert-row.case.json	Calc!A3
 F	probes/stat-argument-modes.case.json	Sheet1!H13
 F	probes/stat-argument-modes.case.json	Sheet1!H140
 F	probes/stat-argument-modes.case.json	Sheet1!H144
