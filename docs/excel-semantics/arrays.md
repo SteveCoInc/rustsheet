@@ -1015,9 +1015,15 @@ SUMSQ, MEDIAN, STDEV.S, VAR.P, HARMEAN, GEOMEAN, DEVSQ, AVEDEV, MODE.SNGL, KURT,
 `LAMBDA(z,z)` result agree (06b4e8f5de409d5e A366, 68d8ffb69ff739d8 A285, 7c20351562a2d71d A381). CONCAT is `#VALUE!` (A18),
 SUMPRODUCT 0 (A22), ROWS and COLUMNS the outer shape (A23, A24). A one-cell reference body's cell is `#VALUE!` to PRODUCT and MIN
 (gen-m7/bcad709c30cfdf64 A13, gen-m9/2a18b2f5a4dc43ac A371). Range-only functions (MAXIFS, RANK.EQ, COUNTBLANK, SUBTOTAL,
-AGGREGATE 1-13) cannot take the result. Ours since T-2594: the walker's `NestedReading` (functions/util/aggregate_args.rs):
-SUM, COUNT and COUNTA flatten, charging the walk budget; the AVERAGE family, MIN, MAX, PRODUCT, SUMSQ and the A-variants give
-`#N/A`. T-2625 (probes/t2625-nested-consumers, excel-graph, 2026-10-24): VARA, STDEVA, VARPA, STDEVPA, AND, OR and XOR are `#N/A`
+AGGREGATE 1-13) cannot take the result. Ours since T-4736 (the November reads, decision 0329): the walker's `NestedReading`
+(functions/util/aggregate_args.rs) reads no nested cell's contents. SUM is `#N/A` over an array cell and reads a reference-body
+cell's value (t2609-nested-operators-and-lifts A50, 60); COUNT skips a nested cell and COUNTA counts it as one value (each is an
+`#N/A` item to them); the AVERAGE family, MIN, MAX, PRODUCT, SUMSQ and the A-variants give `#N/A`. Superseded by T-4736, with the
+refills that replace them: t2592-nested-groupby-cells A6:A8 (-refill-1106 A6:A8), t2594-nested-aggregates A26:A29 (-refill-1106
+A26:A29), t2625-nested-consumers A13, A17, A20, A25, A26 (-refill-1106 the same cells), and the earlier-only cells
+gen-m9/e85daedce5c2675e Calc!A35 (probes/gen-m9-e85daedce5c2675e-refill-1107, excel-graph 2026-11-07: COUNT over the PIVOTBY now
+gives our value, every one of its 400 cells passes) and probes/t2436/e85daedce5c2675e Calc!A31, A46
+(probes/t2436-e85daedce5c2675e-refill-1107, 12 of 12 pass). T-2625 (probes/t2625-nested-consumers, excel-graph, 2026-10-24): VARA, STDEVA, VARPA, STDEVPA, AND, OR and XOR are `#N/A`
 too (A1:A7), IMSUM and IMPRODUCT `#VALUE!` (A8, A9), MODE.MULT, QUARTILE.INC and PERCENTILE.EXC `#N/A` (A10:A12). MODE.SNGL,
 LARGE, SMALL and the PERCENTILE/QUARTILE family read their data outside the walker and give `#N/A` through `nested_array_error`
 (crates/rustsheet-engine/src/nested_array.rs); SUMPRODUCT reads a nested cell as 0. Inferred, unprobed: the `#N/A` beats an
