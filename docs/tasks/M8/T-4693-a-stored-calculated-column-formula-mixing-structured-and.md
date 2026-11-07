@@ -3,7 +3,7 @@ id: T-4693
 title: "A stored calculated-column formula mixing structured and A1 references follows edits; one default-locale parser helper (T-4274 review follow-ups)"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -28,9 +28,17 @@ one helper.
     `set_displaced_column_formulas`; keep the old text when the parse is an error node.
 
 ## Acceptance criteria
-- [ ] Probe of a mixed column formula through insert_column A; the engine stores Excel's text; unit test.
-- [ ] One default-locale helper used at every site above.
-- [ ] `make check` green; reviewers approve.
+- [ ] Probe of a mixed column formula through insert_column A; the engine stores Excel's text; unit test. (moved to T-5052: needs a desktop-Excel file)
+- [x] One default-locale helper used at every site above.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - `#This Row` cell evaluation after a column insert (T-4680).
+
+## Outcome
+- One helper, `Parser::with_default_locale` (expressions/parser/mod.rs; `Model::with_default_parser` in model.rs is it on the model's own parser), now does
+  the save / switch to the default locale and language / restore at every site: `parse_internal_formula`,
+  `displace_cf_ranges`, `parse_formulas`, `displaced_column_formulas`, `set_displaced_column_formulas` and the
+  calculated-column fill. No behavior change; no eval delta.
+- The mixed-reference probe needs desktop Excel (excel-graph cannot insert a column into a table and save its
+  XML), so it and the optional parse-error guard moved to T-5052.

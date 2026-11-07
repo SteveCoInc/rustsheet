@@ -69,6 +69,55 @@ class UnownedNew(TaskDir):
         self.assertNotIn(f"{OLD}!P!B1", self.listed())
 
 
+EXPORT = "pivot-export/new-export.export.json"
+
+
+def layout_report(compared: bool) -> dict[str, object]:
+    """An export case whose two pivots' layouts are not Excel's; `compared` marks its lines as
+    compared in full (`layout_checked`), which makes them baseline items (T-4944)."""
+    case: dict[str, object] = {
+        "id": EXPORT,
+        "cells": [],
+        "pivot_layout": [
+            {"sheet": "K", "name": "CalcTopSort", "excel_location": "A3:D11", "verdict": "lines_differ"},
+            {"sheet": "S", "name": "Blocked", "excel_location": "A3", "verdict": "location_differs"},
+        ],
+    }
+    if compared:
+        case["layout_checked"] = 2
+    return {"cases": [case]}
+
+
+class LayoutItems(TaskDir):
+    def listed(self, compared: bool = True) -> list[str]:
+        names = exit_owners.case_names([EXPORT])
+        return [
+            f"{o.cell.case}!{o.cell.key}\t{o.cell.formula}\t{o.expected}\t{o.actual}"
+            for o in new_case_owners.unowned_new(layout_report(compared), self.tasks, {EXPORT}, names)
+        ]
+
+    def test_each_pivot_whose_layout_is_an_item_needs_an_owner(self) -> None:
+        self.assertEqual(
+            self.listed(),
+            [
+                f"{EXPORT}!K!CalcTopSort\tpivot layout\tA3:D11\tlines_differ",
+                f"{EXPORT}!S!Blocked\tpivot layout\tA3\tlocation_differs",
+            ],
+        )
+
+    def test_a_task_naming_the_case_and_the_pivot_owns_it(self) -> None:
+        # Beside a cell list, as owner lines are: a line with no A1 name would own the whole case.
+        self.task("- pivot-export/new-export.export.json Calc!B2, K!CalcTopSort")
+        self.assertEqual(self.listed(), [f"{EXPORT}!S!Blocked\tpivot layout\tA3\tlocation_differs"])
+        self.task("pivot-export/new-export.export.json", status="done")
+        self.assertEqual(len(self.listed()), 1)
+        self.task("pivot-export/new-export.export.json")
+        self.assertEqual(self.listed(), [])
+
+    def test_a_layout_that_is_only_reported_is_no_item(self) -> None:
+        self.assertEqual(self.listed(compared=False), [])
+
+
 def git(root: Path, *args: str) -> None:
     subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
 

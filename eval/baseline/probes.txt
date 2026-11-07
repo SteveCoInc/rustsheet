@@ -2395,6 +2395,7 @@ C	probes/t4245-cjk-numeral-past-1e16.case.json	35
 C	probes/t4248-getpivotdata-recordless-item.case.json	10
 C	probes/t4249-pivot-range-group-edges.case.json	252
 C	probes/t4249-pivot-range-group-labels.case.json	212
+C	probes/t4251-xirr-no-root-bracket.case.json	17
 C	probes/t4253-pivot-decimal-relabel.case.json	196
 C	probes/t4253-pivot-relabel-order.case.json	224
 C	probes/t4254-beta-t-l140-zero-cut.case.json	132
@@ -2716,6 +2717,11 @@ C	probes/t4755-two-criteria-filtered-table-delete-one.case.json	22
 C	probes/t4757-later-mark-sheet-names.case.json	20
 C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/t4765-growth-factor-edges.case.json	24
+C	probes/t4766-array-subnormal-boundary.case.json	264
+C	probes/t4766-array-subnormal-compare.case.json	51
+C	probes/t4766-array-subnormal-exp-boundary.case.json	264
+C	probes/t4766-array-subnormal-fresh.case.json	94
+C	probes/t4766-array-subnormal-order.case.json	165
 C	probes/t4767-pivot-group-items.case.json	171
 C	probes/t4767-pivot-record-tuples.case.json	41
 C	probes/t4767-pivot-slicers.case.json	47
@@ -2736,6 +2742,8 @@ C	probes/t4870-empty-date-args.case.json	31
 C	probes/t4870-r2-empty-optional.case.json	14
 C	probes/t4870-r3-order-and-lift.case.json	24
 C	probes/t4871-empty-mode-args.case.json	31
+C	probes/t4872-atp-empty-argument.case.json	54
+C	probes/t4872-r2-order-and-lift.case.json	14
 C	probes/t4873-empty-arg-let-lambda.case.json	11
 C	probes/t4873-empty-arg-quotient-ceiling.case.json	55
 C	probes/t4874-numbervalue-empty-separator.case.json	69
@@ -4618,7 +4626,6 @@ F	probes/stat-test-lift.case.json	Sheet1!P67
 F	probes/stats-evidence-floor-t1623.case.json	S!Q36
 F	probes/subexpr-05d44f6dd6cfc567-calc-a178.case.json	Subexpr!A6
 F	probes/subnormal-saved-negative-and-array.case.json	S!A3
-F	probes/subnormal-saved-negative-and-array.case.json	S!D1
 F	probes/t1689-chisq-test-blanks-text-booleans.case.json	F!A1
 F	probes/t2085-getpivotdata-items.case.json	Q!A1
 F	probes/t2085-getpivotdata-items.case.json	Q!A2
@@ -8067,6 +8074,18 @@ F	probes/t4238-r3-absorb-whole-shape.case.json	Calc!A1
 F	probes/t4238-r3-absorb-whole-shape.case.json	Calc!A10
 F	probes/t4238-r3-absorb-whole-shape.case.json	Calc!A2
 F	probes/t4238-r3-absorb-whole-shape.case.json	Calc!A6
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A1
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A10
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A11
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A13
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A16
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A2
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A3
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A4
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A5
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A7
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A8
+F	probes/t4251-xirr-no-root-bracket.case.json	Calc!A9
 F	probes/t4254-beta-t-l140-zero-cut.case.json	Calc!A1
 F	probes/t4254-beta-t-l140-zero-cut.case.json	Calc!A10
 F	probes/t4254-beta-t-l140-zero-cut.case.json	Calc!A11
@@ -9529,12 +9548,6 @@ F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!E38
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!E39
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!E40
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!E7
-F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F12
-F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F13
-F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F14
-F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F15
-F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F16
-F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F17
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F2
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F3
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!F7
@@ -9601,6 +9614,7 @@ F	probes/t4765-growth-factor-edges.case.json	Cut!A1
 F	probes/t4765-growth-factor-edges.case.json	Cut!A5
 F	probes/t4765-growth-factor-edges.case.json	SmallB!A1
 F	probes/t4765-growth-factor-edges.case.json	SmallB!A3
+F	probes/t4766-array-subnormal-compare.case.json	S!A30
 F	probes/t4793-growth-one-factor-underflow.case.json	One!A2
 F	probes/t4793-growth-several-x.case.json	Multi!A4
 F	probes/t4793-growth-several-x.case.json	SubProd!A5

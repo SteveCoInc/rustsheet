@@ -26,35 +26,57 @@ type BesselFn = fn(i32, f64) -> f64;
 impl Model {
     /// `BESSELI(x, n)`.
     pub(crate) fn fn_besseli(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Besseli, args, cell, &mut |model, values| {
-            // A subnormal result is 0: `BESSELI(4.4501477170144E-308,1)` (x/2, just below 2^-1022)
-            // and `BESSELI(2^-1022,1)` are 0 (probes/t4552-bessel-tiny-x-cut D2, D8).
-            model.bessel_of(values, |n, x| flush_subnormal(bessel_i(n, x)), cell)
-        })
+        self.atp_lift_call(
+            Function::Besseli,
+            args,
+            (2, 2),
+            cell,
+            &mut |model, values| {
+                // A subnormal result is 0: `BESSELI(4.4501477170144E-308,1)` (x/2, just below 2^-1022)
+                // and `BESSELI(2^-1022,1)` are 0 (probes/t4552-bessel-tiny-x-cut D2, D8).
+                model.bessel_of(values, |n, x| flush_subnormal(bessel_i(n, x)), cell)
+            },
+        )
     }
 
     /// `BESSELJ(x, n)`.
     pub(crate) fn fn_besselj(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Besselj, args, cell, &mut |model, values| {
-            // A subnormal result is 0: `BESSELJ(2^-1022,1)` is 0 (probes/t4552-bessel-tiny-x-cut C8).
-            model.bessel_of(values, |n, x| flush_subnormal(excel_bessel_j(n, x)), cell)
-        })
+        self.atp_lift_call(
+            Function::Besselj,
+            args,
+            (2, 2),
+            cell,
+            &mut |model, values| {
+                // A subnormal result is 0: `BESSELJ(2^-1022,1)` is 0 (probes/t4552-bessel-tiny-x-cut C8).
+                model.bessel_of(values, |n, x| flush_subnormal(excel_bessel_j(n, x)), cell)
+            },
+        )
     }
 
     /// `BESSELK(x, n)`.
     pub(crate) fn fn_besselk(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Besselk, args, cell, &mut |model, values| {
-            // K_n(x) below the normal range is 0: BESSELK(705.5,0) and everything past it, the
-            // subnormals included (probes/eng-besselk-underflow-bit-shift; 705 keeps 3.1E-308).
-            model.bessel_of(values, |n, x| flush_subnormal(bessel_k(n, x)), cell)
-        })
+        self.atp_lift_call(
+            Function::Besselk,
+            args,
+            (2, 2),
+            cell,
+            &mut |model, values| {
+                // K_n(x) below the normal range is 0: BESSELK(705.5,0) and everything past it, the
+                // subnormals included (probes/eng-besselk-underflow-bit-shift; 705 keeps 3.1E-308).
+                model.bessel_of(values, |n, x| flush_subnormal(bessel_k(n, x)), cell)
+            },
+        )
     }
 
     /// `BESSELY(x, n)`.
     pub(crate) fn fn_bessely(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Bessely, args, cell, &mut |model, values| {
-            model.bessel_of(values, excel_bessel_y, cell)
-        })
+        self.atp_lift_call(
+            Function::Bessely,
+            args,
+            (2, 2),
+            cell,
+            &mut |model, values| model.bessel_of(values, excel_bessel_y, cell),
+        )
     }
 
     /// One Bessel element: `x`, then the order `n`, truncated; a negative order (Excel: `#NUM!`)
@@ -92,7 +114,7 @@ impl Model {
 
     /// `ERF(lower_limit, [upper_limit])`.
     pub(crate) fn fn_erf(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Erf, args, cell, &mut |model, values| {
+        self.atp_lift_call(Function::Erf, args, (2, 2), cell, &mut |model, values| {
             let (lower, upper) = match values {
                 [lower] => (lower, None),
                 [lower, upper] => (lower, Some(upper)),

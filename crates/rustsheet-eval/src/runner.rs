@@ -217,6 +217,11 @@ pub struct CaseResult {
     /// The case's pivots whose layout is not Excel's (T-4124; empty without sidecar pivots).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pivot_layout: Vec<PivotLayout>,
+    /// How many sidecar pivots the case compares in full, location and saved `rowItems`/`colItems`
+    /// (an engine-export case's, T-4944); `None` where the lines are not compared. Each of its
+    /// `pivot_layout` entries is then a baseline item ([`crate::baseline`]'s `LF` lines).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout_checked: Option<usize>,
     /// An xlsx case's saved pivots, each fresh or stale with its render and refresh scores
     /// (T-4131, T-4906; empty unless the suite trusts the workbook's cached values). A fresh
     /// pivot's render cells are among `cells`.
@@ -299,6 +304,7 @@ impl CaseResult {
             arguments: Vec::new(),
             reference_forms: ReferenceFormCells::default(),
             pivot_layout: Vec::new(),
+            layout_checked: None,
             pivot_freshness: Vec::new(),
             pivot_features: Vec::new(),
             pivot_cells: crate::pivot_features::PivotCellTally::default(),
@@ -476,6 +482,8 @@ fn run_isolated(
     };
     let pivot_keys = std::mem::take(&mut prepared.pivot_keys);
     let export = prepared.export.as_mut().map(std::mem::take);
+    // An export case compares every sidecar pivot's saved lines (`evaluate_prepared`).
+    let layout_checked = export.as_ref().map(|_| prepared.pivots.len());
     // Cases without expectations still run: a panic, timeout or load error is a crash we can
     // catch before any oracle value exists (T-0007).
     let engine = Arc::clone(engine);
@@ -513,6 +521,7 @@ fn run_isolated(
         Ok(Ok((cells, scored, text, arguments, got, (layout, freshness)))) => {
             check_values = got;
             result.pivot_layout = layout;
+            result.layout_checked = layout_checked;
             result.pivot_freshness = freshness;
             result.text = text;
             result.arguments = arguments;

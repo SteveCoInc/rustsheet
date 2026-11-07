@@ -16,6 +16,14 @@
 //! Displayed text (decision 0068) is gated the same way on its own lines (decision 0070):
 //! `TC<TAB>case<TAB>n` counts a case's scored text cells and `TF<TAB>case<TAB>Sheet!A1` lists
 //! a known text failure, with the same regression, new-coverage and fix rules.
+//!
+//! A pivot's layout is gated the same way where the case compares it in full, location and
+//! saved `rowItems`/`colItems` (an engine-export case, T-4944): `LC<TAB>case<TAB>n` counts the
+//! case's sidecar pivots and `LF<TAB>case<TAB>Sheet!Pivot` lists a pivot whose layout is not
+//! Excel's, whatever its [`crate::pivot_scoring::LayoutVerdict`]: a location fixed to reveal
+//! wrong lines is no new failure. Any case whose pivots a saved package is compared for (the
+//! round-trip goldens of SPEC-0033 X3, T-4180) can fill the same lines. The file header is left
+//! as it was, so the new kinds rewrite only the baselines that hold them.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -42,6 +50,11 @@ pub struct Baseline {
     pub text_checked: BTreeMap<String, usize>,
     /// (case id, `Sheet!A1`) whose displayed text is known to fail.
     pub text_failing: BTreeSet<(String, String)>,
+    /// case id → number of sidecar pivots whose layout is compared in full (cases with none are
+    /// absent).
+    pub layout_checked: BTreeMap<String, usize>,
+    /// (case id, `Sheet!Pivot`) whose layout is known not to be Excel's.
+    pub layout_failing: BTreeSet<(String, String)>,
 }
 
 impl Baseline {
@@ -63,6 +76,14 @@ impl Baseline {
                 for t in r.text.iter().filter(|t| !t.pass) {
                     b.text_failing
                         .insert((r.id.clone(), format!("{}!{}", t.sheet, t.cell)));
+                }
+            }
+            // So is a fully compared pivot layout, whatever the value mode (T-4944).
+            if let Some(n) = r.layout_checked.filter(|n| *n > 0) {
+                b.layout_checked.insert(r.id.clone(), n);
+                for p in &r.pivot_layout {
+                    b.layout_failing
+                        .insert((r.id.clone(), format!("{}!{}", p.sheet, p.name)));
                 }
             }
             match r.status {
@@ -116,6 +137,13 @@ impl Baseline {
                 (Some("TF"), Some(case), Some(item)) => {
                     b.text_failing.insert((case.to_string(), item.to_string()));
                 }
+                (Some("LC"), Some(case), Some(pivots)) => {
+                    b.layout_checked.insert(case.to_string(), count(pivots)?);
+                }
+                (Some("LF"), Some(case), Some(item)) => {
+                    b.layout_failing
+                        .insert((case.to_string(), item.to_string()));
+                }
                 _ => anyhow::bail!("{}:{}: malformed line", path.display(), n + 1),
             }
         }
@@ -142,6 +170,12 @@ impl Baseline {
         }
         for (case, item) in &self.text_failing {
             let _ = writeln!(out, "TF\t{case}\t{item}");
+        }
+        for (case, count) in &self.layout_checked {
+            let _ = writeln!(out, "LC\t{case}\t{count}");
+        }
+        for (case, item) in &self.layout_failing {
+            let _ = writeln!(out, "LF\t{case}\t{item}");
         }
         std::fs::write(path, out).with_context(|| path.display().to_string())
     }
@@ -175,7 +209,8 @@ impl Delta {
 }
 
 /// Compares the committed baseline with the current run: values, then displayed text, whose
-/// labels carry a `text ` prefix on the item (decision 0070).
+/// labels carry a `text ` prefix on the item (decision 0070), then pivot layouts, `layout `
+/// (T-4944).
 #[must_use]
 pub fn diff(old: &Baseline, new: &Baseline) -> Delta {
     let mut d = Delta::default();
@@ -189,6 +224,12 @@ pub fn diff(old: &Baseline, new: &Baseline) -> Delta {
         (&old.text_checked, &old.text_failing),
         (&new.text_checked, &new.text_failing),
         "text ",
+        &mut d,
+    );
+    diff_items(
+        (&old.layout_checked, &old.layout_failing),
+        (&new.layout_checked, &new.layout_failing),
+        "layout ",
         &mut d,
     );
     d
@@ -286,6 +327,87 @@ mod tests {
         assert_eq!(new.failing, BTreeSet::new());
     }
 
+    /// `base` with pivot-layout counts and failures.
+    fn with_layout(
+        base: Baseline,
+        checked: &[(&str, usize)],
+        failing: &[(&str, &str)],
+    ) -> Baseline {
+        let t = with_text(Baseline::default(), checked, failing);
+        Baseline {
+            layout_checked: t.text_checked,
+            layout_failing: t.text_failing,
+            ..base
+        }
+    }
+
+    #[test]
+    fn pivot_layouts_ratchet_like_values() {
+        // A pivot whose layout was Excel's in an unchanged case and now is not is a regression
+        // even when every cell passes; one that now is Excel's is a fix (T-4944).
+        let old = with_layout(b(&[("a", 3)], &[]), &[("a", 2)], &[("a", "K!Top")]);
+        let new = with_layout(b(&[("a", 3)], &[]), &[("a", 2)], &[("a", "S!Pv")]);
+        let d = diff(&old, &new);
+        assert_eq!(d.regressions, vec!["a\tlayout S!Pv"]);
+        assert_eq!(d.fixed, vec!["a\tlayout K!Top"]);
+        // A case that now compares more pivots is new coverage, to be recorded.
+        let grown = with_layout(b(&[("a", 3)], &[]), &[("a", 3)], &[("a", "S!Pv")]);
+        let d = diff(&old, &grown);
+        assert!(d.regressions.is_empty());
+        assert!(d.new_failures.contains(&"a\tlayout S!Pv".to_string()));
+        // A case new to the layout lines (an existing case once it compares them) is too.
+        let d = diff(&b(&[("a", 3)], &[]), &new);
+        assert!(d.regressions.is_empty());
+        assert_eq!(d.new_cases, vec!["layout a"]);
+        assert!(d.is_dirty());
+        assert!(new.failing.is_empty() && new.text_failing.is_empty());
+    }
+
+    #[test]
+    fn only_a_case_that_compares_its_pivot_lines_records_their_layout() {
+        use crate::pivot_scoring::{LayoutVerdict, PivotLayout};
+        let layout = |verdict| PivotLayout {
+            sheet: "K".into(),
+            name: "Top".into(),
+            excel_location: "A3:D11".into(),
+            engine_location: Some("A3:D11".into()),
+            excel_lines: (7, 2),
+            engine_lines: Some((7, 2)),
+            verdict,
+        };
+        let export = |verdict| CaseResult {
+            pivot_layout: vec![layout(verdict)],
+            layout_checked: Some(2),
+            ..CaseResult::for_test("x/a", "x")
+        };
+        let lines =
+            Baseline::from_results(BaselineMode::Cells, &[&export(LayoutVerdict::LinesDiffer)]);
+        assert_eq!(lines.layout_checked.get("x/a"), Some(&2));
+        let items: Vec<_> = lines
+            .layout_failing
+            .iter()
+            .map(|(_, i)| i.as_str())
+            .collect();
+        assert_eq!(items, ["K!Top"]);
+        // A location verdict is the same item, so fixing the location alone changes nothing.
+        let moved = Baseline::from_results(
+            BaselineMode::Cells,
+            &[&export(LayoutVerdict::LocationDiffers)],
+        );
+        assert!(!diff(&moved, &lines).is_dirty());
+        // A case whose lines are not compared (every other suite) records no layout line.
+        let other = CaseResult {
+            pivot_layout: vec![layout(LayoutVerdict::LinesNotEmitted)],
+            ..CaseResult::for_test("x/a", "x")
+        };
+        let plain = Baseline::from_results(BaselineMode::Cells, &[&other]);
+        assert!(plain.layout_checked.is_empty() && plain.layout_failing.is_empty());
+        // An ungated suite records nothing.
+        let none =
+            Baseline::from_results(BaselineMode::None, &[&export(LayoutVerdict::LinesDiffer)]);
+        assert_eq!(none, Baseline::default());
+    }
+
     #[test]
     fn classifies_regressions_new_failures_and_fixes() {
         let old = b(&[("a", 3), ("b", 2)], &[("a", "S!A1")]);
@@ -352,6 +474,7 @@ mod tests {
             &[("a", 2)],
             &[("a", "Sheet 1!B2")],
         );
+        let base = with_layout(base, &[("a", 1)], &[("a", "Sheet 1!Pivot 1")]);
         base.write(&path).unwrap();
         assert_eq!(Baseline::read(&path).unwrap(), base);
         let _ = std::fs::remove_dir_all(dir);

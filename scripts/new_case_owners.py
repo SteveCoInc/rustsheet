@@ -5,12 +5,17 @@ T-3793, decision 0245. A case the branch adds, or whose `.case.json` / workbook 
 sidecar it changes (a refill counts), is new. Each new case is run alone
 (`rustsheet-eval run --suite S --filter F --out <tmp>`, under a second), and its visibly-off cells
 (decision 0188 R1(c): `exit_owners.all_off_cells`) must each be owned by an open task by
-`exit_owners`' rule; a cell owned only by a `defer:` task passes. A branch with no new case runs
-nothing, so `main` always passes.
+`exit_owners`' rule; a cell owned only by a `defer:` task passes. So must each pivot of a new case
+whose layout is a baseline item (T-4944: a case with `layout_checked`, an engine-export case, lists
+in `pivot_layout` every pivot whose location or saved `rowItems`/`colItems` are not Excel's, the
+`LF<TAB>case<TAB>Sheet!Pivot` lines of eval/baseline): its `Sheet!Pivot` is owned as a cell is, the
+pivot's name standing for the A1 name. A branch with no new case runs nothing, so `main` always
+passes.
 
 Usage: new_case_owners.py [--base origin/main] [--eval target/release/rustsheet-eval]
 Exit 0 when every cell has an owner, 1 when one has none (each listed as
-`case!Sheet!A1<TAB>formula<TAB>expected<TAB>actual`), 2 when the check cannot run.
+`case!Sheet!A1<TAB>formula<TAB>expected<TAB>actual`, a pivot as
+`case!Sheet!Pivot<TAB>pivot layout<TAB>Excel's location<TAB>verdict`), 2 when the check cannot run.
 Standard library only.
 """
 
@@ -33,6 +38,8 @@ ROOT = exit_owners.ROOT
 # The case files a suite may hold (`rustsheet-eval`'s `SuiteKind`) and their oracle sidecar.
 CASE_SUFFIXES = (".case.json", ".export.json", ".xlsx", ".xlsm")
 SIDECAR = ".oracle.json"
+# The criterion (and the printed formula) of a pivot whose layout is a baseline item (T-4944).
+LAYOUT = "pivot layout"
 
 
 class GateError(Exception):
@@ -122,16 +129,35 @@ def run_case(eval_bin: Path, root: Path, case_id: str, out: Path) -> dict[str, o
     return report
 
 
+def layout_items(report: dict[str, object]) -> list[exit_owners.OffCell]:
+    """The pivots of `report` whose layout is a baseline item: every `pivot_layout` entry of a case
+    that has `layout_checked` (T-4944), as `Sheet!Pivot` with Excel's location and the verdict. A
+    case without `layout_checked` only reports its layouts, so they are not items."""
+    out = []
+    cases = report.get("cases")
+    for case in cases if isinstance(cases, list) else []:
+        if case.get("layout_checked") is None:
+            continue
+        for p in case.get("pivot_layout") or []:
+            key = f"{p['sheet']}!{p['name']}"
+            cell = exit_owners.ExitCell(LAYOUT, str(case["id"]), key, LAYOUT)
+            out.append(exit_owners.OffCell(cell, str(p.get("excel_location", "")), str(p.get("verdict", ""))))
+    return out
+
+
 def unowned_new(
     report: dict[str, object], tasks_dir: Path, new: set[str], names: dict[str, tuple[str, ...]]
 ) -> list[exit_owners.OffCell]:
-    """The visibly-off cells of the `new` cases in `report` that no open task owns (a cell owned
-    by a deferred task only is owned)."""
-    return [
+    """The visibly-off cells, then the layout items (`layout_items`), of the `new` cases in
+    `report` that no open task owns (one owned by a deferred task only is owned)."""
+    cells = [
         o
         for o, deferred in exit_owners.unowned_off(report, tasks_dir, names)
         if o.cell.case in new and not deferred
     ]
+    pivots = [o for o in layout_items(report) if o.cell.case in new]
+    texts = exit_owners.open_task_texts(tasks_dir, None) if pivots else []
+    return cells + [o for o in pivots if not exit_owners.owned(o.cell, texts, names[o.cell.case])]
 
 
 def main(argv: list[str]) -> int:
@@ -160,11 +186,11 @@ def main(argv: list[str]) -> int:
         print(f"{o.cell.case}!{o.cell.key}\t{o.cell.formula}\t{o.expected}\t{o.actual}")
     if found:
         print(
-            f"new-case owners: {len(found)} visibly-off cells of the {count} new or refilled cases have no open"
-            " owner; file or amend a task that names them (decision 0245)"
+            f"new-case owners: {len(found)} visibly-off cells or pivot layouts of the {count} new or refilled cases"
+            " have no open owner; file or amend a task that names them (decision 0245)"
         )
         return 1
-    print(f"new-case owners: every visibly-off cell of the {count} new or refilled cases has an owner")
+    print(f"new-case owners: every visibly-off cell and pivot layout of the {count} new or refilled cases has an owner")
     return 0
 
 
