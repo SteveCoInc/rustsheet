@@ -11,6 +11,7 @@ tools' `fitlab` exact arithmetic) without its 50-step cap, over the three t4844 
     cd tools && uv run python -I ../docs/research/irr-2026-11-07/replay.py          # the T-4844 counts
     cd tools && uv run python -I ../docs/research/irr-2026-11-07/replay.py pole     # T-4888's case: write or check
     cd tools && uv run python -I ../docs/research/irr-2026-11-07/replay.py stall    # T-4888's stall sweep
+    cd tools && uv run python -I ../docs/research/irr-2026-11-07/replay.py stall2   # the sweep after its freeze
 
 `pole` draws short series (3 to 6 flows, 6 significant digits, seed "T-4838/pole") whose secant from 0.1 crosses the
 pole (an iterate at d >= 1), and keeps them by how two models answer: the secant run on past the pole (`secant(...,
@@ -281,6 +282,98 @@ def stall_case() -> int:
     return 0
 
 
+STALL2_CASE = "t4888-irr-stall-sweep-2"
+STALL2_GUESSES = [0.1, 0.1, 0.0, -0.5, 0.5, 2.0, -0.9, 10.0]
+# The frozen rule (financial_util.rs `irr_stall_stops`), predicted per cell before the fill.
+FROZEN_ABSOLUTE, FROZEN_RELATIVE, FROZEN_FLOWS = 1e-4, 1e-12, (1.3e-7, 1.3e14)
+
+
+def frozen_holds(residual: float, peak: float) -> bool:
+    return (
+        FROZEN_FLOWS[0] <= peak <= FROZEN_FLOWS[1]
+        and residual < FROZEN_ABSOLUTE
+        and residual < FROZEN_RELATIVE * peak
+    )
+
+
+def stall_point(values: list[float], guess: float) -> tuple[float, float] | None:
+    """The rate and |NPV| of the first zero step at |NPV| >= 1e-7 in the first 50 steps from `guess` (run on past the
+    pole), or None."""
+    hit = stall(values, guess)
+    if hit is None:
+        return None
+    d0 = X87.div(guess, 1 + guess)
+    f0 = _npv_v_running(values, 1.0 - d0)
+    d1 = d0 - (1e-3 if f0 > 0 else -1e-3)
+    f1 = _npv_v_running(values, 1.0 - d1)
+    for _ in range(hit[0] + 1):
+        d2 = d1 - X87.div(f1 * (d1 - d0), f1 - f0)
+        f2 = _npv_v_running(values, 1.0 - d2)
+        d0, f0, d1, f1 = d1, f1, d2, f2
+    return X87.div(1.0, 1.0 - d1) - 1, hit[1]
+
+
+def stall2_case() -> int:
+    """T-4888's second stall sweep, drawn after the two-part rule was frozen: varied guesses (-0.9 to 10), 2 to 150
+    flows, scales 1E-9 to 1E+17. Writes the case and its `.predictions.tsv` (the stall point, |NPV|, largest flow, the
+    frozen rule's hold-or-not and "no stall stop"'s), which depend only on the seed."""
+    rng = random.Random("T-4888/stall-2")
+    rows: list[tuple[list[float], float, float, float, float]] = []
+    per: defaultdict[int, int] = defaultdict(int)
+    while len(rows) < 240:
+        n = rng.choice([2, 3, 5, 10, 20, 40, 80, 150])
+        root = rng.uniform(-0.3, 0.6)
+        flows = [rng.uniform(0.1, 1.0) * rng.choice([1, 1, 1, -1]) for _ in range(n - 1)]
+        outlay = -sum(c / (1 + root) ** (i + 1) for i, c in enumerate(flows))
+        decade = rng.randint(-9, 17)
+        values = [float(f"{c * 10.0**decade:.6g}") for c in [outlay, *flows]]
+        guess = rng.choice(STALL2_GUESSES)
+        if per[decade] >= 10 or all(c >= 0 for c in values) or all(c <= 0 for c in values):
+            continue
+        try:
+            point = stall_point(values, guess)
+        except (NoResultError, OverflowError, ZeroDivisionError):
+            continue
+        if point is not None:
+            per[decade] += 1
+            rows.append((values, guess, point[0], point[1], max(abs(c) for c in values)))
+    cells = {
+        f"A{i}": "=IRR({" + ",".join(map(repr, v)) + "}" + ("" if g == 0.1 else f",{g!r}") + ")"
+        for i, (v, g, _, _, _) in enumerate(rows, 1)
+    }
+    with (CASES / f"{STALL2_CASE}.predictions.tsv").open("w") as out:
+        out.write(
+            "cell\tguess\tstall rate\t|NPV| at the stall\tlargest |flow|\tfrozen rule holds\tno stall stop holds\n"
+        )
+        for i, (_, g, rate, residual, peak) in enumerate(rows, 1):
+            out.write(
+                f"A{i}\t{g!r}\t{rate!r}\t{residual:.6g}\t{peak:.6g}\t{frozen_holds(residual, peak)}\tFalse\n"
+            )
+    path = CASES / f"{STALL2_CASE}.case.json"
+    if path.exists():
+        same = json.loads(path.read_text())["sheets"] == [{"name": "P", "cells": cells}]
+        print(
+            f"{STALL2_CASE}: {'up to date' if same else 'differs from the generator'}; predictions rewritten"
+        )
+        return 0 if same else 1
+    case = {
+        "format": "rustsheet-case/v1",
+        "description": (
+            "T-4888: second fresh sweep for IRR's zero-step stall rule, drawn after the two-part rule (|NPV| < 1e-4 and "
+            "< 1e-12 of the largest flow, largest flows 1.3E-7..1.3E+14) was frozen (seed 'T-4888/stall-2'). 240 series "
+            "of 2 to 150 flows, scales 1E-9 to 1E+17, guesses -0.9 to 10, each reaching a zero step at |NPV| >= 1e-7 "
+            f"within 50 steps. The frozen rule's predictions in {STALL2_CASE}.predictions.tsv, committed before the "
+            "fill. docs/research/irr-2026-11-07/replay.py stall2."
+        ),
+        "tags": ["M9", "probe", "financial", "irr"],
+        "sheets": [{"name": "P", "cells": cells}],
+        "expected": {},
+    }
+    path.write_text(json.dumps(case, indent=2) + "\n")
+    print(f"wrote {path.name}: {len(rows)} cells")
+    return 0
+
+
 def main() -> None:
     cells, oracle = load("t4844-irr-guess-ladder")
     split: Counter[tuple[str, str]] = Counter()
@@ -321,4 +414,6 @@ if __name__ == "__main__":
         sys.exit(pole_case())
     if sys.argv[1:] == ["stall"]:
         sys.exit(stall_case())
+    if sys.argv[1:] == ["stall2"]:
+        sys.exit(stall2_case())
     main()
