@@ -78,23 +78,23 @@ fn exp_keeps_subnormal_results() {
 #[test]
 fn array_comparison_reads_a_tiny_excess_as_equal() {
     let mut model = new_empty_model();
-    model._set("A1", "=INDEX((EXP({-745,-708}))=0,1)");
-    model._set("A2", "=INDEX((EXP({-745,-708}))=0,2)");
-    model._set("A3", "=INDEX(EXP({-745,-708}),1)=0");
-    model._set("A4", "=INDEX(0=EXP({-745}),1)");
-    model._set("A5", "=INDEX(EXP({-745})<EXP({-744}),1)");
-    model._set("A6", "=INDEX(EXP({-744})>EXP({-745}),1)");
+    model.set_a1("A1", "=INDEX((EXP({-745,-708}))=0,1)");
+    model.set_a1("A2", "=INDEX((EXP({-745,-708}))=0,2)");
+    model.set_a1("A3", "=INDEX(EXP({-745,-708}),1)=0");
+    model.set_a1("A4", "=INDEX(0=EXP({-745}),1)");
+    model.set_a1("A5", "=INDEX(EXP({-745})<EXP({-744}),1)");
+    model.set_a1("A6", "=INDEX(EXP({-744})>EXP({-745}),1)");
     // Either side of 2^-1026 (-1026 ln 2 = -711.1648): EXP(-711.17) is below, EXP(-711.16) above.
-    model._set("A7", "=INDEX((EXP({-711.17}))=0,1)");
-    model._set("A8", "=INDEX((EXP({-711.16}))=0,1)");
-    model._set("A9", "=INDEX((EXP(-745)+{0})>0,1)");
+    model.set_a1("A7", "=INDEX((EXP({-711.17}))=0,1)");
+    model.set_a1("A8", "=INDEX((EXP({-711.16}))=0,1)");
+    model.set_a1("A9", "=INDEX((EXP(-745)+{0})>0,1)");
     model.evaluate();
     let expected = [
         "TRUE", "FALSE", "FALSE", "FALSE", "TRUE", "FALSE", "TRUE", "FALSE", "FALSE",
     ];
     for (row, want) in expected.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *want,
             "A{}",
             row + 1
