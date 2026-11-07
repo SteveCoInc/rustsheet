@@ -47,5 +47,8 @@ The fork's lint exemptions cover only the files that still violate them, so post
 - Rebased on main at 37 newer commits: the pivot filter code (pivot/filter.rs, filter/rank.rs) that landed meanwhile
   violated 13 previously crate-allowed lints. Fixed in place: `if let`, merged arms, a module-level type, and
   `f64::from`. The exact whole-day comparison and the bounded casts carry a statement-level `expect` with a reason.
-- Follow-ups: T-4847 to T-4855 (duplicate concepts); the per-file cast/float debt remains for `quality`-lane tasks.
+- Follow-ups: T-4847 to T-4855 (duplicate concepts); the remaining per-file debt is split into T-4980 (mechanical lints), T-4981 (API-shape lints),
+  T-4982 (match_same_arms, too_many_lines), T-4983 (numeric-kernel literals and names), T-4984 (spec: one checked
+  numeric-conversion helper for the 423 cast entries), T-4985 (float_cmp) and T-4986 (manual_midpoint, on evidence).
+  The xlsx importer's `dbg!`/prints stay with T-4572.
 - Eval delta: none expected. The renames are test-only, and the clippy fixes do not change semantics.
