@@ -1457,7 +1457,10 @@ def test_arg_pairs_getpivotdata_queries_the_case_pivot(tmp_path: Path) -> None:
     data = data_sheet["cells"]
     assert pivot["name"] == "Pivot"
     [table] = pivot["pivot_tables"]
-    calls = [_split_args(text[1:]) for text in calc["cells"].values()]
+    control, *calls = [_split_args(text[1:]) for text in calc["cells"].values()]
+    # The first call is a valid query, so a pivot Excel did not build cannot pass for a batch of misses.
+    field = sorted(n for n in (table["row"], table.get("column")) if n)[0]
+    assert control[1][:3] == [quoted(table["value"]), "Pivot!$H$3", quoted(field)]
     assert len(calls) == 2 * CALLS_PER_PAIR
     assert spec["check"] == [f"Calc!{a1}" for a1 in calc["cells"]]
     axis_names = {quoted(n) for n in (table["row"], table.get("column")) if n}

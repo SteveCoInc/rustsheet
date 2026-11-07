@@ -11,7 +11,9 @@ A `pivot: true` function (GETPIVOTDATA, T-4006) queries the case's own pivot (ge
 every argument the pair does not force is a valid name from that pivot (its data field, its top-left cell, one of
 its axis fields and an item of it), and a forced `range` pivot reference is a cell or the whole of it, so each call
 is a valid query apart from the forced pair. The field and item come together or not at all: Excel for the web
-refuses a workbook with an odd GETPIVOTDATA argument count of 5 or more (docs/excel-semantics/syntax.md).
+refuses a workbook with an odd GETPIVOTDATA argument count of 5 or more (docs/excel-semantics/syntax.md). Each
+such case opens with one fully valid query, a control: almost every forced pair is a miss Excel answers with an
+error, so without it a pivot Excel failed to build would look the same as a batch of misses.
 
 Design: docs/architecture/synthetic-generator.md §6.7.
 """
@@ -183,6 +185,17 @@ class ArgPairs:
                     args.append(self.unforced(p))
         return f"{fn.get('spelled', fn['name'])}({','.join(args)})"
 
+    def pivot_control(self, fn: dict[str, Any], source: PivotSource) -> str:
+        """A valid GETPIVOTDATA query of `source`: its data field, its top-left cell, an axis field and an item."""
+        field = sorted(source.axis)[0]
+        args = [
+            quoted(source.table["value"]),
+            corner_ref(source),
+            quoted(field),
+            quoted(source.axis[field][0]),
+        ]
+        return f"{fn.get('spelled', fn['name'])}({','.join(args)})"
+
     def pivot_call(self, fn: dict[str, Any], pair: Pair, variant: int, source: PivotSource) -> str:
         """GETPIVOTDATA with `pair` forced against `source` (module docstring). The field/item pair is passed
         when either is forced, and on the second call otherwise, so a call without it (the grand total) and one
@@ -270,7 +283,10 @@ def generate_arg_pairs(
             ]
         if skipped:
             skipped_by_fn[name] = skipped
-        chunks = [texts[i : i + MAX_FORMULAS] for i in range(0, len(texts), MAX_FORMULAS)]
+        per_case = MAX_FORMULAS if pivot is None else MAX_FORMULAS - 1
+        chunks = [texts[i : i + per_case] for i in range(0, len(texts), per_case)]
+        if pivot is not None:
+            chunks = [["=" + maker.pivot_control(fn, pivot), *chunk] for chunk in chunks]
         spills = fn["name"] in dynamic
         stride = SPILL_ROW_STRIDE if spills else ROW_STRIDE
         for part, chunk in enumerate(chunks, 1):
@@ -281,7 +297,8 @@ def generate_arg_pairs(
                     "format": "rustsheet-case/v1",
                     "description": (
                         f"generated arg-pairs seed={seed} milestone={milestone} {name} part {part}/{len(chunks)}: "
-                        f"{len(chunk)} calls over {len(pairs) - len(skipped)} unseen pairs{note}"
+                        f"{len(chunk)} calls over {len(pairs) - len(skipped)} unseen pairs"
+                        f"{'' if pivot is None else ', the first a valid control query'}{note}"
                     ),
                     "tags": ["generated", "arg-pairs", milestone, name],
                     "sheets": [

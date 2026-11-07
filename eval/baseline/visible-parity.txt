@@ -3,6 +3,10 @@
 # visibly off from Excel. A case with no line allows none. Only `--lower-visible-lock` lowers a line.
 fixtures/merged-covered-formula.xlsx	5
 fixtures/merged-covered-values.xlsx	10
+gen-m6/16b67941f34e0346.case.json	23
+gen-m6/2963992505456e99.case.json	21
+gen-m6/37eb2ebaf9386ade.case.json	13
+gen-m6/ccc550562ee5fd06.case.json	8
 gen-m9/0072265d385d8ab2.case.json	1
 gen-m9/01523d247594952e.case.json	2
 gen-m9/05d44f6dd6cfc567.case.json	2
