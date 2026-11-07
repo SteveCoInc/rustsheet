@@ -31,7 +31,7 @@ engine matching it.
 - [x] An excel-graph probe (predictions committed first) covering both shapes, with a few dozen draws each, is filled.
 - [x] The engine matches its cells (the early return in `vdb_switching_between` extended or narrowed to fit), and
       financial.md records the result.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The `no_switch` TRUE mode.
