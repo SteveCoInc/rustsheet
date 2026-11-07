@@ -321,8 +321,8 @@ the importer's model without a recalculation, so every pivot holds the definitio
 report.json lists each pivot per case (`pivot_freshness`) and the counts per suite in `fresh_pivot_render`
 (`fresh`, `stale`, `fresh_unscored`, `fresh_rendered_exactly`, `render_cells`, `render_passed`,
 `render_visibly_off`, `refresh_compared`, `refresh_exact`, `refresh_not_comparable`, `refresh_failed`). The M16
-exit row's corpus render measure is to read the `pivot-corpus-*` rows: met when `render_cells > 0` and
-`render_visibly_off == 0` (wiring: T-4971). report.md's "Pivot freshness" section has the same counts, every stale
+exit row's corpus render measure reads the `pivot-corpus-*` rows: met when both have `render_cells > 0` and
+`render_visibly_off == 0`, not measured when either is absent (T-4971). report.md's "Pivot freshness" section has the same counts, every stale
 pivot, every fresh pivot whose render is off or unscored, and every refresh check. The pivot files of calipers and
 poi are classified by their own suites' runs; corpus-bench's are not, since that suite does not trust its caches.
 The nightly eval fetches, runs and checks both pivot-corpus suites (decision 0346).
@@ -620,10 +620,10 @@ false when a sidecar pivot is missing or misplaced, null while the engine emits 
 to compare), the corpus render criterion (`corpus_render_met`, plan check (b): fresh corpus pivots
 re-rendered from their saved cache must reproduce Excel's saved cells), and the pivot-corpus fresh and
 stale counts, shown only.
-`pivot_freshness` decides "fresh" by the engine's own render, so a fresh file the engine renders wrongly
-is called stale and is never scored; `corpus_render_met` therefore stays null, not measured, until
-freshness is decided without the renderer (T-4906), and until then M16 cannot be met. `exit` needs
-every one of these met.
+Freshness is decided without the renderer (T-4906: the saved records' values at Excel's saved
+`rowItems`/`colItems`), so `corpus_render_met` reads report.json's `fresh_pivot_render` (T-4971): met
+when both `pivot-corpus-*` rows have render cells and none visibly off, null (not measured) when either
+suite has no row (not fetched, or no pivot classified). `exit` needs every one of these met.
 
 The "Fifteen-digit parity checkpoint" section (`v15_checkpoint`, decision 0094) also prints the
 Phase 1 line of decision 0114: the in-scope functions that are covered and have at most one cell in

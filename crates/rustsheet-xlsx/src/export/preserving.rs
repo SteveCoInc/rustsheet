@@ -2,13 +2,14 @@
 //! that package wherever nothing changed, instead of rebuilding every part from the model.
 //!
 //! Three tiers: `Verbatim` when the live model equals the pristine re-import of the source,
-//! `Patched` when only cells changed (`patch`, T-4560), `Regenerated` otherwise.
+//! `Patched` when only cells changed (`patch`, T-4560), `Regenerated` otherwise, which keeps the
+//! source's `PivotChart` drawings (`pivot_drawings`, T-4950).
 
 use std::io::{Seek, Write};
 
 use rustsheet_engine::Model;
 
-use super::save_xlsx_to_writer;
+use super::save_regenerated;
 use crate::error::XlsxError;
 
 /// How a save wrote the package (SPEC-0034 D4).
@@ -32,8 +33,9 @@ pub enum SaveTier {
 
 /// Writes `model`, keeping `source` where SPEC-0034 allows. `pristine` is `source` imported again
 /// the way `model` was first loaded, so comparing the two typed models says what changed since the
-/// load (D2). An unchanged workbook is the source's bytes, untouched; any change regenerates, as
-/// [`save_xlsx_to_writer`] always did.
+/// load (D2). An unchanged workbook is the source's bytes, untouched; a change the patch cannot
+/// write regenerates, as [`save_xlsx_to_writer`](super::save_xlsx_to_writer) always did,
+/// keeping the source's `PivotChart` drawings where it can (T-4950).
 ///
 /// # Errors
 /// When writing fails, or the regenerating export does.
@@ -54,6 +56,6 @@ pub fn save_preserving<W: Write + Seek>(
         }
         Err(reason) => reason,
     };
-    let writer = save_xlsx_to_writer(model, writer)?;
+    let writer = save_regenerated(model, pristine, source, writer)?;
     Ok((writer, SaveTier::Regenerated { reason }))
 }

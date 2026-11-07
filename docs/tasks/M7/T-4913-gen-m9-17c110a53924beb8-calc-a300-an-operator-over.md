@@ -27,6 +27,14 @@ re-filling or editing the October sidecar, so the line can never leave. The evid
 So the gap is in the owner tools: scripts/exit_owners.py treats only open tasks as owners. Decision 0329's
 consequences leave excluding such cells from scoring to T-3610; this task changes only who counts as their owner.
 
+The same applies to the cells T-4737 superseded under decision 0329 item 3 (its one `--allow-regressions` run). The
+2026-11-07 evening steward run found `make exit-owners MILESTONE=M7` listing 33 of them with no open M7 owner. This
+task owns them until the owner tools count them as settled:
+- gen-m7/21b4eef18424ce94 Calc!B1505:E1514 (26 spill cells of Calc!A1504; November refill in probes/gen-m7-21b4eef18424ce94-refill-1107)
+- probes/t2360-array-lambda-holidays (5 cells of column C on sheet P)
+- probes/t2311-pivotby-value-columns-error P!C12
+- probes/t2625-nested-consumers P!A32
+
 ## Acceptance criteria
 - [ ] scripts/exit_owners.py reads the cells a decision record lists as superseded from one machine-readable place
       (for example an "Owned cell:"-style line in the decision, or the semantics entry decision 0329 item 3 requires)

@@ -21,9 +21,10 @@
 //! - **freshness**: the pivot-corpus pivots fresh and stale (`pivot_freshness`), shown only: a stale
 //!   pivot is reported, never scored (plan §6 check (b)).
 //! - **corpus render** (plan §6 check (b)): every fresh corpus pivot re-rendered from its saved cache
-//!   reproduces Excel's saved cells. `pivot_freshness` decides "fresh" by the engine's own render, so
-//!   a fresh file the engine renders wrongly is called stale and nothing is scored: the check is not
-//!   measured (`None`) until freshness is decided without the renderer (T-4906), and M16 waits on it.
+//!   reproduces Excel's saved cells. Freshness is decided without the renderer (T-4906) and the
+//!   render scores are report.json's `fresh_pivot_render` ([`corpus_render`], T-4971): met when both
+//!   pivot-corpus suites have render cells and none visibly off; `None` (not measured, never met)
+//!   when either suite has no row, as when it was not fetched or classified no pivot.
 //!
 //! The probe measure leaves out the visibly-off cells decision 0188 calls passing or never blocking:
 //! R3 cells where the engine returns the math and desktop-owned (M14) cells ([`probe_off`]).
@@ -108,8 +109,9 @@ pub struct PivotExit {
     pub corpus_fresh: Option<usize>,
     /// Stale pivots of the pivot-corpus suites.
     pub corpus_stale: Option<usize>,
-    /// Plan check (b): the fresh corpus pivots' re-render reproduces Excel's saved cells. Always
-    /// `None` (not measured) until freshness is decided without the engine's renderer (T-4906).
+    /// Plan check (b): the fresh corpus pivots' re-render reproduces Excel's saved cells, read
+    /// from report.json's `fresh_pivot_render` ([`corpus_render`], T-4971); `None` (not measured)
+    /// unless both pivot-corpus suites ran.
     pub corpus_render_met: Option<bool>,
     /// Of the M16 probe row's visibly-off cells, those the measure counts: all but R3 passes and
     /// M14-owned cells ([`probe_off`]); `None` without a probe row.
@@ -246,10 +248,24 @@ pub(super) fn measure(report: &RunReport) -> PivotExit {
         out.corpus_fresh = Some(fresh);
         out.corpus_stale = Some(pivots.len() - fresh);
     }
-    // Plan check (b) is not scored until T-4906 decides freshness without the renderer.
-    out.corpus_render_met = None;
+    out.corpus_render_met = corpus_render(report);
     out.met = all_met(&out);
     out
+}
+
+/// Plan check (b) from the fresh-render scores T-4906 reports (T-4971): met when each pivot-corpus
+/// suite has scored render cells and none of them is visibly off; `None` while either suite has
+/// no row: it was not fetched (decision 0146 item 2(b)) or classified no pivot. Never met either way.
+fn corpus_render(report: &RunReport) -> Option<bool> {
+    let mut met = true;
+    for suite in CORPUS_SUITES {
+        let row = report
+            .fresh_pivot_render
+            .iter()
+            .find(|r| r.suite == suite)?;
+        met &= row.render_cells > 0 && row.render_visibly_off == 0;
+    }
+    Some(met)
 }
 
 fn verdict(met: Option<bool>) -> &'static str {

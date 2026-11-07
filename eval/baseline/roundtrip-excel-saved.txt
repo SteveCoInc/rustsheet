@@ -4,7 +4,7 @@
 # and requires --allow-regressions plus a justification in the PR (docs/process/quality-gates.md).
 # `TC` and `TF` lines do the same for displayed text (decision 0070).
 C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	3696
-C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0/again	2291
+C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0/again	3313
 C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R1/E1	3696
 C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R1/E4	3696
 C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R1/E5	3696
@@ -325,22 +325,18 @@ F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocum
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/theme[0]:/theme/a:themeElements[0]/a:fontScheme[0]/a:minorFont[0]/a:font[46] added
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[CS]/pivotTable[0]:/pivotTableDefinition/colItems[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[CS]/pivotTable[0]:/pivotTableDefinition/rowItems[0] lost
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[CS]:/worksheet/drawing[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[CS]:/worksheet/pageMargins[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[CS]:/worksheet/sheetFormatPr[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[CS]:/worksheet/sheetViews[0]/sheetView[0]/selection[0] added
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[C]:/worksheet/drawing[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[C]:/worksheet/pageMargins[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[C]:/worksheet/sheetFormatPr[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[C]:/worksheet/sheetViews[0]/sheetView[0]/selection[0] added
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[Data]:/worksheet/pageMargins[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[Data]:/worksheet/sheetFormatPr[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[Data]:/worksheet/sheetViews[0]/sheetView[0]/selection[0] added
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[F]:/worksheet/drawing[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[F]:/worksheet/pageMargins[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[F]:/worksheet/sheetFormatPr[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[F]:/worksheet/sheetViews[0]/sheetView[0]/selection[0] added
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[M]:/worksheet/drawing[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[M]:/worksheet/pageMargins[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[M]:/worksheet/sheetFormatPr[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]/worksheet[M]:/worksheet/sheetViews[0]/sheetView[0]/selection[0] added
@@ -363,11 +359,3 @@ F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/customXml[1]/customXmlProps[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/customXml[2] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/customXml[2]/customXmlProps[0] lost
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/worksheet[CS]/drawing[0] lost
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/worksheet[CS]/drawing[0]/chart[0] lost
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/worksheet[C]/drawing[0] lost
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/worksheet[C]/drawing[0]/chart[0] lost
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/worksheet[F]/drawing[0] lost
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/worksheet[F]/drawing[0]/chart[0] lost
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/worksheet[M]/drawing[0] lost
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/worksheet[M]/drawing[0]/chart[0] lost

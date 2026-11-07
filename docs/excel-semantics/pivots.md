@@ -2490,18 +2490,33 @@ everything outside the series as the part has it (so not the `c:pivotSource` nam
 `c:numFmt`), gives a series past the part's last the last one's formatting and its `uniqueId` renumbered (no id where
 the part has none), names a series of several labels by its labels joined with a space (UNVERIFIED, T-4938), leaves an error point out,
 and for Values on rows takes the first data field's format code (UNVERIFIED, T-4953; the `pivotFmts`, axis `numFmt`
-and `uniqueId` readings too). The export does not call it yet: a save that regenerates the package drops drawings and
-charts (T-4950).
+and `uniqueId` readings too). The export calls it: a save that regenerates the package
+(crates/rustsheet-xlsx/src/export/pivot_drawings.rs, `DrawingPlan`, T-4950) keeps each source sheet's drawing whose
+closure is pivot charts only (chart, `chartStyle`, `chartColorStyle`), copied under export-owned names with the
+sheet's `<drawing r:id>`, relationships and content-type overrides, and writes each chart's series through the rewrite
+from the pivot its `c:pivotSource` names (`[file]Sheet!Name`) and the grid's `#SPILL!` collapse: a pivot is
+collapsed when its location is its anchor cell and that cell holds `#SPILL!`, as the grid saves a collapsed pivot. It
+reads three things UNVERIFIED (probe pending: T-4991): a quoted sheet in the name (`[f]'My sheet'!P`, doubled quotes
+undone; t4187 writes `C!P_C` bare though formulas quote `C`), the sheet found ignoring case, and the pivot by its exact
+name; a name it cannot place drops the drawing. An empty drawing (no anchors, no relationships) passes the
+rule and is kept as the source wrote it. So
+roundtrip-excel-saved's R0 keeps Excel's four drawings and chart parts byte for byte. A drawing holding anything else
+(a picture, a shape, a non-pivot chart, another relationship), a chart the rewrite refuses or whose pivot the export
+does not write, and the drawing of a sheet renamed, moved, deleted or changed other than in its cells (decision 0098's
+structural edits included, until T-4567 settles how a drawing moves) is dropped with a log line, as M15's replay
+layer owns them.
 
 ## A rewritten PivotChart part is capped
 Rule: the export's PivotChart rewrite refuses (`PivotChartError::TooLarge`) a chart part whose rewritten text would
 pass 64 MiB (`MAX_CHART_PART_BYTES`), checked before each piece is appended. Each series copies its template's
 formatting children and the category cache, so one large series times many column lines would otherwise multiply
 without bound. Excel caps a chart at 255 series; 255 series of about 4,000 categories fit. What Excel writes for a
-PivotChart past its own limits is unknown; the caller keeps or drops the part as it decides (T-4950).
+PivotChart past its own limits is unknown; the regenerating export drops the chart's drawing with a log line, and the
+drawings it keeps are capped together at 256 MiB, the import's package budget (`MAX_KEPT_BYTES`, T-4950).
 Evidence: none for Excel; a resource limit (CLAUDE.md directive 5, T-4187 security review).
 Status: DEVIATION (decision 0014)
-Implemented in: crates/rustsheet-xlsx/src/export/pivot_charts.rs (`Output`, T-4187).
+Implemented in: crates/rustsheet-xlsx/src/export/pivot_charts.rs (`Output`, T-4187), export/pivot_drawings.rs
+(`MAX_KEPT_BYTES`, T-4950).
 
 ## A PivotChart plots the pivot's item lines
 Rule: a chart bound to a pivot (`c:pivotSource`) plots one category per row leaf and one series per column line, and
