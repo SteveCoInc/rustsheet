@@ -3,7 +3,7 @@ id: T-3370
 title: "Oracle probe: T.INV near p = 1/2 (centre quantile, follow-up of T-2724)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
