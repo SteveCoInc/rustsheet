@@ -30,19 +30,11 @@ impl Model {
         if args.len() > max {
             return Err(CalcResult::new_args_number_error(cell));
         }
-        if args
-            .iter()
-            .take(strict)
-            .any(|a| self.is_empty_argument(a))
-        {
+        if args.iter().take(strict).any(|a| self.is_empty_argument(a)) {
             return Err(CalcResult::new_error(Error::NA, cell, String::new()));
         }
         let mut end = args.len();
-        while end > strict
-            && args
-                .get(end - 1)
-                .is_some_and(|a| self.is_empty_argument(a))
-        {
+        while end > strict && args.get(end - 1).is_some_and(|a| self.is_empty_argument(a)) {
             end -= 1;
         }
         Ok(args.get(..end).unwrap_or(args))

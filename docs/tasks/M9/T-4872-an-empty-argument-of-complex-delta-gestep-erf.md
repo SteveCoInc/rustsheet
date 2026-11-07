@@ -93,3 +93,9 @@ omitted forms A48:A54 keep the values the engine gives today.
   push, wait for green CI, then enqueue.
 - Don't repeat this: the math run took more than 10 minutes here and was cut off by `timeout 600`. Run it in the
   background, without a short timeout.
+- Adopted (opus worker, orphan rule): merged `origin/main` to resolve the conflicts in complex/mod.rs, let.rs and the
+  probes baseline. Main had landed the same omission helper as `Model::is_empty_argument` (util/empty_args.rs), so the
+  branch's `is_omitted_argument` copy was dropped and its callers use main's. Wrote the case's math sidecar with
+  `rustsheet-accuracy math --suite probes --function ERF --function ERFC`, the only stale entries (a full-suite run
+  times out on an unrelated point). `make eval-math-check` is current, and `make check-fast` and `rustsheet-eval
+  check` pass with 0 regressions.
