@@ -4333,23 +4333,30 @@ Rule: every argument of F.DIST, F.DIST.RT, FDIST, F.INV, F.INV.RT and FINV reads
   so is the text element `"2.5"` of a lifted array; an empty cell and an omitted flag are FALSE.
 - F.TEST and FTEST: every sample kind of "F.TEST of a single value (T-2455)" and its neighbours holds in both
   positions; an omitted sample is `#VALUE!` (see that entry).
-Ours: matches every kind cell except the omitted F.TEST sample (T-4882); some kind cells are off at the 15th digit
-through the quantiles' own values (T-4883).
+Ours: every kind cell has Excel's type and error, except the omitted F.TEST sample (T-4882). The values are a
+separate matter: `rustsheet-eval show` passes 514 of the 669 scored cells bit for bit; 125 are within 4 ulp, 26 are
+further off, and 4 are the F.TEST error mismatch. The 26 are quantile values (F.INV, F.INV.RT and FINV at the
+probe's p and df, among them `F.INV(0.3,TRUE,10)` and its reference and `(1=1)` forms, A302, A308, A319, and the
+F.INV.RT and FINV rows from A389), the engine's quantile digits rather than the argument reading (T-4883).
 Status: VERIFIED (excel-graph)
 Tasks: T-4857, T-4882
 
 ## F quantiles at a tiny p leave the math abruptly, and at a huge df stay off it (T-4857)
 Rule (excel-graph, probes-numeric/t4857-f-classes, 2026-11-07, against `rustsheet-accuracy`'s 50-digit math):
-- **A jump in p.** `F.INV(1E-k,30,3)` is within 3E-15 of the math for k = 1 to 172 (sweep-p A2758:A2777) and
-  10 orders of magnitude below it from k = 181 (`F.INV(1E-181,30,3)` = 3.664905678607796E-24, math 7.76E-14; A2778),
-  the gap growing to 21 orders at k = 307. `F.INV.RT(1E-k,3,30)` is its reciprocal at every k (A2793:A2827). At
+- **A jump in p.** `F.INV(1E-k,30,3)` is within 3E-15 of the math on k = 1, 10, ..., 172 (every ninth k; sweep-p
+  A2758:A2777) and 10 orders of magnitude below it on k = 181, 190, ..., 307 (`F.INV(1E-181,30,3)` =
+  3.664905678607796E-24, math 7.76E-14; A2778), the gap growing to about 18 orders at k = 307 (A2792: Excel
+  4.93E-40, math 3.09E-22). The jump lies between 1E-172 and 1E-181; only those k were probed. `F.INV.RT(1E-k,3,30)` is its reciprocal at every k (A2793:A2827). At
   (5, 7) the sweep stays within 3E-14 of the math to k = 289, 7E-13 off at 298, and 6% (F.INV) and 0.4% (F.INV.RT)
   off at 1E-307 (A2722, A2757). So the cut depends on the df.
 - **p at DBL_MIN, and a subnormal p.** `F.INV(2.2250738585072014E-308,5,7)` is 6.3% off the math,
   `F.INV.RT`/`FINV` 5.8%, `FINV(DBL_MIN,30,3)` 24 orders of magnitude (A2219:A2230). A subnormal p made by
   `EXP(-720)` is not read as 0 by the quantiles (a typed `1E-308` or `2^-1074` is): `F.INV(EXP(-720),5,7)` is
-  1.169307705097078E-124 where the math is 4.5E-126 (A1417), `F.INV.RT(EXP(-720),5,7)` 2.3991226329524575E+89
-  (A1435, FINV A1453).
+  1.169307705097078E-124 where the math is 4.5175785832753948E-126 (A1417), `F.INV.RT(EXP(-720),5,7)`
+  2.3991226329524575E+89 where the math is 5.5076272452839048E+89 (A1435, FINV A1453). These math values are an
+  mpmath recompute (50 digits, p = e^-720 = 2.03E-313) done for this entry, not the committed math sidecar:
+  `rustsheet-accuracy` reads `EXP(-720)` as Excel's flushed 0 (numbers.md "Subnormal results become 0"), so the
+  sidecar holds 0 at A1417 and an error ("probability outside (0, 1]") at A1435 and A1453.
 - **Tiny-p `#NUM!`** where the math is a normal number: `F.INV.RT(2.29499489338186E-230,16,80)` (A977),
   `FINV(2.09953717878393E-16,79,1E10)` (A1092) and `F.INV(0.00149502660982554,1E10,79)` (A1312, the df pair of
   T-4044's band, through BETA.INV).

@@ -86,6 +86,12 @@ def main() -> None:
     out = ["# F family coverage: Excel cells per class and pair, before and after T-4857", ""]
     out.append(f"Cells read: {before['cells']} before, {after['cells']} after (`audit.py`).")
     out.append("")
+    out.append(
+        "Only json cases are read (eval/suites and eval/accuracy/tables): the xlsx suites (ironcalc-calc's F_DIST.xlsx "
+        "and F_TEST.xlsx, calipers, corpus-bench, poi) are excluded, so every empty or thin count below is an upper "
+        "bound on the gap."
+    )
+    out.append("")
     out.append("## Summary")
     out.append("")
     out.append(

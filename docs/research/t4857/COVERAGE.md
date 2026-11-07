@@ -2,6 +2,8 @@
 
 Cells read: 114558 before, 118471 after (`audit.py`).
 
+Only json cases are read (eval/suites and eval/accuracy/tables): the xlsx suites (ironcalc-calc's F_DIST.xlsx and F_TEST.xlsx, calipers, corpus-bench, poi) are excluded, so every empty or thin count below is an upper bound on the gap.
+
 ## Summary
 
 | Group | Table | Classes or pairs | Empty before | Thin (<3) before | Empty after | Thin after |

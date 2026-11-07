@@ -19,9 +19,9 @@ bring the evidence to the owner for a decision 0188 R3 ruling.
 T-4857's probe (probes-numeric/t4857-f-classes, excel-graph 2026-11-07; docs/research/t4857/ANALYSIS.md section 6)
 found a sharp regime change and many off-math cells (statistics.md "F quantiles at a tiny p leave the math abruptly
 (T-4857)"):
-- **A jump between p = 1E-172 and 1E-181 at (30, 3).** `F.INV(1E-k,30,3)` is within 3E-15 of the math for k = 1 to
-  172 (sweep-p A2758:A2777) and 10 orders of magnitude below it from k = 181 (A2778: 3.66E-24 against 7.76E-14), the
-  gap growing to 21 orders at k = 307. `F.INV.RT(1E-k,3,30)` is its exact reciprocal throughout (A2793:A2827). At
+- **A jump between p = 1E-172 and 1E-181 at (30, 3).** `F.INV(1E-k,30,3)` is within 3E-15 of the math on k = 1, 10, ..., 172
+  (every ninth k; sweep-p A2758:A2777) and 10 orders of magnitude below it on k = 181, 190, ..., 307 (A2778: 3.66E-24 against 7.76E-14), the
+  gap growing to about 18 orders at k = 307 (A2792). `F.INV.RT(1E-k,3,30)` is its exact reciprocal throughout (A2793:A2827). At
   (5, 7) the same sweep stays within 3E-14 of the math to k = 289, is 7E-13 off at 298, and 6% (F.INV) and 0.4%
   (F.INV.RT) off at 307 (A2722, A2757).
 - **p = DBL_MIN and below.** `F.INV(DBL_MIN,5,7)` is 6% off the math, `F.INV.RT(DBL_MIN,5,7)` and `FINV` 6%,

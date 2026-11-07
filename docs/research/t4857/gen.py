@@ -123,12 +123,17 @@ def next_down(x: float) -> float:
     return math.nextafter(x, -math.inf)
 
 
-def _ordered(x: float) -> int:
+def _bits(x: float) -> int:
+    """The bit pattern of a positive double, for `find_edges`' bisection: on positive doubles it is already in
+    order, so this is not `fitlab.score._ordered` (which also orders negatives) and needs the inverse below,
+    which that module does not have. Neighbours one ulp away are `math.nextafter` (`next_up`, `next_down`)."""
+    assert x > 0, x
     (bits,) = struct.unpack("<q", struct.pack("<d", x))
     return bits
 
 
-def _from_ordered(n: int) -> float:
+def _from_bits(n: int) -> float:
+    """The positive double with bit pattern `n` (`_bits`' inverse)."""
     (v,) = struct.unpack("<d", struct.pack("<q", n))
     return float(v)
 
@@ -393,15 +398,15 @@ def find_edges(d1: float, d2: float, label, lo: float = -705.0, hi: float = 709.
     for i in range(len(xs) - 1):
         if labels[i] == labels[i + 1]:
             continue
-        a, b = _ordered(xs[i]), _ordered(xs[i + 1])
+        a, b = _bits(xs[i]), _bits(xs[i + 1])
         la = labels[i]
         while b - a > 1:
             m = (a + b) // 2
-            if label(_from_ordered(m)) == la:
+            if label(_from_bits(m)) == la:
                 a = m
             else:
                 b = m
-        out.append((_from_ordered(a), _from_ordered(b), la, label(_from_ordered(b))))
+        out.append((_from_bits(a), _from_bits(b), la, label(_from_bits(b))))
     return out
 
 

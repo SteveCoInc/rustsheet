@@ -323,6 +323,7 @@ probes/t4793-growth-several-x.case.json	2
 probes/t4844-irr-guess-ladder.case.json	269
 probes/t4844-irr-pad-ladder.case.json	31
 probes/t4844-irr-stage-invariance.case.json	56
+probes/t4857-f-kinds.case.json	10
 probes/table-edits/t4274-calc-column-delete-row-2.case.json	1
 probes/table-edits/t4274-calc-column-structured-insert-column-a.case.json	1
 probes/yield-below-par-sweep.case.json	3

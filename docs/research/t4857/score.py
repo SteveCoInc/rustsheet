@@ -20,23 +20,11 @@ from pathlib import Path
 import audit as A
 import cells as C
 import fclasses as F
-from rustsheet_tools.fitlab.score import ulp_distance, within_fifteen_digits
+from rustsheet_tools.fitlab.score import ulp_distance, within_digits
 from rustsheet_tools.snapshot import show_cells
 
 CASES = ("probes-numeric/t4857-f-classes", "probes/t4857-f-kinds")
 THIN = 3
-
-
-def within_digits(expected: float, actual: float, digits: int) -> bool:
-    """`within_fifteen_digits` at `digits` significant digits (13 is decision 0267's family bar)."""
-    if digits == 15:
-        return within_fifteen_digits(expected, actual)
-    if not (math.isfinite(expected) and math.isfinite(actual)):
-        return False
-    if expected == 0.0:
-        return actual == 0.0
-    exponent = Decimal(repr(abs(expected))).adjusted()
-    return abs(actual - expected) <= float(f"5e{exponent - digits}")
 
 
 def rel(a: float, m: Decimal) -> float:

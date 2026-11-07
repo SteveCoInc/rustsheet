@@ -32,7 +32,7 @@ ANALYSIS.md section 6) found three rules (docs/excel-semantics/statistics.md "F 
   rule fires first). A literal `1E-308` or `2^-1074` reads as 0 and gives 0 or 1 in both.
 - Code: `fisher.rs` `f_dist_of`, `f_dist_rt_of`, `f_beta_ratio_overflows`; `arithmetic::flush_subnormal`.
 
-Cells (probes-numeric/t4857-f-classes): A191, A375, A1341, A1379, A1398, A1482:A1485; C3187, C3197, C3207
+Cells (probes-numeric/t4857-f-classes): A191, A260, A284, A339, A375, A1341, A1379, A1398, A1482:A1485, A3187, A3197, A3207; C3187, C3197, C3207
 
 ## Acceptance criteria
 - [ ] The cells above match Excel; the rest of t4857-f-classes and the t4026 and t2435 cases do not regress.

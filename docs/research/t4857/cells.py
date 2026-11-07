@@ -11,6 +11,7 @@ constant cells and exact-input cells (a formula cell whose formula is such arith
 
 from __future__ import annotations
 
+import ast
 import json
 import math
 import re
@@ -108,15 +109,43 @@ def find_calls(formula: str) -> Iterator[tuple[str, str, int, int]]:
 
 
 def arithmetic(text: str) -> float | None:
-    """The double of arithmetic over number literals (`2^-1074`, `(1+2)/3`), else None."""
+    """The double of arithmetic over number literals (`2^-1074`, `(1+2)/3`), else None: an AST walk over
+    numbers, unary signs and + - * / ^ (no eval; an exponent beyond 2,000 in magnitude is refused, so a formula
+    cannot make Python build a huge integer)."""
     t = text.strip()
     if not t or not ARITH.match(t) or "**" in t:
         return None
     try:
-        value = eval(t.replace("^", "**"), {"__builtins__": {}}, {})  # noqa: S307 - digits and operators only
-    except (SyntaxError, ZeroDivisionError, OverflowError, TypeError, ValueError):
+        value = _arith_node(ast.parse(t.replace("^", "**"), mode="eval").body)
+    except (SyntaxError, ZeroDivisionError, OverflowError, ValueError):
         return None
-    return float(value) if isinstance(value, int | float) else None
+    return value if math.isfinite(value) else None
+
+
+_BINARY = {
+    ast.Add: lambda a, b: a + b,
+    ast.Sub: lambda a, b: a - b,
+    ast.Mult: lambda a, b: a * b,
+    ast.Div: lambda a, b: a / b,
+}
+
+
+def _arith_node(node: ast.expr) -> float:
+    if isinstance(node, ast.Constant) and isinstance(node.value, int | float) and not isinstance(node.value, bool):
+        return float(node.value)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub | ast.UAdd):
+        v = _arith_node(node.operand)
+        return -v if isinstance(node.op, ast.USub) else v
+    if isinstance(node, ast.BinOp):
+        a, b = _arith_node(node.left), _arith_node(node.right)
+        if isinstance(node.op, ast.Pow):
+            if abs(b) > 2000:
+                raise ValueError("exponent out of range")
+            return float(a**b)
+        op = _BINARY.get(type(node.op))
+        if op is not None:
+            return float(op(a, b))
+    raise ValueError("not arithmetic over number literals")
 
 
 def number_literal(text: str) -> float | None:

@@ -35,22 +35,22 @@ says where the engine's agreement with Excel rests on extrapolation, and any gap
   citing the owner's request.
 
 ## Acceptance criteria
-- [ ] docs/research/t4857/ANALYSIS.md maps every argument kind, every domain and range edge and every kernel branch
+- [x] docs/research/t4857/ANALYSIS.md maps every argument kind, every domain and range edge and every kernel branch
       boundary of the family to equivalence classes, each grounded in code or evidence, and describes the functions'
       shape (nonlinearities, cancellation, underflow and overflow, the x <-> 1/x symmetry).
-- [ ] A committed coverage-audit script bins every existing Excel cell of the family (eval/suites and
+- [x] A committed coverage-audit script bins every existing Excel cell of the family (eval/suites and
       eval/accuracy/tables) into the classes and their pairs, and reports the empty and thin ones.
-- [ ] A seeded generator under docs/research/t4857/ writes a kinds probe case and a numeric probe case (about 2,000
+- [x] A seeded generator under docs/research/t4857/ writes a kinds probe case and a numeric probe case (about 2,000
       to 4,000 cells in all): every class several times, every numeric class pair, boundary triples at each branch
       edge, dense 1-D sweeps across the riskiest edges, symmetry pairs, and subnormal companions. Both are filled by
       excel-graph and their oracle and math sidecars committed.
-- [ ] A committed scoring script reports Excel vs math, engine vs Excel and engine vs math per class and per pair,
+- [x] A committed scoring script reports Excel vs math, engine vs Excel and engine vs math per class and per pair,
       type mismatches, regime changes along the sweeps, and the low-prior-evidence classes where the engine drifts
       from Excel. The summary tables are in this task's Outcome.
-- [ ] Every new Excel quirk is in docs/excel-semantics/statistics.md; every real engine gap has a filed task with
+- [x] Every new Excel quirk is in docs/excel-semantics/statistics.md; every real engine gap has a filed task with
       cell lists; new failing cells enter the baseline only through `make eval-baseline`; `make eval-math-check`
       prints current.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Engine changes (follow-up tasks own them).
@@ -115,6 +115,12 @@ decision 0267 item 5's probe freeze, citing the owner's request.
   new cases only, with `rustsheet-accuracy`'s per-case step (`eval_math._job`): `--function F.DIST ...` would
   recompute the 85 other F cases of probes-numeric for hours, so no existing sidecar changed
   (`git diff origin/main...HEAD -- eval/suites` adds files only); `make eval-math-check` prints current.
+- **Review round 1** (design and security APPROVE, fidelity REQUEST_CHANGES): the (30, 3) quantile gap at k = 307 is
+  about 18 orders, not 21; the sweep's k values and the jump's bracket are stated as probed; the subnormal-p math
+  values are named as an mpmath recompute (the sidecar reads `EXP(-720)` as 0); the kinds entry now separates types
+  from values, and the 20 unowned quantile kinds cells joined T-4883; T-4881 lists the six subnormal-result cells.
+  `within_digits` now lives beside `within_fifteen_digits` in tools' fitlab score, `cells.arithmetic` walks the AST
+  instead of `eval`, and COVERAGE.md says its counts are upper bounds (xlsx suites excluded). Merged origin/main.
 - **Not done**: xlsx suites (ironcalc-calc's F_DIST.xlsx and F_TEST.xlsx, the corpora) are not in the audit (tools do
   not parse xlsx values); where the zero band past the ratio overflow ends, and where the (30, 3) quantile jump sits
   exactly, are left to T-4881 and T-4884.

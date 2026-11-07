@@ -29,14 +29,14 @@ math (or both are within 1E-14 of each other) the engine misses:
 - `FINV(DBL_MIN,80,2)` (A1095) is Excel's 4.49E+307 = the math, ours 2.25E+306; `FINV(2.84E-305,81,201)` (A1128)
   and `F.INV.RT(1.63E-286,84,200)` (A1148) are 31% and 7.8E-7 off Excel, which is on the math.
 - 15th-digit misses at moderate p (A1412, A1966, A1982, A1985, A1994, A1998, A2007, A3112, A3144, A3162, A916, A919;
-  kinds A331, A337, A348, A351, A352, A354 at df 1 through TRUE or `SEQUENCE(3)/2`).
+  and the 26 kinds cells off past 4 ulp: F.INV at df 1 through TRUE, a TRUE reference, `(1=1)` or `SEQUENCE(3)/2` (A302, A308, A319, A331, A337, A348), their lifts, and the F.INV.RT and FINV rows from A389).
 - T-1871 (in flight) reworks F.INV where statrs' inversion fails; re-score these cells after it lands before
   changing the search.
 - Code: `fisher.rs` `f_quantile`, `f_quantile_tail`; `inverse_beta.rs` `f_inverse_cdf`; `special::refine_increasing`.
 
 Cells (probes-numeric/t4857-f-classes): A891, A904, A907, A913, A916, A919, A982, A1095, A1128, A1148, A1412, A1966, A1982, A1985, A1994, A1998, A2007, A3112, A3144, A3162
 
-Cells (probes/t4857-f-kinds): A331, A337, A348, A351:A352, A354
+Cells (probes/t4857-f-kinds): A302, A308, A319, A322:A323, A325, A331, A337, A348, A351:A352, A354, A389, A395, A406, A409:A410, A412, A421, A476, A482, A493, A496:A497, A499, A508
 
 ## Acceptance criteria
 - [ ] Each cell above is within 15 digits of Excel or its residue is explained in the Outcome; no gated quantile
