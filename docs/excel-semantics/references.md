@@ -356,15 +356,21 @@ with no cached data as the reference it is, not as its `#BLOCKED!` cells:
 - **One cell** reads empty, as the cell INDEX picks does: `EDATE(…!A1,1)` is 31,
   `IMAGINARY(…!A1)` 0, `ISEVEN(…!A1)` TRUE, `COMPLEX(…!A1,1)` "i", and ERROR.TYPE of them `#N/A`.
   The bare `…!A1` is `#BLOCKED!`.
+- **Picked by IF, CHOOSE, INDEX or LET**, the reference reads the same: `EDATE(IF(TRUE,…!A1:B2),1)`,
+  `CHOOSE(1,…!A1:B2)`, `INDEX(…!A1:B2,0,0)` and `LET(a,1,…!A1:B2)` are `#VALUE!` (ERROR.TYPE 3,
+  ROWS `#VALUE!`), and `INDEX(…!A1:B2,1,1)`, `IF(TRUE,…!A1)`, `CHOOSE(1,…!A1)` and `LET(a,1,…!A1)`
+  are 31 (ERROR.TYPE `#N/A`, ROWS 1); IMAGINARY likewise, with 0 for one cell.
 
 Evidence: probes/external-ref-no-link-lift-arrays Calc!A1:A16, D1:D13 (excel-graph, 2026-11-07,
-T-4859), with local-range controls D8:D9.
+T-4859), with local-range controls D8:D9; probes/external-ref-no-link-lift-picked Calc!A1:E46
+(excel-graph, 2026-11-07, T-4878): column A the call, D ROWS of it, E ERROR.TYPE of it.
 Ours: matches. A reference into a linked workbook whose cache the workbook holds reads the same
 way: one cell is its cached value (`COMPLEX([1]Defines!$B$2,0)` is "142"), several are refused.
 That case is not probed.
 Status: VERIFIED (excel-graph)
-Implemented in: crates/rustsheet-engine/src/functions/lift/call.rs (`evaluate_as_reference`)
-Tasks: T-4859
+Implemented in: crates/rustsheet-engine/src/functions/lift/call.rs (`evaluate_as_reference`,
+through `pick_reference` for the picked forms)
+Tasks: T-4859, T-4878
 
 ## Cached values of a linked workbook (`[n]Sheet!A1`, `[n]!Name`, `[0]!Name`)
 Rule: in xlsx, Excel writes a reference into another workbook with the 1-based index of its
