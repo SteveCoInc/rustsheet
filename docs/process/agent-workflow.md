@@ -51,6 +51,10 @@ Work is partitioned into **lanes** so that parallel workers rarely touch the sam
   whose task is already done on main, excepted). A sonnet branch in flight never hides the lane's
   opus tasks, nor the reverse. A branch's tier is its own task file's (`opus` once it was handed off
   or re-reviewed after the review-round limit); a branch with no task file takes a slot of both.
+  A ready task of the current milestone (the `(M<n> is current)` of the `docs/status.md` snapshot
+  heading) is offered even in a busy lane when every branch filling the lane's slots for its tier
+  works a task of a later milestone in the phase order of `docs/milestones.md` (decision 0332): at
+  most one such pass per lane and tier, never past an M0 or current-milestone branch.
 - The functions work is split into the nine `functions-*` lanes above so several workers can fix
   functions at once; plain `functions` is retired for open tasks (`scripts/tasks.py validate`).
   Pick the lane by the module the fix touches; a fix spanning families takes the lane of its main

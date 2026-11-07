@@ -214,6 +214,7 @@ probes/t3585-rate-num-near-minus-one.case.json	7
 probes/t3638-subnormal-upper-tail.case.json	7
 probes/t3698-rate-flat-restart-fresh.case.json	25
 probes/t3698-rate-flat-restart.case.json	22
+probes/t3740-binom-range-past-mean-sweep.case.json	18
 probes/t3850-rate-same-state.case.json	46
 probes/t3862-beta-inv-huge-alpha.case.json	36
 probes/t3862-beta-inv-sqrt-dbl-max.case.json	61
@@ -265,6 +266,7 @@ probes/t4515-fresh-sweep.case.json	25
 probes/t4543-xlookup-not-found-address-sheet-lift.case.json	2
 probes/t4563-xlookup-not-found-ref-element.case.json	106
 probes/t4569-xlookup-ref-element-max-min.case.json	70
+probes/t4579-ttest-paired.case.json	48
 probes/t4582-pivot-item-edges.case.json	40
 probes/t4583-pivot-row-labels.case.json	165
 probes/t4585-pivot-field-names.case.json	8

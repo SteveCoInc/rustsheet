@@ -47,6 +47,8 @@ from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 
+import milestone_order
+
 ROOT = Path(__file__).resolve().parent.parent
 TASKS = ROOT / "docs" / "tasks"
 STATUSES = ["todo", "in-progress", "blocked", "done", "dropped"]
@@ -842,7 +844,9 @@ def available(
     ]
     # One task in flight per lane and tier; a handoff or a re-review is resumed whatever its lane is doing, and a
     # P0 is started whatever it is doing (decision 0330).
-    cands = [t for t in unclaimed if busy_key(t) is None or resumable(t) or str(t.get("priority")) == "P0"]
+    current, order = milestone_order.read(ROOT)  # current-milestone work passes later work (decision 0332)
+    cands = [t for t in unclaimed if (key := busy_key(t)) is None or resumable(t) or str(t.get("priority")) == "P0"
+             or milestone_order.passes_later_work(t, [by_id.get(i, {}) for i, _ in flights[key]], current, order)]
     shown = {str(t.get("lane")) for t in cands}
     hiding = {key[0]: key for t in unclaimed if (key := busy_key(t)) is not None and key[0] not in shown}
     busy_lanes = {name: flights[hiding[name]][0] for name in sorted(hiding)}

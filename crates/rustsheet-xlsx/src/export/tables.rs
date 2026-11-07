@@ -81,7 +81,8 @@ fn dxf_attribute(name: &str, dxf_id: Option<u32>, dxf_count: usize) -> String {
 
 /// What the totals row holds for a column, as the table part records it: a formula is written as
 /// `totalsRowFunction="custom"` with its `<totalsRowFormula>`, a text cell as `totalsRowLabel`,
-/// and a number, boolean or error constant as `totalsRowFunction="custom"` alone. Excel refuses a
+/// and a number, boolean or error constant, or a value spilled into the cell, as
+/// `totalsRowFunction="custom"` alone. Excel refuses a
 /// table with a totals row whose cells lack it (xlsx-storage.md "Structured references in the
 /// file"), and refuses a constant written as a label or with a `<totalsRowFormula>`; the bare
 /// `custom` loads with the cell kept a constant (excel-graph uploads, 2026-11-06, T-4005;
@@ -119,9 +120,13 @@ fn totals_row_metadata(
             ),
             None => (String::new(), String::new()),
         },
-        Cell::NumberCell { .. } | Cell::BooleanCell { .. } | Cell::ErrorCell { .. } => {
-            (" totalsRowFunction=\"custom\"".to_string(), String::new())
-        }
+        // A value spilled into the totals row from a dynamic array outside it takes the same
+        // bare `custom` as a constant: Excel refuses the file without it and loads it, keeping
+        // the spill, with it (excel-graph, T-4421; xlsx-storage.md "Table parts in the export").
+        Cell::NumberCell { .. }
+        | Cell::BooleanCell { .. }
+        | Cell::ErrorCell { .. }
+        | Cell::SpillCell { .. } => (" totalsRowFunction=\"custom\"".to_string(), String::new()),
         _ => (String::new(), String::new()),
     }
 }
