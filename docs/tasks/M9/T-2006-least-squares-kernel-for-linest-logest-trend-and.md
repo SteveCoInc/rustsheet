@@ -272,3 +272,11 @@ probes/linest-modes (oracle, excel-graph), for the multi-predictor exact-fit reg
   B and E says B is not last there. So a column order alone does not explain both: score pivoted QR (largest residual
   norm first, LINPACK dqrdc) and the drop of A rather than E (which column the collinearity test removes) next, with
   a replica in Python of `householder` (same summation order) on these two formulas before touching linest.rs.
+- Scored after the notes above (06:00-06:20 UTC, branch merged with origin/main 2e192ce4, `rustsheet-eval check`):
+  - KERNEL 9 as committed: fixed 321 (probes 279, ironcalc-calc 38, gen-m9 4), REGRESSIONS 9 (probes 8, ironcalc-calc 1).
+  - A Python replica of `householder` (same summation order) over every column order, applied or -sign·norm
+    diagonal, pivoting by largest residual norm, centred or not: K85 is exact (C 0, B 1, A 0) with the applied
+    diagonal in the natural order (and with pivoting); K106 (A dropped, B..E) is matched by no candidate (at best 2
+    of B, C, D, E).
+  - KERNEL 9 with the applied diagonal in the engine: fixed 259 (probes 223, ironcalc-calc 32, gen-m9 4), REGRESSIONS 6.
+    It trades 62 fixes for 3 regressions, so it is not taken. The merge commit of origin/main is kept (pushed).
