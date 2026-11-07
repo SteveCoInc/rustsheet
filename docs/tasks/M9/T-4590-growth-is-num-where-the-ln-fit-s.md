@@ -31,30 +31,27 @@ Code path: `trend_or_growth` in crates/rustsheet-engine/src/functions/statistica
       just above ln(max double), with const TRUE and FALSE, and a slope's e^coefficient past the double range.
       The finding goes into statistics.md.
 - [x] The engine follows the probed rule; `accuracy/GROWTH/s1!Calc!A104` leaves eval/accuracy/known-failures.tsv.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The least-squares solve's digits (T-2006).
 
 ## Outcome
-- **Probe.** probes/t4590-growth-overflow (excel-graph, 2026-11-07), with predictions in docs/research/t4590 committed
-  before the fill (dc6d154df).
+- **Probe.** probes/t4590-growth-overflow (excel-graph, 2026-11-07). The predictions in docs/research/t4590 were
+  committed before the fill (dc6d154df).
   - H1 holds on all 23 GROWTH cells: GROWTH is `#NUM!` exactly when LOGEST's b = e^intercept overflows (intercept
     709.7828 or more; 709.7827 is a number).
-  - H2 (any factor's overflow) is refuted: a slopes' factor past the double range is a number in GROWTH, though
-    LOGEST's own m is `#NUM!`.
-  - Not predicted: GROWTH is 0 where the slopes' factor is subnormal (c = 709 to 709.7827), though the prediction is
-    about 1.
-- **Code.** `growth_prediction` (functions/statistical/trend.rs) applies the two edges: `#NUM!` when e^intercept
-  overflows, and 0 when the slopes' factor e^(Σ m_j x_j) is subnormal or 0. Elsewhere it keeps the single
-  exponential.
-  - The product of the two factors was tried. It moves ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5 from exact to
-    one ulp off, so it was not kept, and how Excel combines the factors between the edges is not identified.
-  - No constants are involved: the cuts are the double range itself.
-- **Docs and test.** New statistics.md entry "GROWTH is #NUM! once LOGEST's b overflows ...", and the T-4096 entry's
-  A104 note is resolved. Unit test `growth_edges_of_logest_factors`.
+  - H2 is refuted: LOGEST's m = e^slope past the double range is a number in GROWTH.
+  - Not predicted: GROWTH is 0 where the slopes' factor is subnormal (Int A2:A7). This is recorded but not
+    implemented, since the evidence covers one narrow region; T-4765 probes the cut and the other shapes.
+- **Code.** `growth_prediction` (functions/statistical/trend.rs) returns `#NUM!` when e^intercept overflows (const
+  TRUE), and otherwise the same single exponential as before. No constants: the cut is the double range.
+  - The two-factor product was tried and dropped, since it moved ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5 one
+    ulp off.
+- **Docs and test.** New statistics.md entry, and the T-4096 entry's A104 note resolved. Unit test
+  `growth_edges_of_logest_factors`.
 - **Eval delta.**
   - Gate A loses accuracy/GROWTH/s1 A104 (`eval-gates`: 0 failing).
-  - eval-check has 0 regressions; no other GROWTH cell changes.
-  - The new probe adds 14 known failures, which are least-squares digits (1E-13 to 1E-12 off) owned by the new
-    T-4763, after T-2006.
+  - eval-check: 0 regressions.
+  - The new probe adds 20 known failures: 14 least-squares digit cells (5E-14 to 3E-13 off), owned by the new T-4763
+    after T-2006, and Int A2:A7, owned by the new T-4765.

@@ -11575,6 +11575,12 @@ F	probes/t4541-t-inv-2t-tiny-p.case.json	Calc!L6
 F	probes/t4563-xlookup-not-found-ref-element.case.json	Calc!V25
 F	probes/t4563-xlookup-not-found-ref-element.case.json	Calc!V26
 F	probes/t4590-growth-overflow.case.json	Int!A1
+F	probes/t4590-growth-overflow.case.json	Int!A2
+F	probes/t4590-growth-overflow.case.json	Int!A3
+F	probes/t4590-growth-overflow.case.json	Int!A4
+F	probes/t4590-growth-overflow.case.json	Int!A5
+F	probes/t4590-growth-overflow.case.json	Int!A6
+F	probes/t4590-growth-overflow.case.json	Int!A7
 F	probes/t4590-growth-overflow.case.json	Int!B1
 F	probes/t4590-growth-overflow.case.json	Int!B2
 F	probes/t4590-growth-overflow.case.json	Int!B4

@@ -146,27 +146,21 @@ fn growth_reads_known_y_in_order() {
     assert_eq!(eval_in(&mut model, "=GROWTH(0,C1)"), "#VALUE!");
 }
 
-// GROWTH is #NUM! once LOGEST's b = e^intercept overflows, and 0 once the slopes' factor is
-// subnormal, though the prediction is about 1; a slopes' factor past the double range is a number
-// (probes/t4590-growth-overflow Int A2, Int A8, Slope A6; statistics.md "GROWTH is #NUM! once
-// LOGEST's b overflows", T-4590).
+// GROWTH is #NUM! once LOGEST's b = e^intercept overflows, though the prediction is about 1; LOGEST's
+// m = e^slope past the double range is no error in GROWTH (probes/t4590-growth-overflow Int A8,
+// Slope A6; statistics.md "GROWTH is #NUM! once LOGEST's b overflows", T-4590).
 #[test]
 fn growth_edges_of_logest_factors() {
     let mut model = new_empty_model();
     model._set(
         "A1",
-        "=GROWTH({9.06554326091656e+153,1,1.10307785338272e-154},{1,2,3},2,TRUE)",
-    );
-    model._set(
-        "A2",
         "=GROWTH({1.34083918970474e+154,1,7.45801590286306e-155},{1,2,3},2,TRUE)",
     );
     model._set(
-        "A3",
+        "A2",
         "=GROWTH({1.70088776356759e+104,9.42397681616358e+138,5.22146968976414e+173},{0.3,0.4,0.5},0.4,FALSE)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "0");
-    assert_eq!(model._get_text("A2"), "#NUM!");
-    assert!(model._get_text("A3").ends_with("E+138"));
+    assert_eq!(model._get_text("A1"), "#NUM!");
+    assert!(model._get_text("A2").ends_with("E+138"));
 }

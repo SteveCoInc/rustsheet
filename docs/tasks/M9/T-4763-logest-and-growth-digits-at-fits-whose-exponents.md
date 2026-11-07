@@ -12,7 +12,7 @@ depends_on: [T-2006]
 
 ## Goal
 LOGEST's b and m and GROWTH's value match Excel's digits on the fits of probes/t4590-growth-overflow, whose exponents
-lie near the double range. Today they are 1E-13 to 1E-12 relative off, the least-squares solve's last digits.
+lie near the double range. Today they are 5E-14 to 3E-13 relative off, the least-squares solve's last digits.
 
 ## Context
 - T-4590 implemented GROWTH's overflow and underflow edges from this probe. Its remaining cells are digits, not
