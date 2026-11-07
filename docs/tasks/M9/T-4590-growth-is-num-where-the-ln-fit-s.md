@@ -3,7 +3,7 @@ id: T-4590
 title: "GROWTH is #NUM! where the ln fit's intercept is past the double range (Gate A GROWTH s1 A104)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
