@@ -53,3 +53,8 @@ number where the ToolPak rule says `#N/A`.
 ## Out of scope
 - The IM* functions (already evidenced and implemented, T-2132).
 - BITAND/BITOR/BITXOR/BITLSHIFT/BITRSHIFT (Excel 2013 functions, not ToolPak; a follow-up if the rule turns out wider).
+
+## Predictions (committed before the oracle fill)
+probes/t4872-atp-empty-argument, sheet Calc: every cell of A1:A47 that writes an argument empty is `#N/A` (required or
+optional argument, also through the LAMBDA and LET rows A43:A47). The controls ERFC(1) (A17), BIN2DEC(101) (A35) and the
+omitted forms A48:A54 keep the values the engine gives today.
