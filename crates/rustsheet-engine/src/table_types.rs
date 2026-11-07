@@ -151,6 +151,20 @@ pub enum FilterCriterion {
     },
 }
 
+impl FilterCriterion {
+    /// A values filter that keeps nothing: no value, no date group and no blank. Excel reads the
+    /// `<filters/>` it is written as as no criterion (excel-graph, T-4749;
+    /// docs/excel-semantics/xlsx-storage.md, "Table parts in the export").
+    #[must_use]
+    pub fn is_empty_values(&self) -> bool {
+        matches!(
+            self,
+            Self::Values { values, blank: false, date_groups, .. }
+                if values.is_empty() && date_groups.is_empty()
+        )
+    }
+}
+
 /// One `<dateGroupItem>` of a values filter: the dates in `year` (and the finer fields down to
 /// `grouping`, one of `ST_DateTimeGrouping`).
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]

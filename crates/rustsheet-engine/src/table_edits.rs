@@ -369,13 +369,15 @@ fn edit_filter_columns(filters: &mut Vec<FilterColumn>, edit: ColumnEdit) {
 /// here too. The caller only ever clears the flag with this: a table the import left unfiltered
 /// (a criterion-less or out-of-range filterColumn) stays so. A criterion-less column counts here,
 /// since [`crate::types::FilterCriterion::Other`] also holds a criterion the import read but could
-/// not check. Excel unfilters the table when a delete in the application takes the filtered
-/// column, and shows the rows it hid (probes/t4371-filtered-table-delete-filtered-column, T-4371).
+/// not check. An empty values filter does not count: Excel reads the `<filters/>` the export
+/// writes for it as no criterion (T-4749). Excel unfilters the table when a delete in the
+/// application takes the filtered column, and shows the rows it hid
+/// (probes/t4371-filtered-table-delete-filtered-column, T-4371).
 fn kept_filter_inside(table: &Table) -> bool {
-    table
-        .filter_columns
-        .iter()
-        .any(|f| usize::try_from(f.col_id).is_ok_and(|id| id < table.columns.len()))
+    table.filter_columns.iter().any(|f| {
+        usize::try_from(f.col_id).is_ok_and(|id| id < table.columns.len())
+            && !f.criterion.is_empty_values()
+    })
 }
 
 /// Appends one column to `columns` and returns its name: `name` when no column of the table has
@@ -742,9 +744,10 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::{
-        append_column, column_span, edit_columns, edit_filter_columns, row_span, ColumnEdit, Span,
+        append_column, column_span, edit_columns, edit_filter_columns, kept_filter_inside,
+        row_span, ColumnEdit, Span,
     };
-    use crate::types::{FilterColumn, FilterCriterion, TableColumn};
+    use crate::types::{FilterColumn, FilterCriterion, Table, TableColumn, TableStyleInfo};
 
     /// Header row 3, data rows 4-7, no totals row.
     fn rows(at: i32, delta: i32) -> Span {
@@ -878,6 +881,45 @@ mod tests {
             },
         );
         assert_eq!(names(&columns), [(3, "Price")]);
+    }
+
+    /// An empty values filter is no kept criterion: Excel reads its `<filters/>` as none (T-4749).
+    #[test]
+    fn an_empty_values_filter_is_no_kept_criterion() {
+        let values = |values: &[&str], blank| FilterCriterion::Values {
+            values: values.iter().map(|v| (*v).to_string()).collect(),
+            blank,
+            calendar_type: None,
+            date_groups: Vec::new(),
+        };
+        let table = |criterion| Table {
+            name: "T".to_string(),
+            display_name: "T".to_string(),
+            reference: "A1:B3".to_string(),
+            totals_row_count: 0,
+            header_row_count: 1,
+            header_row_dxf_id: None,
+            data_dxf_id: None,
+            totals_row_dxf_id: None,
+            columns: named(&["Cat", "Val"]),
+            style_info: TableStyleInfo {
+                name: None,
+                show_first_column: false,
+                show_last_column: false,
+                show_row_stripes: true,
+                show_column_stripes: false,
+            },
+            has_filters: true,
+            filter_columns: vec![FilterColumn {
+                col_id: 1,
+                criterion,
+            }],
+            sheet_name: "S".to_string(),
+        };
+        assert!(!kept_filter_inside(&table(values(&[], false))));
+        assert!(kept_filter_inside(&table(values(&[], true))));
+        assert!(kept_filter_inside(&table(values(&["a"], false))));
+        assert!(kept_filter_inside(&table(FilterCriterion::Other)));
     }
 
     /// Kept filter criteria follow their columns through an insert and a delete (T-2838).

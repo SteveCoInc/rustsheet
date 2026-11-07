@@ -14,13 +14,14 @@ use std::io::BufRead;
 use quick_xml::events::BytesStart;
 use rustsheet_engine::expressions::utils::{is_valid_column_number, is_valid_row};
 use rustsheet_engine::pivot::{
-    Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry, OpaqueNode,
-    OpaqueOwner, PageField, PivotCache, PivotField, PivotGeometry, PivotItem, PivotOptions,
-    PivotTable, ShowDataAs, SortType, NO_BASE_ITEM,
+    element_name, Aggregate, AutoShow, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry,
+    OpaqueNode, OpaqueOwner, PageField, PivotCache, PivotField, PivotGeometry, PivotItem,
+    PivotOptions, PivotTable, ShowDataAs, SortType, NO_BASE_ITEM,
 };
 
 use super::super::package::ImportLimits;
 use super::super::worksheets::parse_range;
+use super::filters::read_filters;
 use super::{
     at, attribute, index_attribute, local_name, shown, skip, walk, walk_keeping, Skip, Tag,
     MAX_AXIS_FIELDS, MAX_DATA_FIELDS,
@@ -316,6 +317,7 @@ impl TableReader<'_> {
     ///   item labels", probes/t4698-pivot-repeat-labels). The definition's own
     ///   `fillDownLabelsDefault` is not read: Excel fills no existing field down for it (t4129 X14,
     ///   t4698 TW, TWE, OW).
+    /// - The definition's `<filters>` are its typed filters (`filters::read_filters`, T-4165).
     fn read_extension(&mut self, owner: OpaqueOwner, xml: &str) -> Result<(), Skip> {
         match owner {
             OpaqueOwner::DataField(index) => {
@@ -340,6 +342,11 @@ impl TableReader<'_> {
                 if let (Some(fill), Some(field)) = (fill, self.table.fields.get_mut(index as usize))
                 {
                     field.fill_down_labels = fill;
+                }
+            }
+            OpaqueOwner::Definition if element_name(xml) == "filters" => {
+                if let Some(cache) = self.cache {
+                    self.table.filters = read_filters(xml, cache, self.limits)?;
                 }
             }
             _ => {}
@@ -419,6 +426,17 @@ impl TableReader<'_> {
             Some(other) => return skip(format!("unknown sortType {:?}", shown(other))),
         };
         field.insert_blank_row = flag(element, "insertBlankRow", field.insert_blank_row)?;
+        // Read, and kept verbatim for export (they are not in FIELD_TYPED), as `fillDownLabels`
+        // is (T-4165).
+        if flag(element, "autoShow", false)? {
+            field.auto_show = Some(AutoShow {
+                count: number(element, "itemPageCount")?.unwrap_or(10),
+                top: flag(element, "topAutoShow", true)?,
+                measure: number::<i64>(element, "rankBy")?
+                    .and_then(|m| u32::try_from(m).ok())
+                    .unwrap_or(0),
+            });
+        }
         field.number_format = number(element, "numFmtId")?;
         field.subtotal_caption = attribute(element, "subtotalCaption")?;
         if let Some(caption) = &field.subtotal_caption {
