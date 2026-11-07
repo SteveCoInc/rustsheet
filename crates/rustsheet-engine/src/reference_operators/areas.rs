@@ -353,6 +353,22 @@ impl RefGrid {
         Some(first_error.unwrap_or(Error::NA))
     }
 
+    /// [`Self::order_statistic_error`] as the `CalcResult` error of the call at `cell`, the one
+    /// LARGE, SMALL, MEDIAN and the RANK readers return.
+    pub(crate) fn order_statistic_result(
+        &self,
+        sheet: u32,
+        cell: CellReferenceIndex,
+    ) -> Option<CalcResult> {
+        self.order_statistic_error(sheet).map(|error| {
+            CalcResult::new_error(
+                error,
+                cell,
+                "Array of references on another sheet".to_string(),
+            )
+        })
+    }
+
     /// The value view (SPEC-0014 rule 2): every reference element is `#VALUE!`, an error
     /// element is itself and a value element its value, so `=OFFSET(A1,{0;1},0)` spills two
     /// `#VALUE!` (probes/reference-lift-elements K1, K4, K13) and

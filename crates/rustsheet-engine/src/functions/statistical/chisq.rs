@@ -471,14 +471,8 @@ impl Model {
             // [`RefGrid::order_statistic_error`]). The RANK family is unprobed and keeps the
             // value view.
             RefArg::Grid(grid) if !arrays_are_value_errors => {
-                match grid.order_statistic_error(cell.sheet) {
-                    Some(error) => {
-                        return Err(CalcResult::new_error(
-                            error,
-                            cell,
-                            "Array of references on another sheet".to_string(),
-                        ))
-                    }
+                match grid.order_statistic_result(cell.sheet, cell) {
+                    Some(error) => return Err(error),
                     None => grid.to_values(),
                 }
             }
