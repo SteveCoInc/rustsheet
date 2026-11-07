@@ -33,6 +33,7 @@ from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
     DomainError,
+    Interval,
     MathArg,
     NoValueError,
     Param,
@@ -63,7 +64,7 @@ def _array(a: MathArg) -> tuple[mpmath.mpf, ...]:
 
 
 def _irr(args: Sequence[MathArg]) -> mpmath.mpf:
-    flows = _array(args[0])
+    flows = _array(args[0])  # a call's guess (args[1]) does not move a unique root
     return flow_rate(flows, [mpmath.mpf(i) for i in range(len(flows))])
 
 
@@ -151,6 +152,9 @@ IRR = register(
     Definition(
         function="IRR",
         params=(Param("values", "array", source=STOP_EARLY_SOURCE),),
+        # The guess only picks among several roots, and a point here has one (the module doc), as RATE's
+        # (annuity.py); `_irr` ignores it (T-4778).
+        call_params=(Param("guess", "real", Interval(), source=STOP_EARLY_SOURCE, optional=True),),
         value=_irr,
         draw=_irr_draw,
         solver=True,

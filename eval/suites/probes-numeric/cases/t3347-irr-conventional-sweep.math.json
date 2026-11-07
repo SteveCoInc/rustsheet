@@ -6,7 +6,7 @@
   "dps": 80,
   "input_sha256": "caf4f3ceec3a3f41c76315e58538c1d5b8f6946b4fe24d663db6914ceb274396",
   "definitions": {
-   "IRR": "b7bd2ac117248389"
+   "IRR": "48c92670056f1e82"
   },
   "arguments_sha256": "380a148fd0f7b0dc77a1204e75850cbd6fd7425daa2e8df681b03c3f66620ad1"
  },
@@ -613,7 +613,7 @@
   "P": {
    "A106": {
     "f": "=IRR({-4.91,0.49,1.13,0.88,0.9,1.51})",
-    "why": "not converged or too slow"
+    "why": "not converged"
    }
   }
  }
