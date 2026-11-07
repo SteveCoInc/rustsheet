@@ -1,33 +1,61 @@
-//! Whether each pivot an xlsx case's file holds is fresh or stale (T-4131, pivot-corpus).
+//! Whether each pivot an xlsx case's file holds is fresh or stale, and the scores of its re-render
+//! and its refresh (T-4131, T-4906; docs/research/pivot-tables-2026-11-04/plan.md, checks (b) and
+//! (c)).
 //!
-//! A pivot is *fresh* when its cache reproduces the cells Excel saved for it: the engine lays it
-//! out again from its saved definition and cache (`Workbook::pivot_table_cells`, which computes
-//! what a refresh would write and changes nothing) and every cell of that layout, and of Excel's
-//! saved area, equals Excel's cached value. Otherwise it is *stale*: Excel saved cells its cache
-//! no longer gives (an edited sheet, a cache saved without records), or the engine cannot yet lay
-//! the pivot out as Excel did. Until the PV1 renderer reaches parity both kinds are stale; the
-//! re-render check (docs/research/pivot-tables-2026-11-04/plan.md, check (b)) scores fresh pivots
-//! only, so a stale one is reported and never scored for render.
+//! **Freshness** is a property of the file: a pivot is *fresh* when its saved cache records
+//! reproduce every value Excel saved for it, read at the cells Excel's own `<rowItems>` and
+//! `<colItems>` place them (`records`). It does not depend on the renderer: labels and headers
+//! are left out, and the values come from the engine's result tree, not its layout. Anything
+//! else is *stale*: a value the records do not give (an edited sheet, a cache saved without
+//! records), or a pivot the test cannot read (no data field, no layout lines, a pivot the
+//! importer skips).
+//!
+//! **Check (b), the re-render.** Every pivot is laid out again from its saved definition and
+//! cache (`Model::plan_pivot_render`) and compared with Excel's saved area, cell by cell, labels
+//! included: T-4131's comparison, now the render score. A fresh pivot's area cells are scored
+//! cells of the case, ratcheted by the baseline like any other; a stale pivot's render is
+//! reported and never scored, since its saved cells are no evidence of what Excel renders from
+//! its cache.
+//!
+//! **Check (c), the refresh.** A pivot over a `refreshOnLoad` cache is refreshed from its source
+//! (`Model::plan_pivot_refresh`, what the facade's load runs) and the refresh's cells compared
+//! with Excel's saved area. Excel re-renders such a pivot on open, so its saved cells are the
+//! render before that refresh (docs/excel-semantics/pivots.md "Excel for the web re-renders a
+//! refreshOnLoad pivot when it opens the file"). They are compared only when the pivot is fresh
+//! and the source still holds the records the cache saved: then they are Excel's render of the
+//! very records the refresh reads. Otherwise the check is reported as not comparable. It is
+//! reported, not scored: where it is comparable its cells are check (b)'s.
 //!
 //! Only a workbook whose cached values its suite trusts (Excel-saved, `use_cached_values`) is
 //! classified: another application's cells are no evidence of what Excel renders.
 
+mod records;
+mod saved_model;
+mod summary;
+#[cfg(test)]
+mod tests;
+
 use std::collections::BTreeMap;
-use std::fmt::Write as _;
 
 use serde::{Deserialize, Serialize};
 
 use crate::cellref::{parse_range, Addr};
-use crate::engine::Evaluated;
-use crate::runner::CaseResult;
+use crate::closeness::Visible;
+use crate::runner::{CellKind, CellResult, Target};
 use crate::value::{compare, Value};
-use crate::xlsx_snapshot::{PivotDef, WorkbookSnapshot};
+use crate::xlsx_snapshot::{PivotDef, PivotLine, WorkbookSnapshot};
+use saved_model::SavedModel;
+pub use summary::FreshRenderSuite;
+pub(crate) use summary::{summarize, write_markdown};
 
 /// The largest saved area compared, as the oracle fill caps a captured one
 /// (`tools/src/rustsheet_tools/snapshot.py` `MAX_PIVOT_AREA_CELLS`).
 const MAX_AREA_CELLS: u64 = 100_000;
 
-/// A pivot as Excel saved it: its place and its area's cached values.
+/// The saved `dataCaption`s of a pivot whose default captions are English.
+const EN_US_DATA_CAPTIONS: [&str; 2] = ["Values", "Data"];
+
+/// A pivot as Excel saved it: its place, its layout lines and its area's cached values.
 #[derive(Debug, Clone)]
 pub(crate) struct SavedPivot {
     sheet: String,
@@ -35,8 +63,16 @@ pub(crate) struct SavedPivot {
     location: String,
     /// The area compared (1-based, inclusive), or why there is none.
     area: Result<(Addr, Addr), String>,
+    /// `<location>`'s top-left cell, which `first_data_row` and `first_data_col` count from.
+    anchor: Addr,
+    first_data_row: u32,
+    first_data_col: u32,
+    row_items: Vec<PivotLine>,
+    col_items: Vec<PivotLine>,
     /// Excel's non-empty cached values inside `area`.
     cells: BTreeMap<Addr, Value>,
+    /// Whether the workbook is Excel's, so its cells are Excel evidence.
+    from_excel: bool,
 }
 
 /// The saved area of `pivot`, 1-based and inclusive: its `location` and the page-field rows above
@@ -59,6 +95,7 @@ fn saved_area(pivot: &PivotDef) -> Option<(Addr, Addr)> {
 
 /// Every pivot of `snapshot` with its saved area's values.
 pub(crate) fn saved_pivots(snapshot: &WorkbookSnapshot) -> Vec<SavedPivot> {
+    let from_excel = snapshot.is_excel_authored();
     snapshot
         .pivots
         .iter()
@@ -86,7 +123,13 @@ pub(crate) fn saved_pivots(snapshot: &WorkbookSnapshot) -> Vec<SavedPivot> {
                 name: p.name.clone(),
                 location: p.location.clone(),
                 area,
+                anchor: parse_range(&p.location).map_or(Addr { row: 1, col: 1 }, |(a, _)| a),
+                first_data_row: p.first_data_row,
+                first_data_col: p.first_data_col,
+                row_items: p.row_items.clone(),
+                col_items: p.col_items.clone(),
                 cells,
+                from_excel,
             }
         })
         .collect()
@@ -100,13 +143,57 @@ fn inside(a: Addr, first: Addr, last: Addr) -> bool {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Freshness {
-    /// The engine's layout from the saved cache gives every cell Excel saved, and no other.
+    /// The saved cache records give every value Excel saved, where Excel's lines place it.
     Fresh,
-    /// It does not, or the pivot cannot be laid out.
+    /// They do not, or the pivot cannot be checked.
     Stale,
 }
 
-/// One saved pivot's classification.
+/// Check (b) for one pivot: its re-render against Excel's saved area.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct RenderScore {
+    /// Cells compared: Excel's saved area and every cell of the engine's layout.
+    pub compared: usize,
+    /// Of those, the ones whose values differ.
+    pub differing: usize,
+    /// Of those, the ones visibly off (decision 0083).
+    pub visibly_off: usize,
+    /// Whether the engine's `rowItems` and `colItems` (T-4147) are the ones Excel saved; `None`
+    /// when the engine has no layout of the pivot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lines_equal: Option<bool>,
+    /// The first differing cell, or why the pivot was not laid out or compared.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub first: Option<String>,
+}
+
+/// What check (c) could do for a `refreshOnLoad` pivot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RefreshOutcome {
+    /// The refresh's cells were compared with Excel's saved area.
+    Compared,
+    /// Excel's saved cells are no evidence of the refresh: the pivot is stale, or its source no
+    /// longer holds the records its cache saved.
+    NotComparable,
+    /// The engine did not refresh the pivot.
+    Failed,
+}
+
+/// Check (c) for one `refreshOnLoad` pivot.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RefreshCheck {
+    pub outcome: RefreshOutcome,
+    /// Cells compared, when [`RefreshOutcome::Compared`].
+    pub compared: usize,
+    /// Of those, the ones whose values differ.
+    pub differing: usize,
+    /// The first differing cell, or why the check was not compared.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub first: Option<String>,
+}
+
+/// One saved pivot's classification and scores.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PivotFreshness {
     pub sheet: String,
@@ -114,22 +201,106 @@ pub struct PivotFreshness {
     /// Excel's `<location ref>`.
     pub location: String,
     pub freshness: Freshness,
-    /// Cells compared: Excel's saved area and every cell of the engine's layout.
+    /// Value cells of Excel's layout the records test compared.
     pub compared: usize,
     /// Of those, the ones whose values differ.
     pub differing: usize,
-    /// Why a stale pivot is stale: its first differing cell, or why it was not compared.
+    /// Why a stale pivot is stale: its first differing value cell, or why it was not checked.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
+    /// Check (b); `None` when the pivot has no saved area to compare.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub render: Option<RenderScore>,
+    /// Why a fresh pivot's render is reported but not scored: it was saved by a non-en-US Excel,
+    /// whose default captions are no evidence of what en-US Excel renders (decision 0030).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub render_unscored: Option<String>,
+    /// Check (c), for a pivot over a `refreshOnLoad` cache.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refresh: Option<RefreshCheck>,
 }
 
-/// Classifies each of `saved` against the engine's layout of it in `evaluated`.
-pub(crate) fn classify(saved: &[SavedPivot], evaluated: &dyn Evaluated) -> Vec<PivotFreshness> {
-    saved.iter().map(|p| classify_one(p, evaluated)).collect()
+/// Every cell of `p`'s saved area against `engine`'s value there, then every cell of `engine`
+/// outside the area against empty (Excel saved it empty, or the pivot holds no such cell): (cell,
+/// Excel's value, the engine's).
+fn compare_area(
+    p: &SavedPivot,
+    (first, last): (Addr, Addr),
+    engine: &[(Addr, Value)],
+) -> Vec<(Addr, Value, Value)> {
+    let engine: BTreeMap<Addr, &Value> = engine.iter().map(|(a, v)| (*a, v)).collect();
+    let mut out = Vec::new();
+    for row in first.row..=last.row {
+        for col in first.col..=last.col {
+            let at = Addr { row, col };
+            let excel = p.cells.get(&at).cloned().unwrap_or(Value::Empty);
+            let actual = engine.get(&at).map_or(Value::Empty, |v| (*v).clone());
+            out.push((at, excel, actual));
+        }
+    }
+    for (at, actual) in engine.iter().filter(|(a, _)| !inside(**a, first, last)) {
+        out.push((*at, Value::Empty, (*actual).clone()));
+    }
+    out
 }
 
-fn classify_one(p: &SavedPivot, evaluated: &dyn Evaluated) -> PivotFreshness {
-    let stale = |reason: String| PivotFreshness {
+/// The first of `compared` whose values differ, as `A1: Excel x, engine y`.
+fn first_difference(compared: &[(Addr, Value, Value)], engine: &str) -> Option<String> {
+    (compared.iter())
+        .find(|(_, excel, actual)| !compare(excel, actual).is_pass())
+        .map(|(at, excel, actual)| format!("{at}: Excel {excel}, {engine} {actual}"))
+}
+
+/// `compared` as scored cells of `p`'s sheet.
+fn render_cells(p: &SavedPivot, compared: Vec<(Addr, Value, Value)>) -> Vec<CellResult> {
+    (compared.into_iter())
+        .map(|(at, expected, actual)| CellResult {
+            sheet: p.sheet.clone(),
+            cell: at.to_string(),
+            formula: None,
+            anchor_formula: None,
+            verdict: compare(&expected, &actual),
+            expected,
+            actual,
+            from_excel: p.from_excel,
+            listed_deviation: false,
+            graph_subnormal: false,
+            kind: CellKind::Scored,
+            math: None,
+            target: Target::Excel,
+        })
+        .collect()
+}
+
+/// Classifies each of `saved`, pivots of the xlsx `bytes`, and scores its render and refresh.
+/// Returns the classifications and the scored render cells of the fresh pivots.
+pub(crate) fn classify(
+    saved: &[SavedPivot],
+    bytes: &[u8],
+) -> (Vec<PivotFreshness>, Vec<CellResult>) {
+    if saved.is_empty() {
+        return (Vec::new(), Vec::new());
+    }
+    let model = SavedModel::load(bytes);
+    let mut cells = Vec::new();
+    let pivots = (saved.iter())
+        .map(|p| {
+            let (freshness, render) = match &model {
+                Ok(model) => classify_one(p, model),
+                Err(e) => (stale(p, format!("import: {e}")), None),
+            };
+            if let Some(render) = render.filter(|_| freshness.freshness == Freshness::Fresh) {
+                cells.extend(render);
+            }
+            freshness
+        })
+        .collect();
+    (pivots, cells)
+}
+
+/// A stale classification of `p`, unchecked, for `reason`.
+fn stale(p: &SavedPivot, reason: String) -> PivotFreshness {
+    PivotFreshness {
         sheet: p.sheet.clone(),
         name: p.name.clone(),
         location: p.location.clone(),
@@ -137,217 +308,102 @@ fn classify_one(p: &SavedPivot, evaluated: &dyn Evaluated) -> PivotFreshness {
         compared: 0,
         differing: 0,
         reason: Some(reason),
-    };
-    let (first, last) = match &p.area {
-        Ok(area) => *area,
-        Err(e) => return stale(e.clone()),
-    };
-    let engine: BTreeMap<Addr, Value> = match evaluated.pivot_cells(&p.sheet, &p.name) {
-        Ok(cells) => cells.into_iter().collect(),
-        Err(e) => return stale(format!("engine: {e}")),
-    };
-    let mut compared = 0;
-    let mut differing = 0;
-    let mut reason = None;
-    let mut check = |at: Addr, expected: &Value, actual: &Value| {
-        compared += 1;
-        if !compare(expected, actual).is_pass() {
-            differing += 1;
-            reason.get_or_insert_with(|| format!("{at}: Excel {expected}, engine {actual}"));
-        }
-    };
-    for row in first.row..=last.row {
-        for col in first.col..=last.col {
-            let at = Addr { row, col };
-            let expected = p.cells.get(&at).unwrap_or(&Value::Empty);
-            check(at, expected, engine.get(&at).unwrap_or(&Value::Empty));
-        }
+        render: None,
+        render_unscored: None,
+        refresh: None,
     }
-    // A cell of the engine's layout outside Excel's area: Excel saved it empty, or the pivot
-    // holds no such cell at all.
-    for (at, actual) in engine.iter().filter(|(a, _)| !inside(**a, first, last)) {
-        check(*at, &Value::Empty, actual);
-    }
-    PivotFreshness {
-        sheet: p.sheet.clone(),
-        name: p.name.clone(),
-        location: p.location.clone(),
-        freshness: if differing == 0 {
-            Freshness::Fresh
-        } else {
-            Freshness::Stale
+}
+
+/// `p`'s classification and scores, and its render's cells.
+fn classify_one(p: &SavedPivot, model: &SavedModel) -> (PivotFreshness, Option<Vec<CellResult>>) {
+    let Some(table) = model.table(&p.sheet, &p.name) else {
+        return (stale(p, "the importer did not load the pivot".into()), None);
+    };
+    let mut out = match model.records(table, p) {
+        Ok(check) => PivotFreshness {
+            freshness: if check.differing == 0 && check.compared > 0 {
+                Freshness::Fresh
+            } else {
+                Freshness::Stale
+            },
+            compared: check.compared,
+            differing: check.differing,
+            reason: check
+                .first
+                .or_else(|| (check.compared == 0).then(|| "no value cell to compare".into())),
+            ..stale(p, String::new())
         },
-        compared,
-        differing,
-        reason,
-    }
-}
-
-/// report.md's "Pivot freshness" section: the counts by suite, and every stale pivot.
-pub(crate) fn write_markdown(cases: &[CaseResult], md: &mut String) {
-    let rows: Vec<(&CaseResult, &PivotFreshness)> = cases
-        .iter()
-        .flat_map(|c| c.pivot_freshness.iter().map(move |p| (c, p)))
-        .collect();
-    if rows.is_empty() {
-        return;
-    }
-    let mut by_suite: BTreeMap<&str, (usize, usize)> = BTreeMap::new();
-    for (case, p) in &rows {
-        let counts = by_suite.entry(case.suite.as_str()).or_default();
-        match p.freshness {
-            Freshness::Fresh => counts.0 += 1,
-            Freshness::Stale => counts.1 += 1,
+        Err(e) => stale(p, e),
+    };
+    let Ok(area) = p.area.clone() else {
+        out.reason = out.reason.or_else(|| p.area.clone().err());
+        return (out, None);
+    };
+    // A pivot the engine does not lay out writes none of its cells: a fresh one's are scored so.
+    let (engine, why) = match model.render(table) {
+        Ok(engine) => (engine, None),
+        Err(e) => (Vec::new(), Some(format!("engine: {e}"))),
+    };
+    let compared = compare_area(p, area, &engine);
+    let first = why.or_else(|| first_difference(&compared, "engine"));
+    let scored = render_cells(p, compared);
+    // Excel writes an item's line without `t` or as `t="data"`.
+    let plain = |lines: &[PivotLine]| -> Vec<PivotLine> {
+        let mut lines = lines.to_vec();
+        for line in &mut lines {
+            line.t = line.t.take().filter(|t| t != "data");
         }
-    }
-    let _ = writeln!(
-        md,
-        "## Pivot freshness\n\nEach pivot of an Excel-saved workbook whose cache the engine lays out \
-         again into exactly Excel's saved cells is fresh; any other is stale, reported here and \
-         never scored for render (T-4131). Stale includes pivots the engine does not yet lay out as \
-         Excel did, not only outdated caches (T-4906).\n"
-    );
-    let _ = writeln!(md, "| suite | fresh | stale |\n|---|---|---|");
-    for (suite, (fresh, stale)) in &by_suite {
-        let _ = writeln!(md, "| {suite} | {fresh} | {stale} |");
-    }
-    let _ = writeln!(
-        md,
-        "\n| case | pivot | location | differing / compared | reason |\n|---|---|---|---|---|"
-    );
-    for (case, p) in rows.iter().filter(|(_, p)| p.freshness == Freshness::Stale) {
-        let reason = p.reason.as_deref().unwrap_or("-").replace('|', "\\|");
-        let _ = writeln!(
-            md,
-            "| {} | {}!{} | {} | {} / {} | {reason} |",
-            case.id, p.sheet, p.name, p.location, p.differing, p.compared
-        );
-    }
-    let _ = writeln!(md);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::runner::CaseStatus;
-
-    struct Laid(Result<Vec<(Addr, Value)>, String>);
-    impl Evaluated for Laid {
-        fn value(&self, _: &str, _: Addr) -> Option<Value> {
-            None
+        lines
+    };
+    let lines_equal = (model.lines(table).ok())
+        .map(|(rows, columns)| rows == plain(&p.row_items) && columns == plain(&p.col_items));
+    out.render = Some(RenderScore {
+        compared: scored.len(),
+        differing: scored.iter().filter(|c| !c.verdict.is_pass()).count(),
+        visibly_off: scored.iter().filter(|c| Visible::is_off(c)).count(),
+        lines_equal,
+        first,
+    });
+    out.refresh = model.refresh(table).map(|refreshed| {
+        let not = |outcome, why: &str| RefreshCheck {
+            outcome,
+            compared: 0,
+            differing: 0,
+            first: Some(why.to_string()),
+        };
+        match refreshed {
+            Err(e) => not(RefreshOutcome::Failed, &e),
+            Ok(_) if out.freshness == Freshness::Stale => not(
+                RefreshOutcome::NotComparable,
+                "stale: the saved cells are not a render of the saved records",
+            ),
+            Ok(r) if !r.same_records => not(
+                RefreshOutcome::NotComparable,
+                "the source no longer holds the saved records, so the saved cells predate the refresh",
+            ),
+            Ok(r) => {
+                let compared = compare_area(p, area, &r.cells);
+                RefreshCheck {
+                    outcome: RefreshOutcome::Compared,
+                    compared: compared.len(),
+                    differing: (compared.iter())
+                        .filter(|(_, e, a)| !compare(e, a).is_pass())
+                        .count(),
+                    first: first_difference(&compared, "refresh"),
+                }
+            }
         }
-        fn stored_cells(&self, _: &str) -> Vec<Addr> {
-            Vec::new()
-        }
-        fn pivot_cells(&self, _: &str, _: &str) -> Result<Vec<(Addr, Value)>, String> {
-            self.0.clone()
-        }
+    });
+    // `Values` is the en-US data caption (`Data` in a file first saved by an Excel before 2007
+    // or by LibreOffice, whose other captions are English too); a non-English Excel saves its
+    // own (pivots.md "A non-English Excel saves its own UI language's default captions").
+    if let Some(caption) = (model.data_caption(table)).filter(|c| !EN_US_DATA_CAPTIONS.contains(c))
+    {
+        out.render_unscored = Some(format!(
+            "dataCaption {caption:?}: saved by a non-en-US Excel, whose default captions are no \
+             en-US evidence (decision 0030)"
+        ));
+        return (out, None);
     }
-
-    fn a(s: &str) -> Addr {
-        Addr::parse(s).expect("a1")
-    }
-
-    fn def(location: &str, pages: u32) -> PivotDef {
-        PivotDef {
-            name: "Pv".into(),
-            sheet: "P".into(),
-            location: location.into(),
-            first_header_row: 1,
-            first_data_row: 1,
-            first_data_col: 1,
-            row_page_count: pages,
-            col_page_count: u32::from(pages > 0),
-            row_items: Vec::new(),
-            col_items: Vec::new(),
-            cache_fields: Vec::new(),
-        }
-    }
-
-    fn saved(cells: &[(&str, Value)]) -> SavedPivot {
-        SavedPivot {
-            sheet: "P".into(),
-            name: "Pv".into(),
-            location: "A3:B4".into(),
-            area: saved_area(&def("A3:B4", 0)).ok_or_else(String::new),
-            cells: cells.iter().map(|(c, v)| (a(c), v.clone())).collect(),
-        }
-    }
-
-    fn excel() -> Vec<(&'static str, Value)> {
-        vec![
-            ("A3", Value::Text("Row Labels".into())),
-            ("B3", Value::Text("Sum of x".into())),
-            ("A4", Value::Text("Grand Total".into())),
-            ("B4", Value::Number(6.0)),
-        ]
-    }
-
-    fn engine(cells: &[(&str, Value)]) -> Laid {
-        Laid(Ok(cells.iter().map(|(c, v)| (a(c), v.clone())).collect()))
-    }
-
-    #[test]
-    fn the_saved_area_takes_the_page_rows_above_the_location() {
-        assert_eq!(saved_area(&def("A3:B4", 0)), Some((a("A3"), a("B4"))));
-        // One page field: its row and the blank row before the location.
-        assert_eq!(saved_area(&def("A4:B6", 1)), Some((a("A2"), a("B6"))));
-        assert_eq!(saved_area(&def("A1:B2", 3)), Some((a("A1"), a("B2"))));
-        assert_eq!(saved_area(&def("nope", 0)), None);
-    }
-
-    #[test]
-    fn a_pivot_whose_layout_gives_exactly_excels_cells_is_fresh() {
-        let got = classify(&[saved(&excel())], &engine(&excel()));
-        assert_eq!(got[0].freshness, Freshness::Fresh);
-        assert_eq!((got[0].compared, got[0].differing), (4, 0));
-        assert_eq!(got[0].reason, None);
-    }
-
-    #[test]
-    fn a_different_missing_or_extra_cell_makes_it_stale() {
-        let mut other = excel();
-        other[3].1 = Value::Number(7.0);
-        let got = classify(&[saved(&excel())], &engine(&other));
-        assert_eq!(got[0].freshness, Freshness::Stale);
-        assert_eq!(got[0].differing, 1);
-        assert_eq!(got[0].reason.as_deref(), Some("B4: Excel 6.0, engine 7.0"));
-        // A cell the engine leaves out.
-        let got = classify(&[saved(&excel())], &engine(&excel()[..3]));
-        assert_eq!(got[0].differing, 1);
-        // A cell beyond Excel's area.
-        let mut longer = excel();
-        longer.push(("A5", Value::Text("x".into())));
-        let got = classify(&[saved(&excel())], &engine(&longer));
-        assert_eq!((got[0].compared, got[0].differing), (5, 1));
-    }
-
-    #[test]
-    fn a_pivot_the_engine_cannot_lay_out_or_too_large_to_compare_is_stale() {
-        let got = classify(&[saved(&excel())], &Laid(Err("no records".into())));
-        assert_eq!(got[0].freshness, Freshness::Stale);
-        assert_eq!(got[0].reason.as_deref(), Some("engine: no records"));
-        let mut huge = saved(&[]);
-        huge.area = Err("area over 100000 cells, not compared".into());
-        assert_eq!(
-            classify(&[huge], &engine(&[]))[0].freshness,
-            Freshness::Stale
-        );
-    }
-
-    #[test]
-    fn the_report_counts_by_suite_and_lists_stale_pivots() {
-        let mut md = String::new();
-        write_markdown(&[CaseResult::empty("s/x", "s", CaseStatus::Pass)], &mut md);
-        assert!(md.is_empty());
-        let mut case = CaseResult::empty("s/x.xlsx", "s", CaseStatus::Pass);
-        let mut stale_cells = excel();
-        stale_cells[3].1 = Value::Number(7.0);
-        case.pivot_freshness = classify(&[saved(&excel())], &engine(&excel()));
-        case.pivot_freshness
-            .extend(classify(&[saved(&excel())], &engine(&stale_cells)));
-        write_markdown(&[case], &mut md);
-        assert!(md.contains("| s | 1 | 1 |"), "{md}");
-        assert!(md.contains("| s/x.xlsx | P!Pv | A3:B4 | 1 / 4 | B4: Excel 6.0, engine 7.0 |"));
-    }
+    (out, Some(scored))
 }

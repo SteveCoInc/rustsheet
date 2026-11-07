@@ -35,7 +35,8 @@ Current suites:
 - `gen-m2`: generator output (30 cases, 12,000 cells), oracle-filled and gated (T-0203).
 - `pivot-corpus-lo`, `pivot-corpus-closedxml`: the pivot-corpus (T-4131), Excel-saved workbooks with pivots from
   LibreOffice `sc/qa/unit/data` (a sparse fetch) and ClosedXML `ClosedXML.Tests/Resource`, scored against their
-  cached values and each pivot classified fresh or stale (below); `gate = false`, cell baselines.
+  cached values, each pivot classified fresh or stale and a fresh pivot's re-render scored (below); `gate = false`,
+  cell baselines.
 - `gen-pivot`: M16 pivot tables from `rustsheet-gen --milestone M16` (T-4132): 9 cases of up to 12 pivots (104 in all) over a covering
   array of the PV1 dimensions, oracle-filled and gated; its scored cells are the sidecars' pivot areas and their texts.
 
@@ -288,16 +289,43 @@ Mismatches are listed in report.md's "Pivot layout" section and in report.json's
 xlsx cases' sidecars are not read for pivots yet: their pivot cells are cached constants the importer keeps.
 
 Instead, each pivot of an xlsx case whose cached values the suite trusts (`trusts_cached_values`) is
-classified fresh or stale (T-4131, `crates/rustsheet-eval/src/pivot_freshness.rs`). The engine lays the pivot
-out again from its saved definition and cache (`Evaluated::pivot_cells`, the facade's
-`Workbook::pivot_table_cells`, which changes nothing). The pivot is `fresh` when every cell of that layout and of
-Excel's saved area (its location and page rows, as the oracle fill captures it; at most 100,000 cells) equals
-Excel's cached value, and `stale` otherwise, with the first differing cell or why it could not be laid out as its
-reason. report.json lists it per case (`pivot_freshness`); report.md's "Pivot freshness" section counts each
-suite's pivots and lists every stale one. Stale pivots are not scored for render; render scoring of fresh ones
-is T-4906. Until the PV1 renderer reaches parity, stale also covers pivots the engine does not yet lay out as
-Excel did. The pivot files of calipers and poi are classified by their own suites' runs; corpus-bench's are
-not, since that suite does not trust its caches.
+classified fresh or stale and its re-render and refresh scored (T-4131, T-4906;
+`crates/rustsheet-eval/src/pivot_freshness.rs` and `pivot_freshness/`). The workbook is loaded a second time into
+the importer's model without a recalculation, so every pivot holds the definition and cache Excel saved
+(`pivot_freshness/saved_model.rs`; the facade's evaluated workbook has already refreshed its `refreshOnLoad` caches).
+- **Freshness** is the file's own evidence and does not depend on the renderer: each value cell is found from
+  Excel's saved `<rowItems>`/`<colItems>` (at `firstDataRow`/`firstDataCol` inside `<location>`) and its value read
+  from the engine's result tree over the saved records (`rustsheet_engine::pivot::compute_on`), never from the
+  layout (`pivot_freshness/records.rs`). The pivot is `fresh` when every one equals Excel's saved cell; labels and
+  headers are not compared, and a compact or outline parent row's cell Excel left empty is skipped (its subtotal
+  shows only at the top). `stale` otherwise, with the first differing value or why the pivot could not be checked:
+  no data field, a cache saved without records, no layout lines for an axis with fields, lines that do not fit the
+  location, a pivot the importer skips (a non-worksheet or calculated-field cache it drops). The test reads the
+  engine's aggregation, so a pivot whose values the engine does not yet aggregate as Excel does is stale too
+  (T-4918's blank Count cells).
+- **Check (b), the re-render**: every pivot is laid out again from its saved definition and cache
+  (`Model::plan_pivot_render`, what `Workbook::pivot_table_cells` calls) and every cell of Excel's saved area (its
+  location and page rows, as the oracle fill captures it; at most 100,000 cells), and every engine cell outside it,
+  compared with Excel's: `render` per pivot. A fresh pivot's cells are scored cells of its case (no formula,
+  `from_excel` for an Excel-saved file), ratcheted by the cell baseline like any other; a pivot the engine does not
+  lay out scores its saved cells against nothing. A stale pivot's render is reported and never scored. A fresh pivot
+  whose saved `dataCaption` is neither `Values` nor `Data` was saved by a non-en-US Excel, whose default captions are
+  no en-US evidence (decision 0030; pivots.md "A non-English Excel saves its own UI language's default captions"):
+  its render is reported with `render_unscored` and not scored.
+- **Check (c), the refresh**: a pivot over a `refreshOnLoad` cache is refreshed from its source
+  (`Model::plan_pivot_refresh`, changing nothing) and compared with Excel's saved area: `refresh` per pivot. Excel
+  re-renders such a pivot on open, so its saved cells predate that refresh; they are compared (`compared`) only when
+  the pivot is fresh and the refreshed cache holds the saved cache's records, and are otherwise `not_comparable`;
+  `failed` when the engine does not refresh it. Reported, not scored: where comparable its cells are check (b)'s.
+
+report.json lists each pivot per case (`pivot_freshness`) and the counts per suite in `fresh_pivot_render`
+(`fresh`, `stale`, `fresh_unscored`, `fresh_rendered_exactly`, `render_cells`, `render_passed`,
+`render_visibly_off`, `refresh_compared`, `refresh_exact`, `refresh_not_comparable`, `refresh_failed`). The M16
+exit row's corpus render measure is to read the `pivot-corpus-*` rows: met when `render_cells > 0` and
+`render_visibly_off == 0` (wiring: T-4971). report.md's "Pivot freshness" section has the same counts, every stale
+pivot, every fresh pivot whose render is off or unscored, and every refresh check. The pivot files of calipers and
+poi are classified by their own suites' runs; corpus-bench's are not, since that suite does not trust its caches.
+The nightly eval fetches, runs and checks both pivot-corpus suites (decision 0346).
 Tools never re-derive case discovery: `rustsheet-eval cases <suite>` prints each case's path,
 sidecar path, formula-cell count and whether the suite trusts its cached values.
 

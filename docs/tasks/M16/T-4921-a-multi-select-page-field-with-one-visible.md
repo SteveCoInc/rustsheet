@@ -36,6 +36,9 @@ Owner of these visibly-off cells (decision 0245), 12 values and texts on 12 shee
 - gen-pivot/ec473260bb2065b3 P12!M3
 - gen-pivot/f9e7edbb5b74011a P12!M2
 
+Also owner of these pivot-corpus render cells (T-4906, Excel-saved files: docs/excel-semantics/pivots.md "What the Excel-saved pivot corpus shows (T-4906)"), 1 render cell of 1 fresh pivot:
+- pivot-corpus-lo/xlsx/tdf89139_pivot_table.xlsx pivot!B1
+
 ## Acceptance criteria
 - [ ] The cells above pass (`rustsheet-eval run --suite gen-pivot`), and no other case regresses (`make eval-baseline`).
 - [ ] The pivots.md entry says the engine now matches, with the implementing code path.
