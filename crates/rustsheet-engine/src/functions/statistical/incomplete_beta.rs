@@ -140,9 +140,7 @@ fn reg_tails(x: f64, y: f64, a: f64, b: f64, kernel: Kernel) -> (f64, f64) {
     if y <= 0.0 {
         return (1.0, 0.0);
     }
-    closed_form_tails(x, y, a, b)
-        .or_else(|| shape_one_tails(x, y, a, b))
-        .unwrap_or_else(|| beta_tails(x, y, a, b, kernel))
+    closed_or_shape_one_tails(x, y, a, b).unwrap_or_else(|| beta_tails(x, y, a, b, kernel))
 }
 
 /// Excel's closed forms of the incomplete beta, (`I_x(a, b)`, 1 - `I_x(a, b)`), for 0 < x, y < 1
@@ -190,6 +188,12 @@ pub(crate) fn half_half_cdf(x: f64, y: f64) -> f64 {
     2.0 * (x.sqrt() / y.sqrt()).atan() / std::f64::consts::PI
 }
 
+/// Excel's closed forms ([`closed_form_tails`]), else bratio's shape-one branch
+/// ([`shape_one_tails`]); `None` where neither applies and the caller picks its kernel.
+pub(crate) fn closed_or_shape_one_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
+    closed_form_tails(x, y, a, b).or_else(|| shape_one_tails(x, y, a, b))
+}
+
 /// (`I_x(a, b)`, 1 - `I_x(a, b)`) at a shape of 1 where [`closed_form_tails`] does not apply, for
 /// 0 < x, y < 1: bratio's oriented a0 = 1 with y0 > 0.9 (x0 below about 0.1). Like bratio, Excel
 /// computes w and forms w1 as (0.5 - w) + 0.5 (statistics.md "Incomplete beta at a shape of 1
@@ -211,7 +215,7 @@ pub(crate) fn half_half_cdf(x: f64, y: f64) -> f64 {
 /// `None` for other shapes and points. A w1 below 2^-53 is 0 or 2^-53 by the complement, as
 /// Excel's is on the four such t3568-r5-bup cells (`BETA.DIST(0.95591070645675,826.0,1.0,TRUE)`
 /// is 2^-53, t3568-r5-bup-fresh B744); the rest of that region has no evidence (TODO(T-3150)).
-pub(crate) fn shape_one_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
+fn shape_one_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
     let swap = x > 0.5;
     let (a0, b0, x0, y0) = if swap { (b, a, y, x) } else { (a, b, x, y) };
     if a0 != 1.0 || b0 == 1.0 || y0 <= A1_CLOSED_FORM_MAX_Y {

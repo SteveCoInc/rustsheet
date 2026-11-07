@@ -33,11 +33,18 @@ accuracy/NEGBINOM.DIST/r4-T-3576!Calc!A125 passes and its known-failures line go
 - NEGBINOM.DIST at a huge number_s (T-3576, T-4238).
 
 ## Outcome
-- NEGBINOM.DIST's cumulative path (`binom.rs` `negbinom_dist_of`) now tries `incomplete_beta::shape_one_tails` after
-  the closed forms. This is bratio's evidenced a0 = 1 branch for y0 > 0.9, w = 1 - e^(b·log1p(-x)) with Excel's log1p
-  (statistics.md "Incomplete beta at a shape of 1 outside the closed forms", T-3007/T-3764), which BETA.DIST's kernel
-  already takes. At p = 8E-281 it keeps p where fl(1 - p) is 1.
-- `shape_one_tails` became `pub(crate)`. No new form and no constants: the branch is reused as it was.
+- At number_s 1 on the unswapped side (p <= 1/2), NEGBINOM.DIST's cumulative path (`binom.rs` `negbinom_dist_of`) now
+  takes `incomplete_beta::closed_or_shape_one_tails`. That is Excel's closed forms, else bratio's evidenced a0 = 1
+  branch for y0 > 0.9, w = 1 - e^(b·log1p(-x)) with Excel's log1p (statistics.md "Incomplete beta at a shape of 1
+  outside the closed forms", T-3007/T-3764), the branch BETA.DIST's kernel already takes. Elsewhere only the closed
+  forms are tried, as before.
+- The swapped side (number_f 0, p > 0.9) is excluded on evidence: the branch puts probes-numeric/t2145-negbinom-sweep
+  A420, A1080 and accuracy/NEGBINOM.DIST/s1 A107 an ulp low, where the walk matches Excel (excel-fidelity review,
+  round 1).
+- The chain is one helper, `closed_or_shape_one_tails`, which `reg_tails` and NEGBINOM.DIST share; `shape_one_tails`
+  stays private. No new form and no constants.
 - Unit test `negbinom_cdf_at_one_success_keeps_a_tiny_p`.
-- Eval delta: Gate A loses accuracy/NEGBINOM.DIST/r4-T-3576 A125 (`eval-gates`: 0 failing). eval-check: 0
-  regressions and 0 fixed in every suite, so no existing NEGBINOM.DIST cell moves.
+- Eval delta, from a per-point diff against main:
+  - Gate A: four NEGBINOM.DIST points move to Excel's bits: r4-T-3576 A125 (which leaves known-failures), r4-T-3576
+    A31, r4-T-2146 A152 and s1 A124. `eval-gates` has 0 failing.
+  - No other Gate A point changes, and none of the 161 eval case files that call NEGBINOM.DIST changes output.
