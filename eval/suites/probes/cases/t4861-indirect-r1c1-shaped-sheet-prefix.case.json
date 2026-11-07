@@ -1,0 +1,81 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4861: INDIRECT of an unquoted R1C1-shaped sheet prefix. Sheets C1D, R1C1, RC, R1_, R0, C1, R1, R (B1 100..107). Column A is INDIRECT of the unquoted text, column B of the quoted text. Predictions, committed before the fill: the quoted column reads every B1; the unquoted column is #REF! for the names that are R1C1 references or prefixes (R1C1, RC, R0, C1, R1, R) and reads the sheet for C1D and R1_ (not R1C1 syntax).",
+ "tags": [
+  "M8",
+  "references",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": "=INDIRECT(\"C1D!B1\")",
+    "B1": "=INDIRECT(\"'C1D'!B1\")",
+    "A2": "=INDIRECT(\"R1C1!B1\")",
+    "B2": "=INDIRECT(\"'R1C1'!B1\")",
+    "A3": "=INDIRECT(\"RC!B1\")",
+    "B3": "=INDIRECT(\"'RC'!B1\")",
+    "A4": "=INDIRECT(\"R1_!B1\")",
+    "B4": "=INDIRECT(\"'R1_'!B1\")",
+    "A5": "=INDIRECT(\"R0!B1\")",
+    "B5": "=INDIRECT(\"'R0'!B1\")",
+    "A6": "=INDIRECT(\"C1!B1\")",
+    "B6": "=INDIRECT(\"'C1'!B1\")",
+    "A7": "=INDIRECT(\"R1!B1\")",
+    "B7": "=INDIRECT(\"'R1'!B1\")",
+    "A8": "=INDIRECT(\"R!B1\")",
+    "B8": "=INDIRECT(\"'R'!B1\")"
+   }
+  },
+  {
+   "name": "C1D",
+   "cells": {
+    "B1": 100
+   }
+  },
+  {
+   "name": "R1C1",
+   "cells": {
+    "B1": 101
+   }
+  },
+  {
+   "name": "RC",
+   "cells": {
+    "B1": 102
+   }
+  },
+  {
+   "name": "R1_",
+   "cells": {
+    "B1": 103
+   }
+  },
+  {
+   "name": "R0",
+   "cells": {
+    "B1": 104
+   }
+  },
+  {
+   "name": "C1",
+   "cells": {
+    "B1": 105
+   }
+  },
+  {
+   "name": "R1",
+   "cells": {
+    "B1": 106
+   }
+  },
+  {
+   "name": "R",
+   "cells": {
+    "B1": 107
+   }
+  }
+ ],
+ "expected": {}
+}
