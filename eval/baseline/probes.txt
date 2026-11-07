@@ -2487,6 +2487,7 @@ C	probes/t4469-take-drop-if-one-cell-reference.case.json	52
 C	probes/t4470-weeknum-return-type-edges.case.json	24
 C	probes/t4473-textsplit-fold-gaps.case.json	117
 C	probes/t4474-textbefore-utf16-bounds.case.json	135
+C	probes/t4475-scan-reduce-reference-initial.case.json	64
 C	probes/t4477-filter-include-error-shapes.case.json	49
 C	probes/t4478-reduce-reference-in-callers.case.json	13
 C	probes/t4478-reduce-scan-reference-accumulator.case.json	117

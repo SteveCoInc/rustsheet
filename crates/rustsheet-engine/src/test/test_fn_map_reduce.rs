@@ -734,6 +734,46 @@ fn scan_reduce_initial_value_cell_is_a_reference() {
     assert_eq!(model._get_text("B5"), "1");
 }
 
+/// `initial_value` is bound as a LAMBDA call's argument is: an IF, CHOOSE, INDEX, XLOOKUP, OFFSET
+/// or INDIRECT that picks a cell, a LET variable bound to one and a union reach the LAMBDA as
+/// references, IFERROR as a value, and a 3-D span as `#VALUE!`
+/// (probes/t4475-scan-reduce-reference-initial D2:I10, excel-graph; T-4475).
+#[test]
+fn scan_reduce_initial_value_forms_bind_as_lambda_arguments() {
+    let mut model = new_empty_model();
+    model._set("A1", "TRUE");
+    model._set("A2", "'1");
+    model._set("A3", "2.5");
+    model._set("B1", "x");
+    model._set("B2", "y");
+    model._set("B3", "z");
+    model.add_sheet("Sheet2").unwrap();
+    model._set("Sheet2!A2", "'1");
+    model._set("D1", "=REDUCE(IF(TRUE,A2),A3,LAMBDA(a,v,COUNT(a)))");
+    model._set("D2", "=REDUCE(IFERROR(A2,0),A3,LAMBDA(a,v,COUNT(a)))");
+    model._set(
+        "D3",
+        "=REDUCE(XLOOKUP(\"x\",B1:B3,A1:A3),A1,LAMBDA(a,v,PRODUCT(a)))",
+    );
+    model._set(
+        "D4",
+        "=LET(c,OFFSET(A1,1,0),REDUCE(c,A3,LAMBDA(a,v,COUNT(a))))",
+    );
+    model._set("D5", "=REDUCE((A1,A3),A1,LAMBDA(a,v,PRODUCT(a)))");
+    model._set("D6", "=SCAN((A2,A3),A3,LAMBDA(a,v,ISREF(a)))");
+    model._set("D7", "=REDUCE(Sheet1:Sheet2!A1,A1,LAMBDA(a,v,PRODUCT(a)))");
+    model._set("D8", "=REDUCE(Sheet1:Sheet2!A2,A3,LAMBDA(a,v,ISREF(a)))");
+    model.evaluate();
+    assert_eq!(model._get_text("D1"), "0");
+    assert_eq!(model._get_text("D2"), "1");
+    assert_eq!(model._get_text("D3"), "0");
+    assert_eq!(model._get_text("D4"), "0");
+    assert_eq!(model._get_text("D5"), "2.5");
+    assert_eq!(model._get_text("D6"), "TRUE");
+    assert_eq!(model._get_text("D7"), "#VALUE!");
+    assert_eq!(model._get_text("D8"), "FALSE");
+}
+
 /// A blank cell taken into an array by HSTACK reaches a LAMBDA as the empty value: ISBLANK TRUE, but
 /// COUNT and AVERAGE count it as 0 (probes/t2413-blank-in-stacked-arrays A7:A11, A49; gen-m7/f19581ac44da1653
 /// A2088, T-2413). A range's blank cell stays a blank cell (A43).
