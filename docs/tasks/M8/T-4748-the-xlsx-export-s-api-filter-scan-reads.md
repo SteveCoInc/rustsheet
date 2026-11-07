@@ -3,7 +3,7 @@ id: T-4748
 title: "The xlsx export's API-filter scan reads hidden rows in one pass, not one row-record scan per data row (T-4363 review follow-up)"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
