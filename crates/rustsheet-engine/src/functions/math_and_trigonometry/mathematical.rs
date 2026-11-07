@@ -137,6 +137,15 @@ pub(crate) fn excel_atan2(x: f64, y: f64) -> Result<f64, Error> {
     })
 }
 
+/// How [`Model::numbers_fn_reading`] reads a written-empty argument (`ROUND(2.5,)`).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum EmptyArgReads {
+    /// As 0, the usual reading of a blank.
+    Zero,
+    /// As the argument's default, as if it were omitted.
+    Default,
+}
+
 impl Model {
     /// MIN and MAX: folds every number of `args` with `pick`; 0 when there is none.
     ///
@@ -268,12 +277,38 @@ impl Model {
 
     /// A math function of `N` numbers on the SPEC-0011 driver, an omitted optional one taking its
     /// entry in `defaults` (only the trailing ones are read): `op` per element, the leftmost
-    /// argument's error winning.
+    /// argument's error winning. A written-empty argument reads as 0.
     pub(crate) fn numbers_fn<const N: usize>(
         &mut self,
         kind: Function,
         args: &[Node],
         defaults: [f64; N],
+        cell: CellReferenceIndex,
+        op: impl Fn([f64; N]) -> Result<f64, Error>,
+    ) -> CalcResult {
+        self.numbers_fn_reading(kind, args, (defaults, EmptyArgReads::Zero), cell, op)
+    }
+
+    /// [`Model::numbers_fn`] where a written-empty argument takes its default, as an omitted one
+    /// does: Excel's CEILING.MATH, FLOOR.MATH, CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING
+    /// (`CEILING.MATH(2.675,)` is 3; probes/t4873-empty-arg-toolpak-roundings A24:A53;
+    /// docs/excel-semantics/numbers.md "An empty significance of the newer roundings is 1").
+    pub(crate) fn numbers_fn_empty_as_omitted<const N: usize>(
+        &mut self,
+        kind: Function,
+        args: &[Node],
+        defaults: [f64; N],
+        cell: CellReferenceIndex,
+        op: impl Fn([f64; N]) -> Result<f64, Error>,
+    ) -> CalcResult {
+        self.numbers_fn_reading(kind, args, (defaults, EmptyArgReads::Default), cell, op)
+    }
+
+    fn numbers_fn_reading<const N: usize>(
+        &mut self,
+        kind: Function,
+        args: &[Node],
+        (defaults, empty): ([f64; N], EmptyArgReads),
         cell: CellReferenceIndex,
         op: impl Fn([f64; N]) -> Result<f64, Error>,
     ) -> CalcResult {
@@ -293,7 +328,10 @@ impl Model {
                     *slot = *number;
                     continue;
                 }
-                match model.kernel_number_or(values.get(index), *slot, cell) {
+                let value = values.get(index).filter(|value| {
+                    empty == EmptyArgReads::Zero || !matches!(value, CalcResult::EmptyArg)
+                });
+                match model.kernel_number_or(value, *slot, cell) {
                     Ok(number) => *slot = number,
                     Err(error) => return error,
                 }
@@ -358,8 +396,11 @@ impl Model {
     /// Within one element the numerator's error wins (C29-C30).
     pub(crate) fn fn_quotient(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.lift_call(Function::Quotient, args, cell, &mut |model, values| {
-            let (value, divisor) = match model.two_numbers(values, cell) {
-                Ok(pair) => pair,
+            // Excel: a written-empty argument is #N/A, as in MROUND, judged left to right
+            // (`QUOTIENT(,5)` and `QUOTIENT(7,)` #N/A, `QUOTIENT(1/0,)` #DIV/0!:
+            // probes/t4873-empty-arg-toolpak-roundings A1:A13).
+            let [value, divisor] = match model.atp_numbers(values, cell) {
+                Ok(numbers) => numbers,
                 Err(error) => return error,
             };
             if divisor == 0.0 {
@@ -382,21 +423,10 @@ impl Model {
             // `MROUND(TRUE,)` #VALUE! but `MROUND(,TRUE)` #N/A: probes/ceiling-floor-mround-array-
             // lift A19:A20, A23, A27:A42, date-math-lift-driver-edges G44-G47, G51-G52;
             // docs/excel-semantics/arrays.md).
-            let mut numbers = [0.0; 2];
-            for (slot, value) in numbers.iter_mut().zip(values) {
-                let number = match value {
-                    CalcResult::EmptyArg => {
-                        Err(CalcResult::new_error(Error::NA, cell, String::new()))
-                    }
-                    CalcResult::Boolean(_) => Err(value_error(cell)),
-                    other => model.kernel_number(other, cell),
-                };
-                match number {
-                    Ok(number) => *slot = number,
-                    Err(error) => return error,
-                }
-            }
-            let [value, multiple] = numbers;
+            let [value, multiple] = match model.atp_numbers(values, cell) {
+                Ok(numbers) => numbers,
+                Err(error) => return error,
+            };
             if multiple == 0.0 {
                 return CalcResult::Number(0.0);
             }

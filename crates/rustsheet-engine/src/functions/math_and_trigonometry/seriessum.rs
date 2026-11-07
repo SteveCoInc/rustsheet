@@ -3,6 +3,7 @@ use crate::{
     calc_result::CalcResult,
     expressions::{
         parser::{is_multi_sheet_span, ArrayNode, Node},
+        token::Error,
         types::CellReferenceIndex,
     },
     functions::{
@@ -59,6 +60,11 @@ impl Model {
         if is_multi_sheet_span(node) {
             return Err(value_error(cell));
         }
+        // Excel: written-empty coefficients are #N/A, as the ToolPak's other empty arguments are,
+        // reported after x, n and m (probes/t4873-empty-arg-toolpak-roundings A17, A22).
+        if matches!(node, Node::EmptyArgKind) {
+            return Err(CalcResult::new_error(Error::NA, cell, String::new()));
+        }
         let result = self.evaluate_node_in_context(node, cell);
         let is_single = match &result {
             CalcResult::String(_) => true,
@@ -85,21 +91,15 @@ impl Model {
         coefficients: &Coefficients,
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        // The fourth slot is the coefficients' `EmptyArg` (`WholeByCaller`).
-        let [x, n, m, _] = values else {
+        // The fourth slot is the coefficients' `EmptyArg` (`WholeByCaller`). Excel: x, n and m
+        // are ToolPak arguments, so a written-empty one is #N/A (`atp_number`;
+        // probes/t4873-empty-arg-toolpak-roundings A14:A23).
+        if values.len() != 4 {
             return CalcResult::new_args_number_error(cell);
-        };
-        let x = match self.cast_number_no_bools_ref(x, cell) {
-            Ok(v) => v,
-            Err(e) => return e,
-        };
-        let n = match self.cast_number_no_bools_ref(n, cell) {
-            Ok(v) => v,
-            Err(e) => return e,
-        };
-        let m = match self.cast_number_no_bools_ref(m, cell) {
-            Ok(v) => v,
-            Err(e) => return e,
+        }
+        let [x, n, m] = match self.atp_numbers(values, cell) {
+            Ok(numbers) => numbers,
+            Err(error) => return error,
         };
         let coefficients = match coefficients {
             Ok(rows) => rows,

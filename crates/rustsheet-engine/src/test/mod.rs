@@ -181,6 +181,7 @@ pub(crate) mod test_collation;
 mod test_combin_combina;
 mod test_cycle_reference;
 mod test_datetime_format;
+mod test_empty_arg_toolpak_roundings;
 mod test_escape_quotes;
 mod test_even_odd;
 mod test_exp_sign;

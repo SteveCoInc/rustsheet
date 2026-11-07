@@ -756,6 +756,41 @@ impl Model {
         self.cast_number_ref(value, cell)
     }
 
+    /// A number argument of an Analysis `ToolPak` function (MROUND, QUOTIENT, SERIESSUM's x, n
+    /// and m): [`Model::cast_number_no_bools_ref`], except that a written-empty argument is
+    /// `#N/A`, not 0 (`MROUND(5,)`, `QUOTIENT(7,)`: probes/ceiling-floor-mround-array-lift
+    /// A27:A35, t4873-empty-arg-toolpak-roundings; docs/excel-semantics/numbers.md "An empty
+    /// argument of a ToolPak function is #N/A").
+    pub(crate) fn atp_number(
+        &self,
+        value: &CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Result<f64, CalcResult> {
+        if matches!(value, CalcResult::EmptyArg) {
+            return Err(CalcResult::new_error(Error::NA, cell, String::new()));
+        }
+        self.cast_number_no_bools_ref(value, cell)
+    }
+
+    /// The first `N` arguments of an Analysis `ToolPak` kernel, each read by
+    /// [`Model::atp_number`] left to right: the first failure is the result, so an error before
+    /// an empty argument wins (`MROUND(1/0,)` is #DIV/0!, `MROUND(,1/0)` #N/A). Too few values
+    /// are the argument-count error.
+    pub(crate) fn atp_numbers<const N: usize>(
+        &self,
+        values: &[CalcResult],
+        cell: CellReferenceIndex,
+    ) -> Result<[f64; N], CalcResult> {
+        if values.len() < N {
+            return Err(CalcResult::new_args_number_error(cell));
+        }
+        let mut numbers = [0.0; N];
+        for (slot, value) in numbers.iter_mut().zip(values) {
+            *slot = self.atp_number(value, cell)?;
+        }
+        Ok(numbers)
+    }
+
     pub(crate) fn get_string(
         &mut self,
         node: &Node,
