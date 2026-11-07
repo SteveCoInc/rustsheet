@@ -145,6 +145,7 @@ pub fn refresh(
 ) -> Result<PivotCache, PivotCacheError> {
     let mut fresh = read_source(cache, source, workbook_values_left)?.finish();
     fresh.refresh_on_load = cache.refresh_on_load;
+    fresh.source_name.clone_from(&cache.source_name);
     let old = fields_by_name(cache);
     for field in &mut fresh.fields {
         let Some(prior) = old.get(&fold_case(&field.name)) else {

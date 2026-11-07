@@ -475,7 +475,12 @@ the one point above; whether `rangePr` dates follow the same rule (since T-4225 
 `endDate` with it, so 59932's `1899-12-30T00:00:00` start is serial 0, which matches its `<1/0/1900` label);
 1904 workbooks (a cache date before 1904-01-01 still skips the cache). No GETPIVOTDATA cell depends on it yet.
 Implemented in: crates/rustsheet-xlsx/src/import/iso_date.rs (`pivot_cache_date_serial`), import/pivots.rs (`read_item`)
-Tasks: T-3182
+Implemented in: crates/rustsheet-xlsx/src/export/pivots/cache.rs (`date_text`, T-4176): the export writes the
+inverse, a 1900 workbook's cache date as 1899-12-30 plus the serial and a 1904 workbook's as 1904-01-01 plus it, to
+the second, so export then import is a fixed point. UNVERIFIED that Excel reads them so: serials 1 to 60, the
+phantom serial 60 (written as `1900-02-28T00:00:00`, the date serial 59 also reads as), and every 1904 cache date
+(probe pending: T-4177).
+Tasks: T-3182, T-4176
 
 ## Structured references in the file
 Rule (excel-graph uploads of spec2xlsx files, 2026-10-16, T-1607): the file form of a structured reference
