@@ -4,11 +4,13 @@
 //! applies, with the checks a loaded workbook passes (`workbook_check`), before anything is written.
 
 use crate::{
+    cf_types::ConditionalFormatting,
     constants::COLUMN_WIDTH_FACTOR,
-    expressions::utils::check_block,
+    cut_paste::cf_sqref_anchor,
+    expressions::{parser::DefinedNameS, utils::check_block},
     formula_rewrite::RewrittenCell,
-    types::{ArrayKind, Cell, Style},
-    user_model::history::{ColumnData, RowData},
+    types::{ArrayKind, Cell, MergedCell, Style},
+    user_model::history::{ColumnData, Diff, RowData},
     workbook_check::{check_cell, check_row_record, check_style},
     UserModel,
 };
@@ -179,6 +181,110 @@ impl UserModel {
 }
 
 impl UserModel {
+    /// Returns a snapshot diff of the merged cells of the sheet when the
+    /// current list differs from `old_merged_cells`, and nothing otherwise.
+    ///
+    /// Structural actions (insert, delete or move of rows and columns) displace
+    /// merged ranges on their own when they are (re)played, but their undo
+    /// cannot always reconstruct the original ranges (a fully deleted merge is
+    /// gone, deleting rows above a merge and re-inserting them displaces it).
+    /// The snapshot has `old_value == new_value` — a no-op when applied — and
+    /// must go *before* the structural diff in the list, so that on undo
+    /// (replayed in reverse) it runs last and restores the exact original list.
+    pub(super) fn merged_cells_snapshot_diffs(
+        &self,
+        sheet: u32,
+        old_merged_cells: Vec<MergedCell>,
+    ) -> Result<Vec<Diff>, String> {
+        if self.model.get_merged_cells(sheet)? != old_merged_cells.as_slice() {
+            Ok(vec![Diff::SetMergedCells {
+                sheet,
+                old_value: old_merged_cells.clone(),
+                new_value: old_merged_cells,
+            }])
+        } else {
+            Ok(vec![])
+        }
+    }
+
+    /// What a row or column delete on `sheet` is about to rewrite past what re-inserting the lines
+    /// undoes: the sheet's conditional formats and every defined name (T-4702). Taken before the
+    /// delete; [`Self::rewritten_snapshot_diffs`] turns it into diffs after it.
+    pub(super) fn rewrite_snapshot(
+        &self,
+        sheet: u32,
+    ) -> Result<(Vec<ConditionalFormatting>, Vec<DefinedNameS>), String> {
+        let formats = self
+            .model
+            .workbook
+            .worksheet(sheet)?
+            .conditional_formatting
+            .clone();
+        Ok((formats, self.model.workbook.get_defined_names_with_scope()))
+    }
+
+    /// One diff per conditional format of `sheet` and per defined name the delete changed, each
+    /// with `old == new` set to its state before the delete, as [`Diff::SetMergedCells`] does: a
+    /// no-op on redo, which runs before the delete rewrites them again, and on undo, which runs
+    /// after the lines are inserted again, the exact text before the delete (T-4702). A rule or
+    /// name is matched by its index, which a delete does not change.
+    pub(super) fn rewritten_snapshot_diffs(
+        &self,
+        sheet: u32,
+        (formats, names): (Vec<ConditionalFormatting>, Vec<DefinedNameS>),
+    ) -> Result<Vec<Diff>, String> {
+        let mut diffs = Vec::new();
+        let now = &self.model.workbook.worksheet(sheet)?.conditional_formatting;
+        for (index, (before, after)) in formats.into_iter().zip(now).enumerate() {
+            if before.range != after.range || before.cf_rule != after.cf_rule {
+                diffs.push(Diff::UpdateConditionalFormatting {
+                    sheet,
+                    index: u32::try_from(index).map_err(|_| "Too many conditional formats")?,
+                    old_range: before.range.clone(),
+                    old_rule: Box::new(before.cf_rule.clone()),
+                    old_priority: before.priority,
+                    new_range: before.range,
+                    new_rule: Box::new(before.cf_rule),
+                });
+            }
+        }
+        let now = self.model.workbook.get_defined_names_with_scope();
+        for ((name, scope, before), (_, _, after)) in names.into_iter().zip(now) {
+            if before != after {
+                diffs.push(Diff::UpdateDefinedName {
+                    name: name.clone(),
+                    scope,
+                    old_formula: before.clone(),
+                    new_name: name,
+                    new_scope: scope,
+                    new_formula: before,
+                });
+            }
+        }
+        Ok(diffs)
+    }
+
+    /// The conditional format at `index` on `sheet` that an `UpdateConditionalFormatting` diff
+    /// sets to `range`, or an error if there is none or `range` names no cell: a peer's diff is
+    /// untrusted (CLAUDE.md directive 5), and a delete's undo writes these back (T-4702).
+    pub(super) fn checked_cf_slot(
+        &mut self,
+        sheet: u32,
+        index: u32,
+        range: &str,
+    ) -> Result<&mut ConditionalFormatting, String> {
+        if cf_sqref_anchor(range).is_none() {
+            return Err(format!(
+                "Conditional formatting range '{range}' is not valid"
+            ));
+        }
+        let worksheet = self.model.workbook.worksheet_mut(sheet)?;
+        usize::try_from(index)
+            .ok()
+            .and_then(|i| worksheet.conditional_formatting.get_mut(i))
+            .ok_or_else(|| format!("Conditional formatting index {index} out of bounds"))
+    }
+
     /// The formula cells a delete of `count` rows (columns when not `rows`) from `first` on
     /// `sheet` rewrote, `rewritten` at their places before it, checked before its undo changes
     /// anything, since a peer's diff is untrusted (CLAUDE.md directive 5, T-4668): each passes

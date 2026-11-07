@@ -1808,9 +1808,10 @@ column label against one bound name (`a:C`, which stays a column range) are UNVE
 REDUCE argument (`Parser::function_call`); REDUCE is not otherwise a reference operand, so as an intersection,
 range or SUBTOTAL operand it is refused as before (not probed). In reference context REDUCE is
 `Model::reduce_reference`, which keeps a union accumulator's areas from step to step and a union initial value as
-its areas; ISREF of a parameter bound to a union is TRUE. SCAN's union initial value is not probed and is still read
-(`SCAN((A1,A3),{1},LAMBDA(a,v,ISREF(a)))` is FALSE in ours).
-Tasks: T-4478, T-4494
+its areas; ISREF of a parameter bound to a union is TRUE. Since T-4475 SCAN's and REDUCE's initial value is bound
+as a LAMBDA argument (`lambda_initial_value`), so SCAN's union initial value is a union to the LAMBDA too
+(probes/t4475-scan-reduce-reference-initial F9, G9).
+Tasks: T-4478, T-4494, T-4475
 
 ## BYROW and BYCOL: a LAMBDA result that is an array
 Rule: if the LAMBDA returns a 1x1 array (`{7}`, `SEQUENCE(1)`, a one-element array slice) BYROW and BYCOL use its one
@@ -1993,22 +1994,35 @@ Tasks: T-1627, T-1630, T-1632
 Rule: when the LAMBDA of MAP or SCAN returns a multi-cell reference (`MAP(A1:A2,LAMBDA(r,B1:B3))`,
 a row range, a range holding an error cell), Excel gives the whole call one `#CALC!` (a scalar, not a
 `#CALC!` per element: `ROWS` of it is `#CALC!` too), as BYROW and BYCOL do. It does not depend on
-what the range holds (numbers, an error cell among numbers, an error cell among blanks, text and booleans all alike; an all-blank range and a LAMBDA that returns a range for only some elements are unprobed). A one-cell
-range is the control: its value is the element (`MAP(A1:A2,LAMBDA(r,J1:J1))` is 4, 4).
-Evidence: probes/map-scan-range-result (excel-graph 2026-10-18).
+what the range holds (numbers, an error cell among numbers, an error cell among blanks, text and booleans all alike), nor on
+how many elements return one:
+- a range for one element only is enough: `MAP(A1:A3,LAMBDA(r,IF(r=2,B1:B3,r)))`, the same at the last element (`r=3`), and
+  `SCAN(0,A1:A3,LAMBDA(a,v,IF(v=2,B1:B3,v)))` and its `v=3` form are each one `#CALC!`, and so are ROWS, ARRAYTOTEXT and
+  `INDEX(..,1)` of them (ERROR.TYPE 14; probes/t4476-lambda-range-results D1:H13);
+- an all-blank range is no exception: `MAP(A1:A2,LAMBDA(r,Z1:Z3))` and `SCAN(0,A1:A2,LAMBDA(a,v,Z1:Z3))` are `#CALC!` (D17:H21),
+  while the one-cell blank `Z1:Z1` gives 0, 0 (D25:G29).
+A one-cell range is the control: its value is the element (`MAP(A1:A2,LAMBDA(r,J1:J1))` is 4, 4).
+REDUCE is not one of them: its last accumulator is its result, a multi-cell range included, so `REDUCE(0,A1:A2,LAMBDA(a,v,B1:B3))`
+spills "x", "y", "z" (ROWS 3, ARRAYTOTEXT "x, y, z", D33:G35) and ISREF of it is TRUE (D53); an all-blank range spills 0, 0, 0
+(D37:G39); a range handed on as the accumulator is a reference to the next step (`REDUCE(0,A1:A2,LAMBDA(a,v,IF(v=1,B1:B3,
+COUNTA(a))))` is 3, D41); `J1:J1` is 4 and ISREF TRUE (D45, E53), and the array `{1;2}` spills (D49).
+Evidence: probes/map-scan-range-result (excel-graph 2026-10-18); probes/t4476-lambda-range-results (excel-graph, 2026-11-07,
+T-4476).
 Implemented in: `Model::lambda_result_value`, which still reads the range's existing cells (a cycle
 through it is 0, recalc.md). Tasks: T-1792, T-1769.
 The same holds for a multi-cell array value, not only a range: `MAP(Data!C4:D12,Data!A8:B12,LAMBDA(x,acc,HSTACK(acc,Data!A7:D11,acc)))`
 (gen-m7/611ce3bbfab27cef Calc!A944), `SCAN(Data!B8,Data!B6:E11,LAMBDA(acc,v,HSTACK(..)))` (b24ce74f08d3f91a A430), a SCAN step that is a FILTER
 result (7307132bb8820f17 A619) or a TRIMRANGE (2c5ea078f25443a2 A1717), a MAP step raising to a BYROW column (7307132bb8820f17 A1324) and a SCAN
 whose array initial value is returned as the accumulator (9359f03972e94026 A1705) are each one `#CALC!` with nothing spilled (excel-graph,
-2026-10-21, T-2225). Ours: implemented (T-2306, T-2309): a multi-cell array step of MAP or SCAN is the one `#CALC!` of a multi-cell range (`lambda_result_value`); REDUCE does not go through it.
+2026-10-21, T-2225). Ours: implemented (T-2306, T-2309): a multi-cell array step of MAP or SCAN is the one `#CALC!` of a multi-cell range (`lambda_result_value`); REDUCE does not go through it
+(`Model::fn_reduce` returns its last accumulator as `Model::reduce_reference` keeps it; a whole-column result such as
+`REDUCE(0,A1:A2,LAMBDA(a,v,C:C))` stays a reference, and a read that would build more than 1,048,576 cells is `#ERROR!`, T-4476).
 A 1x1 array step is its one value, as in BYROW: `MAP(Data!B5:E6,..,LAMBDA(w,x,TRANSPOSE(w)))` is the cells' values (gen-m7/b2078b5d702c691a
 Calc!A2162; f7e94a817e5385ac A842), `SCAN(..,LAMBDA(w,acc,HSTACK(PROPER(acc))))` "True", "0.3", "0" (7ea6ef6ceabacafd A87) and
 `SCAN(..,LAMBDA(w,x,BYROW(w,_xleta.COUNT)))` 0, 1, 1, 1 (2d9b48c6363e7a16 A2954); so is a 1x1 array initial_value of SCAN:
 `SCAN(MINVERSE(Data!C7),..)` (23b5367c18059af2 A74) and `SCAN(LEN(WRAPROWS("Hello World",4,0.3)),Data!A7:D7,LAMBDA(z,y,z*y))`, 22, 2.2E+16,
 6.6E+15, 0 (7ea6ef6ceabacafd A3615) (excel-graph, 2026-10-22, T-2254 triage). Ours: implemented (T-2407): `lambda_result_value` reads a 1x1 array as its one value.
-Tasks: T-2309, T-2306, T-2407
+Tasks: T-2309, T-2306, T-2407, T-4476
 
 ## SCAN and REDUCE keep errors in the LAMBDA
 Rule: SCAN and REDUCE do not stop at an error. An error initial_value, an error accumulator and an error element are handed
@@ -2027,14 +2041,31 @@ A285). Both are references:
 - A285 and A1767 need a reference initial value: a text value would make PRODUCT `#VALUE!` and COUNT 2.
 - A467 needs a reference element too. PRODUCT of a reference TRUE and a value TRUE would be 1.
 - Elements from a range, a one-cell range included, were already references (T-1442).
-- Unprobed initial values:
-  - a function result such as `IF(TRUE,A1)`;
-  - an INDEX or XLOOKUP that picks a cell (ours: a reference, as `eval_ref_or_index` gives it);
-  - a union or a 3-D span (ours: read as values, as before);
-  - ISREF of the accumulator (ours: TRUE for a cell).
-Evidence: gen-m7 cases above (excel-graph, 2026-10-21, T-2225).
+- The initial value is bound as a LAMBDA call's argument is (probes/t4475-scan-reduce-reference-initial, excel-graph,
+  2026-11-06, T-4475; Sheet1 A1 TRUE, A2 the text "1", A3 2.5; each form asked as `COUNT(a)`, `PRODUCT(a)` and `ISREF(a)`,
+  where a reference gives 0, 0 and TRUE and a value 1, 1 and FALSE):
+  - a reference: the cell itself (D1:G1), `IF(TRUE,A2)` (D2:G2), `CHOOSE(1,A2)` (D3:G3), `INDEX(A1:A3,2)` (D5:G5),
+    `XLOOKUP("y",B1:B3,A1:A3)` (D6:G6), `OFFSET(A1,1,0)` (D7:G7) and `INDIRECT("A2")` (D8:G8), in REDUCE and SCAN alike;
+  - a value: `IFERROR(A2,0)` (D4:G4);
+  - a LET variable bound to any of these keeps its kind: `LET(c,IF(TRUE,A2),REDUCE(c,A3,LAMBDA(a,v,COUNT(a))))` is 0
+    (H1:I8), `IFERROR`'s variable 1 (H4, I4);
+  - a union stays its areas: `REDUCE((A2,A3),A3,LAMBDA(a,v,COUNT(a)))` is 1, `REDUCE((A1,A3),A1,LAMBDA(a,v,PRODUCT(a)))`
+    2.5 and ISREF(a) TRUE (D9:I9);
+  - a 3-D span is `#VALUE!`, not a reference: COUNT(a) 0, PRODUCT(a) `#VALUE!` and ISREF(a) FALSE (D10:I10). A LET
+    variable bound to the span gives the same (H10, I10), unlike `LAMBDA(x,SUM(x))(Data1:Data3!A1)` (references.md).
+  - The case calls a LAMBDA (`LAMBDA(a,v,COUNT(a))`). An uncommitted first fill wrote the bare names
+    `REDUCE(A2,A3,COUNT)` and `REDUCE(A1,A1,PRODUCT)` and got `#VALUE!`, which is the unknown name a bare function name
+    is in a file ("Functions passed by name", below), not an eta result. The stored eta form
+    (`_xleta.COUNT`) does tell a reference from a value (A1767 above); with these initial-value forms it is probed in probes/t4666-union-variable-isref (excel-graph 2026-11-07, T-4666; the engine matches every cell): `REDUCE(IF(TRUE,A2),A3,_xleta.COUNT)` 1 and `SCAN(IF(TRUE,A2),A3,_xleta.COUNT)` 1 (the accumulator is the reference to the text "1", not counted), `REDUCE(XLOOKUP(2.5,A1:A3,A1:A3),A3,_xleta.COUNT)` 2, `REDUCE((A2,A3),A3,_xleta.COUNT)` 2, `REDUCE(IFERROR(A2,0),A3,_xleta.COUNT)` 2 (a plain value "1" is counted), `REDUCE(A1,A1,_xleta.PRODUCT)` 0 (references to TRUE are ignored).
+- The accumulator a step returns (row 11; T-4478's rule, "REDUCE keeps a returned reference"): REDUCE keeps a returned reference in the next step's `a`
+  (`REDUCE(0,A1:A2,LAMBDA(a,v,IF(ISREF(a),"r",v)))` is "r", D11; the COUNT form 0, F11), SCAN does not
+  (`SCAN(0,A1:A3,LAMBDA(a,v,ISREF(a)))` is FALSE at every step, G11; E11 {TRUE;"1";2.5}).
+Evidence: gen-m7 cases above (excel-graph, 2026-10-21, T-2225); probes/t4475-scan-reduce-reference-initial (T-4475).
 Ours: implemented (T-2306): `fn_scan` and `fn_reduce` hand error values to the LAMBDA and SCAN keeps an error step in its slot.
-Since T-2307, `lambda_initial_value` keeps a reference initial_value a reference, as `eval_ref_or_index` binds a LAMBDA argument.
+Since T-2307, `lambda_initial_value` keeps a reference initial_value a reference; since T-4475 it binds it with
+`Model::bind_argument`, as a LAMBDA call binds an argument (the 3-D span read as its `#VALUE!`), and REDUCE and SCAN pass that
+binding to the first call (`call_lambda_caller_binding`); ISREF of a parameter bound to a union is TRUE (references.md
+union entry). D11 and F11 (REDUCE keeping a returned reference) pass since T-4478.
 A blank cell taken into an array by HSTACK counts as a 0 argument when an element reaches AVERAGE: `REDUCE(<3x1 text array>,
 HSTACK(Data!Z1:Z2,{1;2}),_xleta.AVERAGE)` is 1.125 = AVERAGE(AVERAGE(AVERAGE(AVERAGE(texts,0),1),0),2) (gen-m7/f19581ac44da1653 Calc!A2088,
 excel-graph, 2026-10-22). Probed (probes/t2413-blank-in-stacked-arrays, excel-graph, 2026-10-23, T-2413): the element is the

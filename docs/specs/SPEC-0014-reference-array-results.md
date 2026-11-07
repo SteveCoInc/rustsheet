@@ -47,7 +47,12 @@ cell is told from its sum. Cell ids are the consumers case's unless named.
 3. **Reference view: INDEX.** `INDEX(r,i,j)` is element (i,j) itself: one cell is its value with ISREF
    TRUE (E81), a multi-cell one spills or is `#SPILL!` (reference-lift-elements); `SUM(INDEX(..,2,1))`
    reads the whole element (101, E177). With one index over a column of elements, `INDEX(r,2)` is
-   `#VALUE!` (b1d E109). `ISREF` of the whole result is FALSE, through LET too (E209, b2 E209).
+   `#VALUE!` (b1d E109): it is a 1x1 array of references holding element 2, shown by its value view, and where a
+   reference is taken it stays one, so `INDEX(INDEX(OFFSET(A1,{0;1},0,2),2),1,1)` spills A2:A3, ROWS of the one-index
+   INDEX is 1, ISREF of the nested INDEX TRUE, and `SUM` of the one-index INDEX reads only the element's top-left
+   cell, as rule 4 does (2, not 6); INDIRECT and the mixed XLOOKUP grid alike (probes/t4701-index-one-index-ref-grid,
+   T-4701; `index_reference_arg`, `column_element`). `ISREF` of the whole result is FALSE, through LET too (E209, b2
+   E209).
 4. **Reference view: top-left aggregates.** SUM, AVERAGE, MIN, MAX and PRODUCT read each element's
    **top-left cell** as a range cell: text, booleans and blanks are skipped
    (`SUM(OFFSET(A1,0,0,{1;2}))` 2, `SUM(OFFSET(A1,0,0,{2;3}))` 2, `SUM(OFFSET(A2,0,0,{1;2}))` 200,
@@ -305,9 +310,11 @@ Where the implementation departs from the text above, or settles what it left op
 - **Keyed lookups.** An XLOOKUP whose `if_not_found` is a reference is not a keyed lookup (SPEC-0020 Amendment 2,
   `tailed_array.rs keyed_lookup`): its misses are references, which the head-and-tail reading cannot hold, so a
   whole-column key builds its grid in full.
-- **INDEX, one index.** One index into a one-column grid is a 1x1 array of the element's value view, not a 1x1
-  sub-grid: its own cells match (t4563 A25, T25:U25, W25:Z25), but `INDEX(INDEX(X(r),2),1,1)` gives `#VALUE!`, not
-  the range (V25:V26). T-4701 keeps the reference. One index into a grid of several columns stays `#VALUE!`.
+- **INDEX, one index.** One index into a one-column grid that picks a reference element is a 1x1 sub-grid where a
+  reference is taken (`Model::index_reference_arg`, `column_element`; T-4701), so `INDEX(INDEX(X(r),2),1,1)` hands
+  the range back (t4563 V25:V26), and its value view everywhere else (A25, T25:U25, W25:Z25). A picked value or
+  error element stays a 1x1 value array (`INDEX(INDEX(X(r),1),1,1)` is 20, t4701 C4). One index into a grid of
+  several columns stays `#VALUE!`.
 - **Per-element callers.** `lifts_into_reference_elements` adds an XLOOKUP with an `if_not_found` to OFFSET and
   INDIRECT as the argument read ahead; one that gives no grid is put back as its reference form's result. The
   static analysis gives such a call the lookup_value's shape, so `COUNTIF(X(r),">0")` spills (t4569 A26). VSTACK's

@@ -1,0 +1,36 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4630 step-5c probe: CONVERT between metre units (m to m, km to m, m to cm, mm to km) at 15-digit values where a metre base (x*P) and the angstrom base (x*1E10/1E10*P) differ by one ulp (A1:A14), plus one control per pair where both agree (A15:A18).",
+  "tags": [
+    "M9",
+    "probe",
+    "engineering",
+    "T-4630"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=CONVERT(7.42716535250082,\"m\",\"m\")",
+        "A2": "=CONVERT(3.70923578582955,\"km\",\"m\")",
+        "A3": "=CONVERT(58.7183184617233,\"m\",\"m\")",
+        "A4": "=CONVERT(484.532621640828,\"m\",\"m\")",
+        "A5": "=CONVERT(0.875876565560019,\"m\",\"m\")",
+        "A6": "=CONVERT(3765.88842348279,\"km\",\"m\")",
+        "A7": "=CONVERT(0.059527397299247,\"km\",\"m\")",
+        "A8": "=CONVERT(0.00343633783820848,\"km\",\"m\")",
+        "A9": "=CONVERT(903.448528867578,\"m\",\"cm\")",
+        "A10": "=CONVERT(60.1711322732715,\"m\",\"cm\")",
+        "A11": "=CONVERT(0.00756146442683792,\"m\",\"cm\")",
+        "A12": "=CONVERT(0.881395448092847,\"mm\",\"km\")",
+        "A13": "=CONVERT(0.0550528030215293,\"mm\",\"km\")",
+        "A14": "=CONVERT(0.498056478438954,\"mm\",\"km\")",
+        "A15": "=CONVERT(8.58764447293995,\"m\",\"m\")",
+        "A16": "=CONVERT(6.71784705237589,\"km\",\"m\")",
+        "A17": "=CONVERT(4.31898483515411,\"m\",\"cm\")",
+        "A18": "=CONVERT(2.17807307471698,\"mm\",\"km\")"
+      }
+    }
+  ],
+  "expected": {}
+}

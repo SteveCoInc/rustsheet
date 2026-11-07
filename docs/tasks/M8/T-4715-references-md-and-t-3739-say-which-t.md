@@ -3,7 +3,7 @@ id: T-4715
 title: "references.md and T-3739 say which T-4680 column-edit #This Row rules are hand extensions"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -35,3 +35,6 @@ Excel evidence backs and which are hand extensions.
 
 ## Out of scope
 - The probe itself (T-3739).
+
+## Outcome
+Docs only: references.md marks the outside-the-table and column-delete parts of the T-4680 rule as hand extensions pointing at T-3739; T-3739 Context describes the engine after T-4680. Eval delta: none.

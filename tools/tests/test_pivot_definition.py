@@ -155,6 +155,28 @@ def test_layout_attributes_fields_items_and_raw_slots() -> None:
     assert table.index("<pivotTableStyleInfo") < table.index("<filters")
 
 
+def test_x14_show_as_modes_item_attributes_and_field_extensions() -> None:
+    # T-4129: an Excel 2010 mode is the x14 dataField extension's pivotShowAs, with no showDataAs.
+    ext = '<extLst><ext uri="{2946ED86-A175-432a-8AC1-64E0C546D7DE}"><x14:pivotField/></ext></extLst>'
+    table = _parts(
+        _spec(
+            {
+                "rows": ["Region", "Product"],
+                "data": [{"field": "Sales", "showDataAs": "rankDescending", "baseField": "Product"}],
+                "fields": {"Product": {"item_attrs": {"B": {"d": True}}}, "Region": {"xml": {"extLst": ext}}},
+            }
+        )
+    )["xl/pivotTables/pivotTable1.xml"]
+    assert "showDataAs" not in table
+    assert (
+        '<dataField name="Sum of Sales" fld="2" baseField="1" baseItem="0"><extLst>'
+        '<ext uri="{E15A36E0-9728-4e99-A89B-3F7291B0FE68}"'
+    ) in table
+    assert '<x14:dataField pivotShowAs="rankDescending"/></ext></extLst></dataField>' in table
+    assert '<item x="1" d="1"/>' in table
+    assert f'<item t="default"/></items>{ext}</pivotField>' in table
+
+
 def test_custom_subtotals_use_the_item_type_names() -> None:
     # countA and count are ST_ItemType names (T-4622): countASubtotal="1" and <item t="countA"/>.
     table = _parts(
@@ -249,6 +271,30 @@ def test_calculated_fields_page_fields_and_numeric_groups() -> None:
             "page item 'North'",
         ),
         ({"rows": ["Region"], "data": [{"field": "Sales"}], "wat": 1}, "unknown keys ['wat']"),
+        (
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"item_attrs": {"East": {"h": 1}}}},
+            },
+            "may not set attribute 'h'",
+        ),
+        (
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"item_attrs": {"North": {"d": 1}}}},
+            },
+            "item_attrs item 'North'",
+        ),
+        (
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"xml": {"items": "<items/>"}}},
+            },
+            "are ['extLst']",
+        ),
     ],
 )
 def test_refusals(definition: dict[str, Any], message: str) -> None:

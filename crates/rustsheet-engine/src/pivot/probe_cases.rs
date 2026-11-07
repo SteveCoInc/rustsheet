@@ -11,8 +11,8 @@ use crate::expressions::utils::number_to_column;
 use crate::model::Model;
 use crate::pivot::{
     read_source, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea,
-    DataField, PageField, PivotCache, PivotField, PivotItem, PivotTable, RecordValue, SourceArea,
-    SourceCells, MAX_RECORD_VALUES,
+    DataField, PageField, PivotCache, PivotField, PivotItem, PivotTable, RecordValue, ShowDataAs,
+    SourceArea, SourceCells, MAX_RECORD_VALUES,
 };
 
 /// The pivot sheets of probes/t4634-pivot-total-order-4 that the result, line and render tests
@@ -315,7 +315,17 @@ pub(crate) fn probe_pivot_over(
                 ),
                 field: field(name),
                 function: aggregate_named(subtotal),
-                ..DataField::default()
+                number_format: d["numFmtId"].as_u64().map(|id| u32::try_from(id).unwrap()),
+                // The builder writes `baseField="0" baseItem="0"` unless the spec sets them, and
+                // an x14 mode as the extension's `pivotShowAs` (`pivot_definition.rs`).
+                show_data_as: d["showDataAs"].as_str().map_or(ShowDataAs::Normal, |mode| {
+                    ShowDataAs::from_name(mode).unwrap_or_else(|| panic!("showDataAs {mode}"))
+                }),
+                base_field: match &d["baseField"] {
+                    Json::String(name) => i32::try_from(field(name)).unwrap(),
+                    other => i32::try_from(other.as_i64().unwrap_or(0)).unwrap(),
+                },
+                base_item: u32::try_from(d["baseItem"].as_u64().unwrap_or(0)).unwrap(),
             }
         })
         .collect();

@@ -2503,18 +2503,59 @@ near 0.5 over two nearly equal samples) and TTEST A11 (4.7E-13), and every other
   (Σd² - (Σd)²/n)/(n - 1), is -1.1E-13 there, the only negative one among the tables' paired points; every paired
   point whose one-pass variance is positive is a number, including the ones VAR.S would switch to the two-pass form
   ("VAR/STDEV switch between a one-pass and a two-pass formula"). Hypothesis: a paired test is `#DIV/0!` when that
-  one-pass variance is 0 or below. T-4579 probes and implements it.
+  one-pass variance is 0 or below. REFUTED by T-4579's probe ("Paired T.TEST is erratic ..." below): positive
+  one-pass variances there are `#DIV/0!` too.
 - The paired offsets keep their digits: TTEST/s1 A101 (ten pairs, x near -108519.3, y near 204025.4, spread about
   1E-4) is 6.268514994599738E-70 in Excel, 1E-15 from the exact value of the doubles' exact differences, where the
   double differences x - y put ours 1.6E-9 off. Owned by T-4579.
 - Excel kept as the target (decision 0300): no table point and no probes or probes-numeric cell of these functions
-  (272 cells with a math value) is more than 1E-4 relative off the exact value, so the list is empty.
+  (272 cells with a math value) is more than 1E-4 relative off the exact value. probes/t4579-ttest-paired (T-4579)
+  adds such cells: see "Paired T.TEST is erratic ...".
 Ours: bit-exact with Excel on 214 of the 583 numeric points (T.TEST 54, TTEST 50, F.TEST 55, FTEST 55) and on every
 error point but A136; every point but A136 and A101 is inside the envelope (known failures owned by T-4579). The rest
 of the last-digit gaps are the tail noise of the entries above.
 Evidence: eval/accuracy/tables/{T.TEST,TTEST,F.TEST,FTEST}/s1 (excel-graph, 2026-11-06).
-Status: VERIFIED (excel-graph) for the cited cells; the A136 rule is a one-cell hypothesis.
+Status: VERIFIED (excel-graph) for the cited cells; the A136 hypothesis is refuted (T-4579, "Paired T.TEST is erratic ...").
 Tasks: T-4097, T-4579
+
+## Paired T.TEST is erratic where the differences are near-constant or the samples offset (T-4579)
+Rule: none of the simple forms reproduces Excel's paired T.TEST (type 1). Where the differences are near-constant
+or both samples sit on large offsets, Excel is often `#DIV/0!` or far from the math.
+- **Near-constant differences** (2 to 4 pairs; probes/t4579-ttest-paired Div, 27 rows). The predictions were
+  committed before the excel-graph fill, 2026-11-07. Excel is `#DIV/0!` on 22 of the 27 rows and a number on 5 (A8,
+  A12, A14, A17, A18).
+  - The rows are classified by the one-pass variance `(Σd² - (Σd)²/n)/(n-1)` of the double differences. All 8 rows
+    where it is positive (7.1E-15 to 4.5E-13) are `#DIV/0!`, the opposite of the hypothesis behind TTEST/s1 A136.
+    Of the 16 rows where it is 0 or negative, 11 are `#DIV/0!` and 5 are numbers (1 negative, A17; 4 zero, A8, A12,
+    A14, A18).
+  - The 3 rows whose double differences are exactly constant are `#DIV/0!`.
+  - That hypothesis (`#DIV/0!` exactly when the one-pass variance is <= 0) holds on 14 of 27 rows. The two-pass rule
+    the engine uses holds on 8.
+  - The 5 numbers are themselves far off the math. A8 is 3.88E-8 in Excel against the math's 6.3E-15. A18 is 8.3E-21
+    against 5.1E-42.
+- **Offset samples** (Off, 24 rows: offsets 1E3 to 1E6, a shared spread, and a paired effect of 1E-9 to 1E-6).
+  - 11 rows are `#DIV/0!` where the math is a number.
+  - The other 13 are off the math by between 2.3E-4 and 5.4E11 relative. For example, A9 is 9.57E-91 against the
+    math's 1.78E-102, and A14 is 5.2E-65 against 2.4E-74.
+  - Excel is far less accurate here than double differences. Neither exact differences nor per-sample deviations
+    `(x - m_x) - (y - m_y)` match. The offset point TTEST/s1 A101 is within 1E-15 of the math in Excel, but these rows
+    show that this is not Excel's general behavior.
+- **Forms tried and rejected** on all 51 rows:
+  - one-pass over the differences, as `(Σd² - (Σd)²/n)/(n-1)` and as `(nΣd² - (Σd)²)/(n(n-1))`;
+  - raw sums, `Σx² - 2Σxy + Σy² - (Σx - Σy)²/n`;
+  - centred covariance terms.
+
+  None is within 1E-9 on any cell where Excel gives a number. On the error-or-number outcome they agree with Excel on
+  25 or 26 of the 51 cells.
+- **Reversed argument orders** (Rev): `T.TEST({5},{3,3,3,3},2,3)` is `#DIV/0!`, and
+  `T.TEST({1E+200,1E+200,-1E+200},{1,2,4},1,2)` and `F.TEST({1E+200,1E+200,-1E+200},{1,2,4})` are `#NUM!`. These are
+  the T-4097 rules with the special sample second, and the engine already gives all three.
+- Excel stays the target (decision 0300) on the cells here that are more than 1E-4 off the math: the 13 Off numbers
+  and the 5 Div numbers. No owner ruling is needed.
+Evidence: probes/t4579-ttest-paired (excel-graph, 2026-11-07), docs/research/t4579.
+Status: VERIFIED (excel-graph) as observations. Excel's algorithm is not identified, and the engine keeps the
+two-pass double differences.
+Tasks: T-4579
 
 ## T.DIST.RT follows the rounded y beyond t = 1 (T-0969)
 Rule: away from the deep tail, T.DIST.RT (and so T.DIST, T.DIST.2T and TDIST) takes the tail at
@@ -2980,6 +3021,24 @@ Status: VERIFIED (excel-graph) for the dispatch, computed tail, complement and a
 arithmetic is in the entries below
 Tasks: T-2464, T-2504, T-2505, T-3665
 
+## Incomplete beta at two vanishing shapes: bratio's w = b/(a + b) (T-3577)
+Rule: where both shapes are below eps/1000 (eps = 1e-15), Excel's incomplete beta is bratio's first branch, `w = b/(a + b)`
+and `w1 = a/(a + b)` in doubles, before bratio looks at x. Every evidence point has x at or below 8.1E-43; that the
+same holds at moderate x follows from TOMS's structure and is not oracle-confirmed yet. So BETA.DIST's cdf is about b/a,
+not 0:
+`BETA.DIST(2.65510449055274E-229,1.22900757873089E-163,2.29413050210964E-185,TRUE)` is 1.8666528521155483E-22, and
+`BETADIST(4.03359750605285E-148,4.41754879662325E-300,5.09204162393239E-226)` is 1. This matches the true value at these
+shapes too (50-digit mpmath).
+Evidence: accuracy/BETA.DIST/s1 A184, A187, A193; BETADIST/s1 A183, A187, A193, A198; BETA.DIST/r4-T-4437 A185, A189,
+A192, A194 (excel-graph). All eleven are to the bit, from three batches. Seven are nontrivial; four are 1. BETADIST/s1
+A191, a twelfth such point, already passed and still does. BETA.INV/s1 A189, A195, A199 (both shapes tiny) are `#NUM!` in
+Excel, as they are in the engine, which fits a cdf that does not move with x. Before T-3577 the engine had no Tiny branch and
+gave 0 through its fallback kernel. These points were first read as fpser/apser shapes, but both shapes are tiny, so
+bratio stops before those tests. Where only one shape is tiny, Excel has no fpser, and no apser (or a narrower one) ("Incomplete beta bpser").
+Status: VERIFIED (excel-graph)
+Implemented (T-3577): `bratio::ported_tails_with`'s `Branch::Tiny`.
+Tasks: T-3577
+
 ## Incomplete beta closed forms act on the oriented arguments (T-2464)
 Rule: after bratio's swap, on (a0, b0, x0, y0), with Excel's EXP and LN: b0 = 1 gives w = EXP(a0·LN(x0)); a0 = 1 with
 y0 <= 0.9 gives w1 = EXP(b0·LN(fl(1 - x0))), 1 - x0 recomputed in the kernel (not the caller's y); a0 = 1 with y0 > 0.9
@@ -3322,16 +3381,36 @@ column B), including every range starting at 0 (the cdf alone) and every range a
 Excel's BINOM.DIST pmf to the bit. The 21 that differ are all ranges from mean + 3 sd to mean + 5 sd, 2E-16 to 6E-14
 relative off that difference: there Excel takes another form, UNVERIFIED. A difference of upper tails,
 P(X > s1 - 1) - P(X > s2) with each tail bratio's w of I_p(k+1, n-k), lands within 1E-15 relative on 18 of the 21 rows
-(none bit-exact; A6 and A12 at n = 1E4 stay 1.6E-14 and 2.4E-14 off), but it was scored only on those rows and the
-probe has no range starting between the mean and mean + 3 sd, so it is a candidate (T-3740), not implemented.
-Status: VERIFIED (excel-graph, 2026-11-01) for BINOM.INV and the cdf-difference rows; the upper-tail form is
-UNVERIFIED.
+(none bit-exact; A6 and A12 at n = 1E4 stay 1.6E-14 and 2.4E-14 off).
+Past the walk's budget the engine takes that upper-tail difference whenever the lower end is past the mean (s1 - 1 >
+n·p, T-3740). This is the cancellation-free form, not Excel's exact one. It was frozen before a fresh sweep,
+probes/t3740-binom-range-past-mean-sweep (seed 374020261107, excel-graph, 2026-11-07; predictions in
+docs/research/t3740), which draws 60 ranges past the mean, 40 of them in the mean + 0.1..3 sd band t3444 never probed,
+plus 10 controls below the mean:
+- Excel's range is within 1E-12 relative of the form on all 60 rows.
+- Excel's range differs from its own cdf difference on 37 of the 60, so Excel does not take the cdf difference past
+  the mean in that band either.
+- The form is visibly off (15 digits) on 19 rows, where the cdf difference is visibly off on 38. It is bit-exact on 7
+  rows, where the cdf difference is bit-exact on 9: on 9 rows near the mean the cdf difference lands nearer Excel's
+  bits.
+- The controls below the mean are Excel's cdf difference to the bit, unchanged.
+- So Excel's own switch lies between mean - 0.05 sd and mean + 0.1 sd. The engine's mean is the cancellation boundary
+  inside that bracket, not a proven switch.
+- On t3444, 17 of the 21 rows move to within 15 digits. A6 (`BINOM.DIST.RANGE(10000,0.3,3137,3229)`) moves from 2 ulp to
+  113 ulp and becomes visibly off. The case's visibly-off Range cells drop from 67 to 52.
+- All 60 sweep rows past the mean are inside the Gate A envelope, the worst 6.2E-12 relative to the math. The Gate A
+  batch r4-T-3740 (200 log-uniform points, drawn after the freeze) is inside the envelope too, but none of its points
+  reaches the branch: a log-uniform p makes n·p about 0.
+Excel's exact form there is still unknown (T-4746).
+Status: VERIFIED (excel-graph, 2026-11-01) for BINOM.INV and the cdf-difference rows. The upper-tail form is VERIFIED
+to 1E-12 past the mean (excel-graph, 2026-11-07), but it is not Excel's algorithm.
 - Ours before T-3444: past the double-double walk both fell back to statrs, grossly wrong near the mean at a large n
   (`BINOM.INV(1000000000,0.3,0.5)` 299998246 against a median of 300000000).
 - Ours now (T-3444): `binom.rs` `excel_binom_cdf` and `excel_binom_pmf` are BINOM.DIST's own paths. BINOM.INV's
   bisection uses the cdf, and all 126 BINOM.INV and 126 CRITBINOM probe cells pass. BINOM.DIST.RANGE takes the pmf
-  for one point and the cdf from 0, then the double-double walk, then the cdf difference. Its probe misses are those
-  of BINOM.DIST's own last digits (T-3447) plus the 21 upper-tail rows (T-3740).
+  for one point and the cdf from 0, then the double-double walk, then the upper-tail difference past the mean
+  (T-3740) or the cdf difference. Its probe misses are those of BINOM.DIST's own last digits (T-3447) plus the 21
+  upper-tail rows (T-4746).
 - Gate A fresh sweep (T-3741; accuracy/BINOM.DIST.RANGE, BINOM.INV and CRITBINOM s1, 200 points each, trials to
   2^31 - 2, excel-graph, 2026-11-04), scored against 50-digit math:
   - Ranges above the mean: on the 9 points where ours is off (owner T-3740: A85, A91, A94, A101, A107, A146, A172,

@@ -1,5 +1,6 @@
 #![allow(clippy::unwrap_used)]
 
+use crate::cell::CellValue;
 use crate::test::util::{new_empty_model, round_trip_value};
 
 #[test]
@@ -462,5 +463,32 @@ fn test_binom_dist_range_from_0_at_a_large_n_is_a_probability() {
             .parse()
             .unwrap_or(f64::NAN);
         assert!((0.0..=1.0).contains(&value), "{formula}: {value}");
+    }
+}
+
+// Past the walk's budget, a range whose lower end is past the mean is the difference of the two
+// upper tails, not the cdf difference, which cancels to 0 here. Excel is within 7E-12 of the
+// math (accuracy/BINOM.DIST.RANGE/s1 A107, A85, excel-graph; statistics.md "BINOM.DIST.RANGE
+// and BINOM.INV at a large n", T-3740).
+#[test]
+fn binom_dist_range_past_the_mean_takes_the_upper_tails() {
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        "=BINOM.DIST.RANGE(777228,0.567422582556133,451769,452355)",
+    );
+    model._set(
+        "A2",
+        "=BINOM.DIST.RANGE(130451,0.400874068766277,55775,58062)",
+    );
+    model.evaluate();
+    for (cell, excel) in [
+        ("A1", 1.884_480_688_966_841_3e-134),
+        ("A2", 8.653_790_732_962_652e-86),
+    ] {
+        match model.get_cell_value_by_ref(&format!("Sheet1!{cell}")) {
+            Ok(CellValue::Number(n)) => assert!(((n - excel) / excel).abs() < 1e-11, "{cell}: {n}"),
+            other => panic!("expected number, got {other:?}"),
+        }
     }
 }

@@ -188,7 +188,7 @@ of case and cell): 336 of 338 bit-exact, against 314 for the correctly rounded c
 801 of 807 against 742. Fresh sweep generated after the model was frozen (t3861-convert-prefix-sweep,
 150 seeded calls with prefixes on one or both units): 142 of 150 bit-exact, against 123 correctly
 rounded and 97 for the previous form; all 150 within 4 ulp, 15 digits and Gate A's envelope.
-Open gap: seven of the eight misses have a light-year or parsec factor (T-2047's digits).
+Seven of the eight misses have a light-year or parsec factor; the angstrom distance base below fixes them (T-4630).
 The eighth mixes a binary and a decimal prefix, and mixed pairs follow another rule (T-3975,
 probes/convert-mixed-prefix, excel-graph): with a binary prefix on either unit the prefixes are each
 unit's own constant, `(P_from × B_from) / (P_to × B_to)`, so a decimal prefix on the target enters as
@@ -203,21 +203,44 @@ pure-decimal rule; train 475 of 475 against 338 and 415. Fresh sweep after the r
 bit-exact, against 108 correctly rounded and 125 for the pure-decimal rule; all inside Gate A's envelope.
 The lbf factor is 444822.16152605
 (`CONVERT(1,"lbf","dyn")` is exactly that).
-Open gap: `CONVERT(1,"m","ft")` is 3.2808398950131235 in Excel and one ulp low in ours (probes/scalar-lift-open-a,
-probes/eng-convert-boolean-unit A7; T-2046, T-2047).
-Open gap: `CONVERT(255,"mi","km")` is 410.38272 and `CONVERT(255,"in","cm")` 647.7 in Excel for the web (the desktop
-calipers formulas_engineering golden agrees, D26:J27), and the engine is one ulp off (410.38272000000006,
-647.6999999999999); the negatives mirror them (probes/t4534-bessel-convert-web-values B1:B4, D1:D4, excel-graph,
-2026-11-06; T-4630).
-Overflow: `value * F_from` is not allowed to overflow when the answer is representable:
+Distance is in angstroms (m = 1E10), as area is in square angstroms, not in metres (T-4630). Each distance factor is
+the nearest double to Excel's length of the unit in angstroms (the parsec is Excel's 3.0856775812815532E+16 m, not the
+IAU value): mi 16093440000000, in 254000000, ft 3048000000, ly
+9.4607304725808E+25, the pica 1/6 inch (42333333.333333336) and the point 1/72 inch (3527777.777777778). The base shows
+in the last digit of a conversion between two non-base units or to a prefixed unit: `CONVERT(255,"mi","km")` is
+410.38272 and `CONVERT(255,"in","cm")` 647.7 (in metres 410.38272000000006 and 647.6999999999999; probes/t4534-bessel-
+convert-web-values B1:B4, D1:D4, the calipers formulas_engineering golden D26:J27 agrees), `CONVERT(1,"m","ft")`
+3.2808398950131235 (probes/scalar-lift-open-a Z8:Z10, convert-unit-names B33), and the light-year and parsec cells of
+the T-3861 sweeps. Of the 160 literal distance cells with oracle values in probes and probes-numeric, the metre base
+fits 143, the correctly rounded value 148 or 149 and the angstrom base 160; no other power of ten from 1E-12 m to
+1E12 m fits more than 155. Hold-out by cell hash (30%, SHA-256 of case and cell, scored after the choice, so not blind): 44 of 44
+exact, against 39 for the metre base and 42 correctly rounded; train 116 of 116 against 104 and 106 to 107.
+Fresh sweep after the factors were frozen (probes-numeric/t4630-convert-distance-sweep, 150 seeded calls between
+distance units with decimal prefixes on neither, one or both units; 100 are `#N/A`, a prefix on a unit that takes none):
+the angstrom base is exact on all 50 numeric cells, against 33 for both the metre base and the correctly rounded value;
+all 50 are inside Gate A's envelope. ironcalc-calc ENGINEERING/CONVERT.xlsx is unchanged.
+A conversion between metre units goes through the factor too, so it is not an identity or a pure power of ten:
+`CONVERT(7.42716535250082,"m","m")` is 7.427165352500819 and `CONVERT(3.70923578582955,"km","m")` 3709.2357858295504
+(`x*1E10/1E10`, then the prefix; probes-numeric/t4630-convert-metre-identity, excel-graph, 2026-11-07, chosen after the
+freeze: 14 values where the two bases differ for m to m, km to m, m to cm and mm to km all give the angstrom-base value,
+and 4 controls where they agree, A15:A18).
+Overflow: `value * F_from` is not allowed to overflow when the answer and the pre-prefix conversion are representable:
 `CONVERT(1E290,"m2","m2")` is 1E+290, `CONVERT(1E300,"ha","m2")` 1.0000000000000001E+304,
 `CONVERT(1E302,"J","J")` 1E+302. The engine divides first (`value / F_to * F_from`) when the
 product is infinite; every probed value fits, but whether Excel does this or uses extended
 precision is not distinguishable from the probes.
+Non-round values (T-4670): 48 seeded 15-digit values from 1E297 to 1.7E307 for m to m, m to ft, mi to km, in to cm, m2 to m2
+and m2 to ft2 (probes-numeric/t4670-convert-distance-overflow A1:A48, excel-graph, 2026-11-07) all match ours exactly, last digit included.
+A1 is a product-path cell: `value * 1E10` is 1.3E307 and fits, so `CONVERT(1.30209135723375E297,"m","m")` is
+`x*1E10/1E10` = 1.3020913572337498E+297, not the input (the divide-first form would give the input). The cells whose product
+passes 1.8E308 (from about 1.8E298 for a metre unit) are the overflow-path evidence. A23:A24 (`CONVERT(1.33429819197683E306,"mi","km")`
+and the E307 value) are `#NUM!` although the answers (about 2.1E306 and 1.9E307 km) are representable: the conversion before the
+prefixes (`value / F_to * F_from`, about 2.1E309) overflows, and the "k" prefix is applied only afterwards. So the rule above
+holds only while that pre-prefix quotient fits a double; otherwise the result is `#NUM!`.
 Backend: excel-desktop cached values + excel-graph (probes/convert-targets).
 Status: VERIFIED (for the evidenced conversions)
-Implemented in: `fn_convert` in functions/engineering/convert.rs (T-0922, T-1297, T-3861)
-Tasks: T-0922, T-1297, T-3861
+Implemented in: `fn_convert` in functions/engineering/convert.rs (T-0922, T-1297, T-3861, T-4630)
+Tasks: T-0922, T-1297, T-3861, T-4630
 
 ## CONVERT temperature
 Rule: every temperature pair has its own last-digit form; there is no shared pivot unit. The forms
@@ -321,9 +344,10 @@ with definitions in `tools/src/rustsheet_tools/accuracy/defs/complex_modulus.py`
   with a math sidecar, is that far off.
 - Last digits: the engine is bit-exact with Excel on 119 of 120 IMABS points (the miss,
   `IMABS("2.03246951872072E-05-73.6214006894732i")`, Excel 73.62140068947602, is T-2538's), 120 of 120 IMARGUMENT
-  points and 188 of 200 CONVERT points. Ten CONVERT misses are inside the envelope on both sides (T-2046, T-2047): among
-  them Excel's `CONVERT(484.091427716597,"yd","yd")` is 484.0914277165971 (not the identity, so `yd` to `yd` goes through
-  the factor), while ours keeps `ga` to `ga` and `Ega` to `ga` one ulp off Excel.
+  points and 194 of 200 CONVERT points (188 before T-4630's angstrom distance base). The six CONVERT misses are inside the
+  envelope on both sides (T-2046, T-2047): ym2 to ly^2, Zga to daT, Reau to F, Ega to ga, ly2 to mi2 and ga to ga. Excel's
+  `CONVERT(484.091427716597,"yd","yd")` is 484.0914277165971 (not the identity, so `yd` to `yd` goes through the factor),
+  which ours matches since T-4630.
 Evidence: the three s1 tables (excel-graph, 2026-11-06); `rustsheet-eval accuracy`.
 Status: VERIFIED (excel-graph)
 Tasks: T-4085, T-2538, T-2046, T-2047, T-4615

@@ -609,6 +609,10 @@ pub struct OraclePivot {
     pub definition: crate::xlsx_snapshot::PivotDef,
     /// A1 address on the pivot's sheet → Excel's value there.
     pub cells: BTreeMap<String, Value>,
+    /// A1 address → Excel's displayed text (`Range.text`) of each cell of the area that shows
+    /// any (T-4169); scored by `text_expect` beside the values. Empty in sidecars filled before.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub text: BTreeMap<String, String>,
 }
 
 /// The formulas `x` of `spec` whose companion `=(x)=0` the excel-graph `oracle` answers FALSE:

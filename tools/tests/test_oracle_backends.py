@@ -6,7 +6,15 @@ from typing import Any
 import pytest
 import requests
 
-from rustsheet_tools.oracle.backends import GRAPH, GraphBackend, LibreOfficeBackend, OracleError, text_blocks
+from rustsheet_tools.oracle.backends import (
+    GRAPH,
+    MAX_TEXT_BLOCK,
+    GraphBackend,
+    LibreOfficeBackend,
+    OracleError,
+    text_blocks,
+    used_cells,
+)
 from rustsheet_tools.spec2xlsx import build_xlsx
 
 VARS = ("TENANT_ID", "CLIENT_ID", "CLIENT_SECRET", "DRIVE_ID", "USER", "SITE", "MSAL_CACHE_B64")
@@ -282,6 +290,58 @@ def test_recalc_reads_the_text_of_listed_cells_after_calculating(
     i = fake.calls.index("POST /workbook/application/calculate")
     assert fake.calls[i + 1] == "GET /workbook/worksheets('It%27%27s')/range(address='A1%3AB2')?$select=text"
     assert fake.calls[i + 2] == "POST /workbook/worksheets/add"
+
+
+def _pivot_spec() -> dict[str, Any]:
+    data = {"A1": "K", "B1": "V", "A2": "x", "B2": 1.5}
+    pivot = {
+        "name": "Pv",
+        "source": "D!A1:B2",
+        "location": "A3",
+        "definition": {"rows": ["K"], "data": [{"field": "V"}]},
+    }
+    return {"sheets": [{"name": "D", "cells": data}, {"name": "P", "cells": {}, "pivot_tables": [pivot]}]}
+
+
+def test_recalc_reads_the_text_of_each_pivot_sheets_used_range(
+    graph: GraphBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # T-4169: a sheet holding a pivot has its used range's displayed text read in the session, after
+    # calculating; empty cells are left out.
+    fake = FakeGraph()
+
+    def call(method: str, url: str, **kw: Any) -> Any:
+        response = fake(method, url, **kw)
+        if url.endswith("usedRange?$select=address"):
+            return SimpleNamespace(json=lambda: {"address": "P!A3:B4"})
+        if url.endswith("?$select=text"):
+            return SimpleNamespace(json=lambda: {"text": [["Row Labels", "Sum of V"], ["x", ""]]})
+        return response
+
+    monkeypatch.setattr(graph, "_call", call)
+    _, info = graph.recalc(build_xlsx(_pivot_spec()))
+    assert info.pivot_texts == {"P": {"A3": "Row Labels", "B3": "Sum of V", "A4": "x"}}
+    i = fake.calls.index("POST /workbook/application/calculate")
+    assert fake.calls[i + 1] == "GET /workbook/worksheets('P')/usedRange?$select=address"
+    assert fake.calls[i + 2] == "GET /workbook/worksheets('P')/range(address='A3%3AB4')?$select=text"
+    assert fake.calls[i + 3] == "POST /workbook/worksheets/add"
+
+
+def test_a_workbook_without_pivots_reads_no_used_range(
+    graph: GraphBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = FakeGraph()
+    monkeypatch.setattr(graph, "_call", fake)
+    _, info = graph.recalc(build_xlsx({"sheets": [{"name": "S", "cells": {"A1": "=1"}}]}))
+    assert info.pivot_texts == {}
+    assert not any("usedRange" in c for c in fake.calls)
+
+
+def test_used_cells_lists_a_graph_address_row_by_row() -> None:
+    assert used_cells("P!A3:B4") == ["A3", "B3", "A4", "B4"]
+    assert used_cells("'It''s'!$C$2") == ["C2"]
+    assert used_cells("nonsense") is None
+    assert used_cells(f"P!A1:A{MAX_TEXT_BLOCK + 1}") is None
 
 
 def test_text_blocks_read_a_dense_sheet_at_once_and_sparse_cells_one_by_one() -> None:

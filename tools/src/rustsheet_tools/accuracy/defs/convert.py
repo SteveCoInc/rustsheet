@@ -24,8 +24,9 @@ Sources:
     the definition (the envelope judges it; T-2046, T-2047).
   - `CONVERT(1E290,"m2","m2")` is 1E+290 although the product `value * F_from` overflows; a result past the double
     range is `#NUM!` (the generator redraws: no value). Where `value * F_from`, or the quotient by the to-factor before
-    the prefixes, would be a nonzero below the smallest normal double, or the quotient overflows, no probe shows what
-    Excel does, so the point has no value (NoValueError).
+    the prefixes, would be a nonzero below the smallest normal double, no probe shows what Excel does; where that
+    quotient overflows Excel gives `#NUM!` even when the prefixed answer fits (probes-numeric/t4670-convert-distance-overflow
+    A23:A24, T-4670). Both points have no value (NoValueError): Excel's error is matched, not computed.
 - engineering.md, "CONVERT temperature" (T-1297, T-1860): each pair's own form, with its constants as doubles
   (273.15, 1.8, 459.67, 0.8; 1.25, 2.25 and 32 are exact). Only `K` and `kel` take a prefix: the value is scaled by
   the from-prefix first and the result divided by the to-prefix (`CONVERT(1E-24,"yK","K")`, ov12).

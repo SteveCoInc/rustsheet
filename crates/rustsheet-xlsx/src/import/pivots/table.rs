@@ -22,8 +22,8 @@ use rustsheet_engine::pivot::{
 use super::super::package::ImportLimits;
 use super::super::worksheets::parse_range;
 use super::{
-    attribute, index_attribute, local_name, shown, skip, walk_keeping, Skip, Tag, MAX_AXIS_FIELDS,
-    MAX_DATA_FIELDS,
+    at, attribute, index_attribute, local_name, shown, skip, walk, walk_keeping, Skip, Tag,
+    MAX_AXIS_FIELDS, MAX_DATA_FIELDS,
 };
 
 const TABLE: &str = "pivotTableDefinition";
@@ -71,7 +71,7 @@ const ROOT_TYPED: [&str; 20] = [
 /// Excel labels both lines `<item> Count` (`ItemType::Function`). Excel: see
 /// docs/excel-semantics/pivots.md "Which function the countA and count custom subtotals compute"
 /// (probes/t4622-pivot-count-subtotals).
-const SUBTOTAL_FUNCTIONS: [(&str, Aggregate); 11] = [
+pub(crate) const SUBTOTAL_FUNCTIONS: [(&str, Aggregate); 11] = [
     ("sum", Aggregate::Sum),
     ("countA", Aggregate::Count),
     ("avg", Aggregate::Average),
@@ -181,6 +181,9 @@ pub(super) fn read_pivot_table<B: BufRead>(
             Tag::Open(element) => reader.open(path, element),
             Tag::Kept(xml) => {
                 let owner = reader.owner(path)?;
+                if let OpaqueOwner::DataField(index) = owner {
+                    reader.read_data_extension(index, &xml)?;
+                }
                 reader.keep(owner, OpaqueNode::Element(xml))
             }
             Tag::Close(_) => Ok(()),
@@ -291,11 +294,6 @@ impl TableReader<'_> {
                 }
                 let mut data = read_data_field(element, self.limits)?;
                 data.field = field_index(element, "fld")?;
-                // "Show values as" (% of total, running total, ...) changes every value, which
-                // GETPIVOTDATA does not compute yet (T-4161, T-4163): such a pivot is skipped.
-                if data.show_data_as != ShowDataAs::Normal {
-                    return skip("a data field shown as a calculation");
-                }
                 self.table.data_fields.push(data);
                 |key| DATA_FIELD_TYPED.contains(&key)
             }
@@ -307,6 +305,29 @@ impl TableReader<'_> {
         inner.push(name);
         let owner = self.owner(&inner)?;
         self.keep_attributes(owner, element, typed)
+    }
+
+    /// An element kept whole inside `<dataField>` number `index`: its x14 extension's
+    /// `pivotShowAs` is the field's mode (an Excel 2010 mode is written there alone, with no
+    /// `showDataAs`: pivots.md "Show-values-as modes as Excel for the web renders them"). Beside a
+    /// `showDataAs`, the x14 mode wins (UNVERIFIED, T-4750). The element stays kept verbatim for
+    /// export.
+    fn read_data_extension(&mut self, index: u32, xml: &str) -> Result<(), Skip> {
+        let mut mode = None;
+        walk(xml.as_bytes(), |path, tag| {
+            if let Tag::Open(element) = tag {
+                if at(path, &["extLst", "ext"]) && local_name(element) == "dataField" {
+                    if let Some(name) = attribute(element, "pivotShowAs")? {
+                        mode = Some(show_data_as(&name)?);
+                    }
+                }
+            }
+            Ok(())
+        })?;
+        if let (Some(mode), Some(data)) = (mode, self.table.data_fields.get_mut(index as usize)) {
+            data.show_data_as = mode;
+        }
+        Ok(())
     }
 
     /// The root: the pivot's name, its cache and the pivot-wide options.
@@ -512,17 +533,12 @@ impl TableReader<'_> {
 fn read_data_field(element: &BytesStart, limits: &ImportLimits) -> Result<DataField, Skip> {
     let caption = attribute(element, "name")?.unwrap_or_default();
     limits.check_text(&caption)?;
-    let show_data_as = match attribute(element, "showDataAs")?.as_deref() {
-        None | Some("normal") => ShowDataAs::Normal,
-        Some("difference") => ShowDataAs::Difference,
-        Some("percent") => ShowDataAs::Percent,
-        Some("percentDiff") => ShowDataAs::PercentDiff,
-        Some("runTotal") => ShowDataAs::RunTotal,
-        Some("percentOfRow") => ShowDataAs::PercentOfRow,
-        Some("percentOfCol") => ShowDataAs::PercentOfColumn,
-        Some("percentOfTotal") => ShowDataAs::PercentOfTotal,
-        Some("index") => ShowDataAs::Index,
-        Some(other) => return skip(format!("unknown showDataAs {:?}", shown(other))),
+    let show_data_as = match attribute(element, "showDataAs")? {
+        None => ShowDataAs::Normal,
+        Some(name) => match show_data_as(&name)? {
+            mode if mode.is_x14() => return skip(format!("unknown showDataAs {:?}", shown(&name))),
+            mode => mode,
+        },
     };
     Ok(DataField {
         caption,
@@ -533,6 +549,12 @@ fn read_data_field(element: &BytesStart, limits: &ImportLimits) -> Result<DataFi
         base_item: number(element, "baseItem")?.unwrap_or(NO_BASE_ITEM),
         number_format: number(element, "numFmtId")?,
     })
+}
+
+/// The mode a `showDataAs` or x14 `pivotShowAs` names; an unknown one skips the pivot.
+fn show_data_as(name: &str) -> Result<ShowDataAs, Skip> {
+    ShowDataAs::from_name(name)
+        .map_or_else(|| skip(format!("unknown showDataAs {:?}", shown(name))), Ok)
 }
 
 /// An `xsd:boolean` attribute: `default` when absent or not a boolean, as Excel's own writer never

@@ -3326,7 +3326,9 @@ Tasks: T-2207, T-2732, T-2733
 
 ## PRICE, DURATION and MDURATION sum order at a huge coupon rate and yield
 Rule: PRICE takes the accrued interest as `rate/f · A/E · 100` (left to right, `A/E` one quotient) and discounts
-coupon k (k = 0..N-1) at the exponent `k + DSC/E`; the redemption keeps `DSC/E + N - 1`, and each discount is
+coupon k (k = 0..N-1) at the exponent `k + DSC/E`; the redemption at `(N - 1) + DSC/E` (T-2788: `DSC/E + N - 1`,
+which this entry had, rounds differently and leaves YIELD cells 8 to 11 ulps off; see "YIELD stops short of PRICE's
+root"), and each discount is
 Excel's `^` ("PRICE and ODDFPRICE discount with Excel's `^`"). The single-coupon (N = 1) branch, which discounts
 linearly, keeps the accrued `coupon · (A/E)`: on the post-freeze fresh sweep probes-numeric/t2733-price-r4-fresh
 (excel-graph, 2026-11-01) all 78 PRICE rows with COUPNUM = 1 are bit-exact with it and 62 with `rate/f · A/E · 100`
@@ -4042,6 +4044,23 @@ is exact or fused. It replaces attempt 4's `pr·T` on the unrounded term.
 - In the engine (`yield_start`) it fixes 226 YIELD and ODDFYIELD known failures and adds none: yield-start-rate-term
   S!B30, yield-start-term-basis S!C47 and yield-one-step-start S!A37 are bit-exact, and 63 of the cells are
   oddfyield-solver-sweep's (ODDFYIELD shares the start).
+T-2788 (2026-11-07): PRICE discounts the redemption at `(n - 1) + DSC/E`, not `(DSC/E + n) - 1`. The two sums
+round differently in the last bit of the exponent, so `^` and the price move by an ulp, and YIELD's Newton turns
+that ulp into 8 to 11 ulps of yield. yield-start-one-input S!B67, yield-start-term-basis S!A52 and S!B50 were 8 to 11
+ulps off in the engine and bit-exact in the fit lab, whose `solvers.price` already took `(n - 1) + DSC/E`. The `^`
+factors were the same in both (928 factors compared, the 16 that differ are on other cells), and the accrued order
+(`rate/f · (A/E) · 100` against `100 · rate/f · A/E`) does not move them.
+- Lab (`yield-caret`, 370 cells): `(n - 1) + DSC/E` 369 bit-exact, `(DSC/E + n) - 1` 368. Hold-out (fixed split, 127
+  cells): 242/243 train and 127/127 test against 241/243 and 127/127; B67 is a train cell.
+- Fresh sweep accuracy/YIELD/r4-T-2788 (300 points, drawn and filled after the change was fixed; excel-graph,
+  2026-11-07): 288 bit-exact against 284, and 4 points outside Gate A's envelope against 5 (A237 comes inside). The
+  4 left fail the same way under both orders: A194 and A239 are `#NUM!` in Excel (T-4523), A252 and A267 stop short
+  of the root outside Excel's 15 digits (T-4758).
+- In the eval it fixes those three cells and coup-calendar-edges S!J12, with no regression in any suite.
+- The evidence for PRICE itself is indirect: no PRICE probe cell yet sits where `fl(fl(DSC/E + n) - 1)` and
+  `fl((n - 1) + DSC/E)` differ and changes its value (T-4758 asks for one).
+Evidence: the probes above (excel-graph), the r4-T-2788 batch. DURATION's own cash-flow sum (`add_cash_flow`) still
+takes `DSC/E + n - 1`; no cell has shown it to differ.
 Ours: since T-1592 the fitted start and stop on the `^`-priced PRICE with an analytic slope (`excel_yield_newton`), with
 T-2777's term (`yield_start_term`) and, since T-3215, the denominator `100·T - q·T/2 - q/4` in doubles (`yield_start`). Since
 T-2391 there is no fallback: an iterate off PRICE's domain is `#NUM!` and the 100th iterate is the value ("YIELD's #NUM!
@@ -4056,7 +4075,7 @@ follow (`fn_yield_matches_excel_off_the_fit`). Still visibly off, though only 5 
 unit in the 15th digit): yield-start-rate-term S!B39 and S!B49 (basis 1, 8 and 30 years) and yield-solver-sweep S!C7
 (T-2974).
 Status: UNVERIFIED (the algorithm is a fit: 369/370 bit-exact in the lab since T-3215; 367/370 of T-2741's cells within 15 digits); the values are excel-graph
-Tasks: T-1374, T-1493, T-1525, T-1533, T-1583, T-1592, T-2187, T-2304, T-2740, T-2741, T-2777 (the start's term), T-2788 (the last ulps), T-2974 (the three visibly-off cells; probes/yield-price-at-iterates), T-3152 (the cells the start's rounding moved), T-3215 (the start's denominator)
+Tasks: T-1374, T-1493, T-1525, T-1533, T-1583, T-1592, T-2187, T-2304, T-2740, T-2741, T-2777 (the start's term), T-2788 (the last ulps; the redemption exponent's order), T-2974 (the three visibly-off cells; probes/yield-price-at-iterates), T-3152 (the cells the start's rounding moved), T-3215 (the start's denominator), T-4758 (the residue)
 
 ## ODDFYIELD stops short of ODDFPRICE's root
 Rule: ODDFYIELD's last digits are not the root of ODDFPRICE's price at the given price, and they fall on both sides
@@ -4483,14 +4502,18 @@ build the per-period charges differently, so the same inputs give different last
 - Straight line from period 0 (T-4111): where straight line already wins at period 0, `(cost - salvage)/life >
   cost·rate` (a factor below `1 - salvage/cost`, salvage at most cost), every period of the window charges
   `(cost - salvage)/life`, the start's fraction included: there is no declining-balance fraction first. So the result
-  is `(end - start)·(cost - salvage)/life`: `VDB(121503138647.778,3864354372.11506,4,0.5,4,0.15833054798759,FALSE)` is
+  is `(end - start)·sl` with `sl = (cost - salvage)/life` rounded first, one product like the whole straight-line
+  periods above: `VDB(121503138647.778,3864354372.11506,4,0.5,4,0.15833054798759,FALSE)` is
   102933936241.20506, `3.5·(cost - salvage)/4`, where the fractional grid above gives 115234076960.1236 (10.7% off),
   and `VDB(147.345559004139,0.00344462972942079,21,12.5,18.5,0.295807274286059)` is 42.09774696411702, `6·(cost -
-  salvage)/21` (the grid: 42.82078686786086). The rule gives Excel's value to the bit or within one ulp on all seven
+  salvage)/21` (the grid: 42.82078686786086). In that operation order the rule gives Excel's value to the bit on all seven
   table points where it applies (accuracy/VDB/s1 A119 with a whole start, where both readings agree, and A158, A183,
   A187, A188, A189, A200, factors 0.10 to 0.60 and starts 0.5 to 53.25; excel-graph, 2026-11-06), and it changes no
-  probe or gen-m9 VDB cell (T-4111 ran it over the 257 literal one-call VDB eval cells with a math value). The engine still lays the fraction first
-  on these six (T-4510).
+  probe or gen-m9 VDB cell (T-4111 ran it over the 257 literal one-call VDB eval cells with a math value). `(end - start)·(cost - salvage)/life`, rounding
+  the product first, is one ulp off at A187 and at gen-m9/67a4c03afd63f988 A334 (`VDB(86661,45,37,0,6,0.2)`,
+  14045.837837837837), a whole start. Implemented (T-4510) for a fractional start only, the six points that
+  show the change. A whole start keeps the schedule, the same `sl` from period 0 (A119). The order with a fractional
+  end there, and factor 0 from a fractional start, are not evidenced yet (T-4724).
 Evidence: probes/fin-vdb-schedule (78 cells), fin-vdb-modes, fin-rri-vdb-edges (excel-graph, 2026-10-20, T-1975);
 fin-vdb-fractional-start (45 cells), fin-vdb-fractional-start-edges (14 cells) (excel-graph, 2026-10-28, T-2185);
 fin-vdb-amordegrc-edges A1-A59 (excel-graph, 2026-10-30, T-1978): salvage at or above cost in both modes (switching
@@ -4499,7 +4522,7 @@ equal to cost give 0 everywhere), fractional windows near the end of life (`VDB(
 3.0082099200000414, TRUE 11.061273600000135), and a fractional life 9.5 (an end past it is #NUM!, factor 3 reaches the
 salvage before period 8). The model already matched all 59 cells.
 Status: VERIFIED (excel-graph)
-Implemented (T-1975, T-2185): `vdb_no_switch_between` and `vdb_switching_between` in
+Implemented (T-1975, T-2185, T-4510): `vdb_no_switch_between` and `vdb_switching_between` in
 functions/financial/financial_depreciation.rs.
 Tasks: T-1975, T-2185, T-3022, T-4111, T-4510
 

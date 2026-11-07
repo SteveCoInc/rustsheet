@@ -177,7 +177,10 @@ otherwise as a hypothesis to probe:
    or volatile functions and under the work budget.
 5. **Label, value and date filters, Top-N, then sorting** (T-4165). Totals cover what stays: verified for
    Top-N (t4128 K). For the other filters and for hidden items (stage 1), this is T-4164's to probe.
-6. **Show values as** (T-4163), in three passes: leaves, subtotals, grand total.
+6. **Show values as** (T-4163): one post-pass over the values of stage 3 (`pivot/show_as.rs`). Per data
+   field with a mode, it computes every (row node, column node) cell, leaves, subtotals and grand totals
+   alike, since several modes give an empty intersection a value. It charges one work unit per cell and
+   counts each shown value as a node (pivots.md "Show-values-as edge cases (T-4161)").
 7. **Layout lines:** Excel's `rowItems`/`colItems` (`t`, `r`, `i`, `x`) for the form, subtotal placement,
    grand totals, Values position and blank rows (T-4147, T-4168).
 
@@ -223,6 +226,18 @@ Writes the typed model plus the verbatim rest, the cache and records, and the re
 and location. The ClosedXML invariants (oss-engines.md §4) are the checklist, and the round-trip suite
 (T-4177) is the proof. Pivot parts move from the `Replay` class of the M15 ownership matrix (T-4183, T-4567; decision 0275) to
 modelled.
+
+As built (T-4176, `crates/rustsheet-xlsx/src/export/pivots.rs`): the regenerating export writes every cache as a
+`pivotCacheDefinition` (every item a shared item, the `sharedItems` flags from `SharedItemsFlags`, the source range or
+`worksheetSource@name`, now kept as `PivotCache::source_name`) with a `pivotCacheRecords` part of `<x v>` indices, and
+every pivot as a `pivotTableDefinition`: typed attributes where they differ from the schema's defaults, the verbatim
+rest on its owner, root children in schema order, and `rowItems`/`colItems`: the saved ones as read until the engine
+lays the pivot out (a render or refresh drops them), then the engine's when its layout gives the location and
+geometry the pivot holds. A cache is held to the import limits, and one with case-variant texts in a field is
+dropped (Excel for the web calls it corrupt). An axis field with no `<items>` gets one per cache
+item plus its subtotal lines (ClosedXML's invariant), a data field's pivot field `dataField="1"`. A grouped cache is
+dropped with its pivots until T-4734; a cache definition's unread rest is T-4735's. The source-preserving tiers
+(SPEC-0034) still keep an unchanged pivot's own parts byte for byte.
 
 ### PivotChart data (T-4186)
 `PivotChartData { categories: Vec<Vec<CellValue>>, series: Vec<Series> }` is derived from the

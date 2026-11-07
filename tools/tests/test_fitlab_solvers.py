@@ -469,3 +469,16 @@ def test_yield_start_denominator_is_100t_minus_qt_over_2() -> None:
         assert after == math.nextafter(before, step * math.inf), key
         assert old(*cell.args) != cell.expected, key
         assert new(*cell.args) == cell.expected, key
+
+
+def test_yield_redemption_exponent_order_moves_b67() -> None:
+    """T-2788: probes/yield-start-one-input S!B67 `YIELD(DATE(2096,3,1),DATE(2097,6,30),0.05,98,100.5,1,0)` is
+    Excel's 0.06966784545910434 with the redemption discounted at `(n - 1) + DSC/E`, and 8 ulps high at
+    `(DSC/E + n) - 1`; PRICE's correctly rounded root lies above both (Excel stops short of it)."""
+    args = (71650.0, 72136.0, 0.05, 98.0, 100.5, 1.0, 0.0)
+    start = yield_caret.hundred_t_minus_qt_yield_start
+    chosen = yield_caret.caret_priced(solvers._newton_yield_short(start, 1e-10))
+    old = yield_caret.caret_priced(yield_caret.dsc_first_yield)
+    assert chosen(*args) == 0.06966784545910434
+    assert old(*args) == 0.06966784545910445
+    assert yield_caret.correctly_rounded_yield(*args) > chosen(*args)
