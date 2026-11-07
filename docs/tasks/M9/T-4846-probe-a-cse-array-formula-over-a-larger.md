@@ -3,7 +3,7 @@ id: T-4846
 title: "Probe a CSE array formula over a larger range in-repo: 1x1, row, column, 2-D #N/A fill and IFERROR (T-0950 follow-up)"
 milestone: M9
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
