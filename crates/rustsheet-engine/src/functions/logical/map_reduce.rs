@@ -113,6 +113,12 @@ impl Model {
     /// Accumulates a result by applying the lambda to each element of `array`.
     /// The lambda takes `(accumulator, current_value)` and returns the new accumulator.
     /// With 2 arguments the first element of the array seeds the accumulator.
+    ///
+    /// The last accumulator is the result as it is, unlike MAP's and SCAN's steps
+    /// (`Model::lambda_result_value`): a multi-cell range spills (`REDUCE(0,A1:A2,LAMBDA(a,v,
+    /// B1:B3))` is "x", "y", "z", an all-blank range 0, 0, 0), where MAP and SCAN are `#CALC!`
+    /// (probes/t4476-lambda-range-results D33:G39, D1:H21; arrays.md "MAP and SCAN with a LAMBDA
+    /// that returns a multi-cell range").
     pub(crate) fn fn_reduce(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.reduce_reference(args, cell).into_single_area(cell)
     }
