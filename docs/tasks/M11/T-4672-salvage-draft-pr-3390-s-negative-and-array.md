@@ -3,7 +3,7 @@ id: T-4672
 title: "Salvage draft PR #3390's negative and array kept-subnormal save probe and saved_number flush onto main"
 milestone: M11
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -36,3 +36,6 @@ the new probe's lines with `make eval-baseline` rather than copying the branch's
 
 ## Out of scope
 - Desktop Excel's save (M14).
+
+## Outcome
+Superseded: T-4355 (PR #3833) landed the negative and array kept-subnormal save probe (`probes/subnormal-saved-negative-and-array`) and the `saved_number` flush on main. Nothing left to salvage from draft PR #3390.
