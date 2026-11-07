@@ -3269,8 +3269,16 @@ all within 15 digits of the math: `DOLLARDE(-805.1,2)` -805.5000000000001 (A71),
 20.83163163163163 (A67, D = 1000), `DOLLARDE(34.7156,1001)` 41.14885114885117 (A79, D = 10000), `DOLLARDE(356.223,100)`
 356.223 (A69), `DOLLARFR(-611.7,2)` -611.14 (A75), `DOLLARFR(415.961,1000000)` 415.961 (A74); and the gen-m9 cells
 (`DOLLARDE(2.5,13)` 5.846153846153847).
-Unprobed: a fraction below 1 (Microsoft documents `#NUM!` below 0 and `#DIV/0!` from 0 to 1), a non-integer fraction,
-and fractions past 1E9, where a double `log10` of 10^k + 1 may round to k.
+Fraction edges (probes/t4608-dollarde-dollarfr-fraction-edges, excel-graph, 2026-11-07, 162 cells, T-4608; dollars 1.5,
+-1.5 and 0.3): the fraction is truncated toward 0 first, and the checks run on the original value. A fraction below 0
+(-1, -0.5) is `#NUM!` (A2:B3); one from 0 up to but not including 1 (0, 0.3, 0.5, 0.999) is `#DIV/0!` (A1:B1, A4:B6),
+so 0.999 is not rounded up. 1, 1.005 and 1.5 truncate to 1 and return the dollar unchanged (A7:B9); 2.5 truncates to 2
+(`DOLLARDE(1.5,2.5)` 3.5, `DOLLARFR` 1.1), 15.9 to 15 (4.333333333333334, 1.075) and 16.1 to 16 (4.125, 1.08; A10:B12).
+The power of ten D is exact in decimal at 10^k - 1, 10^k and 10^k + 1 for k = 9, 10, 12: `DOLLARDE(1.5,1000000001)`
+5.999999995 (D = 10^10) against 1.5 at 10^9 and 1.5000000005 at 10^9 - 1 (A13:B21), so no double `log10` rounding
+puts 10^k + 1 in the lower cut. At 10^15 - 1 the result is 1 to 2 ulps off the math (1.5000000000000004); 10^15 and
+10^15 + 1 return 1.5 (A22:B24), as do 2^53 - 1 and 2^53 (1.5551115123125783, same for both) and 1E300 (1.5).
+The same holds for the negative and the 0.3 dollar (mirror and scaled values, A28:B81). Ours matches every cell.
 Ours: `fn_dollarde` and `fn_dollarfr` (functions/financial/rate_conversions.rs), bit-exact on all 240 points.
 Status: VERIFIED (excel-graph)
 Tasks: T-4110
