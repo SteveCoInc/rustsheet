@@ -6558,12 +6558,12 @@ and different shapes, pairing them in reading order; only a different count is `
 (7674c89c824aca43 A72). Which cell pairs with which (reading order, row by row) follows from the values only where they
 differ; UNVERIFIED beyond these cells.
 Evidence: gen-m9 (excel-graph, 2026-10-22, T-2255), 17 cells listed in T-2431; T-2256: `RSQ(Data!A4:C7,Data!C2:D7)` 0.3991684810183792 (329b177b5d5165ad A104), `SLOPE(Data!A7:D9,Data!D3:E8)` 1.0000000246913243 (334f3dc9ca937f10 A63), `PEARSON({3,3,3,3},Data!B8:C9)` `#DIV/0!` (38e4fc309fe199ea A26), `STEYX(Data!C8:E10,Data!C1:C9)` `#DIV/0!` (7980ffb6095a340d A352); T-2436 probe: `FORECAST(<FALSE>,Data!C1:D3,Data!C10:E11)` (3x2 against 2x3) `#DIV/0!` (b4173fe25109a238 A78).
-Ours: pairs by cell count in reading order (T-2431). For CHISQ.TEST and CHITEST of different shapes the degrees of freedom come from the first array's shape: UNVERIFIED, no oracle cell separates the choices (T-2650 probes `CHISQ.TEST({1;2;3;4},{2,2;2,2})` against `CHISQ.TEST({1,2;3,4},{2;2;2;2})`, df 3 against 1).
+Ours: pairs by cell count in reading order (T-2431). For CHISQ.TEST and CHITEST of different shapes the degrees of freedom come from the first array's shape when it is 1-D (probes/t1689 Calc A18, 6x1 against 3x2, df 5); the 2-D-first direction is UNVERIFIED (T-2650 probes `CHISQ.TEST({1;2;3;4},{2,2;2,2})` against `CHISQ.TEST({1,2;3,4},{2;2;2;2})`, df 3 against 1).
 Status: VERIFIED (excel-graph) for the cited cells
 
 CHISQ.TEST/CHITEST have no per-cell sign check: a negative actual (`CHITEST(Data!D7:D9,Data!C10:E10)`, -1 against 1, 0.1353352832366127 = exp(-2), c6cfda6bd10cae93 A375) and a negative expected cell with a positive summed statistic (`CHITEST(Data!B5:E7,Data!B7:D10)` is 0, f2bd5f380ec002bf A314) are numbers; only a negative summed statistic is `#NUM!` (probes-numeric/m9-legacy-chitest A21, `CHITEST(G1:G3,M1:M3)`, G={1,2,3}, M={5,6,-1}).
 Evidence: those three cells, excel-graph. Status: VERIFIED for them; a single negative expected with a positive total and all-numeric inputs is unprobed (T-2650).
-Rule (T-2094): a side holding no number (blank, text or booleans in a range) is `#DIV/0!`: `CHISQ.TEST(Data!A10:B12,Data!A8:C9)` (0a9226016e8f5f33 A333, the actual side has only text, a boolean and blanks). Numbers on both sides that are never paired stay 1 (8dd2312c96effb1b A343). Still UNVERIFIED: blank against blank of equal shape beyond these cells (T-2650).
+Rule (T-2094): a side holding no number (blank, text or booleans in a range) is `#DIV/0!`: `CHISQ.TEST(Data!A10:B12,Data!A8:C9)` (0a9226016e8f5f33 A333, the actual side has only text, a boolean and blanks). Numbers on both sides that are never paired stay 1 (8dd2312c96effb1b A343). Blank cells in equal-shape ranges are covered by probes/t1689 (A1, A3, A4).
 
 ## An error element of an array argument is that error (T-2255)
 Rule: an error inside an array constant or array value given to LARGE, SMALL, QUARTILE.EXC, PERCENTRANK.INC,
@@ -8474,12 +8474,16 @@ Status: VERIFIED (excel-graph)
 Tasks: T-4310
 
 ## CHISQ.TEST over whole columns, blanks, text and booleans (T-1689)
-Rule: CHISQ.TEST takes its degrees of freedom from the shape of the ranges, so a whole column pair counts
-1,048,575 (`CHISQ.TEST(A:A,B:B)` with a statistic of 1,048,2xx is 0.5124423901432269 = `CHISQ.DIST.RT(stat,1048575)`,
-not the used area's df). A pair with a blank, text or boolean cell on either side is skipped alike (blank, text and boolean at the
-same position give the same value, A6, A7, A8-vs-A6 pattern); whether a skipped pair counts in the degrees of freedom is
-not separated by this probe. Whole columns of blanks as the expected range (`CHISQ.TEST(A:B,C:D)`, C:D empty) are `#DIV/0!`.
-Evidence: probes/t1689-chisq-test-blanks-whole-columns (Calc A1, A4, A19:A22 for the df; A6:A18 for the skipped pairs; A24 for the empty expected range).
+Rule: a pair with a blank, text or boolean cell on either side is dropped from the statistic, but the degrees of
+freedom still come from the full shape of the ranges: (rows - 1) for 1-D, (rows - 1)(columns - 1) for 2-D. So
+`CHISQ.TEST(A:A,B:B)` with a statistic of 1,048,529.161 is 0.5124423901432269 = `CHISQ.DIST.RT(stat,1048575)` although
+1,048,574 pairs are blank (Calc A1, A3, A4, A19; A2 and A20:A22 are 0), and 6-row ranges with one skipped pair are
+df 5 (A6, A7 and A10 agree at 0.7735040168804609 for a blank, text and blank-in-expected skip; A11 with two skips gives the
+same; A8 and A9 differ only because they skip another row; A13:A15, 3x2 with one skipped pair, are df 2). Calc A18
+(`CHISQ.TEST(B1:B6,K1:L3)`, 6x1 against 3x2, statistic 15) is 0.010362337915786444 = sf(15,5): for different shapes the
+degrees of freedom come from the first array (1-D) shape. The 2-D-first direction stays open (T-2650). An expected range
+that is entirely empty (`CHISQ.TEST(A:B,C:D)`, C:D blank) is `#DIV/0!` (A24).
+Evidence: probes/t1689-chisq-test-blanks-whole-columns (excel-graph; the engine agrees on df, differing 1 to 4 ulp).
 Ours: matches every value to within 1 to 4 ulp (7 cells, T-4864).
 Status: VERIFIED (excel-graph)
 Tasks: T-1689, T-4864
