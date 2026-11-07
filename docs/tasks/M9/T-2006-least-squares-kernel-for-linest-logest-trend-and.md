@@ -253,3 +253,5 @@ Measured on this branch's own baseline (cut before main's newer probes; merge `o
   the first notes), is still unresolved.
 - Still owed before a PR: acceptance criteria 1 (fitlab `regression` kernel, candidate table in statistics.md), the R4
   hold-out and the fresh sweep, and replacing the `KERNEL` scaffold with one form (clippy has not been run on it).
+
+Resumed 2026-11-07 06:02 UTC by an opus run (worker step 2, branch idle 5 h).
