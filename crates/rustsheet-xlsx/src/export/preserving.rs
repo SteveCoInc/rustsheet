@@ -9,6 +9,7 @@ use std::io::{Seek, Write};
 
 use rustsheet_engine::Model;
 
+use super::report::{self, SaveReport};
 use super::save_regenerated;
 use crate::error::XlsxError;
 
@@ -35,7 +36,8 @@ pub enum SaveTier {
 /// the way `model` was first loaded, so comparing the two typed models says what changed since the
 /// load (D2). An unchanged workbook is the source's bytes, untouched; a change the patch cannot
 /// write regenerates, as [`save_xlsx_to_writer`](super::save_xlsx_to_writer) always did,
-/// keeping the source's `PivotChart` drawings where it can (T-4950).
+/// keeping the source's `PivotChart` drawings where it can (T-4950). The report says which tier
+/// wrote the package and which source parts it left out (SPEC-0033 D7, T-4562).
 ///
 /// # Errors
 /// When writing fails, or the regenerating export does.
@@ -44,18 +46,30 @@ pub fn save_preserving<W: Write + Seek>(
     pristine: &Model,
     source: &[u8],
     mut writer: W,
-) -> Result<(W, SaveTier), XlsxError> {
+) -> Result<(W, SaveReport), XlsxError> {
     if model.workbook == pristine.workbook {
         writer.write_all(source)?;
-        return Ok((writer, SaveTier::Verbatim));
+        let report = SaveReport {
+            tier: SaveTier::Verbatim,
+            dropped: Vec::new(),
+        };
+        return Ok((writer, report));
     }
     let reason = match super::patch::patch(model, pristine, source)? {
         Ok((bytes, sheets)) => {
             writer.write_all(&bytes)?;
-            return Ok((writer, SaveTier::Patched { sheets }));
+            let report = SaveReport {
+                tier: SaveTier::Patched { sheets },
+                dropped: report::patched(source, &bytes),
+            };
+            return Ok((writer, report));
         }
         Err(reason) => reason,
     };
-    let writer = save_regenerated(model, pristine, source, writer)?;
-    Ok((writer, SaveTier::Regenerated { reason }))
+    let (writer, kept) = save_regenerated(model, pristine, source, writer)?;
+    let report = SaveReport {
+        tier: SaveTier::Regenerated { reason },
+        dropped: report::regenerated(source, &kept),
+    };
+    Ok((writer, report))
 }

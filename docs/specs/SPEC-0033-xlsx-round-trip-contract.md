@@ -285,7 +285,9 @@ pub struct SaveReport {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Dropped {
-    /// The fidelity-item key (D2), printed as the suite prints it.
+    /// The source part's name as its zip entry spells it (`xl/calcChain.xml`); the suite resolves
+    /// it to the part's fidelity-item key (D2), so a writer's renaming never changes a report.
+    /// Element-level entries come with SPEC-0034 stage 5's fragments.
     pub item: String,
     /// Why it was not written.
     pub reason: DropReason,

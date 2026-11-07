@@ -77,11 +77,14 @@ const ANCHORS: [&str; 3] = ["twoCellAnchor", "oneCellAnchor", "absoluteAnchor"];
 const ANCHOR_CHILDREN: [&str; 6] = ["from", "to", "pos", "ext", "graphicFrame", "clientData"];
 
 /// One kept part: its name in the saved package, its content type (none for a relationships
-/// part, which the package's `rels` default covers) and its bytes.
+/// part, which the package's `rels` default covers), its bytes, and the source part it was copied
+/// or rewritten from (none for a relationships part, which is written anew), which the save report
+/// leaves out of its drops (T-4562).
 struct KeptPart {
     name: String,
     content_type: Option<&'static str>,
     bytes: Vec<u8>,
+    source: Option<String>,
 }
 
 /// One sheet's kept drawing: the model sheet's index, its part number and its parts, the drawing
@@ -193,6 +196,13 @@ impl DrawingPlan {
         ))
     }
 
+    /// The source parts the kept drawings were copied or rewritten from, by part key.
+    pub(super) fn sources(&self) -> BTreeSet<String> {
+        (self.drawings.iter().flat_map(|d| &d.parts))
+            .filter_map(|p| p.source.as_deref().map(crate::import::part_key))
+            .collect()
+    }
+
     /// Writes the kept parts.
     pub(super) fn write<W: Write + Seek>(
         &self,
@@ -295,6 +305,7 @@ fn keep_drawing(
         name: name.clone(),
         content_type: Some(DRAWING_TYPE),
         bytes: xml.into_bytes(),
+        source: Some(path.to_string()),
     }];
     parts.push(relationships_part(&name, &relationships));
     parts.extend(charts);
@@ -343,6 +354,7 @@ fn keep_chart(
             name: format!("xl/charts/{target}"),
             content_type: Some(content_type),
             bytes: read(archive, &style_path)?.into_bytes(),
+            source: Some(style_path),
         });
         relationships.push((id.as_str(), rel.rel_type.as_str(), target));
     }
@@ -352,6 +364,7 @@ fn keep_chart(
         name: name.clone(),
         content_type: Some(CHART_TYPE),
         bytes: rewritten.into_bytes(),
+        source: Some(path.to_string()),
     }];
     if !relationships.is_empty() {
         kept.push(relationships_part(&name, &relationships));
@@ -461,6 +474,7 @@ fn relationships_part(name: &str, relationships: &[(&str, &str, String)]) -> Kep
         name: rels_name,
         content_type: None,
         bytes: relationships_xml(&relationships).into_bytes(),
+        source: None,
     }
 }
 

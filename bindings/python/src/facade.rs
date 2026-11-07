@@ -460,10 +460,24 @@ impl PyWorkbook {
         Ok(Self::wrap(wb))
     }
 
-    /// Saves to an xlsx file (the GIL is released while saving).
-    fn save_xlsx(&self, py: Python<'_>, path: &str) -> PyResult<()> {
-        py.detach(|| lock(&self.wb).save_xlsx(path, SaveOptions::default()))
-            .map_err(|e| PySaveError::new_err(e.to_string()))
+    /// Saves to an xlsx file (the GIL is released while saving). With `report`, returns what the
+    /// save left out as `(item, reason)` pairs (SPEC-0033 D7): the source part's name and the
+    /// reason's name (`NotPreserved`, `Policy`, ...).
+    #[pyo3(signature = (path, report=false))]
+    fn save_xlsx(
+        &self,
+        py: Python<'_>,
+        path: &str,
+        report: bool,
+    ) -> PyResult<Option<Vec<(String, String)>>> {
+        let saved = py
+            .detach(|| lock(&self.wb).save_xlsx_with_report(path, SaveOptions::default()))
+            .map_err(|e| PySaveError::new_err(e.to_string()))?;
+        Ok(report.then(|| {
+            (saved.dropped.into_iter())
+                .map(|d| (d.item, d.reason.name().to_string()))
+                .collect()
+        }))
     }
 
     /// Returns the workbook as xlsx bytes.
