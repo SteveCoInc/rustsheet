@@ -801,6 +801,34 @@ and `Model::lift_call` (functions/lift/call.rs), with the kernels `edate_of`, `e
 (functions/date_and_time/month_shift.rs), `weeknum_of` (date_and_time/weeknum.rs) and `yearfrac_of` (date_and_time/yearfrac.rs).
 Tasks: T-1090 (generator modes: every date parameter is `value`, holidays `array`), follow-ups below
 
+## A written-empty argument of the ToolPak date functions: required is `#N/A`, optional is omitted (T-4870)
+Rule: EDATE, EOMONTH, WORKDAY, NETWORKDAYS, WEEKNUM, YEARFRAC, WORKDAY.INTL and NETWORKDAYS.INTL give `#N/A` when a
+required argument is written empty (`F(,x)`, `F(x,)`) or is a LET or LAMBDA variable bound to nothing. A written-empty
+optional argument (holidays, return_type, basis) is omitted.
+- `#N/A`: `EDATE(,1)`, `EDATE(1,)`, `EOMONTH(40000,)`, `WORKDAY(,1)`, `NETWORKDAYS(1,)`, `WEEKNUM(,1)`, `YEARFRAC(1,)`,
+  `WORKDAY.INTL(1,,1)`, `NETWORKDAYS.INTL(,10,1)`, `LET(e,,EDATE(1,e))`, `LAMBDA(a,b,EDATE(a,b))(1,)`.
+- Omitted, giving the same value as the call without the comma:
+  - `WORKDAY(1,5,)` is 6 and `WORKDAY(45000,10,)` 45014; `NETWORKDAYS(45000,45030,)` is 23.
+  - `WEEKNUM(45000,)` is 11 (type 1); `YEARFRAC(13816,16816,)` is 8.21111111111111.
+  - `WORKDAY.INTL(45000,10,11,)` is 45012 and `NETWORKDAYS.INTL(45000,45030,11,)` 27.
+  - `LET(h,,WORKDAY(45000,10,h))` is 45014.
+- Not ToolPak, so unchanged: `DAYS(10,)` is 10 and `WEEKDAY(45000,)` `#NUM!`.
+For a required argument this is the rule MROUND, RANDBETWEEN, IMSUB and IMDIV follow. For an optional one it is the
+dynamic-array functions' rule (lookup.md, T-4871). It applies to the formula's text: an argument that only evaluates to
+nothing is read as before. So `EDATE(<#VALUE! start>,IFNA(<blank cell>,..))` stays the start's `#VALUE!`
+(gen-m6/b54448af3fde07ca A297).
+Excel's order between this `#N/A` and another argument's error is unprobed. The empty `weekend` of the .INTL pair is
+T-2591's.
+Evidence: probes/t4870-empty-date-args A1:A31 (excel-graph, 2026-11-07), with predictions committed before the fill.
+H_na_req scored 26/31, H_na_all 25/31 and H_zero 3/31. No hypothesis predicted the optional cells A10, A14, A16, A24
+and A27, which act as omitted. Round 2, probes/t4870-r2-empty-optional A1:A14, tested that rule at fresh arguments
+with H_omitted committed before its fill: 14/14.
+Ours: `Model::is_written_empty` and `Model::toolpak_empty_required` (functions/logical/let.rs), applied to the argument
+nodes before lifting. `Model::holidays_arg` (date_and_time/holidays.rs) does this for the WORKDAY and NETWORKDAYS pairs.
+WEEKNUM drops a written-empty return_type.
+Status: VERIFIED (excel-graph)
+Tasks: T-4870
+
 ## DATEDIF and DAYS360 error order with a bad unit or method
 Rule (probes/datedif-days360-error-order, excel-graph, 2026-10-19, T-1430): both functions read every argument's
 value first, left to right, and only then check the dates' range. An error or non-date text in a date argument

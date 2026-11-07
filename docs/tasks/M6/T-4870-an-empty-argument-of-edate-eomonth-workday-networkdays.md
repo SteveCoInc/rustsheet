@@ -79,12 +79,15 @@ committed before the fill, so the engine no longer reads an empty argument as 0 
   "an optional empty argument is omitted", with H_omitted committed in bf24d2c55 before its fill: 14/14.
 - **No fit:** each cell is `#N/A` or the omitted call's value, and nothing numeric is tuned.
 - **Code:**
-  - `toolpak_empty_required` (functions/util.rs) is called by each function's per-element reader, so lifting is
-    unchanged. T-4872 and T-4873 can reuse it.
-  - `Model::is_written_empty` (logical/let.rs) is the one definition of an empty argument node or variable bound to
-    nothing. `complex_pair_of` now uses it, and the holidays readers of WORKDAY(.INTL) and NETWORKDAYS(.INTL) use it to
-    treat an empty holidays as omitted.
-  - WEEKNUM's reader has a `[serial, EmptyArg]` arm, so an empty return_type means type 1.
+  - `Model::is_written_empty` (logical/let.rs) is the one definition of an empty argument node or a variable bound to
+    nothing; `complex_pair_of` now uses it. `Model::toolpak_empty_required` (same file) gives the `#N/A` from the
+    argument nodes, before lifting, so T-4872 and T-4873 can reuse it.
+  - The check is on the nodes, not the values. A first draft checked lifted values, and that regressed gen-m6/
+    b54448af3fde07ca A297: there `IFNA(<blank>,..)` evaluates to an empty value, and Excel keeps the start's
+    `#VALUE!`.
+  - `Model::holidays_arg` (date_and_time/holidays.rs) holds the argument-count check, the `#N/A` check and the
+    empty-holidays filter that WORKDAY(.INTL) and NETWORKDAYS(.INTL) share.
+  - WEEKNUM drops a written-empty return_type node, so it reads as type 1.
   - Unit test: test/test_toolpak_empty_date_args.rs.
 - **Docs:** dates.md "A written-empty argument of the ToolPak date functions: required is `#N/A`, optional is omitted
   (T-4870)".
