@@ -1,6 +1,6 @@
 # SPEC-0034 — Source-preserving xlsx export
 
-- **Status:** draft (stages 1–3 ready to implement)
+- **Status:** draft (stages 1–3 implemented; stage 5, D5, specified, T-4567)
 - **Milestone / lane:** M15 / research (the code lives in crates/rustsheet-xlsx and crates/rustsheet)
 - **Tasks:** T-4183 (this spec); the implementation tasks are filed with it (see Rollout)
 
@@ -34,8 +34,8 @@ Goals:
   size limits.
 
 Non-goals:
-- Structural edits that preserve (row and column insert or delete, sheet moves). They need M4's reference shifting and
-  the ownership matrix of stage 5.
+- Structural edits that preserve range-bound content (row and column insert or delete). They need M4's reference
+  shifting (stage 5c). Stage 5 (D5) keeps everything else a regenerated save can keep.
 - Workbooks created from scratch, which have no source and keep the regenerating export.
 - Byte-identical zip containers. Entry order, compression level and timestamps may differ: SPEC-0033 D4.6 ignores
   them. Part *contents* are what is preserved.
@@ -197,12 +197,178 @@ The drops are:
 This replaces SPEC-0033 D7.1's plan of a coarse report in T-4183's first stage: the report ships with T-4562.
 Until then the round-trip suite scores every missing item `lost`, which is the same score.
 
-### D5. Stage 5: preserving under regeneration
-For structural edits, the ownership matrix, closure rule, fragment slots, invalidation table and preservation limits
-of decision 0275 apply. T-4183 was filed to specify them. This spec chose instead to make preservation the default
-through the source and the patcher, which needs none of them, and moved them to stage 5. Its spec is task
-T-4567, which depends on M4's reference shifting for range-bound content. SPEC-0033 D7's
-`ClosureReachesRegenerated` and the `Drop` policy are defined there.
+### D5. Stage 5: preserving under regeneration (T-4567)
+Stages 1–3 keep the source whenever the patcher can. A save that falls back to regeneration still writes only what the
+model holds:
+- every structural change (D2.1);
+- every fallback reason of D3;
+- every workbook created from scratch with a source attached.
+
+That is the "stays exactly as lossy as today" of the goals. Stage 5 shrinks that loss without M4. Range-bound content
+under row and column edits waits for M4.
+
+**Shape.** The Regenerated tier with a source becomes "regenerate, then keep":
+- the export writes every part it models, as today;
+- it then adds back each source part the model does not hold, under the ownership matrix (D5.1) and the closure rule
+  (D5.2), written as D5.3 says;
+- inside the parts it regenerates, it re-emits the source's unmodelled elements in their schema slots (D5.4);
+- the invalidation table (D5.5) says what an edit makes stale, which is dropped and reported;
+- every step is bounded (D5.6).
+
+Nothing here touches the engine. Fragments and kept parts are read from the retained source bytes at save time,
+beside the pristine re-import of D2. The model and `import/` gain no preservation fields: one definition of "what the
+source had" (directive 3), and no memory cost for workbooks that never save.
+
+**Provisional.** Rows marked *(M4)* depend on the structural-edit API M4 will ship:
+- row and column insert and delete;
+- `RefMap`, Excel-exact reference adjustment, docs/milestones.md M4.
+
+Today those edits exist only behind the `harness_row_insert` feature (decisions 0076, 0098). The rows are written
+against the planned API and are re-checked when M4's spec lands. Everything else is implementable now.
+
+**D5.1. Ownership matrix.** One table in `rustsheet-xlsx` (`export/ownership.rs`) maps each relationship type to a
+policy. It is keyed by relationship type, then by content type for parts reached without a typed relationship. Part
+names vary between writers, so they are never keys. Each row is defined once, and the reader, the writer and the
+SaveReport all look it up (directive 3).
+
+| Policy | Meaning | Relationship types (last path segment; the namespace is ECMA-376's or that of the Microsoft extension that defines it) |
+|---|---|---|
+| `Modelled` | Written from the model; the source part is never copied | `officeDocument`, `worksheet`, `styles`, `sharedStrings`, `theme`, `sheetMetadata`, the rich-value parts (`rdRichValue`, `rdRichValueStructure`, `rdRichValueTypes`), `table`, `pivotCacheDefinition`, `pivotCacheRecords`, `pivotTable`, `externalLink`, `hyperlink` (External), `core-properties`, `extended-properties` |
+| `Replay` | Copied byte for byte while its owner (the package, the workbook or a sheet) exists | `customXml` and its `customXmlProps`, `custom-properties`, package `thumbnail`, `connections`, `printerSettings`, `person` (threaded-comment people), web extensions (`webextension`, `webextensiontaskpanes`) |
+| `ReplayIfClean` | Copied byte for byte only if no edit invalidated what it is anchored to (D5.5); otherwise dropped and reported | sheet-anchored: `drawing` (with its `chart`, `image`, `chartUserShapes`, chart style and colour parts), `vmlDrawing`, `comments`, `threadedComment`, `ctrlProp`, `slicer`, `timeline`, `queryTable`; workbook-scoped but range-bound: `slicerCache`, `timelineCache` |
+| `Active` | Copied byte for byte into `.xlsm`/`.xltm`/`.xlam` only, never interpreted (decision 0275 D5); otherwise `ActiveContentInPlainFormat` | `vbaProject`; ActiveX `control` and its `activeXControlBinary`; `oleObject` and `package` embeddings |
+| `Drop` | Never written; `Policy` | `calcChain`; digital signatures (`digital-signature/origin` and its signature parts); `revisionHeaders` and `usernames` |
+| unknown | Any relationship type not in the table | `Replay` if the closure rule (D5.2) holds for it; otherwise `Drop` with `ClosureReachesRegenerated` |
+
+Notes:
+- The unknown row is the answer to features Excel has not shipped yet. A new part kind that hangs off the package, the
+  workbook or a sheet, and points into nothing the export regenerates, survives on day one.
+- `comments`, `slicerCache` and `timelineCache` are read by the importer (legacy notes; slicer filters for pivots), but
+  the export does not write them, so they are `ReplayIfClean`. The model's view of each is compared, pristine against
+  live (D2), and a difference drops the part (`StaleAfterStructuralEdit` on its sheet, or `NotPreserved` until it is
+  written from the model). That rule moves a row to `Modelled` as soon as the export writes the part; T-4950 does this
+  for pivot-bound drawings.
+- Chartsheets, dialogsheets and macrosheets are sheets: their `<sheet>` entry is regenerated `workbook.xml`, which
+  the model does not hold. They stay `NotPreserved` in stage 5, a known gap reported per part.
+- The theme is `Modelled`, as the export writes the model's theme. Where the importer reads only part of it, the
+  loss belongs to the theme row of stage 4, not here.
+
+**D5.2. Closure rule.** The closure of a root part R is every part reachable from R by following `.rels` with
+`TargetMode` internal. External targets are kept as written. They are never followed, and never resolved against the
+file system. A root is kept only if:
+- no part in its closure is `Modelled`, `Drop`, or the root of another sheet's parts;
+- the closure is within the limits of D5.6.
+
+Otherwise the root and its whole closure are dropped with `ClosureReachesRegenerated` (or `LimitExceeded`). A part
+reached from two kept roots (one image under two drawings) is written once. A part reached from a kept root and a
+dropped root is kept, since it is still referenced. Consequences:
+- A chart whose rels point only at its own style, colour and embedding parts is kept with its drawing.
+- A drawing whose closure reaches a `pivotTable` is dropped until T-4950 writes it from the model.
+- A part a kept root reaches only through text (a chart series formula naming a sheet) is not in the closure. Text
+  references are D5.5's concern.
+
+**D5.3. Writing kept parts.**
+- Kept parts keep their source names, unless a name collides with a part the export writes; the export owns
+  `xl/worksheets/sheetN.xml`, `xl/tables/tableN.xml` and the others it numbers. A colliding part is renamed to the next
+  free name of the same pattern, and the `.rels` that target it are rewritten. Within a kept part's closure, `.rels`
+  are copied byte for byte, except for targets renamed this way.
+- The owner's `.rels` (`_rels/.rels`, `xl/_rels/workbook.xml.rels`, `xl/worksheets/_rels/sheetN.xml.rels`) is never
+  replayed (research §4 lessons). The export writes its own relationships, then one per kept root with a fresh id
+  (`rId<n>` after the export's highest), and remaps the root's attach point to it (D5.4).
+- `[Content_Types].xml` is re-derived, as today. Each kept part gets the `Override` the source had for it, or the
+  source's `Default` for its extension. Nothing is copied from the source file wholesale.
+- A kept root that needs an attach element in a regenerated part (`<drawing r:id>`, `<legacyDrawing r:id>`,
+  `<controls>`, the `pageSetup` `r:id` of `printerSettings`, a workbook `<ext>` holding slicer caches) is kept only if
+  that element is a fragment D5.4 keeps. Otherwise the root is dropped with `UnmappableRelationship`. Kept parts that no
+  element references, such as `customXml`, are attached by their relationship alone.
+
+**D5.4. Fragment slots.** The regenerating writers of `workbook.xml`, `sheetN.xml` and `styles.xml` each declare the
+child elements, `ext` URIs and attributes they write: one owned set per part, next to the writer. Everything else
+the source part holds there is a fragment. It is read from the source part at save time and re-emitted at its
+schema position.
+
+- **Positions.** A fragment's slot is its element's place in the schema sequence:
+  - `CT_Worksheet` (ECMA-376 Part 1 §18.3.1.99): sheetPr, dimension, sheetViews, sheetFormatPr, cols, sheetData,
+    sheetCalcPr, sheetProtection, protectedRanges, scenarios, autoFilter, sortState, dataConsolidate,
+    customSheetViews, mergeCells, phoneticPr, conditionalFormatting, dataValidations, hyperlinks, printOptions,
+    pageMargins, pageSetup, headerFooter, rowBreaks, colBreaks, customProperties, cellWatches, ignoredErrors,
+    smartTags, drawing, legacyDrawing, legacyDrawingHF, drawingHF, picture, oleObjects, controls, webPublishItems,
+    tableParts, extLst;
+  - `CT_Workbook` (§18.2.27) and `CT_Stylesheet` (§18.8.39), likewise.
+
+  An element the writer owns is never a fragment, even when the writer writes it differently. Partly modelled elements
+  (`sheetViews`, `cols`, `calcPr`) are stage 4's to model, not stage 5's to splice.
+- **Owned elements with unknown content.** Inside elements the writer owns, only these are fragments:
+  - unknown attributes on the root and on a closed list of owned elements, declared next to the writer (`sheetView`,
+    `col`, `calcPr` to start);
+  - `<ext>` entries whose `uri` the writer does not write. The export writes the x14 conditional-format and data-bar
+    URIs, for example.
+
+  Each fragment carries the namespace declarations it uses. The writer rebuilds `mc:Ignorable` from the prefixes it
+  emits.
+- **`mc:AlternateContent`.** It is a fragment like any other, kept whole or dropped whole, never half-read.
+- **`x15ac:absPath`.** It is kept as Excel keeps it (decision 0275 D6). `SaveOptions::strip_abs_path`, false by
+  default, drops it.
+- **Classification.** Each fragment is classified when it is read, with one classifier for all three parts:
+  - **relationship-bound**: holds an `r:id` (or `r:embed`, `r:link`, `r:pict`). It is remapped through D5.3, or
+    dropped with `UnmappableRelationship`.
+  - **range-bound**: holds an A1 range or formula text. Known elements are listed: `dataValidations`, `autoFilter`,
+    `sortState`, `protectedRanges`, `scenarios`, `customSheetViews`, `rowBreaks`, `colBreaks`, `ignoredErrors`,
+    `cellWatches`, `dataConsolidate`, and ext entries holding `xm:sqref` or `xm:f` (x14 data validation, sparklines).
+    For unknown elements and ext entries, it is assumed when any attribute or text matches the A1 or R1C1 reference
+    grammar.
+  - **sheet-name-bound**: holds formula text that names a sheet (a `xm:f`, a `formula1`).
+  - **index-bound**: holds a style index (`dxfId`, `s`). It is kept only while the style section it indexes is
+    prefix-stable against the pristine table (D3.3).
+  - **inert**: none of the above.
+
+**D5.5. Invalidation table.** Triggers come from the pristine-against-live diff (D2), a closed set defined next to
+the matrix. Each drop carries SPEC-0033 D7's reason:
+
+| Change | Dropped | Reason |
+|---|---|---|
+| Cell content (R1) | nothing. Cached values in kept parts (chart caches, external-link caches) stay as the source had them (SPEC-0033 RQ3) | — |
+| A modelled feature of sheet S edited (merges, conditional formats, tables, hyperlinks, column or row properties) | range-bound and index-bound fragments of S that overlap the edited range; `ReplayIfClean` parts anchored to an edited table (slicers, query tables) | `StaleAfterStructuralEdit { sheet: S }` |
+| Sheet S renamed | sheet-name-bound fragments and `ReplayIfClean` parts, workbook-wide, whose text names S | `StaleAfterStructuralEdit { sheet: S }` |
+| Sheet S deleted | every fragment of S; every kept root attached to S, with its closure (D5.2); everything else whose text names S | `OwnerDeleted` |
+| Sheet added or moved | nothing. Kept content addresses sheets by name or relationship, not by position. A fragment that holds a sheet index (`localSheetId`, `activeTab`) is index-bound and dropped. | `StaleAfterStructuralEdit` |
+| Defined name added, edited or removed | nothing: names are modelled, and fragments that name them are text | — |
+| Style table not prefix-stable | index-bound fragments of the section that moved | `StaleAfterStructuralEdit` |
+| *(M4)* Rows or columns inserted or deleted on S | range-bound fragments of S; `ReplayIfClean` parts anchored to S (drawings, notes, controls, slicers), until the shifter of stage 5c rewrites them | `StaleAfterStructuralEdit { sheet: S }` |
+
+Never kept stale (decision 0275 D4). A kept item still in the output after its trigger fired is a SaveReport bug
+(SPEC-0033 D7.3).
+
+**D5.6. Limits (directive 5).**
+
+| Limit | Value | Over it |
+|---|---|---|
+| Kept bytes | within the source's `max_uncompressed_bytes`, which the load already charged | — |
+| Kept parts | the export's parts plus the kept ones ≤ `max_zip_entries` | the remaining roots are dropped |
+| Closure depth | 16 hops (GridCraft's value) | `LimitExceeded { limit: "closure depth" }` |
+| Closure size | 1,000 parts per root | `LimitExceeded { limit: "closure size" }` |
+| Fragment element depth | 256 (`MAX_DEPTH`, the patcher's) | `LimitExceeded { limit: "fragment depth" }` |
+| Fragments per part | 10,000 | `LimitExceeded { limit: "fragments" }` |
+| Fragment bytes per part | the part's own size (a fragment is a slice of it) | — |
+
+A limit drops what it covers. It never fails the save and never writes a half-kept closure. The fragment reader is the
+patcher's bounded quick-xml scan: no DOM, and no recursion beyond the depth limit.
+
+**D5.7. Reporting and measurement.**
+- Every drop is a SaveReport entry (SPEC-0033 D7, T-4562), so stage 5 needs T-4562 first. Entries are keyed as
+  SPEC-0033 D2 keys items: a part by its part key, a fragment by its element key.
+- The R2 scenarios of SPEC-0033 are what measure this stage. The sheet-level ones (rename, add, delete, move) need no
+  M4 and are filed with it. Rows and columns follow M4.
+- Each implementation task carries an Excel re-save probe (T-4890's tooling): Excel for the web opens the
+  regenerated-and-kept saves, and the saves keep the parts and fragments.
+
+**D5.8. Excel behaviour to verify.** All of this is UNVERIFIED until the probes run:
+- Excel opens a package whose kept parts sit under renamed names;
+- it accepts the rebuilt `mc:Ignorable`;
+- it accepts fragments emitted in schema order next to regenerated siblings;
+- it keeps an `x15ac:absPath` it did not write.
+
+Each finding goes into docs/excel-semantics/xlsx-storage.md.
 
 ## Alternatives considered
 - **Dirty flags through the engine.** These are cheaper at save, but every mutation path (edits, recalculation,
@@ -232,4 +398,7 @@ T-4567, which depends on M4's reference shifting for range-bound content. SPEC-0
 2. **Sheet patcher for changed cached values and inputs** (D3.1, D3.2, D3.4), with the shared-strings append (D3.3).
 3. **The styles append** (D3.3) and the `metadata.xml` and calcChain rules (D3.4, D3.5, E2).
 4. **SaveReport tiers** (D4), wired into the round-trip `dropped` verdict.
-5. **Stage 5** (D5), after M4: T-4567 specifies it, then its own tasks.
+5. **Stage 5** (D5). T-4567 specified it and filed its tasks, listed in the T-4567 task file's Outcome. Stage 5a
+   (everything but row and column edits) needs no M4. Stage 5b is the row and column rows of D5.5, after M4. Stage 5c
+   is the shifter that keeps range-bound content under those edits instead of dropping it (research §8 items 28 and
+   29).
