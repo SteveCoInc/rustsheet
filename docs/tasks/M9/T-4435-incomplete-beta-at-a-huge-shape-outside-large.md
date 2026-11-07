@@ -3,7 +3,7 @@ id: T-4435
 title: "Incomplete beta at a huge shape outside large_shape_beta's bounds still takes Cephes' fraction: F.DIST.RT and BETA.DIST 1E-13 to 9E-8 off the math (FDIST(1.5,80,1E10), F.DIST.RT(5,24,1E6); T-4119 follow-up)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
