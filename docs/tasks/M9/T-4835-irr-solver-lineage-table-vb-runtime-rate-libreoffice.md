@@ -3,7 +3,7 @@ id: T-4835
 title: "IRR solver lineage table: VB runtime, RATE, LibreOffice, Gnumeric, POI, historical docs"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
