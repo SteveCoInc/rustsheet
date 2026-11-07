@@ -68,3 +68,33 @@ fn exp_keeps_subnormal_results() {
     let tiny = number(&model, 3);
     assert!(tiny > 0.0 && tiny < f64::MIN_POSITIVE);
 }
+
+/// A comparison over an array or range reads a left number that exceeds the right one by less
+/// than 2^-1026 as equal; a scalar comparison stays exact (probes/t4766-array-subnormal-compare A1,
+/// A5, A12; probes/t4766-array-subnormal-order; excel-graph).
+#[test]
+fn array_comparison_reads_a_tiny_excess_as_equal() {
+    let mut model = new_empty_model();
+    model._set("A1", "=INDEX((EXP({-745,-708}))=0,1)");
+    model._set("A2", "=INDEX((EXP({-745,-708}))=0,2)");
+    model._set("A3", "=INDEX(EXP({-745,-708}),1)=0");
+    model._set("A4", "=INDEX(0=EXP({-745}),1)");
+    model._set("A5", "=INDEX(EXP({-745})<EXP({-744}),1)");
+    model._set("A6", "=INDEX(EXP({-744})>EXP({-745}),1)");
+    // Either side of 2^-1026 (-1026 ln 2 = -711.1648): EXP(-711.17) is below, EXP(-711.16) above.
+    model._set("A7", "=INDEX((EXP({-711.17}))=0,1)");
+    model._set("A8", "=INDEX((EXP({-711.16}))=0,1)");
+    model._set("A9", "=INDEX((EXP(-745)+{0})>0,1)");
+    model.evaluate();
+    let expected = [
+        "TRUE", "FALSE", "FALSE", "FALSE", "TRUE", "FALSE", "TRUE", "FALSE", "FALSE",
+    ];
+    for (row, want) in expected.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("A{}", row + 1)),
+            *want,
+            "A{}",
+            row + 1
+        );
+    }
+}

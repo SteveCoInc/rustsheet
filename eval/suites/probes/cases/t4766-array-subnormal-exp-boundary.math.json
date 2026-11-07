@@ -1,0 +1,254 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "fc2741dff82a7029f9fb4ece68726c3ea3977cb5e85deaedbf43a2868011ff81",
+  "definitions": {
+   "EXP": "9de1fa5084c01ced"
+  },
+  "arguments_sha256": "e4d5033c7d5bc95d22f411c80f26c064ca4c80176318e35d0d86b742a3f9524c"
+ },
+ "sheets": {},
+ "skipped": {
+  "S": {
+   "D1": {
+    "f": "=EXP(-720.0)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D10": {
+    "f": "=EXP(-718.2)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D11": {
+    "f": "=EXP(-718.0)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D12": {
+    "f": "=EXP(-717.8)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D13": {
+    "f": "=EXP(-717.6)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D14": {
+    "f": "=EXP(-717.4)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D15": {
+    "f": "=EXP(-717.2)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D16": {
+    "f": "=EXP(-717.0)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D17": {
+    "f": "=EXP(-716.8)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D18": {
+    "f": "=EXP(-716.6)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D19": {
+    "f": "=EXP(-716.4)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D2": {
+    "f": "=EXP(-719.8)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D20": {
+    "f": "=EXP(-716.2)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D21": {
+    "f": "=EXP(-716.0)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D22": {
+    "f": "=EXP(-715.8)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D23": {
+    "f": "=EXP(-715.6)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D24": {
+    "f": "=EXP(-715.4)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D25": {
+    "f": "=EXP(-715.2)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D26": {
+    "f": "=EXP(-715.0)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D27": {
+    "f": "=EXP(-714.8)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D28": {
+    "f": "=EXP(-714.6)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D29": {
+    "f": "=EXP(-714.4)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D3": {
+    "f": "=EXP(-719.6)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D30": {
+    "f": "=EXP(-714.2)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D31": {
+    "f": "=EXP(-714.0)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D32": {
+    "f": "=EXP(-713.8)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D33": {
+    "f": "=EXP(-713.6)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D34": {
+    "f": "=EXP(-713.4)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D35": {
+    "f": "=EXP(-713.2)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D36": {
+    "f": "=EXP(-713.0)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D37": {
+    "f": "=EXP(-712.8)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D38": {
+    "f": "=EXP(-712.6)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D39": {
+    "f": "=EXP(-712.4)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D4": {
+    "f": "=EXP(-719.4)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D40": {
+    "f": "=EXP(-712.2)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D41": {
+    "f": "=EXP(-712.0)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D42": {
+    "f": "=EXP(-711.8)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D43": {
+    "f": "=EXP(-711.6)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D44": {
+    "f": "=EXP(-711.4)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D45": {
+    "f": "=EXP(-711.2)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D46": {
+    "f": "=EXP(-711.0)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D47": {
+    "f": "=EXP(-710.8)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D48": {
+    "f": "=EXP(-710.6)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D49": {
+    "f": "=EXP(-710.4)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D5": {
+    "f": "=EXP(-719.2)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D50": {
+    "f": "=EXP(-710.2)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D51": {
+    "f": "=EXP(-710.0)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D52": {
+    "f": "=EXP(-709.8)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D53": {
+    "f": "=EXP(-709.6)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D54": {
+    "f": "=EXP(-709.4)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D55": {
+    "f": "=EXP(-709.2)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D56": {
+    "f": "=EXP(-709.0)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D57": {
+    "f": "=EXP(-708.8)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D58": {
+    "f": "=EXP(-708.6)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D59": {
+    "f": "=EXP(-708.4)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D6": {
+    "f": "=EXP(-719.0)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D7": {
+    "f": "=EXP(-718.8)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D8": {
+    "f": "=EXP(-718.6)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "D9": {
+    "f": "=EXP(-718.4)*2^1000",
+    "why": "scaled value not exact"
+   }
+  }
+ }
+}
