@@ -202,7 +202,7 @@ impl<'a> AxisColumns<'a> {
         for (rank, &item) in (0u32..).zip(&column.order.item) {
             // Nor an item a filter removed (UNVERIFIED, T-4799: no probe has `showAll` beside a
             // filter).
-            if !field.is_hidden(item) && !kept.is_removed(index, item) {
+            if !field.excludes(item) && !kept.is_removed(index, item) {
                 intern(keys, &[K::part(0, rank)])?;
             }
         }

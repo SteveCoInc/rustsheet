@@ -39,7 +39,8 @@ Goals:
 3. **Refresh semantics as Excel's:**
    - a pivot refreshes on load when its cache is `refreshOnLoad`, on an explicit API call, and when it is
      created;
-   - never on a source edit (Auto Refresh only as T-4182 evidences) nor on a calculate (probed through
+   - never on a source edit (Excel for the web neither stores nor honours Auto Refresh; T-4182 was dropped,
+     pivots.md) nor on a calculate (probed through
      a Graph write on a refreshOnLoad pivot only; pivots.md lists what is not probed), and a pivot loaded
      without `refreshOnLoad` keeps the cells the file saved, even when its `rowItems`/`colItems`
      disagree with the cache or are absent (probes/t4586-pivot-refresh-on-load, T-4586).
@@ -153,7 +154,8 @@ refresh is ordered after that calculation.
   pivots unrendered, laying out only a grouped one.
 - The refresh on open plans every marked cache within one shared work and cell budget, and writes
   and recalculates only when at least one plan succeeds.
-- Auto Refresh is added only as T-4182 evidences it.
+- Auto Refresh is not implemented: Excel for the web neither stores nor honours it (pivots.md "PivotTable Auto
+  Refresh is not stored or honoured by Excel for the web"; T-4182, dropped).
 
 ### PivotResult (T-4142, T-4163, T-4165, T-4174, T-4175)
 `fn compute(table: &PivotTable, cache: &PivotCache, work: &mut u64) -> Result<PivotResult, PivotComputeError>`
@@ -381,7 +383,8 @@ introducing it adds:
 - **Probes:** the `pivots` probes (t4123, t4128, t4134, t4137, t4138 and the later probe tasks) score
   every pivot cell and layout through T-4124.
 - **Generated:** `gen-pivot` (T-4132, T-4160) adds covering-array coverage.
-- **Corpora:** fresh pivot-corpus files (T-4131) re-render exactly.
+- **Corpora:** fresh pivot-corpus files (T-4131; fresh when their saved records give their saved values,
+  T-4906) re-render exactly, cell by cell and in their `rowItems`/`colItems`.
 - **Metamorphic** (T-4155):
   - refresh is idempotent;
   - GETPIVOTDATA of each non-empty value cell's tuple equals the cell, when no missing or error caption
@@ -403,7 +406,7 @@ introducing it adds:
 8. T-4154: GETPIVOTDATA over the result.
 9. PV2 and PV3 stages (T-4163, T-4165, T-4168, T-4169, T-4171, T-4174, T-4175), each after its probe
    (T-4161, T-4164, T-4170, T-4505, T-4582, T-4583, T-4584).
-10. Auto Refresh (T-4182), once its evidence lands.
+10. Auto Refresh: dropped (T-4182), since Excel for the web neither stores nor honours it.
 11. Export and API (T-4176–T-4178, T-4184), then PivotChart data and I/O (T-4186, T-4187) and slicers
     (T-4188).
 

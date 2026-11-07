@@ -25,6 +25,9 @@ pub struct CatalogRow {
     pub family: String,
     /// The OOXML path or enumeration value the row stands for.
     pub ooxml: String,
+    /// Whether Excel for the web renders the feature: `yes`, `no` or `unknown` (decision 0274
+    /// item 5: a row it cannot render is M14's and never blocks M16).
+    pub web: String,
     /// `in`, `out (...)` or `round-trip only (...)` (decision 0274).
     pub scope: String,
     /// The M16 stage (`PV1`...), `out` or `round-trip`.
@@ -33,9 +36,15 @@ pub struct CatalogRow {
     pub status: String,
 }
 
+/// Whether a catalog row is in M16's scope: `in` and not retired (decision 0274 item 3). The one
+/// definition the catalog and the report's rows share.
+fn in_scope(scope: &str, status: &str) -> bool {
+    scope == "in" && status != "retired"
+}
+
 impl CatalogRow {
     fn in_scope(&self) -> bool {
-        self.scope == "in" && self.status != "retired"
+        in_scope(&self.scope, &self.status)
     }
 }
 
@@ -53,15 +62,16 @@ fn parse(text: &str) -> Result<Vec<CatalogRow>> {
     let mut lines = text.lines();
     let header: Vec<&str> = lines.next().unwrap_or_default().split('\t').collect();
     let col = |name: &str| header.iter().position(|h| *h == name);
-    let (Some(id), Some(family), Some(ooxml), Some(scope), Some(stage), Some(status)) = (
+    let (Some(id), Some(family), Some(ooxml), Some(web), Some(scope), Some(stage), Some(status)) = (
         col("id"),
         col("family"),
         col("ooxml"),
+        col("web"),
         col("scope"),
         col("stage"),
         col("status"),
     ) else {
-        bail!("the pivot catalog header lacks id, family, ooxml, scope, stage or status");
+        bail!("the pivot catalog header lacks id, family, ooxml, web, scope, stage or status");
     };
     lines
         .filter(|l| !l.is_empty())
@@ -78,6 +88,7 @@ fn parse(text: &str) -> Result<Vec<CatalogRow>> {
                 id: get(id)?,
                 family: get(family)?,
                 ooxml: get(ooxml)?,
+                web: get(web)?,
                 scope: get(scope)?,
                 stage: get(stage)?,
                 status: get(status)?,
@@ -92,8 +103,14 @@ pub struct FeatureRow {
     pub id: String,
     pub family: String,
     pub ooxml: String,
+    /// The catalog's `web` column.
+    #[serde(default)]
+    pub web: String,
     pub scope: String,
     pub stage: String,
+    /// The catalog's `status` column.
+    #[serde(default)]
+    pub status: String,
     /// Excel-evidence pivot cells of the cases that name this id.
     pub cells: usize,
     /// Of those, the passing ones.
@@ -103,6 +120,14 @@ pub struct FeatureRow {
     pub cases: Vec<String>,
     /// In scope with no cell: the row is not measured yet.
     pub uncovered: bool,
+}
+
+impl FeatureRow {
+    /// In M16's scope: `in` and not retired.
+    #[must_use]
+    pub fn in_scope(&self) -> bool {
+        in_scope(&self.scope, &self.status)
+    }
 }
 
 /// The report's `pivot_features` section.
@@ -166,8 +191,10 @@ pub fn summarize(catalog: &[CatalogRow], cases: &[CaseResult]) -> PivotFeatures 
                 id: r.id.clone(),
                 family: r.family.clone(),
                 ooxml: r.ooxml.clone(),
+                web: r.web.clone(),
                 scope: r.scope.clone(),
                 stage: r.stage.clone(),
+                status: r.status.clone(),
                 cells: tally.cells,
                 passed: tally.passed,
                 cases,
@@ -184,7 +211,7 @@ pub fn write_markdown(features: &PivotFeatures, md: &mut String) {
     if features.rows.is_empty() {
         return;
     }
-    let in_scope: Vec<&FeatureRow> = features.rows.iter().filter(|r| r.scope == "in").collect();
+    let in_scope: Vec<&FeatureRow> = features.rows.iter().filter(|r| r.in_scope()).collect();
     let _ = writeln!(
         md,
         "## Pivot features\n\nOne row per in-scope pivot catalog id (T-4126, eval/catalog/pivot-features.tsv): \

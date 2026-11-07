@@ -1631,8 +1631,8 @@ about 50 near 100 and 317 at `POISSON(16,510,TRUE)`). Over the 32 adjacent doubl
 drifts about 2 ulp a step and jumps by 64 ulp, one ulp of a number near |ln Q| = 92.
 
 Excel's far upper tail (T-3269; its subnormal results are flushed except at df 2 / k = 0, numbers.md "Subnormal results become 0", T-3638). Rule: at shapes 3/2 to 11 (POISSON's cdf at k from 1 to 10, CHISQ.DIST.RT and
-CHIDIST at df 3 to 22), for 30 < x <= 600, Excel's Q(a, x) is Stirling's ratio prefactor, sqrt(a / 2 pi) exp(a ln(x/a)
-+ (a - x) - correction(a)), the form T-2638 found above shape 20 away from the mode, times the continued fraction; at
+CHIDIST at df 3 to 22), for 30 < x <= 600, Excel's Q(a, x) is Stirling's prefactor, sqrt(a / 2 pi) exp(-B -
+correction(a)) with Loader's direct deviance B = a ln(a/x) + (x - a) (corrected by T-3469, below), times the continued fraction; at
 and below x = 30 it is the accurate Q at integer shapes. Above shape 11 Excel is not this form next to x = 30 (where it
 switches there is open, T-3469), and past x = 600 it is unmeasured.
 - The switch: probes-numeric/t3269-gamma-tail-switch (x from 26 to 40 by 0.5 at shapes 2 to 4) has Excel correctly
@@ -1678,6 +1678,32 @@ switches there is open, T-3469), and past x = 600 it is unmeasured.
   `CHISQ.DIST.RT(390,39)` +245) though within 5 at others (shapes 1.5, 4.5, 6, 7.5, 9, 10.5, 15.5); no ln(x/a) variant
   tried (Excel's LN, ln x - ln a, x87 ops, -a rlog) changes it. Half-integer shapes below x = 30 are none of the forms
   tried (T-3285).
+- Correction (T-3469): the exponent is not the ratio form a ln(x/a) + (a - x) T-3269 took but -B, Loader's direct
+  deviance B = a ln(a/x) + (x - a) (`density::direct_deviance`, as the far-above-the-mean cdf at shapes 31 to 301,
+  T-4302, and the density at shape 20 and above, T-4308, take it). The two are the same number, but x/a and a/x round differently before the log, and |ln Q| of 30 to 90
+  magnifies that. With B, at the same switch and shape range: gen-m9/43c6227e0ff368c7 A108 `POISSON(5,42,-1)` 25 to
+  0 ulp, gen-m9/5919660b7bb4d195 A80 `POISSON(9,100,..)` and its twin probes-numeric/t1049-chisqdistrt A28 72 to 0,
+  t3269-shape6-misses A46 `POISSON(5,38,TRUE)` 26 to 0, A67 and A68 (and their twins t2561-chisq-dist-rt-past-edge
+  R!A73, A75) 129 and 189 to 2, t3284-gamma-deep-upper-tail A165 and A166 (x / a = 10) 90 to 1, A69 and A70
+  `POISSON(3,40,TRUE)` 28 to 0. So the shape-6 spikes and the x / a = 10 misses were this one rounding, not
+  something tied to that shape or that x. On the whole eval (main a300350e against the change, per cell) 13 cells
+  are fixed, 29 more are closer and none is farther. Still off and not this form's rounding: t3269-shape6-misses A69
+  `POISSON(4,42,TRUE)` (shape 5, 6 ulp), t3269-fresh-sweep-2 A173 `CHISQ.DIST.RT(69.988,3)` and A233
+  `CHISQ.DIST.RT(61.3502,3)` (shape 3/2, 17 and 21 ulp), and gen-m9/caa1eed48b1883fe A59 `CHIDIST(100,9)` (1 ulp).
+  The x / a = 10 cells above shape 11 (A183, A184, 5 ulp) are outside the form's range. Decision 0188 R4 (the
+  T-3469 Outcome): on T-3269's hold-out 27 cells closer and none farther than the ratio form, and on a fresh sweep
+  (probes-numeric/t3469-fresh-sweep-3, 200 cells) 4 closer and none farther; every cell inside the Gate A envelope.
+  That sweep adds shape-3/2 misses at x 30.9 to 33.3 (A29, A144, A174, 18 to 28 ulp; T-4954) and cells past x = 600
+  and above shape 11 where Excel is not the accurate kernel (12 to 901 ulp; T-3640).
+- Quirk (T-3469): at shapes 3 to 11 past x = 30 Excel's Q and its density take different exponents for the same
+  Stirling prefactor. Q's far tail (shapes 3/2 to 11, 30 < x <= 600) is -B, the direct deviance, above; the density
+  below shape 20 above the mode (x > 1.4a) keeps the ratio form a ln(x/a) + (a - x) (`density::density_with`,
+  `excel_ratio_exponent`): `CHISQ.DIST(40,10,FALSE)` is Excel's 6.870512074795199E-6 bit for bit with the ratio
+  form, and in T-3147's fit Loader's saddle point (R's `dpois_raw`, whose deviance far from the mode is this direct
+  one) was never more often exact than the ratio form ("Found in T-3147" above). Only at shape 20 and above does
+  the density take the direct deviance too (T-4308). So at shapes 3 to 11 above 1.4a and past x = 30 Excel's pdf and
+  Q are not one prefactor's two uses; the density's T-3147 evidence predates this correction and was not re-scored
+  with the direct deviance (UNVERIFIED for the density).
 
 ## HYPGEOM.DIST: per-call cap and lifting (T-1873)
 Rule: HYPGEOM.DIST and HYPGEOMDIST lift every argument over an array and over a two-cell range on the formula's own rows,
@@ -6821,6 +6847,7 @@ error (`QUARTILE.EXC(A1,NA())` `#N/A`, `QUARTILE.EXC(A1,1/0)` `#DIV/0!`, `QUARTI
 TRUE stays the one value 1 ("QUARTILE(TRUE,1)", but `QUARTILE.EXC(TRUE,1)` is `#NUM!` for one value). PERCENTRANK of it is
 `#N/A` and `MEDIAN(A1)` `#NUM!`. So `QUARTILE.EXC(Data!D7,HYPGEOMDIST(2,3,7,2^32))` with D7 TRUE is `#NUM!`
 (gen-m9/38e4fc309fe199ea A5).
+T-2605 (probes/t2605-single-boolean-cell, excel-graph, 2026-11-07, 41 cells) confirms FALSE reads the same as TRUE, and for every quart/k tried (`QUARTILE(A1,0/1/4/7)`, `PERCENTILE(A1,0/7)`, `PERCENTILE.EXC(A1,0.5)`): `#NUM!`. PERCENTRANK, `.INC` and `.EXC` of a boolean, an empty or a text cell are `#N/A` with significance 0, 2 or omitted: empty data comes before the significance check.
 Evidence: probes/t2429-quartile-exc-no-number A1-A24 (excel-graph, 2026-10-25).
 Ours: since T-2429 (`percentile_numbers`); `#VALUE!` before.
 Status: VERIFIED (excel-graph)
@@ -7017,7 +7044,7 @@ stays the second shape, is a number on both sides (5.85776711227727E-157) and so
 - It explains all 12 `#NUM!` cells of the Gate A class "`#NUM!` at a huge alpha" (alpha 5.1E+161 to 4.1E+296) and 12
   of the 13 BETAINV/s1 cells (A180:A190, A193; alpha 4.2E+154 to 1.1E+303, beta from 2E-266 to 2.7E+221, so also
   where the true quantile is interior, A188 at about 0.989, or tiny, A187 and A189 near a/(a + b)).
-- Not this rule: with beta above 1 Excel is `#NUM!` far lower. `BETA.INV(1E-10,a,10)` is 0.9999999999999956 at
+- Not this rule: with beta above 1 Excel is `#NUM!` far lower, where Loader's n - k vanishes (T-4713, the next entry). `BETA.INV(1E-10,a,10)` is 0.9999999999999956 at
   a = 1E+16 and `#NUM!` from 1E+18 (where AS 109's start pp/(pp + qq exp(2w)) rounds to 1), but `BETA.INV(0.1,a,2)` is
   `#NUM!` from 1E+16, where that start is 0.9999999999999996 and the quantile about 1 - 3.9E-16, so "the start rounds
   to 1" is refuted as the rule; BETAINV/s1 A179 (alpha 1.55E+145, beta 4.2E+128) is in this class (T-4713).
@@ -7032,9 +7059,36 @@ before each fill (task file). Fills with `BETA.INV(0.1,alpha,1E+100)` at those a
 retries exhausted).
 Ours: `#NUM!` from the cut since T-3862 (functions/statistical/beta.rs `first_shape_square_overflows`); below it
 1 - 2^-53 where Excel has 0.999999 or 1 - 1/e, and 5.888648679911079E-157 where Excel has 5.85776711227727E-157
-(T-4700); a number where beta is above 1 (T-4713).
+(T-4700); `#NUM!` where beta is above 1 and Loader's n - k vanishes since T-4713.
 Status: VERIFIED (excel-graph) for the cut; the expression that squares pp UNVERIFIED
 Tasks: T-3862, T-4713, T-4700
+
+## BETA.INV and BETA.DIST's density are #NUM! where Loader's n - k is not positive (T-4713)
+Rule: with both shapes above 1, BETA.DIST(x, a, b, FALSE) is `#NUM!` at every x where its Loader counts
+k = fl(a - 1), n = fl(fl(a + b) - 2) leave nk = fl(n - k) at 0 or below (its LN(nk) has no value); BETA.INV and
+BETAINV are `#NUM!` at every p on exactly those shapes after AS 109's flip ((alpha, beta) for p up to 1/2,
+(beta, alpha) above it), as their Newton step takes that density. nk only vanishes from a = 2^53, where a - 1 and
+a + b - 2 round onto the same double (or past each other: nk = -4 at `BETA.INV(0.4,2.23872113856835E+16,1.5)`), so
+the cut in alpha is ragged: `BETA.INV(0.1,a,2)` is `#NUM!` at a = 9.12E+15, 9.33E+15 and from 1E+16 to 1.78E+16 but
+a number at 9.55E+15, 9.77E+15 and 1.82E+16 to 1.91E+16, row for row where `BETA.DIST(1-2^-51,a,2,FALSE)` is.
+- Evidence: probes/t4713-beta-inv-cut-pieces (H1:H41 against K1:K41, alpha 10^15.9 to 10^16.3 by 10^0.01; A to D
+  above the first `#NUM!`), probes/t4713-beta-inv-beta-above-1-cut (40 rows a decade at four (p, beta) pairs, the
+  flipped p = 0.9, beta = 1), probes/t3862-beta-inv-sqrt-dbl-max G1:H25 and t3862-beta-inv-huge-alpha D1:D11
+  (excel-graph, 2026-11-07; predictions committed before each fill, task file). nk at or below 0 predicts `#NUM!` on
+  469 of the 469 BETA.INV cells of these cases with both shapes above 1 below the sqrt(DBL_MAX) cut, and on 41 of 41
+  densities; Gate A accuracy/BETAINV/s1 A179 (alpha 1.55E+145, beta 4.23E+128: fl(a + b) = a) is the same rule.
+- Refuted on the way: the true quantile's 1 - x below a threshold (`BETA.INV(0.1,a,2)` is the same double
+  1 - 2^-51 at a = 8.4E+15, 9.4E+15 and the `#NUM!` 1E+16); the start rounding to 1 (T-3862).
+- The flipped orientation is Excel's: `BETA.INV(0.9,a,2)` (k = 1, nk about a) is a number at every a from 1E+15 to
+  1E+16, where the unflipped counts vanish on most rows.
+- In passing: below the cut Excel's BETA.INV at these shapes is often AS 109's start pp/(pp + qq exp(2w)) unmoved,
+  bit for bit (every row of t4713-beta-inv-beta-above-1-cut A and C), and the moved root elsewhere (most of B and D);
+  ours is the crossing, within an ulp or two near 1. `BETA.INV(0.1,a,1)` is 0.999999 from a = 5.6E+16 (F12:F17, the
+  1 - 1E-6 cap T-4700 has at a tiny beta) and `BETA.INV(0.9,1E+16,2)` is 1 where ours is `#NUM!` (E41): T-4958.
+Ours: functions/statistical/loader.rs `beta_density_counts_vanish`, taken by beta.rs's density and by
+`beta_quantile` (`newton_density_vanishes`).
+Status: VERIFIED (excel-graph)
+Tasks: T-4713, T-4958
 
 ## F.INV.RT saturates at 3.696066238512854E+150/df1 in the far tail (T-2435)
 Rule: for a probability far in the tail and a df2 below 2, Excel's F quantile search stops at a

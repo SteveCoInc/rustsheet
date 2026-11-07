@@ -239,6 +239,7 @@ fn load_package<R: Read + Seek>(
         archive,
         &rels,
         &workbook.pivot_caches,
+        &workbook.slicer_caches,
         &pivot_sheets,
         date_system,
     );
