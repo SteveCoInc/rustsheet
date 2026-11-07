@@ -111,9 +111,17 @@ pub(crate) fn rename_sheet_in_node(
 /// Points every reference of `node` written without a sheet prefix at the sheet `to`. A
 /// D-function's computed criterion reads its unqualified references on the database's sheet, not
 /// its own (probes/db-computed-criteria-cross-sheet, criteria.md "D* computed criteria and an
-/// unknown header in the gen-m9 database sweep (T-2258)").
+/// unknown header in the gen-m9 database sweep (T-2258)"). A structured reference names its
+/// table and keeps reading the table's sheet: `=DbT[@Col]<0` on Db over a database on Data reads
+/// Db (probes/t3002-db-computed-criteria-absolute-mixed Calc B13:E13). The walk does not enter
+/// one ([`Node::push_children_mut`]), nor a 3-D span, whose sheets are written; an explicit stack
+/// keeps it off the call stack.
 pub(crate) fn retarget_unqualified_references(node: &mut Node, to: u32) {
-    for_each_sheet_reference_mut(node, &mut |node| {
+    let mut pending = vec![node];
+    while let Some(node) = pending.pop() {
+        if matches!(node, Node::SheetSpanKind { .. }) {
+            continue;
+        }
         if let Node::ReferenceKind {
             sheet_name: None,
             sheet_index,
@@ -123,16 +131,12 @@ pub(crate) fn retarget_unqualified_references(node: &mut Node, to: u32) {
             sheet_name: None,
             sheet_index,
             ..
-        }
-        | Node::ThisRowKind {
-            sheet_name: None,
-            sheet_index,
-            ..
         } = node
         {
             *sheet_index = to;
         }
-    });
+        node.push_children_mut(&mut pending);
+    }
 }
 
 /// Writes `sheet` as the prefix of every reference of `node` written without one, so the text

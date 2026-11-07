@@ -181,14 +181,49 @@ impl Node {
     /// step 2 (T-1699). For a formula with no cell of its own, a defined name's body. An explicit
     /// stack keeps the walk off the call stack.
     pub(crate) fn lower_this_rows_at(&mut self, row: i32) {
+        self.fix_cell_row(row, false);
+    }
+
+    /// Whether the tree reads the row of the cell that evaluates it: a `ROW()` with no argument,
+    /// or a `#This Row` structured reference. [`Node::pin_cell_row`] rewrites these.
+    pub(crate) fn reads_cell_row(&self) -> bool {
+        self.contains_node(|node| match node {
+            Node::FunctionKind {
+                kind: Function::Row,
+                args,
+            } => args.is_empty(),
+            Node::StructuredReferenceKind { lowered, .. } => {
+                matches!(**lowered, Node::ThisRowKind { .. })
+            }
+            _ => false,
+        })
+    }
+
+    /// Fixes what [`Node::reads_cell_row`] finds to `row`, so the tree reads it from any
+    /// evaluating cell: every `ROW()` with no argument becomes the number `row`, and every
+    /// `#This Row` reference its area on `row` ([`Node::lower_this_rows_at`]). A D-function's
+    /// computed criterion runs for each record with its relative references moved to that
+    /// record, yet these stay the criteria cell's (probes/t3002-db-computed-criteria-absolute-mixed
+    /// Calc B6:E14, criteria.md "D* computed criteria"). An explicit stack keeps the walk off the
+    /// call stack.
+    pub(crate) fn pin_cell_row(&mut self, row: i32) {
+        self.fix_cell_row(row, true);
+    }
+
+    /// [`Node::lower_this_rows_at`], and with `row_calls` [`Node::pin_cell_row`].
+    fn fix_cell_row(&mut self, row: i32, row_calls: bool) {
         let mut pending = vec![self];
         while let Some(node) = pending.pop() {
-            let area = match node {
+            let pinned = match node {
+                Node::FunctionKind {
+                    kind: Function::Row,
+                    args,
+                } if row_calls && args.is_empty() => Some(Node::NumberKind(f64::from(row))),
                 Node::StructuredReferenceKind { lowered, .. } => lowered.this_row_at(row),
                 _ => None,
             };
-            if let Some(area) = area {
-                *node = area;
+            if let Some(pinned) = pinned {
+                *node = pinned;
                 continue;
             }
             node.push_children_mut(&mut pending);
