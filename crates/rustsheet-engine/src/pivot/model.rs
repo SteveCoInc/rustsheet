@@ -39,6 +39,11 @@ pub struct PivotTable {
     /// The pivot-wide layout flags and captions.
     pub options: PivotOptions,
     /// The definition's elements and attributes the model does not read, verbatim.
+    ///
+    /// The export (T-4176) writes each entry back into the part as it is, unescaped and
+    /// unchecked, so an entry must be XML the importer captured from a definition part (or a
+    /// copy of one): well-formed, with its values already escaped. Nothing else may add one; a
+    /// pivot made through the API holds none.
     pub opaque: Vec<OpaqueEntry>,
 }
 
@@ -403,24 +408,35 @@ pub enum Aggregate {
     VarP,
 }
 
+/// `ST_DataConsolidateFunction`'s names of the functions, in the schema's order.
+const CONSOLIDATE_NAMES: [(&str, Aggregate); 11] = [
+    ("sum", Aggregate::Sum),
+    ("count", Aggregate::Count),
+    ("average", Aggregate::Average),
+    ("max", Aggregate::Max),
+    ("min", Aggregate::Min),
+    ("product", Aggregate::Product),
+    ("countNums", Aggregate::CountNums),
+    ("stdDev", Aggregate::StdDev),
+    ("stdDevp", Aggregate::StdDevP),
+    ("var", Aggregate::Var),
+    ("varp", Aggregate::VarP),
+];
+
 impl Aggregate {
     /// The function a `dataField@subtotal` (`ST_DataConsolidateFunction`) names.
     #[must_use]
     pub fn from_consolidate_name(name: &str) -> Option<Self> {
-        Some(match name {
-            "sum" => Self::Sum,
-            "count" => Self::Count,
-            "average" => Self::Average,
-            "max" => Self::Max,
-            "min" => Self::Min,
-            "product" => Self::Product,
-            "countNums" => Self::CountNums,
-            "stdDev" => Self::StdDev,
-            "stdDevp" => Self::StdDevP,
-            "var" => Self::Var,
-            "varp" => Self::VarP,
-            _ => return None,
-        })
+        let mut names = CONSOLIDATE_NAMES.iter();
+        names.find(|(n, _)| *n == name).map(|(_, f)| *f)
+    }
+
+    /// The `dataField@subtotal` name of the function, what [`Aggregate::from_consolidate_name`]
+    /// reads.
+    #[must_use]
+    pub fn consolidate_name(self) -> &'static str {
+        let mut names = CONSOLIDATE_NAMES.iter();
+        names.find(|(_, f)| *f == self).map_or("sum", |(n, _)| *n)
     }
 
     /// Excel's word for the function: a new data field's caption starts with it (`Sum of Sales`,
@@ -466,9 +482,40 @@ pub enum ShowDataAs {
     Index,
 }
 
+/// `ST_ShowDataAs`'s names, in the schema's order.
+const SHOW_DATA_AS_NAMES: [(&str, ShowDataAs); 9] = [
+    ("normal", ShowDataAs::Normal),
+    ("difference", ShowDataAs::Difference),
+    ("percent", ShowDataAs::Percent),
+    ("percentDiff", ShowDataAs::PercentDiff),
+    ("runTotal", ShowDataAs::RunTotal),
+    ("percentOfRow", ShowDataAs::PercentOfRow),
+    ("percentOfCol", ShowDataAs::PercentOfColumn),
+    ("percentOfTotal", ShowDataAs::PercentOfTotal),
+    ("index", ShowDataAs::Index),
+];
+
+impl ShowDataAs {
+    /// The calculation a `dataField@showDataAs` names.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        let mut names = SHOW_DATA_AS_NAMES.iter();
+        names.find(|(n, _)| *n == name).map(|(_, s)| *s)
+    }
+
+    /// The `dataField@showDataAs` name, what [`ShowDataAs::from_name`] reads.
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        let mut names = SHOW_DATA_AS_NAMES.iter();
+        names
+            .find(|(_, s)| *s == self)
+            .map_or("normal", |(n, _)| *n)
+    }
+}
+
 /// Where in the definition an [`OpaqueEntry`] was read: the typed element it belongs to.
 /// Indices count the elements of that kind in file order.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum OpaqueOwner {
     /// The `pivotTableDefinition` root.
     Definition,
@@ -529,6 +576,17 @@ pub struct OpaqueEntry {
 }
 
 impl OpaqueEntry {
+    /// Whether the entry is the definition's saved `rowItems` or `colItems`: the lines of the
+    /// layout the file's cells show. They describe a pivot only until the engine lays it out
+    /// again, which drops them ([`crate::model::Model::plan_pivot_render`] and the refresh); the
+    /// export (T-4176) writes the engine's lines for a pivot without them.
+    #[must_use]
+    pub fn is_layout_lines(&self) -> bool {
+        self.owner == OpaqueOwner::Definition
+            && matches!(&self.node, OpaqueNode::Element(xml)
+                if matches!(element_name(xml), "rowItems" | "colItems"))
+    }
+
     /// The bytes the entry holds, counted toward the import limits: its text and its own size.
     #[must_use]
     pub fn cost(&self) -> usize {
@@ -588,6 +646,17 @@ impl OpaqueOwner {
             other => other,
         }
     }
+}
+
+/// The local name of verbatim element `xml`'s tag: `rowItems` for `<x:rowItems count="1">`.
+#[must_use]
+pub fn element_name(xml: &str) -> &str {
+    let tag = xml.strip_prefix('<').unwrap_or(xml);
+    let end = tag
+        .find(|c: char| c.is_whitespace() || c == '/' || c == '>')
+        .unwrap_or(tag.len());
+    let name = tag.get(..end).unwrap_or_default();
+    name.rsplit(':').next().unwrap_or(name)
 }
 
 /// Whether verbatim `xml` has an attribute whose local name is `field` or `fld` or ends in one,

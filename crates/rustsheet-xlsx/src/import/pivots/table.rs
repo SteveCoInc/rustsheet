@@ -71,7 +71,7 @@ const ROOT_TYPED: [&str; 20] = [
 /// Excel labels both lines `<item> Count` (`ItemType::Function`). Excel: see
 /// docs/excel-semantics/pivots.md "Which function the countA and count custom subtotals compute"
 /// (probes/t4622-pivot-count-subtotals).
-const SUBTOTAL_FUNCTIONS: [(&str, Aggregate); 11] = [
+pub(crate) const SUBTOTAL_FUNCTIONS: [(&str, Aggregate); 11] = [
     ("sum", Aggregate::Sum),
     ("countA", Aggregate::Count),
     ("avg", Aggregate::Average),
@@ -513,16 +513,11 @@ fn read_data_field(element: &BytesStart, limits: &ImportLimits) -> Result<DataFi
     let caption = attribute(element, "name")?.unwrap_or_default();
     limits.check_text(&caption)?;
     let show_data_as = match attribute(element, "showDataAs")?.as_deref() {
-        None | Some("normal") => ShowDataAs::Normal,
-        Some("difference") => ShowDataAs::Difference,
-        Some("percent") => ShowDataAs::Percent,
-        Some("percentDiff") => ShowDataAs::PercentDiff,
-        Some("runTotal") => ShowDataAs::RunTotal,
-        Some("percentOfRow") => ShowDataAs::PercentOfRow,
-        Some("percentOfCol") => ShowDataAs::PercentOfColumn,
-        Some("percentOfTotal") => ShowDataAs::PercentOfTotal,
-        Some("index") => ShowDataAs::Index,
-        Some(other) => return skip(format!("unknown showDataAs {:?}", shown(other))),
+        None => ShowDataAs::Normal,
+        Some(name) => match ShowDataAs::from_name(name) {
+            Some(show) => show,
+            None => return skip(format!("unknown showDataAs {:?}", shown(name))),
+        },
     };
     Ok(DataField {
         caption,

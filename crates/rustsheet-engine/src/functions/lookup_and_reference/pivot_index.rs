@@ -378,6 +378,7 @@ mod tests {
     fn cache() -> PivotCache {
         PivotCache {
             source: None,
+            source_name: None,
             fields: vec![CacheField {
                 name: "Group".to_string(),
                 items: vec![CacheItem::Missing; 3],
