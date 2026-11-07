@@ -646,6 +646,7 @@ impl Model {
             );
         }
         self.refuse_table_off_sheet(sheet, column, column_count, false)?;
+        self.refuse_data_table_split(sheet, false, column, column_count)?;
         // Written so it cannot overflow: `column_count` can be any `i32` (T-2896).
         let max_column = self.workbook.worksheet(sheet)?.dimension().max_column;
         if !utils::is_valid_column_number(column) || column_count > LAST_COLUMN - max_column {
@@ -656,9 +657,7 @@ impl Model {
         }
         self.displace_pivots(sheet, PivotLines::Columns, column, column_count)?;
         self.reset_dynamic_array_spills(sheet)?;
-        // Merged ranges are remapped at the end; take them out so the cell moves
-        // (which go through `set_user_input`) do not trip the covered-cell guard.
-        let merged_cells = std::mem::take(&mut self.workbook.worksheet_mut(sheet)?.merged_cells);
+        let guards = self.take_write_guards(sheet)?;
         let kept = self.column_edit_kept(sheet, column, column_count);
         let worksheet = self.workbook.worksheet(sheet)?;
         let all_rows = worksheet.sheet_data.rows();
@@ -684,7 +683,7 @@ impl Model {
         });
 
         // Merged ranges shift right or grow when columns are inserted inside them
-        self.workbook.worksheet_mut(sheet)?.merged_cells = merged_cells;
+        self.restore_write_guards(sheet, guards, (false, column, column_count))?;
         displace_merged_cells(
             self.workbook.worksheet_mut(sheet)?,
             |first_row, first_column, last_row, last_column| {
@@ -782,11 +781,10 @@ impl Model {
                 "Cannot delete columns because that would break an array formula".to_string(),
             );
         }
+        self.refuse_data_table_split(sheet, false, column, -column_count)?;
         self.displace_pivots(sheet, PivotLines::Columns, column, -column_count)?;
         self.reset_dynamic_array_spills(sheet)?;
-        // Merged ranges are remapped at the end; take them out so the cell moves
-        // (which go through `set_user_input`) do not trip the covered-cell guard.
-        let merged_cells = std::mem::take(&mut self.workbook.worksheet_mut(sheet)?.merged_cells);
+        let guards = self.take_write_guards(sheet)?;
         // first column being deleted
         let column_start = column;
         // last column being deleted
@@ -828,7 +826,7 @@ impl Model {
         });
 
         // Merged ranges shrink or shift left; fully deleted ones are removed
-        self.workbook.worksheet_mut(sheet)?.merged_cells = merged_cells;
+        self.restore_write_guards(sheet, guards, (false, column, -column_count))?;
         displace_merged_cells(
             self.workbook.worksheet_mut(sheet)?,
             |first_row, first_column, last_row, last_column| {
@@ -1009,6 +1007,7 @@ impl Model {
             return Err("Cannot insert rows because that would break an array formula".to_string());
         }
         self.refuse_table_row_insert(sheet, row, row_count)?;
+        self.refuse_data_table_split(sheet, true, row, row_count)?;
         // Written so it cannot overflow: `row_count` can be any `i32` (T-2896).
         let max_row = self.workbook.worksheet(sheet)?.dimension().max_row;
         if !utils::is_valid_row(row) || row_count > LAST_ROW - max_row {
@@ -1020,9 +1019,7 @@ impl Model {
         let (disp, kept) = self.row_edit(sheet, row, row_count);
         self.displace_pivots(sheet, PivotLines::Rows, row, row_count)?;
         self.reset_dynamic_array_spills(sheet)?;
-        // Merged ranges are remapped at the end; take them out so the cell moves
-        // (which go through `set_user_input`) do not trip the covered-cell guard.
-        let merged_cells = std::mem::take(&mut self.workbook.worksheet_mut(sheet)?.merged_cells);
+        let guards = self.take_write_guards(sheet)?;
         // Move cells
         let worksheet = &self.workbook.worksheet(sheet)?;
         let mut all_rows = worksheet.sheet_data.rows();
@@ -1065,7 +1062,7 @@ impl Model {
         });
 
         // Merged ranges shift down or grow when rows are inserted inside them
-        self.workbook.worksheet_mut(sheet)?.merged_cells = merged_cells;
+        self.restore_write_guards(sheet, guards, (true, row, row_count))?;
         displace_merged_cells(
             self.workbook.worksheet_mut(sheet)?,
             |first_row, first_column, last_row, last_column| {
@@ -1112,6 +1109,7 @@ impl Model {
         row_count: i32,
     ) -> Result<Vec<RewrittenCell>, String> {
         self.check_delete_rows(sheet, row, row_count)?;
+        self.refuse_data_table_split(sheet, true, row, -row_count)?;
         if let Some(area) = self.kept_data_row(sheet, row, row_count) {
             // A table keeps its first data row, cleared, and loses its other data rows
             // (Model::kept_data_row, T-2338, T-3259; `UserModel::delete_rows` records the same two
@@ -1127,9 +1125,7 @@ impl Model {
         let (disp, kept) = self.row_edit(sheet, row, -row_count);
         self.displace_pivots(sheet, PivotLines::Rows, row, -row_count)?;
         self.reset_dynamic_array_spills(sheet)?;
-        // Merged ranges are remapped at the end; take them out so the cell moves
-        // (which go through `set_user_input`) do not trip the covered-cell guard.
-        let merged_cells = std::mem::take(&mut self.workbook.worksheet_mut(sheet)?.merged_cells);
+        let guards = self.take_write_guards(sheet)?;
         // Move cells
         let worksheet = &self.workbook.worksheet(sheet)?;
         let all_rows = worksheet.sheet_data.rows();
@@ -1181,7 +1177,7 @@ impl Model {
         });
 
         // Merged ranges shrink or shift up; fully deleted ones are removed
-        self.workbook.worksheet_mut(sheet)?.merged_cells = merged_cells;
+        self.restore_write_guards(sheet, guards, (true, row, -row_count))?;
         displace_merged_cells(
             self.workbook.worksheet_mut(sheet)?,
             |first_row, first_column, last_row, last_column| {
@@ -1705,6 +1701,7 @@ impl Model {
         {
             return Err("Cannot move columns because that would split a merged cell".to_string());
         }
+        self.refuse_data_table_move(sheet, false, (column, group_end, delta))?;
         self.move_pivots(sheet, PivotLines::Columns, column, group_end, delta)?;
         self.reset_dynamic_array_spills(sheet)?;
 
@@ -1779,6 +1776,7 @@ impl Model {
         {
             return Err("Cannot move rows because that would split a merged cell".to_string());
         }
+        self.refuse_data_table_move(sheet, true, (row, group_end, delta))?;
         self.move_pivots(sheet, PivotLines::Rows, row, group_end, delta)?;
         self.reset_dynamic_array_spills(sheet)?;
 

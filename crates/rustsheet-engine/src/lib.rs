@@ -71,6 +71,7 @@ mod circular;
 mod conditional_formatting;
 mod constants;
 mod cut_paste;
+mod data_table_edits;
 mod data_table_memo;
 mod data_table_types;
 mod data_tables;
