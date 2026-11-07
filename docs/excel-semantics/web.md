@@ -137,6 +137,32 @@ Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674;
 Max, Min, Product, Var and StdDev pivots are unprobed (UNVERIFIED: the worksheet functions' algorithms over the picked numbers).
 Structural edits: see "Pivot tables and structural edits" below. xlsx export writes pivots (T-4176; pivots.md "Excel for the web opens engine-exported pivot parts"), except a grouped cache, dropped with its pivots (T-4734).
 
+## GETPIVOTDATA error arguments (T-4006)
+Rule: against a live compact-form pivot, an error argument of GETPIVOTDATA gives:
+- `data_field` typed as an error literal: that error (`#N/A,Pivot!$H$3` is `#N/A`; `#NULL!,Pivot!$H$3,2,"C"` is
+  `#NULL!`). The same error read from a cell is **`#REF!`**, a miss like an unknown name
+  (`Data!G9,Pivot!$H$3,"Product",Data!G1` with Data!G9 `#DIV/0!` is `#REF!`).
+- `field`, typed or read from a cell: that error (`"Units",Pivot!$H$3,#NAME?,2` is `#NAME?`;
+  `Data!G1,Pivot!$H$3,Data!G9,"C"` is `#DIV/0!`).
+- `item`, typed or read from a cell: `#REF!`, like any item not in the field
+  (`"Units",Pivot!$H$3,"Product",#DIV/0!`).
+- Order: a field error beats an item error (`#REF!,#NAME?` is `#REF!`; `Data!G9,Data!G9` is `#DIV/0!`) and a
+  referenced data_field error (`Data!G9,Pivot!$H$3,Data!G9,"A"` is `#DIV/0!`); a typed data_field error beats an
+  item error (`#NULL!,Pivot!$H$3,"Product",#VALUE!` is `#NULL!`). A typed data_field error against a field error
+  is unseparated (both `#NULL!` in the one cell that has both).
+- The other non-text `data_field` classes are `#REF!` with no other miss in the call: 0, -1, 0.5, `TRUE`, `"2.5"`
+  and the 2 x 2 range `Data!A1:B2` (`GETPIVOTDATA(0,Pivot!$H$3)`), and 0, -2.5, 1.5, `"12"`, `FALSE` read from a
+  cell or the range `Data!C3:D4`, against the whole pivot with a valid pair (one `#REF!` each, no spill seen).
+Evidence: gen-m6 16b67941f34e0346, ccc550562ee5fd06, 37eb2ebaf9386ade and 2963992505456e99 (excel-graph,
+2026-11-07, T-4006; `--policy arg-pairs`). Each case's Calc!A1 is a valid control,
+`GETPIVOTDATA("Units",Pivot!$H$3,"Product","A")`, which Excel answers 6.75, so the pivot was live. Cells: typed
+data_field 16b67941f34e0346 Calc!A34, A562; referenced data_field 37eb2ebaf9386ade Calc!A43 and 16b67941f34e0346
+Calc!A37; field 2963992505456e99 Calc!A175 and 16b67941f34e0346 Calc!A97; item 37eb2ebaf9386ade Calc!A298; order
+2963992505456e99 Calc!A223, A226, ccc550562ee5fd06 Calc!A16, A13 and 37eb2ebaf9386ade Calc!A88; other classes
+16b67941f34e0346 Calc!A4 to A43.
+Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081). Ours: the field and referenced-data_field
+rules are T-4823 (65 cells); the rest matches.
+
 ## GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)
 Probed (probes/t4248-getpivotdata-recordless-item, excel-graph): the cache lists "North" as a shared item no record uses
 (`refreshOnLoad` off; UNVERIFIED: that Excel drops the item on a refresh, and the `missingItemsLimit` link), over Data East 10, West 20, East 5.

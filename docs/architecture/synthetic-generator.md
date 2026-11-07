@@ -684,7 +684,13 @@ and coercion order live, and random draws rarely hit a given pair. The policy se
 - **Skipped pairs.** A parameter with a `hard` domain is never forced (outside it Excel refuses the
   workbook, e.g. MUNIT), so its pairs are skipped, as are pairs naming an unknown parameter or class.
   The skipped pairs are named in each of the function's case descriptions and printed on stderr.
-  GETPIVOTDATA (`pivot`) and LAMBDA (`invoke`) are left out: neither is a plain call.
+  LAMBDA (`invoke`) is left out: it is not a plain call.
+- **Pivot queries (T-4006).** A `pivot` function (GETPIVOTDATA) gets the case's own `Pivot` sheet
+  (the T-2396 pivot below, built once per function from its own seeded stream). Every argument the
+  pair does not force is a valid name from that pivot (its data field, its top-left cell, an axis
+  field and one of its items); a forced `range` pivot reference is its top-left cell, then the whole
+  pivot. The field/item pair is passed whenever either is forced, and on the second call otherwise,
+  never one without the other (Excel for the web refuses an odd argument count of 5 or more).
 - **Layout.** One function per case, at most 200 calls, formulas every third row of column A on
   `Calc`, so a 2 × 2 `range` lifted by a value parameter spills into the gap instead of onto the next
   formula. The Data sheet is a 12 × 5 block of generator values plus the class cells. A `dynamic_array`
