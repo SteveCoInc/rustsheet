@@ -467,7 +467,10 @@ pub(crate) fn name_needs_quoting(name: &str) -> bool {
         Some(c) if !(is_letter_name_start(c) || c == '_') => return true,
         Some(_) => {}
     }
-    if chars.any(|c| !(c.is_alphanumeric() || c == '_' || c == '.')) {
+    // A mark after the first character leaves the name unquoted: Excel's FORMULATEXT of a
+    // reference to sheet `a`+U+0301 or `x`+U+20DD, typed quoted, shows no quotes
+    // (probes/t4446-defined-name-characters A20, A22, excel-graph, T-4446).
+    if chars.any(|c| !(c.is_alphanumeric() || is_mark(c) || c == '_' || c == '.')) {
         return true;
     }
     if parse_reference_a1(name).is_some() {

@@ -27,6 +27,10 @@ and eval/baseline/probes.txt:
   two-pass orders (sum of cubed deviations over s³, cubes of z, n/((n-1)(n-2)) placement, var^1.5): none is bit-exact;
   dividing the cube sum by s³ gives ...066066e-15, so the mean or the cube sum is formed differently in Excel. Probe
   more SKEW inputs (excel-probe skill) before fitting.
+- Gap triage 2026-11-07 (origin/main b9ae5216): T-4661's byte-identical refill of the probe gives the same Excel values
+  for the NEGBINOMDIST and SKEW cells. Its two cells count in the M9 exit row, and only T-4661 (M7, a whole-case
+  mention) owned them, so they belong here too:
+  - probes/t2475-stat-subexpressions-refill-1106.case.json (2): P!A417, A520
 
 ## Acceptance criteria
 - [ ] The three probe cells and the two gen-m9 cells leave eval/baseline, no new known-failure lines; each fit is

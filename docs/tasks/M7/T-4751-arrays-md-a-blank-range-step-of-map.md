@@ -3,7 +3,7 @@ id: T-4751
 title: "arrays.md: a blank range step of MAP, SCAN and REDUCE keeps blank elements (ARRAYTOTEXT shows them empty), not 0"
 milestone: M7
 lane: functions-logic
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -26,10 +26,13 @@ only when spilled or read through INDEX, not the number 0.
 - Docs only: no engine change.
 
 ## Acceptance criteria
-- [ ] arrays.md's entry says the step keeps blank elements (ARRAYTOTEXT ", " and ", , ", F25, F29, F37), shown as 0 when
+- [x] arrays.md's entry says the step keeps blank elements (ARRAYTOTEXT ", " and ", , ", F25, F29, F37), shown as 0 when
       spilled and through INDEX (D25:D30, D37:D39, G25, G29, G37).
-- [ ] T-4476's Outcome wording is corrected the same way.
-- [ ] `make check` green; reviewers approve.
+- [x] T-4476's Outcome wording is corrected the same way.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Any engine change: probes/t4476-lambda-range-results passes 81/81.
+
+## Outcome
+Docs only: arrays.md and T-4476's Outcome now say the blank range step keeps blank elements (ARRAYTOTEXT ", " / ", , "), shown as 0 only when spilled or through INDEX. No engine or eval change.

@@ -281,23 +281,23 @@
   "Calc": {
    "A1": {
     "f": "=BESSELJ(2E+5,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A2": {
     "f": "=BESSELJ(5E+4,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A24": {
     "f": "=BESSELJ(1E+6,1E+6+1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A25": {
     "f": "=BESSELJ(1E+5,1E+6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A3": {
     "f": "=BESSELJ(9E+4,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "C1": {
     "f": "=BESSELK(2.5,100001)",
@@ -313,15 +313,15 @@
    },
    "C12": {
     "f": "=BESSELK(25019,1E+6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "C13": {
     "f": "=BESSELK(1E+5,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "C14": {
     "f": "=BESSELK(1E+6,1E+7)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "C15": {
     "f": "=BESSELK(1E-300,100001)",
@@ -385,19 +385,19 @@
    },
    "D1": {
     "f": "=BESSELY(1E+6,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "D2": {
     "f": "=BESSELY(2E+5,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "D3": {
     "f": "=BESSELY(1E+6,1E+6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "D4": {
     "f": "=BESSELY(1E+7,1E+6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "D5": {
     "f": "=BESSELY(800,100001)",

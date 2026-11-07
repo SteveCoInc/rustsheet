@@ -13,6 +13,8 @@
 //! </table>
 //! ```
 
+use std::collections::HashSet;
+
 use rustsheet_engine::{
     expressions::{
         parser::{parse_range, stringify::to_excel_string},
@@ -81,7 +83,8 @@ fn dxf_attribute(name: &str, dxf_id: Option<u32>, dxf_count: usize) -> String {
 
 /// What the totals row holds for a column, as the table part records it: a formula is written as
 /// `totalsRowFunction="custom"` with its `<totalsRowFormula>`, a text cell as `totalsRowLabel`,
-/// and a number, boolean or error constant as `totalsRowFunction="custom"` alone. Excel refuses a
+/// and a number, boolean or error constant, or a value spilled into the cell, as
+/// `totalsRowFunction="custom"` alone. Excel refuses a
 /// table with a totals row whose cells lack it (xlsx-storage.md "Structured references in the
 /// file"), and refuses a constant written as a label or with a `<totalsRowFormula>`; the bare
 /// `custom` loads with the cell kept a constant (excel-graph uploads, 2026-11-06, T-4005;
@@ -119,9 +122,13 @@ fn totals_row_metadata(
             ),
             None => (String::new(), String::new()),
         },
-        Cell::NumberCell { .. } | Cell::BooleanCell { .. } | Cell::ErrorCell { .. } => {
-            (" totalsRowFunction=\"custom\"".to_string(), String::new())
-        }
+        // A value spilled into the totals row from a dynamic array outside it takes the same
+        // bare `custom` as a constant: Excel refuses the file without it and loads it, keeping
+        // the spill, with it (excel-graph, T-4421; xlsx-storage.md "Table parts in the export").
+        Cell::NumberCell { .. }
+        | Cell::BooleanCell { .. }
+        | Cell::ErrorCell { .. }
+        | Cell::SpillCell { .. } => (" totalsRowFunction=\"custom\"".to_string(), String::new()),
         _ => (String::new(), String::new()),
     }
 }
@@ -141,8 +148,21 @@ pub(crate) fn api_filter_column(model: &Model, sheet: u32, table: &Table) -> Opt
     let totals = i32::try_from(table.totals_row_count).ok()?;
     let mut values: Vec<String> = Vec::new();
     let mut blank = false;
-    for row in top.checked_add(1)?..=bottom.checked_sub(totals)? {
-        if model.is_row_hidden(sheet, row).unwrap_or(false) {
+    let first = top.checked_add(1)?;
+    let last = bottom.checked_sub(totals)?;
+    // One pass over the row records, not `Model::is_row_hidden` (a linear scan) per data row, which
+    // is quadratic on a big table (T-4748). The first record of a row decides, as it does there.
+    let mut seen: HashSet<i32> = HashSet::new();
+    let mut hidden: HashSet<i32> = HashSet::new();
+    if let Ok(worksheet) = model.workbook.worksheet(sheet) {
+        for record in &worksheet.rows {
+            if (first..=last).contains(&record.r) && seen.insert(record.r) && record.hidden {
+                hidden.insert(record.r);
+            }
+        }
+    }
+    for row in first..=last {
+        if hidden.contains(&row) {
             continue;
         }
         let text = model

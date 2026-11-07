@@ -2,6 +2,8 @@
 //! reader. Tables matter to evaluation through structured references and through filters
 //! (SUBTOTAL skips filter-hidden rows, functions/subtotal.rs).
 
+use std::collections::HashSet;
+
 use crate::{
     expressions::{
         lexer::LexerMode,
@@ -439,21 +441,34 @@ impl Model {
     /// the tables it changed but kept, as they were before: what its undo restores (T-4652). A
     /// column delete can drop table columns, with their names, formulas and filters, so the
     /// whole table is kept, not only its [`TableExtent`]. Also returns the formula cells it
-    /// rewrote past what re-inserting the columns undoes (T-4668).
+    /// rewrote past what re-inserting the columns undoes (T-4668), and the rows it showed: a
+    /// delete that takes a filtered table's last criterion shows the rows the filter hid (T-4371),
+    /// which the undo hides again.
     pub(crate) fn delete_columns_keeping_tables(
         &mut self,
         sheet: u32,
         column: i32,
         count: i32,
-    ) -> Result<(KeptTables, Vec<RewrittenCell>), String> {
-        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+    ) -> Result<(KeptTables, Vec<RewrittenCell>, Vec<i32>), String> {
+        let worksheet = self.workbook.worksheet(sheet)?;
+        let sheet_name = worksheet.get_name();
+        let hidden: Vec<i32> = (worksheet.rows.iter())
+            .filter(|r| r.hidden)
+            .map(|r| r.r)
+            .collect();
         let before = self.tables_on_sheet(&sheet_name);
         let rewritten = self.delete_columns_rewriting(sheet, column, count)?;
+        let rows = &self.workbook.worksheet(sheet)?.rows;
+        let still: HashSet<i32> = rows.iter().filter(|r| r.hidden).map(|r| r.r).collect();
+        let shown = hidden
+            .into_iter()
+            .filter(|row| !still.contains(row))
+            .collect();
         let tables = &self.workbook.tables;
         let changed = (before.into_iter())
             .filter(|(name, table)| tables.get(name).is_some_and(|now| now != table))
             .collect();
-        Ok((changed, rewritten))
+        Ok((changed, rewritten, shown))
     }
 
     /// Checks everything about `tables` that [`Model::restore_tables_of_sheet`] needs except the

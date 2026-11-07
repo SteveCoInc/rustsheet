@@ -1,9 +1,9 @@
 //! Tables and structured references through the export (SPEC-0016 step 3, T-2196).
 
-use std::fs;
+use std::{fs, time::Instant};
 
 use rustsheet_engine::{
-    types::{CustomFilter, DateGroupItem, Dxf, FilterColumn, FilterCriterion},
+    types::{CustomFilter, DateGroupItem, Dxf, FilterColumn, FilterCriterion, Row},
     Model,
 };
 
@@ -177,6 +177,79 @@ fn totals_row_constants_get_custom_metadata() {
         assert_eq!(
             reloaded.get_formatted_cell_value(0, 3, column).unwrap(),
             value
+        );
+    }
+}
+
+/// A value spilled into the totals row from a dynamic array beside the table gets the same bare
+/// `totalsRowFunction="custom"` as a constant: without it Excel refuses the file, with it Excel
+/// loads it and keeps the spill, and `Sales[[#Totals],[Val]]` reads the spilled value
+/// (excel-graph uploads, 2026-11-07, T-4421; xlsx-storage.md "Table parts in the export"). A
+/// totals cell the spill does not reach keeps no metadata.
+#[test]
+fn a_value_spilled_into_the_totals_row_gets_custom_metadata() {
+    for (formula, val_metadata, cat_total, val_total) in [
+        ("=HSTACK(1,\"y\",\"z\")", true, "y", "z"),
+        ("=SEQUENCE(1,2)", false, "2", "0"),
+    ] {
+        let mut model = new_empty_model();
+        for (row, column, input) in [
+            (1, 2, "Cat"),
+            (1, 3, "Val"),
+            (2, 2, "a"),
+            (2, 3, "1"),
+            (3, 2, "b"),
+            (3, 3, "2"),
+        ] {
+            model
+                .set_user_input(0, row, column, input.to_string())
+                .unwrap();
+        }
+        model
+            .add_table_with_totals(0, "Sales", (1, 2, 4, 3), false, true)
+            .unwrap();
+        // A4 spills over the totals row's B4, and C4 for the three-wide array.
+        for (row, column, input) in [
+            (4, 1, formula),
+            (1, 5, "=Sales[[#Totals],[Val]]"),
+            (2, 5, "=Sales[[#Totals],[Cat]]"),
+            (3, 5, "=ROWS(A4#)*10+COLUMNS(A4#)"),
+        ] {
+            model
+                .set_user_input(0, row, column, input.to_string())
+                .unwrap();
+        }
+        model.evaluate();
+        assert_eq!(model.get_formatted_cell_value(0, 2, 5).unwrap(), cat_total);
+        assert_eq!(model.get_formatted_cell_value(0, 1, 5).unwrap(), val_total);
+        let temp_file_name = "temp_file_test_totals_spill.xlsx";
+        save_to_xlsx(&model, temp_file_name).unwrap();
+        let table_xml = part_text(temp_file_name, "xl/tables/table1.xml");
+        let mut reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+        fs::remove_file(temp_file_name).unwrap();
+
+        assert!(
+            table_xml.contains(r#"name="Cat" totalsRowFunction="custom"></tableColumn>"#),
+            "{table_xml}"
+        );
+        assert_eq!(
+            table_xml.contains(r#"name="Val" totalsRowFunction="custom"></tableColumn>"#),
+            val_metadata,
+            "{table_xml}"
+        );
+        assert!(!table_xml.contains("totalsRowFormula"), "{table_xml}");
+        reloaded.evaluate();
+        assert_eq!(
+            reloaded.get_formatted_cell_value(0, 2, 5).unwrap(),
+            cat_total
+        );
+        assert_eq!(
+            reloaded.get_formatted_cell_value(0, 1, 5).unwrap(),
+            val_total
+        );
+        assert_eq!(
+            reloaded.get_formatted_cell_value(0, 3, 5).unwrap(),
+            if val_metadata { "13" } else { "12" }
         );
     }
 }
@@ -589,7 +662,7 @@ fn a_color_filter_past_the_dxfs_drops_its_dxf_id() {
 
 /// A table filtered by a criterion from its file stays filtered while a criterion is left inside
 /// it, and stops being filtered when a column delete takes the last one, as the export then
-/// writes no filterColumn (T-4003).
+/// writes no filterColumn (T-4003), and shows the rows the filter hid, as Excel does (T-4371).
 #[test]
 fn deleting_the_filtered_column_unfilters_the_table() {
     let mut model = new_empty_model();
@@ -614,12 +687,16 @@ fn deleting_the_filtered_column_unfilters_the_table() {
             },
         }];
     }
+    model.set_row_hidden(0, 3, true).unwrap();
     model.delete_columns(0, 3, 1).unwrap();
     assert!(model.workbook.tables["Sales"].has_filters);
+    assert!(model.is_row_hidden(0, 3).unwrap());
     model.delete_columns(0, 1, 1).unwrap();
     let table = &model.workbook.tables["Sales"];
     assert!(table.filter_columns.is_empty());
     assert!(!table.has_filters);
+    // Excel shows the rows the filter hid (probes/t4371-filtered-table-delete-filtered-column).
+    assert!(!model.is_row_hidden(0, 3).unwrap());
 
     let temp_file_name = "temp_file_test_deleted_filter_column.xlsx";
     save_to_xlsx(&model, temp_file_name).unwrap();
@@ -700,11 +777,14 @@ fn a_calculated_column_keeps_its_column_formula() {
 #[test]
 fn a_calculated_column_formula_follows_row_and_column_edits() {
     type Edit = fn(&mut rustsheet_engine::UserModel) -> Result<(), String>;
-    let cases: [(&str, Edit, &str); 5] = [
+    let cases: [(&str, Edit, &str); 6] = [
         ("=A2*2", |u| u.insert_columns(0, 1, 1), "B2*2"),
         ("=A2*2", |u| u.delete_columns(0, 2, 1), "A2*2"),
         ("=A2*2", |u| u.insert_rows(0, 1, 1), "A3*2"),
         ("=A2*2", |u| u.insert_rows(0, 3, 1), "A2*2"),
+        // A delete of the first data row: the next row's formula moved up, not `#REF!*2`
+        // (t4274-calc-column-delete-row-2, T-4769).
+        ("=A2*2", |u| u.delete_rows(0, 2, 1), "A2*2"),
         (
             "=[@Col]*2",
             |u| u.insert_columns(0, 1, 1),
@@ -741,4 +821,37 @@ fn a_calculated_column_formula_follows_row_and_column_edits() {
             "{typed} case {index}: {table_xml}"
         );
     }
+}
+
+/// The API-filter scan reads the hidden rows in one pass over the row records, not one scan of them
+/// per data row (T-4748): a 100,000-row table with 50,000 hidden row records, which was ~5e9 steps.
+#[test]
+fn the_api_filter_scan_of_a_big_table_is_not_quadratic() {
+    let mut model = new_empty_model();
+    let rows = 100_000;
+    model.set_user_input(0, 1, 1, "Qty".to_string()).unwrap();
+    model
+        .add_table(0, "Big", (1, 1, rows + 1, 1), true)
+        .unwrap();
+    let records = &mut model.workbook.worksheet_mut(0).unwrap().rows;
+    for r in (2..=rows + 1).step_by(2) {
+        records.push(Row {
+            r,
+            height: 14.0,
+            custom_format: false,
+            custom_height: false,
+            s: 0,
+            hidden: true,
+        });
+    }
+    let table = model.workbook.tables["Big"].clone();
+    let start = Instant::now();
+    let column = super::super::tables::api_filter_column(&model, 0, &table).unwrap();
+    // The one pass takes ~0.1 s even in a debug build; the per-row scan took ~2.6 s.
+    assert!(start.elapsed().as_millis() < 1000, "{:?}", start.elapsed());
+    // Only the visible rows are blank (empty cells), so the criterion is just `blank`.
+    let FilterCriterion::Values { values, blank, .. } = column.criterion else {
+        panic!("not a values criterion");
+    };
+    assert!(values.is_empty() && blank);
 }

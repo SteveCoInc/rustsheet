@@ -456,10 +456,11 @@ impl Model {
                     | Function::Vstack),
                 args,
             } => return self.reference_producer(kind, args, cell),
+            // One index into a column of a mixed grid keeps a reference element (T-4701).
             Node::FunctionKind {
                 kind: Function::Index,
                 args,
-            } => self.index_reference(args, cell),
+            } => return self.index_reference_arg(args, cell),
             // A lifted XLOOKUP with a range if_not_found is an array of its hits and that range
             // (SPEC-0014 amendment "Mixed grids"); any other XLOOKUP is its value, as before.
             Node::FunctionKind {

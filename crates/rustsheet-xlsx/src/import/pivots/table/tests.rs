@@ -375,7 +375,7 @@ fn every_attribute_is_typed_or_kept() {
 }
 
 #[test]
-fn a_data_field_shown_as_a_calculation_is_typed_but_its_pivot_still_skipped() {
+fn a_data_field_shown_as_a_calculation_is_typed_and_its_pivot_loads() {
     // probes/t4123-pivot-capture Tabular: `Pct` is % of grand total in format 10.
     let element = BytesStart::from_content(
         r#"dataField name="Pct" fld="2" showDataAs="percentOfTotal" baseField="0" baseItem="0" numFmtId="10""#,
@@ -394,13 +394,77 @@ fn a_data_field_shown_as_a_calculation_is_typed_but_its_pivot_still_skipped() {
     assert_eq!(plain.function, Aggregate::Count);
     assert_eq!((plain.base_field, plain.base_item), (-1, NO_BASE_ITEM));
     assert_eq!(plain.number_format, None);
-    // GETPIVOTDATA does not compute show-values-as yet, so the pivot stays out (T-4161).
-    let (result, _) = read_with(TABULAR_PERCENT, cache(&[2, 3, 6]), usize::MAX);
-    assert_eq!(result.unwrap_err(), "a data field shown as a calculation");
-    let sum_only = TABULAR_PERCENT.replace(r#" showDataAs="percentOfTotal""#, "");
-    let pivot = read(&sum_only, &[2, 3, 6]);
+    // The engine shows the values as the mode says (T-4163), so the pivot loads.
+    let pivot = read(TABULAR_PERCENT, &[2, 3, 6]);
+    assert_eq!(
+        pivot.data_fields[1].show_data_as,
+        ShowDataAs::PercentOfTotal
+    );
     assert_eq!(pivot.data_fields[1].number_format, Some(10));
     assert_eq!(pivot.data_fields[2].function, Aggregate::Count);
+    // An x14 mode is only the extension's to name.
+    let x14 = TABULAR_PERCENT.replace("percentOfTotal", "rankAscending");
+    let (result, _) = read_with(&x14, cache(&[2, 3, 6]), usize::MAX);
+    assert_eq!(result.unwrap_err(), r#"unknown showDataAs "rankAscending""#);
+}
+
+#[test]
+fn an_x14_show_values_as_mode_is_read_from_the_kept_extension() {
+    // As the case builder and Excel write it (pivots.md "Show-values-as modes as Excel for the
+    // web renders them"): `pivotShowAs` in the x14 dataField extension, no `showDataAs`.
+    let ext = r#"<extLst><ext uri="{E15A36E0-9728-4e99-A89B-3F7291B0FE68}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"><x14:dataField pivotShowAs="percentOfParent"/></ext></extLst>"#;
+    let xml = TABULAR_PERCENT.replace(
+        r#"<dataField name="Pct" fld="2" showDataAs="percentOfTotal" baseField="0" baseItem="0" numFmtId="10"/>"#,
+        &format!(r#"<dataField name="Pct" fld="2" baseField="0" baseItem="0">{ext}</dataField>"#),
+    );
+    let pivot = read(&xml, &[2, 3, 6]);
+    assert_eq!(
+        pivot.data_fields[1].show_data_as,
+        ShowDataAs::PercentOfParent
+    );
+    assert_eq!(pivot.data_fields[0].show_data_as, ShowDataAs::Normal);
+    // The extension is still kept verbatim, for export.
+    assert_eq!(kept(&pivot, OpaqueOwner::DataField(1)), ext);
+    let unknown = xml.replace("percentOfParent", "percentOfNothing");
+    let (result, _) = read_with(&unknown, cache(&[2, 3, 6]), usize::MAX);
+    assert_eq!(
+        result.unwrap_err(),
+        r#"unknown showDataAs "percentOfNothing""#
+    );
+}
+
+#[test]
+fn repeat_item_labels_are_read_from_the_kept_field_extension() {
+    // As Excel and the case builder write it (pivots.md "Repeat item labels",
+    // probes/t4698-pivot-repeat-labels): `fillDownLabels` in the x14 pivotField extension.
+    let ext = r#"<extLst><ext uri="{2946ED86-A175-432a-8AC1-64E0C546D7DE}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"><x14:pivotField fillDownLabels="1"/></ext></extLst>"#;
+    let xml = TABULAR_PERCENT.replacen(
+        "</items></pivotField>",
+        &format!("</items>{ext}</pivotField>"),
+        1,
+    );
+    let pivot = read(&xml, &[2, 3, 6]);
+    assert!(pivot.fields[0].fill_down_labels);
+    assert!(!pivot.fields[1].fill_down_labels);
+    // The extension is still kept verbatim, for export.
+    assert_eq!(kept(&pivot, OpaqueOwner::Field(0)), ext);
+    // Off and malformed read as the default; the definition-wide default fills no field
+    // (t4698 TW, TWE).
+    for value in ["0", "yes"] {
+        let off = xml.replace(
+            r#"fillDownLabels="1""#,
+            &format!(r#"fillDownLabels="{value}""#),
+        );
+        assert!(!read(&off, &[2, 3, 6]).fields[0].fill_down_labels);
+    }
+    let table = r#"<extLst><ext uri="{962EF5D1-5CA2-4c93-8EF4-DBF5C05439D2}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"><x14:pivotTableDefinition fillDownLabelsDefault="1"/></ext></extLst>"#;
+    let wide = TABULAR_PERCENT.replace(
+        "</pivotTableDefinition>",
+        &format!("{table}</pivotTableDefinition>"),
+    );
+    let pivot = read(&wide, &[2, 3, 6]);
+    assert!(pivot.fields.iter().all(|f| !f.fill_down_labels));
+    assert!(kept(&pivot, OpaqueOwner::Definition).contains(table));
 }
 
 #[test]

@@ -369,8 +369,8 @@ fn edit_filter_columns(filters: &mut Vec<FilterColumn>, edit: ColumnEdit) {
 /// here too. The caller only ever clears the flag with this: a table the import left unfiltered
 /// (a criterion-less or out-of-range filterColumn) stays so. A criterion-less column counts here,
 /// since [`crate::types::FilterCriterion::Other`] also holds a criterion the import read but could
-/// not check; Excel's own result after deleting the filtered column in the application is unprobed
-/// (T-4371).
+/// not check. Excel unfilters the table when a delete in the application takes the filtered
+/// column, and shows the rows it hid (probes/t4371-filtered-table-delete-filtered-column, T-4371).
 fn kept_filter_inside(table: &Table) -> bool {
     table
         .filter_columns
@@ -597,6 +597,7 @@ impl Model {
             return Ok(());
         }
         let mut headers = Vec::new();
+        let mut shown = Vec::new();
         for (name, resized) in resized {
             if let Some(table) = self.workbook.tables.get_mut(&name) {
                 table.reference = resized.reference;
@@ -604,13 +605,34 @@ impl Model {
                     table.totals_row_count = 0;
                 }
                 if let Some(edit) = resized.columns {
+                    let filtered = table.has_filters;
                     edit_columns(&mut table.columns, edit);
-                    if !table.filter_columns.is_empty() {
+                    if table.filter_columns.is_empty() {
+                        // An API-filtered table holds no criteria; its export writes one on its
+                        // first column (T-4363), so deleting that column takes the filter.
+                        table.has_filters &= edit.delta >= 0 || edit.index > 0;
+                    } else {
                         edit_filter_columns(&mut table.filter_columns, edit);
-                        table.has_filters = table.has_filters && kept_filter_inside(table);
+                        table.has_filters &= kept_filter_inside(table);
+                    }
+                    if filtered && !table.has_filters {
+                        // Excel shows the rows the filter hid once a delete in the application takes
+                        // the table's last criterion (probes/t4371-filtered-table-delete-filtered-column:
+                        // SUBTOTAL 103 counts all six rows; docs/excel-semantics/numbers.md).
+                        shown.extend(bounds(table).map(|b| b.data));
                     }
                     headers.extend(inserted_headers(table, edit));
                 }
+            }
+        }
+        if !shown.is_empty() {
+            // One pass over the sheet's stored rows: a table may span a million rows.
+            let rows = &mut self.workbook.worksheet_mut(sheet)?.rows;
+            for row in rows
+                .iter_mut()
+                .filter(|r| shown.iter().any(|&(a, b)| (a..=b).contains(&r.r)))
+            {
+                row.hidden = false;
             }
         }
         for (row, column, name) in headers {

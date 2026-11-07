@@ -177,7 +177,10 @@ otherwise as a hypothesis to probe:
    or volatile functions and under the work budget.
 5. **Label, value and date filters, Top-N, then sorting** (T-4165). Totals cover what stays: verified for
    Top-N (t4128 K). For the other filters and for hidden items (stage 1), this is T-4164's to probe.
-6. **Show values as** (T-4163), in three passes: leaves, subtotals, grand total.
+6. **Show values as** (T-4163): one post-pass over the values of stage 3 (`pivot/show_as.rs`). Per data
+   field with a mode, it computes every (row node, column node) cell, leaves, subtotals and grand totals
+   alike, since several modes give an empty intersection a value. It charges one work unit per cell and
+   counts each shown value as a node (pivots.md "Show-values-as edge cases (T-4161)").
 7. **Layout lines:** Excel's `rowItems`/`colItems` (`t`, `r`, `i`, `x`) for the form, subtotal placement,
    grand totals, Values position and blank rows (T-4147, T-4168).
 

@@ -85,8 +85,9 @@ The steward keeps this line as it is until the owner changes it.
 ## Needs owner
 
 - **Re-apply the worker routines from docs/process/routines.md** (added 2026-11-07, T-3821). Decision 0331 makes a
-  lane busy per tier, and both worker prompts now say so ("lanes that are busy for your tier"). Agents never edit
-  routines, so please re-apply the sonnet and opus worker prompts.
+  lane busy per tier, and both worker prompts now say so ("lanes that are busy for your tier"); decision 0332 (T-3824)
+  adds that a current-milestone task passes a lane busy only with later-milestone work. Agents never edit routines,
+  so please re-apply the sonnet and opus worker prompts.
 - **Owner ruling on RATE's keep-r0 secant model, T-4239** (2026-11-04). T-3963 found why RATE's same-state flat
   secants split (Excel keeps the older iterate when a step leaves the residual unchanged) and built the model on draft
   PR #3019: +78 bit-exact of 2,400 literal RATE cells, 59 against 9 on a blind fresh probe. But it moves five

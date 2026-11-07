@@ -318,7 +318,8 @@ but `#SPILL!` in the anchor cell, and saves the pivot's `location` as that one c
 Microsoft's 2025 "PivotTable #SPILL!" announcement (excel-docs.md, PSPILL).
 Evidence: probes/t4128-pivot-spike S (excel-graph, 2026-11-06, T-4128): the constant S!C5 lies inside
 the layout, and the pivot is saved with location A3, where S!A3 is `#SPILL!`.
-Status: VERIFIED (excel-graph); GETPIVOTDATA against such a pivot is in T-4130
+Status: VERIFIED (excel-graph); GETPIVOTDATA against such a pivot: "GETPIVOTDATA against a pivot collapsed to
+#SPILL!" (T-4130)
 Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`Model::place`, `meets_foreign`: the
 anchor gets `#SPILL!`, the location becomes that cell and the geometry zero, as the sidecar saves
 it; tested on t4128 S in `pivot/grid/tests.rs`; T-4151)
@@ -465,7 +466,8 @@ above reproduced; T-4149)
 Rule:
 - A row and column intersection with no records is a blank cell, not 0 (compact C!D6, West/C).
 - In tabular form an outer item's label shows on its first line only; the lines below it leave the
-  outer cell blank (T!A6, A7, A10).
+  outer cell blank (T!A6, A7, A10), unless the field repeats its labels ("Repeat item labels"
+  below).
 - A subtotal line reads `<item> Total` in the outer field's column, with the inner field's cell blank
   (T!A8 `East Total`, B8 blank; A11 `West Total`), and the grand total line reads `Grand Total`
   (T!A12).
@@ -503,6 +505,45 @@ attributes below).
 Status: VERIFIED (excel-graph) for the probes listed. UNVERIFIED (probe pending: T-4657): number
 and date item subtotal labels; (T-4650): the Values-inside and Values-axis captions and header.
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`render`; T-4149)
+
+## Repeat item labels
+Rule: a pivot field whose x14 extension sets `fillDownLabels="1"` ("Repeat Item Labels", saved as
+`<extLst><ext uri="{2946ED86-A175-432a-8AC1-64E0C546D7DE}"><x14:pivotField fillDownLabels="1"/>`
+in the `<pivotField>`) shows its item's label on every line of the item's children, in its own
+label column, where it would otherwise show on the item's first line only. The lines (`rowItems`,
+`colItems`) do not change. In detail (rows Region, Product, Year and Sum of Sales over the data of
+t4129, every pivot at A3):
+- **Per field, not inherited.** With the flag on Region only, `East` fills A4:A11 but Product's
+  cells below its first line stay blank (T3R!B5); with it on Product only, `A` fills B5 and Region
+  stays blank (T3P!A5:A11); with both, both fill (T3A). On the innermost field it changes nothing
+  (TIN).
+- **Subtotal lines of inner fields repeat it too**: `East` beside `A Total` (T3R!A6, A9, A11). The
+  field's own subtotal line reads `East Total` alone (T3R!A12), the grand total line is unchanged
+  (A19), and so are `insertBlankRow` lines (TBR!A8:C8, blank) and a collapsed item's one line
+  (TSD!A4:B4). With no subtotal the next item's lines follow directly (TND!A4:A8).
+- **Outline form fills too**: the outer item keeps its own line and its label repeats on every
+  child line below it, Product's and Year's (OST!A5:A7, O3!A5:A12), with subtotals at the top or
+  at the bottom (OB!A5:A7 then `East Total` in A8; the item's own line A4 still reads `East`).
+- **Compact form fills nothing** (CF!A5:A7 show the Products): a cell belongs to the deepest level
+  of the line placed in it. In MX, Region (compact, flagged) shares column A with Product
+  (tabular, flagged): Product's `A` repeats on its Year lines (MX!A6) and Region fills nothing.
+- **On columns** the label repeats across the children's columns (CC!B4:D4 `East`, F4:G4 `West`).
+- **A blank item** repeats as `(blank)` (TBL!A8).
+- **The table-wide `fillDownLabelsDefault="1"` fills no existing field** (TW, TWE, OW; t4129 X14).
+
+Evidence: probes/t4698-pivot-repeat-labels (excel-graph, 2026-11-07, T-4698): T3R, T3P, T3A,
+TND, TBR, TSD, TIN, TW, TWE, OST, OB, O3, OW, CF, MX, CC, TBL; probes/t4129-pivot-layout-flags X14,
+X14F (T-4129). The sidecars' `row_items`/`col_items` equal the engine's unflagged lines.
+The engine's own readings, not probed (UNVERIFIED, T-4764): a flagged level whose column it
+shares with a deeper level the line leaves unlabelled (the engine fills nothing); an inner column
+field's subtotal column under a flagged outer column field (the engine fills, as on rows); the
+Values field on a flagged field's axis (the engine fills field levels only); an explicit
+`fillDownLabels="0"` beside the table default, and custom subtotal lines under a flagged field
+(filled as default subtotal lines are).
+Status: VERIFIED (excel-graph) for the probes listed; UNVERIFIED (T-4764) for the readings above.
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`read_extension`: the typed
+`PivotField::fill_down_labels`, the extension kept verbatim for export; T-4698)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`Cells::fill_down`; T-4698)
 
 ## Caption attributes, empty and error captions, page captions, custom subtotal labels
 Rule:
@@ -687,8 +728,8 @@ placement and grand totals off; (T-4650): the Values field away from the innermo
 after a collapsed item (it adds one); custom subtotals after the children in plain outline form; a
 collapsed item whose field has Values inside it (several data fields: one line, the first data field's
 values); a collapsed item on columns, in a middle field, or in a field with
-`subtotalTop="0"` or custom subtotals (one line, the data field's own aggregate). (T-4698): repeat item
-labels (`fillDownLabels`, saved in `extLst`), which the model keeps opaque and the renderer ignores.
+`subtotalTop="0"` or custom subtotals (one line, the data field's own aggregate). Repeat item labels
+change no line (probes/t4698-pivot-repeat-labels, every sheet; "Repeat item labels" below).
 Items with no data (`showAll`): docs/excel-semantics/web.md "GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)" (t4311 H,
 a grouped row field) and crates/rustsheet-engine/src/pivot/result.rs; an axis of several fields, a
 rendered column field and an item the page filter empties are UNVERIFIED (T-4657).
@@ -1190,8 +1231,9 @@ source to 35) all differ:
   still shows East 5 and total 25 (Q!A3:F3 and the sidecar's area). A refresh would show 105 and 125.
 
 Consequences: an engine loads such a pivot's area as the plain cells the file holds and builds nothing
-for it until a refresh; a calculate, including a full rebuild, is not a refresh. Not probed: Auto Refresh
-(the x14/x15 refresh-on-change flags, T-4182), a source edit on a pivot without `refreshOnLoad`, and
+for it until a refresh; a calculate, including a full rebuild, is not a refresh. A source edit on a pivot without
+`refreshOnLoad` does not re-render it either (probes/t4130-pivot-auto-refresh AR0, "PivotTable Auto Refresh is not
+stored or honoured by Excel for the web"). Not probed:
 desktop Excel (M14). In (c) the range write is the session's first call, so it lands after the load's
 refresh: East 5 shows that refresh read the blank B2.
 Status: VERIFIED (excel-graph)
@@ -1311,9 +1353,26 @@ Rule: Excel for the web refuses to open a workbook (createSession 501 `FileCorru
   run, excel-graph, 2026-11-07). That every `baseItem` past the field's last item other than (previous)
   and (next) is refused is UNVERIFIED (probe pending: T-4750).
 
+- (T-4130) a pivot field item with `f="1"` even when the cache lists it in `calculatedItems`: every calculated
+  item ("Excel for the web refuses calculated items");
+- (T-4130) a filter of `type="unknown"`;
+- (T-4130) a filter whose filterColumn criterion is a `colorFilter`, with or without `dxfId` and `cellColor`
+  (`<colorFilter/>` gives `OpenWorkbookBlockedWorkbook` instead);
+- (T-4130) a filter with `iMeasureHier` (an OLAP measure, on a worksheet cache);
+- (T-4130) an item with `s="1"` (`s="0"` opens);
+- (T-4130) a pivotField with `hideNewItems="1"` or with `hiddenLevel="1"`;
+- (T-4130) a tuple list (`<tpls>`) under a cache shared item of any type (`s`, `n`, `m`, `e`). Under a record value
+  (`pivotCacheRecords/r/*`) it opens.
+
 `allDrilled="1"` and `defaultAttributeDrillState="1"` on the same field open.
 Evidence: T-4129 runs (excel-graph, 2026-11-06), one pivot per flag, bisected from the FA sheet of
-probes/t4129-pivot-layout-flags and the sheets of probes/t4129-pivot-item-flags.
+probes/t4129-pivot-layout-flags and the sheets of probes/t4129-pivot-item-flags. T-4130 runs (excel-graph,
+2026-11-07), one pivot per flag, bisected from the sheets of the t4130 probes before the refused sheets were dropped
+(the probes' descriptions name them), and for the tuples scratch files built from probes/t4130-pivot-label-filters CEq
+with one `<tpls c="1"><tpl fld="0" hier="0" item="0"/></tpls>` added: on the shared item Apple (refused), on a Sales
+number of rows Sales (refused; control without it opens), on a blank Product item (refused; control opens), on an
+error item (refused; control opens), and on the first record's Sales value as `n`, `m`, `e` or `s` (all open: input
+sha256 743d27d3…, 155006e8…, 06b87095…, 4eecedac…).
 Status: a builder observation, not committable as a probe: Excel saves nothing for a file it refuses.
 What desktop Excel does is out of scope (decision 0266). The case builder does not refuse these
 flags; a case that sets one cannot be filled.
@@ -1451,6 +1510,11 @@ is 0 (Z PD A). The other cells follow percent's rules (`#NULL!`, empty, `#DIV/0!
   Totals).
 - A grand total of 0 over nonzero row and column totals gives 0 (E IX 2024, 2025).
 - With three row fields, the Grand Total column is 1 at every level (NP IX3).
+- The order of the operations is UNVERIFIED (probe pending: T-4754). The engine computes value × grand
+  total / row total / column total, left to right. Of the probed cells only T-4129 IX!B5 tells the
+  orders apart (value 18, grand total 63, row total 30, column total 38: Excel 0.994736842105263, which
+  this order gives; (value × grand total)/(row total × column total) and the other orders are 1 ulp
+  off). That one cell is below the R4.4 web-versus-desktop floor, so it does not settle the order.
 
 **percentOfParent (% of parent total).**
 - Each row is divided by its ancestor on the base field, in the same column, however deep it is. With
@@ -1485,7 +1549,28 @@ visible, and items in cache order. These are UNVERIFIED (probe pending: T-4750):
 - whether every `baseItem` past the field's last item is refused, beyond the one probed;
 - two data fields, or Values on rows.
 
-The engine is T-4163.
+The engine is `pivot::show_as` (T-4163), a post-pass over the computed values that computes every
+(row node, column node) cell. It matches every cell of the probes above and of T-4129's. Its own
+readings, where no probe shows Excel's, are UNVERIFIED (probe pending: T-4750):
+- a base field on no axis makes every cell `#N/A`;
+- a `baseItem` that names no item of its field makes every cell below the base field's parents
+  `#N/A` (Excel for the web refused the one probed file, `baseItem="9"`: "Pivot flags Excel for the
+  web refuses");
+- an empty value over a percentOfRunningTotal total of 0 is empty;
+- a data field with both `showDataAs` and an x14 `pivotShowAs` shows the x14 mode;
+- -0 is shown as 0;
+- a base item that exists over a missing combination leaves a difference cell empty, as BI QRN shows
+  for percentDiff;
+- an error value, base or denominator is the cell's error, the value's first; a running total stays
+  an error from the first error on; a rank leaves errors out of its run;
+- a cell whose denominator line has no record at all (a `showAll` item) is empty;
+- a result that is not finite is `#NUM!`;
+- `baseItem` indexes the base field's `<items>`, as ECMA-376 reads it (in the probes the fields list
+  their items in cache order, so it is also the cache item);
+- a custom subtotal line of another function than the data field's shows its plain value;
+- GETPIVOTDATA on a pivot whose data field is shown as a calculation is `#REF!`, as it was while the
+  importer dropped such a pivot;
+- with several data fields, each is shown on its own (the probes have one).
 
 ## Layout and totals flags as Excel for the web renders them
 Rule, per flag (each one on its own pivot of rows Region and Product with Sum of Sales):
@@ -1505,10 +1590,157 @@ Rule, per flag (each one on its own pivot of rows Region and Product with Sum of
   `firstHeaderRow` is 2.
 - `numFmtId="3"` on the Year row field (NF): it renders. The saved labels are numbers; their display
   format is not captured.
-- x14 pivotTableDefinition `fillDownLabelsDefault="1"` (X14): **existing fields are not filled down**.
-  (Our reading, not evidenced: the setting is a default for fields added later.) A field's own x14 `fillDownLabels="1"` (X14F)
+- x14 pivotTableDefinition `fillDownLabelsDefault="1"` (X14): **existing fields are not filled down**,
+  in tabular and outline form, with or without an empty x14 pivotField extension on the fields
+  (probes/t4698-pivot-repeat-labels TW, TWE, OW). (Our reading, not evidenced: the setting is a
+  default for fields added later, which a file cannot probe; UNVERIFIED, T-4764.) A field's own x14 `fillDownLabels="1"` (X14F)
   repeats its labels: `East` on every East product row.
 - A `formats` entry whose pivotArea has `axis="axisValues"` (AV): it renders.
 
 Evidence: probes/t4129-pivot-layout-flags (excel-graph, 2026-11-06, T-4129).
 Status: VERIFIED (excel-graph) for these shapes.
+
+## Capability matrix 2: filters, sorts and calculated fields and items
+Rule: Excel for the web opens and applies a pivot carrying any one of the catalog rows of the filtering, sorting and
+calculated families, except these, which it refuses ("Pivot flags Excel for the web refuses"): a filter of type
+`unknown`, a `colorFilter` criterion, `iMeasureHier`, an item `s="1"`, `hideNewItems="1"`, `hiddenLevel="1"`, tuples
+under a cache shared item, and every calculated item (its item `f="1"`). That covers every other ST_PivotFilterType
+value (caption, value, Top-N count/percent/sum, fixed date, M1–M12, Q1–Q4 and every relative date), every
+`autoFilter` child, `filter`, `pageField` and pivotField filter attribute, the x15 `pivotFilter` extension, every
+ST_FieldSortType value, `autoSortScope` with every pivotArea and reference attribute, `nonAutoSortDefault`,
+`customListSort`, and calculated fields. The catalog's `web` column (eval/catalog/pivot-features.tsv) records the
+answer per row, and its `evidence` column names the probe and sheet: 146 filtering rows yes, 11 no and 4 `unknown`
+(below), 42 sorting rows yes, 2 calculated rows (the calculated field) yes and 40 (calculated items) no. The grouping
+and slicers-timelines rows are T-4767's.
+Evidence: these cases, all excel-graph, 2026-11-07, T-4130:
+- probes/t4130-pivot-label-filters (the 14 caption types), probes/t4130-pivot-value-filters (the 8 value types,
+  Top-N count, percent and sum, a bottom N, a stale `filterVal`, `iMeasureFld` 1);
+- probes/t4130-pivot-date-filters (the 8 fixed date types, M1–M12, Q1–Q4, `useWholeDay`, and DLit, below);
+- probes/t4130-pivot-relative-date-filters (the 16 relative types and stale `val`/`maxVal`);
+- probes/t4130-pivot-filter-attrs and probes/t4130-pivot-field-filters (the other criteria, filter and field
+  attributes, page fields);
+- probes/t4130-pivot-sort and probes/t4130-pivot-calc-items.
+
+The four tuple rows under records (`pivotCacheRecords/r/{e,m,n,s}/tpls/tpl@hier`) opened in scratch files only
+(previous entry), which are not committed: the case builder writes no tuples. Their catalog rows stay `unknown`.
+Status: VERIFIED (excel-graph) for opening and rendering; what each shape shows is the next entries'. UNVERIFIED
+(probe pending: T-4767, which teaches the builder to write tuples and commits the probe): that a tuple under a
+record value opens.
+
+## Pivot sorts and filters as Excel for the web renders them
+Rule, per shape (each its own pivot, rows Product unless said, Sum of Sales):
+- **Caption filters** match the item's text with the autoFilter's wildcards (`Ap*`, `*e`, `*an*`) or comparison;
+  the `Not` forms are their complements. The match ignores case: `AP*` keeps Apple and Apricot (CBwU), `*AN*` keeps
+  Banana (CCoU), `banana` equals Banana (CEqL), and Cherry and Grape are greater than `BANANA` (CGtU). captionBetween
+  is inclusive at both ends: Banana to Cherry keeps both (CBtI). For a captionEqual, **the autoFilter decides, not
+  `stringValue1`**: one whose `stringValue1` says Cherry and whose customFilter says Grape shows Grape (CMix); the
+  other types were probed only with the two agreeing. The grand total covers only the items shown.
+- **Value filters** compare each item's value of data field `iMeasureFld` (VM1 filters on the second data field, Count
+  of Sales). Top-N `count` keeps the N largest (`top="0"`: smallest), `percent` keeps the largest items until they
+  reach the percentage of the grand total (top 50 of 63 keeps Apple 30 and Banana 12), and `sum` keeps the largest
+  until their sum reaches the value (40 keeps 30 and 12). The stored `filterVal` is ignored and recomputed (TCv).
+- **Date filters** compare the item's date: fixed dates as serials, M1–M12 the month of any year (M1 keeps 1/15/2024
+  and 1/10/2025), Q1–Q4 the quarter of any year. **Relative dates are evaluated against the day the web opens the
+  file**: today, yesterday, tomorrow, this, last and next week, month, quarter and year, and yearToDate, each keeping
+  exactly the bucket its period holds. A stale `val`/`maxVal` (and `valIso`/`maxValIso`) on thisMonth is ignored
+  (RtMv).
+- **A dateEqual filter on a field the file caches as numbers is dropped** and every item shows (DLit: literal
+  date-formatted numbers, which the builder caches as `<n>`). The oracle's cached download of that run shows Excel
+  saving the pivot with no `<filters>` and the field's items as `<d>` (with a `maxDate` of 1900-01-03T07:51:04, as
+  observed). The other date types were tried this way only in a first run, not committed, where every one was
+  dropped. Over DATE formulas, which the builder caches as missing, every date filter applies.
+- **Other criteria under a pivot filter**: a values list (`<filters><filter val="Cherry"/>`) applies like the
+  captionEqual (FVals); an `iconFilter` (FIcon) or a `dateGroupItem` on a text field (FDgi) keeps nothing (the pivot
+  shows only an empty Grand Total). `hiddenButton`, `showButton`, an autoFilter `sortState`, a filter's `name`,
+  `description`, `mpFld` and `evalOrder="0"` change nothing visible.
+- **Several filters**: a label and a value filter on one field both apply, **whatever `multipleFieldFilters` says**
+  (FMf1, FMf0: Banana, Cherry, Grape); a filter on each of two row fields both apply (FTwo).
+- **Legacy AutoShow** (`autoShow`, `itemPageCount`, `rankBy`) is a Top-N on the field: top 2, or with
+  `topAutoShow="0"` bottom 2 (AS, ASb). `measureFilter="1"` and `includeNewItemsInFilter="1"` change nothing visible.
+- **Page fields**: with several items selected (hidden items, `multipleItemSelectionAllowed`) the page cell reads
+  `(Multiple Items)` (PM); a `pageField@cap` (`Banana!`) and `@name` are not shown: the page cell reads the item,
+  `Banana` (PC).
+- **Label sorts**: `ascending` and `descending` sort the items' text; `manual` keeps the field's listed order (SM).
+  `nonAutoSortDefault="1"` changes nothing visible (NA). With `customListSort` on (the default) Day ascending follows
+  the day-name custom list (Mon, Wed, Fri, CL1); with it off, the alphabet (Fri, Mon, Wed, CL0).
+- **Value sorts** (`autoSortScope` on a data field) order the items by their value, within each outer item (SVR), by
+  a column item when the scope references it (SVC sorts by 2024), or by the second data field through the
+  reference's `x`: SV2 sorts descending by Max of Sales, Ant 20, Bee 10, Cat 9, an order neither Sum order gives
+  (Sum descending is Ant, Cat, Bee). Ties are T-4164's.
+
+Evidence: the probes of the previous entry (excel-graph, 2026-11-07, T-4130); the sidecars' `pivots` sections hold
+every cell. Data: Product sums Apple 30, Apricot 4, Banana 12, Cherry 11, Grape 6 (filters); Ant 28, Bee 14, Cat 18,
+cached in the order Bee, Ant, Cat (sorts).
+Status: VERIFIED (excel-graph) for these shapes. Ties, filter order and filters over totals are T-4164's; the engine is
+T-4165 (filters, Top-N, value sorts) and T-4768 (label sorts).
+
+## Excel for the web refuses calculated items
+Rule: Excel for the web refuses (createSession 501 `FileCorruptTryRepair`) every workbook whose pivot lists a
+calculated item: a pivotField `<item f="1">` over a cache with `<calculatedItems>`. The refusal holds for every shape
+tried: formulas `A+B`, `A*2-C/3`, `Product[A]-'B'` and `AB*2` (an item over another), with rows Region and Product,
+with columns Year, with A and B hidden, beside a calculated field, with a `calculatedItem@field`, with `A +B` or
+`'A'+'B'`, and with `refreshOnLoad` off. With the item written `f="0"` (or with no `f`) the file opens and Excel does
+not compute the item: it renders A, B, C and Grand Total 63. It saves the `calculatedItems` normalised, not as written:
+from CIA0's full pivotArea it drops `type`, `dataOnly`, `labelOnly`, `grandRow`, `grandCol` and
+`collapsedLevelsAreSubtotals` (keeping `field`, `cacheIndex`, `outline`, `offset`, `axis` and `fieldPosition`), and
+every reference flag but `selected`. It marks the AB shared item `u="1"` (unused) and the pivotField item `m="1"`
+(missing). This is from the oracle's cached download of the CI0/CIA0/CF run (input sha256 964b6558…), not a committed
+file. A calculated field (`cacheField@formula`, `databaseField="0"`) renders: Sum of Dbl, Dbl = Sales*2+1,
+is twice the field sum plus one at every level (A 81, Grand Total 127).
+Evidence: probes/t4130-pivot-calc-items CI0, CIA0 (the item `f="0"`) and CF (excel-graph, 2026-11-07, T-4130); the
+refusals are T-4130 runs bisected from that case's first sheets (CI, CIR, CIC, CIK, CIQ, CI2, CIH, CIA, CIF, all
+`f="1"`) and scratch variants of CI. The builder writes the calculated item with Excel's pivotArea (`cacheIndex="1"`,
+the reference naming the item); no Excel-saved file with a calculated item has been opened on the web.
+Status: VERIFIED (excel-graph) for the builder's shape. Whether an Excel-saved calculated item opens on the web is
+UNVERIFIED (probe pending: T-4505, with a desktop-saved file from a corpus); until then calculated items have no web
+evidence and their rows are `no`. What desktop Excel computes is out of scope (decision 0266).
+
+## PivotTable Auto Refresh is not stored or honoured by Excel for the web
+Rule: Excel for the web does not refresh a pivot after a Graph range write to its source: after the oracle types 100 into the
+source's blank Data!B2 and runs a full-rebuild calculate, a pivot saved without `refreshOnLoad` (AR0) and a
+`refreshOnLoad` pivot (AR1) both still show East 5, West 20, Grand Total 25, while Q!B1 sums the source to 125. Excel
+saves no Auto Refresh setting: the saved pivotCacheDefinition carries only the attributes already known
+(`refreshOnLoad`, `refreshedBy="Excel Services"`, `refreshedDate`, versions, `xr:uid`) and an empty
+`x14:pivotCacheDefinition` extension, and the pivotTableDefinition only the empty `xpdl:pivotTableDefinition16`
+extension. Answer to plan.md §10's question: no Auto Refresh attribute is in the file Excel for the web saves, and the
+web does not auto-refresh (2026-11-07).
+Evidence: probes/t4130-pivot-auto-refresh (excel-graph, 2026-11-07, T-4130): the sidecar's AR0 and AR1 areas and Q;
+the saved parts are the oracle's cached download of that run (input sha256 668bde32…), not a committed file. The
+source edit is a Graph range write in the session, not a typed UI edit; as t4586 (c) found for a `refreshOnLoad`
+pivot.
+Status: VERIFIED (excel-graph) that a Graph range write does not refresh; VERIFIED (excel-graph, cached download)
+that the saved file carries no Auto Refresh setting. Whether desktop Excel, where Auto Refresh is an Insider feature on by
+default for new local-data pivots (excel-docs.md AUTOREFRESH), stores a flag in the file, and whether a UI edit on
+the web would trigger it, is UNVERIFIED: the oracle cannot create a pivot through the UI or reach desktop Excel
+(decision 0266). T-4182 records this and is dropped unless a desktop-saved file shows a flag.
+
+## Excel for the web rewrites a PivotChart's caches when it renders the pivot
+Rule: when Excel for the web renders a pivot on open, it rewrites the caches of a chart bound to it (`c:pivotSource`):
+the series' `c:tx`, `c:cat` and `c:val` references become the pivot's rendered ranges (`'C'!$A$4:$A$6`, `'C'!$B$4:$B$6`:
+the item rows and the Grand Total row), and their caches hold the plotted points only, without the grand total
+(`c:strCache` East, West; `c:numCache` 18, 27; the series name `Total`), replacing the stale caches the file held
+(`Stale`, StaleX, StaleY, 999, 998). It also rewrites `c:pivotSource`'s name to the uploaded file's name and adds its
+`c:pivotFmts` data labels and the c16 series id. For a pivot collapsed to `#SPILL!` (CS) all three references
+become the anchor `CS!$A$3`; the category cache keeps East and West, and the value cache has `ptCount` 2 and one point,
+0.
+Evidence: probes/t4130-pivot-chart-cache (excel-graph, 2026-11-07, T-4130): the chart parts of the oracle's cached
+download of that run (input sha256 c78d1952…), not a committed file (the sidecars do not record charts). The charts
+are written by tools/src/rustsheet_tools/pivot_chart.py. Consequence for plan.md §7: Excel-saved chart caches are an
+oracle for PivotChartData (T-4186), read from a downloaded file.
+Status: VERIFIED (excel-graph, cached download) for a one-series column chart over a one-field pivot. Several series,
+column fields and multi-level categories (`c:multiLvlStrCache`) are T-4186's to probe; the export is T-4187.
+
+## GETPIVOTDATA against a pivot collapsed to #SPILL!
+Rule: GETPIVOTDATA whose pivot reference is the anchor of a pivot collapsed to `#SPILL!` returns:
+- `#REF!` for the grand total (`GETPIVOTDATA("Sales",S!$A$3)`, also by the name `Sum of Sales`);
+- `#SPILL!` for a field and item pair that names an item of the pivot (`"Region","East"`);
+- `#REF!` for a pair that names no item (`"Region","Nope"`).
+
+A reference that is a cell of the layout the pivot would have had but not its anchor (S!$B$4), or a range holding the
+anchor (S!$A$1:$D$10), gives `#REF!` too. The control pivot N, unblocked, gives 45, 45, 18, `#REF!` (no such item),
+45, 27 for the same six. `ERROR.TYPE` of the anchor is 9 (`#SPILL!`), and `ISREF` of it is TRUE.
+Evidence: probes/t4130-pivot-spill-getpivotdata Q!A1:B8 (excel-graph, 2026-11-07, T-4130): S holds the constant
+`blocker` at B5 inside its pivot's layout.
+Status: VERIFIED (excel-graph). When the pivot recovers (the blocker removed and a refresh) is not probed. The engine
+is T-4154: it gives `#SPILL!` for the grand total (by either name) and for the unknown item, and 27 for the range
+reference; the named item (`#SPILL!`) and the non-anchor cell (`#REF!`) already agree.

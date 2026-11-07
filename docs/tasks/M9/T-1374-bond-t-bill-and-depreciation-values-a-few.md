@@ -41,6 +41,10 @@ probes/fin-argument-modes (excel-graph, 2026-10-11, T-1084). Base rows that miss
 The same DURATION, MDURATION and PRICE base values recur as the intersected controls of
 probes/fin-remaining-later-argument-ranges I85-I103 and I165-I171 (T-1822), and so do the CUMIPMT, CUMPRINC, ODDFPRICE,
 ODDFYIELD and YIELD ones there (I65-I84, I105-I136, I173-I184).
+Gap triage 2026-11-07: a hyphen span names only its ends (decision 0136), so the five CUMPRINC controls inside I65-I84
+had no owner. They are H80's point, `CUMPRINC(0.01,360,100000,1,12,0)` with one argument `@`-intersected (Excel
+-362.8793467231, ours -362.8793467230999), and this task owns them:
+- probes/fin-remaining-later-argument-ranges.case.json (5): Sheet1!I75, I77, I79, I81, I83
 The annuity family (FV, PMT, PPMT, NPV) and the solvers (IRR, RATE, XIRR) are T-0901's and T-0916's, not this task's.
 ODDFYIELD's solver (H200, fin-yield-odd-lift A5/I9, the ODDFYIELD controls of fin-remaining-later-argument-ranges and the
 PRICE_YIELD.xlsx K column) moved to T-2007 (gap triage 2026-10-19); this task keeps ODDFPRICE.
@@ -111,6 +115,19 @@ Owned gen-m9 cells (T-2487, excel-graph, 2026-10-25): 1 known-failure line in ev
 - gen-m9/e8d55ec393460bb7 Calc!A91 `=TBILLYIELD(COS(KURT(Data!B1:B9,Data!A9:A11,Data!D11:D11)),(Data!E3*SORT("1.5")),F.INV(ABS(Data!E5),4,3))`: Excel 150510.9757994007, ours 150510.97579940068
 Cells:
 - gen-m9/e8d55ec393460bb7.case.json (1): Calc!A91
+
+Added by gap triage 2026-11-07 (`make eval` on origin/main b9ae5216, excel-graph). These last-digit cells are not
+visibly off, and no open task listed them. They are this task's base values reached another way:
+- The intersected CUMPRINC controls of probes/fin-remaining-later-argument-ranges repeat base row H80
+  `CUMPRINC(0.01,360,100000,1,12,0)` (Excel -362.8793467231, ours -362.8793467230999). The hyphen span "I65-I84" in
+  Context above names only its ends (decision 0136), so these were unowned.
+- DURATION and MDURATION at frequency 4 on the coupon walk's bounds.
+- Two gen-m9 YIELD calls, 1 ulp off.
+Cells:
+- probes/fin-remaining-later-argument-ranges.case.json (5): Sheet1!I75, I77, I79, I81, I83
+- probes/fin-coupon-walk-bounds-c.case.json (4): Sheet1!I13, K13, I14, K14
+- gen-m9/9a1fa5366bc50918.case.json (1): Calc!A231
+- gen-m9/bc04c1f478c9896c.case.json (1): Calc!A23
 
 ## Acceptance criteria
 - [ ] Visible parity (gen-m9, T-2257): the 6 visibly-off known-failure lines listed under "T-2257 sweep" in Context disappear

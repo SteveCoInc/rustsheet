@@ -1182,7 +1182,6 @@ impl UserModel {
     ) -> Result<(), String> {
         let worksheet = self.model.workbook.worksheet(sheet)?;
         let mut old_data = Vec::new();
-        // Collect data for all columns to be deleted
         for c in column..column + column_count {
             let mut column_data = None;
             for col in &worksheet.cols {
@@ -1233,7 +1232,7 @@ impl UserModel {
 
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
         let snapshot = self.rewrite_snapshot(sheet)?;
-        let (tables, rewritten) =
+        let (tables, rewritten, shown) =
             (self.model).delete_columns_keeping_tables(sheet, column, column_count)?;
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
         diff_list.extend(link_diffs);
@@ -1246,6 +1245,7 @@ impl UserModel {
             tables,
             rewritten,
         });
+        diff_list.extend(shown.into_iter().map(|row| Diff::row_shown(sheet, row)));
         self.push_diff_list(diff_list);
         self.evaluate_if_not_paused();
         Ok(())
