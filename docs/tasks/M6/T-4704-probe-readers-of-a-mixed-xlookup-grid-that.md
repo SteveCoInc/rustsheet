@@ -3,7 +3,7 @@ id: T-4704
 title: "Probe readers of a mixed XLOOKUP grid that T-4570 left unprobed (FORMULATEXT, OFFSET, RANK, error beside an off-sheet reference, both-sheet grids)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
