@@ -3,7 +3,7 @@ id: T-5044
 title: "xlsx import keeps the content of covered cells of a merged range (SPEC-0036 S1)"
 milestone: M11
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -23,14 +23,23 @@ called from `load_sheet` (import/worksheets.rs); keep `load_merge_cells` and `Ke
 xlsx-storage.md entry's "Ours" and Status lines.
 
 ## Acceptance criteria
-- [ ] The importer keeps covered content; `clear_covered_cells` and its unit tests are gone.
-- [ ] This task owns these visibly-off cells, and they pass:
+- [x] The importer keeps covered content; `clear_covered_cells` and its unit tests are gone.
+- [x] This task owns these visibly-off cells, and they pass:
       fixtures/merged-covered-values.xlsx A4:N4
       fixtures/merged-covered-formula.xlsx B1 A3:D3
-- [ ] Tests: import keeps covered values and styles; a covered formula calculates and round-trips; unmerge shows the covered
+- [x] Tests: import keeps covered values and styles; a covered formula calculates and round-trips; unmerge shows the covered
       value; a range clear of the merged range clears it; deleting the anchor row makes the covered cell the anchor with its
       value (each engine test with undo/redo).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Paste (T-5045) and autofill (T-5047) over covered content.
+
+## Outcome
+The importer keeps covered cells as stored; `clear_covered_cells` and its unit tests are gone (`KeptRanges` stays).
+fixtures/merged-covered-values A4:N4 and merged-covered-formula B1 A3:D3 now pass: 15 known-failure lines left
+eval/baseline/fixtures.txt. The roundtrip-fixtures baseline counts two more checked cells for merged-covered-formula
+(117 to 119), as kept covered cells are now compared. Tests: xlsx import keeps covered content (bad_merge_cells,
+whole-column merge bench), covered content round-trips, and engine tests for covered values in formulas, unmerge,
+range clear and delete of the anchor row, each with undo/redo. No new Excel quirk beyond xlsx-storage.md's entry,
+whose Ours/Status lines are updated.

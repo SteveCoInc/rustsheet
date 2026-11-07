@@ -719,7 +719,7 @@ fn example_pivot_lines_are_the_saved_ones() {
 }
 
 /// A covered cell's content survives a save and reload, as Excel keeps it (SPEC-0036 W1;
-/// tests/bad_merge_cells.xlsx covers C2 of the merge at B2:C3 with 43).
+/// `tests/bad_merge_cells.xlsx` covers C2 of the merge at B2:C3 with 43).
 #[test]
 fn covered_cell_content_round_trips() {
     let model = load_from_xlsx("tests/bad_merge_cells.xlsx", "en", "UTC", "en").unwrap();

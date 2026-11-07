@@ -833,7 +833,7 @@ pub(super) fn load_sheet<R: Read + std::io::Seek>(
     // read as a tree.
     let SheetDataXml {
         worksheet,
-        mut sheet_data,
+        sheet_data,
         rows,
         shared_formulas,
         data_tables,
