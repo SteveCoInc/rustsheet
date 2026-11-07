@@ -9,7 +9,10 @@
 use std::io::Cursor;
 
 use quick_xml::events::Event;
-use rustsheet_engine::pivot::{CacheField, CacheItem};
+use rustsheet_engine::pivot::{
+    CacheField, CacheItem, DateGroupItem, DynamicDate, FilterCondition, FilterCriteria,
+    FilterOperator, PivotFilter, PivotFilterKind,
+};
 
 use super::*;
 
@@ -327,6 +330,209 @@ fn filters_and_unread_field_attributes_are_kept_verbatim() {
     );
 }
 
+/// The fixture's `<filters>` replaced by `filters`, read against `cache`.
+fn with_filters(filters: &str, cache: PivotCache) -> Result<PivotTable, String> {
+    let start = CALC_TOP_SORT.find("<filters").unwrap();
+    let end = CALC_TOP_SORT.find("</filters>").unwrap() + "</filters>".len();
+    let xml = format!(
+        "{}{filters}{}",
+        CALC_TOP_SORT.get(..start).unwrap(),
+        CALC_TOP_SORT.get(end..).unwrap()
+    );
+    read_with(&xml, cache, usize::MAX).0
+}
+
+/// One `<filter>` on field 1 of `type` with the criterion `column` and the extra `inner` XML.
+fn one_filter(kind: &str, column: &str, inner: &str) -> String {
+    format!(
+        r#"<filters count="1"><filter fld="1" type="{kind}" evalOrder="-1" id="3" iMeasureFld="1"><autoFilter ref="A1"><filterColumn colId="0">{column}</filterColumn></autoFilter>{inner}</filter></filters>"#
+    )
+}
+
+#[test]
+fn filters_are_typed_from_the_kept_element() {
+    // probes/t4128-pivot-spike CalcTopSort: a count Top-N (pivots.md "A Top-N filter changes the
+    // subtotals and grand totals"), still kept verbatim for export (above).
+    let pivot = read(CALC_TOP_SORT, &[2, 3, 6, 6]);
+    assert_eq!(
+        pivot.filters,
+        [PivotFilter {
+            field: 1,
+            kind: PivotFilterKind::Count,
+            measure: 0,
+            eval_order: -1,
+            id: 1,
+            criteria: FilterCriteria::Top10 {
+                top: true,
+                value: "2".to_string(),
+            },
+            whole_day: false,
+        }]
+    );
+    // probes/t4130-pivot-label-filters CBt and t4164-pivot-date-times WBt1, as the case builder
+    // writes them.
+    let between = r#"<customFilters and="1"><customFilter operator="greaterThanOrEqual" val="B"/><customFilter operator="lessThanOrEqual" val="D"/></customFilters>"#;
+    let ext = r#"<extLst><ext uri="{0605FD5F-26C8-4aeb-8148-2DB25E43C511}" xmlns:x15="http://schemas.microsoft.com/office/spreadsheetml/2010/11/main"><x15:pivotFilter useWholeDay="1"/></ext></extLst>"#;
+    let pivot = with_filters(
+        &one_filter("captionBetween", between, ext),
+        cache(&[2, 3, 6, 6]),
+    )
+    .unwrap();
+    let [filter] = pivot.filters.as_slice() else {
+        panic!("one filter");
+    };
+    assert_eq!(
+        (filter.kind, filter.measure, filter.id),
+        (PivotFilterKind::Caption, 1, 3)
+    );
+    assert!(filter.whole_day);
+    let condition = |operator, value: &str| FilterCondition {
+        operator,
+        value: value.to_string(),
+    };
+    assert_eq!(
+        filter.criteria,
+        FilterCriteria::Custom {
+            and: true,
+            conditions: vec![
+                condition(FilterOperator::GreaterThanOrEqual, "B"),
+                condition(FilterOperator::LessThanOrEqual, "D"),
+            ],
+        }
+    );
+    // A bottom Top-N, a dynamic date, a values list with a date group item, and an icon
+    // (t4130-pivot-value-filters TB, t4130-pivot-date-filters M3, t4130-pivot-filter-attrs FVals,
+    // FDgi, FIcon).
+    let criteria = |kind: &str, column: &str| {
+        let pivot = with_filters(&one_filter(kind, column, ""), cache(&[2, 3, 6, 6])).unwrap();
+        pivot.filters.first().map(|f| (f.kind, f.criteria.clone()))
+    };
+    assert_eq!(
+        criteria("count", r#"<top10 top="0" val="2" filterVal="6"/>"#),
+        Some((
+            PivotFilterKind::Count,
+            FilterCriteria::Top10 {
+                top: false,
+                value: "2".to_string()
+            }
+        ))
+    );
+    assert_eq!(
+        criteria("M3", r#"<dynamicFilter type="M3"/>"#),
+        Some((
+            PivotFilterKind::Date,
+            FilterCriteria::Dynamic(DynamicDate::Month(3))
+        ))
+    );
+    let values = r#"<filters blank="1" calendarType="none"><filter val="i1"/><dateGroupItem year="2024" month="4" day="17" hour="0" minute="0" second="0" dateTimeGrouping="day"/></filters>"#;
+    assert_eq!(
+        criteria("captionEqual", values),
+        Some((
+            PivotFilterKind::Caption,
+            FilterCriteria::Values {
+                values: vec!["i1".to_string()],
+                blank: true,
+                dates: vec![DateGroupItem {
+                    year: 2024,
+                    month: 4,
+                    day: 17,
+                    hour: 0,
+                    minute: 0,
+                    second: 0,
+                    parts: 3,
+                }],
+            }
+        ))
+    );
+    assert_eq!(
+        criteria(
+            "captionEqual",
+            r#"<iconFilter iconSet="3Arrows" iconId="0"/>"#
+        ),
+        Some((PivotFilterKind::Caption, FilterCriteria::Nothing))
+    );
+}
+
+#[test]
+fn a_date_filter_on_a_field_cached_as_numbers_is_dropped() {
+    // probes/t4130-pivot-date-filters DLit: Excel drops a dateEqual over a field the file
+    // caches as `<n>` items, and applies it over date items or uncached ones.
+    let date = one_filter(
+        "dateEqual",
+        r#"<customFilters><customFilter val="45399"/></customFilters>"#,
+        "",
+    );
+    // Field 1's three items, as the fixture's `<items>` lists them.
+    let with_items = |item: CacheItem| {
+        let mut cache = cache(&[2, 3, 6, 6]);
+        cache.fields[1].items = vec![item.clone(), item.clone(), item];
+        with_filters(&date, cache).unwrap().filters.len()
+    };
+    assert_eq!(with_items(CacheItem::Number(45399.0)), 0);
+    assert_eq!(with_items(CacheItem::Date(45399.0)), 1);
+    assert_eq!(with_items(CacheItem::Missing), 1);
+    // A caption filter over the same numbers stays.
+    let label = one_filter(
+        "captionEqual",
+        r#"<customFilters><customFilter val="1"/></customFilters>"#,
+        "",
+    );
+    let mut numbers = cache(&[2, 3, 6, 6]);
+    numbers.fields[1].items = vec![CacheItem::Number(1.0); 3];
+    assert_eq!(with_filters(&label, numbers).unwrap().filters.len(), 1);
+}
+
+#[test]
+fn a_filter_naming_no_field_skips_the_pivot() {
+    let past = one_filter("count", r#"<top10 val="2"/>"#, "").replace(r#"fld="1""#, r#"fld="9""#);
+    assert!(with_filters(&past, cache(&[2, 3, 6, 6])).is_err());
+    let bad = one_filter(
+        "captionEqual",
+        r#"<customFilters><customFilter operator="like" val="x"/></customFilters>"#,
+        "",
+    );
+    assert!(with_filters(&bad, cache(&[2, 3, 6, 6])).is_err());
+}
+
+#[test]
+fn auto_show_is_read_from_the_kept_field_attributes() {
+    // probes/t4130-pivot-field-filters ASb: autoShow, itemPageCount, rankBy, topAutoShow.
+    let attrs = r#" autoShow="1" itemPageCount="2" rankBy="1" topAutoShow="0""#;
+    let xml = CALC_TOP_SORT.replacen(
+        r#"sortType="descending""#,
+        &format!(r#"sortType="descending"{attrs}"#),
+        1,
+    );
+    let pivot = read(&xml, &[2, 3, 6, 6]);
+    assert_eq!(
+        pivot.fields[1].auto_show,
+        Some(AutoShow {
+            count: 2,
+            top: false,
+            measure: 1,
+        })
+    );
+    assert_eq!(pivot.fields[0].auto_show, None);
+    // Still kept verbatim, for export.
+    assert!(kept(&pivot, OpaqueOwner::Field(1)).contains(attrs));
+    // Off, it is no AutoShow; on with nothing else, the top 10 by the first data field.
+    let off = xml.replace(r#"autoShow="1""#, r#"autoShow="0""#);
+    assert_eq!(read(&off, &[2, 3, 6, 6]).fields[1].auto_show, None);
+    let bare = CALC_TOP_SORT.replacen(
+        r#"sortType="descending""#,
+        r#"sortType="descending" autoShow="1""#,
+        1,
+    );
+    assert_eq!(
+        read(&bare, &[2, 3, 6, 6]).fields[1].auto_show,
+        Some(AutoShow {
+            count: 10,
+            top: true,
+            measure: 0,
+        })
+    );
+}
+
 #[test]
 fn an_excel_saved_definition_keeps_its_extensions_and_rendered_lines() {
     let pivot = read(CORPUS, &[3, 3, 3, 2]);
@@ -560,4 +766,38 @@ fn malformed_typed_attributes_skip_the_pivot_or_read_as_the_default() {
             .unwrap_err(),
         "more items than the cache field holds"
     );
+}
+
+#[test]
+fn filters_past_the_import_limits_skip_the_pivot() {
+    use super::super::filters::{MAX_CONDITIONS, MAX_FILTERS, MAX_LIST_VALUES};
+    let top = r#"<filter fld="1" type="count"><autoFilter ref="A1"><filterColumn colId="0"><top10 val="2"/></filterColumn></autoFilter></filter>"#;
+    let filters = |n: usize| format!("<filters>{}</filters>", top.repeat(n));
+    assert_eq!(
+        with_filters(&filters(MAX_FILTERS), cache(&[2, 3, 6, 6]))
+            .unwrap()
+            .filters
+            .len(),
+        MAX_FILTERS
+    );
+    assert!(with_filters(&filters(MAX_FILTERS + 1), cache(&[2, 3, 6, 6])).is_err());
+    let condition = r#"<customFilter val="x"/>"#;
+    let custom = |n: usize| {
+        one_filter(
+            "captionEqual",
+            &format!("<customFilters>{}</customFilters>", condition.repeat(n)),
+            "",
+        )
+    };
+    assert!(with_filters(&custom(MAX_CONDITIONS), cache(&[2, 3, 6, 6])).is_ok());
+    assert!(with_filters(&custom(MAX_CONDITIONS + 1), cache(&[2, 3, 6, 6])).is_err());
+    let list = |n: usize| {
+        one_filter(
+            "captionEqual",
+            &format!("<filters>{}</filters>", r#"<filter val="a"/>"#.repeat(n)),
+            "",
+        )
+    };
+    assert!(with_filters(&list(MAX_LIST_VALUES), cache(&[2, 3, 6, 6])).is_ok());
+    assert!(with_filters(&list(MAX_LIST_VALUES + 1), cache(&[2, 3, 6, 6])).is_err());
 }

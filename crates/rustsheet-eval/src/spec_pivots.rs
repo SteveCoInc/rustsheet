@@ -55,7 +55,7 @@ pub fn add_pivots(
         if pivot.definition.is_some() {
             continue;
         }
-        tx.add_pivot_table(&pivot_input(spec, ids, sheet, id, pivot)?)?;
+        tx.register_pivot_table(&pivot_input(spec, ids, sheet, id, pivot)?)?;
     }
     Ok(())
 }

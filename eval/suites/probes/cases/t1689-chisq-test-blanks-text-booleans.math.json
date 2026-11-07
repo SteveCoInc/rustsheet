@@ -1,0 +1,32 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "f3e09971cfea08032689a12dac1862b3ad27800d4691a000a9d65a5726fca6aa",
+  "definitions": {
+   "CHISQ.TEST": "1c6c57fe197c6811"
+  },
+  "arguments_sha256": "75aa8e6aeaaef293053c5db87fc6516637a4a811e8d15d578deb8ebcc189c555"
+ },
+ "sheets": {
+  "F": {
+   "A1": {
+    "t": "n",
+    "v": "0.99722495129180307801258209719810242410708190187164",
+    "f": "=CHISQ.TEST(S!A1:A10,S!B1:B10)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "0.84446458229297679311716746586105107043808111746392",
+    "f": "=CHISQ.TEST(S!A21:C23,S!E21:G23)"
+   },
+   "D2": {
+    "t": "e",
+    "why": "#N/A: the arrays differ in cell count",
+    "f": "=CHISQ.TEST(S!A21:C23,S!E21:F23)"
+   }
+  }
+ }
+}

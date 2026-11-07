@@ -13,7 +13,7 @@ use std::fmt::Write as _;
 
 use chrono::{Duration, NaiveDate};
 use rustsheet_engine::pivot::{
-    CacheItem, PivotCache, SharedItemsFlags, MAX_ITEMS, MAX_RECORDS, MAX_RECORD_VALUES,
+    CacheField, CacheItem, PivotCache, SharedItemsFlags, MAX_ITEMS, MAX_RECORDS, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::DateSystem;
 
@@ -48,7 +48,7 @@ pub(super) fn check(
     if cache.source.is_none() && cache.source_name.is_none() {
         return Err(Unwritable("a cache without a worksheet source".into()));
     }
-    if (cache.fields.iter()).any(|f| f.number_groups.is_some() || f.date_groups.is_some()) {
+    if (cache.fields.iter()).any(CacheField::is_grouped) {
         return Err(Unwritable("a grouped cache field (T-4734)".into()));
     }
     let records = cache.record_count as usize;
