@@ -12,7 +12,7 @@ mod package;
 mod package_diff;
 mod r1;
 pub(crate) mod scenarios;
-mod semantic;
+pub(crate) mod semantic;
 #[cfg(test)]
 mod tests;
 mod xmldiff;

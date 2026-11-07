@@ -26,13 +26,24 @@ jobs:
       #   make eval's.
       - run: |
           for attempt in 1 2 3; do
-            scripts/eval_guard.sh target/release/rustsheet-eval fetch --suite calipers --suite poi --suite corpus-bench && exit 0
+            scripts/eval_guard.sh target/release/rustsheet-eval fetch --suite calipers --suite poi --suite corpus-bench \
+              --suite pivot-corpus-lo --suite pivot-corpus-closedxml && exit 0
             sleep 30
           done
           exit 1
+      # Decision 0346: the pivot-corpus suites (T-4131, T-4906), fetched above, which make eval ran without. Their
+      # report, with "Pivot freshness" and report.json's `fresh_pivot_render`, goes into the artifact.
+      - run: >-
+          scripts/eval_guard.sh target/release/rustsheet-eval run --out eval/runs/latest/pivot-corpus
+          --suite pivot-corpus-lo --suite pivot-corpus-closedxml
       - run: >-
           scripts/eval_guard.sh target/release/rustsheet-eval roundtrip --check --timeout 300
           --suite roundtrip-calipers --suite roundtrip-poi --suite roundtrip-corpus-bench
+      # Their cell baselines (`gate = false`, so no PR gate checks them); run whatever the round trips gave.
+      - if: ${{ !cancelled() }}
+        run: >-
+          scripts/eval_guard.sh target/release/rustsheet-eval check
+          --suite pivot-corpus-lo --suite pivot-corpus-closedxml
       # The report is kept when a gate above fails, which is when it is needed.
       - if: always()
         uses: actions/upload-artifact@v4

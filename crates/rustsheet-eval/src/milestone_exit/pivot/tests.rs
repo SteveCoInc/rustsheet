@@ -76,6 +76,9 @@ fn met() -> RunReport {
         compared: 4,
         differing: 1,
         reason: None,
+        render: None,
+        render_unscored: None,
+        refresh: None,
     }];
     r.cases = vec![
         pivot_case("gen-pivot/a", GEN_SUITE),
