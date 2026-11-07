@@ -3,7 +3,7 @@ id: T-4895
 title: "Probe what a column delete that leaves a filter criterion does to hand-hidden, visible, case-differing and formatted rows"
 milestone: M8
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
