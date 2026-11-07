@@ -323,13 +323,7 @@ impl TableReader<'_> {
     fn read_extension(&mut self, owner: OpaqueOwner, xml: &str) -> Result<(), Skip> {
         match owner {
             OpaqueOwner::DataField(index) => {
-                let mut mode = None;
-                each_x14_element(xml, "dataField", |element| {
-                    if let Some(name) = attribute(element, "pivotShowAs")? {
-                        mode = Some(show_data_as(&name)?);
-                    }
-                    Ok(())
-                })?;
+                let mode = data_field_x14_show_as(xml).map_err(Skip)?;
                 let data = self.table.data_fields.get_mut(index as usize);
                 if let (Some(mode), Some(data)) = (mode, data) {
                     data.show_data_as = mode;
@@ -608,6 +602,21 @@ fn each_x14_element(
         }
         Ok(())
     })
+}
+
+/// The x14 `pivotShowAs` mode `xml`, an element kept inside a `<dataField>`, names (the last, if
+/// several), or the reason it cannot be read: an unknown mode or malformed XML. The importer reads
+/// a field's mode with it, and the exporter checks a kept extension against the model (T-4759).
+pub(crate) fn data_field_x14_show_as(xml: &str) -> Result<Option<ShowDataAs>, String> {
+    let mut mode = None;
+    let read = each_x14_element(xml, "dataField", |element| {
+        if let Some(name) = attribute(element, "pivotShowAs")? {
+            mode = Some(show_data_as(&name)?);
+        }
+        Ok(())
+    });
+    read.map_err(|skip| skip.0)?;
+    Ok(mode)
 }
 
 /// A `<dataField>` but its `fld`, which the caller checks against the cache.

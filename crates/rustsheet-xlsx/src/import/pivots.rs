@@ -32,7 +32,7 @@ use rustsheet_engine::pivot::{
 use rustsheet_engine::types::DateSystem;
 
 use self::groups::{apply_groups, FieldGroup, RangeGroup};
-pub(crate) use self::table::SUBTOTAL_FUNCTIONS;
+pub(crate) use self::table::{data_field_x14_show_as, SUBTOTAL_FUNCTIONS};
 use self::table::{flag, read_pivot_table};
 use super::iso_date::pivot_cache_date_serial;
 use super::package::{

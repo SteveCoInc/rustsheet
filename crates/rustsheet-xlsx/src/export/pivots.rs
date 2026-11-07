@@ -20,6 +20,7 @@ mod cache;
 #[cfg(test)]
 mod group_tests;
 mod groups;
+mod show_as;
 mod table;
 #[cfg(test)]
 mod tests;

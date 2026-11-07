@@ -1659,6 +1659,13 @@ T-4129). The sidecars' `pivots` sections hold every cell.
 Status: VERIFIED (excel-graph) for these shapes. Ties, division by zero, a missing base item, (next),
 and the other base fields are in the next entry (T-4161). The engine is T-4163.
 
+UNVERIFIED (T-4948): two dataField extension shapes the exporter writes (T-4759,
+`export/pivots/show_as.rs`) are seen in no Excel-saved file. Removing a stale x14 mode, when the
+model's mode is ECMA or `normal`, can leave an attribute-less `<x14:dataField/>` in its `<ext>`,
+beside a `showDataAs` or beside none. A kept `extLst` in a prefixed main namespace gains the
+extension as `<x:ext>`; Excel writes the main namespace unprefixed. Whether Excel for the web opens
+each shape, what it renders and what it saves back are unknown until T-4948 probes them.
+
 ## Show-values-as edge cases (T-4161)
 Rule: each mode's base items, ties, running totals, subtotal and grand-total cells and division by
 zero render as listed below, per mode. This extends the entry above, mode by mode. Every pivot below has rows Region (outer) and Product, columns

@@ -624,28 +624,33 @@ fn patch_value(old: &str, new: &str, export_vm: bool) -> Option<String> {
 
 /// `<c ...` (without its closing `>`) with `t` set to the given value in its place (or removed,
 /// or added last), every other attribute kept in its order and spelling. With `vm` given, `vm` is
-/// set the same way; without it, the source's `vm` is kept. A value is re-quoted with `"`, so one
-/// that held a `"` inside `'...'` gets it as `&quot;`. `None` for a malformed attribute.
+/// set the same way; without it, the source's `vm` is kept. `None` for a malformed attribute.
 fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>, vm: Vm<'_>) -> Option<String> {
-    let mut out = String::from("<c");
-    // `Some(new)` is an attribute to rewrite (`new` its value, or `None` to remove it); `None`
-    // leaves the source's as it is.
-    let mut t = Some(t.map(|t| escape_xml(t).into_owned()));
-    let mut vm = match vm {
-        Vm::Keep => None,
-        Vm::Set(v) => Some(v.map(|v| escape_xml(v).into_owned())),
-    };
+    match vm {
+        Vm::Keep => rewrite_tag(e, "c", &[("t", t)]),
+        Vm::Set(vm) => rewrite_tag(e, "c", &[("t", t), ("vm", vm)]),
+    }
+}
+
+/// The start tag `e` as `<name ...` (without its closing `>`), each attribute `changes` names set
+/// to its value (escaped here) in its place, or removed for `None`, or added last when absent;
+/// every other attribute kept in its order and spelling. A kept value is re-quoted with `"`, so
+/// one that held a `"` inside `'...'` gets it as `&quot;`. `None` for a malformed attribute.
+pub(crate) fn rewrite_tag(
+    e: &BytesStart<'_>,
+    name: &str,
+    changes: &[(&str, Option<&str>)],
+) -> Option<String> {
+    let mut out = format!("<{name}");
+    // `Some(new)` is a change still to place (`new` its value, or `None` to remove it).
+    let mut pending: Vec<(&str, Option<Option<String>>)> = (changes.iter())
+        .map(|(key, value)| (*key, Some(value.map(|v| escape_xml(v).into_owned()))))
+        .collect();
     for a in e.attributes() {
         let a = a.ok()?;
         let key = a.key.as_ref();
-        // `t` and a given `vm` are rewritten where the source had them.
-        let slot = match key {
-            "t" => Some(&mut t),
-            "vm" if vm.is_some() => Some(&mut vm),
-            _ => None,
-        };
-        let value = match slot {
-            Some(slot) => match slot.take().flatten() {
+        let value = match pending.iter_mut().find(|(k, _)| *k == key) {
+            Some((_, slot)) => match slot.take().flatten() {
                 Some(value) => value,
                 None => continue,
             },
@@ -653,7 +658,7 @@ fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>, vm: Vm<'_>) -> Option<
         };
         out.push_str(&format!(" {key}=\"{value}\""));
     }
-    for (key, value) in [("t", t), ("vm", vm)] {
+    for (key, value) in pending {
         if let Some(Some(value)) = value {
             out.push_str(&format!(" {key}=\"{value}\""));
         }
