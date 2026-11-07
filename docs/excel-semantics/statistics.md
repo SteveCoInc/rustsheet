@@ -3201,6 +3201,21 @@ cdf, F.DIST, F.DIST.RT, FDIST, BINOM.DIST's cdf and NEGBINOM.DIST's cdf (T-2505,
 large shapes and BETA.INV's huge-shape crossing (`bratio/mod.rs::kernel_tails`, T-2977)
 Tasks: T-2502, T-2505, T-2511, T-2977, T-3007
 
+## Incomplete beta (Cephes kernel): an exhausted fraction and an underflowing prefactor (T-4979, T-4975)
+Rule (audit item 5 of the 2026-11-07 findings, reproduced in `incomplete_beta.rs`):
+- Iteration exhaustion. Cephes' continued fraction stops at 300 steps and its last convergent is used
+  (`incbcf(2E5,2E5,0.5)` does not converge). Excel's value is that convergent's to Gate A's envelope where it happens:
+  turning exhaustion into `#NUM!` makes `FDIST(1.09318173579934,49,888336)` (Excel 0.3034459528338627, accuracy/FDIST/s1
+  A176) and 16 BETA.INV/BETAINV Gate A points (Excel 1 - 2^-53 or 2^-53, BETA.INV/s1 A86, A100, BETAINV/s1 A85 and
+  others) errors. So exhaustion is detected but not reported; a better fallback kernel there is open (T-4979).
+- Prefactor underflow. With a + b below MAXGAM the prefactor is exp(a ln x)·exp(b ln y)·Gamma(a+b)/(Gamma(a) Gamma(b)),
+  and a factor underflowing to 0 zeroed a representable tail: `I_1E-4(85,85)` came out 0 where the tail is
+  4.5346145057366762E-291 (mpmath). Where the product underflows or overflows and the Gamma ratio is finite, the
+  prefactor is now taken in log space. Where the Gamma product itself overflows (a shape near DBL_MIN) the 0 stays:
+  BETA.INV reads that tail as its start (accuracy/BETA.INV/s1 A135, Excel 0.5, T-4663).
+Status: VERIFIED (the underflow against mpmath; the exhaustion against Excel's Gate A cells)
+Implemented in: functions/statistical/incomplete_beta.rs `beta_tails`, `cephes_fraction`, `fraction`.
+
 ## Incomplete beta at a shape of 1 outside the closed forms (T-3007)
 Rule: after bratio's swap, at a0 = 1 with y0 > 0.9 (x0 below about 0.1, b0 not 1), Excel computes one tail, w, and
 forms the other as (0.5 - w) + 0.5, as bratio does on every branch; it does not form w1 = y0^b0 on its own. Its w is
