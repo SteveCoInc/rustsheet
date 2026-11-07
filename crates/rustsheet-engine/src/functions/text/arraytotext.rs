@@ -8,6 +8,8 @@ use crate::{
     number_format::number_to_text,
 };
 
+use super::util::{text_budget_error, within_text_budget};
+
 impl Model {
     /// ARRAYTOTEXT(array, [format])
     /// format=0 (default, concise): values joined with "," (columns) and ";" (rows)
@@ -123,27 +125,84 @@ fn arraytotext_render(
         );
     }
     // Excel: a scalar is a one-element array, so strict form braces it, as a larger array.
-    let result = if strict {
-        // Strict: {col1,col2;row2col1,row2col2}
-        let rows: Vec<String> = array
-            .iter()
-            .map(|row| {
-                row.iter()
-                    .map(|v| format_array_value(v, true))
-                    .collect::<Vec<_>>()
-                    .join(",")
-            })
-            .collect();
-        format!("{{{}}}", rows.join(";"))
-    } else {
-        // Concise: flatten all elements row-by-row, join with ", "
-        let elements: Vec<String> = array
-            .iter()
-            .flat_map(|row| row.iter().map(|v| format_array_value(v, false)))
-            .collect();
-        elements.join(", ")
-    };
-    CalcResult::String(result.into())
+    // Strict: {col1,col2;row2col1,row2col2}; concise: every element row by row, joined with ", ".
+    // Every piece (element text with its quotes and doubled quotes, separator, brace) is charged
+    // to the broadcast text budget before it is appended, so the text never passes the cap
+    // (directive 5, DEVIATION decision 0014; docs/excel-semantics/text.md "Broadcast text output
+    // cap").
+    let mut out = BoundedText::default();
+    match render_into(&mut out, array, strict) {
+        Some(()) => CalcResult::String(out.text.into()),
+        None => text_budget_error(cell),
+    }
+}
+
+/// Appends ARRAYTOTEXT's text of `array` to `out`; `None` once the budget is passed.
+fn render_into(out: &mut BoundedText, array: &[Vec<ArrayNode>], strict: bool) -> Option<()> {
+    if strict {
+        out.push("{")?;
+    }
+    let mut first = true;
+    for (r, row) in array.iter().enumerate() {
+        if strict && r > 0 {
+            out.push(";")?;
+        }
+        for (c, value) in row.iter().enumerate() {
+            if strict && c > 0 {
+                out.push(",")?;
+            } else if !strict && !first {
+                out.push(", ")?;
+            }
+            first = false;
+            push_array_value(out, value, strict)?;
+        }
+    }
+    if strict {
+        out.push("}")?;
+    }
+    Some(())
+}
+
+/// A text built piece by piece under the broadcast text budget (`within_text_budget`): a piece is
+/// charged before it is appended, and `None` once the total passes the cap.
+#[derive(Default)]
+struct BoundedText {
+    text: String,
+    charged: usize,
+}
+
+impl BoundedText {
+    fn reserve(&mut self, len: usize) -> Option<()> {
+        within_text_budget(&mut self.charged, len).then_some(())
+    }
+
+    fn push(&mut self, piece: &str) -> Option<()> {
+        self.reserve(piece.len())?;
+        self.text.push_str(piece);
+        Some(())
+    }
+}
+
+/// Appends one element's text: a string's quotes and doubled quotes in strict form are charged
+/// before anything is copied.
+fn push_array_value(out: &mut BoundedText, node: &ArrayNode, strict: bool) -> Option<()> {
+    match node {
+        ArrayNode::String(s) if strict => {
+            let quotes = s.bytes().filter(|&b| b == b'"').count();
+            out.reserve(s.len().saturating_add(quotes).saturating_add(2))?;
+            out.text.push('"');
+            for ch in s.chars() {
+                if ch == '"' {
+                    out.text.push('"');
+                }
+                out.text.push(ch);
+            }
+            out.text.push('"');
+            Some(())
+        }
+        ArrayNode::String(s) => out.push(s),
+        other => out.push(&format_array_value(other)),
+    }
 }
 
 fn empty_cell_error(cell: CellReferenceIndex) -> CalcResult {
@@ -154,7 +213,8 @@ fn empty_cell_error(cell: CellReferenceIndex) -> CalcResult {
     )
 }
 
-fn format_array_value(node: &ArrayNode, strict: bool) -> String {
+/// The text of a non-string element (strings are appended by [`push_array_value`]).
+fn format_array_value(node: &ArrayNode) -> String {
     match node {
         // Excel: General text, 15 significant digits, the text `&` and VALUETOTEXT give
         // (docs/excel-semantics/text.md#arraytotext-number-text).
@@ -166,13 +226,7 @@ fn format_array_value(node: &ArrayNode, strict: bool) -> String {
                 "FALSE".to_string()
             }
         }
-        ArrayNode::String(s) => {
-            if strict {
-                format!("\"{}\"", s.replace('"', "\"\""))
-            } else {
-                (**s).to_owned()
-            }
-        }
+        ArrayNode::String(s) => (**s).to_owned(),
         ArrayNode::Error(e) => format!("{e}"),
         ArrayNode::Empty => String::new(),
         // Excel: a LAMBDA element is the letter lambda (probes/lambda-arrays B28).

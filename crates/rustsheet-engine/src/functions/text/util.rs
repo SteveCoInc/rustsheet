@@ -372,6 +372,15 @@ pub(crate) fn within_text_budget(total: &mut usize, len: usize) -> bool {
     *total <= MAX_BROADCAST_TEXT_BYTES
 }
 
+/// The `#VALUE!` of a call whose texts pass the broadcast text budget ([`within_text_budget`]).
+pub(crate) fn text_budget_error(cell: CellReferenceIndex) -> CalcResult {
+    CalcResult::new_error(
+        Error::VALUE,
+        cell,
+        "Total text result is too large".to_string(),
+    )
+}
+
 /// Largest `instance_num` SUBSTITUTE accepts (2^31 - 2; text.md, T-2279).
 const MAX_SUBSTITUTE_INSTANCE: f64 = 2_147_483_646.0;
 

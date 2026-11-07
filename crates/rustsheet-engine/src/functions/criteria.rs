@@ -7,7 +7,9 @@ use crate::{
     cast::value_number_text_with,
     expressions::token::{is_english_error_string, Error},
     formatter::date_text::{parse_date, CurrentYear},
-    functions::util::collation::{cmp_text_pairwise, fold_lookup, note_compared, BYTE_TICKS},
+    functions::util::collation::{
+        cmp_text_pairwise, fold_lookup, note_compared, out_of_ticks, BYTE_TICKS,
+    },
     locale::Locale,
     number_format::{cmp_excel_precision, parse_excel_number, parse_finite_number},
     text::Text,
@@ -720,7 +722,10 @@ impl WildcardPattern {
                 note_compared(s.len(), BYTE_TICKS);
                 self.matches_units(s.as_bytes(), |byte| u16::from(byte.to_ascii_lowercase()))
             }
-            _ => self.matches_units(&folded_units(text), |unit| unit),
+            _ => {
+                // `folded_units` charges its fold; the matcher charges steps past the length.
+                self.matches_units(&folded_units(text), |unit| unit)
+            }
         }
     }
 
@@ -760,14 +765,34 @@ impl WildcardPattern {
 
     /// Glob matching with backtracking to the last `*` only, which suffices because `*` matches
     /// any run: on a mismatch the last `*` takes one more unit. At most `text.len()` restarts,
-    /// each of at most `tokens.len()` steps.
+    /// each of at most `tokens.len()` steps, so O(n*m) steps for n units and m tokens.
+    ///
+    /// The caller charged the text's length (one step a unit); every step past it is charged
+    /// too, as it is taken (audit 2 item 2, directive 5: `XMATCH("*"&REPT("a",16000)&"b",..,2)`
+    /// over 32767-unit texts takes about 2.7E8 steps a text, which a length charge never saw).
+    /// Inside a `stoppable` reader (XMATCH's and XLOOKUP's wildcard scan) it stops once the run's
+    /// work allowance is spent; `out_of_ticks` then marks the run cut short, so its value is the
+    /// work budget's error, never this "no match".
     fn matches_units<T: Copy>(&self, text: &[T], unit: impl Fn(T) -> u16) -> bool {
+        /// Steps between two charges (and allowance checks).
+        const CHARGE_EVERY: usize = 1 << 12;
         let tokens = &self.tokens;
         let mut next_token = 0;
         let mut next_unit = 0;
         // The token after the last `*` seen, and the text position that `*` now runs to.
         let mut last_star: Option<(usize, usize)> = None;
+        // Steps taken, and steps charged (the caller's length charge first).
+        let mut steps = 0usize;
+        let mut charged = text.len();
         while let Some(&current) = text.get(next_unit) {
+            steps += 1;
+            if steps.is_multiple_of(CHARGE_EVERY) && steps > charged {
+                note_compared(steps - charged, BYTE_TICKS);
+                charged = steps;
+                if out_of_ticks() {
+                    return false;
+                }
+            }
             match tokens.get(next_token) {
                 Some(WildcardToken::AnyRun) => {
                     next_token += 1;
@@ -792,6 +817,9 @@ impl WildcardPattern {
             next_token = after_star;
             next_unit = star_end + 1;
             last_star = Some((after_star, next_unit));
+        }
+        if steps > charged {
+            note_compared(steps - charged, BYTE_TICKS);
         }
         tokens
             .get(next_token..)

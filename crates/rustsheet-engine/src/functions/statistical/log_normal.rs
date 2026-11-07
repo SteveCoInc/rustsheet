@@ -5,7 +5,7 @@
 use crate::arithmetic::{extended_product, extended_quotient, extended_sum};
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{num_error, number_or_error};
-use crate::functions::statistical::normal::normal_quantile;
+use crate::functions::statistical::normal::standard_normal_quantile;
 use crate::functions::statistical::special::{normal_cdf, LN_SQRT_2PI_CORRECTLY_ROUNDED};
 use crate::functions::Function;
 use crate::x87_exp::{excel_exp, two_sum};
@@ -85,8 +85,11 @@ impl Model {
         if p <= 0.0 || p >= 1.0 || std_dev <= 0.0 {
             return Err(num_error(cell));
         }
-        // EXP of NORM.INV's quantile, so the PPND16 tails reach LOGNORM.INV too (T-0925).
-        let result = normal_quantile(p, mean, std_dev, cell)?.exp();
+        // EXP(mean + sd*z) of the stored standard-normal quantile z, so the PPND16 tails reach
+        // LOGNORM.INV too (T-0925). Not NORM.INV's `mean + (sd*sqrt(2))*u`: LOGNORM.INV scales the
+        // rounded z (addendum 2 of the 2026-11-07 parity findings, section F).
+        let z = standard_normal_quantile(p, cell)?;
+        let result = (mean + std_dev * z).exp();
         if !result.is_finite() {
             return Err(num_error(cell));
         }

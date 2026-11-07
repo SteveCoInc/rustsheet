@@ -85,7 +85,7 @@ impl Function {
 
 /// An absolute reference to `range`, the argument a per-element call reads in place of the
 /// array of references it came from, or of a reference argument read once.
-fn range_node(range: &Range) -> Node {
+pub(crate) fn range_node(range: &Range) -> Node {
     Node::RangeKind {
         sheet_name: None,
         sheet_index: range.left.sheet,

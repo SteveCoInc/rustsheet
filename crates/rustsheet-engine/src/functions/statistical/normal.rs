@@ -8,7 +8,10 @@ use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 
 use crate::arithmetic::flush_subnormal;
 use crate::expressions::types::CellReferenceIndex;
+use std::f64::consts::SQRT_2;
+
 use crate::functions::lift::{div_error, num_error, number_or_error};
+use crate::functions::statistical::erf::inverse_erf_small;
 use crate::functions::statistical::special::{normal_cdf, normal_density_overflows, normal_pdf};
 use crate::functions::statistical::t_dist::{
     cauchy_two_tail_quantile, t_upper_quantile, two_tailed_half_underflows, T_DF_MAX,
@@ -84,8 +87,26 @@ fn ppnd16_tail(p: f64) -> Option<f64> {
     Some(if q < 0.0 { -value } else { value })
 }
 
+/// Where the central inverse-erf rational stops: |q| = |2p - 1| <= 0.5 (statrs' and Boost's
+/// small-argument piece; addendum 2 of the 2026-11-07 parity findings, section F).
+const CENTRAL_Q_LIMIT: f64 = 0.5;
+
+/// The signed u = erfinv(2p - 1) for |2p - 1| <= 0.5, `None` beyond. 2p - 1 is exact there
+/// (Sterbenz), and the rational is applied to |q| with the sign restored, as statrs' `erfc_inv`.
+fn central_inverse_erf(p: f64) -> Option<f64> {
+    let q = 2.0 * p - 1.0;
+    if q.abs() > CENTRAL_Q_LIMIT {
+        return None;
+    }
+    let u = inverse_erf_small(q.abs());
+    Some(if q < 0.0 { -u } else { u })
+}
+
 /// The quantile of `p` in (0, 1) of the normal distribution with `mean` and `std_dev`, O(1): the
-/// PPND16 tail as `mean + z*std_dev`, else statrs' closed form (`erfc_inv`).
+/// PPND16 tail as `mean + z*std_dev`; centrally (|2p - 1| <= 0.5) `mean + (std_dev*sqrt(2))*u`
+/// with u = [`inverse_erf_small`], the scale multiplying sqrt(2) before u (ironcalc `NORM_DIST.xlsx`
+/// 'NORM.DIST NORM.INV'!F28: `NORM.INV(0.500001994711402,0,1E6)` = 5.0000000001370815, one ulp
+/// above scaling a stored z); between them statrs' closed form (`erfc_inv`).
 pub(crate) fn normal_quantile(
     p: f64,
     mean: f64,
@@ -95,12 +116,18 @@ pub(crate) fn normal_quantile(
     if let Some(z) = ppnd16_tail(p) {
         return Ok(mean + z * std_dev);
     }
+    if let Some(u) = central_inverse_erf(p) {
+        return Ok(mean + (std_dev * SQRT_2) * u);
+    }
     let dist = Normal::new(mean, std_dev).map_err(|_| num_error(cell))?;
     Ok(dist.inverse_cdf(p))
 }
 
-/// The standard normal quantile of `p` in (0, 1) ([`normal_quantile`]).
-fn standard_normal_quantile(p: f64, cell: CellReferenceIndex) -> Result<f64, CalcResult> {
+/// The standard normal quantile of `p` in (0, 1) ([`normal_quantile`]): centrally sqrt(2)*u.
+pub(crate) fn standard_normal_quantile(
+    p: f64,
+    cell: CellReferenceIndex,
+) -> Result<f64, CalcResult> {
     normal_quantile(p, 0.0, 1.0, cell)
 }
 
@@ -379,5 +406,33 @@ mod tests {
         assert!((upper + lower).abs() < 1e-14, "{upper} {lower}");
         // r > 5 takes the E/F rational.
         assert!(ppnd16_tail(1e-300).is_some_and(|z| (z + 37.047_096_299_361_2).abs() < 1e-9));
+    }
+
+    const CELL: CellReferenceIndex = CellReferenceIndex {
+        sheet: 0,
+        column: 1,
+        row: 1,
+    };
+
+    fn quantile(p: f64, mean: f64, std_dev: f64) -> f64 {
+        normal_quantile(p, mean, std_dev, CELL).unwrap_or(f64::NAN)
+    }
+
+    #[test]
+    fn central_inverse_erf_register_discipline() {
+        // calipers roundtrip/formula_stress_test golden.xlsx Statistical!B42 (NORM.INV) and B46
+        // (NORMINV) of NORM.DIST(0,-1,3,TRUE): Excel 2^-50, a cancellation cell.
+        assert_eq!(
+            quantile(0.630_558_659_818_236_4, -1.0, 3.0),
+            8.881_784_197_001_252e-16
+        );
+        // ironcalc NORM_DIST.xlsx 'NORM.DIST NORM.INV'!F28: sd*sqrt(2) is formed before u.
+        assert_eq!(
+            quantile(0.500_001_994_711_402, 0.0, 1e6),
+            5.000_000_000_137_081_5
+        );
+        // Mirror: bit-identical |p - 1/2| gives opposite quantiles.
+        assert_eq!(quantile(0.25, 0.0, 1.0), -quantile(0.75, 0.0, 1.0));
+        assert_eq!(quantile(0.5, 0.0, 1.0), 0.0);
     }
 }

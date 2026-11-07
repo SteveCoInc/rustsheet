@@ -10,6 +10,7 @@ use crate::functions::{
     binary_search::binary_search_by,
     criteria::wildcard_text_matcher,
     text::{LookupPattern, LookupRegexes},
+    util::collation::stoppable,
     util::near_integer::near_integer_whole,
 };
 
@@ -118,13 +119,18 @@ pub(crate) fn linear_scan<'a>(
                     // (probes/t3161-xmatch-wildcard-regex-near-equal Calc!A1:A10, C1:C10, E1:E10).
                     Box::new(move |x| compare_searched(x, lookup_value) == 0)
                 };
-            indices.into_iter().find(|&idx| {
-                let v = get(idx);
-                if is_blank(v) || blank_lookup {
-                    is_blank(v) && blank_lookup
-                } else {
-                    matches(v)
-                }
+            // The scan's result reaches only this call's value, so the matcher may stop once the
+            // run's work allowance is spent (`stoppable`; the run is then the work budget's error,
+            // audit 2 item 2).
+            stoppable(|| {
+                indices.into_iter().find(|&idx| {
+                    let v = get(idx);
+                    if is_blank(v) || blank_lookup {
+                        is_blank(v) && blank_lookup
+                    } else {
+                        matches(v)
+                    }
+                })
             })
         }
         MatchMode::Regex => None,

@@ -6193,8 +6193,29 @@ it with `uv run rustsheet-fitlab norm-s-inv` (`fitlab/kernels/norm_inv.py`).
 Status: VERIFIED (tails); the central algorithm is UNVERIFIED
 Tasks: T-1746, T-1759, T-0925, T-0968
 
+## NORM.INV's centre keeps the inverse-erf product in a register, and scales sd*sqrt(2) first (T-4975)
+Rule: for |q| <= 0.5 with q = 2p - 1 (exact there), NORM.S.INV(p) is sqrt(2)*u and NORM.INV(p, m, s) and
+NORMINV are `m + (s*sqrt(2))*u`, with u = sign(q)*erfinv(|q|) from the small-argument rational of statrs/Boost,
+`x*(x+10)*(Y + R(x))` (Y = 0.08913147449493408, R a degree-7/9 rational in plain doubles), evaluated in x87
+discipline: x+10 is stored, g = x*(x+10) stays in a register, g*Y and g*R(x) are each stored, and their sum is
+formed in extended precision and stored. Rounding g early, or keeping the shift unrounded, misses the controls.
+The scale multiplies sqrt(2) before u: scaling a stored z instead is one ulp low on the control below, while
+LOGNORM.INV does scale the stored z (next entry). Between |q| = 0.5 and PPND16's split statrs' closed form stays.
+- `NORMINV(NORMDIST(0,-1,3,TRUE),-1,3)` and `NORM.INV(...)` = 8.881784197001252E-16 (2^-50), a cancellation cell
+  where the earlier closed form gave 6.661338147750939E-16.
+- `NORM.INV(0.500001994711402,0,1E6)` = 5.0000000001370815.
+This explains NORMINV's cancellation cell, not the remaining central NORM.S.INV / NORM.INV misses (up to about
+22 ulp; the entry above).
+Evidence: calipers roundtrip/formula_stress_test golden.xlsx Statistical!B42, B46 (Excel-saved); ironcalc-calc
+STATISTICAL/NORM_DIST.xlsx 'NORM.DIST NORM.INV'!F28 (Excel-authored cached value); addendum 2 of the 2026-11-07
+parity findings, section F.
+Status: VERIFIED (the controls); the rest of the centre is UNVERIFIED
+Implemented in: functions/statistical/erf.rs `inverse_erf_small`, normal.rs `normal_quantile`
+Tasks: T-4975
+
 ## LOGNORM.INV is EXP of NORM.INV's quantile (T-0925)
-Rule: LOGNORM.INV(p, m, s) and LOGINV are EXP(NORM.INV(p, m, s)), on NORM.INV's hybrid (PPND16 in the tails, see above). In the tails it is EXP(m + z*s), with z
+Rule: LOGNORM.INV(p, m, s) and LOGINV are EXP(m + s*z) of the stored standard-normal quantile z = NORM.S.INV(p)
+(T-4975: not NORM.INV's centre association `m + (s*sqrt(2))*u`, the entry above), on NORM.INV's hybrid (PPND16 in the tails, see above). In the tails it is EXP(m + z*s), with z
 the PPND16 quantile. `LOGNORM.INV(1E-20,0,1)` = 9.493291347224372E-05 (probes-numeric/t1543-inverse-cdf-tiny-p
 A16; statrs' `LogNormal::inverse_cdf` gave ...338E-05). With it, 20 ironcalc-calc LOGNORM.xlsx lines and 17 gen-m9
 LOGNORM.INV, LOGINV, CONFIDENCE.NORM and CONFIDENCE lines pass, and no cell regresses. The central LOGNORM.INV
