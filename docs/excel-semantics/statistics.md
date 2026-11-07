@@ -1068,13 +1068,15 @@ continued-fraction steps, 3.1 to 3.4 us in release), about 2.5 ms (the statrs se
 Since T-0974 the F quantiles below p = 1E-20, where statrs has no start, bisect the cdf: `F.INV(1E-300,5,5)` to
 `F.INV(1E-100,5,5)` (E1-E5) and the lifted A7 of the unit test are Excel's power-law values to 13 digits, no longer
 `#NUM!`. `F.INV(1E-50,6000,4)` is 0.016348827552952715 where Excel gives 0.0004924127886173762 (E6), and
-`F.INV(1E-50,2000,2)` 0.008195481623830967 where Excel gives 0.004452511009947361 (E7): our deep tail of the incomplete
-beta at these df is not Excel's (T-1871). E8, E11 and E12 are within the 15th digit and E10 is 25 units of it off (T-1871).
+`F.INV(1E-50,2000,2)` 0.008195481623830967 where Excel gives 0.004452511009947361 (E7). Both of ours are the
+50-digit math (mpmath, T-1871): Excel is 97% and 46% below it, its own search as at T-4103's points, Excel the target
+(decisions 0300, 0301), not reproduced (T-4894). E8, E11 and E12 are within the 15th digit and E10 is 25 units of it
+off (E10 and E11 are within 4 ulp of the math, Excel 1 ulp; T-4894).
 Where statrs' search never finished (its step loop never ends once a Newton step is infinite, found once for BETA.INV at
 p = 1-2^-53), the capped search has no start and the refinement bisects the cdf: since T-2119
 `BETA.INV(1-2^-53,1.0024017013258346,12177.162026553196)` is 0.003013141..., a known mismatch: Excel gives
-0.0691959487211844 (E9; it was `#NUM!`). Unit test `quantile_searches_that_hung_or_panicked_are_bounded`; T-1871 gives
-Excel's value there. (statrs also panicked for every F.INV below p = 1.6E-162 and hung for about 7% of F.INV
+0.0691959487211844 (E9; it was `#NUM!`). Unit test `quantile_searches_that_hung_or_panicked_are_bounded`. E9 is Excel's erratic
+extreme-shape BETA.INV (true quantile about 0.003); its rule is UNVERIFIED (T-1871 left it, T-4894). (statrs also panicked for every F.INV below p = 1.6E-162 and hung for about 7% of F.INV
 calls below p = 3.6E-27; since T-0974 those bisect the cdf without a start and give a number, see E6 above.)
 DEVIATION (decision 0014, CLAUDE.md directive 5): a lifted BETA.INV, BETAINV, F.INV, F.INV.RT or FINV of more than 512
 elements, and a lifted T.INV, T.INV.2T, TINV or CONFIDENCE.T of more than 1,024 (2,048 before T-2511's crossing, whose
@@ -1091,7 +1093,7 @@ a probability outside (0, 1), an alpha or beta of 0 or less, or B <= A, where a 
 `beta_inv_refused_elements_are_charged_one`). The cap on real searches is unchanged. F.INV and the T quantiles keep the
 flat charge.
 Status: VERIFIED (excel-graph)
-Tasks: T-1848, T-1849, T-1871, T-2607
+Tasks: T-1848, T-1849, T-1871, T-2607, T-4894
 
 ## Incomplete gamma: per-call cap and lifting (T-1872)
 Rule: CHISQ.DIST, CHISQ.DIST.RT, CHIDIST, CHISQ.INV, CHISQ.INV.RT, CHIINV, GAMMA.DIST, GAMMADIST, GAMMA.INV, GAMMAINV,
@@ -7225,6 +7227,53 @@ Ours: `#NUM!` where the quantile saturates, and 7 ulp off at `F.INV.RT(1E-20,3,9
 Status: VERIFIED (excel-graph) for the cells; the mechanism UNVERIFIED
 Tasks: T-2435, T-2808, T-4662, T-4675
 
+## F quantile far from the mean: brcomp's far branch (T-1871)
+Rule: where Excel's F.INV, F.INV.RT and FINV deep-tail values are the 50-digit math, they are the math to 15 digits
+at shapes far from the incomplete beta's mean too: `F.INV(4.56622854140627E-172,29,7719)` = 6.547980469317685E-13,
+`F.INV.RT(4.6950979439918E-162,3216,23)` = 241639249736357.75 and `F.INV(1.04122706037508E-20,1,161)` =
+1.7082817524148195E-40 (accuracy/F.INV/s1 A154, A168; F.INV.RT/s1 A155; math sidecars).
+Ours: two engine faults, not Excel quirks, put these off before T-1871. (1) The Cephes tail's prefactor at a + b of
+MAXGAM or more (`incomplete_beta.rs` `large_prefactor`) took rlog1(-lambda/a) at every x, and far below the mean
+1 - lambda/a = x/x0 keeps only 2^-53/(x/x0) of its digits (x/x0 about 1.7E-13 at A154: 8.4E-5 off; A155 1.8%). TOMS
+708 `brcomp` takes e - ln(x/x0) once |e| > 0.6; the engine takes it where 1 + e cancels, e < -0.6
+(`brcomp_log_term`). On the e > 0.6 side nothing cancels, and TOMS' branch only re-rounds the term: it moved
+`BETADIST(0.925987407725148,691.377340906423,16.7922142692129)` from -15 to -34 ulp of Excel and
+`F.DIST.RT(4.6348085950674,51,1254)` from +12 to +45 (accuracy/BETADIST/s1 A171, F.DIST.RT/s1 A148, both further from
+the math too), so rlog1 stays there. Of the 44,723 Gate A points, besides A154, A168 and A155 only three moved, a few
+ulp each, all inside the envelope: F.INV/s1 A171 (2 ulp below the math -> on it; Excel is far off, T-4103),
+F.INV.RT/s1 A168 (+7 -> -1 ulp of Excel) and FINV/s1 A168 (2 ulp below the math -> 2 above; Excel far off, T-4103);
+no gated eval cell changed. (2) statrs' AS 109 search stops on an absolute step test, so below p = 1E-15, where its estimate is kept
+unrefined, it could return a point that is no root (A168: 1.87E-14, its cdf 1E13 times p; gen-m9/c6cfda6bd10cae93
+A114 `F.INV(1E-16,1,2)` 2.4E-16 against 2E-32). An estimate whose lower-tail cdf misses p by more than 1E-12 relative
+now goes to the crossing (`fisher.rs` `estimate_solves`; the converged estimates of the suites miss by at most
+2E-13). A114 is then 53 ulp from Excel and gen-m9/3a25a03eb94fcfbd A44 `F.INV(1E-20,4,6)` 9 ulp (2.5E-12 relative off
+before), both still past the 15th digit, as below.
+Evidence: eval/accuracy/tables/F.INV/s1, F.INV.RT/s1 (excel-graph oracle and math sidecars); unit tests
+`large_prefactor_far_from_the_mean_keeps_its_digits`, `deep_tail_quantiles_are_within_fourteen_digits`.
+Status: VERIFIED (excel-graph) for the cells
+Tasks: T-1871
+
+## F quantile at a tiny p is near the leading-term closed form (T-1871)
+Rule: at a tiny p (the smaller tail below 1E-20) with small df, Excel's F quantile is not the correctly rounded
+crossing: it is 1E-16 to 3E-14 relative from the 50-digit math (`F.INV(1E-200,2,9)` = 9.999999999999846E-201, 1.5E-14
+below the math 1.0000000000000000E-200 to 16 digits), growing with |ln p| over the first shape, as the rounding of a
+log-domain formula would. Lead, UNVERIFIED: it lies within a few ulp of the incomplete beta's leading-term inverse
+x = exp((ln q + ln a + ln B(a, b))/a), q the smaller tail and (a, b) its shapes (df1/2, df2/2 for the lower tail,
+swapped for the upper), mapped to F; `F.INV(1E-300,5,5)`, `F.INV(1E-100,5,5)`, `F.INV(1E-100,9,1)`,
+`F.INV.RT(1E-300,1,9)` and `F.INV.RT(1E-100,1,1)` are bit-exact on one or another of the arithmetic variants below. On the literal-argument cells of the eval
+suites where that leading term is exact to 1E-17, ranked over 72 arithmetic variants (libm or Excel's LN and EXP,
+two ln-gamma kernels, three sum orders, three mappings) on a fixed hold-out split, the best is bit-exact on 5 of 36
+fit cells and within 4 ulp on 15 (hold-out 5 and 17 of 32), where the engine's crossing is within 4 ulp on none; the
+other misses are 140 to 250 ulp (`F.INV(1E-170,5,5)`, `F.INV(1E-200,6,1)`, `FINV(1E-100,7,2)`), about one rounding of
+the sum at |ln p| of 400 to 700. So Excel's arithmetic is none of the 72. At p = 1E-300 with df2 3 to 10 Excel is off
+both, 1E-12 to 1E-9 from the math (`F.INV(1E-300,6,3)`, `F.INV.RT(1E-300,4,10)`, `F.INV.RT(1E-300,3,5)`).
+Evidence: gen-m9 cells of T-4894 and probes/stat-quantile-lift E1-E5 (excel-graph values, committed). The math
+values (mpmath 1.3 at 60 digits) and the variant ranking are from an uncommitted T-1871 run; T-4894 carries the method
+and owes committed references (a math sidecar on a probe case) before any of it is relied on.
+Ours: the crossing of the engine's tail (the math within a few ulp); not changed (T-4894).
+Status: UNVERIFIED (the form); VERIFIED (excel-graph) for the cell values
+Tasks: T-1871, T-4894
+
 ## F.INV.RT and FINV at a tiny probability: Excel's own search, far from the math (T-4103)
 Rule: below p of about 1E-130, and at p = 2.22507385850721E-308 (DBL_MIN), Excel's F.INV.RT and FINV are often far
 from the true quantile, with both names alike; Excel is the target there (decision 0300).
@@ -7245,7 +7294,8 @@ Not established: why Excel's search stops where it does (T-2555's BETA.INV stop 
 candidates). The other numeric points (154 of F.INV.RT's, 155 of FINV's) are within 1E-4 of the math.
 Evidence: eval/accuracy/tables/F.INV.RT/s1 and FINV/s1 (oracle and math sidecars; `rustsheet-eval accuracy`).
 Ours: Excel's value at every point above but F.INV.RT/s1 A112 and A142 (the math; T-4568); A155
-(`F.INV.RT(4.6950979439918E-162,3216,23)`, where Excel is the math) is 1.8% off (T-1871).
+(`F.INV.RT(4.6950979439918E-162,3216,23)`, where Excel is the math) is 12 ulp from Excel since T-1871 (1.8% off
+before: see "F quantile far from the mean: brcomp's far branch (T-1871)").
 Status: VERIFIED (excel-graph) for the cells; the mechanism UNVERIFIED
 Tasks: T-4103, T-4568, T-1871
 
