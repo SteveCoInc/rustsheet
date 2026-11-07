@@ -56,6 +56,11 @@
        line.
      - The semantics entry lists the superseded cells next to the refill cells that replace them.
      - No one re-fills or edits the earlier sidecar to clear them.
+     - An earlier-only cell is a cell with no later fill that the change moves (it holds a changed read inside another
+       formula). The implementing task supersedes it only after it commits a copy of its case refilled on or after the
+       change (item 1's copy rule) that shows the new value. It then lists the cell in its task file's "supersedes"
+       list, which is what the regression run may cover. If the refill keeps the old value, the cell is not superseded
+       and must keep passing.
   4. **This change.** The 2026-11-06 nested-cell reads are a behavior change under item 1, and they are the target.
      SPEC-0018 rules 4 and 7 and its "One reader" are revised to them (T-4661). The superseded cells, all in
      probes, are:
@@ -65,11 +70,11 @@
      - t2360-array-lambda-holidays P!C1, C9, C17, C25 and C33;
      - t2311-pivotby-value-columns-error P!C12;
      - t2475-stat-subexpressions P!A64 (October `64|13x3|?`, which ours gives today);
-     - gen-m9/e85daedce5c2675e Calc!A35, conditionally. Its `BESSELJ(COUNT(PIVOTBY(..),Data!B3:B5,Data!D9:D10),0)` holds
-       the COUNT of t2625-nested-consumers P!A26 word for word, but the cell has an October fill only (2026-10-23), and
-       ours passes it today. It is superseded once a copy of the case refilled on or after 2026-11-06 shows the
-       November count (item 1). T-4736 files that refill before its regression run. If the refill keeps the October
-       value, the cell is not superseded, and T-4736 must keep it passing.
+     - the earlier-only cells of item 3 that a 2026-11-07 scan of the suites found (formulas that hold SUM, COUNT,
+       COUNTA or a lifted read over a GROUPBY or PIVOTBY whose function returns its array). They are listed as
+       candidates in T-4736 and T-4737 and are superseded only by item 3's refill. One example is
+       gen-m9/e85daedce5c2675e Calc!A35, `BESSELJ(COUNT(PIVOTBY(..),Data!B3:B5,Data!D9:D10),0)`, which holds t2625 A26's
+       COUNT word for word and passes today against its 2026-10-23 fill.
      The October cells of probes/t2475-stat-subexpressions P!A62, A63 and gen-m9/17c110a53924beb8 Calc!A300 are
      superseded too. Ours already gives their November values, so they are F lines against the October values today.
      They stay F lines, and they need no regression run. Unlike them, t2475 P!A64 passes today and needs the run.

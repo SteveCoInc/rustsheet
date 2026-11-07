@@ -42,8 +42,14 @@ Cells this task supersedes (decision 0329 item 3):
 - t2311-pivotby-value-columns-error P!C12;
 - t2625-nested-consumers P!A32;
 - t2475-stat-subexpressions P!A64 (October `64|13x3|?`; ours passes it today).
-Check gen-m7/21b4eef18424ce94 Calc!A1504 too: REGEXEXTRACT reads its return_mode through a nested cell. It has no
-November fill. If the change moves it, file a refill probe before you supersede it.
+
+Earlier-only candidates (decision 0329 item 3). These are cells with an October fill only that read a nested cell through a
+lift. Supersede one only after you commit a refill copy of its case that shows the November value; otherwise keep it
+passing:
+- gen-m7/21b4eef18424ce94 Calc!A1504 and gen-m7/b24ce74f08d3f91a Calc!A1826 (REGEXEXTRACT reads its return_mode through a
+  nested cell);
+- probes/rich-errors-regex-group Calc!A23, K23, L23 (the same, with `LAMBDA(acc,acc)`).
+Any other cell that the eval run shows moving is handled the same way, and it is listed here before the run.
 
 ## Acceptance criteria
 - [ ] Every cell under "fixes" passes; `make eval-show` shows each one.

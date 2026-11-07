@@ -33,15 +33,20 @@ Cells this task supersedes (decision 0329 item 3; they become F lines against th
 - t2592-nested-groupby-cells P!A6:A8;
 - t2594-nested-aggregates P!A26:A29;
 - t2625-nested-consumers P!A13, A17, A20, A25, A26;
-- gen-m9/e85daedce5c2675e Calc!A35, only once a refill confirms it (decision 0329 item 4). The cell is
-  `BESSELJ(COUNT(PIVOTBY(..),Data!B3:B5,Data!D9:D10),0)`, which wraps t2625 A26's COUNT. It has an October fill only, and ours
-  passes it today. Before the regression run, add a refill copy (`probes/gen-m9-e85daedce5c2675e-refill-1106`, identical sheets,
-  as probes/gen-m9-17c110a53924beb8-refill-1106 did) with the `excel-probe` skill. If the refill shows the November count,
-  supersede A35. If it does not, keep A35 passing.
+
+
+Earlier-only candidates (decision 0329 item 3). These are cells with an October fill only that hold SUM or COUNT over a nested
+result inside another formula. Supersede one only after you commit a refill copy of its case (identical sheets, as
+probes/gen-m9-17c110a53924beb8-refill-1106 is; `excel-probe` skill) that shows the November value; otherwise keep it passing:
+- gen-m9/e85daedce5c2675e Calc!A35 (`BESSELJ(COUNT(PIVOTBY(..),Data!B3:B5,Data!D9:D10),0)`, t2625 A26's COUNT);
+- probes/t2436/e85daedce5c2675e Calc!A31, A46 (the same COUNT, bare and inside BESSELJ);
+- gen-m9/81bcdc0bec0c8e6b Calc!A121 (`IRR(SUM(..,PIVOTBY(..,LAMBDA(v,v),..),..))`) and gen-m9/d8f44d556674c2fd Calc!A78
+  (`PROB(..,SUM(..,PIVOTBY(..,LAMBDA(y,y),..)),..)`).
+Any other cell that the eval run shows moving is handled the same way, and it is listed here before the run.
 
 ## Acceptance criteria
 - [ ] Every cell under "fixes" passes; `make eval-show` shows each one.
-- [ ] The gen-m9/e85daedce5c2675e refill is committed, and A35 is handled as it shows.
+- [ ] Each earlier-only candidate that moves has a committed refill, and is superseded or kept passing as that refill shows.
 - [ ] The baseline diff adds F lines for exactly the cells under "supersedes", made by one
       `update-baseline --allow-regressions` run under decision 0329, and no other regression.
 - [ ] `NestedReading::Flatten` is removed, or kept only where a probe still shows flattening; arrays.md "Aggregates over
