@@ -74,3 +74,14 @@ Items 2 (error order) and 4 (FIELDVALUE row-axis, 3x1 of `#FIELD!`, `#FIELD!`, `
 values ("STOCKHISTORY and IMAGE residue (T-4686)"). Still UNVERIFIED and noted there: an empty-cell `height`/`width`
 under `sizing` 0..2, date text as an IMAGE number, and an empty `end_date`, array element or array `stock` with an empty `start_date` in STOCKHISTORY.
 No new known failures; the baseline gains the 44 passing cells.
+
+## Landing notes
+- PR #3785, head `f80911b83` before this notes commit: CI had just started after `make catch-up` merged `origin/main` (the only
+  conflict was eval/baseline/probes.txt). `make check-fast` passed locally on the pre-merge head `8f3a2360e`.
+- Reviewers: security, design and excel-fidelity all APPROVED `8f3a2360e` (the merge added no code of this PR). Two
+  MINOR doc nits from fidelity were left on purpose: cite A3 (`2,-1`) in the information.md bullet, and list boolean text
+  (`"TRUE"`) as UNVERIFIED for option coercion.
+- Next step: wait for CI on the current head, then `enable_pr_auto_merge` with SQUASH. If the queue removes it, follow
+  work-loop step 6.3 (`make catch-up PR=3785` for a baseline-list conflict).
+- Do not repeat: the fidelity MAJOR (sizing 1 and 2 with a width alone) is already probed (A16:A18) and the option text
+  parse already goes through `Model::cast_number`.
