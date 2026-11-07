@@ -127,11 +127,9 @@ pub struct Lexer {
     /// reads the column as no column, as Excel does, and refuses the prefix (see
     /// [`Lexer::set_engine_text`]).
     engine_text: bool,
-    /// Whether `**` is a number's exponent marker, as `E` is: text a user types, which Excel
-    /// reads so (`=2**3` stores `=2000`; see [`Lexer::set_typed`]).
-    double_star_exponent: bool,
-    /// The formula is typed: `#REF!` followed by a cell or range is refused (T-4628, see
-    /// `consume_deleted_sheet_reference`).
+    /// Whether the formula is text a user types ([`Lexer::set_typed`]): then `**` is a number's
+    /// exponent marker, as `E` is (`=2**3` stores `=2000`), and `#REF!` followed by a cell or
+    /// range is refused (T-4628, see `consume_deleted_sheet_reference`).
     typed: bool,
     /// Whether whitespace between tokens of the formula last set held a TAB or an NBSP, which
     /// Excel refuses in typed text ([`Lexer::skipped_refused_whitespace`]).
@@ -166,7 +164,6 @@ impl Lexer {
             locale,
             language,
             engine_text: true,
-            double_star_exponent: false,
             typed: false,
             refused_whitespace: false,
             peeked: None,
@@ -178,9 +175,9 @@ impl Lexer {
     /// its exponent marker `E`: `=2**3` is `=2000`, `=1.5**2` `=150`, `=2**-1` `=0.2`; `**` not
     /// written where an `E` would be (after a reference or `)`, before a space, a fraction or a
     /// second exponent) is refused (syntax.md "`**` in a typed number is `E`",
-    /// probes/t3283-typed-double-star, t3213-typed-parse-errors A5).
+    /// probes/t3283-typed-double-star, t3213-typed-parse-errors A5), and where `#REF!` before a
+    /// cell or range is refused (probes/t4628-deleted-sheet-reference-text).
     pub(crate) fn set_typed(&mut self, typed: bool) {
-        self.double_star_exponent = typed;
         self.typed = typed;
         self.peeked = None;
     }
