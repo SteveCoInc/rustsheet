@@ -3,7 +3,7 @@ id: T-4755
 title: "Probe a row hidden by hand inside a filtered table, and a delete that leaves a criterion, through column edits"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
