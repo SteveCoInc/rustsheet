@@ -35,7 +35,7 @@ const CLOSED_FORM_QUANTILE_MAX: f64 = 1e-21;
 /// 4.1475670139922064E-134) and at 4.4E-14 (gen-m9/3a25a03eb94fcfbd A254 `GAMMAINV(0.5,0.01,100)`:
 /// F is 4.4E-16 below p at the closed form; the result is Excel's 4.4655350189103716E-29). F is
 /// [`excel_form_lower`], the leading-factor series form, even where a·LN(x) is above
-/// [`EXCEL_EXPONENT_MAX`](super::EXCEL_EXPONENT_MAX) and the engine's GAMMA.DIST is the pair. A254 and A396 need that: on
+/// [`EXCEL_EXPONENT_MAX`](super::lower_form::EXCEL_EXPONENT_MAX) and the engine's GAMMA.DIST is the pair. A254 and A396 need that: on
 /// GAMMA.DIST's value their steps would be 2.2E-14 (kept) and 4.2E-14 (taken), both against Excel.
 /// So either Excel's GAMMA.INV steps on an internal form, or the engine's GAMMA.DIST is off there
 /// (T-3265 probes it). One step only: at A26 a second would be 3.46E-14 of x and Excel takes none.

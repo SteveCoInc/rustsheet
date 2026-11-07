@@ -4,8 +4,8 @@ use super::erf::gamma_half_lower;
 use super::gamma_x87::excel_gamma;
 use super::gammaln::excel_gammaln;
 use super::incomplete_gamma::{
-    excel_small_shape_lower, excel_small_shape_quantile, gamma_cdf, gamma_density, gamma_quantile,
-    huge_shape_quantile, Tail, DIRECT_SHAPE_MAX, HUGE_SHAPE_MIN,
+    excel_lower, excel_lower_density, excel_small_shape_quantile, gamma_cdf, gamma_density,
+    gamma_quantile, huge_shape_quantile, Tail, DIRECT_SHAPE_MAX, HUGE_SHAPE_MIN,
 };
 use super::normal::normal_quantile;
 
@@ -133,10 +133,10 @@ pub(super) fn log_form_density(alpha: f64, x: f64, beta: f64) -> Option<f64> {
 /// GAMMA.DIST's cdf for the gamma `dist` of scale `beta`, through Excel's identities
 /// (docs/excel-semantics/statistics.md, T-1778): GAMMA.DIST(x,a,b,TRUE) = GAMMA.DIST(x/b,a,1,TRUE),
 /// the quotient rounded twice like the worksheet `/` (statrs scales by a rounded 1/b instead), and
-/// at shape 0.5 that is ERF.PRECISE(SQRT(x/b)). At another shape below 1 and an x/b below 1 it is
-/// Excel's own leading factor over the series ([`excel_small_shape_lower`], T-3060). An x of 0,
-/// and an x/b that underflows to 0 or overflows, keep the port's own branches (a subnormal x/b is
-/// flushed to 0 first, T-1942):
+/// at shape 0.5 that is ERF.PRECISE(SQRT(x/b)). At another shape below 1, or above 1 at an x/b up
+/// to 1, it is Excel's own leading factor over the series where Excel takes it ([`excel_lower`],
+/// T-3060, T-3412). An x of 0, and an x/b that underflows to 0 or overflows, keep the port's own
+/// branches (a subnormal x/b is flushed to 0 first, T-1942):
 /// `GAMMA.DIST(1E300,1,1E-10,TRUE)` is #NUM! and `GAMMA.DIST(1E-300,2,1E100,TRUE)` is 0
 /// (probes/incomplete-gamma-cap E6, E7).
 fn gamma_dist_cdf(dist: &Gamma, x: f64, beta: f64) -> f64 {
@@ -153,7 +153,7 @@ fn gamma_dist_cdf(dist: &Gamma, x: f64, beta: f64) -> f64 {
     if dist.shape() == HALF_SHAPE {
         return gamma_half_lower(scaled);
     }
-    if let Some(lower) = excel_small_shape_lower(dist.shape(), scaled) {
+    if let Some(lower) = excel_lower(dist.shape(), scaled) {
         return lower;
     }
     Gamma::new(dist.shape(), 1.0).map_or(f64::NAN, |unit| gamma_cdf(&unit, scaled))
@@ -230,7 +230,8 @@ impl Model {
             // A subnormal density is 0, as in Excel (`(x)=0` TRUE: probes-numeric/m9-gamma-dist-a500
             // B22; docs/excel-semantics/numbers.md "Distribution densities").
             flush_subnormal(
-                log_form_density(alpha, x, beta_scale)
+                excel_lower_density(alpha, x, extended_quotient(x, beta_scale))
+                    .or_else(|| log_form_density(alpha, x, beta_scale))
                     .or_else(|| gamma_density(alpha, x, beta_scale))
                     .unwrap_or_else(|| dist.pdf(x)),
             )
