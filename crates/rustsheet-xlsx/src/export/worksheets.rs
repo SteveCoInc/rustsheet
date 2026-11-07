@@ -180,9 +180,12 @@ fn external_link_count(worksheet: &Worksheet) -> usize {
 /// The rels part of the worksheet (`xl/worksheets/_rels/sheetN.xml.rels`) holding one
 /// relationship per external link, then one per table part (`tables` are the part numbers of
 /// the sheet's tables), or `None` if the worksheet has neither.
+/// `pivot_tables` are the sheet's relationships to its pivot tables, numbered after its other
+/// ones from the id it is given (`PivotPlan::sheet_relationships`).
 pub(crate) fn get_worksheet_xml_rels(
     worksheet: &Worksheet,
     tables: std::ops::Range<usize>,
+    pivot_tables: impl FnOnce(usize) -> Vec<String>,
 ) -> Option<String> {
     let mut relationships_str: Vec<String> = vec![];
     let mut rel_id = 0;
@@ -201,6 +204,7 @@ pub(crate) fn get_worksheet_xml_rels(
             "<Relationship Id=\"rId{rel_id}\" Type=\"{TABLE_RELATIONSHIP}\" Target=\"../tables/table{table}.xml\"/>"
         ));
     }
+    relationships_str.extend(pivot_tables(rel_id + 1));
     if relationships_str.is_empty() {
         return None;
     }

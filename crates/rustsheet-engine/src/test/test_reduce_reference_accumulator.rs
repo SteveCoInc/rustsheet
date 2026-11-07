@@ -112,3 +112,22 @@ fn a_growing_union_accumulator_is_bounded_by_the_work_budget() {
     let actual = results(&["=AREAS(REDUCE(A1,A2:A70000,LAMBDA(a,v,(a,v))))"]);
     assert_eq!(actual, ["#VALUE!"]);
 }
+
+#[test]
+fn reduce_ending_on_a_whole_column_stays_within_the_array_bound() {
+    // Directive 5 (T-4476): a REDUCE whose LAMBDA returns a whole column hands the reference on
+    // without building its cells, and a read that would build more than 1,048,576 cells is
+    // `#ERROR!` (arrays.md "Array results above 1,048,576 cells are #ERROR!").
+    let mut model = new_empty_model();
+    for (cell, value) in [("A1", "1"), ("A2", "2"), ("C1", "5"), ("C3", "7")] {
+        model._set(cell, value);
+    }
+    model._set("E1", "=ROWS(REDUCE(0,A1:A2,LAMBDA(a,v,C:C)))");
+    model._set("E2", "=SUM(REDUCE(0,A1:A2,LAMBDA(a,v,C:C)))");
+    model._set("E3", "=ISREF(REDUCE(0,A1:A2,LAMBDA(a,v,C:C)))");
+    model._set("E4", "=ROWS(REDUCE(0,A1:A2,LAMBDA(a,v,C:D))+0)");
+    model._set("E5", "=ROWS(REDUCE(0,A1:A2,LAMBDA(a,v,C:C))+0)");
+    model.evaluate();
+    let actual: Vec<String> = (1..=5).map(|i| model._get_text(&format!("E{i}"))).collect();
+    assert_eq!(actual, ["1048576", "12", "TRUE", "#ERROR!", "1048576"]);
+}

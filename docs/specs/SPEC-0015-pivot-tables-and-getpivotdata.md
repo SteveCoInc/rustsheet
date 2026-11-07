@@ -25,7 +25,7 @@ Goals:
 Non-goals: refreshing a pivot (recomputing its cache from the source range, `refreshOnLoad`),
 creating, editing or laying out pivots in the engine, pivot charts, OLAP/external caches,
 calculated fields and items, and xlsx export of pivots (dropped on export, as today; T-2081
-records it). PIVOTBY is a function (SPEC-0006), not a pivot table.
+records it; SPEC-0032 added the export, T-4176). PIVOTBY is a function (SPEC-0006), not a pivot table.
 
 ## Excel behavior to match
 Rules (docs/excel-semantics/web.md "GETPIVOTDATA against a pivot table", evidence

@@ -95,3 +95,24 @@ fn a_refresh_rolls_back_with_its_edit_and_names_an_unknown_pivot() -> Res {
         .any(|c| c.after.as_deref() == Some("14") && c.before.as_deref() == Some("999")));
     Ok(())
 }
+
+/// A refreshed pivot is saved from the model (T-4176), not dropped: the reloaded workbook holds
+/// the refreshed cells, GETPIVOTDATA reads the refreshed cache, and the pivot refreshes again by
+/// name.
+#[test]
+fn a_refreshed_pivot_survives_a_save() -> Res {
+    let mut wb = load(&falsified(false)?, true)?;
+    wb.set("Data!C2", 11.0)?;
+    let p = wb.sheet_id("P")?;
+    wb.edit(|tx| tx.refresh_pivot_table(p, "PivotSum"))?;
+    let saved = wb.to_xlsx_bytes(rustsheet::SaveOptions::default())?;
+    let mut back = load(&saved, true)?;
+    assert_eq!(back.value("P!B5")?, Value::Number(15.0));
+    assert_eq!(back.value("P!E7")?, Value::Number(50.0));
+    assert_eq!(back.value("P!H5")?, Value::Number(15.0));
+    back.set("Data!C2", 12.0)?;
+    let p = back.sheet_id("P")?;
+    back.edit(|tx| tx.refresh_pivot_table(p, "PivotSum"))?;
+    assert_eq!(back.value("P!B5")?, Value::Number(16.0));
+    Ok(())
+}
