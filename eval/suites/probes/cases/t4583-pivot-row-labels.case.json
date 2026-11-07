@@ -1,0 +1,479 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4583: what decides `Row Labels` versus the field name in a tabular pivot's first row header, and colHeaderCaption beside a real column field. Data!A1:E7 has five fields in cache order Region, Product, Sales, Units, Risky. R1-R6: tabular pivots (rows Region, Product; data Sum of Sales) whose every pivotField carries compact=0 and outline=0 except one, left at the default: R1 Region (first, axis), R2 Product (inner axis), R3 Units (unused, middle), R4 Sales (data, middle), R6 Risky (unused, last); R5 has none at the default (control). C1: a compact pivot with column field Product, colHeaderCaption Products and rowHeaderCaption Regions. C2: the same with every field non-compact (tabular). Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4583",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Sales",
+    "D1": "Units",
+    "E1": "Risky",
+    "A2": "East",
+    "B2": "A",
+    "C2": 10,
+    "D2": 1,
+    "E2": 1,
+    "A3": "West",
+    "B3": "A",
+    "C3": 20,
+    "D3": 2,
+    "E3": 2,
+    "A4": "East",
+    "B4": "B",
+    "C4": 5,
+    "D4": 3,
+    "E4": 3,
+    "A5": "West",
+    "B5": "B",
+    "C5": 7,
+    "D5": 4,
+    "E5": 4,
+    "A6": "East",
+    "B6": "C",
+    "C6": 3,
+    "D6": 5,
+    "E6": 5,
+    "A7": "East",
+    "B7": "A",
+    "C7": 4,
+    "D7": 6,
+    "E7": 6
+   }
+  },
+  {
+   "name": "R1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PR1",
+     "source": "Data!A1:E7",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Risky": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "R2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PR2",
+     "source": "Data!A1:E7",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Risky": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "R3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PR3",
+     "source": "Data!A1:E7",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Risky": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "R4",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PR4",
+     "source": "Data!A1:E7",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Risky": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "R5",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PR5",
+     "source": "Data!A1:E7",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Risky": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "R6",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PR6",
+     "source": "Data!A1:E7",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "C1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PC1",
+     "source": "Data!A1:E7",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "colHeaderCaption": "Products",
+       "rowHeaderCaption": "Regions"
+      },
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "C2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PC2",
+     "source": "Data!A1:E7",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false,
+       "colHeaderCaption": "Products"
+      },
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Risky": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "columns": [
+       "Product"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=SUM(Data!C2:C7)"
+   }
+  }
+ ]
+}

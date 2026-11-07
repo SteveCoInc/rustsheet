@@ -324,8 +324,8 @@ POOLS: dict[str, list[str]] = {
     ),
     # OCT2BIN, OCT2DEC and OCT2HEX numbers: 3777777777 is the largest positive, 4000000000 the most negative and
     # 7777777777 is -1; 11 digits, an 8 or 9 digit and a fraction are #NUM!; OCT2BIN of a negative beyond -512
-    # (7777777000) and of a positive past 511 (1000) has no 10-bit form; a blank cell is 0 ("OCT2BIN of a blank
-    # cell is 0").
+    # (7777777000) and of a positive past 511 (1000) has no 10-bit form; a blank cell is 0 ("Base conversions read a blank
+    # cell and empty text as 0").
     "oct_digits": entries(
         "0 | 7 | 777 | 1000 | 3777777777 | 4000000000 | 7777777777 | 7777777000 | 77777777777 | 8 | 19 | 1.5 | (-1) | "
         '"0000000017" | "" | Data!Z1 | TRUE'

@@ -4,7 +4,28 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "1443aa974a1b3c712a012ae409e26d1e2463b9e01324ac625901a8155153bd2c"
+  "input_sha256": "1443aa974a1b3c712a012ae409e26d1e2463b9e01324ac625901a8155153bd2c",
+  "definitions": {
+   "ACCRINT": "c130f249b462c121",
+   "ACCRINTM": "d78f0dcbb4bdac42",
+   "AMORLINC": "46fbe91b5f5b4f82",
+   "DISC": "d78f0dcbb4bdac42",
+   "DURATION": "93982788afd6a279",
+   "INTRATE": "d78f0dcbb4bdac42",
+   "ODDFPRICE": "01474ee9e21d1dba",
+   "ODDLPRICE": "01474ee9e21d1dba",
+   "PRICE": "93982788afd6a279",
+   "PRICEDISC": "d78f0dcbb4bdac42",
+   "PRICEMAT": "d78f0dcbb4bdac42",
+   "RECEIVED": "d78f0dcbb4bdac42",
+   "TBILLPRICE": "d78f0dcbb4bdac42",
+   "XIRR": "b7bd2ac117248389",
+   "XNPV": "cd9c76178750f2c0",
+   "YEARFRAC": "271c30e000ba259f",
+   "YIELDDISC": "d78f0dcbb4bdac42",
+   "YIELDMAT": "d78f0dcbb4bdac42"
+  },
+  "arguments_sha256": "276332aab45f90a735fef92fce299b23ac5d5859dd1ee50de4e081ddf78b18e4"
  },
  "sheets": {
   "S": {
@@ -122,6 +143,21 @@
     "t": "n",
     "v": "5.4940367677879740018423920419812718110403955607134",
     "f": "=DURATION(DATE(2024,2,15),DATE(2030,8,31),0.05,0.06,2,1)"
+   },
+   "A34": {
+    "t": "n",
+    "v": "94.954632594539171065474912627547444560419430896545",
+    "f": "=ODDFPRICE(DATE(2024,1,31),DATE(2030,2,28),DATE(2023,12,1),DATE(2024,2,29),0.05,0.06,100,2,0)"
+   },
+   "A35": {
+    "t": "n",
+    "v": "99.492044228694714373666602530768345587234647201074",
+    "f": "=ODDLPRICE(DATE(2024,2,29),DATE(2024,8,31),DATE(2023,11,30),0.05,0.06,100,2,0)"
+   },
+   "A36": {
+    "t": "n",
+    "v": "99.767390827298661503133925433733236203579516324068",
+    "f": "=ODDLPRICE(DATE(2024,1,15),DATE(2024,3,31),DATE(2023,11,15),0.05,0.06,100,2,0)"
    },
    "A37": {
     "t": "n",

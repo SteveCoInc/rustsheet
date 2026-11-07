@@ -1,0 +1,75 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4587: which sheet-scoped definition a bare name in an API-added (Graph names/add) workbook name binds to, when the candidate sheets differ in letter case or start with an underscore. Tabs Z, B, a, _u (Z active, B1 = 1, 2, 3, 4), no workbook definitions; workbook names W_1..W_4 = =Dup_1..=Dup_4 added through the API. Dup_1: B's (B1 = 2) + a's (3): 3 if the order ignores case, 2 if it is ordinal (B < a). Dup_2: a's (3) + _u's (4). Dup_3: B's (2) + _u's (4): 2 if '_' sorts after the letters' upper case, 4 if before. Dup_4: Z's (1) + a's (3): 3 is by name, not tab order.",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "Z",
+ "names": {
+  "B!Dup_1": "=B!$B$1",
+  "a!Dup_1": "=a!$B$1",
+  "a!Dup_2": "=a!$B$1",
+  "_u!Dup_2": "=_u!$B$1",
+  "B!Dup_3": "=B!$B$1",
+  "_u!Dup_3": "=_u!$B$1",
+  "Z!Dup_4": "=Z!$B$1",
+  "a!Dup_4": "=a!$B$1"
+ },
+ "sheets": [
+  {
+   "name": "Z",
+   "cells": {
+    "B1": 1,
+    "D1": "=W_1",
+    "D2": "=W_2",
+    "D3": "=W_3",
+    "D4": "=W_4"
+   }
+  },
+  {
+   "name": "B",
+   "cells": {
+    "B1": 2
+   }
+  },
+  {
+   "name": "a",
+   "cells": {
+    "B1": 3
+   }
+  },
+  {
+   "name": "_u",
+   "cells": {
+    "B1": 4
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "Z!D1",
+  "Z!D2",
+  "Z!D3",
+  "Z!D4"
+ ],
+ "api_names": [
+  {
+   "name": "W_1",
+   "formula": "=Dup_1"
+  },
+  {
+   "name": "W_2",
+   "formula": "=Dup_2"
+  },
+  {
+   "name": "W_3",
+   "formula": "=Dup_3"
+  },
+  {
+   "name": "W_4",
+   "formula": "=Dup_4"
+  }
+ ]
+}

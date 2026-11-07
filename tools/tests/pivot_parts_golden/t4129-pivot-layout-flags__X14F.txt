@@ -1,0 +1,86 @@
+== cache_definition
+pivotCacheDefinition createdVersion=6 id=rId1 minRefreshableVersion=3 recordCount=8 refreshOnLoad=1 refreshedVersion=6
+  cacheSource type=worksheet
+    worksheetSource ref=A1:D9 sheet=Data
+  cacheFields count=4
+    cacheField name=Region numFmtId=0
+      sharedItems count=2
+        s v=East
+        s v=West
+    cacheField name=Product numFmtId=0
+      sharedItems count=3
+        s v=A
+        s v=B
+        s v=C
+    cacheField name=Year numFmtId=0
+      sharedItems containsInteger=1 containsNumber=1 containsSemiMixedTypes=0 containsString=0 maxValue=2025 minValue=2024
+    cacheField name=Sales numFmtId=0
+      sharedItems containsInteger=1 containsNumber=1 containsSemiMixedTypes=0 containsString=0 maxValue=20 minValue=3
+== cache_records
+pivotCacheRecords count=8
+  r
+    x v=0
+    x v=0
+    n v=2024
+    n v=10
+  r
+    x v=0
+    x v=0
+    n v=2025
+    n v=4
+  r
+    x v=0
+    x v=1
+    n v=2024
+    n v=5
+  r
+    x v=0
+    x v=1
+    n v=2025
+    n v=8
+  r
+    x v=0
+    x v=2
+    n v=2024
+    n v=3
+  r
+    x v=1
+    x v=0
+    n v=2024
+    n v=20
+  r
+    x v=1
+    x v=0
+    n v=2025
+    n v=6
+  r
+    x v=1
+    x v=1
+    n v=2025
+    n v=7
+== table
+pivotTableDefinition applyAlignmentFormats=0 applyBorderFormats=0 applyFontFormats=0 applyNumberFormats=0 applyPatternFormats=0 applyWidthHeightFormats=1 cacheId=1 compact=0 compactData=0 createdVersion=6 dataCaption=Values indent=0 itemPrintTitles=1 minRefreshableVersion=3 name=P_X14F outline=0 outlineData=0 updatedVersion=6 useAutoFormatting=1
+  location firstDataCol=1 firstDataRow=1 firstHeaderRow=1 ref=A3:B4
+  pivotFields count=4
+    pivotField axis=axisRow compact=0 outline=0 showAll=0
+      items count=3
+        item x=0
+        item x=1
+        item t=default
+      extLst
+        ext uri={2946ED86-A175-432a-8AC1-64E0C546D7DE}
+          pivotField fillDownLabels=1
+    pivotField axis=axisRow compact=0 outline=0 showAll=0
+      items count=4
+        item x=0
+        item x=1
+        item x=2
+        item t=default
+    pivotField showAll=0
+    pivotField dataField=1 showAll=0
+  rowFields count=2
+    field x=0
+    field x=1
+  dataFields count=1
+    dataField baseField=0 baseItem=0 fld=3 name=Sum of Sales
+  pivotTableStyleInfo name=PivotStyleLight16 showColHeaders=1 showColStripes=0 showLastColumn=1 showRowHeaders=1 showRowStripes=0

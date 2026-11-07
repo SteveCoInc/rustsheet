@@ -442,22 +442,25 @@ pub fn numerals(tag: &str) -> Numerals {
     if let Some(value) = hex_value(tag) {
         return Numerals::from_byte(value >> 24);
     }
-    // An extended-hex value that wraps past byte 31 stays ASCII: `[$€-x-euro2]` prints ASCII digits
-    // (gen-m10/bfbcd16cee266336 T!A12), while a real hex tag takes bytes 32-35
-    // (probes/t4107-numeral-2000-suffix).
+    // A tag opening `x-` (BCP-47 private use, either case) prints ASCII digits whatever numeral
+    // byte its extended-hex value has: `[$-x-euro]0` is "123" although it reads as byte 2, while
+    // `1gdffc8` (the same value) and `y-euro` give Arabic-Indic digits and `x-000000` (byte 13)
+    // stays ASCII (probes/t4356-private-use-prefix, t4356-private-use-value, excel-graph).
+    let private_use = tag.get(..2).is_some_and(|p| p.eq_ignore_ascii_case("x-"));
     let value = match known_tag(tag) {
-        None => extended_hex(tag),
-        Some(_) => None,
+        None if !private_use => extended_hex(tag),
+        _ => None,
     };
-    value.map_or(Numerals::Ascii, |value| match value >> 24 {
-        byte @ 0..=31 => Numerals::from_byte(byte),
-        _ => Numerals::Ascii,
-    })
+    // Bytes 32 and up take their digits like a hex tag's (`[$-y-euros]0` is CJK, `[$-xx-euro]0`
+    // fullwidth; probes/t4356-private-use-prefix); the old "ASCII past 31" reading was this
+    // prefix's effect (`x-euro2`, probes/t4107-numeral-2000-suffix).
+    value.map_or(Numerals::Ascii, |value| Numerals::from_byte(value >> 24))
 }
 
 /// The locale and numeral parts of a tag written `locale,N00`, the form Excel gives a cell typed
 /// with script digits (`[$-ar-SA,200]0`, `[$-,D00]h:mm`; probes/t3446-script-digits-forms): the
-/// hex after the comma holds the numeral byte of [`Numerals::from_byte`] above its low byte, so
+/// suffix after the comma, read as extended hex ([`numerals`]), holds the numeral byte of
+/// [`Numerals::from_byte`] above its low byte, so
 /// `,200` prints Arabic-Indic digits, `,D00` Thai and `,1200` Khmer, and `,0` ASCII
 /// (probes/t3891-numeral-tag-render A1:A30, excel-graph 2026-11-04). `,2000` prints fullwidth
 /// digits there, as byte 32 does in the LCID form (A28; probes/t4107-numeral-2000-suffix). Before the

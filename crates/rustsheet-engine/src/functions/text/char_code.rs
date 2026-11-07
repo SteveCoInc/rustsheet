@@ -95,7 +95,7 @@ impl Model {
                 return Err(Error::ERROR);
             };
             // Excel: a code just below an integer counts as that integer, while UNICHAR truncates
-            // exactly (probes/t4453-near-integer-text-args D1:E21; docs/excel-semantics/text.md).
+            // exactly (probes/t4453-near-integer-text-args D1:D21, E1:E14; docs/excel-semantics/text.md).
             let n = near_integer_count(model.calc_result_to_number(number)?) as u32;
             match win1252_to_char(n) {
                 Some(c) => Ok(ArrayNode::String(c.to_string().into())),

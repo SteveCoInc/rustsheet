@@ -61,7 +61,6 @@ from __future__ import annotations
 
 import math
 import random
-import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
@@ -71,11 +70,12 @@ import mpmath
 
 from rustsheet_tools.accuracy.defs._common import (
     StratumDraws,
+    below_normal,
     by_stratum,
     domain_of,
     fraction_to_mpf,
     one_of,
-    scalars,
+    real_args,
     signed_log_uniform,
 )
 from rustsheet_tools.accuracy.defs.aggregate import running_total
@@ -118,11 +118,6 @@ class Moments:
     ]  # Excel's double sxx, syy and sxy (STEYX's residual decides its #NUM!)
 
 
-def _below_normal(*values: float) -> bool:
-    """Whether any of `values` is nonzero and below the normal range (a subnormal: Excel's flush is unprobed here)."""
-    return any(v != 0 and abs(v) < sys.float_info.min for v in values)
-
-
 def _double_sums(xs: Sequence[float], ys: Sequence[float]) -> tuple[float, float, float, float, float]:
     """(sum of x, sum of y, sxx, syy, sxy) in doubles, two passes about the double means, as Excel sums them (the paired
     entry: this order fits Excel's bits; the sums of the values are Excel's left-to-right `running_total`); NoValueError
@@ -133,7 +128,7 @@ def _double_sums(xs: Sequence[float], ys: Sequence[float]) -> tuple[float, float
     sxx = syy = sxy = 0.0
     for x, y in zip(xs, ys, strict=True):
         dx, dy = x - mean_x, y - mean_y
-        if _below_normal(dx * dx, dy * dy, dx * dy):
+        if below_normal(dx * dx, dy * dy, dx * dy):
             msg = "a deviation square or product below the normal range (unprobed flush)"
             raise NoValueError(msg)
         sxx += dx * dx
@@ -142,7 +137,7 @@ def _double_sums(xs: Sequence[float], ys: Sequence[float]) -> tuple[float, float
     return sum_x, sum_y, sxx, syy, sxy
 
 
-def _constant_exact(values: Sequence[float]) -> bool:
+def constant_exact(values: Sequence[float]) -> bool:
     """Whether a series is constant with Excel's double mean equal to its value (else NoValueError for a constant
     series: its double deviations are a nonzero constant, "Inexact constants")."""
     if len(set(values)) > 1:
@@ -158,7 +153,7 @@ def _series(args: Sequence[MathArg]) -> tuple[list[float], list[float]]:
     out: list[list[float]] = []
     for a in args[-2:]:
         assert isinstance(a, tuple)
-        out.append([float(v) for v in scalars(a)])
+        out.append([float(v) for v in real_args(a)])
     ys, xs = out
     return ys, xs
 
@@ -169,7 +164,7 @@ def moments(args: Sequence[MathArg]) -> Moments:
     if len(ys) != len(xs):
         msg = "#N/A: the arrays differ in length"
         raise DomainError(msg)
-    if _below_normal(*xs, *ys):
+    if below_normal(*xs, *ys):
         msg = "a subnormal literal (Excel reads it as 0; unprobed here)"
         raise NoValueError(msg)
     sum_x, sum_y, sxx_d, syy_d, sxy_d = _double_sums(xs, ys)
@@ -193,11 +188,11 @@ def moments(args: Sequence[MathArg]) -> Moments:
 
 
 def _x_constant(args: Sequence[MathArg], m: Moments) -> bool:
-    return m.n < 2 or _constant_exact(_series(args)[1])
+    return m.n < 2 or constant_exact(_series(args)[1])
 
 
 def _y_constant(args: Sequence[MathArg]) -> bool:
-    return _constant_exact(_series(args)[0])
+    return constant_exact(_series(args)[0])
 
 
 def _slope(args: Sequence[MathArg]) -> tuple[Moments, Fraction]:
@@ -228,7 +223,7 @@ def _intercept(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _forecast(args: Sequence[MathArg]) -> mpmath.mpf:
     m, slope = _slope(args)
-    (x,) = scalars(args[:1])
+    (x,) = real_args(args[:1])
     return fraction_to_mpf(m.mean_y + slope * (Fraction(float(x)) - m.mean_x))
 
 
@@ -267,7 +262,7 @@ def _covariance(args: Sequence[MathArg], *, sample: bool) -> mpmath.mpf:
     for series in _series(args):
         # called for its NoValueError only: a constant whose double mean is not its value has no evidenced result,
         # while an exact constant needs no special case (its Sxy is 0)
-        _constant_exact(series)
+        constant_exact(series)
     return fraction_to_mpf(m.sxy / (m.n - 1 if sample else m.n))
 
 
@@ -304,7 +299,7 @@ def _steyx(args: Sequence[MathArg]) -> mpmath.mpf:
     if residual < 0:  # also -inf where Sxy^2 overflows (T-4047, near 1E+160)
         msg = "#NUM!: Excel's double Syy - Sxy^2/Sxx is below zero"
         raise DomainError(msg)
-    if _below_normal(square, explained, residual):
+    if below_normal(square, explained, residual):
         msg = "a subnormal intermediate of the residual (unprobed flush)"
         raise NoValueError(msg)
     return mpmath.sqrt(fraction_to_mpf((m.syy - m.sxy * m.sxy / m.sxx) / (m.n - 2)))
@@ -364,7 +359,7 @@ def _exact_line(rng: random.Random) -> list[Arg]:
     return [tuple(float(a + b * x) for x in xs), xs]
 
 
-def _constant(rng: random.Random, n: int) -> tuple[float, ...]:
+def constant_series(rng: random.Random, n: int) -> tuple[float, ...]:
     """A constant series with an exact double mean (a small integer or a multiple of 1/8)."""
     return (rng.randint(-160, 160) / 8,) * n
 
@@ -377,8 +372,11 @@ def _edge(rng: random.Random) -> list[Arg]:
             lambda: [MICROSOFT_Y, MICROSOFT_X],  # Microsoft's example
             lambda: _pairs(rng, 1, 1e-3, 1e6),  # one pair: #DIV/0!
             lambda: [array_of(rng, n + 1, 1e-3, 1e6), array_of(rng, n, 1e-3, 1e6)],  # #N/A: lengths differ
-            lambda: [array_of(rng, n, 1e-3, 1e6), _constant(rng, n)],  # x constant: #DIV/0!
-            lambda: [_constant(rng, n), array_of(rng, n, 1e-3, 1e6)],  # y constant: SLOPE 0, CORREL #DIV/0!
+            lambda: [array_of(rng, n, 1e-3, 1e6), constant_series(rng, n)],  # x constant: #DIV/0!
+            lambda: [
+                constant_series(rng, n),
+                array_of(rng, n, 1e-3, 1e6),
+            ],  # y constant: SLOPE 0, CORREL #DIV/0!
             lambda: _exact_line(rng),
             lambda: _pairs(rng, 2, 1e-3, 1e6),  # two pairs: r is +-1
             lambda: [array_of(rng, n, 1e-3, 1e6), array_of(rng, n, 1e199, 1e201)],  # x overflows: #NUM!

@@ -32,7 +32,7 @@ from collections.abc import Sequence
 import mpmath
 
 from rustsheet_tools.accuracy import model
-from rustsheet_tools.accuracy.defs._common import by_stratum, finite_double, one_of, scalars, trunc
+from rustsheet_tools.accuracy.defs._common import by_stratum, finite_double, one_of, real_args, trunc
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, Draw, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -57,17 +57,17 @@ def double_factorial(n: int) -> int:
 
 
 def fact_domain(args: Sequence[MathArg]) -> str | None:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return "a negative number (#NUM!)" if mpmath.floor(x) < 0 else None
 
 
 def factdouble_domain(args: Sequence[MathArg]) -> str | None:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return "a number below -1 (#NUM!)" if mpmath.floor(x) < -1 else None
 
 
 def _fact(args: Sequence[MathArg]) -> mpmath.mpf:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     n = int(mpmath.floor(x))
     if n > 170:  # n! is past the largest double from 171 on; no big-int product of a huge n
         return finite_double(math.factorial(171), "n!")
@@ -75,7 +75,7 @@ def _fact(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _factdouble(args: Sequence[MathArg]) -> mpmath.mpf:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     n = int(mpmath.floor(x))
     if n > 301:  # n!! is past the largest double from 301 on
         return finite_double(double_factorial(301), "n!!")
@@ -94,7 +94,7 @@ def combin_value(n: int, k: int) -> mpmath.mpf:
 
 
 def combin_domain(args: Sequence[MathArg]) -> str | None:
-    n, k = (int(mpmath.floor(a)) for a in scalars(args))
+    n, k = (int(mpmath.floor(a)) for a in real_args(args))
     if n < 0 or k < 0:
         return "a negative argument (#NUM!)"
     if k > n:
@@ -105,14 +105,14 @@ def combin_domain(args: Sequence[MathArg]) -> str | None:
 
 
 def _combin(args: Sequence[MathArg]) -> mpmath.mpf:
-    n, k = (int(mpmath.floor(a)) for a in scalars(args))
+    n, k = (int(mpmath.floor(a)) for a in real_args(args))
     return combin_value(n, k)
 
 
 def _combina_args(args: Sequence[MathArg]) -> tuple[int, int]:
     """(n, k) as COMBINA reads them: `number` truncated, `number_chosen` floored, or truncated
     when `number` is 0."""
-    x, y = scalars(args)
+    x, y = real_args(args)
     n = trunc(x)
     k = trunc(y) if n == 0 else int(mpmath.floor(y))
     return n, k
@@ -137,7 +137,7 @@ def _combina(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def multinomial_domain(args: Sequence[MathArg]) -> str | None:
-    values = scalars(args)
+    values = real_args(args)
     if any(v < 0 for v in values):
         return "a negative argument (#NUM!)"
     if sum(int(mpmath.floor(v)) for v in values) > MULTINOMIAL_SUM_LIMIT:
@@ -146,7 +146,7 @@ def multinomial_domain(args: Sequence[MathArg]) -> str | None:
 
 
 def _multinomial(args: Sequence[MathArg]) -> mpmath.mpf:
-    parts = [int(mpmath.floor(v)) for v in scalars(args)]
+    parts = [int(mpmath.floor(v)) for v in real_args(args)]
     denominator = math.prod(math.factorial(p) for p in parts)
     return mpmath.mpf(math.factorial(sum(parts))) / denominator
 
@@ -383,7 +383,7 @@ LN_DOUBLE_MAX = (
 
 
 def permut_domain(args: Sequence[MathArg]) -> str | None:
-    n, k = (int(mpmath.floor(a)) for a in scalars(args))
+    n, k = (int(mpmath.floor(a)) for a in real_args(args))
     if n < 0 or k < 0:
         return "a negative argument (#NUM!)"
     if k > n:
@@ -394,7 +394,7 @@ def permut_domain(args: Sequence[MathArg]) -> str | None:
 
 
 def _permut(args: Sequence[MathArg]) -> mpmath.mpf:
-    n, k = (int(mpmath.floor(a)) for a in scalars(args))
+    n, k = (int(mpmath.floor(a)) for a in real_args(args))
     if k > PERMUT_FACTORS_MAX:  # no big-int product of a huge k: it overflows
         return finite_double(math.factorial(PERMUT_FACTORS_MAX + 1), "the product")
     return finite_double(math.perm(n, k), "the product")
@@ -402,7 +402,7 @@ def _permut(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _permutationa_args(args: Sequence[MathArg]) -> tuple[int, int]:
     """(n, k) as PERMUTATIONA reads them: `number` floored, `number_chosen` truncated."""
-    x, y = scalars(args)
+    x, y = real_args(args)
     return int(mpmath.floor(x)), trunc(y)
 
 

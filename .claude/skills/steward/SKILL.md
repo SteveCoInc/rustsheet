@@ -184,6 +184,10 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   such issue or comment (its `report` job failed), file one P0 task per distinct finding yourself
   (dedupe by panic site/stack against open tasks) per docs/process/agent-workflow.md "When
   something goes wrong".
+- **Nightly eval failures** (`.github/workflows/nightly.yml`, decision 0323): check the latest scheduled run on `main`
+  every day. Its corpus round-trip step is the only gate on Calipers, POI and corpus-bench fidelity, and no issue is
+  opened for it. A red run is handled per docs/process/agent-workflow.md "When something goes wrong" (the "Nightly
+  eval run red" row).
 - **Eval regressions** in CI (`eval-check`): the PR broke previously-passing Excel behavior. Fix
   the code, do not touch the baseline.
 - **Accepted deviations** (decision 0036): a suite's `deviations` file lists cells that differ
@@ -226,6 +230,10 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   `v15_checkpoint.phase1_met` and the rest of docs/milestones.md's Phase 1 exit; no Phase 1 line in
   docs/status.md is read for this. In the same PR, remove `defer: phase-1b` from
   every task.
+- **Deferred owners on the exit line** (decision 0325): a `defer: phase-1b` task alone does not own a visibly-off
+  cell for `make phase1-exit`'s `owners` line. A probes or probes-numeric cell that R1(c) counts only for want of a
+  math value is owned by the open task that attaches its math (a Gate A table task or a math-sidecar task); when the
+  line lists one, file or amend that task, not a fit task. A Gate B cell gets a `campaign:` task.
 - **Time-boxed numeric fits** (decision 0056): a task "Blocked because: time-boxed (decision 0056)"
   is not reopened when its dependencies land, only when a new hypothesis is recorded there.
   Read with decision 0188 R4.1, an attempt raises the bit-exact count only if it raises the

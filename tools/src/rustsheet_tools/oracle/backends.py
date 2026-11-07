@@ -30,7 +30,7 @@ import requests
 from xlsxwriter.utility import xl_rowcol_to_cell
 
 from rustsheet_tools.api_names import ApiName, api_names
-from rustsheet_tools.oracle.package import PackageError, patch_workbook
+from rustsheet_tools.oracle.package import PackageError, patch_workbook, pivot_sheets
 from rustsheet_tools.spec2xlsx import Entered, entered_cells, parse_a1, sheet_ops, text_cells
 
 
@@ -49,6 +49,10 @@ class OracleInfo:
     # another sheet and `CELL("filename")` name it); the eval adapter gives the engine the same
     # name (T-2042).
     workbook_name: str | None = None
+    # Displayed text of every non-empty cell of the used range of each sheet that holds a pivot
+    # (`recorded_pivot_sheets`): sheet -> A1 -> text. The fill crops it to each pivot's area for the
+    # sidecar's `pivots` entries (T-4169).
+    pivot_texts: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 class Backend(Protocol):
@@ -92,6 +96,14 @@ def recorded_text_cells(xlsx: bytes) -> list[tuple[str, str]]:
     try:
         return text_cells(xlsx)
     except ValueError as e:
+        raise OracleError(str(e)) from e
+
+
+def recorded_pivot_sheets(xlsx: bytes) -> list[str]:
+    """The sheets whose pivots' displayed text a backend must read after recalculating (T-4169)."""
+    try:
+        return pivot_sheets(xlsx)
+    except PackageError as e:
         raise OracleError(str(e)) from e
 
 
@@ -409,6 +421,7 @@ class GraphBackend:
                 headers=sid,
             )
             texts = self._read_texts(item_url, sid, recorded_text_cells(xlsx))
+            pivot_texts = self._read_used_texts(item_url, sid, recorded_pivot_sheets(xlsx))
             # Excel only persists a session that *edited* the workbook: after a bare recalculation
             # of a file last saved by current Excel, closeSession saves nothing and the download is
             # the upload, cached values and all (observed 2026-10-04 on ironcalc's arithmetic.xlsx;
@@ -437,7 +450,11 @@ class GraphBackend:
             with contextlib.suppress(OracleError):
                 self._call("DELETE", item_url)
         return content, OracleInfo(
-            kind=self.name, application="Excel for the web (Graph)", texts=texts, workbook_name=name
+            kind=self.name,
+            application="Excel for the web (Graph)",
+            texts=texts,
+            workbook_name=name,
+            pivot_texts=pivot_texts,
         )
 
     def _type_entry(self, item_url: str, sid: dict[str, str], entry: Entered) -> None:
@@ -509,6 +526,30 @@ class GraphBackend:
                 texts.setdefault(sheet, {})[a1] = str(text)
         return texts
 
+    def _read_used_texts(
+        self, item_url: str, sid: dict[str, str], sheets: list[str]
+    ) -> dict[str, dict[str, str]]:
+        """The displayed text of every non-empty cell of each sheet's used range, read as `_read_texts`
+        reads listed cells (one block per sheet), so a pivot Excel rendered on open has its text in
+        the sidecar beside its values (T-4169). A sheet whose used range passes [`MAX_TEXT_BLOCK`]
+        cells is reported and left out (directive 5); no probe needs one."""
+        texts: dict[str, dict[str, str]] = {}
+        for sheet in sheets:
+            sheet_ref = quote(sheet.replace("'", "''"), safe="")
+            used = self._call(
+                "GET", f"{item_url}/workbook/worksheets('{sheet_ref}')/usedRange?$select=address", headers=sid
+            ).json()
+            cells = used_cells(str(used.get("address", "")))
+            if cells is None:
+                print(
+                    f"PIVOT TEXT {sheet!r}: used range too large or unreadable, not captured", file=sys.stderr
+                )
+                continue
+            read = self._read_texts(item_url, sid, [(sheet, a1) for a1 in cells])
+            if shown := {a1: text for a1, text in read.get(sheet, {}).items() if text}:
+                texts[sheet] = shown
+        return texts
+
 
 MAX_TEXT_BLOCK = 20_000  # cells in one `Range.text` read: well under Graph's response limits
 
@@ -531,6 +572,19 @@ def text_blocks(cells: list[tuple[str, str]]) -> list[tuple[str, str, dict[str, 
         else:
             reads.extend((sheet, a1, {a1: (0, 0)}) for a1 in at)
     return reads
+
+
+def used_cells(address: str) -> list[str] | None:
+    """Every A1 cell of a Graph range `address` (`Sheet!A1:C3`, `'My Sheet'!B2`), row by row; `None`
+    when it does not parse or has more than [`MAX_TEXT_BLOCK`] cells."""
+    first, _, last = address.rpartition("!")[2].replace("$", "").partition(":")
+    try:
+        (top, left), (bottom, right) = parse_a1(first), parse_a1(last or first)
+    except ValueError:
+        return None
+    if (bottom - top + 1) * (right - left + 1) > MAX_TEXT_BLOCK:
+        return None
+    return [xl_rowcol_to_cell(r, c) for r in range(top, bottom + 1) for c in range(left, right + 1)]
 
 
 def _has_cell(rows: Any, row: int, col: int) -> bool:

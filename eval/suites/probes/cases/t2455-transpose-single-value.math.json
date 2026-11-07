@@ -1,0 +1,27 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "cfec299bff89737bff8f363123701950773cf6887b287109aeda3eae5a4247e3",
+  "definitions": {
+   "FTEST": "7c580778acc117bb"
+  },
+  "arguments_sha256": "9b7b5efa10641d3e8427e2fea6393e20d8bb8ffbd7aa437a293c052108d2a5e0"
+ },
+ "sheets": {
+  "Calc": {
+   "A22": {
+    "t": "e",
+    "why": "#DIV/0!: fewer than two numbers in a sample",
+    "f": "=FTEST(B1:B1,{1;2;3})"
+   },
+   "A40": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=FTEST({1;2;3},{1;2;3})"
+   }
+  }
+ }
+}

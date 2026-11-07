@@ -3,7 +3,9 @@
 use std::io::{Cursor, Write};
 
 use rustsheet_engine::expressions::token::Error;
-use rustsheet_engine::pivot::{MAX_FIELDS, MAX_ITEMS, MAX_RECORDS};
+use rustsheet_engine::pivot::{
+    Aggregate, Axis, AxisField, CellArea, DataField, ShowDataAs, MAX_FIELDS, MAX_ITEMS, MAX_RECORDS,
+};
 
 use super::super::package::ImportLimits;
 use super::*;
@@ -245,7 +247,10 @@ fn shared_and_inline_values_load_into_the_cache_and_the_pivot() {
         [DataField {
             caption: "Sum of Sales".into(),
             field: 2,
-            function: Aggregate::Sum
+            function: Aggregate::Sum,
+            base_field: 0,
+            base_item: 0,
+            ..DataField::default()
         }]
     );
 }
@@ -334,7 +339,13 @@ fn out_of_range_indices_skip_the_cache_or_the_pivot() {
     let (_, pivots) = load(&with(parts(), TABLE_PART, table(&count)));
     assert_eq!(pivots[0].data_fields[0].function, Aggregate::CountNums);
     let shown_as = TABLE_BODY.replace(r#"baseItem="0""#, r#"showDataAs="percentOfTotal""#);
-    assert_no_pivot(&with(parts(), TABLE_PART, table(&shown_as)));
+    let (_, pivots) = load(&with(parts(), TABLE_PART, table(&shown_as)));
+    assert_eq!(
+        pivots[0].data_fields[0].show_data_as,
+        ShowDataAs::PercentOfTotal
+    );
+    let unknown = TABLE_BODY.replace(r#"baseItem="0""#, r#"showDataAs="median""#);
+    assert_no_pivot(&with(parts(), TABLE_PART, table(&unknown)));
 }
 
 #[test]

@@ -86,9 +86,13 @@ since their item lines would run to tens of megabytes:
   both modes, a fall in a case's checked count, or a case that newly does not run, is a regression too;
 - updating a `cases` suite refuses to drop a case (a cache fetched under an older include).
 
-Their `root` is the cell suite's fetched cache (`eval/.cache/suites/<suite>`). A suite whose root is absent is
-skipped with a message, so it never records an empty baseline. They are `gate = false`, like the calipers cell suite:
-`rustsheet-eval roundtrip --check --suite <name>` gates one on demand.
+Each names its cell suite with `cases_of = "<suite>"` and takes that suite's `[fetch]` and cache directory
+(`eval/.cache/suites/<suite>`, T-4629). So it is fetched, skipped with a message while not fetched, and gated exactly
+as that suite is, and it never records an empty baseline:
+- `roundtrip-poi` and `roundtrip-corpus-bench` are `gate = true`, like their cell suites. `make check` holds them
+  wherever the caches are fetched; CI, which fetches no corpus, skips them as it skips the cell suites.
+- `roundtrip-calipers` stays `gate = false`, like the calipers cell suite. `rustsheet-eval roundtrip --check --suite
+  roundtrip-calipers` gates it on demand.
 
 `rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. Each suite's line and report section
 give its kept rate: source items compared, less those the failing items cover (`Item::weight`: a lost element's
@@ -166,7 +170,11 @@ Input conventions:
 
   The builder writes only the cache, records and table parts, and Excel renders the pivot on open
   (`refreshOnLoad`). The full schema is in `tools/src/rustsheet_tools/pivot_definition.py`. The
-  engine adapter does not register a defined pivot until the engine renders pivots (T-4152).
+  engine adapter writes the same parts (`crates/rustsheet-eval/src/pivot_definition.rs`, which
+  mirrors the builder), loads them through the xlsx importer once the case's cells are in, and
+  recalculates, so the engine refreshes and renders the pivot as Excel does on open (T-4152). A
+  pivot the importer drops (a calculated field, a `showDataAs` data field, group items past
+  the rebuilt groups) is dropped there too.
 - Optional `"names": {"rate": "=Sheet1!$B$1"}` declares workbook-scoped defined names (any
   formula Excel accepts as a name body, e.g. an intersection). A key `Sheet1!name` is a name scoped
   to that sheet.

@@ -38,6 +38,7 @@ use rustsheet_eval::lift_kinds;
 use rustsheet_eval::milestone_exit;
 use rustsheet_eval::milestone_lists::{self, MilestoneList};
 use rustsheet_eval::phase1_exceptions::Phase1Exceptions;
+use rustsheet_eval::pivot_features;
 use rustsheet_eval::probe_milestones::{self, Mapping, Rules};
 use rustsheet_eval::r1c::{mark_r3_math, R1cCells};
 use rustsheet_eval::report::RunReport;
@@ -176,10 +177,8 @@ enum Cmd {
     Roundtrip {
         #[command(flatten)]
         sel: Selection,
-        #[arg(long, conflicts_with = "update")]
-        check: bool,
-        #[arg(long = "update-baseline")]
-        update: bool,
+        #[command(flatten)]
+        flags: roundtrip::Flags,
     },
     /// Gate A (SPEC-0029, decision 0188 R2): fail when a reference-table point of eval/accuracy
     /// is outside the envelope, a known-failure line is stale, an R3 mark lacks evidence or a
@@ -291,9 +290,11 @@ fn select_from(all: Vec<Suite>, sel: &Selection, gate_only: bool) -> Result<Vec<
                         }
                     };
                 }
+                // A round-trip suite over a cell suite's cache is fetched as that suite.
+                let fetch_as = s.manifest.cases_of.as_ref().unwrap_or(&s.manifest.name);
                 eprintln!(
-                    "skipping {}: not fetched (run `rustsheet-eval fetch --suite {}`)",
-                    s.manifest.name, s.manifest.name
+                    "skipping {}: not fetched (run `rustsheet-eval fetch --suite {fetch_as}`)",
+                    s.manifest.name
                 );
                 return false;
             }
@@ -346,6 +347,8 @@ struct Milestones {
     /// where the engine returns the math (decision 0188 R3), and the closeness buckets count as
     /// `r3_math` (decision 0310).
     r3: R3Marks,
+    /// eval/catalog/pivot-features.tsv (T-4126); empty when the root has none.
+    pivot_catalog: Vec<pivot_features::CatalogRow>,
 }
 
 /// Loads the frozen lists and the probe-milestone mapping, and fails when a line of either names
@@ -383,6 +386,7 @@ fn load_milestones(root: &Path, catalog: &Catalog) -> Result<Milestones> {
         exceptions,
         phase1_exceptions,
         r3,
+        pivot_catalog: pivot_features::load(root)?,
     })
 }
 
@@ -422,6 +426,7 @@ fn score_milestones(
         .collect();
     report.catalog_coverage =
         catalog_coverage::summarize(catalog, results, &report.evidence, &generated);
+    report.pivot_features = pivot_features::summarize(&milestones.pivot_catalog, results);
     let generated_names: Vec<&str> = generated.keys().map(String::as_str).collect();
     report.v15_checkpoint = v15_checkpoint::summarize(
         catalog,
@@ -938,7 +943,7 @@ fn run() -> Result<ExitCode> {
         Cmd::Show { case_id, all } => cmd_show(&root, &case_id, all),
         Cmd::Cases { suite } => cmd_cases(&root, &suite),
         Cmd::Accuracy { json, timeout } => cmd_accuracy(&root, json, timeout),
-        Cmd::Roundtrip { sel, check, update } => cmd_roundtrip(&root, &sel, check, update),
+        Cmd::Roundtrip { sel, flags } => cmd_roundtrip(&root, &sel, flags),
         Cmd::Snapshot { .. } | Cmd::Compare { .. } => unreachable!("handled above"),
     }
 }
@@ -962,13 +967,9 @@ fn cmd_suites(root: &Path) -> Result<ExitCode> {
 }
 
 /// `rustsheet-eval roundtrip` (SPEC-0033): the gate suites with `--check`, else the selection.
-fn cmd_roundtrip(root: &Path, sel: &Selection, check: bool, update: bool) -> Result<ExitCode> {
-    let suites = select_from(Suite::load_roundtrip(root)?, sel, check)?;
-    let mode = match (check, update) {
-        (true, _) => roundtrip::Mode::Check,
-        (_, true) => roundtrip::Mode::Update,
-        _ => roundtrip::Mode::Report,
-    };
+fn cmd_roundtrip(root: &Path, sel: &Selection, flags: roundtrip::Flags) -> Result<ExitCode> {
+    let suites = select_from(Suite::load_roundtrip(root)?, sel, flags.check)?;
+    let mode = flags.mode();
     let timeout = Duration::from_secs(sel.timeout);
     let (ok, lines) = roundtrip::command(root, &suites, sel.filter.as_deref(), timeout, mode)?;
     for line in lines {

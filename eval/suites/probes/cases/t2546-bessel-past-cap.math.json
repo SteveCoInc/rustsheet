@@ -4,7 +4,14 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "21d1a1c077f7835672898272edb7f7f97f0173b1b7ff43e76ba1dbeec5f83a7e"
+  "input_sha256": "21d1a1c077f7835672898272edb7f7f97f0173b1b7ff43e76ba1dbeec5f83a7e",
+  "definitions": {
+   "BESSELI": "7b6d52d8d609219a",
+   "BESSELJ": "7b6d52d8d609219a",
+   "BESSELK": "7b6d52d8d609219a",
+   "BESSELY": "7b6d52d8d609219a"
+  },
+  "arguments_sha256": "e1720bb431b9cc438085591887f0bb20d9ae5d47cf542c941aed947ae733848e"
  },
  "sheets": {
   "Calc": {
@@ -274,23 +281,23 @@
   "Calc": {
    "A1": {
     "f": "=BESSELJ(2E+5,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A2": {
     "f": "=BESSELJ(5E+4,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A24": {
     "f": "=BESSELJ(1E+6,1E+6+1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A25": {
     "f": "=BESSELJ(1E+5,1E+6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A3": {
     "f": "=BESSELJ(9E+4,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "C1": {
     "f": "=BESSELK(2.5,100001)",
@@ -306,15 +313,15 @@
    },
    "C12": {
     "f": "=BESSELK(25019,1E+6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "C13": {
     "f": "=BESSELK(1E+5,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "C14": {
     "f": "=BESSELK(1E+6,1E+7)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "C15": {
     "f": "=BESSELK(1E-300,100001)",
@@ -378,19 +385,19 @@
    },
    "D1": {
     "f": "=BESSELY(1E+6,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "D2": {
     "f": "=BESSELY(2E+5,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "D3": {
     "f": "=BESSELY(1E+6,1E+6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "D4": {
     "f": "=BESSELY(1E+7,1E+6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "D5": {
     "f": "=BESSELY(800,100001)",

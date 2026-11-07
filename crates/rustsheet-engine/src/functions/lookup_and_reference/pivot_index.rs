@@ -39,6 +39,12 @@ impl PivotIndexes {
         self.pivots.clear();
     }
 
+    /// Drops the index of the pivot at position `pivot`, whose definition or cache changed in
+    /// place (the grid writer, T-4151).
+    pub(crate) fn forget(&mut self, pivot: usize) {
+        self.pivots.remove(&pivot);
+    }
+
     /// How many indices were built so far.
     #[cfg(test)]
     pub(crate) fn builds(&self) -> u64 {
@@ -76,12 +82,18 @@ struct PivotIndex {
     memo: HashMap<PivotQuery, Result<f64, Error>>,
 }
 
-/// A pivot GETPIVOTDATA can answer from: one data field, no page field and no hidden item.
-/// Every other shape is one of SPEC-0015's unknowns (1 and 4), `#REF!` until T-2085 probes it.
-/// Several fields on an axis (unknown 10) are indexed too, but only their grand total is
-/// answered ([`nested_axis`]).
+/// A pivot GETPIVOTDATA can answer from: one data field, shown as itself, no page field and no
+/// hidden item. Every other shape is one of SPEC-0015's unknowns (1 and 4), `#REF!` until T-2085
+/// probes it; what GETPIVOTDATA answers for a field shown as a calculation is unprobed (UNVERIFIED,
+/// T-4750; before T-4163 the importer dropped such a pivot, so it was `#REF!` too). Several
+/// fields on an axis (unknown 10) are indexed too, but only their grand total is answered
+/// ([`nested_axis`]).
 fn supported(pivot: &PivotTable) -> Option<Vec<u32>> {
     if pivot.data_fields.len() != 1
+        || pivot
+            .data_fields
+            .iter()
+            .any(|d| d.show_data_as != crate::pivot::ShowDataAs::Normal)
         || pivot.fields.iter().any(|f| {
             f.axis == Some(crate::pivot::Axis::Page) || f.hidden.iter().any(|word| *word != 0)
         })
@@ -190,6 +202,9 @@ impl Model {
                 .items;
             let mut map = HashMap::new();
             for (item, i) in items.iter().zip(0u32..) {
+                // Why only text: an error source cell is an error item (`CacheItem::Error`, as
+                // `pivot::read_source` reads it), so a `"#N/A"` text argument does not name it;
+                // whether Excel's GETPIVOTDATA matches it is UNVERIFIED (probe pending: T-4640).
                 if let CacheItem::Text(text) = item {
                     map.entry(text.to_lowercase())
                         .and_modify(|m| *m = ItemMatch::Several)
@@ -369,6 +384,7 @@ mod tests {
     fn cache() -> PivotCache {
         PivotCache {
             source: None,
+            source_name: None,
             fields: vec![CacheField {
                 name: "Group".to_string(),
                 items: vec![CacheItem::Missing; 3],
@@ -377,6 +393,7 @@ mod tests {
                 date_groups: None,
             }],
             record_count: 4,
+            refresh_on_load: false,
         }
     }
 

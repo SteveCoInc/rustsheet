@@ -510,14 +510,15 @@ def rendered_cells(spec: dict[str, Any], sheet: dict[str, Any], pivot: dict[str,
 
 def relationships_xml(*relationships: str) -> bytes:
     """A relationships part holding `relationships`."""
-    return _xml(f'<Relationships xmlns="{PACKAGE_REL_NS}">{"".join(relationships)}</Relationships>')
+    return xml_part(f'<Relationships xmlns="{PACKAGE_REL_NS}">{"".join(relationships)}</Relationships>')
 
 
 def _relationship(rid: str, kind: str, target: str) -> str:
     return f'<Relationship Id="{rid}" Type="{REL_NS}/{kind}" Target="{target}"/>'
 
 
-def _xml(text: str) -> bytes:
+def xml_part(text: str) -> bytes:
+    """A package part: `text` behind the XML declaration Excel writes (pivot_chart.py writes its parts with it)."""
     return f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n{text}'.encode()
 
 
@@ -565,9 +566,9 @@ def _link(
     definition = f"xl/pivotCache/pivotCacheDefinition{n}.xml"
     records = f"xl/pivotCache/pivotCacheRecords{n}.xml"
     table = f"xl/pivotTables/pivotTable{n}.xml"
-    out.parts[definition] = _xml(definition_xml)
-    out.parts[records] = _xml(records_xml)
-    out.parts[table] = _xml(table_xml)
+    out.parts[definition] = xml_part(definition_xml)
+    out.parts[records] = xml_part(records_xml)
+    out.parts[table] = xml_part(table_xml)
     out.parts[f"xl/pivotCache/_rels/pivotCacheDefinition{n}.xml.rels"] = relationships_xml(
         _relationship("rId1", "pivotCacheRecords", f"pivotCacheRecords{n}.xml")
     )
@@ -604,7 +605,8 @@ def _defined(
     pivot = DefinedPivot(raw, rows[0], rows[1:])
     top, left = xlsxwriter.utility.xl_cell_to_rowcol(str(raw["location"]).replace("$", ""))
     cells = pivot.footprint(top, left)
-    if overlap := taken & cells:
+    # A pivot saved without refreshOnLoad may hold spec cells: they are its saved render (T-4586).
+    if pivot.refresh_on_load and (overlap := taken & cells):
         msg = f"pivot {pivot.name} needs empty cells at {sorted(overlap)} (Excel shows #SPILL! otherwise)"
         raise ValueError(msg)
     taken |= cells

@@ -115,7 +115,9 @@ fn each_element_is_the_scalar_call_with_its_own_error() {
 #[test]
 fn a_cdf_sum_is_bounded() {
     // `HYPGEOM.DIST(25000000,50000000,50000000,100000000,TRUE)` summed 25,000,001 terms on main
-    // (about 4.8 s in release); it sums the 95,942 that are not 0 now, to main's value. A sum
+    // (about 4.8 s in release); it sums the 95,942 that are not 0 now, to the math: the
+    // distribution is symmetric about x, so the cdf is 1/2 + pmf(x)/2 (statrs' sum gave
+    // 0.500079709 before T-4502). A sum
     // with more than 2^18 terms left is #NUM! (the widest distribution at the largest population
     // Excel takes, 2^31 - 2, x about 43 standard deviations above the mode): a DEVIATION.
     let mut model = new_empty_model();
@@ -128,7 +130,7 @@ fn a_cdf_sum_is_bounded() {
         "=HYPGEOM.DIST(537370912,1073741823,1073741823,2147483646,TRUE)",
     );
     model.evaluate();
-    let expected = [("A1", "0.500079709"), ("A2", "#NUM!")];
+    let expected = [("A1", "0.500079788"), ("A2", "#NUM!")];
     for (cell, value) in expected {
         assert_eq!(model._get_text(cell), *value, "{cell}");
     }

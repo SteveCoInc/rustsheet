@@ -4,7 +4,18 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "1529d8ea83b9583ea79f7893d74f6d2b2fffdb7a5de94783141af63762d69c4f"
+  "input_sha256": "1529d8ea83b9583ea79f7893d74f6d2b2fffdb7a5de94783141af63762d69c4f",
+  "definitions": {
+   "HARMEAN": "8061eaadc95c994e",
+   "KURT": "8061eaadc95c994e",
+   "MDETERM": "3eb7c614704f3e48",
+   "SKEW": "8061eaadc95c994e",
+   "STANDARDIZE": "8e4045d7b4e4bcab",
+   "SUMX2MY2": "75e3a541c3378a0e",
+   "SUMX2PY2": "75e3a541c3378a0e",
+   "SUMXMY2": "75e3a541c3378a0e"
+  },
+  "arguments_sha256": "b21020523a7893f0c67f6c211cb5bf5a5420490308e134fa3ee4ae0b0f5ac17e"
  },
  "sheets": {
   "S": {
@@ -17,6 +28,46 @@
     "t": "n",
     "v": "0.0",
     "f": "=SUMX2MY2(A1:B2,A1:B2)"
+   },
+   "Q106": {
+    "t": "n",
+    "v": "-2.0",
+    "f": "=MDETERM(E1:F2)"
+   },
+   "Q107": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MDETERM(G1:I3)"
+   },
+   "Q110": {
+    "t": "n",
+    "v": "-2.0",
+    "f": "=MDETERM({1,2;3,4})"
+   },
+   "Q111": {
+    "t": "n",
+    "v": "2.0",
+    "f": "=MDETERM({2})"
+   },
+   "Q112": {
+    "t": "n",
+    "v": "5.0",
+    "f": "=MDETERM(5)"
+   },
+   "Q120": {
+    "t": "n",
+    "v": "-3.0",
+    "f": "=MDETERM({1,2,3;4,5,6;7,8,10})"
+   },
+   "Q121": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MDETERM({1,2;2,4})"
+   },
+   "Q122": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MDETERM(E1:E1)"
    },
    "Q13": {
     "t": "n",
@@ -172,6 +223,18 @@
     "t": "n",
     "v": "-20.0",
     "f": "=SUMX2MY2({1,2},{3,4})"
+   }
+  }
+ },
+ "skipped": {
+  "S": {
+   "Q108": {
+    "f": "=MDETERM(J1:K3)",
+    "why": "no single value"
+   },
+   "Q116": {
+    "f": "=MDETERM(A1:A8)",
+    "why": "no single value"
    }
   }
  }

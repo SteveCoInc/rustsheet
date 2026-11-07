@@ -1,4 +1,4 @@
-use super::regression::{given, independent_columns, known_points, layout, Grid};
+use super::regression::{independent_columns, known_points, layout, Grid};
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{LiftCost, LiftOptions};
@@ -553,9 +553,10 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> Result<(Grid, Grid), CalcResult> {
-        let y = Grid::from_data(self.read_known_y(&args[0], cell)?);
-        let x = match given(args.get(1)) {
-            Some(node) => Grid::from_data(self.read_data(node, cell)?),
+        let (y, x) = self.read_known_y_and_x(args, cell)?;
+        let y = Grid::from_data(y);
+        let x = match x {
+            Some(x) => Grid::from_data(x),
             None => Grid::counting(y.rows, y.cols),
         };
         Ok((y, x))

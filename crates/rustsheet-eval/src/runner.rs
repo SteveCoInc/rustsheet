@@ -221,6 +221,12 @@ pub struct CaseResult {
     /// The case's pivots whose layout is not Excel's (T-4124; empty without sidecar pivots).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pivot_layout: Vec<PivotLayout>,
+    /// The spec case's `pivot_features` catalog ids (T-4126).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivot_features: Vec<String>,
+    /// Its Excel-evidence sidecar pivot cells and how many pass (T-4126).
+    #[serde(default)]
+    pub pivot_cells: crate::pivot_features::PivotCellTally,
 }
 
 #[derive(Debug, Clone)]
@@ -295,6 +301,8 @@ impl CaseResult {
             arguments: Vec::new(),
             reference_forms: ReferenceFormCells::default(),
             pivot_layout: Vec::new(),
+            pivot_features: Vec::new(),
+            pivot_cells: crate::pivot_features::PivotCellTally::default(),
         }
     }
 
@@ -348,6 +356,9 @@ struct PreparedCase {
     reference_forms: ReferenceFormCells,
     /// The sidecar's pivots, whose layout is compared with the engine's (T-4124).
     pivots: Vec<OraclePivot>,
+    /// The spec case's pivot catalog ids and its sidecar pivot-area cell keys (T-4126).
+    pivot_features: Vec<String>,
+    pivot_keys: BTreeSet<String>,
 }
 
 /// Runs all cases of the given suites in parallel.
@@ -421,7 +432,7 @@ fn run_isolated(
     let prepared = MathTable::load(&math_sidecar(&case.sidecar))
         .map_err(|e| e.to_string())
         .and_then(|m| prepare(suite, case, values).map(|p| (p, m)));
-    let ((prepared, refusal), math_table) = match prepared {
+    let ((mut prepared, refusal), math_table) = match prepared {
         Ok(p) => p,
         Err(e) => {
             return CaseValues {
@@ -444,10 +455,12 @@ fn run_isolated(
         skipped_volatile: prepared.skipped_volatile,
         skipped_add_in: prepared.skipped_add_in,
         tags: prepared.tags.clone(),
+        pivot_features: prepared.pivot_features.clone(),
         defined_names: prepared.defined_names.clone(),
         reference_forms: prepared.reference_forms.clone(),
         ..CaseResult::empty(&case.id, &suite.manifest.name, CaseStatus::Pending)
     };
+    let pivot_keys = std::mem::take(&mut prepared.pivot_keys);
     // Cases without expectations still run: a panic, timeout or load error is a crash we can
     // catch before any oracle value exists (T-0007).
     let engine = Arc::clone(engine);
@@ -502,6 +515,7 @@ fn run_isolated(
                 CaseStatus::Fail
             };
             result.cells = cells;
+            result.pivot_cells = crate::pivot_features::PivotCellTally::of(&result, &pivot_keys);
             if let Some(table) = &math_table {
                 attach_math(&mut result.cells, table);
             }
@@ -734,6 +748,8 @@ fn prepare_xlsx(suite: &Suite, case: &CaseFile) -> Result<PreparedCase, String> 
             defined_names: BTreeMap::new(),
             reference_forms,
             pivots: Vec::new(),
+            pivot_features: Vec::new(),
+            pivot_keys: BTreeSet::new(),
         });
     };
     let (scorable, skipped_volatile) =
@@ -782,6 +798,8 @@ fn prepare_xlsx(suite: &Suite, case: &CaseFile) -> Result<PreparedCase, String> 
         defined_names,
         reference_forms,
         pivots: Vec::new(),
+        pivot_features: Vec::new(),
+        pivot_keys: BTreeSet::new(),
     })
 }
 
@@ -934,7 +952,9 @@ fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase, String> {
         extent: oracle_is_excel
             .then(|| SpillExtent::new(&spec, &expected, &oracle_cells, &formulas)),
         tags: spec.tags.clone(),
-        text: text_expect::expectations(&spec, case)?,
+        pivot_features: spec.pivot_features.clone(),
+        pivot_keys,
+        text: text_expect::with_pivot_text(text_expect::expectations(&spec, case)?, &pivots),
         defined_names: BTreeMap::new(),
         reference_forms: ReferenceFormCells::default(),
         pivots,

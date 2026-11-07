@@ -1,7 +1,7 @@
-use super::reference_operators::{at_outside, wrong_range_shape};
+use super::reference_operators::{at_outside, is_reference_operand, wrong_range_shape};
 use super::{for_each_chain_operand_mut, Node};
 use crate::functions::lift::lifting_table_functions;
-use crate::functions::lookup_and_reference::lifts_into_references;
+use crate::functions::lookup_and_reference::lifts_into_reference_elements;
 use crate::functions::Function;
 use broadcast::{broadcast_shapes, static_analysis_operator_chain};
 use if_arm::{indexes_one_reference_cell, returns_range_arm, returns_single_cell_index};
@@ -33,8 +33,8 @@ use signature::{
     args_signature_ifs, args_signature_index, args_signature_lambda, args_signature_let,
     args_signature_lookup, args_signature_map, args_signature_match, args_signature_npv,
     args_signature_offset, args_signature_one_vector, args_signature_pivotby,
-    args_signature_randarray, args_signature_reduce, args_signature_row, args_signature_scalars,
-    args_signature_scan, args_signature_sumif, args_signature_textafter, args_signature_textsplit,
+    args_signature_reduce, args_signature_row, args_signature_scalars, args_signature_scan,
+    args_signature_sumif, args_signature_textafter, args_signature_textsplit,
     args_signature_trimrange, args_signature_xlookup, args_signature_xmatch, Signature,
 };
 
@@ -414,7 +414,8 @@ fn criteria_static_result(args: &[Node], first: usize) -> StaticResult {
 /// once per element of an array of references in a range argument
 /// (`Function::per_reference_element`; SPEC-0014 rule 6,
 /// `COUNTIF(OFFSET(A1,{0;1},0),">0")` spills 1, 1, probes/reference-lift-consumers E57): a range
-/// argument that is a lifted OFFSET or INDIRECT gives the shape, the criteria
+/// argument that is a lifted OFFSET or INDIRECT, or an XLOOKUP with an `if_not_found`
+/// ([`lifts_into_reference_elements`]), gives the shape, the criteria
 /// (`args[first]`, `args[first + 2]`, ...) only without one. Anything else does not:
 /// `SUMIF(IF(TRUE,A1:A6),"a",B1:B6)` stays a scalar call (probes/legacy-if-arm-range-argument U12).
 fn criteria_and_grid_static_result(kind: &Function, args: &[Node], first: usize) -> StaticResult {
@@ -424,12 +425,26 @@ fn criteria_and_grid_static_result(kind: &Function, args: &[Node], first: usize)
             per_element.takes_reference
         });
     let grids = args.iter().enumerate().filter_map(|(index, arg)| {
-        if !lifts_into_references(arg) || !takes_reference(index) {
+        if !lifts_into_reference_elements(arg) || !takes_reference(index) {
             return None;
         }
-        match run_static_analysis_on_node(arg) {
-            shape @ StaticResult::Array(..) => Some(shape),
-            _ => None,
+        match arg.ungrouped() {
+            // An XLOOKUP's grid has its lookup_value's shape, one cell gives none, and only a
+            // reference `if_not_found` builds it (the engine's `NotFound::Range`).
+            Node::FunctionKind {
+                kind: Function::Xlookup,
+                args,
+            } => {
+                if !args.get(3).is_some_and(is_reference_operand) {
+                    return None;
+                }
+                let (rows, columns) = run_static_analysis_on_node(args.first()?).counts()?;
+                ((rows, columns) != (1, 1)).then_some(StaticResult::Array(rows, columns))
+            }
+            _ => match run_static_analysis_on_node(arg) {
+                shape @ StaticResult::Array(..) => Some(shape),
+                _ => None,
+            },
         }
     });
     // Over a grid each call's own spill is cut to its top-left value (as the engine runs it),
@@ -524,7 +539,6 @@ fn fallback_signature(kind: &Function, arg_count: usize) -> Option<Vec<Signature
         Function::Map => args_signature_map(arg_count),
         Function::Reduce => args_signature_reduce(arg_count),
         Function::Scan => args_signature_scan(arg_count),
-        Function::Randarray => args_signature_randarray(arg_count),
         Function::Textsplit => args_signature_textsplit(arg_count),
         Function::Concat => vec![Signature::Vector; arg_count],
         Function::Lower => args_signature_scalars(arg_count, 1, 0),
@@ -779,7 +793,6 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Getpivotdata => broadcast_static_result(args.iter().skip(3).step_by(2)),
         Function::Map | Function::Reduce => StaticResult::Unknown,
         Function::Scan => StaticResult::Unknown,
-        Function::Randarray => StaticResult::Unknown,
         Function::Textsplit => StaticResult::Unknown,
         Function::Concat => not_implemented(args),
         // UPPER/LOWER broadcast element-wise: an array/range argument yields an array.

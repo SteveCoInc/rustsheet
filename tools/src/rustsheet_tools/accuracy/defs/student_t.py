@@ -13,12 +13,13 @@ Sources:
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import DF_CUT
+from rustsheet_tools.accuracy.defs._common import DF_CUT, confidence_margin, is_real, real_args
 from rustsheet_tools.accuracy.model import (
     Definition,
     Interval,
@@ -32,6 +33,10 @@ from rustsheet_tools.fitlab.kernels.beta import betacf
 
 DF_SOURCE = "statistics.md#student-t-sweep-df-truncation-df-limits-tinv2t-above-1-t-1043"
 TINY_P_SOURCE = "statistics.md#student-t-quantile-at-a-tiny-probability-t-1531"
+HUGE_X_SOURCE = "statistics.md#scalar-distributions-at-extreme-arguments-part-2-t-2256"
+DENSITY_HUGE_X_SOURCE = (
+    "statistics.md#tdists-density-is-num-at-a-huge-x-and-tinv2t-and-tinv-at-p--22e-308-t-3358"
+)
 # The continued fraction converges for y < (a + 1)/(a + b + 2), which holds for x² ≥ 3 at every df; from |x| = 2 it
 # takes at most about 600 terms (df 1E10), fewer as |x| grows.
 CF_MIN_X = 2
@@ -119,7 +124,7 @@ def quantile(p: mpmath.mpf, df: mpmath.mpf) -> mpmath.mpf:
 
 def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     df = args[1]
-    if isinstance(df, (bool, str, tuple)) or df < 1:
+    if not is_real(df) or df < 1:
         msg = "no tail map below df 1"
         raise ValueError(msg)
     x = lower_quantile(q, mpmath.floor(df))
@@ -128,20 +133,24 @@ def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _t_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df, cumulative = args
-    assert not isinstance(x, bool) and not isinstance(df, bool)
+    assert is_real(x) and is_real(df)
+    _t_dist_cut(x, cumulative=bool(cumulative)).check_probed(x)
     return cdf(x, df) if cumulative else density(x, df)
 
 
 def _t_dist_domain(args: Sequence[MathArg]) -> str | None:
     df, cumulative = args[1], args[2]
-    if cumulative and not isinstance(df, (bool, str, tuple)) and df > DF_CUT:
+    if cumulative and is_real(df) and df > DF_CUT:
         return "cumulative df above 1E+10"
-    return None
+    x = _x_of(args)
+    if not cumulative and _df_one_denominator_overflows(x, df):
+        return "a df-1 density whose denominator overflows is #DIV/0!"
+    return _t_dist_cut(x, cumulative=bool(cumulative)).domain(x)
 
 
 def _t_inv(args: Sequence[MathArg]) -> mpmath.mpf:
     p, df = args
-    assert not isinstance(p, bool) and not isinstance(df, bool)
+    assert is_real(p) and is_real(df)
     return quantile(p, df)
 
 
@@ -197,7 +206,7 @@ T_DIST = register(
         domain=_t_dist_domain,
         tail=_tail_x,
         tail_param="x",
-        sources=(DF_SOURCE, "Abramowitz and Stegun 26.7.1"),
+        sources=(DF_SOURCE, HUGE_X_SOURCE, DENSITY_HUGE_X_SOURCE, "Abramowitz and Stegun 26.7.1"),
     )
 )
 
@@ -231,7 +240,7 @@ def two_tailed_quantile(p: mpmath.mpf, df: mpmath.mpf) -> mpmath.mpf:
 
 def _t_inv_2t(args: Sequence[MathArg]) -> mpmath.mpf:
     p, df = args
-    assert not isinstance(p, bool) and not isinstance(df, bool)
+    assert is_real(p) and is_real(df)
     return two_tailed_quantile(p, df)
 
 
@@ -270,7 +279,6 @@ TINV = register(_two_tailed("TINV"))
 # arguments, part 2"): `HugeXCut` holds each function's evidenced bracket.
 UPPER_SOURCE = "statistics.md#tdistrt-and-tdist2t-are-not-1---tdist"
 LEGACY_T_SOURCE = "statistics.md#legacy-distribution-names-sweep-second-family-t-1048"
-HUGE_X_SOURCE = "statistics.md#scalar-distributions-at-extreme-arguments-part-2-t-2256"
 
 
 @dataclass(frozen=True)
@@ -307,6 +315,39 @@ T_DIST_2T_CUT = HugeXCut(  # accuracy/T.DIST.2T/s1 A88 (value 0) and A99
 TDIST_CUT = HugeXCut(  # accuracy/TDIST/s1 A185 (value 0) and A176
     last_number=1.76387937163976e150, first_error=2.08984434704072e166
 )
+# T.DIST's brackets, keyed by (cumulative, x ≥ 0) (T-4580, decision 0321), from every Excel cell of one T.DIST call
+# with |x| above 1E10: only its three Gate A tables have one (no probe or gen-m9 cell does outside a composite). A
+# cumulative cell whose df is above 1E10 is #NUM! for its df whatever x is, so it brackets nothing.
+# The density's cut is exact (T-3554): #NUM! from 2^512, where fl(x x) overflows, at every df and either sign, while
+# 2^512 - 2^460 (`2^512*(1-2^-52)`, two doubles below 2^512) is a number (probes/t3554-tdist-density-huge-x); 2^512's
+# true predecessor is unprobed. It replaces decision 0321's density brackets
+# (s1 A97 and r4-T-2585 A236 numbers, r4-T-2585 A266 and A267 #NUM!), which it lies inside.
+DENSITY_X_SQUARED_CUT = HugeXCut(last_number=2.0**512 * (1 - 2.0**-52), first_error=2.0**512)
+T_DIST_CUTS = {
+    (True, True): HugeXCut(  # accuracy/T.DIST/e-T-3425 A92 (value 1) and r4-T-2585 A217
+        last_number=7.33561600112214e146, first_error=1.89648831921934e159
+    ),
+    (True, False): HugeXCut(  # accuracy/T.DIST/r4-T-2585 A223 (value 0) and e-T-3425 A88
+        last_number=2.01264664929796e153, first_error=5.43165733249003e196
+    ),
+    (False, True): DENSITY_X_SQUARED_CUT,
+    (False, False): DENSITY_X_SQUARED_CUT,
+}
+
+
+def _df_one_denominator_overflows(x: mpmath.mpf, df: MathArg) -> bool:
+    """Whether Excel's df-1 density 1/fl(pi fl(1 + fl(x x))) is #DIV/0!: fl(x x) is finite but the denominator
+    overflows, |x| from about 7.56E+153 to below 2^512 (probes/t3554-tdist-density-df1-div0 A9, A10; A1:A8 below it
+    are numbers). Python's doubles round each step once, as Excel's stored x87 results do."""
+    if not (is_real(df) and int(df) == 1):
+        return False
+    xx = float(x) * float(x)
+    return math.isfinite(xx) and not math.isfinite(math.pi * (1.0 + xx))
+
+
+def _t_dist_cut(x: mpmath.mpf, *, cumulative: bool) -> HugeXCut:
+    """T.DIST's huge-x bracket for `cumulative` and the sign of x (x = 0 is far from every cut)."""
+    return T_DIST_CUTS[(cumulative, x >= 0)]
 
 
 def _rt_cut(x: mpmath.mpf) -> HugeXCut:
@@ -315,7 +356,7 @@ def _rt_cut(x: mpmath.mpf) -> HugeXCut:
 
 def _x_of(args: Sequence[MathArg]) -> mpmath.mpf:
     x = args[0]
-    assert not isinstance(x, (bool, tuple))
+    assert is_real(x)
     return x
 
 
@@ -332,7 +373,7 @@ def _upper_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _t_dist_rt(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(df, (bool, tuple))
+    assert is_real(x) and is_real(df)
     _rt_cut(x).check_probed(x)
     return upper_tail(x, df)
 
@@ -351,8 +392,8 @@ def _tails_upper(
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
         x, df = args[0], args[1]
         tails = args[2] if len(args) > 2 else mpmath.mpf(2)
-        assert not isinstance(x, (bool, tuple)) and not isinstance(df, (bool, tuple))
-        assert not isinstance(tails, (bool, tuple))
+        assert is_real(x) and is_real(df)
+        assert is_real(tails)
         cut.check_probed(x)
         return tails * upper_tail(x, df)
 
@@ -437,30 +478,16 @@ TDIST = register(
 # 0, 1, -0.1 or 1.5 are #NUM! (T-1043), so alpha is in (0, 1), unlike T.INV.2T's (0, 2). The df n - 1 is cut at 1E10:
 # n = 10000000001 is a number and 10000000002 #NUM! (T-1043, `t1518-t-df-cut`). A tiny alpha has a finite margin
 # (`CONFIDENCE.T(1E-300,1,2)` = 4.50158158078553E299; statistics.md T-1531). sd 0 is #NUM! (T-1043), but no cell shows
-# a negative sd, so a negative sd has no value (NoValueError, unprobed) rather than an assumed error.
-CONFIDENCE_RANGE = (2.2250738585072014e-308, 1e300)  # a normal double, clear of the overflow
-
-
-def confidence_margin(alpha: mpmath.mpf, sd: mpmath.mpf, n: mpmath.mpf) -> mpmath.mpf:
-    """T.INV.2T(alpha, n - 1)·sd/√n. NoValueError where sd·t, sd/√n, t/√n or the margin leaves the normal double
-    range: no cell shows where Excel's products overflow or underflow, so such a point is unprobed."""
-    t = two_tailed_quantile(alpha, n - 1)
-    root = mpmath.sqrt(n)
-    for intermediate in (sd * t, sd / root, t / root, sd * t / root):
-        if not CONFIDENCE_RANGE[0] <= abs(intermediate) <= CONFIDENCE_RANGE[1]:
-            msg = "an intermediate leaves the normal double range (unprobed)"
-            raise NoValueError(msg)
-    return sd * t / root
+# a negative sd, so a negative sd has no value (NoValueError, unprobed) rather than an assumed error. The margin and its
+# range check are `_common.confidence_margin`, shared with CONFIDENCE.NORM and CONFIDENCE (T-4581).
 
 
 def _confidence_t(args: Sequence[MathArg]) -> mpmath.mpf:
-    alpha, sd, n = args
-    assert not isinstance(alpha, (bool, str, tuple)) and not isinstance(sd, (bool, str, tuple))
-    assert not isinstance(n, (bool, str, tuple))
+    alpha, sd, n = real_args(args)
     if sd < 0:
         msg = "a negative standard_dev is unprobed"
         raise NoValueError(msg)
-    return confidence_margin(alpha, sd, n)
+    return confidence_margin(two_tailed_quantile(alpha, n - 1), sd, n)
 
 
 def _confidence_t_domain(args: Sequence[MathArg]) -> str | None:

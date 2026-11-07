@@ -254,11 +254,26 @@ impl RefArg {
     }
 }
 
-/// One element of an array of references: the reference a scalar call returned, or its error.
+/// One element of an array of references: the reference a scalar call returned, its error, or
+/// the scalar value it returned beside references of the same grid (SPEC-0014 amendment "Mixed
+/// grids": a hit of `XLOOKUP({2;9},A1:A3,B1:B3,D1:D2)`, whose miss is the range D1:D2).
 #[derive(Clone)]
 pub(crate) enum RefElement {
     Reference(Range),
     Error(Error),
+    /// A `Boolean`, `Number`, `String` or `Empty` node, never an error, LAMBDA or nested cell.
+    Value(ArrayNode),
+}
+
+impl RefElement {
+    /// The element as an array element: a reference is `reference`, an error or a value itself.
+    pub(crate) fn as_node(&self, reference: &ArrayNode) -> ArrayNode {
+        match self {
+            RefElement::Reference(_) => reference.clone(),
+            RefElement::Error(error) => ArrayNode::Error(error.clone()),
+            RefElement::Value(value) => value.clone(),
+        }
+    }
 }
 
 /// A lifted call whose elements are references (SPEC-0014 "Representation"): `rows` x
@@ -304,29 +319,73 @@ impl RefGrid {
         &self.elements
     }
 
+    /// Whether any element is a reference, not an error: what makes a lifted OFFSET or
+    /// INDIRECT carry the ERROR.TYPE/CELL mark (`number_mark.rs`; statistics.md "An array of
+    /// references is #NUM! in the paired functions").
+    pub(crate) fn holds_reference(&self) -> bool {
+        self.elements
+            .iter()
+            .any(|element| matches!(element, RefElement::Reference(_)))
+    }
+
     /// Whether `other` is a clone of this grid, holding the same elements in memory.
     pub(crate) fn shares_elements(&self, other: &RefGrid) -> bool {
         Arc::ptr_eq(&self.elements, &other.elements)
     }
 
-    /// The value view (SPEC-0014 rule 2): every reference element is `#VALUE!` and an error
-    /// element is itself, so `=OFFSET(A1,{0;1},0)` spills two `#VALUE!` (probes/
-    /// reference-lift-elements K1, K4, K13).
+    /// The error LARGE, SMALL and MEDIAN give over this grid (SPEC-0014 amendment rule 5), or
+    /// `None` when they read its value view: `#N/A` when a reference element is on another sheet
+    /// than `sheet`, the formula's (`LARGE(OFFSET(Data!G1,{0;1},0),1)` is `#N/A` from Calc,
+    /// `LARGE(OFFSET(Local!A1,{0;1},0),1)` `#VALUE!` from Local; probes/t4569-xlookup-ref-element-
+    /// max-min Calc!A31, A40, Local!E1:E5, F1:F8). An error element comes first, as it does for
+    /// the other aggregates (unprobed). A grid with references on both sheets is `#N/A` (unprobed).
+    pub(crate) fn order_statistic_error(&self, sheet: u32) -> Option<Error> {
+        let off_sheet = self.elements.iter().any(
+            |element| matches!(element, RefElement::Reference(range) if range.left.sheet != sheet),
+        );
+        if !off_sheet {
+            return None;
+        }
+        let first_error = self.elements.iter().find_map(|element| match element {
+            RefElement::Error(error) => Some(error.clone()),
+            _ => None,
+        });
+        Some(first_error.unwrap_or(Error::NA))
+    }
+
+    /// [`Self::order_statistic_error`] as the `CalcResult` error of the call at `cell`, the one
+    /// LARGE, SMALL, MEDIAN and the RANK readers return.
+    pub(crate) fn order_statistic_result(
+        &self,
+        sheet: u32,
+        cell: CellReferenceIndex,
+    ) -> Option<CalcResult> {
+        self.order_statistic_error(sheet).map(|error| {
+            CalcResult::new_error(
+                error,
+                cell,
+                "Array of references on another sheet".to_string(),
+            )
+        })
+    }
+
+    /// The value view (SPEC-0014 rule 2): every reference element is `#VALUE!`, an error
+    /// element is itself and a value element its value, so `=OFFSET(A1,{0;1},0)` spills two
+    /// `#VALUE!` (probes/reference-lift-elements K1, K4, K13) and
+    /// `=XLOOKUP({2;9},A1:A3,B1:B3,F1:F2)` 20 and `#VALUE!` (probes/t4563-xlookup-not-found-ref-
+    /// element A57).
     pub(crate) fn to_values(&self) -> CalcResult {
         CalcResult::Array(self.to_array(ArrayNode::Error(Error::VALUE)))
     }
 
-    /// The grid as array rows: every reference element is `reference`, an error element is
-    /// itself.
+    /// The grid as array rows: every reference element is `reference`, an error or value element
+    /// is itself.
     pub(crate) fn to_array(&self, reference: ArrayNode) -> Vec<Vec<ArrayNode>> {
         self.elements
             .chunks(self.columns)
             .map(|row| {
                 row.iter()
-                    .map(|element| match element {
-                        RefElement::Reference(_) => reference.clone(),
-                        RefElement::Error(error) => ArrayNode::Error(error.clone()),
-                    })
+                    .map(|element| element.as_node(&reference))
                     .collect()
             })
             .collect()

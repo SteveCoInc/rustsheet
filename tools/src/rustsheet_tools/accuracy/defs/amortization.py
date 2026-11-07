@@ -23,11 +23,11 @@ applies them:
   `(n + 2)·1e-14` relative of a rounding half, or a remain that close to the salvage, has no value (Excel's walk may
   fall on the other side).
 Domains (Excel's errors, all `#NUM!`, "AMORLINC and AMORDEGRC check order"): a date that does not floor to
-0..2958465, a negative cost or salvage, a salvage above the cost, a negative period, a rate of 0 or less, a purchase
+0..2958465, a cost of 0 or less, a negative salvage, a salvage above the cost, a negative period, a rate of 0 or less, a purchase
 after the first period, a basis but 0, 1, 3 or 4 after truncation (a negative one too, "Day-count basis: a negative
 basis is #NUM!"); for AMORDEGRC an asset life 1/rate of 2 or less ("AMORDEGRC life bands").
-A salvage equal to the cost is not `#NUM!` but 0 from period 1 on (this table's cells, recorded in that entry); below
-period 1 it is unprobed.
+A salvage equal to a positive cost is not `#NUM!` but 0 at every period, fractions and period 0 included, once every
+check above has passed (the basis and AMORDEGRC's asset life still win; probes/amor-salvage-equal-cost, T-4504).
 No math value (`NoValueError`): AMORDEGRC at a period strictly between 0 and 1, which returns the value the last
 AMORDEGRC or AMORLINC Excel ran left behind (workbook state, "AMORDEGRC below period 1"); a 30/360 basis with a date
 below serial 61 (the stand-in calendar before 1900-03-01 is probed on basis 1 only); AMORLINC at a period below 1 whose
@@ -45,18 +45,11 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import ill_conditioned, one_of, scalars, trunc
+from rustsheet_tools.accuracy.defs._common import ill_conditioned, one_of, real_args, trunc
 from rustsheet_tools.accuracy.defs.depreciation import stratified
 from rustsheet_tools.accuracy.defs.yearfrac import displayed_date, eu_30_360, us_30_360, whole_serial
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    DomainError,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 from rustsheet_tools.fitlab.sweep import EPOCH
 
@@ -118,12 +111,11 @@ class _Asset:
     """Checked arguments (module docstring)."""
 
     def __init__(self, args: Sequence[MathArg], *, degressive: bool) -> None:
-        a = scalars(args)
+        a = real_args(args)
         self.cost, self.salvage, self.period, self.rate = a[0], a[3], a[4], a[5]
-        self.fully_salvaged = False
         purchased, first = whole_serial(float(a[1])), whole_serial(float(a[2]))
-        if not (self.cost >= 0 and self.salvage >= 0 and self.salvage <= self.cost):
-            msg = "a negative cost or salvage, or a salvage above the cost: #NUM!"
+        if not (self.cost > 0 and self.salvage >= 0 and self.salvage <= self.cost):
+            msg = "a cost of 0 or less, a negative salvage, or a salvage above the cost: #NUM!"
             raise DomainError(msg)
         if self.period < 0 or self.rate <= 0 or purchased > first:
             msg = "a negative period, a rate at most 0 or a purchase after the first period: #NUM!"
@@ -140,13 +132,9 @@ class _Asset:
         if self.period > MAX_PERIOD:
             msg = "a period past 1E6 (Excel's walk time)"
             raise NoValueError(msg)
-        if self.salvage == self.cost:
-            # 0 in Excel at the periods probed, 1 to 5 (accuracy/AMORDEGRC/s1 A114, A118, A128, A130, A131,
-            # accuracy/AMORLINC/s1 A124, A125; financial.md "AMORLINC and AMORDEGRC check order")
-            if self.period < 1:
-                msg = "a salvage equal to the cost below period 1 (unprobed)"
-                raise NoValueError(msg)
-            self.fully_salvaged = True
+        # 0 at every period once the basis and the asset life have passed, fractions and period 0 included
+        # (probes/amor-salvage-equal-cost A, B, C, E, F; financial.md "AMORLINC and AMORDEGRC check order").
+        self.fully_salvaged = bool(self.salvage == self.cost)
         self.life = math.ceil(quotient)
         self.purchased, self.first = purchased, first
 

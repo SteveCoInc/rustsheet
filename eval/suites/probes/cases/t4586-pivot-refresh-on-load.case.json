@@ -1,0 +1,62 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4586: does Excel for the web re-render a pivot saved without refreshOnLoad, and one whose source is edited with no refresh? Data!B2 is a formula (=10) the case builder caches as missing, so the three answers differ: the saved cells (East 99, Grand Total 99, no West), a render from the cache (East 5, West 20, total 25) and a refresh from the source (East 15, West 20, total 35). (a) sheet A: refreshOnLoad off, location A3:B5, saved cells and rowItems listing only East. (b) sheet B: the same with no rowItems or colItems. (c) sheet C: a refreshOnLoad pivot over Src, whose B2 the oracle types as 100 through a Graph range write after load (an `entered` cell, blank in the file), with no refresh; East shows 5 if Excel does not re-render it and 105 if it does. Q reads each area's cells and Src!B2. The pivot cells are also in the sidecar's `pivots` section.",
+  "tags": ["probe", "pivot", "T-4586", "M16"],
+  "pivot_features": ["PV-0665", "PV-1016", "PV-1183"],
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "Region", "B1": "Sales",
+        "A2": "East", "B2": "=10",
+        "A3": "West", "B3": 20,
+        "A4": "East", "B4": 5
+      }
+    },
+    {
+      "name": "Src",
+      "cells": {
+        "A1": "Region", "B1": "Sales",
+        "A2": "East", "B2": {"entered": "100"},
+        "A3": "West", "B3": 20,
+        "A4": "East", "B4": 5
+      }
+    },
+    {
+      "name": "A",
+      "cells": {"A3": "Row Labels", "B3": "Sum of Sales", "A4": "East", "B4": 99, "A5": "Grand Total", "B5": 99},
+      "pivot_tables": [
+        {"name": "Saved", "source": "Data!A1:B4", "location": "A3",
+         "definition": {"rows": ["Region"], "data": [{"field": "Sales"}], "refresh_on_load": false, "area": "A3:B5",
+                        "xml": {"rowItems": "<rowItems count=\"2\"><i><x/></i><i t=\"grand\"><x/></i></rowItems>",
+                                "colItems": "<colItems count=\"1\"><i/></colItems>"}}}
+      ]
+    },
+    {
+      "name": "B",
+      "cells": {"A3": "Row Labels", "B3": "Sum of Sales", "A4": "East", "B4": 99, "A5": "Grand Total", "B5": 99},
+      "pivot_tables": [
+        {"name": "NoItems", "source": "Data!A1:B4", "location": "A3",
+         "definition": {"rows": ["Region"], "data": [{"field": "Sales"}], "refresh_on_load": false, "area": "A3:B5"}}
+      ]
+    },
+    {
+      "name": "C",
+      "cells": {},
+      "pivot_tables": [
+        {"name": "Edited", "source": "Src!A1:B4", "location": "A3",
+         "definition": {"rows": ["Region"], "data": [{"field": "Sales"}]}}
+      ]
+    },
+    {
+      "name": "Q",
+      "cells": {
+        "A1": "=A!A4", "B1": "=A!B4", "C1": "=A!A5", "D1": "=A!B5", "E1": "=A!A6", "F1": "=A!B6",
+        "A2": "=B!A4", "B2": "=B!B4", "C2": "=B!A5", "D2": "=B!B5", "E2": "=B!A6", "F2": "=B!B6",
+        "A3": "=C!A4", "B3": "=C!B4", "C3": "=C!A5", "D3": "=C!B5", "E3": "=C!A6", "F3": "=C!B6",
+        "A4": "=Src!B2", "B4": "=SUM(Data!B2:B4)"
+      }
+    }
+  ],
+  "expected": {}
+}

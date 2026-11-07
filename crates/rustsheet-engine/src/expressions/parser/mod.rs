@@ -74,7 +74,9 @@ mod unparsed;
 
 pub use chain::ChainLeft;
 use chain::ChainLevel;
-pub(crate) use chain::{for_each_chain_operand_mut, left_chain, value_operands};
+pub(crate) use chain::{
+    chain_operands_in_order_mut, for_each_chain_operand_mut, left_chain, value_operands,
+};
 pub(crate) use depth::is_limit_error;
 pub use depth::{
     MAX_FORMULA_DEPTH, MAX_NESTED_CALLS, MAX_PARENTHESES, MAX_SIGNS, MAX_VALUE_OPERATORS,
@@ -184,6 +186,10 @@ pub struct Parser {
     /// embedder or the bindings), not text the engine printed and re-enters itself: a padded bare
     /// column then reads as no column, as typed or loaded text does (see [`Parser::set_external`]).
     external: bool,
+    /// The formula is the body of a name added through the API: a bare defined name reads its
+    /// sheet-scoped definition on the first sheet by name order (see
+    /// [`Parser::set_api_name_body`]).
+    api_name_body: bool,
     /// The formula is typed with the workbook in R1C1 reference style
     /// (`Model::set_typed_r1c1_user_input`): `Model::parse_cell_formula` reads it in the R1C1
     /// grammar, short forms written out, instead of the A1 grammar (T-4288).
@@ -260,6 +266,7 @@ impl Parser {
             typed: false,
             loaded: false,
             external: false,
+            api_name_body: false,
             r1c1_entry: false,
             cell_shaped_binding: None,
             prefixed_declaration: None,
@@ -286,6 +293,15 @@ impl Parser {
     /// T-3069, T-3258).
     pub(crate) fn set_external(&mut self, external: bool) {
         self.external = external;
+    }
+
+    /// Reads the next formulas as the body of a name added through the API (`true`) or not
+    /// (`false`, the default). Excel's `names/add` binds a bare defined name of the body to its
+    /// sheet-scoped definition on the first sheet by name, whichever sheet is active, else to
+    /// the workbook name (docs/excel-semantics/syntax.md "A bare name in an API-added name's
+    /// body", T-4587); the node then carries that sheet as its prefix, `Last!Dup`.
+    pub(crate) fn set_api_name_body(&mut self, api_name_body: bool) {
+        self.api_name_body = api_name_body;
     }
 
     /// Reads the next formulas as typed (`true`) or stored (`false`); see [`Parser::typed_refusal`].
@@ -548,6 +564,12 @@ impl Parser {
                 self.reference_or_call_operand(sheet, row, column, absolute_column, absolute_row)
             }
             TokenType::Range { sheet, left, right } => {
+                if sheet.is_none() {
+                    let text = self.lexer.source_since(start);
+                    if let Some(node) = self.bound_names_range(&text) {
+                        return self.call_if_parenthesis_follows(node);
+                    }
+                }
                 self.range_or_call_operand(sheet, left, right)
             }
             TokenType::Ident(name) => self.parse_identifier(name),

@@ -48,7 +48,7 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars, signed, square_overflows
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, is_real, real_args, signed, square_overflows
 from rustsheet_tools.accuracy.defs.erf import erfc
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
@@ -119,14 +119,14 @@ def _density_domain(z: float, cumulative: MathArg) -> str | None:
 
 def _standardized(args: Sequence[MathArg]) -> float:
     """NORM.DIST's z = (x - mean)/sd as Excel forms it in doubles (only its overflow is read; an inf or nan stays one)."""
-    x, mean, sd = (float(a) for a in scalars(args[:3]))
+    x, mean, sd = (float(a) for a in real_args(args[:3]))
     return (x - mean) / sd
 
 
 def _norm_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, mean, sd, cumulative = args
-    assert not isinstance(x, (bool, str, tuple)) and not isinstance(mean, (bool, str, tuple))
-    assert not isinstance(sd, (bool, str, tuple))
+    assert is_real(x) and is_real(mean)
+    assert is_real(sd)
     if cumulative and math.isinf(_standardized(args)):
         # (x - mean)/sd past the double range: no Excel cell says what the cdf is there (T-2435 probed the
         # density only), so such a point is redrawn.
@@ -142,25 +142,25 @@ def _norm_dist_domain(args: Sequence[MathArg]) -> str | None:
 
 def _norm_s_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     z, cumulative = args
-    assert not isinstance(z, (bool, str, tuple))
+    assert is_real(z)
     return cdf(z) if cumulative else density(z)
 
 
 def _norm_s_dist_domain(args: Sequence[MathArg]) -> str | None:
-    return _density_domain(float(scalars(args[:1])[0]), args[1])
+    return _density_domain(float(real_args(args[:1])[0]), args[1])
 
 
 def _phi(args: Sequence[MathArg]) -> mpmath.mpf:
-    (z,) = scalars(args)
+    (z,) = real_args(args)
     return density(z)
 
 
 def _phi_domain(args: Sequence[MathArg]) -> str | None:
-    return _density_domain(float(scalars(args)[0]), False)
+    return _density_domain(float(real_args(args)[0]), False)
 
 
 def _gauss(args: Sequence[MathArg]) -> mpmath.mpf:
-    (z,) = scalars(args)
+    (z,) = real_args(args)
     if abs(z) < 1:
         # Phi(z) - 1/2 cancels every digit at a tiny z (GAUSS(1E-300) is 3.99E-301); erf keeps them.
         return mpmath.erf(z / mpmath.sqrt(2)) / 2
@@ -168,12 +168,12 @@ def _gauss(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _norm_s_inv(args: Sequence[MathArg]) -> mpmath.mpf:
-    (p,) = scalars(args)
+    (p,) = real_args(args)
     return standard_quantile(p)
 
 
 def _norm_inv(args: Sequence[MathArg]) -> mpmath.mpf:
-    p, mean, sd = scalars(args)
+    p, mean, sd = real_args(args)
     return mean + sd * standard_quantile(p)
 
 
@@ -187,7 +187,7 @@ def _standard_tail(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmat
 def _general_tail(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     """NORM.DIST's x whose lower (or upper) tail is q: mean + sd*z."""
     mean, sd = args[1], args[2]
-    if isinstance(mean, (bool, str, tuple)) or isinstance(sd, (bool, str, tuple)) or sd <= 0:
+    if not is_real(mean) or not is_real(sd) or sd <= 0:
         msg = "no tail map without a positive standard deviation"
         raise ValueError(msg)
     return mean + sd * _standard_tail(q, upper, args)
@@ -436,13 +436,13 @@ NORMINV = register(_norm_inv_definition("NORMINV"))
 def _standardize(args: Sequence[MathArg]) -> mpmath.mpf:
     """(x - mean)/sd. Excel's one double subtraction and one division are within an ulp or so of it; a quotient (or
     a difference) past the largest double, or below the smallest normal one, is unprobed and redrawn."""
-    x, mean, sd = scalars(args)
+    x, mean, sd = real_args(args)
     difference = float(x) - float(mean)
     value = (x - mean) / sd
     if math.isinf(difference) or abs(value) > sys.float_info.max:
         msg = "x - mean or the quotient overflows a double (unprobed)"
         raise NoValueError(msg)
-    if value != 0 and abs(value) < sys.float_info.min:
+    if value != 0 and abs(value) < NORMAL_MIN:
         msg = "a subnormal quotient (unprobed)"
         raise NoValueError(msg)
     return value

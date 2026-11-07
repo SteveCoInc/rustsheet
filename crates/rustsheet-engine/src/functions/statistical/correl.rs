@@ -1,4 +1,5 @@
 use crate::expressions::types::CellReferenceIndex;
+use crate::functions::statistical::paired::SecondMark;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
@@ -131,7 +132,8 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> Result<PairedMoments, CalcResult> {
-        let (_, _, known_y, known_x) = self.fn_get_two_matrices(args, cell)?;
+        let (_, _, known_y, known_x) =
+            self.fn_get_two_matrices(args, cell, SecondMark::NoNumber)?;
         Ok(PairedMoments::new(&known_x, &known_y))
     }
 

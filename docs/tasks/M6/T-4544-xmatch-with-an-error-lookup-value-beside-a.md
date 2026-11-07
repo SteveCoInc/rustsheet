@@ -3,7 +3,7 @@ id: T-4544
 title: "XMATCH with an error lookup_value beside a lifted match_mode or search_mode, and an error-cell search_mode against each bad match_mode: probe and match"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -50,15 +50,33 @@ call these forms UNVERIFIED are VERIFIED or corrected.
   modes in one order, read it through one helper (directive 3).
 
 ## Acceptance criteria
-- [ ] probes/t4544-xmatch-error-modes and its hold-out case (excel-graph, canary-verified) cover every form in
+- [x] probes/t4544-xmatch-error-modes and its hold-out case (excel-graph, canary-verified) cover every form in
       Context. Each case's predictions were committed before its fill.
-- [ ] Every cell of both cases passes. Any cell that does not is recorded in lookup.md and owned by a task filed with
+- [x] Every cell of both cases passes. Any cell that does not is recorded in lookup.md and owned by a task filed with
       `make new-task` (`campaign: semantics` with a `## Visible-parity stage` section) and named in the Outcome.
-- [ ] lookup.md: both UNVERIFIED passages quoted in Context are replaced by the evidenced rule, with the cells cited.
-- [ ] The cells of probes/lookup-argument-modes, t2746-xlookup-error-lookup-array-modes and the four gen-m6 cases of
+- [x] lookup.md: both UNVERIFIED passages quoted in Context are replaced by the evidenced rule, with the cells cited.
+- [x] The cells of probes/lookup-argument-modes, t2746-xlookup-error-lookup-array-modes and the four gen-m6 cases of
       the T-3496 entry still pass. No new known failures in any baseline; `make check` green; reviewers approve.
 
 ## Out of scope
 - MATCH's error lookup_value against a lifted match_type (T-2637).
 - XLOOKUP's if_not_found lift (T-4543).
 - Near-integer modes (T-2656, done).
+
+## Outcome
+Probe only: the engine already matched every probed cell, so no code changed.
+- probes/t4544-xmatch-error-modes (122 formulas, 175 scored cells) covers every form in Context: an error lookup_value
+  (`NA()`, `1/0`, a cell holding `#N/A`) beside array and 2-cell range match_mode/search_mode, both as arrays at once, the
+  first and second elements of array modes with a valid lookup_value, and an error search_mode (literal, `NA()`, `1/0`, two
+  error cells) against match_mode 0, 9, -2.5, "12", "1", "x", "", TRUE, a blank cell and errors of either kind.
+  probes/t4544-xmatch-error-modes-holdout (52 generated formulas, seed 4544, 86 cells) is the hold-out. Both were filled
+  on excel-graph (canary-verified) on 2026-11-06, after the engine's predictions were committed
+  (docs/research/t4544/predictions-main.md and predictions-holdout.md, commit "probe cases and engine predictions before
+  the fill").
+- Result: 261 of 261 cells pass. Every prediction held, in the main case and in the hold-out.
+- lookup.md: the T-1958 XMATCH search_mode bullet and the T-3496 gen-m6 entry are now VERIFIED, with the rule and cells
+  cited. The rule: an error lookup_value beats every mode element; an error match_mode wins first, then a match_mode
+  that does not convert gives #VALUE!, then a scalar error search_mode beats an out-of-range numeric match_mode.
+- No shared mode-reading helper: nothing changed in `fn_xmatch` or XLOOKUP's readers, so the directive 3 question in
+  Context does not arise in this PR.
+- Eval delta: +261 passing cells (two new probe cases); no baseline changes, no new known failures.

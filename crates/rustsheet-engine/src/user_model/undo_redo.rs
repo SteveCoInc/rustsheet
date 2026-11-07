@@ -158,9 +158,16 @@ impl UserModel {
                     row,
                     count: _,
                     old_data,
+                    tables,
+                    rewritten,
                 } => {
+                    self.model.check_table_extents(*sheet, tables)?;
+                    let lines = (*sheet, *row, old_data.len(), true);
+                    let rewritten = self.checked_rewritten_cells(rewritten, lines)?;
                     needs_evaluation = true;
                     self.undo_delete_rows(*sheet, *row, old_data)?;
+                    self.model.restore_table_extents(*sheet, tables)?;
+                    self.restore_rewritten_cells(rewritten)?;
                 }
                 Diff::InsertColumns {
                     sheet,
@@ -175,9 +182,16 @@ impl UserModel {
                     column,
                     count: _,
                     old_data,
+                    tables,
+                    rewritten,
                 } => {
+                    self.model.check_tables_of_sheet(*sheet, tables)?;
+                    let lines = (*sheet, *column, old_data.len(), false);
+                    let rewritten = self.checked_rewritten_cells(rewritten, lines)?;
                     needs_evaluation = true;
                     self.undo_delete_columns(*sheet, *column, old_data)?;
+                    self.model.restore_tables_of_sheet(*sheet, tables)?;
+                    self.restore_rewritten_cells(rewritten)?;
                 }
                 Diff::SetFrozenRowsCount {
                     sheet,
@@ -260,9 +274,18 @@ impl UserModel {
                     name,
                     scope,
                     old_value,
+                    hidden,
+                    comment,
                 } => {
-                    // The name existed: an undo puts it back even past the API's call cap (T-4014).
-                    self.model.restore_defined_name(name, *scope, old_value)?;
+                    // The name existed: an undo puts it back even past the API's call cap (T-4014),
+                    // with the flags it was loaded with (T-4637).
+                    self.model.restore_defined_name(
+                        name,
+                        *scope,
+                        old_value,
+                        *hidden,
+                        comment.clone(),
+                    )?;
                 }
                 Diff::UpdateDefinedName {
                     name,
@@ -481,15 +504,12 @@ impl UserModel {
                     old_priority,
                     ..
                 } => {
-                    let ws = self.model.workbook.worksheet_mut(*sheet)?;
-                    let i = *index as usize;
-                    if i < ws.conditional_formatting.len() {
-                        ws.conditional_formatting[i] = ConditionalFormatting {
-                            range: old_range.clone(),
-                            cf_rule: *old_rule.clone(),
-                            priority: *old_priority,
-                        };
-                    }
+                    let slot = self.checked_cf_slot(*sheet, *index, old_range)?;
+                    *slot = ConditionalFormatting {
+                        range: old_range.clone(),
+                        cf_rule: *old_rule.clone(),
+                        priority: *old_priority,
+                    };
                     needs_evaluation = true;
                 }
                 Diff::SwapConditionalFormattingPriority {
@@ -691,6 +711,8 @@ impl UserModel {
                     row,
                     count,
                     old_data: _,
+                    tables: _,
+                    rewritten: _,
                 } => {
                     self.model.delete_rows(*sheet, *row, *count)?;
                     needs_evaluation = true;
@@ -708,6 +730,8 @@ impl UserModel {
                     column,
                     count,
                     old_data: _,
+                    tables: _,
+                    rewritten: _,
                 } => {
                     self.model.delete_columns(*sheet, *column, *count)?;
                     needs_evaluation = true;
@@ -789,6 +813,8 @@ impl UserModel {
                     name,
                     scope,
                     old_value: _,
+                    hidden: _,
+                    comment: _,
                 } => self.model.delete_defined_name(name, *scope)?,
                 Diff::UpdateDefinedName {
                     name,
@@ -947,12 +973,9 @@ impl UserModel {
                     new_rule,
                     ..
                 } => {
-                    let ws = self.model.workbook.worksheet_mut(*sheet)?;
-                    let i = *index as usize;
-                    if i < ws.conditional_formatting.len() {
-                        ws.conditional_formatting[i].range = new_range.clone();
-                        ws.conditional_formatting[i].cf_rule = *new_rule.clone();
-                    }
+                    let slot = self.checked_cf_slot(*sheet, *index, new_range)?;
+                    slot.range = new_range.clone();
+                    slot.cf_rule = *new_rule.clone();
                     needs_evaluation = true;
                 }
                 Diff::SwapConditionalFormattingPriority {

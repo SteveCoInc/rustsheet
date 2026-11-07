@@ -164,10 +164,10 @@ fn fn_amorlinc_first_period() {
 #[test]
 fn fn_amorlinc_errors() {
     let mut model = new_empty_model();
-    // salvage >= cost
+    // salvage > cost (equal is 0: `fn_amor_salvage_equal_to_the_cost`)
     model._set(
         "A1",
-        "=AMORLINC(2400, DATE(2008,8,19), DATE(2008,12,31), 2400, 1, 0.15, 1)",
+        "=AMORLINC(2400, DATE(2008,8,19), DATE(2008,12,31), 2401, 1, 0.15, 1)",
     );
     // basis 2 (Actual/360) is not allowed
     model._set(
@@ -184,6 +184,50 @@ fn fn_amorlinc_errors() {
     assert_eq!(model._get_text("A1"), *"#NUM!");
     assert_eq!(model._get_text("A2"), *"#NUM!");
     assert_eq!(model._get_text("A3"), *"#NUM!");
+}
+
+// A salvage equal to the cost is 0 at every period, fractions and period 0 included, but only
+// after every argument check: the basis's error, a basis of 2 and AMORDEGRC's asset life still
+// win, and a cost of 0 stays #NUM!. The walk keeps comparing `remain < salvage`: a remain equal to
+// a lower salvage still charges (financial.md "AMORLINC and AMORDEGRC check order";
+// probes/amor-salvage-equal-cost, T-4504).
+#[test]
+fn fn_amor_salvage_equal_to_the_cost() {
+    let mut model = new_empty_model();
+    let cases = [
+        ("=AMORDEGRC(2400,39679,39813,2400,0,0.15,1)", "0"),
+        ("=AMORDEGRC(2400,39679,39813,2400,1,0.15,1)", "0"),
+        ("=AMORDEGRC(2400,39679,39813,2400,5,0.15,1)", "0"),
+        ("=AMORDEGRC(2400,39679,39813,2400,6,0.15,1)", "0"),
+        ("=AMORDEGRC(2400,39679,39813,2400,1.5,0.15,1)", "0"),
+        ("=AMORDEGRC(2400,39679,39813,2400,1,0.4,1)", "0"),
+        ("=AMORLINC(2400,39679,39813,2400,0,0.15,1)", "0"),
+        ("=AMORLINC(2400,39679,39813,2400,0.5,0.15,1)", "0"),
+        ("=AMORLINC(2400,39679,39813,2400,2,0.15,1)", "0"),
+        ("=AMORLINC(2400,39679,39813,2400,1,2,1)", "0"),
+        ("=AMORDEGRC(2400,39679,39813,2400,1,0.5,1)", "#NUM!"),
+        ("=AMORDEGRC(2400,39679,39813,2400,0.5,0.5,1)", "#NUM!"),
+        ("=AMORDEGRC(2400,39679,39813,2400,1,0.5,NA())", "#N/A"),
+        ("=AMORDEGRC(2400,39679,39813,2400,1,0.15,2)", "#NUM!"),
+        ("=AMORLINC(2400,39679,39813,2400,1,0.15,NA())", "#N/A"),
+        ("=AMORLINC(2400,39679,39813,2400,1,0.15,5)", "#NUM!"),
+        ("=AMORLINC(2400,39813,39679,2400,1,0.15,1)", "#NUM!"),
+        ("=AMORDEGRC(0,39679,39813,0,1,0.15,1)", "#NUM!"),
+        ("=AMORLINC(0,39679,39813,0,0,0.15,1)", "#NUM!"),
+        ("=AMORDEGRC(2400,39679,39813,2070,1,0.15,1)", "776"),
+        ("=AMORDEGRC(2400,39679,39813,1293.75,2,0.15,1)", "485"),
+    ];
+    for (row, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("A{}", row + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
 }
 
 #[test]
@@ -260,6 +304,49 @@ fn fn_vdb_fractional_start_bits() {
     assert_eq!(bits("A6"), 25.0_f64.to_bits());
     assert_eq!(bits("A7"), (-600.0_f64).to_bits());
     assert_eq!(bits("A8"), 94.623_498_24_f64.to_bits());
+}
+
+// Where straight line already wins at period 0, the whole window charges `(cost - salvage)/life`
+// as one product `n·sl`, a fractional start included (financial.md "VDB charge order";
+// accuracy/VDB/s1 and gen-m9/67a4c03afd63f988 A334, excel-graph, T-4111, T-4510).
+#[test]
+fn fn_vdb_straight_line_from_period_zero_bits() {
+    let mut model = new_empty_model();
+    model._set("A1", "=VDB(7.00815007310244E-276,0,1793,53.25,1099,0.603)");
+    model._set(
+        "A2",
+        "=VDB(133385333.387961,232343.987648587,8,1.25,4.75,0.570826109457717,FALSE)",
+    );
+    model._set(
+        "A3",
+        "=VDB(147.345559004139,0.00344462972942079,21,12.5,18.5,0.295807274286059)",
+    );
+    model._set(
+        "A4",
+        "=VDB(121503138647.778,3864354372.11506,4,0.5,4,0.15833054798759,FALSE)",
+    );
+    model._set(
+        "A5",
+        "=VDB(2802973.77427359,454.661570023026,24,6.5,18.75,0.101632427134068)",
+    );
+    model._set(
+        "A6",
+        "=VDB(9.95316729348141,4.66310160542375,20,16.3,16.5,0.334748293043145)",
+    );
+    model._set("A7", "=VDB(86661,45,37,0,6,0.2)");
+    model.evaluate();
+    let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
+        Ok(CellValue::Number(n)) => n.to_bits(),
+        other => panic!("expected number, got {other:?}"),
+    };
+
+    assert_eq!(bits("A1"), 4.087_436_106_495_748e-276_f64.to_bits());
+    assert_eq!(bits("A2"), 58_254_432.862_636_68_f64.to_bits());
+    assert_eq!(bits("A3"), 42.097_746_964_117_02_f64.to_bits());
+    assert_eq!(bits("A4"), 102_933_936_241.205_06_f64.to_bits());
+    assert_eq!(bits("A5"), 1_430_452.463_775_779_1_f64.to_bits());
+    assert_eq!(bits("A6"), 0.052_900_656_880_576_415_f64.to_bits());
+    assert_eq!(bits("A7"), 14_045.837_837_837_837_f64.to_bits());
 }
 
 // RRI and DURATION use Excel's own operators (financial.md "DURATION and RRI operation order";

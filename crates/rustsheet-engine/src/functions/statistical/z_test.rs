@@ -14,12 +14,21 @@ use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 /// against (mean - x)/(sigma/sqrt(n)), matches 240 of 240 there (columns I and J, 141 for the
 /// plain-double `(mean - x)*sqrt(n)/sigma`) and the 30 numeric cells of t1048-ztest and t1049-ztest
 /// (24 for the quotient form). docs/excel-semantics/statistics.md, T-1778 section, "Engine (T-1929)".
-fn z_test_p(mean: f64, x: f64, n: f64, sigma: f64) -> f64 {
+///
+/// With sigma given, a z past the double range is `#NUM!` when it is positive (the mean above x)
+/// and 0.5 when it is negative, not Phi(-z)'s 0 and 1: `Z.TEST({1,2,3},-1E+300,1E-300)` and
+/// `Z.TEST({1,2,3},1E+300,1E-300)` (probes/t4098-tests-prob-domains A48, A49; statistics.md
+/// "CHISQ.TEST, Z.TEST and PROB: Gate A domains (T-4098)"). With sigma omitted it is unprobed and
+/// keeps Phi(-z).
+fn z_test_p(mean: f64, x: f64, n: f64, sigma: f64, sigma_given: bool) -> Option<f64> {
     let z = extended_quotient(
         extended_product(extended_sum(mean, -x), extended_sqrt(n)),
         sigma,
     );
-    normal_cdf(-z, 0.0, 1.0)
+    if sigma_given && z.is_infinite() {
+        return (z < 0.0).then_some(0.5);
+    }
+    Some(normal_cdf(-z, 0.0, 1.0))
 }
 
 /// Z.TEST's data argument read once: its numbers' count, mean and sample standard deviation.
@@ -171,6 +180,7 @@ fn z_test_element(
     if sigma.is_some_and(|sigma| sigma <= 0.0) {
         return error(Error::NUM);
     }
+    let sigma_given = sigma.is_some();
     // If sigma is omitted, the sample standard deviation STDEV(array).
     let Some(sigma) = sigma.or(data.stdev) else {
         return error(Error::DIV);
@@ -190,9 +200,8 @@ fn z_test_element(
     }
     // A NaN p (an omitted sigma over data whose sum overflows) is #NUM!, not a NaN number
     // (not probed, TODO(T-1942)).
-    let p = z_test_p(data.mean, x, n, sigma);
-    if !p.is_finite() {
-        return error(Error::NUM);
+    match z_test_p(data.mean, x, n, sigma, sigma_given) {
+        Some(p) if p.is_finite() => CalcResult::Number(p),
+        _ => error(Error::NUM),
     }
-    CalcResult::Number(p)
 }

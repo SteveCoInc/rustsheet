@@ -45,10 +45,16 @@ Work is partitioned into **lanes** so that parallel workers rarely touch the sam
   minutes and 10 tasks per run, then landing its own PRs until minute 110 (decisions 0022, 0025,
   0229). Each walks the `**Critical lane:**` list in `docs/status.md`, then
   `functions` (every `functions-*` lane; allowlist and rules in `routines.md`).
-- One task in flight per lane, three in `engine` (decision 0269). `make next-task` enforces it: it
-  skips tasks claimed by a pushed branch and lanes whose slots are all taken by branches that moved
-  in the last 2 hours (handoffs, and branches whose task
-  is already done on main, excepted).
+- One task in flight per lane and tier, three per tier in `engine` (decisions 0269, 0331).
+  `make next-task` enforces it: it skips tasks claimed by a pushed branch and lanes whose slots for
+  the asking tier are all taken by branches that moved in the last 2 hours (handoffs, and branches
+  whose task is already done on main, excepted). A sonnet branch in flight never hides the lane's
+  opus tasks, nor the reverse. A branch's tier is its own task file's (`opus` once it was handed off
+  or re-reviewed after the review-round limit); a branch with no task file takes a slot of both.
+  A ready task of the current milestone (the `(M<n> is current)` of the `docs/status.md` snapshot
+  heading) is offered even in a busy lane when every branch filling the lane's slots for its tier
+  works a task of a later milestone in the phase order of `docs/milestones.md` (decision 0332): at
+  most one such pass per lane and tier, never past an M0 or current-milestone branch.
 - The functions work is split into the nine `functions-*` lanes above so several workers can fix
   functions at once; plain `functions` is retired for open tasks (`scripts/tasks.py validate`).
   Pick the lane by the module the fix touches; a fix spanning families takes the lane of its main
@@ -163,6 +169,7 @@ A pending probe is better than a confident wrong implementation.
 | Task turns out to be bigger than M | stop, commit the analysis to the task file, ask the planner to split it |
 | Missing capability (oracle, credentials, network) | mark blocked with the exact need and the command that proves it is available (oracle: `rustsheet-oracle status` shows `excel-graph OK`); record it in `docs/status.md` under "Needs owner". Exception: a need for the excel-desktop oracle (desktop-only or conditional-format evidence) is not a "Needs owner" item and blocks nothing else; move the task to M14 (Phase 4) or add the item to T-1075 (decision 0039) |
 | A blocking capability is now available | unblock it (see "Unblocking" under Task lifecycle); never wait for the owner to edit task files |
+| Nightly eval run red (`.github/workflows/nightly.yml`) | the corpus round-trip gate failed (decision 0323), or the report or the fetch did. Read the failed step: a red `roundtrip --check` names the regressing cases. Reproduce with `rustsheet-eval fetch --suite <suite>` and `rustsheet-eval roundtrip --check --timeout 300 --suite roundtrip-<suite>`, bisect the merges since the last green run, and file one P0 task per cause in the owning lane with the case ids. A fetch that failed three times is a network or upstream problem: re-run the workflow once, and record it under "Needs owner" if it fails again |
 | Nightly fuzz run red (`.github/workflows/fuzz.yml`) | a crash, timeout or out-of-memory. The run's `report` job opens a `fuzz-failure` issue per failed target with the inputs embedded, or comments on the open one (decision 0302); the issue intake works it (issue-intake skill, "Fuzz finding"), and the steward files the task itself only if no issue was opened. Reproduce with `cd fuzz && cargo fuzz run --target "$(rustc -vV | sed -n 's/^host: //p')" <target> <file>` (decision 0035); one P0 task per distinct cause (same panic site or stack = same cause) in the owning lane with the reproducer's bytes in the task (escaped; never the job environment); the fix adds the reproducer as a unit test (decision 0035). Under `cfg(fuzzing)` bitcode accepts trailing bytes, so a `bitcode_workbook` test uses the prefix that decodes in a normal build (T-4048) |
 
 ## Scheduled routines (how the loop runs unattended)

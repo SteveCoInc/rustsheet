@@ -420,12 +420,29 @@ impl Model {
         values: impl IntoIterator<Item = CalcResult>,
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        // `call_prepared` binds the parameters in order, so the i-th call takes the i-th value.
-        let mut values = values.into_iter();
+        let values = values
+            .into_iter()
+            .map(|value| (Binding::Value(value), false));
+        self.call_lambda_caller_binding(caller, values, cell)
+            .into_single_area(cell)
+    }
+
+    /// [`Self::call_lambda_caller`] with each parameter's binding and its ERROR.TYPE mark given,
+    /// as [`Model::bind_argument`] gives them (so one may be a union or an array of references:
+    /// SCAN's and REDUCE's `initial_value`, `Model::lambda_initial_value`), and the areas of a
+    /// union a reference-keeping `caller` returns kept: REDUCE's step
+    /// ([`Model::reduce_reference`]).
+    pub(crate) fn call_lambda_caller_binding(
+        &mut self,
+        caller: &mut LambdaCaller,
+        bindings: impl IntoIterator<Item = (Binding, bool)>,
+        cell: CellReferenceIndex,
+    ) -> RefArg {
+        // `call_prepared` binds the parameters in order, so the i-th call takes the i-th binding.
+        let mut bindings = bindings.into_iter();
         self.call_prepared(caller, cell, |_, _| {
-            values.next().map_or(Binding::Omitted, Binding::Value)
+            bindings.next().unwrap_or((Binding::Omitted, false))
         })
-        .into_single_area(cell)
     }
 
     /// One call of `caller` with argument nodes evaluated in the calling cell, as `call_lambda`
@@ -450,7 +467,7 @@ impl Model {
     ) -> RefArg {
         self.call_prepared(caller, cell, |model, i| match call_args.get(i) {
             Some(arg) => model.bind_argument(arg, cell),
-            None => Binding::Omitted,
+            None => (Binding::Omitted, false),
         })
     }
 
@@ -468,7 +485,7 @@ impl Model {
         &mut self,
         caller: &mut LambdaCaller,
         cell: CellReferenceIndex,
-        bind: impl FnMut(&mut Self, usize) -> Binding,
+        bind: impl FnMut(&mut Self, usize) -> (Binding, bool),
     ) -> RefArg {
         // Past the formula's work budget no LAMBDA runs, so a helper's loop over its remaining
         // elements does no work and the run ends at once; the formula's value is the budget's
@@ -516,7 +533,7 @@ impl Model {
         &mut self,
         caller: &mut LambdaCaller,
         cell: CellReferenceIndex,
-        mut bind: impl FnMut(&mut Self, usize) -> Binding,
+        mut bind: impl FnMut(&mut Self, usize) -> (Binding, bool),
     ) -> RefArg {
         let mut prepared = match caller.prepared.take() {
             Some(prepared) => prepared,
@@ -528,34 +545,37 @@ impl Model {
                 let captured = self.bind_captures(&caller.lambda, cell);
                 let blanks_references = self.eta_blanks_references(&caller.lambda);
                 for (i, &(raw_id, once)) in ids.iter().enumerate() {
-                    let binding = match bind(self, i) {
+                    let (binding, marked) = bind(self, i);
+                    let binding = match binding {
                         binding if blanks_references && i > 0 => {
                             picked_reference_read(binding, cell)
                         }
                         Binding::Value(value) if once => Binding::ReadOnce(value),
                         binding => binding,
                     };
-                    self.variable_stack.insert(raw_id, binding, cell);
+                    self.variable_stack
+                        .insert_marked(raw_id, binding, marked, cell);
                 }
                 // A body that picks a reference with XLOOKUP, TAKE or DROP, also as
                 // the arm an IF, CHOOSE, IFS or SWITCH picks or a LET body, is that reference:
                 // ISREF is TRUE, SUM skips its text and GROUPBY makes it `#VALUE!`
                 // (probes/lambda-body-picked-references, take-drop-over-ifs-switch-picks A78).
-                let result = match body.ungrouped() {
+                // The body's ERROR.TYPE/CELL mark is the call's (`number_mark.rs`).
+                let result = self.passing_mark(body, |model| match body.ungrouped() {
                     // A root `+`/`-` is never a reference, so a reference-keeping in-place call
                     // snaps it too: an in-place call passed to another one is bound in reference
                     // context (`bind_argument`), and `LAMBDA(a,x,a+x)(LAMBDA(a,x,a+x)(..),..)`
                     // snaps at each level (probes/t3095-snap-lambda-helpers B94, B117).
                     _ if caller.root_snap && matches!(body, Node::OpSumKind { .. }) => {
-                        RefArg::Value(self.evaluate_formula_root(body, cell, false))
+                        RefArg::Value(model.evaluate_formula_root(body, cell, false))
                     }
-                    _ if caller.references => self.evaluate_picked_reference_arg(body, cell),
+                    _ if caller.references => model.evaluate_picked_reference_arg(body, cell),
                     Node::FunctionKind {
                         kind: Function::Trimrange,
                         args,
-                    } if caller.trimrange_references => self.trimrange_reference(args, cell, true),
-                    _ => RefArg::Value(self.evaluate_node_in_context(body, cell)),
-                };
+                    } if caller.trimrange_references => model.trimrange_reference(args, cell, true),
+                    _ => RefArg::Value(model.evaluate_node_in_context(body, cell)),
+                });
                 // A LAMBDA the body made may read the parameters and the captures bound here.
                 // Most calls make no LAMBDA, and they list no ids (a plain call allocates nothing).
                 if self.last_lambda_id > mark {

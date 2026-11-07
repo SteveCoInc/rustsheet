@@ -1,0 +1,315 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4130: does Excel for the web open and apply the pivotField and pageField filter attributes? The data are t4130-pivot-label-filters' (Product sums Apple 30, Apricot 4, Banana 12, Cherry 11, Grape 6). Each sheet is one builder-v2 pivot at A3 (PM and PC at A4), Sum of Sales, rows Product: AS legacy AutoShow (autoShow 1, itemPageCount 2, rankBy 0: top 2); ASb the same with topAutoShow 0 (bottom 2); IH Cherry hidden (h, control); IS0 Cherry hidden with Apple marked s 0; HN2 Cherry hidden with includeNewItemsInFilter 1; MF1 measureFilter 1. (An item s 1, hideNewItems 1 and hiddenLevel 1 each make the web refuse the file: pivots.md.) PM: page field Product with Apple and Cherry hidden (multipleItemSelectionAllowed 1), rows Region; PC: page field Product selecting Banana with pageField cap `Banana!` and name `[Product].[Banana]`, rows Region. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4130",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-1023",
+  "PV-1024",
+  "PV-1026",
+  "PV-1027",
+  "PV-1028",
+  "PV-1029",
+  "PV-1030",
+  "PV-1031",
+  "PV-1079",
+  "PV-1088",
+  "PV-1105",
+  "PV-1108",
+  "PV-1110",
+  "PV-1112",
+  "PV-1118",
+  "PV-1131"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Sales",
+    "A2": "East",
+    "B2": "Apple",
+    "C2": 10,
+    "A3": "East",
+    "B3": "Apricot",
+    "C3": 4,
+    "A4": "East",
+    "B4": "Banana",
+    "C4": 5,
+    "A5": "East",
+    "B5": "Cherry",
+    "C5": 3,
+    "A6": "West",
+    "B6": "Apple",
+    "C6": 20,
+    "A7": "West",
+    "B7": "Banana",
+    "C7": 7,
+    "A8": "West",
+    "B8": "Grape",
+    "C8": 6,
+    "A9": "West",
+    "B9": "Cherry",
+    "C9": 8
+   }
+  },
+  {
+   "name": "AS",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_AS",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "autoShow": true,
+         "itemPageCount": 2,
+         "rankBy": 0
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "ASb",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_ASb",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "autoShow": true,
+         "itemPageCount": 2,
+         "rankBy": 0,
+         "topAutoShow": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "IH",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IH",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "hidden": [
+         "Cherry"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "IS0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IS0",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "hidden": [
+         "Cherry"
+        ],
+        "item_attrs": {
+         "Apple": {
+          "s": false
+         }
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "HN2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_HN2",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "hidden": [
+         "Cherry"
+        ],
+        "attrs": {
+         "includeNewItemsInFilter": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "MF1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_MF1",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "measureFilter": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "PM",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PM",
+     "source": "Data!A1:C9",
+     "location": "A4",
+     "definition": {
+      "pages": [
+       {
+        "field": "Product"
+       }
+      ],
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "hidden": [
+         "Apple",
+         "Cherry"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "PC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PC",
+     "source": "Data!A1:C9",
+     "location": "A4",
+     "definition": {
+      "pages": [
+       {
+        "field": "Product",
+        "item": "Banana",
+        "attrs": {
+         "cap": "Banana!",
+         "name": "[Product].[Banana]"
+        }
+       }
+      ],
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A20)"
+   }
+  }
+ ],
+ "expected": {}
+}

@@ -1,0 +1,31 @@
+---
+id: T-4756
+title: "Pivot import, export and import is a fixed point over generated pivots"
+milestone: M16
+lane: quality
+status: todo
+priority: P2
+size: S
+tier: opus
+depends_on: [T-4155, T-4176]
+---
+
+## Goal
+For generated pivots, a save and reload, and a second save and reload, give the same pivot caches, pivot
+tables and rendered cells as the first reload: import, export and import is a fixed point.
+
+## Context
+- The last property of docs/research/pivot-tables-2026-11-04/plan.md §6 layer 5. T-4155 left it out because the
+  pivot export (T-4176, `crates/rustsheet-xlsx/src/export/pivots.rs`) is in the xlsx crate, which the engine's
+  test module (`crates/rustsheet-engine/src/test/test_pivot_properties.rs`) cannot reach.
+- Reuse T-4155's generator (seeded `Rng` records, a Sum pivot over Data!A1:C(n+1)) rather than copying it. One way:
+  move the generator to a `pub` test-support item the xlsx tests can call (check `scripts/check_duplication.py`).
+
+## Acceptance criteria
+- [ ] A seeded property test in the xlsx crate checks, over 48 or more seeds, that import, export, import equals
+      import, export, import, export, import (caches, tables, rendered cells), and runs within the CI time budget.
+- [ ] Any difference it finds is fixed, or filed as a task with its seed.
+- [ ] `make check` green; reviewers approve.
+
+## Out of scope
+- Oracle uploads (plan §6 layer 4).

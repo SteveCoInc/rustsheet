@@ -27,9 +27,10 @@ from rustsheet_tools.accuracy.literal import (
     round15,
 )
 from rustsheet_tools.accuracy.model import Definition, MathArg, Param
-from rustsheet_tools.fitlab.sweep import parse_complex_text
+from rustsheet_tools.fitlab.sweep import read_complex_arg
 
 STRATA = ("typical", "tail", "edge", "extreme", "log-uniform")
+AIMED = "aimed"  # a definition's own region draw (`Definition.aimed`), never in the default split (T-4059)
 SHARES = (0.40, 0.15, 0.15, 0.20, 0.10)
 TAIL_DISTANCE = (1e-15, 1e-1)  # relative distance of a tail point from a finite domain bound
 TAIL_PROBABILITY = (1e-300, 1e-1)  # a distribution's tail probability, drawn log-uniform
@@ -62,14 +63,15 @@ def stratum_counts(count: int) -> dict[str, int]:
 
 def math_arg(param: Param, a: Arg) -> MathArg:
     """The math's view of a drawn argument: the exact double (or integer), the logical, a complex
-    number text's parsed parts (an `mpc`; ValueError for text that is no complex number) or a
+    number text's parts as Excel reads them (an `mpc` of `read_complex_arg`'s parts, each cut to 15
+    significant digits; ValueError for text that is no complex number) or a
     fixed-list text itself."""
     if param.kind == "bool" or isinstance(a, bool):
         return bool(a)
     if isinstance(a, str):
         if not param.is_complex:
             return a
-        re, im = parse_complex_text(a)
+        re, im = read_complex_arg(a)
         return mpmath.mpc(re, im)
     if param.kind == "matrix" and isinstance(a, tuple):
         return tuple(tuple(mpmath.mpf(x) for x in row) for row in a if isinstance(row, tuple))
@@ -224,8 +226,8 @@ class Sampler:
         d = self.definition
         if self.has_complex:
             self.suffix = self.rng.choice(COMPLEX_SUFFIXES)
-        if d.draw is not None:
-            drawn = d.draw(stratum, self.rng)
+        if stratum == AIMED or d.draw is not None:
+            drawn = self._whole(stratum)
             return [self.finish(p, a) for p, a in zip(d.params_for(len(drawn)), drawn, strict=True)]
         if stratum == "tail":
             return self._tail(index)
@@ -236,6 +238,19 @@ class Sampler:
         if stratum == "log-uniform":
             return [self.whole_domain(p) for p in d.params]
         return [self.typical(p) for p in d.params]
+
+    def _whole(self, stratum: str) -> list[Arg]:
+        """A whole point from the definition's own draw: `aimed`, or `draw` for any other stratum."""
+        d = self.definition
+        if stratum == AIMED:
+            if d.aimed is None:
+                msg = f"{d.function} has no aimed draw"
+                raise ValueError(msg)
+            return d.aimed(self.rng)
+        if d.draw is None:
+            msg = f"{d.function} has no draw"
+            raise ValueError(msg)
+        return d.draw(stratum, self.rng)
 
     def _extreme(self) -> list[Arg]:
         params = self.definition.params

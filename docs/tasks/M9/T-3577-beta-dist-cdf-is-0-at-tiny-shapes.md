@@ -3,7 +3,7 @@ id: T-3577
 title: "BETA.DIST cdf is 0 at tiny shapes where Excel and the math are positive, and 0 where Excel is #NUM! at a huge beta"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P1
 size: S
 tier: opus
@@ -29,9 +29,24 @@ At both shapes tiny, I_x(a, b) is about b/(a + b) · (x^a) for x far below 1, wh
 kernel is `functions/statistical/bratio` (TOMS 708).
 
 ## Acceptance criteria
-- [ ] The four points pass `rustsheet-eval accuracy`, and their lines leave `eval/accuracy/known-failures.tsv`.
-- [ ] The `#NUM!` rule is cited in docs/excel-semantics (a probe if A186 alone does not settle it).
+- [x] The four points pass `rustsheet-eval accuracy`, and their lines leave `eval/accuracy/known-failures.tsv`.
+- [ ] (moved to T-4733) The `#NUM!` rule is cited in docs/excel-semantics (a probe if A186 alone does not settle it).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - BETA.INV (T-3578).
+
+## Outcome
+- The eleven tiny-shape points are bratio's Tiny branch (both shapes below eps/1000), not fpser/apser. The engine had
+  not ported that branch, so it fell to the Cephes kernel, which gave 0. `bratio::ported_tails_with` now returns TOMS
+  708's `w = b/(a + b)`, `w1 = a/(a + b)`, which is Excel's value to the bit on all eleven Gate A points across three
+  batches: BETA.DIST/s1 A184, A187, A193; BETADIST/s1 A183, A187, A193, A198; BETA.DIST/r4-T-4437 A185, A189, A192,
+  A194. This is a verbatim branch, not a fit.
+- A first attempt ported TOMS fpser/apser. It was dropped: statistics.md "Incomplete beta bpser" records that Excel has
+  neither, and the eleven points never reach them.
+- New statistics.md entry: "Incomplete beta at two vanishing shapes". New unit test:
+  `bratio::tests::tiny_shapes_are_b_over_a_plus_b`.
+- The two `#NUM!` points at a huge beta (BETA.DIST/s1 A186, BETADIST/s1 A184) are a different rule and move to the new
+  T-4733, with their known-failures lines retargeted.
+- Eval delta: Gate A loses 11 known failures (`eval-gates`: 0 failing). eval-check: 0 regressions, no other cell
+  changed.

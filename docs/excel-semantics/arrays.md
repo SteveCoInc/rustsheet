@@ -394,13 +394,20 @@ does the same); a blank does not count as 0. `MDETERM` of a single numeric cell 
 number either: MDETERM, MINVERSE and MMULT give `#VALUE!` for a boolean cell (`MINVERSE(E1)`, E1 = FALSE;
 gen-m7/7c48e2456500644f Calc!A19, T-1275), a boolean value (`MDETERM(TRUE)`, `MINVERSE(FALSE)`), and a boolean
 element of a larger matrix (`MDETERM({TRUE,2;3,4})`, `MMULT(D1:E2,...)` with D1 = TRUE)
-(probes/matrix-boolean-elements G1-G13, excel-graph 2026-10-15, T-1358).
+(probes/matrix-boolean-elements G1-G13, excel-graph 2026-10-15, T-1358). Text is not a number either, a text number
+included: all three give `#VALUE!` for a text element of an array literal (`MDETERM({1,"2";3,4})`, `{1,"a";3,4}`,
+`{"5"}`), a text cell in a matrix range (`MDETERM(B1:C2)` with C1 the text "2"), a one-cell text range (`MDETERM(A1)`,
+A1 the text "5") and a direct text argument (`MINVERSE("5")`, `MMULT("5",1)`), in either MMULT argument
+(probes/t4626-matrix-text-elements M1-M26, excel-graph 2026-11-06, T-4626). The error is one scalar `#VALUE!`, not an
+array with errors at the affected elements: `SUM(IFERROR(MINVERSE(B1:C2),100))` and
+`SUM(IFERROR(MMULT(F1:F2,G1:H1),100))` (a 2x2 product whose text element touches only one column) are 100, not 400
+(M16, M17, M27).
 Evidence: poi/MatrixFormulaEvalTestData.xlsx (Excel-cached, Excel 16) Sheet1!H10 `MDETERM(B10:D12)`
 and H30 `MDETERM(B30:D32)` (all blank / only B30 = 1) are `#VALUE!`; H14:J16 `MINVERSE(B14:D16)` and
 H34:J36 `MINVERSE(B34:D36)` are `#VALUE!` in every cell; H50 `MDETERM(B50)` = 1.
 Implemented in: `coerce_to_f64` (crates/rustsheet-engine/src/functions/math_and_trigonometry/matrix.rs, T-0943)
 Status: VERIFIED (Excel-cached; the boolean rule excel-graph)
-Tasks: T-0943, T-1358
+Tasks: T-0943, T-1358, T-4626
 A single blank cell is a blank matrix too: `MINVERSE(B4)`, `MDETERM(D$1)`, `MMULT(100,C$9)` and `MMULT(1E-15,B11)`
 with the cell blank are `#VALUE!`. Implemented in `Model::eval_matrix_arg` (matrix.rs, T-2164); any blank result, not only a direct reference, stays blank (a blank through INDEX or CHOOSE is unprobed). So does the empty value a lookup gives for a blank result cell: `MMULT(LOOKUP(TRUE,Data!B2:B10,Data!E11:E11),2.5)` is `#VALUE!` (probes/lookup-short-result-vector A20, T-2278; lookup.md "LOOKUP past a short result vector"), as do `MMULT(,2)`, IFERROR of a blank and `IF(TRUE,<blank>)` (probes/lookup-t2278-followups A1-A5). Evidence (excel-graph, 2026-10-20): gen-m5/cf893ec19f53a7fc
 Calc!A204, gen-m5/fc81c2f704bef138 Calc!A381, gen-m5/3e134e52393061b1 Calc!A10, gen-m5/d9fb1e918971111b Calc!A213 (T-2164).
@@ -817,6 +824,12 @@ NETWORKDAYS.INTL is the exception: it lifts over a range (`INDEX(WORKDAY.INTL(45
   whatever its size and under a sign, and the call none: `=EDATE(@{45000;45031},1)`, `=YEARFRAC(@{45000},46000)`,
   `=BIN2DEC(@{101})`, `=QUOTIENT(@{7},2)`, `=ISEVEN(-@{5})` (probes/iseven-isodd-range-derived-arrays Leg!G3:N3,
   G41:N41, excel-graph, T-4528; information.md "ISEVEN/ISODD over a range").
+  The `@` follows the argument slot of the enclosing call, not nesting: the same constants as the
+  argument of a call that takes arrays show none (legacy `=SUM(EDATE({45000},1))`,
+  `=SUM(EDATE({45000;45031},1))` and `=SUMPRODUCT(ISEVEN({5}))` show their written text, the
+  first is 45031, the second 90092), and under a scalar-argument call they do (legacy
+  `=ABS(QUOTIENT({7},2))` shows `=ABS(QUOTIENT(@{7},2))`, 3; probes/nested-legacy-atp-array-constant
+  A1:A8, excel-graph, 2026-11-06, T-4591).
 Evidence: probes/scalar-lift-shapes H1-H50, J1-J8, K1-K8; probes/scalar-lift-shapes-b (each
 question on row 3 and row 70); probes/scalar-lift-shapes-c (legacy formulas and their FORMULATEXT).
 All three: excel-graph, 2026-10-17, T-1767. The per-family argument lists are in statistics.md,
@@ -927,9 +940,8 @@ gen-m9/c2684066d8df263e Calc!A214), while a spilled blank element still displays
 element as 0, as they read a blank cell of a multi-cell range: `TEXTJOIN("|",FALSE,IFERROR(GROUPBY(..),"#"))` shows the blank
 key as "0" (probes/groupby-sort-filter-args G!B15, B55, groupby-sort-filter-args2 G!B10; `if_error_like`, logical/mod.rs).
 IF passes a blank element through as a blank: `TTEST(..,IF(TRUE,PIVOTBY(..)),1,2)` equals the TTEST without the IF
-(probes/pivotby-ttest-array2 P!A41, P!A31). Whether IFERROR reads blanks of other arrays (FILTER, INDEX lifted over blank
-cells, VSTACK) as 0, and what N and arithmetic do with a blank element, is unprobed (T-2999); ours reads every array's
-blank as 0 in IFERROR and IFNA.
+(probes/pivotby-ttest-array2 P!A41, P!A31). Blanks of other arrays (FILTER, INDEX, VSTACK), N and arithmetic: see "IFERROR, IFNA, N and
+arithmetic over blank array elements (T-2999)".
 T-2592 (probes/t2592-nested-groupby-cells, excel-graph, 2026-10-24; `GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,v))` is 3x3: keys a, b, Total by
 key, C, D; group a `{1;2}`/`{10;20}`, b `{3;4}`/`{30;40}`, Total 4x1; the shown headers are off). Nested cells in practice:
 - A LAMBDA whose body is a one-cell reference (`LAMBDA(x,D!D2)`) still displays `#VALUE!` in every spilled cell (probes/groupby-lambda-forms
@@ -956,12 +968,47 @@ Ours since T-2593 (SPEC-0018): the nested cells of rules 1, 3 and 8 (A16:A18, A2
 as its value (A21), and BYROW's row and BYCOL's column holding nested cells (A106, A107). Since T-2594: MAP and REDUCE hand
 the LAMBDA each nested cell as its array (A100:A105, A109, A15), and t2311 P!D12 is `#CALC!`; ARRAYTOTEXT over a result
 holding one is `#CALC!` (A10); and the aggregates follow "Aggregates over nested GROUPBY and PIVOTBY cells" below. An element-wise lift
-of a two-level cell reads the inner top-left (assumed, T-2609), of a reference cell `#VALUE!` (unprobed, T-2609); a lifted INDEX
-element and an operator over the whole result read a nested cell as `#VALUE!` (unprobed, T-2609). Excel's operator does not read it as `#VALUE!`:
-`MEDIAN({1;2;"";4},GROUPBY(..,LAMBDA(z,z))-x,..)` is `#N/A`, as MEDIAN over nested cells, where ours is `#VALUE!`, and TEXTJOIN over
-`IFERROR((GROUPBY(..)-x)&"",..)` fails as over nested cells (probes/t2475-stat-subexpressions P!A62, A63; T-2623, fix T-2686).
+of a two-level cell reads the inner top-left, of a reference cell `#VALUE!`; a lifted INDEX element reads a nested cell as `#VALUE!`
+(T-2609 below has Excel's answers, which differ for the two-level cell and the lifted INDEX).
+Operators over nested cells, and Excel's change of 2026-11 (T-2609; probes/t2609-nested-operators-and-lifts, -one-cell and -d04,
+excel-graph, 2026-11-06, over the T-2592 data; `G` is the T-2592 GROUPBY, `V` is `DROP(G,,1)`):
+- An operator over the whole result makes every nested cell `#VALUE!`, whatever its size and whatever the operator: `V+0` is 3x2 of
+  `#VALUE!` (A1), `SUM(V+0)`, `SUM(--V)`, `SUMPRODUCT(V+0)` and `MEDIAN(V+0)` are `#VALUE!` (A2, A18, A26:A28), and `INDEX(G op x,2,2)` is
+  `#VALUE!` for `+0`, `*10`, `1-G`, unary `-`, `&"x"`, `=3`, `G+G`, a 3x3 constant, a range, a one-cell reference, `/0`, `%` and `^2`
+  (A5:A17, A20). A one-record group's 1x1 cell is no exception (probes/t2609-nested-operators-one-cell A1:A12, A17, A22, A29, A30, a computed
+  `LAMBDA(v,{7})` A18, a text or an `#N/A` cell A20, A21, A24), nor a two-level cell (and-lifts A21:A23), nor a reference-body cell
+  (`INDEX(GROUPBY(..,LAMBDA(x,D!D2))+0,2,2)` is `#VALUE!`, A24). COUNT of such a result is 0 and COUNTA counts the errors (A29, A30).
+  Ours matches all of these (`own_error` and `array_node_to_number` in arithmetic.rs and cast.rs read a nested cell as `#VALUE!`).
+- So `MEDIAN({1;2;"";4},GROUPBY(..,LAMBDA(z,z))-x,..)` is `#VALUE!` in today's Excel, as ours: the gen-m9/17c110a53924beb8 Data sheet
+  (and-d04 A1:A17, whose MAP of `TYPE` shows each nested cell 16 after `-0` and 64 before) and byte-identical copies refilled on
+  2026-11-06 give `#VALUE!` for P!A62, our 13x3 listing for P!A63 and a full listing for P!A64 (ours `?`) of
+  probes/t2475-stat-subexpressions-refill-1106 (input sha256 4e41b349…, every other cell as on 2026-10-28), and `#VALUE!` for Calc!A300
+  of probes/gen-m9-17c110a53924beb8-refill-1106 (the same sheets as gen-m9/17c110a53924beb8, every other cell as on 2026-10-23; its
+  input sha256 differs from the October sidecar's only because the xlsx builder has changed since: both cases build the same bytes). The October fills had `#N/A`, `?`, `?` and `#N/A`
+  there: Excel's earlier behavior.
+- Excel changed what reads a nested cell between 2026-10-28 and 2026-11-06 (excel-graph, Excel for the web, on both dates; no desktop
+  fill confirms it yet, decision 0039). Byte-identical copies of the T-2592, T-2594, T-2625, T-2360
+  and T-2311 probes refilled on 2026-11-06 (`<case>-refill-1106`, twice for the first two, identical) agree with their October fills
+  except: SUM over a nested result is `#N/A` and COUNT skips its nested cells (t2592-refill-1106 A6, A7: `#N/A`, 0; A8 COUNTA 9, one per
+  cell; t2594-refill-1106 A26:A29; t2625-refill-1106 A13, A17, A26, and COUNT over an INDEXed row or column of nested cells A20, A25);
+  and an element-wise lift reads a nested cell as an error, not as its top-left (`SUM(--ISERROR(GROUPBY(..)))` counts every nested
+  cell: t2360-refill-1106 P!C1, C9, C17, C25, C33, t2311-refill-1106 P!C12). The error is `#VALUE!`: the lifted fallback of
+  `IFERROR(G&"","#"&ERROR.TYPE(G))` gives "#3" at every nested cell, 1x1 and multi-cell (t2475-stat-subexpressions-refill-1106 P!A64
+  over a raw GROUPBY, t2625-refill-1106 A32 over an INDEXed PIVOTBY row), where in October it read the non-error top-left and gave `#N/A`
+  (t2625 A32 one `#N/A`, t2475 A64 a `?` listing). INDEX, TYPE, MAP, BYROW, BYCOL, REDUCE, the shape functions and the other aggregates did not change.
+  Consistent with it, an element-wise lift reads a two-level cell as an error that is not `#N/A`, even when the inner top-left is `#N/A`
+  (`SUM(--ISERROR(G2))` 6, `ISTEXT` 3, `ISNA` over the `#N/A` form 0, `ISERROR` 3; and-lifts A44:A47; one-cell A27), and a reference-body
+  cell as `#VALUE!` (`SUM(--ISERROR(..))` 6, `ISNUMBER` 0, REGEXEXTRACT `#VALUE!` per cell; A41, A42, A49).
+- A lifted INDEX of nested cells gives each one's top-left: `INDEX(G,{2;3},2)` is `{3;1}`, SUM 4, no error (and-lifts A56:A59; ours `#VALUE!`).
+- A reference-body result: SUM reads each cell as its value (`SUM(GROUPBY(..,LAMBDA(x,D!D2)))` 60, A50), COUNT is 0 and COUNTA 9 (A51,
+  A52); INDEX of a cell whose body points at a blank cell is a true blank (TYPE 1, `&""` "", A53) and at an `#N/A` cell `#N/A` (A54).
+- The November reads are the target (decision 0329: a behavior change, reproduced on byte-identical copies). SPEC-0018 rule 4 states them
+  (T-4661). The engine still follows the October reads, so the refilled cells above are known failures until T-4736 (SUM, COUNT,
+  COUNTA, and SUM over a reference body), T-4737 (lifts read an error; `&""` over an INDEXed row) and T-4738 (the lifted INDEX top-left)
+  land. Each of them turns its share of the October cells (t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26, A32, t2360
+  P!C1, C9, C17, C25, C33, t2311 P!C12, t2475 P!A64; and October-only cells such as gen-m9/e85daedce5c2675e Calc!A35, once a refill confirms each, decision 0329 item 3) into superseded known failures, with the October sidecars kept (decision 0329 item 3).
 Aggregates over nested GROUPBY and PIVOTBY cells (probes/t2594-nested-aggregates, excel-graph, 2026-10-24, T-2594, over the T-2592
-data): SUM, COUNT and COUNTA flatten a nested cell (SUM 220, COUNT 16, COUNTA 19 over GROUPBY; over PIVOTBY SUM 220, COUNT 16,
+data): (October fills; by 2026-11-06 SUM is `#N/A` and COUNT skips nested cells, see the T-2609 list above) SUM, COUNT and COUNTA flatten a nested cell (SUM 220, COUNT 16, COUNTA 19 over GROUPBY; over PIVOTBY SUM 220, COUNT 16,
 COUNTA 32; `SUM(1,GROUPBY(..),2)` 223; A26:A29). Every other aggregate tried is `#N/A`: MIN, MAX, MINA, MAXA, AVERAGEA, PRODUCT,
 SUMSQ, MEDIAN, STDEV.S, VAR.P, HARMEAN, GEOMEAN, DEVSQ, AVEDEV, MODE.SNGL, KURT, SKEW, LARGE, SMALL, PERCENTILE.INC (A1:A21),
 `AVERAGE(1,GROUPBY(..))` (A25), AVERAGE and MIN/MAX over PIVOTBY (A30:A32); gen-m9 MAX, HARMEAN and AVERAGE over a
@@ -1152,7 +1199,7 @@ T-2644): `GROUPBY(A1:A3,B1:B3,_xleta.ROW)` and `..COLUMN` are 4x2 with `#VALUE!`
 and SHEETS `#N/A` in each (H121:H124, J59; ours matches, T-4518), RANDARRAY 4 rows with a value that is not
 an error (J61:J63; ours an array there, T-4519), `PIVOTBY(A1:A3,A1:A3,B1:B3,_xleta.ROW)` 5x5 (J69). Yet `ARRAYTOTEXT` of the
 ROW and COLUMN results is `#CALC!` (F109, F115, also `LAMBDA(v,ROW(v))` J65; `ARRAYTOTEXT(INDEX(..,0,1))` is
-"1, 3, 5, Total", J15; ours prints the cells, T-4519). Functions that take none stay a whole-call `#VALUE!`: NOW (J55), PI
+"1, 3, 5, Total", J15; ours matches since T-4610). Functions that take none stay a whole-call `#VALUE!`: NOW (J55), PI
 in GROUPBY and PIVOTBY (J67, J73).
 T-1327 follow-up (PIVOTBY relative_to; probes/groupby-pivotby-functions P!A1-A841 show each cell's set with
 `LAMBDA(x,y,SUM(y))`, and -functions3 P!A61-A181):
@@ -1286,6 +1333,54 @@ per element, as the row and column probed), and a 1x1 array field_relationship s
 to one cell, as `{FALSE}` is in followup G!A921).
 Status: VERIFIED (web)
 Tasks: T-1276, T-1328, T-1322, T-1323, T-1326, T-1324, T-1700, T-1325, T-1327, T-3838
+
+## RANDARRAY lifts over its arguments
+Rule: all five arguments of RANDARRAY (rows, columns, min, max, whole_number) lift over an array and a range, one call per
+element, each element that call's top-left number: `RANDARRAY({2})` is 1x1, `RANDARRAY({2;3})` 2x1, `RANDARRAY({2},{3})` 1x1, and
+inside GROUPBY `_xleta.RANDARRAY` is one number per group record.
+- (probes/t4519-row-column-randarray-over-arrays D2:H4, D7:H8, excel-graph 2026-11-06, T-4519) the shapes above.
+- (probes/t4611-randarray-min-max-whole-arrays A1:A14, excel-graph 2026-11-06, T-4611; Y1 5, Y2 7) `ROWS(RANDARRAY(1,1,{0;5}))`, `..,0,{1;5})`,
+  `..,5,5,{TRUE;FALSE})`, `..,{5;7},{5;7})`, `..,Y1:Y2,Y1:Y2)`, `..,{5;6},{5;6},{TRUE;FALSE})` and `ROWS(RANDARRAY({1;2},1,{5;6},{5;6}))` are
+  2; `COLUMNS(RANDARRAY(1,1,{5,7},{5,7}))` is 2. With min = max the elements are the bounds: `{5;7},{5;7}` gives 5 then 7 (A5:A6),
+  `{5,7},{5,7}` 5 then 7 (A9), and whole_number `{TRUE;FALSE}` over 5,5 starts at 5 (A10). The arguments pair element by
+  element (A5:A6, A9); A13, `RANDARRAY({1;2},1,{5;6},{5;7})`, is a draw (6.279) and unscored. An element with min > max is its own `#VALUE!`,
+  not the whole call: `ROWS(RANDARRAY(1,1,{0;5},{9;1}))` is 2 (A14). A range in rows, columns or whole_number is unprobed and lifts by
+  inference (SPEC-0011); only min and max were probed over a range (A7).
+Ours: implemented (T-4611): `Model::fn_randarray` calls `lift_call` with a `RANDARRAY` entry in `lift/kinds/general.rs`, each
+element charged the cells it builds.
+Status: VERIFIED (excel-graph)
+Tasks: T-4611
+
+## ROW, COLUMN and RANDARRAY over an array value (GROUPBY's per-group function)
+Rule: ROW and COLUMN of an array value (no reference) give an array of `#VALUE!` in that value's shape, not one `#VALUE!`; an error
+element keeps its own error (`LET(x,{1;#N/A},ROW(x))` is {#VALUE!;#N/A}). RANDARRAY
+lifts over an array `rows` or `columns`, one call per element, each element a number (that it is the call's top-left is
+assumed, not probed; T-4611). So GROUPBY with `_xleta.ROW`,
+`_xleta.COLUMN` or `LAMBDA(v,ROW(v))` holds a nested array of `#VALUE!` in each value cell: it displays `#VALUE!` (ERROR.TYPE 3,
+probes/t4450-eta-special-forms H109:H112), but ARRAYTOTEXT of the whole result is `#CALC!` (F109, F115, J65), as for any nested cell
+("GROUPBY and PIVOTBY" above). SHEET's `#N/A` is a scalar and prints (F121). With `_xleta.RANDARRAY`, each cell holds one number per
+record: the cell of a one-record group is a 1x1 array, so `ERROR.TYPE(INDEX(..,1,2))` is one `#N/A` cell (J63).
+- probes/t4519-row-column-randarray-over-arrays (excel-graph, 2026-11-06, T-4519; A1:A3 1, 3, 5, B1:B3 2, 4, 6):
+  - `LET(x,{1;2},ROW(x))` is 2x1, TYPE 64, ARRAYTOTEXT "#VALUE!, #VALUE!", and each element's ERROR.TYPE is 3 (D1:H1).
+  - `ROW(LET(x,{7},x))` is a 1x1 array (D11:H11).
+  - `INDEX(GROUPBY(..,_xleta.ROW),4,2)`, the Total cell, is a 3x1 of `#VALUE!`, and `..,1,2` a 1x1 (D5:H6). `LAMBDA(v,ROW(v))` and
+    `_xleta.COLUMN` give the same (D9:H10).
+  - `RANDARRAY({2})` is 1x1, `RANDARRAY({2;3})` 2x1 and `RANDARRAY({2},{3})` 1x1 (D2:H4). The RANDARRAY Total cell is a 3x1 of numbers
+    and a group cell 1x1 (D7:H8).
+- Excel for the web refuses a workbook holding ROW or COLUMN of an array constant, a function call or an operator:
+  `ROW({1;2})`, `ROW({1,2,3})`, `ROW({7})`, `COLUMN({1,2,3})`, `COLUMN({1;2})`, `ROW(SEQUENCE(2,2))`, `COLUMN(SEQUENCE(1,3))` and `ROW(A1:A3*1)` (FileCorruptTryRepair,
+  one single-formula workbook each, T-4519). So an array reaches ROW only as a LET-bound value, a LAMBDA parameter or a pick.
+- probes/t4610-row-column-array-error-element (excel-graph, 2026-11-06, T-4610): `LET(x,{1;#N/A},ROW(x))` is 2x1, ARRAYTOTEXT
+  "#VALUE!, #N/A", ERROR.TYPE 3 and 7 (A1:A4); `LET(x,{#DIV/0!,2},COLUMN(x))` "#DIV/0!, #VALUE!" (A5:A6); `LET(x,{#N/A},ROW(x))` a
+  1x1 `#N/A` (A7:A8); a 2x2 `{1,2;3,4}` a 2x2 of `#VALUE!` (A9:A10); text and logical elements `#VALUE!` (A11). A LET-bound scalar is
+  one `#VALUE!` and a scalar error that error (A12:A13), as before.
+Ours: ROW and COLUMN lift over an array value as above since T-4610 (`Model::row_or_column`, which reads the argument once through
+`reference_ranges_or_array`). It lifts over any array a name, IF, CHOOSE or LET gives; only the LET-bound and LAMBDA-parameter
+forms are probed, and an IF or CHOOSE that returns an array (`ROW(CHOOSE(1,{1;2}))`) or a defined name bound to an array constant
+follows by inference (before T-4610 each was one `#VALUE!`, unevidenced too). RANDARRAY
+lifts since T-4611 (see "RANDARRAY lifts over its arguments" above).
+Status: VERIFIED (excel-graph)
+Tasks: T-4519, T-4610, T-4611
 
 ## GROUPBY and PIVOTBY: column totals over several value columns
 Rule: with one function over two or more value columns (`width` w), PIVOTBY puts its column subtotal and total cells as
@@ -1477,7 +1572,8 @@ probes/eta-reduced-names E93; probes/t2475-stat-subexpressions (excel-graph, 202
 probes/t2622-take-let-reference-lambda-text Q1-Q10 (excel-graph, 2026-10-29, T-2622).
 Ours: `value_extent` (cast.rs), `is_predicate` and `parity_of` (information/mod.rs), `index_select` (index.rs) since T-1511; `&` of
 one is `#VALUE!` in `handle_concatenate` (arithmetic.rs) since T-2622. CONCATENATE, CONCAT and TEXTJOIN of one are unprobed.
-INDEX of a LAMBDA with an index of 2 is `#REF!` there, as for a scalar, which is unprobed (T-1946).
+INDEX of a LAMBDA with an index of 2 is `#REF!` there, as for a scalar (probes/map-later-array-error-blank A17; see "MAP over
+single values").
 Status: VERIFIED (excel-graph)
 Tasks: T-1511, T-2622
 
@@ -1672,9 +1768,55 @@ arrays and every element counts: `BYCOL(IFERROR(A1:B3,1),LAMBDA(c,COUNTA(c)))` i
 Evidence: probes/lambda-helper-range-slices (excel-graph, 2026-10-12, T-1395).
 Ours: BYROW and BYCOL pass references since T-1395 (`by_slices_source`, bycol_byrow.rs); a range keeps its full size
 (a whole column gives 1,048,576 calls and full-column slices) under the 2^20-cell array bound of "Array results above
-1,048,576 cells". MAP, SCAN and REDUCE pass each cell of a one-sheet range as a one-cell reference too (`lambda_cells`, T-1442); a reference the LAMBDA returns is read when it becomes a MAP or SCAN output cell, while a REDUCE or SCAN accumulator stays as returned (what Excel does with `ISREF(a)` on an accumulator is unprobed); the bare COUNTA of E32 is `#VALUE!` since T-1466 (a bare name read from a file is unknown, and BYROW and BYCOL refuse anything but a LAMBDA; see "Functions passed by name").
+1,048,576 cells". MAP, SCAN and REDUCE pass each cell of a one-sheet range as a one-cell reference too (`lambda_cells`, T-1442); a reference the LAMBDA returns is read when it becomes a MAP or SCAN output cell, and a REDUCE accumulator stays a reference while a SCAN accumulator is read ("REDUCE keeps a returned reference", T-4478); the bare COUNTA of E32 is `#VALUE!` since T-1466 (a bare name read from a file is unknown, and BYROW and BYCOL refuse anything but a LAMBDA; see "Functions passed by name").
 Status: VERIFIED (excel-graph)
 Tasks: T-1395, T-1442
+
+## REDUCE keeps a returned reference; SCAN reads it
+Rule: a reference a REDUCE LAMBDA returns stays a reference. The next step's accumulator `a` is that reference, and
+so is REDUCE's result:
+- `REDUCE(A1,A2:A3,LAMBDA(a,v,IF(ISREF(a),v,"no")))` is 3: step 2's `a` is the A2 step 1 returned (Calc!H2).
+- `ISREF(REDUCE(A1,A2:A3,LAMBDA(a,v,v)))` is TRUE. So is ISREF of `OFFSET(a,1,0)` on the accumulator, of a REDUCE
+  with an empty initial argument (`REDUCE(,A1:A3,...)`), and of `p_a:p_v` built across steps (Calc!E2, E3, E8, E11, E20).
+- `SUM(REDUCE(A1,A2:A3,LAMBDA(p_a,p_v,p_a:p_v)))` is 6 (Calc!H21).
+- A bare `=REDUCE(A1,A2:A3,LAMBDA(p_a,p_v,p_a:p_v))` spills A1:A3's values (Calc!P1:P3).
+
+SCAN reads the reference before the next step, so its accumulator is a value from the second step on:
+- `SCAN(A1,A2:A4,LAMBDA(a,v,IF(ISREF(a),v,0)))` is `{2;0;0}` (Calc!H13).
+- `SCAN(A1,A2:A3,LAMBDA(p_a,p_v,ROWS(p_a:p_v)))` is `{2;#VALUE!}` (Calc!H24).
+- A multi-cell output is `#CALC!`, as in "map-scan-range-result" (Calc!G25, H25).
+
+The initial value is the first step's `a`. A cell or range stays a reference (T-2307), and so does a union
+(`REDUCE((A1,A3),{1},LAMBDA(a,v,ISREF(a)))` is TRUE, Calc!H17). A 3-D span is not: ISREF of it is FALSE, and
+returning it is `#VALUE!` (Calc!H18, G19, H19).
+
+Callers of a REDUCE that ends on a one-cell reference (probes/t4478-reduce-reference-in-callers, excel-graph
+2026-11-06, A3 = 5):
+- BYROW and BYCOL read it as a written reference is read, over an array as over a range:
+  `BYROW({1;2},LAMBDA(r,REDUCE(A1,r,LAMBDA(a,v,A3))))` is `{5;5}` (D1:D3, D5; written-reference control D4). So do
+  MAKEARRAY and MAP (D10, D11).
+- GROUPBY and PIVOTBY refuse it with `#CALC!`, as they refuse a written reference or one INDEX returns (D6, D9; controls
+  D8, D12; a REDUCE ending on a value, D7, aggregates).
+
+Inside the LAMBDA, `a:v` between two parameters is the range between their references, not the column range A:V:
+- `REDUCE(A1,A2:A3,LAMBDA(a,v,a:v))` is A1:A3 (Calc!F5, H5, J1:J3).
+- `(a,v)` is a union, and AREAS of the REDUCE is 3 (Calc!H7, H22).
+Evidence: probes/t4478-reduce-scan-reference-accumulator (excel-graph, 2026-11-06; predictions in docs/research/t4478),
+probes/t4478-reduce-reference-in-callers
+Status: VERIFIED (excel-graph)
+Ours: since T-4478, `fn_reduce` calls its LAMBDA with a reference-keeping caller, and ISREF evaluates a REDUCE in
+reference context. SCAN is unchanged (`lambda_result_value` reads each step). A 3-D initial value is `#VALUE!`. BYROW and BYCOL read a
+one-cell reference result on both their range and array paths (`by_slices_result`).
+Since T-4494 the parser reads `a:v` as the range between two names an enclosing LET or LAMBDA binds
+(`Parser::bound_names_range`). Only LAMBDA parameters are probed; the LET form (`LET(a,A1,v,A3,SUM(a:v))`) and a
+column label against one bound name (`a:C`, which stays a column range) are UNVERIFIED (inferred). AREAS takes a
+REDUCE argument (`Parser::function_call`); REDUCE is not otherwise a reference operand, so as an intersection,
+range or SUBTOTAL operand it is refused as before (not probed). In reference context REDUCE is
+`Model::reduce_reference`, which keeps a union accumulator's areas from step to step and a union initial value as
+its areas; ISREF of a parameter bound to a union is TRUE. Since T-4475 SCAN's and REDUCE's initial value is bound
+as a LAMBDA argument (`lambda_initial_value`), so SCAN's union initial value is a union to the LAMBDA too
+(probes/t4475-scan-reduce-reference-initial F9, G9).
+Tasks: T-4478, T-4494, T-4475
 
 ## BYROW and BYCOL: a LAMBDA result that is an array
 Rule: if the LAMBDA returns a 1x1 array (`{7}`, `SEQUENCE(1)`, a one-element array slice) BYROW and BYCOL use its one
@@ -1857,22 +1999,36 @@ Tasks: T-1627, T-1630, T-1632
 Rule: when the LAMBDA of MAP or SCAN returns a multi-cell reference (`MAP(A1:A2,LAMBDA(r,B1:B3))`,
 a row range, a range holding an error cell), Excel gives the whole call one `#CALC!` (a scalar, not a
 `#CALC!` per element: `ROWS` of it is `#CALC!` too), as BYROW and BYCOL do. It does not depend on
-what the range holds (numbers, an error cell among numbers, an error cell among blanks, text and booleans all alike; an all-blank range and a LAMBDA that returns a range for only some elements are unprobed). A one-cell
-range is the control: its value is the element (`MAP(A1:A2,LAMBDA(r,J1:J1))` is 4, 4).
-Evidence: probes/map-scan-range-result (excel-graph 2026-10-18).
+what the range holds (numbers, an error cell among numbers, an error cell among blanks, text and booleans all alike), nor on
+how many elements return one:
+- a range for one element only is enough: `MAP(A1:A3,LAMBDA(r,IF(r=2,B1:B3,r)))`, the same at the last element (`r=3`), and
+  `SCAN(0,A1:A3,LAMBDA(a,v,IF(v=2,B1:B3,v)))` and its `v=3` form are each one `#CALC!`, and so are ROWS, ARRAYTOTEXT and
+  `INDEX(..,1)` of them (ERROR.TYPE 14; probes/t4476-lambda-range-results D1:H13);
+- an all-blank range is no exception: `MAP(A1:A2,LAMBDA(r,Z1:Z3))` and `SCAN(0,A1:A2,LAMBDA(a,v,Z1:Z3))` are `#CALC!` (D17:H21),
+  while the one-cell blank `Z1:Z1` keeps blank elements: ARRAYTOTEXT is ", " (F25, F29), shown as 0 only when spilled
+  (D25:D30) and through `INDEX(..,1)` (G25, G29), not the number 0.
+A one-cell range is the control: its value is the element (`MAP(A1:A2,LAMBDA(r,J1:J1))` is 4, 4).
+REDUCE is not one of them: its last accumulator is its result, a multi-cell range included, so `REDUCE(0,A1:A2,LAMBDA(a,v,B1:B3))`
+spills "x", "y", "z" (ROWS 3, ARRAYTOTEXT "x, y, z", D33:G35) and ISREF of it is TRUE (D53); an all-blank range keeps its blanks (`Z1:Z3`: ARRAYTOTEXT ", , ", F37), shown as 0 when
+spilled (D37:D39) and through `INDEX(..,1)` (G37), not the number 0; a range handed on as the accumulator is a reference to the next step (`REDUCE(0,A1:A2,LAMBDA(a,v,IF(v=1,B1:B3,
+COUNTA(a))))` is 3, D41); `J1:J1` is 4 and ISREF TRUE (D45, E53), and the array `{1;2}` spills (D49).
+Evidence: probes/map-scan-range-result (excel-graph 2026-10-18); probes/t4476-lambda-range-results (excel-graph, 2026-11-07,
+T-4476).
 Implemented in: `Model::lambda_result_value`, which still reads the range's existing cells (a cycle
 through it is 0, recalc.md). Tasks: T-1792, T-1769.
 The same holds for a multi-cell array value, not only a range: `MAP(Data!C4:D12,Data!A8:B12,LAMBDA(x,acc,HSTACK(acc,Data!A7:D11,acc)))`
 (gen-m7/611ce3bbfab27cef Calc!A944), `SCAN(Data!B8,Data!B6:E11,LAMBDA(acc,v,HSTACK(..)))` (b24ce74f08d3f91a A430), a SCAN step that is a FILTER
 result (7307132bb8820f17 A619) or a TRIMRANGE (2c5ea078f25443a2 A1717), a MAP step raising to a BYROW column (7307132bb8820f17 A1324) and a SCAN
 whose array initial value is returned as the accumulator (9359f03972e94026 A1705) are each one `#CALC!` with nothing spilled (excel-graph,
-2026-10-21, T-2225). Ours: implemented (T-2306, T-2309): a multi-cell array step of MAP or SCAN is the one `#CALC!` of a multi-cell range (`lambda_result_value`); REDUCE does not go through it.
+2026-10-21, T-2225). Ours: implemented (T-2306, T-2309): a multi-cell array step of MAP or SCAN is the one `#CALC!` of a multi-cell range (`lambda_result_value`); REDUCE does not go through it
+(`Model::fn_reduce` returns its last accumulator as `Model::reduce_reference` keeps it; a whole-column result such as
+`REDUCE(0,A1:A2,LAMBDA(a,v,C:C))` stays a reference, and a read that would build more than 1,048,576 cells is `#ERROR!`, T-4476).
 A 1x1 array step is its one value, as in BYROW: `MAP(Data!B5:E6,..,LAMBDA(w,x,TRANSPOSE(w)))` is the cells' values (gen-m7/b2078b5d702c691a
 Calc!A2162; f7e94a817e5385ac A842), `SCAN(..,LAMBDA(w,acc,HSTACK(PROPER(acc))))` "True", "0.3", "0" (7ea6ef6ceabacafd A87) and
 `SCAN(..,LAMBDA(w,x,BYROW(w,_xleta.COUNT)))` 0, 1, 1, 1 (2d9b48c6363e7a16 A2954); so is a 1x1 array initial_value of SCAN:
 `SCAN(MINVERSE(Data!C7),..)` (23b5367c18059af2 A74) and `SCAN(LEN(WRAPROWS("Hello World",4,0.3)),Data!A7:D7,LAMBDA(z,y,z*y))`, 22, 2.2E+16,
 6.6E+15, 0 (7ea6ef6ceabacafd A3615) (excel-graph, 2026-10-22, T-2254 triage). Ours: implemented (T-2407): `lambda_result_value` reads a 1x1 array as its one value.
-Tasks: T-2309, T-2306, T-2407
+Tasks: T-2309, T-2306, T-2407, T-4476
 
 ## SCAN and REDUCE keep errors in the LAMBDA
 Rule: SCAN and REDUCE do not stop at an error. An error initial_value, an error accumulator and an error element are handed
@@ -1891,14 +2047,31 @@ A285). Both are references:
 - A285 and A1767 need a reference initial value: a text value would make PRODUCT `#VALUE!` and COUNT 2.
 - A467 needs a reference element too. PRODUCT of a reference TRUE and a value TRUE would be 1.
 - Elements from a range, a one-cell range included, were already references (T-1442).
-- Unprobed initial values:
-  - a function result such as `IF(TRUE,A1)`;
-  - an INDEX or XLOOKUP that picks a cell (ours: a reference, as `eval_ref_or_index` gives it);
-  - a union or a 3-D span (ours: read as values, as before);
-  - ISREF of the accumulator (ours: TRUE for a cell).
-Evidence: gen-m7 cases above (excel-graph, 2026-10-21, T-2225).
+- The initial value is bound as a LAMBDA call's argument is (probes/t4475-scan-reduce-reference-initial, excel-graph,
+  2026-11-06, T-4475; Sheet1 A1 TRUE, A2 the text "1", A3 2.5; each form asked as `COUNT(a)`, `PRODUCT(a)` and `ISREF(a)`,
+  where a reference gives 0, 0 and TRUE and a value 1, 1 and FALSE):
+  - a reference: the cell itself (D1:G1), `IF(TRUE,A2)` (D2:G2), `CHOOSE(1,A2)` (D3:G3), `INDEX(A1:A3,2)` (D5:G5),
+    `XLOOKUP("y",B1:B3,A1:A3)` (D6:G6), `OFFSET(A1,1,0)` (D7:G7) and `INDIRECT("A2")` (D8:G8), in REDUCE and SCAN alike;
+  - a value: `IFERROR(A2,0)` (D4:G4);
+  - a LET variable bound to any of these keeps its kind: `LET(c,IF(TRUE,A2),REDUCE(c,A3,LAMBDA(a,v,COUNT(a))))` is 0
+    (H1:I8), `IFERROR`'s variable 1 (H4, I4);
+  - a union stays its areas: `REDUCE((A2,A3),A3,LAMBDA(a,v,COUNT(a)))` is 1, `REDUCE((A1,A3),A1,LAMBDA(a,v,PRODUCT(a)))`
+    2.5 and ISREF(a) TRUE (D9:I9);
+  - a 3-D span is `#VALUE!`, not a reference: COUNT(a) 0, PRODUCT(a) `#VALUE!` and ISREF(a) FALSE (D10:I10). A LET
+    variable bound to the span gives the same (H10, I10), unlike `LAMBDA(x,SUM(x))(Data1:Data3!A1)` (references.md).
+  - The case calls a LAMBDA (`LAMBDA(a,v,COUNT(a))`). An uncommitted first fill wrote the bare names
+    `REDUCE(A2,A3,COUNT)` and `REDUCE(A1,A1,PRODUCT)` and got `#VALUE!`, which is the unknown name a bare function name
+    is in a file ("Functions passed by name", below), not an eta result. The stored eta form
+    (`_xleta.COUNT`) does tell a reference from a value (A1767 above); with these initial-value forms it is probed in probes/t4666-union-variable-isref (excel-graph 2026-11-07, T-4666; the engine matches every cell): `REDUCE(IF(TRUE,A2),A3,_xleta.COUNT)` 1 and `SCAN(IF(TRUE,A2),A3,_xleta.COUNT)` 1 (the accumulator is the reference to the text "1", not counted), `REDUCE(XLOOKUP(2.5,A1:A3,A1:A3),A3,_xleta.COUNT)` 2, `REDUCE((A2,A3),A3,_xleta.COUNT)` 2, `REDUCE(IFERROR(A2,0),A3,_xleta.COUNT)` 2 (a plain value "1" is counted), `REDUCE(A1,A1,_xleta.PRODUCT)` 0 (references to TRUE are ignored).
+- The accumulator a step returns (row 11; T-4478's rule, "REDUCE keeps a returned reference"): REDUCE keeps a returned reference in the next step's `a`
+  (`REDUCE(0,A1:A2,LAMBDA(a,v,IF(ISREF(a),"r",v)))` is "r", D11; the COUNT form 0, F11), SCAN does not
+  (`SCAN(0,A1:A3,LAMBDA(a,v,ISREF(a)))` is FALSE at every step, G11; E11 {TRUE;"1";2.5}).
+Evidence: gen-m7 cases above (excel-graph, 2026-10-21, T-2225); probes/t4475-scan-reduce-reference-initial (T-4475).
 Ours: implemented (T-2306): `fn_scan` and `fn_reduce` hand error values to the LAMBDA and SCAN keeps an error step in its slot.
-Since T-2307, `lambda_initial_value` keeps a reference initial_value a reference, as `eval_ref_or_index` binds a LAMBDA argument.
+Since T-2307, `lambda_initial_value` keeps a reference initial_value a reference; since T-4475 it binds it with
+`Model::bind_argument`, as a LAMBDA call binds an argument (the 3-D span read as its `#VALUE!`), and REDUCE and SCAN pass that
+binding to the first call (`call_lambda_caller_binding`); ISREF of a parameter bound to a union is TRUE (references.md
+union entry). D11 and F11 (REDUCE keeping a returned reference) pass since T-4478.
 A blank cell taken into an array by HSTACK counts as a 0 argument when an element reaches AVERAGE: `REDUCE(<3x1 text array>,
 HSTACK(Data!Z1:Z2,{1;2}),_xleta.AVERAGE)` is 1.125 = AVERAGE(AVERAGE(AVERAGE(AVERAGE(texts,0),1),0),2) (gen-m7/f19581ac44da1653 Calc!A2088,
 excel-graph, 2026-10-22). Probed (probes/t2413-blank-in-stacked-arrays, excel-graph, 2026-10-23, T-2413): the element is the
@@ -2264,18 +2437,24 @@ Status: VERIFIED (excel-graph)
 Tasks: T-2409, T-4448
 
 ## TAKE and DROP keep the one-cell reference a picker hands them
-Rule: when TAKE's or DROP's array is an IF, CHOOSE, IFS or SWITCH whose pick is a reference (one cell included), a defined name or
-an INDEX, the result is that reference's part, a reference, as TAKE or DROP of the reference itself is: never a 1x1 array.
+Rule: when TAKE's, DROP's or TRIMRANGE's array is an IF, CHOOSE, IFS or SWITCH whose pick is a reference (one cell included),
+a one-cell defined name or an INDEX of a range, the result is that reference's part, a reference, as TAKE or DROP of the
+reference itself is: never a 1x1 array.
 - (probes/t4469-take-drop-if-one-cell-reference, excel-graph 2026-11-06, T-4469; Y1 5, Y2 "t", Z1 blank) `TYPE(X)` is 1 (2
   for Y2), `ISREF(X)` TRUE, `X&"x"` "x" ("5x", "tx") and `ISBLANK(INDEX(X,1,1))` TRUE for Z1 for each X of
   `DROP(IF(TRUE,Z1),0)`, `TAKE(IF(TRUE,Y1),1)`, `TAKE(IF(FALSE,0,Z1),1)`, `TAKE(IF(TRUE,IF(TRUE,Z1)),1)`,
   `DROP(IF(TRUE,Y1),0)`, `TAKE(IFS(TRUE,Z1),1)`, `TAKE(SWITCH(1,1,Z1),1)`, `TAKE(IF(TRUE,Y2),1)`, `DROP(IF(TRUE,Y2),0,0)` and
-  `TAKE(IF(TRUE,Y1:Y2),1)` (A1:D10). probes/t4448-lone-blank-reshapers B9: `TYPE(TAKE(IF(TRUE,Z1),1))` is 1.
+  `TAKE(IF(TRUE,Y1:Y2),1)` (A1:D10); the same for `TRIMRANGE(IF(TRUE,Y1))`, `TRIMRANGE(IFS(TRUE,Y1))` and
+  `TRIMRANGE(SWITCH(1,1,Y2))` (A11:D13). probes/t4448-lone-blank-reshapers B9: `TYPE(TAKE(IF(TRUE,Z1),1))` is 1.
+- (probes/t4596-take-drop-picker-name-index-choose, excel-graph 2026-11-06, T-4596; names NMZ = Sheet1!$Z$1, NMY =
+  Sheet1!$Y$1) the same four results (TYPE 1, ISREF TRUE, blank stays blank) hold for `TAKE(IF(TRUE,NMZ),1)`,
+  `TAKE(IF(TRUE,NMY),1)`, `TAKE(IF(TRUE,INDEX(Y1:Y2,1)),1)`, `TAKE(CHOOSE(1,Z1),1)`, `DROP(CHOOSE(1,Y1),0)`,
+  `TRIMRANGE(CHOOSE(1,Y1))` and `TAKE(CHOOSE(1,Y2),1)` (A1:D7; TYPE 2 for Y2).
 - So a blank picked cell stays blank and a picked number is not lifted as an array.
 Ours (T-4469): `Model::take_drop_value_source` in drop_take.rs. Before, IF, IFS and SWITCH read a one-cell arm as its
-value, so TYPE was 64 and ISREF FALSE; CHOOSE already kept it.
+value, so TYPE was 64 and ISREF FALSE; CHOOSE already kept it (T-4596 now evidences that in Excel).
 Status: VERIFIED (excel-graph)
-Tasks: T-4469
+Tasks: T-4469, T-4596
 
 ## GROUPBY and PIVOTBY lift over an array field_headers or total depth
 Rule: an array (or a multi-cell range) given as GROUPBY's `field_headers` or `total_depth`, or PIVOTBY's `field_headers`,
@@ -2374,6 +2553,10 @@ the rule frozen on it before -holdout (seed 4465) and -fresh (seed 44651, genera
 Main 539/539, hold-out 318/318, fresh 316/316 for the rule; the best single alternative scores 469, 276 and 290. The
 rows that tell the shared rule from 2^-23 added before the floor are 12 of main's and 6 of the hold-out's; the fresh
 sweep has only 1 such row, so it confirms the other constructors' rules more than that choice.
+At the top of the range the bound is the same absolute 2^-22 (probes/t4553-sequence-extent-top, excel-graph, 2026-11-06):
+`ROWS(SEQUENCE(1048576-x))`, `COLUMNS(SEQUENCE(1,1048576-x))` and `ROWS(SEQUENCE(524288-x))` for x = k*2^-30 read 1048576 (524288)
+for k = 96, 128, 160 and 256 (x = 2^-22) and one less for k = 257, 264, 288 and 320. Above the integer nothing snaps:
+`1048576+x` and `524288+x` read the integer, not `#VALUE!`.
 Ours: implemented (T-4465): SEQUENCE and RANDARRAY call `near_integer_whole` (sequence.rs's `EXTENT_EPSILON` is gone);
 TAKE, DROP, EXPAND, WRAPROWS/WRAPCOLS and MAKEARRAY already matched. RANDARRAY's columns argument shares
 `randarray_extent` with its rows but no probe cell reads it.
@@ -2705,7 +2888,7 @@ reference shows up, for TOCOL's and TOROW's array. FILTER reads its array and in
 (`Model::filter_arg_array`, filter.rs, through `evaluate_picked_reference_arg`), which covers a written reference, a LET
 variable, INDEX and the arm IF picks alike, and checks every include's shape before its elements. Only stored cell
 errors are evidenced; other errors read through a reference (a `#REF!` for a sheet index, a circular read) are wrapped
-unprobed. An include one column tall as the array is wide filters its columns (`include_axis`; not probed by T-4477). T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
+unprobed. An include that is one column as tall as the array is wide does not filter its columns: `FILTER(A1:B3,{TRUE;FALSE})`, `{1;0}`, `{1;#N/A}`, `FILTER(A1:C2,{1;0;1})` and `FILTER(A1:B3,C1:C2)` (C1 `#DIV/0!`) are all `#VALUE!`, while the row form `{1,0,1}` over A1:C2 filters its columns and the square `FILTER(A1:B2,{1;0})` filters rows (probes/t4517-filter-transposed-include A10:G12, excel-graph 2026-11-06, T-4517; `include_axis`). T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
 (spill_functions.rs) so VSTACK/HSTACK also wrap a LET variable or LAMBDA parameter bound to a one-cell error reference.
 Blank-cell variables (T-3887, probes/t3887-stack-blank-variable, excel-graph 2026-11-03): with z bound to a blank cell
 (D!Z1) by LET or as a MAP LAMBDA parameter, `INDEX(VSTACK(z,1),1,1)` and `INDEX(HSTACK(z,1),1,1)` are the same "empty value"

@@ -28,7 +28,7 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, scalars, sum_away_from_mode
+from rustsheet_tools.accuracy.defs._common import by_stratum, real_args, sum_away_from_mode
 from rustsheet_tools.accuracy.defs.discrete import TRIALS_LIMIT, TRIALS_SOURCE
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register, spend
@@ -164,12 +164,12 @@ def binom_quantile(alpha: mpmath.mpf, n: mpmath.mpf, p: mpmath.mpf) -> mpmath.mp
 
 
 def _range_value(args: Sequence[MathArg]) -> mpmath.mpf:
-    n, p, s1, *rest = scalars(args)
+    n, p, s1, *rest = real_args(args)
     return binom_range(n, p, s1, rest[0] if rest else s1)
 
 
 def _range_domain(args: Sequence[MathArg]) -> str | None:
-    n, _, s1, *rest = scalars(args)
+    n, _, s1, *rest = real_args(args)
     s2 = rest[0] if rest else s1
     if s1 > n:
         return "number_s above trials"
@@ -312,7 +312,7 @@ BINOM_DIST_RANGE = register(
 
 
 def _inv_value(args: Sequence[MathArg]) -> mpmath.mpf:
-    n, p, alpha = scalars(args)
+    n, p, alpha = real_args(args)
     if n == 0:
         return mpmath.mpf(0)
     return binom_quantile(alpha, n, p)

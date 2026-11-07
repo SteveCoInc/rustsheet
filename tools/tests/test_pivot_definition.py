@@ -155,6 +155,43 @@ def test_layout_attributes_fields_items_and_raw_slots() -> None:
     assert table.index("<pivotTableStyleInfo") < table.index("<filters")
 
 
+def test_x14_show_as_modes_item_attributes_and_field_extensions() -> None:
+    # T-4129: an Excel 2010 mode is the x14 dataField extension's pivotShowAs, with no showDataAs.
+    ext = '<extLst><ext uri="{2946ED86-A175-432a-8AC1-64E0C546D7DE}"><x14:pivotField/></ext></extLst>'
+    table = _parts(
+        _spec(
+            {
+                "rows": ["Region", "Product"],
+                "data": [{"field": "Sales", "showDataAs": "rankDescending", "baseField": "Product"}],
+                "fields": {"Product": {"item_attrs": {"B": {"d": True}}}, "Region": {"xml": {"extLst": ext}}},
+            }
+        )
+    )["xl/pivotTables/pivotTable1.xml"]
+    assert "showDataAs" not in table
+    assert (
+        '<dataField name="Sum of Sales" fld="2" baseField="1" baseItem="0"><extLst>'
+        '<ext uri="{E15A36E0-9728-4e99-A89B-3F7291B0FE68}"'
+    ) in table
+    assert '<x14:dataField pivotShowAs="rankDescending"/></ext></extLst></dataField>' in table
+    assert '<item x="1" d="1"/>' in table
+    assert f'<item t="default"/></items>{ext}</pivotField>' in table
+
+
+def test_custom_subtotals_use_the_item_type_names() -> None:
+    # countA and count are ST_ItemType names (T-4622): countASubtotal="1" and <item t="countA"/>.
+    table = _parts(
+        _spec(
+            {
+                "rows": ["Region", "Product"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"subtotals": ["countA", "count", "avg", "stdDevP"]}},
+            }
+        )
+    )["xl/pivotTables/pivotTable1.xml"]
+    assert 'countASubtotal="1" countSubtotal="1" avgSubtotal="1" stdDevPSubtotal="1"' in table
+    assert '<item t="countA"/><item t="count"/><item t="avg"/><item t="stdDevP"/></items>' in table
+
+
 def test_calculated_fields_page_fields_and_numeric_groups() -> None:
     parts = _parts(
         _spec(
@@ -202,6 +239,14 @@ def test_calculated_fields_page_fields_and_numeric_groups() -> None:
         ({"rows": ["Region"], "data": [{"field": "Sales", "subtotal": "median"}]}, "subtotal 'median'"),
         ({"rows": ["Region"], "data": [{"field": "Sales"}, {"field": "Sales"}]}, "names must differ"),
         (
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"subtotals": ["countNums"]}},
+            },
+            "subtotals of 'Region' must be a list of",
+        ),
+        (
             {"rows": ["Region"], "data": [{"field": "Sales"}], "table": {"cacheId": 3}},
             "may not set attribute 'cacheId'",
         ),
@@ -226,11 +271,53 @@ def test_calculated_fields_page_fields_and_numeric_groups() -> None:
             "page item 'North'",
         ),
         ({"rows": ["Region"], "data": [{"field": "Sales"}], "wat": 1}, "unknown keys ['wat']"),
+        (
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"item_attrs": {"East": {"h": 1}}}},
+            },
+            "may not set attribute 'h'",
+        ),
+        (
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"item_attrs": {"North": {"d": 1}}}},
+            },
+            "item_attrs item 'North'",
+        ),
+        (
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "fields": {"Region": {"xml": {"items": "<items/>"}}},
+            },
+            "are ['autoSortScope', 'extLst']",
+        ),
     ],
 )
 def test_refusals(definition: dict[str, Any], message: str) -> None:
     with pytest.raises(ValueError, match=re.escape(message)):
         build_xlsx(_spec(definition))
+
+
+def test_cache_names_replace_a_blank_or_repeated_header() -> None:
+    spec = _spec(
+        {"rows": ["Area"], "data": [{"field": "Amount"}], "cache_names": ["Area", "P", "Amount", "F"]}
+    )
+    cells = spec["sheets"][0]["cells"]
+    del cells["A1"]  # an empty header cell
+    cells.update({"B1": "Sales", "D1": "Sales"})  # a repeated constant
+    cache = _parts(spec)["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert re.findall(r'<cacheField name="([^"]*)"', cache) == ["Area", "P", "Amount", "F"]
+    for names, message in (
+        (["Area", "P"], "one name per source column"),
+        (["Area", "P", "area", "F"], "distinct non-empty texts"),
+        (["Area", "", "Amount", "F"], "distinct non-empty texts"),
+    ):
+        with pytest.raises(ValueError, match=re.escape(message)):
+            build_xlsx(_spec({"data": [{"field": "Amount"}], "cache_names": names}))
 
 
 def test_page_fields_need_room_and_the_anchor_must_be_empty() -> None:
@@ -251,3 +338,115 @@ def test_values_on_rows_sets_data_on_rows() -> None:
     )["xl/pivotTables/pivotTable1.xml"]
     assert ' dataOnRows="1"' in table
     assert '<rowFields count="2"><field x="0"/><field x="-2"/></rowFields>' in table
+
+
+def test_a_pivot_saved_without_refresh_on_load_keeps_its_saved_render() -> None:
+    """T-4586: no `refreshOnLoad`, spec cells in the area, `area` as the location and raw layout lines."""
+    rows = '<rowItems count="2"><i><x/></i><i t="grand"><x/></i></rowItems>'
+    columns = '<colItems count="1"><i/></colItems>'
+    saved = {"A3": "Row Labels", "B3": "Sum of Sales", "A4": "East", "B4": 99, "A5": "Grand Total", "B5": 99}
+    parts = _parts(
+        _spec(
+            {
+                "rows": ["Region"],
+                "data": [{"field": "Sales"}],
+                "refresh_on_load": False,
+                "area": "A3:B5",
+                "xml": {"rowItems": rows, "colItems": columns},
+            },
+            cells=saved,
+        )
+    )
+    assert "refreshOnLoad" not in parts["xl/pivotCache/pivotCacheDefinition1.xml"]
+    table = parts["xl/pivotTables/pivotTable1.xml"]
+    assert '<location ref="A3:B5" ' in table
+    # Schema order: rowFields, rowItems, colFields, colItems, then the data fields.
+    assert f'<rowFields count="1"><field x="0"/></rowFields>{rows}{columns}<dataFields' in table
+    assert '<c r="B4"' in parts["xl/worksheets/sheet2.xml"]
+
+
+def test_refresh_on_load_and_area_refusals() -> None:
+    base: dict[str, Any] = {"rows": ["Region"], "data": [{"field": "Sales"}]}
+    for extra, message in (
+        ({"refresh_on_load": 0}, "refresh_on_load is true or false"),
+        ({"area": "B3:C5"}, "starting at the location"),
+        ({"area": "A3:A2"}, "starting at the location"),
+        ({"area": "A3"}, "starting at the location"),
+        ({"xml": {"rowItem": "<rowItem/>"}}, "xml slots are"),
+        ({"xml": {"rowItems": "<colItems/>"}}, "one <rowItems> element"),
+    ):
+        with pytest.raises(ValueError, match=re.escape(message)):
+            build_xlsx(_spec({**base, **extra}))
+    # A refreshing pivot still refuses a spec cell at its anchor.
+    with pytest.raises(ValueError, match=r"#SPILL!"):
+        build_xlsx(_spec({**base, "refresh_on_load": True}, cells={"A3": 1}))
+
+
+def test_sort_scope_page_attributes_and_calculated_items() -> None:
+    # T-4130: a field's raw autoSortScope goes after its items and before its extLst; a page entry's attrs
+    # follow the managed ones; a calculated item is appended to its field's shared items, written f="1"
+    # in the pivotField, and listed in the cache's calculatedItems with Excel's pivotArea.
+    scope = '<autoSortScope><pivotArea dataOnly="0" outline="0" fieldPosition="0"/></autoSortScope>'
+    ext = "<extLst/>"
+    parts = _parts(
+        _spec(
+            {
+                "pages": [{"field": "Region", "item": "West", "attrs": {"cap": "W"}}],
+                "rows": ["Product"],
+                "data": [{"field": "Sales"}],
+                "fields": {
+                    "Product": {
+                        "attrs": {"sortType": "descending"},
+                        "xml": {"autoSortScope": scope, "extLst": ext},
+                    }
+                },
+                "calculated_items": [{"field": "Product", "name": "AB", "formula": "A+B"}],
+            },
+            location="A4",
+        )
+    )
+    table = parts["xl/pivotTables/pivotTable1.xml"]
+    cache = parts["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert '<pageField fld="0" item="1" hier="-1" cap="W"/>' in table
+    assert f'<item x="3" f="1"/><item t="default"/></items>{scope}{ext}</pivotField>' in table
+    assert _shared(cache, "Product").endswith('<s v="C"/><s v="AB"/></sharedItems>')
+    assert (
+        '</cacheFields><calculatedItems count="1"><calculatedItem formula="A+B"><pivotArea cacheIndex="1" outline="0"'
+        ' fieldPosition="0"><references count="1"><reference field="1" count="1" selected="0"><x v="3"/></reference>'
+        "</references></pivotArea></calculatedItem></calculatedItems></pivotCacheDefinition>"
+    ) in cache
+    raw = '<pivotArea outline="0"/>'
+    cache = _parts(
+        _spec(
+            {
+                "rows": ["Product"],
+                "data": [{"field": "Sales"}],
+                "calculated_items": [
+                    {
+                        "field": "Product",
+                        "name": "X",
+                        "formula": "A*2",
+                        "attrs": {"field": 1},
+                        "pivot_area": raw,
+                    }
+                ],
+            }
+        )
+    )["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert f'<calculatedItem formula="A*2" field="1">{raw}</calculatedItem>' in cache
+
+
+@pytest.mark.parametrize(
+    ("items", "message"),
+    [
+        ([{"field": "Product", "name": "A", "formula": "B"}], "needs a source field without that item"),
+        ([{"field": "Product", "name": "X"}], "a calculated item is"),
+        (
+            [{"field": "Product", "name": "X", "formula": "A", "pivot_area": "<references/>"}],
+            "must be one <pivotArea>",
+        ),
+    ],
+)
+def test_calculated_item_refusals(items: list[dict[str, Any]], message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        build_xlsx(_spec({"rows": ["Product"], "data": [{"field": "Sales"}], "calculated_items": items}))

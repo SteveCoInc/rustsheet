@@ -1,4 +1,5 @@
 use crate::calc_result::Range;
+use crate::functions::statistical::paired::SecondMark;
 use crate::nested_array::nested_array_error;
 use crate::reference_operators::{Ranges, RefArg};
 use statrs::distribution::{Continuous, Gamma};
@@ -431,7 +432,6 @@ impl Model {
         cell: CellReferenceIndex,
         arrays_are_value_errors: bool,
     ) -> Result<Vec<Option<f64>>, CalcResult> {
-        let by_reference = matches!(*node.ungrouped_at(cell.row), Node::ReferenceKind { .. });
         // The `@` of a non-reference array is its top-left value, which the RANK family takes as
         // it takes the whole array: `#VALUE!`, or the element's error, in one cell
         // (`RANK(5,@IF(A1:B2>0,A1:B2))`, `RANK(5,@{3,4})`; probes/rank-at-if-ref H1, H31, K28).
@@ -461,9 +461,23 @@ impl Model {
                 })
                 .collect();
         }
-        let single = match self.evaluate_reference_arg(node, cell) {
+        // Read in reference context, so a cell a name, INDEX, IF, CHOOSE or parentheses pick is a
+        // range of one cell like the cell itself: `RANK(5,IF(TRUE,Data!A2))` with TRUE in A2 is
+        // `#N/A` and `LARGE(CHOOSE(1,Data!A3),1)` with text in A3 `#NUM!`
+        // (probes/t4310-rank-regression-picked-cells A1:A120, T-4310).
+        let single = match self.evaluate_picked_reference_arg(node, cell) {
             RefArg::Ranges(areas @ Ranges::Areas(_)) => {
                 return self.values_from_areas(&areas, cell)
+            }
+            // LARGE and SMALL over an array of references on another sheet are `#N/A`, on the
+            // formula's own sheet its value view (SPEC-0014 amendment rule 5,
+            // [`RefGrid::order_statistic_error`]). The RANK family is unprobed and keeps the
+            // value view.
+            RefArg::Grid(grid) if !arrays_are_value_errors => {
+                match grid.order_statistic_result(cell.sheet, cell) {
+                    Some(error) => return Err(error),
+                    None => grid.to_values(),
+                }
             }
             single => single.into_single_area(cell),
         };
@@ -502,13 +516,7 @@ impl Model {
             {
                 unsupported(Error::VALUE)
             }
-            // A cell holding a scalar is a reference the function cannot rank (#NUM!); the same
-            // scalar typed in place is a one-element list.
-            CalcResult::Boolean(_) | CalcResult::Number(_) | CalcResult::String(_)
-                if by_reference =>
-            {
-                unsupported(Error::NUM)
-            }
+            // A scalar typed in place is a one-element list (a cell, however picked, is a range).
             CalcResult::Boolean(value) => Ok(vec![Some(if value { 1.0 } else { 0.0 })]),
             CalcResult::Number(value) => Ok(vec![Some(value)]),
             CalcResult::String(value) => match self.cast_number(&value) {
@@ -550,11 +558,11 @@ impl Model {
 
     // CHISQ.TEST(actual_range, expected_range)
     pub(crate) fn fn_chisq_test(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let (width, height, values_left, values_right) = match self.fn_get_two_matrices(args, cell)
-        {
-            Ok(v) => v,
-            Err(r) => return r,
-        };
+        let (width, height, values_left, values_right) =
+            match self.fn_get_two_matrices(args, cell, SecondMark::NumError) {
+                Ok(v) => v,
+                Err(r) => return r,
+            };
 
         // A pair with a non-number on either side adds nothing; the degrees of freedom still come
         // from the first range's shape (statistics.md, CHITEST text rule; for two different shapes
@@ -601,7 +609,19 @@ impl Model {
                 );
             }
             let diff = obs - exp;
-            chi2 += (diff * diff) / exp;
+            let square = diff * diff;
+            // A squared difference past the double range is #NUM!, not a p of 0:
+            // `CHISQ.TEST({1E+160,1,1},{1,1,1})` (probes/t4098-tests-prob-domains A44, A45;
+            // statistics.md "CHISQ.TEST, Z.TEST and PROB: Gate A domains (T-4098)"). Where the
+            // finite squares' quotients or sum overflow is unprobed (a p of 0 here).
+            if square.is_infinite() {
+                return CalcResult::new_error(
+                    Error::NUM,
+                    cell,
+                    "CHISQ.TEST squared difference overflows".to_string(),
+                );
+            }
+            chi2 += square / exp;
         }
 
         if chi2 < 0.0 && chi2 > -1e-12 {

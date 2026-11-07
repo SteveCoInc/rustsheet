@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ast
+import inspect
 import json
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from pathlib import Path
@@ -10,8 +12,9 @@ from typing import Any
 import mpmath
 import pytest
 
-from rustsheet_tools.accuracy import composite, eval_math
+from rustsheet_tools.accuracy import composite, eval_math, fingerprint
 from rustsheet_tools.accuracy.defs.cashflow import IRR, XIRR
+from rustsheet_tools.accuracy.defs.paired_regression import COVAR
 from rustsheet_tools.accuracy.defs.student_t import T_DIST, T_INV, cdf
 from rustsheet_tools.accuracy.eval_math import (
     calls_any,
@@ -24,6 +27,7 @@ from rustsheet_tools.accuracy.eval_math import (
 )
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, NoValueError, Param
 from rustsheet_tools.accuracy.tables import DroppedError, PointTimeoutError, compute
+from rustsheet_tools.fitlab.sweep import parse_arg
 
 
 def _case(tmp_path: Path, cells: dict[str, Any], oracle: dict[str, Any] | None) -> tuple[Path, Path]:
@@ -320,3 +324,109 @@ def test_composite_exact_composition_is_the_unrounded_value() -> None:
         composite.parse("=T.INV(0.5,3)*T.INV(0.5,3)^2", "S", book, eval_math.fit_arg) is None
     )  # `^` of a call
     assert composite.parse("=1+2", "S", book, eval_math.fit_arg) is None  # no call
+
+
+def _written_sidecar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path]:
+    """A case with two T.DIST cells and the sidecar `math` writes for it, in process."""
+    cells = {"A1": "=T.DIST(1.5,3,TRUE)", "A2": "=T.DIST(2.5,3,TRUE)"}
+    case, sidecar = _case(tmp_path, cells, {a: {"t": "n", "v": 0.5} for a in cells})
+    entries = [{"id": "t/c", "path": str(case), "sidecar": str(sidecar)}]
+    monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)
+    monkeypatch.setattr(eval_math, "_pool", _InProcessPool)
+    write_suite("t", workers=None)
+    assert check_suite("t") == []
+    return case, sidecar
+
+
+def test_check_names_a_definition_whose_code_changed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # T-4231: the sidecar records each definition's code fingerprint. Editing T.DIST's module (here its
+    # source as `inspect` reads it) makes the committed values stale, and the check names the function.
+    _case_path, sidecar = _written_sidecar(tmp_path, monkeypatch)
+    data = json.loads(math_path(sidecar).read_text())
+    assert set(data["source"]["definitions"]) == {"T.DIST"}
+    real = inspect.getsource
+
+    def edited(module: Any) -> str:
+        text: str = real(module)
+        return text + "\nEDITED = 1\n" if module.__name__ == T_DIST.value.__module__ else text
+
+    fingerprint.clear_caches()
+    monkeypatch.setattr(inspect, "getsource", edited)
+    try:
+        assert check_suite("t") == [
+            "t/c: math values of T.DIST were computed by other code (regenerate with --function T.DIST)",
+            "regenerate: cd tools && uv run rustsheet-accuracy math --suite t",
+        ]
+    finally:
+        fingerprint.clear_caches()
+
+
+def test_check_names_values_read_from_other_arguments(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A reader change that alters an argument (as T-3675's subnormal flush did) leaves the formula as
+    # it was, so only the argument fingerprint shows it.
+    _written_sidecar(tmp_path, monkeypatch)
+    real = parse_arg
+
+    def reads_otherwise(text: str, *args: Any, **kwargs: Any) -> Any:
+        value = real(text, *args, **kwargs)
+        return 1.25 if value == 1.5 else value
+
+    monkeypatch.setattr("rustsheet_tools.accuracy.eval_math.parse_arg", reads_otherwise)
+    assert check_suite("t") == [
+        "t/c: math values were computed from other arguments than the argument reader gives now",
+        "regenerate: cd tools && uv run rustsheet-accuracy math --suite t",
+    ]
+
+
+def test_check_names_a_sidecar_without_fingerprints_or_of_another_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    case, sidecar = _written_sidecar(tmp_path, monkeypatch)
+    path = math_path(sidecar)
+    data = json.loads(path.read_text())
+    del data["source"]["definitions"]
+    path.write_text(json.dumps(data))
+    assert eval_math.check_case("t/c", case, sidecar) == [
+        "t/c: math sidecar has no input fingerprints (written before T-4231)"
+    ]
+    data["source"]["version"] = "0"
+    path.write_text(json.dumps(data))
+    assert eval_math.check_case("t/c", case, sidecar) == [
+        "t/c: math sidecar version 0 is not the generator's 1"
+    ]
+
+
+def test_the_digest_leaves_out_empty_fields() -> None:
+    # Python 3.12 adds an empty `type_params` to every function: the digest must not see it, or CI's
+    # Python and a local one would disagree on every sidecar.
+    tree = ast.parse("def f(x):\n    return x\n")
+    before = fingerprint._tree_digest(tree)
+    func = tree.body[0]
+    assert isinstance(func, ast.FunctionDef)
+    func.type_params = []  # type: ignore[attr-defined,unused-ignore]
+    assert fingerprint._tree_digest(tree) == before
+
+
+def test_a_partial_definition_is_hashed_by_its_function_module() -> None:
+    # COVAR's value is a functools.partial: hashing `functools` (the standard library) would make the
+    # digest differ between Pythons; its function's module is what computes it.
+    modules = fingerprint._code_modules(COVAR)
+    assert COVAR.value.func.__module__ in modules  # type: ignore[attr-defined]
+    assert all(m.startswith("rustsheet_tools.") for m in modules)
+
+
+def test_source_digest_ignores_comments_and_docstrings_only() -> None:
+    base = fingerprint.source_digest('"""Doc."""\ndef f(x):\n    """Doc."""\n    return x + 1\n')
+    assert fingerprint.source_digest('"""Other."""\ndef f(x):  # note\n    return x + 1\n') == base
+    assert fingerprint.source_digest('"""Doc."""\ndef f(x):\n    return x + 2\n') != base
+
+
+def test_a_definition_digest_covers_the_kernels_its_module_imports() -> None:
+    # T.DIST's module imports defs._common and the fit lab's beta kernel; the scoring modules the
+    # kernel imports for its types are machinery (fingerprint.MACHINERY).
+    modules = fingerprint._closure(fingerprint._code_modules(T_DIST))
+    assert T_DIST.value.__module__ in modules
+    assert {"rustsheet_tools.accuracy.defs._common", "rustsheet_tools.fitlab.kernels.beta"} <= set(modules)
+    assert not set(modules) & fingerprint.MACHINERY

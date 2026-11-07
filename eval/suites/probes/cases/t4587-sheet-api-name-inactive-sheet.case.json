@@ -1,0 +1,50 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4587: probes/t4049-sheet-api-name-plain with the other sheet active. Name N scoped to sheet S, defined through the API (Graph worksheets('S')/names/add) with the body =1 after load, while T is the active sheet; no workbook-scoped N. probes/t4554-api-name-local-name-body Last!D3 (=LD on Last, LD added scoped to Last with S2 active) is 90, where t4049's S!A1 (S active) is #NAME?. Does an unqualified =N on S, loaded or typed before the add, see the new name when S is not active?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "T",
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "A3": {
+     "entered": "=N"
+    },
+    "A4": "=S!N",
+    "B1": "=FORMULATEXT(A1)",
+    "B3": "=FORMULATEXT(A3)"
+   }
+  },
+  {
+   "name": "T",
+   "cells": {
+    "A1": "=S!N",
+    "A2": "=N"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "S!A1",
+  "S!A2",
+  "S!A3",
+  "S!A4",
+  "S!B1",
+  "S!B3",
+  "T!A1",
+  "T!A2"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "S"
+  }
+ ]
+}

@@ -20,7 +20,7 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, one_of
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, by_stratum, domain_of, one_of
 from rustsheet_tools.accuracy.defs.aggregate import SNAP_SOURCE, running_total, sum_value
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, Param, register
@@ -51,7 +51,7 @@ def _quotient(args: Sequence[MathArg]) -> mpmath.mpf:
     q = part / whole
     if abs(q) > sys.float_info.max:
         raise DomainError("the quotient is beyond the double range")
-    return mpmath.mpf(0) if abs(q) < sys.float_info.min else q  # D14: the flush
+    return mpmath.mpf(0) if abs(q) < NORMAL_MIN else q  # D14: the flush
 
 
 # -- draws -------------------------------------------------------------------------------------
@@ -71,7 +71,7 @@ def _normal(args: list[Arg]) -> bool:
         q = _quotient([tuple(mpmath.mpf(x) for x in a) for a in args if isinstance(a, tuple)])
     except DomainError:
         return True
-    return bool(q == 0 or abs(q) >= sys.float_info.min)
+    return bool(q == 0 or abs(q) >= NORMAL_MIN)
 
 
 def _point(rng: random.Random, lo: float, hi: float, sizes: tuple[int, int]) -> list[Arg]:

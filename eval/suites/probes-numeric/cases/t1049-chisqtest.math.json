@@ -1,0 +1,118 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "2dc0ceca3cbf18cb1ae1e39c76b481103911ea0ad108d6c472e1b003ffdd8c12",
+  "definitions": {
+   "CHISQ.TEST": "1c6c57fe197c6811",
+   "CHITEST": "1c6c57fe197c6811"
+  },
+  "arguments_sha256": "1030d6334c955038639f6ebbf04b7019e25e7ffbd2b6b9de4fdf206e5bdf85ca"
+ },
+ "sheets": {
+  "Calc": {
+   "A10": {
+    "t": "n",
+    "v": "0.78395186447422268130688067970072116879768545247732",
+    "f": "=CHISQ.TEST(B1:B4,C1:C4)"
+   },
+   "A11": {
+    "t": "n",
+    "v": "0.77104266824289036519116985118078559193265405151596",
+    "f": "=CHISQ.TEST(C1:C4,B1:B4)"
+   },
+   "A12": {
+    "t": "n",
+    "v": "0.28238918979868195831339972801791093971494724276024",
+    "f": "=CHISQ.TEST(B1:C2,C1:D2)"
+   },
+   "A13": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=CHISQ.TEST(B1:B4,B1:B4)"
+   },
+   "A14": {
+    "t": "n",
+    "v": "0.45605654025025601260219343659343364579731742419743",
+    "f": "=CHISQ.TEST(D1:D2,E1:E2)"
+   },
+   "A15": {
+    "t": "e",
+    "why": "#DIV/0!: an expected cell of 0",
+    "f": "=CHISQ.TEST(D1:E2,E1:F2)"
+   },
+   "A16": {
+    "t": "e",
+    "why": "#N/A: the arrays differ in cell count",
+    "f": "=CHISQ.TEST(B1:B3,C1:C4)"
+   },
+   "A17": {
+    "t": "e",
+    "why": "#N/A: the arrays differ in cell count",
+    "f": "=CHISQ.TEST(B1:B4,C1:C3)"
+   },
+   "A18": {
+    "t": "e",
+    "why": "#N/A: the arrays differ in cell count",
+    "f": "=CHISQ.TEST(B1:B4,F1:F3)"
+   },
+   "A19": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=CHISQ.TEST(F2:F3,F2:F3)"
+   },
+   "A25": {
+    "t": "n",
+    "v": "0.18887560283756183846055629512779206898515703972151",
+    "f": "=CHISQ.TEST(I1:I3,J1:J3)"
+   },
+   "A27": {
+    "t": "e",
+    "why": "#N/A: one cell",
+    "f": "=CHISQ.TEST(B1,C1)"
+   },
+   "A28": {
+    "t": "e",
+    "why": "#N/A: one cell",
+    "f": "=CHISQ.TEST(B1:B1,C1:C1)"
+   },
+   "A29": {
+    "t": "n",
+    "v": "0.18887560283756183846055629512779206898515703972151",
+    "f": "=CHISQ.TEST({10,20,30},{15,15,30})"
+   },
+   "A30": {
+    "t": "n",
+    "v": "0.18887560283756183846055629512779206898515703972151",
+    "f": "=CHISQ.TEST({10;20;30},{15,15,30})"
+   },
+   "A31": {
+    "t": "n",
+    "v": "0.067889154861829023644602151148161204711968899270285",
+    "f": "=CHISQ.TEST({10,20;30,40},{15,15;30,40})"
+   },
+   "A32": {
+    "t": "e",
+    "why": "#NUM!: a negative statistic",
+    "f": "=CHISQ.TEST({10,20,30},{15,15,-30})"
+   },
+   "A33": {
+    "t": "e",
+    "why": "#DIV/0!: an expected cell of 0",
+    "f": "=CHISQ.TEST({10,20,30},{15,0,30})"
+   },
+   "A36": {
+    "t": "e",
+    "why": "#N/A: one cell",
+    "f": "=CHISQ.TEST(5,5)"
+   },
+   "A38": {
+    "t": "n",
+    "v": "0.18887560283756183846055629512779206898515703972151",
+    "f": "=CHITEST(I1:I3,J1:J3)"
+   }
+  }
+ }
+}

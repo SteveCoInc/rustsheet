@@ -224,11 +224,20 @@ fn is_if(node: &Node) -> bool {
 /// The arguments of a keyed lookup and how many of them past the key are tables: VLOOKUP or
 /// HLOOKUP with 3 or 4 arguments, MATCH with 2 or 3 (SPEC-0020 Amendment 2, section 1; T-3221),
 /// XMATCH with 2 to 4 and XLOOKUP with 3 to 6, whose `return_array` is a second table (section 3;
-/// T-3223). Its one operand is its key, `args[0]`.
+/// T-3223). Its one operand is its key, `args[0]`. An XLOOKUP whose `if_not_found` is a
+/// reference is not one: under a lifted key each miss is that reference, an element of an array
+/// of references that no head and tail of values can hold (SPEC-0014 amendment "Mixed grids").
 fn keyed_lookup(node: &Node) -> Option<(&[Node], usize)> {
     let Node::FunctionKind { kind, args } = node else {
         return None;
     };
+    if *kind == Function::Xlookup
+        && args
+            .get(3)
+            .is_some_and(|node| matches!(ungroup(node), Node::ReferenceKind { .. }))
+    {
+        return None;
+    }
     let (counts, tables) = match kind {
         Function::Vlookup | Function::Hlookup => (3..=4, 1),
         Function::Match => (2..=3, 1),

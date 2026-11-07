@@ -1,0 +1,43 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4587: probes/t4049-sheet-api-name-plain (S!A1 =N is #NAME? after a sheet-scoped N = =1 is added on S) with the added body a bare name, as probes/t4554-api-name-local-name-body's LD = =Dup (Last!D3 =LD is 90). Workbook name Src = =T!$B$1 (7) in the file; N = =Src added through the API scoped to S. Does an unqualified =N on S see it when the body is a name?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "names": {
+  "Src": "=T!$B$1"
+ },
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "B1": "=FORMULATEXT(A1)"
+   }
+  },
+  {
+   "name": "T",
+   "cells": {
+    "A1": "=S!N",
+    "B1": 7
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "S!A1",
+  "S!A2",
+  "S!B1",
+  "T!A1"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=Src",
+   "sheet": "S"
+  }
+ ]
+}

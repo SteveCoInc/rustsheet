@@ -1,0 +1,48 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Defined names after insert_row 4 on Data: Pt on A5, Span over A3:A5, Fm =Data!$A$5*2. Predictions: A1 100, A2 111, A3 401, A4 200. If names did not shift: A1 10, A2 11, A3 301, A4 20. (T-4702)",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=Pt",
+        "A2": "=SUM(Span)",
+        "A3": "=ROWS(Span)*100+COLUMNS(Span)",
+        "A4": "=Fm"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A3": 1,
+        "A4": 10,
+        "A5": 100
+      }
+    }
+  ],
+  "names": {
+    "Pt": "=Data!$A$5",
+    "Span": "=Data!$A$3:$A$5",
+    "Fm": "=Data!$A$5*2"
+  },
+  "expected": {},
+  "sheet_ops": [
+    {
+      "op": "insert_row",
+      "sheet": "Data",
+      "row": 4
+    }
+  ],
+  "check": [
+    "Calc!A1",
+    "Calc!A2",
+    "Calc!A3",
+    "Calc!A4"
+  ]
+}

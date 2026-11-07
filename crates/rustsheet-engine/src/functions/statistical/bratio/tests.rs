@@ -1,6 +1,6 @@
 use super::{
-    beta_dist_lower_tail, closed_or_ported_tails, dispatch, half_complement, l140_overflows,
-    l140_prefactor_zero_tails, Branch,
+    beta_dist_l140_zero, beta_dist_lower_tail, closed_or_ported_tails, dispatch, half_complement,
+    l140_bup_prefactor_underflows, l140_overflows, l140_zero_tails, Branch,
 };
 
 fn branch(a: f64, b: f64, x: f64) -> (Branch, bool) {
@@ -610,10 +610,65 @@ fn l140_bup_sum_overflow_is_excels_num_error() {
 // -708.0 too, so the rule does not apply there (Excel's 0 there is the earlier cut T-4437 owns).
 #[test]
 fn l140_prefactor_zero_is_beta_dists_zero() {
-    let zero = |x: f64, a: f64, b: f64| l140_prefactor_zero_tails(a, b, x, 1.0 - x);
+    let zero =
+        |x: f64, a: f64, b: f64| l140_zero_tails(a, b, x, 1.0 - x, l140_bup_prefactor_underflows);
     assert_eq!(zero(0.999_857_729_248_015, 5e6, 25.5), None);
     assert_eq!(zero(0.999_857_529_135_952, 5e6, 25.5), Some((0.0, 1.0)));
     assert_eq!(zero(0.999_857_095_889_413, 5e6, 30.0), None);
     assert_eq!(zero(0.999_856_895_637_99, 5e6, 30.0), Some((0.0, 1.0)));
     assert_eq!(zero(0.999_644_361_097_655, 2e6, 5.5), None);
+}
+
+// At n >= 3 bup terms BETA.DIST's cdf is also Excel's exact 0 where bup's sum W is below 2^-970
+// (T-4437): the second fresh sweep, probes/t4437-beta-zero-fresh2, rows 0.05 nats apart around the
+// edge. H11 (4.5E6, 3.5; n = 3) is 1.027452053743555E-292 and H12 is 0; D11 and D12 (7E6, 5;
+// n = 4, c = 1) alike. n = 2 is outside the rule (T-4564): I22 (3E6, 2.5) is a number 0.525 nats
+// below the edge.
+#[test]
+fn l140_sum_flush_is_beta_dists_zero_at_three_terms() {
+    let zero = |x: f64, a: f64, b: f64| l140_zero_tails(a, b, x, 1.0 - x, beta_dist_l140_zero);
+    assert_eq!(zero(0.999_847_242_166_822, 4.5e6, 3.5), None);
+    assert_eq!(zero(0.999_847_231_016_925, 4.5e6, 3.5), Some((0.0, 1.0)));
+    assert_eq!(zero(0.999_900_671_670_924, 7e6, 5.0), None);
+    assert_eq!(zero(0.999_900_664_487_516, 7e6, 5.0), Some((0.0, 1.0)));
+    assert_eq!(zero(0.999_772_564_701_615, 3e6, 2.5), None);
+}
+
+// Both shapes below eps/1000: bratio's w = b/(a + b), Excel's cdf to the bit (T-3577;
+// accuracy/BETA.DIST/s1 A184, A187, BETADIST/s1 A183, BETA.DIST/r4-T-4437 A185).
+#[test]
+fn tiny_shapes_are_b_over_a_plus_b() {
+    let cdf = |x: f64, a: f64, b: f64| beta_dist_lower_tail(x, 1.0 - x, a, b).to_bits();
+    assert_eq!(
+        cdf(
+            2.655_104_490_552_74e-229,
+            1.229_007_578_730_89e-163,
+            2.294_130_502_109_64e-185
+        ),
+        1.866_652_852_115_548_3e-22_f64.to_bits()
+    );
+    assert_eq!(
+        cdf(
+            2.082_764_766_560_38e-168,
+            6.756_482_513_675_39e-92,
+            5.689_839_675_962_67e-231
+        ),
+        8.421_304_524_131_021e-140_f64.to_bits()
+    );
+    assert_eq!(
+        cdf(
+            4.033_597_506_052_85e-148,
+            4.417_548_796_623_25e-300,
+            5.092_041_623_932_39e-226
+        ),
+        1.0_f64.to_bits()
+    );
+    assert_eq!(
+        cdf(
+            2.274_575_339_211_87e-260,
+            6.244_858_989_082_16e-159,
+            2.182_356_307_649_34e-191
+        ),
+        3.494_644_653_249_556e-33_f64.to_bits()
+    );
 }

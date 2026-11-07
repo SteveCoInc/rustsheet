@@ -1,4 +1,5 @@
-"""Gate A definitions of T.DIST.RT, T.DIST.2T, TDIST and CONFIDENCE.T (T-4102) against published values."""
+"""Gate A definitions of T.DIST.RT, T.DIST.2T, TDIST and CONFIDENCE.T (T-4102) against published values, and
+T.DIST's huge-x cut (T-4580)."""
 
 from __future__ import annotations
 
@@ -120,6 +121,13 @@ def test_a_confidence_margin_past_the_double_range_has_no_value() -> None:
         ("T.DIST.2T", ("4.22238650908343E+161", 15)),
         ("TDIST", ("2.08984434704072E+166", 2, 1)),
         ("TDIST", ("1E+300", 8, 1)),
+        # T.DIST per cumulative and sign (T-4580): accuracy/T.DIST r4-T-2585 A217, e-T-3425 A88, r4-T-2585 A267 and
+        # A266, and gen-m9's 1E+307
+        ("T.DIST", ("1.89648831921934E+159", 51740, 1)),
+        ("T.DIST", ("-5.43165733249003E+196", 3768, 1)),
+        ("T.DIST", ("3.83716580917453E+200", 4209, 0)),
+        ("T.DIST", ("-9.72379926420781E+176", 5, 0)),
+        ("T.DIST", ("1E+307", 2, 1)),
     ],
 )
 def test_a_huge_x_at_or_past_the_evidenced_error_is_outside_the_domain(
@@ -136,6 +144,8 @@ def test_a_huge_x_at_or_past_the_evidenced_error_is_outside_the_domain(
         ("T.DIST.RT", ("-1E+150", 5)),
         ("T.DIST.2T", ("1E+150", 5)),
         ("TDIST", ("1E+160", 5, 2)),
+        ("T.DIST", ("1E+150", 5, 1)),
+        ("T.DIST", ("-1E+160", 5, 1)),
     ],
 )
 def test_a_huge_x_inside_the_unprobed_bracket_has_no_value(
@@ -145,12 +155,24 @@ def test_a_huge_x_inside_the_unprobed_bracket_has_no_value(
         value(function, *args)
 
 
+def test_the_density_cut_is_exact() -> None:
+    # T-3554 (probes/t3554-tdist-density-huge-x): the density has no unprobed bracket; #NUM! from 2^512.
+    assert value("T.DIST", "1E+150", 5, 0) >= 0
+    with pytest.raises(DomainError):
+        value("T.DIST", "-1E+160", 5, 0)
+
+
 def test_the_largest_evidenced_numbers_keep_their_values() -> None:
     # probes/t4456-beta-t-zero-reach F2, accuracy/T.DIST.RT/s1 A116, T.DIST.2T/s1 A88 and TDIST/s1 A185
     assert value("T.DIST.RT", "1.34305338528263E+60", 5) > 0
     assert value("T.DIST.RT", "-1.35098712206146E+123", 445854763) == 1
     assert value("T.DIST.2T", "5.76102699358893E+146", 21) >= 0
     assert value("TDIST", "1.76387937163976E+150", 7, 2) >= 0
+    # T.DIST (T-4580): accuracy/T.DIST e-T-3425 A92 and r4-T-2585 A223, s1 A97 and r4-T-2585 A236
+    assert value("T.DIST", "7.33561600112214E+146", 228757, 1) == 1
+    assert value("T.DIST", "-2.01264664929796E+153", 43530, 1) >= 0
+    assert value("T.DIST", "9.93424108915371E+137", 24, 0) >= 0
+    assert value("T.DIST", "-1.12173766596864E+153", 8, 0) >= 0
 
 
 def test_a_negative_standard_deviation_has_no_value() -> None:

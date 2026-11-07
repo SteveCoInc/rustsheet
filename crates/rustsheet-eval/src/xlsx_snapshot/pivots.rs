@@ -12,10 +12,10 @@
 //! engine's `MAX_RECORD_VALUES`. A pivot whose parts are missing, malformed or past the budget is
 //! skipped, never an error for the workbook.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use quick_xml::events::Event;
-use quick_xml::Reader;
+use quick_xml::{Reader, XmlVersion};
 use rustsheet_engine::pivot::{MAX_FIELDS, MAX_RECORD_VALUES};
 use rustsheet_xlsx::import::MAX_PIVOTS;
 use serde::{Deserialize, Serialize};
@@ -49,6 +49,26 @@ pub struct PivotCacheField {
     /// groups (T-4124) converts it.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub group_items: Vec<Value>,
+    /// `<sharedItems>`'s items in cache order, each with its type tag, as Excel wrote them
+    /// (T-4612): whether an item Excel appended on refresh is a `<d>` or an `<n>` is part of what
+    /// a refresh must reproduce.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shared_items: Vec<PivotSharedItem>,
+    /// `<sharedItems>`'s attributes (`containsDate`, `minDate`, ...) by name, as Excel wrote
+    /// them (T-4612).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub shared_flags: BTreeMap<String, String>,
+}
+
+/// One item of a cache field's `<sharedItems>`: its element and its `v`, both as written, so the
+/// sidecar keeps a `<d>` apart from an `<n>` of the same serial.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PivotSharedItem {
+    /// The element: `s`, `n`, `d`, `b`, `e` or `m`.
+    pub t: String,
+    /// The `v` attribute, as written; absent for `<m/>`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub v: Option<String>,
 }
 
 /// A pivot table as Excel saved it.
@@ -113,7 +133,18 @@ impl PivotReader {
 fn fields_cost(fields: &[PivotCacheField]) -> usize {
     fields
         .iter()
-        .map(|f| 1 + f.name.len() + f.group_items.iter().map(value_cost).sum::<usize>())
+        .map(|f| {
+            1 + f.name.len()
+                + f.group_items.iter().map(value_cost).sum::<usize>()
+                + f.shared_items
+                    .iter()
+                    .map(|i| 1 + i.t.len() + i.v.as_ref().map_or(0, String::len))
+                    .sum::<usize>()
+                + f.shared_flags
+                    .iter()
+                    .map(|(k, v)| k.len() + v.len())
+                    .sum::<usize>()
+        })
         .sum()
 }
 
@@ -263,7 +294,9 @@ fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
             Event::Start(e) | Event::Empty(e) => {
                 let empty = matches!(event, Event::Empty(_));
                 match e.local_name().as_ref() {
-                    "pivotTableDefinition" => {
+                    // The root only: the x14 extension's `<x14:pivotTableDefinition>` has the same
+                    // local name and, read as the root, dropped the pivot (t4129-pivot-layout-flags X14).
+                    "pivotTableDefinition" if pivot.is_none() => {
                         pivot = Some(PivotDef {
                             name: kept_attr(e, "name", budget).ok()?.unwrap_or_default(),
                             sheet: sheet.to_string(),
@@ -317,10 +350,28 @@ fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
     pivot.filter(|p| !p.location.is_empty())
 }
 
+/// `<sharedItems>`'s attributes into `flags`, each charged its bytes before it is copied; `None`
+/// on a malformed attribute or when the budget runs out.
+fn shared_flags(
+    e: &quick_xml::events::BytesStart<'_>,
+    flags: &mut BTreeMap<String, String>,
+    budget: &mut usize,
+) -> Option<()> {
+    for a in e.attributes() {
+        let a = a.ok()?;
+        let value = a.normalized_value(XmlVersion::Implicit1_0).ok()?;
+        let key = a.key.local_name();
+        spend(budget, key.as_ref().len() + value.len())?;
+        flags.insert(key.as_ref().to_owned(), value.into_owned());
+    }
+    Some(())
+}
+
 fn parse_cache_fields(xml: &str, budget: &mut usize) -> Option<Vec<PivotCacheField>> {
     let mut reader = Reader::from_str(xml);
     let mut fields: Vec<PivotCacheField> = Vec::new();
     let mut in_group = false;
+    let mut in_shared = false;
     loop {
         let event = reader.read_event().ok()?;
         match &event {
@@ -335,9 +386,23 @@ fn parse_cache_fields(xml: &str, budget: &mut usize) -> Option<Vec<PivotCacheFie
                         fields.push(PivotCacheField {
                             name: kept_attr(e, "name", budget).ok()?.unwrap_or_default(),
                             group_items: Vec::new(),
+                            shared_items: Vec::new(),
+                            shared_flags: BTreeMap::new(),
                         });
                     }
+                    "sharedItems" => {
+                        in_shared = !empty;
+                        shared_flags(e, &mut fields.last_mut()?.shared_flags, budget)?;
+                    }
                     "groupItems" if !empty => in_group = true,
+                    tag @ ("s" | "n" | "d" | "b" | "e" | "m") if in_shared => {
+                        spend(budget, 1 + tag.len())?;
+                        let v = kept_attr(e, "v", budget).ok()?;
+                        fields.last_mut()?.shared_items.push(PivotSharedItem {
+                            t: tag.to_string(),
+                            v,
+                        });
+                    }
                     tag if in_group => {
                         spend(budget, 1)?;
                         let v = kept_attr(e, "v", budget).ok()?;
@@ -358,6 +423,7 @@ fn parse_cache_fields(xml: &str, budget: &mut usize) -> Option<Vec<PivotCacheFie
                 }
             }
             Event::End(e) if e.local_name().as_ref() == "groupItems" => in_group = false,
+            Event::End(e) if e.local_name().as_ref() == "sharedItems" => in_shared = false,
             Event::Eof => break,
             _ => {}
         }
@@ -387,6 +453,17 @@ mod tests {
         assert_eq!(p.row_items[1].x, vec![1]);
         assert_eq!(p.row_items[3].t.as_deref(), Some("grand"));
         assert_eq!(p.col_items[1].i, 1);
+    }
+
+    #[test]
+    fn the_x14_extension_does_not_replace_the_root() {
+        let xml = r#"<pivotTableDefinition xmlns="m" name="P_X14" cacheId="1">
+            <location ref="A3:C11" firstHeaderRow="1" firstDataRow="1" firstDataCol="2"/>
+            <extLst><ext uri="{962EF5D1-5CA2-4c93-8EF4-DBF5C05439D2}" xmlns:x14="x14">
+            <x14:pivotTableDefinition fillDownLabelsDefault="1"/></ext></extLst>
+            </pivotTableDefinition>"#;
+        let p = parse_pivot(xml, "P", &mut usize::MAX.clone()).expect("parses");
+        assert_eq!((p.name.as_str(), p.location.as_str()), ("P_X14", "A3:C11"));
     }
 
     #[test]
@@ -426,6 +503,38 @@ mod tests {
                 Value::Number(3.0)
             ]
         );
+    }
+
+    #[test]
+    fn reads_shared_items_with_their_types_and_flags() {
+        // The shape Excel saves for a refreshed date field (T-4612): the listed `<n>` items, then
+        // the appended ones, and the `<sharedItems>` flags as written.
+        let xml = r#"<pivotCacheDefinition><cacheFields count="2">
+            <cacheField name="K"><sharedItems containsDate="1" minDate="2023-03-15T00:00:00">
+              <n v="45000"/><m/><d v="2023-03-15T00:00:00"/><s v="a&amp;b"/></sharedItems></cacheField>
+            <cacheField name="V"><sharedItems containsInteger="1"/></cacheField>
+            </cacheFields></pivotCacheDefinition>"#;
+        let fields = parse_cache_fields(xml, &mut usize::MAX.clone()).expect("parses");
+        let item = |t: &str, v: Option<&str>| PivotSharedItem {
+            t: t.into(),
+            v: v.map(Into::into),
+        };
+        assert_eq!(
+            fields[0].shared_items,
+            vec![
+                item("n", Some("45000")),
+                item("m", None),
+                item("d", Some("2023-03-15T00:00:00")),
+                item("s", Some("a&b")),
+            ]
+        );
+        assert_eq!(fields[0].shared_flags["containsDate"], "1");
+        assert_eq!(fields[0].shared_flags["minDate"], "2023-03-15T00:00:00");
+        assert!(fields[1].shared_items.is_empty());
+        assert_eq!(fields[1].shared_flags["containsInteger"], "1");
+        // Items and flags are charged against the budget too.
+        let cost = fields_cost(&fields);
+        assert!(parse_cache_fields(xml, &mut (cost / 2)).is_none());
     }
 
     #[test]
@@ -540,6 +649,8 @@ mod tests {
         let fields = vec![PivotCacheField {
             name: long,
             group_items: vec![Value::Text("abc".into())],
+            shared_items: Vec::new(),
+            shared_flags: BTreeMap::new(),
         }];
         assert_eq!(fields_cost(&fields), 1 + 100_000 + 1 + 3);
         // A budget the size of the engine's runs out after about a hundred copies, not thousands.

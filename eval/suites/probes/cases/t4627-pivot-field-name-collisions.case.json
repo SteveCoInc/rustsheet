@@ -1,0 +1,488 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4627: how Excel names pivot cache fields when a suffixed or Field<n> name meets a real header, when a header cell is empty, typed twice, whitespace or non-ASCII case variants, and how a record cell holding =\"\" is itemised. Each source sheet X has a pivot on sheet P_X (rows Region, Total = Sum of Sales); the sidecar's `pivots` cache_fields hold the names Excel saves on refresh (refreshOnLoad). SufA!A1:D1 Region, Sales, Sales2, =\"Sales\"; SufB Region, Sales, =\"Sales\", Sales2; FldA Region, Sales, Field4, =\"\"; FldB Region, Sales, X, =\"\", Field4; Off!B1:G1 Region, Sales, X, =\"\" (sheet column E, 4th source column), Y, Z; Empty!A1:E1 Region, Sales, X, an empty cell, Y; Const Region, Sales, Sales, SALES typed as constants (Empty and Const save other names through the builder's cache_names, so Excel must rename them); Space Region, Sales, =\" \", =\" \"&\"\", X; Fold!A1:G1 Region, Sales, é, =\"É\", ß, =\"SS\", =\"s\"&\"s\" with Region items é, É, ß, SS, ss, Straße, STRASSE and Sales 1..64; Rec Region a, =\"\", empty, =\"\", a with Sales 1, 2, 4, 8, 16. Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4627",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "SufA",
+   "cells": {
+    "A2": "East",
+    "A3": "West",
+    "B2": 1,
+    "B3": 10,
+    "C2": 2,
+    "C3": 20,
+    "D2": 3,
+    "D3": 30,
+    "A1": "Region",
+    "B1": "Sales",
+    "C1": "Sales2",
+    "D1": "=\"Sales\""
+   }
+  },
+  {
+   "name": "SufB",
+   "cells": {
+    "A2": "East",
+    "A3": "West",
+    "B2": 1,
+    "B3": 10,
+    "C2": 2,
+    "C3": 20,
+    "D2": 3,
+    "D3": 30,
+    "A1": "Region",
+    "B1": "Sales",
+    "C1": "=\"Sales\"",
+    "D1": "Sales2"
+   }
+  },
+  {
+   "name": "FldA",
+   "cells": {
+    "A2": "East",
+    "A3": "West",
+    "B2": 1,
+    "B3": 10,
+    "C2": 2,
+    "C3": 20,
+    "D2": 3,
+    "D3": 30,
+    "A1": "Region",
+    "B1": "Sales",
+    "C1": "Field4",
+    "D1": "=\"\""
+   }
+  },
+  {
+   "name": "FldB",
+   "cells": {
+    "A2": "East",
+    "A3": "West",
+    "B2": 1,
+    "B3": 10,
+    "C2": 2,
+    "C3": 20,
+    "D2": 3,
+    "D3": 30,
+    "E2": 4,
+    "E3": 40,
+    "A1": "Region",
+    "B1": "Sales",
+    "C1": "X",
+    "D1": "=\"\"",
+    "E1": "Field4"
+   }
+  },
+  {
+   "name": "Off",
+   "cells": {
+    "B2": "East",
+    "B3": "West",
+    "C2": 1,
+    "C3": 10,
+    "D2": 2,
+    "D3": 20,
+    "E2": 3,
+    "E3": 30,
+    "F2": 4,
+    "F3": 40,
+    "G2": 5,
+    "G3": 50,
+    "B1": "Region",
+    "C1": "Sales",
+    "D1": "X",
+    "E1": "=\"\"",
+    "F1": "Y",
+    "G1": "Z"
+   }
+  },
+  {
+   "name": "Empty",
+   "cells": {
+    "A2": "East",
+    "A3": "West",
+    "B2": 1,
+    "B3": 10,
+    "C2": 2,
+    "C3": 20,
+    "D2": 3,
+    "D3": 30,
+    "E2": 4,
+    "E3": 40,
+    "A1": "Region",
+    "B1": "Sales",
+    "C1": "X",
+    "E1": "Y"
+   }
+  },
+  {
+   "name": "Const",
+   "cells": {
+    "A2": "East",
+    "A3": "West",
+    "B2": 1,
+    "B3": 10,
+    "C2": 2,
+    "C3": 20,
+    "D2": 3,
+    "D3": 30,
+    "A1": "Region",
+    "B1": "Sales",
+    "C1": "Sales",
+    "D1": "SALES"
+   }
+  },
+  {
+   "name": "Space",
+   "cells": {
+    "A2": "East",
+    "A3": "West",
+    "B2": 1,
+    "B3": 10,
+    "C2": 2,
+    "C3": 20,
+    "D2": 3,
+    "D3": 30,
+    "E2": 4,
+    "E3": 40,
+    "A1": "Region",
+    "B1": "Sales",
+    "C1": "=\" \"",
+    "D1": "=\" \"&\"\"",
+    "E1": "X"
+   }
+  },
+  {
+   "name": "Fold",
+   "cells": {
+    "A1": "Region",
+    "B1": "Sales",
+    "C1": "é",
+    "D1": "=\"É\"",
+    "E1": "ß",
+    "F1": "=\"SS\"",
+    "G1": "=\"s\"&\"s\"",
+    "A2": "é",
+    "B2": 1,
+    "C2": 0,
+    "D2": 0,
+    "E2": 0,
+    "F2": 0,
+    "G2": 0,
+    "A3": "=\"É\"",
+    "B3": 2,
+    "C3": 1,
+    "D3": 1,
+    "E3": 1,
+    "F3": 1,
+    "G3": 1,
+    "A4": "ß",
+    "B4": 4,
+    "C4": 2,
+    "D4": 2,
+    "E4": 2,
+    "F4": 2,
+    "G4": 2,
+    "A5": "=\"SS\"",
+    "B5": 8,
+    "C5": 3,
+    "D5": 3,
+    "E5": 3,
+    "F5": 3,
+    "G5": 3,
+    "A6": "=\"ss\"",
+    "B6": 16,
+    "C6": 4,
+    "D6": 4,
+    "E6": 4,
+    "F6": 4,
+    "G6": 4,
+    "A7": "Straße",
+    "B7": 32,
+    "C7": 5,
+    "D7": 5,
+    "E7": 5,
+    "F7": 5,
+    "G7": 5,
+    "A8": "=\"STRASSE\"",
+    "B8": 64,
+    "C8": 6,
+    "D8": 6,
+    "E8": 6,
+    "F8": 6,
+    "G8": 6
+   }
+  },
+  {
+   "name": "Rec",
+   "cells": {
+    "A1": "Region",
+    "B1": "Sales",
+    "A2": "a",
+    "B2": 1,
+    "A3": "=\"\"",
+    "B3": 2,
+    "B4": 4,
+    "A5": "=\"\"",
+    "B5": 8,
+    "A6": "a",
+    "B6": 16
+   }
+  },
+  {
+   "name": "P_SufA",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PvSufA",
+     "source": "SufA!A1:D3",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "sum",
+        "name": "Total"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P_SufB",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PvSufB",
+     "source": "SufB!A1:D3",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "sum",
+        "name": "Total"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P_FldA",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PvFldA",
+     "source": "FldA!A1:D3",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "sum",
+        "name": "Total"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P_FldB",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PvFldB",
+     "source": "FldB!A1:E3",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "sum",
+        "name": "Total"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P_Off",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PvOff",
+     "source": "Off!B1:G3",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "sum",
+        "name": "Total"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P_Empty",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PvEmpty",
+     "source": "Empty!A1:E3",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "sum",
+        "name": "Total"
+       }
+      ],
+      "cache_names": [
+       "Region",
+       "Sales",
+       "X",
+       "Blank",
+       "Y"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P_Const",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PvConst",
+     "source": "Const!A1:D3",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "sum",
+        "name": "Total"
+       }
+      ],
+      "cache_names": [
+       "Region",
+       "Sales",
+       "Sales_b",
+       "Sales_c"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P_Space",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PvSpace",
+     "source": "Space!A1:E3",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "sum",
+        "name": "Total"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P_Fold",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PvFold",
+     "source": "Fold!A1:G8",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "sum",
+        "name": "Total"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P_Rec",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PvRec",
+     "source": "Rec!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "sum",
+        "name": "Total"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=SUM(SufA!B2:B3)"
+   }
+  }
+ ]
+}

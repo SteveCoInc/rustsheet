@@ -1,0 +1,28 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Prefix x- versus the value 0x020D...: non-x- tags that read the same value, and x- tags that wrap to numeral byte 13 (T-4356).",
+  "tags": [
+    "M10",
+    "probe",
+    "number-format",
+    "T-4356"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=TEXT(123,\"[$-1gdffc8]0\")",
+        "A2": "=TEXT(123,\"[$-1gd0000]0\")",
+        "A3": "=TEXT(123,\"[$-1gdabcd]0\")",
+        "A4": "=TEXT(123,\"[$-x-000000]0\")",
+        "A5": "=TEXT(123,\"[$-0d0000g0]0\")",
+        "A6": "=TEXT(123,\"[$-x-0000001]0\")",
+        "A7": "=TEXT(123,\"[$-x-000010]0\")",
+        "A8": "=TEXT(123,\"[$-1gd0001]0\")",
+        "A9": "=TEXT(123,\"[$-x-X]0\")",
+        "A10": "=TEXT(123,\"[$-X-000000]0\")",
+        "A11": "=TEXT(123,\"[$-x-00000g]0\")"
+      }
+    }
+  ]
+}

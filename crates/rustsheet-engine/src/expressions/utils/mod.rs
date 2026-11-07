@@ -467,7 +467,10 @@ pub(crate) fn name_needs_quoting(name: &str) -> bool {
         Some(c) if !(is_letter_name_start(c) || c == '_') => return true,
         Some(_) => {}
     }
-    if chars.any(|c| !(c.is_alphanumeric() || c == '_' || c == '.')) {
+    // A mark after the first character leaves the name unquoted: Excel's FORMULATEXT of a
+    // reference to sheet `a`+U+0301 or `x`+U+20DD, typed quoted, shows no quotes
+    // (probes/t4446-defined-name-characters A20, A22, excel-graph, T-4446).
+    if chars.any(|c| !(c.is_alphanumeric() || is_mark(c) || c == '_' || c == '.')) {
         return true;
     }
     if parse_reference_a1(name).is_some() {
@@ -607,7 +610,24 @@ pub(crate) fn defined_name_text(
 
 /// Quotes a string sheet name if it needs to
 /// NOTE: Invalid characters in a sheet name \, /, *, \[, \], :, ?
+///
+/// A sheet of another workbook, `[book]Sheet`, is left bare when `Sheet` needs no quotes and
+/// otherwise quoted whole: Excel writes `[1]Sort!$B:$C` and `'[1]XA Data Pull'!$J:$J` in the
+/// files it saves (corpus-bench 59932 and 52450, T-4140), and ADDRESS prints `[Book1]Sheet1!$A$1`
+/// (docs/excel-semantics/references.md). A 3-D span of that workbook's sheets, `[1]Uses:Defines`,
+/// follows a span of this workbook's (`sheet_span_text`): bare unless either end needs quotes,
+/// as the fixture Excel for the web opened holds it (fixtures/external-link-cached-3d-span;
+/// Excel's own saved form for it is unprobed).
 pub fn quote_name(name: &str) -> String {
+    if let Some((book, sheet)) = name.strip_prefix('[').and_then(|rest| rest.split_once(']')) {
+        let bare = match sheet.split_once(':') {
+            Some((first, last)) => !name_needs_quoting(first) && !name_needs_quoting(last),
+            None => !name_needs_quoting(sheet),
+        };
+        if !book.contains('[') && bare {
+            return name.to_string();
+        }
+    }
     if name_needs_quoting(name) {
         return format!("'{}'", name.replace('\'', "''"));
     };
@@ -676,5 +696,14 @@ mod tests {
 
         assert_eq!(quote_name("B1048576"), "'B1048576'");
         assert_eq!(quote_name("B1048577"), "B1048577");
+        // Another workbook's sheet: bare unless the sheet needs quotes, then quoted whole (T-4140).
+        assert_eq!(quote_name("[1]Sort"), "[1]Sort");
+        assert_eq!(quote_name("[1]XA Data Pull"), "'[1]XA Data Pull'");
+        assert_eq!(quote_name("[1]56737"), "'[1]56737'");
+        assert_eq!(quote_name("[1]O'B"), "'[1]O''B'");
+        assert_eq!(quote_name("[Book1.xlsx]Sheet1"), "[Book1.xlsx]Sheet1");
+        assert_eq!(quote_name("[1]Uses:Defines"), "[1]Uses:Defines");
+        assert_eq!(quote_name("[1]Uses:Q 4"), "'[1]Uses:Q 4'");
+        assert_eq!(quote_name("[[1]Sheet"), "'[[1]Sheet'");
     }
 }

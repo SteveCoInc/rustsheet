@@ -3,7 +3,7 @@ id: T-3736
 title: "A merge-train CI wait that times out keeps the running run instead of cancelling it with a retry push"
 milestone: M2
 lane: harness
-status: todo
+status: dropped
 priority: P1
 size: S
 tier: opus
@@ -38,3 +38,7 @@ progress, that run is not thrown away: a retry no longer cancels a run that woul
 ## Out of scope
 - The value of `CI_TIMEOUT` (decision 0242).
 - Shortening CI itself (T-3699 to T-3705).
+
+## Outcome
+Dropped 2026-11-07: the merge train it changes no longer exists. Decision 0247 moved merges to GitHub's merge queue, and
+decision 0252 deleted `scripts/merge_train.py` and its tooling, so there is nothing left to fix or measure.

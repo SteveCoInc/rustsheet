@@ -293,8 +293,18 @@ exactly the scalar criterion's result, in a 1x6 array for COUNTIF, SUMIF, SUMIFS
 (`""` the blank and the `""` cell, `"="` the blank only, `"<>"` all but the blank, and `0`, `"0"`, `"=0"` each the number 0 and the text "0"),
 SUMIF/SUMIFS 3, 1, 14, 12, 12, 12, AVERAGEIFS 1.5, 1, 14/3, 6, 6, 6, MAXIFS 2, 1, 8, 8, 8, 8
 (probes/criteria-tilde-blank-single-cell-edges Arr!D1:K8, excel-graph 2026-10-21, T-2235);
-for SUMIFS and SUMIF an error in the sum range is `#N/A` only at the criteria positions whose rows select it
-(`SUMIFS(E1:E3,A1:A3,{"a","b"})` with E1 = #N/A is #N/A, 5; AVERAGEIFS and MAXIFS probed only at position 1: `#N/A`);
+for SUMIFS, SUMIF, AVERAGEIFS, AVERAGEIF, MAXIFS and MINIFS an error in the sum (value) range is the result only at the criteria
+positions whose selected rows include it (which error wins when one position selects two different errors is unprobed)
+(`SUMIFS(E1:E3,A1:A3,{"a","b"})` with E1 = #N/A is #N/A, 5). With A1:A4 = a, b, a, c and E1:E4 = #N/A, 5, 7, #DIV/0!, AVERAGEIFS, AVERAGEIF,
+MAXIFS, MINIFS and SUMIFS give `{"a","b","c"}` -> #N/A, 5, #DIV/0!; `{"b";"c"}` -> 5, #DIV/0!; `{"c"}` -> #DIV/0! (ERROR.TYPE 7, 2);
+a second pair `B1:B4,">0"` (B = 1, 1, 0, 1) drops only row 3, so the error rows still select and the row gives #N/A, 5, #DIV/0!
+(probes/t4606-ifs-array-criterion-value-error, excel-graph 2026-11-06, T-4606; ours matches all 86 cells);
+with B = 0, 1, 1, 1 the pair `B1:B4,">0"` drops the error row 1 that the first criterion selects for "a", so over
+`{"a","b","c","z"}` AVERAGEIFS, MAXIFS, MINIFS and SUMIFS give 7, 5, #DIV/0!, then #DIV/0! (AVERAGEIFS) or 0 (the others) for "z";
+the error is the result only where a selected row still holds it (AVERAGEIF has no second pair, so it is not in this row). With a #NUM! value range N1:N4 = #NUM!, 5, 7, #NUM!
+the array criterion alone (no second pair) gives #NUM!, 5, #NUM!, then #DIV/0! (AVERAGEIFS, AVERAGEIF) or 0 (MAXIFS, MINIFS, SUMIFS) for "z", so the
+value-range error at "c" is #NUM!, not the no-numeric-match #DIV/0! (ERROR.TYPE 6 against 2)
+(probes/t4667-ifs-second-pair-and-num-value-error, excel-graph 2026-11-06, T-4667);
 `COUNTIFS(E1:E3,{"a","b"})` ignores it (0 at position 1). A `NA()`/non-range first argument with an array criterion
 (`COUNTIF(NA(),{"a","b"})`, `COUNTIFS(NA(),{"a"})`, `SUMIFS(NA(),...)`) made excel-graph reject the whole workbook as unsupported,
 so those cases are unprobed.
@@ -377,6 +387,18 @@ Status: VERIFIED
 Implemented in: `resize_to` in `crates/rustsheet-engine/src/functions/statistical/if_ifs.rs`
 Tasks: T-0214
 
+### AVERAGEIF's numeric-like criteria pick the same rows under a resized average_range
+Rule: with an average_range, AVERAGEIF matches its range exactly as without one, and averages the matched rows of the
+range resized from average_range's top-left cell. Over A1:A6 = 0, -1, 0.5, text "1", TRUE, 1 with D1:D6 = 10 to 60:
+`0`, `-1` and `0.5` each match their one number (10, 20, 30); the text criterion `"1"` matches the text "1" and the
+number 1 (50); `"0.5"` matches the number 0.5 (30); `TRUE` matches the TRUE cell only, not the number 1 (50); `FALSE`
+does not match the number 0 in A1 (`#DIV/0!` in every column of H7:M7, not 10). A literal and the same value in a criteria cell agree, and D1 and D1:E1 give what D1:D6
+gives (each resized to D1:D6).
+Evidence: probes/t4540-averageif-criteria-average-range H1:M7 (42 cells). Oracle: excel-graph, 2026-11-06 (T-4540).
+Status: VERIFIED
+Implemented in: `resize_to`, `apply_ifs` in `crates/rustsheet-engine/src/functions/statistical/if_ifs.rs`
+Tasks: T-4540
+
 ### SUMIF/AVERAGEIF resize clamps at the sheet edge; single-cell ranges are 1x1
 Rule: when the resized sum_range would run past XFD1048576 Excel clamps it to the sheet edge (no `#REF!`):
 `SUMIF(A1:B2,">0",XFD1)` sums XFD1:XFD2. After clamping, AVERAGEIF averages only the cells inside the clamped range (`AVERAGEIF(A1:B2,">0",XFD1048576)` = 30/1, not 30/4).
@@ -396,7 +418,7 @@ Tasks: T-0234
 ### Conditional-format Equal/NotEqual compare on 15 digits (no absolute epsilon)
 Rule: the engine's conditional-format "cell value equal to / not equal to" rules compare with the same 15-significant-digit rule as `=` and criteria equality (`cmp_excel_precision`), not an absolute `f64::EPSILON` tolerance, so tiny values never equal 0. NaN orders above every number and equals itself in `CalcResult`'s `Ord`; -0.0 equals 0.0.
 Tests: `test_equal_and_not_equal_use_15_digit_comparison`, `cmp_excel_precision_total_order_on_nan_and_signed_zero`; callers of `cmp_excel_precision` (e.g. `functions/criteria.rs`) now see NaN == NaN. Evidence: none direct. The Graph oracle cannot evaluate conditional formats, so the Excel behavior for tiny values is inferred from the 15-digit comparison rule.
-Status: UNVERIFIED (probe pending: T-1051)
+Status: UNVERIFIED (unprobeable: the Graph oracle cannot evaluate conditional formats, and desktop work is out of scope, decision 0266)
 Implemented in: `ValueOperator::Equal`/`NotEqual` in `crates/rustsheet-engine/src/conditional_formatting.rs`, `cmp_excel_precision` in `number_format.rs`
 Tasks: T-1033
 
@@ -434,11 +456,28 @@ headers Name, Qty, Price, Date; Qty 4, 10, 0, 2, 1, -4, 7, 5, so every record su
 - Field: 5, 0, -1, " Qty", "" and "Nope" are `#VALUE!`; 2.9 is column 2; "qty" matches the header; a header cell
   reference works. The plain-text, `=`, wildcard, escaped-wildcard (`a~**`), `<>`, `<>4`, date (`>45351`), OR-row and
   AND-column criteria all match ours.
-Evidence: the scratch suite of engineering.md "Engineering edge-pool smoke check (T-2249)" (excel-graph, 2026-10-22,
-deleted afterwards).
-Status: UNVERIFIED (probe pending: T-2422 commits the probe case; the cells that match are regenerated by the
-gen-m9 sweep, T-2258)
-Tasks: T-2249, T-2422, T-2258
+Evidence (the observations were first made in the scratch suite of engineering.md "Engineering edge-pool smoke check
+(T-2249)", excel-graph, 2026-10-22, deleted afterwards; each bullet below is now backed by committed excel-graph cells,
+all 1-based cells of Calc, oracle values read with `make eval-show`):
+- Unknown criteria header ignored: probes/db-computed-criteria-shapes AB17 (header "Zzz", condition 1: DSUM 15, all
+  records) and AB18 (DCOUNTA 6, all six records); probes/db-header-criteria-shapes AB44 (unmatched header over a blank condition,
+  DSUM 15). A text condition under an unknown header (">2", AB43) matches nothing, DSUM 0, which the entry's numeric
+  condition does not do. The Db!N1:N2 shape is also in gen-m9 (for example
+  `DCOUNTA(Db!A1:D12,DAY(7593),Db!N1:N2)` in gen-m9/f61a73cd9af21e6d).
+- Computed criterion: probes/db-computed-criteria-shapes AB25/AB26 (header "Zzz" over `=B2>2`: DSUM 12, DCOUNTA 4) and
+  AB23/AB24 (blank header over the same formula); the Db!O1:O2 shape is in gen-m9 (`DCOUNTA(Db!A1:D12,5,Db!O1:O2)` in gen-m9/88cabddc4935351c).
+- Header-only criteria range `#VALUE!`: probes/db-header-criteria-shapes AB2 (`DSUM(A1:E6,2,H1)`) and AB3 (two-cell
+  one-row block); a header over a blank row matches every record: AB45 (`P1:P2`, 15) and AB56 (`H1:H3`, trailing blank
+  row, 15); the twelve-function version is db-front-end-sweep (T-3650).
+- Header-only database `#VALUE!`: probes/db-header-criteria-shapes AB4 (`DSUM(A1:E1,2,H1:H2)`); without its header row
+  the first record is read as the headers: AB71 (`DSUM(A2:E6,2,H1:H2)` 0).
+- Field forms: probes/db-header-criteria-shapes AB58 (text "0.5" matches the 0.5 header, 120), AB59, AB60 (empty text
+  matches the blank header, 12000), AB61 (2.9 is column 2, 12), AB62 (0 is `#VALUE!`) and AB63 (past the last column
+  `#VALUE!`); the padded, negative and cell-reference forms and the "qty" case-insensitive match: db-front-end-sweep.
+- Trailing blank rows are not records (`DCOUNTA(Db!A1:D12,,Db!K1:K2)` 8): no committed cell. Every other function
+  ignores an all-blank record, and db-front-end-sweep cannot tell for DCOUNT/DCOUNTA either. Probe: T-4732.
+Status: VERIFIED for every bullet except "trailing blank rows are not records", which is UNVERIFIED (T-4732).
+Tasks: T-2249, T-2422, T-2258, T-4688, T-4732
 
 ## D-function front end across all twelve functions (VERIFIED, T-3650)
 Rule: the twelve D-functions (DAVERAGE, DCOUNT, DCOUNTA, DGET, DMAX, DMIN, DPRODUCT, DSTDEV, DSTDEVP, DSUM, DVAR,
@@ -531,9 +570,10 @@ match only themselves. These rules do not use the criteria matcher in functions/
 criteria and wildcard consumer uses (decision 0137).
 Excel: unknown. Excel saves a "text that contains" rule with a formula of its own, and if that formula is SEARCH-based,
 wildcards would apply. No probe exists: the Graph oracle cannot evaluate conditional formats, so the evidence needs
-desktop Excel (decision 0039, T-1075 item 20).
-Status: UNVERIFIED.
-Tasks: T-2910, T-1075
+desktop Excel, which is out of scope (decision 0266; decision 0039).
+Status: UNVERIFIED (unprobeable: the Graph oracle cannot evaluate conditional formats, and desktop work is out of
+scope, decision 0266).
+Tasks: T-2910
 
 ## Empty text in ABS and MONTH; fraction and numeric-text COUNTIFS criteria (VERIFIED, T-2870)
 Rule: `ABS("")`, `ABS(cell holding "")`, `MONTH("")` and `MONTH(cell holding "")` are `#VALUE!` (ERROR.TYPE 3). A

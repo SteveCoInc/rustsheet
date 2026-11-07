@@ -3,10 +3,14 @@
 //! column"; T-2957, T-2958), and one typed just right of a table grows it by a column (T-2968),
 //! as a constant does (T-3218); either typed just below it grows it by a row (T-3273).
 
+use crate::actions::displace_cf_formula_str;
 use crate::constants::{LAST_COLUMN, LAST_ROW};
+use crate::expressions::parser::stringify::{DisplaceData, Displacement};
 use crate::expressions::parser::{stringify::to_excel_string, Node};
 use crate::expressions::types::CellReferenceRC;
 use crate::expressions::utils::number_to_column;
+use crate::language::get_default_language;
+use crate::locale::get_default_locale;
 use crate::model::Model;
 use crate::table_edits::{append_column, bounds, Bounds};
 use crate::types::{Cell, Table};
@@ -441,6 +445,11 @@ impl Model {
     }
 }
 
+/// The most calculated-column cells one row insert fills ([`Model::refuse_oversized_column_fill`]):
+/// one whole column, 2^20 cells, as many as `limits::check_array_cells` allows in an
+/// array (directive 5; a DEVIATION, decision 0014).
+pub(crate) const MAX_INSERT_FILL_CELLS: u64 = 1 << 20;
+
 /// The calculated-column fill of one typed cell ([`Model::calculated_column_fill`]).
 pub(crate) struct ColumnFill {
     /// The table's name.
@@ -451,4 +460,241 @@ pub(crate) struct ColumnFill {
     first_row: i32,
     /// The other data rows of the column, (row, column): the cells the formula fills.
     targets: Vec<(i32, i32)>,
+}
+
+/// A calculated column's stored formula (`TableColumn::calculated_column_formula`) as a row or
+/// column insert or delete displaces it, in user form, before the tables follow the edit
+/// ([`Model::displaced_column_formulas`]).
+pub(crate) struct DisplacedColumnFormula {
+    /// The table's key in `Workbook::tables`.
+    table: String,
+    /// The column's `TableColumn::id`, which stays with the column through the edit.
+    id: u32,
+    /// The row the column's first data cell is on after the edit: the displaced text reads there.
+    /// It is no longer the first data row after a row insert at that row, which grows the table
+    /// above the cell (T-4692).
+    row: i32,
+    /// The displaced formula, without `=`, in the default locale.
+    text: String,
+}
+
+impl Model {
+    /// The stored formula of every calculated column, displaced by the row or column insert or
+    /// delete `displacement` as the formula of the column's first data cell is: Excel saves the
+    /// column formula the edit made of that cell's formula (xlsx-storage.md, "A calculated column
+    /// is saved as `calculatedColumnFormula` plus one formula per row"; T-4274
+    /// t4274-calc-column-*: `A2*2` is `B2*2` after a column insert at A and `A3*2` after a row
+    /// insert at 1, and stays `A2*2` after a row insert inside the data rows or a delete of a
+    /// column it does not read). A formula with a structured reference keeps its text: it names
+    /// columns, not cells (`T[[#This Row],[Col]]*2` stays so through a column insert at A, as in
+    /// Excel), and the displacement would lower its `#This Row` to the cell's area under a column
+    /// edit (T-3739). A `[` outside a structured reference (in a string) keeps the text too. A
+    /// column whose first data cell the edit deletes keeps its text (unprobed), as does every
+    /// column under any other kind of edit.
+    pub(crate) fn displaced_column_formulas(
+        &mut self,
+        displacement: Displacement,
+    ) -> Vec<DisplacedColumnFormula> {
+        let (sheet, row_edit, at, delta) = match *displacement.data {
+            DisplaceData::Row { sheet, row, delta } => (sheet, true, row, delta),
+            DisplaceData::Column {
+                sheet,
+                column,
+                delta,
+            } => (sheet, false, column, delta),
+            _ => return Vec::new(),
+        };
+        let deleted = |index: i32| delta < 0 && (at..at.saturating_sub(delta)).contains(&index);
+        let edited_sheet = self.workbook.worksheet(sheet).map(|w| w.get_name()).ok();
+        let (locale, language) = (self.locale, self.language);
+        self.parser.set_locale(get_default_locale());
+        self.parser.set_language(get_default_language());
+        let mut displaced = Vec::new();
+        for (name, table) in &self.workbook.tables {
+            let Some(b) = bounds(table) else {
+                continue;
+            };
+            let on_edited = edited_sheet
+                .as_deref()
+                .is_some_and(|s| table.is_on_sheet(s));
+            for (column, table_column) in (b.left..).zip(&table.columns) {
+                let Some(formula) = &table_column.calculated_column_formula else {
+                    continue;
+                };
+                if formula.contains('[')
+                    || on_edited && deleted(if row_edit { b.data.0 } else { column })
+                {
+                    continue;
+                }
+                let context = CellReferenceRC {
+                    sheet: table.sheet_name.clone(),
+                    row: b.data.0,
+                    column,
+                };
+                // A row edit above or at the first data cell moves it by `delta` (a delete of the
+                // cell itself is skipped above).
+                let moves = on_edited && row_edit && b.data.0 >= at;
+                displaced.push(DisplacedColumnFormula {
+                    table: name.clone(),
+                    id: table_column.id,
+                    row: if moves {
+                        b.data.0.saturating_add(delta)
+                    } else {
+                        b.data.0
+                    },
+                    text: displace_cf_formula_str(
+                        &mut self.parser,
+                        formula,
+                        &context,
+                        displacement,
+                    ),
+                });
+            }
+        }
+        self.parser.set_locale(locale);
+        self.parser.set_language(language);
+        displaced
+    }
+
+    /// Stores `displaced` ([`Model::displaced_column_formulas`]) in file form, read where the
+    /// column's first data cell moved and printed at the column's first data row after the tables
+    /// followed the edit, as the fill stores it (`T[[#This Row],[Col]]*2` stays so, as in Excel).
+    /// The two rows differ after a row insert at the first data row: `A2*2` stays `A2*2`, the
+    /// formula Excel fills into the inserted row and saves as `calculatedColumnFormula` (T-4692: the
+    /// cached `table1.xml` of probes/table-edits/t4692-insert-row-first-data).
+    pub(crate) fn set_displaced_column_formulas(&mut self, displaced: Vec<DisplacedColumnFormula>) {
+        let (locale, language) = (self.locale, self.language);
+        self.parser.set_locale(get_default_locale());
+        self.parser.set_language(get_default_language());
+        for DisplacedColumnFormula {
+            table,
+            id,
+            row,
+            text,
+        } in displaced
+        {
+            let Some(table) = self.workbook.tables.get_mut(&table) else {
+                continue;
+            };
+            let Some(b) = bounds(table) else {
+                continue;
+            };
+            let Some((column, table_column)) = (b.left..)
+                .zip(table.columns.iter_mut())
+                .find(|(_, c)| c.id == id)
+            else {
+                continue;
+            };
+            let moved = CellReferenceRC {
+                sheet: table.sheet_name.clone(),
+                row,
+                column,
+            };
+            let node = self.parser.parse(&text, &moved);
+            let first = CellReferenceRC {
+                row: b.data.0,
+                ..moved
+            };
+            table_column.calculated_column_formula = Some(to_excel_string(&node, &first));
+        }
+        self.parser.set_locale(locale);
+        self.parser.set_language(language);
+    }
+
+    /// Refuses a row insert of `count` rows at `row` on `sheet` that would fill more than
+    /// [`MAX_INSERT_FILL_CELLS`] calculated-column cells ([`Model::fill_inserted_data_rows`]),
+    /// before the insert changes anything (directive 5: one call must not write an unbounded
+    /// number of cells). Excel fills them all; the cap is a DEVIATION (decision 0014;
+    /// references.md "Rows inserted into a calculated column's table"). It counts every calculated
+    /// column of each table whose first data row to its last row (the totals row, if any) holds
+    /// `row`, the inserts that add data rows, so it may refuse a little early, never late.
+    pub(crate) fn refuse_oversized_column_fill(
+        &self,
+        sheet: u32,
+        row: i32,
+        count: i32,
+    ) -> Result<(), String> {
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        let columns: usize = (self.workbook.tables.values())
+            .filter(|table| table.is_on_sheet(&sheet_name))
+            .filter(|table| bounds(table).is_some_and(|b| b.data.0 <= row && row <= b.bottom))
+            .map(|table| {
+                (table.columns.iter())
+                    .filter(|c| c.calculated_column_formula.is_some())
+                    .count()
+            })
+            .sum();
+        let cells = u64::try_from(columns)
+            .unwrap_or(u64::MAX)
+            .saturating_mul(u64::try_from(count).unwrap_or(0));
+        if cells > MAX_INSERT_FILL_CELLS {
+            return Err(format!(
+                "Cannot insert rows because that would fill {cells} calculated-column cells (at most {MAX_INSERT_FILL_CELLS})"
+            ));
+        }
+        Ok(())
+    }
+
+    /// Writes each calculated column's formula into the rows `rows` (first, last) that a row
+    /// insert on `sheet` added to the data rows of the tables `grown` (their keys in
+    /// `Workbook::tables`), after the tables and their column formulas followed the insert, as
+    /// Excel fills them (T-4692: probes/table-edits/t4274-calc-column-insert-row-3, T on A1:C4
+    /// with `=A2*2` in C2, then `insert_row` 3: Excel's C3 holds `=A3*2`). The stored column
+    /// formula (`calculated_column_formula`, file form at the first data row) is filled down,
+    /// with each cell's own style, like [`Model::fill_calculated_column`]. A column whose stored
+    /// formula does not parse fills nothing (it can come from an untrusted file).
+    pub(crate) fn fill_inserted_data_rows(
+        &mut self,
+        sheet: u32,
+        (first, last): (i32, i32),
+        grown: &[String],
+    ) -> Result<(), String> {
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        let mut columns = Vec::new();
+        for name in grown {
+            let Some(table) = self.workbook.tables.get(name) else {
+                continue;
+            };
+            let Some(b) = bounds(table) else {
+                continue;
+            };
+            if !table.is_on_sheet(&sheet_name) || first < b.data.0 || last > b.data.1 {
+                continue;
+            }
+            for (column, table_column) in (b.left..).zip(&table.columns) {
+                if let Some(text) = &table_column.calculated_column_formula {
+                    columns.push((b.data.0, column, text.clone()));
+                }
+            }
+        }
+        if columns.is_empty() {
+            return Ok(());
+        }
+        let (locale, language) = (self.locale, self.language);
+        self.parser.set_locale(get_default_locale());
+        self.parser.set_language(get_default_language());
+        let nodes: Vec<(i32, Node)> = columns
+            .into_iter()
+            .map(|(row, column, text)| {
+                let context = CellReferenceRC {
+                    sheet: sheet_name.clone(),
+                    row,
+                    column,
+                };
+                (column, self.parser.parse(&text, &context))
+            })
+            .filter(|(_, node)| !matches!(node, Node::ParseErrorKind { .. }))
+            .collect();
+        self.parser.set_locale(locale);
+        self.parser.set_language(language);
+        for (column, node) in nodes {
+            // The parsed formula is relative to its cell, so one shared formula fills every row.
+            let formula_index = self.shared_formula_index(sheet, node)?;
+            for row in first..=last {
+                let style = self.formula_style_index(sheet, row, column)?;
+                self.set_formula_index_with_units(sheet, row, column, formula_index, style)?;
+            }
+        }
+        Ok(())
+    }
 }

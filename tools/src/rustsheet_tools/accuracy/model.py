@@ -26,6 +26,11 @@ MathArg: TypeAlias = (
 number text's parsed parts (an `mpc` of the two exact doubles), a fixed-list text itself, an array
 literal's elements, or a matrix literal's rows."""
 
+NON_REAL = (bool, str, tuple, mpmath.mpc)
+"""The `MathArg` members that are not a real (a logical, a text, an array or matrix, a complex number's parts): the one
+`isinstance` tuple that narrows an argument to a real (`defs/_common.is_real` and `real_arg`), so a new `MathArg`
+member is added here only (T-4592)."""
+
 
 class Unfit(str):
     """Why an eval cell's argument does not fit its parameter (`eval_math.fit_arg`): a reason, told
@@ -186,7 +191,10 @@ class Definition:
     (BETA.DIST's and BETA.INV's bounds, RATE's guess; T-3923): `params_for` accepts them after
     `params`, and `value` receives them when the call gives them. `rescaled_param` names the parameter
     they rescale (BETA.DIST's x, which [A, B] moves off [0, 1]): when a call gives call parameters,
-    that parameter's interval is not checked, and `domain` checks it instead."""
+    that parameter's interval is not checked, and `domain` checks it instead. `aimed` draws a whole
+    point inside one region the strata miss; only `generate --stratum aimed` reaches it, so the
+    default split, and every committed batch, stays as drawn (an `r4-*` sweep of a fix's region,
+    T-4059)."""
 
     function: str
     params: tuple[Param, ...]
@@ -203,6 +211,7 @@ class Definition:
     literal_arrays: bool = False
     call_params: tuple[Param, ...] = ()
     rescaled_param: str | None = None
+    aimed: Callable[[random.Random], list[Arg]] | None = None
 
     def __post_init__(self) -> None:
         if self.call_params and self.variadic:
@@ -251,9 +260,7 @@ class Definition:
             if isinstance(a, mpmath.mpc):  # a complex number's parts each take the parameter's interval
                 parts = [a.real, a.imag]
             elif (
-                p.kind in ("bool", "array", "matrix", "text")
-                or isinstance(a, (bool, str, tuple))
-                or p.name == rescaled
+                p.kind in ("bool", "array", "matrix", "text") or isinstance(a, NON_REAL) or p.name == rescaled
             ):
                 # an array's or a matrix's rules, a list text's and a rescaled parameter's are the definition's `domain`
                 continue
