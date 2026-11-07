@@ -1306,10 +1306,10 @@ Rule: Excel for the web refuses to open a workbook (createSession 501 `FileCorru
 `unsupportedWorkbook`) if a pivot has any of the following:
 - a pivotField with `dataSourceSort="1"`;
 - an item with `d="1"`;
-- an item with `f="1"` and no `calculatedItems`.
-- a dataField whose `baseItem` is past its base field's last item, that is not (previous) or
-  (next). A `percent` dataField with `baseItem="9"` on a two-item Product field was refused (T-4161 run,
-  excel-graph, 2026-11-07).
+- an item with `f="1"` and no `calculatedItems`;
+- a `percent` dataField with `baseItem="9"` on a two-item field (Product), past its last item (T-4161
+  run, excel-graph, 2026-11-07). That every `baseItem` past the field's last item other than (previous)
+  and (next) is refused is UNVERIFIED (probe pending: T-4750).
 
 `allDrilled="1"` and `defaultAttributeDrillState="1"` on the same field open.
 Evidence: T-4129 runs (excel-graph, 2026-11-06), one pivot per flag, bisected from the FA sheet of
@@ -1343,7 +1343,8 @@ columns Year, and Sum of Sales. The data are East A 10/4, B 5/8, C 3/– and Wes
   empty.
 - **percentOfParentRow** (PPR): each value is divided by its parent row item. For East and West the
   parent is the grand total row: East/2024 is 18/38. The Grand Total row is 1.
-- **percentOfParentCol** (PPC): with one column field it equals percentOfRow.
+- **percentOfParentCol** (PPC): with one column field it equals percentOfRow (except a row total of 0,
+  which is empty; see T-4161).
 - **percentOfRunningTotal** in Product (PRT): this is the running total divided by the Region total.
   Subtotal and Grand Total rows are empty.
 - **rankAscending and rankDescending** in Product (RA, RD): each column is ranked within its Region,
@@ -1356,7 +1357,8 @@ Status: VERIFIED (excel-graph) for these shapes. Ties, division by zero, a missi
 and the other base fields are in the next entry (T-4161). The engine is T-4163.
 
 ## Show-values-as edge cases (T-4161)
-This extends the entry above, mode by mode. Every pivot below has rows Region (outer) and Product, columns
+Rule: each mode's base items, ties, running totals, subtotal and grand-total cells and division by
+zero render as listed below, per mode. This extends the entry above, mode by mode. Every pivot below has rows Region (outer) and Product, columns
 Year, and Sum of Sales, unless it says otherwise. The cases are probes/t4161-pivot-show-as-base-items (BI),
 -running-rank (RR), -zeros (Z), -edges (E), -running-zero (RZ) and -nested-parent (NP), all excel-graph,
 2026-11-07, T-4161. Each case's description lists its data. "Empty" means an empty cell.
@@ -1418,10 +1420,11 @@ is 0 (Z PD A). The other cells follow percent's rules (`#NULL!`, empty, `#DIV/0!
 **percentOfRunningTotal (% running total in).**
 - The running total is divided by the run's total, which is its last value. The last item of the run
   is therefore 1, an empty intersection included (RR PTR West/C/2024).
-  - Under the outer Region, the run's total is the Grand Total row: RR PTR East in 2024 is 13/40.
+  - Under the outer Region, the run's total is the same inner item's total over all Regions (for the
+    subtotal rows, the Grand Total row): RR PTR East/A/2024 is 5/25 and East in 2024 is 13/40.
   - Under Year, it is the row's Grand Total (RR PTY).
-- **Over a total of 0, a cell whose own value is 0 or empty is empty, and any other cell is
-  `#DIV/0!`.** RZ PRY: East/A (-4, then 4) is `#DIV/0!` in both years, while East/B (0, 0) is empty. In
+- **Over a total of 0, a cell whose own value is 0 is empty, and a cell with a nonzero value is
+  `#DIV/0!`.** What an empty value over a total of 0 shows is UNVERIFIED (probe pending: T-4750). RZ PRY: East/A (-4, then 4) is `#DIV/0!` in both years, while East/B (0, 0) is empty. In
   E PRY's Grand Total row, 2023 (value 0) is empty, while 2024 (3) and 2025 (-3, running total 0) are
   `#DIV/0!`. In Z PRT and in RZ PRP's Grand Total column, a total of 0 over 0s is empty.
 
@@ -1478,6 +1481,8 @@ Status: VERIFIED (excel-graph) for these shapes: one data field, Values not on a
 visible, and items in cache order. These are UNVERIFIED (probe pending: T-4750):
 - (previous) and (next) over hidden items or a custom sort;
 - percent or percentDiff where the value is empty and the base is 0;
+- percentOfRunningTotal where the value is empty and the total is 0;
+- whether every `baseItem` past the field's last item is refused, beyond the one probed;
 - two data fields, or Values on rows.
 
 The engine is T-4163.

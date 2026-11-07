@@ -37,7 +37,7 @@ edge cases (T-4161)" extends T-4129's entry mode by mode. Main findings:
 - Division by zero is `#DIV/0!` for percent, percentDiff, the % of row/column/total modes and index. It is
   an empty cell for the % of parent modes. Under % running total it is empty only where the cell's own
   value is 0.
-- A `baseItem` past the end of its field makes Excel for the web refuse the file (recorded in "Pivot flags
+- `baseItem` 9 on a two-item field makes Excel for the web refuse the file (recorded in "Pivot flags
   Excel for the web refuses").
 
 Still open, UNVERIFIED and owned by T-4750:
