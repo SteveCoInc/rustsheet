@@ -190,15 +190,20 @@ impl Model {
     /// Converts text to a number using the given separators. Every argument lifts over an array
     /// and a range (probes/t2198-m5-lift-argument-kinds rows 25-27 and 35).
     pub(crate) fn fn_numbervalue(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        // A written-empty separator, or a LET name bound to nothing, takes the default as an
+        // omitted one does; a blank cell or "" is still #VALUE! (probes/t4874-numbervalue-empty-
+        // separator; docs/excel-semantics/text.md, T-4874).
+        let omitted: Vec<bool> = args.iter().map(|a| self.is_omitted_argument(a)).collect();
         self.lift_call(Function::Numbervalue, args, cell, &mut |model, values| {
-            number_or_error(model.numbervalue_of(values, cell))
+            number_or_error(model.numbervalue_of(values, &omitted, cell))
         })
     }
 
-    /// One NUMBERVALUE element.
+    /// One NUMBERVALUE element; `omitted[i]` when argument `i` is written empty.
     fn numbervalue_of(
         &self,
         values: &[CalcResult],
+        omitted: &[bool],
         cell: CellReferenceIndex,
     ) -> Result<f64, CalcResult> {
         let Some(text) = values.first() else {
@@ -206,10 +211,12 @@ impl Model {
         };
         let text = Self::cast_string_ref(text, cell)?;
         let separator = |i: usize, default: &str| -> Result<String, CalcResult> {
-            values.get(i).map_or_else(
-                || Ok(default.to_string()),
-                |v| Self::cast_string_ref(v, cell),
-            )
+            match values.get(i) {
+                Some(v) if !omitted.get(i).copied().unwrap_or(false) => {
+                    Self::cast_string_ref(v, cell)
+                }
+                _ => Ok(default.to_string()),
+            }
         };
         let decimal_sep = separator(1, ".")?;
         // The omitted group separator is "." when the decimal separator starts with ",", else ",":

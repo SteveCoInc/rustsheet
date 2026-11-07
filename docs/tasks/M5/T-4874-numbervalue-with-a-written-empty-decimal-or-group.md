@@ -48,3 +48,16 @@ the fill.
 ## Out of scope
 - The legacy text functions (SUBSTITUTE, FIND, SEARCH, LEFT, RIGHT, MID, REPT, FIXED, DOLLAR), which read an empty
   argument as 0 today; a follow-up probe only if this one shows the rule reaches them.
+
+## Predictions (engine, committed before the oracle fill)
+probes/t4874-numbervalue-empty-separator, sheet Calc, with a written-empty argument read as omitted:
+
+| row | B | C | D | E | F | G | H | I | J | K | L |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1.5 | 1.5 | 1.5 | 1.5 | #VALUE! | 15.0 | 15.0 | #VALUE! | #VALUE! | #VALUE! | #VALUE! |
+| 2 | 1234.5 | 1234.5 | 1234.5 | 1234.5 | #VALUE! | #VALUE! | #VALUE! | #VALUE! | #VALUE! | #VALUE! | #VALUE! |
+| 3 | #VALUE! | #VALUE! | #VALUE! | #VALUE! | #VALUE! | 1234.5 | 1234.5 | #VALUE! | #VALUE! | #VALUE! | #VALUE! |
+| 4 | 25.0 | 25.0 | 25.0 | 25.0 | #VALUE! | 2.5 | 2.5 | #VALUE! | #VALUE! | #VALUE! | #VALUE! |
+| 5 | 0.5 | 0.5 | 0.5 | 0.5 | #VALUE! | 0.5 | 0.5 | #VALUE! | #VALUE! | #VALUE! | #VALUE! |
+| 6 | 0.0625 | 0.0625 | 0.0625 | 0.0625 | #VALUE! | 0.0625 | 0.0625 | #VALUE! | #VALUE! | #VALUE! | #VALUE! |
+| 8 | 1.5 | 1234.5 | 1234.5 |  |  |  |  |  |  |  |  |
