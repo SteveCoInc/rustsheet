@@ -3,7 +3,7 @@ id: T-1942
 title: "Probe Z.TEST where sigma/sqrt(n) underflows or the data sum overflows"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
