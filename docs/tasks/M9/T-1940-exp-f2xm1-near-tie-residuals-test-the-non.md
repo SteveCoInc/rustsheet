@@ -8,6 +8,7 @@ priority: P3
 size: S
 tier: opus
 depends_on: [T-1931]
+defer: phase-1b
 ---
 
 ## Goal
@@ -22,6 +23,10 @@ model, or stay documented residuals.
   cells of `kmyst-erfc-r5expmap1/2`, each a 1 ulp miss (engine minus Excel +1 ulp at 47, -1 ulp at 40).
 - The T-1916 re-fill changed 9 of its 20 ERFC near-tie cells to the engine's value, while the T-1931 re-fill
   (2026-10-19) returned all 87 EXP cells unchanged: the CPU-dependence hypothesis (an AMD Zen F2XM1) is untested.
+- T-0975 adds one EXP residual that is not a near-tie: at a = -643.5078125 (the density at z = -35.875,
+  probes-numeric m9-normpdf-norm-s-dist and m9-normpdf-phi Calc!A18, `NORM.S.DIST(-35.875,FALSE)` = Excel
+  1.3459162462827747E-280) Excel's density is K times one ulp under V6's EXP (3.3737117182176244E-280), while
+  2^|f| - 1 there lies 0.09 ulp from a 64-bit value, far from a midpoint. Explain it with the near-ties, or record it.
 - The T-1778 round-8 notes describe a hardware test (`hwtest.c`) for a non-Intel F2XM1.
 
 ## Acceptance criteria
@@ -32,3 +37,6 @@ model, or stay documented residuals.
 
 ## Out of scope
 - Changing EXP away from model V6 elsewhere.
+
+## Deferred (decision 0114)
+`defer: phase-1b`: the cells this task owns are already within 15 significant digits of Excel, so it waits until Phase 1 exits. Remove the key only when the steward records the Phase 1 exit, or when an eval shows one of its cells visibly off (then give it a `campaign:` stage instead).

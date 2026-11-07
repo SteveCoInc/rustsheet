@@ -11,7 +11,9 @@ mod workday;
 mod yearfrac;
 use weekend::WeekendPattern;
 
-use crate::formatter::date_clock::{parse_date_clock_serial, SECONDS_PER_DAY_F64};
+use crate::formatter::date_clock::{
+    parse_date_clock_serial, parse_letter_period_serial_in, trim_spaces, SECONDS_PER_DAY_F64,
+};
 
 pub(crate) fn is_leap_year(year: i32) -> bool {
     (year % 4 == 0) && (year % 100 != 0 || year % 400 == 0)
@@ -21,7 +23,7 @@ pub(crate) fn is_leap_year(year: i32) -> bool {
 /// 29th (serial 60): DAYS360 counts 1900-02-29 as February's last day (`DAYS360(60,1)` = -59) and
 /// DATEDIF "MD" borrows 29 days from it (`DATEDIF(59,61,"MD")` = 2; probes/dates-early-1900-displayed,
 /// dates.md "Serials below 61 in DATEDIF, EDATE, DAYS360, WEEKNUM and YEARFRAC").
-fn displayed_month_length(year: i32, month: u32) -> u32 {
+pub(crate) fn displayed_month_length(year: i32, month: u32) -> u32 {
     match month {
         2 if year == 1900 || is_leap_year(year) => 29,
         2 => 28,
@@ -57,7 +59,7 @@ fn datedif_month_days(start: (i32, u32, u32), end: (i32, u32, u32)) -> i64 {
     days + i64::from(displayed_month_length(year, month))
 }
 
-// The date serial of a raw argument (DAYS360, HOUR/MINUTE/SECOND's bound), rounding the
+// The date serial of a raw argument (DAYS360), rounding the
 // time-of-day to the nearest second first: Excel rolls 46000.999999 up to 46001.
 fn days360_serial(raw: f64) -> i64 {
     ((raw * SECONDS_PER_DAY_F64).round() / SECONDS_PER_DAY_F64).floor() as i64
@@ -131,45 +133,22 @@ fn is_feb29_between_consecutive_years(start: chrono::NaiveDate, end: chrono::Nai
     }
 }
 
-/// A DATE or TIME argument as Excel reads it: [`near_integer_floor`] with the shared
-/// [`NEAR_INTEGER_TOLERANCE`], half of it for a negative value, in the argument's own unit, so
-/// `TIME(1-2^-22,0,0)` is 1:00, `TIME(1,0,-1E-7)` 1:00 and `DATE(1983,12,-1E-15)` day 0.
-// Excel: docs/excel-semantics/dates.md "TIME: an argument past 32767 is `#NUM!`" and "DATE: a
-// year, month or day just below an integer" (probes/time-argument-*, date-argument-window; T-2267,
-// T-2268): the positive edge lies in (2^-22+1E-12, 2.4E-7), the negative one in
-// (2^-23+1E-12, 1.2E-7), the same for every argument of both and at every magnitude probed.
-fn date_time_whole(value: f64) -> f64 {
-    let tolerance = if value < 0.0 {
-        NEAR_INTEGER_TOLERANCE / 2.0
-    } else {
-        NEAR_INTEGER_TOLERANCE
-    };
-    near_integer_floor(value, tolerance)
-}
-
-/// One TIME argument: [`date_time_whole`], then `#NUM!` outside -32768..=32767.
+/// One TIME argument: [`near_integer_whole`], then `#NUM!` above 32767. A whole value below -32768
+/// wraps by 65536 into -32768..=32767 (`TIME(600,-32769,0)` is `TIME(600,32767,0)`), and one below
+/// -2^31 reads as 0, the way a clamp to the 32-bit minimum -2^31 (a multiple of 65536) would.
+/// Excel: dates.md "TIME: an argument past 32767 is `#NUM!`" (probes/t3678-time-argument-far-negative,
+/// probes/t3983-time-argument-below-131072; T-3983).
 fn time_argument(value: f64) -> Result<f64, Error> {
-    let whole = date_time_whole(value);
-    if (-32768.0..=32767.0).contains(&whole) {
-        Ok(whole)
-    } else {
+    let whole = near_integer_whole(value);
+    if whole > 32767.0 {
         Err(Error::NUM)
+    } else if whole < -2_147_483_648.0 {
+        Ok(0.0)
+    } else if whole < -32768.0 {
+        Ok((whole + 32768.0).rem_euclid(65536.0) - 32768.0)
+    } else {
+        Ok(whole)
     }
-}
-
-/// The hour, minute and second of a serial's time of day, as HOUR, MINUTE and SECOND take it
-/// apart. Half a second is added to the serial, then its fraction of a day is split by floors,
-/// through hours (x24) and minutes (x60), each step in double precision. So the time rounds to the
-/// nearest second and carries into the minute, the hour and past midnight (23:59:59.6 is hour 0),
-/// and an exact half goes whichever way the serial's binary noise takes it: `SECOND(0.5+2.5/86400)`
-/// is 2, `SECOND(0.5+3.5/86400)` 4. Excel: docs/excel-semantics/dates.md "HOUR, MINUTE and SECOND
-/// round to the nearest second" (probes/second-rounding, all 40 cells; T-1408).
-fn time_of_day_parts(v: f64) -> [f64; 3] {
-    let hours = (v + 0.5 / SECONDS_PER_DAY_F64).rem_euclid(1.0) * 24.0;
-    let hour = hours.floor();
-    let minutes = (hours - hour) * 60.0;
-    let minute = minutes.floor();
-    [hour, minute, ((minutes - minute) * 60.0).floor()]
 }
 
 use crate::cast::{calc_result_to_string, number_text_too_long};
@@ -179,8 +158,9 @@ use crate::expressions::types::CellReferenceIndex;
 use crate::formatter::date_text::parse_date;
 use crate::formatter::dates::date_month_and_day;
 use crate::formatter::dates::permissive_date_to_serial_number;
+use crate::formatter::dates::{carried_day, time_of_day_parts};
 use crate::functions::lift::{num_error, number_result, value_error};
-use crate::functions::util::{near_integer_floor, NEAR_INTEGER_TOLERANCE};
+use crate::functions::util::near_integer::near_integer_whole;
 use crate::functions::Function;
 use crate::number_format::parse_excel_number;
 use crate::types::DateSystem;
@@ -194,7 +174,7 @@ use crate::{
 
 /// The error kind of a failed argument evaluation. A non-error result is #VALUE! on purpose: the
 /// callers only pass the `Err` of a coercion, which is always an error.
-fn error_kind(result: &CalcResult) -> Error {
+pub(crate) fn error_kind(result: &CalcResult) -> Error {
     match result {
         CalcResult::Error { error, .. } => error.clone(),
         _ => Error::VALUE,
@@ -216,25 +196,36 @@ impl Model {
     /// (probes/date-text-grammar B53: `DATEVALUE("1/2/2020 25:00")` is 43833, 3 Jan), with
     /// year-less text in [`Model::current_year`]. Excel: see docs/excel-semantics/dates.md.
     pub(crate) fn parse_datevalue_text(&self, value: &str) -> Option<i32> {
-        let (text, year) = (value.trim(), &|| self.current_year());
+        // Only the space character is trimmed: a tab, line break, no-break or ideographic space
+        // around the text is #VALUE!, as in VALUE (probes/date-text-shape-survey rows 84-88, 91).
+        let (text, year) = (trim_spaces(value), &|| self.current_year());
+        let date_system = self.workbook.settings.date_system;
         let serial = if let Ok((serial, _)) = parse_date(text, self.locale, year) {
             serial
         } else {
-            let serial = parse_date_clock_serial(text, self.locale, year)?.floor();
-            if !(f64::from(MINIMUM_DATE_SERIAL_NUMBER)..=f64::from(MAXIMUM_DATE_SERIAL_NUMBER))
-                .contains(&serial)
+            // `N A. F/D/Y` text is read in the workbook's system and its day mapped back to the
+            // 1900 count, so the shift below restores it: in a 1904 workbook `DATEVALUE("10 A. 5")`
+            // is 49710, the no-date form's day 0 unshifted (probes/t3920-typed-a-period-1904 G1).
+            // Its day is not range-checked: `DATEVALUE("10 A. 5:30")` is 2982616, past 9999-12-31
+            // (probes/t3957-letter-period-colon-tail G1, G13:G18, G23, G24; t3948-letter-period-gate-edges G10).
+            if let Some(serial) =
+                parse_letter_period_serial_in(text, self.locale, year, date_system)
             {
-                return None;
+                let day = date_system.to_1900_serial(serial.floor() as i64)?;
+                i32::try_from(day).ok()?
+            } else {
+                let serial = parse_date_clock_serial(text, self.locale, year)?.floor();
+                if !(f64::from(MINIMUM_DATE_SERIAL_NUMBER)..=f64::from(MAXIMUM_DATE_SERIAL_NUMBER))
+                    .contains(&serial)
+                {
+                    return None;
+                }
+                serial as i32
             }
-            serial as i32
         };
         // The parsers count from the 1900 epoch; a 1904 workbook counts from 1904-01-01
         // (`DATEVALUE("1904-01-02")` is 1, probes/date-system-1904-negatives A12).
-        let serial = self
-            .workbook
-            .settings
-            .date_system
-            .serial_from_1900_serial(i64::from(serial))?;
+        let serial = date_system.serial_from_1900_serial(i64::from(serial))?;
         i32::try_from(serial).ok()
     }
 
@@ -249,8 +240,12 @@ impl Model {
     ) -> CalcResult {
         let date_system = self.workbook.settings.date_system;
         self.numbers_fn(kind, args, [0.0], cell, |[serial]| {
+            let day = carried_day(serial);
+            if day > f64::from(MAXIMUM_DATE_SERIAL_NUMBER) {
+                return Err(Error::NUM);
+            }
             date_system
-                .to_1900_serial(serial.floor() as i64)
+                .to_1900_serial(day as i64)
                 .and_then(excel_serial_to_ymd)
                 .map(part)
                 .ok_or(Error::NUM)
@@ -275,7 +270,7 @@ impl Model {
     pub(crate) fn fn_date(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         let date_system = self.workbook.settings.date_system;
         self.numbers_fn(Function::Date, args, [0.0; 3], cell, |[year, month, day]| {
-            let [year, month, day] = [year, month, day].map(date_time_whole);
+            let [year, month, day] = [year, month, day].map(near_integer_whole);
             let mut year = year as i32;
             if year < 0 {
                 return Err(Error::NUM);
@@ -522,7 +517,7 @@ impl Model {
     ) -> CalcResult {
         self.numbers_fn(kind, args, [0.0], cell, |[value]| {
             let last = i64::from(MAXIMUM_DATE_SERIAL_NUMBER);
-            if !(value >= 0.0 && days360_serial(value) <= last) {
+            if !(value >= 0.0 && carried_day(value) <= last as f64) {
                 return Err(Error::NUM);
             }
             Ok(part(value))
@@ -566,6 +561,7 @@ impl Model {
             &mut |model, values| match values {
                 [CalcResult::String(s)] => model
                     .parse_datevalue_text(s)
+                    .or_else(|| time_text::parse_bare_clock_days(s))
                     .map(|serial| ArrayNode::Number(f64::from(serial)))
                     .ok_or(Error::VALUE),
                 [CalcResult::Error { error, .. }] => Err(error.clone()),
@@ -648,18 +644,26 @@ impl Model {
         end_serial: f64,
         unit: Result<&str, Error>,
     ) -> Result<f64, Error> {
-        let (start_serial, end_serial) = (start_serial.floor() as i64, end_serial.floor() as i64);
         // A unit error beats a reversed pair and an out-of-calendar date: `DATEDIF(10,5,NA())` and
         // `DATEDIF(3000000,5,NA())` are #N/A (probes/datedif-days360-error-order A1, A16; dates.md
         // "DATEDIF argument errors before date checks").
         let unit = unit?;
-        if end_serial < start_serial {
+        let (start_floor, end_floor) = (start_serial.floor() as i64, end_serial.floor() as i64);
+        if end_floor < start_floor {
             return Err(Error::NUM);
         }
-        let start_1900 = date_system.to_1900_serial(start_serial).ok_or(Error::NUM)?;
+        // "D" and the reversed-pair check above floor the serials, while the calendar units read the
+        // day YEAR, MONTH and DAY see, with its half-second carry: `DATEDIF(60-0.4/86400,425,"M")` is
+        // 11, from the fictitious 1900-02-29, while its "D" is 366, from 1900-02-28. The carried
+        // dates are what must lie in the calendar, for "D" too: `DATEDIF(1,2958466-0.4/86400,"D")` is
+        // #NUM! (probes/t4574-feb29-near-midnight-date-args; dates.md "DATEDIF's calendar units
+        // carry half a second", T-4574).
+        let start_1900 = date_system
+            .to_1900_serial(carried_day(start_serial) as i64)
+            .ok_or(Error::NUM)?;
         let start = excel_serial_to_ymd(start_1900).ok_or(Error::NUM)?;
         let end = date_system
-            .to_1900_serial(end_serial)
+            .to_1900_serial(carried_day(end_serial) as i64)
             .and_then(excel_serial_to_ymd)
             .ok_or(Error::NUM)?;
         // The units are ASCII, so an ASCII case-blind match is the upper-casing it replaces.
@@ -670,7 +674,7 @@ impl Model {
         match unit {
             "Y" => Ok(f64::from(datedif_months(start, end).div_euclid(12))),
             "M" => Ok(f64::from(datedif_months(start, end))),
-            "D" => Ok((end_serial - start_serial) as f64),
+            "D" => Ok((end_floor - start_floor) as f64),
             "YM" => Ok(f64::from(datedif_months(start, end).rem_euclid(12))),
             "YD" => {
                 // The start moved on by the "YM" months in its own year (DATE's day overflow, so
@@ -695,16 +699,36 @@ impl Model {
 
     pub(crate) fn fn_days(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         // Lifts over a range or array in both arguments (probes/date-argument-modes F11:F14).
-        self.numbers_fn(Function::Days, args, [0.0; 2], cell, |[end, start]| {
-            let (end_serial, start_serial) = (end.floor() as i64, start.floor() as i64);
+        // Error order: an error-valued argument first (leftmost), then #NUM! for a readable
+        // argument off the calendar, then #VALUE! for unreadable text (gen-m6/a4a301d00b46acf3
+        // A79, A241, A493; dates.md "DAYS error order", T-3536).
+        self.lift_call(Function::Days, args, cell, &mut |model, values| {
+            let read = [0, 1].map(|i| model.kernel_number_or(values.get(i), 0.0, cell));
+            let given_error =
+                (0..2).find(|&i| matches!(values.get(i), Some(CalcResult::Error { .. })));
+            if let Some(i) = given_error {
+                if let Err(error) = &read[i] {
+                    return error.clone();
+                }
+            }
             // Excel accepts any serial in 0..=MAXIMUM (a 0 serial is 1900-01-00) and
             // reports #NUM! otherwise. DAYS works directly on serials, so the dates
             // themselves are never materialised.
             let range = 0..=MAXIMUM_DATE_SERIAL_NUMBER as i64;
-            if !range.contains(&start_serial) || !range.contains(&end_serial) {
-                return Err(Error::NUM);
+            let [end, start] = read;
+            // Then the arguments left to right: unreadable text is #VALUE!, a number off the
+            // calendar #NUM! (`DAYS(-1,"abc")` #NUM!, `DAYS("abc",-1)` #VALUE!).
+            let mut serials = [0_i64; 2];
+            for (slot, arg) in serials.iter_mut().zip([end, start]) {
+                match arg {
+                    Err(error) => return error,
+                    Ok(n) if !range.contains(&(n.floor() as i64)) => {
+                        return CalcResult::new_error(Error::NUM, cell, String::new());
+                    }
+                    Ok(n) => *slot = n.floor() as i64,
+                }
             }
-            Ok((end_serial - start_serial) as f64)
+            number_result(Ok((serials[0] - serials[1]) as f64), cell)
         })
     }
 
@@ -765,8 +789,7 @@ impl Model {
         // The date and the return type lift (probes/date-argument-modes F51:F52).
         let kind = Function::Weekday;
         self.numbers_fn(kind, args, [0.0, 1.0], cell, |[serial, return_type]| {
-            let s = serial.floor();
-            let date = ds.date_of_serial_from_zero(s as i64);
+            let date = ds.date_of_serial_from_zero(carried_day(serial) as i64);
             weekday_number(date.ok_or(Error::NUM)?, return_type as i32)
         })
     }
@@ -780,7 +803,7 @@ impl Model {
         // ISOWEEKNUM of a valid serial keeps a Monday start in WEEKNUM's stale return_type state
         // (probes/weeknum-stale-reset-isoweeknum, SPEC-0017 rule 2).
         if matches!(result, CalcResult::Number(_)) {
-            self.evaluation.weeknum_start = Some(weeknum::WeeknumStart::Monday);
+            self.evaluation.order_state.weeknum_start = Some(weeknum::WeeknumStart::Monday);
         }
         result
     }

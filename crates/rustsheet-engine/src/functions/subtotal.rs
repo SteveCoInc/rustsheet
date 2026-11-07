@@ -12,10 +12,10 @@ use crate::{
         math_and_trigonometry::SumParts,
         statistical::variance::{variance_result, VarianceKind},
         util::array_node_to_calc_result,
-        Function,
     },
     model::Model,
     reference_operators::{not_a_reference_array, Ranges, RefArg},
+    types::Cell,
 };
 
 /// Excel has a complicated way of filtering + hidden rows
@@ -86,31 +86,31 @@ impl Model {
     }
 
     fn cell_is_subtotal(&self, sheet_index: u32, row: i32, column: i32) -> bool {
-        self.cell_formula_is_one_of(
-            sheet_index,
-            row,
-            column,
-            &[Function::Subtotal, Function::Aggregate],
-        )
+        self.cell_formula_calls_subtotal(sheet_index, row, column)
     }
 
-    /// Whether the cell holds a formula that calls one of `kinds` anywhere (SUBTOTAL and
-    /// AGGREGATE skip such cells; probes/subtotal-hidden-filtered Nest sheet, T-1036).
-    pub(crate) fn cell_formula_is_one_of(
+    /// Whether the cell holds a formula that calls SUBTOTAL or AGGREGATE anywhere in its text
+    /// (read from the flag cached on the shared formula, T-1195; SUBTOTAL and AGGREGATE skip such cells; probes/subtotal-hidden-filtered Nest sheet, T-1036). The
+    /// flag is the formula's syntax, not what it evaluated: an untaken IF branch, an unused LET
+    /// binding or an uncalled LAMBDA counts, while a defined name whose body calls SUBTOTAL, an
+    /// INDIRECT to such a cell or the name in a string does not. A spilled cell carries its
+    /// anchor's flag (probes/t4194-subtotal-nested-skip, excel-graph, T-4194).
+    pub(crate) fn cell_formula_calls_subtotal(
         &self,
         sheet_index: u32,
         row: i32,
         column: i32,
-        kinds: &[Function],
     ) -> bool {
-        let Some(cell) = self.workbook.worksheets[sheet_index as usize].cell(row, column) else {
-            return false;
+        let worksheet = &self.workbook.worksheets[sheet_index as usize];
+        let cell = match worksheet.cell(row, column) {
+            Some(Cell::SpillCell {
+                a: (anchor_row, anchor_column),
+                ..
+            }) => worksheet.cell(*anchor_row, *anchor_column),
+            cell => cell,
         };
-        cell.get_formula().is_some_and(|f| {
-            self.parsed_formulas[sheet_index as usize][f as usize]
-                .0
-                .contains_function(kinds)
-        })
+        cell.and_then(Cell::get_formula)
+            .is_some_and(|f| self.parsed_formulas[sheet_index as usize][f as usize].calls_subtotal)
     }
 
     /// Calls `f` with the value of every cell of `arg` that SUBTOTAL reads: filtered rows,
@@ -506,10 +506,11 @@ impl Model {
             Ok(s) => s,
             Err(s) => return s,
         };
-        let mut result = 0.0;
         let l = values.len();
+        // Snaps a near-zero final addition like SUM does (probes/t3092-averagea-subtotal-snap D15-D27).
+        let mut sum = SumParts::default();
         for value in values {
-            result += value;
+            sum.add(value);
         }
         if l == 0 {
             return CalcResult::Error {
@@ -519,7 +520,10 @@ impl Model {
             };
         }
         // Rounds twice like AVERAGE's (numbers.md "Division rounds twice", T-1636).
-        CalcResult::finite_number_or_num(flush_subnormal(extended_quotient(result, l as f64)), cell)
+        CalcResult::finite_number_or_num(
+            flush_subnormal(extended_quotient(sum.snapped(), l as f64)),
+            cell,
+        )
     }
 
     fn subtotal_sum(

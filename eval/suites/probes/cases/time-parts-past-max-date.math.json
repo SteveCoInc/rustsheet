@@ -1,0 +1,89 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "e795cf0f34fd118190c2f89c00cd9b753b6f1f4493cd9c12695e0961af480572",
+  "definitions": {
+   "HOUR": "6ee22fff0f9f7716",
+   "MINUTE": "6ee22fff0f9f7716",
+   "SECOND": "6ee22fff0f9f7716"
+  },
+  "arguments_sha256": "d027c571dc4b6a52399e12be61c263402c8f4f0aa6366ccf123a851cf980bda8"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A1": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=HOUR(2958465)"
+   },
+   "A10": {
+    "t": "e",
+    "why": "the serial rounds past 9999-12-31",
+    "f": "=SECOND(2958466)"
+   },
+   "A11": {
+    "t": "e",
+    "why": "the serial rounds past 9999-12-31",
+    "f": "=SECOND(2958466.5)"
+   },
+   "A12": {
+    "t": "e",
+    "why": "the serial rounds past 9999-12-31",
+    "f": "=SECOND(1E+15)"
+   },
+   "A13": {
+    "t": "e",
+    "why": "the serial rounds past 9999-12-31",
+    "f": "=HOUR(123456789.123)"
+   },
+   "A14": {
+    "t": "e",
+    "why": "the serial rounds past 9999-12-31",
+    "f": "=MINUTE(7+123456789.123)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "21.0",
+    "f": "=HOUR(2958465.9)"
+   },
+   "A3": {
+    "t": "n",
+    "v": "23.0",
+    "f": "=HOUR(2958465.99999)"
+   },
+   "A4": {
+    "t": "e",
+    "why": "the serial rounds past 9999-12-31",
+    "f": "=HOUR(2958466)"
+   },
+   "A5": {
+    "t": "e",
+    "why": "the serial rounds past 9999-12-31",
+    "f": "=HOUR(2958466.5)"
+   },
+   "A6": {
+    "t": "n",
+    "v": "36.0",
+    "f": "=MINUTE(2958465.9)"
+   },
+   "A7": {
+    "t": "e",
+    "why": "the serial rounds past 9999-12-31",
+    "f": "=MINUTE(2958466)"
+   },
+   "A8": {
+    "t": "e",
+    "why": "the serial rounds past 9999-12-31",
+    "f": "=MINUTE(2958466.5)"
+   },
+   "A9": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=SECOND(2958465.9)"
+   }
+  }
+ }
+}

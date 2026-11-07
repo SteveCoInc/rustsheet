@@ -38,6 +38,7 @@ from rustsheet_tools.fitlab.exact import (
     x87_value,
 )
 from rustsheet_tools.fitlab.fit import Fit
+from rustsheet_tools.fitlab.holdout import REFERENCE
 from rustsheet_tools.fitlab.kernels.power import integer_power
 from rustsheet_tools.fitlab.score import Candidate, candidate
 from rustsheet_tools.fitlab.sweep import Arg, numeric_arg
@@ -218,7 +219,7 @@ def grid(shapes: dict[str, Shape], count: int) -> Callable[[], list[Candidate]]:
 
     def build() -> list[Candidate]:
         first = next(iter(shapes.values()))
-        out = [candidate("correctly rounded", _exact_fn(first, count), "correctly rounded")]
+        out = [candidate(REFERENCE, _exact_fn(first, count), "correctly rounded")]
         for model_name, model in MODELS.items():
             for power_name, power in POWERS.items():
                 for shape_name, shape in shapes.items():
@@ -303,7 +304,7 @@ def ipmt_grid(principal: bool) -> Callable[[], list[Candidate]]:
                     pmt, ipmt = _ipmt_parts(ops, _nums(args, 6), power, p_rnd)
                     return to_double(ops.sub(pmt, ipmt) if principal else ipmt)
 
-                name = "correctly rounded" if model_name == "exact" else f"{model_name}: {power_name}"
+                name = REFERENCE if model_name == "exact" else f"{model_name}: {power_name}"
                 out.append(candidate(name, evaluate, model_name))
         return out
 
@@ -364,7 +365,7 @@ def nper_candidates() -> list[Candidate]:
         return evaluate
 
     return [
-        candidate("correctly rounded", correctly_rounded, "correctly rounded"),
+        candidate(REFERENCE, correctly_rounded, "correctly rounded"),
         candidate("double: log(ratio)/log(1+r)", libm(lambda r: math.log(1 + r), to_double_value), "double"),
         candidate("double: log(ratio)/log1p(r)", libm(math.log1p, to_double_value), "double"),
         candidate("double: correctly rounded logs", rounded_logs(to_double_value), "double"),
@@ -420,7 +421,22 @@ def npv_candidates() -> list[Candidate]:
 
         return evaluate
 
-    out = [candidate("correctly rounded", by_power(p_exact, exact_value, exact_value), "correctly rounded")]
+    def deferred(rnd: Rounding) -> Callable[..., float]:
+        """(sum of v_i / (1+r)^(i-1)) / (1+r): a running factor that starts at 1, one division at the end.
+
+        T-2671 (probes/npv-term-order): bit-exact on all 382 cells in doubles."""
+
+        def evaluate(*args: Arg) -> float:
+            r, vs = values(args)
+            base, d, total = rnd(1 + r), Fraction(1), Fraction(0)
+            for v in vs:
+                total = rnd(total + rnd(v / d))
+                d = rnd(d * base)
+            return to_double(rnd(total / base))
+
+        return evaluate
+
+    out = [candidate(REFERENCE, by_power(p_exact, exact_value, exact_value), "correctly rounded")]
     for model_name, (rnd, p_rnd) in MODELS.items():
         for power_name, power in POWERS.items():
             out.append(
@@ -428,6 +444,7 @@ def npv_candidates() -> list[Candidate]:
             )
         out.append(candidate(f"{model_name}: Horner (v_n/(1+r)+v_n-1)/(1+r)...", horner(rnd), model_name))
         out.append(candidate(f"{model_name}: running factor d*=(1+r)", running(rnd), model_name))
+        out.append(candidate(f"{model_name}: deferred (sum v/(1+r)^(i-1))/(1+r)", deferred(rnd), model_name))
     return out
 
 
@@ -476,8 +493,9 @@ FITS = [
     ),
     Fit(
         name="annuity-npv",
-        description="NPV over the T-0942 sweep: discounting orders x power sources x rounding models",
-        cases=[_CASE_NPER_NPV],
+        description="NPV over the T-0942 sweep and probes/npv-term-order (T-2671): discounting orders x power "
+        "sources x rounding models",
+        cases=[_CASE_NPER_NPV, "probes/npv-term-order"],
         pattern=r"^=NPV\((.*)\)$",
         candidates=npv_candidates,
     ),

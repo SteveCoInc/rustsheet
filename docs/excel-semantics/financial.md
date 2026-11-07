@@ -1,12 +1,15 @@
 # Financial functions
 
 ## Annuity evaluation order and `(1+r)^n` (PV/FV/PMT/NPER/IPMT/PPMT)
+Amended (T-4146): PV's and FV's `+`, `*` and `/` are Excel's twice-rounded operators, not plain doubles; see "FV
+and PV round each operation twice" below. The two forms agree on every cell of the sweeps cited here.
 Rule: with `P = (1+r)^n` by right-to-left square-and-multiply (numbers.md, "Integer exponents"),
 `k = 1+r*type` and `T = pmt*(k*((P-1)/r))`, Excel computes PV = `-(fv+T)/P` and FV = `-(pv*P+T)`
 (integer nper, rate ≠ 0), and NPER = `ln((pmt*k - fv*r)/(pmt*k + pv*r)) / ln(1+r)`, every
 operation in doubles and each logarithm a double logarithm of the double `1+r` (libm or correctly
 rounded; the sweep does not separate them), not `log1p`. PMT, IPMT and PPMT are the exact payment
-to 15 digits but not to the bit ("PMT, IPMT and PPMT are the exact payment" below); NPV is still
+to 15 digits but not to the bit ("PMT, IPMT and PPMT are the exact payment" below; PMT's bits are "PMT is a
+discounted payment", T-3014); NPV is still
 unexplained; 64-bit intermediates do not explain them either (below).
 Evidence (Excel-cached values, `ironcalc-calc/FINANCIAL/PMT.xlsx`, `PV.xlsx`, `FV.xlsx`):
 - `PMT.xlsx` Sheet1!F36 (rate 0.2, nper 5, pv -200): Excel's `(1+r)^n` behaves as exactly `2.48832`
@@ -53,14 +56,51 @@ Evidence (Excel-cached values, `ironcalc-calc/FINANCIAL/PMT.xlsx`, `PV.xlsx`, `F
   fixes 30 Excel-cached cells but regresses 22 others (PMT.xlsx, IPMT_PPMT.xlsx,
   CUMPRINC_CUMIPMT.xlsx), and IPMT's recurrence on the fitted FV regresses 4 more. Both stay with
   T-1528: Excel's PMT is not the accurate value.
+- Operation orders against Excel's PMT bits (T-2951, `docs/research/t2951_pmt_order_score.py`, EXP and LN the
+  engine's Excel models, L and expm1 as in "PPMT discounts with an atanh-series log"). Bit-exact counts on the nine
+  PMT inputs of PMT.xlsx's visibly-off chained cells (F10, F11, F18, F23 at rate -0.9; F27, G27, F32, F33, G33 at
+  0.2), PMT.xlsx's 40 other PMT cells over constants, and the 308 of m9-fin-pmt: correctly rounded (the engine)
+  0/31/132; textbook `-(pv*P+fv)*r/(k*(P-1))` on Excel's `^` 1/28/68, with k divided out last 0/25/65; fv-first
+  `-(fv+pv*P)/(k*((P-1)/r))` 0/25/60, k last 0/23/64; the split `-(pv*r+(pv+fv)*r/(P-1))/k` 3/19/73; Excel-L/EXP
+  `-(pv+fv*Q)/(k*((1-Q)/r))` (Q = EXP(-n·L), 1-Q Excel's expm1; T-2730, T-3014) 1/24/175, k last 0/23/173; the
+  same Q and 1-Q doubles with the rest rounded once, `-(pv+fv*Q)*r/((1-Q)*k)`, 1/33/197, the best m9-fin-pmt
+  score so far, but not Excel's (in unscripted scratch runs, an extended EXP result or a 64-bit Kahan step scored lower:
+  111 to 170). At rate -0.9 with fv 300 and type 1 every form is 3 to 6 ulp larger in magnitude than Excel, which
+  sits 3 to 5 ulp toward zero from the exact payment, and (unscripted) the miss barely moves with L: a consistent L
+  largely cancels at n = 1, so `PMT(-0.9,1,100,300,1)` is -3099.999999999999 in Excel, and every L within 10 ulp of
+  Excel's LN gives -3100.0000000000005 or beyond. The fv 0, type 0 controls at -0.9 are close but not settled:
+  G10 is -1 ulp exact and +1 Excel-L/EXP, G11 0 and +1, G18 0 under each of these. So the 3 to 5 ulp gap comes mostly from
+  how fv or type 1 enters, which PMT.xlsx cannot separate (no -0.9 cell has fv alone or type 1 alone). Probe: T-3071.
 - Extrapolated, not yet probed (T-1684): non-integer nper (where `^` is exp(y·ln x)), NPER with
   pmt = 0 (the general formula, not `-fv/pv`) or pv/fv = 0, and rates within a few ulps of -1 (`1+r`
   by Excel's `+`). The sweeps have integer nper and non-zero pmt only.
-Status: PARTLY VERIFIED (PV/FV/NPER fitted on the sweep and implemented, for integer nper and pmt ≠ 0; PMT/IPMT/PPMT/NPV bits open, time-boxed per
+Status: PARTLY VERIFIED (PV/FV/NPER fitted on the sweep and implemented, for integer nper and pmt ≠ 0; PMT's bits fitted in "PMT is a discounted payment" (T-3014); IPMT/PPMT/NPV bits open, time-boxed per
 decision 0056 after T-1524's two attempts, in T-1528)
-Implemented in: `annuity_power`, `annuity_factor`, `compute_future_value`,
+Implemented in: `annuity_power`, `annuity_factor_rounded` (T-4146), `compute_future_value`,
 `fn_pv` and `fn_nper` (crates/rustsheet-engine/src/functions/financial/mod.rs, T-0901). Salvaged from
 draft PR #13 by T-0031.
+
+## FV and PV round each operation twice
+Rule (T-4146): in FV = `-(pv*P + pmt*(k*((P-1)/r)))` and PV = `-(fv + pmt*(k*((P-1)/r)))/P` (the parenthesization
+of "Annuity evaluation order" above), each `+`, `*` and `/` is Excel's twice-rounded operator (the 64-bit
+extended result rounded to a double, as RATE's residual in "RATE is a secant on the FV residual"), not one double
+rounding. `1+r` and P are as before. The two forms differ only where the sum cancels (pv·P and pmt·A, or fv and
+pmt·A, close and of opposite sign), which is why the earlier sweeps could not tell them apart.
+Evidence (excel-graph, 2026-11-04, T-4146; generator, forms and scorer in docs/research/t4146/):
+- probes/t3424-rate-noise-trace A132, `=FV((2.88607473601363e-05+1.01643953670516e-20),321,-2890484105.96678,
+  934408648396.347,1)`: Excel -10935378180.042114, the twice-rounded form; plain doubles give -10935378180.042236.
+  It was the only one of 587 literal FV oracle cells where the forms differ (docs/research/t3424/fv_forms.py).
+- probes/t4146-annuity-twice-rounded: 240 calls (FV and PV alternating, rate ±1e-7..0.5, integer nper 1..400,
+  type 0 and 1, a cancelling pmt), kept where the forms differ, committed before the fill. On the fit lab's hash
+  split (margin 5 points, fixed before scoring): twice-rounded bit-exact FV 84/84 train and 36/36 test, PV 87/87 and
+  33/33; plain doubles 0 on every side (PV within 4 ulp on 29 of 120); the correctly rounded value 0.
+- probes/t4146-annuity-twice-fresh: 120 calls drawn with a new seed after the form was frozen, committed before
+  the fill: twice-rounded 120/120 bit-exact, plain 0, correctly rounded 0.
+- No other FV, PV or RATE oracle cell changed (`make eval-baseline`: probes fixed 1, regressions 0).
+Ours: `compute_future_value` and `fn_pv` with `annuity_factor_rounded` (functions/financial/annuity.rs).
+Status: VERIFIED (excel-graph; integer nper, rate ≠ 0. rate = 0 and non-integer nper keep their forms, unprobed
+here)
+Tasks: T-4146, T-3424
 
 ## PMT, IPMT and PPMT are the exact payment
 Rule: Excel's PMT, IPMT and PPMT are within a few ulp of the exact value of the payment on the
@@ -82,21 +122,88 @@ values of ironcalc-calc FINANCIAL/IPMT_PPMT.xlsx), each model computed exactly i
   3.3,30,8000)`, `PPMT(0.1,3,29.9,8000,10,1)`, `IPMT(0.0083,12.5,36,8000,1234,1)`: J13, I15,
   G30) to 15 digits.
 - Excel is not the exact value to the bit: 3.5 ulp at most for PMT ("Annuity evaluation order").
+  Even at nper 1, where the exact payment is a plain quotient, Excel is off it: `PMT(0.05,1,10000)` is
+  -10499.999999999998 and `PMT(0.1,1,10000)` -11000.000000000002 (m9-fin-pmt A169, A85; exact -10500 and
+  -11000). Gap triage 2026-10-28: PPMT's discount below (`Q(-n)` by EXP of `-n*L`, `1-Q(-n)` by Kahan's
+  expm1) in the form `-(pv+fv*Q)/(k*((1-Q)/rate))` is bit-exact on 175 of the 308 PMT cells with libm EXP
+  and LN (a libm scratch scorer since replaced), above every form T-1528 tried (at most 133). Superseded: T-3014
+  fitted Excel's PMT on that discount in a different form ("PMT is a discounted payment", 308/308). These ulps
+  matter: RATE amplifies them, so 113 `RATE(n,PMT(..))` cells of m9-fin-irr-rate were visibly off on the exact
+  payment and are bit-exact on Excel's (probes/rate-excel-pmt-bits, T-2527).
+  At rate -0.9 with type 1 Excel's PMT is 3 to 6 ulp below the exact magnitude (`ironcalc-calc/FINANCIAL/PMT.xlsx`
+  F10 `PMT(-0.9,3,120,300,1)` = -2703.783783783783, exact on the double rate -2703.78378378378444...; F11, F18, F23
+  likewise), and no form tried so far (the P-1 forms with `pow` or `exp(n*log1p(r))`, the discount forms above,
+  `1+rate` snapped to 0.1) reproduces those bits (T-3014's "PMT is a discounted payment" does, all four); PV and NPER of those payments amplify the gap about 100-fold
+  into visibly-off cells (J10, H10; T-2243). T-2951's nine scored forms miss them too ("Annuity evaluation
+  order" above); the probe that separates fv from type 1 there is T-3071.
   Where PPMT cancels, Excel's error grows: the four period-1 cells of long terms A82, A166, A412,
   A418 are 7 to 41 ulp from the exact value and visibly different from it. For the 154 fv-0,
   type-0 PPMT cells, `PMT*exp((per-1-nper)*log1p(rate))` (the exact PMT rounded to a double, libm
   `exp` and `log1p`) is within 15 digits on 153, all but A166 (Excel -1.2549699967849914E-12,
   that model -1.254969996784983E-12), and bit-exact on 63; with `ln` of the double `1+rate` it is
   131. Explained by Excel's own log and EXP ("PPMT discounts with an atanh-series log", T-2242).
-- Not probed: whether the exact form also holds where P_n leaves about 1E±270 (the engine falls
-  back to its double forms there; probes/pmt-overflow covers the overflow edges), and for |nper|
-  above 2^32.
+- Past P_n of about 1E+270 and where IPMT's balance cancels on fv: "IPMT cancels on fv" (T-2490).
+  Not probed: |nper| above 2^32.
 Status: VERIFIED to 15 digits (m9-fin-pmt and IPMT_PPMT.xlsx), except the four PPMT cells above (T-2242);
-bits open (T-1528, T-2243)
+bits open (T-1528, T-2243). PMT's own bits are "PMT is a discounted payment" below (T-3014); the engine's PMT no
+longer uses `accurate_payment`, while IPMT, PPMT, CUMIPMT and CUMPRINC still start from it.
 Implemented in: `accurate_growth`, `accurate_payment` and `accurate_period_split`
 (crates/rustsheet-engine/src/functions/financial/annuity.rs, T-2130).
 
+## PMT is a discounted payment
+Rule: with L = ln(1+rate) as PPMT's discount has it ("PPMT discounts with an atanh-series log": the x87 atanh
+series below |rate| 0.375, Excel's LN of `1+rate` from it on) and `x = -nper*L` a double, `1-Q` is Excel's expm1,
+`-expm1(x)` (Kahan's formula, numbers.md), for |x| < 1 and `1 - EXP(x)` (Excel's EXP, then a double subtraction)
+from 1 on, and
+`PMT = -(((pv+fv)/(1-Q) - fv) * d)`, every operation a plain double, `d = rate` for type 0 and `d = 1/(1/rate + 1)`
+for type 1. So fv enters through `(pv+fv)/(1-Q) - fv` (the balance discounted by `Q`, rewritten), not through
+`pv + fv*Q`, and type 1 is a multiplication by `1/(1/rate+1)`, not a division by `1+rate`. The value is up to a few
+ulp from the exact payment either way (`PMT(0.05,1,10000)` is -10499.999999999998, exact -10500).
+Evidence (T-3014):
+- probes-numeric/m9-fin-pmt (excel-graph): 308 of 308 PMT cells bit-exact (fv 0 with type 0, fv -500 with type 1).
+  The exact payment matches 132; `-(pv+fv*Q)*r/((1-Q)*k)` rounded once 197 (T-2951); every form with Kahan's
+  expm1 at all |x| misses the five fv-0, type-0 cells with |x| above 1.4 (A313, A385, A463, A469, A835), all of which
+  `1-Q` fits.
+- probes/t3014-pmt-fv-type-alone (excel-graph, 371 cells): column A has fv -500 alone and column B type 1 alone on
+  m9-fin-pmt's rate x nper grid, 154 + 154 bit-exact (`(pv/(1-Q) + fv*Q/(1-Q))*r` 119 and `pv/(1-Q)*(r/(1+r))` 117
+  were the next best); type 1's misses with `r/(1+r)` were whole rate rows (0.2, 0.3: -1 ulp, -0.02: +1 ulp), the
+  ulp `1/(1/r+1)` differs from `r/(1+r)` by. Column C sweeps |x| from 0.5 to 1.6 where expm1 and `1-Q` give
+  different payments: expm1 through |x| 0.9896 (C41, `PMT(-0.05,19.293,10000)` = -295.8295769625972), `1-Q` from
+  1.0648 on (C42, `PMT(-0.1,10.106,10000)` = -526.2654771089761), for positive and negative x alike, so the switch
+  is at |x| = 1 (between those two points; 1 itself is not pinned).
+- ironcalc-calc FINANCIAL/PMT.xlsx (Mac Excel cached values): all 49 PMT cells over constants bit-exact, including
+  the rate -0.9 cells with fv 300 and type 1 that no earlier form reached (F10 `PMT(-0.9,3,120,300,1)` =
+  -2703.783783783783, F18 `PMT(-0.9,1,100,300,1)` = -3099.999999999999) and the fractional and negative nper cells
+  (F31, F15), so the whole workbook (309 cells, its chained NPER, PV and FV included) passes. Type 0 is `rate`
+  itself, not `1/(1/rate)`: they differ at -0.9 (`1/(1/-0.9)` is -0.8999999999999999), and G18
+  `PMT(-0.9,1,100)` = -9.999999999999998 needs `rate`.
+- RATE on these payments: all 308 `RATE(n,PMT(..),..)` cells of probes-numeric/m9-fin-irr-rate pass (154 failed on
+  the exact payment), as RATE is bit-exact on Excel's PMT bits (probes/rate-excel-pmt-bits, T-2527).
+- Not established: whether Excel's expm1 itself switches to `EXP(x)-1` at |x| = 1 (SINH and TANH call it only below
+  1, numbers.md). IPMT and PPMT take the same switch ("IPMT and PPMT split Excel's discounted payment", T-2243);
+  CUMIPMT and CUMPRINC still use Kahan's form at every |x| and keep their fitted forms: the switch in CUMPRINC's
+  `1 - v^nper` moves no gated cell, so the evidence does not place it (T-3179).
+  Not probed: nper 0 with a non-zero rate, |x| at exactly 1, and rates where `1-Q` leaves the normal range (the
+  engine keeps "PMT, IPMT and PPMT are the exact payment"'s forms and errors there).
+Tiny rates (T-2748): the same form holds down to a rate of 1E-16, with no switch to the rate-0 branch `-(pv+fv)/nper` or
+to the double `(1+rate)^nper`, except at sampled rates from 1.2E-16 to 2.1E-16, where Excel's payment is 1, 2 or 4 ulp
+larger in magnitude than this form's (`PMT(1.2E-16,12,1000,0,0)` = -83.33333333333343, the form -83.33333333333337).
+1.1E-16 and 2.2E-16 to 4E-16 are bit-exact. probes/pmt-tiny-rate (160 cells: rates 1E-16 to 1E-12 by type 0 and 1 at
+(nper, pv, fv) = (346, 96301, 42), (346, 96301, 0), (346, 0, 42), (12, 96301, 42), (1000, 96301, 42)) is bit-exact but
+for its 2E-16 row (`PMT(2E-16,346,96301,42,0)` = -278.4479768786224, the form -278.44797687862234), and
+`PMT(1E-15,346,96301,42,1)` = -278.44797687866065 (t2475-stat-subexpressions P!A462) is one of the bit-exact cells.
+probes/pmt-tiny-rate-near-2e-16 (30 cells, rates 1.1E-16 to 4E-16) misses on rows 1.2E-16 to 2.1E-16 only. The band is
+not where `1+rate` rounds up to 1+2^-52 while `2+rate` rounds down to 2 (2^-53 to 2^-52): 2.2E-16 is below 2^-52 =
+2.2204E-16 and bit-exact. Excel's s = rate/(2+rate) is still the double quotient: taking `2+rate` in the x87 register
+fixes 23 cells and breaks 294 (probes, gen-m9 and ironcalc-calc CUMPRINC_CUMIPMT). The gaps are within the web oracle's
+reproducibility floor (up to 4 ulp), so the band's form is open (T-3489).
+Status: VERIFIED (m9-fin-pmt, t3014-pmt-fv-type-alone, PMT.xlsx); the 1.2E-16 to 2.1E-16 band UNVERIFIED (T-3489)
+Implemented in: `discounted_payment` and `compute_payment`
+(crates/rustsheet-engine/src/functions/financial/annuity.rs, T-3014).
+
 ## PPMT discounts with an atanh-series log
+Superseded for IPMT and PPMT where it is finite by "IPMT and PPMT split Excel's discounted payment" (T-2243); the
+evidence below stands, and the engine keeps these forms only where that one is not finite and for CUMIPMT's sum.
 Rule: Excel's PPMT is its PMT discounted with Excel's EXP and its own `L = ln(1+rate)`:
 `PPMT(rate, 1, n, pv)` = `PMT(rate, n, pv) * EXP(-n*L)`, the product `-n*L` a double and the
 multiplication rounded once. L is not `log1p`: for |rate| up to at least 0.37 it is
@@ -123,18 +230,32 @@ relative from the exact -1.254969996784983E-12 (m9-fin-pmt A166).
   large-rate fv cells by 10 to 94 ulp (`PPMT(10,2,85,-1,733)` = -2.440762531497786E-84), `1-Q(-n)`
   taken directly misses short terms (279; it cancels), and `Q(per-2-n)` for type 1 instead of the
   division misses `PPMT(2.5,5,214,1E-300,589,1)` by 108 ulp. In period 1 of type 1 PPMT is PMT.
-- Where it does not apply: rates at or below -0.375 are the exact form (`PPMT(-0.5,1,277,73630,609)`
-  = -37119.5, gen-m9 762cd0e4ec9a7aa9 A5; this model is 25 ulp off), yet `PPMT(-0.5,12,158,1.9)` is
-  -0.00046386718749999705, 6.4E-15 relative from the exact value and 33 ulp from this model
-  (gen-m9 38e4fc309fe199ea A73): unexplained (T-2242 follow-up). Where |n*L| < 1E-6 L's error
-  cannot move the power by an ulp, and the exact form matches Excel's last bit where this one is an
-  ulp off (`PPMT(1E-10,2,124,191996,822,1)` = -1554.9838614045912).
-- Open: the switch between 0.37 and 0.38 is not pinned (the engine takes 0.375), nor whether it is
-  on |rate| or on rate for negative rates; the last-bit misses of the sweeps (a 64-bit `-n*L`, the
-  x87 EXP on it, and a divided form were each worse).
+- Negative rates (T-2588): the same discount holds for rates down to at least -0.9 (the lowest probed), not
+  only above -0.375; the engine extends it to every rate above -1, from -0.9 down an extrapolation.
+  `PPMT(-0.5,5,294,171132)` is -5347.875000000112 and `PPMT(-0.5,12,158,1.9)` -0.00046386718749999705,
+  where the exact values are -5347.875 and -0.0004638671875 (gen-m9 79d87fc527927626 A46, 38e4fc309fe199ea
+  A73). probes-numeric/ppmt-negative-rate-sweep (excel-graph, 2026-10-27: rates -0.9 to -0.3 in four shapes
+  with fv and type 1, a fine grid at -0.38 to -0.37, a -0.5 grid over period, term and fv): over the 62
+  cells at or below -0.375 this form, with a correctly rounded LN and EXP, is within 15 digits on 61 and
+  bit-exact on 31, where the exact form is within 15 digits on 32 (8 bit-exact; `PPMT(-0.9,5,60,100000)`
+  is Excel's -8.999999999999833, exact -8.999999999999993). The engine's form is within 15 digits on all
+  79 cells (43 bit-exact). The earlier note that `PPMT(-0.5,1,277,73630,609)` = -37119.5 ruled it out is
+  wrong: this form gives -37119.5 too.
+- Past the double range: Excel's value is the form's exact value where a double product of
+  `(pv+fv)*rate*Q` would overflow, consistent with an extended-range (x87) intermediate: `PPMT(-0.5,4,230,1E+300)` is -6.249999999999966E+298 (exact
+  -6.25E+298; gen-m9 67a4c03afd63f988 A180, and -0.25 and -0.75 in the sweep). The engine rescales
+  `pv+fv` by 2^-600 and back when the double product overflows, which keeps every bit.
+- Fractional periods take the same form (`PPMT(-0.5,1.999,97,226365)` is -56630.48966324223, the
+  engine an ulp below; gen-m9 d0854366830dcdee A335).
+- Where |n*L| < 1E-6 L's error cannot move the power by an ulp, and the exact form matches Excel's
+  last bit where this one is an ulp off (`PPMT(1E-10,2,124,191996,822,1)` = -1554.9838614045912).
+- Open: the series/LN switch between 0.37 and 0.38 is not pinned (the engine takes 0.375), nor
+  whether it is on |rate| (the engine) for negative rates: the sweep is within 15 digits either side
+  of -0.375 but was not scored by L candidate. The last-bit misses of the sweeps (a 64-bit `-n*L`, the
+  x87 EXP on it, and a divided form were each worse) are open too.
 Status: VERIFIED to 15 digits (excel-graph); bits open.
 Implemented in: `growth_log` and `discounted_principal`, on `x87_exp::excel_expm1`
-(crates/rustsheet-engine/src/functions/financial/annuity.rs, T-2242).
+(crates/rustsheet-engine/src/functions/financial/annuity.rs, T-2242, T-2588).
 Conflicting evidence: 35 cells of desktop-Excel-saved Calipers models fed by PPMT and IPMT
 matched Excel bit for bit before T-2242 and are now off by a few ulps. They are in pv_goldens
 pv23_007 ("Pro Forma Cash Flow Statement" AF13, AV13, BG15, G15, G24, N13, …), pv23_008 ("Debt
@@ -142,6 +263,231 @@ Financing"!E231, "Est Property Value"!B47:C47, IRR!B26), pv23_009 and pv23_056 (
 T-0455, 2026-10-24). Until T-0458 settles which form Excel uses for their arguments, the calipers
 baseline cannot record its fixes.
 Tasks: T-2242, T-0458
+
+## IPMT cancels on fv
+Superseded for IPMT and PPMT where it is finite by "IPMT and PPMT split Excel's discounted payment" (T-2243); the
+evidence below stands, and the engine keeps these forms only where that one is not finite and for CUMIPMT's sum.
+Rule: Excel's IPMT is `-rate*B`, divided by `1+rate` for type 1 (0 in period 1 of type 1), with
+the balance after period-1 periods `B = (pv+fv)*Y - fv` and `Y = (1-(1+rate)^(per-1-nper))/(1-(1+rate)^-nper)`.
+Where that balance is smaller than fv (`|B| < |fv|`) it is computed in doubles on the rounded `Y`, so
+IPMT carries fv's rounding instead of the exact balance: `IPMT(0.5,2,124,0,315)` is 0 (exact
+1.15E-20), `IPMT(50,2,10,0,315)` is 5.6843418860808015E-12 = 25*2^-42 (exact 6.615E-12, B is two
+ulp of 315), `IPMT(1E+10,10,10,0,315)` is 315.00007935392205 (exact 314.9999999685) and
+`IPMT(1E+300,10,10,0,315)` 0 (exact 315). Elsewhere B is the exact balance, as "PMT, IPMT and PPMT
+are the exact payment" has it. The form needs no `(1+rate)^nper`, so past its overflow IPMT keeps
+its value, about `-pv*rate` for huge rates: `IPMT(1E+300,3,2000,452017,905)` is -4.52017E+305,
+`IPMT(123456789.123,3,156,64486)` -7961234503385.777, `IPMT(2,1100,1100,1,5)` 2. PPMT past the
+overflow is the discounted form of "PPMT discounts with an atanh-series log", and it is 0 where the discounted balance
+`A*Q(per-1-nper)` is below the normal range, `A = (pv+fv)/(1-Q(-nper))`, which is `pv+fv` here (a flush to zero of that
+product, not of the discount nor of the final value): `PPMT(r,1,300,1)`
+keeps a discount of 2^-1022 and is 0 from 2^-1022.5 on, `PPMT(10,1,296,1)` is 0 though its value, 5.6E-308, is normal,
+`PPMT(7,1,341,1.9999)` is 0 and `PPMT(7,1,341,2)` -1.5575517009551696E-307 (the discount 8^-341 = 2^-1023), as are
+`PPMT(7,1,341,1,1)`, `PPMT(7,1,341,3,-1)` and `PPMT(7,10,350,2)`; the period does not matter (`PPMT(7,k,340+k,1)` is 0 and
+`PPMT(7,k,340+k,2)` kept for k 2, 10 and 100), and a deeper discount is kept once `pv+fv` lifts the product (`PPMT(7,1,353,2^36)`
+is 0, `PPMT(7,1,353,2^37)` kept, the discount 2^-1059; `PPMT(10,1,300,1E10)` -3.821153221973863E-302).
+`PPMT(42,10,303,8292,1,1)` and `PPMT(1E+300,1.5,180,194733,-1E+300)`
+0, `PPMT(10,11,304,44626,826)` -3.0768304255991313E-301, `PPMT(2,1100,1100,1,5)` -4. Neither needs
+PMT's value: `PPMT(1E+307,7,292,176644,89)` is 0 where `pv*rate` overflows, and
+`IPMT(-0.5,1,2000,1,0,1)` is 0 where PMT is `#NUM!` (PPMT of it `#NUM!`, as PMT).
+Evidence: probes/fin-ipmt-ppmt-huge-rate (excel-graph, 2026-10-25, T-2490): column A, 1152 cells
+over rates 0.5 to 1E+300, nper 10 to 2000, period 2, nper/2 and nper, pv/fv (1000,0), (0,315),
+(1000,315), (1000,-1000) and both types; column B the edges above. probes/fin-ppmt-discount-underflow
+(excel-graph, 2026-10-25): `PPMT(r,1,300,1)` with `(1+r)^300 = 2^k`, k from 1021.5 to 1074, and power-of-two bases.
+probes/fin-ppmt-subnormal-discount-by-size (excel-graph, 2026-10-30, T-2666): subnormal discounts by pv and fv size, period
+(1 to 100), base (4, 8, 10.5, 11) and type. Fit (exact rationals, then the
+rounding named): on its 595 IPMT cells the cancelling form is within 15 digits on 590, the exact
+balance on 521 (all its misses pv-0 cells); on m9-fin-pmt's 286 IPMT cells the doubles-everywhere
+form misses 38 to the bit and 2 to 15 digits (`IPMT(0.05/12,2,3,10000,0,1)`), so the switch on
+`|B| < |fv|` (any threshold from 0.1 to 1 fits; 2 loses 5 m9 cells) keeps every exact match.
+`Y` from `1-EXP(x*L)` instead of the exact quotient is 592 of 595 but loses short terms at small
+rates; `-expm1` 586. The gen-m9 cells of T-2257 that motivated it: 31474c20fc1dafd6 A235,
+6376e27be7a05871 A32, abb7d565af89b849 A112, b6a02893a8d6b151 A280, 81bcdc0bec0c8e6b A249 (rate
+50, pv 0: 0) and the rest of T-2490's list.
+- Past the range a fractional nper is no different from an integer one: all 84 parameter sets of
+  probes/t2665-ipmt-fractional-nper-past-range give the same value at every nper. That probe covers rates 0.01 to 1E+10;
+  nper pairs 1000/1000.5, 1E5/100000.5, 1E6/1000000.25 and 18518518/18518518.44345; periods 7 and 50; pv/fv (92160,674),
+  (1000,0) and (1000,-1000); and both types (excel-graph, 2026-10-29, T-2665). Type 0 is the exact `-rate*B` on all 300
+  type-0 cells.
+  Type 1 depends on the rate. At a rate that is not a whole number it is the rounded balance times the double `rate/(1+rate)`,
+  `-B*(rate/(1+rate))`: `IPMT(1.005,7,1E+5,92160,674,1)` is -46194.91271820449, against the exact value's ...448 (gen-m9
+  0a957119475760c5 A153 is that cell at an nper of about 1.85E+7), and `IPMT(0.1,7,1E+6,1000,0,1)` is -90.9090909090909.
+  At a whole-number rate the exact quotient holds: `IPMT(42,8,290,392736,-0.5,1)` is -383602.6046511628 (gen-m9
+  b73c6cc96e093f03 A268), and `IPMT(2,2000,2000,1000,0,1)` is -444.44444444444446 (fin-ipmt-ppmt-huge-rate A186).
+  This switch is fitted, not an identified formulation. It fits 552 of the probe's 600 cells. The old FV recurrence fits
+  118 of its 300 fractional-nper cells and is visibly off on some, e.g. `IPMT(0.5,50,100000.5,92160,674,1)` is -30720,
+  where the recurrence gives -30720.001953125.
+- Open: at rate 1000, type 1 matches neither form, on all 48 such cells of the probe: `IPMT(1000,7,1E+5,1000,0,1)` is
+  -999.0009990009992, where the double form gives ...991 and the exact value ...990. `-(rate*B)*EXP(-LN(1+rate))` with
+  libm fits these cells but misses the rate-1.005 cells (T-3086).
+- Open: the fit's rational model is within 15 digits on 590 of 595, the engine on 588: 7 pv-0 cells keep
+  their cancellation's last bits unexplained: `IPMT(10,2,10,0,315)` (Excel 1.2144607808295405E-6, ours
+  1.214461349263729E-6), `IPMT(10,5,10,0,315)` and `IPMT(10,10,10,0,315)` (one ulp of 315 in B; Excel
+  286.3636362532304, ours 286.363636253231), each with its type 1, and `IPMT(0.1,2,360,0,1)` (Excel 0,
+  ours 1.11E-17: Excel's Y rounds to 1 where the exact quotient rounds below it). Excel's own Y is a few
+  ulp from the exact one; which formulation it is was not separated (T-2667). The `|B| < |fv|` switch is
+  a fitted boundary, not an identified formulation.
+Status: VERIFIED to 15 digits on 590/595 by the model, 588/595 by the engine (excel-graph); bits open.
+Implemented in: `balance_interest`, `accurate_discount` and `discounted_principal`'s `past_range`
+(crates/rustsheet-engine/src/functions/financial/annuity.rs, T-2490; type 1 past the range, T-2665).
+Tasks: T-2490, T-2665, T-2666, T-2667, T-3086
+
+## IPMT follows Excel's own discount where it moves the value
+Superseded for IPMT and PPMT where it is finite by "IPMT and PPMT split Excel's discounted payment" (T-2243); the
+evidence below stands, and the engine keeps these forms only where that one is not finite and for CUMIPMT's sum.
+Rule: where IPMT's balance does not cancel on fv ("IPMT cancels on fv"), Excel's IPMT is the exact balance of "PMT,
+IPMT and PPMT are the exact payment" only to a few ulp. Where Excel's own discount moves the value further, Excel has
+`-rate*((pv+fv)*Y - fv)` in doubles (divided by `1+rate` for type 1) with `Y = expm1((per-1-nper)*L)/expm1(-nper*L)`,
+Excel's expm1 and PPMT's `L` ("PPMT discounts with an atanh-series log"). That happens for long terms at negative
+rates, where `(1+rate)^-nper` is huge and carries L's error, and for a fractional period:
+`IPMT(-0.05,10,336,1)` = 0.03151246988087522 (exact 0.03151246988087528), `IPMT(-0.5,3,232,259859,333,1)` =
+64714.99999999975 (exact 64715), `IPMT(-0.05,4,341,208149,115,1)` = 9391.86032881097 (exact ...977),
+`IPMT(3.14159,1.999,167,0.375)` = -1.1780962499999998 (the engine's exact form had ...500000083).
+Evidence (excel-graph; gen-m9 e168be7f6d3f84c2 A385, c0681a8b150ce301 A104, b6a02893a8d6b151 A35, 1cd3096e3e87c965
+A227; T-2587 fit over the 1403 IPMT and 441 CUMIPMT cells of gen-m9, probes, probes-numeric and ironcalc-calc):
+- The discounted form is bit-exact on all four cells; the exact balance misses them by 4 to 37 ulp. `1-EXP(x*L)` in
+  place of expm1 fits the same four but not `IPMT(1,6,50,272273,1371742112.8222222)`, and the same form taken in
+  double-double arithmetic misses A35.
+- Taken wherever the balance does not cancel, the discounted form leaves no cell visibly off but trades bits both
+  ways (76 cells better, 88 worse); with `1-EXP(x*L)` it is visibly off at tiny rates (`IPMT(1E-10,11,198,114508)`,
+  gen-m9 89f0aee953a55a45 A26). Taken only where it differs from the exact balance by
+  more than 6E-16 relative (about 3 ulp), it fixes the four cells and moves no other cell; 5E-16 to 7E-16 fit
+  the same, 3E-16 moves 4 cells the wrong way and 1E-15 loses A35. The switch is a fitted boundary, not an identified
+  formulation.
+- Open: `IPMT(1,6,50,272273,AVERAGE(..))` (fv about 1.37E+9, gen-m9 0a957119475760c5 A202) cancels on fv. Excel's
+  -272272.99996209145 is the discounted form with expm1 (the cancelling form's exact `Y` gives ...232986), but taking
+  that form for cancelling balances makes `IPMT(0.1,8,291,1,638)` (gen-m9 6376e27be7a05871 A207) and four
+  probes/fin-ipmt-ppmt-huge-rate pv-0 cells (`IPMT(2,2,10,0,315)`) visibly off (T-2943).
+Status: VERIFIED to the bit on the four cells (excel-graph); the switch was fitted.
+Removed (T-3523, decision 0188 R4): since T-2243 the engine reaches the switch only where "IPMT and PPMT split Excel's
+discounted payment" declines (a subnormal or tiny rate, a negative rate whose `(1+rate)^-nper` overflows, an
+overflowing product). Turned off, it moved no gated cell. A fresh 800-cell sweep of those inputs
+(probes-numeric/t3523-ipmt-selector-sweep, excel-graph 2026-11-05: 200 negative rates past the power's range, 200
+subnormal rates, 200 near-overflow values, 200 rates from 1E-300 to 1E-12) reaches the switch on 234 cells (B 154,
+C 5, D 75, counted on an instrumented build), it changes none of them, and Excel is `#NUM!` on all 234 (below). So no
+finite Excel value lies where the switch runs, and `period_payments` takes the exact balance interest there, with
+no fitted switch.
+
+## IPMT is #NUM! where its discounted balance fails (near the double range and at tiny rates)
+Rule: outside period 1 of type 1, Excel's IPMT at a nonzero rate is `#NUM!` where its discounted split ("IPMT and
+PPMT split Excel's discounted payment") has no balance or no factor, even where the interest itself would be a
+finite double:
+- the discounted balance `A = (pv+fv)/(1-Q(-nper*L))` is past the double range, including `pv+fv` itself:
+  `IPMT(0.5,1,2,9.9E+307)` is -4.95E+307 (A = 1.782E+308) and `IPMT(0.5,1,2,2*5E+307)` `#NUM!` (A = 1.8E+308),
+  though its interest is -5E+307; `IPMT(0.5,1,2,0,2*5E+307)` and `IPMT(0.5,1,2,5E+307,5E+307)` are `#NUM!`, while
+  `IPMT(0.5,1,2,2*5E+307,-2*5E+307)` (pv+fv = 0) is -5E+307;
+- `1-Q(-nper*L)` is below the normal range: `IPMT(1E-300,1,1E-10,1E-300)` is `#NUM!` with A = 1E+10;
+- the rate is subnormal (written as a kept-subnormal difference, arrays.md), so that `d` (the rate for type 0, 0 for
+  type 1, where `1/rate` overflows) is not normal: `IPMT((7.245817E-308-6.217028E-308),2,1E+9,1E-10,0,0)` is `#NUM!`
+  with A = 9.7E+288, for type 1, for a negative rate and for pv = fv = 0 alike. The smallest normal rates have values
+  (`IPMT(2.2250738585073E-308,2,1E+9,1E-10)`).
+
+Period 1 of type 1 stays 0 (`IPMT((7.245817E-308-6.217028E-308),1,1E+9,1E-10,0,1)` is a true 0). A product with `d`
+below the normal range is a true 0, as Excel's `*` is (numbers.md "Subnormal results become 0"):
+`IPMT(2.2250738585073E-308,2,1E+9,1E-10)`, `IPMT(4.4501477170144E-308,...)` and the type 1 one are 0 with `(..)=0`
+TRUE, where the double product is about 2.2E-318.
+
+The same inputs make PMT, PPMT and CUMIPMT `#NUM!` (`PMT(0.5,2,2*5E+307)`, `PPMT(0.5,1,2,2*5E+307)`,
+`CUMIPMT(0.5,2,2*5E+307,1,1,0)`, `PPMT((7.245817E-308-6.217028E-308),2,1E+9,1E-10,0,0)`,
+`PPMT(1E-300,1,1E-10,1E-300)`); the engine follows that for all three (T-4488). CUMPRINC is unprobed there and keeps its values.
+
+The boundary is A's own overflow: the largest Excel-finite `|A|` in the sweep is 1.43E+308 (column C) and 1.36E+308
+(column D), and every `#NUM!` cell of columns C and D has A past the double range; of column B (all `#NUM!`), 188
+have A past the range, 11 have `1-Q` subnormal and B127 (`IPMT(-(7.376629E-308-6.401598E-308),183380,192098,
+-12143.8633442825,0,0)`, A = 6.5E+306) only the subnormal rate.
+
+Evidence:
+- probes-numeric/t3523-ipmt-selector-sweep columns B, C and D (excel-graph, 2026-11-05, T-3523): all 200 of B, the 6
+  cells C44, C46, C55, C114, C179, C189 and 113 of D are `#NUM!`, the other 281 of C and D finite;
+- probes/t4314-ipmt-balance-overflow (excel-graph, 2026-11-06, T-4314): A1:A10 across A's overflow, B1:B6 PMT, PPMT
+  and CUMIPMT, C1:C12 subnormal and smallest normal rates, D1:D3 a subnormal `1-Q`, E1:E4 the `(x)=0` companions.
+  `1E+308` cannot be typed (numbers.md), so the probe writes `2*5E+307`.
+
+Status: VERIFIED (excel-graph).
+Implemented in: `period_payments` (crates/rustsheet-engine/src/functions/financial/annuity.rs) errs IPMT where
+`discounted_balance` or `payment_factor` declines (`discounted_fails`); `discounted_split` flushes its interest.
+PMT (`compute_payment`), PPMT (`period_payments`) and CUMIPMT (`cumulative_of`) err on the same test (T-4488).
+Tasks: T-2587, T-2943, T-3523, T-4314, T-4488
+
+## IPMT and PPMT split Excel's discounted payment
+Rule: IPMT and PPMT split PMT's own discounted payment ("PMT is a discounted payment"). With PMT's `L`, its `1-Q`
+(Excel's expm1 for |x| < 1, `1 - EXP(x)` from 1 on), `A = (pv+fv)/(1-Q(-nper*L))` and `d` (the rate for type 0,
+`1/(1/rate + 1)` for type 1), and `x = (per-1-nper)*L`, all doubles:
+- `IPMT = -((A*(1-Q(x)) - fv) * d)`, where `1-Q(x)` uses the same expm1 / `1 - EXP` switch. This is the balance after
+  per-1 periods, times d.
+- `PPMT = -(A*Q(x)*d)`, with `Q(x) = EXP(x)`. A discount `Q(x)` below the normal range makes PPMT 0
+  ("IPMT cancels on fv").
+- In period 1 of type 1, IPMT is 0 and PPMT is Excel's PMT.
+
+This one form replaces the fitted switches of "IPMT cancels on fv" (`|B| < |fv|`, and type 1's
+`-B*(rate/(1+rate))` at rates that are not whole numbers) and "IPMT follows Excel's own discount where it moves the
+value" (the 6E-16 boundary). It also replaces PPMT's `-(pv+fv)*rate*Q/(1-Q)` with its division by `1+rate`. All of
+those were approximations of this form.
+
+Evidence (T-2243; each candidate was scored to the bit on every IPMT/PPMT cell with constant arguments in eval/suites,
+plus ironcalc-calc FINANCIAL/IPMT_PPMT.xlsx, Mac Excel cached values):
+- IPMT: all 1495 cells are bit-exact. That includes m9-fin-pmt (208, previously 137), fin-ipmt-ppmt-huge-rate (595,
+  previously 499), t2665-ipmt-fractional-nper-past-range (600, previously 552), IPMT_PPMT.xlsx (35, previously 16)
+  and 20 gen-m9 cells. Among them are the cells earlier entries left open:
+  - `IPMT(10,2,10,0,315)` = 1.2144607808295405E-6 (T-2667);
+  - `IPMT(1000,7,1E+5,1000,0,1)` = -999.0009990009992 (T-3086).
+
+  Other forms scored worse:
+  - the same balance as `-(((A - fv) - A*Q(x)) * d)`: 145/208 on m9, 456/595 on huge-rate;
+  - `-rate*((pv+fv)*Y - fv)` with `Y = (1-Q(x))/(1-Q(-nper*L))` and the switch: 149/208 and 515/595;
+  - `A*(-expm1(x))` without the switch: 203/208 and 587/595;
+  - PMT less PPMT, or the FV recurrence on Excel's PMT: 87 to 123 of 208.
+- PPMT: 2552 of 2556 cells are bit-exact. ppmt-first-period-sweep goes from 461 to 799 of 800, ppmt-log-rate-sweep
+  from 464 to 754 of 756, ppmt-negative-rate-sweep from 43 to 79 of 79, m9-fin-pmt from 138 to 224 of 224, and
+  fin-ipmt-ppmt-huge-rate from 516 to 593 of 593. The misses:
+  - three are one ulp (`PPMT(0.21,1,160,10000)`, `PPMT(1,1,44,10000)`, `PPMT(0.1,1,320,10000)`); the old form
+    matched the first. On each of those rows Excel's PMT cell (ppmt-log-rate-sweep B371, B742,
+    ppmt-first-period-sweep B320) is an ulp off our PMT too, so the misses are PMT's, not the split's (T-3186);
+  - the fourth was `PPMT(7,10,350,58827)`, whose subnormal discount Excel keeps since `pv+fv` times it is normal (T-2666).
+  `-(A*d*Q)`, `-(A*(Q*d))` and `-(A*Q*rate)/(1+rate)` score 21 to 71 points lower on the sweeps.
+- CUMIPMT does not sum this IPMT. Its type-1 per-period sum still takes the exact split ("PMT, IPMT and PPMT are the
+  exact payment"), which is bit-exact on CUMPRINC_CUMIPMT.xlsx G3, G4, G15 and fin-cumipmt-overflow-and-forms A8. With
+  the discounted IPMT those four cells are an ulp off: `CUMIPMT(0.1,10,345,2,2,1)` is -29.395712615048502, but the
+  discounted `IPMT(0.1,2,10,345,0,1)` is ...485 in the engine. Excel's IPMT on those arguments is not probed: if it
+  were ...502, this form would miss it rather than CUMIPMT having a form of its own. Four other type-1 CUMIPMT cells
+  would have been fixed by it. The probe is done (probes/t3179-cumipmt-ipmt-sum: Excel's IPMT there is ...485, so
+  CUMIPMT has a form of its own, "CUMIPMT of one period is not that period's IPMT"); that form is open (T-4197).
+Status: VERIFIED to the bit (Mac Excel cached values and excel-graph probes).
+Implemented in: `discounted_split`, `discounted_balance`, `discount_complement`, `payment_factor` and
+`period_payments`' `SplitForm` (crates/rustsheet-engine/src/functions/financial/annuity.rs, T-2243). Where the form
+is not finite (`1-Q` or `A` past the double range), and for CUMIPMT's `SplitForm::Exact`, the forms of the entries
+named above still decide.
+Tasks: T-2243, T-2666, T-3179, T-4197
+
+## DB and SYD argument domains
+Rule: SYD with a negative salvage is `#NUM!` (`SYD(100,-1E-300,10,1)`; salvage 0 is a value), and `life*(life+1)` past the
+double range is `#DIV/0!` (`SYD(100,10,1.3E+154,1)` 1.3846153846153848E-152, `SYD(100,10,1.4E+154,1)` and
+`SYD(1E+300,1,1E+200,1)` `#DIV/0!`); an overflowing numerator is `#NUM!` (`SYD(9E+307,0,10,1)`, `SYD(9E+307,1E+307,3,1)`). DB
+reads life and period as 32-bit integers: a life above 2147483647 is `#NUM!` (`DB(100,10,2147483648,1)`,
+`DB(6912,0,2147483648,2,6)`, `DB(100,10,2147483648,0.5)`; 2147483647 is a value), with one odd exception: from a life of
+4294967295 (u32::MAX) on, with a month other than 12, a period in (0, 1) is the partial last year straight after the first,
+`(cost - cost*rate*month/12) * (rate*(12-month)/12)` (`DB(100,0,4294967296,0.5,8)` 11.111111111111114,
+`DB(100,0,1E+10,0.5,6)` 25, `DB(18057,894,FACT(13),0.5,8)` 0, gen-m9 762cd0e4ec9a7aa9 A200), as if the life saturated in an
+unsigned 32-bit integer and life+1 wrapped to period 0. 4294967294 and 4E+9 are still `#NUM!` there, a month of 12 is
+`#NUM!` (`DB(100,10,4294967296,0.5,12)`), and period 1 is `#NUM!` (`DB(100,10,4294967296,1,8)`); a 64-bit-to-32-bit wrap of
+the life is ruled out (`DB(100,10,6442450944,0.5,8)` is 0), and the threshold is on the untruncated life
+(`DB(100,10,4294967294.5,0.5,8)` is `#NUM!`). Only salvage-0 cells test the formula's value (L7, L8): for any other
+salvage the rate rounds to 0 at such lives. A period above 2147483647 is period 1's value whatever the life
+(`DB(100,10,4,2147483648)` and `DB(100,10,4,1E+200)` are 43.8, `DB(0.01,488,32,1E+200,10)` -0.0033416666666666673,
+`DB(1,0,1E15,1E15)` 1)
+while 2147483647 is past life+1 and `#NUM!`; the life+1 bound is on the period's whole part (`DB(0.01,488,32,33.5,10)` is
+period 33's value; C1 and C2 are one ulp off ours, T-2697). A negative salvage is `#NUM!` for DB too, even at cost 0 (`DB(0,-1,4,1)`, `DB(100,-0.0001,4,1)`), while
+`DB(0,0,4,1)` is 0. So a huge period needs no schedule walk and is not under "DB and VDB period cap".
+Domain orderings (T-2718, probes/fin-db-syd-domain-order, excel-graph 2026-10-29; the engine already matched all 24 cells): with
+a fractional life, DB's period bound compares the period's whole part with life+1 (life 4.5, month 6: periods 5, 5.5 and 5.7 are
+period 5's value 3.445191064925025, period 6 and 6.5 are `#NUM!`; life 4.25: periods 5, 5.25 and 5.5 are 3.2590552540392004,
+period 6 is `#NUM!`); with month 12 the periods probed past the life (5, 5.25, 5.5 and 6) are `#NUM!`, 5 included (no fractional period between the life and the next whole number was probed). DB's huge-life
+`#NUM!` runs before the cost-0 shortcut (`DB(0,10,1E+10,1)` and `DB(0,10,2147483648,1)` are `#NUM!`), while `DB(0,10,1E+10,0.5,8)` is 0 (consistent with the u32-max wrap rule above;
+period and month both differ from the `#NUM!` cell, so it does not isolate either). SYD's negative-salvage `#NUM!` beats the `life*(life+1)`
+overflow `#DIV/0!` (`SYD(100,-1,1E+200,1)` and `SYD(1E+300,-1E+300,1E+200,1)` are `#NUM!`).
+Evidence: probes/fin-syd-db-domain (excel-graph, 2026-10-25, T-2491); probes/fin-db-syd-domain-order (excel-graph, 2026-10-29, T-2718); gen-m9 cells of T-2491.
+Status: VERIFIED (excel-graph)
+Implemented in: `fn_db`, `fn_syd`, `DB_INTEGER_MAX`, `DB_WRAPPED_LIFE`, `db_wrapped_last_year` (crates/rustsheet-engine/src/functions/financial/financial_depreciation.rs, T-2491).
+Tasks: T-2491, T-2718
 
 ## ISPMT's operation order
 Rule: Excel computes `ISPMT(rate, per, nper, pv)` as `(per - nper) * pv * rate / nper`, left to right in doubles. Each
@@ -155,6 +501,45 @@ T-2048); ironcalc-calc/FINANCIAL/ISPMT.xlsx Sheet1!E2 (Mac desktop cache).
 Status: VERIFIED (excel-graph)
 Implemented in: `ispmt_of` (functions/financial/annuity.rs)
 Tasks: T-2048
+
+## IPMT and PPMT take a period up to nper + 1
+Rule: IPMT's and PPMT's period is `#NUM!` below 1 and at or past nper + 1, not past nper: a period between nper and
+nper + 1 is a value, the split of "IPMT and PPMT split Excel's discounted payment" at that fractional period.
+`PPMT(0.0798622533510215,139.5,139,-115683.067689867,0,0)` is 8890.724785738455 (the closed form at period 139.5 is
+8890.7247857384561; at period 139 it would be 8555.65), and `PPMT(0.0134753740281655,123.5,123,-394.704261526236,
+60.5849877072275,1)` 5.466510612214358. At nper + 1 it is `#NUM!`: `PPMT(0.0449398904217299,315,314,-3107.59202412783,
+0,1)`, `PPMT(0.0805588428682658,227,226,16.1638393072709,0,0)` and `IPMT(0.0104741966355263,249,248,340880.668375193,0,0)`;
+so is a period of 0.5 (`IPMT(0.00268654404805728,0.5,11,-557.559050130903,0,0)`), 0 or -1.
+Unprobed: IPMT at a period strictly between nper and nper + 1 (the engine takes PPMT's bound for both). The only IPMT
+cells in that band, probes/t4314-ipmt-balance-overflow D1:D2 (`IPMT(1E-300,1,1E-10,1E-300)`, period 1 over nper 1E-10),
+are `#NUM!` for a subnormal `1-Q` ("IPMT is #NUM! where its discounted balance fails"), so they do not settle the band;
+the Gate A definition keeps the closed form there and the cells keep their math value (T-4516).
+Evidence: accuracy/PPMT/s1 A112, A118 (values), A128, A137, A139 (`#NUM!`); accuracy/IPMT/s1 A113, A114, A117, A120,
+A123, A139 (`#NUM!`) (excel-graph, 2026-11-06, T-4109); gen-m9 a91bad4e84f49739 A354 `PPMT(1,0.5,323,401723)` and
+c0681a8b150ce301 A375 `PPMT(0.1,9,1.5,404118,62,1)` (`#NUM!`); "Financial edge-pool smoke check" (IPMT 13 of 12).
+Status: VERIFIED (excel-graph) for PPMT; IPMT's band UNVERIFIED
+Implemented in: `period_payments` (`period >= period_count + 1.0`, functions/financial/annuity.rs)
+Tasks: T-4109
+
+## PDURATION's domain
+Rule: `PDURATION(rate, pv, fv)` is `(LN(fv) - LN(pv)) / LN(1+rate)`, with `1+rate` a double. A rate, pv or fv of 0 or
+below is `#NUM!`, and a rate so small that `1+rate` is 1 is `#DIV/0!`. Because the denominator is the logarithm of the
+double `1+rate`, not `log1p(rate)`, a tiny rate puts Excel far off the true period count, by about 1E-16/rate:
+`PDURATION(1E-15,204482.528669153,5714.93905255357)` is -3222234474861891.5 against a true -3577398904732622 (9.9%),
+`PDURATION(4.63349481901791E-16,154.751778919733,2.53388363643895)` -9259556764248234 against -8874660289073923 (4.3%),
+and `PDURATION(1.298060469022E-13,30.5334710958428,16.5767219758772)` is still 6.9E-4 off. Decision 0300 keeps Excel
+as the target there.
+Evidence: accuracy/PDURATION/s1 (excel-graph, 2026-11-06, T-4109): a negative rate (A115, A119, A128, A130, A132, A133,
+A138, A140), pv (A111, A122, A139) or fv (A114, A117, A118, A121) and a pv or fv of 0 (A123, A126, A137) are `#NUM!`;
+rate 1.1E-16 is `#DIV/0!` (A124), 2.3E-16 a value (A135). The double form above is bit-exact on all 181 numeric points,
+the tiny-rate ones included (A82, A85, A89, A107, A112, A116, A120, A135 are 2.2E-4 to 9.9E-2 off the math). Earlier
+cells: gen-m9 31474c20fc1dafd6 A194 `PDURATION(0,7968,32308)` and 9a1fa5366bc50918 A196 `PDURATION(100,0,49370)`
+(`#NUM!`), e168be7f6d3f84c2 A180 `PDURATION(1E-300,4938,46197)` (`#DIV/0!`).
+Unprobed: a rate so small that `1+rate` is 1 with fv equal to pv (`LN(fv)-LN(pv)` and `LN(1+rate)` both 0); the Gate A
+definition gives it no value (T-4516).
+Status: VERIFIED (excel-graph)
+Implemented in: `pduration_of` (functions/financial/growth.rs)
+Tasks: T-4109
 
 ## IRR, RATE and XIRR stop early, and the guess and flow scaling change the result
 Rule: Excel's iterative solvers (IRR, RATE, XIRR) return an un-converged iterate, not the root
@@ -255,7 +640,8 @@ positive root is `#NUM!`. The bracket is the first chain point whose XNPV sign d
 with the point before it (0 included); no bracket is `#NUM!`. Bisection: `a` starts at the bracket's upper
 end and `b` at its lower end; each step takes m = a + (b - a) / 2 and replaces the end whose XNPV has the
 sign of XNPV(m). An exact XNPV(m) = 0 does not stop it. It returns m at the first step where both
-h < 5e-9 + 1e-8 * |m| (h = (b - a) / 2, which equals |m - previous m|) and |XNPV(m)| < 2e-8 * max|value|.
+h < 5e-9 + 1e-8 * |m| (h = (b - a) / 2, which equals |m - previous m|) and, when m < 0 only, |XNPV(m)| < 2e-8 *
+max|value| (T-3268 bullet below; a positive root stops at the first step-test pass).
 So the result lies on the binary lattice of the bracket (for the default guess and a root of exactly 0.1
 it is 3355443/2^25 = 0.09999999403953552), which explains why XIRR is scale- and sign-invariant,
 converged only to about 1e-8, and why guess -0.5 or 1 gives `#NUM!` on one side.
@@ -343,21 +729,84 @@ Evidence (excel-graph, 2026-10-14, T-1525; from `tools/`: `uv run rustsheet-fitl
   equal others (A13); 4.470348358154297e-09 = 0.3/2^26 at guess 0.3 (A3), 4.8828125e-09 = 1e-5/2^11 at guess 0
   (A9), 3.725290298461914e-09 = 2/2^29 at guess 2 (A10). A negative guess is `#NUM!` (A6, A7, A11), even
   where the downward chain from the guess brackets the root (A6: root -0.1, guess -0.2). So no XNPV sign is
-  read on the walk; a NaN from normalising XNPV by the first value would explain it (unconfirmed).
-Ours: this model, T-1583's form (`xirr_bracket`, `compute_xirr`, functions/financial/financial_util.rs,
-T-0916): 227/227 on the fit set and 22/22 on the pre-T-1591 `xirr-oos` cells (the Newton code it replaced: 9 and 11); 48/52 with T-1591's cells. The walk
+  read on the walk; a NaN from normalising XNPV by the first value would explain it (unconfirmed). (A nonzero first value with XNPV(0)
+  exactly 0 does walk from a negative guess: the T-2728 bullet below.)
+- T-2728 (probes/irr-guess-edges A41-A47, probes/t2728-irr-guess-ref-mark A73-A81, excel-graph, 2026-10-25/26): when
+  XNPV(0) is exactly 0 (flows summing to 0, a root at 0), any nonzero XNPV differs from it, so the first chain point
+  brackets and the bisection halves the guess down to 0: `XIRR({-100,10,20,30,40},{0,1,59,60,61},G)` is G/2^k at the
+  first k past the step test, 2.9802322387695314E-09 (0.1/2^25) with no guess, 3.637978807091713E-09 (1000/2^38),
+  3.4266142457661796E-09 (123456789.123/2^55), 4.336808689942018E-09 (1E+10/2^61), 3.3087224502121107E-09 (1E+15/2^78),
+  2.5243548967072378E-09 (1E+20/2^95), 4.8828125e-09 at guess 0 (1E-5/2^11) and -3.725290298461914e-09 at guess -0.5
+  (-0.5/2^27, the downward chain's first point); the same flows negated give 0.1/2^25 too. At guess 1E+300 it is `#NUM!`
+  (about 1000 halvings), so Excel's bisection cap lies between 95 and about 1000 steps (ours 200). Before T-2728 the
+  engine read XNPV(0) = 0 as negative, skipped the upward chain and returned the negative mirror or `#NUM!`.
+- T-2045 (attempt 1; probes/xirr-back-dated-stop, excel-graph, 2026-10-30; 31 cells): with a flow dated before the
+  first, T-1583's span (the years from the first date to the latest) does not fit. whole-column-empty-walkers E7 and
+  F3 (`{-1000,1100,-1000,45000}` on `{45000,45365,1100,45365}`) stop at the first iterate past the step test (step
+  24, |XNPV| 2.55e-7·max|v|), where T-1583's bound runs on to step 26. The same flows as a literal (A1), as a range
+  with nine empty rows between (A2; the empty rows are zero flows on date 0, "XIRR reads empty cells as 0") and with
+  a zero flow dated 0 added (A3) give the same bits, so the whole column's empty cells do not move the stop. Of the 28
+  literal cells, 25 stop at the first step-test pass: last values 1100 to 300000 (A6-A12) and back flows 1 to 100
+  years early (A13-A20), among others. xirr-xnpv-whole-column-nogaps A4 (`{-1000,1100,-1000}` on
+  `{45000,45365,1100}`, root -0.0175) is the exception, along with its copies A4 and A5 and its 5-year twin A23: these
+  take one step past the first pass, after rejecting an iterate at |XNPV| 2.82e-8·max|v|. A6 differs from A4 only by
+  an extra 1100 flow at the latest date (same max|v|, same dates) and needs a bound more than 5 times A4's. So no
+  bound `c·N` fits both, whatever the constant `c`. Scratch arithmetic over the 269 numeric cells of `xirr`,
+  `xirr-oos` and this probe (a nonzero first value) rules out every normaliser `N` tried: max|v| scaled or not by
+  T-1583's span or by the earliest-to-latest years, Σ|v|, max or Σ of the discounted terms at m, |XNPV'(m)| (bare, times
+  |m| or times 1 + m), |XNPV| at either bracket end, at 0, at the first or the previous midpoint, |Σv| and the sum of
+  the positive values. A step test on the signed m (`5e-9 + 1e-8·m`) scores 218 of 280 cells, against 269 for T-1583.
+  Lab (`uv run rustsheet-fitlab xirr-oos`, now with this probe: 81 cells): T-1583's span with the span from the earliest
+  date to the latest, or from the first date to the farthest either side (named T-2045 candidates), 76/81, and 227/227
+  on `xirr`. The misses are the A4 family (4 cells) and xirr-early-dates A7 (the input check). T-2328's rule (the engine)
+  scores 69/81, and the step test alone 74/81. Put in the engine, the earliest-to-latest span would fix E7, F3 and the
+  probe's E7 family but regress nogaps A4, so it is not applied. What sets the A4 family apart was open (next bullet).
+- T-3268 (attempt 2; no new probe, the 267 numeric cells with a nonzero first value of `xirr` and `xirr-oos`): the sign
+  of the root sets the A4 family apart. On every positive root (184 cells, the 4-flow back-dated cells, A8's 124 years and
+  T-1591's long spans among them) Excel returns the first iterate past the step test, so no XNPV bound ever binds there.
+  On every negative root (83 cells, the A4 family, A21-A28 and the downward-chain cells of the fit set) the unscaled
+  bound |XNPV(m)| < 2e-8·max|value| fits, with the feasible constant in (1.93e-8, 2.05e-8] and no span factor (every
+  negative-root cell has a latest date within a year of the first). So the rule is: the step test, and the XNPV bound only
+  when m < 0. Lab candidate "bisect, first-value sign, |f| bound on a negative root only, Excel ^ (T-3268)": 227/227 on
+  `xirr`, 80/81 on `xirr-oos` (the miss: the input check of xirr-early-dates A7). T-1583's span factor was a stand-in for
+  the positive-root exemption: A8 and T-1591's cells are positive roots. Not separated by any cell: whether the switch is
+  the midpoint's sign, the bracket's side (the downward chain) or a bound that grows fast with 1 + m; and whether a
+  negative-root cell spanning years scales the bound (none is probed).
+- T-3353 (probes/xirr-two-flow-long-span, excel-graph, 2026-10-31; 270 two-flow cells `XIRR({-1000, v1}, {2000-01-01,
+  +round(years·365.25)})`, years 1 to 100 and roots -0.9 to 10, default guess; probes-numeric/xirr-two-flow-gate-a-sweep,
+  120 fresh log-uniform cells with a 50-digit closed-form column): the negative-root XNPV bound does not scale with the
+  span. T-3268's unscaled rule is bit-exact on all 270 cells (and on all 120 of the sweep). The span-scaled bound of
+  T-1583 and T-2328 (the engine until T-3268, and the engine at the commit the owner's 2026-10-31 assessment ran on)
+  misses 49 of the 270 (a scratch replay of both rules with libm's `pow`, which itself gives all 270 under T-3268's rule).
+  Every miss is a negative root over 3 to 100 years (rows 37, 55, 73, 75, 91-93, ... 253-257: roots -0.9 to -0.01). It
+  stops early there, 2.3e-10 to 2.8e-7 off Excel's value (row 239, root -0.01 over 90 years: 2.8e-7), and
+  that was item 6 of decision 0188's list. Excel's own XIRR is about 1e-8 off the math at a root away from 0, and
+  1e-7 to 2.4e-6 off at roots near 1e-3 (row 6: 2.0e-6). That is the step test's absolute 5e-9 term, and below G it
+  stays Excel's value. Near a zero root (|root| below about 2e-5) the same term puts Excel 1e-4 to 2.1e-3 off the
+  math (9 sweep cells, rows 94-104): an R3 candidate the owner ruled to keep Excel's (decision 0300, T-3484).
+Ours: this model (`xirr_bracket`, `compute_xirr`, functions/financial/financial_util.rs,
+T-0916), with T-3268's stop (the XNPV bound on a negative midpoint only, unscaled): 227/227 on the fit set and 80/81 on
+the 81-cell `xirr-oos` (T-1583's span-scaled form before it: 69/81; the Newton code it replaced: 9/22 and 11/22 on the
+older cells). The walk
 cap (100 points) and bisection cap (200 steps) are engine bounds (DEVIATION, "The IRR and XIRR solver
 caps" below). A trial rate where a power overflows or underflows to 0 has no XNPV, as in the lab model.
 Status: VERIFIED (excel-graph) for the bracket, the midpoint and the step test. The XNPV part of the stop test
-(T-1583's span-scaled form) fits every numeric cell probed once XNPV uses Excel's `^` (T-2328). Its form rests on the
-fit set, `xirr-oos` and A8 alone, so it is a fitted rule, not a known mechanism.
-Tasks: T-1525, T-0916, T-1533, T-1583, T-1591, T-2328, T-2329
+(T-3268's form: unscaled, on a negative midpoint only) fits every numeric cell probed once XNPV uses Excel's `^`
+(T-2328), flows dated before the first included. It is a fitted rule, not a known mechanism.
+Tasks: T-1525, T-0916, T-1533, T-1583, T-1591, T-2328, T-2329, T-2728, T-2045, T-3268 (the negative-root stop), T-3353 (unscaled over long spans), T-3484 (near-zero roots, R3 candidate)
 
-## IRR is a secant in v = 1/(1 + r) from v0 and v0 +- 0.001 (fitted, 189/263 bit-exact)
-Rule: IRR runs the secant method on NPV as a function of v = 1/(1 + r):
-- start: v0 = 1/(1 + guess) (guess 0.1 when omitted) and v1 = v0 + 0.001 when NPV(v0) > 0, else v0 - 0.001;
-- step: v2 = v0 - NPV(v0)(v1 - v0)/(NPV(v1) - NPV(v0)), then shift (v0, v1) <- (v1, v2);
-- stop: at the first v2 with |v2 - v1| < 1e-7 and |NPV(v2)| < 1e-7, returning 1/v2 - 1;
+## IRR is a secant in d = 1 - v = r/(1 + r) from d0 and d0 -+ 0.001 (fitted, 263/263 bit-exact)
+Rule: IRR runs the secant method on NPV as a function of d = 1 - v = r/(1 + r), v = 1/(1 + r) (T-3120 moved
+the state from v to d; the T-1533 text below, written for the secant in v, holds for d with the signs flipped):
+- leading zero flows are dropped (T-3120 bullet below);
+- start: d0 = guess/(1 + guess) (guess 0.1 when omitted) and d1 = d0 - 0.001 when NPV(d0) > 0, else d0 + 0.001
+  (v1 = v0 +- 0.001 as before);
+- NPV at d: the sum of c_i/D_i with D_0 = 1 and D_i = D_(i-1)*x a running product, x = 1/(1 - d) (worksheet NPV's
+  arithmetic, "NPV's residue at IRR's root is not the double sum"), every `*`, `/` and `+` Excel's twice-rounded
+  operator (numbers.md "Division rounds twice"; T-3205 bullet below);
+- step: d2 = d1 - NPV(d1)(d1 - d0)/(NPV(d1) - NPV(d0)) (anchored on the newer iterate), then shift (d0, d1) <- (d1, d2);
+- stop: at the first d2 with |d2 - d1| < 1e-7 and |NPV(d2)| < 1e-7, or with d2 = d1 exactly and |NPV(d2)| below
+  1e-7 times the largest |flow| (fitted, T-3120 bullet), returning 1/(1 - d2) - 1;
 - a run that does not stop is retried once from guess 0.1. (The 18 `#NUM!` cells of the sweeps are all
   flows without a sign change; they are not scored.)
 So the result is x - 1 with x = 1/v a double: for all 263 numeric IRR cells, value + 1 is exactly
@@ -391,13 +840,13 @@ I!C, I!D (closed-form two- and three-flow roots), probes-numeric/m9-fin-irr-rate
 flows, guesses); excel-graph, 2026-10-14. `uv run rustsheet-fitlab irr` (263 cells): the fitted secant
 189/263 bit-exact, 207 within 4 ulp, 260 within 1e-9; the best Newton candidate (in v, converged) 74; the
 engine 1.
-Ours: this secant (`irr_npv`, `irr_secant`, `compute_irr`, functions/financial/financial_util.rs, T-0916):
-189/263 bit-exact and 207 within 4 ulp on the fit set, the same cells as the lab model (the Newton code it
-replaced: 1). Three gated cells the Newton code matched by chance are known failures now (decision 0065).
-Where both secant runs fail the engine falls back to the earlier Newton/bisection solver (not an Excel
-fact). Excel returns `IRR({-400,1,1,1,1,1})` = -0.6737366751808405 (ironcalc-calc IRR.xlsx General!L17),
+Ours: this secant (`irr_npv`, `irr_secant`, `compute_irr`, functions/financial/financial_util.rs, T-0916, in d
+since T-3120, its NPV twice-rounded since T-3205): 263/263 bit-exact on the fit set, the same cells as
+the lab model (the Newton code it replaced: 1; the secant in v: 189). Three gated cells the Newton code matched by chance are known failures now (decision 0065).
+Where both secant runs fail the engine runs the fitted fallback of "IRR's fallback when the secant fails" (T-2727). Excel returns `IRR({-400,1,1,1,1,1})` = -0.6737366751808405 (ironcalc-calc IRR.xlsx General!L17),
 where the fitted secant does not stop, and raising its step cap does not explain it (1,000 steps give
--0.6737366751808431). Probing it is T-1686.
+-0.6737366751808431). T-2727 fitted that fallback ("IRR's fallback when the secant fails"); its digits and caps
+are left to T-1686.
 Open, the 2026-10-24 re-fit over every IRR cell of the eval (T-2131; 388 numeric cells with
 distinct flows and guess, gen-m9 included, of which the model matches 219): no variant of the
 arithmetic closes the gap. NPV as c_i/x^i, Horner in v or c_i*v^i, each with double or 64-bit
@@ -418,36 +867,298 @@ two other kinds:
   (gen-m9/31474c20fc1dafd6 A271) and `{0.3,-2.5,1.005}` (gen-m9/a91bad4e84f49739 A369), no
   secant run from any guess in -0.99 to 100 gives Excel's bits (the nearest is 2.6e-15 off), so
   Excel's fallback is not a retry of the same secant from another fixed guess (T-1686).
-Status: VERIFIED for the method (secant in v, offset, both stop tests, retry; 189/263 bit-exact); UNVERIFIED
-for the last bit (NPV's evaluation order), the step cap, and flows with leading zeros (A173, A175)
-Tasks: T-1525, T-1533, T-0916, T-2131, T-2565
+- T-2565 (probes/t2565-irr-guess-sweeps, excel-graph 2026-10-28; {-0.0001,2,42} P!A1:C72 and {-2.5,-1,123456789.123}
+  P!A73:C175, each as is, x1E6 and x-1; `IRR(flows, g_k)` at every iterate of the model's run from 0.1 and the
+  j = -5..5 guess sweep): the departure is not in the early steps. Excel departs from the model by 1E-13 to 1E-12
+  relative over the iterates (6E-15 at the lowest, 1.1E-12 at the highest; P!C157 is the one outlier, below) from the very first
+  guess g_1 (P!C1, C73) to the last (P!C13, C95, whose guess is the model's final iterate), so no distance from the root at which the two agree exists; the model's rate for guess 0.1 + j*1E-5
+  slides with j (P!C14:C24; not in the 67a4c03a x1E6 block, C131:C141), Excel's is constant over j = -5..5 in all three scalings of {-0.0001,2,42}
+  (P!C14:C24, C38:C48, C62:C72) and in the unscaled and x1E6 blocks of the other flow (P!C96:C106, C131:C141); its
+  x-1 block (P!C165:C175) is constant except C175. The
+  result is on a grid: in v = 1/(1 + result) Excel's results are integer multiples of 2^-53 (v is about 1.4E-4 or 5E-5, whose own
+  spacing is 2^-65 or 2^-67), and the model's v rounded to the nearest multiple of 2^-53, returned as 1/v - 1,
+  equals Excel's bits in 173 of the 175 cells; P!C95 is 1 grid step off after rounding (0.84 before) and P!C157 (flow 67a4c03a x-1, guess
+  = an iterate) is an unexplained outlier, about 100 grid steps and 7.9E-11 relative off, perhaps another step
+  count or path. So the "0.1 to 0.4 %" error
+  of the large-root cells is the secant's final v held with 53 fractional bits (the iterate is stored as an offset
+  from 1 or in a 2^-53-granular fixed form), not a different early step.
+- T-3120 (fit lab `uv run rustsheet-fitlab irr`, `irr_secant_d`; engine eval): the rounding is the state. Excel's
+  secant runs on d = 1 - v, so every iterate's v = 1 - d is a multiple of 2^-53 once v < 0.5 (d in (0.5, 1) has
+  spacing 2^-53), not only the result. Fit set (263 cells), bit-exact / within 4 ulp: the secant in v 189/207;
+  that secant's result rounded to the grid (candidate A) 190/208; the secant in d anchored on d0 with
+  d0 = 1 - 1/(1 + g) and NPV as c_i/x^i (candidate B) 202/214, anchored on d0 with the shipped start and NPV 225/234;
+  the shipped rule 262/262. Each part counts: d0 = 1 - 1/(1 + g) instead of g/(1 + g) 235/239, NPV as c_i/x^i (pow,
+  `_npv_v_over_x`) 229/232, leading zeros kept 260/260 (Calc!A173, A175; 261 with T-3205's NPV). It also gives irr-fallback-roots P!A25-A28 and A36-A39
+  bit for bit (the two-flow roots too: NPV by the running product of x is what puts them on the grid point nearest
+  the root) and 180 of the 181 t2565 cells; P!C95 is exact now and P!C157 stays the outlier. Rounding only the
+  final v cannot be the rule: in v in [0.25, 0.5) every off-grid double is a tie, and Excel takes the lower v for
+  `IRR({-1,0,0,0,0,0,0,0,0,1000})` (gen-m9 9a1fa5366bc50918 A302) but the higher for IRR.xlsx General!L47.
+  The zero-step stop: in t2565's x1E6 block of {-2.5,-1,123456789.123} (P!A107, C107-C141) no grid point has
+  |NPV| < 1e-7 (1.2E-6 at Excel's 7026.083663633989), the secant's step becomes exactly 0, and Excel still returns
+  that iterate; without the zero-step stop the run fails and those 36 cells are `#NUM!` (144/181). The bound on
+  that residual is fitted: 1E-20 to 1E-7 of the largest flow, or an absolute 1E-5 to 0.1, score the same; an
+  unconditional zero-step stop costs 6 fit cells (far guesses whose step stalls on a flat NPV and must retry).
+  Leading zeros: `IRR({0,-100,110},0.05)`, `IRR({0,0,-100,110},-0.5)` and `(..,10)` are exactly the
+  values of `{-100,110}` from the same guesses (irr-guess-edges P!A33, m9-fin-irr-rate Calc!A173, A175).
+- T-3205 (fit lab `irr` plus the two cells below; engine eval): NPV's operators round twice. The two cells T-3120
+  left, m9-fin-irr-rate Calc!A214 `IRR({-1000,230,200,125,200,10},5)` (Excel -0.10150067605359347) and gen-m9
+  67a4c03afd63f988 Calc!A395 `IRR(Data!C10:E12,0.5)`, flows {0.5,0.1,-0.5} (Excel -0.09501243788791103), are each
+  exactly the secant's next iterate after the one plain doubles stop at (16 ulp off): there the plain NPV is
+  5.6E-13 and 2.2E-16, so the stop tests pass one step early. With the running product's `*` twice-rounded
+  (numbers.md "Division rounds twice") A395 comes out right, with the sum's `+` twice-rounded A214, and with
+  both, `/` too or not, every cell: 263/263, and both cells (264/264 counting A395). Rejected on the same set:
+  NPV with every operation held at 64 bits and one final rounding (ext) 194, the quotients summed right to left
+  197 (plain or twice-rounded), NPV as c_i*v^i 179, the step as d1 - f1/((f1-f0)/(d1-d0)) 243 or
+  d1 - (d1-d0)*(f1/(f1-f0)) 237, the step in 64 bits 233, two consecutive small steps before the stop 50, one
+  extra step after it 47, a step bound of 1E-8 193. The lab's NPV now flushes subnormals as the engine's does,
+  and its "unconditional zero-step stop" candidate scores 257 (the 6 cells above). Worksheet NPV shares this
+  arithmetic (`discounted_sum`): its fit (annuity-npv, 470 cells) cannot tell plain from twice-rounded, and the
+  twice-rounded form also gives gen-m9 9d9ceba257f8001b Calc!A85 `NPV(1E-10,Data!A8,{-100,50,60,0,0},{0,0,0})`
+  = 9.999999981999995 and gen-m9 81bcdc0bec0c8e6b Calc!A268 `IRR(Data!A8:D9)` = 1.9999999999999996, which
+  plain doubles missed. Still open: P!C157 (below), and whether dropping leading zero flows holds for a root far
+  from 0.1 (T-3120's review; unprobed).
+Status: VERIFIED for the method (secant in d, offset, both stop tests, retry, leading zeros dropped, NPV
+twice-rounded; 263/263 bit-exact); UNVERIFIED for the zero-step stop's bound and the step cap
+Tasks: T-1525, T-1533, T-0916, T-2131, T-2565, T-3120, T-3205
+
+## IRR at an exact zero root
+Rule: on flows whose exact root is 0, Excel for the web returns exactly 0 for `IRR({-4,4})` (with or without a
+guess of 0.1 or -0.5), `IRR(A4:B4)` on -4 and 4, and `IRR({-1,1})`, but -2^-52 for `IRR({4,-4})` and
+-2.886801908630332E-12 for `IRR({-2,1,1})` (probes/t3410-irr-zero-root-imcos Calc!C1 to C8, excel-graph,
+2026-10-31; C7 `IRR({-4,4})=0` is TRUE). The engine gives all eight.
+- The secant of "IRR is a secant in d = 1 - v" stops at d2 = 8.326672684688674E-17 on {-4,4}. Its final
+  1/(1 - d2) - 1 in plain doubles is 2^-52; with Excel's twice-rounded division (numbers.md "Division rounds
+  twice") 1/(1 - d2) is a tie that rounds to 1, so the result is 0, the web's value. On {4,-4} and {-2,1,1} plain
+  and twice-rounded arithmetic agree (a scratch run of the rule in plain doubles, T-3410).
+- ironcalc-calc/FINANCIAL/IRR.xlsx Two Values!C4, the same formula on the same cells, caches 2^-52, though its
+  app.xml names Excel Online 16.0300. docs/research/oracle-calibration.md (T-0004) recorded the web's 0 there too.
+  That is consistent with a build that rounds the final quotient once, though other paths could give the same bits. Decision 0196 names the cell M14
+  desktop-only evidence (T-1075 item 23); it stays a known failure.
+Status: VERIFIED (web); the desktop value is T-1075 item 23
+Tasks: T-3410
 
 ## The IRR and XIRR solver caps
 Rule: Excel's caps on its IRR secant, XIRR's bracket walk and XIRR's bisection are unknown: no probe
 reaches them. The engine bounds each loop itself, so an untrusted workbook cannot make one cell iterate
 without end (CLAUDE.md directive 5). XIRR walks at most 100 points per chain and bisects at most 200
-steps. IRR's secant takes at most 50 steps per run, with one retry from 0.1, and then the earlier
-Newton/bisection solver at most 50 Newton steps per start and 50 bisection steps. A run that reaches its
+steps. IRR's secant takes at most 50 steps per run (200 on the flows where Excel's longer runs are evidenced, T-3408:
+"IRR's secant runs longer than 50 steps"), with one retry from 0.1, and then the fallback's Newton search
+at most 50 steps ("IRR's fallback when the secant fails"; Excel's own cap there lies between 29 and 119). A run that reaches its
 cap gives `#NUM!` (or, for IRR, moves on to the next stage). Every oracle cell of the fit sets finishes
 well inside the caps.
 Evidence: none for Excel; this is a resource limit, not an Excel observation. Probing Excel's caps, the
 fallback path and overflowing trial rates is T-1686.
 Status: DEVIATION (decision 0014)
-Implemented in: `xirr_bracket` (`WALK_CAP`), `compute_xirr` (`BISECTION_CAP`), `irr_secant` (`MAX_STEPS`),
-`irr_fallback` and `irr_newton_raphson` (functions/financial/financial_util.rs)
+Implemented in: `xirr_bracket` (`WALK_CAP`), `compute_xirr` (`BISECTION_CAP`), `irr_secant` (`irr_secant_steps`),
+`irr_fallback` (`IRR_FALLBACK_STEPS`) (functions/financial/financial_util.rs)
 Tasks: T-0916, T-1686
 
+## IRR's guess range
+Rule: IRR's guess must be above -1 and below 2^53, else the call is `#VALUE!`, ahead of the no-sign-change `#NUM!`:
+`IRR({-100,60,60},G)` converges for G = 1E+15, 2^52, 8E+15, 9E+15 and 2^53-1, and is `#VALUE!` for 2^53, 2^60, 2^100,
+1E+16, 1E+20, 2.5E+29 and 1E+300 (as for -1, -2 and -1E+300); `IRR(COUNTBLANK(..),1E+300)` (a scalar flow, otherwise
+`#NUM!`) is `#VALUE!` too. (guess >= 2^53 and 1 + guess = guess are the same test on doubles.) An error argument in
+the flows comes before the guess bound (`IRR(1/0,1E+300)` is `#DIV/0!`); the full order is "IRR's error order" below.
+Other findings of the same probes: `IRR({-1,X})` is `#NUM!` for X from 1E+13 to 1E+16 except `#DIV/0!` at X = 1E+15
+("IRR's far-root bound"); `IRR(CELL("row",D2))`, `IRR(CELL("col",D2))` and
+`IRR(LET(x,CELL("row",D2),x))` are `#VALUE!` while `IRR(CELL("row",D2)+0)`, `IRR(CELL("contents",D2))` and `IRR(ROW(D2))`
+are `#NUM!` (followed since T-2728, "IRR's error order"); `XIRR({-100,10,20,30,40},{0,1,59,60,61},123456789.123)` is
+3.4266142457661796E-09 and with no guess 2.9802322387695314E-09 (followed since T-2728, "XIRR is a bracketing bisection").
+Evidence: probes/irr-guess-edges, probes/irr-guess-edges-2 (excel-graph, 2026-10-25).
+Status: VERIFIED (excel-graph)
+Implemented in: functions/financial/financial_util.rs (`compute_irr`, `IRR_GUESS_BOUND`)
+Tasks: T-2494, T-2727, T-2728
+
+## IRR's error order
+Rule: IRR reads its errors in this order: (1) an error that the flows argument itself evaluates to (not a single
+cell's), as is; (2) the guess: an error guess, as is, then the guess range (`#VALUE!`, "IRR's guess range"); (3) the
+`#VALUE!` of an error inside the flows (an array element or a referenced cell, "IRR over an error element") and the
+`#VALUE!` of a flow that is a number straight from `CELL("row"|"col",..)` or ERROR.TYPE; (4) the solver's `#NUM!`.
+- (1) before (2): `IRR(1/0,NA())`, `IRR(1/0,"x")`, `IRR(1/0,1E+300)` and `IRR(1/0,{0.1,0.2})` are `#DIV/0!` (A41, A33,
+  A29, A27).
+- (2) before (3): `IRR({1,"a"}+0,1/0)` is `#DIV/0!` (A39) where `IRR({1,"a"}+0,0.1)` is `#VALUE!` (A23);
+  `IRR(CELL("row",Data!D2),1/0)` is `#DIV/0!` and `IRR(ERROR.TYPE(#REF!),NA())` `#N/A` (-2 A1, A3). The gen-m9 cell
+  `IRR((YEAR(Data!D$11)+UNIQUE(Data!B2:E10,TRUE,TRUE)),INDEX(Data!A3:B9,2))` is `#REF!` this way: its flows hold `#VALUE!`
+  elements (A5) and its guess is INDEX's own `#REF!` for one index into a 2-D range (lookup.md "INDEX with one index into a
+  2-D range is #REF!"; `ABS(INDEX(Data!A3:B9,2))`, `PMT(..)`, `NPV(..)`, `XIRR(..)`, `MIRR(..)`, `RATE(..)` of it are
+  `#REF!` too, -2 A29-A39), not an IRR quirk: a plain 1x2 range guess lifts (`Data!A4:B4`, `(Data!A4:B4)`,
+  `OFFSET(Data!A4,0,0,1,2)`, `INDIRECT(..)`, `IF(TRUE,..)`, `CHOOSE(1,..)`, `LET`, an intersection and INDEX with an area
+  all spill two results, A9, -2 A13-A27).
+- (2) before (4): `IRR(Data!B9:B10,1E+300)` (two text cells, no number) is `#VALUE!`, `IRR(Data!B9:B10,1/0)` `#DIV/0!`
+  (A45, -2 A5).
+- The mark of (3): `IRR(CELL("row",D2))`, `IRR(CELL("col",D2))`, `IRR(ERROR.TYPE(#REF!))` and `IRR(CELL("row",D2),0.5)`
+  are `#VALUE!` where `IRR(5)`, `IRR(ROW(D2))`, `IRR(CELL("contents",D2))`, `IRR(CELL("row",D2)+0)` and
+  `IRR(@CELL("row",D2))` are `#NUM!` (irr-guess-edges A20-A26, irr-guess-edges-2 A35-A44; A51, A63). It is the mark of
+  statistics.md "ERROR.TYPE and CELL results are #NUM! in the paired functions", and it passes through the same wrappers:
+  `LET(x,..,x)`, `IF(TRUE,..)`, `CHOOSE(1,..)`, `INDEX(..,1)`, `IFERROR(..,0)` and `LAMBDA(x,x)(..)` keep the `#VALUE!`
+  (A53-A61), nested too: `IRR(CHOOSE(1,LET(x,CELL("row",D2),x)))` is `#VALUE!` (probes/t2766-mark-positions-2 A5).
+- A single error cell as the flows is (3): with A1 `=1/0`, `IRR(A1,NA())`, `IRR(A1:A1,NA())` and `IRR((A1),NA())` are `#N/A`
+  and `IRR(A1,0.1)` `#VALUE!` (probes/t2728-irr-guess-ref-mark-3 A2-A5).
+Evidence: probes/t2728-irr-guess-ref-mark (cells A1-A81, "-2" is probes/t2728-irr-guess-ref-mark-2), -3, excel-graph,
+2026-10-26; probes/irr-guess-edges, irr-guess-edges-2 (2026-10-25); gen-m9 5422bdbf173fc233 A63, 5c6a23c4f6597f1c A153.
+Status: VERIFIED (excel-graph)
+Implemented in: `fn_irr` (functions/financial/mod.rs) through `Model::evaluate_marked` (number_mark.rs), the wrapped
+forms included since T-2766 (A53-A61 scored again; irr-guess-edges-2 A37 `IRR(LET(x,CELL("row",D2),x))`).
+Tasks: T-2728, T-2766
+
+## IRR's far-root bound
+Rule: IRR is `#NUM!` at a root with 1 + r at or above about 1E+7 (v = 1/(1 + r) at or below 1E-7), whether the
+secant or the fallback finds it: `IRR({-1,X})` returns for X = 1E+4, 1E+5, 1E+6 and 3E+6 and is `#NUM!` for X = 1E+7,
+3E+7, 1E+8 to 1E+14 and 2E+15 (also with guess 1E+8), and `IRR({-1,0,X})` returns for X = 1E+8 to 1E+14 (the last
+9999998.994161328, 1 + r = 9999999.994, just below 1E+7). Three-flow and longer sets agree: `IRR({-0.0001,2,42})` = 20019.98 returns, and
+the gen-m9 roots 3.16E+7 and 2E+7 (9a1fa5366bc50918 A400, abc2939ebd1e2365 A280's inner IRR), `IRR({-1E-15,1})` and
+`IRR({-1E-13,1})` are `#NUM!`. The exact threshold between 9999998.99 and 1E+7 is not pinned; the engine uses 1E+7.
+The two-flow returns are not the exact root X - 1 (`IRR({-1,1E+6})` is 999998.9999712444), so Excel's steps at
+these scales are not the fitted secant's (T-2131, T-2565).
+The 2^-53 grid in v ("IRR is a secant in d = 1 - v", T-2565 and T-3120 bullets) explains both kinds (gap triage 2026-10-29):
+- Two flows: Excel's value is the exact root with v = 1/X rounded to the nearest multiple of 2^-53, and 1/v - 1
+  returned. That gives 9999.0000000011 (A25), 99999.0000004551 (A26), 2999998.999580666 (A28) and
+  999998.9999712444 exactly. The fitted secant already lands on a grid point here, one step away.
+- `{-1,0,X}`: the fitted secant's v rounded to the same grid gives Excel's A36-A39 bit for bit (for example
+  9999998.994161328 for X = 1E+14).
+T-3120 found where: the secant's state is d = 1 - v, whose spacing in [0.5, 1) is 2^-53, and with NPV by
+worksheet NPV's running product the secant reaches those grid points itself (A25-A28 and A36-A39 bit for bit).
+`IRR({-1,1E+300})` is `#DIV/0!` (probes/irr-guess-edges A39): from the guess 0.1 the secant's second iterate is
+d = 1 exactly, so v = 0 and NPV's 1/v divides by zero. The engine ends the call with `#DIV/0!` there (T-2802;
+whether the retry from 0.1 would run after such a stop from another guess is unprobed). Not explained:
+`IRR({-1,1E+15})` is `#DIV/0!` from guesses 0.05, 0.1, 5E+14 and 1E+15 (irr-guess-edges-2 A20, A28, A29,
+irr-guess-edges A38), while `IRR({-1,9E+14})` and `IRR({-1,2E+15})` are `#NUM!` (A19, A21): the fitted secant
+reaches none of them at d = 1; it stalls at the far root (d = 0.999999999999999 for 1E+15, 1 - 9 or 10 grid steps)
+in all three, so the rule that separates 1E+15 is elsewhere. IRR over gen-m9 bc04c1f478c9896c's Data!A1:D12 (first flow 0) from
+guesses 0.05, 0.1 and 0.5 is `#DIV/0!` too; ours is `#NUM!` (T-3900).
+`IRR({0,1E+15,2,42,1E+15,-0.0001})`, also a zero first flow, is `#NUM!` as ours.
+Evidence: probes/irr-fallback-roots A25-A40, probes/irr-guess-edges-2 A15-A34, probes/irr-guess-edges A27-A39
+(excel-graph, 2026-10-25 and 2026-10-26).
+Status: VERIFIED (excel-graph) for the bound and the d = 1 `#DIV/0!`; the other `#DIV/0!` cases are unexplained (T-3900)
+Implemented in: `IRR_FAR_ROOT_BOUND`, `irr_from_discount` (functions/financial/financial_util.rs)
+Tasks: T-2727, T-2802, T-3120
+
+## IRR's fallback when the secant fails
+Rule: where both secant runs fail (an iterate at v <= 0, a flat secant, no stop in the cap), Excel finds some roots and
+not others, and the split is that of Newton's method on the NPV polynomial in v, P(v) = sum c_i v^i, started at
+v = 0 (r = +inf): it converges to the real root nearest v = 0 and the call is `#NUM!` when that root is not positive or
+the run needs more than about 50 steps. Leading zero flows are dropped first (P(v)/v^k), else v = 0 would be a root:
+`IRR({0,2,-1})` returns about -0.5 (gen-m9/3c06f9298f65a3ba A394, under COSH(100)) and
+`IRR({0,1E+15,2,42,1E+15,-0.0001})` is `#NUM!` (probes/irr-guess-edges A34, A35). The guess does not change which flows return (it can change the digits;
+Sweep below). Probes:
+- `IRR({42,1,1,-1},G)` = -0.7467044766537371 for G = 0, 0.01, 0.1, 0.5, 1 and `IRR({-400,1,1,1,1,1},G)` =
+  -0.6737366751808405 for G = 0.01, 0.1, 0.5, 1 (P has one real root; Newton from 0 takes 29 and 26 steps);
+- `IRR({1,3,-1})`, `IRR({1,7,-1})` (guesses 0.01 to 1) and `IRR({1,20,-1})` are `#NUM!`, though each has a root at
+  r = -0.70, -0.86 and -0.95 that a secant from a guess near it finds: their P has a negative root nearer 0;
+- `IRR({0.3,-2.5,1.005},G)` = 6.909808543634611 for G = 1E-6 to 0.01 (the root at v = 0.126, nearer 0 than v = 2.36);
+- gen-m9: 31474c20fc1dafd6 A173 returns 661.41 (v = 0.0015, a negative root at -0.005 is farther); A22 c0681a8b150ce301,
+  A104 and A349 5c6a23c4f6597f1c, A117 1b60bf99d71424e7, A277 1cd3096e3e87c965, A293 0a957119475760c5 and A251
+  3c06f9298f65a3ba are `#NUM!` (negative nearest roots); abb7d565af89b849 A254 `{1E+15,-0.0001,1,-2.5,-0.0001}` is
+  `#NUM!` although its nearest root v = 50887 is positive: Newton from 0 needs 119 steps there. In 1b60bf99d71424e7
+  A117 and 1cd3096e3e87c965 A277 Newton from 0 jumps past a nearer negative root (-4.6E-5, -4.01) to a positive one
+  (8.41, 4.06); Excel is `#NUM!`, so the engine also rejects a root when P changes sign on [-v, 0).
+Neither an XIRR-style bracket walk from the guess (it finds `{1,3,-1}`'s root) nor a secant retry from any fixed guess
+in -0.99 to 1000 (they find the `{1,k,-1}` roots) fits. The returned digits are 15 to 35 ulp from Excel's
+(`{42,1,1,-1}` -0.7467044766537408 against -0.7467044766537371), not bit-exact (`{0.3,-2.5,1.005}` with guess 0.1 is 6.909808543634389 in Excel, 6.909808543634611 from guess 0.01).
+Against the exact roots (mpmath, 50 digits; gap triage 2026-10-27), Excel is the inaccurate one. `{42,1,1,-1}`'s
+root is -0.74670447665374079 and `{-400,1,1,1,1,1}`'s is -0.67373667518084225. Excel is 3.7E-15 and 1.8E-15 above
+them, while ours is within 1E-16, correctly rounded. Matching Excel means reproducing where its iteration stops
+(T-2928, after the T-2927 sweep).
+The 50-step bound is not Excel's: Excel returns Newton iterates from v = 0 after up to 632 steps (T-3411; "IRR's
+returns where the secant fails are Newton iterates on P(v) from v = 0, past the 1e-7 stop").
+Sweep (T-2927; probes-numeric/t2927-irr-fallback-sweep, 150 flows where the fitted secant fails from guess 0.1 and
+its retry, excel-graph 2026-10-27; exact roots of the flows' binary values and the signed offset of Excel's double in ulps in
+t2927-irr-fallback-sweep.roots.tsv, decimal bisection to 30 digits; both files are written by tools'
+rustsheet_tools.fitlab.irr_fallback_sweep). Excel's offset from the exact root has no fixed sign or size, by family:
+- `{k,1,1,-1}`, k = 2..100: -59 to +113 ulps (median +1; 0 to 2 ulps for many k); scaled by 1E6: -2.0 to +8.9;
+  negated (same root): -572 to +1251 (k = 25: +1 ulp, negated +1251).
+- `{-N,1,1,1,1,1}`, N = 163..375: within 1 ulp except N = 284 (A24), +1865 ulps, whose 1E6-scaled and negated
+  forms are within 1 ulp; negated up to +53.
+- `{0.3,-2.5,1.005}` scaled by 1E-3..1E+6 (A32-A41): -251 to -252 ulps at every scale. Scaled by a further 1E6
+  (A113-A131): -251 while the first flow is at most 3E6 (A113-A121), +7 from 3E7 on (A123-A131): the split goes with
+  the size of the flows. Negated: -282 to -291.
+- `{0.3,-b,1.005}`, b = 2.2..4.0: -9168 (b = 2.4) to +8395 ulps (b = 3.0); scaled by 1E6: -35 to +14; negated:
+  -10524 (A138) to +9036 (A144).
+- `{0,2,-1}`: exact in every form.
+Hypotheses for T-2928, not findings: the size dependence (1E6 scaling shrinks the offsets, and the flows' size splits
+A113-A131) suggests a stop test on |P| in the flows' units; the negation dependence says the iteration is not
+symmetric in the sign of P. The secant model that chose the flows is itself a fit, so some rows may be secant results
+rather than fallback ones, the guess-dependent rows below first. The guess column (column B, every tenth row) changes
+the digits on 5 of its 15 rows: `{2,1,1,-1}` (A1) and its 1E6 scaling (A51), -0.5000000000000002 against
+-0.5000000000000036 with guess 0.5; `{0.3E6,-2.5E6,1.005E6}` (A41) and `{3E6,-25E6,10.05E6}` (A121),
+6.909808543634389 against 6.909808543634618; `{7E6,1E6,1E6,-1E6}` (A61) by one ulp. This conflicts with
+irr-fallback-roots, where `{42,1,1,-1}` and `{-400,1,1,1,1,1}` give the same digits for every guess from 0 to 1:
+whether the fallback starts from the guess (or from the secant's last iterate) is UNVERIFIED and left to T-2928.
+Which flows return does not depend on the guess.
+`#NUM!` where the fallback rule returns: `{-N,1,1,1,1,1}` for N = 496, 656, 866, 1145, 1513 and 2000 (rows 26-31),
+and the same scaled by 1E6 and negated (rows 101-112), while N = 163 to 375 and 400 return. The engine's Newton from v = 0
+converges there within its cap, so Excel's fallback gives up on a condition the rule lacks (a step cap below ours, or a stop on |P|
+that the large first flow defeats).
+Fit (T-2928 attempt 1, `uv run rustsheet-fitlab irr-fallback`, kernels/irr_fallback.py `irr_fallback_candidates`; 212
+cells of the sweep and irr-fallback-roots, the `#NUM!` cells included; bit-exact / within 4 ulp / within 1E-9, each
+candidate run as the fallback alone, the engine with its secant first): the engine 72/108/191; Newton in v from 0 as
+the engine 63/98/179, with |P(next)| < 1E-7 added 69/104/183, |dv| < 1E-10 67/101/179, < 1E-8 65/101/179, < 1E-7
+63/101/179, < 1E-5 51/74/179, < 1E-7·|v| 63/98/179, P summed in ascending powers 65/98/179, returning v instead of
+next 28/28/113 (relative stop 21/21/106), from v = 1 36/49/104, from the guess 54/91/178; Newton in r from the guess
+2/9/40, from 0 1/9/37, in x = 1 + r 2/10/42; the fitted secant from the guess with a 1000-step cap 48/50/63 (by Horner
+49/51/63). In a scratch harness (not shipped) these also fail: the secant continuing past an iterate at v <= 0 with
+the iterate kept, -v, v1/2, v1/10, (v0 + v1)/2, 0.9·v1, v1 + 1 or 1E-3 (at most 29 of the 152 numeric cells
+bit-exact, the engine's fallback 38); the secant in v, v by Horner, r and x = 1 + r from every fixed start on a grid of
+1,200 (-0.99 to 10, offsets 1E-5 to 0.1, signed or not, step tolerance 1E-6 to 1E-8, with or without |f| < 1E-7):
+only r0 = -0.65, r1 = r0 + 0.001 gives both `{42,1,1,-1}` and `{-400,1,1,1,1,1}`, and it scores 24/152 overall, so
+the hit is chance. Findings that bound the next attempt: (1) Excel's error is not what a plain Newton step leaves: on
+`{42,1,1,-1}`, `{-400,1,1,1,1,1}` and `{0.3,-2.5,1.005}` a last Newton step in v or in r would leave an error of the
+sign of P''/P', and Excel's has the other sign (only Newton in r on `{0.3,-2.5,1.005}` fits, from an iterate
+1.4E-6 off). A secant's error C·e1·e0 has no fixed sign, and its signed first offset explains the negation
+dependence. (2) `{0.3,-2.5,1.005}` at -251 ulps from 1E-3 to 1E+6 scale and +7 from 3E7 on fits a stop test
+|P| < 1E-7 in the flows' units: at Excel's iterate |P| is about 7.9E-15 times the scale, so it passes up to the
+1E7 scale and fails from 1E8. (3) That test also turns the engine's Newton `#NUM!` on the 1E6-scaled
+`{-N,1,1,1,1,1}` for N = 656 to 2000 (rows A103-A111, as Excel) because |P| cannot fall below 1E-7 at that scale, but
+not on N = 496 scaled (A101) or on the unscaled rows A26-A31. (4) Excel's value is an iterate of Newton in v from 0,
+Newton in r from the guess or the secant in v or r from the guess on only 53 of the 152 numeric cells (Newton in v
+on 40, the secant in v on 19, Newton and the secant in r on 2 each). (5) No step cap on the engine's Newton from
+v = 0 separates the `#NUM!` rows: `{-N,1,1,1,1,1}` takes 24 to 27 steps for N = 163 to 400 (returns) and 28 to 33 for
+N = 496 to 2000 (`#NUM!`), but `{40,1,1,-1}` takes 28 and `{42,1,1,-1}` 30 and both return; neither does a bound on
+the root (v = 3.21 is `#NUM!` for N = 496 while `{100,1,1,-1}` returns at v = 5.08).
+Fit, attempt 2 (T-2928, 2026-10-29, scratch harness only, not shipped). Each candidate ran after the fit lab's
+`irr_secant_v`, on the same 212 cells. With the engine's Newton as the fallback that harness gets 62/90/183, against
+the engine's own 72, so these counts compare only with each other. Results:
+- Newton in d = 1 - v from d = 1, with v held to 2^-53 at the return: 66/89/183, 72/96/185 with |P| < 1E-7.
+- Forward-difference Newton in v from 0 (h = 1E-3 to 1E-9, absolute or relative, either sign, with or without
+  |P| < 1E-7): at best 70/94/188.
+- A secant from v = 0, in v or in d. The first offset was 1E-5 to 1, signed by P(0), unsigned or flipped. The stop test
+  was |dx| < 1E-7, 1E-5 or 1E-3, or none, with or without |P| < 1E-7. Best 66/78/157: it often reaches another root.
+- The fitted secant, continued past an iterate at v <= 0 with that iterate replaced by 2·v1, 1.5·v1, 10·v1, 1.1·v1,
+  v1 + 0.1 or v1 + 2|v1 - v0|: at best 63/79/121.
+The gains over 62 are the |P| test's `#NUM!` rows (A103-A111, as attempt 1's finding 3) and last-bit cells; it loses
+A97, A129 and A131, which Excel returns.
+Attempt 2 found two things:
+(6) The fallback is not Newton in any variable. Negating every flow leaves each Newton iterate bit-for-bit unchanged,
+and a residual test as well. But Excel's negated rows differ from their positive rows by up to 1,251 ulp (A74
+`{-25,-1,-1,1}` against A12 `{25,1,1,-1}`). A58, A60 and A62 are 276 to 613 ulp from the exact root, and their positive
+rows A4-A6 within 50. So a step depends on the sign of P, as a
+secant's signed first offset does.
+(7) Where v < 1, Excel's results lie on a 2^-53 grid in v, as T-2565 found for the secant. 29 of the 32 distinct values
+are within half an ulp of r of a multiple of 2^-53, where chance gives 3.3; on a 2^-52 grid it is 11. So the iterate is
+held as d = 1 - v or in a fixed-point form there.
+Holding v to that grid alone moves the harness from 62 to 66.
+Next evidence: T-3117 scales the same flows by exact powers of two, where only an absolute test sees the scale, and
+negates them.
+Evidence: probes/irr-fallback-roots A1-A24 (excel-graph, 2026-10-26); the gen-m9 cells above;
+probes-numeric/t2927-irr-fallback-sweep (excel-graph, 2026-10-27).
+Status: VERIFIED (excel-graph) for which flows return; UNVERIFIED for the method (not Newton, finding 6) and the step cap
+(between 29 and 119)
+Implemented in: `irr_fallback`, `IRR_FALLBACK_STEPS` (functions/financial/financial_util.rs)
+Tasks: T-2727, T-1686, T-2131, T-2927 (sweep), T-2928 (returned digits), T-3117 (power-of-two probe)
+
 ## RATE is a secant on the FV residual
-Rule: RATE is a secant, not Newton's method, on the residual f(r) = pv·P + pmt·(k·((P-1)/r)) + fv with
-FV's own evaluation: P = (1+r)^n by Excel's `^` on Excel's `1+r`, k = 1+r for type 1, in exactly that
-parenthesization (FV's `annuity_factor`), and f(0) = pv + pmt·n + fv. It starts from r0 = guess and
+Rule: RATE is a secant, not Newton's method, on the residual f(r) = ((pv·P) + (pmt·(k·((P-1)/r)))) + fv:
+P = (1+r)^n by Excel's `^` on Excel's `1+r`, k = 1+r for type 1, in exactly that parenthesization, each
+`+`, `-`, `*` and `/` Excel's twice-rounded operator (not FV's `annuity_factor`, which rounds once), and
+f(0) = pv + pmt·n + fv. It starts from r0 = guess and
 r1 = r0 - 0.001·sign(f(r0)), steps r2 = r1 - f1·(r1-r0)/(f1-f0) with Excel's twice-rounded `-`, `*` and `/`,
 and stops at the first iterate with |r2 - r1| < 1e-7 and |f(r2)| < 1e-7, returning r2. The cap is 200
 steps, not the documented 20: guesses whose run needs 172 to 200 steps converge, those needing 201 to 216 are
-`#NUM!`, and the 200th iterate is returned on the step test alone (probes/rate-step-cap A30 is
-0.004999993194059272, the root 0.0049999931931192...; A31, whose 200th step is 8E-7, is `#NUM!`). An
-iterate at or below -1 is `#NUM!` (m9-fin-irr-rate A236, A352, A371-A378: the secant's root is
-below -1 there). Guess 0 therefore converges (rate-empty-arguments A1, A3, A8), and Excel's guess-sweep
+`#NUM!`. The 200th iterate, unconverged, is returned when it passes a looser test: |r200 - r199| < 1e-4,
+|f(r200)| < 1e-4 and 1 + r200 > 1e-4, all three absolute (T-2689, below). Otherwise the run is `#NUM!`. A
+result at or below -1 is `#NUM!` (m9-fin-irr-rate A236, A352, A371-A378: the secant's root is
+below -1 there); an iterate there runs on, and a flat secant holds (T-3348, "RATE holds on a flat secant and runs
+on below -1" below, which amends this model). Guess 0 therefore converges (rate-empty-arguments A1, A3, A8), and Excel's guess-sweep
 errors on R!C1:C31 are the secant's last step, whose sign and size depend on where the run lands.
 Evidence: scratch fit harness (T-2005; the RATE arguments evaluated by the engine, nested
 `RATE(n,PMT(..),..)` cells included) over the 464 literal RATE cells of probes-numeric/m9-fin-irr-rate,
@@ -462,20 +1173,395 @@ tests |dr| < 1e-7 alone 166, |f| < 1e-6 188, < 1e-8 181, |dr| < 1e-6 191, < 1e-8
 217/394, 100 232/414. In exact arithmetic Newton (in r, v = 1/(1+r), ln(1+r), on f, f/(1+r)^n,
 r·f and f·(1+r)^a for a in -100..100), Halley and finite-difference Newton (steps ±1E-5 to ±1E-10,
 absolute and relative) never reproduce R!C's large-error cells; the secant reproduces R!B's to a few ulps.
-The 181 numeric cells still off are mostly a few ulps (the last secant step amplifies f's rounding);
-which operation differs is open (follow-up in T-2005's Outcome). One cell disagrees on the value type:
+The 181 numeric cells still off were f's rounding and the nested PMT's bits (T-2527): the fit lab
+(`uv run rustsheet-fitlab rate`, kernels/solvers.py `rate_secant_candidates`) reads a nested `PMT(..)` as
+Excel's value of the same call in probes-numeric/m9-fin-pmt (all 308 inner calls are there). Excel agrees
+that the nested call adds nothing: probes/rate-excel-pmt-bits repeats the 308 nested cells with the PMT
+replaced by a cell holding Excel's PMT bits (its 15-digit literal plus an exact m·2^-e), and its 308 values
+are the nested cells' bits. On the 782 RATE cells of the fit set (errors included; the probes above,
+rate-zero-residual-guess and rate-excel-pmt-bits) the secant is bit-exact on all 782 with the residual's
+operators twice-rounded, 778 with them rounded once (FV's evaluation; m9-fin-irr-rate A487 2,183 ulp, A218
+157 ulp, and the same two inputs again as rows A2 and A271 of rate-excel-pmt-bits), and 751 to 774 with the
+three-term sum in another order (pv,fv,pmt; fv,pv,pmt; pmt,fv,pv; either rounding). Excel's value is an
+iterate of the model's trace on 705 of 705 numeric cells. So the RATE cells still off
+in the eval (m9-fin-irr-rate A218, A278, A245, A367 among them) are off by the engine's PMT bits, not by
+RATE's: the engine's PMT differs from Excel on 176 of the 308 inner calls (PMT's own tasks, T-1528).
+A guess whose residual is exactly 0 runs the secant, it is not returned (probes/rate-zero-residual-guess,
+T-2527): `RATE(1,0,0,0)` and `RATE(1,0,0,0,0,0.3)`, residual 0 everywhere, are `#NUM!` (the flat secant),
+not the guess; `RATE(10,-1E6,1E7,0,0,0)` is 0 (from guess 0 the first step lands on 0 exactly and the
+next one does not move), where the default guess is `#NUM!` (A583 below), and the guess-0 roots A8 and A10
+are 0 too; exact roots as guesses (`RATE(2,0,-1,1.5625,0,0.25)`, `RATE(2,-1,-1,4.75,0,0.5)`; A3-A6, A12)
+return the guess's bits, as the model. A7 (default guess) and A11 (type 1, residual -1.25 at the guess) are
+controls, not zero residuals. One cell disagrees on the value type:
 m9-fin-irr-rate A583 `RATE(10,-1E6,1E7)`, root exactly 0, is `#NUM!` in Excel; near 0 the residual is
 rounding noise (|f| about 0.1 to 0.4 against the 1E-7 test), the run wanders until the cap and the
-model returns its 200th iterate, -2.6E-9. Whether Excel's run goes flat or rejects earlier there, or
-its cap rule also tests |f| (A30's 200th residual is 7E-5), is unprobed.
-Not probed, kept from the model: `#NUM!` for a flat secant (f1 = f0) and for a residual whose `^` overflows; only the
-iterates r2 are tested against -1 (not r1 = guess - 0.001); a guess whose residual is exactly 0 runs the secant
-(the zero's sign picks r1) rather than returning the guess; f(0) is pv + pmt·n + fv in plain doubles (the three
+model returned its 200th iterate, -2.6E-9, before the cap's |f| test below (now `#NUM!`, as in Excel).
+The cap's return test (T-2689; probes/rate-cap-return-rule, rate-pmt-zero-cap, rate-step-cap, excel-graph):
+- Step, absolute: the 200th steps 7.3e-5 and 7.8e-5 return (rate-cap-return-rule A68 at r 0.05, A72 at r 0.2, where it is 4e-4
+  of the rate, so the test is not relative) and 1.09e-4 to 1.3e-4 is `#NUM!` (A70; rate-pmt-zero-cap A25, A55).
+- |f|, absolute: the same loan run returns at |f| 7.3e-5 (rate-step-cap A30) and is `#NUM!` at 1.06e-4 to 6e-3
+  (rate-cap-return-rule A53-A64, A20-A30, steps below 1e-7 included: A31 of rate-step-cap is this, not its step).
+  Scaling pmt and pv by 2^-10 to 2^-40 keeps the trajectory and shrinks f, and those runs return (A65-A74).
+- 1 + r: `RATE(n,0,pv)` creeps to its root -1, and returns at 1 + r200 = 1.02e-4 (rate-cap-return-rule A1, A7)
+  but not at 9.4e-5 (A16) or below (A5, A6, A8, A10, A11, A13, A15; rate-pmt-zero-cap n 11-15). The guesses
+  move 1 + r200 while the last step's ratio to 1 + r stays a function of n alone, so the edge is on 1 + r. With
+  pmt 0 and fv 0 the bands follow: n 2-10 converge, n 11-15 end below 1 + r = 1e-4, n 16-24 return (calipers
+  formulas_financial F142 = rate-pmt-zero-cap A24, -0.9970141220397587), n 25 and up have a step over 1e-4.
+Whether a test is `<` or `<=` and whether the last one is 1 + r or r + 1 are not separated by any cell.
+Not probed, kept from the model: `#NUM!` for a residual whose `^` overflows (a flat secant is probed:
+rate-zero-residual-guess A1, A2); only the iterates r2 are tested against -1 (not r1 = guess ± 0.001); a -0
+residual at the guess (a +0 one steps up, T-3876's entry "RATE steps up from a zero residual"; no probed one is -0); f(0) is pv + pmt·n + fv in plain doubles (the three
 guess-0 cells are bit-exact, but no cell separates the order); the cap probe's guesses were chosen by the model's own
 step count, so the cap's position is measured in model steps (A30's exact unconverged bits confirm it).
 Ours: `compute_rate` (functions/financial/financial_util.rs), this model.
-Status: VERIFIED (method, stop rule, cap; excel-graph) / UNVERIFIED (f's last-ulp evaluation, the rules above)
-Tasks: T-1525, T-0916, T-1533, T-2005
+Status: VERIFIED (method, f's evaluation to the last ulp, stop rule, cap and its return test, a zero residual at the guess; excel-graph) / UNVERIFIED (the rules above)
+Tasks: T-1525, T-0916, T-1533, T-2005, T-2689, T-2527
+
+## RATE holds on a flat secant and runs on below -1
+Rule: two amendments to "RATE is a secant on the FV residual" above, the rest of that model unchanged.
+- **Flat secant.** When f1 = f0 the secant has no finite step: 0/0 after a zero-step stall (r1 = r0), and a
+  nonzero number over 0 when the two iterates differ. The modelled outcome, which fits the evidence below, is that
+  Excel holds at r1 instead of failing. The held point is judged by the convergence test (|f1| < 1e-7) and, as the
+  200th iterate would be, by the cap's test (|f1| < 1e-4 and 1 + r1 > 1e-4); otherwise the run is `#NUM!`. A flat
+  secant on a residual of exactly 0 stays `#NUM!` (`RATE(1,0,0,0)`, rate-zero-residual-guess A1, A2). Whether
+  that rule is "f = 0", "every argument 0" or "a flat first step" is not separated.
+- **Below -1.** An iterate at or below -1 does not end the run: the residual is evaluated there (Excel's `^` takes
+  a negative base at an integer nper) and the secant carries on. Only the result is judged: a converged iterate at or
+  below -1 is `#NUM!`, as the cap's 1 + r > 1e-4 already was. UNVERIFIED: an iterate below -1 at a non-integer
+  nper. The engine's `^` errs on the negative base there and the run is `#NUM!`; Excel is unprobed.
+Why it matters: near the root of a long annuity with a large balance, the residual is rounding noise bigger than
+1e-7 (|pv·P| about 1e10 has an ulp near 1e-6), so the secant reaches a zero step, then a flat secant, before |f|
+can pass 1e-7. Excel returns that iterate; the engine returned `#NUM!` (decision 0188's item 2,
+`RATE(239,-14841.27102594,344293.4825124,-155496.6323522,0)` = 0.04310546919282547, stalled at |f| 3.2e-7).
+Evidence (excel-graph, 2026-10-31, T-3348):
+- probes/t3348-rate-fv-nonzero (186 cells: the example scaled by 2^-40 to 2^20, nper 200 to 300, type 1, five
+  guesses, and a sweep of annuities with fv ≠ 0 stratified by the old model's outcome). The flat secants split on
+  |f| at the cap's bound: held values at |f| from 1.1e-7 to 8.3e-5 are returned (A10 at 2^8 the example's scale,
+  8.3e-5), |f| 1.56e-4 and above is `#NUM!` (A99 1.56e-4, A11-A12 and others to 5e27), whether the stall is a
+  zero step (r1 = r0) or two distinct iterates with one residual (A182, A183, A184). The amended model gives
+  Excel's type on 186/186 and Excel's bits on 179; the old one 126/126 (all 60 misses `#NUM!` against a number).
+- probes/t3348-rate-below-minus-one (50 runs whose old-model iterate leaves -1): 50/50 bit-exact with the run
+  continued (30 come back above -1 and return Excel's value, e.g. `RATE(3,3735.938842325,-6629.520726773,
+  4839.177771065,1)` = 1.2149215363749337; 10 converge below -1 and 10 err later, all `#NUM!`); the old model
+  gives 20/50. Found on probes-numeric/t3348-rate-gate-a-sweep A171 (`RATE(5,1650044.83915129,...)` =
+  0.7069774195050786, first step at -1.48).
+- The fit set of "RATE is a secant on the FV residual" (960 literal cells with the cap probes) is unchanged:
+  960/960 bit-exact under the amended model; m9-fin-irr-rate A236, A352, A371-A378 converge below -1 (`#NUM!`).
+- probes-numeric/t3348-rate-gate-a-fresh (300 points drawn log-uniform after the model was frozen, T-3348 review
+  round 1; Gate A envelope in T-3348's Outcome): the amended model has Excel's type on 286 and Excel's bits on 269,
+  against the old model's 249 and 249. Its hold-out (T-3348's Outcome) is 367/367 bit-exact against 33 for the
+  correctly rounded root.
+- Not reproduced: in the noise floor Excel's iterates differ from the model's.
+  - Right type, not Excel's bits: seven flat-secant cells of t3348-rate-fv-nonzero (A112, A138, A153, A171, A175,
+    A180, A185) are 1 ulp to 2e-11 relative from Excel's. Excel's own value is that far from the root too (A171:
+    Excel 0.002094170434484841, root 0.002094170434492252, model 0.0020941704345254896). T-3389 tried to reproduce
+    the 4 beyond 15 digits (A138, A171, A180, A185) and did not (scratch harness on the fit lab kernels, the
+    amended model bit-exact on the other 1,189 of the 1,196 non-sweep RATE cells):
+    - Excel's value is not an iterate of the model's trace on any of the 7 cells. On the 4, no secant step between
+      any two of the trace's iterates gives it either. So no stop, hold or flat-secant fallback rule fixes them:
+      Excel's path leaves the model's earlier. The model's trace bounces in the noise for 10 to 30 steps on A138,
+      A180 and A185 (|f| about 1e-6 on terms of 1e7 to 1e9) and 2 steps on A171.
+    - A171 (nper 1, so the exact residual is linear and the secant lands next to the root at once): with the model's
+      residual near the root, Excel's value is reachable from first iterates 5.7e-14 or more from the model's
+      0.0020941704345913. Moving the guess residuals f(0.1) and f(0.101) by up to 600 ulps each gives it in 2 of
+      1.44 million pairs, both 400 to 600 ulps in opposite directions. The residual's rounding near the root is the
+      model's 1+r: the double 1+r puts a bias of up to pmt/r·2^-53 (1.4e-7 here) on f. An extended 1+r removes the
+      bias, and the run then lands on the root itself, not on Excel's value 7.4e-15 below it.
+    - Residual forms tried, none of which gives any of the 4: each operation of the residual (1+r, the power's
+      products, P-1, the quotient by r, the two products, the two sums) twice-rounded, kept at 64 bits, or P-1
+      exact (96 combinations; the best gets 3 of the 7, all among the last-digit ones); k·(P-1) before the
+      quotient by r;
+      P by C `pow`, by exp(n·ln(1+r)), by exp(n·log1p(r)), and by the x87 instruction sequence on the exact and on
+      the double 1+r; the factor as expm1(n·log1p(r))/r; and the PV form pv + pmt·k·(1-1/P)/r + fv/P. Excel's
+      `+` snap cannot fire: the residual's sums are not near zero against their left addends (A171: -1.7e-7 on
+      11634.76).
+    - Step forms tried, none of which gives any of the 7: plain doubles, rounded once, kept at 64 bits, r1 -
+      f1·((r1-r0)/(f1-f0)), and r1 - f1/((f1-f0)/(r1-r0)).
+    The 4 stay known failures. T-3579 probes Excel's residual bits directly (guess-seeded runs at nper 1).
+  - **The residual is not the cause at nper 1; the flat-secant outcome is** (probes/t3579-rate-residual-nper1, 53
+    cells on A171's arguments, excel-graph, 2026-11-01, T-3579). The model is bit-exact on 49:
+    - every guess other than 0.1 (16 near the root, root ± 1e-14 to 1e-9, and 17 from -0.9 to 1, A3:A35), whose
+      values read Excel's residual at the guess, at the guess ± 0.001 and near the root, so Excel's residual there
+      has the model's bits, f(0.1)'s partner points 0.099 (A29) and 0.101 (A30) included;
+    - pv, pmt and fv scaled by 2^-40 to 2^-1 (A36:A40) and the two #NUM! runs at 2^10 and 2^20 (A43, A44).
+    The model's run at guess 0.1 reaches r2 = 0.0020941704345913 with f(r2) = -1.674e-7, steps to
+    0.0020941704345254896 with the same residual, and holds there on the flat secant. Scaled by 2^-1 or less,
+    |f| < 1e-7 stops the run at that iterate before the flat secant, and Excel agrees. At scales 1, 2 and 4 (A1, A2,
+    A41, A42) Excel does not hold. Its value at scales 1 and 2 (0.002094170434484841) is, bit for bit, the model's run
+    restarted from the flat step's older iterate r2 (`RATE(..,0.0020941704345913)`, A6). At scale 4 it is
+    0.0020941704344770674, which the same restart also gives once its third iterate fails |f| < 1e-7. Restarting
+    from the newer iterate gives 0.0020941704344399933 instead (A5).
+    - As a blanket rule ("on a flat secant that has not converged, restart the secant from r0 with r0 ∓ 0.001"),
+      the restart is wrong. In a scratch build it gets A1, A2, A41 and A42 and t3348-rate-fv-nonzero A171, but
+      loses this probe's A43 and A46 (scale 2^10) and 32 held cells of t3348-rate-fv-nonzero (A15 to A26, A74 to
+      A184 among them, including the distinct-iterate holds A182 to A184). It also loses 17 cells of
+      probes-numeric/t3348-rate-gate-a-fresh, 10 of t3348-rate-gate-a-sweep and 4 of t3478-rate-r4-wide.
+    - So Excel sometimes restarts and sometimes holds. T-3698's rule ("RATE restarts once on an early flat secant"
+      below) separates them on these cells: A1, A2, A41 and A42 restart and pass, A43 and A46 do not restart.
+  - Right type, last digits, on the training sweep (gap triage 2026-11-01c; T-3607): probes-numeric/
+    t3348-rate-gate-a-sweep A228, A269, A271, A273 and A285 (terms 1e9 to 2e11) are 1 to 3 ulp from Excel. Excel
+    is not the correctly rounded root there either: A228 `RATE(102,2166497722.99291,-207421358353.562,
+    2596415.8989201,0)` is 0.001243745130470952 in Excel, 8.7e-13 above the 50-digit root 0.0012437451304698745,
+    and the model is 1.6 ulp from Excel. On A271 `RATE(2,-875955339.667909,-10743.2012310885,2915489978.03367,1)`,
+    Excel's 0.391647652294285 is 5.5e-16 from the root and the model's 0.3916476522942853 is 1.6e-16.
+  - Wrong type: at |pv| and |fv| 1e6 to 1e12 the noise decides the type. 13 holds the model returns are `#NUM!` in
+    Excel (gate-a-sweep A296; gate-a-fresh A59, A70, A74, A77, A89, A90, A95, A157, A162, A173, A275, A292), at held
+    |f| 2.4e-7 to 5.5e-5 and steps 11 to 119. The old model's `#NUM!` matched Excel on these 13; decision 0198
+    records the trade. 3 more are `#NUM!` in the model where Excel returns a number (gate-a-sweep A272; gate-a-fresh
+    A251, A272). Excel's A272 value is about 2 ulps from the model's held iterate, so its last steps differ.
+  - Across the 1,796 RATE oracle cells (the fit set, both probes and both sweeps), Excel returns 133 holds and
+    errs on 13 below the 1e-4 bound, and errs on 95 and returns 3 above it. No rule on the hold gives all 244
+    Excel's type:
+    - an absolute bound on |f|: Excel errs at 2.4e-7 and returns up to 9.5e-4;
+    - a bound relative to the residual's largest term: errors and returns overlap from 5e-20 to 1.4e-16;
+    - a zero step against distinct iterates: Excel errs on 12 of 125 zero-step holds and 1 of 21 distinct ones;
+    - a cut on the step count.
+
+    They are the noise floor's path, not a second rule. T-3424 probed it (next bullet).
+  - **Excel's FV along the path is the model's annuity value; how RATE decides in the noise floor is not**
+    (probes/t3424-rate-noise-trace, 433 cells, excel-graph, 2026-11-04, T-3424; scripts in docs/research/t3424/).
+    The probe covers the 16 wrong-type cells above, at nper 1 to 351 and |pv|, |fv| from 1e6 to 1e12.
+    - Residual: FV at 355 iterates of the model's run from guess 0.1 (the first 6 and the last 24 per cell, most of
+      them in the noise floor, |f| from 1e-7 to 1e-2) equals -(pv·P + pmt·A) with Excel's twice-rounded operators on
+      all 355. That is the model's RATE residual less + fv, so no residual difference shows at these points at any nper (T-3579
+      found the same at nper 1). This reads Excel's FV, not RATE's own residual: that RATE evaluates its residual
+      with FV's arithmetic is consistent with the scores but not observed directly. An iterate is written as
+      `(a+b)`: a 15-digit head plus a tail that rounds back to the double, because Excel cuts a formula literal to
+      15 digits (numbers.md "Formula number literals are read at 15 significant digits").
+    - Step: on the 2,475 literal RATE oracle cells, the model's step r1 - f1·(r1-r0)/(f1-f0) is bit-exact on 1,951.
+      Other forms do worse:
+
+      | step form | bit-exact cells |
+      |---|---|
+      | the model's form in plain doubles | 1,945 |
+      | r1 - f1/((f1-f0)/(r1-r0)) | 1,504 |
+      | r1 - (r1-r0)·(f1/(f1-f0)) | 1,494 |
+      | r1 - ((r1-r0)/(f1-f0))·f1 | 1,463 |
+      | r0 - f0·(r1-r0)/(f1-f0) | 1,313 |
+      | (r0·f1 - r1·f0)/(f1-f0) | 1,039 |
+
+      Keeping the iterates in 80-bit precision between steps gets 1,111 with the residual taken at the double
+      iterate, and 1,048 with 1+r and /r taken at the extended iterate. This ranks whole-run scores: the model's
+      step ranks first, but no step was observed directly, and the 524 cells it misses leave room for a difference
+      in RATE's own step, residual or stop test.
+    - A flat secant is not always `#NUM!`. Making it `#NUM!` fixes 60 wrong-type cells but breaks 549.
+    - The hold point does not decide the outcome. On the nper 1 and 2 cells, RATE seeded with each of the last 12
+      iterates (78 cells) gives these results:
+      - Where the model converges (19 cells), Excel equals the model on all 19.
+      - Where the model holds (51 cells), Excel equals the hold on 20, errs on 22, and gives another number on 9.
+      - Where the model ends `#NUM!` on a flat secant it cannot hold (8 cells), Excel returns a number on 7: the
+        opposite type error.
+      - Two seeded runs of fresh A275 hold at the same iterate 0.07115318239018958. Excel returns it for one and
+        gives `#NUM!` for the other.
+      - The plateau decides nothing either. A157's runs hold at 10 different iterates, all with f = -2.38e-7. Excel
+        returns 5 of them and errs on 5. (Its 2 other holds have f = 3.58e-6, and Excel gives another number on
+        both.)
+    - No single threshold on a quantity at the hold separates Excel's 549 returned holds from its 60 errors much
+      better than returning every hold, which gets 60 wrong. The best split, on r itself, gets 57 wrong. Quantities
+      tried:
+      - |f|, and |f| over the largest term, over pv, over pmt, over fv, over f at the guess and over f at the first
+        iterate;
+      - |f| in ulps of the largest term and of fv;
+      - r, n and the step;
+      - a zero step against distinct iterates, and the stall's sign and direction;
+      - whether the run bracketed the root, and whether the hold has the smallest |f| of the run.
+    - Where Excel returns a number on a held run (549 cells), its value is the model's held iterate on 202, 1 to 4
+      ulp from it on 182 (in either direction), and further off on 165: up to 156,030 ulp on t3348-rate-fv-nonzero
+      A138 and about 2.5e9 ulp on probe A344.
+    - So Excel's path leaves the model's in the noise floor, sometimes in the last ulp and sometimes many steps
+      earlier. With double iterates, RATE's own residual, step or stop test must then differ from the model's
+      somewhere; which one is unknown. One example is fresh A59's run seeded at 5.279321039425968e-06 (probe A74).
+      Excel stops
+      at 5.2793196756967624e-06, one ulp past the model's hold and the first double where f changes sign. The cause
+      is unknown. T-3424 is blocked as time-boxed (decision 0056), so its cells are accepted (decision 0267). T-3963
+      studies the flat-secant outcome for the cells it owns.
+    - FV: Excel's FV is the twice-rounded form on all 355 cells. The engine's plain-double FV misses one of them,
+      A132 (`=FV((2.88607473601363e-05+1.01643953670516e-20),321,-2890484105.96678,934408648396.347,1)`: Excel
+      -10935378180.042114, engine -10935378180.042236). Across the 587 numeric literal FV oracle cells, the
+      twice-rounded form scores 587 and the plain form 586. T-4146 owns A132.
+- Unprobed: no oracle cell has a flat secant with |f1| < 1e-7, so the convergence test on a held point is untested.
+  It differs from the cap's test only where 1 + r1 <= 1e-4.
+Ours: `compute_rate` (functions/financial/financial_util.rs), T-3348, decision 0198.
+Status: VERIFIED (excel-graph; Excel's FV along the path, T-3424) / UNVERIFIED (RATE's own residual, step and stop
+test in the noise floor; the outcome of a flat secant there; a non-integer nper below -1; a held point with
+|f1| < 1e-7)
+Tasks: T-3348, T-3389, T-3424, T-3579, T-3698, T-3963, T-4146
+
+## RATE steps up from a zero residual
+Rule: the secant's second point is r1 = guess - 0.001 only when f(guess) > 0; when f(guess) is exactly 0 (and when it is
+negative) r1 = guess + 0.001. The rest of "RATE is a secant on the FV residual" is unchanged.
+Evidence: probes/t3876-rate-noise-residual (T-3876), 26 cells, 25 bit-exact with the rule:
+- Rounding-noise annuities (nper 1 with pv + pmt = 0 at the payment date and fv 0, type 1; or pv 0 and pmt = -fv, type 0):
+  every rate is a root and f is 0 or a few ulp of the flows. In 14 cells f(guess) is exactly 0. Excel returns the guess
+  in exactly the 5 where the model's f(guess + 0.001) is not 0 (A1, A8 `RATE(1,±13501.684222927,∓13501.684222927,0,1,1.74874265618351)`
+  at f ±7.3e-12, A11 `RATE(1,-3,0,3,0,3)`, A17, A26): the secant steps from guess + 0.001 back onto the guess, where
+  f = 0 stops it. In the other 9 (A2:A7, A9, A10, A12; guesses -0.99999999 to 10) f(guess + 0.001) is 0 too, the first
+  secant is flat on 0 and the call is `#NUM!`. Stepping down instead (the model before T-3876) agrees on 11 of the 14:
+  A1, A8 and A11 have f(guess - 0.001) = 0.
+- Every argument 0 (`RATE(1,0,0,0,1,0.3)`, `RATE(2,0,0,0,0,1.74874265618351)`, A18:A21) stays `#NUM!`: the flat secant on 0.
+- Nonzero noise at the guess (A13:A16) runs the secant as before. A13 commits T-3698's first draw,
+  `RATE(1,702.59374702126,-702.59374702126,0,1)` = 0.09577777777777774, which the model gives bit for bit.
+- nper 2 controls (A24, A25, type 1, pmt = -pv) are `#NUM!` in both.
+- The off cell: A22, `RATE(1,0,0,1E-300,0,0.3)`, a constant residual 1E-300, is `#NUM!` in Excel; the model holds at
+  r1 = 0.299 and returns it (flat secant, entry "RATE holds on a flat secant"). T-4431 owns it. A23 (guess -0.9999) is
+  `#NUM!` in both.
+Fresh sweep (R4, drawn after the rule was frozen): probes/t3876-rate-noise-residual-fresh, 126 cells, 121 bit-exact.
+A61:A126 are the 66 of 20,000 random noise-only draws (seed 38762) where f(guess) is exactly 0 and exactly one of
+f(guess ± 0.001) is 0, so the two step directions predict opposite results: the step-up rule matches all 66 (27 return
+the guess, 39 `#NUM!`), stepping down matches none. A1:A60 are plain random draws, 55 bit-exact under either rule; the
+5 off (A1, A16, A26, A31 `#NUM!` in Excel where the model holds a flat secant on nonzero noise at guess - 0.001, and A5
+on another noise path) are T-4431's, with A22 above.
+Not separated: whether a residual of -0 at the guess steps up too. No probed residual at the guess is -0, and the
+engine's rule (step down only when f > 0) sends both zeros up.
+On the existing evidence the change is neutral: rate-zero-residual-guess (guess-0 roots A8:A10, exact roots A3:A6, A12)
+and every other RATE cell in probes, probes-numeric, gen-m9 and ironcalc-calc keep their results.
+Ours: `rate_secant` (functions/financial/financial_util.rs), T-3876.
+Status: VERIFIED (excel-graph, the cells above) / UNVERIFIED (a -0 residual at the guess)
+
+## RATE restarts once on an early flat secant
+Rule: an amendment to "RATE holds on a flat secant and runs on below -1" above. A flat secant (f1 = f0, f1 ≠ 0)
+restarts the run once, as a fresh run whose guess is the flat step's older iterate r0, when all of these hold:
+- the two iterates differ (r1 ≠ r0; a zero-step stall holds as before);
+- it is at step 3 to 16 of the run;
+- 1.3e-7 <= |f1| < 1e-4 (the upper cut is the cap's bound);
+- r0 > -1.
+
+Otherwise the run holds at r1 as before. The restarted run has its own 200 steps, and a flat secant in it holds;
+it never restarts again. The step bound is FITTED (T-3698). It approximates a path difference, and on many
+noise-floor cells Excel's value matches neither the hold nor the restart. Steps 1 and 2 and |f1| below 1.3e-7 are
+outside the evidence (no probed flat secant comes there), so the rule is not applied there and the run holds.
+Why it matters: on runs that land next to the root at once (nper 1, t3348-rate-fv-nonzero A171), Excel's value is
+the restarted run's value. Holding returned an iterate up to 3e-11 relative from Excel's.
+Evidence (excel-graph, 2026-11-02, T-3698):
+- probes/t3698-rate-flat-restart (54 cells): flat-secant cells of t3348-rate-fv-nonzero, t3348-rate-gate-a-fresh
+  and t3348-rate-gate-a-sweep, re-run with other guesses so that the first flat secant comes at steps 3 to 154, plus
+  t3579's nper-1 example scaled by 2^3 to 2^11. Each cell was chosen because the hold and the restart from r0 give
+  different results there.
+  - The hold is bit-exact on 11 cells and an unconditional restart on 17.
+  - The nper-1 family splits on |f|: it restarts at |f| 1.3e-6 to 4.3e-5 (A3:A8), and at 1.7e-4 and 3.4e-4
+    (A1, A2, scales 2^10 and 2^11) it is `#NUM!`, as the hold is.
+  - On one source series (t3348-rate-gate-a-fresh A296) the restart is Excel's at step 13 (A23) and step 16 (A26)
+    and the hold is Excel's at step 30 (A38). On A187 the hold is Excel's at steps 18, 30, 38 and 70 (A28, A37,
+    A40, A49). Step 17 (A27) matches neither. So the step bound lies in 16..17.
+  - Late restarts that Excel takes (A35 step 27, A39 step 33, A42 step 41) are not covered by the rule.
+  - probes/t3698-rate-flat-restart-fresh (51 cells) was drawn after a first freeze of the rule and is part of the
+    fit set below, not a fresh sweep.
+- Choice of the step bound and the |f1| cut (decision 0188 R4.1; scorers in docs/research/t3698/). The fit set is
+  every `=RATE(` oracle cell of probes and probes-numeric except t3478-rate-r4-wide (another fit's fresh sweep). It is
+  split by the fit lab's hash (`holdout.py`, 30% test), with the 5-point margin stated before scoring. The candidates
+  (K in 3..200, cut 1e-5..1e-3, steps from 3, |f1| from 1.3e-7) were ranked on the 1,477 train cells only. K = 16
+  or 17 is best:
+  - The evidence brackets the cut. The nper-1 family restarts at |f1| up to 4.3e-5 (t3698-rate-flat-restart A3:A8)
+    and holds at 1.7e-4 and 3.4e-4 (A1, A2). So the cut lies in (4.3e-5, 1.7e-4), and the cap's bound 1e-4 is taken.
+    On train, the cuts 1e-4 and 3e-4 tie bit-exact. 3e-4 is outside the bracket: it restarts A1, and it loses
+    t3579-rate-residual-nper1 A43.
+  - Train bit-exact / 4 ulp / 15 digits: 1,395 / 1,422 / 1,422 of 1,477. The hold gets 1,378 / 1,412 / 1,413.
+  - Test: 551 / 561 / 561 of 581, against 546 / 554 / 557 for the hold. The test exact rate is 94.8% against 94.4%
+    on train, inside the margin. K = 18 to 22 is one cell behind on train.
+  - Correctly rounded root, on the cells with a 50-digit sidecar: 35 / 80 / 98 of 637 on train and 16 / 33 / 44 of
+    251 on test. On the same cells the rule gets 610 / 623 / 623 and 239 / 245 / 245.
+  - The cells were seen before (an earlier freeze scored them all), so this is a train-only choice on a fixed split,
+    not a blind hold-out. The fresh batch below is the out-of-sample check.
+- Fresh sweep (decision 0188 R4.2): the Gate A batch accuracy/RATE/r4-T-3698, 300 points of `rustsheet-accuracy
+  generate RATE --batch r4-T-3698`, drawn and oracle-filled after the final freeze. All 300 are inside the envelope,
+  and the batch stays in Gate A.
+  The batch never fires the restart, though: an instrumented build counted 121 flat secants and 0 restarts in Gate A's
+  RATE tables, and 0 restarts on probes-numeric/t3698-rate-r4-fresh (T-3906).
+  - The table's RATE takes no guess. probes-numeric/t3698-rate-r4-fresh (300 points of the same draw, each with a
+    log-uniform guess, and 50-digit roots in its `math.tsv`) adds that. There the rule is bit-exact on 298 and
+    within 15 digits on 299. The one outside is A201, below.
+  - Neither sweep makes many flat secants. They show that the rule moves nothing elsewhere; they do not measure the
+    restart itself.
+- Out of sample where the restart fires (T-3906, excel-graph, 2026-11-03): probes/t3906-rate-restart-oos.
+  - It holds 240 calls sampled from the 15,850 of 1,000,000 fresh annuities where the frozen rule's result differs
+    from the hold's (draw and seeds in the case's description). They are mostly large annuities (|pv| to 1e12) whose
+    run reaches the noise floor.
+  - Bit-exact / 4 ulp / 15 digits: the rule 48 / 84 / 103 of 240, the hold 12 / 76 / 104. Of the 232 cells where
+    Excel returns a number, the correctly rounded root gets 15 / 66 / 91.
+  - Gate A envelope (within half a unit of Excel's 15th digit or 1e-9 of the math; an error against a number is
+    outside; 50-digit roots at the double nearest each literal, per SPEC-0029, in the case's `math.tsv`): the rule is inside on 207 of 240 and the hold on 204. The rule brings
+    A15, A26, A64, A76 and A121 in, and moves A152 and A194 out.
+    - A194, `RATE(1,-57090142708.1999,57155400514.2199,-66085711.1548055,1,-0.0413434246245947)`, is `#NUM!` after
+      the restart. Excel returns 0.012686683557386938 and the hold 0.012686683564913244.
+  - So the rule beats the hold on the bit (48 against 12) and at 4 ulp (84 against 76). It is one cell behind at 15
+    digits (103 against 104).
+  - Moving two points out of the envelope fails the Gate A envelope item (decision 0188 R2, as reviewer check 7 applies
+    it), so the rule is not cleared. Which non-error point leaves is sensitive at the 1e-9 level: with roots computed
+    from the decimal literals it is A144, not A152. A194 leaves either way. It stays in
+    the code for now; the narrow-or-revert choice is below (T-3850, T-3916).
+  - On 180 of the 240 Excel's value is neither path's: in the noise floor its iterates leave the model's (T-3850).
+  - No narrowing clears it (T-3850, docs/research/t3850, 2026-11-03).
+    - Of 48 variants (restarts per call, falling back to the hold when the restarted run errs, last step, |f1| cut and
+      floor), each with 0 regressions still moves a point out: A152, A194 or A204. Each with no point leaving
+      regresses 9 to 16 bit-exact cells of the fit set.
+    - A revert moves A15, A26, A64, A76 and A121 out.
+    - A152 leaves inside its root's rounding-noise width: eps·Σ|terms| / |f'(r)| / |r| is 7.7e-9, almost 8 times
+      ε = 1e-9, with the rule at 1.36e-9 from the math root and the hold at 7.9e-10. Excel's own A144 is 1.4e-8 off.
+    - A194 is a real exit. The restarted run wanders 92 steps to a second flat secant with |f| 1.65e-4, above the cap's
+      1e-4, so it is `#NUM!`. Its last iterate, 0.01268668355857748, is within 1e-10 of Excel's value, so Excel likely
+      restarts too and then ends with a number.
+    - Falling back to the hold there would lose A26: its restarted run converges to -1 + 3e-12, which is `#NUM!` in
+      Excel as here (the 1 + r floor), and the hold is a number.
+    - R4.1 on firing cells only: the rule is bit-exact on 17 of 40 train and 5 of 14 test cells (the hold on 0 of
+      each), against 48 of 240 out of sample.
+    - Owner ruling (decision 0265, T-3916): the rule is kept as merged. A point whose root noise width exceeds ε is
+      judged against Excel's 15 digits only when a fit is checked, so A152 is outside under both paths and does not
+      count against the rule. A194 is accepted as the rule's one exit; T-3963 owns it with A26.
+- Every flow 0 (found by the batch's first draw): `RATE(1,702.59374702126,-702.59374702126,0,1)` is 0.09577777777777774
+  in Excel. pv + pmt = 0 at t = 0 and fv = 0, so every rate is a root, and Excel returns its secant's iterate. The
+  Gate A definition now treats such a point as having no single value (it is redrawn), not as a domain error.
+- Not separated: why Excel restarts late on some series (A35, A39, A42) and holds early on others. T-3850 found that
+  no rule on the model's state at the flat step separates them (next entry).
+- Misses inside the rule's region (T-3698 review): t3698-rate-flat-restart A9 (|f1| 8.57e-5, step 3; Excel
+  0.002094170434467432 matches neither path), and A17, A21, A25 and -fresh A22 (Excel `#NUM!`, both paths a number).
+- Found in passing (T-3698's fresh sweep A201): with nper 1, type 1, fv 0 and pmt = -pv, every residual is rounding
+  noise (pv + pmt = 0 at t = 0). Excel returns the guess, 1.74874265618351. The model returned `#NUM!` until T-3876
+  found the cause: a zero residual at the guess steps up, not down (entry "RATE steps up from a zero residual").
+Ours: `compute_rate` and `rate_secant` (functions/financial/financial_util.rs), T-3698.
+Status: VERIFIED (excel-graph, on the cells above) / UNVERIFIED (the step bound's position in 16..17; late
+restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0 <= -1)
+Tasks: T-3698, T-3424, T-3876, T-3916, T-3963
+
+## RATE flat secants: no rule on the model's state separates Excel's restarts from its holds
+Explained (T-3963): the hidden state is the iterate before r0; see "RATE keeps its older iterate when a step leaves
+the residual unchanged" below (a finding; the engine still has the merged rule).
+Rule (a negative finding, T-3850): calls whose model run meets the same flat secant (the same args, r0, r1 and f1)
+and differ only in the guess, and so in the step of the flat secant, get different Excel values, in no step order.
+So no rule on what the model sees at that step (the step, |f1|, |r1 - r0|, f1 relative to the residual's terms) can
+choose between the hold and the restart. Excel's own iterates differ from the model's before that step. The model
+keeps T-3698's restart rule ("RATE restarts once on an early flat secant" above) unchanged.
+Why it matters: on many flat-secant cells where the hold and the restart differ, Excel is neither (100 of the new
+probe's 240, 250 of 344 in the older cases). Late restarts can't be added as a rule: they need a model of Excel's residual in the noise floor (T-3963).
+Evidence (excel-graph, 2026-11-03, T-3850; tools in docs/research/t3850/):
+- The fit set's same-state groups (probes/t3698-rate-flat-restart). In each group the args and the model's r0, r1
+  and f1 are the same:
+  - `RATE(10,807899972.923294,-1390492.12506236,-78566555703.1099,0,g)`, flat at r0 0.46831931314861075, r1
+    0.4683193131486107, f1 3.05e-5: step 10 (A15) is Excel's r0, step 17 (A27) 0.4683193131486108 (neither path),
+    step 22 (A33) r0 again, step 24 (A34) the restart's 0.46831931314861086.
+  - `RATE(22,368004296.87717,-30770197366.4562,120137665952.442,1,g)`, f1 6.1e-5: step 11 (A16) and step 41 (A42)
+    are the restart's value and step 15 (A25) is `#NUM!` (an error against a number, so not fill noise).
+  - `RATE(294,5227.362063958,-6908028.229217,29809043.9559,0,g)`, f1 1.3e-7: steps 46, 61, 84 and 154 (A43, A47,
+    A51, A54) give 4 different Excel values; only A47 is the restart's.
+- probes/t3850-rate-same-state (240 calls, drawn blind by `gen_late.py` before the fill): 40 groups of 6 calls with
+  the same model state, at steps 6 to 200 (98 calls at steps up to 16, 142 later).
+  - 25 groups get more than one Excel value. 12 of them are solid evidence: 4 mix `#NUM!` with a number and 8 spread
+    over more than 4 ulp, up to 3,196 ulp (A193:A198). The other 13 differ by 1 to 4 ulp. That is under the
+    reproducibility floor decision 0112 sets for excel-graph bits, although a second fill (16:11 UTC) gave all 240
+    cells bit for bit.
+  - Example: `RATE(22,368004296.87717,-30770197366.4562,120137665952.442,1,g)` (A55:A60) is `#NUM!` in Excel at step
+    12 (A56). At steps 7, 16, 20, 61 and 79 it is the restart's 0.07120577478278645. A step bound can't give both.
+  - Excel is the hold on 29 cells, the restart from r0 on 111, and neither on 100; T-3698's rule gets 55. "Neither"
+    is mostly last bits: 120 of the 185 off cells are a few ulp from Excel and 54 more agree to 15 digits.
+    - On the 12 solid groups (72 cells): hold 8, restart 15, neither 49.
+    - On the 1-to-4-ulp groups (78 cells): hold 21, restart 30, neither 27.
+    - On the 15 groups with one Excel value (90 cells): restart 66, neither 24.
+- A wider restart is not a rule. Restarting at every step to 200 with |f1| unbounded gains 70 and loses 14 cells on
+  the new probe. On the 2,160 other RATE oracle cells it gains 8 and loses 12, and the best step and |f1| bounds
+  there gain 2 with none lost, below the 5-point margin. Which cells win depends on how the series were sampled.
+Ours: `rate_secant` (functions/financial/financial_util.rs), unchanged by T-3850.
+Status: VERIFIED (excel-graph, the error-against-number and over-4-ulp groups above) / UNVERIFIED (the splits of
+4 ulp or less, under decision 0112's floor; Excel's residual in the noise floor)
+Tasks: T-3850, T-3963, T-3916, T-3424
 
 ## YIELD with one coupon period left is closed form
 Rule: when at most one coupon period is left, Excel evaluates the documented formula
@@ -506,6 +1592,193 @@ Ours: `yield_one_period` returns 0 when DSR is 0 (T-1949).
 Status: VERIFIED (excel-graph)
 Tasks: T-1525, T-1532
 
+## RATE keeps its older iterate when a step leaves the residual unchanged
+Rule (T-3963, a finding; not implemented, owner ruling T-4239): a secant step whose new residual equals the last one
+exactly (f2 = f1) does not shift the pair. Excel keeps the older iterate r0 and replaces r1 with r2, so the next
+secant runs on r0 and r2. Otherwise the pair shifts as in "RATE is a secant on the FV residual". So a flat secant
+(f1 = f0) can only come on the start pair, guess and guess - 0.001·sign(f), which still holds per "RATE holds on a
+flat secant and runs on below -1". In this model T-3698's restart ("RATE restarts once on an early flat secant") and,
+on two distinct iterates, T-3348's hold are not needed. A zero step (r2 = r1, so f2 = f1) would repeat itself to the
+200th step, so a model applies the cap's test to it at once.
+Why it matters: it explains T-3850's negative finding. Calls whose runs reach the same r0, r1 and f1 by different
+paths get different Excel values (probes/t3850-rate-same-state), because Excel's next step depends on the iterate
+before r0, which the merged model's state drops. Excel's residual itself is not the cause: every other residual
+tried loses hundreds of cells.
+Evidence (excel-graph, 2026-11-03, T-3963; scorers and the temporary switch in docs/research/t3963/):
+- Residual candidates scored on the 2,400 literal `=RATE(` oracle cells of probes and probes-numeric (the merged
+  model is bit-exact on 1,914). Each loses 360 to 920 cells: the residual or the secant step held in an x87 register
+  until stored, `(1+r)^n` from libm `pow` or from Excel's `exp(n·ln(1+r))`, and the factor as `(k·(P-1))/r` or
+  `(pmt·k)·((P-1)/r)`. The twice-rounded residual of "RATE is a secant on the FV residual" stands.
+- Path candidates on the flat-secant step, on the same cells: a secant on r1 and the iterate before r0 (+98, -39),
+  a fresh run from r1 (+83, -72), from the iterate before r0 (+66, -123), an unconditional restart from r0 (+78,
+  -26), keeping r0 when |f2| >= |f1| (-258 net) and keeping r0 when f2 = f1 (+112, -34). The last was frozen.
+- Hold-out (the fit lab's hash split, 30% test): train 1,416 of 1,704 bit-exact (merged rule 1,357), test 576 of
+  696 (557). The candidates were first ranked on all 2,400 cells, so this split is not blind; the fresh probe is.
+- Fresh sweep, drawn after the freeze: probes/t3963-rate-keep-r0-fresh, 240 calls on the args of the existing RATE
+  probe series with new guesses, kept where the merged and the frozen model differ (`gen_fresh.py`, committed before
+  the fill). Bit-exact: the frozen model 59, the merged rule 9 (11 on `main` of 2026-11-04). Cells of the wrong type: 8 and 21. A hybrid (keep r0,
+  but T-3698's restart inside its steps and |f| band) scores 46 there and is worse on train and test too.
+- Gate A batch accuracy/RATE/r4-T-3963 (300 points drawn after the freeze): all inside the envelope under both
+  models; the table's RATE takes no guess, so the rule seldom fires there.
+- What it costs against the merged rule: 37 gated cells the merged rule has bit-exact (19 within 4 ulp, 13 beyond,
+  5 of the wrong type, among them the scaled nper-1 family t3698-rate-flat-restart A1 and A2, where the run ends on a
+  zero step at |f| 2.3e-7 and Excel is `#NUM!`); and five error-against-number points it moves out of the Gate A
+  envelope, which decision 0265 does not cover: t3906-rate-restart-oos A143 (`#NUM!` where Excel returns
+  -0.06546463553005233) and t3963-rate-keep-r0-fresh A59, A60, A73 and A188 (numbers where Excel is `#NUM!`).
+  Excel still restarts like T-3698 on some nper-1 calls whose residual is rounding noise for every rate
+  (t3906-rate-restart-oos A15, `RATE(1,18770705030.2495,-18770705030.2495,0,1,g)`; T-3970).
+Ours: `rate_secant` (functions/financial/financial_util.rs) still has the merged rule. The model is on PR #3019's
+branch, waiting on the owner's ruling (T-4239).
+Status: UNVERIFIED (partial: bit-exact on 59 of 240 fresh calls where it differs from the merged rule; why Excel still
+restarts on some noise-only residuals and errs on some zero steps is open)
+Tasks: T-3963, T-4239, T-3970, T-3424
+
+## RATE and IRR secant constants past their fit sets
+Rule: the fitted constants of the two secants (RATE's start offset 0.001 toward smaller |f| and residual stop
+|f| < 1e-7; IRR's start offset 1e-3 in d and residual stop |NPV| < 1e-7) are Excel's well past the cells they were
+chosen on. Measured on fresh sweeps drawn after the models were frozen, with one axis outside the fit set per stratum
+(decision 0188 R4.2, R4.3; T-3478):
+- RATE, probes-numeric/t3478-rate-r4-wide (300 points: rate -0.999 to -0.75 and 2 to 100, nper 1000 to 1E+5, |pv|
+  and |fv| 1E-8 to 1E-4 and 1E+8 to 1E+12, guess -0.999 to -0.5 and 10 to 1000, and all at once): the engine is
+  bit-exact on all 100 points where Excel returns a number and gives Excel's `#NUM!` on 186 of its 200. The fit lab's
+  T-2005 model with T-3348's hold reproduces the engine on all 300; in it, offset 1e-4 keeps 8 of the 100 numbers,
+  the offset on the other side 14, residual 1e-6 92 and 1e-8 93. The correctly rounded root matches 9 of the 300.
+  The 100 roots lie at nper 1 to 22908, rate -0.985 to 21.3 and guess -0.97 to 980 (|pmt| 1.6E-47 to 1.9E+10, |pv|
+  and |fv| 1.1E-8 to 9.7E+11); past that (rates 21.3 to 100, nper to 1E+5) the sweep only shows agreement on
+  `#NUM!`, which tests the error path, not the constants. The 14 cells off Excel are the next entry's 13 and
+  Calc!A285 (a noise-floor cell, T-3424's kind).
+- IRR, probes-numeric/t3478-irr-r4-wide (300 conventional series: 42 to 150 flows, |c| 1E-12 to 1E-6 and 1E+9 to
+  1E+15, roots -0.9999 to -0.99 and 99 to 1E+6, guess -0.9999 to -0.99 and 100 to 1E+8, and all at once): the
+  engine is bit-exact on 229 (Excel returns a root on 231). In the fit lab's `irr_secant_d` replica (284 of 300
+  equal to the engine; the rest reach the fallback) the shipped pair scores 232 in aggregate, offset 1e-4 146, 1e-2
+  126, residual 1e-6 224 and 1e-8 217; per stratum it leads or ties except on the 42 to 150 flows, where residual
+  1e-6 gets 30 against its 29. Of the 50 cells off Excel, 33 are roots the engine misses (the step cap and the
+  fallback, "IRR on conventional flows where the secant fails") and 17 are Excel errors ("IRR is #NUM! or #DIV/0! on
+  some conventional series it could solve" below); none points to these two constants (T-3548).
+Evidence: the two cases (excel-graph, 2026-10-31) with 50-digit roots in their `.math.tsv`; generator and scorers
+docs/research/t3478/.
+Status: VERIFIED (excel-graph)
+Implemented in: `compute_rate` (`OFFSET`, `TOLERANCE`), `irr_secant` (functions/financial/financial_util.rs)
+Tasks: T-3478, T-3548
+
+## RATE is #NUM! when 1 + r is 1e-7 or less
+Rule: a converged RATE iterate (step and |f| under 1e-7) is returned only when 1 + r is above 1e-7; at or below it the
+call is `#NUM!`. The bound is the same for a genuine root of the FV residual near -1, for the spurious root r = -1 that
+every type-1 residual with fv = 0 has (pv(1+r)^n + pmt(1+r)((1+r)^n - 1)/r + fv is 0 there whatever the annuity's
+real root), and for type 0 and type 1 alike. So the rule is a floor on 1 + r, not a test of r = -1 being a root. It is
+separate from the cap's looser test (1 + r > 1e-4 at the 200th iterate or a flat-secant hold, "RATE holds on a flat
+secant and runs on below -1").
+Evidence (excel-graph, 2026-11-01, T-3585): probes/t3585-rate-num-near-minus-one, roots with 1 + r = d for
+d = 1E-4, 1E-6, 1E-7, ..., 1E-15:
+- type 0, n = 1 (`RATE(1,100*d,-100)`, A1-A11): d 1E-4 and 1E-6 return (-0.9999, -0.999999); 1E-7 and below are
+  `#NUM!`.
+- type 1 with the spurious root shifted to -1 + d by fv (`RATE(77,-2757.6011275919,18790.0791146529,
+  2757.6011275919*d,1)`, B1-B11; `RATE(1,-50,-50,100*d,1)`, D1-D11): the same split; fv 0 (B12, D12) is `#NUM!`.
+- type 0 at n = 77 (`RATE(77,-2757.6011275919,18790.0791146529,-2757.6011275919/(d-1))`, C1-C11): 1E-7 returns
+  -0.9999998999965758 (1 + r = 1.0000034E-7); 1E-8 and below are `#NUM!`. With A3 (1 + r = 1E-7 to the double,
+  `#NUM!`) this brackets the floor at 1E-7 .. 1.0000034E-7; the engine uses the step bound 1e-7 itself.
+- the pmt-0 double root at -1 (`RATE(2,0,-1E+k)`, E1-E8 type 0, F1-F8 type 1): at pv -1E+2 to -1E+6 the secant
+  stops at 1 + r = 1.19E-7 and returns; from -1E+8 it creeps further (|f| < 1e-7 needs a smaller 1 + r) and is
+  `#NUM!`. Type 1 and type 0 agree.
+- Gate A's RATE table (accuracy/RATE/s1 A19, A128, A129, A137, A158) and 13 points of probes-numeric/t3478-rate-r4-wide
+  (Calc!A60, A76, A85, A88, A89, A131, A146, A171, A213, A237, A243, A256, A265): type 1, fv 0, real roots 0.17 to
+  16.6, where the secant converges to -1 with 1 + r from 1E-16 to 3.7E-12; Excel is `#NUM!` on all.
+Not this rule: accuracy/RATE/s1 A278 and A291 (huge pv, roots 6.2E-10 and 2.2E-6). There the engine's secant ends in
+a flat-secant hold in the residual's rounding noise, T-3424's kind. The probe's columns G and H scale their pv and pmt
+by 2^-k: Excel errs at k = 0 and 2 for A278 and at k = 0 and 6 (not 2 or 4) for A291, and fv changes the type at k = 0
+(A278 with fv 0 or 1 returns, with fv +-179.96 errs). An error that comes and goes with the scale is the noise floor,
+not a rule on the scale; the engine matches the probe's other 35 cells of G and H.
+Ours: `compute_rate` (functions/financial/financial_util.rs) checks 1 + r > 1e-7 at convergence (T-3585).
+Status: VERIFIED (excel-graph); the bound's exact value inside 1E-7 .. 1.0000034E-7 is not pinned
+Tasks: T-3585, T-3547, T-3424
+
+## IRR is #NUM! or #DIV/0! on some conventional series it could solve
+Rule (unknown; the cells are what is known): on conventional series (one sign change, so one root in (-1, inf)),
+Excel errs where its documented secant would reach the root, and the engine returns it. probes-numeric/
+t3478-irr-r4-wide (excel-graph, 2026-10-31; T-3478; inputs and 50-digit roots in its `.math.tsv`):
+- `#NUM!` on flows of 1E-12 to 1E-6: Calc!A60, A68, A69, A70, A90 (roots -0.003 to 0.61).
+- `#NUM!` on roots near -0.995 with an outlay 1E+6 to 1E+7 times the inflows: A102, A131, A135, for example
+  `IRR({-1094.61114674609,0.000910884706979783,0.00106012873359891,0.000809480661078265})` (root -0.99092...).
+- `#NUM!` at A258 and A262 (every axis outside the fit set, roots 0.014 and 0.027).
+- `#DIV/0!` with guesses near -1 or above 100: A261, A275, A281 (the engine returns the root), A277, A290, A298
+  (the engine is `#NUM!`), and A289 (flows near 1E-11, guess 9.6E+7; the engine returns 0.10121131912486914, not the
+  root 0.000174819..., because every |NPV| there is under the absolute 1e-7 stop).
+- Gate A's IRR table (accuracy/IRR/s1, excel-graph, T-3586) adds long conventional series. Excel errs on 54 of its 60
+  series of 51 to 200 flows (flow scale 1E+9 to 1E+14), though each has one root: 51 `#NUM!` and 3 `#DIV/0!`. The engine
+  is `#NUM!` on 43 of the `#NUM!` series, which pass. The rest:
+  - `#NUM!` where the engine returns the root (51 to 164 flows, roots 0.044 to 0.25): accuracy/IRR/s1 A216, A221, A233,
+    A238, A240, A242, A258 and A270.
+  - `#DIV/0!` where the engine is `#NUM!` (about 180 flows, roots 0.0125 to 0.019): accuracy/IRR/s1 A237, A248 and
+    A268.
+  - Excel is also `#NUM!`, as is the engine, on four log-uniform series (21 to 97 flows) with roots near 0:
+    accuracy/IRR/s1 A273, A276, A279 and A293 (roots -5.0E-7 to 2.4E-5).
+Most of t3406-irr-num-boundary's `#DIV/0!` cells and the `#DIV/0!` cells above with guesses near -1 or above 100 are
+explained by "IRR is #DIV/0! where its secant cannot evaluate NPV" (T-3407); `IRR({-1,1E+15})`'s ("IRR's far-root
+bound") is not.
+Evidence: probes-numeric/t3478-irr-r4-wide; docs/research/t3478/score_sweep.py lists the cells; accuracy/IRR/s1
+Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED
+Ours: on t3478, `#DIV/0!` with Excel on all seven `#DIV/0!` cells (T-3407); the `#NUM!` cells are T-3548's. On
+accuracy/IRR/s1, `#NUM!` with Excel on 47 cells, the root on the 8 `#NUM!` cells listed, and `#NUM!` on the 3 `#DIV/0!`
+cells.
+Tasks: T-3548, T-3407
+
+
+## IRR is #DIV/0! where its secant cannot evaluate NPV
+Rule: when a step of IRR's secant (from the guess or the retry from 0.1) lands on a rate where NPV, evaluated with
+worksheet NPV's running discount product, cannot be computed (a discount power that overflows or falls below the
+smallest normal double, or a sum that is not finite), the call is `#DIV/0!`: worksheet NPV's error for the same sum.
+The call ends there, without the retry from 0.1 and without the fallback.
+- On long series after one outlay, the secant's first step from the guess jumps far toward v = 0 or past it in r, and
+  the n-th discount power leaves the double range (1 + r below about 10^(-308/n)). That is T-3411's observation that
+  `#DIV/0!` sits where log10 |NPV| at the first step is above 228: the next trial point is out of range.
+- Scored cell by cell over every IRR cell of probes, probes-numeric and gen-m9 (T-3407): 59 cells move to Excel's
+  value and none moves away. They are probes/t3406-irr-num-boundary P!A69-A72 and A84-A94 (level annuities of 40 and 60
+  flows), 7 of the 9 long-series `#DIV/0!` cells of probes-numeric/t3347-irr-conventional-holdout (P!A123, A126, A130,
+  A132, A134, A135, A143; A131 and A138 are T-3347's "IRR is #DIV/0! on a flat secant after a far step"), 28 cells of the
+  t3411-irr-r4-fresh sweeps, t3478-irr-r4-wide A261, A275, A277, A281, A289, A290 and A298 (guesses near -1 or above
+  100), probes/irr-guess-edges A27 and gen-m9/bc04c1f478c9896c A56. t3406 P!A83, the same 60-flow annuity with a
+  smaller outlay (1.35E+7), stays `#NUM!` in both: its steps stay in range.
+- Out of sample (decision 0188 R4.2; a structural rule, frozen before the draws): a fresh probes-numeric sweep
+  (docs/research/t3411/gen_sweep.py, case name t3407-irr-r4-fresh, not committed under decision 0267's probe freeze)
+  has 7 cells better and 0 worse, with its `#DIV/0!` mismatches 10 -> 3. The Gate A batch accuracy/IRR/r4-T-3407 has
+  the same 25 points outside the envelope with and without the rule; none of its points reaches the rule.
+- Not explained: 23 `#DIV/0!` cells where every NPV the secant evaluates is in range and the engine is `#NUM!` (T-3900
+  lists them), `IRR({-1,1E+15})` ("IRR's far-root bound") and Gate A's long-series `#DIV/0!` points (accuracy/IRR/s1
+  A237, A248, A268; r4-T-3411 A213, A232, A233; r4-T-3407 A237). The step that overflows in Excel there is not one of the engine's secant iterates.
+Evidence: the cells above (excel-graph, 2026-10-31 to 2026-11-04)
+Status: VERIFIED (excel-graph) for the cells; that the error comes from NPV's evaluation is inferred, not observed
+Implemented in: `irr_secant` (`SecantStop::DivZero`), `irr_npv` (functions/financial/financial_util.rs)
+Tasks: T-3407
+
+## IRR is #DIV/0! on a flat secant after a far step
+Rule (fitted proxy; Excel's mechanism is not known): on long conventional series (one large outlay, then many small
+inflows) IRR's secant from 0.1 takes a first step far toward r = -1 (d = 1 - v of -1E+3 to -3E+11), where NPV is
+1E+200 or more, steps back near d = 0.0919, takes a zero step (d2 = d1) and goes flat (f1 = f0, d1 = d0: the next step
+is 0/0). There Excel is `#DIV/0!` when the run's largest |NPV| was large, and `#NUM!` (or, on other series, the root)
+when it was not. The engine cuts at 3E+226, placed on the train side of the fit lab's split (decision 0188 R4.1,
+`holdout.is_holdout`): the largest train `#NUM!` run reaches 1.556E+226 (probes/t3406-irr-num-boundary A65, a 40-flow
+annuity of 1 after -48614255.03) and the smallest train `#DIV/0!` one above it 6.57E+230 (A81). Every NPV of these
+runs is a finite double, so this is not T-3407's overflow ("IRR is #DIV/0! where its secant cannot evaluate NPV").
+Every evidenced run starts from 0.1 (the default guess, or the retry from 0.1), so the engine applies the cut only
+there, and only for 27 to 144 flows with the largest |flow| 1.3E+4 to 6.7E+14.
+- A flat 0/0 step alone is not the rule: making every one `#DIV/0!` moves A131 and A138 of t3347-irr-conventional-
+  holdout but breaks about 150 cells where Excel is `#NUM!` or returns the root (T-3347, attempt 1).
+- In sample, over every IRR cell in eval, the cut moves 19 cells to Excel's `#DIV/0!` and none away. Train (13):
+  t3347-irr-conventional-holdout P!A138; probes/t3406-irr-num-boundary P!A66, A67, A68, A81; t3411-irr-r4-fresh A83,
+  A91; -2 A6, A92; -3 A78; -4 A4, A89, A103. Test (6): t3347-irr-conventional-holdout P!A131; t3406 P!A82;
+  t3411-irr-r4-fresh-2 A1, A19; -4 A86, A94.
+- Out of sample (decision 0188 R4.2): probes-numeric/t3347-irr-r4-fresh, 150 long series in six strata
+  (docs/research/t3411/gen_sweep.py, seed "T-3347/r4-fresh"), drawn and filled (excel-graph, 2026-11-06) after the cut
+  was frozen: 8 cells move to Excel's `#DIV/0!` (A37, A49, A54, A61, A84, A131, A144, A148) and none away.
+- Against it: two `#DIV/0!` runs peak below the cut, at 1.3E+215 and 3.0E+221 (t3411-irr-r4-fresh A85, -3 A24), and on
+  11 runs past it Excel returns a root from -4% to -11% (t3411-irr-r4-fresh A15, A22; -4 A17, A79, A88, A93;
+  t3347-irr-r4-fresh A52, A53, A58, A74, A109). The engine was `#NUM!` there and is `#DIV/0!` now: wrong either way.
+  Those roots are the "near -10%" returns of T-3347's Goal, so Excel's secant does not take the engine's path on them.
+Evidence: the cells above (excel-graph); the cut is scored by an engine run with the rule and without it
+Status: VERIFIED (excel-graph) for the cells; the rule is a FITTED proxy (decision 0188 R4, decision 0316)
+Implemented in: `irr_flat_is_div_zero`, `IRR_FLAT_DIV_ZERO_NPV` (functions/financial/financial_util.rs)
+Tasks: T-3347, T-3548
+
 ## RATE: an empty guess is guess 0, not the default 0.1
 Rule: an empty guess argument (`RATE(48,-200,8000,0,1,)`) or a reference to an empty cell behaves as
 guess 0, not the default 0.1: the result has the same bits as an explicit `0` (0.008052981923885287)
@@ -518,6 +1791,37 @@ Evidence: probes/rate-empty-arguments A1-A10 (excel-graph, T-1128)
 Status: VERIFIED
 Implemented in: `compute_rate` (empty argument reads as 0; guess 0 converges, T-2005)
 
+## XIRR (and IRR): an empty guess argument is the default 0.1 for XIRR, guess 0 for IRR
+Rule: XIRR reads a written empty guess (`XIRR(v,d,)`) as the default 0.1, the opposite of RATE
+("RATE: an empty guess is guess 0, not the default 0.1"). A reference to an empty cell is still guess 0
+(same bits as an explicit `0`), so only the empty argument itself is special. IRR reads both as guess 0,
+like RATE. So the rule is per function and neither side may be generalised from the other.
+- XIRR, Excel's doc flows -10000, 2750, 4250, 3250, 2750 on 39448, 39508, 39751, 39859, 39904: `XIRR(v,d,)`
+  = 0.3733625352382659, the same bits as no guess and as `,0.1` (A1, A2, A4), over ranges and array
+  constants (A7, A8). `XIRR(v,d,0)`, `XIRR(v,d,E1)` with E1 empty and `XIRR(v,d,0.1-0.1)` give
+  0.3733625341796877 (A3, A5, A22; A9 for constants). A `""` guess is `#VALUE!` (A6). The bisection's
+  bracket starts from the guess ("XIRR is a bracketing bisection"), so the two runs differ in the 9th digit.
+- IRR, -70000, 12000, 15000, 18000, 21000, 26000: `IRR(v,)`, `IRR(v,E1)` and `IRR(v,0)` all give
+  0.08663094803653149 (A11, A15, A13; A17, A19 for constants), and no guess or `,0.1` gives
+  0.08663094803652216 (A12, A14, A18). A `""` guess is `#VALUE!` (A16).
+- Desktop agrees: calipers pv23_056 Summary!F23 `=XIRR(...,...,)` (Microsoft Macintosh Excel 16.x) caches
+  0.11376532912254333, the fit lab's XIRR model with guess 0.1; guess 0 gives 0.11376532714843753.
+Evidence: probes/xirr-irr-empty-guess A1-A22 (excel-graph, T-2688); calipers pv23_056 Summary!F23
+Status: VERIFIED
+Implemented in: `fn_xirr` (an `EmptyArg` guess is dropped, so the default applies); `fn_irr` reads it as 0.
+Our IRR from guess 0 is a few ulps off Excel's on these flows (…3171 for …3149), a separate kernel gap.
+
+## XIRR: a mismatched value/date size is #NUM! whatever the guess, a written empty guess included
+Rule: `XIRR(v,d,)`, `XIRR(v,d)`, `XIRR(v,d,E1)` (E1 empty) and `XIRR(v,d,0.1)` all give `#NUM!` when the
+values and dates differ in length (3 vs 2, 2 vs 3, 3 vs 4), over ranges and array constants, and also when
+the longer flow holds a text or boolean element (G21-G36). A written empty guess and an empty-cell guess
+take the same error path as an absent or number guess; a text, boolean or error guess keeps `#VALUE!`
+(see "XIRR and XNPV under the gen-m9 statistical cells").
+Evidence: probes/xirr-size-mismatch-empty-guess G1-G36 (excel-graph, T-2773)
+Status: VERIFIED
+Implemented in: `fn_xirr` (`number_guess` counts `EmptyArg` and `EmptyCell`; before T-2773 they gave
+`#VALUE!` over text or boolean flows).
+
 ## XIRR reads empty cells as 0 and accepts earlier dates; XNPV is #NUM! on empty cells
 (One empty values cell on its own is the exception: see "XNPV reads one empty values cell as a single 0 cash flow".)
 Rule: XIRR reads an empty value or date cell as 0. It does not skip it. A zero value adds nothing, so
@@ -527,7 +1831,10 @@ are whole-column `XIRR(Data!A:A,Data!B:B)` on a sheet holding only A1:B2, whole-
 empty date (X11). Date 0 is a valid date: -1000 with an empty date, then 1100 on 45365, gives
 1.1^(365/45365) - 1 = 0.000767144560813904 (X5, xirr-early-dates A8). A value with an empty date late
 in the range puts that flow on date 0. 50 on date 0 after -1000 on 45000 and 1100 on 45365 has no root
-and is `#NUM!` (X2). Text in either range is `#VALUE!` (X6, X7). Dates before the first are accepted:
+and is `#NUM!` (X2). Non-numeric text in either range is `#VALUE!` (X6, X7), but numeric text in cells reads as
+its number: `XIRR(G1:G13,H1:H13)` with E7's four flows typed as text ("-1000", "45000", ...) gives the same
+0.03189964592456816 as the numbers (probes/xirr-back-dated-stop A31 against A2, excel-graph, T-2045; ours `#VALUE!`,
+T-3267). Dates before the first are accepted:
 `XIRR({-1000,1100,-1000},{45000,45365,1100})` = -0.01750176399946212 (XNPV of the same flows is
 #NUM!), and -1000, 1100, -1000 on 45000, 45365, 44000 = -0.24668241366744048 (X8). But XIRR is `#NUM!`
 when no date is later than the first and the first value is nonzero, even where a root exists (with a zero first value
@@ -544,31 +1851,61 @@ one past 2958465 is `#NUM!` (A6, A7, A16). A zero first value gives 2.9802322387
 XNPV is `#NUM!` when its ranges contain empty cells, and a whole column counts every cell, not the
 used area: `XNPV(0.1,Data!A:A,Data!B:B)` is #NUM! although Data holds only A1:B2, where
 `XNPV(0.1,Data!A1:A2,Data!B1:B2)` is finite.
-Unprobed: which error XNPV gives for a whole column whose used area holds a cell error or a text date
-(the engine returns that error, then #NUM! for the skipped cells); XIRR dates strictly between -1 and 0
-(the engine truncates first, so -0.5 becomes -1 and is #NUM!).
+A cell error in the used area of a whole column wins over the empty-cell `#NUM!`, XNPV and XIRR alike, and a whole
+column reads the same as the same cells as a range: `#N/A` or `#DIV/0!` in the last or a middle values or dates
+cell is that error (probes/t4607-xnpv-xirr-column-errors-and-day-minus-one rows 1-8, all four forms). A text date
+"1/1/2010" in the dates column is read as its number by XIRR (0.18863303065299983 last, 0.16333606839179998 in the
+middle) and a text number "60" in the values column too, where XNPV is `#NUM!` for them
+(rows 9, 10, 13, 14 in all four forms); non-date text "x" is `#VALUE!` for XIRR and `#NUM!` for XNPV (rows 11, 12).
+Dates strictly between -1 and 0 (-0.5, -1E-9) are `#NUM!` for XNPV and XIRR as the first, a later or a last date, with
+0 first or not, in array constants and cells (rows 15-22), as a date truncated to -1 would be.
 Evidence: probes/xirr-xnpv-whole-column-nogaps A1-A8, probes/whole-column-empty-walkers E1, E5, E7,
 F3, F4, F6, F7, F9 (excel-graph, 2026-10-07, T-1114); probes/xirr-mismatched-empties X1-X14,
-probes/xirr-early-dates A1-A16 (excel-graph, 2026-10-08, T-1124).
+probes/xirr-early-dates A1-A16 (excel-graph, 2026-10-08, T-1124),
+probes/t4607-xnpv-xirr-column-errors-and-day-minus-one (excel-graph, 2026-11-06, T-4607; the engine already matched).
 Status: VERIFIED (these cells). XNPV matches since T-1114 (the used-area clip applies the empty-cell
 error to the cells it skips, `get_array_of_numbers_generic`). XIRR follows the empty-as-0, date-range
 and later-date rules since T-1124. Its values still miss in the last digits (the early stop above).
 The zero-first-value result and the date-0-first root match since T-1583 and T-0916 (the solver entry
 "XIRR is a bracketing bisection, not Newton" above; T-1155 done).
-Tasks: T-1114, T-1124, T-2329
+Tasks: T-1114, T-1124, T-2329, T-4607
 
 ## DB and VDB period cap
 Rule: RustSheet returns `#NUM!` for DB with a `period`, and VDB with an `end_period`, whose integer part is above
 100,000, after Excel's own argument checks, to bound per-call work on untrusted input (CLAUDE.md directive 5). Both
-schedules step one period at a time (`DB(1,0,1E15,1E15)` ran for hours before the cap). Excel's values above the cap are
-unprobed. A lifted DB or VDB call is also charged by each element's period
+schedules step one period at a time (`VDB(1000,0,1E9,0,1E9)` would walk 1E9 periods). Excel's values above the cap are
+unprobed, except that a DB period above 2147483647 is period 1's value and walks nothing ("DB and SYD argument domains";
+`DB(1,0,1E15,1E15)` is 1), so DB's cap covers periods 100,001 to 2147483647. A lifted DB or VDB call is also charged by each element's period
 (SPEC-0011 `ValueWork::Loop`, T-1820): 2^17 units at the cap, so at most 1,024 such elements per call, while small
 periods lift freely (`ROWS(DB(G25:G26,1000,6,2,7))` is 2 in Excel, probes/fin-argument-modes). Within the cap the values are unchanged.
 Evidence: the cap is a resource limit, not an Excel observation; probes/fin-argument-modes shows Excel lifting DB and VDB.
 Status: DEVIATION (decision 0014)
-Tasks: T-1820
+Tasks: T-1820, T-2491
 Implemented in: functions/financial/financial_depreciation.rs (`MAX_DEPRECIATION_PERIODS`),
 functions/lift/kinds/financial.rs (`DB`, `VDB`)
+
+## M9 financial argument kinds (T-3184)
+Rule: in the 55 M9 financial functions, one argument of a valid call replaced by another kind gives, by kind
+(probes/t3184-m9-financial-argument-kinds-a to -e, 608 cells, excel-graph, 2026-11-04; case letter and Calc row):
+- An error literal (`#N/A`) is returned in every parameter of every function (218 cells).
+- `""` is `#VALUE!` in every scalar parameter (255 cells). As the cash-flow array, `IRR("",0.1)` is `#NUM!` (c A18) and
+  `MIRR("",0.1,0.12)` is `#DIV/0!` (c A44): a scalar text flow is skipped, leaving no flows.
+- Numeric text is its number (75 cells: `"45337"` as a date, `"0.05"` as a rate, `"2"` as a frequency), except a
+  scalar flow or date, which is skipped as text is: `MIRR("5",..)` is `#DIV/0!` (c A42), `XIRR("5",..)` and
+  `XNPV(..,"5")` (dates) are `#NUM!` (e A49, e A60). Text `"x"` is `#VALUE!` (a A16, a A79, a A103, d A110), but
+  `MIRR("x",..)` is `#DIV/0!` (c A43).
+- A blank cell is 0: the result is a number where 0 is in the parameter's domain (basis, type, salvage, cost of SYD,
+  a coupon settlement; 13 cells, e.g. a A19, c A17, e A9) and `#NUM!` where it is not (a frequency, a maturity, nper,
+  per, a price or redemption, `PDURATION`'s fv; 15 cells, e.g. a A82, a A111, d A26, e A32).
+- TRUE is 1 in the annuity functions (FV pmt and pv, IPMT nper, NPER pmt and pv, PMT pv, PPMT fv, RATE fv, SLN life,
+  VDB salvage: b A79, b A82, c A7, c A56, c A58, d A31, d A46, d A112, e A6, e A36; `RATE(48,TRUE,8000,0,0,0.1)` is
+  `#NUM!`, d A106, since a payment of 1 has no rate), and `#VALUE!` in the Analysis ToolPak functions: the
+  settlement or maturity of COUPDAYBS, COUPPCD, DURATION, MDURATION and PRICE, the frequency of COUPPCD and YIELD,
+  and CUMIPMT's nper (a A65, a A119, a A126, a A134, b A58, c A29, d A51, d A54, e A77).
+- `COUPDAYS(S,0,2,1)` (maturity 0) is `#NUM!` (a A76), as is `ODDLPRICE(..,-1,2,0)` (redemption -1, c A120).
+Status: VERIFIED (excel-graph). The engine matched all 608 cells when probed. Earlier entries below give the
+check order between kinds; this entry adds one cell per missing parameter and kind (report.json `argument_coverage`).
+Generator choice: hand-written probe cases, option (b) of T-3184 (docs/architecture/synthetic-generator.md).
 
 ## Financial function argument modes
 Rule: every scalar argument of the M9 financial functions lifts elementwise over an array literal: all 256
@@ -667,6 +2004,21 @@ Status: VERIFIED (excel-graph)
 Implemented in: `fn_mirr` in functions/financial/mirr.rs (T-1798); replaces the hand-taken limits at rate -1.
 Tasks: T-1798
 
+## MIRR at finance 1E+200 over five flows with a negative flow at index 2 is #DIV/0! (T-4116)
+Rule (one probed point): `MIRR({-3496.38522311601,97.9347197399849,-81.6919783865016,180.891974550287,218.629532704649},1E+200,0.00166838654471219)`
+is `#DIV/0!` (accuracy/MIRR/s1 A125): finance rate 1E+200, five flows with positive ones, and a negative flow at index 2,
+the first index whose finance power (1+fr)^2 = 1E+400 overflows. With a positive flow and the first flow the only
+negative one, a finance overflow is `#NUM!` instead (`MIRR({-100,50,80},1E+200,0.1)` and `-1E+200`, "MIRR error and edge
+cases" A15, A24); with no positive flow it is `#DIV/0!` (A29).
+Settled by probes/fin-mirr-overflow-negative (T-4537, excel-graph, 2026-11-06): hypothesis (b) holds. A finance
+overflow is `#DIV/0!` when a negative flow is divided by an infinite finance power (A3, A4, A7, A8, A10 and A125's
+index 2), and stays `#NUM!` when every negative flow sits before the first overflowing power (a negative flow at
+index 1 under 1E+200 or 1E+300 is `#NUM!`: A2, A5, A6; a final power that overflows only after the last flow, A11).
+Evidence: accuracy/MIRR/s1 A125, probes/fin-mirr-overflow-negative (excel-graph, 2026-11-06).
+Implemented in: `mirr_of` in functions/financial/mirr.rs (T-4537).
+Status: VERIFIED (excel-graph)
+Tasks: T-4116, T-4537
+
 ## Coupon settlement before the calendar
 Rule: PRICE, YIELD, DURATION, MDURATION and ACCRINT are `#NUM!` for a settlement (ACCRINT: an issue, first interest
 date or settlement) below serial 1 in a 1900 workbook; the COUP* functions only for one below serial 0. Probed values:
@@ -703,17 +2055,17 @@ from 1 March 1900 on counts Excel's fictitious 1900-02-29, and a coupon date bef
   (from 1900-02-28, the month's last day); the actual bases count serials (`COUPDAYBS(61,36585,4,1)` is 2).
 - COUPDAYSNC on basis 0 is the period's 30/360 length less COUPDAYBS (`COUPDAYSNC(1,1000,2)` is 85), on basis 1 the
   serials to the next coupon date.
-- COUPDAYS on basis 1 counts a period that starts before 1900-01-01 in the real calendar (`COUPDAYS(1,43830,4,1)` is
-  90, 1899-12-31 to 1900-03-31; `COUPDAYS(1,1000,2,1)` 181) and one inside the calendar by serials
-  (`COUPDAYS(1,43831,2,1)` is 182). A period starting or ending on 1900-02-28 takes the 29 February rule ("COUPDAYS
-  basis 1 around 29 February"): `COUPDAYS(59,36585,4,1)` and `COUPDAYS(1,43890,4,1)` are 90 and 92.
+- COUPDAYS on basis 1 counts its own period ("COUPDAYS basis 1 counts from the chained next coupon"): one that starts
+  before 1900-01-01 in the real calendar (`COUPDAYS(1,43830,4,1)` is 90, 1899-12-30 to 1900-03-30;
+  `COUPDAYS(1,1000,2,1)` 181), one inside it by serials (`COUPDAYS(1,43831,2,1)` is 182), and 1900-02-28 is not a
+  month end there: `COUPDAYS(59,36585,4,1)` and `COUPDAYS(1,43890,4,1)` are 90 and 92.
 - A month-end schedule's February 1900 ends on the 28th (`COUPPCD(59,36585,4)` is 59).
 Evidence: probes/fin-coupon-walk-bounds A21-A28, -b A1-A13 (excel-graph, 2026-10-17, T-1822), fin-coupon-walk-bounds-c
 A1-L14 (excel-graph, 2026-10-20, T-1844).
 Ours: matches (functions/financial/financial_bonds/coupon_schedule.rs: `coupon_period`, `coupon_count`,
 `coupdays_actual`, `coupon_days_nc`). In a 1904 workbook
 `COUPNUM(0,400,2)` and `COUPNUM(1,400,2)` are `#NUM!` (previous coupon 1903-08-04, before the 1904 calendar) while
-`COUPPCD(1,400,2)` is -150 (-1904 A5-A7); see "COUPNUM in a 1904 workbook".
+`COUPPCD(1,400,2)` is -150 (-1904 A5-A7); see "COUPNUM in a 1904 workbook" (ours matches since T-2337).
 Status: VERIFIED (excel-graph)
 Tasks: T-1822, T-1844, T-2124, T-2125
 
@@ -721,12 +2073,51 @@ Tasks: T-1822, T-1844, T-2124, T-2125
 Rule: ACCRINT reads its dates as Excel 1900 serials too, and is `#NUM!` when a coupon date it accrues over falls before
 1900-01-01 (serial 0): the coupon date before settlement (the regular one, `first_interest` less a period, when
 settlement is not past `first_interest` or calc_method is FALSE) or any period start on the walk back to the issue.
+**Unstable in Excel for the web**: the fills of 2026-10-20 to 10-27 gave the `#NUM!` this rule and the bullets below
+record; two fresh fills on 2026-11-06 gave 0 (and numbers past the basis-1 and 1904 cuts) for about 140 of the same
+cells. One cell has flipped twice: fin-coupon-walk-bounds-b A9 was 0 on 2026-10-17 (the only fill that day), `#NUM!` on
+10-24 and 0 again on 11-06; see the last bullets. The engine keeps the `#NUM!` rule, and the cells where Excel last gave 0 stay known
+failures, until fills agree over time (T-4566 decided not to follow either answer).
 - `ACCRINT(DATE(1900,3,1),DATE(1900,6,30),S,0.05,1000,4,0,TRUE)` is `#NUM!` for every settlement S from 1900-05-01 to
   9999-12-31 (the issue's period starts 1899-12-31), with calc_method FALSE, on bases 0, 1, 3 and 4 and with semiannual
   or annual coupons; `ACCRINT(DATE(1900,3,1),DATE(1900,3,31),DATE(1900,3,15),...)` too (the regular period starts
   1899-12-31). `ACCRINT(DATE(1900,4,1),DATE(1900,6,30),DATE(9990,6,30),0.05,1000,4,0,TRUE)` is 404512.3611111111.
 - A regular period that starts before 1900 does not matter when the settlement's period is later:
   `ACCRINT(33448,1,37714,1E+300,0.3,1,2,TRUE)` is a number (gen-m9 3b7990bd4e3307ba Calc!A317).
+  On basis 1 it does: basis 1 reads the length of first_interest's regular period, so that period must start on
+  1900-01-01 or later however late the settlement is. `ACCRINT(33853,FI,37554,1,9888,freq,1)` is `#NUM!` for FI 1, 1.005
+  and 2 at frequencies 1, 2 and 4, and a number for FI 367 (regular period from 1900-01-01 when annual); bases 0, 2, 3
+  and 4 give numbers for all of them (probes/accrint-calendar-start-1900 A1:A60; gen-m9 932b33b1ef8b7608 Calc!A118 is
+  FI 1.005, annual, basis 1; T-2562).
+- A first_interest of serial 59 (1900-02-28) or 60 (Excel's 1900-02-29) with an issue of 1, 30 or 45 is `#NUM!`,
+  semiannual and quarterly, on bases 0 and 1, settlement before or after it: the regular period starts in 1899
+  (probes/accrint-calendar-start-1900 B1:B32). Those cells did not show how serial 59 and 60 act in the schedule;
+  probes/accrint-eom-1900 (T-2837) does. With calc_method TRUE and a settlement past first_interest (semiannual
+  settlement 1900-08-30, quarterly 1900-05-30):
+  - An issue of 58.5 is `#NUM!` for first_interest 59 and 60 on bases 0 and 1.
+  - When the issue is not before first_interest (issue 59 with first_interest 59, issue 60 with first_interest 59
+    or 60), basis 0 is a number (`ACCRINT(59,59,242,...,2,0,TRUE)` is 24.86111111111111, `ACCRINT(59,59,150,...,
+    4,0,TRUE)` 12.36111111111111, issue 60 gives 25 and 12.5) and basis 1 is `#NUM!` (the regular period starts in
+    1899).
+  - Issue 59 with first_interest 60 is `#NUM!` on basis 0 as well: serial 60 stays serial 60 as the coupon date, so
+    the issue (59) lies before it and the walk back reaches 1899. This does not show whether serial 59 counts as
+    month-end: no cell reached a coupon date after 1900-02-28/29 that depends on it (the settlement slice uses the
+    regular period's 360/frequency days on basis 0), so the question has no observable effect in these cells.
+- Basis 1's cut on first_interest's regular period is exactly 1900-01-01: ACCRINT(33853,FI,37554,1,9888,freq,1) is
+  `#NUM!` for FI 365 and 366 annual, 182 (1900-06-30, whose period starts before serial 1 with or without the month-end rule) semiannual and 91
+  (1900-03-31) quarterly, and a number for FI 367 annual (period from 1900-01-01), 183 and 184 semiannual and 92 and
+  93 quarterly (probes/accrint-eom-1900 B1:B9; the same cells on basis 0 are all numbers, C1:C9; T-2837).
+- In a 1904 workbook the cut moves to 1904-01-01: with first_interest 1904-03-31 or 1904-06-30 (quarterly), an issue of
+  1904-01-01, 1904-01-02, serial 0 or serial 1 is `#NUM!` for settlements 1904-02-15 and 1950-06-30, calc_method TRUE or
+  FALSE, and `ACCRINT(DATE(1904,1,1),DATE(1904,3,31),DATE(1950,6,30),0.05,1000,freq,basis,TRUE)` is `#NUM!` on every basis,
+  semiannual and quarterly. An issue of 1904-04-01 computes (2312.361111111111 for first_interest 1904-03-31, calc_method
+  TRUE, or 1904-06-30), except with first_interest 1904-03-31 and calc_method FALSE (regular period from 1903-12-31),
+  which is `#NUM!` (probes/accrint-calendar-start-1904, 47 of its 50 cells `#NUM!`; first filled 2026-10-26, re-filled
+  2026-10-27 with the same values). ACCRINT reads a 1904 date as the date itself (dates.md "The 1904 date system:
+  ACCRINT, COUPNUM and the TBILL functions read the date itself"), so this is the 1900 rule with the calendar starting on
+  1904-01-01. An issue on serial 0 is `#NUM!` in 1904 too, also when its period starts on 1904-01-01
+  (`ACCRINT(0,DATE(1904,7,1),DATE(1904,3,1),0.06,1000,2,0)`, fin-coupnum-1904-maturity-sweep C2). Ours since T-2337
+  (`DateSystem::first_coupon_1900_serial` passed to `compute_accrint`).
 - The day counts read the serials as Excel shows them: the actual bases count serials, so the fictitious 1900-02-29
   counts, and the 30/360 bases read serial 1 as 1900-01-01: `ACCRINT(DATE(1900,2,15),DATE(1900,5,10),DATE(1900,4,1),
   0.05,1000,4,0,TRUE)` is 6.388888888888888 (46/90) on bases 0, 1, 2 and 4, and 6.301369863013699 on basis 3;
@@ -734,17 +2125,47 @@ settlement is not past `first_interest` or calc_method is FALSE) or any period s
   (1900-02-29) is not February's last day (1900 is not a leap year there): `ACCRINT(60,DATE(1900,5,10),DATE(1900,4,1),
   0.05,1000,4,0,TRUE)` is 4.444444444444445 (32 days), while 1900-02-28 is (`ACCRINT(DATE(1900,2,28),DATE(1900,5,31),
   DATE(1900,4,1),...)` 4.305555555555555, 31 days).
+- On 2026-11-06 Excel for the web gave 0, not `#NUM!`, for this shape with calc_method TRUE and a settlement after
+  first_interest, `ACCRINT(61,182,45000,0.05,1000,4,0,TRUE)` included (probes/accrint-zero-results A1:A19; "ACCRINT,
+  ACCRINTM, PRICEMAT and YIELDMAT: amount domains (T-4114)"); with calc_method FALSE or a settlement before
+  first_interest it stayed `#NUM!` (A10, A11).
+- Re-fill of 2026-11-06 (T-4566): probes/accrint-zero-results, fin-accrint-1900-calendar, fin-coupon-walk-bounds-b and
+  -c, accrint-calendar-start-1900, accrint-calendar-start-1904 and accrint-eom-1900, filled twice with `--force` and an
+  emptied oracle cache (15:08 and 15:10 UTC), gave the same values both times, and 140 of their cells differ from the
+  committed 2026-10-20 to 10-27 fills:
+  - Every cell whose walk back to the issue reaches a period start before 1900-01-01 is **0**, not `#NUM!`, with
+    calc_method TRUE or FALSE and a settlement before or after first_interest: fin-accrint-1900-calendar A1:A14, B1:B5,
+    B9, C10:C12, D1:D10, E1:E7 (`ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(1950,6,30),0.05,1000,4,0,TRUE)` and its
+    FALSE twin), fin-coupon-walk-bounds-b A9, -c O1:O4, O6, O8, O9, O11, O12, accrint-calendar-start-1900 B2, B3, B6,
+    B7, B10, B11, B14, B15, B18, B19, B22, B23, B26, B27, B30, B31, accrint-eom-1900 A1:A8, A13:A16.
+  - A settlement's own period that starts before 1900-01-01 stays `#NUM!`: `ACCRINT(DATE(1900,3,1),DATE(1900,3,31),
+    DATE(1900,3,15),...)` (-c O13), `ACCRINT(30,59,45,0.05,1000,2,0,TRUE)` (accrint-calendar-start-1900 B1, B4 and the
+    rest of its B column with the settlement before first_interest), accrint-zero-results A10, A11.
+  - Basis 1 no longer reads the regular period's start: `ACCRINT(33853,1,37554,1,9888,1,1)` is 3028888.918032787
+    (accrint-calendar-start-1900 A2, A7, A12, A17, A22, A27, A32, A37, A42), `ACCRINT(33853,366,37554,1,9888,1,1)`
+    100176.78688524592 (accrint-eom-1900 B1, B3, B4, B7), `ACCRINT(59,59,242,0.05,1000,2,1,TRUE)` 77.54237288135593
+    (accrint-eom-1900 A10, A12, A18, A20, A22, A24).
+  - The 1904 cut is gone except for a settlement's own period before 1904-01-01: `ACCRINT(DATE(1904,1,1),DATE(1904,3,31),
+    DATE(1950,6,30),0.05,1000,4,0,TRUE)` is 2324.861111111111 and an issue of serial 0 or 1 computes
+    (accrint-calendar-start-1904 A1:A16, A20, A25:A40, B1:B10); A17, A18, A21, A22 stay `#NUM!`.
+  The committed sidecars keep the earlier fills: with the multi-cell answer moving from `#NUM!` (10-20 to 10-27) to 0
+  (11-06), and -b A9 going 0, `#NUM!`, 0 (10-17, 10-24, 11-06), neither is followed, and the cells where the committed oracle already says 0
+  (accrint-zero-results A1:A9, A12, A14, A16:A19) stay known failures for that reason.
 - Excel for the web returned 0 for `ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(9990,6,30),0.05,1000,4,0,TRUE)`
   (fin-coupon-walk-bounds-b A9) on 2026-10-17 and `#NUM!` on 2026-10-24, in a re-fill of -b and in
   fin-accrint-1900-calendar D1; the oracle now records `#NUM!`.
-Evidence: probes/fin-accrint-1900-calendar (52 cells), fin-coupon-walk-bounds-c O1-O14, -b A9 (excel-graph, 2026-10-24).
-Status: VERIFIED (excel-graph)
+Evidence: probes/fin-accrint-1900-calendar (52 cells), fin-coupon-walk-bounds-c O1-O14, -b A9 (excel-graph, 2026-10-24);
+accrint-calendar-start-1900 (92 cells) (excel-graph, 2026-10-26); accrint-calendar-start-1904 (50 cells, excel-graph,
+2026-10-27, T-2835, landed by T-2337).
+Status: VERIFIED (excel-graph); unstable since 2026-11-06, re-decided by T-4631
 Implemented (T-2124): `compute_accrint` in functions/financial/accrint.rs.
-Tasks: T-2124
+Tasks: T-2124, T-2562, T-2835, T-2337, T-4114, T-4566
 
 ## COUPNUM in a 1904 workbook
 Rule: in a 1904 workbook COUPNUM is `#NUM!` exactly when the previous coupon date is before 1904-01-01 (a negative
-1904 serial); a previous coupon on 1904-01-01 (serial 0) counts. Nothing else takes this cut: COUPPCD returns the
+1904 serial); a previous coupon on 1904-01-01 (serial 0) counts. This is the 1900 rule ("Coupon schedules at the
+calendar's edges") in the 1904 calendar: since 2026-10-21 COUPNUM reads a 1904 date as the date itself (dates.md "The
+1904 date system: ACCRINT, COUPNUM and the TBILL functions read the date itself"). Nothing else takes this cut: COUPPCD returns the
 negative serial, and COUPNCD, COUPDAYBS, COUPDAYS, COUPDAYSNC, PRICE, YIELD, DURATION and MDURATION compute with that
 period. The cut is the same at frequency 1, 2 and 4; bases 1 and 3 and fractional dates are probed on the `#NUM!` side
 only (A37-A40).
@@ -758,17 +2179,16 @@ only (A37-A40).
 - ACCRINT has its own cut: `#NUM!` when the issue is serial 0 (C1, C2, C4-C9, C11, C12, C17) or when the issue's
   previous coupon is before 1904-01-01 (`ACCRINT(10,DATE(1904,6,30),DATE(1904,3,1),0.06,1000,2,0)`, C10); an issue of 1
   or later whose previous coupon is on or after 1904-01-01 computes (C3, C15, C16, C18, C19).
-- `ACCRINT(200,DATE(1904,12,31),DATE(1905,3,1),0.06,1000,2,0)` is 37.16666666666667, ours 37 (C14); with
+- `ACCRINT(200,DATE(1904,12,31),DATE(1905,3,1),0.06,1000,2,0)` is 37.16666666666667 (C14; ours 37 until T-2337); with
   calc_method FALSE it is 37 (C21).
-Conflict: these values are from 2026-10-21. On 2026-10-12 the same excel-graph oracle gave 25 for
-`COUPNUM(0,DATE(1910,3,31),4)` (probes/date-system-1904-financial S!A38), and a re-fill of the 24 committed 1904 cases on
-2026-10-21 changed 111 of their 1,041 cells; see dates.md "Excel for the web changed 1904 financial results (2026-10)".
-The rule above is today's Excel; how it fits with the rest of the 1904 financial rules is T-2337's to work out.
+Before 2026-10-21 Excel for the web read the dates 2·1462 days on here too and gave 25 for `COUPNUM(0,DATE(1910,3,31),4)`
+(probes/date-system-1904-financial S!A38, 2026-10-12); a re-fill on 2026-10-27 confirms the values above (T-2337).
 Evidence: probes/fin-coupnum-1904-epoch A1-A41, fin-coupnum-1904-maturity-sweep A1-A79, C1-C21 (excel-graph,
-2026-10-21, T-2125), fin-coupon-walk-bounds-1904 A5-A7.
-Ours: not implemented. A COUPNUM-only check is drafted in docs/research/excel-1904-drift-2026-10.md; it is parked until
-T-2337 settles the 1904 rules, because on its own it breaks date-system-1904-financial S!A38 against the older value.
-Status: CONFLICTING (excel-graph 2026-10-21 against excel-graph 2026-10-12; T-2337)
+2026-10-21, re-filled 2026-10-27; T-2125, T-2337), fin-coupon-walk-bounds-1904 A5-A7.
+Ours: COUPNUM reads `DateReading::Calendar` and checks the previous coupon against
+`DateSystem::first_coupon_1900_serial` (`fn_coupnum`, financial_bonds.rs; T-2337); ACCRINT's cut is
+`accrint_coupon_serial` (accrint.rs).
+Status: VERIFIED (excel-graph)
 Tasks: T-2125, T-2337
 
 ## Coupon schedule work cap
@@ -792,26 +2212,39 @@ Tasks: T-1822, T-1846
 
 ## Yield and odd-coupon work cap
 Rule: RustSheet charges a lifted YIELD, ODDFPRICE, ODDFYIELD, ODDLPRICE or ODDLYIELD call for its solver and schedule work,
-in proportion to each element's coupon count plus one, so one call lifts at most 8 elements (YIELD, ODDFYIELD), 256
+in proportion to each element's coupon count plus one, so one call lifts at most 2 elements (YIELD, ODDFYIELD), 256
 (ODDFPRICE) or 1,024 (ODDLPRICE, ODDLYIELD) at the calendar's longest schedule, and more over shorter ones:
 `ROWS(YIELD(SEQUENCE(9)*0+1,2958465,0.05,1E300,100,4,1))` is `#ERROR!` where Excel lifts every element
 (probes/fin-argument-modes, fin-yield-odd-lift: they lift over arrays; Excel's own limit is unprobed), while
 `ROWS(YIELD(SEQUENCE(9)+39000,43831,0.05,95,100,2))` is 9. YIELD's and ODDFYIELD's kernels walk the coupon schedule once
 (up to 4.4 and 6.3 ms at the calendar's longest schedule, release build), then the solver evaluates the price at most
-397 times (100 Newton steps of three prices, 97 bisection prices), each a sum over up to 32,400 quarterly coupons
-(0.55 ms): about 0.23 s an element at that bound, charged 2^24 units against SPEC-0011's 2^27 visit cap (8 elements,
-about 1.8 s; the slowest inputs found, a price of 1E300 over 9990 years, take 54 ms an element). ODDFPRICE walks and sums
+397 times (ODDFYIELD: 100 Newton steps of three prices, 97 bisection prices; YIELD's Newton, since T-2391, at most 100
+steps of a price and a slope), each a sum over up to 32,400 quarterly coupons
+(0.55 ms): about 0.23 s an element at that bound, charged 2^26 units against SPEC-0011's 2^27 visit cap (2 elements).
+Where the discount's power takes its slow path near overflow (a price of 1E-100) a price term costs about 340 ns, not
+17 ns, so the weight is fitted to those inputs (T-2879, release build, one call at the cap): 161 elements of
+`YIELD(43831,80355,0.05,1E-100,100,4)` take 4.3 s, 535 of `YIELD(43831,54788,0.05,1E-100,100,4)` 0.75 s, 3,085 of
+`YIELD(43831,47484,0.05,1E-100,100,2)` 2.6 s and 89 of `ODDFYIELD(43831,DATE(2200,1,1),43800,DATE(2020,4,1),0,1E-100,100,4)`
+4.2 s; one element more is `#ERROR!`. At 2^24 those took 10.9 s to 17.3 s. ODDFPRICE walks and sums
 its odd first period once (up to 6.3 ms, 8 walks of `COUPON_WALK_WEIGHT`: 256 elements took 1.7 s), ODDLPRICE and
 ODDLYIELD walk to the maturity once in closed form (up to 2.2 ms, 2 walks: 1,024 elements took 2.2 s). Below the longest
 schedule each element is charged in proportion to its coupon count plus one, the extra period covering a pass's fixed cost
-(`ValueWork::CouponWalks`, T-1869): a 10-year semiannual YIELD is 10,873 units (12,344 elements), and a one-period one
-524. The scalar calls are not capped. Before T-1842 YIELD and ODDFYIELD walked the schedule on every solver step (about
+(`ValueWork::CouponWalks`, T-1869): a 10-year semiannual YIELD is 43,501 units (3,085 elements), and a one-period one
+2,093. An ODD* or YIELD element its kernel refuses before any walk is charged 1 unit (T-2815, T-2879 for YIELD): every ODD*
+kernel reads all its arguments first (`Model::odd_args`), as YIELD does (`Model::bond_args`), returning on an error
+or a logical in any of them and on a date outside [0, 2958466) as it reads it, so `ODDFYIELD(45535,45661,X,38502,{22 errors},82,110,4)` with an issue X near -1.2E14
+lifts its 22 elements (gen-m9/ba4ddb817a8e700e Calc!A323, Excel `#SPILL!` there) where it was charged 22
+calendar-long solvers. A text argument of any of these kernels, and of the COUP* functions, PRICE, DURATION,
+MDURATION and ACCRINT, is charged as the engine reads it (`Model::cast_number`, T-2879): a date text as its date, a text that reads
+as no number 1, as it is `#VALUE!` before any walk (gen-m9/0a957119475760c5 Calc!A116, whose settlement texts `a*`,
+`ABC`, `x~*`, `abc` were each charged a calendar-long walk).
+The scalar calls are not capped. Before T-1842 YIELD and ODDFYIELD walked the schedule on every solver step (about
 2.4 s a scalar call at the solver bound, 0.6 s measured); the walk is now hoisted out of the solver, with the same values.
 Evidence: none for Excel; this is a resource limit (CLAUDE.md directive 5, SPEC-0011 "Security rule for kernel work").
 Status: DEVIATION (decision 0014)
 Implemented in: functions/lift/kinds/financial.rs (`YIELD_SOLVER_WEIGHT`, `YIELD`, `ODDFPRICE`, `ODDFYIELD`, `ODD_LAST`),
 functions/lift/kinds/mod.rs (`ValueWork::CouponWalks`)
-Tasks: T-1842, T-1869
+Tasks: T-1842, T-1869, T-2815, T-2879
 
 ## CUMIPMT and CUMPRINC over many periods
 Rule: Excel computes CUMIPMT and CUMPRINC in constant time whatever the period count, also where `(1+rate)^nper`
@@ -946,10 +2379,336 @@ per-period sum (type 0) or the closed form (type 1), and the balance drop where 
 interest is the payments less the closed-form principal where `nper·L` is below 2^-10 (`TINY_RATE_GROWTH`).
 19 known failures are fixed, none regressed, and visibly-off cells go from 8281 to 8267. The gates have no
 oracle cell near their edges (T-2521).
-Status: PARTLY VERIFIED (excel-graph; visibly right but for A6, A7 (= G2), A9-A11 and K3 near period 1E15,
-fin-cumipmt-period-bound A18, and the gen-m9 cells A62, A372, A352, A379 above: T-2521; the short sums' last digits
-in T-1374)
-Tasks: T-1845, T-1890, T-2192, T-2363, T-2514, T-2521, T-1374
+T-2521 (probes/fin-cumipmt-gate-edges, excel-graph 2026-10-28: 89 cells around the kernel's gates; float64 fit with
+the engine's own `growth_log`, `excel_exp` and `excel_expm1` against the type 0 and type 1 cells of the probes, the
+gen-m9 sweep and CUMPRINC_CUMIPMT.xlsx):
+- The short principal's geometric sum discounts with Excel's own `L = ln(1+rate)`, the one PPMT uses ("PPMT discounts
+  with an atanh-series log"), not `log1p`. That L is an ulp below libm's `log1p` at 0.1 and 0.1234 and an ulp above it
+  at 2 (where libm's `log1p(2)` is itself an ulp below the correctly rounded `ln 3`), and a deep discount carries it:
+  `CUMPRINC(2,151,319288,3,42,1)` -1.049166891970377E-47 and `CUMPRINC(0.1,1023,478581,7,24,1)` -1.589128180790285E-36
+  are to the bit with it, 245 and 67 ulps off with `log1p` (gen-m9 b73c6cc96e093f03 A62, 9d9ceba257f8001b A372).
+  Excel's EXP and expm1 in place of libm's fit about as many cells (in the kernel's order 25 against 24 of 54 type 1
+  principals, 19 against 21 of 33 type 0), and an eval run with them and type 1's payment below moved gen-m9 A193,
+  A383 and A398 off the bit, so libm's stay.
+- With that L the geometric sum is as close or closer than the per-period sum and the closed form from a discount
+  exponent of 3.62 up: gate-edges C1-C11 (type 0) and D1-D11 (type 1), rate 0.1 over exponents 3.62 to 9.34, are 12
+  of 22 to the bit and the rest within 2 ulps, where the other forms missed all 22 by 1 to 10 ulps. Below 3.62 the
+  only probed cells are gen-m9 A300 (exponent 2E-7, the per-period sum to the bit, the geometric 2 ulps off) and
+  fin-argument-modes H80 (3.58, `CUMPRINC(0.01,360,100000,1,12,0)`: the per-period sum 4 ulps off, the geometric 2),
+  so the cut at 3.6 is a fit between 2E-7 and 3.62 (T-3067 probes it); CUMPRINC_CUMIPMT.xlsx H25 (3.96), which T-2514 had to the bit only with the closed form, is to the bit
+  with the geometric sum on this L too.
+- Type 0's interest is the payments less the principal wherever the principal is no larger than the interest:
+  `CUMIPMT(0.5,60,100000,10,18,0)` is -449999.99609733943 to the bit with it and 74 ulps off with the balance form,
+  and so are gate-edges B1-B11 across the growth 2^10 (both sides), fin-argument-modes H72 and gen-m9 cells. There
+  `-pmt·m` and the principal do not cancel, so the principal's last bit does not move the result.
+- Not fitted (T-3067):
+  - Type 0 interest at tiny rates where the principal dominates: gate-edges A2-A7 (`CUMIPMT(1E-4,60,100000,3,10,0)`
+    -72.68628355221881) are 128 to 512 ulps off, one ulp of `pmt·m`, with the principal from the per-period sum, the
+    geometric sum, the closed form or the balance drop, and 14 to 354 with the balance form. Excel's implied principal
+    is -2 to +2 ulps from the exact sum. Across the growth 2^-10 (A1-A8) neither form is right on both sides, so
+    `BALANCE_GROWTH_MIN` stays.
+  - Type 1 interest at tiny rates: gate-edges E1-E10 (`CUMIPMT(r,100,100000,3,10,1)`, r from 2E-6 to 1E-4, across
+    `nper·L` = 2^-10) are 49 to 4096 ulps off with either the IPMT sum or the payments less the principal. Excel's
+    value is not `-pmt·m` less its own CUMPRINC (F1-F10) for any of 40 payment forms, so `TINY_RATE_GROWTH` stays.
+  - Type 1 from period 1: Excel's type 1 payment is `pv/((1+r)·(1-v^nper))·r` (`CUMPRINC(0.0083,36,8000,1,1,1)` =
+    `PMT(0.0083,36,8000,0,1)` = -255.86361744160234, G1, I1; also G7 at 0.1, and the 3 type 1 PMT cells of the suites),
+    and with it CUMIPMT is `-pmt·m - CUMPRINC` on Excel's own CUMPRINC to the bit on G2 (H5, H6, H8-H11). Our
+    CUMPRINC is 2 ulps off there (G5, G6), which the cancellation makes 6 ulps of CUMIPMT. The principal
+    `-(pmt0·((1-v^m)/r)·v^(nper-end+1))` on Excel's EXP fits G5 and G6 but moves gen-m9 A193 off the bit.
+  - A62 is 40 periods, past the kernel's 32-period short range, so the closed form still takes it (103 ulps off).
+    The geometric sum on Excel's L over every long range fixes it but moves fin-cumipmt-period-bound A6, A11 and A30
+    (1,024 to 99,998 periods) off the bit; where between 40 and 1,024 periods the closed form takes over is unprobed.
+  - `CUMIPMT(1E-15,283,(1.005+3.14159+1E15)%,2,16,0)` (A352), `CUMIPMT(1E-9,235,379138,7,14,1)` (A379) and the
+    periods near 1E15 (A9-A11, K3, A18): unchanged.
+Ours since T-2521: the geometric principal and the payment of type 0's `-pmt·m - principal` take `growth_log`'s L,
+the geometric sum starts at a discount exponent of 3.6 (`GEOMETRIC_MIN_DISCOUNT`, was 8; `GEOMETRIC_MIN_LEAD` since T-3067), and type 0's short
+interest is the payments less the principal wherever the principal is no larger than the interest, the band
+deciding only the rest. 11 known failures are fixed (gen-m9 4, probes 7), none regressed, and the new probe case
+has 37 of its 89 cells to the bit, among them J1 `CUMPRINC(0.004,1024,1000,3,34,1)`
+-2.3341923189629874 (2 ulps from the exact sum, which the closed form had) and J2.
+T-3067 notes (float64 fit, 2026-10-28; nothing changed in the kernel):
+- Near period 1E15, rate 0.01 (fin-cumipmt-overflow-and-forms A9-A11, fin-remaining-later-argument-ranges K3): `v^nper`
+  underflows, so every payment form gives exactly 1000, and Excel's implied principal `-pmt·m - CUMIPMT` (for m = 11
+  also fin-cumipmt-period-bound A19's CUMPRINC) is above the exact sum with r = fl(0.01):
+  `CUMIPMT(0.01,1E15,100000,1E15,1E15,0)` -9.900990099009732 means a principal of 990.0990099009903, 1.5 ulps above the
+  exact sum and 2 ulps above the double `1000/1.01`; m = 2 (A10) is 2.9 ulps above and m = 11 (A9) 2.0.
+  Ours, the per-period sum of `exp((k-1-nper)·log1p r)`, is 1, 3 and 2 ulps from Excel's principal for m = 11, 2 and 1,
+  and one ulp of a principal of 1,000 to 10,000 is visibly off in an interest of 10 to 632.
+- Tried on those three principals: L as `log1p`, PPMT's `growth_log`, Excel's LN of `1+r` and libm's `ln`; libm's
+  and Excel's EXP and expm1; 32 orderings (the per-period sum forward and backward, a repeated product of `v`, `powi`,
+  `powf`, the geometric sum from the last period and from the first, with `(1+r)/r`, `1/(r/(1+r))` and `1/(1-v)`
+  factors in every association, and the difference of two powers over `r` or `expm1(L)`); and `growth_log`'s L
+  lowered by 0 to 200 ulps. None is exact on all three. The best are the geometric sums on `growth_log`, within an ulp
+  on all three: the kernel's `(1-v^m)/r·(1+r)` ordering is exact on m = 1, the `(1-v^m)/(r/(1+r))` one on m = 1 and
+  m = 11, and no form is exact on m = 2. That second ordering as the kernel's geometric principal (gate unchanged)
+  moved 12 bit-exact cells off the bit (gen-m9 9a1fa5366bc50918 A18, 5ded7594e597e31e A22, d912671baa1364aa A104,
+  0a957119475760c5 A383, 9d9ceba257f8001b A372, 5c6a23c4f6597f1c A7; gate-edges C1, C2, C11, D1, D2, D11) and put 8 on
+  it (ba4ddb817a8e700e A116, CUMPRINC_CUMIPMT.xlsx H7, gate-edges C3, C9, C10, D3, D9, D10), none visibly, so it is not
+  kept.
+- Near period 1E15 measured directly (T-3067 run 2, probes/fin-cumprinc-near-1e15): CUMPRINC over the last m = 1 to
+  12 periods of nper 1E15 at rates 0.01, 0.001 and 0.1 (A-C), PPMT of each of those periods at 0.01 (D), the
+  CUMIPMT (E, which A9-A11 and K3 sample) and type 1 CUMPRINC (F). Excel's CUMPRINC is not the sum of its own PPMTs:
+  `CUMPRINC(0.01,1E15,100000,1E15,1E15,0)` is -990.0990099009903 where `PPMT(0.01,1E15,1E15,100000)` is
+  -990.09900990099, 2 ulps apart. Each E cell is `PMT·m - A` (G - A) exactly, with PMT a whole -1000 (G).
+  Of 30 forms fitted to the 36 A-C principals (with L as `log1p`, `growth_log`, Excel's LN of `1+r` and libm's `ln`,
+  each shifted by -4 to 4 ulps; with libm's and Excel's EXP and expm1; and with the exponent kept in an x87
+  register), the best is the drop in the remaining balance, `pv/(1-v^nper)·(v^(nper-end)·(1-v^m))` with
+  `1-v^m = -EXPM1(-m·L)`, Excel's EXP and expm1, and `growth_log`'s L. It is exact on 23 of the 36 and within an ulp
+  on the rest, and exact on 8 of the 12 at 0.01, where the kernel's per-period sum is exact on 4. Neither pv's
+  factor nor the order of `pmt·…/r` moves it. libm's expm1 gives 19 of the 36, and `log1p` 12. As the first type 0
+  short principal it puts 3 gen-m9 cells on the bit and takes 8 off. Gated on an underflowed `v^nper`
+  (`1-v^nper = 1`), it fixes 4 probe cells and still takes 14 off: 8 at a rate of 1E10
+  (fin-cumipmt-overflow-and-forms A15-A17, A20-A24) and 6 at integer rates (gen-m9 1cd3096e3e87c965 A147,
+  67a4c03afd63f988 A110, 81bcdc0bec0c8e6b A226, 9a1fa5366bc50918 A18 and A361, d912671baa1364aa A104). So it is not
+  kept. Next: probe the same last-m ranges at nper 1E6 and 1E10, where `v^nper` underflows but the periods stay
+  exact, to see whether the balance-drop form holds wherever the range ends at nper.
+- Where the sum changes form, measured (T-3067 run 3, probes/fin-cumprinc-form-boundaries, excel-graph 2026-10-29, 132
+  cells): what decides it is the leading discount `(nper-end+1)·L`, how far before nper the range ends, not the range's
+  length or its deepest discount. Over 33 to 512 periods ending a deep discount before nper (rate 2, nper 600 and rate
+  0.1, nper 1100: A1-D14) the geometric sum on `growth_log` is within 2 ulps of Excel on all 56 cells, both types, where
+  the closed form the kernel took past 32 periods was 46 to 1,431 ulps off and visibly off:
+  `CUMPRINC(2,600,319288,3,42,1)` is -6.214428680002485E-262 (A2). On a long range that ends near nper (I1-I11, J1-J11,
+  K1-K11, L1-L11: leading exponents 0.005 to 9.5) the closed form's difference is as close or closer up to an exponent
+  of 2.9 (bit-exact on the whole-loan `CUMPRINC(0.005,100000,1000,2,99999,1)`, fin-cumipmt-period-bound A6, which the
+  geometric sum misses by an ulp) and 4 to 8 ulps off from 4.3 up, where the geometric sum is within an ulp. Over a short
+  range, at leading exponents of 0.4 to 3.6 (E1-H8: rate 0.01 over periods 1-12, rate 0.1 over 2-6, both types), the
+  geometric sum is exact on 22 of 32 cells and within 2 ulps on the rest; the per-period sum and the closed form are
+  exact on 7 and up to 5 ulps off. At 0.095 (G1, and the last periods of nper 1E15 at 0.1, fin-cumprinc-near-1e15 C6
+  and C10) the old forms keep the bit. The cut on the deepest discount (3.6, T-2521) moved to the leading one.
+  Ours since T-3067 run 3: the principal is the geometric sum from a leading exponent of 0.3 over up to 32 periods
+  (`GEOMETRIC_MIN_LEAD`, was a deepest exponent of 3.6) and from 3.6 past 32 periods (`LONG_GEOMETRIC_MIN_LEAD`, was
+  never); both cuts sit inside the gaps the probe left (0.095 to 0.398, and 2.9 to 4.3). 7 known failures are fixed
+  (gen-m9 b73c6cc96e093f03 A62; CUMPRINC_CUMIPMT.xlsx H9, H10, H15, H21; gate-edges G9, G11), none regressed, and the
+  new case's 132 cells are visibly right, 73 to the bit.
+- The two cuts on a fresh sweep (T-3524, decision 0188 R4; probes-numeric/t3524-cumprinc-lead-fresh-sweep,
+  excel-graph 2026-11-05, 1,000 cells: CUMPRINC and CUMIPMT, the leading exponent log-uniform in [1E-3, 40], rates
+  1E-4 to 2, both types, 500 cells over up to 32 periods and 500 over 33 to 3,000). Neither cut is where Excel changes
+  form. Past 32 periods the geometric sum is Excel's more often at every leading exponent: 242 of the 500 long-range
+  cells to the bit with it against 184 with the cut at 3.6, and 3 visibly off against 20 (below 0.01: 34 vs 15; 1 to
+  2.9: 43 vs 27). On the old cells the cut was fitted on it keeps 4 more (form-boundaries I-L, period-bound A6, A11:
+  1 ulp each) but loses on the held-out side (146 vs 149). Over up to 32 periods the geometric sum at every exponent
+  is a little closer too (fresh 514 vs 508 of 1,000), but there the other forms keep 38 old cells visible that it
+  loses (tiny-rate interests, where an ulp of the principal is thousands of the interest's: gen-m9 b72d952c5f52cb4d
+  A257, fin-cumipmt-tiny-rate-structure A1, A3), against 20 the other way; over a short range on the fresh sweep 9 against 15, and 18 against 33 on the tiny-rate
+  sweep below. Removing it puts 21 more gated cells visibly off, the 21 it brings back on the two sweeps, and below a
+  lead of 1E-3 only old cells back it. So
+  between 0 and 0.3 the leading exponent does not decide which form Excel's short principal matches: the old cells
+  below 0.095 favour the other forms and the fresh ones the geometric sum (fresh 46 vs 57). Ours since T-3524: the
+  geometric sum over any range of more than 32 periods (`LONG_GEOMETRIC_MIN_LEAD` removed); the short-range cut of 0.3
+  stays (decision 0295, T-4349). A second sweep at rates 1E-12 to 1E-4 (probes-numeric/t3524-cumprinc-tiny-rate-sweep, 1,000 cells,
+  same draw) bears the long-range rule out where the first sweep had no point: over more than 32 periods the
+  geometric sum is Excel's on 238 of 500 cells against 71 with the cut, and below a lead of 3.6 on 169 of 404 against
+  2 (the per-period and closed forms are visibly off on most of them). Over up to 32 periods there the geometric sum
+  is also ahead (265 vs 237), as on the first sweep: the rate is a candidate decider for T-4349.
+- Neither short-range form is Excel's below a lead of 0.3 (T-4349, decision 0296; docs/research/t4349). Over the
+  cells where the engine's two short-range forms differ (923 of 3,238 old and T-3524 cells), each is bit-exact on only
+  about 30%, the per-period and closed forms on 265 and the geometric sum on 286, so Excel computes something else
+  there and no selector between the two replaces the cut. The best one found, ranked on the old cells' train side with
+  no train cell newly visibly off, is a band: at most 4 periods, rate at least 1E-3, lead below 0.095 takes the
+  geometric sum. On a sweep drawn after it was frozen (probes-numeric/t4349-cumprinc-short-selector-fresh-sweep,
+  excel-graph 2026-11-05, 800 cells over 1 to 4 periods, rates 1E-3 to 0.0997, leads up to 0.095, both types) it
+  is bit-exact on 299 against the cut's 258 and visibly off on 190 against 216 (all CUMIPMT). At a rate of 0.1 one
+  period from nper (lead `ln 1.1` = 0.0953) the cut's forms are Excel's on the probed cells
+  (fin-cumprinc-near-1e15 C2, C4; fin-cumprinc-underflow-ends C2, C4, H2, H4) and the geometric sum is 1 to 2 ulps
+  off, which is why the band stops at 0.095. Ours since T-4349: the band; Excel's own short-range form is T-4390.
+- How the interest is built, measured (T-3067 run 4, probes/fin-cumipmt-tiny-rate-structure, excel-graph 2026-10-29,
+  226 cells): Excel's CUMIPMT is its own PMT times the period count less its own CUMPRINC, in doubles and exactly:
+  `CUMIPMT(r,n,pv,s,e,t) = PMT(r,n,pv,0,t)·(e-s+1) - CUMPRINC(r,n,pv,s,e,t)`, to the bit on all 60 probed pairs (type 1
+  at 2E-5 and 2E-6 over single periods 3 to 14 and over periods 3 to 2+m, m = 1 to 12; type 0 at 1E-4 likewise: A-M).
+  A type 1 range from period 1 is built from the range from period 2: `CUMPRINC(..,1,e,1) = PMT + CUMPRINC(..,2,e,1)`
+  and `CUMIPMT(..,1,e,1) = PMT·(e-1) - CUMPRINC(..,2,e,1)`, to the bit on all 22 cells at 0.0083 and 2E-5 (N-T),
+  where `PMT·e - CUMPRINC(..,1,e,1)` misses 11 of them (6 at 0.0083 by 2 to 8 ulps, 5 at 2E-5 by 512 ulps, an
+  ulp of `PMT·e`; gate-edges H2-H4 are such cells). The first
+  pass found the hint: every gate-edges A2-A8 and E1-E10 value is a multiple of its principal's ulp (2^-40 for E), so
+  the last operation is a cancellation of two doubles of about 8,000. Consequences: the tiny-rate interests
+  (gate-edges A2-A8, E1-E10, gen-m9 A379) and G2/H2 are visibly off only because they amplify an ulp of PMT or of
+  CUMPRINC (an ulp of a 1,000 payment is 512 to 4,096 ulps of an interest of 1.5 to 15), and ours are not those bits:
+  the engine's PMT, which rounds the exact payment once (`accurate_payment`), is an ulp off Excel's at 2E-6, 2E-5
+  (both types) and 0.0083 type 1 (M1, M2, M4, M5; Excel's are 0.5 to 0.9 ulp from exact, T-3014), and our CUMPRINC is
+  1 to 3 ulps off on 59 of the case's 104 principals. Taking the rule now (with the engine's PMT and CUMPRINC) is no
+  better: everywhere it takes 29 bit-exact cells off (gen-m9 5c6a23c4f6597f1c A392, 81bcdc0bec0c8e6b A274 and 6 more;
+  CUMPRINC_CUMIPMT.xlsx G3-G5; gate-edges B8, B9, B11, H1, H7, H8; fin-cumipmt-overflow-and-forms A5, A8, A12, A14
+  and 7 more) and moves the visible count by one (7 fewer in the new case, 6 more elsewhere), and limited to `nper·L < 2^-10` it still takes 2 to 4 off.
+  So nothing in the kernel changed. With Excel's PMT bits plugged in, the best principal form for a type 1 range
+  from period 2 (the geometric sum `pmt·((1-v^m)/(r/(1+r)))·v^(nper-end+1)` on `log1p` or `growth_log`, Excel's
+  expm1) is exact on 22 of the 58 type 1 principals and within 3 ulps of the rest, so CUMPRINC's own form is open too.
+  Next: Excel's PMT bits (T-3014), then CUMIPMT as `PMT·m - CUMPRINC` (T-3118).
+- Where `v^nper` underflows, measured (T-3067 run 5, probes/fin-cumprinc-underflow-ends, excel-graph 2026-10-29, 124
+  cells): Excel's principal over the last m periods does not depend on nper. Type 0 CUMPRINC over the last 1 to 12
+  periods of nper 1E6, 1E10 and 1E12 (A, B, G at 0.01; C, H at 0.1; D at 0.001) is the same double as at nper 1E15
+  (fin-cumprinc-near-1e15 A-C) on every one of the 72 cells, and so are the CUMIPMT (I) and type 1 CUMPRINC (J) of
+  those ranges: `CUMPRINC(0.01,1E6,100000,1E6,1E6,0)` is -990.0990099009903 as at 1E15, 2 ulps from
+  `PPMT(0.01,1E6,1E6,100000)` -990.09900990099 (E1). So the near-1E15 cells are no question about huge periods: only
+  the remaining periods `nper-end` and m reach the result, and PMT is the whole `pv·r` (K1, K2, K4).
+  Excel is 0 to 2.7 ulps above the exact sum at 0.01 and 0.001 and -0.5 to 1.4 at 0.1, and the errors are not one
+  biased L: solving each cell for the L that gives it, the windows for m = 2 (-152 to -107 ulps of L) and m = 8 (-28 to
+  -12) at 0.01 do not overlap, so the error is in the operation order. 20 forms (the geometric sums, the balance drop
+  in four orders, the per-period sums forward and back, `powi`, `powf`, `expm1` quotients), each on `log1p` or
+  `growth_log` and on libm's or Excel's EXP and expm1, fitted to A, C, D and the non-underflowed nper 1000 (F, which
+  rides on `1 - v^nper` too): the best is the balance drop `pv/(1-v^nper)·(1-v^m)`, 28 of 48 to the bit, the
+  per-period sum 21. None is exact on all.
+  Ours since T-3067 run 5: where `1 - v^nper` is 1 and the leading exponent is below `GEOMETRIC_MIN_LEAD`, type 0's
+  short principal is the balance drop `-(pv·(v^(nper-end)·(1-v^m)))` on Excel's EXP, Kahan's expm1 and `growth_log`
+  (`underflowed_principal`); in the kernel it beat the libm variant (22 against 18 fixed, 7 against 8 regressed). It
+  is exact on 70 of the 108 underflowed principals probed (A-D, G, H; near-1e15 A-C), where the per-period sum had 16
+  of the 36 near 1E15. 22 known failures are fixed (fin-cumipmt-overflow-and-forms A9, A11, fin-cumipmt-period-bound
+  A19, fin-remaining-later-argument-ranges K3 and 18 near-1e15 cells) and 7 near-1e15 cells leave the bit (A7, B1, B4,
+  B9, C6, C10 by an ulp; E7 `CUMIPMT(0.01,1E15,100000,1E15-6,1E15,0)` by 16, A7's ulp in the interest, visibly):
+  decision 0160, follow-up T-3141. Visibly-off cells go from 2,833 to 2,822.
+- The interest as `PMT·m - CUMPRINC`, applied (T-3118, after T-3014 gave PMT Excel's bits): the kernel's CUMIPMT is
+  the engine's PMT times the period count less the engine's CUMPRINC, a type 1 range from period 1 from the range from
+  period 2, with no per-period interest form left (type 0's balance form and payments less principal, type 1's IPMT
+  sum and tiny-rate form are gone; where PMT is `#NUM!`, a rate lost in `1 + rate`, type 0 keeps the payments less
+  the remaining-balance principal, fin-cumipmt-period-bound A24). On probes, gen-m9 and ironcalc-calc it fixes 53
+  CUMIPMT cells (gate-edges A5, A8, E1, E2, H2, H4; 31 of tiny-rate-structure; period-bound A3, A5; `CUMPRINC_CUMIPMT.xlsx` G6, G7, G12,
+  G16, G17, G22, G25; gen-m9 e168be7f6d3f84c2 A379 and 6 more) and CUMIPMT's visibly-off cells go from 102 to 67.
+  Every CUMIPMT cell still off, and the 7 it moves off the bit (decision 0197: gen-m9 6e18550e9fc9c1b9 A329,
+  `CUMPRINC_CUMIPMT.xlsx` G3, overflow-and-forms A8, A12, A14, gate-edges A1, tiny-rate-structure F2), is our
+  CUMPRINC's last bits, amplified: with our PMT, Excel's value is `PMT·m - x` for an x 1 to 4 ulps from our CUMPRINC
+  (`CUMIPMT(2E-6,100,100000,4,4,1)`'s x is Excel's own probed CUMPRINC -999.9050029410097, ours ...096). The old
+  forms were exact on those 7 by fit. No structural gate keeps all 7 (keeping the balance form in its growth band,
+  or type 1's IPMT sum at ordinary rates, gives up 7 to 25 fixes and still regresses 2 to 5), and CUMPRINC derived
+  from the old interest forms regresses 10 to 42 CUMPRINC cells. Follow-up: T-3413.
+- One period of CUMPRINC is not PPMT at a tiny rate either (gap triage 2026-10-31k, probes/fin-cumipmt-tiny-rate-structure,
+  excel-graph): over a single period the probe's own pairs are 1 to 3 ulps apart, B1 `CUMPRINC(2E-5,100,100000,3,3,1)`
+  -999.0303135033106 against C1 `PPMT(2E-5,3,100,100000,0,1)` -999.0303135033108, B4 -999.0902565209652 against C4
+  ...9655, I1 `CUMPRINC(1E-4,60,100000,3,3,0)` -1662.087365975419 against J1 -1662.0873659754193 (I2 and J2 agree).
+  Our PPMT has Excel's bits on every C and J cell. Our CUMPRINC is 1 to 3 ulps off on 59 of the case's 104 principals,
+  so 38 of its CUMIPMT cells are visibly off (F2 is T-3413's; the other 37 and their principals were T-3552's, now T-3776's).
+- T-3731 attempt 2 (2026-11-01) found no form either. On the 425 type 0 one-period principals of the three tiny-rate
+  cases, the best of about 30 forms (attempt 1's two hypotheses: the interest on an L-error-free balance, and the
+  amortization loop in doubles and in x87 registers; PPMT's kernel on `log1p` or on the unrounded x87 L; double-double
+  payments; `pmt - IPMT`) is 145 bit-exact, against the engine's 120. Against `pmt·exp(-j·log1p)` the miss is a per-rate
+  value from -3 to +3 ulps with ±1 ulp of scatter within a rate. The table is in the T-3731 task file.
+- How one period of CUMPRINC differs from PPMT, measured (T-3552 attempt 1, excel-graph 2026-11-01:
+  probes/fin-cumprinc-dyadic-rates, 296 cells, and probes/fin-cumprinc-single-period-rate-scan, 720 cells):
+  - At rates that are powers of two (2^-16, 2^-14, 2^-10), where every `·r` and `/r` is exact, a one-period
+    CUMPRINC is PPMT of that period within ±1 ulp, and the mean gap is 0.0 to 0.3 ulp. At 3·2^-17, where `1+r` is
+    exact too but `·r` rounds, it is +1.2 ulp off PPMT on average (smaller in magnitude). So the extra step is
+    not the rounding of `1+r`.
+  - Over 60 log-spaced rates from 1E-6 to 1E-2 (type 0, nper 100, periods 3 to 6, 50 and 98), `CUMPRINC/PPMT - 1`
+    is `+δL`: CUMPRINC = PPMT·(1+δL). Here δL = (L − ln(1+r))/ln(1+r), the relative error of `growth_log`'s L against the exact log (PPMT's
+    `ln(1+r)`). Measured as `(CUMPRINC - PPMT)/|PPMT|`, which is `-δL` because both values are negative, the
+    regression slope is -1.04 (correlation -0.69). So where L is low (δL < 0), Excel's principal is smaller in
+    magnitude than PPMT. The gap does not depend on the period. Against the correctly rounded payment
+    `pmt·v^(n-k+1)` the bias is gone (mean +0.14 ulp), but the spread is ±3 ulps. In words: Excel's principal
+    does not carry the L error that PPMT's balance `pv/(1-v^n)` carries, and its own last bits are from another
+    chain.
+  - What it is not, scored bit-exact on the 504 one-period principals of the three cases (type 1 from period 2)
+    and, for the constant searches, on the 60 rates of the scan:
+    - `C·G_k` or `(C·G_k)·Y`, for any constant C within ±16 ulps of the value the first period implies, with:
+      - G_k one of 15 per-period discounts: Excel's or libm's EXP of `(k-1-n)L` or `(k-n)L`; the exponent split
+        or held in an x87 register; the reciprocal of the opposite power; a product or quotient of two powers.
+      - Y one of 1, r, `1-v`, `1+r` and `expm1(L)`.
+      - L one of `growth_log`, `log1p`, Excel's LN of `1+r` and the correctly rounded log.
+      No rate of the 60 has such a C for more than 3 of these forms. With PPMT's own discount and any balance
+      within ±64 ulps of PPMT's, 1 rate of 60 fits.
+    - `P' - IPMT_k`, for any constant P' within ±64 ulps of PMT, with Excel's IPMT bits or three orderings of
+      `A·(1-Q(x))·r`: no rate.
+    - The correctly rounded payment or balance times Excel's discount: 182 of the 504.
+    - Every left-to-right order of `pv, /(1-v^n), Q, ·r, ·(1-v), /r, ·(1+r)`, and of the sets without `·r/r`
+      (the balance drop), each with Excel's or libm's exp and expm1: the best has 267 of 425 (`pv/(1-v^n)·r/r·(1-v)·Q·(1+r)`) type 0 principals.
+    - Toward-zero rounding on any subset of five operations of PPMT's form: at most 101 of the 144 one-period
+      principals of the dyadic and tiny-rate cases, where PPMT's form itself has 83. With PPMT's discount and a
+      free balance (±64 ulps) per rate and type, 6 of 72 rate groups fit.
+    - Evaluation in x87 extended precision with one final rounding: unbiased, but only 19 of 82 bit-exact.
+  - The kernel's current form gets 81 of the 192 dyadic-rate principals, 84 of the 360 scan principals and 45 of
+    the 104 tiny-rate principals. The best geometric sum over all three cases (both types, ranges up to 12 periods) has
+    339 of 634 (the task file lists the families). Multi-period values are not the double sum of the probe's own one-period values
+    either: they agree up to m = 5 and then drift by 1 to 2 ulps.
+- Where `v^nper` underflows, the principal is one core for both types (T-3141, excel-graph 2026-11-04;
+  probes/fin-cumprinc-underflow-type1, 72 cells, and probes/fin-cumprinc-underflow-fresh, 200 cells). Rule: over a short
+  range with `1 - v^nper` = 1, `C = pv·((1-v^m)·v^(nper-end+1))` in doubles, with `1-v^m` PMT's `1-Q` of `-m·L` (Kahan's
+  expm1 below m·L = 1, `1 - EXP` from 1 on, as PMT's: "PMT is a discounted payment"), `v^(nper-end+1)` Excel's EXP of
+  `-(nper-end+1)·L` and L `growth_log`'s; type 1's CUMPRINC is `-C` and type 0's `-(C·(1+r))`. The `1+r` is a last
+  product: folding it into the power (`v^(nper-end)`, T-3067's balance drop) is what left 38 of 108 type 0 cells an ulp
+  off. Consequences, all in Excel's own values: type 1 is nearly type 0 over `1+r` in doubles (`A/1.01 = F` on all 12
+  near-1e15 pairs and 12 underflow-ends pairs; 34 of 36 pairs of the type1 case, the other two, A8/E8 and C6/G6, are
+  `C·(1+r)/(1+r) ≠ C`; the reciprocal product `A·(1/(1+r))` has 27); the CUMIPMT is `PMT·m - CUMPRINC` as everywhere
+  ("How the interest is built"), so E2-E4 and E7 near 1E15 follow. Past a leading exponent `(nper-end+1)·L` of 0.3 the
+  core is Excel's too on every probed cell where it and the geometric sum differ (type1 C7-C9, G7-G9 at 0.2 ending 2
+  before nper, exponent 0.55; fresh I10, K10; integer rates: gen-m9 `CUMPRINC(10,230,351888,4,21,0)` d0854366830dcdee
+  A98, 67a4c03afd63f988 A208, b73c6cc96e093f03 A111), but no fractional rate is probed deeper than 0.56.
+  How it was found: the 132 principals of near-1e15 and underflow-ends were the fit set and the type1 case the hold-out,
+  split before scoring. Every expression tree over {pv, 1-v^m, v^(nper-end), 1/(1+r)} with optional `r/r` and
+  `(1+r)/(1+r)` pairs (10,343 type 0 and 108,691 type 1 distinct value sets, products and quotients in every
+  association) puts type 1's `pv·((1-v^m)·(v^(nper-end)·(1/(1+r))))` at 24 of 24 and type 0's same core times `1+r` at
+  98 of 108, and the core with the power taken whole as EXP of `-(nper-end+1)·L` is exact on all 132 and on all 72 of
+  the hold-out. Frozen, it was exact on 98 of the fresh sweep's 100 principals (5 rates 0.0004 to 0.15, nper 77777 to
+  2E13, pv 1 to 3.3E6, ranges ending at nper, 1 and 3 before); the 2 misses (I5, J5: 0.15 over 10 periods, m·L 1.40,
+  the largest probed) are `1 - EXP(-m·L)`'s, and Kahan's is right at 0.98 (I4), so the cut sits in 0.98..1.40, which
+  PMT's cut at 1 (T-3014) fits; T-3141's kernel (on its branch) reuses that helper. Taking that cut from the fresh case made it fit data,
+  so it is no R4.2 sweep: that sweep is T-4059's `r4-T-3141` batch of a CUMPRINC Gate A table. With the fit lab's split
+  (decision 0188 R4.1, margin 5 points) over all 304 principals, the core is 216/216 bit-exact on train and 88/88 on
+  test (all within 4 ulps and 15 digits), the correctly rounded value 65/216 and 33/88 (all within 4 ulps). Forms that lost on the fit set: x87-register
+  intermediates for Kahan's product and quotient and for the exponent (at most 25 of 36 distinct principals), the
+  extended-precision LN in Kahan's divide (25), libm's expm1 (19 to 21), `1 - EXP` throughout (5), and every per-period
+  and geometric ordering of the T-3067 notes (at most 21).
+Status: PARTLY VERIFIED (excel-graph; visibly right but for A7 (= G2) and A10 near period 1E15, fin-cumipmt-period-bound
+A18, fin-cumprinc-near-1e15 E7, and the CUMIPMT cells that amplify our CUMPRINC's last bits (gate-edges A1-A4, A6, A7,
+E3-E10, H3, gen-m9 A352: T-3413; tiny-rate-structure's other 37: T-3776 (blocked time-boxed after T-3552 and T-3731 found no form); T-3118 moved 7 off the bit, decision 0197: gen-m9 A329,
+`CUMPRINC_CUMIPMT.xlsx` G3, overflow-and-forms A8, A12, A14, gate-edges A1, tiny-rate-structure F2) and T-3141 (the
+underflowed principal's bits); the short sums' last digits in T-1374)
+Tasks: T-1845, T-1890, T-2192, T-2363, T-2514, T-2521, T-3067, T-3118, T-3141, T-3413, T-3552, T-3731, T-3776, T-1374
+
+## CUMIPMT of one period is not that period's IPMT (T-3179)
+Rule: Excel's CUMIPMT is not the sum of its own IPMTs, even over a single period. `CUMIPMT(0.1,10,345,2,2,1)` is
+-29.395712615048502 while `IPMT(0.1,2,10,345,0,1)` is -29.3957126150485 (1 ulp apart), and `CUMIPMT(0.0083,36,8000,3,3,0)`
+is -63.2064526131625 while `IPMT(0.0083,3,36,8000,0,0)` is -63.20645261316252 (3 ulp). Over ranges the gap is 1 ulp too:
+`CUMIPMT(0.3,36,8000,3,30,1)` -50422.18667857409 against both `SUM(IPMT(0.3,SEQUENCE(28,1,3),36,8000,0,1))` and the
+left-to-right running sum of the 28 IPMTs, -50422.186678574086; `CUMIPMT(0.1,29.9,8000,3,10,1)` -5557.470043410287
+against -5557.470043410286. So CUMIPMT has a per-period interest form of its own; summing IPMT (or the discounted
+split IPMT and PPMT use, "IPMT and PPMT split Excel's discounted payment") does not reach Excel's bits on these cells.
+Evidence: probes/t3179-cumipmt-ipmt-sum (84 cells, excel-graph, 2026-11-04): A1, D1 and B1, C1 against columns A-D
+(each IPMT) and E-H (running sums); the same CUMIPMT cells are ironcalc-calc CUMPRINC_CUMIPMT.xlsx G3 (= probes
+fin-cumipmt-overflow-and-forms A8), G4, G15 and fin-cumipmt-overflow-and-forms A13.
+Status: VERIFIED (excel-graph). Ours: every IPMT and running sum of the probe matches; the two single-period CUMIPMT
+cells A1 (-29.395712615048506) and D1 (-63.20645261316247) do not. CUMIPMT's form is open (T-4197).
+Scored forms (T-3179, second run, 2026-11-04): on the 168 CUMIPMT cells with literal arguments and a range of at most 32
+periods that carry Excel values (probes fin-cumipmt-*, t3179-cumipmt-ipmt-sum, gen-m9), each candidate written as a
+formula over our own PMT, FV, IPMT and PPMT, which match Excel's to the bit on their probes:
+- ours, `PMT·m - CUMPRINC`: 92 bit-exact;
+- `PMT·m - SUM(PPMT(..SEQUENCE..))`: 61 (10 that ours misses, at rates 2E-6 to 1.5E-4; 41 that ours has);
+- `SUM(IPMT(..SEQUENCE..))`: 24, all of them also ours;
+- the balance form `SUM(FV(r,k-1,PMT,pv,t)·r)` (over `1+r` for type 1): 9 to 11. It gives A1 to the bit and D1 1 ulp
+  off, but misses the single-period cells `CUMIPMT(0.0083,36,8000,2,2,1)` (tiny-rate-structure Q1) and
+  `CUMIPMT(0.1,36,8000,2,2,1)` (gate-edges H10), which ours has, and its `(1+r)^m - 1` loses hundreds of ulps at
+  rates of 2E-5.
+So none of these is Excel's, and A1 and D1 are not evidence for a per-period form: ours stays 1 and 4 ulp off them
+(the 3 ulp above is Excel's IPMT against its CUMIPMT at D1). Taking PMT's `1-Q` switch (`1 - EXP(-nper·L)` from
+|nper·L| 1, "PMT is a discounted payment") in CUMPRINC's `1 - v^nper` moves none of the 168 cells and no gated cell
+(see T-3179's Outcome), so the evidence does not place a switch there and the kernel keeps `-expm1`.
+
+## CUMPRINC where `v^nper` underflows, at deep leading exponents (T-4059)
+Rule: where `1 - v^nper` is 1 in doubles, Excel's CUMPRINC over a short range (at most 32 periods) is T-3141's core
+`C = pv·((1-v^m)·v^(nper-end+1))` (type 1 `-C`, type 0 `-(C·(1+rate))`; "CUMIPMT and CUMPRINC over many periods") at
+every leading exponent `(nper-end+1)·L` probed. That is not only below 0.3, where the engine's geometric sum takes
+over (`GEOMETRIC_MIN_LEAD`), but out to 695. The geometric sum is an ulp or more off on 100 of the 170 points
+from 0.3 up.
+Evidence: accuracy/CUMPRINC/e-T-4059 and accuracy/CUMIPMT/e-T-4059. Each has 200 points from the aimed draw
+(`annuity_cumulative._underflowed`), filled from excel-graph on 2026-11-06:
+- rates 1E-4 to 2.9;
+- leading exponents 0.012 to 695;
+- m·L 0.003 to 4.8;
+- nper up to 9.3E14;
+- type 1 from period 2.
+
+T-3141's core at every leading exponent is to the bit on 199 of the 200 CUMPRINC principals and on all 200 CUMIPMT
+interests. Main's forms get 81 and 151. From a leading exponent of 0.3 up, the geometric sum gets 70 of 170
+CUMPRINC principals to the bit. The first aimed draw, accuracy/CUMPRINC/e-T-3141 and accuracy/CUMIPMT/e-T-3141
+(200 points each, filled 2026-11-06; T-3141's fit data for dropping its 0.3 cut), gives the same split: the core
+matches 399 of 400, and its only miss is the CUMIPMT entry below.
+
+Open misses:
+- `CUMPRINC(0.273951989085243,2756,134494.948128047,9,9,1)` (e-T-4059 A119; lead 665, result -3.2E-285) is
+  -3.166759757937701E-285 in Excel. The core gives -3.1667597579380603E-285, 962 ulps away, and the math is
+  -3.1667597579377963E-285. Excel is 3.0E-14 off the math relative and the core 8.3E-14, so at a result this
+  deep Excel keeps digits that the core loses. Its form there is open.
+- `CUMIPMT(0.103414751928719,17312013078,200894.020467694,17312013077,17312013078,1)` (accuracy/CUMIPMT/e-T-3141 A41;
+  the last two periods of a type 1 loan at 0.1034) is -5128.51360859488 in Excel. Ours is -5128.513608594883, 4 ulps
+  off with any principal form, so the miss sits in the `PMT·m` half of `PMT·m - CUMPRINC`.
+Status: PARTLY VERIFIED (excel-graph, Gate A e-T-3141 and e-T-4059 batches; A119 and the CUMIPMT miss are open, T-4710)
+Tasks: T-4059, T-3141
 
 ## CUMIPMT and CUMPRINC work cap
 Rule: RustSheet charges each lifted CUMIPMT or CUMPRINC element for its kernel's bound, 2^8 units against SPEC-0011's
@@ -964,6 +2723,31 @@ Evidence: none for Excel; this is a resource limit (CLAUDE.md directive 5, SPEC-
 Status: DEVIATION (decision 0014)
 Implemented in: functions/lift/kinds/financial.rs (`CUMULATIVE_WEIGHT`, `CUMULATIVE`)
 Tasks: T-1845
+
+## CUMIPMT and CUMPRINC argument domains (T-4110)
+Rule: CUMIPMT and CUMPRINC are `#NUM!` at a rate of 0, for a start period below 1 (before it rounds up), for an end
+period past nper (also below nper + 1, over a fractional nper) and for a start period after the end period. Over a
+valid range CUMPRINC is within ulps of the exact sum with the start rounded up and the end rounded down, type 1's
+period 1 being the whole payment, also over millions of periods ("CUMIPMT and CUMPRINC over many periods"). CUMIPMT
+is `PMT·m - CUMPRINC` in doubles, which cancels at a tiny rate: `CUMIPMT(1.10337465791075E-12,249,107536.505163037,50,88,0)`
+is -3.3637479646131396E-6 against the math's -3.3637426202E-6, 1.6E-6 relative off (CUMIPMT/s1 A108); elsewhere it is
+within ulps of the exact sum too.
+Evidence: the Gate A tables accuracy/CUMIPMT/s1 and accuracy/CUMPRINC/s1 (excel-graph, 2026-11-06, T-4110), 400 points,
+16 of them `#NUM!`: a rate of 0 at CUMIPMT A127 `CUMIPMT(0,156,794172.239738137,76,130,1)`, A138 and CUMPRINC A113,
+A115, A122, A124, A132, A138; a start below 1 at CUMIPMT A118 `CUMIPMT(0.00122690808909371,58,276.366733654612,0.3,53,0)`
+and CUMPRINC A131 (start 0), A136 (0.3); an end past a fractional nper at CUMPRINC A119
+`CUMPRINC(0.0366349037247216,213.5,37308.7701841375,186,214,0)` and A126 (nper 65.5, end 66); a start after the end at
+CUMIPMT A115, A132 and CUMPRINC A125. The gen-m9 cells agree: 9d9ceba257f8001b A382 `CUMIPMT(0,310,54445,6,22,0)`,
+67a4c03afd63f988 A271 `CUMIPMT(0.05,272,417600,7,2,0)`, 0a957119475760c5 A40 (start 0.3). Every other point is a value.
+Unprobed: a negative rate (only -2, gen-m9 d0854366830dcdee A232, and the overflow case of "PMT when (1+rate)^nper
+overflows or underflows" are `#NUM!`), a pv of 0 or below, a type other than 0, 0.5 and 1, and a start and end in order
+whose rounding leaves no whole period (`CUMIPMT(r,n,pv,1.5,1.7,0)`); the Gate A definitions give them no math value.
+Where the principal underflows the double range (a deep discount over millions of periods, CUMPRINC A153, A170) Excel
+gives 0, inside the table's absolute floor.
+Ours: the engine matches every error and is bit-exact on 230 of the 400 points; four tiny-rate CUMIPMT points are
+visibly off Excel through `PMT·m - CUMPRINC` (known failures, T-4390).
+Status: VERIFIED (excel-graph)
+Tasks: T-4110
 
 ## NPV, IRR and MIRR cash-flow work cap
 Rule: RustSheet charges each lifted NPV, IRR or MIRR element for its walks over the cash flows, against SPEC-0011's
@@ -995,10 +2779,12 @@ with nontrivial values. A date at serial 0 makes XNPV `#NUM!` (J1:J5), although 
 (xirr-early-dates A8).
 Evidence: probes/xirr-exact-root-sign: 541 numeric cells, all matched by the lab's `xirr.xnpv` (tools/.../kernels/xirr.py) with
 `caret_pow` and 15-digit literals (excel-graph, 2026-10-24, T-2328).
-Ours: `compute_xnpv` and XIRR's `xirr_xnpv` (functions/financial/financial_util.rs) use `powf`, so they miss
-these cells. This is the follow-up task filed with T-2328.
+Ours: `compute_xnpv` and XIRR's `xirr_xnpv` use `arithmetic::power`, Excel's `^` (T-2566).
+Unprobed: where a power overflows (`XNPV(1E+300,{-100,100},{39448,40000})`), ours adds that flow as 0 (value/inf), as before
+T-2566; Excel's result is not evidenced.
 Status: VERIFIED (excel-graph)
-Tasks: T-2328
+Implemented in: functions/financial/financial_util.rs (`compute_xnpv`, `xirr_xnpv`)
+Tasks: T-2328, T-2566
 
 ## XNPV, XIRR and FVSCHEDULE beside their whole data
 Rule: XNPV's rate, XIRR's guess and FVSCHEDULE's principal lift over an array and refuse a multi-cell range, as the other
@@ -1019,15 +2805,61 @@ functions/financial/mod.rs (`fn_xnpv`, `fn_xirr`, `fn_fvschedule`, `flow_count`)
 Tasks: T-1843
 
 ## NPV, IRR and MIRR error order
-Rule (ours, unprobed): NPV reads its rate before its cash flows, so a rate error wins over an error in the flows. IRR
+Rule (ours, unprobed for IRR and MIRR): NPV reads its rate before its cash flows, so a rate error wins over an error in
+the flows (probed for NPV: `NPV(NA(),"x")` is #N/A, `NPV("x",NA())` #VALUE!, probes/npv-power-edges-2 A41-A43). IRR
 and MIRR read their flows first, so a flows error wins over a guess or rate error. This is the order the scalar calls
 had before T-1821. When the rate lifts, an error in the flows is every element's error, after that element's own
 earlier arguments. The flows are evaluated once per call, before the elements, even when NPV's rate is an error. The
-values are the same, but it is not Excel's evaluation order, which is unprobed.
-Evidence: none yet (T-2103).
-Status: UNVERIFIED
+values are the same, but it is not Excel's evaluation order, which is unprobed. Among NPV's flows, see "NPV's error
+order".
+Evidence: probes/npv-power-edges-2 A41-A43 (NPV); none yet for IRR and MIRR (T-2103).
+Status: VERIFIED for NPV's rate-first order; UNVERIFIED for IRR and MIRR
 Implemented in: functions/financial/mod.rs (`fn_npv`, `fn_irr`), functions/financial/mirr.rs (`fn_mirr`)
-Tasks: T-1821, T-2103
+Tasks: T-1821, T-2103, T-2493
+
+## NPV's error order
+Rule: among NPV's cash-flow arguments, an error that is a direct argument (an error value, or text that is no number,
+#VALUE!) is the result in argument order, and an error inside a range or an array (a constant one, a computed one or a
+single cell) is the result only when no direct argument errs, whatever the order. Among ranges and arrays the first
+error in argument order wins. Any flow error beats NPV's own `#DIV/0!` ("NPV's discount past the double range").
+`NPV(1.0049,0,{1,2}/0,NA())` is #N/A, `NPV(0.1,{1,#DIV/0!},"x")` #VALUE!, `NPV(0.1,Q1:Q2,NA())` (Q2 `=1/0`) #N/A,
+`NPV(0.1,Q3,NA())` (Q3 `=1/0`) #N/A, `NPV(0.1,{#N/A},#DIV/0!)` #DIV/0!, `NPV(1.0049,0,1/0,NA())` #DIV/0!,
+`NPV(0.1,{1,#DIV/0!},{#N/A})` #DIV/0!, `NPV(0.1,Q1:Q2,{1,#N/A})` #DIV/0!, `NPV(0.1,{1,#N/A},Q1:Q2)` #N/A,
+`NPV(1E+300,1,1,{1,#N/A})` #N/A, `NPV(-1,{1,#N/A},NA())` #N/A. This explains gen-m9 0a957119475760c5 Calc!A255, whose
+third argument is a `TOROW(..)/0` array of #DIV/0! and fourth a RANK.EQ #N/A (Excel #N/A).
+Evidence: probes/npv-power-edges A35-A51, probes/npv-power-edges-2 A31-A48 (excel-graph, 2026-10-25); also
+probes/t2493-npv-rate-edges A26:A29, A48:A59, A71:A77 (an error flow before a failing discount, `NPV(-1,NA())` #N/A; error
+cells in B3:B4 against `NA()`) and probes/t2493-npv-error-order-inner-calls (gen-m9/0a957119475760c5 A157, A255; T-2734).
+Status: VERIFIED (excel-graph)
+Implemented in: functions/financial/mod.rs (`npv_cash_flows`)
+Tasks: T-2493
+
+## NPV's discount past the double range
+Rule: NPV divides each value v_i by d(i-1), the running product (1+rate)^(i-1) kept as a double, and the sum once by
+1+rate (the next entry, "NPV's residue at IRR's root is not the double sum"). It is
+`#DIV/0!` when 1+rate is 0 (a rate of -1, or one that rounds to -1 such as -1+1E-100, with any flows, 0s included:
+`NPV(-1,0)`, `NPV(-1,{1,2})`) and when the power some later period builds on overflows or falls below the smallest
+normal double. The last period's own power is never formed, so its overflow loses nothing: `NPV(1E+300,1,1E+300)` is
+2E-300, `NPV(1E+300,0,0)` 0 and `NPV(1E+200,1,1)` 1E-200, but `NPV(1E+200,1,1,1)`, `NPV(1E+300,0,0,0)`,
+`NPV(1E+300,1,,)` and `NPV(9E+307,1,1,1)` are #DIV/0!; `NPV(1E+154,1,1,1)` is 1E-154 (1E+308 is in range).
+`NPV(1,SEQUENCE(1024))` is 1.9999999999999998 and 1025 flows are #DIV/0!; `NPV(-0.5,<1023 zeros>)` is 0 and
+`NPV(-0.5,<1074 zeros>)` #DIV/0! (consistent with a subnormal power read as 0; 1024 to 1073 zeros unprobed). A
+subnormal quotient is 0 (`NPV(9E+307,1)` is 0), and an overflowing sum is #NUM! (`NPV(-0.5,9E+307,1)`). Unprobed: a partial sum that overflows before
+the final division brings it back in range (`NPV(1,1.5E+308,1.5E+308)`: #NUM! in doubles, about 1.1E+308 if Excel
+sums in a wider format), and a subnormal quotient that the final division would scale up (T-2953). A rate below
+-1 is fine (`NPV(-2,1,1)` 0, `NPV(-3,1,1,1)` -0.375). The literal 1E+308 in a probe formula makes Excel Online
+reject the workbook ("unsupported features"), so these probes use 9E+307.
+Evidence: probes/npv-power-edges A1-A34, probes/npv-power-edges-2 A1-A30 (excel-graph, 2026-10-25); probes/t2493-npv-rate-edges
+A1:A14, A30:A47 and A60:A70 (a typed -0.9999999999999999 is cut to 15 digits, numbers.md "Formula number literals are read at
+15 significant digits"; 20 flows of 1 give 1.016120504184532E+300, 21 give #NUM!,
+22 and more #DIV/0!; T-2734); the T-2436 and
+T-2496 sub-expression probes (NPV(-1,..) and NPV(1E+300,..) cells).
+Ours: matches since T-2493. Since T-2672 the power is Excel's running product d(i) = d(i-1)*(1+r) (financial.md "NPV's
+residue at IRR's root is not the double sum"), and the last period's power is never formed: the sum is divided by
+1+r once, at the end. probes/npv-power-edges and npv-power-edges-2 stay green under it.
+Status: VERIFIED (excel-graph)
+Implemented in: functions/financial/financial_util.rs (`excel_npv`)
+Tasks: T-2493
 
 ## AMORLINC and AMORDEGRC over many periods
 Rule: Excel walks AMORLINC's and AMORDEGRC's periods one by one in doubles, so a long walk carries every rounding:
@@ -1042,7 +2874,8 @@ the periods before charge 0.0024 (A5) and the ones after 0 (A7); at rate 0.001 p
 to 2.4E6 periods (rate 1E-7) Excel is 18989305437102, 16344246350030, 13720292047582 and 5154670166168 for
 `AMORDEGRC(1E20,39679,39813,300,P,1E-7,1)` with P = 1100000, 1700000, 2400000 and `AMORDEGRC(3E19,..,1500000,..)`
 (-c A1-A4): a walk in doubles gives A1, A3 and A4 but 16344246350031 for A2, so Excel's per-period arithmetic is
-not exactly that walk at that size; `AMORDEGRC(1E300,..,2000000,1E-7,1)` is 1.51632679480347E293, 15 significant digits
+not exactly that walk at that size (it subtracts in x87 extended precision, a walk that does gives all of A1-A5:
+"AMORDEGRC rounds its charge like ROUND"); `AMORDEGRC(1E300,..,2000000,1E-7,1)` is 1.51632679480347E293, 15 significant digits
 (-c A5, as -b B2). Excel finishes 10^9 periods (`AMORLINC(2400,39679,39813,300,1E9,1E-9,1)` is 0, -b A1), but
 `AMORLINC(2400,39679,39813,300,1E15,1E-300,1)` did not finish within the excel-graph timeout: a fill of a workbook
 holding only that cell failed after 8.5 minutes (createSession retries exhausted, 2026-10-18), as did, twice, a larger
@@ -1051,18 +2884,18 @@ one with periods of 1E12 to 1E308 at rates of 1E-13 to 1E-300; neither is in the
 Evidence: probes/fin-amor-period-bound A1-A13, B1-B18, probes/fin-amor-period-bound-b A1-A3, B1, B2 and
 probes/fin-amor-period-bound-c A1-A6 (excel-graph, 2026-10-18, T-1841).
 Ours: since T-1841 (functions/financial/amortization.rs) both walks are bounded. AMORLINC keeps main's value for every
-period main finished, and AMORDEGRC up to 2^20 periods. AMORLINC's walk is exact for any period: while the remainder stays in one binade, the subtraction rounds the
+period main finished, and AMORDEGRC up to 2^22 periods (2^20 before T-2918). AMORLINC's walk is exact for any period: while the remainder stays in one binade, the subtraction rounds the
 charge to that binade's grid the same way each time, so after two equal steps the next ones are jumped in one
 multiplication, and a charge below half an ulp of the remainder stops it for ever (at most 616 single steps over every
-double; `linear_charge`). AMORDEGRC walks up to 2^20 periods one by one, stopping early where the rest is fixed (below
+double; `linear_charge`). AMORDEGRC walks up to 2^22 periods one by one, stopping early where the rest is fixed (below
 the salvage, a charge that rounds to 0 before the half period, a remainder the charge no longer moves); past that it
-finishes in closed form, `remain * exp(n * log1p(-rate))` ("AMORDEGRC past 2^20 periods"). Main's counter
+finishes in closed form, `remain * exp(n * log1p(-rate))` ("AMORDEGRC past 2^22 periods"). Main's counter
 `counted += 1.0` stopped moving past 2^53, so main never finished there; where Excel did not finish within the
 excel-graph timeout, the kernel returns the value the walk reaches (a DEVIATION: `AMORLINC(2400,39679,39813,300,1E15,
 1E-300,1)` is 2.4E-297, the charge, and `AMORDEGRC(1E300,39679,39813,300,1E15,1E-300,1)` is 3, the charge 2.5 rounded).
-AMORDEGRC at a period below 1 (B17, 485 in Excel, ours 0: unexplained, "AMORLINC and AMORDEGRC check order") and at a cost of 1E308 (-b B2) are base values, T-1895.
-Status: VERIFIED (excel-graph) for AMORLINC's walks and AMORDEGRC's up to 2^20 periods; DEVIATION (decision 0014) past
-2^20 AMORDEGRC periods and where Excel did not finish
+AMORDEGRC at a period below 1 (B17, 485: the value left over from B18, "AMORDEGRC below period 1"; ours since T-2825) and at a cost of 1E308 (-b B2) are base values, T-1895.
+Status: VERIFIED (excel-graph) for AMORLINC's walks and AMORDEGRC's up to 2^22 periods; DEVIATION (decision 0014) past
+2^22 AMORDEGRC periods and where Excel did not finish
 Tasks: T-1841, T-1895
 
 ## AMORLINC and AMORDEGRC check order
@@ -1070,20 +2903,33 @@ Rule: AMORLINC and AMORDEGRC read cost, date_purchased, first_period, salvage, p
 error, text or boolean is returned; text "1" is 1), and a date that does not floor to 0-2958465 (9999-12-31) is `#NUM!` as it
 is read (`AMORLINC(2400,-1,NA(),..)` and `AMORLINC(2400,39679,2958466,NA(),..)` are `#NUM!`, `AMORLINC(NA(),-1,..)` `#N/A`;
 dates 0 and 0.5 pass, `AMORLINC(2400,0.5,NA(),..)` is `#N/A`). Then the values are checked, all `#NUM!`: a negative cost or
-salvage, a salvage not below the cost, a negative period, a rate of 0 or less, a purchase after the first period (one on
+salvage, a salvage above the cost, a cost of 0 (with its salvage of 0: `AMORLINC(0,39679,39813,0,0,0.15,1)` and
+`AMORDEGRC(0,..,0,1,..)` are `#NUM!`), a negative period, a rate of 0 or less, a purchase after the first period (one on
 it is valid: `AMORLINC(2400,1,1,300,1,0.15,1)` is 360). Only then the basis is read: its error, text or boolean, then
 `#NUM!` for any basis but 0, 1, 3 or 4 (`AMORLINC(-1,39679,39813,300,1,0.15,NA())` is `#NUM!`). AMORDEGRC's asset-life check
-comes last (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is `#N/A`). A purchase date below 1 is serial 0, the day before
+comes next (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is `#N/A`). Last, a salvage *equal* to a positive cost is 0 at
+every period, with no charge computed:
+- Both functions are 0 at periods 0, 0.0001, 0.5, 1 to 8 and 1.5, AMORDEGRC's half period and the rest periods after it
+  included (rates 0.15, 0.25 and 0.4, prorated and full first periods), and AMORLINC at rates 0.5, 1 and 2
+  (probes/amor-salvage-equal-cost A1-C18, E7-E9; also `AMORLINC(99977.707698474,42751,42993,99977.707698474,2,
+  0.213533204746625)`, accuracy/AMORDEGRC/s1 A114, A118, A128, A130, A131 and accuracy/AMORLINC/s1 A124, A125, T-4111).
+- Every check above still wins: AMORDEGRC at rates 0.5, 0.6, 1 and 2 is `#NUM!` (periods 0, 0.5 and 1), a basis of
+  `NA()` is `#N/A` (rate 0.5 too), bases 2 and 5 `#NUM!`, and a purchase after the first period, a rate of 0 and a
+  period of -1 `#NUM!` (E1-E6, E10-E20, E25).
+- It is an early 0, not the walk's salvage comparison turned to `<=`: a remain *equal* to a salvage below the cost
+  still charges (`AMORDEGRC(2400,39679,39813,2070,1,0.15,1)` is 776 with the remain 2070 before period 1, and
+  `(..,1293.75,2,..)` 485 with the remain 1293.75 before period 2; G1-G6). AMORLINC charges what fits as before
+  (G7-G10).
+- It leaves the value an AMORDEGRC below period 1 reads as it was, at any period, AMORLINC included (which otherwise
+  leaves its first charge): 485 + the call + a fraction is 970 for each (F2-F6), and an AMORDEGRC below period 1
+  with a salvage equal to the cost is 0, not the 485 left before it (F1, F7, F8).
+Evidence: probes/amor-salvage-equal-cost (81 cells, excel-graph, 2026-11-06, T-4504; predictions committed before the
+fill: the early 0 was the alternative, `remain <= salvage` the pick). A purchase date below 1 is serial 0, the day before
 serial 1: `AMORDEGRC(2400,0,366,300,1,0.15,1)` is 562 (366 days), `AMORDEGRC(2400,0,1,..)` 899, `AMORDEGRC(2400,1,366,..)` 563,
 `AMORLINC(46557,0,39881,440,0,0.1)` 46117.
-AMORDEGRC with a period strictly between 0 and 1 is UNEXPLAINED. Mostly it is the asset's period-1 charge: on the 2400 asset
-periods 0.001 to 0.9999 are 776, period 1's value (probes/amordegrc-fractional-period A1-A11, the first cells of their
-workbook; amor-argument-check-order A846-A851), and `AMORDEGRC(98882,37287,38647,1E-13,0.3,0.1,1)` is 1693, its period 1
-(A23, A27). But `AMORDEGRC(10000,39000,39400,500,0.3,0.3,0)` and `(..,0.5,..)` are 1693 where that asset's period 1 is 2284
-(A24, A26: 1693 is the value of the cell just before each), `AMORDEGRC(2400,..,0.0001,0.15,0)` and `(..,1)` are 0
-(amor-argument-check-order A862, A863), and `AMORDEGRC(98882,37287,38647,1E-13,0.5625,0.1,1)` is 0 in that probe (A864) but
-1 inside gen-m9 d912671baa1364aa A76. One hypothesis, untested, is a value left over from an earlier evaluation, which would depend on
-the calculation order; probing each formula alone in a fresh workbook would test it (T-1895). From 1 on a fractional period
+AMORDEGRC with a period strictly between 0 and 1 returns a value the previous AMORDEGRC or AMORLINC left behind
+("AMORDEGRC below period 1" below).
+From 1 on a fractional period
 truncates (1.5 is period 1, 2.9 period 2), and AMORLINC reads any period above 0 and up to the full periods as a full charge
 (`AMORLINC(..,0.0001,0.15,1)` is 360).
 Evidence: probes/amor-argument-check-order (866 cells: each out-of-domain argument against `NA()`, text and `TRUE` in every
@@ -1091,43 +2937,212 @@ other position, `NA()` and `1/0` in every pair, booleans and text alone, purchas
 excel-graph, 2026-10-24, T-2485) and probes/amordegrc-fractional-period (32 cells). Every order cell fits the rule.
 Dates -1, -0.5, 0, 1E-15, 0.5, 0.99, 1 and 2958466 were probed (-0.5 is `#NUM!`, A410-A412, A843-A845); 2958465.5 is
 inferred (the floor is taken from the shared reader's other functions).
-Ours: since T-2485 (`amortization_of` and `amor_date` in functions/financial/amortization.rs). AMORDEGRC below period 1
-stays 0 (known failures, T-1895).
-Status: VERIFIED (excel-graph) for the order and the purchase date below 1; UNEXPLAINED for AMORDEGRC below period 1
-Tasks: T-2485, T-1895
+Ours: since T-2485 (`amortization_of` and `amor_date` in functions/financial/amortization.rs); the salvage equal to
+the cost since T-4504 (`amortization_values_valid` and the early return in `amortization_of`).
+Status: VERIFIED (excel-graph)
+Tasks: T-2485, T-1895, T-4111, T-4504
 
-## AMORDEGRC past 2^20 periods
-Rule: past 2^20 periods RustSheet computes AMORDEGRC's decay in closed form, `remain * exp(n * log1p(-rate))` from the
-state after 2^20 walked periods, instead of walking on. Excel and main walk every period, adding a rounding each time,
-so the closed form drifts from the walk by up to about 1e-13 relative over 10^6 further periods: the same once rounded
-for charges below about 1E11, but a larger charge can be a unit off (a review replay found one at about 3.1E11; at 1E12
-or more it often is).
-`AMORDEGRC(1E20,39679,39813,300,1100000,1E-7,1)` is 18989305437101 here and 18989305437102 in Excel (-c A1), and A3, A4
-are a unit off the other way (13720292047583, 5154670166167); A2 is Excel's 16344246350030, where main's walk is ...031;
-`AMORDEGRC(1E300,..,2000000,1E-7,1)` is 1.5163267948033552E293, Excel 1.51632679480347E293 and main
-1.5163267948034761E293 (-c A5, also T-1895's 15-digit rounding). A review replay found 6 of 154 random cases (costs 1E6
-to 1E20, 1.1 to 4 times 2^20 periods) a unit off main; the unit test `degressive_shortcuts_equal_the_walk_and_the_closed_form_stays_near_it`
-bounds the drift at 1e-13 relative for costs up to 1E20. Main walked these in milliseconds (46 ms for the five above),
-but a walk is unbounded in the period, and the 2^20 cut is the kernel's work cap ("AMORLINC and AMORDEGRC work cap").
+## AMORDEGRC below period 1
+Rule: AMORDEGRC with a period strictly between 0 and 1 computes no charge of its own: it returns a value left behind by
+the last AMORDEGRC or AMORLINC that Excel evaluated before it in the workbook, and 0 when none did. The value is
+workbook-wide state written in Excel's calculation order:
+- Alone in a fresh workbook every such formula is 0: `AMORDEGRC(10000,39000,39400,500,0.3,0.3,0)`,
+  `AMORDEGRC(2400,39679,39813,300,0.5,0.15,1)`, `(..,0.0001,..)` and `AMORDEGRC(98882,37287,38647,1E-13,0.5625,0.1,1)`
+  (probes/amordegrc-fraction-alone-a to -d).
+- An AMORDEGRC from period 1 on leaves its own value: 485 from `AMORDEGRC(2400,39679,39813,300,2,0.15,1)`, 776 from
+  `(..,1,..)` (alone-f, fraction-state-l to -q). A period-0 AMORDEGRC leaves the value as it was, not its own
+  46117: `AMORDEGRC(46557,0,39881,440,0,0.1)` passes the 485 below it through (fraction-state-z; alone, -t, 0).
+- AMORLINC leaves its first-period charge rounded to a whole number, whatever its period:
+  `AMORLINC(2400,39679,39813,300,p,0.15,1)` is 360 for p 1 and 3 and 131.803… for p 0, and leaves 132 for each
+  (fraction-state-j, -w, -s); bought on its first period's end, `AMORLINC(2400,39813,39813,300,1,0.15,1)` leaves 360
+  (-y). Other functions leave the value as it was: `EFFECT(1,1)` (1) and `SUM(1,2)` pass the 485 below them through
+  (-aa, -ab), and alone `EFFECT(1,1)` and a constant 7 below the fraction leave it 0 (-i, -k).
+- An AMORDEGRC or AMORLINC that is an error, or past the asset life (period 20 of a 0.15 rate, value 0), leaves the
+  value as it was: an early `#NUM!` (negative salvage, -m), one from the asset-life check (rate 3.1E26, -l) and both
+  functions at period 20 (-u, -v) pass the 485 below them through, and alone an asset-life error (rate 1) leaves
+  0 (-h). An error after the arguments are checked (a NaN AMORLINC charge) has no reachable input: it needs
+  `LINEAR_STEP_CAP` (1024) single steps of the charge walk, and the walk takes a few steps per binade whatever the
+  inputs (T-2844; no probe).
+- Lifted over an array, a call runs on a state of its own that starts empty and leaves the workbook's state empty.
+  `SUM(AMORDEGRC(..,{0.3,0.5},..))` above the 485 charge is 0 (-x), so the 485 is not read. The elements run in order
+  and a fractional one reads what an earlier element of the same call left: `SUM(AMORDEGRC(2400,39679,39813,300,
+  {1,0.5},0.15,1))` is 1552 (776 + 776, -ae), `{0.5,1}` 776 (0 + 776, -af). A fraction above such a call is 0, not
+  the call's last element (485 for `{1,2}`, 776 for `{2,1}`, 776 for `{1,0.5}`) nor the AMORLINC's 132 below it
+  (-ac to -af: A1 fraction, A2 the lifted SUM, A3 `AMORLINC(2400,39679,39813,300,1,0.15,1)`).
+  An error element leaves the value as it was, like a scalar error: `AMORDEGRC(2400,39679,39813,300,{1,-1,0.5},0.15,1)`
+  is 776, `#NUM!`, 776, both through INDEX (-as) and spilled (-at, where a fraction below it in A2 is 0: the lifted
+  call left the state empty).
+- Some function calls empty the state, at the point Excel evaluates them and after they have read their arguments
+  (T-3393). A fraction above `=SEQUENCE(1,2)` above the 485 charge is 0 (-ag), and so it is above `=SEQUENCE(1,1)`,
+  which does not spill (-an), `=SUM(SEQUENCE(1,2))` or `=ROWS(SEQUENCE(1,2))` (-az, -bd). Within a formula the calls run
+  left to right: `=SEQUENCE(1,2)+AMORDEGRC(..485..)` leaves 485 whatever ran before it (-ah, -aj, -ak, -au, -av, -aw;
+  -ap: above a 776 charge, 485), and `=AMORDEGRC(..485..)+SEQUENCE(1,2)` leaves the state empty (-am). A charge inside
+  the call's own arguments is emptied too: `SUM(SEQUENCE(1,1,AMORDEGRC(..485..)))`, `TEXTJOIN(",",TRUE,..)`, `XLOOKUP`
+  over it and `MMULT({1},..)` leave 0 (-cx to -da). A SEQUENCE in an IF arm that is not taken empties nothing (-be).
+  Probed one call each (wrapped in SUM, between the fraction and the 485 charge, -ax to -cw):
+  - **Empty it:** SEQUENCE, RANDARRAY, MUNIT, SORT, SORTBY, UNIQUE, FILTER, XLOOKUP, XMATCH, TOCOL, TOROW, HSTACK,
+    VSTACK, TAKE, DROP, CHOOSECOLS, CHOOSEROWS, EXPAND, WRAPROWS, WRAPCOLS, TEXTSPLIT, TEXTBEFORE, TEXTJOIN, CONCAT,
+    ARRAYTOTEXT, MMULT, MINVERSE, FREQUENCY, LINEST, TREND, MODE.MULT, MAKEARRAY, MAP, BYROW, SCAN, REDUCE, and a
+    called LAMBDA (`LAMBDA(x,x)(1)`, -ct).
+  - **Keep it:** an array constant `={1,2}` (-aq), TRANSPOSE (-ax), a lifted ABS (the case after -az), COLUMN (-bg), MDETERM, LET,
+    RAND, RANDBETWEEN, INDEX, MATCH, SUMPRODUCT and ROWS (-ca, -ce, -cl to -cp, -cw), with SUM and EFFECT (-aa, -ab).
+  No principle we know of splits the two lists. It is not the spill, the array result, a function's age or an
+  `_xlfn.` prefix: MINVERSE and FREQUENCY empty it while TRANSPOSE and MDETERM keep it, and LET keeps it while
+  LAMBDA empties it. Every other function is unprobed. Ours keeps the state for those, except that every LAMBDA we
+  run empties it, so BYCOL, GROUPBY and PIVOTBY with a function argument, and a defined-name LAMBDA, empty it in ours
+  (unprobed; T-4289 probes its WEEKNUM analogue).
+- A dynamic-array formula is no exception: it acts at its place in the order like any other formula, with the
+  calls above. Ours runs the anchors before the chain, so the chain puts back, at each anchor's place, the value
+  that anchor's run left, if its run wrote the state. An anchor that reads the state still reads it before the chain
+  runs. For `=AMORDEGRC(..fraction..)+SEQUENCE(1,2)` above a 485 charge, the rule predicts 485 and ours gives 0
+  (unprobed, as it was before T-3393).
+- -ai (`=SEQUENCE(1,2)*0+AMORDEGRC(..485..)` below the fraction) was 0 on 2026-10-30. On 2026-11-05 the same input
+  bytes (sha256 3f8ec3b8…) give 485, both in the copy -av and in a refill of -ai that is not committed. The 10-30
+  value does not reproduce, like gen-m9 A76's 1 below. Excel's values on 2026-11-05 fit the rule above. -ai A1
+  stays a known failure against its committed 10-30 value (decision 0284, T-3610).
+- The order is Excel's fresh-load order (recalc.md "The order Excel calculates a freshly loaded workbook in"): the
+  value comes from the cell below (-p: A1 is 776 from A2, not A3's 485), the cell to the right (-q: A1 is B1's 485)
+  or a later sheet (-n: Sheet1!A1 is Sheet2!A1's 485); a precedent is evaluated first wherever it sits (-o: A2's
+  period reads A1, so A2 is A1's 485, where without the reference it is 0, alone-e).
+Every earlier cell fits this reading: probes/amordegrc-fractional-period A1-A11 are 776, the value of A12 (period
+1.0001) below them; A23-A26 are 1693, A24's and A26's from A25 and A27 (a different asset, whose own period 1 is 2284,
+A28); fin-amor-period-bound B17 (period 0.5) is 485, B18's value; amor-argument-check-order A846-A851 are 776 from A852
+(period 1.5), and A862-A864 are 0: A866's period-0 AMORDEGRC, the first cell Excel runs, and the error in A865
+leave the state empty. gen-m9 d912671baa1364aa A76
+(period 0.5625) was 1 in its oracle run (excel-graph, 2026-10-28), which the table does not explain: the last
+AMORDEGRC or AMORLINC after it, A96 (`AMORLINC(92598,36663,39379,343,6,1E-300,3)`), leaves 0 (fraction-state-r), and
+its other AMORDEGRCs and AMORLINCs are errors. That 1 does not reproduce (T-3590). The same workbook, byte for byte
+(input sha256 685de544…, probes/amordegrc-a76-bisect-a), is 0 in Excel on 2026-11-01, and the other 412 cells match
+the 10-28 run. It is also 0 with the pivot table dropped (-b), with Calc cut to A1:A76 (-c), A76:A400 (-d), A76 alone
+(-e) or A76:A96 (-f), and as the whole workbook plus one unrelated constant (-h). Nothing is left to bisect, so the
+task's hypotheses (an erroring call that still leaves a state, an argument pattern that gives 1, an order that reaches
+Pivot or Db first) cannot be told apart, and each subset agrees with the rule above. The state did not carry from one
+workbook to the next one the service calculated: -h, filled 9 s after -g left 485, is 0. The 10-28 value is therefore
+not a function of the workbook alone, like WEEKNUM's state after edits (decision 0038). What else made it 1 (a
+different service build, or a recalc after the load in an order the calc chain set) is not known.
+Evidence: probes/amordegrc-fraction-alone-a to -g (excel-graph, 2026-10-26, T-1895) and
+probes/amordegrc-fraction-state-h to -ab (excel-graph, 2026-10-27, T-2825),
+probes/amordegrc-fraction-state-ac to -ai (excel-graph, 2026-10-30, T-2844),
+probes/amordegrc-fraction-state-aj to -da (excel-graph, 2026-11-05, T-3393), probes/amordegrc-a76-bisect-a to -h
+(excel-graph, 2026-11-01, T-3590), with the earlier cells above.
+Ours: since T-2825 (decision 0131), `OrderState::amor_left_over` in evaluation.rs, set and read by
+`Model::amortization_call` (functions/financial/amortization.rs, `LeftOver`), emptied by `Model::empty_amor_left_over`
+after the calls of `Function::empties_amor_left_over` and a called LAMBDA (since T-3393), with each anchor's value put
+back at its place by `run_excel_order` (`Evaluation::anchor_amor`); a read runs the pass in Excel's order
+(`excel_order.rs`, SPEC-0017), whose move budget and its DEVIATION (dates.md) apply here too. gen-m9 d912671baa1364aa
+Calc!A76 stays a known failure against its 10-28 oracle value; ours (0) is Excel's value on every 2026-11-01 run.
+Status: VERIFIED (excel-graph) on freshly loaded workbooks; after an edit in a live session the order is not
+reproducible from the file (recalc.md); as for what a lifted call and a dynamic-array formula's place in the order do to the
+value: a lifted call and the emptying calls are VERIFIED (ours matches every 2026-11-05 cell; functions not listed
+are unprobed), and -ai's 10-30 value and gen-m9 A76's 1 are UNEXPLAINED and not reproducible (probes/amordegrc-a76-bisect-a to -h, T-3590)
+Tasks: T-1895, T-2825, T-2844, T-3393, T-3590
+
+## AMORDEGRC past 2^22 periods
+Rule: past 2^22 periods (4,194,304) RustSheet computes AMORDEGRC's decay in closed form, `remain * exp(n *
+log1p(-rate))` from the state after 2^22 walked periods, instead of walking on. Excel walks every period, adding a
+rounding each time (twice rounded at each subtraction, "AMORDEGRC rounds its charge like ROUND", T-2849), so the closed
+form drifts from the walk by up to about 1e-13 relative over 10^6 further periods: the same once rounded for charges
+below about 1E11, but a larger charge can be a unit off (a review replay found one at about 3.1E11; at 1E12 or more it
+often is). Up to 2^22 periods the kernel is Excel's walk.
+Until T-2918 the bound was 2^20, and the closed form made 4 of the 6 probes/fin-amor-period-bound-c cells (1.1E6 to
+2.4E6 periods) miss Excel: `AMORDEGRC(1E20,39679,39813,300,1100000,1E-7,1)` was 18989305437101 (Excel 18989305437102,
+-c A1), A3 and A4 were a unit off the other way (13720292047583, 5154670166167, Excel ...582 and ...168), and
+`AMORDEGRC(1E300,..,2000000,1E-7,1)` was 1.5163267948033552E293 (Excel 1.51632679480347E293, A5); A2 was Excel's
+16344246350030 by chance. The walk to 2^22 gives all six. A review replay (T-1841) found 6 of 154 random cases (costs
+1E6 to 1E20, 1.1 to 4 times 2^20 periods) a unit off main's walk under the closed form; the unit test
+`degressive_shortcuts_equal_the_walk_and_the_closed_form_stays_near_it` bounds the drift at 1e-13 relative for costs
+up to 1E20. No probe has a charge of 1E11 or more past 2^22 periods, so no evidence cell is known to miss.
+Why 2^22 (T-2918): a walk is unbounded in the period (a life is `ceil(1/rate)`), so some bound is the kernel's work
+cap ("AMORLINC and AMORDEGRC work cap"). A walked period costs about 7.6 ns in release, so 2^22 periods are about 29 ms
+a scalar call (7 ms at 2^20) and a lifted call keeps its 2^27-unit cap at about 4 s by charging 2^20 units an element
+(128 elements: 3.96 to 4.35 s measured, 2026-10-27), in line with the other weighted kernels of SPEC-0011 (YIELD's
+solver cap is 4.3 s a call). The next step, 2^23, would
+be about 58 ms a scalar call and 64 lifted elements for no known cell. AMORDEGRC's lifted element limit fell from 512
+to 128; no eval case lifts more than 128 AMORDEGRC elements that reach the walk.
 Evidence: probes/fin-amor-period-bound-c A1-A6 (excel-graph, 2026-10-18, T-1841 review).
 Status: DEVIATION (decision 0014)
 Implemented in: functions/financial/amortization.rs (`DEGRESSIVE_LOOP_PERIODS`, `DegressiveWalk::closed_form`)
-Tasks: T-1841, T-1895
+Tasks: T-1841, T-1895, T-2826, T-2918, T-2907
+
+T-1895: AMORDEGRC's charge past about 1.8E295 stays finite: `AMORDEGRC(1E308,39679,39813,300,1E5,1E-6,1)` is
+1.94700443465919E302 in Excel (probes/fin-amor-period-bound-b B2), main's walk cut to 15 digits ("AMORDEGRC rounds
+its charge like ROUND", T-2826). Main's rounding scaled the value by 1E13 first and overflowed to 0.
+Excel does not round each period's charge before subtracting it from what is left: a walk that does gives -c A1-A4
+but probes/fin-amor-period-bound B4 and B5 become 1000 and 999 (Excel 0), B11 41042641306981 (Excel
+41042641307062) and fin-amordegrc A7 155 (Excel 154) (T-1895, a scratch run). With Excel's final rounding, main's walk
+gives -c A1, A3 and A4 past 2^20 periods (the closed form, which took over there before T-2918, does not), but not A2 (main ...030.504 cuts to ...030.5 and
+rounds to ...031) nor A5; Excel's own walk, which subtracts in x87 extended precision, gives all five ("AMORDEGRC rounds
+its charge like ROUND", T-2849).
+
+## AMORDEGRC rounds its charge like ROUND
+Rule: AMORDEGRC rounds the charge it returns the way ROUND(x,0) does ("ROUND family rounds in two decimal stages",
+numbers.md): the exact value of the walk's charge is cut to 15 significant digits, then rounded half away from zero. A
+charge of 1E15 or more comes back as its 15-digit cut: `AMORDEGRC(1E300,39679,39813,300,1,1E-7,1)` is
+2.49999977117486E293 (the walk's 2.4999997711748632E293), and a charge whose 15-digit cut is a half rounds up although
+the charge is below it: `AMORDEGRC(1.72531591826348E20,..,1,1E-7,1)` (charge 43132894008630.49) is 43132894008631.
+Main pre-rounded at 13 decimal places (`x * 1E13`), which kept such a charge below the half and a huge charge unrounded.
+Excel's per-period walk subtracts each charge from what is left in x87 extended precision and stores the difference
+as a double, so the remaining value is rounded twice, first to a 64-bit significand and then to 53 bits ("Division
+rounds twice", numbers.md): `remain = RN53(RN64(remain - rate * remain))`, the charge `rate * remain` a plain double
+product. About one step in 4,000 then lands an ulp from main's plain `remain -= rate * remain`, so the two walks agree at
+1 and 2 periods (every charge within one ulp of a cut boundary: probes/amordegrc-walk-drift D1-D12, -ties A1-A12, C1-C3,
+C7) and drift apart from about 1000 periods: main's walk misses 1 of 6 near-boundary cells at 1000 periods (-drift D16:
+Excel 1.54281774366471E294, main's charge 1.5428177436647047E294), 2 of 6 at 10^4 (E5, E6) and about half at 5x10^4 to
+10^6 (E7-E45; -ties A51, A53, C5, C8, C9), 28 of the 135 cells, where the twice-rounded walk gives all 135. It also gives
+all five of probes/fin-amor-period-bound-c A1-A5 (1.1E6 to 2.4E6 periods, not used in the fit), where main's walk
+misses A2 and A5. Not Excel's (each scored against the 135 cells in a scratch fit, T-2826 and T-2849): the walk in exact
+or extended arithmetic throughout (86), an FMA update, `remain * (1 - rate)` (38), the rate and coefficient multiplied
+in another order, a first charge computed in another order (107 each), a charge cut to 8 to 16 significant digits or
+rounded to a whole number before it is subtracted, and an accumulated depreciation subtracted from the cost. The
+product `rate * remain` kept in extended precision too (rounded twice when it is the charge) also gives all 135 and
+differs from the double product in 2 raw charges of 135, none visible once rounded; the subtraction of the first
+period's rounded charge from the cost is rounded twice too: 12 costs where it differs from the plain difference,
+a unit in the period-1 charge, give Excel's twice-rounded value in both directions (probes/amordegrc-first-subtraction
+A1-A6 plain above, B1-B6 plain below; excel-graph, 2026-10-31, T-2917).
+The first period's charge (period 0) rounds the same way: `AMORDEGRC(3.47925977217322E18,39679,39813,300,0,1E-7,1)`
+(318456837070.49963) is 318456837071, where main's pre-round gave ...070 (probes/amordegrc-round-mid F1-F6; G1-G6 at
+period 1, charges 1.2E12 to 2.3E12). Smaller charges, where the two rules still differ for a fraction within 0.5*10^(d-15) below a half (d integer digits;
+about 5E-5 at 1E10, down to charges of about 1E3), and the value AMORLINC leaves behind follow ROUND by analogy, unprobed; so does a charge whose 15-digit cut
+overflows, which ours leaves as it is where ROUND is `#NUM!` (T-2849).
+Evidence: probes/amordegrc-walk-ties (69 cells: costs near 1E20 at 1 to 10^6 periods whose charge in main's walk is
+within 0.01 of a half, exact halves, costs 1E300 and 1.23456789012345E300) and probes/amordegrc-walk-drift (66 cells:
+charges within one ulp of a 15-digit cut boundary at 1, 2 and 1000 periods, and near x.45 at 10^4 to 10^6 periods),
+excel-graph, 2026-10-27, T-2826; probes/amordegrc-round-mid (12 cells, excel-graph, 2026-10-27, T-2826 review);
+probes/fin-amor-period-bound-b B2; probes/fin-amor-period-bound-c A1-A5 (excel-graph, 2026-10-18, T-1841 review).
+Ours: since T-2826 (`amor_round` in functions/financial/amortization.rs, through `decimal_round::round_decimal`); the
+twice-rounded walk since T-2849 (`DegressiveWalk::charge` through `arithmetic::extended_sum`, which rounds the first
+period's subtraction twice too, by analogy). Since T-2918 the walk goes on to 2^22 periods, so -c A1-A5 are Excel's;
+past that the kernel still finishes in closed form ("AMORDEGRC past 2^22 periods", a DEVIATION).
+Status: VERIFIED (excel-graph) for the rounding of charges from about 3E11 up and for the walk; smaller charges and the
+first subtraction inferred
+Tasks: T-2826, T-2849, T-2917
 
 ## AMORLINC and AMORDEGRC work cap
-Rule: RustSheet charges each lifted AMORLINC element 2^9 units and each AMORDEGRC element 2^18 against SPEC-0011's 2^27
-visit cap, so one call lifts at most 262,144 AMORLINC or 512 AMORDEGRC elements:
-`ROWS(AMORDEGRC(SEQUENCE(513)*0+2400,39679,39813,300,1,0.15,1))` is `#ERROR!` where Excel lifts every element (they lift
+Rule: RustSheet charges each lifted AMORLINC element 2^9 units and each AMORDEGRC element 2^20 against SPEC-0011's 2^27
+visit cap, so one call lifts at most 262,144 AMORLINC or 128 AMORDEGRC elements (512 before T-2918):
+`ROWS(AMORDEGRC(SEQUENCE(129)*0+2400,39679,39813,300,1,0.15,1))` is `#ERROR!` where Excel lifts every element (they lift
 over arrays: probes/fin-argument-modes H19-H35; Excel's own limit is unprobed). The weights are the kernels' bounds in a
 release build: AMORLINC's exact walk at most 1,024 single subtractions, its step cap (`LINEAR_STEP_CAP`; the longest
 real walk takes 616, and 2^18 elements of `AMORLINC(..,9E15,1.08E-16,1)`, 613 steps each, took 1.23 s, so the cap is
-about 7.9 us an element, 2.1 s per call; a walk at the cap would be `#NUM!`), AMORDEGRC's 2^20 walked periods and the closed
-form (512 elements of `AMORDEGRC(1E15,..,1,5E6,1E-7,1)`, which takes no shortcut, 2.06 s). The scalar calls are not
+about 7.9 us an element, 2.1 s per call; a walk at the cap would be `#NUM!`), AMORDEGRC's 2^22 walked periods and the closed
+form (128 elements of `AMORDEGRC(1E15,..,1,5E6,1E-7,1)`, which takes no shortcut, 3.96 to 4.35 s at T-2918's 2^22
+periods, each subtraction rounded twice since T-2849; at 2^20 periods 512 elements took 3.9 s, 2.06 s before T-2849).
+The scalar calls are not
 capped beyond those bounds.
+Since T-2840 an element the kernel refuses before its walk is charged 1, not the weight, so a broadcast of such elements
+lifts in full: an error or a logical in any argument (each is read, the basis too, before the walk), a cost, salvage,
+period and rate, all numbers, that fail the value checks (`0 <= salvage < cost`, `period >= 0`, `rate > 0`, NaN failing
+them), or for AMORDEGRC a rate whose asset life is refused (`1/rate` in [0, 2], T-1978); the charge calls the
+kernel's own predicates (`amortization_values_valid`, `asset_life_refused`). A text or a blank is not judged (it may
+read as any number), nor is a date's calendar check, which depends on the date system: such an element is charged the
+weight. gen-m9/e8d55ec393460bb7
+Calc!A10, about 1,250 PIVOTBY purchase dates (most of them texts) at a rate of `PMT(100,271,417889,43,0)` (negative),
+spills like Excel's instead of `#ERROR!`.
 Evidence: none for Excel; this is a resource limit (CLAUDE.md directive 5, SPEC-0011 "Security rule for kernel work").
 Status: DEVIATION (decision 0014)
-Implemented in: functions/lift/kinds/financial.rs (`AMORLINC_WEIGHT`, `AMORDEGRC_WEIGHT`, `AMORLINC`, `AMORDEGRC`)
-Tasks: T-1841
+Implemented in: functions/lift/kinds/financial.rs (`AMORLINC_WEIGHT`, `AMORDEGRC_WEIGHT`, `AMORLINC`, `AMORDEGRC`),
+functions/lift/kinds/mod.rs (`ValueWork::Amortization`, `amortization_refused`)
+Tasks: T-1841, T-2840, T-2918
 
 ## Day-count basis: a negative basis is #NUM!
 Rule: every function with a day-count basis argument rejects any basis below 0 with `#NUM!`: -1, -0.5, -0.9999999999,
@@ -1154,7 +3169,7 @@ Rule: INTRATE, PRICEDISC and YIELDDISC accept settlement serial 0 and compute wi
 0.00044227185222223174), whereas RECEIVED, PRICEMAT and YIELDMAT return #NUM! for settlement 0 (PRICEMAT and
 YIELDMAT possibly because issue > settlement: inferred, the probe cannot tell it from a rejection of settlement 0 itself). All six: basis 5 and -1 are #NUM!, a fractional basis truncates (1.9 is 1) and any negative basis is #NUM! ("Day-count basis: a negative basis is #NUM!"), a text
 basis "1" is coerced, a boolean basis is #VALUE!, text dates are parsed, fractional dates truncate, settlement >= maturity
-is #NUM!, and a zero or negative investment, price or redemption (probed for INTRATE, PRICEDISC and YIELDDISC; RECEIVED's investment) is #NUM!, as is a zero or negative PRICEDISC discount; RECEIVED is #NUM! once 1 - discount*yearfrac = 0 (the "< 0" side is inferred, not probed) (`RECEIVED(...,1000,1)` is #NUM!, `...,0.99` is 99999.99999999991); a negative PRICEMAT/YIELDMAT rate or yield price is #NUM! (PRICEMAT and YIELDMAT accept a
+is #NUM!, and a zero or negative investment, price or redemption (probed for INTRATE, PRICEDISC and YIELDDISC; RECEIVED's investment) is #NUM!, as is a zero or negative PRICEDISC discount; RECEIVED is #NUM! once 1 - discount*yearfrac = 0 and below it (the "< 0" side since gen-m9 01523d247594952e A152, A222 and accuracy/RECEIVED/s1: "Discount securities and T-bills: amount domains (T-4112)") (`RECEIVED(...,1000,1)` is #NUM!, `...,0.99` is 99999.99999999991); a negative PRICEMAT/YIELDMAT rate or yield price is #NUM! (PRICEMAT and YIELDMAT accept a
 zero rate; issue on or after settlement is #NUM!, issue = settlement included: probes/matdisc-serial-0-60 A9, A14, A25, A30). Basis 2 is the only mode whose result differs on a one-year span
 (actual/360); bases 0, 1, 3 and 4 agree there.
 PRICEMAT and YIELDMAT count the settlement-to-maturity days as DSM = YEARFRAC-days(issue,maturity) - days(issue,settlement), not
@@ -1194,8 +3209,11 @@ Tasks: T-2032
 ## EFFECT and NOMINAL raise to their power with `^`
 Rule: EFFECT is `(1 + r/n)^n - 1` and NOMINAL is `((1 + e)^(1/n) - 1) * n`, with n floored, and both powers are
 Excel's `^` operator, not libm `pow`. EFFECT's integer n goes through right-to-left square-and-multiply (numbers.md
-"Integer exponents: right-to-left square-and-multiply"). For NOMINAL, n = 1 is an exact integer power, n = 2 is the
-square root, and every other n is `exp(ln(1+e) * (1/n))` (numbers.md "Non-integer exponents: exp(y·ln x)").
+"Integer exponents: right-to-left square-and-multiply") below 2^32 - 1, and through `exp(n·ln x)` from there on
+(numbers.md "Integer exponents from 2^32 - 1: exp(y·ln x)", T-2392): `EFFECT(0.05,3E9)` is 0.05127110013105862 and
+`EFFECT(0.05,1E10)` 0.05127110072502061, each equal to its `(1+0.05/n)^n-1` (probes/fin-effect-huge-npery).
+For NOMINAL, n = 1 is an exact integer power, n = 2 is the square root, and every other n is `exp(ln(1+e) * (1/n))`
+(numbers.md "Non-integer exponents: exp(y·ln x)").
 `EFFECT(0.5,10)` is 0.6288946267774416 (libm pow gives ...442), `NOMINAL(0.5,4.5)` is 0.4267276788012868 (...859), and
 `EFFECT(0.05,4)` is 0.050945336914062445 (...222). Columns E and F of NOMINAL_EFFECT.xlsx, which convert the other
 function's result back, match once C and D do.
@@ -1210,6 +3228,46 @@ Ours: `rate_power` in functions/financial/rate_conversions.rs calls `arithmetic:
 Status: VERIFIED (excel-graph)
 Tasks: T-2034, T-2241
 
+## EFFECT, NOMINAL and RRI near a rate of 0 are far from the math (T-4110)
+Rule: EFFECT and NOMINAL are `#NUM!` at a rate of 0 and at an npery that floors to 0. At a tiny rate, or a rate small
+against npery, Excel's `(1 + r/n)^n - 1` and `((1 + e)^(1/n) - 1)·n` lose the rate in the double `1 + r/n` or
+`(1 + e)^(1/n)`: where it rounds to 1 the result is 0, and near it the result is off the math by up to 61%. RRI's
+`EXP(LN(fv/pv)*(1/nper))-1` cancels the same way where the growth is near 0. These are Excel's values (decision 0300):
+the engine matches them to the bit.
+Evidence: the Gate A tables accuracy/EFFECT/s1, accuracy/NOMINAL/s1 and accuracy/RRI/s1 (excel-graph, 2026-11-06,
+T-4110):
+- `#NUM!` at a rate of 0 (EFFECT A71 `EFFECT(0,7)`, A72, A76, A81; NOMINAL A69 `NOMINAL(0,275)`, A70, A73-A75, A78, A84)
+  and at npery 0 (EFFECT A67 `EFFECT(0.0270739423891995,0)`, A73, A80, A83, A84; NOMINAL A68, A71, A77, A79, A80, A82),
+  as gen-m9 5422bdbf173fc233 A70 `EFFECT(0,4)` and c0681a8b150ce301 A291 `EFFECT(0.05,0.5)` showed.
+- 0 where the math is not: EFFECT A85 `EFFECT(1.70813547576784E-10,25076364)` (math 1.708E-10), A92, A93, A95, A99,
+  A119; NOMINAL A85 `NOMINAL(2.51964277981808E-13,669472753125)` (math 2.520E-13), A91, A94, A95, A108, A109, A120.
+- Off the math by more than 1E-4 relative: EFFECT A116 `EFFECT(4.71226605712091E-15,3)` 4.6629367034256575E-15
+  (math 4.7123E-15, 1.0%), A87 (2.0%), A102, A104, A110, A113, A120; NOMINAL A119 `NOMINAL(4.04873998338286E-15,4)`
+  3.552713678800501E-15 (math 4.0487E-15, 12%), A97 `NOMINAL(1.04206680307683E-09,7542681)` 1.67481162272054E-09 (math
+  1.0421E-09, 61%), A87, A89, A106, A115; RRI A163 `RRI(144671643887.505,1.37778115802967E+68,1.36433071381757E+68)`
+  -6.783462680459706E-14 (math -6.7811E-14, 3.5E-4).
+- The eval cells agree: gen-m9 1dce4774f5c0e736 A246 `EFFECT(1E-300,8)` and 6376e27be7a05871 A235 `EFFECT(1E-300,1)` are
+  0, and `EFFECT(0.05,1E15)` is 0 (probes/fin-effect-huge-npery A45) and `EFFECT(0.05,1E12)`
+  0.05122908433109119 against the math's 0.0512711 (A37).
+Status: VERIFIED (excel-graph)
+Tasks: T-4110
+
+## DOLLARDE and DOLLARFR scale the fraction by the next power of ten (T-4110)
+Rule: with F the fraction and D the smallest power of ten at or above F, DOLLARDE(x, F) is `i + f·D/F` and
+DOLLARFR(x, F) `i + f·F/D`, where x = i + f splits into its integer part toward 0 and its fraction, so a negative
+dollar is the mirror of the positive one and a power of ten for F returns x. Excel's doubles are within ulps of that
+math on the doubles of the arguments.
+Evidence: the Gate A tables accuracy/DOLLARDE/s1 and accuracy/DOLLARFR/s1 (excel-graph, 2026-11-06, T-4110), 240 points,
+all within 15 digits of the math: `DOLLARDE(-805.1,2)` -805.5000000000001 (A71), `DOLLARDE(20.8308,999)`
+20.83163163163163 (A67, D = 1000), `DOLLARDE(34.7156,1001)` 41.14885114885117 (A79, D = 10000), `DOLLARDE(356.223,100)`
+356.223 (A69), `DOLLARFR(-611.7,2)` -611.14 (A75), `DOLLARFR(415.961,1000000)` 415.961 (A74); and the gen-m9 cells
+(`DOLLARDE(2.5,13)` 5.846153846153847).
+Unprobed: a fraction below 1 (Microsoft documents `#NUM!` below 0 and `#DIV/0!` from 0 to 1), a non-integer fraction,
+and fractions past 1E9, where a double `log10` of 10^k + 1 may round to k.
+Ours: `fn_dollarde` and `fn_dollarfr` (functions/financial/rate_conversions.rs), bit-exact on all 240 points.
+Status: VERIFIED (excel-graph)
+Tasks: T-4110
+
 ## PRICE and ODDFPRICE discount with Excel's `^`
 Rule: PRICE and ODDFPRICE discount each coupon and the redemption by `(1 + yld/frequency)^t` with Excel's `^`
 operator (numbers.md "Integer exponents: right-to-left square-and-multiply" and "Non-integer exponents:
@@ -1217,7 +3275,8 @@ exp(y·ln x)"), not libm `pow`. `PRICE(DATE(2020,3,1),DATE(2030,3,1),0.06,0.07,1
 gives ...889), `PRICE(1,43831,0.05,0.06,100,2)` is 83.34716628375435 (240 coupons; libm ...423) and
 `ODDFPRICE(39448,43831,39083,39630,0.08,0.09,100,2,0)` is 92.4077632093273 (libm 92.40776320932721).
 Integer exponents (settlement on a coupon date) and the fractional ones of a mid-period settlement and of
-ODDFPRICE's offsets all come out bit-exact with `^`: every PRICE and ODDFPRICE cell in eval/ now passes.
+ODDFPRICE's offsets all come out bit-exact with `^`: every PRICE and ODDFPRICE cell in eval/ then passed, except
+where both the coupon rate and the yield are far above 1 (the observation below).
 Evidence: ironcalc-calc FINANCIAL/PRICE_YIELD.xlsx PRICE_YIELD!H2-H6, H8-H11, H28, ODDFPRICE_ODDFYIELD!J5, J8, J9,
 J11, J23, J25, J27, J29-J33, J44, J45 and ODDFPRICE_SHORT!J9, J10, J13 (Excel-cached); probes/fin-coupon-walk-bounds-c
 C10, C11, G10, G11, J10, J11, fin-argument-modes H189, H251, fin-bond-negative-basis E2, E9, G2, G9,
@@ -1233,9 +3292,80 @@ bit-exact, as the libm-priced ones do: Newton from 0.1 to a 1e-12 step 4/178 (10
 and redemption 100 0/178 (5) against 1/178 (14). The union of both fits' candidates is 15/178, against 12/178 for `yield` alone. So the
 PRICE kernel is not what keeps the YIELD fits (T-1592, T-2007) from Excel's bits.
 Ours: `discount_growth` in functions/financial/financial_bonds.rs (`arithmetic::power`, libm where `^` is an error);
-DURATION and MDURATION use it too (T-1975). YIELD's `compute_yield_from_price` prices with `f64::powf`.
+DURATION and MDURATION use it too (T-1975), and so does YIELD's Newton (T-1592); ODDFYIELD's `solve_yield` prices with
+`f64::powf`.
+Observation (T-2732): where both the coupon rate and the yield are far above 1, PRICE, DURATION and MDURATION leave
+Excel's bits, and in 62 cells its 15 digits. probes/bond-extreme-coupon-yield (579 cells, excel-graph) crosses coupon
+rates 10..1E+300 with yields 1..44270 at frequency 1, 2 and 4, basis 0 and 1, mid-period (DSC = 26 days) and on a
+coupon date, plus short stubs (43830-45293 at frequency 4, basis 1: DSC/E = 2/92; 39697-44449 at frequency 2,
+basis 0: 4/180). The engine passes 165 cells, 319 are within 4 ulp and 95 beyond, 62 of them visibly off: PRICE 43,
+DURATION 8, MDURATION 11. The pieces pass: COUPDAYSNC, COUPDAYS, COUPNUM (Parts!A1-A3), `(1+yld/2)^(DSC/E)` and
+`(1+yld/2)^(DSC/E+N-1)` with Excel's `^` (Parts!C1-D6), and the redemption term alone at rate 0 (Parts!B1-B6), so
+the gap is in how the coupon flows are summed and combined: the coupon term alone (redemption 1E-300, Parts!E1-J6)
+already misses, 5 cells visibly (Parts!F1, F2, F5, F6, G2), with the same digits as PRICE at redemption 100. Against
+a 50-digit mpmath value of the documented sums (DSC/E, N and A/E from the coupon dates; q = 1+yld/f, c = 100·rate/f;
+price = sum over k = 1..N of c/q^(k-1+DSC/E), plus redemption/q^(N-1+DSC/E), minus c·A/E; DURATION = the Macaulay sum
+of the same flows ÷ f; MDURATION = DURATION/q; each cell's distance from it in ulps of the exact value):
+- Short stubs: Excel is close to correctly rounded and the engine is not. All 34 failing DURATION and MDURATION
+  cells are within 3.1 ulp in Excel and 5 to 30 ulp off in the engine; the 16 visibly-off PRICE cells are 0.6 to 23
+  ulp off in Excel (median 6) and 16 to 55 in the engine (median 33). All 33 visibly-off short-stub cells are closer
+  in Excel, including gen-m9 a91bad4e84f49739 A142's twin `PRICE(43830,45293,100,278,50,4,1)` (Calc!A182: Excel +15.8 ulp,
+  ours -16.2) and 30e20ba3302fea8b A90's `MDURATION(39697,44449,EDATE(58318,22),44270,2,0)` (Calc!C183: Excel
+  -0.8 ulp, ours -17.8).
+- The main grid (DSC = 26 days): neither is correctly rounded. On the 29 visibly-off cells (27 of them PRICE, 5 of
+  those on Parts) Excel is 0 to 32 ulp off (median 5) and the engine 0.6 to 23 (median 9); Excel is closer in 16, the
+  engine in 13. Excel's own error reaches
+  32 ulp (Calc!A20 `PRICE(38136,44737,1E+10,7,100,1,0)`: Excel 55709579072.88489, -32 ulp; ours ...88501, -16).
+  gen-m9 0a957119475760c5 A279's `PRICE(38136,44737,1E+300,7,100,2)` (Calc!A181) is Excel +0.5 ulp, ours +8.5 (
+against the double that 1E+300 parses to).
+So a more accurate kernel would fix the short-stub DURATION and MDURATION cells but not the grid's PRICE cells,
+where only Excel's own operation order gives its digits: T-2733 keeps the `visible` stage. T-2733 found that order
+("PRICE, DURATION and MDURATION sum order at a huge coupon rate and yield").
 Status: VERIFIED (excel-graph)
-Tasks: T-2207
+Tasks: T-2207, T-2732, T-2733
+
+## PRICE, DURATION and MDURATION sum order at a huge coupon rate and yield
+Rule: PRICE takes the accrued interest as `rate/f · A/E · 100` (left to right, `A/E` one quotient) and discounts
+coupon k (k = 0..N-1) at the exponent `k + DSC/E`; the redemption at `(N - 1) + DSC/E` (T-2788: `DSC/E + N - 1`,
+which this entry had, rounds differently and leaves YIELD cells 8 to 11 ulps off; see "YIELD stops short of PRICE's
+root"), and each discount is
+Excel's `^` ("PRICE and ODDFPRICE discount with Excel's `^`"). The single-coupon (N = 1) branch, which discounts
+linearly, keeps the accrued `coupon · (A/E)`: on the post-freeze fresh sweep probes-numeric/t2733-price-r4-fresh
+(excel-graph, 2026-11-01) all 78 PRICE rows with COUPNUM = 1 are bit-exact with it and 62 with `rate/f · A/E · 100`
+(A56 `PRICE(38927,38971,0.828072,1.77301,1.21553,1,2)` is Excel -3.3520514477410757, 32 ulp from the latter); the
+re-check sweep probes-numeric/t2733-price-n1-fresh confirms it (T-2733 Outcome). DURATION and MDURATION discount
+coupon k at the same `k + DSC/E`. Written this way every cell of probes/bond-extreme-coupon-yield is within half a
+unit of Excel's 15th significant digit, among them the probe rows that mirror gen-m9 0a957119475760c5 A279,
+a91bad4e84f49739 A142 and 30e20ba3302fea8b A90 with literal arguments: `PRICE(38136,44737,1E+300,7,100,2)`
+(Calc!A181) is 8.95449454935698e+300, `PRICE(43830,45293,100,278,50,4,1)` (Calc!A182) -133.76680342333566 and
+`MDURATION(39697,44449,58988,44270,2,0)` (Calc!C183) 5.029680055838246e-07; the three gen-m9 cells pass too. The order before (accrued `coupon · (A/E)`,
+exponent `DSC/E + k - 1` for k = 1..N) left 62 cells visibly off, Calc!A20 `PRICE(38136,44737,1E+10,7,100,1,0)` at
+55709579072.88501 against Excel's 55709579072.88489.
+Offline fit (T-2733: the candidate orders scored outside the engine, over 239 PRICE cells of the case with more
+than one coupon left, plain doubles unless named; bit-exact / within 15 digits by display; it ranks the candidates and
+is not the eval result, below):
+- before: 63 / 176; exponent `k + DSC/E` with accrued `coupon·A/E`: 146 / 215; with `coupon·(A/E)`: 142 / 214;
+- accrued `rate/f·(A/E)·100`, `rate·(A/E)·(100/f)` or `A/E·rate·100/f` (the same doubles here): **196 / 238**;
+  `rate·A/E·100/f`: 166 / 223; every other order of the five factors scored lower;
+- each operation rounded twice (x87, "Division rounds twice"): the same 196 / 238; an extended (64-bit) accumulator:
+  65 / 191; everything exact with one final rounding: 61 / 189;
+- the power: Excel's `^` 196, `EXP(t·LN v)` with libm or Excel's kernels and a double product 181, the product in an
+  x87 register 164, `1/EXP(-t·LN v)` 154, libm `pow` and a correctly rounded pow 119 (with the earlier accrued);
+- the coupon `100·rate/f`, `rate·(100/f)` or `rate/f·100`: tie; summing from the last coupon: 85 at best; a
+  closed-form annuity, `v^k·v^(DSC/E)`, a running product of `v`, or discounting the coupon-date value by
+  `v^(DSC/E)` once: 79 at best; the exponent written `(k·E + DSC)/E` (one rounding): no change.
+Eval (the engine at T-2733, `rustsheet-eval show`): every one of the case's 240 PRICE cells (Calc!A1-A198,
+Parts!B1-B6 and E1-J6) is bit-exact. The redemption term alone (rate 0, Parts!B1-B6) is 100 over the worksheet's
+`(1+yld/2)^(COUPDAYSNC/COUPDAYS+COUPNUM-1)` (Parts!D1-D6, Excel's own `^`) to the bit in all six rows in Excel, and
+the engine matches; for example `PRICE(38136,44737,0,42,100,2,0)` (Parts!B3) is 3.012159688249292e-47 = 100/Parts!D3.
+The 47 cells of the case left are all DURATION or MDURATION (Calc columns B and C), numeric and within 2 ulp:
+last-digit residue, T-2972's except Calc!B7, B43, C7 and C43, which T-2733 moved by 1 or 2 ulp (T-2973). YIELD
+prices with the same sum: on top of T-3215's start it fixes 16 cells of the yield-* probes and moves none.
+Evidence: probes/bond-extreme-coupon-yield (579 cells, excel-graph, 2026-10-26, T-2732); gen-m9/0a957119475760c5
+Calc!A279, a91bad4e84f49739 Calc!A142, 30e20ba3302fea8b Calc!A90 (excel-graph, 2026-10-23).
+Ours: `CouponSchedule::price` and `duration_of` in functions/financial/financial_bonds.rs since T-2733.
+Status: VERIFIED (excel-graph)
+Tasks: T-2733, T-2972, T-2973
 
 ## PMT when (1+rate)^nper overflows or underflows
 Rule: when `pv*P` overflows (`P = (1+rate)^nper`, overflowing or not), PMT is not an error but the annuity quotient
@@ -1248,7 +3378,7 @@ and `PMT(1,1023,1)`, `PMT(1,1024,1)`, `PMT(1,1100,1)` are all -1. When P is fini
 overflows (0, or the subnormal 2^-1070) PMT is `#NUM!` whatever fv and type are, and so are IPMT, PPMT and CUMIPMT:
 `PMT(-0.5,2000,1)`, `PMT(1,-2000,1)`, `PMT(-0.5,2000,0,5)`, `PMT(-0.5,2000,1,0,1)`, `PMT(-0.5,2000,1,5)`,
 `PMT(-0.5,1070,1)`, `PMT(-0.5,1070,0,5)`, `IPMT(-0.5,1,2000,1)`, `PPMT(-0.5,1,2000,1)`, `CUMIPMT(-0.5,2000,1,1,1,0)`
-(CUMPRINC, which shares the kernel, and a subnormal P whose reciprocal is finite are unprobed). IPMT and PPMT follow PMT: `IPMT(100,1,184,439103)` is
+(CUMPRINC, which shares the kernel, and a subnormal P whose reciprocal is finite are unprobed), except IPMT in period 1 of type 1, which is 0 ("IPMT cancels on fv"). IPMT and PPMT follow PMT: `IPMT(100,1,184,439103)` is
 -43910300 and `PPMT` of it 0; `IPMT(1,1,2000,1)`, `IPMT(1,2,2000,1)` are -1 and their PPMT 0;
 `PPMT(1,1,60,1)` is -8.67361737988405E-19 (ours 0, unscored: a last-digit question, T-1528). PV, FV and NPER stay `#NUM!` there (`PV(100,184,1)`, `FV(100,184,1)`,
 `NPER(100,-1,1)`). The gen-m9 inference holds: `FLOOR(NA(),1/0)` is `#N/A`, FLOOR returns its number's error first.
@@ -1262,9 +3392,12 @@ Tasks: T-1405
 ## Analysis ToolPak securities functions check frequency and dates first
 Rule: the COUP* functions (COUPDAYSNC and COUPNUM probed; they share one argument reader) check each argument as they read
 it, left to right, so a bad value is `#NUM!` before a later argument's error or text:
-1. settlement: an error or text is that error (`#VALUE!` for text); a serial below 1 is `#NUM!` at once
-   (`COUPDAYSNC(-1,1/0,2,0)` and `COUPDAYSNC(-1,"x",2,0)` are `#NUM!`);
-2. maturity: its error or text, then settlement >= maturity is `#NUM!` (`COUPDAYSNC(40000,39000,1/0,0)`,
+1. settlement: an error or text is that error (`#VALUE!` for text); a serial that does not floor to 0-2958465
+   (9999-12-31) is `#NUM!` at once (`COUPDAYSNC(-1,1/0,2,0)`, `COUPDAYSNC(-1,"x",2,0)` and `COUPDAYS(2958466,NA(),2)` are
+   `#NUM!`; `COUPNCD(2958465.5,NA(),2)` is `#N/A`);
+2. maturity: its error or text, then a serial past 2958465 is `#NUM!` (`COUPNUM(39000,2958466,2,NA())`,
+   `COUPDAYBS(39000,1E15,3,NA())`; `COUPPCD(39000,2958465.9,2)` is 38898), then settlement >= maturity is `#NUM!`
+   (`COUPDAYSNC(40000,39000,1/0,0)`,
    `COUPDAYSNC(39000,39000,"x",0)`, `COUPNUM(40000,39000,NA(),1/0)` are `#NUM!`);
 3. frequency: its error or text, then a frequency other than 1, 2 or 4 is `#NUM!` (`COUPDAYSNC(39000,40000,3,1/0)` and
    `COUPDAYSNC(37342,46362,-0.0001,<#DIV/0!>)` are `#NUM!`);
@@ -1277,13 +3410,21 @@ floors to a serial from 0 to 2958465 (9999-12-31) as they read it: `TBILLEQ(3900
 or equal date pair, or a maturity more than a year after settlement, comes after the discount (`TBILLEQ(39100,39000,1/0)`
 is `#DIV/0!`, `TBILLPRICE(39000,39500,"x")` `#VALUE!`). An error settlement beats an invalid maturity
 (`TBILLYIELD(1/0,-1,0.05)` is `#DIV/0!`).
-Evidence: probes/securities-argument-error-order (192 cells, excel-graph, 2026-10-20, T-1406); gen-m9/0c7fc447bc2eebfd
+Evidence: probes/securities-argument-error-order (192 cells, excel-graph, 2026-10-20, T-1406); probes/coup-calendar-edges
+A1-A8 (the 9999-12-31 bound, excel-graph, 2026-10-25, T-2486); gen-m9/0c7fc447bc2eebfd
 Calc!A24, gen-m9/4df1b22d3ed63f58 Calc!A20 (excel-graph, 2026-10-12, T-1289).
-Unprobed: serial 2958465 alone as a T-bill date (the inclusive bound is inferred), and the range in a 1904 workbook (the
-engine checks the date after the 1904 shift).
-Ours: matches since T-1406 (`coupon_args` in financial_bonds.rs, `tbill_arguments` in discount.rs).
-Status: VERIFIED (web)
-Tasks: T-1406
+In a 1904 workbook the T-bills read the date itself, so their range is the 1904 calendar's own, 1904-01-01 to
+9999-12-31: `TBILLPRICE(DATE(9996,1,1),DATE(9996,6,30),0.05)` is a number while DISC of the same dates is `#NUM!`, and
+`TBILLPRICE(-1,100,0.05)` is `#NUM!` (probes/fin-1904-calendar-readers A1, A10, A16; dates.md "The 1904 date system:
+ACCRINT, COUPNUM and the TBILL functions read the date itself"). Near the end of the calendar see "T-bills settled in 9999".
+Ours: matches since T-1406 (`coupon_args` in financial_bonds.rs, `tbill_arguments` in discount.rs); the COUP* upper
+bound since T-2486 (`coupon_date_of` in financial/dates.rs). In a 1904 workbook the bound is the 1904 calendar's own
+last day, 2957003, though the financial reading moves it past 9999-12-31: `COUPPCD(39000,2957003,2)` = -1462,
+`COUPPCD(39000,2957004,2)` and `COUPPCD(2957004,NA(),2)` are `#NUM!`, `COUPPCD(2957003,NA(),2)` is `#N/A`
+(probes/coup-calendar-edges-1904, excel-graph, 2026-10-25) (before it, a maturity past 9999-12-31 read on to a later error, and `COUPDAYS(39123,2958466,1,0)` was
+360).
+Status: VERIFIED (web; the COUP* upper bound excel-graph)
+Tasks: T-1406, T-2486
 
 ## PRICE, YIELD, DURATION and MDURATION check order
 Rule: these four do not read their arguments as the COUP* functions do, and PRICE and YIELD differ from DURATION and
@@ -1311,6 +3452,58 @@ Ours: matches since T-2482 (`bond_args` in financial_bonds.rs).
 Status: VERIFIED (excel-graph)
 Tasks: T-2482
 
+## PRICE, DURATION and MDURATION at a huge yield or coupon
+Rule: PRICE, DURATION and MDURATION are `#NUM!` when `(1+yld/frequency)^t` overflows a double at the redemption's term
+`t = DSC/E + N - 1`, the longest one, although the overflowing flows would just discount to 0. A sum that overflows (a
+huge coupon) is `#NUM!` too. There is no separate cap on the yield or the coupon.
+- The boundary is the power's overflow: with N = 20 and settlement on a coupon date (t = 20), a yield of 5.12154E+15
+  gives `PRICE` 9.76268856632966E-16 and 5.22501E+15 `#NUM!` (the overflow is at 5.1733E+15); with settlement half a
+  period in (t = 19.5) 1.27233E+16 is a number and 1.29803E+16 `#NUM!`; with N = 40 1.00701E+08 is a number and
+  1.02735E+08 `#NUM!`. A zero coupon has the same boundary. DURATION and MDURATION switch at the same yields.
+- A single remaining coupon (t at most 1) never overflows: `PRICE(47300,47484,0.05,1E+300,100,2,0)` is 2.05E-298,
+  DURATION 0.5, MDURATION 1E-300.
+- At a 5% yield a coupon rate of 1E+300 gives a price of 7.794581142823408E+302 and DURATION 4.841148506210218; 1E+306
+  and 9.99999999999999E+307, whose coupon sums overflow, are `#NUM!` for all three.
+- `1E+308` cannot be typed into Excel (9.99999999999999E+307 is the largest literal): a workbook with it fails to load
+  in Excel for the web (`FileCorruptTryRepair`).
+Evidence: probes/bond-huge-yield-overflow (78 cells, excel-graph, 2026-10-25, T-2488); gen-m9 cells such as
+`PRICE(39050,44044,0.5,123456789.123,110,4,2)` and `MDURATION(38368,44642,1%,1E+300,4,3)`, both `#NUM!`.
+Unprobed: YIELD's solver near the boundary (T-2391). ODDFPRICE and ODDLPRICE: see "ODDFPRICE and ODDLPRICE at a huge yield".
+Ours: matches since T-2488 (`CouponSchedule::discount_overflows` in financial_bonds.rs).
+Status: VERIFIED (excel-graph)
+Tasks: T-2488
+
+## ODDFPRICE and ODDLPRICE at a huge yield
+Rule: ODDFPRICE is `#NUM!` when `(1+yld/frequency)^t` overflows a double at the redemption's term `t` (the exponent of
+the redemption's discount: `n - 1 + DSC/E` for a short first period), although the overflowing flows would just discount
+to 0; the same rule as PRICE. ODDLPRICE is linear in the yield and never overflows.
+- Semiannual, 10 years, first coupon half a year after settlement (t = 20): `ODDFPRICE(43831,47484,43800,44013,0.05,5.12154E+15,100,2,0)`
+  is -0.41666666666666546 and 5.22501E+15 `#NUM!`; with settlement mid-period (t = 19.5) 1.27233E+16 is a number and
+  1.29803E+16 `#NUM!`; a long first period (issue 43000) has the same boundary as t = 20. Annual (t = 10) 1E+17 is a
+  number and 1E+300 `#NUM!`. Basis 1 behaves alike.
+- ODDLPRICE stays a number at every yield up to 9.99999999999999E+307 (`ODDLPRICE(47300,47484,47119,0.05,9.99999999999999E+307,100,2,0)`
+  is -2.5; a few periods, -0.41666666666666663).
+Evidence: probes/odd-bond-huge-yield-overflow (excel-graph, 2026-10-29, T-2659).
+Ours: matches since T-2659 (`OddFirstSchedule::discount_overflows`). ODDFYIELD and ODDLYIELD near the boundary: see "ODDFYIELD and ODDLYIELD at a price far from par" (T-3122).
+Status: VERIFIED (excel-graph)
+Tasks: T-2659
+
+## ODDFYIELD and ODDLYIELD at a price far from par
+Rule: ODDLYIELD is closed form and returned a number at every price probed, from 1E-300 (82 for one period,
+1264.17391304348 for a few) to 1E15 (-1.99999999999979). ODDFYIELD is a number from 1E-300 up to a price of 3E4 and
+`#NUM!` from 1E5 up (semiannual, 10 years, first coupon half a year after settlement, redemption 100). At a vanishing
+price ODDFYIELD saturates rather than failing: 13.745966692460962 for every price from 1E-20 down to 1E-300 (basis 1:
+13.614800524624842 at 1E-300), so no price of this bond makes ODDFYIELD fail from the low side. Why Excel stops at 13.7
+and where exactly between 3E4 and 1E5 it turns `#NUM!` were not probed. The result at 3E4, -3.5048035053499063, is below
+-2, so `1 + yield / frequency` is negative there, and Excel still returns it as a number (1E4 is -0.40210502794450986).
+- `ODDFYIELD(43831,47484,43800,44013,0.05,P,100,2,0)`: P = 1 is 3.9188814666622176, 150 is 0, 1000 is -0.19969492032817104,
+  3E4 is -3.5048035053499063, 1E5, 3E5, 1E6, 1E10 and 1E15 are `#NUM!`; annual (first coupon 44197) is `#NUM!` from 1E6 and
+  -0.18891309879713358 at 1000; a redemption of 1E300 stays a number (235.9546570552217 at P = 1E15).
+Evidence: probes/odd-yield-far-from-par (102 cells, excel-graph, 2026-10-31, T-3122).
+Ours: matches without a change; the solver is `odd_first_yield` in yield_solver.rs.
+Status: VERIFIED (excel-graph)
+Tasks: T-3122
+
 ## ODDFPRICE, ODDFYIELD, ODDLPRICE and ODDLYIELD check order
 Rule: the four odd-coupon functions read their arguments in order and check few of them as they read:
 1. The dates (settlement, maturity, then issue and first_coupon, or last_interest): an error or text is returned, and a
@@ -1321,7 +3514,8 @@ Rule: the four odd-coupon functions read their arguments in order and check few 
    or 4 as it is read (`ODDLPRICE(..,100,3,NA())` is `#NUM!`).
 3. basis: an error, text or boolean is returned, then outside 0-4 `#NUM!`.
 4. Only then the date order and value checks, all `#NUM!`: a settlement not before the maturity, an issue not before the
-   first coupon, a coupon date not before the maturity, ODDLPRICE's and ODDLYIELD's settlement on or before `last_interest`
+   first coupon, a coupon date not before the maturity, ODDFPRICE's and ODDFYIELD's settlement on or before the issue or on
+   or after the first coupon (see "ODDFPRICE and ODDFYIELD need issue < settlement < first_coupon"), ODDLPRICE's and ODDLYIELD's settlement on or before `last_interest`
    (`ODDLPRICE(42917,43200,42917,..)` is `#NUM!`, `ODDLPRICE(42918,43200,42917,0.0575,0.065,100,2,0)` = 99.44775142683748),
    a negative rate, a negative yld (ODDFYIELD and ODDLYIELD: a price of 0 or less), a redemption of 0 or less. So
    `ODDFPRICE(43832,43831,..,NA(),2,0)` is `#N/A` and `ODDLPRICE(43000,43200,42917,-0.05,..,TRUE)` `#VALUE!`.
@@ -1334,6 +3528,29 @@ that only the move takes past 9999-12-31 is `#NUM!` after the reads, as before T
 Ours: matches since T-2483 (`odd_args` and `odd_last_of` in financial_bonds.rs).
 Status: VERIFIED (excel-graph)
 Tasks: T-2483
+
+## ODDFPRICE and ODDFYIELD need issue < settlement < first_coupon
+Rule: ODDFPRICE and ODDFYIELD are `#NUM!` unless issue < settlement < first_coupon < maturity, at every frequency and
+basis. A settlement equal to the issue, before it (a day or a year), equal to the first coupon, a day after it, or
+anywhere between the first coupon and the maturity is `#NUM!`, as are a settlement on or after the maturity, an issue
+on or after the first coupon, and a first coupon on or after the maturity. This is ODDLPRICE's and ODDLYIELD's
+last_interest < settlement < maturity with the odd period moved to the front: both pairs price only a settlement inside
+the odd period. A settlement on a quasi-coupon date inside a long first period is a value.
+The domain checks match the ODDL* pair's: a negative rate is `#NUM!` and a rate of 0 is a value; ODDFPRICE's yld of
+0, 1E-12 and 2 are values and -0.01 `#NUM!`; ODDFYIELD's pr of 0 and -1 are `#NUM!` and 1E-6 a value (a yield of
+3.7 to 94), and a pr of 150 above a redemption of 100 is a negative yield, not `#NUM!`; a redemption of 0 or -100
+is `#NUM!` and 1E-9 a value.
+- `ODDFPRICE(DATE(2024,3,15),DATE(2030,6,15),DATE(2024,3,15),DATE(2024,6,15),0.05,0.06,100,2,0)` (settlement = issue)
+  and `ODDFPRICE(DATE(2027,1,1),DATE(2030,6,15),DATE(2024,3,15),DATE(2024,6,15),0.05,0.06,100,2,0)` are `#NUM!`.
+Evidence: probes/oddf-date-order-domain-sweep (1260 cells: 26 date and domain scenarios plus the yld or pr edges, at
+frequency 1, 2 and 4 by basis 0-4; maturity 2030-06-15, first coupon 2024-06-15, a short and a long first period;
+excel-graph, 2026-11-03, T-3652): P!A5:O19 and Y!A5:O19 `#NUM!`, P!A3:O3 the quasi-coupon settlement.
+Ours: matches since T-3652 (`odd_first_of` in financial_bonds.rs); before it a settlement outside the odd period was
+priced (P!A5:O11 and Y!A5:O11, 162 cells). The sweep's other off cells are ODDFYIELD's solver digits on the long
+first period with a settlement before the quasi-coupon date (Y!A2:O2, A22:O22, A33:O33, A34:O34, T-3031) and last
+ulps (P!A29, E29, T-1374; Y!I29, N29, T-3043).
+Status: VERIFIED (excel-graph)
+Tasks: T-3652
 
 ## ODDFPRICE and ODDFYIELD need the first coupon on the maturity's schedule
 
@@ -1390,30 +3607,88 @@ first_interest 2956456 (9994-07-01; coupons on 1 January and 1 July), `ACCRINT(2
 (next coupon 10000-07-01) and accrues with frequency 4 (next coupon 9999-10-01). calc_method FALSE does not walk the schedule and is not affected (a settlement on 9999-12-30 accrues).
 Evidence: probes/date-system-1900-accrint-settlement-bound A23:A53 and its 1904 twin
 date-system-1904-accrint-settlement-bound (the same cells, every date 2 * 1462 serials lower; excel-graph,
-2026-10-13, T-1494).
+2026-10-13, T-1494). Since 2026-10-21 a 1904 workbook's ACCRINT reads those serials as the dates themselves, eight
+years before the 1900 cells, so its twin no longer reaches the cut and gives the 1900 values of its own dates
+(re-filled 2026-10-27; dates.md "The 1904 date system: ACCRINT, COUPNUM and the TBILL functions read the date itself").
 Ours: `compute_accrint` (functions/financial/accrint.rs).
 Status: VERIFIED (excel-graph). Tasks: T-1494.
 
-## COUPDAYS basis 1 around 29 February
-Rule: COUPDAYS on basis 1 is the length of the coupon period around settlement, except that when that period (as
-COUPPCD/COUPNCD give it, with the end-of-month rule) starts or ends on a 29 February that is not the maturity, it is
-the length of the period of the schedule walked back from the maturity *without* the end-of-month rule (each date
-the one after it moved back a period, its day clamped to the month). So with maturity 2025-02-28 the dates fall on the
-28th: `COUPDAYS(DATE(2023,11,15),DATE(2025,2,28),2,1)` is 184 (2023-08-28 to 2024-02-28) while COUPPCD, COUPNCD,
-COUPDAYBS (76) and COUPDAYSNC (106) describe 2023-08-31 to 2024-02-29 (182 days); settlement 2024-03-15 gives 182
-(2024-02-28 to 2024-08-28, not 184), settlement 2024-02-28 gives 182 (2024-02-28 is then the period's start) and
-2024-02-27 gives 184. A maturity of 2025-08-31 (frequency 2) and of 2025-05-31 (frequency 4) behave the same, since
-the walk passes 2025-02-28: 184 and 92 for settlements 2023-11-15 and 2023-12-15. Frequency 1, maturity 2025-02-28,
-settlement 2023-06-15: 365, not 366. A period ending on 28 February of a common year keeps the end-of-month rule
-(2099-08-31 to 2100-02-28, 181), and so does one ending on a 29 February that is the maturity
-(`COUPDAYS(DATE(2399,11,15),DATE(2400,2,29),2,1)` is 182). 1900-02-28 takes the rule like a 29 February (Excel's
-1900 has a 29 February): `COUPDAYS(59,36585,4,1)` is 90 (probes/fin-coupon-walk-bounds-c G5). Only COUPDAYS shows it: PRICE and DURATION on basis 1 use the
-182-day period, and bases 0, 2, 3 and 4 have fixed lengths. Unprobed: a walk that lands on a 29 February itself (maturity 2028-08-31, settlement 2027-11-15; the rule predicts 184, 2027-08-29 to 2028-02-29).
-Evidence: probes/coupdays-feb-month-end (296 cells, excel-graph, 2026-10-13, T-1493) and
-probes/date-system-1900-financial-readers E15.
-Ours: `coupdays_actual` (functions/financial/financial_bonds/coupon_schedule.rs).
+## COUPDAYS basis 1 counts from the chained next coupon
+Rule: COUPDAYS on basis 1 is not COUPNCD - COUPPCD. Excel walks the schedule back from the maturity *without* the
+end-of-month rule (each date the one after it moved back a period, its day clamped to the month, so the day can drift),
+takes the first date of that walk after settlement, B, and counts from A, B moved back one period: to the last day of
+A's month when B is the last day of its month, else B's day clamped. Excel's 1900 has a 29 February, so 1900-02-28 is
+not a month end. If A is after settlement, Excel steps back once more (B := A, A from it the same way). A date before
+1900-01-01 compares one higher than its serial in that test (1899-12-31 as 1). The count is the serial difference,
+except: real-calendar days when B is before 1900-01-01, or when A is and there was no extra step; B's serial (A reads
+as serial 0) when A is before 1900-01-01 after the extra step.
+- Month-end schedules inside the calendar (maturity 2019-03-31 semiannual): 181 for settlement 1950-01-15 (1949-09-30
+  to 1950-03-30; COUPPCD and COUPNCD describe 1949-09-30 to 1950-03-31, 182), 183 for 1950-06-15 (1950-03-31 to
+  1950-09-30), and 182 for 2018-12-15 (the walk's first date is the maturity). Maturity 2019-04-30 semiannual: 183 for
+  2018-06-15 (2018-04-30 to 2018-10-30, not 184). Maturity 2019-01-31 quarterly: 92 for 1950-01-15 (1949-10-30 to
+  1950-01-30), 91 for 1950-06-15 (1950-04-30 to 1950-07-30), but 92 for 2018-06-15 (the walk is still on the 31st:
+  2018-04-30 to 2018-07-31). A maturity on the 30th that is not a month end: 2019-12-30 semiannual gives 181 for
+  2018-01-15 (B = 2018-06-30, a month end, so A = 2017-12-31), 183 for 2018-08-15.
+- Around 29 February (T-1493): maturity 2025-02-28 semiannual, settlement 2023-11-15: 184 (2023-08-28 to 2024-02-28,
+  since 2024-02-28 is not a month end), while COUPPCD, COUPNCD, COUPDAYBS (76) and COUPDAYSNC (106) describe 2023-08-31
+  to 2024-02-29; settlement 2024-03-15 gives 182 (2024-02-28 to 2024-08-28), 2024-02-28 gives 182 and 2024-02-27 184.
+  Frequency 1, maturity 2025-02-28, settlement 2023-06-15: 365. A maturity on a 29 February is a month end
+  (`COUPDAYS(DATE(2399,11,15),DATE(2400,2,29),2,1)` is 182), and so is 28 February of a common year (2099-08-31 to
+  2100-02-28, 181). `COUPDAYS(59,36585,4,1)` is 90 (1900-02-28 is not a month end). A walk that lands on a 29 February
+  counts from the month end: `COUPDAYS(DATE(2027,11,15),DATE(2028,8,31),2,1)` is 182 (2027-08-31 to 2028-02-29; T-1493
+  had predicted 184), and `COUPDAYS(DATE(2027,11,15),DATE(2028,5,31),4,1)` is 92 (2027-08-29 to 2027-11-29).
+- Before the calendar (T-2640): maturity 2019-03-31 semiannual is 181 for settlements 0 to 89 (1899-09-30 to
+  1900-03-30, real days), 91 for 90 (1900-03-30: A = 1900-03-31 is after it, so 1899-09-30 to 1900-03-31 counted as
+  serial 91 - 0) and 183 from 91; maturity 2019-05-31 is 152 at settlement 151. Maturity 2019-12-31 or 9999-12-31
+  semiannual (also 2019-12-30 and 2019-06-30): 184 for a settlement in [0, 1) (A = 1899-12-31 compares as 1, so
+  1899-06-30 to 1899-12-31) and 181 from 1 (1899-12-31 to 1900-06-30); maturity 2019-12-29 is 182. Quarterly
+  maturity 2019-01-31 is 31 at settlement 30. Annual month-end schedules are 365 throughout 1900 except the February
+  one, 366 from settlement 59.
+Only COUPDAYS shows it: COUPPCD, COUPNCD, COUPDAYBS and COUPDAYSNC keep the end-of-month schedule
+(`COUPNCD(0,2958465,2)` = 182, `COUPDAYBS(0,2958465,2,1)` = 0, `COUPDAYSNC(0,2958465,2,1)` = 182), PRICE and DURATION
+on basis 1 use COUPNCD - COUPPCD, and bases 0, 2, 3 and 4 have fixed lengths.
+Evidence: probes/coupdays-pre1900-control (1,728 cells: settlements on the 15th of every month of 1900, 1901, 1904, 1950,
+2000 and 2018 against 12 schedules), coupdays-pre1900-sweep (6,316 cells: every settlement 0 to 370 on 38 schedules),
+coupdays-pre1900-period (148 cells) (excel-graph, 2026-10-25, T-2640); coup-calendar-edges C1-C21, D1-I12 (T-2486);
+coupdays-feb-month-end (296 cells, T-1493) and date-system-1900-financial-readers E15; gen-m9/b72d952c5f52cb4d Calc!A88
+(`COUPDAYS(5E-05,2958465,2,1)` = 184). The rule reproduces all 7,422 basis-1 COUPDAYS cells of the 1900-system probes.
+Ours: `coupdays_actual` (functions/financial/financial_bonds/coupon_schedule.rs). Before T-2640 it counted
+COUPNCD - COUPPCD (the real calendar before 1900) and walked the chained schedule only around a 29 February.
 Status: VERIFIED (excel-graph)
-Tasks: T-1489, T-1493
+Tasks: T-1489, T-1493, T-2486, T-2640
+
+## Coupon dates keep the maturity's day
+Rule: every coupon date of the COUP* schedule is the maturity moved back a whole number of periods, its day clamped to
+the month (or the month's last day under the end-of-month rule), so a maturity on the 29th or 30th that is not a month
+end keeps that day after a short month: maturity 2027-11-29 quarterly has coupons on 2003-08-29 and 2003-11-29
+(`COUPPCD(37913,46720,4)` = 37862, `COUPNCD` 37954, `COUPDAYBS(37913,46720,4,4)` and on basis 0 = 50,
+`COUPDAYSNC(..,1)` = 41), and maturity 2027-05-30 quarterly has 2019-11-30 and 2020-02-29 (`COUPPCD(DATE(2020,1,1),
+DATE(2027,5,30),4)` = 43799, `COUPNCD` 43890); maturity 2027-08-29 semiannual has 2025-02-28 (common year) but 2025-05-29
+quarterly. PRICE, YIELD, DURATION, MDURATION, ODDFPRICE and ODDFYIELD use the same schedule:
+`PRICE(37913,46720,0.05,0.06,100,4,0)` = 87.29595935878451, `DURATION(37913,46720,0.05,0.06,4,0)` = 13.296825458940603,
+and with maturity 2027-11-29 an ODDFPRICE or ODDFYIELD first coupon of 2003-11-29 is on the schedule (87.29680647881554)
+while 2003-11-28 is `#NUM!`. Only COUPDAYS on basis 1 (and, below, ODDLPRICE, ODDLYIELD and ACCRINT, each in its own walk direction) walks the chained schedule, each date clamped from its neighbour
+in the walk ("COUPDAYS basis 1 counts from the chained next coupon").
+Evidence: probes/coup-calendar-edges B1-B14, J1-J14 (excel-graph, 2026-10-25, T-2486); gen-m9/7d2979fba2c95d64 Calc!A304.
+Ours: matches since T-2486 (`coupon_period` in financial_bonds/coupon_schedule.rs, which the COUP*, PRICE, YIELD,
+DURATION, MDURATION and ODDF* schedules read); before it the walk stepped from each date to the next, so the day drifted
+to the 28th after the first February (COUPDAYBS was 51, the PRICE above 87.29662784091713, and the ODDF* first coupon
+had to be the 28th). The ODDL* and ACCRINT walks (`change_month` in financial_bonds.rs, accrint.rs) step date to
+date, and Excel does the same: EXCEPTION to this rule, Excel's ODDLPRICE, ODDLYIELD and ACCRINT coupon walks DRIFT. Each
+date is clamped from the previous one, so after a February the 29th/30th becomes the 28th/29th and stays there. Do not
+"unify" them with `coupon_period`. Evidence: probes/oddl-accrint-february-day (excel-graph, T-2639, 49 cells, ours matches
+all). ODDLPRICE and ODDLYIELD give the same value for a last interest on the 29th and on the 30th (A1/A4, A2/A5, A3/A6,
+A7/A10, A32/A35, A44/A47 and the other pairs, frequencies 2 and 4, bases 0 and 1): after the first February both schedules
+sit on the same day, which only a drifting walk does (a walk anchored on the last interest keeps the 29th and 30th
+apart). Only A13-A15 (Oct 30 -> Jan 30 -> Apr 30, never a February) do not discriminate. ACCRINT's backward walk from the
+first interest drifts too: A16 (issue 2023-08-15, first interest 2024-08-30, frequency 2, basis 0, calc_method TRUE) =
+56.26086281812539 = 25 * (31/180 + 2 + 14/179), whose issue stub ends on 2023-08-29 (14 days of a 179-day period
+from 2023-02-28), not on 2023-08-30; and the quarterly first interests 2024-05-30 and 2024-05-29 differ (A24 =
+35.833..., A28 = 35.972...), as the drifting stub ends differ. ACCRINT basis 0 with calc_method FALSE is equal for the
+two days (A18 = A22).
+Ours: matches (the date-to-date `change_month` walk). Keep it: it is deliberate Excel behaviour.
+Status: VERIFIED (excel-graph)
+Tasks: T-2486, T-2639
 
 ## YIELD stops short of PRICE's root
 Rule: YIELD's last digits are not the exact root of PRICE: Excel stops early, below the root, by up to about 1e-9
@@ -1499,8 +3774,8 @@ reaches 0.0593019, 98 / 0.05 / 2110 (A18) 0.0519331, 90 / 0 / 2098 (A26) 0.04568
 and the root cells). The cells at the root need no S.
 These cells also contradict the stop rule above (first step below about 7e-6): B2 stops with PRICE 2.0e-8 above the
 target after a last step of 7.54e-6, above T-2187's 7.11e-6 upper bound (B17), so the absolute cut is ruled out; B2
-(2.4e-4 relative) and A26 (last step 6.87e-6, 1.43e-4 relative) rule out the relative cut. The stop rule needs
-re-probing (T-2330).
+(2.4e-4 relative) and A26 (last step 6.87e-6, 1.43e-4 relative) rule out the relative cut. Resolved by T-1592's short stop (T-2330, below): B2 and A26 return the iterate
+before a 9.13e-11 and a 6.52e-11 step that is not taken, each 1 ulp from Excel.
 T-1592 (third round, 2026-10-24): a numerical derivative does not explain S either. Newton with a finite-difference
 derivative (forward or central, step 1e-8 to 1e-2 absolute or relative to y, also -1e-4 and -1e-3; from 0, 0.1, the coupon rate
 or the current yield; stops on the step at 1e-10 to 1e-5 or on |PRICE - pr| at 1e-8 to 1e-6; 560 variants in a scratch grid)
@@ -1509,44 +3784,632 @@ variants: 5/178 bit-exact and 14 within 4 ulp at best; the family union 14/178, 
 back-chained S is not an artefact of assuming an analytic derivative. Nor is S an iterate of Newton on the frequency-free annuity
 model (redemption 100, compounding 1, 2, 3, 4, 6, 12 or 365 times a year, or continuous, over the basis term T) from 0, 0.01,
 0.05, 0.1, 0.5 or 1: no iterate comes within 5e-4 relative of the starts of A1, D2, E1, E4 or E5 (scratch arithmetic).
-Next (T-1592, T-2330): fit S on the T-2304 grid (it moves with term, rate and price) and re-probe the stop rule.
-Ours: Newton from the coupon rate to 1e-8, which lands on the root; the stopping rule is unfitted.
-Status: UNVERIFIED (the algorithm); the values are excel-graph
-Tasks: T-1374, T-1493, T-1525, T-1533, T-1583, T-1592, T-2187, T-2304
+Next (T-1592): fit S on the T-2304 grid (it moves with term, rate and price); the stop rule is settled below (T-2330).
+T-2740 (probes/yield-start-one-input, excel-graph 2026-10-25; T-2304's A8 bond `YIELD(DATE(2096,3,1),M,R,P,100.5,F,0)`,
+M = DATE(2100,6,30), R = 0.05, P = 98 unless varied; column A frequency 2, B frequency 1; rows 1-41 P 80 to 100 by 0.5,
+42-66 R 0 to 0.12 by 0.005, 67-96 M on 30 June 2097 to 2126). The lab's `newton_back_chain` gives:
+- Step count: on every row with both twins below the root (rows 22-96 but 67) A and B step back exactly **two**
+  iterates to one S, to 1.3e-8 (the back-chain's own precision); one step back they differ by 2.2e-7 to 3.7e-4, three
+  steps back by 3.6e-5 to 2.8e-3. So S is two Newton steps before Excel's value on this bond, at frequency 2 and 1 alike.
+- At the root (|PRICE(y) - P| below 1e-11, so no S): both twins on rows 1-5 (P 80 to 82) and row 67 (maturity 2097);
+  only B on rows 6-21 (P 82.5 to 90), whose A cells alone leave the step count open.
+- Rate: S = 0.0046704412 + 1.01128042·R over rows 42-66, to 6e-9, i.e. linear in the coupon rate within the
+  back-chain's precision (row 52, R = 0.05, is 0.0552344615, the T-2187 start 0.0552344627).
+- Price: at P = 100 S is the coupon rate (row 41: 0.0499999981 and 0.0500000009). Below, S - R grows faster than
+  linearly in 100 - P: (S - R)/(100 - P) is 0.0025953 at P 99.5, 0.0026172 at 98, 0.0027328 at 90.5. No simple form
+  fitted yet (time-box).
+- Term: S falls toward the coupon rate as the maturity grows (0.0593019 for 2098, 0.0552345 for 2100, 0.0526987 for
+  2105, 0.0516858 for 2113, 0.0511796 for 2126); (S - R)·T, with T the years from settlement, is not constant (about
+  0.0232 at 2101, 0.0353 at 2125), so not a plain 1/T. No form fitted yet.
+Read together: a start that equals the coupon at par and moves linearly with the coupon looks like a current-yield or
+yield-approximation formula; T-1592 is the place to fit it. Lab test: `test_yield_start_one_input_two_steps_back`.
+T-1592 (fourth round, 2026-10-26): the start and the stop rule are fitted.
+- Start: S = (100·R + (100 - P)/T) / ((100 + P)/2 - (100 - P)/(4T)), with T the basis's settlement-to-maturity days
+  over 360 (over 365 on bases 1 and 3; T-2777 below replaces this term on every basis). On yield-start-one-input
+  rows 22-96 (but 67) the two-steps-back start fits a denominator P + w(100 - P) where (1/2 - w)·T is 0.25000 on every
+  row (prices 90.5 to 99.5, rates 0 to 0.12, terms 2.3 to 30.3 years). At price 98 and T = 1559/360 that gives
+  0.0552344627, the T-2187 start. It does not use the redemption, the frequency or the coupon schedule. Rows 1-21 and 67 sit
+  at the root, so the back-chain cannot reach their start.
+- Stop: an analytic-Newton step on PRICE (the `^`-priced PRICE that PRICE itself computes) that is below 1e-10 is not
+  taken, so the value is the iterate before it. That is why the values sit short of the root. The cut lies between 9.67e-11
+  (a step yield-start-sweep C18 does not take) and 1.01e-10 (one yield-start-one-input B21 takes; tightened by T-2330 below). This replaces the step-size
+  cuts tried in T-2187 and T-2304: their 6e-6 to 7e-6 "last steps" are the step before the one that is not taken.
+- Stop re-checked on every cell (T-2330, lab arithmetic, `^`-priced, from the fitted start with T-2777's term): of the 741
+  YIELD probe cells with more than one coupon left (solver-iteration-traces, bond-one-period-bases, yield-solver-sweep,
+  yield-start-sweep, yield-start-one-input, yield-start-rate-term, yield-start-term-basis, yield-newton-domain), 721 are
+  matched within 4 ulp by some cut, and every one of them by any cut in (9.6715e-11, 1.0063e-10] (706 by the cut; the
+  15 large-redemption cells yield-newton-domain C1-C10 and C12-C16 return the 100th iterate whatever the cut): the largest step not
+  taken is yield-start-sweep C18's 9.6715e-11 (bit-exact) and the smallest taken is yield-start-one-input A5's
+  1.0063e-10 (1 ulp off; with bit-exact cells alone, yield-start-rate-term B1's 1.0081e-10). 1e-10 is inside;
+  whether the test is `<` or `<=` is not observable. No cut brings the other 20 within 4 ulp, so their miss is not the
+  stop: solver-iteration-traces Y!E2, yield-solver-sweep C7 and C11, yield-start-one-input B11, B17, B31, B54, B62 and
+  B69, yield-start-rate-term A20, B39 and B49, yield-start-term-basis A9, C11, C20, A26 and A38 (root-level last
+  digits), and yield-newton-domain A6, B2 and B3. Other stop tests score lower on the same cells: a step relative to the
+  iterate (best cut 1.5e-9) 677/741 and the residual |PRICE - pr| before the step (best cut 3.7e-8) 681/741; the
+  residual is ruled out by the bracketing pair itself (C18 does not step at a residual of 3.66e-8, A5 steps at 3.06e-8),
+  the relative step likewise (1.7e-9 not taken, 9.7e-10 taken). Lab test:
+  `test_yield_short_stop_cut_is_bracketed_by_two_cells`; T-2187's 6.9e-6 pin in
+  `test_yield_start_sweep_newton_from_a_shared_start` is now the short stop at 1e-10.
+- Lab fit `yield-caret` (family "Newton, fitted start"): 240/370 bit-exact and 361/370 within 4 ulp (`yield`, libm-priced:
+  212 and 340). Cut 1e-9: 194/370; 1e-11: 145/370. The previous best was 4/178. The 9 cells left are 7 to 33 ulp off
+  (solver-iteration-traces Y!E2; yield-solver-sweep C7 and C11, where the rate is 0.4 or 0.2; yield-start-one-input B11,
+  B17, B31, B54, B62 and B69), within 15 significant digits. Lab test: `test_yield_fitted_start_and_short_stop`.
+T-2777 (probes/yield-start-term-basis, excel-graph 2026-10-26/27; 159 cells `YIELD(S,M,0.05,P,100.5,F,B)`, columns P 98
+F 2, P 98 F 4 and P 110 F 2; 12 settlement-maturity pairs on bases 1, 2 and 3, and rows 37-53 on basis 0 and 4 with 28
+and 29 February settlements, plus sub-year terms): the start's term
+T is not the basis' days over a year. It is the whole years from settlement, then the basis' days from the last
+anniversary of the settlement to maturity over 360 on bases 0, 2 and 4, over 365 on basis 3, and over the length of
+the maturity's calendar year (365 or 366) on basis 1. A 29 February settlement has its anniversaries on 1 March in
+common years. Examples: 31 January 2010 to 30 January 2020 is 9 + 364/366 on basis 1 (2020 is a leap year), not
+3651/365; 5 July 2004 to 15 May 2022 is 17 + 314/360 on basis 2 (gen-m9 A189), not 6523/360; 29 February 2012 to
+15 August 2019 is 7 + 167/365 on basis 1 and 7 + DAYS360(1 March 2019, 15 August 2019)/360 = 7 + 164/360 on basis 0,
+not DAYS360 over the whole term (2685/360). The 30/360 count starts at the anniversary, so its end-of-February rule looks
+at the anniversary, not the settlement: 28 February 2015 to 15 August 2016 on basis 0 is 1 + DAYS360(28 February 2016,
+15 August 2016)/360 = 1 + 167/360, not DAYS360's 525/360 (row 46), and 29 February 2012 to 15 August 2019 on basis 4
+is 7 + 164/360 (row 41). Counted back from maturity instead, or with 29 February anniversaries on 28 February,
+or with the anniversary year's or the settlement year's length on basis 1, the fit is worse (lab arithmetic,
+cells bit-exact / within 4 ulp, of rows 1-40: this rule 59/115; forward with 28 February 46/103 at best; back from maturity
+48/92 at best; the days over a year 8/14; lab `solvers.start_years` on all 159 cells 79/153, the days over a year
+18/34). In the lab, rows 41-53 are all within 2 ulp under this rule, where the old term misses rows 41, 46, 47, 49, 51 and 53 by
+3e-15 to 1.4e-9. The 5 cells left (A9, C11, C20, A26, A38) sit at PRICE's root (next step 1e-12 to
+1e-16) and are 4e-15 to 1e-14 off, the root-level last digits of T-2788; the engine also leaves the sub-year cells
+B50 and A52 10 to 12 ulp off (their term is 344/365 under either rule, so the miss is in the Newton or PRICE), with their twins in the other columns
+within 2 ulp. gen-m9/ba4ddb817a8e700e A17 (basis 1, 20 + 284/365) becomes bit-exact; gen-m9/81bcdc0bec0c8e6b A189
+(basis 2) moves from 3e-11 off to 8 ulp. The dates are the ones Excel shows: serial 60 is 29 February 1900, so
+`YIELD(60,36585,0.05,90,100,4)` (to 29 February 2000) starts from 100 years and keeps Excel's bits
+(probes/fin-coupon-walk-bounds-c H12), where 28 February 1900 would give 100 + 1/360. Lab: `solvers.start_years`, pinned in
+tools/tests/test_fitlab_solvers.py::test_yield_start_term_whole_years_then_leftover_days.
+T-2974 (attempt 1, 2026-10-29; the three visibly-off cells yield-start-rate-term S!B39 and S!B49, yield-solver-sweep
+S!C7, and yield-newton-domain P!B2): the miss is not in PRICE. probes/yield-price-at-iterates (excel-graph, 59 PRICE
+cells) asks Excel's PRICE at the exact iterates of our Newton (each yield written as `(hi*2^26+lo)/2^k`, so Excel reads
+the double unrounded) and at Excel's own YIELD value, on these four, B11, B54, B62, B69, C11 and Y!E2 (11 to 33 ulp
+off) and four controls (yield-solver-sweep A1 and
+yield-start-sweep C18 bit-exact, yield-start-one-input A54 and A62 within 2 ulps). The lab's `^`-priced PRICE (`solvers.caret_pow`) equals Excel's to the bit on all 59. The engine's misses 4 of them (B4,
+C3, C7, D4) by 1 to 2 ulps, where its `power` and the lab's `excel_model` disagree (T-3144); its YIELD misses do not
+come from these. Each miss is 2 to 10 ulps
+of price on the iterate before the last step taken (C7 1.4e-13, P!B2 1.3e-13, B49 1.4e-13, B39 3.4e-14), or a slope
+4e-10 to 1e-9 relative off, far above rounding. So Excel's iterates are not ours: its start or slope differ, or its
+solver prices with something other than its PRICE function. More findings:
+- On yield-solver-sweep S!C7 (yield-price-at-iterates P!A1), which takes one step from the start, Excel's bits come from starts 2.2e-10 to 1.45e-9 relative below the
+  fitted start (4 of 6,001 starts scanned in steps of 1e-11 relative). So the fitted start, accurate only to the
+  back-chain's 1e-8, is off there.
+- On the cells with two or more steps (B39, B49, P!B2, and B11, B54, B62, B69, C11, Y!E2), Excel's bits come from 1%
+  to 8% of starts scattered over ±3e-8 relative around the fitted one. Their last bits ride on the rounding of the
+  iterate before the last step, about 7 yield ulps per price ulp, so only an exact start reaches them. Of the
+  frequency-1 cells, all but Y!E2 (7 ulps low) are 11 to 33 ulps high.
+- PRICE variants scored (lab arithmetic, `^`-priced, from the fitted start with the short stop; bit-exact and within
+  4 ulp of the 370 `yield-caret` cells): coupons summed forward 240/361 (the engine), backward 190/324; the redemption
+  summed first 171/308 at best; the accrued subtracted from the redemption 209/343 or from the coupons 89/219;
+  discounting split as `v^(DSC/E)·v^(k-1)` and recursive `term/v` 192/321 at best; the coupons factored as
+  `c·Σ v^-t` 171/308; the last coupon merged with the redemption into one cash flow 203/426; the accrued moved onto the
+  target (`dirty - (pr + accrued)`) 334/541 of 570 cells (this one scored on all 570 YIELD probe cells, against
+  337/543); the slope as `t·c/v^t/v/f` or `(t/f)·c/v^(t+1)` 236 to 240. libm prices instead of `^` scored too. No
+  variant moves C7 below 18 ulps. The best per cell (B39 and B49 1 ulp) comes from kernels that score 90 to 190
+  overall.
+- Start arrangements (algebraically the same, rounded differently; of 570 YIELD probe cells): the engine's
+  `((100 + pr)/2 - (100 - pr)/(4T))` denominator 335/540; `pr + (0.5 - 0.25/T)(100 - pr)` 337/543, which makes
+  P!B2, P!A6 and P!B4 bit-exact. In the engine it fixes 8 YIELD cells and regresses 6 (each within 2 ulps). On
+  ODDFYIELD, which shares the start, it fixes 27 cells and regresses 26, and oddfyield-solver-sweep S!C92 becomes
+  visibly off (61 ulps). About 20 arrangements and terms were scored, so one hitting P!B2 is chance. It was not kept.
+  Multiplying the denominator through by T or 4T scores 247; whole years plus days over the year against
+  `(whole·year + days)/year` makes no difference.
+Next: refine the start on cells that step once from it (as C7 does). There, Excel's bits fix the start to about 1e-9.
+Collect such cells over rates, prices and terms, and fit the start to that precision instead of the back-chain's 1e-8.
+T-2974 (attempt 2, 2026-10-29): Excel's start is the fitted formula **rounded once, over the exact term**.
+- The cells that take one Newton step from the start show its last bit, not its value to 1e-9. One ulp of start moves
+  PRICE at the start by about a price ulp, which is about 25 yield ulps of the step. Excel's value then jumps by that
+  much between neighbouring starts: on yield-solver-sweep C7, our start gives +27 ulps and the next double up gives
+  Excel's bits. A linear fit of the step's result against the start's value finds Excel's start within
+  ±0.5e-9 relative of the fitted one on all 15 distinct one-step bonds. The miss is in the rounding, not the formula.
+- Arrangements of the start (lab, `^`-priced, 761 YIELD probe cells, bit-exact):
+  | arrangement | bit-exact |
+  |---|---|
+  | the formula in doubles | 441 |
+  | the exact value rounded once, with `T` as the double `whole + days/year` | 498 |
+  | the same with `T` exact | 503 |
+  | x87 64-bit intermediates | 498 |
+  | the 64 mixes of rounded and exact intermediates, with `T` double or exact | 486 to 503 |
+  | rounded up | 437 |
+  | rounded down | 296 |
+  | 13 algebraic rearrangements in doubles | 337 to 447 |
+- Rounding up fixes C2, C7, C8, B39 and B49, but not P!B2. No single perturbation of `T` fits all eight basis-0 rates
+  (r = 0 needs none, r = 0.06 needs 6 to 20 ulps of `T`).
+- The engine now computes `(400 r N + 4 (100 - pr) Y) / (2 N (100 + pr) - (100 - pr) Y)`, with `T = N/Y`, in
+  double-double (`yield_start`). In the eval this fixes 256 YIELD and ODDFYIELD known failures and moves 148 YIELD and ODDFYIELD cells off
+  the bit, 9 of them visibly (decision 0162, follow-up T-3152). In-scope visibly-off cells go from 2,885 to 2,862.
+- yield-start-rate-term B49 has Excel's start now, but stays off (15 ulps) on the engine's PRICE, which differs from
+  the lab's `^` PRICE in the last bits (T-3144). In the lab it is bit-exact.
+- yield-solver-sweep C2, C7 and C8 (one step each) and yield-start-rate-term B39 need a start one ulp above the
+  correctly rounded one,
+  and yield-newton-domain P!B2 needs one below. So the single rounding is the closest model found, not Excel's exact
+  arithmetic.
+T-2974 (attempt 3, 2026-10-29): the best-fitting candidate for Excel's start is the term-scaled formula in doubles, with one multiply-add fused:
+`S = ((r·T)·100 + (100 - pr)) / (fma(pr, T, 100·T)/2 - (100 - pr)/4)`, where `T` is the double `whole + days/year` and
+each other operation rounds. A compiler would emit that for `(100·T + pr·T)/2` if it contracted `a·b + c` into an
+FMA, but that explanation is a hypothesis. The fit is not complete: about one start in five is still 1 or 2 ulps off.
+- Evidence: probes/yield-one-step-start (excel-graph, 2026-10-29; 360 cells). Each bond takes exactly one Newton step
+  from the start, because its redemption (which the start does not read) puts PRICE's root 5e-5 relative above the
+  start. `^` rounds PRICE's base `1 + y/f` to a double, so PRICE is a step function of y. Between two steps the one-step
+  value moves one ulp per ulp of start, so the cell shows the start's last bit. All 360 cells match the lab model for
+  a start within 2 ulps of the rounded-once one: 280 distinct starts, plus the 10 one-step starts of the older probes
+  (yield-solver-sweep A1:A12, C1:C8, yield-start-sweep D1, D2, yield-newton-domain D8). Twins at frequency 1, 2 and 4
+  always need the same start, so the start's bits do not depend on the frequency.
+- Starts matched exactly (lab arithmetic; 290 one-step starts, then 266 start sets read off multi-step cells, which
+  carry less information):
+  | start | one-step | multi-step |
+  |---|---|---|
+  | rounded once (the engine since attempt 2) | 152 | 159 |
+  | x87 64-bit intermediates, any term | 147 to 152 | 156 to 159 |
+  | the formula in doubles (T-1592's arrangement) | 129 | 134 |
+  | `((100r)·T + q) / ((100+pr)·T/2 - q/4)`, `q = 100 - pr` | 174 | 142 |
+  | `((r·T)·100 + q) / ((100+pr)·T/2 - q/4)` | 212 | 172 |
+  | the same with `fma(r·T, 100, q)` | 203 | 168 |
+  | `((r·T)·100 + q) / (100·T/2 + pr·T/2 - q/4)` | 217 | 171 |
+  | `((r·T)·100 + q) / (fma(pr, T, 100·T)/2 - q/4)` | **229** | **209** |
+  | about 60 others: `N·(1/D)`, rate plus a correction, other FMA placements, per-100 prices | below 229 | at most 209 |
+- On the groups whose term is a double exactly (4.75, 12 and 12.5 years; 63 starts), every term-scaled form with
+  `(r·T)·100` matches all 63 starts. Rounded-once matches 48 and the formula in doubles 39. So the misses come from how
+  `T` enters, not from the arrangement. Per group, no single double `T` (scanned ±3,000 ulps), no real-valued `T` in the
+  products, no coupon-schedule term `(N - 1 + DSC/E)/f`, no day-count form (`(whole·year + days)/year`,
+  `whole + days·(1/year)`, years + months/12 + days/360) and no split `r·whole + r·(days/year)` fits every start.
+- Ties: in the two groups where `100·T` is an exact rounding tie that rounds down to even (3 + 119/360 and
+  4 + 119/360 years), Excel's starts match only if `pr·T` takes `T`'s predecessor (30 of 30 and 8 of 8 one-step
+  starts). The ties that round up (7 + 167/360 and 10 + 289/360 years, 3 cells each) do not need that. Computing `100·T`
+  as `(10T)·10`, `25T·4`, `50T·2`, `T/0.01`, `75T + 25T` or `64T + 36T`, or rounding its ties up or down, does not
+  explain it. The tie rule is a diagnostic, not kept: it lifts the lab to 936 of 1,101 YIELD probe cells bit-exact
+  (yield-solver-sweep C2, C7, C8 and yield-newton-domain P!B2 become exact; yield-start-rate-term B39 stays 5 ulps off),
+  but without the mechanism it is a branch fitted to two terms.
+- Full lab (Newton on the `^` PRICE with the short stop; 1,101 cells, the 741 older probe cells plus the new 360):
+  rounded-once 704 bit-exact and 1,080 within 4 ulps; the FMA form 787 and 1,089. On the older cells alone the FMA form
+  scores 488 against 503. It loses 157 cells, 141 of them on the 4 + 119/360 bond (a tie group), and gains 142.
+  Finite-difference slopes (central, step 1e-7 to 1e-4 absolute or 1e-5 to 1e-3 relative, from the rounded-once start)
+  score at most 16 of 741, so the slope stays analytic.
+Next: find what the tie groups do to `pr·T`, then put the FMA form in `yield_start` (it changes ODDFYIELD too, which
+shares the start).
+T-2974 (attempt 4, 2026-10-29): the tie anomaly is the term's rounding. Excel's denominator reads `pr·T` with `T` as the
+exact sum `whole + fl(days/year)`, not that sum rounded to a double, and rounds `pr·T + fl(100·T)` once:
+`S = ((r·T)·100 + q) / (D/2 - q/4)`, `D = fl(pr·(whole + fl(days/year)) + fl(100·T))`, every other `T` the rounded
+double. An 80-bit register holding `T` for that one product would do it; that is a hypothesis.
+- Found by shifting `fl(100·T)` per term group: where its rounding is a tie that rounds down, Excel needs it one ulp
+  lower, and the best shift has the opposite sign of `100·T`'s rounding error elsewhere too. So the products see a `T`
+  other than the double. Scoring the term in each product as the double, the exact `N/Y`, `N/Y` rounded to 64 bits,
+  or `whole + fl(days/year)` exact or rounded to 64 bits, showed only `pr·T` wants the unrounded one.
+- Lab (`^`-priced PRICE, the short stop; 1,115 YIELD probe cells, attempt 3's set plus yield-price-at-iterates):
+  | start | bit-exact | within 4 ulps | tie groups (360 cells) |
+  |---|---|---|---|
+  | rounded once (decision 0162) | 709 | 1,087 | - |
+  | attempt 3's `fma(pr, T, 100·T)` | 790 | 1,097 | 134 |
+  | the same, `fl(100·T)` one ulp lower on down-rounded ties only (diagnostic) | 987 | 1,109 | 331 |
+  | `pr·T` with `T` = `N/Y` exact | 945 | 1,105 | 334 |
+  | `pr·T` with `T` = `whole + fl(days/year)` rounded to 64 bits | 954 | 1,106 | 334 |
+  | `pr·T` with `T` = `whole + fl(days/year)` exact | **960** | **1,108** | 334 |
+  | the same with the numerator `fma(r·T, 100, q)` | 935 | 1,106 | 335 |
+  | the same with the numerator in 64 bits on the unrounded term | 820 | 1,097 | 319 |
+  | `100·T` also from the unrounded term (numerator `fma(r·T, 100, q)`) | 857 | 1,103 | 335 |
+  | `100·T` as `100·whole + 100·(days/year)` or `(100·days)/year + 100·whole` | 697 to 699 | 1,094 | 134 |
+  | x87: `pr·T` rounded to 64 bits, the sum to 64 then 53 | 945 to 960 | 1,105 to 1,108 | 334 |
+  Twelve denominator arrangements around the FMA form (`(100 + pr)·T`, `fma(100, T, pr·T)`, `q/2` inside the FMA, halves
+  first) score 657 to 790.
+- yield-solver-sweep C7 and E12, yield-start-rate-term B39, yield-newton-domain P!B2 and yield-one-step-start A68 are
+  bit-exact under it, in the lab and in the engine. yield-start-rate-term B49 has Excel's start but stays 15 ulps off on
+  the engine's PRICE (T-3144).
+- The engine (`yield_start`, double-double for `D`): 515 known failures fixed, 58 YIELD and ODDFYIELD cells moved off
+  the bit (51 by 1 ulp, one visibly: yield-one-step-start A37, 32 ulps; decision 0166, follow-up T-3152). In-scope
+  visibly-off cells go from 3,166 to 3,141. The lab still misses 155 of 1,115 cells.
+T-3152 (attempt 1, 2026-10-30): no start built from the term-scaled formula's operations beats the engine's. The fit lab
+now names both earlier engine starts (kernels/yield_caret.py `rounded_once_yield_start`, `unrounded_term_yield_start`):
+`uv run rustsheet-fitlab yield-caret` (370 basis-0 cells) scores the rounded-once start 268 bit-exact and 361 within
+4 ulps, the unrounded-term start 341 and 369, T-1592's start in doubles 240 and 361.
+- Of the 9 cells decision 0162 listed visibly off, 6 are within 15 digits since attempt 4; yield-start-rate-term B30
+  and yield-start-term-basis C47 (each wants the start one ulp lower) and, from decision 0166, yield-one-step-start A37
+  (one ulp higher, which crosses a PRICE step: 32 ulps) are not. The lab reproduces each engine miss to the ulp, so
+  the miss is the start, not the engine's PRICE.
+- Scratch grid (1,100 YIELD probe cells with more than one coupon, all bases; a candidate scores a cell when its start
+  is one of the starts within 3 ulps of the engine's that give Excel's bits): `S = n/den` rounded, with each of the nine
+  operations of `n = (r·T)·100 + q` and `den = (pr·T + 100·T)/2 - q/4` exact or rounded to a double, and `T` in each of
+  `r·T`, `pr·T` and `100·T` the double, `whole + fl(days/year)` exact, or `whole + days/year` exact (13,824
+  candidates). Best: 945, the engine's arrangement and eleven equivalents (`pr·T` exact on `whole + fl(days/year)`,
+  rounding of `D`, `D/2`, `q/4` or `den` immaterial). All in doubles 676, attempt 3's FMA form 775, all exact 694. Every
+  one of the 1,100 cells has a start within 3 ulps that gives Excel's bits.
+- Misses are not per term: in the 8 + 309/360 group (yield-one-step-start, 44 cells) 20 take the engine's start and 24
+  need one ulp more, with the engine's exact quotient anywhere from -0.44 to +0.28 ulps off its rounding. On the 360
+  one-step cells the relative slope error that would explain each miss instead runs evenly from -4e-12 to +5e-12 (A37 aside), so it
+  is no constant slope error either.
+Next (T-3215): a hypothesis outside this operation set (another formula whose terms round differently, or a start from a
+different day count per product); the operation grid around the term-scaled form is exhausted.
+T-3215 (attempt 2 of T-3152's track, 2026-10-30): Excel's start is the term-scaled formula in doubles with its
+denominator written as `100·T - q·T/2 - q/4`, the same value since `(100 + pr)/2 = 100 - q/2`:
+`S = ((r·T)·100 + q) / ((100·T - q·T/2) - q/4)`, `q = 100 - pr`, `T` the double `whole + days/year`. No operation
+is exact or fused. It replaces attempt 4's `pr·T` on the unrounded term.
+- Found from the denominators: for each YIELD probe cell, the doubles `D` that give Excel's bits with the engine's
+  numerator bound Excel's real `D` to an interval one ulp wide. On every term group that missed, it holds
+  `pr·T + 2·fl(100·T) - 100·T`, where `100·T`'s rounding error counts twice. That is what `100·T - q·T/2` leaves:
+  `2·(fl(100·T) - q·T/2) = pr·T + 2·fl(100·T) - 100·T`. The "unrounded term in `pr·T`" of attempt 4 was the nearest
+  arrangement inside the old operation grid to that doubled error.
+- Scratch scoring (1,086 YIELD probe cells with more than one coupon left, all bases, that some start within 3 ulps
+  of attempt 4's gives Excel's bits; a start scores a cell when it is one of those starts):
+  | denominator, numerator `(r·T)·100 + q` | cells |
+  |---|---|
+  | `(100·T - q·T/2) - q/4` in doubles, or `100·T - (q/2)·T - q/4` | **1,083** |
+  | `100·T - (q·T/2 + q/4)`, `100·T - q·(T/2 + 0.25)`, `100·T - q·(2T + 1)/4` | 1,077 |
+  | the same with `q·T` on the unrounded term, or the whole denominator rounded once | 1,071 to 1,076 |
+  | attempt 4: `fl(pr·(whole + fl(days/year)) + fl(100·T))/2 - q/4` (the engine before) | 931 |
+  | `((100 + pr)/2)·T - q/4` or `(100 - q/2)·T - q/4` | 678 |
+  | the unscaled `(100r + q/T) / (100 - q/2 - q/(4T))` | 588 |
+  With this denominator the numerator stays `(r·T)·100 + q`: `(100r)·T + q` scores 893, `r·(100T) + q` 882, and the
+  exact numerator rounded once 907. The three cells left are yield-start-one-input S!B8 (3 ulps of start),
+  yield-start-term-basis S!C2 (2 ulps, basis 1) and yield-newton-domain P!B13 (rate 30).
+- Fit lab (`uv run rustsheet-fitlab yield-caret`, 370 basis-0 cells, kernels/yield_caret.py
+  `hundred_t_minus_qt_yield_start`): 369 bit-exact and 370 within 4 ulps, against 341 and 369 for attempt 4's start.
+- In the engine (`yield_start`) it fixes 226 YIELD and ODDFYIELD known failures and adds none: yield-start-rate-term
+  S!B30, yield-start-term-basis S!C47 and yield-one-step-start S!A37 are bit-exact, and 63 of the cells are
+  oddfyield-solver-sweep's (ODDFYIELD shares the start).
+T-2788 (2026-11-07): PRICE discounts the redemption at `(n - 1) + DSC/E`, not `(DSC/E + n) - 1`. The two sums
+round differently in the last bit of the exponent, so `^` and the price move by an ulp, and YIELD's Newton turns
+that ulp into 8 to 11 ulps of yield. yield-start-one-input S!B67, yield-start-term-basis S!A52 and S!B50 were 8 to 11
+ulps off in the engine and bit-exact in the fit lab, whose `solvers.price` already took `(n - 1) + DSC/E`. The `^`
+factors were the same in both (928 factors compared, the 16 that differ are on other cells), and the accrued order
+(`rate/f · (A/E) · 100` against `100 · rate/f · A/E`) does not move them.
+- Lab (`yield-caret`, 370 cells): `(n - 1) + DSC/E` 369 bit-exact, `(DSC/E + n) - 1` 368. Hold-out (fixed split, 127
+  cells): 242/243 train and 127/127 test against 241/243 and 127/127; B67 is a train cell.
+- Fresh sweep accuracy/YIELD/r4-T-2788 (300 points, drawn and filled after the change was fixed; excel-graph,
+  2026-11-07): 288 bit-exact against 284, and 4 points outside Gate A's envelope against 5 (A237 comes inside). The
+  4 left fail the same way under both orders: A194 and A239 are `#NUM!` in Excel (T-4523), A252 and A267 stop short
+  of the root outside Excel's 15 digits (T-4758).
+- In the eval it fixes those three cells and coup-calendar-edges S!J12, with no regression in any suite.
+- The evidence for PRICE itself is indirect: no PRICE probe cell yet sits where `fl(fl(DSC/E + n) - 1)` and
+  `fl((n - 1) + DSC/E)` differ and changes its value (T-4758 asks for one).
+Evidence: the probes above (excel-graph), the r4-T-2788 batch. DURATION's own cash-flow sum (`add_cash_flow`) still
+takes `DSC/E + n - 1`; no cell has shown it to differ.
+Ours: since T-1592 the fitted start and stop on the `^`-priced PRICE with an analytic slope (`excel_yield_newton`), with
+T-2777's term (`yield_start_term`) and, since T-3215, the denominator `100·T - q·T/2 - q/4` in doubles (`yield_start`). Since
+T-2391 there is no fallback: an iterate off PRICE's domain is `#NUM!` and the 100th iterate is the value ("YIELD's #NUM!
+cells and its 100-step cap").
+Off the fit (T-2741, `make eval` on de48145d): of the 370 probe and ironcalc-calc YIELD cells that were visibly off
+before T-1592, 367 are now within Excel's 15 digits. Those cells come from yield-start-rate-term, yield-start-sweep,
+yield-solver-sweep, PRICE_YIELD.xlsx's I column, solver-iteration-traces, the 1900 date-system readers and the
+fin-* probes. PRICE_YIELD!I30 (0.06499999999159671, short of PRICE's own 0.065) is bit-exact. Both
+date-system-1900-financial-readers S!E8 twins and yield-start-rate-term S!B20 are 1 ulp off. The twins are the same bond
+four years apart, and their start's term in the basis's years differs, so Excel's values differ by 8e-11 and ours
+follow (`fn_yield_matches_excel_off_the_fit`). Still visibly off, though only 5 to 27 ulp from Excel (a gap larger than half a
+unit in the 15th digit): yield-start-rate-term S!B39 and S!B49 (basis 1, 8 and 30 years) and yield-solver-sweep S!C7
+(T-2974).
+Status: UNVERIFIED (the algorithm is a fit: 369/370 bit-exact in the lab since T-3215; 367/370 of T-2741's cells within 15 digits); the values are excel-graph
+Tasks: T-1374, T-1493, T-1525, T-1533, T-1583, T-1592, T-2187, T-2304, T-2740, T-2741, T-2777 (the start's term), T-2788 (the last ulps; the redemption exponent's order), T-2974 (the three visibly-off cells; probes/yield-price-at-iterates), T-3152 (the cells the start's rounding moved), T-3215 (the start's denominator), T-4758 (the residue)
 
-## YIELD's #NUM! cells and its suspected 100-step cap
-Rule: Excel's YIELD is `#NUM!` at some inputs where PRICE has a root, and returns a number that is not a root at others;
-neither follows from Newton on PRICE from the coupon rate alone:
+## ODDFYIELD stops short of ODDFPRICE's root
+Rule: ODDFYIELD's last digits are not the root of ODDFPRICE's price at the given price, and they fall on both sides
+of it, so they are not analytic Newton on that price stopped short (Newton on a convex, decreasing price stays below
+the root after its first step; "YIELD stops short of PRICE's root").
+Fitted (T-2007 attempt 2): ODDFYIELD is YIELD's Newton ("YIELD stops short of PRICE's root": YIELD's closed-form
+start over the term in years from settlement to maturity, a step under 1e-10 not taken, 100 steps at most, #NUM!
+when a step is not finite) on ODDFPRICE, but its slope is not ODDFPRICE's: the odd first coupon weighs in the slope
+as a regular coupon (100 × rate / frequency at the odd coupon's exponent, not the odd amount DFC/E or DCNL of a
+coupon). That wrong slope is what lands Excel above the root. On probes/oddfyield-solver-sweep (a short-first 5%
+semiannual bond, the same bond at a 0% coupon, and a short-first annual 6% bond at redemption 120, over prices 50
+to 150, and two ODDFPRICE inversions over yields 0 to 0.3) this model puts 98 of 101 zero-coupon cells within 4 ulp
+(39 bit-exact; there the slope is exact) and 323 of 324 coupon-bond cells within 1e-13 relative on libm prices,
+against 15 for ODDFPRICE's exact slope; in the engine 320 of the 547 sweep cells and every probe ODDFYIELD cell of
+the date-system cases pass bit-exact or within the harness' ulp tolerance. The long first periods, which this
+left off, have their own slope (T-3031, below). T-2007 tried for them, with no better score
+(PRICE_YIELD.xlsx cells passing, of 352; its slope 325): a regular coupon in the slope at every quasi-coupon date
+from settlement without T-3031's shift (325) and YIELD's own slope over the regular schedule from settlement to
+maturity (321).
+- Desktop (ironcalc-calc `FINANCIAL/PRICE_YIELD.xlsx` ODDFPRICE_ODDFYIELD, Mac 16.x cache; each K row inverts
+  `J = ODDFPRICE(.., F, ..)` back to F): K2 is 0.04999999999851281 (1.49e-12 below F = 0.05, |ODDFPRICE(K2) - J|
+  1.46e-9), K8 0.0499999999321231 (6.79e-11 below), and K23 0.05000000000085884, 8.59e-13 *above* the root. Of the
+  31 numeric K cells 25 sit 1.3e-12 to 7.2e-11 below the root and 6 sit 1.7e-13 to 3.8e-12 above it (K23, K26, K27,
+  K35, K37, K38).
+- Web (excel-graph): the same both-sides pattern. probes/date-system-1900-odd-threshold S!A5 (and its 43 twins in
+  the -odd-threshold and -odd-years probes, 1900 and 1904, one bond in different years) is 0.06499377053016654,
+  1.61e-14 above the root 0.06499377053015046 (ODDFPRICE residual -2.1e-12); date-system-1900-odd-accrint-bound
+  S!A3 is 2.49e-14 below (+1.25e-11) and S!A6 7.79e-14 above (-6.7e-12); date-system-1900-oddf-issue-after-quasi
+  S!A17 5.06e-11 above (-4.3e-9); fin-argument-modes H200 1.38e-11 below (+9.9e-9); odd-bond-argument-check-order
+  Calc!A258 1.53e-13 above (-1.2e-10). Residuals run from 1e-12 to 1e-8 in price.
+- Rejected (T-2007 attempt 1, a scratch grid on the engine's own odd-first schedule, which ODDFPRICE matches
+  bit-exact on every eval cell; 99 cells: the 31 desktop K cells read with Excel's cached J, and 68 numeric web
+  cells): every candidate below is 0/99 bit-exact and 0/99 within 4 ulp. The engine's central-difference Newton from
+  the coupon rate (stop at |dy| < 1e-8, then bisection), which lands on the root, is 0/99 as well.
+  - Newton with an analytic slope, or a central (h = 1e-5), forward or backward (h = 1e-4, 1e-5, 1e-6, 1e-8)
+    difference; from the coupon rate, 0, 0.1 or YIELD's fitted start (`yield_start` over `yield_start_term`);
+    stopping on a step below 1e-6, 1e-8, 1e-10 or 1e-12 (the iterate before the step, or after it) or on
+    |price - pr| below the same values; prices discounted with Excel's `^` or with libm, and with the accrued
+    interest subtracted from the price or added to the target instead (1,920 variants).
+  - The secant from (s, s + 0.01) for the same starts and stop rules.
+  - YIELD's fitted model as is (`excel_yield_newton` from `yield_start`, step cut 1e-10).
+- Back-chain (analytic Newton run backwards from the desktop cells below the root): one step back is 4e-7 to 4e-6
+  below the root, and none of the iterates one to three steps back meets the coupon rate, 0, 0.1 or YIELD's fitted
+  start. So whatever explains the above-root cells (a non-analytic slope, or a price inside ODDFYIELD that differs
+  from ODDFPRICE's by about 1e-9 near the root) also has to explain these.
+- Long first period (T-3031, T-3988): the slope is the regular-coupon slope above with two changes, which only show
+  when the settlement lies before a quasi-coupon date inside the long first period: (1) a regular coupon at every
+  quasi-coupon date after the settlement, so `nq` more coupons ahead of the odd one, `nq` the quasi-coupon dates in
+  (settlement, first coupon) on the first coupon's schedule walked with the end-of-month rule; (2) the lead `DFC'/E`
+  periods away, `DFC'` the basis' days from the settlement straight to the first coupon, and every later exponent,
+  the redemption's too, whole periods after it. ODDFPRICE's own exponents differ in both on a month-end schedule
+  (T-3988): its `nq` comes from `coupNumber`, which moves the settlement to its month's end when the first coupon is
+  a month end and so counts one quasi period more (`DATE(2010,1,7)` before a 28 February 2010 first coupon: `nq` 1,
+  lead 1.29 periods away, where 0.29 is the truth), and its `DSC` is `E` minus the days from the previous
+  quasi-coupon date, which on 30/360 is not the days to the first coupon. The slope uses neither. With `nq` = 0
+  and a regular schedule both changes vanish, which is why the annual PRICE_YIELD rows fitted before.
+  T-3031 found the shape on the zero-coupon row probes/oddf-date-order-domain-sweep Y!A22:O22, where the slope is
+  the redemption's alone: each of the 15 cells is bit-exact only with the redemption's exponent a quasi period's
+  days over E later than the price's (366/365 on bases 1 and 3, annual, Q 2023-06-15 to 2024-06-15; 366/360 on
+  basis 2; 92/91, 92/90 and 92/91.25 quarterly; 183/182.5 semiannual basis 3; 1 on bases 0 and 4), and wrote it as
+  a shift `s` = the basis' days from the settlement's next quasi-coupon date Q to the first coupon over E, added to
+  the price's exponents. On regular schedules that equals (2). The extra coupons were chosen on the coupon cells of
+  that probe and PRICE_YIELD.xlsx (the shift alone, any choice of which coupon terms carry it, leaves them 1e-12 to
+  1e-10 off). Scores (engine, Excel's `^`): ironcalc-calc `FINANCIAL/PRICE_YIELD.xlsx` 352 of 352 cells (339 before
+  T-3031), probes/oddf-date-order-domain-sweep 1256 of 1260 (1196 before; the other 4 are 1-ulp cells, two of them
+  ODDFPRICE), probes/oddfyield-solver-sweep unchanged (short first periods only), all unchanged by T-3988. T-3031's
+  fresh sweep probes-numeric/t3031-r4-oddfyield-long-first (160 seeded calls, excel-graph 2026-11-03) passed 157,
+  missing S!A61 and S!A70, both a 28 February first coupon: there ODDFPRICE's `nq` is one too many, and the cells
+  are bit-exact only with the slope's coupons and exponents counted from the true `nq` (a scan of the shift in
+  steps of 1/3600 period: one hit each, -2/180 and +5/360 off T-3031's form) and, for A61, the lead 51 30/360 days
+  away (`DFC'`, not DSC 53). T-3988 then drew probes-numeric/t3988-r4-oddfyield-month-end (120 month-end long first
+  periods, excel-graph 2026-11-06): with `DSC/E + s` it passed 116; S!A94
+  (`ODDFYIELD(DATE(2007,9,9),DATE(2014,2,28),DATE(2006,8,29),DATE(2008,8,31),0.019,74.231,111.04,2,0)`) needs the
+  lead 352 30/360 days away, which is `DFC'` (9 September to 31 August), not 170 + 181 split at Q (29 February), and
+  with `DFC'` the case passes 119 (S!A86 is 1 ulp). T-3031's form passes 13 of its 120, and the true `nq` with the
+  price's `DSC` 99.
+  Fresh sweep after this model was frozen: probes-numeric/t3988-r4-oddfyield-fresh-2 (120 calls, half with a
+  month-end first coupon, a quarter on the 29th or 30th, a quarter on days 1-28; excel-graph 2026-11-06): 118 pass
+  (T-3031's form 67). Off: S!A54 (basis 4, a yield near 0, 1.8e-13 relative) and S!A108 (a zero coupon, basis 2,
+  3.5e-15; T-3031's form passed it, the same exponent rounded differently), both T-4551. Keeping the split at Q
+  with the remainder `(DFC' - DSC)/E` passes A108 but leaves t3988-r4-oddfyield-month-end at 117.
+  T-3031's hold-out (R4.1): the fit lab's split (`is_holdout`), applied after the lab scored to the 73 long-first cells above
+  that the model was chosen on, gives this slope 45/45/45 of 45 train and 28/28/28 of 28 test (bit-exact / within
+  4 ulp / within 15 digits) and ODDFPRICE's root, rounded, 0/0/0 on both; on the fresh sweep, never tuned on (margin
+  5 points), the slope is 157/158/158 of 160 (105/106/106 of its 108 cells with `nq` >= 1) and the root 0/1/2
+  (0/0/0). Excel is 3e-12 to 3e-8 relative from the root. Gate A for S!A61 and S!A70: the 50-digit mpmath roots of ODDFPRICE(y) = price over the
+  engine's schedule are 0.077480666073101446 and 0.12192508630779288; Excel is -3.7e-11 and +4.9e-11 relative of them,
+  ours -9.0e-11 and +1.2e-10, inside the 1e-9 envelope (T-3999 files the ODDFYIELD math model and table). (Those two now pass, T-3988.) T-3988's
+  guards (a structural model): the fit lab's split applied to the cells it was chosen on gives this slope 116/117/117
+  of 117 train and 43/43/43 of 43 test on t3031-r4-oddfyield-long-first and 87/88/88 of 88 train and 32/32/32 of 32
+  test on t3988-r4-oddfyield-month-end, ODDFPRICE's root rounded 1/1/1, 0/0/1, 0/0/0 and 0/0/0; both test rates are
+  within the default 5-point margin of train. On the fresh t3988-r4-oddfyield-fresh-2 (R4.2, never tuned on, scored
+  whole): 115/115/115 of its 117 numeric cells (the 3 error cells match), the root 0/0/0. Gate A on that sweep: 118 of 120 within 15 digits of Excel, S!A108 5.2e-11 relative
+  of the 50-digit root (inside 1e-9), S!A54 2.4e-8 relative of it (outside; Excel itself is 2.4e-8 off the root
+  there, and T-3031's form was 1.8e-7 off, so T-3988 moves no point out of the envelope).
+  T-3031 attempt 1 (same day, without the shift) tried 12 lead-term slopes and five other starts with no long-first
+  cell gained, and found the zero-coupon cells off Excel's Newton path, some above the root: the shift explains both.
+Ours: `fn_oddfyield` calls `odd_first_yield` (functions/financial/financial_bonds/yield_solver.rs), which runs
+`excel_yield_newton` with `OddFirstSchedule::dprice`, the slope above; before T-2007 it was a central-difference Newton
+from the coupon rate with a bisection fallback, landing on the root.
+Status: UNVERIFIED (a fitted structural model); the values are oracle-backed.
+Tasks: T-2007 (the fit), T-3031 (the long first periods), T-3988 (month-end long first periods), T-4551 (the fresh
+sweep's two misses), T-1374 (ODDFPRICE's own last digits), T-1592 (YIELD)
+
+## ODDFYIELD's #NUM! at extreme prices
+Rule: across prices 1, 5, 500, 5000, 1E-3 and 1E-6, frequencies 1, 2 and 4, short and long odd first periods and
+coupon rates 0.05 and 0, ODDFYIELD is `#NUM!` in exactly two of 72 cells: the long first period (settlement
+2023-03-16, issue 2022-12-15, first coupon 2024-06-15, maturity 2030-06-15, basis 0), annual, 0% coupon, at prices 1E-3
+and 1E-6 (`ODDFYIELD(DATE(2023,3,16),DATE(2030,6,15),DATE(2022,12,15),DATE(2024,6,15),0,1E-3,100,1,0)`). Every other
+cell computes, at prices from 1E-6 (yields up to 92.4: short quarterly 0.05 at 1E-6) to 5000 (yields down to -0.596 at a 0% coupon and -0.585 at 0.05),
+including the long-first-period 0% bonds at semiannual and quarterly frequency (2.886 and 2.310 at 1E-3). So the `#NUM!` is the
+solver's non-finite step ("YIELD's #NUM! cells and its 100-step cap") and not a price limit of the function: no
+price in the sweep is rejected outright, and large and small prices alike converge or stop on the 100th iterate.
+Status: VERIFIED for the cell values (the mechanism is the engine's T-2007 model, which reproduces them).
+Tasks: T-3990, T-3031.
+Evidence: probes/oddfyield-extreme-price (T-3990), all 72 cells matching the engine in type and value (T-3031 follow-up).
+
+## ODDFYIELD is #NUM! at a price and redemption far from par
+Rule: ODDFYIELD can be `#NUM!` where ODDFPRICE has a root (every flow is positive and comes after the dirty price, so
+there is exactly one), with a redemption far from 100 or a price far below it. On the Gate A table 15 points are
+`#NUM!` with a root:
+- a price far below a redemption near 100, roots in the hundreds:
+  `ODDFYIELD(44927,45040,44903,44950,0.00105291760193462,0.0201046452468288,104.806177882375,4,1)` (A188, root 3216.2)
+  and `ODDFYIELD(35531,35635,35502,35544,0.137503628270339,0.0901795679194373,100,4)` (A197, root 524.93);
+- a redemption from 0.037 to 3441, with the price near it or a few times it (roots 7.3E-7 to 1.46):
+  A218 (redemption 0.350456807761596), A221 (0.036925299804218), A229 (0.558045732426464), A235 (11.9845303447765),
+  A237 (6.33993775602189), A243 (1.62199180104625), A251 (3441.41032295667), A277 (1.43681184856485), A280
+  (2.43718966572268), A285 (8.36657840509682), A292 (2.29511375165819), A297 (917.902213204161) and A299
+  (4.63735536111899), e.g. `ODDFYIELD(49922,50428,49884,49971,2.22723839884459E-06,4.63765939631562,4.63735536111899,4,0)`
+  (root 7.29E-7).
+It is not the scale alone: the table's 247 numeric ODDFYIELD points include redemptions from 0.030 to 8.3E5 and prices
+from 5.9E-5 to 6.6E3 times the redemption, and a price near a redemption far from 100 often computes. Where the cut lies
+is unprobed.
+Inferred, not observed: Excel's Newton runs from YIELD's start fitted on par bonds ("ODDFYIELD stops short of
+ODDFPRICE's root") and leaves ODDFPRICE's domain, as YIELD's does ("YIELD is #NUM! at a price and redemption far from
+par"). The evidence for this mechanism is that the engine's model of that Newton (`odd_first_yield`) gives `#NUM!` at
+all 15 points.
+At a root near 0, Excel's absolute step test leaves a large relative gap ("ODDFYIELD stops short of ODDFPRICE's
+root"): table points A129, A132, A143, A150, A153, A170, A174 and A202 (roots from -1.1E-15 to 4.6E-10), A291 and A295
+(roots 1.4E-7 and 2.9E-8, 1.1E-4 and 1.6E-4 relative), and probes/oddfyield-solver-sweep S!E1 and S!F1 (roots 5.0E-18
+and 6.8E-18).
+Excel kept as the target (decision 0300): Excel is more than 1E-4 relative off the math at:
+- accuracy/ODDFYIELD/s1: A126 (next entry), A129 (Excel 4.533275529406585E-16, root 4.388E-16), A132
+  (2.8002528713848925E-10, 2.817E-10), A143 (4.6355090386611066E-10, 4.633E-10), A150 (-7.717045174648507E-18,
+  -5.928E-18), A153 (-5.974504409461947E-15, root 0), A170 (8.906550524312836E-12, -1.25E-16), A174
+  (9.116830996141099E-11, -1.11E-15), A202 (-1.8167704768983512E-12, -7.09E-15), A291 (1.4084037213640614E-7,
+  1.40855E-7) and A295 (2.9357184518689303E-8, 2.93524E-8);
+- the math sidecars: probes/odd-yield-far-from-par F1-F16 (redemption 1E300: Excel 235.95 to 302.53, the 100th iterates
+  of "ODDFYIELD and ODDLYIELD at a price far from par", roots 3.6E14 to 2.1E15) and G4 (price 3E4:
+  -3.5048035053499063, root -0.48894); probes/oddfyield-extreme-price K5 (2.8858649274745423, root 2.7686), K6
+  (5.502269165947319, root 6.0316) and L6 (4.275092925366498, root 4.2951); probes/oddfyield-solver-sweep S!E1
+  (5.716981438845498E-18, root 4.958E-18) and S!F1 (-3.3959306358422327E-12, root 6.82E-18); and
+  probes-numeric/t3988-r4-oddfyield-fresh-2 S!A46 (next entry).
+No R3 marks.
+Evidence: accuracy/ODDFYIELD/s1 (excel-graph, 2026-11-06, T-4115); the probes named above (excel-graph).
+Ours: matches on all 15 `#NUM!` points and bit-exact on every point listed. Two table points are off Excel, owned by
+T-4551: A272 (a root near 0, 1.1E-11 relative off Excel) and A289 (an extra-quasi-period point, next entry; 2E-13).
+Status: VERIFIED (excel-graph)
+Tasks: T-4115, T-4551
+
+## ODDFYIELD off ODDFPRICE's root when ODDFPRICE counts a quasi period too many
+Rule: on a long first period with a month-end first coupon, oddbonds.fs' `coupNumber` moves the settlement to its
+month's end and so counts one quasi-coupon period more than lies between settlement and first coupon ("ODDFYIELD stops
+short of ODDFPRICE's root", T-3988). ODDFYIELD's value can then be far from ODDFPRICE's root.
+Observed (excel-graph):
+- ODDFPRICE keeps the extra period: the 7 table points with the extra count, accuracy/ODDFPRICE/s1 A83, A92, A101,
+  A145, A152, A166 and A194, are bit-exact in the engine (which counts it) and within 1E-15 of the math with it.
+- `ODDFYIELD(DATE(2030,2,4),DATE(2031,4,30),DATE(2026,4,7),DATE(2030,4,30),0.0943,102.489,100,1,0)`
+  (probes-numeric/t3988-r4-oddfyield-fresh-2 S!A46) is 0.19995383929563632.
+- `ODDFYIELD(46782,47149,46148,46783,0.00872796956994154,121.065357690152,100,1,4)` (accuracy/ODDFYIELD/s1 A126:
+  settlement 2028-01-30, first coupon 2028-01-31, basis 4) is -0.5526841759064842.
+- The engine is bit-exact on both.
+- Not every such point is far off: the other 9 ODDFYIELD table points with the extra count (A17, A76, A80, A115, A121,
+  A123, A138, A157, A289) are within 2E-7 of the root. "Can be far" is observed only at A126 and S!A46.
+Computed (not Excel cells): at S!A46, ODDFPRICE at Excel's yield is 67.2665427726564 (the definition and the engine
+agree), and the root of ODDFPRICE = 102.489 is 0.0330399456396704 (nq 1, the lead 1.24 periods away where 0.24 is the
+truth). At A126 the root is -0.0866553525315469 (nq 1 and DSC 0: the lead a whole period away instead of one day).
+Inferred, from the engine's model reproducing both cells bit-exact: ODDFYIELD's Newton slope counts the true periods
+and its price the extra one, so the Newton stops away from the price's root.
+Excel kept as the target (decision 0300): both cells, 5.05 and 5.38 relative off the math. No R3 marks.
+Evidence: accuracy/ODDFPRICE/s1 A83, A92, A101, A145, A152, A166, A194 and accuracy/ODDFYIELD/s1 A126 (excel-graph,
+2026-11-06, T-4115); probes-numeric/t3988-r4-oddfyield-fresh-2 S!A46 (excel-graph, 2026-11-06, T-3988).
+Ours: matches both bit-exact (`odd_first_yield`: `OddFirstSchedule::price` with `coup_number`, `dprice` on the true
+schedule).
+Status: VERIFIED (excel-graph) for the cells; UNVERIFIED for the mechanism
+Tasks: T-4115, T-3988
+
+## YIELD's #NUM! cells and its 100-step cap
+Rule: with more than one coupon left, YIELD is analytic Newton on PRICE from the fitted start ("YIELD stops short of
+PRICE's root") with no fallback. An iterate where the step is not finite (PRICE or its slope leaves its domain) makes
+YIELD `#NUM!`, even where PRICE has a root; after 100 steps the 100th iterate is the value, root or not.
 - A coupon rate far above the root is `#NUM!`: `YIELD(36665,44491,42,106,100,4,0)` and the gen-m9 cells
   `YIELD(36665,44491,42,106,42,4,0)`, `YIELD(39779,45574,1E+10,86,101,1,3)`, `YIELD(38930,46538,1E+300,116,0.01,1,1)` and
-  15 more (roots 5 to 32, which our bisection finds), while `YIELD(36665,44491,R,106,100,4,0)` computes for R = 0.5 to 30
-  (roots 0.47 to 14.3).
+  15 more (roots 5 to 32), while `YIELD(36665,44491,R,106,100,4,0)` computes for R = 0.5 to 30
+  (roots 0.47 to 14.3). `YIELD(39681,45662,42,3.14159,102,4)` (a price far below par) is `#NUM!` too.
+- Far below par a coupon rate above 21 to 23 is `#NUM!` at this bond, and the cut moves a little with the price:
+  `YIELD(39681,45662,R,P,102,4)` (16.4 years, quarterly, redemption 102; coupon rate 100% to 10000%, price 1% to 20% of
+  par) computes at every sampled R from 1 to 21 and every sampled P from 1 to 20 (yields 4.48 at R = 1, P = 20 to 19.11
+  at R = 21, P = 1) and is `#NUM!` at every sampled R from 23.5 to 100. Between them the last R that computes rises with
+  the price: 21 at P = 1, 21.5 at 3.14159, 22 at 10, 23 at 20 (R in steps of 0.5). The last one before the cut at P =
+  3.14159, 10 and 20 is a negative yield (`YIELD(39681,45662,21.5,3.14159,102,4)` = -2.6837489023653673, R = 22 at P =
+  10 -0.8519602400469752, R = 23 at P = 20 -2.2823895460582744), which is no root: below a yield of 0 PRICE is above its
+  undiscounted payments, 102 and more, so these are 100th iterates. Every positive price has a root (PRICE falls from
+  its undiscounted sum toward 0 as the yield grows), so the `#NUM!` is the solver's. The rule above reproduces all 196
+  cells of probes/yield-deep-discount-sweep and yield-deep-discount-cut in type (T-2747).
 - A price far above par computes up to 1E4 and is `#NUM!` from 1E5: `YIELD(39448,43831,0.05,P,100,2)` is -0.0222 at
-  P = 200, -0.165 at 1000, -0.220 at 2000, -0.340 at 10000, `#NUM!` at 1E5 and 1E6 (where our solver finds -0.494 and -0.633). The
-  gen-m9 cell `YIELD(39572,45740,1E-10,97,(FISHERINV(Data!$E1)+Data!A2),4.9)` (redemption 1, frequency 4.9 cut to 4;
-  ours -0.26) is `#NUM!` too.
-- With a redemption far above the price (1E+50 to 1E+300), YIELD returns a value below the root, where Newton has not
-  converged: `YIELD(37341,45513,1E-9,105,1E+300,1)` is 78.13551092802992 (the root is above 1E+13), the same bits at
-  redemptions 1E+100 and 1E+200, 78.13550467139088 at 1E+50; at a redemption of 1E+20 Excel and our solver agree (C11). The value moves
-  with the rate (78.909 at 0.01, 116.80 at 0.5) and the price (85.41 at price 1, 71.37 at 1E+10), and
-  `YIELD(43831,45412,10,999999999999998,1E+300,2)` is 88233.09573268576.
-Lab (T-2391, scratch scripts on the fitlab PRICE): the third group is what about 100 analytic-Newton steps from a start
-near the redemption-100 root give. That start is `(100/105)^(1/22.4) - 1` = -0.0021787 for C1. Stepping back 100 steps
-from Excel's values lands within 1e-6 of it. Run forward 100 steps, it is within 7.7e-7 relative of C1, C8 and C9, 2.4e-7
-of C6 (frequency 2) and 3.8e-7 of C7 (frequency 4), but 1e-5 to 1.3e-2 off at rates 0.01 to 0.5 or price 1. The same
-bits at redemptions 1E+100 to 1E+300 point to an analytic derivative: our central difference moves the last digits with
-the redemption. The first two groups rule out simpler models of the solver. Newton from the coupon rate with no
-fallback (failing where an iterate is not finite or at or below -1 or -frequency) gets every `#NUM!` cell of the first
-group, but is also `#NUM!` at prices 1500 to 10000, where Excel computes. Halving the step back into the domain fixes
-those but computes A14, A15, B14 and five gen-m9 cells. No fixed start (0, 0.05, 0.1, -0.5, 1) separates the cells
-that compute from the ones that do not. So the `#NUM!` rule likely comes from YIELD's unfitted start phase ("YIELD
-stops short of PRICE's root", T-1592).
+  P = 200, -0.165 at 1000, -0.220 at 2000, -0.340 at 10000, `#NUM!` at 1E5 and 1E6 (roots -0.494 and -0.633). The
+  gen-m9 cell `YIELD(39572,45740,1E-10,97,(FISHERINV(Data!$E1)+Data!A2),4.9)` (redemption 1, frequency 4.9 cut to 4)
+  is `#NUM!` too.
+- With a redemption far above the price (1E+50 to 1E+300), YIELD returns the 100th iterate, below the root:
+  `YIELD(37341,45513,1E-9,105,1E+300,1)` is 78.13551092802992 (the root is above 1E+13), the same bits at
+  redemptions 1E+100 and 1E+200, 78.13550467139088 at 1E+50; at a redemption of 1E+20 Newton converges (C11). The value
+  moves with the rate (78.909 at 0.01, 116.80 at 0.5) and the price (85.41 at price 1, 71.37 at 1E+10), and
+  `YIELD(43831,45412,10,999999999999998,1E+300,2)` is 88233.09573268576. The same bits at redemptions 1E+100 to 1E+300
+  come from the analytic slope.
+Verified (T-2391, 2026-10-26): with the fitted start of T-1592 this rule matches every one of the 53 cells of
+probes/yield-newton-domain in type, and every value cell within 7 ulp (the 16 C cells bit-exact); the 13 cells left are
+last-digit misses of "YIELD stops short of PRICE's root". It matches the 21 gen-m9 cells T-2391 owned and the two of
+T-2747 (probes/t2475-stat-subexpressions P!A214, gen-m9/44a8841352dc48e9 A318), and all 196 cells of
+probes/yield-deep-discount-sweep and yield-deep-discount-cut in type (146 bit-exact; 48 of the other 50 1 to 5 ulp off
+and two of the three negative 100th iterates, yield-deep-discount-cut B3 and C4, 5e-14 and 6e-15 relative off; last
+digits that T-2788 owns). The earlier attempt
+(Newton from the coupon rate with no fallback) was `#NUM!` at prices 1500 to 10000: the fitted start, not the stop rule,
+decides them.
 Evidence: probes/yield-newton-domain (53 cells: A price sweep, B coupon-rate sweep, C large redemptions, D low
-redemptions and negative roots; excel-graph, 2026-10-24, T-2391); the 20 gen-m9 cells listed in T-2391.
-Ours: Newton from the coupon rate with a central-difference derivative, then bisection on (-0.9999, 100), so it finds a
-root in the first two groups (wrong where Excel is `#NUM!`) and is `#NUM!` in the third.
-Status: UNVERIFIED (the algorithm); the values are excel-graph
-Tasks: T-2391, T-1592
+redemptions and negative roots; excel-graph, 2026-10-24, T-2391); the gen-m9 cells listed in T-2391.
+probes/yield-deep-discount-sweep (160 cells: 20 coupon rates 1 to 100 by 8 prices 1 to 20 at the P!A214 bond) and
+probes/yield-deep-discount-cut (36 cells: R = 20.5 to 24.5 in steps of 0.5 by P = 1, 3.14159, 10, 20); excel-graph,
+2026-10-31, T-2747.
+probes/yield-below-par-sweep (184 cells) and probes/yield-newton-step-cap (15 cells) (excel-graph, 2026-10-31, T-2747).
+- A Newton whose step meets its 1e-10 test on the 100th and last check is `#NUM!`, though one that meets it on the
+  99th check is a value and one that meets it on no check returns the 100th iterate: Excel's "out of steps" test is
+  one check early. At `YIELD(39681,45662,R,P,102,4)` our uncapped Newton meets its test on checks 98 to 102 at
+  R = 22.7375, 22.74375, 22.75, 22.75625 and 22.7625 (P = 20), and at the matching rates for P = 10 and 5; Excel is
+  `#NUM!` on exactly the check-100 cell of each column (yield-newton-step-cap A3, B3, C3) and within 3 ulp of ours on
+  the other 12. `YIELD(39681,45662,23,20,102,4)`, where no check of the 100 passes (the uncapped Newton would need 166),
+  is -2.2823895460582744, the 100th iterate, far below PRICE's root. The check counts are our Newton's, whose
+  iterates are within a few ulp of Excel's; the rule is inferred from them, the 12 neighbours on checks 98, 99, 101
+  and 102 bracketing each check-100 cell.
+- Far below par at a huge coupon (T-2747, probes/yield-below-par-sweep: `YIELD(39681,45662,R,P,102,4)`, rates 1 to
+  100, prices 1 to 20): the first step from the fitted start jumps to a negative yield where 1 + y/4 is small and
+  PRICE is huge, and Newton then climbs back by small steps. Where the climb takes more than 100 steps the value is
+  the 100th iterate, a negative yield that is no root (`YIELD(39681,45662,21.25,1,102,4)` = -1.853031327841678,
+  `YIELD(39681,45662,22,10,102,4)` = -0.8519602400469752); where a step leaves PRICE's domain it is `#NUM!` (every
+  price from rate 24 up, and from about rate 21.5 at price 1 to 23 at price 20). 183 of the 184 cells match ours in
+  type and the values within 2.5e-12 relative; the 184th (H16) is the check-100 cell above.
+Ours: matches since T-2391 (`excel_yield_newton` in functions/financial/financial_bonds/yield_solver.rs); the
+check-100 `#NUM!` since T-2747 (`compute_yield` in financial_bonds.rs). ODDFYIELD runs the same Newton; whether
+its check-100 stop is `#NUM!` too is not probed (T-3625).
+Status: VERIFIED
+Tasks: T-2391, T-1592, T-2747
+
+## PRICE, DURATION and MDURATION take DSC as E - A on every basis
+Rule: with more than one coupon left as with one, PRICE, DURATION and MDURATION discount from settlement by
+`DSC/E = (E - A)/E`, where A is COUPDAYBS (30/360 on bases 0 and 4, serial days on bases 1-3) and E is 360/f on bases
+0, 2 and 4, 365/f on basis 3 and COUPNCD - COUPPCD on basis 1; not by COUPDAYSNC. On bases 2 and 3 the actual days to
+the next coupon differ from E - A whenever the coupon period is not exactly 360/f or 365/f days, so the exponents
+`k + DSC/E` are not COUPDAYSNC/COUPDAYS: on the Gate A tables 163 points on bases 2 and 3 have E - A unequal to the actual
+days to the next coupon (55 PRICE, 50 DURATION, 58 MDURATION, 132 of them with more than one coupon left), and Excel is
+within 1.2E-13 relative of the 50-digit math with E - A on every one (PRICE within 5.2E-15). "YIELD with one coupon
+period left is closed form" already stated this for PRICE's single-period form; YIELD's closed form takes the actual
+period instead.
+So DSC is negative when A exceeds E, which bases 2 and 3 allow (a period of more than 360/f days on basis 2, or more
+than 365/f on basis 3): the settlement then discounts back in time. `MDURATION(1064950,1064951,
+0.000128159104484352,0.756789005672321,2,3)` (one day before maturity, A = 183 against E = 182.5, DSC -0.5) is a negative duration,
+-0.000993810560677671 (math -0.00099381056067767515), and `PRICE(2661503,2661504,0.544303320391621,0.00188934538460332,
+6079.97276154982,1,2)` (A = 364 against E = 360, DSC -4) is 6079.49676063253, the linear form with s < 0, matching the
+math to all 15 digits.
+Evidence: accuracy/PRICE/s1 (A163), accuracy/DURATION/s1, accuracy/MDURATION/s1 (A177) (excel-graph, 2026-11-06,
+T-4113): all 600 points inside the envelope, every numeric one within 1E-9 of the math with E - A.
+Ours: matches (`CouponSchedule` in functions/financial/financial_bonds.rs: `dsc_over_e = (e - a) / e`).
+Status: VERIFIED (excel-graph)
+Tasks: T-4113
+
+## YIELD is #NUM! at a price and redemption far from par
+Rule: YIELD (more than one coupon left) can be `#NUM!` where PRICE has a root when the price and the redemption are far
+from 100, although the same bond scaled to par computes: Excel's Newton starts from a start fitted on par bonds ("YIELD
+stops short of PRICE's root", T-1592: `100·rate·T + (100 - pr)` over `100·T - ...`), which is far from the root there,
+and the Newton leaves PRICE's domain ("YIELD's #NUM! cells and its 100-step cap"). On the Gate A table:
+`YIELD(609344,609526,0.0216926180008319,2.08692048857734,1.06986954448637,4,1)` (A216, root 0.0674),
+`YIELD(1511252,1600178,0.693266194144484,0.0113829835620059,0.013387175518858,2,1)` (A225, root 37.04),
+`YIELD(2444317,2445266,0.00262698867298459,6.83327915820922,6.15108985700114,1)` (A231, root 5.7E-6),
+`YIELD(41644,41964,3.95504106162018E-05,1.07913390167583,1.10630172770542,2,0)` (A278, root 0.0322) and
+`YIELD(43934,44400,3.18837697006861E-08,2561.5239125089,2562.67943505766,1,1)` (A284, root 3.5E-4) are `#NUM!`. It is not
+the scale alone: the table's 264 numeric YIELD points include prices from 0.0033 to 8.2E5 and redemptions from 0.014
+to 8.2E5 (a price near its redemption far from 100 often computes). At a redemption near 100 prices of 1E5 and more are
+`#NUM!`, as that entry records: A160 `YIELD(34484,58272,0.00994370100069034,598517.33532802,100,1,0)` (redemption 100)
+and A164 `YIELD(43785,58096,0.14042700948137,394426.617648828,99.049049737235,2,2)` (redemption 99.049049737235). Where the
+cut lies is unprobed (T-4523). Where
+the price is not exact Excel stops short of the root ("YIELD stops short of PRICE's root"): at a root near 0 the
+relative gap is large, `YIELD(46176,47108,0.108576904443112,127.687110632994,100,1)` (A140) is -1.5180348575085436E-15
+against a root of -1.466E-15 and `YIELD(44098,44491,0.0822071318475585,108.860101988015,100,1,4)` (A184)
+-3.1884443225695292E-15 against -3.114E-15 (3.5% and 2.4%); decision 0300 keeps Excel as the target there.
+Evidence: accuracy/YIELD/s1 A140, A160, A164, A184, A216, A225, A231, A278, A284 (excel-graph, 2026-11-06, T-4113).
+Ours: matches on A160, A164, A216, A231, A278 and A284 (`#NUM!`) and on A140 and A184; A225 converges to the root
+(37.03781989946988), owned by T-4523.
+Status: VERIFIED (excel-graph)
+Tasks: T-4113, T-4523
+
+## T-bill settlement below serial 1
+Rule: TBILLEQ, TBILLPRICE and TBILLYIELD floor both dates to whole days before they count days, so a
+settlement from 0 to below 1 is serial 0 (1900-01-00), a valid date. The one-year limit compares the dates Excel
+shows, so 1900-01-00 to 1900-12-31 (366) is within it and to 1901-01-01 (367) is not. A 29 February settlement reaches its
+anniversary on 1 March: `TBILLPRICE(DATE(2024,2,29),DATE(2025,3,1),0.1)` = 89.83333333333333, and the fictitious
+1900-02-29 does the same (`TBILLPRICE(60,426,0.1)` = 89.83333333333333, `TBILLPRICE(61,427,0.1)` `#NUM!`); 1 March 2024
+to 1 March 2025 is within the limit too. `TBILLPRICE(0,1,0.1)`, `TBILLPRICE(0.5,1.9,0.1)` and `TBILLPRICE(39000.7,39001.2,0.1)` are all
+99.97222222222221 (one day), `TBILLPRICE(0.5,0.9,0.1)` and `TBILLPRICE(0,0,0.1)` are `#NUM!` (equal days);
+`TBILLPRICE(0,366,0.1)` = 89.83333333333333 and `TBILLPRICE(0,367,0.1)` is `#NUM!` (over a year), like
+`TBILLPRICE(1,367,0.1)` = 89.83333333333333 one day on. `TBILLEQ(0,366,0.1)` = 0.11013984535998977 and
+`TBILLYIELD(0,366,98)` = 0.020073603211776512; `TBILLYIELD(1E-15,100,1E+300)` = -3.6.
+Evidence: probes/tbill-settlement-below-one (34 cells, excel-graph, 2026-10-25, T-2487); gen-m9/0a957119475760c5 A309,
+gen-m9/e8d55ec393460bb7 A287.
+The gen-m9 T-bill cells whose error looked out of order follow the T-bill order; an inner call differs
+(probes/tbill-error-order-inner-calls, each case's Data sheet copied, excel-graph, 2026-10-25, T-2487): Excel's
+`T.TEST(E11,A6:C12,2,D8)` there is `#VALUE!` (ours `#NUM!`), `PPMT(2*B11,8,360,-100,926)` 0 (ours 2E17, so ours reads
+an off-calendar settlement first), `QUARTILE(C7,E9)` of a text cell `#NUM!` (ours `#VALUE!`) and `BIN2DEC` of its text
+cell `#NUM!` (ours `#VALUE!`); `TBILLYIELD(36586,1,MAP(Z1:Z3,<#REF!>,..))` is `#VALUE!` like ours. Those four cells
+moved to T-2496.
+Ours: matches since T-2487 (`tbill_arguments` in financial/discount.rs, `is_less_than_one_year` in financial/dates.rs).
+
+## T-bills settled in 9999
+Rule: TBILLEQ, TBILLPRICE and TBILLYIELD are `#NUM!` for a settlement in the year 9999, however short the bill, in both
+date systems; a settlement on 9998-12-31 still computes, to any maturity up to 9999-12-31. As if Excel needs the
+settlement's one-year anniversary as a date before it applies the one-year limit.
+- `TBILLPRICE(DATE(9999,1,1),DATE(9999,1,10),0.05)`, `TBILLYIELD(...,98)`, `TBILLEQ(...,0.05)` and
+  `TBILLPRICE(2958464,2958465,0.05)` are `#NUM!` (A9, A17, A18, A3); `TBILLPRICE(DATE(9998,12,31),DATE(9999,1,10),0.05)`
+  = 99.86111111111111 (A8), and with a settlement of 9998-12-31.5 the same (A16); `TBILLPRICE(DATE(9998,12,31),
+  DATE(9999,12,31),0.05)` = 94.93055555555556 (A12).
+- The 1904 workbook's last year is the same 9999: `TBILLPRICE(2957003-100,2957003,0.05)` and its TBILLYIELD and
+  TBILLEQ twins are `#NUM!` there (fin-1904-calendar-readers A2, A21:A25), while 9996 dates compute (A1, A9).
+Evidence: probes/fin-1900-tbill-last-day A1:A19, fin-1904-calendar-readers (excel-graph, 2026-10-27, T-2337).
+Ours: `is_less_than_one_year` (financial/dates.rs) since T-2337.
+Status: VERIFIED (excel-graph)
+Tasks: T-2337
 
 ## TBILLEQ and TBILLYIELD
 Rule: Excel's TBILLYIELD is `(100 - pr)/pr * (360/DSM)`, evaluated in that order; the textbook
@@ -1570,6 +4433,9 @@ Equal dates: TBILLEQ, TBILLPRICE and TBILLYIELD all give `#NUM!` when settlement
 reaches the division (`TBILLYIELD(45366,45366,98)`, `TBILLEQ(45366,45366,0.05)`, `TBILLPRICE(45366,45366,0.05)`,
 and `TBILLYIELD(45366,45366,100)`, `TBILLEQ(45366,45366,0)`; one day later is a number: probes/tbill-equal-dates,
 excel-graph, 2026-10-14, T-1539).
+The long-branch form is not Excel's to the bit everywhere. On accuracy/TBILLEQ/s1, A39 and A127 are about 30 ulp off
+it, and A39 is matched by a price of `100 - rate*100*DSM/360` (see "Discount securities and T-bills: amount domains
+(T-4112)"; the order is open in T-4521).
 Evidence: ironcalc-calc/FINANCIAL/TBILLs.xlsx D2:D31, R2:R31 and L5:L26 (Excel-cached, Microsoft
 Macintosh Excel; all 273 cells bit-exact, T-1475); the same formulation is bit-exact on the excel-graph
 probes fin-argument-modes H313, date-system-1904-financial A29:A30 and -shift A32.
@@ -1589,10 +4455,10 @@ Evidence: probes/fin-vdb-modes, fin-amordegrc, fin-fvschedule, fin-mduration, fi
 - FVSCHEDULE: a boolean principal is `#VALUE!` from a TRUE or FALSE cell (`C1`, `C2`), `INDEX(C1:C2,1)` or `INDIRECT("C1")`; a text-number cell (`"1000"`) is converted (1100). The reference path matches the typed path, so `cast_number_no_bools_ref` (the lifted kernel's read) is right (T-1992).
 Evidence: probes/fin-fvschedule-bool-ref (excel-graph, 2026-10-19, T-1992).
 Status: VERIFIED (excel-graph)
-Implemented (T-1764): VDB with salvage above cost never switches to straight line (-600); a fractional end period
+Implemented (T-1764; the fractional-period rules are now the fractional grid of "VDB charge order", T-2185): VDB with salvage above cost never switches to straight line (-600); a fractional end period
 prorates the unclipped declining-balance charge and the total is capped at `cost - salvage` (A9 is 0; salvage <= cost only, salvage above cost keeps the clipped charge); AMORDEGRC
-rejects only an asset life (1/rate) in [0, 3] or strictly between 4 and 5 (exactly 4 and 5 are valid, coefficients
-1.5 and 2). The salvage-above-cost rule (A17) and the cap (A9) are each inferred from one probe cell. The AMORDEGRC bands at life 3 and strictly between 4 and 5 are documentation-only. Probes needed: T-1978. The ulp differences (VDB A6, A7, A10, A13, MDURATION, RRI) are fixed by T-1975: see "VDB charge order" and "DURATION and RRI operation order".
+rejects only an asset life (1/rate) of 2 or less (T-1978 replaced T-1764's [0, 3] and (4, 5) bands; see "AMORDEGRC
+life bands"). T-1978 confirmed the VDB rules across 59 more cells (see "VDB charge order"). The ulp differences (VDB A6, A7, A10, A13, MDURATION, RRI) are fixed by T-1975: see "VDB charge order" and "DURATION and RRI operation order".
 Implemented (T-1765): a typed boolean principal is `#VALUE!` (A18); a text-number principal still converts. A boolean principal read through a reference is `#VALUE!` too, verified by probes/fin-fvschedule-bool-ref (T-1992).
 Tasks: T-1764 (incl. MDURATION, RRI ulp), T-1765
 
@@ -1606,18 +4472,98 @@ build the per-period charges differently, so the same inputs give different last
   The floor at 0 holds from the first period: with salvage above cost, `VDB(2400,3000,10,0,1,2,TRUE)` is 0, where the
   switching mode gives -600. With `factor >= life` the rate is 1: `VDB(1000,100,2,0,1,3,TRUE)` is 900 and the next
   period 0 (probes/fin-rri-vdb-edges A17-A24).
-- `no_switch` FALSE, from a whole start period: the book value steps down by each charge,
-  `min(b·factor/life, b - salvage)`, until the straight-line charge `(b - salvage)/(life - p)` is larger; from then on
-  every period charges that same amount. The window's declining-balance charges (and a prorated last period) are summed
-  in doubles, and the whole straight-line periods are added at the end as one product `n·sl`:
+- `no_switch` FALSE: the periods are laid on the fraction of the start. The first `f = start - floor(start)` of a
+  period charges `f·min(cost·rate, cost - salvage)`, floored at 0, and whole periods follow from there (at `f`, `1+f`,
+  ...). Each period's book value `b` steps down by its charge `min(b·rate, b - salvage)` until the straight-line
+  charge `(b - salvage)/(life - t)`, `t` the period's start, is larger than the unclipped `b·rate`; from then on every
+  period charges that same amount. The window's declining-balance charges (and a prorated last period) are summed in
+  doubles, and the whole straight-line periods are added at the end as one product `n·sl`:
   `VDB(1234.56,78.9,12,4,9,1.75)` is 379.8854487417499, one ulp below the period-by-period sum, and
-  `VDB(2400,300,10,7,10,2,FALSE)` is 203.31648000000007.
-- `no_switch` FALSE from a fractional start period is not fitted yet: probes/fin-vdb-schedule A42-A46 still miss
-  (T-2185, which records a restart model that passes 89 of 92 cells).
-Evidence: probes/fin-vdb-schedule (78 cells), fin-vdb-modes, fin-rri-vdb-edges (excel-graph, 2026-10-20, T-1975).
+  `VDB(2400,300,10,7,10,2,FALSE)` is 203.31648000000007. A whole start has `f = 0`, the plain schedule.
+  Consequences of the fractional grid:
+  - A fractional start past the switch sees the same straight-line charge wherever it lies, set by its fraction:
+    `VDB(2400,100,10,6.5,7.5)` and `VDB(2400,100,10,8.5,9.5)` are both 133.20886857142858, `(566.23104 - 100)/3.5`,
+    and `VDB(2400,100,10,6.3,7.3)` is 132.80996324324326, `(591.396864 - 100)/3.7`, where the whole-period schedule
+    charges 132.2864 (probes/fin-vdb-fractional-start A11:A15). `VDB(2400,300,10,8.3,9.9,1.5)` is 244.0757706382978,
+    straight line from the 5.3 grid point over 4.7 periods (fin-vdb-schedule A44).
+  - The switch test uses the unclipped charge, so a clipped last piece under one period stays declining:
+    `VDB(2400,300,10,9.25,10)` is 4.512314880000062, `0.75·(b - salvage)`, while `VDB(1000,5,10,9.25,10,4)` switches and
+    charges all of `b - salvage`, 4.069926399999998 (fin-vdb-fractional-start A44, fin-vdb-fractional-start-edges A1).
+    This replaced T-1975's comparison with the clipped charge for whole starts too; a whole-start period rarely tells
+    the two apart, mostly only with a fractional life (edges A2, A9, A12), and every whole-start cell still passes.
+  - The first partial charge is clipped: `VDB(1000,900,5,0.5,1)` is 25, and `VDB(1000,950,4,1.5,3)` is 0. With salvage
+    above cost it is 0 and the negative charges follow: `VDB(2400,3000,10,0.5,1.5)` is -600 (edges A3:A7). The old
+    "fractional end period capped at `cost - salvage`" reading of `VDB(2400,300,10,9.5,10)` = 0 (T-1764) is this rule
+    too: the 9.5 grid point's book value is the salvage.
+  The model matches 153 of the 161 switching-mode cells to the bit and the other 8 to one ulp, all with a start
+  fraction of .2 or .3 (T-3022). LibreOffice's model (a restart from the start with its half-life shift) and the
+  running-total difference this replaced both miss visibly: fin-vdb-schedule A44 is 250.50773812499992 and
+  242.0635349999999 with them.
+- Straight line from period 0 (T-4111): where straight line already wins at period 0, `(cost - salvage)/life >
+  cost·rate` (a factor below `1 - salvage/cost`, salvage at most cost), every period of the window charges
+  `(cost - salvage)/life`, the start's fraction included: there is no declining-balance fraction first. So the result
+  is `(end - start)·sl` with `sl = (cost - salvage)/life` rounded first, one product like the whole straight-line
+  periods above: `VDB(121503138647.778,3864354372.11506,4,0.5,4,0.15833054798759,FALSE)` is
+  102933936241.20506, `3.5·(cost - salvage)/4`, where the fractional grid above gives 115234076960.1236 (10.7% off),
+  and `VDB(147.345559004139,0.00344462972942079,21,12.5,18.5,0.295807274286059)` is 42.09774696411702, `6·(cost -
+  salvage)/21` (the grid: 42.82078686786086). In that operation order the rule gives Excel's value to the bit on all seven
+  table points where it applies (accuracy/VDB/s1 A119 with a whole start, where both readings agree, and A158, A183,
+  A187, A188, A189, A200, factors 0.10 to 0.60 and starts 0.5 to 53.25; excel-graph, 2026-11-06), and it changes no
+  probe or gen-m9 VDB cell (T-4111 ran it over the 257 literal one-call VDB eval cells with a math value). `(end - start)·(cost - salvage)/life`, rounding
+  the product first, is one ulp off at A187 and at gen-m9/67a4c03afd63f988 A334 (`VDB(86661,45,37,0,6,0.2)`,
+  14045.837837837837), a whole start. The same single product holds for a whole start with a fractional end: 3 of the 30
+  cells of probes/t4724-vdb-straight-from-zero sheet W (A7, A15, A20) tell the schedule (`share = end - start - n`,
+  `share·sl + n·sl`) from the product, by 1 ulp each, and Excel gives the product on all 3; the other 27 agree under
+  both. Factor 0 from a fractional start is T-4111's `(end - start)·(c - s)/life`, not the fractional grid's
+  `/(life - f)` (sheet F, 20 of 20). Both excel-graph, 2026-11-07, predictions in docs/research/t4724. Factor 0 with a
+  whole start and a fractional end is inferred from the two, not probed. Implemented (T-4510, T-4724) for every
+  start.
+Evidence: probes/fin-vdb-schedule (78 cells), fin-vdb-modes, fin-rri-vdb-edges (excel-graph, 2026-10-20, T-1975);
+fin-vdb-fractional-start (45 cells), fin-vdb-fractional-start-edges (14 cells) (excel-graph, 2026-10-28, T-2185);
+fin-vdb-amordegrc-edges A1-A59 (excel-graph, 2026-10-30, T-1978): salvage at or above cost in both modes (switching
+gives -300 for `VDB(2400,3000,10,0,0.5)`, -600 for (0,1.5) and (0,10), 0 from period 1 on; `no_switch` TRUE and salvage
+equal to cost give 0 everywhere), fractional windows near the end of life (`VDB(2400,300,10,9.25,9.75,2,FALSE)` is
+3.0082099200000414, TRUE 11.061273600000135), and a fractional life 9.5 (an end past it is #NUM!, factor 3 reaches the
+salvage before period 8). The model already matched all 59 cells.
 Status: VERIFIED (excel-graph)
-Implemented (T-1975): `vdb_no_switch_between` and `vdb_switching_between` in functions/financial/financial_depreciation.rs.
-Tasks: T-1975, T-2185
+Implemented (T-1975, T-2185, T-4510, T-4724): `vdb_no_switch_between` and `vdb_switching_between` in
+functions/financial/financial_depreciation.rs.
+Tasks: T-1975, T-2185, T-3022, T-4111, T-4510, T-4724
+
+## AMORDEGRC life bands
+Rule: AMORDEGRC refuses (#NUM!) an asset life `1/rate` of 2 or less, that is a rate of 0.5 or more, and nothing else
+for a positive rate. There is no refused gap at life 3 or strictly between 4 and 5, which Microsoft's documentation and
+the library RustSheet ported from both have: `AMORDEGRC(2400,39679,39813,300,0,r,1)` is a number for r = 1/2.000001
+(659), 1/2.01 (656), 1/2.5, 1/2.9, 1/2.99, 1/3 (439), 0.34, 1/4.01 (438), 1/4.5 (391), 1/4.99 (352), and #NUM! for
+r = 0.5, 1/2, 1/1.99, 1/1.5 and 1. The coefficient goes by the whole life `ceil(1/rate)`: 1.5 for 3 and 4 (so lives
+above 2 up to 4), 2 for 5 and 6 (lives above 4 up to 6), 2.5 above; the 1.0 coefficient of a life under 3 is never reached.
+Evidence: probes/fin-vdb-amordegrc-edges A60-A143 (excel-graph, 2026-10-30, T-1978).
+Status: VERIFIED (excel-graph)
+Implemented (T-1978): `asset_life_refused` and `amor_depr_coeff` in functions/financial/amortization.rs.
+Tasks: T-1764, T-1978
+
+## VDB, DDB and ACCRINT argument types
+Rule: VDB's `no_switch` reads as a boolean. TRUE, FALSE and a number are taken, and so is the text "TRUE" or "FALSE"
+in any case, typed or from a cell. Any other text is `#VALUE!` before the range checks, numeric text too ("1", "0",
+"x"), and it is `#VALUE!` even with a cost of -1 (`VDB(-1,0,39,1,9,10,"x")`, A63). The value checks then apply:
+`VDB(1,-0.0001,23,1,9,10,"true")` is `#NUM!`. An empty no_switch is FALSE (`VDB(1000,100,10,0,1,2,)` is 200).
+VDB takes a factor of 0. With no declining balance, the switching mode is straight line and no_switch gives 0:
+`VDB(1000,100,10,0,1,0)` is 90, with TRUE it is 0, and `VDB(43478,488,1E+9,3,7,0)` is 0.00017196. A negative
+factor is `#NUM!`. An empty or blank factor is 0, not the default 2: `VDB(1000,100,10,0,1,,FALSE)` and a blank cell
+give 90, and with TRUE they give 0 (A59:A62). VDB also takes an empty window at period 0: `VDB(1000,100,10,0,0)` and `VDB(0.01,5,25,0,0,3)` are 0.
+VDB's factor and DDB's factor read a boolean as 1 or 0 and a numeric text as its number. `DDB(1000,100,10,1,TRUE)` is
+100, also from a TRUE cell. With FALSE (factor 0) it is `#NUM!`, with "3" it is 300, and with "TRUE" it is `#VALUE!`.
+ACCRINT's `calc_method` takes a boolean but no text: "FALSE", "TRUE" and a "FALSE" cell are all `#VALUE!`, before a
+negative rate's `#NUM!`.
+The error-order cells of the T-2257 sweep come from the arguments' own errors. `VDB(-1,0,39,<ACCRINT(..,"FALSE")>,9,10,0)`
+is `#VALUE!` because that ACCRINT is `#VALUE!`, while `VDB(-1,0,39,SQRT(-1),9,10,0)` is `#NUM!` and
+`VDB(73409,713,1/0,SQRT(-1),10)` is `#DIV/0!`, the first error in argument order.
+Evidence: probes/t2492-vdb-ddb-arguments A1:A64 (excel-graph, 2026-10-25, T-2492).
+Implemented (T-2492): `fn_vdb`, `fn_ddb` (functions/financial/financial_depreciation.rs) and `accrint_of`
+(functions/financial/accrint.rs). VDB from a fractional start in the switching mode still misses by value (A1, A9:A12),
+which T-2185 owns. A218 of gen-m9/d0854366830dcdee is `#NUM!` because `PERCENTILE(<TRUE cell>,7)` is `#NUM!` (A55), and ours
+`#VALUE!` (T-2605).
+Status: VERIFIED
 
 ## DB and DDB operation order
 Rule: DB and DDB compute each period's charge in a fixed operation order, and the last bits depend on it.
@@ -1641,6 +4587,39 @@ G10, G20, G31, G35-G37, G39, G42, H10), probes/fin-argument-modes H88, H95 and t
 Status: VERIFIED (excel-graph)
 Implemented (T-2033): `db_depreciation` and `ddb_depreciation` in functions/financial/financial_depreciation.rs.
 Tasks: T-2033
+
+## SLN, SYD, DB, DDB and VDB argument domains
+Rule: beside the domains "DB and SYD argument domains" states, these errors hold (each with the eval cells and the Gate
+A table cells that show it; the engine matched every one):
+- SLN: a life of 0 is `#DIV/0!` (`SLN(99396,203,0)`, gen-m9 67a4c03afd63f988 A120; accuracy/SLN/s1 A112 and 9 more). A
+  negative life is a value (accuracy/SLN/s1 A82, A83 and 8 more).
+- SYD: a per above the life is `#NUM!`, a negative life included (`SYD(74613,683,-1,12)`, gen-m9 30e20ba3302fea8b A83;
+  accuracy/SYD/s1 A111, A119), and so is a per of 0 or less (`SYD(7528,..,32,0)`, gen-m9 01523d247594952e A153;
+  accuracy/SYD/s1 A114 and 5 more). A fractional per or life is a value (accuracy/SYD/s1 A82-A85).
+- DB: a negative cost (`DB(-1,441,12,3)`, gen-m9 1b60bf99d71424e7 A79), a month of 0 or less (gen-m9 3c06f9298f65a3ba
+  A292) or above 12 (`DB(82870,563,20,10,123456789.123)`, gen-m9 3aa168259335be54 A378) and a period of 0 or less
+  (gen-m9 3c06f9298f65a3ba A341, 5422bdbf173fc233 A385) are `#NUM!`.
+- DDB: a period above the life (`DDB(1E-300,497,34,360)`, gen-m9 0a957119475760c5 A225; accuracy/DDB/s1 A112, A117,
+  A121, A132), a negative cost (`DDB(-100,78,14,4)`, gen-m9 3c06f9298f65a3ba A34; accuracy/DDB/s1 A113, A114, A119,
+  A130) or salvage (`DDB(13936,-1000,25,1)`, gen-m9 30e20ba3302fea8b A218), a period of 0 or less (gen-m9
+  b73c6cc96e093f03 A217; accuracy/DDB/s1 A118, A120, A137, A140) and a factor of 0 or less (accuracy/DDB/s1 A123,
+  A124, A133-A135, A139; factor 0 also "VDB, DDB and ACCRINT argument types") are `#NUM!`. A period between 0 and 1 is
+  period 1's value (accuracy/DDB/s1 A115, A122, A127, A136).
+- VDB: a negative cost (gen-m9 6376e27be7a05871 A163; accuracy/VDB/s1 A111), salvage (`VDB(64334,-1,32,2,9)`, gen-m9
+  abb7d565af89b849 A180; accuracy/VDB/s1 A121), factor (accuracy/VDB/s1 A118, A123) or start (`VDB(14349,333,33,-1,10,1)`,
+  gen-m9 5422bdbf173fc233 A304; accuracy/VDB/s1 A116, A120, A127, A129), a life of 0 or less (`VDB(24437,541,0,3,7)`,
+  gen-m9 79d87fc527927626 A371), a start above the life (`VDB(71180,203,0.1,3,9)`, gen-m9 ba4ddb817a8e700e A145;
+  accuracy/VDB/s1 A114, A128, A134, A137) or an end above it (`VDB(70284,111,17,3,360)`, gen-m9 6376e27be7a05871 A359;
+  accuracy/VDB/s1 A122, A135), and a start above the end (`VDB(22104,684,36,2,-1)`, gen-m9 30e20ba3302fea8b A19;
+  accuracy/VDB/s1 A112, A133) are `#NUM!`. An empty window at the life with `no_switch` TRUE is 0 (accuracy/VDB/s1 A19, A115).
+Unprobed: VDB switching with life, start and end all equal (ours `#NUM!`, the library's check), and DB with a life of 0
+or less that passes the period checks.
+Evidence: the gen-m9 cells above (excel-graph, T-2257 sweep) and the T-4111 Gate A tables accuracy/{SLN,SYD,DB,DDB,VDB}/s1
+(excel-graph, 2026-11-06), where every Excel error falls on one of these rules or on "DB and SYD argument domains".
+Status: VERIFIED (excel-graph)
+Implemented in: `fn_sln`, `fn_syd`, `fn_db`, `fn_ddb`, `fn_vdb` (functions/financial/financial_depreciation.rs); the Gate A
+definitions in tools/src/rustsheet_tools/accuracy/defs/depreciation.py.
+Tasks: T-4111
 
 ## DURATION and RRI operation order
 Rule: DURATION discounts each cash flow with Excel's `^` (not libm `pow`) and weights it as `(t·cf)/v^t`, then
@@ -1666,12 +4645,16 @@ T-2216 sweep (probes-numeric/m9-fin-rri-sweep, excel-graph, 143 rows: the web ag
 `EXP(LN(fv/pv)*(1/nper))-1`, with the reciprocal taken first; the `/nper` candidate is refuted (it misses 49 of 136).
 RRI is no worksheet form at the edges (rows 131-139): fv=0 is -1 and pv=fv=0 is 0; pv=0 with fv<>0 is `#NUM!`; nper <= 0 is
 `#NUM!` even where the worksheet forms are numbers (nper -1 and -0.5 give -0.25 and -0.4375); `RRI(1E-5,1,2)` is `#NUM!`
-(overflow) while `RRI(0.001,1,2)` is 1.0715086071861939e+301. Fix: T-2217.
+(overflow) while `RRI(0.001,1,2)` is 1.0715086071861939e+301.
+nper exactly 1 skips EXP/LN: RRI is `fv/pv-1` there. `RRI(1,826,40633)` is 48.19249394673123, `40633/826-1`, where
+`EXP(LN(40633/826)*(1/1))-1` is ...124; 32 of 32 nper-1 rows agree, while nper 0.9999999999999999 and 1.0000000000000002 (one
+ulp either side) follow the EXP/LN form (probes-numeric/m9-fin-rri-nper-one, excel-graph, 2026-10-28, T-2217; the case that
+showed it is gen-m9/1cd3096e3e87c965 Calc!A291).
 Status: VERIFIED (excel-graph)
-Implemented (T-1975): `duration_of` in functions/financial/financial_bonds.rs, `rri_of` in annuity.rs.
+Implemented (T-1975, RRI's EXP/LN form and nper-1 case T-2217): `duration_of` in functions/financial/financial_bonds.rs, `rri_of` in functions/financial/growth.rs.
 Resolved by the T-2216 sweep above: RRI.xlsx Sheet1!D12 `RRI(0.5,3,4)` is 0.7777777777777775 (Mac cached, and the web), ours
 0.7777777777777777; E12 `POWER(4/3,1/0.5)-1` is 0.7777777777777777, so RRI is not POWER/`^`. The engine's `excel_exp`/`excel_ln`
-form with `*(1/nper)` fits D12, RRI.xlsx D3-D6 and every excel-graph RRI cell above. Fix: T-2217 (supersedes T-2222).
+form with `*(1/nper)` fits D12, RRI.xlsx D3-D6 and every excel-graph RRI cell above. Implemented: T-2217 (supersedes T-2222).
 Tasks: T-1975, T-2216, T-2217
 
 ## NPV with a rate of -1 or 1E+300 is #DIV/0!
@@ -1718,6 +4701,289 @@ Status: VERIFIED (excel-graph)
 Implemented in: `fn_npv`, `fn_fvschedule` in functions/financial/mod.rs (T-1373)
 Tasks: T-1084, T-1373
 
+## IRR on conventional flows near 0 and -10% (T-3347's training probes)
+Rule (excel-graph, 2026-10-31, probes/t3347-irr-conventional-num, 42 cells, and probes-numeric/
+t3347-irr-conventional-sweep, 120 cells; exact roots in each case's `.roots.tsv`): Excel's IRR returns the root of
+conventional cash flows (one outlay, then positive flows) within 4e-12 of the exact root on 159 of these 162 series.
+The strata: roots near 0 (positive roots from about 1e-17 to 1e-2, negative ones from -1.0e-5 to -2.6e-4), near
+-10%, and log-uniform positive and negative roots; across both cases the roots run from -0.40 to 0.72. It is `#NUM!` on three that have a real root
+(sweep A111, A115 and A117, r = -0.23, -0.40 and -0.11, long series of tiny flows after a large outlay). The fitted
+secant ("IRR is a secant in d") fails on both shapes: near -10% on long level series (probe A10-A21) it drifts to its
+step cap, and near 0 with flows up to 1E9 (probe A36-A42) v = 1 - d repeats, so the secant is flat. Neither a larger
+cap nor any stop variant reproduces Excel's digits. Newton on P(v) from v = 1 (draft #2529's stage) fit these 162 but
+failed its hold-out (t3347-irr-conventional-holdout), and T-3406 refuted it under any cap, so which conventional series
+Excel leaves `#NUM!` is not known (see "IRR on conventional flows where the secant fails: which return is
+path-sensitive"). Also seen: sweep A106 (a root of -1.3E-17) is -2.220446049250313E-16 in Excel and in the engine, the
+secant's one-ulp-of-v resolution.
+Evidence: the two cases above (salvaged from draft #2529); docs/research/t3347_irr_conventional_sweep.py builds them
+and the roots; docs/research/t3347_irr_holdout_score.py scores the hold-out.
+Ours (2026-11-04): `#NUM!` against Excel's number on the 19 probe cells and 23 of the 25 sweep cells listed in T-3347;
+sweep A33 and A82 return a number off from about the 10th to 12th significant digit. Since T-3408's 200-step secant
+cap, probe A10 and A11 and sweep A38 and A88 return Excel's value (their runs from 0.1 stop at steps 86 to 196).
+Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED
+Tasks: T-3347, T-3406, T-3408
+
+## IRR on conventional flows where the secant fails: which return is path-sensitive
+Rule (partial; what Excel does is not known yet): on conventional flows (one outlay, then positive flows) where the
+fitted secant from guess 0.1 fails, Excel returns the root on some series and is `#NUM!` (or `#DIV/0!`) on others, and
+which one is decided by something that changes when the outlay moves by under 1%. probes/t3406-irr-num-boundary
+(excel-graph, 2026-10-31; T-3406):
+- Level annuities, `IRR({-P,1,...,1})` with n flows of 1 and the root at r = -0.02k: Excel returns down to
+  r = -0.22 for n = 20 (A1-A11), -0.18 for n = 30 (A25-A33), -0.14 for n = 40 (A49-A55) and -0.12 for n = 60
+  (A73-A78), then is `#NUM!`; below about -0.36 for n = 40 (A66-A72) and from -0.18 for n = 60 (A81-A96, but A83 at
+  -0.22 is `#NUM!`) it is `#DIV/0!`. The engine (main) is `#NUM!` on 28 of the 33 returning cells: from r = -0.10
+  for n = 20, -0.04 for n = 30 and already -0.02 for n = 40 and 60. This is an ordinary input that is visibly wrong.
+- The outlay of t3347-irr-conventional-holdout A26, A70, A142 and A61 scaled by 0.97 to 1.03 in 12 steps
+  (A97-A144): A26's family alternates num, num, `#NUM!` x3, num, `#NUM!` x2, num, `#NUM!`, num, num as the root moves
+  smoothly from 7.3E-4 to -1.26E-3; A70's is `#NUM!` except A117; A142's alternates; A61's always returns. The engine
+  is `#NUM!` on all 26 returning cells of this family.
+Refuted candidates, scored on the type (number, `#NUM!`, `#DIV/0!`) of 450 cells (this probe, T-3347's probe, sweep and
+hold-out): Newton on P(v) = sum c_i v^i from v = 1 under any step cap (T-3347's fit: a returning n = 60 annuity needs
+137 steps, a `#NUM!` n = 20 one 33); the secant from guess 0.1 under a 50, 100 or 200-step cap (295, 301, 306 of 450);
+the secant carried past a flat step by a Newton step in d (304, 311, 317); a retry of the secant from any one of 17
+fixed guesses in -0.9 to 2 (no guess set separates T-3347's `#NUM!` cells from its returning ones: the `#NUM!` ones
+converge from some negative guesses, many returning ones from none). In a double replica, the secant from 0.1 on the
+annuities lands at d ~ -1.2 to -14 on its first step, comes back to d1 = 0.0919 and goes flat at step 3, the same on
+A11 (returns) and A12 (`#NUM!`).
+Evidence: probes/t3406-irr-num-boundary (inputs and 50-digit roots in its `.roots.tsv`;
+docs/research/t3406_irr_num_boundary.py); the candidate counts from docs/research/t3406_irr_secant_candidates.py
+Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
+Ours: the secant, `irr_fallback` (Newton from v = 0) then `#NUM!`: 76 of the 144 probe cells fail (28 + 26 `#NUM!`
+for a number, 22 `#NUM!` for `#DIV/0!`)
+Also: probes-numeric/t3478-irr-r4-wide (T-3478) adds 33 conventional series where Excel returns a root and the engine
+is `#NUM!`, 21 of them with 42 to 150 flows; a 100-step cap recovers 12 of the 33 and a 1000-step one 15, but only 2
+of the 21 long ones (T-3548).
+Tasks: T-3406, T-3411 (the model), T-3407 (`#DIV/0!`), T-3347, T-3548
+
+## IRR on level annuities where the secant fails: the type cut ignores the flows' scale and guesses 0 to 0.3
+Rule (partial; the mechanism is still unknown): on the level annuities `IRR({-P,1,...,1})` where the secant from 0.1
+fails, Excel's number-or-`#NUM!` cut depends on the root and n only. Multiplying every flow by 2, 1000 or 0.001 moves
+no cell's type, and neither does a guess of 0 or 0.3. probes/t4027-irr-annuity-scale-guess (excel-graph, 2026-11-06;
+T-4027):
+- The cuts, refined from t3406's 0.02 grid to 0.01: n = 20 returns down to r = -0.23 (A4) and is `#NUM!` from -0.24
+  (A5, A6). n = 40 returns down to -0.15 (A51) and is `#NUM!` from -0.16 (A52, A53).
+- Scale (A1-A24, A54-A58): the type is the same at x1, x2, x1000 and x0.001. So no absolute tolerance on NPV decides
+  it, unlike the fallback's 1E-4 residual cut ("IRR's fallback is `#NUM!` when NPV at its root is 1E-4 or more"), which
+  Excel follows across scales on other series. The digits at x2 are bit-identical to x1. At x1000 and x0.001 some move
+  in the last digits (A14, A16, A19, A20). A16 (x1000, root -0.23) is bit for bit the converged secant from guess -0.2
+  (A40), not the x1 value (A4).
+- Guess (A25-A48, A59-A68): guesses 0 and 0.3 give bit for bit the default guess's value or `#NUM!` on every n = 20
+  cell, and guess 0 does the same at n = 40. This is consistent with a failed run being retried from 0.1 and then
+  handed to a stage that does not see the guess. Guess -0.1 returns at -0.23 and -0.24 (A34, A35), but not at -0.25. Its
+  digits there differ from the default's (A34 -0.22999993443769884, A4 -0.22999993443767364). Guess -0.2 (n = 20) and
+  -0.15 (n = 40) return everywhere: the engine's secant converges there, and its digits match Excel's bit for bit.
+- Refuted on these cells: a secant restart from any one fixed guess. Over the guesses -0.6 to 0.7 in steps of 0.005,
+  the engine's secant never gives Excel's digits on A1, A2, A4 or A49. Also refuted: any cap on the engine's secant
+  from 50 to 100000 steps (t4027 type mismatches 35 to 33, t3406 54 to 48), and any fallback cap of 100 to 100000 with
+  the secant capped at 50 or 200. Uncapping the fallback fixes A1-A4 but also returns the -0.24 and -0.25 cells, where
+  Excel is `#NUM!`, as on t3406.
+Evidence: probes/t4027-irr-annuity-scale-guess (inputs and 50-digit roots in its `.roots.tsv`,
+docs/research/t4027_irr_annuity_probe.py; the engine's predictions before the fill in docs/research/t4027/predictions.md).
+The guess sweep and the caps were run on a scratch build of the engine (not committed).
+Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
+Ours: `#NUM!` on 33 of the 68 cells, all where Excel returns the root (A1-A4, A7-A10, A13-A16, A19-A22, A25-A28,
+A43-A46, A49-A51, A54-A56, A59-A61); every returned value matches. A34 and A35 (guess -0.1) match Excel's digits since
+T-3408's longer secant run ("IRR's secant runs longer than 50 steps" below).
+Tasks: T-4027
+
+## IRR's secant runs longer than 50 steps: up to 200 always finish, and past that the step count does not decide
+Rule (T-3408, 2026-11-06): an IRR secant run in Excel (from the guess, then the retry from 0.1) returns its own stop
+iterate after 51 to 200 steps. Past 200 steps, Excel's outcome is not a clean function of the step count, so no cap is
+Excel's rule. A run that reaches its stop only by a stalled zero step (d2 = d1 with |NPV| above 1e-7, the stop T-3120
+fitted on short runs) returns up to its 41st step and is `#NUM!` from its 70th. That stall evidence is shown only on
+flow sets outside the cap's range below.
+- Evidence files: an engine replay of every IRR literal cell with an oracle value (3,233 cells of eval/suites and
+  Gate A), each cell with its fit lab side, in docs/research/t3408/:
+  - long_runs.tsv: runs of 51..300 steps, with whether run and retry give the same bits;
+  - cap_runs.tsv: the engine's result at each candidate cap;
+  - stalls.tsv: every stalled stop.
+
+  `python3 -I docs/research/t3408/bounds.py docs/research/t3408` prints all of the counts below.
+- All 83 runs that reach the residual stop at their 51st..200th step are Excel's value bit for bit. Examples:
+  t3411-irr-r4-fresh A53 at the 90th step, and t3411-irr-r4-fresh-3 A53 and t3478-irr-r4-wide A221 at the 200th.
+- Past 200 steps the outcomes interleave:
+  - Excel returns the run's own value after 241, 256, 281 and 291 steps (t3411-irr-r4-fresh A2,
+    t2927-irr-fallback-sweep A97, t3411-irr-r4-fresh-4 A63, t3411-irr-r4-fresh A70);
+  - it returns the retry's value after 208 to 287 steps (t3411-irr-r4-fresh-4 A70 at 208, t3411-irr-r4-fresh A55 at
+    215, t3411-irr-r4-fresh-2 A63 at 217, up to t3411-irr-r4-fresh-2 A57 at 287).
+- The engine's cap of 200 is chosen by score, not taken from Excel. Over the 87 train cells whose result depends on
+  the cap, it matches Excel on 64 for any cap from 200 to 216, 62 at 241 and 61 at 291. 200 is the low end of that
+  plateau.
+- Stalled stops: Excel returns them up to the 41st step (t3478-irr-r4-wide A260). It is `#NUM!` on all 6 from the 70th
+  to the 189th step:
+  - probes/irr-guess-edges-2 A25, A26, A27 (70th, 74th, 125th step; 3 and 4 flows, |c| 1E+28 to 1E+45);
+  - Gate A r4-T-3411 A228 (129th; 63 flows) and A215 (132nd; 164 flows);
+  - t3478-irr-r4-wide A227 (189th; |c| 4.6E+17).
+
+  These include the cells that refuted a plain cap below. All six lie outside the range the engine gives the 200-step
+  cap (6..54 flows, |c| up to 2.2E+8).
+- Fresh sweep (decision 0188 R4.2), drawn after the model was frozen: probes-numeric/t3408-irr-r4-fresh (150 series
+  of long runs, seed "T-3408/r4-fresh" of docs/research/t3411/gen_sweep.py, excel-graph 2026-11-06).
+  - With the 200-step cap 115 of 150 cells pass, against 76 with 50, and none moves away.
+  - Its 31 cells outside the Gate A envelope are `#NUM!` where Excel returns a root (T-3548's class).
+  - A2, A13, A31 and A48 keep main's retry digits: their guesses or flows lie outside the narrowed range (decision
+    0320).
+  - 11 of those 31 are on 55..148 flows, outside the range the engine applies the cap on, so Excel may finish long
+    runs on longer series too.
+- Not shown:
+  - what decides Excel's outcome past 200 steps;
+  - what Excel does at a stalled stop past the 41st step on flows inside the cap's range (no cell has one);
+  - where in 42..70 its stall bound is.
+The earlier, partial picture (kept for its evidence):
+- Runs of 51 to 136 steps return Excel's digits bit for bit in an engine-faithful replica (the engine's twice-rounded
+  operators): probes-numeric/t3347-irr-conventional-holdout A23, A57, A50, A47 and A56 (51 to 75 steps) and
+  probes/t3406-irr-num-boundary A26 and A5 (118, 136); the level annuity `IRR({-72.25,1,...,1})` (20 flows of 1) is
+  -0.09999761744847369 after 136 steps.
+- Pointing at a cap of at most 214: the run from probes-numeric/t3411-irr-r4-fresh A55's guess -0.99235 would stop at
+  its 215th step on digits Excel does not return (Excel's are the retry's from 0.1); t3478-irr-r4-wide A240 (229 steps)
+  and m9-fin-irr-rate A125 (`IRR({-100,10,10,10,10,110},10)`, 741 steps) agree.
+- Against any single cap: t3478-irr-r4-wide A227 (`IRR({-4.64118123183281E+17,...},-0.990669502541584)`) is `#NUM!` in
+  Excel, while the guess run converges at its 189th step (to -0.6781680690607276), so it needs a cap of 188 or less;
+  A201 and A221 match Excel only with a cap of 195 and 200 or more.
+- The best cap on the probe cells is still refuted (T-3548, 2026-11-04): over every IRR cell of probes, probes-numeric
+  and gen-m9, caps 182..188 each fix 63 cells and lose none (t3478-irr-r4-wide A206, which Excel returns, needs 182
+  steps; A227 bounds it at 188). Frozen at 185 within 148 flows, it loses Gate A's accuracy/IRR/r4-T-3411 A228 (63
+  flows): Excel is `#NUM!` there, while the guess run converges at its 129th step to 1.5164068398071384E-2 (the math
+  root to 2.3E-16). A fresh Gate A batch drawn after the freeze has a 130-flow series that Excel errs on and the
+  secant solves at step 98. Excel errs on runs of 98 and 129 steps and returns runs of 182, so the step count does
+  not separate its returns from its errors.
+- Cell counts over the six IRR probe cases, by cap (T-3806's fidelity review): 50 = 594, 136 = 630, 170 = 639,
+  200..214 = 641, 215 = 640, 230 = 637. 200..214 is only the best-scoring range, and taking it loses A227.
+- Holdout A44 and A105 match Excel's digits only in runs of 1,068 and 2,406 steps, so Excel reaches the same last
+  iterates there by another path (unexplained).
+- Where the secant stalls at the root with |NPV| above 1e-7 (rounding noise; a flat secant right after a step under
+  1e-7, at |NPV| 1.2E-7 to 8.4E-5), Excel returns a number on all 22 such cells of the two probe cases above and
+  t3411-irr-r4-fresh, and its digits are those of `irr_fallback` (Newton on the NPV polynomial from v = 0) run past its
+  50-step cap on 15 of them (up to 179 steps; t3411-irr-r4-fresh A129 needs 9). It is not the stalled iterate: A129's
+  flat iterate is -0.010524456189355935, Excel's -0.010524456189355713. No cap on that Newton search separates
+  Excel's returns from its errors: over the 285 probe cells where both secant runs fail, returns and `#NUM!`
+  interleave from 0 to 680 Newton steps.
+- Refuted: returning the stalled iterate when |NPV| < 1E-4 (Excel returns at 8.4E-5, errs at 2.9E-4 on
+  t3478-irr-r4-wide A52 and at 0.125 on `IRR({1E+15,1,-1E+15},0.05)`) passes 17 more eval cells and 5 more of
+  t3411-irr-r4-fresh, but gives non-Excel digits (A129 above).
+Evidence: probes-numeric/t3411-irr-r4-fresh and t3411-irr-r4-fresh-2 (excel-graph, 2026-11-02; fresh sweeps with
+50-digit roots in their `.math.tsv`, docs/research/t3411/gen_sweep.py), plus the cells named above. The replica behind
+the step counts was scratch code and is not committed.
+Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
+Ours: `irr_secant` takes up to 200 steps (`IRR_LONG_RUN_STEPS`, FITTED, decision 0320) on 6..54 flows with the largest
+|c| in 5.6E-9..2.2E+8 and a guess in -0.99934..9.81E+7 (`IRR_LONG_RUN_RANGE`, the range of the returning train runs
+whose run and retry differ; the cap is a train-score plateau point, not Excel's), 50
+elsewhere; a stalled zero step stops a run only within its first 50 steps (the old cap, inside the 41..69 bracket, not
+fitted; T-3408). Earlier, a 213-step cap without the stall limit was tried
+(T-3806) and dropped because it loses A227, and a 185-step one (T-3548) because it loses Gate A A228.
+Tasks: T-3411, T-3806 (dropped), T-3548, T-3408
+
+## IRR's returns where the secant fails are Newton iterates on P(v) from v = 0, past the 1e-7 stop
+Rule (partial): where both runs of the engine's secant fail and Excel returns a number, Excel's double is often
+bit for bit 1/v - 1 at an iterate of `irr_fallback`'s Newton search (P(v) = sum c_i v^i by Horner in plain doubles,
+from v = 0), after many more steps than its 50-step cap, and, where the cells can tell, mostly the iterate one past
+the engine's stop. What decides which iterate Excel returns, and when it is `#NUM!` instead, is not known.
+- Over the numeric IRR cells of eval with oracle values, both secant runs of an exact replay of the engine fail on
+  710: t2927-irr-fallback-sweep 162, t3406-irr-num-boundary 139, t3478-irr-r4-wide 105, t3411-irr-r4-fresh-2 94,
+  t3411-irr-r4-fresh 89, t3347-irr-conventional-holdout 66, irr-fallback-roots 31, irr-guess-edges-2 20 and
+  irr-guess-edges 4. Excel returns on 405 of them, is `#NUM!` on 249 and `#DIV/0!` on 56.
+- On 181 of the 405 Excel's value is a Newton iterate, after 4 to 632 steps (69 within 50): the n = 20 annuity A11 of
+  t3406-irr-num-boundary at step 126, the n = 60 one A78 at 579, the outlay family A122-A132 (but not the `#NUM!`
+  A125, A127, A130, A131) at 127-128, and A134, A136, A138-A140, A142-A144 at 438-441 (A133, A135, A137 and A141
+  return, but no iterate is their value). The other 224 are no Newton iterate; the earlier finding that longer
+  secant runs give many of them ("IRR's secant runs longer than 50 steps") still stands.
+- Against the engine's stop (the first step under 1e-7 max(|v|, 1)): on 123 of the 181 the iterate at the stop and
+  the next one give the same rate, so the cell cannot tell them apart. Of the rest, Excel returns the next iterate on
+  51, the one at the stop on 4 (t3347-irr-conventional-holdout A39, t3411-irr-r4-fresh A102 and A129,
+  t3411-irr-r4-fresh-2 A2) and another iterate on 3. The size of the stopping step does not separate them: Excel
+  stops after a step of 2.29E-11 (fresh-2 A2) but takes one more after 2.92E-12 (fresh-2 A44), and stops after
+  1.54E-10 (fresh A102) but takes one more after 1.6E-10 (fresh-2 A14). Nor does |P|: on fresh-2 A14 Excel takes
+  another step at |P| 2.86E-15 of the largest flow and stops at 3.03E-15. So the extra step is decided by something
+  the replica does not see (perhaps Excel's own residual arithmetic at the noise floor). The fallback's stop rule is
+  unchanged: no rule on the step or |P| fits both groups.
+- `#NUM!` is not where Newton fails: it converges to a positive root under the far-root bound on 196 of the 249
+  `#NUM!` cells (and on 2 of the 56 `#DIV/0!` ones). Nor is it the way the secant fails: by how the last run fails,
+  the cells split 151 / 168 / 20 (returns / `#NUM!` / `#DIV/0!`) for a flat secant, 116 / 46 / 1 for the 50-step
+  cap and 138 / 35 / 35 for an iterate outside (0, 1) in d or an NPV out of range.
+- On t3406-irr-num-boundary A97-A144, twelve NPV evaluations (the engine's twice-rounded running product, plain
+  doubles, an 80-bit accumulator, products by v instead of quotients by x, Horner in v or in x, each with plain,
+  twice-rounded or 80-bit operators) take the secant down the same path: flat at step 3 on A109-A144 for all twelve.
+  So a last-ulp difference in NPV at d = 0.0919 is not what separates A126 (returns) from A125 (`#NUM!`).
+- Also refuted on t3406 (type agreement of the secant alone, 144 cells, cap 213): Illinois regula falsi once a step
+  brackets the root 104 (plain secant 92), but none of its returns has Excel's digits; keeping the two points of
+  smallest |NPV| 85.
+- Near-zero roots (T-4213; evidence salvaged from draft PR #3211 by T-4386, the IRR change itself is not on main). On
+  conventional series whose root is within 0.03 of zero and whose flows are large (|c| 1E+8 to 7E+11), both secant
+  runs go flat in NPV's rounding noise (|NPV| 2E-7 to 7E-5, above the 1e-7 stop, a few 1E-16 of the discounted flows),
+  so the fallback answers, and a 1E-16 absolute step of the rate is an 11th to 15th-digit difference. Excel's value
+  there is sometimes the fallback's iterate one step past the stop (t3411-irr-r4-fresh-2 A43 -0.0022000456147424075
+  and A44 -0.0038627368146444407; the stop iterates are -0.0022000456147435177 and -0.003862736814644663) and
+  sometimes a secant iterate the engine passes on its way to flat: fresh-2 A30 and A32, fresh-3 A38, A45 and A109 and
+  fresh-4 A110 are bit for bit 1/(1 - d) - 1 at the first secant iterate whose |NPV| is under about 1.2E-15 to
+  2.1E-15 of sum |c_i| v^i (fresh-2 A37 is no iterate of either). That relative stop is not Excel's rule, though:
+  added to the secant at any constant from 6E-16 to 3E-15, it turns 98 cells Excel is `#NUM!` on into numbers
+  (`IRR({1E+15,1,-1E+15},0.05)`, probes/irr-guess-edges A37, among them) and costs 27 bit-exact cells; the same holds
+  when |NPV| is measured against the largest flow (which also loses t2565-irr-guess-sweeps A107-C141) or against the
+  guess's NPV. Which iterate Excel returns at the noise floor, and when it is `#NUM!` instead, stays unknown.
+- Returning the iterate one step past the stop instead (measured on the T-4213 branch, not on main) makes 12 IRR
+  cells of eval bit-exact (t2927-irr-fallback-sweep A79, A80, A135, A137; t3347-irr-conventional-holdout A41;
+  t3411-irr-r4-fresh-2 A43, A44; t3411-irr-residual-scale A31, A32, A48, A49; t3478-irr-r4-wide A292) and costs one
+  (t3411-irr-r4-fresh A129, the stop iterate), with no change of type; 4 t2927-irr-fallback-sweep cells move one ulp
+  past the 15th digit. The fresh sweep drawn after that choice was frozen is probes-numeric/t4213-irr-r4-fresh (150
+  conventional series with roots 1E-7 to 0.05, filled from excel-graph 2026-11-04, seed "T-4213/r4-fresh" of
+  docs/research/t3411/gen_sweep.py): Excel returns a number on 104 and `#NUM!` on 46. The branch's engine returned 59
+  of the 104 (57 bit-exact) and was `#NUM!` on 45 where Excel returns a root (T-3548's type rule); T-4232 owns the
+  visibly-off cells. On main (the stop iterate) the case scores 102 of 150 (56 of the 104 numbers bit-exact).
+Evidence: the oracle values of the cases above; `python3 -I docs/research/t3411/fallback_iterates.py .` prints the
+counts of the first four points, each iterate's step and stopping step size (an exact replay of the engine's
+secant, then Newton from v = 0). The NPV variants and the Illinois and two-point secants were scratch code.
+Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
+Ours: `irr_fallback` stops at the first step under 1e-7 max(|v|, 1) within 50 steps; unchanged.
+Tasks: T-3411, T-4213, T-4386
+
+## IRR's fallback is `#NUM!` when NPV at its root is 1E-4 or more
+Rule (partial; the type rule where both secant runs fail): where Excel's IRR reaches the root by the fallback (the
+engine's `irr_fallback`, Newton on P(v) from v = 0), it is `#NUM!` when |NPV| at that root, evaluated as IRR's secant
+evaluates it (the running product at x = 1/v with the twice-rounded operators, `irr_npv`), is 1E-4 or more; a root
+with a smaller residual can still be `#NUM!` for other reasons (the level annuities below).
+- Inside the outlay families of probes/t3406-irr-num-boundary, where the returns and `#NUM!` share the same secant
+  path and the same Newton path, the residual alone parts them: A97-A108 return at 8.1E-6 to 7.8E-5 and are `#NUM!` at
+  1.26E-4 to 3.4E-4; A109-A120 return only on A117 (6.9E-5), the others are 3.2E-4 to 4.5E-3; A121-A132 return at
+  7.6E-6 to 8.4E-5 and are `#NUM!` at 1.11E-4 to 1.72E-4 (A125, A127, A130, A131, A121). A133-A144 (all under 4E-7)
+  all return.
+- Over all 710 IRR cells in eval whose secant runs fail (the replay of "IRR's returns where the secant fails are Newton
+  iterates"), with the Newton search run uncapped: no cell Excel returns has a residual above 9.54E-5
+  (probes-numeric/t3478-irr-r4-wide A83, t3411-irr-r4-fresh A128), and every cell with a residual of 1.106E-4
+  (t3406 A131) or more is an error. 1E-4 is the round value in that bracket.
+- With the engine's 50-step fallback and the check one Newton step past its stop, over every IRR cell in eval (169
+  cases): no cell moves for any cut in 9.16E-5..1.22E-4. Excel's largest returning residual there is 9.155E-5
+  (probes-numeric/t3411-irr-r4-fresh A37, A140), its smallest `#NUM!` 1.2207E-4 (t3478-irr-r4-wide A90), then
+  1.526E-4 (t3411-irr-r4-fresh-3 A49). These residuals are 3, 4 and 5 times 2^-15, the rounding step of NPV sums of
+  flows near 1E+11: the cut sits at the noise floor of such flows.
+- The cut is absolute, not relative to the flows' size: probes-numeric/t3411-irr-residual-scale scales the bracket
+  cells' flows by 10^k (k = -6..4). Excel returns IRR(fresh A37), IRR(fresh A140), IRR(wide A79) and IRR(wide A292) up
+  to x1 and is `#NUM!` for the same flows times 10 or more; wide A90 is `#NUM!` at x1, returns at x10 and is `#NUM!`
+  from x100. The cut gives Excel's type on all 72 cells. So scaling every flow of an IRR by 10 can turn its answer
+  into `#NUM!`.
+- Fresh sweeps (decision 0188 R4, generated and oracle-filled after each freeze), against main's model cell by cell:
+  round 3 (check at the stop iterate) on t3411-irr-r4-fresh-3: 3 gained, 0 lost, type mismatches 52 -> 49; round 4
+  (one step past) on t3411-irr-r4-fresh-4: 5 gained (A29, A46, A48, A49, A144), 0 worse, type mismatches 67 -> 62;
+  Gate A batch accuracy/IRR/r4-T-3411: 300 points, 31 outside the envelope against 32 on main (the same points and
+  kinds; A296 is fixed).
+- Where the residual is taken matters: the bracket above is at the iterate one Newton step past the engine's stop
+  (where Excel's value usually is). At the engine's stop iterate itself the residual can be 10 to 70 times larger:
+  probes-numeric/t3411-irr-r4-fresh-2 A43 (3.9E-3 at the stop, 6.9E-5 one step on), t3478-irr-r4-wide A79 (8.8E-4,
+  1.2E-5) and A292 (1.3E-4, 6.7E-6), all returned by Excel. Checking at the stop iterate makes those three `#NUM!`
+  (the first engine version of this rule did, T-3411 review).
+- Not the whole type rule. With the residual check and the Newton search uncapped, 71 cells main gets right turn
+  wrong: 39 level annuities of t3406 (A12-A24, A34-A48, A56-A65, A79; residuals 2E-13 to 3E-7, Excel `#NUM!`) and 32
+  scattered sweep cells. Excel's returning level annuities A1-A10, A25-A30 and A32-A33 are mostly not Newton iterates
+  from v = 0, so their path is still unknown; the n = 20 cutoff (A11 returns after 125 Newton steps, A12 is `#NUM!`
+  after 133) is no fixed step cap (n = 30 returns after 223, n = 60 after 577). The engine keeps its 50-step cap.
+Evidence: probes/t3406-irr-num-boundary, probes-numeric/t3478-irr-r4-wide, t3411-irr-r4-fresh, -fresh-2, -fresh-3 and
+-fresh-4, t3411-irr-residual-scale, accuracy/IRR/r4-T-3411 (excel-graph); the residuals from the replay in docs/research/t3411/fallback_iterates.py
+(`npv` at the Newton root) and from the engine's `irr_npv` one step past `irr_fallback`'s stop.
+Status: VERIFIED (excel-graph) for the cells; the cut is UNVERIFIED as a rule (FITTED bracket 9.155E-5..1.2207E-4, one Newton step past the engine's stop; the residuals are the engine's `irr_npv`, not shown to be bit-identical to Excel's NPV)
+Ours: `irr_fallback` takes one more Newton step from its stop iterate and is `#NUM!` when |`irr_npv`| there is
+`IRR_ROOT_RESIDUAL` = 1E-4 or more; it still returns the stop iterate (T-3411 round 4). The check applies only to
+2..148 flows whose largest |c| is 6.4E-12..2.2E+82, the evidenced range (`IRR_ROOT_RESIDUAL_FLOWS`).
+Tasks: T-3411
+
 ## IRR over an error element
 Rule: IRR (probes/fin-irr-error-array, T-2390, excel-graph) gives `#VALUE!`, whatever the kind, when its values hold an
 error: in an array constant (`IRR({-100,#N/A,60})`, also `#DIV/0!`, `#NUM!`, `#VALUE!`, `#REF!`, `#NAME?`, first, middle or last,
@@ -1739,7 +5005,8 @@ formula per pool entry:
 - A coupon frequency truncates: `COUPNUM(39448,43831,2.5)` is 24 and `...,4.9)` 48; `"2"` is coerced (24); 3, 0, 12, -1
   and -0.0001 are `#NUM!`.
 - EFFECT floors npery: `EFFECT(0.05,1.5)` = `EFFECT(0.05,1)` = 0.050000000000000044, and npery 0.5, 0.999, 0 and -1 are
-  `#NUM!`. `EFFECT(0.05,1E+10)` is 0.05127110072502061 (ours 0.05127110027547532, T-2392).
+  `#NUM!`. `EFFECT(0.05,1E+10)` is 0.05127110072502061 (ours was 0.05127110027547532; fixed by T-2392, see "EFFECT and NOMINAL
+  raise to their power with `^`").
 - PMT: a rate of -1 and nper 0 are `#NUM!`; a negative nper computes (`PMT(0.05,-12,1000)` = 62.82541002081538); nper
   1E+6, 1E+9 and 1E+300 give -50 (`-pv*rate`). IPMT per 0, 0.5, -1 and past nper (13 of 12) is `#NUM!`; per 1.5 computes.
 - IRR: no sign change, a single flow and all zeros are `#NUM!`; text and TRUE inside an array literal are skipped
@@ -1747,9 +5014,9 @@ formula per pool entry:
   (`IRR({-100,#N/A,60})`; see "IRR over an error element").
 - XNPV: dates whose first is not the earliest, dates from serial 0 to 61, and fewer dates than values are `#NUM!`; equal
   dates give 0; fractional dates truncate.
-- YIELD: a price of 0 or -1 is `#NUM!`, and so are 1E+6 and 1E+300 (ours -0.6330938491144911 at 1E+6, T-2391); a price of
+- YIELD: a price of 0 or -1 is `#NUM!`, and so are 1E+6 and 1E+300 (ours matches since T-2391); a price of
   200 computes (-0.02224401627496982). The price sweep in probes/yield-newton-domain locates the cut between 1E4 and 1E5
-  ("YIELD's #NUM! cells and its suspected 100-step cap").
+  ("YIELD's #NUM! cells and its 100-step cap").
 Evidence: a scratch suite of 169 cells (one formula per entry of the pools rate, nper, period, cash_amount, price,
 annuity_type, security_date, basis, frequency, npery, cash_flows and cash_dates), filled through excel-graph on
 2026-10-22 and deleted afterwards, as the task asked; T-2390, T-2391 and T-2392 commit probes for the three mismatches.
@@ -1774,11 +5041,32 @@ with both TRUE, bc40d37cb4d8301d A392) and `#NUM!` for a number against a range 
 Evidence: gen-m9 (excel-graph, 2026-10-22, T-2255), 51 cells listed in T-2428.
 Order (XIRR, T-2428, from 198 gen-m9 cells now passing): an error dates argument, then (beside a number or omitted guess;
 a text, boolean or error guess keeps the element reading's `#VALUE!` or that error) one value with one date is `#N/A`
-unless either is a text, boolean or empty cell (`#VALUE!`; an array element such as BYROW's `{FALSE}` is not a cell, so
+unless either is a text or boolean cell (`#VALUE!`; an empty cell is a number here since T-3312, see "XIRR's guess,
+date and empty-cell order (T-3312)"; an array element such as BYROW's `{FALSE}` is not a cell, so
 `#N/A`); a single date that is a text, boolean or empty cell is `#VALUE!`; a single text or boolean value cell against
 several dates is `#VALUE!`; then different counts are `#NUM!` whatever a larger range holds (gen-m9/0a957119475760c5 A47);
-then the element reading. Open (T-2428): an error guess beside numeric values is the guess's error in Excel
-(1b60bf99d71424e7 A29, 67a4c03afd63f988 A388) but text values beside an error guess are `#VALUE!` (b72d952c5f52cb4d A50).
+then the element reading. T-2611 (gen-m9, excel-graph, 2026-10-24; 42 top-level cells): an error values argument comes
+first (`XIRR(<#VALUE!>,<#DIV/0!>,..)` is `#VALUE!`, 79d87fc527927626 A228; an `INDEX` `#REF!` beside an error dates,
+81bcdc0bec0c8e6b A305, bc04c1f478c9896c A220); then an error guess is that error before an error dates argument, the size checks and the values'
+cells (`XIRR(1E+21,<#VALUE!>,<#NUM!>)` is `#NUM!`, 1dce4774f5c0e736 A189; `XIRR({-1000,300,400,500},<16 dates>,<#N/A>)`
+`#N/A`, 1b60bf99d71424e7 A29; `XIRR(<text cells>,<5 dates>,<#VALUE!>)` `#VALUE!`, b72d952c5f52cb4d A50, whose guess is
+itself `#VALUE!`); then an error dates argument, before the values' cells are read (`XIRR(Data!B11:E11,<#N/A>)` with E11
+the text `" x "` is `#N/A`, 67a4c03afd63f988 A241). T-3312 moved the guess before the error values argument and
+made every boolean guess `#VALUE!` (see "XIRR's guess, date and empty-cell order (T-3312)"). A boolean guess beside values
+and dates of different counts is `#VALUE!` (a guess cell holding TRUE beside 6 values and 3 dates, b6a02893a8d6b151 A226). In the size checks one empty or numeric-text cell is not "a text, boolean
+or empty cell": one empty values cell against several dates (`XIRR(Data!D10:D10,Data!B7:E8)`, 1dce4774f5c0e736 A91;
+89f0aee953a55a45 A36; ba4ddb817a8e700e A339), one empty date cell against several values (`XIRR(Data!B6:C11,<empty>,0.5)`,
+89f0aee953a55a45 A330; d0854366830dcdee A133) and one numeric-text date `"1"` against 14 values (c0681a8b150ce301 A266) are
+the count's `#NUM!`; one FALSE date stays `#VALUE!` (1cd3096e3e87c965 A48). 1db18890916ee643 A108, once cited for an
+empty date cell's `#VALUE!`, is a nested cell with a FALSE guess and other `#VALUE!` arguments, so it does not show
+the empty date's error (unconfirmed which argument decides it). Settled by T-3312: an error guess beats an error values argument,
+and a numeric-text guess keeps the count's `#NUM!`. Unprobed: numeric text inside a values
+range, array or typed argument (T-3312). Settled for range cells (T-3267): numeric text reads as its number, in both
+the values and the dates (`XIRR(G1:G13,H1:H13)` over text cells equals the number flows, probes/xirr-back-dated-stop
+A31; `XIRR(Data!C9:C11,{39448,39508,39859},0.1)` with C11 `"1"` is `#NUM!`, 31474c20fc1dafd6 A351); non-numeric text is
+`#VALUE!`. A TRUE guess beside 6 values and 3 dates is `#VALUE!` (b6a02893a8d6b151 A226, whose range text `"1.5"` is
+numeric, so the guess decides it). Formatted numeric text in XIRR ranges (dates, currency, percent) is unprobed; ours
+reads it with the engine's text-to-number coercion.
 Order (XNPV, T-2428): the rate first, per element, where a boolean is `#VALUE!` (a cell, `XNPV(<TRUE>,..)`,
 1dce4774f5c0e736 A22, or an array element, `XNPV(SORT(<FALSE>),..)`, 5c6a23c4f6597f1c A258); then one values cell that is
 non-numeric text or a boolean is `#VALUE!`, before an error dates argument (`XNPV(-1,<FALSE>,<#N/A>)`, 3aa168259335be54
@@ -1787,14 +5075,89 @@ A334), while numeric text there is not refused (`DB(XNPV(0.1,<"1.5">,Data!C5:C6)
 5c6a23c4f6597f1c A111; four cells with a `#VALUE!` dates expression beside a values range holding text); then one dates cell
 that is non-numeric text or a boolean is `#VALUE!` (d0854366830dcdee A274); then values and dates of different counts are
 `#NUM!` whatever they hold, an error value included (`XNPV(0.1,{-100,#N/A,60},<5 dates>)`, bc04c1f478c9896c A313;
-`XNPV(10,{100,200,300},<6 cells with text>)`, 1b60bf99d71424e7 A24); then the element reading. Open (T-2611): equal counts
-with text in both (1b60bf99d71424e7 A171 `#VALUE!`) and a boolean date inside a range (5ded7594e597e31e A12 `#NUM!`).
+`XNPV(10,{100,200,300},<6 cells with text>)`, 1b60bf99d71424e7 A24); then the element reading. A boolean date inside a range
+(5ded7594e597e31e A12 `#NUM!`) is settled by T-3312 ("XNPV's rate, first date and later dates (T-3312)").
 Evidence: 38 of the 48 gen-m9 cells whose formula is a bare XNPV or FVSCHEDULE call (excel-graph, direct), and the
 nested cells listed in T-2428.
 Ours: XIRR follows its order (`xirr_size_error`) and XNPV its (`xnpv_size_error`, the rate read without booleans) since
 T-2428; the error-guess cells are T-2611's.
 Status: VERIFIED (excel-graph; direct for the bare XIRR and XNPV cells, inferred through the enclosing call otherwise)
 Tasks: T-2428, T-2611
+
+## XIRR's guess, date and empty-cell order (T-3312)
+Rule: XIRR checks, in this order: (1) the guess: an error guess is that error, a text guess that is no number and a
+boolean guess (a literal TRUE or FALSE or a cell holding TRUE, beside equal or different counts) `#VALUE!`; (2) an error values
+argument; (3) an error dates argument; (4) the size checks of "XIRR and XNPV under the gen-m9 statistical cells", where
+one empty cell counts as a number: `XIRR(<empty>,39448)`, `XIRR(5,<empty>)` and `XIRR(<empty>,<empty>)` are `#N/A`, as
+is `XIRR(5,39448)`, while a text or boolean single cell stays `#VALUE!` (`XIRR(5,"x")`, `XIRR(5,TRUE)`). A guess at or
+below -1 turns those size errors into `#NUM!` (`XIRR(5,39448,-1)`, `XIRR(<empty>,1E+15,-1)`, `XIRR(5,-5,-1)`; -0.5
+and 0 keep `#N/A`), but not a single text or boolean date's `#VALUE!` (`XIRR(5,"x",-1)`). A numeric-text guess reads as
+its number, so the counts' `#NUM!` stands beside it (`XIRR(<-100,110,"x">,<2 dates>,"0.1")` is `#NUM!`). (5) The
+values and dates, pair by pair from the first: a text or boolean value or date is `#VALUE!`, a negative date or one
+past 9999-12-31 `#NUM!`, whichever comes first (`{-2.5,39448,"x"}` and `{39448,-2.5,"x"}` dates are `#NUM!`,
+`{39448,"x",-2.5}` and `{"x",39448,39508}` `#VALUE!`; values `{-100,110,"x"}` on `{-2.5,39448,39508}` are `#NUM!`;
+gen-m9/7c20351562a2d71d A40, one text value cell before 16 dates holding a negative one, is `#VALUE!`). (6) The flows'
+signs: all-negative values are `#NUM!` only after the dates read clean (`XIRR({-100,-200,-300},{39448,39508,"x"})` is
+`#VALUE!`, with `{-2.5,39448,"x"}` `#NUM!`). An equal-count call with a guess at or below -1 is `#NUM!`
+(`XIRR({-100,110},{39448,39508},-1)`), the solver's check, which was `#VALUE!` in the engine before.
+Evidence: probes/t3312-xirr-xnpv-inner-calls A18-A31, A39-A64 and probes/t3312-xirr-guess-dates-weibull A1-A47
+(excel-graph, 2026-11-04). Error order: `XIRR(NA(),{2 dates},1/0)` is `#DIV/0!`, `XIRR(1/0,{2 dates},NA())` `#N/A`,
+`XIRR(1/0,NA(),"x")`, `XIRR(NA(),{2 dates},TRUE)` and `XIRR({-100,110},NA(),TRUE)` `#VALUE!`; `XIRR(NA(),{2 dates},-1)`
+and `XIRR({-100,110},NA(),-1)` `#N/A`. These settle gen-m9/4bad303d32cc3f46 A364 (`XIRR(<empty>,1E+15,-1)`),
+5919660b7bb4d195 A144 (`-2.5`, empty, `"TRUE"` dates) and b72d952c5f52cb4d A38 (`XIRR(MONTH(59085),<empty>)`).
+Unprobed: a FALSE guess cell (literal TRUE and FALSE and a TRUE cell are probed; ours: `#VALUE!` for every boolean);
+the -1 guess beside one text or boolean values cell against several dates (ours: that `#VALUE!` stands, as for one text
+date); which of a pair is read first when both the value and the date are bad; a text value against an error element
+in the dates (ours: the value's `#VALUE!` whatever the positions, the order before T-3312); an error element inside the
+values against a bad date earlier in the dates (ours: the values' error); a date past 9999-12-31 against later text
+(ours: the negative date's rule, on the date truncated to a whole day). `XIRR({-100,200,-300},{1,2,3})` is 2.9802322387695314E-09 in Excel, ours `#NUM!` (T-4251).
+Status: VERIFIED
+Implemented in: `fn_xirr`, `xirr_size_error` (crates/rustsheet-engine/src/functions/financial/mod.rs), `xirr_flows`
+(functions/financial/flows.rs), `compute_xirr`'s guess check.
+Tasks: T-3312
+
+## XIRR's date bound is checked on the whole day (T-4283)
+Rule: XIRR truncates a date to a whole day before checking it against 0 and 9999-12-31 (2958465): 2958465.5 is a valid
+date and 2958466 is `#NUM!`; 0.5 is a valid date and -0.5 is `#NUM!` (it truncates to -1, like -1 itself), as for XNPV's
+fractional dates.
+Evidence: probes/t4283-xirr-whole-day-date-bound A1-A10 (excel-graph, 2026-11-05): `XIRR({-100,100.001},{2958464,2958465.5})`
+and with 2958465 are 0.003656652569770813, with 2958466 `#NUM!`; `XIRR({-100,200},{-0.5,43831})` and with -1 are `#NUM!`,
+with 0.5 or 0 0.005788829922676086; the range forms agree (A8-A10).
+Ours: matches (`xirr_flows`, pinned by `fn_xirr_date_bound_is_checked_on_the_whole_day`).
+Status: VERIFIED (excel-graph)
+Implemented in: `xirr_flows` (functions/financial/flows.rs).
+Tasks: T-4283
+
+## XNPV's rate, first date and later dates (T-3312)
+Rule: after the rate's own checks and the size checks of "XIRR and XNPV under the gen-m9 statistical cells", XNPV is
+(1) the error of a values argument that is itself an error; (2) `#NUM!` for a rate at or below 0, before any element
+(`XNPV(0,{-100,#N/A,60},<TRUE,0,1.005>)` and `XNPV(-1,{-100;30;40;50},<7,TRUE,8,9>)` are `#NUM!`); (3) `#VALUE!` when
+the first date of a range or array is text or a boolean (`XNPV(0.1,{-100,60,70},<TRUE,0,1.005>)`, and before an error
+value: `XNPV(0.1,{-100,#N/A,60},<TRUE,39448,39508>)`); (4) an error among the values (`XNPV(0.1,{-100,#N/A,60},
+<39448,TRUE,39508>)` is `#N/A`); (5) `#NUM!` for a text or boolean date after the first, as for a date that is no
+valid serial or precedes the first (`XNPV(0.1,{-100;30;40;50},{7;TRUE;8;9})` and its range form, also with rate 1E+15;
+with -0.0001 or 123456789.123 among the dates `#NUM!` too). Excel's documentation names `#VALUE!` for a non-date; only
+the first date gives it.
+Evidence: probes/t3312-xirr-xnpv-inner-calls A9-A17, A32-A38 (excel-graph, 2026-11-04); the error-argument order from
+gen-m9/7d2979fba2c95d64 A84 (`XNPV(-1+2^-52,<#VALUE!>,..)` is `#VALUE!`), c0681a8b150ce301 A112, d0854366830dcdee A127,
+e168be7f6d3f84c2 A88 (excel-graph). Settles gen-m9/5ded7594e597e31e A12 and 8f2ac25945af87da A137.
+Unprobed: a first date that is an empty cell (ours `#NUM!`, the empty-date rule), an error element in the dates
+against a non-number first date, and a non-number first date against a text, boolean or empty values element (ours:
+the first date's `#VALUE!`; only error value elements are probed, A33, A36).
+Status: VERIFIED
+Implemented in: `fn_xnpv` (crates/rustsheet-engine/src/functions/financial/mod.rs), `xnpv_flows`, `xnpv_dates`
+(functions/financial/flows.rs).
+Tasks: T-3312
+
+## FVSCHEDULE whose running product overflows: excel-graph cannot open it
+Rule (unsettled): `FVSCHEDULE(5916,{-1E+300,1E+300})` is 0 on excel-graph inside gen-m9/89f0aee953a55a45 (A349, filled
+2026-10-23 and again 2026-11-04), but every smaller workbook holding an overflowing FVSCHEDULE fails to open there
+(`createSession` 501 FileCorruptTryRepair): the formula alone, beside 58 other formulas, with the case's own Data sheet,
+with the schedule in cells, and `FVSCHEDULE(1,{1E+300,1E+300})`. The 0 is likely a non-finite result the Graph read
+cannot carry. Ours is `#DIV/0!`. Desktop Excel decides it (T-4250, decision 0039).
+Evidence: T-3312 oracle attempts (2026-11-04); gen-m9/89f0aee953a55a45 A349.
+Status: OPEN
+Tasks: T-4250
 
 ## FVSCHEDULE with one empty schedule cell is the principal
 Rule: a schedule that is one empty cell is an empty schedule, so FVSCHEDULE returns the principal: `FVSCHEDULE(6527,D1)`
@@ -1823,7 +5186,9 @@ outer call is the function; "inferred" means the other arguments nest calls whos
 - COUP* functions: a settlement or maturity past 9999-12-31 is `#NUM!` as it is read, before a later error or text
   (`COUPDAYS(123456789.123,<FALSE>,4)` 89f0aee953a55a45 A363, `COUPNUM(37484,2958466,2,<#VALUE!>)` 1dce4774f5c0e736 A19), and
   `COUPDAYS(39123,2958466,1,0)` is `#NUM!` (a91bad4e84f49739 A153). `COUPDAYBS(37913,46720,4,4)` = 50 (7d2979fba2c95d64 A304) and
-  `COUPDAYS(5E-05,2958465,2.5,1)` = 184 (b72d952c5f52cb4d A88).
+  `COUPDAYS(5E-05,2958465,2.5,1)` = 184 (b72d952c5f52cb4d A88). Now probed: "Analysis ToolPak securities functions check
+  frequency and dates first", "Coupon dates keep the maturity's day" and "COUPDAYS basis 1 counts from the chained
+  next coupon" (T-2486, T-2640).
 - ODDLPRICE with the settlement before `last_interest` is `#NUM!`: `ODDLPRICE(59,38163,33447,0,10,110,1,4)` (0a957119475760c5 A351),
   `ODDLPRICE(36111,38608,36584,..)` (89f0aee953a55a45 A8); probed, with ODDLYIELD and a settlement on `last_interest`, in
   "ODDFPRICE, ODDFYIELD, ODDLPRICE and ODDLYIELD check order" (T-2483).
@@ -1838,13 +5203,14 @@ outer call is the function; "inferred" means the other arguments nest calls whos
   `DB(6912,0,1E+300,2,6)` e168be7f6d3f84c2 A70); `DB(0.01,488,32,1E+200,10)` = -0.0033416666666666673 (762cd0e4ec9a7aa9 A151),
   a first Excel value past the "DB and VDB period cap".
 - VDB takes a text `no_switch`: `VDB(17334,389,36,0.2,9,3,"FALSE")` = 9114.101951893414 (762cd0e4ec9a7aa9 A379); DDB takes a
-  TRUE factor from a cell without `#VALUE!` (`DDB(3.14159,866,13,7,<TRUE>)` = 0, 81bcdc0bec0c8e6b A8; the salvage is above
-  the cost there, so whether the boolean is read as 1 or the 0 comes before the factor is read is unprobed); `VDB(43478,488,1E+9,3,7,0)` = 0.00017196
-  (a91bad4e84f49739 A323).
-- NPER at a rate of 1E-300 is `#DIV/0!` (`NPER(1E-300,-236,2766,945)`, 3c06f9298f65a3ba A148), NPV at a rate of -1 is `#DIV/0!`
-  (`NPV(-1,GESTEP(-2.5,-100))`, 3aa168259335be54 A18), EFFECT at a huge nominal rate `#NUM!` (`EFFECT(1E+300,11)`,
+  TRUE factor from a cell without `#VALUE!` (`DDB(3.14159,866,13,7,<TRUE>)` = 0, 81bcdc0bec0c8e6b A8); `VDB(43478,488,1E+9,3,7,0)`
+  = 0.00017196 (a91bad4e84f49739 A323). Now probed and followed ("VDB, DDB and ACCRINT argument types", T-2492).
+- NPER at a rate of 1E-300 is `#DIV/0!` (`NPER(1E-300,-236,2766,945)`, 3c06f9298f65a3ba A148; five more 1E-300 cells in
+  T-2698), and at a rate of -1 it is `#NUM!` (`NPER(-1,-31,1)`, 3c06f9298f65a3ba A50; both implemented by T-2620, "Annuity and DB argument domains at their
+  limits"). NPV at a rate
+  of -1 is `#DIV/0!` (`NPV(-1,GESTEP(-2.5,-100))`, 3aa168259335be54 A18), EFFECT at a huge nominal rate `#NUM!` (`EFFECT(1E+300,11)`,
   31474c20fc1dafd6 A37).
-- `IRR(CELL("row",Data!D$2),0.5)` is `#VALUE!` with the cause unprobed (5422bdbf173fc233 A63), while plain scalar flows and
+- `IRR(CELL("row",Data!D$2),0.5)` is `#VALUE!` (5422bdbf173fc233 A63; the CELL mark, "IRR's error order", T-2728), while plain scalar flows and
   one-cell ranges are `#NUM!` (`IRR(123456789.123)` e168be7f6d3f84c2 A297, `IRR(MROUND(2^53,2.5),0.5)` d0854366830dcdee A69,
   `IRR(Data!A8:A8)` 1cd3096e3e87c965 A130, `IRR(Data!D2,2)` 1dce4774f5c0e736 A40); a guess of 1E+300 is `#VALUE!`
   (`IRR({0,0,-100,50,60},1E+300)`, e168be7f6d3f84c2 A395), `IRR(Data!A1:D12,0.05)` over mixed flows (1E+15 and
@@ -1855,7 +5221,8 @@ outer call is the function; "inferred" means the other arguments nest calls whos
   -20000000000 (89f0aee953a55a45 A124).
 - YIELD is `#NUM!` at a coupon rate far above the yield (`YIELD(38829,45714,100,0.25,2,4,4)`, 31474c20fc1dafd6 A321), and PRICE,
   DURATION and MDURATION at a huge yield or coupon (`PRICE(39050,44044,0.5,123456789.123,110,4,2)`, 1dce4774f5c0e736 A8;
-  `MDURATION(38368,44642,0.01,1E+300,4,3)`, c0681a8b150ce301 A248); the boundaries are unprobed (T-2488, T-2391).
+  `MDURATION(38368,44642,0.01,1E+300,4,3)`, c0681a8b150ce301 A248). PRICE's, DURATION's and MDURATION's boundary is now
+  probed ("PRICE, DURATION and MDURATION at a huge yield or coupon", T-2488); YIELD's is unprobed (T-2391).
 - FVSCHEDULE with an empty schedule cell returns the principal (`FVSCHEDULE(6527,<empty>)` = 6527, 30e20ba3302fea8b A250).
 Evidence: gen-m9 (excel-graph, 2026-10-23, T-2257); the cells and the rest of each family are listed in the owning tasks.
 Ours: see each task; the triage (T-2257 Outcome) lists every family.
@@ -1901,6 +5268,94 @@ functions/financial/discount.rs; `day_count_basis_of` in financial/dates.rs, sha
 Status: VERIFIED (excel-graph)
 Tasks: T-2484
 
+## Discount securities and T-bills: amount domains (T-4112)
+Rule: with valid dates and basis, the amounts' domains are:
+- DISC: a price of 0 or below and a negative redemption are `#NUM!` (`DISC(43831,45494,0,104,0)`,
+  `DISC(1,45749,-1,107,2)`, `DISC(38874,46818,99,-1,3)`). A redemption of exactly 0 with a positive price is unprobed.
+- RECEIVED: a discount of 0 or below is `#NUM!` (`RECEIVED(38015,45886,14389,0)`, `RECEIVED(37603,46059,339731,-0.05)`),
+  and so is every `1 - discount*DIM/B` below 0, not only 0 itself ("Discount-security functions: settlement 0, basis and
+  argument modes" had inferred the "< 0" side): `RECEIVED(36767,46418,285642,0.05)` (26 years at 5%),
+  `RECEIVED(51445,51750,6463.56213591132,1.5,2)`.
+- PRICEDISC: a negative discount is `#NUM!` (`PRICEDISC(37716,46874,-0.5,107)`), as zero is in the entry above. A
+  price past the double range is `#NUM!` (`PRICEDISC(37415,44610,1E+10,1E+300)`).
+- TBILLEQ, TBILLPRICE: a negative discount is `#NUM!` even where the price is positive (`TBILLEQ(39427,39448,-0.5)`,
+  `TBILLEQ(45000,45315,-0.05)`). A discount of exactly 0 with valid dates is unprobed: the engine returns `#NUM!`.
+- DISC accepts settlement 0 like INTRATE, PRICEDISC and YIELDDISC (`DISC(0,366,95,100,0)` = 0.04986149584487539,
+  basis 4 0.050000000000000044: probes/discount-serial-zero A1:E2).
+Near a zero price, Excel's doubles decide which side of 0 the price falls on: `TBILLEQ(1000,1100,3.6)` and
+`TBILLPRICE(1000,1100,3.6)` are 0 because `3.6*100` is 360 in doubles, though the exact product of the double 3.6 and
+100 is just above 360, a negative price. So the Gate A definitions give no math value within cancellation of a zero
+price (defs/discount.py `_price_share`), and a math value of 0 or `#NUM!` only where the product is exact.
+From 183 days, TBILLEQ's form in "TBILLEQ and TBILLYIELD" (`-t + sqrt(...)`) cancels at a tiny discount, so Excel is
+off the math by about 1E-16/discount relative: `TBILLEQ(53457,53640,5.56066541833896E-10)` is 5.63838975509136E-10
+against 5.637896884071863E-10 (8.7E-5), `TBILLEQ(1438166,1438350,8.54032607528415E-11)` 5.7E-5 off
+(accuracy/TBILLEQ/s1 A110, A175; A81, A87, A88, A100, A106, A108, A109, A163 and A189 are smaller). The engine is
+bit-exact with Excel on all of these. Below 183 days the plain quotient does not cancel.
+The documented long-branch form is not quite Excel's: two table points are about 30 ulp (15th digit) from Excel, and
+pass Gate A only through the math envelope. accuracy/TBILLEQ/s1 A39 `TBILLEQ(33842,34067,0.213177283226975)` (225
+days) is 0.24375066975421497 in Excel and 0.24375066975421592 in the form above (and the engine). Excel's value comes
+out exactly when the price is computed as `100 - rate*100*DSM/360`. A127 `TBILLEQ(45351,45716,0.178249140751279)` (365
+days, 2024-02-29 to 2025-02-28) is 0.20960730738258349 in Excel and 0.20960730738258393 in the engine, and no price
+variant tried explains it, Y = 366 included. Over the table's 38 long-branch numeric points, `rate*100*DSM/360` matches
+37 and the documented form 36. Excel's exact operation order is open (T-4521).
+Unprobed (T-4522): a day count of 0 (30/360 from the 30th to the 31st of one month), where the engine returns
+`#DIV/0!`; DISC at a redemption of exactly 0; a T-bill discount of exactly 0 (the engine's `#NUM!`).
+Evidence: gen-m9 1dce4774f5c0e736 A227, A276; 31474c20fc1dafd6 A376, A241; 5c6a23c4f6597f1c A113; 30e20ba3302fea8b A49;
+6376e27be7a05871 A152, A8; 79d87fc527927626 A225; bc04c1f478c9896c A216; 01523d247594952e A152, A222, A278, A219, A163;
+probes/discount-serial-zero; accuracy/DISC/s1 A113, A122, A123, A129, A132; accuracy/RECEIVED/s1 A6, A8, A13, A14,
+A15, A22, A24, A30, A38, A67, A79, A112, A116, A118, A120, A131, A144 (1 - discount*DIM/B below 0, and amounts at most
+0); accuracy/PRICEDISC/s1 A112, A120, A125, A131, A132; accuracy/TBILLEQ/s1 A111, A135; accuracy/TBILLPRICE/s1 A128,
+A129 (excel-graph, 2026-11-06, T-4112). All 1,400 table points of the seven functions match these rules.
+Ours: matches the domains (`discount_days`, `received_of`, `tbill_arguments` in functions/financial/discount.rs); the
+TBILLEQ long-branch digits above are T-4521's.
+Status: VERIFIED (excel-graph)
+Tasks: T-4112, T-4521, T-4522
+
+## ACCRINT, ACCRINTM, PRICEMAT and YIELDMAT: amount domains (T-4114)
+Rule: with valid dates and basis:
+- ACCRINT and ACCRINTM: a rate of 0 or below and a negative par are `#NUM!` (`ACCRINT(56708,56772,59045,0,..)`,
+  `ACCRINT(34667,45535,45351,-0.5,2421,2)`, `ACCRINT(34052,36345,39703,1E+300,-1000,4)`; `ACCRINTM(57642,57652,0,..)`,
+  `ACCRINTM(33676,37345,-0.5,3341)`, `ACCRINTM(33054,47664,0.2,-1000)`). A par of exactly 0 is unprobed.
+- ACCRINTM is **0**, not `#NUM!`, when the issue equals the settlement: `ACCRINTM(d,d,0.05,1000,b)` is 0 for d = 0, 1,
+  59, 60, 61, 366, 45000 and 2958465 on every basis. An issue after the settlement is still `#NUM!`
+  (`ACCRINTM(45100,44968,..)`). PRICEMAT and YIELDMAT stay `#NUM!` for an issue equal to the settlement (probes/
+  matdisc-serial-0-60). Equal ACCRINTM dates with a rate or par at most 0 are unprobed.
+- ACCRINT: a settlement past 9999-12-31 is `#NUM!` (`ACCRINT(2956276,2956456,2958467,0.05,1000,2,b,c)` on every basis,
+  calc_method TRUE or FALSE).
+- PRICEMAT: a negative rate or yld is `#NUM!` (`PRICEMAT(38148,38193,37235,0,-1,0)`, `PRICEMAT(37717,44053,34809,0.1,
+  -1,4)`); a yld of 0 computes, with a rate of 0 too (`PRICEMAT(36890,44902,33776,0.1,0,3)` is 319.5068493150685,
+  `PRICEMAT(42437,42965,42235,0,0,0)` 100).
+- YIELDMAT: a negative rate is `#NUM!` (`YIELDMAT(38011,44323,34864,-0.05,112)`), as is a negative price (the entry
+  above), also with a rate of 0 (`YIELDMAT(45481,45483,45374,0,-1,0)`). A price of exactly 0 is unprobed.
+- TBILLYIELD at a price of 0 or below is unprobed.
+ACCRINT counts the issue's period on basis 2 as basis 0 does, US 30/360 moving both dates, not plain US 30/360:
+`ACCRINT(49107,49552,49782,0.1,1000,2,2,FALSE)` (issue 2034-06-12, first_interest 2035-08-31, so the issue's period
+runs from 2034-02-28 to 2034-08-31) is 137.22222222222223, the stub 80/180, where plain 30/360 gives 80/181 and
+137.09944751381215 (the engine before T-4566). 360/frequency would give the same there, but not when that period runs from 2034-02-28
+to 2034-08-28 (first_interest 2035-08-28 or 08-30): Excel's 136.62921348314606 is 80/178, US 30/360 moving both dates.
+With calc_method TRUE, a settlement after first_interest and a coupon date on the walk back before 1900-01-01, Excel
+for the web gave **0** on 2026-11-06: quarterly on bases 0 to 4 (`ACCRINT(61,91,45000,0.05,1000,4,b,TRUE)`, A1:A5),
+semiannual on bases 0 and 1 (A6, A7, A17) and annual on basis 0 (A16); other bases at those frequencies are unprobed. Issue 61,
+62 or 90, first_interest 90, 91 or 182, settlement 92 to 45000. "ACCRINT at the calendar's start" records `#NUM!` for the
+same shape from earlier fills, and a re-fill on 2026-11-06 (T-4566) gave 0 again, so the result there is not stable over
+time; the engine keeps `#NUM!` and the Gate A definition gives those points no math value. With calc_method FALSE or a
+settlement before first_interest they are `#NUM!` (A10, A11).
+Evidence: probes/accrint-zero-results A1:A19 (ACCRINT at the calendar's start), B1:B40 (ACCRINTM with equal dates),
+C1:C26 (the issue's period on bases 0, 2 and 4) (excel-graph, 2026-11-06; columns A and B filled twice the same day,
+with the same values);
+accuracy/ACCRINT/s1 A21 (basis 2), A116, A117, A123, A126, A135, A138 (rate 0), A114, A136, A163
+(next coupon past the calendar); accuracy/ACCRINTM/s1
+A115 and A134 (equal dates), A111, A112, A118, A129, A140 (rate 0); accuracy/PRICEMAT/s1 A118, A122, A134, A135,
+A140; accuracy/YIELDMAT/s1 A123, A124, A130, A137 (excel-graph, 2026-11-06, T-4114); gen-m9 0a957119475760c5 A92,
+1cd3096e3e87c965 A123, A140, 290180acf017709c A147, A177, A312, 67a4c03afd63f988 A179, 9a1fa5366bc50918 A180,
+9d9ceba257f8001b A381, b73c6cc96e093f03 A333; probes/date-system-1900-accrint-settlement-bound A1:A20.
+Ours: the amount domains match, and since T-4566 so do ACCRINTM's 0 for equal dates (`accrintm_of`) and ACCRINT's
+basis-2 issue period (`stub_denominator`). ACCRINT's 0 at the calendar's start does not: it is unstable across fills
+("ACCRINT at the calendar's start"), so the engine keeps `#NUM!` and probes/accrint-zero-results A1:A9, A12, A14,
+A16:A19 stay known failures.
+Status: VERIFIED (excel-graph)
+Tasks: T-4114, T-4566
+
 ## Booleans in ACCRINT, ACCRINTM, AMORLINC and AMORDEGRC (T-2455)
 Rule: a boolean is `#VALUE!`, typed or from a cell, in ACCRINTM's par (`ACCRINTM(34825,37622,1E-9,TRUE,4)`, A41, A54; text "2"
 is 2, A55), ACCRINT's issue, also before first_interest's error (`ACCRINT(TRUE,39500,..)`, `ACCRINT(TRUE,SQRT(-1),..)`, A52,
@@ -1911,22 +5366,163 @@ date past the calendar is `#NUM!` before AMORDEGRC's boolean rate (`AMORDEGRC(70
 e8d55ec393460bb7 A374), while a date of 0 passes the read (`AMORDEGRC(-1,<blank>,38872,265,0,<#VALUE!>,0)` is `#VALUE!`,
 1dce4774f5c0e736 A199) and one below 0 is `#NUM!` as it is read ("AMORLINC and AMORDEGRC check order").
 Ours: since T-2455 (`cast_number_no_bools_ref` in `accrintm_of`, `accrint_of` and the AMORLINC/AMORDEGRC kernel, which since
-T-2485 refuses a boolean in every argument, "AMORLINC and AMORDEGRC check order"). ACCRINT's other dates and numbers
-still take booleans (unprobed).
+T-2485 refuses a boolean in every argument, "AMORLINC and AMORDEGRC check order"). Since T-2827 ACCRINT refuses a boolean in
+every argument but calc_method ("ACCRINT check order: calc_method first, dates as read").
 Status: VERIFIED (excel-graph)
-Tasks: T-2455
+Tasks: T-2455, T-2827
+
+## ACCRINT check order: calc_method first, dates as read (T-2676)
+Rule: ACCRINT reads its last argument, calc_method, before all the others: calc_method's own error is the result, and
+text there (`"1"`, `"TRUE"`, `""`) is `#VALUE!` ("VDB, DDB and ACCRINT argument types"), whatever the first seven
+arguments hold, an issue off the calendar included. Then it reads issue, first_interest, settlement, rate, par,
+frequency and basis in order, and an issue or first_interest that does not floor to a calendar serial (below 0, or past 2958465) is `#NUM!`
+as soon as it is read, before a later argument's error, text or boolean, as the COUP* readers do ("Analysis ToolPak
+securities functions check frequency and dates first"). A par read from a FALSE cell is `#VALUE!`, before frequency
+100's `#NUM!`.
+- calc_method first: `ACCRINT(33996,35923,39160,<#DIV/0!>,2872,2,0,"1")` is `#VALUE!` (gen-m9/290180acf017709c A32),
+  `ACCRINT(34182,2958466,37446,<#NUM!>,4792,2,4,<#REF!>)` `#REF!` (932b33b1ef8b7608 A323),
+  `ACCRINT(43830,42,-0.5,<#REF!>,<#NUM!>,2,4,<#N/A>)` `#N/A` (290180acf017709c A132), and with a text issue cell
+  `ACCRINT(<"a*">,35416,61,1,3393,2,3,<#NUM!>)` `#NUM!` (A22); also 290180acf017709c A297, A342, A372, A387,
+  f81bd3b6dc373e5c A55, A70, A105, A145, A225, A285. Over the 240 Excel-backed gen-m9 cells with ACCRINT as the outer call,
+  all 40 where calc_method is an error or text give calc_method's result, among them cells that already passed with an
+  issue below 0 (290180acf017709c A82, A392) or a first_interest below 0 (f81bd3b6dc373e5c A310).
+- dates as read: `ACCRINT(34205,2958466,43831,<"a" cell>,1719,1,3)` is `#NUM!` (290180acf017709c A117),
+  `ACCRINT(1.005,-3.05,37242,-238.09,<#DIV/0!>,2)` `#NUM!` (932b33b1ef8b7608 A33), `ACCRINT(33191,-0.2525,37264,
+  <T.TEST(..)>,3606,4,3)` `#NUM!` (290180acf017709c A47), `ACCRINT(123456789.123,35882,37568,0.5,6884,<"ü" cell>)`
+  `#NUM!` (f81bd3b6dc373e5c A290), and an inner `ACCRINT(-1,35650,39448,<TRUE cell>,7682,4,3)` is `#NUM!` before the
+  boolean rate's `#VALUE!` (290180acf017709c A162, through STEYX). Of the 10 gen-m9 cells with a date off the calendar
+  before a later bad argument, 9 are `#NUM!` (also A37, A157, A232 of 290180acf017709c, A43 of 932b33b1ef8b7608 and A255
+  of f81bd3b6dc373e5c); the tenth, f81bd3b6dc373e5c A115, is `#SPILL!` because its par is an array, which lifts first.
+- boolean par: `ACCRINT(32965,35462,36817,10,<FALSE cell>,100,1.005,FALSE)` is `#VALUE!` (932b33b1ef8b7608 A233).
+- booleans anywhere: a TRUE or FALSE, typed or from a cell, in issue, first_interest, settlement, rate, par, frequency or
+  basis is `#VALUE!` (probes/accrint-boolean-args A1:A28, T-2827; the all-number baseline A29 is 506.8056).
+Unprobed: whether an issue after the settlement waits for the later arguments (ours checks the order after every
+read); a settlement past 2958465 (every cell past 2958465 is an issue or first_interest) or below 0 read before a later error, and a boolean frequency or basis after such a settlement; a first_interest of 0 in a 1900 workbook (ours: `#NUM!`).
+Evidence: gen-m9/290180acf017709c, 932b33b1ef8b7608, f81bd3b6dc373e5c (excel-graph, T-2676 sweep, 2026-10-26); each
+cell's arguments evaluated with the engine on the case's Data sheet.
+Ours: since T-2792, `accrint_of` (functions/financial/accrint.rs) reads calc_method first, then issue and first_interest, each range-checked from serial 0 as it is read (serial 0 itself still fails the later calendar check), then the other arguments in order; settlement is checked against its calendar limit only after all are read, and a boolean in any of the seven is `#VALUE!`, typed or from a cell (T-2827).
+Status: VERIFIED (excel-graph)
+Tasks: T-2792
 
 ## XNPV reads one empty values cell as a single 0 cash flow
 Rule: `XNPV(1,A2,B11)` and `XNPV(1,A2,B11:B11)` with A2 empty and B11 = 100 are the number 0 (not `#NUM!`); an empty cell
 in a multi-cell values range stays `#NUM!` (whole-column probe xirr-xnpv-whole-column-nogaps A1). The one-cell range
 `A2:A2` reads the same (`XNPV(1,A2:A2,B11)` and `XNPV(1,A2:A2,B11:B11)` are 0), but an empty dates cell is no date:
 `XNPV(1,B11,A2)`, `XNPV(1,B11,A2:A2)` and `XNPV(1,A2,A2)` are `#NUM!` (probes/xnpv-empty-cell-forms C1-C5). A date of 0
-after a value is `#NUM!` (`XNPV(1,A2,B12)`, B12 = 0). Only direct references were probed: an expression that gives one empty cell (INDEX, OFFSET, a LET name) reads the same here, unprobed. This narrows "XIRR reads empty cells as 0 and accepts earlier dates; XNPV is #NUM! on empty cells" to ranges. `XNPV(1,A2:A3,B11:B12)` with both values empty is `#VALUE!` in Excel; ours is
-`#NUM!` (known failure, unexplained: an empty range seems to be refused by a different check than the whole-column one).
+after a value is `#NUM!` (`XNPV(1,A2,B12)`, B12 = 0). Only direct references were probed: an expression that gives one empty cell (INDEX, OFFSET, a LET name) reads the same here, unprobed. This narrows "XIRR reads empty cells as 0 and accepts earlier dates; XNPV is #NUM! on empty cells" to ranges. `XNPV(1,A2:A3,B11:B12)` with both values empty is `#VALUE!`: see "XNPV is #VALUE! when a values range's first cell is no
+number" (T-2603).
 Evidence: probes/xnpv-empty-values-cell C1-C8 and xnpv-empty-cell-forms C1-C5 (excel-graph, 2026-10-24); it surfaced through gen-m9/eccd03df42e40006 A24
 (`PERCENTRANK(<no numbers>, XNPV(..))` is `#N/A`, so the XNPV is no error).
 Status: VERIFIED (excel-graph)
 Tasks: T-2066, T-2599 (C8: T-2603)
+
+## XNPV is #VALUE! when a values range's first cell is no number
+Rule: XNPV over a multi-cell values range whose **first** cell is empty, a boolean or non-numeric text is `#VALUE!`,
+whatever the later cells hold. `XNPV(1,A4:A5,B11:B12)` with A4 empty and A5 = 5 is `#VALUE!`, and so are an empty, 5,
+"x" range and TRUE, 5, "x". A non-number after a numeric first cell is still `#NUM!`: 5 then an empty cell (C4), and
+5, "x", 6 (C21).
+- It comes after the counts and the rate: `XNPV(1,A2:A3,B11)` and a 2-against-3 call are `#NUM!` (C2, C12), and
+  `XNPV(-1,A2:A3,B11:B12)` is `#NUM!` (C13).
+- Dates whose first cell is a number come first when a date cell is a boolean or non-numeric text. Those calls stay
+  `#NUM!`: gen-m9/3aa168259335be54 A236 (text dates), 76b07b57099ccc8d A263 (FALSE, with 123456789.123) and
+  b6a02893a8d6b151 A114 (the text 'abc', with 1E+15).
+- An empty date or one before the first date does not take precedence: dates 100, 0 and an empty cell give `#VALUE!`
+  (C1, C7). Neither do dates whose first cell is no number: all empty (C5) or FALSE, 123456789.123 (C14).
+- `EXPONDIST(1E+307,EXP(XNPV(100,<FALSE, empty>,<FALSE, 123456789.123>)),"x")` is XNPV's `#VALUE!` passed on (C16;
+  gen-m9/58e3253bbd3a7a82 A189). EXPONDIST does not read "x" first: `EXPONDIST(1,1/0,"x")` is `#DIV/0!` (C15).
+- Numeric text in the first cell and the first element of an array constant are refused too (T-3815, the entry
+  below, rows 30, 31).
+- The `#VALUE!` beats every later element behind a first value that is no number (`"x"`, empty or TRUE first): a later
+  error value (`<"x",30,#N/A,50>`), an error date, a date of -1 or 2958466 at index 2 or 4, each as a range, an array
+  constant and a computed array (T-4375, probes/t4375-xnpv-refused-first-and-one-cell rows 1-28). The walk does not
+  run there.
+
+Evidence: probes/t2603-xnpv-no-number-values C1-C24 (excel-graph, 2026-11-03), probes/xnpv-empty-values-cell C8.
+Status: VERIFIED (excel-graph)
+Code: `Model::xnpv_first_value_refused` (functions/financial/mod.rs)
+Tasks: T-2603
+
+## XNPV reads its values and dates element by element (T-3815)
+Rule (excel-graph, 2026-11-05, probes/t3815-xnpv-element-reading, 187 cells; each row in a range (A), an array
+constant (B), a computed array `IF(TRUE,<range>)` (C) and as one cell (D), all alike unless noted): over values and
+dates of the same count, more than one element, with a number as the first value, XNPV takes each index in turn,
+the value before its date (every walk row has a number first; behind one that is no number, T-2603's entry above,
+which beats every later element, T-4375).
+- An error element is that error, whichever argument holds it: values `-100, 30, #N/A, 50` against dates
+  `39448, #DIV/0!, 39600, 39700` is `#DIV/0!`, the errors one place apart the other way `#N/A` (rows 35, 38).
+- A later value that is no number is `#NUM!`: numeric text "30", date text, "x", TRUE, an empty cell (rows 24-28); TRUE
+  at index 2 beats a `#DIV/0!` date at index 3 (row 39). A first value that is no number, numeric text "-100" too,
+  is `#VALUE!` (rows 30, 31; T-2603's entry above).
+- A later date that is text (numeric "39508" and date "1/1/2025" too), a boolean or empty is `#NUM!` (rows 13-18), a
+  first one `#VALUE!` (rows 20, 21). Negative dates, date 0 and dates past 2958465 are `#NUM!` (rows 4-8); a later
+  date is bounded before it is truncated, so a last date of 2958465.5 is `#NUM!` (row 9), while a fractional date
+  is otherwise truncated: first + 0.5 and 39448.7 then 39448.2 discount as the same day (rows 1-3). With a number
+  first, a later negative date beats a later error value (row 37). A later 0, empty date or date before the first
+  is `#NUM!` at its own index, so before a later error value: `XNPV(0.1,{-100;30;#N/A;50},<39448,0,39600,39700>)` is
+  `#NUM!`, not `#N/A`, with 0, an empty cell and 39400 alike (T-4375 rows 29-31). Behind a first value that is no
+  number the `#VALUE!` beats all of them (T-2603 C1, C7; T-4375). A date equal to the first is fine, one before it `#NUM!`
+  (rows 10, 11), and later dates need not be sorted (row 12).
+- One cell: a values or dates cell holding an error is that error, the values' first (`XNPV(0.1,<#N/A>,<TRUE>)` is
+  `#N/A`, D32-D38; a dates cell `#N/A`, D19, D22). Numeric and date text in one cell is read as its number:
+  `XNPV(0.1,<"30">,<39448>)` is 30 and `<"1/1/2025">` 45658, a dates cell `<"39508">` too (D13, D14, D20, D24, D25,
+  D30), where a range or array element of text is `#NUM!`. A one-cell date of 2958465.5 is read truncated
+  (`XNPV(0.1,30,<2958465.5>)` is 30, D9). The same holds through a one-cell range, `OFFSET`, `INDEX` and a defined
+  name for one cell, holding an error, numeric text or date text, as values and as dates (T-4375 rows 32-43; the
+  engine reads a cell, a defined name and `INDEX` of a reference this way, `xnpv_one_cell`). A text literal and a defined
+  name for a constant text read the same: `XNPV(0.1,"30",39448)`, `XNPV(0.1,30,"1/1/2025")`, `XNPV(0.1,"30",
+  "1/1/2025")`, a name `="30"` as values, `="1/1/2025"` or `="39448"` as dates are all 30, and non-numeric text
+  (`"x"`, a name `="x"`) is `#VALUE!` (probes/t4381-xnpv-literal-and-named-text A1:A10, excel-graph, T-4381). Computed
+  text (`"3"&"0"`) is unprobed and keeps its earlier reading.
+- The rate: -1, -2, -0.5, 0 and an empty cell are `#NUM!`; "0.1" and a text cell "0.1" are 0.1, a date-text cell
+  its serial (rows 41-48). A values row against a dates column, 2x2 against a column or 2x2, and a 2x2 array
+  constant all read in row-major order with the same result (rows 49-54).
+
+Evidence: probes/t3815-xnpv-element-reading (excel-graph, 2026-11-05; generator docs/research/t3815/gen_case.py),
+probes/t4375-xnpv-refused-first-and-one-cell (excel-graph, 2026-11-05; docs/research/t4375/gen_case.py).
+Status: VERIFIED (excel-graph)
+Code: `Model::xnpv_walk_error` and `xnpv_dates` (functions/financial/flows.rs), `Model::xnpv_one_cell`,
+`xnpv_size_error` and `xnpv_first_value_refused` (functions/financial/mod.rs)
+Tasks: T-3815, T-4375
+
+## XIRR reads its values and dates element by element, the date first (T-3816)
+Rule (excel-graph, 2026-11-05, probes/t3816-xirr-element-reading, 175 cells; the rows of T-3815's XNPV probe above,
+each in a range (A), an array constant (B), a computed array `IF(TRUE,<range>)` (C) and as one cell (D), all alike
+unless noted; values `-100, 30, 40, 50` on dates `39448, 39508, 39600, 39700` with one element changed):
+- Numeric and date text is read as its number in a range, an array constant and a computed array alike, as values
+  and as dates: `XIRR({-100;30;40;50},{39448;"39508";39600;39700})` is 0.4881, the same as with 39508, and a value
+  "1/1/2025" is the flow 45658 (rows 13, 14, 20, 24, 25, 30), where XNPV refuses text elements. Non-numeric text and
+  booleans are `#VALUE!` as values and as dates, first or later (rows 15-17, 26, 27, 31).
+- Over values and dates that are both ranges or arrays, XIRR takes each index in turn, the date before the value
+  (XNPV takes the value first), and an error element is that error: values `-100, 30, #N/A, 50` against dates
+  `39448, #DIV/0!, 39600, 39700` is `#DIV/0!`, the errors swapped `#N/A` (rows 35, 38); a TRUE or -1 date at index 2
+  beats a `#N/A` value at index 3 (`#VALUE!`, `#NUM!`; rows 36, 37); a TRUE value at index 2 beats a `#DIV/0!` date
+  at index 3 (`#VALUE!`, row 39), but loses to a -1 date at index 2 (`#NUM!`, row 40).
+- Dates are truncated: a later date of first + 0.5 and 39448.7 then 39448.2 give the same result as the first day
+  (rows 1, 3), first + 1.5 as first + 1 (row 2); a later date equal to the first, before it, or unsorted is fine
+  (rows 10-12), and a first date of 0 or an empty first date is date 0 (0.001681, rows 6, 21). A negative date, first
+  or later, a date past 2958465, a later 0 or empty date and a last date of 2958465.5 are `#NUM!` (rows 4, 5, 7-9,
+  18, 23); for the later 0, the empty date and 2958465.5 this probe does not separate a date check from the solver's
+  `#NUM!` (T-4283 bounds the whole day). `XIRR({-1000;1100},{45000;45000.5})` is `#NUM!`: truncated, no date is later
+  than the first (row 43).
+- A first value of 0, values all 0 and values all of one sign are `#NUM!` (rows 29, 34, 41, 42); a later empty value
+  is a 0 flow (-0.1687, row 28).
+- One value cell and one date cell (D) are the size check's `#N/A`, numeric and date text cells included (D13, D14,
+  D20, D24, D25, D30), except a non-numeric text or boolean cell, `#VALUE!` (D15-D17, D26, D27, D31), and an error
+  cell, its error, the value's first (D19, D22, D32-D38). One TRUE value cell against one `#DIV/0!` date cell is
+  `#VALUE!` (D39), where a values range holding text against an error dates argument is that error
+  (gen-m9/67a4c03afd63f988 A241). The same `#VALUE!` holds for a literal TRUE, FALSE or "x", a one-cell range
+  `A1:A1` holding TRUE or "x", and a TRUE cell with guess -1 or -2 (not T-3312's `#NUM!`), each against a literal
+  `1/0` or `NA()` dates argument and a `#DIV/0!` or `#N/A` dates cell (probes/t4415-xirr-error-dates-scalar-forms,
+  excel-graph, 2026-11-06, 28 cells, T-4415; the engine already matched).
+- A values row against a dates column, 2x2 against a column or 2x2, and a 2x2 or row array constant against a column
+  all read in row-major order with the same result (rows 44-49).
+
+Evidence: probes/t3816-xirr-element-reading (excel-graph, 2026-11-05; generator docs/research/t3815/gen_case.py,
+which writes T-3815's XNPV case too).
+Status: VERIFIED (excel-graph)
+Code: `Model::xirr_walk_error`, `Model::xirr_flows` and `xirr_date_error` (functions/financial/flows.rs),
+`Model::xirr_size_error`, `Model::fn_xirr` and `Model::array_of_numbers_from` (functions/financial/mod.rs)
+Tasks: T-3816, T-4415
 
 ## Financial cells of the T-2436 sub-expression probe
 Rule (excel-graph, 2026-10-24, probes/t2436): `YIELD(36563,45559,999999999999995,107,107,2,1)` (a huge rate) is `#NUM!`;
@@ -1938,3 +5534,165 @@ Evidence: probes/t2436; cells in T-2482, T-2483, T-2484, T-2428, T-2493, T-2494,
 Ours: values or the other argument's error; those tasks.
 Status: VERIFIED (excel-graph), one or two cells each
 Tasks: T-2482, T-2483, T-2484, T-2428, T-2493, T-2494, T-2491
+
+## Financial cells of the T-2496 sub-expression probe
+Rule (excel-graph, 2026-10-25, probes/t2496-fin-subexpressions, each gen-m9 case's Data sheet copied): in the gen-m9
+financial cells whose error the outer call cannot make, an inner call differs and the outer call passes its error on.
+`PV(-1+2^-52,91,-421)` and `IRR(<4x4 flows>,41.9999)` are `#DIV/0!` (see "PV, PMT and IRR near a rate of -1"); `NPV(-1,1E-15,2.5)` and `NPV(1E+300,7,1E+15,2.5)` are `#DIV/0!` (T-2493, as
+in the T-2436 probe); `XMATCH(FALSE,{1,2,3},0,0.5^1E-15)` is `#N/A` (lookup.md, T-2656). The statistical inner calls
+follow statistics.md: Z.TEST's one-number `#DIV/0!` and lone-empty-cell `#N/A` (T-2470), PROB's unequal-count `#N/A` and
+one-value `#DIV/0!` (T-2468), FREQUENCY's extra row for a bins argument with no number, so the enclosing ODDFYIELD and
+CUMIPMT lift to a 2x1 array and show `#SPILL!` (T-2427), `T.TEST` of a blank one-cell sample (T-2469) and WEIBULL.DIST
+overflow (T-2435). The T-bill cells: `PPMT(2E+15,8,360,-100,926)` is 0 (T-2490), `QUARTILE` of a TRUE cell `#NUM!`
+(T-2344), `BIN2DEC("x")` `#NUM!` (T-2544).
+Evidence: probes/t2496-fin-subexpressions P!A1-A99 (column B names the gen-m9 cell and sub-expression);
+probes/tbill-error-order-inner-calls.
+Ours: the other error or a value; the tasks named.
+Status: VERIFIED (excel-graph), one or two cells each
+Tasks: T-2496, T-2656, T-2657, T-2493, T-2470, T-2468, T-2427, T-2469, T-2435, T-2490, T-2344, T-2544
+
+## PV, PMT and IRR near a rate of -1
+Rule (excel-graph, 2026-10-26, probes/t2657-pv-irr-div0): at a rate of -1+k*2^-52, PV is `#DIV/0!` and PMT `#NUM!` from
+the first n where (1+rate)^n is below the smallest normal double (2^-1022), not only where it is 0. `PV(-1+2^-52,20,-421)`
+((2^-52)^20 = 2^-1040, subnormal) is `#DIV/0!`, while `PV(-1+2*2^-52,20,-421)` (2^-1020, normal) is `#NUM!`, because the
+result overflows. `PV(-1+3*2^-52,20,-421)` is 1.422500710491959E+306 and `PV(-1+1024*2^-52,24,-421)` still a value,
+with `#DIV/0!` from n = 21 and 25 (P!A1:D29). PMT's `#NUM!` starts at the same n (P!I1:L29), and FV stays near 421
+(P!E1:H29). At rate -1, PV is `#DIV/0!`, PMT `#NUM!` and FV 421 (P!A40:A42). n = 0, 1E-300 and -1 are values
+(P!A53:A55), and 20.5 is `#DIV/0!`. `PV(-1+1E-200,5,-421)` and `PV(-1+1E-100,11,-421)` are `#DIV/0!`, and
+`PV(1E+300,2,-421)` is `#NUM!`.
+IRR over the flows {1E-15,42,3.14159,0.5,-0.5,-2.5,-2.5} (gen-m9/9d9ceba257f8001b Data!A6:D9, row by row) is `#DIV/0!`
+from every guess probed (omitted, 0.1, 1, 2, 5, 10 to 50, 100, 1000, 1E+6), except -0.5, which gives
+-0.38612871136992966 (I!A1:A21). With the first flow -1E-15 it is also `#DIV/0!`. With 1 or 1E-8 it is `#NUM!`.
+With 0, or with the first flow dropped, it is -0.38612871136908067 from every guess (I!B1:G6). So the error depends
+on the first flow's size (1E-15 against 1E-8). A plain-double replica of the fitted secant ("IRR is a secant in d")
+does not explain it: from 0.1 its first step is already a negative v (-0.37), and from 41.9999 it meets the v-stop at
+v = 2.4E-13 (rate 4.1E+12), where NPV is only the first flow, and its next step is negative. Not identified.
+Evidence: probes/t2657-pv-irr-div0 sheets P (PV, FV, PMT) and I (IRR; the flows on sheet D); salvaged from draft #1885.
+Ours (2026-11-04): every PV, FV and PMT cell passes. 22 of sheet I's `#DIV/0!` cells (listed in T-2657) are `#NUM!`; the rest match.
+Status: VERIFIED (excel-graph) for the values; the IRR rule is UNVERIFIED
+Tasks: T-2657
+
+## NPV's residue at IRR's root is not the double sum
+Rule: NPV divides by (1+r) once, at the end: NPV(r, v1..vn) = (v1/d0 + v2/d1 + ... + vn/d(n-1)) / (1+r), where d0 = 1
+and d(i) = d(i-1)*(1+r) is a running product. All of it is in doubles: 1+r rounded (once in the engine; whether
+Excel rounds it twice is unprobed), and each product, each quotient and each partial sum (left to right) rounded to
+a double twice (64 bits, then 53; numbers.md "Division rounds twice"). The NPV fit below cannot tell that from one
+rounding, but IRR's secant, which runs on this sum, can (T-3205, "IRR is a secant in d = 1 - v"), and so can gen-m9
+9d9ceba257f8001b Calc!A85 (9.999999981999995), the one worksheet NPV cell that separates the two. Where NPV's terms cancel, this differs from both the exact sum
+and the plain double sum of v_i/(1+r)^i by more than half a unit of the 15th significant digit of the result. At M2,
+M8 and Three Parameters!E2 below (and at H367 and A148) Excel is nearer the exact value than the plain double sum, at
+M3 further from it.
+Evidence for the rule (T-2671, probes/npv-term-order, excel-graph, 382 cells at 20 rates, the rates exact doubles in
+R!A1:A20: IRR.xlsx's L2, L3, L8 and Three Parameters!D2, the m9-fin-nper-npv rates 0.05 to 0.2 and 11 rates searched
+where T-1528's candidates differ most; generator docs/research/t2671_npv_term_order.py):
+- one-term NPV(r,v) is v/(1+r) (40/40 cells);
+- zero-padded NPV(r,0,..,0,1) over k periods is (1/d(k-1))/(1+r) with d the running product (220/220, periods 2-12).
+  Not 1/(1+r)^k by any power source: 1/d(k) 141/220, libm pow(1+r,-k) 116, repeated division 108, Excel's `^` 78;
+- two- and three-term NPVs with values of opposite sign and close magnitude, and the IRR flows at L2 and D2, sum the
+  quotients left to right before the last division (122/122, P!A75 and A78 being the same formula; summed right to
+  left 116/122). NPV(r,-1,1+r) is exactly 0 in Excel (e.g. P!A55, A189): the rule gives that zero itself
+  (-1/1 + (1+r)/(1+r)), so there is no snap of near-zero sums.
+Lab: `uv run rustsheet-fitlab annuity-npv` (now also on probes/npv-term-order), candidate "double: deferred (sum
+v/(1+r)^(i-1))/(1+r)": 470/470 bit-exact over m9-fin-nper-npv and npv-term-order (`x87 op` the same). The others:
+Horner from the last value 254/470, the running factor d*=(1+r) with v/d per term 228, sum of v/P with libm pow 190
+(at 64 bits 186), with Excel's `^` (the engine today) 159, with the exact or x87-instruction power 107, correctly
+rounded 82. T-1528's best on m9-fin-nper-npv alone was 27/88. Lab test: `test_npv_deferred_division_reproduces_excel`.
+The rule also gives every residue value below to the bit (M2, M3, M8, Three Parameters!E2, H367 and A148).
+Evidence for the residues (ironcalc-calc/FINANCIAL/IRR.xlsx, saved by Excel Online; the rate cell is an IRR that ours matches to the
+bit, so NPV gets the same inputs):
+- General!M2 `NPV(L2,A2:F2)`, flows {-20,5,5,5,5,5}, L2 = 0.07930826116039724: Excel 6.4212018552224666E-12, exact at
+  that rate 6.421923509333131E-12, ours before T-2672 (left-to-right sum of v/(1+r).powi(i); with libm `pow` M2 is 6.419753617592505E-12) 6.418865439172805E-12.
+- General!M3, flows {-1000,230,200,125,200,10}, L3 = -0.1015006760535847: Excel -2.8358465972398184E-11, exact
+  -2.815865414018216E-11, ours -2.8180124900245573E-11.
+- General!M8, flows {-70,12,15}, L8 = -0.44350694133432755: Excel -1.579429159894141E-10, exact
+  -1.5794321715940695E-10, ours -1.5792522845003987E-10.
+- Three Parameters!E2 `NPV(D2,A2:C2)`, flows {1,-2,1}, D2 = 1.091399510766422E-07: Excel 1.187938506697367E-14, exact
+  1.1911525020941654E-14, ours 1.2101430968414206E-14.
+- Also General!M5, M9, M10, M11, M13, FullRow!Q2 and FullColumn!B21, B22 (same flows and rates as E2, M2 and M3 over
+  whole rows).
+- The same holds away from a root: probes/fin-argument-modes H367 `NPV(0.1,-10000,2750,4250,3250,2750)` is
+  302.233453999042 in Excel (exact at the double rate 302.23345399904366, ours 302.23345399904133); probes-numeric/m9-fin-nper-npv A148
+  `NPV(0.1,-1E6,250000,250000,250000,250000,250000)` is -47548.46149808013 (exact -47548.46149807995, ours
+  -47548.4614980802).
+Rejected before T-2671 (gap triage 2026-10-25, doubles, on the 9 rate-exact residues and H367): sum of v/(1+r)^i left
+to right or reversed, Horner from the last value with / or * 1/(1+r) (matches M8 only), a running factor by * or /,
+v*(1+r)^-i, v/exp(i*log1p r), fsum, and the future-value Horner divided by (1+r)^n. T-1528's Blocked section lists its
+own rejected forms on m9-fin-nper-npv.
+Ours: the rule, since T-2672 (`excel_npv`; the "ours" values above are from before it). Held out on the eval
+(2026-10-27): the 12 rate-exact IRR.xlsx cells above 12/12 bit-exact; fin-argument-modes H186, H367, H368, H372 4/4;
+m9-fin-nper-npv 88/88; npv-term-order 382/382; gen-m9 NPV cells 252/255 (36 fixed). Of the three left, gen-m9
+abb7d565af89b849 Calc!A387 `NPV(IRR(..,-0.5),..)` is IRR's: ours is 9999.199996060153 and Excel's NPV needs a rate
+near 9999.19999605711, 1673 ulp lower (T-2131); 3c06f9298f65a3ba A317 is FORECAST.ETS's. The one miss of the rule is
+gen-m9 9d9ceba257f8001b Calc!A85 `NPV(1E-10,<empty>,{-100,50,60,0,0},{0,0,0})`: Excel 9.999999981999995, the rule
+9.999999982000002 (4 ulp, within 15 digits). There (-100 + 50*(1/b) + 60*(1/b)^2)/b and (-100 + 50*b^-1 +
+60*b^-2)/b give Excel's bit, the running product, its repeated division, the plain powers and Horner do not; unprobed
+which of them, if any, generalises (T-2672's phase-1b follow-up).
+The 12 IRR.xlsx cells whose rate is off in ours (General!M4, M6, M12, M16-M19, Three Parameters!E3-E5, FullRow!R2,
+FullColumn!B23) are the rule at Excel's cached rate to the bit (10/10 distinct cells), so what is left there is IRR's
+(T-2131).
+Status: VERIFIED (values: the IRR.xlsx Excel Online cache, excel-graph sidecars fin-argument-modes, m9-fin-nper-npv and
+npv-term-order; the rule is bit-exact on all 470 lab cells).
+Implemented in: functions/financial/financial_util.rs (`excel_npv`)
+Tasks: T-2671, T-2672, T-1528, T-2131
+
+## Annuity and DB argument domains at their limits
+Rule: PV's growth factor `P = (1+rate)^nper` is Excel's `^`, errors included, and PV then divides by P:
+- a rate of -1 with nper 0 is 0^0, which is `#NUM!` (`PV(-1,0,-713)`);
+- a P of 0 is the division's `#DIV/0!`. That covers a rate of -1 with nper > 0, and a rate so near -1 that P underflows
+  (`PV(-1+2^-52,165,-978,224,0)`, where 1+rate is 2^-52 and its 165th power is 0);
+- so is a subnormal P, whatever pmt, fv and type are (`PV(-0.5,1030,0,0)` too): `PV(-0.9999999999,30,-1,1)` is
+  9.999976005322188E+289 and `PV(-0.9999999999,31,-1,1)` (P = 1E-310) `#DIV/0!`, as are 31.5, 78 and 161 periods;
+  `PV(-0.5,1022,0,1)` is -4.49423283715579E+307 (P = 2^-1022) and `PV(-0.5,1023,-1,1)` `#DIV/0!`; `PV(-0.9,307,-1,1)` is
+  1.1111111111112013E+306 and `PV(-0.9,308,-1,1)` `#DIV/0!`. Evidence: probes/fin-pv-power-underflow (excel-graph,
+  2026-10-31, T-2685), 35 cells, all matched.
+
+NPER divides by ln(1+rate):
+- a rate so small that 1+rate is 1 is `#DIV/0!`, start-of-period type 1 too (`NPER(1E-300,-113,3037,368,1)`);
+- a rate of -1 is `#NUM!` (LN(0); `NPER(-1,-31,1)`);
+- a ratio whose denominator pmt·(1 + rate·type) + pv·rate cancels to exactly 0 in doubles is `#NUM!`, not `#DIV/0!`,
+  though the true count is finite: `NPER(0.0787082899943479,-44696304.3306312,567872892.853356,-198914751.586312,0)`
+  is `#NUM!` where the math is 499.1157 (accuracy/NPER/s1 A263, excel-graph, T-3535). The engine matches (`annuity.rs`,
+  the infinite ratio).
+
+DB's `month` reads a boolean as 1 or 0, from a cell too, as DDB's factor does ("VDB, DDB and ACCRINT argument types").
+`DB(15779,385,37,<FALSE>,<FALSE>)`, with period and month both FALSE cells, is `#NUM!`, not `#VALUE!`. Only the FALSE
+pair is probed; TRUE as month 1 is inferred from DDB.
+
+Evidence: probes/t2475-stat-subexpressions P!A39, A92, A136, A165 (excel-graph, 2026-10-24, T-2475), and the gen-m9 cells
+they isolate: 11eb3ab4f4f8104c A109, 1b31092a0d79e5f1 A260, 31f09e6c48ca245c A232, 38e4fc309fe199ea A89, and
+3c06f9298f65a3ba A50, A148 (T-2698's list).
+Ours: `pv_of` and `nper_of` (functions/financial/annuity.rs), `fn_db` (functions/financial/financial_depreciation.rs), T-2620.
+Inferred from the same formulas, unprobed: PV's `#DIV/0!` covers every P that underflows to 0 (a rate in (-2,-1)
+with a large even nper too, `#NUM!` before).
+Probed (T-3367): NPER's 1 + rate = 1 `#DIV/0!` comes before a non-positive ratio's `#NUM!`, the reverse of what
+this entry inferred earlier: `NPER(1E-17,0,100,200,0)`, `NPER(5E-17,0,100,200,0)` and `NPER(1.1E-16,0,100,200,0)`
+are `#DIV/0!`, while `NPER(1.2E-16,0,100,200,0)`, where 1 + rate is not 1, is `#NUM!`
+(probes-numeric/t3367-nper-tiny-rate A7, A14, A21, A28; excel-graph, 2026-11-05).
+Status: VERIFIED for the probed cells; DB's boolean month beyond the FALSE pair and PV's inferred line are UNVERIFIED
+(T-2749 probes them).
+Tasks: T-2620, T-2698, T-2749, T-3367
+
+## NPER at a tiny positive rate: Excel is far off, RustSheet returns the math (MATH-OVER-EXCEL)
+Rule: NPER at 0 < rate < 1e-14 is far off the true period count in Excel, above G = 1e-4, so RustSheet returns the
+math there (decision 0188 R3). The owner's assessment found up to 4%. The Gate A table finds up to 35% as the rate
+nears the 1 + rate = 1 cut: `NPER(3.04353262019695E-16,370.793811118894,-6303.49478902119,0,0)` is 23.0 in Excel
+against a true 17.0, and at rate 5.1E-16 Excel is 15% off. Excluded: rates so small that 1 + rate == 1, which are `#DIV/0!` in Excel ("NPER divides
+by ln(1+rate)" above, VERIFIED) and stay `#DIV/0!`. Negative tiny rates are not covered.
+Evidence:
+- The owner's 2026-10-31 assessment (decision 0188), 50-digit mpmath against Excel for the web.
+- The R3-marked points of the Gate A table: accuracy/NPER/s1 A121, A130, A133, A135, A142, A143, A151, A152, A153,
+  A156, A158 and A162, at rates 3.0E-16 to 7.6E-15 (excel-graph, T-3535, decision 0220).
+- probes-numeric/t3367-nper-tiny-rate, seven argument sets at each of 20 rates from 1E-17 to 1E-12 (excel-graph,
+  2026-11-05, with a 50-digit math sidecar). The 66 numeric cells inside the region are R3-marked (decision 0282).
+  Excel's relative error against the math there runs from 6.5E-3 to 4.7E-1, the largest just above the cut:
+  `NPER(1.2E-16,-100,10000,0,0)` is 54.0 in Excel against a true 100.0.
+
+Where Excel's error exceeds G: from the cut up to 1E-13 on the probe. The cells at 1E-14, 1.5E-14, 3E-14 and 1E-13
+(A99 to A125) are 7.0E-4 to 6.9E-3 off. At 3E-13 and 1E-12 the error falls below G (5.8E-5 to 9.1E-5). The error is
+about 1E-16/rate, from the rounding of the doubles 1 + rate and ratio before their logarithms. The approved region
+stops at 1E-14, so the engine keeps Excel's value from 1E-14 up. The owner ruled not to widen it (decision 0300, T-4285).
+Status: MATH-OVER-EXCEL (decision 0188)
+Ours: below 1E-14, and where 1 + rate is not 1, `nper_of` (functions/financial/annuity.rs, `NPER_MATH_RATE`) returns
+log1p(-(fv+pv)·rate/(pmt·k+pv·rate)) / log1p(rate). That is within 1e-14 of the math on every probe cell. Excel's
+errors still decide which cells are errors (T-3367).
+Tasks: T-3367, T-3535, T-4285

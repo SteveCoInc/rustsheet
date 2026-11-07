@@ -1,5 +1,6 @@
 use crate::{
     arithmetic::flush_subnormal,
+    decimal_round::x87_text_to_f64,
     formatter::{
         self,
         format::{FormatContext, Formatted},
@@ -14,7 +15,10 @@ use crate::{
 // so that `DEFAULT_NUM_FMTS[id]` is the format code for that built-in id. Ids 23–36 are
 // reserved/undefined by the spec and resolve to "general". A workbook-defined `numFmt` always
 // takes precedence over this table (see `get_num_fmt`), so this is only consulted for a
-// referenced-but-undefined built-in id.
+// referenced-but-undefined built-in id. Id 14 is the one departure from the ECMA table: Excel shows
+// it as the locale's short date, `m/d/yyyy` in en-US (probes/t4169-pivot-number-formats: a value
+// cell in numFmtId 14 reads `4/18/2024`; docs/excel-semantics/pivots.md "Value cells show their
+// data field's number format").
 const DEFAULT_NUM_FMTS: &[&str] = &[
     "general",                                                              // 0
     "0",                                                                    // 1
@@ -30,7 +34,7 @@ const DEFAULT_NUM_FMTS: &[&str] = &[
     "0.00E+00",                                                             // 11
     "# ?/?",                                                                // 12
     "# ??/??",                                                              // 13
-    "mm-dd-yy",                                                             // 14
+    "m/d/yyyy",                                                             // 14
     "d-mmm-yy",                                                             // 15
     "d-mmm",                                                                // 16
     "mmm-yy",                                                               // 17
@@ -92,8 +96,16 @@ pub fn get_num_fmt(num_fmt_id: i32, num_fmts: &[NumFmt]) -> String {
     DEFAULT_NUM_FMTS[0].to_string()
 }
 
+/// The first id of a workbook's own number formats, by convention: ids below 164 are built-in or
+/// reserved for built-ins (ECMA-376 §18.8.30), and the case builder (XlsxWriter) numbers custom
+/// formats from 164, so a spec workbook's first custom format has the same id here as in the file
+/// Excel opens. Which ids Excel itself gives on save is UNVERIFIED (T-4731), and so is the match
+/// with several custom formats (T-4730; number-formats.md "Custom number format ids start at
+/// 164").
+const FIRST_CUSTOM_NUM_FMT_ID: i32 = 164;
+
 pub fn get_new_num_fmt_index(num_fmts: &[NumFmt]) -> i32 {
-    let mut index = DEFAULT_NUM_FMTS.len() as i32;
+    let mut index = FIRST_CUSTOM_NUM_FMT_ID;
     let mut found = true;
     while found {
         found = false;
@@ -134,6 +146,9 @@ pub fn parse_excel_number(text: &str) -> Option<f64> {
     let mut integer_sig_digits = 0i64;
     let mut fraction_digits = 0i64;
     let mut leading_fraction_digit = None;
+    // The first 15 significant digits as written (trailing zeros included), for the x87
+    // conversion below; later digits are cut, as `out` cuts them.
+    let mut written: u64 = 0;
     for c in mantissa.chars() {
         match c {
             '.' => {
@@ -151,6 +166,10 @@ pub fn parse_excel_number(text: &str) -> Option<f64> {
                 }
                 if sig > 0 || c != '0' {
                     sig += 1;
+                    if sig <= 15 {
+                        // At most 15 digits: below 10^15, so no overflow.
+                        written = written * 10 + (u64::from(c) - u64::from('0'));
+                    }
                 }
                 if sig <= 15 {
                     out.push(c);
@@ -176,6 +195,18 @@ pub fn parse_excel_number(text: &str) -> Option<f64> {
         Some(position) => exponent.saturating_sub(position),
         None => exponent.saturating_add(integer_sig_digits - 1),
     };
+    // Number text converts like Excel's x87 multiply by 10^-n, its first 15 significant digits as
+    // written (later ones cut) times 10^-n, rather than to the nearest double: `=4.91E-06`,
+    // `=0.00000491` and `VALUE("491E-8")` are 4.9100000000000004E-06, and so is a positive
+    // exponent or a longer string, read at its cut digits (docs/excel-semantics/numbers.md
+    // "Decimals reach a double through an x87 multiply by 10^-n"; probes-numeric/t3658-round-scaling
+    // Hits!C and E, -fresh C and D, t4077-long-literal-x87, excel-graph; T-3932, T-4077).
+    let cut = i64::try_from(sig.saturating_sub(15)).unwrap_or(i64::MAX);
+    let number = exponent
+        .checked_sub(fraction_digits)
+        .and_then(|place| place.checked_add(cut))
+        .and_then(|place| x87_text_to_f64(written, place))
+        .map_or(number, |converted| converted.copysign(number));
     (leading >= MIN_LEADING_EXPONENT).then(|| flush_subnormal(number))
 }
 
@@ -250,6 +281,13 @@ pub fn to_precision(value: f64, precision: usize) -> f64 {
 /// This intends to be equivalent to the js: `${parseFloat(value.toPrecision(precision)})`
 /// See ([ecma](https://tc39.es/ecma262/#sec-number.prototype.toprecision)).
 pub fn to_excel_precision_str(value: f64) -> String {
+    // A whole number of at most 15 digits is its own 15-digit rounding and prints without a
+    // fraction or exponent: the integer text, without the round trip through scientific text,
+    // which was most of printing the number literals of loaded formulas (T-0499). `-0` keeps
+    // the general path (it prints `-0`).
+    if value.fract() == 0.0 && value.abs() < 1e15 && !(value == 0.0 && value.is_sign_negative()) {
+        return (value as i64).to_string();
+    }
     to_precision_str(value, 15)
 }
 
@@ -274,16 +312,17 @@ pub(crate) fn cmp_excel_precision(a: f64, b: f64) -> std::cmp::Ordering {
 
 /// [`cmp_excel_precision`] without its shortcuts: the order of the two 15-digit values.
 fn cmp_rounded(a: f64, b: f64) -> std::cmp::Ordering {
-    // total_cmp orders -0.0 below 0.0 and negative-sign NaN below every number, so canonicalise
-    // both first (`+ 0.0` turns -0.0 into 0.0).
-    let canon = |x: f64| {
-        if x.is_nan() {
-            f64::NAN
-        } else {
-            to_excel_precision(x, 15) + 0.0
-        }
-    };
-    canon(a).total_cmp(&canon(b))
+    excel_precision_canon(a).total_cmp(&excel_precision_canon(b))
+}
+
+/// The 15-digit value [`cmp_excel_precision`] orders by. `total_cmp` orders -0.0 below 0.0 and
+/// negative-sign NaN below every number, so both are canonicalised (`+ 0.0` turns -0.0 into 0.0).
+fn excel_precision_canon(x: f64) -> f64 {
+    if x.is_nan() {
+        f64::NAN
+    } else {
+        to_excel_precision(x, 15) + 0.0
+    }
 }
 
 pub fn to_excel_precision(value: f64, precision: usize) -> f64 {
@@ -410,6 +449,8 @@ pub(crate) fn number_to_text(value: f64) -> String {
 /// small part in plain notation past 20 characters (`0.0000602887066915739`), otherwise
 /// the 20-character rule holds (`1.22514845490862E-16`, probes/eng-impower A9). The exponent -5
 /// limit is evidenced exactly: probes/eng-im-small-part has -1 to -5 plain and -6 to -16 in E notation.
+/// A large part is plain up to exponent 20, padded with zeros past 15 digits
+/// (`123456789012345000000`), and E notation from 21 (probes/eng-im-large-part).
 pub(crate) fn complex_part_to_text(value: f64) -> String {
     value_to_text(value, TextRules::ComplexPart)
 }
@@ -424,8 +465,13 @@ enum TextRules {
 fn value_to_text(value: f64, rules: TextRules) -> String {
     /// Longest plain-notation string (sign excluded) before Excel switches to E notation.
     const MAX_PLAIN_LEN: usize = 20;
+    /// Longest plain string for an IM* part below 1 (sign excluded): 21 characters, one more than
+    /// coercion allows (probes/eng-im-part-plain-boundary, docs/excel-semantics/engineering.md).
+    const MAX_COMPLEX_FRACTION_PLAIN_LEN: usize = 21;
     /// Smallest decimal exponent an IM* part writes in plain notation whatever its length.
     const MIN_COMPLEX_PLAIN_EXPONENT: i32 = -5;
+    /// Largest decimal exponent an IM* part writes in plain notation whatever its length.
+    const MAX_COMPLEX_PLAIN_EXPONENT: i32 = 20;
     if !value.is_finite() {
         // Unreachable from formulas: Excel has no infinities or NaN (overflow is `#NUM!`).
         return format!("{value}");
@@ -454,8 +500,10 @@ fn value_to_text(value: f64, rules: TextRules) -> String {
     let plain = match rules {
         TextRules::Coercion => plain_len(digits.len(), exponent) <= MAX_PLAIN_LEN,
         TextRules::ComplexPart => {
-            plain_len(digits.len(), exponent) <= MAX_PLAIN_LEN
-                || (MIN_COMPLEX_PLAIN_EXPONENT..0).contains(&exponent)
+            let len = plain_len(digits.len(), exponent);
+            len <= MAX_PLAIN_LEN
+                || (exponent < 0 && len <= MAX_COMPLEX_FRACTION_PLAIN_LEN)
+                || (MIN_COMPLEX_PLAIN_EXPONENT..=MAX_COMPLEX_PLAIN_EXPONENT).contains(&exponent)
         }
     };
     if plain {
@@ -602,6 +650,20 @@ impl Model {
             number_example,
         }
     }
+}
+
+/// Groups the digits of an integer part in threes with `separator` (`1234567` → `1,234,567`).
+/// Indian `#,##,##0` grouping is the formatter's own (`use_group_separator`); FIXED, DOLLAR and
+/// fraction formats group in threes.
+pub(crate) fn group_thousands(digits: &str, separator: &str) -> String {
+    let mut result = String::with_capacity(digits.len() + digits.len() / 3);
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            result.push_str(separator);
+        }
+        result.push(c);
+    }
+    result
 }
 
 #[cfg(test)]

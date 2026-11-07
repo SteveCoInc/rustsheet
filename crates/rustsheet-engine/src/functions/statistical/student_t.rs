@@ -15,25 +15,32 @@
 //! - beyond t = 1 and short of y = 0.99, deep tail included, L is `I_y(n/2, 1/2)`/2 at y as the
 //!   worksheet rounds it, fl(n / fl(n + fl(t*t))), through the same kernel as T.TEST's
 //!   [`student_t_tail_at`] (T-0969 attempt 7, probes-numeric t0969-t-tail-grid);
-//! - at df 2, for y from 0.1 up and t of any size, L is BETA.DIST's a = 1 closed form
-//!   1 - exp(ln(1 - y)/2), halved, at that rounded y ([`closed_form_tail`], T-0969 attempt 8);
+//! - at df 2, for fl(1 - y) <= 0.9 and t of any size, L is the incomplete beta's closed form on
+//!   bratio's oriented arguments, halved, at that rounded y ([`closed_form_tail`], T-0969 attempt 8,
+//!   T-2502);
+//! - beyond t = 1 at df 1, and at df 2 past that cut, L is the exact tail at t rounded once, which
+//!   Excel is within about an ulp of ([`exact_low_df_tail`], T-3187);
 //! - elsewhere away from the deep tail (an integer df above [`SERIES_MAX_DF`], or a series tail too
 //!   small to keep its digits) L comes from Cephes' fractions with every input
 //!   formed from z and t^2/n, never from the rounded y ([`centre_tail`]): Excel is within a few ulp
 //!   of the exact value there up to df 1E10 (`T.DIST(2,1E10,TRUE)` = 0.977249868038323,
 //!   probes-numeric m9-t-edges), and a rounded y moves L by about n eps.
 //!
+//! - from df 3 on, L is one call into the ported incomplete-beta kernel, K(n/2, 1/2, y, z), halved
+//!   ([`kernel_tail`], T-2509), ahead of every rule below, which now covers df 1 and 2 and the
+//!   points the kernel does not take;
 //! - for df 13 to 16 the series tail is scaled by Excel's 1/B(n/2, 1/2) over the exact one: Excel's
 //!   BETA.DIST forms B from GAMMALNs there ([`log_gamma_ratio`], T-0969 attempt 10).
 //!
 //! Every loop is bounded: [`SERIES_MAX_DF`] / 2 series terms, [`TAYLOR_TERMS`] Taylor terms and
 //! [`MAX_POWER_SERIES_TERMS`] power-series terms a call.
 
+use super::bratio::t_kernel_tails;
 use super::gammaln::excel_gammaln;
-use super::incomplete_beta::{
-    beta_reg_complement, beta_reg_upper, incbcf, incbd, A1_CLOSED_FORM_MIN_X,
-};
-use crate::x87_exp::{dd_add, dd_div, dd_div_small, dd_mul, excel_exp, two_sum};
+use super::incomplete_beta::{beta_reg_upper, closed_form_tails, incbcf, incbd};
+use super::loader::excel_t_density;
+use crate::arithmetic::flush_subnormal;
+use crate::x87_exp::{dd_add, dd_div, dd_div_small, dd_mul, dd_sqrt, excel_exp};
 
 /// A double-double: an unevaluated sum `hi + lo` with |lo| <= ulp(hi)/2.
 type Dd = (f64, f64);
@@ -44,9 +51,11 @@ const SERIES_MAX_DF: f64 = 1000.0;
 /// From this shape up to [`LOG_GAMMA_BETA_MAX`] Excel's B(a, 1/2) is a sum of GAMMALNs
 /// ([`log_gamma_ratio`]). Below it (df under 13) the form is not probed and scaling by it loses
 /// probes-numeric cells (statistics.md "Student t prefactor per df").
+/// FITTED(T-0969, 192 cells, df 1..1E6, T.DIST.RT and T.TEST)
 const LOG_GAMMA_BETA_MIN: f64 = 6.5;
 /// Up to this shape Excel's B(a, 1/2) is a sum of GAMMALNs: past 8 GAMMALN is Stirling's series and
 /// Excel's B is accurate.
+/// FITTED(T-0969, 970 cells, BETA.DIST a 0.25..2.5, b 6.5..9.5)
 const LOG_GAMMA_BETA_MAX: f64 = 8.0;
 /// From this shape on, Gamma(a + 1/2)/Gamma(a) comes from its asymptotic series.
 const ASYMPTOTIC_MIN_SHAPE: f64 = 85.0;
@@ -61,8 +70,12 @@ const MAX_POWER_SERIES_TERMS: u32 = 200;
 const TAYLOR_TERMS: u32 = 40;
 /// Below this the double-double tail 1/2 - A/2 keeps fewer than 40 of its 106 bits.
 const MIN_SERIES_TAIL: f64 = 1e-12;
+/// df 1 and 2 keep today's path rather than the kernel call ([`kernel_tail`]).
+/// FITTED(T-2509, 67 cells, df 1, t up to 1E6)
+const KERNEL_MIN_DF: f64 = 2.0;
 /// Largest rounded y = n/(n+t^2) at which the tail of a t beyond 1 is taken at that y
 /// ([`unflushed_upper_tail`]).
+/// FITTED(T-0969, 3232 cells, df 2..1000, t 0.0013..8)
 const ROUNDED_Y_MAX: f64 = 0.99;
 /// 1/pi as a double-double.
 const FRAC_1_PI_DD: Dd = (
@@ -101,21 +114,12 @@ pub(crate) fn student_t_tails(t: f64, n: f64) -> (f64, f64) {
     }
 }
 
-/// L = P(T > t) for t > 0.
+/// L = P(T > t) for t > 0. A tail below the normal range is 0: main (statrs) returned 0 for a
+/// subnormal tail and `T.DIST.2T(...)` in gen-m9/3ec66461400faf2f A15 is 0 in Excel; the graph
+/// oracle cannot tell 0 from a kept subnormal (decision 0042), so the flush stays until a probe
+/// with a companion cell decides it.
 fn upper_tail(t: f64, n: f64) -> f64 {
     flush_subnormal(unflushed_upper_tail(t, n))
-}
-
-/// A tail below the normal range is 0. Main (statrs) returned 0 for a subnormal tail and
-/// `T.DIST.2T(...)` in gen-m9/3ec66461400faf2f A15 is 0 in Excel; the graph oracle cannot tell 0
-/// from a kept subnormal (decision 0042), so the flush stays until a probe with a companion cell
-/// decides it.
-fn flush_subnormal(tail: f64) -> f64 {
-    if tail < f64::MIN_POSITIVE {
-        0.0
-    } else {
-        tail
-    }
 }
 
 /// [`upper_tail`] before the subnormal flush.
@@ -125,6 +129,9 @@ fn unflushed_upper_tail(t: f64, n: f64) -> f64 {
     if n + t * t == n {
         return 0.5;
     }
+    if let Some(tail) = kernel_tail(t, n) {
+        return tail;
+    }
     // Beyond t = 1, and short of y = 0.99, Excel evaluates the tail at y rounded as the
     // worksheet would round it, fl(n / fl(n + fl(t^2))), as T.TEST does (`student_t_tail_at`);
     // inside it the tail is the exact one at t (docs/excel-semantics/statistics.md, "T.DIST.RT
@@ -132,6 +139,9 @@ fn unflushed_upper_tail(t: f64, n: f64) -> f64 {
     // path below, which still gives a far tail for a small n.
     let rounded_y = n / (n + t * t);
     if let Some(tail) = closed_form_tail(rounded_y, n) {
+        return tail;
+    }
+    if let Some(tail) = exact_low_df_tail(t, n) {
         return tail;
     }
     if t > 1.0 && rounded_y > 0.0 && rounded_y <= ROUNDED_Y_MAX {
@@ -148,6 +158,57 @@ fn unflushed_upper_tail(t: f64, n: f64) -> f64 {
         series: series_arguments(t, n),
     };
     tail_from(&args, n)
+}
+
+/// L = w/2 for w of one incomplete-beta kernel call, K(n/2, 1/2, y, z), with the worksheet's
+/// y = fl(n/fl(n + fl(t·t))) and complement z = fl(fl(t·t)/fl(n + fl(t·t))) (docs/excel-semantics/
+/// statistics.md "Student t tails are one kernel call, K(n/2, 1/2, y, z)"; T-2464 r2-tdist, T-2509):
+/// bgrat at b = 1/2 (n > 30), bup + bgrat (n <= 30) and bpser in the centre and the deep tail.
+/// `None` where t·t overflows and for df 1 and 2, which keep today's path: df 2 its closed forms
+/// (which read fl(1 - y)) and today's deep tail, df 1 (bpser at a = b = 1/2) the double-double
+/// series, bit-exact on 41 of cells.tsv's 67 df-1 tails against 24 through the ported bpser
+/// (`T.DIST.2T(1,1)` = 0.5000000000000001 is 5 ulp off through it). At every df from 3 the
+/// kernel is bit-exact on more cells than today's path in every branch.
+fn kernel_tail(t: f64, n: f64) -> Option<f64> {
+    let square = t * t;
+    let sum = n + square;
+    if !sum.is_finite() || n <= KERNEL_MIN_DF {
+        return None;
+    }
+    let y = n / sum;
+    let z = square / sum;
+    let a = 0.5 * n;
+    let (w, _) = t_kernel_tails(a, y, z)?;
+    Some(0.5 * w)
+}
+
+/// L beyond t = 1 at df 1, and at df 2 where [`closed_form_tail`] does not take it (fl(1 - y) > 0.9,
+/// t above about 4.24), as the exact tail at t rounded once: atan(1/t)/pi at df 1 and
+/// 1/(s (s + t)) with s = sqrt(2 + t^2) at df 2, both in double-double. Excel is within 1.8 ulp of
+/// the exact tail on the probed cells there, most within one (`T.DIST.2T(1E15,1)` =
+/// 6.366197723675813E-16, `T.DIST.RT(2,1)` = 0.14758361765043326, `T.DIST.RT(1E6,2)`; gen-m9,
+/// probes-numeric m9-t-dist-rt, m9-t-dist-2t, m9-t-nonint-df, t0969-t-df2-cut; T-3187;
+/// docs/excel-semantics/statistics.md "T.DIST.RT at df 2 is BETA.DIST's closed form down to
+/// y = 0.1"), where the tail at the rounded y was up to 24 ulp off. `None` elsewhere, and where t^2
+/// overflows.
+fn exact_low_df_tail(t: f64, n: f64) -> Option<f64> {
+    if t <= 1.0 || !(t * t).is_finite() {
+        return None;
+    }
+    if n == 1.0 {
+        let angle = dd_atan(dd_div((1.0, 0.0), (t, 0.0)));
+        return Some(dd_mul(angle, FRAC_1_PI_DD).0);
+    }
+    if n != 2.0 {
+        return None;
+    }
+    let root = dd_sqrt(dd_add(dd_mul((t, 0.0), (t, 0.0)), (2.0, 0.0)));
+    let denominator = dd_mul(root, dd_add(root, (t, 0.0)));
+    // 2 t^2 past the double range: the tail is below 2^-1023, which `upper_tail` flushes.
+    if !denominator.0.is_finite() {
+        return Some(0.0);
+    }
+    Some(dd_div((1.0, 0.0), denominator).0)
 }
 
 /// L = `I_y(n/2, 1/2)`/2 at a y that is already a double: T.TEST's p-value. Excel's T.TEST
@@ -193,15 +254,18 @@ fn tail_at(y: f64, n: f64) -> f64 {
     tail_from(&args, n)
 }
 
-/// L at df 2 for y = n/(n+t^2) from [`A1_CLOSED_FORM_MIN_X`] up, from y as the worksheet rounds it,
-/// fl(2/fl(2 + fl(t*t))): there `I_y(1, 1/2)` is BETA.DIST's a = 1 closed form, 1 - exp(ln(1 - y)/2)
-/// (T-1744), inside t = 1 too. `T.DIST.RT(0.0513,2)` = 0.4818746322295301 is that form, where the
-/// exact tail at t is 15 ulp off (probes-numeric t0969-t-tail-grid), and so is every
-/// `T.DIST.RT(t,2)` from t = 2 to 4.24 (t0969-t-df2-cut; docs/excel-semantics/statistics.md
-/// "T.DIST.RT at df 2 is BETA.DIST's closed form down to y = 0.1"). `None` elsewhere.
+/// L at df 2 for y = n/(n+t^2) as the worksheet rounds it, fl(2/fl(2 + fl(t*t))), with complement
+/// fl(1 - y): where the incomplete beta takes Excel's closed form on bratio's oriented arguments
+/// ([`closed_form_tails`] for `I_y(1, 1/2)`), inside t = 1 too. That is every y with
+/// fl(1 - y) <= 0.9: `T.DIST.RT(0.0513,2)` = 0.4818746322295301 is that form, where the exact tail
+/// at t is 15 ulp off (probes-numeric t0969-t-tail-grid), and so is every `T.DIST.RT(t,2)` from
+/// t = 2 to 4.24 (t0969-t-df2-cut; docs/excel-semantics/statistics.md "Incomplete beta closed forms
+/// act on the oriented arguments", 508 of 508 df-2 cells, T-2502). `None` elsewhere.
 fn closed_form_tail(y: f64, n: f64) -> Option<f64> {
-    (n == 2.0 && (A1_CLOSED_FORM_MIN_X..1.0).contains(&y))
-        .then(|| 0.5 * beta_reg_complement(y, 1.0 - y, 1.0, 0.5))
+    if n != 2.0 || !(y > 0.0 && y < 1.0) {
+        return None;
+    }
+    closed_form_tails(y, 1.0 - y, 1.0, 0.5).map(|(lower, _)| 0.5 * lower)
 }
 
 /// The inputs one tail is computed from, z = t^2/(n+t^2) and y = n/(n+t^2) among them, so that
@@ -248,13 +312,33 @@ fn centre_tail(args: &TailArguments, n: f64, z: f64, ratio: f64) -> f64 {
     let a = 0.5 * n;
     let power = (-a * args.square_over_n.ln_1p()).exp();
     if args.inside_one {
-        // A = z^(1/2) y^a / ((1/2) B(1/2, a)) * w.
-        let centre = 2.0 * z.sqrt() * power * ratio * incbcf(0.5, a, z);
-        0.5 - 0.5 * centre
+        0.5 - 0.5 * centre_fraction(a, z, power, ratio)
     } else {
         // I_y(a, 1/2) = y^a z^(1/2) / (a B(a, 1/2)) * w / z.
         0.5 * power * z.sqrt() * ratio / a * (incbd(a, 0.5, args.n_over_square) / z)
     }
+}
+
+/// The centre A = `I_z(1/2, a)` = z^(1/2) y^a / ((1/2) B(1/2, a)) * w by Cephes' `incbcf` w, with
+/// `power` = y^a and `ratio` = 1/B(1/2, a): [`centre_tail`]'s side up to t = 1.
+fn centre_fraction(a: f64, z: f64, power: f64, ratio: f64) -> f64 {
+    2.0 * z.sqrt() * power * ratio * incbcf(0.5, a, z)
+}
+
+/// A = P(|T| < t) for t in [0, 1] and an integer df n from 1 to 1E10, from [`beta_arguments`]' z
+/// and y^(n/2) = exp(-(n/2) log1p(t^2/n)), never from 1 - y, so a tiny t keeps its digits: within
+/// a few ulp of the exact value (T-2724, the T.INV centre). NaN for a df [`gamma_ratio`] refuses.
+pub(crate) fn student_t_centre(t: f64, n: f64) -> f64 {
+    let Some(ratio) = gamma_ratio(n) else {
+        return f64::NAN;
+    };
+    if t <= 0.0 {
+        return 0.0;
+    }
+    let a = 0.5 * n;
+    let (z, _) = beta_arguments(t, n);
+    let power = (-a * (t * t / n).ln_1p()).exp();
+    centre_fraction(a, z, power, ratio)
 }
 
 /// (t^2/(n+t^2), n/(n+t^2)) for t > 0, each rounded once from double-double arithmetic: forming
@@ -491,12 +575,9 @@ pub(crate) fn student_t_density(t: f64, n: f64) -> Option<f64> {
     Some(dd_div(dd_mul(ratio, power), dd_sqrt((n, 0.0))).0)
 }
 
-/// sqrt of a positive double-double: the double root and one Newton correction.
-fn dd_sqrt(a: Dd) -> Dd {
-    let root = a.0.sqrt();
-    let square = dd_mul((root, 0.0), (root, 0.0));
-    let residual = dd_add(a, (-square.0, -square.1));
-    two_sum(root, residual.0 / (2.0 * root))
+/// T.DIST(t, n, FALSE): Excel's own form ([`excel_t_density`], T-2585), else [`student_t_density`].
+pub(crate) fn t_density(t: f64, n: f64) -> Option<f64> {
+    excel_t_density(t, n).or_else(|| student_t_density(t, n))
 }
 
 /// atan of a positive double-double u: the double atan `theta_0`, then one Newton step on
@@ -523,8 +604,43 @@ fn dd_atan(u: Dd) -> Dd {
 
 #[cfg(test)]
 mod tests {
-    use super::super::incomplete_beta::tests::ulps;
+    use super::super::incomplete_beta::{beta_reg_complement, A1_EXPM1_MAX_X};
     use super::*;
+    use crate::test::util::ulps;
+
+    #[test]
+    fn bgrat_tails_match_excel() {
+        // probes-numeric t2464-r2-tdist-p1 part C (excel-graph): T.DIST.RT(t, n) for n > 30 in
+        // bgrat's region, one kernel call K(n/2, 1/2, y, z) with bgrat at b = 1/2 (T-2509).
+        for (t, n, excel) in [
+            (6.876_766_968_460_287, 1184.0, 4.944_295_635_855_830_5e-12),
+            (6.688_772_703_856_486, 1462.0, 1.597_408_460_492_365_4e-11),
+            (1.194_984_828_755_362_2, 818.0, 0.116_219_651_401_460_62),
+            (5.651_628_247_834_669, 450.0, 1.412_472_689_666_297_8e-8),
+            (2.907_418_672_926_900_7, 869.0, 0.001_868_483_605_870_204_5),
+        ] {
+            assert_eq!(student_t_tails(t, n).1, excel, "T.DIST.RT({t},{n})");
+            assert_eq!(student_t_tails(-t, n).0, excel, "T.DIST({t},{n},TRUE)");
+        }
+    }
+
+    #[test]
+    fn kernel_tail_covers_every_df_from_three() {
+        // bup + bgrat (n <= 30), bgrat (n > 30), the centre and the deep tail (bpser) go through
+        // the kernel; df 1, df 2 and an overflowing t·t keep today's path.
+        for (t, n) in [
+            (2.5, 30.0),
+            (2.5, 100.0),
+            (0.5, 10.0),
+            (50.0, 10.0),
+            (2.0, 3.0),
+        ] {
+            assert!(kernel_tail(t, n).is_some(), "{t}, {n}");
+        }
+        assert!(kernel_tail(1.0, 1.0).is_none());
+        assert!(kernel_tail(3.0, 2.0).is_none());
+        assert!(kernel_tail(1e300, 10.0).is_none());
+    }
 
     #[test]
     fn tail_beyond_one_is_taken_at_the_rounded_y() {
@@ -558,6 +674,33 @@ mod tests {
     }
 
     #[test]
+    fn low_df_tails_past_the_cut_are_exact_at_t() {
+        // probes-numeric m9-t-dist-rt A10, A12, A26, A27 and gen-m9/46ac3ef5e61583ca A236: Excel's
+        // values, each the exact tail at t rounded once (T-3187).
+        assert_eq!(student_t_tails(100.0, 1.0).1, 0.003_182_992_764_908_255);
+        assert_eq!(student_t_tails(1e6, 1.0).1, 3.183_098_861_836_845_5e-7);
+        assert_eq!(student_t_tails(1000.0, 2.0).1, 4.999_992_500_012_5e-7);
+        // Excel is 1 ulp above the exact tail at `T.DIST.RT(1E6,2)` (A27); ours is the exact one.
+        assert_eq!(
+            ulps(student_t_tails(1e6, 2.0).1, 4.999_999_999_992_501e-13),
+            1
+        );
+        assert_eq!(
+            2.0 * student_t_tails(1e15, 1.0).1,
+            6.366_197_723_675_813e-16
+        );
+        // df 1 from t = 1 up: `T.DIST.RT(2,1)` (m9-t-dist-rt A5) is the exact tail; at
+        // `T.DIST.RT(3,1)` (A6) Excel is 1.8 ulp from it (T-3877).
+        assert_eq!(student_t_tails(2.0, 1.0).1, 0.147_583_617_650_433_26);
+        assert_eq!(
+            ulps(student_t_tails(3.0, 1.0).1, 0.102_416_382_349_566_75),
+            2
+        );
+        // A t whose 2 t^2 overflows has a tail below the normal range: flushed.
+        assert_eq!(student_t_tails(1e154, 2.0).1, 0.0);
+    }
+
+    #[test]
     fn df_two_tail_is_the_closed_form_down_to_y_one_tenth() {
         // probes-numeric t0969-t-tail-grid B2 and t0969-t-df2-cut B1, B201, B449: 1 - exp(ln(1-y)/2)
         // at the rounded y, inside t = 1 and out to t = 4.24 (y = 0.100112).
@@ -573,7 +716,7 @@ mod tests {
         // the incomplete beta's a = 1 tail is the uncancelled form there (T-0974) and gives
         // Excel's value.
         let y = 2.0 / (2.0 + 4.245 * 4.245);
-        assert!(y < A1_CLOSED_FORM_MIN_X);
+        assert!(y < A1_EXPM1_MAX_X);
         assert_eq!(closed_form_tail(y, 2.0), None);
         let closed = 0.5 * (1.0 - (0.5 * (1.0 - y).ln()).exp());
         assert_eq!(ulps(closed, 0.025_631_992_844_658_943), 1);
@@ -607,12 +750,12 @@ mod tests {
         // T_DIST.xlsx `T.DIST T.INV T.DIST.RT`: D15 and D16 are bit-exact.
         assert_eq!(student_t_tails(1.0, 1.0).0, 0.75);
         assert_eq!(student_t_tails(1.0, 2.0).0, 0.788_675_134_594_812_9);
-        // F18: the deep tail keeps its digits, one ulp from Excel's 1.230468749943611E-56 (the
-        // exact value is 33 ulp away).
+        // F18: the deep tail (bpser(5, 1/2, y)) keeps its digits and is Excel's
+        // 1.230468749943611E-56 bit for bit since bpser splits a non-double z (T-3879; it was
+        // 1 ulp off before). The exact value is 33 ulp away.
         let deep = student_t_tails(1e6, 10.0);
-        assert_eq!(deep.1, 1.230_468_749_943_610_7e-56);
+        assert_eq!(deep.1, 1.230_468_749_943_611e-56);
         assert_eq!(student_t_tails(-1e6, 10.0).0, deep.1);
-        assert_eq!(ulps(deep.1, 1.230_468_749_943_611e-56), 1);
     }
 
     #[test]

@@ -99,7 +99,7 @@ exact UTF-16 units throughout:
 - 32,767 limit: `LEN(REPT("a",32766)&"😀")` is 32767 (the kept unit is the high half, coercion.md "Truncation inside a surrogate pair"); `REPT("😀",16384)` is `#VALUE!`;
   CONCAT and TEXTJOIN one unit over (a pair straddling the limit) are `#CALC!`, not truncated (existing entry below).
 Evidence: probes/text-lone-surrogates A1-A81, B1-B6 (excel-graph, 2026-10-15, T-1582).
-Ours: comparisons, EXACT and exact-mode MATCH read lone units exactly (T-1585): `cmp_text` in functions/util/collation.rs weighs a lone unit (and each unit of an astral character) above every BMP character, by unit value, which gives H<L, H<"😀"<L, and both H and L above U+FFFD (`H<UNICHAR(65533)` FALSE); COUNTIF-style criteria and wildcard MATCH/XMATCH read lone units exactly as well (T-1642, criteria paragraph below). UPPER, LOWER, PROPER, TRIM and CLEAN keep lone units (`Text::map_runs`; a lone unit breaks a word for PROPER, unprobed). FIND, SEARCH and SUBSTITUTE read lone units exactly (T-1586: `find_element` in functions/text/position.rs maps each unit, a lone one included, to one character; `substitute_units` in functions/text/util.rs matches unit for unit, so a lone half splits a pair; with an `instance_num` instances overlap, as in the well-formed path, `SUBSTITUTE("aaa","aa","x",2)` is "ax", as Excel gives: "SUBSTITUTE instances overlap" below). CODE and VALUE already behaved as probed. REPT repeats the exact units (`Text::repeat`; `REPT(L&H,2)` re-pairs at the join like `&`), TEXT prints the exact text where `@` is (`format_text_value_exact` in formatter/format.rs formats a one-character private-use stand-in the format does not hold, so the 255-character limit and every format rule stay the well-formed path's, then swaps the exact text in; the limit is re-checked on the real length), and T returns its argument unchanged (T-1587; exactness VERIFIED, T-1647).
+Ours: comparisons, EXACT and exact-mode MATCH read lone units exactly (T-1585): `cmp_text` in functions/util/collation.rs weighs a lone unit (and each unit of an astral character) above every BMP character, by unit value, which gives H<L, H<"😀"<L, and both H and L above U+FFFD (`H<UNICHAR(65533)` FALSE); COUNTIF-style criteria and wildcard MATCH/XMATCH read lone units exactly as well (T-1642, criteria paragraph below). UPPER, LOWER, PROPER, TRIM and CLEAN keep lone units (`Text::map_runs`; a lone unit breaks a word for PROPER, as a supplementary character does, probes/t3802-proper-surrogates: "PROPER word starts: Excel's own letter table (T-3657)"). FIND, SEARCH and SUBSTITUTE read lone units exactly (T-1586: `find_element` in functions/text/position.rs maps each unit, a lone one included, to one character; `substitute_units` in functions/text/util.rs matches unit for unit, so a lone half splits a pair; with an `instance_num` instances overlap, as in the well-formed path, `SUBSTITUTE("aaa","aa","x",2)` is "ax", as Excel gives: "SUBSTITUTE instances overlap" below). CODE and VALUE already behaved as probed. REPT repeats the exact units (`Text::repeat`; `REPT(L&H,2)` re-pairs at the join like `&`), TEXT prints the exact text where `@` is (`format_text_value_exact` in formatter/text_value.rs formats a one-character private-use stand-in the format does not hold, so the 255-character limit and every format rule stay the well-formed path's, then swaps the exact text in; the limit is re-checked on the real length), and T returns its argument unchanged (T-1587; exactness VERIFIED, T-1647).
 Status: VERIFIED
 **Criteria and wildcards (VERIFIED, probes/criteria-lone-surrogates, excel-graph 2026-10-16, T-1642).** Excel's criteria (SUMIF, COUNTIFS) and wildcard MATCH/XMATCH read lone units exactly, unit by unit. Data: H, L, "😀", U+FFFD, "x", H&"a", "a"&L, "a".
 - A lone-half criterion (`H`, `"="&H`) matches H only. It does not match U+FFFD or the other half. `"<>"&H` matches everything else.
@@ -161,7 +161,7 @@ Cell errors past the limit (probes/text-result-limit-errors, excel-graph, 2026-1
 Other reference kinds behave like a direct A1 cell or range (probes/text-result-limit-errors-refs, excel-graph, 2026-10-08, T-0285; same layout, `Sheet2` repeats `A1:A2`): a defined name, `INDEX`, `IF`, `OFFSET`, `INDIRECT`, `INDEX(..):INDEX(..)` and a 3-D reference (`Sheet1:Sheet2!A1:A2`) are references, so a range that includes "b" gives `#CALC!` for CONCAT and TEXTJOIN (C1-C2, C4-C5, C7, C10, D1-D2, D4-D5, D7, D10), a single cell holding `#N/A` gives `#N/A` for CONCAT (exactly 32,767, C3, C6, C8, C11-C12) and `#CALC!` for TEXTJOIN (the delimiter takes it over, D3, D6, D8, D11-D12). `@A1:A2` from row 9 or 10 is `#VALUE!` (no intersection; C9, D9), which says nothing about the limit. Unprobed: TEXTJOIN with ignore_empty FALSE over a whole-column 3-D span (the engine's 3-D walk does not add the delimiters of the empty cells outside the used area, unlike the single-sheet walk).
 Array arguments (probes/round-concat-array-edges F1-F7, with F1 the same `#CALC!` for the error-free row form, excel-graph 2026-10-13, T-1400): an error element of an array constant behaves like a range cell error. After 32,767 characters `CONCAT(REPT("a",32767),{"b",#N/A})` is `#CALC!` (so are `{"b";#DIV/0!}` and `{"b";"c"}`); an error met before the limit wins (`CONCAT({"b",#N/A},REPT("a",32767))` is `#N/A`, and `CONCAT(REPT("a",32767),{#N/A,"b"})` is `#N/A` since the error comes before any character overflows). With two errors the first wins (`CONCAT({"b",#N/A},{"c",#DIV/0!})` is `#N/A`). The engine matches.
 Status: VERIFIED
-Implemented in: `fn_concat`/`fn_textjoin` in functions/text/concatenate.rs (`ConcatText`, `JoinSize`) stop appending text once over the limit but still evaluate later arguments. `fn_concat` drops a range or reference cell error met once over the limit and continues; `fn_textjoin` does the same for range cells (through `JoinSize::push_cell`, also used for the sheet-by-sheet 3-D walk) and, in its `Node::ReferenceKind` arm, for a direct single-cell reference, counting the preceding delimiter through `JoinSize::exceeds_with_separator`. Both read their arguments through `evaluate_aggregate_arg` (which also treats `:` expressions, `Node::OpRangeKind`, as references), and `get_range` (reference_operators.rs) keeps an INDEX operand of `:` a reference (T-0243, T-0262, T-0284, T-0285)
+Implemented in: `fn_concat`/`fn_textjoin` in functions/text/concatenate.rs (`ConcatText`, `JoinSize`) stop appending text once over the limit but still evaluate later arguments. `fn_concat` drops a range or reference cell error met once over the limit and continues; `fn_textjoin` does the same for range cells (through `JoinSize::push_cell`, also used for the sheet-by-sheet 3-D walk) and, in its `Node::ReferenceKind` arm, for a direct single-cell reference, counting the preceding delimiter through `JoinSize::exceeds_with_separator`. Both read their arguments through `evaluate_aggregate_arg` (which also treats `:` expressions, `Node::OpRangeKind`, as references), and `get_range` (reference_operators/mod.rs) keeps an INDEX operand of `:` a reference (T-0243, T-0262, T-0284, T-0285)
 Tasks: T-0243, T-0262, T-0284, T-0285, T-1400
 
 ## CONCAT joins an array argument element by element
@@ -178,13 +178,25 @@ small the used area: `TEXTJOIN(",",FALSE,D:D)` is `#CALC!` (1,048,576 values joi
 characters) and `TEXTJOIN(",",FALSE,10:10)` with H10 = "x" and J10 = "y" is ",,,,,,,x,,y" followed by
 16,374 more commas. With ignore_empty TRUE only the non-empty cells count (`TEXTJOIN(",",TRUE,D:D)` =
 "a,c"). `TEXTJOIN(",",FALSE,D1:D16385)` over the same sheet has length 16,386.
-Unprobed: an error cell met after the skipped empties have taken the join over the limit (for example
-`TEXTJOIN(",",FALSE,1:3)` with an error in A3); the engine gives `#CALC!`, as for a walked range (C20).
-Evidence: probes/whole-column-empty-walkers E2, E3, E6, F1, F2, F5, F8 (excel-graph, 2026-10-07, T-1114).
+An error cell met after the skipped empties have taken the join over the limit is dropped: with A1 = "x",
+A2 = "y" and A3 = `=NA()`, `TEXTJOIN(",",FALSE,1:3)` and `1:2` are `#CALC!`, while `1:1` joins to 16,384
+characters and `TEXTJOIN(",",TRUE,1:3)`, `3:3` and `A1:A3` are `#N/A` (probes/textjoin-whole-rows-error-cell
+A1-A7, excel-graph, 2026-10-29, T-3098).
+Past the limit Excel stops reading cells: with A1 = "x", A2 = "y" and `=TEXTJOIN(",",FALSE,1:10)` in B5 (a cell
+of its own range, below the row where the padding passes the limit) the result is `#CALC!`, not a circular
+reference, while `=TEXTJOIN(",",TRUE,1:10)` in D3 is circular (0), since ignore_empty TRUE adds no padding and reads
+every cell (probes/textjoin-whole-rows-self-reference B5, D3, excel-graph, 2026-10-29, T-3098). The engine's
+whole-row walk with ignore_empty FALSE stops at the limit (`textjoin_push_padded_range`), also when the used area
+spans every column (A1, XFD1, A2, XFD2 set: B5 `=TEXTJOIN(",",FALSE,1:10)` and B8 `=TEXTJOIN(",",FALSE,A1:XFD10)`
+are `#CALC!`, D3 with ignore_empty TRUE is circular (0); probes/textjoin-whole-rows-self-reference-full-width,
+excel-graph, 2026-10-29, T-3123).
+The limit can also be passed partway along the formula's own row: with A1 holding 32,160 units of text, `=TEXTJOIN(",",FALSE,1:1)` in ZZ1 (and `1:10` in ZZ9) is `#CALC!`, because Excel stops reading once the join passes the limit and never reaches its own cell. It stops at the cell that crosses it, padding or value, with ignore_empty TRUE too: with A holding 32,562 units and B 250 more, the formula in C (next cell), in D (after a blank), TRUE or FALSE, and in E after two more cells (TRUE) is `#CALC!` (C11, C12, D13, D14, E15). Where the limit is passed only after the formula cell (B3, FALSE) or never (ZZ7, TRUE, 32,160 units) it is circular (0). `textjoin_push_range` stops its walk at the crossing (probes/t3293-textjoin-own-row-limit, excel-graph, 2026-10-31, T-3293). 3-D references are unprobed.
+Evidence: probes/whole-column-empty-walkers E2, E3, E6, F1, F2, F5, F8 (excel-graph, 2026-10-07, T-1114); probes/textjoin-whole-rows-error-cell A1-A7 and probes/textjoin-whole-rows-self-reference B5, D3 (excel-graph, 2026-10-29, T-3098); probes/textjoin-whole-rows-self-reference-full-width B5, B8, D3 (T-3123); probes/t3293-textjoin-own-row-limit (T-3293).
 Status: VERIFIED
-Implemented in: `fn_textjoin` (functions/text/concatenate.rs) walks the used area and adds the skipped
-empty cells per row and after the last row through `JoinSize::push_empties`, which stops at the limit.
-Tasks: T-1114
+Implemented in: `fn_textjoin` (functions/text/concatenate.rs) walks the used area through the shared
+sparse whole-range walker (T-2713) and adds the skipped empty cells per row (one walk per row)
+and after the last row through `JoinSize::push_empties`, which stops at the limit.
+Tasks: T-1114, T-3293
 
 ## JIS is `#NAME?` in en-US Excel for the web
 Rule: `JIS`, although Microsoft's en-US function list includes it, is not a known function in
@@ -201,7 +213,7 @@ Rule: FIXED prints no minus sign when the number rounds to zero at the requested
 (`EVEN(-0.0001)` is -2).
 Evidence: gen-m6/f94b5b8236742618 Calc!A24 (excel-graph, 2026-10-09, T-1239).
 Implemented in: `fn_fixed` (T-1257): the sign is dropped when the rounded text has no non-zero digit. Further shapes: `FIXED(-0.004,2)` and `FIXED(-0.4,0)` (probes/dollar-fixed-unichar-edges A49, A50).
-Status: VERIFIED (excel-graph: gen-m6 A24, probes/dollar-fixed-unichar-edges A49, A50); desktop confirmation pending (T-1081). `FIXED(-0.005,2)` keeping its sign ("-0.01") is UNVERIFIED
+Status: VERIFIED (excel-graph: gen-m6 A24, probes/dollar-fixed-unichar-edges A49, A50); desktop confirmation pending (T-1081). A negative value that rounds away from zero keeps its sign, ties included: `FIXED(x,2)` of -0.005, -0.015, -0.025, -0.045 and -1.005 is "-0.01", "-0.02", "-0.03", "-0.05" and "-1.01" (the same digits as half away from zero, whichever side of the tie the double lies), -0.0050000001 is "-0.01", -0.0049999999 drops the sign in FIXED ("0.00") while DOLLAR keeps its parentheses ("($0.00)"); `FIXED(-0.5,0)` "-1", `FIXED(-0.05,1)` "-0.1", `FIXED(-5,-1)` "-10"; DOLLAR gives the same digits in parentheses (probes/t4720-fixed-sign-and-exponent-digits A1:A17, excel-graph, 2026-11-06, T-4720; all match ours)
 Tasks: T-1257
 
 ## Count and position bounds of LEFT, RIGHT, MID and REPLACE
@@ -226,15 +238,27 @@ character. The bound is absolute, identical below 1, 10, 1000 and 30000, and it 
 `MID(t,1,1-1E-15)` is "" and `MID(t,1-1E-15,5)` is `#VALUE!` (start below 1). The negative check sees the
 raw value (`LEFT(t,-1E-300)` is `#VALUE!`); REPLACE's start_num < 1 check comes after the rounding
 (`REPLACE(t,1-2E-7,1,"z")` starts at 1, `1-1E-5` is `#VALUE!`). A computed `TRUE-1E-15` count is 1 for LEFT
-(gen-m2/b4392a6514a36ade Calc!A14). INDEX's row and column indexes share it (lookup.md, T-1407); whether other
-functions (REPT, FIND/SEARCH start_num, CHAR) do is UNVERIFIED. The cutoff is known to 2^-36: 2^-22 + 8·2^-36 (= 2^-22 + 2^-33) rounds up, 2^-22 + 9·2^-36 does not;
-the engine takes the bound as exactly 2^-22 + 2^-33, inclusive. Unprobed: REPLACE start_num 32767.9999999 (rounds
+(gen-m2/b4392a6514a36ade Calc!A14). INDEX's row and column indexes share it (lookup.md, T-1407). Among the other
+M5 text arguments (probes/t4453-near-integer-text-args, excel-graph 2026-11-06, T-4453), FIND and SEARCH start_num
+(B1:C14), CHAR (D1:D21), SUBSTITUTE instance_num (F1:F21) and FIXED and DOLLAR decimals (G1:H14) snap with the same
+bound: `FIND("a",t,1-2^-23)` is 1 and `CHAR(1-1E-15)` is U+0001, while 2^-22 + 9·2^-36 below the integer floors
+(`FIND("a",t,1-2^-22-9*2^-36)` and `CHAR(1-1E-6)` are `#VALUE!`). The bound is the full one, not DATE's halved
+negative one, and it holds below 1000 and 255 alike. Negative decimals snap their magnitude and truncate toward zero,
+symmetric with the positive side: `FIXED(1234.5678,-1+2^-23)` is "1230", `-1+2^-22+9*2^-36` "1235", `-1E-6`
+"1235" (not -1), `-3+2^-23` "1000" and `-3+1E-6` "1200" (I1:J21). REPT's number_times and UNICHAR do **not** snap:
+they truncate exactly like MID, so `REPT("a",1-1E-15)` is "" and `UNICHAR(66-2^-23)` is "A" (A1:A14, E1:E14; the
+n-1E-15 cells at 1000 and 66 read n only because that value rounds to n in binary). The cutoff is known to 2^-36: 2^-22 + 8·2^-36 (= 2^-22 + 2^-33) rounds up, 2^-22 + 9·2^-36 does not;
+the engine takes the bound as exactly 2^-22 + 2^-33, inclusive. At the upper caps (probes/t4468-near-integer-text-caps, excel-graph 2026-11-06, T-4468): `FIXED(1,128-2^-23)`, `DOLLAR(1,128-2^-23)`, `CODE(CHAR(256-2^-23))` and `FIND("","abc",5-2^-23)` snap up to the cap and are `#VALUE!` (B1:E2), while 2^-22 + 9*2^-36 below floors to 127 (digits printed), 255 (CODE 255) and 4 (FIND 4) (B4:E4); cap-1 is accepted (row 6). SUBSTITUTE instance_num at 2^31-1 snaps over a far wider window than 2^-22 + 2^-33: `2147483647-d` is `#VALUE!` for every d up to 2^-18 (3.8E-6; F1:F6, A1:A5) and "aaa" (no such instance) from d = 5*2^-19 (G1:G11) and 2^-16 (F7:F12). The model: instance_num is **cut to 15 significant digits (round to nearest) before** the near-integer floor, so at ten integer digits anything within 5E-6 of 2147483647 reads 2147483647. `2147483647-4.5E-6` is `#VALUE!` and `2147483647-4.9E-6` (the double 2147483646.99999499…) is "aaa" (probes/t4468-substitute-cap-window A1:A14, registered before the fill; 21 of 21 cells). A literal or text instance_num is cut by truncation first ("15-digit literal parsing", numbers.md), so `SUBSTITUTE("aaa","a","b",2147483646.999999)` and `"2147483646.999996"` read 2147483646.99999 and give "aaa" while `2147483647-1E-6`, the same double as that literal's full parse, is `#VALUE!` (B5, C1). A fresh log-uniform sweep frozen after the model (probes/t4468-substitute-cap-sweep, 60 cells, d in [1E-7,1E-4] at the cap and [1E-8,1E-5] at 3) matches 60 of 60; the absolute bound alone matches 48. Below 1E+8 the cut's window (at most 5E-8) is inside the 2^-22 snap, so no other snapping argument can show it; the engine applies it to SUBSTITUTE only.
+Unprobed: REPLACE start_num 32767.9999999 (rounds
 up to 32,768, so the engine gives `#VALUE!`).
-Evidence: probes/text-count-argument-bounds A-D, N-S, T-V, X-Y, Z, AA (excel-graph, 2026-10-11, T-0219).
+Evidence: probes/text-count-argument-bounds A-D, N-S, T-V, X-Y, Z, AA (excel-graph, 2026-10-11, T-0219);
+probes/t4453-near-integer-text-args A1:J21 (excel-graph, 2026-11-06, T-4453);
+probes/t4468-near-integer-text-caps, t4468-substitute-cap-window, t4468-substitute-cap-sweep (excel-graph, 2026-11-06, T-4468).
 Status: VERIFIED
-Implemented in: functions/util.rs (`near_integer_count`), used by `left_element`, `right_element`
-(common.rs) and `replace_element` (string_format.rs).
-Tasks: T-0219
+Implemented in: functions/util/near_integer.rs (`near_integer_count`, `near_integer_trunc`), used by `left_element`,
+`right_element` (common.rs), `replace_element` (string_format.rs), `find_element` (position.rs), `fn_char`
+(char_code.rs), `substitute_element` (util.rs) and `decimals_arg` (string_format.rs).
+Tasks: T-0219, T-4453, T-4468
 
 ## Text function argument modes
 Rule: the M5 text functions take scalar arguments that lift over a range or array (one result per cell, a spill;
@@ -307,7 +331,7 @@ VERIFIED (probes/textsplit-lift-guesses, excel-graph, 2026-10-19, T-1824):
 - REGEXEXTRACT in a lifted call keeps the first value of each element (`REGEXEXTRACT({"a1b2";"c3d4"},"[0-9]",1)` is 2x1 "1","3"; A47-A52).
 - A 1x1 array lifts the call: `COLUMNS(TEXTSPLIT({"a,b"},","))`, `COLUMNS(TEXTSPLIT(FILTER(Data!A1:A2,Data!A1:A2="a,b"),","))` and `COLUMNS(REGEXEXTRACT({"a1b2"},"[0-9]",1))` are 1, as is `ROWS(...)` (every lifted element keeps its first value, so `COLUMNS(TEXTSPLIT({"a,b";"c,d,e"},","))` is 1 and its ROWS 2); `COLUMNS(TEXTSPLIT(Data!A3,","))` over a single cell is 3, a non-lifting call (A56-A70).
 - A 1x1 array as the delimiter does not lift (`COLUMNS(TEXTSPLIT("a,b",{","}))` is 2, A64); as ignore_empty or a REGEX pattern it does (A66, A67). A one-cell range `Data!A3:A3` does not lift (A70). `INDEX(TEXTSPLIT({"a,b"},","),1,2)` is `#REF!` because the lifted call has one column (A68).
-- A scalar boolean delimiter is its spelling in TEXTSPLIT as in TEXTBEFORE (`TEXTSPLIT("a TRUE b",TRUE)` is "a "," b", A71-A73). Of two different errors in one delimiter list the first element wins (whether the scan is row-major or column-major is UNVERIFIED: every 2x2 cell has its winner at (1,1); ours row-major; `{#N/A,#DIV/0!}` is `#N/A`, `{#DIV/0!,#N/A}` is `#DIV/0!`, `{#REF!,#N/A;#VALUE!,#DIV/0!}` is `#REF!`, A74-A81), and an error in the list beats an invalid instance_num (`TEXTBEFORE("abc",{"",#N/A},0)` is `#N/A`; without the error `#VALUE!`, A82-A87).
+- A scalar boolean delimiter is its spelling in TEXTSPLIT as in TEXTBEFORE (`TEXTSPLIT("a TRUE b",TRUE)` is "a "," b", A71-A73). Of two different errors in one delimiter list the first element wins (the scan is row-major, VERIFIED: in a 2x2 array or range holding `#N/A` at (1,2) and `#DIV/0!` at (2,1) TEXTSPLIT and TEXTBEFORE give `#N/A`, with the two swapped `#DIV/0!`, probes/t4719-text-unverified-residue A1:A4, A9:A12; ours row-major; `{#N/A,#DIV/0!}` is `#N/A`, `{#DIV/0!,#N/A}` is `#DIV/0!`, `{#REF!,#N/A;#VALUE!,#DIV/0!}` is `#REF!`, A74-A81), and an error in the list beats an invalid instance_num (`TEXTBEFORE("abc",{"",#N/A},0)` is `#N/A`; without the error `#VALUE!`, A82-A87).
 - REGEXEXTRACT's return_mode 2 keeps the first group of each lifted element (`REGEXEXTRACT({"a1b2";"c3d4"},"([a-z])([0-9])",2)` is "a","c"; A53) and its fourth argument case_sensitivity lifts (`REGEXEXTRACT("a1B2","b",0,{0;1})` is `#N/A`,"B", so its TEXTJOIN is `#N/A`; A55). Ours since T-1360 ("REGEX* optional arguments" below).
 Ours: all of this since T-1272. The work caps are the next entry's. A multi-cell range as the TEXTBEFORE/TEXTAFTER
 delimiter is still read as one text, as before T-1272 (gen-m7/851eb2099ae3f805 Calc!A25 is `#VALUE!`); its list rule is
@@ -316,7 +340,9 @@ Status: VERIFIED (excel-graph) for the cited cells; UNVERIFIED as noted above
 Tasks: T-1272, T-1824 (probe the guesses), T-1361 (delimiter ranges)
 
 ## Lifted TEXTSPLIT, TEXTBEFORE, TEXTAFTER and REGEX* calls are capped
-Rule: Excel computes these calls whatever their size.
+Rule: Excel computes these calls whatever their size. The REGEX* limits below also bound an XMATCH or XLOOKUP call in
+regex mode (`match_mode` 3, T-2680): one call, all its lifted elements included, has one REGEX* budget
+(`LookupRegexes`; lookup.md "XMATCH and XLOOKUP regex mode").
 Ours: a call is `#ERROR!` (as the *IF(S) lift) when its work passes `limits::MAX_LIFTED_CELL_VISITS` (2^27): over
 every operand, each element's length plus 1, times how often the broadcast repeats it; the text's length is further
 multiplied, per position, by the delimiter count plus the delimiter bytes compared there (each delimiter at most the
@@ -385,9 +411,26 @@ Backtracker limits (T-1900, functions/text/pcre/backtrack.rs and program.rs):
   (`REGEXTEST("a"&CHAR(10)&REPT("a",32764)&CHAR(10),"(?:b[a-z]{20000}|a)*b$")`). Each chunk it reaches is charged one unit
   a word, and each state it enters a step.
 Status: DEVIATION (decision 0014)
-Implemented in: the fold budget of `pcre::parse` (functions/text/pcre/parse.rs, charged per code point a fold walks), `Model::lift_text_call`, `text_call_cost` and `ScanCost` (functions/text/lifted.rs), `PatternCache`
+Implemented in: the fold budget of `pcre::parse` (functions/text/pcre/parse.rs, charged per code point a fold walks), `Model::lift_text_call`, `text_call_cost` and `ScanCost` (functions/text/lifted.rs), `PatternCache` and `LookupRegexes` (regex_functions.rs)
 and `Replacement` (functions/text/regex_replacement.rs), `Engine` and `Search` (functions/text/regex_engine.rs), `Backtracker` and `Program` (functions/text/pcre/), `SplitList` (functions/text/textsplit.rs)
-Tasks: T-1272, T-1829, T-1988, T-1989, T-2098, T-2138, T-2355
+Tasks: T-1272, T-1829, T-1988, T-1989, T-2098, T-2138, T-2355, T-2680
+
+## Lifted FIND and SEARCH calls are capped
+Rule: Excel computes a lifted FIND, FINDB, SEARCH or SEARCHB whatever its texts' lengths.
+Ours: a lifted call is `#ERROR!` ("Too many cells to visit") before its first element when its work passes
+`limits::MAX_LIFTED_CELL_VISITS` (2^27). Each element is charged both texts' UTF-8 lengths plus 1 and, at each of the
+`within_text` length plus 1 start positions, 1 plus the bytes compared there (at most the shorter text's length) over
+256 for FIND (a `memcmp`) and over 8 for SEARCH (its wildcard segments compare unit by unit); a number or a logical
+counts as 32 bytes, an error or a blank as none. `FIND(REPT("a",32766)&"b",REPT("a",32763)&SEQUENCE(1000))`, about
+10^9 compared bytes per element, is `#ERROR!`; `SUM(FIND("a",A1:A100000))` over short texts runs, and a call that does
+not lift is not charged (`FIND(REPT("a",32766)&"b",REPT("a",32767))` is `#VALUE!`, after one scan).
+Even a one-character search is charged each start position, as TEXTBEFORE reads each position: a lift whose
+`within_text`s add up past about 2^27 bytes is `#ERROR!` (`SUM(--ISNUMBER(SEARCH("x",A1:A5000)))` over 32,767-character
+cells), where 100,000 texts of 1,000 bytes run.
+Status: DEVIATION (decision 0014)
+Implemented in: `ValueWork::TextScan` and `text_scan_units` (functions/lift/kinds/mod.rs), the FIND and SEARCH entries
+(functions/lift/kinds/text.rs)
+Tasks: T-1775, T-1961
 
 ## TEXTSPLIT, TEXTBEFORE and TEXTAFTER delimiter ranges
 Rule: a multi-cell range of any shape is a delimiter list, like an array constant (arrays.md "Dynamic-array and LAMBDA
@@ -407,7 +450,7 @@ A31-A34, probes/textbefore-number-delimiter (excel-graph, 2026-10-18, T-1361); g
 gen-m7/0e40208f51c2454c Calc!A17; gen-m7/4629e931955aa4b8 Calc!A19; gen-m7/851eb2099ae3f805 Calc!A25 (excel-graph,
 2026-10-11, T-1275); gen-m9/0c7fc447bc2eebfd A6, 4df1b22d3ed63f58 A14, A30, 3ec66461400faf2f A3, 696af2c8cee2f57e A23,
 95efb37a9874f82e A25 (excel-graph, 2026-10-12, T-1289).
-Ours: matches (`delimiter_list` in functions/text/lifted.rs). The error of a list with two different errors is the first in row-major order (UNVERIFIED).
+Ours: matches (`delimiter_list` in functions/text/lifted.rs). The error of a list with two different errors is the first in row-major order (VERIFIED, probes/t4719-text-unverified-residue A1:A4, A9:A12: a 2x2 array and a 2x2 range both).
 Status: VERIFIED (web)
 Tasks: T-1361, T-1412
 
@@ -426,6 +469,43 @@ A35, A36 (excel-graph, 2026-10-18, T-1361).
 Ours: matches (`around_empty_delimiter` in functions/text/before_after.rs).
 Status: VERIFIED (web)
 Tasks: T-1361
+
+## TEXTBEFORE and TEXTAFTER: overlapping delimiter instances
+Rule: TEXTBEFORE and TEXTAFTER count only disjoint delimiter matches, unlike SUBSTITUTE's instance_num ("SUBSTITUTE
+instances overlap" above). From the start, the scan counts the longest delimiter that starts at a position and resumes
+after its end: `TEXTBEFORE("aaa","aa",2)` is `#N/A`, `TEXTBEFORE("aaaa","aa",2)` "aa", `,3)` `#N/A`, `TEXTAFTER("aaaaa","aa",2)`
+"a"; `TEXTBEFORE("-2.5",{"2.5","-2.5"},2)` is `#N/A` in either list order ("-2.5" at unit 0 hides the "2.5" inside it);
+`TEXTBEFORE("xabcx",{"b","abc"},2)` is `#N/A` ("abc" at unit 1 hides the "b"). With a negative instance_num the scan
+takes start positions from the last back, and after a counted match steps back by that match's length and goes on from
+there, checking the whole rest of the text at each position, so a longer delimiter may still run into the counted match
+(`TEXTAFTER("3.141590.2-0.5x~*",C5:D12,-2)` with "0.2" and "2" among the delimiters counts "2" at unit 9, then "0.2" at
+unit 7, and is "-0.5x~*"; gen-m7/a470dc9e165bdb20 Calc!A1441), while the same delimiter cannot:
+`TEXTBEFORE("aaa","aa",-1)` "a", `-2` `#N/A`; `TEXTBEFORE("aaaaa","aa",-2)` "a"; `TEXTBEFORE("ababa","aba",-1)` "ab",
+`-2` `#N/A`; `TEXTBEFORE("xabcx",{"abc","b"},-1)` is "xa" (the later start wins, even though "abc" ends later);
+`TEXTBEFORE("abcd",{"ab","bc","cd"},-2)` is "" ("cd", then "ab"; "bc" overlaps "cd"). match_mode 1 counts the same way
+(`TEXTBEFORE("AAA","aa",2,1)` `#N/A`, `TEXTBEFORE("aAaA","AA",2,1)` "aA"). With match_end 1 the end of the text (the
+start, from the end) is one more instance after the last disjoint match, not only when nothing matches:
+`TEXTBEFORE("aaa","aa",2,,1)` is "aaa", `TEXTBEFORE("aaa","aa",-2,,1)` "", `TEXTAFTER("aaa","aa",2,,1)` ""; and
+`TEXTBEFORE("aaa","aa",2,,,"nf")` is "nf". The `#VALUE!` bound on instance_num ("instance_num past the text" below)
+counts positions, not disjoint matches: `TEXTBEFORE("aaa","aa",3)` is `#VALUE!` but `TEXTBEFORE("aaaa","aa",3)` `#N/A`.
+TEXTSPLIT splits at the same disjoint matches: `TEXTSPLIT("aaa","aa")` is "","a", `TEXTSPLIT("aaaaa","aa")` "","","a",
+`TEXTSPLIT("-2.5",{"2.5","-2.5"})` "","", `TEXTSPLIT("ababa","aba")` splits only at unit 0, `TEXTSPLIT("xabcx",{"b","abc"})` "x","x".
+Evidence: probes/t3335-textbefore-overlapping-instances A1-A58, C1-E29 (excel-graph, 2026-10-31, T-3335);
+gen-m9/cde551ea787f713a Calc!A37 (`TEXTBEFORE("-2.5",{2.5,-2.5},2)` inside BETADIST, `#N/A`); gen-m7/a470dc9e165bdb20
+Calc!A1441 (excel-graph). The backward step is the counted match's own length in UTF-16 units, not the shortest or
+longest delimiter's nor a count of characters: `TEXTAFTER("abcab",{"ab","c"},-2)` is "cab" in either list order (a
+shortest-delimiter step would reach the "c" and give "ab"), `TEXTAFTER("abcab",{"ab","c","zzzz"},-2)` still "cab",
+`TEXTBEFORE("abcc",{"c","bc"},-2)` "ab", `TEXTAFTER("abcab",{"ab","c"},-3)` `#N/A` (the "c" is stepped over, never
+counted) and with match_end 1 the whole text; `TEXTBEFORE("abzab😀c",{"b😀c","abz","bz"},-2)` is "" (four units back
+from "b😀c" reach "abz"; three characters back would reach "bz" and give "a"). match_mode 1 steps the same
+(`TEXTAFTER("ABCAB",{"ab","c"},-2,1)` "CAB"). Forward, the scan resumes after the counted match even when a shorter
+list entry starts inside it: `TEXTBEFORE("abcb",{"abc","b"},2)` is "abc" in either list order (not "a"),
+`TEXTBEFORE("😀bcb",{"😀bc","b"},2)` "😀bc", `TEXTBEFORE("abcbc",{"abc","c"},2)` "abcb"; TEXTSPLIT agrees
+(`TEXTSPLIT("abcb",{"abc","b"})` is "","",""). Evidence: probes/t3375-textbefore-scan-steps A1-A14, B1-B10
+(excel-graph, 2026-10-31, T-3375).
+Ours: matches (`Instances::Disjoint` in functions/text/util.rs; TEXTSPLIT's `split_grid` already scanned disjointly).
+Status: VERIFIED (excel-graph)
+Tasks: T-3335, T-3375
 
 ## TEXTSPLIT of empty text is #VALUE!
 Rule: TEXTSPLIT of empty text is `#VALUE!` whatever its valid other arguments: a literal `""`, a blank cell and an empty-string cell,
@@ -454,16 +534,26 @@ Tasks: T-1412, T-1361
 
 ## TEXTSPLIT match_mode 1 case folding
 Rule: with match_mode 1 TEXTSPLIT compares case-insensitively without changing the length of the text. `İ` (U+0130) matches `i`
-(`TEXTSPLIT("aİbİc","i",,,1)` splits at both İ, and so does the delimiter `İ` against text containing `İ`: {"a","b","c"}; the delimiter `İ` against a plain `i` or `I`, and `I` against `İ`, are UNVERIFIED), unlike SEARCH, where `SEARCH("i","İx")`
+(`TEXTSPLIT("aİbİc","i",,,1)` splits at both İ, and so does the delimiter `İ` against text containing `İ`: {"a","b","c"}; the delimiter `İ` splits "aibIc" at both `i` and `I`, and the delimiter `I` splits "aİbİc" at both `İ`), unlike SEARCH, where `SEARCH("i","İx")`
 is `#VALUE!`. The Kelvin sign U+212A does not match `k` (`TEXTSPLIT("a"&UNICHAR(8490)&"bkc","k",,,1)` is {"aKb","c"}), unlike SEARCH, where
 `SEARCH("k",UNICHAR(8490))` is 1. `ß` and `ẞ` do not match `ss` (`TEXTSPLIT("aßbSSc","ss",,,1)` is {"aßb","c"}), and `Ä` matches `ä`.
-Pieces are cut from the original text, so they keep their case. Final sigma follows SEARCH (`ς` and `Σ` both fold to `σ`), which changed from the pre-T-1794 string-level lowercase; it is UNVERIFIED for TEXTSPLIT.
-Evidence: probes/textsplit-casefold-length A1-A8 (excel-graph, 2026-10-17, T-1794).
-Ours: `fold_for_split` (text/casefold.rs) folds char by char (one char in, one char out) with those two exceptions; positions are mapped back to
+Pieces are cut from the original text, so they keep their case. The Angstrom sign U+212B matches neither `å` nor `Å`, in either
+direction (`TEXTSPLIT("a"&UNICHAR(8491)&"b",UNICHAR(229),,,1)` is the one piece "a"&UNICHAR(8491)&"b"), again unlike SEARCH's fold. `ſ` (U+017F) matches neither `s`
+nor `S`, and `µ` (U+00B5) neither `μ` nor `Μ`, in either direction; each titlecase digraph (`ǅ` U+01C5, `ǈ` U+01C8, `ǲ` U+01F2)
+matches its upper and lower forms both ways (`TEXTSPLIT("aǅb",UNICHAR(452),,,1)` is {"a","b"}). **Sigma folds by position, as in
+TEXTBEFORE and TEXTAFTER, not as in SEARCH:** `TEXTSPLIT("aΣbςcσd","σ",,,1)` is {"a","bςc","d"} (the `Σ` before a letter is `σ`, `ς`
+is only `ς`), the delimiter `ς` gives {"aΣb","cσd"}, the lone delimiter `Σ` is `ς` and gives {"aΣb","cσd"} too, "aΟΣ" split by `ς` is
+{"aΟ",""}, "aΣb" split by `ς` is {"aΣb"}, and `ς` and `σ` never match each other.
+Evidence: probes/textsplit-casefold-length A1-A8 (excel-graph, 2026-10-17, T-1794); probes/t4473-textsplit-fold-gaps A1:A6, A12:A25
+and, in A27:A104, the first two of every three cells (excel-graph, 2026-11-06, T-4473; each TEXTSPLIT is read through ARRAYTOTEXT and
+COLUMNS; match_mode 0 controls in A1:A2, A12:A13, A24:A26).
+Ours: `fold_for_match` (text/casefold.rs) folds char by char (one char in, one char out) with `fold_match_char`'s İ, Kelvin, Angstrom and `ẞ` exceptions and `fold_sigma_by_position`'s sigma rule; positions are mapped back to
 byte offsets of the original text. Before T-1794 the code sliced the original at byte offsets found in `to_lowercase()`, which panicked on
-`TEXTSPLIT("İİİ,a",",",,,1)`. The folding of other chars (Å U+212B, ſ, µ, final sigma, titlecase digraphs) is UNVERIFIED and follows SEARCH's.
+`TEXTSPLIT("İİİ,a",",",,,1)`. Before T-4473 TEXTSPLIT folded sigma and U+212B as SEARCH does; both now share `fold_sigma_by_position` and
+`fold_match_char` with TEXTBEFORE. `ẞ` and `ß` do not match each other in either direction (`TEXTSPLIT("assbẞc","ß",,,1)` is {"assbẞc"},
+`TEXTSPLIT("aßbẞc","ẞ",,,1)` is {"aßb","c"}, `TEXTSPLIT("aẞb","ẞ",,,1)` is {"a","b"}; probes/t4499-textsplit-sharp-s A3:A10, T-4499).
 Status: VERIFIED (web) for the listed forms
-Tasks: T-1794
+Tasks: T-1794, T-4473, T-4499
 
 ## TEXTBEFORE and TEXTAFTER match_mode 1 case folding
 Rule: with match_mode 1 TEXTBEFORE and TEXTAFTER fold case like TEXTSPLIT, never changing the length of the text: `İ` (U+0130) matches `i`
@@ -476,15 +566,20 @@ instance numbers behave the same on `"İİİ,a,b"`. Sigma is positional, unlike 
 other `Σ` (end of text, space, punctuation) is `ς`, and `ς` is only `ς`. So the delimiter `Σ` alone matches a text `ς` but not `σ`, the delimiter `ς` matches a final `Σ`
 ("aΟΣ") but neither `σ` nor a `Σ` followed by a letter, and the delimiter `σ` matches a `Σ` followed by a letter but not `ς`.
 The same holds for the text and a delimiter that are both `Σ` (`TEXTBEFORE("aΣb","Σ",1,1)` is `#N/A`: the text's `Σ` is `σ`, the lone delimiter `Σ` is `ς`), and for TEXTAFTER.
-A `Σ` before a digit is `σ` (`TEXTBEFORE("ΟΔΟΣ1","σ",1,1)` is "ΟΔΟ", delimiter `ς` is `#N/A`); before a space or a comma it is `ς` (`"ΟΔΟΣ ΚΑΙ"` and `"ΟΔΟΣ,Α"` match `ς`, not `σ`).
-Evidence: probes/textbefore-casefold-length A1-A25 (excel-graph, 2026-10-17, T-1796); probes/textbefore-sigma-contexts A1-A18 (excel-graph, 2026-10-19, T-1799).
-Ours: `fold_for_before_after` (text/casefold.rs) folds char by char with `fold_for_split`'s İ/Kelvin exceptions plus the sigma and `ẞ` rules,
+A `Σ` before a digit is `σ` (`TEXTBEFORE("ΟΔΟΣ1","σ",1,1)` is "ΟΔΟ", delimiter `ς` is `#N/A`); before a space or a comma it is `ς` (`"ΟΔΟΣ ΚΑΙ"` and `"ΟΔΟΣ,Α"` match `ς`, not `σ`). A `Σ` before a combining acute (U+0301), `’` (U+2019) or a zero-width space
+(U+200B) is `σ`, as LOWER's rule says (`TEXTBEFORE("ΟΣ"&UNICHAR(769)&"x","σ",1,1)` is "Ο", the delimiter `ς` is `#N/A`; TEXTAFTER the same).
+The delimiter `İ` matches `I` and `i` and the delimiter `I` matches `İ` (`TEXTBEFORE("aIb","İ",1,1)` is "a"). The Angstrom sign, `ſ`, `µ`
+and the titlecase digraphs fold as in TEXTSPLIT (above): U+212B, `ſ` and `µ` match no other form (`#N/A`), a digraph matches its upper
+and lower forms.
+Evidence: probes/textbefore-casefold-length A1-A25 (excel-graph, 2026-10-17, T-1796); probes/textbefore-sigma-contexts A1-A18 (excel-graph, 2026-10-19, T-1799);
+probes/t4473-textsplit-fold-gaps A7:A11, A29, A35, A41, A47, A53, A59, A65, A71, A77, A83, A89, A95, A101 (one direction; the reverse is
+the cell three below each) and A105:A117 (excel-graph, 2026-11-06, T-4473), probes/t4499-textsplit-sharp-s A1:A12 (excel-graph, 2026-11-06, T-4499).
+Ours: `fold_for_match` (text/casefold.rs) folds char by char with `fold_match_char`'s İ, Kelvin, Angstrom and `ẞ` exceptions, `fold_sigma_by_position`'s sigma rule (shared with TEXTSPLIT),
 and `match_text` (util.rs) maps the match back to byte offsets of the original with `str::get`. Before T-1796 it searched `to_lowercase()` of the text
-and sliced the original at those offsets, which panicked on `TEXTBEFORE("İİİ,a",",",1,1)`. Ours: the final-sigma rule is `sigma_is_final` (string_format.rs), shared with LOWER. UNVERIFIED: whether a `Σ` before a combining mark, `’` or a zero-width space is `σ` (LOWER's rule, assumed), whether a letter must precede the `Σ` (the code ignores what precedes it), the folding of other chars (Å U+212B, ſ, µ,
-titlecase digraphs, which follow SEARCH's `fold_char`), `ẞ` against the delimiter `ß`'s mirror (text `ß`, delimiter `ẞ`), and whether TEXTSPLIT shares the
-`ẞ` and sigma rules (its probe has no such cell).
+and sliced the original at those offsets, which panicked on `TEXTBEFORE("İİİ,a",",",1,1)`. Ours: the final-sigma rule is `sigma_is_final` (string_format.rs), shared with LOWER. No letter need precede the `Σ`: `LOWER` of `Σ`, ` Σ`, `1Σ` and `aΣ` is a final `ς` in all four (probes/t4719-text-unverified-residue A13:A16, VERIFIED), and the case-insensitive `ς` delimiter does not match the `Σ` of `Σx`, ` Σx`, `1Σx` or `aΣx` (a non-final `Σ`) in TEXTBEFORE and TEXTSPLIT (A17:A24); the code ignores what precedes the `Σ`. The mirror (text `ß`, delimiter `ẞ`) is also `#N/A`
+(`TEXTBEFORE("aßb","ẞ",1,1)`, probes/t4499-textsplit-sharp-s A12), and TEXTSPLIT shares the `ẞ` rule and the sigma rule (probes/t4473-textsplit-fold-gaps A14:A23).
 Status: VERIFIED (web) for the listed forms
-Tasks: T-1796
+Tasks: T-1796, T-4473
 
 ## ARRAYTOTEXT number text
 Rule: ARRAYTOTEXT writes a number as General text with 15 significant digits, like VALUETOTEXT and `&`:
@@ -501,7 +596,7 @@ Rule: SEARCH lowercases per character and never changes the text's length: a cha
 Also: ς (final sigma) matches Σ and σ in either direction (`SEARCH("ς","ΟΣ")` is 2, `SEARCH("σ","ΟΣ")` is 2), ǆ matches ǅ, and U+212A (Kelvin) matches k; ſ/s, µ/μ, ϐ/β and ﬀ/ff do not match (`#VALUE!`).
 Evidence: probes/text-search-casefold-length A1-A24 (oracle: excel-graph, 2026-10-12, T-1296).
 Status: VERIFIED (excel-graph)
-Implemented in: `fold_case` (functions/text/casefold.rs).
+Implemented in: `fold_case` (functions/util/collation.rs; shared with exact-match lookups and wildcard criteria, T-3133).
 Tasks: T-1296
 
 ## TEXT over an array of format codes
@@ -511,6 +606,26 @@ Evidence: probes/text-format-length-limit-f A54:B54 (T-1434); probes/text-format
 Status: VERIFIED (excel-graph, probes/text-format-array, T-1458)
 Implemented in: `fn_text` (functions/text/common.rs); the format argument is evaluated once (TEXT nested in a format must not be exponential).
 Tasks: T-1451
+
+## TEXT's format_text of every argument class (T-3809)
+Rule: a format_text that is not text is read as the text it would display, then used as a code. A number
+is its General text (`TEXT(2,0)` is "2", `TEXT("2.5",0)` is "3", `TEXT(-0.5,-1)` is "--1": the code `-1` is the literals `-` and `1`,
+with no digit placeholder, so the value is never shown and only its minus is added), a blank cell or blank range element is empty text (an empty code shows nothing
+but a negative's minus: number-formats.md "An empty format string returns empty text"), and a boolean is the code `TRUE`/`FALSE`, which the code check rejects, so `TEXT("",TRUE)`,
+`TEXT(TRUE,TRUE)` and `TEXT(A1:B2,TRUE)` are `#VALUE!` (see number-formats.md "TEXT checks the code before it looks at a
+text or boolean value"). A boolean value prints as its text under a numeric code (`TEXT(TRUE,0)` is "TRUE"). Errors:
+an error value wins over an error format (`TEXT(#NAME?,#NUM!)` is `#NAME?`), over a boolean format (`TEXT(#NAME?,TRUE)`
+is `#NAME?`) and over a range format; an error format wins over any other value, text, empty text and blank included
+(`TEXT("abc",#VALUE!)`, `TEXT("",#NAME?)` and `TEXT(blank,#DIV/0!)` are that error). Ranges in either argument lift
+(text.md "Text function argument modes").
+Evidence: gen-m5/0428ca72d3724bea (excel-graph, 2026-11-02; `--policy arg-pairs --functions TEXT`, 102 cells over the 51
+unseen (value, format_text) class pairs, Calc!A1:A304 every third row): `TEXT(2,0)` A1, `TEXT(-1,Data!A1:B2)` A31
+("--1.5", the top-left code -0.5), `TEXT("2.5",0)` A55, `TEXT("",TRUE)` A109, `TEXT(TRUE,0)` A139, `TEXT(#NAME?,#NUM!)`
+A199, `TEXT(#NAME?,TRUE)` A193, `TEXT("abc",#VALUE!)` A79, `TEXT(blank,#NAME?)` A235, `TEXT(Data!A1:B2,"")` A283 ("-"), `TEXT(Data!A1:B2,-1)` A259 ("--1", the top-left value -0.5).
+Status: VERIFIED (excel-graph)
+Ours: matches (102/102 cells).
+Implemented in: `fn_text` (functions/text/common.rs).
+Tasks: T-3809
 
 ## CLEAN and CODE scalar edges
 Rule: CLEAN removes code points 0-31 and the C1 controls U+0080-U+009F (128-159; including the Windows-1252
@@ -549,12 +664,16 @@ Implemented in: crates/rustsheet-engine/src/functions/text/string_format.rs (`MA
 
 ## DOLLAR and FIXED decimals
 Rule: `decimals` is truncated toward zero, not floored: `DOLLAR(1234.5,-1.5)` is "$1,230" (decimals -1), `FIXED(1234.5,-0.5)`
-is "1,235" (decimals 0), `DOLLAR(1234.5,1.9)` is "$1,234.5". A `decimals` of 128 or more (also 128.5) is `#VALUE!`;
+is "1,235" (decimals 0), `DOLLAR(1234.5,1.9)` is "$1,234.5"; a magnitude within 2^-22 + 2^-33 below an integer counts
+as that integer on either side of zero (`FIXED(1234.5678,-1+2^-23)` "1230"; see "LEFT, RIGHT and REPLACE round counts up
+near an integer", T-4453). A `decimals` of 128 or more (also 128.5) is `#VALUE!`;
 127 is fine and prints 127 fraction digits; large negatives just give "0" (`FIXED(1,-400)`, `DOLLAR(1,-129)`).
 `FIXED(1234,0,"x")` is `#VALUE!`; a numeric no_commas is a boolean (`FIXED(1234,0,2)` = "1234").
-Evidence: probes/dollar-fixed-unichar-edges A1-A29, A46-A50, D69-D75 (excel-graph, T-1281).
+Evidence: probes/dollar-fixed-unichar-edges A1-A29, A46-A50, D69-D75 (excel-graph, T-1281); probes/t4453-near-integer-text-args
+G1:J21 (excel-graph, 2026-11-06, T-4453); probes/t4468-near-integer-text-caps B1:C6 (`128-2^-23` is `#VALUE!`, T-4468).
 FIXED of a value that rounds to zero drops the sign (`FIXED(-0.004,2)` "0.00", `FIXED(-0.4,0)` "0"; DOLLAR keeps
 parentheses: `DOLLAR(-0.004)` "($0.00)"). Implemented (T-1257), see "FIXED drops the sign of a value that rounds to zero".
+Tasks: T-1281, T-4453
 Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081)
 
 ## FIXED, DOLLAR and BAHTTEXT cut to 15 significant digits first (T-2148, T-2149)
@@ -567,6 +686,8 @@ goes toward zero), then rounded half away from zero at `decimals`, and the digit
 `BAHTTEXT(999999999999997.5)` reads ...เก้าสิบเจ็ดบาทถ้วน (997).
 With a negative `decimals`, a value that rounds to zero has no sign: `DOLLAR(-3.75,-1)`, `DOLLAR(-2.02005,-1)` and
 `DOLLAR(-0.5,-1)` are "$0", while `DOLLAR(-0.004)` keeps "($0.00)" (above).
+At `decimals` 0 and 1 the parentheses stay: `DOLLAR(-0.4,0)` is "($0)", `DOLLAR(-0.04,1)` "($0.0)", `DOLLAR(-0.4,1)` "($0.4)" and
+`DOLLAR(-0.5,0)` "($1)"; only a negative `decimals` drops the sign (evidence: excel-graph, 2026-10-27, probes/t2184-dollar-neg-rounds-to-zero Sheet1!A1:A4, T-2184).
 Past 2^64, and with more than about 20 decimals, the 15 digits are followed by zeros as well: `DOLLAR(1.0000001234567907E+30,-2)`
 is "$1,000,000,123,456,790,000,000,000,000,000", `DOLLAR(4.33884297520652E+28,3)` "$43,388,429,752,065,200,000,000,000,000.000",
 `DOLLAR(1.2244897707231034E+29,0)` "$122,448,977,072,310,000,000,000,000,000", `FIXED(90909090909108.86,24.2)`
@@ -600,6 +721,9 @@ Every space is removed before the text is read, so `NUMBERVALUE("12:30 PM")` is 
 `VALUE("12:30 PM")` is 0.5208333333333334 (gen-m5/bbbd316c346ce645 A207, fc81c2f704bef138 A194, 6a8bb7cd6d7769ad A357
 against gen-m5/49bfbf67a1409563 A217, 901e91c09b347914 A13; Microsoft's NUMBERVALUE page says spaces are ignored "even in the
 middle"; that "12:30PM" is the reason, not a refusal of AM/PM, is the simplest reading and unprobed).
+An omitted group separator defaults to "," unless the decimal separator starts with ",", when it defaults to ".":
+`NUMBERVALUE("1.5",",")` = 15, `("1.000,5",",")` = 1000.5, `("1.5.2",",")` = 152, while `("1,5",";")` = 15, `("1,5","x")` = 15
+and `("1.5",".")` = 1.5 (excel-graph, 2026-10-28, probes/numbervalue-default-group A1-A14, T-2441). A multi-character decimal separator starting with "," is unprobed (only the first character is read elsewhere).
 A decimal separator equal to the group separator is `#VALUE!` whatever the text: `NUMBERVALUE("1.5",",",",")` and
 `NUMBERVALUE("1.5",".",".")` (excel-graph, 2026-10-20, T-2198, probes/t2198-m5-lift-argument-kinds A38, B38).
 A separator over 255 characters is `#VALUE!`, though only its first character counts: `NUMBERVALUE(0.2,REPT("A",255),"b")` is 0.2
@@ -609,14 +733,55 @@ and `NUMBERVALUE(0.2,REPT("A",256),"b")`, `NUMBERVALUE("2",REPT("A",256),"b")` a
 `NUMBERVALUE("1x5","x","X")` are 1.5, but `NUMBERVALUE("1,5","A","a")` is `#VALUE!` (the "," is no separator) and the decimal
 separator matches case (`NUMBERVALUE("1a5","A","b")` is `#VALUE!`). A letter decimal separator leaves "0.2" readable
 (`NUMBERVALUE("0.2","A","b")` and `NUMBERVALUE("0.2","A")` are 0.2). With a "," decimal separator and no group separator,
-`NUMBERVALUE("1.5",",")` is 15: the default group separator is then not "," (ours `#VALUE!`, T-2441). Separators whose first characters agree clash even when
+`NUMBERVALUE("1.5",",")` is 15: the default group separator is then "." (rule above, T-2441). Separators whose first characters agree clash even when
 the rest differs: `NUMBERVALUE("1A5","A","AB")` is `#VALUE!` (A20).
 Evidence: probes/numbervalue-separator-edges A1:A20 (excel-graph, 2026-10-22, T-2379). Whether the 255 counts characters or
 UTF-16 units is unprobed (the engine counts as for the text, `number_text_too_long`).
-Unprobed: date text with spaces (`"29 Feb 2024"`, `"Feb 29, 2024"`; ours reads it without its spaces), a group separator after the decimal separator, `%` with custom separators, whitespace-only text and `"%"` (ours: spaces-only is 0, `"%"` is `#VALUE!`), a separator outside the BMP (ours: first code point, Excel counts UTF-16 units).
+Unprobed: date text with spaces (`"29 Feb 2024"`, `"Feb 29, 2024"`; ours reads it without its spaces), a separator outside the BMP (ours: first code point, Excel counts UTF-16 units). A group separator after the decimal separator, `%` with custom separators, whitespace-only text and `"%"` are probed: next section (T-3647).
 Status: VERIFIED (excel-graph); implemented: first-character separators and empty text (T-2152), VALUE-like parsing
 after the separators with every space removed (T-2151, `numbervalue_of` in text/string_format.rs), the trailing
 colon after a bare hour (T-2352, in the shared clock parser).
+
+## NUMBERVALUE removes group separators only before the decimal separator (T-3647)
+Rule: the group separator's first character is removed only from the text before the first decimal separator. After
+it, the character stays, so a digit reads as a digit and anything else leaves text VALUE cannot read (`#VALUE!`):
+- `NUMBERVALUE("1.5,2")`, `("1.5,")`, `(".,5")` and `("1,2.3,4")` are `#VALUE!` (ours 1.52, 1.5, 0.5, 12.34), while
+  `("1,2.3")` = 12.3, `("1,234.")` = 1234 and `("1,0E3")` = 10000.
+- With the default separators against a custom pair, `NUMBERVALUE("1,234.5",",",".")` and `NUMBERVALUE("1.234,5")` are
+  `#VALUE!` (ours 1.2345 for both).
+- A digit separator: `NUMBERVALUE("17582","7","8")` = 1.582, `("1758","7","8")` = 1.58, `("785","7","8")` = 0.85 and
+  `("18275","7","8")` = 12.5.
+- Before the decimal separator anything goes: leading, trailing, repeated and unevenly spaced group separators are
+  removed (`",123"` = `"123,"` = 123, `",,1"` = 1, `"1,,234"` = 1234, `"1,2,3"` = 123, `"12,34.5"` = 1234.5).
+Whitespace: every space, tab, line feed and carriage return is removed first, wherever it is, even when it is a
+separator, so the decimal separator is looked for in the text without it: `NUMBERVALUE("1"&CHAR(9)&"234.5")`,
+`"1"&CHAR(10)&…` and `"1"&CHAR(13)&…` are 1234.5 (ours `#VALUE!`), `NUMBERVALUE("1.5"&CHAR(9)&"2",".",CHAR(9))` = 1.52,
+`CHAR(10)` alone is 0, and a whitespace decimal separator is never found: `NUMBERVALUE("1 5"," ",",")` = 15 (also with
+CHAR(9), CHAR(10) and CHAR(13)), and `NUMBERVALUE("1 2,5"," ",",")` = 125, its "," a group separator with no decimal
+separator after it. Other characters are not removed, nor trimmed at the ends: CHAR(1), CHAR(11), CHAR(12), NBSP
+(CHAR(160)), U+3000 and U+202F inside the digits are `#VALUE!`, and so are `NUMBERVALUE(UNICHAR(160)&"1.5")`,
+`("1.5"&UNICHAR(160))` and `(UNICHAR(12288)&"1.5")` (ours 1.5; VALUE's shared reader trims them). As a separator they are read at the ends too (T-3746, probes/t3746-numbervalue-nbsp-separator): the decimal
+separator is replaced before the ends are checked, so with NBSP or U+3000 as the decimal separator `("1"&sep,sep)` = 1,
+`(sep&"5",sep)` = 0.5 and `("1"&sep&"5",sep)` = 1.5; as the group separator `(sep&"234.5",".",sep)` = 234.5 and
+`("1"&sep&"234.5",".",sep)` = 1234.5, but one after the decimal separator stays and `("234.5"&sep,".",sep)` is `#VALUE!`. CHAR(11), CHAR(12)
+and U+202F at the ends are unprobed. VALUE does not remove a tab: `VALUE("1"&CHAR(9)&"234")` is `#VALUE!`.
+Percent: one leading `%` divides by 100 as a trailing one does, also after a sign or `(`: `NUMBERVALUE("%1.5")` =
+0.015, `("%1.5%")` = 0.00015, `("-%1.5")` = `("%-1.5")` = `("(%1.5)")` = `("%(1.5)")` = -0.015, `("+%1.5")` =
+`("%+1.5")` = 0.015, `("%1,234.5")` = 12.345, and `("%1d5","d","g")` = 0.015. Two leading `%`, a leading `%` with
+currency anywhere, or `%` inside a sign and parentheses are `#VALUE!`: `"%%1.5"`, `"%$1.5"`, `"$%1.5"`, `"%1.5$"`,
+`"%€1.5"`, `"€%1.5"`, `"-(%1.5)"`. Text of `%` signs alone is 0: `NUMBERVALUE("%")` = `NUMBERVALUE("%%")` = 0 (ours
+`#VALUE!`). The decimal separator is read before any `%`: with the decimal separator "%", `NUMBERVALUE("%5","%")` =
+0.5, `("1%5","%")` = 1.5, `("5%","%")` = 5 and `("%5%","%")` is `#VALUE!` (two decimal separators). VALUE takes the
+leading `%` too: `VALUE("%1.5")` = 0.015 (ours `#VALUE!`; T-3742 owns it). A trailing currency sign is `#VALUE!`:
+`NUMBERVALUE("1.5$")` (ours 1.5; T-3742 owns it, with VALUE's reading of it unprobed).
+The same shapes hold for the pairs ","/".", "."/" ", ";"/"'", "d"/"g" and "7"/"8" (264 cells, all matching).
+Evidence: probes/t3647-numbervalue-separator-placement (44 text shapes × 6 separator pairs),
+probes/t3647-numbervalue-percent-and-controls A1:A31 and probes/t3647-numbervalue-whitespace-decimal A1:A27,
+excel-graph, 2026-11-01.
+Status: VERIFIED (excel-graph)
+Implemented in: `numbervalue_text` and `strip_leading_percent` in functions/text/string_format.rs (T-3647); VALUE's
+leading `%` and NUMBERVALUE's trailing currency are not (T-3742).
+Tasks: T-3647, T-3742
 
 ## REPT, CODE, UNICODE and T refuse a text argument over 255 UTF-16 units (T-2155; T of a cell reference gives "", T-2305)
 Rule: REPT's text, CODE's and UNICODE's argument are `#VALUE!` when the text is longer than 255 characters, whatever the
@@ -633,12 +798,11 @@ units (`LEN` 256) and is `#VALUE!` in all three (row 7), as is 255 "x" plus it (
 (A9-A11, A13, `LEN` 256 for the first three). `VALUE(REPT("1",256))` is `#VALUE!` (A14), which the probe cannot tell
 from a numeral-length limit. From a cell, as an array element and with an error count (T-2305; probes/text-255-units-from-cell, -array-element,
 -rept-error-count, excel-graph 2026-10-24): a cell holding 256 "x" (typed, D1, or a formula result, D3) is `#VALUE!` in
-`REPT(D1,2)`, `CODE` and `UNICODE`, but `T(D1)` and `T(D3)` are empty text "", not `#VALUE!` (ours `#VALUE!`); 255 from a cell works in all
-four. As an array element (`REPT("x",256)&{""}`) REPT, CODE, UNICODE and T are all `#VALUE!` (ours keeps T's element);
+`REPT(D1,2)`, `CODE` and `UNICODE`, but `T(D1)` and `T(D3)` are empty text "", not `#VALUE!`; 255 from a cell works in all
+four. As an array element (`REPT("x",256)&{""}`) REPT, CODE, UNICODE and T are all `#VALUE!`;
 255 works. excel-graph refused to open a workbook whose array constants held 256-character literals (cause not isolated), so the probe builds the long text with REPT. REPT with a
-long text and an error count gives the count's error: `REPT(REPT("x",256),#N/A)` is `#N/A`, `(…,#DIV/0!)` is `#DIV/0!` (ours
-`#VALUE!`); `(…,-1)` is `#VALUE!`; `REPT(#N/A,REPT("x",256))` is `#N/A`. Unprobed: `T` of a multi-cell range whose top-left cell holds long text.
-Status: VERIFIED (excel-graph); implemented (T-2155: `reject_over_short_limit` in functions/text/common.rs); the cell, array and error-count differences are T-2627.
+long text and an error count gives the count's error: `REPT(REPT("x",256),#N/A)` is `#N/A`, `(…,#DIV/0!)` is `#DIV/0!`; `(…,-1)` is `#VALUE!`; `REPT(#N/A,REPT("x",256))` is `#N/A`. T of such a cell is "" however the cell is reached (T-3107; probes/text-255-units-reference-shapes, excel-graph 2026-10-29): `T(D1:D2)` (top-left cell), a defined name, `INDIRECT`, `OFFSET`, `INDEX`, `IF`, `CHOOSE`, `LET`, a spill reference (`T(F1#)`), a sheet-qualified reference (same sheet or another), `T((D1))`, a single-cell structured reference, and a legacy formula's `T(D1)`, `T(D1:D2)` and `T(name)` are all "". A computed value stays `#VALUE!`, and so does the unary plus: `T(+D1)` is `#VALUE!`. Implemented by `reads_cell_text` in t_function.rs.
+Status: VERIFIED (excel-graph); implemented (T-2155: `reject_over_short_limit` in functions/text/common.rs); the cell, array and error-count rules are implemented (T-2627, T-3107: `T` of any reference reads "", an array element is `#VALUE!`, REPT reads its count's error before the text limit).
 
 ## UNICHAR code point bounds
 Rule: UNICHAR truncates toward zero and lifts over arrays (`UNICHAR({65,66})` spills "A","B"). Below 1 (0, -1, 0.5) or
@@ -698,7 +862,14 @@ Tasks: T-1360, T-1688, T-1272 (range lift)
 Rule (coercion, all three): an omitted, empty (`REGEXTEST("ABC","abc",)`) or blank-cell argument is 0; a number is
 truncated toward zero (0.5 and 0.9 are 0, 1.5 is 1; as occurrence -0.5 is 0, -1.5 is -1); TRUE is 1, FALSE 0; number
 text is its number ("1" probed for case_sensitivity and return_mode, "2" and "-1" for occurrence); other text, "" included, is `#VALUE!`; an error argument is returned. Arguments are read left to
-right, so an error in the text beats one in a later argument (`REGEXTEST(NA(),"a",1/0)` is `#N/A`).
+right, so an error in the text beats one in a later argument (`REGEXTEST(NA(),"a",1/0)` is `#N/A`). The range check of an option comes after the later arguments are read, though: REGEXEXTRACT's return_mode is coerced in
+its turn, but an out-of-range return_mode loses to an error case_sensitivity (`REGEXEXTRACT("abc","[0-9]",-1,#DIV/0!)`,
+`REGEXEXTRACT("abc","^.",-2.5,#DIV/0!)`, return_mode 7 or "12" with case_sensitivity `#DIV/0!`, and a lifted return_mode of
+-2.5 or 42 with `#NUM!`, are that error), while a non-number text return_mode is still `#VALUE!` first (`"x~*"` with `#NUM!`
+is `#VALUE!`); a valid return_mode (TRUE) gives the error. Evidence: gen-m7/3d156a08a7bacf35 Calc!A8236, A9273, A9334,
+A11408 and gen-m7/781b74b7c112265f Calc!A6833:B6834 (excel-graph, 2026-11-02, T-3810). Ours since T-3810
+(`regex_option_in_range` after both coercions in `fn_regexextract`). REGEXREPLACE's occurrence and the other functions'
+order are unprobed.
 Rule (case_sensitivity, REGEXTEST's third, REGEXEXTRACT's fourth, REGEXREPLACE's fifth): after truncation 0 is
 case-sensitive and 1 case-insensitive; anything else (2, -1, 2^53) is `#VALUE!`, also for an array element (`{0;1;2}`
 gives FALSE, TRUE, `#VALUE!`). Case-insensitive matching uses Unicode case folding (`ſ` matches `s`, the Kelvin sign
@@ -738,9 +909,13 @@ the digits are a decimal number, a group if it is below 10 or no more than the p
 error), else, if it starts with three octal digits, those as a character up to `\377` (one or two such digits are an error) (`\101` is `A`, `\1010` is `A0`; with 12
 groups `\10` is group 10 but `\20` and `\77` are errors; `\400` an error; `\18`, `\181` errors).
 Case forcing: `\U` and `\L` set a mode for the rest of this match's replacement (literals, groups and the characters
-the escapes above make alike: `\L\x41\U\x61` is `aA`); `\u` upper-cases the next character only and keeps the mode
-(`\L\uxyz` is `Xyz`, `\u\L$1` too); `\l` is unlike PCRE2's: it lower-cases the next character and sets the `\L` mode, so
-`\Uab\lcd` is `ABcd` and `\U\lxyz` is `xyz` (and `\u\lxyz` is `xyz`, `\l\uxyz` is `Xyz`, `\l\Uabc` is `aBC`); `\E`
+the escapes above make alike: `\L\x41\U\x61` is `aA`); `\u` and `\l` change the case of the next character only and,
+unlike PCRE2's, end a `\U` or `\L` mode: `\L$0\uCD` with `$0` = AB is `abCD`, `\L$0\lCD` is `abcD`, `\U$0\lCD` with
+`$0` = ab is `ABcD`, `\l$0` with `$0` = ΩA is `ωA` and `\L\l$0CD` with `$0` = AB is `aBCD` (T-3777, VERIFIED,
+probes/t3777-regexreplace-case-table C7:C10, C17:C24, excel-graph 2026-11-02; T-1897's earlier reading, that `\l` sets
+the `\L` mode, came from lower-case literals that cannot tell the two apart). A `\U` or `\L` after a pending `\u` or `\l`
+keeps it (`\u\L$1` is `Xyz` for xyz, `\l\Uabc` is `aBC`), and the later of two pending escapes wins (`\u\lxyz` is `xyz`,
+`\l\uxyz` is `Xyz`); `\E`
 ends the mode and a pending `\u`; an empty group or text keeps a pending `\u` for the text after it (`\u$2b` with
 `$2` empty is `B`); the state starts afresh with each match (`REGEXREPLACE("abab","(a)(b)","$2\U$1")` is `bAbA`); only
 the replacement is case-forced, never the subject text around the match. Case mapping is the one-to-one mapping of UPPER and
@@ -767,12 +942,13 @@ included (`REGEXEXTRACT("naïve","\w+")` is "naïve"; `\W` does not match `é`; 
 not match in "aé"); `\d` matches the Arabic-Indic three and the full-width digit; `\s` matches NBSP, U+2003, U+3000,
 U+0085 and VT but not the zero-width space U+200B; the POSIX classes `[[:alpha:]]` and `[[:word:]]` match `é`;
 `(*UCP)`, `\X`, `\h` and `\R` are accepted. `$` matches at the end and before a final LF only (`"a"&CHAR(10)` matches
-`a$`; an LF, CR or U+2028 inside the text does not end a line for `$` or `^`), and `.` does not match LF.
+`a$`; without `(?m)`, an LF, CR or U+2028 inside the text does not end a line for `$` or `^`), and `.` does not match LF. A final CR or
+CRLF counts as a final LF does (next entry, T-2364).
 Evidence: probes/regex-ascii-classes A1-A42 (excel-graph, 2026-10-19).
 Ours: matches, `(*UCP)`, `\h` and `$` before a final LF included since T-1973 (our PCRE2 parser, functions/text/pcre/).
 `\X` and `\R` (A27, A42) since T-2287 (next entry).
-`\Z` follows `$`'s final-LF rule, as SPEC-0013 reads PCRE2. That is UNVERIFIED for Excel (T-1972); before T-1973 it was
-`#VALUE!`.
+`\Z` follows `$`'s final-LF rule, as SPEC-0013 reads PCRE2, and Excel's does too (probes/t2364-regex-newline-convention
+B18-B20, T-2364); before T-1973 it was `#VALUE!`.
 Other syntax that T-1973 changed without a probe (UNVERIFIED, T-1972 probes them):
 - Now accepted as PCRE2 reads it: `(?n)`, `(?-)`, `(?'name'..)`, `\e`, `\cX`, `[\b]`, `\p{^Lu}`, a `{` that starts
   no quantifier (a literal), and spaces inside a bracket under `(?x)` (literal).
@@ -789,6 +965,28 @@ then runs on the backtracker's memoized mode. Before, they matched only at the v
 but none at the end stays on the automata, `$` meaning its end (A7, A8).
 Status: VERIFIED (excel-graph)
 Tasks: T-1829 (probe), T-1900, T-1903, T-2355 (probe t2355-regex-dollar-inner-lf), T-1973
+
+## REGEX* newlines are CR, LF and CRLF (PCRE2's ANYCRLF convention)
+Rule: Excel's PCRE2 counts CR, LF and the pair CRLF as newlines, and nothing else (not U+2028, NEL, VT or FF). `$`
+without `(?m)` and `\Z` match at the end and before a final LF, CR or CRLF, so also between the CR and LF of a final
+CRLF: `REGEXTEST("a"&CHAR(13),"a$")`, `REGEXTEST("a"&CHAR(13)&CHAR(10),"a$")` and `"a\r$"` on it are TRUE, and
+`REGEXREPLACE("a"&CHAR(13)&CHAR(10),"$","x")` puts an x before the CR, before the LF and at the end; two CRs or LF CR
+at the end are not one newline (`"a"&CHAR(13)&CHAR(13)` and `"a"&CHAR(10)&CHAR(13)` do not match `a$`); `\z` stays the
+very end. `(?m)$` matches at the end and before every CR and every LF, also between a CR and its LF (`"a"&CHAR(13)&
+CHAR(10)&"b"` with `(?m)$` -> x gives `ax<CR>x<LF>bx`). `(?m)^` matches after an LF and after a CR that no LF follows,
+never between a CR and its LF (`xa<CR><LF>xb`), and not after U+2028. `.` matches neither CR nor LF (`a.b` on
+`"a"&CHAR(13)&"b"` and `a..b` on a CRLF are FALSE) but matches U+2028.
+Evidence: probes/t2364-regex-newline-convention B1-B25 and probes/t2364-regex-dollar-final-cr A1-A5 (excel-graph,
+2026-10-22 and 2026-10-25).
+Ours: matches since T-2364. The backtracker's `holds` and `.` read these rules; the automata use regex-syntax's CRLF
+forms (`Dot::AnyCharExceptCRLF`, `Look::StartCRLF`, `Look::EndCRLF`), and a regular pattern holding `$`, `\Z` or
+`(?m)$` over a text with a CR runs on the backtracker's memoized mode (`FinalLf::Cr`), since no `Look` gives those
+there. Unprobed (T-1972): `(?m)^` at the very end after a final LF (ours matches there, as before T-2364) or a final CR
+(ours matches there since T-2364, through `Look::StartCRLF`; stock PCRE2 matches after neither); and PCRE2's ANYCRLF
+bump-along, which after a failed attempt at a CR skips the position between it and its LF unless the pattern holds a
+literal CR or LF (`REGEXTEST("a"&CHAR(13)&CHAR(10)&"b","\s\w")` would then be FALSE; ours is TRUE).
+Status: VERIFIED (excel-graph)
+Tasks: T-2364
 
 ## `\R` and `\X` are atomic; `\X` is PCRE2's grapheme cluster (T-2287)
 Rule: `\R` is one line break, CR LF or any one of LF, VT, FF, CR, NEL, U+2028 and U+2029, and it never gives back the
@@ -835,7 +1033,7 @@ steps over it (`REGEXREPLACE("😀b","😀|b","-")` is `--`, `.` on `a😀` give
 match (`REGEXREPLACE("a😀","","-",1)` is `-a😀`; with `a*` on `😀a` `-😀a`, `b|` occurrence 2 on `ab😀` `a-😀`, `a|`
 occurrence 1 `-b😀`), while occurrence 3 of `""` on `a😀` and REGEXEXTRACT's all-matches mode over it are `#VALUE!`;
 REGEXEXTRACT's first match is unaffected (`""`). A negative occurrence needs the whole iteration, so it is `#VALUE!`
-in ours whenever the iteration splits a pair: UNVERIFIED (not probed).
+in ours whenever the iteration splits a pair, VERIFIED: REGEXREPLACE occurrence -1 and -2 and REGEXEXTRACT's all-matches mode over `"a"&UNICHAR(128512)&"b"` with the empty pattern or `x*` are `#VALUE!`, and with a pattern that never splits the pair (`b`) occurrence -1 replaces the last `b` and -2 leaves the text (probes/t4719-text-unverified-residue A25:A36).
 Evidence: probes/regex-pcre2-features C1-C19, D1-D14, B27-B29 (excel-graph, 2026-10-18; D11 and D14 undecoded there,
 answered by the next case); probes/regex-iteration-surrogates A1-A11 (excel-graph, 2026-10-22, T-1899).
 Ours: PCRE2's grammar since T-1973 (functions/text/pcre/): comments, `\Q..\E`, `(?x)` and scoped flags match
@@ -866,15 +1064,98 @@ Tasks: T-1688, T-1898, T-1899, T-1900, T-1972, T-1973, T-1974, T-2354, T-2355, T
 
 ## CLEAN character set and PROPER word starts and case mapping (T-1307)
 Rule (CLEAN): code points 0-31 and the C1 controls 128-159 (`CHAR(129)`, 141, 143, 144, 157 and `UNICHAR(133)` included) are removed; 32, DEL (127), NBSP (160), the soft hyphen (173), U+200B, U+2028 and U+FEFF stay. TAB, LF and CR go (`CLEAN("a"&CHAR(10)&"b"&CHAR(1)&"c")` is "abc"). The engine already matched all 38 CLEAN cells.
-Rule (PROPER; UPPER, LOWER and further characters in the T-1747 section below): a letter after any non-letter, digits, apostrophes (straight or curly), `_` and `-` included, is upper-cased and the other letters lowered (`2Nd Place`, `O'Neil Mc-Donald`, `It'S 3Rd`, `A1B2C3`, `Hello_World`; full-width letters follow the same rule). Case mapping is per character and one-to-one: the characters whose full mapping expands stay as they are (`PROPER("ßa straße")` is `ßa Straße`, ŉ, ǰ and the ﬁ/ﬂ ligatures unchanged), where Rust's `to_uppercase` gives "SS", "ʼN" and "FI". İ folds to ASCII (`PROPER("İstanbul")` is `Istanbul`, `PROPER("aİb")` `Aib`) and ΐ, ΰ upper-case to Ϊ, Ϋ. Titlecase digraphs map to their capital (`ǅ ǈ ǋ ǲ` give `Ǆ Ǉ Ǌ Ǳ`). A capital sigma ending a word lowers to the final ς, with no letter or digit after it (`ΣΊΣΥΦΟΣ` is `Σίσυφος`, `ΑΣ.ΑΣ-Σ ΑΣ1` is `Ας.Ας-Σ Ασ1`, so a following digit keeps σ and a word-initial Σ stays). A combining mark is not a letter, so the next letter is capitalised (`e` + U+0301 + `cole` is `ÉCole`), and a zero-width space (U+200B) is not a letter either (`PROPER(U+200B&"abc def")` is `<U+200B>Abc Def`).
+Rule (PROPER; UPPER, LOWER and further characters in the T-1747 section below; which characters are letters is in "PROPER word starts: Excel's own letter table (T-3657)" below): a letter after any non-letter, digits, apostrophes (straight or curly), `_` and `-` included, is upper-cased and the other letters lowered (`2Nd Place`, `O'Neil Mc-Donald`, `It'S 3Rd`, `A1B2C3`, `Hello_World`; full-width letters follow the same rule). Case mapping is per character and one-to-one: the characters whose full mapping expands stay as they are (`PROPER("ßa straße")` is `ßa Straße`, ŉ, ǰ and the ﬁ/ﬂ ligatures unchanged), where Rust's `to_uppercase` gives "SS", "ʼN" and "FI". İ folds to ASCII (`PROPER("İstanbul")` is `Istanbul`, `PROPER("aİb")` `Aib`) and ΐ, ΰ upper-case to Ϊ, Ϋ. Titlecase digraphs map to their capital (`ǅ ǈ ǋ ǲ` give `Ǆ Ǉ Ǌ Ǳ`). A capital sigma ending a word lowers to the final ς, with no letter or digit after it (`ΣΊΣΥΦΟΣ` is `Σίσυφος`, `ΑΣ.ΑΣ-Σ ΑΣ1` is `Ας.Ας-Σ Ασ1`, so a following digit keeps σ and a word-initial Σ stays). A combining mark is not a letter, so the next letter is capitalised (`e` + U+0301 + `cole` is `ÉCole`), and a zero-width space (U+200B) is not a letter either (`PROPER(U+200B&"abc def")` is `<U+200B>Abc Def`).
 Evidence: probes/clean-proper-chars (excel-graph, 2026-10-16, 88 cells; engine matches all after T-1307). Implemented in `proper_case` (functions/text/string_format.rs).
 Status: VERIFIED (excel-graph)
 Tasks: T-1307
 
+## PROPER word starts: Excel's own letter table (T-3657)
+Rule: PROPER upper-cases a letter that follows a non-letter (or starts the text) and lowers every other character,
+non-letters included, and "letter" is Excel's own table, not Unicode's Alphabetic property or general category. Swept
+over every BMP code point U+0020-U+FFFD (surrogates excluded): 47,717 are letters, in 328 ranges (the table is in
+`proper_letters.rs`). Every letter is in a Unicode letter category (Lu, Ll, Lt, Lm, Lo) or Nl, except 18 Mn marks: the
+Thai vowel and tone marks U+0E31, U+0E34-U+0E3A, U+0E47-U+0E4E and the Mongolian U+1885-U+1886. Every other combining
+mark is not a letter, including those Unicode calls Alphabetic: `PROPER("a"&UNICHAR(1456)&"bc")` (Hebrew sheva) is
+`A`+U+05B0+`Bc`, and so are Arabic U+0610 and U+064B, Devanagari U+0901, U+0903 and U+093C, Greek U+0345, Cyrillic U+0483
+and U+3099. 1,321 Unicode letters are not letters to PROPER, mostly ones the newer Unicode versions added (so
+`PROPER("aꟺbc")` is `AꟺBc`): among them the modifier letters ʹ and ʺ, the letters of U+02C6-U+02CF (`PROPER("aˆbc")` is `AˆBc`), U+0524-U+052F,
+U+0800-U+08C9 (Samaritan, Mandaic, Syriac supplement, extended Arabic), Georgian Mtavruli U+1C90-U+1CBF and U+10FD-U+10FF,
+Cherokee small letters U+13F8-U+13FD and U+AB70-U+ABBF, Latin Extended-D U+A788 and U+A78D-U+A7FA, U+A960-U+A97C,
+U+D7B0-U+D7FB, and the Bamum numerals U+A6E6-U+A6EF (Nl). Ordinary letters of every older script are letters
+(`PROPER("aאbc")`, `"a一bc"`, `"a가bc"`, `"aʰbc"`, `"a々bc"`, `"aⅰbc"` all keep `b` lower). Digits of every script,
+modifier symbols (`^`, `` ` ``, `´`, `¨`), the zero-width and bidi format characters, every space, control character and
+punctuation mark probed, and the private-use area are not letters. A supplementary-plane character is not a letter, whatever its case, and breaks a word
+(`PROPER("a𝐚bc")` is `A𝐚Bc`, `PROPER("x"&U+1D41A&"yz")` `X𝐚Yz`; a Deseret capital U+10400 or small U+10428 is left as it is at a word start,
+`PROPER(U+10400&"x")` is `𐐀X`, and mid-word, `A𐐀Bc`, `A𐐨Bc`; an emoji likewise). A lone surrogate, high or low, also breaks a word and is kept
+(`PROPER("a"&H&"bc")` is `A`+H+`Bc`, as with L; `PROPER(H&"b")` is H+`B`; the halves joined back into a pair, `PROPER("ab"&H&L&"cd")`, still break the word: `Ab`+H+L+`Cd`; the lone halves are built with `MID(UNICHAR(128512),1,1)` and `,2,1)`, as `LEFT` and `RIGHT` take the whole emoji).
+Non-letter capitals that Excel's case table lacks are not lowered (circled letters, which have an entry, are: above): Georgian Mtavruli U+1C90, Cyrillic U+0524 and Latin U+A78D stay as they are
+at a word start, mid-word, after a digit and after a space (`PROPER("a"&U+1C90&"b")` is `A`+U+1C90+`B`), and so does the small U+0525 (that the table lacks U+1C90 is shown by the T-3820 note below; for the others it is inferred from these cells)
+(probes/t3802-proper-surrogates, excel-graph, 2026-11-04, 49 cells; the engine matches all, T-3802). Circled letters are not letters, so they are lowered
+wherever they stand: `PROPER(UNICHAR(9398)&"x")` (Ⓐ) is `ⓐX`, `PROPER("aⒶB")` is `AⓐB`, `PROPER("1Ⓐ")` is `1ⓐ`. The
+titlecase digraphs map to their capital at a word start, also after a digit (`PROPER("1ǆ")` is `1Ǆ`), and to their small
+form inside a word (`PROPER("aǅB")` is `Aǆb`); the Greek letters with ypogegrammeni stay unchanged at a word start
+(ᾀ, ᾳ, ῃ, ῳ) and, as LOWER does, their capitals ᾈ ᾼ ῌ ῼ stay capital inside a word; Ⅰ stays Ⅰ and ⅰ stays ⅰ in every
+position (the case-table gaps of "UPPER and LOWER use an old per-character case table" below).
+Evidence: probes/t3657-proper-word-starts (excel-graph, 2026-11-01, 177 cells: column A word starts after 105
+characters, B:D the word-start, mid-word and after-digit mapping of 24 titlecase-sensitive characters) and
+probes/t3657-proper-letter-sweep (excel-graph, 2026-11-01: Calc!A1:A4 give one digit per code point, 63,454 in all).
+Status: VERIFIED (excel-graph). Implemented in: `is_proper_letter` (functions/text/proper_letters.rs) and `proper_case`
+(functions/text/string_format.rs). The 7 cells that need Excel's case table (t3657-proper-word-starts S!B24, C14, C16,
+C18, C20, C23, D24) wait for T-3583. Tasks: T-3657
+
 ## UPPER, LOWER and PROPER: one-to-one case mapping, final-sigma context (T-1747)
-Rule: UPPER, LOWER and PROPER all use the simple one-to-one mapping, so characters whose full mapping expands stay unchanged in every case (ᾳ, ẖ, ẘ, ﬀ, ﬃ, ﬆ, և, ß, ŉ, ǰ, ﬁ; `UPPER("ß")` is `ß`, not "SS"). ΐ upper-cases to Ϊ in UPPER and PROPER (LOWER leaves it; ΰ to Ϋ in UPPER is unprobed, carried over from PROPER). İ is the exception to consistency: PROPER and LOWER fold it to I / i (`LOWER("aİb İc")` is `aib ic`) but UPPER leaves it as İ. A capital Σ lowers to the final ς in LOWER and PROPER when the next character is the end of the text, a space, a straight apostrophe or `-`, and to σ when a letter or digit, a combining mark (probed: U+0301, U+0308; the rest of U+0300-U+036F is assumed, other combining blocks and U+200C/U+200D/U+2018 are unprobed and give ς), a curly apostrophe (U+2019) or a zero-width space (U+200B) follows. In LOWER a lone `Σ`, `Σ ` and `1Σ` give ς (no preceding letter needed), but `Σ`+U+0308 gives σ̈; lower-case σ is never changed (`LOWER("ασ")` is `ασ`). PROPER keeps a word-initial Σ capital.
+Rule: UPPER, LOWER and PROPER all use the simple one-to-one mapping, so characters whose full mapping expands stay unchanged in every case (ᾳ, ẖ, ẘ, ﬀ, ﬃ, ﬆ, և, ß, ŉ, ǰ, ﬁ; `UPPER("ß")` is `ß`, not "SS"). ΐ upper-cases to Ϊ in UPPER and PROPER (LOWER leaves it), and ΰ to Ϋ in UPPER (probes/t3298-case-mapping-sweep; see "UPPER and LOWER use an old per-character case table" below for every other character). İ is the exception to consistency: PROPER and LOWER fold it to I / i (`LOWER("aİb İc")` is `aib ic`) but UPPER leaves it as İ. A capital Σ lowers to the final ς in LOWER and PROPER only when it ends the text or the next character is one of 30 ASCII characters: TAB, LF, CR, space and the punctuation ``! " # $ % & ' + , - . / : ; < = > ? @ [ \ ] _ { | }``. Before every other character it lowers to σ: letters (also those Excel's case table lacks, U+0526, U+10C7, U+13A0, U+AB70, U+1C90, U+A7C0, and the supplementary 𐐀), uncased letters, modifier letters, digits of any script, non-digit numerics (², ½, Ⅻ, ①), combining marks of every block, format characters (U+00AD, U+200B-U+200D, U+2060, U+FEFF, U+FE0F), U+2018, U+2019, an emoji, `Σ σ ς`, and also the ASCII ``( ) * ^ ` ~``, the other C0 controls, DEL and U+00A0 (T-3820, VERIFIED: probes/t3820-lower-sigma-next-char Calc!A1:C50 per class, and Calc!E1:F256, a sweep of the whole BMP as the next character through LOWER (E) and PROPER (F), where these 30 and no other code point give ς, of the code points UNICHAR can build: U+0000, the surrogates, U+FDD0-U+FDEF, U+FFFE and U+FFFF are errors there; excel-graph 2026-11-03). TEXTBEFORE's case-insensitive mode agrees on every row probed (Calc!C1:C50). So the test is a fixed list of separators, not a letter table. Ours: `sigma_is_final` (string_format.rs) tests exactly this list (T-3905). In LOWER a lone `Σ`, `Σ ` and `1Σ` give ς (no preceding letter needed), but `Σ`+U+0308 gives σ̈; lower-case σ is never changed (`LOWER("ασ")` is `ασ`). PROPER keeps a word-initial Σ capital.
 Evidence: probes/case-mapping-expanding (excel-graph, 2026-10-17, 81 cells; engine matches all).
-Status: VERIFIED (excel-graph). Implemented in: `lower_case`, `upper_case`, `proper_case` (functions/text/string_format.rs). Tasks: T-1747
+Status: VERIFIED (excel-graph). Implemented in: `lower_case`, `upper_case`, `proper_case`, `sigma_is_final` (functions/text/string_format.rs). Tasks: T-1747, T-3905
+
+## UPPER and LOWER use an old per-character case table (T-3298)
+Rule: UPPER and LOWER map a character only if Excel's own case table has it, and that table is far older than current
+Unicode (it reads like the Windows NT-era tables): many letters whose case pair Unicode added later are left unchanged.
+Swept over all 3037 code points whose Rust std (rustc 1.97) `to_lowercase` or `to_uppercase` differs from itself, BMP and
+supplementary. Where Excel maps a character it gives Rust's one-to-one mapping, except as listed here.
+- UPPER leaves these unchanged (code point ranges of the swept characters: every swept character inside a range is unchanged, and the characters
+  in a range that were not swept are not claimed):
+  00B5, 017F, 019B, 023F-0240, 0250-0252, 025C, 0261, 0264-0266, 026A, 026C, 0271, 0282, 0287, 029D-029E, 0345,
+  0371-0373, 0377, 037B-037D, 03D7-03D9, 03F2-03F5, 03F8, 03FB, 0515-052F, 10D0-10FA, 10FD-10FF, 13F8-13FD, 1C80-1C8A,
+  1D79, 1D8E, 1E9B, 1EFB-1F07, 1F10-1F15, 1F20-1F27, 1F30-1F37, 1F40-1F45, 1F51, 1F53, 1F55, 1F57, 1F60-1F67, 1F70-1F7D, 1FB0-1FB1,
+  1FBE, 1FD0-1FD1, 1FE0-1FE1, 1FE5, 2170-217F, 2C30-2C5F, 2C73, 2C81-2CE3, 2CEC-2CEE, 2CF3, 2D00-2D27, 2D2D,
+  A641-A66D, A681-A69B, A723-A72F, A733-A76F, A77A-A77C, A77F-A787, A78C, A791-A794, A797-A7A9, A7B5-A7C3, A7C8-A7CA,
+  A7CD-A7DB, A7F6, AB53, AB70-ABBF, and every supplementary-plane letter swept (Deseret 10428-1044F, Osage 104D8-104FB,
+  Vithkuqi 10597-105BC, Old Hungarian 10CC0-10CF2, Garay 10D70-10D85, Warang Citi 118C0-118DF, Medefaidrin
+  16E60-16E7F, 16EBB-16ED3, Adlam 1E922-1E943). So `UPPER("µ")` is `µ`, `UPPER("ſ")` `ſ`, Georgian Mkhedruli,
+  Glagolitic, Coptic, Cherokee, the small Roman numerals and most of Greek Extended stay as they are.
+- UPPER drops the tonos of the Greek accented vowels: ά έ ή ί ό ύ ώ give Α Ε Η Ι Ο Υ Ω (Rust: Ά Έ Ή Ί Ό Ύ Ώ), and ΐ ΰ give
+  Ϊ Ϋ (Rust has no one-to-one mapping for them).
+- LOWER leaves these unchanged: 0370-0372, 0376, 037F, 03CF, 03D8, 03F4, 03F7-03FA, 03FD-03FF, 0514-052E, 10C7, 10CD,
+  13A0-13F5, 1C89, 1C90-1CBA, 1CBD-1CBF, 1E9E, 1EFA-1EFE, 1F08-1F0F, 1F18-1F1D, 1F28-1F2F, 1F38-1F3F, 1F48-1F4D,
+  1F59-1F5F, 1F68-1F6F, 1F88-1F8F, 1F98-1F9F, 1FA8-1FAF, 1FB8-1FBC, 1FC8-1FCC, 1FD8-1FDB, 1FE8-1FEC, 1FF8-1FFC, 2126,
+  212A-212B, 2160-216F, 2C00-2C2F, 2C6D-2C72, 2C7E-2CE2, 2CEB-2CED, 2CF2, A640-A66C, A680-A69A, A722-A72E, A732-A76E,
+  A779-A786, A78B-A78D, A790-A792, A796-A7DC, A7F5, and every supplementary-plane capital swept (10400-10427,
+  104B0-104D3, 10570-10595, 10C80-10CB2, 10D50-10D65, 118A0-118BF, 16E40-16E5F, 16EA0-16EB8, 1E900-1E921). So
+  `LOWER("ẞ")` is `ẞ`, and the Ohm, Kelvin and Ångström signs (U+2126, U+212A, U+212B) stay as they are.
+- LOWER maps Georgian Asomtavruli U+10A0-U+10C5 to Mkhedruli U+10D0-U+10F5 (Rust: to Nuskhuri U+2D00-U+2D25), and
+  İ (U+0130) to i (Rust's full mapping is i+U+0307; T-1747 already had `LOWER("aİb")`).
+A surrogate pair is never case-mapped (no supplementary letter changes in either direction).
+Characters whose full mapping expands (ß, ŉ, ǰ, the ligatures U+FB00-U+FB17, the Greek with ypogegrammeni) stay
+unchanged, as T-1747 found.
+Evidence: probes/t3298-case-mapping-sweep Calc!A1:A50 (UPPER of 1580 characters, 32 per cell, Data!A) and
+Calc!B1:B47 (LOWER of 1488, Data!B) (excel-graph, 2026-10-31).
+Status: VERIFIED (excel-graph). Implemented in: `simple_case` with the `UPPER_UNMAPPED` and `LOWER_UNMAPPED` range tables
+(functions/text/string_format.rs). Tasks: T-3298 (probe), T-3583 (engine), T-3777 (PROPER/REGEXREPLACE probe).
+
+### PROPER and REGEXREPLACE case forcing use the same table, except PROPER's word starts (T-3777)
+Rule: REGEXREPLACE's `\U \L \u \l` map every swept character exactly as UPPER and LOWER do. PROPER lowers a letter
+inside a word exactly as LOWER does, and upper-cases a word-initial letter as UPPER does with two exceptions: the
+Greek tonos vowels ά έ ή ί ό ύ ώ keep their tonos (Ά Έ Ή Ί Ό Ύ Ώ; UPPER gives Α Ε Η Ι Ο Υ Ω), and a word-initial Georgian
+Asomtavruli capital U+10A0-U+10C5 is lowered to Mkhedruli U+10D0-U+10F5, as LOWER does (`PROPER("Ⴀბ")` is აბ;
+U+10C7 and U+10CD stay, as in LOWER). ΐ ΰ still give Ϊ Ϋ at a word start, and every other capital stays a capital.
+Evidence: probes/t3777-proper-case-table (excel-graph, 2026-11-02): Calc!A1:A50 (every UPPER-swept character
+word-initial), B1:B47 (every LOWER-swept character after "a"), D1:D47 (every LOWER-swept character word-initial),
+E1 (Asomtavruli word-initial), C1:C16 (spot checks: `PROPER("άλφα")` is Άλφα, A9:A10 and C1:C7 the tonos,
+C12, D15:D16 and E1 the Asomtavruli); probes/t3777-regexreplace-case-table Calc!A1:A50 (`\U$0` over the UPPER-swept
+strings), B1:B47 (`\L$0` over the LOWER-swept strings), C1:C16 spot checks (`\u`, `\l`, İ, final sigma, ß, ﬁ).
+Status: VERIFIED (excel-graph). Implemented in: `proper_initial` (functions/text/string_format.rs) for PROPER's word
+starts; REGEXREPLACE goes through `upper_case`/`lower_case`.
 
 ## ARRAYTOTEXT: a single empty cell is #VALUE!, an empty cell in a larger range is empty text
 Rule: `ARRAYTOTEXT` of a reference to one empty cell is `#VALUE!` in both formats, and so are a 1x1 range of an empty
@@ -905,6 +1186,37 @@ Evidence: probes/value-argument-lift (excel-graph, 2026-10-18); corpus-bench/421
 Implemented in: `fn_value` (functions/text/common.rs), through the lift driver (`Model::lift_text`, T-1775).
 Status: VERIFIED (excel-graph)
 Tasks: T-1791
+
+## VALUE reads a mixed fraction, a sign before a space and a one-digit-year dash date (T-2646)
+Rule: `VALUE("- 5")` is -5, `VALUE("3 1/2")` 3.5 and `VALUE("1-1-1")` 36892 (2001-01-01, month-day-year with a
+one-digit year). Readers built on VALUE's grammar follow it: `IMABS("3 1/2")` is 3.5 (engineering.md "How an inumber
+is read").
+Evidence: probes/eng-inumber-date-boundary B21:B23, A22 (excel-graph, 2026-10-25).
+A criterion reads `"1 1/2"` as 1.5 too (criteria.md "Criterion operands and text cells read numbers with VALUE's grammar",
+probes/t3136-criteria-formatted-number-operands H25).
+Edges (probes/value-sign-space-mixed-fraction-dash-date, excel-graph, 2026-10-29): spaces after a sign are skipped
+(`"- 5"`, `"-  5"` -5, `"+ 5"` 5, `"- 5.5"` -5.5, and `="- 5"+0` -5, so number coercion shares it). A mixed fraction takes
+a sign (`"-3 1/2"`, `"- 3 1/2"`, `"-  3 1/2"` -3.5, `"+3 1/2"` 3.5), a `$` (3.5) and a `%` (`"3 1/2%"` is
+0.034999999999999996, the whole and the fraction divided by 100 apart); an improper fraction reads (`"1 3/2"` 2.5), a
+numerator with a leading zero too (`"3 01/02"` 3.5), many digits (`"123456789 1/2"`), a denominator of 200 (3.005); but
+`"3 1/0"`, `"3  1/2"` (two spaces), `"3 1 /2"` and `"3 1/ 2"` are `#VALUE!`. A dash date reads a one-digit year as 200x
+and `"1/1/1"` is the same 36892 (`"1-1-0"` 36526, `"1-1-99"` 36161, `"1-1-30"` 1930); `"13-1-1"` and `"0-1-1"` are `#VALUE!`.
+Typed input, criteria and coercion (probes/typed-input-sign-space-mixed-fraction, excel-graph, 2026-10-30, T-3178): typed
+`- 5`, `+ 5`, `1-1-1` and `1/1/1` are numbers (-5, 5, 36892, 36892), and so are the typed mixed fractions `-$3 1/2` (-3.5),
+`-3 1/2%` (-0.034999999999999996) and `+ 3 1/2` (3.5); typed `€3 1/2` (no euro in en-US) and `$3 1/2%` stay text; unsigned `3 1/2`, `$3 1/2` and `3 1/2%` are numbers (B10-B12). Number
+coercion reads `"€3 1/2"` 3.5, `"-$3 1/2"`, `"-3 1/2%"` and `"+ 3 1/2"` too, but `"$3 1/2%"` is `#VALUE!`, and so is `VALUE("$3 1/2%")` (J1): a currency
+symbol and a `%` do not combine in a mixed fraction. A criterion operand reads `- 5`, `+ 5`, both dates, `-$3 1/2`,
+`-3 1/2%` and `+ 3 1/2` but not `€3 1/2` or `$3 1/2%` (`COUNTIF(3.5,"€3 1/2")` is 0), while a text cell `€3 1/2` does read
+as 3.5 (`COUNTIF(A5,A5+0)` is 1). A typed mixed fraction gets the number format `# ?/?` when its denominator is a single digit (`3 1/2`, `-$3 1/2`,
+`+ 3 1/2`, `$3 1/2`, `-3 1/2`, `1 3/2`, `3 01/02`, `3 001/2`, `3 1/002`; no currency format even with `$`) and `# ??/??` when
+it is 10 or more (`3 1/10`, `3 1/12`, `1 1/16`, `-$1 7/16`, `3 1/99`, `3 1/999`, `3 1/10000`), leading zeros not counted, the typed denominator not the reduced one (`3 5/10` is `??/??`, `3 2/4` `?/?`) and the numerator's width not at all (`3 12/5` displays `5 2/5`, `3 10/5` displays `5`);
+one with a `%` gets `0.00%` whatever the denominator (`3 1/2%`, `-3 1/2%`, `2 5/16%`). Displayed, `3 1/12` is `3  1/12`
+and `3 1/200` (three digits fit no `??/??`) is `3` plus six spaces. Typed `-$3 1/2%` stays text, like `$3 1/2%`, but the cell still gets `0.00%` (A15 ENTERED numberFormat)
+(probes/typed-mixed-fraction-number-format, excel-graph, 2026-10-30, T-3237; raw ENTERED lines and displayed text in
+docs/research/typed-mixed-fraction-number-format-2026-10-30.md).
+Ours: all implemented, T-3251 added the leading-`-` text path (`mixed_fraction`, mixed_fraction.rs, read through `value_number_text_with`, cast.rs; `parse_number`, parse_formatted.rs; `parse_separated`, date_text.rs).
+Status: VERIFIED (excel-graph); implemented (T-3151, T-2646).
+Tasks: T-2646, T-3151, T-3178
 
 ## REGEX* POSIX classes are Unicode (T-1903)
 Rule: inside a bracket, a POSIX class matches what PCRE2 in UCP mode matches, by Unicode property, not ASCII only:
@@ -980,9 +1292,17 @@ less that delimiter's, plus one, counted in UTF-16 units) is `#VALUE!`, whatever
 excepted, see above). `TEXTBEFORE("abcde","xyz",3)` and `-3` are `#N/A`, `4` and `-4` `#VALUE!`; `TEXTBEFORE("abcde",{"xyz","qq"},4)`
 is `#N/A`, `5` `#VALUE!`; `TEXTBEFORE("ab","xyz",1)` is `#VALUE!`; a number delimiter is its text, so `TEXTBEFORE("42ABC",1.005,-2)`,
 also from a cell, is `#VALUE!` (gen-m9 8d3588d8df0812df A313) but `-1` `#N/A`; `TEXTAFTER("😀b","😀😀",2)` is `#VALUE!` (probes/
-t2581-textsplit-textbefore A30-A50, excel-graph, 2026-10-24; T-2581). Unprobed: a delimiter whose case folding changes its UTF-16 length under
-match_mode 1 (ours measures the unfolded delimiter), and a delimiter that fits the text by UTF-8 bytes but not by UTF-16 positions
-(A50 is decided by ours' earlier every-delimiter-longer check). With a one-unit delimiter this is the text's length: `TEXTBEFORE("b","a",-2,1,1)`, `TEXTBEFORE("ab","a",3)` and
+t2581-textsplit-textbefore A30-A50, excel-graph, 2026-10-24; T-2581). Both this bound and the
+every-delimiter-longer check before it (`#VALUE!` with more than two arguments, `#N/A` with two) measure the text and each delimiter
+in UTF-16 units, the delimiter as written (never its case fold), under match_mode 1 too (probes/t4474-textbefore-utf16-bounds,
+excel-graph, 2026-11-06; T-4474). So `TEXTBEFORE("a","é",1)`, `TEXTBEFORE("ab","😀",1)` and `TEXTBEFORE("a",{"é","bb"},1)` are
+`#N/A` (B1, B5, B6; equal lengths), and `TEXTAFTER("a","é",1,0,0,"nf")` is `nf` (A10); `TEXTBEFORE("é","ab")` and
+`TEXTBEFORE("😀","abc")` are `#N/A` with two arguments and `#VALUE!` with three, also with an if_not_found (A2, B2, A3, B3, B10, C10),
+while `TEXTBEFORE("😀","ab",1)` is `#N/A` (B4: two units each). `TEXTBEFORE("éé","x",2)` is `#N/A` and `3` `#VALUE!`;
+`TEXTBEFORE("😀a","x",3)` and `-3` are `#N/A` and `4` `#VALUE!` (A11:A20). Under match_mode 1, `İ` (full
+fold two units) and `ß` (full fold `ss`) count one unit: `TEXTBEFORE("a","ß",1,1)` and `TEXTBEFORE("a","İ",1,1)` are `#N/A`, not the
+too-long `#VALUE!` (A43, A49), and `TEXTBEFORE("ab","ß",2,1)` is `#N/A` and `3` `#VALUE!`, as under match_mode 0 (A35:A42). TEXTSPLIT
+has neither check: `TEXTSPLIT("é","ab")` and `TEXTSPLIT("😀","abc")` are the text (A55:A58). With a one-unit delimiter this is the text's length: `TEXTBEFORE("b","a",-2,1,1)`, `TEXTBEFORE("ab","a",3)` and
 `TEXTBEFORE("ab","a",3,0,0,"nf")` are `#VALUE!`, while `TEXTBEFORE("ab","a",2)` is the usual `#N/A`. `TEXTAFTER("😀","a",2)` is `#N/A`
 and `TEXTAFTER("😀","a",3)` `#VALUE!` (two units), `TEXTAFTER("é","a",2)` `#VALUE!` (one). Gen-m7 shows it on `TEXTBEFORE("x~*","1",
 WORKDAY(..))` (611ce3bbfab27cef A336) and `TEXTBEFORE(..,"-",DATE(2060,10,19),0,0,6)` (b24ce74f08d3f91a A767).
@@ -990,17 +1310,28 @@ match_mode is cut toward zero and must then be 0 or 1, else `#VALUE!`, also besi
 are `#VALUE!` (`TEXTBEFORE("aBc","b",1,2)`; `TEXTBEFORE("abc","",2,123456789.123)`, which is c36ff5f42a1a4d47 A148), 0.5 is 0
 (`#N/A` for a case-different delimiter), 1.5 and TRUE are 1. A number or boolean if_not_found comes back as its text:
 `TEXTBEFORE("b","a",1,0,0,5)` is "5", `-2.5` is "-2.5", TRUE is "TRUE" (also gen-m7 ac67253061bba16a A776, A1345).
-Evidence: probes/t2314-textbefore-instance-bound (excel-graph, 2026-10-22) and gen-m7 (excel-graph, 2026-10-21, T-2225).
-Ours: matches (`text_around_element`, `around_options` and `around_not_found` in functions/text/before_after.rs, T-2314). The probe's
+An error `match_end` (5th argument) beats the `#VALUE!` of an out-of-range numeric match_mode: `TEXTAFTER("abc","a",1,-1,#N/A)` is `#N/A`, as are match_mode 2, 7, -2.5, "12" and "2.5" beside an error match_end (gen-m7/9f9357dbf7e17803 A85, A88, A157, A160, A286; gen-m7/b2139ff37d606cb4 A115, A118, A199, A202, A313, A316). A match_mode text that fails to coerce ("x", "abc", the empty string) is still `#VALUE!` beside an error match_end (9f9357dbf7e17803 A343, A346, A412; b2139ff37d606cb4 A373, A376, A439, A442), while a blank match_mode cell coerces to 0 and gives the match_end error (9f9357dbf7e17803 A589, A592). excel-graph 2026-11-04, T-3513. Implemented (T-4037): `around_options` reads match_end before range-checking match_mode.
+Evidence: probes/t2314-textbefore-instance-bound (excel-graph, 2026-10-22), probes/t4474-textbefore-utf16-bounds (excel-graph,
+2026-11-06, T-4474) and gen-m7 (excel-graph, 2026-10-21, T-2225).
+Ours: matches (`text_around_element`, `around_options` and `around_not_found` in functions/text/before_after.rs, T-2314; both
+length checks use its `units`, T-4474). The probe's
 `TEXTBEFORE("abc","b",1,-0.5)` is "a", not `#VALUE!`: flooring -0.5 would give the invalid -1 (A2), so match_mode is cut toward zero.
 match_end is read the same way: -0.0001 is 0, so `TEXTAFTER(LOWER("'a"),Data!A11:B12,1,1,<-0.0001>)`, where no delimiter is in the text,
 is `#N/A` (with match_end 1 the end of the text would match and give ""): gen-m7/2d9b48c6363e7a16 Calc!A660 (excel-graph, 2026-10-22); 0.5 is 0 too: `TEXTAFTER("1.5","-",-1,1,0.5)` is `#N/A`, gen-m9/b9a32ce9a1fd0d71 Calc!A142.
-Ours: implemented (T-2412), `around_options` cuts match_end toward zero. Other match_end values (2, -1, TRUE) are unprobed, and 1.5 is cut to 1 by the same helper, also unprobed.
+Ours: implemented (T-2412), `around_options` cuts match_end toward zero. The cut value must then be 0 or 1, else `#VALUE!`, also when the
+delimiter is found and beside an if_not_found: 1.5 (also from a cell), 1.9999, TRUE (also from a cell), the text "1" (also from a cell) and the text "1.5" are 1, 0.9999,
+-0.5 and FALSE are 0, while 2, -1 and -1.5 are `#VALUE!` (`TEXTAFTER("ab","b",1,0,2)` is `#VALUE!`, not ""), and the text "TRUE" is `#VALUE!`.
+TEXTBEFORE reads it the same way (A16-A30): with the delimiter not found, a value cut to 1 gives the whole text "ab", one cut to 0 `#N/A`, and the same values are `#VALUE!`. `TEXTAFTER("a","zz",1,0,<any>)` is `#VALUE!` for every value (the longer-delimiter rule above; for 2 and -1 both checks give `#VALUE!`, so their order is not shown). Evidence: probes/t2498-textafter-match-end (excel-graph,
+2026-10-25, T-2498). Ours: matches (`around_options`).
+An instance_num that is the empty value (`CELL("contents",<blank>)`) behaves as 0 (`#VALUE!`), not as an omitted argument:
+`TEXTAFTER(((Data!C$12&"")&Data!E10),"-",CELL("contents",Data!B3),1,1)` with Data!B3 blank (gen-m7/9359f03972e94026 Calc!A1420,
+excel-graph). A left-out argument (`TEXTAFTER(..,"-",,1)`) keeps the default 1. Ours: matches since T-3053 (`around_options` reads
+a written empty value as 0, so match_mode and match_end do too, unprobed: T-3087; information.md "CELL("contents", ref) as a VSTACK argument").
 TEXTAFTER's result takes the shape of an array if_not_found even when the text is an error (T-2414, probes/t2414-gen-m7-unexplained, excel-graph, 2026-10-23):
 `ROWS(TEXTAFTER("abc","",1,-2^53,0,{1;2}))` is 2 (invalid match_mode: each cell `#VALUE!`), `TEXTAFTER("abc","b",1,0,0,{1;2})` is "c","c", and
 `ROWS(TEXTAFTER(<#VALUE!>,"",1,-2^53,0,OFFSET(B9:C12,5,1,DROP(A3:A5,-2,0),2)))` is 2. The OFFSET alone is a 2x2 reference
-(`ROWS`, `COLUMNS` 2, 2; `INDEX(..,1,1)` one 0, no spill), although `DROP(A3:A5,-2,0)` is the one cell A3 (1E-15): UNVERIFIED mechanism
-(Excel reads the one-cell DROP result as a height giving 2 rows, ours as a lifted 1x1). The gen-m7 `#SPILL!` (4dac39f89709e2fc A2870) is
+(`ROWS`, `COLUMNS` 2, 2; `INDEX(..,1,1)` one 0, no spill), although `DROP(A3:A5,-2,0)` is the one cell A3 (1E-15): mechanism: `OFFSET`'s height in (0, 1) reaches one cell back, so the OFFSET is 2 rows (references.md "OFFSET negative and fractional height/width", VERIFIED, T-0956; probes/t2414-gen-m7-unexplained A141:A171)
+(Excel reads the one-cell DROP result as a height giving 2 rows; ours matches, all 70 cells of the case pass). The gen-m7 `#SPILL!` (4dac39f89709e2fc A2870) is
 then consistent with a 2x2 TEXTAFTER of `#VALUE!` colliding; only ROWS = 2 of it is probed.
 Status: VERIFIED (excel-graph)
 Tasks: T-2314, T-2412, T-2581
@@ -1008,8 +1339,9 @@ Tasks: T-2314, T-2412, T-2581
 ## TEXTSPLIT: argument errors first, an all-empty result
 Rule: TEXTSPLIT checks its arguments in this order, the first failure being the result: the text (an error); a delimiter that is
 itself an error (col_delimiter, then row_delimiter); ignore_empty (an error, or a value that is not a boolean or number: `#VALUE!`);
-match_mode, alike; an array pad_with (`#VALUE!`); an error element of a delimiter list (an array holding an error, or an OFFSET array
-of references, which is `#VALUE!`); then TEXTSPLIT's own `#VALUE!` for an empty delimiter, no delimiter or empty text.
+match_mode, alike; an error element of a delimiter list (an array or a multi-cell range holding an error, or an OFFSET array
+of references, which is `#VALUE!`); an array pad_with (`#VALUE!`); then TEXTSPLIT's own `#VALUE!` for an empty delimiter, no
+delimiter or empty text (the last three are all `#VALUE!`, so their order among themselves is unobservable).
 So `TEXTSPLIT("abc",",",NA(),1/0)` is `#N/A` and `TEXTSPLIT("abc",",",NA(),"x")` `#N/A`, but `TEXTSPLIT("abc",{",",#N/A},,1/0)` is
 `#DIV/0!`; `TEXTSPLIT("abc",",",,1/0,NA())` is `#DIV/0!`, `TEXTSPLIT("abc",",",,"x",NA())` `#VALUE!`; `TEXTSPLIT("abc",",",,1/0,,{1,2})`
 is `#DIV/0!`, `TEXTSPLIT("abc",NA(),,,,{1,2})` and `TEXTSPLIT("abc",",",,,NA(),{1,2})` are `#N/A`; `TEXTSPLIT("abc",",",
@@ -1040,11 +1372,21 @@ A one-cell range `TRANSPOSE(B2:B2)` is the value too, while a 1x1 array stays an
 A blank cell transposes to a blank value: `ISBLANK(TRANSPOSE(B10))` is FALSE and `FTEST(TRANSPOSE(B10),{1;2;3})` is the
 one-value `#DIV/0!`, not the blank-cell `#VALUE!` (A92, A93).
 Ours: since T-2455 (`fn_transpose`: a 1x1 result of an argument that did not evaluate to an array is its element).
-Unprobed: an array pad_with against an error element of a delimiter list (ours: the pad_with `#VALUE!`), and a one-cell reference to an
-error cell as the delimiter, which ours reads as a list, so `TEXTSPLIT("abc",B1,,1/0)` with B1 `#N/A` is ours `#DIV/0!`.
-Ours: this order and the `#CALC!` since T-2315 (`fn_textsplit`, `textsplit_element` in functions/text/textsplit.rs).
+A one-cell reference to an error cell is a delimiter that is itself an error, in every spelling: with B1 `#N/A`,
+`TEXTSPLIT("abc",F,,1/0)`, `TEXTSPLIT("abc",F,,"x")` and `TEXTSPLIT("abc",F)` are all `#N/A` for F = `B1`, `B1:B1`, `$B$1`,
+`Calc!B1`, `INDEX(B1:B2,1)` and a defined name for B1, and for a LET-bound `B1` (probes/t4198-textsplit-error-ref-delimiter A1-A21);
+the same as row_delimiter, `B1` or `B1:B1` (A22-A27). So it does not follow TOCOL's rule that a one-cell error reference is a 1x1
+array (arrays.md, T-3497). An error text still comes first (`TEXTSPLIT(B2,B1)` with B2 `#DIV/0!` is `#DIV/0!`, also with `B1:B1` or as
+row_delimiter, A28-A31); a one-cell reference to "," splits (A32, A33). A two-cell range of errors is a list: `TEXTSPLIT("abc",B1:B2,,1/0)`
+is `#DIV/0!`, with ignore_empty `"x"` `#VALUE!`, alone `#N/A` (A34-A36). An error element of a list beats an array pad_with:
+`TEXTSPLIT("a,b;c",{",",#N/A},";",,,{1,2})`, `TEXTSPLIT("abc",{",",#N/A},,,,{1,2})` and the same over the range B1:C1 (C1 ",") are
+`#N/A` (A37-A40), as are `TEXTSPLIT("abc",B1,,,,{1,2})` and its `B1:B1` form (A42, A43). TEXTBEFORE and TEXTAFTER read `B1` and
+`B1:B1` alike too (`#N/A`, also against an instance_num `1/0`, A44-A51).
+Evidence for this paragraph: probes/t4198-textsplit-error-ref-delimiter (excel-graph, 2026-11-04, T-4198).
+Ours: this order and the `#CALC!` since T-2315 (`fn_textsplit`, `textsplit_element` in functions/text/textsplit.rs); a one-cell
+reference read as its cell's value, and the list errors before the array pad_with, since T-4198.
 Status: VERIFIED (excel-graph)
-Tasks: T-2315
+Tasks: T-2315, T-4198
 
 
 ## TEXTSPLIT: column delimiters first, match_mode 0 or 1
@@ -1063,3 +1405,105 @@ Evidence: probes/t2581-textsplit-textbefore A1-A29 (excel-graph, 2026-10-24). Th
 Ours: since T-2581 (`split_grid`, `textsplit_element` in functions/text/textsplit.rs).
 Status: VERIFIED (excel-graph)
 Tasks: T-2581
+
+## ARRAYTOTEXT error before format
+An error value as ARRAYTOTEXT's first argument is the result before the format is looked at: `ARRAYTOTEXT(NA(),2)`
+is `#N/A`, `ARRAYTOTEXT(1/0,2)` `#DIV/0!`, `ARRAYTOTEXT(SINH(710),2)` `#NUM!`, `ARRAYTOTEXT(NA(),"x")` `#N/A`, and a
+reference to an error cell (also `B1:B1`) the same. With two errors the first argument's wins (`ARRAYTOTEXT(NA(),1/0)`
+`#N/A`, `ARRAYTOTEXT(1/0,NA())` `#DIV/0!`); a valid first argument with an error format gives the format's error
+(`ARRAYTOTEXT(1,NA())` `#N/A`). An error inside an array is not the argument's error: `ARRAYTOTEXT({1,#N/A},2)` is
+`#VALUE!`, as `ARRAYTOTEXT(1,2)` and `ARRAYTOTEXT(1,"x")` are. VERIFIED (probes/arraytotext-error-vs-format, excel-graph
+2026-10-27, T-2250). VALUETOTEXT differs: `VALUETOTEXT(NA(),2)` is `#VALUE!`, not the argument's error (matches today's
+engine, unprobed beyond that cell). UNPROBED: a multi-cell range of only errors and a 1x1 array (`{#N/A}`) with format 2 (the engine gives `#VALUE!`); a reference to an error cell with an error or text format, such as `ARRAYTOTEXT(B1,NA())` or `ARRAYTOTEXT(B1,"x")` with B1 holding `#N/A` (the engine reads the format first and returns its error).
+
+See also: RIGHT num_chars numeric-text coercion is recorded in criteria.md "Zero and negative SUMIFS criteria; IF error arguments; RIGHT numeric-text num_chars" (T-2980).
+
+## CHAR(128..255) is Windows-1252 on the web; Mac desktop is Mac Roman
+Rule (excel-graph, 2026-11-06, T-4534): `CHAR(n)` for 128 <= n <= 255 maps through Windows-1252 in Excel for the web:
+`CHAR(255)` is ÿ, `CHAR(254)` þ, `CHAR(128)` € (probes/t4534-desktop-golden-web-values A1, A7, A8). Desktop Excel for Mac
+(16.0300) maps through Mac Roman: its cached `CHAR(255)` is ˇ (U+02C7; calipers formulas_text Text Functions!C190).
+Status: VERIFIED (excel-graph); the Mac value is a desktop cached value, out of scope (decision 0266).
+Ours: Windows-1252, as the web. The calipers cell is a Phase 1 rate exception (decision 0315).
+Tasks: T-4534
+
+## CHAR lifts over ranges and arrays
+
+`CHAR` takes a range or array argument and returns an array, like `UNICHAR`, `CODE` and
+`UNICODE`; inside `CONCAT`, `TEXTJOIN` (as text or delimiter) and `CONCAT`'s mixed arguments the
+elements are joined whole (`=CONCAT(CHAR(A1:A3))` is "Hi!" for 72, 105, 33), not implicitly
+intersected. An error element (`CHAR(0)` is `#VALUE!`, a `#N/A` cell) is the join's result.
+Evidence: probes/t3302-text-funcs-arrays (E1-E20, oracle-filled). The probe shows
+`CONCAT`/`TEXTJOIN` over `CHAR`, `UNICHAR`, `CODE`, `UNICODE` ranges and computed arrays already
+agree; the only gap was `CHAR`, fixed in T-3302.
+
+Per-element errors (T-2946, probes/t2946-char-array, excel-graph 2026-11-06, 18/18 cells match): in a spilled
+`CHAR(array)` an element 0, 256, text ("x") or blank gives `#VALUE!` in its own slot and the neighbours keep their
+characters (`CHAR({65;0;66})` is "A", `#VALUE!`, "B"; same for 256 and "x"; `CHAR(A1:A5)` over 65, 256, "x", blank, 66 is
+"A", `#VALUE!`, `#VALUE!`, `#VALUE!`, "B"). `=LET(s,SEQUENCE(10),CONCAT(CHAR(48+s)))` is "123456789:" and
+`CONCAT(IF(SEQUENCE(3)>1,CHAR(80+SEQUENCE(3)),CHAR(48+SEQUENCE(3))))` is "1RS". The engine already did all of this.
+
+## ARRAYTOTEXT format range lifts and spills; TEXTJOIN text ignore_empty beats an error delimiter (T-3512 batch)
+
+Oracle-filled cells of the arg-pairs batch (ARRAYTOTEXT implemented, T-3884; TEXTJOIN T-3885):
+
+- A multi-cell range as ARRAYTOTEXT's format lifts per element and spills to the range's shape; the array
+  argument is read whole. `ARRAYTOTEXT(2,Data!A1:B2)` (A1:B2 = 0, FALSE, blank, 1) fills A31:B32 with
+  `"2"`, `"2"`, `"2"`, `"{2}"` (gen-m5/af89ea54bae02c71). With C3:D4 (blank, "1.5", "x", 0.1) as format,
+  `ARRAYTOTEXT(Data!G1,Data!C3:D4)` fills A34:B35 with `"7"`, `"{7}"`, `#VALUE!`, `"7"`: text "x" is `#VALUE!`.
+  `ARRAYTOTEXT(Data!A1:B2,Data!A1:B2)` fills A529:B530 with `"0, FALSE, , 1"` x3 and `"{0,FALSE;,1}"`.
+  The eval scores only the anchor cell, so a "first element" model would pass but spill wrongly.
+- `ARRAYTOTEXT(<blank ref>,#DIV/0!)` is `#VALUE!` for every format kind (A469-A514, A499, A502): the
+  existing rule that a reference to one empty cell is `#VALUE!` (above) and T-2250's error-first rule apply.
+- TEXTJOIN with an error delimiter given as a reference keeps the delimiter's own error (`#DIV/0!`) when
+  ignore_empty is a number, boolean, blank or the same error (gen-m5/d0c5e5dff134d787 A286, A292, A304, A328,
+  A334), but a text ignore_empty, even numeric text or "", is `#VALUE!` and wins over it (A310, A316, A322;
+  alone A349, A352). The rule depends on the delimiter being a reference; see the next section.
+
+## TEXTJOIN: ignore_empty is read before a reference delimiter's error, after an error value
+Rule: when TEXTJOIN's delimiter is a reference to an error cell (a cell, a range holding an error, or an IF or
+INDEX that returns such a reference), ignore_empty is read first: a text ignore_empty (`"x"`, `"12"`, `""`, a
+text cell, `LOWER(...)`) is `#VALUE!`, and an error ignore_empty is its own error (`TEXTJOIN(<#DIV/0! cell>,
+<#N/A cell>,"a")` is `#N/A`); a number, boolean or blank ignore_empty leaves the delimiter's error. When the
+delimiter is an error *value* (a literal `#DIV/0!`, `1/0`, `NA()`, `VLOOKUP(TRUE,{1,2},2)`), that error is the
+result whatever ignore_empty is, text and error ignore_empty included.
+Consequence: `TEXTJOIN(VLOOKUP(...),LOWER(...),...)` is the VLOOKUP's `#N/A`
+(gen-m5/1d22a002d4f380b3 Calc!A274), while `TEXTJOIN(Data!G9,Data!G6,...)` with G9 `#DIV/0!` and G6 "x" is
+`#VALUE!`.
+Evidence: probes/t3885-textjoin-error-delimiter-text-ignore-empty B2:M13 (12 delimiter forms by 10 ignore_empty
+forms), B15:F15, B16:G16 (excel-graph, 2026-11-03; T-3885); gen-m5/d0c5e5dff134d787 Calc!A310, A316, A322;
+gen-m5/1d22a002d4f380b3 Calc!A274.
+Status: VERIFIED
+Implemented in: `Model::fn_textjoin` and `Model::textjoin_delimiters` (functions/text/concatenate.rs).
+Tasks: T-3885
+
+## TEXTJOIN: an array or range ignore_empty is lifted per element, with the scalar rule applied to each
+Rule: an array or range ignore_empty makes TEXTJOIN spill one result per element, and each element follows the
+scalar rule above. With a reference delimiter (a cell or a range of error cells) the elements give: boolean or
+number -> the delimiter's error (`#DIV/0!`), text (`"x"`, `""`) -> `#VALUE!`, error -> its own error (`#N/A`). With an
+error value delimiter (`1/0`) every element is `#DIV/0!`. With a plain delimiter: boolean or number -> `"a"`, text
+-> `#VALUE!`, error -> that error. An array literal and a range holding the same values agree.
+Evidence: probes/t3909-textjoin-lifted-ignore-empty A1:E8 (4 delimiters by array and range ignore_empty, 5 elements
+each; excel-graph, 2026-11-03; T-3909).
+Status: VERIFIED
+Implemented in: `Model::fn_textjoin` via `lift_call`; all 40 formula cells (44 scored) already match, no engine change.
+Tasks: T-3909
+
+## ARRAYTOTEXT: a range format argument
+Rule: ARRAYTOTEXT reads its array argument whole and lifts `format` over a range or an array literal, one text per element, spilling to the format's shape: `ARRAYTOTEXT(2,Data!A1:B2)` spills "2" over a 2x2 (`{2}` where an element selects strict form), and `ARRAYTOTEXT(range,range)` with the same range as format gives the array text per format element ("0, FALSE, , 1"). A blank first argument is `#VALUE!` even over an error format (`ARRAYTOTEXT(Data!H1,#DIV/0!)`, `ARRAYTOTEXT(Data!H1,<#DIV/0! ref>)`), while a non-blank first argument gives the format error.
+An error or blank first argument spills its error to the format's shape: `ARRAYTOTEXT(#N/A,Data!A1:B2)` fills A463:B464 with `#N/A`, `ARRAYTOTEXT(Data!G9,Data!C3:D4)` A466:B467 with `#DIV/0!`, a blank reference A511:B512 and A514:B515 with `#VALUE!`.
+An array-literal format lifts the same way: `ARRAYTOTEXT(7,{0,1})` spills "7", "{7}" across, `{0;1}` down, and `{0,2}` gives "7", `#VALUE!` (an element outside 0 and 1 is `#VALUE!` in its own cell only); `ARRAYTOTEXT({1,"x"},{0,1})` gives "1, x", `{1,"x"}`; `ARRAYTOTEXT(NA(),{0,1})` spills `#N/A` twice.
+Evidence: gen-m5/af89ea54bae02c71 Calc!A463:B464, A466:B467, A511:B512, A514:B515, A31:B32, A34:B35, A529:B530, A532:B533, A499, A502 (excel-graph oracle sidecar; T-3884); probes/arraytotext-array-literal-format A1:B1, A4:A5, A7:B7, A10:B10, A13:A15, A17:B17, A20:B20 (excel-graph, 2026-11-03; T-3884).
+Status: VERIFIED
+Implemented in: `Model::fn_arraytotext` (functions/text/arraytotext.rs) with the `ARRAYTOTEXT` entry of the lifting table (functions/lift/kinds/text.rs).
+Tasks: T-3884
+
+## SUBSTITUTE with a boolean instance_num is #VALUE! (T-3510, T-3927)
+Rule: any boolean instance_num is `#VALUE!`: literal `TRUE` and `FALSE`, a boolean from a cell (`B1`/`B2`), a comparison
+(`1=1`), and each boolean element of an array (`{TRUE,FALSE,1}` gives `#VALUE!`, `#VALUE!`, "xaa"). A blank-cell instance_num is
+also `#VALUE!` (like 0); `"2"` text coerces ("axa"). A boolean as text, old_text or new_text is coerced to "TRUE"
+(`SUBSTITUTE("TRUE",TRUE,"x")` "x", `SUBSTITUTE("aaa","a",TRUE,2)` "a", then TRUE as text, then "a"). The gen-m5 pairs `SUBSTITUTE("abc",0,"abc",TRUE)`,
+`SUBSTITUTE("Hello","Hello",2,TRUE)` and `SUBSTITUTE(2,"abc","abc",TRUE)` are all that one rule (23 cells, see T-3927 for the list).
+An error in text, old_text or new_text wins over the boolean `#VALUE!` (`SUBSTITUTE("abc",#REF!,"Hello",TRUE)` `#REF!`, `SUBSTITUTE(#N/A,"abc","abc",TRUE)` `#N/A`).
+Evidence: gen-m5 arg-pairs batch (excel-graph, 2026-11-03); probes/substitute-boolean-instance A1:A12, B12:C12 (excel-graph, 2026-11-03, T-3927).
+Status: VERIFIED
+Implemented in: `fn_substitute` (functions/text/common.rs), T-3927.

@@ -25,7 +25,7 @@ Goals:
 Non-goals: refreshing a pivot (recomputing its cache from the source range, `refreshOnLoad`),
 creating, editing or laying out pivots in the engine, pivot charts, OLAP/external caches,
 calculated fields and items, and xlsx export of pivots (dropped on export, as today; T-2081
-records it). PIVOTBY is a function (SPEC-0006), not a pivot table.
+records it; SPEC-0032 added the export, T-4176). PIVOTBY is a function (SPEC-0006), not a pivot table.
 
 ## Excel behavior to match
 Rules (docs/excel-semantics/web.md "GETPIVOTDATA against a pivot table", evidence
@@ -50,7 +50,7 @@ Unknowns. Each is probed by T-2085, and until then T-2083 answers `#REF!` for it
 T-1703 behavior where one exists), never a guessed value:
 1. several data fields: the `"Values"` field, what a blank `data_field` picks, and a source name
    shared by two data fields (Sum and Count of Sales);
-2. an empty intersection of any aggregate but Sum (H13 covers Sum only);
+2. an empty intersection of CountNums, Product, Var, VarP, StdDev and StdDevP (Sum, Count, Average, Max and Min are 0, T-2404);
 3. numbers, dates and booleans as items (match by value or by text);
 4. page (filter) fields with a selected item, and hidden items on an axis;
 5. the same field twice with the same item;
@@ -59,12 +59,13 @@ T-1703 behavior where one exists), never a guessed value:
    web.md records the others as unprobed; T-1703 gives one `#REF!`, kept);
 8. `""` as `data_field` against a pivot (J7 is an empty cell; `""` is only probed with no pivot);
 9. a reference overlapping two pivots, or pointing into a page-field area outside `<location>`;
-10. two row fields and their subtotals, tabular and outline form;
+10. two row fields and their subtotals, tabular and outline form (the no-pair grand total is evidenced, T-2662);
 11. whether the answer follows the cache when the records disagree with the rendered cells (a file
     saved without refreshing), and the summation order (cache order or display order) on
-    non-representable decimals;
-12. grouped fields (`<fieldGroup>`, date grouping), calculated fields, and a cache saved without
-    records (`saveData="0"`): skipped at import (`#REF!`), a non-parity gap T-2085 records.
+    non-representable decimals (one data point: web.md "GETPIVOTDATA on real-model pivots", T-2662);
+12. calculated fields and a cache saved without records (`saveData="0"`): skipped at import
+    (`#REF!`), a non-parity gap T-2085 records. Grouped fields (`<fieldGroup>`) import as their group
+    items (T-4225); which group Excel puts each value in, and GETPIVOTDATA on them, are unprobed.
 13. an error in a field or item argument (ours `#REF!`), an error held by a single-cell
     `pivot_table` inside a pivot (ours: the error, as T-1703 does with no pivot), and an error
     cell inside a multi-cell `pivot_table` range (ours: not looked at);
@@ -149,9 +150,14 @@ edits".
   that cache or pivot, never a panic or a read outside the package.
 - `pivotCacheDefinition`: `<cacheSource type="worksheet"><worksheetSource ref sheet|name>`,
   `<cacheField name>` with `<sharedItems>` (`s`, `n`, `b`, `e`, `d`, `m`); other source types and
-  `<cacheHierarchies>` (OLAP) give no pivot. `<fieldGroup>` and calculated fields (`formula`
-  attribute) make the cache unusable: the pivot is skipped, so GETPIVOTDATA on it is `#REF!`
-  (UNVERIFIED, logged by the importer as a skipped feature).
+  `<cacheHierarchies>` (OLAP) give no pivot. Calculated fields (`formula` attribute) make the
+  cache unusable: the pivot is skipped, so GETPIVOTDATA on it is `#REF!` (UNVERIFIED, logged by the
+  importer as a skipped feature). A grouped field (`<fieldGroup>` with `<rangePr>` or
+  `<discretePr>` and `<groupItems>`; T-4225) becomes an ordinary `CacheField` at import: its items
+  are the group labels and its records each record's group, derived from the `base` field's values;
+  a grouping field (`databaseField="0"`, written after the database fields and absent from the
+  records part) is appended as a field of its own. The model needs no new type (web.md "Grouped
+  pivot fields import as their group items").
 - `pivotCacheRecords`: `<r>` rows of `x v` (shared index) or inline `s n b e d m` values, the inline
   ones interned into the field's items. With no records part (`saveData="0"`) the cache and its
   pivots are skipped, so GETPIVOTDATA is `#REF!` (unknown 12; Excel would refresh).
@@ -176,10 +182,13 @@ refers to the list in "Excel behavior to match".
    than one data field is `#REF!` (unknown 1).
 3. The pairs: an odd count is `#REF!` (H15); each field name must match (ignoring case) a cache field
    on the row or column axis (H8, J3); each item must match a text item of that field ignoring case
-   (H7, H18, J6, J8); a number, date or boolean item or field is `#REF!` (unknown 3); the same field
-   twice is `#REF!`, with different items (H17) or the same (unknown 5).
+   (H7, H18, J6, J8), or be an omitted argument, which picks the field's blank item (calipers
+   pv23_041, T-2662); a number, date or boolean item or field is `#REF!` (unknown 3); the same field
+   twice is `#REF!`, with different items (H17) or the same (unknown 5). A pivot with two fields on
+   an axis answers only with no pairs, its grand total (calipers formula_stress_test, T-2662); any
+   pair there is `#REF!` (unknown 10).
 4. The value: the data field's aggregate over the records whose fields equal every chosen item. A
-   Sum over no records is 0 (H13); any other aggregate over no records is `#REF!` (unknown 2). A
+   Sum, Count, Average, Max or Min over no records is 0 (H13, probes/getpivotdata-empty-intersection); any other aggregate over no records is `#REF!` (unknown 2, unprobed). A
    record holding an error, a blank or text in the data field makes the answer `#REF!` (unknown 6).
 5. An array of items lifts per SPEC-0011 (L1, L5), each element a scalar call; an array
    `data_field`, `pivot_table` or field name keeps T-1703's single `#REF!` (unknown 7).
@@ -241,6 +250,15 @@ A spec case has no xlsx, and its rendered pivot cells exist only in the built fi
   already written: the same snapshot `refreshOnLoad` gives) and the definition from the spec's
   fields. It is test support, not public API: `#[doc(hidden)]`, not mirrored in the Python binding
   (explicitly deferred per api-design.md), and the only engine-side cache building.
+- A grouped spec pivot (`group`, T-4228) has no `rendered`: which group a record falls in is what
+  such a case probes, so the builder cannot lay it out (T-4235). `PivotTableInput::group` groups
+  the row field with the importer's rule (`rustsheet_engine::pivot::group_by_numbers`, which
+  `apply_groups` calls too), and `Txn::add_pivot_table` then writes the layout itself from the
+  location's top-left cell, before the pivot is registered: the builder's compact form with one
+  row field (`Row Labels`, the caption, the groups holding a record, `Grand Total`), in one place,
+  `rustsheet_engine::pivot::render` over `compute` and `lay_out` (SPEC-0032, T-4149). This is the Rust layout the alternative below rejects for
+  baking, kept to the one shape the builder cannot bake; oracle reads of Excel's own layout
+  (probes/t4228-pivot-range-groups, probes/t4235-pivot-range-rounding) keep it in step.
 
 ## Alternatives considered
 - Reading the rendered pivot cell instead of aggregating the cache: needs the layout of every

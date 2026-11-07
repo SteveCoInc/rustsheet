@@ -343,8 +343,8 @@ fn legacy_value_arguments_intersect_and_export_unchanged() {
         ),
         (
             "SUM([1]Uses!$A$2:$A$3+0)",
-            "SUM(@'[1]Uses'!$A$2:$A$3+0)",
-            "SUM('[1]Uses'!$A$2:$A$3+0)",
+            "SUM(@[1]Uses!$A$2:$A$3+0)",
+            "SUM([1]Uses!$A$2:$A$3+0)",
         ),
     ]);
 }
@@ -484,6 +484,27 @@ fn lift_arrays_arguments_get_no_at_on_a_bare_range() {
             "SUMPRODUCT(EDATE(A1:A60,1))",
             "SUMPRODUCT(EDATE(A1:A60,1))",
         ),
+    ]);
+}
+
+// An array constant in a `LiftArrays` argument takes the `@` of a scalar argument, with one
+// element or several and under a sign, so the call itself takes none; a bare range still takes
+// none (probes/iseven-isodd-range-derived-arrays Leg!A3, C3, F3:N3, excel-graph, T-4528).
+#[test]
+fn lift_arrays_arguments_intersect_array_constants() {
+    check(&[
+        ("ISEVEN({5})", "ISEVEN(@{5})", "ISEVEN({5})"),
+        ("ISEVEN({2;3})", "ISEVEN(@{2;3})", "ISEVEN({2;3})"),
+        ("ISODD({2,3})", "ISODD(@{2,3})", "ISODD({2,3})"),
+        ("ISEVEN(-{5})", "ISEVEN(-@{5})", "ISEVEN(-{5})"),
+        (
+            "EDATE({45000;45031},1)",
+            "EDATE(@{45000;45031},1)",
+            "EDATE({45000;45031},1)",
+        ),
+        ("BIN2DEC({101})", "BIN2DEC(@{101})", "BIN2DEC({101})"),
+        ("QUOTIENT({7},2)", "QUOTIENT(@{7},2)", "QUOTIENT({7},2)"),
+        ("ISEVEN(A1:A60)", "ISEVEN(A1:A60)", "ISEVEN(A1:A60)"),
     ]);
 }
 
@@ -828,6 +849,34 @@ fn legacy_array_values_intersect_in_value_positions() {
             "IF(1,_xlfn.SINGLE({2;3}))",
             "IF(1,@{2;3})",
             "IF(1,_xlfn.SINGLE({2;3}))",
+        ),
+    ]);
+}
+
+// An array constant under the root's operators, parentheses and signs takes its own `@`, and the
+// export drops it (probes/t3051-legacy-root-array-operators, T-3051).
+#[test]
+fn legacy_root_array_constants_intersect_and_export_unchanged() {
+    check(&[
+        ("{2;3}", "@{2;3}", "{2;3}"),
+        ("({2;3})", "(@{2;3})", "({2;3})"),
+        ("-{2;3}+1", "-@{2;3}+1", "-{2;3}+1"),
+        (
+            "0.1+{0.2;0.2}-0.3",
+            "0.1+@{0.2;0.2}-0.3",
+            "0.1+{0.2;0.2}-0.3",
+        ),
+        ("{1,2;3,4}*2", "@{1,2;3,4}*2", "{1,2;3,4}*2"),
+        ("{2;3}+{4;5}", "@{2;3}+@{4;5}", "{2;3}+{4;5}"),
+        ("{2;3}%", "@{2;3}%", "{2;3}%"),
+        ("{2;3}+B1:B2", "@{2;3}+@B1:B2", "{2;3}+B1:B2"),
+        // A typed `@` on a root constant is the automatic one and is dropped too.
+        ("@{2;3}+1", "@{2;3}+1", "{2;3}+1"),
+        // No automatic `@` in a formula holding a SWITCH (probes/legacy-switch-callers).
+        (
+            "{2;3}+SWITCH(1,1,2)",
+            "{2;3}+SWITCH(1,1,2)",
+            "{2;3}+_xlfn.SWITCH(1,1,2)",
         ),
     ]);
 }
@@ -1192,4 +1241,43 @@ fn let_range_result_takes_the_at_and_lambda_call_removes_it() {
         let exported = to_excel_string(&t, &cell_reference);
         assert!(!exported.contains('@'), "export of `{formula}`: {exported}");
     }
+}
+
+// A formula written with whitespace saves it in its `<f>` text (T-2948), and takes the same `@`s,
+// on import and on export, as the formula without it: the legacy rewrite decides on the tree with
+// no whitespace. `N( IF(1,{2;3}) )` takes no `@`, as `N(IF(1,{2;3}))` does not; the shape test
+// of N over IF does not look past the whitespace, so that formula loses it (T-2970).
+#[test]
+fn spaced_formulas_keep_their_whitespace_and_their_at() {
+    check(&[
+        ("SIN( A1:A3 )", "SIN( @A1:A3 )", "SIN( A1:A3 )"),
+        (
+            "SUM( _xlfn.SINGLE(J1:J10), 1)",
+            "SUM( @J1:J10, 1)",
+            "SUM( _xlfn.SINGLE(J1:J10), 1)",
+        ),
+        ("ABS( {5} )", "ABS( @{5} )", "ABS( {5} )"),
+        ("N( IF(1,{2;3}) )", "N( IF(1,{2;3}) )", "N( IF(1,{2;3}) )"),
+        (
+            "T( IF(1,{\"a\";\"b\"}) )",
+            "T( IF(1,{\"a\";\"b\"}) )",
+            "T( IF(1,{\"a\";\"b\"}) )",
+        ),
+        (
+            "N( CHOOSE(1,{2;3}) )",
+            "N( CHOOSE(1,{2;3}) )",
+            "N( CHOOSE(1,{2;3}) )",
+        ),
+        (
+            "SUM(INDEX(B1:B6, {2;3} ))",
+            "SUM(INDEX(B1:B6, @{2;3} ))",
+            "SUM(INDEX(B1:B6, {2;3} ))",
+        ),
+        ("ABS( {2;3} + 0 )", "ABS( @{2;3} + 0 )", "ABS( {2;3} + 0 )"),
+        (
+            "N( _xlfn.SINGLE(IFERROR({2;3},0)) )",
+            "N( @IFERROR({2;3},0) )",
+            "N( IFERROR({2;3},0) )",
+        ),
+    ]);
 }

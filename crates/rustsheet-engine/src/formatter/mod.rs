@@ -1,5 +1,7 @@
+mod calendar_dates;
 mod complexity;
 pub(crate) mod date_clock;
+mod date_names;
 pub(crate) mod date_text;
 pub mod dates;
 mod elapsed;
@@ -9,8 +11,13 @@ mod fraction;
 mod general;
 pub mod lexer;
 pub mod locale_tag;
+mod lunar_calendar;
+pub mod numerals;
 mod parse_formatted;
 pub mod parser;
+mod sections;
+mod table_calendars;
+mod text_value;
 
 pub(crate) use complexity::rejects_format_code;
 

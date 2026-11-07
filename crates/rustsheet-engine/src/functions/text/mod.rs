@@ -11,6 +11,7 @@ mod filterxml;
 mod lifted;
 mod pcre;
 mod position;
+mod proper_letters;
 mod regex_engine;
 mod regex_functions;
 mod regex_reach;
@@ -21,3 +22,7 @@ mod t_function;
 mod text_kernel;
 mod textsplit;
 pub(super) mod util;
+
+#[cfg(test)]
+pub(crate) use regex_functions::REGEX_UNITS;
+pub(crate) use regex_functions::{LookupPattern, LookupRegexes};

@@ -140,8 +140,9 @@ fn quantile_searches_that_hung_or_panicked_are_bounded() {
     // The capped port is NaN there. F.INV then bisects its cdf without a start (T-0974):
     // F.INV(1E-300,5,5) and F.INV(1E-170,5,5) are Excel's 5.081599884913164E-121 and
     // 5.081599884913239E-69 to 13 digits (probes/stat-quantile-lift E1, E3), while F.INV(1E-50,6000,4)
-    // is not Excel's 0.0004924127886173762 (E6). BETA.INV stays #NUM! (a DEVIATION: Excel gives
-    // 0.0692..., E9; TODO(T-1871)). The longest search seen, 377 Newton steps, still finishes (E8).
+    // is not Excel's 0.0004924127886173762 (E6). BETA.INV refines to the crossing of BETA.DIST's
+    // cdf from no start (T-2119): 0.003013141, a known mismatch (Excel 0.0692..., E9;
+    // TODO(T-1871)) kept here as a guard that the search ends. The longest search seen, 377 Newton steps, still finishes (E8).
     let mut model = new_empty_model();
     model._set("C1", "=1-2^-53");
     model._set("A1", "=F.INV(1E-300,5,5)");
@@ -156,7 +157,7 @@ fn quantile_searches_that_hung_or_panicked_are_bounded() {
         ("A1", "5.0816E-121"),
         ("A2", "5.0816E-69"),
         ("A3", "0.016348828"),
-        ("A4", "#NUM!"),
+        ("A4", "0.003013141"),
         ("A5", "0.043055298"),
         ("A6", "5.0816E-09"),
         ("A7", "5.0816E-121"),
@@ -170,14 +171,14 @@ fn quantile_searches_that_hung_or_panicked_are_bounded() {
 fn quantile_kernels_are_charged_their_weight() {
     // BETA.INV and F.INV are charged 2^18 an element (the bound of their caps at a full-cost cdf,
     // about 4 ms): 2^27 / 2^18 = 512 elements, so a lifted call of 513 is refused before it runs;
-    // T.INV and CONFIDENCE.T are charged 2^16 (about 0.82 ms): 2,048 elements.
+    // T.INV and CONFIDENCE.T are charged 2^17 (about 1.5 ms at df 999, T-2511): 1,024 elements.
     let mut model = new_empty_model();
     model._set("A1", "=ROWS(BETA.INV(SEQUENCE(513)/514,2,3))");
     model._set("A2", "=ROWS(BETA.INV(SEQUENCE(512)/513,2,3))");
     model._set("A3", "=ROWS(F.INV.RT(0.4,5,SEQUENCE(513)))");
-    model._set("A4", "=ROWS(T.INV(0.4,SEQUENCE(2049)))");
-    model._set("A5", "=ROWS(CONFIDENCE.T(0.4,2,SEQUENCE(2049)+1))");
-    model._set("A6", "=ROWS(T.INV(0.4,SEQUENCE(2048)))");
+    model._set("A4", "=ROWS(T.INV(0.4,SEQUENCE(1025)))");
+    model._set("A5", "=ROWS(CONFIDENCE.T(0.4,2,SEQUENCE(1025)+1))");
+    model._set("A6", "=ROWS(T.INV(0.4,SEQUENCE(1024)))");
     model._set("A7", "=ROWS(F.INV(0.4,5,SEQUENCE(512)))");
     model.evaluate();
     assert_eq!(model._get_text("A1"), *"#ERROR!");
@@ -185,7 +186,7 @@ fn quantile_kernels_are_charged_their_weight() {
     assert_eq!(model._get_text("A3"), *"#ERROR!");
     assert_eq!(model._get_text("A4"), *"#ERROR!");
     assert_eq!(model._get_text("A5"), *"#ERROR!");
-    assert_eq!(model._get_text("A6"), *"2048");
+    assert_eq!(model._get_text("A6"), *"1024");
     assert_eq!(model._get_text("A7"), *"512");
 }
 

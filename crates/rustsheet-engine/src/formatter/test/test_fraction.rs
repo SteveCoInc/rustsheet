@@ -1,15 +1,10 @@
 #![allow(clippy::unwrap_used)]
 
+use super::text;
 use crate::{
     formatter::format::{format_number, FormatContext},
     locale::get_locale,
 };
-
-/// `value` under `format` in the en locale.
-fn text(value: f64, format: &str) -> String {
-    let ctx = FormatContext::new(get_locale("en").unwrap());
-    format_number(value, format, &ctx).text
-}
 
 // Expected texts are Excel's displayed text in eval/suites/gen-m10 (excel-graph, T-1611), cells
 // named by case-id prefix; docs/excel-semantics/number-formats.md "Fraction formats".
@@ -186,4 +181,163 @@ fn numerator_past_excels_bound_is_unshowable() {
     assert!(unshowable(-2_147_483_647.0, "??/??"));
     assert_eq!(text(1E15, "# ?/?"), "1000000000000000    ");
     assert_eq!(format_number(1000.0, "?/100", &ctx).text, "#VALUE!");
+}
+
+/// probes/fraction-format-features F9, F13 and I10 (excel-graph, T-2074): a negative value whose
+/// numerator rounds to zero takes no minus when there is no integer part, and a comma between
+/// integer placeholders groups the integer digits.
+#[test]
+fn zero_numerator_without_integer_has_no_minus_and_integer_groups() {
+    assert_eq!(text(-0.001, "?/100"), "0/100");
+    assert_eq!(text(-0.001, "?/00"), "0/01");
+    assert_eq!(text(-1.0 / 7.0, "# ?/2"), "-0    ");
+    assert_eq!(text(1234.5, "#,##0 ?/4"), "1,234 2/4");
+    assert_eq!(text(1234567.5, "#,##0 ?/4"), "1,234,567 2/4");
+}
+
+/// probes/fraction-overflow-scaled (excel-graph, T-2522): a `,` right after the denominator
+/// multiplies by 10^((-3n) mod 256); elsewhere it is a literal or vanishes.
+#[test]
+fn comma_after_denominator_scales_up_by_a_wrapped_exponent() {
+    let ctx = FormatContext::new(get_locale("en").unwrap());
+    let unshowable = |value: f64, format: &str| format_number(value, format, &ctx).unshowable;
+    assert_eq!(text(1E-250, "?/?,"), "1000/1");
+    assert_eq!(text(0.0, "?/?,"), "0/1");
+    assert!(unshowable(0.5, "?/?,"));
+    assert_eq!(text(1E-250, "?/?,,"), "1/1");
+    assert_eq!(text(1E-251, "?/?,,"), "0/1");
+    assert_eq!(text(1E-238, "?/?,,,"), "1000000000/1");
+    assert_eq!(text(1E-250, "?/4,"), "4000/4");
+    assert!(unshowable(2.0, "# ?/4,"));
+    assert_eq!(format_number(2.0, "# ?/4,", &ctx).text, "#VALUE!");
+    assert_eq!(text(1E-252, "?/?%,"), "0/1%,");
+    assert_eq!(text(1E-250, "?/? ,"), "0/1 ,");
+    assert_eq!(text(1234567.5, "0, ?/4"), "1234567 2/4");
+    assert_eq!(text(0.5, "0%,"), "50%,");
+    assert_eq!(text(21474836.469, "?/?%"), "2147483647/1%");
+    assert!(unshowable(21474836.47, "?/?%"));
+}
+
+/// probes/fraction-large-fixed-denominator and -six-digit-denominator (excel-graph, T-2522): past
+/// 32768 a fixed denominator is picked as for placeholders (up to 9999999) and prints the code's
+/// digits cut to its length; six digits are #VALUE!.
+#[test]
+fn fixed_denominator_past_32768_is_picked() {
+    let ctx = FormatContext::new(get_locale("en").unwrap());
+    assert_eq!(text(0.5, "?/32768"), "16384/32768");
+    assert_eq!(text(0.5, "?/32769"), "1/3    ");
+    assert_eq!(text(0.8192, "?/40000"), "512/400  ");
+    assert_eq!(text(0.8191874, "?/40000"), "4095937/40000");
+    assert_eq!(text(1.0 / 9_999_999.0, "?/40000"), "1/40000");
+    assert_eq!(text(1E-7, "?/40000"), "0/4    ");
+    assert_eq!(text(0.5, "??/40000"), " 1/4    ");
+    assert_eq!(text(0.5, "0/40000"), "1/4");
+    assert_eq!(text(1.5, "# ?/40000"), "1 1/4    ");
+    assert_eq!(format_number(0.5, "?/100000", &ctx).text, "#VALUE!");
+}
+
+/// probes/t3711-fraction-trailing-placeholders rows 5 and 9-19 and t4204-fraction-denominator-mixed
+/// (excel-graph, T-4204): a denominator's unused placeholders print in place; leading `#`s take no
+/// digit; a short denominator leaves out `0`s, then `#`s, then the rightmost `?`s.
+#[test]
+fn denominator_placeholders_print_in_place() {
+    assert_eq!(text(12.5, "# ?/?0"), "12 1/20"); // t3711 A5
+    assert_eq!(text(12.5, "# ?/??0"), "12 1/2 0"); // A9
+    assert_eq!(text(12.125, "# ?/?0?"), "12 1/80 "); // C16
+    assert_eq!(text(12.5, "# ?/??#"), "12 1/2 "); // A17
+    assert_eq!(text(12.5, "# ?/?#"), "12 1/2"); // A12
+    assert_eq!(text(12.5, "# ?/#0"), "12 1/2"); // A10
+    assert_eq!(text(0.5, "# ?/#?"), " 1/2"); // B13
+    assert_eq!(text(12.5, "# ?/0?"), "12 1/02"); // A11
+    assert_eq!(text(12.125, "# ?/0#"), "12 1/08"); // C14
+    assert_eq!(text(0.5, "# ?/00?"), " 1/002"); // B15
+    assert_eq!(text(12.5, "# ?/#0#"), "12 1/02"); // A19
+    assert_eq!(text(12.0, "# ?/?0"), "12     "); // B5
+    assert_eq!(text(12.5, "# ?/#?0"), "12 1/20"); // t4204 A2
+    assert_eq!(text(12.5, "# ?/?#?"), "12 1/2 "); // A4
+    assert_eq!(text(12.5, "# ?/#?#"), "12 1/2"); // A5
+    assert_eq!(text(12.125, "# ?/0??"), "12 1/08 "); // C8
+    assert_eq!(text(12.5, "# ?/0#?"), "12 1/02"); // A6
+    assert_eq!(text(0.123, "# ?/?0"), " 8/65"); // A9
+    assert_eq!(text(std::f64::consts::PI, "# ?/?0"), "3 1/70"); // B9
+    assert_eq!(text(0.3, "# ?/?0"), " 3/10"); // C9
+    assert_eq!(text(std::f64::consts::PI, "# ?/#0"), "3 1/7"); // B10
+    assert_eq!(text(std::f64::consts::PI, "# ?/0?"), "3 1/07"); // B13
+    assert_eq!(text(0.123, "# ?/??0"), " 23/187"); // A11
+    assert_eq!(text(0.3, "# ?/?0?"), " 3/100"); // C12
+}
+
+// probes/t4069-fixed-denominator-tail (T-4069): a placeholder after a fixed denominator makes
+// Excel pick the fraction and print the code's digits in place of the picked denominator's.
+#[test]
+fn a_placeholder_after_a_fixed_denominator_picks_the_fraction() {
+    for (value, code, expected) in [
+        (12.5, "# ?/4|0", "12 1/4|0"),
+        (12.5, "# ?/4", "12 2/4"),
+        (12.5, "# ?/8|0", "12 1/8|0"),
+        (12.5, "# ?/10|0", "12 1/1 |0"),
+        (12.6, "# ?/10|0", "12 3/1 |0"),
+        (12.375, "# ?/8|0", "12 3/8|0"),
+        (12.5, "?/4|0", "25/4|0"),
+        (12.0, "# ?/4|0", "12      "),
+    ] {
+        assert_eq!(text(value, code), expected, "{code} on {value}");
+    }
+}
+
+// Placeholders after a fraction print what the denominator hands on: spilled and lacking digits,
+// owed zeros and a due space (number-formats.md "Placeholders after a fraction"; excel-graph
+// probes/t4043-separated-slots A12, A24, A36, A71, t4043-fixed-denominator-slots, T-4515).
+#[test]
+fn placeholders_after_a_fraction_take_what_the_denominator_hands_on() {
+    assert_eq!(text(0.5, "# ?/4|?|?"), " 1/4| |0");
+    assert_eq!(text(0.5, "# ?/4|?|?|#"), " 1/4| |0|00");
+    assert_eq!(text(0.5, "# ?/16|?|?"), " 1/1 |0| ");
+    assert_eq!(text(0.5, "# ?/100|#|?|?"), " 1/1  ||0|0");
+    assert_eq!(text(0.0625, "# ?/4 ? 0"), " 1/4 6 00");
+    assert_eq!(text(0.3, "# 0/4|0"), "3/40|0");
+    assert_eq!(text(0.5, "# ?/16|#"), " 1/1 |");
+    assert_eq!(text(0.3, "# ?/100|##"), " 3/10 |0");
+    // A blank fraction's placeholder is as wide as what it would print.
+    assert_eq!(text(0.0, "# ?/100|##"), "0       ");
+}
+
+// A `,` after the decimal point with a placeholder anywhere after it is inert; after a literal a
+// run prints one `,`; after a fraction a `,` does not group (probes/t3598-decimal-part-commas A23,
+// A24, A26, t3666-review-followups A7, A10, t4515-fraction-tail-holdout A18, A19, A20, T-4515).
+#[test]
+fn commas_after_the_point_or_a_fraction() {
+    assert_eq!(text(1234567.89, "0.0,,0"), "1234567.89");
+    assert_eq!(text(1234567.89, "0.,0"), "1234567.9");
+    assert_eq!(text(1234567.89, "0.,"), "1235.");
+    assert_eq!(text(1234567.89, "0.00|,0"), "1234567.89|,0");
+    assert_eq!(text(1234567.891, "0.0|,,0"), "1234567.8|,9");
+    assert_eq!(text(1234567.891, "0.00,|0"), "1234567.89|1");
+    assert_eq!(text(1234567.891, "0.0,0,"), "1234.57");
+    assert_eq!(text(1234567.89, "# ?/?|#,##0"), "1234567 8/9|0000");
+}
+
+// A `.` among the placeholders after a fraction splits them like a number's point: before it the
+// last `?` takes every spilled digit and zeros are left pending; after it nothing spills, pending
+// zeros print first, and blanks run while a space is due (probes/t4594-fraction-tail-point-explore
+// rows 2, 3, 6, 22, t4594-fraction-tail-point-explore-wide C82, t4594-fraction-tail-point-holdout-2
+// A22, t4594-fraction-tail-point-holdout-3 A24, t4594-fraction-tail-point-holdout-4 B12,
+// t4515-fresh-sweep A1, A5, C5, A8; T-4594).
+#[test]
+fn placeholders_after_a_fraction_with_a_point() {
+    assert_eq!(text(0.0123, "# ?/7 ?.0"), " 123/7 0000.0");
+    assert_eq!(text(0.0123, "# ?/1000|?.#"), " 123/1000|0.");
+    assert_eq!(text(0.123456789, "# ?/1000|?.#"), " 10/10  |0.0");
+    assert_eq!(text(0.0123, "# ?/40|?.0#"), " 123/40|000.00");
+    assert_eq!(text(0.0123, "# ?/7|?.0#"), " 123/7|0000.00");
+    assert_eq!(text(0.0123, "# ?/7|?.##"), " 123/7|0000.");
+    assert_eq!(text(0.0123, "# ?/7|?.#?"), " 123/7|0000.0");
+    assert_eq!(text(0.0123, "# ?/7|0.0#"), " 123/7|00000.0");
+    // Pending zeros: two `?` spaces, `??0`, `#?#`, and blanks after the point.
+    assert_eq!(text(0.5, "# ?/7|??.###"), " 1/7|  .00");
+    assert_eq!(text(0.04, "# ?/3|??0.?0?"), " 1/3|5 00.000");
+    assert_eq!(text(0.07, "# ?/64|#?#.0##"), " 7/64|00000.00");
+    assert_eq!(text(0.55, "# ?/128|?.##0?"), " 11/12 |0.00");
+    // A blank fraction's tail is as wide as what it would print.
+    assert_eq!(text(12.0, "# ?/1000|?.#"), "12           ");
 }

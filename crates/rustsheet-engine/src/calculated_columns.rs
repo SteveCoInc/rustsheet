@@ -1,0 +1,700 @@
+//! Calculated columns: a formula typed into a table column fills the column, as Excel does
+//! (docs/excel-semantics/references.md, "Calculated columns: a formula typed into a table
+//! column"; T-2957, T-2958), and one typed just right of a table grows it by a column (T-2968),
+//! as a constant does (T-3218); either typed just below it grows it by a row (T-3273).
+
+use crate::actions::displace_cf_formula_str;
+use crate::constants::{LAST_COLUMN, LAST_ROW};
+use crate::expressions::parser::stringify::{DisplaceData, Displacement};
+use crate::expressions::parser::{stringify::to_excel_string, Node};
+use crate::expressions::types::CellReferenceRC;
+use crate::expressions::utils::number_to_column;
+use crate::language::get_default_language;
+use crate::locale::get_default_locale;
+use crate::model::Model;
+use crate::table_edits::{append_column, bounds, Bounds};
+use crate::types::{Cell, Table};
+
+/// The direction a [`TableExpansion`] grows its table in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TableGrowth {
+    /// By one column, typed just right of the table (T-2968, T-3218).
+    Right,
+    /// By one row, typed just below its last data row (T-3273).
+    Down,
+}
+
+/// A table that a formula or constant typed just right of it grows by one column (T-2968, T-3218),
+/// or typed just below it by one row (T-3273).
+#[derive(Debug, Clone, PartialEq)]
+pub struct TableExpansion {
+    /// The table, as it is before the expansion.
+    pub table: Table,
+    /// Whether it grows by a column or a row.
+    pub growth: TableGrowth,
+    /// The new column's cells other than the typed one, (row, column): its header cell and the
+    /// data rows the formula fills, which the expansion writes. A new row writes none.
+    pub cells: Vec<(i32, i32)>,
+    /// Whether the typed cell is the header cell. Then the value is not stored as typed: a formula
+    /// gives the header text `0`, a constant [`TableExpansion::header_text`].
+    pub header: bool,
+    /// The header text a constant typed into the header cell gives, as text even for a number
+    /// (`5` typed into D1 is the text `5`, TYPE 2; probes/t3003-const-number-d1). `None` for a
+    /// formula or a cell that is not the header cell.
+    pub header_text: Option<String>,
+}
+
+/// The header text of `value`, a constant typed into the header cell of a table's new column:
+/// the text as typed, without the `'` that marks typed text (unprobed; Excel's own header is
+/// probed with `5` and `hello` only, probes/t3003-const-*-d1).
+fn constant_header(value: &str) -> String {
+    value.strip_prefix('\'').unwrap_or(value).to_string()
+}
+
+/// The A1 range of a table of [`Bounds`] `b` grown by `growth`.
+///
+/// # Errors
+/// When the grown range has no column name (beyond the last column).
+fn grown_reference(b: &Bounds, growth: TableGrowth) -> Result<String, String> {
+    let (right, bottom) = match growth {
+        TableGrowth::Right => (b.right + 1, b.bottom),
+        TableGrowth::Down => (b.right, b.bottom + 1),
+    };
+    let (first, last) = number_to_column(b.left)
+        .zip(number_to_column(right))
+        .ok_or_else(|| format!("No column {right}"))?;
+    Ok(format!("{first}{}:{last}{bottom}", b.top))
+}
+
+/// The table column a typed formula fills as a calculated column ([`Model::calculated_column`]).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CalculatedColumn {
+    /// The table, as it is before the formula is typed.
+    pub table: Table,
+    /// The column's other data rows, (row, column): the cells the formula fills.
+    pub targets: Vec<(i32, i32)>,
+}
+
+impl Model {
+    /// The tables on the sheet named `sheet_name` whose range fits, with their [`Bounds`].
+    fn table_bounds_on_sheet<'a>(
+        &'a self,
+        sheet_name: &'a str,
+    ) -> impl Iterator<Item = (&'a Table, Bounds)> + 'a {
+        (self.workbook.tables.values())
+            .filter(move |table| table.is_on_sheet(sheet_name))
+            .filter_map(|table| Some((table, bounds(table)?)))
+    }
+
+    /// The table that typing `value` into (`sheet`, `row`, `column`) grows by one column, as Excel
+    /// grows a table when a formula or a constant is typed into the cell just right of its header
+    /// row, a data row or its totals row (probes/t2957-expand-right-data, -header: `T` A1:C4
+    /// becomes A1:D4; t3003-const-*: `5` or `hello` grows it too; t3003-totals-*: a totals row
+    /// does not stop it; docs/excel-semantics/references.md "Calculated columns" rules 7a, 7c),
+    /// or by one row, typed into the cell just below its last data row inside its columns
+    /// (t3003-below-last-row, -const: `=B4*2` or `7` in A5 grows `T` A1:C4 to A1:C5; rule 7e).
+    /// `None` for an empty value, or a new column or row whose other cells are not all blank (Excel
+    /// stays put for a column, rule 7d; unprobed for a row) or that another table overlaps
+    /// (unprobed), so the cell is typed as before. A table with a totals row does not grow down
+    /// (unprobed: the totals row is the cell above). `None` too for a formula that does not parse
+    /// there as typed: Excel refuses such an entry and changes nothing.
+    ///
+    /// # Errors
+    /// When `sheet` does not exist.
+    pub fn table_expansion(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        value: &str,
+    ) -> Result<Option<TableExpansion>, String> {
+        if value.is_empty() || column > LAST_COLUMN || row > LAST_ROW {
+            return Ok(None);
+        }
+        let worksheet = self.workbook.worksheet(sheet)?;
+        let sheet_name = worksheet.get_name();
+        let on_sheet = || self.table_bounds_on_sheet(&sheet_name);
+        let right = || {
+            on_sheet()
+                .find(|(_, b)| b.right + 1 == column && (b.top..=b.bottom).contains(&row))
+                .map(|(table, b)| (table, b, TableGrowth::Right))
+        };
+        let down = || {
+            on_sheet()
+                .find(|(table, b)| {
+                    table.totals_row_count == 0
+                        && b.bottom + 1 == row
+                        && (b.left..=b.right).contains(&column)
+                })
+                .map(|(table, b)| (table, b, TableGrowth::Down))
+        };
+        let Some((table, b, growth)) = right().or_else(down) else {
+            return Ok(None);
+        };
+        // The new column or row, (top, left, bottom, right), which must be blank but for the typed
+        // cell and must not reach into another table.
+        let (top, left, bottom, right) = match growth {
+            TableGrowth::Right => (b.top, column, b.bottom, column),
+            TableGrowth::Down => (row, b.left, row, b.right),
+        };
+        let overlapped = on_sheet().any(|(_, other)| {
+            other.left <= right && left <= other.right && other.top <= bottom && top <= other.bottom
+        });
+        let blank = (top..=bottom)
+            .flat_map(|r| (left..=right).map(move |c| (r, c)))
+            .filter(|&cell| cell != (row, column))
+            .all(|(r, c)| matches!(worksheet.cell(r, c), None | Some(Cell::EmptyCell { .. })));
+        if overlapped || !blank {
+            return Ok(None);
+        }
+        let formula = value.starts_with('=');
+        if growth == TableGrowth::Down {
+            // A new row writes nothing besides the typed cell (filling a calculated column into it
+            // is unprobed: t3003-below-last-row reads only ROWS and the typed cell back).
+            let expansion = TableExpansion {
+                table: table.clone(),
+                growth,
+                cells: Vec::new(),
+                header: false,
+                header_text: None,
+            };
+            return Ok(
+                (!formula || self.parses_as_typed(sheet, row, column, value)).then_some(expansion),
+            );
+        }
+        let header = table.header_row_count > 0 && row == b.top;
+        // Only a formula typed into a data row fills the other data rows; the totals cell is
+        // never filled, and a formula typed into it fills nothing (t3003-totals-data-row D5
+        // blank; t3003-totals-totals-row D2:D4 blank). A constant fills nothing either
+        // (t3003-const-*-d2 D3:D4 blank).
+        let fills = formula && (b.data.0..=b.data.1).contains(&row);
+        let cells = (b.top..=b.bottom)
+            .filter(|&r| r != row)
+            .filter(|&r| (r == b.top && table.header_row_count > 0) || fills && r <= b.data.1)
+            .map(|r| (r, column))
+            .collect();
+        // Typed beside a data row, the formula parses inside the table it grows, so an unqualified
+        // `[@Col]` names that table (probes/t3003-unqualified-structured-d2, rule 7f). Beside the
+        // header or totals row it parses outside, as before (unprobed).
+        let grown = fills
+            .then(|| grown_reference(&b, growth).ok())
+            .flatten()
+            .map(|reference| Table {
+                reference,
+                ..table.clone()
+            });
+        let expansion = TableExpansion {
+            table: table.clone(),
+            growth,
+            // Typed into the header cell, the value writes no data row.
+            cells: if header { Vec::new() } else { cells },
+            header,
+            header_text: (header && !formula).then(|| constant_header(value)),
+        };
+        if !formula {
+            return Ok(Some(expansion));
+        }
+        let parses = match grown {
+            Some(grown) => self.parses_inside(grown, sheet, row, column, value),
+            None => self.parses_as_typed(sheet, row, column, value),
+        };
+        Ok(parses.then_some(expansion))
+    }
+
+    /// Whether `value`, a formula, parses as typed into (`sheet`, `row`, `column`): no parse
+    /// error and no refusal of typed text (decision 0103).
+    fn parses_as_typed(&mut self, sheet: u32, row: i32, column: i32, value: &str) -> bool {
+        let Some(formula) = self.formula_without_prefix(value) else {
+            return false;
+        };
+        self.parser.set_typed(true);
+        let parsed = self.parse_cell_formula(sheet, row, column, formula);
+        self.parser.set_typed(false);
+        matches!(parsed, Ok(node) if !matches!(node, Node::ParseErrorKind { .. }))
+    }
+
+    /// [`Model::parses_as_typed`] with `grown` standing in for the table of its name for this one
+    /// parse: the parser's table list is put back after it, so nothing changes.
+    fn parses_inside(
+        &mut self,
+        grown: Table,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        value: &str,
+    ) -> bool {
+        let name = grown.name.clone();
+        let before = self.parser.replace_table(grown);
+        let parses = self.parses_as_typed(sheet, row, column, value);
+        match before {
+            Some(table) => self.parser.replace_table(table),
+            None => self.parser.remove_table(&name),
+        };
+        parses
+    }
+
+    /// Grows the table of `expansion` (on `sheet`). A [`TableGrowth::Down`] expansion only moves
+    /// the reference down a row (T-3273). A new column also gets its name written into its header
+    /// cell: `Column1` as for a column insert (probes/t2957-expand-right-data: D1 is `Column1`),
+    /// `0` when a formula was typed into the header cell itself (-header: `=1+1` typed into D1
+    /// leaves the text `0`, not 2 and no formula; rule 7b), or the text of a constant typed there
+    /// (t3003-const-*-d1, rule 7a). A name the table already has falls back to `ColumnN`
+    /// (unprobed).
+    pub(crate) fn expand_table(
+        &mut self,
+        sheet: u32,
+        expansion: &TableExpansion,
+    ) -> Result<(), String> {
+        let Some(b) = bounds(&expansion.table) else {
+            return Ok(());
+        };
+        let reference = grown_reference(&b, expansion.growth)?;
+        let name = expansion.table.name.clone();
+        let Some(table) = self.workbook.tables.get_mut(&name) else {
+            return Ok(());
+        };
+        table.reference = reference;
+        if expansion.growth == TableGrowth::Down {
+            self.reset_tables();
+            return Ok(());
+        }
+        let column = b.right + 1;
+        let typed_name = match &expansion.header_text {
+            Some(text) => Some(text.as_str()),
+            None => expansion.header.then_some("0"),
+        };
+        let header_text = append_column(&mut table.columns, typed_name);
+        let has_header = table.header_row_count > 0;
+        self.reset_tables();
+        if has_header {
+            let written = self
+                .prepare_cell_for_user_input(sheet, b.top, column)
+                .and_then(|()| self.update_cell_with_text(sheet, b.top, column, &header_text));
+            if written.is_err() {
+                // No grown table without its header: put it back.
+                self.restore_table(expansion.table.clone());
+            }
+            written?;
+        }
+        Ok(())
+    }
+
+    /// Puts `table` back as it was (the facade's undo of [`Model::table_expansion`]'s growth),
+    /// and reparses every formula against it.
+    pub fn restore_table(&mut self, table: Table) {
+        self.workbook.tables.insert(table.name.clone(), table);
+        self.reset_tables();
+    }
+
+    /// Makes column `column` (its 0-based index in the table) of table `table` a calculated column
+    /// with `formula`, file-form text without `=` as xlsx's `calculatedColumnFormula` holds it,
+    /// as a workbook Excel saved with one loads: no cell changes, and a formula typed into the
+    /// column later re-fills it (references.md "Calculated columns" rule 9). Returns the table as
+    /// it was, for the facade's rollback.
+    ///
+    /// # Errors
+    /// When there is no such table or column.
+    pub fn set_table_column_formula(
+        &mut self,
+        table: &str,
+        column: usize,
+        formula: &str,
+    ) -> Result<Table, String> {
+        let current =
+            (self.workbook.tables.get_mut(table)).ok_or_else(|| format!("no table {table}"))?;
+        let before = current.clone();
+        let table_column = (current.columns.get_mut(column))
+            .ok_or_else(|| format!("table {table} has no column {column}"))?;
+        table_column.calculated_column_formula = Some(formula.to_string());
+        Ok(before)
+    }
+
+    /// The table, as it is now, whose column a formula typed into (`sheet`, `row`, `column`)
+    /// fills or re-fills as a calculated column, and the cells it fills, every other data row of
+    /// the column (row, column). The table is one in whose data rows the cell is, when the
+    /// column's other data cells are all blank (Excel fills an empty column), or all hold one
+    /// formula and the column is a calculated column (`calculated_column_formula`: Excel re-fills
+    /// a filled column, but not a column of identical stored formulas, rule 8 of
+    /// docs/excel-semantics/references.md "Calculated columns"). `None` when another data cell
+    /// holds a value or a different formula (Excel leaves a column with an exception, a typed
+    /// constant, alone), or is blank beside formulas (probes/t2957-*, t2983-*). The typed formula
+    /// makes the column a calculated column, so the facade keeps this table for its rollback.
+    ///
+    /// # Errors
+    /// When `sheet` does not exist.
+    pub fn calculated_column(
+        &self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+    ) -> Result<Option<CalculatedColumn>, String> {
+        let Some(fill) = self.calculated_column_fill(sheet, row, column)? else {
+            return Ok(None);
+        };
+        Ok(
+            (self.workbook.tables.get(&fill.table)).map(|table| CalculatedColumn {
+                table: table.clone(),
+                targets: fill.targets,
+            }),
+        )
+    }
+
+    /// What a formula typed into (`sheet`, `row`, `column`) fills ([`Model::calculated_column`]).
+    /// The totals row is never filled.
+    pub(crate) fn calculated_column_fill(
+        &self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+    ) -> Result<Option<ColumnFill>, String> {
+        let worksheet = self.workbook.worksheet(sheet)?;
+        let sheet_name = worksheet.get_name();
+        let Some((table, b)) = self.table_bounds_on_sheet(&sheet_name).find(|(_, b)| {
+            (b.left..=b.right).contains(&column) && (b.data.0..=b.data.1).contains(&row)
+        }) else {
+            return Ok(None);
+        };
+        let Ok(index) = usize::try_from(column - b.left) else {
+            return Ok(None);
+        };
+        let calculated =
+            (table.columns.get(index)).is_some_and(|c| c.calculated_column_formula.is_some());
+        // The column's one formula, and whether a blank cell was met: the other cells must be all
+        // blank or all that formula, so blank and formula cells mixed are no calculated column.
+        let mut formula = None;
+        let mut blank = false;
+        let mut targets = Vec::new();
+        for r in b.data.0..=b.data.1 {
+            if r == row {
+                continue;
+            }
+            match worksheet.cell(r, column) {
+                None | Some(Cell::EmptyCell { .. }) => blank = true,
+                Some(cell) => match (cell.get_formula(), formula) {
+                    (Some(f), None) => formula = Some(f),
+                    (Some(f), Some(g)) if f == g => {}
+                    _ => return Ok(None),
+                },
+            }
+            if blank && formula.is_some() {
+                return Ok(None);
+            }
+            targets.push((r, column));
+        }
+        // Identical formulas the column holds without being a calculated column were stored, not
+        // filled by typing (probes/t2983-identical-stored-refill: only the typed cell changes).
+        if formula.is_some() && !calculated {
+            return Ok(None);
+        }
+        Ok(Some(ColumnFill {
+            table: table.name.clone(),
+            index,
+            first_row: b.data.0,
+            targets,
+        }))
+    }
+
+    /// Writes the formula of (`sheet`, `row`, `column`) into `fill`'s targets, the cells
+    /// [`Model::calculated_column_fill`] found before it was typed, each with its own style, and
+    /// makes the column a calculated column (`calculated_column_formula`, the first data row's
+    /// text in file form). The formula is stored relative to its
+    /// cell, so an A1 reference fills shifted, like a fill down (`=A2*2` gives `=A3*2` a row
+    /// below; probes/t2957-a1-reference). Nothing is written when the cell holds no formula: a typed
+    /// constant fills nothing. A target the write guards refuse (`prepare_cell_for_user_input`)
+    /// ends the fill with an error and the rows before it filled; the facade's edit rolls the
+    /// whole write back.
+    pub(crate) fn fill_calculated_column(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        fill: &ColumnFill,
+    ) -> Result<(), String> {
+        let Some(formula_index) = self
+            .workbook
+            .worksheet(sheet)?
+            .cell(row, column)
+            .and_then(Cell::get_formula)
+        else {
+            return Ok(());
+        };
+        for &(r, c) in &fill.targets {
+            self.prepare_cell_for_user_input(sheet, r, c)?;
+            let style = self.formula_style_index(sheet, r, c)?;
+            self.set_formula_index_with_units(sheet, r, c, formula_index, style)?;
+        }
+        // File form (xlsx-storage.md, "A calculated column is saved as `calculatedColumnFormula`
+        // plus one formula per row"), as the first data row reads it: an exception typed into a
+        // data row later does not change it, as in Excel.
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        let context = CellReferenceRC {
+            sheet: sheet_name,
+            row: fill.first_row,
+            column,
+        };
+        let text = usize::try_from(formula_index)
+            .ok()
+            .and_then(|i| self.parsed_formulas.get(sheet as usize)?.get(i))
+            .map(|parsed| to_excel_string(&parsed.evaluated, &context));
+        if let Some(table_column) = (self.workbook.tables.get_mut(&fill.table))
+            .and_then(|table| table.columns.get_mut(fill.index))
+        {
+            table_column.calculated_column_formula = text;
+        }
+        Ok(())
+    }
+}
+
+/// The most calculated-column cells one row insert fills ([`Model::refuse_oversized_column_fill`]):
+/// one whole column, 2^20 cells, as many as `limits::check_array_cells` allows in an
+/// array (directive 5; a DEVIATION, decision 0014).
+pub(crate) const MAX_INSERT_FILL_CELLS: u64 = 1 << 20;
+
+/// The calculated-column fill of one typed cell ([`Model::calculated_column_fill`]).
+pub(crate) struct ColumnFill {
+    /// The table's name.
+    table: String,
+    /// The column's index in the table.
+    index: usize,
+    /// The table's first data row.
+    first_row: i32,
+    /// The other data rows of the column, (row, column): the cells the formula fills.
+    targets: Vec<(i32, i32)>,
+}
+
+/// A calculated column's stored formula (`TableColumn::calculated_column_formula`) as a row or
+/// column insert or delete displaces it, in user form, before the tables follow the edit
+/// ([`Model::displaced_column_formulas`]).
+pub(crate) struct DisplacedColumnFormula {
+    /// The table's key in `Workbook::tables`.
+    table: String,
+    /// The column's `TableColumn::id`, which stays with the column through the edit.
+    id: u32,
+    /// The row the column's first data cell is on after the edit: the displaced text reads there.
+    /// It is no longer the first data row after a row insert at that row, which grows the table
+    /// above the cell (T-4692).
+    row: i32,
+    /// The displaced formula, without `=`, in the default locale.
+    text: String,
+}
+
+impl Model {
+    /// The stored formula of every calculated column, displaced by the row or column insert or
+    /// delete `displacement` as the formula of the column's first data cell is: Excel saves the
+    /// column formula the edit made of that cell's formula (xlsx-storage.md, "A calculated column
+    /// is saved as `calculatedColumnFormula` plus one formula per row"; T-4274
+    /// t4274-calc-column-*: `A2*2` is `B2*2` after a column insert at A and `A3*2` after a row
+    /// insert at 1, and stays `A2*2` after a row insert inside the data rows or a delete of a
+    /// column it does not read). A formula with a structured reference keeps its text: it names
+    /// columns, not cells (`T[[#This Row],[Col]]*2` stays so through a column insert at A, as in
+    /// Excel), and the displacement would lower its `#This Row` to the cell's area under a column
+    /// edit (T-3739). A `[` outside a structured reference (in a string) keeps the text too. A
+    /// column whose first data cell the edit deletes keeps its text (unprobed), as does every
+    /// column under any other kind of edit.
+    pub(crate) fn displaced_column_formulas(
+        &mut self,
+        displacement: Displacement,
+    ) -> Vec<DisplacedColumnFormula> {
+        let (sheet, row_edit, at, delta) = match *displacement.data {
+            DisplaceData::Row { sheet, row, delta } => (sheet, true, row, delta),
+            DisplaceData::Column {
+                sheet,
+                column,
+                delta,
+            } => (sheet, false, column, delta),
+            _ => return Vec::new(),
+        };
+        let deleted = |index: i32| delta < 0 && (at..at.saturating_sub(delta)).contains(&index);
+        let edited_sheet = self.workbook.worksheet(sheet).map(|w| w.get_name()).ok();
+        let (locale, language) = (self.locale, self.language);
+        self.parser.set_locale(get_default_locale());
+        self.parser.set_language(get_default_language());
+        let mut displaced = Vec::new();
+        for (name, table) in &self.workbook.tables {
+            let Some(b) = bounds(table) else {
+                continue;
+            };
+            let on_edited = edited_sheet
+                .as_deref()
+                .is_some_and(|s| table.is_on_sheet(s));
+            for (column, table_column) in (b.left..).zip(&table.columns) {
+                let Some(formula) = &table_column.calculated_column_formula else {
+                    continue;
+                };
+                if formula.contains('[')
+                    || on_edited && deleted(if row_edit { b.data.0 } else { column })
+                {
+                    continue;
+                }
+                let context = CellReferenceRC {
+                    sheet: table.sheet_name.clone(),
+                    row: b.data.0,
+                    column,
+                };
+                // A row edit above or at the first data cell moves it by `delta` (a delete of the
+                // cell itself is skipped above).
+                let moves = on_edited && row_edit && b.data.0 >= at;
+                displaced.push(DisplacedColumnFormula {
+                    table: name.clone(),
+                    id: table_column.id,
+                    row: if moves {
+                        b.data.0.saturating_add(delta)
+                    } else {
+                        b.data.0
+                    },
+                    text: displace_cf_formula_str(
+                        &mut self.parser,
+                        formula,
+                        &context,
+                        displacement,
+                    ),
+                });
+            }
+        }
+        self.parser.set_locale(locale);
+        self.parser.set_language(language);
+        displaced
+    }
+
+    /// Stores `displaced` ([`Model::displaced_column_formulas`]) in file form, read where the
+    /// column's first data cell moved and printed at the column's first data row after the tables
+    /// followed the edit, as the fill stores it (`T[[#This Row],[Col]]*2` stays so, as in Excel).
+    /// The two rows differ after a row insert at the first data row: `A2*2` stays `A2*2`, the
+    /// formula Excel fills into the inserted row and saves as `calculatedColumnFormula` (T-4692: the
+    /// cached `table1.xml` of probes/table-edits/t4692-insert-row-first-data).
+    pub(crate) fn set_displaced_column_formulas(&mut self, displaced: Vec<DisplacedColumnFormula>) {
+        let (locale, language) = (self.locale, self.language);
+        self.parser.set_locale(get_default_locale());
+        self.parser.set_language(get_default_language());
+        for DisplacedColumnFormula {
+            table,
+            id,
+            row,
+            text,
+        } in displaced
+        {
+            let Some(table) = self.workbook.tables.get_mut(&table) else {
+                continue;
+            };
+            let Some(b) = bounds(table) else {
+                continue;
+            };
+            let Some((column, table_column)) = (b.left..)
+                .zip(table.columns.iter_mut())
+                .find(|(_, c)| c.id == id)
+            else {
+                continue;
+            };
+            let moved = CellReferenceRC {
+                sheet: table.sheet_name.clone(),
+                row,
+                column,
+            };
+            let node = self.parser.parse(&text, &moved);
+            let first = CellReferenceRC {
+                row: b.data.0,
+                ..moved
+            };
+            table_column.calculated_column_formula = Some(to_excel_string(&node, &first));
+        }
+        self.parser.set_locale(locale);
+        self.parser.set_language(language);
+    }
+
+    /// Refuses a row insert of `count` rows at `row` on `sheet` that would fill more than
+    /// [`MAX_INSERT_FILL_CELLS`] calculated-column cells ([`Model::fill_inserted_data_rows`]),
+    /// before the insert changes anything (directive 5: one call must not write an unbounded
+    /// number of cells). Excel fills them all; the cap is a DEVIATION (decision 0014;
+    /// references.md "Rows inserted into a calculated column's table"). It counts every calculated
+    /// column of each table whose first data row to its last row (the totals row, if any) holds
+    /// `row`, the inserts that add data rows, so it may refuse a little early, never late.
+    pub(crate) fn refuse_oversized_column_fill(
+        &self,
+        sheet: u32,
+        row: i32,
+        count: i32,
+    ) -> Result<(), String> {
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        let columns: usize = (self.workbook.tables.values())
+            .filter(|table| table.is_on_sheet(&sheet_name))
+            .filter(|table| bounds(table).is_some_and(|b| b.data.0 <= row && row <= b.bottom))
+            .map(|table| {
+                (table.columns.iter())
+                    .filter(|c| c.calculated_column_formula.is_some())
+                    .count()
+            })
+            .sum();
+        let cells = u64::try_from(columns)
+            .unwrap_or(u64::MAX)
+            .saturating_mul(u64::try_from(count).unwrap_or(0));
+        if cells > MAX_INSERT_FILL_CELLS {
+            return Err(format!(
+                "Cannot insert rows because that would fill {cells} calculated-column cells (at most {MAX_INSERT_FILL_CELLS})"
+            ));
+        }
+        Ok(())
+    }
+
+    /// Writes each calculated column's formula into the rows `rows` (first, last) that a row
+    /// insert on `sheet` added to the data rows of the tables `grown` (their keys in
+    /// `Workbook::tables`), after the tables and their column formulas followed the insert, as
+    /// Excel fills them (T-4692: probes/table-edits/t4274-calc-column-insert-row-3, T on A1:C4
+    /// with `=A2*2` in C2, then `insert_row` 3: Excel's C3 holds `=A3*2`). The stored column
+    /// formula (`calculated_column_formula`, file form at the first data row) is filled down,
+    /// with each cell's own style, like [`Model::fill_calculated_column`]. A column whose stored
+    /// formula does not parse fills nothing (it can come from an untrusted file).
+    pub(crate) fn fill_inserted_data_rows(
+        &mut self,
+        sheet: u32,
+        (first, last): (i32, i32),
+        grown: &[String],
+    ) -> Result<(), String> {
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        let mut columns = Vec::new();
+        for name in grown {
+            let Some(table) = self.workbook.tables.get(name) else {
+                continue;
+            };
+            let Some(b) = bounds(table) else {
+                continue;
+            };
+            if !table.is_on_sheet(&sheet_name) || first < b.data.0 || last > b.data.1 {
+                continue;
+            }
+            for (column, table_column) in (b.left..).zip(&table.columns) {
+                if let Some(text) = &table_column.calculated_column_formula {
+                    columns.push((b.data.0, column, text.clone()));
+                }
+            }
+        }
+        if columns.is_empty() {
+            return Ok(());
+        }
+        let (locale, language) = (self.locale, self.language);
+        self.parser.set_locale(get_default_locale());
+        self.parser.set_language(get_default_language());
+        let nodes: Vec<(i32, Node)> = columns
+            .into_iter()
+            .map(|(row, column, text)| {
+                let context = CellReferenceRC {
+                    sheet: sheet_name.clone(),
+                    row,
+                    column,
+                };
+                (column, self.parser.parse(&text, &context))
+            })
+            .filter(|(_, node)| !matches!(node, Node::ParseErrorKind { .. }))
+            .collect();
+        self.parser.set_locale(locale);
+        self.parser.set_language(language);
+        for (column, node) in nodes {
+            // The parsed formula is relative to its cell, so one shared formula fills every row.
+            let formula_index = self.shared_formula_index(sheet, node)?;
+            for row in first..=last {
+                let style = self.formula_style_index(sheet, row, column)?;
+                self.set_formula_index_with_units(sheet, row, column, formula_index, style)?;
+            }
+        }
+        Ok(())
+    }
+}

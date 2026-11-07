@@ -47,7 +47,7 @@ fn implicit_intersection_operator() {
     model._set("B1", "=FORMULATEXT(@A:A)");
     model.evaluate();
 
-    assert_eq!(model._get_text("B1"), *"=1+2");
+    assert_eq!(model._get_text("B1"), *"=1 +  2");
 }
 
 #[test]
@@ -69,8 +69,8 @@ fn test_language_independence() {
     model.set_language("fr").unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_formula("A1"), *"=SOMME(1,2)");
-    assert_eq!(model._get_text("B1"), *"=SUM(1,2)");
+    assert_eq!(model._get_formula("A1"), *"=SOMME(1, 2)");
+    assert_eq!(model._get_text("B1"), *"=SUM(1, 2)");
 }
 
 #[test]
@@ -84,8 +84,8 @@ fn test_locale() {
     model.set_locale("fr").unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_formula("A1"), *"=SOMME(1,123;2)");
-    assert_eq!(model._get_text("B1"), *"=SUM(1,123;2)");
+    assert_eq!(model._get_formula("A1"), *"=SOMME(1,123; 2)");
+    assert_eq!(model._get_text("B1"), *"=SUM(1,123; 2)");
 }
 
 #[test]
@@ -110,6 +110,16 @@ fn test_sign_prefixed() {
         assert_eq!(model._get_formula(cell), *"", "{input}");
     }
 
+    // Coercion refuses a trailing `$` (T-3742), typed input keeps reading it: `-200$` is no
+    // formula (unprobed, T-3835).
+    for (cell, input) in [("A10", "-200$"), ("A11", "-200 $")] {
+        model._set(cell, input);
+        assert_eq!(model._get_formula(cell), *"", "{input}");
+    }
+    // Typed `-%1.5` shares VALUE's reader: the number -0.015, no formula (T-3742).
+    model._set("A12", "-%1.5");
+    assert_eq!(model._get_formula("A12"), *"");
+
     model._set("A7", "-B");
     assert_eq!(model._get_formula("A7"), *"=-B");
 
@@ -122,6 +132,7 @@ fn test_sign_prefixed() {
     assert_eq!(model._get_text("A5"), *"-42");
     assert_eq!(model._get_text("A6"), *"42");
     assert_eq!(model._get_text("A7"), *"#NAME?");
+    assert_eq!(model._get_text("A12"), *"-1.50%");
 }
 
 #[test]
@@ -219,4 +230,56 @@ fn index_argument_errors() {
     assert_eq!(model._get_text("A1"), *"#REF!");
     assert_eq!(model._get_text("A2"), *"#VALUE!");
     assert_eq!(model._get_text("A3"), *"#ERROR!");
+}
+
+/// A pick call is read as the cell its taken arm or lookup picks, a value as `#VALUE!` and a
+/// failed pick as its own error; a lifted INDIRECT reads each element
+/// (probes/formulatext-pick-scalars-and-arrays, excel-graph; T-2726).
+#[test]
+fn pick_calls_read_the_cell_they_pick() {
+    let mut model = new_empty_model();
+    model._set("H1", "1");
+    model._set("H2", "=H1+1");
+    model._set("H3", "3");
+    model._set("I2", "x");
+    model._set("A1", "=FORMULATEXT(IF(TRUE,H2,5))");
+    model._set("A2", "=FORMULATEXT(IF(TRUE,5,H1))");
+    model._set("A3", "=FORMULATEXT(SWITCH(9,1,5,H2))");
+    model._set("A4", "=FORMULATEXT(SWITCH(9,1,5))");
+    model._set("A5", "=FORMULATEXT(XLOOKUP(\"x\",I1:I3,H1:H3))");
+    model._set("A6", "=FORMULATEXT(XLOOKUP(9,H1:H3,H1:H3,\"nf\"))");
+    model._set("A7", "=FORMULATEXT(LET(x,H2,x+1))");
+    model._set("A8", "=FORMULATEXT(TAKE(H1:H3,2))");
+    model._set("C1", "=FORMULATEXT(IF({TRUE,FALSE},NA(),H2))");
+    model._set("C2", "=FORMULATEXT(INDIRECT({\"H1\",\"H2\",\"zz zz\"}))");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"=H1+1");
+    assert_eq!(model._get_text("A2"), *"#VALUE!");
+    assert_eq!(model._get_text("A3"), *"=H1+1");
+    assert_eq!(model._get_text("A4"), *"#N/A");
+    assert_eq!(model._get_text("A5"), *"=H1+1");
+    assert_eq!(model._get_text("A6"), *"#VALUE!");
+    assert_eq!(model._get_text("A7"), *"#VALUE!");
+    assert_eq!(model._get_text("A8"), *"#N/A");
+    assert_eq!(model._get_text("A9"), *"=H1+1");
+    assert_eq!(model._get_text("C1"), *"#N/A");
+    assert_eq!(model._get_text("D1"), *"#VALUE!");
+    assert_eq!(model._get_text("C2"), *"#N/A");
+    assert_eq!(model._get_text("D2"), *"=H1+1");
+    assert_eq!(model._get_text("E2"), *"#REF!");
+}
+
+/// Number-text coercion of a sign before a leading percent and of a trailing `$`
+/// (probes/t3742-value-percent-currency A1, A10-A13, excel-graph 2026-11-03).
+#[test]
+fn coercion_sign_percent_and_trailing_dollar() {
+    let model = new_empty_model();
+    assert_eq!(model.cast_number("-%1.5"), Some(-0.015));
+    assert_eq!(model.cast_number("% 1.5"), Some(0.015));
+    for text in ["1.5$", "1.5 $", "-1.5$", "%%1.5", "%1.5%"] {
+        assert_eq!(model.cast_number(text), None, "{text}");
+    }
+    assert_eq!(model.cast_number("1.5€"), Some(1.5));
+    assert_eq!(model.cast_number("-$1.5"), Some(-1.5));
 }

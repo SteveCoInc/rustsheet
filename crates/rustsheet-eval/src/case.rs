@@ -20,7 +20,8 @@ pub const ORACLE_FORMAT: &str = "rustsheet-oracle/v1";
 /// (`{"t":"s","v":"=not a formula"}`, `{"t":"e","v":"#N/A"}`) for anything else. An error may
 /// carry `"stored":true`: spec2xlsx writes it as a stored `t="e"` constant (T-0999) and the engine
 /// adapter enters it as one, as xlsx import does (T-1221), not as typed input. `{"entered":"(1)"}`
-/// is text entered as a user types it, so Excel picks the value and number format (T-0280).
+/// is text entered as a user types it, so Excel picks the value and number format (T-0280);
+/// `{"entered_r1c1":"=R1C2+1"}` is typed the same way in R1C1 mode (T-3113).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum CellInput {
@@ -37,14 +38,23 @@ pub enum CellInput {
     Entered {
         entered: String,
     },
+    /// Typed entry in R1C1 mode: as `Entered`, but the oracle backend writes it as
+    /// `Range.formulasR1C1`, so `R1C2` is a reference (T-3113, decision 0179).
+    EnteredR1c1 {
+        entered_r1c1: String,
+    },
 }
 
 impl CellInput {
-    /// The formula text without its leading `=`, or `None` for any other input.
+    /// The formula text without its leading `=`, or `None` for any other input. A typed entry
+    /// (`{"entered": "=NOW( )"}`) is a formula when it starts with `=`, as Excel's input parser reads it;
+    /// an R1C1-mode entry's formula is its R1C1 text.
     #[must_use]
     pub fn formula(&self) -> Option<&str> {
         match self {
-            Self::Str(f) => f.strip_prefix('='),
+            Self::Str(f) | Self::Entered { entered: f } | Self::EnteredR1c1 { entered_r1c1: f } => {
+                f.strip_prefix('=')
+            }
             _ => None,
         }
     }
@@ -136,6 +146,27 @@ pub struct SheetSpec {
     /// (probes/displayed-text-formats B1:B3; docs/excel-semantics/number-formats.md).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub column_widths: BTreeMap<String, f64>,
+    /// Conditional formats of type `formula` (`<cfRule type="expression">`), written by
+    /// spec2xlsx (T-3263) to probe what Excel accepts in their formulas. The engine adapter
+    /// ignores them: conditional formats change no cell value.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conditional_formats: Vec<RangeFormulaSpec>,
+    /// Custom data validations (`<dataValidation type="custom">`), written by spec2xlsx
+    /// (T-3263). The engine adapter ignores them: data validation is not evaluated.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub data_validations: Vec<RangeFormulaSpec>,
+}
+
+/// A formula applied to a range of a spec sheet: a conditional format's rule or a data
+/// validation's criterion (T-3263).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RangeFormulaSpec {
+    /// A1 range the rule applies to (`A1:B3`).
+    #[serde(rename = "ref")]
+    pub range: String,
+    /// The formula, with its leading `=`.
+    pub formula: String,
 }
 
 /// A table in a spec sheet. spec2xlsx gives a filtered table a values filter that keeps exactly
@@ -148,11 +179,47 @@ pub struct TableSpec {
     pub range: String,
     #[serde(default)]
     pub filter: bool,
-    /// The last row of `range` is the table's totals row (T-1607). The facade cannot add one yet
-    /// (TODO(T-1671)), so the engine adapter registers the table without it: data references read
-    /// right, `#Totals` and `#All` do not.
+    /// How spec2xlsx writes the filter's `<filterColumn>` (T-4003); `None`: a values filter
+    /// under `colId` 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter_column: Option<FilterColumnSpec>,
+    /// The last row of `range` is the table's totals row (T-1607; the engine adapter adds it with
+    /// `Txn::add_table_with_totals`, T-1671).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub totals_row: bool,
+    /// `false`: the table has no header row; its data starts on the first row of `range` and its
+    /// columns are `Column1`, `Column2`, ... (T-3260; the engine adapter adds it with
+    /// `Txn::add_table_with_rows`).
+    #[serde(default = "crate::suite::default_true")]
+    pub header_row: bool,
+    /// Calculated columns as spec2xlsx writes them (`calculatedColumnFormula`, T-2969): column
+    /// letter to its formula, with or without `=`, in file form (`T[[#This Row],[Col]]`): the
+    /// adapter does not translate a `[@Col]` shorthand and refuses one. The engine adapter marks
+    /// each with `Txn::set_table_column_formula` (T-3033).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub calculated: BTreeMap<String, String>,
+}
+
+/// The `<filterColumn>` of a filtered spec table (T-4003): Excel calls the hidden rows filtered
+/// only for a criterion inside the table.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FilterColumnSpec {
+    /// The column's `colId` (0-based in the table); a values filter's must be 0 or past the
+    /// table's last column, since it lists the first column's values.
+    #[serde(default)]
+    pub col_id: u32,
+    /// `false`: the filterColumn holds no criterion.
+    #[serde(default = "crate::suite::default_true")]
+    pub criterion: bool,
+    /// `true`: the filterColumn holds a `<colorFilter/>` with no `dxfId`, which Excel reads as no
+    /// criterion (probes/t4558-color-filter-subtotal, T-4558).
+    #[serde(default)]
+    pub color: bool,
+    /// `false` with `color`: the colorFilter says `cellColor="0"` (a font colour); Excel reads it
+    /// as no criterion too, so the engine adapter does not consult it.
+    #[serde(default = "crate::suite::default_true")]
+    pub cell_color: bool,
 }
 
 /// A what-if data table in a spec sheet: `ref` holds its result cells; `row_input` alone is a
@@ -170,6 +237,9 @@ pub struct DataTableSpec {
 
 /// A pivot table in a spec sheet (T-1705): `row` (and optionally `column`) are text fields of the
 /// `source` range's header row, `value` a number field aggregated by `function` (`sum` when absent).
+/// A pivot with a `definition` (case builder v2, T-4122) has none of those: Excel renders it from the
+/// definition on open, and the engine adapter loads the builder's parts for it and has the engine
+/// render it the same way (`pivot_definition`, T-4152).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PivotTableSpec {
@@ -179,12 +249,14 @@ pub struct PivotTableSpec {
     pub source: String,
     /// Top-left cell of the rendered pivot.
     pub location: String,
-    /// The row field (a text column of the source).
+    /// The row field (a text column of the source); empty for a pivot with a `definition`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub row: String,
     /// The column field (another text column), if any.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub column: Option<String>,
-    /// The data field (a number column).
+    /// The data field (a number column); empty for a pivot with a `definition`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub value: String,
     /// `sum` (when absent), `count`, `average`, `max` or `min`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -195,6 +267,60 @@ pub struct PivotTableSpec {
     /// box is the pivot's `<location>`.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub rendered: BTreeMap<String, CellInput>,
+    /// A numeric range grouping of the row field (T-4228). The builder renders no cells for a
+    /// grouped pivot: the engine adapter has the engine lay it out from `location` (T-4235).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<PivotGroupSpec>,
+    /// Texts the row field's cache keeps as shared items though no record uses them (T-4248); the
+    /// builder leaves `refreshOnLoad` off for such a pivot. The engine adapter appends them to the
+    /// row field's cache items after the records' own (T-4276).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unused_items: Vec<String>,
+    /// The row field's `showAll` (T-4248); false when absent.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub show_all: bool,
+    /// `unused_items` for the column field (T-4311); the adapter appends them to its cache items.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub column_unused_items: Vec<String>,
+    /// The column field's `showAll` (T-4311); false when absent.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub column_show_all: bool,
+    /// The pivot's definition, one-to-one with `pivotTableDefinition`
+    /// (`tools/src/rustsheet_tools/pivot_definition.py`, which validates it). Kept as JSON: the
+    /// adapter writes it out as the builder's parts (`pivot_definition`, T-4152), never reading
+    /// it into a model of its own.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub definition: Option<serde_json::Value>,
+}
+
+/// A pivot row field's range or date grouping (`<fieldGroup>` with `<rangePr>`), as
+/// `tools/src/rustsheet_tools/pivot.py` writes it: `items` are the group labels in order, the first
+/// for values below `start` and the last for values past `end`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PivotGroupSpec {
+    /// `startNum`.
+    pub start: f64,
+    /// `endNum`.
+    pub end: f64,
+    /// `groupInterval`.
+    pub interval: f64,
+    /// The `<groupItems>` items: labels, or numbers written as `<n>` items (T-4316).
+    pub items: Vec<PivotGroupItem>,
+    /// A date group's `groupBy` (`months`, `hours`, ...), whose `start` and `end` are date serials
+    /// (`startDate`, `endDate`; T-4236); absent for a numeric range group.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub by: Option<String>,
+}
+
+/// One `<groupItems>` item of a [`PivotGroupSpec`]: a label (`<s>`) or a number (`<n>`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum PivotGroupItem {
+    /// A text label.
+    Text(String),
+    /// A number item, which matches none of Excel's labels.
+    Number(f64),
 }
 
 /// A workbook's calculation settings (`<calcPr>`), written by spec2xlsx (T-0428). The engine
@@ -219,32 +345,79 @@ pub struct CalculationSpec {
 /// "to":"Inputs"}` renames one, `{"op":"move","sheet":"Data","to":0}` moves one to a 0-based
 /// position, and `{"op":"insert_row","sheet":"S","row":1}` inserts one blank row above the 1-based
 /// `row`, shifting the cells below down (T-1933). T-2323 adds `{"op":"delete_row","sheet":"S",
-/// "row":1}` (the 1-based row goes, the cells below shift up), `{"op":"insert_column","sheet":"S",
+/// "row":1}` (the 1-based row goes, the cells below shift up; an optional `"count":4` deletes that
+/// many rows from `row` in one edit, T-3019), `{"op":"insert_column","sheet":"S",
 /// "column":"B"}` and `{"op":"delete_column","sheet":"S","column":"B"}` (a column letter; the cells
 /// to the right shift), `{"op":"delete_sheet","sheet":"S"}`, `{"op":"delete_table","sheet":"S",
-/// "table":"T1"}` and `{"op":"convert_table","sheet":"S","table":"T1"}`. The engine has no convert
-/// to range yet, so the adapter refuses `convert_table` and the case scores as an adapter error
-/// until an engine task adds it.
+/// "table":"T1"}` and `{"op":"convert_table","sheet":"S","table":"T1"}`. `convert_table` converts the table
+/// to a plain range (T-2342). `{"op":"add_table","sheet":"S","table":"T1","ref":"B3:C7"}` adds
+/// a table (T-3629).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SheetOp {
-    Add { sheet: String },
-    Rename { sheet: String, to: String },
-    Move { sheet: String, to: u32 },
-    InsertRow { sheet: String, row: u32 },
-    DeleteRow { sheet: String, row: u32 },
-    InsertColumn { sheet: String, column: String },
-    DeleteColumn { sheet: String, column: String },
-    DeleteSheet { sheet: String },
-    ConvertTable { sheet: String, table: String },
-    DeleteTable { sheet: String, table: String },
+    Add {
+        sheet: String,
+    },
+    Rename {
+        sheet: String,
+        to: String,
+    },
+    Move {
+        sheet: String,
+        to: u32,
+    },
+    InsertRow {
+        sheet: String,
+        row: u32,
+    },
+    DeleteRow {
+        sheet: String,
+        row: u32,
+        /// How many rows go from `row` on in one edit (absent: one).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<u32>,
+    },
+    InsertColumn {
+        sheet: String,
+        column: String,
+        /// How many columns go in at `column` in one edit (absent: one; T-2899).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<u32>,
+    },
+    DeleteColumn {
+        sheet: String,
+        column: String,
+        /// How many columns go from `column` on in one edit (absent: one; T-2899).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<u32>,
+    },
+    DeleteSheet {
+        sheet: String,
+    },
+    ConvertTable {
+        sheet: String,
+        table: String,
+    },
+    DeleteTable {
+        sheet: String,
+        table: String,
+    },
+    /// A table named `table` added over `range` (its header row first, the header cells already
+    /// set), as Graph `tables/add` and a rename make it (T-3629).
+    AddTable {
+        sheet: String,
+        table: String,
+        #[serde(rename = "ref")]
+        range: String,
+    },
 }
 
 impl SheetOp {
     /// Where the input cell `addr` (1-based row) of `sheet` sits after this op: an `insert_row` at
-    /// or above it moves it down a row, a `delete_row` above it moves it up, and the column ops
-    /// move it the same way across. A cell in the deleted row or column, a deleted sheet or a
-    /// table op leaves the address as it was (the cell is gone or unmoved; no case reads it).
+    /// or above it moves it down a row, a `delete_row` above it moves it up by its row count, and
+    /// the column ops move it the same way across. A cell in the deleted row or column, a deleted
+    /// sheet or a table op leaves the address as it was (the cell is gone or unmoved; no case
+    /// reads it).
     /// `sheet` is the spec's sheet name: an edit of a sheet renamed by an earlier op is not
     /// matched, which no case does yet.
     #[must_use]
@@ -261,23 +434,62 @@ impl SheetOp {
                 row: shift(addr.row, *row, 1),
                 ..addr
             },
-            SheetOp::DeleteRow { sheet: at, row } if at == sheet && addr.row > *row => Addr {
-                row: addr.row - 1,
+            SheetOp::DeleteRow {
+                sheet: at,
+                row,
+                count,
+            } if at == sheet => {
+                let count = count.unwrap_or(1);
+                if addr.row >= row.saturating_add(count) {
+                    Addr {
+                        row: addr.row - count,
+                        ..addr
+                    }
+                } else {
+                    addr
+                }
+            }
+            SheetOp::InsertColumn {
+                sheet: at,
+                column,
+                count,
+            } if at == sheet => Addr {
+                col: Addr::col_index(column).map_or(addr.col, |c| {
+                    shift(
+                        addr.col,
+                        c,
+                        i32::try_from(count.unwrap_or(1)).unwrap_or(i32::MAX),
+                    )
+                }),
                 ..addr
             },
-            SheetOp::InsertColumn { sheet: at, column } if at == sheet => Addr {
-                col: Addr::col_index(column).map_or(addr.col, |c| shift(addr.col, c, 1)),
-                ..addr
-            },
-            SheetOp::DeleteColumn { sheet: at, column } if at == sheet => Addr {
-                col: Addr::col_index(column)
-                    .filter(|c| addr.col > *c)
-                    .map_or(addr.col, |_| addr.col - 1),
-                ..addr
-            },
+            SheetOp::DeleteColumn {
+                sheet: at,
+                column,
+                count,
+            } if at == sheet => {
+                let count = count.unwrap_or(1);
+                Addr {
+                    col: Addr::col_index(column)
+                        .filter(|c| addr.col >= c.saturating_add(count))
+                        .map_or(addr.col, |_| addr.col - count),
+                    ..addr
+                }
+            }
             _ => addr,
         }
     }
+}
+
+/// A defined name added through the API after load (`CaseSpec::api_names`, T-3264).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ApiName {
+    pub name: String,
+    pub formula: String,
+    /// The sheet the name is scoped to; workbook scope when absent (T-4014).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sheet: Option<String>,
 }
 
 /// A self-contained workbook test case.
@@ -288,6 +500,10 @@ pub struct CaseSpec {
     pub description: String,
     #[serde(default)]
     pub tags: Vec<String>,
+    /// The pivot catalog ids (eval/catalog/pivot-features.tsv) the case's pivot cells evidence
+    /// (T-4126).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivot_features: Vec<String>,
     pub sheets: Vec<SheetSpec>,
     /// The workbook's date system, `1900` (the default) or `1904` (`<workbookPr date1904="1"/>`;
     /// SPEC-0005, T-1268). Any other value is refused when the case is built.
@@ -300,6 +516,16 @@ pub struct CaseSpec {
     /// Cell keys in `expected` and `check` use the sheet names after the edits.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sheet_ops: Vec<SheetOp>,
+    /// Names defined through the API after the sheet edits, in order (T-3264): the oracle replays
+    /// each with Graph `names/add` (`worksheets('S')/names/add` for one scoped to a sheet, T-4014),
+    /// the engine adapter with `Txn::define_name` (`Txn::define_sheet_name`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub api_names: Vec<ApiName>,
+    /// The workbook's active sheet (spec2xlsx makes it the active, only selected tab; T-4394): the
+    /// engine adapter sets it before `api_names`, which bind unqualified references to it
+    /// (T-4445). The first sheet when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_sheet: Option<String>,
     /// Workbook-scoped defined names: name → formula (e.g. `"=Sheet1!$A$1:$B$2"`).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub names: BTreeMap<String, String>,
@@ -368,6 +594,25 @@ pub struct OracleFile {
     /// Displayed text of the cells a case lists in `text`: sheet → A1 → text (T-1610).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub text: BTreeMap<String, BTreeMap<String, String>>,
+    /// Every pivot Excel saved, with its layout and the cells of its area (T-4123); scored by
+    /// T-4124.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivots: Vec<OraclePivot>,
+}
+
+/// A pivot of an oracle sidecar: Excel's saved definition (location, layout lines, group labels)
+/// and every cell of its area, a blank one as `empty` (`tools/src/rustsheet_tools/snapshot.py`
+/// `pivot_areas`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OraclePivot {
+    #[serde(flatten)]
+    pub definition: crate::xlsx_snapshot::PivotDef,
+    /// A1 address on the pivot's sheet → Excel's value there.
+    pub cells: BTreeMap<String, Value>,
+    /// A1 address → Excel's displayed text (`Range.text`) of each cell of the area that shows
+    /// any (T-4169); scored by `text_expect` beside the values. Empty in sidecars filled before.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub text: BTreeMap<String, String>,
 }
 
 /// The formulas `x` of `spec` whose companion `=(x)=0` the excel-graph `oracle` answers FALSE:
@@ -463,18 +708,49 @@ mod tests {
     use super::*;
 
     #[test]
+    fn sidecar_pivots_round_trip_and_older_sidecars_have_none() {
+        let json = r#"{"format":"rustsheet-oracle/v1","source":{"kind":"excel-graph"},
+            "sheets":{"P":{}},"pivots":[{"name":"Pv","sheet":"P","location":"A3:B5",
+            "first_header_row":1,"first_data_row":1,"first_data_col":1,"row_page_count":0,
+            "col_page_count":0,"row_items":[{"r":0,"i":0,"x":[0]},{"t":"grand","r":0,"i":0,"x":[0]}],
+            "col_items":[],"cells":{"A3":{"t":"s","v":"Row Labels"},"B5":{"t":"empty"}}}]}"#;
+        let file: OracleFile = serde_json::from_str(json).expect("parses");
+        let pivot = &file.pivots[0];
+        assert_eq!(pivot.definition.location, "A3:B5");
+        assert_eq!(pivot.definition.row_items[1].t.as_deref(), Some("grand"));
+        assert_eq!(pivot.cells.get("B5"), Some(&Value::Empty));
+        let again: OracleFile =
+            serde_json::from_str(&serde_json::to_string(&file).expect("writes")).expect("reads");
+        assert_eq!(again, file);
+        let old: OracleFile = serde_json::from_str(
+            r#"{"format":"rustsheet-oracle/v1","source":{"kind":"hand"},"sheets":{}}"#,
+        )
+        .expect("parses");
+        assert!(old.pivots.is_empty());
+    }
+
+    #[test]
     fn deletes_and_column_inserts_move_the_inputs_they_shift() {
         let at = |a1| Addr::parse(a1).expect("addr");
         let op = |json: &str| serde_json::from_str::<SheetOp>(json).expect("op");
         let del_row = op(r#"{"op":"delete_row","sheet":"S","row":3}"#);
         assert_eq!(del_row.moved("S", at("B4")), at("B3"));
         assert_eq!(del_row.moved("S", at("B2")), at("B2"));
+        let del_rows = op(r#"{"op":"delete_row","sheet":"S","row":3,"count":2}"#);
+        assert_eq!(del_rows.moved("S", at("B5")), at("B3"));
+        assert_eq!(del_rows.moved("S", at("B4")), at("B4"));
+        assert_eq!(del_rows.moved("S", at("B2")), at("B2"));
         let ins_col = op(r#"{"op":"insert_column","sheet":"S","column":"B"}"#);
         assert_eq!(ins_col.moved("S", at("B1")), at("C1"));
         assert_eq!(ins_col.moved("S", at("A1")), at("A1"));
         let del_col = op(r#"{"op":"delete_column","sheet":"S","column":"B"}"#);
         assert_eq!(del_col.moved("S", at("C1")), at("B1"));
         assert_eq!(del_col.moved("T", at("C1")), at("C1"));
+        let ins_cols = op(r#"{"op":"insert_column","sheet":"S","column":"B","count":2}"#);
+        assert_eq!(ins_cols.moved("S", at("B1")), at("D1"));
+        let del_cols = op(r#"{"op":"delete_column","sheet":"S","column":"B","count":2}"#);
+        assert_eq!(del_cols.moved("S", at("D1")), at("B1"));
+        assert_eq!(del_cols.moved("S", at("C1")), at("C1"));
         let table = op(r#"{"op":"delete_table","sheet":"S","table":"Sales"}"#);
         assert_eq!(table.moved("S", at("C1")), at("C1"));
     }

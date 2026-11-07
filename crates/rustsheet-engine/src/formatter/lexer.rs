@@ -1,4 +1,5 @@
 use super::locale_tag::{self, LocaleTag};
+use super::numerals::Numerals;
 use crate::number_format::{parse_excel_number, parse_finite_number};
 
 pub struct Lexer {
@@ -8,10 +9,13 @@ pub struct Lexer {
     error_message: String,
     error_position: usize,
     /// The locale of a `[$€-40C]` currency tag, returned by the call after its symbol.
-    pending_locale: Option<LocaleTag>,
+    pending_locale: Option<(LocaleTag, Numerals)>,
     /// Whether the current section has a token before this one other than a color, condition,
     /// locale or calendar prefix: a `B1`/`B2` calendar prefix is invalid after one.
     section_started: bool,
+    /// Whether the current section has had a `B2` prefix: a locale tag after it resolves with
+    /// the Hijri calendar (`locale_tag::resolve_after_hijri_prefix`).
+    hijri_prefix: bool,
 }
 
 #[derive(PartialEq, Debug)]
@@ -39,6 +43,8 @@ pub enum Token {
     Day,            // d
     DayPadded,      // dd
     DayNameShort,   // ddd
+    WeekdayShort,   // aaa
+    WeekdayFull,    // aaaa and longer
     DayName,        // dddd+
     Month,          // m (or minute)
     MonthPadded,    // mm (or minute padded)
@@ -67,8 +73,8 @@ pub enum Token {
     AMPM,                // AM/PM
     /// `A/P`: the letters printed for the morning and for the afternoon.
     AP(char, char),
-    /// `[$-409]`: a locale with no currency symbol, which prints nothing.
-    Locale(LocaleTag),
+    /// `[$-409]`: a locale with no currency symbol, which prints nothing, and its numeral system.
+    Locale(LocaleTag, Numerals),
     ILLEGAL,
     EOF,
 }
@@ -108,6 +114,8 @@ impl Token {
             || self == &Token::DayPadded
             || self == &Token::DayNameShort
             || self == &Token::DayName
+            || self == &Token::WeekdayShort
+            || self == &Token::WeekdayFull
             || self == &Token::MonthName
             || self == &Token::MonthNameShort
             || self == &Token::Month
@@ -119,6 +127,22 @@ impl Token {
             || self == &Token::BuddhistYearShort
             || self == &Token::BuddhistYear
     }
+}
+
+/// Whether the last section of `format` is exactly `@`, with no color, locale or literal, not even
+/// `""`. Excel shows a text whole under it however long, where any other text section shows 255 `#`
+/// past 255 characters (probes/displayed-text-long-text-b A2, A3 vs A1, A4, A6; T-3282).
+pub(crate) fn last_section_is_bare_at(format: &str) -> bool {
+    let mut lexer = Lexer::new(format);
+    let mut start = 0;
+    loop {
+        match lexer.next_token() {
+            Token::EOF => break,
+            Token::Separator => start = lexer.position,
+            _ => {}
+        }
+    }
+    lexer.chars.get(start..) == Some(&['@'][..])
 }
 
 impl Lexer {
@@ -133,6 +157,7 @@ impl Lexer {
             error_position: 0,
             pending_locale: None,
             section_started: false,
+            hijri_prefix: false,
         }
     }
 
@@ -343,7 +368,7 @@ impl Lexer {
 
     fn consume_color(&mut self) -> Option<i32> {
         let colors = [
-            "black", "white", "red", "green", "blue", "yellow", "magenta",
+            "black", "white", "red", "green", "blue", "yellow", "magenta", "cyan",
         ];
         let mut chars = "".to_string();
         while let Some(ch) = self.read_next_char() {
@@ -385,9 +410,22 @@ impl Lexer {
         count
     }
 
+    /// How many characters from the current position are exactly `c`, without consuming them.
+    /// Unlike [`Self::consume_run`] it is case-sensitive: `aAa` is not a weekday run (T-1880).
+    fn same_char_run(&self, c: char) -> usize {
+        self.chars
+            .get(self.position..)
+            .map_or(0, |rest| rest.iter().take_while(|&&next| next == c).count())
+    }
+
     /// Whether the characters from the current position start with `text`, ignoring ASCII case.
     fn looks_at(&self, text: &str) -> bool {
-        let mut position = self.position;
+        self.looks_at_after(0, text)
+    }
+
+    /// Whether the characters `offset` places on start with `text`, ignoring ASCII case.
+    fn looks_at_after(&self, offset: usize, text: &str) -> bool {
+        let mut position = self.position + offset;
         for expected in text.chars() {
             match self.chars.get(position) {
                 Some(c) if c.eq_ignore_ascii_case(&expected) => position += 1,
@@ -395,6 +433,34 @@ impl Lexer {
             }
         }
         true
+    }
+
+    /// The run of `c` from the current position that belongs to an `aaa` weekday code: the run's
+    /// last letter is the `A` of an `AM/PM` or `A/P` token right after it, not part of the code.
+    /// Excel: `TEXT(0.75,"aaaa/p")` is "Satp" and `"aaam/pm"` is "aaPM", not "Saturday/p"
+    /// (probes/text-format-aaa-weekday-d A5, A7; T-2745).
+    fn weekday_run(&self, c: char) -> usize {
+        let run = self.same_char_run(c);
+        if run > 0 && (self.looks_at_after(run, "m/pm") || self.looks_at_after(run, "/p")) {
+            run - 1
+        } else {
+            run
+        }
+    }
+
+    /// Whether the next token is a currency tag's symbol: `[$€]` or `[$€-40C]` (`Token::Currency`),
+    /// or `[$USD]` (`Token::Text`), not a `[$-409]` locale tag. The complexity limit prices it
+    /// apart from quoted text (formatter/complexity.rs, T-2812).
+    pub(crate) fn at_currency_tag(&self) -> bool {
+        self.pending_locale.is_none()
+            && self.chars.get(self.position) == Some(&'[')
+            && self.chars.get(self.position + 1) == Some(&'$')
+            && !matches!(self.chars.get(self.position + 2), Some('-' | ']') | None)
+    }
+
+    /// Whether the next token is the locale of the currency tag just read (`[$€-40C]`).
+    pub(crate) fn has_pending_locale(&self) -> bool {
+        self.pending_locale.is_some()
     }
 
     pub fn peek_token(&mut self) -> Token {
@@ -416,17 +482,32 @@ impl Lexer {
         let token = self.read_token();
         self.section_started = match token {
             Token::Separator => false,
-            Token::Color(_) | Token::Condition(..) | Token::Locale(_) | Token::Calendar(_) => {
+            Token::Color(_) | Token::Condition(..) | Token::Locale(..) | Token::Calendar(_) => {
                 self.section_started
             }
             _ => true,
         };
+        match token {
+            Token::Separator => self.hijri_prefix = false,
+            Token::Calendar('2') => self.hijri_prefix = true,
+            _ => {}
+        }
         token
     }
 
+    /// Resolves the locale tag `tag` of the current section.
+    fn resolve_tag(&self, tag: &str) -> (LocaleTag, Numerals) {
+        let locale = if self.hijri_prefix {
+            locale_tag::resolve_after_hijri_prefix(tag)
+        } else {
+            locale_tag::resolve(tag)
+        };
+        (locale, locale_tag::numerals(tag))
+    }
+
     fn read_token(&mut self) -> Token {
-        if let Some(locale) = self.pending_locale.take() {
-            return Token::Locale(locale);
+        if let Some((locale, numerals)) = self.pending_locale.take() {
+            return Token::Locale(locale, numerals);
         }
         let ch = self.read_next_char();
         match ch {
@@ -453,6 +534,7 @@ impl Lexer {
                             }
                         } else if c == '$' {
                             // currency: [$<symbol>] or [$<symbol>-<locale>]
+                            // (`at_currency_tag` tells this branch's symbol tags apart; keep the two in step)
                             // IronCalc ignores the currency/locale modifiers for now
                             // They are of two types:
                             //  * BCP-47 locale tag (like [$€-fr-FR])
@@ -468,7 +550,8 @@ impl Lexer {
                                 let mut tag = String::new();
                                 while let Some(c) = self.read_next_char() {
                                     if c == ']' {
-                                        return Token::Locale(locale_tag::resolve(&tag));
+                                        let (locale, numerals) = self.resolve_tag(&tag);
+                                        return Token::Locale(locale, numerals);
                                     }
                                     tag.push(c);
                                 }
@@ -499,7 +582,7 @@ impl Lexer {
                                         tag.push(c);
                                         self.read_next_char();
                                     }
-                                    self.pending_locale = Some(locale_tag::resolve(&tag));
+                                    self.pending_locale = Some(self.resolve_tag(&tag));
                                 }
                                 if self.read_next_char() == Some(']') {
                                     return if text.chars().count() == 1 {
@@ -636,6 +719,29 @@ impl Lexer {
                         self.read_next_char();
                         let pm = self.read_next_char().unwrap_or('p');
                         Token::AP(x, pm)
+                    } else if let first @ 3.. = 1 + self.weekday_run(x) {
+                        // Excel: three or more of one `a` (all lowercase or all uppercase) are the
+                        // weekday, `aaa` short and `aaaa`+ full like `ddd`/`dddd`; mixed case
+                        // prints (`TEXT(1,"aaa")` = "Sun", `"AAAA"` "Sunday", `"aAa"` "aAa").
+                        // Such runs of the other case right after it join it (`"aaaAAA"` is
+                        // "Sunday"), shorter ones do not (`"aaaA"` is "SunA"; probes/
+                        // text-format-aaa-weekday, -b, -c; T-1880).
+                        self.position += first - 1;
+                        let mut run = first;
+                        while let Some(next @ ('a' | 'A')) = self.peek_char() {
+                            match self.weekday_run(next) {
+                                more @ 3.. => {
+                                    self.position += more;
+                                    run += more;
+                                }
+                                _ => break,
+                            }
+                        }
+                        if run == 3 {
+                            Token::WeekdayShort
+                        } else {
+                            Token::WeekdayFull
+                        }
                     } else {
                         // Excel: an unquoted `a` that is not AM/PM prints as itself
                         // (probes/text-format-unquoted-letters A1, A27).
@@ -676,11 +782,9 @@ impl Lexer {
                 // `ee` "05" (probes/text-locale-calendars A13).
                 'e' => Token::EraYear(self.consume_run('e') > 1),
                 'g' | 'G' => {
-                    if self
-                        .chars
-                        .get(self.position..)
-                        .is_some_and(|rest| rest.starts_with(&['e', 'n', 'e', 'r', 'a', 'l']))
-                    {
+                    // Excel: the word is case-insensitive (`TEXT(5,"GENERAL x")` = "5 x";
+                    // probes/text-format-general-company A16).
+                    if self.looks_at("eneral") {
                         self.position += 6;
                         return Token::General;
                     }

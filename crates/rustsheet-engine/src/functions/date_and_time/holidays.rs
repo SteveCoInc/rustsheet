@@ -9,7 +9,7 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
-    functions::Function,
+    functions::{information::written_reference, Function},
     model::Model,
     reference_operators::Picked,
 };
@@ -30,16 +30,20 @@ impl Model {
     ///
     /// The holidays are read in order and the first bad one is the error: `{"a",-1}` is
     /// `#VALUE!` and `{-1,"a"}` `#NUM!` (probes/workday-holidays-error-order F1, G1, Q60:Q63).
-    /// [`HolidaysError::before_weekend`] says when WORKDAY.INTL reports it.
+    /// [`HolidaysError::before_weekend`] says when WORKDAY.INTL reports it. The flag returned
+    /// with the serials is whether the argument was a scalar value, neither a reference nor an
+    /// array ([`Holidays::scalar`]).
     pub(super) fn holiday_serials(
         &mut self,
         arg: &Node,
         cell: CellReferenceIndex,
-    ) -> Result<Vec<i64>, HolidaysError> {
+    ) -> Result<(Vec<i64>, bool), HolidaysError> {
         let early = |error| HolidaysError {
             error,
             before_weekend: true,
         };
+        // `Node::ungrouped` sees through a unary plus, so read it off the argument as written.
+        let written_plus = written_reference(arg) == Some(false);
         let (mut arg, mut picked) = (arg, false);
         let value = loop {
             if is_multi_sheet_span(arg) {
@@ -70,6 +74,19 @@ impl Model {
             return Err(early(value.empty_array_as_value_error(cell)));
         }
         let one_value = is_one_value(&value);
+        // A scalar is whatever ISREF would call no reference, read on the arm IF picked (its
+        // condition is not read again): `+C1`, `N(C1)`, `"45003"`, `LET(h,C1,h+0)` and a name
+        // bound to `=45003` are scalar, while `(C1)`, `@C1`, `IF(TRUE,C1)`, `LET(h,C1,h)`,
+        // `XLOOKUP(1,{1},C1:C1)` and a name bound to a cell are references; `IF(TRUE,45003)`
+        // and `XLOOKUP(1,{1},{45003})` are scalar (probes/networkdays-intl-holiday-kinds,
+        // -kinds-let, -kinds-names; T-4190). An array is never scalar.
+        // A unary plus over a function that returns one cell (`+OFFSET(C1,0,0)`, `+IF(TRUE,C1)`)
+        // is a value as well, though the evaluator hands the cell's range on
+        // (probes/networkdays-intl-holiday-unary-fn A1:B4, T-4209).
+        let plus_of_one_cell = written_plus && one_value;
+        let scalar = plus_of_one_cell
+            || (!matches!(value, CalcResult::Array(_) | CalcResult::Range { .. })
+                && !self.is_reference(arg, cell));
         let date_system = self.workbook.settings.date_system;
         let (mut serials, mut out_of_range) = (Vec::new(), false);
         self.collect_serial_numbers(value, cell, |serial| {
@@ -85,7 +102,7 @@ impl Model {
             error,
             before_weekend: one_value && !out_of_range,
         })?;
-        Ok(serials)
+        Ok((serials, scalar))
     }
 }
 
@@ -136,15 +153,20 @@ pub(super) struct Holidays {
     by_residue: [Vec<i64>; 7],
     /// The days read, repeats included: what preparing them cost (`LiftCost::Prepared`).
     pub(super) read: u64,
+    /// The argument was a scalar value (a literal or a computed number), not a reference or an
+    /// array. NETWORKDAYS.INTL then drops a holiday only on a Saturday or Sunday, whatever its
+    /// weekend argument; a reference or an array is dropped on the weekend's own days (dates.md
+    /// "NETWORKDAYS.INTL: a scalar holiday ignores the weekend argument").
+    pub(super) scalar: bool,
 }
 
 impl Holidays {
     /// No holidays: the call has no holidays argument.
     pub(super) fn none() -> Self {
-        Self::new(Vec::new())
+        Self::new(Vec::new(), false)
     }
 
-    pub(super) fn new(mut days: Vec<i64>) -> Self {
+    pub(super) fn new(mut days: Vec<i64>, scalar: bool) -> Self {
         let read = u64::try_from(days.len()).unwrap_or(u64::MAX);
         days.sort_unstable();
         days.dedup();
@@ -152,7 +174,11 @@ impl Holidays {
         for day in days {
             by_residue[residue(day)].push(day);
         }
-        Self { by_residue, read }
+        Self {
+            by_residue,
+            read,
+            scalar,
+        }
     }
 
     /// The distinct holidays of `from..=to` per weekday, Monday first, where day `from` is
@@ -207,7 +233,7 @@ mod tests {
     /// The closed-form count equals walking the days one by one.
     #[test]
     fn counts_match_a_day_walk() {
-        let holidays = Holidays::new(vec![3, 3, 10, 11, -4, 40]);
+        let holidays = Holidays::new(vec![3, 3, 10, 11, -4, 40], false);
         let mask = [false, false, false, false, false, true, true];
         for from in -10_i64..20 {
             for to in from..from + 30 {

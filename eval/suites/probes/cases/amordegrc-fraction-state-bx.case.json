@@ -1,0 +1,20 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3393: AMORDEGRC left-over value, SUM(TEXTBEFORE(\"a,b\",\",\")) in A2 between the fraction (A1) and the 485 charge (A3): does the call empty the state as SEQUENCE does (-ag, -az)?",
+  "tags": [
+    "M9",
+    "financial",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=AMORDEGRC(10000,39000,39400,500,0.3,0.3,0)",
+        "A2": "=SUM(TEXTBEFORE(\"a,b\",\",\"))",
+        "A3": "=AMORDEGRC(2400,39679,39813,300,2,0.15,1)"
+      }
+    }
+  ],
+  "expected": {}
+}

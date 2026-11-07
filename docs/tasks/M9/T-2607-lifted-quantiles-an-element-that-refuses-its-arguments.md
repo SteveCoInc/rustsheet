@@ -23,6 +23,9 @@ element is charged `QUANTILE_WEIGHT` (2^18, lift/kinds/statistical.rs), which ca
 -1 are `#NUM!`, the last argument is an error). A `KernelWork::ByValue` charge (lift/kinds/mod.rs `ValueWork`, as DB/VDB's
 `Loop` and the coupon walks do) can see that from the element's values. arrays.md "Arrays past the grid".
 
+- The probe copy of that formula fails the same way (T-2940): probes/t2436/4250f880ab640c49 Calc!A121, T121, U121
+  (Excel `#SPILL!`, ROWS 4, COLUMNS 51638; ours `#ERROR!`).
+
 ## Acceptance criteria
 - [ ] gen-m9/4250f880ab640c49 Calc!A237 passes and leaves eval/baseline.
 - [ ] A lift of refused elements past 512 runs; one of valid elements past the cap is still `#ERROR!` (unit tests).

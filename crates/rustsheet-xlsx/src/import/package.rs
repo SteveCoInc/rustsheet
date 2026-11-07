@@ -7,7 +7,7 @@
 
 use std::cell::Cell;
 use std::collections::HashMap;
-use std::io::{self, BufReader, Read, Seek};
+use std::io::{self, BufReader, Read, Seek, SeekFrom};
 
 use super::shared_strings::decode_xlsx_escapes;
 use crate::error::{ImportLimit, XlsxError};
@@ -24,6 +24,12 @@ pub struct ImportLimits {
     /// code units, so this count is never stricter); what Excel does with a longer one in a file
     /// is not probed yet (T-0004).
     pub max_text_chars: usize,
+    /// Most rounds (`spinCount`) an encrypted package's password key derivation may ask for
+    /// (SPEC-0031 D3). MS-OFFCRYPTO allows up to 10,000,000, about 2 to 4 s of SHA-512 that any
+    /// untrusted file could demand without a password; Excel writes 100,000. The default,
+    /// 1,000,000, refuses files Excel opens (a directive-5 deviation, docs/excel-semantics/
+    /// xlsx-storage.md); a caller that trusts its files may raise it to 10,000,000.
+    pub max_spin_count: u32,
 }
 
 impl Default for ImportLimits {
@@ -32,6 +38,7 @@ impl Default for ImportLimits {
             max_uncompressed_bytes: 256 << 20,
             max_zip_entries: 5_000,
             max_text_chars: 32_767,
+            max_spin_count: 1_000_000,
         }
     }
 }
@@ -59,7 +66,8 @@ impl ImportLimits {
         Ok(())
     }
 
-    fn bytes_exceeded(&self) -> XlsxError {
+    /// The uncompressed-bytes limit error.
+    pub(crate) fn bytes_exceeded(&self) -> XlsxError {
         XlsxError::Limit {
             limit: ImportLimit::UncompressedBytes,
             max: self.max_uncompressed_bytes,
@@ -104,6 +112,19 @@ impl PartNames {
         Ok(PartNames::new(entries.iter().map(AsRef::as_ref)))
     }
 
+    /// The groups of two or more entries that name one part (OPC calls such a package invalid),
+    /// each sorted, in a stable order.
+    pub fn clashes(&self) -> Vec<Vec<String>> {
+        let mut groups: Vec<Vec<String>> = self
+            .entries
+            .values()
+            .filter(|names| names.len() > 1)
+            .cloned()
+            .collect();
+        groups.sort_unstable();
+        groups
+    }
+
     /// The zip entry that holds the part `name` (such as `xl/workbook.xml`), if any. An entry
     /// named exactly `name` wins; among other equivalent entries (a package OPC calls invalid)
     /// the first in byte order is taken, so the choice is deterministic.
@@ -119,10 +140,22 @@ impl PartNames {
 
 /// The part name an entry or a part reference stands for: `/` separators, no leading `/`,
 /// ASCII lowercase.
-pub(super) fn part_key(name: &str) -> String {
+pub fn part_key(name: &str) -> String {
     name.replace('\\', "/")
         .trim_start_matches('/')
         .to_ascii_lowercase()
+}
+
+/// The first bytes of an OLE compound file (MS-CFB 2.2, `_abSig`).
+const OLE_SIGNATURE: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
+
+/// Whether `bytes` start like an OLE compound file: a password-protected xlsx (an ECMA-376
+/// `EncryptedPackage`) or a legacy binary workbook, which are refused with the error
+/// [`classify_ole_compound_file`](super::classify_ole_compound_file) names (decision 0279,
+/// SPEC-0031 D1).
+#[must_use]
+pub fn is_ole_compound_file(bytes: &[u8]) -> bool {
+    bytes.starts_with(&OLE_SIGNATURE)
 }
 
 /// A zip package with a byte budget shared by every part read from it.
@@ -139,7 +172,24 @@ pub(crate) struct Package<R> {
 }
 
 impl<R: Read + Seek> Package<R> {
-    pub(crate) fn new(reader: R, limits: ImportLimits) -> Result<Self, XlsxError> {
+    pub(crate) fn new(mut reader: R, limits: ImportLimits) -> Result<Self, XlsxError> {
+        // A password-protected xlsx is an OLE compound file holding the encrypted package, not a
+        // zip (poi 58616, protected_passtika): name the cause rather than a zip error (T-3972).
+        let mut head = Vec::with_capacity(OLE_SIGNATURE.len());
+        reader
+            .by_ref()
+            .take(OLE_SIGNATURE.len() as u64)
+            .read_to_end(&mut head)?;
+        reader.seek(SeekFrom::Start(0))?;
+        if is_ole_compound_file(&head) {
+            // Only a file with the signature is handed to the container parser, bounded by the
+            // byte budget before it is parsed (SPEC-0031 D1): one byte over is enough to refuse.
+            let mut ole = Vec::new();
+            reader
+                .take(limits.max_uncompressed_bytes.saturating_add(1))
+                .read_to_end(&mut ole)?;
+            return Err(super::ole::classify_ole_compound_file(&ole, &limits));
+        }
         let archive = zip::ZipArchive::new(reader)?;
         if u32::try_from(archive.len()).map_or(true, |n| n > limits.max_zip_entries) {
             return Err(XlsxError::Limit {

@@ -1,0 +1,124 @@
+---
+id: T-4115
+title: "Gate A tables, odd-period bonds: ODDFPRICE, ODDFYIELD, ODDLPRICE and ODDLYIELD"
+milestone: M0
+lane: harness
+status: done
+priority: P2
+size: M
+tier: opus
+depends_on: []
+spec: docs/specs/SPEC-0029-gate-a-accuracy-gate.md
+---
+
+## Goal
+ODDFPRICE, ODDFYIELD, ODDLPRICE and ODDLYIELD each get a cited mpmath Gate A definition and a committed, oracle-filled `s1` table, and `make check` runs them.
+Every failing table point has an owner.
+
+## Context
+- Gate A (decision 0188 R1(a), SPEC-0029): decision 0273 (T-3797) classified these functions as needing a table.
+- Date arguments are integer serials. An order constraint (settlement < maturity, issue < settlement < first coupon) is a
+  Definition's joint `draw` or a `domain` rule (`accuracy/model.py`), as T-3535's NPER and RATE use (`defs/annuity.py`).
+  Basis is an `int` parameter over 0..4. Reuse `defs/yearfrac.py` for the day counts (directive 3).
+- Solvers follow the IRR and RATE pattern (T-3535, T-3586): `solver=True`, 300 points, and Excel's root choice cited from
+  a semantics entry. A point with several roots is not drawn without one.
+- Where Excel's own arithmetic (a rounding step, an operation order) puts it far from the math, list the points in the
+  Outcome as R3 candidates for an owner ruling and do not mark them (decision 0188 R3).
+- Tools: as in T-3925 (`rustsheet-accuracy` table generation, oracle fill, `rustsheet-eval accuracy`).
+- The dates need issue < settlement < first coupon, with the first coupon on the maturity's schedule: a joint `draw`.
+  ODDFYIELD and ODDLYIELD are solvers. Sources (financial.md): "ODDFPRICE and ODDFYIELD need issue < settlement <
+  first_coupon", "ODDFPRICE and ODDFYIELD need the first coupon on the maturity's schedule", "ODDLPRICE and ODDLYIELD: a
+  quasi-coupon date past the calendar is #NUM!", "ODDFPRICE and ODDLPRICE at a huge yield", "ODDFYIELD and ODDLYIELD at a
+  price far from par", "ODDFPRICE, ODDFYIELD, ODDLPRICE and ODDLYIELD check order", "ODDFYIELD stops short of
+  ODDFPRICE's root", "ODDFYIELD's #NUM! at extreme prices".
+
+## Acceptance criteria
+- [x] One definition per function in `tools/src/rustsheet_tools/accuracy/defs/`, reusing the existing definitions,
+      each citing its sources, with unit tests against Microsoft's published examples or the semantics entries' values.
+- [x] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
+      their number. Every point outside the envelope has a `known-failures.tsv` owner.
+- [x] `make check` green; reviewers approve. (`make check-fast` green locally; design and security APPROVE, Excel
+      fidelity's round-1 changes made)
+
+## Out of scope
+- The other groups of decision 0273.
+
+## Outcome
+- `tools/src/rustsheet_tools/accuracy/defs/odd_bonds.py`: one definition each for ODDFPRICE, ODDFYIELD, ODDLPRICE
+  and ODDLYIELD.
+  - The formulas are Microsoft's odd-first and odd-last-period ones, on the schedules and day counts of the engine's
+    oddbonds.fs port (`OddFirstSchedule`, `coup_number`, `odd_l_func`), which match Excel bit-exact. They are taken as
+    exact rationals: the short and long first period (the quasi-coupon walk, DCNL and ANL, DSC on bases 2-3 against
+    0, 1 and 4, `coupNumber`'s month-end quasi count, the DFC = E `#NUM!`), and the drifting odd-last walk with
+    basis 0's both-dates 30/360 period lengths.
+  - ODDFYIELD is ODDFPRICE's unique root (`solver=True`, 300 points; every flow is positive and after the dirty
+    price). ODDLYIELD is ODDLPRICE's closed-form inverse.
+  - Reused: bonds.py's `coupons`, `date_serial` and double-range tests; yearfrac.py's `basis_days` and
+    `us_30_360_both` (shared with T-4114's ACCRINT, its docstring citing both callers); the fit lab's `schedule`,
+    `add_months` and `month_end`; `annuity.unique_rate`. bonds.py now holds what both modules draw and register with
+    (`value_edge`, `price_or_par`, `bond_definition`). After merging main, `rustsheet-accuracy verify` gives 0
+    differences on PRICE, YIELD, DURATION, MDURATION, T-4114's ACCRINT, ACCRINTM, PRICEMAT, YIELDMAT and TBILLYIELD,
+    and the four tables here.
+  - Domain errors, each from a semantics entry: dates off the calendar, the frequency, the basis, a negative rate or
+    yld, a pr or redemption of 0 or below, the date orders, a first coupon off the maturity's schedule, and an ODDL*
+    quasi-coupon date past 9999-12-31 on bases 0 and 1. ODDFPRICE's redemption power past the double range.
+  - DFC = E is `#NUM!` on bases 0, 1 and 4 at every frequency (the entry's semiannual and quarterly cells; the
+    table's annual ODDFPRICE A126 and ODDFYIELD A168, A169, A195, A199, A208) and on basis 2 semiannually.
+  - No value (unprobed): DFC = E on basis 2 annually or quarterly or basis 3 annually; a date before 1901-03-01; a
+    walk past the calendar for ODDF*, or on ODDL* bases 2-4; 100·rate, a dirty sum or a price past the double range;
+    ODDLYIELD with DSCNL = 0; an ODDL* quasi period of 0 days (unreachable).
+  - Pre-check before generating, over the 2,841 literal one-call cells of these functions in eval/suites (probes,
+    probes-numeric, gen-m9; 1,755 more skipped as not literal):
+    - no math domain error where Excel has a number, and no Excel number where the math has a domain error;
+    - ODDFPRICE (544 numeric, 422 `#NUM!`), ODDLPRICE (122, 24) and ODDLYIELD (112, 40) are within 1E-9 of Excel on
+      every numeric cell; 2 ODDLPRICE `#NUM!` cells with a last interest of serial 1 get no value;
+    - ODDFYIELD: 943 within 1E-9, 136 within 1E-4, 21 beyond, 459 errors on both sides, 13 Excel `#NUM!` with a root
+      (the documented far-from-par and extreme-price Newton failures), 3 dropped (a root of exactly 0).
+    The pre-check skipped nested calls; the sidecars score two more (oddfyield-solver-sweep S!E1, S!F1, below).
+  - Tests in tools/tests/test_accuracy_odd_bonds.py: Microsoft's examples, the semantics entries' Excel values,
+    T-3999's two 50-digit roots, price/yield inversion on every basis, the evidenced errors and no-value regions
+    (the unprobed DFC = E cases included), and the draws.
+- Tables `eval/accuracy/tables/{ODDFPRICE,ODDLPRICE,ODDLYIELD}/s1` (200 points each) and `ODDFYIELD/s1` (300),
+  filled from excel-graph with 0 failures.
+- `rustsheet-eval accuracy`, release build, after merging main:
+  - 0 failing, 0 table defects. 898 of the 900 points are inside the envelope.
+  - `missing tables` went 50 to 46 at the branch point; it is 17 after merging main, where other tables landed.
+  - The engine is bit-exact with Excel on 897 of 900: ODDFPRICE 199, ODDFYIELD 298, ODDLPRICE 200, ODDLYIELD 200.
+    ODDFPRICE A162 is 1 ulp off, inside.
+  - Two ODDFYIELD points are known failures under T-4551, now in its Context and acceptance criteria. A272 is a
+    root near 0 (engine 1.1E-11 relative off Excel). A289 is an extra-quasi-period point (first coupon 2005-05-31,
+    `coup_number` nq 1 where the true count is 0; engine 2E-13 relative off Excel). Excel and the engine are 1.8E-6
+    and 2E-7 off the math there.
+- Errors: every Excel error on the tables matches a coded domain, except 15 ODDFYIELD points where Excel's Newton is
+  `#NUM!` at a price and redemption far from par: A188, A197, A218, A221, A229, A235, A237, A243, A251, A277, A280,
+  A285, A292, A297 and A299. The engine matches all 15. New financial.md entry: "ODDFYIELD is #NUM! at a price and
+  redemption far from par". It labels the Newton-from-YIELD's-start mechanism as inferred from the engine matching.
+- New quirk, in financial.md "ODDFYIELD off ODDFPRICE's root when ODDFPRICE counts a quasi period too many".
+  - Observed: Excel's ODDFYIELD at A126 and probes-numeric/t3988-r4-oddfyield-fresh-2 S!A46, both reproduced
+    bit-exact by the engine. The 7 ODDFPRICE table points with the extra count (A83, A92, A101, A145, A152, A166,
+    A194) are bit-exact with it.
+  - The other 9 ODDFYIELD points with the extra count (A17, A76, A80, A115, A121, A123, A138, A157, A289) are within
+    2E-7 of the root.
+  - Computed, not Excel cells: ODDFPRICE at Excel's S!A46 yield is 67.27, and the root is 0.033.
+  - Inferred: the slope-versus-price mechanism.
+- **Excel kept as the target (decision 0300):** 34 points are more than 1e-4 relative off the math, all ODDFYIELD.
+  - Table: A126 (5.4, the quirk above) and ten roots near 0 where Excel's absolute step stops short (A129, A132,
+    A143, A150, A153, A170, A174, A202, A291, A295; absolute gaps under 1E-10).
+  - Sidecars:
+    - probes/odd-yield-far-from-par F1-F16: redemption 1E300, Excel's 100th iterates of 236 to 303 against roots
+      near 1E15.
+    - probes/odd-yield-far-from-par G4: price 3E4, -3.50 against a root of -0.489.
+    - probes/oddfyield-extreme-price K5, K6 and L6: zero-coupon long first periods at a price of 1E-3 or 1E-6,
+      0.5% to 9% off.
+    - probes/oddfyield-solver-sweep S!E1 (5.716981438845498E-18 against a root of 4.958E-18) and S!F1
+      (-3.3959306358422327E-12 against 6.82E-18): nested ODDFPRICE inversions at a yield of 0.
+    - probes-numeric/t3988-r4-oddfyield-fresh-2 S!A46 (5.05).
+  - The engine is bit-exact with Excel on every one. No R3 marks. All are listed in financial.md under both new
+    entries.
+- T-3999 (an ODDFYIELD math model and table) is covered by this task: its two roots are unit tests here, and the t3031
+  case now has a math sidecar.
+- Math sidecars: `rustsheet-accuracy math --function` over the four functions, for probes and probes-numeric, after
+  merging main. 16 new sidecars (2,724 cells, 824 of them math domain errors) and 142 cells added to 12 existing ones.
+  No existing cell changed or was removed. `make eval-math-check` prints "current".
+- Duplication 2873 against the baseline of 2876.
+- Eval delta: none in the gated suites (tools, tables, sidecars and docs only).

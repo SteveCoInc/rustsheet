@@ -6,6 +6,8 @@ extend-exclude = [
   "crates/rustsheet-engine/src/test/",
   "crates/rustsheet-xlsx/tests/",
   "tools/upstream/",
+  # [MS-LCID] locale tags (fo, ba, ...), the input of rustsheet-excel-locales
+  "tools/src/rustsheet_tools/ms_lcid_tags.tsv",
   "eval/baseline/",
   "eval/suites/",
   "docs/research/",
@@ -16,14 +18,19 @@ extend-exclude = [
 [default]
 # C99 hex-float literals (0x1.79f85ba68804p-4) in comments citing research coefficients.
 # Generated eval case ids (16 lowercase hex digits, e.g. 4ab2ba98d26c8a5e) cited as evidence.
-extend-ignore-re = ["-?0x[0-9a-fA-F]\\.[0-9a-fA-F]+p[-+]?[0-9]+", "\\b[0-9a-f]{16}\\b"]
+# The DrawingML chart series tag `<c:ser>` (tools/src/rustsheet_tools/pivot_chart.py, T-4130).
+extend-ignore-re = ["-?0x[0-9a-fA-F]\\.[0-9a-fA-F]+p[-+]?[0-9]+", "\\b[0-9a-f]{16}\\b", "</?c:ser>"]
 
 [default.extend-words]
 # Excel function names and spreadsheet jargon
 ue = "ue"
 iif = "iif"
+# Excel's short Saka Monday, `[$-100409]ddd` (number-formats.md, T-2779)
+Som = "Som"
 # T-1941 probe case names (kmyst-gam-*)
 gam = "gam"
+# TOMS 708 routine names bgrat / grat1 (incomplete beta and gamma, statistics.md T-2464, T-2512)
+grat = "grat"
 # Excel function names / foreign-language function names that look like typos
 Permut = "Permut"
 permut = "permut"

@@ -8,7 +8,7 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
-    functions::Function,
+    functions::{util::near_integer::near_integer_count, Function},
     model::Model,
 };
 
@@ -89,17 +89,19 @@ fn char_to_win1252(c: char) -> Option<u32> {
 impl Model {
     /// CHAR(number) — Returns the character specified by the Windows-1252 code number.
     pub(crate) fn fn_char(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        if args.len() != 1 {
-            return CalcResult::new_args_number_error(cell);
-        }
-        let n = match self.get_number(&args[0], cell) {
-            Ok(f) => f.floor() as u32,
-            Err(e) => return e,
-        };
-        match win1252_to_char(n) {
-            Some(c) => CalcResult::String(c.to_string().into()),
-            None => CalcResult::new_error(Error::VALUE, cell, "Invalid character code".to_string()),
-        }
+        // Lifts over a range or array argument (probes/t3302-text-funcs-arrays).
+        self.lift_text(Function::Char, args, cell, &mut |model, values| {
+            let [number] = values else {
+                return Err(Error::ERROR);
+            };
+            // Excel: a code just below an integer counts as that integer, while UNICHAR truncates
+            // exactly (probes/t4453-near-integer-text-args D1:D21, E1:E14; docs/excel-semantics/text.md).
+            let n = near_integer_count(model.calc_result_to_number(number)?) as u32;
+            match win1252_to_char(n) {
+                Some(c) => Ok(ArrayNode::String(c.to_string().into())),
+                None => Err(Error::VALUE),
+            }
+        })
     }
 
     /// CODE(text) — Returns the Windows-1252 numeric code for the first character of text.

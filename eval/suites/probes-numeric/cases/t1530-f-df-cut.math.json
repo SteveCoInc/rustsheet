@@ -1,0 +1,305 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "62d8732a14b9a35213be4692396559737a3f3701e35d06011ed70b83ae625da3",
+  "definitions": {
+   "F.DIST": "09d581f2e8ead57b",
+   "F.DIST.RT": "09d581f2e8ead57b",
+   "F.INV": "09d581f2e8ead57b",
+   "F.INV.RT": "09d581f2e8ead57b",
+   "FDIST": "09d581f2e8ead57b",
+   "FINV": "09d581f2e8ead57b"
+  },
+  "arguments_sha256": "1f5d1cf57a3cd60a94ff3706e56d58b0ec1618cc54b745923a76a2a645b50c23"
+ },
+ "sheets": {
+  "Calc": {
+   "A10": {
+    "t": "n",
+    "v": "0.14167277676179965475686312375975351454703147769846",
+    "f": "=F.DIST(2,5,10000000000,FALSE)"
+   },
+   "A11": {
+    "t": "n",
+    "v": "0.2235049288860899178892982168588598609383667421784",
+    "f": "=F.DIST.RT(2,10000000000,5)"
+   },
+   "A12": {
+    "t": "n",
+    "v": "0.075235246245683122411713216204049437198954909597825",
+    "f": "=F.DIST.RT(2,5,10000000000)"
+   },
+   "A13": {
+    "t": "n",
+    "v": "0.2235049288860899178892982168588598609383667421784",
+    "f": "=FDIST(2,10000000000,5)"
+   },
+   "A14": {
+    "t": "n",
+    "v": "0.075235246245683122411713216204049437198954909597825",
+    "f": "=FDIST(2,5,10000000000)"
+   },
+   "A15": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.INV(0.5,10000000001,5)"
+   },
+   "A16": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.INV(0.5,5,10000000001)"
+   },
+   "A17": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.INV.RT(0.5,10000000001,5)"
+   },
+   "A18": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.INV.RT(0.5,5,10000000001)"
+   },
+   "A19": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=FINV(0.5,10000000001,5)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "0.87029203827791371564823704197676509535789598992434",
+    "f": "=F.INV(0.5,5,10000000000)"
+   },
+   "A20": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=FINV(0.5,5,10000000001)"
+   },
+   "A21": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.DIST(2,10000000001,5,TRUE)"
+   },
+   "A22": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.DIST(2,5,10000000001,TRUE)"
+   },
+   "A23": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.DIST(2,10000000001,5,FALSE)"
+   },
+   "A24": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.DIST(2,5,10000000001,FALSE)"
+   },
+   "A25": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.DIST.RT(2,10000000001,5)"
+   },
+   "A26": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.DIST.RT(2,5,10000000001)"
+   },
+   "A27": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=FDIST(2,10000000001,5)"
+   },
+   "A28": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=FDIST(2,5,10000000001)"
+   },
+   "A29": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.INV(0.5,15000000000,5)"
+   },
+   "A30": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.INV(0.5,5,15000000000)"
+   },
+   "A31": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.INV.RT(0.5,15000000000,5)"
+   },
+   "A32": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.INV.RT(0.5,5,15000000000)"
+   },
+   "A33": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=FINV(0.5,15000000000,5)"
+   },
+   "A34": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=FINV(0.5,5,15000000000)"
+   },
+   "A35": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.DIST(2,15000000000,5,TRUE)"
+   },
+   "A36": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.DIST(2,5,15000000000,TRUE)"
+   },
+   "A37": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.DIST(2,15000000000,5,FALSE)"
+   },
+   "A38": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.DIST(2,5,15000000000,FALSE)"
+   },
+   "A39": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.DIST.RT(2,15000000000,5)"
+   },
+   "A40": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.DIST.RT(2,5,15000000000)"
+   },
+   "A41": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=FDIST(2,15000000000,5)"
+   },
+   "A42": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=FDIST(2,5,15000000000)"
+   },
+   "A43": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.INV(0.5,1E11,5)"
+   },
+   "A44": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.INV(0.5,5,1E11)"
+   },
+   "A45": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.INV.RT(0.5,1E11,5)"
+   },
+   "A46": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.INV.RT(0.5,5,1E11)"
+   },
+   "A47": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=FINV(0.5,1E11,5)"
+   },
+   "A48": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=FINV(0.5,5,1E11)"
+   },
+   "A49": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.DIST(2,1E11,5,TRUE)"
+   },
+   "A50": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.DIST(2,5,1E11,TRUE)"
+   },
+   "A51": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.DIST(2,1E11,5,FALSE)"
+   },
+   "A52": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.DIST(2,5,1E11,FALSE)"
+   },
+   "A53": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=F.DIST.RT(2,1E11,5)"
+   },
+   "A54": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=F.DIST.RT(2,5,1E11)"
+   },
+   "A55": {
+    "t": "e",
+    "why": "deg_freedom1 outside [1, 1e+10]",
+    "f": "=FDIST(2,1E11,5)"
+   },
+   "A56": {
+    "t": "e",
+    "why": "deg_freedom2 outside [1, 1e+10]",
+    "f": "=FDIST(2,5,1E11)"
+   },
+   "A7": {
+    "t": "n",
+    "v": "0.7764950711139100821107017831411401390616332578216",
+    "f": "=F.DIST(2,10000000000,5,TRUE)"
+   },
+   "A8": {
+    "t": "n",
+    "v": "0.92476475375431687758828678379595056280104509040217",
+    "f": "=F.DIST(2,5,10000000000,TRUE)"
+   },
+   "A9": {
+    "t": "n",
+    "v": "0.18825249234504015169635864474761381844084923481239",
+    "f": "=F.DIST(2,10000000000,5,FALSE)"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "A1": {
+    "f": "=F.INV(0.5,10000000000,5)",
+    "why": "not converged"
+   },
+   "A3": {
+    "f": "=F.INV.RT(0.5,10000000000,5)",
+    "why": "not converged"
+   },
+   "A4": {
+    "f": "=F.INV.RT(0.5,5,10000000000)",
+    "why": "not converged"
+   },
+   "A5": {
+    "f": "=FINV(0.5,10000000000,5)",
+    "why": "not converged"
+   },
+   "A58": {
+    "f": "=F.INV(0.5,1E10,1E10)",
+    "why": "not converged"
+   },
+   "A6": {
+    "f": "=FINV(0.5,5,10000000000)",
+    "why": "not converged"
+   }
+  }
+ }
+}

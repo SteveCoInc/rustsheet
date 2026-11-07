@@ -8,14 +8,19 @@ use rustsheet_engine::clock::Clock;
 use rustsheet_engine::types::DateSystem;
 use rustsheet_engine::{Model, LAST_COLUMN, LAST_ROW};
 use rustsheet_xlsx::error::XlsxError;
-use rustsheet_xlsx::import::ImportLimits;
+use rustsheet_xlsx::import::{decrypt_ole_package, is_ole_compound_file, ImportLimits};
+use zeroize::Zeroizing;
 
-use crate::error::{LoadError, RefError, SaveError};
+use crate::error::{LoadError, RefError, SaveError, UnsupportedKind};
 use crate::refs::{
     parse_cell, parse_range, resolve_sheet_by_name, CellRef, RangeRef, SheetId, Target,
 };
+use crate::source::Source;
 use crate::value::{lone_text, Array, Value};
+mod active_sheet;
 mod calculation;
+#[cfg(feature = "harness_row_insert")]
+mod harness;
 
 /// Options for [`Workbook::new`] and the limits shared by all reads.
 #[derive(Clone, Debug)]
@@ -58,17 +63,58 @@ impl Default for WorkbookOptions {
     }
 }
 
+/// The password of a password-protected xlsx (SPEC-0031 D4).
+///
+/// Its text is zeroized when it is dropped, and its `Debug` prints `Password(***)`. It implements
+/// neither `Display` nor `Serialize`, so neither it nor a [`LoadOptions`] holding it can print or
+/// store the password.
+#[derive(Clone)]
+pub struct Password(Zeroizing<String>);
+
+impl Password {
+    /// Wraps `password`, taking ownership of its buffer (no other copy is made).
+    #[must_use]
+    pub fn new(password: impl Into<String>) -> Self {
+        Self(Zeroizing::new(password.into()))
+    }
+
+    /// The password text, for the decryption only.
+    pub(crate) fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Debug for Password {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Password(***)")
+    }
+}
+
 /// Options for [`Workbook::open`] and [`Workbook::from_xlsx_bytes`].
 ///
 /// The size limits are enforced on the bytes actually inflated, before any part is parsed.
+///
+/// The struct is not `#[non_exhaustive]`: build it with `..LoadOptions::default()` so a field added
+/// later (as `password` and `max_spin_count` were) does not break the caller.
 #[derive(Clone, Debug)]
 pub struct LoadOptions {
     /// Recalculate once after loading.
     pub recalc: bool,
-    /// Most bytes all zip entries may declare in total.
+    /// Most bytes all zip entries may declare in total. A password-protected xlsx is bounded by it
+    /// both as a file and as the zip it decrypts to.
     pub max_uncompressed_bytes: u64,
     /// Most entries the zip directory may list.
     pub max_zip_entries: u32,
+    /// The password of a password-protected xlsx; `None` (the default) refuses one with
+    /// [`LoadError::PasswordRequired`]. Ignored for a file that is not encrypted. Only this password
+    /// is tried, so a load runs at most one key derivation.
+    pub password: Option<Password>,
+    /// Most key derivation rounds (`spinCount`) a password-protected xlsx may ask for, checked
+    /// before any hashing; a file asking for more is [`LoadError::Options`]. The default,
+    /// 1,000,000, refuses files Excel opens (it allows up to 10,000,000, several seconds of CPU
+    /// any untrusted file could demand): a DEVIATION, docs/excel-semantics/xlsx-storage.md. Raise
+    /// it, up to 10,000,000, only for files you trust.
+    pub max_spin_count: u32,
     /// Options of the loaded workbook (read limit, locale, timezone, language).
     pub workbook: WorkbookOptions,
 }
@@ -80,6 +126,8 @@ impl Default for LoadOptions {
             recalc: true,
             max_uncompressed_bytes: import.max_uncompressed_bytes,
             max_zip_entries: import.max_zip_entries,
+            password: None,
+            max_spin_count: import.max_spin_count,
             workbook: WorkbookOptions::default(),
         }
     }
@@ -118,10 +166,32 @@ pub struct Workbook {
     max_read_cells: u64,
     /// Whether `edit` diffs formula values into [`crate::ChangeSet::values`].
     pub(crate) track_changes: bool,
+    /// The package the workbook was loaded from, kept so a save can write back what did not change
+    /// (SPEC-0034 D1). `None` for a workbook created with [`Workbook::new`].
+    source: Option<Arc<Source>>,
+    /// Whether the first [`Workbook::recalculate`] refreshes the `refreshOnLoad` pivots.
+    pub(crate) pivots_due: bool,
 }
 
-fn engine_load_error(message: impl std::fmt::Display) -> LoadError {
+pub(crate) fn engine_load_error(message: impl std::fmt::Display) -> LoadError {
     LoadError::Format(message.to_string())
+}
+
+/// The facade error for an importer error (SPEC-0031 D4). None of them carries the password.
+pub(crate) fn import_load_error(e: XlsxError) -> LoadError {
+    match e {
+        XlsxError::Limit { .. } => LoadError::Options(e.to_string()),
+        XlsxError::EncryptedPackage => LoadError::PasswordRequired,
+        XlsxError::WrongPassword => LoadError::WrongPassword,
+        XlsxError::LegacyBinaryWorkbook => {
+            LoadError::Unsupported(UnsupportedKind::LegacyBinaryWorkbook)
+        }
+        XlsxError::OleCompoundFile => LoadError::Unsupported(UnsupportedKind::OtherOleFile),
+        XlsxError::UnsupportedEncryption(kind) => {
+            LoadError::Unsupported(UnsupportedKind::Encryption(kind))
+        }
+        e => engine_load_error(e),
+    }
 }
 
 /// All sheets of a model in workbook order.
@@ -204,6 +274,8 @@ impl Workbook {
             model,
             max_read_cells,
             track_changes: true,
+            source: None,
+            pivots_due: false,
         }
     }
 
@@ -228,9 +300,18 @@ impl Workbook {
 
     /// Loads an xlsx workbook from memory. Never touches the filesystem.
     ///
+    /// A password-protected xlsx is decrypted with [`LoadOptions::password`] first (ECMA-376 Agile
+    /// and Standard encryption, SPEC-0031); the password is not kept on the workbook.
+    ///
     /// # Errors
-    /// [`LoadError::Options`] when the zip exceeds the limits or the locale is unknown,
-    /// [`LoadError::Format`] when the bytes are not a valid workbook.
+    /// - [`LoadError::Options`] when the zip exceeds the limits (including
+    ///   [`LoadOptions::max_spin_count`]) or the locale is unknown;
+    /// - [`LoadError::PasswordRequired`] / [`LoadError::WrongPassword`] for a password-protected
+    ///   xlsx opened without its password;
+    /// - [`LoadError::Unsupported`] for a legacy `.xls`, another OLE file or an encryption kind
+    ///   not read;
+    /// - [`LoadError::Format`] when the bytes are not a valid workbook (including an encrypted
+    ///   package that is malformed or fails its integrity check).
     pub fn from_xlsx_bytes(bytes: &[u8], opts: &LoadOptions) -> Result<Self, LoadError> {
         let w = &opts.workbook;
         // The importer enforces the same limits on the parts it reads, so a caller raising
@@ -238,31 +319,41 @@ impl Workbook {
         let limits = ImportLimits {
             max_uncompressed_bytes: opts.max_uncompressed_bytes,
             max_zip_entries: opts.max_zip_entries,
+            max_spin_count: opts.max_spin_count,
             ..ImportLimits::default()
         };
-        let book = rustsheet_xlsx::import::load_from_xlsx_bytes_with_limits(
-            bytes,
-            w.name.as_deref().unwrap_or_default(),
-            &w.locale,
-            &w.timezone,
-            &limits,
-        )
-        .map_err(|e| match e {
-            XlsxError::Limit { .. } => LoadError::Options(e.to_string()),
-            e => engine_load_error(e),
-        })?;
-        let model = Model::from_workbook_with_clock(book, &w.language, w.clock)
-            .map_err(LoadError::Format)?;
+        // With a password, an OLE file is decrypted here (one key derivation, SPEC-0031 D3); one
+        // that is not an encrypted xlsx gets the error the importer would give it. Without one,
+        // the importer refuses it as encrypted, which is `PasswordRequired`.
+        let decrypted = match &opts.password {
+            Some(password) if is_ole_compound_file(bytes) => Some(Zeroizing::new(
+                decrypt_ole_package(bytes, password.expose(), &limits)
+                    .map_err(import_load_error)?,
+            )),
+            _ => None,
+        };
+        let was_decrypted = decrypted.is_some();
+        // The retained package is wiped when dropped: for an encrypted file it is the plaintext
+        // (SPEC-0031), so it is moved in, never copied.
+        let package = decrypted.unwrap_or_else(|| Zeroizing::new(bytes.to_vec()));
+        let source = Source {
+            bytes: package,
+            name: w.name.clone().unwrap_or_default(),
+            locale: w.locale.clone(),
+            timezone: w.timezone.clone(),
+            language: w.language.clone(),
+            clock: w.clock,
+            limits,
+        };
+        let model = source.import(was_decrypted)?;
         let mut workbook = Self::from_model(model, w.max_read_cells);
+        workbook.source = Some(Arc::new(source));
+        let caches = &workbook.model.workbook.pivot_caches;
+        workbook.pivots_due = caches.iter().any(|c| c.refresh_on_load);
         if opts.recalc {
             workbook.recalculate();
         }
         Ok(workbook)
-    }
-
-    /// Recalculates every formula.
-    pub fn recalculate(&mut self) {
-        self.model.evaluate();
     }
 
     /// Pins the workbook clock (`NOW`, `TODAY`) to the timestamp in the workbook's `METADATA`
@@ -273,115 +364,42 @@ impl Workbook {
     pub fn pin_clock_from_metadata(&mut self) -> bool {
         rustsheet_xlsx::metadata_clock::pin_clock_from_metadata(&mut self.model)
     }
-
-    /// Inserts `count` blank rows above the 0-based `row` of `sheet`, shifting the cells below
-    /// down and rewriting the formulas that refer to them, as Excel's row insert does. Harness
-    /// only (decision 0076): it is not a [`crate::Txn`] edit, so it has no undo and reports no
-    /// change set; the eval replays a case's `insert_row` sheet op with it. It does not
-    /// recalculate.
-    ///
-    /// # Errors
-    /// [`EditError::Ref`] for an unknown sheet, a row past the sheet or a `count` of 0 or more
-    /// rows than lie below `row`; [`EditError::Engine`] when
-    /// the engine refuses the insert (it would push cells off the sheet).
-    #[cfg(feature = "harness_row_insert")]
-    pub fn insert_rows(
-        &mut self,
-        sheet: SheetId,
-        row: u32,
-        count: u32,
-    ) -> Result<(), crate::error::EditError> {
-        let index = self.sheet_index(sheet)?;
-        let (row, count) = harness_span(row, count, LAST_ROW)?;
-        self.model
-            .insert_rows(index, row, count)
-            .map_err(crate::error::EditError::Engine)
-    }
-
-    /// Deletes `count` rows from the 0-based `row` of `sheet`, shifting the cells below up; the engine
-    /// rewrites the formulas that refer to them (Excel: docs/excel-semantics/references.md "Structured
-    /// references under row deletes, column edits, convert, table and sheet delete"; T-2338). Harness only (decisions 0076, 0098):
-    /// as [`Self::insert_rows`], it has no undo and does not recalculate.
-    ///
-    /// # Errors
-    /// [`EditError::Ref`] for an unknown sheet, a row past the sheet or a `count` of 0 or more
-    /// rows than lie from `row`; [`EditError::Engine`] when the engine refuses the delete.
-    #[cfg(feature = "harness_row_insert")]
-    pub fn delete_rows(
-        &mut self,
-        sheet: SheetId,
-        row: u32,
-        count: u32,
-    ) -> Result<(), crate::error::EditError> {
-        let index = self.sheet_index(sheet)?;
-        let (row, count) = harness_span(row, count, LAST_ROW)?;
-        self.model
-            .delete_rows(index, row, count)
-            .map_err(crate::error::EditError::Engine)
-    }
-
-    /// Inserts `count` blank columns left of the 0-based `column` of `sheet`, shifting the cells
-    /// right. Harness only (decisions 0076, 0098); errors as [`Self::insert_rows`] with columns.
-    ///
-    /// # Errors
-    /// As [`Self::insert_rows`], for columns.
-    #[cfg(feature = "harness_row_insert")]
-    pub fn insert_columns(
-        &mut self,
-        sheet: SheetId,
-        column: u32,
-        count: u32,
-    ) -> Result<(), crate::error::EditError> {
-        let index = self.sheet_index(sheet)?;
-        let (column, count) = harness_span(column, count, LAST_COLUMN)?;
-        self.model
-            .insert_columns(index, column, count)
-            .map_err(crate::error::EditError::Engine)
-    }
-
-    /// Deletes `count` columns from the 0-based `column` of `sheet`, shifting the cells left.
-    /// Harness only (decisions 0076, 0098); errors as [`Self::delete_rows`] with columns.
-    ///
-    /// # Errors
-    /// As [`Self::delete_rows`], for columns.
-    #[cfg(feature = "harness_row_insert")]
-    pub fn delete_columns(
-        &mut self,
-        sheet: SheetId,
-        column: u32,
-        count: u32,
-    ) -> Result<(), crate::error::EditError> {
-        let index = self.sheet_index(sheet)?;
-        let (column, count) = harness_span(column, count, LAST_COLUMN)?;
-        self.model
-            .delete_columns(index, column, count)
-            .map_err(crate::error::EditError::Engine)
-    }
-
-    /// Deletes the table `name` and clears its cells, as Graph's `DELETE tables('T')` does
-    /// (T-2341). Harness only (decisions 0076, 0098): the eval replays a case's `delete_table`
-    /// sheet op with it. It does not recalculate.
-    ///
-    /// # Errors
-    /// [`EditError::Engine`] when there is no table with that exact name.
-    #[cfg(feature = "harness_row_insert")]
-    pub fn delete_table(&mut self, name: &str) -> Result<(), crate::error::EditError> {
-        self.model
-            .delete_table(name)
-            .map_err(crate::error::EditError::Engine)
-    }
-
     /// Serializes to xlsx bytes.
+    ///
+    /// A loaded workbook unchanged since its load saves as its package, byte for byte (SPEC-0034;
+    /// deciding re-imports it, about twice the model in memory). The save is never encrypted.
     ///
     /// # Errors
     /// [`SaveError::Engine`] when the engine cannot export the workbook.
     pub fn to_xlsx_bytes(&self, _opts: SaveOptions) -> Result<Vec<u8>, SaveError> {
-        rustsheet_xlsx::export::save_xlsx_to_writer(&self.model, Cursor::new(Vec::new()))
+        let engine = |e: XlsxError| SaveError::Engine(e.to_string());
+        let Some(source) = &self.source else {
+            return rustsheet_xlsx::export::save_xlsx_to_writer(
+                &self.model,
+                Cursor::new(Vec::new()),
+            )
             .map(Cursor::into_inner)
-            .map_err(|e| SaveError::Engine(e.to_string()))
+            .map_err(engine);
+        };
+        // What changed since the load is the difference from the source imported again the same
+        // way (SPEC-0034 D2). The source loaded once, so it loads again; if it somehow does not,
+        // that is an engine error, never a silently different file.
+        let pristine = source
+            .import(false)
+            .map_err(|e| SaveError::Engine(format!("the source no longer loads: {e}")))?;
+        rustsheet_xlsx::export::save_preserving(
+            &self.model,
+            &pristine,
+            &source.bytes,
+            Cursor::new(Vec::new()),
+        )
+        .map(|(w, _tier)| w.into_inner())
+        .map_err(engine)
     }
 
     /// Writes an xlsx file, replacing an existing one.
+    ///
+    /// The file is never encrypted, also for a workbook opened from a password-protected one.
     ///
     /// # Errors
     /// [`SaveError::Io`] if the file cannot be written, otherwise as [`Self::to_xlsx_bytes`].
@@ -605,24 +623,6 @@ impl Workbook {
                 CellRef::new(sheet, to_u32(row)?, to_u32(col)?)
             })
             .collect()
-    }
-}
-
-/// The engine's 1-based start and count for a harness row or column edit at the 0-based `start`
-/// of `count` lines in a sheet `last` lines long: at least one line, and no more than lie from
-/// `start` to the end.
-#[cfg(feature = "harness_row_insert")]
-fn harness_span(start: u32, count: u32, last: i32) -> Result<(i32, i32), crate::error::EditError> {
-    let start = start
-        .checked_add(1)
-        .and_then(|s| i32::try_from(s).ok())
-        .filter(|s| *s <= last);
-    let count = i32::try_from(count)
-        .ok()
-        .filter(|c| *c >= 1 && start.is_some_and(|s| *c <= last - s + 1));
-    match (start, count) {
-        (Some(start), Some(count)) => Ok((start, count)),
-        _ => Err(crate::error::EditError::Ref(RefError::OutOfBounds)),
     }
 }
 

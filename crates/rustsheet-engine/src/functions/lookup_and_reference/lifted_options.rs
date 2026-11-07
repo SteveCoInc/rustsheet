@@ -72,28 +72,52 @@ impl Model {
             let Some(node) = args.get(index) else {
                 continue;
             };
-            let frozen = self.frozen(node, cell);
+            let (frozen, reference) = self.freeze(node, cell);
+            // A written range, and a reference a function returns: a multi-cell one lifts as the
+            // range does (`INDEX(Data!A4:D4,0)` as a total depth is 1x4, probes/t2707-prob-orders
+            // A50, A63:A65; T-3088).
+            let reference = match (&frozen, reference) {
+                (Node::RangeKind { .. }, _) => Some(self.evaluate_node_in_context(&frozen, cell)),
+                (_, reference) => reference,
+            };
             // A one-element array lifts too: `GROUPBY(k,v,SUM,{3})` is one cell (A113).
-            let elements = match &frozen {
-                Node::ArrayKind(elements) => elements.clone(),
-                Node::RangeKind { .. } => match self.evaluate_node_in_context(&frozen, cell) {
-                    range @ CalcResult::Range { left, right } if left != right => {
-                        self.result_to_array(range, cell)?
-                    }
-                    _ => continue,
-                },
+            let elements = match (&frozen, &reference) {
+                (Node::ArrayKind(elements), _) => elements.clone(),
+                (_, Some(range @ CalcResult::Range { left, right })) if left != right => {
+                    self.result_to_array(range.clone(), cell)?
+                }
                 _ => {
                     // Text that is no number is `#VALUE!` in the option's place, ahead of a later
-                    // argument's error value, scalar or lifted (A201, A97).
-                    let frozen = match frozen {
-                        Node::StringKind(text)
-                            if self
-                                .cast_to_number(CalcResult::String(text.as_str().into()), cell)
-                                .is_err() =>
-                        {
-                            Node::ErrorKind(Error::VALUE)
+                    // argument's error value, scalar or lifted (A201, A97), written or in a
+                    // one-cell reference, `""` included (probes/t3838-groupby-option-order G!B6,
+                    // B8, B35, B38).
+                    let range = match (&frozen, reference) {
+                        (_, Some(range)) => Some(range),
+                        // A written reference stays as written (`Model::freeze`); reading it
+                        // evaluates nothing else.
+                        (Node::ReferenceKind { .. }, None) => {
+                            Some(self.evaluate_node_in_context(&frozen, cell))
+                        }
+                        _ => None,
+                    };
+                    let value = match range {
+                        Some(range @ CalcResult::Range { .. }) => {
+                            Some(self.dereference(range, cell))
                         }
                         other => other,
+                    };
+                    let text = match (&frozen, value) {
+                        (Node::StringKind(text), _) => Some(text.as_str().into()),
+                        (_, Some(CalcResult::String(text))) => Some(text),
+                        _ => None,
+                    };
+                    let not_a_number = text.is_some_and(|text| {
+                        self.cast_to_number(CalcResult::String(text), cell).is_err()
+                    });
+                    let frozen = if not_a_number {
+                        Node::ErrorKind(Error::VALUE)
+                    } else {
+                        frozen
                     };
                     if let Some(slot) = args.get_mut(index) {
                         *slot = frozen;
@@ -149,63 +173,118 @@ impl Model {
                 .map(|(element, &bound)| model.element_class(element, bound, cell))
                 .collect()
         };
-        Err(self.lift_by_class(&positions, classify, |model, elements| {
-            for ((&index, element), class) in
-                indices.iter().zip(elements).zip(classify(model, elements))
-            {
-                // Text that is no number is `#VALUE!` in its argument's place, ahead of a later
-                // argument's error value (`{1,"x",#N/A}` over a `1/0` relationship: A97).
-                if let Some(slot) = scalar_args.get_mut(index) {
-                    *slot = if class == Class::OtherText {
-                        Node::ErrorKind(Error::VALUE)
-                    } else {
-                        literal(element)
-                    };
+        Err(self.lift_by_class(
+            &positions,
+            // Once the filter is spent, a position whose first error comes before any text that
+            // is no number is that error: the call returns it before it filters
+            // (t3964-groupby-filter-lift-errors G!B71, B83, B89, B101). Numeric text and an
+            // out-of-range number before it do not stop it (t3985-groupby-two-lifted-spent-filter
+            // G!B1, B25), nor do out-of-range or fractional numeric text and TRUE or FALSE, in
+            // either option (t4019-groupby-lifted-spent-filter-kinds G!B1:B46), nor does a blank
+            // cell; other text does (t3985 G!B13), `""` included
+            // (t4028-groupby-lifted-spent-filter-blank G!B1, B13, B19). Before the filter is spent
+            // `run` gives the same error (each error is a class of its own) without spending it
+            // (t3964 G!A77, A95).
+            |model, elements, spent| {
+                if !spent {
+                    return None;
                 }
-            }
-            match call(model, &scalar_args, cell) {
-                CalcResult::Array(output) => at(&output, 0, 0),
-                other => calc_result_to_array_node(other),
-            }
-        }))
+                match classify(model, elements)
+                    .into_iter()
+                    .find(|class| matches!(class, Class::Error(_) | Class::OtherText))
+                {
+                    Some(Class::Error(error)) => Some(ArrayNode::Error(error)),
+                    _ => None,
+                }
+            },
+            classify,
+            |model, elements| {
+                for ((&index, element), class) in
+                    indices.iter().zip(elements).zip(classify(model, elements))
+                {
+                    // Text that is no number is `#VALUE!` in its argument's place, ahead of a later
+                    // argument's error value (`{1,"x",#N/A}` over a `1/0` relationship: A97).
+                    if let Some(slot) = scalar_args.get_mut(index) {
+                        *slot = if class == Class::OtherText {
+                            Node::ErrorKind(Error::VALUE)
+                        } else {
+                            literal(element)
+                        };
+                    }
+                }
+                match call(model, &scalar_args, cell) {
+                    CalcResult::Array(output) => at(&output, 0, 0),
+                    other => calc_result_to_array_node(other),
+                }
+            },
+        ))
     }
 
     /// `node` evaluated and put back as a literal: a value, or an array as an array constant.
     /// Omitted arguments, literals, references (cheap to read again, and a blank cell is not a
     /// literal) and anything that evaluates to a reference or a LAMBDA are kept as they are.
     fn frozen(&mut self, node: &Node, cell: CellReferenceIndex) -> Node {
+        self.freeze(node, cell).0
+    }
+
+    /// [`Model::frozen`], with the reference a kept node evaluated to, so a caller can read it
+    /// without evaluating the node a second time.
+    fn freeze(&mut self, node: &Node, cell: CellReferenceIndex) -> (Node, Option<CalcResult>) {
         // A `#This Row` area is the cell or range on the formula's row (SPEC-0016 step 2).
         let node: &Node = &node.resolved_at(cell.row);
         if is_scalar_node(node) || matches!(node, Node::RangeKind { .. } | Node::ArrayKind(_)) {
-            return node.clone();
+            return (node.clone(), None);
         }
-        match self.evaluate_node_in_context(node, cell) {
+        let frozen = match self.evaluate_node_in_context(node, cell) {
             CalcResult::Number(number) => Node::NumberKind(number),
             CalcResult::String(text) => Node::StringKind(text.to_string()),
             CalcResult::Boolean(value) => Node::BooleanKind(value),
             CalcResult::Error { error, .. } => Node::ErrorKind(error),
             CalcResult::Array(array) => Node::ArrayKind(array),
-            CalcResult::Range { .. }
-            | CalcResult::EmptyCell
-            | CalcResult::EmptyArg
-            | CalcResult::Lambda(_) => node.clone(),
-        }
+            range @ CalcResult::Range { .. } => return (node.clone(), Some(range)),
+            CalcResult::EmptyCell | CalcResult::EmptyArg | CalcResult::Lambda(_) => node.clone(),
+        };
+        (frozen, None)
     }
 
     /// `elements` lifted: each element's value is `run` of the first element of its class, so
     /// `run` is called once per class whatever the array's size (GROUPBY's `field_relationship`
     /// and the options of [`Model::lift_options`]).
+    ///
+    /// Excel's GROUPBY filter serves one element: once an element's call has dropped rows with
+    /// its `filter_array` ([`Model::groupby_filter_spent`]), every later element, in row-major
+    /// order, is `#VALUE!`, whatever it holds, a blank included; an element refused before the
+    /// filter (text, a `field_relationship` of 2) leaves it for the next one, and a filter that
+    /// keeps every row is never spent (probes/t3840-groupby-lifted-beside-filter,
+    /// t3840-groupby-lifted-filter-consumed; docs/excel-semantics/arrays.md "A lifted GROUPBY's
+    /// filter serves one element"). An element `settled` answers (it is given the model, the
+    /// element and whether the filter is spent) is that value and spends nothing: an element
+    /// whose call returns before it filters, as an error `field_relationship`, `field_headers`
+    /// or total depth element does
+    /// (probes/t3880-groupby-scalar-filter-edges G!A89:B93, t3964-groupby-filter-lift-errors
+    /// G!A47:B105).
     pub(crate) fn lift_by_class<E, K: PartialEq>(
         &mut self,
         elements: &[Vec<E>],
+        mut settled: impl FnMut(&mut Model, &E, bool) -> Option<ArrayNode>,
         mut classify: impl FnMut(&mut Model, &E) -> K,
         mut run: impl FnMut(&mut Model, &E) -> ArrayNode,
     ) -> CalcResult {
+        let outer_spent = std::mem::replace(&mut self.groupby_filter_spent, false);
         let mut known: Vec<(K, ArrayNode)> = Vec::new();
         let mut lifted = Vec::with_capacity(elements.len());
         for row in elements {
             let mut cells = Vec::with_capacity(row.len());
             for element in row {
+                let spent = self.groupby_filter_spent;
+                if let Some(value) = settled(self, element, spent) {
+                    cells.push(value);
+                    continue;
+                }
+                if self.groupby_filter_spent {
+                    cells.push(ArrayNode::Error(Error::VALUE));
+                    continue;
+                }
                 let class = classify(self, element);
                 if let Some((_, value)) = known.iter().find(|(c, _)| *c == class) {
                     cells.push(value.clone());
@@ -217,6 +296,7 @@ impl Model {
             }
             lifted.push(cells);
         }
+        self.groupby_filter_spent = outer_spent;
         CalcResult::Array(lifted)
     }
 
@@ -263,8 +343,12 @@ impl Model {
     }
 }
 
-/// Whether `node` is omitted, a literal or a one-cell reference, none of which lifts.
-fn is_scalar_node(node: &Node) -> bool {
+/// Whether `node` is omitted, a literal or a one-cell reference, none of which lifts, under any
+/// unary plus (the identity, T-2723).
+fn is_scalar_node(mut node: &Node) -> bool {
+    while let Node::UnaryPlus { child } | Node::Spaced { child, .. } = node {
+        node = child;
+    }
     matches!(
         node,
         Node::EmptyArgKind

@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "06e9a6140b51dea772a38136e814617f1f73a9d76495862e4b9e93d1f36acca4",
+  "definitions": {
+   "CONVERT": "8f956768ccba4018"
+  },
+  "arguments_sha256": "520b249a621bc7a4b79f0d6e1b0690b316c3a3e47a595b26c057128eea9246fd"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A30": {
+    "t": "e",
+    "why": "'m' and 's' share no class (#N/A)",
+    "f": "=CONVERT(1,\"m\",\"s\")"
+   }
+  }
+ }
+}

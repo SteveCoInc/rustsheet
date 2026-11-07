@@ -12,16 +12,16 @@ mod database;
 pub(crate) mod date_and_time;
 mod engineering;
 mod financial;
-mod information;
-mod kinds;
+pub(crate) mod information;
+pub(crate) mod kinds;
 pub(crate) mod lift;
 pub(crate) mod logical;
 pub(crate) mod lookup_and_reference;
-mod math_and_trigonometry;
+pub(crate) mod math_and_trigonometry;
 mod spill_functions;
-mod statistical;
+pub(crate) mod statistical;
 mod subtotal;
-mod text;
+pub(crate) mod text;
 pub(crate) mod util;
 mod xlookup;
 mod xlsx_names;
@@ -2172,6 +2172,6 @@ impl Model {
             Function::SkewP => Self::fn_skew_p,
             Function::Small => Self::fn_small,
         };
-        self.call_by_reference_elements(kind, args, cell, implementation)
+        self.call_with_order_effects(kind, args, cell, implementation)
     }
 }

@@ -7,6 +7,8 @@ use super::legacy::{
     leaves_call_whole, legacy_array_context, legacy_context_intersects, remove_array_at,
     remove_in_array_context, removes_automatic_at,
 };
+use super::lifted::array_constant_context;
+use super::operand_array::remove_operand_array_at;
 use super::{
     add_legacy_intersection, for_each_chain_operand_mut, get_function_args_signature,
     is_array_context, Node,
@@ -29,15 +31,21 @@ use super::{
 /// be stringified as `_xlfn.SINGLE`.
 ///
 /// `add` mirrors the flag in `add_implicit_intersection` and must start `true`
-/// (a formula is evaluated in a scalar context).
+/// (a formula is evaluated in a scalar context). The operators dropped are those of the
+/// formula with no whitespace ([`Node::rewrite_as_unspaced`]), as the import decides them.
 pub fn remove_redundant_implicit_intersection(node: &mut Node, add: bool) {
-    // The import adds no `@` to a formula holding a SWITCH or another `NO_AUTOMATIC_AT`
-    // function, so every `@` in it is meaningful
-    // (`add_root_legacy_intersection`, probes/legacy-switch-callers).
-    if add && removes_automatic_at(node) {
-        return;
-    }
-    remove_redundant_legacy_intersection(node, add, add);
+    node.rewrite_as_unspaced(|node| {
+        // The import adds no `@` to a formula holding a SWITCH or another `NO_AUTOMATIC_AT`
+        // function, so every `@` in it is meaningful
+        // (`add_root_legacy_intersection`, probes/legacy-switch-callers).
+        if add && removes_automatic_at(node) {
+            return;
+        }
+        if add {
+            remove_operand_array_at(node); // `add_root_legacy_intersection`'s root constants
+        }
+        remove_redundant_legacy_intersection(node, add, add);
+    });
 }
 
 /// [`remove_redundant_implicit_intersection`] with the `arrays` flag of
@@ -49,6 +57,7 @@ pub(super) fn remove_redundant_legacy_intersection(node: &mut Node, add: bool, a
         | Node::NumberKind(_)
         | Node::StringKind(_)
         | Node::ErrorKind(_)
+        | Node::SheetRefErrorKind { .. }
         | Node::EmptyArgKind
         | Node::ParseErrorKind { .. }
         | Node::WrongReferenceKind { .. }
@@ -89,7 +98,9 @@ pub(super) fn remove_redundant_legacy_intersection(node: &mut Node, add: bool, a
         Node::SpillRangeOperator { child } => {
             remove_redundant_legacy_intersection(child, add, false);
         }
-        Node::Group { child, .. } => remove_redundant_legacy_intersection(child, add, arrays),
+        Node::Group { child, .. } | Node::UnaryPlus { child } | Node::Spaced { child, .. } => {
+            remove_redundant_legacy_intersection(child, add, arrays);
+        }
         Node::UnaryKind { right, .. } => remove_redundant_legacy_intersection(right, add, arrays),
         Node::OpConcatenateKind { .. }
         | Node::OpSumKind { .. }
@@ -105,9 +116,12 @@ pub(super) fn remove_redundant_legacy_intersection(node: &mut Node, add: bool, a
         }
         Node::FunctionKind { kind, args } => {
             let signature = get_function_args_signature(kind, args.len());
-            for (index, arg) in args.iter_mut().enumerate() {
-                let arrays = legacy_array_context(kind, signature.get(index), index, arg, arrays);
-                remove_array_at(kind, signature.get(index), index, arg, arrays);
+            for index in 0..args.len() {
+                let (constant_signature, constant_arrays) =
+                    array_constant_context(kind, signature.get(index), index, args, arrays);
+                let arrays = legacy_array_context(kind, signature.get(index), index, args, arrays);
+                let arg = &mut args[index];
+                remove_array_at(kind, constant_signature, index, arg, constant_arrays);
                 // Scalar arguments are an intersecting context; vector arguments
                 // (ranges/arrays) are not (`legacy_context_intersects`).
                 let child_add = legacy_context_intersects(kind, signature.get(index), index, arg)

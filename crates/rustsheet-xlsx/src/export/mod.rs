@@ -6,14 +6,19 @@ mod data_tables;
 mod doc_props;
 mod dxfs_styles;
 mod escape;
+mod patch;
+mod pivots;
+mod preserving;
 mod rich_errors;
 mod shared_strings;
 mod styles;
 mod styles_util;
+mod tables;
 mod theme;
 mod workbook;
 mod workbook_xml_rels;
 mod worksheets;
+pub use preserving::{save_preserving, SaveTier};
 pub(crate) use rich_errors::rich_error_vm;
 pub(crate) use worksheets::exported_error_literal;
 mod xml_constants;
@@ -28,6 +33,7 @@ use rustsheet_engine::expressions::utils::number_to_column;
 use rustsheet_engine::types::Workbook;
 use rustsheet_engine::Model;
 
+use self::pivots::PivotPlan;
 use self::xml_constants::XML_DECLARATION;
 
 use crate::error::XlsxError;
@@ -35,7 +41,13 @@ use crate::error::XlsxError;
 #[cfg(test)]
 mod test;
 
-fn get_content_types_xml(workbook: &Workbook, rich: bool) -> String {
+/// `table_parts` is the number of table parts (`xl/tables/table1.xml` on).
+fn get_content_types_xml(
+    workbook: &Workbook,
+    rich: bool,
+    table_parts: usize,
+    pivots: &PivotPlan,
+) -> String {
     // A list of all files in the zip
     let mut content = vec![
         r#"<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">"#.to_string(),
@@ -50,13 +62,24 @@ fn get_content_types_xml(workbook: &Workbook, rich: bool) -> String {
         );
         content.push(sheet);
     }
+    for table in 1..=table_parts {
+        content.push(format!(
+            r#"<Override PartName="/xl/tables/table{table}.xml" ContentType="{}"/>"#,
+            tables::TABLE_CONTENT_TYPE
+        ));
+    }
+    content.extend(pivots.content_types());
     content.push(
         r#"<Override PartName="/xl/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>"#.to_string(),
     );
     content.extend([
         r#"<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>"#.to_string(),
         r#"<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>"#.to_string(),
-        r#"<Override PartName="/xl/metadata.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheetMetadata+xml"/>"#.to_string(),
+        format!(
+            r#"<Override PartName="/{}" ContentType="{}"/>"#,
+            crate::import::rich_errors::METADATA_PART,
+            rich_errors::METADATA_CONTENT_TYPE
+        ),
     ]);
     if rich {
         for (part, content_type, _, _) in rich_errors::rich_value_parts() {
@@ -86,8 +109,8 @@ pub fn save_to_xlsx(model: &Model, file_name: &str) -> Result<(), XlsxError> {
     Ok(())
 }
 
-/// Writes `model` as an xlsx package. Features the exporter does not write and drops: pivot
-/// caches and pivot tables (`Workbook::pivot_caches`/`pivot_tables`; SPEC-0015 non-goal).
+/// Writes `model` as an xlsx package, its pivot caches and pivot tables included ([`pivots`]:
+/// the ones it cannot write faithfully are dropped and logged).
 pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<W, XlsxError> {
     let workbook = &model.workbook;
     let selected_sheet = match workbook.views.get(&0) {
@@ -96,13 +119,24 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
     };
     // Cells holding `#SPILL!`, `#CALC!`, ... point (`vm`) at rich values (T-1014).
     let rich = rich_errors::has_rich_errors(workbook);
+    let tables_by_sheet = tables::tables_by_sheet(workbook);
+    // The table parts of each sheet: the part numbers `first..first + count`, from 1.
+    let mut table_parts = Vec::with_capacity(tables_by_sheet.len());
+    let mut next_part = 1;
+    for tables in &tables_by_sheet {
+        table_parts.push(next_part..next_part + tables.len());
+        next_part += tables.len();
+    }
+    let pivots = PivotPlan::new(workbook);
+    // The workbook relates to its sheets as `rId1`..., then to its pivot caches.
+    let first_cache_id = workbook.worksheets.len() + 1;
     let mut zip = zip::ZipWriter::new(writer);
 
     let options = zip::write::SimpleFileOptions::default();
 
     // root folder
-    zip.start_file("[Content_Types].xml", options)?;
-    zip.write_all(get_content_types_xml(workbook, rich).as_bytes())?;
+    zip.start_file(crate::import::CONTENT_TYPES_PART, options)?;
+    zip.write_all(get_content_types_xml(workbook, rich, next_part - 1, &pivots).as_bytes())?;
 
     zip.add_directory("docProps", options)?;
     zip.start_file("docProps/app.xml", options)?;
@@ -122,7 +156,14 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
     zip.start_file("xl/styles.xml", options)?;
     zip.write_all(styles::get_styles_xml(workbook).as_bytes())?;
     zip.start_file("xl/workbook.xml", options)?;
-    zip.write_all(workbook::get_workbook_xml(workbook, selected_sheet)?.as_bytes())?;
+    zip.write_all(
+        workbook::get_workbook_xml(
+            workbook,
+            selected_sheet,
+            &pivots.workbook_pivot_caches(first_cache_id),
+        )?
+        .as_bytes(),
+    )?;
     zip.start_file(crate::import::rich_errors::METADATA_PART, options)?;
     zip.write_all(rich_errors::get_metadata_xml(rich).as_bytes())?;
     if rich {
@@ -138,14 +179,23 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
     zip.write_all(theme::get_theme_xml(&workbook.theme).as_bytes())?;
 
     zip.add_directory("xl/_rels", options)?;
-    zip.start_file("xl/_rels/workbook.xml.rels", options)?;
-    zip.write_all(workbook_xml_rels::get_workbook_xml_rels(workbook, rich).as_bytes())?;
+    zip.start_file(crate::import::WORKBOOK_RELS_PART, options)?;
+    zip.write_all(
+        workbook_xml_rels::get_workbook_xml_rels(
+            workbook,
+            rich,
+            pivots.workbook_relationships(first_cache_id),
+        )
+        .as_bytes(),
+    )?;
 
     zip.add_directory("xl/worksheets", options)?;
     // sheet rels parts (one per sheet with external hyperlinks)
     let mut has_worksheet_rels = false;
     for (sheet_index, worksheet) in workbook.worksheets.iter().enumerate() {
-        if let Some(rels_xml) = worksheets::get_worksheet_xml_rels(worksheet) {
+        let parts = table_parts.get(sheet_index).cloned().unwrap_or(0..0);
+        let pivot_tables = |first_id| pivots.sheet_relationships(sheet_index, first_id);
+        if let Some(rels_xml) = worksheets::get_worksheet_xml_rels(worksheet, parts, pivot_tables) {
             if !has_worksheet_rels {
                 zip.add_directory("xl/worksheets/_rels", options)?;
                 has_worksheet_rels = true;
@@ -177,10 +227,42 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
                 &model.parsed_formulas[sheet_index],
                 sheet_dimension_str,
                 is_sheet_selected,
+                tables_by_sheet.get(sheet_index).map_or(0, Vec::len),
             )
             .as_bytes(),
         )?;
     }
+
+    if next_part > 1 {
+        zip.add_directory("xl/tables", options)?;
+    }
+    for (sheet_index, tables) in tables_by_sheet.iter().enumerate() {
+        let (Some(worksheet), Some(parsed_formulas), Some(parts)) = (
+            workbook.worksheets.get(sheet_index),
+            model.parsed_formulas.get(sheet_index),
+            table_parts.get(sheet_index),
+        ) else {
+            continue;
+        };
+        for (table, id) in tables.iter().zip(parts.clone()) {
+            zip.start_file(format!("xl/tables/table{id}.xml"), options)?;
+            let sheet = u32::try_from(sheet_index).ok();
+            let api_filter = sheet.and_then(|sheet| tables::api_filter_column(model, sheet, table));
+            zip.write_all(
+                tables::get_table_xml(
+                    table,
+                    id,
+                    worksheet,
+                    parsed_formulas,
+                    workbook,
+                    api_filter.as_ref(),
+                )
+                .as_bytes(),
+            )?;
+        }
+    }
+
+    pivots.write(workbook, &mut zip, options)?;
 
     let writer = zip.finish()?;
     Ok(writer)

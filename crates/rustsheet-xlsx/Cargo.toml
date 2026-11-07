@@ -10,13 +10,26 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zip = { version = "9.0.5", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 quick-xml = "0.42"
 thiserror = "1.0"
 rustsheet_engine = { path = "../rustsheet-engine" }
 itertools = "0.12"
 chrono = "0.4"
 bitcode = "0.6.8"
+# OLE compound files (SPEC-0031 D1): pinned exactly, it parses untrusted containers.
+cfb = "=0.16.0"
+# ECMA-376 decryption (SPEC-0031 D2): RustCrypto primitives, pinned exactly, on the digest 0.10 /
+# cipher 0.4 line that the `sha2` already in Cargo.lock uses, so no second digest stack is built.
+aes = { version = "=0.8.4", default-features = false }
+cbc = { version = "=0.1.2", default-features = false }
+ecb = { version = "=0.1.2", default-features = false }
+sha1 = { version = "=0.10.6", default-features = false }
+sha2 = { version = "=0.10.9", default-features = false }
+hmac = { version = "=0.12.1", default-features = false }
+base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
+zeroize = { version = "=1.8.2", default-features = false, features = ["alloc"] }
+subtle = { version = "=2.6.1", default-features = false }
 
 [dev-dependencies]
 uuid = { version = "1.2.2", features = ["serde", "v4"] }

@@ -1,0 +1,20 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-2745: the aaa weekday code in runs that change case several times, and before m/pm and AM/PM.",
+  "tags": ["M10", "probe", "text", "T-2745"],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=TEXT(1,\"aaaAAAaaa\")",
+        "A2": "=TEXT(1,\"AAAaaaAAA\")",
+        "A3": "=TEXT(1,\"aaaAAAa\")",
+        "A4": "=TEXT(1,\"aaaAAAaaaa\")",
+        "A5": "=TEXT(0.75,\"aaam/pm\")",
+        "A6": "=TEXT(0.75,\"aaaAM/PM\")",
+        "A7": "=TEXT(0.75,\"aaaa/p\")"
+      }
+    }
+  ]
+}

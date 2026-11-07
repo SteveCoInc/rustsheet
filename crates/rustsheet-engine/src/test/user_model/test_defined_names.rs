@@ -113,7 +113,7 @@ fn delete_sheet() {
 
     assert_eq!(
         model.get_cell_content(0, 2, 1),
-        Ok(r#"=CONCATENATE(MyName," my world!")"#.to_string())
+        Ok(r#"=CONCATENATE(MyName, " my world!")"#.to_string())
     );
 }
 
@@ -172,7 +172,7 @@ fn rename_defined_name() {
 
     assert_eq!(
         model.get_cell_content(0, 2, 1),
-        Ok(r#"=CONCATENATE(newName," world!")"#.to_string())
+        Ok(r#"=CONCATENATE(newName, " world!")"#.to_string())
     );
 }
 
@@ -208,7 +208,7 @@ fn rename_defined_name_operations() {
 
     assert_eq!(
         model.get_cell_content(0, 2, 1),
-        Ok("=IF(respuesta<2,respuesta*2,respuesta^2)".to_string())
+        Ok("=IF(respuesta<2, respuesta*2, respuesta^2)".to_string())
     );
 
     assert_eq!(
@@ -638,4 +638,59 @@ fn cut_paste_range_defined_name_no_update_when_partial_overlap() {
         model.get_defined_name_list(),
         vec![("BigRange".to_string(), None, "Sheet1!$B$1:$D$3".to_string())]
     );
+}
+
+// A body edited past the API's 65-call cap (an update is unchecked: Graph has no endpoint that sets
+// a body) comes back when the delete of its name is undone, instead of failing the undo (T-4014).
+#[test]
+fn undoing_the_delete_of_an_over_cap_name_restores_it() {
+    let deep = format!("={}1{}", "ABS(".repeat(66), ")".repeat(66));
+    let mut model = new_empty_user_model();
+    model.new_defined_name("Deep", None, "Sheet1!$A$1").unwrap();
+    model
+        .update_defined_name("Deep", None, "Deep", None, &deep)
+        .unwrap();
+    model.set_user_input(0, 2, 1, "=Deep").unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 1), Ok("1".to_string()));
+    model.delete_defined_name("Deep", None).unwrap();
+    assert_eq!(
+        model.get_formatted_cell_value(0, 2, 1),
+        Ok("#NAME?".to_string())
+    );
+    model.undo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 1), Ok("1".to_string()));
+    assert_eq!(model.get_defined_name_list().len(), 1);
+}
+
+/// T-4637: undoing the delete of a hidden, commented (loaded) name restores both; redo deletes it
+/// again, and a name added through the API has neither flag.
+#[test]
+fn undo_delete_restores_hidden_and_comment() {
+    let mut model = new_empty_user_model();
+    model
+        .new_defined_name("plain", None, "Sheet1!$A$1")
+        .unwrap();
+    model
+        .new_defined_name("loaded", None, "Sheet1!$A$2")
+        .unwrap();
+    for name in &mut model.model.workbook.defined_names {
+        if name.name == "loaded" {
+            name.hidden = true;
+            name.comment = Some("note".to_string());
+        }
+    }
+    model.delete_defined_name("loaded", None).unwrap();
+    model.delete_defined_name("plain", None).unwrap();
+    model.undo().unwrap();
+    model.undo().unwrap();
+    let names = &model.model.workbook.defined_names;
+    let flags = |n: &str| {
+        let d = names.iter().find(|d| d.name == n).unwrap();
+        (d.hidden, d.comment.clone())
+    };
+    assert_eq!(flags("loaded"), (true, Some("note".to_string())));
+    assert_eq!(flags("plain"), (false, None));
+    model.redo().unwrap();
+    model.redo().unwrap();
+    assert!(model.get_defined_name_list().is_empty());
 }

@@ -1,6 +1,9 @@
+use super::util::utf16_len;
+use crate::arithmetic::lambda_text_error;
 use crate::calc_result::Range;
-use crate::functions::util::array_node_to_calc_result;
+use crate::functions::util::{array_node_to_calc_result, RangeItem};
 use crate::number_format::number_to_text;
+use crate::reference_operators::RefArg;
 use crate::{
     calc_result::CalcResult,
     cast::{array_node_to_string, calc_result_to_text, StringOrArray, MAX_TEXT_UNITS},
@@ -36,10 +39,7 @@ struct JoinSize {
 impl JoinSize {
     fn new(delimiters: &[String]) -> Self {
         JoinSize {
-            delimiter_units: delimiters
-                .iter()
-                .map(|d| d.encode_utf16().count())
-                .collect(),
+            delimiter_units: delimiters.iter().map(|d| utf16_len(d)).collect(),
             counted: 0,
             units: 0,
         }
@@ -56,9 +56,7 @@ impl JoinSize {
     fn exceeds(&mut self, values: &[String]) -> bool {
         for value in values.get(self.counted..).unwrap_or_default() {
             let separator = self.separator();
-            self.units = self
-                .units
-                .saturating_add(separator + value.encode_utf16().count());
+            self.units = self.units.saturating_add(separator + utf16_len(value));
             self.counted += 1;
         }
         self.units > MAX_TEXT_UNITS
@@ -102,7 +100,10 @@ impl JoinSize {
             }
             error @ CalcResult::Error { .. } => return Err(error),
             CalcResult::EmptyCell | CalcResult::EmptyArg | CalcResult::Range { .. } => {}
-            CalcResult::Array(_) | CalcResult::Lambda(_) => {
+            // Excel: an uncalled LAMBDA joined as text is #VALUE! (probes/t3130-concat-lambda-
+            // trimrange-cell-variable Q5-Q12; arrays.md "An uncalled LAMBDA is one value").
+            CalcResult::Lambda(_) => return Err(lambda_text_error(cell)),
+            CalcResult::Array(_) => {
                 return Err(CalcResult::new_error(
                     Error::NIMPL,
                     cell,
@@ -141,7 +142,7 @@ struct ConcatText {
 
 impl ConcatText {
     fn push(&mut self, piece: &str) {
-        self.units = self.units.saturating_add(piece.encode_utf16().count());
+        self.units = self.units.saturating_add(utf16_len(piece));
         if self.units <= MAX_TEXT_UNITS {
             self.text.push_str(piece);
         }
@@ -231,13 +232,7 @@ impl Model {
                         }
                     }
                 }
-                CalcResult::Lambda(_) => {
-                    return CalcResult::new_error(
-                        Error::NIMPL,
-                        cell,
-                        "Arrays not supported yet".to_string(),
-                    );
-                }
+                CalcResult::Lambda(_) => return lambda_text_error(cell),
                 scalar => {
                     if let Err(error) = result.push_value(scalar) {
                         return error;
@@ -255,13 +250,33 @@ impl Model {
 
     /// TEXTJOIN's delimiter: a scalar, or the elements of an array or range in row-major order,
     /// which cycle between the joined values (probes/textjoin-delimiter-array A1-A6, T-1510).
-    /// Never empty.
+    /// Never empty. An error comes with whether the delimiter was a reference, which lets a bad
+    /// `ignore_empty` win over it (`fn_textjoin`).
     fn textjoin_delimiters(
         &mut self,
         node: &Node,
         cell: CellReferenceIndex,
+    ) -> Result<Vec<String>, (CalcResult, bool)> {
+        // One evaluation, in reference context, tells both the value and whether the delimiter
+        // was a reference (`B1`, `B1:B2`, `IF(TRUE,B1)`, `INDEX(B1:B2,1)`); evaluating it again
+        // on the error path would double the work at every nested TEXTJOIN delimiter.
+        let delimiter = self.evaluate_reference_arg(node, cell);
+        let is_reference = matches!(delimiter, RefArg::Ranges(_));
+        let value = delimiter.into_single_area(cell);
+        if matches!(value, CalcResult::Lambda(_)) {
+            return Err((lambda_text_error(cell), false));
+        }
+        self.textjoin_delimiter_list(value, cell)
+            .map_err(|error| (error, is_reference))
+    }
+
+    /// The delimiter list of an evaluated TEXTJOIN delimiter ([`Self::textjoin_delimiters`]).
+    fn textjoin_delimiter_list(
+        &mut self,
+        value: CalcResult,
+        cell: CellReferenceIndex,
     ) -> Result<Vec<String>, CalcResult> {
-        match self.get_string_or_array(node, cell)? {
+        match self.string_or_array(value, cell)? {
             StringOrArray::String(text) => Ok(vec![text.into_lossy_string()]),
             StringOrArray::Array(array) => {
                 let mut delimiters = Vec::new();
@@ -318,7 +333,18 @@ impl Model {
         self.lift_call(Function::Textjoin, args, cell, &mut |model, values| {
             let delimiters = match &delimiters {
                 Ok(delimiters) => delimiters,
-                Err(error) => return error.clone(),
+                // Excel reads ignore_empty before the error of a delimiter given as a reference
+                // (a cell, a range, IF or INDEX returning one): a text ignore_empty is #VALUE! and
+                // an error one is its own error. An error value as delimiter (a literal, 1/0,
+                // NA(), VLOOKUP) is the result whatever ignore_empty is
+                // (probes/t3885-textjoin-error-delimiter-text-ignore-empty; docs/excel-semantics/
+                // text.md, T-3885).
+                Err((error, is_reference)) => {
+                    return match values.get(1).map(|value| Self::cast_bool_ref(value, cell)) {
+                        Some(Err(ignore_empty_error)) if *is_reference => ignore_empty_error,
+                        _ => error.clone(),
+                    };
+                }
             };
             let ignore_empty = match values.get(1).map(|value| Self::cast_bool_ref(value, cell)) {
                 Some(Ok(ignore_empty)) => ignore_empty,
@@ -329,6 +355,112 @@ impl Model {
                 .get_or_insert_with(|| model.textjoin_walk(delimiters, ignore_empty, &texts, cell))
                 .clone()
         })
+    }
+
+    /// Walks `range` for [`Self::textjoin_walk`], pushing each cell, and each run of blank
+    /// cells with `ignore_empty` FALSE, onto the join state `(size, values, over_limit)`.
+    fn textjoin_push_range(
+        &mut self,
+        range: &Range,
+        ignore_empty: bool,
+        (size, values, over_limit): (&mut JoinSize, &mut Vec<String>, &mut bool),
+        cell: CellReferenceIndex,
+    ) -> Result<(), CalcResult> {
+        // Excel reads no cell past the 32,767-unit limit, not even later in the same row: a
+        // whole-row TEXTJOIN that includes its own cell is #CALC!, not circular, when the limit is
+        // passed before that cell (probes/t3293-textjoin-own-row-limit ZZ1, ZZ9, E15; text.md), with
+        // ignore_empty TRUE as well as FALSE. The walk stops with a private `Err` once over, before the next cell is evaluated.
+        let mut stopped = false;
+        let walked = self.for_each_cell_or_error_in_whole_range(range, cell, |_, item| {
+            match item {
+                RangeItem::Cell(value) => {
+                    size.push_cell(value, ignore_empty, values, over_limit, cell)?;
+                }
+                RangeItem::Blanks(count) => {
+                    if !ignore_empty && !*over_limit {
+                        *over_limit =
+                            size.push_empties(values, i64::try_from(count).unwrap_or(i64::MAX));
+                    }
+                }
+            }
+            // A cell that takes the join over the limit stops the read at once, so the cell
+            // after it is not read either (probes/t3293-textjoin-own-row-limit C11, C12, D13, D14).
+            *over_limit = *over_limit || size.exceeds(values);
+            if *over_limit {
+                stopped = true;
+                return Err(CalcResult::EmptyCell);
+            }
+            Ok(())
+        });
+        if stopped {
+            return Ok(());
+        }
+        walked
+    }
+
+    /// Walks a one-sheet `left:right` for [`Self::textjoin_walk`] with `ignore_empty` FALSE.
+    ///
+    /// Excel joins every cell of a whole column or row, so the empty cells the clip leaves off the
+    /// used area still add a delimiter each: `TEXTJOIN(",",FALSE,D:D)` is #CALC! (over 32,767) and
+    /// `TEXTJOIN(",",FALSE,10:10)` has 16,383 delimiters (probes/whole-column-empty-walkers F1, F8;
+    /// text.md).
+    fn textjoin_push_padded_range(
+        &mut self,
+        left: CellReferenceIndex,
+        right: CellReferenceIndex,
+        (size, values, over_limit): (&mut JoinSize, &mut Vec<String>, &mut bool),
+        cell: CellReferenceIndex,
+    ) -> Result<(), CalcResult> {
+        let (row1, column1) = (left.row, left.column);
+        let (full_row2, full_column2) = (right.row, right.column);
+        let (row2, column2) =
+            match self.clip_to_used_area(left.sheet, row1, column1, full_row2, full_column2) {
+                Ok(clipped) => clipped,
+                Err(message) => {
+                    return Err(CalcResult::new_error(Error::ERROR, cell, message));
+                }
+            };
+        // `max` covers a clip that ends before the range starts (nothing walked).
+        let skipped_columns = i64::from(full_column2) - i64::from(column2.max(column1 - 1));
+        let skipped_rows = i64::from(full_row2) - i64::from(row2.max(row1 - 1));
+        let width = i64::from(full_column2) - i64::from(column1) + 1;
+        // One walk per row, so the join stays in row-major order (the first error cell reached, and
+        // the limit, depend on it) when columns are clipped, and so the walk can stop at the limit:
+        // Excel reads no cell past it, so a range that includes the TEXTJOIN cell itself is #CALC!,
+        // not circular (probes/textjoin-whole-rows-self-reference{,-full-width} B5; text.md). Past
+        // the limit nothing more changes the result (cell errors are dropped).
+        for row in row1..=row2 {
+            if column2 >= column1 {
+                let row_range = Range {
+                    left: CellReferenceIndex {
+                        row,
+                        column: column1,
+                        ..left
+                    },
+                    right: CellReferenceIndex {
+                        row,
+                        column: column2,
+                        ..right
+                    },
+                };
+                self.textjoin_push_range(
+                    &row_range,
+                    false,
+                    (&mut *size, &mut *values, &mut *over_limit),
+                    cell,
+                )?;
+            }
+            if !*over_limit {
+                *over_limit = size.push_empties(values, skipped_columns);
+            }
+            if *over_limit {
+                return Ok(());
+            }
+        }
+        if !*over_limit {
+            *over_limit = size.push_empties(values, skipped_rows.saturating_mul(width));
+        }
+        Ok(())
     }
 
     /// One TEXTJOIN join of `texts` (each an argument's value, and whether it is a direct
@@ -356,74 +488,19 @@ impl Model {
             match text {
                 CalcResult::Number(value) => values.push(number_to_text(*value)),
                 &CalcResult::Range { left, right } => {
-                    if left.sheet != right.sheet {
-                        // A 3-D reference is walked sheet by sheet; an error cell past the limit
-                        // is dropped like a range cell's (probes/text-result-limit-errors-refs
-                        // D10-D11). With ignore_empty FALSE a blank cell adds a delimiter, so
-                        // the blanks past each sheet's used area are walked too.
-                        if let Err(error) = self.for_each_cell_or_error_in_whole_range(
-                            &Range { left, right },
-                            cell,
-                            |_, value| {
-                                size.push_cell(
-                                    value,
-                                    ignore_empty,
-                                    &mut values,
-                                    &mut over_limit,
-                                    cell,
-                                )
-                            },
-                        ) {
-                            return error;
-                        }
-                        continue;
-                    }
-                    let row1 = left.row;
-                    let mut row2 = right.row;
-                    let column1 = left.column;
-                    let mut column2 = right.column;
-                    let (full_row2, full_column2) = (row2, column2);
-                    match self.clip_to_used_area(left.sheet, row1, column1, row2, column2) {
-                        Ok((r, c)) => {
-                            row2 = r;
-                            column2 = c;
-                        }
-                        Err(message) => return CalcResult::new_error(Error::ERROR, cell, message),
-                    }
-                    // Excel joins every cell of a whole column or row, so the empty cells the clip
-                    // skips still add a delimiter each with ignore_empty FALSE: `TEXTJOIN(",",
-                    // FALSE,D:D)` is #CALC! (over 32,767) and `TEXTJOIN(",",FALSE,10:10)` has 16,383
-                    // delimiters (probes/whole-column-empty-walkers F1, F8; text.md).
-                    let pad = !ignore_empty;
-                    // `max` covers a clip that ends before the range starts (nothing walked).
-                    let skipped_columns =
-                        i64::from(full_column2) - i64::from(column2.max(column1 - 1));
-                    let skipped_rows = i64::from(full_row2) - i64::from(row2.max(row1 - 1));
-                    let width = i64::from(full_column2) - i64::from(column1) + 1;
-                    for row in row1..row2 + 1 {
-                        for column in column1..(column2 + 1) {
-                            let value = self.evaluate_cell(CellReferenceIndex {
-                                sheet: left.sheet,
-                                row,
-                                column,
-                            });
-                            if let Err(error) = size.push_cell(
-                                value,
-                                ignore_empty,
-                                &mut values,
-                                &mut over_limit,
-                                cell,
-                            ) {
-                                return error;
-                            }
-                        }
-                        if pad && !over_limit {
-                            over_limit = size.push_empties(&mut values, skipped_columns);
-                        }
-                    }
-                    if pad && !over_limit {
-                        over_limit =
-                            size.push_empties(&mut values, skipped_rows.saturating_mul(width));
+                    // A reference is walked sheet by sheet (a 3-D one spans several); an error cell
+                    // past the limit is dropped like a range cell's (probes/text-result-limit-errors-refs
+                    // D10-D11). With ignore_empty FALSE a blank cell adds a delimiter, so the blanks
+                    // inside the used area are walked too, a run of them in a mostly blank area as
+                    // one count, so the walk costs the stored cells (T-2710, T-2713).
+                    let state = (&mut size, &mut values, &mut over_limit);
+                    let walked = if !ignore_empty && left.sheet == right.sheet {
+                        self.textjoin_push_padded_range(left, right, state, cell)
+                    } else {
+                        self.textjoin_push_range(&Range { left, right }, ignore_empty, state, cell)
+                    };
+                    if let Err(error) = walked {
+                        return error;
                     }
                 }
                 // A direct single-cell reference is read like a range cell (probes/text-result-limit-errors
@@ -464,13 +541,7 @@ impl Model {
                         }
                     }
                 }
-                CalcResult::Lambda(_) => {
-                    return CalcResult::Error {
-                        error: Error::NIMPL,
-                        origin: cell,
-                        message: "Arrays not supported yet".to_string(),
-                    }
-                }
+                CalcResult::Lambda(_) => return lambda_text_error(cell),
             };
         }
         if over_limit || size.exceeds(&values) {

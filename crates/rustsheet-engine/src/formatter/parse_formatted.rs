@@ -1,10 +1,15 @@
 //! Reading typed text as a number together with the format it implies ("$1,234.50" ->
 //! (1234.5, "$#,##0.00")), split from format.rs, which renders numbers.
 
+use crate::cast::ends_with_dollar;
+use crate::mixed_fraction::mixed_fraction;
 use crate::{locale::Locale, number_format::parse_excel_number, types::DateSystem};
 
 use super::{
-    date_clock::{parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm},
+    date_clock::{
+        am_pm_word, parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm,
+        parse_letter_period_serial_in,
+    },
     date_text::{parse_date, CurrentYear},
     lexer::is_likely_date_number_format,
 };
@@ -14,6 +19,16 @@ use super::{
 /// seconds or AM/PM get the same format (probes/date-text-non-glued-timevalue, T-1952;
 /// docs/research/non-glued-typed-input-2026-10-19.md).
 const TYPED_DATE_CLOCK_FORMAT: &str = "m/d/yyyy h:mm";
+
+/// Format Excel gives a typed mixed fraction whose denominator is a single digit (`3 1/2`,
+/// `-$3 1/2`, `+ 3 1/2`, `3 01/02`).
+const MIXED_FRACTION_FORMAT: &str = "# ?/?";
+
+/// Format of a typed mixed fraction whose denominator is 10 or more (`3 1/12`, `3 1/10000`).
+const MIXED_FRACTION_WIDE_FORMAT: &str = "# ??/??";
+
+/// Format of a typed mixed fraction with a `%` (`3 1/2%`, `-3 1/2%`).
+const MIXED_FRACTION_PERCENT_FORMAT: &str = "0.00%";
 
 /// Format of a typed clock with a fractional second (`10:00:30.5`, `10:00.5`).
 const FRACTION_CLOCK_FORMAT: &str = "mm:ss.0";
@@ -30,18 +45,120 @@ pub(crate) fn parse_typed_number(
     current_year: CurrentYear,
     date_system: DateSystem,
 ) -> Result<(f64, Option<String>), String> {
+    // A trailing `$` stays text when typed: `1.5$`, `1.5 $` and `-200$` are General text
+    // (probes/t3980-typed-percent-currency A4:C6), as coercion refuses them too.
+    if ends_with_dollar(original) {
+        return Err("Cannot parse number".to_string());
+    }
+    let parse =
+        |text: &str| parse_ascii_typed_number(text, currencies, locale, current_year, date_system);
+    parse_typed_script_digits(original, parse).unwrap_or_else(|| parse(original))
+}
+
+/// [`parse_typed_number`] for text whose digits are ASCII.
+fn parse_ascii_typed_number(
+    original: &str,
+    currencies: &[&str],
+    locale: &Locale,
+    current_year: CurrentYear,
+    date_system: DateSystem,
+) -> Result<(f64, Option<String>), String> {
     parse_formatted_number(original, currencies, locale, current_year, date_system).or_else(|err| {
         let text = without_single_letter_dot(original);
         if let Some(parsed) = parse_bare_letter_clock(text) {
             return Ok(parsed);
         }
-        let Some(shape) = typed_clock_shape(text) else {
-            return Err(err);
+        if let Some(parsed) = parse_bare_clock(original) {
+            return Ok(parsed);
+        }
+        // A mixed fraction, signed, with `$` or `%`, is a number (probes/typed-input-sign-space-
+        // mixed-fraction B6, B7, B9-B12). Its format is `# ?/?`, `# ??/??` for a denominator of 10 or more, or `0.00%` with a `%` (ENTERED
+        // numberFormat, probes/typed-mixed-fraction-number-format, excel-graph 2026-10-30;
+        // docs/research/typed-mixed-fraction-number-format-2026-10-30.md).
+        let trimmed = original.trim_matches(' ');
+        if let Some(v) = mixed_fraction(trimmed, currencies) {
+            let format = if trimmed.ends_with('%') {
+                MIXED_FRACTION_PERCENT_FORMAT
+            } else if mixed_fraction_denominator_is_wide(trimmed) {
+                MIXED_FRACTION_WIDE_FORMAT
+            } else {
+                MIXED_FRACTION_FORMAT
+            };
+            return Ok((v, Some(format.to_string())));
+        }
+        // A clock-first date-time tolerates trailing spaces (probes/date-text-typed-clock-first-shapes A18).
+        let trimmed = text.trim_end_matches(' ');
+        if let Some(serial) =
+            parse_letter_period_serial_in(trimmed, locale, current_year, date_system)
+        {
+            return Ok((serial, Some(FRACTION_CLOCK_FORMAT.to_string())));
+        }
+        let (shape, text) = match typed_clock_shape(text) {
+            Some(shape) => (shape, text),
+            None => match leading_clock_shape(text) {
+                Some(shape) => (shape, text.trim_end_matches(' ')),
+                None => return Err(err),
+            },
         };
         parse_date_clock_serial_in(text, locale, current_year, date_system)
             .map(|serial| (serial, shape.format()))
             .ok_or(err)
     })
+}
+
+/// Whether the denominator of the mixed fraction `text` (already read by `mixed_fraction`) is 10
+/// or more, ignoring leading zeros: `3 1/12` and `3 1/10000` take `# ??/??`, `3 1/9` and
+/// `3 1/002` take `# ?/?` (probes/typed-mixed-fraction-number-format A9-A27); a closing `)` or
+/// space is not part of it (`$(1 1/2)` is `# ?/?`, `$(3 1/12)` `# ??/??`, probes/t4117-currency-
+/// parens A21, A34).
+fn mixed_fraction_denominator_is_wide(text: &str) -> bool {
+    text.rsplit_once('/').is_some_and(|(_, denominator)| {
+        denominator
+            .trim_end_matches([')', ' '])
+            .trim_start_matches('0')
+            .len()
+            >= 2
+    })
+}
+
+/// A bare typed 24-hour clock (no date, no AM/PM) as a time of day with the format Excel gives it:
+/// `12:30`, `9:05`, `1:2` and `10:00:` are `h:mm`, `10:00:30` is `h:mm:ss`, a fractional second is
+/// `mm:ss.0`, `24:00`, `25:00:30` and `100:00` are `[h]:mm:ss`, and `10:60`, `10:99` and `10:00:60` are
+/// numbers with General; `:30` and ` 10:00` (a leading space) stay text
+/// (probes/t3894-bare-24h-clock, excel-graph 2026-11-03;
+/// docs/research/t3894-bare-24h-clock-2026-11-03.md; probes/t3903-bare-24h-clock-extra). An hour
+/// of 24 or more with an out-of-range minute or second stays text (`25:60`, `25:00:60`).
+fn parse_bare_clock(text: &str) -> Option<(f64, Option<String>)> {
+    let first = text.bytes().next()?;
+    if !first.is_ascii_digit()
+        || !text
+            .bytes()
+            .all(|b| b.is_ascii_digit() || b == b':' || b == b'.')
+    {
+        return None;
+    }
+    let body = text.strip_suffix(':').unwrap_or(text);
+    if !body.contains(':') {
+        return None;
+    }
+    let serial = parse_clock_text(text)?;
+    if body.contains('.') {
+        return Some((serial, Some(FRACTION_CLOCK_FORMAT.to_string())));
+    }
+    let value = |s: &str| s.parse::<u32>().unwrap_or(u32::MAX);
+    let parts: Vec<u32> = body.split(':').map(value).collect();
+    let format = match parts.as_slice() {
+        [hour, minute] if *hour >= 24 && *minute < 60 => Some("[h]:mm:ss"),
+        [hour, minute] if *hour < 24 && *minute < 60 => Some("h:mm"),
+        [hour, minute, second] if *hour < 24 && *minute < 60 && *second < 60 => Some("h:mm:ss"),
+        // Hours of 24 or more take the elapsed-hours format with seconds too; an out-of-range
+        // minute or second there stays text (probes/t3903-bare-24h-clock-extra A1:A21, T-3903).
+        [hour, minute, second] if *hour >= 24 && *minute < 60 && *second < 60 => Some("[h]:mm:ss"),
+        // An out-of-range minute or second with an hour below 24 is a number with General.
+        [hour, ..] if *hour < 24 => None,
+        _ => return None,
+    };
+    Some((serial, format.map(str::to_string)))
 }
 
 /// A bare typed clock with an `A`/`P` or `AM`/`PM` suffix as a time of day with its AM/PM clock
@@ -50,10 +167,7 @@ pub(crate) fn parse_typed_number(
 /// as without the suffix (N24-N25, T-2053).
 fn parse_bare_letter_clock(text: &str) -> Option<(f64, Option<String>)> {
     let (clock, word) = text.rsplit_once(' ')?;
-    let ap_word = is_single_letter_ap(word)
-        || word.eq_ignore_ascii_case("am")
-        || word.eq_ignore_ascii_case("pm");
-    if clock.contains(' ') || !ap_word {
+    if clock.contains(' ') || !is_am_pm_word(word) {
         return None;
     }
     let serial = parse_clock_text(text).or_else(|| parse_hour_only_am_pm(text))?;
@@ -68,9 +182,11 @@ fn parse_bare_letter_clock(text: &str) -> Option<(f64, Option<String>)> {
 }
 
 /// `text` without the dot after a trailing single-letter `A`/`P` suffix (`10:00 A.` -> `10:00 A`):
-/// typed text accepts it (probes/date-text-single-letter-ap N12).
+/// typed text accepts it (probes/date-text-single-letter-ap N12), also before trailing spaces
+/// (`10 A.  ` is 10 AM, probes/t3948-letter-period-gate-edges A14).
 fn without_single_letter_dot(text: &str) -> &str {
     match text
+        .trim_end_matches(' ')
         .strip_suffix('.')
         .and_then(|rest| rest.rsplit_once(' '))
     {
@@ -81,6 +197,11 @@ fn without_single_letter_dot(text: &str) -> &str {
 
 fn is_single_letter_ap(word: &str) -> bool {
     word.eq_ignore_ascii_case("a") || word.eq_ignore_ascii_case("p")
+}
+
+/// Whether `word` is a clock's `AM`/`PM` or single-letter `A`/`P` word, in any case.
+fn is_am_pm_word(word: &str) -> bool {
+    am_pm_word(word).is_some()
 }
 
 /// Cell format of typed text that stays text because its clock is rejected: a date followed by a
@@ -96,11 +217,15 @@ pub(crate) fn rejected_clock_text_format(
     current_year: CurrentYear,
     date_system: DateSystem,
 ) -> Option<String> {
+    // Typed `-$3 1/2%` stays text but takes `0.00%` like the numeric mixed fractions (A15).
+    if crate::mixed_fraction::is_negative_currency_percent_fraction(
+        original.trim_matches(' '),
+        currencies,
+    ) {
+        return Some(MIXED_FRACTION_PERCENT_FORMAT.to_string());
+    }
     let (rest, word) = without_single_letter_dot(original).rsplit_once(' ')?;
-    if !["am", "pm", "a", "p"]
-        .iter()
-        .any(|s| word.eq_ignore_ascii_case(s))
-    {
+    if !is_am_pm_word(word) {
         return None;
     }
     let rest = rest.trim_end_matches(' ');
@@ -152,6 +277,35 @@ impl TypedClock {
     }
 }
 
+/// The clock typed before the date (`10:00 7/1/2025`, `10 AM 7/1/2025`, `9:00:30 July 1, 2025`):
+/// a number whose format follows the clock like a clock typed after the date, `m/d/yyyy h:mm`
+/// except a fractional second (`mm:ss.0`) and an out-of-range component (General). Whatever date
+/// shape the reader accepts may follow, with extra spaces around it, and a year-less date takes
+/// the current year (probes/date-text-typed-clock-first-shapes A1-A45, excel-graph 2026-11-03;
+/// docs/excel-semantics/dates.md "Typed clock-first date-times"). A leading space keeps it text
+/// (probes/date-text-mixed-separator-typed A8, A9).
+fn leading_clock_shape(text: &str) -> Option<TypedClock> {
+    let (clock, rest) = text.split_once(' ')?;
+    let rest = rest.trim_start_matches(' ');
+    // An `AM`/`PM`/`A`/`P` word between the clock and the date belongs to the clock
+    // (`10 A 7/1/2025`, A34). `A.` is not one: Excel reads `10 A. 7/1/2025` as another number
+    // (`parse_letter_period_serial_in`).
+    let clock_end = match rest.split_once(' ') {
+        Some((word, _)) if is_am_pm_word(word) => text.len() - rest.len() + word.len(),
+        _ => clock.len(),
+    };
+    let clock = text.get(..clock_end)?;
+    if clock.is_empty() || !clock.bytes().next()?.is_ascii_digit() {
+        return None;
+    }
+    // An hour alone needs its AM/PM word (`10 AM`, A1); `typed_clock_shape` leaves that to the
+    // bare-clock reader.
+    if parse_hour_only_am_pm(clock).is_some() {
+        return Some(TypedClock::Time);
+    }
+    typed_clock_shape(clock)
+}
+
 /// Classifies the clock at the end of typed date+clock text: `H:MM`, `H:MM:SS`, `H:MM:SS.f` or
 /// `M:SS.f`, optionally followed by spaces and `AM`/`PM`/`A`/`P` in any case (probes/date-text-single-letter-ap,
 /// T-1994), or an hour-only `H AM`.
@@ -163,10 +317,7 @@ fn typed_clock_shape(text: &str) -> Option<TypedClock> {
     let mut text = text.trim_end_matches(' ');
     let mut suffixed = false;
     if let Some((rest, word)) = text.rsplit_once(' ') {
-        if ["am", "pm", "a", "p"]
-            .iter()
-            .any(|s| word.eq_ignore_ascii_case(s))
-        {
+        if is_am_pm_word(word) {
             suffixed = true;
             text = rest.trim_end_matches(' ');
         }
@@ -219,7 +370,9 @@ pub(crate) fn parse_formatted_number(
     current_year: CurrentYear,
     date_system: DateSystem,
 ) -> Result<(f64, Option<String>), String> {
-    let value = original.trim();
+    // Only the space is trimmed: CHAR(160) padding is not number text (VALUE("$1"&CHAR(160)) is
+    // #VALUE!, probes/t3334-criteria-operand-forms H47, H51, H55, H59).
+    let value = original.trim_matches(' ');
 
     let symbols = &locale.numbers.symbols;
     let decimal_separator = symbols.decimal.chars().next().unwrap_or('.');
@@ -287,7 +440,7 @@ fn parse_percent_or_currency(
     // separators (`1,000%` is `0%`). Probes: typed-currency-percent-input, typed-paren-number-input;
     // docs/excel-semantics/coercion.md "Typed currency and percent formats".
     if let Some(p) = value.strip_suffix('%') {
-        let (f, options) = parse_number(p.trim(), decimal_separator, group_separator)?;
+        let (f, options) = parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
         if options.is_scientific {
             return Ok(Some((
                 percent_value(f),
@@ -302,14 +455,71 @@ fn parse_percent_or_currency(
         return Ok(Some((percent_value(f), Some(format.to_string()))));
     }
 
+    // A leading percent sign shifts the number after it: `%1` is 0.01, `%-1` -0.01, `% 1` 0.01,
+    // while `%1%` is refused (probes/eng-inumber-grammar-value B3,
+    // eng-number-text-group-comma-edges A15-A18). A minus sign may precede it: `-%1.5` is -0.015
+    // (probes/t3742-value-percent-currency A1, A16), but not before a minus: `-%-1.5` is #VALUE!
+    // and typed text. A plus may precede it: `+%1.5` is 0.015 (probes/t3980-typed-percent-
+    // currency A7/B7 and A2 for `-%-1.5`, A10/B10 for `+%1.5`; the shapes after a sign are T-3991). Typed cell input shares this reader (A1, A3).
+    let leading_percent = value
+        .strip_prefix('%')
+        .map(|p| (p, 1.0, false))
+        .or_else(|| value.strip_prefix("+%").map(|p| (p, 1.0, true)))
+        .or_else(|| value.strip_prefix("-%").map(|p| (p, -1.0, true)));
+    if let Some((p, sign, signed)) = leading_percent {
+        // Any sign before the percent sign refuses a second sign after it: `-%-1.5`, `+%-1.5`
+        // and `-%+1.5` are #VALUE! (probes/t3980 A2, probes/t3991-percent-shapes A1/A4/A5).
+        if signed && p.trim_start_matches(' ').starts_with(['-', '+']) {
+            return Err("Cannot parse number".to_string());
+        }
+        let (f, options) = parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
+        let f = sign * f;
+        let format = if options.is_scientific {
+            SCIENTIFIC_FORMAT
+        } else if options.decimal_digits > 0 {
+            "0.00%"
+        } else {
+            "0%"
+        };
+        return Ok(Some((percent_value(f), Some(format.to_string()))));
+    }
+
     // check if it is a currency in currencies
     for currency in currencies {
+        // A currency sign before a parenthesised amount is negative: `$(12)`, `$ (12)`, `$( 12 )`
+        // and `$(1,234.5)` are -12, -12, -12 and -1234.5, typed with the `$` accounting format
+        // (decimal digits after the point, even `$(12.0)` and `$(12.)`, give the two-decimal one);
+        // `$(1e3)` takes `0.00E+00`. `$(-12)`, `$((12))`, `$(12`, `$12)`, `(12$)`, `-$(12)` and
+        // `$(12)%` are text. `"€(12)"+0`, VALUE and NUMBERVALUE are -12 while typed `€(12)` is
+        // text, because typed input has no `€` among its currencies (probes/t4117-typed-currency-
+        // paren; ENTERED log docs/research/t4117-typed-currency-paren-2026-11-04.md;
+        // docs/excel-semantics/coercion.md "Currency sign before parentheses").
+        if let Some(inner) = Some(currency)
+            .filter(|c| !c.is_empty())
+            .and_then(|c| value.strip_prefix(c))
+            .map(|rest| rest.trim_start_matches(' '))
+            .and_then(|rest| rest.strip_prefix('('))
+            .and_then(|rest| rest.strip_suffix(')'))
+        {
+            let inner = inner.trim_matches(' ');
+            if inner.starts_with(['-', '+', '(']) {
+                return Err("Cannot parse number".to_string());
+            }
+            let (f, options) = parse_number(inner, decimal_separator, group_separator)?;
+            let format = if options.is_scientific {
+                SCIENTIFIC_FORMAT.to_string()
+            } else {
+                prefix_currency_format(currency, options.decimal_digits > 0)
+            };
+            return Ok(Some((0.0 - f, Some(format))));
+        }
         let prefixed = value
             .strip_prefix(&format!("-{currency}"))
             .map(|p| (p, -1.0))
             .or_else(|| value.strip_prefix(currency).map(|p| (p, 1.0)));
         if let Some((p, sign)) = prefixed {
-            let (f, options) = parse_number(p.trim(), decimal_separator, group_separator)?;
+            let (f, options) =
+                parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
             // Excel: `-$1e3` is -1000 like `$-1e3` (typed-currency-percent-input A29).
             let f = sign * f;
             if options.is_scientific {
@@ -320,7 +530,14 @@ fn parse_percent_or_currency(
                 Some(prefix_currency_format(currency, options.decimal_digits > 0)),
             )));
         } else if let Some(p) = value.strip_suffix(currency) {
-            let (f, options) = parse_number(p.trim(), decimal_separator, group_separator)?;
+            let (f, options) =
+                parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
+            // A trailing `$` after E-notation is not a number: VALUE("1e2$") is #VALUE!
+            // (probes/t3334-criteria-operand-forms H39). A trailing euro sign reads by coercion
+            // (probes/t3742-value-percent-currency A11).
+            if options.is_scientific && *currency == "$" {
+                return Err("Cannot parse number".to_string());
+            }
             if options.is_scientific {
                 return Ok(Some((f, Some(SCIENTIFIC_FORMAT.to_string()))));
             }
@@ -384,6 +601,190 @@ fn parse_plain_number(
     Ok((f, None))
 }
 
+/// Excel reads the digits of twelve scripts as their values, alone or mixed with ASCII digits and
+/// with each other: Arabic-Indic (U+0660..), Extended Arabic-Indic (U+06F0..), Devanagari
+/// (U+0966..), Bengali (U+09E6..), Gurmukhi (U+0A66..), Tamil (U+0BE6..), Telugu (U+0C66..), Thai
+/// (U+0E50..), Lao (U+0ED0..), Tibetan (U+0F20..), Myanmar (U+1040..) and Khmer (U+17E0..), in
+/// every probed form; full-width digits stay text. Number-text coercion (`cast::number_text_in`,
+/// the mixed fraction readers) and typed cell input ([`parse_typed_number`]) read them.
+/// Evidence: docs/excel-semantics/coercion.md "Script digits in number text (T-3446)",
+/// probes/t3276-collation-other-scripts Calc!H1:H8, probes/t3446-script-digits-forms,
+/// t3958-gurmukhi-tamil-telugu-khmer-digits, t3891-typed-script-digit-shapes.
+pub(crate) fn script_digit_to_ascii(c: char) -> char {
+    script_digit(c).map_or(c, |(_, digit)| digit)
+}
+
+/// The block of a script digit ([`script_digit_to_ascii`]) and its ASCII digit.
+fn script_digit(c: char) -> Option<(ScriptDigits, char)> {
+    let block = SCRIPT_DIGITS
+        .iter()
+        .find(|block| (block.zero..block.zero + 10).contains(&u32::from(c)))?;
+    let digit = char::from_digit(u32::from(c) - block.zero, 10)?;
+    Some((*block, digit))
+}
+
+/// A block of script digits and the locale tag Excel gives a number typed with them: the locale,
+/// and the numeral part of the tag (`ar-SA` and `200` make `[$-ar-SA,200]0`; the numeral byte of
+/// `locale_tag::numerals` above the low byte). Logged by the oracle for every block
+/// (docs/research/t3446-script-digits-forms-2026-11-03.md,
+/// t3891-typed-script-digit-shapes-2026-11-04.md).
+#[derive(Clone, Copy)]
+struct ScriptDigits {
+    zero: u32,
+    locale: &'static str,
+    /// The numeral byte of [`Numerals::from_byte`]; the tag suffix is `{byte:X}00`.
+    numeral_byte: u32,
+}
+
+const SCRIPT_DIGITS: [ScriptDigits; 12] = [
+    ScriptDigits {
+        zero: 0x0660,
+        locale: "ar-SA",
+        numeral_byte: 2,
+    },
+    ScriptDigits {
+        zero: 0x06F0,
+        locale: "ar-SA",
+        numeral_byte: 3,
+    },
+    ScriptDigits {
+        zero: 0x0966,
+        locale: "hi-IN",
+        numeral_byte: 4,
+    },
+    ScriptDigits {
+        zero: 0x09E6,
+        locale: "bn-IN",
+        numeral_byte: 5,
+    },
+    ScriptDigits {
+        zero: 0x0A66,
+        locale: "pa-IN",
+        numeral_byte: 6,
+    },
+    ScriptDigits {
+        zero: 0x0BE6,
+        locale: "ta-IN",
+        numeral_byte: 9,
+    },
+    ScriptDigits {
+        zero: 0x0C66,
+        locale: "te-IN",
+        numeral_byte: 10,
+    },
+    ScriptDigits {
+        zero: 0x0E50,
+        locale: "th-TH",
+        numeral_byte: 13,
+    },
+    ScriptDigits {
+        zero: 0x0ED0,
+        locale: "lo-LA",
+        numeral_byte: 14,
+    },
+    ScriptDigits {
+        zero: 0x0F20,
+        locale: "bo-CN",
+        numeral_byte: 15,
+    },
+    ScriptDigits {
+        zero: 0x1040,
+        locale: "my-MM",
+        numeral_byte: 16,
+    },
+    ScriptDigits {
+        zero: 0x17E0,
+        locale: "km-KH",
+        numeral_byte: 18,
+    },
+];
+
+/// [`parse_typed_number`] for typed text with script digits: the number of its ASCII reading,
+/// with the format Excel gives it, which names the block of the **last** script digit in a
+/// locale tag (`१٢` takes `ar-SA,200`, `๓२١` `ar-SA,200`, `१२๓` `th-TH,D00`; probes/t3891-typed-
+/// script-digit-shapes A31:A39) and differs from the format of the same ASCII text
+/// ([`script_digit_format`]). `None` when `original` has no script digit.
+fn parse_typed_script_digits(
+    original: &str,
+    parse: impl Fn(&str) -> Result<(f64, Option<String>), String>,
+) -> Option<Result<(f64, Option<String>), String>> {
+    let block = original.chars().rev().find_map(script_digit)?.0;
+    let ascii = ascii_script_digits(original);
+    Some(parse(&ascii).map(|(value, format)| {
+        let format = script_digit_format(&ascii, value, format.as_deref(), block);
+        (value, format)
+    }))
+}
+
+/// The format Excel gives typed script-digit text whose ASCII reading `ascii` has the typed
+/// format `format` (probes/t3446-script-digits-forms, t3958-gurmukhi-tamil-telugu-khmer-digits,
+/// t3891-typed-script-digit-shapes; excel-graph ENTERED logs):
+/// - a number with no format is `0`, or `0.` and one `#` per typed decimal (`١.٢٥٠` is `0.###`,
+///   `١٢.٥٠` `0.##`), and an integer of 12 digits or more `0.#####E+00`;
+/// - a percent is `0.00%` (ASCII `12%` is `0%`), a currency the long form
+///   `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)` however it was written;
+/// - a date is `mm/dd/yyyy`, or `dd-mmm-yyyy` with a month name, under `[$-,200]`; a date-time
+///   and a clock keep their format under that tag;
+/// - an exponent or a mixed fraction keeps its format with no tag.
+fn script_digit_format(
+    ascii: &str,
+    value: f64,
+    format: Option<&str>,
+    block: ScriptDigits,
+) -> Option<String> {
+    let ScriptDigits {
+        locale,
+        numeral_byte,
+        ..
+    } = block;
+    let numerals = format!("{numeral_byte:X}00");
+    let tagged = |code: &str| Some(format!("[$-{locale},{numerals}]{code}"));
+    let Some(format) = format else {
+        // Excel: `١٢٣٤٥٦٧٨٩٠١٢` is `0.#####E+00` (A20); 11 digits and below unprobed.
+        if value.abs() >= 1e11 {
+            return tagged("0.#####E+00");
+        }
+        let decimals = ascii.split_once('.').map_or(0, |(_, rest)| {
+            rest.chars().take_while(char::is_ascii_digit).count()
+        });
+        return tagged(&format!(
+            "0{}{}",
+            if decimals > 0 { "." } else { "" },
+            "#".repeat(decimals)
+        ));
+    };
+    if format.contains('E') || format.contains('?') {
+        return Some(format.to_string());
+    }
+    if format.contains('$') {
+        let symbol = format!("[$$-{locale},{numerals}]");
+        return Some(format!("{symbol} #,##0.00_);[Red]({symbol}#,##0.00)"));
+    }
+    if format.contains('%') {
+        return tagged("0.00%");
+    }
+    if is_likely_date_number_format(format) {
+        let has_clock = format.contains('h') || format.contains('s');
+        let code = match () {
+            () if has_clock => format,
+            () if format.contains("mmm") => "dd-mmm-yyyy",
+            () => "mm/dd/yyyy",
+        };
+        return Some(format!("[$-,{numerals}]{code}"));
+    }
+    tagged(format)
+}
+
+/// `text` with every script digit ([`script_digit_to_ascii`]) replaced by its ASCII digit;
+/// borrowed unchanged when it is ASCII.
+pub(crate) fn ascii_script_digits(text: &str) -> std::borrow::Cow<'_, str> {
+    if text.is_ascii() {
+        std::borrow::Cow::Borrowed(text)
+    } else {
+        std::borrow::Cow::Owned(text.chars().map(script_digit_to_ascii).collect())
+    }
+}
+
 struct NumberOptions {
     has_commas: bool,
     is_scientific: bool,
@@ -416,6 +817,14 @@ fn parse_number(
         1.0
     };
 
+    // Excel: spaces between the sign and the digits are skipped, `VALUE("- 5")` is -5 and
+    // `VALUE("+ 5")` is 5 (docs/excel-semantics/text.md, probes/value-sign-space-mixed-fraction-dash-date A1-A6).
+    if position > 0 {
+        while position < len && characters[position] == ' ' {
+            position += 1;
+        }
+    }
+
     if position >= len {
         return Err("Cannot parse number".to_string());
     }
@@ -436,9 +845,20 @@ fn parse_number(
         }
         position += 1;
     }
-    // Check the group separator is in multiples of three
-    for index in &group_separator_index {
-        if (chars.len() - index) % 3 != 0 {
+    // Excel: every group after a comma has three or more digits, so `1,0000` is 10000 and
+    // `1,000,0000` is 10000000, while `1,`, `1,00`, `1,000,00` and `1,000,` are refused; an integer
+    // part of only zeros before the first comma is refused whatever the group (`0,0000`, `0,000`,
+    // `00,000` are #VALUE!, `01,0000` is 10000).
+    // Probes eng-inumber-grammar-value, eng-number-text-group-comma-edges; coercion.md "Group
+    // commas and a leading percent sign".
+    for (n, index) in group_separator_index.iter().enumerate() {
+        let end = group_separator_index
+            .get(n + 1)
+            .copied()
+            .unwrap_or(chars.len());
+        let group = end - index;
+        let zero_lead = n == 0 && chars[..*index].trim_start_matches('0').is_empty();
+        if group < 3 || zero_lead {
             return Err("Cannot parse number".to_string());
         }
     }
@@ -492,5 +912,26 @@ fn parse_number(
                 decimal_digits,
             },
         )),
+    }
+}
+
+#[cfg(test)]
+mod script_digits_table_tests {
+    use super::{ScriptDigits, SCRIPT_DIGITS};
+    use crate::formatter::numerals::Numerals;
+
+    /// `SCRIPT_DIGITS` and `Numerals::from_byte` are one table: each block's numeral byte prints
+    /// that block's own zero (Tamil keeps ASCII `0`, which has no zero digit).
+    #[test]
+    fn script_digits_agree_with_numerals() {
+        for ScriptDigits {
+            zero, numeral_byte, ..
+        } in SCRIPT_DIGITS
+        {
+            match Numerals::from_byte(numeral_byte) {
+                Numerals::Positional { zero: z, .. } => assert_eq!(z, zero, "byte {numeral_byte}"),
+                other => panic!("byte {numeral_byte} is {other:?}"),
+            }
+        }
     }
 }

@@ -3,8 +3,8 @@ id: T-1749
 title: "DEVSQ accumulation order: last-digit and cancellation mismatches (probes/stat-order-floor-batch)"
 milestone: M9
 lane: functions-stat
-status: todo
-priority: P2
+status: done
+priority: P1
 size: S
 tier: opus
 campaign: visible
@@ -16,6 +16,9 @@ DEVSQ matches Excel's value to the last digit, including under cancellation.
 
 ## Context
 Oracle: `DEVSQ(L1:L6)` = 48.833333333333336 (ours ...34), `DEVSQ(0.1,0.2,0.3)` = 0.019999999999999997 (ours ...976), `DEVSQ(1E15,1E15+1)` = 0.5 (ours 0), plus 1-ulp cases A278, A280, A290, A300 in probes/stat-order-floor-batch. More last-digit cells (T-1927): probes/ftest-decomposition Calc!B9 `DEVSQ(Data!C1:C3)` = 4.666666666666666 (ours ...668), C9/F10 77.60000000000001 (ours 77.6), C10/F9 30.8 (ours 30.799999999999997), D10 11.719999999999999 (ours 11.720000000000013). Excel looks like a mean-then-squared-deviation two-pass; fit the accumulation order against these cells (see coercion.md note on I392).
+
+Also poi/FormulaEvalTestData_Copy.xlsx EverythingTests!I392 `DEVSQ("1","2",2)`: Excel 0.6666666666666666, ours 0.6666666666666661 (sumsq - sum^2/n), now visibly off
+(half a unit in the 15th digit is 5E-16; owner moved from the deferred T-0951 at the 2026-10-28 triage). A two-pass mean/deviation sum gives Excel's value here; T-0951 keeps the VARP cells.
 
 Visibly-off cells (gap triage 2026-10-21, decision 0083): 1 cell, 1 numeric past half a unit in the 15th digit and 0 with a wrong type, error or text, blamed on DEVSQ 1. Every one is listed above.
 
@@ -33,6 +36,13 @@ Cells:
 gen-m9 sweep (T-2255 triage), last digits only, not visibly off: DEVSQ (124) and KURT (45) last digits (the accumulation order). Bit-level targets, outside the visible-parity stage (T-2255 triage, excel-graph, 2026-10-22): 169 known-failure lines in eval/baseline/gen-m9.txt, 169 formulas.
 Examples:
 - gen-m9/05d44f6dd6cfc567 Calc!A185 `=KURT(Data!C7:C12,Data!A11:A12,Data!E11:E12)`: Excel 7.000000000000002, ours 7.0
+- KURT fitting hints (gap triage 2026-10-29, folded in from a duplicate task): where the exact result is 7 (n = 8, one
+  outlier) Excel gives 7.000000000000002 and we give 7.0 in eight cases (A185 above; 06b4e8f5de409d5e A14, 3e98b26cf6713e77
+  A359, 4ab2ba98d26c8a5e A356, 68d8ffb69ff739d8 A25, abc2939ebd1e2365 A34, c18dbf21f11093f3 A307, ee2497a5e683c5d9 A350),
+  but d8266bc15533702a A46 is Excel 7.0, ours 6.999999999999998, and `KURT({1,..,10})` is Excel -1.2000000000000002
+  (a013a45a8fbcab4f A2, a54c738c697617c3 A41). These pin the order of the n(n+1)/((n-1)(n-2)(n-3)) factor, the Σz⁴ sum
+  and the 3(n-1)²/((n-2)(n-3)) term. Deferred T-1754's three KURT last-digit cells (probes/stats-evidence-floor-t1623 Q36,
+  ironcalc-calc MEADIAN_KURT_SKEW_HARMEAN.xlsx F2, probes/stat-argument-modes H13) are likely the same order.
 Cells:
 - gen-m9/05d44f6dd6cfc567.case.json (3): Calc!A185, A246, A345
 - gen-m9/06b4e8f5de409d5e.case.json (2): Calc!A14, A158
@@ -97,8 +107,9 @@ Cells:
 ## Acceptance criteria
 - [ ] Visible parity (gen-m9, T-2255): these 4 known-failure lines disappear from eval/baseline/gen-m9.txt
       (`make eval-baseline`), with no new known-failure lines in any baseline.
-- [ ] Visible parity: the visibly-off cell listed under Context (2026-10-21) has Excel's value to 15 significant digits, or its type, error and text: the 1 line in eval/baseline/probes.txt disappears (`make eval-baseline`), with no new known-failure lines in any baseline.
-- [ ] A277, A278, A280, A290, A294, A295, A300 pass and leave eval/baseline/probes.txt.
+- [x] Visible parity: the visibly-off cell listed under Context (2026-10-21) has Excel's value to 15 significant digits, or its type, error and text: the 1 line in eval/baseline/probes.txt disappears (`make eval-baseline`), with no new known-failure lines in any baseline.
+- [x] Visible parity: poi/FormulaEvalTestData_Copy.xlsx EverythingTests!I392 is within half a unit of the 15th significant digit of 0.6666666666666666 (its eval/baseline/poi.txt line may stay only if the last digit is still off; no new known-failure lines).
+- [x] A277, A278, A280, A290, A294, A295, A300 pass and leave eval/baseline/probes.txt.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -106,3 +117,50 @@ Cells:
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off (DEVSQ(1E15,1E15+1) is 0, Excel 0.5), so this task is in the campaign. Its target is that every cell it owns is within half a unit of the 15th significant digit of Excel's value (an expected 0 exactly 0), or has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it. Bit-level criteria still unmet when that target is reached move to a follow-up task filed without the key and named in the Outcome (decision 0083).
+
+## Outcome
+- DEVSQ is now the two-pass sum `Σ(x - mean)²` around the double mean (devsq.rs), through a new
+  `variance::squared_deviations` that VAR/STDEV's two-pass branch now shares, so the definition is not duplicated.
+  The one-pass `Σx² - (Σx)²/n` and its `> -1e-12` clamp are gone. Recorded in docs/excel-semantics/statistics.md "DEVSQ
+  is a two-pass sum (T-1749)" (VERIFIED); coercion.md's open I392 note is updated.
+- R4 (a choice between two structural forms, not a fit). The fresh sweep is probes-numeric t1749-devsq-fresh
+  (docs/research/t1749/gen_fresh.py, seed 1749, 200 cells, generated and filled by excel-graph after the change):
+  200 of 200 bit-exact with the two-pass form, 27 of 200 with the old one-pass form. Gate A envelope: 200 of 200
+  inside (every cell bit-exact against Excel), none outside.
+- R4.1 hold-out (review round 1): `rustsheet-fitlab devsq` (the 290 owned gen-m9 and probes DEVSQ cells the lab
+  parses) and `devsq-fresh` (tools/src/rustsheet_tools/fitlab/kernels/devsq.py), T-3360 split, margin 5 points
+  stated before scoring. Bit-exact train / test: owned, two-pass 201/203 and 87/87 (accept), correctly rounded
+  133/203 and 67/87 (reference), one-pass 120/203 and 61/87 (refused); fresh, two-pass 133/134 and 66/66 (accept),
+  correctly rounded 60/134 and 28/66, one-pass 18/134 and 9/66 (refused). The engine is 290/290 and 200/200; the
+  two-pass candidate's three misses are the lab's argument reader (two one-cell references to a bool or numeric
+  text read as literals; fresh A156's literals rounded correctly where Excel's x87 conversion is not). poi
+  E/F/I/J392 is an xlsx case the lab cannot read; it passes in the eval.
+- The subnormal flush of each square and of the mean is marked inferred from VAR/STDEV in statistics.md (no
+  DEVSQ cell reaches it), not probed.
+- Eval delta: gen-m9 known failures 1929 -> 1803 (fixed 126, every DEVSQ cell the task owned); probes 5710 -> 5696
+  (fixed 14: stat-order-floor-batch A277, A278, A280, A290, A294, A295, A300, ftest-decomposition B9, C9, C10, D10,
+  F9, F10, stat-argument-modes H5); poi 115 -> 111 (EverythingTests!E392, F392, I392, J392); 0 regressions in every
+  suite. The visible-parity criteria for the probes cell and poi I392 are met.
+- Not done, moved to T-4328 (`campaign: visible`): the task's 48 KURT cells, 3 of them visibly off (27601819397dd56e
+  A200, 7bd219ec0c0c5e22 A279, c2974c061384fdd9 A55), so the gen-m9 visible-parity box stays open for those 3 lines.
+  KURT is already two-pass, and taking s from Excel's STDEV.S did not move the cells I tried.
+
+## Landing notes (resumed, done)
+- PR #3344, head 96f523d5de0cfa48bfe9273c25689475217f2ad8 (draft); this notes commit sits on top of it. CI on
+  d2be964 was red only on hygiene: the duplication ratchet hit 2900, because T-0975's merged gen_fresh.py and this
+  one sat side by side. Fixed in 96f523d (shared `write_case`; local `check_duplication.py` reports 2878, and
+  `make check-fast` is green after merging origin/main). CI on 96f523d had not reported when the window closed.
+- Reviewers on 96f523d: design APPROVE (MINOR: the unit test could sum with `fold` like production), security
+  APPROVE, excel-fidelity REQUEST_CHANGES:
+  1. [MAJOR] R4.1 hold-out missing. Run the fit lab (T-3360 split, margin stated before scoring) over the owned DEVSQ
+     cells (probes stat-order-floor-batch, ftest-decomposition, stat-argument-modes H5, poi E/F/I/J392, the 126 gen-m9
+     DEVSQ cells) with three candidates: two-pass around the double mean, one-pass `Σx²-(Σx)²/n`, and the correctly
+     rounded `Σ(x-mean)²`. Report train and test (bit-exact / 4 ulp / 15 digits) side by side, and show that two-pass
+     beats correctly rounded on test within the margin.
+  2. [MINOR] Add "envelope: 200/200 inside, none outside" to the Outcome's fresh-sweep line.
+  3. [MINOR] DEVSQ's subnormal flush (`flush_subnormal` on each square and on the mean) has only VAR/STDEV evidence. Add
+     probe cells (`DEVSQ(0,2.2E-154)`, `DEVSQ(1E-160,-1E-160)`) and fill them, or mark the flush in statistics.md as
+     inferred from VAR.
+- Next step: do 1 to 3, run `make check-fast`, push once, re-run the reviewers whose approval names an older head (all
+  three), then mark the PR ready and enqueue.
+- Do not repeat: taking KURT's s from `excel_variance` moved none of the KURT cells (T-4328 owns KURT).

@@ -2,11 +2,12 @@ use crate::cf_types::{CfRule, Cfvo};
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::cut_paste::cf_sqref_anchor;
 use crate::expressions::parser::stringify::{
-    to_localized_string, to_string_displaced, DisplaceData,
+    to_localized_string, to_string_displaced_keeping, DisplaceData, Displacement,
 };
-use crate::expressions::parser::Parser as ExprParser;
+use crate::expressions::parser::{Node, Parser as ExprParser};
 use crate::expressions::types::CellReferenceRC;
 use crate::expressions::utils;
+use crate::formula_rewrite::{before_moves, MovedFormulas, RewrittenCell};
 use crate::language::get_default_language;
 use crate::locale::get_default_locale;
 use crate::model::{CellStructure, Model};
@@ -228,20 +229,21 @@ fn displace_cf_sqref(sqref: &str, data: &DisplaceData, sheet: u32) -> String {
 // In IronCalc, if one of the edges of the range is deleted will replace the edge with #REF!
 // I feel this is unimportant for now.
 
-/// Displaces a single formula string (with or without leading `=`) using `to_string_displaced`.
+/// Displaces a single formula string (with or without leading `=`) using
+/// `to_string_displaced_keeping`.
 /// CF formulas are stored in English (see [`Model::user_formula_to_internal`]),
 /// so the caller must have the parser in the default (English) locale/language.
-fn displace_cf_formula_str(
+pub(crate) fn displace_cf_formula_str(
     parser: &mut ExprParser,
     formula: &str,
     context: &CellReferenceRC,
-    data: &DisplaceData,
+    data: Displacement,
 ) -> String {
     let trimmed = formula.trim();
     let has_eq = trimmed.starts_with('=');
     let body = if has_eq { &trimmed[1..] } else { trimmed };
     let node = parser.parse(body, context);
-    let displaced = to_string_displaced(
+    let displaced = to_string_displaced_keeping(
         &node,
         context,
         data,
@@ -259,7 +261,7 @@ fn displace_cfvo(
     parser: &mut ExprParser,
     cfvo: Cfvo,
     context: &CellReferenceRC,
-    data: &DisplaceData,
+    data: Displacement,
 ) -> Cfvo {
     if let Cfvo::Formula(f) = cfvo {
         Cfvo::Formula(displace_cf_formula_str(parser, &f, context, data))
@@ -273,7 +275,7 @@ fn displace_cf_rule_formulas(
     parser: &mut ExprParser,
     rule: CfRule,
     context: &CellReferenceRC,
-    data: &DisplaceData,
+    data: Displacement,
 ) -> CfRule {
     match rule {
         CfRule::Formula {
@@ -355,20 +357,22 @@ fn displace_cf_rule_formulas(
 }
 
 impl Model {
+    /// Rewrites the formula of the cell for `displacement`; the cell as it was when the rewrite is
+    /// one re-inserting deleted rows or columns does not undo ([`Model::lost_on_reinsert`]).
     fn shift_cell_formula(
         &mut self,
         sheet: u32,
         row: i32,
         column: i32,
-        displace_data: &DisplaceData,
-    ) -> Result<(), String> {
+        displacement: Displacement,
+    ) -> Result<Option<Cell>, String> {
         if let Some(f) = self
             .workbook
             .worksheet(sheet)?
             .cell(row, column)
             .and_then(|c| c.get_formula())
         {
-            let node = &self.parsed_formulas[sheet as usize][f as usize].0.clone();
+            let node = &Node::clone(self.parsed_formulas[sheet as usize][f as usize].written());
             let cell_reference = CellReferenceRC {
                 sheet: self.workbook.worksheets[sheet as usize].get_name(),
                 row,
@@ -379,39 +383,65 @@ impl Model {
             // one is written back through the (localized) parser, and comparing
             // against an English rendering would flag every formula as changed.
             let formula = to_localized_string(node, &cell_reference, self.locale, self.language);
-            let formula_displaced = to_string_displaced(
+            let formula_displaced = to_string_displaced_keeping(
                 node,
                 &cell_reference,
-                displace_data,
+                displacement,
                 self.locale,
                 self.language,
             );
             if formula != formula_displaced {
+                let lost = self.lost_on_reinsert(
+                    displacement.data,
+                    &cell_reference,
+                    &formula,
+                    &formula_displaced,
+                );
+                let before = if lost {
+                    self.workbook.worksheet(sheet)?.cell(row, column).cloned()
+                } else {
+                    None
+                };
                 let text = format!("={formula_displaced}");
                 if node.has_legacy_marker() {
                     self.update_cell_with_legacy_formula(sheet, row, column, &text)?;
                 } else {
                     self.update_cell_with_formula(sheet, row, column, text)?;
                 }
+                return Ok(before);
             };
         }
-        Ok(())
+        Ok(None)
     }
     /// This function iterates over all cells in the model and shifts their formulas according to the displacement data.
+    /// It returns the cells a row or column delete rewrote past what re-inserting them undoes
+    /// ([`Model::lost_on_reinsert`]), as they were, at the places it found them (T-4668).
     ///
     /// # Arguments
     ///
-    /// * `displace_data` - A reference to `DisplaceData` describing the displacement's direction and magnitude.
-    fn displace_cells(&mut self, displace_data: &DisplaceData) -> Result<(), String> {
-        let cells = self.get_all_cells();
-        for cell in cells {
-            self.shift_cell_formula(cell.index, cell.row, cell.column, displace_data)?;
+    /// * `displacement` - The displacement's direction and magnitude, and the tables that follow it.
+    pub(crate) fn displace_cells(
+        &mut self,
+        displacement: Displacement,
+    ) -> Result<Vec<RewrittenCell>, String> {
+        let mut rewritten = Vec::new();
+        for place in self.get_all_cells() {
+            let (sheet, row, column) = (place.index, place.row, place.column);
+            if let Some(cell) = self.shift_cell_formula(sheet, row, column, displacement)? {
+                rewritten.push(RewrittenCell {
+                    sheet,
+                    row,
+                    column,
+                    cell,
+                });
+            }
         }
-        Ok(())
+        Ok(rewritten)
     }
 
-    /// Updates the `range` field and formula fields of every CF rule on `sheet` according to `displace_data`.
-    fn displace_cf_ranges(&mut self, sheet: u32, displace_data: &DisplaceData) {
+    /// Updates the `range` field and formula fields of every CF rule on `sheet` according to `displacement`.
+    pub(crate) fn displace_cf_ranges(&mut self, sheet: u32, displacement: Displacement) {
+        let displace_data = displacement.data;
         let count = match self.workbook.worksheets.get(sheet as usize) {
             Some(ws) => ws.conditional_formatting.len(),
             None => return,
@@ -444,7 +474,7 @@ impl Model {
                 column: anchor_col,
             };
             let new_rule =
-                displace_cf_rule_formulas(&mut self.parser, rule, &context, displace_data);
+                displace_cf_rule_formulas(&mut self.parser, rule, &context, displacement);
             self.workbook.worksheets[sheet as usize].conditional_formatting[idx].range = new_range;
             self.workbook.worksheets[sheet as usize].conditional_formatting[idx].cf_rule = new_rule;
         }
@@ -472,14 +502,14 @@ impl Model {
     ///
     /// It assumes that the caller has already checked that the move is valid
     /// (e.g. it does not split an array formula). And that dynamic array spills have been reset.
-    /// A legacy N/T marker moves with the formula (T-1852).
+    /// A legacy N/T marker moves with the formula (T-1852). `kept` names (lowercase) the tables
+    /// that follow the edit, whose `#This Row` references keep their text ([`Model::moved_text`]).
     fn move_cell(
         &mut self,
         sheet: u32,
-        source_row: i32,
-        source_column: i32,
-        target_row: i32,
-        target_column: i32,
+        (source_row, source_column): (i32, i32),
+        (target_row, target_column): (i32, i32),
+        kept: &[String],
     ) -> Result<(), String> {
         let source_cell = match self
             .workbook
@@ -542,20 +572,20 @@ impl Model {
             }
         }
         let legacy = self.cell_has_legacy_marker(sheet, source_row, source_column)?;
-        let formula_or_value = self
-            .moved_text(sheet, source_row, source_column, target_row - source_row)?
-            .unwrap_or_else(|| {
-                source_cell.get_localized_text(
-                    &self.workbook.shared_strings,
-                    self.locale,
-                    self.language,
-                )
-            });
+        let delta = target_row - source_row;
+        let moved = self.moved_text(sheet, (source_row, source_column), delta, kept)?;
+        let formula_or_value = moved.unwrap_or_else(|| {
+            source_cell.get_localized_text(
+                &self.workbook.shared_strings,
+                self.locale,
+                self.language,
+            )
+        });
 
         if let Some((width, height)) = array {
             // We are moving an array formula, we need to move the whole range.
             // Its cells are removed first: the new area may overlap the old one,
-            // and `set_user_array_formula` refuses to cover an array formula.
+            // and `reenter_array_formula` refuses to cover an array formula.
             let worksheet = self.workbook.worksheet_mut(sheet)?;
             for r in source_row..source_row + height {
                 for c in source_column..source_column + width {
@@ -564,16 +594,19 @@ impl Model {
                     }
                 }
             }
-            self.set_user_array_formula(
+            self.reenter_array_formula(
                 sheet,
-                target_row,
-                target_column,
-                width,
-                height,
+                (target_row, target_column),
+                (width, height),
                 &formula_or_value,
             )?;
         } else {
-            self.reenter_user_input(sheet, target_row, target_column, formula_or_value, legacy)?;
+            let table = self.kept_table_holding(sheet, (source_row, source_column), kept);
+            self.parser.set_moved_table(table);
+            let entered =
+                self.reenter_user_input(sheet, target_row, target_column, formula_or_value, legacy);
+            self.parser.set_moved_table(None);
+            entered?;
         }
 
         let worksheet = self.workbook.worksheet_mut(sheet)?;
@@ -612,10 +645,10 @@ impl Model {
                 "Cannot insert columns because that would break an array formula".to_string(),
             );
         }
-        // check if it is possible:
-        let dimensions = self.workbook.worksheet(sheet)?.dimension();
-        let last_column = dimensions.max_column + column_count;
-        if last_column > LAST_COLUMN {
+        self.refuse_table_off_sheet(sheet, column, column_count, false)?;
+        // Written so it cannot overflow: `column_count` can be any `i32` (T-2896).
+        let max_column = self.workbook.worksheet(sheet)?.dimension().max_column;
+        if !utils::is_valid_column_number(column) || column_count > LAST_COLUMN - max_column {
             return Err(
                 "Cannot shift cells because that would delete cells at the end of a row"
                     .to_string(),
@@ -626,13 +659,14 @@ impl Model {
         // Merged ranges are remapped at the end; take them out so the cell moves
         // (which go through `set_user_input`) do not trip the covered-cell guard.
         let merged_cells = std::mem::take(&mut self.workbook.worksheet_mut(sheet)?.merged_cells);
+        let kept = self.column_edit_kept(sheet, column, column_count);
         let worksheet = self.workbook.worksheet(sheet)?;
         let all_rows = worksheet.sheet_data.rows();
         for row in all_rows {
             let sorted_columns = self.get_columns_for_row(sheet, row, true)?;
             for col in sorted_columns {
                 if col >= column {
-                    self.move_cell(sheet, row, col, row, col + column_count)?;
+                    self.move_cell(sheet, (row, col), (row, col + column_count), &kept)?;
                 } else {
                     // Break because columns are in descending order.
                     break;
@@ -677,8 +711,7 @@ impl Model {
             column,
             delta: column_count,
         };
-        self.displace_cells(&disp)?;
-        self.displace_cf_ranges(sheet, &disp);
+        self.displace_formulas(sheet, &disp)?;
 
         // In the list of columns:
         // * Keep all the columns to the left
@@ -723,13 +756,25 @@ impl Model {
         column: i32,
         column_count: i32,
     ) -> Result<(), String> {
+        self.delete_columns_rewriting(sheet, column, column_count)
+            .map(drop)
+    }
+
+    /// [`Model::delete_columns`], returning the formula cells it rewrote past what re-inserting
+    /// the columns undoes, as they were before it (T-4668).
+    pub(crate) fn delete_columns_rewriting(
+        &mut self,
+        sheet: u32,
+        column: i32,
+        column_count: i32,
+    ) -> Result<Vec<RewrittenCell>, String> {
         if column_count <= 0 {
             return Err("Please use insert columns instead".to_string());
         }
         if !(1..=LAST_COLUMN).contains(&column) {
             return Err(format!("Column number '{column}' is not valid."));
         }
-        if column + column_count - 1 > LAST_COLUMN {
+        if column_count > LAST_COLUMN - column + 1 {
             return Err("Cannot delete columns beyond the last column of the sheet".to_string());
         }
         if !self.can_delete_columns(sheet, column, column_count)? {
@@ -748,15 +793,23 @@ impl Model {
         let column_end = column + column_count - 1;
 
         // Move cells
+        let kept = self.column_edit_kept(sheet, column, -column_count);
         let worksheet = &self.workbook.worksheet(sheet)?;
         let all_rows = worksheet.sheet_data.rows();
+        let mut moved = MovedFormulas::new();
 
         for r in all_rows {
             let columns: Vec<i32> = self.get_columns_for_row(sheet, r, false)?;
             for col in columns {
                 if col >= column_start {
                     if col > column_end {
-                        self.move_cell(sheet, r, col, r, col - column_count)?;
+                        self.keep_moved_formula(
+                            sheet,
+                            (r, col),
+                            (r, col - column_count),
+                            &mut moved,
+                        )?;
+                        self.move_cell(sheet, (r, col), (r, col - column_count), &kept)?;
                     } else {
                         self.workbook.worksheet_mut(sheet)?.remove_cell(r, col)?;
                     }
@@ -806,8 +859,8 @@ impl Model {
             column,
             delta: -column_count,
         };
-        self.displace_cells(&disp)?;
-        self.displace_cf_ranges(sheet, &disp);
+        let rewritten = self.displace_formulas(sheet, &disp)?;
+        let rewritten = before_moves(rewritten, sheet, moved);
         let worksheet = &mut self.workbook.worksheet_mut(sheet)?;
 
         // deletes all the column styles
@@ -867,6 +920,22 @@ impl Model {
         }
         worksheet.cols = new_columns;
 
+        Ok(rewritten)
+    }
+
+    /// Keeps the cell at `from` in `moved` by `to`, where a row or column delete moves it, if it
+    /// holds a formula ([`before_moves`]).
+    fn keep_moved_formula(
+        &self,
+        sheet: u32,
+        from: (i32, i32),
+        to: (i32, i32),
+        moved: &mut MovedFormulas,
+    ) -> Result<(), String> {
+        let cell = self.workbook.worksheet(sheet)?.cell(from.0, from.1);
+        if let Some(cell) = cell.filter(|cell| cell.has_formula()) {
+            moved.insert(to, (from, cell.clone()));
+        }
         Ok(())
     }
 
@@ -925,66 +994,6 @@ impl Model {
         Ok(true)
     }
 
-    // Returns true if deleting rows [row, row + row_count - 1] would not break any
-    // array formula. An array formula must be either fully inside the deleted range
-    // or fully outside it; any partial overlap is rejected.
-    fn can_delete_rows(&self, sheet: u32, row: i32, row_count: i32) -> Result<bool, String> {
-        let row_end = row + row_count; // exclusive upper bound
-        let cell_coords: Vec<(i32, i32)> = {
-            let worksheet = self.workbook.worksheet(sheet)?;
-            worksheet
-                .sheet_data
-                .cells()
-                .map(|(r, c, _)| (r, c))
-                .collect()
-        };
-        for (r, c) in cell_coords {
-            if let CellStructure::ArrayFormula { range: (_, height) } =
-                self.get_cell_structure(sheet, r, c)?
-            {
-                // Formula row span: [r, r + height - 1]
-                let overlaps = r < row_end && r + height > row;
-                let contained = r >= row && r + height <= row_end;
-                if overlaps && !contained {
-                    return Ok(false);
-                }
-            }
-        }
-        Ok(true)
-    }
-
-    // Returns true if deleting columns [column, column + column_count - 1] would not
-    // break any array formula.
-    fn can_delete_columns(
-        &self,
-        sheet: u32,
-        column: i32,
-        column_count: i32,
-    ) -> Result<bool, String> {
-        let col_end = column + column_count; // exclusive upper bound
-        let cell_coords: Vec<(i32, i32)> = {
-            let worksheet = self.workbook.worksheet(sheet)?;
-            worksheet
-                .sheet_data
-                .cells()
-                .map(|(r, c, _)| (r, c))
-                .collect()
-        };
-        for (r, c) in cell_coords {
-            if let CellStructure::ArrayFormula { range: (width, _) } =
-                self.get_cell_structure(sheet, r, c)?
-            {
-                // Formula column span: [c, c + width - 1]
-                let overlaps = c < col_end && c + width > column;
-                let contained = c >= column && c + width <= col_end;
-                if overlaps && !contained {
-                    return Ok(false);
-                }
-            }
-        }
-        Ok(true)
-    }
-
     /// Inserts one or more new rows into the model at the specified index.
     ///
     /// # Arguments
@@ -999,15 +1008,16 @@ impl Model {
         if !self.can_insert_rows(sheet, row, row_count)? {
             return Err("Cannot insert rows because that would break an array formula".to_string());
         }
-        // Check if it is possible:
-        let dimensions = self.workbook.worksheet(sheet)?.dimension();
-        let last_row = dimensions.max_row + row_count;
-        if last_row > LAST_ROW {
+        self.refuse_table_row_insert(sheet, row, row_count)?;
+        // Written so it cannot overflow: `row_count` can be any `i32` (T-2896).
+        let max_row = self.workbook.worksheet(sheet)?.dimension().max_row;
+        if !utils::is_valid_row(row) || row_count > LAST_ROW - max_row {
             return Err(
                 "Cannot shift cells because that would delete cells at the end of a column"
                     .to_string(),
             );
         }
+        let (disp, kept) = self.row_edit(sheet, row, row_count);
         self.displace_pivots(sheet, PivotLines::Rows, row, row_count)?;
         self.reset_dynamic_array_spills(sheet)?;
         // Merged ranges are remapped at the end; take them out so the cell moves
@@ -1022,7 +1032,7 @@ impl Model {
                 // We do not really need the columns in any order
                 let columns: Vec<i32> = self.get_columns_for_row(sheet, r, false)?;
                 for column in columns {
-                    self.move_cell(sheet, r, column, r + row_count, column)?;
+                    self.move_cell(sheet, (r, column), (r + row_count, column), &kept)?;
                 }
             } else {
                 // Rows are in descending order
@@ -1077,13 +1087,7 @@ impl Model {
         );
 
         // Update all formulas in the workbook
-        let disp = DisplaceData::Row {
-            sheet,
-            row,
-            delta: row_count,
-        };
-        self.displace_cells(&disp)?;
-        self.displace_cf_ranges(sheet, &disp);
+        self.displace_formulas(sheet, &disp)?;
 
         Ok(())
     }
@@ -1096,18 +1100,31 @@ impl Model {
     /// * `row` - The index of the first row to delete.
     /// * `row_count` - The number of rows to delete.
     pub fn delete_rows(&mut self, sheet: u32, row: i32, row_count: i32) -> Result<(), String> {
-        if row_count <= 0 {
-            return Err("Please use insert rows instead".to_string());
+        self.delete_rows_rewriting(sheet, row, row_count).map(drop)
+    }
+
+    /// [`Model::delete_rows`], returning the formula cells it rewrote past what re-inserting the
+    /// rows undoes, as they were before it (T-4668).
+    pub(crate) fn delete_rows_rewriting(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        row_count: i32,
+    ) -> Result<Vec<RewrittenCell>, String> {
+        self.check_delete_rows(sheet, row, row_count)?;
+        if let Some(area) = self.kept_data_row(sheet, row, row_count) {
+            // A table keeps its first data row, cleared, and loses its other data rows
+            // (Model::kept_data_row, T-2338, T-3259; `UserModel::delete_rows` records the same two
+            // steps). The second delete starts below the table's first data row, so it cannot match
+            // kept_data_row again.
+            self.range_clear_contents(&area)?;
+            return if row_count > 1 {
+                self.delete_rows_rewriting(sheet, row + 1, row_count - 1)
+            } else {
+                Ok(Vec::new())
+            };
         }
-        if !(1..=LAST_ROW).contains(&row) {
-            return Err(format!("Row number '{row}' is not valid."));
-        }
-        if row + row_count - 1 > LAST_ROW {
-            return Err("Cannot delete rows beyond the last row of the sheet".to_string());
-        }
-        if !self.can_delete_rows(sheet, row, row_count)? {
-            return Err("Cannot delete rows because that would break an array formula".to_string());
-        }
+        let (disp, kept) = self.row_edit(sheet, row, -row_count);
         self.displace_pivots(sheet, PivotLines::Rows, row, -row_count)?;
         self.reset_dynamic_array_spills(sheet)?;
         // Merged ranges are remapped at the end; take them out so the cell moves
@@ -1116,6 +1133,7 @@ impl Model {
         // Move cells
         let worksheet = &self.workbook.worksheet(sheet)?;
         let all_rows = worksheet.sheet_data.rows();
+        let mut moved = MovedFormulas::new();
 
         for r in all_rows {
             if r >= row {
@@ -1124,7 +1142,9 @@ impl Model {
                 if r >= row + row_count {
                     // displace all cells in column
                     for column in columns {
-                        self.move_cell(sheet, r, column, r - row_count, column)?;
+                        let to = (r - row_count, column);
+                        self.keep_moved_formula(sheet, (r, column), to, &mut moved)?;
+                        self.move_cell(sheet, (r, column), (r - row_count, column), &kept)?;
                     }
                 } else {
                     // remove all cells in row
@@ -1186,14 +1206,8 @@ impl Model {
             },
         );
 
-        let disp = DisplaceData::Row {
-            sheet,
-            row,
-            delta: -row_count,
-        };
-        self.displace_cells(&disp)?;
-        self.displace_cf_ranges(sheet, &disp);
-        Ok(())
+        let rewritten = self.displace_formulas(sheet, &disp)?;
+        Ok(before_moves(rewritten, sheet, moved))
     }
 
     // Inner column move: no boundary/can check, no spill reset.
@@ -1299,7 +1313,7 @@ impl Model {
             for c in column + 1..=target_column {
                 let refs = self.workbook.worksheet(sheet)?.column_cell_references(c)?;
                 for r in refs {
-                    self.move_cell(sheet, r.row, c, r.row, c - 1)?;
+                    self.move_cell(sheet, (r.row, c), (r.row, c - 1), &[])?;
                 }
                 let w = self.workbook.worksheet(sheet)?.get_actual_column_width(c)?;
                 let s = self.workbook.worksheet(sheet)?.get_column_style(c)?;
@@ -1312,7 +1326,7 @@ impl Model {
             for c in (target_column..=column - 1).rev() {
                 let refs = self.workbook.worksheet(sheet)?.column_cell_references(c)?;
                 for r in refs {
-                    self.move_cell(sheet, r.row, c, r.row, c + 1)?;
+                    self.move_cell(sheet, (r.row, c), (r.row, c + 1), &[])?;
                 }
                 let w = self.workbook.worksheet(sheet)?.get_actual_column_width(c)?;
                 let s = self.workbook.worksheet(sheet)?.get_column_style(c)?;
@@ -1324,7 +1338,7 @@ impl Model {
         }
         for (r, value, style_idx, array, legacy) in original_cells {
             if let Some(a) = array {
-                self.set_user_array_formula(sheet, r, target_column, a.0, a.1, &value)?;
+                self.reenter_array_formula(sheet, (r, target_column), a, &value)?;
             } else {
                 self.reenter_user_input(sheet, r, target_column, value, legacy)?;
             }
@@ -1348,8 +1362,7 @@ impl Model {
             column,
             delta,
         };
-        self.displace_cells(&disp)?;
-        self.displace_cf_ranges(sheet, &disp);
+        self.displace_formulas(sheet, &disp)?;
         Ok(())
     }
 
@@ -1389,7 +1402,8 @@ impl Model {
                 .cell(row, *c)
                 .ok_or("Expected Cell to exist")?;
             let style_idx = cell.get_style();
-            let formula_or_value = self.moved_text(sheet, row, *c, delta)?.unwrap_or_else(|| {
+            let moved = self.moved_text(sheet, (row, *c), delta, &[])?;
+            let formula_or_value = moved.unwrap_or_else(|| {
                 cell.get_localized_text(&self.workbook.shared_strings, self.locale, self.language)
             });
             let mut array = None;
@@ -1438,27 +1452,20 @@ impl Model {
             for r in row + 1..=target_row {
                 let cols = self.get_columns_for_row(sheet, r, false)?;
                 for c in cols {
-                    self.move_cell(sheet, r, c, r - 1, c)?;
+                    self.move_cell(sheet, (r, c), (r - 1, c), &[])?;
                 }
             }
         } else {
             for r in (target_row..=row - 1).rev() {
                 let cols = self.get_columns_for_row(sheet, r, false)?;
                 for c in cols {
-                    self.move_cell(sheet, r, c, r + 1, c)?;
+                    self.move_cell(sheet, (r, c), (r + 1, c), &[])?;
                 }
             }
         }
         for (c, value, style_idx, array, legacy) in original_cells {
             if let Some(array_range) = array {
-                self.set_user_array_formula(
-                    sheet,
-                    target_row,
-                    c,
-                    array_range.0,
-                    array_range.1,
-                    &value,
-                )?;
+                self.reenter_array_formula(sheet, (target_row, c), array_range, &value)?;
             } else {
                 self.reenter_user_input(sheet, target_row, c, value, legacy)?;
             }
@@ -1495,8 +1502,7 @@ impl Model {
         }
 
         let disp = DisplaceData::RowMove { sheet, row, delta };
-        self.displace_cells(&disp)?;
-        self.displace_cf_ranges(sheet, &disp);
+        self.displace_formulas(sheet, &disp)?;
         Ok(())
     }
 
@@ -1678,14 +1684,10 @@ impl Model {
         if column_count <= 0 || delta == 0 {
             return Ok(());
         }
-        let target_first = column + delta;
-        let target_last = column + column_count - 1 + delta;
-        if !(1..=LAST_COLUMN).contains(&target_first) || !(1..=LAST_COLUMN).contains(&target_last) {
+        if !utils::moved_span_in_grid(column, column_count, delta, LAST_COLUMN) {
             return Err("Target column out of boundaries".to_string());
         }
-        if !(1..=LAST_COLUMN).contains(&column)
-            || !(1..=LAST_COLUMN).contains(&(column + column_count - 1))
-        {
+        if !utils::moved_span_in_grid(column, column_count, 0, LAST_COLUMN) {
             return Err("Initial column out of boundaries".to_string());
         }
         if !self.can_move_columns_action(sheet, column, column_count, delta)? {
@@ -1758,12 +1760,10 @@ impl Model {
         if row_count <= 0 || delta == 0 {
             return Ok(());
         }
-        let target_first = row + delta;
-        let target_last = row + row_count - 1 + delta;
-        if !(1..=LAST_ROW).contains(&target_first) || !(1..=LAST_ROW).contains(&target_last) {
+        if !utils::moved_span_in_grid(row, row_count, delta, LAST_ROW) {
             return Err("Target row out of boundaries".to_string());
         }
-        if !(1..=LAST_ROW).contains(&row) || !(1..=LAST_ROW).contains(&(row + row_count - 1)) {
+        if !utils::moved_span_in_grid(row, row_count, 0, LAST_ROW) {
             return Err("Initial row out of boundaries".to_string());
         }
         if !self.can_move_rows_action(sheet, row, row_count, delta)? {

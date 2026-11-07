@@ -7,8 +7,8 @@ status: todo
 priority: P2
 size: M
 tier: opus
-campaign: visible
 depends_on: []
+campaign: accuracy
 ---
 
 ## Goal
@@ -83,3 +83,35 @@ K123, K219 (Excel 9.215274223288255, ours 9.21527422328826); gen-m9 8fec7b207f4d
 - Result shapes, `#N/A` fill, flags, omitted arguments and error choice (T-1741, T-1742, T-1743, T-1726).
 - FORECAST/FORECAST.LINEAR, SLOPE, INTERCEPT, STEYX and the CORREL family. They are closed forms in forecast.rs and
   correl.rs, not this solve (T-1725, T-1723, T-1707).
+
+## Deferred (decision 0114)
+`defer: phase-1b`: the cells this task owns are already within 15 significant digits of Excel, so it waits until Phase 1 exits. Remove the key only when the steward records the Phase 1 exit, or when an eval shows one of its cells visibly off (then give it a `campaign:` stage instead).
+
+## Cells added by gap triage (2026-10-31m)
+`make eval` on origin/main 900fbc1bf (excel-graph). An ownership check over every failing Excel cell
+(`scripts/exit_owners.py`'s `owned` rule over the open task files of origin/main and of every `origin/agent/*` branch
+pushed since 2026-10-29) found these cells named by no open task. All are within 15 significant digits of Excel (Phase
+1b), so they join this deferred owner of their kernel. LINEST, LOGEST, TREND and GROWTH with known_y only (range and
+array forms) on the stat argument-modes probe, 1 to 6 ulp: `INDEX(TREND(A1:A8),1,1)` Excel 1.4999999999999996, ours
+1.5000000000000009.
+- probes/stat-argument-modes.case.json (8): Sheet1!H318, H319, H321, H322, H324, H325, H327, H328
+
+## Cells added by gap triage (2026-11-05)
+`make eval` on origin/main 4e3993c9e: the same ownership check over every failing Excel cell found one more LINEST
+cell no open task names, 4 ulp and within 15 digits (Phase 1b). It sits in an AMORDEGRC state probe but calls
+LINEST alone: `SUM(LINEST({1,2,3},{1,2,4}))` is Excel 1.1428571428571428, ours 1.1428571428571437.
+- probes/amordegrc-fraction-state-cc.case.json (1): Sheet1!A2
+
+## Points added by T-4096 (Gate A tables, 2026-11-06)
+The Gate A tables accuracy/{LINEST,LOGEST,TREND,GROWTH}/s1 (excel-graph) found 21 points where the normal-equations
+solve is visibly off on an ill-conditioned design (large offsets with a small relative spread, mixed magnitudes),
+from 2E-9 to 20 relative off the exact least-squares value, while Excel is within 2E-8 of it on 19 of them (LOGEST
+A82's and A98's near-exact-fit F and ss_resid are 8E-7 and 3E-6 off in Excel too). TREND A193 is the badly scaled
+`#NUM!` described above (data from 1E-45 to 1E+49; Excel and the math -1.3025416638036628E+49). So a solve with
+Excel's conditioning (QR rather than the normal equations, and a singularity test relative to scale) brings the other
+19 inside the envelope whichever Excel bits it reaches (LOGEST A82 and A98 need Excel's own digits to 15 places); per the Deferred section above these visibly-off points move the task from
+`defer: phase-1b` to `campaign: accuracy`. They are lines of eval/accuracy/known-failures.tsv owned by this task:
+- accuracy/LINEST/s1: Calc!A85, A87, A93, A98, A100, A102, A103, A104, A110, A129, A187
+- accuracy/LOGEST/s1: Calc!A81, A82, A86, A98, A103, A110
+- accuracy/TREND/s1: Calc!A94, A98, A193
+- accuracy/GROWTH/s1: Calc!A97

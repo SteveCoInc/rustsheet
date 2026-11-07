@@ -1,0 +1,35 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3836: MMULT with a blank or partly-blank range as its first argument beside an error second argument. Data: A1 = 1, A2 blank, A3 = 2, B1 blank, H1:H3 blank, G9 = 1/0 (#DIV/0!). Calc!A1:A16 one question each (see the formulas); C1:C16 their FORMULATEXT is not needed, values only.",
+  "tags": ["M5", "math", "probe"],
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {"A1": 1, "A3": 2, "G9": "=1/0"}
+    },
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=MMULT(Data!H1:H1,#NUM!)",
+        "A2": "=MMULT(Data!H1:H1,Data!G9)",
+        "A3": "=MMULT(Data!H1:H2,#NUM!)",
+        "A4": "=MMULT(Data!H1:H2,Data!G9)",
+        "A5": "=MMULT(Data!A1:A2,#NUM!)",
+        "A6": "=MMULT(Data!A1:A2,Data!G9)",
+        "A7": "=MMULT(Data!A1:B1,#NUM!)",
+        "A8": "=MMULT(Data!A1:B1,Data!G9)",
+        "A9": "=MMULT(Data!H1:H2,Data!H3)",
+        "A10": "=MMULT(Data!A1:A1,#NUM!)",
+        "A11": "=MMULT(Data!G9,Data!H1:H1)",
+        "A12": "=MMULT(Data!H1:H1,2)",
+        "A13": "=MMULT(Data!A2:A3,#NUM!)",
+        "A14": "=MMULT(Data!H1:I1,Data!G9)",
+        "A15": "=MMULT(Data!H1:H2,{1,2})",
+        "A16": "=MMULT(Data!A1:A2,Data!A1:A2)",
+        "A17": "=MMULT(Data!H1:H1,{#N/A})",
+        "A18": "=MMULT(Data!A1:A2,Data!A1:B1)"
+      }
+    }
+  ],
+  "expected": {}
+}

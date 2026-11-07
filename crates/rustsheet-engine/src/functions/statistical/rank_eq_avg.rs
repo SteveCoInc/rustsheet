@@ -1,7 +1,10 @@
+use super::chisq::RankData;
 use super::sorted_data::{DataOrder, SortedNumbers};
+use crate::calc_result::Range;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{value_error, LiftCost};
 use crate::functions::Function;
+use crate::reference_operators::{RefElement, RefGrid};
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
@@ -49,14 +52,10 @@ impl Model {
         let mut numbers = match self.numbers_from_rank_ref_arg(reference, cell) {
             // Excel: a reference with no numeric value (or an empty one) gives #N/A like any
             // absent number, never #NUM! (statistics.md, "RANK/RANK.EQ/RANK.AVG: a number absent").
-            Ok(values) => Ok(SortedNumbers::new(
-                values
-                    .into_iter()
-                    .flatten()
-                    .filter(|v| !v.is_nan())
-                    .collect(),
-                DataOrder::Ascending,
-            )),
+            Ok(RankData::Numbers(values)) => Ok(sorted_numbers(values)),
+            Ok(RankData::PerElement(grid)) => {
+                return self.rank_per_element(args, &grid, ties, cell);
+            }
             Err(CalcResult::Array(grid)) => {
                 // Every element of `grid` is an error, so no element reads the numbers.
                 let mut numbers = Err(value_error(cell));
@@ -91,6 +90,83 @@ impl Model {
             },
         )
     }
+}
+
+impl Model {
+    /// The RANK family over an array of references lifts over its elements, broadcast with a
+    /// lifted `number` or `order`: a reference element ranks against its own range, a value
+    /// element is `#VALUE!` (a value is no reference) and an error element is itself, each after
+    /// `number`'s error. `RANK(60,X)` over `X = XLOOKUP({2;9},A1:A3,B1:B3,Data!G1:G2)` (hits 20)
+    /// is `{#VALUE!;1}`, `RANK(20,X)` `{#VALUE!;#N/A}` (probes/t4704-mixed-xlookup-grid-readers
+    /// A25:C38, T-4740). The elements reach the driver as their indices, as OFFSET's do
+    /// (`offset_over_grid`); each element reads its range, charged as the largest one.
+    fn rank_per_element(
+        &mut self,
+        args: &[Node],
+        grid: &RefGrid,
+        ties: Ties,
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
+        let cells = grid
+            .elements()
+            .iter()
+            .map(|element| match element {
+                RefElement::Reference(range) => range_cells(range),
+                RefElement::Error(_) | RefElement::Value(_) => 1,
+            })
+            .max()
+            .unwrap_or(1);
+        self.lift_call_beside(
+            Function::RankEq,
+            args,
+            (1, grid.index_array()),
+            LiftCost::Cells(cells),
+            cell,
+            &mut |model, values| {
+                let element = values.get(1).and_then(|index| grid.element_at(index));
+                let (mut numbers, slot) = match element {
+                    Some(RefElement::Reference(range)) => (
+                        model
+                            .values_from_range(range.left, range.right)
+                            .map(sorted_numbers)
+                            .map_err(CalcResult::without_message),
+                        CalcResult::EmptyArg,
+                    ),
+                    Some(RefElement::Error(error)) => (
+                        Err(value_error(cell)),
+                        CalcResult::new_error(error.clone(), cell, String::new()),
+                    ),
+                    Some(RefElement::Value(_)) | None => {
+                        (Err(value_error(cell)), value_error(cell))
+                    }
+                };
+                let mut values = values.to_vec();
+                if let Some(ref_slot) = values.get_mut(1) {
+                    *ref_slot = slot;
+                }
+                rank_element(model, &mut numbers, &values, ties, true, cell)
+            },
+        )
+    }
+}
+
+/// The numbers RANK ranks against: the numeric values of its data, NaN dropped.
+fn sorted_numbers(values: Vec<Option<f64>>) -> SortedNumbers {
+    SortedNumbers::new(
+        values
+            .into_iter()
+            .flatten()
+            .filter(|v| !v.is_nan())
+            .collect(),
+        DataOrder::Ascending,
+    )
+}
+
+/// The cells of `range`, saturating.
+fn range_cells(range: &Range) -> u64 {
+    let rows = u64::try_from(range.right.row - range.left.row).unwrap_or(0) + 1;
+    let columns = u64::try_from(range.right.column - range.left.column).unwrap_or(0) + 1;
+    rows.saturating_mul(columns)
 }
 
 /// One RANK element over the numbers read once. `values[1]` is the slot of `ref`: `EmptyArg`

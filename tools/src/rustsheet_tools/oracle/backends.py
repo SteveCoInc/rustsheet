@@ -29,8 +29,9 @@ from urllib.parse import quote
 import requests
 from xlsxwriter.utility import xl_rowcol_to_cell
 
-from rustsheet_tools.oracle.package import PackageError, patch_workbook
-from rustsheet_tools.spec2xlsx import entered_cells, parse_a1, sheet_ops, text_cells
+from rustsheet_tools.api_names import ApiName, api_names
+from rustsheet_tools.oracle.package import PackageError, patch_workbook, pivot_sheets
+from rustsheet_tools.spec2xlsx import Entered, entered_cells, parse_a1, sheet_ops, text_cells
 
 
 class OracleError(RuntimeError):
@@ -48,6 +49,10 @@ class OracleInfo:
     # another sheet and `CELL("filename")` name it); the eval adapter gives the engine the same
     # name (T-2042).
     workbook_name: str | None = None
+    # Displayed text of every non-empty cell of the used range of each sheet that holds a pivot
+    # (`recorded_pivot_sheets`): sheet -> A1 -> text. The fill crops it to each pivot's area for the
+    # sidecar's `pivots` entries (T-4169).
+    pivot_texts: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 class Backend(Protocol):
@@ -78,7 +83,7 @@ def force_full_calc_on_load(xlsx: bytes) -> bytes:
         raise OracleError(str(e)) from e
 
 
-def typed_entries(xlsx: bytes) -> list[tuple[str, str, str]]:
+def typed_entries(xlsx: bytes) -> list[Entered]:
     """The cells a backend must enter as typed text before recalculating (spec2xlsx, T-0280)."""
     try:
         return entered_cells(xlsx)
@@ -90,6 +95,22 @@ def recorded_text_cells(xlsx: bytes) -> list[tuple[str, str]]:
     """The cells whose displayed text a backend must read after recalculating (spec2xlsx, T-1610)."""
     try:
         return text_cells(xlsx)
+    except ValueError as e:
+        raise OracleError(str(e)) from e
+
+
+def recorded_pivot_sheets(xlsx: bytes) -> list[str]:
+    """The sheets whose pivots' displayed text a backend must read after recalculating (T-4169)."""
+    try:
+        return pivot_sheets(xlsx)
+    except PackageError as e:
+        raise OracleError(str(e)) from e
+
+
+def recorded_api_names(xlsx: bytes) -> list[ApiName]:
+    """The names a backend must define through the API after load (api_names.py, T-3264)."""
+    try:
+        return api_names(xlsx)
     except ValueError as e:
         raise OracleError(str(e)) from e
 
@@ -114,6 +135,17 @@ _RANGE_EDITS = {
     "delete_column": ("delete", "Left"),
 }
 SCOPES = ["Files.ReadWrite"]
+
+
+def _error_code(resp: requests.Response) -> str | None:
+    """The `error.code` of a Graph error response, or None when its body has none."""
+    try:
+        body = resp.json()
+    except ValueError:
+        return None
+    error = body.get("error") if isinstance(body, dict) else None
+    code = error.get("code") if isinstance(error, dict) else None
+    return code if isinstance(code, str) else None
 
 
 def _cache_path() -> Path:
@@ -252,7 +284,11 @@ class GraphBackend:
         headers: dict[str, str] | None = None,
         json: Any = None,
         data: bytes | None = None,
+        refusable: bool = False,
     ) -> requests.Response:
+        """Sends one Graph request, retrying throttling and dropped connections; any error status
+        raises OracleError, except a 400 `InvalidArgument` when `refusable` (Excel refusing typed
+        input, decision 0179), which is returned."""
         for attempt in range(8):
             all_headers = {"Authorization": f"Bearer {self._token()}", **(headers or {})}
             try:
@@ -267,6 +303,8 @@ class GraphBackend:
             if resp.status_code in (429, 503, 504):
                 time.sleep(float(resp.headers.get("Retry-After", 2**attempt)))
                 continue
+            if refusable and resp.status_code == 400 and _error_code(resp) == "InvalidArgument":
+                return resp
             if resp.status_code >= 400:
                 raise OracleError(
                     f"{method} {self._redact(url)} -> {resp.status_code}: {self._redact(resp.text[:500])}"
@@ -315,11 +353,14 @@ class GraphBackend:
                 # One blank row above row `to` with the cells below shifted down, as the T-1853
                 # session did (docs/research/t1853-legacy-cell-edits-2026-10-18.md); the other
                 # row and column edits (T-2323) are the same call with another verb and shift.
-                # The address is `3:3` for a row and `C:C` for a column letter.
+                # The address is `3:3` for a row and `C:C` for a column letter; a multi-row
+                # delete_row is recorded as its span, `4:7`, already an address (T-3019).
                 verb, shift = _RANGE_EDITS[op]
+                target = str(to).upper()
+                address = target if ":" in target else f"{target}:{target}"
                 self._call(
                     "POST",
-                    f"{ref(sheet)}/range(address='{str(to).upper()}:{str(to).upper()}')/{verb}",
+                    f"{ref(sheet)}/range(address='{address}')/{verb}",
                     json={"shift": shift},
                     headers=sid,
                 )
@@ -327,6 +368,21 @@ class GraphBackend:
                 if sheet == CANARY_SHEET:
                     raise OracleError(f"sheet op delete_sheet {sheet!r}: the canary sheet stays")
                 self._call("DELETE", ref(sheet), headers=sid)
+            elif op == "add_table":
+                # Graph names the new table itself (Table1): add it over the range with its header
+                # row, then rename it, and read the name back so a rename Excel did not make never
+                # becomes an oracle value (T-3629).
+                table, address = str(to).split(" ", 1)
+                added = self._call(
+                    "POST",
+                    f"{ref(sheet)}/tables/add",
+                    json={"address": address, "hasHeaders": True},
+                    headers=sid,
+                ).json()
+                self._call("PATCH", table_url(str(added["id"])), json={"name": table}, headers=sid)
+                got = self._call("GET", table_url(str(added["id"])), headers=sid).json().get("name")
+                if got != table:
+                    raise OracleError(f"sheet op add_table {table!r}: Excel named it {got!r}")
             elif op in ("convert_table", "delete_table"):
                 table = table_url(str(to))
                 if op == "convert_table":
@@ -349,22 +405,12 @@ class GraphBackend:
                 "POST", f"{item_url}/workbook/createSession", json={"persistChanges": True}
             ).json()
             sid = {"workbook-session-id": session["id"]}
-            for sheet, a1, text in typed_entries(xlsx):
-                # Writing `values` runs Excel's typed-input parser: "(1)" becomes -1 with a number
-                # format Excel picks, as if typed into the cell (T-0280).
-                sheet_ref = quote(sheet.replace("'", "''"), safe="")
-                rng = self._call(
-                    "PATCH",
-                    f"{item_url}/workbook/worksheets('{sheet_ref}')/range(address='{quote(a1, safe='')}')",
-                    json={"values": [[text]]},
-                    headers=sid,
-                ).json()
-                print(
-                    f"ENTERED {sheet}!{a1} {text!r}: values={rng.get('values')} "
-                    f"numberFormat={rng.get('numberFormat')}",
-                    file=sys.stderr,
-                )
+            for entry in typed_entries(xlsx):
+                self._type_entry(item_url, sid, entry)
             self._replay_sheet_ops(item_url, sid, recorded_sheet_ops(xlsx))
+            # Not `name`: that is the uploaded file's name, returned as `workbook_name` below.
+            for defined in recorded_api_names(xlsx):
+                self._add_name(item_url, sid, defined)
             # Load, this rebuild and the scratch edit below are three calculations; the eval
             # adapter repeats them for iterative cases (`ORACLE_CALCULATIONS` in
             # crates/rustsheet-eval/src/engine.rs, T-0429): keep the two in step.
@@ -375,6 +421,7 @@ class GraphBackend:
                 headers=sid,
             )
             texts = self._read_texts(item_url, sid, recorded_text_cells(xlsx))
+            pivot_texts = self._read_used_texts(item_url, sid, recorded_pivot_sheets(xlsx))
             # Excel only persists a session that *edited* the workbook: after a bare recalculation
             # of a file last saved by current Excel, closeSession saves nothing and the download is
             # the upload, cached values and all (observed 2026-10-04 on ironcalc's arithmetic.xlsx;
@@ -403,8 +450,58 @@ class GraphBackend:
             with contextlib.suppress(OracleError):
                 self._call("DELETE", item_url)
         return content, OracleInfo(
-            kind=self.name, application="Excel for the web (Graph)", texts=texts, workbook_name=name
+            kind=self.name,
+            application="Excel for the web (Graph)",
+            texts=texts,
+            workbook_name=name,
+            pivot_texts=pivot_texts,
         )
+
+    def _type_entry(self, item_url: str, sid: dict[str, str], entry: Entered) -> None:
+        """Types `entry` into its cell. Writing `values` runs Excel's typed-input parser: "(1)"
+        becomes -1 with a number format Excel picks, as if typed into the cell (T-0280);
+        `formulasR1C1` is the same typed in R1C1 mode (T-3113). Text Excel refuses (400
+        `InvalidArgument`) leaves the cell blank: that is the answer, not a failure (decision
+        0179)."""
+        sheet_ref = quote(entry.sheet.replace("'", "''"), safe="")
+        resp = self._call(
+            "PATCH",
+            f"{item_url}/workbook/worksheets('{sheet_ref}')/range(address='{quote(entry.a1, safe='')}')",
+            json={"formulasR1C1" if entry.r1c1 else "values": [[entry.text]]},
+            headers=sid,
+            refusable=True,
+        )
+        where = f"{entry.sheet}!{entry.a1} {entry.text!r}{' (R1C1)' if entry.r1c1 else ''}"
+        if resp.status_code == 400:
+            print(f"REFUSED {where}: {self._redact(resp.text[:500])}", file=sys.stderr)
+            return
+        rng = resp.json()
+        print(
+            f"ENTERED {where}: values={rng.get('values')} numberFormat={rng.get('numberFormat')}",
+            file=sys.stderr,
+        )
+
+    def _add_name(self, item_url: str, sid: dict[str, str], defined: ApiName) -> None:
+        """Defines `defined` through the API: `names/add` for a workbook-scoped name (T-3264),
+        `worksheets('S')/names/add` for one scoped to sheet S (T-4014). A body Excel refuses (400
+        `InvalidArgument`) leaves the name undefined: that is the answer, not a failure, as for a
+        refused typed cell (decision 0179)."""
+        name, formula, sheet = defined
+        scope = ""
+        if sheet is not None:
+            sheet_ref = quote(sheet.replace("'", "''"), safe="")
+            scope = f"/worksheets('{sheet_ref}')"
+        resp = self._call(
+            "POST",
+            f"{item_url}/workbook{scope}/names/add",
+            json={"name": name, "reference": formula},
+            headers=sid,
+            refusable=True,
+        )
+        verdict = "REFUSED" if resp.status_code == 400 else "ADDED"
+        detail = f": {self._redact(resp.text[:500])}" if resp.status_code == 400 else ""
+        where = "" if sheet is None else f" on sheet {sheet!r}"
+        print(f"{verdict} name {name}{where} {formula[:80]!r}{detail}", file=sys.stderr)
 
     def _read_texts(
         self, item_url: str, sid: dict[str, str], cells: list[tuple[str, str]]
@@ -429,6 +526,30 @@ class GraphBackend:
                 texts.setdefault(sheet, {})[a1] = str(text)
         return texts
 
+    def _read_used_texts(
+        self, item_url: str, sid: dict[str, str], sheets: list[str]
+    ) -> dict[str, dict[str, str]]:
+        """The displayed text of every non-empty cell of each sheet's used range, read as `_read_texts`
+        reads listed cells (one block per sheet), so a pivot Excel rendered on open has its text in
+        the sidecar beside its values (T-4169). A sheet whose used range passes [`MAX_TEXT_BLOCK`]
+        cells is reported and left out (directive 5); no probe needs one."""
+        texts: dict[str, dict[str, str]] = {}
+        for sheet in sheets:
+            sheet_ref = quote(sheet.replace("'", "''"), safe="")
+            used = self._call(
+                "GET", f"{item_url}/workbook/worksheets('{sheet_ref}')/usedRange?$select=address", headers=sid
+            ).json()
+            cells = used_cells(str(used.get("address", "")))
+            if cells is None:
+                print(
+                    f"PIVOT TEXT {sheet!r}: used range too large or unreadable, not captured", file=sys.stderr
+                )
+                continue
+            read = self._read_texts(item_url, sid, [(sheet, a1) for a1 in cells])
+            if shown := {a1: text for a1, text in read.get(sheet, {}).items() if text}:
+                texts[sheet] = shown
+        return texts
+
 
 MAX_TEXT_BLOCK = 20_000  # cells in one `Range.text` read: well under Graph's response limits
 
@@ -451,6 +572,19 @@ def text_blocks(cells: list[tuple[str, str]]) -> list[tuple[str, str, dict[str, 
         else:
             reads.extend((sheet, a1, {a1: (0, 0)}) for a1 in at)
     return reads
+
+
+def used_cells(address: str) -> list[str] | None:
+    """Every A1 cell of a Graph range `address` (`Sheet!A1:C3`, `'My Sheet'!B2`), row by row; `None`
+    when it does not parse or has more than [`MAX_TEXT_BLOCK`] cells."""
+    first, _, last = address.rpartition("!")[2].replace("$", "").partition(":")
+    try:
+        (top, left), (bottom, right) = parse_a1(first), parse_a1(last or first)
+    except ValueError:
+        return None
+    if (bottom - top + 1) * (right - left + 1) > MAX_TEXT_BLOCK:
+        return None
+    return [xl_rowcol_to_cell(r, c) for r in range(top, bottom + 1) for c in range(left, right + 1)]
 
 
 def _has_cell(rows: Any, row: int, col: int) -> bool:
@@ -480,6 +614,8 @@ class ExcelDesktopBackend:
 
         if recorded_sheet_ops(xlsx):
             raise OracleError("excel-desktop cannot replay sheet edits yet (spec `sheet_ops`, T-1608)")
+        if recorded_api_names(xlsx):
+            raise OracleError("excel-desktop cannot define names through the API yet (spec `api_names`)")
 
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp) / "in.xlsx"
@@ -494,8 +630,13 @@ class ExcelDesktopBackend:
                 excel.AskToUpdateLinks = False
                 excel.AutomationSecurity = 3  # msoAutomationSecurityForceDisable
                 wb = excel.Workbooks.Open(str(src), UpdateLinks=0, ReadOnly=True, AddToMru=False)
-                for sheet, a1, text in typed_entries(xlsx):
-                    wb.Worksheets(sheet).Range(a1).Value = text  # parsed as typed input (T-0280)
+                for entry in typed_entries(xlsx):
+                    cell = wb.Worksheets(entry.sheet).Range(entry.a1)
+                    # Parsed as typed input (T-0280), in R1C1 mode for `entered_r1c1` (T-3113).
+                    if entry.r1c1:
+                        cell.FormulaR1C1 = entry.text
+                    else:
+                        cell.Value = entry.text
                 excel.CalculateFullRebuild()
                 wb.SaveAs(str(dst), FileFormat=51)
                 wb.Close(SaveChanges=False)
@@ -526,9 +667,13 @@ class LibreOfficeBackend:
 
     def recalc(self, xlsx: bytes) -> tuple[bytes, OracleInfo]:
         if typed_entries(xlsx):
-            raise OracleError("libreoffice cannot enter typed cell input (spec `entered` cells)")
+            raise OracleError(
+                "libreoffice cannot enter typed cell input (spec `entered`/`entered_r1c1` cells)"
+            )
         if recorded_sheet_ops(xlsx):
             raise OracleError("libreoffice cannot replay sheet edits (spec `sheet_ops`)")
+        if recorded_api_names(xlsx):
+            raise OracleError("libreoffice cannot define names through the API (spec `api_names`)")
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp) / "in.xlsx"
             outdir = Path(tmp) / "out"

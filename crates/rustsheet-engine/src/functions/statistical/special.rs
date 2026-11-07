@@ -4,7 +4,9 @@
 use std::f64::consts::FRAC_1_SQRT_2;
 
 use super::erf::erfc;
+use super::incomplete_beta::FRAC_1_SQRT_2PI;
 use crate::arithmetic::{extended_product, extended_quotient, extended_sum};
+use crate::x87_exp::excel_exp;
 
 /// sqrt(2*pi), the normal density's normalising constant.
 pub(crate) const SQRT_2PI: f64 = 2.506_628_274_631_000_7;
@@ -20,17 +22,26 @@ pub(crate) fn normal_cdf(x: f64, mean: f64, std_dev: f64) -> f64 {
     0.5 * erfc(extended_product(-z, FRAC_1_SQRT_2))
 }
 
-/// Normal probability density function with the given mean and standard deviation.
+/// Normal probability density function with the given mean and standard deviation, one kernel
+/// for NORM.DIST, NORMDIST, NORM.S.DIST and PHI: `EXP(-d*d/2) / std_dev * K`, `d = (x - mean) /
+/// std_dev`, each step a double, with Excel's own EXP ([`excel_exp`], not libm's) and K the
+/// correctly rounded 1/sqrt(2*pi) ([`FRAC_1_SQRT_2PI`]). So `NORM.S.DIST(0,FALSE)` is K itself.
+/// Evidence and the refuted orders: docs/excel-semantics/statistics.md "Normal density is Excel's
+/// EXP times 1/sqrt(2*pi), then / sigma (T-0975)". LOGNORM.DIST is not this kernel (T-4321).
 pub(crate) fn normal_pdf(x: f64, mean: f64, std_dev: f64) -> f64 {
     let d = (x - mean) / std_dev;
-    (-0.5 * d * d).exp() / (SQRT_2PI * std_dev)
+    excel_exp(-(d * d) / 2.0) / std_dev * FRAC_1_SQRT_2PI
 }
 
-/// Standard normal density, shared by PHI and NORM.S.DIST. This operation order reproduces Excel's
-/// cached last digits in PHI.xlsx and `NORM.S.DIST(-37.6,FALSE)` (4.0441448093482273E-308,
-/// probes/subnormal-text-and-tail-companions); `normal_pdf`'s statrs-style order does not.
-pub(crate) fn standard_normal_pdf(x: f64) -> f64 {
-    (-(x * x) / 2.0).exp() / (2.0 * std::f64::consts::PI).sqrt()
+/// Whether Excel's normal density at the standardized `z` is `#NUM!` instead of its limit 0: it is
+/// wherever the squared value leaves the double range, so from |z| = 2^512 on. `NORM.S.DIST(2^512,
+/// FALSE)`, `PHI(1E+200)` and `NORM.DIST(3,1,2^-512,FALSE)` are `#NUM!`, while `SQRT(f64::MAX)` and
+/// every double below 2^512 are 0 (probes/t2435-dist-extremes A42:A47, A50:A57, A82:A84, A119:A125;
+/// `NORMDIST(1E+300,0.3,2.5,0)`, probes/t2475-stat-subexpressions P!A572).
+/// Excel: see docs/excel-semantics/statistics.md, "Normal densities are #NUM! once the square
+/// overflows (T-2435)"
+pub(crate) fn normal_density_overflows(z: f64) -> bool {
+    !(z * z).is_finite()
 }
 
 /// Smallest `x >= 0` with `f(x) >= target` for a non-decreasing `f`, found by doubling a bracket
@@ -48,14 +59,6 @@ pub(crate) fn bisect_increasing(f: impl Fn(f64) -> f64, target: f64, max_doublin
         }
     }
     halve_increasing(&f, target, 0.0, hi, 200)
-}
-
-/// Smallest `x` in [0, 1] with `f(x) >= target` for a non-decreasing `f` with `f(1) >= target`,
-/// halving down to the smallest subnormal (at most 1100 steps), so a quantile as small as 1E-300
-/// keeps its digits where [`bisect_increasing`]'s 200 steps stop near 1E-60. The time is bounded,
-/// unlike `statrs`' `inverse_cdf` (T-1543).
-pub(crate) fn bisect_unit_interval(f: impl Fn(f64) -> f64, target: f64) -> f64 {
-    halve_increasing(&f, target, 0.0, 1.0, 1100)
 }
 
 /// The most bracket expansions [`refine_increasing`] makes around an estimate; each multiplies the
@@ -85,7 +88,22 @@ pub(crate) fn refine_increasing(
 /// accurate, as Excel's converged BETA.INV search returns it (docs/excel-semantics/statistics.md
 /// "BETA.INV at a huge shape is AS 109's Newton search (T-1538)"). At most 65 + 2 evaluations.
 pub(crate) fn nearest_crossing(f: impl Fn(f64) -> f64, target: f64, min: f64, max: f64) -> f64 {
-    let (lo, hi) = crossing_bracket(&f, target, f64::NAN, min, max);
+    nearest_crossing_from(f, target, f64::NAN, min, max)
+}
+
+/// [`nearest_crossing`] with the bracket grown around `estimate` when it is finite (as
+/// [`refine_increasing`] does): the same final bracket for a monotone `f`, in fewer evaluations
+/// when the estimate is close (about 25 within 2^-30 relative). At most
+/// [`REFINE_MAX_EXPANSIONS`] + 65 + 2 evaluations; on [0, 1] the expansions, 4x each from 2^-30
+/// relative, reach an end in about 16, so about 81.
+pub(crate) fn nearest_crossing_from(
+    f: impl Fn(f64) -> f64,
+    target: f64,
+    estimate: f64,
+    min: f64,
+    max: f64,
+) -> f64 {
+    let (lo, hi) = crossing_bracket(&f, target, estimate, min, max);
     if (f(hi) - target).abs() < (target - f(lo)).abs() {
         hi
     } else {
@@ -190,6 +208,17 @@ mod tests {
     fn normal_kernels() {
         close(normal_cdf(1.0, 0.0, 1.0), 0.841_344_746_068_542_9);
         close(normal_pdf(0.0, 0.0, 1.0), 0.398_942_280_401_432_7);
+    }
+
+    /// Excel's density digits, bit for bit (T-0975): `NORM.S.DIST(0,FALSE)` and
+    /// `NORM.S.DIST(1.5,FALSE)` (`NORM_DIST.xlsx` C7, C24), `NORM.DIST(-28,0,10,FALSE)` and
+    /// `NORM.DIST(-13,0,0.5,FALSE)` (probes-numeric m9-normpdf-norm-dist-s10, -s0p5).
+    #[test]
+    fn normal_pdf_matches_excel_bits() {
+        assert_eq!(normal_pdf(0.0, 0.0, 1.0), 0.398_942_280_401_432_7);
+        assert_eq!(normal_pdf(1.5, 0.0, 1.0), 0.129_517_595_665_891_74);
+        assert_eq!(normal_pdf(-28.0, 0.0, 10.0), 0.000_791_545_158_297_996_9);
+        assert_eq!(normal_pdf(-13.0, 0.0, 0.5), 1.289_451_994_279_570_3e-147);
     }
 
     #[test]

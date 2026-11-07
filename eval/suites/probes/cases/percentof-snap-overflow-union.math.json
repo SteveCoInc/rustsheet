@@ -1,0 +1,32 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "c30cc0d604a59633534994cd8214537b3c6dec95c3141a0f36afc4262ff9de5d",
+  "definitions": {
+   "PERCENTOF": "de8cc67aa32f890a"
+  },
+  "arguments_sha256": "94781d1b8e5d85c27ea27c39694aded2a96d4078488929050fa7313d6d1b0223"
+ },
+ "sheets": {
+  "Calc": {
+   "D2": {
+    "t": "e",
+    "why": "the total is 0 (a snapped total too)",
+    "f": "=PERCENTOF(A1:A2,A1:A3)"
+   },
+   "D3": {
+    "t": "e",
+    "why": "the total is 0 (a snapped total too)",
+    "f": "=PERCENTOF(A1:A3,A1:A3)"
+   },
+   "D6": {
+    "t": "e",
+    "why": "a running total is beyond the double range",
+    "f": "=PERCENTOF(F1:F2,F1:F2)"
+   }
+  }
+ }
+}

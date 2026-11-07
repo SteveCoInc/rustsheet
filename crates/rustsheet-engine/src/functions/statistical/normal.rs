@@ -9,8 +9,10 @@ use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 use crate::arithmetic::flush_subnormal;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error};
-use crate::functions::statistical::special::{normal_cdf, normal_pdf, standard_normal_pdf};
-use crate::functions::statistical::t_dist::{t_upper_quantile, T_DF_MAX};
+use crate::functions::statistical::special::{normal_cdf, normal_density_overflows, normal_pdf};
+use crate::functions::statistical::t_dist::{
+    cauchy_two_tail_quantile, t_upper_quantile, two_tailed_half_underflows, T_DF_MAX,
+};
 use crate::functions::util::poly;
 use crate::functions::Function;
 use crate::{
@@ -84,7 +86,7 @@ fn ppnd16_tail(p: f64) -> Option<f64> {
 
 /// The quantile of `p` in (0, 1) of the normal distribution with `mean` and `std_dev`, O(1): the
 /// PPND16 tail as `mean + z*std_dev`, else statrs' closed form (`erfc_inv`).
-fn normal_quantile(
+pub(crate) fn normal_quantile(
     p: f64,
     mean: f64,
     std_dev: f64,
@@ -124,6 +126,11 @@ impl Model {
         let cumulative = Self::cast_bool_ref(cumulative, cell)?;
         // Excel: standard_dev must be > 0
         if std_dev <= 0.0 {
+            return Err(num_error(cell));
+        }
+        // The density is #NUM! where the squared z-score overflows, not its limit 0
+        // (`NORMDIST(1E+300,0.3,2.5,0)`, probes/t2475-stat-subexpressions P!A572).
+        if !cumulative && normal_density_overflows((x - mean) / std_dev) {
             return Err(num_error(cell));
         }
         let result = if cumulative {
@@ -190,10 +197,16 @@ impl Model {
         cumulative: bool,
         cell: CellReferenceIndex,
     ) -> Result<f64, CalcResult> {
+        // The density past |z| = 2^512 is #NUM!, as in NORM.DIST (`normal_density_overflows`;
+        // `NORM.S.DIST(1E+300,FALSE)` is #NUM! where `NORM.S.DIST(1E+154,FALSE)` is 0, gen-m9
+        // 8dd2312c96effb1b A228, 4ab2ba98d26c8a5e A341).
+        if !cumulative && normal_density_overflows(z) {
+            return Err(num_error(cell));
+        }
         let result = if cumulative {
             normal_cdf(z, 0.0, 1.0)
         } else {
-            standard_normal_pdf(z)
+            normal_pdf(z, 0.0, 1.0)
         };
         if !result.is_finite() {
             return Err(num_error(cell));
@@ -301,14 +314,29 @@ impl Model {
         if df > T_DF_MAX {
             return Err(num_error(cell));
         }
-        let t_dist = StudentsT::new(0.0, 1.0, df)
-            .map_err(|_| CalcResult::new_error(Error::ERROR, cell, String::new()))?;
-        // Two-sided CI => use 1 - alpha/2
-        let t_crit = t_upper_quantile(&t_dist, df, alpha / 2.0);
-        if !t_crit.is_finite() {
+        // An alpha whose half is subnormal is `#NUM!` at every df, even df 1 where T.INV.2T is
+        // `#DIV/0!` (`CONFIDENCE.T(4.4501477170144E-308,1,2)`, probes/t4541-t-inv-2t-tiny-p G4). It is
+        // checked last, so a size below 2 stays `#DIV/0!` (that order is unprobed).
+        if two_tailed_half_underflows(alpha) {
             return Err(num_error(cell));
         }
-        Ok(t_crit * std_dev / size.sqrt())
+        let t_crit = if df == 1.0 {
+            // Excel's 1/TAN closed form at one degree of freedom (T-2858).
+            cauchy_two_tail_quantile(alpha)
+        } else {
+            let t_dist = StudentsT::new(0.0, 1.0, df)
+                .map_err(|_| CalcResult::new_error(Error::ERROR, cell, String::new()))?;
+            // Two-sided CI => use 1 - alpha/2
+            t_upper_quantile(&t_dist, df, alpha / 2.0)
+        };
+        // A cell never holds an infinity: a quantile or product past the double range
+        // (`CONFIDENCE.T(1E-10,1E307,2)`) is `#NUM!`, Excel's overflow error. The error kind for
+        // the overflowing product is UNVERIFIED (TODO(T-3540)).
+        let margin = t_crit * std_dev / size.sqrt();
+        if !margin.is_finite() {
+            return Err(num_error(cell));
+        }
+        Ok(margin)
     }
 
     /// `NORMSDIST(z)`: NORM.S.DIST with `cumulative` TRUE.

@@ -1,19 +1,23 @@
-//! The pass in Excel's fresh-load order (SPEC-0017), run only when a WEEKNUM read the stale
-//! `return_type` state (docs/excel-semantics/dates.md "WEEKNUM's stale `return_type` state").
+//! The pass in Excel's fresh-load order (SPEC-0017), run only when a call read the state earlier
+//! calls left (`OrderState`): WEEKNUM's stale `return_type` (docs/excel-semantics/dates.md
+//! "WEEKNUM's stale `return_type` state") or AMORDEGRC's left-over value (financial.md
+//! "AMORDEGRC below period 1").
 //!
 //! Excel runs the formula cells of a freshly loaded workbook in the reverse of load order: the
 //! last sheet first, each sheet bottom row first and each row right to left. A cell that reads a
 //! formula cell not yet calculated stops at that read, moves to just after it in the order and
 //! runs again from its start when the order reaches it; the stopped run has no effect
 //! (recalc.md "The order Excel calculates a freshly loaded workbook in"). The order is only
-//! observable through that state, so the default pass keeps its own order and this one runs
+//! observable through those states, so the default pass keeps its own order and this one runs
 //! after it only where a reader ran (`Model::evaluate`).
 
+use std::collections::{HashMap, HashSet};
+
 use crate::{
-    evaluation::{key, CellState, Restart},
+    evaluation::{key, CellKey, CellState, KeyBuild, OrderState, Restart},
     expressions::types::CellReferenceIndex,
     model::Model,
-    types::{ArrayKind, Cell},
+    types::Cell,
 };
 
 /// How the run of one cell of the chain ended.
@@ -95,14 +99,46 @@ pub(crate) fn run_chain<C>(
     }
 }
 
+/// What the dynamic-array anchors of an Excel-order pass did to the order state: the AMORDEGRC
+/// value they left (`OrderState::amor_left_over`; financial.md "AMORDEGRC below period 1",
+/// T-3393) and whether they emptied WEEKNUM's state (dates.md "Which calls empty WEEKNUM's
+/// state", T-4315). The anchors run before the chain, so the chain replays each anchor's effect
+/// at its place (`run_excel_order`).
+#[derive(Default)]
+pub(crate) struct AnchorEffects {
+    /// How many times a call has written the value, so that an anchor's run can tell whether it
+    /// wrote it.
+    pub(crate) writes: u64,
+    /// The value each anchor that wrote it left.
+    pub(crate) left: HashMap<CellKey, f64, KeyBuild>,
+    /// How many times a call has emptied WEEKNUM's state (`Model::empty_weeknum_state`).
+    pub(crate) weeknum_empties: u64,
+    /// The anchors whose run emptied WEEKNUM's state.
+    pub(crate) emptied_weeknum: HashSet<CellKey, KeyBuild>,
+}
+
 impl Model {
+    /// Evaluates a root of a pass; an anchor of an Excel-order pass that wrote AMORDEGRC's value
+    /// records what it left, for the chain to put back at its place (`AnchorEffects`).
+    pub(crate) fn evaluate_pass_root(&mut self, cell: CellReferenceIndex, anchor: bool) {
+        let writes = self.evaluation.anchor_effects.writes;
+        let empties = self.evaluation.anchor_effects.weeknum_empties;
+        self.evaluate_root_cell(cell);
+        let state = &mut self.evaluation;
+        if anchor && state.excel_order && state.anchor_effects.writes != writes {
+            let left = state.order_state.amor_left_over;
+            state.anchor_effects.left.insert(key(cell), left);
+        }
+        if anchor && state.excel_order && state.anchor_effects.weeknum_empties != empties {
+            state.anchor_effects.emptied_weeknum.insert(key(cell));
+        }
+    }
+
     /// The formula cells of the workbook in `(load rank, row, column)` order: the chain starts at
     /// the last one. A sheet keeps its load position after a move (SPEC-0017), so the sheets
     /// are ordered by `Worksheet::load_rank`, not by their tab.
     fn formula_positions(&self) -> Vec<CellReferenceIndex> {
-        let mut positions = self.positions_where(|cell| {
-            matches!(cell, Cell::CellFormula { .. } | Cell::ArrayFormula { .. })
-        });
+        let mut positions = self.positions_where(Cell::has_formula);
         positions.sort_unstable_by_key(|position| self.chain_key(*position));
         positions
     }
@@ -128,39 +164,46 @@ impl Model {
         let positions = self.formula_positions();
         let budget = move_budget(positions.len());
         // The chain starts as Excel's recalc does, with an empty state: what the anchors' own
-        // WEEKNUM calls left is not in Excel's order (rule 1; dates.md "Ours").
-        self.evaluation.weeknum_start = None;
+        // calls left is not in Excel's order (rule 1; dates.md "Ours").
+        self.evaluation.order_state = OrderState::default();
         run_chain(self, positions.len(), budget, |model, index, may_block| {
             let cell = positions[index as usize];
             let state = &mut model.evaluation;
             if state.cells.get(&key(cell)) == Some(&CellState::Evaluated) {
-                // An anchor, or a cell an anchor read. At its place in the order a dynamic-array
-                // formula empties WEEKNUM's state (gen-m6, dates.md "WEEKNUM's stale
-                // `return_type` state"; one that spills is unprobed, T-2070).
-                if matches!(
-                    model.fetch_cell(cell),
-                    Some(Cell::ArrayFormula {
-                        kind: ArrayKind::Dynamic,
-                        ..
-                    })
-                ) {
-                    model.evaluation.weeknum_start = None;
+                // An anchor, or a cell an anchor read. An anchor whose run called one of the calls
+                // that empty WEEKNUM's state empties it at its place in the order; a dynamic-array
+                // formula as such does not (probes/weeknum-stale-between-calls, -between-ranges,
+                // -call-shapes; dates.md "Which calls empty WEEKNUM's state", T-4289, T-4315).
+                if model
+                    .evaluation
+                    .anchor_effects
+                    .emptied_weeknum
+                    .contains(&key(cell))
+                {
+                    model.evaluation.order_state.weeknum_start = None;
+                }
+                // An anchor that wrote AMORDEGRC's left-over value leaves, at its place, what its
+                // run left: `=SEQUENCE(1,2)` empties it and `=SEQUENCE(1,2)+AMORDEGRC(..)` leaves
+                // the charge (financial.md "AMORDEGRC below period 1"; probes/amordegrc-fraction-
+                // state-ag, -ah, -am, T-3393). One that wrote nothing (`={1,2}`, -aq) keeps it.
+                if let Some(&left) = model.evaluation.anchor_effects.left.get(&key(cell)) {
+                    model.evaluation.order_state.amor_left_over = left;
                 }
                 return Outcome::Done;
             }
-            let weeknum_start = state.weeknum_start;
+            let order_state = state.order_state;
             state.blocking = may_block;
             state.root = Some(cell);
             model.evaluate_root_cell(cell);
             let state = &mut model.evaluation;
             state.blocking = false;
-            if state.restart.is_some() {
+            if state.abandoned() {
                 return Outcome::Stop;
             }
             let Some(precedent) = state.blocked_on.take() else {
                 return Outcome::Done;
             };
-            state.weeknum_start = weeknum_start;
+            state.order_state = order_state;
             let precedent = (precedent.sheet, precedent.row, precedent.column);
             let precedent = model.chain_key(CellReferenceIndex {
                 sheet: precedent.0,

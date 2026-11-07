@@ -6,13 +6,24 @@
 use super::super::token::{self, TableReference, TokenType};
 use super::super::types::ParsedReference;
 use super::super::utils::{
-    is_out_of_range_r1c1_name, number_to_column, parse_dotted_a1_range, parse_reference_a1,
+    is_out_of_range_r1c1_name, parse_dotted_a1_range, parse_spelled_a1_cell, quote_name,
+    spelled_like_a1_cell,
 };
 use super::reference_operators::is_reference_operand;
 use super::structured_reference::{
-    is_unresolved_structured_reference, COLUMN_NOT_FOUND, TABLE_NOT_FOUND, TABLE_SHEET_NOT_FOUND,
+    is_unresolved_structured_reference, TableExtent, TABLE_SHEET_NOT_FOUND,
 };
 use super::*;
+use crate::functions::kinds::arg_counts;
+use crate::language::get_default_language;
+use crate::typed_input::TYPED_FORMULA_DOES_NOT_PARSE;
+
+/// Whether `name` starts with [`XLPM_PREFIX`] in any letter case (typed, Excel matches it so;
+/// probes/t4299-typed-xlpm-extrapolations).
+fn has_xlpm_prefix(name: &str) -> bool {
+    name.get(..XLPM_PREFIX.len())
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case(XLPM_PREFIX))
+}
 
 impl Parser {
     /// The parse error for a token that cannot start an operand.
@@ -98,8 +109,7 @@ impl Parser {
 
     /// `node` called with the argument list that follows it, when a `(` follows with no space.
     pub(super) fn call_if_parenthesis_follows(&mut self, node: Node) -> Node {
-        if !self.lexer.whitespace_follows() && self.lexer.peek_token() == TokenType::LeftParenthesis
-        {
+        if !self.lexer.whitespace_follows() && *self.lexer.peek() == TokenType::LeftParenthesis {
             return self.parse_call(node);
         }
         node
@@ -175,6 +185,28 @@ impl Parser {
                 (column2, column1) = (column1, column2);
                 (absolute_column2, absolute_column1) = (absolute_column1, absolute_column2);
             }
+        } else if self.typed {
+            // Typed in R1C1 mode, the corners are ordered by the cells they name, as A1 text
+            // orders them: `ROWS(R[-50]:R[-49])` in row 50, rows 1048576 and 1 after the wrap,
+            // is `ROWS(1:1048576)` (probes/t3212-r1c1-bare-offsets I50, T-3212). The storage
+            // form keeps its corners as written.
+            let at = |n: i32, absolute: bool, base: i32| {
+                if absolute {
+                    n
+                } else {
+                    base.saturating_add(n)
+                }
+            };
+            if at(row1, absolute_row1, context.row) > at(row2, absolute_row2, context.row) {
+                (row2, row1) = (row1, row2);
+                (absolute_row2, absolute_row1) = (absolute_row1, absolute_row2);
+            }
+            if at(column1, absolute_column1, context.column)
+                > at(column2, absolute_column2, context.column)
+            {
+                (column2, column1) = (column1, column2);
+                (absolute_column2, absolute_column1) = (absolute_column1, absolute_column2);
+            }
         }
 
         if self.lexer.is_a1_mode() {
@@ -222,19 +254,23 @@ impl Parser {
 
     /// An identifier: a call when `(` follows, otherwise a name.
     pub(super) fn parse_identifier(&mut self, name: String) -> Node {
-        let next_token = self.lexer.peek_token();
+        let next_token = self.lexer.peek();
+        let (at_end, call) = (
+            *next_token == TokenType::EOF,
+            *next_token == TokenType::LeftParenthesis,
+        );
         // If this identifier is the last token before the cursor (its
         // peek is EOF), the user is mid-typing a name here. Record it so
         // `parse_at_cursor` can offer function/name completion. We are in
         // a name/operand position by construction, so this never fires
         // for an identifier glued to a completed operand: the `m` in
         // `1m` is leftover input, never reached as a primary.
-        if next_token == TokenType::EOF {
+        if at_end {
             let end = self.lexer.get_position() as usize;
             let start = end.saturating_sub(name.chars().count());
             self.trailing_name = Some((name.clone(), start));
         }
-        if next_token == TokenType::LeftParenthesis {
+        if call {
             self.lexer.advance_token();
             return self.parse_named_call(name);
         }
@@ -256,15 +292,14 @@ impl Parser {
                 }
                 sheet.to_string()
             }
-            None => match prefix.strip_prefix('\'') {
-                Some(quoted) => quoted.strip_suffix('\'')?.replace("''", "'"),
-                None => prefix.to_string(),
-            },
+            None => crate::expressions::utils::unquote_sheet_prefix(prefix)?,
         };
-        let scope = if sheet.is_empty() {
-            None
-        } else {
-            Some(self.get_sheet_index_by_name(&sheet)?)
+        let scope = match self.get_sheet_index_by_name(&sheet) {
+            _ if sheet.is_empty() => None,
+            Some(index) => Some(index),
+            // `Budget.xlsx!loc`, the text Excel shows for `Feb!loc`, reads the workbook name.
+            None if self.is_workbook_file(&sheet) => None,
+            None => return None,
         };
         // A sheet with no local definition reads the workbook-scoped name (docs/excel-semantics/
         // references.md "A sheet-qualified name falls back to the workbook name"; `Feb!loc`).
@@ -273,21 +308,48 @@ impl Parser {
                 .get_defined_name(bare, sheet)
                 .unwrap_or((scope, String::new())),
             None => {
-                let bare_lower = bare.to_lowercase();
                 let formula = self
-                    .defined_names
-                    .iter()
-                    .find(|(n, s, _)| s.is_none() && n.to_lowercase() == bare_lower)
-                    .map(|(.., formula)| formula.clone())
+                    .defined_name_formula(None, bare)
+                    .map(str::to_owned)
                     .unwrap_or_default();
                 (None, formula)
             }
         };
-        Some(Node::DefinedNameKind((name.to_string(), scope, formula)))
+        // Excel shows a workbook name read through a sheet, or through the file's own-workbook
+        // prefix `[0]!`, with the workbook's file name as its prefix, quoted as a sheet name
+        // would be (`=Feb!loc` is `='53aa….xlsx'!loc`), and a sheet rename leaves it alone
+        // (docs/excel-semantics/references.md "A sheet-qualified workbook name is rewritten to
+        // the workbook's file name", T-2834).
+        let text = match &self.workbook_file {
+            Some(file) if scope.is_none() && !prefix.is_empty() && !formula.is_empty() => {
+                format!("{}!{bare}", quote_name(file))
+            }
+            // An undefined workbook name read through `[0]!` is shown bare: that is how Excel
+            // shows a use that a sheet-scoped add left bound to the workbook name, which is
+            // stored so (`name_binding::pin_unresolved_name`; probes/t4049-sheet-api-name-plain
+            // S!B1, FORMULATEXT `=N`, T-4049).
+            _ if scope.is_none() && formula.is_empty() && prefix == "[0]" => bare.to_string(),
+            _ => name.to_string(),
+        };
+        Some(Node::DefinedNameKind((text, scope, formula)))
+    }
+
+    /// Whether a sheet prefix spells this workbook's file name (`Budget.xlsx`, any case).
+    fn is_workbook_file(&self, prefix: &str) -> bool {
+        self.workbook_file
+            .as_deref()
+            .is_some_and(|file| file.to_lowercase() == prefix.to_lowercase())
     }
 
     /// A name that is not called: a defined name, a table or a LAMBDA parameter.
-    fn name_operand(&mut self, name: String) -> Node {
+    fn name_operand(&mut self, mut name: String) -> Node {
+        // Typed, Excel lowercases the prefix only before a name an enclosing LET or LAMBDA binds:
+        // `=LET(x,2,_XLPM.x*3)` reads back `_xlpm.x*3` in FORMULATEXT, while a bare `=_XLPM.x` and
+        // the doubled `_XLPM._XLPM.x` keep their case (`#NAME?` in all of them; probes/
+        // t4299-typed-xlpm-extrapolations C2, probes/t4331-typed-xlpm-remaining C2:C3, T-4343).
+        if self.typed && has_xlpm_prefix(&name) && self.binds_name(&name[XLPM_PREFIX.len()..]) {
+            name.replace_range(..XLPM_PREFIX.len(), XLPM_PREFIX);
+        }
         // A defined name of a linked workbook, `[1]!Name` or `[1]Sheet!Name` (one identifier to
         // the lexer), keeps its prefix: evaluation reads it from the link's cache.
         if let Some(node) = self.prefixed_name_operand(&name) {
@@ -318,21 +380,31 @@ impl Parser {
         // A LET name or LAMBDA parameter shadows a defined name of the same name in any case
         // (probes/let-name-shadows-defined-name, T-2057).
         if !is_out_of_range_r1c1_name(&name) && !self.binds_name(&name) {
+            if let Some(node) = self.api_body_sheet_name(&name) {
+                return node;
+            }
             if let Some((scope, formula)) = self.get_defined_name(&name, context_sheet_index) {
                 return Node::DefinedNameKind((name, scope, formula));
             }
         }
-        let name_lower = name.to_lowercase();
-        for table_name in self.tables.keys() {
-            if table_name.to_lowercase() == name_lower {
-                // A bare table name is its data area, like `Table[]` (gen-m8b specials
-                // e804cf2f8af00680 K116, lookups 27252667210b1d03).
-                return self.structured_reference_operand(name, None, None, true);
-            }
+        if self.table_named(&name).is_some() {
+            // A bare table name is its data area, like `Table[]` (gen-m8b specials
+            // e804cf2f8af00680 K116, lookups 27252667210b1d03).
+            return self.structured_reference_operand(
+                name,
+                None,
+                None,
+                token::TableSpacing::default(),
+                true,
+            );
         }
-        // xlpm: Excel Lambda Parameter
-        let name = name.trim_start_matches("_xlpm.").to_string();
-        Node::NamedVariableKind { name, id: None }
+        // xlpm: Excel Lambda Parameter. The prefix stays until the end of the parse, which drops
+        // it from a use some LET or LAMBDA binds and keeps it on an unbound one
+        // (`call_names::settle_lambda_prefixes`, T-4099).
+        Node::NamedVariableKind {
+            name: self.written_lambda_name(&name),
+            id: None,
+        }
     }
 
     /// The range a name spelled like a Lotus-style range is (`A1.B2` is `A1:B2`; see
@@ -344,6 +416,37 @@ impl Parser {
         }
         let (left, right) = parse_dotted_a1_range(name)?;
         Some(self.range_operand(None, left, right))
+    }
+
+    /// The name a use written `name` (used or called) reads, before the end of the parse drops
+    /// the `_xlpm.` mark from the bound ones (`call_names::settle_lambda_prefixes`): an unbound
+    /// name written with its prefix keeps it, as FORMULATEXT shows it (T-4099). In a file (A1
+    /// text, not typed) exactly one prefix is the mark, so a name keeps every prefix it was
+    /// written with until the end of the parse decides whether one of them is the mark: a file's
+    /// `_xlpm._xlpm.f1` is the undefined name FORMULATEXT shows `=_xlpm._xlpm.f1`
+    /// (probes/t4224-doubled-xlpm-prefix A1:C2, T-4224). The R1C1 storage form prefixes a name
+    /// that would read back as something else (`variable_text`, `callee_text`), so there exactly
+    /// one prefix is the storage's own, dropped here, and any more are the name's own. Typed, in
+    /// A1 or R1C1 mode, `_xlpm.` is no mark but part of the name: `=_xlpm._xlpm.f1` is that
+    /// undefined name, and `=LET(x,2,_xlpm.x*3)` uses a name `_xlpm.x` no LET binds (`#NAME?`,
+    /// probes/t4224-doubled-xlpm-prefix A3:C6, A9:C14, T-4288).
+    ///
+    /// | prefixes | R1C1 storage form    | A1 text (a file) | typed (A1 or R1C1) |
+    /// |----------|----------------------|------------------|--------------------|
+    /// | 0        | `f1`                 | `f1`             | `f1`               |
+    /// | 1        | `f1` (its mark)      | `_xlpm.f1`       | `_xlpm.f1`         |
+    /// | 2        | `_xlpm.f1`           | `_xlpm._xlpm.f1` | `_xlpm._xlpm.f1`   |
+    fn written_lambda_name(&self, name: &str) -> String {
+        if self.storage_form() {
+            return name.strip_prefix(XLPM_PREFIX).unwrap_or(name).to_string();
+        }
+        name.to_string()
+    }
+
+    /// Whether the text being parsed is the R1C1 storage form (R1C1 grammar, not typed), whose
+    /// `_xlpm.` prefix is its own mark ([`Parser::written_lambda_name`]).
+    pub(super) fn storage_form(&self) -> bool {
+        !self.lexer.is_a1_mode() && !self.typed
     }
 
     /// Whether an enclosing LET or LAMBDA binds `name` ([`Parser::bind_name`]),
@@ -376,6 +479,24 @@ impl Parser {
         self.lexer.is_a1_mode() && self.binds_name(name)
     }
 
+    /// The range between two names an enclosing LET or LAMBDA binds, for text the lexer read
+    /// as a column range (`a:v`). Excel takes the names: `REDUCE(A1,A2:A3,LAMBDA(a,v,a:v))` is
+    /// A1:A3, not columns A:V (probes/t4478-reduce-scan-reference-accumulator Calc!F5, J1,
+    /// excel-graph, T-4494), as `p_a:p_v` is (Calc!F20). Only when both sides are bound: a
+    /// column label against one bound name (`a:C`) is not probed and stays a column range.
+    pub(super) fn bound_names_range(&mut self, text: &str) -> Option<Node> {
+        let (left, right) = text.split_once(':')?;
+        if !self.binds_reference_shaped_name(left) || !self.binds_reference_shaped_name(right) {
+            return None;
+        }
+        let left = self.name_operand(left.to_string());
+        let right = self.name_operand(right.to_string());
+        Some(Node::OpRangeKind {
+            left: Box::new(left),
+            right: Box::new(right),
+        })
+    }
+
     /// `node`, parsed from the argument `text` starting at `token`, where a LET or LAMBDA
     /// expects a name: a name spelled like a Lotus-style range or a relative cell on this sheet
     /// was read as the range or cell while unbound, so it becomes the variable again, and stays
@@ -387,13 +508,23 @@ impl Parser {
     /// defined name becomes the variable in any grammar mode, shadowing the defined name
     /// (probes/let-name-shadows-defined-name, T-2057). Any other plain name is recorded as bound
     /// too when declared bare, for [`Parser::calls_bound_name`] (T-2567).
+    /// The whitespace written around the name stays around the variable (`LET(x, 1, y, 2, x+y)`,
+    /// SPEC-0023).
     pub(super) fn bind_name(&mut self, token: &TokenType, text: &str, node: Node) -> Node {
+        let (space, node) = node.unspaced();
+        self.bind_bare_name(token, text, node).respaced(space)
+    }
+
+    /// [`Parser::bind_name`] of a name with no whitespace around it.
+    fn bind_bare_name(&mut self, token: &TokenType, text: &str, node: Node) -> Node {
         // A name that is also a defined name parsed as that defined name; it declares the
         // variable instead, and shadows the defined name up to the end of the scope. In any
         // grammar mode: a stored formula (R1C1 mode) prints the name without `_xlpm.`.
-        if let (TokenType::Ident(_), Node::DefinedNameKind((name, ..))) = (token, &node) {
-            if !name.contains(['!', '[']) {
-                let name = name.clone();
+        // The written identifier decides, not the node's text: in an API-added name's body a bare
+        // name reads as `Sheet!name` ([`Parser::api_body_sheet_name`], T-4587).
+        if let (TokenType::Ident(ident), Node::DefinedNameKind((name, ..))) = (token, &node) {
+            if !ident.contains(['!', '[']) {
+                let name = crate::expressions::utils::bare_defined_name(name).to_string();
                 self.bound_names.push(name.clone());
                 return Node::NamedVariableKind { name, id: None };
             }
@@ -402,13 +533,32 @@ impl Parser {
         // is the variable, not a function of its name (`calls_bound_name`, T-2567). A name
         // declared `_xlpm.Sum`, as Excel and the export write it, is not: there every call of
         // the variable is `_xlpm.Sum(` too, and a bare `SUM(` is the function.
-        if let (TokenType::Ident(_), Node::NamedVariableKind { name, .. }) = (token, &node) {
-            if !text.trim_start().starts_with("_xlpm.") {
+        if let (TokenType::Ident(_), Node::NamedVariableKind { name, id }) = (token, &node) {
+            // A declaration is bound by definition: it drops the prefix a use keeps until the
+            // end of the parse. In a file exactly one prefix is the mark: `_xlpm._xlpm.x`
+            // declares `_xlpm.x`, which FORMULATEXT shows (probes/t4224-doubled-xlpm-prefix A8,
+            // T-4224); the storage form's mark is already gone ([`Parser::written_lambda_name`]),
+            // and typed text has none (T-4288).
+            let name = if self.storage_form() || self.typed {
+                name.clone()
+            } else {
+                name.strip_prefix(XLPM_PREFIX).unwrap_or(name).to_string()
+            };
+            if !text.trim_start().starts_with(XLPM_PREFIX) {
                 self.bound_names.push(name.clone());
             }
-            return node;
+            return Node::NamedVariableKind { name, id: *id };
         }
         if !self.lexer.is_a1_mode() {
+            // Typed in R1C1 mode, a name that reads as a reference there (`r`, `c`, `rc`, `r1c1`:
+            // a row, a column or a cell) is refused, as `f1` is typed in A1 mode
+            // (probes/t3212-r1c1-bare-offsets H30:H33, H35; T-3212). Stored text binds it.
+            if self.typed
+                && self.cell_shaped_binding.is_none()
+                && matches!(token, TokenType::Reference { .. } | TokenType::Range { .. })
+            {
+                self.cell_shaped_binding = Some(text.to_string());
+            }
             return node;
         }
         let bound = match (token, &node) {
@@ -425,7 +575,7 @@ impl Parser {
                     ..
                 },
                 Node::ReferenceKind { .. } | Node::WrongReferenceKind { .. },
-            ) if parse_reference_a1(&text.to_ascii_uppercase()).is_some() => {
+            ) if spelled_like_a1_cell(text) => {
                 if self.cell_shaped_binding.is_none() {
                     self.cell_shaped_binding = Some(text.to_string());
                 }
@@ -440,6 +590,106 @@ impl Parser {
         }
     }
 
+    /// Records the first call of `kind` with a `count` of arguments the function does not take,
+    /// for [`Parser::typed_refusal`]: Excel refuses such a formula typed (`=PV(1)`, T-2567; `=SUM()`,
+    /// `=IF(1)`, `=ABS(1,2)`, `ACCRINTM` with three arguments, T-2632) and in a file
+    /// (docs/excel-semantics/syntax.md "Minimum argument counts"); stored text keeps it, and the
+    /// call evaluates to `#ERROR!`. The counts are the catalog's for every function
+    /// ([`arg_counts::takes_count`], which also refuses IFS and LET off whole pairs, T-2682); a
+    /// lifted function must also end on a whole `repeat` cycle
+    /// ([`ArgKinds::accepts`]: Excel refuses `=SORTBY(C1:C2,D1:D2,1,E1:E2)` typed, T-2632). A
+    /// function the catalog does not list is never refused here.
+    fn note_argument_count(&mut self, kind: &Function, name: &str, count: usize) {
+        // Only typed text is refused, and the count table is a linear scan: skip it for stored
+        // formulas and xlsx import.
+        if !self.typed || self.wrong_count_call.is_some() {
+            return;
+        }
+        let english = kind.to_localized_name(get_default_language());
+        let refused = !arg_counts::takes_count(&english, count)
+            || kind.arg_kinds().is_some_and(|kinds| !kinds.accepts(count));
+        if refused {
+            self.note_wrong_count(name);
+        }
+    }
+
+    /// Whether the formula is being typed ([`Parser::set_typed`]).
+    pub(crate) fn is_typed(&self) -> bool {
+        self.typed
+    }
+
+    /// Whether the formula just parsed held a TAB or an NBSP between tokens, which Excel refuses
+    /// typed ([`crate::expressions::lexer::Lexer::skipped_refused_whitespace`]): read by
+    /// [`Parser::typed_refusal`] and by the R1C1 entry, which parses before the typed A1 text.
+    pub(crate) fn skipped_refused_whitespace(&self) -> bool {
+        self.lexer.skipped_refused_whitespace()
+    }
+
+    /// Why Excel refuses the formula just parsed when it is typed: a LET name or LAMBDA parameter
+    /// spelled like a cell (T-2040, decision 0103), a call with a wrong argument count (`=PV(1)`,
+    /// T-2567, T-2568), too many nested calls ([`MAX_NESTED_CALLS`], T-3097), or `ANCHORARRAY(`
+    /// spelled as a call (T-3262, probes/t3262-anchor-typed-refused), or a TAB or NBSP between
+    /// tokens ([`Parser::skipped_refused_whitespace`], T-3102). `None`
+    /// when parsing stored text or nothing is refused.
+    pub(crate) fn typed_refusal(&self) -> Option<String> {
+        if !self.typed {
+            return None;
+        }
+        if self.nests_too_many_calls() {
+            // Excel's PATCH 400 leaves the cell blank, as for a formula that does not parse
+            // (probes/t3097-nesting-*-66-typed, T-3689).
+            return Some(format!(
+                "{TYPED_FORMULA_DOES_NOT_PARSE}: {TOO_MANY_NESTED_CALLS_MESSAGE}"
+            ));
+        }
+        if self.skipped_refused_whitespace() {
+            return Some(format!(
+                "{TYPED_FORMULA_DOES_NOT_PARSE}: a TAB or no-break space between tokens"
+            ));
+        }
+        // Excel refuses these two as it refuses a formula that does not parse: the cell stays
+        // blank (probes/t3212-r1c1-bare-offsets H30:J35, probes/t4224-doubled-xlpm-prefix
+        // A10:C10, A12:C12; decision 0179).
+        if let Some(name) = &self.cell_shaped_binding {
+            return Some(format!(
+                "{TYPED_FORMULA_DOES_NOT_PARSE}: the LET or LAMBDA name '{name}' is spelled like a cell"
+            ));
+        }
+        if let Some(name) = &self.prefixed_declaration {
+            return Some(format!(
+                "{TYPED_FORMULA_DOES_NOT_PARSE}: the LET name '{name}' is written with the _xlpm. prefix"
+            ));
+        }
+        if self.spelled_anchorarray {
+            return Some(format!("{TYPED_FORMULA_DOES_NOT_PARSE}: ANCHORARRAY(...)"));
+        }
+        let name = self.wrong_count_call.as_ref()?;
+        Some(format!(
+            "Formula: {name} is called with the wrong number of arguments"
+        ))
+    }
+
+    /// Records the LET name written `text` when it starts with `_xlpm.` and the formula is typed,
+    /// for [`Parser::typed_refusal`]: typed, the prefix is part of the name, and Excel refuses
+    /// `=LET(_xlpm.x,1,_xlpm.x+1)` in A1 and in R1C1 mode (the cell stays blank,
+    /// probes/t4224-doubled-xlpm-prefix A10, A12, T-4288). A file declares every LET name so.
+    /// The match ignores case (`=LET(_XLPM.x,1,_XLPM.x+1)` is refused too) and a LAMBDA parameter
+    /// typed with the prefix is refused alike (probes/t4299-typed-xlpm-extrapolations A1, A4, T-4299).
+    pub(super) fn note_prefixed_declaration(&mut self, text: &str) {
+        let name = text.trim();
+        if self.typed && self.prefixed_declaration.is_none() && has_xlpm_prefix(name) {
+            self.prefixed_declaration = Some(name.to_string());
+        }
+    }
+
+    /// Records `name` as the first call of the formula with a count of arguments Excel refuses
+    /// typed ([`Parser::typed_refusal`]); stored text records nothing.
+    fn note_wrong_count(&mut self, name: &str) {
+        if self.typed && self.wrong_count_call.is_none() {
+            self.wrong_count_call = Some(name.to_ascii_uppercase());
+        }
+    }
+
     /// A call by name, `SUM(...)` or `_xlfn.LAMBDA(...)(...)`, after its `(`.
     fn parse_named_call(&mut self, name: String) -> Node {
         // It's a function call "SUM(.."
@@ -448,12 +698,18 @@ impl Parser {
             return self.parse_lambda();
         }
         // The user-facing name, without the xlsx import prefixes.
-        let display_name = name
-            .trim_start_matches("_xlfn._xlws.")
-            .trim_start_matches("_xlfn.")
-            .trim_start_matches("_xlpm.")
-            .to_string();
-        let args = match self.parse_function_args(&display_name) {
+        // Each prefix starts with `_`, and most names have none: the searches are skipped for
+        // them, a hot spot on loading long formulas (T-0499).
+        let display_name = if name.starts_with('_') {
+            name.trim_start_matches("_xlfn._xlws.")
+                .trim_start_matches("_xlfn.")
+                .trim_start_matches(XLPM_PREFIX)
+                .to_string()
+        } else {
+            name.clone()
+        };
+        let empty_call_run = self.empty_call_run();
+        let mut args = match self.parse_function_args(&display_name) {
             Ok(s) => s,
             Err(e) => return e,
         };
@@ -479,9 +735,13 @@ impl Parser {
                 message: err.message,
             };
         }
-        // We should do this *only* importing functions from xlsx: Implicit Intersection
-        if &name == "_xlfn.SINGLE" {
+        // Implicit intersection: `_xlfn.SINGLE(x)` is how a file stores `@x`, and Excel takes a
+        // typed `SINGLE(x)`, in any case, as `@x` too and shows it so (`=SINGLE(C1:C3)` beside row 2
+        // is the row's cell, FORMULATEXT `=@C1:C3`; probes/single-typed-*, xlsx-storage.md "Typed
+        // SINGLE(x) is the @ operator", T-2938). Excel refuses `=SINGLE()` and `=SINGLE(1,2)` typed.
+        if display_name.eq_ignore_ascii_case("SINGLE") {
             if args.len() != 1 {
+                self.note_wrong_count(&display_name);
                 return Node::ParseErrorKind {
                     formula: self.lexer.get_formula(),
                     expecting: vec![ExpectedTokens::Other],
@@ -494,6 +754,7 @@ impl Parser {
         // The spill range operator; typed `ANCHORARRAY(D1)` is `D1#` for Excel too
         // (probes/at-operand-formulatext J1, T-1109).
         if display_name.eq_ignore_ascii_case("ANCHORARRAY") {
+            self.spelled_anchorarray = true;
             if args.len() != 1 {
                 return Node::ParseErrorKind {
                     formula: self.lexer.get_formula(),
@@ -524,7 +785,13 @@ impl Parser {
             .lookup_stored(&name)
             .filter(|_| !self.calls_bound_name(&name))
         {
-            let node = self.function_call(function_kind, args);
+            self.note_argument_count(&function_kind, &display_name, args.len());
+            if self.loaded && function_kind == Function::Let {
+                result_of_even_let(&mut args);
+            }
+            let node = self
+                .function_call(function_kind, args)
+                .with_empty_call_run(empty_call_run);
             // The result of a function that can return a reference (or a LAMBDA) may be called:
             // `INDEX(A1:A3,1)(2)` is `#REF!` and `IF(TRUE,LAMBDA(x,x*2))(3)` 6, while Excel
             // refuses `SUM(1)(2)`, `ABS(1)(2)` and `IFERROR(LAMBDA(x,x*2),0)(3)`
@@ -541,7 +808,7 @@ impl Parser {
         // (`LET(mk,..,add5,mk(5),add5(1))`, T-2040). A1 grammar only: in R1C1 mode (stored
         // forms, and the raw A1 text of a formula that did not parse) `AB1` is no cell, and reading
         // it as one would turn A1 coordinates into R1C1 offsets.
-        if let Some(cell) = parse_reference_a1(&name.to_ascii_uppercase()).filter(|_| {
+        if let Some(cell) = parse_spelled_a1_cell(&name).filter(|_| {
             self.lexer.is_a1_mode()
                 && !name.contains('$')
                 && !self.binds_reference_shaped_name(&name)
@@ -553,7 +820,7 @@ impl Parser {
             });
         }
         self.chain_calls(Node::NamedFunctionKind {
-            name: name.trim_start_matches("_xlpm.").to_string(),
+            name: self.written_lambda_name(&name),
             args,
             id: None,
         })
@@ -562,12 +829,12 @@ impl Parser {
     /// `TRUE` or `FALSE`, or the calls `TRUE()` and `FALSE()`.
     pub(super) fn parse_boolean_operand(&mut self, value: bool) -> Node {
         // Could be a function call "TRUE()"
-        let next_token = self.lexer.peek_token();
-        if next_token == TokenType::LeftParenthesis {
+        if *self.lexer.peek() == TokenType::LeftParenthesis {
             self.lexer.advance_token();
             // We parse all the arguments, although technically this is moot
             // But is has the upside of transforming `=TRUE( 4 )` into `=TRUE(4)`
             let fn_name = if value { "TRUE" } else { "FALSE" };
+            let empty_call_run = self.empty_call_run();
             let args = match self.parse_function_args(fn_name) {
                 Ok(s) => s,
                 Err(e) => return e,
@@ -580,17 +847,12 @@ impl Parser {
                     message: err.message,
                 };
             }
-            if value {
-                return Node::FunctionKind {
-                    kind: Function::True,
-                    args,
-                };
+            let kind = if value {
+                Function::True
             } else {
-                return Node::FunctionKind {
-                    kind: Function::False,
-                    args,
-                };
-            }
+                Function::False
+            };
+            return Node::FunctionKind { kind, args }.with_empty_call_run(empty_call_run);
         }
         Node::BooleanKind(value)
     }
@@ -605,15 +867,33 @@ impl Parser {
         table_name: String,
         specifier: Option<token::TableSpecifier>,
         table_reference: Option<TableReference>,
+        spacing: token::TableSpacing,
         bare: bool,
     ) -> Node {
-        let reference = StructuredReference {
+        let mut reference = StructuredReference {
             table_name: table_name.clone(),
             specifier: specifier.clone(),
             table_reference: table_reference.clone(),
+            spacing,
             bare,
+            unqualified: false,
+            detached: false,
+            extent: None,
         };
         let lowered = self.lower_structured_reference(table_name, specifier, table_reference);
+        if let Some(table) = self.table_named(&reference.table_name) {
+            reference.use_table_spelling(table);
+        }
+        if let Node::ThisRowKind {
+            data_start,
+            data_end,
+            ..
+        } = &lowered
+        {
+            reference.extent = self
+                .table_named(&reference.table_name)
+                .and_then(|table| TableExtent::of(table, Some((*data_start, *data_end))));
+        }
         if let Node::ParseErrorKind { message, .. } = &lowered {
             if self.loaded
                 && !message.starts_with(TABLE_SHEET_NOT_FOUND)
@@ -628,249 +908,16 @@ impl Parser {
             lowered: Box::new(lowered),
         }
     }
+}
 
-    /// The area a structured reference resolves to against the parser's table list: a
-    /// `ReferenceKind`, a `RangeKind`, a `ThisRowKind`, an `ErrorKind` or a `ParseErrorKind`.
-    fn lower_structured_reference(
-        &mut self,
-        table_name: String,
-        specifier: Option<token::TableSpecifier>,
-        table_reference: Option<TableReference>,
-    ) -> Node {
-        // We will try to convert to a normal reference
-        // table_name[column_name] => cell1:cell2
-        // table_name[[#This Row], [column_name]:[column_name]] => the columns on the cell's row
-        let context = &self.context;
-        let context_sheet_index = match self.get_sheet_index_by_name(&context.sheet) {
-            Some(i) => i,
-            None => {
-                return Node::ParseErrorKind {
-                    formula: self.lexer.get_formula(),
-                    expecting: vec![ExpectedTokens::Other],
-                    position: 0,
-                    message: format!("sheet not found: {}", context.sheet),
-                };
-            }
-        };
-        // table-name => table
-        // Table names match ignoring case (gen-m8b names-case 5b5c0e20e82153bb).
-        // An exact hit is deterministic; the case-folded scan covers the rest.
-        let table_name_lower = table_name.to_lowercase();
-        let table = match self.tables.get(&table_name).or_else(|| {
-            self.tables
-                .iter()
-                .find(|(name, _)| name.to_lowercase() == table_name_lower)
-                .map(|(_, t)| t)
-        }) {
-            Some(t) => t,
-            None => {
-                let message = format!(
-                    "{TABLE_NOT_FOUND}'{table_name}' at '{}!{}{}'",
-                    context.sheet,
-                    number_to_column(context.column).unwrap_or(format!("{}", context.column)),
-                    context.row
-                );
-                return Node::ParseErrorKind {
-                    formula: self.lexer.get_formula(),
-                    expecting: vec![ExpectedTokens::Other],
-                    position: 0,
-                    message,
-                };
-            }
-        };
-        let table_sheet_index = match self.get_sheet_index_by_name(&table.sheet_name) {
-            Some(i) => i,
-            None => {
-                return Node::ParseErrorKind {
-                    formula: self.lexer.get_formula(),
-                    expecting: vec![ExpectedTokens::Other],
-                    position: 0,
-                    message: format!("{TABLE_SHEET_NOT_FOUND}{}", table.sheet_name),
-                };
-            }
-        };
-
-        let sheet_name = if table_sheet_index == context_sheet_index {
-            None
-        } else {
-            Some(table.sheet_name.clone())
-        };
-
-        // The table metadata comes from the workbook (untrusted): a stored reference that does not
-        // parse is #REF! (directive 5: no panics; docs/excel-semantics/references.md, DEVIATION).
-        let Ok((column_start, mut row_start, column_end, mut row_end)) =
-            parse_range(&table.reference)
-        else {
-            return Node::ErrorKind(token::Error::REF);
-        };
-
-        // The counts are workbook values too: arithmetic that does not fit is #REF!, not a wrap.
-        let (Ok(totals_row_count), Ok(header_row_count)) = (
-            i32::try_from(table.totals_row_count),
-            i32::try_from(table.header_row_count),
-        ) else {
-            return Node::ErrorKind(token::Error::REF);
-        };
-        let (Some(data_end), Some(data_start)) = (
-            row_end.checked_sub(totals_row_count),
-            row_start.checked_add(header_row_count),
-        ) else {
-            return Node::ErrorKind(token::Error::REF);
-        };
-        let Some(totals_row) = data_end.checked_add(1) else {
-            return Node::ErrorKind(token::Error::REF);
-        };
-        row_end = data_end;
-
-        let this_row = specifier == Some(token::TableSpecifier::ThisRow);
-        match specifier {
-            // Decided at the evaluating cell's row (`Node::ThisRowKind`), below.
-            Some(token::TableSpecifier::ThisRow) => {}
-            Some(token::TableSpecifier::Totals) => {
-                if totals_row_count != 0 {
-                    row_start = totals_row;
-                    row_end = row_start;
-                } else {
-                    // Table1[#Totals] is #REF! if Table1 does not have totals
-                    return Node::ErrorKind(token::Error::REF);
-                }
-            }
-            Some(token::TableSpecifier::Headers) => {
-                row_end = row_start;
-            }
-            Some(token::TableSpecifier::Data) => {
-                row_start = data_start;
-            }
-            Some(token::TableSpecifier::All) => {
-                if totals_row_count != 0 {
-                    row_end = totals_row;
-                }
-            }
-            // [#Headers],[#Data]: header row through the last data row (row_end already excludes totals).
-            Some(token::TableSpecifier::HeadersData) => {}
-            // [#Data],[#Totals]: data rows plus the totals row when there is one.
-            Some(token::TableSpecifier::DataTotals) => {
-                row_start = data_start;
-                if totals_row_count != 0 {
-                    row_end = totals_row;
-                }
-            }
-            None => {
-                // skip the headers
-                row_start = data_start;
-            }
-        }
-        let one_column = matches!(table_reference, Some(TableReference::ColumnReference(_)));
-        let lowered = match table_reference {
-            None => Node::RangeKind {
-                sheet_name,
-                sheet_index: table_sheet_index,
-                absolute_row1: true,
-                absolute_column1: true,
-                row1: row_start,
-                column1: column_start,
-                absolute_row2: true,
-                absolute_column2: true,
-                row2: row_end,
-                column2: column_end,
-            },
-            Some(TableReference::ColumnReference(s)) => {
-                let column_index = match get_table_column_by_name(&s, table) {
-                    Some(s) => s + column_start,
-                    None => {
-                        return Node::ParseErrorKind {
-                            formula: self.lexer.get_formula(),
-                            expecting: vec![ExpectedTokens::Other],
-                            position: self.lexer.get_position() as usize,
-                            message: format!("{COLUMN_NOT_FOUND}{s} in table {table_name}"),
-                        };
-                    }
-                };
-                if row_start == row_end && !this_row {
-                    return Node::ReferenceKind {
-                        sheet_name,
-                        sheet_index: table_sheet_index,
-                        absolute_row: true,
-                        absolute_column: true,
-                        row: row_start,
-                        column: column_index,
-                    };
-                }
-                Node::RangeKind {
-                    sheet_name,
-                    sheet_index: table_sheet_index,
-                    absolute_row1: true,
-                    absolute_column1: true,
-                    row1: row_start,
-                    column1: column_index,
-                    absolute_row2: true,
-                    absolute_column2: true,
-                    row2: row_end,
-                    column2: column_index,
-                }
-            }
-            Some(TableReference::RangeReference((left, right))) => {
-                let left_column_index = match get_table_column_by_name(&left, table) {
-                    Some(f) => f + column_start,
-                    None => {
-                        return Node::ParseErrorKind {
-                            formula: self.lexer.get_formula(),
-                            expecting: vec![ExpectedTokens::Other],
-                            position: self.lexer.get_position() as usize,
-                            message: format!("{COLUMN_NOT_FOUND}{left} in table {table_name}"),
-                        };
-                    }
-                };
-
-                let right_column_index = match get_table_column_by_name(&right, table) {
-                    Some(f) => f + column_start,
-                    None => {
-                        return Node::ParseErrorKind {
-                            formula: self.lexer.get_formula(),
-                            expecting: vec![ExpectedTokens::Other],
-                            position: self.lexer.get_position() as usize,
-                            message: format!("{COLUMN_NOT_FOUND}{right} in table {table_name}"),
-                        };
-                    }
-                };
-                // The same area whichever column is written first (references.md, column-range
-                // 44cecbb1ecd5b2da K143).
-                Node::RangeKind {
-                    sheet_name,
-                    sheet_index: table_sheet_index,
-                    absolute_row1: true,
-                    absolute_column1: true,
-                    row1: row_start,
-                    column1: left_column_index.min(right_column_index),
-                    absolute_row2: true,
-                    absolute_column2: true,
-                    row2: row_end,
-                    column2: left_column_index.max(right_column_index),
-                }
-            }
-        };
-        if !this_row {
-            return lowered;
-        }
-        // Off the data rows (header, totals, above, below) it is #VALUE!, at the evaluating
-        // cell's row (docs/excel-semantics/references.md, gen-m8b this-row e1bf5aa0ffb4ed87).
-        match lowered {
-            Node::RangeKind {
-                sheet_name,
-                sheet_index,
-                column1,
-                column2,
-                ..
-            } => Node::ThisRowKind {
-                sheet_name,
-                sheet_index,
-                column1,
-                column2,
-                data_start,
-                data_end,
-                cell: one_column,
-            },
-            other => other,
-        }
+/// A stored LET with an even argument count ends on a name and a value, and Excel loads it with
+/// the last name appended as the result: `<f>LET( a ,1, b ,a+1)</f>` prints
+/// `=LET( a,1, b,a+1,b)` and returns 2 (probes/t2949-stored-11, syntax.md "Remaining whitespace
+/// shapes (T-2949)"). Typed, Excel refuses the arity.
+fn result_of_even_let(args: &mut Vec<Node>) {
+    if args.len() < 2 || !args.len().is_multiple_of(2) {
+        return;
     }
+    let name = args[args.len() - 2].unwrap_spaced().clone();
+    args.push(name);
 }

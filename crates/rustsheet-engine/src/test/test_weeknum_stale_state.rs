@@ -172,24 +172,65 @@ fn a_stopped_cell_runs_again_just_after_its_precedent() {
     assert_ne!(sunday, EMPTY);
 }
 
+/// A2's call between a reader (A1) and a Monday setter (A3): what A1 reads.
+fn between(call: &str) -> String {
+    let cells = [
+        ("A1", READER),
+        ("A2", call),
+        ("A3", "=WEEKNUM(1,2)"),
+        ("C1", "1"),
+        ("D1", "2"),
+        ("C2", "3"),
+        ("D2", "4"),
+    ];
+    evaluated(&cells)._get_text("A1")
+}
+
 #[test]
-fn a_spilling_formula_empties_the_state_at_its_place() {
-    // gen-m6 shows it for dynamic-array formulas that gave #SPILL!, an error or one value; that
-    // a formula that does spill does it too is our reading, unprobed (T-2070).
-    let cells = [
-        ("A1", READER),
-        ("A2", "=SEQUENCE(1,2)"),
-        ("A3", "=WEEKNUM(1,2)"),
-    ];
-    let model = evaluated(&cells);
-    assert_eq!(model._get_text("B2"), "2");
-    assert_eq!(model._get_text("A1"), EMPTY);
-    let cells = [
-        ("A1", READER),
-        ("A2", "=SUM(SEQUENCE(1,2))"),
-        ("A3", "=WEEKNUM(1,2)"),
-    ];
-    assert_eq!(evaluated(&cells)._get_text("A1"), MONDAY);
+fn a_dynamic_array_formula_as_such_keeps_the_state() {
+    // probes/weeknum-stale-between-calls S02, S04, S27; -between-ranges S01, S03 (T-4289): a
+    // spill, a sort of a constant, TRANSPOSE and OFFSET of a range keep it.
+    for call in [
+        "=SEQUENCE(1,2)",
+        "=SORT({3,1})",
+        "=SEQUENCE(2,1)",
+        "=TRANSPOSE(C1:D2)",
+        "=OFFSET(C1:D2,0,0,1)",
+        "=FILTER(C1:D2,{TRUE;FALSE})",
+    ] {
+        assert_eq!(between(call), MONDAY, "{call}");
+    }
+}
+
+#[test]
+fn which_calls_empty_the_state_by_argument_shape() {
+    // probes/weeknum-stale-call-shapes and -call-shapes-2 (T-4315), dates.md "Which calls empty
+    // WEEKNUM's state".
+    for call in [
+        "=CHOOSEROWS({1,2;3,4},1)",
+        "=CHOOSEROWS(C1,1)",
+        "=SUM(CHOOSEROWS(C1:D2,1))",
+        "=TAKE({1,2},1)",
+        "=SORT(C1:C2)",
+        "=SORTBY({1,2},{2,1})",
+        "=ARRAYTOTEXT(C1:D2)",
+        "=CONCAT(\"a\",1)",
+        "=CONCAT(C1&\"\")",
+        "=TEXTJOIN(\",\",1,{1,2})",
+    ] {
+        assert_eq!(between(call), EMPTY, "{call}");
+    }
+    for call in [
+        "=SORT(C1)",
+        "=SORTBY(C1,1)",
+        "=ARRAYTOTEXT(C1:C2)",
+        "=CONCAT(C1:D2,\"x\")",
+        "=CONCAT(INDEX(C1:D2,1,1))",
+        "=TEXTJOIN(\",\",1,C1,\"x\")",
+        "=IF(FALSE,CHOOSEROWS(C1:D2,1),1)",
+    ] {
+        assert_eq!(between(call), MONDAY, "{call}");
+    }
 }
 
 #[test]
@@ -254,4 +295,12 @@ fn a_cycle_with_a_reader_ends() {
     ]);
     assert_eq!(model._get_text("C1"), MONDAY);
     assert!(model._is_circular("A1"));
+}
+
+#[test]
+fn a_deep_concat_nest_is_read_once() {
+    // Whether CONCAT joins a reference is read from the formula, not by evaluating its arguments
+    // again: 40 nested `CONCAT(IF(TRUE,...))` stay linear (security review of T-4315).
+    let formula = format!("={}1{}", "CONCAT(IF(TRUE,".repeat(40), "))".repeat(40));
+    assert_eq!(alone(&formula), "1");
 }

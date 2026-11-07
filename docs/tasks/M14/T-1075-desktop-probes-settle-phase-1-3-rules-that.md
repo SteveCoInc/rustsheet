@@ -3,7 +3,7 @@ id: T-1075
 title: "Desktop probes: settle Phase 1-3 rules that rest on web-only or conflicting evidence"
 milestone: M14
 lane: research
-status: blocked
+status: dropped
 priority: P2
 size: M
 tier: opus
@@ -75,6 +75,45 @@ Items (add one in the PR that implements a rule on web-only evidence, or that fi
    0.001846551246313725 and 0.001719431947654535; the web and the engine (Excel's x87-reduced sine of the phase) give
    0.0018465512463137278 and 0.0017194319476545319 (probes/t2547-bessel-phase-cut A85, A86). Does Windows desktop give the
    web values? The engine follows the web, and the two cells stay known failures.
+16. **IMSQRT of a negative real** (T-2536; engineering.md "IMSQRT of a negative real is polar through COS and ATAN2").
+   ironcalc-calc/ENGINEERING/COMPLEXs.xlsx Sheet1!AL26 `IMREAL(IMSQRT(COMPLEX(-1,0)))` and AL12 (of -12) cache Mac 16.0300's
+   libm-like 6.12323399573677E-17 and 2.12115047744981E-16. The web gives 6.1257422745431E-17 for `IMSQRT("-1")` (Excel's
+   COS(ATAN2(-1,0)/2); gen-m9/59a16b5ab566ee5c A6 and 4 more cells). Does Windows desktop give the Mac values? Still open.
+   The engine follows the web under decision 0188 R6 (T-2536), and COMPLEXs.xlsx AL12 and AL26 are now the known failures.
+17. **IMTAN of a real number** (T-2534, T-2774; engineering.md "IM* trigonometry of a real number is SIN, COS and TAN").
+   ironcalc-calc/ENGINEERING/COMPLEXs.xlsx Sheet1!N6 `IMREAL(IMTAN(D6))` (D6 = 5) caches Mac 16.0300's -3.38051500624658,
+   the libm double-angle value; the web gives TAN's kernel, -3.38051500624659 (35 gen-m9 cells, probes/t2534-im-trig-real-limit).
+   Does Windows desktop give the web value? Still open. The engine follows the web under decision 0188 R6 (T-2774), and
+   COMPLEXs.xlsx N6 is now the known failure.
+   probes/t3054-imtan-real-tan-kernel N1 is N6's own formula on N6's inputs: the web gives -3.38051500624659 there, and TAN's
+   kernel in all nine of its discriminating rows (T-3054). Probing those rows on desktop answers the item.
+18. **MEDIAN, LARGE and SMALL over a lifted OFFSET** (T-2065; lookup.md "MEDIAN, LARGE and SMALL over a lifted OFFSET").
+   Answered 2026-10-29 without desktop: Excel for the web opened probes/t2065-lift-median, -large and -small on the
+   steward run's fill and gives `#VALUE!` for all three, which ours matches. Nothing is left for desktop.
+19. **SUMPRODUCT of a one-cell numeric-text reference** (T-2921; coercion.md SUMPRODUCT entry).
+   poi/FormulaEvalTestData_Copy.xlsx EverythingTests!J1328 `SUMPRODUCT(G1330:G1330,I1330:I1330)` (G1330 the text "4",
+   I1330 the number 2): Excel 15 cached `#VALUE!`, excel-graph gives 0 (probes/t2921-sumproduct-one-cell-numeric-text A45).
+   The engine follows the web; J1328 stays a known failure.
+20. **Wildcards in conditional-format text rules** (T-2910; criteria.md "Conditional-format text rules and wildcards").
+   Does a "text that contains" rule (and begins with, ends with, equals) with `a*c`, `a?c` or `~*` as its text treat
+   them as wildcards, as SEARCH does, or literally, as `apply_cf_text` does? The Graph oracle cannot evaluate
+   conditional formats.
+21. **A workbook name read through a sheet, in a quoted file name** (T-2937; references.md "A sheet-qualified
+   workbook name is rewritten to the workbook's file name"). Save a workbook as `My Book's.xlsx` (and as `1 a.xlsx`)
+   with workbook `loc` = `Feb!$A$1` and no `Feb!loc`, type `=Feb!loc` on another sheet: what does FORMULATEXT show
+   (`='My Book''s.xlsx'!loc`, as the sheet-name rule would quote it)? excel-graph uploads under hex names only.
+22. **A workbook name read through a sheet in a never-saved workbook** (T-2937; same entry). In a new, unsaved
+   workbook (`Book1`) with workbook `loc` and no `Feb!loc`, type `=Feb!loc`: does FORMULATEXT show `=Feb!loc`,
+   `=Book1!loc` or something else, and what after the first save? Ours keeps the typed `Feb!loc` until a
+   re-parse shows `[0]!loc`.
+23. **IRR at an exact zero root** (T-3410, decision 0196; financial.md "IRR at an exact zero root").
+   ironcalc-calc/FINANCIAL/IRR.xlsx Two Values!C4 `IRR(A4:B4)` on {-4, 4} caches 2.220446049250313E-16 (2^-52; app.xml
+   names Excel Online 16.0300), but Excel for the web gives 0 today, and so does the engine (probes/t3410-irr-zero-root-imcos
+   C1, C2, C4, C5, C8). Type `=IRR({-4,4})`, `=IRR({4,-4})` and `=IRR({-2,1,1})` in Windows desktop Excel: 0, -2^-52 and
+   -2.886801908630332E-12 as on the web (probe C3, C6), or 2^-52 for the first?
+24. **IMCOS of 4+3i** (T-3410, decision 0196; engineering.md, the COMPLEXs.xlsx residue). ironcalc-calc/ENGINEERING/COMPLEXs.xlsx
+   Sheet1!K25 `IMAGINARY(IMCOS(D25))`, D25 = "4+3i", caches Mac 16.0300's 7.58155274274655; the web and the engine give
+   7.58155274274654 (probe C9, C11, C12). Does Windows desktop give the Mac digit?
 
 ## Acceptance criteria
 - [ ] Each item above has its desktop value(s) in docs/excel-semantics/ with the probe or workbook
@@ -93,3 +132,7 @@ Items (add one in the PR that implements a rule on web-only evidence, or that fi
 ## Blocked because
 Phase 4 (decision 0039). It needs the excel-desktop backend (T-1074). Unblock when
 `cd tools && uv run rustsheet-oracle status` shows `excel-desktop OK` and T-1074 is done.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

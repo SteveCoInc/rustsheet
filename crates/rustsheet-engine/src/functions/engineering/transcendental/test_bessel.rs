@@ -104,3 +104,186 @@ fn excel_bessel_j_odd_order_is_odd_in_x() {
         assert_eq!(excel_bessel_j(n + 1, -x), excel_bessel_j(n + 1, x));
     }
 }
+
+/// Past `MAX_ORDER` the O(1) rules give 0 only where the uncapped recurrence (Excel's algorithm)
+/// computes exactly 0, over a log grid of x that spans the tiny-x overflow, the underflow and the
+/// turning point x = n (T-2546).
+#[test]
+fn past_cap_rules_agree_with_the_recurrence() {
+    use super::bessel_excel::{excel_bessel_j, jn_miller};
+    use super::bessel_i::in_miller;
+    let grid = |lo: f64, hi: f64, points: u32| {
+        (0..=points).map(move |i| lo * (hi / lo).powf(f64::from(i) / f64::from(points)))
+    };
+    let (mut j_zeros, mut i_zeros) = (0, 0);
+    for n in [100_001, 160_001] {
+        let order = f64::from(n);
+        for x in grid(1e-7, order, 120).chain(grid(1.5e-5, 4e-5, 12)) {
+            if excel_bessel_j(n, x) == 0.0 {
+                j_zeros += 1;
+                assert_eq!(jn_miller(n, x), 0.0, "BESSELJ({x},{n})");
+            }
+        }
+        for x in grid(1e-7, 720.0, 120).chain(grid(1.5e-5, 6e-5, 12)) {
+            if bessel_i(n, x) == 0.0 {
+                i_zeros += 1;
+                assert_eq!(in_miller(n, x), 0.0, "BESSELI({x},{n})");
+            }
+        }
+    }
+    // Most of each grid is 0, so the rules are not vacuous.
+    assert!(j_zeros > 150 && i_zeros > 150, "{j_zeros} {i_zeros}");
+}
+
+// probes/t2546-bessel-past-cap (excel-graph) and the gen-m9 cells of T-2546.
+#[test]
+fn past_cap_values_match_excel() {
+    use super::bessel_excel::excel_bessel_j;
+    let zero_j = [
+        (100_001, 5e4),
+        (100_001, 9e4),
+        (100_001, 1e-3),
+        (100_001, 2e-5),
+        (100_001, -10.0),
+        (100_002, -10.0),
+        (1_000_000, 0.0),
+        (1_000_000, 1e-3),
+        (1_000_000, 3e-4),
+        (1_000_000, 1e5),
+        (5_000_000, 10.0),
+        (10_000_000, 0.0),
+    ];
+    for (n, x) in zero_j {
+        assert_eq!(excel_bessel_j(n, x).to_bits(), 0, "BESSELJ({x},{n})");
+    }
+    // Excel's tiny-x overflow and its own cap are `#NUM!`; x near or past n has a value there
+    // (the remaining deviation).
+    for (n, x) in [
+        (100_001, 1e-5),
+        (100_001, 1e-300),
+        (1_000_000, 3e-5),
+        (10_000_001, 0.0),
+    ] {
+        assert!(excel_bessel_j(n, x).is_nan(), "BESSELJ({x},{n})");
+    }
+    let zero_i = [
+        (100_001, 100.0),
+        (100_001, 700.0),
+        (100_001, 1e-3),
+        (100_001, 5e-5),
+        (100_001, 0.0),
+        (100_001, -2.5),
+        (100_002, -2.5),
+        (1_000_000, 2.5),
+        (1_000_000, 8.0),
+        (1_000_000, 1e-3),
+        (10_000_000, 100.0),
+    ];
+    for (n, x) in zero_i {
+        assert_eq!(bessel_i(n, x).to_bits(), 0, "BESSELI({x},{n})");
+    }
+    for (n, x) in [
+        (100_001, 1e4),
+        (100_001, 713.0),
+        (100_001, 2e-5),
+        (10_000_001, 100.0),
+    ] {
+        assert!(bessel_i(n, x).is_nan(), "BESSELI({x},{n})");
+    }
+    for (n, x) in [
+        (100_001, 706.0),
+        (100_001, 25019.0),
+        (1_000, 720.0),
+        (10_000_000, 800.0),
+    ] {
+        assert_eq!(bessel_k(n, x).to_bits(), 0, "BESSELK({x},{n})");
+    }
+    for (n, x) in [
+        (100_001, 705.0),
+        (100_001, 2.5),
+        (100_001, 1e-300),
+        (10_000_001, 800.0),
+    ] {
+        assert!(!bessel_k(n, x).is_finite(), "BESSELK({x},{n})");
+    }
+}
+
+/// Both recurrences round each step twice, as Excel's x87 code does: plain double steps miss these
+/// near the turning point n = x (probes/t2881-besselj-turning-point, excel-graph, T-2548).
+#[test]
+fn turning_point_recurrences_round_twice() {
+    use super::bessel_excel::excel_bessel_j;
+    for (x, n, excel) in [
+        // Miller's downward recurrence (x <= n).
+        (5000.0, 5000, 0.026_158_686_649_286_743),
+        (990.0, 1000, 0.012_361_942_456_230_18),
+        (100_000.0, 100_000, 0.009_636_944_011_336_267),
+        // The upward recurrence (x > n).
+        (2001.0, 2000, 0.038_080_655_425_271_136),
+        (100_100.0, 100_000, -0.006_729_033_731_473_101),
+    ] {
+        assert_eq!(excel_bessel_j(n, x), excel, "BESSELJ({x},{n})");
+    }
+}
+
+#[test]
+fn bessel_i_is_nan_past_the_overflow_cut() {
+    // probes/besseli-overflow-cut-finest: 709.7 is finite and 709.70001 is #NUM! (T-2613).
+    assert!(bessel_i(0, 709.7).is_finite());
+    for n in [0, 1, 5] {
+        assert!(bessel_i(n, 709.70001).is_nan(), "n = {n}");
+    }
+}
+
+/// At a tiny x each order's recurrence overflow is `#NUM!`, never the 0 that `i0 / inf` would give,
+/// and the cut is the first overflowing x; the values just above it round twice per step (T-4422,
+/// probes/t4422-bessel-tiny-x-bisect and -cuts, excel-graph).
+#[test]
+fn bessel_i_tiny_x_overflow_is_nan() {
+    use super::bessel_excel::excel_bessel_j;
+    for (n, answers, errors) in [
+        (2, 2.04e-24, 2.03e-24),
+        (3, 7.13e-21, 7.12e-21),
+        (4, 1.23e-18, 1.22e-18),
+        (5, 4.26e-17, 4.25e-17),
+        (6, 2.62e-16, 2.61e-16),
+        (7, 1.19e-15, 1.18e-15),
+    ] {
+        assert!(bessel_i(n, answers).is_finite(), "BESSELI({answers},{n})");
+        for x in [errors, -errors, errors / 100.0, 1e-306] {
+            assert!(bessel_i(n, x).is_nan(), "BESSELI({x},{n})");
+        }
+    }
+    for (n, answers, errors) in [(2, 1.36e-39, 1.35e-39), (7, 5.03e-23, 5.02e-23)] {
+        assert!(
+            excel_bessel_j(n, answers).is_finite(),
+            "BESSELJ({answers},{n})"
+        );
+        assert!(excel_bessel_j(n, errors).is_nan(), "BESSELJ({errors},{n})");
+    }
+    // Bit-exact values that plain doubles miss by 1 ulp.
+    for (n, x, excel) in [
+        (7, 1e-6, 1.550_099_206_349_255e-48),
+        (6, 1e-15, 2.170_138_888_888_891_8e-95),
+        (6, 7e-15, 2.553_146_701_388_891e-90),
+    ] {
+        assert_eq!(bessel_i(n, x), excel, "BESSELI({x},{n})");
+    }
+}
+
+#[test]
+fn besselk_is_num_once_half_x_is_subnormal() {
+    // probes/t4459-besselk-tiny-x-ulps: Excel reads its 16-digit literals at 15 digits, so A1:B4 ask
+    // 4.4501477170144E-308 (#NUM! for orders 0 and 1) and A5:B6 ask 4.45014771701441E-308, which
+    // answers 707.8192028722641 and 2.2471164185778914E+307. 2^-1021 lies between them.
+    let below = 4.450_147_717_014_4e-308;
+    let above = 4.450_147_717_014_41e-308;
+    for n in 0..=2 {
+        assert!(
+            bessel_k(n, below).is_nan(),
+            "BESSELK(4.4501477170144E-308,{n})"
+        );
+    }
+    assert_eq!(bessel_k(0, above), 707.819_202_872_264_1);
+    assert_eq!(bessel_k(1, above), 2.247_116_418_577_891_4e307);
+}

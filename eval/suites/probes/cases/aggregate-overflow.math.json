@@ -1,0 +1,115 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "0e6d0b011cf4e39852902bfd689814cca41864f471dd68acc411d9554c42a794",
+  "definitions": {
+   "AVERAGE": "a929cc013d1216b5",
+   "PRODUCT": "9d49d571b41c134b",
+   "SERIESSUM": "6e26060e67fa2d13",
+   "SUM": "a929cc013d1216b5",
+   "SUMPRODUCT": "75e3a541c3378a0e",
+   "SUMSQ": "9d49d571b41c134b",
+   "SUMX2MY2": "75e3a541c3378a0e",
+   "SUMX2PY2": "75e3a541c3378a0e",
+   "SUMXMY2": "75e3a541c3378a0e"
+  },
+  "arguments_sha256": "be2aa7dc997bb48167f61e9eaa3fd65f89061da77906b1712473f285c93315b8"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "e",
+    "why": "a running total is beyond the double range",
+    "f": "=SUM(9E+307,9E+307,-9E+307)"
+   },
+   "A11": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=SUMPRODUCT({9E+307,9E+307},{1,1})"
+   },
+   "A12": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=SUMPRODUCT({9E+307},{9E+307})"
+   },
+   "A13": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=SUMPRODUCT({9E+307,9E+307,-9E+307},{1,1,1})"
+   },
+   "A14": {
+    "t": "e",
+    "why": "a running total is beyond the double range",
+    "f": "=AVERAGE(9E+307,9E+307)"
+   },
+   "A15": {
+    "t": "e",
+    "why": "a running total is beyond the double range",
+    "f": "=AVERAGE(9E+307,9E+307,-9E+307)"
+   },
+   "A17": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=PRODUCT(1E+200,1E+200)"
+   },
+   "A18": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=PRODUCT(1E+200,1E+200,0)"
+   },
+   "A19": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=PRODUCT(1E+200,1E+200,1E-200)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "9.0000000000000004979796345719080610879188504783258e+307",
+    "f": "=SUM(9E+307,-9E+307,9E+307)"
+   },
+   "A21": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=SUMSQ(1E+200)"
+   },
+   "A22": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=SUMSQ(1E+154,1E+154)"
+   },
+   "A23": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=SUMSQ(F5)"
+   },
+   "A39": {
+    "t": "e",
+    "why": "a running sum is beyond the double range",
+    "f": "=SERIESSUM(1,0,1,F1:F3)"
+   },
+   "A41": {
+    "t": "n",
+    "v": "8.1000000000000003306084128222107492053042733036878e+307",
+    "f": "=SUMX2MY2({9E+153},{0})"
+   },
+   "A42": {
+    "t": "e",
+    "why": "a term is beyond the double range",
+    "f": "=SUMX2PY2({1E+154},{1E+154})"
+   },
+   "A43": {
+    "t": "e",
+    "why": "a term is beyond the double range",
+    "f": "=SUMXMY2({9E+307},{-9E+307})"
+   },
+   "A9": {
+    "t": "e",
+    "why": "a running total is beyond the double range",
+    "f": "=SUM(F1,F2,F3)"
+   }
+  }
+ }
+}

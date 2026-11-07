@@ -2,20 +2,78 @@
 //! are parsed differently and stored through the same node setter, so a legacy tree is stored as
 //! it was rewritten, its N/T markers included (SPEC-0012), not re-read from its display text.
 
-use crate::expressions::parser::static_analysis::{run_static_analysis_on_node, StaticResult};
+use std::sync::Arc;
+
+use crate::expressions::parser::static_analysis::{
+    legacy_formula_is_dynamic, run_static_analysis_on_node, StaticResult,
+};
 use crate::expressions::parser::stringify::{
-    to_localized_string, to_localized_string_this_row_lowered,
+    to_localized_string_reentered, to_localized_string_this_row_lowered,
 };
 use crate::expressions::parser::Node;
 use crate::expressions::types::{CellReferenceIndex, CellReferenceRC};
+use crate::functions::Function;
 use crate::language::Language;
 use crate::locale::Locale;
 use crate::model::Model;
+use crate::types::{ArrayKind, Cell};
 
 /// A printer of a parsed formula in the active locale and language, at a cell.
-type FormulaPrinter = fn(&Node, &CellReferenceRC, &Locale, &Language) -> String;
+type FormulaPrinter<'a> = &'a dyn Fn(&Node, &CellReferenceRC, &Locale, &Language) -> String;
+
+/// A shared formula as a sheet stores it: the tree evaluation and analysis read, with no
+/// whitespace in it, its static result and, for a formula written with whitespace, the tree as
+/// written, which the cell's formula text prints (SPEC-0023; see [`ParsedFormula::written`]).
+/// Evaluation never sees a [`Node::Spaced`], so no argument-shape test has to peel one.
+pub struct ParsedFormula {
+    /// The tree evaluation and analysis read, with no whitespace in it.
+    pub evaluated: Arc<Node>,
+    /// The static analysis of [`evaluated`](Self::evaluated).
+    pub static_result: StaticResult,
+    /// Whether [`evaluated`](Self::evaluated) calls SUBTOTAL or AGGREGATE anywhere in its text,
+    /// computed once so SUBTOTAL and AGGREGATE do not walk the tree for every cell sharing the
+    /// formula (T-1195).
+    pub calls_subtotal: bool,
+    /// The tree as written, whitespace included, for a formula written with whitespace.
+    pub written: Option<Arc<Node>>,
+}
+
+impl ParsedFormula {
+    /// The tree the formula text prints: as written, whitespace included.
+    pub fn written(&self) -> &Node {
+        self.written.as_deref().unwrap_or(&self.evaluated)
+    }
+}
+
+/// `node`, a formula as parsed, stored as a [`ParsedFormula`].
+pub(crate) fn stored_formula(node: Node) -> ParsedFormula {
+    let written = node.has_spaces().then(|| Arc::new(node.clone()));
+    let mut node = node;
+    if written.is_some() {
+        node.strip_spaces();
+    }
+    let static_result = run_static_analysis_on_node(&node);
+    let calls_subtotal = node.contains_function(&[Function::Subtotal, Function::Aggregate]);
+    ParsedFormula {
+        evaluated: Arc::new(node),
+        static_result,
+        calls_subtotal,
+        written,
+    }
+}
 
 impl Model {
+    /// The tree the formula text of shared formula `formula_index` of `sheet` prints.
+    pub(crate) fn written_formula(&self, sheet: u32, formula_index: i32) -> Result<&Node, String> {
+        Ok(self
+            .parsed_formulas
+            .get(sheet as usize)
+            .ok_or("missing sheet")?
+            .get(formula_index as usize)
+            .ok_or("missing formula")?
+            .written())
+    }
+
     /// The formula in (`sheet`, `row`, `column`), `=` first, as `printer` prints it at the cell;
     /// `None` for a cell without a formula. [`Model::get_cell_formula`] and
     /// [`Model::moved_text`] differ only in their printer.
@@ -24,18 +82,13 @@ impl Model {
         sheet: u32,
         row: i32,
         column: i32,
-        printer: FormulaPrinter,
+        printer: FormulaPrinter<'_>,
     ) -> Result<Option<String>, String> {
         let worksheet = self.workbook.worksheet(sheet)?;
         let Some(formula_index) = worksheet.cell(row, column).and_then(|c| c.get_formula()) else {
             return Ok(None);
         };
-        let (formula, _static_result) = &self
-            .parsed_formulas
-            .get(sheet as usize)
-            .ok_or("missing sheet")?
-            .get(formula_index as usize)
-            .ok_or("missing formula")?;
+        let formula = self.written_formula(sheet, formula_index)?;
         let cell_ref = CellReferenceRC {
             sheet: worksheet.get_name(),
             row,
@@ -46,22 +99,26 @@ impl Model {
     }
 
     /// [`Model::get_cell_formula`] for a formula a structural edit moves `row_delta` rows; to
-    /// another row, every `#This Row` reference in it is printed as the area it is on the
-    /// cell's row (`$A$3`, or `#VALUE!` off the data rows), so the moved formula keeps reading the
-    /// row it read, as before SPEC-0016 step 2 (T-1699).
+    /// another row, every `#This Row` reference in it to a table not in `kept` (lowercase names)
+    /// is printed as the area it is on the cell's row (`$A$3`, or `#VALUE!` off the data rows),
+    /// so the moved formula keeps reading the row it read, as before SPEC-0016 step 2 (T-1699).
+    /// One to a table in `kept`, a table that follows the edit, keeps its text and reads its new
+    /// row in the edited table, as Excel does (T-3037, T-2845 table-insert-row-this-row-*).
     pub(crate) fn moved_text(
         &self,
         sheet: u32,
-        row: i32,
-        column: i32,
+        (row, column): (i32, i32),
         row_delta: i32,
+        kept: &[String],
     ) -> Result<Option<String>, String> {
-        let printer: FormulaPrinter = if row_delta == 0 {
-            to_localized_string
-        } else {
-            to_localized_string_this_row_lowered
-        };
-        self.formula_text_with(sheet, row, column, printer)
+        if row_delta == 0 {
+            return self.formula_text_with(sheet, row, column, &to_localized_string_reentered);
+        }
+        let printer =
+            |node: &Node, cell: &CellReferenceRC, locale: &Locale, language: &Language| {
+                to_localized_string_this_row_lowered(node, cell, kept, locale, language)
+            };
+        self.formula_text_with(sheet, row, column, &printer)
     }
 
     /// The style a formula written into the cell gets: the cell's, without a quote prefix.
@@ -104,16 +161,80 @@ impl Model {
         node: Node,
         style: i32,
     ) -> Result<i32, String> {
-        let static_result = run_static_analysis_on_node(&node);
-        let is_dynamic = !matches!(static_result, StaticResult::Scalar);
-        let formula_index = self.shared_formula_index(sheet, node, static_result)?;
+        let formula_index = self.shared_formula_index(sheet, node)?;
+        self.set_cell_with_formula_index(sheet, row, column, formula_index, style)?;
+        Ok(formula_index)
+    }
+
+    /// Makes each plain formula cell whose formula Excel spills even when it is stored without the
+    /// dynamic-array flag ([`legacy_formula_is_dynamic`]) a dynamic anchor, as typing the formula
+    /// would ([`Self::set_cell_with_formula_index`]): an xlsx `<f>` with no `cm`, or a decoded
+    /// `CellFormula`, holding `SIN(A1#)` or `SEQUENCE(3)` (probes/legacy-formula-spill-ref, T-3467).
+    /// Without it such a cell reached evaluation as a scalar cell with an array result.
+    pub(crate) fn promote_dynamic_formula_cells(&mut self) {
+        for (sheet, worksheet) in self.workbook.worksheets.iter_mut().enumerate() {
+            let Some(formulas) = self.parsed_formulas.get(sheet) else {
+                continue;
+            };
+            // Decided once per shared formula, not per cell: many cells share one formula, and
+            // the walks are as long as its tree (T-3467 review).
+            let dynamic: Vec<bool> = formulas
+                .iter()
+                .map(|parsed| {
+                    is_dynamic_anchor(parsed) && legacy_formula_is_dynamic(&parsed.evaluated)
+                })
+                .collect();
+            let promoted: Vec<(i32, i32)> = worksheet
+                .sheet_data
+                .cells()
+                .filter_map(|(row, column, cell)| match cell {
+                    Cell::CellFormula { f, .. }
+                        if usize::try_from(*f)
+                            .ok()
+                            .and_then(|f| dynamic.get(f))
+                            .is_some_and(|dynamic| *dynamic) =>
+                    {
+                        Some((row, column))
+                    }
+                    _ => None,
+                })
+                .collect();
+            for (row, column) in promoted {
+                if let Some(cell) = worksheet.sheet_data.cell_mut(row, column) {
+                    let placeholder = Cell::EmptyCell { s: 0 };
+                    *cell = match std::mem::replace(cell, placeholder) {
+                        Cell::CellFormula { f, s, v } => Cell::ArrayFormula {
+                            f,
+                            s,
+                            r: (1, 1),
+                            kind: ArrayKind::Dynamic,
+                            v,
+                        },
+                        other => other,
+                    };
+                }
+            }
+        }
+    }
+
+    /// Stores the sheet's shared formula `formula_index` in the cell, as a dynamic anchor unless
+    /// its static result is a scalar.
+    fn set_cell_with_formula_index(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        formula_index: i32,
+        style: i32,
+    ) -> Result<(), String> {
+        let is_dynamic =
+            is_dynamic_anchor(&self.parsed_formulas[sheet as usize][formula_index as usize]);
         let worksheet = self.workbook.worksheet_mut(sheet)?;
         if is_dynamic {
-            worksheet.set_cell_with_dynamic_formula(row, column, formula_index, style, 1, 1)?;
+            worksheet.set_cell_with_dynamic_formula(row, column, formula_index, style, 1, 1)
         } else {
-            worksheet.set_cell_with_formula(row, column, formula_index, style)?;
+            worksheet.set_cell_with_formula(row, column, formula_index, style)
         }
-        Ok(formula_index)
     }
 
     /// Stores `node` as `set_user_input` stores a formula: with `style`, then the number format
@@ -126,10 +247,23 @@ impl Model {
         node: Node,
         style: i32,
     ) -> Result<(), String> {
-        let formula_index = self.set_cell_with_formula_node(sheet, row, column, node, style)?;
+        let formula_index = self.shared_formula_index(sheet, node)?;
+        self.set_formula_index_with_units(sheet, row, column, formula_index, style)
+    }
+
+    /// [`Model::set_formula_node_with_units`] for a formula the sheet already shares, by index.
+    pub(crate) fn set_formula_index_with_units(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        formula_index: i32,
+        style: i32,
+    ) -> Result<(), String> {
+        self.set_cell_with_formula_index(sheet, row, column, formula_index, style)?;
         let cell = CellReferenceIndex { sheet, row, column };
-        let (parsed_formula, _static_result) =
-            &self.parsed_formulas[sheet as usize][formula_index as usize];
+        let parsed_formula =
+            &self.parsed_formulas[sheet as usize][formula_index as usize].evaluated;
         if let Some(units) = self.compute_node_units(parsed_formula, &cell) {
             let style_index = self
                 .workbook
@@ -140,4 +274,11 @@ impl Model {
         }
         Ok(())
     }
+}
+
+/// Whether a formula cell holding `parsed` is stored as a dynamic anchor: unless its static result
+/// is a scalar. A typed formula follows this alone; a formula loaded without the dynamic-array flag
+/// must also have no automatic `@` ([`Model::promote_dynamic_formula_cells`]).
+fn is_dynamic_anchor(parsed: &ParsedFormula) -> bool {
+    !matches!(parsed.static_result, StaticResult::Scalar)
 }

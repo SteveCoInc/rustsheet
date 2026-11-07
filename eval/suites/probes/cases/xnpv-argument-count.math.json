@@ -1,0 +1,32 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "4fdb329336dbf22888d98751cb5b3f6a3b6b62e7cf846f6c810e36ee2fc46f3e",
+  "definitions": {
+   "XNPV": "cd9c76178750f2c0"
+  },
+  "arguments_sha256": "0c113eaec8dae664175bccdf770d19dd7a796ed214d4a291f3d881843bea49f2"
+ },
+ "sheets": {
+  "Sheet1": {
+   "D1": {
+    "t": "n",
+    "v": "9.962109338017496564781995928163736509523578838145",
+    "f": "=XNPV(1,A1:B2,A1:B2)"
+   },
+   "D2": {
+    "t": "n",
+    "v": "117.46438284632481663079022483893624164537000674728",
+    "f": "=XNPV(0.1,A4:A6,B4:B6)"
+   },
+   "D3": {
+    "t": "e",
+    "why": "values and dates differ in size: #NUM!",
+    "f": "=XNPV(0.1,A4:A6,B4:B5)"
+   }
+  }
+ }
+}

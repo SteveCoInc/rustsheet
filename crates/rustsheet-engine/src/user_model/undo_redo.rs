@@ -2,19 +2,22 @@
 
 use crate::{
     cf_types::ConditionalFormatting,
-    constants::COLUMN_WIDTH_FACTOR,
     expressions::types::Area,
     types::{Cell, Style},
+    workbook_check::{check_merged_cells, check_worksheet},
     UserModel,
 };
 
 use crate::user_model::common::selected_sheet_after_move;
+use crate::user_model::diff_undo::moved_back;
 use crate::user_model::history::{Diff, DiffList};
 
 impl UserModel {
     pub(super) fn apply_undo_diff_list(&mut self, diff_list: &DiffList) -> Result<(), String> {
         let mut needs_evaluation = false;
         for diff in diff_list.iter().rev() {
+            // What earlier diffs restored bounds what this one may walk (T-3426).
+            self.restored_spills.check()?;
             match diff {
                 Diff::SetCellValue {
                     sheet,
@@ -24,7 +27,11 @@ impl UserModel {
                     ..
                 } => {
                     needs_evaluation = true;
-                    self.undo_set_cell_value(*sheet, *row, *column, old_value.as_ref().as_ref())?;
+                    let restored = match old_value.as_ref() {
+                        Some(cell) => Some(self.restored_cell(*sheet, *row, *column, cell)?),
+                        None => None,
+                    };
+                    self.undo_set_cell_value(*sheet, *row, *column, restored.as_ref())?;
                 }
                 Diff::SetArrayValue {
                     sheet,
@@ -36,27 +43,11 @@ impl UserModel {
                     old_values,
                 } => {
                     needs_evaluation = true;
-                    // Clear all cells in the array formula range (anchor + spill cells).
-                    let ws = self.model.workbook.worksheet_mut(*sheet)?;
-                    for r in *row..*row + *height {
-                        for c in *column..*column + *width {
-                            let _ = ws.cell_clear_contents(r, c);
-                        }
-                    }
-                    // Restore all cells that existed before the array formula was placed.
-                    for (ri, row_vals) in old_values.iter().enumerate() {
-                        for (ci, cell) in row_vals.iter().enumerate() {
-                            if let Some(cell) = cell {
-                                let r = *row + ri as i32;
-                                let c = *column + ci as i32;
-                                self.model.workbook.worksheet_mut(*sheet)?.update_cell(
-                                    r,
-                                    c,
-                                    cell.clone(),
-                                )?;
-                            }
-                        }
-                    }
+                    self.undo_array_value(
+                        *sheet,
+                        ((*row, *column), (*width, *height)),
+                        old_values,
+                    )?;
                 }
                 Diff::SetColumnWidth {
                     sheet,
@@ -95,18 +86,8 @@ impl UserModel {
                     old_value,
                 } => {
                     needs_evaluation = true;
-                    for r in *row..*row + *height {
-                        for c in *column..*column + *width {
-                            let row_index = (r - *row) as usize;
-                            let col_index = (c - *column) as usize;
-                            if let Some(value) = old_value[row_index][col_index].clone() {
-                                self.model
-                                    .workbook
-                                    .worksheet_mut(*sheet)?
-                                    .update_cell(r, c, value)?;
-                            }
-                        }
-                    }
+                    let area = ((*row, *column), (*width, *height));
+                    self.undo_range_clear(*sheet, area, old_value, None)?;
                 }
                 Diff::RangeClearAll {
                     sheet,
@@ -118,20 +99,8 @@ impl UserModel {
                     old_style,
                 } => {
                     needs_evaluation = true;
-                    for r in *row..*row + *height {
-                        for c in *column..*column + *width {
-                            let row_index = (r - *row) as usize;
-                            let col_index = (c - *column) as usize;
-                            if let Some(value) = old_value[row_index][col_index].clone() {
-                                self.model
-                                    .workbook
-                                    .worksheet_mut(*sheet)?
-                                    .update_cell(r, c, value)?;
-                                let style = &old_style[row_index][col_index];
-                                self.model.set_cell_style(*sheet, r, c, style)?;
-                            }
-                        }
-                    }
+                    let area = ((*row, *column), (*width, *height));
+                    self.undo_range_clear(*sheet, area, old_value, Some(old_style))?;
                 }
                 Diff::SetCellStyle {
                     sheet,
@@ -189,18 +158,16 @@ impl UserModel {
                     row,
                     count: _,
                     old_data,
+                    tables,
+                    rewritten,
                 } => {
+                    self.model.check_table_extents(*sheet, tables)?;
+                    let lines = (*sheet, *row, old_data.len(), true);
+                    let rewritten = self.checked_rewritten_cells(rewritten, lines)?;
                     needs_evaluation = true;
-                    self.model
-                        .insert_rows(*sheet, *row, old_data.len() as i32)?;
-                    let worksheet = self.model.workbook.worksheet_mut(*sheet)?;
-                    for (i, row_data) in old_data.iter().enumerate() {
-                        let r = *row + i as i32;
-                        if let Some(row_style) = row_data.row.clone() {
-                            worksheet.rows.push(row_style);
-                        }
-                        worksheet.sheet_data.set_row(r, row_data.data.clone());
-                    }
+                    self.undo_delete_rows(*sheet, *row, old_data)?;
+                    self.model.restore_table_extents(*sheet, tables)?;
+                    self.restore_rewritten_cells(rewritten)?;
                 }
                 Diff::InsertColumns {
                     sheet,
@@ -215,23 +182,16 @@ impl UserModel {
                     column,
                     count: _,
                     old_data,
+                    tables,
+                    rewritten,
                 } => {
+                    self.model.check_tables_of_sheet(*sheet, tables)?;
+                    let lines = (*sheet, *column, old_data.len(), false);
+                    let rewritten = self.checked_rewritten_cells(rewritten, lines)?;
                     needs_evaluation = true;
-                    self.model
-                        .insert_columns(*sheet, *column, old_data.len() as i32)?;
-                    let worksheet = self.model.workbook.worksheet_mut(*sheet)?;
-                    for (i, col_data) in old_data.iter().enumerate() {
-                        let c = *column + i as i32;
-                        for (row, cell) in &col_data.data {
-                            worksheet.update_cell(*row, c, cell.clone())?;
-                        }
-                        if let Some(col) = &col_data.column {
-                            let width = col.width * COLUMN_WIDTH_FACTOR;
-                            let style = col.style;
-                            let hidden = col.hidden;
-                            worksheet.set_column_width_and_style(c, width, hidden, style)?;
-                        }
-                    }
+                    self.undo_delete_columns(*sheet, *column, old_data)?;
+                    self.model.restore_tables_of_sheet(*sheet, tables)?;
+                    self.restore_rewritten_cells(rewritten)?;
                 }
                 Diff::SetFrozenRowsCount {
                     sheet,
@@ -275,15 +235,13 @@ impl UserModel {
                 Diff::MoveSheet {
                     sheet_index,
                     new_index,
+                    rewritten,
                 } => {
-                    // Undo a move by moving the sheet back to its original index.
                     let selected = self.get_selected_sheet();
-                    self.model.move_sheet(*new_index, *sheet_index)?;
-                    self.set_selected_sheet(selected_sheet_after_move(
-                        selected,
-                        *new_index,
-                        *sheet_index,
-                    ))?;
+                    self.model
+                        .unmove_sheet(*sheet_index, *new_index, rewritten)?;
+                    let (from, to) = (*new_index, *sheet_index);
+                    self.set_selected_sheet(selected_sheet_after_move(selected, from, to))?;
                 }
                 Diff::SetSheetColor {
                     index,
@@ -316,8 +274,18 @@ impl UserModel {
                     name,
                     scope,
                     old_value,
+                    hidden,
+                    comment,
                 } => {
-                    self.model.new_defined_name(name, *scope, old_value)?;
+                    // The name existed: an undo puts it back even past the API's call cap (T-4014),
+                    // with the flags it was loaded with (T-4637).
+                    self.model.restore_defined_name(
+                        name,
+                        *scope,
+                        old_value,
+                        *hidden,
+                        comment.clone(),
+                    )?;
                 }
                 Diff::UpdateDefinedName {
                     name,
@@ -366,6 +334,9 @@ impl UserModel {
                     rewritten,
                 } => {
                     needs_evaluation = true;
+                    let styles = self.model.workbook.styles.cell_xfs.len();
+                    check_worksheet(old_data, styles, &mut self.restored_spills)
+                        .map_err(|e| format!("Sheet '{}': {e}", old_data.name))?;
                     let (name, id) = (old_data.name.clone(), old_data.sheet_id);
                     self.model.insert_sheet(&name, *sheet, Some(id))?;
                     let worksheet = self.model.workbook.worksheet_mut(*sheet)?;
@@ -381,7 +352,7 @@ impl UserModel {
                     worksheet.color = old_data.color.clone();
                     worksheet.merged_cells = old_data.merged_cells.clone();
                     worksheet.shared_formulas = old_data.shared_formulas.clone();
-                    self.model.restore_table_references(rewritten.clone());
+                    self.model.restore_rewritten_formulas(rewritten.clone());
                     self.model.restore_tables(tables.clone());
                     self.set_selected_sheet(*sheet)?;
                 }
@@ -436,12 +407,9 @@ impl UserModel {
                     column_count,
                     delta,
                 } => {
-                    self.model.move_columns_action(
-                        *sheet,
-                        *column + *delta,
-                        *column_count,
-                        -*delta,
-                    )?;
+                    let (moved, back) = moved_back(*column, *delta)?;
+                    self.model
+                        .move_columns_action(*sheet, moved, *column_count, back)?;
                     needs_evaluation = true;
                 }
                 Diff::MoveRows {
@@ -450,8 +418,9 @@ impl UserModel {
                     row_count,
                     delta,
                 } => {
+                    let (moved, back) = moved_back(*row, *delta)?;
                     self.model
-                        .move_rows_action(*sheet, *row + *delta, *row_count, -*delta)?;
+                        .move_rows_action(*sheet, moved, *row_count, back)?;
                     needs_evaluation = true;
                 }
                 Diff::SetLocale {
@@ -470,7 +439,7 @@ impl UserModel {
                     old_value,
                     new_value: _,
                 } => {
-                    self.model.workbook.name = old_value.clone();
+                    self.model.set_workbook_name(old_value);
                 }
                 Diff::CreateNamedStyle {
                     name,
@@ -535,15 +504,12 @@ impl UserModel {
                     old_priority,
                     ..
                 } => {
-                    let ws = self.model.workbook.worksheet_mut(*sheet)?;
-                    let i = *index as usize;
-                    if i < ws.conditional_formatting.len() {
-                        ws.conditional_formatting[i] = ConditionalFormatting {
-                            range: old_range.clone(),
-                            cf_rule: *old_rule.clone(),
-                            priority: *old_priority,
-                        };
-                    }
+                    let slot = self.checked_cf_slot(*sheet, *index, old_range)?;
+                    *slot = ConditionalFormatting {
+                        range: old_range.clone(),
+                        cf_rule: *old_rule.clone(),
+                        priority: *old_priority,
+                    };
                     needs_evaluation = true;
                 }
                 Diff::SwapConditionalFormattingPriority {
@@ -582,10 +548,12 @@ impl UserModel {
                 } => {
                     // Merged cells block spilling, so a change can affect results
                     needs_evaluation = true;
+                    check_merged_cells(old_value)?;
                     self.model.workbook.worksheet_mut(*sheet)?.merged_cells = old_value.clone();
                 }
             }
         }
+        self.restored_spills.check()?;
         if needs_evaluation {
             self.evaluate_if_not_paused();
         }
@@ -596,6 +564,8 @@ impl UserModel {
     pub(super) fn apply_diff_list(&mut self, diff_list: &DiffList) -> Result<(), String> {
         let mut needs_evaluation = false;
         for diff in diff_list {
+            // What earlier diffs restored bounds what this one may walk (T-3426).
+            self.restored_spills.check()?;
             match diff {
                 Diff::SetCellValue {
                     sheet,
@@ -603,16 +573,17 @@ impl UserModel {
                     column,
                     new_value,
                     legacy,
+                    external,
                     old_value: _,
                 } => {
                     needs_evaluation = true;
-                    self.model.reenter_user_input(
-                        *sheet,
-                        *row,
-                        *column,
-                        new_value.to_string(),
-                        *legacy,
-                    )?;
+                    let value = new_value.to_string();
+                    if *external {
+                        self.model.set_user_input(*sheet, *row, *column, value)?;
+                    } else {
+                        self.model
+                            .reenter_user_input(*sheet, *row, *column, value, *legacy)?;
+                    }
                 }
                 Diff::SetArrayValue {
                     sheet,
@@ -740,6 +711,8 @@ impl UserModel {
                     row,
                     count,
                     old_data: _,
+                    tables: _,
+                    rewritten: _,
                 } => {
                     self.model.delete_rows(*sheet, *row, *count)?;
                     needs_evaluation = true;
@@ -757,6 +730,8 @@ impl UserModel {
                     column,
                     count,
                     old_data: _,
+                    tables: _,
+                    rewritten: _,
                 } => {
                     self.model.delete_columns(*sheet, *column, *count)?;
                     needs_evaluation = true;
@@ -801,6 +776,7 @@ impl UserModel {
                 Diff::MoveSheet {
                     sheet_index,
                     new_index,
+                    ..
                 } => {
                     let selected = self.get_selected_sheet();
                     self.model.move_sheet(*sheet_index, *new_index)?;
@@ -837,6 +813,8 @@ impl UserModel {
                     name,
                     scope,
                     old_value: _,
+                    hidden: _,
+                    comment: _,
                 } => self.model.delete_defined_name(name, *scope)?,
                 Diff::UpdateDefinedName {
                     name,
@@ -934,7 +912,7 @@ impl UserModel {
                     old_value: _,
                     new_value,
                 } => {
-                    self.model.workbook.name = new_value.clone();
+                    self.model.set_workbook_name(new_value);
                 }
                 Diff::CreateNamedStyle {
                     name,
@@ -995,12 +973,9 @@ impl UserModel {
                     new_rule,
                     ..
                 } => {
-                    let ws = self.model.workbook.worksheet_mut(*sheet)?;
-                    let i = *index as usize;
-                    if i < ws.conditional_formatting.len() {
-                        ws.conditional_formatting[i].range = new_range.clone();
-                        ws.conditional_formatting[i].cf_rule = *new_rule.clone();
-                    }
+                    let slot = self.checked_cf_slot(*sheet, *index, new_range)?;
+                    slot.range = new_range.clone();
+                    slot.cf_rule = *new_rule.clone();
                     needs_evaluation = true;
                 }
                 Diff::SwapConditionalFormattingPriority {
@@ -1039,11 +1014,13 @@ impl UserModel {
                 } => {
                     // Merged cells block spilling, so a change can affect results
                     needs_evaluation = true;
+                    check_merged_cells(new_value)?;
                     self.model.workbook.worksheet_mut(*sheet)?.merged_cells = new_value.clone();
                 }
             }
         }
 
+        self.restored_spills.check()?;
         if needs_evaluation {
             self.evaluate_if_not_paused();
         }

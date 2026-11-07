@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "553c1eb4fc8cb41649f3f2e6d2e6a4f1e307296236e77241fee87b094ac5469b",
+  "definitions": {
+   "SUM": "a929cc013d1216b5"
+  },
+  "arguments_sha256": "0ae5258ea1c3228b446f31b2b1e95e0bf1a9504b3eef776d6971a265b5d8b521"
+ },
+ "sheets": {
+  "S1": {
+   "B7": {
+    "t": "n",
+    "v": "5.0",
+    "f": "=SUM(S2!A1)"
+   }
+  }
+ }
+}

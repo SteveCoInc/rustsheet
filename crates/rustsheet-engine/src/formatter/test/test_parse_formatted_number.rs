@@ -139,15 +139,9 @@ fn currency() {
         parse("4.456$", &["$"]),
         Ok((4.456, Some("#,##0.00$".to_string())))
     );
-    // Currencies in scientific notation will not be formatted as currencies
-    assert_eq!(
-        parse("23e-12$", &["$"]),
-        Ok((2.3e-11, Some("0.00E+00".to_string())))
-    );
-    assert_eq!(
-        parse("2.3e-12$", &["$"]),
-        Ok((2.3e-12, Some("0.00E+00".to_string())))
-    );
+    // A trailing `$` after E-notation is not a number (probes/t3334-criteria-operand-forms H39).
+    assert!(parse("23e-12$", &["$"]).is_err());
+    assert!(parse("2.3e-12$", &["$"]).is_err());
     assert_eq!(
         parse("€23e-12", &["€"]),
         Ok((2.3e-11, Some("0.00E+00".to_string())))
@@ -200,8 +194,8 @@ fn errors() {
     assert_eq!(parse("23 Hello", &["$"]), Err(PARSE_ERROR_MSG.to_string()));
     assert_eq!(parse("Hello 23", &["$"]), Err(PARSE_ERROR_MSG.to_string()));
     assert_eq!(parse("2 3", &["$"]), Err(PARSE_ERROR_MSG.to_string()));
-    // No space between
-    assert_eq!(parse("- 23", &["$"]), Err(PARSE_ERROR_MSG.to_string()));
+    // Excel skips spaces after a sign: VALUE("- 5") is -5 (probes/value-sign-space-mixed-fraction-dash-date A1).
+    assert_eq!(parse("- 23", &["$"]), Ok((-23.0, None)));
 }
 
 #[test]
@@ -439,4 +433,344 @@ fn typed_currency_and_percent_formats() {
     );
     assert_eq!(parse("1,000%", &["$"]), Ok((10.0, Some("0%".to_string()))));
     assert_eq!(parse("-1%", &["$"]), Ok((-0.01, Some("0%".to_string()))));
+}
+
+#[test]
+fn script_digit_coercion_helper_maps_each_block() {
+    use crate::formatter::format::ascii_script_digits;
+    let map = |s: &str| ascii_script_digits(s).into_owned();
+    assert_eq!(map("٣٫"), "3٫");
+    assert_eq!(map("१२३"), "123");
+    assert_eq!(map("๓.๕"), "3.5");
+    assert_eq!(map("1٣"), "13");
+    // The five blocks T-3446 added: Extended Arabic-Indic, Bengali, Lao, Tibetan, Myanmar
+    // (probes/t3446-script-digits-forms rows 23:33, 45:55, 67:99).
+    assert_eq!(map("۱۲۳"), "123");
+    assert_eq!(map("১২৩"), "123");
+    assert_eq!(map("໑໒໓"), "123");
+    assert_eq!(map("༡༢༣"), "123");
+    assert_eq!(map("၁၂၃"), "123");
+    assert_eq!(
+        map("\u{0669}\u{06F9}\u{096F}\u{09EF}\u{0E59}\u{0ED9}\u{0F29}\u{1049}"),
+        "99999999"
+    );
+    // Full-width digits stay text (probes/t3276-collation-other-scripts Calc!H6).
+    assert_eq!(map("３"), "３");
+    // `parse_formatted_number` reads ASCII only: coercion maps first (`cast::number_text_in`), and
+    // typed input in `parse_typed_number` (T-3891).
+    assert!(parse("٣", &[]).is_err());
+}
+
+// docs/excel-semantics/coercion.md "Group commas and a leading percent sign" (T-3811).
+#[test]
+fn group_commas_of_three_or_more_digits_and_a_leading_percent() {
+    for (text, value) in [
+        ("1,0000", 10000.0),
+        ("1,000,0000", 10_000_000.0),
+        ("1,0000.5", 10000.5),
+        ("12,0000", 120_000.0),
+        ("%1", 0.01),
+        ("%-1", -0.01),
+        ("1,0000%", 100.0),
+    ] {
+        assert_eq!(parse(text, &[]).unwrap().0, value, "{text}");
+    }
+    for text in [
+        "1,", "1,00", ",1", "2,0", "1,000,00", "1,,000", "0,0000", "0,000", "00,000", "%1%", "2%%",
+    ] {
+        assert!(parse(text, &[]).is_err(), "{text}");
+    }
+}
+
+/// Typed mixed-separator dates and clock-first date-times (probes/date-text-mixed-separator-typed,
+/// excel-graph 2026-11-01; docs/excel-semantics/dates.md "Typed mixed-separator dates").
+#[test]
+fn typed_mixed_separator_date_formats() {
+    let fmt = |s: &str| {
+        let locale = get_default_locale();
+        crate::formatter::format::parse_typed_number(
+            s,
+            &["$"],
+            locale,
+            &|| Some(2026),
+            DateSystem::default(),
+        )
+        .map(|(v, f)| (v, f.unwrap_or_default()))
+    };
+    for s in ["2025/07-01", "2025-07/01", "7/1-25", "7/1-2025", "7-1/2025"] {
+        assert_eq!(fmt(s).unwrap().1, "m/d/yyyy", "{s}");
+    }
+    for s in ["1-Jul/2025", "1/Jul-2025"] {
+        assert_eq!(fmt(s).unwrap().1, "d-mmm-yy", "{s}");
+    }
+    // Pure separators keep their own formats.
+    assert_eq!(fmt("2025/07/01").unwrap().1, "yyyy/mm/dd");
+    assert_eq!(fmt("7/1/25").unwrap().1, "m/d/yy");
+    let (v, f) = fmt("10:00 7/1/2025").unwrap();
+    assert!((v - 45_839.416_666_666_7).abs() < 1e-9);
+    assert_eq!(f, "m/d/yyyy h:mm");
+    // A leading space keeps it text.
+    assert!(fmt(" 10:00 7/1/2025").is_err());
+    assert!(fmt(" 10:00 AM 7/1/2025").is_err());
+    // Other clock-first shapes (probes/date-text-typed-clock-first-shapes, excel-graph 2026-11-03).
+    for (s, value, format) in [
+        ("10 AM 7/1/2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 PM 7/1/2025", 45_839.916_666_666_7, "m/d/yyyy h:mm"),
+        ("9:00 7/1/2025", 45_839.375, "m/d/yyyy h:mm"),
+        ("10:00:30 7/1/2025", 45_839.417_013_888_9, "m/d/yyyy h:mm"),
+        ("10:00:30.5 7/1/2025", 45_839.417_019_675_9, "mm:ss.0"),
+        ("10:00.5 7/1/2025", 45_839.006_950_231_5, "mm:ss.0"),
+        ("24:00 7/1/2025", 45_840.0, ""),
+        ("10:60 7/1/2025", 45_839.458_333_333_3, ""),
+        ("10:00  7/1/2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 July 1, 2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 1-Jul-2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 2025-07-01", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 7/1", 46_204.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 7/1/25", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("23:59 7/1-2025", 45_839.999_305_555_6, "m/d/yyyy h:mm"),
+        ("10:00 7-1-2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 7/1/2025 ", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 1/Jul/2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 AM 7-1-2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+    ] {
+        let (v, f) = fmt(s).unwrap_or_else(|e| panic!("{s}: {e}"));
+        assert!((v - value).abs() < 1e-9, "{s}: {v}");
+        assert_eq!(f, format, "{s}");
+    }
+    // Untyped mixed shapes.
+    assert_eq!(fmt("2025/7-1").unwrap().1, "m/d/yyyy");
+    assert_eq!(fmt("1-Jul/25").unwrap().1, "d-mmm-yy");
+}
+
+/// Typed text and the format Excel picks (probes/typed-group-comma-leading-percent, excel-graph
+/// 2026-11-02, raw `ENTERED` log in docs/research/typed-group-comma-leading-percent-2026-11-02.md,
+/// T-3835): the same reader as VALUE, so values and formats follow the grouped digits and the percent.
+#[test]
+fn typed_group_comma_and_leading_percent_formats() {
+    for (text, value, format) in [
+        ("1,0000", 10000.0, "#,##0"),
+        ("01,0000", 10000.0, "#,##0"),
+        ("-1,0000", -10000.0, "#,##0"),
+        ("1,000,0000", 10_000_000.0, "#,##0"),
+        ("1,0000.5", 10000.5, "#,##0.00"),
+        ("%1", 0.01, "0%"),
+        ("%-1", -0.01, "0%"),
+        ("% 1", 0.01, "0%"),
+        ("%1.5", 0.015, "0.00%"),
+        ("%1,0000", 100.0, "0%"),
+        ("1,0000%", 100.0, "0%"),
+    ] {
+        assert_eq!(
+            parse(text, &["$"]),
+            Ok((value, Some(format.to_string()))),
+            "{text}"
+        );
+    }
+    // Stay text (General) when typed.
+    for text in ["1,", "0,000", "0,0000", "1,00", "%1%"] {
+        assert!(parse(text, &["$"]).is_err(), "{text}");
+    }
+}
+
+/// A bare typed 24-hour clock is a number with Excel's clock format (probes/t3894-bare-24h-clock,
+/// excel-graph 2026-11-03; docs/excel-semantics/dates.md).
+#[test]
+fn typed_bare_24_hour_clock() {
+    let fmt = |s: &str| {
+        crate::formatter::format::parse_typed_number(
+            s,
+            &["$"],
+            get_default_locale(),
+            &|| Some(2026),
+            DateSystem::default(),
+        )
+        .map(|(v, f)| (v, f.unwrap_or_else(|| "General".to_string())))
+    };
+    let cases = [
+        ("12:30", 0.520_833_333_333_333, "h:mm"),
+        ("9:05", 0.378_472_222_222_222, "h:mm"),
+        ("0:00", 0.0, "h:mm"),
+        ("1:2", 0.043_055_555_555_555_6, "h:mm"),
+        ("10:00:", 0.416_666_666_666_667, "h:mm"),
+        ("10:00:30", 0.417_013_888_888_889, "h:mm:ss"),
+        ("01:02:03", 0.043_090_277_777_777_8, "h:mm:ss"),
+        ("24:00", 1.0, "[h]:mm:ss"),
+        ("100:00", 4.166_666_666_666_67, "[h]:mm:ss"),
+        ("10:60", 0.458_333_333_333_333, "General"),
+        ("10:00:60", 0.417_361_111_111_111, "General"),
+        // T-3903: probes/t3903-bare-24h-clock-extra.
+        ("25:00:30", 1.042_013_888_888_89, "[h]:mm:ss"),
+        ("24:00:00", 1.0, "[h]:mm:ss"),
+        ("99:59:59", 4.166_655_092_592_59, "[h]:mm:ss"),
+        ("24:01", 1.000_694_444_444_44, "[h]:mm:ss"),
+        ("10:60:00", 0.458_333_333_333_333, "General"),
+        ("10:61", 0.459_027_777_777_778, "General"),
+        ("10:99", 0.485_416_666_666_667, "General"),
+        ("0:00:75", 0.000_868_055_555_555_556, "General"),
+        ("1:100", 0.111_111_111_111_111, "General"),
+        ("10:00.5", 0.006_950_231_481_481_48, "mm:ss.0"),
+        ("10:00:30.5", 0.417_019_675_925_926, "mm:ss.0"),
+    ];
+    for (text, value, format) in cases {
+        let (v, f) = fmt(text).unwrap_or_else(|e| panic!("{text}: {e}"));
+        assert!((v - value).abs() < 1e-12, "{text}: {v}");
+        assert_eq!(f, format, "{text}");
+    }
+    assert!(fmt(":30").is_err());
+    assert!(fmt(" 10:00").is_err());
+    // An hour of 24 or more with an out-of-range minute or second stays text (T-3903).
+    for text in ["25:60", "24:60", "25:00:60", "25:61:00"] {
+        assert!(fmt(text).is_err(), "{text}");
+    }
+}
+
+/// Typed script-digit text: Excel's value and locale-tagged format (excel-graph ENTERED logs,
+/// docs/research/t3446-script-digits-forms-2026-11-03.md, t3891-typed-script-digit-shapes-2026-11-04.md).
+#[test]
+fn typed_script_digits_take_tagged_formats() {
+    let typed = |s: &str| {
+        let locale = get_default_locale();
+        crate::formatter::format::parse_typed_number(
+            s,
+            &["$"],
+            locale,
+            &|| Some(2026),
+            DateSystem::default(),
+        )
+        .map(|(v, f)| (v, f.unwrap_or_default()))
+    };
+    let currency = "[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)";
+    for (text, value, format) in [
+        ("١٢٣", 123.0, "[$-ar-SA,200]0"),
+        ("-١٢", -12.0, "[$-ar-SA,200]0"),
+        ("(١٢)", -12.0, "[$-ar-SA,200]0"),
+        ("+١٢", 12.0, "[$-ar-SA,200]0"),
+        ("١.٥", 1.5, "[$-ar-SA,200]0.#"),
+        (".٥", 0.5, "[$-ar-SA,200]0.#"),
+        ("١.٢٥", 1.25, "[$-ar-SA,200]0.##"),
+        ("١.٢٥٠", 1.25, "[$-ar-SA,200]0.###"),
+        ("١٢.٥٠", 12.5, "[$-ar-SA,200]0.##"),
+        (
+            "١٢٣٤٥٦٧٨٩٠١٢",
+            123_456_789_012.0,
+            "[$-ar-SA,200]0.#####E+00",
+        ),
+        ("١٢%", 0.12, "[$-ar-SA,200]0.00%"),
+        ("١٢.٥%", 0.125, "[$-ar-SA,200]0.00%"),
+        ("١,٢٣٤%", 12.34, "[$-ar-SA,200]0.00%"),
+        ("$١٢", 12.0, currency),
+        ("-$١٢", -12.0, currency),
+        ("$-١٢", -12.0, currency),
+        ("$١,٢٣٤.٥", 1234.5, currency),
+        ("١,٢٣٤", 1234.0, "[$-ar-SA,200]#,##0"),
+        ("(١,٢٣٤)", -1234.0, "[$-ar-SA,200]#,##0"),
+        ("١,٢٣٤.٥", 1234.5, "[$-ar-SA,200]#,##0.00"),
+        ("١e٣", 1000.0, "0.00E+00"),
+        ("١E-٣", 0.001, "0.00E+00"),
+        ("١ ١/٢", 1.5, "# ?/?"),
+        ("١ ١/١٢", 13.0 / 12.0, "# ??/??"),
+        ("٢٠٢٠-١-١", 43831.0, "[$-,200]mm/dd/yyyy"),
+        ("١/٢/٢٠٢٠", 43832.0, "[$-,200]mm/dd/yyyy"),
+        ("١ Jan ٢٠٢٠", 43831.0, "[$-,200]dd-mmm-yyyy"),
+        ("Jan ١, ٢٠٢٠", 43831.0, "[$-,200]dd-mmm-yyyy"),
+        ("١٢:٣٠:٤٥", 0.521_354_166_666_666_7, "[$-,200]h:mm:ss"),
+        ("١:٣٠ AM", 0.0625, "[$-,200]h:mm AM/PM"),
+        ("١ PM", 13.0 / 24.0, "[$-,200]h:mm AM/PM"),
+        ("١٢:٣٠.٥", 750.5 / 86400.0, "[$-,200]mm:ss.0"),
+        (
+            "٢٠٢٠-١-١ ١٢:٣٠",
+            43831.0 + 12.5 / 24.0,
+            "[$-,200]m/d/yyyy h:mm",
+        ),
+        // The last script digit names the block.
+        ("١२๓", 123.0, "[$-th-TH,D00]0"),
+        ("๓२١", 321.0, "[$-ar-SA,200]0"),
+        ("1٢३", 123.0, "[$-hi-IN,400]0"),
+        ("१٢3", 123.0, "[$-ar-SA,200]0"),
+        ("12٣", 123.0, "[$-ar-SA,200]0"),
+        ("۱२", 12.0, "[$-hi-IN,400]0"),
+        ("੧੨੩", 123.0, "[$-pa-IN,600]0"),
+        ("௧.௫", 1.5, "[$-ta-IN,900]0.#"),
+        (
+            "$౧౨",
+            12.0,
+            "[$$-te-IN,A00] #,##0.00_);[Red]([$$-te-IN,A00]#,##0.00)",
+        ),
+        ("១២:៣០", 0.520_833_333_333_333_4, "[$-,1200]h:mm"),
+        ("၁,၂၃၄", 1234.0, "[$-my-MM,1000]#,##0"),
+    ] {
+        let (v, f) = typed(text).unwrap_or_default();
+        assert!(
+            (v - value).abs() <= 1e-12 * value.abs().max(1.0),
+            "{text}: {v}"
+        );
+        assert_eq!(f, format, "{text}");
+    }
+    // Arabic punctuation is not read (probes/t3446-script-digits-forms B103:B105).
+    for text in ["١٫٥", "١٬٢٣٤", "١٢٪"] {
+        assert!(typed(text).is_err(), "{text}");
+    }
+}
+
+/// A currency sign before a parenthesised amount is a negative number with the format Excel types
+/// for it (probes/t4117-currency-parens, ENTERED numberFormat in
+/// docs/research/t4117-currency-parens-2026-11-04.md; docs/excel-semantics/coercion.md).
+#[test]
+fn typed_currency_before_parentheses() {
+    let fmt = |s: &str| {
+        crate::formatter::format::parse_typed_number(
+            s,
+            &["$"],
+            get_default_locale(),
+            &|| Some(2026),
+            DateSystem::default(),
+        )
+        .map(|(v, f)| (v, f.unwrap_or_else(|| "General".to_string())))
+    };
+    let cases = [
+        ("$(12)", -12.0, "$#,##0_);[Red]($#,##0)"),
+        ("$( 12 )", -12.0, "$#,##0_);[Red]($#,##0)"),
+        ("$(1,234.5)", -1234.5, "$#,##0.00_);[Red]($#,##0.00)"),
+        ("$(1e3)", -1000.0, "0.00E+00"),
+        ("$(1.5E+2)", -150.0, "0.00E+00"),
+        ("$(1 1/2)", -1.5, "# ?/?"),
+        ("$( 1 1/2 )", -1.5, "# ?/?"),
+        ("$ (1 1/2)", -1.5, "# ?/?"),
+        ("$(3 1/12)", -3.083_333_333_333_333_5, "# ??/??"),
+    ];
+    for (text, value, format) in cases {
+        assert_eq!(fmt(text), Ok((value, format.to_string())), "{text}");
+    }
+    for text in [
+        "$(12%)",
+        "$(+12)",
+        "$()",
+        "$(12",
+        "$(12)%",
+        "$($12)",
+        "-$(1 1/2)",
+        "$(1 1/2%)",
+        "€(12)",
+    ] {
+        assert!(fmt(text).is_err(), "{text}");
+    }
+}
+
+/// Typed `$(1 1/2%)` stays text but takes `0.00%`, like `-$3 1/2%` (probes/t4117-currency-parens
+/// A30, ENTERED numberFormat).
+#[test]
+fn typed_currency_parenthesised_percent_fraction_format() {
+    let format = |s: &str| {
+        crate::formatter::format::rejected_clock_text_format(
+            s,
+            &["$"],
+            get_default_locale(),
+            &|| Some(2026),
+            DateSystem::default(),
+        )
+    };
+    assert_eq!(format("$(1 1/2%)").as_deref(), Some("0.00%"));
+    assert_eq!(format("-$3 1/2%").as_deref(), Some("0.00%"));
+    assert_eq!(format("$3 1/2%"), None);
 }

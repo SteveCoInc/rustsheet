@@ -167,3 +167,38 @@ fn oddfprice_first_period_of_one_period_on_the_basis_is_num() {
     assert_eq!(model._get_text("A4"), "#NUM!");
     assert_eq!(model._get_text("A5"), "96.20983152");
 }
+
+// Excel prices only a settlement inside the odd first period: issue < settlement < first_coupon
+// (probes/oddf-date-order-domain-sweep P!A5:O11, Y!A5:O11, T-3652).
+#[test]
+fn test_oddf_settlement_outside_odd_period_is_num() {
+    let mut model = new_empty_model();
+    let tail = "DATE(2030,6,15),DATE(2024,3,15),DATE(2024,6,15),0.05";
+    let settlements = [
+        ("A", "DATE(2024,3,15)"), // = issue
+        ("B", "DATE(2024,3,14)"), // before issue
+        ("C", "DATE(2024,6,15)"), // = first coupon
+        ("D", "DATE(2027,1,1)"),  // between first coupon and maturity
+    ];
+    for (col, settlement) in settlements {
+        model._set(
+            &format!("{col}1"),
+            &format!("=ODDFPRICE({settlement},{tail},0.06,100,2,0)"),
+        );
+        model._set(
+            &format!("{col}2"),
+            &format!("=ODDFYIELD({settlement},{tail},98,100,2,0)"),
+        );
+    }
+    // Inside the odd period it is a value.
+    model._set(
+        "E1",
+        &format!("=ODDFPRICE(DATE(2024,4,30),{tail},0.06,100,2,0)"),
+    );
+    model.evaluate();
+    for col in ["A", "B", "C", "D"] {
+        assert_eq!(model._get_text(&format!("{col}1")), "#NUM!", "{col}1");
+        assert_eq!(model._get_text(&format!("{col}2")), "#NUM!", "{col}2");
+    }
+    assert_ne!(model._get_text("E1"), "#NUM!");
+}

@@ -4,14 +4,31 @@
 //! probes/stat-whole-lift W21-W47).
 
 use super::sorted_data::{DataArg, DataOrder, SortedNumbers};
+use crate::decimal_round::{cut_to_15_digits, decimal_to_f64};
 use crate::expressions::types::CellReferenceIndex;
 pub(super) use crate::functions::lift::num_error;
 use crate::functions::lift::LiftCost;
 use crate::functions::Function;
 use crate::nested_array::nested_array_error;
+use crate::reference_operators::Ranges;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
+
+/// A typed boolean or text data argument (one that is not a picked cell) as a one-element
+/// array: a boolean is 0 or 1, text must read as a number, else `#VALUE!`. Shared by PERCENTILE*
+/// and TRIMMEAN (`TRIMMEAN(FALSE,0)` is 0, `TRIMMEAN("2.5",0)` 2.5, probes/t3874-trimmean-typed-
+/// scalar A1, A8, A9; T-3874).
+pub(super) fn typed_scalar_numbers(
+    model: &mut Model,
+    value: CalcResult,
+    cell: CellReferenceIndex,
+) -> Result<Vec<f64>, CalcResult> {
+    match value {
+        CalcResult::Boolean(b) => Ok(vec![f64::from(u8::from(b))]),
+        text => model.cast_number_ref(&text, cell).map(|n| vec![n]),
+    }
+}
 
 /// The numbers of the data argument of PERCENTILE*, QUARTILE* and PERCENTRANK*: a range's
 /// numbers (text, booleans and blanks skipped), an array's, a number, or nothing for an empty
@@ -23,28 +40,52 @@ fn percentile_numbers(
     arg: &Node,
     cell: CellReferenceIndex,
 ) -> Result<Vec<f64>, CalcResult> {
-    let typed_in_place = !matches!(*arg.ungrouped_at(cell.row), Node::ReferenceKind { .. });
-    match model.evaluate_node_in_context(arg, cell) {
+    // Read once in reference context (nesting costs no more): a name, INDEX, OFFSET, IF or CHOOSE
+    // that picks a cell comes back as a range, so a lone text or boolean cell is skipped like text
+    // in a range, and only a typed value is a one-element array (T-2344).
+    match model
+        .evaluate_picked_reference_arg(arg, cell)
+        .into_areas_or_single(cell)
+    {
+        // A union or 3-D range is read area by area (probes/t4309-3d-union-trimmean-percentile).
+        Ok(areas) => area_numbers(model, &areas, cell),
+        Err(value) => percentile_scalar_numbers(model, value, cell),
+    }
+}
+
+/// [`percentile_numbers`] of an argument that is not a union or a 3-D range.
+fn percentile_scalar_numbers(
+    model: &mut Model,
+    value: CalcResult,
+    cell: CellReferenceIndex,
+) -> Result<Vec<f64>, CalcResult> {
+    match value {
         CalcResult::EmptyCell | CalcResult::EmptyArg => Ok(vec![]),
         error @ CalcResult::Error { .. } => Err(error),
         // A typed boolean is a one-element array (`QUARTILE(TRUE,1)` is 1, probes-numeric/t1748-
         // typed-boolean-data A1-A8 for the whole family, probes/stat-order-floor-batch A102, A128),
-        // and typed text a number (A11). A single cell holding a boolean is unprobed and keeps the
-        // old reading below.
-        CalcResult::Boolean(b) if typed_in_place => Ok(vec![f64::from(u8::from(b))]),
-        text @ CalcResult::String(_) if typed_in_place => {
-            model.cast_number_ref(&text, cell).map(|n| vec![n])
+        // and typed text a number (A11).
+        scalar @ (CalcResult::Boolean(_) | CalcResult::String(_)) => {
+            typed_scalar_numbers(model, scalar, cell)
         }
-        // A single cell holding text (a cell reference, not the typed text above) is no number,
-        // like text inside a range: the data is empty and every function reports `#NUM!`, not
-        // `#VALUE!` (probes/quartile-single-text-cell B1-B11, quartile-numeric-text-cell C2-C5).
-        CalcResult::String(_) => Ok(vec![]),
         CalcResult::Array(array) => match nested_array_error(&array, cell) {
             Some(error) => Err(error),
-            None => model.numeric_flat_of(CalcResult::Array(array), cell),
+            None => model.numeric_flat_with_element_errors(CalcResult::Array(array), cell),
         },
-        value => model.numeric_flat_of(value, cell),
+        value => model.numeric_flat_with_element_errors(value, cell),
     }
+}
+
+/// The numbers of the areas of a union or 3-D range, as written (an overlap counts twice); the
+/// first error cell is the result, text and booleans are skipped.
+pub(super) fn area_numbers(
+    model: &mut Model,
+    areas: &Ranges,
+    cell: CellReferenceIndex,
+) -> Result<Vec<f64>, CalcResult> {
+    model
+        .values_from_areas(areas, cell)
+        .map(|values| values.into_iter().flatten().collect())
 }
 
 /// The data of PERCENTILE*, QUARTILE* and PERCENTRANK*: smallest first, each element O(1) (a
@@ -165,9 +206,9 @@ impl Model {
         )
     }
 
-    /// PERCENTRANK.INC or .EXC (`rank_of`) of one element: an error x, then an empty array `#N/A`,
-    /// then the significance (3 digits when omitted; below 1 `#NUM!` unless the data is one
-    /// value), then an x outside the data is `#N/A`.
+    /// PERCENTRANK.INC or .EXC (`rank_of`) of one element: an error x, then an error or non-numeric
+    /// significance, then an empty array `#N/A`, then an x outside the data `#N/A`, then the significance's domain (3 digits when omitted; below 1
+    /// `#NUM!` unless the data is one value).
     fn percentrank_of(
         &self,
         data: &mut SortedNumbers,
@@ -181,6 +222,17 @@ impl Model {
             Ok(v) => v,
             Err(e) => return e,
         };
+        // A significance that is an error or text that does not read as a number comes before the
+        // `#N/A` of empty data or of an x outside it (T-3781 arg-pairs, gen-m9/8cbdca3221390122 and
+        // others; statistics.md "PERCENTRANK: a non-numeric-text or error significance before the
+        // #N/A"). A numeric but out-of-domain one (below 1) still loses to that `#N/A` (T-2472).
+        let sig = match values.get(2) {
+            Some(significance) => match self.cast_number_ref(significance, cell) {
+                Ok(v) => v.floor() as i32,
+                Err(e) => return e,
+            },
+            None => 3,
+        };
         if data.is_empty() {
             return CalcResult::new_error(Error::NA, cell, String::new());
         }
@@ -188,47 +240,56 @@ impl Model {
         if x.is_nan() {
             return num_error(cell);
         }
-        let sig = match values.get(2) {
-            Some(significance) => match self.cast_number_ref(significance, cell) {
-                Ok(v) => {
-                    let s = v.floor() as i32;
-                    if s < 1 && data.len() > 1 {
-                        return num_error(cell);
-                    }
-                    s
-                }
-                Err(e) => return e,
-            },
-            None => 3,
-        };
         let sorted = data.sorted();
         let (Some(first), Some(last)) = (sorted.first(), sorted.last()) else {
             return CalcResult::new_error(Error::NA, cell, String::new());
         };
-        // Unlike the documentation, x at either end of the array is in range (EXC too).
+        // Unlike the documentation, x at either end of the array is in range (EXC too). An x
+        // outside the data is `#N/A` before a significance below 1 is `#NUM!`
+        // (`PERCENTRANK.EXC(C4:C10,-1,0)`, gen-m9/097af1ca33638670 A312; statistics.md "Order
+        // statistics: the scalar argument's error before the no-number result").
         if x < *first || x > *last {
             return CalcResult::new_error(Error::NA, cell, String::new());
+        }
+        if sig < 1 && sorted.len() > 1 {
+            return num_error(cell);
         }
         if sorted.len() == 1 {
             // One value equal to x ranks 1 (EXC too, not 0.5); any numeric significance leaves 1 (probes/percentrank-single-value B9, B14-B19).
             return CalcResult::Number(1.0);
         }
-        let factor = 10f64.powi(sig);
-        CalcResult::Number((rank_of(sorted, x) * factor).floor() / factor)
+        // A significance whose 10^sig overflows (309 or more) is `#DIV/0!` (308 still computes:
+        // probes/t2473-percentrank-significance A6-A15, B6-B15, C6-C15).
+        // 10^sig correctly rounded: `powi` drifts by ulps past 10^22 and moves the result
+        // (`PERCENTRANK({1,2,3,4},2.5,100)` is 0.5, t2473 A5). `None` is a power past the double
+        // range.
+        let factor = decimal_to_f64(1, sig.into()).unwrap_or(f64::INFINITY);
+        if !factor.is_finite() {
+            return CalcResult::new_error(Error::DIV, cell, String::new());
+        }
+        // The scaled rank is cut to 15 significant digits before the floor, so a rank within
+        // rounding below a cut keeps its digit: `PERCENTRANK.EXC({1E+15,1,-1E+15},0.3)` (the double
+        // 0.49999999999999983) is 0.5, and 2/3 at 15 digits 0.666666666666667 (t2473 D1-D4, D19-D23;
+        // statistics.md "PERCENTRANK: a huge significance is #DIV/0!").
+        let scaled = cut_to_15_digits(rank_of(sorted, x) * factor, true);
+        CalcResult::Number(scaled.floor() / factor)
     }
 }
 
-/// PERCENTILE.INC interpolation: rank = k*(n-1) in 0-indexed sorted array.
+/// PERCENTILE.INC interpolation from the one-based rank `1 + k*(n-1)`. Adding the 1 before the
+/// fraction is taken is Excel's (a tiny k is lost, `PERCENTILE.INC(.., 1E-20)` is the smallest
+/// value exactly; docs/excel-semantics/statistics.md "PERCENTILE and PERCENTILE.INC interpolate
+/// from a one-based rank", gen-m9 T-1811 cells).
 pub(crate) fn percentile_inc_impl(sorted: &[f64], k: f64) -> f64 {
     let n = sorted.len();
     if n == 1 {
         return sorted[0];
     }
-    let rank = k * (n - 1) as f64;
-    let low = rank.floor() as usize;
+    let rank = 1.0 + k * (n - 1) as f64;
+    let whole = rank.floor();
+    let low = (whole as usize).saturating_sub(1).min(n - 1);
     let high = (low + 1).min(n - 1);
-    let frac = rank - rank.floor();
-    sorted[low] + frac * (sorted[high] - sorted[low])
+    sorted[low] + (rank - whole) * (sorted[high] - sorted[low])
 }
 
 /// PERCENTRANK.INC: virtual position in sorted array, divided by (n-1).

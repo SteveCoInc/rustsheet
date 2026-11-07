@@ -23,6 +23,51 @@ fn test_frequency_basic() {
     assert_eq!(model._get_text("C3"), "1");
 }
 
+// Evidence: probes/frequency-bins (excel-graph, 2026-10-24, T-2427).
+#[test]
+fn test_frequency_rows_and_errors() {
+    let mut model = new_empty_model();
+    model._set("A1", "x");
+    model._set("B1", "=ROWS(FREQUENCY({1;2;3},2))");
+    model._set("B2", "=ROWS(FREQUENCY({1;2},A1))");
+    model._set("B3", "=INDEX(FREQUENCY({1;2;3},\"a\"),2)");
+    model._set("B4", "=FREQUENCY(NA(),{1;2})");
+    model._set("B5", "=FREQUENCY({1;2},NA())");
+    model._set("B6", "=FREQUENCY({1;#DIV/0!},NA())");
+    model._set("B7", "=FREQUENCY(1/0,NA())");
+    model._set("B8", "=T.TEST({0.02,0.027},2,44,NA())");
+    model._set("B9", "=T.TEST({0.02,0.027},2,44,2)");
+    model.evaluate();
+    assert_eq!(model._get_text("B8"), "#N/A");
+    assert_eq!(model._get_text("B9"), "#NUM!");
+    assert_eq!(model._get_text("B1"), "2");
+    assert_eq!(model._get_text("B2"), "2");
+    assert_eq!(model._get_text("B3"), "3");
+    assert_eq!(model._get_text("B4"), "#N/A");
+    assert_eq!(model._get_text("B5"), "#N/A");
+    assert_eq!(model._get_text("B6"), "#N/A");
+    assert_eq!(model._get_text("B7"), "#DIV/0!");
+}
+
+/// An error cell in a data range comes before a scalar bins error (as on `main`, unprobed), and an
+/// error element of the bins array is skipped like text (probes/array-error-element-order A1-A2,
+/// T-2636); PROB returns an array's error element (A12).
+#[test]
+fn test_frequency_data_range_error_and_bins_error_element() {
+    let mut model = new_empty_model();
+    model._set("A1", "1");
+    model._set("A2", "=1/0");
+    model._set("B1", "=FREQUENCY(A1:A2,NA())");
+    model._set("B2", "=ROWS(FREQUENCY({1;2},{1,#N/A}))");
+    model._set("B3", "=INDEX(FREQUENCY(0,{1,#VALUE!,3}),1)");
+    model._set("B4", "=PROB({1,#N/A,3},{0.2,0.3,0.5},1)");
+    model.evaluate();
+    assert_eq!(model._get_text("B4"), "#N/A");
+    assert_eq!(model._get_text("B1"), "#DIV/0!");
+    assert_eq!(model._get_text("B2"), "2");
+    assert_eq!(model._get_text("B3"), "1");
+}
+
 // Evidence: probes/mode-typed-arguments A21-A29 (excel-graph, 2026-10-16, T-1291), which supersedes
 // the inference from poi EverythingTests row 936 (T-0947): typed and referenced text is skipped, a
 // direct error propagates, and a blank single-cell reference or an empty argument is `#VALUE!`.
@@ -221,6 +266,23 @@ fn test_permutationa_basic() {
     model.evaluate();
     // 3^2 = 9
     assert_eq!(model._get_text("A1"), "9");
+}
+
+#[test]
+fn test_permutationa_number_chosen_cut() {
+    // probes/t4501-permutationa-chosen-cut: a truncated number_chosen of 2^31 - 1 or more is #NUM!.
+    let mut model = new_empty_model();
+    model._set("A1", "=PERMUTATIONA(1, 2147483646.9)");
+    model._set("A2", "=PERMUTATIONA(1, 2147483647)");
+    model._set("A3", "=PERMUTATIONA(0, 2147483647.5)");
+    model._set("A4", "=PERMUTATIONA(0, 1E10)");
+    model._set("A5", "=PERMUTATIONA(0, 2147483646)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "1");
+    assert_eq!(model._get_text("A2"), "#NUM!");
+    assert_eq!(model._get_text("A3"), "#NUM!");
+    assert_eq!(model._get_text("A4"), "#NUM!");
+    assert_eq!(model._get_text("A5"), "0");
 }
 
 // ── PROB ─────────────────────────────────────────────────────────────────────
@@ -646,4 +708,38 @@ fn quartile_reports_quart_error_before_empty_data() {
     model.evaluate();
     assert_eq!(model._get_text("A1"), "#VALUE!");
     assert_eq!(model._get_text("A2"), "#NUM!");
+}
+
+// The scalar argument's error comes before the no-number result, and PERCENTRANK's `#N/A` for an x
+// outside the data before a significance below 1 (T-2472; gen-m9/3e98b26cf6713e77 A247,
+// gen-m9/097af1ca33638670 A312).
+#[test]
+fn order_statistics_report_scalar_error_before_no_number_and_bad_significance() {
+    let mut model = new_empty_model();
+    model._set("B1", "abc");
+    for (i, a) in [
+        "=QUARTILE(Z1,1/0)",
+        "=PERCENTILE.INC(B1:B2,1/0)",
+        "=TRIMMEAN(B1:B2,NA())",
+        "=TRIMMEAN(B1:B2,0.1)",
+    ]
+    .iter()
+    .enumerate()
+    {
+        model._set(&format!("A{}", i + 1), a);
+    }
+    for (i, v) in [1.0, 2.0, 3.0, 4.0, 5.0].iter().enumerate() {
+        model._set(&format!("C{}", i + 1), &v.to_string());
+    }
+    model._set("A5", "=PERCENTRANK(C1:C5,1963,-2.5)");
+    model._set("A6", "=PERCENTRANK(C1:C5,3,-2.5)");
+    model._set("A7", "=PERCENTRANK.EXC(C1:C5,-1,0)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#DIV/0!");
+    assert_eq!(model._get_text("A2"), "#DIV/0!");
+    assert_eq!(model._get_text("A3"), "#N/A");
+    assert_eq!(model._get_text("A4"), "#NUM!");
+    assert_eq!(model._get_text("A5"), "#N/A");
+    assert_eq!(model._get_text("A6"), "#NUM!");
+    assert_eq!(model._get_text("A7"), "#N/A");
 }

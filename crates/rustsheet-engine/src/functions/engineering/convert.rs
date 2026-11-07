@@ -7,6 +7,137 @@ use crate::{
     model::Model,
 };
 
+/// Excel's decimal prefixes as (power of ten, prefix) ("da" and its alias "e" are deka).
+const DECIMAL_PREFIXES: [(i32, &str); 21] = [
+    (24, "Y"),
+    (21, "Z"),
+    (18, "E"),
+    (15, "P"),
+    (12, "T"),
+    (9, "G"),
+    (6, "M"),
+    (3, "k"),
+    (2, "h"),
+    (1, "da"),
+    (1, "e"),
+    (-1, "d"),
+    (-2, "c"),
+    (-3, "m"),
+    (-6, "u"),
+    (-9, "n"),
+    (-12, "p"),
+    (-15, "f"),
+    (-18, "a"),
+    (-21, "z"),
+    (-24, "y"),
+];
+
+/// Excel's binary prefixes, `2^10` to `2^80`.
+const BINARY_PREFIXES: [(&str, f64); 8] = [
+    ("ki", 1024.0),
+    ("Mi", 1_048_576.0),
+    ("Gi", 1_073_741_824.0),
+    ("Ti", 1_099_511_627_776.0),
+    ("Pi", 1_125_899_906_842_624.0),
+    ("Ei", 1_152_921_504_606_846_976.0),
+    ("Zi", 1_180_591_620_717_411_303_424.0),
+    ("Yi", 1_208_925_819_614_629_174_706_176.0),
+];
+
+// Excel: these units, and only these, take a decimal prefix; every other unit is `#N/A` with any
+// prefix (probes/convert-unit-names, every unit with k, m, da, e and M, and the 21 decimal
+// prefixes on fifteen of them; docs/excel-semantics/engineering.md "CONVERT unit names").
+const DECIMAL_PREFIXED: [&str; 52] = [
+    "Pa", "p", "atm", "at", "mmHg", "g", "u", "m", "ang", "ly", "parsec", "pc", "ang2", "ang^2",
+    "ar", "m2", "m^2", "N", "dyn", "dy", "pond", "J", "e", "c", "cal", "eV", "ev", "Wh", "wh", "W",
+    "w", "T", "ga", "uk_pt", "l", "L", "lt", "ang3", "ang^3", "m3", "m^3", "bit", "byte", "m/h",
+    "m/hr", "m/s", "m/sec", "mph", "K", "kel", "sec", "s",
+];
+
+// Excel: only bit and byte take a binary prefix (`kibyte`, `Gibit`); `kim`, `Mig`, `kiJ`, `kiK`
+// are `#N/A` (probes/convert-unit-names).
+const BINARY_PREFIXED: [&str; 2] = ["bit", "byte"];
+
+/// A unit string read within one class: the unit's name, its factor in the class's internal
+/// base and its prefix, as the power of ten of a decimal prefix (already multiplied by 2 or 3 for
+/// square and cubic units; 0 without one) and the power of two of a binary prefix (1 without one).
+struct ParsedUnit {
+    name: &'static str,
+    factor: f64,
+    decimal_exponent: i32,
+    binary_scale: f64,
+}
+
+impl ParsedUnit {
+    /// The prefix's scale on its own (the temperature conversions take it).
+    fn scale(&self) -> f64 {
+        nearest_power_of_ten(self.decimal_exponent) * self.binary_scale
+    }
+}
+
+/// The nearest double to the decimal `1En` (Rust's float parsing is correctly rounded).
+fn nearest_power_of_ten(n: i32) -> f64 {
+    format!("1e{n}").parse::<f64>().unwrap_or(f64::NAN)
+}
+
+/// Reads `text` as a unit of the class `kind`: the unit itself, or one prefix the unit takes
+/// followed by the unit (case-sensitive, nothing around it). `None` if neither reads.
+fn parse_unit(kind: &str, class: &HashMap<&'static str, f64>, text: &str) -> Option<ParsedUnit> {
+    let (name, factor, decimal_exponent, binary_scale) =
+        if let Some((&name, &factor)) = class.get_key_value(text) {
+            (name, factor, 0, 1.0)
+        } else {
+            prefixed_unit(kind, class, text)?
+        };
+    Some(ParsedUnit {
+        name,
+        factor,
+        decimal_exponent,
+        binary_scale,
+    })
+}
+
+/// `text` as one prefix followed by a unit of the class that takes it: the unit's name and factor,
+/// the decimal prefix's power of ten (times 2 or 3 for a square or cubic unit; 0 for a binary
+/// prefix) and the binary prefix's power of two (1 for a decimal prefix).
+fn prefixed_unit(
+    kind: &str,
+    class: &HashMap<&'static str, f64>,
+    text: &str,
+) -> Option<(&'static str, f64, i32, f64)> {
+    // Two unit names of a class could both end `text`: try the longest name first, so the reading
+    // does not depend on the map's iteration order.
+    let mut names: Vec<_> = class.iter().collect();
+    names.sort_unstable_by_key(|(name, _)| (std::cmp::Reverse(name.len()), **name));
+    names.into_iter().find_map(|(&name, &factor)| {
+        let prefix = text.strip_suffix(name)?;
+        let decimal = DECIMAL_PREFIXED
+            .contains(&name)
+            .then(|| DECIMAL_PREFIXES.iter().find(|&&(_, p)| p == prefix))
+            .flatten();
+        if let Some(&(exponent, _)) = decimal {
+            // A prefix on a square unit scales its length, so it is squared ("km2" is 1E6 m2;
+            // "ar" is not a square of a length and takes it once); likewise cubed for "ang3"
+            // and "m3".
+            let power = if kind == "area" && name != "ar" {
+                2
+            } else if kind == "volume" && ["ang3", "ang^3", "m3", "m^3"].contains(&name) {
+                3
+            } else {
+                1
+            };
+            return Some((name, factor, exponent * power, 1.0));
+        }
+        // Binary prefixes go only on bit and byte, never on a square or cubic unit.
+        let binary_scale = BINARY_PREFIXED
+            .contains(&name)
+            .then(|| BINARY_PREFIXES.iter().find(|&&(p, _)| p == prefix))
+            .flatten()?
+            .1;
+        Some((name, factor, 0, binary_scale))
+    })
+}
+
 enum Temperature {
     Kelvin,
     Celsius,
@@ -75,48 +206,27 @@ impl Model {
             Ok(f) => f,
             Err(s) => return s,
         };
-        let from_unit = match Self::cast_string_ref(from_unit, cell) {
+        // A boolean unit read from a cell is `#VALUE!`, not an unknown unit
+        // (gen-m9 290180acf017709c Calc!A148, A158, f81bd3b6dc373e5c Calc!A291).
+        // Each unit is checked and read in turn, so from_unit's error comes first.
+        let unit_text = |unit: &CalcResult| {
+            if matches!(unit, CalcResult::Boolean(_)) {
+                return Err(CalcResult::new_error(
+                    Error::VALUE,
+                    cell,
+                    "Expecting text".to_string(),
+                ));
+            }
+            Self::cast_string_ref(unit, cell)
+        };
+        let from_unit = match unit_text(from_unit) {
             Ok(s) => s,
             Err(error) => return error,
         };
-        let to_unit = match Self::cast_string_ref(to_unit, cell) {
+        let to_unit = match unit_text(to_unit) {
             Ok(s) => s,
             Err(error) => return error,
         };
-        let prefix = HashMap::from([
-            ("Y", 1E+24),
-            ("Z", 1E+21),
-            ("E", 1000000000000000000.0),
-            ("P", 1000000000000000.0),
-            ("T", 1000000000000.0),
-            ("G", 1000000000.0),
-            ("M", 1000000.0),
-            ("k", 1000.0),
-            ("h", 100.0),
-            ("da", 10.0),
-            ("e", 10.0),
-            ("d", 0.1),
-            ("c", 0.01),
-            ("m", 0.001),
-            ("u", 0.000001),
-            ("n", 0.000000001),
-            ("p", 1E-12),
-            ("f", 1E-15),
-            ("a", 1E-18),
-            ("z", 1E-21),
-            ("y", 1E-24),
-            ("Yi", 2.0_f64.powf(80.0)),
-            ("Ei", 2.0_f64.powf(70.0)),
-            ("Yi", 2.0_f64.powf(80.0)),
-            ("Zi", 2.0_f64.powf(70.0)),
-            ("Ei", 2.0_f64.powf(60.0)),
-            ("Pi", 2.0_f64.powf(50.0)),
-            ("Ti", 2.0_f64.powf(40.0)),
-            ("Gi", 2.0_f64.powf(30.0)),
-            ("Mi", 2.0_f64.powf(20.0)),
-            ("ki", 2.0_f64.powf(10.0)),
-        ]);
-
         let mut units = HashMap::new();
 
         let weight = HashMap::from([
@@ -139,22 +249,30 @@ impl Model {
 
         units.insert("weight", weight);
 
+        // Distance factors are in angstroms (m = 1e10), Excel's internal base, as area's are in
+        // square angstroms: the factor ratio then rounds as Excel's does. `CONVERT(255,"mi","km")`
+        // is 410.38272 and `CONVERT(255,"in","cm")` 647.7 (probes/t4534-bessel-convert-web-values
+        // B1:B4, D1:D4; in metres they are 410.38272000000006 and 647.6999999999999), and
+        // `CONVERT(1,"m","ft")` 3.2808398950131235. The pica is 1/6 inch and the point 1/72 inch,
+        // each the nearest double to its exact length in angstroms (probes/convert-unit-names
+        // A105, B105). docs/excel-semantics/engineering.md "CONVERT constants and evaluation
+        // order" (T-4630).
         let distance = HashMap::from([
-            ("m", 1.0),
-            ("mi", 1609.344),
-            ("Nmi", 1852.0),
-            ("in", 0.0254),
-            ("ft", 0.3048),
-            ("yd", 0.9144),
-            ("ang", 0.0000000001),
-            ("ell", 1.143),
-            ("ly", 9460730472580800.0),
-            ("parsec", 3.0856775812815532e+16),
-            ("pc", 3.0856775812815532e+16),
-            ("Picapt", 0.0003527777777777778),
-            ("Pica", 0.0003527777777777778),
-            ("pica", 0.004233333333333334),
-            ("survey_mi", 1609.3472186944373),
+            ("m", 1e10),
+            ("mi", 16093440000000.0),
+            ("Nmi", 18520000000000.0),
+            ("in", 254000000.0),
+            ("ft", 3048000000.0),
+            ("yd", 9144000000.0),
+            ("ang", 1.0),
+            ("ell", 11430000000.0),
+            ("ly", 9.4607304725808e+25),
+            ("parsec", 3.0856775812815533e+26),
+            ("pc", 3.0856775812815533e+26),
+            ("Picapt", 3527777.777777778),
+            ("Pica", 3527777.777777778),
+            ("pica", 42333333.333333336),
+            ("survey_mi", 16093472186944.373),
         ]);
         units.insert("distance", distance);
         let time = HashMap::from([
@@ -323,105 +441,28 @@ impl Model {
         ]);
         units.insert("temperature", temperature);
 
-        // only some units admit prefixes (the is no kC, kilo Celsius, for instance)
-        let mks = [
-            "Pa", "p", "atm", "at", "mmHg", "g", "u", "m", "ang", "ly", "parsec", "pc", "ang2",
-            "ang^2", "ar", "m2", "m^2", "N", "dyn", "dy", "pond", "J", "e", "c", "cal", "eV", "ev",
-            "Wh", "wh", "W", "w", "T", "ga", "uk_pt", "l", "L", "lt", "ang3", "ang^3", "m3", "m^3",
-            "bit", "byte", "m/h", "m/hr", "m/s", "m/sec", "mph", "K", "kel",
-        ];
-        let volumes = ["ang3", "ang^3", "m3", "m^3"];
-
-        // We need all_units to make sure tha pc is interpreted as parsec and not pico centimeters
-        // We could have this list hard coded, of course.
-        let mut all_units = Vec::new();
-        for unit in units.values() {
-            for &unit_name in unit.keys() {
-                all_units.push(unit_name);
-            }
-        }
-
-        // A unit's factor (in its class's internal base) and its prefix scale are kept apart:
-        // Excel applies the prefix last (see the end of this function).
-        let mut to_unit_factor = 1.0;
-        let mut from_unit_factor = 1.0;
-        let mut to_unit_scale = 1.0;
-        let mut from_unit_scale = 1.0;
-
-        // kind of units (weight, distance, time, ...)
-        let mut to_unit_kind = "";
-        let mut from_unit_kind = "";
-
-        let mut to_unit_name = "";
-        let mut from_unit_name = "";
-
-        for (&name, unit) in &units {
-            for (&unit_name, unit_value) in unit {
-                if let Some(pk) = from_unit.strip_suffix(unit_name) {
-                    if pk.is_empty() {
-                        from_unit_kind = name;
-                        from_unit_factor = *unit_value;
-                        from_unit_name = unit_name;
-                    } else if let Some(modifier) = prefix.get(pk) {
-                        if mks.contains(&unit_name) && !all_units.contains(&from_unit.as_str()) {
-                            // We make sure:
-                            // 1. It is a unit that admits a modifier (like metres or grams)
-                            // 2. from_unit is not itself a unit
-                            let scale = if name == "area" && unit_name != "ar" {
-                                // 1 km2 is actually 10^6 m2
-                                *modifier * modifier
-                            } else if name == "volume" && volumes.contains(&unit_name) {
-                                // don't look at me I don't make the rules!
-                                *modifier * modifier * modifier
-                            } else {
-                                *modifier
-                            };
-                            from_unit_kind = name;
-                            from_unit_factor = *unit_value;
-                            from_unit_scale = scale;
-                            from_unit_name = unit_name;
-                        }
-                    }
-                }
-                if let Some(pk) = to_unit.strip_suffix(unit_name) {
-                    if pk.is_empty() {
-                        to_unit_kind = name;
-                        to_unit_factor = *unit_value;
-                        to_unit_name = unit_name;
-                    } else if let Some(modifier) = prefix.get(pk) {
-                        if mks.contains(&unit_name) && !all_units.contains(&to_unit.as_str()) {
-                            let scale = if name == "area" && unit_name != "ar" {
-                                *modifier * modifier
-                            } else if name == "volume" && volumes.contains(&unit_name) {
-                                *modifier * modifier * modifier
-                            } else {
-                                *modifier
-                            };
-                            to_unit_kind = name;
-                            to_unit_factor = *unit_value;
-                            to_unit_scale = scale;
-                            to_unit_name = unit_name;
-                        }
-                    }
-                }
-                if !from_unit_kind.is_empty() && !to_unit_kind.is_empty() {
-                    break;
-                }
-            }
-            if !from_unit_kind.is_empty() && !to_unit_kind.is_empty() {
-                break;
-            }
-        }
-        if from_unit_kind != to_unit_kind {
+        // Excel reads each unit string within one class at a time and takes the class in which both
+        // strings parse: "pc" is the parsec against "m" but pico-calories against "J" or "eV"
+        // (probes/convert-unit-names; docs/excel-semantics/engineering.md "CONVERT unit names").
+        // Within a class an exact unit name wins over a prefixed reading. No two classes give both
+        // strings a reading with different values (only "pc" parses in two classes, and
+        // "pc" to "pc" is the identity in either), so the class order only makes the scan
+        // deterministic.
+        let mut classes: Vec<_> = units.iter().collect();
+        classes.sort_unstable_by_key(|(name, _)| **name);
+        let Some((kind, from, to)) = classes.into_iter().find_map(|(&kind, class)| {
+            Some((
+                kind,
+                parse_unit(kind, class, &from_unit)?,
+                parse_unit(kind, class, &to_unit)?,
+            ))
+        }) else {
             return CalcResult::new_error(Error::NA, cell, String::new());
-        }
+        };
+        let (from_unit_name, from_unit_factor) = (from.name, from.factor);
+        let (to_unit_name, to_unit_factor) = (to.name, to.factor);
 
-        // Let's check if it is temperature;
-        if from_unit_kind.is_empty() {
-            return CalcResult::new_error(Error::NA, cell, String::new());
-        }
-
-        if from_unit_kind == "temperature" {
+        if kind == "temperature" {
             // Temperature requires formula conversion
             // Kelvin (K, k), Celsius (C,cel), Rankine (Rank), Réaumur (Reau)
             let to_temperature = match to_unit_name {
@@ -444,11 +485,25 @@ impl Model {
                     return CalcResult::new_error(Error::ERROR, cell, String::new());
                 }
             };
+            // Excel: a prefix on the Kelvin side is dropped from K to Rank, from K to Reau and from
+            // Reau to K, but kept from Rank to K and against C and F: `CONVERT(1000,"mK","Rank")`
+            // is 1800 and `CONVERT(1000,"Reau","YK")` 1523.15, while `CONVERT(1000,"Rank","YK")` is
+            // 5.555555555555556E-22 (probes/t4615-convert-prefixed-kelvin, every decimal prefix;
+            // docs/excel-semantics/engineering.md "CONVERT drops a Kelvin prefix toward Rank and
+            // Reau").
+            let from_scale = match (&from_temperature, &to_temperature) {
+                (Temperature::Kelvin, Temperature::Rankine | Temperature::Reaumur) => 1.0,
+                _ => from.scale(),
+            };
+            let to_scale = match (&from_temperature, &to_temperature) {
+                (Temperature::Reaumur, Temperature::Kelvin) => 1.0,
+                _ => to.scale(),
+            };
             let t = convert_temperature(
-                value * (from_unit_scale * from_unit_factor),
+                value * (from_scale * from_unit_factor),
                 from_temperature,
                 to_temperature,
-            ) / (to_unit_scale * to_unit_factor);
+            ) / (to_scale * to_unit_factor);
             return CalcResult::Number(t);
         }
         // Excel: the value is multiplied by the from-factor, divided by the to-factor, and only then
@@ -457,24 +512,36 @@ impl Model {
         // `CONVERT(0.0002,"Mang3","m3")` = 2.0000000000000002E-16).
         // Excel: `1E290 m2 -> m2`, `1E300 ha -> m2` and `1E302 J -> J` do not overflow although
         // `value * F_from` does (probes/convert-targets): when the product is infinite the
-        // division goes first. The target prefix is applied as a reciprocal multiply
-        // (`CONVERT(0.0002,"m3","Mm3")` is 2.0000000000000003E-22, not 2E-22).
+        // division goes first.
         let product = value * from_unit_factor;
         let scaled = if product.is_infinite() {
             value / to_unit_factor * from_unit_factor
         } else {
             product / to_unit_factor
         };
-        // Excel: `CONVERT(1E290,"Ym","Ym")` is 1E+290 and `CONVERT(1E300,"Ym","Zm")` 1E+303 although
-        // `value * 1E24` overflows (probes/convert-temperature-ov00, -ov01, -ov20): the prefixes are
-        // combined into one ratio when applying the from-prefix first would overflow. A result that
-        // overflows even so stays `#NUM!` (ov02, ov21).
-        let from_scaled = scaled * from_unit_scale;
-        let result = if from_scaled.is_infinite() {
-            scaled * (from_unit_scale * (1.0 / to_unit_scale))
+        // Excel: the two prefixes are one factor, the nearest double to their combined power of
+        // ten (times the binary prefixes' exact ratio), not a product or quotient of the prefixes:
+        // `CONVERT(1,"m","nm")` is 1E9 (1/1E-9 is 999999999.9999999), `CONVERT(1,"dm2","m2")` 0.01
+        // (0.1 × 0.1 is 0.010000000000000002), `CONVERT(1,"Pm3","l")` 9.999999999999999E47
+        // (1000 × 1E45; 1E15³ gives 1E48) (probes/convert-unit-names), `CONVERT(0.0002,"m3","Mm3")`
+        // 2.0000000000000003E-22 (× 1E-18; dividing by 1E18 gives 2E-22). `CONVERT(1E290,"Ym","Ym")`
+        // is 1E+290 and `CONVERT(1E300,"Ym","Zm")` 1E+303 (probes/convert-temperature-ov00, -ov01,
+        // -ov20), where 1E24 × 1E-24 would be 1 - 2^-53; a result that overflows is `#NUM!` (ov02,
+        // ov21). docs/excel-semantics/engineering.md "CONVERT constants and evaluation order".
+        // Excel: with a binary prefix on either unit the prefixes are each unit's own constant,
+        // `(P_from × B_from) / (P_to × B_to)`: a decimal prefix on the target enters as its rounded
+        // reciprocal, not as the nearest double to the inverse power. `CONVERT(4.73E-10,"Gibyte",
+        // "zbyte")` is 5.0787988275200007E+20 (× 2^30 × (1/1E-21); × 2^30 × 1E21 gives
+        // 5.07879882752E+20). All 679 mixed binary/decimal cells fit (probes/convert-mixed-prefix,
+        // T-3975, every binary prefix against the 21 decimal prefixes in both directions);
+        // docs/excel-semantics/engineering.md "CONVERT constants and evaluation order".
+        let prefixes = if from.binary_scale > 1.0 || to.binary_scale > 1.0 {
+            (nearest_power_of_ten(from.decimal_exponent) * from.binary_scale)
+                / (nearest_power_of_ten(to.decimal_exponent) * to.binary_scale)
         } else {
-            from_scaled * (1.0 / to_unit_scale)
+            nearest_power_of_ten(from.decimal_exponent - to.decimal_exponent)
         };
+        let result = scaled * prefixes;
         CalcResult::Number(result)
     }
 }

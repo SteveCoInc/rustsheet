@@ -24,8 +24,8 @@ const SHORT_CHAIN: usize = 16;
 
 /// The left operand of a value operator node. It derefs to the boxed node; its
 /// `Clone` copies the chain below it in a loop (a derived `Clone` overflowed a
-/// 1 MiB optimized stack at about 4,600 links), so `Node` keeps a derived
-/// `Clone`.
+/// 1 MiB optimized stack at about 4,600 links). `Node`'s own `Clone` loops over
+/// runs of signs the same way (`node_walks.rs`).
 #[derive(PartialEq, Debug)]
 pub struct ChainLeft(Box<Node>);
 
@@ -162,6 +162,27 @@ pub(crate) fn for_each_chain_operand_mut(node: &mut Node, mut f: impl FnMut(&mut
     }
 }
 
+/// The operands of the chain rooted at `node` (see [`left_chain`]) in the order the formula
+/// writes them: the first operand, then each link's right operand, innermost first. For walkers
+/// whose visits depend on that order; found without recursion, so a long chain costs no stack.
+pub(crate) fn chain_operands_in_order_mut(node: &mut Node) -> Vec<&mut Node> {
+    let mut rights = Vec::new();
+    let mut current = node;
+    loop {
+        match value_operands_mut(current) {
+            Ok((left, right)) => {
+                rights.push(right);
+                current = left;
+            }
+            Err(first) => {
+                rights.push(first);
+                rights.reverse();
+                return rights;
+            }
+        }
+    }
+}
+
 /// A copy of value operator `link` over `left` in place of its left operand.
 fn relink(link: &Node, left: Node) -> Node {
     let left = ChainLeft::new(left);
@@ -259,13 +280,13 @@ impl Parser {
     /// [`Self::parse_chain_links`], so that the frame `parse_chain` keeps on the stack for every
     /// nesting level of a formula stays small in unoptimized builds (T-1110).
     fn at_chain_operator(&mut self, level: ChainLevel) -> bool {
-        ChainOperator::at(level, &self.lexer.peek_token()).is_some()
+        ChainOperator::at(level, self.lexer.peek()).is_some()
     }
 
     /// The links of a chain after its first operand `t`.
     fn parse_chain_links(&mut self, level: ChainLevel, mut t: Node) -> Node {
         let mut depth = self.depth;
-        while let Some(operator) = ChainOperator::at(level, &self.lexer.peek_token()) {
+        while let Some(operator) = ChainOperator::at(level, self.lexer.peek()) {
             self.lexer.advance_token();
             let p = self.parse_chain_operand(level);
             if let Node::ParseErrorKind { .. } = p {

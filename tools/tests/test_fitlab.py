@@ -24,7 +24,16 @@ from rustsheet_tools.fitlab.score import (
     score,
     ulp_distance,
 )
-from rustsheet_tools.fitlab.sweep import Cell, Sweep, UnparsedError, Workbook, parse_arg, select, split_args
+from rustsheet_tools.fitlab.sweep import (
+    Cell,
+    Sweep,
+    UnparsedError,
+    Workbook,
+    parse_arg,
+    select,
+    split_args,
+    unquoted,
+)
 from rustsheet_tools.snapshot import UNDECODED, parse_show
 
 CASES = repo_root() / "eval" / "suites" / "probes-numeric" / "cases"
@@ -58,6 +67,12 @@ def test_split_args_respects_nesting_and_strings() -> None:
     assert split_args("") == []
 
 
+def test_unquoted_skips_strings_and_tracks_depth() -> None:
+    # The quote characters and everything between them are skipped; brackets inside a string do not count.
+    assert list(unquoted('a(")"}')) == [(0, "a", 0), (1, "(", 1), (5, "}", 0)]
+    assert [d for _i, _ch, d in unquoted("x)", 1)] == [-1]
+
+
 def test_parse_arg_literals_and_references() -> None:
     book = _book()
     assert parse_arg("1E-10", "Calc", book) == 1e-10
@@ -81,6 +96,14 @@ def test_arithmetic_arguments_use_excels_operator_model() -> None:
     assert sweep.arithmetic("0.05/12") == 0.05 / 12
     assert sweep.arithmetic("-2^2") == 4.0  # a unary sign binds tighter than ^
     assert sweep.arithmetic("2^3^2") == 64.0  # ^ is left-associative
+    # numbers.md "Subnormal results become 0": `*`, `/`, `^` and literals flush, `+`/`-` keep
+    assert sweep.arithmetic("2^-1074") == 0.0
+    assert sweep.arithmetic("2^-1000+2^-1052") == 2.0**-1000
+    assert sweep.arithmetic("1E-307/10") == 0.0
+    assert sweep.arithmetic("3E-308*0.5") == 0.0
+    assert sweep.arithmetic("1E-308") == 0.0
+    assert sweep.arithmetic("3E-308-2.5E-308") == 3e-308 - 2.5e-308
+    assert sweep.arithmetic("2^-1022") == 2.0**-1022
     assert sweep.arithmetic("(1+0.2)") == 1.2
     for bad in (
         "2^0.5",
@@ -280,6 +303,16 @@ def test_npv_candidates_discount_each_value() -> None:
     # NPV(0.2,-1000,300) = -1000/1.2 + 300/1.44 = -625 (oracle m9-fin-nper-npv A133)
     assert cands["correctly rounded"].evaluate(_cell((0.2, -1000.0, 300.0))) == -625.0
     assert len({c.family for c in cands.values()}) == 5
+
+
+def test_npv_deferred_division_reproduces_excel() -> None:
+    deferred = _by_name(annuity.npv_candidates())["double: deferred (sum v/(1+r)^(i-1))/(1+r)"]
+    # ironcalc IRR.xlsx General!M2, NPV at IRR's root (L2): Excel 6.4212018552224666E-12, also
+    # probes/npv-term-order P!A20; the plain sum of v/(1+r)^i gives 6.418865439172805E-12.
+    flows = (-20.0, 5.0, 5.0, 5.0, 5.0, 5.0)
+    assert deferred.evaluate(_cell((0.07930826116039724, *flows))) == 6.4212018552224666e-12
+    # probes/npv-term-order P!A10, NPV(L2,0,..,0,1) over 9 periods: Excel 0.5031419041659052.
+    assert deferred.evaluate(_cell((0.07930826116039724, *([0.0] * 8), 1.0))) == 0.5031419041659052
 
 
 def test_factorial_products_and_half_integer_gamma() -> None:

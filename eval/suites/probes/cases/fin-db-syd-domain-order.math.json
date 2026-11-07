@@ -1,0 +1,138 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "333327c7a80b770d760d2b1947a0a47bf8899aa97840b9e6bcae789a1c39f91a",
+  "definitions": {
+   "DB": "233e90ed5293d2f5",
+   "SYD": "233e90ed5293d2f5"
+  },
+  "arguments_sha256": "7149ec76f0d3d90e4bf2bef76dbf0d9629cdcaad43825ef157dad1fcf7f02ced"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A1": {
+    "t": "n",
+    "v": "11.50314211995",
+    "f": "=DB(100,10,4.5,4,6)"
+   },
+   "A10": {
+    "t": "e",
+    "why": "month 12 and a period above the life: #NUM!",
+    "f": "=DB(100,10,4.5,6,12)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "11.50314211995",
+    "f": "=DB(100,10,4.5,4.5,6)"
+   },
+   "A3": {
+    "t": "n",
+    "v": "3.445191064925025",
+    "f": "=DB(100,10,4.5,5,6)"
+   },
+   "A4": {
+    "t": "n",
+    "v": "3.445191064925025",
+    "f": "=DB(100,10,4.5,5.5,6)"
+   },
+   "A5": {
+    "t": "n",
+    "v": "3.445191064925025",
+    "f": "=DB(100,10,4.5,5.7,6)"
+   },
+   "A6": {
+    "t": "e",
+    "why": "a period's whole part above life + 1: #NUM!",
+    "f": "=DB(100,10,4.5,6,6)"
+   },
+   "A7": {
+    "t": "e",
+    "why": "a period's whole part above life + 1: #NUM!",
+    "f": "=DB(100,10,4.5,6.5,6)"
+   },
+   "A8": {
+    "t": "e",
+    "why": "month 12 and a period above the life: #NUM!",
+    "f": "=DB(100,10,4.5,5,12)"
+   },
+   "A9": {
+    "t": "e",
+    "why": "month 12 and a period above the life: #NUM!",
+    "f": "=DB(100,10,4.5,5.5,12)"
+   },
+   "B1": {
+    "t": "n",
+    "v": "11.1995025912",
+    "f": "=DB(100,10,4.25,4,6)"
+   },
+   "B2": {
+    "t": "n",
+    "v": "11.1995025912",
+    "f": "=DB(100,10,4.25,4.25,6)"
+   },
+   "B3": {
+    "t": "n",
+    "v": "3.2590552540392",
+    "f": "=DB(100,10,4.25,5,6)"
+   },
+   "B4": {
+    "t": "n",
+    "v": "3.2590552540392",
+    "f": "=DB(100,10,4.25,5.25,6)"
+   },
+   "B5": {
+    "t": "n",
+    "v": "3.2590552540392",
+    "f": "=DB(100,10,4.25,5.5,6)"
+   },
+   "B6": {
+    "t": "e",
+    "why": "a period's whole part above life + 1: #NUM!",
+    "f": "=DB(100,10,4.25,6,6)"
+   },
+   "B7": {
+    "t": "e",
+    "why": "month 12 and a period above the life: #NUM!",
+    "f": "=DB(100,10,4.25,5,12)"
+   },
+   "B8": {
+    "t": "e",
+    "why": "month 12 and a period above the life: #NUM!",
+    "f": "=DB(100,10,4.25,5.25,12)"
+   },
+   "B9": {
+    "t": "e",
+    "why": "month 12 and a period above the life: #NUM!",
+    "f": "=DB(100,10,4.25,6,12)"
+   },
+   "C1": {
+    "t": "e",
+    "why": "a life above 2147483647: #NUM!",
+    "f": "=DB(0,10,1E+10,1)"
+   },
+   "C2": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=DB(0,10,1E+10,0.5,8)"
+   },
+   "C3": {
+    "t": "e",
+    "why": "a life above 2147483647: #NUM!",
+    "f": "=DB(0,10,2147483648,1)"
+   },
+   "D1": {
+    "t": "e",
+    "why": "a negative salvage: #NUM!",
+    "f": "=SYD(100,-1,1E+200,1)"
+   },
+   "D2": {
+    "t": "e",
+    "why": "a negative salvage: #NUM!",
+    "f": "=SYD(1E+300,-1E+300,1E+200,1)"
+   }
+  }
+ }
+}

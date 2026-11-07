@@ -1,0 +1,175 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A11": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A13": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A14": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A2": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A3": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A4": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A5": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A6": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A7": {
+    "t": "n",
+    "v": 6.0
+   },
+   "A8": {
+    "t": "n",
+    "v": 2.0
+   },
+   "A9": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "B1": {
+    "t": "b",
+    "v": false
+   },
+   "B10": {
+    "t": "b",
+    "v": true
+   },
+   "B11": {
+    "t": "b",
+    "v": false
+   },
+   "B12": {
+    "t": "b",
+    "v": true
+   },
+   "B13": {
+    "t": "b",
+    "v": false
+   },
+   "B14": {
+    "t": "b",
+    "v": false
+   },
+   "B2": {
+    "t": "b",
+    "v": false
+   },
+   "B3": {
+    "t": "b",
+    "v": false
+   },
+   "B4": {
+    "t": "b",
+    "v": false
+   },
+   "B5": {
+    "t": "b",
+    "v": false
+   },
+   "B6": {
+    "t": "b",
+    "v": false
+   },
+   "B7": {
+    "t": "b",
+    "v": false
+   },
+   "B8": {
+    "t": "b",
+    "v": false
+   },
+   "B9": {
+    "t": "b",
+    "v": false
+   },
+   "C1": {
+    "t": "s",
+    "v": "=_xlpm._xlpm.f1"
+   },
+   "C10": {
+    "t": "s",
+    "v": "none"
+   },
+   "C11": {
+    "t": "s",
+    "v": "=LET(x,2,_xlpm.x*3)"
+   },
+   "C12": {
+    "t": "s",
+    "v": "none"
+   },
+   "C13": {
+    "t": "s",
+    "v": "=LET(x,2,_xlpm._xlpm.x*3)"
+   },
+   "C14": {
+    "t": "s",
+    "v": "=LET(x,2,_xlpm._xlpm.x*3)"
+   },
+   "C2": {
+    "t": "s",
+    "v": "=_xlpm._xlpm.abc"
+   },
+   "C3": {
+    "t": "s",
+    "v": "=_xlpm._xlpm.f1"
+   },
+   "C4": {
+    "t": "s",
+    "v": "=_xlpm._xlpm.abc"
+   },
+   "C5": {
+    "t": "s",
+    "v": "=_xlpm._xlpm.f1"
+   },
+   "C6": {
+    "t": "s",
+    "v": "=_xlpm._xlpm.abc"
+   },
+   "C7": {
+    "t": "s",
+    "v": "=LET(x,2,x*3)"
+   },
+   "C8": {
+    "t": "s",
+    "v": "=LET(_xlpm.x,1,_xlpm.x+1)"
+   },
+   "C9": {
+    "t": "s",
+    "v": "=LET(x,2,_xlpm.x*3)"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "0b6b5d63f855409071a1aec4e900c670d84c0058a0c0d406001298fcc905393b",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-05T03:57:00+00:00",
+  "version": null,
+  "workbook_name": "bc9a96cf41e76b5f83b2add42f93462bed2598b9503455a037b99b14012ac1aa.xlsx"
+ }
+}

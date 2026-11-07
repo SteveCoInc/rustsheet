@@ -1,6 +1,5 @@
-use std::fmt;
-
-use crate::arithmetic::power;
+use crate::arithmetic::{extended_sqrt, power};
+use crate::cast::number_text_too_long;
 use crate::functions::lift::{num_error, value_error};
 use crate::functions::math_and_trigonometry::{
     excel_atan2, excel_quarter_turn_remainder, excel_sin_cos, EXCEL_INNER_TRIG_LIMIT,
@@ -13,213 +12,22 @@ use crate::limits::too_many_visits;
 use crate::reference_operators::RefArg;
 use crate::{
     calc_result::CalcResult,
-    expressions::{
-        lexer::util::get_tokens,
-        parser::Node,
-        token::{Error, OpSum, TokenType},
-        types::CellReferenceIndex,
-    },
+    expressions::{parser::Node, token::Error, types::CellReferenceIndex},
     functions::Function,
     model::Model,
-    number_format::{complex_part_to_text, to_precision},
 };
 
+mod parse;
+mod reading;
 mod trig;
+use parse::{Complex, Suffix};
+use reading::{has_unread_edge, split_inumber, strip_currency_symbols, Inumber};
 use trig::{imcos, imcosh, imcot, imcsc, imcsch, imsec, imsech, imsin, imsinh, imtan};
 
-/// This implements all functions with complex arguments in the standard
-/// NOTE: If performance is ever needed we should have a new entry in `CalcResult`,
-/// So this functions will return `CalcResult::Complex(x,y`, Suffix)
-/// and not having to parse it over and over again.
-
-#[derive(Clone, Copy, PartialEq, Debug)]
-enum Suffix {
-    I,
-    J,
-    /// A number with no imaginary part and no suffix ("3"): it takes the suffix of the number it
-    /// meets, so `IMSUM("3+4j","3")` is "6+4j" (probes/eng-imsum-improduct-3d-j-empty E1-E10).
-    Real,
-}
-
-impl Suffix {
-    /// The suffix two operands share, or `None` when one is `i` and the other `j`.
-    fn join(self, other: Suffix) -> Option<Suffix> {
-        match (self, other) {
-            (Suffix::Real, suffix) | (suffix, Suffix::Real) => Some(suffix),
-            (a, b) if a == b => Some(a),
-            _ => None,
-        }
-    }
-}
-
-impl fmt::Display for Suffix {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            // A `Real` only prints when it has an imaginary part, which an unsuffixed number never has.
-            Suffix::I | Suffix::Real => write!(f, "i"),
-            Suffix::J => write!(f, "j"),
-        }
-    }
-}
-
-struct Complex {
-    x: f64,
-    y: f64,
-    suffix: Suffix,
-}
-
-impl fmt::Display for Complex {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // 15-digit rounding of a part near DBL_MAX overflows to infinity; Excel writes
-        // `1.79769313486232E+308` (probes/eng-imexp-overflow-imag A22), so keep the unrounded part.
-        let round15 = |v: f64| {
-            Some(to_precision(v, 15))
-                .filter(|r| r.is_finite())
-                .unwrap_or(v)
-        };
-        let x = round15(self.x);
-        let y = round15(self.y);
-        let suffix = &self.suffix;
-        // Each part is written as Excel's number-to-text writes it: plain up to 20 characters,
-        // then E notation (`1.22514845490862E-16`, probes/eng-impower A9; `1E+200`,
-        // probes/eng-imdiv A19).
-        // The coefficient 1 is dropped only for an imaginary part that is exactly ±1: Excel writes
-        // `0.1+1i` for `COMPLEX(0.1,1+2^-52,"i")` (gen-m9/62c886e21a1042af A243), so compare the
-        // unrounded part.
-        let y_str = if self.y == 1.0 {
-            String::new()
-        } else if self.y == -1.0 {
-            "-".to_string()
-        } else {
-            complex_part_to_text(y)
-        };
-        let x_str = complex_part_to_text(x);
-        if y == 0.0 && x == 0.0 {
-            write!(f, "0")
-        } else if y == 0.0 {
-            write!(f, "{x_str}")
-        } else if x == 0.0 {
-            write!(f, "{y_str}{suffix}")
-        } else if y > 0.0 {
-            write!(f, "{x_str}+{y_str}{suffix}")
-        } else {
-            write!(f, "{x_str}{y_str}{suffix}")
-        }
-    }
-}
-
-fn parse_complex_number(s: &str) -> Result<(f64, f64, Suffix), String> {
-    // Check for i, j, -i, -j
-    // One leading `+` is read like a leading `-`: `IMABS("+i")` 1, `IMABS("+3+4i")` 5, while a second
-    // sign (`"++i"`, `"+-i"`) is `#NUM!` (probes/eng-leading-plus-oct-bool A1:A8, A26).
-    let (sign, s) = match s.strip_prefix('-') {
-        Some(r) => (-1.0, r),
-        None => (1.0, s.strip_prefix('+').unwrap_or(s)),
-    };
-    if s.starts_with(['+', '-']) {
-        return Err(format!("Not a complex number: {s}"));
-    }
-    match s {
-        "i" => return Ok((0.0, sign * 1.0, Suffix::I)),
-        "j" => return Ok((0.0, sign * 1.0, Suffix::J)),
-        _ => {
-            // Let it go
-        }
-    };
-
-    // TODO: This is an overuse
-    let tokens = get_tokens(s);
-
-    // There has to be 1, 2 3, or 4 tokens
-    // number
-    // number suffix
-    // number1+suffix
-    // number1+number2 suffix
-
-    match tokens.len() {
-        1 => {
-            // Real number
-            let number1 = match tokens[0].token {
-                TokenType::Number(f) => f,
-                _ => return Err(format!("Not a complex number: {s}")),
-            };
-            Ok((sign * number1, 0.0, Suffix::Real))
-        }
-        2 => {
-            // number2 i
-            let number2 = match tokens[0].token {
-                TokenType::Number(f) => f,
-                _ => return Err(format!("Not a complex number: {s}")),
-            };
-            let suffix = match &tokens[1].token {
-                TokenType::Ident(w) => match w.as_str() {
-                    "i" => Suffix::I,
-                    "j" => Suffix::J,
-                    _ => return Err(format!("Not a complex number: {s}")),
-                },
-                _ => {
-                    return Err(format!("Not a complex number: {s}"));
-                }
-            };
-            Ok((0.0, sign * number2, suffix))
-        }
-        3 => {
-            let number1 = match tokens[0].token {
-                TokenType::Number(f) => f,
-                _ => return Err(format!("Not a complex number: {s}")),
-            };
-            let operation = match &tokens[1].token {
-                TokenType::Addition(f) => f,
-                _ => return Err(format!("Not a complex number: {s}")),
-            };
-            let suffix = match &tokens[2].token {
-                TokenType::Ident(w) => match w.as_str() {
-                    "i" => Suffix::I,
-                    "j" => Suffix::J,
-                    _ => return Err(format!("Not a complex number: {s}")),
-                },
-                _ => {
-                    return Err(format!("Not a complex number: {s}"));
-                }
-            };
-            let number2 = if matches!(operation, OpSum::Minus) {
-                -1.0
-            } else {
-                1.0
-            };
-            Ok((sign * number1, number2, suffix))
-        }
-        4 => {
-            let number1 = match tokens[0].token {
-                TokenType::Number(f) => f,
-                _ => return Err(format!("Not a complex number: {s}")),
-            };
-            let operation = match &tokens[1].token {
-                TokenType::Addition(f) => f,
-                _ => return Err(format!("Not a complex number: {s}")),
-            };
-            let mut number2 = match tokens[2].token {
-                TokenType::Number(f) => f,
-                _ => return Err(format!("Not a complex number: {s}")),
-            };
-            let suffix = match &tokens[3].token {
-                TokenType::Ident(w) => match w.as_str() {
-                    "i" => Suffix::I,
-                    "j" => Suffix::J,
-                    _ => return Err(format!("Not a complex number: {s}")),
-                },
-                _ => {
-                    return Err(format!("Not a complex number: {s}"));
-                }
-            };
-            if matches!(operation, OpSum::Minus) {
-                number2 = -number2;
-            }
-            Ok((sign * number1, number2, suffix))
-        }
-        _ => Err(format!("Not a complex number: {s}")),
-    }
-}
+// This implements all functions with complex arguments in the standard
+// NOTE: If performance is ever needed we should have a new entry in `CalcResult`,
+// So this functions will return `CalcResult::Complex(x,y`, Suffix)
+// and not having to parse it over and over again.
 
 /// A parsed complex number: the real part, the imaginary part and the suffix.
 type ComplexParts = (f64, f64, Suffix);
@@ -284,12 +92,18 @@ impl Model {
     /// and a boolean, typed or in a cell, is `#VALUE!` (`IMABS(TRUE)`, `IMSUB(M4,"1")`:
     /// probes/eng-argument-modes A89, probes/eng-imsum-improduct-whole C1:C15).
     fn complex_of(
+        &self,
         value: &CalcResult,
         empty: EmptyText,
         cell: CellReferenceIndex,
     ) -> Result<ComplexParts, CalcResult> {
         if matches!(value, CalcResult::Boolean(_)) {
             return Err(value_error(cell));
+        }
+        // A number keeps its full precision, not its 15-digit text: `IMPOWER(1.6564497455696935E-10,3)`
+        // is 4.54500948137352E-30 (gen-m9/756a9f7bc3a06bcc A345).
+        if let CalcResult::Number(f) = value {
+            return Ok((*f, 0.0, Suffix::Real));
         }
         let blank = matches!(value, CalcResult::EmptyCell | CalcResult::EmptyArg);
         let value = Self::cast_string_ref(value, cell)?;
@@ -298,7 +112,47 @@ impl Model {
             // (`IMSUB("3+4j",Q1)` is "3+4j"): probes/eng-imsub-imdiv-blank-j A1:A6, B1, B5.
             return Ok((0.0, 0.0, Suffix::Real));
         }
-        parse_complex_number(&value).map_err(|_| num_error(cell))
+        // Excel: text over 255 characters is `#VALUE!` (`IMSECH("TRUE"&REPT("AB",300))`, gen-m9
+        // b5aef3645cec1b95 A101), and a leading tab or U+3000 is `#NUM!` where a leading space is
+        // read (`IMCOT(CHAR(9)&"123456789.123")`, gen-m9/12e4aa13a20cc1f8 A224, 8fa8b572ebc1f001 A377).
+        if number_text_too_long(&value) {
+            return Err(value_error(cell));
+        }
+        // Text is split into its parts and each part is read as VALUE reads it (engineering.md
+        // "How an inumber is read"): "1,000+2i", "50%+2i", "(1)+2i", "1/2/2020+2i" and "1--2i" are
+        // read (probes/eng-inumber-grammar, probes/eng-inumber-grammar-parts), and so is text
+        // VALUE reads as a real number (`IMPOWER("$4.00",1)` "4", `IMCONJUGATE("2:24:00")` "0.1").
+        // Text with an inner sign and no suffix is not: `IMABS("2024-01-01")` is `#NUM!`
+        // (probes/eng-inumber-date-boundary column A).
+        let text = strip_currency_symbols(&value);
+        let read = |part: &str| {
+            if has_unread_edge(part) {
+                None
+            } else {
+                self.value_text_number(part)
+            }
+        };
+        let parts = match split_inumber(&text).ok_or_else(|| num_error(cell))? {
+            Inumber::Real(real) => read(real).map(|x| (x, 0.0, Suffix::Real)),
+            Inumber::Complex {
+                real,
+                sign,
+                coefficient,
+                suffix,
+            } => {
+                let x = match real {
+                    Some(real) => read(real),
+                    None => Some(0.0),
+                };
+                let y = if coefficient.trim_matches(' ').is_empty() {
+                    Some(1.0)
+                } else {
+                    read(coefficient)
+                };
+                x.zip(y).map(|(x, y)| (x, sign * y, suffix))
+            }
+        };
+        parts.ok_or_else(|| num_error(cell))
     }
 
     /// A one-argument complex function, lifted: its argument lifts over an array and refuses a
@@ -310,11 +164,11 @@ impl Model {
         op: ComplexFn,
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        self.lift_call(kind, args, cell, &mut |_, values| {
+        self.lift_call(kind, args, cell, &mut |model, values| {
             let [value] = values else {
                 return CalcResult::new_args_number_error(cell);
             };
-            match Self::complex_of(value, EmptyText::ZeroIfBlank, cell) {
+            match model.complex_of(value, EmptyText::ZeroIfBlank, cell) {
                 Ok(z) => op(z, cell),
                 Err(error) => error,
             }
@@ -322,8 +176,12 @@ impl Model {
     }
 
     /// Two complex arguments of one element (IMDIV, IMSUB), read left to right; empty text and
-    /// different suffixes are `#NUM!` (engineering.md "T-1625 probes").
+    /// different suffixes are `#NUM!` (engineering.md "T-1625 probes"). `args` are the call's
+    /// argument nodes: only an argument left out of the formula is `#N/A`, not the empty value
+    /// IFERROR or IFNA hand on for a blank cell, which is 0 like the blank cell itself.
     fn complex_pair_of(
+        &self,
+        args: &[Node],
         values: &[CalcResult],
         cell: CellReferenceIndex,
     ) -> Result<(ComplexParts, ComplexParts), CalcResult> {
@@ -331,12 +189,17 @@ impl Model {
             return Err(CalcResult::new_args_number_error(cell));
         };
         // Excel: an empty argument, in either place, is `#N/A` (`IMSUB("3+4j",)`, `IMDIV(,"3+4j")`):
-        // probes/eng-imsub-imdiv-blank-j A3, A4, B3, B4.
-        if matches!(first, CalcResult::EmptyArg) || matches!(second, CalcResult::EmptyArg) {
+        // probes/eng-imsub-imdiv-blank-j A3, A4, B3, B4. A variable bound to an omitted LAMBDA
+        // parameter or an empty LET value hands the omission on: `LAMBDA(a,b,IMSUB(a,b))("1",)`,
+        // `LET(e,,IMSUB("1",e))` (probes/eng-imsub-imdiv-lambda-let-empty A1:A4, A12).
+        if args
+            .iter()
+            .any(|arg| matches!(arg, Node::EmptyArgKind) || self.is_omitted_variable(arg))
+        {
             return Err(CalcResult::new_error(Error::NA, cell, String::new()));
         }
-        let first = Self::complex_of(first, EmptyText::ZeroIfBlank, cell)?;
-        let second = Self::complex_of(second, EmptyText::ZeroIfBlank, cell)?;
+        let first = self.complex_of(first, EmptyText::ZeroIfBlank, cell)?;
+        let second = self.complex_of(second, EmptyText::ZeroIfBlank, cell)?;
         let Some(suffix) = first.2.join(second.2) else {
             return Err(num_error(cell));
         };
@@ -353,6 +216,15 @@ impl Model {
                 [x, y, suffix] => (x, y, Some(suffix)),
                 _ => return CalcResult::new_args_number_error(cell),
             };
+            // Excel reads the suffix before the numbers, so a bad or error suffix wins over an
+            // error in real_num or i_num (T-2532; engineering.md, gen-m9 COMPLEX cells).
+            let suffix = match suffix.map(|suffix| Self::cast_string_ref(suffix, cell)) {
+                None => Suffix::I,
+                Some(Ok(s)) if s == "i" || s.is_empty() => Suffix::I,
+                Some(Ok(s)) if s == "j" => Suffix::J,
+                Some(Ok(_)) => return value_error(cell),
+                Some(Err(s)) => return s,
+            };
             // A boolean is `#VALUE!`: `COMPLEX(TRUE,1)` (probes/eng-imsum-improduct-whole C12).
             let x = match model.cast_number_no_bools_ref(x, cell) {
                 Ok(s) => s,
@@ -361,13 +233,6 @@ impl Model {
             let y = match model.cast_number_no_bools_ref(y, cell) {
                 Ok(s) => s,
                 Err(s) => return s,
-            };
-            let suffix = match suffix.map(|suffix| Self::cast_string_ref(suffix, cell)) {
-                None => Suffix::I,
-                Some(Ok(s)) if s == "i" || s.is_empty() => Suffix::I,
-                Some(Ok(s)) if s == "j" => Suffix::J,
-                Some(Ok(_)) => return value_error(cell),
-                Some(Err(s)) => return s,
             };
             complex_result(x, y, suffix)
         })
@@ -412,8 +277,8 @@ impl Model {
     /// `IMDIV(inumber1, inumber2)`: both lift over an array and refuse a multi-cell range
     /// (probes/eng-argument-modes B36:E36, probes/scalar-lift-open-a Y13).
     pub(crate) fn fn_imdiv(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Imdiv, args, cell, &mut |_, values| {
-            let ((x1, y1, suffix), (x2, y2, _)) = match Self::complex_pair_of(values, cell) {
+        self.lift_call(Function::Imdiv, args, cell, &mut |model, values| {
+            let ((x1, y1, suffix), (x2, y2, _)) = match model.complex_pair_of(args, values, cell) {
                 Ok(pair) => pair,
                 Err(error) => return error,
             };
@@ -463,7 +328,7 @@ impl Model {
             let [number, n] = values else {
                 return CalcResult::new_args_number_error(cell);
             };
-            let (x, y, suffix) = match Self::complex_of(number, EmptyText::ZeroIfBlank, cell) {
+            let (x, y, suffix) = match model.complex_of(number, EmptyText::ZeroIfBlank, cell) {
                 Ok(s) => s,
                 Err(error) => return error,
             };
@@ -488,7 +353,14 @@ impl Model {
             let Ok(radius) = power(r, n) else {
                 return num_error(cell);
             };
-            let angle = f64::atan2(y, x) * n;
+            // The angle is Excel's ATAN2 kernel, `atan(y/x)` (IMARGUMENT's [`excel_atan2`]):
+            // `IMPOWER("1000+1i",1)` is "1000+1i", its imaginary part 1.0000000000000002 where
+            // libm `atan2` gives exactly 1 (gen-m9/74779cff2810ccf4 Calc!A379; T-2610). Unprobed
+            // (T-2736): where that kernel errs (a subnormal x, an overflowing y/x) `atan2` is kept
+            // ([`atan2_or_libm`]); its subnormal angle is 0 (`IMPOWER("1E20+1E-300i",1)` is
+            // "1E+20") and a -0 imaginary part with x < 0 is +π, where `atan2` gave a tiny part and
+            // -π.
+            let angle = atan2_or_libm(x, y, None) * n;
             // An underflowed radius of 0 is "0" without reading the angle
             // (`IMPOWER("0.5i",134217728)`; probes/eng-impower-imdiv-edges A28-A35).
             if radius == 0.0 {
@@ -552,7 +424,7 @@ impl Model {
             Function::Imsub,
             args,
             cell,
-            &mut |_, values| match Self::complex_pair_of(values, cell) {
+            &mut |model, values| match model.complex_pair_of(args, values, cell) {
                 Ok(((x1, y1, suffix), (x2, y2, _))) => {
                     // Excel: a part that overflows is 0 and the other part stays
                     // (`IMSUB("9E307","-9E307")` is "0", `IMSUB("9E307+1i","-9E307")` is "i";
@@ -668,7 +540,7 @@ impl Model {
             if let Some(error) = too_many_visits(visits, cell) {
                 return error;
             }
-            let is_reference = matches!(*arg.ungrouped_at(cell.row), Node::ReferenceKind { .. });
+            let is_reference = arg.is_cell_reference_at(cell.row);
             // The cells of a range the walk hands on: the others are blank.
             let mut referenced: u64 = 0;
             let walked = self.walk_aggregate_read(
@@ -676,7 +548,7 @@ impl Model {
                 is_reference,
                 cell,
                 &mut walk,
-                &mut |_, source, value| {
+                &mut |model, source, value| {
                     if source == ItemSource::ReferencedCell {
                         referenced += 1;
                     }
@@ -686,7 +558,7 @@ impl Model {
                             has_blank = true;
                             return Ok(());
                         }
-                        value => Self::complex_of(&value, EmptyText::Parse, cell)?,
+                        value => model.complex_of(&value, EmptyText::Parse, cell)?,
                     };
                     let next = match total {
                         None => z,
@@ -755,7 +627,7 @@ fn imabs((x, y, _): ComplexParts, _: CellReferenceIndex) -> CalcResult {
     CalcResult::Number(scaled_modulus(x, y))
 }
 
-/// IMABS's modulus, `a·sqrt(1 + (b/a)²)` with a = max(|x|, |y|) (IMLOG2 takes it too).
+/// IMABS's modulus, `a·sqrt(1 + (b/a)²)` with a = max(|x|, |y|).
 fn scaled_modulus(x: f64, y: f64) -> f64 {
     let (x, y) = (x.abs(), y.abs());
     let (large, small) = if x >= y { (x, y) } else { (y, x) };
@@ -831,51 +703,115 @@ fn imexp_cap_window(quarter_turns: i64) -> f64 {
     }
 }
 
-/// The logs are `#NUM!` if both parts are nonzero and `x²+y²` is inf or subnormal (eng-imln-modulus-range).
-fn log_modulus_out_of_range(x: f64, y: f64) -> bool {
-    x != 0.0 && y != 0.0 && !(x * x + y * y).is_normal()
+/// A part's square as IMSQRT and the logs take it: a subnormal square is 0. With it,
+/// `IMLN("1E-154+1E-153i")` is ln 1E-153, -352.295519228089 (`hypot` gives -352.290544062662), and
+/// `IMSQRT("1E-154+1E-153i")` is 2.34467878292635E-77+2.12190513569646E-77i, the root of
+/// 1E-153 at half the unflushed angle (probes/eng-imln-modulus-range A79, A80; T-2572).
+fn flushed_square(part: f64) -> f64 {
+    let square = part * part;
+    if square.is_subnormal() {
+        0.0
+    } else {
+        square
+    }
 }
 
-/// IMLN, IMLOG10 and IMLOG2: the real and imaginary parts that `parts` makes of `(x, y)`. The
-/// log of 0 is `#NUM!`, not "-inf" (T-2389).
+/// IMLN, IMLOG10 and IMLOG2: the real and imaginary parts that `parts` makes of the
+/// [`log_modulus`] and the argument (eng-imln-modulus-range, T-2117, T-2572, T-3643):
+/// - with both parts nonzero a part whose square is subnormal drops out of the modulus
+///   ([`flushed_square`]), so the log is `#NUM!` when both squares flush to 0 or their sum
+///   overflows (`IMLN("1E-154+1E-154i")`, `IMLN("1E154+1E154i")`);
+/// - a pure real or imaginary number keeps its part (`IMLN("1E-160+0i")` is -368.413614879047);
+/// - the argument is Excel's ATAN2 kernel, `atan(y/x)` plus or minus π ([`atan2_or_libm`]),
+///   and an overflowing `y/x` is `#NUM!`, as in ATAN2 ([`angle_quotient_overflows`]):
+///   `IMLOG10("1E-300+1E20i")` and `IMLOG2("1E-300-1E300i")` are `#NUM!` while
+///   `IMLOG10("1E-20+1E20i")` answers (probes/t3643-imlog10-grid J2, J3, U2; T-3643). libm
+///   `atan2` misses `IMLOG10("-0.561651839159889-0.827373683149484i")`'s -0.941193126217726 and
+///   `IMLOG2(COMPLEX(-1,1.05859478337023E-09))`'s 4.53236014029996i by one digit
+///   (probes-numeric/t3643-r4-log-modulus B101, C173; T-3795); IMLN prints the same digits with
+///   either.
+///
+/// The log of 0 is `#NUM!`, not "-inf" (T-2389).
 fn complex_log(
     p: ComplexParts,
     c: CellReferenceIndex,
     parts: fn(f64, f64) -> (f64, f64),
 ) -> CalcResult {
     let (x, y, suffix) = p;
-    if log_modulus_out_of_range(x, y) {
+    if x != 0.0 && y != 0.0 && !(flushed_square(x) + flushed_square(y)).is_normal() {
         return num_error(c);
     }
-    let (re, im) = parts(x, y);
+    if angle_quotient_overflows(x, y) {
+        return num_error(c);
+    }
+    let (re, im) = parts(log_modulus(x, y), atan2_or_libm(x, y, None));
     finite_complex_result(re, im, suffix, c)
 }
 
-/// IMLN is `ln` of the [`modulus`] and the argument (`atan2`).
-fn imln_parts(x: f64, y: f64) -> (f64, f64) {
-    (modulus(x, y).ln(), f64::atan2(y, x))
+/// The modulus the logs take: the double sum of the parts' [`flushed_square`]s, its root taken
+/// in x87 extended precision and rounded again to a double ([`extended_sqrt`]). The second
+/// rounding shows near |z| = 1: `0.999999999999999+1E-8i` sums to 1-17·2^-53, whose root rounds
+/// to the midpoint 1-8.5·2^-53 and then to even, 1-8·2^-53, so `IMLOG10` is
+/// -3.85730986621315E-16 (`hypot` and IMABS's scaled modulus give 1-9·2^-53, -4.33947359948979E-16;
+/// probes/t3643-imlog10-grid D5, E4, t3643-imlog2-grid D5; T-3643). It also gives 1-6·2^-53 for
+/// `0.707106781186547+0.707106781186547i`, as `hypot` does (eng-imln-modulus A1; T-2117).
+/// A pure real or imaginary number is its part's absolute value, never flushed.
+fn log_modulus(x: f64, y: f64) -> f64 {
+    if y == 0.0 {
+        return x.abs();
+    }
+    if x == 0.0 {
+        return y.abs();
+    }
+    extended_sqrt(flushed_square(x) + flushed_square(y))
 }
 
-/// IMLOG10 divides the argument by ln 10: multiplying by log10 e misses
-/// `IMLOG10("711+1.5i")`'s 0.000916231724847909 (probes/eng-im-overflow-edges A95) and the
-/// reciprocal `1/ln 10` misses `IMLOG10("1.5+710.4i")`; the division fits all 36 IMLOG10 cells
-/// of the eval suites (T-2231).
-fn imlog10_parts(x: f64, y: f64) -> (f64, f64) {
-    (
-        modulus(x, y).log10(),
-        f64::atan2(y, x) / std::f64::consts::LN_10,
-    )
+/// IMLN is `ln` of the [`log_modulus`] and the argument.
+fn imln_parts(modulus: f64, angle: f64) -> (f64, f64) {
+    (modulus.ln(), angle)
 }
 
-/// IMLOG2 is `ln` of IMABS's [`scaled_modulus`] and the argument, both times the double one ulp
-/// above log2 e (`1/ln 2` rounded from the double below ln 2): it fits all 103 distinct real and
-/// 103 imaginary parts of IMLOG2 in the eval suites, `IMLOG2("710.4+0i")` 9.47248777146275 and
-/// `IMLOG2("1E-20")` -66.4385618977473 among them, where `log2` and `atan2·log2 e` print the digit
-/// below (probes/eng-im-overflow-edges A104, A107, A109; probes-numeric im-last-digit-sweep N, O;
-/// T-2231). `hypot` instead of the scaled modulus misses `-0.66925-0.233532i` (sweep row 53).
-fn imlog2_parts(x: f64, y: f64) -> (f64, f64) {
+/// IMLOG10 is IMLN's parts times the double `log10 e` (T-3795): `ln |z|·log10 e` and the
+/// argument (Excel's ATAN2 kernel, [`complex_log`]) times `log10 e`. With that argument, the
+/// product fits every IMLOG10 cell of the eval suites (896, among them
+/// `IMLOG10("10+1E8i")`'s 0.682188133491473 and `IMLOG10("711+1.5i")`'s 0.000916231724847909,
+/// probes/t3643-imlog10-grid I8, eng-im-overflow-edges A95), where dividing by `LN_10` misses
+/// eight imaginary parts and `log10 |z|` two real ones (probes-numeric/t3643-r4-log-modulus B29,
+/// B52, B56, B99, B101).
+fn imlog10_parts(modulus: f64, angle: f64) -> (f64, f64) {
+    let k = std::f64::consts::LOG10_E;
+    (modulus.ln() * k, angle * k)
+}
+
+/// IMLOG2 is `ln` of the [`log_modulus`] and the argument, both times the double one ulp
+/// above log2 e (`1/ln 2` rounded from the double below ln 2): `IMLOG2("710.4+0i")`
+/// 9.47248777146275 and `IMLOG2("1E-20")` -66.4385618977473, where `log2` and `atan2·log2 e` print
+/// the digit below (probes/eng-im-overflow-edges A104, A107, A109; probes-numeric
+/// im-last-digit-sweep N, O; T-2231). With Excel's ATAN2 kernel as the argument
+/// ([`complex_log`]) it fits all IMLOG2 cells of the eval suites but
+/// probes-numeric/t3643-r4-log-modulus C111, whose `atan(5.15092871182028)` Excel takes one ulp
+/// below the correctly rounded 1.3790419226756176 (T-3795).
+fn imlog2_parts(modulus: f64, angle: f64) -> (f64, f64) {
     let k = std::f64::consts::LOG2_E.next_up();
-    (scaled_modulus(x, y).ln() * k, f64::atan2(y, x) * k)
+    (modulus.ln() * k, angle * k)
+}
+
+/// Whether the quotient `y/x` of Excel's ATAN2 kernel overflows (`#NUM!` in ATAN2): the logs are
+/// then `#NUM!` (probes/t3643-imlog10-grid J2; T-3643).
+fn angle_quotient_overflows(x: f64, y: f64) -> bool {
+    matches!(excel_atan2(x, y), Err(Error::NUM))
+}
+
+/// The angle of `x + yi` for IMPOWER and IMSQRT: Excel's ATAN2 kernel ([`excel_atan2`]), and libm
+/// `atan2` where that kernel errs: a subnormal x, an overflowing y/x, or x = y = 0 (a zero modulus,
+/// whose angle does not change the result). The fallback is unprobed (T-2736). `on_overflow`, when
+/// given, replaces the angle where y/x overflows: IMSQRT's 0 (probes/t3643-imsqrt-grid J2; T-3643).
+fn atan2_or_libm(x: f64, y: f64, on_overflow: Option<f64>) -> f64 {
+    match excel_atan2(x, y) {
+        Ok(angle) => angle,
+        Err(Error::NUM) => on_overflow.unwrap_or_else(|| f64::atan2(y, x)),
+        Err(_) => f64::atan2(y, x),
+    }
 }
 
 fn imreal((x, _, _): ComplexParts, _: CellReferenceIndex) -> CalcResult {
@@ -885,64 +821,32 @@ fn imreal((x, _, _): ComplexParts, _: CellReferenceIndex) -> CalcResult {
 /// Excel squares each part first: a part past `sqrt(DBL_MAX)` (1.34078E154) is `#NUM!`
 /// (`IMSQRT("1.35E154")`, `IMSQRT("1E307")`), but when only the sum of the squares overflows
 /// (`IMSQRT("1E154+1E154i")`) the result is `0`, not an error (probes/eng-imsqrt-large,
-/// eng-imsqrt-large-b; docs/excel-semantics/engineering.md, T-1996). Not `modulus`: Excel gives
-/// "0" on underflow (probes/eng-imln-modulus A18, A20).
+/// eng-imsqrt-large-b; docs/excel-semantics/engineering.md, T-1996). Not `modulus`: a subnormal
+/// square is 0 ([`flushed_square`]), so `IMSQRT("1E-154+1E-154i")` and `IMSQRT("1E-160+0i")` are
+/// "0" (probes/eng-imln-modulus A18, A20; eng-imln-modulus-range A51-A56, A80; T-2572).
+/// The half angle is Excel's ATAN2 kernel (IMARGUMENT's [`excel_atan2`]) through Excel's SIN and
+/// COS: `IMSQRT("-1")` is "6.1257422745431E-17+i", COS(ATAN2(-1,0)/2), where libm's cos(π/2) gives
+/// 6.12323399573677E-17 (gen-m9 59a16b5ab566ee5c A6, 516488da78a6b08c A52; excel-graph, T-2536).
+/// Decision 0188 R6 follows the web over the Mac 16.0300 cache of ironcalc-calc COMPLEXs.xlsx
+/// AL12 and AL26, which has libm's digits (T-1075 item 16). Every other IMSQRT cell of the suites
+/// prints the same either way. An overflowing y/x makes the angle 0, so the root is real:
+/// `IMSQRT("1E-300+1E20i")`, `IMSQRT("-1E-300+1E20i")` and `IMSQRT("1E-300-1E20i")` are all
+/// "10000000000" (probes/t3643-imsqrt-grid J2, J12, T2; T-3643). Where the kernel errs otherwise
+/// (a subnormal x) libm `atan2` stands in ([`atan2_or_libm`]), and a -0 imaginary part with x < 0
+/// takes +π, as in IMPOWER (unprobed, T-2736).
 fn imsqrt((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> CalcResult {
-    let (xx, yy) = (x * x, y * y);
+    let (xx, yy) = (flushed_square(x), flushed_square(y));
     if !xx.is_finite() || !yy.is_finite() {
         return num_error(cell);
     }
     if !(xx + yy).is_finite() {
         return complex_result(0.0, 0.0, suffix);
     }
-    let r = f64::sqrt(xx + yy).sqrt();
-    let a = f64::atan2(y, x);
-    complex_result(r * f64::cos(a / 2.0), r * f64::sin(a / 2.0), suffix)
+    let r = extended_sqrt(extended_sqrt(xx + yy));
+    let a = atan2_or_libm(x, y, Some(0.0));
+    let (sin, cos) = excel_sin_cos(a / 2.0);
+    complex_result(r * cos, r * sin, suffix)
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::functions::engineering::complex::Suffix;
-
-    use super::parse_complex_number as parse;
-
-    #[test]
-    fn coefficient_one_written_unless_exactly_one() {
-        let text = |x: f64, y: f64| {
-            super::Complex {
-                x,
-                y,
-                suffix: Suffix::I,
-            }
-            .to_string()
-        };
-        assert_eq!(text(0.1, 1.0 + 2f64.powi(-52)), "0.1+1i");
-        assert_eq!(text(0.5, 1.0 - 2f64.powi(-53)), "0.5+1i");
-        assert_eq!(text(0.5, -1.0 - 2f64.powi(-52)), "0.5-1i");
-        assert_eq!(text(0.5, 1.0), "0.5+i");
-        assert_eq!(text(0.5, -1.0), "0.5-i");
-        assert_eq!(text(0.0, 1.0), "i");
-    }
-
-    #[test]
-    fn suffix_join() {
-        assert_eq!(Suffix::I.join(Suffix::J), None);
-        assert_eq!(Suffix::Real.join(Suffix::J), Some(Suffix::J));
-        assert_eq!(Suffix::I.join(Suffix::Real), Some(Suffix::I));
-        assert_eq!(Suffix::Real.join(Suffix::Real), Some(Suffix::Real));
-    }
-
-    #[test]
-    fn test_parse_complex() {
-        assert_eq!(parse("1+2i"), Ok((1.0, 2.0, Suffix::I)));
-        assert_eq!(parse("2i"), Ok((0.0, 2.0, Suffix::I)));
-        assert_eq!(parse("7.5"), Ok((7.5, 0.0, Suffix::Real)));
-        assert_eq!(parse("-7.5"), Ok((-7.5, 0.0, Suffix::Real)));
-        assert_eq!(parse("7-5i"), Ok((7.0, -5.0, Suffix::I)));
-        assert_eq!(parse("i"), Ok((0.0, 1.0, Suffix::I)));
-        assert_eq!(parse("7+i"), Ok((7.0, 1.0, Suffix::I)));
-        assert_eq!(parse("7-i"), Ok((7.0, -1.0, Suffix::I)));
-        assert_eq!(parse("-i"), Ok((0.0, -1.0, Suffix::I)));
-        assert_eq!(parse("0"), Ok((0.0, 0.0, Suffix::Real)));
-    }
-}
+mod tests;

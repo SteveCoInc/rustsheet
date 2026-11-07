@@ -7,8 +7,8 @@ status: todo
 priority: P3
 size: S
 tier: opus
-campaign: visible
 depends_on: [T-2219, T-2220]
+defer: phase-1b
 ---
 
 ## Goal
@@ -101,6 +101,12 @@ Cells:
 - gen-m9/fd9fa22d212080d6.case.json (3): Calc!A6, A183, A366
 - gen-m9/fec39efaba9284c3.case.json (2): Calc!A184, A322
 
+T-2502 (2026-10-25) settles part of this: F.DIST, F.DIST.RT and FDIST at a df of 2 take Excel's closed forms on
+bratio's oriented arguments with w5's x = 1/(1 + d2/(d1·X)), y = 1/(1 + (d1·X)/d2), bit-exact on all 367 F closed-form
+cells of T-2464 w5-triangulation (t2220-f-dist-sweep-cdf, -rt, -d1-1, -d2-1: 70 cells fixed). The tail choice is
+bratio's dispatch, not the mean (statistics.md "Incomplete beta is TOMS 708 `bratio`"); the other shapes' last digits
+need bratio's branches (T-2505 onwards).
+
 ## Acceptance criteria
 - [ ] The F_DIST.xlsx Sheet1!F3 line disappears from eval/baseline/ironcalc-calc.txt
       (`make eval-baseline`), with no new line in any baseline.
@@ -111,6 +117,7 @@ Cells:
       reported in the Outcome.
 - [ ] statistics.md's T-0970 section replaces the PARTIAL rules with the fitted formulation (VERIFIED on
       the sweep) or records which hypotheses were ruled out.
+- [ ] The 35 cells added by gap triage 2026-10-30 are bit-exact (their 6 gen-m9 lines leave eval/baseline/gen-m9.txt; the probes-numeric cells, ungated, shown with `make eval-show`) or the Outcome lists each with its ulp distance.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -122,3 +129,68 @@ Decision 0083: this stage is met when the six visibly-off cells above (m9-f-dist
 m9-legacy-fdist A47, A48, A55, A56; t1049-fdist A16) are within half a unit of the 15th
 significant digit of Excel's value, and no other cell this task owns is newly visibly off. Bit-level
 criteria still unmet at that point move to a follow-up task without the campaign key.
+
+## Deferred (decision 0114)
+`defer: phase-1b`: the cells this task owns are already within 15 significant digits of Excel, so it waits until Phase 1 exits. Remove the key only when the steward records the Phase 1 exit, or when an eval shows one of its cells visibly off (then give it a `campaign:` stage instead).
+
+## Phase 1 triage (T-0090, 2026-10-27)
+110 visibly-off F.DIST cells of probes-numeric/t2220-f-dist-sweep-cdf (and the other t2220 sweeps) are not last-digit residue; T-2981 owns them and routes them to the kernel task that fixes them (T-2219 / T-2790 first guess). This task stays `defer: phase-1b` for its bit-level fits.
+
+## Cells added by gap triage (2026-10-30)
+`make eval` on origin/main 6a26b992a (excel-graph), `scripts/exit_owners.py`'s `owned` rule over every failing cell and the task files of origin/main and every pushed branch: 35 F.DIST, F.DIST.RT and FDIST cells within 15 digits (31 within 4 ulp, 4 further; none visibly off) that no open task names, on the m9, m9-legacy and t1049 probes this task already reads and six gen-m9 cells. They include the d1 = d2 = 1 points this task's Context cites (`F.DIST.RT(1,1,1)` and `FDIST(1,1,1)`: Excel 0.4999999999999999, ours 0.5000000000000002; statistics.md "Incomplete beta in the ironcalc-calc workbooks: F tails and densities"). Other examples, Excel vs ours: m9-legacy-fdist A46 `F.DIST.RT(3.5,10,10)` 0.030373282606640854 vs 0.030373282606640812; t1049-fdist A33 `F.DIST(1,1.5,7,TRUE)` 0.6493833371797926 vs 0.6493833371797924; gen-m9/0a614cfe974b59c3 A19 `F.DIST.RT(10,3,4)` 0.024910273396826055 vs 0.024910273396826058.
+- gen-m9/05d44f6dd6cfc567.case.json (1): Calc!A175
+- gen-m9/0a614cfe974b59c3.case.json (1): Calc!A19
+- gen-m9/0a9226016e8f5f33.case.json (1): Calc!A325
+- gen-m9/4ab2ba98d26c8a5e.case.json (1): Calc!A157
+- gen-m9/a790a4d4a6a82756.case.json (1): Calc!A121
+- gen-m9/eced4bb6a0234c9e.case.json (1): Calc!A213
+- probes-numeric/m9-f-dist-rt.case.json (3): Calc!A2, A3, A18
+- probes-numeric/m9-legacy-fdist.case.json (20): Calc!A31, A37, A39, A46, A49, A50, A51, A57, A58, A59, A60, A61, A66, A67, A68, A71, A76, A77, A78, A79
+- probes-numeric/t1049-fdist.case.json (3): Calc!A13, A19, A33
+- probes-numeric/t1049-fdistrt.case.json (3): Calc!A10, A11, A26
+
+## Cells added by gap triage (2026-10-31m)
+`make eval` on origin/main 900fbc1bf (excel-graph). An ownership check over every failing Excel cell
+(`scripts/exit_owners.py`'s `owned` rule over the open task files of origin/main and of every `origin/agent/*` branch
+pushed since 2026-10-29) found these cells named by no open task. All are within 15 significant digits of Excel (Phase
+1b), so they join this deferred owner of their kernel. F.DIST, F.DIST.RT and FDIST at one df on the T-2220 d1-1 sweep, 1
+to 15 ulp (329 of them within 4), and the legacy FDIST/F.DIST.RT pair at (100, 100, 3), 2 ulp; and F.TEST/FTEST on the
+stat argument-modes probe, 2 ulp, whose value is an F.DIST.RT. The d1-1 line names the whole case: every failing cell of
+it not named by another open task is this task's.
+- probes-numeric/t2220-f-dist-sweep-d1-1.case.json: the whole case, its within-15-digit cells (348 at this run)
+- probes-numeric/m9-legacy-fdist.case.json (2): Calc!A69, A70
+- probes/stat-argument-modes.case.json (2): Sheet1!H248, H251
+
+## Cells added from T-3198 (2026-11-03)
+These are T-2219's gen-m9 cells that T-3198 owned. For each, Excel and ours are about equally far from the 50-digit
+reference, between 1e-16 and 1e-14 relative and usually on the same side, so matching them is fitting Excel's last bits.
+None is visibly off. T-3198's "Triage (2026-11-03)" has the per-cell table.
+Correction (gap triage 2026-11-03, `make eval` on origin/main c2062e5c8): eight of them are visibly off by the report's
+rule (more than half a unit in the 15th digit of Excel's value), and gen-m9 is a Gate B suite, so a deferred owner
+leaves them unworked in Phase 1. Their visible-parity work moved to non-deferred tasks; this task keeps only their
+bit-level residue: Calc!A374 of 2801c1c11c21e134, A34 of 285d87cea1aaa73c, A181 of 3a25a03eb94fcfbd and A50 of
+b6593d7dd13f2dac to T-3472 (accuracy); A151 of 60b0b6e69ad35a45 to T-3183; A219 of 2801c1c11c21e134 to T-3952;
+A92 of 8f2ac25945af87da to T-3954; A259 of 2a18b2f5a4dc43ac to T-1871 (its inner F.INV.RT).
+Gap triage 2026-11-04: T-3472 was deferred, so A374, A34, A181 and A50 moved on to T-4016 and T-4015; A349 of
+7bd219ec0c0c5e22 (visibly off: Excel +6.7E-15 from the math, ours -2.1E-15) moved to T-4018. This task keeps only
+their bit-level residue.
+- gen-m9/2801c1c11c21e134.case.json (2): Calc!A219, A374
+- gen-m9/285d87cea1aaa73c.case.json (1): Calc!A34
+- gen-m9/2a18b2f5a4dc43ac.case.json (1): Calc!A259
+- gen-m9/35e8168aae2b00f8.case.json (1): Calc!A123
+- gen-m9/3a25a03eb94fcfbd.case.json (2): Calc!A49, A181
+- gen-m9/4bad303d32cc3f46.case.json (1): Calc!A141
+- gen-m9/68d8ffb69ff739d8.case.json (3): Calc!A3, A29, A273
+- gen-m9/7bd219ec0c0c5e22.case.json (1): Calc!A349
+- gen-m9/8dd2312c96effb1b.case.json (2): Calc!A144, A395
+- gen-m9/8f2ac25945af87da.case.json (1): Calc!A92
+- gen-m9/9cca17438a7e6f8a.case.json (1): Calc!A220
+- gen-m9/a5828d3925575713.case.json (1): Calc!A235
+- gen-m9/a612e89321a6df9c.case.json (1): Calc!A70
+- gen-m9/b6593d7dd13f2dac.case.json (1): Calc!A50
+- gen-m9/b8ee55934c5b824c.case.json (1): Calc!A22
+- gen-m9/bc40d37cb4d8301d.case.json (1): Calc!A344
+- gen-m9/c18dbf21f11093f3.case.json (1): Calc!A289
+- gen-m9/d8266bc15533702a.case.json (2): Calc!A120, A337
+- gen-m9/ee2497a5e683c5d9.case.json (1): Calc!A118
+- gen-m9/60b0b6e69ad35a45.case.json (1): Calc!A151

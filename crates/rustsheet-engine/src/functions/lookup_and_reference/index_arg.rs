@@ -9,7 +9,8 @@ use crate::{
     },
     functions::{
         lift::{LiftCost, LiftOptions, LiftedArg},
-        util::{array_node_to_calc_result, near_integer_count},
+        util::array_node_to_calc_result,
+        util::near_integer::near_integer_count,
         Function,
     },
     model::Model,
@@ -89,7 +90,7 @@ impl Model {
         }
         if let Some(error) = table_error {
             let sorted_grid = is_sorted.ok().filter(LiftedArg::is_grid);
-            return Err(self.argument_error_each(lookup_value, sorted_grid, error, cell));
+            return Err(self.argument_error_each(args, lookup_value, sorted_grid, error, cell));
         }
         let index = match index {
             Ok(index) => index,
@@ -99,7 +100,7 @@ impl Model {
             // gen-m2/942bdade381b7537 Calc!A381, T-1468).
             Err(error) if lifts || LiftedArg::is_grid(&lookup_value) => {
                 let sorted_grid = is_sorted.ok().filter(LiftedArg::is_grid);
-                return Err(self.argument_error_each(lookup_value, sorted_grid, error, cell));
+                return Err(self.argument_error_each(args, lookup_value, sorted_grid, error, cell));
             }
             Err(error) => return Err(error),
         };
@@ -117,8 +118,10 @@ impl Model {
     /// `VLOOKUP(2,1/0,2,{TRUE;FALSE})` spill `#DIV/0!` twice, `VLOOKUP(NA(),1/0,2,{TRUE;FALSE})`
     /// `#N/A` twice (probes/lookup-argument-edges H120-H124, H336-H352), and
     /// `VLOOKUP({1;99},A1:B2,"a")` is `#VALUE!` twice (probes/vlookup-scalar-range-lookup-lifted).
+    /// `call` is the lookup's arguments (`Model::lift_values_keyed`).
     fn argument_error_each(
         &mut self,
+        call: &[Node],
         lookup_value: CalcResult,
         sorted_grid: Option<CalcResult>,
         error: CalcResult,
@@ -139,7 +142,8 @@ impl Model {
         if is_limit || !criteria.iter().any(LiftedArg::is_grid) {
             return error;
         }
-        self.lift_values(
+        self.lift_values_keyed(
+            call,
             criteria,
             LiftCost::Unit,
             &LiftOptions::REUSE_EQUAL_RUNS,
@@ -158,6 +162,9 @@ impl Model {
     /// text or an error fails before the search (probes/lookup-index-order H9, H13, H28); a
     /// reference is kept for [`Model::resolve_lookup_index`]. `INDEX(...)` is a reference too: its
     /// selected cell is read only after a match (probes/lookup-index-shapes H2, H3, H11, H12).
+    /// A reference-returning call that fails (`INDEX(E1:E4,"x")`, `OFFSET(E1,-5,0)`,
+    /// `INDIRECT("nope")`) comes back as its error and fails here like a value index, keeping
+    /// that error rather than mapping it to `#REF!` (probes/lookup-index-failing, T-4191).
     pub(super) fn lookup_index_arg(
         &mut self,
         node: &Node,

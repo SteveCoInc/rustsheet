@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use regex_automata::Match;
 
 use super::{
-    lifted::COMPARED_BYTES_PER_VISIT,
+    lifted::{to_u64, COMPARED_BYTES_PER_VISIT},
     pcre::{self, BacktrackCache, FinalLf, Form},
     regex_engine::{within_size_limits, BuildFailure, Engine, Spent},
     regex_replacement::Replacement,
@@ -37,6 +37,14 @@ const HELD_LIMIT: usize = 64 << 20;
 /// is `#ERROR!` (DEVIATION, decision 0014).
 const SEARCH_BUDGET: u64 = 1 << 30;
 
+/// Bytes of [`COMPILE_BUDGET`] charged as one unit of the formula's work budget
+/// (`area_budget::MAX_FORMULA_WORK`): the whole compile budget, about 1 s, is 2^25 units.
+const COMPILE_BYTES_PER_WORK_UNIT: u64 = 4;
+
+/// Units of [`SEARCH_BUDGET`] (about a nanosecond each) charged as one unit of the formula's work
+/// budget (`area_budget::MAX_FORMULA_WORK`): the whole search budget, about 1 s, is 2^25 units.
+const SEARCH_UNITS_PER_WORK_UNIT: u64 = 32;
+
 /// A compiled pattern (`None` when invalid), its search caches and the heap they last held.
 struct Compiled {
     matcher: Option<Matcher>,
@@ -48,9 +56,9 @@ struct Compiled {
 /// [`HELD_LIMIT`], and every search is charged against [`SEARCH_BUDGET`].
 struct PatternCache {
     /// The case-sensitive patterns, then the case-insensitive ones; each once for
-    /// [`FinalLf::EndLf`] texts, then for [`FinalLf::End`] and [`FinalLf::InnerLf`] ones (compiled
-    /// only for a text that needs it).
-    entries: [HashMap<String, Compiled>; 6],
+    /// [`FinalLf::EndLf`] texts, then for [`FinalLf::End`], [`FinalLf::InnerLf`] and
+    /// [`FinalLf::Cr`] ones (compiled only for a text that needs it).
+    entries: [HashMap<String, Compiled>; 8],
     held: usize,
     budget: usize,
     work: u64,
@@ -93,6 +101,7 @@ impl PatternCache {
             FinalLf::EndLf => 0,
             FinalLf::End => 1,
             FinalLf::InnerLf => 2,
+            FinalLf::Cr => 3,
         };
         let index = usize::from(case_insensitive) + 2 * kind;
         if !self.entries[index].contains_key(pattern) {
@@ -180,13 +189,140 @@ impl PatternCache {
         })
     }
 
-    /// The call's result: `#ERROR!` when its work ran out in any element.
-    fn finish(&self, result: CalcResult, cell: CellReferenceIndex) -> CalcResult {
-        if self.exhausted {
-            too_much_regex_work(cell)
+    /// The call's result: `#ERROR!` when its work ran out in any element. What the call spent of
+    /// its compile and search budgets is charged to the formula's work budget too, so a LAMBDA
+    /// cannot multiply a call within these budgets past the formula's (SPEC-0024). A call that ran
+    /// out is charged both whole budgets: it may have spent them, and a failed charge leaves the
+    /// counters short of what was done.
+    fn finish(
+        &self,
+        model: &mut Model,
+        result: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
+        self.finish_after(model, result, cell, 0)
+    }
+
+    /// The work units the call has spent so far: what [`Self::finish`] charges.
+    fn spent_units(&self) -> u64 {
+        let (compiled, searched) = if self.exhausted {
+            (to_u64(COMPILE_BUDGET), SEARCH_BUDGET)
         } else {
-            result
+            (
+                to_u64(COMPILE_BUDGET.saturating_sub(self.budget)),
+                SEARCH_BUDGET.saturating_sub(self.work),
+            )
+        };
+        (compiled / COMPILE_BYTES_PER_WORK_UNIT)
+            .saturating_add(searched / SEARCH_UNITS_PER_WORK_UNIT)
+    }
+
+    /// [`Self::finish`] of a call whose earlier finish already charged `charged` units: only the
+    /// rest is charged, so the finishes of one call's parts charge what one finish would.
+    fn finish_after(
+        &self,
+        model: &mut Model,
+        result: CalcResult,
+        cell: CellReferenceIndex,
+        charged: u64,
+    ) -> CalcResult {
+        let units = self.spent_units().saturating_sub(charged);
+        #[cfg(test)]
+        REGEX_UNITS.with(|total| total.set(total.get().saturating_add(units)));
+        if let Err(error) = model.spend_work(units, cell) {
+            return error;
         }
+        if self.exhausted {
+            return too_much_regex_work(cell);
+        }
+        result
+    }
+}
+
+/// The regex state of one XMATCH or XLOOKUP call (`match_mode` 3): its patterns on the REGEX*
+/// engine, so a lookup reads the same PCRE2 syntax as REGEXTEST (lookbehind, backreferences,
+/// `\K`, possessive and atomic groups; probes/t2680-lookup-regex-pcre2; T-2680), and the call's
+/// one compile, held-memory and work budget, shared by every lifted element as in a REGEX* call
+/// (SPEC-0013). Past it the call is `#ERROR!`: a DEVIATION (decision 0014), lookup.md "XMATCH and
+/// XLOOKUP regex mode".
+pub(crate) struct LookupRegexes {
+    cache: PatternCache,
+    /// The work units an earlier [`Self::finish`] charged: a keyed lookup's tail continues its
+    /// head's call (SPEC-0020 Amendment 2, section 3; `Model::keyed_regexes`).
+    charged: u64,
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Tests sum the work units regex finishes charge, to compare a keyed lookup's head and tail
+    /// with its one call (SPEC-0020 Amendment 2, section 3).
+    pub(crate) static REGEX_UNITS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+impl LookupRegexes {
+    pub(crate) fn new() -> Self {
+        LookupRegexes {
+            cache: PatternCache::new(),
+            charged: 0,
+        }
+    }
+
+    /// `pattern`, compiled for a case-sensitive search: `#VALUE!` when it is invalid,
+    /// `#ERROR!` once the call's work is spent.
+    pub(crate) fn pattern(
+        &mut self,
+        pattern: String,
+        cell: CellReferenceIndex,
+    ) -> Result<LookupPattern<'_>, CalcResult> {
+        // The text-independent compile: a pattern holding `$` or `\Z` also compiles a variant for
+        // each kind of final line feed when a text needs it, but the variants parse alike, so
+        // one that compiles here compiles there too.
+        self.cache.with(&pattern, false, "", cell, |_| Ok(()))?;
+        Ok(LookupPattern {
+            regexes: self,
+            pattern,
+        })
+    }
+
+    /// The call's result: `#ERROR!` when its work ran out in any element. Charges the work
+    /// units spent since an earlier finish of the same call, so a keyed lookup's head and tail,
+    /// finishing one cache in turn, charge and fail as its one call does (SPEC-0020 Amendment 2,
+    /// section 3): the units are a function of the cache's counters, which the tail continues.
+    pub(crate) fn finish(
+        &mut self,
+        model: &mut Model,
+        result: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
+        let result = self.cache.finish_after(model, result, cell, self.charged);
+        self.charged = self.cache.spent_units();
+        result
+    }
+
+    #[cfg(test)]
+    fn spend(&mut self, left: u64) {
+        self.cache.work = left;
+    }
+}
+
+/// One element's compiled pattern, searching on its call's [`LookupRegexes`].
+pub(crate) struct LookupPattern<'a> {
+    regexes: &'a mut LookupRegexes,
+    pattern: String,
+}
+
+impl LookupPattern<'_> {
+    /// Whether the pattern matches anywhere in `text`; `#ERROR!` once the call's work is spent.
+    pub(crate) fn is_match(
+        &mut self,
+        text: &str,
+        cell: CellReferenceIndex,
+    ) -> Result<bool, CalcResult> {
+        self.regexes
+            .cache
+            .with(&self.pattern, false, text, cell, |search| {
+                search.is_match(text)
+            })
     }
 }
 
@@ -304,7 +440,14 @@ impl Model {
         max: u8,
         cell: CellReferenceIndex,
     ) -> Result<u8, CalcResult> {
-        let n = self.cast_number_or(value, 0.0, cell)?.trunc();
+        let n = self.cast_number_or(value, 0.0, cell)?;
+        Self::regex_option_in_range(n, max, cell)
+    }
+
+    /// The range check of [`Model::regex_option`] on an already coerced number: truncated, it must
+    /// be 0 to `max`, else `#VALUE!`.
+    fn regex_option_in_range(n: f64, max: u8, cell: CellReferenceIndex) -> Result<u8, CalcResult> {
+        let n = n.trunc();
         (0..=max)
             .find(|&option| f64::from(option) == n)
             .ok_or_else(|| CalcResult::new_error(Error::VALUE, cell, "Invalid option".to_string()))
@@ -345,12 +488,17 @@ impl Model {
             COMPARED_BYTES_PER_VISIT,
             |model, values, first_only| {
                 let options = Model::regex_operands(values, cell).and_then(|operands| {
-                    let mode = match model.regex_option(values.get(2), 2, cell)? {
+                    // return_mode is coerced before case_sensitivity, but its range is checked
+                    // after it: `REGEXEXTRACT("abc","^.",-2.5,#DIV/0!)` is #DIV/0!, while a
+                    // non-number text return_mode is #VALUE! first (gen-m7/781b74b7c112265f
+                    // B6833; text.md "REGEX* optional arguments", T-3810).
+                    let mode = model.cast_number_or(values.get(2), 0.0, cell)?;
+                    let insensitive = model.regex_case_insensitive(values.get(3), cell)?;
+                    let mode = match Self::regex_option_in_range(mode, 2, cell)? {
                         0 => ReturnMode::First,
                         1 => ReturnMode::All,
                         _ => ReturnMode::Groups,
                     };
-                    let insensitive = model.regex_case_insensitive(values.get(3), cell)?;
                     Ok((operands, mode, insensitive))
                 });
                 let ((text, pattern), mode, insensitive) = match options {
@@ -413,7 +561,7 @@ impl Model {
                 CalcResult::Array(vec![row])
             },
         );
-        cache.finish(result, cell)
+        cache.finish(self, result, cell)
     }
 
     /// REGEXREPLACE(text, `regular_expression`, replacement, [occurrence], [`case_sensitivity`])
@@ -513,9 +661,9 @@ impl Model {
         );
         if over_budget {
             // As a text broadcast past its cap: one `#VALUE!` (text.md, first entry).
-            return cache.finish(too_long(cell), cell);
+            return cache.finish(self, too_long(cell), cell);
         }
-        cache.finish(result, cell)
+        cache.finish(self, result, cell)
     }
 
     /// REGEXTEST(text, `regular_expression`, [`case_sensitivity`])
@@ -551,7 +699,7 @@ impl Model {
                 }
             },
         );
-        cache.finish(result, cell)
+        cache.finish(self, result, cell)
     }
 }
 
@@ -574,6 +722,41 @@ mod tests {
                 ..
             })
         )
+    }
+
+    // T-2680: a lookup's patterns share their call's budget; once it is spent the search and
+    // the call are `#ERROR!` (DEVIATION, decision 0014), and an invalid pattern is `#VALUE!`.
+    #[test]
+    fn lookup_regexes_share_the_call_budget() {
+        let mut regexes = super::LookupRegexes::new();
+        assert!(matches!(
+            regexes.pattern("(".into(), CELL),
+            Err(CalcResult::Error {
+                error: Error::VALUE,
+                ..
+            })
+        ));
+        let matched = regexes
+            .pattern("a".into(), CELL)
+            .and_then(|mut p| p.is_match("cat", CELL));
+        assert!(matches!(matched, Ok(true)));
+        regexes.spend(1_000);
+        let text = "y".repeat(1 << 16);
+        let spent = regexes
+            .pattern("x".into(), CELL)
+            .and_then(|mut p| p.is_match(&text, CELL));
+        assert!(is_error(&spent));
+        assert!(matches!(
+            regexes.finish(
+                &mut crate::test::util::new_empty_model(),
+                CalcResult::Number(1.0),
+                CELL
+            ),
+            CalcResult::Error {
+                error: Error::ERROR,
+                ..
+            }
+        ));
     }
 
     // T-1272 performance review: a simple pattern is charged what its lazy DFA scans, so a

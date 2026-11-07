@@ -1,6 +1,7 @@
+pub(crate) mod near_integer;
+
 use crate::external_reference::PickedReference;
 use crate::{
-    area_budget::SLOTS_PER_WALK_STEP,
     calc_result::{CalcResult, Range},
     constants::{LAST_COLUMN, LAST_ROW},
     expressions::{
@@ -17,6 +18,13 @@ use crate::{
 
 pub(crate) mod aggregate_args;
 pub(crate) mod collation;
+pub(crate) mod collation_tables;
+mod pairwise_order;
+pub(crate) use pairwise_order::{coalesce_equal_lines, sort_indices_pairwise};
+mod existing_walk;
+
+pub(crate) use existing_walk::StoredWalk;
+use existing_walk::{span, WalkBudget};
 
 use collation::cmp_text;
 
@@ -172,6 +180,17 @@ pub(crate) fn compare_values(left: &CalcResult, right: &CalcResult) -> i32 {
     }
 }
 
+/// [`compare_values`], except that two texts compare as Excel's `<`, `=`, `>` do (`cmp_text_pairwise`):
+/// the lookups and SWITCH use this (T-3210), and SORT and SORTBY through `sort_key_cmp` with
+/// [`sort_indices_pairwise`] (T-3211); GROUPBY and PIVOTBY keep the total `cmp_text`
+/// (docs/excel-semantics/coercion.md "Not a total order"; probes/t3181-collation-prefix-callers).
+pub(crate) fn compare_values_pairwise(left: &CalcResult, right: &CalcResult) -> i32 {
+    match (left, right) {
+        (CalcResult::String(l), CalcResult::String(r)) => collation::cmp_text_pairwise(l, r) as i32,
+        _ => compare_values(left, right),
+    }
+}
+
 /// Whether `node` is `@IF(...)`: the `@` of an IF keeps the reference the IF picks.
 pub(crate) fn is_at_if(node: &Node) -> bool {
     matches!(
@@ -193,21 +212,6 @@ pub(crate) fn is_at_xlookup_take(node: &Node) -> bool {
     )
 }
 
-/// Most columns holding cells that a union area may have to be walked through the column index
-/// ([`Model::for_each_indexed_position`]); a wider one is walked by rows. The merge compares the
-/// next row of every column still being merged for each row it hands on, and a row is charged at
-/// least a step per four of them, so with this few columns the comparisons stay a small part of
-/// a row's cost.
-const MAX_INDEXED_COLUMNS: usize = 16;
-
-/// Fewest rows of the sheet a union area must span to be walked through the column index
-/// ([`Model::for_each_existing_position`]): one chunk of row storage.
-const MIN_INDEXED_ROWS: i32 = 1024;
-
-/// Rows of one column an indexed walk reads from the index at a time: one search, then a step per
-/// row, so a dense column costs a read step per this many cells.
-const INDEX_BATCH_ROWS: usize = 64;
-
 /// Which cells of a sheet a range walk hands on ([`Model::walk_area`]). The two dense walks
 /// differ only for an explicit block reaching past the used area: `ClipBlocks` stops at the
 /// used area ([`Model::clip_block_to_used_area`]), `ClipWholeLines` walks the block whole and
@@ -223,26 +227,34 @@ enum AreaWalk {
     Existing,
 }
 
-/// The rows of one column of an indexed walk that were read from the index, from `next` on not
-/// yet handed on.
-struct ColumnBatch {
-    column: i32,
-    rows: Vec<i32>,
-    next: usize,
+/// What a range walk hands its walker ([`Model::walk_area`]): a position to read, or, for an
+/// `AreaWalk::ClipWholeLines` walk over a mostly blank area, a run of blank positions handed on
+/// as their count, in row-major order between the positions around it.
+enum AreaStep {
+    Position(CellReferenceIndex),
+    Blanks(u64),
 }
 
-impl ColumnBatch {
-    fn head(&self) -> Option<i32> {
-        self.rows.get(self.next).copied()
-    }
-
-    /// Whether the index may hold rows past the ones read: the read was full and is used up.
-    fn needs_read(&self) -> bool {
-        self.next == self.rows.len() && self.rows.len() == INDEX_BATCH_ROWS
-    }
+/// What [`Model::for_each_cell_or_error_in_whole_range`] hands its walker, in row-major order:
+/// a cell's value, or a run of blank cells as their count, so a mostly blank range costs its
+/// data, not its positions (T-2710).
+pub(crate) enum RangeItem {
+    Cell(CalcResult),
+    Blanks(u64),
 }
 
 impl Model {
+    /// MATCH's, VLOOKUP's and HLOOKUP's table argument: [`Model::external_lookup_table`] for a
+    /// table written into a linked workbook, else [`Model::evaluate_single_sheet_arg`].
+    pub(crate) fn evaluate_lookup_table_arg(
+        &mut self,
+        node: &Node,
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
+        self.external_lookup_table(node, cell)
+            .unwrap_or_else(|| self.evaluate_single_sheet_arg(node, cell))
+    }
+
     /// Evaluates an argument that must be a single-sheet reference (INDEX, AREAS, VLOOKUP,
     /// MATCH, COUNTBLANK): a 3-D reference is `#VALUE!` there, not the `#REF!` it is as a
     /// value (probes/3d-ref-functions; docs/excel-semantics/references.md). A one-cell reference,
@@ -348,6 +360,17 @@ impl Model {
         blanks: CachedBlanks,
         cell: CellReferenceIndex,
     ) -> RefArg {
+        // Bracketed for the ERROR.TYPE/CELL mark (`number_mark.rs`).
+        self.marking(node, |model| model.reference_arg_read(node, blanks, cell))
+    }
+
+    /// [`Self::reference_arg_reading`] without the bracket.
+    fn reference_arg_read(
+        &mut self,
+        node: &Node,
+        blanks: CachedBlanks,
+        cell: CellReferenceIndex,
+    ) -> RefArg {
         // An IF or CHOOSE that may pick a reference into another workbook is the argument it
         // picks (`SUM(IF(TRUE,…!A1))` is `#BLOCKED!`; probes/external-ref-no-link-ifchoose A3).
         // An aggregate reading cells of another workbook reads what its externalLink cache
@@ -412,6 +435,12 @@ impl Model {
             } => return self.let_impl(args, cell, true),
             // A LET variable bound to a union is its areas (probes/multiarea-let H1).
             Node::NamedVariableKind { .. } => return self.variable_reference(node, cell),
+            // REDUCE ends on the accumulator, a union kept (probes/t4478-reduce-scan-reference-
+            // accumulator Calc!H7, T-4494).
+            Node::FunctionKind {
+                kind: Function::Reduce,
+                args,
+            } => return self.reduce_reference(args, cell),
             Node::LambdaCallKind { lambda, args } => {
                 return self.call_callee_as_reference(lambda, args, cell)
             }
@@ -427,10 +456,17 @@ impl Model {
                     | Function::Vstack),
                 args,
             } => return self.reference_producer(kind, args, cell),
+            // One index into a column of a mixed grid keeps a reference element (T-4701).
             Node::FunctionKind {
                 kind: Function::Index,
                 args,
-            } => self.index_reference(args, cell),
+            } => return self.index_reference_arg(args, cell),
+            // A lifted XLOOKUP with a range if_not_found is an array of its hits and that range
+            // (SPEC-0014 amendment "Mixed grids"); any other XLOOKUP is its value, as before.
+            Node::FunctionKind {
+                kind: Function::Xlookup,
+                args,
+            } => return self.xlookup_reference(args, cell, false),
             Node::FunctionKind {
                 kind: Function::Hlookup,
                 args,
@@ -466,6 +502,19 @@ impl Model {
         blanks: CachedBlanks,
         cell: CellReferenceIndex,
     ) -> RefArg {
+        // Bracketed for the ERROR.TYPE/CELL mark (`number_mark.rs`).
+        self.marking(node, |model| {
+            model.picked_reference_arg_read(node, blanks, cell)
+        })
+    }
+
+    /// [`Self::picked_reference_arg_reading`] without the bracket.
+    fn picked_reference_arg_read(
+        &mut self,
+        node: &Node,
+        blanks: CachedBlanks,
+        cell: CellReferenceIndex,
+    ) -> RefArg {
         // The arm a scalar IF, CHOOSE, IFS or SWITCH picks and a LET body follow the same rule,
         // however deeply they nest: `SUBTOTAL(9,IF(TRUE,XLOOKUP(1,J1:J2,H1:I2)))` is 9 and
         // `AREAS(LET(v,1,XLOOKUP(..)))` 1 (probes/subtotal-if-choose-over-xlookup A10-A42,
@@ -477,7 +526,9 @@ impl Model {
         };
         if let Some(picked) = self.pick_step(kind, args, cell) {
             return match picked {
-                Picked::Node(arm) => self.picked_reference_arg_reading(arm, blanks, cell),
+                Picked::Node(arm) => self.passing_mark(arm, |model| {
+                    model.picked_reference_arg_reading(arm, blanks, cell)
+                }),
                 Picked::Value(value) => RefArg::Value(value),
             };
         }
@@ -491,9 +542,24 @@ impl Model {
             // top-left cells (`SUM(TRIMRANGE(A1:B5,{0;1}))` is 10 with A1 = 5;
             // probes/trimrange-lift-sources D27).
             Function::Trimrange => self.trimrange_reference(args, cell, true),
-            // So does a lifted TAKE or DROP over a range (T-1838).
-            Function::Take => self.take_drop_reference(args, cell, Edge::Take, true),
-            Function::Drop => self.take_drop_reference(args, cell, Edge::Drop, true),
+            // So does a lifted TAKE or DROP over a range (T-1838), which still empties
+            // AMORDEGRC's left-over value (probes/amordegrc-fraction-state-bp, -bq).
+            Function::Take | Function::Drop => {
+                let edge = match kind {
+                    Function::Take => Edge::Take,
+                    _ => Edge::Drop,
+                };
+                let value = self.take_drop_reference(args, cell, edge, true);
+                self.empty_amor_left_over();
+                value
+            }
+            // So does a lifted XLOOKUP with a range if_not_found (SPEC-0014 amendment "Mixed
+            // grids"), which also empties AMORDEGRC's left-over value as its reference form does.
+            Function::Xlookup => {
+                let value = self.xlookup_reference(args, cell, true);
+                self.empty_amor_left_over();
+                value
+            }
             _ if kind.picks_reference() => match self.evaluate_reference_form(kind, args, cell) {
                 Some(result) => RefArg::from(result),
                 None => self.reference_arg_reading(node, blanks, cell),
@@ -587,7 +653,9 @@ impl Model {
     /// something: TEXTJOIN with `ignore_empty` FALSE adds a delimiter for it. (GCD and LCM read
     /// it as 0, `LCM(F1:F3)` with 4, blank, 6 is 0, docs/excel-semantics/coercion.md, but any
     /// number of blanks as one: [`Self::for_each_cell_or_error_in_range_noting_blanks`].)
-    /// Whole-row and whole-column ranges are still clipped to the used area.
+    /// Whole-row and whole-column ranges are still clipped to the used area. A mostly blank
+    /// area ([`Self::walks_sparsely`]) hands its blank cells on as runs, [`RangeItem::Blanks`],
+    /// so the walk costs the cells that exist (T-2710).
     pub(crate) fn for_each_cell_or_error_in_whole_range<F>(
         &mut self,
         range: &Range,
@@ -595,15 +663,18 @@ impl Model {
         mut f: F,
     ) -> Result<(), CalcResult>
     where
-        F: FnMut(&mut Self, CalcResult) -> Result<(), CalcResult>,
+        F: FnMut(&mut Self, RangeItem) -> Result<(), CalcResult>,
     {
         self.walk_area(
             range,
             AreaWalk::ClipWholeLines,
             cell,
-            &mut |model, position| {
-                let value = model.evaluate_cell(position);
-                f(model, value)
+            &mut |model, step| match step {
+                AreaStep::Position(position) => {
+                    let value = model.evaluate_cell(position);
+                    f(model, RangeItem::Cell(value))
+                }
+                AreaStep::Blanks(count) => f(model, RangeItem::Blanks(count)),
             },
         )
         .map(|_| ())
@@ -623,7 +694,11 @@ impl Model {
     where
         F: FnMut(&mut Self, CalcResult) -> Result<(), CalcResult>,
     {
-        self.walk_area(range, AreaWalk::ClipBlocks, cell, &mut |model, position| {
+        self.walk_area(range, AreaWalk::ClipBlocks, cell, &mut |model, step| {
+            let AreaStep::Position(position) = step else {
+                // A `ClipBlocks` walk hands on no blank runs: its blanks are left out.
+                return Ok(());
+            };
             let value = model.evaluate_cell(position);
             f(model, value)
         })
@@ -653,13 +728,14 @@ impl Model {
 
     /// Calls `f` with the position of the cells of one area, row by row. A range that is the
     /// whole argument (`of_union` false) is walked densely: every position of the range within
-    /// each sheet's used area, for an explicit block as for whole rows and columns (T-0405). An
-    /// area of a union is walked over the cells that exist only: every caller of a union walk
-    /// skips blank cells, and a union can repeat a whole column
-    /// many times over (`MAX_AREAS` copies, or a LAMBDA walking one per row), so the walk must
-    /// cost what the data costs (T-1497). Its work is drawn from the formula's walk budget
-    /// ([`Model::spend_area_walk`]) as it goes, and the area is recorded as seen empty in one
-    /// piece rather than cell by cell.
+    /// each sheet's used area, for an explicit block as for whole rows and columns (T-0405),
+    /// unless a far cell leaves that area mostly blank, when it is walked like a union's area
+    /// ([`Self::walks_sparsely`], T-1690). An area of a union is walked over the cells that
+    /// exist only: every caller of a union walk skips blank cells, and a union can repeat a
+    /// whole column many times over (`MAX_AREAS` copies, or a LAMBDA walking one per row), so
+    /// the walk must cost what the data costs (T-1497). Its work is drawn from the formula's
+    /// walk budget ([`Model::spend_area_walk`]) as it goes, and the area is recorded as seen
+    /// empty in one piece rather than cell by cell.
     pub(crate) fn for_each_position_in_area<F>(
         &mut self,
         area: &Range,
@@ -675,7 +751,12 @@ impl Model {
         } else {
             AreaWalk::ClipBlocks
         };
-        self.walk_area(area, walk, cell, f).map(|_| ())
+        self.walk_area(area, walk, cell, &mut |model, step| match step {
+            AreaStep::Position(position) => f(model, position),
+            // Only a `ClipWholeLines` walk hands on blank runs.
+            AreaStep::Blanks(_) => Ok(()),
+        })
+        .map(|_| ())
     }
 
     /// [`Self::for_each_position_in_area`] with the cells of each sheet chosen as `walk` says.
@@ -689,7 +770,7 @@ impl Model {
         f: &mut F,
     ) -> Result<bool, CalcResult>
     where
-        F: FnMut(&mut Self, CellReferenceIndex) -> Result<(), CalcResult>,
+        F: FnMut(&mut Self, AreaStep) -> Result<(), CalcResult>,
     {
         let Range { left, right } = area;
         // The columns of a row found by a union walk, reused from row to row and sheet to sheet.
@@ -702,7 +783,13 @@ impl Model {
         for sheet in left.sheet..=right.sheet {
             let clipped = match walk {
                 AreaWalk::Existing => {
-                    self.for_each_existing_position(sheet, (left, right), cell, &mut columns, f)?;
+                    self.for_each_existing_position(
+                        sheet,
+                        (left, right),
+                        cell,
+                        (&mut columns, WalkBudget::Charged),
+                        &mut |model, position| f(model, AreaStep::Position(position)),
+                    )?;
                     continue;
                 }
                 AreaWalk::ClipBlocks => self
@@ -724,169 +811,54 @@ impl Model {
             };
             let (row2, column2) =
                 clipped.map_err(|message| CalcResult::new_error(Error::ERROR, cell, message))?;
+            // A far cell stretches the used area: `SUM(A:XFD)` with data in A1 and XFD1048576
+            // is 1.7e10 positions. A mostly blank area is walked over its cells that exist, as
+            // a union's areas are, so the walk costs the data (T-1690, T-2710). The blank cells
+            // it skips are ones the dense walk hands on, so `ClipBlocks` reports them left out
+            // and `ClipWholeLines` hands them on as runs between the cells it visits.
+            if self.walks_sparsely(sheet, left, (row2, column2)) {
+                blanks_left_out = true;
+                let corner = CellReferenceIndex {
+                    sheet,
+                    row: row2,
+                    column: column2,
+                };
+                let runs = matches!(walk, AreaWalk::ClipWholeLines);
+                let width = span(left.column, column2);
+                // The row-major index of the next position not yet handed on. Every position
+                // the walk visits lies inside the area, so its index is below the area's size.
+                let mut next: u64 = 0;
+                self.for_each_existing_position(
+                    sheet,
+                    (left, &corner),
+                    cell,
+                    (&mut columns, WalkBudget::Free),
+                    &mut |model, position| {
+                        let index = span(left.row, position.row - 1) * width
+                            + span(left.column, position.column - 1);
+                        if runs && index > next {
+                            f(model, AreaStep::Blanks(index - next))?;
+                        }
+                        next = index + 1;
+                        f(model, AreaStep::Position(position))
+                    },
+                )?;
+                let positions = span(left.row, row2) * width;
+                if runs && positions > next {
+                    f(self, AreaStep::Blanks(positions - next))?;
+                }
+                continue;
+            }
             for row in left.row..=row2 {
                 for column in left.column..=column2 {
-                    f(self, CellReferenceIndex { sheet, row, column })?;
+                    f(
+                        self,
+                        AreaStep::Position(CellReferenceIndex { sheet, row, column }),
+                    )?;
                 }
             }
         }
         Ok(blanks_left_out)
-    }
-
-    /// The union-area walk of [`Self::for_each_position_in_area`] on one sheet: the existing
-    /// cells of the rectangle `left..=right`, in row-major order like the dense walk, so the
-    /// first error cell is the same one. The area, every chunk and row slot the search looks at
-    /// and every cell it hands to `f` are paid for before `f` runs. An area whose cells lie in at
-    /// most [`MAX_INDEXED_COLUMNS`] columns is walked through the column index instead
-    /// ([`Self::for_each_indexed_position`]), so the rows other columns fill cost it nothing.
-    fn for_each_existing_position<F>(
-        &mut self,
-        sheet: u32,
-        (left, right): (&CellReferenceIndex, &CellReferenceIndex),
-        cell: CellReferenceIndex,
-        columns: &mut Vec<i32>,
-        f: &mut F,
-    ) -> Result<(), CalcResult>
-    where
-        F: FnMut(&mut Self, CellReferenceIndex) -> Result<(), CalcResult>,
-    {
-        let sheet_error = |message| CalcResult::new_error(Error::ERROR, cell, message);
-        // The positions not handed to `f` are empty. Recording the whole rectangle covers the
-        // existing cells too, which is harmless: a spill can only write where nothing but its
-        // own spill cells stands, and those read as empty until it has run.
-        // The area itself is a step: its record must be paid for even when it finds nothing, or
-        // a LAMBDA repeating a union over an empty sheet would grow the record without bound.
-        self.spend_area_walk(1, cell)?;
-        self.record_seen_empty_range(sheet, left.row, left.column, right.row, right.column);
-        let data = &mut self
-            .workbook
-            .worksheet_mut(sheet)
-            .map_err(sheet_error)?
-            .sheet_data;
-        // Only an area over more rows of the sheet than one chunk gains from the index: the row
-        // walk of a shorter one is a chunk's slots at most. Such an area builds the index, once
-        // per sheet: a pass over its cells, after which every write keeps it in step. Finding
-        // the area's columns is then a search of the index per column found (one when none).
-        if right.row.min(data.last_row()) - left.row >= MIN_INDEXED_ROWS {
-            data.build_column_index();
-            let few = data.columns_between(left.column, right.column, MAX_INDEXED_COLUMNS, columns);
-            self.spend_area_walk((columns.len() as u64).max(1), cell)?;
-            if few {
-                return self.for_each_indexed_position(sheet, (left, right), cell, columns, f);
-            }
-        }
-        // Slots are paid for in whole steps as they add up, so a dense column costs a step per
-        // cell and one more per `SLOTS_PER_WALK_STEP` rows.
-        let mut slots: u64 = 0;
-        let mut from = left.row;
-        while from <= right.row {
-            let search = self
-                .workbook
-                .worksheet(sheet)
-                .map_err(sheet_error)?
-                .sheet_data
-                .next_row_between(from, right.row);
-            let paid = slots.div_ceil(SLOTS_PER_WALK_STEP);
-            slots += search.slots;
-            let steps = search.absent_chunks + (slots.div_ceil(SLOTS_PER_WALK_STEP) - paid);
-            self.spend_area_walk(steps, cell)?;
-            let Some(row) = search.row else {
-                break;
-            };
-            self.workbook
-                .worksheet(sheet)
-                .map_err(sheet_error)?
-                .sheet_data
-                .columns_in_row_between(row, left.column, right.column, columns);
-            // A row costs a step even with no cell in the area's columns: finding them is a
-            // search of the row.
-            self.spend_area_walk((columns.len() as u64).max(1), cell)?;
-            for &column in columns.iter() {
-                f(self, CellReferenceIndex { sheet, row, column })?;
-            }
-            from = row + 1;
-        }
-        Ok(())
-    }
-
-    /// The walk of [`Self::for_each_existing_position`] through the column index, for an area
-    /// whose cells lie in `columns` (ascending, at most [`MAX_INDEXED_COLUMNS`] of them): each
-    /// column's rows are read from the index [`INDEX_BATCH_ROWS`] at a time and merged in
-    /// row-major order, so only the area's own cells are visited. A read is a step and every
-    /// cell handed to `f` is a step (a row at least one per four columns still being merged), paid
-    /// before `f` runs. `f` may write to the sheet (a spill
-    /// anchored in the area); each of `columns` is then read again from the next row on, a step
-    /// each, as the row walk finds each next row afresh. The set of columns is fixed when the walk
-    /// starts: a spill into a column of the area that held no cell is not walked, and is caught
-    /// by the seen-empty record of the area, which restarts the pass.
-    fn for_each_indexed_position<F>(
-        &mut self,
-        sheet: u32,
-        (left, right): (&CellReferenceIndex, &CellReferenceIndex),
-        cell: CellReferenceIndex,
-        columns: &[i32],
-        f: &mut F,
-    ) -> Result<(), CalcResult>
-    where
-        F: FnMut(&mut Self, CellReferenceIndex) -> Result<(), CalcResult>,
-    {
-        let sheet_error = |message| CalcResult::new_error(Error::ERROR, cell, message);
-        let mut batches: Vec<ColumnBatch> = columns
-            .iter()
-            .map(|&column| ColumnBatch {
-                column,
-                rows: Vec::new(),
-                next: 0,
-            })
-            .collect();
-        let mut row_columns = Vec::with_capacity(columns.len());
-        let mut version = None;
-        let mut from = left.row;
-        loop {
-            let data = &self
-                .workbook
-                .worksheet(sheet)
-                .map_err(sheet_error)?
-                .sheet_data;
-            let stale = version != Some(data.layout_version());
-            version = Some(data.layout_version());
-            let mut reads = 0;
-            for batch in &mut batches {
-                if stale || batch.needs_read() {
-                    data.rows_in_column_between(
-                        batch.column,
-                        (from, right.row),
-                        INDEX_BATCH_ROWS,
-                        &mut batch.rows,
-                    );
-                    batch.next = 0;
-                    reads += 1;
-                }
-            }
-            self.spend_area_walk(reads, cell)?;
-            // A column with no rows left is done (a write by `f` into it is caught by the
-            // area's read-empty record, as for a column that held none at the start).
-            batches.retain(|batch| batch.head().is_some());
-            let Some(row) = batches.iter().filter_map(ColumnBatch::head).min() else {
-                break;
-            };
-            row_columns.clear();
-            for batch in &mut batches {
-                if batch.head() == Some(row) {
-                    row_columns.push(batch.column);
-                    batch.next += 1;
-                }
-            }
-            // A row is a step per cell handed on, and at least a step per four columns still
-            // being merged, which each row compares.
-            let merge = batches.len().div_ceil(4);
-            self.spend_area_walk(row_columns.len().max(merge) as u64, cell)?;
-            for &column in &row_columns {
-                f(self, CellReferenceIndex { sheet, row, column })?;
-            }
-            from = row + 1;
-        }
-        Ok(())
     }
 
     /// Calls `f` with every number held by the cells of `areas`, in the order of
@@ -922,40 +894,33 @@ pub(crate) fn poly(c: &[f64], y: f64) -> f64 {
 
 /// Excel's `MOD`: the exact remainder (`fmod`) shifted into the divisor's sign. Not
 /// `n - d*floor(n/d)`, which loses precision for tiny divisors; evidence: `MOD_QUOTIENT.xlsx`
-/// C20/C21/C25/C26 (docs/excel-semantics/numbers.md). `divisor` must be non-zero.
-pub(crate) fn excel_mod(value: f64, divisor: f64) -> f64 {
+/// C20/C21/C25/C26 (docs/excel-semantics/numbers.md). `divisor` must be non-zero. `None` is
+/// Excel's `#NUM!` for a remainder that passes below the smallest normal double.
+pub(crate) fn excel_mod(value: f64, divisor: f64) -> Option<f64> {
     let remainder = value % divisor;
     if remainder == 0.0 {
         // Drop the sign of -0.0 (fmod keeps the dividend's sign).
-        0.0
-    } else if (remainder < 0.0) != (divisor < 0.0) {
-        remainder + divisor
-    } else {
-        remainder
+        return Some(0.0);
     }
-}
-
-/// How far below the next integer a whole-number argument may fall and still count as that
-/// integer: 2^-22 + 2^-33, the same at 1, 500, 1000, 30000 and 100000 (an absolute bound, not
-/// relative). LEFT, RIGHT, REPLACE counts, INDEX's and VLOOKUP/HLOOKUP's indexes and TIME share it.
-pub(crate) const NEAR_INTEGER_TOLERANCE: f64 = 1.0 / 4_194_304.0 + 1.0 / 8_589_934_592.0;
-
-/// The whole number LEFT, RIGHT, REPLACE, INDEX, VLOOKUP and HLOOKUP read from a count, position
-/// or index: `x` floored, except that a fraction within [`NEAR_INTEGER_TOLERANCE`] of the next
-/// integer counts as that integer, so `LEFT("abc",1-2^-22)` is "a". MID truncates exactly and does
-/// not use this.
-// Excel: docs/excel-semantics/text.md "LEFT, RIGHT and REPLACE round counts up near an
-// integer" (probes/text-count-argument-bounds) and lookup.md "INDEX rounds an index up near an
-// integer" (probes/index-snap-tolerance).
-pub(crate) fn near_integer_count(x: f64) -> f64 {
-    near_integer_floor(x, NEAR_INTEGER_TOLERANCE)
-}
-
-/// `x` floored, but a fraction within `tolerance` of the next integer counts as that integer.
-pub(crate) fn near_integer_floor(x: f64, tolerance: f64) -> f64 {
-    let whole = x.floor();
-    // `x - whole` is exact for every finite double, so the bound is not blurred at large x.
-    whole + f64::from(u8::from(x - whole >= 1.0 - tolerance))
+    // Excel: a subnormal remainder, or a subnormal shifted result, is #NUM!; when both are
+    // subnormal the result is `d - fmod` if |d| is exactly 2^-1022 and #NUM! otherwise
+    // (`MOD(-(2^-1021*(1+2^-52)),2^-1022)` = 2^-1022+2^-1073, probes/t2714-mod-near-smallest-
+    // normal, -b, -c; numbers.md "MOD near the smallest normal").
+    let is_subnormal = |x: f64| x.abs() < f64::MIN_POSITIVE;
+    if (remainder < 0.0) == (divisor < 0.0) {
+        return (!is_subnormal(remainder)).then_some(remainder);
+    }
+    let shifted = remainder + divisor;
+    match (is_subnormal(remainder), is_subnormal(shifted)) {
+        (true, true) if divisor.abs() == f64::MIN_POSITIVE => Some(divisor - remainder),
+        (false, false) => {
+            // A shift that rounds back to the divisor is 0: `MOD(1,-(2^54))` = 0 but
+            // `MOD(1,-(2^53))` = 1-2^53 (probes/mod-huge-opposite-divisor; numbers.md "MOD of
+            // a small number by a huge opposite-sign divisor is 0").
+            Some(if shifted == divisor { 0.0 } else { shifted })
+        }
+        _ => None,
+    }
 }
 
 impl Function {
@@ -977,24 +942,24 @@ impl Function {
     pub(crate) fn picks_reference(&self) -> bool {
         self.picked_reference_arg().is_some()
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::near_integer_count;
-
-    #[test]
-    fn near_integer_count_rounds_up_within_the_tolerance() {
-        // probes/text-count-argument-bounds Z10, Z9, AA1, AA2: 1 - (2^-22 + 2^-33) is 1, a hair
-        // further down is 0; the bound is absolute (AA13, AA14 below 30000).
-        let at = 2f64.powi(-22) + 2f64.powi(-33);
-        let past = 2f64.powi(-22) + 9.0 * 2f64.powi(-36);
-        assert_eq!(near_integer_count(1.0 - at), 1.0);
-        assert_eq!(near_integer_count(1.0 - past), 0.0);
-        assert_eq!(near_integer_count(30000.0 - at), 30000.0);
-        assert_eq!(near_integer_count(30000.0 - past), 29999.0);
-        assert_eq!(near_integer_count(2.5), 2.0);
-        assert_eq!(near_integer_count(1e-300), 0.0);
-        assert_eq!(near_integer_count(1e100), 1e100);
+    /// The built-ins whose result can be a reference they pick or build: INDEX, OFFSET and INDIRECT, the arm a
+    /// scalar IF, CHOOSE, SWITCH or IFS takes, a LET body, the accumulator REDUCE ends with
+    /// (`AREAS(REDUCE(A1,A2:A3,LAMBDA(a,v,(a,v))))` is 3, probes/t4478-reduce-scan-reference-accumulator
+    /// Calc!H7, T-4494), and [`Function::picks_reference`]'s.
+    /// The parser takes them as reference operands (`is_reference_operand`) and FORMULATEXT
+    /// reads the reference they pick (`fn_formulatext`, T-2726).
+    pub(crate) fn may_be_reference(&self) -> bool {
+        matches!(
+            self,
+            Function::Index
+                | Function::Offset
+                | Function::Indirect
+                | Function::If
+                | Function::Choose
+                | Function::Switch
+                | Function::Ifs
+                | Function::Let
+        ) || self.picks_reference()
     }
 }

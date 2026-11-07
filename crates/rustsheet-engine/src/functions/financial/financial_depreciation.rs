@@ -17,85 +17,11 @@ use crate::functions::lift::{div_error, num_error};
 // See https://github.com/fsprojects/ExcelFinancialFunctions
 // ---------------------------------------------------------------------------
 
-// `totalDepr`: cumulative depreciation between period 0 and `period`.
-//
-// Walks the declining-balance schedule one (integer) period at a time,
-// optionally switching to straight line when that yields a larger amount,
-// and prorates the contribution of the period that contains the fractional
-// part of `period`.
-fn vdb_total_depr(
-    cost: f64,
-    salvage: f64,
-    life: f64,
-    period: f64,
-    factor: f64,
-    straight_line: bool,
-) -> f64 {
-    let frac = period - period.trunc();
-    let int_period = period.trunc() as i64;
-    let int_life = life.trunc() as i64;
-
-    let ddb_unclipped = |tot: f64| (cost - tot) * (factor / life);
-    let ddb_formula = |tot: f64| ddb_unclipped(tot).min(cost - salvage - tot);
-    let sln_formula = |tot: f64, a_period: f64| (cost - tot - salvage) / (life - a_period);
-
-    // Salvage above cost never switches: VDB(2400,3000,10,0,1) is -600 (the declining-balance
-    // charge `cost - salvage`), not the straight-line -60 (probes/fin-vdb-modes A17).
-    let switches = salvage <= cost;
-    // A fractional period prorates the unclipped charge, then the total stops at `cost - salvage`:
-    // VDB(2400,300,10,9.5,10) is 0 (probes/fin-vdb-modes A9).
-    let cap = cost - salvage;
-
-    let mut tot_depr = 0.0;
-    let mut per = 0.0_f64;
-    loop {
-        let ddb_depr = ddb_formula(tot_depr);
-        let sln_depr = sln_formula(tot_depr, per);
-        let is_sln = straight_line && switches && ddb_depr < sln_depr;
-        let depr = if is_sln { sln_depr } else { ddb_depr };
-        let new_total = tot_depr + depr;
-
-        if int_period == 0 {
-            return new_total * frac;
-        } else if per.trunc() as i64 == int_period - 1 {
-            let ddb_next = ddb_formula(new_total);
-            let sln_next = sln_formula(new_total, per + 1.0);
-            let is_sln_next = straight_line && switches && ddb_next < sln_next;
-            let depr_next = if is_sln_next {
-                if int_period == int_life {
-                    0.0
-                } else {
-                    sln_next
-                }
-            } else {
-                // The prorated part takes the unclipped charge; the cap below clips the total.
-                // Only probed with salvage <= cost; salvage above cost keeps the clipped charge.
-                if switches {
-                    ddb_unclipped(new_total)
-                } else {
-                    ddb_next
-                }
-            };
-            let prorated = new_total + depr_next * frac;
-            return if switches && prorated > cap {
-                cap
-            } else {
-                prorated
-            };
-        } else {
-            tot_depr = new_total;
-            per += 1.0;
-        }
-    }
-}
-
 /// VDB's depreciation between `start_period` and `end_period`. Excel sums the charges of the
 /// periods in the window rather than subtracting two running totals, and its two modes build the
-/// charges differently (docs/excel-semantics/financial.md "VDB charge order", T-1975):
+/// charges differently (docs/excel-semantics/financial.md "VDB charge order", T-1975, T-2185):
 /// - `no_switch` TRUE: [`vdb_no_switch_between`];
-/// - switching, from a whole `start_period`: [`vdb_switching_between`];
-/// - switching from a fractional `start_period` keeps the running-total model of
-///   [`vdb_total_depr`], which Excel does not match on every cell yet (T-2185).
+/// - switching to straight line: [`vdb_switching_between`].
 fn vdb_depr_between(
     cost: f64,
     salvage: f64,
@@ -105,13 +31,10 @@ fn vdb_depr_between(
     factor: f64,
     straight_line: bool,
 ) -> f64 {
-    if !straight_line {
-        vdb_no_switch_between(cost, salvage, life, start_period, end_period, factor)
-    } else if start_period.fract() == 0.0 {
+    if straight_line {
         vdb_switching_between(cost, salvage, life, start_period, end_period, factor)
     } else {
-        vdb_total_depr(cost, salvage, life, end_period, factor, true)
-            - vdb_total_depr(cost, salvage, life, start_period, factor, true)
+        vdb_no_switch_between(cost, salvage, life, start_period, end_period, factor)
     }
 }
 
@@ -162,14 +85,26 @@ fn vdb_no_switch_between(
     total
 }
 
-/// VDB switching to straight line, from a whole `start`. The book value steps down by each
-/// period's charge `min(b·(factor/life), b - salvage)`; from the first period whose
-/// straight-line charge `(b - salvage)/(life - p)` is larger, every later period charges that
-/// same amount. The window's declining-balance charges (and a prorated last period) are summed in
-/// doubles and the whole straight-line periods are added last as one product:
-/// `VDB(1234.56,78.9,12,4,9,1.75)` is 379.8854487417499, one ulp below the period-by-period sum
-/// (probes/fin-vdb-schedule A1-A15, A31-A40, A47-A54; fin-vdb-modes A6, A13). Salvage above cost
-/// never switches and keeps the negative charge: `VDB(2400,3000,10,0,1)` is -600 (fin-vdb-modes A17).
+/// VDB switching to straight line. Excel lays the schedule's periods on the fraction of `start`:
+/// the first `start - floor(start)` of a period charges that share of the first declining-balance
+/// charge `min(cost·rate, cost - salvage)` (at least 0), and whole periods follow from there, so a
+/// fractional start sees the same schedule wherever it lies past the switch:
+/// `VDB(2400,100,10,6.5,7.5)` and `VDB(2400,100,10,8.5,9.5)` are both 133.20886857142858,
+/// `(566.23104 - 100)/3.5` (probes/fin-vdb-fractional-start A12:A13). Each period's book value
+/// `b` steps down by its charge `min(b·rate, b - salvage)`, `rate = factor/life`; from the first
+/// period whose straight-line charge `(b - salvage)/(life - t)` (`t` the period's start) is
+/// larger than the unclipped `b·rate`, every later period charges that same amount. Comparing with
+/// the unclipped charge keeps a clipped last piece declining: `VDB(2400,300,10,9.25,10)` is
+/// 4.512314880000062, `0.75·(b - salvage)`, while `VDB(1000,5,10,9.25,10,4)` switches and charges
+/// all of `b - salvage` (fin-vdb-fractional-start A44, fin-vdb-fractional-start-edges A1). The
+/// window's declining-balance charges (and a prorated last period) are summed in doubles and the
+/// whole straight-line periods are added last as one product: `VDB(1234.56,78.9,12,4,9,1.75)` is
+/// 379.8854487417499, one ulp below the period-by-period sum (probes/fin-vdb-schedule A1-A15,
+/// A31-A54; fin-vdb-modes A6, A9, A13). Salvage above cost never switches and keeps the negative
+/// charge: `VDB(2400,3000,10,0,1)` is -600 (fin-vdb-modes A17), and so is
+/// `VDB(2400,3000,10,0.5,1.5)` (fin-vdb-fractional-start-edges A7). Where straight line already wins
+/// at period 0, the window is `(end - start)·sl` for any start, factor 0 included ("Straight line
+/// from period 0", T-4111, T-4510, T-4724).
 fn vdb_switching_between(
     cost: f64,
     salvage: f64,
@@ -179,19 +114,46 @@ fn vdb_switching_between(
     factor: f64,
 ) -> f64 {
     let switches = salvage <= cost;
+    let rate = factor / life;
+    let whole = start.floor();
+    let fraction = start - whole;
+    let straight_from_zero = (cost - salvage) / life;
+    if switches && straight_from_zero > cost * rate {
+        // Straight line already wins at period 0: every period of the window charges
+        // `(cost - salvage)/life`, a fractional start's share included, as one product
+        // `(end - start)·sl`, whatever the start (financial.md "VDB charge order", T-4111, T-4510).
+        // Evidence: accuracy/VDB/s1 A158, A183, A187, A188, A189, A200 and all 50 cells of
+        // probes/t4724-vdb-straight-from-zero; a whole start's fractional end is not the
+        // schedule's `share·sl + n·sl` there (T-4724).
+        return (end - start) * straight_from_zero;
+    }
     let mut book = cost;
+    if fraction > 0.0 {
+        book -= fraction * (cost * rate).min(cost - salvage).max(0.0);
+    }
+    // Offsets of each period from `start`, so the window's shares and the straight-line
+    // denominators are measured from `start` itself, not from the rounded fraction
+    // (fin-vdb-fractional-start: 153 of 161 cells to the bit this way, 147 the other way).
+    let remaining_life = life - start;
+    let window = end - start;
     let mut straight_line: Option<f64> = None;
     let mut declining = 0.0;
     let mut straight_periods = 0.0;
-    let last = end.ceil() as u32;
-    for index in 0..last {
-        let elapsed = f64::from(index);
+    // `end` is at most MAX_DEPRECIATION_PERIODS, so the count fits. The schedule stops at the
+    // first period starting at or past `end`: `8.3 - 7.3` is a hair above 1, and a period counted
+    // from it would add a sliver (fin-vdb-fractional-start A43).
+    for index in 0..=end.ceil() as u32 {
+        if fraction + f64::from(index) >= end {
+            break;
+        }
+        let offset = f64::from(index) - whole;
         let charge = match straight_line {
             Some(charge) => charge,
             None => {
-                let ddb = (book * (factor / life)).min(book - salvage);
-                let sln = (book - salvage) / (life - elapsed);
-                if switches && sln > ddb {
+                let unclipped = book * rate;
+                let ddb = unclipped.min(book - salvage);
+                let sln = (book - salvage) / (remaining_life - offset);
+                if switches && sln > unclipped {
                     straight_line = Some(sln);
                     sln
                 } else {
@@ -199,12 +161,14 @@ fn vdb_switching_between(
                 }
             }
         };
-        if elapsed >= start {
-            let period = elapsed + 1.0;
-            if straight_line.is_some() && period <= end {
+        if offset >= 0.0 {
+            let share = window.min(offset + 1.0) - offset;
+            if straight_line.is_some() && share == 1.0 {
                 straight_periods += 1.0;
+            } else if share == 1.0 {
+                declining += charge;
             } else {
-                declining += prorated(charge, period, start, end);
+                declining += charge * share;
             }
         }
         book -= charge;
@@ -222,6 +186,15 @@ fn vdb_switching_between(
 /// its period up to it.
 pub(crate) const MAX_DEPRECIATION_PERIODS: u32 = 100_000;
 
+/// DB's largest life and period, `i32::MAX`: Excel reads both as 32-bit integers
+/// (probes/fin-syd-db-domain A6:A7, C7:C8).
+const DB_INTEGER_MAX: f64 = 2_147_483_647.0;
+
+/// The smallest DB life whose last year, life+1, is period 0: `u32::MAX`, as if Excel held the
+/// life in an unsigned 32-bit integer that saturates and life+1 wrapped (probes/fin-syd-db-domain
+/// H3:H8, L1:L6; 4294967294 and 4E9 are `#NUM!`).
+const DB_WRAPPED_LIFE: f64 = 4_294_967_295.0;
+
 /// Whether `period` is past [`MAX_DEPRECIATION_PERIODS`].
 fn past_period_cap(period: f64) -> bool {
     period.trunc() > f64::from(MAX_DEPRECIATION_PERIODS)
@@ -233,8 +206,7 @@ fn past_period_cap(period: f64) -> bool {
 // last period charges `balance * (rate * (12 - month) / 12)`. `DB(100,10,4,1,2)` is
 // 7.299999999999999 and `DB(23,10,4,5,2)` 1.8687313963962309 (ironcalc-calc DB_DDB.xlsx G20, G42).
 fn db_depreciation(cost: f64, salvage: f64, life: f64, period: f64, month: f64) -> f64 {
-    // The depreciation rate, rounded to three decimal places.
-    let rate = ((1.0 - (salvage / cost).powf(1.0 / life)) * 1000.0).round() / 1000.0;
+    let rate = db_rate(cost, salvage, life);
     let int_period = period.trunc() as i64;
     let int_life = life.trunc() as i64;
 
@@ -255,6 +227,19 @@ fn db_depreciation(cost: f64, salvage: f64, life: f64, period: f64, month: f64) 
     } else {
         balance * rate
     }
+}
+
+/// DB's depreciation rate, rounded to three decimal places.
+fn db_rate(cost: f64, salvage: f64, life: f64) -> f64 {
+    ((1.0 - (salvage / cost).powf(1.0 / life)) * 1000.0).round() / 1000.0
+}
+
+/// DB's partial last year straight after the first: what a period below 1 is when `life` is at
+/// least [`DB_WRAPPED_LIFE`] and `month` is not 12 (`DB(100,0,4294967296,0.5,8)` is
+/// 11.111111111111114, `DB(100,0,1E+10,0.5,6)` 25; probes/fin-syd-db-domain L7, L8).
+fn db_wrapped_last_year(cost: f64, salvage: f64, life: f64, month: f64) -> f64 {
+    let rate = db_rate(cost, salvage, life);
+    (cost - cost * rate * (month / 12.0)) * (rate * (12.0 - month) / 12.0)
 }
 
 // `ddb`: double-declining-balance depreciation for a single `period`
@@ -310,17 +295,23 @@ impl Model {
                 let start_period = model.cast_number_ref(start_period, cell)?;
                 let end_period = model.cast_number_ref(end_period, cell)?;
                 let factor = model.cast_number_or(rest.first(), 2.0, cell)?;
-                // no_switch defaults to FALSE => switch to straight line.
-                let no_switch = model.cast_number_or(rest.get(1), 0.0, cell)? != 0.0;
+                // no_switch defaults to FALSE => switch to straight line. It reads as a boolean:
+                // "TRUE" and "FALSE" in any case are taken and other text, numeric text too, is
+                // `#VALUE!`, before the range checks (probes/t2492-vdb-ddb-arguments A1:A9, A27).
+                let no_switch = rest
+                    .get(1)
+                    .map_or(Ok(false), |value| Self::cast_bool_ref(value, cell))?;
+                // A factor of 0 is taken (no declining balance: straight line, or 0 with
+                // no_switch), and so is an empty window at period 0 (probes/t2492-vdb-ddb-arguments
+                // A13:A19).
                 if cost < 0.0
                     || salvage < 0.0
                     || life <= 0.0
-                    || factor <= 0.0
+                    || factor < 0.0
                     || start_period < 0.0
                     || start_period > life
                     || end_period > life
                     || start_period > end_period
-                    || end_period <= 0.0
                 {
                     return Err(num_error(cell));
                 }
@@ -358,20 +349,35 @@ impl Model {
                 let salvage = model.cast_number_ref(salvage, cell)?;
                 let life = model.cast_number_ref(life, cell)?;
                 let period = model.cast_number_ref(period, cell)?;
-                let month = model
-                    .cast_number_no_bools_or(rest.first(), 12.0, cell)?
-                    .trunc();
+                // A boolean month reads as 1 or 0, from a cell too (`DB(15779,385,37,<FALSE>,<FALSE>)`
+                // is `#NUM!`, probes/t2475-stat-subexpressions A165), as DDB's factor does.
+                let month = model.cast_number_or(rest.first(), 12.0, cell)?.trunc();
+                // Excel reads life and period as 32-bit integers: a period past i32::MAX is period 1
+                // (month 12 too, probe E8), a life past it is #NUM! except the u32::MAX "wrapped
+                // last year", and a negative salvage is #NUM! even at cost 0 (financial.md "DB and
+                // SYD argument domains", probes/fin-syd-db-domain).
+                let huge_period = period > DB_INTEGER_MAX;
+                let period = if huge_period { 1.0 } else { period };
+                let wrapped_last_year = life >= DB_WRAPPED_LIFE && month != 12.0 && period < 1.0;
+                let huge_life = life > DB_INTEGER_MAX && !huge_period && !wrapped_last_year;
                 if month == 12.0 && period > life
-                    || (period > life + 1.0)
+                    // The partial last year is period life+1 by its whole part
+                    // (`DB(0.01,488,32,33.5,10)` is period 33's value, probes/fin-syd-db-domain C2).
+                    || (period.trunc() > life + 1.0)
                     || month <= 0.0
                     || month > 12.0
                     || period <= 0.0
                     || cost < 0.0
+                    || salvage < 0.0
+                    || huge_life
                 {
                     return Err(num_error(cell));
                 }
                 if cost == 0.0 {
                     return Ok(0.0);
+                }
+                if wrapped_last_year {
+                    return Ok(db_wrapped_last_year(cost, salvage, life, month));
                 }
                 if past_period_cap(period) {
                     return Err(num_error(cell));
@@ -417,17 +423,26 @@ impl Model {
                 let salvage = model.cast_number_ref(salvage, cell)?;
                 let life = model.cast_number_ref(life, cell)?;
                 let per = model.cast_number_ref(per, cell)?;
-                if life == 0.0 || per > life || per <= 0.0 {
+                if life == 0.0 || per > life || per <= 0.0 || salvage < 0.0 {
                     return Err(num_error(cell));
                 }
-                Ok(((cost - salvage) * (life - per + 1.0) * 2.0) / (life * (life + 1.0)))
+                // `life*(life+1)` past the double range is #DIV/0! (`SYD(100,10,1.4E+154,1)`),
+                // a numerator past it #NUM! (`SYD(1E+300,-1E+300,10,1)` by its salvage;
+                // probes/fin-syd-db-domain F16, F20; financial.md "DB and SYD argument domains").
+                let years = life * (life + 1.0);
+                if !years.is_finite() {
+                    return Err(div_error(cell));
+                }
+                Ok(((cost - salvage) * (life - per + 1.0) * 2.0) / years)
             };
             number_or_error(read())
         })
     }
 
     /// `DDB(cost, salvage, life, period, [factor])`; `factor` is 2 when omitted (the
-    /// double-declining balance), and a boolean factor is `#VALUE!`.
+    /// double-declining balance). A boolean factor is 1 or 0 and a numeric text its number:
+    /// `DDB(1000,100,10,1,TRUE)` is 100, with FALSE `#NUM!`, with "3" 300 (probes/t2492-vdb-ddb-
+    /// arguments A32:A38).
     pub(crate) fn fn_ddb(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.lift_call(Function::Ddb, args, cell, &mut |model, values| {
             let [cost, salvage, life, period, rest @ ..] = values else {
@@ -438,7 +453,7 @@ impl Model {
                 let salvage = model.cast_number_ref(salvage, cell)?;
                 let life = model.cast_number_ref(life, cell)?;
                 let period = model.cast_number_ref(period, cell)?;
-                let factor = model.cast_number_no_bools_or(rest.first(), 2.0, cell)?;
+                let factor = model.cast_number_or(rest.first(), 2.0, cell)?;
                 if period > life || cost < 0.0 || salvage < 0.0 || period <= 0.0 || factor <= 0.0 {
                     return Err(num_error(cell));
                 }

@@ -1,10 +1,13 @@
 //! INDEX: one cell, row, column or area of a reference or an array, lifted element-wise over
 //! array indices (docs/excel-semantics/lookup.md).
 
+use super::drop_take::Edge;
 use crate::arithmetic::bcast_get;
 use crate::cast::{calc_result_to_array_node, scalar_as_array, NumberOrArray};
 use crate::external_reference::{ExternalArea, PickedReference};
-use crate::functions::util::{array_element_value, near_integer_count, NEAR_INTEGER_TOLERANCE};
+use crate::functions::util::near_integer::{near_integer_count, NEAR_INTEGER_TOLERANCE};
+use crate::functions::util::{array_element_value, array_node_to_calc_result};
+use crate::functions::Function;
 use crate::limits::check_array_size;
 use crate::nested_array::NestedBudget;
 use crate::reference_operators::{three_d_needs_one_sheet, RefArg, RefElement, RefGrid};
@@ -119,8 +122,8 @@ fn index_window(
 /// 2, `TYPE` 1: probes/index-one-index-array-shape, docs/excel-semantics/lookup.md "INDEX of an
 /// array: a whole row stays an array"), unless `top_left` asks for its first value only (a lifted
 /// element, which must not copy the selection). One nested GROUPBY or PIVOTBY cell is the array it
-/// holds, charged to `budget` (SPEC-0018 rule 3, `NestedArray::value`); a lifted element keeps the
-/// `#VALUE!` it shows (unprobed). A row or column keeps its nested cells (rule 5).
+/// holds, charged to `budget` (SPEC-0018 rule 3, `NestedArray::value`); a lifted element is the
+/// nested cell's top-left (rule 4). A row or column keeps its nested cells (rule 5).
 fn index_from_array(
     arr: &[Vec<ArrayNode>],
     row_eff: usize,
@@ -147,6 +150,18 @@ fn index_from_array(
     if top_left || (row_eff != 0 && col_eff != 0) {
         return match arr.get(row_start - 1).and_then(|r| r.get(col_start - 1)) {
             Some(ArrayNode::Nested(nested)) if !top_left => nested.value(budget, cell),
+            // A lifted element that selects a nested cell is that cell's top-left: `INDEX(G,{2;3},2)`
+            // is `{3;1}`, SUM 4, with no error (probes/t2609-nested-operators-and-lifts A56:A59).
+            // This is not the `#VALUE!` an element-wise lift reads (`ArrayNode::scalar`, rule 4).
+            // A top-left that is nested again reads as `#VALUE!` (unprobed).
+            Some(ArrayNode::Nested(nested)) => match nested.elements().next() {
+                Some(first) => array_element_value(first, cell),
+                None => CalcResult::new_error(Error::VALUE, cell, String::new()),
+            },
+            // A blank element of an array value is the empty value IFERROR gives a blank cell:
+            // ISBLANK TRUE, `&` "", yet COUNT counts it (`COUNT(INDEX(HSTACK(Z1:Z2,{1;2}),1,1))`
+            // is 1; probes/t2413-blank-in-stacked-arrays A1:A6, arrays.md T-2413 paragraph).
+            Some(ArrayNode::Empty) if !top_left => CalcResult::EmptyArg,
             // A LAMBDA element is that LAMBDA: `TYPE(INDEX(SCAN(..),1,1))` is 128 and a LET name
             // bound to it calls (probes/lambda-arrays B5, B6).
             Some(node) => array_element_value(node, cell),
@@ -216,28 +231,53 @@ impl Model {
         cell: CellReferenceIndex,
         form: IndexForm,
     ) -> CalcResult {
+        self.index_arg(args, cell, form).into_single_area(cell)
+    }
+
+    /// INDEX where a reference is taken ([`Model::evaluate_reference_arg`]): as
+    /// [`Self::index_reference`], except that one index into a column of a mixed grid's elements
+    /// that picks a reference keeps it, as a one-element array of references, so
+    /// `INDEX(INDEX(XLOOKUP({2;9},A1:A3,B1:B3,D1:D2),2),1,1)` spills D1:D2
+    /// (probes/t4563-xlookup-not-found-ref-element V25:V26, T-4701).
+    pub(crate) fn index_reference_arg(
+        &mut self,
+        args: &[Node],
+        cell: CellReferenceIndex,
+    ) -> RefArg {
+        self.index_arg(args, cell, IndexForm::Reference)
+    }
+
+    /// [`Self::index_impl`] as a [`RefArg`]: a reference element picked by one index into a column
+    /// of elements is a 1x1 [`RefGrid`] ([`column_element`]), which a value context reads by its
+    /// value view.
+    fn index_arg(&mut self, args: &[Node], cell: CellReferenceIndex, form: IndexForm) -> RefArg {
         if !(2..=4).contains(&args.len()) {
-            return CalcResult::new_args_number_error(cell);
+            return RefArg::from(CalcResult::new_args_number_error(cell));
         }
         let two_arg = args.len() == 2;
         match self.external_index_args(args, cell) {
             None => {}
-            Some(Err(error)) => return error,
+            Some(Err(error)) => return RefArg::from(error),
             Some(Ok((areas, IndexArgs::Numbers(numbers)))) => {
-                return match external_index_area(&areas, numbers, two_arg, cell) {
+                return RefArg::from(match external_index_area(&areas, numbers, two_arg, cell) {
                     Ok(area) => self.external_picked_value(area, cell),
                     Err(error) => error,
-                };
+                });
             }
             // Each element is the scalar INDEX's top-left cell, empty with no cache
             // (probes/external-ref-no-link-ifchoose H1, I1).
             Some(Ok((areas, IndexArgs::Lifted { row, col, area }))) => {
-                return self.index_lifted(row, col, area, cell, None, |model, numbers| {
-                    match external_index_area(&areas, numbers, two_arg, cell) {
+                return RefArg::from(self.index_lifted(
+                    row,
+                    col,
+                    area,
+                    cell,
+                    None,
+                    |model, numbers| match external_index_area(&areas, numbers, two_arg, cell) {
                         Ok(picked) => model.external_picked_value(picked.top_left(), cell),
                         Err(error) => error,
-                    }
-                });
+                    },
+                ));
             }
         }
         let numbers = match self.index_numbers(args, cell) {
@@ -251,11 +291,18 @@ impl Model {
                 };
                 // `INDEX(XMATCH(2,{1,2,3}),{1,2})` is 2, #REF! (probes/index-literal-scalar A10).
                 let arg = scalar_as_one_element_array(arg, cell);
-                return self.index_lifted(row, col, area, cell, arg_error, |model, numbers| {
-                    model.index_select(&arg, numbers, two_arg, cell, IndexForm::TopLeft)
-                });
+                return RefArg::from(self.index_lifted(
+                    row,
+                    col,
+                    area,
+                    cell,
+                    arg_error,
+                    |model, numbers| {
+                        model.index_select(&arg, numbers, two_arg, cell, IndexForm::TopLeft)
+                    },
+                ));
             }
-            Err(error) => return error,
+            Err(error) => return RefArg::from(error),
         };
         // INDEX into an IF or CHOOSE that picks a reference into another workbook picks from
         // that reference (`ERROR.TYPE(INDEX(IF(TRUE,…!A1:C4),2,2))` is `#N/A`;
@@ -263,26 +310,105 @@ impl Model {
         // after the indices, as the reference is read otherwise.
         let arg = match self.pick_reference(&args[0], cell) {
             PickedReference::External(areas) => {
-                return match areas
-                    .and_then(|areas| external_index_area(&areas, numbers, two_arg, cell))
-                {
-                    Ok(area) => self.external_picked_value(area, cell),
-                    Err(error) => error,
-                };
+                return RefArg::from(
+                    match areas
+                        .and_then(|areas| external_index_area(&areas, numbers, two_arg, cell))
+                    {
+                        Ok(area) => self.external_picked_value(area, cell),
+                        Err(error) => error,
+                    },
+                );
             }
             // A scalar is a one-element array, wherever it comes from: `INDEX(CHOOSE(1,
             // @B1:B6*1),3)` is `#REF!` on the range's rows (probes/legacy-choose-arm-aggregate-
             // and-array-constant-at H1, T-1643), `INDEX(XMATCH(2,{1,2,3}),1,1)` 2 and `INDEX(5,2)`
             // `#REF!` (probes/lookup-argument-modes, m7-argument-modes, index-literal-scalar; T-1645).
             PickedReference::Node(reference) => {
-                scalar_as_one_element_array(self.evaluate_reference_arg(reference, cell), cell)
+                if args
+                    .first()
+                    .is_some_and(|first| std::ptr::eq(reference, first))
+                {
+                    if let Some(value) = self.index_tailed(reference, numbers, two_arg, cell, form)
+                    {
+                        return RefArg::from(value);
+                    }
+                }
+                // The array's ERROR.TYPE/CELL mark is INDEX's (`number_mark.rs`;
+                // probes/t2576-error-type-cell-paired D20).
+                let source =
+                    self.passing_mark(reference, |model| model.index_source(reference, cell));
+                scalar_as_one_element_array(source, cell)
             }
             PickedReference::Read(read) => scalar_as_one_element_array(read, cell),
             PickedReference::Value(value) => {
                 scalar_as_one_element_array(RefArg::Value(value), cell)
             }
         };
-        self.index_select(&arg, numbers, two_arg, cell, form)
+        if let RefArg::Grid(grid) = &arg {
+            if let Some(element) = column_element(grid, numbers, two_arg) {
+                return RefArg::Grid(element);
+            }
+        }
+        RefArg::from(self.index_select(&arg, numbers, two_arg, cell, form))
+    }
+
+    /// INDEX's first argument as it picks from it: TAKE and DROP over a range are the reference
+    /// they return, so the cell picked is a reference and a blank one stays blank
+    /// (`ISREF(INDEX(TAKE(Z1:Z2,2),1,1))` is TRUE and `COUNT` of it 0, where over an array value
+    /// the blank element counts: probes/t2461-blank-array-sources A10, A27, A28, A36; T-2461).
+    fn index_source(&mut self, reference: &Node, cell: CellReferenceIndex) -> RefArg {
+        let edge = match reference.ungrouped() {
+            Node::FunctionKind {
+                kind: Function::Take,
+                args,
+            } => Some((Edge::Take, args)),
+            Node::FunctionKind {
+                kind: Function::Drop,
+                args,
+            } => Some((Edge::Drop, args)),
+            _ => None,
+        };
+        match edge {
+            Some((edge, args)) => self.take_drop_reference(args, cell, edge, true),
+            None => self.evaluate_reference_arg(reference, cell),
+        }
+    }
+
+    /// INDEX with scalar indices into a tailed argument (SPEC-0020 Amendment 2, section 3; T-3222):
+    /// `INDEX(VLOOKUP(Keys!A:A,..),1000)` picks its element from the head or the tail
+    /// ([`Tailed::element_at`](crate::tailed_array::Tailed::element_at)) without building the
+    /// 1,048,576-row array. Only for `area_num` 1 and one column picked, `column_num` 1 or absent:
+    /// the one-row selection of a column (the two-argument form, a 1x1 array) or its one cell (a
+    /// value), converted by [`index_from_array`] as an element of the whole array is. `None` for
+    /// any other index, or an argument that is not tailed, which INDEX then reads the ordinary way.
+    fn index_tailed(
+        &mut self,
+        reference: &Node,
+        numbers: IndexNumbers,
+        two_arg: bool,
+        cell: CellReferenceIndex,
+        form: IndexForm,
+    ) -> Option<CalcResult> {
+        // The array has more than one row, so the two-argument form picks a whole row (column 0).
+        let column = if two_arg { 0 } else { numbers.col };
+        if numbers.area != 1.0 || numbers.row == 0 || !(two_arg || column == 1) {
+            return None;
+        }
+        let element = self
+            .read_tailed(reference, cell, |model| {
+                model.evaluate_reference_arg(reference, cell)
+            })?
+            .element_at(numbers.row)?;
+        let top_left = form == IndexForm::TopLeft;
+        let budget = &mut self.nested_budget;
+        Some(index_from_array(
+            &[vec![element]],
+            1,
+            column,
+            top_left,
+            budget,
+            cell,
+        ))
     }
 
     /// INDEX's `row_num`, `column_num` and `area_num` (`args[1..]`), evaluated and validated, or
@@ -550,14 +676,33 @@ impl Model {
         if numbers.area != 1.0 {
             return CalcResult::new_error(Error::REF, cell, "Area out of range".into());
         }
-        if two_arg {
+        let (rows, columns) = grid.dims();
+        // One index into a one-element array of references picks that element:
+        // `F.TEST(INDEX(INDIRECT("B1",{1}),1),{-1,0,1})` is the `#DIV/0!` of B1's one value
+        // (probes/t2577-indirect-ref-array A100).
+        let numbers = if two_arg && (rows, columns) == (1, 1) && numbers.row == 1 {
+            IndexNumbers { col: 1, ..numbers }
+        } else if two_arg && columns == 1 && (1..=rows).contains(&numbers.row) {
+            // One index into a column of elements is that element as a one-element array, shown
+            // by its value view: `INDEX(XLOOKUP({2;9},A1:A3,B1:B3,D1:D2),2)` is `#VALUE!`, ROWS
+            // of it 1 and INDEX of it at (2,1) `#REF!` (probes/t4563-xlookup-not-found-ref-element
+            // A25, T25:Z25). Where a reference is taken, a reference element stays one
+            // ([`column_element`], V25:V26).
+            let element = grid
+                .get(numbers.row - 1, 0)
+                .map_or(ArrayNode::Error(Error::REF), |element| {
+                    element.as_node(&ArrayNode::Error(Error::VALUE))
+                });
+            return CalcResult::Array(vec![vec![element]]);
+        } else if two_arg {
             return CalcResult::new_error(
                 Error::VALUE,
                 cell,
                 "INDEX of an array of references needs a row and a column".into(),
             );
-        }
-        let (rows, columns) = grid.dims();
+        } else {
+            numbers
+        };
         if numbers.row > rows || numbers.col > columns {
             return wrong_reference(cell);
         }
@@ -584,6 +729,9 @@ impl Model {
             Some(RefElement::Error(error)) => {
                 CalcResult::new_error(error.clone(), cell, "Error element".into())
             }
+            // A value element is that value, not a reference: `INDEX(XLOOKUP({2;9},A1:A3,B1:B3,
+            // F1:F2),1,1)` is 20 (probes/t4563-xlookup-not-found-ref-element A29).
+            Some(RefElement::Value(value)) => array_node_to_calc_result(value, cell),
             None => wrong_reference(cell),
         }
     }
@@ -625,6 +773,25 @@ fn external_index_area(
         last_column: offset(area.first_column, last_col),
         cache: area.cache,
     })
+}
+
+/// The reference element that one index picks from a column of elements, as a 1x1 grid:
+/// `INDEX(XLOOKUP({2;9},A1:A3,B1:B3,D1:D2),2)` where a reference is taken is the array holding
+/// D1:D2 (probes/t4563-xlookup-not-found-ref-element V25:V26, T-4701). `None` for any other
+/// selection, and for a value or error element, which stay the value array
+/// [`Model::index_grid`] gives (unprobed as references).
+fn column_element(grid: &RefGrid, numbers: IndexNumbers, two_arg: bool) -> Option<RefGrid> {
+    let (rows, columns) = grid.dims();
+    let row = numbers.row;
+    if !two_arg || numbers.area != 1.0 || columns != 1 || rows == 1 || !(1..=rows).contains(&row) {
+        return None;
+    }
+    let element = grid.get(row - 1, 0)?;
+    if let RefElement::Reference(_) = element {
+        RefGrid::new(1, 1, vec![element.clone()])
+    } else {
+        None
+    }
 }
 
 /// INDEX's first argument with a scalar value read as a one-element array (T-1645). An empty

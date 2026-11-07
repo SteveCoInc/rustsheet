@@ -1,8 +1,8 @@
 # Calculation: circular references, iterative calculation, data tables
 
 Iterative calculation (T-0447) and data tables (T-0441) are implemented without the Phase 2
-dependency graph (M3, SPEC-0002 / T-0401); a circular reference without iteration is 0
-(T-0445, below). A case sets iteration with the spec's top-level `"calculation"`
+dependency graph (M3, SPEC-0002 / T-0401); a circular reference without iteration keeps the
+cells' values from before the recalculation, 0 for a new formula (T-0445, T-0461, below). A case sets iteration with the spec's top-level `"calculation"`
 and data tables with a sheet's `"data_tables"`
 (tools/src/rustsheet_tools/spec2xlsx.py, T-0428).
 
@@ -27,18 +27,29 @@ left. A cell that reads a formula cell not yet calculated is abandoned, moved to
 precedent, and re-run from its start at its new place; the cells in between run first. A sheet moved after loading keeps its load position, and `calcChain.xml` does not change
 the order on a full-calc load. Formulas entered or edited in a live session leave this order and
 are not reproducible from the file. The order is visible only through WEEKNUM's stale return_type
-state, the one calc-order-dependent value known so far (dates.md, "WEEKNUM's stale return_type
-state"); iterative calculation sweeps a cycle in forward row-major order instead (below).
+state (dates.md, "WEEKNUM's stale return_type state") and AMORDEGRC's left-over value below period 1
+(financial.md, "AMORDEGRC below period 1", which follows the same order: probes/amordegrc-fraction-state-n,
+-o, -p, -q), the calc-order-dependent values known so far; iterative calculation sweeps a cycle in forward row-major order instead (below).
 Evidence: probes/weeknum-stale-grid, -order-row, -order-column, -order-column-40, -order-2x3,
 -order-3x2, -sheet-order, -sheet-moved, -dependency, -precedent-between and -precedent-restart (excel-graph, 2026-10-19, T-1484);
 calcChain.xml and session edits: docs/research/t1484-weeknum-calc-order-2026-10-19.md.
 Ours: `Model::run_pass` evaluates spill anchors first, then every cell in forward storage order
-(sheet, row, column ascending). SPEC-0017 reproduces Excel's order where WEEKNUM's state needs it.
+(sheet, row, column ascending). SPEC-0017 reproduces Excel's order where WEEKNUM's or AMORDEGRC's
+state needs it (`OrderState`, decision 0131).
 Status: VERIFIED (excel-graph)
-Tasks: T-1484, T-2068, T-2069, T-2070
+Tasks: T-1484, T-2068, T-2069, T-2070, T-2825
 
-## A circular reference without iteration is 0, and so is every cell that reads it
-Rule: with iterative calculation off, every cell of a cycle is 0, with no error value: a
+## A circular reference without iteration keeps the cells' values from before the recalculation
+Rule: with iterative calculation off, every cell of a cycle, and every cell whose evaluation reads one, keeps the value
+it had before the recalculation, with no error value. In a loaded workbook that is the cached value; a formula never
+calculated (every cell of a spec probe, whose builder caches 0) is 0 in ours; Excel with no cached `<v>` is
+unprobed (T-0464). In fixtures/circular-keeps-cached-values the cached
+values are A1 `=B1+1` 5, B1 `=A1` 4, C1 `=A1*2` 999, D1 `=D1+1` 7, E1 `=D1+100` 0, F1 `=1+1` 55, G1 `=F1*3` 0, H1 `=C1+1` 0,
+I1 `=A1+F1` 0 and J1 `=IF(F1>100,A1,F1*10)` 0. After the recalculation, F1 is 2 and G1 6 (recalculated). A1 through E1,
+H1 and I1 keep 5, 4, 999, 7, 0, 0 and 0; I1 keeps its value though it also reads the changed F1. J1, which never evaluates its
+A1 branch, recalculates to 20. Calipers pv23_022, a Mac Excel model with two 3-statement loops, iteration off and `calcMode="manual"`, keeps
+its cached loop values, one-cell dynamic arrays (`cm="1"`, D88 `=D37`) included. The rest of this entry was probed on
+workbooks whose cached values are all 0, so each "is 0" below is "keeps 0". With no cached values, every cell of a cycle is 0: a
 self-reference `=A1+1`, `=A2`, and the 2- and 3-cell cycles `B1=C1+1, C1=B1+1` and `D1=E1+1,
 E1=F1+1, F1=D1+1`. A cell outside the cycle that reads it is also 0, whatever it computes:
 `=A1+10` is 0 (not 10), `=SUM(B1:C1)+5` is 0, and `=ISNUMBER(A1)` is the number 0 (not FALSE). So is a
@@ -53,12 +64,40 @@ Readers that take a reference without its value are not circular: `ISREF(A1)` TR
 `INDEX(A1:A2,2)` 7, `ROWS(OFFSET(A1,0,0,2,1))` 2; `INDIRECT("A1")` reads the value, so it is 0.
 Evidence: probes/circular-iteration-off (excel-graph, 2026-10-16, T-0428); probes/t0445-circular-readers
 (excel-graph, 2026-10-22, T-0445); probes/t0451-circular-spill-and-ref-readers (excel-graph, 2026-10-22, T-0451).
+Evidence (prior values): fixtures/circular-keeps-cached-values (excel-graph, 2026-10-25, T-0461); calipers
+pv23_022 (Excel-cached, and the same values from an excel-graph recalculation of the file, 2026-10-25).
 Ours: matches since T-0445, and the T-0451 probe passes in full (17/17). A read that closes a loop, or reads a cell
-already known to be circular, marks every cell on the evaluation stack circular, and a circular cell stores 0 and
-does not spill (`Model::mark_stack_circular`, crates/rustsheet-engine/src/circular.rs). An array anchor whose spill
-contradicts its own inputs, which the driver marks circular, is 0 the same way, and so are its readers.
+already known to be circular, marks every cell on the evaluation stack circular. A circular cell keeps its stored
+value, which is 0 for a formula never evaluated, and does not spill (`Model::mark_stack_circular` and
+`Model::circular_value`, crates/rustsheet-engine/src/circular.rs; T-0461). A spilling anchor on a loop is 0, and so are its
+readers. An array anchor whose spill contradicts its own inputs (which the driver marks circular) keeps a cached value
+when it is stored as a one-cell array, and is 0 otherwise. No probe covers an earlier spill kept on a loop, a loop
+member with no cached value, or a cached text, boolean or error on a loop (T-0464). The fixture is the reproducible
+evidence: pv23_022 is not vendored, and its file is in manual calculation mode.
 Status: VERIFIED (excel-graph)
-Tasks: T-0428, T-0401, T-0445, T-0451
+Tasks: T-0428, T-0401, T-0445, T-0451, T-0461, T-0464
+
+## A circular formula typed after the load leaves its readers their values from before
+Rule: Excel recalculates after the workbook loads and again after each typed entry, and the rule above holds at each of
+those recalculations: a cell that reads a cycle keeps the value it had just before the entry that closed it. So a formula
+typed into a blank cell that reads itself is 0, but its readers keep what they computed when it was blank: with H10
+typed `=H10+1`, the stored `ISBLANK(H10)` is TRUE, `ISNUMBER(H10)` FALSE, `TYPE(H10)` 1, `H10&"x"` "x",
+`COUNTBLANK(H10)` 1, `=H10` and `IFERROR(H10,"e")` 0, and a reader typed before H10 (`ISBLANK(H10)` in H5) is TRUE too,
+where a reader typed after it has no earlier value and is the number 0 (`ISBLANK(H10)`, `=H10` and `ISNUMBER(H10)` typed
+in H12:H14). `ISFORMULA(H10)`, which takes the reference without its value, is TRUE. A cycle typed one cell at a time
+keeps its first cell's value from the entry before the cycle closed: H17 `=H18+1` typed while H18 is blank is 1, then
+H18 `=H17+1` is 0, and `ISBLANK(H17)` is FALSE while `ISBLANK(H18)` is TRUE. A stored cycle is unchanged (D1 `=D1+1`
+0, its reader `ISBLANK(D1)` the number 0, as in the entry above). The R1C1 forms `=RC[0]*0+1` and
+`=SUM(R:R[1])*0+ROWS(R[-50]:R[-49])` (probes/t3212-r1c1-bare-offsets S!H39, S!H50) are such typed self-references: 0,
+and `ISBLANK` of them (J39, J50) TRUE.
+Evidence: probes/t3898-typed-circular-readers (28 cells, excel-graph, 2026-11-03, T-3898); probes/t3212-r1c1-bare-offsets
+S!H39, S!J39, S!H50, S!J50 (excel-graph, 2026-11-03).
+Ours: the engine keeps a circular cell's stored value (the entry above); the eval harness types a case's entered cells
+one edit each, in row-major order sheet by sheet, after the edit that loads the stored cells (`type_entries`,
+crates/rustsheet-eval/src/engine.rs; T-3898), as the oracle types them. A host that types several formulas in one
+`Workbook::edit` gets one recalculation for all of them, as one paste would (unprobed).
+Status: VERIFIED (excel-graph)
+Tasks: T-3898
 
 ## Iterative calculation sweeps the cycle in sheet order, in place
 Rule: with iteration on, each iteration recalculates the cycle's cells once in row-major sheet
@@ -135,16 +174,68 @@ Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/iteration.rs (`Model::sweep`)
 Tasks: T-0428, T-0401, T-0429, T-0447
 
+## Iteration settings outside Excel's range fall back to its defaults
+Rule: Excel's Options dialog takes a Maximum Iterations of 1 to 32,767 and a non-negative Maximum
+Change; what Excel does with an xlsx whose `calcPr@iterateCount` or `iterateDelta` is outside
+that is unprobed.
+Evidence: none for Excel's handling of out-of-range values in a file; the range is the dialog's.
+Ours: the count and the delta each fall back to Excel's default (100 and 0.001) on their own when
+absent, unparsable, a count outside 1 to 32,767, or a delta that is not finite and non-negative.
+The xlsx importer and a workbook decoded from bytes (`Model::from_bytes`) apply the same rule, so
+neither can ask for more than 32,767 sweeps. Before T-4048 a decoded workbook kept any count: the
+`bitcode_workbook` fuzz target found a one-cell cycle with a count of 50,529,030 whose single
+recalculation took 6.7 s in a release build and over 30 s under the fuzzer (CLAUDE.md directive 5).
+Status: DEVIATION (decision 0014)
+Implemented in: crates/rustsheet-engine/src/iteration.rs (`Iteration::within_excel_range`),
+crates/rustsheet-engine/src/model.rs (`Model::from_workbook_with_clock`),
+crates/rustsheet-xlsx/src/import/workbook.rs (`iteration_from`)
+Tasks: T-0447, T-4048
+
 ## Iterative sweeps evaluate at most 2^25 members per recalculation
 Rule: Excel's limit on the work of iterative calculation is unprobed; it runs up to iterateCount
 (at most 32,767) sweeps over every member.
 Evidence: none for Excel; this is a resource limit, not an Excel observation.
 Ours: the sweeps of one recalculation evaluate at most 33,554,432 members together
 (`MAX_SWEEP_EVALUATIONS`). They stop where they are when the budget is spent, so a large cycle with
-a large iterateCount cannot hold the evaluation without bound (CLAUDE.md directive 5).
+a large iterateCount cannot hold the evaluation without bound (CLAUDE.md directive 5). Their runs
+also draw on the 2^32 ceiling of "One recalculation does at most 2^32 work units", and running out
+of it stops them as their count cap does: the member being evaluated keeps its value from before
+that run.
 Status: DEVIATION (decision 0014)
-Implemented in: crates/rustsheet-engine/src/iteration.rs (`MAX_SWEEP_EVALUATIONS`)
-Tasks: T-0447
+Implemented in: crates/rustsheet-engine/src/iteration.rs (`MAX_SWEEP_EVALUATIONS`, `sweep`)
+Tasks: T-0447, T-3009
+
+## One recalculation does at most 2^32 work units, and a pass past 2^30 shares them out
+Rule: Excel has no known limit on the work of a recalculation; a long one runs until done or
+until interrupted, and a workbook that long cannot be probed (Excel for the web's session times
+out).
+Evidence: none for Excel; a resource limit (CLAUDE.md directive 5, SPEC-0028).
+Ours: the formula runs of one recalculation may spend 2^32 work units in all (SPEC-0024's units:
+every pass, restarted pass and run cut short by the evaluation depth limit, every iterative sweep
+run and every data-table run). A pass whose formulas
+commit more than 2^30 units, or a round whose restarted passes and cut-short runs spend more than
+2^30, is run again with every formula limited to 2^30 / (4 × the number of formula cells) units;
+a formula past that share is `#VALUE!` ("Recalculation needs too much work to calculate this
+formula"), which `IFERROR` cannot catch, though a reader of the cell can. Past 2^32 every formula
+cell is `#VALUE!` ("Recalculation needs too much work"), dynamic anchors spill nothing, and
+neither the sweeps nor the data tables run. Which cells give up does not depend on the order the
+cells are evaluated in, except through restarted passes and runs cut short by the evaluation depth
+limit (SPEC-0028 section 3). Calibration (T-3008, every suite including calipers, poi and
+corpus-bench): the heaviest eval pass commits 180,967,707 units and the heaviest eval
+recalculation spends the same (probes/t2759-lunar-packed-7101), under a quarter of 2^30 and of
+2^32; no eval workbook reaches share mode. Worked example of SPEC-0028 section 5 (release build,
+heavy cells of 249,980,402 units each): A1:A4 compute in 24 s; A1:A5 give up in 31 s; A1:A1000
+give up in 33 s; A1:A1000 with 99,000 light cells in 27 s, every light cell computed (before this
+bound, about two hours). The sweeps and the data tables do not count against the 2^30 pass
+allowance (their order is canonical, SPEC-0028 section 4) and, in share mode, run under the share.
+When the ceiling runs out during a sweep, the sweeps stop where they are; when it runs out during a
+data table, that result cell and every later one are `#NUM!`, and the second round of passes after
+the tables is exhausted. A table the memo skips (T-0453) is charged the units its last
+recomputation spent, and is skipped only in normal mode and while the ceiling has that many left,
+so its results are those of a recomputation either way.
+Status: DEVIATION (decision 0014)
+Implemented in: crates/rustsheet-engine/src/recalc_budget.rs (`MAX_PASS_WORK`, `MAX_RECALC_WORK`), crates/rustsheet-engine/src/area_budget.rs (`with_area_budget`), crates/rustsheet-engine/src/evaluation.rs (`evaluate_passes`), crates/rustsheet-engine/src/iteration.rs (`sweep`), crates/rustsheet-engine/src/data_tables.rs (`spend_all_past_ceiling`, `evaluate_data_tables`)
+Tasks: T-2807, T-3008, T-3009
 
 ## Data tables (TABLE()) are recalculated, and FORMULATEXT shows `{=TABLE(row,column)}`
 Rule: excel-graph recalculates a what-if data table stored as `<f t="dataTable" ref=… dt2D=…
@@ -171,15 +262,21 @@ Ours: matches (probes/data-tables 20/20). Each table is the sheet's `DataTable` 
 results, row input and column input), and its result cells hold plain values. After an evaluation
 pass, the tables are recomputed in sheet order. For each result cell the input cells are replaced
 by the header values, the table's formula is evaluated on demand, and the inputs are put back. The
-workbook is then evaluated again, so readers see the results. ISFORMULA and FORMULATEXT of a result
+workbook is then evaluated again, so readers see the results. A table is not recomputed when
+nothing its last recomputation read has changed: while it is recomputed every sheet records the
+cells and areas read, and their contents (constants, formula texts, styles, spills), the sheets'
+extents, the names, tables, settings and hidden rows and columns are kept with its results. A
+formula that reaches RAND, RANDBETWEEN, RANDARRAY, NOW, TODAY, CELL, INFO or GETPIVOTDATA, or
+iterative calculation, recomputes every time; when no table is recomputed the second evaluation
+is skipped (`data_table_memo.rs`, T-0453). ISFORMULA and FORMULATEXT of a result
 cell are TRUE and `{=TABLE(row,column)}`. The xlsx import reads `dt2D`, `dtr`, `r1`, `r2`, `del1`
 and `del2`, and the export writes them back on the first result cell.
 Unprobed, our choices: a deleted input (`del1`/`del2`), or a table with no input, makes every
 result `#REF!`. A header cell or formula that spills or gives a range is read as its top-left
 value (`scalar_at`). Neither is in probes/data-tables (T-0459).
 Status: VERIFIED (excel-graph) for the rules above; the unprobed choices are not
-Implemented in: crates/rustsheet-engine/src/data_tables.rs, crates/rustsheet-xlsx/src/import/sheet_data.rs (`data_table`), crates/rustsheet-xlsx/src/export/data_tables.rs
-Tasks: T-0428, T-0441, T-0446
+Implemented in: crates/rustsheet-engine/src/data_tables.rs, crates/rustsheet-engine/src/data_table_memo.rs, crates/rustsheet-xlsx/src/import/sheet_data.rs (`data_table`), crates/rustsheet-xlsx/src/export/data_tables.rs
+Tasks: T-0428, T-0441, T-0446, T-0453
 
 ## Data tables re-evaluate the workbook at most 2^25 formulas per recalculation
 Rule: Excel's limit on the work of data tables is unprobed; it is expected to compute every
@@ -189,10 +286,16 @@ Ours: every result cell re-evaluates the formulas its table's formula depends on
 of one recalculation may evaluate at most 33,554,432 formulas together
 (`MAX_DATA_TABLE_EVALUATIONS`). The result cells computed after the budget is spent are `#NUM!`,
 so a large table over a large model cannot hold the evaluation without bound (CLAUDE.md
-directive 5).
+directive 5). A table that is not recomputed (T-0453) is charged what its last recomputation
+spent, so the tables after it find the budget as a recomputation would leave it. It is skipped
+only while the budget left covers that cost, and one whose recomputation ran out is always
+recomputed, so the results are those of a recomputation either way. Each run also draws on the
+2^32 ceiling of "One recalculation does at most 2^32 work units", and running out of it stops the
+tables as their count cap does: the result cell being computed and every later one are `#NUM!`.
+A table that is not recomputed is charged the ceiling units its last recomputation spent too.
 Status: DEVIATION (decision 0014)
-Implemented in: crates/rustsheet-engine/src/data_tables.rs (`MAX_DATA_TABLE_EVALUATIONS`)
-Tasks: T-0441
+Implemented in: crates/rustsheet-engine/src/data_tables.rs (`MAX_DATA_TABLE_EVALUATIONS`, `spend_all_past_ceiling`)
+Tasks: T-0441, T-3009
 
 ## A data table holds at most 2^20 result cells, and a sheet at most 1,024 tables
 Rule: Excel accepts a data table as large as the sheet; its limits are unprobed.

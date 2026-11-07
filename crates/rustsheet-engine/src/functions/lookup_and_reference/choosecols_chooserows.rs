@@ -1,5 +1,6 @@
 //! CHOOSECOLS and CHOOSEROWS: the columns or rows of an array picked by a list of indexes.
 
+use crate::functions::spill_functions::one_cell_error_ref_as_array;
 use crate::functions::util::array_node_to_calc_result;
 use crate::limits::check_array_cells;
 use crate::{
@@ -20,7 +21,11 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         }
 
-        let data = match self.eval_to_array(&args[0], cell) {
+        // Excel: arrays.md "A one-cell error reference in the other array functions (T-3667)". A lone
+        // blank cell stays blank (`CHOOSECOLS(Z1,1)&"x"` is "x"; probes/t4448-lone-blank-reshapers
+        // A12:D12, T-4448).
+        let data = self.eval_array_arg_keep_blank(&args[0], cell);
+        let data = match one_cell_error_ref_as_array(&args[0], data, cell) {
             Ok(d) => d,
             Err(e) => return e,
         };
@@ -53,7 +58,10 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         }
 
-        let data = match self.eval_to_array(&args[0], cell) {
+        // A lone blank cell stays blank (`CHOOSEROWS(Z1,1)&"x"` is "x";
+        // probes/t4448-lone-blank-reshapers A11:D11, A13:D13, T-4448).
+        let data = self.eval_to_array_keep_blank(&args[0], cell);
+        let data = match one_cell_error_ref_as_array(&args[0], data, cell) {
             Ok(d) => d,
             Err(e) => return e,
         };

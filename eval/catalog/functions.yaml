@@ -39,6 +39,16 @@
 # the `domain` draw and never on a `hard` domain. `pool_rate: <share>` replaces the 35% (the D* database and criteria
 # take 0.8: their pools point into the case's `Db` sheet, tools/src/rustsheet_tools/gen/database.py, and match only
 # each other).
+# `same_shape: true` on the `range` params of one call (the *IFS sum and criteria ranges) gives them one shared
+# rows x columns shape, except in about 1 call in 10 (SHAPE_MISMATCH_RATE) whose ranges stay free so the
+# shape-mismatch #VALUE! stays covered (T-2719). `probe: <param>` on a `value` param draws it from the cells of that
+# `range` param (PROBE_HIT_RATE, 95%), so MATCH's lookup_value usually exists in the array (T-2719). On a `vector`
+# param, `wide_rate: <share>` makes that share of draws 2-D and `row_rate: <share>` a one-row range (T-2719).
+# `probe_edge: first_column | first_row` on a `probe` param narrows the draw to the first column (VLOOKUP) or
+# first row (HLOOKUP) of that range, where the search looks (T-3074). `index_of: {param, axis: rows | columns}`
+# on a `number` param draws it (INDEX_HIT_RATE, 90%) from 1 to the height or width of that range param, so
+# VLOOKUP's col_index_num, HLOOKUP's row_index_num and INDEX's row_num/column_num usually pick a cell inside
+# the table; the rest use the `domain`, keeping #REF! covered (T-3074).
 # `vector: true` on a `range` param makes the generator pass a one-column range (LOOKUP and XLOOKUP/XMATCH lookup
 # vectors: a 2-D one is #N/A or #VALUE!, so random widths would hide the search itself; WRAPROWS/WRAPCOLS on an
 # `array` param). `full: true` makes every range span all data rows, so the arrays of one call are the same height
@@ -211,9 +221,9 @@ functions:
     prior: 8.5
     returns: any
     params:
-      - { name: lookup_value, mode: value, type: any }
+      - { name: lookup_value, mode: value, type: any, probe: table_array, probe_edge: first_column }
       - { name: table_array, mode: range, type: any }
-      - { name: col_index_num, mode: value, type: number, domain: { int: true, min: 1, max: 4 } }
+      - { name: col_index_num, mode: value, type: number, index_of: { param: table_array, axis: columns }, domain: { int: true, min: 1, max: 4 } }
       - { name: range_lookup, mode: value, type: bool, optional: true }
   - name: CONCATENATE
     category: text
@@ -233,9 +243,9 @@ functions:
     prior: 1.5
     returns: any
     params:
-      - { name: lookup_value, mode: value, type: any }
+      - { name: lookup_value, mode: value, type: any, probe: table_array, probe_edge: first_row }
       - { name: table_array, mode: range, type: any }
-      - { name: row_index_num, mode: value, type: number, domain: { int: true, min: 1, max: 4 } }
+      - { name: row_index_num, mode: value, type: number, index_of: { param: table_array, axis: rows }, domain: { int: true, min: 1, max: 4 } }
       - { name: range_lookup, mode: value, type: bool, optional: true }
   - name: INDEX
     category: lookup
@@ -245,25 +255,25 @@ functions:
     dynamic_array: true
     params:
       - { name: array, mode: range, type: any }
-      - { name: row_num, mode: value, type: number, domain: { int: true, min: 0, max: 6 } }
-      - { name: column_num, mode: value, type: number, optional: true, domain: { int: true, min: 0, max: 4 } }
+      - { name: row_num, mode: value, type: number, index_of: { param: array, axis: rows }, domain: { int: true, min: 0, max: 6 } }
+      - { name: column_num, mode: value, type: number, optional: true, index_of: { param: array, axis: columns }, domain: { int: true, min: 0, max: 4 } }
   - name: MATCH
     category: lookup
     milestone: M2
     prior: 5
     returns: number
     params:
-      - { name: lookup_value, mode: value, type: any }
-      - { name: lookup_array, mode: range, type: any }
-      - { name: match_type, mode: value, type: number, optional: true, domain: { int: true, min: -1, max: 1 } }
+      - { name: lookup_value, mode: value, type: any, probe: lookup_array }
+      - { name: lookup_array, mode: range, type: any, vector: true, wide_rate: 0.05, row_rate: 0.2 }
+      - { name: match_type, mode: value, type: number, optional: true, always: true, domain: { enum: [0, 0, 0, 0, 0, 0, 0, 1, -1] } }
   - name: SUMIFS
     category: math
     milestone: M2
     prior: 3
     returns: number
     params:
-      - { name: sum_range, mode: range, type: number }
-      - { name: criteria_range, mode: range, type: any, repeat: { group: [criteria_range, criteria], min: 1, max: 127 } }
+      - { name: sum_range, mode: range, type: number, same_shape: true }
+      - { name: criteria_range, mode: range, type: any, same_shape: true, repeat: { group: [criteria_range, criteria], min: 1, max: 127 } }
       - { name: criteria, mode: criteria, type: any }
   - name: COUNTIFS
     category: statistical
@@ -271,7 +281,7 @@ functions:
     prior: 2
     returns: number
     params:
-      - { name: criteria_range, mode: range, type: any, repeat: { group: [criteria_range, criteria], min: 1, max: 127 } }
+      - { name: criteria_range, mode: range, type: any, same_shape: true, repeat: { group: [criteria_range, criteria], min: 1, max: 127 } }
       - { name: criteria, mode: criteria, type: any }
   - name: ROUNDUP
     category: math
@@ -567,8 +577,8 @@ functions:
     prior: 0.5
     returns: number
     params:
-      - { name: average_range, mode: range, type: number }
-      - { name: criteria_range, mode: range, type: any, repeat: { group: [criteria_range, criteria], min: 1, max: 127 } }
+      - { name: average_range, mode: range, type: number, same_shape: true }
+      - { name: criteria_range, mode: range, type: any, same_shape: true, repeat: { group: [criteria_range, criteria], min: 1, max: 127 } }
       - { name: criteria, mode: criteria, type: any }
   - name: BAHTTEXT
     category: text
@@ -2865,8 +2875,8 @@ functions:
     prior: 0.2
     returns: number
     params:
-      - { name: max_range, mode: range, type: number }
-      - { name: criteria_range, mode: range, type: any, repeat: { group: [criteria_range, criteria], min: 1, max: 127 } }
+      - { name: max_range, mode: range, type: number, same_shape: true }
+      - { name: criteria_range, mode: range, type: any, same_shape: true, repeat: { group: [criteria_range, criteria], min: 1, max: 127 } }
       - { name: criteria, mode: criteria, type: any }
   - name: MDETERM
     category: math
@@ -2919,8 +2929,8 @@ functions:
     prior: 0.2
     returns: number
     params:
-      - { name: min_range, mode: range, type: number }
-      - { name: criteria_range, mode: range, type: any, repeat: { group: [criteria_range, criteria], min: 1, max: 127 } }
+      - { name: min_range, mode: range, type: number, same_shape: true }
+      - { name: criteria_range, mode: range, type: any, same_shape: true, repeat: { group: [criteria_range, criteria], min: 1, max: 127 } }
       - { name: criteria, mode: criteria, type: any }
   - name: MINUTE
     category: date

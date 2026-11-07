@@ -3,6 +3,7 @@
 //! are derived from `Function::arg_kinds`, never written by hand.
 
 use super::broadcast::broadcast_shapes;
+use super::legacy::legacy_array_context;
 use super::reference_parameter::reference_by_caller_shape;
 use super::reference_result::yields_cells;
 use super::{run_static_analysis_on_node, Node, Signature, StaticResult};
@@ -76,6 +77,34 @@ pub(super) fn lifts_arrays_at(kind: &Function, index: usize) -> bool {
     kind.arg_kinds()
         .and_then(|kinds| kinds.kind(index))
         .is_some_and(|kind| kind == ArgKind::LiftArrays)
+}
+
+/// The signature and value-position flag ([`legacy_array_context`]) with which argument `index`
+/// of `kind(args)` reads an array constant, for `add_array_at` and `remove_array_at`. An
+/// Analysis `ToolPak` (`LiftArrays`) argument reads one as a scalar argument does, although it
+/// reads a range whole: a legacy `=ISEVEN({5})` shows `=ISEVEN(@{5})`, `=ISEVEN({2;3})`
+/// `=ISEVEN(@{2;3})`, `=ISEVEN(-{5})` `=ISEVEN(-@{5})`, and EDATE, YEARFRAC, BIN2DEC and QUOTIENT
+/// alike, on the rows of nothing and off them (probes/iseven-isodd-range-derived-arrays Leg!C3,
+/// F3, G3:N3, C41, F41, G41:N41, excel-graph, T-4528). Only at a value position (`arrays`): under
+/// an argument that takes arrays the constants stay as written, `=SUM(EDATE({45000},1))` and
+/// `=SUMPRODUCT(ISEVEN({5}))` show no `@`, while `=ABS(QUOTIENT({7},2))` shows
+/// `=ABS(QUOTIENT(@{7},2))` (probes/nested-legacy-atp-array-constant, excel-graph, T-4591).
+pub(super) fn array_constant_context<'a>(
+    kind: &Function,
+    signature: Option<&'a Signature>,
+    index: usize,
+    args: &[Node],
+    arrays: bool,
+) -> (Option<&'a Signature>, bool) {
+    let signature = if arrays && lifts_arrays_at(kind, index) {
+        Some(&Signature::Scalar)
+    } else {
+        signature
+    };
+    (
+        signature,
+        legacy_array_context(kind, signature, index, args, arrays),
+    )
 }
 
 #[cfg(test)]

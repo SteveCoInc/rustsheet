@@ -5,8 +5,11 @@
 use super::ArgKind::{
     Lift, LiftArrays, LiftArraysRangeWhole, ReferenceByCaller, Whole, WholeByCaller,
 };
-use super::KernelWork::{Constant, Weighted};
-use super::{ArgKinds, LIFT_1, LIFT_2, LIFT_3, LIFT_3_OF_5, LIFT_4, LIFT_4_OF_6};
+use super::KernelWork::{ByValue, Constant, Weighted};
+use super::ValueWork::{HypergeometricSum, IncompleteGamma};
+use super::{
+    ArgKinds, GammaShape, KernelWork, LIFT_1, LIFT_2, LIFT_3, LIFT_3_OF_5, LIFT_4, LIFT_4_OF_6,
+};
 use crate::functions::Function;
 
 /// A data argument its function reads itself, then one lifted worksheet argument:
@@ -48,6 +51,9 @@ const ETS_STAT_TYPE: ArgKinds = ArgKinds::fixed(
     &[WholeByCaller, WholeByCaller, Lift, Lift, Lift, Lift],
     Constant,
 );
+/// `FORECAST.ETS.SEASONALITY(values, timeline, [data_completion], [aggregation])`.
+const ETS_SEASONALITY: ArgKinds =
+    ArgKinds::fixed(2, &[WholeByCaller, WholeByCaller, Lift, Lift], Constant);
 /// A lifted argument, a reference read by its function, then an optional lifted argument:
 /// `RANK(number, ref, [order])`.
 const ONE_THEN_REFERENCE_THEN_1: ArgKinds =
@@ -71,14 +77,16 @@ const DISCRETE_SUM_4: ArgKinds =
 const DISCRETE_SUM_3_OF_4: ArgKinds =
     ArgKinds::fixed(3, &[Lift, Lift, Lift, Lift], Weighted(DISCRETE_SUM_WEIGHT));
 /// `BINOM.INV(trials, probability_s, alpha)` and CRITBINOM: a search that halves `[0, trials]`
-/// (a `u64`) at most 64 times, its own per-call cap (`statistical/binom.rs`), with one statrs
-/// incomplete-beta cdf (up to 140 continued-fraction steps) each. Measured in release: up to
-/// about 65 us an element (`BINOM.INV(1E12,0.3,alpha)`; 37 us at 1E6 trials, 13 us at a tiny
-/// `probability_s`). The weight caps a lifted call at 2^27 / 4096 = 32,768 elements: 2.14 s
-/// measured at the worst case, the budget of the Bessel entries (a DEVIATION, statistics.md).
+/// (`trials` under 2^31 - 1) at most 31 times, its own per-call cap (`statistical/binom.rs`), with
+/// one BINOM.DIST cdf each: the bratio port, else the double-double walk of up to 2^10 terms, else
+/// statrs (T-3444). Measured in release over n 1E3 to 2^31 - 2, p 1E-9 to 1 - 1E-6 and alpha
+/// 1E-300 to 1 - 1E-12 (T-3444, 2026-11-01): up to about 200 us an element
+/// (`BINOM.INV(1E4,0.999,0.999999999999)`; 20 us at 2^31 - 2 trials and p = 0.3). The weight caps a
+/// lifted call at 2^27 / 16384 = 8,192 elements, about 1.6 s at the worst case measured, inside the
+/// budget of the Bessel entries (a DEVIATION, statistics.md).
 const BINOM_INV: ArgKinds = ArgKinds::fixed(3, &[Lift, Lift, Lift], Weighted(BINOM_INV_WEIGHT));
 /// The units one BINOM.INV element is charged against `MAX_LIFTED_CELL_VISITS`.
-const BINOM_INV_WEIGHT: u32 = 1 << 12;
+const BINOM_INV_WEIGHT: u32 = 1 << 14;
 // --- End statistical (T-1290) ---------------------------------------------------------------
 
 // --- Statistical quantiles (T-1848) ---------------------------------------------------------
@@ -90,10 +98,13 @@ const BINOM_INV_WEIGHT: u32 = 1 << 12;
 ///
 /// What one BETA.INV or F.INV element is charged. Its quantile is the capped port of statrs'
 /// inversion (`statistical/inverse_beta.rs`: at most 512 Newton steps of one cdf and 4,096 step
-/// adjustments, its own per-call cap: 1.6 ms at full cost), for F.INV refined to the crossing of
-/// the T-0970 incomplete beta (`special::refine_increasing`: at most 129 of its cdfs, each at most
-/// two continued fractions of 300 steps, about twice statrs' cost: 0.9 ms more; T-0974), or, at a
-/// huge shape or df, a crossing of at most 67 of those cdfs (`inverse_beta::beta_quantile_crossing`,
+/// adjustments, its own per-call cap: 1.6 ms at full cost), refined to the crossing of its cdf
+/// (`special::refine_increasing`: at most 129 cdfs; F.INV crosses `incomplete_beta::search_tails`,
+/// at most two continued fractions of 300 steps, 0.9 ms more, T-0974; BETA.INV crosses
+/// `bratio::beta_search_tails`, the port's branches (bpser at most 2,000 terms, bfrac 1,000, bgrat 30)
+/// and those same fractions elsewhere, 0.41 ms the slowest timed, T-3398; every bpser branch has a
+/// term ratio of at most 0.7 and settles in about 110 terms, not its 2,000-term cap), or, at
+/// a huge shape or df, a crossing of at most 67 of those cdfs (`inverse_beta::beta_quantile_crossing`,
 /// T-1538: 0.5 ms), so the full Newton search plus refinement (2.5 ms) is the bound.
 /// The weight caps a lifted call at 2^27 / 2^18 = 512 elements: 1.7 s at the bound (a DEVIATION,
 /// statistics.md). The cases measured cost much less (over 8,192 elements in release: 167 us for
@@ -109,14 +120,16 @@ const BETA_INV: ArgKinds = ArgKinds::fixed(
 );
 /// `F.INV(probability, deg_freedom1, deg_freedom2)`, F.INV.RT and FINV.
 const F_INV: ArgKinds = ArgKinds::fixed(3, &[Lift, Lift, Lift], Weighted(QUANTILE_WEIGHT));
-/// What one T.INV or CONFIDENCE.T element is charged. Its quantile is the capped port with at most
-/// 64 Newton steps and 512 step adjustments (`inverse_beta::T_MAX_NEWTON_STEPS`,
-/// `T_MAX_STEP_ADJUSTMENTS`; 27 and 78 were the most seen: 0.21 ms at full cost), a closed form, or
-/// a bisection of at most 264 cdfs (`t_dist::t_quantile`'s 64 doublings and 200 halvings: 0.82 ms,
-/// the bound). The weight caps a lifted call at 2^27 / 2^16 = 2,048 elements: 1.7 s at the bound
-/// (a DEVIATION, statistics.md). Measured cases cost much less (over 65,536 elements in release:
-/// 17.5 us for `T.INV.2T(1E-9,99999)`, the bisection; 1.2 us for `T.INV(0.4,5)`).
-const T_QUANTILE_WEIGHT: u32 = 1 << 16;
+/// What one T.INV or CONFIDENCE.T element is charged. From df 2 its quantile is a crossing of the
+/// tail at y (`t_dist::t_rounded_y_quantile`, T-2511): about 25 to 30 tails seeded by statrs' search,
+/// at most 66 without a seed (q below 1E-8) and about 81 with a poor one, each tail up to about 30 us where it sums the
+/// integer-df series (df up to 1000). Measured in release (T-2511): 1.53 ms for `T.INV(1E-12,999)`,
+/// the worst seen, about 1.0 ms at df 999 and 1000 otherwise, 0.47 ms at df 500, under 0.2 ms at
+/// df 99 and from df 1001. At df 1 it is the capped statrs port (0.21 ms) or a bisection of at most
+/// 264 cdfs (0.82 ms). The weight caps a lifted call at 2^27 / 2^17 = 1,024 elements: about 1.6 s
+/// at the worst case seen (a DEVIATION, statistics.md). It assumes a good seed: a poor one at df
+/// near 1000 would cost about 2.5 ms a call; hoisting the per-df work out of the tail is T-3399's.
+const T_QUANTILE_WEIGHT: u32 = 1 << 17;
 /// `T.INV(probability, deg_freedom)`, T.INV.2T and TINV.
 const T_INV: ArgKinds = ArgKinds::fixed(2, &[Lift, Lift], Weighted(T_QUANTILE_WEIGHT));
 /// `CONFIDENCE.T(alpha, standard_dev, size)`.
@@ -125,43 +138,115 @@ const CONFIDENCE_T: ArgKinds = ArgKinds::fixed(3, &[Lift, Lift, Lift], Weighted(
 
 // --- Incomplete gamma (T-1872) --------------------------------------------------------------
 /// What one GAMMA.DIST, GAMMA.INV, CHISQ.* or POISSON element is charged. Each runs one capped
-/// port of statrs' incomplete gamma (`statistical/incomplete_gamma.rs`): a cdf of at most 2^19
-/// series or continued-fraction terms, or an inversion whose cdfs (at most about 2,250 of them:
-/// 1,075 halvings, 1,025 doublings, 8 bisections, 4 Newton steps, then for GAMMA.INV and
-/// CHISQ.INV* one check and at most 129 more of a refinement, T-1634) share one budget of 2^19
-/// terms. Measured in release (T-1872, load 2 to 5 on 4 cores) over 512 elements at the cap: a
+/// capped incomplete gamma (`statistical/incomplete_gamma`): a cdf of at most 2^19 series or
+/// continued-fraction terms, or an inversion whose cdfs (at most 129 of them, the refinement from
+/// a Wilson-Hilferty start, T-3131; statrs' search ran up to about 2,250 before) share one budget
+/// of 2^19 terms. Measured in release (T-1872, load 2 to 5 on 4 cores) over 512 elements at the cap: a
 /// continued-fraction term costs 4.1 to 4.7 ns on its NaN path (2.4 ms for 2^19,
 /// `GAMMA.DIST(1.0000001E300,1E300,1,TRUE)`, whose terms overflow at once) and 2.4 ns where it
 /// converges and rescales (1.3 ms, `GAMMA.DIST(1000000000000001,1E15,1,TRUE)`, which reaches the
 /// cap at a shape of 1E15 and rescales on about 65% of its terms), a series term 2.5 ns (1.3 ms,
 /// `GAMMA.DIST(1E12,1E12,1,TRUE)`), and a cdf's own work 49 ns (`GAMMA.INV(1E-300,0.001,1E-300)`,
-/// 1,060 cdfs: 52 us). The bound of an element is 2^19 terms at the slowest, 4.7 ns, plus 2,250 cdfs
-/// at 49 ns, about 2.6 ms, so the weight caps a lifted call at 2^27 / 2^18 = 512 elements: 1.3 s
-/// at the bound (a DEVIATION, statistics.md). Measured cases cost less: 2.4 ms for the
+/// 1,060 cdfs: 52 us). The bound of an element is 2^19 terms at the slowest, 4.7 ns, plus 129 cdfs at
+/// 49 ns, about 2.5 ms (2.6 ms with statrs' 2,250 cdfs before T-3131), so the 2^18 weight still
+/// holds: it caps a lifted call at 2^27 / 2^18 = 512 elements, 1.3 s at the bound (a DEVIATION,
+/// statistics.md). Measured cases cost less: 2.4 ms for the
 /// continued fraction at the cap, 1.2 ms for `CHISQ.DIST(1E10,1E10,TRUE)` (481,117 terms),
-/// 1.6 us for `GAMMA.INV(0.4,2,3)`.
+/// 1.6 us for `GAMMA.INV(0.4,2,3)`. It is the most an element is charged; each is charged by
+/// its shape below it (`incomplete_gamma`, T-2795, at the 4.7 ns and 49 ns above:
+/// `INCOMPLETE_GAMMA_TERM_COST` and `INCOMPLETE_GAMMA_CDF_COST` in mod.rs).
 const INCOMPLETE_GAMMA_WEIGHT: u32 = 1 << 18;
-/// `CHISQ.DIST.RT(x, deg_freedom)`, CHIDIST, `CHISQ.INV(probability, deg_freedom)`,
-/// CHISQ.INV.RT and CHIINV.
-const CHISQ_2: ArgKinds = ArgKinds::fixed(2, &[Lift, Lift], Weighted(INCOMPLETE_GAMMA_WEIGHT));
-/// `CHISQ.DIST(x, deg_freedom, cumulative)`, `POISSON.DIST(x, mean, cumulative)`, POISSON,
+/// An incomplete-gamma entry charged by value (T-2795): at most `INCOMPLETE_GAMMA_WEIGHT` an
+/// element, in proportion to the bound of its shape (`ValueWork::IncompleteGamma`), so a lift
+/// of small shapes runs far more than 512 elements (gen-m9/c2974c061384fdd9 A56, a CHIDIST over
+/// a 731-element PIVOTBY, was `#ERROR!` where Excel spills): `CHIDIST(x,5)` is charged 150
+/// units, a CHISQ.INV.RT of df 10 the bound unless its probability is outside (0, 1).
+const fn incomplete_gamma(
+    args: usize,
+    shape: usize,
+    shape_of: GammaShape,
+    probability: Option<usize>,
+) -> KernelWork {
+    ByValue(IncompleteGamma {
+        args,
+        shape,
+        shape_of,
+        probability,
+        weight: INCOMPLETE_GAMMA_WEIGHT,
+    })
+}
+/// `CHISQ.DIST.RT(x, deg_freedom)` and CHIDIST.
+const CHISQ_DIST_RT: ArgKinds = ArgKinds::fixed(
+    2,
+    &[Lift, Lift],
+    incomplete_gamma(2, 1, GammaShape::HalfDegrees, None),
+);
+/// `CHISQ.INV(probability, deg_freedom)`, CHISQ.INV.RT and CHIINV.
+const CHISQ_INV: ArgKinds = ArgKinds::fixed(
+    2,
+    &[Lift, Lift],
+    incomplete_gamma(2, 1, GammaShape::HalfDegrees, Some(0)),
+);
+/// `CHISQ.DIST(x, deg_freedom, cumulative)`.
+const CHISQ_DIST: ArgKinds = ArgKinds::fixed(
+    3,
+    &[Lift, Lift, Lift],
+    incomplete_gamma(3, 1, GammaShape::HalfDegrees, None),
+);
+/// `POISSON.DIST(x, mean, cumulative)` and POISSON: Q(trunc(x) + 1, mean).
+const POISSON: ArgKinds = ArgKinds::fixed(
+    3,
+    &[Lift, Lift, Lift],
+    incomplete_gamma(3, 0, GammaShape::PoissonCount, None),
+);
 /// `GAMMA.INV(probability, alpha, beta)` and GAMMAINV.
-const INCOMPLETE_GAMMA_3: ArgKinds =
-    ArgKinds::fixed(3, &[Lift, Lift, Lift], Weighted(INCOMPLETE_GAMMA_WEIGHT));
+const GAMMA_INV: ArgKinds = ArgKinds::fixed(
+    3,
+    &[Lift, Lift, Lift],
+    incomplete_gamma(3, 1, GammaShape::Shape, Some(0)),
+);
 /// `GAMMA.DIST(x, alpha, beta, cumulative)` and GAMMADIST.
 const GAMMA_DIST: ArgKinds = ArgKinds::fixed(
     4,
     &[Lift, Lift, Lift, Lift],
-    Weighted(INCOMPLETE_GAMMA_WEIGHT),
+    incomplete_gamma(4, 1, GammaShape::Shape, None),
 );
 // --- End incomplete gamma (T-1872) ----------------------------------------------------------
 
 // --- Hypergeometric (T-1873) ----------------------------------------------------------------
-/// One HYPGEOM.DIST element: its capped cdf's bound, (2^18 + 131) terms at 250 ns, about 66 ms, so
-/// 32 elements take about 2.1 s (a DEVIATION; measured in release: hypegeom.rs `MAX_TERMS`). A cdf
-/// or pmf takes either the double-double walk (at most 78 us, T-0977) or that sum, never both.
+/// The most one HYPGEOM.DIST element is charged: its capped cdf's bound, (2^18 + 131) terms at
+/// 250 ns, about 66 ms, so 32 elements at the bound take about 2.1 s (a DEVIATION; measured in
+/// release: hypegeom.rs `MAX_TERMS`).
 const HYPGEOM_DIST_WEIGHT: u32 = 1 << 22;
-const HYPGEOM_DIST: ArgKinds = ArgKinds::fixed(5, &[Lift; 5], Weighted(HYPGEOM_DIST_WEIGHT));
+/// The units one term of HYPGEOM.DIST's cdf sum is charged: `HYPGEOM_DIST_WEIGHT` over the
+/// (2^18 + 131) terms of its bound, rounded up, so about 250 ns a term (T-2433).
+const HYPGEOM_TERM_WEIGHT: u32 = 16;
+/// What HYPGEOM.DIST's double-double walk is charged: at most 2^12 steps (T-0977), measured in
+/// release at about 120 us an element for the cdf's 4,000-step walk (16,384 elements of
+/// `HYPGEOM.DIST(0,4000,4000,1E9,TRUE)` took 1.93 to 2.0 s in benches/lift.rs, T-2433; the pmf's
+/// walk is cheaper, 78 us), so twice HYPGEOMDIST's weight: 8,192 elements a lifted call, about 1 s.
+const HYPGEOM_WALK_WEIGHT: u32 = 1 << 14;
+/// The exponents HYPGEOM.DIST's cdf sum may evaluate beside its terms: its window's bisections
+/// (hypegeom.rs `nonzero_terms`).
+const HYPGEOM_WINDOW_EXPONENTS: u32 = 131;
+/// `HYPGEOM.DIST(sample_s, number_sample, population_s, number_pop, cumulative)`. A cdf or pmf
+/// takes either the double-double walk (`HYPGEOM_WALK_WEIGHT`) or the capped sum, never both,
+/// and the sum's window is at most `min(sample_s, number_sample, population_s) + 1` terms (above
+/// `min(number_sample, population_s)` the cdf is 1 before any sum), so each element is charged
+/// the larger of the two by its counts (T-2433; before it, every element was charged the cap's
+/// bound, and a lift of 33 small calls was `#ERROR!` where Excel spills:
+/// gen-m9/7bd219ec0c0c5e22 A159).
+const HYPGEOM_DIST: ArgKinds = ArgKinds::fixed(
+    5,
+    &[Lift; 5],
+    ByValue(HypergeometricSum {
+        counts: &[0, 1, 2],
+        walk: HYPGEOM_WALK_WEIGHT,
+        extra: HYPGEOM_WINDOW_EXPONENTS,
+        per_term: HYPGEOM_TERM_WEIGHT,
+        weight: HYPGEOM_DIST_WEIGHT,
+    }),
+);
 /// One HYPGEOMDIST element: its pmf walk (`statistical/discrete.rs`, T-0977) of at most 2^12
 /// double-double steps, 78 us in release at 4,095 steps, twice BINOM.DIST's walk, so twice its
 /// weight: 16,384 elements a lifted call, about 1.3 s. Past the walk's budget the pmf is statrs'
@@ -230,6 +315,7 @@ pub(super) fn arg_kinds(function: &Function) -> Option<&'static ArgKinds> {
         Function::ForecastEts => Some(&ETS_TARGET),
         Function::ForecastEtsConfint => Some(&ETS_CONFINT_TARGET),
         Function::ForecastEtsStat => Some(&ETS_STAT_TYPE),
+        Function::ForecastEtsSeasonality => Some(&ETS_SEASONALITY),
         // RANK's `number` and `order` lift likewise over a `ref` read once; a `ref` that is not a
         // reference broadcasts as its own shape of errors (probes/stat-test-lift P20-P33, P72;
         // probes/stat-argument-modes H492-H499; T-1999). A lifted call sorts the numbers once
@@ -321,16 +407,11 @@ pub(super) fn arg_kinds(function: &Function) -> Option<&'static ArgKinds> {
         // incomplete gamma and its search keep a per-call cap of their own
         // (`statistical/incomplete_gamma.rs`), so the entries are weighted by its bound
         // (statistics.md "Incomplete gamma: per-call cap and lifting").
-        Function::ChisqDistRT
-        | Function::ChiDistCompat
-        | Function::ChisqInv
-        | Function::ChisqInvRT
-        | Function::ChiInvCompat => Some(&CHISQ_2),
-        Function::ChisqDist
-        | Function::PoissonDist
-        | Function::PoissonCompat
-        | Function::GammaInv
-        | Function::GammaInvCompat => Some(&INCOMPLETE_GAMMA_3),
+        Function::ChisqDistRT | Function::ChiDistCompat => Some(&CHISQ_DIST_RT),
+        Function::ChisqInv | Function::ChisqInvRT | Function::ChiInvCompat => Some(&CHISQ_INV),
+        Function::ChisqDist => Some(&CHISQ_DIST),
+        Function::PoissonDist | Function::PoissonCompat => Some(&POISSON),
+        Function::GammaInv | Function::GammaInvCompat => Some(&GAMMA_INV),
         Function::GammaDist | Function::GammaDistCompat => Some(&GAMMA_DIST),
         // --- End incomplete gamma (T-1872) ---
         // --- Hypergeometric (T-1873) ---

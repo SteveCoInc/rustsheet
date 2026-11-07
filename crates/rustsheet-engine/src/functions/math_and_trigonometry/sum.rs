@@ -1,12 +1,14 @@
 use crate::calc_result::Range;
+use crate::expressions::parser::is_multi_sheet_span;
 use crate::expressions::types::CellReferenceIndex;
-use crate::functions::statistical::paired::PairedArg;
+use crate::functions::statistical::element_errors::array_element_error;
+use crate::functions::statistical::paired::{marked_number_error, PairedArg, SecondMark};
 use crate::functions::util::aggregate_args::{
-    AggregatePolicy, ArgReading, ErrorRule, GridReading, NestedReading, NumberRules,
+    AggregatePolicy, AggregateWalk, ArgReading, ErrorRule, GridReading, NestedReading, NumberRules,
 };
 
 use crate::{
-    arithmetic::{extended_sum, snap_near_zero},
+    arithmetic::{extended_sum, flush_subnormal, snap_near_zero},
     calc_result::CalcResult,
     expressions::parser::Node,
     expressions::token::Error,
@@ -15,27 +17,24 @@ use crate::{
 
 type TwoMatricesResult = (i64, i64, Vec<Option<f64>>, Vec<Option<f64>>);
 
-// Helper to check if two shapes are the same or compatible 1D shapes
-fn is_same_shape_or_1d(rows1: i64, cols1: i64, rows2: i64, cols2: i64) -> bool {
-    (rows1 == rows2 && cols1 == cols2)
-        || (rows1 == 1 && cols2 == 1 && cols1 == rows2)
-        || (rows2 == 1 && cols1 == 1 && cols2 == rows1)
-}
-
 impl Model {
     // SUMX2MY2(array_x, array_y) - Returns the sum of the difference of squares
     pub(crate) fn fn_sumx2my2(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.sumx_fold(args, cell, |x, y| x * x - y * y)
+        self.sumx_fold(args, cell, |x, y| {
+            flush_subnormal(x * x) - flush_subnormal(y * y)
+        })
     }
 
     // SUMX2PY2(array_x, array_y) - Returns the sum of the sum of squares
     pub(crate) fn fn_sumx2py2(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.sumx_fold(args, cell, |x, y| x * x + y * y)
+        self.sumx_fold(args, cell, |x, y| {
+            flush_subnormal(x * x) + flush_subnormal(y * y)
+        })
     }
 
     // SUMXMY2(array_x, array_y) - Returns the sum of squares of differences
     pub(crate) fn fn_sumxmy2(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.sumx_fold(args, cell, |x, y| (x - y) * (x - y))
+        self.sumx_fold(args, cell, |x, y| flush_subnormal((x - y) * (x - y)))
     }
 
     // Excel pairs the arrays row-major and only needs equal element counts (not shapes). The
@@ -54,11 +53,20 @@ impl Model {
         if args.len() != 2 {
             return CalcResult::new_args_number_error(cell);
         }
-        let first = match self.sumx_arg(&args[0], cell) {
+        // A marked argument (a number from ERROR.TYPE or CELL, an array of references), first or
+        // second, is `#NUM!` after the other's error value and the count check:
+        // `SUMXMY2(ERROR.TYPE(#REF!),5)`, `SUMXMY2(5,ERROR.TYPE(#REF!))`, SUMX2MY2 and SUMX2PY2 alike,
+        // and `SUMXMY2(INDIRECT("B1",{1}),4)`, are `#NUM!`, while `SUMXMY2(ERROR.TYPE(#REF!),1/0)` is
+        // `#DIV/0!` and `SUMXMY2(ERROR.TYPE(#REF!),{1;2})` `#N/A` (probes/t2576-error-type-cell-paired
+        // E16, t2577-indirect-ref-array A148, t2766-mark-positions A15:A19; statistics.md
+        // "ERROR.TYPE and CELL results are #NUM! in the paired functions").
+        let (first_value, first_marked) = self.evaluate_sample_arg(&args[0], cell);
+        let first = match self.sumx_arg_value(first_value, cell) {
             Ok(arg) => arg,
             Err(e) => return e,
         };
-        let second = match self.sumx_arg(&args[1], cell) {
+        let (second_value, second_marked) = self.evaluate_sample_arg(&args[1], cell);
+        let second = match self.sumx_arg_value(second_value, cell) {
             Ok(arg) => arg,
             Err(e) => return e,
         };
@@ -74,8 +82,10 @@ impl Model {
                 return unequal_counts();
             }
         }
-        let array_error =
-            |_, error| CalcResult::new_error(error, cell, "Error in array".to_string());
+        if first_marked || second_marked {
+            return marked_number_error(cell);
+        }
+        let array_error = |_, error| array_element_error(error, cell);
         let paired = match self.paired_values(first, second, cell, array_error) {
             Ok(paired) => paired,
             Err(e) => return e,
@@ -101,8 +111,12 @@ impl Model {
     // value, or a one-cell reference holding an error, is returned at once, and so is #VALUE! for
     // a blank one-cell reference or an omitted argument; errors inside a longer range or an array
     // wait for the count check.
-    fn sumx_arg(&mut self, arg: &Node, cell: CellReferenceIndex) -> Result<PairedArg, CalcResult> {
-        let value = match self.evaluate_node_in_context(arg, cell) {
+    fn sumx_arg_value(
+        &mut self,
+        value: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Result<PairedArg, CalcResult> {
+        let value = match value {
             CalcResult::Range { left, right } if left == right => self.evaluate_cell(left),
             value => value,
         };
@@ -121,17 +135,26 @@ impl Model {
     }
 
     // Helper function to extract and validate two matrices (ranges or arrays) with compatible shapes.
-    // Returns (rows, cols, values_left, values_right) or an error.
+    // Returns (rows, cols, values_left, values_right) or an error. `marked_second` says what a
+    // marked second argument is: cells with no number (the regression family) or `#NUM!` (CHITEST).
     pub(crate) fn fn_get_two_matrices(
         &mut self,
         args: &[Node],
         cell: CellReferenceIndex,
+        marked_second: SecondMark,
     ) -> Result<TwoMatricesResult, CalcResult> {
         if args.len() != 2 {
             return Err(CalcResult::new_args_number_error(cell));
         }
-        let x_range = self.evaluate_node_in_context(&args[0], cell);
-        let y_range = self.evaluate_node_in_context(&args[1], cell);
+        // A marked first argument (a number straight from ERROR.TYPE or CELL, an array of
+        // references) is `#NUM!` once the sizes match (`INTERCEPT(ERROR.TYPE(#REF!),5)`,
+        // `SLOPE(INDIRECT("B1",{1;1}),{1;2})`, while `RSQ(ERROR.TYPE(#NAME?),Data!C8:C11)` is
+        // `#N/A`; T-2576, T-2577). So is CHITEST's marked second argument
+        // (probes/t2766-mark-positions-2 A26, A28). A marked second argument of CORREL, PEARSON,
+        // SLOPE, INTERCEPT, RSQ and STEYX is cells with no number, its errors kept
+        // ([`SecondMark::NoNumber`]).
+        let (x_range, first_marked) = self.evaluate_sample_arg(&args[0], cell);
+        let (y_range, second_marked) = self.evaluate_sample_arg(&args[1], cell);
         let x_range = self.blank_one_cell_as_error(x_range, cell);
         let y_range = self.blank_one_cell_as_error(y_range, cell);
         if let (CalcResult::Range { left: l1, .. }, CalcResult::Range { left: l2, .. }) =
@@ -155,22 +178,22 @@ impl Model {
                 "Both arguments must be ranges or arrays".to_string(),
             ));
         };
-        if !is_same_shape_or_1d(rows1, cols1, rows2, cols2) {
-            // Excel: unequal sizes are #N/A, with or without text in the ranges (T-1292, T-1620).
+        if rows1 * cols1 != rows2 * cols2 {
+            // Excel: unequal cell counts are #N/A, with or without text in the ranges (T-1292, T-1620);
+            // any two shapes with the same count pair in reading order (T-2431).
             return Err(CalcResult::new_error(
                 Error::NA,
                 cell,
-                "Arguments must be of the same shape".to_string(),
+                "Arguments must have the same number of cells".to_string(),
             ));
         }
-        let array_error = |index, error| {
-            let which = if index == 0 { "first" } else { "second" };
-            CalcResult::new_error(
-                Error::VALUE,
-                cell,
-                format!("Error in {which} array: {error:?}"),
-            )
+        let second = match marked_second {
+            _ if first_marked => return Err(marked_number_error(cell)),
+            SecondMark::NumError if second_marked => return Err(marked_number_error(cell)),
+            SecondMark::NoNumber if second_marked => second.without_numbers(),
+            _ => second,
         };
+        let array_error = |_, error| array_element_error(error, cell);
         let paired = self.paired_values(first, second, cell, array_error)?;
         Ok((rows1, cols1, paired.first, paired.second))
     }
@@ -210,7 +233,7 @@ fn matrix_arg(
 
 /// A running SUM: the total and the two addends of the latest addition, which
 /// [`snap_near_zero`] needs.
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub(crate) struct SumParts {
     total: f64,
     before_last: f64,
@@ -266,6 +289,57 @@ impl Model {
         }
     }
 
+    /// PERCENTOF's two sums, `(SUM(part), SUM(total))`, read in one walk under SUM's error ranking
+    /// so a direct error in either argument (an error value, non-numeric typed text) wins in
+    /// argument order over any error inside a reference or an array, and such an error is `#NUM!`
+    /// whichever it is: `PERCENTOF(Data!B1,NA())` is `#N/A`, `PERCENTOF(Data!B1,Data!B2)` and
+    /// `PERCENTOF({1,#N/A},4)` are `#NUM!` (numbers.md "PERCENTOF: an error inside a reference or
+    /// array is #NUM!"; probes/t3653-percentof-argument-kinds, excel-graph, T-3653). Each sum
+    /// snaps near zero and overflows to `#NUM!` like SUM. A 3-D reference (`S1:S2!A1`) is refused
+    /// as a direct `#VALUE!` in its place: `PERCENTOF(NA(),S1:S2!A1)` is `#N/A`,
+    /// `PERCENTOF(S2!B1,S1:S2!A1)` with S2!B1 `#N/A` is `#VALUE!` (probes/t3653-percentof-3d).
+    pub(crate) fn percentof_sums(
+        &mut self,
+        part: &Node,
+        total: &Node,
+        cell: CellReferenceIndex,
+    ) -> Result<(f64, f64), CalcResult> {
+        let mut walk = AggregateWalk::for_numbers(SUM_ARGS, NumberRules::SUM_LIKE);
+        let mut sums = [SumParts::default(); 2];
+        for (arg, sum) in [part, total].into_iter().zip(sums.iter_mut()) {
+            if is_multi_sheet_span(arg) {
+                return Err(CalcResult::new_error(
+                    Error::VALUE,
+                    cell,
+                    "PERCENTOF takes no 3-D reference".to_string(),
+                ));
+            }
+            self.walk_aggregate_arg(arg, cell, &mut walk, &mut |model, source, value| {
+                if let Some(number) =
+                    model.aggregate_number(NumberRules::SUM_LIKE, source, value, cell)?
+                {
+                    sum.add(number);
+                }
+                Ok(())
+            })?;
+        }
+        if walk.finish().is_err() {
+            return Err(CalcResult::new_error(
+                Error::NUM,
+                cell,
+                "Error in a referenced cell or array".to_string(),
+            ));
+        }
+        let [part, total] =
+            sums.map(
+                |sum| match CalcResult::finite_number_or_num(sum.snapped(), cell) {
+                    CalcResult::Number(n) => Ok(n),
+                    error => Err(error),
+                },
+            );
+        Ok((part?, total?))
+    }
+
     /// The sum of SUM's arguments, with the two addends of its final addition.
     fn sum_with_last_addition(
         &mut self,
@@ -274,6 +348,12 @@ impl Model {
     ) -> Result<SumParts, CalcResult> {
         if args.is_empty() {
             return Err(CalcResult::new_args_number_error(cell));
+        }
+        // A running total, from the prefix cache (T-3456).
+        if let [arg] = args {
+            if let Some(sum) = self.prefix_sum(arg, cell) {
+                return sum;
+            }
         }
         let mut sum = SumParts::default();
         self.for_each_aggregate_number(args, cell, SUM_ARGS, NumberRules::SUM_LIKE, |value| {

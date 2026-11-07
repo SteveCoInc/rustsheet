@@ -1,0 +1,37 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "3ed8e5b3ece5e40433ac97f059626a4923af40949e8adc862621329db2b502ea",
+  "definitions": {
+   "MULTINOMIAL": "1ff230db6691ac48"
+  },
+  "arguments_sha256": "86c1287d7fa8627cce0d8979e55b70484811973748f35307ea564b93bda3d772"
+ },
+ "sheets": {
+  "Calc": {
+   "J26": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(0)"
+   },
+   "J27": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(0,2)"
+   },
+   "J29": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(Z210)"
+   },
+   "J30": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(Z210,2)"
+   }
+  }
+ }
+}

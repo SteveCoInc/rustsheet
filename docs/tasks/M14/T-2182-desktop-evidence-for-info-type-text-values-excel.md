@@ -3,7 +3,7 @@ id: T-2182
 title: "Desktop evidence for INFO type_text values (Excel for the web gives #VALUE!)"
 milestone: M14
 lane: research
-status: blocked
+status: dropped
 priority: P3
 size: S
 tier: sonnet
@@ -30,3 +30,7 @@ Desktop Excel values for INFO's type_text arguments are known, so INFO can be im
 
 ## Out of scope
 - Excel for the web (T-2190).
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

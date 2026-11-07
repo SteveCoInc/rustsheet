@@ -2,10 +2,10 @@
 //! functions, LEFT to VALUETOTEXT, and DATEVALUE and TIMEVALUE (T-1775).
 
 use super::ArgKind::{Lift, WholeByCaller};
-use super::KernelWork::Constant;
+use super::KernelWork::{ByValue, Constant};
+use super::ValueWork::TextScan;
 use super::{
-    ArgKinds, CallResult, LIFT_1, LIFT_1_OF_2, LIFT_1_OF_3, LIFT_2, LIFT_2_OF_3, LIFT_3,
-    LIFT_3_OF_4, LIFT_4,
+    ArgKinds, CallResult, LIFT_1, LIFT_1_OF_2, LIFT_1_OF_3, LIFT_2, LIFT_3, LIFT_3_OF_4, LIFT_4,
 };
 use crate::functions::Function;
 
@@ -34,6 +34,48 @@ const TEXTJOIN: ArgKinds = ArgKinds {
     result: CallResult::Value,
 };
 
+/// `ARRAYTOTEXT(array, [format])`: the array is read whole by the function and `format` lifts over
+/// a range or an array literal, spilling to its shape (gen-m5/af89ea54bae02c71 Calc!A31:B32,
+/// probes/arraytotext-array-literal-format A1:B1; T-3884).
+const ARRAYTOTEXT: ArgKinds = ArgKinds {
+    required: 1,
+    params: &[WholeByCaller, Lift],
+    repeat: &[],
+    max: 2,
+    work: Constant,
+    result: CallResult::Value,
+};
+
+/// `FIND(find_text, within_text, [start_num])` and FINDB: each element compares `find_text` with
+/// every start position of `within_text` by `starts_with`, a `memcmp` of about 0.017 ns a byte
+/// against about 4.5 ns a position (T-1961, a release build:
+/// `SUM(FIND(REPT("a",3000)&"b",REPT("a",30000)&SEQUENCE(20)))` took 28 ms,
+/// `SUM(FIND("b",REPT("a",30000)&SEQUENCE(20)))` 2.7 ms), so 256 compared bytes cost one visit.
+const FIND: ArgKinds = ArgKinds::fixed(
+    2,
+    &[Lift, Lift, Lift],
+    ByValue(TextScan {
+        find: 0,
+        within: 1,
+        per_visit: 256,
+    }),
+);
+
+/// `SEARCH(find_text, within_text, [start_num])` and SEARCHB: as FIND, but each start position
+/// matches the wildcard pattern's segments unit by unit, about 0.6 ns a unit (T-1961:
+/// `SUM(SEARCH(REPT("a",3000)&"b",REPT("a",30000)&SEQUENCE(20)))` took 983 ms), so 8 compared
+/// bytes cost one visit. A `*` segment takes its leftmost match, so the segments together compare
+/// no more than the whole pattern at each position. Bytes over-count a non-ASCII text's units.
+const SEARCH: ArgKinds = ArgKinds::fixed(
+    2,
+    &[Lift, Lift, Lift],
+    ByValue(TextScan {
+        find: 0,
+        within: 1,
+        per_visit: 8,
+    }),
+);
+
 /// This family's part of the lifting table (`Function::arg_kinds`).
 pub(super) fn arg_kinds(function: &Function) -> Option<&'static ArgKinds> {
     match function {
@@ -41,15 +83,16 @@ pub(super) fn arg_kinds(function: &Function) -> Option<&'static ArgKinds> {
         // results broadcast as the operators' do (probes/text-argument-modes; docs/excel-semantics/
         // arrays.md "Errors broadcast through `&`, comparisons, POWER and the element-wise
         // functions", probes/error-precedence-text). DATEVALUE and TIMEVALUE lift like them
-        // (probes/date-argument-modes F9:F10, F47:F48), and so do CODE, UNICHAR, UNICODE (T-2090), BAHTTEXT and
+        // (probes/date-argument-modes F9:F10, F47:F48), and so do CHAR (T-3302), CODE, UNICHAR, UNICODE (T-2090), BAHTTEXT and
         // FILTERXML (probes/text-argument-modes F5:F6, text-bahttext-form4, -form5,
         // filterxml-array-forms). Each element is O(1) or linear in its texts, which the
-        // 32,767-unit cell text limit bounds, and the driver's 64 MiB text budget bounds the call; FIND and SEARCH scan their
-        // texts once per element, REPT and SUBSTITUTE check their result's length before they
+        // 32,767-unit cell text limit bounds, and the driver's 64 MiB text budget bounds the call; FIND and SEARCH are
+        // charged by their texts' lengths (`TextScan`), REPT and SUBSTITUTE check their result's length before they
         // build it.
         Function::Len
         | Function::Lenb
         | Function::Value
+        | Function::Char
         | Function::Code
         | Function::Unichar
         | Function::Unicode
@@ -66,14 +109,14 @@ pub(super) fn arg_kinds(function: &Function) -> Option<&'static ArgKinds> {
         // mixed shapes broadcast with #N/A fill (probes/t2198-m5-lift-argument-kinds rows 20-35).
         Function::Fixed | Function::Numbervalue => Some(&LIFT_1_OF_3),
         Function::Rept | Function::Exact | Function::Text | Function::Filterxml => Some(&LIFT_2),
-        Function::Find | Function::Findb | Function::Search | Function::Searchb => {
-            Some(&LIFT_2_OF_3)
-        }
+        Function::Find | Function::Findb => Some(&FIND),
+        Function::Search | Function::Searchb => Some(&SEARCH),
         Function::Mid | Function::Midb => Some(&LIFT_3),
         Function::Substitute => Some(&LIFT_3_OF_4),
         Function::Replace | Function::Replaceb => Some(&LIFT_4),
         Function::Concatenate => Some(&CONCATENATE),
         Function::Textjoin => Some(&TEXTJOIN),
+        Function::Arraytotext => Some(&ARRAYTOTEXT),
         _ => None,
     }
 }

@@ -9,14 +9,17 @@
 //! captures every formula and spill cell, ops add the cells they touch, and after the recalc
 //! the captured values are compared with the current ones (see `diff`).
 
+mod calculated_column;
 mod diff;
 mod pivot;
 
-pub use self::pivot::{PivotError, PivotFunction, PivotTableInput};
+pub use self::pivot::{
+    PivotDateGroupBy, PivotError, PivotFunction, PivotParts, PivotRangeGroup, PivotTableInput,
+};
 
 use rustsheet_engine::clock::Clock;
 use rustsheet_engine::types::{
-    Cell, DataTable, DataTableInput, Link, Worksheet, MAX_DATA_TABLE_CELLS,
+    Cell, DataTable, DataTableInput, Link, Table, Worksheet, MAX_DATA_TABLE_CELLS,
 };
 use rustsheet_engine::Model;
 use rustsheet_engine::TakenSheet;
@@ -35,19 +38,26 @@ pub enum Input {
     Value(Value),
     /// A formula as a user types it; must start with `=`. Excel refuses some typed formulas it
     /// reads when stored, and so does this: a LET name or LAMBDA parameter spelled like a cell
-    /// (`=LET(f1,1,f1+1)`) is [`EditError::InvalidInput`] (decision 0103).
+    /// (`=LET(f1,1,f1+1)`) is [`EditError::InvalidInput`] (decision 0103). Typed into a table's
+    /// data rows it fills the column as a calculated column where Excel would, as
+    /// [`Input::Parse`] does (Excel's API and UI both type the formula; T-2958).
     Formula(String),
     /// A formula as an xlsx file stores it, read as xlsx import reads a dynamic-array `<f>`; must
     /// start with `=`. LET names and LAMBDA parameters spelled like a cell bind, as Excel binds
-    /// them stored as `_xlpm.f1` (decision 0103). Use it to replay stored formulas.
+    /// them stored as `_xlpm.f1` (decision 0103). Use it to replay stored formulas; it never
+    /// fills a table column.
     StoredFormula(String),
     /// A formula as a pre-dynamic-array workbook stores it; must start with `=`. Functions
     /// that expect a scalar implicitly intersect a range, so `=A1:A2` is stored as `=@A1:A2`,
     /// exactly as xlsx import reads a plain `<f>`.
     LegacyFormula(String),
     /// Text as a user would type it: `=` starts a formula, numbers, booleans, errors and
-    /// percentages/currencies are recognised, a leading `'` forces text.
+    /// percentages/currencies are recognised, a leading `'` forces text. A formula typed into a
+    /// table's data rows fills the column when its other data cells are all blank or all hold
+    /// one formula (a calculated column, T-2958); the filled cells are part of the edit.
     Parse(String),
+    /// [`Input::Parse`] typed in R1C1 style (`=R[-1]C+1` in A3 is `=A2+1`; T-4288).
+    ParseR1C1(String),
     /// Empties the cell (its style is kept).
     Clear,
 }
@@ -183,16 +193,16 @@ enum Undo {
     },
     /// A table added by `add_table`.
     Table(String),
+    /// A table as it was before a typed formula grew it (T-2968) or made one of its columns a
+    /// calculated column (T-3024).
+    TableBefore(Box<Table>),
     /// A data table added by `add_data_table`: its sheet and result range.
     DataTable {
         sheet_id: u32,
         range: (i32, i32, i32, i32),
     },
-    /// The lengths of the workbook's pivot caches and tables before `add_pivot_table`.
-    Pivot {
-        caches: usize,
-        tables: usize,
-    },
+    /// A pivot added, refreshed or laid out (`edit::pivot`).
+    Pivot(pivot::PivotUndo),
     /// A row's hidden flag as it was before `set_row_hidden`.
     RowHidden {
         sheet_id: u32,
@@ -243,7 +253,17 @@ impl Txn<'_> {
         };
         let key = (range.sheet.get(), row, col);
         self.log_cell(sheet, key, cell)?;
-        self.apply(sheet, row, col, input.into(), cell)
+        let input = input.into();
+        match &input {
+            // `Input::Formula` without `=` is refused in `apply` before it writes anything.
+            Input::Formula(text) if !text.starts_with('=') => {}
+            Input::Parse(text) | Input::Formula(text) | Input::ParseR1C1(text) => {
+                let r1c1 = matches!(input, Input::ParseR1C1(_));
+                self.log_typed_fill(sheet, key, cell, text, r1c1)?;
+            }
+            _ => {}
+        }
+        self.apply(sheet, row, col, input, cell)
     }
 
     /// Records the input text, the undo entry and the pre-edit values for a write to `key`.
@@ -338,10 +358,9 @@ impl Txn<'_> {
             Input::Parse(text) | Input::Formula(text) => {
                 model.set_typed_user_input(sheet, row, col, text)
             }
+            Input::ParseR1C1(text) => model.set_typed_r1c1_user_input(sheet, row, col, text),
             Input::StoredFormula(text) => model.set_loaded_user_input(sheet, row, col, text),
-            Input::LegacyFormula(text) => {
-                model.set_cell_with_legacy_formula(sheet, row, col, &text)
-            }
+            Input::LegacyFormula(text) => model.set_loaded_legacy_formula(sheet, row, col, &text),
             Input::Value(value) => {
                 // Typed setters skip the spill/array/merge checks that `set_user_input` does.
                 model
@@ -475,14 +494,15 @@ impl Txn<'_> {
         Ok(())
     }
 
-    /// Adds a workbook-scoped defined name. `formula` may be any formula that parses, with or
-    /// without a leading `=` (e.g. `=Sheet1!$A$1:$B$3 Sheet1!$A$2:$B$3`, an intersection). Like a
-    /// sheet-level op it reparses and re-evaluates the workbook, so define names before setting
-    /// many cells. Names are not reported in the [`ChangeSet`]; cells whose value they change are.
+    /// Adds a workbook-scoped defined name: any formula that parses, `=` optional (`=S!$A$1:$B$3
+    /// S!$A$2:$B$3`, an intersection); an unqualified reference binds to [`crate::Workbook::active_sheet`],
+    /// as `names/add` does. Like a sheet-level op it reparses and re-evaluates the workbook, so define
+    /// names before many cells. Names are not reported in the [`ChangeSet`]; changed cells are.
     ///
     /// # Errors
     /// [`EditError::DefinedName`] when the name is not a valid identifier, already exists, or the
-    /// formula does not parse.
+    /// formula does not parse or nests more than 65 function calls, which Excel's `names/add`
+    /// refuses (probes/t3264-api-name-66; docs/excel-semantics/syntax.md "Formula nesting depth cap").
     pub fn define_name(&mut self, name: &str, formula: &str) -> Result<(), EditError> {
         self.add_defined_name(name, None, formula, false)
     }
@@ -637,11 +657,49 @@ impl Txn<'_> {
         name: &str,
         filtered: bool,
     ) -> Result<(), EditError> {
+        self.add_table_with_totals(range, name, filtered, false)
+    }
+
+    /// [`Txn::add_table`] for a `range` whose last row is the table's totals row when
+    /// `totals_row` is set, so `Table[#Totals]` reads it and `Table[#All]` includes it. The totals
+    /// cells keep what they hold (set them first or after); a totals-row function is not recorded.
+    ///
+    /// # Errors
+    /// As [`Txn::add_table`]; a totals row needs a data row between the header and itself.
+    pub fn add_table_with_totals(
+        &mut self,
+        range: RangeRef,
+        name: &str,
+        filtered: bool,
+        totals_row: bool,
+    ) -> Result<(), EditError> {
+        self.add_table_with_rows(range, name, filtered, (true, totals_row))
+    }
+
+    /// [`Txn::add_table_with_totals`] for a table with or without a header row
+    /// (`(header_row, totals_row)`). Without one the data starts on the first row of `range` and
+    /// the columns are named `Column1`, `Column2`, ...; such a table takes no filter.
+    ///
+    /// # Errors
+    /// As [`Txn::add_table`]; a table without a header row needs one data row and no filter.
+    pub fn add_table_with_rows(
+        &mut self,
+        range: RangeRef,
+        name: &str,
+        filtered: bool,
+        (header_row, totals_row): (bool, bool),
+    ) -> Result<(), EditError> {
         let index = sheet_index(self.model, range.sheet)?;
         let (top, left) = engine_rc(range.top, range.left).ok_or(RefError::OutOfBounds)?;
         let (bottom, right) = engine_rc(range.bottom, range.right).ok_or(RefError::OutOfBounds)?;
         self.model
-            .add_table(index, name, (top, left, bottom, right), filtered)
+            .add_table_with_rows(
+                index,
+                name,
+                (top, left, bottom, right),
+                filtered,
+                (header_row, totals_row),
+            )
             .map_err(EditError::Table)?;
         self.sheet_op = true;
         self.undo.push(Undo::Table(name.to_string()));
@@ -819,14 +877,12 @@ fn roll_back(model: &mut Model, undo: Vec<Undo>, re_evaluate: bool) {
                     .and_then(|scope| model.delete_defined_name(&name, scope));
                 debug_assert!(undone.is_ok(), "undo of define_name failed: {undone:?}");
             }
-            Undo::Pivot { caches, tables } => {
-                model.workbook.pivot_caches.truncate(caches);
-                model.workbook.pivot_tables.truncate(tables);
-            }
+            Undo::Pivot(undo) => undo.roll_back(model),
             Undo::Table(name) => {
                 let undone = model.remove_table(&name);
                 debug_assert!(undone.is_ok(), "undo of add_table failed: {undone:?}");
             }
+            Undo::TableBefore(table) => model.restore_table(*table),
             Undo::DataTable { sheet_id, range } => {
                 let sheet = (model.workbook.worksheets.iter())
                     .position(|ws| ws.get_sheet_id() == sheet_id)

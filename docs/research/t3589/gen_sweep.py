@@ -1,0 +1,160 @@
+"""T-3589: fresh sweeps drawn after the model was frozen (decision 0188 R4.2).
+
+The frozen model: at |x| <= 0.01 IMSINH's sinh x is the ascending Taylor sum x + x^3/3! + x^5/5! + ...
+(doubles, each term the previous times x^2/((2k)(2k+1)), until a term leaves the sum unchanged) and
+cosh x the `1/u` form (u = EXP(-x)), the same parts for IMCOSH, IMSECH and IMCSCH; IMSIN and IMCOS
+take sinh y and cosh y as (u - 1/u)/2 and (u + 1/u)/2 with u = EXP(y) for every |y|, the EXP pair
+past |y| = 20 gone.
+
+Deterministic. Writes three cases to eval/suites/probes-numeric/cases/:
+- t3589-im-hyperbolic-small-x-sweep (seed 3589): 150 rows, |x| log-uniform in [1e-6, 0.01] with a random
+  sign, 15 significant digits; y = 0 on even rows, |y| uniform in [0.1, 1.4] with a random sign on odd
+  rows. A IMSINH, B IMCOSH, C IMSECH, D IMCSCH of x+yi.
+- t3589-imsin-imcos-large-imag-sweep (seed 35891): 150 rows, |y| uniform in [20, 709.7] with a random
+  sign; x = 0 on rows divisible by 4, else uniform in (-3.1, 3.1). A IMSIN, B IMCOS of x+yi.
+- t3720-im-reciprocal-small-x-complex (seed 3720, T-3720): 404 rows of IMCOSH, IMCSCH, IMSECH, IMSINH of a
+  complex z with 0 < |x| <= 0.01 and the worksheet SIN(y), COS(y), SINH(x), COSH(x), EXP(-x) companions.
+- t3721-im-hyperbolic-small-x-fresh-sweep (seed 3721, T-3721): drawn after T-3721 froze the series at three
+  terms (x + x^3/3! + x^5/5!, no stopping test): 400 rows of IMCOSH, IMCSCH, IMSECH, IMSINH with |x| log-uniform
+  in [1e-6, 0.01] on odd rows and uniform in [0.004, 0.01] (where a fourth term moves the last bit) on even rows,
+  y = 0 on rows divisible by 5, else |y| uniform in [0.05, 1.5]; signs random.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import random
+from pathlib import Path
+
+CASES = Path(__file__).resolve().parents[3] / "eval/suites/probes-numeric/cases"
+
+
+def sig15(v: float) -> str:
+    return f"{v:.15g}".replace("e", "E")
+
+
+def signed(rng: random.Random, magnitude: float) -> str:
+    return sig15(rng.choice((-1, 1)) * magnitude)
+
+
+def complex_text(x: str, y: str) -> str:
+    if y == "0":
+        return x
+    return f"{x}{y if y.startswith('-') else '+' + y}i"
+
+
+def write(name: str, cells: dict[str, str], description: str, task: str = "T-3589") -> None:
+    case = {
+        "format": "rustsheet-case/v1",
+        "description": description,
+        "tags": ["M9", "engineering", "probe", task],
+        "expected": {},
+        "sheets": [{"name": "S", "cells": cells}],
+    }
+    (CASES / f"{name}.case.json").write_text(json.dumps(case, indent=2) + "\n")
+
+
+def small_x() -> None:
+    rng = random.Random(3589)
+    cells: dict[str, str] = {}
+    for row in range(1, 151):
+        x = signed(rng, math.exp(rng.uniform(math.log(1e-6), math.log(0.01))))
+        y = "0" if row % 2 == 0 else signed(rng, rng.uniform(0.1, 1.4))
+        z = complex_text(x, y)
+        for col, fn in zip("ABCD", ("IMSINH", "IMCOSH", "IMSECH", "IMCSCH"), strict=True):
+            cells[f"{col}{row}"] = f'={fn}("{z}")'
+    write(
+        "t3589-im-hyperbolic-small-x-sweep",
+        cells,
+        "T-3589: fresh sweep after the freeze (decision 0188 R4.2) of IMSINH (A), IMCOSH (B), IMSECH (C) and "
+        "IMCSCH (D) with |x| log-uniform in [1e-6, 0.01], y = 0 on even rows and |y| in [0.1, 1.4] on odd rows. "
+        "Generator: docs/research/t3589/gen_sweep.py (seed 3589).",
+    )
+
+
+def large_y() -> None:
+    rng = random.Random(35891)
+    cells: dict[str, str] = {}
+    for row in range(1, 151):
+        y = signed(rng, rng.uniform(20.0, 709.7))
+        x = "0" if row % 4 == 0 else sig15(rng.uniform(-3.1, 3.1))
+        z = complex_text(x, y)
+        cells[f"A{row}"] = f'=IMSIN("{z}")'
+        cells[f"B{row}"] = f'=IMCOS("{z}")'
+    write(
+        "t3589-imsin-imcos-large-imag-sweep",
+        cells,
+        "T-3589: fresh sweep after the freeze (decision 0188 R4.2) of IMSIN (A) and IMCOS (B) with |y| uniform "
+        "in [20, 709.7] with a random sign, x = 0 on rows divisible by 4, else in (-3.1, 3.1). "
+        "Generator: docs/research/t3589/gen_sweep.py (seed 35891).",
+    )
+
+
+def reciprocal_complex() -> None:
+    """T-3720: complex z with 0 < |x| <= 0.01 and the worksheet SIN/COS/SINH/COSH/EXP companions."""
+    rng = random.Random(3720)
+    cells: dict[str, str] = {}
+
+    def row_cells(row: int, x: str, y: str) -> None:
+        z = complex_text(x, y)
+        for col, fn in zip("ABCD", ("IMCOSH", "IMCSCH", "IMSECH", "IMSINH"), strict=True):
+            cells[f"{col}{row}"] = f'={fn}("{z}")'
+        for col, fn, arg in (("E", "SIN", y), ("F", "COS", y), ("G", "SINH", x), ("H", "COSH", x)):
+            cells[f"{col}{row}"] = f"={fn}({arg})"
+        cells[f"I{row}"] = f"=EXP(-({x}))"
+
+    for row in range(1, 401):
+        if row <= 200:
+            mag = math.exp(rng.uniform(math.log(1e-6), math.log(0.01)))
+        else:
+            mag = rng.uniform(0.003, 0.01)
+        row_cells(row, signed(rng, mag), signed(rng, rng.uniform(0.05, 1.5)))
+    pairs = ("-0.00908725305283191", "-0.897991007302082"), ("-0.00994266897763484", "-0.217145289213716")
+    row = 401
+    for x, y in pairs:
+        row_cells(row, x, y)
+        row_cells(row + 1, x, y[1:])
+        row += 2
+    write(
+        "t3720-im-reciprocal-small-x-complex",
+        cells,
+        "T-3720: IMCOSH (A), IMCSCH (B), IMSECH (C), IMSINH (D) of complex x+yi with 0 < |x| <= 0.01 and the "
+        "worksheet companions SIN(y) (E), COS(y) (F), SINH(x) (G), COSH(x) (H), EXP(-x) (I). Rows 1-200 |x| "
+        "log-uniform in [1E-6, 0.01], rows 201-400 |x| in [0.003, 0.01], |y| in [0.05, 1.5]; rows 401-404 the two "
+        "t3589 arguments (S!B15/D15, S!D29) and their conjugates. Generator: docs/research/t3589/gen_sweep.py "
+        "(seed 3720).",
+        "T-3720",
+    )
+
+
+def three_term_fresh() -> None:
+    """T-3721: the fresh sweep after the three-term series was frozen (decision 0188 R4.2)."""
+    rng = random.Random(3721)
+    cells: dict[str, str] = {}
+    for row in range(1, 401):
+        if row % 2:
+            mag = math.exp(rng.uniform(math.log(1e-6), math.log(0.01)))
+        else:
+            mag = rng.uniform(0.004, 0.01)
+        x = signed(rng, mag)
+        y = "0" if row % 5 == 0 else signed(rng, rng.uniform(0.05, 1.5))
+        z = complex_text(x, y)
+        for col, fn in zip("ABCD", ("IMCOSH", "IMCSCH", "IMSECH", "IMSINH"), strict=True):
+            cells[f"{col}{row}"] = f'={fn}("{z}")'
+    write(
+        "t3721-im-hyperbolic-small-x-fresh-sweep",
+        cells,
+        "T-3721: fresh sweep after the three-term sinh series was frozen (decision 0188 R4.2) of IMCOSH (A), "
+        "IMCSCH (B), IMSECH (C), IMSINH (D) of x+yi, |x| log-uniform in [1E-6, 0.01] on odd rows and uniform in "
+        "[0.004, 0.01] on even rows, y = 0 on rows divisible by 5, else |y| uniform in [0.05, 1.5]. "
+        "Generator: docs/research/t3589/gen_sweep.py (seed 3721).",
+        "T-3721",
+    )
+
+
+if __name__ == "__main__":
+    small_x()
+    large_y()
+    reciprocal_complex()
+    three_term_fresh()

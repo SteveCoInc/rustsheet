@@ -1,0 +1,51 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "S": {
+   "E4": {
+    "t": "n",
+    "v": 15.0
+   },
+   "E5": {
+    "t": "s",
+    "v": "=SUM(QtyName)"
+   },
+   "E6": {
+    "t": "n",
+    "v": 4.0
+   },
+   "E7": {
+    "t": "n",
+    "v": 15.0
+   },
+   "E8": {
+    "t": "s",
+    "v": "=SUM(AllName)"
+   },
+   "F1": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "F10": {
+    "t": "s",
+    "v": "=#REF!"
+   },
+   "F2": {
+    "t": "s",
+    "v": "=#REF!"
+   },
+   "F9": {
+    "t": "e",
+    "v": "#REF!"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "d35290530a8ca84444d9dea6a477fd075f81334f399b3d66cad1359b21f746e5",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-04T02:31:13+00:00",
+  "version": null,
+  "workbook_name": "862d2ffa6b96a395c3e6d43e76c5c37a796cbcfa676959553f48565ff1bdef3d.xlsx"
+ }
+}

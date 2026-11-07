@@ -1,18 +1,38 @@
 //! BINOM.DIST, BINOM.DIST.RANGE, BINOM.INV and NEGBINOM.DIST (and BINOMDIST, CRITBINOM,
 //! NEGBINOMDIST): every argument lifts over an array and a range (SPEC-0011;
 //! probes/stat-argument-modes H105-H131, H374-H384, probes/stat-later-argument-lift H11-H23,
-//! K15-K16). BINOM.DIST, BINOM.DIST.RANGE and NEGBINOM.DIST sum their pmf terms in double-double
-//! (`discrete.rs`, T-0927), and past that walk's budget fall back to statrs' incomplete beta, a
-//! continued fraction of at most 140 steps, as BINOM.INV's search does throughout.
+//! K15-K16). The BINOM.DIST and NEGBINOM.DIST pmfs are Loader's kernel in Excel's arithmetic
+//! (T-2146). Their cdfs and BINOM.DIST.RANGE take Excel's closed forms and the bratio port, or sum
+//! their pmf terms in double-double (`discrete.rs`, T-0927), and past that walk's budget fall back
+//! to statrs' incomplete beta, a continued fraction of at most 140 steps. BINOM.INV's search runs
+//! on that same cdf (T-3444). BINOM.DIST at k = 0, and its pmf at k = n, take Excel's closed forms (T-2645).
 
 use statrs::distribution::{Binomial, Discrete, DiscreteCDF, NegativeBinomial};
 
-use super::discrete::{binomial_cdf, binomial_pmf, binomial_range, odds, times_ratio, Scaled};
+use super::bratio::{closed_or_ported_tails, dispatch, l140_overflows, ported_tails, Branch};
+use super::discrete::{binomial_cdf, binomial_pmf, binomial_range, odds, times_ratio};
+use super::incomplete_beta::{closed_form_tails, closed_or_shape_one_tails};
+use super::loader::excel_dbinom_exponent;
 
+use crate::arithmetic::flush_subnormal;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{num_error, number_or_error};
 use crate::functions::Function;
+use crate::x87_exp::{excel_exp, excel_exp_extended};
+use crate::x87_log10::excel_ln;
+use crate::x87_log1p::excel_ln_one_minus;
+use crate::x87_register::Register;
 use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
+
+/// The trial count (after truncation) from which BINOM.DIST, BINOMDIST, BINOM.DIST.RANGE,
+/// BINOM.INV and CRITBINOM are `#NUM!` whatever the other arguments: 2^31 - 1, so 2^31 - 2 trials
+/// is the most Excel evaluates (statistics.md "BINOM.DIST is #NUM! from 2^31 - 1 trials";
+/// probes-numeric t2645-binom-trials-limit, excel-graph: every k, both cumulative modes, p = 0 and
+/// 1 too; the same limit holds for the inverses, `BINOM.INV(2147483647,0.5,0.5)` and
+/// `CRITBINOM(2147483647,0.5,0.5)` #NUM! against a count at 2^31 - 2, probes/t2435-dist-extremes
+/// A16, A17, A19; the count itself at such a trial count is still ours to fix, A15 and A18,
+/// T-2809).
+const TRIALS_LIMIT: f64 = crate::limits::COUNT_LIMIT_EXCLUSIVE;
 
 impl Model {
     /// `BINOM.DIST(number_s, trials, probability_s, cumulative)`, and BINOMDIST.
@@ -30,26 +50,36 @@ impl Model {
         let [number_s, trials, p, cumulative] = values else {
             return Err(CalcResult::new_args_number_error(cell));
         };
-        let number_s = self.cast_number_ref(number_s, cell)?.trunc();
+        // A count in (-1, 0) is `#NUM!`: the sign is checked before truncation (gen-m9 85f48d5cdfb24555
+        // A35, caa1eed48b1883fe A384, 7bd219ec0c0c5e22 A320; statistics.md "Scalar distributions
+        // at extreme arguments (T-2255)").
+        let number_s = self.cast_number_ref(number_s, cell)?;
+        let negative = number_s < 0.0;
+        let number_s = number_s.trunc();
         let trials = self.cast_number_ref(trials, cell)?.trunc();
         let p = self.cast_number_ref(p, cell)?;
         let cumulative = Self::cast_bool_ref(cumulative, cell)?;
-        if trials < 0.0
-            || number_s < 0.0
+        if !(0.0..TRIALS_LIMIT).contains(&trials)
+            || negative
             || number_s > trials
             || p.is_nan()
             || !(0.0..=1.0).contains(&p)
         {
             return Err(num_error(cell));
         }
-        // Limit to u64
-        if trials > u64::MAX as f64 {
-            return Err(num_error(cell));
-        }
         let n = trials as u64;
         let k = number_s as u64;
         // A certain outcome: the walks need 0 < p < 1.
         if p == 0.0 || p == 1.0 {
+            // The pmf at k = 0 is EXP(n.LN(1 - p)) (below), so p = 1 takes Excel's LN(0) and is
+            // #NUM! from one trial on, where the cdf there is 0 and n = 0 trials is 1
+            // (`BINOM.DIST(0,2,1,FALSE)` and `BINOMDIST(0,2,1,FALSE)` #NUM!,
+            // `BINOM.DIST(0,2,1,TRUE)` 0, `BINOM.DIST(0,0,1,FALSE)` 1,
+            // `BINOM.DIST(1,2,1,FALSE)` 0; probes/t2435-dist-extremes A1:A13, A113, A114;
+            // gen-m9 05d44f6dd6cfc567 A344, a013a45a8fbcab4f A206).
+            if p == 1.0 && !cumulative && k == 0 && n >= 1 {
+                return Err(num_error(cell));
+            }
             let certain = if p == 0.0 { 0 } else { n };
             let hit = if cumulative {
                 k >= certain
@@ -58,16 +88,16 @@ impl Model {
             };
             return Ok(if hit { 1.0 } else { 0.0 });
         }
-        let walked = if cumulative {
-            binomial_cdf(n, odds(p), k)
+        let kernel = if cumulative {
+            excel_binom_cdf(n, p, k)
         } else {
-            binomial_pmf(n, odds(p), k).map(Scaled::to_f64)
+            excel_binom_pmf(n, p, k)
         };
-        if let Some(prob) = walked {
+        if let Some(prob) = kernel {
             return Ok(prob);
         }
         let dist = Binomial::new(p, n).map_err(|_| num_error(cell))?;
-        let prob = if cumulative { dist.cdf(k) } else { dist.pmf(k) };
+        let prob = flush_subnormal(if cumulative { dist.cdf(k) } else { dist.pmf(k) });
         if prob.is_nan() || prob.is_infinite() {
             return Err(num_error(cell));
         }
@@ -104,7 +134,7 @@ impl Model {
             Some(value) => self.cast_number_ref(value, cell)?.trunc(),
             None => number_s,
         };
-        if trials < 0.0
+        if !(0.0..TRIALS_LIMIT).contains(&trials)
             || number_s < 0.0
             || number_s2 < 0.0
             || number_s > number_s2
@@ -112,9 +142,6 @@ impl Model {
             || p.is_nan()
             || !(0.0..=1.0).contains(&p)
         {
-            return Err(num_error(cell));
-        }
-        if trials > u64::MAX as f64 {
             return Err(num_error(cell));
         }
         let n = trials as u64;
@@ -128,14 +155,42 @@ impl Model {
                 0.0
             });
         }
+        // A one-point range is Excel's BINOM.DIST pmf and a range from 0 its cdf, to the bit on
+        // every such row of probes/t3444-binom-range-inv-large-n (statistics.md "BINOM.DIST.RANGE
+        // and BINOM.INV at a large n sit on BINOM.DIST's own cdf").
+        let own = if lower == upper {
+            excel_binom_pmf(n, p, lower)
+        } else if lower == 0 {
+            excel_binom_cdf(n, p, upper)
+        } else {
+            None
+        };
+        if let Some(prob) = own {
+            return Ok(prob);
+        }
         if let Some(prob) = binomial_range(n, odds(p), lower, upper) {
             return Ok(prob);
         }
+        // Past the walk's budget, a range whose lower end is past the mean is the difference of
+        // the two upper tails, P(X > s1 - 1) - P(X > s2): the cdf difference cancels there (to 0
+        // on accuracy/BINOM.DIST.RANGE/s1 A85, A94, A101, A107), and Excel is within 1E-12 of
+        // this form on every probed range past the mean, though not to the bit (T-3740; Excel's
+        // exact form, T-4746). Elsewhere Excel's range is its own BINOM.DIST cdf difference, to
+        // the bit on 105 of the 126 probes/t3444-binom-range-inv-large-n Range rows.
+        if lower >= 1 && (lower - 1) as f64 > n as f64 * p {
+            if let (Some(from), Some(past)) = (
+                excel_binom_upper_tail(n, p, lower - 1),
+                excel_binom_upper_tail(n, p, upper),
+            ) {
+                return Ok(from - past);
+            }
+        }
         let dist = Binomial::new(p, n).map_err(|_| num_error(cell))?;
+        let cdf = |k: u64| binom_cdf_or_statrs(&dist, p, k);
         let prob = if lower == 0 {
-            dist.cdf(upper)
+            cdf(upper)
         } else {
-            dist.cdf(upper) - dist.cdf(lower - 1)
+            cdf(upper) - cdf(lower - 1)
         };
         if prob.is_nan() || prob.is_infinite() {
             return Err(num_error(cell));
@@ -144,9 +199,10 @@ impl Model {
     }
 
     /// `BINOM.INV(trials, probability_s, alpha)`, and CRITBINOM. The search halves
-    /// `[0, trials]` with `trials` a `u64`, so it stops after at most 64 steps of one cdf each,
-    /// its own per-call cap: up to about 65 us an element in release, which the lifting table
-    /// charges as `Weighted(4096)` (SPEC-0011 security rule; lift/kinds/statistical.rs
+    /// `[0, trials]` with `trials` under [`TRIALS_LIMIT`], so it stops after at most 31 steps of
+    /// one cdf each,
+    /// its own per-call cap: up to about 200 us an element in release (T-3444), which the lifting
+    /// table charges as `Weighted(16384)` (SPEC-0011 security rule; lift/kinds/statistical.rs
     /// `BINOM_INV`).
     pub(crate) fn fn_binom_inv(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.lift_call(Function::BinomInv, args, cell, &mut |model, values| {
@@ -165,8 +221,7 @@ impl Model {
         let trials = self.cast_number_ref(trials, cell)?.trunc();
         let p = self.cast_number_ref(p, cell)?;
         let alpha = self.cast_number_ref(alpha, cell)?;
-        if trials < 0.0
-            || trials > u64::MAX as f64
+        if !(0.0..TRIALS_LIMIT).contains(&trials)
             || p.is_nan()
             // Probability 0 is #NUM! too, unlike BINOMDIST (probes-numeric/m9-legacy-critbinom A23, A24).
             || p <= 0.0
@@ -179,12 +234,15 @@ impl Model {
         }
         let n = trials as u64;
         let dist = Binomial::new(p, n).map_err(|_| num_error(cell))?;
-        // Smallest k with CDF(k) >= alpha. statrs' generic `inverse_cdf` can panic
-        // (an unwrap inside its bisection), e.g. for BINOM.INV(1, 0.001, 0.1).
+        // Smallest k with CDF(k) >= alpha, CDF being BINOM.DIST's own: Excel's result is that k
+        // against its BINOM.DIST on all 126 probes/t3444-binom-range-inv-large-n Inv rows (n 1E4
+        // to 2^31 - 2), where statrs' cdf was grossly off near the mean. statrs' generic
+        // `inverse_cdf` can panic (an unwrap inside its bisection), e.g. for BINOM.INV(1, 0.001, 0.1).
+        let cdf = |k: u64| binom_cdf_or_statrs(&dist, p, k);
         let (mut lo, mut hi) = (0u64, n);
         while lo < hi {
             let mid = lo + (hi - lo) / 2;
-            if DiscreteCDF::cdf(&dist, mid) >= alpha {
+            if cdf(mid) >= alpha {
                 hi = mid;
             } else {
                 lo = mid + 1;
@@ -222,24 +280,75 @@ impl Model {
         cumulative: Option<&CalcResult>,
         cell: CellReferenceIndex,
     ) -> Result<f64, CalcResult> {
-        let number_f = self.cast_number_ref(number_f, cell)?.trunc();
+        // number_f in (-1, 0) is `#NUM!` before truncation (gen-m9 d208bbafc3bc1997 A231,
+        // 3b7990bd4e3307ba A312, 1db18890916ee643 A124; statistics.md "Scalar distributions at
+        // extreme arguments, part 2 (T-2256)").
+        let number_f = self.cast_number_ref(number_f, cell)?;
+        let negative = number_f < 0.0;
+        let number_f = number_f.trunc();
         let number_s = self.cast_number_ref(number_s, cell)?.trunc();
         let probability_s = self.cast_number_ref(probability_s, cell)?;
         let cumulative = match cumulative {
             Some(value) => Self::cast_bool_ref(value, cell)?,
             None => false,
         };
-        if number_f < 0.0 || number_s < 1.0 || probability_s <= 0.0 || probability_s >= 1.0 {
+        if negative || number_s < 1.0 || probability_s <= 0.0 || probability_s >= 1.0 {
             return Err(num_error(cell));
         }
-        // Guard against absurdly large failures that won't fit in u64
+        // Guard against absurdly large failures that won't fit in u64. Not TRIALS_LIMIT:
+        // NEGBINOM.DIST has no 2^31 - 1 limit (probes-numeric/t2645-binom-trials-limit A34, A46).
         if number_f > (u64::MAX as f64) {
             return Err(num_error(cell));
         }
         let f_u = number_f as u64;
+        // Excel's cdf is the incomplete beta I_p(r, f+1) at x = p, y = fl(1 - p), which at r = 1 or
+        // f = 0 takes Excel's closed form (T-2464 w5-triangulation, T-2502).
+        let walk_first = cumulative && takes_bfrac(number_s, number_f + 1.0, probability_s);
+        if cumulative {
+            // Then the bratio port's branches (T-2847), whose subnormal cdf is 0 in Excel
+            // (`NEGBINOM.DIST(1,1000,0.48,TRUE)` = 0: probes/t2706-subnormal-density-paths A9:B9).
+            // Excel's closed forms come first. At one success (r = 1, p <= 1/2, so bratio's a0 is
+            // r) past their reach (y0 > 0.9) the cdf then takes bratio's shape-one branch, which
+            // works from p through log1p as BETA.DIST's kernel does; at a tiny p, fl(1 - p) is 1 and
+            // a form through y loses p (`NEGBINOM.DIST(70991230,1,8.02387331627331E-281,TRUE)` is
+            // Excel's 5.696246441102946E-273, the math; accuracy/NEGBINOM.DIST/r4-T-3576 A125,
+            // T-4242). Not on the swapped side (f = 0, p > 0.9): there Excel matches the walk below,
+            // and the branch is an ulp low (`NEGBINOM.DIST(0,2,0.999,TRUE)` is 0.998001,
+            // probes-numeric/t2145-negbinom-sweep A420). Not [`closed_or_ported_tails`]: the flush is
+            // backed for the port only, so these results are returned as they are.
+            let (x, y, a, b) = (probability_s, 1.0 - probability_s, number_s, number_f + 1.0);
+            let closed = if number_s == 1.0 && probability_s <= 0.5 {
+                closed_or_shape_one_tails(x, y, a, b)
+            } else {
+                closed_form_tails(x, y, a, b)
+            };
+            if let Some((lower, _)) = closed {
+                return Ok(lower);
+            }
+            // Excel's kernel is `#NUM!` where bratio's L140 bup sum overflows (T-3576).
+            if l140_overflows(a, b, x, y) {
+                return Err(num_error(cell));
+            }
+            // bfrac's points take the double-double walk below first, and bfrac only past its
+            // budget: Excel's `NEGBINOM.DIST(1,100,0.99,TRUE)` (ironcalc-calc BINOM.xlsx
+            // NEGBINOM.DIST!E39) is the correctly rounded I_0.99(100, 2), which the walk hits and
+            // bfrac misses by one ulp (its w is correctly rounded, but 1 - w is then an exact tie
+            // that rounds the other way; T-2508).
+            if !walk_first {
+                if let Some((lower, _)) = ported_tails(a, b, x, y) {
+                    return Ok(flush_subnormal(lower));
+                }
+            }
+        }
+        // The pmf is Excel's own kernel ([`excel_negbinom_pmf`], T-2146), before the walk.
+        if !cumulative && number_f + number_s < 2f64.powi(53) {
+            if let Some(pmf) = excel_negbinom_pmf(number_f, number_s, probability_s) {
+                return Ok(pmf);
+            }
+        }
         // F failures before the r-th success: P(F <= f) is P(at most f failures in f + r trials),
         // a binomial cdf whose "success" is a failure, and P(F = f) = r / (f + r) times that
-        // binomial's pmf at f.
+        // binomial's pmf at f (where Excel's kernel is not finite).
         if number_f + number_s < 2f64.powi(53) {
             let r_u = number_s as u64;
             let trials = f_u + r_u;
@@ -247,20 +356,43 @@ impl Model {
                 let (p, q) = odds(probability_s);
                 (q, p)
             };
+            // Off the closed forms a subnormal cdf or pmf is 0, as in Excel (`(x)=0` TRUE: probes/
+            // t2706-subnormal-density-paths B9:B11, probes-numeric/t2513-verify-r3-binom-pmf-h J229,
+            // J238), but the pmf at f = 0, p^r, is kept (t2706-subnormal-density-paths B12:B13).
             let walked = if cumulative {
-                binomial_cdf(trials, failure_odds, f_u)
+                binomial_cdf(trials, failure_odds, f_u).map(flush_subnormal)
             } else {
-                binomial_pmf(trials, failure_odds, f_u).map(|pmf| times_ratio(pmf, r_u, trials))
+                binomial_pmf(trials, failure_odds, f_u).map(|pmf| {
+                    let pmf = times_ratio(pmf, r_u, trials);
+                    if f_u == 0 {
+                        pmf
+                    } else {
+                        flush_subnormal(pmf)
+                    }
+                })
             };
             if let Some(result) = walked {
                 return Ok(result);
             }
         }
+        if walk_first {
+            if let Some((lower, _)) =
+                ported_tails(number_s, number_f + 1.0, probability_s, 1.0 - probability_s)
+            {
+                return Ok(flush_subnormal(lower));
+            }
+        }
         let dist = NegativeBinomial::new(number_s, probability_s).map_err(|_| num_error(cell))?;
-        let result = if cumulative {
+        let raw = if cumulative {
             dist.cdf(f_u)
         } else {
             dist.pmf(f_u)
+        };
+        let keeps_subnormal = !cumulative && f_u == 0;
+        let result = if keeps_subnormal {
+            raw
+        } else {
+            flush_subnormal(raw)
         };
         if !result.is_finite() {
             return Err(num_error(cell));
@@ -292,4 +424,112 @@ impl Model {
             },
         )
     }
+}
+
+/// Excel's binomial pmf for `0 < p < 1`, as BINOM.DIST computes it, or `None` where only statrs
+/// is left. Loader's (2000) end branches are Excel's own closed forms (statistics.md "BINOM.DIST
+/// pmf: closed forms at k = 0 and k = n"; T-2464 r2-log1p, T-2513 r3-binom-pmf): at k = 0 the
+/// pmf, and so the cdf, is EXP(fl(n·l)) with l Excel's ln(1 - p), bit-exact on all 345
+/// BINOM.DIST(0,n,p) cells of the T-2464 research set; at k = n it is EXP(fl(n·LN(p))), 172 of
+/// 172. Off those a subnormal pmf is 0, as in Excel (`(x)=0` TRUE: probes-numeric/
+/// t2513-r3-binom-pmf-n E1729:E1792; numbers.md "Distribution densities"). In between it is
+/// Excel's own interior kernel, Loader's `dbinom_raw` (T-3352, T-2146), and the exact walk only
+/// where that kernel is not finite.
+fn excel_binom_pmf(n: u64, p: f64, k: u64) -> Option<f64> {
+    if k == 0 {
+        return Some(excel_binom_at_zero(n, p));
+    }
+    if k == n {
+        return Some(excel_exp(n as f64 * excel_ln(p)));
+    }
+    // Loader's kernel first, everywhere in the interior (T-2146): its model of Excel's stored chain
+    // is not bit-exact, but it beats the exact walk on every sweep, the fresh one included
+    // (statistics.md "BINOM.DIST and NEGBINOM.DIST pmfs take Loader's kernel everywhere"). The walk
+    // is left for points where a piece of the kernel is not finite (an n p that underflows).
+    loader_pmf(k as f64, n as f64, p)
+        .or_else(|| binomial_pmf(n, odds(p), k).map(|pmf| flush_subnormal(pmf.to_f64())))
+}
+
+/// Excel's NEGBINOM.DIST pmf `P(F = f)` for `0 < p < 1` and r >= 1 (statistics.md "NEGBINOM.DIST
+/// pmf sits on the shifted binomial kernel", "BINOM.DIST and NEGBINOM.DIST pmfs take Loader's
+/// kernel everywhere"): EXP(fl(r·LN(p))) at f = 0, kept when subnormal (`NEGBINOMDIST(0,1,1E-200)`
+/// 9.99999999999978E-201, gen-m9 d8f44d556674c2fd A281; probes/t2706-subnormal-density-paths
+/// B12:B13); p times the shifted kernel otherwise, q^f = EXP(fl(f·l)) at r = 1 and Loader's
+/// `dbinom_raw(r - 1, f + r - 1, p, q)` above, a subnormal result flushed to 0 (t2706 B9:B11).
+/// `None` where the kernel is not finite.
+fn excel_negbinom_pmf(f: f64, r: f64, p: f64) -> Option<f64> {
+    if f == 0.0 {
+        let pmf = excel_exp(r * excel_ln(p));
+        return pmf.is_finite().then_some(pmf);
+    }
+    let kernel = if r == 1.0 {
+        Some(excel_exp(f * excel_ln_one_minus(p)))
+    } else {
+        loader_pmf(r - 1.0, f + r - 1.0, p)
+    }?;
+    let pmf = p * kernel;
+    pmf.is_finite().then(|| flush_subnormal(pmf))
+}
+
+/// Excel's binomial cdf `P(X <= k)` for `0 < p < 1`, as BINOM.DIST computes it, or `None` where
+/// only statrs is left. At k = 0 it is BINOM.DIST's own closed form ([`excel_binom_at_zero`]), not
+/// the kernel's (T-2645). Elsewhere it is the upper tail of the incomplete beta `I_p(k+1, n-k)` at
+/// x = p, y = fl(1 - p): Excel's closed form at k = n - 1 (T-2464 w5-triangulation, T-2502), then
+/// the bratio port's branches (T-2847), basym among them (T-3352), then the walk. Off k = 0 a
+/// subnormal cdf is 0, as in Excel (`(x)=0` TRUE: probes/t2706-subnormal-density-paths B5:B7).
+fn excel_binom_cdf(n: u64, p: f64, k: u64) -> Option<f64> {
+    if k == 0 {
+        return Some(excel_binom_at_zero(n, p));
+    }
+    if k >= n {
+        return Some(1.0);
+    }
+    if let Some((_, cdf)) = excel_binom_tails(n, p, k) {
+        return Some(cdf);
+    }
+    binomial_cdf(n, odds(p), k).map(flush_subnormal)
+}
+
+/// (P(X > k), P(X <= k)) for 0 < k < n and 0 < p < 1: the (w, w1) of the incomplete beta
+/// `I_p(k+1, n-k)` at x = p, y = fl(1 - p), from Excel's closed forms and the bratio port, each
+/// subnormal tail flushed to 0. `None` where neither applies.
+fn excel_binom_tails(n: u64, p: f64, k: u64) -> Option<(f64, f64)> {
+    let (x, y, a, b) = (p, 1.0 - p, k as f64 + 1.0, (n - k) as f64);
+    closed_or_ported_tails(x, y, a, b).map(|(w, w1)| (flush_subnormal(w), flush_subnormal(w1)))
+}
+
+/// The pmf, and so the cdf, at k = 0: EXP(fl(n·l)) with l Excel's ln(1 - p), BINOM.DIST's closed
+/// form (statistics.md "BINOM.DIST pmf: closed forms at k = 0 and k = n").
+fn excel_binom_at_zero(n: u64, p: f64) -> f64 {
+    excel_exp(n as f64 * excel_ln_one_minus(p))
+}
+
+/// Excel's binomial upper tail `P(X > k)` for `0 < p < 1` and k >= 1: the other half of the call
+/// [`excel_binom_cdf`] takes ([`excel_binom_tails`]), and 0 from k = n (T-3740).
+fn excel_binom_upper_tail(n: u64, p: f64, k: u64) -> Option<f64> {
+    if k >= n {
+        return Some(0.0);
+    }
+    excel_binom_tails(n, p, k).map(|(upper, _)| upper)
+}
+
+/// [`excel_binom_cdf`], else statrs' cdf of `dist` (`Binomial::new(p, n)`), the last resort of
+/// BINOM.DIST.RANGE and BINOM.INV.
+fn binom_cdf_or_statrs(dist: &Binomial, p: f64, k: u64) -> f64 {
+    excel_binom_cdf(dist.n(), p, k).unwrap_or_else(|| DiscreteCDF::cdf(dist, k))
+}
+
+/// Excel's binomial pmf `dbinom_raw(k, n, p, fl(1 - p))` for 0 < k < n: EXP of Loader's saddle-point
+/// exponent ([`excel_dbinom_exponent`], the kernel BETA.DIST's density shares; statistics.md
+/// "BINOM.DIST pmf: closed forms at k = 0 and k = n, and one kernel with BETA.DIST"), a subnormal
+/// result flushed to 0 as Excel's interior pmf is. `None` where a piece is not finite.
+fn loader_pmf(k: f64, n: f64, p: f64) -> Option<f64> {
+    let exponent = excel_dbinom_exponent(k, n, n - k, p, 1.0 - p)?;
+    let pmf = excel_exp_extended(Register::from_double_double(exponent));
+    pmf.is_finite().then(|| flush_subnormal(pmf))
+}
+
+/// Whether bratio takes bfrac for NEGBINOM.DIST's cdf, `I_p(r, f + 1)` at y = fl(1 - p).
+fn takes_bfrac(r: f64, f_plus_one: f64, p: f64) -> bool {
+    dispatch(r, f_plus_one, p, 1.0 - p).is_some_and(|d| d.branch == Branch::Bfrac)
 }

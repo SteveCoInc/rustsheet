@@ -1,0 +1,44 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "a058e4ff802c60c37d0edb728278c5ec2fd5b9e947d77afb8169b97356b30f2b",
+  "definitions": {
+   "EXP": "9de1fa5084c01ced"
+  },
+  "arguments_sha256": "f020d945cf566baf8be7bbac296164b10e4ec8b7c3642b342965a2b2ed5a7e2f"
+ },
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "n",
+    "v": "2.8223507304719370763534400820597826208243630629102e-324",
+    "f": "=EXP(-745)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "2.0322308024242931528666337664148122967242281660125e-313",
+    "f": "=EXP(-720)"
+   },
+   "A4": {
+    "t": "n",
+    "v": "3.3075530036384079962011742972052157985717634615694e-308",
+    "f": "=EXP(-708)"
+   }
+  }
+ },
+ "skipped": {
+  "S": {
+   "C1": {
+    "f": "=EXP(-745)*2^1000",
+    "why": "scaled value not exact"
+   },
+   "C2": {
+    "f": "=EXP(-720)*2^1000",
+    "why": "scaled value not exact"
+   }
+  }
+ }
+}

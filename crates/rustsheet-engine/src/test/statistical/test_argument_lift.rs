@@ -168,18 +168,18 @@ fn permut_stops_once_its_product_is_infinite() {
 
 #[test]
 fn weighted_kernels_are_charged_their_weight() {
-    // BINOM.INV is charged 4096 per element (its search costs up to about 65 us an element):
-    // 2^27 / 4096 = 32,768 elements, so a lifted call of 40,000 is refused before it runs and one
-    // of 30,000 runs; PERMUT and PERMUTATIONA (`Constant`) run over 800,000 elements.
+    // BINOM.INV is charged 16384 per element (its search costs up to about 200 us an element,
+    // T-3444): 2^27 / 16384 = 8,192 elements, so a lifted call of 10,000 is refused before it runs
+    // and one of 8,000 runs; PERMUT and PERMUTATIONA (`Constant`) run over 800,000 elements.
     let mut model = new_empty_model();
-    model._set("A1", "=ROWS(BINOM.INV(5,0.4,SEQUENCE(40000)/40001))");
-    model._set("A2", "=ROWS(BINOM.INV(5,0.4,SEQUENCE(30000)/30001))");
-    model._set("A3", "=ROWS(CRITBINOM(5,0.4,SEQUENCE(40000)/40001))");
+    model._set("A1", "=ROWS(BINOM.INV(5,0.4,SEQUENCE(10000)/10001))");
+    model._set("A2", "=ROWS(BINOM.INV(5,0.4,SEQUENCE(8000)/8001))");
+    model._set("A3", "=ROWS(CRITBINOM(5,0.4,SEQUENCE(10000)/10001))");
     model._set("A4", "=ROWS(PERMUT(5,SEQUENCE(800000)))");
     model._set("A5", "=ROWS(PERMUTATIONA(5,SEQUENCE(800000)))");
     model.evaluate();
     assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"30000");
+    assert_eq!(model._get_text("A2"), *"8000");
     assert_eq!(model._get_text("A3"), *"#ERROR!");
     assert_eq!(model._get_text("A4"), *"800000");
     assert_eq!(model._get_text("A5"), *"800000");
@@ -230,9 +230,10 @@ fn overflowing_arguments_are_excels_errors_not_panics() {
     model._set("B3", "=F.DIST(C5,2,3,TRUE)");
     model._set("B4", "=F.DIST(C5,2,3,FALSE)");
     model._set("B5", "=F.DIST.RT(C5,2,3)");
-    // Large degrees of freedom keep main's #NUM! for the pdf (TODO(T-1864)).
+    // Large degrees of freedom: Loader's form, to the digit shown (T-1864; the exact densities
+    // are in test_fn_f_pdf_large_df.rs).
     model._set("B6", "=F.DIST(1,1000,1000,FALSE)");
-    model._set("B7", "=F.DIST(3,50,100,FALSE)");
+    model._set("B7", "=F.DIST(20,100,3,FALSE)");
     model._set("B8", "=TDIST(-1,5,NA())");
     model._set("B9", "=BETA.DIST(C2,2,3,FALSE,C2,C1)");
     model._set("A6", "=BETA.DIST(C1,2,3,TRUE,C2,C1)");
@@ -255,8 +256,8 @@ fn overflowing_arguments_are_excels_errors_not_panics() {
         ("B3", "1"),
         ("B4", "0"),
         ("B5", "0"),
-        ("B6", "#NUM!"),
-        ("B7", "#NUM!"),
+        ("B6", "6.306254545"),
+        ("B7", "0.001080758"),
         ("B8", "#N/A"),
         ("B9", "#DIV/0!"),
         ("A1", "#DIV/0!"),
@@ -283,18 +284,12 @@ fn overflowing_arguments_are_excels_errors_not_panics() {
 }
 
 #[test]
-fn the_f_pdf_takes_only_an_underflow_from_its_log_form() {
-    // A positive F density whose direct form overflows at moderate x stays #NUM!, as on main:
-    // unprobed, and the logarithmic form misses there (T-1865). An underflow to 0 is Excel's
-    // (probes/stat-overflow-arguments E11, -b A6).
+fn the_f_pdf_takes_an_underflow_from_its_log_form() {
+    // An underflow to 0 of a density whose direct form overflows at a huge x is Excel's
+    // (probes/stat-overflow-arguments E11, -b A6); a positive one is Loader's form (T-1864,
+    // test_fn_f_pdf_large_df.rs).
     let mut model = new_empty_model();
-    model._set("A1", "=F.DIST(20,100,3,FALSE)");
-    model._set("A2", "=F.DIST(2,140,2,FALSE)");
-    model._set("A3", "=F.DIST(1E10,30,5,FALSE)");
     model._set("A4", "=F.DIST(8E+307,2,3,FALSE)");
     model.evaluate();
-    for cell in ["A1", "A2", "A3"] {
-        assert_eq!(model._get_text(cell), *"#NUM!", "{cell}");
-    }
     assert_eq!(model._get_text("A4"), *"0");
 }

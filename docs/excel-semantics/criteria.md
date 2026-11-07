@@ -33,6 +33,44 @@ Evidence: probes/criteria-gaps C4–C14 over 10, abc, TRUE, #N/A, blank, ABC, ab
 Status: VERIFIED
 Implemented in: functions::criteria::wildcard_text_matcher
 
+Case beyond ASCII (T-3133): a wildcard criterion (SUMIF, COUNTIFS, SUMIFS with `*` or `?`) and a wildcard MATCH/XMATCH
+fold case one character to one character, never changing the text's length, which is SEARCH's fold (text.md "SEARCH
+lowercases per character"). A character whose lowercase is one character takes it; one whose full lowercase is longer
+stays itself. Over Data!A1:A35 = İ ı I i ΟΣ οσ ος K(U+212A) k K ẞ ß ǅ ǆ Ǆ Å(U+212B) å Å Ω(U+2126) ω Ω ſ s S µ μ Μ Ａ ａ
+Σ σ ς i+U+0307 ss İx (SUMIF weights 2^(k-1)): `İ&"*"` matches İ and İx only, `"i*"` matches I, i and i+U+0307 but
+not İ, and `"?"` counts İ (one unit) and not i+U+0307 (two); `ΟΣ`, `οσ` and `ος` are one text, as are `Σ σ ς`
+(`"ς*"` matches all three; `"*"&"Σ"` also matches ΟΣ, οσ, ος); the Kelvin sign is `k`/`K`, `ẞ` is `ß` (neither is
+`ss`; `"s*"` matches s, S and ss only), `ǅ ǆ Ǆ` are one letter, the Ångström sign is `å`/`Å` and the Ohm sign `ω`/`Ω`,
+and fullwidth `Ａ` is `ａ`; `ı`, `ſ` and `µ` match only themselves (`ſ` is not `s`, `µ` is not `μ`). `"??"` counts ΟΣ,
+οσ, ος, i+U+0307, ss and İx; `"???"` nothing. COUNTIFS, SUMIFS and SUMIF agree.
+Evidence: probes/t3133-lookup-criteria-case-fold Calc!B1:B35, F1:I35, K1:L35, N1:N6 (excel-graph, 2026-10-29, T-3133).
+D-function prefix criteria fold `ς` too: DCOUNTA over `σx`, `ςx`, `Σ` counts 3 for `ς`, `σ` and `ς*` and 1 for `=ς`
+(probes/t3154-collation-accents Calc!H12:H15, T-3154). The D-function plain prefix and `*` criteria agree with COUNTIF's
+wildcard fold on the T-3995 keys (probes/t3995-dfunction-fold-final-forms, excel-graph 2026-11-04): `İ`/`i`, `ϐ`/`β` and
+`ﬀ`/`ff` do not match in either direction (Calc!B1:D6 = 0), while each Hebrew final form matches its normal form in both
+directions (`ך`/`כ`, `ם`/`מ`, `ן`/`נ`, `ף`/`פ`, `ץ`/`צ`: Calc!B7:D16 = 1), as do `ς`/`σ` (B18:D19) and `İ` with itself (B17:D17).
+`=`-style COUNTIF equality (Calc!E) is T-3904's.
+Wildcard criteria and D-function criteria (wildcard or plain prefix) fold as exact MATCH does (lookup.md "MATCH,
+VLOOKUP and HLOOKUP exact-match keys fold case one character to one"), one UTF-16 unit at a time
+(probes/t3929-wildcard-fold-criteria, -xmatch, -dfunctions, excel-graph 2026-11-03, T-3929; COUNTIF, SUMIF,
+COUNTIFS, MATCH(..,0), XMATCH(..,2), XLOOKUP(..,2) and DCOUNTA agree on every wildcard row):
+- weightless characters are one class, counted one for one: `"a?b"` matches a&U+0524&b and a&U+00AD&b,
+  `U+0525&"*"` matches U+0524, and DCOUNTA's prefix a&U+0525 counts a&U+0524&b (rows 1:8); `"a"&U+0524&"*"` does
+  not match ab (row 9), and DCOUNTA's prefix `ab` does not count a&U+0524&b (Calc!C3 of -dfunctions);
+- supplementary letters stay apart from their case pair (`"𐐀*"` does not match 𐐨x nor `"𐐨*"` 𐐀x, rows 11:12), and
+  `?` is one unit, so `"?"` does not match 𐐨 and `"??"` does (rows 14:15);
+- the wider classes hold: `"ϳ*"` matches Ͷx and ͷx, `"Ͷ*"` ϳx, `"ϴ*"` ϑx but not θx, `"θ*"` not ϴx, `"Ε*"` ϵx,
+  `"צ*"` ץx, U+1C91&`"*"` U+1C90&x (both weightless) but not `"ა*"`; `Ɒ`/`ɒ` stay apart (rows 16:28).
+Without a wildcard, COUNTIF, SUMIF, COUNTIFS and XMATCH(..,0) keep the `=` collation instead: a&U+0524&b equals ab
+there (coercion.md "Weightless characters in `=`, COUNTIF and XMATCH"; -criteria Calc!B3:D3, -xmatch Calc!E3), while
+the wildcard and D-function paths do not. That includes `=`'s prefix rule for a trailing weightless
+character (`ab`&U+00AD is not `ab`, `aé`&U+00AD is `aé`) and the weights of U+200B and the C1 controls
+(coercion.md "Format characters, U+200B and the C1 controls (T-3662)"; probes/t3662-collation-ignorables
+Calc!AD:AJ, AL:AM, -prefix Calc!R:U).
+Status: VERIFIED (excel-graph) for the list and the T-3929 rows above
+Implemented in: `fold_lookup_char` (functions/util/collation/lookup_fold.rs, T-3445), through `folded_units` and
+`WildcardPattern::new`; D-function prefix criteria through `result_starts_with_units` (functions/criteria.rs, T-3929)
+
 ## Tildes inside wildcard patterns and wildcard-mode lookups
 Rule: once a criterion holds `*` or `?`, or always for a MATCH(..,0)/XMATCH(..,2) text lookup value, `~` makes the next
 character literal whatever it is: `~x` reads as `x`, `~~` as one `~`, `~*`/`~?` as `*`/`?`; a trailing `~` is dropped.
@@ -66,7 +104,11 @@ Evidence: probes/criteria-grammar C11 (`DCOUNTA` with criterion "ab" over ab, ab
 The prefix is read unit by unit, so a lone surrogate is a unit of its own (probes/d-function-prefix-lone-surrogates, excel-graph 2026-10-16, T-1667): over H, L, "😀", U+FFFD, "x", H&"a", "a"&L, "a" (v = 1, 2, 4, ..., 128), `DSUM` with criterion H gives 37 (H, "😀", H&"a"), L gives 2 (L only, not "a"&L), "😀" gives 4, U+FFFD gives 8 (never a lone half), H&"a" gives 32, "a"&L gives 64, "a" gives 192 ("a" and "a"&L), `"="&H` gives 1 and `"="&L` gives 2, "x" gives 16; `DCOUNTA` counts agree (H 3, "a" 2).
 Oracle: excel-graph, 2026-10-04.
 Status: VERIFIED
-Implemented in: functions::criteria::build_criteria_with (CriteriaFlavor::Database)
+A wildcard criterion without `=` matches by prefix too, as if it ended in `*`: over one cell each, DCOUNTA counts abc
+for `a?`, abcd for `a?c` and `a*c`, ab for `?`, xab for `?a`, abc for `*b` and `??`, ab?x for `ab~?`, and the astral
+𐐨 (two units) for `?`, where COUNTIF counts none of them; `=a?` over abc, `=a*c` over abcd and `=?` over 𐐨 count 0,
+and `a?` does not count a (probes/t3929-dfunction-wildcard-prefix Calc!B1:C15, excel-graph 2026-11-03, T-3929).
+Implemented in: functions::criteria::build_criteria_with (CriteriaFlavor::Database; `WildcardPattern::match_any_tail`)
 
 ## D-function criteria are not trimmed into an operator criterion
 Rule: leading spaces stop a criterion from being an operator criterion: `"  > 1 "` and `" >1"` are
@@ -112,6 +154,34 @@ Also verified for SUMIF, AVERAGEIF, COUNTIFS, SUMIFS, AVERAGEIFS, MAXIFS (`"="`)
 probes/criteria-ifs-bare-equals C1-C12. Oracle: excel-graph, 2026-10-05 (T-0246).
 Tasks: T-0227, T-0246
 
+## A blank-cell or omitted criterion is the criterion 0
+Rule: a criterion that is a blank cell (`COUNTIF(r,Z1)` with Z1 empty, on this sheet, another sheet or picked by
+`INDEX`) or an omitted argument (`COUNTIF(r,)`, `IF(FALSE,1,)`) matches what the number criterion `0` does on
+every probed cell kind, padded and formatted zero text included, in COUNTIF, SUMIF, AVERAGEIF, COUNTIFS, SUMIFS, AVERAGEIFS, MINIFS and MAXIFS: number cells equal to 0 at 15
+digits (0 and `=-0`; `=2^-1074` is 0 in Excel) and the text `"0"`. It never matches a blank cell, an empty-string
+cell, FALSE, `" "`, 1E-17, -1E-300 or 5E-16. So it is neither `""` (which matches blanks and empty strings) nor
+`"="` (blanks only). With no matching cell, AVERAGEIF and AVERAGEIFS are `#DIV/0!`.
+Evidence: probes/t3138-blank-criterion. Over A1:A14 = blank, `=""`, 0, `=-0`, 1E-17, -1E-300, `=2^-1074`, 5E-16,
+FALSE, "0", " ", "x", `=NA()`, 1 with weights B = 2^0..2^13, every source gives COUNTIF 4, SUMIF 588 (= 4 + 8 + 64
++ 512: the 0, -0, `2^-1074` and "0" rows), AVERAGEIF 147, MINIFS 4, MAXIFS 512 (D1:H9), and the same on the
+80-cell range A21:A100 that the *IFS cache indexes (D21:H29, J31:J39). N1:N4: `#DIV/0!` and 0 with no match.
+Oracle: excel-graph, 2026-10-29 (T-3138).
+Like the number criterion 0, it also matches the text cells VALUE reads as 0: over "$1", "1e2%", "(1)", "0%", "$0",
+"0:00", "12:00 AM", "1 1/2", "1", "0" (weights 2^0..2^9), a blank-cell and an omitted SUMIF criterion and a blank-cell
+SUMIFS criterion all give 632, the "0%", "$0", "0:00", "12:00 AM" and "0" rows (probes/t3151-number-criterion-formatted-text
+C2, C3, C8; excel-graph, 2026-10-29, T-3151; see "Criterion operands and text cells read numbers with VALUE's grammar").
+Padded zero text follows the number criterion 0 too: over A1:A12 = `" 0"`, `"0 "`, `" 0 "`, CHAR(160)&"0", "0"&CHAR(160),
+"+0", "0.0", "-0", "0E0", "00", the number 0 and the text "0" (weights 2^0..2^11), a blank-cell criterion (from this
+sheet or picked by `INDEX`), an omitted one, the number 0 and the text criterion "0" all give COUNTIF and COUNTIFS 10 and
+SUMIF and SUMIFS 4071: every cell except the two CHAR(160)-padded ones, which VALUE does not read as a number (K4, K5, L4, L5; the `#VALUE!` itself is shown for NBSP-padded text by
+probes/t3334-criteria-operand-forms H47, H51, H55, H59, T-3404) and
+which no numeric criterion matches ("Numeric criteria against text cells and non-ASCII spaces"). The 80-cell range
+A21:A100 that the *IFS cache indexes gives the same. Evidence: probes/t3807-blank-criterion-padded-zero D1:H4, D21:H24,
+K1:L12. Oracle: excel-graph, 2026-11-02 (T-3807).
+Status: VERIFIED
+Implemented in: `indexed_criterion` (`crates/rustsheet-engine/src/functions/criteria.rs`), which turns the empty
+criterion into the number criterion 0 for both the walk and the indexed *IFS path.
+
 ## `<`, `>`, `<=`, `>=` with a boolean or error operand
 Rule: `COUNTIF(r,">TRUE")`, `"<TRUE"`, `">#N/A"` and `"<#N/A"` match nothing, even over TRUE or
 #N/A cells; `"<=TRUE"`/`">=TRUE"` (and `<=`/`>=` with `#N/A`) behave as equality and count exactly
@@ -120,6 +190,19 @@ Evidence: probes/criteria-operands C1-C8 over 10, "abc", TRUE, #N/A, "abd", 5: 0
 Oracle: excel-graph, 2026-10-04.
 Status: VERIFIED
 Implemented in: functions::criteria::bool_or_error_operand_matcher
+
+## Numeric `<`, `<=`, `>`, `>=` criteria compare the 15-digit value of the cell
+Rule: a number cell meets an ordering criterion by its 15-digit value, like `=` and `<>`: a cell holding `1+22*2^-52`
+(prints 1) meets `"<=1"`, `">=1"` and `"=1"` but not `">1"`; `1+23*2^-52` meets `">1"`. Same in COUNTIF, SUMIF,
+COUNTIFS and SUMIFS. The criterion's own operand is text, already cut to 15 digits when parsed.
+Evidence: probes/t3072-criteria-near-equal-order (288 criteria cells); details in numbers.md "Criteria ordering
+operators compare at 15 digits too".
+Status: VERIFIED
+Implemented in: `result_is_less_than_number` and the other three ordering matchers (functions/criteria.rs), on
+`cmp_excel_precision`, and in the indexed *IFS cache (`number_interval`, functions/statistical/ifs_cache.rs).
+AVERAGEIF(S), MINIFS/MAXIFS and DCOUNT/DSUM/DAVERAGE/DMIN/DMAX share these matchers and agree: probes/t4399-criteria-near-equal-others
+(excel-graph, 2026-11-05, 379 cells, all bit-exact with ours) runs the same twelve boundary values with all six criteria
+over one-cell and whole ranges and over a database with one criteria range per criterion (the D-function `=1` control, BF2, is the number 1, not the text, because the sheet cell "=1" is a formula; the four ordering criteria and `<>1` are text). Anchor cells: AVERAGEIF(B6,">1",B6)-1 = 5.107E-15 (G6) against #DIV/0! for the 22-ulp cell (G5); MAXIFS "<=1" over B1:B12 picks the 22-ulp cell (4.885E-15); DCOUNT ">1" = 1 (BD4), "<=1" = 11 (BC4). A criteria cell holding the TEXT `=1` (or `=1.0`) behaves exactly like the number-1 control: DCOUNT = 10, DSUM-1 = 9.000000000000009, DAVERAGE-1 = 0, DMIN-1 = 0, DMAX-1 = 4.885E-15 (probes/t4444-dfunction-text-equal-one, excel-graph, 2026-11-06, 52 cells, all bit-exact with ours; BB = text `=1`, BC = number control, BD = text `=1.0`). Tasks: T-3084, T-3103, T-4399, T-4444
 
 ## Text `<=` / `>=` criteria, and dotted dates are text in en-US
 Rule: `"<=text"` and `">=text"` compare the cell text with the operand, case-insensitively, like
@@ -210,15 +293,29 @@ exactly the scalar criterion's result, in a 1x6 array for COUNTIF, SUMIF, SUMIFS
 (`""` the blank and the `""` cell, `"="` the blank only, `"<>"` all but the blank, and `0`, `"0"`, `"=0"` each the number 0 and the text "0"),
 SUMIF/SUMIFS 3, 1, 14, 12, 12, 12, AVERAGEIFS 1.5, 1, 14/3, 6, 6, 6, MAXIFS 2, 1, 8, 8, 8, 8
 (probes/criteria-tilde-blank-single-cell-edges Arr!D1:K8, excel-graph 2026-10-21, T-2235);
-for SUMIFS and SUMIF an error in the sum range is `#N/A` only at the criteria positions whose rows select it
-(`SUMIFS(E1:E3,A1:A3,{"a","b"})` with E1 = #N/A is #N/A, 5; AVERAGEIFS and MAXIFS probed only at position 1: `#N/A`);
+for SUMIFS, SUMIF, AVERAGEIFS, AVERAGEIF, MAXIFS and MINIFS an error in the sum (value) range is the result only at the criteria
+positions whose selected rows include it (which error wins when one position selects two different errors is unprobed)
+(`SUMIFS(E1:E3,A1:A3,{"a","b"})` with E1 = #N/A is #N/A, 5). With A1:A4 = a, b, a, c and E1:E4 = #N/A, 5, 7, #DIV/0!, AVERAGEIFS, AVERAGEIF,
+MAXIFS, MINIFS and SUMIFS give `{"a","b","c"}` -> #N/A, 5, #DIV/0!; `{"b";"c"}` -> 5, #DIV/0!; `{"c"}` -> #DIV/0! (ERROR.TYPE 7, 2);
+a second pair `B1:B4,">0"` (B = 1, 1, 0, 1) drops only row 3, so the error rows still select and the row gives #N/A, 5, #DIV/0!
+(probes/t4606-ifs-array-criterion-value-error, excel-graph 2026-11-06, T-4606; ours matches all 86 cells);
+with B = 0, 1, 1, 1 the pair `B1:B4,">0"` drops the error row 1 that the first criterion selects for "a", so over
+`{"a","b","c","z"}` AVERAGEIFS, MAXIFS, MINIFS and SUMIFS give 7, 5, #DIV/0!, then #DIV/0! (AVERAGEIFS) or 0 (the others) for "z";
+the error is the result only where a selected row still holds it (AVERAGEIF has no second pair, so it is not in this row). With a #NUM! value range N1:N4 = #NUM!, 5, 7, #NUM!
+the array criterion alone (no second pair) gives #NUM!, 5, #NUM!, then #DIV/0! (AVERAGEIFS, AVERAGEIF) or 0 (MAXIFS, MINIFS, SUMIFS) for "z", so the
+value-range error at "c" is #NUM!, not the no-numeric-match #DIV/0! (ERROR.TYPE 6 against 2)
+(probes/t4667-ifs-second-pair-and-num-value-error, excel-graph 2026-11-06, T-4667);
 `COUNTIFS(E1:E3,{"a","b"})` ignores it (0 at position 1). A `NA()`/non-range first argument with an array criterion
 (`COUNTIF(NA(),{"a","b"})`, `COUNTIFS(NA(),{"a"})`, `SUMIFS(NA(),...)`) made excel-graph reject the whole workbook as unsupported,
 so those cases are unprobed.
 DEVIATION (directive 5, decision 0014): a lifted call whose walks would visit more than 2^27 cells
-(used cells of the walked range x criteria count x distinct criteria elements; T-0408 counts a
+(positions the walk visits x criteria count x distinct criteria elements; T-0408 counts a
 repeated element once wherever it repeats, where it counted each run of equal consecutive elements) is
-`#ERROR!` before any walk; Excel computes it. Example: `SUM(COUNTIF(A1:A3000,SEQUENCE(50000)))`
+`#ERROR!` before any walk; Excel computes it. The positions are those of the stored-cell walks
+(T-2711, "*IF(S) criteria ranges line up position by position"): the sum range's for the SUMIFS
+family, every criteria range's for COUNTIFS, each its stored cells, or its block within the used
+area when it is well filled (unit test `a_lifted_countifs_is_priced_by_every_criteria_range_it_walks`).
+Example: `SUM(COUNTIF(A1:A3000,SEQUENCE(50000)))`
 over 3,000 used cells (unit test `too_many_cell_visits_is_an_error_without_walking`). VLOOKUP/HLOOKUP over an array lookup_value
 use the same cap, at elements x evaluated cells of the searched column or row (lookup.md, T-0270; unit test
 `lifted_lookup_over_an_array_table_hits_the_visit_cap`).
@@ -255,6 +352,31 @@ Status: VERIFIED
 Implemented in: `fn_countifs` and `apply_ifs` (`strict_shape`) in `crates/rustsheet-engine/src/functions/statistical/if_ifs.rs`
 Tasks: T-0209
 
+## *IF(S) criteria ranges line up position by position, whatever each sheet's used area
+Rule: COUNTIFS and the SUMIFS-shaped functions test position k of every range together, so a
+position counts only when every aligned cell meets its criterion, even when the ranges sit on
+sheets whose used areas end at different rows. With Sheet1 holding A1 = 1 and Sheet2 holding
+A100 = "x" and A200 = 5: `=COUNTIFS(Sheet1!A:A,"",Sheet2!A:A,"x")` = 1 (row 100 lies past
+Sheet1's used area), `=COUNTIFS(Sheet1!A:A,"",Sheet2!A:A,"<>x")` = 1048574,
+`=SUMIFS(Sheet2!A:A,Sheet1!A:A,"")` = 5, `=COUNTIF(Sheet2!A:B,"")` = 2097150.
+Evidence: probes/criteria-sparse-cross-sheet Calc!A1:A9 (excel-graph, 2026-10-25, T-2711).
+How the engine walks (no Excel-visible effect; directive 5): a position at which no range stores
+a cell is blank in every range, so it matches or fails as a whole and is counted without being
+read; COUNTIFS visits the positions where some range stores a cell, and the SUMIFS family the
+cells stored in its sum range (a matched position adds only a number or an error held by its sum
+cell; the first such error in row-major order is the result). A well-filled range is walked
+densely (its block within the used area is at most 4x the cells stored in its columns), any other
+over its stored cells only, so the work is at most a few times the stored cells plus the rows or
+chunks searched, not the ranges' extent: `COUNTIF(A:J,1)` beside one cell
+in J1048576 reads a few cells, `COUNTIF(A:J,"")` there is still 10,485,759. Each range is put on
+record as read empty in one piece, so a spill into it restarts the pass
+(references.md "Seen-range cap"). The engine used to treat every row past the first range's used
+area as blank in every range, which gave 0 and 1048575 for the first two calls above.
+Status: VERIFIED
+Implemented in: `count_ifs`, `run_ifs` in `crates/rustsheet-engine/src/functions/statistical/if_ifs.rs`;
+`stored_walk`, `for_each_stored_position` in `crates/rustsheet-engine/src/functions/util.rs`
+Tasks: T-2711
+
 ## SUMIF resizes sum_range from its top-left cell and never errors
 Rule: SUMIF sums the range of the criteria range's shape that starts at sum_range's top-left cell,
 whatever sum_range's own shape: `=SUMIF(Data!C2:E2,"<>1",Data!B4:B10)` sums B4:D4 (123456831.123).
@@ -264,6 +386,18 @@ Evidence: gen-m2/629e6e8b76fab8b9 Calc!A217, 04cfd82f54dbc2b2 Calc!A344 (`=SUMIF
 Status: VERIFIED
 Implemented in: `resize_to` in `crates/rustsheet-engine/src/functions/statistical/if_ifs.rs`
 Tasks: T-0214
+
+### AVERAGEIF's numeric-like criteria pick the same rows under a resized average_range
+Rule: with an average_range, AVERAGEIF matches its range exactly as without one, and averages the matched rows of the
+range resized from average_range's top-left cell. Over A1:A6 = 0, -1, 0.5, text "1", TRUE, 1 with D1:D6 = 10 to 60:
+`0`, `-1` and `0.5` each match their one number (10, 20, 30); the text criterion `"1"` matches the text "1" and the
+number 1 (50); `"0.5"` matches the number 0.5 (30); `TRUE` matches the TRUE cell only, not the number 1 (50); `FALSE`
+does not match the number 0 in A1 (`#DIV/0!` in every column of H7:M7, not 10). A literal and the same value in a criteria cell agree, and D1 and D1:E1 give what D1:D6
+gives (each resized to D1:D6).
+Evidence: probes/t4540-averageif-criteria-average-range H1:M7 (42 cells). Oracle: excel-graph, 2026-11-06 (T-4540).
+Status: VERIFIED
+Implemented in: `resize_to`, `apply_ifs` in `crates/rustsheet-engine/src/functions/statistical/if_ifs.rs`
+Tasks: T-4540
 
 ### SUMIF/AVERAGEIF resize clamps at the sheet edge; single-cell ranges are 1x1
 Rule: when the resized sum_range would run past XFD1048576 Excel clamps it to the sheet edge (no `#REF!`):
@@ -284,7 +418,7 @@ Tasks: T-0234
 ### Conditional-format Equal/NotEqual compare on 15 digits (no absolute epsilon)
 Rule: the engine's conditional-format "cell value equal to / not equal to" rules compare with the same 15-significant-digit rule as `=` and criteria equality (`cmp_excel_precision`), not an absolute `f64::EPSILON` tolerance, so tiny values never equal 0. NaN orders above every number and equals itself in `CalcResult`'s `Ord`; -0.0 equals 0.0.
 Tests: `test_equal_and_not_equal_use_15_digit_comparison`, `cmp_excel_precision_total_order_on_nan_and_signed_zero`; callers of `cmp_excel_precision` (e.g. `functions/criteria.rs`) now see NaN == NaN. Evidence: none direct. The Graph oracle cannot evaluate conditional formats, so the Excel behavior for tiny values is inferred from the 15-digit comparison rule.
-Status: UNVERIFIED (probe pending: T-1051)
+Status: UNVERIFIED (unprobeable: the Graph oracle cannot evaluate conditional formats, and desktop work is out of scope, decision 0266)
 Implemented in: `ValueOperator::Equal`/`NotEqual` in `crates/rustsheet-engine/src/conditional_formatting.rs`, `cmp_excel_precision` in `number_format.rs`
 Tasks: T-1033
 
@@ -322,11 +456,61 @@ headers Name, Qty, Price, Date; Qty 4, 10, 0, 2, 1, -4, 7, 5, so every record su
 - Field: 5, 0, -1, " Qty", "" and "Nope" are `#VALUE!`; 2.9 is column 2; "qty" matches the header; a header cell
   reference works. The plain-text, `=`, wildcard, escaped-wildcard (`a~**`), `<>`, `<>4`, date (`>45351`), OR-row and
   AND-column criteria all match ours.
-Evidence: the scratch suite of engineering.md "Engineering edge-pool smoke check (T-2249)" (excel-graph, 2026-10-22,
-deleted afterwards).
-Status: UNVERIFIED (probe pending: T-2422 commits the probe case; the cells that match are regenerated by the
-gen-m9 sweep, T-2258)
-Tasks: T-2249, T-2422, T-2258
+Evidence (the observations were first made in the scratch suite of engineering.md "Engineering edge-pool smoke check
+(T-2249)", excel-graph, 2026-10-22, deleted afterwards; each bullet below is now backed by committed excel-graph cells,
+all 1-based cells of Calc, oracle values read with `make eval-show`):
+- Unknown criteria header ignored: probes/db-computed-criteria-shapes AB17 (header "Zzz", condition 1: DSUM 15, all
+  records) and AB18 (DCOUNTA 6, all six records); probes/db-header-criteria-shapes AB44 (unmatched header over a blank condition,
+  DSUM 15). A text condition under an unknown header (">2", AB43) matches nothing, DSUM 0, which the entry's numeric
+  condition does not do. The Db!N1:N2 shape is also in gen-m9 (for example
+  `DCOUNTA(Db!A1:D12,DAY(7593),Db!N1:N2)` in gen-m9/f61a73cd9af21e6d).
+- Computed criterion: probes/db-computed-criteria-shapes AB25/AB26 (header "Zzz" over `=B2>2`: DSUM 12, DCOUNTA 4) and
+  AB23/AB24 (blank header over the same formula); the Db!O1:O2 shape is in gen-m9 (`DCOUNTA(Db!A1:D12,5,Db!O1:O2)` in gen-m9/88cabddc4935351c).
+- Header-only criteria range `#VALUE!`: probes/db-header-criteria-shapes AB2 (`DSUM(A1:E6,2,H1)`) and AB3 (two-cell
+  one-row block); a header over a blank row matches every record: AB45 (`P1:P2`, 15) and AB56 (`H1:H3`, trailing blank
+  row, 15); the twelve-function version is db-front-end-sweep (T-3650).
+- Header-only database `#VALUE!`: probes/db-header-criteria-shapes AB4 (`DSUM(A1:E1,2,H1:H2)`); without its header row
+  the first record is read as the headers: AB71 (`DSUM(A2:E6,2,H1:H2)` 0).
+- Field forms: probes/db-header-criteria-shapes AB58 (text "0.5" matches the 0.5 header, 120), AB59, AB60 (empty text
+  matches the blank header, 12000), AB61 (2.9 is column 2, 12), AB62 (0 is `#VALUE!`) and AB63 (past the last column
+  `#VALUE!`); the padded, negative and cell-reference forms and the "qty" case-insensitive match: db-front-end-sweep.
+- Trailing blank rows are not records (`DCOUNTA(Db!A1:D12,,Db!K1:K2)` 8): no committed cell. Every other function
+  ignores an all-blank record, and db-front-end-sweep cannot tell for DCOUNT/DCOUNTA either. Probe: T-4732.
+Status: VERIFIED for every bullet except "trailing blank rows are not records", which is UNVERIFIED (T-4732).
+Tasks: T-2249, T-2422, T-2258, T-4688, T-4732
+
+## D-function front end across all twelve functions (VERIFIED, T-3650)
+Rule: the twelve D-functions (DAVERAGE, DCOUNT, DCOUNTA, DGET, DMAX, DMIN, DPRODUCT, DSTDEV, DSTDEVP, DSUM, DVAR,
+DVARP) share one front end; every shape below gives the same result family-wide (each function's own value over the
+same set of matched records).
+- Grammar: a criteria range of one row (headers only, one header, two headers, a single blank cell) is `#VALUE!`. A
+  header over a blank row, a wholly blank two-row block, a header the database does not have, an error header
+  (`=NA()` over 1) and an OR block whose middle row is blank match every record. A criteria header matches a database
+  header ignoring case (`qty`) but not with a leading or trailing space (` Qty`, `Qty `), and a numeric header (2) is not
+  a column position: those, and a blank header over a value (beside a real one or alone), match no record. Duplicate
+  headers AND their conditions (`Qty >1` and `Qty <5`). An error value under a header (`=NA()`) matches no record. A
+  criteria range overlapping the database (B1:B2, A1:B3) is read like any other block.
+- Field: text matches a header ignoring case but not with padding; numeric text (`"2"`, `"1"`), `""`, 0, -1, 0.5, FALSE,
+  a blank cell, a position past the columns and a two-cell range are `#VALUE!`; 2.7 truncates to 2; TRUE is column 1
+  (DCOUNTA 5, DCOUNT 0); an omitted field is `#VALUE!` except in DCOUNT and DCOUNTA, which count matched records.
+- Database: the header row alone is `#VALUE!`; two trailing blank rows (A1:C8 over the A1:C6 data, row 73) change no
+  result of the twelve (the probe cannot tell whether they are records; see "Database edge-pool smoke check (T-2249)").
+- Error order: an error field is the result (`#N/A`) even with a header-only database, header-only criteria or an
+  error criterion. Every other front-end failure (an unresolvable field, a one-row criteria range, a header-only
+  database) is `#VALUE!`, alone or combined (also with an error criteria header or no matching record), so their
+  relative order is not observable.
+- An error in a matched record's field is the result for DAVERAGE, DMAX, DMIN, DPRODUCT, DSTDEV, DSTDEVP, DSUM, DVAR and
+  DVARP (`#N/A` or `#DIV/0!` from the cell), the first one in record order when two differ (`#DIV/0!` above `#N/A` gives
+  `#DIV/0!`, the reverse `#N/A`); an error in a record that does not match is ignored, as is one in a criteria column
+  (the record simply does not match). DCOUNT skips it, DCOUNTA counts it as filled, and DGET returns it when its record
+  is the only match (`#NUM!` with more than one filled match). Before T-3650 ours skipped the error like a text cell.
+- Excel for the web refused (createSession `unsupportedWorkbook`) a workbook in which a D-function's database or criteria
+  argument was a function call (`NA()`, `1/0`) rather than a reference, as it does for an array-literal database
+  (db-argument-modes); those shapes are not probed.
+Evidence: probes/db-front-end-sweep rows 30-90 (A describes each row; B:M are the twelve functions in the order above;
+excel-graph, 2026-11-01). Implemented in `db_fold_numbers` (functions/database.rs).
+Status: VERIFIED
+Tasks: T-3650
 
 ## D* computed criteria and an unknown header in the gen-m9 database sweep (T-2258)
 Rule: observed D* values over the same Db sheet (Db!A1:D9 as in "Database edge-pool smoke check (T-2249)"; rows 2-9 hold
@@ -343,23 +527,144 @@ Qty 4, 10, 0, 2, 1, -4, 7, 5, Price 2.5, "x", 4, TRUE, 10, 0.5, 100, -1 and Date
   `#NUM!` (probes/db-get-blank-field N1-N8, excel-graph 2026-10-24, T-2422; implemented in `fn_dget`).
 - A database on another sheet (Data) with the criterion on Db matches no record: `DCOUNTA(Data!B4:B6,1,Db!O1:O2)`,
   `DMAX(Data!B2:E4,4,..)`, `DPRODUCT(Data!B11:E12,3,..)`, `DPRODUCT(Data!C10:E12,3,..)`, `DPRODUCT(Data!C6:D10,2,..)` are
-  0, `DAVERAGE(Data!A10:C12,2,..)` and `DVAR(Data!D2:E12,1,..)` `#DIV/0!` and `DGET(Data!A7:D11,2,..)` `#VALUE!` (ours
-  finds records: 1, 1, 1, -0.0042, 123456789.123, 3.14159, 549.25, `#NUM!`).
+  0, `DAVERAGE(Data!A10:C12,2,..)` and `DVAR(Data!D2:E12,1,..)` `#DIV/0!` and `DGET(Data!A7:D11,2,..)` `#VALUE!` (before
+  T-2617 ours found records: 1, 1, 1, -0.0042, 123456789.123, 3.14159, 549.25, `#NUM!`).
 - An unknown criteria header is ignored over a Data database too: `DGET(Data!B6:E8,4,Db!N1:N2)` (N1 "Nope") is -0.5
   (DGET skips the blank E8, above).
 Evidence: gen-m9 4dc761698ca23149 A129, 74779cff2810ccf4 A52, fa8ee59f2f1be7e0 A332, 7a819ffbbeff8fcc A303,
 5bdef392d16a5efb A161, f066968376660329 A292, A205, A313, d193e8b4ab820f52 A375, A260, f61a73cd9af21e6d A289,
 c9d7659896d95368 A82, A1, 6d16afd40600302b A365, cb80ca09be0e12bc A52, d9d55972b50e55e8 A106, 88cabddc4935351c A255
 (excel-graph, 2026-10-22/23, T-2258).
-Ours: the same-sheet cells match since T-2553: a record whose moved relative reference into the database's columns lands
-on its header row does not match (`reads_records` in functions/database.rs; the first record of Db!A2:D9
-reads B2). Ours extends this, unprobed, to a reference above the header row and to a range with either end there; a
-reference outside the database's columns, or below its records, is read as it is (all in T-2617's probe). The cells over
-a database on another sheet are T-2617's: the plain shift ours does gives Excel's `DCOUNTA(Data!A2:C10,3,Db!O1:O2)` = 3
-(02b7cfabebd2cc0a A231) and `DVARP(Data!A4:D9,1,Db!O1:O2)` = 0 (d193e8b4ab820f52 A114), but not the 8 cells above that
-match nothing, and no fixed shift fits all ten.
+Where a moved reference reads (probes/db-computed-criteria-cross-sheet, excel-graph 2026-10-28, T-2617; DSUM over
+field cells holding 2^(row-1), so each value is the set of matched records, and ROW bits of the moved reference):
+- A computed criterion's references without a sheet prefix read the **database's** sheet, not the criteria cell's: with
+  the criterion on Db (`=B2<0`, Db!B negative) over a database on Data (positive), no record ever matches, and
+  `ISODD(ROW(B2))` matches the same records as `ISODD(ROW(Data!B2))`. A reference qualified with the criteria sheet
+  (`=Db!B2<0`) reads Db, moved per record as usual, and every record matches.
+- As on one sheet (T-2525), the first record reads the reference as written and each later record one row lower.
+- A record matches only if every moved relative reference onto the database's sheet lies in the database's record
+  area: on a record row (not the header row or above, not below the last record) and in one of its columns. Over
+  Same!A5:C12 (header row 5): `=B5>0` fails the first record only, `=B4>0` the first two, `=B3>0` three, `=B2>0` four;
+  `=E6>0` (column E, outside A:C) and `=B13>0` (below row 12 for every record) match nothing though the cells hold
+  positive numbers; `=ROW(B5)>0` fails the first record too, so the position decides, not the value.
+- A range matches when it overlaps that area: `SUM(B5:B6)>0` matches every record, `SUM(B4:B5)>0` all but the first,
+  `SUM(B3:B4)>0` all but the first two.
+- An absolute reference stays put and is not checked: `=$B$5>0` (the header row) matches every record.
+- So over Data the 8 gen-m9 cells match nothing because their moved references land at or above the header row
+  (Data!B4:B6, A7:D11, A10:C12, B11:E12, C10:E12) or outside the columns (D2:E12, C6:D10); over Data!B2:E4 only
+  the second record matches, and `DMAX(Data!B2:E4,4,..)` is 0 from its field;
+  `DCOUNTA(Data!A2:C10,3,..)` and `DVARP(Data!A4:D9,1,..)` keep the records whose moved reference is a record row.
+Ours: matches every cell above since T-2617: `db_computed_condition` retargets unprefixed references to the
+database's sheet (`retarget_unqualified_references`) and `reads_records` checks the record area. Unprobed, ours
+also exempts a reference whose row is absolute but whose column is relative, and checks a range with one absolute
+row by its moved other corner.
 Status: VERIFIED (excel-graph) for the values; the reference rule for a criterion away from the database is VERIFIED
 (T-2525, probes/db-criteria-formula-placement: relative references rebase onto the first record, absolute ones
-stay put; ours agrees); the header-row rule is VERIFIED for Db!A2:D9 with `=B2>3` only (eight cells, one placement; T-2553),
-its general form and the other-sheet rule are UNVERIFIED (T-2617).
+stay put); the record-area rule and the database-sheet rule are VERIFIED (T-2617, probes/db-computed-criteria-cross-sheet).
 Tasks: T-2258, T-2422, T-2525, T-2553, T-2617
+
+## Conditional-format text rules and wildcards (UNVERIFIED, T-2910)
+Rule (ours): the conditional-format text rules (contains, does not contain, begins with, ends with, equals;
+`apply_cf_text` in conditional_formatting.rs) compare lower-cased text literally. `*`, `?` and `~` in the rule's text
+match only themselves. These rules do not use the criteria matcher in functions/criteria.rs, which every worksheet
+criteria and wildcard consumer uses (decision 0137).
+Excel: unknown. Excel saves a "text that contains" rule with a formula of its own, and if that formula is SEARCH-based,
+wildcards would apply. No probe exists: the Graph oracle cannot evaluate conditional formats, so the evidence needs
+desktop Excel, which is out of scope (decision 0266; decision 0039).
+Status: UNVERIFIED (unprobeable: the Graph oracle cannot evaluate conditional formats, and desktop work is out of
+scope, decision 0266).
+Tasks: T-2910
+
+## Empty text in ABS and MONTH; fraction and numeric-text COUNTIFS criteria (VERIFIED, T-2870)
+Rule: `ABS("")`, `ABS(cell holding "")`, `MONTH("")` and `MONTH(cell holding "")` are `#VALUE!` (ERROR.TYPE 3). A
+COUNTIFS criterion of the number `0.5` or of a cell holding 0.5 counts the numeric 0.5 cells; the text criterion `"0.5"`
+counts them too. Numeric text (`"2"` literal or a cell holding the text "2") matches both the number 2 and the text "2"
+cells, as does the number 2 (the same rule as the numeric-criterion entry above). With a second criterion `">0"` on the
+same range (A21) the text "2" is not counted (2, not 3), which shows B3 is text. The `#VALUE!` of `ABS("")`/`MONTH("")` is
+argument coercion: see also the `--""` entry in coercion.md.
+Evidence: probes/m2-argument-kind-gaps-b (excel-graph), Calc!A11:A14 and A15:A21. Ours already matches (12/12).
+Status: VERIFIED.
+Tasks: T-2870
+
+## Zero and negative SUMIFS criteria; IF error arguments; RIGHT numeric-text num_chars (VERIFIED, T-2980)
+Evidence: `probes/m2-argument-kind-gaps-c` (excel-graph). Criteria `0`/`"0"`/`"=0"` match a numeric 0 and a `"0"`
+text cell but not a blank; `-2`/`"-2"`/`"=-2"` match numeric -2 and a `"-2"` text cell; `"<0"` matches only numbers.
+An error `logical_test` (literal or cell) propagates; an error `value_if_false` surfaces only on the FALSE branch.
+`RIGHT(text,"2")`, `" 2 "` and `"1E1"` coerce num_chars as numbers. `RIGHT("abcdef","2.7")` is "ef" (truncated; Calc!A27) and `RIGHT(..,"x")` is #VALUE! (Calc!A31). IF cells: Calc!A1:A12; RIGHT cells: Calc!A25:A31. Our engine already matches every cell.
+
+## Criterion operands and text cells read numbers with VALUE's grammar (VERIFIED, T-3136)
+Rule (criterion side): a *IF(S) or D-function criterion operand, after its operator, is a number exactly when VALUE reads
+it as one. Percent (`"50%"`, `"1,000.5%"` = 10.005, `"1e2%"` = 1), `$` currency with and without grouping and sign (`"$1"`,
+`"$1,000"`, `"$-1"`, `"-$1"`), thousands grouping (`"1,000"`), a time (`"12:00"`, `"12:00 PM"` = 0.5), a date with a time
+(`"1/2/2020 12:00"` = 43832.5), a mixed fraction (`"1 1/2"`) and a parenthesised negative (`"(1)"`) are all numbers, under
+the plain operand, `=`, `<>` and `>=`. Misplaced grouping is not: `"1,00"` is text in the criterion, as `VALUE("1,00")` is
+`#VALUE!`, so it matches only the text cell "1,00" and `">=1,00"` compares texts by the collation. Calc!H gives VALUE of each
+operand: every one agrees with the criteria. So the criteria read numbers consistently with VALUE's grammar (`parse_formatted_number` plus VALUE's own forms), not
+with the plain parser the engine uses; no probed form tells VALUE apart from typed input.
+Rule (text-cell side): a numeric criterion under the plain operand or `=` matches the text cells that VALUE reads as the
+same number: `50%`, `12:00` and `12:00 PM` match the text cells "50%", "12:00" and "12:00 PM"; `$1` and `1e2%` match "$1",
+"1e2%" and "1"; `1,000` matches "1,000" and "$1,000"; `(1)`, `$-1` and `-$1` match "(1)" and "$-1". `<>` with a numeric
+operand counts every text cell, the equal ones included; `>=` never matches a text cell (Calc!B, D, F: 0). This extends
+"Numeric criteria against text cells and non-ASCII spaces" above from plain number text to VALUE's grammar.
+SUMIF, SUMIFS (the indexed path), COUNTIF, COUNTIFS and DSUM agree on every row, with criteria from cells and from literals.
+Evidence: probes/t3136-criteria-formatted-number-operands (excel-graph, 2026-10-29): Data!A1:A8 numbers 0.5, 1, -1, 1.5, 1000,
+10.005, 43832.5, 100 and Data!C1:C14 text cells with power-of-two SUMIF weights. Rows 1-56 are 14 operands × 4 operators.
+Calc!A (SUMIF numbers), B (SUMIF text), C/D (SUMIFS), E (COUNTIF), F (COUNTIFS text), G (DSUM) and H1-H53 (VALUE).
+A number criterion from a cell or a literal reads text cells the same way (probes/t3151-number-criterion-formatted-text,
+excel-graph, 2026-10-29, T-3151): over the text cells above, a cell holding 1 gives SUMIF and SUMIFS 259 ("$1", "1e2%",
+"1"), `COUNTIF(r,1)` 3, 1.5 matches "1 1/2" and -1 matches "(1)". An operand followed by a tab (`"1"&CHAR(9)`,
+`"=1"&CHAR(9)`) is text and matches none of them (C10, C11).
+Verified in text.md (T-3178): `- 5`, `1-1-1` and mixed fractions in a criterion. Euro operands `€1`, `1€` and `€3 1/2` match nothing (probes/typed-input-sign-space-mixed-fraction J2, J3, I5), though a text cell `€3 1/2` reads as 3.5 (E5); ours: `OPERAND_CURRENCIES` vs `CELL_CURRENCIES`, criteria.rs. Verified (probes/t3334-criteria-operand-forms, T-3334; Calc!A:G per operand row, H = VALUE of the operand):
+- `<`, `>` and `<=` behave as `>=` does: a formatted number operand (`50%`, `$1`, `1,000`, `(1)`, `12:00 PM`, `1e2%`)
+  compares against the number cells only and never matches a text cell, not even the text that VALUE reads as
+  that number (rows 1-18, B/D/F all 0).
+- An operand VALUE rejects is text, and `<` / `>` then compare it as text against the text cells only:
+  `Jan 1 2020 12:00` (H19 #VALUE!; rows 19-22: `<Jan 1 2020 12:00` matches all ten text cells, no number) and
+  `1e2$` (H39 #VALUE!; rows 39-42: plain and `=` match nothing, `<1e2$` eight text cells, `>1e2$` the two that
+  sort after it). A trailing `$` is not a currency form. Implemented (T-3404): `1e2$` is text in VALUE and as an operand, and VALUE is #VALUE! for number text padded with CHAR(160) (H47, H51, H55, H59); only the space character is trimmed.
+- Month-name dates with a time are numbers when VALUE reads them: `January 1, 2020 0:00` (H27 43831; rows 27-30),
+  `>=January 2, 2020 12:00` (row 63), and `1-Jan 6:00 PM`, read in the current year (H23 is its offset 0.75 from
+  January 1; rows 23-26).
+- `$1e2`, `$1E+2` (H31, H35 100) and `-$1e2` (H43 -100) are numbers: they match 100 (or -100) among the numbers
+  (A31, A35 32; A43 64). Under the plain and `=` operators `$1e2` and `$1E+2` also match the text cell `$1e2`, as
+  T-3136's `=` operands do (B31, B35 256; rows 31-38); `-$1e2` matches no text cell (B43, B44 0).
+- A mixed fraction under `<` is a number: `<1 1/2` (H64 1.5) matches the eight number cells below 1.5 and no text cell
+  (A64 15431, B64 0, E64 8).
+- CHAR(160) padding before or after a formatted number (`$1`+NBSP, NBSP+`50%`, `1,000`+NBSP, `=`+NBSP+`$1`) makes
+  the operand text, and VALUE of it is #VALUE! (H47, H51, H55, H59). Under the plain and `=` operators it matches
+  only the identical text cell (B47 32, B51 64, B55 128; NBSP+`$1` has none, B59 0); under `<` and `>` it compares
+  as text against all ten text cells (B49 66, B50 925, B53 0, B54 959, B57 374, B58 521, B61 0, B62 1023), and the
+  NBSP-led operands sort before every other text cell. The engine's criteria agree; its VALUE returns the number
+  (follow-up T-3404).
+- The other way round, a CHAR(160)-padded text cell (`$1`+NBSP, NBSP+`50%`, `1,000`+NBSP) never matches a number
+  criterion: the operands `$1`, `50%`, `1,000`, their `=` forms and the numbers 1, 0.5 and 1000 match only the
+  unpadded text cells (`$1`: B85 2; `50%`: B87 9, which is `50%` and `12:00 PM`; `1,000`: B89 4; rows 85-93).
+- The percent tie: `33.3333333333333%` and `33.33333333333335%` both read as 0.333333333333333 (H65, H71) and match
+  1/3, its two neighbouring doubles and the 15-digit 0.333333333333333 alike, under plain and `=`, and `<` / `>`
+  exclude all four (rows 65-76). Those two operands alone do not show how the cut is made: the double of
+  `33.33333333333335` is 33.33333333333334991..., already below the tie, so rounding that double to 15 digits gives
+  the same value as truncating. The operands `33.33333333333336%` and `33.33333333333338%`, whose doubles over 100
+  (0.33333333333333359..., 0.33333333333333376...) round to 0.333333333333334, settle it: VALUE reads both as
+  0.333333333333333 (H77, H81), they match the four 1/3 cells and the text cell `33.3333333333333%` under plain
+  and `=` (A77 15360, B77 512), and `<` / `>` exclude those cells (A79 68, A80 955; rows 77-84). So the operand is
+  truncated to 15 significant digits, not rounded, and the cell side compares at 15 digits. The cut comes before the
+  division by 100, on the decimal text: the operand's digits are cut to 15 significant digits, shifted two places
+  and rounded to a double once. probes/t3807-percent-operand-cut-order sets six operands where the other orders give a
+  different 15-digit value (cutting the double of `x/100` computed in binary, cutting the double nearest `x/100`, or
+  cutting the double of `x` before the shift), each against the three cells one unit apart in the 15th digit:
+  `1681.2415868344901%` (cut first 16.8124158683449; the binary and once-rounded orders 16.8124158683448),
+  `9.3960306202786801%` (0.0939603062027868; the other three orders 0.0939603062027867), `5712.2807073685301%`
+  (57.1228070736853; cutting the double of `x` first 57.1228070736852), `21513.191086314701%` (215.131910863147;
+  the once-rounded order 215.131910863146), `5706.1463389694002%` (57.061463389694; binary and double-first
+  57.0614633896939) and `4.5404674510462395%` (0.0454046745104623; the binary order 0.0454046745104624). Each one
+  matches only its cut-first cell under plain and `=` in SUMIF, SUMIFS, COUNTIF and COUNTIFS, from a literal or a cell,
+  on the walk and on the 80-cell cached range (C1:D6, G1:J6, L1:L6, O1:P6); under `<` it takes the lower neighbour and
+  under `>` the upper one, never the cut-first cell (E1:F6, M1:N6); VALUE of each is the cut-first value (K1:K6).
+  Oracle: excel-graph, 2026-11-02 (T-3807).
+UNVERIFIED: non-en-US locales (out of scope).
+Ours: the operand and the text cells read with the plain parser, then VALUE's reader (`criterion_text_number` in
+functions/criteria.rs over `value_number_text` in cast.rs, which VALUE uses too), then the date parser; text padded with a
+non-ASCII space stays text on both sides, as the section above requires. The indexed *IFS path and the D-functions build
+their predicates there too. Every cell of the probe passes (T-3151).
+Status: VERIFIED (excel-graph); implemented (T-3151).
+Tasks: T-3136, T-3151

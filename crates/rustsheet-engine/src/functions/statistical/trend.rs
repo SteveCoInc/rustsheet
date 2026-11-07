@@ -1,10 +1,11 @@
 //! TREND and GROWTH: the predictions of LINEST's and LOGEST's fit (statistics.md "TREND:
 //! defaults, shapes, single points and error inputs").
 
-use super::linest::{linear_regression, predict, reconstruct_beta};
+use super::linest::{flag_range_value, linear_regression, predict, reconstruct_beta};
 use super::regression::{
     given, known_points, layout, shape_error, Element, Grid, KnownPoints, Layout,
 };
+use crate::arithmetic::flush_subnormal;
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{LiftCost, LiftOptions};
@@ -123,8 +124,10 @@ impl TrendData {
                 if point.iter().any(|v| v.is_nan()) {
                     return ArrayNode::Error(Error::VALUE);
                 }
-                let fitted = predict(&beta, &point, const_term);
-                ArrayNode::Number(if self.growth { fitted.exp() } else { fitted })
+                if !self.growth {
+                    return ArrayNode::Number(predict(&beta, &point, const_term));
+                }
+                growth_prediction(&beta, &point, const_term)
             })
             .collect();
         CalcResult::Array(
@@ -190,7 +193,8 @@ impl Model {
         // text element of a lifted const (`GROWTH(..,TEXTSPLIT(..))`, 8fec7b207f4dd753 A14), while
         // a text cell waits for them (`TREND(Data!C10:E11,..,Data!$A12)` with A12 = "abc" is
         // `#REF!`, bbab6562e88b70e8 A13). A multi-cell range does not lift
-        // (`TREND(..,OFFSET(Data!B6:C12,-1,3))` is `#VALUE!`, 43c6227e0ff368c7 A165).
+        // (`TREND(..,OFFSET(Data!B6:C12,-1,3))` is `#VALUE!`, 43c6227e0ff368c7 A165): it reads its
+        // top-left cell.
         let typed = !matches!(
             *const_node.resolved_at(cell.row),
             Node::ReferenceKind { .. }
@@ -206,7 +210,9 @@ impl Model {
             };
             data.predictions(const_arg, cell)
         };
+        // A range is its top-left cell, not a lift ([`flag_range_value`]).
         let const_value = self.evaluate_node_in_context(const_node, cell);
+        let const_value = flag_range_value(self, const_value);
         if !matches!(const_value, CalcResult::Array(_)) {
             return kernel(self, const_value);
         }
@@ -227,11 +233,9 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> Result<Grids, CalcResult> {
-        let y = Grid::from_data(self.read_known_y(&args[0], cell)?);
-        let x = match given(args.get(1)) {
-            Some(node) => Some(Grid::from_data(self.read_data(node, cell)?)),
-            None => None,
-        };
+        let (y, x) = self.read_known_y_and_x(args, cell)?;
+        let y = Grid::from_data(y);
+        let x = x.map(Grid::from_data);
         let new_x = match given(args.get(2)) {
             Some(node) => Some(Grid::from_data(self.read_data(node, cell)?)),
             None => None,
@@ -248,4 +252,35 @@ impl Model {
     pub(crate) fn fn_growth(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.trend_or_growth(args, true, cell)
     }
+}
+
+/// GROWTH's prediction `e^(intercept + Σ m_j x_j)` at the edges of LOGEST's factors, `b = e^intercept`
+/// and each variable's `e^(m_j x_j)`. Excel multiplies the variables' factors left to right in
+/// doubles, each partial product flushed to 0 once subnormal (statistics.md "GROWTH is #NUM! once
+/// LOGEST's b or a slope's factor overflows ..."):
+/// - `#NUM!` where b overflows (probes/t4590-growth-overflow `Int!`), a factor overflows
+///   (t4765-growth-factor-edges `Over!`), or a zero partial product meets an overflowing factor
+///   (t4793-growth-several-x `Multi!`);
+/// - 0 where a partial product is subnormal: the first factor alone (t4765 `Cut!`, `NoConst!`,
+///   t4793-growth-one-factor-underflow `One!A1`, `One!A3`), but not a later subnormal factor that
+///   the product before it lifts back (`One!A2`); and 0 where the prediction is subnormal
+///   (t4793 `SubProd!`).
+///
+/// Between the edges the value is the single exponential. `beta` holds the intercept first when
+/// `const_term`, as for [`predict`].
+fn growth_prediction(beta: &[f64], point: &[f64], const_term: bool) -> ArrayNode {
+    if const_term && beta[0].exp().is_infinite() {
+        return ArrayNode::Error(Error::NUM);
+    }
+    let mut product = 1.0;
+    for (m, x) in beta[usize::from(const_term)..].iter().zip(point) {
+        product = flush_subnormal(product * (m * x).exp());
+    }
+    if !product.is_finite() {
+        return ArrayNode::Error(Error::NUM);
+    }
+    if product == 0.0 {
+        return ArrayNode::Number(0.0);
+    }
+    ArrayNode::Number(flush_subnormal(predict(beta, point, const_term).exp()))
 }

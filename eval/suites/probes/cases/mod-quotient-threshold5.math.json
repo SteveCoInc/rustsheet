@@ -1,0 +1,97 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "17466592dbb00494c31000755f75be7f7f403e0f13d0af5ca78d55a9654920a6",
+  "definitions": {
+   "MOD": "f3652f667cdcece1"
+  },
+  "arguments_sha256": "501fe8e956f48d2cad839911777b9b02439d9731d6e8e81f4ef69671dc597537"
+ },
+ "sheets": {
+  "Sheet1": {
+   "C1": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125900563019,1)"
+   },
+   "C10": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125906468594,1)"
+   },
+   "C11": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125907124769,1)"
+   },
+   "C12": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MOD(1125899999999,1)"
+   },
+   "C13": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125900000000,1)"
+   },
+   "C14": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125900000001,1)"
+   },
+   "C15": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125900000002,1)"
+   },
+   "C16": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125900000500,1)"
+   },
+   "C2": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125901219194,1)"
+   },
+   "C3": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125901875369,1)"
+   },
+   "C4": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125902531544,1)"
+   },
+   "C5": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125903187719,1)"
+   },
+   "C6": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125903843894,1)"
+   },
+   "C7": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125904500069,1)"
+   },
+   "C8": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125905156244,1)"
+   },
+   "C9": {
+    "t": "e",
+    "why": "|number/divisor| at or above 1.1259E+12 (#NUM!)",
+    "f": "=MOD(1125905812419,1)"
+   }
+  }
+ }
+}

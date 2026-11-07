@@ -1,0 +1,71 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "6fd10901555d3c31e60dc5e04e0ba83cd82211523e2cfae4d9e1cb7aab843f2e",
+  "definitions": {
+   "ROUNDDOWN": "19ce5b4189e2c2a5",
+   "ROUNDUP": "19ce5b4189e2c2a5"
+  },
+  "arguments_sha256": "770a01b8d96d3aca80ce15e30c603c7b889803f696b7a2e118624915563f35ec"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A5": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(7712487.6865209,-400)"
+   }
+  }
+ },
+ "skipped": {
+  "Sheet1": {
+   "A1": {
+    "f": "=ROUNDUP(6.4421516092447E+265,-43376)",
+    "why": "no single value"
+   },
+   "A10": {
+    "f": "=ROUNDDOWN(1.23456789012345E+95,-32769)",
+    "why": "no single value"
+   },
+   "A11": {
+    "f": "=ROUNDUP(1.23456789012345E+105,-43376)",
+    "why": "no single value"
+   },
+   "A12": {
+    "f": "=ROUNDDOWN(1.23456789012345E+105,-43376)",
+    "why": "no single value"
+   },
+   "A2": {
+    "f": "=ROUNDDOWN(6.4421516092447E+265,-43376)",
+    "why": "no single value"
+   },
+   "A3": {
+    "f": "=ROUNDUP(-3.41521682833705E-207,-11541)",
+    "why": "no single value"
+   },
+   "A4": {
+    "f": "=ROUNDUP(-2.33253918200575E+106,-678)",
+    "why": "no single value"
+   },
+   "A6": {
+    "f": "=ROUNDUP(4.72880001004526E+149,22178)",
+    "why": "no single value"
+   },
+   "A7": {
+    "f": "=ROUNDUP(1.23456789012345E+105,-32769)",
+    "why": "no single value"
+   },
+   "A8": {
+    "f": "=ROUNDDOWN(1.23456789012345E+105,-32769)",
+    "why": "no single value"
+   },
+   "A9": {
+    "f": "=ROUNDUP(1.23456789012345E+95,-32769)",
+    "why": "no single value"
+   }
+  }
+ }
+}

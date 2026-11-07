@@ -1,0 +1,21 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "GROWTH with two x where one variable's factor underflows and the sum stays normal (T-4793, review round 1); predictions in docs/research/t4793/predictions2.tsv committed before the fill. H_flush: 0 once a factor e^(m_j x_j) is below DBL_MIN (the engine); H_sum: e^(sum). A4 is a normal control.",
+ "tags": [
+  "M9",
+  "statistical",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "One",
+   "cells": {
+    "A1": "=GROWTH({2.3802664086944e-26;1.07303053937489e-182;4.62349229995411e+104;4.04856600857927e+78},{1,1;2,1;1,2;2,3},{2,2},TRUE)",
+    "A2": "=GROWTH({2.3802664086944e-26;4.62349229995411e+104;1.07303053937489e-182;9.39600346673829e-209},{1,1;2,1;1,2;2,3},{2,2},TRUE)",
+    "A3": "=GROWTH({5.82431986847049e-24;6.42467825792674e-178;1.13133126468452e+107;2.42404414941008e+83},{1,1;2,1;1,2;2,3},{2,2},TRUE)",
+    "A4": "=GROWTH({5.24288566336346e-22;5.20597071316492e-174;1.01839194997492e+109;1.9642233186818e+87},{1,1;2,1;1,2;2,3},{2,2},TRUE)"
+   }
+  }
+ ],
+ "expected": {}
+}

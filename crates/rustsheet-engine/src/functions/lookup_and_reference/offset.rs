@@ -4,12 +4,12 @@
 use super::ref_lift::{lifts_one_by_one, may_hand_on_grid};
 use crate::calc_result::{CalcResult, Range};
 use crate::constants::{LAST_COLUMN, LAST_ROW};
-use crate::expressions::parser::ArrayNode;
 use crate::expressions::parser::Node;
 use crate::expressions::token::Error;
 use crate::expressions::types::CellReferenceIndex;
 use crate::external_reference::PickedReference;
 use crate::functions::lift::{ArgBuf, LiftedArg};
+use crate::functions::Function;
 use crate::model::Model;
 use crate::reference_operators::{RefArg, RefElement, RefGrid};
 
@@ -111,6 +111,19 @@ impl Model {
         node: &Node,
         cell: CellReferenceIndex,
     ) -> Result<Source, CalcResult> {
+        // A lifted XLOOKUP with a range if_not_found is a mixed grid of its hits as values and
+        // its misses as that range, which OFFSET lifts over (`ROWS(OFFSET(XLOOKUP({2;9},A1:A3,
+        // B1:B3,G1:G2),0,0))` is 2, each element `#VALUE!`; probes/t4704-mixed-xlookup-grid-
+        // readers A4:C8). Any other XLOOKUP reads as before: the reference it picks, or its value.
+        if let Node::FunctionKind {
+            kind: Function::Xlookup,
+            args,
+        } = node.ungrouped()
+        {
+            let read = self.xlookup_reference(args, cell, true);
+            self.empty_amor_left_over();
+            return offset_source_read(read, cell);
+        }
         if !may_hand_on_grid(node) {
             return self.get_reference(node, cell).map(Source::One);
         }
@@ -133,26 +146,20 @@ impl Model {
             Ok(lifted) => lifted,
             Err(error) => return RefArg::Value(error),
         };
-        let (rows, columns) = grid.dims();
-        let indices = (0..rows)
-            .map(|row| {
-                (0..columns)
-                    .map(|column| ArrayNode::Number((row * columns + column) as f64))
-                    .collect()
-            })
-            .collect();
-        lifted.insert(0, LiftedArg::Grid(indices));
+        lifted.insert(0, LiftedArg::Grid(grid.index_array()));
         self.lift_references(lifted, cell, &mut |model, values| {
-            let Some((CalcResult::Number(index), values)) = values.split_first() else {
+            let Some((index, values)) = values.split_first() else {
                 return CalcResult::new_error(Error::VALUE, cell, "Not an element".to_string());
             };
-            // The index is a whole number below the grid's length, exactly as built above.
-            match grid.elements().get(*index as usize) {
+            match grid.element_at(index) {
                 Some(RefElement::Reference(reference)) => model.offset_of(reference, values, cell),
                 Some(RefElement::Error(error)) => {
                     CalcResult::new_error(error.clone(), cell, "Error element".to_string())
                 }
-                None => CalcResult::new_error(Error::VALUE, cell, "Not an element".to_string()),
+                // OFFSET of a value is `#VALUE!`, as of any non-reference argument.
+                Some(RefElement::Value(_)) | None => {
+                    CalcResult::new_error(Error::VALUE, cell, "Not an element".to_string())
+                }
             }
         })
     }
@@ -170,7 +177,7 @@ impl Model {
             args.get(1..).unwrap_or_default(),
             cell,
             |model, arg, cell| {
-                model.evaluate_picked_source(arg, cell, Self::evaluate_node_in_context)
+                model.evaluate_picked_source(arg, cell, Self::evaluate_node_in_context, false)
             },
         )
     }

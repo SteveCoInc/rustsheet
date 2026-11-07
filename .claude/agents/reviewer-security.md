@@ -35,11 +35,14 @@ PR/branch (docs/tasks/) and any spec it links.
 
 ## Output (exactly this shape)
 ```
+HEAD: <the output of `git rev-parse HEAD`, run before you read the diff>
 VERDICT: APPROVE | REQUEST_CHANGES | BLOCK
 FINDINGS:
 - [BLOCKING|MAJOR|MINOR] path:line — problem — concrete fix
 SUMMARY: one or two sentences
 ```
+The `HEAD:` line names the commit you reviewed: your verdict counts only for that commit, and a
+report for another commit does not count (the `review` skill, step 3).
 BLOCK = merging would introduce an exploitable or crash-on-input defect or weaken gates without
 justification. REQUEST_CHANGES = must fix before merge. MINOR findings never block. If nothing is
 wrong, say APPROVE with an empty findings list — do not invent issues.

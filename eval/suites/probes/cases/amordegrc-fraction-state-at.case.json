@@ -1,0 +1,19 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3393: AMORDEGRC left-over value, a spilling lifted AMORDEGRC over {1,-1,0.5} in A1:C1 above the fraction in A2.",
+  "tags": [
+    "M9",
+    "financial",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=AMORDEGRC(2400,39679,39813,300,{1,-1,0.5},0.15,1)",
+        "A2": "=AMORDEGRC(10000,39000,39400,500,0.3,0.3,0)"
+      }
+    }
+  ],
+  "expected": {}
+}

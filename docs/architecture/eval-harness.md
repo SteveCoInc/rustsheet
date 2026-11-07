@@ -10,20 +10,21 @@ side by side.
 | key | meaning |
 |---|---|
 | `name`, `description`, `license`, `origin` | identity and provenance (license decides vendor vs fetch) |
-| `kind` | `xlsx` (workbooks) or `spec` (`*.case.json`) |
+| `kind` | `xlsx` (workbooks) or `spec` (`*.case.json`); `roundtrip` only under `eval/roundtrip/` (below) |
 | `root`, `include`, `exclude` | where the cases are (globs relative to `root`) |
 | `use_cached_values` | for xlsx: Excel's cached `<v>` values are the oracle (when no sidecar exists) |
 | `require_excel_authored` | only trust caches written by Microsoft Excel (`docProps/app.xml`; XlsxWriter's fake `12.0000` rejected) |
 | `oracle_dir` | optional, relative path inside the suite directory: sidecars live there, mirroring the case path, instead of next to the case (for fetched suites, whose cases sit in the git-ignored cache; decision 0019) |
 | `cached_overrides` | xlsx: optional file (relative to the manifest) replacing single cached values that are not en-US evidence with cells of committed `excel-graph`/`excel-desktop` sidecars (`overrides.rs`, decision 0032); an excel-graph evidence cell whose probe companion `(x)=0` is FALSE also carries decision 0042's kept-subnormal rule (decision 0090) |
 | `gate` | part of the CI no-regression gate |
-| `baseline` | `cells` (default), `cases` (large corpora) or `none` |
+| `baseline` | `cells` (default), `cases` (large corpora) or `none`; a round-trip suite's `cells` baseline lists fidelity items in the item slot |
 | `milestone` | which milestone(s) the suite measures |
 | `[fetch]` | optional pinned external source: `url` (`https://` or `file://`), exactly one pin (`rev` = 40-hex git commit, or `sha256` of a `.zip`/`.tar*` archive), optional `subdir` and `include` globs |
 
 External suites (`[fetch]`) live in `eval/.cache/suites/<name>` (gitignored) after `rustsheet-eval fetch`;
 their `root` is that directory. A suite whose cache is missing or stale (marker `.rustsheet-fetched`
 differs from the pin) is listed as `not fetched` and skipped, with a note, by `run`/`check`/`update-baseline`.
+`run`/`check`/`update-baseline` take `--fetch-missing`: each *selected* suite whose cache is missing or stale is then fetched (as `fetch` does, printing `fetched <name> (<n> files)`) before scoring; a failed fetch prints `skipping <name>: fetch failed: <error>`, skips that suite and does not change the exit code. Without the flag nothing is fetched.
 Use this for sources that are too large or not redistributable (GPL / CC-BY-SA); never vendor them.
 
 Current suites:
@@ -32,6 +33,73 @@ Current suites:
 - `smoke`: hand-written core semantics.
 - `probes`: Excel-behavior questions awaiting the oracle.
 - `gen-m2`: generator output (30 cases, 12,000 cells), oracle-filled and gated (T-0203).
+
+## Round-trip suites
+`eval/roundtrip/<name>/suite.toml` (SPEC-0033, T-4172) uses the same manifest with `kind = "roundtrip"`:
+- Its cases are the `.xlsx` and `.xlsm` files under `root`, discovered as an xlsx suite's are.
+- `scenarios` lists what each case runs. Only `R0` (load, recalculate with the harness clock, save) exists yet; T-4514
+  adds R1.
+- The output is checked by the package validator, checks V1–V6 and V8 of SPEC-0033 D6.
+- The source's parts are scored as `part` fidelity items, matched by a key built from the relationship graph, never
+  by part name (D2). An item is kept, changed (content type or bytes), lost, added, or package-invalid.
+- Each kept XML part pair is diffed structurally (`roundtrip/xmldiff.rs`, D4; T-4509):
+  - names compare by namespace URI;
+  - children compare in order, except at the listed unordered paths and inside `extLst`, which match by key;
+  - an absent attribute equals its schema default, and xsd:boolean spellings compare equal;
+  - `mc:Ignorable` compares as a set of URIs.
+
+  This yields `element` and `attribute` items keyed `<part key>:<path>`. A lost element absorbs its descendants.
+  The children of `worksheet/sheetData` and of the shared-string table are left to the semantic items (T-4513).
+  Items that fall under a candidate normalization N1–N12 carry a `candidate-N<k>` tag, and are never normalized
+  until T-4503's evidence. A part pair reports at most 500 items; the rest are counted in a `<truncated>` item.
+- Semantic items (`roundtrip/semantic.rs`, D2/D3; T-4513) flatten each workbook into keyed facts and compare them
+  key by key:
+  - from the importer's model (`Model`): resolved cell styles, sheet order, state, tab colour, frozen panes and grid
+    lines, merges, hyperlinks, conditional-format rules, defined names and tables;
+  - from the snapshot reader, which reads what the file stores: formula text (leading spaces, TABs and LFs dropped
+    as Excel drops them, SPEC-0033 X5) and constant values;
+  - the cached values of formula and spill cells, comparing the saved, recalculated workbook with the output as
+    loaded, error values by kind.
+
+  Inputs, styles and structure compare the source as loaded with the output as loaded. Validator check V7 flags a
+  shared-string index the model accepts out of range; an out-of-range style index already fails V8, because the
+  importer refuses it.
+- A package is read once, every part under one inflated-byte budget (the importer's default).
+- A case's checked count is the number of source parts, elements and attributes compared. Only failing element and
+  attribute items are listed.
+
+Round-trip suites live outside `eval/suites/`, as Gate A's tables do, so no cell report, milestone row or gate counts
+them. `Suite::load_all` refuses a `roundtrip` manifest under `eval/suites/`, and a round-trip suite may not reuse an
+`eval/suites/` name, because both keep their baseline at `eval/baseline/<name>.txt`.
+
+The baseline is the ordinary cells-mode file:
+- `C` gives a case's number of items;
+- each `F` line is a failing item, `<scenario> <kind> <key> <verdict>` (calcChain carries `candidate-N1` until
+  T-4503's evidence);
+- the ratchet is `baseline::diff`.
+
+The corpus suites (`roundtrip-calipers`, `roundtrip-poi`, `roundtrip-corpus-bench`; T-4173) use `baseline = "cases"`,
+since their item lines would run to tens of megabytes:
+- each failing case is one `F` line, `* <n> <digest>`: n is its failing items, weighted as the kept rate weighs
+  them (at least 1 each), and the digest hashes their set of keys;
+- `roundtrip::diff` treats a smaller n as a fix, and a held or larger n with another digest as a regression. In
+  both modes, a fall in a case's checked count, or a case that newly does not run, is a regression too;
+- updating a `cases` suite refuses to drop a case (a cache fetched under an older include).
+
+Each names its cell suite with `cases_of = "<suite>"` and takes that suite's `[fetch]` and cache directory
+(`eval/.cache/suites/<suite>`, T-4629). So it is fetched, skipped with a message while not fetched, and gated exactly
+as that suite is, and it never records an empty baseline:
+- `roundtrip-poi` and `roundtrip-corpus-bench` are `gate = true`, like their cell suites. `make check` holds them
+  wherever the caches are fetched; CI, which fetches no corpus, skips them as it skips the cell suites.
+- `roundtrip-calipers` stays `gate = false`, like the calipers cell suite. `rustsheet-eval roundtrip --check --suite
+  roundtrip-calipers` gates it on demand.
+
+`rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. Each suite's line and report section
+give its kept rate: source items compared, less those the failing items cover (`Item::weight`: a lost element's
+subtree, a lost part's elements, a `<truncated>` item's hidden differences), over the items compared (`KeptRate`,
+SPEC-0033 D8). Cases that did not run are counted as not scored. `--check` (in `make eval-gates`, gate suites only) fails on a regression or an
+out-of-date baseline. `--update-baseline` (in `make eval-baseline`) records fixes and new cases, and refuses
+regressions. `make eval` runs every round-trip suite (decision 0307).
 
 ## Case formats
 **`rustsheet-case/v1`** (`*.case.json`):
@@ -53,6 +121,13 @@ Input conventions:
   PATCH before calculating (and logs the `numberFormat` Excel chose as `ENTERED ...` on stderr),
   excel-desktop sets `Range.Value` (that this parses exactly like typing is UNVERIFIED: no desktop run yet), libreoffice refuses. The engine adapter enters it as
   `Input::Parse`. Formulas can only observe the value: `CELL("format")` is `#VALUE!` on excel-graph.
+- `{"entered_r1c1":"=R1C2+1"}` is typed the same way in R1C1 mode (T-3113, decision 0179): recorded with
+  a fourth element `"r1c1"` and written with a range `formulasR1C1` PATCH (excel-desktop:
+  `Range.FormulaR1C1`, UNVERIFIED like `Range.Value`). The engine adapter enters it as
+  `Input::ParseR1C1`, which the engine parses in the R1C1 grammar against its cell and stores as parsed
+  (`Model::set_typed_r1c1_user_input`, T-4288; no A1 text in between). Typed text Excel for the web refuses
+  (PATCH 400 `InvalidArgument`) leaves the cell blank, and so does text the engine refuses with
+  `TYPED_FORMULA_DOES_NOT_PARSE`, in either mode; probe a refusal through a dependant such as `=ISBLANK(A1)`.
 - Optional per-sheet `"legacy_formulas": ["H1"]` lists formula cells that spec2xlsx writes as plain
   legacy `<f>` formulas (no dynamic-array `cm`), to probe what Excel shows for a non-array formula
   (T-1077). The engine adapter enters them as `Input::LegacyFormula`, which adds the implicit
@@ -63,8 +138,10 @@ Input conventions:
   the first row of `ref` and must hold literal text. With `"filter": true` spec2xlsx gives the table's
   autoFilter a values filter on its first column that keeps exactly the visible data rows (those
   cells must be literal text or whole numbers, and no value may be both kept and hidden), so Excel
-  reads the hidden rows as filtered. The engine adapter loads both through `Txn::add_table` and
-  `Txn::set_row_hidden`. With `"totals_row": true` the last row of `ref` is the table's totals row; its
+  reads the hidden rows as filtered. `"filter_column": {"col_id": 5}` writes that values filter under `colId` 5 (0 or
+  past the table's last column) and `"criterion": false` there writes a criterion-less `<filterColumn colId="N"/>`; Excel
+  reads neither as filtered, so the adapter adds such a table unfiltered (T-4003). The engine adapter loads both
+  through `Txn::add_table` and `Txn::set_row_hidden`. With `"totals_row": true` the last row of `ref` is the table's totals row; its
   cells must be labels or formulas, which spec2xlsx writes with the totals-row metadata Excel needs. The
   facade cannot add a totals row yet, so the adapter registers the table without that row (T-1671).
   Formulas use structured references as typed (`Sales[@Qty]`, a bare `Sales`); spec2xlsx stores their
@@ -75,9 +152,41 @@ Input conventions:
   creates the workbook with `WorkbookOptions::date_system` and applies formats with
   `Txn::set_number_format`. Number formats change only what a cell displays, which excel-graph
   cannot report (it reads cached values), so they are for cases that formulas read through.
+- Optional per-sheet `"conditional_formats": [{"ref": "A1:A3", "formula": "=A1>0"}]` and
+  `"data_validations": [{"ref": "A1", "formula": "=A1>0"}]` write formula conditional formats
+  (`<cfRule type="expression">`) and custom data validations, their formulas prefixed like cell
+  formulas (T-3263). They probe what Excel accepts in those formulas (a refused workbook is the
+  answer); the engine adapter ignores both, as neither changes a cell value.
+- Optional per-sheet `"pivot_tables"` places pivots on the sheet (T-1705). The original form names
+  one `row`, an optional `column`, one `value` and a `function`, and the builder renders the cells
+  itself (`tools/src/rustsheet_tools/pivot.py`). A pivot with a `"definition"` (case builder v2,
+  T-4122) maps one-to-one onto `pivotTableDefinition`:
+  - `rows`, `columns` and `pages` name the fields (`"Values"` is the Σ field);
+  - `data` lists the data fields (`subtotal`, `showDataAs`, `baseField`, `baseItem`, `numFmtId`);
+  - `fields` gives per-field `attrs`, `hidden`, `collapsed`, `order`, `subtotals` and a numeric
+    `group`;
+  - `calculated` lists calculated fields; `table` and `cache` hold attributes;
+  - `xml` holds raw `formats`, `filters` and similar children.
+
+  The builder writes only the cache, records and table parts, and Excel renders the pivot on open
+  (`refreshOnLoad`). The full schema is in `tools/src/rustsheet_tools/pivot_definition.py`. The
+  engine adapter writes the same parts (`crates/rustsheet-eval/src/pivot_definition.rs`, which
+  mirrors the builder), loads them through the xlsx importer once the case's cells are in, and
+  recalculates, so the engine refreshes and renders the pivot as Excel does on open (T-4152). A
+  pivot the importer drops (a calculated field, a `showDataAs` data field, group items past
+  the rebuilt groups) is dropped there too.
 - Optional `"names": {"rate": "=Sheet1!$B$1"}` declares workbook-scoped defined names (any
   formula Excel accepts as a name body, e.g. an intersection). A key `Sheet1!name` is a name scoped
   to that sheet.
+- Optional `"api_names": [{"name": "N", "formula": "=ABS(1)"}]` defines workbook-scoped names
+  (with `"sheet": "S"`, a name scoped to sheet S, replayed with Graph `worksheets('S')/names/add` and
+  `Txn::define_sheet_name`; T-4014)
+  through the API after the typed entries and the sheet ops, in order (T-3264;
+  `tools/src/rustsheet_tools/api_names.py`): spec2xlsx records them as docProps custom properties
+  `rustsheet.apiname.<n>`, the excel-graph backend replays each with Graph `workbook/names/add`
+  (a 400 `InvalidArgument` is Excel refusing the name, which stays undefined; decision 0179) and the
+  other backends refuse such cases. The engine adapter replays each with `Txn::define_name` and skips
+  a name it refuses for nesting more than 65 calls, as Excel does; any other refusal fails the case.
 - Optional `"sheet_ops"` lists sheet edits made after the workbook loads and before it is
   recalculated (T-1608): `{"op":"add","sheet":"New"}` appends a sheet, `{"op":"rename",
   "sheet":"Data","to":"Inputs"}` renames one (formulas that refer to it are rewritten), and
@@ -85,7 +194,8 @@ Input conventions:
   `{"op":"insert_row","sheet":"S","row":1}` inserts one blank row above the 1-based row, shifting
   the cells below down (T-1933; Graph `range(address='1:1')/insert`). T-2323 adds `delete_row`
   (`row`), `insert_column` and `delete_column` (`column`, a letter), `delete_sheet` and
-  `convert_table` / `delete_table` (`table`); see docs/architecture/oracle.md for the Graph calls
+  `convert_table` / `delete_table` (`table`), and T-3629 `add_table` (`table` and `ref`, the range with its
+  header row first, header cells set in the case); see docs/architecture/oracle.md for the Graph calls
   and decision 0098 for the engine side (`convert_table` is refused there). Any other op or key is
   refused. spec2xlsx records them as docProps custom properties `rustsheet.sheetop.<n>`. The
   excel-graph backend replays them in the session after the typed entries and keeps its canary
@@ -118,6 +228,27 @@ A sidecar may also hold `text{Sheet:{A1:"shown text"}}`: Excel's displayed text 
 case lists in `"text": ["Sheet!A1", ...]` (T-1610, decision 0068). spec2xlsx records those cells in
 the `rustsheet.text.<n>` custom properties, and the excel-graph backend reads each one's
 `Range.text` after the recalculation, in the same session.
+A sidecar of a workbook with pivots also holds `pivots: [...]` (T-4123), one entry per pivot Excel
+saved, from `rustsheet-eval snapshot`'s `pivots`:
+- `name`, `sheet` and `location` (`<location ref>`);
+- `first_header_row`, `first_data_row` and `first_data_col`;
+- `row_page_count` and `col_page_count`;
+- `row_items` and `col_items`, Excel's layout lines `{t?, r, i, x:[...]}`;
+- `cache_fields` (`{name, group_items?}`);
+- `cells`: every cell of the location and of the page-field rows above it, A1 to value, a blank one
+  as `{"t":"empty"}` (`snapshot.py` `pivot_areas`; an area over 100,000 cells is not captured).
+
+`OracleFile::pivots` reads it. For a spec case, every one of those cells is a scored Excel cell (T-4124,
+`crates/rustsheet-eval/src/pivot_scoring.rs`): a pivot the engine does not render fails cell by cell, and
+its failures enter the baseline like any other cell's. A cell the sidecar's `sheets` also give keeps that
+value. Each sidecar pivot's layout is also compared with the engine's, matched by sheet and name:
+- `Missing`: no such engine pivot;
+- `LocationDiffers`: another location;
+- `LinesNotEmitted`: Excel's location, but no `rowItems`/`colItems` from the engine yet (T-4147).
+
+Mismatches are listed in report.md's "Pivot layout" section and in report.json's `pivot_layout` per case.
+xlsx cases' sidecars are not read for pivots yet: their pivot cells are cached constants the importer keeps
+(pivot-corpus, T-4131).
 Tools never re-derive case discovery: `rustsheet-eval cases <suite>` prints each case's path,
 sidecar path, formula-cell count and whether the suite trusts its cached values.
 
@@ -134,6 +265,13 @@ does not flow through it to its dependents. Rules:
   fixed mock clock (`NOW()>45000` is not invariant here);
 - `rustsheet-oracle fill` recalculates a case with `invariant` cells a second time without the
   cache and leaves pending (prints `VARIES ...`) every listed cell whose two values differ.
+
+A formula that calls an add-in function (`_xll.` prefix, outside string literals;
+`formula_calls::calls_add_in`) is not scored either, and is counted as `skipped_add_in` (T-0462).
+Decision 0027 puts add-ins out of scope, and Excel's cached value came from the add-in (calipers
+pv26_003's S&P Capital IQ `_xll.ciqfunctions.udf.CIQHI` cells). Unlike volatile taint, only the
+calling cell is left out: its dependents are scored, so a miss they show stays visible. report.md's
+out-of-scope section lists each suite's count.
 
 | Verdict | Meaning |
 |---|---|
@@ -161,7 +299,8 @@ Only `pass` counts as passing. Case statuses:
   ranked by failing cells; failing examples per function; Excel evidence per function; out-of-scope
   functions. This is the hill-climbing to-do list. Function counts follow the catalog's `scope`
   (decision 0027), read from the generated `eval/catalog/scope.json` (decision 0040): `scope: out`
-  functions leave the function tables and get their own section with their reason; the evidence
+  functions leave the function tables and get their own section with their reason (and the per-suite
+  count of unscored add-in cells, see Scoring); the evidence
   section lists in-scope catalog functions with no Excel evidence, the `oracle: none` ones that
   need another evidence source, and, by catalog category, the ones below the evidence floor
   (fewer than 20 Excel cells; T-0056, decision 0062). Suite cell counts and baselines still cover every checked cell.
@@ -172,16 +311,96 @@ Only `pass` counts as passing. Case statuses:
   either are listed by name, tagged `oracle: none` or `volatile`. Informational; never gated.
   A "Visibly off (fifteen digits)" section (T-0061, decision 0088) splits each suite's in-scope
   scored cells into the closeness buckets of `closeness.rs` (bit-exact, 1 ulp, 2–4 ulp,
-  `digits15` within half a unit in the 15th significant digit, `visible_numeric`,
-  `visible_other`) and lists the functions with visibly-off cells, worst first. A visibly-off
+  `digits15` within half a unit in the 15th significant digit, `residue13` for incomplete-beta
+  family numbers past it but within half a unit in the 13th (decision 0267, SPEC-0030; not visibly
+  off), `r3_math` for numbers where the engine returns the 50-digit math instead of Excel's value by
+  design (decision 0188 R3: an R3 mark, Excel more than 1e-4 off the math, the engine within 1e-9 of
+  it; the test is `r1c::r3_math`, marked once per run as `CellResult::target` = `Target::Math`; decision 0310; not
+  visibly off), `visible_numeric`, `visible_other`) and lists the functions with visibly-off cells, worst first. A visibly-off
   cell is blamed on the functions it calls other than glue (`closeness::GLUE`: IF, SUM, DATE,
   INDEX and the like), or on its glue when it calls nothing else.
+  A "Parity tiers (glue-aware)" section (T-0068, decision 0118, `attribution.rs`) counts the
+  in-scope functions per worst-cell tier (`exact`, `ulp4`, `digits15`, `rate999`, `rate99`,
+  `below99`, `unscored`) and how many of them use the fallback. Informational; never gated.
 - `report.json`: the same data, machine-readable. Each function's `closeness` holds its bucket
   counts and `visible` its blamed visibly-off cells; each suite's `closeness` holds its in-scope
-  bucket counts.
+  bucket counts. Decision 0118's counts sit beside them (T-0068): each function's `excel` holds
+  the non-deviation Excel-evidence cells that call it, `attributed` those whose only non-glue call
+  it is (`closeness::sole_call`), `tier` the worst-cell tier and `attribution` whether `attributed`
+  (`sole`) or, below 20 attributed cells, `excel` (`all`) placed it. Each function's
+  `real_world_calls` counts the formula cells of the Excel-saved corpora that call it, the suites
+  the top-level `real_world_suites` names (calipers and poi; T-0079). Each suite's `workbooks`
+  counts its cases with a scored in-scope cell: `all_exact`, `all_within15` and `any_visible`.
+  It uses the suite's `closeness` cells (hand-written expectations and deviation passes included),
+  so it is suite scope, not Excel-only evidence.
+  The top-level `tiers` holds the per-tier function counts of that section, over the catalog's
+  in-scope set. `run` (T-0080, `run_meta.rs`) records the run itself: `commit` (`git rev-parse
+  --short=8 HEAD`, or null when git fails), `date` (UTC, `YYYY-MM-DD`) and `skipped_suites`
+  (`{name, reason}` for each suite under eval/suites that did not run: `not fetched` or `not
+  selected`); report.md prints it under the title. `date` and `commit` change on every run, so no
+  test or golden file compares a whole report.json.
+  Each `argument_coverage[]` row's `unseen_pairs` (T-3277) lists the expected argument-class pairs
+  (parameter names and `ArgClass` of each) that its `pairwise` share counts but no Excel-evidence call has passed.
 - `eval/baseline/<suite>.txt`: known failures (see `docs/process/quality-gates.md`).
-- `eval/baseline/visible-parity.json`: the visible-parity lock (decision 0088). Task PRs never lower
-  it; the steward does, daily, with `make eval-lower-visible-lock` (decision 0093).
+- `eval/baseline/visible-parity.txt`: the visible-parity lock (decisions 0088, 0219), one sorted
+  `case<TAB>count` line per case with in-scope visibly-off cells; `check` fails a case above its
+  line, and a case with no line allows none. `update-baseline` writes new cases' lines; task PRs
+  never lower a line; the steward does, daily, with `make eval-lower-visible-lock` (decision 0093).
+
+## Gate A: the accuracy check
+Normative design: [SPEC-0029](../specs/SPEC-0029-gate-a-accuracy-gate.md) (decision 0188 R2; the
+`make eval-gates` wiring is decision 0193). `rustsheet-eval accuracy` (`accuracy.rs` and
+`accuracy/`) runs in `make eval-gates`, so in `make check` and CI's `eval-gates` job, right after
+`check --evidence-floor`.
+
+- **Tables.** `eval/accuracy/suite.toml` is the `accuracy` suite (`kind = "spec"`, `gate = false`,
+  `baseline = "none"`, root `tables/`). It lives outside `eval/suites/`, so `Suite::load_all`, `make
+  eval`, the eval gate, the evidence floor and every report measure never see it;
+  `Suite::load_named(root, name)` resolves it for `cases accuracy` and `show accuracy/...` (and so the
+  oracle fill), and refuses a suite under `eval/suites/` named `accuracy`. A table is a directory
+  `tables/<FUNCTION>/`, a batch one `<batch>.case.json` there (one formula with literal arguments per
+  `check` cell; every check cell is a point), its oracle sidecar `<batch>.oracle.json` and its
+  `rustsheet-math/v1` sidecar `<batch>.math.json` (`accuracy/math.rs`: per cell a 50-digit value
+  `{"t":"n","v":"<digits>"}` or a domain error `{"t":"e","why":...}`, its formula `f` and stratum
+  `s`). The math sidecar's path is the oracle sidecar's with `.math.json`, so `oracle_dir` mirroring
+  applies to both. A math value whose `f` differs from the cell's formula is stale and never attaches.
+- **Points.** A point's id is `accuracy/<FUNCTION>/<batch>!<Sheet>!<A1>` (`runner::cell_id` of the
+  case id less `.case.json`). Each batch runs once through `runner::run_case_values`, which shares
+  `run_case`'s preparation, panic isolation and timeout and also returns the engine's value of every
+  check cell, pending ones included. A batch that crashes or times out fails every point in it.
+- **Envelope** (`accuracy::envelope::envelope`, the one definition T-3359 and T-3380 reuse): `Both`,
+  `Excel15` (the eval's own scored cell is not `Visible::is_off`: decision 0083's 15-digit rule, the
+  4-ulp precedence of decision 0088, decision 0042's subnormal rule), `Math` (within ε = 1e-9
+  relative of the math, absolute floor 1e-300; a math domain error matched by Excel's error code, or
+  by any error while pending), `Outside`, `ErrorMismatch` (an error against a number either way, or
+  two different error codes; no R3 mark excuses it) and `Table` (no math value, a stale one, or a
+  math domain error against an Excel number). A pending point (no Excel value) is held to the math.
+- **Lists** (`accuracy/lists.rs`). `known-failures.tsv` (`<point id>\t<T-NNNN>\t<note>`) carries a
+  failing point until its owner task lands; a listed point that passes, or that no table holds, is a
+  stale line and fails. `math-over-excel.tsv` (`<point or eval cell id>\tdocs/excel-semantics/<file>.md#<anchor>`)
+  marks R3 points, checked against the math only: its entry must have a `Status: MATH-OVER-EXCEL`
+  line (`deviations::check_entry_status`, the anchor check `deviations` lines use), and a filled
+  marked point must show Excel off the math by more than G = 1e-4 relative. A missing list is empty.
+- **Output.** One summary line (points, tables, pending, in envelope with the Excel-only and
+  math-only counts, known failures by owner, failing, table defects, missing tables, seconds), then
+  `FAIL` lines worst first by relative error against the math, `KNOWN`, `STALE`, `BAD MARK` and
+  `TABLE` lines. `--json PATH` (default `eval/runs/accuracy.json`, git-ignored) holds every point's
+  class, standing and values. Exit 1 on a failing point, a stale known-failure line, a bad mark or a
+  table defect. Budget: 30 s for the whole set on the CI runner.
+- **Math references for eval cells** (T-3380, SPEC-0029 "Math references for eval cells"). Any eval
+  case may carry the same `rustsheet-math/v1` sidecar, `<case>.math.json` beside its oracle sidecar
+  (no stratum `s`). `run_case` reads it when present and puts each cell's value on
+  `CellResult::math` (absent from the JSON when there is none), through `MathTable::attach`, so a
+  value whose `f` differs from the cell's formula is dropped. An unreadable sidecar makes the case
+  `InvalidCase`. `rustsheet-accuracy math --suite S` (tools/, `accuracy/eval_math.py`) writes the
+  sidecars for a suite's spec cases: every scored cell that is one call of a function with a Gate A
+  definition and whose arguments the fit lab's sweep reader reads without a formula cell (literals,
+  constant cells, `DATE`, arithmetic over literals), with integer parameters given integers and the
+  definition's argument count. R1(c)'s report rows (T-3427) count a visibly-off numeric cell inside
+  the envelope through it; a cell with no math value counts as outside.
+- **Not yet.** The missing-table count and `exempt.tsv`, the protected-path and known-failure line
+  rules and ci_changes routing are T-3379's; the generator and the real tables are T-3357's and
+  T-3358's. The end-to-end fixture is `crates/rustsheet-eval/tests/data/accuracy-fixture`.
 
 ## Milestone probe lists
 `eval/milestones/<name>.txt` (decisions 0043, 0044) freezes the cases a milestone's probe criterion
@@ -236,6 +455,25 @@ keeps its meaning. `run` and `check` refuse a malformed line or a repeated cell;
 in no row is listed under "Stale exit exceptions" without failing the run. The file never touches
 eval/baseline or the gate.
 
+The Phase 1 rate (`v15_checkpoint`) has its own list, `eval/milestones/phase1-exceptions.tsv`
+(`phase1_exceptions.rs`, decision 0134; one line per cell: `case!Sheet!A1` of any suite, the decision
+that names it as M14-only desktop evidence, the owning M14 task). A listed visibly-off Excel cell
+leaves `rate_cells` and `rate_visible` of the function whose count holds it (`rate_excepted`);
+`cells`, `visible`, the tier and the strict count keep it. report.md prints the number left out per
+function under the Phase 1 line, and warns about a listed cell whose suite the run scored but that is
+not scored or not visibly off (`stale_exceptions`). A line in a suite the run skipped (not fetched or
+not selected) is listed as not checked (`unchecked_exceptions`), never as stale. The same validation
+refuses a malformed line in `run` and `check`.
+
+The rate also leaves out the cells only open M14 tasks own (decision 0143), with no hand-kept line:
+`make eval` runs `scripts/desktop_owned.py`, which applies exit_owners.py's `owned` rule to every
+cell `F` line of eval/baseline and writes `case!Sheet!A1<TAB>T-<owner>` lines to the git-ignored
+`eval/runs/desktop-owned.tsv`, then `rustsheet-eval run --desktop-owned` reads it
+(`Phase1Exceptions::load_desktop_owned`). Such a visibly-off cell leaves `rate_cells` and
+`rate_visible` as `desktop_owned` (per function and in total; report.md's "M14-owned, left out"
+column); a cell both lists hold counts once, as `rate_excepted`. A generated cell that is not
+visibly off is not stale. Without the flag, `run` leaves no such cell out.
+
 ## Catalog coverage per milestone
 `crates/rustsheet-eval/src/catalog_coverage.rs` (T-2112, T-2175) adds a "Catalog coverage per milestone"
 section to report.md (report.json: `catalog_coverage`), one row per function milestone. A function is
@@ -246,19 +484,100 @@ functions, which report.md lists apart as "Mk exempt from b". The row is at 100%
 `functions`. The table is an exit measure, not a gate; M6 inherits the rule.
 
 ## Milestone exit
-`crates/rustsheet-eval/src/milestone_exit.rs` (T-2177) adds a "Milestone exit (decision 0085)" section to
-report.md (report.json: `milestone_exit`) with one row each for M5 and M6 (M7 to M11 need their own
-decision first). It reads four rows the report already computes and scores nothing itself: catalog
-coverage (`covered == functions`), the `gen-m<k>` suite (at least 20,000 scored cells, `cells -
-deviations`, at a 0.999 pass rate; known failures print beside the allowance `floor(0.001 * scored)`),
-`ironcalc-calc` failing cells excluding exit exceptions (0), and the probe row's known failures (0). A
-missing input prints `n/a` and is never `met`; `exit` is `met` only when all four are. It is an exit
-measure, not a gate.
+`crates/rustsheet-eval/src/milestone_exit.rs` (T-2177) adds a "Milestone exit (decisions 0085, 0114)"
+section to report.md (report.json: `milestone_exit`) with one row each for M5 and M6 (M7 to M11 need
+their own decision first). It reads four rows the report already computes and scores nothing itself:
+catalog coverage (`covered == functions`), the `gen-m<k>` suite (at least 20,000 scored cells, `cells -
+deviations`, with at least 0.999 of them not visibly off; visibly-off cells print beside the allowance
+`floor(0.001 * scored)`), `ironcalc-calc` visibly-off cells excluding exit exceptions (0), and the
+probe row's visibly-off cells (0). Decision 0114 measures Phase 1 at visible parity; the bit-level
+counts (`gen_known_failures`, `calc_failing`, `probe_known_failures`) print in brackets for Phase 1b.
+A missing input prints `n/a` and is never `met`; `exit` is `met` only when all four are. It is an exit
+measure, not a gate. The M2 row (decision 0135) has no coverage criterion (its counts print, its
+verdict is `n/a` and `exit` ignores it), needs 10,000 scored `gen-m2` cells with none visibly off,
+and reads the `M0-M2` probe row (`probe_row`). Each row lists its gen suite's visibly-off cells
+(`gen_visibly_off_cells`) and each probe row its own (`visibly_off_cells`), so
+`scripts/exit_owners.py` lists exactly the visibly-off exit cells without re-deriving closeness.
+`make phase1-exit` (`scripts/phase1_exit.py`, decision 0187) prints one verdict per Phase 1 exit
+criterion (run completeness, catalog, function rate, owners, each Phase 1 milestone row, and the
+`manual` items) from report.json, the catalog and the task tree, and exits 1 unless every measured
+one is met; `--json` prints the same lines for other tools.
+The M9 row (decision 0146 item 3, T-0095) requires no suite (`gen_suite` is empty and prints `none
+required`); its ironcalc-calc measure is a rate: the function-scope row less its deviations and exit
+exceptions (`calc_scored`) with at most `floor(0.0005 * calc_scored)` visibly off (`calc_allowance`),
+and every `v15_checkpoint` function of catalog milestone M9 must be `meets_rate` (`rate_functions`,
+`below_rate`, `rate_met`; `below_rate_functions` names the others, whose `attributed_off` cells
+`exit_owners.py` lists as `rate:<FUNCTION>`). Rates are over a denominator of 10,000 so that 99.95% is
+one `meets_rate` call. The M8 row (decision 0146 item 2, T-0096) reads gen-m8a (`gen_suite`), and as
+`more_suites` gen-m8b and the `poi M8 subset` (the report's `poi_m8_subset`, at 99.5% with no
+`blocked_cases`, the crashed or errored poi cases holding a subset formula, listed as `case!*`).
+
+The "Fifteen-digit parity checkpoint" section (`v15_checkpoint`, decision 0094) also prints the
+Phase 1 line of decision 0114: the in-scope functions that are covered and have at most one cell in
+a thousand visibly off, with each function's within-15-digit share. Decision 0118 counts those cells
+(T-0080): each function's `rate_cells` and `rate_visible` are its `attributed` cells, or its `excel`
+cells below 20 attributed cells (`attribution`), and `meets_rate`, `at_rate`, `phase1_met` and the
+Phase 1 line follow them. Coverage (`covered`) still counts every Excel cell that calls the function
+(decision 0094). The stricter share, `cells` against the blamed `visible`, stays as information:
+`strict.meets_rate`, `at_strict_rate` and a line labelled "Information, gates nothing".
+
+**Gate B** (`gate_b.rs`, decision 0188 R1(b), T-3359) is the same rate counted on user-representative
+evidence only: the gen-* suites, ironcalc-calc, corpus-bench, calipers, poi, smoke and fixtures.
+Per function it rebuilds the decision 0118 counts (`FunctionStat::add_attributed`, `counted`) from those
+suites' cells, leaves out the decisions 0134 and 0143 cells of those suites, and meets the rate when the
+function is covered (decision 0094, every suite) and at most one counted cell in a thousand is visibly off.
+A function with no counted cell has no rate and does not meet it. A run that did not score calipers, poi
+or corpus-bench reports Gate B as `n/a` (`measured: false`, `missing`), never met. `v15_checkpoint.gate_b`
+holds the result; `phase1_met` is `gate_b.met`, and the Phase 1 line prints Gate B with the every-suite
+`at_rate` beside it as information. The report lists the worst functions below Gate B's rate under that line.
+
+**R1(c)** (`r1c.rs`, decision 0188 R1(c), R3 and R7, T-3427) decides which visibly-off cells the probe
+rows and the ironcalc-calc exit rows count. `R1cCells::build` classifies every visibly-off cell of the run
+once (`main.rs` `score_milestones`, kept on the report but not in its JSON) as one of four classes:
+- `m14_owned`: a probe-row cell (suite `probes`) in decision 0143's generated desktop-owned list (R7). It
+  leaves the row. R7 names the probe rows only, so an M14-owned ironcalc-calc cell is classified like any
+  other and still counts in the calc rows, which keep decision 0146's exit exceptions for such cells.
+- `r3_pass`: a cell `eval/accuracy/math-over-excel.tsv` marks, where Excel is more than G = 1e-4 off its math
+  value (R3's evidence, checked per cell; a mark without it is ignored) and Gate A's `envelope` puts the
+  engine within ε of the math. It passes, and Gate B attributes it as a pass.
+- `phase1b`: a number inside the envelope (within ε of its math value, T-3380) whose Excel value is within ε
+  of the math too, so the engine and Excel differ by at most about 2ε: last-digit residue, Phase 1b work.
+- `counts`: everything else. That covers a type, error or text cell; a number outside the envelope or with
+  no math value; and a number within ε of the math whose Excel value is more than ε off it with no R3 mark.
+  That last gap may be a rule Excel applies that the engine misses (R1(c)'s semantic-rule cells) or an Excel
+  inaccuracy (an R3 candidate); the values cannot tell them apart, so it counts, which is the strictest
+  reading of R1(c).
+
+A cell the run did not classify counts too, so nothing reads as met early. Each probe row carries
+`r1c_off`, `r1c_off_cells`, `phase1b`, `r3_pass` and `m14_owned` beside `visibly_off`. The exit rows
+carry `probe_r1c_off`, `probe_phase1b` and `calc_r1c_off`, and `probes_met` and `calc_met` read them. The
+table prints the R1(c) count with the visibly-off total in parentheses when that is larger. M1's frozen
+probe list still counts every visibly-off cell. `phase1b_evidence` holds the classes per probes,
+probes-numeric and ironcalc-calc, and its line is printed under the exit table. The report also writes
+`r1c_left_out`, every left-out cell with its class. `scripts/exit_owners.py` lists a probe row's
+`r1c_off_cells`, drops the left-out cells from the ironcalc-calc listing and the R3 passes from the rate
+listing, and `--all-off` drops left-out cells outside Gate B's suites. `scripts/phase1_exit.py` reads
+Gate B for its `function rate` line, as `n/a` with the missing suites when the run did not measure it
+(T-3428, decision 0211).
 
 ## CLI
 ```
-rustsheet-eval suites | fetch [--suite S] | run [--suite S] [--filter X] | check | update-baseline [--allow-regressions]
-               | evidence-floor [--update [--allow-increase]]
-               | show <case-id> [--all] | snapshot <file.xlsx>
+rustsheet-eval suites | fetch [--suite S] | run [--suite S] [--filter X] | check [--evidence-floor] | update-baseline [--allow-regressions]
+               | evidence-floor [--update [--allow-increase]] | accuracy [--json PATH] [--timeout S]
+               | show <case-id> [--all] | cases <suite> | snapshot <file.xlsx>
+               | subexpr-case <suite/case> <Sheet!A1> [--out PATH] | subexpr-case --culprit <probes/case>
 ```
 `snapshot` is the **only** xlsx value parser in the repo. Python tools call it.
+
+`subexpr-case` (T-3333; synthetic-generator.md §11 stage 1) localizes a visibly-off cell whose formula nests several
+calls. It writes `eval/suites/probes/cases/subexpr-<source stem>-<sheet>-<cell>.case.json`: the source spec case's
+sheets with their constant cells and only the formula cells the formula reads (one level), plus a sheet `Subexpr` holding, from A1 down, one cell per distinct subexpression of the formula,
+children first and the whole formula last, every reference absolute and sheet-qualified (the engine's
+`subexpressions` hook prints them, so relative references keep their targets). Literals, bare references, nodes that
+read a LET or LAMBDA name, volatile nodes (`volatile::is_volatile`) and nodes that depend on their own cell (`ROW()`,
+`COLUMN()`, `SHEET()` without an argument, `INDIRECT`, `CELL`) get no cell; the description lists each with the reason.
+The case keeps the source's milestone tag (decision 0051) and refuses xlsx-backed suites, cells without a formula and
+cases with `sheet_ops`. A node whose value spills spills from its own cell (or reads `#SPILL!` against the next cell)
+on both sides alike. After `rustsheet-oracle fill -b excel-graph --suite probes --case <id>`, `--culprit` runs the case
+and prints each visibly-off node (decision 0083, `Visible::is_off`) whose checked children all match Excel, with both
+values, or `no divergent node`.

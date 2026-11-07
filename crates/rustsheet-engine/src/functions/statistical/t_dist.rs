@@ -1,17 +1,31 @@
-use statrs::distribution::{Continuous, ContinuousCDF, Normal, StudentsT};
+use statrs::distribution::{Continuous, ContinuousCDF, StudentsT};
 
+use crate::arithmetic::{extended_quotient, flush_subnormal};
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error, LiftCost};
-use crate::functions::statistical::inverse_beta::t_inverse_cdf;
-use crate::functions::statistical::paired::{PairedSamplesError, PairedValues};
-use crate::functions::statistical::special::{bisect_increasing, ln_gamma};
+use crate::functions::math_and_trigonometry::excel_tan;
+use crate::functions::statistical::inverse_beta::{t_inverse_cdf, t_quantile_beta_root};
+use crate::functions::statistical::loader::excel_t_density_df_one_overflows;
+use crate::functions::statistical::paired::{MarkedSample, PairedSamplesError, PairedValues};
+use crate::functions::statistical::special::{
+    bisect_increasing, ln_gamma, nearest_crossing_from, refine_increasing,
+};
 use crate::functions::statistical::student_t::{
-    student_t_density, student_t_tail_at, student_t_tails,
+    student_t_centre, student_t_density, student_t_tail_at, student_t_tails, t_density,
 };
 use crate::functions::Function;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
+
+/// Student-t quantile at one degree of freedom for the two-tailed probability `q` in (0, 1]:
+/// `1/TAN(PI()*q/2)` through Excel's own TAN, not the true Cauchy quantile (statistics.md
+/// "Student-t quantile at one degree of freedom is 1/TAN(π·p/2) through Excel's TAN", T-2858).
+pub(crate) fn cauchy_two_tail_quantile(q: f64) -> f64 {
+    // The worksheet `/` rounds twice (numbers.md "Division rounds twice"), which matters at the
+    // round points: TINV(0.5,1) is 1, not 1.0000000000000002.
+    extended_quotient(1.0, excel_tan(std::f64::consts::PI * q / 2.0))
+}
 
 fn mean(xs: &[f64]) -> f64 {
     let n = xs.len();
@@ -61,18 +75,40 @@ fn t_test_element(
     let [_, _, tails, test_type] = values else {
         return CalcResult::new_args_number_error(cell);
     };
-    let tails = match model.kernel_number(tails, cell).map(f64::trunc) {
-        Ok(1.0) => TTestTails::OneTailed,
-        Ok(2.0) => TTestTails::TwoTailed,
-        Ok(_) => return num_error(cell),
+    // A sample that is itself an error value, or a blank one-cell reference, comes before tails
+    // and type (`T.TEST(<#VALUE!>,42,1,-1)` is `#VALUE!`, `TTEST(<#VALUE!>,<#REF!>,2,<#REF!>)`
+    // too, probes/t2475-stat-subexpressions P!A58, P!A222; `T.TEST(E11,A6:C12,2,123456789.123)`
+    // with E11 blank is `#VALUE!`, probes/tbill-error-order-inner-calls; the second sample's
+    // `#VALUE!` before tails' `#N/A`, gen-m9 9e2225ead8a6a07b A59, and its `#DIV/0!` before
+    // tails' `#VALUE!`, 3b7990bd4e3307ba A100), while an error inside a range comes after.
+    if let Err(PairedSamplesError {
+        error,
+        argument_is_error_value: true,
+        ..
+    }) = samples
+    {
+        return error.clone();
+    }
+    // Both are read before either is checked: type's `#VALUE!` beats tails 7
+    // (`T.TEST(..,{..},7,<#VALUE!>)`, gen-m9 607e85cfee83a689 A194).
+    let tails = match model.kernel_number(tails, cell) {
+        Ok(tails) => tails.trunc(),
         Err(error) => return error,
     };
-    let test_type = match model.kernel_number(test_type, cell).map(f64::trunc) {
-        Ok(1.0) => TTestType::Paired,
-        Ok(2.0) => TTestType::TwoSampleEqualVar,
-        Ok(3.0) => TTestType::TwoSampleUnequalVar,
-        Ok(_) => return num_error(cell),
+    let test_type = match model.kernel_number(test_type, cell) {
+        Ok(test_type) => test_type.trunc(),
         Err(error) => return error,
+    };
+    let tails = match tails {
+        1.0 => TTestTails::OneTailed,
+        2.0 => TTestTails::TwoTailed,
+        _ => return num_error(cell),
+    };
+    let test_type = match test_type {
+        1.0 => TTestType::Paired,
+        2.0 => TTestType::TwoSampleEqualVar,
+        3.0 => TTestType::TwoSampleUnequalVar,
+        _ => return num_error(cell),
     };
     match samples {
         Ok(samples) => number_or_error(t_test_p(samples, &tails, &test_type, cell)),
@@ -143,6 +179,12 @@ fn t_test_p(
             let nd = diffs.len();
             let md = mean(&diffs);
             let vd = sample_var(&diffs);
+            // A sample variance that overflows (data whose squares do) is #NUM!, not a p from an
+            // infinite deviation, in every test type (`T.TEST(B6:D12,{1E+200,1E+200,-1E+200},1,2)`,
+            // gen-m9 a612e89321a6df9c A375; statistics.md "Overflowing squares (T-2432)").
+            if vd.is_infinite() {
+                return error(Error::NUM);
+            }
             // Zero variance of the differences.
             if vd <= 0.0 {
                 return error(Error::DIV);
@@ -166,6 +208,9 @@ fn t_test_p(
             let m2 = mean(&values2);
             let v1 = sample_var(&values1);
             let v2 = sample_var(&values2);
+            if v1.is_infinite() || v2.is_infinite() {
+                return error(Error::NUM);
+            }
 
             let df_i = (n1 + n2 - 2) as i32;
             if df_i <= 0 {
@@ -199,6 +244,9 @@ fn t_test_p(
             let m2 = mean(&values2);
             let v1 = sample_var(&values1);
             let v2 = sample_var(&values2);
+            if v1.is_infinite() || v2.is_infinite() {
+                return error(Error::NUM);
+            }
 
             let s1n = v1 / (n1 as f64);
             let s2n = v2 / (n2 as f64);
@@ -247,37 +295,96 @@ fn t_test_p(
 /// Excel: see docs/excel-semantics/statistics.md#student-t-sweep-df-truncation-df-limits-tinv2t-above-1-t-1043
 pub(crate) const T_DF_MAX: f64 = 1e10;
 
-/// Above this df `statrs`' `inverse_cdf` is both inaccurate and unbounded in time (seconds at 1E7,
-/// no finish at 1E8), and its cdf is only good to ~1E-6 relative, so the quantile comes from the
-/// normal quantile and the A&S 26.7.5 series instead.
-const T_QUANTILE_SERIES_DF: f64 = 1e5;
+/// Whether the half `p / 2` of a positive two-tailed probability falls below the smallest normal
+/// double, which Excel flushes to 0 (p below `2.0 * f64::MIN_POSITIVE`): T.INV.2T and TINV then answer as at p = 0
+/// (`#DIV/0!` at df 1, `#NUM!` from df 2) and CONFIDENCE.T is `#NUM!`, although T.INV at p itself is
+/// a number. The cut is df independent: `T.INV.2T(4.4501477170144E-308,df)` is an error and
+/// `T.INV.2T(4.45014771701441E-308,df)` a number at df 1, 2, 9 and 30 (probes/t4541-t-inv-2t-tiny-p;
+/// statistics.md "T.DIST's density is #NUM! at a huge x, and T.INV.2T and TINV at p = 2.2E-308").
+pub(crate) fn two_tailed_half_underflows(p: f64) -> bool {
+    p > 0.0 && flush_subnormal(p / 2.0) == 0.0
+}
+
+/// T.INV (`two_tailed` false, p in (0, 1)) and T.INV.2T / TINV (p in (0, 2)) at one degree of
+/// freedom: Excel's closed form (T-2858) through [`cauchy_two_tail_quantile`]. T.INV(0.5) is 0,
+/// unprobed (T-3540).
+fn df_one_quantile(p: f64, two_tailed: bool) -> f64 {
+    if two_tailed {
+        if p == 1.0 {
+            // 1/TAN(PI/2) would be 6.1E-17; Excel returns 0 (gen-m9 0620505280d2ea6e A90
+            // `TINV(1,1)`, 7f7ca726c3f68554 A166 `TINV(1-1E-17,1)`).
+            0.0
+        } else if p > 1.0 {
+            -cauchy_two_tail_quantile(2.0 - p)
+        } else {
+            cauchy_two_tail_quantile(p)
+        }
+    } else if p < 0.5 {
+        -cauchy_two_tail_quantile(2.0 * p)
+    } else if p > 0.5 {
+        cauchy_two_tail_quantile(2.0 * (1.0 - p))
+    } else {
+        0.0
+    }
+}
+
+/// Whether the Student-t functions refuse `x` as `#NUM!`: fl(x x) overflows (|x| >= 2^512). Exact for
+/// T.DIST's density (T-3554); UNVERIFIED (T-2474) for T.DIST (cumulative), T.DIST.RT, T.DIST.2T and TDIST,
+/// `#NUM!` at 1E+300 but a number at `T.DIST.2T(1E+15,1)` (statistics.md "... extreme arguments, part 2").
+fn t_x_overflows(x: f64) -> bool {
+    (x * x).is_infinite()
+}
 
 /// Probabilities below this take the tail path of [`t_tail_quantile`] instead of `statrs`.
+/// T-3395 moved the cut in full eval runs (a temporary override, reverted) and scored every
+/// changed cell in ulps against Excel; after T-2511 the 25 cells it moves are df 1 and 2 (and
+/// df 1.5, truncated), q 5E-11..5E-3. A lower cut makes them worse (1E-8: 3 cells, 1E-11: 15
+/// worse, 4 better), 1E-4 changes none, 1E-3 brings one closer (`T.INV.2T(0.001,1)`) and 1E-2
+/// makes 4 worse and 2 better. So the cells place the cut in 1E-5..1E-3, leaning to the top;
+/// T-3477 owns any move.
+/// FITTED(T-1531, 25 cells, q 5E-11..5E-3 at df 1..2; cells place the cut in 1E-5..1E-3)
 const T_TAIL_P: f64 = 1e-5;
 
 /// Below this `x = df / (df + t^2)` the incomplete beta `I_x(df/2, 1/2)` equals its leading term and
 /// the first correction to better than 1E-16, so the tail quantile has a closed form.
 const T_TAIL_X: f64 = 1e-8;
 
-/// Below this probability the quantile comes from bisection on the cdf, not `statrs`' `inverse_cdf`,
-/// which hangs at 1E-100 for df = 1000 and panics from about 1E-200 (the sweep test covers df 2 to
-/// 9E4). Above it `statrs` is bit-exact with Excel where x is not tiny (`T_DIST.xlsx` `T.INV(0.9999999,10)`).
+/// Below this probability the df-1 quantile comes from bisection on the cdf, not `statrs`'
+/// `inverse_cdf`, which hangs at 1E-100 for df = 1000 and panics from about 1E-200. Only df 1
+/// reaches it (every other df takes [`t_rounded_y_quantile`]). No cell moves with it (T-3395: the
+/// same cut-moving runs as [`T_TAIL_P`], at 1E-20, 1E-11, 1E-9 and 1E-7, change no cell's value),
+/// so after T-2511 it is in effect the guard against statrs' hang and panic, not a fit to cells.
+/// FITTED(T-1531, 105 cells, p 1E-300..1E-10, df 1..1E5; no cell moves with the cut from 1E-20 to 1E-7)
 const T_STATRS_MIN_P: f64 = 1e-8;
 
-/// Magnitude `t > 0` with `P(T < -t) = q` for a small `q`, `df < T_QUANTILE_SERIES_DF`; bounded time.
-/// Excel gives finite values down to the smallest p it accepts (probes-numeric `t1531-t-tiny-p`:
-/// `T.INV(1E-300,1)` = -3.183098861837907E299). Where `x` is not tiny `statrs` is bit-exact with
-/// Excel (`T_DIST.xlsx` `T.INV(0.9999999,10)`), so it is kept there.
-fn t_tail_quantile(dist: &StudentsT, df: f64, q: f64) -> f64 {
+/// The tail quantile's closed form: `t` with `P(T < -t) = q` from the leading term and first
+/// correction of `I_x(df/2, 1/2)`, where `x = df / (df + t^2)` is below [`T_TAIL_X`] (`None`
+/// otherwise). In the deep tail Excel's quantile is within an ulp or so of this form where the
+/// rounded-y back-transform is visibly off (`TINV(1E-200,2)` = 1.0000000000000101E+100, this form
+/// 1.0000000000000103E+100, the back-transform 9.99999999999996E+99; gen-m9/7980ffb6095a340d A312, T-2511).
+fn t_tail_closed_form(df: f64, q: f64) -> Option<f64> {
     let a = 0.5 * df;
     // P(T < -t) = I_x(a, 1/2) / 2 with I_x ~ x^a / (a B(a, 1/2)) * (1 + a / (2 (a + 1)) x).
     let ln_b = ln_gamma(a) + ln_gamma(0.5) - ln_gamma(a + 0.5);
     let mut ln_x = ((2.0 * q).ln() + a.ln() + ln_b) / a;
-    if ln_x < T_TAIL_X.ln() {
-        let x = ln_x.exp();
-        ln_x -= (a / (2.0 * (a + 1.0)) * x).ln_1p() / a;
-        let x = ln_x.exp();
-        return df.sqrt() * (-0.5 * ln_x).exp() * (1.0 - x).sqrt();
+    // A NaN ln_x (a df its Gamma ratio refuses) has no closed form either.
+    if ln_x.is_nan() || ln_x >= T_TAIL_X.ln() {
+        return None;
+    }
+    let x = ln_x.exp();
+    ln_x -= (a / (2.0 * (a + 1.0)) * x).ln_1p() / a;
+    let x = ln_x.exp();
+    Some(df.sqrt() * (-0.5 * ln_x).exp() * (1.0 - x).sqrt())
+}
+
+/// Magnitude `t > 0` with `P(T < -t) = q` for a small `q` at df 1 (every other df takes
+/// [`t_rounded_y_quantile`]); bounded time.
+/// Excel gives finite values down to the smallest p it accepts (probes-numeric `t1531-t-tiny-p`:
+/// `T.INV(1E-300,1)` = -3.183098861837907E299). Where `x` is not tiny `statrs`' search is kept
+/// (its df-1 closed form is T-2858's).
+fn t_tail_quantile(dist: &StudentsT, df: f64, q: f64) -> f64 {
+    if let Some(t) = t_tail_closed_form(df, q) {
+        return t;
     }
     if q >= T_STATRS_MIN_P {
         return -t_inverse_cdf(df, q);
@@ -287,9 +394,98 @@ fn t_tail_quantile(dist: &StudentsT, df: f64, q: f64) -> f64 {
     bisect_increasing(|t| -dist.cdf(-t), -q, 64)
 }
 
+/// Central probabilities `c = |2p - 1|` below this take [`t_centre_quantile`]. statrs' inversion
+/// solves for `y = df / (df + t^2)` near 1 and back-transforms with `1 - y`, which keeps only the
+/// digits of `y` below 1 (`TINV(1-1E-10,5)` 2.36E-8, Excel 1.32E-10; T-2724). Excel switches from the
+/// rounded-y form to the exact quantile between two-tailed p = 0.9 (c = 0.1) and 0.95 (c = 0.05)
+/// (statistics.md "Student-t quantile is SQRT(df*(1/y-1)) of the rounded beta quantile, away from
+/// the centre"), so the cut sits inside that bracket. T-3395 moved it in full eval runs (a
+/// temporary override, after T-2511): a cut of 0.04 breaks gen-m9's six cells at c = 0.05
+/// (`TINV(0.95,3)`, `TINV(0.95,5)`, `T.INV.2T(0.95,12)`, `CONFIDENCE.T(0.95,..,20)`) and takes 5
+/// more at c 0.05..0.057 further off; a cut of 0.0999 brings two failing t3349 sweep cells closer,
+/// `T.INV.2T(0.921314149721905,4)` (c 0.0787) and `T.INV.2T(0.90147488203954,8)` (c 0.0985). So
+/// on net the cells favour a cut in 0.0985..0.1; T-3477 owns any move.
+/// FITTED(T-2724, 13 cells, c 0.05..0.1, df 3..1E10; cut bracketed 0.05..0.1, cells favour 0.0985..0.1)
+const T_CENTRE_C: f64 = 0.075;
+
+/// The centre cut of T.INV.2T's negative branch, p in (1, 2), with c = p - 1: Excel is the exact
+/// quantile there at c = 0.0986 and 0.0991, past [`T_CENTRE_C`] (`T.INV.2T(LN(3),7)` =
+/// -0.12847323195087978, gen-m9 c2684066d8df263e A64; d910f000b60e2eac A357 at df 8).
+/// FITTED(T-2724, 2 cells, c 0.0986..0.0991, df 7..8)
+const T_NEGATIVE_CENTRE_C: f64 = 0.1;
+
+/// Magnitude `t >= 0` with `P(|T| < t) = c` for a central probability `c` below [`T_CENTRE_C`]
+/// (so `t` < 0.12 at every df): the crossing of the centre probability itself
+/// (`student_t_centre`), which never forms `1 - y`, so a tiny quantile keeps its digits. Excel's
+/// centre quantiles are accurate (statistics.md "Student t sweep", T-2724). The estimate is
+/// `c / (2 f(0))`, `f` the density; at most 129 evaluations (`refine_increasing`).
+/// `df` is a truncated integer from 1 to [`T_DF_MAX`] here, every one of which `student_t_centre`
+/// takes (it is NaN only for a df its Gamma ratio refuses).
+fn t_centre_quantile(df: f64, c: f64) -> f64 {
+    let estimate = student_t_density(0.0, df).map_or(f64::NAN, |density| 0.5 * c / density);
+    refine_increasing(|t| student_t_centre(t, df), c, estimate, 0.0, 1.0)
+}
+
+/// Below this df statrs' search is bounded and accurate enough to seed [`t_rounded_y_quantile`]'s
+/// bracket (seconds per call at 1E7, no finish at 1E8).
+const T_STATRS_MAX_DF: f64 = 1e5;
+
+/// From this df the quantile away from the centre is [`t_rounded_y_quantile`]; df 1 keeps statrs'
+/// search and the tail forms below (its closed form is T-2858's).
+const T_ROUNDED_Y_MIN_DF: f64 = 2.0;
+
+/// Magnitude `t > 0` with `P(T > t) = q` for a one-sided `q` in (0, 1/2) outside the centre:
+/// Excel's back-transform t = fl(sqrt(fl(df * fl(fl(1/y) - 1)))) of y, the double nearest the
+/// crossing of the tail at a rounded y, L(y) = q (`student_t_tail_at`, T.TEST's tail; statistics.md
+/// "Student-t quantile is SQRT(df*(1/y-1)) of the rounded beta quantile, away from the centre",
+/// T-3061; the crossing is T-2511's). The ported kernel's tail at y (`bratio::t_kernel_tails`,
+/// as T.DIST takes it) fixes 4 more cells but makes 3 newly visibly off (`T.INV(0.2,5)`,
+/// gen-m9/0bbab6206b5c9a07 A67, 6 ulp). L rises with y, so the search is `nearest_crossing` over
+/// [0, 1], seeded by AS 109's root where statrs is reliable: about 25 to 30 tails with a good seed,
+/// at most 66 unseeded and about 81 with a poor seed, for every df up to [`T_DF_MAX`] (the cost is in lift/kinds/statistical.rs
+/// `T_QUANTILE_WEIGHT`). A deep tail keeps
+/// [`t_tail_closed_form`].
+fn t_rounded_y_quantile(df: f64, q: f64) -> f64 {
+    if q < T_TAIL_P {
+        if let Some(t) = t_tail_closed_form(df, q) {
+            return t;
+        }
+    }
+    // AS 109's root (statrs' search, a few microseconds where it is reliable) seeds the bracket:
+    // about 25 tails instead of 64, which matters where one tail sums the integer-df series
+    // (about 30 us at df 1000; T-2511's performance review).
+    let estimate = if df < T_STATRS_MAX_DF && q >= T_STATRS_MIN_P {
+        t_quantile_beta_root(df, q)
+    } else {
+        f64::NAN
+    };
+    let y = nearest_crossing_from(|y| student_t_tail_at(y, df), q, estimate, 0.0, 1.0);
+    // A y of 0 gives an infinite t, which the callers turn into #NUM! (`is_finite` checks in
+    // `t_inv_of` and CONFIDENCE.T).
+    (df * (1.0 / y - 1.0)).sqrt()
+}
+
+/// The signed quantile with `P(T > t) = q` from [`t_rounded_y_quantile`], for q outside the centre.
+fn t_rounded_y_upper(df: f64, q: f64) -> f64 {
+    // 1 - q is exact for q in [1/2, 1] (Sterbenz).
+    if q < 0.5 {
+        t_rounded_y_quantile(df, q)
+    } else {
+        -t_rounded_y_quantile(df, 1.0 - q)
+    }
+}
+
 /// Quantile `t` with `P(T > t) = q`. For a tiny `q`, `1 - q` rounds to 1, so the tail is asked for
-/// directly (T-1531); otherwise this is `t_quantile(1 - q)` as before.
+/// directly (T-1531); near 1/2 the centre is (T-2724); otherwise this is `t_quantile(1 - q)`.
 pub(crate) fn t_upper_quantile(dist: &StudentsT, df: f64, q: f64) -> f64 {
+    // 1 - 2q is exact for q in [1/4, 1] (Sterbenz) where 1 - q is not for q below 1/2.
+    let c = 1.0 - 2.0 * q;
+    if c.abs() < T_CENTRE_C {
+        return t_centre_quantile(df, c.abs()).copysign(c);
+    }
+    if df >= T_ROUNDED_Y_MIN_DF {
+        return t_rounded_y_upper(df, q);
+    }
     if q < T_TAIL_P {
         -t_quantile(dist, df, q)
     } else {
@@ -298,32 +494,26 @@ pub(crate) fn t_upper_quantile(dist: &StudentsT, df: f64, q: f64) -> f64 {
 }
 
 /// Quantile of Student's t with `df` degrees of freedom for `p` in (0,1); the time is bounded for
-/// every df up to [`T_DF_MAX`]. statrs' search is the capped port of `inverse_beta.rs` (T-1848),
-/// bit for bit statrs' value where statrs finishes.
+/// every df up to [`T_DF_MAX`]. The centre is [`t_centre_quantile`], every df from 2 elsewhere
+/// [`t_rounded_y_quantile`]; df 1 keeps statrs' search (the capped port of `inverse_beta.rs`,
+/// T-1848) and the tail forms of [`t_tail_quantile`].
 pub(crate) fn t_quantile(dist: &StudentsT, df: f64, p: f64) -> f64 {
-    if df < T_QUANTILE_SERIES_DF {
-        // Below the tail threshold `statrs` is fine; above it its inverse saturates (T.INV(1E-10,1)
-        // gives -8.9E7, Excel -3.18E9) and panics from p about 1E-200 (T-1531).
-        let (q, sign) = if p < 0.5 { (p, -1.0) } else { (1.0 - p, 1.0) };
-        if q < T_TAIL_P {
-            return sign * t_tail_quantile(dist, df, q);
-        }
-        return t_inverse_cdf(df, p);
+    // 2p - 1 is exact for p in [1/4, 1] (Sterbenz).
+    let c = 2.0 * p - 1.0;
+    if c.abs() < T_CENTRE_C {
+        return t_centre_quantile(df, c.abs()).copysign(c);
     }
-    let Ok(normal) = Normal::new(0.0, 1.0) else {
-        return f64::NAN;
-    };
-    let z = normal.inverse_cdf(p);
-    // Abramowitz & Stegun 26.7.5; the neglected term is O(z^11 / df^5).
-    let (z2, z3) = (z * z, z * z * z);
-    let z5 = z3 * z2;
-    let z7 = z5 * z2;
-    let z9 = z7 * z2;
-    let g1 = (z3 + z) / 4.0;
-    let g2 = (5.0 * z5 + 16.0 * z3 + 3.0 * z) / 96.0;
-    let g3 = (3.0 * z7 + 19.0 * z5 + 17.0 * z3 - 15.0 * z) / 384.0;
-    let g4 = (79.0 * z9 + 776.0 * z7 + 1482.0 * z5 - 1920.0 * z3 - 945.0 * z) / 92160.0;
-    z + g1 / df + g2 / df.powi(2) + g3 / df.powi(3) + g4 / df.powi(4)
+    if df >= T_ROUNDED_Y_MIN_DF {
+        // P(T < t) = p is P(T > t) = 1 - p, i.e. -t has the upper tail p.
+        return -t_rounded_y_upper(df, p);
+    }
+    // df 1: below the tail threshold `statrs` is fine; above it its inverse saturates
+    // (T.INV(1E-10,1) gives -8.9E7, Excel -3.18E9) and panics from p about 1E-200 (T-1531).
+    let (q, sign) = if p < 0.5 { (p, -1.0) } else { (1.0 - p, 1.0) };
+    if q < T_TAIL_P {
+        return sign * t_tail_quantile(dist, df, q);
+    }
+    t_inverse_cdf(df, p)
 }
 
 impl Model {
@@ -347,18 +537,18 @@ impl Model {
         let x = self.cast_number_ref(x, cell)?;
         let df = self.cast_number_ref(df, cell)?.trunc();
         let cumulative = Self::cast_bool_ref(cumulative, cell)?;
-        // The density divides by the truncated df: df in (-1, 1) is `#DIV/0!`, not `#NUM!`
-        // (`T.DIST(2,0.5,FALSE)`, `T.DIST(2,-0.5,FALSE)`; probes-numeric m9-t-edges A27-A41,
-        // statistics.md "Student t sweep").
-        if !cumulative && df == 0.0 {
+        // The density divides by the truncated df: df in (-1, 1) is `#DIV/0!` (`T.DIST(2,0.5,FALSE)`;
+        // probes-numeric m9-t-edges A27-A41, "Student t sweep"), as is df 1's where its denominator
+        // overflows (T-3554, statistics.md "T.DIST's density is #NUM! at a huge x").
+        if !cumulative && (df == 0.0 || (df == 1.0 && excel_t_density_df_one_overflows(x))) {
             return Err(div_error(cell));
         }
-        if df < 1.0 || (cumulative && df > T_DF_MAX) {
+        if df < 1.0 || t_x_overflows(x) || (cumulative && df > T_DF_MAX) {
             return Err(num_error(cell));
         }
         let result = if cumulative {
             student_t_tails(x, df).0
-        } else if let Some(density) = student_t_density(x, df) {
+        } else if let Some(density) = t_density(x, df) {
             density
         } else {
             StudentsT::new(0.0, 1.0, df)
@@ -395,7 +585,7 @@ impl Model {
         cell: CellReferenceIndex,
     ) -> Result<f64, CalcResult> {
         let df = self.cast_number_ref(df, cell)?.trunc();
-        if x < 0.0 || !(1.0..=T_DF_MAX).contains(&df) {
+        if x < 0.0 || !(1.0..=T_DF_MAX).contains(&df) || t_x_overflows(x) {
             return Err(num_error(cell));
         }
         let result = 2.0 * student_t_tails(x, df).1;
@@ -428,7 +618,7 @@ impl Model {
         cell: CellReferenceIndex,
     ) -> Result<f64, CalcResult> {
         let df = self.cast_number_ref(df, cell)?.trunc();
-        if !(1.0..=T_DF_MAX).contains(&df) {
+        if !(1.0..=T_DF_MAX).contains(&df) || t_x_overflows(x) {
             return Err(num_error(cell));
         }
         let result = student_t_tails(x, df).1;
@@ -439,10 +629,10 @@ impl Model {
     }
 
     /// `T.INV(probability, deg_freedom)`: both arguments lift over an array and a range
-    /// (SPEC-0011; probes/stat-argument-modes, probes/stat-quantile-lift). The quantile is the
-    /// capped port of statrs' inversion, a closed form, or a bisection of at most 264 cdfs
-    /// (`t_quantile`), which the lifting table charges (lift/kinds/statistical.rs
-    /// `T_QUANTILE_WEIGHT`).
+    /// (SPEC-0011; probes/stat-argument-modes, probes/stat-quantile-lift). The quantile is a
+    /// crossing of the tail at y from df 2 (`t_rounded_y_quantile`) or a closed form, and at df 1 the capped port of
+    /// statrs' inversion or a bisection of at most 264 cdfs (`t_quantile`), which the lifting
+    /// table charges (lift/kinds/statistical.rs `T_QUANTILE_WEIGHT`).
     pub(crate) fn fn_t_inv(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.lift_call(Function::TInv, args, cell, &mut |model, values| {
             number_or_error(model.t_inv_of(values, false, cell))
@@ -456,8 +646,9 @@ impl Model {
         })
     }
 
-    /// The T.INV kernel; `two_tailed` for T.INV.2T and TINV, which take p in (0, 1] and return
-    /// the magnitude with `P(|T| > t) = p`.
+    /// The T.INV kernel; `two_tailed` for T.INV.2T and TINV, which take p in (0, 2) and return
+    /// the magnitude with `P(|T| > t) = p` for p up to 1, and the negative quantile of 2 - p
+    /// above it.
     fn t_inv_of(
         &self,
         values: &[CalcResult],
@@ -467,18 +658,44 @@ impl Model {
         let [p, df] = values else {
             return Err(CalcResult::new_args_number_error(cell));
         };
-        let p = self.cast_number_ref(p, cell)?;
+        let mut p = self.cast_number_ref(p, cell)?;
         let df = self.cast_number_ref(df, cell)?.trunc();
+        if two_tailed && two_tailed_half_underflows(p) {
+            p = 0.0;
+        }
+        // p = 0 with a df that truncates to 1 is `#DIV/0!`, from df 2 up `#NUM!` (`TINV(0,1)`,
+        // `T.INV(0,1.999)`, `T.INV.2T(FALSE,1.005)` against `T.INV(0,2)`; statistics.md "Student t
+        // quantile at p = 0 with df below 2 is #DIV/0!", probes/t2475-stat-subexpressions P!A124).
+        if p == 0.0 && df == 1.0 {
+            return Err(div_error(cell));
+        }
         let p_out = if two_tailed {
-            p <= 0.0 || p > 1.0
+            p <= 0.0 || p >= 2.0
         } else {
             p <= 0.0 || p >= 1.0
         };
         if p_out || !(1.0..=T_DF_MAX).contains(&df) {
             return Err(num_error(cell));
         }
+        if df == 1.0 {
+            let x = df_one_quantile(p, two_tailed);
+            return if x.is_finite() {
+                Ok(x)
+            } else {
+                Err(num_error(cell))
+            };
+        }
         let dist = StudentsT::new(0.0, 1.0, df).map_err(|_| num_error(cell))?;
-        let x = if two_tailed {
+        let x = if two_tailed && p > 1.0 {
+            // T.INV.2T(p) = T.INV(1 - p/2), the negative quantile, for p in (1, 2) (m9-t-edges A2
+            // `T.INV.2T(1.5,5)`, A43 `T.INV.2T(1.5,10)`). 2 - p is exact on [1, 2] (Sterbenz), and
+            // the upper tail of (2 - p) / 2 reaches the tiny-p path for p near 2. p - 1 is exact too.
+            if p - 1.0 < T_NEGATIVE_CENTRE_C {
+                -t_centre_quantile(df, p - 1.0)
+            } else {
+                -t_upper_quantile(&dist, df, (2.0 - p) / 2.0).abs()
+            }
+        } else if two_tailed {
             // Two-sided: F(x) = 1 - p/2
             t_upper_quantile(&dist, df, p / 2.0).abs()
         } else {
@@ -506,8 +723,11 @@ impl Model {
         {
             return CalcResult::new_args_number_error(cell);
         }
+        // A text sample is an array of one cell with no number, not `#VALUE!`
+        // (`TTEST(IFERROR(#VALUE!,""),Data!B11:E11,1,3)` is `#DIV/0!`, gen-m9
+        // 46ac3ef5e61583ca A344; statistics.md "T.TEST: an error sample first ...").
         let samples = self
-            .paired_samples(args, cell, false)
+            .paired_samples(args, cell, MarkedSample::NumError)
             .map_err(|error| PairedSamplesError {
                 error: error.error.without_message(),
                 ..error
@@ -561,75 +781,4 @@ impl Model {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{t_quantile, t_upper_quantile};
-    use statrs::distribution::StudentsT;
-
-    // Excel (probes-numeric t1531-t-tiny-p): the Student-t quantile is finite, never an error, for
-    // a tiny p, and statrs' own inverse_cdf panics there. Expected values are Excel's cached values.
-
-    fn dist(df: f64) -> StudentsT {
-        StudentsT::new(0.0, 1.0, df).expect("valid df")
-    }
-
-    fn assert_close(actual: f64, expected: f64) {
-        assert!(
-            (actual / expected - 1.0).abs() < 1e-11,
-            "actual {actual:e}, expected {expected:e}"
-        );
-    }
-
-    #[test]
-    fn tail_asymptotic_matches_excel() {
-        // x = df / (df + t^2) is tiny: the closed-form branch.
-        assert_close(
-            t_quantile(&dist(1.0), 1.0, 1e-300),
-            -3.183_098_861_837_907e299,
-        );
-        assert_close(t_quantile(&dist(1.0), 1.0, 1e-10), -3_183_098_861.837_906_4);
-        assert_close(
-            t_quantile(&dist(5.0), 5.0, 1e-300),
-            -1.568_392_559_099_332e60,
-        );
-        assert_close(t_quantile(&dist(5.0), 5.0, 1e-50), -15_683_925_590.993_399);
-        // The upper tail is the mirror image (T.INV.2T(1E-300,1) = 2 * 3.18E299).
-        assert_close(
-            t_upper_quantile(&dist(1.0), 1.0, 5e-301),
-            6.366_197_723_675_814e299,
-        );
-        // CONFIDENCE.T(1E-300,1,2) = t / sqrt(2).
-        assert_close(
-            t_upper_quantile(&dist(1.0), 1.0, 5e-301) / 2.0_f64.sqrt(),
-            4.501_581_580_785_53e299,
-        );
-    }
-
-    #[test]
-    fn statrs_branch_is_kept_where_it_matches_excel() {
-        // T_DIST.xlsx `T.INV(0.9999999,10)`: bit-exact with statrs.
-        assert_eq!(
-            t_quantile(&dist(10.0), 10.0, 0.999_999_9),
-            12.492_209_688_254_745
-        );
-    }
-
-    #[test]
-    fn bisection_branch_is_bounded() {
-        // x is not tiny and q < 1E-8: bisection on the cdf (T.INV(1E-10,5), 1 ulp from Excel).
-        assert_close(t_quantile(&dist(5.0), 5.0, 1e-10), -156.825_592_708_894_3);
-        // x is not tiny and q < 1E-100: statrs panics here. Excel gives -79.06351062982456; ours is
-        // wrong (the cdf of statrs saturates), so only the bound is pinned (TODO(T-1542)).
-        let t = t_quantile(&dist(99999.0), 99999.0, 1e-300);
-        assert!(t.is_finite() && t < -30.0 && t > -80.0, "{t}");
-    }
-
-    #[test]
-    fn no_panic_across_df_and_p() {
-        for df in [2.0, 10.0, 100.0, 1e3, 1e4, 9e4] {
-            for q in [1e-100, 1e-50, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-150, 1e-300] {
-                let t = t_quantile(&dist(df), df, q);
-                assert!(t.is_finite() && t < 0.0, "df {df} q {q}: {t}");
-            }
-        }
-    }
-}
+mod tests;

@@ -19,15 +19,22 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     web rejects a literal `A1#` in `<f>` (T-0042). The engine reads the spec text, so cases keep `A1#`.
   * Typed entry `{"entered":"(1)"}` (T-0280): the cell is left blank and the docProps custom
     properties `rustsheet.entered.<n>` (one per cell, n from 1 in spec order; Excel caps a property
-    value at 255 characters) hold it as JSON `[sheet, a1, text]`; oracle backends write
+    value at 255 characters, so a longer one continues in `.<n>.2`, `.<n>.3`, ..., T-2709) hold it
+    as JSON `[sheet, a1, text]`; oracle backends write
     the text into the cell as a user types it (Graph `values`), so Excel picks value and number
     format. The engine adapter enters the same text through its user-input parser.
+    `{"entered_r1c1":"=R1C2+1"}` is typed in R1C1 mode (T-3113, decision 0179): recorded the same way
+    with a fourth element, `[sheet, a1, text, "r1c1"]`, and written by the backends as
+    `formulasR1C1` (Graph) or `Range.FormulaR1C1` (desktop); the engine adapter converts it to A1
+    relative to the cell. Excel for the web refusing either kind (Graph 400 `InvalidArgument`) leaves
+    the cell blank; the excel-graph backend logs `REFUSED` and goes on (decision 0179).
   * `"sheet_ops": [{"op": "rename", "sheet": "Data", "to": "Inputs"}, {"op": "add", "sheet": "New"},
     {"op": "move", "sheet": "Inputs", "to": 0}]` at the top level are sheet edits made after the
     workbook loads and before it is recalculated (T-1608): `add` appends a sheet, `rename` renames
     one (Excel rewrites the formulas that refer to it), `move` puts one at a 0-based position,
     `{"op": "insert_row", "sheet": "S", "row": 1}` inserts a blank row above row 1 (T-1933),
-    `delete_row` (same keys) deletes row 1, `{"op": "insert_column", "sheet": "S", "column": "B"}`
+    `delete_row` (same keys) deletes row 1 (with `"count": 4`, rows 1-4 in one edit, T-3019),
+    `{"op": "insert_column", "sheet": "S", "column": "B"}`
     inserts a blank column left of B and `delete_column` deletes it, `{"op": "delete_sheet",
     "sheet": "S"}` deletes a sheet, and `{"op": "convert_table", "sheet": "S", "table": "T1"}` /
     `delete_table` turn a table into a range / delete it (T-2323). The
@@ -35,12 +42,17 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     oracle backend replays them in Excel; the engine adapter applies them through its edit API.
   * A sheet may list `"hidden_rows": [3, 5]` (1-based rows written with `hidden="1"`) and
     `"tables": [{"name": "T1", "ref": "A1:B6", "filter": true}]` (T-1036). A table's header row is the
-    first row of `ref` and its cells must be literal text. With `"filter": true` the table's autoFilter
+    first row of `ref` and its cells must be literal text; `"header_row": false` makes a table without one
+    (data from its first row, columns `Column1`, ...; no filter or calculated column, T-3260). With `"filter": true` the table's autoFilter
     gets a values filter on its first column that keeps exactly the visible data rows, so the hidden rows
     inside the table are the rows the filter hides; that column's data cells must be literal numbers or
-    text, and no value may be both kept and hidden. The engine adapter loads both. With
+    text, and no value may be both kept and hidden. `"filter_column": {"col_id": 5}` writes that values
+    filter under `colId` 5, which must be 0 or past the table's last column, and `"criterion": false` there
+    writes `<filterColumn colId="N"/>` with no criterion; Excel reads neither as filtered, and the
+    engine adapter loads such a table unfiltered (T-4003). The engine adapter loads both. With
     `"totals_row": true` the last row of `ref` is the totals row: its cells (labels or formulas) are
-    written with the table's totals metadata (T-1607). Structured references are stored in their file
+    written with the table's totals metadata (T-1607). `"calculated": {"C": "T[[#This Row],[Col]]*2"}`
+    writes a `<calculatedColumnFormula>` for column C (T-2969), leaving the data cells as the spec has them. Structured references are stored in their file
     form: a bare table name as `Sales[]`, `@` as `#This Row` (`table_refs_to_file_form`).
   * `"date_system": 1904` at the top level writes `<workbookPr date1904="1"/>` (1900, the default,
     writes nothing), and a sheet's `"number_formats": {"A1": "[h]:mm"}` gives those cells that number
@@ -54,9 +66,10 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     table. `ref` must not overlap the sheet's `cells`. The engine adapter ignores both (Phase 2,
     T-0428).
   * A sheet's `"pivot_tables": [{"name": "Pv", "source": "Data!A1:C7", "location": "E3", "row": "Region",
-    "column": "Product", "value": "Sales", "function": "sum"}]` writes pivot tables, rendered cells
-    included (rustsheet_tools/pivot.py, T-1705). An optional `"rendered"` map of the layout (filled by
-    `rustsheet-spec bake-pivots`) must equal it; the engine adapter writes it and registers the pivot (T-2084).
+    "column": "Product", "value": "Sales"}]` writes pivots with rendered cells (pivot.py, T-1705; `"rendered"`, by
+    `rustsheet-spec bake-pivots`, must equal them, T-2084); with a `"definition"` (pivot_definition.py, T-4122)
+    only the parts, and Excel renders it on open. A sheet's `"pivot_charts"` adds column charts bound to a pivot,
+    with the caches the spec gives (pivot_chart.py, T-4130).
   * Future functions get their `_xlfn.` prefixes from the builder's own table (the engine exporter's
     list plus `_BUILDER_ONLY_PREFIXES`), never from XlsxWriter's `use_future_functions`, which skips a
     whole formula once any call in it is prefixed (T-0052); LET/LAMBDA names are written as `_xlpm.x`.
@@ -68,6 +81,13 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     and the oracle backend reads the cell's text after recalculating. A sheet's
     `"column_widths": {"B": 4}` sets those columns' widths in characters (desktop `.Text` depends on the
     width; excel-graph's `text` does not).
+  * A sheet's `"conditional_formats": [{"ref": "A1:A3", "formula": "=A1>0"}]` writes formula conditional
+    formats (`<cfRule type="expression">`) and `"data_validations": [{"ref": "A1", "formula": "=A1>0"}]`
+    custom data validations, their formulas prefixed like cell formulas (T-3263). The engine adapter
+    ignores both.
+  * `"active_sheet": "S2"` at the top level makes that sheet the workbook's active (and only selected)
+    sheet, `<workbookView activeTab>`; the first sheet otherwise (T-4394). Excel binds an unqualified
+    reference in an API-defined name to it. The engine adapter ignores it.
 """
 
 from __future__ import annotations
@@ -82,25 +102,32 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any
-from xml.sax.saxutils import escape, unescape
+from typing import Any, NamedTuple
+from xml.sax.saxutils import escape
 
 import xlsxwriter
 
+from rustsheet_tools.api_names import record_api_names
+from rustsheet_tools.custom_properties import json_properties, set_json_property
 from rustsheet_tools.oracle.package import patch_parts, read_parts
 from rustsheet_tools.pivot import PivotParts, pivot_tables, relationships_xml
+from rustsheet_tools.pivot_chart import write_pivot_charts
 from rustsheet_tools.sheetop import column_number, sheet_op
+from rustsheet_tools.spec_names import define_name
+from rustsheet_tools.spec_sheet_extras import activate_sheet, add_range_formulas, set_column_widths
+from rustsheet_tools.spec_tables import auto_filter, has_header_row
 
 # XlsxWriter stamps docProps/core.xml with the wall clock; a fixed instant keeps identical specs
 # byte-identical so `input_sha256` (sidecars, eval/.cache/oracle) is stable across runs (T-0015).
 _FIXED_CREATED = datetime(2000, 1, 1)
 
 ENTERED_PROPERTY = "rustsheet.entered"
+# The fourth element of an R1C1-mode typed entry's property value (T-3113).
+R1C1_MODE = "r1c1"
 SHEET_OP_PROPERTY = "rustsheet.sheetop"
 TEXT_PROPERTY = "rustsheet.text"
 
 _A1 = re.compile(r"^\$?([A-Za-z]{1,3})\$?(\d+)$")
-
 
 # `A1#`, `$A$1#`, `Sheet!A1#`, `'My Sheet'!A1#`; the lookbehind keeps names like `X1A1#` whole.
 _SPILL_REF = re.compile(r"(?<![\w.$!'])((?:(?:'(?:[^']|'')+'|[A-Za-z_][\w.]*)!)?\$?[A-Za-z]{1,3}\$?\d+)#")
@@ -219,7 +246,7 @@ def prefix_bound_names(formula: str) -> str:
     An optional LAMBDA parameter `[y]` is declared as `_xlop.y`, brackets dropped, and used as
     `_xlpm.y`: Excel for the web stores `=LAMBDA(x,[y],ISOMITTED(y))(1)` as
     `_xlfn.LAMBDA(_xlpm.x,_xlop.y,_xlfn.ISOMITTED(_xlpm.y))(1)`, and refuses `[_xlpm.y]` as a
-    corrupt file (T-1274; docs/excel-semantics/xlsx-storage.md).
+    corrupt file (T-1274; docs/excel-semantics/xlsx-storage.md). `_xlpm._xlpm.x` declares `_xlpm.x` (T-4224).
     """
     out: list[str] = []
     scopes: list[tuple[int, set[str]]] = []  # (end index of the call, lower-cased names)
@@ -240,7 +267,7 @@ def prefix_bound_names(formula: str) -> str:
             args, close = _call_args(formula, end)
             decl = args[0:-1:2] if upper == "LET" else args[:-1]
             names = {a.strip().strip("[]").strip().lower() for a in decl}
-            scopes.append((close, {n for n in names if _IDENT.fullmatch(n)}))
+            scopes.append((close, {n for n in names if _IDENT.fullmatch(n) and not n.startswith("_xlpm.")}))
             if upper == "LAMBDA":
                 start = end + 1
                 for arg in args[:-1]:
@@ -349,7 +376,7 @@ def build_xlsx(spec: dict[str, Any]) -> bytes:
     wb.set_properties({"created": _FIXED_CREATED})
     patches = _Patches()
     tables = frozenset(str(t["name"]).upper() for sheet in spec["sheets"] for t in sheet.get("tables", ()))
-    entered: list[tuple[str, str, str]] = []  # (sheet name, cell ref, text as typed)
+    entered: list[Entered] = []
     worksheets = []
     for number, sheet in enumerate(spec["sheets"], start=1):
         ws = wb.add_worksheet(sheet["name"])
@@ -359,8 +386,10 @@ def build_xlsx(spec: dict[str, Any]) -> bytes:
             ws.set_row(row - 1, None, None, {"hidden": True})
         for table in sheet.get("tables", ()):
             patches.filters.append(_add_table(ws, sheet, table, hidden, tables))
+            patches.calculated.append(_calculated_columns(sheet, table, tables))
         formats = _number_formats(wb, sheet)
-        _set_column_widths(ws, sheet)
+        set_column_widths(ws, sheet)
+        add_range_formulas(ws, sheet, lambda f: _formula_text(f, tables))
         legacy = _listed_formula_cells(sheet, "legacy_formulas")
         bare = _listed_formula_cells(sheet, "bare_function_names")
         if both := legacy & bare:
@@ -373,23 +402,18 @@ def build_xlsx(spec: dict[str, Any]) -> bytes:
                 continue  # written with its table (`_totals_column`)
             if a1 in bare:
                 text = _formula_text(raw, tables, prefix_functions=False)
-                ws.write_dynamic_array_formula(row, col, row, col, text, formats.get(a1))
+                ws.write_dynamic_array_formula(row, col, row, col, _cell_formula(text), formats.get(a1))
                 continue
             if a1 in legacy:
-                ws.write_formula(row, col, _formula_text(raw, tables), formats.get(a1))
+                ws.write_formula(row, col, _cell_formula(_formula_text(raw, tables)), formats.get(a1))
                 continue
             if isinstance(raw, dict) and raw.get("t") == "e" and raw.get("stored"):
                 # A placeholder formula cell with an error result; `_store_errors` swaps it for the constant.
                 ws.write_formula(row, col, "=0", formats.get(a1), "#N/A")
                 patches.stored.append((number, xlsxwriter.utility.xl_rowcol_to_cell(row, col), str(raw["v"])))
                 continue
-            if isinstance(raw, dict) and "entered" in raw:
-                if a1 in formats:
-                    msg = f"entered cell {a1} cannot have a number format (Excel picks it)"
-                    raise ValueError(msg)
-                entered.append(
-                    (sheet["name"], xlsxwriter.utility.xl_rowcol_to_cell(row, col), str(raw["entered"]))
-                )
+            if isinstance(raw, dict) and ("entered" in raw or "entered_r1c1" in raw):
+                entered.append(_entered(sheet["name"], a1, raw, a1 in formats))
                 continue
             if (
                 cell_number := _write(ws, row, col, raw, formats.get(a1), tables=tables)
@@ -402,32 +426,49 @@ def build_xlsx(spec: dict[str, Any]) -> bytes:
             (number, _add_data_table(ws, sheet, t)) for t in sheet.get("data_tables", ())
         )
 
+    activate_sheet(spec, worksheets)
     patches.pivots = pivot_tables(spec, _pivot_cell_writer(worksheets, patches, tables))
     for name, formula in spec.get("names", {}).items():
-        wb.define_name(name, _formula_text(formula, tables))
+        define_name(wb, name, _formula_text(formula, tables))
     _record_backend_steps(wb, spec, entered)
     wb.close()
     return _patch_package(buf.getvalue(), spec, patches)
 
 
-def _set_column_widths(ws: Any, sheet: dict[str, Any]) -> None:
-    """Applies a sheet's `column_widths` (column letter -> width in characters; T-1610)."""
-    for column, width in sheet.get("column_widths", {}).items():
-        _, col = xlsxwriter.utility.xl_cell_to_rowcol(f"{column}1")
-        ws.set_column(col, col, float(width))
+def _entered(sheet: str, a1: str, raw: dict[str, Any], formatted: bool) -> Entered:
+    """The typed entry of spec cell `a1`, `{"entered": ...}` or `{"entered_r1c1": ...}`."""
+    if "entered" in raw and "entered_r1c1" in raw:
+        msg = f"cell {a1} cannot be both entered and entered_r1c1"
+        raise ValueError(msg)
+    if formatted:
+        msg = f"entered cell {a1} cannot have a number format (Excel picks it)"
+        raise ValueError(msg)
+    r1c1 = "entered_r1c1" in raw
+    text = str(raw["entered_r1c1" if r1c1 else "entered"])
+    return Entered(sheet, xlsxwriter.utility.xl_rowcol_to_cell(*parse_a1(a1)), text, r1c1)
 
 
-def _record_backend_steps(
-    wb: xlsxwriter.Workbook, spec: dict[str, Any], entered: list[tuple[str, str, str]]
-) -> None:
-    """Records what an oracle backend does beyond recalculating, as custom properties: typed entries,
-    sheet edits and the cells whose displayed text it reads."""
+def _record_backend_steps(wb: xlsxwriter.Workbook, spec: dict[str, Any], entered: list[Entered]) -> None:
+    """Records what an oracle backend does after load, as custom properties (api_names.py too)."""
     for n, entry in enumerate(entered, start=1):
-        _set_json_property(wb, f"{ENTERED_PROPERTY}.{n}", entry, f"entered cell {entry[0]}!{entry[1]}")
+        # An A1 entry keeps its three elements, so workbooks built before R1C1 entry stay byte-identical.
+        value = [entry.sheet, entry.a1, entry.text, *([R1C1_MODE] if entry.r1c1 else [])]
+        set_json_property(wb, f"{ENTERED_PROPERTY}.{n}", value, f"entered cell {entry.sheet}!{entry.a1}")
     for n, op in enumerate(spec.get("sheet_ops", ()), start=1):
-        _set_json_property(wb, f"{SHEET_OP_PROPERTY}.{n}", list(sheet_op(op)), f"sheet op {n}")
+        set_json_property(wb, f"{SHEET_OP_PROPERTY}.{n}", list(sheet_op(op)), f"sheet op {n}")
     for n, key in enumerate(spec.get("text", ()), start=1):
-        _set_json_property(wb, f"{TEXT_PROPERTY}.{n}", list(_text_cell(key)), f"text cell {key}")
+        set_json_property(wb, f"{TEXT_PROPERTY}.{n}", list(_text_cell(key)), f"text cell {key}")
+    record_api_names(wb, spec)
+
+
+class Entered(NamedTuple):
+    """A typed entry (T-0280): text an oracle backend types into a cell after load."""
+
+    sheet: str
+    a1: str
+    text: str
+    # Typed in R1C1 mode (`entered_r1c1`, T-3113), so `R1C2` is a reference.
+    r1c1: bool = False
 
 
 @dataclass
@@ -439,6 +480,8 @@ class _Patches:
     lossy: list[tuple[int, str, float]] = field(default_factory=list)
     # (table name, `<autoFilter>` element or "") in add order
     filters: list[tuple[str, str]] = field(default_factory=list)
+    # (table name, {header: file-form formula}) in add order, T-2969
+    calculated: list[tuple[str, dict[str, str]]] = field(default_factory=list)
     # (sheet number, (top-left cell, `<f>`)), T-0428
     data_tables: list[tuple[int, tuple[str, str]]] = field(default_factory=list)
     pivots: PivotParts = field(default_factory=PivotParts)  # T-1705
@@ -448,9 +491,10 @@ def _patch_package(xlsx: bytes, spec: dict[str, Any], patches: _Patches) -> byte
     """Writes what XlsxWriter cannot into the package `build_xlsx` wrote."""
     xlsx = _store_errors(xlsx, patches.stored) if patches.stored else xlsx
     xlsx = _filter_tables(xlsx, patches.filters) if any(el for _, el in patches.filters) else xlsx
+    xlsx = _calculated_tables(xlsx, patches.calculated) if any(c for _, c in patches.calculated) else xlsx
     # Data tables and calculation settings are no-ops when the spec has none (T-0428).
     xlsx = _write_calculation(_write_data_tables(xlsx, patches.data_tables), spec.get("calculation"))
-    xlsx = _write_pivots(xlsx, patches.pivots)
+    xlsx = write_pivot_charts(_write_pivots(xlsx, patches.pivots), spec)
     return _store_numbers(xlsx, patches.lossy) if patches.lossy else xlsx
 
 
@@ -487,24 +531,15 @@ def _hidden_rows(sheet: dict[str, Any]) -> set[int]:
     return set(rows)
 
 
-def _range(ref: str) -> tuple[int, int, int, int]:
-    """'A1:B6' → zero-based (first row, first col, last row, last col)."""
+def _range(ref: str, *, header_row: bool = True) -> tuple[int, int, int, int]:
+    """'A1:B6' → zero-based (first row, first col, last row, last col); see `has_header_row`."""
     first, _, last = ref.partition(":")
     (r1, c1), (r2, c2) = parse_a1(first), parse_a1(last or first)
-    if r1 >= r2 or c1 > c2:
-        msg = f"table ref {ref!r} needs a header row and at least one data row"
+    if r1 + int(header_row) > r2 or c1 > c2:
+        rows = "a header row and at least one data row" if header_row else "at least one data row"
+        msg = f"table ref {ref!r} needs {rows}"
         raise ValueError(msg)
     return r1, c1, r2, c2
-
-
-def _filter_value(raw: Any, a1: str) -> str:
-    """The text a values filter lists for a first-column cell (General format: 3 → "3")."""
-    if isinstance(raw, str) and raw and not raw.startswith("="):
-        return raw
-    if isinstance(raw, int | float) and not isinstance(raw, bool) and float(raw).is_integer():
-        return str(int(raw))
-    msg = f"filtered table column cell {a1} must be literal text or a whole number, not {raw!r}"
-    raise ValueError(msg)
 
 
 def _add_table(
@@ -514,41 +549,82 @@ def _add_table(
     With `"totals_row": true` the last row of `ref` is the table's totals row, written by
     `_totals_column`."""
     name, ref = str(table["name"]), str(table["ref"])
-    r1, c1, r2, c2 = _range(ref)
+    header_row = has_header_row(table)
+    r1, c1, r2, c2 = _range(ref, header_row=header_row)
     totals = bool(table.get("totals_row"))
-    if totals and r2 - r1 < 2:
+    if totals and r2 - r1 < 1 + int(header_row):
         msg = f"table {name} at {ref} needs a header row, a data row and the totals row"
         raise ValueError(msg)
     cells = sheet["cells"]
     cell = xlsxwriter.utility.xl_rowcol_to_cell
-    headers = [cells.get(cell(r1, c)) for c in range(c1, c2 + 1)]
-    if not all(isinstance(h, str) and h and not h.startswith("=") for h in headers):
-        msg = f"table {name} header row {ref} must be literal text: {headers!r}"
-        raise ValueError(msg)
+    if header_row:
+        headers = [cells.get(cell(r1, c)) for c in range(c1, c2 + 1)]
+        if not all(isinstance(h, str) and h and not h.startswith("=") for h in headers):
+            msg = f"table {name} header row {ref} must be literal text: {headers!r}"
+            raise ValueError(msg)
+    else:
+        if table.get("filter") or table.get("calculated"):
+            msg = f"table {name}: a table without a header row takes no filter or calculated column"
+            raise ValueError(msg)
+        # Named in the file only, as the engine adapter names them (Excel resolves them: T-3260).
+        headers = [f"Column{i}" for i in range(1, c2 - c1 + 2)]
     # XlsxWriter warns and returns a negative code (-1, -2, ...) instead of raising.
     columns: list[dict[str, Any]] = [{"header": h} for h in headers]
     if totals:
         for options_column, c in zip(columns, range(c1, c2 + 1), strict=True):
             options_column.update(_totals_column(cells.get(cell(r2, c)), cell(r2, c), tables))
-    options = {"name": name, "columns": columns, "total_row": totals}
+    options = {"name": name, "columns": columns, "total_row": totals, "header_row": header_row}
     if ws.add_table(r1, c1, r2, c2, options):
         msg = f"XlsxWriter rejected table {name} at {ref} (see its warning)"
         raise ValueError(msg)
     if not table.get("filter"):
         return name, ""
-    kept: set[str] = set()
-    dropped: set[str] = set()
-    last_data = r2 - 1 if totals else r2
-    for row in range(r1 + 1, last_data + 1):
-        a1 = cell(row, c1)
-        (dropped if row + 1 in hidden else kept).add(_filter_value(cells.get(a1), a1))
-    if kept & dropped:
-        msg = f"table {name}: values {sorted(kept & dropped)} are both kept and hidden by the filter"
-        raise ValueError(msg)
-    values = "".join(f'<filter val="{escape(v, {chr(34): "&quot;"})}"/>' for v in sorted(kept))
-    ref_abs = f"{cell(r1, c1)}:{cell(last_data, c2)}"
-    column = f'<filterColumn colId="0"><filters>{values}</filters></filterColumn>'
-    return name, f'<autoFilter ref="{ref_abs}">{column}</autoFilter>'
+    return name, auto_filter(table, cells, hidden, (r1, c1, r2 - 1 if totals else r2, c2))
+
+
+def _calculated_columns(
+    sheet: dict[str, Any], table: dict[str, Any], tables: frozenset[str]
+) -> tuple[str, dict[str, str]]:
+    """The table's `"calculated"` option as `{header text: file-form formula}` (T-2969)."""
+    name, ref = str(table["name"]), str(table["ref"])
+    r1, c1, _, c2 = _range(ref, header_row=has_header_row(table))
+    found: dict[str, str] = {}
+    for letter, formula in table.get("calculated", {}).items():
+        col = parse_a1(f"{letter}1")[1]
+        if not c1 <= col <= c2 or not isinstance(formula, str) or not formula:
+            msg = f"table {name}: calculated column {letter!r} must be a column of {table['ref']} with a formula"
+            raise ValueError(msg)
+        header = sheet["cells"][xlsxwriter.utility.xl_rowcol_to_cell(r1, col)]
+        found[header] = _formula_text("=" + formula.removeprefix("="), tables).removeprefix("=")
+    return name, found
+
+
+def _calculated_tables(xlsx: bytes, calculated: list[tuple[str, dict[str, str]]]) -> bytes:
+    """Gives each calculated column its `<calculatedColumnFormula>` (XlsxWriter's own column `formula`
+    option would also fill the data cells). `calculated` is in `add_table` order (`tableN.xml`)."""
+
+    def patch(name: str, columns: dict[str, str]) -> Callable[[str], str]:
+        def apply(text: str) -> str:
+            if f' name="{name}"' not in text:
+                msg = f"cannot patch table {name}: table part not found"
+                raise ValueError(msg)
+            for header, formula in columns.items():
+                quoted = escape(header, {chr(34): "&quot;"})
+                column = re.compile(rf'<tableColumn id="(\d+)" name="{re.escape(quoted)}"\s*/>')
+                element = f"<calculatedColumnFormula>{escape(formula)}</calculatedColumnFormula>"
+                if len(matches := list(column.finditer(text))) != 1:
+                    msg = f"table {name}: column {header!r} not found once"
+                    raise ValueError(msg)
+                m = matches[0]
+                tag = f'<tableColumn id="{m[1]}" name="{quoted}">{element}</tableColumn>'
+                text = text[: m.start()] + tag + text[m.end() :]
+            return text
+
+        return apply
+
+    return patch_parts(
+        xlsx, [(f"xl/tables/table{n}.xml", patch(name, c)) for n, (name, c) in enumerate(calculated, 1) if c]
+    )
 
 
 def _totals_column(raw: Any, a1: str, tables: frozenset[str]) -> dict[str, str]:
@@ -571,7 +647,7 @@ def _totals_cells(sheet: dict[str, Any]) -> set[str]:
     found: set[str] = set()
     for table in sheet.get("tables", ()):
         if table.get("totals_row"):
-            _, c1, r2, c2 = _range(str(table["ref"]))
+            _, c1, r2, c2 = _range(str(table["ref"]), header_row=has_header_row(table))
             found.update(xlsxwriter.utility.xl_rowcol_to_cell(r2, c) for c in range(c1, c2 + 1))
     return found
 
@@ -741,43 +817,20 @@ def _filter_tables(xlsx: bytes, filters: list[tuple[str, str]]) -> bytes:
     )
 
 
-def _set_json_property(wb: xlsxwriter.Workbook, name: str, value: object, what: str) -> None:
-    text = json.dumps(value, ensure_ascii=False)
-    if len(text) > 255:  # Excel's custom-property limit; fail here, not at the oracle
-        msg = f"{what} is too long for a custom property ({len(text)} > 255)"
-        raise ValueError(msg)
-    wb.set_custom_property(name, text)
-
-
-def _json_properties(xlsx: bytes, prefix: str) -> list[Any]:
-    """The JSON values of the custom properties `<prefix>.<n>` in `xlsx`, in order of n.
-
-    Raises ValueError when the package or a property is malformed (xlsx inputs are untrusted).
-    """
-    try:
-        parts = read_parts(xlsx)
-        if "docProps/custom.xml" not in parts:
-            return []
-        custom = parts["docProps/custom.xml"].decode("utf-8")
-        # A regex, not an XML parser: the part is untrusted, and only XlsxWriter's own layout matters.
-        pattern = re.compile(rf'name="{re.escape(prefix)}\.(\d+)"><vt:lpwstr>(.*?)</vt:lpwstr>', re.S)
-        found = sorted(
-            (int(n), json.loads(unescape(v, {"&quot;": '"', "&apos;": "'"})))
-            for n, v in pattern.findall(custom)
-        )
-        return [value for _, value in found]
-    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as e:
-        msg = f"malformed {prefix} property: {e}"
-        raise ValueError(msg) from e
-
-
-def entered_cells(xlsx: bytes) -> list[tuple[str, str, str]]:
-    """The `(sheet, a1, text)` typed entries `build_xlsx` recorded in `xlsx`, in spec order.
+def entered_cells(xlsx: bytes) -> list[Entered]:
+    """The typed entries `build_xlsx` recorded in `xlsx`, in spec order.
 
     Raises ValueError when the package or the property is malformed (xlsx inputs are untrusted).
     """
     try:
-        return [(str(s), str(a1), str(t)) for s, a1, t in _json_properties(xlsx, ENTERED_PROPERTY)]
+        entries = []
+        for value in json_properties(xlsx, ENTERED_PROPERTY):
+            sheet, a1, text, *mode = value
+            if mode not in ([], [R1C1_MODE]):
+                msg = f"unknown entry mode {mode!r}"
+                raise ValueError(msg)
+            entries.append(Entered(str(sheet), str(a1), str(text), bool(mode)))
+        return entries
     except (TypeError, ValueError) as e:
         msg = f"malformed {ENTERED_PROPERTY} property: {e}"
         raise ValueError(msg) from e
@@ -800,7 +853,7 @@ def text_cells(xlsx: bytes) -> list[tuple[str, str]]:
     Raises ValueError when the package or the property is malformed (xlsx inputs are untrusted).
     """
     try:
-        return [_text_cell(f"{s}!{a1}") for s, a1 in _json_properties(xlsx, TEXT_PROPERTY)]
+        return [_text_cell(f"{s}!{a1}") for s, a1 in json_properties(xlsx, TEXT_PROPERTY)]
     except (TypeError, ValueError) as e:
         msg = f"malformed {TEXT_PROPERTY} property: {e}"
         raise ValueError(msg) from e
@@ -811,7 +864,7 @@ def sheet_ops(xlsx: bytes) -> list[tuple[str, str, str | int | None]]:
 
     Raises ValueError when the package or a property is malformed or an op is unknown.
     """
-    return [sheet_op(op) for op in _json_properties(xlsx, SHEET_OP_PROPERTY)]
+    return [sheet_op(op) for op in json_properties(xlsx, SHEET_OP_PROPERTY)]
 
 
 def _patch_sheets(xlsx: bytes, patches: list[tuple[int, Callable[[str], str]]]) -> bytes:
@@ -882,6 +935,14 @@ def _formula_text(raw: str, tables: frozenset[str], *, prefix_functions: bool = 
     return prefix_future_functions(text) if prefix_functions else text
 
 
+def _cell_formula(text: str) -> str:
+    """`text` as handed to XlsxWriter's formula writers, which drop one trailing `}` from every cell
+    formula (`_prepare_formula` strips CSE braces even without a leading `{=`), so `=1+{2;3}` would
+    reach the file as `1+{2;3` and Excel for the web refuse the workbook (T-3051). Defined names
+    keep it."""
+    return text + "}" if text.endswith("}") else text
+
+
 def _write(ws: Any, row: int, col: int, raw: Any, fmt: Any = None, *, tables: frozenset[str]) -> float | None:
     """Writes one spec cell (with number format `fmt`, if any; formulas may name `tables`); returns
     the number when it went through `write_number`, else None."""
@@ -892,7 +953,7 @@ def _write(ws: Any, row: int, col: int, raw: Any, fmt: Any = None, *, tables: fr
         return float(raw)
     elif isinstance(raw, str):
         if raw.startswith("="):
-            ws.write_dynamic_array_formula(row, col, row, col, _formula_text(raw, tables), fmt)
+            ws.write_dynamic_array_formula(row, col, row, col, _cell_formula(_formula_text(raw, tables)), fmt)
         elif raw == "":
             ws.write_formula(row, col, '=""', fmt)
         else:

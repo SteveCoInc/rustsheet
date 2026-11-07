@@ -5,7 +5,9 @@ use rustsheet_engine::expressions::parser::{
 };
 use std::{collections::HashMap, io::Read, num::ParseIntError};
 
+use super::call_cap;
 use super::package::{part_folder_and_rels, resolve_target, Package};
+pub(super) use super::relocation_key::RcTextCache;
 use super::rich_errors::{cached_error_name, load_value_metadata_errors};
 use super::workbook::WorkbookXML;
 use super::xml::XmlNode;
@@ -26,11 +28,13 @@ use thiserror::Error;
 use crate::error::XlsxError;
 
 use super::{
+    array_refs::ArrayClaims,
     columns::load_columns,
     conditional_formatting::load_conditional_formatting,
     iso_date::iso8601_to_date_system_serial,
+    merged_cells,
     shared_strings::{decode_xlsx_escapes, SharedStringTable},
-    sheet_data::{read_sheet_data, SheetDataXml},
+    sheet_data::{read_sheet_data, SheetDataXml, SheetPart},
     tables::load_table,
     util::{get_attribute, get_color, get_number, get_relationship, parse_cell_number},
     Relationship,
@@ -108,8 +112,10 @@ fn load_merge_cells(ws: &XmlNode) -> Result<Vec<MergedCell>, XlsxError> {
     // </mergeCells>
     // Malformed, single-cell and overlapping entries are skipped: the engine
     // invariants are that merged ranges span more than one cell and never
-    // intersect each other.
+    // intersect each other. The first of any intersecting ranges is kept, through an index, since
+    // checking each range against every kept one is quadratic (T-3454).
     let mut merged_cells: Vec<MergedCell> = Vec::new();
+    let mut kept = merged_cells::KeptRanges::default();
     let merge_cells_nodes = ws
         .children()
         .filter(|n| n.has_tag_name("mergeCells"))
@@ -128,18 +134,15 @@ fn load_merge_cells(ws: &XmlNode) -> Result<Vec<MergedCell>, XlsxError> {
             if width < 1 || height < 1 || (width == 1 && height == 1) {
                 continue;
             }
-            if merged_cells
-                .iter()
-                .any(|m| m.intersects(row, column, width, height))
-            {
-                continue;
-            }
-            merged_cells.push(MergedCell {
+            let range = MergedCell {
                 row,
                 column,
                 width,
                 height,
-            });
+            };
+            if kept.keep(&range) {
+                merged_cells.push(range);
+            }
         }
     }
     Ok(merged_cells)
@@ -250,17 +253,57 @@ fn parse_reference(s: &str) -> Result<CellReferenceRC, ParseReferenceError> {
 pub(super) fn from_a1_to_rc(
     formula: String,
     parser: &mut Parser,
+    cache: &mut RcTextCache,
     context: String,
     is_array_formula: bool,
 ) -> Result<String, XlsxError> {
     let cell_reference =
         parse_reference(&context).map_err(|error| XlsxError::Xml(error.to_string()))?;
-    let mut t = parser.parse(&formula, &cell_reference);
-    if !is_array_formula {
-        add_implicit_intersection(&mut t, true);
+    // A copy of a formula read before (same key) has its tree, so its text: no parse. The copy
+    // read first passed the nesting check below, and the copy's tree nests the same.
+    let key = cache.lexer.key(&formula, &cell_reference);
+    if let Some(text) = key
+        .as_deref()
+        .and_then(|k| cache.get_keyed(k, is_array_formula))
+    {
+        return Ok(text.to_string());
     }
-
-    Ok(to_rc_format(&t))
+    let t = parser.parse(&formula, &cell_reference);
+    if t.has_parse_error() {
+        // A formula that does not parse is no template for its copies (relocation_key.rs).
+        cache.lexer.forget_template();
+    }
+    // Excel refuses a workbook nesting more function calls than it takes (createSession 501;
+    // syntax.md "Formula nesting depth cap", T-3097).
+    // So it does one past the 256-parenthesis or the sign cap (T-3869).
+    let what = format!("Formula in {context}");
+    call_cap::refuse_too_many_calls(parser, &what)?;
+    call_cap::refuse_past_syntax_cap(&t, &what)?;
+    // Tree equality holds `-0` equal to `0`, which print differently (`{-0}`, `{0}`): such a
+    // tree is neither looked up nor kept.
+    let key = key.filter(|_| !t.has_parse_error());
+    let cacheable = !t.has_negative_zero();
+    if cacheable {
+        if let Some(text) = cache.get(&t, is_array_formula) {
+            let text = text.to_string();
+            if let Some(key) = key {
+                cache.insert_keyed(key, is_array_formula, text.clone());
+            }
+            return Ok(text);
+        }
+    }
+    let mut rewritten = t.clone();
+    if !is_array_formula {
+        add_implicit_intersection(&mut rewritten, true);
+    }
+    let text = to_rc_format(&rewritten);
+    if let Some(key) = key {
+        cache.insert_keyed(key, is_array_formula, text.clone());
+    }
+    if cacheable {
+        cache.insert(t, is_array_formula, text.clone());
+    }
+    Ok(text)
 }
 
 /// The index of a formula among the shared formulas of the sheet being read,
@@ -279,6 +322,23 @@ pub(super) fn find_or_add_formula(
     lookup.insert(formula.clone(), index);
     shared_formulas.push(formula);
     index
+}
+
+/// Whether a constant (formula-less) cell of type `cell_type` stores no value: no `<v>`, an empty
+/// `<v>` for a shared string (an index of nothing), or no `<is>` for an inline string. A `t="str"`
+/// cell with an empty `<v>` does store one, the empty string (fixtures/valueless-cell-forms A3), and
+/// `t="d"` keeps its own rule.
+fn is_valueless_constant(
+    cell_type: &str,
+    cell_value: Option<&str>,
+    rich_text_inline: Option<&str>,
+) -> bool {
+    match cell_type {
+        "b" | "n" | "e" | "str" => cell_value.is_none(),
+        "s" => cell_value.is_none_or(|v| v.trim().is_empty()),
+        "inlineStr" => rich_text_inline.is_none(),
+        _ => false,
+    }
 }
 
 pub(super) enum CellArrayKind {
@@ -313,6 +373,15 @@ pub(super) fn get_cell_from_excel(
     //   s (Shared String)
     //   str (String)
 
+    if formula_index == -1
+        && anchor_cell.is_none()
+        && is_valueless_constant(cell_type, cell_value, rich_text_inline.as_deref())
+    {
+        // Excel reads a constant cell that stores no value as blank whatever its `t`: ISBLANK is
+        // TRUE, COUNTA skips it and TYPE is 1 (fixtures/valueless-cell-forms; T-4148,
+        // docs/excel-semantics/xlsx-storage.md "A cell that stores no value is blank").
+        return Cell::EmptyCell { s: cell_style };
+    }
     if formula_index == -1 {
         match cell_type {
             "b" => {
@@ -361,7 +430,9 @@ pub(super) fn get_cell_from_excel(
                 }
             }
             "s" => Cell::SharedString {
-                si: cell_value.unwrap_or("0").parse::<i32>().unwrap_or(0),
+                si: cell_value
+                    .and_then(crate::util::parse_shared_string_index)
+                    .unwrap_or(0),
                 s: cell_style,
             },
             "str" => {
@@ -390,7 +461,9 @@ pub(super) fn get_cell_from_excel(
                 None => Cell::EmptyCell { s: cell_style },
             },
             "inlineStr" => {
-                let s = rich_text_inline.unwrap_or_default();
+                // An inline string's `_xHHHH_` escapes decode like a shared string's (poi/60289.xlsx
+                // TABLE!B2 stores `Rich Text_x000d_` inline; T-4150).
+                let s = decode_xlsx_escapes(&rich_text_inline.unwrap_or_default());
                 let si = shared_strings.intern(&s) as i32;
 
                 Cell::SharedString { si, s: cell_style }
@@ -460,7 +533,7 @@ pub(super) fn get_cell_from_excel(
             "inlineStr" => {
                 // NB: This is untested, I don't know of any engine that uses inline strings in formulas
                 make_cell(FormulaValue::Text(
-                    rich_text_inline.unwrap_or("".to_string()).into(),
+                    decode_xlsx_escapes(&rich_text_inline.unwrap_or_default()).into(),
                 ))
             }
             _ => {
@@ -744,6 +817,7 @@ pub(super) fn load_sheet<R: Read + std::io::Seek>(
     theme: &Theme,
     dxfs: &mut Vec<Dxf>,
     rich_errors: &[Option<&'static str>],
+    array_claims: &mut ArrayClaims,
 ) -> Result<(Worksheet, bool), XlsxError> {
     let sheet_name = &settings.name;
     let sheet_id = settings.id;
@@ -769,8 +843,11 @@ pub(super) fn load_sheet<R: Read + std::io::Seek>(
         &mut parser,
         shared_strings,
         &limits,
-        rich_errors,
-        settings.date_system,
+        SheetPart {
+            rich_errors,
+            date_system: settings.date_system,
+            array_claims,
+        },
     )?;
     let ws = &worksheet;
     let dimension = load_dimension(ws);
@@ -780,27 +857,12 @@ pub(super) fn load_sheet<R: Read + std::io::Seek>(
 
     let merged_cells = load_merge_cells(ws)?;
 
-    // Covered cells of a merged range must not hold content (an engine
-    // invariant); Excel leaves them empty but third-party producers sometimes
-    // leave values behind, so we clear them here (keeping their styles).
-    for merged_cell in &merged_cells {
-        for row in merged_cell.row..=merged_cell.last_row() {
-            for column in merged_cell.column..=merged_cell.last_column() {
-                if row == merged_cell.row && column == merged_cell.column {
-                    continue;
-                }
-                if let Some(cell) = sheet_data.cell_mut(row, column) {
-                    *cell = Cell::EmptyCell {
-                        s: cell.get_style(),
-                    };
-                }
-            }
-        }
-    }
+    merged_cells::clear_covered_cells(&mut sheet_data, &merged_cells);
 
     let links = load_hyperlinks(ws, &settings.hyperlink_rels)?;
 
     let conditional_formatting = load_conditional_formatting(ws, theme, dxfs)?;
+    call_cap::check_rule_formulas(ws, &mut parser, sheet_name)?;
     // pageSetup
     // <pageSetup orientation="portrait" r:id="rId1"/>
 
@@ -888,6 +950,8 @@ pub(super) fn load_sheets<R: Read + std::io::Seek>(
 
     let defined_names = workbook.get_defined_names_with_scope();
     let rich_errors = load_value_metadata_errors(archive)?;
+    // One tally for the whole load: the sheets share its slack (T-3437).
+    let mut array_claims = ArrayClaims::default();
 
     for sheet in &workbook.worksheets {
         let sheet_name = &sheet.name;
@@ -918,6 +982,7 @@ pub(super) fn load_sheets<R: Read + std::io::Seek>(
                 theme,
                 dxfs,
                 &rich_errors,
+                &mut array_claims,
             )?;
             if is_selected {
                 selected_sheet = sheet_index;

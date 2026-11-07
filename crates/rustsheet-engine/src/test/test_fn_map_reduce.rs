@@ -316,14 +316,16 @@ fn defined_name_lambda_calls_reuse_their_body_and_stay_independent() {
 }
 
 #[test]
-fn map_wrong_lambda_arity_is_value_in_every_element() {
+fn map_wrong_lambda_arity_is_one_value_error() {
+    // One `#VALUE!` for the whole call, not a spill of them (probes/t3655-makearray-arity-sizes
+    // row 57, T-3655).
     let mut model = new_empty_model();
     model._set("A1", "1");
     model._set("A2", "2");
     model._set("B1", "=MAP(A1:A2, LAMBDA(x, y, x))");
     model.evaluate();
     assert_eq!(model._get_text("B1"), "#VALUE!");
-    assert_eq!(model._get_text("B2"), "#VALUE!");
+    assert_eq!(model._get_text("B2"), "");
 }
 
 #[test]
@@ -732,6 +734,46 @@ fn scan_reduce_initial_value_cell_is_a_reference() {
     assert_eq!(model._get_text("B5"), "1");
 }
 
+/// `initial_value` is bound as a LAMBDA call's argument is: an IF, CHOOSE, INDEX, XLOOKUP, OFFSET
+/// or INDIRECT that picks a cell, a LET variable bound to one and a union reach the LAMBDA as
+/// references, IFERROR as a value, and a 3-D span as `#VALUE!`
+/// (probes/t4475-scan-reduce-reference-initial D2:I10, excel-graph; T-4475).
+#[test]
+fn scan_reduce_initial_value_forms_bind_as_lambda_arguments() {
+    let mut model = new_empty_model();
+    model._set("A1", "TRUE");
+    model._set("A2", "'1");
+    model._set("A3", "2.5");
+    model._set("B1", "x");
+    model._set("B2", "y");
+    model._set("B3", "z");
+    model.add_sheet("Sheet2").unwrap();
+    model._set("Sheet2!A2", "'1");
+    model._set("D1", "=REDUCE(IF(TRUE,A2),A3,LAMBDA(a,v,COUNT(a)))");
+    model._set("D2", "=REDUCE(IFERROR(A2,0),A3,LAMBDA(a,v,COUNT(a)))");
+    model._set(
+        "D3",
+        "=REDUCE(XLOOKUP(\"x\",B1:B3,A1:A3),A1,LAMBDA(a,v,PRODUCT(a)))",
+    );
+    model._set(
+        "D4",
+        "=LET(c,OFFSET(A1,1,0),REDUCE(c,A3,LAMBDA(a,v,COUNT(a))))",
+    );
+    model._set("D5", "=REDUCE((A1,A3),A1,LAMBDA(a,v,PRODUCT(a)))");
+    model._set("D6", "=SCAN((A2,A3),A3,LAMBDA(a,v,ISREF(a)))");
+    model._set("D7", "=REDUCE(Sheet1:Sheet2!A1,A1,LAMBDA(a,v,PRODUCT(a)))");
+    model._set("D8", "=REDUCE(Sheet1:Sheet2!A2,A3,LAMBDA(a,v,ISREF(a)))");
+    model.evaluate();
+    assert_eq!(model._get_text("D1"), "0");
+    assert_eq!(model._get_text("D2"), "1");
+    assert_eq!(model._get_text("D3"), "0");
+    assert_eq!(model._get_text("D4"), "0");
+    assert_eq!(model._get_text("D5"), "2.5");
+    assert_eq!(model._get_text("D6"), "TRUE");
+    assert_eq!(model._get_text("D7"), "#VALUE!");
+    assert_eq!(model._get_text("D8"), "FALSE");
+}
+
 /// A blank cell taken into an array by HSTACK reaches a LAMBDA as the empty value: ISBLANK TRUE, but
 /// COUNT and AVERAGE count it as 0 (probes/t2413-blank-in-stacked-arrays A7:A11, A49; gen-m7/f19581ac44da1653
 /// A2088, T-2413). A range's blank cell stays a blank cell (A43).
@@ -772,4 +814,91 @@ fn map_takes_a_1x1_array_step_as_its_value() {
     assert_eq!(model._get_text("A1"), "5");
     assert_eq!(model._get_text("A2"), "5");
     assert_eq!(model._get_text("C1"), "#CALC!");
+}
+
+// A REDUCE step that is a TRIMRANGE of a range is the trimmed reference, as a step that is the
+// range is: IMSQRT does not lift over it, while it still lifts over an array step and the
+// trimmed values still spill (probes/t2579-array-value-edges B40, B46, B49; T-2596).
+#[test]
+fn reduce_step_trimrange_of_a_range_is_a_reference() {
+    let mut model = new_empty_model();
+    model._set("Z1", "4");
+    model._set("Z2", "9");
+    model._set(
+        "A1",
+        "=ROWS(IMSQRT(REDUCE(0,1,LAMBDA(a,b,TRIMRANGE(Z1:Z3)))))",
+    );
+    model._set("A2", "=ROWS(IMSQRT(REDUCE(0,1,LAMBDA(a,b,Z1:Z2))))");
+    model._set(
+        "A3",
+        "=ROWS(IMSQRT(REDUCE(0,1,LAMBDA(a,b,TRIMRANGE({4;9})))))",
+    );
+    model._set("B1", "=REDUCE(0,1,LAMBDA(a,b,TRIMRANGE(Z1:Z3)))");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#VALUE!");
+    assert_eq!(model._get_text("A2"), "#VALUE!");
+    assert_eq!(model._get_text("A3"), "2");
+    assert_eq!(model._get_text("B1"), "4");
+    assert_eq!(model._get_text("B2"), "9");
+    assert_eq!(model._get_text("B3"), "");
+}
+
+// ── A function argument the helper cannot call (T-3655) ─────────────────────
+
+/// Every LAMBDA helper is one whole-call `#VALUE!` for a function it cannot call with its
+/// argument count, an error argument included; optional parameters fill the count
+/// (probes/t3655-makearray-arity-sizes, probes/t3655-lambda-helper-function-argument).
+#[test]
+fn helpers_refuse_a_function_they_cannot_call() {
+    let mut model = new_empty_model();
+    let refused = [
+        "=ROWS(MAKEARRAY(2,2,LAMBDA(x,7)))",
+        "=ROWS(MAKEARRAY(2,2,LAMBDA(a,b,c,a+b)))",
+        "=ROWS(MAKEARRAY(2,2,NA()))",
+        "=ROWS(MAKEARRAY(2,2,5))",
+        "=ROWS(MAKEARRAY(2,2,_xleta.NOW))",
+        "=ROWS(MAP({1,2},LAMBDA(a,b,a)))",
+        "=ROWS(MAP({1,2},NA()))",
+        "=ROWS(MAP({1,2},_xleta.POWER))",
+        "=ROWS(BYROW({1;2},LAMBDA(a,b,a)))",
+        "=ROWS(SCAN(0,{1,2},LAMBDA(a,a)))",
+        "=ROWS(REDUCE(0,{1,2},NA()))",
+    ];
+    for (row, formula) in refused.iter().enumerate() {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model._set("B1", "=INDEX(MAKEARRAY(2,2,LAMBDA(r,[c],r)),2,2)");
+    model._set("B2", "=INDEX(MAKEARRAY(2,2,_xleta.ROUND),2,2)");
+    model._set("B3", "=ROWS(MAKEARRAY(NA(),1,5))");
+    model._set("B4", "=INDEX(MAP({1,2},{3,4},LAMBDA(a,b,[c],a+b)),1,2)");
+    model.evaluate();
+    for (row, formula) in refused.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("A{}", row + 1)),
+            "#VALUE!",
+            "{formula}"
+        );
+    }
+    assert_eq!(model._get_text("B1"), "2");
+    assert_eq!(model._get_text("B2"), "2");
+    assert_eq!(model._get_text("B3"), "#N/A");
+    assert_eq!(model._get_text("B4"), "6");
+}
+
+#[test]
+fn stack_keeps_a_lambda_parameter_error_reference_as_an_element() {
+    // Excel (probes/t3765-stack-error-reference D10, D12, D17): a one-cell error reference passed
+    // through a LAMBDA parameter is a 1x1 array in VSTACK, not the call's error (T-3765).
+    let mut model = new_empty_model();
+    model._set("A1", "=1/0");
+    model._set("B1", "12");
+    model._set("D1", "=SCAN(B1,A1,LAMBDA(x,z,VSTACK(x,z)))");
+    model._set("D5", "=SCAN(B1,A1,LAMBDA(x,z,ROWS(VSTACK(x,z))))");
+    model._set("D6", "=MAP(A1,LAMBDA(z,ROWS(HSTACK(z,1))))");
+    model._set("D7", "=ROWS(VSTACK(\"12\",#DIV/0!))");
+    model.evaluate();
+    assert_eq!(model._get_text("D1"), "#CALC!");
+    assert_eq!(model._get_text("D5"), "2");
+    assert_eq!(model._get_text("D6"), "1");
+    assert_eq!(model._get_text("D7"), "#DIV/0!");
 }

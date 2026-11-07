@@ -1,0 +1,218 @@
+[
+ {
+  "rate": 6e-05,
+  "nper": 60,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 0,
+  "excel_cumipmt": -43.60706444761672
+ },
+ {
+  "rate": 8e-05,
+  "nper": 60,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 0,
+  "excel_cumipmt": -58.14589024579618
+ },
+ {
+  "rate": 0.0001,
+  "nper": 60,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 0,
+  "excel_cumipmt": -72.68628355221881
+ },
+ {
+  "rate": 0.000105,
+  "nper": 60,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 0,
+  "excel_cumipmt": -76.32162670940852
+ },
+ {
+  "rate": 0.00012,
+  "nper": 60,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 0,
+  "excel_cumipmt": -87.2282435768866
+ },
+ {
+  "rate": 0.00015,
+  "nper": 60,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 0,
+  "excel_cumipmt": -109.0441194821833
+ },
+ {
+  "rate": 0.0001,
+  "nper": 60,
+  "pv": 100000.0,
+  "start": 5,
+  "end": 5,
+  "type": 0,
+  "excel_cumipmt": -9.33519828870999
+ },
+ {
+  "rate": 0.0001,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 1,
+  "excel_cumipmt": -75.6129877611329
+ },
+ {
+  "rate": 8e-06,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 1,
+  "excel_cumipmt": -6.0480833114934285
+ },
+ {
+  "rate": 9e-06,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 1,
+  "excel_cumipmt": -6.804105438500301
+ },
+ {
+  "rate": 1e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 1,
+  "excel_cumipmt": -7.560130167765237
+ },
+ {
+  "rate": 1.1e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 1,
+  "excel_cumipmt": -8.316157499096335
+ },
+ {
+  "rate": 1.2e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 1,
+  "excel_cumipmt": -9.072187432296232
+ },
+ {
+  "rate": 2e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 1,
+  "excel_cumipmt": -15.120520542116537
+ },
+ {
+  "rate": 5e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 3,
+  "end": 10,
+  "type": 1,
+  "excel_cumipmt": -37.80325097037894
+ },
+ {
+  "rate": 2e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 4,
+  "end": 4,
+  "type": 1,
+  "excel_cumipmt": -1.9400193807944106
+ },
+ {
+  "rate": 2e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 6,
+  "end": 6,
+  "type": 1,
+  "excel_cumipmt": -1.9000569694098886
+ },
+ {
+  "rate": 2e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 7,
+  "end": 7,
+  "type": 1,
+  "excel_cumipmt": -1.8800751642795603
+ },
+ {
+  "rate": 2e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 10,
+  "end": 10,
+  "type": 1,
+  "excel_cumipmt": -1.8201273510396732
+ },
+ {
+  "rate": 2e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 11,
+  "end": 11,
+  "type": 1,
+  "excel_cumipmt": -1.800143947316883
+ },
+ {
+  "rate": 2e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 12,
+  "end": 12,
+  "type": 1,
+  "excel_cumipmt": -1.7801601439258548
+ },
+ {
+  "rate": 2e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 13,
+  "end": 13,
+  "type": 1,
+  "excel_cumipmt": -1.7601759408589714
+ },
+ {
+  "rate": 2e-05,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 14,
+  "end": 14,
+  "type": 1,
+  "excel_cumipmt": -1.7401913381080476
+ },
+ {
+  "rate": 2e-06,
+  "nper": 100,
+  "pv": 100000.0,
+  "start": 4,
+  "end": 4,
+  "type": 1,
+  "excel_cumipmt": -0.19400019398062796
+ }
+]

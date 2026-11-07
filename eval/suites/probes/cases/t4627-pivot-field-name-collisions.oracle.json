@@ -1,0 +1,1080 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Sales"
+    },
+    {
+     "name": "Sales2"
+    },
+    {
+     "name": "Sales3"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Total"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 10.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PvSufA",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P_SufA"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Sales"
+    },
+    {
+     "name": "Sales2"
+    },
+    {
+     "name": "Sales22"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Total"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 10.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PvSufB",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P_SufB"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Sales"
+    },
+    {
+     "name": "Field4"
+    },
+    {
+     "name": "Field42"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Total"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 10.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PvFldA",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P_FldA"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Sales"
+    },
+    {
+     "name": "X"
+    },
+    {
+     "name": "Field42"
+    },
+    {
+     "name": "Field4"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Total"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 10.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PvFldB",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P_FldB"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Sales"
+    },
+    {
+     "name": "X"
+    },
+    {
+     "name": "Field4"
+    },
+    {
+     "name": "Y"
+    },
+    {
+     "name": "Z"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Total"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 10.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PvOff",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P_Off"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Sales"
+    },
+    {
+     "name": "X"
+    },
+    {
+     "name": "Field4"
+    },
+    {
+     "name": "Y"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Total"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 10.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PvEmpty",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P_Empty"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Sales"
+    },
+    {
+     "name": "Sales2"
+    },
+    {
+     "name": "SALES3"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Total"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 10.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PvConst",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P_Const"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Sales"
+    },
+    {
+     "name": " "
+    },
+    {
+     "name": " 2"
+    },
+    {
+     "name": "X"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Total"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 10.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PvSpace",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P_Space"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Sales"
+    },
+    {
+     "name": "\u00e9"
+    },
+    {
+     "name": "\u00c92"
+    },
+    {
+     "name": "\u00df"
+    },
+    {
+     "name": "SS2"
+    },
+    {
+     "name": "ss3"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "\u00e9"
+    },
+    "A5": {
+     "t": "s",
+     "v": "\u00df"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Stra\u00dfe"
+    },
+    "A7": {
+     "t": "s",
+     "v": "SS"
+    },
+    "A8": {
+     "t": "s",
+     "v": "STRASSE"
+    },
+    "A9": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Total"
+    },
+    "B4": {
+     "t": "n",
+     "v": 3.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 4.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 32.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 24.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 64.0
+    },
+    "B9": {
+     "t": "n",
+     "v": 127.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B9",
+   "name": "PvFold",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      5
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P_Fold"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Sales"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "a"
+    },
+    "A5": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "A6": {
+     "t": "empty"
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Total"
+    },
+    "B4": {
+     "t": "n",
+     "v": 17.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 4.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 10.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 31.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B7",
+   "name": "PvRec",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "P_Rec"
+  }
+ ],
+ "sheets": {
+  "Const": {},
+  "Empty": {},
+  "FldA": {
+   "D1": {
+    "t": "s",
+    "v": ""
+   }
+  },
+  "FldB": {
+   "D1": {
+    "t": "s",
+    "v": ""
+   }
+  },
+  "Fold": {
+   "A3": {
+    "t": "s",
+    "v": "\u00c9"
+   },
+   "A5": {
+    "t": "s",
+    "v": "SS"
+   },
+   "A6": {
+    "t": "s",
+    "v": "ss"
+   },
+   "A8": {
+    "t": "s",
+    "v": "STRASSE"
+   },
+   "D1": {
+    "t": "s",
+    "v": "\u00c9"
+   },
+   "F1": {
+    "t": "s",
+    "v": "SS"
+   },
+   "G1": {
+    "t": "s",
+    "v": "ss"
+   }
+  },
+  "Off": {
+   "E1": {
+    "t": "s",
+    "v": ""
+   }
+  },
+  "P_Const": {},
+  "P_Empty": {},
+  "P_FldA": {},
+  "P_FldB": {},
+  "P_Fold": {},
+  "P_Off": {},
+  "P_Rec": {},
+  "P_Space": {},
+  "P_SufA": {},
+  "P_SufB": {},
+  "Q": {
+   "A1": {
+    "t": "n",
+    "v": 11.0
+   }
+  },
+  "Rec": {
+   "A3": {
+    "t": "s",
+    "v": ""
+   },
+   "A5": {
+    "t": "s",
+    "v": ""
+   }
+  },
+  "Space": {
+   "C1": {
+    "t": "s",
+    "v": " "
+   },
+   "D1": {
+    "t": "s",
+    "v": " "
+   }
+  },
+  "SufA": {
+   "D1": {
+    "t": "s",
+    "v": "Sales"
+   }
+  },
+  "SufB": {
+   "C1": {
+    "t": "s",
+    "v": "Sales"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "c94a7b77f7d0c73ccf026308fbbc09813decf05e0fe01c02fcc7f4ef50c7b7f4",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-06T16:10:16+00:00",
+  "version": null,
+  "workbook_name": "5a1b79b77ad9f4714f8f9f7d81dd8eb5ffdf8cb709a39f1940be23f5c649a00d.xlsx"
+ }
+}

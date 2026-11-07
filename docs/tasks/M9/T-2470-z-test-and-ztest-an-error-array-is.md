@@ -3,12 +3,12 @@ id: T-2470
 title: "Z.TEST and ZTEST: an error array is that error, one data value is #DIV/0! before sigma, a lone text or boolean cell is #N/A (gen-m9, 37 cells)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
 depends_on: []
-campaign: visible
+campaign: semantics
 ---
 
 ## Goal
@@ -81,17 +81,25 @@ Cells:
 - gen-m9/a790a4d4a6a82756.case.json (1): Calc!A308
 - gen-m9/eced4bb6a0234c9e.case.json (1): Calc!A34
 
+T-2496 probe (probes/t2496-fin-subexpressions, each case's Data sheet copied as Dnn, every call and compound argument read through a TYPE/shape summary, excel-graph, 2026-10-25; probes/tbill-error-order-inner-calls for the T-bill cells): the innermost diverging sub-expression of 2 gen-m9 financial cells moved here from T-2496. The first is a two-cell range with one number (`#DIV/0!`, like `{5}`); the second a lone empty cell (`#N/A`), both as statistics.md "Z.TEST: an error array first" says.
+
+| gen-m9 cell | innermost sub-expression | Excel | ours |
+|---|---|---|---|
+| gen-m9/5422bdbf173fc233 Calc!A227 | `ZTEST(Data!D7:D8,Data!$A12,Data!$B10)` (D7:D8 = FALSE, 42; one number; sigma FALSE) | #DIV/0! | #NUM! |
+| gen-m9/bc04c1f478c9896c Calc!A275 | `ZTEST(Data!$A10,(1.005/2.5),100)` (A10 empty, a lone cell) | #N/A | #VALUE! |
+
 ## Acceptance criteria
-- [ ] Visible parity (gen-m9, T-2436): these 4 known-failure lines disappear from eval/baseline/gen-m9.txt
+- [x] Visible parity (gen-m9, T-2436): these 4 known-failure lines disappear from eval/baseline/gen-m9.txt
       (`make eval-baseline`), with no new known-failure lines in any baseline.
-- [ ] Visible parity (gen-m9, T-2258): these 2 known-failure lines disappear from eval/baseline/gen-m9.txt
+- [x] Visible parity (gen-m9, T-2258): these 2 known-failure lines disappear from eval/baseline/gen-m9.txt
       (`make eval-baseline`), with no new known-failure lines in any baseline.
-- [ ] Visible parity (gen-m9, T-2256): these 35 known-failure lines disappear from eval/baseline/gen-m9.txt
+- [x] (Partly met; rest in T-2775) Visible parity (gen-m9, T-2256): these 35 known-failure lines disappear from eval/baseline/gen-m9.txt
       (`make eval-baseline`), with no new known-failure lines in any baseline.
-- [ ] Unit tests: `Z.TEST(1/0,"x")` is `#DIV/0!`, `Z.TEST({5},3,-1)` `#DIV/0!`, `Z.TEST(A1,1)` with A1 = "x" `#N/A`,
-      `Z.TEST(A1:A1,1)` with A1 = "x" `#DIV/0!`, and `Z.TEST(A1:A8,4,0)` stays `#NUM!`.
-- [ ] statistics.md's T-2256 Z.TEST entry gets an "Ours:" line naming this task.
-- [ ] `make check` green; reviewers approve.
+- [x] Unit tests: `Z.TEST(1/0,"x")` is `#DIV/0!`, `Z.TEST({5},3,-1)` `#DIV/0!`, `Z.TEST(A1,1)` with A1 = "x" `#N/A`,
+      `Z.TEST(A1:A1,1)` with A1 = "x" `#N/A` (amended: statistics.md evidence), and `Z.TEST(A1:A8,4,0)` stays `#NUM!`.
+- [x] statistics.md's T-2256 Z.TEST entry gets an "Ours:" line naming this task.
+- [x] Visible parity (gen-m9, T-2496): the 2 known-failure lines of the T-2496 probe block above disappear from eval/baseline/gen-m9.txt (`make eval-baseline`), with no new known-failure lines in any baseline.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Z.TEST's tail accuracy and the sigma/sqrt(n) underflow (T-1942).
@@ -100,3 +108,11 @@ Cells:
 Decision 0083 (gap triage 2026-10-23, T-2256): every cell it owns has the wrong type, error or text (none is a last-digit difference), so the task is in the campaign. Its target is that every cell it owns
 has Excel's type, error and text, or is within half a unit of the 15th significant digit of Excel's value; the visible-parity
 criterion under Acceptance criteria states it.
+
+## Outcome
+Z.TEST/ZTEST: a one-value data argument is `#DIV/0!` before a sigma of 0 or below, and a plain single-cell
+reference holding text, a boolean or nothing is `#N/A`. Eval delta: 24 gen-m9 known-failure lines fixed, no regressions.
+Not fixed: the remaining owned cells (nested sub-expressions; A294 and A324 untraced); filed as T-2775. Deviation
+from the criteria: the unit test has `Z.TEST(A1:A1,1)` with text as `#N/A`, where the criterion lists `#DIV/0!`; the
+statistics.md evidence for `C7:C7` (5919660b7bb4d195 A364) says `#N/A`. The probes.txt lines removed are probe cells
+that passed once the one-value order changed (made by `make eval-baseline`).

@@ -2,7 +2,7 @@
 
 use crate::{
     cell::CellValue,
-    test::util::{check_cells, new_empty_model},
+    test::util::{check_cells, check_cells_with_numbers, new_empty_model},
 };
 
 #[test]
@@ -105,6 +105,135 @@ fn fn_rate_secant_excel_bits() {
             ("A7", "=RATE(360,-599.55,100000,0,0,0.4615)", "#NUM!"),
             // probes-numeric/m9-fin-irr-rate A371: the secant's root is below -1
             ("A8", "=RATE(10,PMT(0.3,10,10000),10000)", "#NUM!"),
+        ],
+    );
+}
+
+/// RATE holds on a flat secant (financial.md "RATE holds on a flat secant", T-3348): near the
+/// root of a long annuity |f| is rounding noise above 1e-7, the secant stalls with f1 = f0, and
+/// Excel returns the held iterate when |f| is below the cap's 1e-4 (probes/t3348-rate-fv-nonzero).
+#[test]
+fn fn_rate_holds_on_a_flat_secant() {
+    check_cells(
+        &[],
+        &[
+            // probes/t3348-rate-fv-nonzero A1: decision 0188's example, a zero step at |f| 3.2e-7
+            (
+                "A1",
+                "=RATE(239,-14841.27102594,344293.4825124,-155496.6323522,0)",
+                "0.04310546919282547",
+            ),
+            // probes/t3348-rate-fv-nonzero A10: the same run at 2^8 the scale, |f| 8.3e-5
+            (
+                "A2",
+                "=RATE(239,-14841.27102594*2^8,344293.4825124*2^8,-155496.6323522*2^8,0)",
+                "0.04310546919282547",
+            ),
+            // probes/t3348-rate-fv-nonzero A182: f1 = f0 at two iterates 7e-18 apart, type 1
+            (
+                "A3",
+                "=RATE(189,-90562.52118237,2416244.605283,-2145.356961869,1)",
+                "0.0389104591457023",
+            ),
+            // probes/t3348-rate-fv-nonzero A99: held at |f| 1.6e-4, over the cap's 1e-4
+            ("A4", "=RATE(234,2469.37,-28911.03,-549000.41,1)", "#NUM!"),
+            // probes/rate-zero-residual-guess A1: flat on a residual of exactly 0
+            ("A5", "=RATE(1,0,0,0)", "#NUM!"),
+        ],
+    );
+}
+
+/// An early flat secant on two distinct iterates with |f1| < 1e-4 restarts the run once from the
+/// older iterate (financial.md "RATE restarts once on an early flat secant", T-3698).
+#[test]
+fn fn_rate_restarts_on_an_early_flat_secant() {
+    check_cells(
+        &[],
+        &[
+            // probes/t3579-rate-residual-nper1 A1: flat at step 3, |f| 1.7e-7; the restarted run is
+            // A6's, whose guess is the flat step's older iterate 0.0020941704345913
+            (
+                "A1",
+                "=RATE(1,2560574.93,-2543613.41,-11634.76,0)",
+                "0.002094170434484841",
+            ),
+            (
+                "A2",
+                "=RATE(1,2560574.93,-2543613.41,-11634.76,0,0.0020941704345913)",
+                "0.002094170434484841",
+            ),
+            // probes/t3698-rate-flat-restart A1: the same run at 2^10 the scale, |f| 1.7e-4, holds
+            // and fails the cap's test
+            (
+                "A3",
+                "=RATE(1,2560574.93*2^10,-2543613.41*2^10,-11634.76*2^10,0)",
+                "#NUM!",
+            ),
+            // probes/t3698-rate-flat-restart A49 (gate-a-fresh A187): flat at step 70, past the bound, holds
+            (
+                "A4",
+                "=RATE(2,4670416862.51754,-9176930088.60565,-157419359.724444,0,0.1)",
+                "0.0004737270505260268",
+            ),
+        ],
+    );
+}
+
+/// RATE's secant runs on past an iterate at or below -1 and only its result must be above -1
+/// (financial.md "RATE holds on a flat secant and runs on below -1", T-3348).
+#[test]
+fn fn_rate_runs_on_below_minus_one() {
+    check_cells(
+        &[],
+        &[
+            // probes-numeric/t3348-rate-gate-a-sweep A171: the first step lands at -1.48
+            (
+                "A1",
+                "=RATE(5,1650044.83915129,-2172916.57215492,294.348120976469,0)",
+                "0.7069774195050786",
+            ),
+            // probes/t3348-rate-below-minus-one A21, A28: back above -1
+            (
+                "A2",
+                "=RATE(3,3735.938842325,-6629.520726773,4839.177771065,1)",
+                "1.2149215363749337",
+            ),
+            (
+                "A3",
+                "=RATE(12,7.219302529839,-62.09095397375,-23.2320462273,1,-0.5)",
+                "0.00667837581646823",
+            ),
+            // probes/t3348-rate-below-minus-one A3: converges below -1
+            (
+                "A4",
+                "=RATE(4,-29.08640117694,104.8028437104,1.6496936838,0,-0.5)",
+                "#NUM!",
+            ),
+        ],
+    );
+}
+
+/// IRR's NPV takes Excel's twice-rounded `*` and `+` (financial.md "IRR is a secant in d = 1 - v",
+/// T-3205): in plain doubles both calls stop one secant iterate early, 16 ulp off.
+#[test]
+fn fn_irr_npv_rounds_twice() {
+    check_cells(
+        &[],
+        &[
+            // probes-numeric/m9-fin-irr-rate Calc!A214
+            (
+                "A1",
+                "=IRR({-1000,230,200,125,200,10},5)",
+                "-0.10150067605359347",
+            ),
+            // gen-m9/67a4c03afd63f988 Calc!A395 (its flows as a literal)
+            ("A2", "=IRR({0.5,0.1,-0.5},0.5)", "-0.09501243788791103"),
+            // gen-m9/9d9ceba257f8001b Calc!A85 (its Data!A8 is blank, which NPV skips)
+            (
+                "A3",
+                "=NPV(1E-10,{-100,50,60,0,0},{0,0,0})",
+                "9.999999981999995",
+            ),
         ],
     );
 }
@@ -356,12 +485,14 @@ fn fn_nominal() {
 // fuzz crash on `DB(6912,0,1E+300,2,6)`, T-2570).
 #[test]
 fn fn_db_huge_life_does_not_overflow() {
+    // A life past i32::MAX is #NUM! from period 1 on (financial.md "DB and SYD argument
+    // domains"; gen-m9, probes/fin-syd-db-domain G5).
     let mut model = new_empty_model();
     model._set("A1", "=DB(6912,0,1E+300,2,6)");
     model._set("A2", "=DB(6912,1,1E+300,3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "$3,456.00");
-    assert_eq!(model._get_text("A2"), "$0.00");
+    assert_eq!(model._get_text("A1"), "#NUM!");
+    assert_eq!(model._get_text("A2"), "#NUM!");
 }
 
 #[test]
@@ -484,6 +615,43 @@ fn fn_tbillyield() {
     assert_eq!(model._get_text("C2"), *"#ERROR!");
 }
 
+// The T-bills floor both dates, so a settlement from 0 to below 1 is serial 0, a valid date
+// (probes/tbill-settlement-below-one, gen-m9 0a957119475760c5 A309, e8d55ec393460bb7 A287,
+// ba4ddb817a8e700e A135; T-2487).
+#[test]
+fn tbills_take_a_settlement_below_one() {
+    check_cells(
+        &[],
+        &[
+            ("A1", "=TBILLPRICE(1E-15,1,100)", "72.22222222222221"),
+            ("A2", "=TBILLPRICE(0.3,1,0.1)", "99.97222222222221"),
+            ("A3", "=TBILLPRICE(0.5,1.9,0.1)", "99.97222222222221"),
+            ("A4", "=TBILLPRICE(0.5,0.9,0.1)", "#NUM!"),
+            ("A5", "=TBILLPRICE(0,366,0.1)", "89.83333333333333"),
+            ("A6", "=TBILLPRICE(0,367,0.1)", "#NUM!"),
+            (
+                "A7",
+                "=TBILLPRICE(39000.7,39001.2,0.1)",
+                "99.97222222222221",
+            ),
+            ("A8", "=TBILLPRICE(60,426,0.1)", "89.83333333333333"),
+            ("A9", "=TBILLPRICE(61,427,0.1)", "#NUM!"),
+            ("A10", "=TBILLPRICE(45351,45717,0.1)", "89.83333333333333"),
+            ("B1", "=TBILLYIELD(1E-15,1,98)", "7.346938775510203"),
+            ("B2", "=TBILLYIELD(0.3,1,98)", "7.346938775510203"),
+            ("B3", "=TBILLYIELD(0.5,1,98)", "7.346938775510203"),
+            ("B4", "=TBILLYIELD(0,366,98)", "0.020073603211776512"),
+            ("B5", "=TBILLYIELD(0,367,98)", "#NUM!"),
+            ("B6", "=TBILLYIELD(1E-15,100,1E+300)", "-3.6"),
+            ("C1", "=TBILLEQ(1E-15,1,0.05/12)", "0.004224585932707554"),
+            ("C2", "=TBILLEQ(0.3,1,0.05/12)", "0.004224585932707554"),
+            ("C3", "=TBILLEQ(0.5,1,0.05/12)", "0.004224585932707554"),
+            ("C4", "=TBILLEQ(0,200,0.1)", "0.10685341885245037"),
+            ("C5", "=TBILLEQ(0,366,0.1)", "0.11013984535998977"),
+        ],
+    );
+}
+
 #[test]
 fn fn_dollarde() {
     let mut model = new_empty_model();
@@ -573,6 +741,31 @@ fn fn_db_misc() {
     model.evaluate();
 
     assert_eq!(model._get_text("B1"), "$0.00");
+}
+
+// probes/t2475-stat-subexpressions A39, A92, A136, A165 and gen-m9/3c06f9298f65a3ba A50, A148
+// (excel-graph; financial.md "Annuity and DB argument domains at their limits").
+#[test]
+fn annuity_and_db_domain_errors() {
+    check_cells(
+        &[("B1", "FALSE")],
+        &[
+            // 0^0 is #NUM!; a P of 0 (rate -1, or underflow near it) is #DIV/0!
+            ("A1", "=ERROR.TYPE(PV(-1,0,-713))", "6"),
+            ("A2", "=ERROR.TYPE(PV(-1+2^-52,165,-978,224,0))", "2"),
+            ("A3", "=ERROR.TYPE(PV(-1,12,-100))", "2"),
+            // ln(1+1E-300) is 0; ln(1-1) is LN(0)
+            ("A4", "=ERROR.TYPE(NPER(1E-300,-113,3037,368,1))", "2"),
+            ("A5", "=ERROR.TYPE(NPER(-1,-31,1))", "6"),
+            // a boolean month from a cell is 0, not #VALUE!
+            ("A6", "=ERROR.TYPE(DB(15779,385,37,B1,B1))", "6"),
+            (
+                "A7",
+                "=DB(10000,1000,6,1,TRUE)=DB(10000,1000,6,1,1)",
+                "TRUE",
+            ),
+        ],
+    );
 }
 
 // ── whole-column range and a spill beyond the used area ─────────────────────
@@ -697,4 +890,330 @@ fn cumulative_start_period_below_one_is_num() {
     }
     assert_ne!(model._get_text("C1"), *"#NUM!");
     assert_ne!(model._get_text("C2"), *"#NUM!");
+}
+
+/// A guess at or above 2^53 is #VALUE!, before the flows are read (probes/irr-guess-edges,
+/// irr-guess-edges-2; T-2494).
+#[test]
+fn fn_irr_guess_at_or_above_two_to_the_53() {
+    let mut model = new_empty_model();
+    model._set("A1", "=IRR({-100,60,60},2^53-1)=IRR({-100,60,60})");
+    model._set("A2", "=IRR({-100,60,60},2^53)");
+    model._set("A3", "=IRR({-100,60,60},1E+300)");
+    model._set("A4", "=IRR(5,1E+300)");
+    model._set("A5", "=IRR(5)");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"TRUE");
+    assert_eq!(model._get_text("A2"), *"#VALUE!");
+    assert_eq!(model._get_text("A3"), *"#VALUE!");
+    assert_eq!(model._get_text("A4"), *"#VALUE!");
+    assert_eq!(model._get_text("A5"), *"#NUM!");
+}
+
+/// NPV sums v_i/d(i-1) left to right with d the running product of 1+rate, then divides by
+/// 1+rate once: Excel's residues at IRR's root, to the bit (financial.md "NPV's residue at IRR's
+/// root is not the double sum"; IRR.xlsx General!M2, M3, M8, Three Parameters!E2,
+/// probes/fin-argument-modes H367, m9-fin-nper-npv A148; T-2672).
+#[test]
+fn fn_npv_running_product_then_one_division() {
+    check_cells_with_numbers(
+        &[
+            ("B1", 0.079_308_261_160_397_24),
+            ("B2", -0.101_500_676_053_584_7),
+            ("B3", -0.443_506_941_334_327_55),
+            ("B4", 1.091_399_510_766_422E-7),
+        ],
+        &[],
+        &[
+            ("A1", "=NPV(B1,-20,5,5,5,5,5)", "6.4212018552224666E-12"),
+            (
+                "A2",
+                "=NPV(B2,-1000,230,200,125,200,10)",
+                "-2.8358465972398184E-11",
+            ),
+            ("A3", "=NPV(B3,-70,12,15)", "-1.579429159894141E-10"),
+            ("A4", "=NPV(B4,1,-2,1)", "1.187938506697367E-14"),
+            (
+                "A5",
+                "=NPV(0.1,-10000,2750,4250,3250,2750)",
+                "302.233453999042",
+            ),
+            (
+                "A6",
+                "=NPV(0.1,-1E6,250000,250000,250000,250000,250000)",
+                "-47548.46149808013",
+            ),
+        ],
+    );
+}
+
+/// NPV is #DIV/0! where 1+rate is 0 or a power a later period builds on leaves the double range;
+/// the last period's power may overflow (probes/npv-power-edges, npv-power-edges-2; T-2493).
+#[test]
+fn fn_npv_discount_past_the_double_range() {
+    let mut model = new_empty_model();
+    model._set("A1", "=NPV(-1,0)");
+    model._set("A2", "=NPV(-1,{1,2})");
+    model._set("A3", "=NPV(1E+300,1,1E+300)=2E-300");
+    model._set("A4", "=NPV(1E+300,1,0,0)");
+    model._set("A5", "=NPV(1,SEQUENCE(1024))=2-2^-52");
+    model._set("A6", "=NPV(1,SEQUENCE(1025))");
+    model._set("A7", "=NPV(-0.5,SEQUENCE(1023,1,0,0))=0");
+    model._set("A8", "=NPV(-0.5,SEQUENCE(1074,1,0,0))");
+    model._set("A9", "=NPV(9E+307,1)=0");
+    model._set("A10", "=NPV(-2,1,1)=0");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#DIV/0!");
+    assert_eq!(model._get_text("A2"), *"#DIV/0!");
+    assert_eq!(model._get_text("A3"), *"TRUE");
+    assert_eq!(model._get_text("A4"), *"#DIV/0!");
+    assert_eq!(model._get_text("A5"), *"TRUE");
+    assert_eq!(model._get_text("A6"), *"#DIV/0!");
+    assert_eq!(model._get_text("A7"), *"TRUE");
+    assert_eq!(model._get_text("A8"), *"#DIV/0!");
+    assert_eq!(model._get_text("A9"), *"TRUE");
+    assert_eq!(model._get_text("A10"), *"TRUE");
+}
+
+/// An error in a range or an array is NPV's result only when no direct argument errs; the
+/// first such error wins among them (probes/npv-power-edges A36-A51, npv-power-edges-2; T-2493).
+#[test]
+fn fn_npv_defers_range_and_array_errors() {
+    let mut model = new_empty_model();
+    model._set("Q1", "1");
+    model._set("Q2", "=1/0");
+    model._set("A1", "=NPV(0.1,{1,#DIV/0!},\"x\")");
+    model._set("A2", "=NPV(0.1,Q1:Q2,NA())");
+    model._set("A3", "=NPV(0.1,{#N/A},#DIV/0!)");
+    model._set("A4", "=NPV(0.1,{1,#N/A},Q1:Q2)");
+    model._set("A5", "=NPV(0.1,Q1:Q2,{1,#N/A})");
+    model._set("A6", "=NPV(1.0049,0,SEQUENCE(2)/0,5)");
+    model._set("A7", "=NPV(1E+300,1,1,{1,#N/A})");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#VALUE!");
+    assert_eq!(model._get_text("A2"), *"#N/A");
+    assert_eq!(model._get_text("A3"), *"#DIV/0!");
+    assert_eq!(model._get_text("A4"), *"#N/A");
+    assert_eq!(model._get_text("A5"), *"#DIV/0!");
+    assert_eq!(model._get_text("A6"), *"#DIV/0!");
+    assert_eq!(model._get_text("A7"), *"#N/A");
+}
+
+#[test]
+fn fn_db_negative_salvage_is_an_error_value() {
+    // A negative salvage is #NUM! as a value, not a NaN number ISNUMBER sees (T-2551; gen-m9
+    // f066968376660329 A244).
+    let mut model = new_empty_model();
+    model._set("A1", "=ISNUMBER(DB(59341,-1,28,6,12))");
+    model._set("A2", "=ISERROR(DB(59341,-1,28,6,12))");
+    model._set("A3", "=DB(59341,-1,28,6,12)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "FALSE");
+    assert_eq!(model._get_text("A2"), "TRUE");
+    assert_eq!(model._get_text("A3"), "#NUM!");
+}
+
+/// XIRR reads a written empty guess as the default 0.1 but an empty cell as guess 0; IRR reads
+/// both as 0 (probes/xirr-irr-empty-guess; T-2688).
+#[test]
+fn fn_xirr_empty_guess_is_the_default() {
+    let mut model = new_empty_model();
+    let flows = "{-10000,2750,4250,3250,2750},{39448,39508,39751,39859,39904}";
+    model._set("A1", &format!("=XIRR({flows},)=XIRR({flows})"));
+    model._set("A2", &format!("=XIRR({flows},)=XIRR({flows},0)"));
+    model._set("A3", &format!("=XIRR({flows},E1)=XIRR({flows},0)"));
+    let irr_flows = "{-70000,12000,15000,18000,21000,26000}";
+    model._set("A4", &format!("=IRR({irr_flows},)=IRR({irr_flows},0)"));
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"TRUE");
+    assert_eq!(model._get_text("A2"), *"FALSE");
+    assert_eq!(model._get_text("A3"), *"TRUE");
+    assert_eq!(model._get_text("A4"), *"TRUE");
+}
+
+// Past `(1+rate)^nper`'s range a fractional nper gives what an integer one does; type 1 at a rate
+// that is not a whole number is `-B*(rate/(1+rate))`, at a whole rate the exact quotient
+// (probes/t2665-ipmt-fractional-nper-past-range A160, A208; gen-m9 b73c6cc96e093f03 A268; T-2665).
+#[test]
+fn ipmt_past_the_range_fractional_nper_is_the_integer_value() {
+    let mut model = new_empty_model();
+    model._set("A1", "=IPMT(0.5,50,100000.5,92160,674,1)");
+    model._set("A2", "=IPMT(1.005,7,18518518.44345,92160,674,1)");
+    model._set("A3", "=IPMT(1.005,7,100000,92160,674,1)");
+    model._set("A4", "=IPMT(42,8,290,392736,-0.5,1)");
+    model._set("A5", "=IPMT(0.1,7,1000000.25,1000,0,0)");
+    model.evaluate();
+    let number = |row| model.get_cell_value_by_index(0, row, 1);
+    assert_eq!(number(1), Ok(CellValue::Number(-30720.0)));
+    assert_eq!(number(2), Ok(CellValue::Number(-46194.91271820449)));
+    assert_eq!(number(3), Ok(CellValue::Number(-46194.91271820449)));
+    assert_eq!(number(4), Ok(CellValue::Number(-383602.6046511628)));
+    assert_eq!(number(5), Ok(CellValue::Number(-100.0)));
+}
+
+/// XIRR returns an error values argument first, then an error dates argument, before it reads the
+/// values' cells (gen-m9/67a4c03afd63f988 A241, 79d87fc527927626 A228; T-2611).
+#[test]
+fn fn_xirr_error_arguments_before_the_value_cells() {
+    let mut model = new_empty_model();
+    model._set("B1", "-100");
+    model._set("B2", "x");
+    model._set("A1", "=XIRR(B1:B2,1/0)");
+    model._set("A2", "=XIRR(#VALUE!,1/0)");
+    model._set("A3", "=XIRR(B1:B2,{39448,39508})");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#DIV/0!");
+    assert_eq!(model._get_text("A2"), *"#VALUE!");
+    assert_eq!(model._get_text("A3"), *"#VALUE!");
+}
+
+/// XIRR's error guess comes before an error dates argument, the size checks and the values' cells
+/// (gen-m9/1dce4774f5c0e736 A189, 1b60bf99d71424e7 A29; T-2611).
+#[test]
+fn fn_xirr_guess_error_before_the_dates_and_the_sizes() {
+    let mut model = new_empty_model();
+    model._set("B1", "-100");
+    model._set("B2", "x");
+    model._set("A1", "=XIRR(1E+21,1/0,SQRT(-1))");
+    model._set("A2", "=XIRR({-1000,300,400,500},{1,2},NA())");
+    model._set("A3", "=XIRR(B1:B2,{1,2,3},#DIV/0!)");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model._get_text("A2"), *"#N/A");
+    assert_eq!(model._get_text("A3"), *"#DIV/0!");
+}
+
+/// One empty or numeric-text cell beside a range of another count is the count's `#NUM!`, but one
+/// boolean cell keeps `#VALUE!` (gen-m9/1dce4774f5c0e736 A91, 89f0aee953a55a45 A330,
+/// c0681a8b150ce301 A266, 1cd3096e3e87c965 A48; T-2611).
+#[test]
+fn fn_xirr_one_empty_or_numeric_text_cell_is_the_count_error() {
+    let mut model = new_empty_model();
+    model._set("B1", "-100");
+    model._set("B2", "50");
+    model._set("B3", "60");
+    model._set("C1", "'1");
+    model._set("C2", "FALSE");
+    model._set("A1", "=XIRR(D1:D1,B1:B3)");
+    model._set("A2", "=XIRR(B1:B3,D1,0.5)");
+    model._set("A3", "=XIRR(B1:B3,C1)");
+    model._set("A4", "=XIRR(B1:B3,C2)");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model._get_text("A2"), *"#NUM!");
+    assert_eq!(model._get_text("A3"), *"#NUM!");
+    assert_eq!(model._get_text("A4"), *"#VALUE!");
+}
+
+/// Numeric text in a range cell reads as its number (probes/xirr-back-dated-stop A31, T-3267);
+/// non-numeric text stays `#VALUE!`; a boolean guess beside different counts is `#VALUE!`
+/// (gen-m9/b6a02893a8d6b151 A226).
+#[test]
+fn fn_xirr_reads_numeric_text_in_range_cells() {
+    let mut model = new_empty_model();
+    model._set("B1", "'-1000");
+    model._set("B2", "'1100");
+    model._set("C1", "'43831");
+    model._set("C2", "'44197");
+    model._set("D1", "-1000");
+    model._set("D2", "1100");
+    model._set("E1", "43831");
+    model._set("E2", "44197");
+    model._set("F1", "'x");
+    model._set("F2", "1100");
+    model._set("A1", "=XIRR(B1:B2,C1:C2)=XIRR(D1:D2,E1:E2)");
+    model._set("A2", "=XIRR(F1:F2,E1:E2)");
+    model._set("G1", "TRUE");
+    model._set("A3", "=XIRR(D1:D2,{43831,44197,44562},G1)");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"TRUE");
+    assert_eq!(model._get_text("A2"), *"#VALUE!");
+    assert_eq!(model._get_text("A3"), *"#VALUE!");
+}
+
+/// XIRR checks a date's bound on the date truncated to a whole day: 2958465.5 is a date, 2958466
+/// is `#NUM!`, -0.5 is `#NUM!` and 0.5 a date (probes/t4283-xirr-whole-day-date-bound A1-A7,
+/// T-4283). A later change that compares the raw date fails here.
+#[test]
+fn fn_xirr_date_bound_is_checked_on_the_whole_day() {
+    check_cells(
+        &[],
+        &[
+            (
+                "A1",
+                "=ISNUMBER(XIRR({-100,100.001},{2958464,2958465.5}))",
+                "TRUE",
+            ),
+            ("A2", "=XIRR({-100,100.001},{2958464,2958466})", "#NUM!"),
+            ("A3", "=XIRR({-100,200},{-0.5,43831})", "#NUM!"),
+            ("A4", "=XIRR({-100,200},{-1,43831})", "#NUM!"),
+            ("A5", "=ISNUMBER(XIRR({-100,200},{0.5,43831}))", "TRUE"),
+        ],
+    );
+}
+
+/// T-2603: a values range whose first cell is no number is `#VALUE!` (probes/t2603-xnpv-no-number-values),
+/// and the dates scan behind it stops at the used area, so a dates range to the sheet's last cell is
+/// read at once.
+#[test]
+fn xnpv_first_value_refused_bounded() {
+    check_cells(
+        &[("A5", "5"), ("B11", "100"), ("B12", "0")],
+        &[
+            ("C1", "=XNPV(1,A4:A5,B11:B12)", "#VALUE!"),
+            ("C2", "=XNPV(1,A5:A6,B11:B12)", "#NUM!"),
+            // 2 values against a 17-billion-cell dates range: the count's #NUM!, with no scan.
+            ("C3", "=XNPV(1,A2:A3,B11:XFD1048576)", "#NUM!"),
+            // Equal counts, both ranges far past the used area.
+            ("C4", "=XNPV(1,A2:A1048567,B11:B1048576)", "#VALUE!"),
+        ],
+    );
+}
+
+/// T-2603 review: the dates scan behind a refused first value reads only the stored cells, so two
+/// far-apart dates cost two reads, not the 327-million-cell area between them.
+#[test]
+fn xnpv_first_value_refused_sparse_dates() {
+    check_cells(
+        &[("A300", "100"), ("XFD20299", "5"), ("XFD20298", "FALSE")],
+        &[
+            // The formulas sit below both ranges: in B1 and B2 they were inside their own values
+            // range, which the element walk (T-3815) reads cell by cell, a circular reference.
+            ("B30001", "=XNPV(1,A1:XFD20000,A300:XFD20299)", "#NUM!"),
+            ("B30002", "=XNPV(1,A1:XFD19998,A300:XFD20297)", "#VALUE!"),
+        ],
+    );
+}
+
+/// T-3815 review: XNPV's element walk reads only the stored cells, so long sparse ranges cost
+/// their stored cells. A later empty value behind a number is the walk's `#NUM!`
+/// (probes/t3815-xnpv-element-reading rows 28, 39). Behind a first value that is no number the
+/// walk does not run: an error date at the end of a long range leaves the first value's
+/// `#VALUE!` (T-2603; which comes first in Excel is unprobed).
+#[test]
+fn xnpv_walk_reads_stored_cells() {
+    check_cells(
+        &[
+            ("A1", "-100"),
+            ("A2", "30"),
+            ("B1", "39448"),
+            ("B2", "39508"),
+            ("D1", "39448"),
+            ("D1000000", "=NA()"),
+        ],
+        &[
+            ("F1", "=XNPV(0.1,A1:A1000000,B1:B1000000)", "#NUM!"),
+            ("F2", "=XNPV(0.1,C1:C1000000,D1:D1000000)", "#VALUE!"),
+            ("F3", "=XNPV(0.1,A2:A1000001,B1:B1000000)", "#NUM!"),
+            ("F4", "=XNPV(0.1,C2:C1000001,{1;2})", "#NUM!"),
+        ],
+    );
 }

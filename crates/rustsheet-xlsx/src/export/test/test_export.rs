@@ -154,7 +154,7 @@ fn test_formulas() {
 }
 
 /// The text of the part `name` of the xlsx file `path`.
-fn part_text(path: &str, name: &str) -> String {
+pub(super) fn part_text(path: &str, name: &str) -> String {
     let file = fs::File::open(path).unwrap();
     let mut archive = zip::ZipArchive::new(file).unwrap();
     let mut text = String::new();
@@ -241,7 +241,7 @@ fn test_array_formulas_keep_implicit_intersection() {
     fs::remove_file(temp_file_name).unwrap();
     assert_eq!(
         model.get_cell_formula(0, 2, 3).unwrap(),
-        Some("=POWER(@A1:A3,3)".to_string())
+        Some("=POWER(@A1:A3, 3)".to_string())
     );
     assert_eq!(
         model.get_cell_formula(0, 2, 4).unwrap(),
@@ -543,7 +543,127 @@ fn defined_name_scoped_to_a_missing_sheet_is_an_export_error() {
         name: "Print_Area".to_string(),
         formula: "Sheet1!$A$1".to_string(),
         sheet_id: Some(99),
+        hidden: false,
+        comment: None,
     });
-    let result = crate::export::workbook::get_workbook_xml(&model.workbook, 0);
+    let result = crate::export::workbook::get_workbook_xml(&model.workbook, 0, "");
     assert!(matches!(result, Err(XlsxError::Workbook(_))));
+}
+
+// `<definedName hidden="1" comment="...">` keeps both attributes through import, a sheet rename
+// and export, and a hidden name still evaluates (T-3301; ported from ironcalc 1e88d67b, 5d6e7be2).
+#[test]
+fn hidden_commented_defined_name_round_trips() {
+    let mut model = new_empty_model();
+    model.define_name("Secret", None, "Sheet1!$A$1").unwrap();
+    model.define_name("Local", Some(0), "Sheet1!$A$1").unwrap();
+    for name in &mut model.workbook.defined_names {
+        if name.name == "Secret" {
+            name.hidden = true;
+            name.comment = Some("a <b> & \"c\"\nline _x0041_".to_string());
+        }
+    }
+    model.rename_sheet("Sheet1", "Data").unwrap();
+    model
+        .set_user_input(0, 1, 8, "=Secret*2".to_string())
+        .unwrap();
+    model.evaluate();
+    let temp_file_name = "temp_file_test_hidden_commented_defined_name.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let workbook_xml = part_text(temp_file_name, "xl/workbook.xml");
+    assert!(
+        workbook_xml.contains(
+            "<definedName name=\"Secret\" comment=\"a &lt;b&gt; &amp; &quot;c&quot;&#xA;line _x005F_x0041_\" hidden=\"1\">Data!$A$1</definedName>"
+        ),
+        "{workbook_xml}"
+    );
+    assert!(
+        workbook_xml
+            .contains("<definedName name=\"Local\" localSheetId=\"0\">Data!$A$1</definedName>"),
+        "{workbook_xml}"
+    );
+
+    let mut loaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    fs::remove_file(temp_file_name).unwrap();
+    let names = &loaded.workbook.defined_names;
+    let secret = names.iter().find(|n| n.name == "Secret").unwrap();
+    assert!(secret.hidden);
+    assert_eq!(
+        secret.comment.as_deref(),
+        Some("a <b> & \"c\"\nline _x0041_")
+    );
+    let local = names.iter().find(|n| n.name == "Local").unwrap();
+    assert!(!local.hidden);
+    assert_eq!(local.comment, None);
+    loaded.evaluate();
+    assert_eq!(
+        loaded.get_formatted_cell_value(0, 1, 8).unwrap(),
+        model.get_formatted_cell_value(0, 1, 8).unwrap()
+    );
+
+    let icalc_name = "temp_file_test_hidden_commented_defined_name.icalc";
+    save_to_icalc(&loaded, icalc_name).unwrap();
+    let from_icalc = load_from_icalc(icalc_name, "en").unwrap();
+    fs::remove_file(icalc_name).unwrap();
+    assert_eq!(
+        from_icalc.workbook.defined_names,
+        loaded.workbook.defined_names
+    );
+}
+
+// Excel saves the whitespace FORMULATEXT shows in the `<f>` text: `=1 + 2` is `<f>1 + 2</f>` and
+// `=SUM( 1 )` is `<f>SUM( 1 )</f>`. Excel saves a line feed as raw CR LF bytes, which an XML reader
+// reads back as LF; the export writes it as the reference `&#xA;`, which reads back the same
+// (xlsx-storage.md "Typed whitespace is saved…", probes/t2786-whitespace-structured-refs-runs
+// H14:H17, T-2948).
+#[test]
+fn test_typed_whitespace_is_saved_in_the_formula_text() {
+    let mut model = new_empty_model();
+    let formulas = [
+        ("=1 + 2", "<f>1 + 2</f>"),
+        ("=SUM( 1 )", "<f>SUM( 1 )</f>"),
+        ("=1+\n 2", "<f>1+&#xA; 2</f>"),
+        ("=- 5 * 2", "<f>- 5 * 2</f>"),
+        ("=PI( )", "<f>PI( )</f>"),
+        ("=ABS( @A1:A3 ) + 1", "<f>ABS( A1:A3 ) + 1</f>"),
+        ("=SUM( @A1:A3, 1)", "<f>SUM( _xlfn.SINGLE(A1:A3), 1)</f>"),
+        // Saved as a one-cell dynamic array, as without the spaces, so its `<f>` has attributes.
+        (
+            "=LET( x, 1, x + 1)",
+            ">_xlfn.LET( _xlpm.x, 1, _xlpm.x + 1)</f>",
+        ),
+    ];
+    for (row, (formula, _)) in (1..).zip(formulas) {
+        model.set_user_input(0, row, 1, row.to_string()).unwrap();
+        model
+            .set_user_input(0, row, 2, formula.to_string())
+            .unwrap();
+    }
+    model
+        .set_user_array_formula(0, 1, 3, 1, 1, "=SUM( @A1:A3 ) * 2")
+        .unwrap();
+    model.evaluate();
+    let temp_file_name = "temp_file_test_typed_whitespace.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+
+    let sheet_xml = part_text(temp_file_name, "xl/worksheets/sheet1.xml");
+    for (_, saved) in formulas {
+        assert!(sheet_xml.contains(saved), "{saved} in {sheet_xml}");
+    }
+    assert!(
+        sheet_xml.contains(r#"<f t="array" ref="C1:C1">SUM( _xlfn.SINGLE(A1:A3) ) * 2</f>"#),
+        "{sheet_xml}"
+    );
+
+    let mut model = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    fs::remove_file(temp_file_name).unwrap();
+    model.evaluate();
+    for (row, (formula, _)) in (1..).zip(formulas) {
+        assert_eq!(
+            model.get_cell_formula(0, row, 2).unwrap(),
+            Some(formula.to_string())
+        );
+    }
+    assert_eq!(model.get_formatted_cell_value(0, 1, 2).unwrap(), "3");
+    assert_eq!(model.get_formatted_cell_value(0, 1, 3).unwrap(), "2");
 }

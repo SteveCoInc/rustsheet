@@ -1,15 +1,17 @@
-use super::reference_operators::{at_outside, wrong_range_shape};
+use super::reference_operators::{at_outside, is_reference_operand, wrong_range_shape};
 use super::{for_each_chain_operand_mut, Node};
 use crate::functions::lift::lifting_table_functions;
-use crate::functions::lookup_and_reference::lifts_into_references;
+use crate::functions::lookup_and_reference::lifts_into_reference_elements;
 use crate::functions::Function;
 use broadcast::{broadcast_shapes, static_analysis_operator_chain};
-use if_arm::{returns_range_arm, returns_single_cell_index};
+use if_arm::{indexes_one_reference_cell, returns_range_arm, returns_single_cell_index};
 use legacy::{
     add_argument_intersection, add_array_at, add_in_array_context, is_array_context,
     legacy_array_call_at, legacy_array_context, legacy_call_reads_a_value, let_returns_range,
     mark_legacy_reading,
 };
+use lifted::array_constant_context;
+use name_body::scalar_body;
 pub use redundant::remove_redundant_implicit_intersection;
 use redundant::remove_redundant_legacy_intersection;
 mod aggregate;
@@ -17,20 +19,22 @@ mod broadcast;
 mod if_arm;
 mod legacy;
 mod lifted;
+mod name_body;
+mod operand_array;
 mod redundant;
 mod reference_parameter;
 mod reference_result;
 mod row_column;
 mod signature;
 use signature::{
-    args_signature_arraytotext, args_signature_bycol_byrow, args_signature_cell,
-    args_signature_choose, args_signature_choosecols, args_signature_fieldvalue,
-    args_signature_filter, args_signature_getpivotdata, args_signature_groupby,
-    args_signature_hlookup, args_signature_ifs, args_signature_index, args_signature_lambda,
-    args_signature_let, args_signature_lookup, args_signature_map, args_signature_match,
-    args_signature_npv, args_signature_offset, args_signature_one_vector, args_signature_pivotby,
-    args_signature_randarray, args_signature_reduce, args_signature_row, args_signature_scalars,
-    args_signature_scan, args_signature_sumif, args_signature_textafter, args_signature_textsplit,
+    args_signature_bycol_byrow, args_signature_cell, args_signature_choose,
+    args_signature_choosecols, args_signature_fieldvalue, args_signature_filter,
+    args_signature_getpivotdata, args_signature_groupby, args_signature_hlookup,
+    args_signature_ifs, args_signature_index, args_signature_lambda, args_signature_let,
+    args_signature_lookup, args_signature_map, args_signature_match, args_signature_npv,
+    args_signature_offset, args_signature_one_vector, args_signature_pivotby,
+    args_signature_reduce, args_signature_row, args_signature_scalars, args_signature_scan,
+    args_signature_sumif, args_signature_textafter, args_signature_textsplit,
     args_signature_trimrange, args_signature_xlookup, args_signature_xmatch, Signature,
 };
 
@@ -75,9 +79,18 @@ use signature::{
 ///  * A:A => @A:A
 ///  * SIN(A1:D1) => SIN(@A1:D1)
 ///
-/// Assumes formula return a scalar
+/// Assumes formula return a scalar. The operators are those of the formula with no whitespace
+/// ([`Node::rewrite_as_unspaced`]).
 pub fn add_implicit_intersection(node: &mut Node, add: bool) {
-    legacy::add_root_legacy_intersection(node, add);
+    node.rewrite_as_unspaced(|node| legacy::add_root_legacy_intersection(node, add));
+}
+
+/// Whether a formula stored without the dynamic-array flag (a legacy `<f>`) is still dynamic in
+/// Excel: one that [`add_implicit_intersection`] leaves with no automatic `@` (a SWITCH, SEQUENCE
+/// or other dynamic-array function, a LAMBDA call, a spill reference), which Excel spills
+/// (docs/excel-semantics/references.md, T-3467).
+pub(crate) fn legacy_formula_is_dynamic(node: &Node) -> bool {
+    legacy::removes_automatic_at(node)
 }
 
 /// [`add_implicit_intersection`] with `arrays`: whether `node` is in a value position of the cell
@@ -91,6 +104,7 @@ pub(super) fn add_legacy_intersection(node: &mut Node, add: bool, arrays: bool) 
         | Node::NumberKind(_)
         | Node::StringKind(_)
         | Node::ErrorKind(_)
+        | Node::SheetRefErrorKind { .. }
         | Node::EmptyArgKind
         | Node::ParseErrorKind { .. }
         | Node::WrongReferenceKind { .. }
@@ -177,7 +191,10 @@ pub(super) fn add_legacy_intersection(node: &mut Node, add: bool, arrays: bool) 
         }
 
         // operations
-        Node::UnaryKind { right: child, .. } | Node::Group { child, .. } => {
+        Node::UnaryKind { right: child, .. }
+        | Node::Group { child, .. }
+        | Node::UnaryPlus { child }
+        | Node::Spaced { child, .. } => {
             add_legacy_intersection(child, add, arrays);
         }
         Node::OpConcatenateKind { .. }
@@ -195,9 +212,10 @@ pub(super) fn add_legacy_intersection(node: &mut Node, add: bool, arrays: bool) 
         // `=ABS(@Z30:Z32)+@swOne`; probes/legacy-at-defined-name-dynamic-funcs A20-V20), and so
         // does a defined-name lambda's call (`=ABS(@Z30:Z32)+@myId(1)`, probes/legacy-at-dynamic-
         // funcs-2 AE; T-2440). The call of a LET-bound one removes every `@`
-        // (`removes_automatic_at`).
+        // (`removes_automatic_at`). A name whose body is one literal or one cell takes none, as
+        // that body would not (`scalar_body`, T-3856).
         Node::DefinedNameKind(_) | Node::NamedFunctionKind { .. } => {
-            if add {
+            if add && scalar_body(node).is_none() {
                 *node = Node::automatic_at(node.clone());
             }
         }
@@ -212,11 +230,14 @@ pub(super) fn add_legacy_intersection(node: &mut Node, add: bool, arrays: bool) 
         Node::FunctionKind { kind, args } if is_array_context(kind) => add_in_array_context(args),
         Node::FunctionKind { kind, args } => {
             let signature = get_function_args_signature(kind, args.len());
-            for (index, arg) in args.iter_mut().enumerate() {
+            for index in 0..args.len() {
                 // Fixed-length signatures (D-functions, SMALL, ...) can be shorter than `args`; an
                 // extra argument is not scalar (indexing it panicked; found by fuzzing, T-0021).
-                let arrays = legacy_array_context(kind, signature.get(index), index, arg, arrays);
-                add_array_at(kind, signature.get(index), index, arg, arrays);
+                let (constant_signature, constant_arrays) =
+                    array_constant_context(kind, signature.get(index), index, args, arrays);
+                let arrays = legacy_array_context(kind, signature.get(index), index, args, arrays);
+                let arg = &mut args[index];
+                add_array_at(kind, constant_signature, index, arg, constant_arrays);
                 add_argument_intersection(kind, signature.get(index), index, arg, arrays);
             }
             if arrays {
@@ -233,9 +254,7 @@ pub(super) fn add_legacy_intersection(node: &mut Node, add: bool, arrays: bool) 
                 && (add || arrays)
                 && !legacy_call_reads_a_value(kind, args)
                 && match static_analysis_on_function(kind, args) {
-                    StaticResult::Range(_, _) | StaticResult::Unknown => {
-                        add && !returns_single_cell_index(kind, args)
-                    }
+                    StaticResult::Range(_, _) | StaticResult::Unknown => add,
                     // A one-cell array gives the same value with or without the `@`. Excel shows
                     // none on `=SUBTOTAL(9,CHOOSE(1,{5}))`, a 1x1 array shape here
                     // (probes/legacy-one-cell-shape-intersection J3); other one-cell calls are
@@ -293,12 +312,15 @@ pub(crate) fn run_static_analysis_on_node(node: &Node) -> StaticResult {
         | Node::NumberKind(_)
         | Node::StringKind(_)
         | Node::ErrorKind(_)
+        | Node::SheetRefErrorKind { .. }
         | Node::ParseErrorKind { .. }
         | Node::WrongReferenceKind { .. }
         | Node::EmptyArgKind => StaticResult::Scalar,
         Node::WrongRangeKind { .. } => wrong_range_shape(node), // T-1454
         Node::UnaryKind { right: child, .. }
         | Node::Group { child, .. }
+        | Node::UnaryPlus { child }
+        | Node::Spaced { child, .. }
         | Node::StructuredReferenceKind { lowered: child, .. } => {
             run_static_analysis_on_node(child)
         }
@@ -351,7 +373,9 @@ pub(crate) fn run_static_analysis_on_node(node: &Node) -> StaticResult {
         | Node::OpPowerKind { .. }
         | Node::CompareKind { .. } => static_analysis_operator_chain(node),
 
-        // Defined names: their shape is not tracked.
+        // Defined names: their shape is not tracked, but for a body of one literal or one cell
+        // (`scalar_body`, T-3856).
+        Node::DefinedNameKind(_) if scalar_body(node).is_some() => StaticResult::Scalar,
         Node::DefinedNameKind(_) => StaticResult::Unknown,
         Node::NamedVariableKind { .. } | Node::ImplicitIntersection { .. } => StaticResult::Scalar,
         Node::FunctionKind { kind, args } => static_analysis_on_function(kind, args),
@@ -386,10 +410,12 @@ fn criteria_static_result(args: &[Node], first: usize) -> StaticResult {
     broadcast_static_result(args.iter().skip(first).step_by(2))
 }
 
-/// COUNTIF, SUMIF and SUMIFS also call themselves once per element of an array of references in
-/// a range argument (`Function::per_reference_element`; SPEC-0014 rule 6,
+/// COUNTIF, COUNTIFS, SUMIF, SUMIFS, AVERAGEIF, AVERAGEIFS, MAXIFS and MINIFS also call themselves
+/// once per element of an array of references in a range argument
+/// (`Function::per_reference_element`; SPEC-0014 rule 6,
 /// `COUNTIF(OFFSET(A1,{0;1},0),">0")` spills 1, 1, probes/reference-lift-consumers E57): a range
-/// argument that is a lifted OFFSET or INDIRECT gives the shape, the criteria
+/// argument that is a lifted OFFSET or INDIRECT, or an XLOOKUP with an `if_not_found`
+/// ([`lifts_into_reference_elements`]), gives the shape, the criteria
 /// (`args[first]`, `args[first + 2]`, ...) only without one. Anything else does not:
 /// `SUMIF(IF(TRUE,A1:A6),"a",B1:B6)` stays a scalar call (probes/legacy-if-arm-range-argument U12).
 fn criteria_and_grid_static_result(kind: &Function, args: &[Node], first: usize) -> StaticResult {
@@ -399,12 +425,26 @@ fn criteria_and_grid_static_result(kind: &Function, args: &[Node], first: usize)
             per_element.takes_reference
         });
     let grids = args.iter().enumerate().filter_map(|(index, arg)| {
-        if !lifts_into_references(arg) || !takes_reference(index) {
+        if !lifts_into_reference_elements(arg) || !takes_reference(index) {
             return None;
         }
-        match run_static_analysis_on_node(arg) {
-            shape @ StaticResult::Array(..) => Some(shape),
-            _ => None,
+        match arg.ungrouped() {
+            // An XLOOKUP's grid has its lookup_value's shape, one cell gives none, and only a
+            // reference `if_not_found` builds it (the engine's `NotFound::Range`).
+            Node::FunctionKind {
+                kind: Function::Xlookup,
+                args,
+            } => {
+                if !args.get(3).is_some_and(is_reference_operand) {
+                    return None;
+                }
+                let (rows, columns) = run_static_analysis_on_node(args.first()?).counts()?;
+                ((rows, columns) != (1, 1)).then_some(StaticResult::Array(rows, columns))
+            }
+            _ => match run_static_analysis_on_node(arg) {
+                shape @ StaticResult::Array(..) => Some(shape),
+                _ => None,
+            },
         }
     });
     // Over a grid each call's own spill is cut to its top-left value (as the engine runs it),
@@ -462,7 +502,7 @@ fn fallback_signature(kind: &Function, arg_count: usize) -> Option<Vec<Signature
         Function::Na => args_signature_scalars(arg_count, 0, 0),
         // A reference argument (a range, a table's data area: `SHEET(Table1[])`) gives its sheet's
         // number and is not implicitly intersected (probes/info-logic-argument-modes A12; legacy formulas:
-        // calc_test_no_export/tables.xlsx sheet9 A5:A8).
+        // calc_test_tables/tables.xlsx sheet9 A5:A8).
         Function::Sheet if arg_count == 1 => args_signature_one_vector(arg_count),
         Function::Sheet => args_signature_scalars(arg_count, 0, 1),
         Function::Type => args_signature_one_vector(arg_count),
@@ -499,7 +539,6 @@ fn fallback_signature(kind: &Function, arg_count: usize) -> Option<Vec<Signature
         Function::Map => args_signature_map(arg_count),
         Function::Reduce => args_signature_reduce(arg_count),
         Function::Scan => args_signature_scan(arg_count),
-        Function::Randarray => args_signature_randarray(arg_count),
         Function::Textsplit => args_signature_textsplit(arg_count),
         Function::Concat => vec![Signature::Vector; arg_count],
         Function::Lower => args_signature_scalars(arg_count, 1, 0),
@@ -529,10 +568,8 @@ fn fallback_signature(kind: &Function, arg_count: usize) -> Option<Vec<Signature
         Function::Rand => args_signature_scalars(arg_count, 0, 0),
         Function::Randbetween => args_signature_scalars(arg_count, 2, 0),
         Function::Formulatext => args_signature_scalars(arg_count, 1, 0),
-        Function::Char => args_signature_scalars(arg_count, 1, 0),
         Function::Clean => args_signature_scalars(arg_count, 1, 0),
         Function::Asc | Function::Dbcs => args_signature_scalars(arg_count, 1, 0),
-        Function::Arraytotext => args_signature_arraytotext(arg_count),
         Function::Image => args_signature_scalars(arg_count, 1, 4),
         Function::Stockhistory => args_signature_scalars(arg_count, 2, 9),
         Function::Fieldvalue => args_signature_fieldvalue(arg_count),
@@ -624,7 +661,6 @@ fn fallback_signature(kind: &Function, arg_count: usize) -> Option<Vec<Signature
         Function::Intercept => vec![Signature::Vector; 2],
         Function::Slope => vec![Signature::Vector; 2],
         Function::Steyx => vec![Signature::Vector; 2],
-        Function::ForecastEtsSeasonality => vec![Signature::Vector; arg_count],
         Function::Frequency => vec![Signature::Vector, Signature::Vector],
         Function::Growth | Function::Trend => match arg_count {
             1 => vec![Signature::Vector],
@@ -672,12 +708,28 @@ fn static_analysis_on_function(kind: &Function, args: &[Node]) -> StaticResult {
     }
 }
 
+/// The shape of the IF or CHOOSE `kind(args)`, from each argument's shape computed once (so nested
+/// calls stay linear): a scalar when its value arms are one cell whatever the condition
+/// ([`returns_single_cell_index`]), so a legacy formula shows no `@` on the call or a call over it
+/// (T-3134), and the cell stores it as a plain formula, not a spill anchor; otherwise IF broadcasts
+/// its arguments and CHOOSE is reference-shaped.
+fn if_or_choose_shape(kind: &Function, args: &[Node]) -> StaticResult {
+    let shapes: Vec<StaticResult> = args.iter().map(run_static_analysis_on_node).collect();
+    if returns_single_cell_index(args, &shapes) {
+        StaticResult::Scalar
+    } else if matches!(kind, Function::Choose) {
+        reference_result::choose_static_result(shapes)
+    } else {
+        broadcast_shapes(shapes)
+    }
+}
+
 /// The hand-written shapes of the functions not in the lifting table; `None` for one in it.
 fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
     Some(match kind {
         Function::And => StaticResult::Scalar,
         Function::False => StaticResult::Scalar,
-        Function::If => scalar_arguments(args),
+        Function::If | Function::Choose => if_or_choose_shape(kind, args),
         Function::Iferror => scalar_arguments(args),
         Function::Ifna => scalar_arguments(args),
         Function::Ifs => StaticResult::Unknown, // chosen value spills: logic.md
@@ -688,7 +740,6 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Switch => StaticResult::Unknown,
         Function::True => StaticResult::Scalar,
         Function::Xor => StaticResult::Scalar,
-        Function::Choose => reference_result::choose_static_result(args),
         Function::Column => row_column::static_analysis_row_column(args, false),
         Function::Columns => not_implemented(args),
         Function::Max => StaticResult::Scalar,
@@ -710,7 +761,9 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Chooserows => StaticResult::Unknown,
         Function::Hlookup => aggregate::lookup_static_result(args), // T-0270, T-1269
         Function::Hstack => StaticResult::Unknown,
-        // INDEX has two forms, but they are indistinguishable at parse time.
+        // One cell by literal indexes (T-3856); otherwise INDEX has two forms, but they are
+        // indistinguishable at parse time.
+        Function::Index if indexes_one_reference_cell(args) => StaticResult::Scalar,
         Function::Index => StaticResult::Unknown,
         Function::Indirect => reference_result::static_analysis_indirect(args),
         // Spills by lookup_value; the vectors are consumed (T-1241).
@@ -740,7 +793,6 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Getpivotdata => broadcast_static_result(args.iter().skip(3).step_by(2)),
         Function::Map | Function::Reduce => StaticResult::Unknown,
         Function::Scan => StaticResult::Unknown,
-        Function::Randarray => StaticResult::Unknown,
         Function::Textsplit => StaticResult::Unknown,
         Function::Concat => not_implemented(args),
         // UPPER/LOWER broadcast element-wise: an array/range argument yields an array.
@@ -759,11 +811,9 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         }
         Function::T => scalar_arguments(args),
         Function::Trim => scalar_arguments(args),
-        Function::Char => not_implemented(args),
         Function::Clean => scalar_arguments(args),
         Function::Asc | Function::Dbcs => scalar_arguments(args),
         Function::Phonetic => not_implemented(args),
-        Function::Arraytotext => not_implemented(args),
         // All three lift over an array or range `source`/`stock`/`value` (T-1179).
         Function::Image | Function::Stockhistory | Function::Fieldvalue => StaticResult::Unknown,
         Function::Proper => scalar_arguments(args),
@@ -771,15 +821,15 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Average => not_implemented(args),
         Function::Averagea => not_implemented(args),
         Function::Avedev => not_implemented(args),
-        Function::Averageif => criteria_static_result(args, 1),
-        Function::Averageifs => criteria_static_result(args, 2),
+        Function::Averageif => criteria_and_grid_static_result(kind, args, 1),
+        Function::Averageifs => criteria_and_grid_static_result(kind, args, 2),
         Function::Count => not_implemented(args),
         Function::Counta => not_implemented(args),
         Function::Countblank => reference_parameter::countblank_static_result(args),
         Function::Countif => criteria_and_grid_static_result(kind, args, 1),
-        Function::Countifs => criteria_static_result(args, 1),
-        Function::Maxifs => criteria_static_result(args, 2),
-        Function::Minifs => criteria_static_result(args, 2),
+        Function::Countifs => criteria_and_grid_static_result(kind, args, 1),
+        Function::Maxifs => criteria_and_grid_static_result(kind, args, 2),
+        Function::Minifs => criteria_and_grid_static_result(kind, args, 2),
         Function::Now => not_implemented(args),
         Function::Today => not_implemented(args),
         Function::Subtotal => aggregate::subtotal_static_result(args),
@@ -832,7 +882,6 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Intercept => StaticResult::Scalar,
         Function::Slope => StaticResult::Scalar,
         Function::Steyx => StaticResult::Scalar,
-        Function::ForecastEtsSeasonality => StaticResult::Scalar,
         // Spill-returning functions
         Function::Frequency => StaticResult::Unknown,
         Function::Growth => StaticResult::Unknown,

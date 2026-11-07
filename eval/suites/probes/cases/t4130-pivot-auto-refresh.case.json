@@ -1,0 +1,95 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4130: does Excel for the web refresh a pivot after its source changes (PivotTable Auto Refresh), and does it save an Auto Refresh setting in the file? Data!A1:B4 has Region and Sales: East (B2 blank in the file), West 20, East 5. The oracle types 100 into Data!B2 after load (`entered`, a Graph range write), then runs a full-rebuild calculate and no pivot refresh. AR0 holds a pivot saved without refreshOnLoad whose saved cells and rowItems show East 5, West 20, Grand Total 25 (the render of the file's blank B2); AR1 a refreshOnLoad pivot over the same source. Both are rows Region, Sum of Sales. An auto-refreshed pivot shows East 105 and Grand Total 125. The pivot cells are in the sidecar's `pivots` section; Q!A1 reads Data!B2 back and Q!B1 sums the source.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4130",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0782"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Sales",
+    "A2": "East",
+    "B2": {
+     "entered": "100"
+    },
+    "A3": "West",
+    "B3": 20,
+    "A4": "East",
+    "B4": 5
+   }
+  },
+  {
+   "name": "AR0",
+   "cells": {
+    "A3": "Row Labels",
+    "B3": "Sum of Sales",
+    "A4": "East",
+    "B4": 5,
+    "A5": "West",
+    "B5": 20,
+    "A6": "Grand Total",
+    "B6": 25
+   },
+   "pivot_tables": [
+    {
+     "name": "P_AR0",
+     "source": "Data!A1:B4",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "refresh_on_load": false,
+      "area": "A3:B6",
+      "xml": {
+       "rowItems": "<rowItems count=\"3\"><i><x/></i><i><x v=\"1\"/></i><i t=\"grand\"><x/></i></rowItems>",
+       "colItems": "<colItems count=\"1\"><i/></colItems>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "AR1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_AR1",
+     "source": "Data!A1:B4",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=Data!B2",
+    "B1": "=SUM(Data!B2:B4)"
+   }
+  }
+ ],
+ "expected": {}
+}

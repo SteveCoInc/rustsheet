@@ -4,6 +4,7 @@
 
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
+use crate::limits::check_array_cells;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
@@ -27,27 +28,48 @@ pub(super) enum DataRead {
 }
 
 impl Model {
-    /// Reads `known_y` as [`Model::read_data`] does. A computed blank y is `#VALUE!` at once,
-    /// before x's and const's errors: `LINEST(IFERROR(B10,1),1/0)` and
-    /// `LINEST(IFERROR(B10,1),{1;2},NA())` with B10 blank are `#VALUE!`, while the blank reference
-    /// itself and a computed text or boolean y wait (`LINEST(B10,1/0)`, `LINEST("abc",1/0)` and
-    /// `LINEST(IF(TRUE,"abc"),1/0)` are `#DIV/0!`; probes/t2455-transpose-single-value A62:A84).
-    pub(super) fn read_known_y(
+    /// Reads `known_y` (`args[0]`) as [`Model::read_data`] does, then `known_x` (`args[1]`) when
+    /// given. A computed blank y is `#VALUE!` at once, before x's and const's errors:
+    /// `LINEST(IFERROR(B10,1),1/0)` and `LINEST(IFERROR(B10,1),{1;2},NA())` with B10 blank are
+    /// `#VALUE!`, while the blank reference itself and a computed text or boolean y wait
+    /// (`LINEST(B10,1/0)`, `LINEST("abc",1/0)` and `LINEST(IF(TRUE,"abc"),1/0)` are `#DIV/0!`;
+    /// probes/t2455-transpose-single-value A62:A84). A y carrying the ERROR.TYPE/CELL mark is
+    /// `#VALUE!` once x is read, after x's error value: `LINEST(ERROR.TYPE(#REF!))` is `#VALUE!`
+    /// where `LINEST(2)` is 0, and so are LOGEST, TREND and GROWTH of it, while
+    /// `LINEST(ERROR.TYPE(#REF!),1/0)` is `#DIV/0!` (probes/t2576-error-type-cell-paired E34,
+    /// t2766-mark-positions A20:A22, t2766-mark-positions-2 A21; statistics.md "ERROR.TYPE and
+    /// CELL results are #NUM! in the paired functions"). TREND's and GROWTH's against an error
+    /// `new_x` are unprobed: TODO(T-4653).
+    pub(super) fn read_known_y_and_x(
         &mut self,
-        y_arg: &Node,
+        args: &[Node],
         cell: CellReferenceIndex,
-    ) -> Result<DataRead, CalcResult> {
-        let y = self.read_data(y_arg, cell)?;
-        if matches!(y, DataRead::Scalar(Element::Blank))
-            && !matches!(*y_arg.resolved_at(cell.row), Node::ReferenceKind { .. })
-        {
+    ) -> Result<(DataRead, Option<DataRead>), CalcResult> {
+        let y_arg = &args[0];
+        let (value, marked) = self.evaluate_marked(y_arg, cell);
+        let y = self.data_read(value, cell)?;
+        // A blank cell however it is reached, by a name, INDEX, IF, CHOOSE or parentheses, waits
+        // like the plain reference: `LINEST(INDEX(Data!A1:A4,4),1/0)` is `#DIV/0!`
+        // (probes/t4310-rank-regression-picked-cells A121:A150, T-4310). Only a blank y asks.
+        if matches!(y, DataRead::Scalar(Element::Blank)) && !self.is_reference(y_arg, cell) {
             return Err(CalcResult::new_error(
                 Error::VALUE,
                 cell,
                 "Regression: known_y is blank".to_string(),
             ));
         }
-        Ok(y)
+        let x = match given(args.get(1)) {
+            Some(node) => Some(self.read_data(node, cell)?),
+            None => None,
+        };
+        if marked {
+            return Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "Regression: known_y from ERROR.TYPE or CELL".to_string(),
+            ));
+        }
+        Ok((y, x))
     }
 
     /// Reads a data argument of the regression functions element by element, failing only when it
@@ -57,10 +79,25 @@ impl Model {
         arg: &Node,
         cell: CellReferenceIndex,
     ) -> Result<DataRead, CalcResult> {
-        Ok(match self.evaluate_node_in_context(arg, cell) {
+        let value = self.evaluate_node_in_context(arg, cell);
+        self.data_read(value, cell)
+    }
+
+    /// [`Self::read_data`] of an argument evaluated already.
+    fn data_read(
+        &mut self,
+        value: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Result<DataRead, CalcResult> {
+        Ok(match value {
             CalcResult::Range { left, right } => {
                 let n_rows = (right.row - left.row + 1) as usize;
                 let n_cols = (right.column - left.column + 1) as usize;
+                // Every cell is read into a dense grid, so the range is held to the array
+                // limit before anything is allocated (`LINEST(A1:XFD1048576,..)`, directive 5).
+                if let Some((error, message)) = check_array_cells(n_rows, n_cols) {
+                    return Err(CalcResult::new_error(error, cell, message));
+                }
                 let mut rows = Vec::with_capacity(n_rows);
                 for r in 0..n_rows {
                     let mut row = Vec::with_capacity(n_cols);

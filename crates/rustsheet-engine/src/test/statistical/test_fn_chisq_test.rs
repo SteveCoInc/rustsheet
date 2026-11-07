@@ -2,6 +2,21 @@
 
 use crate::test::util::new_empty_model;
 
+// A squared difference past the double range is #NUM!, not a p of 0 (probes/t4098-tests-prob-domains
+// A44, A45; statistics.md "CHISQ.TEST, Z.TEST and PROB: Gate A domains (T-4098)").
+#[test]
+fn test_chisq_test_overflowing_square_is_num() {
+    let mut model = new_empty_model();
+    model._set("A1", "=CHISQ.TEST({1E+200,1,1},{1,1,1})");
+    model._set("A2", "=CHISQ.TEST({1E+160,1,1},{1,1,1})");
+    model._set("A3", "=CHITEST({1E+160,1,1},{1,1,1})");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model._get_text("A2"), *"#NUM!");
+    assert_eq!(model._get_text("A3"), *"#NUM!");
+}
+
 #[test]
 fn test_fn_chisq_test_smoke() {
     let mut model = new_empty_model();
@@ -145,4 +160,71 @@ fn arguments() {
     assert_eq!(model._get_text("C1"), *"#ERROR!");
     assert_eq!(model._get_text("C2"), *"#ERROR!");
     assert_eq!(model._get_text("C3"), *"0.062349477");
+}
+
+// T-2431: a negative actual value is used as is; only a negative summed statistic is #NUM!.
+#[test]
+fn test_chisq_test_negative_actual_value() {
+    let mut model = crate::test::util::new_empty_model();
+    model._set("A1", "=CHISQ.TEST({-1;1;1},{1,1,1})");
+    model._set("A2", "=CHISQ.TEST({1;1;1},{-1,1,1})");
+    model._set("A3", "=CHISQ.TEST({1;5;5},{-1,2,2})");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"0.135335283");
+    assert_eq!(model._get_text("A2"), *"#NUM!");
+    // a negative expected cell with a positive total is a number (A314 is 0 for a huge statistic)
+    assert_eq!(model._get_text("A3"), *"0.082084999");
+}
+
+// T-2094: a side with no number at all is #DIV/0!; one text cell among numbers is unchanged.
+#[test]
+fn test_chisq_test_blank_range() {
+    let mut model = crate::test::util::new_empty_model();
+    for (cell, v) in [("B1", "1"), ("B2", "2"), ("B3", "3"), ("B4", "4")] {
+        model._set(cell, v);
+    }
+    model._set("C1", "a");
+    model._set("C2", "2");
+    model._set("C3", "3");
+    model._set("C4", "4");
+    model._set("A1", "=CHISQ.TEST(B1:B4,Z1:Z4)");
+    model._set("A2", "=CHISQ.TEST(Z1:Z4,B1:B4)");
+    model._set("A3", "=CHITEST(Z1:Z4,B1:B4)");
+    model._set("A4", "=CHISQ.TEST(B1:B4,C1:C4)");
+    model._set("A5", "=CHISQ.TEST(5,5)");
+    model._set("A6", "=CHISQ.TEST(B2:B4,C2:C4)");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#DIV/0!");
+    assert_eq!(model._get_text("A2"), *"#DIV/0!");
+    assert_eq!(model._get_text("A3"), *"#DIV/0!");
+    // the pair with the text cell adds nothing to the statistic: same as the pair dropped, df from 4 points
+    assert_eq!(model._get_text("A4"), *"1");
+    assert_eq!(model._get_text("A6"), *"1");
+    assert_eq!(model._get_text("A5"), *"#N/A");
+}
+
+// The p-value is the direct right tail, not 1 - P: chi2 = 18 at df 2 is EXP(-9) to the last bit in
+// Excel (probes-numeric/m9-legacy-chitest Calc!A23; T-3058).
+#[test]
+fn test_chitest_small_p_is_the_direct_tail() {
+    let mut model = new_empty_model();
+    for (cell, v) in [
+        ("F1", "5"),
+        ("F2", "0"),
+        ("F3", "x"),
+        ("G1", "1"),
+        ("G2", "2"),
+        ("G3", "3"),
+    ] {
+        model._set(cell, v);
+    }
+    model._set("A1", "=CHITEST(F1:F3,G1:G3)");
+    model.evaluate();
+    let crate::cell::CellValue::Number(p) = model.get_cell_value_by_ref("Sheet1!A1").unwrap()
+    else {
+        panic!("expected a number");
+    };
+    assert_eq!(p.to_bits(), (-9.0_f64).exp().to_bits());
 }

@@ -78,10 +78,9 @@ Non-goals:
 - The escape `'` goes before the special character (`Sales[C'#]`); a quote first is refused (same
   entry; gen-m8b d86ef297e840325f).
 - Unprobed: what Excel does to its structured references when a table is resized, converted to a
-  range or deleted (T-2197; recorded UNVERIFIED in references.md). Whether the stored text keeps
-  the typed case of table and column names or uses the table's spelling is also unprobed. The
-  canonical printer writes the specifiers in Excel's case (`#All`) and the names as typed, and
-  T-1683 settles the names along with the `@` spelling.
+  range or deleted (T-2197; recorded UNVERIFIED in references.md). The printed text uses the
+  table's spelling of table and column names and the `@` form of `#This Row` (T-1683,
+  references.md "Structured references: FORMULATEXT").
 
 ## Design
 ### Node
@@ -168,13 +167,15 @@ where its body is parsed (`Node::lower_this_rows_at`), both as before step 2.
 The storage and in-engine printers print a `StructuredReferenceKind` from `reference`, in the
 canonical long form:
 `Table[[#Spec],[Col]]`, `Table[[#Spec],[A]:[B]]`, `Table[Col]`, `Table[[A]:[B]]`, `Table[#Spec]`
-or `Table[]`. Names that need escaping get Excel's `'` escapes (`'[`, `']`, `'#`, `''`, `'@`),
-the inverse of `consume_escaped_until`. `ThisRowKind` is never printed on its own, because it
+or `Table[]`, except that `#This Row` prints in its `@` form (`Table[@Col]`, `Table[@[Two Words]]`,
+`Table[@]`; T-1683), and table and column names in the table's spelling (T-1683). Names that
+need escaping get Excel's `'` escapes (`'[`, `']`, `'#`, `''`, `'@`), the inverse of
+`consume_escaped_until`. `ThisRowKind` is never printed on its own, because it
 only appears inside a wrapper. Where a wrapper prints its lowered area instead, the rule at the
 end of "Structural edits" applies.
 
 A bare table name (`ROWS(Sales)`, operands.rs) keeps printing as the bare name in these
-printers; T-1683 may change how it is spelled. `to_excel_string` prints `lowered` until step 3,
+printers, in the table's spelling (T-1683). `to_excel_string` prints `lowered` until step 3,
 and from then on writes a bare name as `Table[]` (see above).
 
 `rename_sheet_in_node` and `move_formula` recurse into `lowered` as they do today. The printed
@@ -233,19 +234,33 @@ Edge cases, for a table with header row `h`, data rows `d1..d2` and an optional 
 | Insert, `r <= h` | move | every area shifts by `n` |
 | Insert, `r` after the last table row | none | no area changes |
 | Insert, `d1 < r <= d2` | grow | data, `#All` and totals areas grow or shift together, as the lowered ranges do |
-| Insert, `r == d1` (between header and data) | fallback | the lowered data area shifts and the header does not: not a table shape |
-| Insert, `r == t` (between data and totals) | fallback | the data area stays and the totals row shifts: not a table shape |
+| Insert, `r == d1` (between header and data) | grow | Excel grows the table (probes/table-edits/table-insert-row-above-first-data, T-2197); the plain ranges onto its data grow too, see below |
+| Insert, `r == t` (between data and totals) | grow | Excel grows the table and moves the totals row (probes/table-edits/table-insert-row-above-totals, T-2197); the plain ranges onto its data grow too |
 | Delete wholly above `h` or wholly below the last row | move / none | |
 | Delete wholly inside `d1..d2`, at least one data row left | shrink | |
 | Delete touching `h` or `t`, all data rows, or straddling an edge of the table | fallback | the lowered areas become trimmed or `#REF!`, which a table cannot represent |
 
 T-2197 probed the row inserts (references.md "Structured references when the table changes"): Excel
-*grows* the table on an insert at `r == d1` and at `r == t`, so those two fallback rows are superseded
-(T-2321); the other insert rows hold.
+*grows* the table on an insert at `r == d1` and at `r == t` (T-2321 replaced the two fallback rows the
+table had there); the other insert rows hold. With those two inserts a plain range onto the table's
+data grows with it: `=SUM(S!C4:C7)` over data rows 4-7 becomes `=SUM(S!C4:C8)`, where an ordinary
+insert at its first row would shift it and one just below it would leave it. As built
+(`Displacement::range_corners`), every range inside the table's data rows and columns that touches
+the edge grows; only the whole data column is probed (T-2846). A table without a header row has no
+`r == d1` edge: an insert at its first row stays a fallback (T-2845).
 
 A column edit at column `c`: an insert with `c <= c1`, or a delete wholly left of `c1`, is a
 move; an edit wholly right of `c2` changes nothing; every other column edit that crosses
 `c1..c2` is a fallback, since it would change the column list.
+
+As built (T-2297, `table_edits.rs`): the walk takes the set of tables that *follow* the edit
+(move, grow, shrink, or left alone by an edit wholly after them) instead of the fallback set
+(`to_string_displaced_keeping`); a reference to any other table keeps step 1's refined rule. A
+delete at the first or last data row is a fallback too, not a shrink, until T-2338 implements those edges. A table that would grow or move past the last row or column is a fallback. A `#This
+Row` reference keeps step 1's rule even when its table follows the edit (T-2845 probes it), and an
+insert at the first row of a table without a header row is a fallback (T-2845). The insert of
+rows or columns that would push a table off the sheet is allowed (the cells pushed off are empty)
+and the table does not follow it: an engine decision (directive 5).
 
 A fallback leaves the table metadata as it is today and loses the structured text of the
 formulas that refer to that table, as today. T-2197's findings replace the fallback. The interim
@@ -294,7 +309,7 @@ parse-error value.
    decides what `to_excel_string` writes for it.
 
 ### Shared formulas and storage
-The storage text is now `Sales[[#This Row],[Qty]]` in every cell of a filled column. It does not
+The storage text is now `Sales[@Qty]` (the `@` form since T-1683) in every cell of a filled column. It does not
 depend on the cell, so one shared formula serves the whole column, as Excel stores it. Parsing it
 at `(1, 1)` is now correct, because nothing in `lowered` depends on the context row.
 
@@ -368,6 +383,13 @@ same reference. `ThisRowKind` evaluation is O(1).
 3. **T-2196 (M): table parts in the export.** Write `<tableParts>` and `xl/tables/tableN.xml`,
    with the totals-row metadata xlsx-storage.md requires. Then switch `to_excel_string` to the
    preserved reference, with a bare name written as `Table[]`.
+   As built (T-2196): `export/tables.rs` writes one part per table (numbered in sheet order, by name
+   within a sheet), after the sheet's external hyperlinks in its rels part; a totals-row formula cell
+   as `totalsRowFunction="custom"` with its `<totalsRowFormula>`, a text cell as `totalsRowLabel`;
+   an `<autoFilter>` over the header and data rows. The export prints every resolved structured
+   reference from `reference` (`StructuredReference::file_text`), so a `#This Row` is no longer
+   lowered at the cell's row there; an unresolved one is still `#REF!`. The criteria of an applied
+   filter are kept and written back (T-2838).
 4. **T-1683** picks the FORMULATEXT spelling over the preserved node, and adds the lexer
    rejection of unterminated references.
 5. **T-2197 (probe):** how Excel resizes, converts and deletes a table on row and column inserts

@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Builds the fuzz seed corpora from the repository's own test inputs (T-0021).
 
-Formula targets get one file per distinct formula in eval/suites (without the leading `=`);
-`xlsx_import` gets every workbook under crates/rustsheet-xlsx/tests and eval/suites. Corpora are
-generated, never committed, so they track the suites as they grow. Seeds are added to whatever a
-corpus directory already holds, so the inputs libFuzzer found on earlier runs are kept.
+Formula targets get one file per formula shape in eval/suites (without the leading `=`), at most
+MAX_FORMULA_SEEDS of them; `xlsx_import` gets every workbook under crates/rustsheet-xlsx/tests and
+eval/suites; `bitcode_workbook` gets the engine-written workbooks of `seeds/bitcode_seeds.rs`,
+`cfb_container` the OLE containers of `seeds/cfb_seeds.rs`, `pivot_import` the pivot parts of
+`seeds/pivot_seeds.rs`, and `encrypted_package` the encrypted xlsx
+fixtures of crates/rustsheet-xlsx/tests/encrypted.
+Corpora are generated, never committed, so they track the suites as they grow. Seeds are added to
+whatever a corpus directory already holds, so the inputs libFuzzer found on earlier runs are kept.
 
 Usage: fuzz/seed_corpus.py   (from anywhere; writes fuzz/corpus/<target>/ and fuzz/dict/)
 """
@@ -14,6 +18,8 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import subprocess
+import tempfile
 from pathlib import Path
 
 FUZZ = Path(__file__).resolve().parent
@@ -23,6 +29,14 @@ FORMULA_TARGETS = ("formula_parse", "formula_eval")
 MAX_SEED_BYTES = 1 << 20
 # A function call in a seed formula; its name (with the paren) becomes a dictionary token.
 FUNCTION_CALL = re.compile(r"(?<![A-Za-z0-9_.])([A-Z][A-Z0-9.]*\()")
+# The suites hold over 800,000 distinct formulas, most of them one generated shape with other
+# numbers (probes-numeric). libFuzzer reads every seed once before it fuzzes, at a few hundred
+# formula_eval runs a second, so all of them outlasted the nightly job (T-3163). One seed per
+# shape (numbers and text literals replaced), capped, keeps the first pass near a minute; the
+# fuzzer mutates numbers itself, and the dictionary still lists every function name.
+MAX_FORMULA_SEEDS = 20_000
+NUMBER = re.compile(r"(?<![A-Za-z0-9_$.])(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?")
+TEXT = re.compile(r'"(?:[^"]|"")*"')
 
 
 def write_dictionary(formulas: set[str]) -> Path:
@@ -48,8 +62,41 @@ def case_formulas(case: Path) -> set[str]:
     return found
 
 
+def shape(formula: str) -> str:
+    """`formula` with its numbers and text literals blanked: generated probes differ only there."""
+    return NUMBER.sub("0", TEXT.sub('""', formula))
+
+
+def formula_seeds(formulas: set[str]) -> list[str]:
+    """One formula per shape (the first in sorted order), then the MAX_FORMULA_SEEDS whose
+    sha256 sorts first: deterministic, and spread over the suites rather than the first ones."""
+    by_shape: dict[str, str] = {}
+    for formula in sorted(formulas):
+        by_shape.setdefault(shape(formula), formula)
+    ranked = sorted(by_shape.values(), key=lambda f: hashlib.sha256(f.encode("utf-8")).hexdigest())
+    return ranked[:MAX_FORMULA_SEEDS]
+
+
 def write_seed(directory: Path, data: bytes) -> None:
     (directory / hashlib.sha256(data).hexdigest()).write_bytes(data)
+
+
+def binary_seeds(binary: str, directory: Path) -> int:
+    """Adds the seeds the fuzz crate's `binary` writes to `directory` (Rust writes them: engine
+    workbooks for `bitcode_seeds`, T-2895; OLE containers for `cfb_seeds`, T-4264; pivot parts
+    for `pivot_seeds`, T-4133). Returns how
+    many."""
+    directory.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as written:
+        subprocess.run(
+            ["cargo", "run", "--quiet", "--release", "--bin", binary, "--", written],
+            cwd=FUZZ,
+            check=True,
+        )
+        seeds = sorted(Path(written).iterdir())
+        for seed in seeds:
+            write_seed(directory, seed.read_bytes())
+    return len(seeds)
 
 
 def main() -> int:
@@ -57,10 +104,11 @@ def main() -> int:
     formulas: set[str] = set()
     for case in sorted((ROOT / "eval" / "suites").rglob("*.case.json")):
         formulas |= case_formulas(case)
+    seeds = formula_seeds(formulas)
     for target in FORMULA_TARGETS:
         directory = corpus / target
         directory.mkdir(parents=True, exist_ok=True)
-        for formula in formulas:
+        for formula in seeds:
             write_seed(directory, formula.encode("utf-8"))
     dictionary = write_dictionary(formulas)
     directory = corpus / "xlsx_import"
@@ -74,7 +122,17 @@ def main() -> int:
         if workbook.stat().st_size <= MAX_SEED_BYTES:
             write_seed(directory, workbook.read_bytes())
             kept += 1
-    print(f"{len(formulas)} formula seeds, {kept} workbook seeds in {corpus}; dictionary {dictionary}")
+    encoded = binary_seeds("bitcode_seeds", corpus / "bitcode_workbook")
+    containers = binary_seeds("cfb_seeds", corpus / "cfb_container")
+    pivots = binary_seeds("pivot_seeds", corpus / "pivot_import")
+    # The encrypted xlsx fixtures (T-4265): containers that reach the decryption code.
+    directory = corpus / "encrypted_package"
+    directory.mkdir(parents=True, exist_ok=True)
+    encrypted = sorted((ROOT / "crates" / "rustsheet-xlsx" / "tests" / "encrypted").glob("*.xlsx"))
+    for workbook in encrypted:
+        write_seed(directory, workbook.read_bytes())
+    print(f"{len(seeds)} formula seeds of {len(formulas)} formulas, {kept} workbook seeds, {encoded} bitcode "
+          f"seeds, {containers} container seeds, {pivots} pivot seeds, {len(encrypted)} encrypted seeds in {corpus}; dictionary {dictionary}")
     return 0
 
 

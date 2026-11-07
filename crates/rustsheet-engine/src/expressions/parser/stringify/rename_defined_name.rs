@@ -51,14 +51,17 @@ pub(crate) fn rename_defined_name_in_node(
         Node::ImplicitIntersection { child, .. } => {
             rename_defined_name_in_node(child, name, scope, new_name);
         }
-        Node::SpillRangeOperator { child } | Node::Group { child, .. } => {
+        Node::SpillRangeOperator { child }
+        | Node::Group { child, .. }
+        | Node::UnaryPlus { child }
+        | Node::Spaced { child, .. } => {
             rename_defined_name_in_node(child, name, scope, new_name);
         }
         // Do nothing
         Node::BooleanKind(_) => {}
         Node::NumberKind(_) => {}
         Node::StringKind(_) => {}
-        Node::ErrorKind(_) => {}
+        Node::ErrorKind(_) | Node::SheetRefErrorKind { .. } => {}
         Node::ParseErrorKind { .. } => {}
         Node::ArrayKind(_) => {}
         Node::EmptyArgKind => {}

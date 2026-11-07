@@ -1,0 +1,432 @@
+"""Math references for eval cells (T-3380, SPEC-0029 "Math references for eval cells")."""
+
+from __future__ import annotations
+
+import ast
+import inspect
+import json
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from pathlib import Path
+from typing import Any
+
+import mpmath
+import pytest
+
+from rustsheet_tools.accuracy import composite, eval_math, fingerprint
+from rustsheet_tools.accuracy.defs.cashflow import IRR, XIRR
+from rustsheet_tools.accuracy.defs.paired_regression import COVAR
+from rustsheet_tools.accuracy.defs.student_t import T_DIST, T_INV, cdf
+from rustsheet_tools.accuracy.eval_math import (
+    calls_any,
+    case_math,
+    check_suite,
+    fit_args,
+    math_path,
+    single_call,
+    write_suite,
+)
+from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, NoValueError, Param
+from rustsheet_tools.accuracy.tables import DroppedError, PointTimeoutError, compute
+from rustsheet_tools.fitlab.sweep import parse_arg
+
+
+def _case(tmp_path: Path, cells: dict[str, Any], oracle: dict[str, Any] | None) -> tuple[Path, Path]:
+    case = tmp_path / "c.case.json"
+    case.write_text(
+        json.dumps({"format": "rustsheet-case/v1", "sheets": [{"name": "S", "cells": cells}], "expected": {}})
+    )
+    sidecar = tmp_path / "c.oracle.json"
+    if oracle is not None:
+        sidecar.write_text(json.dumps({"format": "rustsheet-oracle/v1", "sheets": {"S": oracle}}))
+    return case, sidecar
+
+
+def test_single_call_takes_one_whole_call_only() -> None:
+    assert single_call("=T.DIST(1,2,TRUE)") == ("T.DIST", "1,2,TRUE")
+    assert single_call("=t.dist(1,2,TRUE)") == ("T.DIST", "1,2,TRUE")
+    assert single_call("=T.DIST(1,2,TRUE)+T.DIST(1,3,TRUE)") is None
+    assert single_call("=T.DIST((1+1),2,TRUE)") == ("T.DIST", "(1+1),2,TRUE")
+    assert single_call("=1+T.DIST(1,2,TRUE)") is None
+    assert single_call("T.DIST(1,2,TRUE)") is None
+
+
+def test_fit_args_follows_the_parameters() -> None:
+    assert fit_args(T_DIST, [1.5, 3.0, True]) == [1.5, 3, True]
+    assert fit_args(T_DIST, [1.5, 3.0, 1.0]) == "number for a logical"
+    assert fit_args(T_DIST, [1.5, 2.5, True]) == [1.5, 2, True]  # T.DIST's df truncates (Param.truncates)
+    assert fit_args(T_INV, [0.5, 2.5]) == "non-integer for an integer parameter"  # unevidenced: skipped
+    assert fit_args(T_DIST, [1.5, 3.0]) == "argument count"
+    assert fit_args(T_DIST, ["1", 3.0, True]) == "non-numeric argument"
+    assert fit_args(T_DIST, [True, 3.0, True]) == "logical for a number"
+    assert (
+        fit_args(T_DIST, [[1.5, 2.0], 3.0, True]) == "non-numeric argument"
+    )  # a range for a scalar parameter
+
+
+def test_fit_args_reads_an_array_parameter_row_major() -> None:
+    assert fit_args(XIRR, [[[-100.0, 30.0], [80.0, 1.0]], [36526, 36600, 36700, 36800]]) == [
+        (-100.0, 30.0, 80.0, 1.0),
+        (36526.0, 36600.0, 36700.0, 36800.0),
+    ]
+    assert fit_args(IRR, [[-100.0, True]]) == "non-numeric array element"
+    assert fit_args(IRR, [[-100.0, "x"]]) == "non-numeric array element"
+    assert fit_args(IRR, [[-100.0, None]]) == "non-numeric array element"
+    assert fit_args(IRR, [[]]) == "non-numeric array element"
+    assert fit_args(IRR, [5.0]) == "scalar for an array"
+
+
+def test_case_math_writes_values_and_skips_what_it_cannot_read(tmp_path: Path) -> None:
+    cells = {
+        "A1": "=T.DIST(1.5,3,TRUE)",  # a value
+        "A2": "=T.DIST(B1,3,TRUE)",  # a constant cell: read
+        "A3": "=T.DIST(A1,3,TRUE)",  # a formula cell: never read
+        "A4": "=T.INV(0.5,2.5)",  # non-integer df T.INV does not truncate: skipped
+        "A5": "=T.INV(0,3)",  # outside the domain: a math domain error
+        "A6": '=LEN("abcd")',  # no definition (a text function): not a candidate
+        "A7": "=T.DIST(1.5,3,TRUE)",  # not scored (no oracle value): not a candidate
+        "A8": "=T.DIST(B2,3,TRUE)",  # an arithmetic-over-literals formula cell: read
+        "B1": 1.5,
+        "B2": "=(3*2^-1)",
+    }
+    oracle = {a: {"t": "n", "v": 0.5} for a in ("A1", "A2", "A3", "A4", "A5", "A6", "A8")}
+    case, sidecar = _case(tmp_path, cells, oracle)
+    math = case_math("t/c.case.json", case, sidecar)
+    got = math.cells["S"]
+    assert set(got) == {"A1", "A2", "A5", "A8"}
+    with mpmath.workdps(60):
+        want = cdf(mpmath.mpf(1.5), mpmath.mpf(3))
+        assert abs(mpmath.mpf(got["A1"]["v"]) - want) < mpmath.mpf("1e-45") * want
+    assert got["A1"]["f"] == "=T.DIST(1.5,3,TRUE)"
+    assert got["A2"]["v"] == got["A1"]["v"] == got["A8"]["v"]
+    assert got["A5"]["t"] == "e" and got["A5"]["f"] == "=T.INV(0,3)"
+    assert math.skipped == {"unparsed (UnparsedError)": 1, "non-integer for an integer parameter": 1}
+
+
+def test_write_suite_is_deterministic_and_removes_only_its_own_stale_sidecars(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with_math = tmp_path / "a"
+    without = tmp_path / "b"
+    foreign = tmp_path / "c"
+    for d in (with_math, without, foreign):
+        d.mkdir()
+    a_case, a_sidecar = _case(with_math, {"A1": "=T.DIST(1.5,3,TRUE)"}, {"A1": {"t": "n", "v": 0.9}})
+    b_case, b_sidecar = _case(without, {"A1": "=1+1"}, {"A1": {"t": "n", "v": 2}})
+    c_case, c_sidecar = _case(foreign, {"A1": "=1+1"}, {"A1": {"t": "n", "v": 2}})
+    math_path(b_sidecar).write_text(
+        json.dumps(
+            {"format": "rustsheet-math/v1", "source": {"generator": "rustsheet-accuracy"}, "sheets": {}}
+        )
+    )
+    math_path(c_sidecar).write_text('{"format": "something else"}')
+    entries = [
+        {"id": f"t/{p.parent.name}", "path": str(p), "sidecar": str(s)}
+        for p, s in ((a_case, a_sidecar), (b_case, b_sidecar), (c_case, c_sidecar))
+    ]
+    monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)
+    write_suite("t", workers=1)
+    first = math_path(a_sidecar).read_bytes()
+    write_suite("t", workers=1)
+    assert math_path(a_sidecar).read_bytes() == first
+    data = json.loads(first)
+    assert data["format"] == "rustsheet-math/v1"
+    assert data["source"]["generator"] == "rustsheet-accuracy" and "seed" not in data["source"]
+    assert set(data["sheets"]["S"]) == {"A1"} and "s" not in data["sheets"]["S"]["A1"]
+    assert not math_path(b_sidecar).exists()  # ours and now empty: removed
+    assert math_path(c_sidecar).exists()  # not ours: kept
+
+
+def test_write_suite_with_functions_rewrites_only_the_cases_that_call_them(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # T-4483: a T.INV-only run leaves the T.DIST case's sidecar as it was, even a stale one.
+    t_dist = tmp_path / "a"
+    t_inv = tmp_path / "b"
+    for d in (t_dist, t_inv):
+        d.mkdir()
+    a_case, a_sidecar = _case(t_dist, {"A1": "=T.DIST(1.5,3,TRUE)"}, {"A1": {"t": "n", "v": 0.9}})
+    b_case, b_sidecar = _case(t_inv, {"A1": "=T.INV(0.9,3)"}, {"A1": {"t": "n", "v": 1.6}})
+    stale = b'{"format": "rustsheet-math/v1", "source": {"generator": "rustsheet-accuracy"}, "sheets": {}}'
+    math_path(a_sidecar).write_bytes(stale)
+    entries = [
+        {"id": f"t/{p.parent.name}", "path": str(p), "sidecar": str(s)}
+        for p, s in ((a_case, a_sidecar), (b_case, b_sidecar))
+    ]
+    monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)
+    results = write_suite("t", workers=1, functions=["T.INV"])
+    assert [m.case for m in results] == ["t/b"]
+    assert math_path(a_sidecar).read_bytes() == stale  # not selected: untouched
+    assert set(json.loads(math_path(b_sidecar).read_bytes())["sheets"]["S"]) == {"A1"}
+
+
+def test_calls_any_matches_whole_function_names(tmp_path: Path) -> None:
+    case = tmp_path / "c.case.json"
+    case.write_text('{"x": "=T.INV.2T(0.1,3)+NORM.S.INV(0.2)"}')
+    assert calls_any(case, ["T.INV.2T"])
+    assert calls_any(case, ["norm.s.inv"])  # case-insensitive, as Excel names are
+    assert not calls_any(case, ["T.INV"])  # a prefix of T.INV.2T, not a call of T.INV
+    assert not calls_any(case, ["S.INV"])  # the tail of NORM.S.INV
+
+
+def test_an_mpmath_value_error_drops_the_point_but_a_domain_error_does_not() -> None:
+    def gives_up(_args: Sequence[MathArg]) -> mpmath.mpf:
+        msg = "hypercomb() failed to converge to the requested 223 bits of accuracy"
+        raise ValueError(msg)
+
+    def several_roots(_args: Sequence[MathArg]) -> mpmath.mpf:
+        raise NoValueError("several roots")
+
+    x = Param("x", "real", Interval(0, 1))
+    with pytest.raises(DroppedError, match="did not converge"):
+        compute(Definition("GIVES.UP", (x,), gives_up, ("test",)), [0.5])
+    with pytest.raises(NoValueError):
+        compute(Definition("ROOTS", (x,), several_roots, ("test",)), [0.5])
+    assert compute(Definition("GIVES.UP", (x,), gives_up, ("test",)), [2.0]).why == "x outside (0, 1)"
+
+
+class _InProcessPool:
+    """Stands in for `eval_math._pool` so a test's monkeypatches reach the jobs: its `spawn`
+    workers re-import the module and would not see them."""
+
+    def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+        pass
+
+    def __enter__(self) -> _InProcessPool:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        return None
+
+    def map(self, fn: Callable[[Any], Any], items: Iterable[Any]) -> Iterator[Any]:
+        return map(fn, items)
+
+
+def test_check_names_missing_and_stale_sidecars_and_passes_after_regenerating(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cells = {"A1": "=T.DIST(1.5,3,TRUE)", "A2": "=T.DIST(2.5,3,TRUE)", "A3": "=T.INV(0.5,2.5)"}
+    case, sidecar = _case(tmp_path, cells, {a: {"t": "n", "v": 0.5} for a in cells})
+    entries = [{"id": "t/c", "path": str(case), "sidecar": str(sidecar)}]
+    monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)
+    regenerate = "regenerate: cd tools && uv run rustsheet-accuracy math --suite t"
+
+    # No sidecar: both candidates are missing; A3 (non-integer df) is no candidate. This call goes
+    # through the real `spawn` pool (its jobs need no monkeypatch); the later ones run in process.
+    assert check_suite("t") == [
+        "t/c: S!A1 =T.DIST(1.5,3,TRUE) has no math value and is not listed as skipped",
+        "t/c: S!A2 =T.DIST(2.5,3,TRUE) has no math value and is not listed as skipped",
+        regenerate,
+    ]
+
+    # The generator drops A2: the sidecar lists it as skipped, and the check passes.
+    real = eval_math.compute
+
+    def drops_a2(definition: Definition, args: list[Any]) -> Any:
+        if args and args[0] == 2.5:
+            raise DroppedError("did not converge")
+        return real(definition, args)
+
+    monkeypatch.setattr(eval_math, "compute", drops_a2)
+    monkeypatch.setattr(eval_math, "_pool", _InProcessPool)
+    write_suite("t", workers=None)
+    data = json.loads(math_path(sidecar).read_text())
+    assert set(data["sheets"]["S"]) == {"A1"}
+    assert data["skipped"] == {"S": {"A2": {"f": "=T.DIST(2.5,3,TRUE)", "why": "not converged"}}}
+    assert check_suite("t") == []
+
+    # The formula changes after the sidecar was written: its entry is stale.
+    cells["A1"] = "=T.DIST(1.25,3,TRUE)"
+    case.write_text(
+        json.dumps({"format": "rustsheet-case/v1", "sheets": [{"name": "S", "cells": cells}], "expected": {}})
+    )
+    assert check_suite("t") == [
+        "t/c: S!A1 math sidecar entry =T.DIST(1.5,3,TRUE) is stale (the cell is =T.DIST(1.25,3,TRUE))",
+        regenerate,
+    ]
+
+
+def test_check_names_a_sidecar_that_is_not_json(tmp_path: Path) -> None:
+    case, sidecar = _case(tmp_path, {"A1": "=T.DIST(1.5,3,TRUE)"}, {"A1": {"t": "n", "v": 0.5}})
+    math_path(sidecar).write_text("{not json")
+    assert eval_math.check_case("t/c", case, sidecar) == ["t/c: math sidecar c.math.json is not JSON"]
+
+
+def test_a_timeout_fails_the_run_and_keeps_the_sidecar_a_drop_does_not(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # T-3833: a point that is only slow is never written as "not converged". The hang guard's
+    # PointTimeoutError fails `math` and leaves the existing sidecar's value in place; a
+    # deterministic non-convergence still lists the cell under `skipped`.
+    cells = {"A1": "=T.DIST(1.5,3,TRUE)"}
+    case, sidecar = _case(tmp_path, cells, {"A1": {"t": "n", "v": 0.5}})
+    entries = [{"id": "t/c", "path": str(case), "sidecar": str(sidecar)}]
+    monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)
+    monkeypatch.setattr(eval_math, "_pool", _InProcessPool)
+    write_suite("t", workers=None)
+    held = math_path(sidecar).read_bytes()
+    assert set(json.loads(held)["sheets"]["S"]) == {"A1"}
+
+    def times_out(_definition: Definition, _args: list[Any]) -> Any:
+        raise PointTimeoutError("a point took over 600 s")
+
+    monkeypatch.setattr(eval_math, "compute", times_out)
+    with pytest.raises(PointTimeoutError):
+        write_suite("t", workers=None)
+    assert math_path(sidecar).read_bytes() == held
+
+    def does_not_converge(_definition: Definition, _args: list[Any]) -> Any:
+        raise DroppedError("not converged: dps 60 and 80 differ by 1e-30")
+
+    monkeypatch.setattr(eval_math, "compute", does_not_converge)
+    write_suite("t", workers=None)
+    data = json.loads(math_path(sidecar).read_text())
+    assert data["sheets"] == {}
+    assert data["skipped"] == {"S": {"A1": {"f": "=T.DIST(1.5,3,TRUE)", "why": "not converged"}}}
+
+
+def test_composite_cells_take_the_outer_math_at_the_inner_doubles(tmp_path: Path) -> None:
+    """T-3993, decision 0297: a nested call and a difference of calls of defined functions get the
+    outer node's math at the doubles the inner nodes round to; an undefined function is skipped."""
+    cells = {
+        "A1": "=T.INV(T.DIST(1.5,3,TRUE),3)",  # a nested call
+        "A2": "=T.DIST(2,3,TRUE)-T.DIST(1.5,3,TRUE)",  # a difference of two calls
+        "A3": "=T.INV(LEN(1),3)",  # LEN has no definition: skipped with its name
+        "A4": "=-T.DIST(1.5,3,TRUE)*2+(1+1)",  # a sign, a product and a call-free part
+        "A5": '=T.DIST(1.5,3,TRUE)&"x"',  # `&` is not read: not a candidate
+    }
+    oracle = {a: {"t": "n", "v": 0.5} for a in cells}
+    case, sidecar = _case(tmp_path, cells, oracle)
+    math = case_math("t/c.case.json", case, sidecar)
+    got = math.cells["S"]
+    assert set(got) == {"A1", "A2", "A4"}
+    assert math.skipped == {"no definition for LEN": 1}
+    with mpmath.workdps(80):
+        inner = mpmath.mpf(float(cdf(mpmath.mpf(1.5), mpmath.mpf(3))))  # the inner call's double
+        nested = T_INV.evaluate([inner, mpmath.mpf(3)])
+        assert abs(mpmath.mpf(got["A1"]["v"]) - nested) < mpmath.mpf("1e-45") * nested
+        # the inner rounding is part of the reference: not the exact composition 1.5
+        assert abs(mpmath.mpf(got["A1"]["v"]) - mpmath.mpf(1.5)) > mpmath.mpf("1e-30")
+        diff = mpmath.mpf(float(cdf(mpmath.mpf(2), mpmath.mpf(3)))) - inner
+        assert abs(mpmath.mpf(got["A2"]["v"]) - diff) < mpmath.mpf("1e-45") * diff
+        assert abs(mpmath.mpf(got["A4"]["v"]) - (2 - 2 * inner)) < mpmath.mpf("1e-45")
+    assert got["A2"]["f"] == cells["A2"]
+
+
+def test_composite_exact_composition_is_the_unrounded_value() -> None:
+    """Option (a), kept for decision 0297's scoring: no inner rounding."""
+    book = eval_math.LiteralBook(sheets={"S": {}}, oracle={})
+    tree = composite.parse("=T.INV(T.DIST(1.5,3,TRUE),3)", "S", book, eval_math.fit_arg)
+    assert tree is not None and tree.root is not None
+    exact = composite.compute(tree.root, rounded=False)
+    assert exact.value is not None
+    assert abs(mpmath.mpf(exact.value) - mpmath.mpf(1.5)) < mpmath.mpf("1e-45")
+    assert (
+        composite.parse("=T.INV(0.5,3)*T.INV(0.5,3)^2", "S", book, eval_math.fit_arg) is None
+    )  # `^` of a call
+    assert composite.parse("=1+2", "S", book, eval_math.fit_arg) is None  # no call
+
+
+def _written_sidecar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path]:
+    """A case with two T.DIST cells and the sidecar `math` writes for it, in process."""
+    cells = {"A1": "=T.DIST(1.5,3,TRUE)", "A2": "=T.DIST(2.5,3,TRUE)"}
+    case, sidecar = _case(tmp_path, cells, {a: {"t": "n", "v": 0.5} for a in cells})
+    entries = [{"id": "t/c", "path": str(case), "sidecar": str(sidecar)}]
+    monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)
+    monkeypatch.setattr(eval_math, "_pool", _InProcessPool)
+    write_suite("t", workers=None)
+    assert check_suite("t") == []
+    return case, sidecar
+
+
+def test_check_names_a_definition_whose_code_changed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # T-4231: the sidecar records each definition's code fingerprint. Editing T.DIST's module (here its
+    # source as `inspect` reads it) makes the committed values stale, and the check names the function.
+    _case_path, sidecar = _written_sidecar(tmp_path, monkeypatch)
+    data = json.loads(math_path(sidecar).read_text())
+    assert set(data["source"]["definitions"]) == {"T.DIST"}
+    real = inspect.getsource
+
+    def edited(module: Any) -> str:
+        text: str = real(module)
+        return text + "\nEDITED = 1\n" if module.__name__ == T_DIST.value.__module__ else text
+
+    fingerprint.clear_caches()
+    monkeypatch.setattr(inspect, "getsource", edited)
+    try:
+        assert check_suite("t") == [
+            "t/c: math values of T.DIST were computed by other code (regenerate with --function T.DIST)",
+            "regenerate: cd tools && uv run rustsheet-accuracy math --suite t",
+        ]
+    finally:
+        fingerprint.clear_caches()
+
+
+def test_check_names_values_read_from_other_arguments(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A reader change that alters an argument (as T-3675's subnormal flush did) leaves the formula as
+    # it was, so only the argument fingerprint shows it.
+    _written_sidecar(tmp_path, monkeypatch)
+    real = parse_arg
+
+    def reads_otherwise(text: str, *args: Any, **kwargs: Any) -> Any:
+        value = real(text, *args, **kwargs)
+        return 1.25 if value == 1.5 else value
+
+    monkeypatch.setattr("rustsheet_tools.accuracy.eval_math.parse_arg", reads_otherwise)
+    assert check_suite("t") == [
+        "t/c: math values were computed from other arguments than the argument reader gives now",
+        "regenerate: cd tools && uv run rustsheet-accuracy math --suite t",
+    ]
+
+
+def test_check_names_a_sidecar_without_fingerprints_or_of_another_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    case, sidecar = _written_sidecar(tmp_path, monkeypatch)
+    path = math_path(sidecar)
+    data = json.loads(path.read_text())
+    del data["source"]["definitions"]
+    path.write_text(json.dumps(data))
+    assert eval_math.check_case("t/c", case, sidecar) == [
+        "t/c: math sidecar has no input fingerprints (written before T-4231)"
+    ]
+    data["source"]["version"] = "0"
+    path.write_text(json.dumps(data))
+    assert eval_math.check_case("t/c", case, sidecar) == [
+        "t/c: math sidecar version 0 is not the generator's 1"
+    ]
+
+
+def test_the_digest_leaves_out_empty_fields() -> None:
+    # Python 3.12 adds an empty `type_params` to every function: the digest must not see it, or CI's
+    # Python and a local one would disagree on every sidecar.
+    tree = ast.parse("def f(x):\n    return x\n")
+    before = fingerprint._tree_digest(tree)
+    func = tree.body[0]
+    assert isinstance(func, ast.FunctionDef)
+    func.type_params = []  # type: ignore[attr-defined,unused-ignore]
+    assert fingerprint._tree_digest(tree) == before
+
+
+def test_a_partial_definition_is_hashed_by_its_function_module() -> None:
+    # COVAR's value is a functools.partial: hashing `functools` (the standard library) would make the
+    # digest differ between Pythons; its function's module is what computes it.
+    modules = fingerprint._code_modules(COVAR)
+    assert COVAR.value.func.__module__ in modules  # type: ignore[attr-defined]
+    assert all(m.startswith("rustsheet_tools.") for m in modules)
+
+
+def test_source_digest_ignores_comments_and_docstrings_only() -> None:
+    base = fingerprint.source_digest('"""Doc."""\ndef f(x):\n    """Doc."""\n    return x + 1\n')
+    assert fingerprint.source_digest('"""Other."""\ndef f(x):  # note\n    return x + 1\n') == base
+    assert fingerprint.source_digest('"""Doc."""\ndef f(x):\n    return x + 2\n') != base
+
+
+def test_a_definition_digest_covers_the_kernels_its_module_imports() -> None:
+    # T.DIST's module imports defs._common and the fit lab's beta kernel; the scoring modules the
+    # kernel imports for its types are machinery (fingerprint.MACHINERY).
+    modules = fingerprint._closure(fingerprint._code_modules(T_DIST))
+    assert T_DIST.value.__module__ in modules
+    assert {"rustsheet_tools.accuracy.defs._common", "rustsheet_tools.fitlab.kernels.beta"} <= set(modules)
+    assert not set(modules) & fingerprint.MACHINERY

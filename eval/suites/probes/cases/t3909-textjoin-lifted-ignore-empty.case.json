@@ -1,0 +1,87 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3909: TEXTJOIN with an array or range ignore_empty (lifted per element) against a reference, range and value error delimiter, and a plain delimiter. N1:N5 = TRUE,\"x\",#N/A,1,\"\"; K1:K2 = #DIV/0!,#N/A. Each row is one (delimiter, ignore_empty) pair, columns A:E element 1..5, G the row label",
+ "tags": [
+  "M5",
+  "probe",
+  "textjoin"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "K1": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "K2": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "N1": {
+     "t": "b",
+     "v": true
+    },
+    "N2": {
+     "t": "s",
+     "v": "x"
+    },
+    "N3": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "N4": 1,
+    "N5": "=\"\"",
+    "A1": "=INDEX(TEXTJOIN($K$1,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),1)",
+    "B1": "=INDEX(TEXTJOIN($K$1,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),2)",
+    "C1": "=INDEX(TEXTJOIN($K$1,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),3)",
+    "D1": "=INDEX(TEXTJOIN($K$1,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),4)",
+    "E1": "=INDEX(TEXTJOIN($K$1,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),5)",
+    "G1": "d: $K$1  ie: {TRUE;\"x\";#N/A;1;\"\"}",
+    "A2": "=INDEX(TEXTJOIN($K$1,$N$1:$N$5,\"a\"),1)",
+    "B2": "=INDEX(TEXTJOIN($K$1,$N$1:$N$5,\"a\"),2)",
+    "C2": "=INDEX(TEXTJOIN($K$1,$N$1:$N$5,\"a\"),3)",
+    "D2": "=INDEX(TEXTJOIN($K$1,$N$1:$N$5,\"a\"),4)",
+    "E2": "=INDEX(TEXTJOIN($K$1,$N$1:$N$5,\"a\"),5)",
+    "G2": "d: $K$1  ie: $N$1:$N$5",
+    "A3": "=INDEX(TEXTJOIN($K$1:$K$2,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),1)",
+    "B3": "=INDEX(TEXTJOIN($K$1:$K$2,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),2)",
+    "C3": "=INDEX(TEXTJOIN($K$1:$K$2,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),3)",
+    "D3": "=INDEX(TEXTJOIN($K$1:$K$2,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),4)",
+    "E3": "=INDEX(TEXTJOIN($K$1:$K$2,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),5)",
+    "G3": "d: $K$1:$K$2  ie: {TRUE;\"x\";#N/A;1;\"\"}",
+    "A4": "=INDEX(TEXTJOIN($K$1:$K$2,$N$1:$N$5,\"a\"),1)",
+    "B4": "=INDEX(TEXTJOIN($K$1:$K$2,$N$1:$N$5,\"a\"),2)",
+    "C4": "=INDEX(TEXTJOIN($K$1:$K$2,$N$1:$N$5,\"a\"),3)",
+    "D4": "=INDEX(TEXTJOIN($K$1:$K$2,$N$1:$N$5,\"a\"),4)",
+    "E4": "=INDEX(TEXTJOIN($K$1:$K$2,$N$1:$N$5,\"a\"),5)",
+    "G4": "d: $K$1:$K$2  ie: $N$1:$N$5",
+    "A5": "=INDEX(TEXTJOIN(1/0,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),1)",
+    "B5": "=INDEX(TEXTJOIN(1/0,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),2)",
+    "C5": "=INDEX(TEXTJOIN(1/0,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),3)",
+    "D5": "=INDEX(TEXTJOIN(1/0,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),4)",
+    "E5": "=INDEX(TEXTJOIN(1/0,{TRUE;\"x\";#N/A;1;\"\"},\"a\"),5)",
+    "G5": "d: 1/0  ie: {TRUE;\"x\";#N/A;1;\"\"}",
+    "A6": "=INDEX(TEXTJOIN(1/0,$N$1:$N$5,\"a\"),1)",
+    "B6": "=INDEX(TEXTJOIN(1/0,$N$1:$N$5,\"a\"),2)",
+    "C6": "=INDEX(TEXTJOIN(1/0,$N$1:$N$5,\"a\"),3)",
+    "D6": "=INDEX(TEXTJOIN(1/0,$N$1:$N$5,\"a\"),4)",
+    "E6": "=INDEX(TEXTJOIN(1/0,$N$1:$N$5,\"a\"),5)",
+    "G6": "d: 1/0  ie: $N$1:$N$5",
+    "A7": "=INDEX(TEXTJOIN(\",\",{TRUE;\"x\";#N/A;1;\"\"},\"a\"),1)",
+    "B7": "=INDEX(TEXTJOIN(\",\",{TRUE;\"x\";#N/A;1;\"\"},\"a\"),2)",
+    "C7": "=INDEX(TEXTJOIN(\",\",{TRUE;\"x\";#N/A;1;\"\"},\"a\"),3)",
+    "D7": "=INDEX(TEXTJOIN(\",\",{TRUE;\"x\";#N/A;1;\"\"},\"a\"),4)",
+    "E7": "=INDEX(TEXTJOIN(\",\",{TRUE;\"x\";#N/A;1;\"\"},\"a\"),5)",
+    "G7": "d: \",\"  ie: {TRUE;\"x\";#N/A;1;\"\"}",
+    "A8": "=INDEX(TEXTJOIN(\",\",$N$1:$N$5,\"a\"),1)",
+    "B8": "=INDEX(TEXTJOIN(\",\",$N$1:$N$5,\"a\"),2)",
+    "C8": "=INDEX(TEXTJOIN(\",\",$N$1:$N$5,\"a\"),3)",
+    "D8": "=INDEX(TEXTJOIN(\",\",$N$1:$N$5,\"a\"),4)",
+    "E8": "=INDEX(TEXTJOIN(\",\",$N$1:$N$5,\"a\"),5)",
+    "G8": "d: \",\"  ie: $N$1:$N$5"
+   }
+  }
+ ],
+ "expected": {}
+}

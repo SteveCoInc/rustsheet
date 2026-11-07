@@ -25,7 +25,7 @@ fn simple_cases() {
     assert_eq!(model._get_text("H1"), *"Brian");
     assert_eq!(model._get_text("H2"), *"Jeden");
     assert_eq!(model._get_text("I2"), *"Jeden,dwa");
-    assert_eq!(model._get_formula("I2"), *"=TEXTBEFORE(A2,\",\",2)");
+    assert_eq!(model._get_formula("I2"), *"=TEXTBEFORE(A2, \",\", 2)");
 }
 
 // T-1796: match_mode 1 once located the delimiter in `to_lowercase()` of the text and sliced the
@@ -97,6 +97,24 @@ fn test_textbefore_textafter_case_insensitive_final_sigma() {
     assert_eq!(model._get_text("A4"), "aο");
     assert_eq!(model._get_text("A8"), "aΟ");
     assert_eq!(model._get_text("A9"), "aΟ");
+}
+
+// T-4473 (probes/t4473-textsplit-fold-gaps A8, A29, A35, A105, A107): the delimiter `İ` matches
+// `I`, the Angstrom sign matches neither `å` nor `Å`, and a `Σ` before a combining mark is `σ`.
+#[test]
+fn test_textbefore_case_insensitive_dotted_i_angstrom_and_sigma_before_mark() {
+    let mut model = new_empty_model();
+    model._set("A1", "=TEXTBEFORE(\"aIb\",\"İ\",1,1)");
+    model._set("A2", "=TEXTBEFORE(\"a\u{212B}b\",\"å\",1,1)");
+    model._set("A3", "=TEXTBEFORE(\"a\u{212B}b\",\"Å\",1,1)");
+    model._set("A4", "=TEXTBEFORE(\"ΟΣ\u{301}x\",\"σ\",1,1)");
+    model._set("A5", "=TEXTBEFORE(\"ΟΣ\u{301}x\",\"ς\",1,1)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "a");
+    assert_eq!(model._get_text("A2"), "#N/A");
+    assert_eq!(model._get_text("A3"), "#N/A");
+    assert_eq!(model._get_text("A4"), "Ο");
+    assert_eq!(model._get_text("A5"), "#N/A");
 }
 
 // A huge negative instance number saturates to i32::MIN in the caller; negating it must not
@@ -419,4 +437,24 @@ fn test_textafter_match_end_is_cut_toward_zero() {
     assert_eq!(model._get_text("A2"), *"#N/A");
     assert_eq!(model._get_text("A3"), *"");
     assert_eq!(model._get_text("A4"), *"#N/A");
+}
+
+// The every-delimiter-longer check counts UTF-16 units, not UTF-8 bytes: "é" is one unit like
+// "a", so `("a","é",1)` reaches the ordinary not-found `#N/A`, and "é" is shorter than "ab", so
+// the two-argument `("é","ab")` is `#N/A` and the three-argument one `#VALUE!`
+// (probes/t4474-textbefore-utf16-bounds B1, A2, B2, T-4474).
+#[test]
+fn test_textbefore_lengths_are_utf16_units() {
+    let mut model = new_empty_model();
+    model._set("A1", "=TEXTBEFORE(\"a\",\"é\",1)");
+    model._set("A2", "=TEXTBEFORE(\"é\",\"ab\")");
+    model._set("A3", "=TEXTBEFORE(\"é\",\"ab\",1)");
+    model._set("A4", "=TEXTBEFORE(\"😀\",\"abc\",1)");
+    model._set("A5", "=TEXTBEFORE(\"😀\",\"ab\",1)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"#N/A");
+    assert_eq!(model._get_text("A2"), *"#N/A");
+    assert_eq!(model._get_text("A3"), *"#VALUE!");
+    assert_eq!(model._get_text("A4"), *"#VALUE!");
+    assert_eq!(model._get_text("A5"), *"#N/A");
 }

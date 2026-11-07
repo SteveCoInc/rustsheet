@@ -211,22 +211,82 @@ fn fn_offset_lifted_into_top_left_aggregates() {
     assert_eq!(model._get_text("C13"), *"0");
 }
 
-// The aggregates SPEC-0014 rules 4-5 do not name keep the value view, every reference element
-// `#VALUE!`, until their Excel results are known (T-2065).
+// STDEV.S, VAR.S and SUMSQ read each element of an array of references by its top-left cell, as
+// SUM does, and so do VAR.P, STDEV.P and legacy VAR; AVERAGEA, MAXA, MINA and the VARA family read
+// that cell as an array element, so a blank or TRUE is skipped, AVERAGEA counts text as 0 and the
+// others skip it. Evidence: T-2824, probes/t2065-lift-* and probes/t2816-lift-*; T-3533,
+// probes/t3533-lift-*; excel-graph. The data is the probes': A1:A3 1, 100, 10000, B1:B3 2, 200,
+// 20000, A4 "5", A5 blank, A6 TRUE, A7 7, A8 -3 (t3533 only).
 #[test]
-fn fn_offset_lifted_into_other_aggregates_is_its_value_view() {
+fn fn_offset_lifted_into_the_statistical_aggregates_reads_top_left_cells() {
+    let mut model = new_empty_model();
+    for (cell, value) in [
+        ("A1", "1"),
+        ("A2", "100"),
+        ("A3", "10000"),
+        ("B1", "2"),
+        ("B2", "200"),
+        ("B3", "20000"),
+        ("A4", "'5"),
+        ("A6", "TRUE"),
+        ("A7", "7"),
+        ("A8", "-3"),
+    ] {
+        model._set(cell, value);
+    }
+    let cases = [
+        // t2065: single-cell elements.
+        ("=STDEV.S(OFFSET(A1,{0;1},0))", "70.00357134"),
+        ("=VAR.S(OFFSET(A1,{0;1},0))", "4900.5"),
+        ("=SUMSQ(OFFSET(A1,{0;1},0))", "10001"),
+        ("=AVERAGEA(OFFSET(A4,{0;1;2},0))", "0"),
+        ("=MAXA(OFFSET(A4,{0;1;2},0))", "0"),
+        // t2816: multi-cell elements count by their top-left cell, not by the formula's row.
+        ("=STDEV.S(OFFSET(A1,0,0,{1;2}))", "0"),
+        ("=VAR.S(OFFSET(A1,0,0,{1;2}))", "0"),
+        ("=SUMSQ(OFFSET(A1,0,0,{1;2}))", "2"),
+        ("=SUMSQ(OFFSET(A2,0,0,{1;2}))", "20000"),
+        // t2816: text is 0, a blank or TRUE element is skipped.
+        ("=AVERAGEA(OFFSET(A4,{0;3},0))", "3.5"),
+        ("=MAXA(OFFSET(A4,{0;3},0))", "7"),
+        ("=AVERAGEA(OFFSET(A5,{0;1},0))", "#DIV/0!"),
+        ("=MAXA(OFFSET(A5,{0;1},0))", "0"),
+        // t3533: text, a blank and TRUE are skipped, multi-cell elements read their top-left cell.
+        ("=MAXA(OFFSET(A4,{0;4},0))", "-3"),
+        ("=MINA(OFFSET(A4,{0;3},0))", "7"),
+        ("=MINA(OFFSET(A6,{0;1},0))", "7"),
+        ("=MINA(OFFSET(A1,{0;1},0,1,2))", "1"),
+        ("=VAR.P(OFFSET(A4,{0;3;4},0))", "25"),
+        ("=STDEV.P(OFFSET(A1,{0;1},0,1,2))", "49.5"),
+        ("=VAR(OFFSET(A5,{0;2;3},0))", "50"),
+        ("=VARA(OFFSET(A4,{0;3;4},0))", "50"),
+        ("=VARPA(OFFSET(A6,{0;1;2},0))", "25"),
+        ("=STDEVA(OFFSET(A5,{0;2;3},0))", "7.071067812"),
+        ("=STDEVPA(OFFSET(A1,{0;1},0,1,2))", "49.5"),
+    ];
+    for (row, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("E{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("E{}", row + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
+}
+
+// MEDIAN keeps the value view of an array of references, every reference element `#VALUE!`, as
+// Excel (probes/t2065-lift-median, lookup.md "MEDIAN, LARGE and SMALL over a lifted OFFSET").
+#[test]
+fn fn_offset_lifted_into_median_is_its_value_view() {
     let mut model = new_empty_model();
     model._set("A1", "1");
     model._set("A2", "100");
     model._set("C1", "=MEDIAN(OFFSET(A1,{0;1},0))");
-    model._set("C2", "=AVERAGEA(OFFSET(A1,{0;1},0))");
-    model._set("C3", "=STDEV.S(OFFSET(A1,{0;1},0))");
-    model._set("C4", "=MAXA(OFFSET(A1,{0;1},0))");
-    model._set("C5", "=SUMSQ(OFFSET(A1,{0;1},0))");
     model.evaluate();
-    for cell in ["C1", "C2", "C3", "C4", "C5"] {
-        assert_eq!(model._get_text(cell), *"#VALUE!", "{cell}");
-    }
+    assert_eq!(model._get_text("C1"), *"#VALUE!");
 }
 
 // LET, a LAMBDA parameter, IF and CHOOSE hand an array of references on, and OFFSET over one
@@ -330,6 +390,73 @@ fn fn_offset_lifted_into_per_element_callers() {
     assert_eq!(model._get_text("K1"), *"101");
     assert_eq!(model._get_text("L1"), *"1");
     assert_eq!(model._get_text("L2"), *"#REF!");
+}
+
+// COUNTIFS, AVERAGEIF and MAXIFS lift per element too, one value each (probes/t2065-lift-countifs,
+// -averageif, -maxifs, excel-graph 2026-10-26), and charge every criteria walk of every element.
+#[test]
+fn fn_offset_lifted_into_countifs_averageif_maxifs() {
+    let mut model = new_empty_model();
+    model._set("A1", "1");
+    model._set("A2", "100");
+    model._set("A1048576", "1");
+    model._set("C1", "=COUNTIFS(OFFSET(A1,{0;1},0),\">0\")");
+    model._set("D1", "=AVERAGEIF(OFFSET(A1,0,0,{1;2}),\">0\")");
+    model._set(
+        "E1",
+        "=MAXIFS(OFFSET(A1,{0;1},0),OFFSET(A1,{0;1},0),\">0\")",
+    );
+    model._set("F1", "=COUNTIFS(OFFSET(A:A,0,0,,SEQUENCE(1,1000)),\">0\")");
+    model._set(
+        "G1",
+        "=MAXIFS(OFFSET(A:A,0,0,,SEQUENCE(1,1000)),A:A,\">0\")",
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("C1"), *"1");
+    assert_eq!(model._get_text("C2"), *"1");
+    assert_eq!(model._get_text("D1"), *"1");
+    assert_eq!(model._get_text("D2"), *"50.5");
+    assert_eq!(model._get_text("E1"), *"1");
+    assert_eq!(model._get_text("E2"), *"100");
+    assert_eq!(model._get_text("F1"), *"#ERROR!");
+    assert_eq!(model._get_text("G1"), *"#ERROR!");
+}
+
+// AVERAGEIFS and MINIFS lift like SUMIFS and MAXIFS: the first range and every criteria range,
+// one value each (probes/t4396-lift-*, excel-graph 2026-11-05). A lifted first range against a
+// two-cell criteria range is a shape mismatch per element, and the bound charges every pair.
+#[test]
+fn fn_offset_lifted_into_averageifs_minifs() {
+    let mut model = new_empty_model();
+    model._set("A1", "1");
+    model._set("A2", "100");
+    model._set("B1", "2");
+    model._set("B2", "200");
+    model._set("A1048576", "1");
+    model._set(
+        "C1",
+        "=AVERAGEIFS(OFFSET(A1,{0;1},0),OFFSET(A1,{0;1},0),\">0\",OFFSET(B1,{0;1},0),\">0\")",
+    );
+    model._set(
+        "D1",
+        "=MINIFS(OFFSET(A1,0,0,{1;2}),OFFSET(A1,0,0,{1;2}),\">0\")",
+    );
+    model._set("E1", "=AVERAGEIFS(OFFSET(A1,{0;1},0),A1:A2,\">0\")");
+    model._set("F1", "=MINIFS(A1,OFFSET(A1,{0;1},0),\">0\")");
+    model._set(
+        "G1",
+        "=AVERAGEIFS(OFFSET(A:A,0,0,,SEQUENCE(1,1000)),A:A,\">0\")",
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("C1"), *"1");
+    assert_eq!(model._get_text("C2"), *"100");
+    assert_eq!(model._get_text("D1"), *"1");
+    assert_eq!(model._get_text("D2"), *"1");
+    assert_eq!(model._get_text("E1"), *"#VALUE!");
+    assert_eq!(model._get_text("E2"), *"#VALUE!");
+    assert_eq!(model._get_text("F1"), *"1");
+    assert_eq!(model._get_text("F2"), *"1");
+    assert_eq!(model._get_text("G1"), *"#ERROR!");
 }
 
 // SPEC-0014 "Bounds": the elements' cells are charged before any element runs, so a SUBTOTAL

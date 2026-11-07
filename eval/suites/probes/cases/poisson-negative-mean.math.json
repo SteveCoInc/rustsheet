@@ -1,0 +1,43 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "388d0906d77d75f08117884407aaeda06fd1855166193acb0a9019424bd1d2f1",
+  "definitions": {
+   "POISSON": "eee69c2ed987357d",
+   "POISSON.DIST": "eee69c2ed987357d"
+  },
+  "arguments_sha256": "4c32b8677851ee0ed0edb5dd7027f1513a80ef2df262213d0c85d1b19f5a9455"
+ },
+ "sheets": {
+  "Calc": {
+   "A2": {
+    "t": "n",
+    "v": "2.7182818284590452353602874713526624977572470937",
+    "f": "=POISSON(0,-1,TRUE)"
+   },
+   "A3": {
+    "t": "n",
+    "v": "2.7182818284590452353602874713526624977572470937",
+    "f": "=POISSON(0,-1,FALSE)"
+   },
+   "A4": {
+    "t": "e",
+    "why": "negative mean above x = 0",
+    "f": "=POISSON(1,-1,TRUE)"
+   },
+   "A5": {
+    "t": "n",
+    "v": "2.7182818284590452353602874713526624977572470937",
+    "f": "=POISSON.DIST(0,-1,TRUE)"
+   },
+   "A6": {
+    "t": "n",
+    "v": "1.6487212707001281468486507878141635716537761007101",
+    "f": "=POISSON.DIST(0,-0.5,FALSE)"
+   }
+  }
+ }
+}

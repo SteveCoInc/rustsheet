@@ -9,6 +9,9 @@
 //!
 //! See `docs/architecture/eval-harness.md`.
 
+pub mod accuracy;
+pub mod argument_coverage;
+pub mod attribution;
 pub mod baseline;
 pub mod calibrate;
 pub mod case;
@@ -24,16 +27,27 @@ pub mod exit_exceptions;
 pub mod fetch;
 pub mod formula_calls;
 pub mod function_scope;
+pub mod gate_b;
 pub mod lift_kinds;
 pub mod lock_file;
 pub mod milestone_exit;
 pub mod milestone_lists;
+pub mod out_of_scope;
 pub mod overrides;
+pub mod phase1_exceptions;
+mod pivot_definition;
+pub mod pivot_features;
+pub mod pivot_scoring;
+pub mod poi_m8_subset;
 pub mod probe_milestones;
+pub mod r1c;
 pub mod report;
+pub mod roundtrip;
+pub mod run_meta;
 pub mod runner;
 mod spec_pivots;
 mod spill_extent;
+pub mod subexpr_case;
 pub mod suite;
 pub mod text_expect;
 pub mod v15_checkpoint;

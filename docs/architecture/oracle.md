@@ -86,7 +86,13 @@ range `values` PATCH before `calculate`; Excel parses it exactly as typed text (
 format) and the PATCH response's `numberFormat` is logged as `ENTERED <sheet>!<a1> ...` on stderr.
 Only the value reaches the sidecar: the cached result stores no formats the snapshot reads, and
 `CELL("format")` is `#VALUE!` on Excel for the web. Record the logged formats in
-`docs/excel-semantics/` with the probe case id.
+`docs/excel-semantics/` with the probe case id. A cell `{"entered_r1c1":"=R1C2+1"}` is typed in
+R1C1 mode instead (T-3113, decision 0179): a range `formulasR1C1` PATCH (excel-desktop:
+`Range.FormulaR1C1`, UNVERIFIED: no desktop run). When Excel for the web refuses typed text of either
+kind (PATCH 400 `InvalidArgument`, as `=S! R1C2` gets in A1 mode), the excel-graph backend logs
+`REFUSED <sheet>!<a1> ...` and goes on: the cell keeps its prior content (blank in a spec case), and a
+dependant (`=ISBLANK(A1)`) records the refusal in the sidecar. Any other error still fails the fill;
+excel-desktop fails it on a refusal too.
 
 **Unobservable features** (T-1171). The sidecar holds cell values only, so anything whose effect
 is visual is out of reach of excel-graph: conditional-formatting rule results (fills, fonts, and
@@ -157,10 +163,15 @@ worksheet endpoints (the canary sheet stays last); the structural ones are:
 | `delete_sheet` | `DELETE worksheets('S')` (the canary sheet is refused) |
 | `convert_table` (`table`) | `POST tables('T')/convertToRange` |
 | `delete_table` (`table`) | `DELETE tables('T')` (the table's cells are cleared too; the engine adapter does the same) |
+| `add_table` (`table`, `ref`) | `POST worksheets('S')/tables/add` (`hasHeaders`), then `PATCH tables(id)` to rename it and a read-back of the name (T-3629) |
 
 Cut and paste, row and column moves, undo and sheet duplication have no Graph REST endpoint and stay out
 (desktop questions, decision 0039). The engine adapter replays the same ops (decisions 0076, 0098); it has no
 table convert-to-range yet, so a `convert_table` case scores as an adapter error.
+
+A case's `api_names` (T-3264, `docs/architecture/eval-harness.md`) are replayed after the sheet ops,
+each with `POST workbook/names/add` (`{"name", "reference"}`), logging `ADDED` or, for a 400
+`InvalidArgument`, `REFUSED` (the name stays undefined, decision 0179).
 
 ## Owner setup — Microsoft Graph (one time, ~20 minutes)
 

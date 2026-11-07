@@ -1,0 +1,125 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "03800288a9210ad5b58f7cb315bc55f2267c30a62a42e78d39eb4c8d90a5f216",
+  "definitions": {
+   "ODDFPRICE": "01474ee9e21d1dba",
+   "ODDFYIELD": "01474ee9e21d1dba",
+   "ODDLPRICE": "01474ee9e21d1dba",
+   "ODDLYIELD": "01474ee9e21d1dba"
+  },
+  "arguments_sha256": "5a7817e633e1ceeec0d3d5fb1e5986d2221f9b33acfa68f6380efb88091643d8"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "n",
+    "v": "93.743971338105614282319118059906788285309870373882",
+    "f": "=ODDFPRICE(39448,43831,39300,39630,0.0575,0.065,100,2,0)"
+   },
+   "A258": {
+    "t": "n",
+    "v": "0.063428684709998942156759904986816178279271619997732",
+    "f": "=ODDFYIELD(39448,43831,39300,39630,0.0575,95,100,2,0)"
+   },
+   "A515": {
+    "t": "n",
+    "v": "99.557082729905865326784611045948521508033874614479",
+    "f": "=ODDLPRICE(43000,43200,42917,0.0575,0.065,100,2,0)"
+   },
+   "A712": {
+    "t": "n",
+    "v": "0.07546015397950339305666725333441213532008243576121",
+    "f": "=ODDLYIELD(43000,43200,42917,0.0575,99,100,2,0)"
+   },
+   "A909": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLPRICE(42800,43200,42917,0.0575,0.065,100,2,0)"
+   },
+   "A910": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLPRICE(42916,43200,42917,0.0575,0.065,100,2,0)"
+   },
+   "A911": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLPRICE(42917,43200,42917,0.0575,0.065,100,2,0)"
+   },
+   "A912": {
+    "t": "n",
+    "v": "99.447751426837475738564262428190318103723769956119",
+    "f": "=ODDLPRICE(42918,43200,42917,0.0575,0.065,100,2,0)"
+   },
+   "A913": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLPRICE(59,43200,42917,0.0575,0.065,100,2,0)"
+   },
+   "A914": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLPRICE(0,43200,42917,0.0575,0.065,100,2,0)"
+   },
+   "A915": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLPRICE(0.5,43200,42917,0.0575,0.065,100,2,0)"
+   },
+   "A916": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLYIELD(42800,43200,42917,0.0575,99,100,2,0)"
+   },
+   "A917": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLYIELD(42916,43200,42917,0.0575,99,100,2,0)"
+   },
+   "A918": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLYIELD(42917,43200,42917,0.0575,99,100,2,0)"
+   },
+   "A919": {
+    "t": "n",
+    "v": "0.071149773826044123636790335633841431697641507510908",
+    "f": "=ODDLYIELD(42918,43200,42917,0.0575,99,100,2,0)"
+   },
+   "A920": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLYIELD(59,43200,42917,0.0575,99,100,2,0)"
+   },
+   "A921": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLYIELD(0,43200,42917,0.0575,99,100,2,0)"
+   },
+   "A922": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLYIELD(0.5,43200,42917,0.0575,99,100,2,0)"
+   },
+   "A923": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLPRICE(59,38163,33447,0,10,110,1,4)"
+   },
+   "A924": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLPRICE(4,36674,34791,-0,100,100,1)"
+   },
+   "A925": {
+    "t": "e",
+    "why": "not last_interest < settlement < maturity: #NUM!",
+    "f": "=ODDLPRICE(59,37822,34339,0,0.05/12,107,4,0)"
+   }
+  }
+ }
+}

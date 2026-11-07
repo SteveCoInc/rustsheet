@@ -68,6 +68,27 @@ pub struct CatalogFunction {
     /// Why `v15` exempts it; required with `v15`.
     #[serde(default)]
     pub v15_reason: Option<String>,
+    /// What the function returns (`number`, `text`, `bool`, `any`, ...), when the catalog says;
+    /// Gate A's missing-table count reads `number` (SPEC-0029, "Gate A holds").
+    #[serde(default)]
+    pub returns: Option<String>,
+    /// The parameters in order, for the argument-coverage census (T-0077).
+    #[serde(default)]
+    pub params: Vec<CatalogParam>,
+}
+
+/// One catalog parameter, as far as the argument-coverage census needs it (T-0077).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CatalogParam {
+    /// The catalog's name, e.g. `lookup_value`.
+    pub name: String,
+    /// How Excel takes the argument: `value`, `aggregate`, `aggregate_a`, `range`, `criteria`,
+    /// `array`, `lambda` or `name` (eval/catalog/functions.yaml).
+    pub mode: String,
+    /// On the first parameter of the repeating group, the group's size.
+    #[serde(default)]
+    pub repeat: Option<usize>,
 }
 
 #[derive(Deserialize)]
@@ -141,6 +162,18 @@ impl Catalog {
         self.functions.values()
     }
 
+    /// The entries that count towards parity, by name: the in-scope set every per-function
+    /// section of the report (the fifteen-digit checkpoint, the parity tiers) lists.
+    pub fn in_scope_functions(&self) -> impl Iterator<Item = &CatalogFunction> {
+        self.functions.values().filter(|f| f.scope == Scope::In)
+    }
+
+    /// The entry for `name`, if the catalog lists it.
+    #[must_use]
+    pub fn function(&self, name: &str) -> Option<&CatalogFunction> {
+        self.functions.get(name)
+    }
+
     /// Whether `name` counts towards parity. Names the catalog does not list (user-defined or
     /// misparsed calls) count, so nothing drops out of the report silently.
     #[must_use]
@@ -157,6 +190,13 @@ impl Catalog {
             .get(name)
             .filter(|f| f.v15 == Some(V15::Exempt))
             .and_then(|f| f.v15_reason.as_deref())
+    }
+
+    /// The in-scope functions that return a number, by name: the functions Gate A needs a
+    /// reference table (or an exemption) for (SPEC-0029, "Gate A holds").
+    pub fn in_scope_numeric(&self) -> impl Iterator<Item = &CatalogFunction> {
+        self.in_scope_functions()
+            .filter(|f| f.returns.as_deref() == Some("number"))
     }
 
     /// Whether `name` is an in-scope function the oracle cannot evaluate.

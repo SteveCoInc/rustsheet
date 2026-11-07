@@ -1,0 +1,44 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4701: one index into a column of an array of references (lifted OFFSET, lifted INDIRECT, a mixed XLOOKUP grid), then read where a reference is taken. Data!A1:A3 = 1, 2, 4; C1:C3 = 1, 2, 3; E1:E3 = 10, 20, 30. Calc: A1 INDEX(INDEX(OFFSET(Data!A1,{0;1},0,2),2),1,1) (spill?), A3 ROWS of the one-index INDEX, A4 ISREF of the nested INDEX, A5 SUM of the one-index INDEX, A6 the one-index INDEX itself, A7 the same nesting over single-cell elements; B1, B4:B6 the same over INDIRECT({\"Data!A1\";\"Data!A2:A3\"}); C1 and C3 over XLOOKUP({2;9},..,Data!A1:A2) element 2 (the range), C4 element 1 (the hit 20).",
+  "tags": [
+    "M6",
+    "lookup",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=INDEX(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2),1,1)",
+        "A3": "=ROWS(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2))",
+        "A4": "=ISREF(INDEX(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2),1,1))",
+        "A5": "=SUM(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2))",
+        "A6": "=INDEX(OFFSET(Data!$A$1,{0;1},0,2),2)",
+        "A7": "=INDEX(INDEX(OFFSET(Data!$A$1,{0;1},0),2),1,1)",
+        "B1": "=INDEX(INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2),1,1)",
+        "B4": "=ROWS(INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2))",
+        "B5": "=SUM(INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2))",
+        "B6": "=INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2)",
+        "C1": "=INDEX(INDEX(XLOOKUP({2;9},Data!$C$1:$C$3,Data!$E$1:$E$3,Data!$A$1:$A$2),2),1,1)",
+        "C3": "=SUM(INDEX(XLOOKUP({2;9},Data!$C$1:$C$3,Data!$E$1:$E$3,Data!$A$1:$A$2),2))",
+        "C4": "=INDEX(INDEX(XLOOKUP({2;9},Data!$C$1:$C$3,Data!$E$1:$E$3,Data!$A$1:$A$2),1),1,1)"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A1": 1,
+        "A2": 2,
+        "A3": 4,
+        "C1": 1,
+        "C2": 2,
+        "C3": 3,
+        "E1": 10,
+        "E2": 20,
+        "E3": 30
+      }
+    }
+  ],
+  "expected": {}
+}

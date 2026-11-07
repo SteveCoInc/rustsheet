@@ -104,19 +104,22 @@ fn intersection_operands_may_be_parenthesized_or_calls() {
 fn whitespace_elsewhere_is_not_an_intersection() {
     let mut parser = parser();
     let cases = [
-        (" 1 + 2 ", "1+2"),
-        ("SUM( A1 , B1 )", "SUM(A1,B1)"),
-        ("SUM( A1:B2 )", "SUM(A1:B2)"),
-        ("( A1 )", "(A1)"),
+        // The spaces Excel keeps print back (SPEC-0023): not those at the end, before a comma,
+        // in an array constant or around `:`.
+        (" 1 + 2 ", " 1 + 2"),
+        ("SUM( A1 , B1 )", "SUM( A1, B1 )"),
+        ("SUM( A1:B2 )", "SUM( A1:B2 )"),
+        ("SUM( A1 : B2 )", "SUM( A1:B2 )"),
+        ("( A1 )", "( A1 )"),
         ("{ 1 , 2 ; 3 , 4 }", "{1,2;3,4}"),
-        ("A1 + B1", "A1+B1"),
-        ("A1 -B1", "A1-B1"),
-        ("A1 & B1", "A1&B1"),
-        ("A1 = B1", "A1=B1"),
-        ("A1 * B1", "A1*B1"),
-        ("A1 ^ B1", "A1^B1"),
-        ("A1 %", "A1%"),
-        ("IF( A1 , B1 , C1 )", "IF(A1,B1,C1)"),
+        ("A1 + B1", "A1 + B1"),
+        ("A1 -B1", "A1 -B1"),
+        ("A1 & B1", "A1 & B1"),
+        ("A1 = B1", "A1 = B1"),
+        ("A1 * B1", "A1 * B1"),
+        ("A1 ^ B1", "A1 ^ B1"),
+        ("A1 %", "A1 %"),
+        ("IF( A1 , B1 , C1 )", "IF( A1, B1, C1 )"),
         ("A1:B2 ", "A1:B2"),
     ];
     for (formula, expected) in cases {
@@ -315,6 +318,33 @@ fn intersection_operands_must_be_references() {
         "A1:A3 ROWS(A2:B2)",
         "A1:A3 HLOOKUP(2,A2:B3,1)",
         "A1:A3 LOOKUP(2,A1:A3,A1:A3)",
+        // T-3308: refused on either side (scratch runs, excel-graph, 2026-11-03).
+        "A1:A3 EXPAND(A2:B2,1,2)",
+        "EXPAND(A2:B2,1,2) A1:A3",
+        "A1:A3 TOCOL(A2:B2)",
+        "TOCOL(A2:B2) A1:A3",
+        "A1:A3 TOROW(A2:B2)",
+        "TOROW(A2:B2) A1:A3",
+        "A1:A3 WRAPROWS(A2:B2,2)",
+        "WRAPROWS(A2:B2,2) A1:A3",
+        "A1:A3 WRAPCOLS(A2:B2,1)",
+        "WRAPCOLS(A2:B2,1) A1:A3",
+        "A1:A3 HSTACK(A2:B2)",
+        "HSTACK(A2:B2) A1:A3",
+        "A1:A3 SORTBY(A2:B2,A2:B2)",
+        "SORTBY(A2:B2,A2:B2) A1:A3",
+        "A1:A3 XMATCH(2,A1:A3)",
+        "XMATCH(2,A1:A3) A1:A3",
+        "A1:A3 AREAS(A2:B2)",
+        "AREAS(A2:B2) A1:A3",
+        "A1:A3 CELL(\"address\",A2)",
+        "CELL(\"address\",A2) A1:A3",
+        "A1:A3 HYPERLINK(\"#Sheet1!A2\",A2)",
+        "HYPERLINK(\"#Sheet1!A2\",A2) A1:A3",
+        "A1:A3 IMAGE(\"https://example.com/a.png\")",
+        "IMAGE(\"https://example.com/a.png\") A1:A3",
+        "A1:A3 GROUPBY(A1:A3,B1:B3,LAMBDA(x,SUM(x)))",
+        "GROUPBY(A1:A3,B1:B3,LAMBDA(x,SUM(x))) A1:A3",
     ] {
         let node = parser.parse(formula, &context());
         assert!(
@@ -340,5 +370,26 @@ fn intersection_operands_must_be_references() {
     ] {
         let node = parser.parse(formula, &context());
         assert!(is_intersection(&node), "{formula}: {node:?}");
+    }
+}
+
+#[test]
+fn extra_spaces_of_an_intersection_print_back() {
+    // The first space is the operator, Excel keeps the rest (SPEC-0023 step 3,
+    // probes/t2776-formula-text-whitespace-shapes C3, C5, E9).
+    let mut parser = parser();
+    for (formula, expected) in [
+        ("B1:B2  B2", "B1:B2  B2"),
+        ("B1:B2   B2", "B1:B2   B2"),
+        ("SUM(B1:B2  B2)", "SUM(B1:B2  B2)"),
+        ("B1:B2  B2  B1", "B1:B2  B2  B1"),
+        ("B1:B2  (B2)", "B1:B2  (B2)"),
+    ] {
+        let node = parser.parse(formula, &context());
+        assert_eq!(
+            to_english_localized_string(&node, &context()),
+            expected,
+            "{formula}: {node:?}"
+        );
     }
 }

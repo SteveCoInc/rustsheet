@@ -1,0 +1,72 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4299: typed _xlpm. extrapolations of T-4288: case of the prefix (A1:A2), a LAMBDA body use and parameter spelled with it (A3:A5, A5 the plain control), R1C1 doubled prefix (A6), and a structured reference typed in R1C1 (A7) and A1 (A8) mode against table T at H1:I4. Each row: the value, ISBLANK and FORMULATEXT.",
+ "tags": [
+  "M2",
+  "syntax",
+  "probe"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "F1": 7,
+    "H1": "Col",
+    "I1": "Other",
+    "H2": 1,
+    "I2": 10,
+    "H3": 2,
+    "I3": 20,
+    "H4": 4,
+    "I4": 40,
+    "A1": {
+     "entered": "=LET(_XLPM.x,1,_XLPM.x+1)"
+    },
+    "B1": "=ISBLANK(A1)",
+    "C1": "=IFERROR(FORMULATEXT(A1),\"none\")",
+    "A2": {
+     "entered": "=LET(x,2,_XLPM.x*3)"
+    },
+    "B2": "=ISBLANK(A2)",
+    "C2": "=IFERROR(FORMULATEXT(A2),\"none\")",
+    "A3": {
+     "entered": "=LAMBDA(x,_xlpm.x*2)(3)"
+    },
+    "B3": "=ISBLANK(A3)",
+    "C3": "=IFERROR(FORMULATEXT(A3),\"none\")",
+    "A4": {
+     "entered": "=LAMBDA(_xlpm.x,_xlpm.x*2)(3)"
+    },
+    "B4": "=ISBLANK(A4)",
+    "C4": "=IFERROR(FORMULATEXT(A4),\"none\")",
+    "A5": {
+     "entered": "=LAMBDA(x,x*2)(3)"
+    },
+    "B5": "=ISBLANK(A5)",
+    "C5": "=IFERROR(FORMULATEXT(A5),\"none\")",
+    "A6": {
+     "entered_r1c1": "=LET(x,2,_xlpm._xlpm.x*3)"
+    },
+    "B6": "=ISBLANK(A6)",
+    "C6": "=IFERROR(FORMULATEXT(A6),\"none\")",
+    "A7": {
+     "entered_r1c1": "=SUM(T[Col])"
+    },
+    "B7": "=ISBLANK(A7)",
+    "C7": "=IFERROR(FORMULATEXT(A7),\"none\")",
+    "A8": {
+     "entered": "=SUM(T[Col])"
+    },
+    "B8": "=ISBLANK(A8)",
+    "C8": "=IFERROR(FORMULATEXT(A8),\"none\")"
+   },
+   "tables": [
+    {
+     "name": "T",
+     "ref": "H1:I4"
+    }
+   ]
+  }
+ ]
+}

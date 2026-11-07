@@ -1,0 +1,64 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4585: how Excel names a pivot cache's fields when the source header repeats a name, has a blank cell or differs only in case. D!A1:F1 is Region, Sales, then formulas the case builder cannot see through: =\"Sales\" (a second Sales), =\"\" (a blank header), =\"region\" (Region in another case) and =\"Sales\"&\"\" (a third Sales). The builder caches those formula headers under their formula text, so Excel's refresh on open (refreshOnLoad) renames them; the sidecar's `pivots` cache_fields hold the names Excel saves. N1 is rows Region, Sum of Sales. Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4585",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "D",
+   "cells": {
+    "A1": "Region",
+    "B1": "Sales",
+    "C1": "=\"Sales\"",
+    "D1": "=\"\"",
+    "E1": "=\"region\"",
+    "F1": "=\"Sales\"&\"\"",
+    "A2": "East",
+    "B2": 10,
+    "C2": 1,
+    "D2": 2,
+    "E2": "a",
+    "F2": 5,
+    "A3": "West",
+    "B3": 20,
+    "C3": 3,
+    "D3": 4,
+    "E3": "b",
+    "F3": 6
+   }
+  },
+  {
+   "name": "N1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PN1",
+     "source": "D!A1:F3",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "sum",
+        "name": "Total Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=SUM(D!B2:B3)"
+   }
+  }
+ ]
+}

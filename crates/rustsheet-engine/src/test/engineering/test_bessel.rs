@@ -99,3 +99,48 @@ fn asymptotic_phase_past_the_inner_trig_cut_is_num_error() {
     assert_eq!(bits("A1"), (-2.020_590_456_739_121_3e-5_f64).to_bits());
     assert_eq!(bits("A10"), (-6.584_002_087_696_111e-5_f64).to_bits());
 }
+
+/// Excel drops a subnormal term `2n/x * K(n)` from BESSELK's upward recurrence, so near x = 700
+/// higher orders repeat K0 and K1 (probes-numeric/m9-besselk-underflow).
+#[test]
+fn besselk_recurrence_flushes_a_subnormal_term() {
+    let mut model = new_empty_model();
+    model._set("A1", "=BESSELK(700,2)=BESSELK(700,0)");
+    model._set("A2", "=BESSELK(702,4)=BESSELK(702,0)");
+    model._set("A3", "=BESSELK(705,5)=BESSELK(705,1)");
+    model._set("A4", "=BESSELK(700,3)");
+    model._set("A5", "=BESSELK(702,4)");
+    model.evaluate();
+    for cell in ["A1", "A2", "A3"] {
+        assert_eq!(model._get_text(cell), *"TRUE", "{cell}");
+    }
+    let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
+        Ok(CellValue::Number(n)) => n.to_bits(),
+        other => panic!("expected number, got {other:?}"),
+    };
+    assert_eq!(bits("A4"), 4.699_795_140_140_56e-306_f64.to_bits());
+    assert_eq!(bits("A5"), 6.310_849_433_265_845e-307_f64.to_bits());
+}
+
+/// BESSELJ and BESSELI return 0 for a subnormal result; BESSELK answers at x = 2^-1021 exactly
+/// and BESSELY answers down to 2^-1022 (probes/t4552-bessel-tiny-x-cut B1:B2, C6, C8, D2, D6, D8,
+/// E8; engineering.md "BESSELK at a tiny x").
+#[test]
+fn bessel_results_at_the_bottom_of_the_normal_range() {
+    let mut model = new_empty_model();
+    model._set("A1", "=BESSELJ(2^-1022,1)");
+    model._set("A2", "=BESSELI(4.4501477170144E-308,1)");
+    model._set("A3", "=BESSELI(2^-1022,1)");
+    model._set("A4", "=BESSELI(2^-1021,1)=2^-1022");
+    model._set("A5", "=BESSELJ(2^-1021,1)>0");
+    model._set("A6", "=BESSELK(2^-1021,0)");
+    model._set("A7", "=BESSELY(2^-1022,0)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"0");
+    assert_eq!(model._get_text("A2"), *"0");
+    assert_eq!(model._get_text("A3"), *"0");
+    assert_eq!(model._get_text("A4"), *"TRUE");
+    assert_eq!(model._get_text("A5"), *"TRUE");
+    assert_eq!(model._get_text("A6"), *"707.8192029");
+    assert_eq!(model._get_text("A7"), *"-451.052972");
+}

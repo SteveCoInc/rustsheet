@@ -3,7 +3,8 @@
 
 use std::borrow::Cow;
 
-use super::casefold::fold_case;
+use crate::functions::util::collation::fold_case;
+use crate::functions::util::near_integer::near_integer_count;
 use crate::{
     calc_result::CalcResult,
     cast::calc_result_to_text,
@@ -25,7 +26,9 @@ pub(super) fn find_element(
 ) -> Result<ArrayNode, Error> {
     let find_text = calc_result_to_text(find_text)?;
     let within_text = calc_result_to_text(within_text)?;
-    let start_num = start_num?.floor();
+    // Excel: a start just below an integer counts as that integer, as LEFT's count does
+    // (probes/t4453-near-integer-text-args B1:C14; docs/excel-semantics/text.md).
+    let start_num = near_integer_count(start_num?);
     if start_num < 1.0 {
         return Err(Error::VALUE);
     }
@@ -94,7 +97,7 @@ fn find(search_for: &str, text: &str, start: usize) -> Option<i32> {
 fn search(search_for: &str, text: &str, start: usize) -> Option<i32> {
     // Both strings have one char per UTF-16 unit (`one_char_per_unit`), so `?` and `*` run over
     // units and match line breaks too (probes/search-wildcard-newline).
-    let pattern = WildcardPattern::from_units(unit_chars_to_units(search_for).into_iter());
+    let pattern = WildcardPattern::for_search(unit_chars_to_units(search_for).into_iter());
     let units = unit_chars_to_units(text);
     let at = pattern.find_from(&units, start.saturating_sub(1))?;
     Some(at as i32 + 1)

@@ -1,0 +1,74 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "8b5f8c964967f76cc604620d38bb0a09987c3ad051ab0ee783b59160cabb2610",
+  "definitions": {
+   "TBILLEQ": "d78f0dcbb4bdac42",
+   "TBILLPRICE": "d78f0dcbb4bdac42",
+   "TBILLYIELD": "d78f0dcbb4bdac42"
+  },
+  "arguments_sha256": "7a3fba35f45027722d9eb8dee4f0a82e0cd0a44ac34fe3cebb703774a3d14ffc"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "e",
+    "why": "settlement on or after maturity: #NUM!",
+    "f": "=TBILLYIELD(45366,45366,98)"
+   },
+   "A2": {
+    "t": "e",
+    "why": "settlement on or after maturity: #NUM!",
+    "f": "=TBILLEQ(45366,45366,0.05)"
+   },
+   "A3": {
+    "t": "e",
+    "why": "settlement on or after maturity: #NUM!",
+    "f": "=TBILLPRICE(45366,45366,0.05)"
+   },
+   "B1": {
+    "t": "e",
+    "why": "settlement on or after maturity: #NUM!",
+    "f": "=TBILLYIELD(45367,45366,98)"
+   },
+   "B2": {
+    "t": "e",
+    "why": "settlement on or after maturity: #NUM!",
+    "f": "=TBILLEQ(45367,45366,0.05)"
+   },
+   "B3": {
+    "t": "e",
+    "why": "settlement on or after maturity: #NUM!",
+    "f": "=TBILLPRICE(45367,45366,0.05)"
+   },
+   "C1": {
+    "t": "n",
+    "v": "7.3469387755102040816326530612244897959183673469388",
+    "f": "=TBILLYIELD(45366,45367,98)"
+   },
+   "C2": {
+    "t": "n",
+    "v": "0.05070148631754410616257601017970962676901905123441",
+    "f": "=TBILLEQ(45366,45367,0.05)"
+   },
+   "C3": {
+    "t": "n",
+    "v": "99.986111111111111110340122899565863513594700230492",
+    "f": "=TBILLPRICE(45366,45367,0.05)"
+   },
+   "D1": {
+    "t": "e",
+    "why": "settlement on or after maturity: #NUM!",
+    "f": "=TBILLYIELD(45366,45366,100)"
+   },
+   "D2": {
+    "t": "e",
+    "why": "settlement on or after maturity: #NUM!",
+    "f": "=TBILLEQ(45366,45366,0)"
+   }
+  }
+ }
+}

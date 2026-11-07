@@ -1,0 +1,259 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3957: a colon in the letter-period tail (`N A. F:G`, T-3948 row 10's `10 A. 5:30`): the minutes and seconds of the tail (rows 1-4, 15-19, 22), the clock (5, 13, 14, 20, 21), the word (6), a second colon, a date or a space after it (7, 8, 23, 24), and T-3948's any-tail gate (9-12). A typed, B ISNUMBER, C value or LEN, D TEXT; E VALUE, F 0+, G DATEVALUE, H TIMEVALUE of the literal.",
+  "tags": [
+    "M2",
+    "probe",
+    "dates",
+    "date-text",
+    "T-3957"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": {
+          "entered": "10 A. 5:0"
+        },
+        "B1": "=ISNUMBER(A1)",
+        "C1": "=IF(ISNUMBER(A1),A1,LEN(A1))",
+        "D1": "=IF(ISNUMBER(A1),TEXT(A1,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E1": "=VALUE(\"10 A. 5:0\")",
+        "F1": "=0+\"10 A. 5:0\"",
+        "G1": "=DATEVALUE(\"10 A. 5:0\")",
+        "H1": "=TIMEVALUE(\"10 A. 5:0\")",
+        "A2": {
+          "entered": "10 A. 5:59"
+        },
+        "B2": "=ISNUMBER(A2)",
+        "C2": "=IF(ISNUMBER(A2),A2,LEN(A2))",
+        "D2": "=IF(ISNUMBER(A2),TEXT(A2,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E2": "=VALUE(\"10 A. 5:59\")",
+        "F2": "=0+\"10 A. 5:59\"",
+        "G2": "=DATEVALUE(\"10 A. 5:59\")",
+        "H2": "=TIMEVALUE(\"10 A. 5:59\")",
+        "A3": {
+          "entered": "10 A. 5:60"
+        },
+        "B3": "=ISNUMBER(A3)",
+        "C3": "=IF(ISNUMBER(A3),A3,LEN(A3))",
+        "D3": "=IF(ISNUMBER(A3),TEXT(A3,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E3": "=VALUE(\"10 A. 5:60\")",
+        "F3": "=0+\"10 A. 5:60\"",
+        "G3": "=DATEVALUE(\"10 A. 5:60\")",
+        "H3": "=TIMEVALUE(\"10 A. 5:60\")",
+        "A4": {
+          "entered": "10 A. 0:30"
+        },
+        "B4": "=ISNUMBER(A4)",
+        "C4": "=IF(ISNUMBER(A4),A4,LEN(A4))",
+        "D4": "=IF(ISNUMBER(A4),TEXT(A4,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E4": "=VALUE(\"10 A. 0:30\")",
+        "F4": "=0+\"10 A. 0:30\"",
+        "G4": "=DATEVALUE(\"10 A. 0:30\")",
+        "H4": "=TIMEVALUE(\"10 A. 0:30\")",
+        "A5": {
+          "entered": "10:00 A. 5:30"
+        },
+        "B5": "=ISNUMBER(A5)",
+        "C5": "=IF(ISNUMBER(A5),A5,LEN(A5))",
+        "D5": "=IF(ISNUMBER(A5),TEXT(A5,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E5": "=VALUE(\"10:00 A. 5:30\")",
+        "F5": "=0+\"10:00 A. 5:30\"",
+        "G5": "=DATEVALUE(\"10:00 A. 5:30\")",
+        "H5": "=TIMEVALUE(\"10:00 A. 5:30\")",
+        "A6": {
+          "entered": "10 P. 5:30"
+        },
+        "B6": "=ISNUMBER(A6)",
+        "C6": "=IF(ISNUMBER(A6),A6,LEN(A6))",
+        "D6": "=IF(ISNUMBER(A6),TEXT(A6,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E6": "=VALUE(\"10 P. 5:30\")",
+        "F6": "=0+\"10 P. 5:30\"",
+        "G6": "=DATEVALUE(\"10 P. 5:30\")",
+        "H6": "=TIMEVALUE(\"10 P. 5:30\")",
+        "A7": {
+          "entered": "10 A. 5:30:15"
+        },
+        "B7": "=ISNUMBER(A7)",
+        "C7": "=IF(ISNUMBER(A7),A7,LEN(A7))",
+        "D7": "=IF(ISNUMBER(A7),TEXT(A7,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E7": "=VALUE(\"10 A. 5:30:15\")",
+        "F7": "=0+\"10 A. 5:30:15\"",
+        "G7": "=DATEVALUE(\"10 A. 5:30:15\")",
+        "H7": "=TIMEVALUE(\"10 A. 5:30:15\")",
+        "A8": {
+          "entered": "10 A. 5:30 7/1/2025"
+        },
+        "B8": "=ISNUMBER(A8)",
+        "C8": "=IF(ISNUMBER(A8),A8,LEN(A8))",
+        "D8": "=IF(ISNUMBER(A8),TEXT(A8,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E8": "=VALUE(\"10 A. 5:30 7/1/2025\")",
+        "F8": "=0+\"10 A. 5:30 7/1/2025\"",
+        "G8": "=DATEVALUE(\"10 A. 5:30 7/1/2025\")",
+        "H8": "=TIMEVALUE(\"10 A. 5:30 7/1/2025\")",
+        "A9": {
+          "entered": "10 a.m."
+        },
+        "B9": "=ISNUMBER(A9)",
+        "C9": "=IF(ISNUMBER(A9),A9,LEN(A9))",
+        "D9": "=IF(ISNUMBER(A9),TEXT(A9,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E9": "=VALUE(\"10 a.m.\")",
+        "F9": "=0+\"10 a.m.\"",
+        "G9": "=DATEVALUE(\"10 a.m.\")",
+        "H9": "=TIMEVALUE(\"10 a.m.\")",
+        "A10": {
+          "entered": "10:00 a.m."
+        },
+        "B10": "=ISNUMBER(A10)",
+        "C10": "=IF(ISNUMBER(A10),A10,LEN(A10))",
+        "D10": "=IF(ISNUMBER(A10),TEXT(A10,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E10": "=VALUE(\"10:00 a.m.\")",
+        "F10": "=0+\"10:00 a.m.\"",
+        "G10": "=DATEVALUE(\"10:00 a.m.\")",
+        "H10": "=TIMEVALUE(\"10:00 a.m.\")",
+        "A11": {
+          "entered": "10 A. x"
+        },
+        "B11": "=ISNUMBER(A11)",
+        "C11": "=IF(ISNUMBER(A11),A11,LEN(A11))",
+        "D11": "=IF(ISNUMBER(A11),TEXT(A11,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E11": "=VALUE(\"10 A. x\")",
+        "F11": "=0+\"10 A. x\"",
+        "G11": "=DATEVALUE(\"10 A. x\")",
+        "H11": "=TIMEVALUE(\"10 A. x\")",
+        "A12": {
+          "entered": "10 A. 5x 7/1/2025"
+        },
+        "B12": "=ISNUMBER(A12)",
+        "C12": "=IF(ISNUMBER(A12),A12,LEN(A12))",
+        "D12": "=IF(ISNUMBER(A12),TEXT(A12,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E12": "=VALUE(\"10 A. 5x 7/1/2025\")",
+        "F12": "=0+\"10 A. 5x 7/1/2025\"",
+        "G12": "=DATEVALUE(\"10 A. 5x 7/1/2025\")",
+        "H12": "=TIMEVALUE(\"10 A. 5x 7/1/2025\")",
+        "A13": {
+          "entered": "0 A. 5:30"
+        },
+        "B13": "=ISNUMBER(A13)",
+        "C13": "=IF(ISNUMBER(A13),A13,LEN(A13))",
+        "D13": "=IF(ISNUMBER(A13),TEXT(A13,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E13": "=VALUE(\"0 A. 5:30\")",
+        "F13": "=0+\"0 A. 5:30\"",
+        "G13": "=DATEVALUE(\"0 A. 5:30\")",
+        "H13": "=TIMEVALUE(\"0 A. 5:30\")",
+        "A14": {
+          "entered": "10 A. 7:30"
+        },
+        "B14": "=ISNUMBER(A14)",
+        "C14": "=IF(ISNUMBER(A14),A14,LEN(A14))",
+        "D14": "=IF(ISNUMBER(A14),TEXT(A14,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E14": "=VALUE(\"10 A. 7:30\")",
+        "F14": "=0+\"10 A. 7:30\"",
+        "G14": "=DATEVALUE(\"10 A. 7:30\")",
+        "H14": "=TIMEVALUE(\"10 A. 7:30\")",
+        "A15": {
+          "entered": "10 A. 5:3"
+        },
+        "B15": "=ISNUMBER(A15)",
+        "C15": "=IF(ISNUMBER(A15),A15,LEN(A15))",
+        "D15": "=IF(ISNUMBER(A15),TEXT(A15,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E15": "=VALUE(\"10 A. 5:3\")",
+        "F15": "=0+\"10 A. 5:3\"",
+        "G15": "=DATEVALUE(\"10 A. 5:3\")",
+        "H15": "=TIMEVALUE(\"10 A. 5:3\")",
+        "A16": {
+          "entered": "10 A. 05:30"
+        },
+        "B16": "=ISNUMBER(A16)",
+        "C16": "=IF(ISNUMBER(A16),A16,LEN(A16))",
+        "D16": "=IF(ISNUMBER(A16),TEXT(A16,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E16": "=VALUE(\"10 A. 05:30\")",
+        "F16": "=0+\"10 A. 05:30\"",
+        "G16": "=DATEVALUE(\"10 A. 05:30\")",
+        "H16": "=TIMEVALUE(\"10 A. 05:30\")",
+        "A17": {
+          "entered": "10 A. 0:0"
+        },
+        "B17": "=ISNUMBER(A17)",
+        "C17": "=IF(ISNUMBER(A17),A17,LEN(A17))",
+        "D17": "=IF(ISNUMBER(A17),TEXT(A17,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E17": "=VALUE(\"10 A. 0:0\")",
+        "F17": "=0+\"10 A. 0:0\"",
+        "G17": "=DATEVALUE(\"10 A. 0:0\")",
+        "H17": "=TIMEVALUE(\"10 A. 0:0\")",
+        "A18": {
+          "entered": "10 A. 12:00"
+        },
+        "B18": "=ISNUMBER(A18)",
+        "C18": "=IF(ISNUMBER(A18),A18,LEN(A18))",
+        "D18": "=IF(ISNUMBER(A18),TEXT(A18,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E18": "=VALUE(\"10 A. 12:00\")",
+        "F18": "=0+\"10 A. 12:00\"",
+        "G18": "=DATEVALUE(\"10 A. 12:00\")",
+        "H18": "=TIMEVALUE(\"10 A. 12:00\")",
+        "A19": {
+          "entered": "10 A. 100:30"
+        },
+        "B19": "=ISNUMBER(A19)",
+        "C19": "=IF(ISNUMBER(A19),A19,LEN(A19))",
+        "D19": "=IF(ISNUMBER(A19),TEXT(A19,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E19": "=VALUE(\"10 A. 100:30\")",
+        "F19": "=0+\"10 A. 100:30\"",
+        "G19": "=DATEVALUE(\"10 A. 100:30\")",
+        "H19": "=TIMEVALUE(\"10 A. 100:30\")",
+        "A20": {
+          "entered": "24 A. 5:30"
+        },
+        "B20": "=ISNUMBER(A20)",
+        "C20": "=IF(ISNUMBER(A20),A20,LEN(A20))",
+        "D20": "=IF(ISNUMBER(A20),TEXT(A20,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E20": "=VALUE(\"24 A. 5:30\")",
+        "F20": "=0+\"24 A. 5:30\"",
+        "G20": "=DATEVALUE(\"24 A. 5:30\")",
+        "H20": "=TIMEVALUE(\"24 A. 5:30\")",
+        "A21": {
+          "entered": "1:2 A. 5:30"
+        },
+        "B21": "=ISNUMBER(A21)",
+        "C21": "=IF(ISNUMBER(A21),A21,LEN(A21))",
+        "D21": "=IF(ISNUMBER(A21),TEXT(A21,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E21": "=VALUE(\"1:2 A. 5:30\")",
+        "F21": "=0+\"1:2 A. 5:30\"",
+        "G21": "=DATEVALUE(\"1:2 A. 5:30\")",
+        "H21": "=TIMEVALUE(\"1:2 A. 5:30\")",
+        "A22": {
+          "entered": "10 A. 5:30.5"
+        },
+        "B22": "=ISNUMBER(A22)",
+        "C22": "=IF(ISNUMBER(A22),A22,LEN(A22))",
+        "D22": "=IF(ISNUMBER(A22),TEXT(A22,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E22": "=VALUE(\"10 A. 5:30.5\")",
+        "F22": "=0+\"10 A. 5:30.5\"",
+        "G22": "=DATEVALUE(\"10 A. 5:30.5\")",
+        "H22": "=TIMEVALUE(\"10 A. 5:30.5\")",
+        "A23": {
+          "entered": "10 A. 5:30 "
+        },
+        "B23": "=ISNUMBER(A23)",
+        "C23": "=IF(ISNUMBER(A23),A23,LEN(A23))",
+        "D23": "=IF(ISNUMBER(A23),TEXT(A23,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E23": "=VALUE(\"10 A. 5:30 \")",
+        "F23": "=0+\"10 A. 5:30 \"",
+        "G23": "=DATEVALUE(\"10 A. 5:30 \")",
+        "H23": "=TIMEVALUE(\"10 A. 5:30 \")",
+        "A24": {
+          "entered": "10 A.5:30"
+        },
+        "B24": "=ISNUMBER(A24)",
+        "C24": "=IF(ISNUMBER(A24),A24,LEN(A24))",
+        "D24": "=IF(ISNUMBER(A24),TEXT(A24,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+        "E24": "=VALUE(\"10 A.5:30\")",
+        "F24": "=0+\"10 A.5:30\"",
+        "G24": "=DATEVALUE(\"10 A.5:30\")",
+        "H24": "=TIMEVALUE(\"10 A.5:30\")"
+      }
+    }
+  ],
+  "expected": {}
+}

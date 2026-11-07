@@ -1,9 +1,10 @@
 //! Taking a sheet out of a model and putting it back, so a caller can undo a delete.
 
 use crate::{
+    expressions::parser::stringify::delete_sheet_in_node,
+    formula_rewrite::RewrittenFormula,
     model::Model,
     pivot::PivotTable,
-    tables::RewrittenFormula,
     types::{Table, Worksheet},
 };
 
@@ -17,8 +18,9 @@ pub struct TakenSheet {
     tables: Vec<(String, Table)>,
     /// Its pivot tables; [`Model::restore_sheet`] puts them back (SPEC-0015, T-2086).
     pivots: Vec<PivotTable>,
-    /// The other formulas whose references to its tables became `#REF!`; [`Model::restore_sheet`]
-    /// puts their text back (T-2340).
+    /// The other formulas whose references to its tables became `#REF!` (T-2340), then those
+    /// whose 3-D spans lost it as an end (T-4272), in that order; [`Model::restore_sheet`] puts
+    /// their text back.
     rewritten: Vec<RewrittenFormula>,
 }
 
@@ -48,7 +50,13 @@ impl Model {
             return Err("Sheet index too large".to_string());
         }
         let pivots = self.take_pivots_on(sheet_index)?;
-        let (tables, rewritten) = self.take_tables_of_sheet(sheet_index);
+        let (tables, mut rewritten) = self.take_tables_of_sheet(sheet_index);
+        let sheet_names = self.workbook.get_worksheet_names();
+        rewritten.extend(
+            self.rewrite_formulas_edited(Some(sheet_index as usize), |node| {
+                delete_sheet_in_node(node, sheet_index, &sheet_names);
+            }),
+        );
         let worksheet = self.workbook.worksheets.remove(sheet_index as usize);
         self.reset_tables();
         Ok(TakenSheet {
@@ -81,7 +89,7 @@ impl Model {
             return Err("A worksheet already exists with that name".to_string());
         }
         self.workbook.worksheets.insert(sheet_index as usize, sheet);
-        self.restore_table_references(rewritten);
+        self.restore_rewritten_formulas(rewritten);
         self.restore_tables(tables);
         self.restore_pivots(pivots);
         Ok(())
@@ -116,6 +124,38 @@ mod tests {
         assert_eq!(
             model.get_formatted_cell_value(0, 1, 1).expect("value"),
             "42"
+        );
+    }
+
+    #[test]
+    fn a_sheet_added_under_a_deleted_name_does_not_revive_its_references() {
+        // probes/table-edits/t2612-delete-sheet-then-add (T-2612): Excel keeps `#REF!`.
+        let mut model = model();
+        let sheet = model.take_sheet(1).expect("take");
+        model.add_sheet("Two").expect("sheet");
+        model
+            .set_user_input(1, 1, 1, "41".to_string())
+            .expect("input");
+        model.evaluate();
+        assert_eq!(
+            model.get_formatted_cell_value(0, 1, 1).expect("value"),
+            "#REF!"
+        );
+        assert_eq!(
+            model.get_cell_formula(0, 1, 1).expect("formula").as_deref(),
+            Some("=#REF!A1+1")
+        );
+        // The undo puts the reference back once the new sheet is gone.
+        model.delete_sheet(1).expect("delete");
+        model.restore_sheet(1, sheet).expect("restore");
+        model.evaluate();
+        assert_eq!(
+            model.get_formatted_cell_value(0, 1, 1).expect("value"),
+            "42"
+        );
+        assert_eq!(
+            model.get_cell_formula(0, 1, 1).expect("formula").as_deref(),
+            Some("=Two!A1+1")
         );
     }
 

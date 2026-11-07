@@ -1,15 +1,16 @@
 mod and_or_xor_not;
 mod bycol_byrow;
 mod lambda;
+mod lambda_scope;
 mod r#let;
 mod map_reduce;
+mod read_once;
 mod scan;
 mod switch;
 
 pub(crate) use bycol_byrow::as_lambda;
-pub(crate) use lambda::{
-    Captures, FunctionValue, LambdaCaller, NamedLambdas, ScopeResult, SharedLambda,
-};
+pub(crate) use lambda::{Captures, FunctionValue, LambdaCaller, NamedLambdas, SharedLambda};
+pub(crate) use lambda_scope::ScopeResult;
 pub(crate) use r#let::{has_duplicate_parameter, same_variable};
 
 use crate::cast::calc_result_to_array_node;
@@ -22,7 +23,7 @@ use crate::{
         types::CellReferenceIndex,
     },
     functions::{
-        lift::{LiftCost, LiftOptions, LiftedArg},
+        lift::{BroadcastArg, LiftCost, LiftOptions, LiftedArg},
         Function,
     },
     limits::check_array_size,
@@ -42,44 +43,6 @@ pub(crate) enum IfBranchMode {
     /// As a cell-reading argument sees it ([`Model::evaluate_chosen_reference`]): a nested IFS,
     /// SWITCH, LET or CHOOSE branch stays the cell it picks.
     Chosen,
-}
-
-// ── IF array helpers ──────────────────────────────────────────────────────────
-
-/// A branch argument to IF/IFERROR/IFNA (and an arm of CHOOSE over an index array): either a
-/// scalar (broadcast to all positions) or a 2-D array (indexed by position with size-1
-/// broadcasting; a ragged out-of-range position → #N/A). See [`if_arg_at`].
-pub(crate) enum IfArg {
-    Scalar(ArrayNode),
-    Array(Vec<Vec<ArrayNode>>),
-}
-
-pub(crate) fn if_arg_dims(arg: &IfArg) -> (usize, usize) {
-    match arg {
-        IfArg::Scalar(_) => (1, 1),
-        IfArg::Array(arr) => (arr.len(), arr.first().map_or(0, |r| r.len())),
-    }
-}
-
-/// Index a branch argument at output position (row, col), applying Excel's
-/// size-1 broadcasting rule: a scalar covers every position, a length-1
-/// dimension repeats its only element to cover the whole output extent, and a
-/// ragged mismatch (e.g. length 2 against an extent of 3) yields `#N/A`.
-pub(crate) fn if_arg_at(arg: &IfArg, row: usize, col: usize) -> ArrayNode {
-    match arg {
-        IfArg::Scalar(node) => node.clone(),
-        IfArg::Array(arr) => {
-            let rows = arr.len();
-            let cols = arr.first().map_or(0, |r| r.len());
-            match bcast_idx(rows, row)
-                .and_then(|r| arr.get(r))
-                .and_then(|r| bcast_idx(cols, col).and_then(|c| r.get(c)))
-            {
-                Some(n) => n.clone(),
-                None => ArrayNode::Error(Error::NA),
-            }
-        }
-    }
 }
 
 /// IFS's and SWITCH's `#N/A` when nothing matches.
@@ -141,7 +104,7 @@ impl Model {
     /// (T-0216, T-1026; docs/excel-semantics/references.md). In reference context a union in
     /// the chosen branch stays its areas: `SUM(IF(TRUE,(A1,B2)))` is 6 and
     /// `IF(TRUE,(A1,B2)) A1` is 1 (probes/multiarea-ifchoose H1:H2). The condition is evaluated
-    /// once, then the chosen branch once (`read_once` in functions/logical/lambda.rs relies on it).
+    /// once, then the chosen branch once (`read_once` in `functions/logical/read_once.rs` relies on it).
     pub(crate) fn if_impl(
         &mut self,
         args: &[Node],
@@ -152,12 +115,13 @@ impl Model {
             Picked::Node(node) => node,
             Picked::Value(value) => return RefArg::Value(value),
         };
-        match mode {
-            IfBranchMode::Aggregate => self.evaluate_reference_arg(node, cell),
-            IfBranchMode::SingleSheet => self.evaluate_single_sheet_arg(node, cell).into(),
-            IfBranchMode::Chosen => self.evaluate_chosen_reference(node, cell).into(),
-            IfBranchMode::Value => self.if_branch_value(node, cell).into(),
-        }
+        // The branch's ERROR.TYPE/CELL mark is IF's in every mode (`number_mark.rs`).
+        self.passing_mark(node, |model| match mode {
+            IfBranchMode::Aggregate => model.evaluate_reference_arg(node, cell),
+            IfBranchMode::SingleSheet => model.evaluate_single_sheet_arg(node, cell).into(),
+            IfBranchMode::Chosen => model.evaluate_chosen_reference(node, cell).into(),
+            IfBranchMode::Value => model.if_branch_value(node, cell).into(),
+        })
     }
 
     /// The branch an ordinary IF picked, as a value. A reference into another workbook is read
@@ -165,8 +129,9 @@ impl Model {
     /// where the written `…!A1` is `#BLOCKED!` (probes/external-ref-no-link-index A26,
     /// external-ref-no-link-ifchoose).
     pub(crate) fn if_branch_value(&mut self, node: &Node, cell: CellReferenceIndex) -> CalcResult {
+        // The branch's ERROR.TYPE/CELL mark is IF's (`number_mark.rs`).
         self.external_reference_picked_value(node, cell)
-            .unwrap_or_else(|| self.evaluate_node_in_context(node, cell))
+            .unwrap_or_else(|| self.evaluate_passing_mark(node, cell))
     }
 
     /// The pick step of a function that stands for one of its arguments once its condition,
@@ -188,6 +153,26 @@ impl Model {
             Function::Switch => self.switch_pick(args, cell),
             _ => return None,
         })
+    }
+
+    /// The value an IF, CHOOSE, IFS or SWITCH (`kind`) gives once [`Self::pick_step`] picked
+    /// `arm`, as `fn_if`, `fn_choose`, `fn_ifs` and `fn_switch` read it: a caller that picks
+    /// first then reads the same value without reading the condition or index again. For nested
+    /// pickers the innermost one reads its arm; a scalar pick hands its arm on unchanged, so
+    /// only IFS's and SWITCH's empty-to-0 depends on which one reads it.
+    pub(crate) fn picked_value(
+        &mut self,
+        kind: &Function,
+        arm: &Node,
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
+        match kind {
+            Function::If => self.if_branch_value(arm, cell),
+            Function::Choose => self.choose_arm_value(arm, cell),
+            _ => self
+                .evaluate_node_in_context(arm, cell)
+                .empty_value_as_zero(),
+        }
     }
 
     /// What IF's condition picks: with a scalar condition the branch it chooses, unevaluated;
@@ -251,22 +236,6 @@ impl Model {
         Picked::Value(self.if_array(args, cond_array, cell))
     }
 
-    /// Evaluates a branch of IF over an array condition (or an arm of CHOOSE over an index
-    /// array) once, as a scalar or a 2-D array; `Err` is a range that cannot be read.
-    pub(crate) fn evaluate_if_arg(
-        &mut self,
-        node: &Node,
-        cell: CellReferenceIndex,
-    ) -> Result<IfArg, CalcResult> {
-        Ok(match self.evaluate_node_in_context(node, cell) {
-            CalcResult::Range { left, right } => {
-                IfArg::Array(self.evaluate_range(left, right, cell)?)
-            }
-            CalcResult::Array(a) => IfArg::Array(a),
-            other => IfArg::Scalar(calc_result_to_array_node(other)),
-        })
-    }
-
     /// IF over an array condition: one result per position, the branches broadcast.
     fn if_array(
         &mut self,
@@ -277,13 +246,21 @@ impl Model {
         let has_else = args.len() == 3;
         // Both branches are read here, so a parameter read once in each is read twice.
         self.variable_stack.copy_read_once();
-        // Evaluate branches once and normalise each to a scalar or 2-D array.
-        let true_arg = match self.evaluate_if_arg(&args[1], cell) {
+        // Evaluate branches once and normalise each to a scalar or 2-D array. A branch no
+        // element of the condition takes is only sized, not copied (T-1564).
+        let picks = |want: bool| {
+            cond_array
+                .iter()
+                .flatten()
+                .any(|node| matches!(array_node_to_bool(node), Ok(taken) if taken == want))
+        };
+        let (true_picked, false_picked) = (picks(true), picks(false));
+        let true_arg = match self.evaluate_broadcast_arm(&args[1], cell, true_picked) {
             Ok(arg) => arg,
             Err(error) => return error,
         };
-        let false_arg: Option<IfArg> = if has_else {
-            match self.evaluate_if_arg(&args[2], cell) {
+        let false_arg: Option<BroadcastArg> = if has_else {
+            match self.evaluate_broadcast_arm(&args[2], cell, false_picked) {
                 Ok(arg) => Some(arg),
                 Err(error) => return error,
             }
@@ -294,14 +271,24 @@ impl Model {
         // Output size = largest extent across all array arguments.
         let cond_rows = cond_array.len();
         let cond_cols = cond_array.first().map_or(0, |r| r.len());
-        let (true_rows, true_cols) = if_arg_dims(&true_arg);
-        let (false_rows, false_cols) = false_arg.as_ref().map_or((1, 1), if_arg_dims);
+        let (true_rows, true_cols) = true_arg.dims();
+        let (false_rows, false_cols) = false_arg.as_ref().map_or((1, 1), BroadcastArg::dims);
         let max_rows = cond_rows.max(true_rows).max(false_rows);
         let max_cols = cond_cols.max(true_cols).max(false_cols);
 
         if let Some((error, message)) = check_array_size(max_rows, max_cols) {
             return CalcResult::new_error(error, cell, message);
         }
+        // The size is checked, so a picked range branch is copied now (T-1564).
+        let true_arg = match self.read_broadcast_arm(true_arg, cell) {
+            Ok(arg) => arg,
+            Err(error) => return error,
+        };
+        let false_arg = match false_arg.map(|arg| self.read_broadcast_arm(arg, cell)) {
+            Some(Err(error)) => return error,
+            Some(Ok(arg)) => Some(arg),
+            None => None,
+        };
 
         let mut output: Vec<Vec<ArrayNode>> = Vec::with_capacity(max_rows);
         for r in 0..max_rows {
@@ -316,9 +303,9 @@ impl Model {
                     None => ArrayNode::Error(Error::NA),
                     Some(cond_node) => match array_node_to_bool(cond_node) {
                         Err(err_node) => err_node,
-                        Ok(true) => if_arg_at(&true_arg, r, c),
+                        Ok(true) => true_arg.at(r, c),
                         Ok(false) => match &false_arg {
-                            Some(fa) => if_arg_at(fa, r, c),
+                            Some(fa) => fa.at(r, c),
                             None => ArrayNode::Boolean(false),
                         },
                     },
@@ -368,7 +355,10 @@ impl Model {
             self.evaluate_picked_reference_arg(&args[0], cell)
                 .into_single_area(cell)
         } else {
-            self.evaluate_node_in_context(&args[0], cell)
+            // A number IFERROR or IFNA returns keeps its ERROR.TYPE/CELL mark (`number_mark.rs`;
+            // probes/t2576-error-type-cell-paired D5, t2766-mark-positions A23). An array, whose
+            // errors may be replaced, drops it (A27).
+            self.evaluate_passing_number_mark(&args[0], cell)
         };
         // A name bound to a 3-D span is a reference, not an error, so the fallback is not taken,
         // and its value is `#VALUE!`: `IFERROR(span3,2)` is `#VALUE!` while `ISERROR(span3)` is
@@ -388,11 +378,22 @@ impl Model {
                 Ok(array) => array,
                 Err(error) => return error,
             },
-            CalcResult::Array(a) => a,
+            // So is a blank element of an array, such as GROUPBY's blank key (true blank to
+            // INDEX and COUNT): `TEXTJOIN("|",FALSE,IFERROR(GROUPBY(..),"#"))` reads it "0"
+            // (probes/groupby-sort-filter-args G!B15, B55; T-2854).
+            CalcResult::Array(a) => blanks_as_zero(a),
             CalcResult::Error { ref error, .. } if is_handled(error) => {
                 // Scalar handled error: evaluate the fallback branch directly.
-                // The branch result may itself be an array (it will spill).
-                return self.evaluate_node_in_context(&args[1], cell);
+                // The branch result may itself be an array (it will spill). A blank cell there
+                // is the empty value too, which STDEV.P counts as 0
+                // (`STDEV.P(A9:A12,IFERROR(1/0,E6),{1,..,10})` with E6 blank;
+                // probes/t2475-stat-subexpressions P!A158).
+                // A number fallback keeps its mark too: `FTEST({1;2;3},IFERROR(1/0,
+                // ERROR.TYPE(#REF!)))` is `#NUM!` (probes/t2766-mark-positions-2 A24; a marked
+                // array fallback is unprobed and drops it: TODO(T-4653)).
+                return self
+                    .evaluate_passing_number_mark(&args[1], cell)
+                    .blank_as_empty_value();
             }
             // A blank cell gives its value, not the reference: an empty value that OR reads as
             // FALSE and a lookup as 0 (T-0291; gen-m2 7469c3e920e1ade4 A351, ef5c55a81783b7d5 A291).
@@ -404,7 +405,7 @@ impl Model {
 
         // value is an array: replace each handled error element with the
         // fallback, broadcasting the fallback across positions.
-        let fallback_arg = match self.evaluate_if_arg(&args[1], cell) {
+        let fallback_arg = match self.evaluate_broadcast_arg(&args[1], cell) {
             Ok(arg) => arg,
             Err(error) => return error,
         };
@@ -412,7 +413,7 @@ impl Model {
         // Output size = largest extent across value and the fallback.
         let value_rows = value_array.len();
         let value_cols = value_array.first().map_or(0, |r| r.len());
-        let (fb_rows, fb_cols) = if_arg_dims(&fallback_arg);
+        let (fb_rows, fb_cols) = fallback_arg.dims();
         let max_rows = value_rows.max(fb_rows);
         let max_cols = value_cols.max(fb_cols);
 
@@ -431,12 +432,12 @@ impl Model {
                     .and_then(|vrow| bcast_idx(value_cols, c).and_then(|vc| vrow.get(vc)));
                 let node = match value_node {
                     // A handled error element → use the (broadcast) fallback.
-                    Some(ArrayNode::Error(e)) if is_handled(e) => if_arg_at(&fallback_arg, r, c),
+                    Some(ArrayNode::Error(e)) if is_handled(e) => fallback_arg.at(r, c),
                     // Anything else (including an unhandled error) passes through.
                     Some(n) => n.clone(),
                     // Out of range → #N/A. Both IFERROR and IFNA handle #N/A, so
                     // it takes the fallback; guard with the predicate for clarity.
-                    None if is_handled(&Error::NA) => if_arg_at(&fallback_arg, r, c),
+                    None if is_handled(&Error::NA) => fallback_arg.at(r, c),
                     None => ArrayNode::Error(Error::NA),
                 };
                 row.push(node);
@@ -537,14 +538,45 @@ impl Model {
                 Ok(true) => return Picked::Node(&args[2 * case_index + 1]),
                 Ok(false) => {}
                 Err(error) if is_text => {
-                    return Picked::Value(CalcResult::Array(vec![vec![calc_result_to_array_node(
+                    return Picked::Value(self.ifs_text_condition_error(
+                        &args[2 * case_index + 1..],
                         error,
-                    )]]))
+                        cell,
+                    ))
                 }
                 Err(error) => return Picked::Value(error),
             }
         }
         Picked::Value(no_match(cell))
+    }
+
+    /// The result of an IFS text condition that does not read as a boolean: `error` as an array
+    /// of the broadcast shape of the pair's value and every later argument, at least 1x1. The
+    /// earlier arguments do not count (`IFS(FALSE,{1,2},"x",5)` is 1x1, `IFS("x",5,TRUE,{1,2})`
+    /// 1x2, `IFS("x",5,{TRUE,FALSE,TRUE},1)` 1x3; probes/t2653-ifs-text-condition-array-value
+    /// and -shape-sources, T-2653).
+    fn ifs_text_condition_error(
+        &mut self,
+        rest: &[Node],
+        error: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
+        let lifted: Vec<CalcResult> = rest
+            .iter()
+            .map(|node| self.evaluate_node_in_context(node, cell))
+            .collect();
+        let units = u64::try_from(lifted.len()).unwrap_or(u64::MAX);
+        let shaped = self.lift_values(
+            lifted,
+            LiftCost::Cells(units),
+            &LiftOptions::REUSE_EQUAL_RUNS,
+            cell,
+            &mut |_, _| error.clone(),
+        );
+        match shaped {
+            CalcResult::Array(_) => shaped,
+            other => CalcResult::Array(vec![vec![calc_result_to_array_node(other)]]),
+        }
     }
 
     /// IFS on one element of lifted (condition, value) pairs: the value of the first TRUE

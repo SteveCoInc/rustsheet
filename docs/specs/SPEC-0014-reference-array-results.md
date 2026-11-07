@@ -2,7 +2,8 @@
 
 - **Status:** draft (accepted on merge of T-1955)
 - **Milestone / lane:** M6 / engine
-- **Tasks:** T-1955 (this spec), T-1956, T-1957, T-1838, T-2063, T-2064, T-2065
+- **Tasks:** T-1955 (this spec), T-1956, T-1957, T-1838, T-2063, T-2064, T-2065; amendment "Mixed grids": T-4569 (spec),
+  T-4570 (implementation)
 
 ## Problem
 A multi-cell range or an array in OFFSET's rows/cols/height/width, INDIRECT's ref_text or a1, or
@@ -46,7 +47,12 @@ cell is told from its sum. Cell ids are the consumers case's unless named.
 3. **Reference view: INDEX.** `INDEX(r,i,j)` is element (i,j) itself: one cell is its value with ISREF
    TRUE (E81), a multi-cell one spills or is `#SPILL!` (reference-lift-elements); `SUM(INDEX(..,2,1))`
    reads the whole element (101, E177). With one index over a column of elements, `INDEX(r,2)` is
-   `#VALUE!` (b1d E109). `ISREF` of the whole result is FALSE, through LET too (E209, b2 E209).
+   `#VALUE!` (b1d E109): it is a 1x1 array of references holding element 2, shown by its value view, and where a
+   reference is taken it stays one, so `INDEX(INDEX(OFFSET(A1,{0;1},0,2),2),1,1)` spills A2:A3, ROWS of the one-index
+   INDEX is 1, ISREF of the nested INDEX TRUE, and `SUM` of the one-index INDEX reads only the element's top-left
+   cell, as rule 4 does (2, not 6); INDIRECT and the mixed XLOOKUP grid alike (probes/t4701-index-one-index-ref-grid,
+   T-4701; `index_reference_arg`, `column_element`). `ISREF` of the whole result is FALSE, through LET too (E209, b2
+   E209).
 4. **Reference view: top-left aggregates.** SUM, AVERAGE, MIN, MAX and PRODUCT read each element's
    **top-left cell** as a range cell: text, booleans and blanks are skipped
    (`SUM(OFFSET(A1,0,0,{1;2}))` 2, `SUM(OFFSET(A1,0,0,{2;3}))` 2, `SUM(OFFSET(A2,0,0,{1;2}))` 200,
@@ -72,9 +78,25 @@ cell is told from its sum. Cell ids are the consumers case's unless named.
    10100 (E101, b2 E153). A producer whose reference argument is a grid lifts again:
    `ROWS(OFFSET(OFFSET(A1,{0;1},0),1,0))` 2, `SUM(..)` 10100 (E145, E149), `SUM(OFFSET(A1:A2,{0;1},0))` 101.
 
-Open (the Excel-for-web session failed, "retries exhausted", on every workbook holding these,
-twice): MEDIAN, STDEV.S, VAR.S, LARGE, SMALL, COUNTIFS, AVERAGEIF, MAXIFS, SUMSQ, AVERAGEA, MAXA and
-CONCAT over a reference grid (T-2065). Until answered, these keep today's behaviour of a value view.
+T-2065 answered the open list, one formula per workbook (probes/t2065-lift-*, excel-graph 2026-10-26, data as in
+b2; E1 holds the formula):
+- Aggregates over all elements: `STDEV.S(OFFSET(A1,{0;1},0))` 70.0035713374682 and `VAR.S(..)` 4900.5 (the values 1 and
+  100), `SUMSQ(OFFSET(A1,{0;1},0))` 10001. Every element is one cell there, so top-left cell versus whole element
+  was probed by T-2816: only the top-left cell of a multi-cell element counts (`STDEV.S(OFFSET(A1,0,0,{1;2}))` 0,
+  `SUMSQ` 2 (top-left, not row intersection: `SUMSQ(OFFSET(A2,0,0,{1;2}))` in E1 is 20000); AVERAGEA/MAXA: text 0, blank and TRUE skipped, unlike a reference argument where TRUE is 1; docs/excel-semantics/lookup.md).
+- Per-element callers (rule 6), each spilling one value per element: `COUNTIFS(OFFSET(A1,{0;1},0),">0")` 1, 1;
+  `AVERAGEIF(OFFSET(A1,0,0,{1;2}),">0")` 1, 50.5; `MAXIFS(OFFSET(A1,{0;1},0),OFFSET(A1,{0;1},0),">0")` 1, 100.
+- `CONCAT(OFFSET(A1,{0;1},0))` is `#VALUE!` (a value view, as TEXTJOIN in rule 2).
+- `AVERAGEA(OFFSET(A4,{0;1;2},0))` and `MAXA(..)` are 0 with A4 the text "5", A5 blank and A6 TRUE: the
+  result is 0: not 5 and not 1, but which elements count is open, as the data holds no number (follow-up task).
+- Failed to open on Excel for the web on 2026-10-26 (createSession "retries exhausted", two runs, alone in a
+  workbook): MEDIAN, LARGE and SMALL over a lifted OFFSET. Desktop question T-1075 item 18 (decision 0039); until
+  answered they keep today's value view. Answered since, on the web: `#VALUE!` (lookup.md "MEDIAN, LARGE and SMALL
+  over a lifted OFFSET", probes/t2065-lift-median, -large, -small, 2026-10-29). T-4569 found that holds only when
+  the references are on the formula's own sheet. Over references on another sheet the three are `#N/A`
+  (probes/t4569-xlookup-ref-element-max-min: t2065's formulas on its own data sheet Local!E1:E3 `#VALUE!`; the same
+  read from another sheet Local!E4:E5, Calc A31:A32, A40:A44 `#N/A`; one fill, 2026-11-06). The amendment's
+  rule 5 carries this.
 
 ## Design
 
@@ -124,12 +146,13 @@ would not move it.
     skips, COUNTA counts, SUMPRODUCT reads 0). An error element is the result. Others keep the
     value view until T-2065 answers them.
   - Per-element callers (rule 6): SUBTOTAL, COUNTIF, SUMIF, SUMIFS, COUNTBLANK, AREAS, ROW, COLUMN,
-    CELL, ISFORMULA, N, T. One helper, `Model::lift_over_ref_grid(grid, cell, |model, elem| ..)`,
+    CELL, ISFORMULA, N, T; COUNTIFS, AVERAGEIF and MAXIFS since T-2823 (T-2065's answers). One
+    helper, `Model::lift_over_ref_grid(grid, cell, |model, elem| ..)`,
     runs the scalar call per element and builds a `CalcResult::Array` (a SUMIF whose range and
     sum_range are both grids broadcasts them as SPEC-0011 does). Its cost is the consumer's:
     `LiftCost::Unit` for ROW, COLUMN, AREAS, CELL, ISFORMULA, N and T (O(1) per element);
     `LiftCost::Cells` of each element's clipped cells for SUBTOTAL, COUNTIF, SUMIF and COUNTBLANK, and
-    cells times criteria pairs for SUMIFS and COUNTIFS (as lookup_each.rs charges). Past the budget
+    cells times criteria pairs for SUMIFS, COUNTIFS and MAXIFS (as lookup_each.rs charges). Past the budget
     the call is the bound's error where Excel computes a value
     (`SUBTOTAL(9,OFFSET(A:A,0,0,SEQUENCE(1000)))`): T-2064 records that DEVIATION (decision 0014)
     when it lands the charge.
@@ -175,6 +198,148 @@ are their arguments'), so it adds no static dependency: the per-element consumer
 TRIMRANGE grid read cells inside the argument's static range, and an OFFSET or INDIRECT grid depends
 through volatility. T-0401 carries a pointer to this paragraph.
 
+## Amendment: mixed grids, value elements beside references (T-4569)
+
+### Problem
+XLOOKUP with an array lookup_value and a range if_not_found returns a grid whose hits are values and whose misses
+are the range itself, a real reference (lookup.md "XLOOKUP's if_not_found and ADDRESS's sheet_text over an array";
+probes/t4563-xlookup-not-found-ref-element, probes/t4569-xlookup-ref-element-max-min, excel-graph, 2026-11-06).
+`RefElement` holds only references and errors, and SPEC-0018's nested cell is not a reference (ISREF, TYPE, AREAS,
+CELL fail), so neither carrier can hold this result. The driver turns a kernel's non-reference value into
+`#VALUE!` (`functions/lift/driver.rs`, `CallResult::Reference`).
+
+### Excel behavior to match
+`X(r)` is `XLOOKUP({2;9},A1:A3,B1:B3,r)`: element 1 is the hit 20, and element 2 is `r`. Cells are t4563's unless
+marked t4569. Every rule of this spec holds for the reference element unchanged. The value element is read as
+an array value. In detail:
+1. **Value view** (rule 2). The grid shows 20, `#VALUE!`. A lifted operator gives 20, `#VALUE!`, even for a one-cell
+   `r` (A46, A57:A70). ISERROR is FALSE, TRUE; ISNUMBER TRUE, FALSE (t4569 C30:D30); ISTEXT FALSE, FALSE; TYPE of
+   the result 64; ISREF FALSE (A85-A105, t4569 A29).
+2. **INDEX** (rule 3). `INDEX(X(r),2,1)` is the reference: ISREF TRUE, TYPE 64 or 1, AREAS 1, CELL names its cell,
+   SUM 7, it spills (A1:A53), and `MAX(INDEX(..,2,1))` is 60 (t4569 A17). `INDEX(X(r),1,1)` is 20. One-argument
+   `INDEX(X(r),2)` is a 1x1 grid holding the element: it shows `#VALUE!`, and `INDEX(that,1,1)` hands the range back
+   (A25, V25:W25). Rule 3's "`INDEX(r,2)` over a column of elements is `#VALUE!`" is this case seen through the value
+   view.
+3. **Top-left aggregates** (rule 4, extended). SUM, AVERAGE, AVERAGEA, MIN, MAX, MINA, MAXA, PRODUCT, SUMSQ and STDEV.S read
+   the reference element's top-left cell as the reader's `GridReading` reads a top-left cell, and the value element
+   as an array value: SUM 23 = 20 + F1,
+   25 = 20 + E1 (A73, A109); over G1:G2 = 50, 60 MAX 50, AVERAGE 35, SUM 70, STDEV.S 21.2132…; over H1:H2 = 1, 2
+   PRODUCT 20, SUMSQ 401 (t4569 A1-A15, A20, A23). MIN and MINA there are 1 under either reading, so they confirm
+   nothing. A text or TRUE value element is read as `TopLeftElements` reads a top-left cell, that is as an array
+   element: SUM, AVERAGE and COUNT skip both (50, 50, 0), AVERAGEA counts text as 0 and skips TRUE (25, 50), and
+   MAXA and MINA skip both (50, 50) (t4569 A50:A63, the hit "t" or TRUE beside G1:G2's element).
+4. **Not numbers** (rule 5). COUNT 1 (the value 20 counts, the reference element does not), COUNTA 2, SUMPRODUCT 20:
+   the reference element is 0 (A77, A81, t4569 A9, A10, A21).
+5. **Order statistics: the sheet decides.** LARGE, SMALL and MEDIAN over a grid holding a reference element give
+   `#N/A` when its references are on another sheet than the formula's. This covers a mixed grid (t4569 A12, A13,
+   A22) and a grid of references alone, from OFFSET or INDIRECT (A31, A32, A40:A44, Local!E4:E5, Local!F6). They give
+   `#VALUE!` when the references are on the formula's own sheet (t2065-lift-*, Local!E1:E3; data and formulas as
+   t2065, same fill), however the reference is written: sheet-qualified absolute `Local!$A$1`, qualified relative
+   `Local!A1`, unqualified absolute `$A$1`, or INDIRECT of unqualified texts (t4569 Local!F1:F5), and for a mixed grid
+   read on its own sheet, unqualified or qualified (Local!F7:F8). So it is the referenced sheet, not the written
+   qualifier, that decides (t4569 Local!F1:F9, predictions in docs/research/t4569/predictions.md). A mixed grid on
+   its own sheet keeps rule 3 for the top-left aggregates: `MAX` is 100, the reference's top-left cell (Local!F9).
+   A grid with references on both sheets: the sheet of its first element decides, `#VALUE!` when that is the
+   formula's own sheet, `#N/A` when it is another (t4697 Local!H1:H9, H16, H17; `{"A1";"Data!G1"}` is `#VALUE!`,
+   `{"Data!G1";"A1"}` is `#N/A`). A mixed XLOOKUP grid has one reference element, so its sheet decides (H14, H15).
+6. **Per-element callers** (rule 6). They lift over every element. A value element is passed as the scalar
+   non-reference argument it is: ROW, AREAS, COUNTIF, SUBTOTAL, COUNTBLANK and CELL give `#VALUE!` for it, and N
+   gives 20. The reference element is the call on the range: ROW 1, AREAS 1, COUNTIF 2, N 50, SUBTOTAL 110,
+   COUNTBLANK 0, CELL 1 (t4569 C24:D34).
+
+### Design
+- **Representation.** One more variant, `RefElement::Value(ArrayNode)`. The node is a scalar: `Boolean`, `Number`,
+  `String` or `Empty`. An error stays `RefElement::Error`. A `Lambda` or `Nested` value is stored as `Error(VALUE)`,
+  as the driver stores every non-reference value today. `RefElement` must stay within its 32-byte size assertion
+  (T-1956). If `ArrayNode` makes it larger, box the value (`Value(Box<ArrayNode>)`), since value elements are rare.
+  T-4570 measures this and keeps the assertion. `RefGrid` and its `Arc<[RefElement]>` are otherwise unchanged. It is still not a `CalcResult`, and it
+  still never reaches storage. Rejected alternatives: `ArrayNode::Reference`, for the reasons above; and a separate
+  `MixedGrid` type, which would duplicate every consumer (directive 3).
+- **Producer.** The driver's `CallResult::Reference` mode keeps a scalar value as `Value`, replacing today's
+  `#VALUE!` (driver.rs). OFFSET, INDIRECT, TRIMRANGE, TAKE and DROP never return a non-reference value, so their
+  grids are unchanged. T-4570 confirms this by running their probes unchanged. XLOOKUP gets a reference form
+  (`evaluate_reference_form` dispatch), used only when lookup_value lifts and if_not_found is a `CalcResult::Range`.
+  There `xlookup_if_not_found` keeps the range, and each miss returns it, so the grid gets one `Reference` element
+  per miss. Otherwise XLOOKUP stays on its value path. When every element is a hit, the reference form returns
+  today's `CalcResult::Array` and builds no grid: a grid always holds at least one `Reference` element.
+- **Readers.** Each consumer adds one arm, and none needs a new walker.
+  - `to_values`: `Value(v)` gives `v`. This is the only value view (rule 1).
+  - INDEX (`index_grid`): `Value(v)` gives `v` as a value, not a reference. The one-index form is still a 1x1
+    sub-grid, so `INDEX(INDEX(X(r),2),1,1)` gives the range (rule 2).
+  - The aggregate walker (`GridReading`): `TopLeft` and `TopLeftElements` both read `Value(v)` as an array
+    element, the reading `TopLeftElements` already gives a top-left cell. So SUM, AVERAGE and COUNT skip text and
+    booleans, AVERAGEA counts text as 0 and skips TRUE, and MAXA and MINA skip both (rule 3, t4569 A50:A63).
+    `NotANumber` counts a number value for COUNT and reads it for SUMPRODUCT.
+  - Order statistics (rule 5): LARGE, SMALL and MEDIAN given a `RefArg::Grid` with a reference element return
+    `#N/A` if the first reference element is on a sheet other than the formula's, and `#VALUE!` if it is on the
+    formula's own sheet (probed, rule 5; t4697 H1:H6, H9, H16, H17 separate the first element from the last, any and
+    the majority). T-4570 implemented "any reference element on another sheet"; T-4714 changes it to the first.
+    This is one scan of the elements in their argument reader. Probed (probes/t4704 A46:C61, T-4704): the
+    first element in order decides, an error or a reference, so `{2;9}` (error first) gives the error and `{9;2}`
+    (reference first) gives `#N/A` (A49:C49, A58:C58). Ours puts an error first always (T-4741).
+  - Per-element callers (`ref_lift.rs`): `Value(v)` calls the scalar function with `v` as a value argument. That is
+    `#VALUE!` where a reference is required, and N reads the value. `put_back` keeps the result.
+    Probed (probes/t4704, T-4704): OFFSET over a mixed grid spills a 2x1 of `#VALUE!` (A4:C8; matched by T-4739, which reads XLOOKUP in its reference form in `offset_source`);
+    FORMULATEXT (`#VALUE!`, `#N/A`) and INDIRECT (`#REF!`, `#VALUE!`) match; COUNTIF and SUMIF over an XLOOKUP with a
+    text if_not_found spill a 2x1 of `#VALUE!`, with a miss or all hits (A64:C74; ours a scalar, T-4742).
+  - ROWS/COLUMNS, ISREF and the pass-throughs (IF, CHOOSE, LET, VSTACK, TAKE, DROP) need no change: they handle
+    elements without reading them.
+  - **Readers already on the walker, unprobed for mixed grids.** VAR.S, VAR.P, STDEV.P (`GridReading::TopLeft`,
+    variance.rs) and VARA, VARPA, STDEVA, STDEVPA (`TopLeftElements`) take the walker's `Value(v)` arm above with no
+    change of their own, as STDEV.S (probed, rule 3) does. Their mixed-grid cells are unprobed.
+  - **Unprobed readers** off the walker fall back to the value view, as rule 2 makes every reader that does not opt
+    in. This covers MODE, PERCENTILE, QUARTILE, the IFS family's criteria ranges, and TEXTJOIN. Each is a
+    probe task before it opts in. RANK, RANK.EQ and RANK.AVG are probed (probes/t4704 A25:C38, T-4704): they lift per
+    element, `#VALUE!` for the hit and the rank in the referenced range for the miss, so they do not fall back
+    (matched by T-4740).
+- **Bounds** (directive 5). No new budget. An XLOOKUP grid has the lifted lookup_value's shape, which the lift
+  already passes through `check_array_size`. Each element is one `xlookup_one` call charged to
+  `MAX_LIFTED_CELL_VISITS`, as today. A miss stores one `Range` (the shared if_not_found) and copies no cells. A
+  top-left aggregate reads one cell per reference element, and a value element costs O(1). The order-statistic
+  check scans the elements once, bounded by the grid's checked size. A per-element caller charges
+  `LiftCost::Cells` for a reference element, as rule 6 does, and `LiftCost::Unit` for a value element. A
+  `Value(String)` holds a text the kernel already built, so there is no extra allocation beyond today's
+  `ArrayNode`.
+- **What changes.** XLOOKUP under a lifted lookup_value with a range if_not_found, and LARGE, SMALL and MEDIAN over
+  a grid whose first reference is on another sheet (`#N/A` replaces today's `#VALUE!`). Their same-sheet `#VALUE!` (the
+  t2065 cells, which pass today) stays. Nothing else.
+
+### As implemented (T-4570)
+Where the implementation departs from the text above, or settles what it left open:
+- **Representation.** `RefElement::Value(ArrayNode)` unboxed: `RefElement` stays within 32 bytes
+  (`test_xlookup_ref_element.rs`). `RefElement::as_node` is the one element-to-array conversion
+  (`to_array`, `to_values` and INDEX's one-index form read it).
+- **Producer.** `lift_references_costed` charges `cells` visits per element, so XLOOKUP's grid costs what its value
+  lift does (`LiftCost::Cells` of the lookup vector's scanned cells). The reference form is
+  `Model::xlookup_reference(args, cell, as_reference)`; it is read by `reference_arg_read` (INDEX, LARGE, SMALL),
+  `picked_reference_arg_read` (the aggregates), `value_or_grid` (SUMPRODUCT) and the per-element read-ahead.
+- **Keyed lookups.** An XLOOKUP whose `if_not_found` is a reference is not a keyed lookup (SPEC-0020 Amendment 2,
+  `tailed_array.rs keyed_lookup`): its misses are references, which the head-and-tail reading cannot hold, so a
+  whole-column key builds its grid in full.
+- **INDEX, one index.** One index into a one-column grid that picks a reference element is a 1x1 sub-grid where a
+  reference is taken (`Model::index_reference_arg`, `column_element`; T-4701), so `INDEX(INDEX(X(r),2),1,1)` hands
+  the range back (t4563 V25:V26), and its value view everywhere else (A25, T25:U25, W25:Z25). A picked value or
+  error element stays a 1x1 value array (`INDEX(INDEX(X(r),1),1,1)` is 20, t4701 C4). One index into a grid of
+  several columns stays `#VALUE!`.
+- **Per-element callers.** `lifts_into_reference_elements` adds an XLOOKUP with an `if_not_found` to OFFSET and
+  INDIRECT as the argument read ahead; one that gives no grid is put back as its reference form's result. The
+  static analysis gives such a call the lookup_value's shape, so `COUNTIF(X(r),">0")` spills (t4569 A26). VSTACK's
+  reference form keeps OFFSET and INDIRECT only.
+- **Order statistics.** `RefGrid::order_statistic_error` is the one scan: `None` (the value view, `#VALUE!`) when
+  the first element is a reference on the formula's own sheet, else the first error element, else `#N/A`, when any
+  reference element is on another sheet (T-4714). LARGE and SMALL read it in their data reader (`numbers_from_ranked_arg`;
+  the RANK family does not), MEDIAN through `GridReading::OrderStatistic`.
+- **RANK family (T-4740).** `numbers_from_rank_ref_arg` hands any array of references back whole
+  (`RankData::PerElement`), and `rank_per_element` lifts over its elements as OFFSET over a grid does
+  (`RefGrid::index_array`): a reference element ranks against its own range, a value element is `#VALUE!`, an
+  error element is itself. This covers a lifted OFFSET or INDIRECT as `ref` too, which is unprobed (it was the
+  value view, `#VALUE!` per element; T-4801 probes it).
+
+### Test plan and rollout
+T-4570 implements it: the t4543 W45:W46, t4563 and t4569 cells it owns leave eval/baseline. Unit tests: a mixed
+grid never reaches storage; the size assertion holds; an all-hit lift builds no grid. Metamorphic tests:
+`SUM(X(r))` equals `SUM(hits) + top-left(r)` times the misses; `COUNTA(X(r))` equals the element count.
+
 ## Alternatives considered
 - **A `CalcResult::References` variant.** Every match on `CalcResult` would need an arm and every
   `_ =>` arm would silently misread it (SPEC-0004's argument). Rejected.
@@ -203,5 +368,5 @@ through volatility. T-0401 carries a pointer to this paragraph.
    As built, T-1956 lifts through a separate driver entry, `Model::lift_references`, sharing the shape check
    with `lift_grids` (its output is `RefElement`s, not `ArrayNode`s), and moved the LET/IF/CHOOSE pass-through,
    the held-grid budget, a producer over a grid reference argument and the deep-nest test to T-2078.
-6. **T-2065** (research, S, any time): probe the open aggregates one formula per workbook (the
-   combined workbooks failed to open).
+6. **T-2065** (research, S, done): probed the open aggregates one formula per workbook (answers above;
+   MEDIAN, LARGE and SMALL never open on Excel for the web).

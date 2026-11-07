@@ -4,10 +4,11 @@ title: "Continue T-1941: crack the four open gamma kernels to the bit"
 milestone: M9
 lane: research
 status: todo
-priority: P1
+priority: P3
 size: M
 tier: opus
 depends_on: [T-1941]
+defer: phase-1b
 ---
 
 ## Goal
@@ -23,9 +24,14 @@ Every other piece of GAMMA, GAMMALN and LN is already bit-exact or reduces exact
   - K2: `k2_ref.py`, 0.950 / 0.978. Reviewer 3's stored cand9 is 0.993 near 2 (HANDOFF2 §12.1). Structure: stored
     is favoured by the near-2 ladders; the far-only transfer control is still to run.
   - K1: `w4/k1r/plain1.txt`, 0.776 / 0.878. The [1.8,2) dip is 0.50 and looks like a coefficient problem.
+    K1's [1.8,2) dip shows in T-3570's probes-numeric t3570-r5-bpser-lg-aux: its LN(GAMMA(a)) side column at a
+    near 1.85 is off at the 15th digit on 45 cells (owned here, decision 0245): E130, E131, E132, E148, E149, E150, E151, E152, E153, E154, E155, E157, E158, E159, E168, E298, E299, E300, E316, E317, E318, E319, E320, E321, E322, E323, E325, E326, E327, E336, E466, E467, E468, E484, E485, E486, E487, E488, E489, E490, E491, E493, E494, E495, E504.
   - K3: `w5/p5` / `w5/p4/ss_fc.txt`, 0.33. Ladder probes `kmyst-gam-k3l*` are filling, with an unwrap tool ready.
   - (1.5,2]: W6's chain in `w6/data/`, 42.7% exact on R.
 - Engine shipping of the current best models was T-2123, split into T-2128 (GAMMALN) and T-2129 (GAMMA); `gamma_kernels.rs` holds the coefficient arrays to swap.
+- T-4070 (docs/research/t4070/RESULTS.md): GAMMALN's last digits below 2 are the only cause left of bpser's b0 >= 8
+  shortfall on t2464-r2-bpser-small-shapes (A9491, A9492, GAMMALN(0.186)) and of the 196 T-2505-moved cells the model
+  gets and the engine does not. A GAMMALN fix there moves those BETA.DIST cells too.
 
 ## How to run (restart prompt)
 Paste this to a fresh coordinator session (Opus, auto mode), on the research branch above:
@@ -72,6 +78,13 @@ Paste this to a fresh coordinator session (Opus, auto mode), on the research bra
   N6+N7 fit: rms 2.4e4 cycles/x, head move N7 +4.0e8, N8 -4.61e10, N9 +3.50e12 ulps. The g-l anchors pull N7 by
   about 2e8 ulps. The joint fit fails its planted control (no alias freedom on N6 rows), so fix it first (14.2 step
   1), then score the a-f head move on rows6 (14.2 step 2). No oracle cases were added.
+- T-2513 evidence (2026-10-24, no run): the beta density M2 (T-2503) needs Excel's GAMMALN exact at its shape
+  arguments, and below 1 the engine model is not. Probe probes-numeric t2513-r3-m1-residual-gl holds Excel's GAMMALN at
+  569 shape arguments (`docs/research/t2464/r3-m1-residual/mkprobe_gl.py`, `probe_gl.args.json`): the engine differs on
+  14 of 47 arguments below 1 (0.71: -2 ulps, 0.77: +2, 0.99: +2). With t2513-verify-r3-m1-residual-hold's 54 more, the
+  verifier counts 24 of 66 below 1 and 19 of 541 from 1 on (verify-r3-m1-residual `vchecks.out`). Below 0.7 that is
+  fl(GAMMALN(fl(x + 1)) - LN(x)), so these are K3 and (1.5, 2] points; use them as extra test points. Cost today: the
+  M2 density's bit-exact hold-out counts drop from 3,106 to 2,804 of 4,096 and from 649 to 562 of 864.
 
 Worksheet cells K3 owns (moved from T-0973, 2026-10-23; known failures in `eval/baseline/gen-m9.txt`, ulp-level): gen-m9
 `GAMMALN.PRECISE` at 40425341c5034eed Calc!A115 (x = 1.0014973824124909), 8f2ac25945af87da A97 (0.8172501166257935),
@@ -87,9 +100,26 @@ They are test points for the engine swap of `gamma_kernels.rs`.
 - [ ] Every new probe case is filled and committed. Coefficient files and scripts are under `docs/research/t1941/`.
 - [ ] Quirks recorded in `docs/excel-semantics/statistics.md` ("GAMMA, GAMMALN and LN kernels"). Lessons added
       to `docs/research/excel-kernel-playbook.md`. An engine task is filed to swap `gamma_kernels.rs`'s arrays.
+- [ ] The K3 model's score includes the two gen-m9 GAMMALN.PRECISE cells added by gap triage 2026-10-30.
 - [ ] `make check` green; reviewers approve. Land notes, coefficient files and verifiers on main in a slim PR, as the T-1941
       close-out did. Bulk probe data (`kmyst-gam-*`, gigabytes) stays on the research branch.
 
 ## Out of scope
 - Engine implementation (T-2123, T-2128, T-2129 and follow-ups).
 - Incomplete gamma / beta kernels (T-0971, T-0970).
+
+## Deferred (decision 0114)
+`defer: phase-1b`: the cells this task owns are already within 15 significant digits of Excel, so it waits until Phase 1 exits. Remove the key only when the steward records the Phase 1 exit, or when an eval shows one of its cells visibly off (then give it a `campaign:` stage instead). Exception: the cell added by T-3036 (below) is visibly off and stays deferred here, because only Excel's own (1.5, 2] coefficients can close it (Excel is 4.2 ulp off the math there, the engine 1 ulp); it is not a trigger to remove the key.
+
+## Cells added by gap triage (2026-10-30)
+`make eval` on origin/main 6a26b992a (excel-graph), `scripts/exit_owners.py`'s `owned` rule over every failing cell and the task files of origin/main and every pushed branch: two gen-m9 GAMMALN.PRECISE cells, 1 to 3 ulp off and none visibly off, that no open task names. Both arguments fall in K3's range: gen-m9/b8ee55934c5b824c A153 `GAMMALN.PRECISE((SQRTPI(Data!C3)-0.1))` with Data!C3 = 0.3 (argument about 0.871), Excel 0.08924278597232677, ours 0.08924278597232672; gen-m9/f2bd5f380ec002bf A241 `GAMMALN.PRECISE(ERF(Data!C4))` with Data!C4 = 1.005 (argument about 0.845), Excel 0.11110042471843157, ours 0.11110042471843155. Score K3 candidates on them too; the engine task this one files to swap `gamma_kernels.rs`'s arrays closes them.
+- gen-m9/b8ee55934c5b824c.case.json (1): Calc!A153
+- gen-m9/f2bd5f380ec002bf.case.json (1): Calc!A241
+
+## Cell added by T-3036 (2026-11-02)
+The one visibly-off GAMMALN cell of the (1.5, 2] kernel, deferred here by T-3036's acceptance criteria: probes-numeric/t2464-r2-bpser-small-gl
+Calc!A3188, `GAMMALN((56921738*2^-25+29850023*2^-51))`. Excel -0.09655332490423914, ours -0.09655332490423907 (5 ulp, just past half a unit of
+the 15th digit), the 40-digit lgamma -0.0965533249042390811: the engine is 1 ulp from the math and Excel 4.2 ulp. No measured coefficient set
+reaches Excel's value (d3ls ...907, pcD0 ...910, 80 ...910, L3b ...911; statistics.md, "GAMMALN is Excel's own x87 routine"), so only Excel's
+own coefficients close it. Score (1.5, 2] candidates on it. The gap triager should not re-file it: T-3036 already scored the known sets.
+- probes-numeric/t2464-r2-bpser-small-gl.case.json (1): Calc!A3188

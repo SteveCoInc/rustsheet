@@ -102,6 +102,7 @@ mod tests {
             }],
             defined_names: Vec::new(),
             tables: Vec::new(),
+            pivots: Vec::new(),
         }
     }
 

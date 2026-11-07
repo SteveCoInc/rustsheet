@@ -1,0 +1,64 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "76aab29315e5652323126b97b8c98fbd48a7491e2432141827064d2b077cd03b",
+  "definitions": {
+   "ACOTH": "0d475ed6c5341c37",
+   "ATANH": "0d475ed6c5341c37",
+   "SUM": "a929cc013d1216b5"
+  },
+  "arguments_sha256": "283f1395fe0d7d7318f8b018deb8d1fe5bdcf1a31f94c12be0465297b4b4f23e"
+ },
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "e",
+    "why": "number outside (-1, 1)",
+    "f": "=ATANH(1)"
+   },
+   "A10": {
+    "t": "n",
+    "v": "17.616361586450413413069841501787957637943689603007",
+    "f": "=ATANH(0.9999999999999999)"
+   },
+   "A11": {
+    "t": "e",
+    "why": "ACOTH needs |x| > 1",
+    "f": "=ACOTH(1)"
+   },
+   "A12": {
+    "t": "e",
+    "why": "ACOTH needs |x| > 1",
+    "f": "=ACOTH(-1)"
+   },
+   "A2": {
+    "t": "e",
+    "why": "number outside (-1, 1)",
+    "f": "=ATANH(-1)"
+   },
+   "A3": {
+    "t": "e",
+    "why": "number outside (-1, 1)",
+    "f": "=ATANH(1+0)"
+   },
+   "A4": {
+    "t": "e",
+    "why": "number outside (-1, 1)",
+    "f": "=ATANH(-1+0)"
+   },
+   "A5": {
+    "t": "e",
+    "why": "number outside (-1, 1)",
+    "f": "=SUM(ATANH(1),1)"
+   },
+   "A9": {
+    "t": "e",
+    "why": "number outside (-1, 1)",
+    "f": "=ATANH(1.0000000000000002)"
+   }
+  }
+ }
+}

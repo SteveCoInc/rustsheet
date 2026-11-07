@@ -1,0 +1,98 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "fec0f5135698f29945e5602e50fbe3ef851f7593892b40ca03287daeecabf029",
+  "definitions": {
+   "GAMMA.DIST": "01f5d761e8de8277"
+  },
+  "arguments_sha256": "63991d54b36aa53b9d371a0592b27f08f5f1cca9a918bc776aba354aa3e0b055"
+ },
+ "sheets": {},
+ "skipped": {
+  "S": {
+   "A1": {
+    "f": "=GAMMA.DIST(2,1E+56,1E+10,TRUE)",
+    "why": "no single value"
+   },
+   "A10": {
+    "f": "=GAMMA.DIST(1E-5,1E+70,1,TRUE)",
+    "why": "no single value"
+   },
+   "A11": {
+    "f": "=GAMMA.DIST(0.5,1E+70,1,TRUE)",
+    "why": "no single value"
+   },
+   "A12": {
+    "f": "=GAMMA.DIST(2,1E+70,1E+100,TRUE)",
+    "why": "no single value"
+   },
+   "A13": {
+    "f": "=GAMMA.DIST(2E+90,1E+70,1E+100,TRUE)",
+    "why": "no single value"
+   },
+   "A14": {
+    "f": "=GAMMA.DIST(1E-90,1E+70,1E+10,TRUE)",
+    "why": "no single value"
+   },
+   "A15": {
+    "f": "=GAMMA.DIST(2,1E+70,2,TRUE)",
+    "why": "no single value"
+   },
+   "A16": {
+    "f": "=GAMMA.DIST(2,1E+70,1E+5,TRUE)",
+    "why": "no single value"
+   },
+   "A17": {
+    "f": "=GAMMA.DIST(2,1E+70,1E+20,TRUE)",
+    "why": "no single value"
+   },
+   "A18": {
+    "f": "=GAMMA.DIST(2,1.5E+76,1E+10,TRUE)",
+    "why": "no single value"
+   },
+   "A19": {
+    "f": "=GAMMA.DIST(2,9E+75,1E+10,TRUE)",
+    "why": "no single value"
+   },
+   "A2": {
+    "f": "=GAMMA.DIST(2,1E+57,1E+10,TRUE)",
+    "why": "no single value"
+   },
+   "A20": {
+    "f": "=GAMMA.DIST(2,1.1E+76,1E+10,TRUE)",
+    "why": "no single value"
+   },
+   "A3": {
+    "f": "=GAMMA.DIST(2,1E+58,1E+10,TRUE)",
+    "why": "no single value"
+   },
+   "A4": {
+    "f": "=GAMMA.DIST(2,1E+59,1E+10,TRUE)",
+    "why": "no single value"
+   },
+   "A5": {
+    "f": "=GAMMA.DIST(2E-10,1E+70,1,TRUE)",
+    "why": "no single value"
+   },
+   "A6": {
+    "f": "=GAMMA.DIST(2E-10,1E+60,1,TRUE)",
+    "why": "no single value"
+   },
+   "A7": {
+    "f": "=GAMMA.DIST(1E-100,1E+70,1,TRUE)",
+    "why": "no single value"
+   },
+   "A8": {
+    "f": "=GAMMA.DIST(1E-50,1E+70,1,TRUE)",
+    "why": "no single value"
+   },
+   "A9": {
+    "f": "=GAMMA.DIST(1E-20,1E+70,1,TRUE)",
+    "why": "no single value"
+   }
+  }
+ }
+}

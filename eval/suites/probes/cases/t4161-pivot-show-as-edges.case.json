@@ -1,0 +1,370 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4161: show-values-as edges in Excel for the web: a value and its base both empty, a negative base, and zero column and grand totals. Data!A1:D7: Region, Product, Year, Sales over six records: East A 2023 -4, 2024 2, 2025 -2; East B 2023 4, 2025 -1 (2024 empty); West A 2024 1 only. Column totals 0, 3, -3; grand total 0. Each sheet is one builder-v2 pivot at A3: rows Region (outer) and Product, columns Year, Sum of Sales named Shown. D0/P0/Q0 difference, % of and % difference from Year 2023 (item 0; West/A/2025 is empty with an empty base); PR/PCo/PT % of row/column/grand total; IX index; PPR/PPC % of parent row/column total; PP % of parent total (Region); PRY % running total in Year. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4161",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0108",
+  "PV-0109",
+  "PV-0111",
+  "PV-0112",
+  "PV-0113",
+  "PV-0114",
+  "PV-0115",
+  "PV-1254",
+  "PV-1255",
+  "PV-1256",
+  "PV-1257",
+  "PV-0892"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Year",
+    "D1": "Sales",
+    "A2": "East",
+    "B2": "A",
+    "C2": 2023,
+    "D2": -4,
+    "A3": "East",
+    "B3": "B",
+    "C3": 2023,
+    "D3": 4,
+    "A4": "East",
+    "B4": "A",
+    "C4": 2024,
+    "D4": 2,
+    "A5": "West",
+    "B5": "A",
+    "C5": 2024,
+    "D5": 1,
+    "A6": "East",
+    "B6": "A",
+    "C6": 2025,
+    "D6": -2,
+    "A7": "East",
+    "B7": "B",
+    "C7": 2025,
+    "D7": -1
+   }
+  },
+  {
+   "name": "D0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_D0",
+     "source": "Data!A1:D7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "difference",
+        "baseField": "Year",
+        "baseItem": 0
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_P0",
+     "source": "Data!A1:D7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percent",
+        "baseField": "Year",
+        "baseItem": 0
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_Q0",
+     "source": "Data!A1:D7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentDiff",
+        "baseField": "Year",
+        "baseItem": 0
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PR",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PR",
+     "source": "Data!A1:D7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfRow"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PCo",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PCo",
+     "source": "Data!A1:D7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfCol"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PT",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PT",
+     "source": "Data!A1:D7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfTotal"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "IX",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IX",
+     "source": "Data!A1:D7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "index"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PPR",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PPR",
+     "source": "Data!A1:D7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfParentRow"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PPC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PPC",
+     "source": "Data!A1:D7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfParentCol"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PP",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PP",
+     "source": "Data!A1:D7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfParent",
+        "baseField": "Region"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PRY",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PRY",
+     "source": "Data!A1:D7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfRunningTotal",
+        "baseField": "Year"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A7)"
+   }
+  }
+ ]
+}

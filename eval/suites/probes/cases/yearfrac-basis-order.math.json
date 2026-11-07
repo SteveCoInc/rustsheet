@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "8ce6064882bb0fadb94e6ac018cd7a8c86fa59c2ace185acd1059d155b8ea5d7",
+  "definitions": {
+   "YEARFRAC": "271c30e000ba259f"
+  },
+  "arguments_sha256": "b6af20a72f288f3b0417758371b749a5423d93daa1158b8efc6d17b568902170"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A1": {
+    "t": "e",
+    "why": "basis 5 is outside 0..4",
+    "f": "=YEARFRAC(45000,46000,5)"
+   }
+  }
+ }
+}

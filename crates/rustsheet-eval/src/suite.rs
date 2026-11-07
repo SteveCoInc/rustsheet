@@ -17,6 +17,9 @@ pub enum SuiteKind {
     Xlsx,
     /// `.case.json` spec cases; expectations inline or from a sidecar `.oracle.json`.
     Spec,
+    /// `.xlsx`/`.xlsm` workbooks loaded and saved again, scored for fidelity, not cell values
+    /// (SPEC-0033). Such suites live under `eval/roundtrip/`, never `eval/suites/`.
+    Roundtrip,
 }
 
 /// Granularity of the no-regression baseline.
@@ -83,6 +86,14 @@ pub struct SuiteManifest {
     /// (populated by `rustsheet-eval fetch`) instead of next to the manifest.
     #[serde(default)]
     pub fetch: Option<FetchSpec>,
+    /// Round-trip suites: the scenarios to run (SPEC-0033 D1). Only `R0` exists yet (T-4514 adds R1).
+    #[serde(default = "default_scenarios")]
+    pub scenarios: Vec<String>,
+    /// Round-trip suites: the cell suite of `eval/suites/` whose fetched cache holds the cases.
+    /// The suite takes that suite's `[fetch]` and cache directory, so it is fetched, skipped
+    /// while not fetched, and gated exactly as that suite is (T-4629).
+    #[serde(default)]
+    pub cases_of: Option<String>,
 }
 
 /// Pinned download of a suite too large or not redistributable to vendor.
@@ -161,16 +172,40 @@ pub enum FetchState {
     NotFetched,
 }
 
+/// The name of Gate A's reference-table suite, resolved by [`Suite::load_named`] (SPEC-0029).
+pub const ACCURACY_SUITE: &str = "accuracy";
+
+/// Its manifest, relative to the repository root: outside `eval/suites/`, so `make eval`, the
+/// eval gate and every report measure never see the tables (SPEC-0029).
+pub const ACCURACY_MANIFEST: &str = "eval/accuracy/suite.toml";
+
+/// The directory of [`ACCURACY_MANIFEST`]: Gate A's committed lists (`known-failures.tsv`,
+/// `math-over-excel.tsv`) live here.
+pub const ACCURACY_DIR: &str = "eval/accuracy";
+
+/// Where the round-trip suites (SPEC-0033) live, relative to the repository root: outside
+/// `eval/suites/`, so no cell report or milestone measure counts them.
+pub const ROUNDTRIP_DIR: &str = "eval/roundtrip";
+
+/// The round-trip scenarios the harness implements (SPEC-0033 D1); T-4514 adds R1.
+pub const ROUNDTRIP_SCENARIOS: &[&str] = &["R0"];
+
 /// File inside a fetched suite recording the pin it was fetched at.
 pub const FETCH_MARKER: &str = ".rustsheet-fetched";
 
 fn default_root() -> String {
     "cases".into()
 }
+fn default_scenarios() -> Vec<String> {
+    ROUNDTRIP_SCENARIOS
+        .iter()
+        .map(|s| (*s).to_string())
+        .collect()
+}
 fn default_include() -> Vec<String> {
     vec!["**/*".into()]
 }
-fn default_true() -> bool {
+pub(crate) fn default_true() -> bool {
     true
 }
 
@@ -219,49 +254,141 @@ impl Suite {
         for entry in WalkDir::new(suites_dir).min_depth(2).max_depth(2) {
             let entry = entry?;
             if entry.file_name() == "suite.toml" {
-                let text = std::fs::read_to_string(entry.path())?;
-                let manifest: SuiteManifest = toml::from_str(&text)
-                    .with_context(|| format!("parsing {}", entry.path().display()))?;
-                let dir = entry
-                    .path()
-                    .parent()
-                    .map(Path::to_path_buf)
-                    .unwrap_or_default();
-                // The name becomes a cache directory that `fetch` replaces wholesale.
-                if manifest.name.is_empty()
-                    || !manifest
-                        .name
-                        .bytes()
-                        .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
-                {
+                let suite = Self::load_manifest(entry.path(), suites_dir)?;
+                if suite.manifest.kind == SuiteKind::Roundtrip {
                     bail!(
-                        "{}: suite name must match [A-Za-z0-9_-]+",
+                        "{}: a roundtrip suite belongs under {ROUNDTRIP_DIR}/ (SPEC-0033 D8)",
                         entry.path().display()
                     );
                 }
-                if let Some(d) = &manifest.oracle_dir {
-                    if d.is_empty() || Path::new(d).is_absolute() || d.split('/').any(|c| c == "..")
-                    {
-                        bail!(
-                            "{}: oracle_dir must be a relative path inside the suite directory",
-                            entry.path().display()
-                        );
-                    }
-                }
-                if let Some(f) = &manifest.fetch {
-                    f.validate()
-                        .with_context(|| format!("{}: [fetch]", entry.path().display()))?;
-                }
-                let cache_dir = suites_dir.join("../.cache/suites").join(&manifest.name);
-                suites.push(Suite {
-                    manifest,
-                    dir,
-                    cache_dir,
-                });
+                suites.push(suite);
             }
         }
         suites.sort_by(|a, b| a.manifest.name.cmp(&b.manifest.name));
         Ok(suites)
+    }
+
+    /// Every round-trip suite (`eval/roundtrip/*/suite.toml` under `root`, SPEC-0033 D8). Each
+    /// must be of kind `roundtrip`, run only scenarios that exist, and take a name no suite of
+    /// `eval/suites/` has, since both kinds keep their baseline in `eval/baseline/<name>.txt`.
+    ///
+    /// # Errors
+    /// When a manifest is unreadable or breaks one of those rules.
+    pub fn load_roundtrip(root: &Path) -> Result<Vec<Suite>> {
+        let dir = root.join(ROUNDTRIP_DIR);
+        if !dir.is_dir() {
+            return Ok(Vec::new());
+        }
+        let cell_suites = Self::load_all(&root.join("eval/suites"))?;
+        let mut suites = Vec::new();
+        for entry in WalkDir::new(&dir).min_depth(2).max_depth(2) {
+            let entry = entry?;
+            if entry.file_name() != "suite.toml" {
+                continue;
+            }
+            let mut suite = Self::load_manifest(entry.path(), &root.join("eval/suites"))?;
+            let at = entry.path().display();
+            if suite.manifest.kind != SuiteKind::Roundtrip {
+                bail!("{at}: suites under {ROUNDTRIP_DIR}/ must be of kind roundtrip");
+            }
+            if let Some(name) = suite.manifest.cases_of.clone() {
+                if suite.manifest.fetch.is_some() {
+                    bail!("{at}: a suite with cases_of takes that suite's [fetch]; give only one");
+                }
+                let Some(cells) = cell_suites.iter().find(|c| c.manifest.name == name) else {
+                    bail!("{at}: cases_of names {name}, which is no suite of eval/suites/");
+                };
+                let Some(fetch) = cells.manifest.fetch.clone() else {
+                    bail!("{at}: cases_of names {name}, which is not a fetched suite");
+                };
+                suite.manifest.fetch = Some(fetch);
+                suite.cache_dir.clone_from(&cells.cache_dir);
+            }
+            let unknown = |s: &&String| !ROUNDTRIP_SCENARIOS.contains(&s.as_str());
+            if let Some(s) = suite.manifest.scenarios.iter().find(unknown) {
+                bail!("{at}: scenario {s} is not implemented yet (SPEC-0033 D1; T-4514 adds R1)");
+            }
+            if cell_suites
+                .iter()
+                .any(|c| c.manifest.name == suite.manifest.name)
+            {
+                bail!(
+                    "{at}: the name {} is taken by a suite of eval/suites/",
+                    suite.manifest.name
+                );
+            }
+            suites.push(suite);
+        }
+        suites.sort_by(|a, b| a.manifest.name.cmp(&b.manifest.name));
+        Ok(suites)
+    }
+
+    /// The suite called `name`: one of `eval/suites/` under `root`, or Gate A's reference tables
+    /// (`eval/accuracy/suite.toml`) for [`ACCURACY_SUITE`], which no measure of `load_all` sees
+    /// (SPEC-0029). A suite under `eval/suites/` may not take that name, so it is never ambiguous.
+    ///
+    /// # Errors
+    /// When no suite has the name, a manifest is unreadable, or `eval/suites/` holds a suite
+    /// named [`ACCURACY_SUITE`].
+    pub fn load_named(root: &Path, name: &str) -> Result<Suite> {
+        let suites_dir = root.join("eval/suites");
+        let mut all = if suites_dir.is_dir() {
+            Self::load_all(&suites_dir)?
+        } else {
+            Vec::new()
+        };
+        if let Some(i) = all.iter().position(|s| s.manifest.name == name) {
+            if name == ACCURACY_SUITE {
+                bail!(
+                    "{}: the suite name {ACCURACY_SUITE} is reserved for eval/accuracy (SPEC-0029)",
+                    all[i].dir.display()
+                );
+            }
+            return Ok(all.swap_remove(i));
+        }
+        if name == ACCURACY_SUITE {
+            let suite = Self::load_manifest(&root.join(ACCURACY_MANIFEST), &suites_dir)?;
+            if suite.manifest.name != ACCURACY_SUITE {
+                bail!("{ACCURACY_MANIFEST}: the suite must be named {ACCURACY_SUITE}");
+            }
+            return Ok(suite);
+        }
+        bail!("suite {name} not found")
+    }
+
+    /// Reads and validates the manifest at `path`; `suites_dir` places a fetched suite's cache.
+    fn load_manifest(path: &Path, suites_dir: &Path) -> Result<Suite> {
+        let text = std::fs::read_to_string(path).with_context(|| path.display().to_string())?;
+        let manifest: SuiteManifest =
+            toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+        let dir = path.parent().map(Path::to_path_buf).unwrap_or_default();
+        // The name becomes a cache directory that `fetch` replaces wholesale.
+        if manifest.name.is_empty()
+            || !manifest
+                .name
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+        {
+            bail!("{}: suite name must match [A-Za-z0-9_-]+", path.display());
+        }
+        if let Some(d) = &manifest.oracle_dir {
+            if d.is_empty() || Path::new(d).is_absolute() || d.split('/').any(|c| c == "..") {
+                bail!(
+                    "{}: oracle_dir must be a relative path inside the suite directory",
+                    path.display()
+                );
+            }
+        }
+        if let Some(f) = &manifest.fetch {
+            f.validate()
+                .with_context(|| format!("{}: [fetch]", path.display()))?;
+        }
+        let cache_dir = suites_dir.join("../.cache/suites").join(&manifest.name);
+        Ok(Suite {
+            manifest,
+            dir,
+            cache_dir,
+        })
     }
 
     #[must_use]
@@ -294,9 +421,11 @@ impl Suite {
         if !root.exists() {
             return Ok(Vec::new()); // fetched suite not downloaded yet
         }
-        let ext = match self.manifest.kind {
-            SuiteKind::Xlsx => ".xlsx",
-            SuiteKind::Spec => ".case.json",
+        let exts: &[&str] = match self.manifest.kind {
+            SuiteKind::Xlsx => &[".xlsx"],
+            SuiteKind::Spec => &[".case.json"],
+            // A macro-enabled workbook is where VBA preservation is measured (decision 0275 D5).
+            SuiteKind::Roundtrip => &[".xlsx", ".xlsm"],
         };
         let mut out = Vec::new();
         for entry in WalkDir::new(&root).sort_by_file_name() {
@@ -310,7 +439,7 @@ impl Suite {
                 .to_string_lossy()
                 .replace('\\', "/");
             let name = entry.file_name().to_string_lossy();
-            if !name.ends_with(ext) || name.starts_with("~$") {
+            if !exts.iter().any(|ext| name.ends_with(ext)) || name.starts_with("~$") {
                 continue;
             }
             if include.is_match(&rel) && !exclude.is_match(&rel) {
@@ -408,6 +537,46 @@ mod tests {
     }
 
     #[test]
+    fn a_round_trip_suite_takes_the_fetch_and_cache_of_the_suite_its_cases_are_of() {
+        let root = std::env::temp_dir().join(format!("rs-cases-of-{}", std::process::id()));
+        let write = |rel: &str, text: &str| {
+            let path = root.join(rel);
+            std::fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
+            std::fs::write(path, text).expect("write");
+        };
+        write(
+            "eval/suites/ext/suite.toml",
+            &format!("name = \"ext\"\nkind = \"xlsx\"\nlicense = \"MIT\"\n[fetch]\nurl = \"https://x.org/a\"\nrev = \"{REV}\"\n"),
+        );
+        write(
+            "eval/suites/local/suite.toml",
+            "name = \"local\"\nkind = \"xlsx\"\nlicense = \"MIT\"\n",
+        );
+        let rt = |of: &str| {
+            write(
+                "eval/roundtrip/rt/suite.toml",
+                &format!(
+                    "name = \"rt\"\nkind = \"roundtrip\"\nlicense = \"MIT\"\ncases_of = \"{of}\"\n"
+                ),
+            );
+            Suite::load_roundtrip(&root)
+        };
+        let suites = rt("ext").expect("loads");
+        let cells = Suite::load_all(&root.join("eval/suites")).expect("cell suites");
+        let ext = cells
+            .iter()
+            .find(|c| c.manifest.name == "ext")
+            .expect("ext");
+        assert_eq!(suites[0].cache_dir, ext.cache_dir);
+        assert_eq!(suites[0].root(), ext.root());
+        assert_eq!(suites[0].fetch_state(), FetchState::NotFetched);
+        // A name that is no cell suite, or one that is not fetched, is refused.
+        assert!(rt("nope").is_err());
+        assert!(rt("local").is_err());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn unknown_fetch_keys_are_rejected() {
         let text = "name = \"x\"\nkind = \"xlsx\"\nlicense = \"MIT\"\n[fetch]\nurl = \"https://x\"\nbogus = 1\n";
         assert!(toml::from_str::<SuiteManifest>(text).is_err());
@@ -485,6 +654,48 @@ mod tests {
                 PathBuf::from("a.oracle.json")
             );
         }
+    }
+
+    fn write_manifest(dir: &Path, name: &str) {
+        std::fs::create_dir_all(dir).expect("mkdir");
+        std::fs::write(
+            dir.join("suite.toml"),
+            format!("name = \"{name}\"\nkind = \"spec\"\nlicense = \"MIT\"\nroot = \"tables\"\n"),
+        )
+        .expect("manifest");
+    }
+
+    #[test]
+    fn load_named_finds_eval_suites_and_the_accuracy_tables() {
+        let root = std::env::temp_dir().join(format!("rs-suite-named-{}", std::process::id()));
+        write_manifest(&root.join("eval/suites/smoke"), "smoke");
+        write_manifest(&root.join("eval/accuracy"), ACCURACY_SUITE);
+        let smoke = Suite::load_named(&root, "smoke").map(|s| s.dir);
+        let accuracy = Suite::load_named(&root, ACCURACY_SUITE).map(|s| s.root());
+        let missing = Suite::load_named(&root, "nope");
+        // `load_all` never sees the tables.
+        let all = Suite::load_all(&root.join("eval/suites")).map(|v| v.len());
+        // A suite under eval/suites may not take the reserved name.
+        write_manifest(&root.join("eval/suites/acc"), ACCURACY_SUITE);
+        let ambiguous = Suite::load_named(&root, ACCURACY_SUITE);
+        std::fs::remove_dir_all(&root).expect("cleanup");
+        assert_eq!(smoke.expect("smoke"), root.join("eval/suites/smoke"));
+        assert_eq!(
+            accuracy.expect("accuracy"),
+            root.join("eval/accuracy/tables")
+        );
+        assert!(missing.is_err());
+        assert_eq!(all.expect("all"), 1);
+        assert!(ambiguous.is_err());
+    }
+
+    #[test]
+    fn the_accuracy_manifest_must_be_named_accuracy() {
+        let root = std::env::temp_dir().join(format!("rs-suite-acc-name-{}", std::process::id()));
+        write_manifest(&root.join("eval/accuracy"), "other");
+        let got = Suite::load_named(&root, ACCURACY_SUITE);
+        std::fs::remove_dir_all(&root).expect("cleanup");
+        assert!(got.is_err());
     }
 
     #[test]

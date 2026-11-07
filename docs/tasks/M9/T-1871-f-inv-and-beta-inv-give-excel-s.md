@@ -16,6 +16,8 @@ F.INV (and BETA.INV where its shapes are extreme) gives Excel's value at a tiny 
 the engine uses saturates, panicked or never finished, instead of `#NUM!` or a wrong number.
 
 ## Context
+- Gate A known failures this task owns (T-3358, eval/accuracy/known-failures.tsv): accuracy/F.INV/s1 A154 and A168 (deep-tail F.INV, the engine far off where Excel matches the math), and accuracy/F.INV.RT/s1 A155 (T-4103, `F.INV.RT(4.6950979439918E-162,3216,23)`: the engine 2.4605E+14, Excel and the math 2.4164E+14). Removing the lines
+  once they pass is part of this task (a passing listed point fails the check as stale).
 Found by T-1848, which capped statrs' `inv_beta_reg` (`statistical/inverse_beta.rs`) so that it is `#NUM!` where statrs
 panicked or hung (statistics.md "Quantile searches: per-call cap and lifting", a DEVIATION). Excel's values,
 probes/stat-quantile-lift (excel-graph, 2026-10-18):
@@ -30,11 +32,11 @@ probes/stat-quantile-lift (excel-graph, 2026-10-18):
   0.043055297894031924 (ours 0.04305529789403196, 5 ulp); E10 `F.INV.RT(1-2^-53,6000,4)` = 0.04910526649490917 (ours
   0.049105266494906694, 357 ulp); E11 `FINV(1-2^-53,5,5)` = 2.1094279171713594E-07 (ours 2.1094279171713626E-07,
   12 ulp); E12 `F.INV(1E-20,5,5)` = 5.081599921802649E-09 (ours 5.081599921802652E-09, 4 ulp), the power law's anchor.
-- E9: `BETA.INV(1-2^-53,1.0024017013258346,12177.162026553196)` = 0.0691959487211844 (ours `#NUM!`, statrs never
+- E9: `BETA.INV(1-2^-53,1.0024017013258346,12177.162026553196)` = 0.0691959487211844 (ours, since T-2119, 0.0030131411834558195; it was `#NUM!` when statrs never
   finished); the true quantile is about 0.003, so this is Excel's erratic extreme-shape behaviour (statistics.md
   "Inverse CDF functions at a tiny or near-1 probability (T-1543)").
 A lower-tail form of the F quantile (the incomplete beta's leading term, as `t_dist::t_tail_quantile` does for Student's
-t) or a bisection fallback on [0, 1] (`special::bisect_unit_interval`) are candidates; T-1745 found Excel's BETA.INV
+t) or a bisection on [0, 1] (`special::refine_increasing` with no start, which BETA.INV uses since T-2119) are candidates; T-1745 found Excel's BETA.INV
 solves its own cdf to the crossing. Keep the per-call caps and the lift weights of kinds.rs `QUANTILE_WEIGHT`.
 
 gen-m9 sweep (gap triage 2026-10-23, T-2255). F.INV, FINV, F.INV.RT and BETAINV at a tiny or near-1 probability
@@ -96,9 +98,33 @@ Cells:
 - gen-m9/f34f66fb7f81e673.case.json (1): Calc!A295
 - gen-m9/fd9fa22d212080d6.case.json (1): Calc!A209
 - gen-m9/fec39efaba9284c3.case.json (3): Calc!A14, A76, A206
+- Composite cells added by gap triage 2026-11-03 (`make eval` on origin/main c2062e5c8, excel-graph;
+  `scripts/exit_owners.py --all-off` lists both as visibly off and owned only by deferred tasks, T-2221 and T-1374). The
+  outer function passes the inner quantile's relative error through (1:1 for PRICEMAT, which is linear in its rate; 5:1
+  for FDIST at d1 = 2, (1 + x/5)^-5), so each passes when the inner tiny-p quantile matches Excel's to about 1 ulp.
+  50-digit references are mpmath 1.3 (dps 50):
+  - gen-m9/2a18b2f5a4dc43ac Calc!A259 `=FDIST(F.INV.RT(1E-10,(3.14159/0.2),5),2,10)` (df1 truncated to 15): Excel
+    2.2275627603805864E-18, ours 2.2275627603805707E-18, math 2.2275627603805911E-18 (Excel -2.1E-15, ours -9.2E-15).
+    The inner quantile F.INV.RT(1E-10,15,5) is 16954.1473883429075 (math); the values the outer closed form implies are
+    Excel 16954.147388342913 (+3E-16, about 1.6 ulp) and ours 16954.147388342937 (+1.8E-15, about 8 ulp).
+  - gen-m9/30e20ba3302fea8b Calc!A310 `=PRICEMAT(39955,45657,34754,FINV(1E-100,2,3),0.05,1)`: Excel
+    1.7583339520153275E+69, ours 1.7583339520153015E+69 (1.5E-14 apart). FINV(1E-100,2,3) is 1.5·(1E-100^(-2/3) - 1) =
+    6.9623832504191683E+66 exactly; Excel's FINV at this p is not that closed form: the gen-m9 cells above show
+    `FINV(1E-100,2,9)` Excel 7.506452417400285E+22 against the exact 7.5064524174002644E+22 (+2.8E-15) and ours
+    7.506452417400256E+22 (-1.1E-15). So the PRICEMAT gap is the inner FINV; add `FINV(1E-100,2,3)` as a probe cell
+    if the outer still misses after the quantile change.
+- gen-m9/2a18b2f5a4dc43ac.case.json (1): Calc!A259
+- gen-m9/30e20ba3302fea8b.case.json (1): Calc!A310
+- Cells this task owns that an earlier owner rule credited to it or to another task only by an A1
+  name written beside a different case (decision 0159, T-0099):
+  - gen-m9/7c20351562a2d71d.case.json: Calc!A37, A254
+  - gen-m9/c18dbf21f11093f3.case.json: Calc!A190
+  - gen-m9/589f42e67f4b4b8d.case.json: Calc!A319
+  - gen-m9/8dd2312c96effb1b.case.json: Calc!A169
+  - gen-m9/c2974c061384fdd9.case.json: Calc!A267
 
 ## Acceptance criteria
-- [ ] Visible parity (gen-m9, T-2255): these 118 known-failure lines disappear from eval/baseline/gen-m9.txt
+- [ ] Visible parity (gen-m9, T-2255): these 118 known-failure lines (120 with the two composite cells added 2026-11-03) disappear from eval/baseline/gen-m9.txt
       (`make eval-baseline`), with no new known-failure lines in any baseline.
 - [ ] probes/stat-quantile-lift E1-E7 pass or are within 4 ulp (named in the Outcome), and E8, E10-E12 pass or are
   no further off than today; E9 matches or its rule is

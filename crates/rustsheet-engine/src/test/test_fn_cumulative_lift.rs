@@ -9,30 +9,52 @@
 
 use std::time::{Duration, Instant};
 
-use crate::test::util::{check_cells, new_empty_model, round_trip_value};
+use crate::test::util::{check_cells, new_empty_model, round_trip_value, ulps};
 
-/// Evaluates `cells` on a sheet whose G1:G2 is 0.01 (a rate), G3:G4 is 360 (an nper) and
-/// Z1:Z8 hold the extreme values of probes/fin-cumipmt-period-bound (1E308 as a product: the
-/// literal is past Excel's 9.99E307), and checks each cell's
-/// value (an expected number is compared bit for bit).
+/// The sheet [`check`] evaluates on: G1:G2 is 0.01 (a rate), G3:G4 is 360 (an nper) and Z1:Z8
+/// hold the extreme values of probes/fin-cumipmt-period-bound (1E308 as a product: the literal is
+/// past Excel's 9.99E307).
+const INPUTS: [(&str, &str); 12] = [
+    ("G1", "0.01"),
+    ("G2", "0.01"),
+    ("G3", "360"),
+    ("G4", "360"),
+    ("Z1", "1E-300"),
+    ("Z2", "1E300"),
+    ("Z3", "1E300"),
+    ("Z4", "1E300"),
+    ("Z5", "=1E307*10"),
+    ("Z6", "1E-12"),
+    ("Z7", "1E12"),
+    ("Z8", "1E307"),
+];
+
+/// Evaluates `cells` on [`INPUTS`] and checks each cell's value (an expected number is compared
+/// bit for bit).
 fn check(cells: &[(&str, &str, &str)]) {
-    check_cells(
-        &[
-            ("G1", "0.01"),
-            ("G2", "0.01"),
-            ("G3", "360"),
-            ("G4", "360"),
-            ("Z1", "1E-300"),
-            ("Z2", "1E300"),
-            ("Z3", "1E300"),
-            ("Z4", "1E300"),
-            ("Z5", "=1E307*10"),
-            ("Z6", "1E-12"),
-            ("Z7", "1E12"),
-            ("Z8", "1E307"),
-        ],
-        cells,
-    );
+    check_cells(&INPUTS, cells);
+}
+
+/// Evaluates `cells` on [`INPUTS`] and checks each is within 2 ulps of Excel's value, never
+/// visibly off. Only for the long-range cells decision 0291 lets go of the bit: since T-3524 a
+/// range of more than 32 periods is the geometric sum at any leading exponent, which is Excel's
+/// more often on fresh cells but 1 or 2 ulps from these probe cells, which T-3067's cut held.
+fn check_within_two_ulps(cells: &[(&str, &str, f64)]) {
+    let mut model = new_empty_model();
+    for (cell, input) in INPUTS {
+        model._set(cell, input);
+    }
+    for (cell, formula, _) in cells {
+        model._set(cell, formula);
+    }
+    model.evaluate();
+    for (cell, formula, excel) in cells {
+        let ours = round_trip_value(&model, cell).parse::<f64>().unwrap();
+        assert!(
+            ulps(ours, *excel) <= 2,
+            "{cell}: {formula}: ours {ours:e}, Excel {excel:e}"
+        );
+    }
 }
 
 #[test]
@@ -42,10 +64,11 @@ fn a_billion_periods_take_milliseconds_and_are_excels_values() {
     check(&[
         ("A1", "=CUMIPMT(1E-9,1E9,1,1,1E9,0)", "-0.5819767073296636"),
         ("A2", "=CUMPRINC(1E-9,1E9,1,1,1E9,0)", "-1"),
-        ("A3", "=CUMPRINC(1E-9,1E9,1,1,1E9,1)", "-1"),
         ("A4", "=CUMIPMT(0.01,Z5,1,1,Z5,0)", "-1E306"),
         ("A5", "=CUMIPMT(0.01,Z5,1,Z8,Z5,1)", "-8.91089108910891E305"),
     ]);
+    // fin-cumipmt-period-bound A4, an ulp off since T-3524 (decision 0291).
+    check_within_two_ulps(&[("A3", "=CUMPRINC(1E-9,1E9,1,1,1E9,1)", -1.0)]);
     assert!(started.elapsed() < Duration::from_secs(5));
 }
 
@@ -82,7 +105,6 @@ fn extreme_values_from_cells_are_values_without_a_panic() {
     check(&[
         ("A1", "=CUMIPMT(Z1,Z2,Z3,1,Z2,0)", "-5.819767068693264E299"),
         ("A2", "=CUMPRINC(Z4,Z2,Z1,1,Z2,1)", "-1E-300"),
-        ("A3", "=CUMPRINC(Z6,Z7,Z3,1,Z7,0)", "-9.999999999999999E299"),
         // A payment that overflows: CUMIPMT is #NUM! as in Excel (probes/fin-cumipmt-overflow-and-forms
         // A1, A3), while type 1's CUMPRINC is still the loan, -1E300 (A2; T-2192).
         ("A4", "=CUMIPMT(Z2,Z5,Z3,1,Z5,0)", "#NUM!"),
@@ -98,6 +120,12 @@ fn extreme_values_from_cells_are_values_without_a_panic() {
             "#NUM!",
         ),
     ]);
+    // fin-cumipmt-period-bound A27, an ulp off since T-3524 (decision 0291).
+    check_within_two_ulps(&[(
+        "A3",
+        "=CUMPRINC(Z6,Z7,Z3,1,Z7,0)",
+        -9.999_999_999_999_999E299,
+    )]);
 }
 
 #[test]
@@ -111,12 +139,11 @@ fn an_end_period_past_nper_is_num() {
 }
 
 #[test]
-fn up_to_32_periods_are_the_per_period_sum() {
-    // Type 1's interest is main's sum of IPMT up to `CUMULATIVE_LOOP_PERIODS` (32), bit for bit
-    // (ironcalc-calc/FINANCIAL/CUMPRINC_CUMIPMT.xlsx G3, G9, G15, G26); past it, the closed form.
-    // Type 0's short sums are their own forms (T-2192, below). The principal of type 1 is the
-    // closed form at any length, close to the PPMT sum (T-1890). The per-period sums are rebuilt
-    // here from IPMT and PPMT.
+fn up_to_32_periods_are_close_to_the_per_period_sum() {
+    // The interest is PMT times the periods less the principal (T-3118), so within an ulp or so of
+    // the IPMT sum, not bit for bit. Type 0's short principal is its own forms (T-2192, below); type
+    // 1's is the geometric sum or the closed form, close to the PPMT sum (T-1890). The per-period
+    // sums are rebuilt here from IPMT and PPMT.
     let mut model = new_empty_model();
     let pairs = [
         (
@@ -138,24 +165,25 @@ fn up_to_32_periods_are_the_per_period_sum() {
     }
     model.evaluate();
     let number = |cell: &str| round_trip_value(&model, cell).parse::<f64>().unwrap();
-    assert_eq!(number("A1").to_bits(), number("B1").to_bits());
-    // The PPMT sum cancels (each principal is a fiftieth of its payment); the closed form is
-    // within an ulp of the exact -2.33419231896298640 (T-1890).
-    assert!((number("A2") / -2.334_192_318_962_986_4 - 1.0).abs() < 4E-16);
+    assert!((number("A1") / number("B1") - 1.0).abs() < 1E-14);
+    // The PPMT sum cancels (each principal is a fiftieth of its payment). The geometric sum on
+    // Excel's own `ln(1+rate)` is Excel's value, an ulp or two from the exact
+    // -2.33419231896298640 (probes/fin-cumipmt-gate-edges J1; T-1890, T-2521).
+    assert_eq!(number("A2"), -2.334_192_318_962_987_4);
     assert!((number("A2") / number("B2") - 1.0).abs() < 1E-12);
-    // 33 periods: the closed form, within an ulp or two of the sum.
-    assert_ne!(number("A3").to_bits(), number("B3").to_bits());
-    assert!((number("A3") / number("B3") - 1.0).abs() < 1E-14);
+    // 33 periods: past the per-period sums, Excel's value (gate-edges J2), which is also the sum
+    // of Excel's discounted IPMT to the bit (T-2243).
+    assert_eq!(number("A3"), -131.849_721_045_626_13);
+    assert_eq!(number("A3").to_bits(), number("B3").to_bits());
     check(&[
-        // CUMPRINC_CUMIPMT.xlsx G3 (one period, the sum) and fin-cumipmt-period-bound A9, A11
-        // (1,024 periods, the closed form).
-        ("A1", "=CUMIPMT(0.1,10,345,2,2,1)", "-29.395712615048502"),
+        // CUMPRINC_CUMIPMT.xlsx G17 (one period) and fin-cumipmt-period-bound A9, A11 (1,024
+        // periods).
+        ("A1", "=CUMIPMT(0.8,12,8000,5,5,1)", "-3526.3391447649296"),
         (
             "A2",
             "=CUMIPMT(0.004,1024,1000,1,1024,0)",
             "-3165.8852276668513",
         ),
-        ("A3", "=CUMPRINC(0.004,1024,1000,1,1024,1)", "-1000"),
         // A large rate over a short range, where expm1 of the range overflows: the difference
         // of powers (probes/fin-cumipmt-overflow-and-forms A15-A19).
         ("A5", "=CUMPRINC(1E10,40,1,10,40,0)", "-1.0000000000000013"),
@@ -167,6 +195,8 @@ fn up_to_32_periods_are_the_per_period_sum() {
             "-1339.6579298169904",
         ),
     ]);
+    // fin-cumipmt-period-bound A11, an ulp off since T-3524 (decision 0291).
+    check_within_two_ulps(&[("A3", "=CUMPRINC(0.004,1024,1000,1,1024,1)", -1000.0)]);
 }
 
 #[test]
@@ -253,7 +283,7 @@ fn a_short_principal_at_a_large_rate_is_one_geometric_sum() {
             "=CUMIPMT(1E-10,296,197540,13,19,1)",
             "-0.00013127066813467536",
         ),
-        // Below `GEOMETRIC_MIN_DISCOUNT` the old forms keep these to the bit: the per-period
+        // Below `GEOMETRIC_MIN_LEAD` the old forms keep these to the bit: the per-period
         // sum (gen-m9 d912671baa1364aa A300) and type 1's closed form (CUMPRINC_CUMIPMT.xlsx H25).
         (
             "A6",
@@ -265,38 +295,123 @@ fn a_short_principal_at_a_large_rate_is_one_geometric_sum() {
             "=CUMPRINC(0.1234,36,8000,3,10,1)",
             "-212.62776661477534",
         ),
+        // Past 32 periods a range that ends a deep discount before nper is the geometric sum
+        // too (gen-m9 b73c6cc96e093f03 A62, probes/fin-cumprinc-form-boundaries A2; T-3067), and
+        // since T-3524 so is one that ends near nper (below).
+        (
+            "A8",
+            "=CUMPRINC(2,151,319288,3,42,1)",
+            "-1.049166891970377E-47",
+        ),
+        (
+            "A9",
+            "=CUMPRINC(2,600,319288,3,42,1)",
+            "-6.214428680002485E-262",
+        ),
+    ]);
+    // fin-cumipmt-period-bound A6, an ulp off since T-3524 (decision 0291).
+    check_within_two_ulps(&[(
+        "A10",
+        "=CUMPRINC(0.005,100000,1000,2,99999,1)",
+        -990.074_503_106_358_9,
+    )]);
+}
+
+#[test]
+fn a_short_range_in_the_band_below_the_cut_is_the_geometric_sum() {
+    // At most 4 periods, a rate of at least 1E-3 and a leading exponent below 0.095 take the
+    // geometric sum below `GEOMETRIC_MIN_LEAD` (T-4349, decision 0296):
+    // probes/fin-cumprinc-underflow-ends A3, J3 (type 1) and I3, whose interest was 64 ulps off
+    // with the per-period forms, and the fresh sweep's B202
+    // (probes-numeric/t4349-cumprinc-short-selector-fresh-sweep, 32 ulps off before). At a rate of
+    // 0.1 one period from nper (lead `ln 1.1`, above the band) the cut's form stays Excel's
+    // (fin-cumprinc-underflow-ends C2).
+    check(&[
+        (
+            "A1",
+            "=CUMPRINC(0.01,1E6,100000,1E6-2,1E6,0)",
+            "-2940.9852072355557",
+        ),
+        (
+            "A2",
+            "=CUMPRINC(0.01,1E6,100000,1E6-2,1E6,1)",
+            "-2911.866541817382",
+        ),
+        (
+            "A3",
+            "=CUMIPMT(0.01,1E6,100000,1E6-2,1E6,0)",
+            "-59.01479276444434",
+        ),
+        (
+            "A4",
+            "=CUMIPMT(0.00222502451804916,33,104329.5031,10,13,1)",
+            "-638.990724797266",
+        ),
+        (
+            "A5",
+            "=CUMPRINC(0.1,1E6,100000,1E6-1,1E6,0)",
+            "-17355.371900826445",
+        ),
     ]);
 }
 
 #[test]
-fn type_0_short_interest_is_the_balance_form() {
-    // probes/fin-cumipmt-overflow-and-forms A12-A14 (excel-graph): the interest of period k is
-    // `-(pv·q·r - pmt·(q-1))` with `q = exp((k-1)·L)`, not the exact IPMT (A12 was
-    // -15.708656559792592, the exact value; T-2192). A rate of 1E10 overflows `q`, and the closed
-    // form keeps A19.
+fn the_interest_is_pmt_times_the_periods_less_cumprinc() {
+    // Excel's CUMIPMT is its own PMT times the period count less its own CUMPRINC, and a type 1
+    // range from period 1 is built from the range from period 2 (`PMT·(e-1) - CUMPRINC(..,2,e,1)`):
+    // probes/fin-cumipmt-tiny-rate-structure and fin-cumipmt-gate-edges (excel-graph; T-3118).
+    // At these tiny rates the interest is a few thousandths of the payment, so the per-period forms
+    // before T-3118 were visibly off. A rate of 1E10 keeps fin-cumipmt-overflow-and-forms A19 (A9),
+    // and period 1 of type 1 pays no interest (A10).
     check(&[
         (
             "A1",
-            "=CUMIPMT(0.01,100,100000,100,100,0)",
-            "-15.708656559792416",
+            "=CUMIPMT(1.1E-4,60,100000,3,10,0)",
+            "-79.95706777414671",
         ),
         (
             "A2",
-            "=CUMIPMT(0.0083,36,8000,3,4,0)",
-            "-124.79622431364345",
+            "=CUMIPMT(2E-4,60,100000,3,10,0)",
+            "-145.41173505342704",
         ),
-        ("A3", "=CUMIPMT(1E10,40,1,10,40,0)", "-309999999999"),
+        (
+            "A3",
+            "=CUMIPMT(2E-6,100,100000,3,10,1)",
+            "-1.5120052077418222",
+        ),
+        (
+            "A4",
+            "=CUMIPMT(5E-6,100,100000,3,10,1)",
+            "-3.7800325459720625",
+        ),
+        ("A5", "=CUMIPMT(0.0083,36,8000,1,2,1)", "-64.27633197523468"),
+        (
+            "A6",
+            "=CUMIPMT(0.0083,36,8000,1,5,1)",
+            "-247.51137774521146",
+        ),
+        (
+            "A7",
+            "=CUMIPMT(2E-5,100,100000,3,3,1)",
+            "-1.9599999870645206",
+        ),
+        (
+            "A8",
+            "=CUMIPMT(2E-5,100,100000,1,2,1)",
+            "-1.9799801937302846",
+        ),
+        ("A9", "=CUMIPMT(1E10,40,1,10,40,0)", "-309999999999"),
+        ("A10", "=CUMIPMT(0.0083,36,8000,1,1,1)", "0"),
     ]);
 }
 
 #[test]
 fn type_0_interest_is_the_payments_less_the_principal() {
-    // T-2363 (excel-graph, gen-m9): outside the balance form's growth band [2^-10, 2^10] Excel's
-    // interest is `-pmt·m - principal`, cancellation included (A1 is 4E-10 relative off the exact
-    // sum; 5c6a23c4f6597f1c A392); at huge rates it is the payments (A2, A3: 1cd3096e3e87c965 A316,
-    // e168be7f6d3f84c2 A330); where `1 + rate` is 1 the principal is the balance drop (A4, A5:
-    // 81bcdc0bec0c8e6b A274, abb7d565af89b849 A84; A6: past 2^53, probes/fin-cumipmt-overflow-and-
-    // forms A5); inside the band the balance form stays (A7, probes A12).
+    // T-2363 (excel-graph, gen-m9): Excel's interest is `PMT·m - principal`, cancellation included
+    // (A1 is 4E-10 relative off the exact sum; 5c6a23c4f6597f1c A392); at huge rates it is the
+    // payments (A2, A3: 1cd3096e3e87c965 A316, e168be7f6d3f84c2 A330); where `1 + rate` is 1 the
+    // principal is the balance drop (A4, A5: 81bcdc0bec0c8e6b A274, abb7d565af89b849 A84; A6: past
+    // 2^53, probes/fin-cumipmt-overflow-and-forms A5).
     check(&[
         (
             "A1",
@@ -315,11 +430,6 @@ fn type_0_interest_is_the_payments_less_the_principal() {
             "A6",
             "=CUMIPMT(1E-15,2E16,1,1E16,1E16+8,0)",
             "-8.999591419181679E-15",
-        ),
-        (
-            "A7",
-            "=CUMIPMT(0.01,100,100000,100,100,0)",
-            "-15.708656559792416",
         ),
     ]);
 }
@@ -358,10 +468,11 @@ fn each_element_is_the_scalar_call() {
             "=INDEX(CUMIPMT(1E-9,{1E9;1E8},1,1,1E8,0),2)",
             "-0.0508331949770886",
         ),
+        // fin-cumipmt-period-bound A30's call, as the scalar call has it (decision 0291).
         (
             "A3",
-            "=INDEX(CUMPRINC(0.005,100000,1000,{2;3},99999,1),2)",
-            "-990.0745031063589",
+            "=INDEX(CUMPRINC(0.005,100000,1000,{2;3},99999,1),2)=CUMPRINC(0.005,100000,1000,3,99999,1)",
+            "TRUE",
         ),
         // An element error stays in its position: type 2 is #NUM!, a boolean #VALUE!.
         (

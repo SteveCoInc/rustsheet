@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used)]
 
 use crate::cell::CellValue;
-use crate::test::util::new_empty_model;
+use crate::test::util::{new_empty_model, ulps, within_fifteen_digits};
 
 // ============================================================
 // PERCENTOF
@@ -160,6 +160,196 @@ fn fn_yield_roundtrip() {
     model.evaluate();
     let yld: f64 = model._get_text("B1").parse().unwrap();
     assert!((yld - 0.065).abs() < 1e-5, "YIELD roundtrip = {yld}");
+}
+
+// YIELD stops one Newton step short of PRICE's root, from its fitted start (T-1592; financial.md
+// "YIELD stops short of PRICE's root"): Excel's bits on probes/yield-solver-sweep S!A1 (the root is
+// 0.0552358703070220) and probes/yield-start-sweep C18 (frequency 4, redemption 100.85).
+#[test]
+fn fn_yield_stops_short_of_the_root() {
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        "=YIELD(DATE(2096,3,1),DATE(2100,6,30),0.05,98,100,2,0)",
+    );
+    model._set(
+        "A2",
+        "=YIELD(DATE(2096,3,1),DATE(2100,6,30),0.05,98,100.85,4,0)",
+    );
+    model.evaluate();
+    let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
+        Ok(CellValue::Number(n)) => n.to_bits(),
+        other => panic!("expected number, got {other:?}"),
+    };
+    assert_eq!(bits("A1"), 0.055_235_870_302_514_56_f64.to_bits());
+    assert_eq!(bits("A2"), 0.056_983_625_338_011_136_f64.to_bits());
+}
+
+// YIELD's start takes whole years, then the leftover days over the basis' year (T-2777; financial.md
+// "YIELD stops short of PRICE's root"): Excel's bits on probes/yield-start-term-basis B5 (basis 1, a
+// 29 February settlement whose anniversaries fall on 1 March), A37 (the same on basis 0: 7 +
+// 164/360, not DAYS360's 2685/360), C13 (basis 2: 17 + 314/360) and gen-m9/ba4ddb817a8e700e A17
+// (basis 1: 20 + 284/365); serial 60 is 29 February 1900, 100 whole years before 29 February 2000
+// (probes/fin-coupon-walk-bounds-c H12).
+#[test]
+fn fn_yield_start_term_whole_years_then_leftover_days() {
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        "=YIELD(DATE(2012,2,29),DATE(2019,8,15),0.05,98,100.5,4,1)",
+    );
+    model._set(
+        "A2",
+        "=YIELD(DATE(2012,2,29),DATE(2019,8,15),0.05,98,100.5,2,0)",
+    );
+    model._set(
+        "A3",
+        "=YIELD(DATE(2004,7,5),DATE(2022,5,15),0.05,110,100.5,2,2)",
+    );
+    model._set("A4", "=YIELD(38743,46332,1E-15,116,123456789.123,4,1)");
+    model._set("A5", "=YIELD(60,36585,0.05,90,100,4)");
+    model.evaluate();
+    let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
+        Ok(CellValue::Number(n)) => n.to_bits(),
+        other => panic!("expected number, got {other:?}"),
+    };
+    // B5 and A37 were one ulp off under the rounded-once (decision 0162) and unrounded-term
+    // (decision 0166) starts; the `100 T - q T/2` denominator gives Excel's bits (T-3215).
+    assert_eq!(bits("A1"), 0.053_819_659_384_186_62_f64.to_bits());
+    assert_eq!(bits("A2"), 0.053_839_849_220_157_665_f64.to_bits());
+    assert_eq!(bits("A3"), 0.042_160_398_818_263_84_f64.to_bits());
+    assert_eq!(bits("A4"), 0.726_837_593_103_053_2_f64.to_bits());
+    assert_eq!(bits("A5"), 0.055_580_455_075_332_17_f64.to_bits());
+}
+
+// YIELD's start divides by `(100 T - q T/2) - q/4` in doubles (T-3215; financial.md "YIELD stops
+// short of PRICE's root"): Excel's bits on probes/yield-start-rate-term S!B30 and
+// yield-start-term-basis S!C47 (a start one ulp below the unrounded-term start of decision 0166) and
+// yield-one-step-start S!A37 (one ulp above it, across a PRICE step: 32 ulps of yield).
+#[test]
+fn fn_yield_start_denominator_is_100t_minus_qt_over_2() {
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        "=YIELD(DATE(2096,3,1),DATE(2098,6,30),0.12,90,100.5,1,0)",
+    );
+    model._set(
+        "A2",
+        "=YIELD(DATE(2016,2,28),DATE(2019,8,15),0.05,110,100.5,2,0)",
+    );
+    model._set(
+        "A3",
+        "=YIELD(DATE(2024,3,1),DATE(2033,1,10),0.07,88.5,99.204492,2,0)",
+    );
+    model.evaluate();
+    let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
+        Ok(CellValue::Number(n)) => n.to_bits(),
+        other => panic!("expected number, got {other:?}"),
+    };
+    assert_eq!(bits("A1"), 0.176_683_161_171_460_55_f64.to_bits());
+    assert_eq!(bits("A2"), 0.021_295_382_081_558_69_f64.to_bits());
+    assert_eq!(bits("A3"), 0.088_353_346_290_028_8_f64.to_bits());
+}
+
+// YIELD's fitted start and early stop (T-1592) reach Excel's 15 digits beyond the cells it was
+// fitted on (T-2741; financial.md "YIELD stops short of PRICE's root"): ironcalc-calc
+// FINANCIAL/PRICE_YIELD.xlsx PRICE_YIELD!I30 (a yield of PRICE's own price, short of 0.065),
+// probes/date-system-1900-financial-readers S!E8 and its -shifted twin S!E8 (the same bond four
+// years later: the start moves with the term in the basis's years, so the two differ by 8e-11), and
+// probes/yield-start-rate-term S!B20 (basis 1, 14 years).
+#[test]
+fn fn_yield_matches_excel_off_the_fit() {
+    let mut model = new_empty_model();
+    model._set(
+        "H30",
+        "=PRICE(DATE(2025,4,1),DATE(2028,3,13),0.05,0.065,15,1,3)",
+    );
+    model._set(
+        "A1",
+        "=YIELD(DATE(2025,4,1),DATE(2028,3,13),0.05,H30,15,1,3)",
+    );
+    model._set(
+        "A2",
+        "=YIELD(DATE(2096,2,15),DATE(2100,2,28),0.05,98,100,2,0)",
+    );
+    model._set(
+        "A3",
+        "=YIELD(DATE(2100,2,16),DATE(2104,3,1),0.05,98,100,2,0)",
+    );
+    model._set(
+        "A4",
+        "=YIELD(DATE(2096,3,1),DATE(2110,6,30),0.12,98,100.5,1,0)",
+    );
+    model.evaluate();
+    let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
+        Ok(CellValue::Number(n)) => n.to_bits(),
+        other => panic!("expected number, got {other:?}"),
+    };
+    assert_eq!(bits("H30"), 25.484_095_435_031_72_f64.to_bits());
+    assert_eq!(bits("A1"), 0.064_999_999_991_596_71_f64.to_bits());
+    // The twins and B20 are within Excel's 15 digits and 1 ulp off its bits; the bit-level
+    // residue is T-2788's.
+    for (c, excel) in [
+        ("A2", 0.055_585_928_765_551_25),
+        ("A3", 0.055_585_928_843_032_48),
+        ("A4", 0.122_943_903_299_904_23),
+    ] {
+        let ours = f64::from_bits(bits(c));
+        assert!(
+            within_fifteen_digits(excel, ours),
+            "{c}: {ours} vs Excel's {excel}"
+        );
+        assert!(ulps(excel, ours) <= 1, "{c}: {ours} vs Excel's {excel}");
+    }
+}
+
+// YIELD's Newton has no fallback (T-2391; financial.md "YIELD's #NUM! cells and its 100-step
+// cap"): an iterate off PRICE's domain is #NUM! though PRICE has a root (probes/yield-newton-domain
+// B14 and A14), and the 100th iterate is the value though it is no root (C1).
+#[test]
+fn fn_yield_newton_domain_and_step_cap() {
+    let mut model = new_empty_model();
+    model._set("A1", "=YIELD(36665,44491,42,106,100,4,0)");
+    model._set("A2", "=YIELD(39448,43831,0.05,100000,100,2)");
+    model._set("A3", "=YIELD(39448,43831,0.05,10000,100,2)");
+    model._set("A4", "=YIELD(37341,45513,1E-9,105,1E+300,1)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#NUM!");
+    assert_eq!(model._get_text("A2"), "#NUM!");
+    let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
+        Ok(CellValue::Number(n)) => n.to_bits(),
+        other => panic!("expected number, got {other:?}"),
+    };
+    assert_eq!(bits("A3"), (-0.339_824_532_737_020_73_f64).to_bits());
+    assert_eq!(bits("A4"), 78.135_510_928_029_92_f64.to_bits());
+}
+
+// A Newton whose step meets its test on the 100th and last check is #NUM!, one that meets it on
+// the 99th or on none is a value (T-2747; financial.md "YIELD's #NUM! cells and its 100-step cap").
+// A1 is probes/yield-newton-step-cap N!A3 (check 100), A2 its N!A2 (check 99), A3 its N!A4
+// (check 101) and A4 probes/yield-below-par-sweep Y!H17 (no check passes: the 100th iterate).
+#[test]
+fn fn_yield_converged_on_the_last_check_is_num() {
+    let mut model = new_empty_model();
+    model._set("A1", "=YIELD(39681,45662,22.75,20,102,4)");
+    model._set("A2", "=YIELD(39681,45662,22.74375,20,102,4)");
+    model._set("A3", "=YIELD(39681,45662,22.75625,20,102,4)");
+    model._set("A4", "=YIELD(39681,45662,23,20,102,4)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#NUM!");
+    let value = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
+        Ok(CellValue::Number(n)) => n,
+        other => panic!("expected number, got {other:?}"),
+    };
+    // Within a few ulps of Excel's values ("YIELD stops short of PRICE's root" owns the last bits).
+    for (c, excel) in [
+        ("A2", 17.152_523_260_680_788),
+        ("A3", 17.153_559_381_582_642),
+        ("A4", -2.282_389_546_058_274_4),
+    ] {
+        let ours = value(c);
+        assert!(ulps(excel, ours) <= 4, "{c}: {ours} vs Excel's {excel}");
+    }
 }
 
 #[test]
@@ -373,6 +563,47 @@ fn fn_coupdays_ms_example_basis1() {
     model.evaluate();
     let v: f64 = model._get_text("A1").parse().unwrap();
     assert!((v - 181.0).abs() < 1e-10, "COUPDAYS basis=1: {v}");
+}
+
+#[test]
+fn fn_coupdays_basis1_counts_from_the_chained_next_coupon() {
+    // Excel values from probes/coupdays-pre1900-control, -sweep, -period and coup-calendar-edges
+    // (excel-graph, 2026-10-25); financial.md "COUPDAYS basis 1 counts from the chained next coupon".
+    let cases = [
+        // Month-end schedules inside the calendar: not COUPNCD - COUPPCD (182, 184, 92).
+        ("=COUPDAYS(DATE(1950,1,15),DATE(2019,3,31),2,1)", 181.0),
+        ("=COUPDAYS(DATE(2018,6,15),DATE(2019,4,30),2,1)", 183.0),
+        ("=COUPDAYS(DATE(1950,1,15),DATE(2019,1,31),4,1)", 92.0),
+        ("=COUPDAYS(DATE(1950,6,15),DATE(2019,1,31),4,1)", 91.0),
+        ("=COUPDAYS(DATE(2018,6,15),DATE(2019,1,31),4,1)", 92.0),
+        ("=COUPDAYS(DATE(2018,1,15),DATE(2019,12,30),2,1)", 181.0),
+        // The next coupon is the maturity itself.
+        ("=COUPDAYS(DATE(2018,12,15),DATE(2019,3,31),2,1)", 182.0),
+        // Around 29 February.
+        ("=COUPDAYS(DATE(2023,11,15),DATE(2025,2,28),2,1)", 184.0),
+        ("=COUPDAYS(DATE(2399,11,15),DATE(2400,2,29),2,1)", 182.0),
+        ("=COUPDAYS(59,36585,4,1)", 90.0),
+        // A period that starts before 1900-01-01.
+        ("=COUPDAYS(89,DATE(2019,3,31),2,1)", 181.0),
+        ("=COUPDAYS(90,DATE(2019,3,31),2,1)", 91.0),
+        ("=COUPDAYS(0,2958465,2,1)", 184.0),
+        ("=COUPDAYS(0.5,DATE(2019,12,30),2,1)", 184.0),
+        ("=COUPDAYS(1,2958465,2,1)", 181.0),
+        ("=COUPDAYS(0,DATE(2019,12,29),2,1)", 182.0),
+        ("=COUPDAYS(1,43830,4,1)", 90.0),
+    ];
+    let mut model = new_empty_model();
+    for (i, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("A{}", i + 1), formula);
+    }
+    model.evaluate();
+    for (i, (formula, expected)) in cases.iter().enumerate() {
+        let v: f64 = model._get_text(&format!("A{}", i + 1)).parse().unwrap();
+        assert!(
+            (v - expected).abs() < 1e-10,
+            "{formula}: {v}, expected {expected}"
+        );
+    }
 }
 
 #[test]
@@ -688,4 +919,39 @@ fn bond_prices_discount_with_excels_power() {
     assert_eq!(bits("A1"), 108.226_897_223_108_92_f64.to_bits());
     assert_eq!(bits("A2"), 83.347_166_283_754_35_f64.to_bits());
     assert_eq!(bits("A3"), 92.407_763_209_327_3_f64.to_bits());
+}
+
+#[test]
+fn coupon_dates_past_the_calendar_are_num_as_read() {
+    // T-2486: a settlement or maturity past 9999-12-31 is #NUM! before a later error, text or
+    // boolean (probes/coup-calendar-edges A1-A8; gen-m9 a91bad4e84f49739 A153, 89f0aee953a55a45
+    // A363).
+    let mut model = new_empty_model();
+    model._set("A1", "=COUPNUM(37484,2958466,2,NA())");
+    model._set("A2", "=COUPDAYS(123456789,TRUE,4)");
+    model._set("A3", "=COUPDAYS(39123,2958466,1,0)");
+    model._set("A4", "=COUPPCD(39000,2958465.9,2)");
+    model._set("A5", "=COUPNCD(2958465.5,NA(),2)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#NUM!");
+    assert_eq!(model._get_text("A2"), "#NUM!");
+    assert_eq!(model._get_text("A3"), "#NUM!");
+    assert_eq!(model._get_text("A4"), "38898");
+    assert_eq!(model._get_text("A5"), "#N/A");
+}
+
+#[test]
+fn coupon_dates_keep_the_maturitys_day() {
+    // T-2486: each coupon date is the maturity moved back whole periods, so the 29th survives a
+    // February (probes/coup-calendar-edges B1-B14; gen-m9 7d2979fba2c95d64 A304).
+    let mut model = new_empty_model();
+    model._set("A1", "=COUPDAYBS(37913,46720,4,4)");
+    model._set("A2", "=COUPPCD(37913,46720,4)");
+    model._set("A3", "=COUPNCD(DATE(2020,1,1),DATE(2027,5,30),4)");
+    model._set("A4", "=COUPDAYSNC(37913,46720,4,1)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "50");
+    assert_eq!(model._get_text("A2"), "37862");
+    assert_eq!(model._get_text("A3"), "43890");
+    assert_eq!(model._get_text("A4"), "41");
 }

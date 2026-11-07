@@ -1,0 +1,23 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "be1c65445d99dc02b545df775d6b029800d912652f16fb6d0a23ac8d8ad3b3c3",
+  "definitions": {
+   "BETA.DIST": "a9652f0571fdcdd2",
+   "ROUND": "19ce5b4189e2c2a5"
+  },
+  "arguments_sha256": "54e4097c46972880bdb9fd9f2223f52dd87366ab644c32a78e0ba632b93b8c8d"
+ },
+ "sheets": {
+  "Sheet1": {
+   "L12": {
+    "t": "n",
+    "v": "0.6875",
+    "f": "=ROUND(BETA.DIST(0.5,2,3,G1),12)"
+   }
+  }
+ }
+}

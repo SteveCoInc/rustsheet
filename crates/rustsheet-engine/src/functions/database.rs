@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use crate::arithmetic::{extended_sum, flush_subnormal};
 use crate::constants::LAST_ROW;
+use crate::expressions::parser::stringify::retarget_unqualified_references;
+use crate::reference_operators::Picked;
 use crate::types::Cell;
 use crate::{
     arithmetic::extended_quotient,
@@ -38,20 +40,22 @@ fn computed_criterion_holds(condition: &CalcResult) -> bool {
     }
 }
 
-/// Whether a formula condition evaluated at `context` (its cell moved down to a record) stays off
-/// the database's header row: Excel matches no record whose moved relative reference into the
-/// database lands on its header row or above. Over Db!A2:D9 (header row 2) with `=B2>3` as the
-/// condition, the first record reads B2 = 4 and does not match, while the later records read
-/// B3..B8 (`DVAR(Db!A2:D9,2,Db!O1:O2)` is 12.5 and `DCOUNTA(..,3,..)` 2, rows 4 and 9; criteria.md
-/// "D* computed criteria and an unknown header in the gen-m9 database sweep (T-2258)"). Absolute
-/// rows stay put and are not checked (probes/db-criteria-formula-placement F2, F14); a reference
-/// on another sheet, or outside the database's columns, is read as it is: TODO(T-2617).
+/// Whether a formula condition evaluated at `context` (its cell moved down to a record) reads
+/// only the record area of the database (its rows below the header row, its columns): Excel
+/// matches no record whose moved relative reference onto the database's sheet lands on the header
+/// row or above, below the last record, or outside the database's columns, and a range matches
+/// when it overlaps that area (`SUM(B5:B6)>0` over Same!A5:C12 matches its first record,
+/// `SUM(B4:B5)>0` does not). Over Db!A2:D9 (header row 2) with `=B2>3`, the first record reads
+/// B2 = 4 and does not match (criteria.md "D* computed criteria and an unknown header in the
+/// gen-m9 database sweep (T-2258)"; probes/db-computed-criteria-cross-sheet). A reference with an
+/// absolute row (a range with two) stays put and is not checked (probes/db-criteria-formula-placement
+/// F2, F14; `$B$5>0` on the header row matches), nor is one on another sheet than the database's.
 fn reads_records(node: &Node, context: CellReferenceIndex, query: &DbQuery) -> bool {
-    let first_record = query.left.row + 1;
+    let rows = query.left.row + 1..=query.right.row;
     let columns = query.left.column..=query.right.column;
-    let reads = |sheet: u32, row: i32, column: i32, absolute_column: bool| {
-        let column = column + if absolute_column { 0 } else { context.column };
-        sheet != query.left.sheet || !columns.contains(&column) || row + context.row >= first_record
+    let moved = |at: i32, absolute: bool, by: i32| at + if absolute { 0 } else { by };
+    let overlaps = |span: &std::ops::RangeInclusive<i32>, a: i32, b: i32| {
+        a.min(b) <= *span.end() && a.max(b) >= *span.start()
     };
     let mut pending = vec![node];
     while let Some(node) = pending.pop() {
@@ -63,8 +67,12 @@ fn reads_records(node: &Node, context: CellReferenceIndex, query: &DbQuery) -> b
                 row,
                 column,
                 ..
-            } => reads(*sheet_index, *row, *column, *absolute_column),
-            // Each corner in `reads`'s argument order, its absolute row flag first.
+            } => {
+                *sheet_index != query.left.sheet
+                    || (rows.contains(&(row + context.row))
+                        && columns.contains(&moved(*column, *absolute_column, context.column)))
+            }
+            // Each corner's row and column with its absolute flag, row first.
             Node::RangeKind {
                 absolute_row1,
                 sheet_index,
@@ -77,8 +85,17 @@ fn reads_records(node: &Node, context: CellReferenceIndex, query: &DbQuery) -> b
                 absolute_column2,
                 ..
             } => {
-                (*absolute_row1 || reads(*sheet_index, *row1, *column1, *absolute_column1))
-                    && (*absolute_row2 || reads(*sheet_index, *row2, *column2, *absolute_column2))
+                *sheet_index != query.left.sheet
+                    || (*absolute_row1 && *absolute_row2)
+                    || (overlaps(
+                        &rows,
+                        moved(*row1, *absolute_row1, context.row),
+                        moved(*row2, *absolute_row2, context.row),
+                    ) && overlaps(
+                        &columns,
+                        moved(*column1, *absolute_column1, context.column),
+                        moved(*column2, *absolute_column2, context.column),
+                    ))
             }
             _ => true,
         };
@@ -139,12 +156,21 @@ impl Model {
         } else {
             LiftCost::Unit
         };
+        // A `field` that is a reference to an error cell is `#VALUE!` in Excel, while an error
+        // literal propagates (probes/m9-database-argument-kinds, excel-graph 2026-11-04). The
+        // driver hands over the dereferenced value, so the reference is recognised here.
+        let field_is_error_cell = self.db_field_is_error_cell(args.get(1), cell);
         self.lift_call_costed(
             kind,
             args,
             cost,
             cell,
-            &mut |model, values| match model.db_query(values, empty_field_counts, cell) {
+            &mut |model, values| match model.db_query(
+                values,
+                empty_field_counts,
+                field_is_error_cell,
+                cell,
+            ) {
                 Ok(query) => compute(model, &query, cell),
                 Err(error) => error,
             },
@@ -177,10 +203,46 @@ impl Model {
         LiftCost::Cells(rows.saturating_mul(per_row))
     }
 
+    /// Whether `field` is a single-cell reference whose cell holds an error, written directly or
+    /// reached through a defined name, `INDEX(…)`, `@` or `IF(TRUE,…)`: all give `#VALUE!` in
+    /// Excel (probes/m9-database-field-error-forms, excel-graph 2026-11-04). Other
+    /// reference-returning functions (OFFSET, CHOOSE, LET variables) are unprobed and keep the
+    /// cell's own error. The IF condition is read once more here than in the main path.
+    fn db_field_is_error_cell(&mut self, field: Option<&Node>, cell: CellReferenceIndex) -> bool {
+        let Some(
+            node @ (Node::ReferenceKind { .. }
+            | Node::DefinedNameKind(_)
+            | Node::FunctionKind {
+                kind: Function::Index | Function::If,
+                ..
+            }
+            | Node::ImplicitIntersection { .. }),
+        ) = field.map(Node::ungrouped)
+        else {
+            return false;
+        };
+        // IF(TRUE,ref) hands on the picked branch's reference.
+        let node = match node {
+            Node::FunctionKind {
+                kind: Function::If,
+                args,
+            } => match self.if_pick(args, cell) {
+                Picked::Node(picked) => picked.ungrouped(),
+                Picked::Value(_) => return false,
+            },
+            other => other,
+        };
+        match self.get_reference(node, cell) {
+            Ok(range) if range.left == range.right => self.evaluate_cell(range.left).is_error(),
+            _ => false,
+        }
+    }
+
     fn db_query(
         &mut self,
         values: &[CalcResult],
         empty_field_counts: bool,
+        field_is_error_cell: bool,
         cell: CellReferenceIndex,
     ) -> Result<DbQuery, CalcResult> {
         let [database, field, criteria] = values else {
@@ -189,6 +251,12 @@ impl Model {
         let (left, right) = reference_corners(database, cell)?;
         let field = if matches!(field, CalcResult::EmptyArg) && empty_field_counts {
             None
+        } else if field_is_error_cell {
+            return Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "Field is a reference to an error".to_string(),
+            ));
         } else {
             Some(self.resolve_db_field_column(left, right, field, cell)?)
         };
@@ -237,28 +305,35 @@ impl Model {
         acc
     }
 
-    /// The finite numbers of the field among the matching records.
+    /// The finite numbers of the field among the matching records, or the first error (in record
+    /// order) a matching record's field cell holds: every aggregating D-function (all but DCOUNT,
+    /// DCOUNTA and DGET) returns that error, and an error in a record that does not match is
+    /// ignored (criteria.md "D-function front end across all twelve functions",
+    /// probes/db-front-end-sweep B74:M82).
     fn db_fold_numbers<T>(
         &mut self,
         query: &DbQuery,
         init: T,
         mut step: impl FnMut(T, f64) -> T,
-    ) -> T {
-        self.db_fold(query, init, |acc, value| match value {
-            CalcResult::Number(n) if n.is_finite() => step(acc, n),
-            _ => acc,
+    ) -> Result<T, CalcResult> {
+        self.db_fold(query, Ok(init), |acc, value| match (acc, value) {
+            (Ok(acc), CalcResult::Number(n)) if n.is_finite() => Ok(step(acc, n)),
+            (Ok(_), error @ CalcResult::Error { .. }) => Err(error),
+            (acc, _) => acc,
         })
     }
 
     /// DMAX and DMIN: the extreme `pick` chooses among the matching numbers, 0 when there are none.
     fn db_extreme(&mut self, query: &DbQuery, pick: fn(f64, f64) -> f64) -> CalcResult {
-        let best = self.db_fold_numbers(query, None, |best: Option<f64>, n| {
+        match self.db_fold_numbers(query, None, |best: Option<f64>, n| {
             Some(best.map_or(n, |current| pick(n, current)))
-        });
-        CalcResult::Number(best.unwrap_or(0.0))
+        }) {
+            Ok(best) => CalcResult::Number(best.unwrap_or(0.0)),
+            Err(error) => error,
+        }
     }
 
-    fn db_numbers(&mut self, query: &DbQuery) -> Vec<f64> {
+    fn db_numbers(&mut self, query: &DbQuery) -> Result<Vec<f64>, CalcResult> {
         self.db_fold_numbers(query, Vec::new(), |mut numbers, n| {
             numbers.push(n);
             numbers
@@ -276,9 +351,12 @@ impl Model {
                 // Rounds the total to a double after every addition, like SUM (numbers.md
                 // "Accumulators beyond SUM and AVERAGE", probes-numeric/daverage-accumulation).
                 let (sum, count) =
-                    model.db_fold_numbers(query, (0.0f64, 0usize), |(sum, count), n| {
+                    match model.db_fold_numbers(query, (0.0f64, 0usize), |(sum, count), n| {
                         (extended_sum(sum, n), count + 1)
-                    });
+                    }) {
+                        Ok(totals) => totals,
+                        Err(error) => return error,
+                    };
                 if count == 0 {
                     return CalcResult::Error {
                         error: Error::DIV,
@@ -367,7 +445,9 @@ impl Model {
     pub(crate) fn fn_dsum(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.db_call(Function::Dsum, args, cell, false, |model, query, _| {
             // Each addition rounds twice like SUM's (probes-numeric/double-rounding-accumulators).
-            CalcResult::Number(model.db_fold_numbers(query, 0.0, extended_sum))
+            model
+                .db_fold_numbers(query, 0.0, extended_sum)
+                .map_or_else(|error| error, CalcResult::Number)
         })
     }
 
@@ -375,9 +455,12 @@ impl Model {
     pub(crate) fn fn_dproduct(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.db_call(Function::Dproduct, args, cell, false, |model, query, _| {
             let (product, has_numeric) =
-                model.db_fold_numbers(query, (1.0f64, false), |(product, _), n| {
+                match model.db_fold_numbers(query, (1.0f64, false), |(product, _), n| {
                     (product * n, true)
-                });
+                }) {
+                    Ok(totals) => totals,
+                    Err(error) => return error,
+                };
             // Excel returns 0 when no rows / no numeric values match for DPRODUCT
             CalcResult::Number(if has_numeric { product } else { 0.0 })
         })
@@ -386,7 +469,10 @@ impl Model {
     // =DSTDEV(database, field, criteria): sample standard deviation of matching numeric values
     pub(crate) fn fn_dstdev(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.db_call(Function::Dstdev, args, cell, false, |model, query, cell| {
-            let values = model.db_numbers(query);
+            let values = match model.db_numbers(query) {
+                Ok(values) => values,
+                Err(error) => return error,
+            };
             variance_result(&values, VarianceKind::Sample, true, "DSTDEV", cell)
         })
     }
@@ -394,7 +480,10 @@ impl Model {
     // =DVAR(database, field, criteria): sample variance of matching numeric values
     pub(crate) fn fn_dvar(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.db_call(Function::Dvar, args, cell, false, |model, query, cell| {
-            let values = model.db_numbers(query);
+            let values = match model.db_numbers(query) {
+                Ok(values) => values,
+                Err(error) => return error,
+            };
             variance_result(&values, VarianceKind::Sample, false, "DVAR", cell)
         })
     }
@@ -407,7 +496,10 @@ impl Model {
             cell,
             false,
             |model, query, cell| {
-                let values = model.db_numbers(query);
+                let values = match model.db_numbers(query) {
+                    Ok(values) => values,
+                    Err(error) => return error,
+                };
                 variance_result(&values, VarianceKind::Population, true, "DSTDEVP", cell)
             },
         )
@@ -416,7 +508,10 @@ impl Model {
     // =DVARP(database, field, criteria): population variance of matching numeric values
     pub(crate) fn fn_dvarp(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.db_call(Function::Dvarp, args, cell, false, |model, query, cell| {
-            let values = model.db_numbers(query);
+            let values = match model.db_numbers(query) {
+                Ok(values) => values,
+                Err(error) => return error,
+            };
             variance_result(&values, VarianceKind::Population, false, "DVARP", cell)
         })
     }
@@ -588,8 +683,10 @@ impl Model {
     /// A computed criterion's value for database `row`. A formula condition is evaluated again
     /// as if it sat as many rows lower as the record is below the first record, so its relative
     /// references follow the record (a blank header over `=B2>2` tests each record's B cell);
-    /// a constant is its own value (probes/db-computed-criteria-shapes AB23-AB26). A record whose
-    /// moved references land on the database's header row does not match ([`reads_records`]).
+    /// a constant is its own value (probes/db-computed-criteria-shapes AB23-AB26). Its references
+    /// without a sheet prefix read the database's sheet, so a condition on another sheet is
+    /// evaluated for the first record too (probes/db-computed-criteria-cross-sheet). A record
+    /// whose moved references leave the database's record area does not match ([`reads_records`]).
     fn db_computed_condition(
         &mut self,
         query: &DbQuery,
@@ -616,18 +713,22 @@ impl Model {
         if context.row > LAST_ROW {
             return CalcResult::new_error(Error::REF, criteria_cell, "Off the grid".to_string());
         }
-        let Some(node) = self
+        let Some(mut node) = self
             .parsed_formulas
             .get(criteria_cell.sheet as usize)
             .and_then(|formulas| formulas.get(usize::try_from(formula).ok()?))
-            .map(|(node, _)| Arc::clone(node))
+            .map(|formula| Arc::clone(&formula.evaluated))
         else {
             return value;
         };
+        let other_sheet = criteria_cell.sheet != query.left.sheet;
+        if other_sheet {
+            retarget_unqualified_references(Arc::make_mut(&mut node), query.left.sheet);
+        }
         if !reads_records(&node, context, query) {
             return CalcResult::Boolean(false);
         }
-        if offset == 0 {
+        if offset == 0 && !other_sheet {
             return value;
         }
         // A formula condition that itself runs a D-function with formula conditions would

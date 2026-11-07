@@ -1,0 +1,42 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4331: remaining typed _XLPM. forms T-4299 left unprobed: mixed-case prefix (A1), bare =_XLPM.x (A2), doubled upper-case prefix (A3), a called _XLPM.f(3) (A4) and a LET-bound lambda called through it (A5). Each row: value, ISBLANK, FORMULATEXT.",
+ "tags": [
+  "M2",
+  "syntax",
+  "probe"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": {
+     "entered": "=LET(_Xlpm.x,1,_Xlpm.x+1)"
+    },
+    "B1": "=ISBLANK(A1)",
+    "C1": "=IFERROR(FORMULATEXT(A1),\"none\")",
+    "A2": {
+     "entered": "=_XLPM.x"
+    },
+    "B2": "=ISBLANK(A2)",
+    "C2": "=IFERROR(FORMULATEXT(A2),\"none\")",
+    "A3": {
+     "entered": "=LET(x,2,_XLPM._XLPM.x*3)"
+    },
+    "B3": "=ISBLANK(A3)",
+    "C3": "=IFERROR(FORMULATEXT(A3),\"none\")",
+    "A4": {
+     "entered": "=LAMBDA(x,_XLPM.f(3))(1)"
+    },
+    "B4": "=ISBLANK(A4)",
+    "C4": "=IFERROR(FORMULATEXT(A4),\"none\")",
+    "A5": {
+     "entered": "=LET(_XLPM.f,LAMBDA(a,a+1),_XLPM.f(3))"
+    },
+    "B5": "=ISBLANK(A5)",
+    "C5": "=IFERROR(FORMULATEXT(A5),\"none\")"
+   }
+  }
+ ]
+}

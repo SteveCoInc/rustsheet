@@ -1,0 +1,78 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "c7d575327f91500bc205c43765493102d93b9f339a13ee68dfcd79a7e767ca16",
+  "definitions": {
+   "SKEW": "8061eaadc95c994e",
+   "SKEW.P": "8061eaadc95c994e"
+  },
+  "arguments_sha256": "ebd18a95cfa5130bd3a6296273afc0a9e3e9c85f7a547d62000a4a2f5ae3f6ec"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "e",
+    "why": "#DIV/0!: fewer than 3 numbers",
+    "f": "=SKEW.P(1,2)"
+   },
+   "A10": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=SKEW(1,2,3)"
+   },
+   "A11": {
+    "t": "n",
+    "v": "0.93521952958282449114041779463836907938458297485061",
+    "f": "=SKEW(1,2,4)"
+   },
+   "A12": {
+    "t": "e",
+    "why": "#DIV/0!: equal numbers (zero variance)",
+    "f": "=SKEW(5,5,5)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=SKEW.P(1,2,3)"
+   },
+   "A3": {
+    "t": "n",
+    "v": "0.38180177416060626383507640125679074507714487834477",
+    "f": "=SKEW.P(1,2,4)"
+   },
+   "A4": {
+    "t": "e",
+    "why": "#DIV/0!: equal numbers (zero variance)",
+    "f": "=SKEW.P(5,5,5)"
+   },
+   "A5": {
+    "t": "e",
+    "why": "#DIV/0!: equal numbers (zero variance)",
+    "f": "=SKEW.P(5,5,5,5)"
+   },
+   "A6": {
+    "t": "n",
+    "v": "1.0182337649086284351372158814309826165701637502714",
+    "f": "=SKEW.P(1,2,3,10)"
+   },
+   "A7": {
+    "t": "e",
+    "why": "#DIV/0!: fewer than 3 numbers",
+    "f": "=SKEW.P(1)"
+   },
+   "A8": {
+    "t": "e",
+    "why": "#DIV/0!: fewer than 3 numbers",
+    "f": "=SKEW.P(2,2)"
+   },
+   "A9": {
+    "t": "e",
+    "why": "#DIV/0!: fewer than 3 numbers",
+    "f": "=SKEW(1,2)"
+   }
+  }
+ }
+}

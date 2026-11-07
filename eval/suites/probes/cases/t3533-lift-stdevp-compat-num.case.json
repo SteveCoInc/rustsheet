@@ -1,0 +1,28 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3533: STDEVP over a lifted OFFSET (num elements), alone in its workbook on the t2816 data plus A8 = -3 (docs/research/t3533/mkcases.py).",
+ "tags": [
+  "M6",
+  "probe",
+  "offset"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": 1,
+    "A2": 100,
+    "A3": 10000,
+    "B1": 2,
+    "B2": 200,
+    "B3": 20000,
+    "A4": "5",
+    "A6": true,
+    "A7": 7,
+    "A8": -3,
+    "E1": "=STDEVP(OFFSET(A1,{0;1;2},0))"
+   }
+  }
+ ],
+ "expected": {}
+}

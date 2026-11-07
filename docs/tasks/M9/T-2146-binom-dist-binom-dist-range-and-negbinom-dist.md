@@ -3,8 +3,8 @@ id: T-2146
 title: "BINOM.DIST, BINOM.DIST.RANGE and NEGBINOM.DIST last digits: fit Excel's evaluation (70 ironcalc-calc BINOM.xlsx known failures)"
 milestone: M9
 lane: functions-stat
-status: todo
-priority: P3
+status: done
+priority: P1
 size: M
 tier: opus
 campaign: visible
@@ -17,6 +17,8 @@ BINOM.DIST, BINOMDIST, BINOM.DIST.RANGE, NEGBINOM.DIST and NEGBINOMDIST give Exc
 and points back to T-0927, which is done.
 
 ## Context
+- Decision 0188 R5 (owner's 2026-10-31 rulings): T-2510 (the bgrat family) is parked as Phase 1b, since its cells are
+  all dense probes-numeric sweep cells, so it left `depends_on`; work on today's kernel for the bgrat branches.
 - The oracle sweep (T-2145) is landed: probes-numeric/t2145-binomial-sweep, t2145-negbinom-sweep
   and t2145-binom-range-sweep (statistics.md "Discrete distributions"). T-0927 tried and ruled out the exact sum, Loader's saddle-point pmf (R's
   `dbinom_raw`: 49 of 122) and `exp(a*ln x)` times the exact remaining factor, all on the cached cells alone.
@@ -158,20 +160,80 @@ Cells:
 - gen-m9/ede0323c389fc703.case.json (3): Calc!A173, A287, A363
 - gen-m9/f82473275380882e.case.json (1): Calc!A392
 
+Sequencing (T-0098, 2026-10-28): waits on T-2510, which ports Excel's bgrat for BINOM and NEGBINOM; fit the last
+digits on the ported kernel, not the current one, so the work is not done twice.
+
+### Cases owned (T-2981)
+Routed by T-2981 (eval of 2026-10-28 at `main` 9586958b): the BINOM.DIST and NEGBINOM.DIST pmf cells (interior k; dbinom_raw on T-2507's saddle point); the cases' BETA.DIST density cells are T-2507's. 4,415 visibly-off cells in 4 cases, per case:
+- probes-numeric/t2513-r3-binom-pmf-a: BINOM.DIST pmf (interior) 1,213
+- probes-numeric/t2513-r3-binom-pmf-hold: BINOM.DIST pmf (interior) 628, NEGBINOM.DIST pmf 780
+- probes-numeric/t2513-r3-binom-pmf-n: BINOM.DIST pmf (interior) 997, NEGBINOM.DIST pmf 629
+- probes-numeric/t2513-verify-r3-binom-pmf-h: BINOM.DIST pmf (interior) 54, NEGBINOM.DIST pmf 114
+
 ## Acceptance criteria
-- [ ] Visible parity (gen-m9, T-2255 and T-2256): these 93 known-failure lines (8 from T-2255, 85 from T-2256) disappear from eval/baseline/gen-m9.txt
+- [ ] (partial: gen-m9's visibly-off BINOM-family cells 48 -> 37 and 26 known-failure lines fixed; T-4352 owns the rest) Visible parity (gen-m9, T-2255 and T-2256): these 93 known-failure lines (8 from T-2255, 85 from T-2256) disappear from eval/baseline/gen-m9.txt
       (`make eval-baseline`), with no new known-failure lines in any baseline.
-- [ ] Visible parity: the 14 visibly-off cells listed under Context (2026-10-21) have Excel's value to 15 significant digits, or its type, error and text: the 6 lines in eval/baseline/ironcalc-calc.txt disappear (`make eval-baseline`); the 8 cells of the ungated probes-numeric suite pass in `make eval`, with no new known-failure lines in any baseline.
-- [ ] statistics.md "Discrete distributions" records the fit: each candidate's count on BINOM.xlsx's 148 numeric
+- [ ] (partial: ironcalc-calc's visibly-off BINOM cells 3 -> 2; T-4352 owns the rest) Visible parity: the 14 visibly-off cells listed under Context (2026-10-21) have Excel's value to 15 significant digits, or its type, error and text: the 6 lines in eval/baseline/ironcalc-calc.txt disappear (`make eval-baseline`); the 8 cells of the ungated probes-numeric suite pass in `make eval`, with no new known-failure lines in any baseline.
+- [x] (in "BINOM.DIST and NEGBINOM.DIST pmfs take Loader's kernel everywhere", as train, hold-out and fresh-sweep totals rather than per case) statistics.md "Discrete distributions" records the fit: each candidate's count on BINOM.xlsx's 148 numeric
       cells, on T-2145's sweep and on the two probes-numeric cases, including the candidates that lost.
-- [ ] The formulation that wins is implemented. The BINOM.xlsx known-failure lines it fixes disappear from
+- [x] The formulation that wins is implemented. The BINOM.xlsx known-failure lines it fixes disappear from
       eval/baseline/ironcalc-calc.txt, with no new ones in any gated suite. The target is all 70 lines; say which
       ones remain and why.
-- [ ] No BINOM.INV/CRITBINOM cell regresses (they search on the same cdf).
-- [ ] `make check` green; reviewers approve.
+- [x] No BINOM.INV/CRITBINOM cell regresses (they search on the same cdf).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - POISSON.DIST (T-2055), HYPGEOM.DIST (T-0977, T-1896), BINOM.INV with probability_s 0 (T-2050).
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off (binomial and negative-binomial values that differ in the 14th-15th digit), so this task is in the campaign. Its target is that every cell it owns is within half a unit of the 15th significant digit of Excel's value (an expected 0 exactly 0), or has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it. Bit-level criteria still unmet when that target is reached move to a follow-up task filed without the key and named in the Outcome (decision 0083). The fit needs T-2145's oracle sweep first.
+
+## Phase 1 triage (T-0090, 2026-10-27)
+It owns 71 of BINOM.DIST.RANGE's 73 needed cells, 534 BINOM.DIST and 121 NEGBINOM.DIST cells: despite the "last digits" title these cells are visibly off. Priority raised so it leads its stage in M9.
+
+## Outcome
+- Both pmfs now take Excel's Loader kernel everywhere off their closed forms, where before the exact double-double walk
+  answered them. BINOM.DIST's interior pmf (and BINOMDIST's, and BINOM.DIST.RANGE's one-point range) is
+  `loader_pmf`. NEGBINOM.DIST's pmf (`excel_negbinom_pmf`) is EXP(fl(r·LN(p))) at f = 0, kept when subnormal, a new
+  finding (`NEGBINOMDIST(0,1,1E-200)` = 9.99999999999978E-201). Elsewhere it is p·q^f at r = 1 and p times the shifted
+  kernel above. The walk is left only where the kernel is not finite. The cdfs are unchanged.
+- The fit is a structural choice between ranked candidates (reviewer-excel-fidelity check 7 (c)), with no fitted
+  constant. The R4 guards:
+  - R4.1 hold-out (fit lab `binom-pmf` and `negbinom-pmf`, `tools/.../fitlab/kernels/binom_pmf.py`, cell-hash split,
+    margin 5 points stated in the fit before scoring; the walk is main's build, `--build walk=...`). Columns are
+    bit-exact, <=4 ulp and <=15 digits:
+
+    | fit | candidate | train | test | verdict |
+    |---|---|---|---|---|
+    | binom-pmf (8,390 train / 3,708 test) | Loader (engine) | 2,278 (27.2%) / 6,042 / 6,911 | 986 (26.6%) / 2,671 / 3,032 | accept |
+    | | walk (main) | 1,504 (17.9%) / 5,065 / 6,261 | 687 (18.5%) / 2,245 / 2,750 | accept |
+    | | correctly rounded | 1,445 (17.2%) / 4,993 / 6,198 | 671 (18.1%) / 2,229 / 2,732 | reference |
+    | negbinom-pmf (4,965 train / 2,201 test) | Loader (engine) | 1,153 (23.2%) / 3,785 / 4,167 | 536 (24.4%) / 1,693 / 1,853 | accept |
+    | | walk (main) | 705 (14.2%) / 3,245 / 3,853 | 308 (14.0%) / 1,450 / 1,700 | accept |
+    | | correctly rounded | 704 (14.2%) / 3,244 / 3,852 | 307 (13.9%) / 1,449 / 1,699 | reference |
+
+  - R4.2 fresh sweep: Gate A batches `r4-T-2146` of BINOM.DIST (198 points) and NEGBINOM.DIST (194), generated after
+    the freeze and filled with excel-graph. R2 envelope: all 392 inside, 0 failing (`rustsheet-eval accuracy`: 19,262
+    points, 0 failing). The probes-numeric case t2146-binom-negbinom-pmf-fresh (400 cells, seed 2146, drawn and
+    filled after the freeze) is extra evidence: bit-exact 96 -> 135, visibly off 168 -> 131. Its math sidecar covers
+    the 360 BINOM.DIST and NEGBINOM.DIST cells, all in the envelope. The 40 legacy-name cells (A361:A400) have no
+    math definition; of them, A361:A363, A366, A373:A374, A376, A378, A382, A385, A393, A398 are off by more than
+    15 digits (T-4352 owns them).
+  - Exploration that chose nothing: on the case-level split the tail-only switch (Loader below e^-T, T = 2 to 60)
+    lost to "everywhere" at every T; the T values were not tuned on the hold-out (it is not shipped). For
+    NEGBINOM, fl(p·kernel) ties EXP(E + LN p), and R's dnbinom loses to the walk.
+  - Counts are in statistics.md "BINOM.DIST and NEGBINOM.DIST pmfs take Loader's kernel everywhere".
+- Eval delta:
+  - gen-m9: 26 known-failure lines fixed, 9 regressed;
+  - ironcalc-calc: 7 fixed, 3 regressed, 274 -> 270; BINOM.xlsx lines 28 -> 24 (from 70 when this task was filed);
+  - probes: 2 fixed, 3 regressed;
+  - visibly-off BINOM-family cells: gen-m9 48 -> 37, ironcalc-calc 3 -> 2, probes 195 -> 193; probes-numeric
+    6,368 -> 4,834, plus 131 in the new fresh case.
+  - BINOM.INV, CRITBINOM and the cdfs move no cell.
+- Decision 0293 allows the 15 regressed gated cells. Eleven are 1 to 2 ulp. Three are 5 to 7 ulp:
+  `NEGBINOM.DIST(6,6,0.05,FALSE)` at gen-m9 941c409532603d32 A223, and t3352-binom-negbinom-large-n A15 and A157.
+  One is visibly off: `NEGBINOMDIST(9,3,0.001)` at gen-m9 1db18890916ee643 A10, 9 ulp.
+- Not reached: visible parity on the remaining 37 gen-m9 and 2 ironcalc-calc cells (BINOM.xlsx BINOM.DIST!E32 and
+  NEGBINOM.DIST!E40). They need the kernel's stored chain, which T-2513 did not identify. Follow-up T-4352 owns
+  them, the 15 regressed cells and the fresh case's 131 visibly-off cells.
+

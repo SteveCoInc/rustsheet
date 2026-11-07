@@ -12,9 +12,9 @@ use crate::expressions::token::Error;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::aggregate::value_node;
 use crate::functions::lift::{ArgBuf, LiftedArg};
-use crate::functions::util::top_left_of_array;
+use crate::functions::util::{array_node_to_calc_result, top_left_of_array};
 use crate::functions::Function;
-use crate::limits::{check_array_size, too_many_visits};
+use crate::limits::check_array_size;
 use crate::model::Model;
 use crate::reference_operators::{Picked, Ranges, RefArg, RefElement, RefGrid};
 
@@ -28,7 +28,8 @@ pub(crate) enum ElementCost {
     /// One visit: ROW, COLUMN, AREAS, CELL, ISFORMULA, N and T read no cells or one.
     Unit,
     /// The cells of the element's references inside the used area, times this many walks:
-    /// SUBTOTAL, COUNTIF, SUMIF and COUNTBLANK walk them once, SUMIFS once per criteria pair.
+    /// SUBTOTAL, COUNTIF, SUMIF, AVERAGEIF and COUNTBLANK walk them once, SUMIFS, COUNTIFS,
+    /// AVERAGEIFS, MAXIFS and MINIFS once per criteria pair.
     Cells(u64),
 }
 
@@ -46,10 +47,15 @@ impl Function {
     /// where they take a reference (SPEC-0014 rule 6), for a call of `count` arguments.
     /// `SUBTOTAL(9,OFFSET(A1,{0;1},0))` spills 1, 100; `ROW(OFFSET(A1,{0;1},0))` 1, 2
     /// (probes/reference-lift-consumers E57-E78, E97, E109, E165, E169, E185; -b1c E85-E93;
-    /// -b1d E97; -b2 E125-E133, E177, E193, E197). COUNTIFS and the other *IFS stay the value
-    /// view until T-2065 probes them.
+    /// -b1d E97; -b2 E125-E133, E177, E193, E197). COUNTIFS, AVERAGEIF and MAXIFS too:
+    /// `COUNTIFS(OFFSET(A1,{0;1},0),">0")` spills 1, 1, `AVERAGEIF(OFFSET(A1,0,0,{1;2}),">0")`
+    /// 1, 50.5 (probes/t2065-lift-countifs, -averageif, -maxifs). AVERAGEIFS and MINIFS lift
+    /// like SUMIFS and MAXIFS: `MINIFS(OFFSET(A1,{0;1},0),OFFSET(A1,{0;1},0),">0")` spills 1,
+    /// 100, and a criteria range alone lifts too (probes/t4396-lift-*).
     pub(crate) fn per_reference_element(&self, count: usize) -> Option<PerElement> {
         let first: fn(usize) -> bool = |index| index == 0;
+        // One walk per criteria pair (SUMIFS, COUNTIFS, AVERAGEIFS, MAXIFS, MINIFS).
+        let per_pair = ElementCost::Cells(u64::try_from(count / 2).unwrap_or(u64::MAX).max(1));
         let (takes_reference, cost): (fn(usize) -> bool, ElementCost) = match self {
             Function::Row
             | Function::Column
@@ -59,14 +65,15 @@ impl Function {
             | Function::T => (first, ElementCost::Unit),
             Function::Cell => (|index| index == 1, ElementCost::Unit),
             Function::Countif | Function::Countblank => (first, ElementCost::Cells(1)),
+            // Every criteria range.
+            Function::Countifs => (|index| index % 2 == 0, per_pair),
             Function::Subtotal => (|index| index > 0, ElementCost::Cells(1)),
             // The criteria range and the sum range.
-            Function::Sumif => (|index| index != 1, ElementCost::Cells(1)),
-            // The sum range and every criteria range.
-            Function::Sumifs => (
-                |index| index == 0 || index % 2 == 1,
-                ElementCost::Cells(u64::try_from(count / 2).unwrap_or(u64::MAX).max(1)),
-            ),
+            Function::Sumif | Function::Averageif => (|index| index != 1, ElementCost::Cells(1)),
+            // The sum (average, max, min) range and every criteria range.
+            Function::Sumifs | Function::Averageifs | Function::Maxifs | Function::Minifs => {
+                (|index| index == 0 || index % 2 == 1, per_pair)
+            }
             _ => return None,
         };
         Some(PerElement {
@@ -106,6 +113,21 @@ pub(crate) fn lifts_into_references(node: &Node) -> bool {
             ..
         }
     )
+}
+
+/// The arguments a per-element consumer reads ahead of its call (SPEC-0014 rule 6): those of
+/// [`lifts_into_references`], and an XLOOKUP with an `if_not_found`, which a lifted `lookup_value`
+/// and a range `if_not_found` make an array of its hits and that range (SPEC-0014 amendment
+/// rule 6; `COUNTIF(XLOOKUP({2;9},A1:A3,B1:B3,G1:G2),">0")` spills `#VALUE!`, 2;
+/// probes/t4569-xlookup-ref-element-max-min A26, C24:D34).
+pub(crate) fn lifts_into_reference_elements(node: &Node) -> bool {
+    match node.ungrouped() {
+        Node::FunctionKind {
+            kind: Function::Xlookup,
+            args,
+        } => args.len() >= 4,
+        node => lifts_into_references(node),
+    }
 }
 
 /// A node that reads again what `read` holds at no more cost than its cells: one range as an
@@ -178,9 +200,9 @@ fn array_cells(rows: &[Vec<ArrayNode>]) -> u64 {
         .fold(0, u64::saturating_add)
 }
 
-/// Whether an argument's value lifts INDIRECT or TRIMRANGE: an array or a range of more than
-/// one cell. A one-cell range and a 1x1 array are their value, as before (whether Excel lifts a
-/// 1x1 array there is unprobed, TODO(T-2347); OFFSET, TAKE and DROP do, [`lifts_one_by_one`]).
+/// Whether an argument's value lifts TRIMRANGE: an array or a range of more than one cell. A
+/// one-cell range and a 1x1 array are their value, as before (whether Excel lifts a 1x1 array
+/// there is unprobed, TODO(T-2347); OFFSET, INDIRECT, TAKE and DROP do, [`lifts_one_by_one`]).
 pub(super) fn lifts(value: &CalcResult) -> bool {
     match value {
         CalcResult::Range { left, right } => left != right,
@@ -189,11 +211,12 @@ pub(super) fn lifts(value: &CalcResult) -> bool {
     }
 }
 
-/// Whether an argument's value lifts OFFSET, TAKE or DROP: what [`lifts`] accepts, and a 1x1
-/// array too, which gives one element: `TAKE(A1:B3,{2})` is one element, A1:B2, so ROWS of it
-/// is 1 and spilled directly it is `#VALUE!` (probes/m7-lift-take-drop-sortby Sheet1 F13, G13,
+/// Whether an argument's value lifts OFFSET, INDIRECT, TAKE or DROP: what [`lifts`] accepts, and
+/// a 1x1 array too, which gives one element: `TAKE(A1:B3,{2})` is one element, A1:B2, so ROWS of
+/// it is 1 and spilled directly it is `#VALUE!` (probes/m7-lift-take-drop-sortby Sheet1 F13, G13,
 /// I13:K13, W65); ROWS of `DROP(A1:B3,{1})` and of `OFFSET(A1:B2,{1},0)` is 1 too
-/// (probes/m7-one-cell-operand-lift F6, F7, F16, F17; T-2298). A one-cell range is still its
+/// (probes/m7-one-cell-operand-lift F6, F7, F16, F17; T-2298), and `INDIRECT("B1",{1})` is
+/// `#VALUE!` (probes/t2577-indirect-ref-array A1, A25; T-2577). A one-cell range is still its
 /// value.
 pub(super) fn lifts_one_by_one(value: &CalcResult) -> bool {
     lifts(value) || matches!(value, CalcResult::Array(_))
@@ -210,6 +233,8 @@ pub(super) fn may_hand_on_grid(node: &Node) -> bool {
                 kind: Function::Offset
                     | Function::Indirect
                     | Function::Trimrange
+                    | Function::Take
+                    | Function::Drop
                     | Function::If
                     | Function::Choose
                     | Function::Let,
@@ -234,10 +259,18 @@ impl Model {
         let mut resolved = Cow::Borrowed(args);
         let mut grids = Vec::new();
         for (index, arg) in args.iter().enumerate() {
-            if !takes_reference(index) || !lifts_into_references(arg) {
+            if !takes_reference(index) || !lifts_into_reference_elements(arg) {
                 continue;
             }
-            let read = self.evaluate_reference_arg(arg, cell);
+            // An XLOOKUP is read in its reference form, so one that gives no grid is put back
+            // as the reference it picks, as the call reads it (`ROW(XLOOKUP(2,A1:A3,B1:B3,C1))`).
+            let read = match arg.ungrouped() {
+                Node::FunctionKind {
+                    kind: Function::Xlookup,
+                    args,
+                } => self.xlookup_reference(args, cell, true),
+                _ => self.evaluate_reference_arg(arg, cell),
+            };
             if let RefArg::Grid(grid) = read {
                 grids.push((index, grid));
             } else if let Some(slot) = resolved.to_mut().get_mut(index) {
@@ -248,7 +281,9 @@ impl Model {
     }
 
     /// Calls the implementation of `kind`: through [`Self::call_per_reference_element`] for a
-    /// per-element consumer ([`Function::per_reference_element`]), directly otherwise.
+    /// per-element consumer ([`Function::per_reference_element`]), directly otherwise. Every
+    /// built-in call's value leaves here, so this is where an array element's error tag is
+    /// dropped ([`CalcResult::untagged`], T-3080).
     pub(crate) fn call_by_reference_elements(
         &mut self,
         kind: &Function,
@@ -256,12 +291,18 @@ impl Model {
         cell: CellReferenceIndex,
         implementation: Implementation,
     ) -> CalcResult {
-        match kind.per_reference_element(args.len()) {
+        let value = match kind.per_reference_element(args.len()) {
             Some(per_element) => {
                 self.call_per_reference_element(args, per_element, cell, implementation)
             }
             None => implementation(self, args, cell),
+        };
+        // After its arguments ran, the call may empty AMORDEGRC's left-over value
+        // (`Function::empties_amor_left_over`; probes/amordegrc-fraction-state-cx to -da).
+        if kind.empties_amor_left_over() {
+            self.empty_amor_left_over();
         }
+        value.untagged()
     }
 
     /// Calls `implementation` once per element of every array of references among its reference
@@ -341,7 +382,7 @@ impl Model {
                 visits = visits.saturating_add(element_cost);
             }
         }
-        if let Some(error) = too_many_visits(visits, cell) {
+        if let Some(error) = self.spend_visits(visits, cell) {
             return error;
         }
         let mut output = Vec::with_capacity(rows);
@@ -380,6 +421,11 @@ impl Model {
             *slot = match element {
                 RefElement::Reference(range) => range_node(range),
                 RefElement::Error(error) => Node::ErrorKind(error.clone()),
+                // A value element is the scalar argument it is: ROW of it is `#VALUE!`, N of it
+                // the value (SPEC-0014 amendment rule 6; probes/t4569-xlookup-ref-element-max-min
+                // C24:D34).
+                RefElement::Value(value) => value_node(&array_node_to_calc_result(value, cell))
+                    .unwrap_or(Node::ErrorKind(Error::VALUE)),
             };
         }
         match implementation(self, element_args, cell) {
@@ -422,6 +468,18 @@ impl Model {
         node: &Node,
         cell: CellReferenceIndex,
     ) -> RefArg {
+        self.value_or_grid(node, cell, false)
+    }
+
+    /// [`Self::evaluate_value_or_grid`], where `keep_cell_variables` reads a variable bound to
+    /// one cell as that reference ([`Model::cell_variable_reference`]), also as the arm IF or
+    /// CHOOSE picks or a LET body: TAKE's and DROP's array (T-2622).
+    pub(crate) fn value_or_grid(
+        &mut self,
+        node: &Node,
+        cell: CellReferenceIndex,
+        keep_cell_variables: bool,
+    ) -> RefArg {
         match node.ungrouped() {
             Node::FunctionKind {
                 kind:
@@ -432,12 +490,18 @@ impl Model {
                     | Function::Drop),
                 args,
             } => self.reference_producer(kind, args, cell),
+            // SUMPRODUCT reads XLOOKUP's reference element as 0 (SPEC-0014 amendment rule 4;
+            // probes/t4569-xlookup-ref-element-max-min A21).
+            Node::FunctionKind {
+                kind: Function::Xlookup,
+                args,
+            } => self.xlookup_reference(args, cell, false),
             Node::FunctionKind {
                 kind: Function::If,
                 args,
             } => match self.if_pick(args, cell) {
                 Picked::Node(arm) if may_hand_on_grid(arm) => {
-                    self.evaluate_value_or_grid(arm, cell)
+                    self.value_or_grid(arm, cell, keep_cell_variables)
                 }
                 Picked::Node(arm) => RefArg::from(self.if_branch_value(arm, cell)),
                 Picked::Value(value) => RefArg::Value(value),
@@ -447,7 +511,7 @@ impl Model {
                 args,
             } => match self.choose_pick(args, cell) {
                 Picked::Node(arm) if may_hand_on_grid(arm) => {
-                    self.evaluate_value_or_grid(arm, cell)
+                    self.value_or_grid(arm, cell, keep_cell_variables)
                 }
                 Picked::Node(arm) => RefArg::from(self.choose_arm_value(arm, cell)),
                 Picked::Value(value) => RefArg::Value(value),
@@ -457,9 +521,15 @@ impl Model {
                 args,
             } => self
                 .let_scope(args, cell, |model, body| {
-                    model.evaluate_value_or_grid(body, cell)
+                    model.value_or_grid(body, cell, keep_cell_variables)
                 })
                 .unwrap_or_else(RefArg::Value),
+            node @ Node::NamedVariableKind { .. } if keep_cell_variables => {
+                match self.cell_variable_reference(node) {
+                    Some(reference) => RefArg::from(reference),
+                    None => self.value_or_grid(node, cell, false),
+                }
+            }
             node @ Node::NamedVariableKind { .. } if self.is_grid_variable(node) => {
                 self.variable_reference(node, cell)
             }
@@ -477,7 +547,7 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> RefArg {
-        match kind {
+        let value = match kind {
             Function::Indirect => self.indirect_reference(args, cell),
             Function::Trimrange => self.trimrange_reference(args, cell, false),
             Function::Take => self.take_drop_reference(args, cell, Edge::Take, false),
@@ -487,7 +557,13 @@ impl Model {
                 None => RefArg::from(self.fn_vstack(args, cell)),
             },
             _ => self.offset_reference(args, cell),
+        };
+        // Read as a reference, TAKE, DROP and VSTACK still empty AMORDEGRC's left-over value
+        // (`Function::empties_amor_left_over`; probes/amordegrc-fraction-state-bo to -bq).
+        if kind.empties_amor_left_over() {
+            self.empty_amor_left_over();
         }
+        value
     }
 
     /// The values of `args`, held inline (no heap allocation for the scalar call, SPEC-0014

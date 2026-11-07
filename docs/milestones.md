@@ -13,21 +13,60 @@ whose exit criteria are not met.
 
 | Phase | Milestones, in order | Status |
 |---|---|---|
-| 1. Parity | M0, M1, M2, M5, M6, M7, M8, M9, M10, M11 | active |
-| 2. Architecture and performance | M3, M4, M13 | deferred until Phase 1 exits |
+| 1. Parity (fifteen digits) | M0, M1, M2, M5, M6, M7, M8, M9, M10, M11, M16 | active |
+| 1b. Bit parity | the `defer: phase-1b` tasks of every milestone | after Phase 1 exits (decision 0114) |
+| 2. Architecture and performance | M3, M4, M13, M15 | deferred until Phase 1 exits |
 | 3. Release | M12 | after Phase 2 |
-| 4. Desktop oracle | M14 | after Phase 3; not started (decision 0039) |
+| 4. Desktop oracle | M14 | out of scope; tasks dropped (decision 0266) |
 
-**Phase 1 exit:** every Excel function is in the catalog with its parity scope (T-0040). Every
-in-scope function has oracle-backed cases covering each parameter mode and edge pool, and
-reaches ≥ 99.9% bit-exact and 100% within 4 ULP. Each remaining failure has a filed task or a
-`DEVIATION` entry. "Bit-exact" percentages here and in every milestone count only scored cells
-not listed as accepted deviations, which are scored in their own column (decision 0036). Accepted
-deviations are directive-5 limits only (decision 0052). The exit criteria of M1, M2, M5–M10 and M11 are met.
+**Phase 1 exit (decisions 0114, 0188):** every Excel function is in the catalog with its parity scope
+(T-0040). Every in-scope function has oracle-backed cases covering each parameter mode and edge
+pool (decision 0094's coverage: 400 Excel cells, 200 of them generated). Each remaining failure, attributed to a
+function or not, has a filed task or a `DEVIATION` entry. Percentages here and in every milestone count only scored
+cells not listed as accepted deviations, which are scored in their own column (decision 0036). Accepted deviations
+are directive-5 limits only (decision 0052); cells where the engine follows the math under decision 0188 R3
+(`MATH-OVER-EXCEL`) count as passing where it returns the math. In addition, two gates hold (decision 0188 R1):
+- **Gate A (accuracy, priority 1):** every numeric function in scope has a committed, stratified reference table
+  (about 40% typical inputs, 30% tails and domain edges, 20% extreme-but-valid, 10% log-uniform), each point with a
+  50-digit mpmath value and, where filled, Excel's value. `make check` fails on a point that is neither within
+  1e-9 relative of the math (absolute 1e-300 near 0) nor within 15 significant digits of Excel, and on an error
+  where the other side is a number. Points where decision 0188 R3 follows the math are checked against the math only.
+- **Gate B (user-representative parity):** every in-scope function has **≥ 99.9% of its attributed Excel cells within
+  15 significant digits** of Excel's value with the right type, error and text (decision 0083's rule: not visibly
+  off), counted only on the gen-* suites, ironcalc-calc, corpus-bench, calipers, poi, smoke and fixtures. A
+  function's cells are counted as decision 0118 says: its attributed Excel cells, those whose formula calls it as the
+  only function outside the harness glue list, or every Excel cell that calls it when it has fewer than 20 attributed
+  cells. The stricter count over every cell that calls it, and the count over every suite, are reported beside it as
+  information and gate nothing.
+
+The exit criteria of M1, M2, M5–M10 and M11 are met, read this way (decision 0188 R1(c)): each milestone's probe row
+and ironcalc-calc row counts only visibly-off type, error or text cells, cells whose wrong number comes from a semantic
+rule, and numeric cells outside Gate A's envelope (neither within 15 digits of Excel nor within 1e-9 of the math; a
+cell with no math reference yet counts as outside). The other visibly-off numeric cells of probes and probes-numeric,
+the fit-lab research sweeps included, are measured and reported on every run as **Phase 1b evidence**. The semantic
+probe-row criteria and the ironcalc-calc allowance are unchanged.
+
+Wherever a Phase 1 milestone below says "bit-exact" (including "100% bit-exact" probes and suite
+rates), Phase 1 reads it as "not visibly off"; the eval report's milestone exit rows and its
+"Phase 1" line measure it that way (decision 0114). The bit-level wording stays the target of
+**Phase 1b**: ≥ 99.9% bit-exact and 100% within 4 ulp per function, worked after Phase 1 exits and
+before Phase 3. Tasks that only move cells already within 15 digits, and last-digit work on the BETA.DIST and F.DIST
+densities and on other dense-sweep cells already within Gate A (decision 0188 R5), carry `defer: phase-1b` and are
+not picked before then. The CI gate is unchanged: no cell may regress, bit for bit.
+
+Phase 1 works visibly-off cells in campaign stages (decision 0114): semantic fixes first (wrong
+type, error or text), then accurate kernels where Excel is close to correctly rounded, then
+reproducing Excel's algorithm where Excel is the inaccurate one (time-boxed, decision 0056). Every numeric fit
+follows decision 0188 R4: a hold-out split in the fit lab, a fresh log-uniform sweep before merge, a
+`FITTED(T-XXXX, n_cells, range)` tag and no use outside the measured range, and no fitting below the oracle's
+reproducibility floor.
 
 A failure whose only open question needs desktop Excel evidence has its filed task in M14
 (Phase 4). It never blocks the exit of Phase 1, any other phase or any milestone. excel-graph is
-the oracle of record for Phases 1–3 (decision 0039).
+the oracle of record for Phases 1–3 (decision 0039). Such a visibly-off cell, once a decision names
+it, is a line of `eval/milestones/phase1-exceptions.tsv` and leaves the Phase 1 rate (decision 0134).
+A visibly-off cell that only open M14 tasks own leaves it too, with no line (decision 0143), and it leaves the
+milestone probe rows as well, so it never blocks a milestone exit (decision 0188 R7).
 
 Out of scope: functions whose result depends on systems outside the workbook (web and online
 services, external data servers, code and add-ins; list in decision 0027).
@@ -90,6 +129,9 @@ Scoring: *bit-exact cell rate* = cells identical to Excel ÷ cells checked (stri
 - Known parity bugs from the IronCalc assessment fixed: `ROUND(1.005,2)`, `CONCAT(0.1+0.2)`,
   `DATE(1900,2,29)`, and the parser accepting trailing garbage.
 - API v0 spec merged and implemented. Python `rustsheet.Workbook` passes binding tests.
+- Measured by report.json's `milestone_exit` M1 row (decision 0146): gen-m1 (≥ 3,000 scored cells),
+  smoke and the frozen `m1-probes` list with no visibly-off cell (decision 0114); the parity-bug and
+  API criteria are checked outside the row.
 
 ## M2 — Top functions (the everyday spreadsheet)
 
@@ -117,6 +159,7 @@ Scoring: *bit-exact cell rate* = cells identical to Excel ÷ cells checked (stri
   The exception is a line of `eval/milestones/exit-exceptions.tsv`; the M2 row's "failing excl. exceptions" leaves it out (decision 0087).
 - One implementation of aggregate-argument iteration and criteria matching, used by every
   consumer. Duplication baseline reduced by ≥ 15%.
+  Met at 11592ab5 (decision 0137): every variadic aggregate uses the SPEC-0009 walker and every criteria or wildcard consumer uses functions/criteria.rs. Duplication fell 68.0% (9,153 → 2,931).
 
 ## M3 — Dependency graph, incremental and lazy recalculation (Phase 2)
 
@@ -195,7 +238,9 @@ its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviati
 
 **Exit criteria:** generated dynamic-array suite (≥ 10k cells, spill shapes included) at ≥ 99.9%;
 spill extents identical to Excel;
-its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviations.
+its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviations. Measured by
+report.json's `milestone_exit` M7 row (decision 0140): gen-m7 alone, spill-extent failures of
+gen-m7 and the M7 probes required to be 0, at visible parity (decision 0114).
 
 ## M8 — Names, tables, structured references, multi-sheet
 
@@ -207,7 +252,11 @@ its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviati
 - Sheet add, rename and move with reference rewriting.
 
 **Exit criteria:** oracle suites for each feature at 100%; POI corpus subset ≥ 99.5%;
-its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviations.
+its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviations. Measured by
+report.json's `milestone_exit` M8 row (decision 0146): gen-m8a and gen-m8b (≥ 3,000 scored cells
+each, none visibly off; external references and sheet operations through the M8 probes), the poi
+cells whose formulas use a defined name or a structured, 3-D or external reference, and the M8
+probes, at visible parity (decision 0114).
 
 ## M9 — Numerical parity: statistical, financial, engineering, database
 
@@ -220,7 +269,10 @@ its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviati
 
 **Exit criteria:** ironcalc-calc at ≥ 99.95% bit-exact overall (from 97.33%); dense oracle sweeps
 per numeric function at ≥ 99.9% bit-exact and 100% within 4 ULP;
-its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviations.
+its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviations. Measured by
+report.json's `milestone_exit` M9 row (decision 0146): the cumulative M9 ironcalc-calc function-scope
+row less exit exceptions at ≥ 99.95% not visibly off, every M9 function covered and at the
+`v15_checkpoint` rate, and the M9 probes, at visible parity (decision 0114); 4-ulp parity is Phase 1b.
 
 ## M10 — Formatting & display
 
@@ -229,23 +281,27 @@ its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviati
   fractions, scientific).
 - `formatted()` cell text identical to Excel's `.Text`.
 - TEXT/FIXED/DOLLAR.
-- Style storage and round-trip (deduplicated).
+- Style storage (deduplicated). Style round-trip fidelity moved to M15 (decision 0275).
 - Locale plumbing (en-US first).
 
 **Exit criteria:** formatted-text oracle suite (≥ 10k cells) at 100%;
-its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviations.
+its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviations. Measured by
+report.json's `milestone_exit` M10 row (decision 0146): gen-m10's displayed-text items (≥ 10,000,
+none failing) and value cells, and the M10 probes' value cells and text items.
 
 ## M11 — Real-world fidelity
 
 **Scope:**
 - Real-world corpora: POI, FUSE/SpreadsheetBench via xlsx-corpus-bench.
-- xlsx round-trip preservation of unknown parts.
 - Data tables (TABLE()) and iterative calculation parity. The oracle cases come in Phase 1;
   the implementation needs the M3 graph.
 
 **Exit criteria:** formula-cell match on xlsx-corpus-bench ≥ 99.8%, matching or beating the best
 published engine;
-its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviations.
+its `probes` cases (decision 0051) at 100% bit-exact, excluding accepted deviations. Measured by
+report.json's `milestone_exit` M11 row (decision 0146): corpus-bench's Excel-backed formula cells
+(≥ 200,000) at ≥ 99.8% not visibly off, the fixed rate of the best published engine, and the M11
+probes; `n/a` when corpus-bench was not fetched.
 
 ## M12 — API v1, bindings & release
 
@@ -269,7 +325,73 @@ Split out of M11 by decision 0027.
 
 **Exit criteria:** full recalc faster than Excel desktop on the benchmark suite.
 
+## M15 — xlsx round-trip fidelity (Phase 2)
+
+Created by decision 0275 from the orphan round-trip lines of M10 and M11. Plan and evidence:
+docs/research/xlsx-round-trip-2026-11-04.md.
+
+**Scope:**
+- The round-trip contract: R0 (load, save), R1 (content edits), R2 (structural edits, with M4);
+  semantic and package equivalence; the expected-delta rule; a SaveReport of every drop.
+- A `roundtrip` eval suite kind with fidelity baselines, a package validator, XSD validation and
+  Excel goldens.
+- Preservation of what the model does not hold: an ownership matrix, the closure rule, bounded
+  source-package retention, and element and extension fragments in regenerated parts.
+- Index-stable output: verbatim untouched parts, and a cell patcher for content-only edits.
+- Modelling the frequent features: page setup, data validation, comments, autoFilter,
+  protection, sheet properties, rich text, full styles, theme, views.
+- Charts, drawings, pivots and slicers are preserved, not modelled.
+
+**Exit criteria:** (measured by a `milestone_exit` M15 row once the suite exists)
+1. 100% of outputs pass the package validator and the XSD check, over every corpus and scenario.
+2. R0 over Calipers `roundtrip/` against Excel goldens: 100% of fidelity items S-equal, except
+   items owned by an open M14 task.
+3. R0 over every other corpus: at least 99.9% of items kept, and no lost part outside the
+   `Drop` policy.
+4. R1 on the standard edit set: the expected-delta rule holds on 100% of corpus files, and the
+   output is S-equal to Excel's own edited save on at least 99% of the feature probes.
+5. Unknown-feature probes: 100% kept under R0 and R1. Under R2, kept or dropped exactly as the
+   ownership matrix says, each drop reported.
+6. The features in scope are modelled and shift correctly under R2.
+7. The hostile set never panics and stays within bounded memory.
+8. Untouched parts are byte-identical under R1 on index-stable files.
+
+## M16 — Pivot tables (Phase 1)
+
+Added by decision 0274 (owner request, 2026-11-04). Research and plan:
+docs/research/pivot-tables-2026-11-04/plan.md. Design: SPEC-0032 (a task of PV0). Today the engine only imports
+pivots read-only and answers GETPIVOTDATA (SPEC-0015).
+
+**Scope:** every in-scope row of the pivot feature catalog `eval/catalog/pivot-features.tsv`, staged:
+- **PV0 Foundations:** the feature catalog (schema-driven), SPEC-0032, case builder v2 (pivot definitions
+  one-to-one with OOXML), sidecar capture and scoring of rendered pivot areas and `rowItems`/`colItems`, the
+  oracle capability matrix, the `pivots`, `gen-pivot` and `pivot-corpus` suites.
+- **PV1 Refresh and core render:** refresh from ranges and Tables with Excel's item rules; the eleven aggregates;
+  compact, outline and tabular forms; subtotals, grand totals, several data fields, page fields, hidden items,
+  label sort, captions; grid ownership and the `#SPILL!` collapse; GETPIVOTDATA over every shape.
+- **PV2 Analysis:** show-values-as (all modes), label/value/date filters, Top-N, sort by value, layout options,
+  data-field number formats.
+- **PV3 Grouping and calculation:** numeric, date and manual groups; calculated fields and items.
+- **PV4 Lifecycle and I/O:** xlsx export validated by an Excel round trip, the create/edit/refresh API and
+  Python binding, shared caches and named sources, drill-down, Auto Refresh as evidenced.
+- **PV5 PivotCharts, slicers, timelines:** PivotChart data (series and categories) and chart-part round trip
+  (no drawing); slicer and timeline state as filters.
+
+Out of scope (decision 0274): OLAP, the Data Model and Power Pivot, external and consolidation sources,
+styles and conditional formats beyond preservation, UI-only commands.
+
+**Exit criteria:** (per stage, then for the milestone)
+- Every in-scope catalog row has at least 30 oracle cells (its edge pools counted).
+- The `pivots`, `gen-pivot` and fresh `pivot-corpus` cells are not visibly off (decision 0083), apart from
+  accepted deviations; rendered layouts match Excel's `rowItems`/`colItems`.
+- Every remaining catalog row has a filed task or an out-of-scope ruling; rows Excel for the web cannot
+  render are M14 tasks and do not block (decision 0039).
+- Measured by report.json's `milestone_exit` M16 row; until that row exists M16 counts as not met.
+
 ## M14 — Desktop-oracle parity (Phase 4)
+
+**Out of scope (decision 0266, 2026-11-04).** Its open tasks are dropped and no new task is filed here;
+the text below is kept as the record of what Phase 4 would have covered.
 
 Added by decision 0039. Planned after Release; not started. It starts when the owner sets up the
 `excel-desktop` backend: a Windows machine with Microsoft 365 Apps and a self-hosted runner, as in

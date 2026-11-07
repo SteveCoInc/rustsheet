@@ -8,6 +8,7 @@ priority: P3
 size: S
 tier: opus
 depends_on: []
+defer: phase-1b
 ---
 
 ## Goal
@@ -25,6 +26,13 @@ TREND: T-2221, T-2033, T-2207, T-2131, T-2044); if the inner function's own task
 fixes them first, close them here. Fit in the fit lab (tools, `rustsheet-fitlab`) on these cells plus the passing ones of
 the same functions in eval/ (a candidate must not break a passing cell).
 Code: functions/statistical/ (median in sorted_data.rs or count_and_average.rs; trimmean.rs; standard_dev.rs; permut.rs).
+MEDIAN moved to T-3017 (gap triage 2026-10-28): `a + (b - a)/2` over the two middle values fits all 50 even-count
+gen-m* MEDIAN cells over plain ranges (statistics.md "MEDIAN of an even count is a + (b - a)/2"). That covers 10 of
+this list's MEDIAN cells, and T-3017 owns them; A264 and A168 pass an inner function's digits through and stay here.
+More TRIMMEAN evidence (same triage, corpus-bench, Excel-cached; no task named it). In corpus-bench/50442/1_50442_input.xlsx
+`TRIMMEAN(IF(Table1[MAX GAIN]>=4,Table1[POINTS G/L]),10%)` is 4.779374999999999 in Excel and 4.779375 in ours. All 7 cells
+are 1 to 2 ulp off, and the case is a whole-case F line of eval/baseline/corpus-bench.txt:
+- corpus-bench/50442/1_50442_input.xlsx (7): RESULTS 1!Q3, T3, Q4, T4, Q5, D52, D53
 
 Owned gen-m9 cells (T-2256 triage, excel-graph, 2026-10-23): 29 known-failure lines in eval/baseline/gen-m9.txt, 0 visibly off.
 Examples:
@@ -59,6 +67,12 @@ Cells:
 - gen-m9/d910f000b60e2eac.case.json (1): Calc!A101
 - gen-m9/eedd629f3d69fdda.case.json (1): Calc!A189
 
+Calipers evidence (gap triage 2026-10-25, desktop goldens, ungated suite): `calipers/pv_goldens/pv23_049` WACC!E23 and
+Public Comps!F17, F33, and `pv23_050` WACC!E23, `MEDIAN(E16:E21)` over {522.4, 118.75, 0, 0, 43.90399999999999,
+12.302999999999999}: Excel 28.103499999999997, ours 28.103499999999993. Of the readings above, only lo + (hi - lo)/2 with
+lo the smaller middle value (12.302999999999999 + (43.90399999999999 - 12.302999999999999)/2) gives Excel's value; (a + b)/2,
+a/2 + b/2 and hi + (lo - hi)/2 give ours, in both single and double rounding. Fit it on the gen-m9 cells too.
+
 ## Acceptance criteria
 - [ ] Last digits (gen-m9, T-2256): these 29 known-failure lines disappear from eval/baseline/gen-m9.txt
       (`make eval-baseline`), with no new known-failure lines in any baseline.
@@ -67,3 +81,6 @@ Cells:
 
 ## Out of scope
 - Visibly-off cells (other tasks).
+
+## Deferred (decision 0114)
+`defer: phase-1b`: the cells this task owns are already within 15 significant digits of Excel, so it waits until Phase 1 exits. Remove the key only when the steward records the Phase 1 exit, or when an eval shows one of its cells visibly off (then give it a `campaign:` stage instead).

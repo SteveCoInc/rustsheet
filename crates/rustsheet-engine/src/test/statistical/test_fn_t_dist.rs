@@ -148,7 +148,7 @@ fn test_fn_t_inv_2t_smoke() {
     model._set("A5", "=T.INV.2T(0.1, 10, 1)");
 
     // Domain errors:
-    // p <= 0 or p > 1
+    // p <= 0 or p >= 2
     model._set("A6", "=T.INV.2T(0, 10)");
     // df < 1
     model._set("A8", "=T.INV.2T(0.1, 0)");
@@ -159,9 +159,8 @@ fn test_fn_t_inv_2t_smoke() {
     assert_eq!(model._get_text("A2"), *"2.228138852");
     assert_eq!(model._get_text("A3"), *"0");
 
-    // NB: Excel returns -0.699812061 for T.INV.2T(1.5, 10)
-    // which seems inconsistent with its documented behavior
-    assert_eq!(model._get_text("A7"), *"#NUM!");
+    // Excel returns the negative quantile T.INV(0.25, 10) for p in (1, 2) (m9-t-edges A43, T-2096).
+    assert_eq!(model._get_text("A7"), *"-0.699812061");
 
     assert_eq!(model._get_text("A4"), *"#ERROR!");
     assert_eq!(model._get_text("A5"), *"#ERROR!");
@@ -238,4 +237,107 @@ fn test_t_family_df_upper_limit() {
     }
     assert_eq!(model._get_text("B3"), *"0.977249868");
     assert_eq!(model._get_text("B4"), *"0.053990967");
+}
+
+#[test]
+fn t_inv_2t_above_one_is_the_negative_quantile_of_the_mirror() {
+    let mut model = new_empty_model();
+    // m9-t-edges A2 and A43: the engine's own mirror is T.INV.2T(2 - p, df), negated bit for bit.
+    let pairs = [
+        (1.5, 5.0),
+        (1.5, 10.0),
+        (1.9, 5.0),
+        (1.0001, 5.0),
+        (1.999, 5.0),
+    ];
+    for (row, (p, df)) in pairs.iter().enumerate() {
+        let row = row + 1;
+        model._set(&format!("A{row}"), &format!("=T.INV.2T({p},{df})"));
+        model._set(
+            &format!("B{row}"),
+            &format!("=-T.INV.2T({}, {df})", 2.0 - p),
+        );
+        model._set(&format!("C{row}"), &format!("=TINV({p},{df})=A{row}"));
+        model._set(&format!("D{row}"), &format!("=A{row}=B{row}"));
+    }
+    model._set("A10", "=T.INV.2T(2,5)");
+    model._set("A11", "=T.INV.2T(2.5,5)");
+    model._set("A12", "=T.INV.2T(0,5)");
+    model._set("A13", "=T.INV.2T(1,5)");
+    model.evaluate();
+    for row in 1..=pairs.len() {
+        assert_eq!(model._get_text(&format!("C{row}")), *"TRUE", "row {row}");
+        assert_eq!(model._get_text(&format!("D{row}")), *"TRUE", "row {row}");
+    }
+    assert_eq!(model._get_text("A2"), *"-0.699812061");
+    assert_eq!(model._get_text("A10"), *"#NUM!");
+    assert_eq!(model._get_text("A11"), *"#NUM!");
+    assert_eq!(model._get_text("A12"), *"#NUM!");
+    assert_eq!(model._get_text("A13"), *"0");
+}
+
+#[test]
+fn t_density_flushes_a_subnormal_result() {
+    // Excel's df >= 3 density is 0 where its last product is subnormal ((x)=0 is TRUE, x*1E300 is 0;
+    // Gate A T.DIST/r4-T-2585 A138), while df 2's EXP keeps it (statistics.md "Student t density is
+    // Loader's dt", T-2585).
+    let mut model = new_empty_model();
+    model._set("A1", "=T.DIST(-1.1002374143529E+20,15,FALSE)");
+    model._set("A2", "=T.DIST(1E+78,3,FALSE)*1E300");
+    model._set("A3", "=T.DIST(1E+104,2,FALSE)*1E300");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"0");
+    assert_eq!(model._get_text("A2"), *"0");
+    assert_eq!(model._get_text("A3"), *"1E-12");
+}
+
+#[test]
+fn t_density_is_num_where_x_squared_overflows() {
+    // Excel's density squares x first: from 2^512, where fl(x x) overflows, it is #NUM! at every df
+    // and either sign, while 2^512 - 2^460 (H2, two doubles below 2^512) is a number (0 here: the density underflows)
+    // (probes/t3554-tdist-density-huge-x A2:B13 and A20:B24; statistics.md "T.DIST's density is
+    // #NUM! at a huge x").
+    let mut model = new_empty_model();
+    model._set("H1", "=2^512");
+    model._set("H2", "=2^512*(1-2^-52)");
+    for (row, df) in ["2", "24", "1E+10", "1E+300"].iter().enumerate() {
+        let row = row + 1;
+        model._set(&format!("A{row}"), &format!("=T.DIST(H1,{df},FALSE)"));
+        model._set(&format!("B{row}"), &format!("=T.DIST(-H1,{df},FALSE)"));
+        model._set(&format!("C{row}"), &format!("=T.DIST(H2,{df},FALSE)"));
+        model._set(&format!("D{row}"), &format!("=T.DIST(-H2,{df},FALSE)"));
+    }
+    // Gate A accuracy/T.DIST/s1 A85 and e-T-3425 A103.
+    model._set("E1", "=T.DIST(1.01778553276442E+236,2,FALSE)");
+    model._set("E2", "=T.DIST(-4.62236657470614E+224,11,FALSE)");
+    model._set("E3", "=T.DIST(1E+160,1,FALSE)");
+    model.evaluate();
+    for row in 1..=4 {
+        assert_eq!(model._get_text(&format!("A{row}")), *"#NUM!", "row {row}");
+        assert_eq!(model._get_text(&format!("B{row}")), *"#NUM!", "row {row}");
+        assert_eq!(model._get_text(&format!("C{row}")), *"0", "row {row}");
+        assert_eq!(model._get_text(&format!("D{row}")), *"0", "row {row}");
+    }
+    for cell in ["E1", "E2", "E3"] {
+        assert_eq!(model._get_text(cell), *"#NUM!", "{cell}");
+    }
+}
+
+#[test]
+fn t_density_at_df_one_is_div0_where_its_denominator_overflows() {
+    // df 1's density is 1/fl(pi fl(1 + fl(x x))): #DIV/0! once the denominator overflows (from
+    // 7.6E+153, while 7.55E+153 is a number), and a subnormal quotient is 0
+    // (probes/t3554-tdist-density-df1-div0; statistics.md "T.DIST's density is #NUM! at a huge x").
+    let mut model = new_empty_model();
+    model._set("A1", "=T.DIST(7.6E+153,1,FALSE)");
+    model._set("A2", "=T.DIST(-1E+154,1,FALSE)");
+    model._set("A3", "=T.DIST(7.6E+153,1.5,FALSE)");
+    model._set("A4", "=T.DIST(7.55E+153,1,FALSE)");
+    model._set("A5", "=T.DIST(-3.8E+153,1,FALSE)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"#DIV/0!");
+    assert_eq!(model._get_text("A2"), *"#DIV/0!");
+    assert_eq!(model._get_text("A3"), *"#DIV/0!");
+    assert_eq!(model._get_text("A4"), *"0");
+    assert_eq!(model._get_text("A5"), *"0");
 }

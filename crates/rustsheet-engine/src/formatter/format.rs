@@ -1,28 +1,33 @@
-use super::elapsed::{elapsed_text, DisplayClock, ElapsedUnit};
-use super::fraction::format_fraction;
-use super::general::format_general;
+use super::elapsed::{
+    date_section_register, elapsed_text, elapsed_token, is_date_or_clock, DisplayClock,
+    FractionalSeconds,
+};
+use super::fraction::{comma_exponent, format_fraction};
+use super::general::{format_general, lead_abs};
 use crate::{
     constants::MAXIMUM_DATE_SERIAL_NUMBER,
-    decimal_round::{round_engineering, round_shown_place},
+    decimal_round::{round_engineering, round_scientific, round_shown_place},
     locale::Locale,
     number_format::{cut_15_digits, to_precision},
-    text::Text,
     types::DateSystem,
 };
-use std::collections::BTreeSet;
 
 pub use super::formatted::Formatted;
 use super::formatted::MAX_TEXT_FORMAT_CHARS;
 pub(crate) use super::parse_formatted::{
-    parse_formatted_number, parse_typed_number, rejected_clock_text_format,
+    ascii_script_digits, parse_formatted_number, parse_typed_number, rejected_clock_text_format,
 };
+pub(crate) use super::text_value::format_text_value_exact;
+pub use super::text_value::{displayed_text, format_text_value};
 use super::{
-    dates::{excel_serial_to_ymd, negative_serial_allowed},
-    lexer::Compare,
-    locale_tag::{japanese_era_name, japanese_era_year, Calendar},
-    parser::{
-        is_text_section, numeric_section_count, section_tokens, ErrorPart, GeneralPart, ParsePart,
-        Parser, TextToken,
+    calendar_dates::{calendar_ymd, hebrew_month_name, year_token_text, HEBREW_LAST_NAMED_YEAR},
+    date_names::NameTokens,
+    dates::negative_serial_allowed,
+    locale_tag::Calendar,
+    parser::{ErrorPart, GeneralPart, ParsePart, Parser, TextToken},
+    sections::{
+        conditional_section, is_bracket_only_section, is_text_section, numeric_section_count,
+        section_condition,
     },
 };
 
@@ -121,124 +126,7 @@ pub fn format_text(value: Option<f64>, format: &str, ctx: &FormatContext) -> For
     format_number(value.unwrap_or(0.0), format, ctx)
 }
 
-/// Formats a text value (a boolean's "TRUE"/"FALSE" included) the way `TEXT` does: only the
-/// 4th section applies, `@` stands for the text and the section's other tokens print as literals
-/// (poi `TextFormatTests` A3:A10, A12:A29; docs/excel-semantics/number-formats.md "Text and
-/// booleans use the format's text section"). A last section with `@` is the text section too,
-/// whatever the section count (`@" ""q"""` on "x" is "x q", probes/format-doubled-quotes C11;
-/// `TEXT("abc","0;x@")` is "xabc", probes/text-at-token-sections A10, A11, T-1656). Any other
-/// format with fewer than four sections returns the text unchanged; that case is unprobed. A
-/// result over 255 characters is `#VALUE!` ([`MAX_TEXT_FORMAT_CHARS`]).
-///
-/// Excel checks the number sections first: a code with an unparsable number section is `#VALUE!`
-/// for a text value too, even where the text section would apply (`TEXT("a","ab1")`,
-/// `TEXT(TRUE,"n;n;n;@")`; probes/t2202-text-code-check-on-text; number-formats.md "TEXT checks
-/// the code before it looks at a text or boolean value"). A bad section a number would not use
-/// in a multi-section code rejects the text too; that case is unprobed.
-pub fn format_text_value(text: &str, format: &str) -> Formatted {
-    let mut parser = Parser::new(format);
-    parser.parse();
-    let parts = parser.parts.as_slice();
-    if parts[..numeric_section_count(parts)]
-        .iter()
-        .any(ParsePart::is_error)
-    {
-        return format_error();
-    }
-    let section = match parts.last() {
-        Some(last) if parts.len() < 4 && is_text_section(last) => parts.len() - 1,
-        _ if parts.len() < 4 => return capped_text(text.to_string()),
-        _ => 3,
-    };
-    let tokens = match parser.parts.get(section) {
-        Some(ParsePart::Error(_)) => return format_error(),
-        Some(part) => match section_tokens(part) {
-            Some(tokens) => tokens,
-            None => return capped_text(text.to_string()),
-        },
-        None => return capped_text(text.to_string()),
-    };
-    let mut out = String::new();
-    let mut chars = 0;
-    for token in tokens {
-        let start = out.len();
-        match token {
-            TextToken::Literal(c) => out.push(*c),
-            TextToken::Text(t) => out.push_str(t),
-            // Excel: `_x` leaves a space but a `*x` fill prints nothing, and `AM/PM` prints "AM"
-            // (`TEXT("abc","x@_x")` is "xabc ", `"x@*-"` "xabc", `"x@AM/PM"` "xabcAM";
-            // probes/text-at-with-tokens A23, A37, A38, B37, B38, T-1656).
-            TextToken::Ghost(_) => out.push(' '),
-            TextToken::AMPM => out.push_str("AM"),
-            // `A/P` prints its morning letter (probes/text-ap-locale-bracket A21-A23).
-            TextToken::AP(am, _) => out.push(*am),
-            TextToken::Raw => out.push_str(text),
-            _ => {}
-        }
-        // Checked as it grows, so a format of many `@` cannot build a huge string.
-        chars += out[start..].chars().count();
-        if chars > MAX_TEXT_FORMAT_CHARS {
-            return text_too_long();
-        }
-    }
-    capped_text(out)
-}
-
-/// The private-use characters [`format_text_value_exact`] picks its stand-in from.
-const STAND_IN_RANGE: std::ops::RangeInclusive<char> = '\u{E000}'..='\u{F8FF}';
-
-/// [`format_text_value`] for exact text: a lone surrogate in `text` is kept where `@` prints it
-/// (probes/text-lone-surrogates, TEXT(H,"@") has length 1). The format runs on a one-character
-/// stand-in for the text, a private-use character the format does not hold, so the 255-character
-/// limit and every other rule are the well-formed path's; the stand-ins in the result are then
-/// replaced by the exact text. `Err` is the formatter's error message.
-pub(crate) fn format_text_value_exact(text: &Text, format: &str) -> Result<Text, String> {
-    if !text.has_lone_surrogate() {
-        let f = format_text_value(text, format);
-        return f.error.map_or(Ok(Text::from(f.text)), Err);
-    }
-    let in_format: BTreeSet<char> = format
-        .chars()
-        .filter(|c| STAND_IN_RANGE.contains(c))
-        .collect();
-    // The format holds at most one private-use character per character, so one of the first
-    // `in_format.len() + 1` is free; the range holds 6,400.
-    let stand_in = STAND_IN_RANGE
-        .clone()
-        .find(|c| !in_format.contains(c))
-        .ok_or_else(|| "No free stand-in character".to_owned())?;
-    let f = format_text_value(stand_in.encode_utf8(&mut [0; 4]), format);
-    if let Some(error) = f.error {
-        return Err(error);
-    }
-    // The stand-in counted as one character, so the limit is checked again on the real length
-    // (this also bounds the result).
-    let copies = f.text.matches(stand_in).count();
-    let chars = f.text.chars().count() - copies + copies.saturating_mul(text.chars().count());
-    if chars > MAX_TEXT_FORMAT_CHARS {
-        return Err(TEXT_TOO_LONG.to_owned());
-    }
-    let mut out = Text::from("");
-    let mut parts = f.text.split(stand_in);
-    if let Some(first) = parts.next() {
-        out.push(&Text::from(first));
-    }
-    for part in parts {
-        out.push(text);
-        out.push(&Text::from(part));
-    }
-    Ok(out)
-}
-
-/// The Buddhist era counts from 543 BC: serial 100 (1900-04-09) is "43" under `b` and "2443" under
-/// `bbbb` (probes/text-format-bare-literals A41-A46; gen-m7/6db767d720c5b55a A30).
-const BUDDHIST_ERA_OFFSET: i32 = 543;
-
-/// The Korean calendar (locale tag calendar digit 5) counts from 2333 BC: `[$-50409]yyyy` of 45000
-/// is "4356" (probes/text-locale-calendars A44-A46).
-const KOREAN_ERA_OFFSET: i32 = 2333;
-
-const TEXT_TOO_LONG: &str = "TEXT result over 255 characters";
+pub(super) const TEXT_TOO_LONG: &str = "TEXT result over 255 characters";
 
 /// A `#VALUE!` result, with `message` saying why.
 fn value_error(message: &str) -> Formatted {
@@ -251,16 +139,16 @@ fn value_error(message: &str) -> Formatted {
 }
 
 /// The `#VALUE!` of a format code that does not parse.
-fn format_error() -> Formatted {
+pub(super) fn format_error() -> Formatted {
     value_error("Problem parsing format string")
 }
 
-fn text_too_long() -> Formatted {
+pub(super) fn text_too_long() -> Formatted {
     value_error(TEXT_TOO_LONG)
 }
 
 /// `text` as a TEXT result, or `#VALUE!` when it is over [`MAX_TEXT_FORMAT_CHARS`].
-fn capped_text(text: String) -> Formatted {
+pub(super) fn capped_text(text: String) -> Formatted {
     if text.chars().count() > MAX_TEXT_FORMAT_CHARS {
         return text_too_long();
     }
@@ -279,15 +167,6 @@ fn general_text(value: f64, locale: &Locale) -> String {
         text
     } else {
         text.replace('.', &locale.numbers.symbols.decimal)
-    }
-}
-
-/// The `[cond]` of a number or date section, if it has one.
-fn section_condition(part: &ParsePart) -> Option<(Compare, f64)> {
-    match part {
-        ParsePart::Number(p) => p.condition,
-        ParsePart::Date(p) => p.condition,
-        ParsePart::General(_) | ParsePart::Error(_) => None,
     }
 }
 
@@ -318,9 +197,21 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
         return format_error();
     }
     let mut value = value_original;
-    let general = ParsePart::General(GeneralPart {});
+    // A value no section takes prints in General, in the format's digits (`[$-2000409][>5]0` on 1
+    // is "١"; probes/t3532-numeral-digit-sections A2).
+    let general = ParsePart::General(GeneralPart {
+        numerals: parser.numerals,
+    });
     let part;
+    let conditional = conditional_section(&parts, sections, value);
     match sections {
+        2..=4 if conditional.is_some() => {
+            let (index, drop_sign) = conditional.unwrap_or_default();
+            if drop_sign {
+                value = value.abs();
+            }
+            part = &parts[index];
+        }
         // Excel: an empty format shows nothing but a negative's minus, also for a value that
         // rounds to zero (`TEXT(-0.0001,"")` = "-", `TEXT(5,"")` = ""; probes/text-format-bare-literals
         // A32-A35).
@@ -387,8 +278,14 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
     }
     match part {
         ParsePart::Error(..) => format_error(),
-        ParsePart::General(..) => Formatted {
-            text: general_text(value, locale),
+        ParsePart::Number(p) if is_bracket_only_section(part) => Formatted {
+            text: p.numerals.number(&general_text(value, locale)),
+            color: p.color,
+            error: None,
+            unshowable: false,
+        },
+        ParsePart::General(p) => Formatted {
+            text: p.numerals.number(&general_text(value, locale)),
             color: None,
             error: None,
             unshowable: false,
@@ -399,7 +296,18 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             // in the 1900 system), and on the date system (`negative_serial_allowed`;
             // docs/excel-semantics/dates.md "The 1904 date system" and "Negative serials under
             // an explicit negative section").
-            if value_original < 0.0 && !negative_serial_allowed(&p.tokens, ctx.date_system) {
+            // A section whose only date-like token is a calendar prefix (`B1`) holds no date
+            // token, so a negative value prints its minus and the literals (`TEXT(-3,"b1")` is "-",
+            // `"b1 x"` "- x"; probes/t2388-b1-negative, excel-graph 2026-10-28, T-2388). The same
+            // holds for `B2`, a tagged prefix, an explicit negative section (`"0;b1 x"` is " x")
+            // and a magnitude past the maximum serial (`TEXT(-3000000,"b1")` is "-", and
+            // `TEXT(3000000,"b1")` is "", `"b1 x"` " x"; probes/t3050-b1-positive-large, excel-graph
+            // 2026-10-29, T-3050).
+            let literals_only = p.tokens.iter().all(TextToken::is_literal);
+            if value_original < 0.0
+                && !literals_only
+                && !negative_serial_allowed(&p.tokens, ctx.date_system)
+            {
                 return invalid_date(value_original);
             }
             // A negative that gets here (a one-section format) is formatted as its magnitude after
@@ -416,28 +324,56 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             // #VALUE!: `TEXT(1234567890,"h:mm")`, `"[h]:mm"`, `"[mm]:ss.0"` (gen-m10
             // 810fee377a42575b T!A16, b4f66526f822ff2c T!A20; gen-m5 6a511beadb56b932 Calc!A126).
             if value >= f64::from(MAXIMUM_DATE_SERIAL_NUMBER) + 1.0
+                && !literals_only
                 && !negative_serial_allowed(tokens, DateSystem::Excel1900)
             {
                 return invalid_date(value_original);
             }
-            let clock = DisplayClock::new(value, fraction_digits, tokens);
+            // What `General` prints here and what an elapsed token after a date or clock token
+            // counts from: `TEXT(5,"d [h] General")` is "5 12 0.5" but `"[h] d General"` "120 5 0.5"
+            // (T-3378, T-3419; number-formats.md "`General` in a date section").
+            let general_value = date_section_register(value, tokens, fraction_digits);
+            let register = FractionalSeconds::new(general_value, fraction_digits.unwrap_or(0));
+            let mut split = false;
+            let clock = DisplayClock::new(value, fraction_digits);
             let (hours, minutes, seconds) = clock.hms;
             let elapsed_fraction = clock.elapsed.as_ref();
             let day_serial = clock.days;
+            // Excel: the cutoff is on the serial rounded to the shown second or fraction digit, and
+            // in a 1904 workbook it is 9999-12-31 there too (2957003): `TEXT(2958465.999999,
+            // "h:mm:ss")` is #VALUE! but `"h:mm:ss.0"` is "23:59:59.9"; in 1904 `TEXT(2957004,
+            // "h:mm:ss")` is #VALUE! (probes/t2135-fractional-second-edges-1900/-1904, T-2135).
+            if clock.elapsed.is_some()
+                && !literals_only
+                && !negative_serial_allowed(tokens, DateSystem::Excel1900)
+                && ctx.date_system.to_1900_serial(clock.days)
+                    > Some(i64::from(MAXIMUM_DATE_SERIAL_NUMBER))
+            {
+                return invalid_date(value_original);
+            }
             // Day/month/year and weekday tokens show Excel's exact components (including the
             // fictitious 1900-02-29) and "1900-01-00" (serial 0). In a 1904 workbook they read the
             // 1904 epoch (`TEXT(0,"yyyy-mm-dd")` is "1904-01-01"; dates.md "The 1904 date system");
             // -1 stands for no date. The fallback is never read: `ymd` is `None` exactly when
             // `date_valid` is false.
             let serial_1900 = ctx.date_system.to_1900_serial(day_serial).unwrap_or(-1);
-            let ymd = excel_serial_to_ymd(serial_1900);
+            let ymd = calendar_ymd(p.calendar, p.hijri, serial_1900);
             let date_valid = ymd.is_some();
+            // A Saka or Hebrew section of a date with no such date is `#VALUE!` even with only
+            // time tokens (`TEXT(60.5,"[$-80409]h:mm")`; probes/t2779-hebrew-saka-more E5, E6).
+            if !date_valid && matches!(p.calendar, Some(Calendar::Saka | Calendar::Hebrew)) {
+                return invalid_date(value);
+            }
             let (ymd_year, ymd_month, ymd_day) = ymd.unwrap_or((0, 1, 0));
             // Under a Japanese locale tag `yy` and `yyyy` after a `g` print the era year: the
             // Japanese one in its own calendar (`[$-411]yy|g|yy` is "23|R|05"), the whole Gregorian
             // year in the others (probes/text-locale-japanese-year A1-A13).
             let mut seen_era = false;
-            for token in tokens {
+            let mut names = NameTokens::new(p);
+            for (index, token) in tokens.iter().enumerate() {
+                // Excel: a date or clock token leaves the register holding the serial's last
+                // component, so an elapsed token after it counts from that (T-3419).
+                split |= is_date_or_clock(token);
                 match token {
                     TextToken::Literal(c) => {
                         text = format!("{text}{c}");
@@ -459,187 +395,131 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     }
                     TextToken::Digit(_) => {}
                     TextToken::Period => {}
-                    TextToken::General => {}
+                    TextToken::General => {
+                        text.push_str(&p.numerals.number(&general_text(general_value, locale)));
+                    }
                     TextToken::Day => {
                         if !date_valid {
                             return invalid_date(value);
                         }
-                        text = format!("{text}{ymd_day}");
+                        names.number();
+                        text.push_str(&p.numerals.field(&ymd_day.to_string()));
                     }
                     TextToken::DayPadded => {
                         if !date_valid {
                             return invalid_date(value);
                         }
+                        names.number();
                         let day = ymd_day as usize;
-                        text = format!("{text}{day:02}");
-                    }
-                    TextToken::DayNameShort => {
-                        if !date_valid {
-                            return invalid_date(value);
-                        }
-                        let day = excel_weekday_index(serial_1900);
-                        text.push_str(
-                            p.names
-                                .map_or(&locale.dates.day_names_short[day], |n| n.days_short[day]),
-                        );
-                    }
-                    TextToken::DayName => {
-                        if !date_valid {
-                            return invalid_date(value);
-                        }
-                        let day = excel_weekday_index(serial_1900);
-                        text.push_str(
-                            p.names
-                                .map_or(&locale.dates.day_names[day], |n| n.days[day]),
-                        );
+                        text.push_str(&p.numerals.field(&format!("{day:02}")));
                     }
                     TextToken::Month => {
                         if !date_valid {
                             return invalid_date(value);
                         }
+                        names.number();
                         let month = ymd_month as usize;
-                        text = format!("{text}{month}");
+                        text.push_str(&p.numerals.field(&month.to_string()));
                     }
                     TextToken::MonthPadded => {
                         if !date_valid {
                             return invalid_date(value);
                         }
+                        names.number();
                         let month = ymd_month as usize;
-                        text = format!("{text}{month:02}");
+                        text.push_str(&p.numerals.field(&format!("{month:02}")));
                     }
-                    TextToken::MonthNameShort => {
+                    TextToken::DayNameShort(..)
+                    | TextToken::DayName(..)
+                    | TextToken::MonthNameShort
+                    | TextToken::MonthName
+                    | TextToken::MonthLetter => {
                         if !date_valid {
                             return invalid_date(value);
                         }
-                        let month = ymd_month as usize;
-                        text.push_str(p.names.map_or(&locale.dates.months_short[month - 1], |n| {
-                            n.months_short[month - 1]
-                        }));
-                    }
-                    TextToken::MonthName => {
-                        if !date_valid {
-                            return invalid_date(value);
+                        let weekday = excel_weekday_index(serial_1900);
+                        if let (Some(Calendar::Hebrew), Some(names), leap_months) =
+                            (p.calendar, p.names, p.leap_months)
+                        {
+                            let month_name = !matches!(
+                                token,
+                                TextToken::DayName(..) | TextToken::DayNameShort(..)
+                            );
+                            if month_name
+                                && leap_months.is_some()
+                                && ymd_year > HEBREW_LAST_NAMED_YEAR
+                            {
+                                return invalid_date(value);
+                            }
+                            if let Some(name) =
+                                hebrew_month_name(token, names, leap_months, serial_1900)
+                            {
+                                text.push_str(name);
+                                continue;
+                            }
                         }
-                        let month = ymd_month as usize;
-                        text.push_str(
-                            p.names
-                                .map_or(&locale.dates.months[month - 1], |n| n.months[month - 1]),
-                        );
-                    }
-                    TextToken::MonthLetter => {
-                        if !date_valid {
-                            return invalid_date(value);
+                        // A month past the twelfth has no name when the months go by Gregorian
+                        // number, `mmmmm` printing U+0001 (`[$-80000]m|mmm|mmmm|mmmmm` of
+                        // 2024-09-20 is "13|||\u{1}"; probes/t2779-hebrew-saka-more E1); a lunar
+                        // calendar's own names give months 13 and 14 the twelfth (`[$-110409]mmmm`
+                        // of 2024-01-11 is "十二月"; probes/text-locale-lunar-edges A26).
+                        if ymd_month > 12 && p.months_by_number {
+                            let is_day = matches!(
+                                token,
+                                TextToken::DayName(..) | TextToken::DayNameShort(..)
+                            );
+                            if !is_day {
+                                let month_letter = matches!(token, TextToken::MonthLetter);
+                                text.push_str(if month_letter { "\u{1}" } else { "" });
+                                continue;
+                            }
                         }
-                        let month = ymd_month as usize;
-                        // Under a locale tag `mmmmm` is the first character of the month name
-                        // (`[$-804]mmmmm` of December is "十"; probes/text-locale-am-neutral A28).
-                        match p.names.and_then(|n| n.months[month - 1].chars().next()) {
-                            Some(letter) => text.push(letter),
-                            None => text.push_str(&locale.dates.months_letter[month - 1]),
-                        }
+                        let month = ymd_month.min(12);
+                        names.push(token, &mut text, p.names, locale, month, weekday);
                     }
                     TextToken::YearShort
                     | TextToken::Year
                     | TextToken::BuddhistYearShort
-                    | TextToken::BuddhistYear => {
+                    | TextToken::BuddhistYear
+                    | TextToken::EraYear(_)
+                    | TextToken::Era(_) => {
                         if !date_valid {
                             return invalid_date(value);
                         }
-                        let buddhist = matches!(
-                            token,
-                            TextToken::BuddhistYearShort | TextToken::BuddhistYear
-                        );
-                        let short =
-                            matches!(token, TextToken::YearShort | TextToken::BuddhistYearShort);
-                        // Excel: `b` is the Buddhist year with no locale tag and the Gregorian one
-                        // under a tag but in the Thai calendar (`[$-40C]bbbb` is "2023",
-                        // `[$-7041E]bbbb` "2566"); `yy` and `yyyy` count in the tag's calendar
-                        // (probes/text-locale-calendars, text-locale-calendars-detail A2, A14-A23).
-                        let year = match (p.calendar, buddhist) {
-                            (Some(Calendar::Japanese { explicit }), false)
-                                if explicit || seen_era =>
-                            {
-                                let era_year = japanese_era_year(serial_1900, ymd_year);
-                                text = format!("{text}{era_year:02}");
-                                continue;
-                            }
-                            // After a `g` a Japanese LCID's other calendars print the whole
-                            // Gregorian year (`[$-10411]g|yy` is "|2023", `[$-70411]g|yyyy`
-                            // "|2023"); other LCIDs are unaffected (`[$-70409]g|yyyy` is "|2566";
-                            // probes/text-locale-japanese-year A13, text-locale-era-gregorian).
-                            (Some(_), false) if seen_era && p.japanese_lcid => {
-                                text = format!("{text}{ymd_year}");
-                                continue;
-                            }
-                            (None, true) | (Some(Calendar::Thai), _) => {
-                                ymd_year + BUDDHIST_ERA_OFFSET
-                            }
-                            (Some(Calendar::Korean), false) => ymd_year + KOREAN_ERA_OFFSET,
-                            _ => ymd_year,
+                        if let TextToken::Era(_) = token {
+                            seen_era = true;
+                        } else {
+                            names.number();
+                        }
+                        let ymd = (ymd_year, ymd_month, ymd_day);
+                        let Some(year) = year_token_text(p, token, seen_era, serial_1900, ymd)
+                        else {
+                            return invalid_date(value);
                         };
-                        // The Taiwan calendar's `yy` is four digits (probes/text-locale-japanese-year
-                        // A15).
-                        let two_digits =
-                            short && (buddhist || p.calendar != Some(Calendar::Taiwan));
-                        if two_digits {
-                            text = format!("{text}{:02}", year % 100);
-                        } else {
-                            text = format!("{text}{year}");
-                        }
+                        text.push_str(&p.numerals.field(&year));
                     }
-                    TextToken::EraYear(padded) => {
-                        if !date_valid {
-                            return invalid_date(value);
-                        }
-                        if let Some(Calendar::Japanese { .. }) = p.calendar {
-                            let era_year = japanese_era_year(serial_1900, ymd_year);
-                            if *padded {
-                                text = format!("{text}{era_year:02}");
-                            } else {
-                                text = format!("{text}{era_year}");
-                            }
-                        } else {
-                            text = format!("{text}{ymd_year}");
-                        }
-                    }
-                    TextToken::Era(length) => {
-                        if !date_valid {
-                            return invalid_date(value);
-                        }
-                        seen_era = true;
-                        if let Some(Calendar::Japanese { .. }) = p.calendar {
-                            text.push_str(japanese_era_name(serial_1900, *length));
-                        }
-                    }
-                    TextToken::Hour => {
+                    TextToken::Hour | TextToken::HourPadded => {
                         let mut hour = hours as i32;
-                        if p.use_ampm {
+                        if p.use_ampm && hour_is_twelve_hour(tokens, index) {
                             if hour == 0 {
                                 hour = 12;
                             } else if hour > 12 {
                                 hour -= 12;
                             }
                         }
-                        text = format!("{text}{hour}");
-                    }
-                    TextToken::HourPadded => {
-                        let mut hour = hours as i32;
-                        if p.use_ampm {
-                            if hour == 0 {
-                                hour = 12;
-                            } else if hour > 12 {
-                                hour -= 12;
-                            }
-                        }
-                        text = format!("{text}{hour:02}");
+                        let hour = match token {
+                            TextToken::HourPadded => format!("{hour:02}"),
+                            _ => hour.to_string(),
+                        };
+                        text.push_str(&p.numerals.field(&hour));
                     }
                     TextToken::Second => {
                         let second = seconds as i32;
-                        text = format!("{text}{second}");
+                        text.push_str(&p.numerals.field(&second.to_string()));
                     }
                     TextToken::SecondPadded => {
                         let second = seconds as i32;
-                        text = format!("{text}{second:02}");
+                        text.push_str(&p.numerals.field(&format!("{second:02}")));
                     }
                     // Under a locale tag both print the locale's strings, so `A/P` becomes
                     // `AM/PM` (`[$-409]h A/P` is "6 PM", `[$-411]h a/p` "6 午後";
@@ -656,45 +536,36 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     }
                     TextToken::Minute => {
                         let minute = minutes as i32;
-                        text = format!("{text}{minute}");
+                        text.push_str(&p.numerals.field(&minute.to_string()));
                     }
                     TextToken::MinutePadded => {
                         let minute = minutes as i32;
-                        text = format!("{text}{minute:02}");
+                        text.push_str(&p.numerals.field(&format!("{minute:02}")));
                     }
-                    TextToken::ElapsedHour => {
-                        let hour = elapsed_text(value, false, ElapsedUnit::Hour, elapsed_fraction);
-                        text = format!("{text}{hour}");
-                    }
-                    TextToken::ElapsedHourPadded => {
-                        let hour = elapsed_text(value, true, ElapsedUnit::Hour, elapsed_fraction);
-                        text = format!("{text}{hour}");
-                    }
-                    TextToken::ElapsedMinute => {
-                        let minute =
-                            elapsed_text(value, false, ElapsedUnit::Minute, elapsed_fraction);
-                        text = format!("{text}{minute}");
-                    }
-                    TextToken::ElapsedMinutePadded => {
-                        let minute =
-                            elapsed_text(value, true, ElapsedUnit::Minute, elapsed_fraction);
-                        text = format!("{text}{minute}");
-                    }
-                    TextToken::ElapsedSecond => {
-                        let second =
-                            elapsed_text(value, false, ElapsedUnit::Second, elapsed_fraction);
-                        text = format!("{text}{second}");
-                    }
-                    TextToken::ElapsedSecondPadded => {
-                        let second =
-                            elapsed_text(value, true, ElapsedUnit::Second, elapsed_fraction);
-                        text = format!("{text}{second}");
+                    TextToken::ElapsedHour
+                    | TextToken::ElapsedHourPadded
+                    | TextToken::ElapsedMinute
+                    | TextToken::ElapsedMinutePadded
+                    | TextToken::ElapsedSecond
+                    | TextToken::ElapsedSecondPadded => {
+                        if let Some((unit, padded)) = elapsed_token(token) {
+                            let count = if split {
+                                elapsed_text(general_value, padded, unit, register.as_ref())
+                            } else {
+                                elapsed_text(value, padded, unit, elapsed_fraction)
+                            };
+                            text.push_str(&p.numerals.number(&count));
+                        }
                     }
                     TextToken::SecondFraction(digits) => {
                         text.push('.');
                         match elapsed_fraction {
-                            Some(fraction) => text.push_str(&fraction.digits_text()),
-                            None => text.extend(std::iter::repeat_n('0', *digits)),
+                            Some(fraction) => {
+                                text.push_str(&p.numerals.digits(&fraction.digits_text()));
+                            }
+                            None => {
+                                text.extend(std::iter::repeat_n(p.numerals.digit('0'), *digits));
+                            }
                         }
                     }
                 }
@@ -713,16 +584,18 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
         }
         ParsePart::Number(p) => {
             if let Some(fraction) = &p.fraction {
-                return match format_fraction(value, p, fraction) {
+                // Past 255 characters a fraction cannot be shown either: `# ?/4,` on 2 would print
+                // 258 (255 `#`, TEXT #VALUE!; probes/fraction-overflow-scaled A49).
+                let text = format_fraction(value, p, fraction, &locale.numbers.symbols.group)
+                    .filter(|text| text.chars().count() <= MAX_TEXT_FORMAT_CHARS);
+                return match text {
                     Some(text) => Formatted {
                         text,
                         color: p.color,
                         error: None,
                         unshowable: false,
                     },
-                    None => {
-                        Formatted::unshowable(format!("Fraction numerator overflows: '{value}'"))
-                    }
+                    None => Formatted::unshowable(format!("Fraction overflows: '{value}'")),
                 };
             }
             let mut text = "".to_string();
@@ -730,9 +603,17 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                 text = format!("{c}");
             }
             let tokens = &p.tokens;
-            // `General` among literals shows the value itself, with its sign
+            // `General` among literals shows the value; `lead_abs` drops its sign when the minus leads
             let general_value = value;
-            let scaled = value * 100.0_f64.powi(p.percent) / (1000.0_f64.powi(p.comma));
+            // Excel keeps the scaling commas' exponent in a signed byte (`comma_exponent`). Up to
+            // 42 commas it does not wrap, and dividing keeps the usual rounding.
+            let percent_scaled = value * 100.0_f64.powi(p.percent);
+            let comma_exponent = comma_exponent(p.comma, true);
+            let scaled = if comma_exponent == p.comma.saturating_mul(-3) {
+                percent_scaled / 1000.0_f64.powi(p.comma)
+            } else {
+                percent_scaled * 10.0_f64.powi(comma_exponent)
+            };
             value = scaled;
             // p.precision is the number of significant digits _after_ the decimal point
             // Excel shows at most 15 significant digits (docs/excel-semantics/numbers.md, "Number → text";
@@ -749,17 +630,30 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     // rounded down (`##0.0E+0` on 123456.789 is "123.5E+3", on 61 "61.0E+0";
                     // `00.0E+0` on 36.5 "36.5E+0"; eval/suites/gen-m10, T-1730). A zero
                     // exponent carries no minus (`0.00E+00` on 1.5 is "1.50E+00").
-                    let group = f64::from(p.digit_count.max(1));
+                    // A grouping `,` in the mantissa makes the step at least 4 (`0,0E+0` and
+                    // `#,##0E+0` on 1234567.89 are "123E+4", `##,##0E+0` "12E+5";
+                    // probes/t4062-grouping-in-scientific; number-formats.md "Commas in
+                    // scientific formats").
+                    let group = f64::from(if p.use_thousands {
+                        p.digit_count.max(4)
+                    } else {
+                        p.digit_count.max(1)
+                    });
                     let exponent;
+                    let mut shifted = false;
                     if group > 1.0 {
                         // The mantissa rounds after the shift (`##0.0E+0` on 1/3: "333.3E-3"; T-2226).
                         (value, exponent) = round_engineering(scaled, group, p.precision);
                     } else {
-                        exponent = value_abs.log10().floor();
+                        (value, exponent) = round_scientific(scaled, p.precision);
+                        // The mantissa is already shifted; engineering below is not.
+                        shifted = true;
                     }
                     exponent_is_negative = exponent < 0.0;
                     exponent_part = format!("{}", exponent.abs()).chars().collect();
-                    value /= 10.0_f64.powf(exponent);
+                    if !shifted {
+                        value /= 10.0_f64.powf(exponent);
+                    }
                     value = to_precision(value, 15);
                     value_abs = value.abs();
                 }
@@ -790,11 +684,19 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             // `<=`: a value exactly one unit at the last shown place (-1 for `0`, -1 after a `#,,`
             // scaling) keeps its sign (poi/NumberFormatTests.xlsx Tests!A95).
             let is_negative = value <= -(10.0_f64.powf(-(p.precision as f64)));
-            let mut needs_period = false;
             // With no integer placeholder no digit carries the minus, so it leads the literals
-            // (`TEXT(-PI(),"x")` = "-x", `TEXT(-5,"2")` = "-2"; probes/text-format-bare-literals A3, A7).
+            // (`TEXT(-PI(),"x")` = "-x", `TEXT(-5,"2")` = "-2"; probes/text-format-bare-literals A3, A7;
+            // `"x"General` on -1.5 is "-x1.5", General then shows |value|: gen-m10 F!D19).
             let has_general = tokens.iter().any(|t| matches!(t, TextToken::General));
-            if digit_count == 0 && is_negative && !has_general {
+            // Excel: with no decimal point either nothing rounds, so any negative keeps its minus
+            // (`TEXT(-0.4,"x")` is "-x", `TEXT(-0.004,"x%")` "-x%"), while `.` and `.0` drop it
+            // when the value rounds to zero (`TEXT(-0.4,".")` is ".", `TEXT(-0.04,".0")` ".0";
+            // probes/text-negative-round-sign, excel-graph 2026-10-30, T-1129).
+            let has_period = tokens.iter().any(|t| matches!(t, TextToken::Period));
+            let unrounded_negative = !has_period && scaled < 0.0;
+            if digit_count == 0
+                && (is_negative || unrounded_negative || (has_general && general_value < 0.0))
+            {
                 text = format!("-{text}");
             }
 
@@ -819,17 +721,15 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                         text = format!("{text}{value}");
                     }
                     TextToken::General => {
-                        text.push_str(&general_text(general_value, locale));
+                        let general = general_text(lead_abs(general_value, digit_count), locale);
+                        text.push_str(&p.numerals.number(&general));
                     }
-                    TextToken::Period => {
-                        if p.precision == 0 {
-                            // No decimal placeholder prints it, so it stands on its own: `0.1`
-                            // on 12.3 is "12.1" (probes/text-format-bare-literals A21, A11).
-                            text = format!("{text}{decimal_separator}");
-                        } else {
-                            needs_period = true;
-                        }
-                    }
+                    // The point prints where it stands, so a literal right after it follows it
+                    // (`0.|0` on 1234567.891 is "1234567.|9", `#.\-#` on 0 ".-";
+                    // probes/t4595-literal-after-point, number-formats.md "A literal right after
+                    // the decimal point"), and with no decimal placeholder it stands on its own
+                    // (`0.1` on 12.3 is "12.1"; probes/text-format-bare-literals A21, A11).
+                    TextToken::Period => text.push_str(&decimal_separator),
                     TextToken::Digit(digit) => {
                         if digit.number.is_integer() {
                             // 1. Integer part
@@ -841,15 +741,14 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                             if ln <= digit_count {
                                 // The number of digits is less or equal than the number of digit tokens
                                 // i.e. the value is 123 and the format_code is ##### (ln = 3 and digit_count = 5)
-                                // A zero mantissa still shows one integer digit, even for `#`:
+                                // A zero mantissa prints every integer placeholder, even `#`:
                                 // `|#.#|E-|#|` on 0 is "|0.|E|0|" (poi/NumberFormatApproxTests.xlsx
-                                // A136), where `#.#` alone gives ".".
-                                let zero_mantissa = p.is_scientific
-                                    && ln == 0
-                                    && number_index == -1
-                                    && digit.kind == '#';
+                                // A136), where `#.#` alone gives "."; `##0.0E+0` on 0 is "000.0E+0"
+                                // (gen-m10 659cd5776d423ce3 F!J14; T-2227).
+                                // A lone `?` does too: `?.?E+0` on 0 is "0. E+0" (probes/text-scientific-edges A41, T-2230).
+                                let zero_mantissa = p.is_scientific && ln == 0 && digit.kind != '0';
                                 if zero_mantissa {
-                                    text = format!("{text}0");
+                                    text.push(p.numerals.digit('0'));
                                 } else if !(number_index < 0 && digit.kind == '#') {
                                     let c = if number_index < 0 {
                                         if digit.kind == '0' {
@@ -878,7 +777,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                                     } else {
                                         ""
                                     };
-                                    text = format!("{text}{c}{sep}");
+                                    text = format!("{text}{}{sep}", p.numerals.digit(c));
                                 }
                                 digit_index += 1;
                             } else {
@@ -894,7 +793,8 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                                     } else {
                                         ""
                                     };
-                                    text = format!("{}{}{}", text, int_part[i as usize], sep);
+                                    let c = p.numerals.digit(int_part[i as usize]);
+                                    text = format!("{text}{c}{sep}");
                                 }
                                 digit_index = number_index + 1;
                             }
@@ -902,27 +802,15 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                             // 2. After the decimal point
                             let index = digit.index as usize;
                             if index < fract_part.len() {
-                                if needs_period {
-                                    text = format!(
-                                        "{}{}{}",
-                                        text, decimal_separator, fract_part[index]
-                                    );
-                                } else {
-                                    text = format!("{}{}", text, fract_part[index]);
-                                }
+                                text.push(p.numerals.digit(fract_part[index]));
                             } else if digit.kind == '0' {
-                                if needs_period {
-                                    text = format!("{text}{decimal_separator}0");
-                                } else {
-                                    text = format!("{text}0");
-                                }
+                                text.push(p.numerals.digit('0'));
                             } else if digit.kind == '?' {
-                                text = format!("{text} ");
-                            } else if digit.kind == '#' && needs_period {
-                                // FIXME: This is what Excel does, but it transforms "3" into "3."
-                                text = format!("{text}{decimal_separator}");
+                                // A padding space: `?.??` on 1000 is "1000.  " (gen-m10, T-1738).
+                                text.push(' ');
                             }
-                            needs_period = false;
+                            // An unfilled `#` prints nothing; the point already printed, so `#.#`
+                            // on 3 is "3." as in Excel.
                         } else if digit.number.is_exponent() {
                             // 3. Exponent part
                             let index = digit.index;
@@ -947,11 +835,15 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                                         exponent_part[number_index as usize]
                                     };
 
-                                    text = format!("{text}{c}");
+                                    text.push(p.numerals.digit(c));
                                 }
                             } else {
-                                for i in 0..number_index + 1 {
-                                    text = format!("{}{}", text, exponent_part[i as usize]);
+                                // Overflowing digits join the first exponent placeholder; later
+                                // placeholders take one digit each (`0.00E+00` on DBL_MAX is
+                                // "1.80E+308", probes/dbl-max-text-b, T-2106).
+                                let first = if index == 0 { 0 } else { number_index };
+                                for i in first..number_index + 1 {
+                                    text.push(p.numerals.digit(exponent_part[i as usize]));
                                 }
                                 digit_index += number_index + 1;
                             }
@@ -960,8 +852,8 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     // Date tokens should not be present
                     TextToken::Day => {}
                     TextToken::DayPadded => {}
-                    TextToken::DayNameShort => {}
-                    TextToken::DayName => {}
+                    TextToken::DayNameShort(..) => {}
+                    TextToken::DayName(..) => {}
                     TextToken::Month => {}
                     TextToken::MonthPadded => {}
                     TextToken::MonthNameShort => {}
@@ -997,4 +889,23 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             }
         }
     }
+}
+
+/// Whether the hour token at `index` of a section with `AM/PM` or `A/P` takes the 12-hour clock.
+///
+/// Excel: only the last hour token before each marker and the last hour token of the section do;
+/// the others print 24-hour (`h|hh|mm|ss|h:mm:ss.00 AM/PM` of 45000.5432 is
+/// "13|13|02|12|1:02:12.48 PM", `h h AM/PM h h` "13 1 PM 13 1"; probes/t3710-ampm-hour-tokens,
+/// docs/excel-semantics/number-formats.md "Hours with AM/PM").
+fn hour_is_twelve_hour(tokens: &[TextToken], index: usize) -> bool {
+    tokens
+        .iter()
+        .skip(index + 1)
+        .find(|t| {
+            matches!(
+                t,
+                TextToken::Hour | TextToken::HourPadded | TextToken::AMPM | TextToken::AP(..)
+            )
+        })
+        .is_none_or(|t| matches!(t, TextToken::AMPM | TextToken::AP(..)))
 }

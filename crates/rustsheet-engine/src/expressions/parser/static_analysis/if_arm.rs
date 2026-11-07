@@ -1,7 +1,8 @@
 //! The arms of a legacy IF or IFS that are references, which the formula passes on whole instead of
 //! intersecting (docs/excel-semantics/references.md "Legacy IF passes a range arm whole").
 
-use super::Node;
+use super::name_body::{is_array_body, is_reference_body, scalar_body, ScalarBody};
+use super::{run_static_analysis_on_node, Node, StaticResult};
 use crate::functions::Function;
 
 /// Whether `arg` is a value arm of IF or IFS that is a reference ([`is_range_arm`]), which a legacy
@@ -44,7 +45,9 @@ fn is_range_arm(arm: &Node) -> bool {
         match node {
             // A defined name is an arm like a range: `=SUM(IF(TRUE,Rng))` shows no `@` and
             // `=IF(TRUE,Rng)` shows `=@IF(TRUE,Rng)` (probes/legacy-if-arm-other-references D,
-            // R), although the name takes its own `@` elsewhere (T-2440).
+            // R), although the name takes its own `@` elsewhere (T-2440). Not a name whose body
+            // is one literal or one cell: `=IF(TRUE,One)` shows no `@` (`scalar_body`, T-3856).
+            Node::DefinedNameKind(_) if scalar_body(node).is_some() => {}
             Node::RangeKind { .. }
             | Node::ThisRowKind { cell: false, .. }
             | Node::OpRangeKind { .. }
@@ -68,6 +71,13 @@ fn is_range_arm(arm: &Node) -> bool {
                 }
                 pending.push(&args[0]);
             }
+            // A single-cell INDEX of a union counts too, though a bare union is not a range arm:
+            // `=SUM(IF(TRUE,INDEX((B1:B6,C1:C6),3,1)))` shows no `@`
+            // (probes/t3297-legacy-if-index-arm-more-shapes M32, T-3297).
+            Node::FunctionKind {
+                kind: Function::Index,
+                ..
+            } if is_single_cell_index(node) => return true,
             Node::FunctionKind {
                 kind: Function::Index,
                 args,
@@ -78,24 +88,86 @@ fn is_range_arm(arm: &Node) -> bool {
     false
 }
 
-/// Whether `arm` is a range arm that makes the IF itself a value to intersect: not `INDEX(range,row)`
-/// with a literal row of 1 or more, one cell, for which Excel shows no `@` at all (`=IF(TRUE,INDEX(B1:B6,3))`,
+/// Whether `arm` is a range arm that makes the IF itself a value to intersect: not a single-cell
+/// INDEX ([`is_single_cell_index`]), for which Excel shows no `@` at all (`=IF(TRUE,INDEX(B1:B6,3))`,
 /// probes/legacy-if-arm-other-references M12, T-2326). The INDEX arm still counts as a reference arm
 /// ([`is_range_arm`]), so it gets no `@` of its own either.
 fn is_whole_range_arm(arm: &Node) -> bool {
     is_range_arm(arm) && !is_single_cell_index(arm)
 }
 
-/// Whether `arm` is `INDEX(range,row)` over a one-column range with a literal row of 1 or more,
-/// possibly in parentheses. Only that shape is evidenced (M12); a 2-D range gives a whole row.
+/// Whether `arm` is an INDEX that picks one cell ([`indexes_one_cell`]).
 fn is_single_cell_index(arm: &Node) -> bool {
     matches!(
         arm.ungrouped(),
         Node::FunctionKind { kind: Function::Index, args }
-            if args.len() == 2
-                && matches!(&*args[0].ungrouped_static(), Node::RangeKind { column1, column2, .. } if column1 == column2)
-                && matches!(args[1].ungrouped(), Node::NumberKind(n) if *n >= 1.0)
+            if indexes_one_cell(args) && !one_index_into_array_body(args)
     )
+}
+
+/// Whether `INDEX(args)` is `INDEX(area,row[,column[,area_num]])` whose indexes are all literal
+/// whole numbers of 1 or more ([`literal_index`]), possibly in parentheses, over a range of any
+/// shape, a table area, a union of ranges or a defined name: Excel shows no `@` on a legacy IF over
+/// `INDEX(B1:C6,3,1)`, `INDEX(B1:F1,3)`, `INDEX(B1:B6,3,1)` or even the 2-D `INDEX(B1:C6,3)`
+/// (`#REF!`), but does over `INDEX(B1:B6,3.5)`, `INDEX(B1:B6,"3")`, `INDEX(B1:B6,1+2)`,
+/// `INDEX(B1:B6,A20)` with A20 = 3, `INDEX(B1:B6,0)` and `INDEX(B1:C6,3,0)`
+/// (probes/t3134-legacy-if-index-arm-shapes I31-I49, excel-graph, T-3134). None either over
+/// `INDEX(B1:B6,3,1,1)`, `INDEX((B1:B6,C1:C6),3,1,2)`, `INDEX(B1:B6,99)` (`#REF!`),
+/// `INDEX(Sheet1!B1:B6,3)`, `INDEX(Rng,3)`, `INDEX(Tbl[Col],3)` or `INDEX(Tbl,3,1)`, while
+/// `INDEX(B1:B6,-3)` and `INDEX(B1:B6,TRUE)` keep it (probes/t3297-legacy-if-index-arm-more-shapes
+/// and -name-table I30-I47, excel-graph, T-3297). The INDEX itself shows none either, at the root,
+/// under ABS or LEN or in a sum (`=INDEX(Z1:Z6,3)`, `=ABS(INDEX(Z1:Z6,3))`, `=INDEX(Z1:Z6,3,1)`,
+/// `=INDEX(Z1:Z6,99)`, `=INDEX(Z1:Z6,nNum)+0` with nNum = 3), while `=@INDEX(Z1:Z6,A20)`,
+/// `=@INDEX(Z1:Z6,"3")` and `=@INDEX(Z1:Z6,0)` keep it (probes/t3856-legacy-at-name-body row 45,
+/// T-3856), so its shape is a scalar ([`indexes_one_reference_cell`]).
+fn indexes_one_cell(args: &[Node]) -> bool {
+    (2..=4).contains(&args.len())
+        && matches!(
+            &*args[0].ungrouped_static(),
+            Node::RangeKind { .. } | Node::OpUnionKind { .. } | Node::DefinedNameKind(_)
+        )
+        && args[1..]
+            .iter()
+            .all(|index| literal_index(index).is_some_and(|n| n >= 1.0 && n.fract() == 0.0))
+}
+
+/// Whether `INDEX(args)` picks one cell ([`indexes_one_cell`]) of an area that is certainly a
+/// reference: a range, a union, or a defined name whose body is a cell or a range reference
+/// (`is_reference_body`), or one element of a name whose body is an array constant, given a row
+/// and a column index (`is_array_body`). Only then is the INDEX a scalar shape (`fallback_shape`):
+/// over a name whose body is a 2-D array constant, `=INDEX(n2d,1,1)` shows no `@` while
+/// `INDEX(n2d,1)` is a row, which a typed formula spills and a legacy one intersects
+/// (`=@INDEX(n2d,1)`; probes/t4273-legacy-at-name-body-more row 45, T-4273). Probed in T-4430
+/// (probes/t4430-legacy-at-name-body-rest rows 45-49): the same holds over `{3}`, `{3,4}` and `{3;4}`
+/// (`INDEX(nRow,1,2)`, `INDEX(nCol,2,1)` no `@`; one index keeps it), `INDEX(n2d,1,1,1)` (an area
+/// number) is one element too, and an out-of-range `INDEX(n2d,5,5)` is scalar.
+pub(super) fn indexes_one_reference_cell(args: &[Node]) -> bool {
+    indexes_one_cell(args)
+        && match &*args[0].ungrouped_static() {
+            Node::RangeKind { .. } | Node::OpUnionKind { .. } => true,
+            name => is_reference_body(name) || (args.len() >= 3 && is_array_body(name)),
+        }
+}
+
+/// Whether `args` is `INDEX(name,index)` over a name whose body is an array constant: one index into
+/// it keeps the `@` as an IF arm for a one-element, one-row and one-column body alike,
+/// `=@IF(TRUE,INDEX(nOne,1))`, `=@IF(TRUE,INDEX(nRow,2))`, `=@IF(TRUE,INDEX(nCol,1))`, while a row and a
+/// column index do not (probes/t4430-legacy-at-name-body-rest row 47, excel-graph, T-4430).
+fn one_index_into_array_body(args: &[Node]) -> bool {
+    args.len() == 2 && is_array_body(&args[0].ungrouped_static())
+}
+
+/// The number an INDEX index is written as: a number literal, possibly in parentheses, or a defined
+/// name whose body is one (`=IF(TRUE,INDEX(B1:B6,Three))` with Three = 3 shows no `@`,
+/// probes/t3297-legacy-if-index-arm-name-table I35, `scalar_body`, T-3856).
+fn literal_index(index: &Node) -> Option<f64> {
+    match index.ungrouped() {
+        Node::NumberKind(n) => Some(*n),
+        name => match scalar_body(name) {
+            Some(ScalarBody::Number(n)) => Some(n),
+            _ => None,
+        },
+    }
 }
 
 /// Whether `kind(args)` is an IF with an arm that is a range ([`is_range_arm`]), which a legacy
@@ -111,12 +183,43 @@ pub(super) fn returns_range_arm(kind: &Function, args: &[Node]) -> bool {
     }
 }
 
-/// Whether `kind(args)` is an IF whose value arms are all single-cell `INDEX` calls
-/// ([`is_single_cell_index`]): one cell whatever the condition, so no `@` on the call. IFS is not
-/// covered: no oracle evidence for it.
-pub(super) fn returns_single_cell_index(kind: &Function, args: &[Node]) -> bool {
-    match kind {
-        Function::If => args.len() > 1 && args[1..].iter().all(is_single_cell_index),
-        _ => false,
-    }
+/// Whether the IF or CHOOSE call over `args`, whose shapes are `shapes`, is one cell whatever its
+/// condition: the condition (CHOOSE's index) is a scalar and every value arm is a scalar or a
+/// single-cell INDEX ([`is_single_cell_index`]), so a nested call of the same kind counts by its own
+/// shape. Excel shows no `@` on such a legacy call or on a call over it: `=IF(TRUE,INDEX(B1:B6,3),5)`,
+/// `=IF(FALSE,INDEX(B1:B6,3),INDEX(C1:C6,2))`, `=IF(TRUE,IF(TRUE,INDEX(B1:B6,3)))` and
+/// `=CHOOSE(1,INDEX(B1:C6,3))`, also under ABS, but `=@IF(TRUE,INDEX(B1:B6,3),B1:B6)` and an `@` on
+/// every IFS, `=@IFS(TRUE,INDEX(B1:B6,3))` (probes/t3134-legacy-if-index-arm-shapes I30-I49,
+/// K30-K49, excel-graph, T-3134). A condition that is not a scalar, such as a dynamic-array call,
+/// keeps the call's broadcast shape (`=IF(TOCOL(A7:A9),"a")` spills).
+pub(super) fn returns_single_cell_index(args: &[Node], shapes: &[StaticResult]) -> bool {
+    args.len() > 1
+        && matches!(shapes.first(), Some(StaticResult::Scalar))
+        && args
+            .iter()
+            .zip(shapes)
+            .skip(1)
+            .all(|(arm, shape)| is_one_cell_arm(arm, shape))
+}
+
+/// Whether a legacy formula leaves the array-constant index of the CHOOSE call `kind(args)` whole
+/// because every value arm is one cell ([`is_one_cell_arm`]):
+/// the `@` then goes on the call, `=@CHOOSE({1,2},INDEX(B1:B6,3),5)` and
+/// `=ABS(@CHOOSE({1,2},INDEX(B1:B6,3),5))`, 3 (probes/t3134-legacy-if-index-arm-shapes I54, K54,
+/// excel-graph, T-3168), while range arms keep both, `=@CHOOSE(@{1,2},H1:H2,I1:I2)`
+/// (probes/legacy-choose-array-index, T-1882). A one-element index still
+/// shows its own `@` ([`super::legacy`]'s `shows_scalar_array_at`, T-1633).
+pub(super) fn leaves_choose_index_whole(kind: &Function, args: &[Node]) -> bool {
+    matches!(kind, Function::Choose)
+        && args.len() > 1
+        && matches!(args[0], Node::ArrayKind(_))
+        && args[1..]
+            .iter()
+            .all(|arm| is_one_cell_arm(arm, &run_static_analysis_on_node(arm)))
+}
+
+/// Whether the value arm `arm`, of shape `shape`, is one cell whatever the condition: a scalar or a
+/// single-cell INDEX ([`is_single_cell_index`]).
+fn is_one_cell_arm(arm: &Node, shape: &StaticResult) -> bool {
+    matches!(shape, StaticResult::Scalar) || is_single_cell_index(arm)
 }

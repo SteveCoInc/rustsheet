@@ -4,20 +4,19 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::{
-    constants::{DEFAULT_WINDOW_HEIGHT, DEFAULT_WINDOW_WIDTH},
     defined_names::{NameReference, ParsedDefinedName},
     expressions::{
         lexer::LexerMode,
         parser::{
-            static_analysis::run_static_analysis_on_node,
             stringify::{
-                rename_sheet_in_node, to_english_string, to_localized_string, to_rc_format,
-                to_string_lowering,
+                move_sheet_in_node, rename_sheet_in_node, to_english_string, to_localized_string,
+                to_rc_format, to_string_lowering, OffRows,
             },
             CallNameSpellings, Node, Parser,
         },
         types::CellReferenceRC,
     },
+    formula_rewrite::RewrittenFormula,
     functions::logical::NamedLambdas,
     language::{get_default_language, get_language, Language},
     locale::{get_default_locale, get_locale, Locale},
@@ -141,8 +140,7 @@ impl Model {
                 if self.call_name_spellings.apply(&mut t) {
                     *formula = to_rc_format(&t);
                 }
-                let static_result = run_static_analysis_on_node(&t);
-                parse_formula.push((std::sync::Arc::new(t), static_result));
+                parse_formula.push(crate::formula_cells::stored_formula(t));
             }
             // The lookup of the shared formulas follows the parsed formulas: both
             // are made from the lists of the sheets, here.
@@ -209,6 +207,8 @@ impl Model {
                 // A name has no cell: its `#This Row` areas are resolved at the row it is parsed
                 // at, as before SPEC-0016 step 2. Excel's rule is unprobed (T-1699, T-2595).
                 body.lower_this_rows_at(dummy_ref.row);
+                // Evaluation reads no whitespace (see `ParsedFormula`); the name keeps its text.
+                body.strip_spaces();
                 match body {
                     Node::LambdaDefKind { parameters, body } => {
                         ParsedDefinedName::LambdaDefinition(Arc::new((parameters, *body)))
@@ -233,7 +233,7 @@ impl Model {
             };
 
             parsed_defined_names.insert(
-                (local_sheet_index, name.to_lowercase()),
+                crate::name_key::NameKey::new(local_sheet_index, &name),
                 parsed_defined_name_formula,
             );
         }
@@ -246,6 +246,7 @@ impl Model {
         let defined_names = self.workbook.get_defined_names_with_scope();
         self.parser
             .set_worksheets_and_names(self.workbook.get_worksheet_names(), defined_names);
+        self.parser.set_workbook_file(self.workbook.file_name());
         self.parsed_formulas = vec![];
         self.parse_formulas();
         self.parsed_defined_names = HashMap::new();
@@ -314,6 +315,11 @@ impl Model {
             return Err("A worksheet already exists with that name".to_string());
         }
         let sheet_id = match sheet_id {
+            // Rewritten formulas and defined names find a sheet by its id, and the id of an
+            // undone delete can come from a peer's diff (T-2896).
+            Some(id) if self.workbook.worksheets.iter().any(|w| w.sheet_id == id) => {
+                return Err(format!("A worksheet already has the id {id}"));
+            }
             Some(id) => id,
             None => self.get_new_sheet_id(),
         };
@@ -431,14 +437,20 @@ impl Model {
         let mut by_row = Vec::new();
         for (index, formula) in new_worksheet.shared_formulas.iter().enumerate() {
             let mut t = self.parser.parse(formula, &cell_reference);
-            rename_sheet_in_node(&mut t, source_index, &new_name);
+            rename_sheet_in_node(&mut t, source_index, &source_name, &new_name);
             shared_formulas.push(to_string_lowering(&t, None, &source_tables));
             if t.has_this_row_to(&source_tables) {
                 by_row.push((index, t));
             }
         }
         new_worksheet.shared_formulas = shared_formulas;
-        lower_this_row_cells(&mut new_worksheet, &by_row, &source_tables);
+        lower_this_row_cells(
+            &mut new_worksheet,
+            &by_row,
+            &source_tables,
+            None,
+            OffRows::Detach,
+        );
         self.parser.set_lexer_mode(LexerMode::A1);
 
         // Insert the copy right after the source sheet.
@@ -485,7 +497,7 @@ impl Model {
                 .unwrap_or(&defined_name.formula);
             let mut node = self.parse_internal_formula(body, &context);
             let before = to_english_string(&node, &context);
-            rename_sheet_in_node(&mut node, source_index, &new_name);
+            rename_sheet_in_node(&mut node, source_index, &source_name, &new_name);
             let after = to_english_string(&node, &context);
 
             // Global names are only duplicated when they actually reference the
@@ -503,6 +515,8 @@ impl Model {
                 name: defined_name.name.clone(),
                 formula,
                 sheet_id: Some(new_sheet_id),
+                hidden: defined_name.hidden,
+                comment: defined_name.comment.clone(),
             });
         }
         self.workbook.defined_names.extend(new_defined_names);
@@ -558,7 +572,7 @@ impl Model {
             let mut formulas = Vec::new();
             for formula in &worksheet.shared_formulas {
                 let mut t = self.parser.parse(formula, cell_reference);
-                rename_sheet_in_node(&mut t, sheet_index, new_name);
+                rename_sheet_in_node(&mut t, sheet_index, &old_name, new_name);
                 formulas.push(to_rc_format(&t));
             }
             worksheet.shared_formulas = formulas;
@@ -580,7 +594,7 @@ impl Model {
             let stored = defined_name.formula.trim_start();
             let (eq, body) = stored.strip_prefix('=').map_or(("", stored), |b| ("=", b));
             let mut t = self.parser.parse(body, cell_reference);
-            rename_sheet_in_node(&mut t, sheet_index, new_name);
+            rename_sheet_in_node(&mut t, sheet_index, &old_name, new_name);
             let formula = format!(
                 "{eq}{}",
                 to_localized_string(&t, cell_reference, self.locale, self.language)
@@ -589,6 +603,8 @@ impl Model {
                 name: defined_name.name.clone(),
                 formula,
                 sheet_id: defined_name.sheet_id,
+                hidden: defined_name.hidden,
+                comment: defined_name.comment.clone(),
             });
         }
         self.workbook.defined_names = defined_names;
@@ -616,11 +632,23 @@ impl Model {
     /// Sheet order is only a position in the worksheet vector; formulas key off
     /// the sheet name (and defined names off the sheet id), so cross-sheet
     /// references stay valid across a move — `reset_parsed_structures` re-resolves
-    /// every reference by name against the reordered vector.
+    /// every reference by name against the reordered vector. A 3-D span whose moved
+    /// end lands past its other end is rewritten first, as Excel does
+    /// (`move_sheet_in_node`).
     ///
     /// Fails if either index is out of range. Moving a sheet to its current
     /// position is a no-op.
     pub fn move_sheet(&mut self, sheet_index: u32, new_index: u32) -> Result<(), String> {
+        self.move_sheet_rewriting(sheet_index, new_index).map(drop)
+    }
+
+    /// [`Model::move_sheet`], handing back the formulas it rewrote so an undo can put them back
+    /// ([`Model::unmove_sheet`]).
+    pub(crate) fn move_sheet_rewriting(
+        &mut self,
+        sheet_index: u32,
+        new_index: u32,
+    ) -> Result<Vec<RewrittenFormula>, String> {
         let sheet_count = self.workbook.worksheets.len() as u32;
         if sheet_index >= sheet_count {
             return Err("Sheet index too large".to_string());
@@ -629,14 +657,40 @@ impl Model {
             return Err("Target sheet index too large".to_string());
         }
         if sheet_index == new_index {
-            return Ok(());
+            return Ok(Vec::new());
         }
-        let worksheet = self.workbook.worksheets.remove(sheet_index as usize);
-        self.workbook
-            .worksheets
-            .insert(new_index as usize, worksheet);
-        self.reset_parsed_structures();
+        let sheet_names = self.workbook.get_worksheet_names();
+        let rewritten = self.rewrite_formulas_edited(None, |node| {
+            move_sheet_in_node(node, sheet_index, new_index, &sheet_names);
+        });
+        self.reorder_sheet(sheet_index, new_index);
+        Ok(rewritten)
+    }
+
+    /// Undoes [`Model::move_sheet_rewriting`] from `sheet_index` to `new_index`: puts back the
+    /// `rewritten` formulas and the sheet. Moving it back with [`Model::move_sheet`] would not
+    /// do, as that move can rewrite spans of its own.
+    pub(crate) fn unmove_sheet(
+        &mut self,
+        sheet_index: u32,
+        new_index: u32,
+        rewritten: &[RewrittenFormula],
+    ) -> Result<(), String> {
+        let sheet_count = self.workbook.worksheets.len() as u32;
+        if sheet_index >= sheet_count || new_index >= sheet_count {
+            return Err("Sheet index too large".to_string());
+        }
+        self.restore_rewritten_formulas(rewritten.to_vec());
+        self.reorder_sheet(new_index, sheet_index);
         Ok(())
+    }
+
+    /// Moves the worksheet at `from` (in range) to `to` without touching any formula text, then
+    /// reparses.
+    fn reorder_sheet(&mut self, from: u32, to: u32) {
+        let worksheet = self.workbook.worksheets.remove(from as usize);
+        self.workbook.worksheets.insert(to as usize, worksheet);
+        self.reset_parsed_structures();
     }
 
     /// Deletes a sheet by name. Fails if:
@@ -710,14 +764,7 @@ impl Model {
         let now = dt.format("%Y-%m-%dT%H:%M:%SZ").to_string();
 
         let mut views = HashMap::new();
-        views.insert(
-            0,
-            WorkbookView {
-                sheet: 0,
-                window_width: DEFAULT_WINDOW_WIDTH,
-                window_height: DEFAULT_WINDOW_HEIGHT,
-            },
-        );
+        views.insert(0, WorkbookView::new(0));
 
         let sheet_name = match language.code.as_str() {
             "en" => "Sheet1".to_string(),
@@ -765,7 +812,7 @@ impl Model {
             clock,
         );
         model.parse_formulas();
-        model.evaluate_conditional_formatting();
+        model.cf.stale = true;
         Ok(model)
     }
 
@@ -775,12 +822,13 @@ impl Model {
     pub(crate) fn unparsed(
         workbook: Workbook,
         shared_strings: HashMap<String, usize>,
-        parser: Parser,
+        mut parser: Parser,
         locale: &'static Locale,
         language: &'static Language,
         tz: Tz,
         clock: Clock,
     ) -> Model {
+        parser.set_workbook_file(workbook.file_name());
         Model {
             workbook,
             shared_strings,
@@ -795,6 +843,7 @@ impl Model {
             clock,
             view_id: 0,
             variable_stack: VariableStack::default(),
+            number_mark: crate::number_mark::NumberMark::default(),
             last_variable_id: 0,
             lambdas: HashMap::new(),
             eta_lambdas: HashMap::new(),
@@ -802,12 +851,14 @@ impl Model {
             lambda_captures: HashMap::new(),
             captured_cells: 0,
             nested_budget: crate::nested_array::NestedBudget::default(),
+            tail_views: Vec::new(),
+            groupby_filter_spent: false,
             lambda_calls_base: None,
             last_lambda_id: 0,
             defined_names_running: Default::default(),
             area_budget: Default::default(),
             evaluation: crate::evaluation::Evaluation::default(),
-            cf_cache: HashMap::new(),
+            cf: crate::cf_styles::CfState::default(),
             links: HashMap::new(),
         }
     }

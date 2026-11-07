@@ -1,0 +1,863 @@
+//! Tables that follow a row or column insert or delete (SPEC-0016 "Structural edits", T-2297):
+//! an edit wholly before a table moves it, a row insert below its header row and above or at its
+//! totals row grows it (T-2321), a row delete inside its data rows that leaves one shrinks it and
+//! one of its totals row drops that row (T-2338), so the structured references to it keep their
+//! text. Every other edit that crosses a table leaves it
+//! as it is (the *fallback*): its references print the displaced area, as before SPEC-0016.
+
+use std::collections::HashSet;
+
+use crate::constants::{LAST_COLUMN, LAST_ROW};
+use crate::expressions::parser::parse_range;
+use crate::expressions::parser::stringify::{DataBlock, DisplaceData, Displacement};
+use crate::expressions::types::Area;
+use crate::expressions::utils::number_to_column;
+use crate::formula_rewrite::RewrittenCell;
+use crate::model::Model;
+use crate::types::{FilterColumn, Table, TableColumn};
+
+/// What a structural edit does to the tables of the edited sheet.
+#[derive(Debug, Default, PartialEq)]
+struct TableEdits {
+    /// The lowercase names of the tables whose structured references keep their text: those
+    /// that move, grow or shrink with the edit, and those it leaves alone.
+    kept: Vec<String>,
+    /// The tables that move, grow or shrink, by name.
+    resized: Vec<(String, Resized)>,
+    /// The table columns a column delete removes, as lowercase (table, column) names: the
+    /// structured references to them print `#REF!` (T-2339).
+    deleted_columns: Vec<(String, String)>,
+    /// The lowercase names of the tables a column delete removes whole (T-3733).
+    deleted_tables: Vec<String>,
+    /// The lowercase names of the tables a column edit left of them moves whole (T-4680).
+    moved_tables: Vec<String>,
+    /// The data blocks of the tables that grow with a row insert at their first data row or at
+    /// their totals row, onto which plain ranges grow too (T-2321).
+    grown_edges: Vec<DataBlock>,
+}
+
+/// How an edit changes the rows (or columns) `first..=last` of a table.
+#[derive(Debug, PartialEq)]
+enum Span {
+    /// The edit leaves them where they are.
+    Unchanged,
+    /// The new first and last row (or column).
+    Changed(i32, i32),
+    /// The table's totals row is deleted: the table keeps its other rows and has no totals row.
+    DropTotals,
+    /// The table cannot follow the edit.
+    Fallback,
+}
+
+/// The rows a row insert (`delta > 0` rows above `at`) or delete (rows `at..at - delta`) gives
+/// the table on rows `top..=bottom` with data rows `data_first..=data_last`, by SPEC-0016's
+/// edge-case table. An insert below the top row and at or above the bottom row grows the table,
+/// so one at the first data row under a header row or at the totals row does too (T-2197
+/// table-insert-row-above-first-data and -above-totals: `ROWS(Sales)` 5). An insert at the first
+/// row of a table without a header row is a fallback (unprobed, T-2845). A delete inside the data
+/// rows, at their edges too, shrinks the table if a data row is left, and one of exactly the totals
+/// row drops it (T-2324 table-delete-row-first-data, -last-data, -last-data-totals, -totals; only
+/// one-row deletes are probed, a wider one reaching a data edge is hand, T-2848). The first row of
+/// a table without a header row is a fallback, as for inserts (T-2845). A
+/// delete touching the header row is a fallback (Excel refuses it), and so is one of every data
+/// row (`Model::kept_data_row` handles a delete of exactly every data row) or one straddling
+/// the table's edges (unprobed).
+fn row_span(
+    (top, bottom): (i32, i32),
+    (data_first, data_last): (i32, i32),
+    at: i32,
+    delta: i32,
+) -> Span {
+    if delta > 0 {
+        if at > bottom {
+            Span::Unchanged
+        } else if bottom > LAST_ROW - delta {
+            // The insert is allowed (the cells pushed off are empty), the table cannot follow it:
+            // an engine decision under directive 5, Excel's answer is unprobed.
+            Span::Fallback
+        } else if at <= top && at < data_first {
+            Span::Changed(top + delta, bottom + delta)
+        } else if top < at {
+            Span::Changed(top, bottom + delta)
+        } else {
+            Span::Fallback
+        }
+    } else {
+        let end = at - delta - 1;
+        if at > bottom {
+            Span::Unchanged
+        } else if end < top {
+            Span::Changed(top + delta, bottom + delta)
+        } else if top < at
+            && data_first <= at
+            && end <= data_last
+            && (data_first < at || end < data_last)
+        {
+            Span::Changed(top, bottom + delta)
+        } else if data_last < bottom && at == bottom && end == bottom {
+            Span::DropTotals
+        } else {
+            Span::Fallback
+        }
+    }
+}
+
+/// The columns a column insert (`delta > 0` columns left of `at`) or delete (columns
+/// `at..at - delta`) gives the table on columns `left..=right`: an edit wholly left of it moves
+/// it, one wholly right of it leaves it, an insert right of its first column grows it and a
+/// delete inside it that leaves a column shrinks it (T-2324 table-insert-column-inside:
+/// `COLUMNS(Sales)` 3; table-delete-column-qty and -region: 1), and so does one straddling an edge
+/// (T-2899 table-delete-columns-straddle-left and -right). A delete of every column or an insert
+/// that would push the table off the sheet is a fallback.
+fn column_span((left, right): (i32, i32), at: i32, delta: i32) -> Span {
+    if at > right {
+        return Span::Unchanged;
+    }
+    if delta > 0 {
+        if right > LAST_COLUMN - delta {
+            Span::Fallback
+        } else if at <= left {
+            Span::Changed(left + delta, right + delta)
+        } else {
+            Span::Changed(left, right + delta)
+        }
+    } else {
+        let end = at - delta - 1;
+        if end < left {
+            Span::Changed(left + delta, right + delta)
+        } else if at < left && end < right {
+            // Straddling the left edge, leaving a column (T-3733 table-delete-columns-straddle-left):
+            // the table keeps its remaining columns, now starting at the delete.
+            Span::Changed(at, right + delta)
+        } else if at >= left && end <= right && (left < at || end < right) {
+            // Inside the table, leaving at least one of its columns.
+            Span::Changed(left, right + delta)
+        } else if at > left && end > right {
+            // Straddling the right edge (table-delete-columns-straddle-right): the last
+            // columns are dropped.
+            Span::Changed(left, at - 1)
+        } else {
+            Span::Fallback
+        }
+    }
+}
+
+/// A table's range, `left..=right` by `top..=bottom`, and its data rows `data.0..=data.1` (below
+/// its header row, above its totals row).
+pub(crate) struct Bounds {
+    pub(crate) left: i32,
+    pub(crate) top: i32,
+    pub(crate) right: i32,
+    pub(crate) bottom: i32,
+    pub(crate) data: (i32, i32),
+}
+
+impl Bounds {
+    /// Whether the two ranges share a cell.
+    pub(crate) fn overlaps(&self, other: &Bounds) -> bool {
+        self.left <= other.right
+            && other.left <= self.right
+            && self.top <= other.bottom
+            && other.top <= self.bottom
+    }
+}
+
+/// The [`Bounds`] of `table`; `None` when its reference or row counts do not fit (directive 5).
+pub(crate) fn bounds(table: &Table) -> Option<Bounds> {
+    let (left, top, right, bottom) = parse_range(&table.reference).ok()?;
+    let header = i32::try_from(table.header_row_count).ok()?;
+    let totals = i32::try_from(table.totals_row_count).ok()?;
+    let data = (top.checked_add(header)?, bottom.checked_sub(totals)?);
+    Some(Bounds {
+        left,
+        top,
+        right,
+        bottom,
+        data,
+    })
+}
+
+/// What a structural edit does to one table of the edited sheet.
+enum Follow {
+    /// The table cannot follow the edit.
+    Fallback,
+    /// The edit leaves the table where it is.
+    Unchanged,
+    /// The table moves, grows or shrinks.
+    Resized(Resized),
+}
+
+/// A table that moves, grows or shrinks with a structural edit.
+#[derive(Debug, PartialEq)]
+struct Resized {
+    /// Its new reference.
+    reference: String,
+    /// Whether it loses its totals row.
+    drops_totals: bool,
+    /// The columns a column edit inside it inserts or deletes, if any.
+    columns: Option<ColumnEdit>,
+}
+
+/// The table columns a column edit inside a table inserts (`delta > 0`) or deletes, from the
+/// table's column `index` (0 for its first column).
+#[derive(Debug, PartialEq, Clone, Copy)]
+struct ColumnEdit {
+    index: usize,
+    delta: i32,
+}
+
+impl ColumnEdit {
+    /// The number of columns a delete removes; 0 for an insert.
+    fn deleted(self) -> usize {
+        usize::try_from(-i64::from(self.delta)).unwrap_or(0)
+    }
+}
+
+/// Whether the edit `displace_data` is a column delete covering every column of `table`.
+fn deletes_every_column(table: &Table, displace_data: &DisplaceData) -> bool {
+    let (Some(b), DisplaceData::Column { column, delta, .. }) = (bounds(table), displace_data)
+    else {
+        return false;
+    };
+    *delta < 0 && *column <= b.left && column.saturating_sub(*delta) > b.right
+}
+
+/// What the edit `displace_data`, on the sheet of `table`, does to it.
+fn follow(table: &Table, displace_data: &DisplaceData) -> Follow {
+    followed(table, displace_data).unwrap_or(Follow::Fallback)
+}
+
+/// [`follow`], with `None` for a fallback.
+fn followed(table: &Table, displace_data: &DisplaceData) -> Option<Follow> {
+    let Bounds {
+        left,
+        top,
+        right,
+        bottom,
+        data,
+    } = bounds(table)?;
+    let (rows, columns, column_edit) = match *displace_data {
+        DisplaceData::Row { row, delta, .. } => (
+            row_span((top, bottom), data, row, delta),
+            Span::Unchanged,
+            None,
+        ),
+        DisplaceData::Column { column, delta, .. } => {
+            let span = column_span((left, right), column, delta);
+            // An insert right of the first column, or a delete from the first column on, is
+            // inside the table: it changes the column list, not only the table's place.
+            let edit = match span {
+                Span::Changed(..) if delta > 0 && left < column => Some(ColumnEdit {
+                    index: usize::try_from(column - left).unwrap_or(usize::MAX),
+                    delta,
+                }),
+                // A delete removes the columns it overlaps (a straddling one fewer than
+                // `-delta`).
+                Span::Changed(..) if delta < 0 && column - delta > left => {
+                    let first = column.max(left);
+                    let last = (column - delta - 1).min(right);
+                    Some(ColumnEdit {
+                        index: usize::try_from(first - left).unwrap_or(usize::MAX),
+                        delta: first - last - 1,
+                    })
+                }
+                _ => None,
+            };
+            (Span::Unchanged, span, edit)
+        }
+        _ => return None,
+    };
+    let ((top, bottom), (left, right), drops_totals) = match (rows, columns) {
+        // `column_span` never drops a totals row.
+        (Span::Fallback, _) | (_, Span::Fallback | Span::DropTotals) => return None,
+        (Span::Unchanged, Span::Unchanged) => return Some(Follow::Unchanged),
+        (Span::DropTotals, _) => ((top, bottom.checked_sub(1)?), (left, right), true),
+        (Span::Changed(top, bottom), _) => ((top, bottom), (left, right), false),
+        (_, Span::Changed(left, right)) => ((top, bottom), (left, right), false),
+    };
+    let (first, last) = (number_to_column(left)?, number_to_column(right)?);
+    Some(Follow::Resized(Resized {
+        reference: format!("{first}{top}:{last}{bottom}"),
+        drops_totals,
+        columns: column_edit,
+    }))
+}
+
+/// The data block of `table` on sheet `sheet` when the row insert `displace_data` is at its first
+/// data row under a header row or at its totals row, the two edges where Excel grows the table and
+/// the plain ranges onto its data with it (T-2197); `None` for any other edit. The caller has
+/// checked that the table follows the edit.
+fn grown_edge(table: &Table, sheet: u32, displace_data: &DisplaceData) -> Option<DataBlock> {
+    let DisplaceData::Row { row, delta, .. } = *displace_data else {
+        return None;
+    };
+    let Bounds {
+        left,
+        top,
+        right,
+        bottom,
+        data: (data_first, data_last),
+    } = bounds(table)?;
+    let at_edge = (row == data_first && top < row) || (row == data_last + 1 && row <= bottom);
+    (delta > 0 && at_edge && data_first <= data_last).then_some(DataBlock {
+        sheet,
+        rows: (data_first, data_last),
+        columns: (left, right),
+    })
+}
+
+/// Inserts or deletes the table columns `edit` names in `columns`. An inserted column is named
+/// `ColumnN`, N the least number no column of the table has yet: Excel names one inserted column
+/// `Column1`, and a second `Column2` (T-2339 table-insert-column-inside-header,
+/// table-insert-two-columns-inside-header); gaps, case clashes and a multi-column insert are a
+/// hand generalisation (T-2899).
+fn edit_columns(columns: &mut Vec<TableColumn>, edit: ColumnEdit) {
+    let index = edit.index.min(columns.len());
+    if edit.delta < 0 {
+        let end = index.saturating_add(edit.deleted()).min(columns.len());
+        columns.drain(index..end);
+        return;
+    }
+    let mut next_id = columns.iter().map(|c| c.id).max().unwrap_or(0);
+    let taken: HashSet<String> = columns.iter().map(|c| c.name.to_lowercase()).collect();
+    let mut number = 0u32;
+    for offset in 0..usize::try_from(edit.delta).unwrap_or(0) {
+        next_id = next_id.saturating_add(1);
+        let name = loop {
+            number = number.saturating_add(1);
+            let name = format!("Column{number}");
+            if !taken.contains(&name.to_lowercase()) {
+                break name;
+            }
+        };
+        columns.insert(
+            index.saturating_add(offset),
+            TableColumn {
+                id: next_id,
+                name,
+                ..TableColumn::default()
+            },
+        );
+    }
+}
+
+/// Moves the kept autoFilter criteria with their columns through the column edit `edit`, as
+/// [`edit_columns`] moves the columns: a criterion right of the edit shifts by its delta, and one
+/// on a deleted column goes with it. Without this, an export would write a criterion on the wrong
+/// column, or past the table's last one.
+fn edit_filter_columns(filters: &mut Vec<FilterColumn>, edit: ColumnEdit) {
+    let index = u32::try_from(edit.index).unwrap_or(u32::MAX);
+    if edit.delta < 0 {
+        let deleted = u32::try_from(edit.deleted()).unwrap_or(u32::MAX);
+        let end = index.saturating_add(deleted);
+        filters.retain(|f| f.col_id < index || f.col_id >= end);
+        for filter in filters.iter_mut().filter(|f| f.col_id >= end) {
+            filter.col_id -= deleted;
+        }
+    } else {
+        let inserted = u32::try_from(edit.delta).unwrap_or(0);
+        for filter in filters.iter_mut().filter(|f| f.col_id >= index) {
+            filter.col_id = filter.col_id.saturating_add(inserted);
+        }
+    }
+}
+
+/// Whether a filtered table whose autoFilter criteria came from its file can stay filtered after
+/// a column edit: one of its kept criteria is left inside the table. Excel calls a table's hidden
+/// rows filtered only for a filterColumn with a criterion inside the table (T-4003), and once the
+/// edit deletes the last such column the export writes none, so the table stops being filtered
+/// here too. The caller only ever clears the flag with this: a table the import left unfiltered
+/// (a criterion-less or out-of-range filterColumn) stays so. A criterion-less column counts here,
+/// since [`crate::types::FilterCriterion::Other`] also holds a criterion the import read but could
+/// not check. Excel unfilters the table when a delete in the application takes the filtered
+/// column, and shows the rows it hid (probes/t4371-filtered-table-delete-filtered-column, T-4371).
+fn kept_filter_inside(table: &Table) -> bool {
+    table
+        .filter_columns
+        .iter()
+        .any(|f| usize::try_from(f.col_id).is_ok_and(|id| id < table.columns.len()))
+}
+
+/// Appends one column to `columns` and returns its name: `name` when no column of the table has
+/// that name (compared ignoring case), else `ColumnN` as [`edit_columns`] names an inserted
+/// column.
+pub(crate) fn append_column(columns: &mut Vec<TableColumn>, name: Option<&str>) -> String {
+    let free = name.filter(|name| {
+        let lower = name.to_lowercase();
+        !columns.iter().any(|c| c.name.to_lowercase() == lower)
+    });
+    let index = columns.len();
+    edit_columns(columns, ColumnEdit { index, delta: 1 });
+    let Some(column) = columns.last_mut() else {
+        // `edit_columns` has just appended the column.
+        return String::new();
+    };
+    if let Some(name) = free {
+        name.clone_into(&mut column.name);
+    }
+    column.name.clone()
+}
+
+/// The header cells (row, column, name) of the columns the insert `edit` added to `table`, whose
+/// reference and column list are already edited; none for a delete or a table without a header
+/// row.
+fn inserted_headers(table: &Table, edit: ColumnEdit) -> Vec<(i32, i32, String)> {
+    let Some(b) = bounds(table) else {
+        return Vec::new();
+    };
+    if edit.delta <= 0 || table.header_row_count == 0 {
+        return Vec::new();
+    }
+    let count = usize::try_from(edit.delta).unwrap_or(0);
+    (b.left..=b.right)
+        .zip(&table.columns)
+        .skip(edit.index)
+        .take(count)
+        .map(|(column, c)| (b.top, column, c.name.clone()))
+        .collect()
+}
+
+impl Model {
+    /// Rewrites every formula (cells on every sheet, and the conditional formats of `sheet`) for
+    /// the structural edit `displace_data` on `sheet`, then moves, grows or shrinks the tables
+    /// that follow it. Returns the cells a row or column delete rewrote past what re-inserting
+    /// them undoes ([`Model::displace_cells`]).
+    pub(crate) fn displace_formulas(
+        &mut self,
+        sheet: u32,
+        displace_data: &DisplaceData,
+    ) -> Result<Vec<RewrittenCell>, String> {
+        let edits = self.table_edits(displace_data);
+        let displacement = Displacement {
+            data: displace_data,
+            kept_tables: &edits.kept,
+            grown_edges: &edits.grown_edges,
+            deleted_columns: &edits.deleted_columns,
+            deleted_tables: &edits.deleted_tables,
+            moved_tables: &edits.moved_tables,
+        };
+        let column_formulas = self.displaced_column_formulas(displacement);
+        let rewritten = self.displace_cells(displacement)?;
+        self.displace_cf_ranges(sheet, displacement);
+        self.displace_defined_names(sheet, displacement);
+        let resized: Vec<String> = edits.resized.iter().map(|(name, _)| name.clone()).collect();
+        self.resize_tables(sheet, edits.resized)?;
+        self.set_displaced_column_formulas(column_formulas);
+        if let DisplaceData::Row { row, delta, .. } = *displace_data {
+            if delta > 0 {
+                let last = row.saturating_add(delta - 1);
+                self.fill_inserted_data_rows(sheet, (row, last), &resized)?;
+            }
+        }
+        Ok(rewritten)
+    }
+
+    /// The first data row of the table on `sheet`, under a header row, whose data rows the row
+    /// delete of `row_count` rows at `row` covers exactly: Excel then keeps that row and clears it,
+    /// and deletes the table's other data rows, so the table keeps one blank data row and what is
+    /// below moves up `row_count - 1` rows (T-2324 table-delete-row-all-data: `ROWS(Sales)` 1,
+    /// `SUM(Sales[Qty])` 0, the plain `S!C4:C4` kept; table-delete-row-all-data-below, T-2338:
+    /// `=S!C10` reads `=S!C7` after four deletes at row 4; table-delete-rows-all-data-once, T-3259:
+    /// one delete of rows 4-7 gives the same, `ROWS(Sales[#All])` 2). Only the table's own cells of
+    /// the kept row are cleared: a one-row delete leaves the row's cells outside the table and a
+    /// table beside it untouched, and a table with a totals row keeps its cleared data row
+    /// (table-delete-row-only-data-outside, -only-data-second-table, -only-data-totals). A multi-row
+    /// delete of every data row of a table with a totals row, or across a table beside it, follows
+    /// the same rule unprobed (hand, T-3259).
+    pub(crate) fn kept_data_row(&self, sheet: u32, row: i32, row_count: i32) -> Option<Area> {
+        if row_count < 1 {
+            return None;
+        }
+        let last = row.checked_add(row_count - 1)?;
+        let sheet_name = self.workbook.worksheet(sheet).ok()?.get_name();
+        self.workbook.tables.values().find_map(|table| {
+            let b = bounds(table)?;
+            let only = table.is_on_sheet(&sheet_name) && b.top < row && b.data == (row, last);
+            only.then_some(Area {
+                sheet,
+                row,
+                column: b.left,
+                width: b.right.checked_sub(b.left)?.checked_add(1)?,
+                height: 1,
+            })
+        })
+    }
+
+    /// The row insert (`delta > 0` rows above `row`) or delete (rows `row..row - delta`) on
+    /// `sheet`, and, for an insert, the lowercase names of the tables that follow it
+    /// (`TableEdits::kept`): the formulas it moves keep the text of their `#This Row` references
+    /// to them ([`Model::moved_text`]) and are parsed in the table they move with
+    /// ([`Model::kept_table_holding`]), as Excel keeps them (T-2845, T-3037). None for a delete:
+    /// Excel's rule is unprobed there (T-3739), so a moved `#This Row` keeps reading its row.
+    pub(crate) fn row_edit(&self, sheet: u32, row: i32, delta: i32) -> (DisplaceData, Vec<String>) {
+        let displace_data = DisplaceData::Row { sheet, row, delta };
+        let kept = if delta > 0 {
+            self.table_edits(&displace_data).kept
+        } else {
+            Vec::new()
+        };
+        (displace_data, kept)
+    }
+
+    /// The lowercase names of the tables on `sheet` that follow the column insert (`delta > 0`
+    /// columns left of `column`) or delete (columns `column..column - delta`). A formula such an
+    /// edit moves out of one of them is parsed in that table ([`Model::kept_table_holding`]), so
+    /// an unqualified `[@Col]` in the table's own cells names it at its new place (T-4680:
+    /// probes/table-edits/t4274-calc-column-structured-insert-column-a, `=[@Col]*2` reads 2, 4,
+    /// 8 after `insert_column` A). The text is kept either way: a column edit moves no cell to
+    /// another row.
+    pub(crate) fn column_edit_kept(&self, sheet: u32, column: i32, delta: i32) -> Vec<String> {
+        self.table_edits(&DisplaceData::Column {
+            sheet,
+            column,
+            delta,
+        })
+        .kept
+    }
+
+    /// The table in `kept` (lowercase names) on `sheet` whose range holds (`row`, `column`): a
+    /// formula a row insert moves from there moves with the table, so an unqualified structured
+    /// reference in it (`[@Qty]*2` in a calculated column) names that table at its new place,
+    /// which the table reaches only after the move (T-3037: before, the last row's formula of a
+    /// table an insert moved did not parse).
+    pub(crate) fn kept_table_holding(
+        &self,
+        sheet: u32,
+        (row, column): (i32, i32),
+        kept: &[String],
+    ) -> Option<String> {
+        if kept.is_empty() {
+            return None;
+        }
+        let sheet_name = self.workbook.worksheet(sheet).ok()?.get_name();
+        let table = self.workbook.tables.values().find(|table| {
+            let holds = bounds(table).is_some_and(|b| {
+                (b.left..=b.right).contains(&column) && (b.top..=b.bottom).contains(&row)
+            });
+            holds && table.is_on_sheet(&sheet_name) && kept.contains(&table.name.to_lowercase())
+        })?;
+        Some(table.name.clone())
+    }
+
+    /// What the structural edit `displace_data` does to the tables of the sheet it edits. Tables
+    /// on other sheets are untouched and in neither list; a row or column move or a cell shift
+    /// leaves every table a fallback.
+    fn table_edits(&self, displace_data: &DisplaceData) -> TableEdits {
+        let sheet = match displace_data {
+            DisplaceData::Row { sheet, .. } | DisplaceData::Column { sheet, .. } => *sheet,
+            _ => return TableEdits::default(),
+        };
+        let Ok(sheet_name) = self.workbook.worksheet(sheet).map(|w| w.get_name()) else {
+            return TableEdits::default();
+        };
+        let mut edits = TableEdits::default();
+        for (name, table) in &self.workbook.tables {
+            if !table.is_on_sheet(&sheet_name) {
+                continue;
+            }
+            match follow(table, displace_data) {
+                Follow::Fallback => {
+                    if deletes_every_column(table, displace_data) {
+                        edits.deleted_tables.push(name.to_lowercase());
+                    }
+                    continue;
+                }
+                Follow::Unchanged => {}
+                Follow::Resized(resized) => {
+                    edits
+                        .grown_edges
+                        .extend(grown_edge(table, sheet, displace_data));
+                    if resized.columns.is_none()
+                        && matches!(displace_data, DisplaceData::Column { .. })
+                    {
+                        edits.moved_tables.push(name.to_lowercase());
+                    }
+                    if let Some(edit) = resized.columns {
+                        let deleted = table.columns.iter().skip(edit.index).take(edit.deleted());
+                        edits
+                            .deleted_columns
+                            .extend(deleted.map(|c| (name.to_lowercase(), c.name.to_lowercase())));
+                    }
+                    edits.resized.push((name.clone(), resized));
+                }
+            }
+            edits.kept.push(name.to_lowercase());
+        }
+        edits
+    }
+
+    /// Gives the tables `resized` (on `sheet`) their new reference and column list, and reparses
+    /// every formula against them, after the walk that printed the formulas (SPEC-0016
+    /// "Structural edits" step 3): a formula whose text the edit kept still holds the area of the
+    /// table before the edit. A column inserted inside a table with a header row gets its name
+    /// written in its header cell, as Excel does (T-2339 table-insert-column-inside-header:
+    /// `INDIRECT("S!C3")` is "Column1").
+    fn resize_tables(&mut self, sheet: u32, resized: Vec<(String, Resized)>) -> Result<(), String> {
+        if resized.is_empty() {
+            return Ok(());
+        }
+        let mut headers = Vec::new();
+        let mut shown = Vec::new();
+        for (name, resized) in resized {
+            if let Some(table) = self.workbook.tables.get_mut(&name) {
+                table.reference = resized.reference;
+                if resized.drops_totals {
+                    table.totals_row_count = 0;
+                }
+                if let Some(edit) = resized.columns {
+                    let filtered = table.has_filters;
+                    edit_columns(&mut table.columns, edit);
+                    if table.filter_columns.is_empty() {
+                        // An API-filtered table holds no criteria; its export writes one on its
+                        // first column (T-4363), so deleting that column takes the filter.
+                        table.has_filters &= edit.delta >= 0 || edit.index > 0;
+                    } else {
+                        edit_filter_columns(&mut table.filter_columns, edit);
+                        table.has_filters &= kept_filter_inside(table);
+                    }
+                    if filtered && !table.has_filters {
+                        // Excel shows the rows the filter hid once a delete in the application takes
+                        // the table's last criterion (probes/t4371-filtered-table-delete-filtered-column:
+                        // SUBTOTAL 103 counts all six rows; docs/excel-semantics/numbers.md).
+                        shown.extend(bounds(table).map(|b| b.data));
+                    }
+                    headers.extend(inserted_headers(table, edit));
+                }
+            }
+        }
+        if !shown.is_empty() {
+            // One pass over the sheet's stored rows: a table may span a million rows.
+            let rows = &mut self.workbook.worksheet_mut(sheet)?.rows;
+            for row in rows
+                .iter_mut()
+                .filter(|r| shown.iter().any(|&(a, b)| (a..=b).contains(&r.r)))
+            {
+                row.hidden = false;
+            }
+        }
+        for (row, column, name) in headers {
+            self.update_cell_with_text(sheet, row, column, &name)?;
+        }
+        self.reset_tables();
+        Ok(())
+    }
+
+    /// Refuses the insert of `count` rows at `row` on `sheet` that would push a table off the sheet
+    /// ([`Model::refuse_table_off_sheet`]) or fill too many calculated-column cells
+    /// ([`Model::refuse_oversized_column_fill`]), before it changes anything.
+    pub(crate) fn refuse_table_row_insert(
+        &self,
+        sheet: u32,
+        row: i32,
+        count: i32,
+    ) -> Result<(), String> {
+        self.refuse_table_off_sheet(sheet, row, count, true)?;
+        self.refuse_oversized_column_fill(sheet, row, count)
+    }
+
+    /// Refuses an insert of `count` rows (`rows`) or columns at `at` that would push a cell of a
+    /// table on `sheet` past the last row (column), even when the cells pushed off are empty: Excel
+    /// answers 409 `InsertDeleteConflict` (excel-graph 2026-10-28, T-2845). A table that merely ends
+    /// exactly at the last row afterwards is unprobed; no table cell leaves the sheet, so it is allowed.
+    pub(crate) fn refuse_table_off_sheet(
+        &self,
+        sheet: u32,
+        at: i32,
+        count: i32,
+        rows: bool,
+    ) -> Result<(), String> {
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        let (limit, what) = if rows {
+            (LAST_ROW, "rows")
+        } else {
+            (LAST_COLUMN, "columns")
+        };
+        let off = (self.workbook.tables.values())
+            .filter(|table| table.is_on_sheet(&sheet_name))
+            .filter_map(bounds)
+            .any(|b| {
+                let last = if rows { b.bottom } else { b.right };
+                last >= at && last.saturating_add(count) > limit
+            });
+        if off {
+            return Err(format!(
+                "Cannot insert {what} because that would move cells in a table off the sheet"
+            ));
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        append_column, column_span, edit_columns, edit_filter_columns, row_span, ColumnEdit, Span,
+    };
+    use crate::types::{FilterColumn, FilterCriterion, TableColumn};
+
+    /// Header row 3, data rows 4-7, no totals row.
+    fn rows(at: i32, delta: i32) -> Span {
+        row_span((3, 7), (4, 7), at, delta)
+    }
+
+    #[test]
+    fn row_inserts_follow_the_edge_case_table() {
+        assert_eq!(rows(1, 1), Span::Changed(4, 8));
+        assert_eq!(rows(3, 2), Span::Changed(5, 9));
+        assert_eq!(rows(4, 1), Span::Changed(3, 8));
+        assert_eq!(rows(5, 1), Span::Changed(3, 8));
+        assert_eq!(rows(7, 1), Span::Changed(3, 8));
+        assert_eq!(rows(8, 1), Span::Unchanged);
+        // With a totals row 8 (data 4-7), an insert at the totals row grows the table (T-2321).
+        assert_eq!(row_span((3, 8), (4, 7), 8, 1), Span::Changed(3, 9));
+        assert_eq!(row_span((3, 8), (4, 7), 9, 1), Span::Unchanged);
+        // Without a header row the first row is a data row: an insert there is a fallback, since
+        // Excel grows a table with a header on an insert at its first data row (T-2845 probes it).
+        assert_eq!(row_span((3, 7), (3, 7), 3, 1), Span::Fallback);
+        assert_eq!(row_span((3, 7), (3, 7), 2, 1), Span::Changed(4, 8));
+        // A table that would leave the sheet does not follow.
+        let last = crate::constants::LAST_ROW;
+        assert_eq!(row_span((3, last), (4, last), 1, 1), Span::Fallback);
+    }
+
+    #[test]
+    fn row_deletes_follow_the_edge_case_table() {
+        assert_eq!(rows(1, -2), Span::Changed(1, 5));
+        assert_eq!(rows(5, -1), Span::Changed(3, 6));
+        assert_eq!(rows(5, -2), Span::Changed(3, 5));
+        assert_eq!(rows(8, -1), Span::Unchanged);
+        // The data edges shrink it too (T-2338).
+        assert_eq!(rows(4, -1), Span::Changed(3, 6));
+        assert_eq!(rows(7, -1), Span::Changed(3, 6));
+        assert_eq!(rows(6, -2), Span::Changed(3, 5));
+        // Without a header row the first row is a data row: a fallback, as for inserts (T-2845).
+        assert_eq!(row_span((3, 7), (3, 7), 3, -1), Span::Fallback);
+        // The header row, every data row at once, or across an edge of the table: a fallback.
+        for (at, count) in [(2, 2), (3, 1), (4, 4), (1, 10)] {
+            assert_eq!(rows(at, -count), Span::Fallback, "delete {at}+{count}");
+        }
+        // With a totals row 8: deleting it drops it, deleting the last data row shrinks.
+        assert_eq!(row_span((3, 8), (4, 7), 8, -1), Span::DropTotals);
+        assert_eq!(row_span((3, 8), (4, 7), 7, -1), Span::Changed(3, 7));
+        assert_eq!(row_span((3, 8), (4, 7), 7, -2), Span::Fallback);
+    }
+
+    #[test]
+    fn column_edits_move_grow_shrink_or_fall_back() {
+        // Columns B:C.
+        assert_eq!(column_span((2, 3), 1, 1), Span::Changed(3, 4));
+        assert_eq!(column_span((2, 3), 2, 1), Span::Changed(3, 4));
+        // An insert right of the first column grows it (T-2339).
+        assert_eq!(column_span((2, 3), 3, 1), Span::Changed(2, 4));
+        assert_eq!(column_span((2, 3), 3, 2), Span::Changed(2, 5));
+        assert_eq!(column_span((2, 3), 4, 1), Span::Unchanged);
+        assert_eq!(column_span((2, 3), 1, -1), Span::Changed(1, 2));
+        // A delete inside that leaves a column shrinks it, at either edge (T-2339).
+        assert_eq!(column_span((2, 3), 3, -1), Span::Changed(2, 2));
+        assert_eq!(column_span((2, 3), 2, -1), Span::Changed(2, 2));
+        assert_eq!(column_span((2, 4), 3, -1), Span::Changed(2, 3));
+        // Every column, or across an edge: a fallback.
+        assert_eq!(column_span((2, 3), 2, -2), Span::Fallback);
+        assert_eq!(column_span((2, 4), 1, -2), Span::Changed(1, 2));
+        assert_eq!(column_span((2, 3), 1, -2), Span::Changed(1, 1));
+        assert_eq!(column_span((2, 3), 1, -3), Span::Fallback);
+        assert_eq!(column_span((2, 3), 3, -2), Span::Changed(2, 2));
+        assert_eq!(column_span((2, 3), 4, -1), Span::Unchanged);
+        // A table that would leave the sheet does not follow.
+        let last = crate::constants::LAST_COLUMN;
+        assert_eq!(column_span((2, last), 3, 1), Span::Fallback);
+    }
+
+    fn named(names: &[&str]) -> Vec<TableColumn> {
+        (1..)
+            .zip(names)
+            .map(|(id, name)| TableColumn {
+                id,
+                name: (*name).to_string(),
+                ..TableColumn::default()
+            })
+            .collect()
+    }
+
+    fn names(columns: &[TableColumn]) -> Vec<(u32, &str)> {
+        columns.iter().map(|c| (c.id, c.name.as_str())).collect()
+    }
+
+    /// A typed header names the appended column unless the table has that name already; then the
+    /// column is `ColumnN` (T-2968).
+    #[test]
+    fn appended_columns_take_a_free_name_or_column_n() {
+        let mut columns = named(&["Col", "Other"]);
+        assert_eq!(append_column(&mut columns, None), "Column1");
+        assert_eq!(append_column(&mut columns, Some("0")), "0");
+        assert_eq!(append_column(&mut columns, Some("0")), "Column2");
+        assert_eq!(
+            names(&columns),
+            [
+                (1, "Col"),
+                (2, "Other"),
+                (3, "Column1"),
+                (4, "0"),
+                (5, "Column2")
+            ]
+        );
+    }
+
+    #[test]
+    fn column_edits_insert_named_columns_and_delete() {
+        let mut columns = named(&["Region", "Qty"]);
+        edit_columns(&mut columns, ColumnEdit { index: 1, delta: 2 });
+        assert_eq!(
+            names(&columns),
+            [(1, "Region"), (3, "Column1"), (4, "Column2"), (2, "Qty")]
+        );
+        // A name the table has is skipped.
+        let mut columns = named(&["Column1", "Qty"]);
+        edit_columns(&mut columns, ColumnEdit { index: 1, delta: 1 });
+        assert_eq!(
+            names(&columns),
+            [(1, "Column1"), (3, "Column2"), (2, "Qty")]
+        );
+        let mut columns = named(&["Region", "Qty", "Price"]);
+        edit_columns(
+            &mut columns,
+            ColumnEdit {
+                index: 0,
+                delta: -2,
+            },
+        );
+        assert_eq!(names(&columns), [(3, "Price")]);
+    }
+
+    /// Kept filter criteria follow their columns through an insert and a delete (T-2838).
+    #[test]
+    fn filter_criteria_follow_their_columns() {
+        let filter = |col_id| FilterColumn {
+            col_id,
+            criterion: FilterCriterion::Other,
+        };
+        let ids = |filters: &[FilterColumn]| filters.iter().map(|f| f.col_id).collect::<Vec<_>>();
+        let mut filters = vec![filter(0), filter(2)];
+        edit_filter_columns(&mut filters, ColumnEdit { index: 1, delta: 2 });
+        assert_eq!(ids(&filters), [0, 4]);
+        edit_filter_columns(&mut filters, ColumnEdit { index: 4, delta: 1 });
+        assert_eq!(ids(&filters), [0, 5]);
+        // Deleting columns 1-2 shifts the criterion on 5 to 3; deleting column 0 drops its own.
+        edit_filter_columns(
+            &mut filters,
+            ColumnEdit {
+                index: 1,
+                delta: -2,
+            },
+        );
+        assert_eq!(ids(&filters), [0, 3]);
+        edit_filter_columns(
+            &mut filters,
+            ColumnEdit {
+                index: 0,
+                delta: -1,
+            },
+        );
+        assert_eq!(ids(&filters), [2]);
+    }
+}

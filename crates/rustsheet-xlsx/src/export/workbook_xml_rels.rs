@@ -1,10 +1,15 @@
 use rustsheet_engine::types::Workbook;
 
-use super::rich_errors::rich_value_parts;
+use super::rich_errors::{rich_value_parts, METADATA_RELATIONSHIP};
 use super::xml_constants::{XML_DECLARATION, XML_WORKSHEET};
 
-/// With `rich`, the workbook also relates to the rich-value parts (T-1014).
-pub(crate) fn get_workbook_xml_rels(workbook: &Workbook, rich: bool) -> String {
+/// With `rich`, the workbook also relates to the rich-value parts (T-1014). `pivot_caches` are
+/// the relationships to the pivot caches, numbered right after the sheets' (`PivotPlan`).
+pub(crate) fn get_workbook_xml_rels(
+    workbook: &Workbook,
+    rich: bool,
+    pivot_caches: Vec<String>,
+) -> String {
     let mut relationships_str: Vec<String> = vec![];
     let worksheet_count = workbook.worksheets.len() + 1;
     for id in 1..worksheet_count {
@@ -12,7 +17,8 @@ pub(crate) fn get_workbook_xml_rels(workbook: &Workbook, rich: bool) -> String {
             "<Relationship Id=\"rId{id}\" Type=\"{XML_WORKSHEET}\" Target=\"worksheets/sheet{id}.xml\"/>"
         ));
     }
-    let mut id = worksheet_count;
+    let mut id = worksheet_count + pivot_caches.len();
+    relationships_str.extend(pivot_caches);
     relationships_str.push(
         format!("<Relationship Id=\"rId{id}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>")
     );
@@ -21,9 +27,9 @@ pub(crate) fn get_workbook_xml_rels(workbook: &Workbook, rich: bool) -> String {
         format!("<Relationship Id=\"rId{id}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings\" Target=\"sharedStrings.xml\"/>")
     );
     id += 1;
-    relationships_str.push(
-        format!("<Relationship Id=\"rId{id}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/sheetMetadata\" Target=\"metadata.xml\"/>")
-    );
+    relationships_str.push(format!(
+        "<Relationship Id=\"rId{id}\" Type=\"{METADATA_RELATIONSHIP}\" Target=\"metadata.xml\"/>"
+    ));
     id += 1;
     relationships_str.push(
         format!("<Relationship Id=\"rId{id}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/>")

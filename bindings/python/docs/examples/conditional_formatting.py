@@ -4,9 +4,9 @@ import os
 import tempfile
 import random
 
-import rustsheet as ic
+from rustsheet import legacy
 
-model = ic.UserModel("cf-example")
+model = legacy.UserModel("cf-example")
 
 random.seed(42)
 for row in range(1, 21):

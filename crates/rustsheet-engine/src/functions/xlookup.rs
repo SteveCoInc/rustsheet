@@ -2,15 +2,21 @@ use std::cmp::Ordering;
 
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
+use crate::reference_operators::RefArg;
 use crate::{
-    calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
+    calc_result::CalcResult, cast::calc_result_to_array_node, expressions::parser::Node,
+    expressions::token::Error, model::Model,
 };
 
 use super::{
-    binary_search::{binary_search, Sequence},
+    binary_search::{binary_search_by, Sequence},
     lift::{LiftCost, LiftOptions, LiftedArg},
-    lookup_and_reference::lookup_table::SearchVector,
-    lookup_and_reference::xmatch::{linear_scan, MatchMode as XmatchMode},
+    lookup_and_reference::lookup_table::{cmp_searched, Indexed, SearchVector},
+    lookup_and_reference::xmatch::{
+        exact_through_index, linear_scan, regex_pattern, regex_scan, MatchMode as XmatchMode,
+    },
+    text::{LookupPattern, LookupRegexes},
+    util::near_integer::near_integer_whole,
     util::{array_element_value, array_node_to_calc_result},
 };
 
@@ -28,32 +34,51 @@ enum MatchMode {
     ExactMatch = 0,
     ExactMatchLarger = 1,
     WildcardMatch = 2,
+    RegexMatch = 3,
 }
 
 /// The first match of `lookup_value` in `values` walking in `search_mode`'s direction. Only the
 /// candidates `SearchVector` names are tested: its virtual empty tail is one cell.
+/// `regex` is the regex mode's compiled pattern ([`regex_pattern`]); its search may run out of
+/// work (`#ERROR!`).
 fn linear_search(
     lookup_value: &CalcResult,
     values: &SearchVector,
     search_mode: &SearchMode,
     match_mode: &MatchMode,
-) -> Option<usize> {
+    regex: Option<&mut LookupPattern<'_>>,
+    cell: CellReferenceIndex,
+) -> Result<Option<usize>, CalcResult> {
+    let forward = *search_mode == SearchMode::StartAtFirstItem;
     let mode = match match_mode {
         MatchMode::ExactMatch => XmatchMode::Exact,
         MatchMode::ExactMatchSmaller => XmatchMode::ExactMatchSmaller,
         MatchMode::ExactMatchLarger => XmatchMode::ExactMatchLarger,
         MatchMode::WildcardMatch => XmatchMode::Wildcard,
+        MatchMode::RegexMatch => {
+            let candidates = values.linear_candidates(forward);
+            return regex_scan(regex, candidates, |index| values.get(index), cell);
+        }
     };
-    let candidates = values.linear_candidates(*search_mode == SearchMode::StartAtFirstItem);
-    linear_scan(lookup_value, candidates, |index| values.get(index), mode)
+    if let Indexed::Searched(found) = exact_through_index(lookup_value, values, forward, mode) {
+        return Ok(found);
+    }
+    let candidates = values.linear_candidates(forward);
+    Ok(linear_scan(
+        lookup_value,
+        candidates,
+        |index| values.get(index),
+        mode,
+    ))
 }
 
 /// Where a binary-search XLOOKUP lands in `values`.
 enum BinaryHit {
     Found(usize),
     NotFound,
-    /// Wildcard match mode with a binary search, which is `#VALUE!`.
-    Wildcard,
+    /// Wildcard or regex match mode with a binary search, which is `#VALUE!`
+    /// (probes/t2669-xlookup-regex-mode D22, D23).
+    Pattern,
 }
 
 /// The binary-search XLOOKUP modes (2 ascending, -2 descending) over `values`: the position of
@@ -65,19 +90,20 @@ fn binary_hit<S: Sequence<CalcResult> + ?Sized>(
     search_mode: &SearchMode,
     match_mode: &MatchMode,
 ) -> BinaryHit {
-    if *match_mode == MatchMode::WildcardMatch {
-        return BinaryHit::Wildcard;
+    if matches!(match_mode, MatchMode::WildcardMatch | MatchMode::RegexMatch) {
+        return BinaryHit::Pattern;
     }
     let side = match match_mode {
         MatchMode::ExactMatchSmaller => Ordering::Less,
         MatchMode::ExactMatchLarger => Ordering::Greater,
         _ => Ordering::Equal,
     };
-    match binary_search(
+    match binary_search_by(
         lookup_value,
         values,
         *search_mode == SearchMode::BinarySearchDescending,
         side,
+        cmp_searched,
     ) {
         Some(index) => BinaryHit::Found(index),
         None => BinaryHit::NotFound,
@@ -126,15 +152,18 @@ fn xlookup_modes(
     // probes/lookup-t2278-followups A6, A7).
     let match_number = model.cast_to_number(match_mode.clone(), cell)?;
     let search_number = model.cast_to_number(search_mode.clone(), cell)?;
-    let match_mode = match match_number.floor() as i32 {
+    // Each mode is floored, snapping just below an integer as XMATCH does (T-2656).
+    let match_mode = match near_integer_whole(match_number) as i32 {
         -1 => MatchMode::ExactMatchSmaller,
         1 => MatchMode::ExactMatchLarger,
         0 => MatchMode::ExactMatch,
         2 => MatchMode::WildcardMatch,
+        // Regex, as in XMATCH (probes/t2656-xmatch-mode-near-integer G7, t2669-xlookup-regex-mode).
+        3 => MatchMode::RegexMatch,
         _ => return Err(unexpected()),
     };
     // An unknown search_mode is #VALUE! (probes/xlookup-array-lookup-value-args A9, A67).
-    let search_mode = match search_number.floor() as i32 {
+    let search_mode = match near_integer_whole(search_number) as i32 {
         1 => SearchMode::StartAtFirstItem,
         -1 => SearchMode::StartAtLastItem,
         -2 => SearchMode::BinarySearchDescending,
@@ -176,18 +205,6 @@ fn xlookup_pick_array(
     // A LAMBDA element is that LAMBDA (`LET(g,XLOOKUP(2,{1,2,3},SCAN(..)),g(0))` is 12,
     // probes/lambda-arrays B33).
     node.map_or_else(out_of_range, |node| array_element_value(node, cell))
-}
-
-/// Rows and columns of a range or array result (1x1 for anything else).
-fn shape(result: &CalcResult) -> (usize, usize) {
-    match result {
-        CalcResult::Range { left, right } => (
-            usize::try_from(right.row - left.row + 1).unwrap_or(0),
-            usize::try_from(right.column - left.column + 1).unwrap_or(0),
-        ),
-        CalcResult::Array(array) => (array.len(), array.first().map_or(0, Vec::len)),
-        _ => (1, 1),
-    }
 }
 
 /// Whether an XLOOKUP lookup vector of `rows` x `columns` runs down a column, given the return
@@ -277,7 +294,8 @@ impl Model {
         let value_error =
             |message: &str| CalcResult::new_error(Error::VALUE, cell, message.to_string());
         // A single-cell reference is a one-cell vector (probes/text-collation-longer A102).
-        let lookup = match self.evaluate_node_with_reference(lookup_node, cell) {
+        let lookup = self.evaluate_node_with_reference(lookup_node, cell);
+        let lookup = match self.uncached_cell_vector(lookup_node, lookup, cell) {
             lookup @ (CalcResult::Range { .. } | CalcResult::Array(_)) => lookup,
             error @ CalcResult::Error { .. } => return Err(error),
             _ => {
@@ -288,16 +306,25 @@ impl Model {
                 ))
             }
         };
-        let (rows, columns) = shape(&lookup);
+        let (rows, columns) = lookup.shape();
         if xlookup_orientation(rows, columns, 1).is_none() {
             return Err(value_error("Second argument must be a vector"));
         }
         let returned = self.evaluate_node_with_reference(return_node, cell);
-        let (return_rows, return_columns) = shape(&returned);
+        let returned = self.uncached_cell_vector(return_node, returned, cell);
+        let (return_rows, return_columns) = returned.shape();
         let returns = match returned {
             CalcResult::Range { left, right } => XlookupReturns::Range(left, right),
             CalcResult::Array(returns) => XlookupReturns::Array(returns),
             error @ CalcResult::Error { .. } => return Err(error),
+            // Excel: a scalar return_array is a one-cell array, so a hit returns it and a miss
+            // gives if_not_found (probes/t3317-xlookup-scalar-return C1-C4, C7, C10-C13, C19).
+            scalar @ (CalcResult::Number(_)
+            | CalcResult::String(_)
+            | CalcResult::Boolean(_)
+            | CalcResult::EmptyCell) => {
+                XlookupReturns::Array(vec![vec![calc_result_to_array_node(scalar)]])
+            }
             _ => return Err(value_error("Range expected")),
         };
         let vertical = xlookup_orientation(rows, columns, return_rows) == Some(true);
@@ -324,6 +351,25 @@ impl Model {
         })
     }
 
+    /// `value`, the value of the XLOOKUP array argument `node`, as a one-cell vector of its
+    /// `#BLOCKED!` when `node` is one cell of a linked sheet that the cache holds nothing of
+    /// ([`Model::external_lookup_table`]). The search then finds nothing, as it does over a range
+    /// of that sheet, so `XLOOKUP(5,[1]Sort!$B$2,[1]Sort!$C$2)` is `#N/A`
+    /// (fixtures/external-link-uncached-lookups Refs!B13, T-0472). Any other value is itself.
+    fn uncached_cell_vector(
+        &self,
+        node: &Node,
+        value: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
+        match value {
+            CalcResult::Error { error, .. } if self.external_lookup_table(node, cell).is_some() => {
+                CalcResult::Array(vec![vec![ArrayNode::Error(error)]])
+            }
+            value => value,
+        }
+    }
+
     /// One XLOOKUP search: `values` are the lookup value, `match_mode` and `search_mode`. A lookup
     /// value error comes first, then a mode error, then an error of the table; `if_not_found`
     /// only when nothing matches (probes/xlookup-array-lookup-value-args A18, A61, A64).
@@ -333,6 +379,7 @@ impl Model {
         table: &Result<XlookupTable, CalcResult>,
         if_not_found: &CalcResult,
         pick: XlookupPick,
+        regexes: &mut LookupRegexes,
         cell: CellReferenceIndex,
     ) -> CalcResult {
         let lookup_value = &values[0];
@@ -349,17 +396,37 @@ impl Model {
         };
         let found = match search_mode {
             SearchMode::StartAtFirstItem | SearchMode::StartAtLastItem => {
-                linear_search(lookup_value, &table.values, &search_mode, &match_mode)
+                // An invalid pattern is #VALUE!, never if_not_found (t2669-xlookup-regex-mode D17).
+                let mut regex = match regex_pattern(
+                    lookup_value,
+                    match_mode == MatchMode::RegexMatch,
+                    regexes,
+                    cell,
+                ) {
+                    Ok(regex) => regex,
+                    Err(error) => return error,
+                };
+                match linear_search(
+                    lookup_value,
+                    &table.values,
+                    &search_mode,
+                    &match_mode,
+                    regex.as_mut(),
+                    cell,
+                ) {
+                    Ok(found) => found,
+                    Err(error) => return error,
+                }
             }
             SearchMode::BinarySearchAscending | SearchMode::BinarySearchDescending => {
                 match binary_hit(lookup_value, &table.values, &search_mode, &match_mode) {
                     BinaryHit::Found(index) => Some(index),
                     BinaryHit::NotFound => None,
-                    BinaryHit::Wildcard => {
+                    BinaryHit::Pattern => {
                         return CalcResult::new_error(
                             Error::VALUE,
                             cell,
-                            "Cannot use wildcard in binary search".to_string(),
+                            "Cannot use wildcard or regex in binary search".to_string(),
                         )
                     }
                 }
@@ -400,6 +467,7 @@ impl Model {
     ///   * -1 - Exact match. If none found, return the next smaller item.
     ///   *  1 - Exact match. If none found, return the next larger item.
     ///   *  2 - A wildcard match where *, ?, and ~ have special meaning.
+    ///   *  3 - A regular-expression match, as in XMATCH.
     ///
     /// [`search_mode`]
     /// Specify the search mode to use:
@@ -429,13 +497,42 @@ impl Model {
         cell: CellReferenceIndex,
         as_reference: bool,
     ) -> CalcResult {
+        // Without `keep_grid` the read is a value: never a grid.
+        self.xlookup_read(args, cell, as_reference, false)
+            .into_single_area(cell)
+    }
+
+    /// XLOOKUP read where a reference is taken (SPEC-0014 amendment "Mixed grids"): under a
+    /// lifted `lookup_value` with a range `if_not_found`, the array of its hits as values and its
+    /// misses as that range, a reference element each (`INDEX(XLOOKUP({2;9},A1:A3,B1:B3,F1:F2),
+    /// 2,1)` is F1:F2, `SUM(XLOOKUP(..))` 23 with F1 = 3; probes/t4563-xlookup-not-found-ref-
+    /// element A1:A53, A73, A109). With no miss it is the array of hits. Any other XLOOKUP is
+    /// what [`Self::xlookup_impl`] gives with `as_reference`, a range as its reference.
+    pub(crate) fn xlookup_reference(
+        &mut self,
+        args: &[Node],
+        cell: CellReferenceIndex,
+        as_reference: bool,
+    ) -> RefArg {
+        match self.xlookup_read(args, cell, as_reference, true) {
+            RefArg::Value(value) if as_reference => RefArg::from(value),
+            read => read,
+        }
+    }
+
+    /// [`Self::xlookup_impl`] and [`Self::xlookup_reference`]: `keep_grid` keeps a range
+    /// `if_not_found` under a lifted `lookup_value` as the reference element of each miss.
+    fn xlookup_read(
+        &mut self,
+        args: &[Node],
+        cell: CellReferenceIndex,
+        as_reference: bool,
+        keep_grid: bool,
+    ) -> RefArg {
         if args.len() < 3 || args.len() > 6 {
-            return CalcResult::new_args_number_error(cell);
+            return RefArg::Value(CalcResult::new_args_number_error(cell));
         }
         let lookup_value = self.evaluate_node_in_context(&args[0], cell);
-        if lookup_value.is_error() {
-            return lookup_value;
-        }
         let match_mode = match args.get(4) {
             Some(node) => self.evaluate_node_in_context(node, cell),
             None => CalcResult::Number(0.0),
@@ -444,8 +541,15 @@ impl Model {
             Some(node) => self.evaluate_node_in_context(node, cell),
             None => CalcResult::Number(1.0),
         };
-        let criteria = vec![lookup_value, match_mode, search_mode];
+        let mut criteria = vec![lookup_value, match_mode, search_mode];
         let lifts = criteria.iter().any(LiftedArg::is_grid);
+        // A scalar error lookup_value is the result unless another criterion lifts: then each
+        // element is an error (ours; which one is unverified), so a grid match_mode still gives
+        // an array and `#SPILL!` where it is blocked (gen-m6/fe0972380d030e4a Calc!A224,
+        // excel-graph).
+        if !lifts && criteria[0].is_error() {
+            return RefArg::Value(criteria.swap_remove(0));
+        }
         let if_not_found = self.xlookup_if_not_found(args.get(3), lifts, as_reference, cell);
         let table = self.xlookup_table(&args[1], &args[2], cell);
         // A lifted element is a value, never a reference, and keeps only the first cell of its
@@ -458,39 +562,74 @@ impl Model {
         // Each element searches the evaluated cells of the lookup vector once, whatever the
         // three criteria are; the table is never walked again.
         let cost = table.as_ref().map_or(1, |table| table.values.scan_cells());
-        self.lift_values(
+        // Over a tailed key the call is a keyed lookup (SPEC-0020 Amendment 2, section 3): its
+        // tail's lift and regex state continue its head's.
+        let mut regexes = self.keyed_regexes(args, cell);
+        let if_not_found = match if_not_found {
+            // A range kept for the misses: one reference element per miss. Never a keyed
+            // lookup: one with a reference if_not_found is not keyed (`tailed_array.rs`).
+            NotFound::Range(range) if keep_grid => {
+                let lifted = match LiftedArg::read_all(self, criteria, cell) {
+                    Ok(lifted) => lifted,
+                    Err(error) => return RefArg::Value(error),
+                };
+                let read = self.lift_references_costed(lifted, cost, cell, &mut |model, values| {
+                    model.xlookup_one(values, &table, &range, pick, &mut regexes, cell)
+                });
+                let finished = regexes.finish(self, CalcResult::EmptyArg, cell);
+                return match (finished, read) {
+                    (error @ CalcResult::Error { .. }, _) => RefArg::Value(error),
+                    // A grid holds at least one reference element; all hits are their array.
+                    (_, RefArg::Grid(grid)) if !grid.holds_reference() => {
+                        RefArg::Value(grid.to_values())
+                    }
+                    (_, read) => read,
+                };
+            }
+            NotFound::Range(_) => CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "Reference if_not_found with an array lookup_value".to_string(),
+            ),
+            NotFound::Value(value) => value,
+        };
+        let result = self.lift_values_keyed(
+            args,
             criteria,
             LiftCost::Cells(cost),
             &LiftOptions::REUSE_EQUAL_RUNS,
             cell,
-            &mut |model, values| model.xlookup_one(values, &table, &if_not_found, pick, cell),
-        )
+            &mut |model, values| {
+                model.xlookup_one(values, &table, &if_not_found, pick, &mut regexes, cell)
+            },
+        );
+        let result = regexes.finish(self, result, cell);
+        self.keep_keyed_regexes(args, cell, regexes);
+        RefArg::Value(result)
     }
 
     /// XLOOKUP's `if_not_found` (`#N/A` when omitted or empty). A range stays a reference in the
     /// reference form: `ISREF(XLOOKUP(9,A1:A3,B1:B3,C1))` is TRUE
     /// (probes/intersection-lookup-operand-errors H10). Under a lifted `lookup_value` an array
-    /// gives its first element and a reference, even a single cell, `#VALUE!`
-    /// (probes/xlookup-array-lookup-value-args A27-A31, A58).
+    /// gives its first element (probes/xlookup-array-lookup-value-args A27-A31, A58), and a
+    /// reference, even a single cell, is [`NotFound::Range`]: the reference element of each miss
+    /// where a reference is taken, `#VALUE!` per miss in the value view (probes/t4563-xlookup-
+    /// not-found-ref-element A57, A97).
     fn xlookup_if_not_found(
         &mut self,
         node: Option<&Node>,
         lifts: bool,
         as_reference: bool,
         cell: CellReferenceIndex,
-    ) -> CalcResult {
+    ) -> NotFound {
         let value = match node {
             Some(node) if lifts || as_reference => self.evaluate_node_with_reference(node, cell),
             Some(node) => self.evaluate_node_in_context(node, cell),
             None => CalcResult::EmptyArg,
         };
-        match value {
+        NotFound::Value(match value {
             CalcResult::EmptyArg => CalcResult::new_error(Error::NA, cell, "Not found".to_string()),
-            CalcResult::Range { .. } if lifts => CalcResult::new_error(
-                Error::VALUE,
-                cell,
-                "Reference if_not_found with an array lookup_value".to_string(),
-            ),
+            range @ CalcResult::Range { .. } if lifts => return NotFound::Range(range),
             CalcResult::Array(rows) if lifts => {
                 rows.first().and_then(|row| row.first()).map_or_else(
                     || CalcResult::new_error(Error::VALUE, cell, "Empty array".to_string()),
@@ -498,6 +637,14 @@ impl Model {
                 )
             }
             other => other,
-        }
+        })
     }
+}
+
+/// XLOOKUP's `if_not_found`, evaluated once.
+enum NotFound {
+    /// What a miss gives.
+    Value(CalcResult),
+    /// A range under a lifted `lookup_value`, a `CalcResult::Range`.
+    Range(CalcResult),
 }

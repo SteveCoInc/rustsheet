@@ -1,0 +1,190 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "bab235d577d320149198ffcf90329be2d809413e472f5c0cfb560b268dba1858",
+  "definitions": {
+   "DURATION": "93982788afd6a279",
+   "MDURATION": "93982788afd6a279",
+   "PRICE": "93982788afd6a279",
+   "YIELD": "93982788afd6a279"
+  },
+  "arguments_sha256": "586dc811d9fc227db45098aec6b184f766b66f76ab57ba4e5766a7e959c7b312"
+ },
+ "sheets": {
+  "Calc": {
+   "A153": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=YIELD(-1,43831,0.0575,95.04,100,2,0)"
+   },
+   "A154": {
+    "t": "e",
+    "why": "date 2958466.0 is outside 1900-01-00..9999-12-31",
+    "f": "=YIELD(2958466,43831,0.0575,95.04,100,2,0)"
+   },
+   "A155": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=YIELD(39448,-1,0.0575,95.04,100,2,0)"
+   },
+   "A156": {
+    "t": "e",
+    "why": "settlement below 1 or not before the maturity",
+    "f": "=YIELD(39448,39000,0.0575,95.04,100,2,0)"
+   },
+   "A157": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=YIELD(39448,43831,-0.05,95.04,100,2,0)"
+   },
+   "A158": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=YIELD(39448,43831,0.0575,0,100,2,0)"
+   },
+   "A159": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=YIELD(39448,43831,0.0575,95.04,0,2,0)"
+   },
+   "A160": {
+    "t": "e",
+    "why": "frequency 3.0 is not 1, 2 or 4",
+    "f": "=YIELD(39448,43831,0.0575,95.04,100,3,0)"
+   },
+   "A161": {
+    "t": "e",
+    "why": "basis 5 is outside 0..4",
+    "f": "=YIELD(39448,43831,0.0575,95.04,100,2,5)"
+   },
+   "A220": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=DURATION(-1,43831,0.08,0.09,2,1)"
+   },
+   "A221": {
+    "t": "e",
+    "why": "date 2958466.0 is outside 1900-01-00..9999-12-31",
+    "f": "=DURATION(2958466,43831,0.08,0.09,2,1)"
+   },
+   "A222": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=DURATION(39448,-1,0.08,0.09,2,1)"
+   },
+   "A223": {
+    "t": "e",
+    "why": "settlement below 1 or not before the maturity",
+    "f": "=DURATION(39448,39000,0.08,0.09,2,1)"
+   },
+   "A224": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=DURATION(39448,43831,-0.05,0.09,2,1)"
+   },
+   "A225": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=DURATION(39448,43831,0.08,-0.05,2,1)"
+   },
+   "A226": {
+    "t": "e",
+    "why": "frequency 3.0 is not 1, 2 or 4",
+    "f": "=DURATION(39448,43831,0.08,0.09,3,1)"
+   },
+   "A227": {
+    "t": "e",
+    "why": "basis 5 is outside 0..4",
+    "f": "=DURATION(39448,43831,0.08,0.09,2,5)"
+   },
+   "A286": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=MDURATION(-1,43831,0.08,0.09,2,1)"
+   },
+   "A287": {
+    "t": "e",
+    "why": "date 2958466.0 is outside 1900-01-00..9999-12-31",
+    "f": "=MDURATION(2958466,43831,0.08,0.09,2,1)"
+   },
+   "A288": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=MDURATION(39448,-1,0.08,0.09,2,1)"
+   },
+   "A289": {
+    "t": "e",
+    "why": "settlement below 1 or not before the maturity",
+    "f": "=MDURATION(39448,39000,0.08,0.09,2,1)"
+   },
+   "A290": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=MDURATION(39448,43831,-0.05,0.09,2,1)"
+   },
+   "A291": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=MDURATION(39448,43831,0.08,-0.05,2,1)"
+   },
+   "A292": {
+    "t": "e",
+    "why": "frequency 3.0 is not 1, 2 or 4",
+    "f": "=MDURATION(39448,43831,0.08,0.09,3,1)"
+   },
+   "A293": {
+    "t": "e",
+    "why": "basis 5 is outside 0..4",
+    "f": "=MDURATION(39448,43831,0.08,0.09,2,5)"
+   },
+   "A70": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=PRICE(-1,43831,0.0575,0.065,100,2,0)"
+   },
+   "A71": {
+    "t": "e",
+    "why": "date 2958466.0 is outside 1900-01-00..9999-12-31",
+    "f": "=PRICE(2958466,43831,0.0575,0.065,100,2,0)"
+   },
+   "A72": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=PRICE(39448,-1,0.0575,0.065,100,2,0)"
+   },
+   "A73": {
+    "t": "e",
+    "why": "settlement below 1 or not before the maturity",
+    "f": "=PRICE(39448,39000,0.0575,0.065,100,2,0)"
+   },
+   "A74": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=PRICE(39448,43831,-0.05,0.065,100,2,0)"
+   },
+   "A75": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=PRICE(39448,43831,0.0575,-0.05,100,2,0)"
+   },
+   "A76": {
+    "t": "e",
+    "why": "a negative rate or yld, a price or redemption of 0 or below",
+    "f": "=PRICE(39448,43831,0.0575,0.065,0,2,0)"
+   },
+   "A77": {
+    "t": "e",
+    "why": "frequency 3.0 is not 1, 2 or 4",
+    "f": "=PRICE(39448,43831,0.0575,0.065,100,3,0)"
+   },
+   "A78": {
+    "t": "e",
+    "why": "basis 5 is outside 0..4",
+    "f": "=PRICE(39448,43831,0.0575,0.065,100,2,5)"
+   }
+  }
+ }
+}

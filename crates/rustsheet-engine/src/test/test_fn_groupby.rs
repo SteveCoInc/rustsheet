@@ -119,10 +119,35 @@ fn number_keys_compare_exactly() {
     assert_eq!(model._get_text("G1"), "TRUE");
 }
 
+/// Inside the array the blank key is a true blank: INDEX gives TYPE 1 and `&""` "" (probes/
+/// t2360-array-lambda-holidays G!A12), COUNT skips it; IFERROR reads it as 0, as it reads a blank
+/// range cell (probes/groupby-sort-filter-args G!B55). T-2460, T-2854.
 #[test]
-fn total_row_fillers_are_empty_text_and_blank_key_is_zero() {
+fn blank_key_is_a_true_blank_inside_the_array() {
+    let mut model = region_sales();
+    model._set(
+        "J1",
+        "=TYPE(INDEX(GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x))),5,1))&INDEX(GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x))),5,1)",
+    );
+    model._set("J2", "=COUNT(GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x))))");
+    model._set(
+        "J3",
+        "=TEXTJOIN(\"|\",FALSE,IFERROR(GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),,0),\"#\"))",
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("J1"), "1");
+    // The six sums; the blank key is not a number (it was 0, giving 7).
+    assert_eq!(model._get_text("J2"), "6");
+    assert_eq!(
+        model._get_text("J3"),
+        "East|45|North|7|South|-3|West|72.5|0|9"
+    );
+}
+
+#[test]
+fn total_row_fillers_are_empty_text_and_blank_key_spills_as_zero() {
     // G!AB25 and G!AC33: the second key cell of the Total row is "" (text), the blank key group
-    // shows the number 0.
+    // displays 0 when spilled (a true blank inside the array).
     let mut model = region_sales();
     for row in 2..=11 {
         model._set(&format!("C{row}"), "k");
@@ -617,6 +642,240 @@ fn invalid_filters_are_value_errors() {
 }
 
 #[test]
+fn one_filter_value_keeps_all_rows_only_beside_one_key_one_value_and_no_header() {
+    // probes/t3839-groupby-scalar-filter: TRUE (or 2, or {TRUE}) keeps every row beside one key
+    // column, one value column and field_headers 0 or 2, whatever the depth and sort (G!C26, G!C74,
+    // F!B2:K7); a header row (field_headers 1 or 3), a second value column or a second key column
+    // is #VALUE!, though the same call without the filter spills (G!C50, G!C98, G!E26, F!C5).
+    let mut model = records();
+    let kept = [
+        "A2:A11,D2:D11,_xleta.SUM,0,,,TRUE",
+        "A2:A11,D2:D11,_xleta.SUM,2,-1,2,2",
+        "A2:A11,D2:D11,_xleta.SUM,0,1,-1,{TRUE}",
+    ];
+    let refused = [
+        "A1:A11,D1:D11,_xleta.SUM,1,,,TRUE",
+        "A1:A11,D1:D11,_xleta.SUM,3,1,2,TRUE",
+        "A2:A11,D2:E11,_xleta.SUM,0,,,TRUE",
+        "A2:B11,D2:D11,_xleta.SUM,0,,,TRUE",
+        "A2:A11,D2:E11,_xleta.SUM,2,-1,2,0.5",
+        "A2:B11,D2:D11,_xleta.SUM,0,-2,2,{TRUE}",
+    ];
+    let unfiltered = |args: &str| {
+        args.rsplit_once(',')
+            .map_or(args, |(head, _)| head)
+            .to_owned()
+    };
+    for (i, args) in kept.iter().enumerate() {
+        model._set(&format!("Z{}", i + 1), &format!("=ROWS(GROUPBY({args}))"));
+        let all = unfiltered(args);
+        model._set(&format!("Y{}", i + 1), &format!("=ROWS(GROUPBY({all}))"));
+    }
+    for (i, args) in refused.iter().enumerate() {
+        model._set(&format!("AA{}", i + 1), &format!("=GROUPBY({args})"));
+        let all = unfiltered(args);
+        model._set(&format!("AB{}", i + 1), &format!("=ROWS(GROUPBY({all}))"));
+    }
+    model.evaluate();
+    let kept_rows = column(&model, "Z", 1, kept.len());
+    assert_eq!(kept_rows, column(&model, "Y", 1, kept.len()));
+    assert!(kept_rows.iter().all(|rows| rows.parse::<u32>().is_ok()));
+    assert_eq!(
+        column(&model, "AA", 1, refused.len()),
+        vec!["#VALUE!"; refused.len()]
+    );
+    for row in 1..=refused.len() {
+        assert!(model._get_text(&format!("AB{row}")).parse::<u32>().is_ok());
+    }
+}
+
+#[test]
+fn a_lifted_groupby_filter_serves_one_element() {
+    // probes/t3840-groupby-lifted-beside-filter, t3840-groupby-lifted-filter-consumed: beside a
+    // filter that drops rows, every element after the first one whose call filtered is #VALUE!,
+    // whatever it holds; one refused before the filter (2 as field_relationship) leaves it for the
+    // next element, an out-of-range depth spends it, and a filter keeping every row is never spent.
+    let mut model = records();
+    let calls = [
+        ("H1", "0,1,,C2:C11=2023,{0,1;0,1}"),
+        ("H4", "0,1,,C2:C11>0,{0,1;0,1}"),
+        ("H7", "0,1,,C2:C11=2023,{2,0;0,1}"),
+        ("H10", "{0,2;0,0},1,,C2:C11=2023"),
+        ("H13", "0,{5,1},,C2:C11=2023"),
+        ("H16", "0,1,,,{0,1;0,1}"),
+    ];
+    for (anchor, options) in calls {
+        model._set(
+            anchor,
+            &format!("=GROUPBY(A2:A11,D2:D11,_xleta.SUM,{options})"),
+        );
+    }
+    model.evaluate();
+    let first = model._get_text("H16");
+    assert_ne!(first, "#VALUE!");
+    let grid =
+        |model: &Model, top: usize| [row(model, top, 'H', 'I'), row(model, top + 1, 'H', 'I')];
+    let value = "#VALUE!".to_owned();
+    assert_eq!(
+        grid(&model, 1),
+        [
+            [first.clone(), value.clone()],
+            [value.clone(), value.clone()]
+        ]
+    );
+    assert_eq!(model._get_text("H4"), first);
+    assert_eq!(model._get_text("I5"), first);
+    assert_eq!(
+        grid(&model, 7),
+        [
+            [value.clone(), first.clone()],
+            [value.clone(), value.clone()]
+        ]
+    );
+    assert_eq!(row(&model, 10, 'H', 'I'), [first.clone(), value.clone()]);
+    assert_eq!(row(&model, 13, 'H', 'I'), [value.clone(), value.clone()]);
+    assert_eq!(model._get_text("I17"), first);
+}
+
+#[test]
+fn one_filter_value_beside_a_header_row_and_one_record_is_that_records_element() {
+    // probes/t3880-groupby-scalar-filter-edges: beside a header row (given or detected) and
+    // exactly one record, a 1x1 filter is the record's element: TRUE, 2, {TRUE} or a TRUE cell
+    // keep it, even beside two key columns, and FALSE keeps no record (G!A1:A41, G!A63:A74). With
+    // two records it is #VALUE!, and so is TRUE beside a detected header row (G!A29, G!A51, G!A57).
+    let mut model = new_empty_model();
+    for (cell, value) in [
+        ("A1", "k"),
+        ("B1", "v"),
+        ("C1", "TRUE"),
+        ("A2", "x"),
+        ("B2", "5"),
+        ("A3", "y"),
+        ("B3", "7"),
+    ] {
+        model._set(cell, value);
+    }
+    let calls = [
+        ("E1", "A1:A2,B1:B2,_xleta.SUM,1,,,{TRUE}"),
+        ("E4", "A1:A2,B1:B2,_xleta.SUM,1,,,2"),
+        ("E7", "A1:A2,B1:B2,_xleta.SUM,1,,,C1"),
+        ("E10", "A1:A2,B1:B2,_xleta.SUM,,,,TRUE"),
+        ("E13", "A1:A2,B1:B2,_xleta.SUM,1,,,FALSE"),
+        ("E16", "A1:A3,B1:B3,_xleta.SUM,1,,,{TRUE}"),
+        ("E19", "A1:A3,B1:B3,_xleta.SUM,,,,TRUE"),
+    ];
+    for (anchor, args) in calls {
+        model._set(anchor, &format!("=GROUPBY({args})"));
+    }
+    model._set("I1", "=GROUPBY(A1:B2,B1:B2,_xleta.SUM,1,,,{TRUE})");
+    model.evaluate();
+    for top in [1, 4, 7, 10] {
+        assert_eq!(row(&model, top, 'E', 'F'), ["x", "5"]);
+        assert_eq!(row(&model, top + 1, 'E', 'F'), ["Total", "5"]);
+    }
+    assert_eq!(model._get_text("K1"), "5");
+    for anchor in ["E13", "E16", "E19"] {
+        assert_eq!(model._get_text(anchor), "#VALUE!");
+    }
+}
+
+#[test]
+fn an_error_relationship_element_is_its_own_error_after_the_filter_is_spent() {
+    // probes/t3880-groupby-scalar-filter-edges G!A89:B93: an error element of a lifted
+    // field_relationship is that error before and after another element spends the filter, and
+    // spends nothing itself.
+    let mut model = records();
+    model._set("Z1", "0");
+    model._set("Z2", "=NA()");
+    model._set("AA1", "1");
+    model._set("AA2", "1");
+    model._set("Z4", "=NA()");
+    model._set("AA4", "0");
+    model._set("Z5", "0");
+    model._set("AA5", "1");
+    model._set(
+        "H1",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,1,,C2:C11=2023,Z1:AA2)",
+    );
+    model._set(
+        "H4",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,1,,C2:C11=2023,Z4:AA5)",
+    );
+    model.evaluate();
+    let first = model._get_text("H1");
+    assert_ne!(first, "#VALUE!");
+    let value = "#VALUE!".to_owned();
+    let na = "#N/A".to_owned();
+    assert_eq!(row(&model, 1, 'H', 'I'), [first.clone(), value.clone()]);
+    assert_eq!(row(&model, 2, 'H', 'I'), [na.clone(), value.clone()]);
+    assert_eq!(row(&model, 4, 'H', 'I'), [na, first]);
+    assert_eq!(row(&model, 5, 'H', 'I'), [value.clone(), value]);
+}
+
+#[test]
+fn an_error_option_element_is_its_own_error_after_the_filter_is_spent() {
+    // probes/t3964-groupby-filter-lift-errors G!A71:B105: an error element of a lifted
+    // field_headers or total depth is that error after another element spends the filter, and
+    // spends nothing itself.
+    let mut model = records();
+    model._set("Z1", "0");
+    model._set("AA1", "=NA()");
+    model._set("Z2", "0");
+    model._set("AA2", "0");
+    model._set("Z4", "1");
+    model._set("AA4", "1");
+    model._set("Z5", "=1/0");
+    model._set("AA5", "1");
+    model._set("Z7", "=1/0");
+    model._set("AA7", "1");
+    model._set("Z8", "1");
+    model._set("AA8", "1");
+    model._set(
+        "H1",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,Z1:AA2,1,,C2:C11=2023)",
+    );
+    model._set(
+        "H4",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,Z4:AA5,,C2:C11=2023)",
+    );
+    model._set(
+        "H7",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,Z7:AA8,,C2:C11=2023)",
+    );
+    model.evaluate();
+    let first = model._get_text("H1");
+    assert_ne!(first, "#VALUE!");
+    let value = "#VALUE!".to_owned();
+    let div0 = "#DIV/0!".to_owned();
+    assert_eq!(row(&model, 1, 'H', 'I'), [first.clone(), "#N/A".to_owned()]);
+    assert_eq!(row(&model, 2, 'H', 'I'), [value.clone(), value.clone()]);
+    assert_eq!(row(&model, 4, 'H', 'I'), [first.clone(), value.clone()]);
+    assert_eq!(row(&model, 5, 'H', 'I'), [div0.clone(), value.clone()]);
+    assert_eq!(row(&model, 7, 'H', 'I'), [div0, first]);
+    assert_eq!(row(&model, 8, 'H', 'I'), [value.clone(), value]);
+}
+
+#[test]
+fn a_cell_read_on_demand_spends_no_filter_of_a_lift() {
+    // Z2 holds a filtering GROUPBY that runs when the lift first reads Z2:Z11; the lifted call
+    // itself has no filter, so every element keeps its value (T-3840 review).
+    let mut model = records();
+    model._set(
+        "Z2",
+        "=D2+IFERROR(INDEX(GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,1,,C2:C11=2023),1,1)*0,0)",
+    );
+    for row in 3..=11 {
+        model._set(&format!("Z{row}"), &format!("=D{row}"));
+    }
+    model._set("H1", "=GROUPBY(A2:A11,Z2:Z11,_xleta.SUM,{0,1;0,1},1)");
+    model._set("K1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,{0,1;0,1},1)");
+    model.evaluate();
+    assert_eq!(row(&model, 1, 'H', 'I'), row(&model, 1, 'K', 'L'));
+    assert_eq!(row(&model, 2, 'H', 'I'), row(&model, 2, 'K', 'L'));
+    assert_ne!(model._get_text("I2"), "#VALUE!");
+}
+
+#[test]
 fn error_values_of_arguments_come_first_in_argument_order() {
     // groupby-sort-filter-args B61-B78: an error value in any argument wins over an invalid other
     // argument, earlier or later, and the first error in argument order wins.
@@ -966,6 +1225,10 @@ fn one_parameter_calls_are_charged_against_the_visit_cap_too() {
     // Every call is charged the cells it is given: one group of 1048575 records and its total
     // row cost 2^21 cells per function, so 10 functions compute and 100 (2E8 cells) are #ERROR!.
     let mut model = new_empty_model();
+    // The visit cap under test, not the formula work budget or the pass's pool, which the reads
+    // now also charge (T-2804, and T-2805's charge on each copy of a bound array).
+    model.area_budget.limit = u64::MAX;
+    model.evaluation.recalc_limits = (u64::MAX, u64::MAX);
     model._set(
         "A1",
         "=549755289600=INDEX(GROUPBY(SEQUENCE(1048575,,1,0),SEQUENCE(1048575),HSTACK(_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM)),3,11)",
@@ -984,8 +1247,11 @@ fn two_parameter_lambdas_are_charged_against_the_visit_cap() {
     // SPEC-0006 Design step 3, DEVIATION (docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY"):
     // 20000 groups each given all 20000 rows visit 4E8 cells, past the cap, so the result is
     // #ERROR!, while the built-in PERCENTOF sums the relative set once (O(N)) and a one-parameter
-    // LAMBDA visits each row once.
+    // LAMBDA visits each row once. The work budgets are lifted: each call's copy of its group is
+    // charged to them too (T-2805), and the visit cap is what this test is about.
     let mut model = new_empty_model();
+    model.area_budget.limit = u64::MAX;
+    model.evaluation.recalc_limits = (u64::MAX, u64::MAX);
     model._set(
         "A1",
         "=GROUPBY(SEQUENCE(20000),SEQUENCE(20000),LAMBDA(x,y,ROWS(y)))",
@@ -1073,4 +1339,230 @@ fn nested_groupby_evaluates_each_level_once() {
     model.evaluate();
     assert!(start.elapsed().as_secs() < 5, "{:?}", start.elapsed());
     assert!(!model._get_text("D1").is_empty());
+}
+
+#[test]
+fn multi_cell_reference_from_a_function_lifts_like_a_written_range() {
+    // probes/t2707-prob-orders A50, A63:A65 (T-3088): `INDEX(range,0)` returns a reference, and a
+    // multi-cell one lifts the call as the written range does, not one #VALUE!.
+    let mut model = region_sales();
+    model._set("H1", "0");
+    model._set("I1", "1");
+    model._set(
+        "D1",
+        "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),INDEX(H1:I1,0))",
+    );
+    model._set("D3", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),H1:I1)");
+    model.evaluate();
+    assert_eq!(
+        [
+            model._get_text("D1"),
+            model._get_text("E1"),
+            model._get_text("F1")
+        ],
+        ["East", "East", ""]
+    );
+    assert_eq!(
+        [model._get_text("D3"), model._get_text("E3")],
+        ["East", "East"]
+    );
+}
+
+/// T-3838: an option is checked in argument order against a later option's error value. A
+/// `field_headers` or `total_depth` that is text but no number, written or in a one-cell reference
+/// (`""` too), is `#VALUE!` ahead of a later `NA()`; a blank cell there is 0 and the later error
+/// wins. A `sort_order` or `filter_array` that is a reference to a blank cell is `#VALUE!` ahead of
+/// it, where text there leaves the later error (probes/t3838-groupby-option-order G!B1-B176).
+#[test]
+fn options_are_refused_in_argument_order() {
+    let mut model = region_sales();
+    model._set("K1", "x");
+    model._set("K2", "=\"\"");
+    let cases = [
+        ("D1", "K1,,,,NA()", "#VALUE!"),
+        ("D2", "K2,,,,NA()", "#VALUE!"),
+        ("D3", "\"x\",,,,NA()", "#VALUE!"),
+        ("D4", "K3,,,,NA()", "#N/A"),
+        ("D5", ",K1,,,NA()", "#VALUE!"),
+        ("D6", ",K2,,,NA()", "#VALUE!"),
+        ("D7", ",K3,,,NA()", "#N/A"),
+        ("D8", ",,K3,,NA()", "#VALUE!"),
+        ("D9", ",,K1,,NA()", "#N/A"),
+        ("D10", ",,,K3,NA()", "#VALUE!"),
+        ("D11", ",,,K1,NA()", "#N/A"),
+        ("D12", ",,K3,NA()", "#VALUE!"),
+        ("D13", "NA(),,K3", "#N/A"),
+    ];
+    for (cell, options, _) in cases {
+        model._set(
+            cell,
+            &format!("=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),{options})"),
+        );
+    }
+    model.evaluate();
+    for (cell, options, expected) in cases {
+        assert_eq!(model._get_text(cell), expected, "{options}");
+    }
+}
+
+/// T-3838: a table relationship (`field_relationship` 1) sorts by the keys `sort_order` names
+/// first, in written order, then the others ascending; a hierarchy (0) always sorts in column
+/// order; descending, the blank key sorts first in a table and last in a hierarchy
+/// (probes/t3838-groupby-option-order G!B184, B205, B217).
+#[test]
+fn a_table_sorts_by_the_named_keys_first() {
+    let mut model = new_empty_model();
+    let rows = [
+        ("East", "Apple", "10"),
+        ("West", "Pear", "20"),
+        ("East", "Pear", "30"),
+        ("West", "Apple", "40"),
+        ("", "Apple", "9"),
+        ("South", "Banana", "-3"),
+    ];
+    for (i, (region, product, sales)) in rows.iter().enumerate() {
+        if !region.is_empty() {
+            model._set(&format!("A{}", i + 1), region);
+        }
+        model._set(&format!("B{}", i + 1), product);
+        model._set(&format!("C{}", i + 1), sales);
+    }
+    model._set("E1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,-2,,1)");
+    model._set("H1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,-2,,0)");
+    model._set("K1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,{-1,2},,1)");
+    model._set("N1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,{-1,2},,0)");
+    model.evaluate();
+    let keys = |model: &Model, a: &str, b: &str| {
+        column(model, a, 1, 6)
+            .into_iter()
+            .zip(column(model, b, 1, 6))
+            .map(|(x, y)| format!("{x}|{y}"))
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        keys(&model, "E", "F"),
+        "East|Pear West|Pear South|Banana East|Apple West|Apple 0|Apple"
+    );
+    assert_eq!(
+        keys(&model, "H", "I"),
+        "East|Pear East|Apple South|Banana West|Pear West|Apple 0|Apple"
+    );
+    assert_eq!(
+        keys(&model, "K", "L"),
+        "0|Apple West|Apple West|Pear South|Banana East|Apple East|Pear"
+    );
+    assert_eq!(
+        keys(&model, "N", "O"),
+        "West|Apple West|Pear South|Banana East|Apple East|Pear 0|Apple"
+    );
+}
+
+#[test]
+fn scalar_inputs_and_the_order_of_their_errors() {
+    // gen-m7 arg-pairs batch (T-3778, excel-graph; docs/excel-semantics/arrays.md "GROUPBY
+    // scalar inputs, option order and scalar filters in the gen-m7 arg-pairs batch", T-3837).
+    // Z1 is an error, Z2 text, Z3 blank, Z4 a number; A1:A3 keys, B1:B3 values.
+    let mut model = new_empty_model();
+    model._set("Z1", "=1/0");
+    model._set("Z2", "x");
+    model._set("Z4", "7");
+    for (row, (key, value)) in [("a", "1"), ("b", "2"), ("a", "3")].iter().enumerate() {
+        model._set(&format!("A{}", row + 1), key);
+        model._set(&format!("B{}", row + 1), value);
+    }
+    let cases = [
+        // Text values, literal or referenced, are #VALUE!; numbers and booleans work.
+        ("=GROUPBY(2,\"abc\",_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(Z4,Z2,_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(2,\"\",_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(2,TRUE,_xleta.MIN)", "2"),
+        // A blank-cell values is #VALUE!, ahead of a later option's error.
+        ("=GROUPBY(2,Z3,_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(A1:A3,Z3,_xleta.SUM,#NUM!)", "#VALUE!"),
+        // Text values lose to a later option's error.
+        ("=GROUPBY(A1:A3,\"abc\",_xleta.SUM,1,#NUM!)", "#NUM!"),
+        // A one-cell reference to an error as row_fields is #VALUE!, a literal error that error,
+        // and an error in values comes first.
+        ("=GROUPBY(Z1,Z4,_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(#REF!,2,_xleta.SUM)", "#REF!"),
+        ("=GROUPBY(Z1,Z1,_xleta.SUM)", "#DIV/0!"),
+        ("=GROUPBY(Z4,Z1,_xleta.SUM)", "#DIV/0!"),
+        // The error row_fields loses to a later option's error: 1 key row against 3 value rows in the
+        // first case, the same height (1 row each) in the second.
+        ("=GROUPBY(Z1,B1:B3,_xleta.SUM,Z1)", "#DIV/0!"),
+        ("=GROUPBY(Z1,Z4,_xleta.SUM,,,,Z1)", "#DIV/0!"),
+        // probes/t3854-groupby-scalar-inputs (T-3854): one row of text values is a header when
+        // field_headers is omitted, data with 0, and the header with 1; a 1x1 text array alike.
+        ("=GROUPBY(2,\"abc\",_xleta.COUNTA,0)", "2"),
+        ("=GROUPBY(2,\"abc\",_xleta.COUNTA,1)", "#VALUE!"),
+        ("=GROUPBY({\"a\"},{\"x\"},_xleta.COUNTA)", "#VALUE!"),
+        // The error-reference key is #VALUE! whatever field_headers is; a 1x1 error array is a key.
+        ("=GROUPBY(Z1,Z4,_xleta.SUM,0)", "#VALUE!"),
+        ("=GROUPBY(Z1,Z4,_xleta.SUM,2)", "#VALUE!"),
+        ("=GROUPBY({#N/A},{1},_xleta.SUM)", "#N/A"),
+        // A one-cell range of a blank cell is a blank cell.
+        ("=GROUPBY(Z4,Z3:Z3,_xleta.SUM)", "#VALUE!"),
+    ];
+    for (i, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("D{}", 3 * i + 1), formula);
+    }
+    model.evaluate();
+    for (i, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("D{}", 3 * i + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
+}
+
+#[test]
+fn an_early_input_error_fills_an_array_field_relationship() {
+    // gen-m7 45c197dc0b22cf2b A7565:B7566 and 35679b4facc62956-style inputs under a lifted
+    // field_relationship: the error fills the lifted shape (T-3837).
+    let mut model = new_empty_model();
+    model._set("Z1", "=1/0");
+    model._set("A1", "a");
+    model._set("B1", "1");
+    model._set("D1", "=GROUPBY(#NULL!,B1,_xleta.SUM,,,,,{0,1;1,0})");
+    model._set("D4", "=GROUPBY(Z1,B1,_xleta.SUM,,,,,{0,1;1,0})");
+    model.evaluate();
+    assert_eq!(
+        [
+            model._get_text("D1"),
+            model._get_text("E1"),
+            model._get_text("D2"),
+            model._get_text("E2")
+        ],
+        ["#NULL!", "#NULL!", "#NULL!", "#NULL!"]
+    );
+    assert_eq!(
+        [model._get_text("D4"), model._get_text("E5")],
+        ["#VALUE!", "#VALUE!"]
+    );
+}
+
+/// A function passed by name that takes none or one argument gets one, NOW and PI none
+/// (probes/t4450-eta-special-forms H109:H118, J55, J67).
+#[test]
+fn groupby_passes_row_one_argument() {
+    let mut model = new_empty_model();
+    for (cell, value) in [("A1", "1"), ("A2", "3"), ("A3", "5")] {
+        model._set(cell, value);
+    }
+    for (cell, value) in [("B1", "2"), ("B2", "4"), ("B3", "6")] {
+        model._set(cell, value);
+    }
+    model._set("D1", "=ROWS(GROUPBY(A1:A3,B1:B3,_xleta.ROW))");
+    model._set(
+        "D2",
+        "=ERROR.TYPE(INDEX(GROUPBY(A1:A3,B1:B3,_xleta.COLUMN),1,2))",
+    );
+    model._set("D3", "=ROWS(GROUPBY(A1:A3,B1:B3,_xleta.PI))");
+    model.evaluate();
+
+    assert_eq!(model._get_text("D1"), *"4");
+    assert_eq!(model._get_text("D2"), *"3");
+    assert_eq!(model._get_text("D3"), *"#VALUE!");
 }

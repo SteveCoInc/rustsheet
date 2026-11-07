@@ -3,8 +3,9 @@
 //!
 //! The edit tests pin today's values with a twin: each structured reference on `Calc` is paired
 //! with the plain range it stood for before SPEC-0016. After every edit both have the same
-//! value, and the structured formula keeps its text unless the edit rewrote its twin, in which
-//! case it has the twin's text (the fallback of SPEC-0016 "Structural edits").
+//! value. An edit the table follows (it moves, grows or shrinks, T-2297) keeps the structured
+//! text; under any other, the structured formula keeps its text unless the edit rewrote its twin,
+//! in which case it has the twin's text (the fallback of SPEC-0016 "Structural edits").
 
 use crate::expressions::parser::stringify::to_excel_string;
 use crate::expressions::types::CellReferenceRC;
@@ -63,18 +64,24 @@ fn value(model: &Model, sheet: u32, row: i32, column: i32) -> String {
     model.get_formatted_cell_value(sheet, row, column).unwrap()
 }
 
-/// Applies `edit` and checks every pair as the module doc says.
-fn check_edit(name: &str, edit: impl FnOnce(&mut Model)) {
+/// Applies `edit`, which the table follows when `follows` is set, and checks every pair as the
+/// module doc says.
+fn check_edit(name: &str, follows: bool, edit: impl FnOnce(&mut Model)) {
     let mut model = model();
     edit(&mut model);
     model.evaluate();
     for (row, (structured, twin)) in PAIRS.iter().enumerate() {
         let row = row as i32 + 1;
+        if follows {
+            assert_eq!(formula(&model, 1, row, 1), *structured, "{name}");
+        }
         // A twin rewritten to the same text (`$A$3:$A$2` read back as `$A$2:$A$3` after a row
         // move) leaves either text on the structured formula.
         let twin_now = formula(&model, 1, row, 2);
         let structured_now = formula(&model, 1, row, 1);
-        if twin_now == *twin {
+        if follows {
+            // The twin moved with the data; the table moved with it.
+        } else if twin_now == *twin {
             assert!(
                 structured_now == *structured || structured_now == twin_now,
                 "{name}: {structured} is {structured_now}"
@@ -127,7 +134,16 @@ fn keeps_the_text_and_follows_the_table() {
 fn every_written_form_is_kept() {
     let mut model = model();
     for (row, (written, stored)) in [
-        ("=SUM(sales[qty])", "=SUM(sales[qty])"),
+        ("=SUM(sales[qty])", "=SUM(Sales[Qty])"),
+        // FORMULATEXT prints `#This Row` in its `@` form, in the table's spelling
+        // (probes/t1683-formulatext-structured-refs F!B2:B8).
+        ("=SUM(sales[@qty])", "=SUM(Sales[@Qty])"),
+        ("=SUM(Sales[[#This Row],[Qty]])", "=SUM(Sales[@Qty])"),
+        ("=SUM(Sales[#This Row])", "=SUM(Sales[@])"),
+        (
+            "=SUM(Sales[[#This Row],[qty]:[VAL]])",
+            "=SUM(Sales[@[Qty]:[Val]])",
+        ),
         ("=SUM(Sales[[#All],[Qty]])", "=SUM(Sales[[#All],[Qty]])"),
         (
             "=SUM(Sales[[#Headers],[#Data]])",
@@ -158,18 +174,19 @@ fn every_written_form_is_kept() {
 }
 
 #[test]
-fn the_export_prints_the_area() {
+fn the_export_keeps_the_reference() {
     let model = model();
     let context = CellReferenceRC {
         sheet: "Calc".to_string(),
         row: 1,
         column: 1,
     };
-    let node = &model.parsed_formulas[1][0].0;
-    assert_eq!(to_excel_string(node, &context), "SUM(Data!$A$2:$A$3)");
+    let node = &model.parsed_formulas[1][0].evaluated;
+    // The export writes the table parts, so the file keeps the reference (T-2196).
+    assert_eq!(to_excel_string(node, &context), "SUM(Sales[Qty])");
     assert_eq!(
         crate::expressions::parser::stringify::to_excel_array_formula_string(node, &context),
-        "SUM(Data!$A$2:$A$3)"
+        "SUM(Sales[Qty])"
     );
 }
 
@@ -182,52 +199,248 @@ fn the_export_of_a_missing_table_is_a_ref_error() {
         row: 1,
         column: 1,
     };
-    let node = &model.parsed_formulas[1][0].0;
+    let node = &model.parsed_formulas[1][0].evaluated;
     assert_eq!(to_excel_string(node, &context), "#REF!");
 }
 
+/// The table (header row 1, data rows 2-3) moves with an insert at its header row, grows with
+/// one at its first data row or inside its data (T-2321) and is left alone by one below it.
 #[test]
 fn row_inserts_keep_values() {
-    for row in [1, 2, 3, 4, 5, 10] {
-        check_edit(&format!("insert row {row}"), |m| {
+    for (row, follows) in [
+        (1, true),
+        (2, true),
+        (3, true),
+        (4, true),
+        (5, true),
+        (10, true),
+    ] {
+        check_edit(&format!("insert row {row}"), follows, |m| {
             m.insert_rows(0, row, 1).unwrap();
         });
     }
 }
 
+/// The table (header row 1, data rows 2-3) shrinks with a delete of either data row (T-2338) and
+/// is left alone by one below it; a delete of both data rows at once keeps one cleared row
+/// (T-3259), and one touching its header row is a fallback.
 #[test]
 fn row_deletes_keep_values() {
-    for (row, count) in [(1, 1), (2, 1), (3, 1), (2, 2), (4, 1), (5, 1), (1, 5)] {
-        check_edit(&format!("delete rows {row}+{count}"), |m| {
+    for (row, count, follows) in [
+        (1, 1, false),
+        (2, 1, true),
+        (3, 1, true),
+        // Every data row of the table (rows 2-3): it keeps one cleared row (T-3259).
+        (2, 2, true),
+        (4, 1, true),
+        (5, 1, true),
+        (1, 5, false),
+    ] {
+        check_edit(&format!("delete rows {row}+{count}"), follows, |m| {
             m.delete_rows(0, row, count).unwrap();
         });
     }
 }
 
+/// The table over columns A:B moves with an insert at A, grows with one at B and is left alone
+/// right of B (T-2339); column deletes inside it are `column_deletes_inside_drop_the_column`.
 #[test]
 fn column_inserts_and_deletes_keep_values() {
+    // An insert at the second column grows the table (T-2339).
     for column in [1, 2, 3, 5] {
-        check_edit(&format!("insert column {column}"), |m| {
+        check_edit(&format!("insert column {column}"), true, |m| {
             m.insert_columns(0, column, 1).unwrap();
         });
-        check_edit(&format!("delete column {column}"), |m| {
+    }
+    for column in [3, 5] {
+        check_edit(&format!("delete column {column}"), true, |m| {
             m.delete_columns(0, column, 1).unwrap();
         });
     }
 }
 
+/// A column delete inside the table shrinks it and drops the column (T-2339): a reference to the
+/// deleted column prints `#REF!`, as Excel does (probes/table-edits/table-delete-column-qty), and
+/// the others keep their text and read the shrunk table. A column range that loses either end is
+/// `#REF!` too (T-3734, probes/table-edits/table-column-range-delete-end, -start).
+#[test]
+fn column_deletes_inside_drop_the_column() {
+    let qty = [
+        ("=SUM(#REF!)", "#REF!"),
+        ("=SUM(Sales[#All])", "30"),
+        ("=ROWS(Sales)", "2"),
+        ("=SUM(#REF!)", "#REF!"),
+        ("=COUNTA(Sales[#Headers])", "1"),
+        ("=SUM(Sales[[#Data],[Val]])", "30"),
+    ];
+    let val = [
+        ("=SUM(Sales[Qty])", "3"),
+        ("=SUM(Sales[#All])", "3"),
+        ("=ROWS(Sales)", "2"),
+        ("=SUM(#REF!)", "#REF!"),
+        ("=COUNTA(Sales[#Headers])", "1"),
+        ("=SUM(#REF!)", "#REF!"),
+    ];
+    for (column, expected) in [(1, qty), (2, val)] {
+        let mut model = model();
+        model.delete_columns(0, column, 1).unwrap();
+        model.evaluate();
+        for (row, (text, result)) in (1..).zip(expected) {
+            assert_eq!(formula(&model, 1, row, 1), text, "delete column {column}");
+            assert_eq!(
+                value(&model, 1, row, 1),
+                result,
+                "delete column {column}: {text}"
+            );
+        }
+    }
+}
+
+/// A column inserted inside the table is named `Column1`, in its header cell too (T-2339,
+/// probes/table-edits/table-insert-column-inside-header).
+#[test]
+fn a_column_inserted_inside_is_named_in_its_header() {
+    let mut model = model();
+    model.insert_columns(0, 2, 1).unwrap();
+    model
+        .set_user_input(1, 10, 1, "=INDEX(Sales[#Headers],1,2)".to_string())
+        .unwrap();
+    model.evaluate();
+    assert_eq!(value(&model, 0, 1, 2), "Column1");
+    assert_eq!(value(&model, 1, 10, 1), "Column1");
+    assert_eq!(formula(&model, 1, 1, 1), "=SUM(Sales[Qty])");
+}
+
 #[test]
 fn row_and_column_moves_keep_values() {
     for (row, delta) in [(2, 1), (3, -1), (1, 3), (5, -4)] {
-        check_edit(&format!("move row {row} by {delta}"), |m| {
+        check_edit(&format!("move row {row} by {delta}"), false, |m| {
             m.move_rows_action(0, row, 1, delta).unwrap();
         });
     }
     for (column, delta) in [(1, 1), (2, -1), (3, -2)] {
-        check_edit(&format!("move column {column} by {delta}"), |m| {
+        check_edit(&format!("move column {column} by {delta}"), false, |m| {
             m.move_columns_action(0, column, 1, delta).unwrap();
         });
     }
+}
+
+/// `Sales` over `Data!B2:C7` (header row 2, Qty 1, 2, 4, 8, 16 in B3:B7), referred to from
+/// `Calc`, from its own sheet, through a defined name and from a conditional format.
+fn wide_model() -> Model {
+    let mut model = Model::new_empty("book", "en", "UTC", "en").unwrap();
+    model.rename_sheet("Sheet1", "Data").unwrap();
+    model.add_sheet("Calc").unwrap();
+    model.set_user_input(0, 2, 2, "Qty".to_string()).unwrap();
+    model.set_user_input(0, 2, 3, "Val".to_string()).unwrap();
+    for (row, qty) in [(3, "1"), (4, "2"), (5, "4"), (6, "8"), (7, "16")] {
+        model.set_user_input(0, row, 2, qty.to_string()).unwrap();
+    }
+    model.add_table(0, "Sales", (2, 2, 7, 3), false).unwrap();
+    model.define_name("QtyName", None, "Sales[Qty]").unwrap();
+    for (row, text) in [
+        (1, "=SUM(Sales[Qty])"),
+        (2, "=SUM(QtyName)"),
+        (3, "=ROWS(Sales[#All])"),
+        (4, "=COLUMN(Sales[Qty])"),
+    ] {
+        model.set_user_input(1, row, 1, text.to_string()).unwrap();
+    }
+    model
+        .set_user_input(0, 1, 6, "=SUM(Sales[Qty])".to_string())
+        .unwrap();
+    model.workbook.worksheets[0].conditional_formatting.push(
+        crate::cf_types::ConditionalFormatting {
+            range: "E1:E2".to_string(),
+            cf_rule: crate::cf_types::CfRule::Formula {
+                formula: "SUM(Sales[Qty])>30".to_string(),
+                dxf_id: 0,
+                stop_if_true: false,
+            },
+            priority: 1,
+        },
+    );
+    model.evaluate();
+    model
+}
+
+/// The `Calc` values, the formula on the table's sheet (wherever the edit moved it), its value,
+/// and the conditional format's formula.
+fn wide_state(model: &Model) -> (Vec<String>, String, String, String) {
+    let calc = (1..=4).map(|row| value(model, 1, row, 1)).collect();
+    let (row, column) = model.workbook.worksheets[0]
+        .sheet_data
+        .cells()
+        .find(|(_, _, cell)| cell.get_formula().is_some())
+        .map(|(row, column, _)| (row, column))
+        .unwrap();
+    let cf = match &model.workbook.worksheets[0].conditional_formatting[0].cf_rule {
+        crate::cf_types::CfRule::Formula { formula, .. } => formula.clone(),
+        other => panic!("{other:?}"),
+    };
+    (
+        calc,
+        formula(model, 0, row, column),
+        value(model, 0, row, column),
+        cf,
+    )
+}
+
+/// A delete inside the data rows shrinks the table, a column delete left of it moves it
+/// left, and a row insert inside its data grows it: every reference keeps its text, from another
+/// sheet, from the table's sheet, through a defined name and from a conditional format, and reads
+/// the table as it now is (references.md "Structured references under row deletes, column edits,
+/// convert, table and sheet delete", T-2324), a delete at an edge of the data too (T-2338).
+#[test]
+fn a_table_shrinks_and_moves_left() {
+    let kept = |calc: [&str; 4]| {
+        (
+            calc.map(str::to_string).to_vec(),
+            "=SUM(Sales[Qty])".to_string(),
+            calc[0].to_string(),
+            "SUM(Sales[Qty])>30".to_string(),
+        )
+    };
+    let mut model = wide_model();
+    assert_eq!(wide_state(&model), kept(["31", "31", "6", "2"]));
+    model.delete_rows(0, 4, 2).unwrap();
+    model.evaluate();
+    assert_eq!(wide_state(&model), kept(["25", "25", "4", "2"]));
+    model.delete_columns(0, 1, 1).unwrap();
+    model.evaluate();
+    assert_eq!(wide_state(&model), kept(["25", "25", "4", "1"]));
+    model.insert_rows(0, 4, 3).unwrap();
+    model.evaluate();
+    assert_eq!(wide_state(&model), kept(["25", "25", "7", "1"]));
+    assert_eq!(model.workbook.tables["Sales"].reference, "A2:B8");
+    // A formula typed after the edits reads the table where it is now.
+    model
+        .set_user_input(1, 9, 1, "=ROWS(Sales)".to_string())
+        .unwrap();
+    model.evaluate();
+    assert_eq!(value(&model, 1, 9, 1), "6");
+
+    // A delete of the last data row (8) shrinks the table too (T-2338).
+    model.delete_rows(0, 8, 1).unwrap();
+    model.evaluate();
+    let (_, text, _, cf) = wide_state(&model);
+    assert_eq!(formula(&model, 1, 1, 1), "=SUM(Sales[Qty])");
+    assert_eq!(text, "=SUM(Sales[Qty])");
+    assert_eq!(cf, "SUM(Sales[Qty])>30");
+    assert_eq!(model.workbook.tables["Sales"].reference, "A2:B7");
+    assert_eq!(value(&model, 1, 9, 1), "5");
+}
+
+/// An edit on another sheet leaves the table, and so its references, alone.
+#[test]
+fn an_edit_of_another_sheet_keeps_the_table() {
+    let mut model = wide_model();
+    model.insert_rows(1, 1, 2).unwrap();
+    model.delete_columns(1, 2, 1).unwrap();
+    model.evaluate();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B2:C7");
+    assert_eq!(formula(&model, 1, 3, 1), "=SUM(Sales[Qty])");
+    assert_eq!(value(&model, 1, 3, 1), "31");
 }
 
 #[test]
@@ -238,9 +451,15 @@ fn a_formula_on_the_table_sheet_keeps_its_value() {
         .unwrap();
     model.insert_rows(0, 1, 1).unwrap();
     model.evaluate();
-    // Today's text and value: the area moved with the data, the table did not.
-    assert_eq!(formula(&model, 0, 2, 6), "=SUM($A$3:$A$4)");
+    // The table moved with the data (T-2297).
+    assert_eq!(formula(&model, 0, 2, 6), "=SUM(Sales[Qty])");
     assert_eq!(value(&model, 0, 2, 6), "3");
+    // An insert at its first data row grows it (T-2321).
+    model.insert_rows(0, 3, 1).unwrap();
+    model.evaluate();
+    assert_eq!(formula(&model, 0, 2, 6), "=SUM(Sales[Qty])");
+    assert_eq!(value(&model, 0, 2, 6), "3");
+    assert_eq!(model.workbook.tables["Sales"].reference, "A2:B5");
     model.insert_rows(0, 20, 1).unwrap();
     model
         .set_user_input(0, 10, 6, "=SUM(Sales[Qty])".to_string())
@@ -248,6 +467,416 @@ fn a_formula_on_the_table_sheet_keeps_its_value() {
     model.insert_rows(0, 20, 1).unwrap();
     model.evaluate();
     assert_eq!(formula(&model, 0, 10, 6), "=SUM(Sales[Qty])");
+}
+
+/// T-2197's `Sales` on S!B3:C7 (header row 3, data rows 4-7, Qty 1, 2, 4, 8), with a totals row
+/// 8 when `totals` is set, and on `F` the formulas `=SUM(Sales[Qty])`, `=ROWS(Sales)` and the
+/// plain ranges `=SUM(S!C4:C7)` (the data column), `=SUM(S!C5:C7)` (inside it, off its edges)
+/// and `=SUM(S!B4:D7)` (wider than the table).
+fn edge_model(totals: bool) -> Model {
+    let mut model = Model::new_empty("book", "en", "UTC", "en").unwrap();
+    model.rename_sheet("Sheet1", "S").unwrap();
+    model.add_sheet("F").unwrap();
+    let mut cells = vec![(3, 2, "Region"), (3, 3, "Qty")];
+    for (row, (region, qty)) in [("E", "1"), ("W", "2"), ("N", "4"), ("S", "8")]
+        .into_iter()
+        .enumerate()
+    {
+        let row = row as i32 + 4;
+        cells.extend([(row, 2, region), (row, 3, qty)]);
+    }
+    for (row, column, input) in cells {
+        model
+            .set_user_input(0, row, column, input.to_string())
+            .unwrap();
+    }
+    let bottom = if totals { 8 } else { 7 };
+    model
+        .add_table_with_totals(0, "Sales", (3, 2, bottom, 3), false, totals)
+        .unwrap();
+    if totals {
+        let total = "=SUBTOTAL(109,Sales[Qty])".to_string();
+        model.set_user_input(0, 8, 3, total).unwrap();
+    }
+    for (row, input) in [
+        "=SUM(Sales[Qty])",
+        "=ROWS(Sales)",
+        "=SUM(S!C4:C7)",
+        "=SUM(S!C5:C7)",
+        "=SUM(S!B4:D7)",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        model
+            .set_user_input(1, row as i32 + 1, 1, input.to_string())
+            .unwrap();
+    }
+    model.evaluate();
+    model
+}
+
+/// The formulas of `F` column A after inserting one row above `row`, and the table's reference.
+fn edge_insert(totals: bool, row: i32) -> (Vec<String>, String) {
+    let mut model = edge_model(totals);
+    model.insert_rows(0, row, 1).unwrap();
+    model.evaluate();
+    let formulas = (1..=5).map(|r| formula(&model, 1, r, 1)).collect();
+    (formulas, model.workbook.tables["Sales"].reference.clone())
+}
+
+/// Excel grows the table on an insert at its first data row and at its totals row, and a plain
+/// range onto its data column grows with it (T-2197 table-insert-row-above-first-data and
+/// -above-totals: `=SUM(S!C4:C7)` becomes `=SUM(S!C4:C8)`); a range off that edge, or wider than
+/// the table, displaces as usual.
+#[test]
+fn a_table_and_ranges_onto_its_data_grow_at_its_edges() {
+    let formulas = |plain: [&str; 3]| {
+        let mut all = vec!["=SUM(Sales[Qty])".to_string(), "=ROWS(Sales)".to_string()];
+        all.extend(plain.map(str::to_string));
+        all
+    };
+    // Only `=SUM(S!C4:C8)` is oracle-backed; the off-edge and wider ranges are hand expectations
+    // (an ordinary displacement) until T-2846 probes them.
+    // Above the first data row.
+    let grown = formulas(["=SUM(S!C4:C8)", "=SUM(S!C6:C8)", "=SUM(S!B5:D8)"]);
+    for totals in [false, true] {
+        let bottom = if totals { 9 } else { 8 };
+        assert_eq!(
+            edge_insert(totals, 4),
+            (grown.clone(), format!("B3:C{bottom}"))
+        );
+    }
+    // Above the totals row.
+    let above_totals = formulas(["=SUM(S!C4:C8)", "=SUM(S!C5:C8)", "=SUM(S!B4:D7)"]);
+    assert_eq!(edge_insert(true, 8), (above_totals, "B3:C9".to_string()));
+    // Just below the table: nothing changes.
+    let unchanged = formulas(["=SUM(S!C4:C7)", "=SUM(S!C5:C7)", "=SUM(S!B4:D7)"]);
+    assert_eq!(
+        edge_insert(false, 8),
+        (unchanged.clone(), "B3:C7".to_string())
+    );
+    assert_eq!(edge_insert(true, 9), (unchanged, "B3:C8".to_string()));
+
+    // The values read the grown table: one blank data row, the totals row still sums the data.
+    let mut model = edge_model(true);
+    model.insert_rows(0, 8, 1).unwrap();
+    model.evaluate();
+    let values: Vec<String> = (1..=3).map(|r| value(&model, 1, r, 1)).collect();
+    assert_eq!(values, ["15", "5", "15"]);
+    assert_eq!(value(&model, 0, 9, 3), "15");
+}
+
+/// A row delete that takes a plain range's first or last rows shrinks it to the rows left
+/// (plain-range-delete-row-first and -last, T-2338); one that takes all of it is `#REF!`.
+#[test]
+fn a_row_delete_at_a_range_edge_shrinks_it() {
+    let text = |delete: (i32, i32), input: &str| {
+        let mut model = Model::new_empty("book", "en", "UTC", "en").unwrap();
+        model.rename_sheet("Sheet1", "S").unwrap();
+        model.add_sheet("F").unwrap();
+        model.set_user_input(1, 1, 1, input.to_string()).unwrap();
+        model.delete_rows(0, delete.0, delete.1).unwrap();
+        formula(&model, 1, 1, 1)
+    };
+    assert_eq!(text((4, 1), "=SUM(S!C4:C7)"), "=SUM(S!C4:C6)");
+    assert_eq!(text((7, 1), "=SUM(S!C4:C7)"), "=SUM(S!C4:C6)");
+    assert_eq!(text((4, 1), "=SUM(S!$C$4:$C$7)"), "=SUM(S!$C$4:$C$6)");
+    assert_eq!(text((7, 1), "=SUM(S!C7:C9)"), "=SUM(S!C7:C8)");
+    // Across an edge with more than one row (hand: only one-row deletes are probed).
+    assert_eq!(text((3, 3), "=SUM(S!C4:C7)"), "=SUM(S!C3:C4)");
+    assert_eq!(text((6, 3), "=SUM(S!C4:C7)"), "=SUM(S!C4:C5)");
+    // Inside or around the range: as before.
+    assert_eq!(text((5, 1), "=SUM(S!C4:C7)"), "=SUM(S!C4:C6)");
+    assert_eq!(text((1, 1), "=SUM(S!C4:C7)"), "=SUM(S!C3:C6)");
+    assert!(text((4, 1), "=SUM(S!C4:C4)").contains("#REF!"));
+}
+
+/// Deleting a table's only data row keeps the row, cleared: nothing below moves
+/// (table-delete-row-all-data-below, T-2338), and undo restores the row without moving anything.
+#[test]
+fn deleting_the_last_data_row_clears_it_and_undo_restores_it() {
+    let mut model = edge_model(false);
+    model.set_user_input(0, 10, 3, "99".to_string()).unwrap();
+    model.set_user_input(1, 6, 1, "=S!C10".to_string()).unwrap();
+    for _ in 0..3 {
+        model.delete_rows(0, 4, 1).unwrap();
+    }
+    model.evaluate();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C4");
+    assert_eq!(formula(&model, 1, 6, 1), "=S!C7");
+    let mut user = crate::UserModel::from_model(model);
+    user.delete_rows(0, 4, 1).unwrap();
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C4");
+    assert_eq!(formula(model, 1, 6, 1), "=S!C7");
+    assert_eq!(value(model, 1, 2, 1), "1");
+    assert_eq!(value(model, 1, 1, 1), "0");
+    assert_eq!(value(model, 0, 4, 3), "");
+    user.undo().unwrap();
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C4");
+    assert_eq!(value(model, 0, 4, 3), "8");
+    assert_eq!(value(model, 0, 7, 3), "99");
+    user.redo().unwrap();
+    assert_eq!(value(user.get_model(), 0, 4, 3), "");
+    assert_eq!(value(user.get_model(), 0, 7, 3), "99");
+}
+
+/// One delete of every data row keeps the first data row, cleared, and deletes the other three:
+/// what is below moves up three rows, not four, as four one-row deletes do
+/// (table-delete-rows-all-data-once, T-3259). In the user model it is one undo step.
+#[test]
+fn deleting_every_data_row_at_once_keeps_one_cleared_row() {
+    let mut model = edge_model(false);
+    model.set_user_input(0, 10, 3, "99".to_string()).unwrap();
+    model.set_user_input(1, 6, 1, "=S!C10".to_string()).unwrap();
+    model
+        .set_user_input(1, 7, 1, "=COUNTA(Sales[Region])".to_string())
+        .unwrap();
+    model
+        .set_user_input(1, 8, 1, "=ROWS(Sales[#All])".to_string())
+        .unwrap();
+    let mut user = crate::UserModel::from_model(model);
+    user.delete_rows(0, 4, 4).unwrap();
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C4");
+    assert_eq!(formula(model, 1, 6, 1), "=S!C7");
+    assert_eq!(value(model, 1, 6, 1), "99");
+    assert_eq!(value(model, 1, 7, 1), "0");
+    assert_eq!(value(model, 1, 8, 1), "2");
+    assert_eq!(value(model, 0, 4, 3), "");
+    user.undo().unwrap();
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C7");
+    assert_eq!(value(model, 1, 7, 1), "4");
+    assert_eq!(value(model, 1, 8, 1), "5");
+    assert_eq!(value(model, 0, 4, 3), "1");
+    assert_eq!(value(model, 0, 5, 3), "2");
+    assert_eq!(value(model, 0, 7, 3), "8");
+    assert_eq!(value(model, 0, 10, 3), "99");
+    user.redo().unwrap();
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C4");
+    assert_eq!(value(model, 0, 4, 3), "");
+    assert_eq!(value(model, 0, 7, 3), "99");
+}
+
+/// Undo of a delete of a table's bottom data rows gives the table its extent back: the insert that
+/// undoes the delete is just below the table's data, where an insert does not grow a table
+/// (table-insert-row-below), so the diff carries the extent (T-3634). Redo shrinks it again.
+#[test]
+fn undo_of_a_delete_of_the_bottom_data_rows_restores_the_table() {
+    let mut user = crate::UserModel::from_model(edge_model(false));
+    user.delete_rows(0, 6, 2).unwrap();
+    assert_eq!(user.get_model().workbook.tables["Sales"].reference, "B3:C5");
+    assert_eq!(value(user.get_model(), 1, 1, 1), "3");
+    user.undo().unwrap();
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C7");
+    assert_eq!(value(model, 1, 1, 1), "15");
+    assert_eq!(value(model, 1, 2, 1), "4");
+    user.redo().unwrap();
+    assert_eq!(user.get_model().workbook.tables["Sales"].reference, "B3:C5");
+    assert_eq!(value(user.get_model(), 1, 1, 1), "3");
+    user.undo().unwrap();
+    assert_eq!(user.get_model().workbook.tables["Sales"].reference, "B3:C7");
+    // With a totals row the delete moves the totals row up; undo moves it back down.
+    let mut user = crate::UserModel::from_model(edge_model(true));
+    user.delete_rows(0, 6, 2).unwrap();
+    assert_eq!(user.get_model().workbook.tables["Sales"].reference, "B3:C6");
+    user.undo().unwrap();
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C8");
+    assert_eq!(model.workbook.tables["Sales"].totals_row_count, 1);
+    assert_eq!(value(model, 0, 8, 3), "15");
+}
+
+/// The extents an undo restores can come from a peer (directive 5): one that names no table on
+/// the sheet, or moves the table's columns, is refused and changes nothing (T-3634).
+#[test]
+fn a_restored_table_extent_is_checked() {
+    let mut model = edge_model(false);
+    let extent = |name: &str, reference: &str, totals_row_count| crate::types::TableExtent {
+        name: name.to_string(),
+        reference: reference.to_string(),
+        totals_row_count,
+    };
+    for bad in [
+        extent("Nope", "B3:C9", 0),
+        extent("Sales", "B3:D9", 0),
+        extent("Sales", "B9:C3", 0),
+        extent("Sales", "B3:C3", 1),
+        extent("Sales", "B3:C9", 2),
+        extent("Sales", "not a range", 0),
+    ] {
+        assert!(model.restore_table_extents(0, &[bad]).is_err());
+        assert_eq!(model.workbook.tables["Sales"].reference, "B3:C7");
+    }
+    assert!(model
+        .restore_table_extents(1, &[extent("Sales", "B3:C9", 0)])
+        .is_err());
+    model
+        .restore_table_extents(0, &[extent("Sales", "B3:C9", 0)])
+        .unwrap();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C9");
+}
+
+/// `S` with the table `Sales` over B3:D7 (Region, Qty, Extra) and `F` with `=SUM(Sales[Qty])`,
+/// `=COLUMNS(Sales)` and `=SUM(Sales[Extra])`, for the column-delete undo tests (T-4652).
+fn three_column_model() -> Model {
+    let mut model = edge_model(false);
+    model.remove_table("Sales").unwrap();
+    let extra = [(3, "Extra"), (4, "10"), (5, "20"), (6, "40"), (7, "80")];
+    for (row, input) in extra {
+        model.set_user_input(0, row, 4, input.to_string()).unwrap();
+    }
+    model.add_table(0, "Sales", (3, 2, 7, 4), false).unwrap();
+    for (row, input) in ["=SUM(Sales[Qty])", "=COLUMNS(Sales)", "=SUM(Sales[Extra])"]
+        .into_iter()
+        .enumerate()
+    {
+        model
+            .set_user_input(1, row as i32 + 1, 1, input.to_string())
+            .unwrap();
+    }
+    model.evaluate();
+    model
+}
+
+/// The names of the columns of `Sales`.
+fn column_names(model: &Model) -> Vec<String> {
+    let columns = &model.workbook.tables["Sales"].columns;
+    columns.iter().map(|c| c.name.clone()).collect()
+}
+
+/// Undo of a column delete puts the table back as it was, extent and column list, wherever the
+/// deleted columns were: at the right edge the re-insert is just right of the table, where an
+/// insert does not grow it, at the left edge it moves the table, and inside it names the
+/// re-inserted column `Column1` (T-4652). Redo shrinks the table again.
+#[test]
+fn undo_of_a_column_delete_restores_the_table() {
+    let names = ["Region", "Qty", "Extra"].map(str::to_string).to_vec();
+    for (column, count, shrunk) in [
+        (4, 1, "B3:C7"),
+        (3, 2, "B3:B7"),
+        (2, 1, "B3:C7"),
+        (3, 1, "B3:C7"),
+    ] {
+        let mut user = crate::UserModel::from_model(three_column_model());
+        let before = user.get_model().workbook.tables["Sales"].clone();
+        user.delete_columns(0, column, count).unwrap();
+        assert_eq!(user.get_model().workbook.tables["Sales"].reference, shrunk);
+        user.undo().unwrap();
+        let model = user.get_model();
+        assert_eq!(model.workbook.tables["Sales"], before, "delete at {column}");
+        assert_eq!(column_names(model), names);
+        // The undo puts back `=SUM(Sales[Qty])` too where the delete made it `#REF!` (T-4668).
+        assert_eq!(value(model, 1, 1, 1), "15");
+        assert_eq!(value(model, 1, 2, 1), "3");
+        let formula = model.get_cell_formula(1, 1, 1).unwrap();
+        assert_eq!(
+            formula.as_deref(),
+            Some("=SUM(Sales[Qty])"),
+            "delete at {column}"
+        );
+        user.redo().unwrap();
+        assert_eq!(user.get_model().workbook.tables["Sales"].reference, shrunk);
+        user.undo().unwrap();
+        assert_eq!(user.get_model().workbook.tables["Sales"], before);
+    }
+}
+
+/// The tables a column-delete undo restores can come from a peer (directive 5): one that names no
+/// table on the sheet, moves its rows, has a column list that does not fit its width or repeats
+/// a name, or overlaps another table, is refused and changes nothing (T-4652).
+#[test]
+fn a_restored_table_is_checked() {
+    let mut model = three_column_model();
+    model.set_user_input(0, 3, 6, "Other".to_string()).unwrap();
+    model.set_user_input(0, 4, 6, "1".to_string()).unwrap();
+    model.add_table(0, "Other", (3, 6, 4, 6), false).unwrap();
+    let sales = model.workbook.tables["Sales"].clone();
+    let with = |edit: &dyn Fn(&mut crate::types::Table)| {
+        let mut table = sales.clone();
+        edit(&mut table);
+        ("Sales".to_string(), table)
+    };
+    let wide = |t: &mut crate::types::Table| {
+        t.reference = "B3:E7".to_string();
+        t.columns.push(crate::types::TableColumn {
+            id: 4,
+            name: "More".to_string(),
+            ..Default::default()
+        });
+    };
+    let bads = [
+        ("Nope".to_string(), sales.clone()),
+        with(&|t| t.name = "Nope".to_string()),
+        with(&|t| t.sheet_name = "F".to_string()),
+        with(&|t| t.reference = "B4:D7".to_string()),
+        with(&|t| t.reference = "B3:E7".to_string()),
+        with(&|t| t.reference = "not a range".to_string()),
+        with(&|t| t.columns[1].name = "region".to_string()),
+        with(&|t| t.columns[1].name = String::new()),
+        with(&|t| t.totals_row_count = 2),
+        with(&|t| {
+            t.reference = "B3:F7".to_string();
+            wide(t);
+            wide(t);
+            t.columns[4].name = "Most".to_string();
+        }),
+    ];
+    for bad in bads {
+        assert!(
+            model
+                .restore_tables_of_sheet(0, std::slice::from_ref(&bad))
+                .is_err(),
+            "{bad:?}"
+        );
+        assert_eq!(model.workbook.tables["Sales"], sales);
+    }
+    assert!(model
+        .restore_tables_of_sheet(1, &[("Sales".to_string(), sales.clone())])
+        .is_err());
+    let good = with(&wide);
+    model
+        .restore_tables_of_sheet(0, std::slice::from_ref(&good))
+        .unwrap();
+    assert_eq!(model.workbook.tables["Sales"], good.1);
+}
+
+/// A delete of every data row that would cut an array formula is refused before anything
+/// changes, so no unrecorded clear is left behind (T-3259).
+#[test]
+fn a_refused_delete_of_every_data_row_changes_nothing() {
+    let mut model = edge_model(false);
+    model
+        .set_user_array_formula(0, 7, 5, 1, 2, "={1;2}")
+        .unwrap();
+    let mut user = crate::UserModel::from_model(model);
+    assert!(user.delete_rows(0, 4, 4).is_err());
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C7");
+    assert_eq!(value(model, 0, 4, 3), "1");
+    assert_eq!(value(model, 0, 4, 2), "E");
+    // One starting in the kept row, outside the table's columns: inside the whole delete, but cut
+    // by the shorter delete below the kept row.
+    let mut model = edge_model(false);
+    model
+        .set_user_array_formula(0, 4, 5, 1, 2, "={1;2}")
+        .unwrap();
+    let mut user = crate::UserModel::from_model(model);
+    assert!(user.delete_rows(0, 4, 4).is_err());
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C7");
+    assert_eq!(value(model, 0, 4, 3), "1");
+    let mut model = edge_model(false);
+    model
+        .set_user_array_formula(0, 4, 5, 1, 2, "={1;2}")
+        .unwrap();
+    assert!(model.delete_rows(0, 4, 4).is_err());
+    assert_eq!(value(&model, 0, 4, 3), "1");
 }
 
 #[test]
@@ -307,8 +936,10 @@ fn a_sheet_rename_keeps_text_and_values() {
         row: 1,
         column: 1,
     };
-    let node = &model.parsed_formulas[1][0].0;
-    assert_eq!(to_excel_string(node, &context), "SUM(Facts!$A$2:$A$3)");
+    let node = &model.parsed_formulas[1][0].evaluated;
+    // The table part is written on the renamed sheet, so the file keeps the reference (T-2196).
+    assert_eq!(to_excel_string(node, &context), "SUM(Sales[Qty])");
+    assert_eq!(model.workbook.tables["Sales"].sheet_name, "Facts");
 }
 
 #[test]
@@ -331,12 +962,13 @@ fn a_sheet_delete_is_a_ref_error_and_restore_brings_the_tables_back() {
     let names = model.workbook.defined_names.clone();
     assert_eq!(names[0].formula, "SUM(#REF!)");
     assert!(model.workbook.tables.is_empty());
-    // A new sheet with the old name does not bring the table back. The plain twin, whose stored
-    // text keeps the sheet name, reads the new sheet: a known gap from Excel (T-2612).
+    // A new sheet with the old name brings back neither the table nor the plain twin, as in
+    // Excel (probes/table-edits/t2612-delete-sheet-then-add, T-2612).
     model.add_sheet("Data").unwrap();
     model.evaluate();
     assert_eq!(value(&model, 0, 1, 1), "#REF!");
-    assert_eq!(value(&model, 0, 1, 2), "0");
+    assert_eq!(value(&model, 0, 1, 2), "#REF!");
+    assert_eq!(formula(&model, 0, 1, 2), "=SUM(#REF!$A$2:$A$3)");
     model
         .delete_sheet(model.get_sheet_index_by_name("Data").unwrap())
         .unwrap();
@@ -496,4 +1128,125 @@ fn a_displayed_deleted_sheet_reference_reads_back_as_ref() {
     assert_eq!(value(&model, 1, 30, 1), "#REF!");
     assert_eq!(value(&model, 1, 31, 1), "#REF!");
     assert_eq!(value(&model, 1, 32, 1), "1");
+}
+
+#[test]
+fn convert_to_range_keeps_cells_and_makes_references_absolute_ranges() {
+    // T-2342: probes/table-edits/table-convert-to-range.
+    let mut model = Model::new_empty("model", "en", "UTC", "en").unwrap();
+    model.set_user_input(0, 1, 1, "Qty".to_string()).unwrap();
+    model.set_user_input(0, 2, 1, "5".to_string()).unwrap();
+    model.set_user_input(0, 3, 1, "7".to_string()).unwrap();
+    model.add_table(0, "Sales", (1, 1, 3, 1), false).unwrap();
+    model
+        .set_user_input(0, 1, 3, "=SUM(Sales[Qty])".to_string())
+        .unwrap();
+    model
+        .set_user_input(0, 2, 3, "=ROWS(Sales[#All])".to_string())
+        .unwrap();
+    model.convert_table_to_range("Sales").unwrap();
+    model.evaluate();
+    assert_eq!(model.get_formatted_cell_value(0, 1, 3).unwrap(), "12");
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3).unwrap(), "3");
+    assert_eq!(
+        model.get_localized_cell_content(0, 1, 3).unwrap(),
+        "=SUM($A$2:$A$3)"
+    );
+    assert_eq!(model.get_formatted_cell_value(0, 3, 1).unwrap(), "7");
+    assert!(model.convert_table_to_range("Sales").is_err());
+}
+
+/// Convert to range: a `#This Row` reference off the data rows becomes `#REF!` (below the
+/// table and on another sheet), while one on a data row reads its own cell with the column
+/// absolute and the row relative (probes/table-edits/t3629-convert-plain F1, F9, T-4020;
+/// table-convert-same-sheet, T-2643).
+#[test]
+fn convert_to_range_lowers_this_row_at_each_row() {
+    let mut model = model();
+    for row in [2, 3, 5] {
+        model
+            .set_user_input(0, row, 4, "=Sales[[#This Row],[Qty]]*2".to_string())
+            .unwrap();
+    }
+    model
+        .set_user_input(1, 5, 4, "=Sales[[#This Row],[Qty]]".to_string())
+        .unwrap();
+    model.convert_table_to_range("Sales").unwrap();
+    model.evaluate();
+    assert_eq!(value(&model, 0, 5, 4), "#REF!");
+    assert_eq!(value(&model, 0, 2, 4), "2");
+    assert_eq!(value(&model, 0, 3, 4), "4");
+    assert_eq!(model.get_localized_cell_content(0, 3, 4).unwrap(), "=$A3*2");
+    assert_eq!(value(&model, 1, 5, 4), "#REF!");
+}
+
+/// Convert to range: a `#This Row` reference off the data rows becomes `#REF!` (FORMULATEXT
+/// `=#REF!`), stays so through row and column inserts and a table re-added under the same name,
+/// and is exported as `#REF!` (probes/table-edits/t3629-convert-plain, -readd-same-area,
+/// -save-detached F1, F2, F9, F10; T-3629, T-4020).
+#[test]
+fn convert_to_range_turns_an_off_row_this_row_into_ref() {
+    let mut model = model();
+    model
+        .set_user_input(0, 5, 4, "=Sales[[#This Row],[Qty]]*2".to_string())
+        .unwrap();
+    model
+        .set_user_input(1, 1, 4, "=Sales[[#This Row],[Qty]]".to_string())
+        .unwrap();
+    model.convert_table_to_range("Sales").unwrap();
+    model.evaluate();
+    let check = |model: &Model, (sheet, row, column): (u32, i32, i32), text: &str| {
+        assert_eq!(value(model, sheet, row, column), "#REF!");
+        assert_eq!(formula(model, sheet, row, column), text);
+    };
+    check(&model, (0, 5, 4), "=#REF!*2");
+    check(&model, (1, 1, 4), "=#REF!");
+    // A row insert moves the cell down, a column insert along its row; each re-enters it.
+    model.insert_rows(0, 1, 1).unwrap();
+    model.insert_columns(0, 3, 1).unwrap();
+    model.insert_rows(1, 1, 1).unwrap();
+    model.add_table(0, "Sales", (2, 1, 4, 2), false).unwrap();
+    model.evaluate();
+    check(&model, (0, 6, 5), "=#REF!*2");
+    check(&model, (1, 2, 4), "=#REF!");
+    let Some(index) = model.workbook.worksheets[0]
+        .cell(6, 5)
+        .and_then(|cell| cell.get_formula())
+    else {
+        panic!("no formula at E6");
+    };
+    let context = CellReferenceRC {
+        sheet: "Data".to_string(),
+        row: 6,
+        column: 5,
+    };
+    let node = &model.parsed_formulas[0][usize::try_from(index).unwrap()].evaluated;
+    assert_eq!(to_excel_string(node, &context), "#REF!*2");
+    // Typed, the engine's `[!]` prefix is not a formula.
+    assert!(model
+        .set_typed_user_input(0, 9, 4, "=[!]Sales[[#This Row],[Qty]]".to_string())
+        .is_err());
+}
+
+/// INDIRECT of structured-reference text is the table area; a column the table lacks, a table
+/// the workbook lacks are `#REF!` (docs/excel-semantics/lookup.md, T-2911).
+#[test]
+fn indirect_of_structured_reference_text() {
+    let mut model = model();
+    for (row, formula) in [
+        "=SUM(INDIRECT(\"Sales[Val]\"))",
+        "=ROWS(INDIRECT(\"Sales[Val]\"))",
+        "=INDIRECT(\"Sales[Nope]\")",
+        "=INDIRECT(\"Nope[Val]\")",
+    ]
+    .iter()
+    .enumerate()
+    {
+        model
+            .set_user_input(1, row as i32 + 1, 5, formula.to_string())
+            .unwrap();
+    }
+    model.evaluate();
+    let got: Vec<String> = (1..=4).map(|row| value(&model, 1, row, 5)).collect();
+    assert_eq!(got, ["30", "2", "#REF!", "#REF!"]);
 }

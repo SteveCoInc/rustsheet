@@ -1,0 +1,28 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "914a3ac753f04684cbc25ddfdddddc090f562863c5e3d615f7389fd3a0e4dc9a",
+  "definitions": {
+   "CHISQ.INV.RT": "5d12acfc19639d7a",
+   "FISHERINV": "90a93c98b90756bc"
+  },
+  "arguments_sha256": "41488418df05f1aed4469fdcfa5bc0f5a878c77facdb1abb88f55c85943c67ca"
+ },
+ "sheets": {
+  "Calc": {
+   "A226": {
+    "t": "n",
+    "v": "0.031820269321418631642623529545118295734501992975349",
+    "f": "=FISHERINV((0.1/Data!D3))"
+   },
+   "A286": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=CHISQ.INV.RT(1,1)"
+   }
+  }
+ }
+}

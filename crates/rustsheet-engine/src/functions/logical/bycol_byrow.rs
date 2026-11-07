@@ -1,5 +1,6 @@
 use super::lambda::LambdaCaller;
 use crate::cast::calc_result_to_element;
+use crate::functions::spill_functions::reject_empty_value;
 use crate::functions::util::{array_element_value, array_node_to_calc_result};
 use crate::functions::Function;
 use crate::nested_array::NestedKind;
@@ -10,7 +11,7 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
-    limits::{check_built_array_size, check_range_size},
+    limits::{check_built_array_size, check_range_size, SIZE_LIMIT_EXCLUSIVE},
     model::Model,
     reference_operators::{Ranges, RefArg},
 };
@@ -127,7 +128,7 @@ impl Model {
                         &[Node::ArrayKind(column)],
                         cell,
                     );
-                    (!makes_calc_error(&result)).then(|| lambda_result_to_array_node(result))
+                    self.by_slices_result(result, cell)
                 })
                 .collect::<Option<Vec<_>>>(),
         };
@@ -165,7 +166,7 @@ impl Model {
                         &[Node::ArrayKind(vec![row])],
                         cell,
                     );
-                    (!makes_calc_error(&result)).then(|| vec![lambda_result_to_array_node(result)])
+                    self.by_slices_result(result, cell).map(|node| vec![node])
                 })
                 .collect::<Option<Vec<_>>>(),
         };
@@ -182,20 +183,10 @@ impl Model {
         CalcResult::new_error(Error::CALC, cell, "a LAMBDA returned an array".to_string())
     }
 
-    /// The LAMBDA argument of BYROW or BYCOL. Anything else, an error or an unknown name too, is
-    /// `#VALUE!`: `BYCOL(A1:B3,NA())`, `BYCOL(A1:B3,1)` and a bare `BYCOL(A1:B3,COUNTA)` read from
-    /// a file (probes/eta-reduced-names E5:E21, E81, excel-graph 2026-10-14, T-1466).
-    fn by_slices_lambda(
-        &mut self,
-        arg: &Node,
-        cell: CellReferenceIndex,
-    ) -> Result<CalcResult, CalcResult> {
-        as_lambda(self.evaluate_node_in_context(arg, cell))
-            .map_err(|_| CalcResult::new_error(Error::VALUE, cell, "Expected a LAMBDA".to_string()))
-    }
-
     /// The array and the one-argument LAMBDA caller of a BYROW or BYCOL call, in that order of
-    /// errors (the argument count first).
+    /// errors (the argument count first). Anything but a function taking one argument, an error or
+    /// an unknown name too, is `#VALUE!`: `BYCOL(A1:B3,NA())`, `BYCOL(A1:B3,1)` and a bare
+    /// `BYCOL(A1:B3,COUNTA)` read from a file (probes/eta-reduced-names E5:E21, E81, T-1466).
     fn by_slices_args(
         &mut self,
         args: &[Node],
@@ -204,9 +195,9 @@ impl Model {
         if args.len() != 2 {
             return Err(CalcResult::new_args_number_error(cell));
         }
-        let source = self.by_slices_source(&args[0], cell, false)?;
-        let lambda_result = self.by_slices_lambda(&args[1], cell)?;
-        Ok((source, self.lambda_caller(&lambda_result, 1)))
+        let source = self.by_slices_source(&args[0], cell, false, false)?;
+        let function = self.evaluate_node_in_context(&args[1], cell);
+        Ok((source, self.helper_caller(&function, 1, cell)?))
     }
 
     /// One BYROW or BYCOL call of `lambda` on the row or column `slice`, bound as a reference.
@@ -221,6 +212,27 @@ impl Model {
             right: slice.right,
         };
         let result = self.call_lambda_caller(caller, [reference], cell);
+        self.by_slices_result(result, cell)
+    }
+
+    /// One BYROW or BYCOL result as its cell of the output, or `None` for the call's `#CALC!`.
+    /// A one-cell reference a function in the body returns is that cell's value, as a written
+    /// one is, whether the array is a range or an array:
+    /// `BYCOL(D6:E11,LAMBDA(y,REDUCE(y,y,LAMBDA(acc,v,D1))))` is D1's value
+    /// (gen-m7/611ce3bbfab27cef A1421) and `BYROW({1;2},LAMBDA(r,REDUCE(A1,r,LAMBDA(a,v,A3))))`
+    /// is A3's twice (probes/t4478-reduce-reference-in-callers D1:D3, D5), now that REDUCE
+    /// returns the reference (T-4478).
+    fn by_slices_result(
+        &mut self,
+        result: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Option<ArrayNode> {
+        let result = match result {
+            reference @ CalcResult::Range { .. } if !reference.is_multi_value() => self
+                .lambda_result_value(reference, cell)
+                .unwrap_or_else(|error| error),
+            result => result,
+        };
         (!makes_calc_error(&result)).then(|| lambda_result_to_array_node(result))
     }
 
@@ -236,11 +248,15 @@ impl Model {
     /// second and later arrays: `MAP(1,{2},LAMBDA(x,y,x+y))` is 3 but `MAP({1},2,..)` and
     /// `MAP(1,2,..)` are `#VALUE!` (probes/lambda-value-arguments A28, B1-B10; arrays.md "MAP over
     /// single values").
+    /// With `refuse_empty_value` the empty value is `#VALUE!` ([`reject_empty_value`]), as MAP reads
+    /// its arrays (`MAP(CELL("contents",<blank>),LAMBDA(v,v))`; probes/t3030-cell-contents-blank-shapers
+    /// A351, T-3053); SCAN, REDUCE, BYROW and BYCOL of it are unprobed.
     fn by_slices_source(
         &mut self,
         arg: &Node,
         cell: CellReferenceIndex,
         refuse_scalar: bool,
+        refuse_empty_value: bool,
     ) -> Result<Source, CalcResult> {
         let data = match self.evaluate_picked_reference_arg(arg, cell) {
             RefArg::Ranges(Ranges::One(range)) if range.left.sheet == range.right.sheet => {
@@ -250,7 +266,10 @@ impl Model {
                 return Ok(Source::Range(range));
             }
             other => {
-                let value = other.into_single_area(cell);
+                let mut value = other.into_single_area(cell);
+                if refuse_empty_value {
+                    value = reject_empty_value(arg, value, cell)?;
+                }
                 if refuse_scalar && is_scalar_value(&value) {
                     return Err(CalcResult::new_error(
                         Error::VALUE,
@@ -276,49 +295,53 @@ impl Model {
     /// the cell), over anything else its value (probes/lambda-helper-range-slices, excel-graph
     /// 2026-10-12, T-1442). Over a range the references are built on demand ([`LambdaGrid::at`]),
     /// not stored per cell (T-1465).
-    /// `refuse_scalar` as in [`Model::by_slices_source`].
+    /// `refuse_scalar` and `refuse_empty_value` as in [`Model::by_slices_source`].
     pub(super) fn lambda_cells(
         &mut self,
         arg: &Node,
         cell: CellReferenceIndex,
         refuse_scalar: bool,
+        refuse_empty_value: bool,
     ) -> Result<LambdaGrid, CalcResult> {
-        Ok(match self.by_slices_source(arg, cell, refuse_scalar)? {
-            Source::Range(range) => LambdaGrid::Cells {
-                origin: range.left,
-                rows: usize::try_from(range.right.row - range.left.row + 1).unwrap_or(0),
-                columns: usize::try_from(range.right.column - range.left.column + 1).unwrap_or(0),
-            },
-            // A blank element of an array value reaches the LAMBDA as the empty value IFERROR gives
-            // a blank cell: ISBLANK TRUE, yet COUNT and AVERAGE count it as 0
-            // (`MAP(HSTACK(Z1:Z2,{1;2}),_xleta.COUNT)` is 1,1,1,1, probes/t2413-blank-in-stacked-arrays
-            // A7:A11, T-2413). A range's blank cell stays a blank cell (A43:A47).
-            // A nested cell of a GROUPBY or PIVOTBY result reaches the LAMBDA whole, as its array
-            // (`MAP(GROUPBY(..,LAMBDA(v,v)),LAMBDA(x,ROWS(x)))` gives 2 for a two-record group,
-            // `REDUCE(0,..,LAMBDA(a,x,a+ROWS(x)))` 19; SPEC-0018 rule 5, probes/t2592-nested-groupby-cells
-            // A100:A105, A15). Its cells are charged to the walk budget (`NestedArray::value`), and
-            // past it the whole call is `#ERROR!` (DEVIATION, decision 0014).
-            Source::Values(data) => {
-                let mut grid = Vec::with_capacity(data.len());
-                for row in &data {
-                    let mut values = Vec::with_capacity(row.len());
-                    for node in row {
-                        values.push(match node {
-                            ArrayNode::Empty => CalcResult::EmptyArg,
-                            ArrayNode::Nested(nested) if nested.kind() == NestedKind::Array => {
-                                match nested.value(&mut self.nested_budget, cell) {
-                                    array @ CalcResult::Array(_) => array,
-                                    error => return Err(error),
+        Ok(
+            match self.by_slices_source(arg, cell, refuse_scalar, refuse_empty_value)? {
+                Source::Range(range) => LambdaGrid::Cells {
+                    origin: range.left,
+                    rows: usize::try_from(range.right.row - range.left.row + 1).unwrap_or(0),
+                    columns: usize::try_from(range.right.column - range.left.column + 1)
+                        .unwrap_or(0),
+                },
+                // A blank element of an array value reaches the LAMBDA as the empty value IFERROR gives
+                // a blank cell: ISBLANK TRUE, yet COUNT and AVERAGE count it as 0
+                // (`MAP(HSTACK(Z1:Z2,{1;2}),_xleta.COUNT)` is 1,1,1,1, probes/t2413-blank-in-stacked-arrays
+                // A7:A11, T-2413). A range's blank cell stays a blank cell (A43:A47).
+                // A nested cell of a GROUPBY or PIVOTBY result reaches the LAMBDA whole, as its array
+                // (`MAP(GROUPBY(..,LAMBDA(v,v)),LAMBDA(x,ROWS(x)))` gives 2 for a two-record group,
+                // `REDUCE(0,..,LAMBDA(a,x,a+ROWS(x)))` 19; SPEC-0018 rule 5, probes/t2592-nested-groupby-cells
+                // A100:A105, A15). Its cells are charged to the walk budget (`NestedArray::value`), and
+                // past it the whole call is `#ERROR!` (DEVIATION, decision 0014).
+                Source::Values(data) => {
+                    let mut grid = Vec::with_capacity(data.len());
+                    for row in &data {
+                        let mut values = Vec::with_capacity(row.len());
+                        for node in row {
+                            values.push(match node {
+                                ArrayNode::Empty => CalcResult::EmptyArg,
+                                ArrayNode::Nested(nested) if nested.kind() == NestedKind::Array => {
+                                    match nested.value(&mut self.nested_budget, cell) {
+                                        array @ CalcResult::Array(_) => array,
+                                        error => return Err(error),
+                                    }
                                 }
-                            }
-                            node => array_element_value(node, cell),
-                        });
+                                node => array_element_value(node, cell),
+                            });
+                        }
+                        grid.push(values);
                     }
-                    grid.push(values);
+                    LambdaGrid::Values(grid)
                 }
-                LambdaGrid::Values(grid)
-            }
-        })
+            },
+        )
     }
 
     /// A LAMBDA's result as a value: a reference it returns (`LAMBDA(v,v)` over a range cell)
@@ -442,16 +465,19 @@ impl Model {
 
         // Rows and columns past the grid are built: `COLUMNS(MAKEARRAY(1,16385,..))` is 16385
         // (probes/expand-makearray-past-grid D1), `ROWS(MAKEARRAY(1048577,1,..))` 1048577
-        // (probes/t2579-array-value-edges B23, above our cell bound).
-        if let Some((error, message)) = check_built_array_size(rows, cols) {
+        // (probes/t2579-array-value-edges B23, above our cell bound), and so is
+        // `COLUMNS(MAKEARRAY(1,1048577,..))`, 1048577 (probes/t2452-makearray-cols-1048577): unlike
+        // EXPAND's, MAKEARRAY's columns have no cap below 2^31 that Excel is known to check.
+        if let Some((error, message)) = check_built_array_size(rows, cols, SIZE_LIMIT_EXCLUSIVE) {
             return CalcResult::new_error(error, cell, message);
         }
 
-        if lambda_result.is_error() {
-            return lambda_result.clone();
-        }
-
-        let mut caller = self.lambda_caller(lambda_result, 2);
+        // The function is checked after the sizes: `MAKEARRAY(NA(),1,5)` is `#N/A`
+        // (probes/t3655-lambda-helper-function-argument row 12).
+        let mut caller = match self.helper_caller(lambda_result, 2, cell) {
+            Ok(caller) => caller,
+            Err(error) => return error,
+        };
         let mut result = Vec::with_capacity(rows);
         for r in 1..=rows {
             let mut row = Vec::with_capacity(cols);
@@ -464,7 +490,11 @@ impl Model {
                 if makes_calc_error(&cell_result) {
                     return Self::by_slices_calc_error(cell);
                 }
-                row.push(lambda_result_to_array_node(cell_result));
+                // A one-cell reference result is its value (gen-m7 a470dc9e165bdb20 A465:
+                // `TRIMRANGE(Data!D11:E11,2,2)` trims to one cell).
+                row.push(lambda_result_to_array_node(
+                    self.collapse_single_cell(cell_result),
+                ));
             }
             result.push(row);
         }

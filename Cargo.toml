@@ -13,7 +13,7 @@ exclude = ["tools/upstream/generate_language", "tools/upstream/generate_locale"]
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/steveash/rustsheet"
+repository = "https://github.com/SteveCoInc/rustsheet"
 rust-version = "1.88"
 
 # Workspace-wide lint policy. See docs/process/quality-gates.md.
@@ -48,3 +48,10 @@ lto = true
 
 [profile.bench]
 debug = true
+
+# Decision 0276 (T-3709): tests build the engine at opt-level 1 with line tables only. Its
+# whole-column tests (test_tailed_array's 1,048,576-row reference evaluations) dominate
+# `make test`, and they run twice as fast; debug assertions and overflow checks stay on.
+[profile.test.package.rustsheet_engine]
+opt-level = 1
+debug = "line-tables-only"

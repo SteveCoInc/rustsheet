@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used)]
 
-use crate::test::util::new_empty_model;
+use crate::test::util::{new_empty_model, round_trip_value, within_fifteen_digits};
 
 #[test]
 fn empty_argument_cumulative() {
@@ -84,4 +84,71 @@ fn test_fn_beta_inv_tiny_probability_is_bounded() {
     assert_eq!(model._get_text("A3"), "0.794328235");
     assert_eq!(model._get_text("A4"), "0.458650995");
     assert_eq!(model._get_text("A5"), "7.8736E-203");
+}
+
+// T-3664: at a shape of exactly 1 and p of 1E-15 or more the quantile is the closed form, not the
+// crossing of BETA.DIST's cdf, which is flat over tens of doubles there (T-3007). Excel values from
+// probes-numeric/m9-beta-inv A69 and A149 (the same points as t1745-beta-inv-roundtrip J67, J144);
+// below 1E-15 the search stays (t1543-inverse-cdf-tiny-p A73 `BETA.INV(1E-300,1,1)`, Excel
+// 1.0000000000000237E-300, not p).
+#[test]
+fn test_fn_beta_inv_shape_one_closed_form() {
+    let mut model = new_empty_model();
+    model._set("A1", "=BETA.INV(0.999,1,100)");
+    model._set("A2", "=BETA.INV(0.001,100,1)");
+    model._set("A3", "=BETA.INV(0.25,1,1)");
+    model._set("A4", "=BETA.INV(1E-300,1,1)");
+    model.evaluate();
+    let number = |cell: &str| round_trip_value(&model, cell).parse::<f64>().unwrap();
+    for (cell, excel) in [
+        ("A1", 0.066_745_699_203_008_99),
+        ("A2", 0.933_254_300_796_991),
+    ] {
+        let value = number(cell);
+        assert!(
+            within_fifteen_digits(excel, value),
+            "{cell}: {value} against Excel {excel}"
+        );
+    }
+    assert_eq!(number("A3").to_bits(), 0.25_f64.to_bits());
+    assert_ne!(number("A4").to_bits(), 1e-300_f64.to_bits());
+}
+
+// T-3764: at b = 1 and x > 0.9 (bratio's a0 = 1 with y0 > 0.9) Excel's w = 1 - x^a is minus its
+// expm1 below |a·ln x| = 1 and 1 - EXP(a·ln x) from there on; Kahan's expm1 at |z| >= 1 put these
+// one 2^-53 step of w off. Excel values (excel-graph) from probes-numeric t3568-r5-bup-tune B856,
+// t3568-r5-bup-hold B816 and B1610, and t3568-r5-bup-fresh B744 (x^a below 2^-53).
+#[test]
+fn test_fn_beta_dist_shape_one_complement_past_unit_exponent() {
+    let mut model = new_empty_model();
+    model._set("A1", "=BETA.DIST(0.9094554,241.0,1.0,TRUE)");
+    model._set("A2", "=BETA.DIST(0.912187876,136.0,1.0,TRUE)");
+    model._set("A3", "=BETA.DIST(0.9965,1414.0,1.0,TRUE)");
+    model._set("A4", "=BETA.DIST(0.95591070645675,826.0,1.0,TRUE)");
+    model.evaluate();
+    let number = |cell: &str| round_trip_value(&model, cell).parse::<f64>().unwrap();
+    for (cell, excel) in [
+        ("A1", 1.164_981_444_645_718_5e-10_f64),
+        ("A2", 3.727_899_646_532_861_8e-6),
+        ("A3", 0.007_029_209_602_111_175),
+        ("A4", 1.110_223_024_625_156_5e-16),
+    ] {
+        assert_eq!(number(cell).to_bits(), excel.to_bits(), "{cell}");
+    }
+}
+
+// T-3764: BETA.DIST's cdf is Excel's exact 0 where L140 bup+bgrat's prefactor underflows (T-4045's
+// rule, F's until now), though the true tail is a normal double. Excel values (excel-graph) from
+// probes-numeric t3568-r5-bup-fresh A291 and t3568-r5-bup-hold A20 and A686; BETADIST shares it.
+#[test]
+fn test_fn_beta_dist_l140_prefactor_underflow_is_zero() {
+    let mut model = new_empty_model();
+    model._set("A1", "=BETA.DIST(0.7115070068952,2160.0,30.5,TRUE)");
+    model._set("A2", "=BETA.DIST(0.749267,2496.51,16.8,TRUE)");
+    model._set("A3", "=BETA.DIST(0.74342,2420.0,33.6362,TRUE)");
+    model._set("A4", "=BETADIST(0.74342,2420.0,33.6362)");
+    model.evaluate();
+    for cell in ["A1", "A2", "A3", "A4"] {
+        assert_eq!(round_trip_value(&model, cell), "0.0", "{cell}");
+    }
 }

@@ -8,7 +8,7 @@ priority: P3
 size: M
 tier: opus
 depends_on: []
-campaign: visible
+defer: phase-1b
 ---
 
 ## Goal
@@ -27,6 +27,8 @@ probes/fin-argument-modes (excel-graph, 2026-10-11, T-1084). Base rows that miss
   YIELD H343. (TBILLEQ H313 and the other TBILL cells moved to T-1475 on 2026-10-13.)
 - Added by T-1842: probes/fin-yield-odd-lift A1 and I5 (YIELD, about 1e-13 relative), A3 and I7 (ODDFPRICE, a few
   ulps), A5 and I9 (ODDFYIELD, about 1e-10 relative): the same base values as above, reached through the lift.
+- Added by T-3652: probes/oddf-date-order-domain-sweep P!A29 and E29 (ODDFPRICE at a yld of 1E-12, annual, bases
+  0 and 4; Excel 131.2499999992618, ours 131.24999999926183), NumericUlp.
 - Moved from T-1493 on 2026-10-13: YIELD A8-E8, A19-E19, A30-E30 and DURATION A20/C20 of
   probes/date-system-1900-financial-readers and its -shifted twin, and the 4 DURATION ulp cells of
   probes/coupdays-feb-month-end. probes/yield-solver-sweep (66 cells, excel-graph) is the YIELD sweep: Excel stops
@@ -39,6 +41,10 @@ probes/fin-argument-modes (excel-graph, 2026-10-11, T-1084). Base rows that miss
 The same DURATION, MDURATION and PRICE base values recur as the intersected controls of
 probes/fin-remaining-later-argument-ranges I85-I103 and I165-I171 (T-1822), and so do the CUMIPMT, CUMPRINC, ODDFPRICE,
 ODDFYIELD and YIELD ones there (I65-I84, I105-I136, I173-I184).
+Gap triage 2026-11-07: a hyphen span names only its ends (decision 0136), so the five CUMPRINC controls inside I65-I84
+had no owner. They are H80's point, `CUMPRINC(0.01,360,100000,1,12,0)` with one argument `@`-intersected (Excel
+-362.8793467231, ours -362.8793467230999), and this task owns them:
+- probes/fin-remaining-later-argument-ranges.case.json (5): Sheet1!I75, I77, I79, I81, I83
 The annuity family (FV, PMT, PPMT, NPV) and the solvers (IRR, RATE, XIRR) are T-0901's and T-0916's, not this task's.
 ODDFYIELD's solver (H200, fin-yield-odd-lift A5/I9, the ODDFYIELD controls of fin-remaining-later-argument-ranges and the
 PRICE_YIELD.xlsx K column) moved to T-2007 (gap triage 2026-10-19); this task keeps ODDFPRICE.
@@ -64,6 +70,7 @@ Examples:
 Cells:
 - gen-m9/0a957119475760c5.case.json (1): Calc!A279
 - gen-m9/30e20ba3302fea8b.case.json (2): Calc!A90, A310
+  (Calc!A310's visible-parity work is T-1871's since gap triage 2026-11-03: the gap is its inner FINV(1E-100,2,3); this task keeps its bit-level residue.)
 - gen-m9/3c06f9298f65a3ba.case.json (1): Calc!A326
 - gen-m9/a91bad4e84f49739.case.json (1): Calc!A142
 - gen-m9/b6a02893a8d6b151.case.json (1): Calc!A260
@@ -102,6 +109,26 @@ Cells:
 - gen-m9/d912671baa1364aa.case.json (1): Calc!A104
 - gen-m9/e168be7f6d3f84c2.case.json (2): Calc!A23, A317
 
+Moved from T-2487 (2026-10-25): a last-digit T-bill cell, visibly right; whether TBILLYIELD's order or its inner F.INV
+gives the ulp is unprobed.
+Owned gen-m9 cells (T-2487, excel-graph, 2026-10-25): 1 known-failure line in eval/baseline/gen-m9.txt, 1 last-digit (not visibly off).
+- gen-m9/e8d55ec393460bb7 Calc!A91 `=TBILLYIELD(COS(KURT(Data!B1:B9,Data!A9:A11,Data!D11:D11)),(Data!E3*SORT("1.5")),F.INV(ABS(Data!E5),4,3))`: Excel 150510.9757994007, ours 150510.97579940068
+Cells:
+- gen-m9/e8d55ec393460bb7.case.json (1): Calc!A91
+
+Added by gap triage 2026-11-07 (`make eval` on origin/main b9ae5216, excel-graph). These last-digit cells are not
+visibly off, and no open task listed them. They are this task's base values reached another way:
+- The intersected CUMPRINC controls of probes/fin-remaining-later-argument-ranges repeat base row H80
+  `CUMPRINC(0.01,360,100000,1,12,0)` (Excel -362.8793467231, ours -362.8793467230999). The hyphen span "I65-I84" in
+  Context above names only its ends (decision 0136), so these were unowned.
+- DURATION and MDURATION at frequency 4 on the coupon walk's bounds.
+- Two gen-m9 YIELD calls, 1 ulp off.
+Cells:
+- probes/fin-remaining-later-argument-ranges.case.json (5): Sheet1!I75, I77, I79, I81, I83
+- probes/fin-coupon-walk-bounds-c.case.json (4): Sheet1!I13, K13, I14, K14
+- gen-m9/9a1fa5366bc50918.case.json (1): Calc!A231
+- gen-m9/bc04c1f478c9896c.case.json (1): Calc!A23
+
 ## Acceptance criteria
 - [ ] Visible parity (gen-m9, T-2257): the 6 visibly-off known-failure lines listed under "T-2257 sweep" in Context disappear
       from eval/baseline/gen-m9.txt (`make eval-baseline`), with no new known-failure lines in any baseline.
@@ -119,3 +146,6 @@ type, error, text, or a value off by more than half a unit of the 15th significa
 target is that every one of them has Excel's type, error and text, or is within half a unit of the 15th significant digit of
 Excel's value; the T-2257 visible-parity criterion under Acceptance criteria states it. Bit-level criteria still unmet then move
 to a follow-up task filed without the key.
+
+## Deferred (decision 0114)
+`defer: phase-1b`: the cells this task owns are already within 15 significant digits of Excel, so it waits until Phase 1 exits. Remove the key only when the steward records the Phase 1 exit, or when an eval shows one of its cells visibly off (then give it a `campaign:` stage instead).

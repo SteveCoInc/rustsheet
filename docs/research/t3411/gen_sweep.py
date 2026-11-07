@@ -1,0 +1,229 @@
+"""T-3411 fresh sweep (decision 0188 R4.2) for IRR's secant cap and stall residual, generated after
+both were frozen (task file "R4 plan"). Writes probes-numeric/t3411-irr-r4-fresh with a 50-digit
+math TSV of the roots (mpmath bisection in ln v at 60 and 80 digits, kept only when they agree).
+
+Strata (25 cells each), conventional flows (one outlay, then inflows; 30% negated):
+  0 long near-level series (20..150 flows) with roots -0.3..-0.01: slow secant runs (the cap)
+  1 large flows (1E+8..1E+13) with roots within 0.05 of 0: NPV noise above 1e-7 (the stall)
+  2 guesses -0.9999..-0.99 on 5..80 flows: long first runs before the retry from 0.1 (the cap)
+  3 long series (20..150 flows) with roots -0.25..-0.05 and spread flows: first-step jumps
+  4 2..41 flows, |c| 1E-6..1E+9, roots +-1E-4..2, half with a guess -0.9..0.9
+  5 every axis wide
+
+Run: cd tools && uv run python -I ../docs/research/t3411/gen_sweep.py <repo> [case name, tNNNN-irr-<seed>]
+(t3411-irr-r4-fresh: seed "T-3411/r4-fresh"; t3411-irr-r4-fresh-2: seed "T-3411/r4-fresh-2", round 2;
+t3411-irr-r4-fresh-3: seed "T-3411/r4-fresh-3", round 3; t3411-irr-r4-fresh-4: seed "T-3411/r4-fresh-4",
+round 4; t3407-irr-r4-fresh: seed "T-3407/r4-fresh", T-3407's overflow rule; t4213-irr-r4-fresh: seed
+"T-4213/r4-fresh", T-4213's near-zero roots, its own six strata, below; t3347-irr-r4-fresh: seed
+"T-3347/r4-fresh", T-3347's flat-secant #DIV/0! cut, its own six strata of long series, below;
+t3408-irr-r4-fresh: seed "T-3408/r4-fresh", T-3408's 200-step secant cap, its own six strata, below)
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import random
+import sys
+from pathlib import Path
+
+import mpmath
+
+from rustsheet_tools.accuracy.literal import round15, text
+from rustsheet_tools.accuracy.sampler import log_uniform
+
+REPO = Path(sys.argv[1])
+NAME = sys.argv[2] if len(sys.argv) > 2 else "t3411-irr-r4-fresh"
+PER = 25
+FROZEN = {
+    "t3411-irr-r4-fresh": "round 1: secant cap 220, stall residual 1E-4",
+    "t3411-irr-r4-fresh-2": "round 2: secant cap 213",
+    "t3411-irr-r4-fresh-3": "round 3: fallback root residual 1E-4",
+    "t3411-irr-r4-fresh-4": "round 4: fallback residual 1E-4 one Newton step past the stop",
+    "t3407-irr-r4-fresh": "T-3407: a non-finite NPV at a secant iterate is #DIV/0!",
+    "t4213-irr-r4-fresh": "T-4213: the fallback returns the Newton iterate one step past its stop",
+    "t3347-irr-r4-fresh": "T-3347: a secant run flat after a zero step is #DIV/0! once its |NPV| passed 3E+226",
+    "t3408-irr-r4-fresh": "T-3408: a secant run takes up to 200 steps on 6..54 flows, |c| 5.6E-9..9.6E+8",
+}
+# The task a sweep belongs to (its seed, description and tags name it): the case name's tNNNN prefix.
+TASK = "T-" + NAME[1:5]
+# T-4213's sweep: conventional flows whose root is 1E-7..0.05 in absolute value (log-uniform), the
+# flows' scale rising by stratum so the secant's NPV noise crosses its 1e-7 stop.
+NEAR_ZERO_SCALES = [(1.0, 1e4), (1e4, 1e7), (1e7, 1e9), (1e9, 1e11), (1e11, 1e13), (1.0, 1e13)]
+NEAR_ZERO = TASK == "T-4213"
+# T-3347's sweep: long conventional series whose secant from 0.1 jumps far toward r = -1, then stalls
+# (n flows, root band, inflow spread); the inflows' scale is log-uniform 1E-2..1E+9 in every stratum.
+FLAT_STRATA = [
+    ((20, 40), (-0.5, -0.1), (0.05, 1.0)),
+    ((40, 80), (-0.5, -0.1), (0.05, 1.0)),
+    ((80, 147), (-0.4, -0.05), (0.05, 1.0)),
+    ((30, 147), (-0.4, -0.05), (0.8, 1.0)),
+    ((27, 147), (-0.1, -0.01), (0.05, 1.0)),
+    ((27, 147), (-0.6, -0.3), (0.05, 1.0)),
+]
+FLAT = TASK == "T-3347"
+# T-3408's sweep: series whose secant run from the guess is long (the 200-step cap's domain is 6..54 flows,
+# largest |c| 5.6E-9..9.6E+8, guess -0.9997..9.81E+7); (n flows, guess band or None for 0.1, root band, |c| band,
+# spread). Stratum 5 lies outside the domain (55..148 flows), where the cap stays 50.
+LONG_STRATA = [
+    ((6, 54), (-0.9997, -0.99), (1e-4, 0.5), (1e-3, 1e8), (0.05, 1.0)),
+    ((6, 20), (-0.9997, -0.99), (1e-4, 0.5), (1e-3, 1e8), (0.05, 1.0)),
+    ((20, 54), (-0.99, -0.9), (1e-4, 0.3), (1e-3, 1e8), (0.05, 1.0)),
+    ((20, 54), None, (0.01, 0.3), (1.0, 1e8), (0.8, 1.0)),
+    ((6, 54), (1.0, 1e4), (1e-4, 1.0), (1e-3, 1e8), (0.05, 1.0)),
+    ((55, 148), (-0.9997, -0.99), (1e-4, 0.5), (1e-3, 1e8), (0.05, 1.0)),
+]
+LONG = TASK == "T-3408"
+STRATA = [f"n {n[0]}..{n[1]}, guess {g}, root {r[0]}..{r[1]}" for n, g, r, _, _ in LONG_STRATA] if LONG else [
+    f"root +-1E-7..0.05, |c| {lo:.0E}..{hi:.0E}" for lo, hi in NEAR_ZERO_SCALES
+] if NEAR_ZERO else [
+    f"n {n[0]}..{n[1]}, root {r[0]}..{r[1]}, spread {w[0]}..{w[1]}" for n, r, w in FLAT_STRATA
+] if FLAT else [
+    "long near-level, root -0.3..-0.01",
+    "|c| 1E+8..1E+13, root near 0",
+    "guess -0.9999..-0.99",
+    "long spread, root -0.25..-0.05",
+    "typical",
+    "all axes wide",
+]
+
+
+def root_at(flows: list[float], dps: int) -> mpmath.mpf | None:
+    """The rate r of the one positive root v = 1/(1 + r) of sum c_i v^i, by bisection in ln v."""
+    with mpmath.workdps(dps):
+        cs = [mpmath.mpf(c) for c in reversed(flows)]
+
+        def p(u: mpmath.mpf) -> mpmath.mpf:
+            v, s = mpmath.exp(u), mpmath.mpf(0)
+            for c in cs:
+                s = s * v + c
+            return s
+
+        lo, hi = mpmath.mpf(-1), mpmath.mpf(1)
+        while (p(lo) > 0) == (p(hi) > 0):
+            lo, hi = lo * 2, hi * 2
+            if hi > 4096:
+                return None
+        sign_lo = p(lo) > 0
+        for _ in range(4 * dps):
+            mid = (lo + hi) / 2
+            if (p(mid) > 0) == sign_lo:
+                lo = mid
+            else:
+                hi = mid
+        return +mpmath.expm1(-(lo + hi) / 2)
+
+
+def irr_math(flows: list[float]) -> str | None:
+    a, b = root_at(flows, 60), root_at(flows, 80)
+    if a is None or b is None or (b != 0 and abs((a - b) / b) > mpmath.mpf("1e-45")):
+        return None
+    with mpmath.workdps(80):
+        return mpmath.nstr(b, 50, strip_zeros=False)
+
+
+def point(rng: random.Random, stratum: int) -> tuple[str, str] | None:
+    guess = None
+    spread = (0.05, 1.0)
+    if LONG:
+        (n_lo, n_hi), band, (r_lo, r_hi), (s_lo, s_hi), spread = LONG_STRATA[stratum]
+        n, scale = rng.randint(n_lo, n_hi), log_uniform(rng, s_lo, s_hi)
+        root = log_uniform(rng, r_lo, r_hi)
+        # Near-level series (stratum 3) have negative roots, the slow runs from 0.1; elsewhere 30% are negative.
+        if band is None or rng.random() < 0.3:
+            root = -root
+        if band is not None:
+            lo, hi = band
+            # A guess near -1 is drawn log-uniform in its distance from -1.
+            guess = -1 + log_uniform(rng, 1 + lo, 1 + hi) if lo < 0 else log_uniform(rng, lo, hi)
+    elif NEAR_ZERO:
+        n, scale = rng.randint(2, 60), log_uniform(rng, *NEAR_ZERO_SCALES[stratum])
+        root = (1 if rng.random() < 0.5 else -1) * log_uniform(rng, 1e-7, 0.05)
+    elif FLAT:
+        (n_lo, n_hi), (r_lo, r_hi), spread = FLAT_STRATA[stratum]
+        n, scale = round(log_uniform(rng, n_lo, n_hi)), log_uniform(rng, 1e-2, 1e9)
+        root = -log_uniform(rng, -r_hi, -r_lo)
+    elif stratum == 0:
+        n, scale, root = (
+            round(log_uniform(rng, 20, 150)),
+            log_uniform(rng, 1, 1e6),
+            -log_uniform(rng, 0.01, 0.3),
+        )
+        spread = (0.8, 1.0)
+    elif stratum == 1:
+        n, scale = rng.randint(2, 60), log_uniform(rng, 1e8, 1e13)
+        root = (1 if rng.random() < 0.5 else -1) * log_uniform(rng, 1e-6, 0.05)
+    elif stratum == 2:
+        n, scale = rng.randint(5, 80), log_uniform(rng, 1e-3, 1e9)
+        root = (1 if rng.random() < 0.7 else -1) * log_uniform(rng, 1e-4, 0.5)
+        guess = -log_uniform(rng, 0.99, 0.9999)
+    elif stratum == 3:
+        n, scale, root = (
+            round(log_uniform(rng, 20, 150)),
+            log_uniform(rng, 1e-2, 1e9),
+            -log_uniform(rng, 0.05, 0.25),
+        )
+    elif stratum == 4:
+        n, scale = rng.randint(2, 41), log_uniform(rng, 1e-6, 1e9)
+        root = (1 if rng.random() < 0.7 else -1) * log_uniform(rng, 1e-4, 0.99 if rng.random() < 0.3 else 2)
+        if rng.random() < 0.5:
+            guess = (1 if rng.random() < 0.7 else -1) * log_uniform(rng, 1e-3, 0.9)
+    else:
+        n, scale = round(log_uniform(rng, 2, 150)), log_uniform(rng, 1e-12, 1e15)
+        root = (1 if rng.random() < 0.6 else -1) * log_uniform(rng, 1e-6, 0.999)
+        if rng.random() < 0.5:
+            guess = -log_uniform(rng, 0.99, 0.9999) if rng.random() < 0.5 else log_uniform(rng, 1e-3, 1e4)
+    tail = [scale * rng.uniform(*spread) for _ in range(n - 1)]
+    with mpmath.workdps(40):
+        v = 1 / (mpmath.mpf(1) + root)
+        c0 = float(-sum(mpmath.mpf(c) * v ** (i + 1) for i, c in enumerate(tail)))
+    if not math.isfinite(c0) or not 1e-300 < abs(c0) < 1e300:
+        return None
+    flows = [c0, *tail]
+    if rng.random() < 0.3:
+        flows = [-c for c in flows]
+    flows = [round15(c) for c in flows]
+    m = irr_math(flows)
+    if m is None:
+        return None
+    body = "{" + ",".join(text(c) for c in flows) + "}"
+    formula = f"=IRR({body})" if guess is None else f"=IRR({body},{text(round15(guess))})"
+    return (formula, m) if len(formula) <= 8000 else None
+
+
+def main() -> None:
+    seed = "r4-fresh" if NAME == "t3411-irr-r4-fresh" else NAME.removeprefix(f"t{TASK[2:]}-irr-")
+    rng = random.Random(f"{TASK}/{seed}")
+    cells: dict[str, str] = {}
+    hypotheses: dict[str, str] = {}
+    rows: list[str] = []
+    for stratum, label in enumerate(STRATA):
+        got = 0
+        while got < PER:
+            p = point(rng, stratum)
+            if p is None:
+                continue
+            got += 1
+            cell = f"A{len(cells) + 1}"
+            cells[cell] = p[0]
+            hypotheses[f"Calc!{cell}"] = f"irr/{label}"
+            rows.append(f"Calc!{cell}\t{p[1]}\t{p[0]}")
+    case = {
+        "format": "rustsheet-case/v1",
+        "description": (
+            f"{TASK} fresh sweep (decision 0188 R4.2) of IRR on conventional flows, generated after the model was "
+            f"frozen ({FROZEN[NAME]}): six strata of 25 (docs/research/t3411/gen_sweep.py). "
+            "Math: math.tsv (50-digit mpmath roots)."
+        ),
+        "tags": ["M9", "probe", "financial", TASK, "sweep", "irr", "r4"],
+        "expected": {},
+        "hypotheses": hypotheses,
+        "sheets": [{"name": "Calc", "cells": cells}],
+    }
+    out = REPO / "eval" / "suites" / "probes-numeric" / "cases"
+    (out / f"{NAME}.case.json").write_text(json.dumps(case, indent=1) + "\n")
+    (out / f"{NAME}.math.tsv").write_text("cell\tmath\tformula\n" + "\n".join(rows) + "\n")
+    print(NAME, len(cells))
+
+
+main()

@@ -1,0 +1,561 @@
+//! The numeral system of a locale tag: the byte in bits 24-31 of `[$-N000409]`, which changes the
+//! digits that numbers, date and clock fields print (literals, names and text sections keep
+//! theirs). Evidence: probes/t1925-numeral-digits, t3532-numeral-digit-fields,
+//! t3532-numeral-digit-general (excel-graph); docs/excel-semantics/number-formats.md
+//! "Numeral-system digits".
+
+/// The digits a section prints under its locale tag's numeral byte.
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Default)]
+pub enum Numerals {
+    /// ASCII digits: no numeral byte, or 0, 1, 20-26 and every byte above 39 probed (40, 63).
+    #[default]
+    Ascii,
+    /// Ten consecutive code points for 0-9, digit by digit (`[$-2000409]0` on 12 is "١٢").
+    /// Tamil (9) and Ethiopic (17) have no zero: theirs stays ASCII `0` (`[$-9000409]#,##0.00`
+    /// on 1020304.05 is "௧,0௨0,௩0௪.0௫").
+    Positional { zero: u32, ascii_zero: bool },
+    /// The CJK numerals of bytes 27-39.
+    Cjk(&'static CjkStyle),
+}
+
+/// How a CJK numeral byte (27-39) writes numbers. A number section prints its digits one by one
+/// (`[$-1B000409]0.00` on 1234567.89 is "一二三四五六七.八九"). A date or clock field from 10 to 99
+/// is written with the tens sign (`[$-1B000409]dd` of the 15th is "十五", `yy` of 2023 "二十三")
+/// and every other field digit by digit (`yyyy` "二〇二三", `mm` of March "〇三"). `General`, and
+/// an elapsed count, spell the integer part out in units and myriads (`[$-1B000409]General` on
+/// 12345 is "一万二千三百四十五", `[h]` of 1.25 "三十") and the rest digit by digit ("〇.五",
+/// "一E+一一"; probes/t3532-numeral-digit-fields, t3532-numeral-digit-general).
+#[derive(PartialEq, Eq, Debug)]
+pub struct CjkStyle {
+    /// The digits 0-9.
+    digits: [char; 10],
+    /// The signs of ten, hundred and thousand.
+    units: [char; 3],
+    /// The signs of 10^4, 10^8 and 10^12. Every Chinese and Japanese style takes 兆 for 10^12
+    /// (`[$-1F000409][s]` of 1E8 is "捌兆陆仟肆佰亿"; probes/t3718-cjk-numeral-unprobed rows 17-19),
+    /// the Korean one 조.
+    myriads: [char; 3],
+    /// Whether a spelled-out number writes the one before a unit sign (`一十`, `壱百`); a
+    /// myriad always takes it (`[$-1B000409]General` on 10000 is "一万", on 100 "百").
+    one_before_unit: bool,
+    /// Whether a date field writes the one before the tens sign (`[$-1C000409]dd` of the 10th is
+    /// "壱拾", but `[$-1E000409]dd` is "十" where General on 10 is "一十").
+    one_before_field_ten: bool,
+    /// Whether a run of zeros before a nonzero digit prints one zero digit (`[$-1E000409]General`
+    /// on 105 is "一百○五"); the Japanese styles drop it ("百五").
+    zero_in_gap: bool,
+    /// Whether trailing zeros of a group count towards that gap: the Chinese styles of 30 and 31
+    /// are unprobed for it, while bytes 32-35 write no zero between `3110億` and `4000万` but one
+    /// before a group's leading or inner zeros (`[$-20000409][s]` of 3.1104E11 s is "３千１百１十亿４千万",
+    /// of 31104000000 s "３百１十１亿０４百万"; probes/t4107-numeral-2000-suffix rows 183-200).
+    trailing_zero_gap: bool,
+    /// Whether date fields use the tens sign; fullwidth digits (29) print fields digit by digit
+    /// (`[$-1D000409]dd` of the 15th is "１５") though General spells them ("十５").
+    field_tens: bool,
+}
+
+/// Byte 27: Japanese numerals with 〇 (U+3007).
+static JAPANESE: CjkStyle = CjkStyle {
+    digits: ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'],
+    units: ['十', '百', '千'],
+    myriads: ['万', '億', '兆'],
+    one_before_unit: false,
+    one_before_field_ten: false,
+    zero_in_gap: false,
+    trailing_zero_gap: true,
+    field_tens: true,
+};
+
+/// Byte 28: Japanese formal numerals (daiji), with 〇.
+static JAPANESE_FORMAL: CjkStyle = CjkStyle {
+    digits: ['〇', '壱', '弐', '参', '四', '伍', '六', '七', '八', '九'],
+    units: ['拾', '百', '阡'],
+    myriads: ['萬', '億', '兆'],
+    one_before_unit: true,
+    one_before_field_ten: true,
+    zero_in_gap: false,
+    trailing_zero_gap: true,
+    field_tens: true,
+};
+
+/// Byte 29: fullwidth digits, with the Japanese unit signs in `General`.
+static FULLWIDTH: CjkStyle = CjkStyle {
+    digits: ['０', '１', '２', '３', '４', '５', '６', '７', '８', '９'],
+    units: ['十', '百', '千'],
+    myriads: ['万', '億', '兆'],
+    one_before_unit: false,
+    one_before_field_ten: false,
+    zero_in_gap: false,
+    trailing_zero_gap: true,
+    field_tens: false,
+};
+
+/// Byte 30: Chinese numerals with ○ (U+25CB).
+static CHINESE: CjkStyle = CjkStyle {
+    digits: ['○', '一', '二', '三', '四', '五', '六', '七', '八', '九'],
+    units: ['十', '百', '千'],
+    myriads: ['万', '亿', '兆'],
+    one_before_unit: true,
+    one_before_field_ten: false,
+    zero_in_gap: true,
+    trailing_zero_gap: true,
+    field_tens: true,
+};
+
+/// Byte 31: Chinese formal (financial) numerals.
+static CHINESE_FORMAL: CjkStyle = CjkStyle {
+    digits: ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'],
+    units: ['拾', '佰', '仟'],
+    myriads: ['万', '亿', '兆'],
+    one_before_unit: true,
+    one_before_field_ten: true,
+    zero_in_gap: true,
+    trailing_zero_gap: true,
+    field_tens: true,
+};
+
+/// Byte 32: Chinese structure (`一千○一十`) written with fullwidth digits (`１千０１十`), the byte
+/// `,2000` and `[$-20000409]` carry. Date and clock fields are digit by digit (`yy` of 2023 is
+/// "２３", `h` 16 "１６") although General and elapsed counts use the unit signs (probes/t4107-numeral-2000-suffix
+/// rows 1-34, 70-73, 100-104, 130-133).
+static FULLWIDTH_CHINESE: CjkStyle = CjkStyle {
+    digits: ['０', '１', '２', '３', '４', '５', '６', '７', '８', '９'],
+    units: ['十', '百', '千'],
+    myriads: ['万', '亿', '兆'],
+    one_before_unit: true,
+    one_before_field_ten: false,
+    zero_in_gap: true,
+    trailing_zero_gap: false,
+    field_tens: false,
+};
+
+/// Byte 35: [`FULLWIDTH_CHINESE`] with the traditional 萬 and 億 (rows 74-80, 115-119, 142-145).
+static FULLWIDTH_TRADITIONAL: CjkStyle = CjkStyle {
+    myriads: ['萬', '億', '兆'],
+    ..FULLWIDTH_CHINESE
+};
+
+/// Byte 33: [`CHINESE`] with the traditional 萬 and 億 (`[s]` of 100000 is "八十六億四千萬"; rows
+/// 105-109, 134-137).
+static CHINESE_TRADITIONAL: CjkStyle = CjkStyle {
+    myriads: ['萬', '億', '兆'],
+    trailing_zero_gap: false,
+    ..CHINESE
+};
+
+/// Byte 34: formal numerals in traditional characters (`貳參陸`, 拾 佰 仟, 萬 億), the structure of
+/// [`CHINESE_FORMAL`] (rows 110-114, 138-141).
+static CHINESE_FORMAL_TRADITIONAL: CjkStyle = CjkStyle {
+    digits: ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'],
+    myriads: ['萬', '億', '兆'],
+    trailing_zero_gap: false,
+    ..CHINESE_FORMAL
+};
+
+/// Byte 36: [`JAPANESE`]'s structure (no gap zero, fields with the tens sign and no one before it)
+/// with a one before every unit and the fullwidth `０` for zero (`[$-24000409]General` on 1010 is
+/// "一千一十", 105 "一百五", 0.05 "０.０五"; `0` on 1230 "一二三０"; `yyyy-mm-dd yy d` of 45000
+/// "二０二三-０三-十五 二十三 十五"; probes/t4347-numeral-bytes-24-27 rows 1-32, 129-131).
+///
+/// Its six is the compatibility ideograph U+F9D1, not U+516D (every six of rows 1-32).
+static CHINESE_FULLWIDTH_ZERO: CjkStyle = CjkStyle {
+    digits: [
+        '０', '一', '二', '三', '四', '五', '\u{F9D1}', '七', '八', '九',
+    ],
+    one_before_unit: true,
+    ..JAPANESE
+};
+
+/// Byte 37: [`JAPANESE_FORMAL`] (拾 百 阡, 萬 億, no gap zero, `壱拾` in fields) with the digits
+/// 零壹貳參 and the plain 四 六 七 八 九 (`[$-25000409]General` on 12345 is "壹萬貳阡參百四拾伍",
+/// `0` on 1230 "壹貳參零", `dd` of the 15th "壹拾伍"; rows 33-64, 132-134).
+///
+/// Its zero, three, six and ten sign are the compatibility ideographs U+F9B2 零, U+F96B 參,
+/// U+F9D1 六 and U+F973 拾, not U+96F6, U+53C3, U+516D and U+62FE (rows 33-64).
+static FORMAL_TRADITIONAL_DAIJI: CjkStyle = CjkStyle {
+    digits: [
+        '\u{F9B2}', '壹', '貳', '\u{F96B}', '四', '伍', '\u{F9D1}', '七', '八', '九',
+    ],
+    units: ['\u{F973}', '百', '阡'],
+    ..JAPANESE_FORMAL
+};
+
+/// Byte 39: Korean hangul numerals (십 백 천, 만 억 조), a one before every unit, no gap zero,
+/// fields with the tens sign and no one before it (`[$-27000409]General` on 12345 is
+/// "일만이천삼백사십오", 105 "일백오"; `0` on 1230 "일이삼영"; `d` of the 15th "십오"; `[s]` of
+/// 1E8 "팔조육천사백억"; rows 97-128, 138-140).
+static KOREAN: CjkStyle = CjkStyle {
+    digits: ['영', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'],
+    units: ['십', '백', '천'],
+    myriads: ['만', '억', '조'],
+    one_before_unit: true,
+    one_before_field_ten: false,
+    zero_in_gap: false,
+    trailing_zero_gap: true,
+    field_tens: true,
+};
+
+/// The largest integer spelled out in units and myriads (to 兆 groups). Past it the count of 兆
+/// prints digit by digit before 兆: `[$-1B000409][s]` of 1E11 (8.64E15) is "八千六百四十兆", of
+/// 1.2E11 (1.0368E16) "一〇三六八兆" (probes/t3718-cjk-numeral-unprobed rows 20-25).
+const MAX_SPELLED: u64 = 9_999_999_999_999_999;
+/// The digits below 兆 (10^12).
+const BELOW_TRILLION: usize = 12;
+
+impl Numerals {
+    /// The numeral system of byte `byte` (bits 24-31 of a locale tag value).
+    pub fn from_byte(byte: u32) -> Numerals {
+        let positional = |zero: u32| Numerals::Positional {
+            zero,
+            ascii_zero: false,
+        };
+        match byte {
+            2 => positional(0x0660),
+            3 => positional(0x06F0),
+            4 => positional(0x0966),
+            5 => positional(0x09E6),
+            6 => positional(0x0A66),
+            7 => positional(0x0AE6),
+            8 => positional(0x0B66),
+            9 => Numerals::Positional {
+                zero: 0x0BE6,
+                ascii_zero: true,
+            },
+            10 => positional(0x0C66),
+            11 => positional(0x0CE6),
+            12 => positional(0x0D66),
+            13 => positional(0x0E50),
+            14 => positional(0x0ED0),
+            15 => positional(0x0F20),
+            16 => positional(0x1040),
+            // Ethiopic one is U+1369; the code point before it is no zero.
+            17 => Numerals::Positional {
+                zero: 0x1368,
+                ascii_zero: true,
+            },
+            18 => positional(0x17E0),
+            19 => positional(0x1810),
+            27 => Numerals::Cjk(&JAPANESE),
+            28 => Numerals::Cjk(&JAPANESE_FORMAL),
+            29 => Numerals::Cjk(&FULLWIDTH),
+            30 => Numerals::Cjk(&CHINESE),
+            31 => Numerals::Cjk(&CHINESE_FORMAL),
+            // Bytes 32-35: fullwidth Chinese, traditional Chinese, traditional formal, fullwidth traditional
+            // (probes/t4107-numeral-2000-suffix).
+            32 => Numerals::Cjk(&FULLWIDTH_CHINESE),
+            33 => Numerals::Cjk(&CHINESE_TRADITIONAL),
+            34 => Numerals::Cjk(&CHINESE_FORMAL_TRADITIONAL),
+            35 => Numerals::Cjk(&FULLWIDTH_TRADITIONAL),
+            36 => Numerals::Cjk(&CHINESE_FULLWIDTH_ZERO),
+            37 => Numerals::Cjk(&FORMAL_TRADITIONAL_DAIJI),
+            // Byte 38 prints as byte 29 on every probed cell (`[$-26000409]General` on 105 is
+            // "百５", `dd` of the 15th "１５"; probes/t4347-numeral-bytes-24-27 rows 65-96, 135-137).
+            38 => Numerals::Cjk(&FULLWIDTH),
+            39 => Numerals::Cjk(&KOREAN),
+            _ => Numerals::Ascii,
+        }
+    }
+
+    /// `c` in this numeral system when it is an ASCII digit; any other character as it is.
+    pub fn digit(self, c: char) -> char {
+        let Some(d) = c.to_digit(10) else {
+            return c;
+        };
+        match self {
+            Numerals::Ascii => c,
+            Numerals::Positional { ascii_zero, .. } if ascii_zero && d == 0 => c,
+            Numerals::Positional { zero, .. } => char::from_u32(zero + d).unwrap_or(c),
+            Numerals::Cjk(style) => style.digits[d as usize],
+        }
+    }
+
+    /// Every ASCII digit of `text` in this numeral system, digit by digit.
+    pub fn digits(self, text: &str) -> String {
+        text.chars().map(|c| self.digit(c)).collect()
+    }
+
+    /// A date or clock field (`d`, `mm`, `yy`, `e`, `h`, `ss`, ...) as Excel prints it: a CJK
+    /// field from 10 to 99 with the tens sign (`三十一`, `壱拾弐`), anything else digit by digit
+    /// (`〇五`, `二〇二三`).
+    pub fn field(self, text: &str) -> String {
+        if let Numerals::Cjk(style) = self {
+            if style.field_tens {
+                if let Some(value) = two_digit_value(text) {
+                    return style.tens(value, style.one_before_field_ten);
+                }
+            }
+        }
+        self.digits(text)
+    }
+
+    /// `General` text, or an elapsed count: a CJK style spells out the integer part
+    /// (`千二百三十四.五`, `-十五`) and writes the rest digit by digit (`一E+二〇`); the other
+    /// systems map every digit.
+    pub fn number(self, text: &str) -> String {
+        let Numerals::Cjk(style) = self else {
+            return self.digits(text);
+        };
+        let sign_len = text.len() - text.trim_start_matches('-').len();
+        let (sign, rest) = text.split_at(sign_len);
+        let integer_len = rest.bytes().take_while(u8::is_ascii_digit).count();
+        let (integer, tail) = rest.split_at(integer_len);
+        // A padded count (`[hh]` under 10) keeps its zero digit by digit.
+        let padded = integer.len() > 1 && integer.starts_with('0');
+        let spelled = match integer.parse::<u64>() {
+            Ok(value) if value <= MAX_SPELLED && !padded => style.spell(value),
+            _ if !padded && integer.len() > BELOW_TRILLION => {
+                // The count of 兆 digit by digit, then 兆 and the rest spelled out, with one gap
+                // zero under 30 and 31 when the rest starts below 1000億 (`[s]` of 1.2345E11 is
+                // "一○六六六兆○八百亿"; probes/t3718-cjk-numeral-unprobed rows 21-25,
+                // t4245-cjk-numeral-past-1e16). `below` is exactly 12 ASCII digits here, so its
+                // parse cannot fail.
+                let (trillions, below) = integer.split_at(integer.len() - BELOW_TRILLION);
+                let below = below.parse::<u64>().unwrap_or(0);
+                let mut count = self.digits(trillions);
+                count.push(style.myriads[2]);
+                if below > 0 {
+                    if style.zero_in_gap && below < 100_000_000_000 {
+                        count.push(style.digits[0]);
+                    }
+                    count.push_str(&style.spell(below));
+                }
+                count
+            }
+            _ => self.digits(integer),
+        };
+        format!("{sign}{spelled}{}", self.digits(tail))
+    }
+}
+
+/// The value of `text` when it is one or two ASCII digits from 10 to 99.
+fn two_digit_value(text: &str) -> Option<u64> {
+    if text.len() > 2 || !text.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    text.parse::<u64>().ok().filter(|v| (10..=99).contains(v))
+}
+
+impl CjkStyle {
+    /// `value` (10-99) as tens sign and digits: `十五`, `二十`, or `壱拾伍` with `one`.
+    fn tens(&self, value: u64, one: bool) -> String {
+        let (tens, units) = (value / 10, value % 10);
+        let mut text = String::new();
+        if tens > 1 || one {
+            text.push(self.digits[tens as usize]);
+        }
+        text.push(self.units[0]);
+        if units > 0 {
+            text.push(self.digits[units as usize]);
+        }
+        text
+    }
+
+    /// `value` spelled out in groups of four digits, each followed by its myriad sign
+    /// (`一万二千三百四十五`, `一億二千三百四十五万六千七百八十九`); zero is the zero digit.
+    fn spell(&self, value: u64) -> String {
+        if value == 0 {
+            return self.digits[0].to_string();
+        }
+        let mut text = String::new();
+        // Whether a digit has printed, and whether zeros have run since the last one.
+        let mut started = false;
+        let mut gap = false;
+        for myriad in (0..4_u32).rev() {
+            let group = value / 10_u64.pow(4 * myriad) % 10_000;
+            if group == 0 {
+                gap |= started;
+                continue;
+            }
+            for place in (0..4_u32).rev() {
+                let d = (group / 10_u64.pow(place) % 10) as usize;
+                if d == 0 {
+                    gap |= started
+                        && (self.trailing_zero_gap || !group.is_multiple_of(10_u64.pow(place + 1)));
+                    continue;
+                }
+                if gap && self.zero_in_gap {
+                    text.push(self.digits[0]);
+                }
+                gap = false;
+                if place == 0 || d != 1 || self.one_before_unit {
+                    text.push(self.digits[d]);
+                }
+                if place > 0 {
+                    text.push(self.units[place as usize - 1]);
+                }
+                started = true;
+            }
+            if myriad > 0 {
+                text.push(self.myriads[myriad as usize - 1]);
+            }
+        }
+        text
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Numerals;
+
+    #[test]
+    fn bytes_32_to_35_drop_the_gap_zero_after_trailing_zeros() {
+        // probes/t4107-numeral-2000-suffix A133, A131, A183, A151.
+        let fullwidth = Numerals::from_byte(32);
+        assert_eq!(fullwidth.number("311040000000"), "３千１百１十亿４千万");
+        assert_eq!(fullwidth.number("31104000000"), "３百１十１亿０４百万");
+        assert_eq!(fullwidth.number("1000000005"), "１十亿０５");
+        assert_eq!(
+            Numerals::from_byte(34).number("311040000000"),
+            "參仟壹佰壹拾億肆仟萬"
+        );
+        assert_eq!(Numerals::from_byte(33).number("1050"), "一千○五十");
+    }
+
+    #[test]
+    fn spells_general_as_excel() {
+        // probes/t3532-numeral-digit-general rows 10-29.
+        let japanese = Numerals::from_byte(27);
+        let cases = [
+            ("5", "五"),
+            ("10", "十"),
+            ("105", "百五"),
+            ("1010", "千十"),
+            ("10000", "一万"),
+            ("100000", "十万"),
+            ("123456789", "一億二千三百四十五万六千七百八十九"),
+            ("1000000000", "十億"),
+            ("0.5", "〇.五"),
+            ("-15", "-十五"),
+            ("1E+11", "一E+一一"),
+            ("12.05", "十二.〇五"),
+        ];
+        for (text, expected) in cases {
+            assert_eq!(japanese.number(text), expected, "{text}");
+        }
+        let chinese = Numerals::from_byte(30);
+        assert_eq!(chinese.number("10"), "一十");
+        assert_eq!(chinese.number("105"), "一百○五");
+        assert_eq!(chinese.number("1010"), "一千○一十");
+        assert_eq!(chinese.number("1000000000"), "一十亿");
+        assert_eq!(Numerals::from_byte(28).number("100000"), "壱拾萬");
+        assert_eq!(
+            Numerals::from_byte(29).number("12345"),
+            "１万２千３百４十５"
+        );
+        assert_eq!(Numerals::from_byte(31).number("1010"), "壹仟零壹拾");
+        // probes/t3718-cjk-numeral-unprobed rows 17-19: elapsed counts past 10^12 take 兆.
+        assert_eq!(japanese.number("8640000000000"), "八兆六千四百億");
+        assert_eq!(
+            Numerals::from_byte(28).number("86400000000000"),
+            "八拾六兆四阡億"
+        );
+        assert_eq!(
+            Numerals::from_byte(31).number("2400000000000"),
+            "贰兆肆仟亿"
+        );
+    }
+
+    #[test]
+    fn spells_trillions_with_zhao() {
+        // probes/t3718-cjk-numeral-unprobed rows 17-20 (`[s]` of 1E8, 1E9, 1E15; `[h]` of 1E11).
+        let japanese = Numerals::from_byte(27);
+        assert_eq!(japanese.number("8640000000000"), "八兆六千四百億");
+        assert_eq!(japanese.number("86400000000000"), "八十六兆四千億");
+        assert_eq!(japanese.number("2400000000000"), "二兆四千億");
+        assert_eq!(
+            japanese.number("86400000000000000000"),
+            "八六四〇〇〇〇〇兆"
+        );
+        assert_eq!(
+            Numerals::from_byte(28).number("8640000000000"),
+            "八兆六阡四百億"
+        );
+        assert_eq!(
+            Numerals::from_byte(30).number("86400000000000"),
+            "八十六兆四千亿"
+        );
+        assert_eq!(
+            Numerals::from_byte(31).number("8640000000000"),
+            "捌兆陆仟肆佰亿"
+        );
+        assert_eq!(
+            Numerals::from_byte(31).number("86400000000000000000"),
+            "捌陆肆零零零零零兆"
+        );
+        // Rows 21-25: the cut at 10^16 and a nonzero rest below 兆.
+        assert_eq!(japanese.number("8640000000000000"), "八千六百四十兆");
+        assert_eq!(japanese.number("10368000000000000"), "一〇三六八兆");
+        assert_eq!(japanese.number("10666080000000000"), "一〇六六六兆八百億");
+        assert_eq!(
+            Numerals::from_byte(30).number("10666080000000000"),
+            "一○六六六兆○八百亿"
+        );
+        assert_eq!(
+            Numerals::from_byte(31).number("10666080000000000"),
+            "壹零陆陆陆兆零捌佰亿"
+        );
+    }
+
+    #[test]
+    fn fields_use_the_tens_sign() {
+        // probes/t3532-numeral-digit-fields.
+        assert_eq!(Numerals::from_byte(27).field("05"), "〇五");
+        assert_eq!(Numerals::from_byte(27).field("10"), "十");
+        assert_eq!(Numerals::from_byte(30).field("10"), "十");
+        assert_eq!(Numerals::from_byte(28).field("31"), "参拾壱");
+        assert_eq!(Numerals::from_byte(31).field("10"), "壹拾");
+        assert_eq!(Numerals::from_byte(29).field("15"), "１５");
+        assert_eq!(Numerals::from_byte(27).field("2023"), "二〇二三");
+        assert_eq!(Numerals::from_byte(9).field("2023"), "௨0௨௩");
+        assert_eq!(Numerals::from_byte(17).digits("10"), "፩0");
+        assert_eq!(Numerals::from_byte(26).digits("10"), "10");
+    }
+
+    #[test]
+    fn bytes_36_to_39_spell_as_excel() {
+        // probes/t4347-numeral-bytes-24-27 (A10, A13, A17, A23, A41, A49, A55, A70, A105, A113,
+        // A119, A138).
+        // (form, input, Excel) per byte: form 0 is `number` (General, elapsed counts), 1
+        // `digits`, 2 `field`.
+        let check = |byte: u32, cells: &[(u8, &str, &str)]| {
+            let numerals = Numerals::from_byte(byte);
+            for &(form, input, excel) in cells {
+                let ours = match form {
+                    0 => numerals.number(input),
+                    1 => numerals.digits(input),
+                    _ => numerals.field(input),
+                };
+                assert_eq!(ours, excel, "byte {byte} on {input}");
+            }
+        };
+        check(
+            36,
+            &[(0, "100000", "一十万"), (0, "1000000005", "一十億五")],
+        );
+        check(
+            36,
+            &[
+                (1, "1230", "一二三０"),
+                (2, "15", "十五"),
+                (1, "6", "\u{F9D1}"),
+            ],
+        );
+        check(37, &[(0, "12345", "壹萬貳阡\u{F96B}百四\u{F973}伍")]);
+        check(
+            37,
+            &[
+                (1, "1230", "壹貳\u{F96B}\u{F9B2}"),
+                (2, "15", "壹\u{F973}伍"),
+            ],
+        );
+        check(38, &[(0, "105", "百５")]);
+        check(
+            39,
+            &[(0, "12345", "일만이천삼백사십오"), (1, "1230", "일이삼영")],
+        );
+        check(
+            39,
+            &[(2, "15", "십오"), (0, "8640000000000", "팔조육천사백억")],
+        );
+    }
+}

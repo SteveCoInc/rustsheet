@@ -2,12 +2,12 @@
 //! (the default test thread) even in an unoptimized build, whose frames are several times larger
 //! than an optimized build's (directive 5).
 
-use crate::expressions::parser::MAX_FORMULA_DEPTH;
+use crate::expressions::parser::{MAX_FORMULA_DEPTH, MAX_PARENTHESES};
 use crate::test::util::new_empty_model;
 
 /// Deepest nesting of calls or parentheses the parser accepts: every operand costs two levels of
 /// `MAX_FORMULA_DEPTH`, the innermost `1` included (expressions/parser/depth.rs).
-const MAX_NESTING: usize = MAX_FORMULA_DEPTH / 2 - 1;
+const MAX_OPERANDS: usize = MAX_FORMULA_DEPTH / 2 - 1;
 
 fn nested(open: &str, inner: &str, close: &str, levels: usize) -> String {
     format!("={}{inner}{}", open.repeat(levels), close.repeat(levels))
@@ -31,7 +31,7 @@ fn deepest_with_inner_on_2_mib_stack(
         .stack_size(2 << 20)
         .spawn(move || {
             let mut model = new_empty_model();
-            let accepted = (1..=MAX_NESTING).rev().find(|&levels| {
+            let accepted = (1..=MAX_OPERANDS).rev().find(|&levels| {
                 model
                     .set_user_input(0, 1, 1, nested(open, inner, close, levels))
                     .is_ok()
@@ -58,11 +58,111 @@ fn formulas_at_the_nesting_limit_evaluate_on_a_2_mib_stack() {
         ("(", ")"),
         ("IF(TRUE,", ")"),
         ("SUM(", ")"),
-        ("-(", ")"),
         ("1*(", ")"),
     ] {
         let text = evaluate_deepest_on_2_mib_stack(open, close);
         assert_eq!(text.as_deref(), Some("1"), "{open}");
+    }
+    // A sign costs no level (T-3193), and a group holding only a signed group none (T-3338),
+    // so `-(` nests past the depth bound, to the parenthesis cap (below).
+    let (accepted, text) = deepest_on_2_mib_stack("-(", ")").unwrap_or_default();
+    assert_eq!(accepted, MAX_OPERANDS);
+    let negated = if accepted % 2 == 1 { "-1" } else { "1" };
+    assert_eq!(text, negated);
+}
+
+/// T-3338: `-(` nests to Excel's 256-parenthesis cap (probes/t3266-nested-paren-256), and so do
+/// its spaced and plus forms, and 200 levels around Excel's 824 more minus signs
+/// (probes/t3266-nested-200-824): each parses, evaluates, prints as written, and survives a row
+/// insert and a sheet rename (directive 5), all on a 2 MiB stack even unoptimized: the walks over
+/// the tree loop over its runs of signs, whitespace and parentheses (T-3253, T-3691).
+#[test]
+fn signed_parentheses_at_the_parenthesis_cap_evaluate_on_a_small_stack() {
+    let limit = MAX_PARENTHESES;
+    let small = 2 << 20;
+    let minuses = "-".repeat(824);
+    for (open, inner, close, levels, value, stack) in [
+        ("-(", "B1", ")", limit, "2", 2 << 20),
+        ("-(", "B1", ")", limit - 1, "-2", 2 << 20),
+        ("+(", "B1", ")", limit, "2", 2 << 20),
+        ("- ( ", "B1", " ) ", limit, "2", small),
+        ("-(", "1", ")", 200, "1", small),
+        ("-(", "-B1%", ")", limit, "-0.02", small),
+    ] {
+        let inner = if levels == 200 {
+            format!("{minuses}{inner}")
+        } else {
+            inner.to_string()
+        };
+        let handle = std::thread::Builder::new()
+            .stack_size(stack)
+            .spawn(move || {
+                let mut model = new_empty_model();
+                let formula = nested(open, &inner, close, levels);
+                model.set_user_input(0, 1, 2, "2".to_string()).ok()?;
+                model.set_user_input(0, 1, 1, formula.clone()).ok()?;
+                model.evaluate();
+                let before = (model._get_formula("A1"), model._get_text("A1"));
+                model.insert_rows(0, 1, 1).ok()?;
+                model.rename_sheet("Sheet1", "Renamed").ok()?;
+                model.evaluate();
+                let moved = nested(open, &inner.replace("B1", "B2"), close, levels);
+                let after = (model._get_formula("A2"), model._get_text("A2"));
+                Some((formula, before, moved, after))
+            });
+        let result = handle.ok().and_then(|h| h.join().ok()).flatten();
+        let (formula, (text, before), moved, (after, value_after)) = result.unwrap_or_default();
+        assert_eq!(text, formula.trim_end(), "{open} {levels}");
+        assert_eq!(before, value, "{open} {levels}");
+        assert_eq!(after, moved.trim_end(), "{open} {levels}");
+        assert_eq!(value_after, value, "{open} {levels}");
+    }
+    // Past the cap the formula is Excel's syntax error, not a resource limit (T-3689): typed it is
+    // refused as not parsing, stored it is kept as a parse error, as the sign cap's is.
+    let mut model = new_empty_model();
+    let past = nested("-(", "1", ")", limit + 1);
+    assert!(model.set_typed_user_input(0, 1, 1, past.clone()).is_err());
+    assert_eq!(model.set_user_input(0, 1, 1, past), Ok(()));
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#ERROR!");
+}
+
+/// SPEC-0023: whitespace costs no nesting level, so a shape typed with spaces at every level, a
+/// `Node::Spaced` around each operand and each sign's operand, nests exactly as deep as without
+/// them (`=SUM( - SUM( - …` past Excel's 64 nested functions), and its formula text prints, survives
+/// a row insert and a sheet rename and evaluates on a 2 MiB stack (decision 0127).
+#[test]
+fn spaced_shapes_nest_as_deep_as_bare_ones_on_a_2_mib_stack() {
+    for (open, close, bare_open, bare_close) in [
+        ("( ", " )", "(", ")"),
+        ("SUM( ", " )", "SUM(", ")"),
+        ("SUM( - ", " )", "SUM(-", ")"),
+        ("- ( ", " ) ", "-(", ")"),
+        ("IF( TRUE, ", " )", "IF(TRUE,", ")"),
+    ] {
+        let (spaced, _) = deepest_on_2_mib_stack(open, close).unwrap_or_default();
+        let (bare, _) = deepest_on_2_mib_stack(bare_open, bare_close).unwrap_or_default();
+        assert_eq!(spaced, bare, "{open}");
+        assert!(spaced > 64, "{open}: {spaced}");
+        let handle = std::thread::Builder::new()
+            .stack_size(2 << 20)
+            .spawn(move || {
+                let mut model = new_empty_model();
+                let formula = nested(open, "B1", close, spaced);
+                model.set_user_input(0, 1, 1, formula.clone()).ok()?;
+                model.evaluate();
+                let before = (model._get_formula("A1"), model._get_text("A1"));
+                model.insert_rows(0, 1, 1).ok()?;
+                model.rename_sheet("Sheet1", "Renamed").ok()?;
+                model.evaluate();
+                let moved = nested(open, "B2", close, spaced);
+                Some((formula, before, moved, model._get_formula("A2")))
+            });
+        let result = handle.ok().and_then(|h| h.join().ok()).flatten();
+        let (formula, (text, value), moved, after) = result.unwrap_or_default();
+        assert_eq!(text, formula.trim_end(), "{open}");
+        assert_eq!(value, "0", "{open}");
+        assert_eq!(after, moved.trim_end(), "{open}");
     }
 }
 
@@ -79,22 +179,30 @@ fn nested_lifted_edate_at_the_nesting_limit_evaluates_on_a_2_mib_stack() {
 
 /// SPEC-0007: a call and a written group alternating, `SUM((SUM((…))))`, so every level is a
 /// `Group` node under a call, evaluates at the parser's limit on a 2 MiB stack. Each level is two
-/// operands, so it nests half as deep as a one-operand shape.
+/// operands, a group (two levels of nesting) and the call at its head (one and a half, T-3197), so
+/// it nests 72 levels, past Excel's 65 nested calls (probes/t3097-nesting-paren-abs-65); the
+/// outermost operand and the innermost `1` take the rest. Measured in an unoptimized build: 72
+/// levels need about 1.9 MiB, as 127 levels of `ABS(` do.
 #[test]
 fn alternating_calls_and_groups_at_the_nesting_limit_evaluate_on_a_2_mib_stack() {
-    let deepest = deepest_on_2_mib_stack("SUM((", "))");
-    assert_eq!(deepest, Some((MAX_NESTING / 2, "1".to_string())));
+    let levels = (2 * MAX_FORMULA_DEPTH - 4) / 7;
+    assert_eq!(levels, 72);
+    for (open, close) in [("SUM((", "))"), ("(ABS(", "))"), ("( SUM( ", " ) )")] {
+        let deepest = deepest_on_2_mib_stack(open, close);
+        assert_eq!(deepest, Some((levels, "1".to_string())), "{open}");
+    }
 }
 
 /// T-1169: the reported shape, `=` + N `(` + `0.1+0.2-0.3+B1` + N `)`, on the default test thread
 /// (2 MiB) in whatever build runs the tests. Up to the limit it parses, evaluates, prints, and
-/// survives the edits that rewrite every formula (row insert, sheet rename); past it, it is
-/// refused as too deep. Either way the process does not abort.
+/// survives the edits that rewrite every formula (row insert, sheet rename); past it, it is a
+/// parse error: typed it is refused, stored it is kept as one (Excel's syntax, T-3689). Either
+/// way the process does not abort. The parentheses are one run, one group node, so the limit is
+/// Excel's 256 (T-3191).
 #[test]
 fn parenthesised_chain_nested_to_the_limit_and_past_it_never_overflows() {
-    // The innermost operator chain costs one level more than a lone operand.
-    let limit = MAX_NESTING - 1;
-    for levels in [limit - 1, limit, limit + 1, MAX_FORMULA_DEPTH, 300] {
+    let limit = MAX_PARENTHESES;
+    for levels in [MAX_OPERANDS, limit - 1, limit, limit + 1, 300] {
         let nested_over = |cell: &str| {
             format!(
                 "={}0.1+0.2-0.3+{cell}{}",
@@ -104,11 +212,15 @@ fn parenthesised_chain_nested_to_the_limit_and_past_it_never_overflows() {
         };
         let formula = nested_over("B1");
         let mut model = new_empty_model();
-        let result = model.set_user_input(0, 1, 1, formula.clone());
         if levels > limit {
-            assert!(result.is_err(), "{levels} levels were accepted");
+            let typed = model.set_typed_user_input(0, 1, 1, formula.clone());
+            assert!(typed.is_err(), "{levels} levels were accepted");
+            assert_eq!(model.set_user_input(0, 1, 1, formula), Ok(()), "{levels}");
+            model.evaluate();
+            assert_eq!(model._get_text("A1"), "#ERROR!", "{levels}");
             continue;
         }
+        let result = model.set_user_input(0, 1, 1, formula.clone());
         assert!(result.is_ok(), "{levels} levels were refused: {result:?}");
         model.evaluate();
         assert_eq!(model._get_text("A1"), "5.55112E-17", "{levels}");

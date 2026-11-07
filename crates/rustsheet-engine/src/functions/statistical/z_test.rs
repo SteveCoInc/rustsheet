@@ -4,6 +4,7 @@ use crate::functions::statistical::special::normal_cdf;
 use crate::expressions::token::Error;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::Function;
+use crate::reference_operators::Ranges;
 use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 
 /// Z.TEST's p-value: NORM.S.DIST(-z,TRUE), not 1 - NORM.S.DIST(z,TRUE), with
@@ -13,12 +14,21 @@ use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 /// against (mean - x)/(sigma/sqrt(n)), matches 240 of 240 there (columns I and J, 141 for the
 /// plain-double `(mean - x)*sqrt(n)/sigma`) and the 30 numeric cells of t1048-ztest and t1049-ztest
 /// (24 for the quotient form). docs/excel-semantics/statistics.md, T-1778 section, "Engine (T-1929)".
-fn z_test_p(mean: f64, x: f64, n: f64, sigma: f64) -> f64 {
+///
+/// With sigma given, a z past the double range is `#NUM!` when it is positive (the mean above x)
+/// and 0.5 when it is negative, not Phi(-z)'s 0 and 1: `Z.TEST({1,2,3},-1E+300,1E-300)` and
+/// `Z.TEST({1,2,3},1E+300,1E-300)` (probes/t4098-tests-prob-domains A48, A49; statistics.md
+/// "CHISQ.TEST, Z.TEST and PROB: Gate A domains (T-4098)"). With sigma omitted it is unprobed and
+/// keeps Phi(-z).
+fn z_test_p(mean: f64, x: f64, n: f64, sigma: f64, sigma_given: bool) -> Option<f64> {
     let z = extended_quotient(
         extended_product(extended_sum(mean, -x), extended_sqrt(n)),
         sigma,
     );
-    normal_cdf(-z, 0.0, 1.0)
+    if sigma_given && z.is_infinite() {
+        return (z < 0.0).then_some(0.5);
+    }
+    Some(normal_cdf(-z, 0.0, 1.0))
 }
 
 /// Z.TEST's data argument read once: its numbers' count, mean and sample standard deviation.
@@ -31,23 +41,42 @@ struct ZTestData {
 
 impl Model {
     /// Z.TEST's evaluated data: the numbers of a range or an array (text and booleans skipped),
-    /// or a number or boolean; anything else is `#VALUE!`.
+    /// or a number, a boolean or numeric text; anything else is `#VALUE!`.
     fn z_test_data(
         &mut self,
-        data: CalcResult,
+        data: Result<Ranges, CalcResult>,
         cell: CellReferenceIndex,
     ) -> Result<ZTestData, CalcResult> {
+        // A union or 3-D range is read area by area (probes/t4309-3d-union-trimmean-percentile).
+        let data = match data {
+            Ok(areas) => {
+                let values = self.values_from_areas(&areas, cell)?;
+                return self.z_test_stats(values);
+            }
+            Err(value) => value,
+        };
         let values = match data {
             CalcResult::Range { left, right } => self.values_from_range(left, right)?,
             CalcResult::Array(array) => self
                 .values_from_array(array)
-                .map_err(|_| CalcResult::new_error(Error::VALUE, cell, String::new()))?,
+                .map_err(|error| CalcResult::new_error(error, cell, String::new()))?,
             CalcResult::Number(v) => vec![Some(v)],
             // A direct boolean is one value like a number (probes-numeric/t1049-ztest A51).
             CalcResult::Boolean(b) => vec![Some(f64::from(u8::from(b)))],
+            // So is direct numeric text: `ZTEST("3",3)` is the one-value `#DIV/0!`, while `""` and
+            // `"a"` are `#VALUE!` (probes/t4223-m9-statistical-array-kinds-b A48, A49; T-4223).
+            CalcResult::String(text) => match self.cast_number(&text) {
+                Some(v) => vec![Some(v)],
+                None => return Err(CalcResult::new_error(Error::VALUE, cell, String::new())),
+            },
             error @ CalcResult::Error { .. } => return Err(error),
             _ => return Err(CalcResult::new_error(Error::VALUE, cell, String::new())),
         };
+        self.z_test_stats(values)
+    }
+
+    /// The count, mean and sample standard deviation of `values`' numbers.
+    fn z_test_stats(&self, values: Vec<Option<f64>>) -> Result<ZTestData, CalcResult> {
         let mut sum = 0.0;
         let mut count: u64 = 0;
         for x in values.iter().flatten() {
@@ -85,7 +114,11 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         }
         let data = match args.first() {
-            Some(node) => self.evaluate_node_in_context(node, cell),
+            // Read once in reference context, as PERCENTILE's data (T-2344): a name, INDEX
+            // or IF (probed; OFFSET by analogy) that picks a cell comes back as a range like the cell itself (T-2883).
+            Some(node) => self
+                .evaluate_picked_reference_arg(node, cell)
+                .into_areas_or_single(cell),
             None => return CalcResult::new_args_number_error(cell),
         };
         // A data argument that is itself an error value comes before `x` and `sigma` in every
@@ -93,7 +126,11 @@ impl Model {
         // `Z.TEST(NA(),"a")` are `#N/A` and `Z.TEST(NA(),{1,2})` spills two, while
         // `Z.TEST(Data!B2:B3,1/0)` and `Z.TEST({1,2,#N/A},1/0)` are `#DIV/0!`
         // (probes/t2428-ztest-error-data).
-        let data_is_error = matches!(data, CalcResult::Error { .. });
+        let data_is_error = matches!(data, Err(CalcResult::Error { .. }));
+        // A single cell holding text, a boolean or nothing, however it is picked, reads as a range
+        // of one cell: data with no number, `#N/A`, not `#VALUE!` (`ZTEST(Data!B11,Data!C2)` with
+        // text in B11, gen-m9/c2684066d8df263e A190; docs/excel-semantics/statistics.md, T-2256
+        // Z.TEST entry; the name, INDEX and IF forms, probes/t2883-stat-name-index-data, T-2883).
         let data = self
             .z_test_data(data, cell)
             .map_err(CalcResult::without_message);
@@ -130,21 +167,30 @@ fn z_test_element(
     if data.count == 0 {
         return error(Error::NA);
     }
-    // A sigma of 0 or below is #NUM! (`Z.TEST(B1:B10,5,-1)`, probes-numeric/t1049-ztest
-    // A26, t1048-ztest A26; probes/stat-test-lift P44, P52), after the data's error:
-    // `Z.TEST(D1:D3,4,0)` with D2 = `#N/A` is `#N/A` (probes/stat-test-lift-b P93).
-    if sigma.is_some_and(|sigma| sigma <= 0.0) {
-        return error(Error::NUM);
-    }
     // One numeric value is #DIV/0!, with or without sigma (`Z.TEST(D1:D1,4,1)`,
-    // `Z.TEST(7,4,1)`: probes-numeric/t1049-ztest A40, A42; t1916-erf-wrappers column T).
+    // `Z.TEST(7,4,1)`: probes-numeric/t1049-ztest A40, A42; t1916-erf-wrappers column T), and it
+    // comes before a sigma of 0 or below (`ZTEST({5},x,-123456789.123)`, gen-m9/38e4fc309fe199ea
+    // A87).
     if data.count <= 1 {
         return error(Error::DIV);
     }
+    // With two or more values, a sigma of 0 or below is #NUM! (`Z.TEST(B1:B10,5,-1)`,
+    // probes-numeric/t1049-ztest A26, t1048-ztest A26; probes/stat-test-lift P44, P52), after the
+    // data's error: `Z.TEST(D1:D3,4,0)` with D2 = `#N/A` is `#N/A` (probes/stat-test-lift-b P93).
+    if sigma.is_some_and(|sigma| sigma <= 0.0) {
+        return error(Error::NUM);
+    }
+    let sigma_given = sigma.is_some();
     // If sigma is omitted, the sample standard deviation STDEV(array).
     let Some(sigma) = sigma.or(data.stdev) else {
         return error(Error::DIV);
     };
+    // A standard deviation that overflows (data whose squares do) is #NUM!, not the p of 0.5 an
+    // infinite sigma gives (`ZTEST({1E+200,1E+200,-1E+200},x)`; statistics.md "Overflowing
+    // squares (T-2432)").
+    if sigma.is_infinite() {
+        return error(Error::NUM);
+    }
     let n = data.count as f64;
     // A sigma/sqrt(n) that underflows is #DIV/0! (not probed; kept from the fork, TODO(T-1942)).
     // The guard keeps the fork's plain-double test so it fires exactly where main's did; the
@@ -154,9 +200,8 @@ fn z_test_element(
     }
     // A NaN p (an omitted sigma over data whose sum overflows) is #NUM!, not a NaN number
     // (not probed, TODO(T-1942)).
-    let p = z_test_p(data.mean, x, n, sigma);
-    if !p.is_finite() {
-        return error(Error::NUM);
+    match z_test_p(data.mean, x, n, sigma, sigma_given) {
+        Some(p) if p.is_finite() => CalcResult::Number(p),
+        _ => error(Error::NUM),
     }
-    CalcResult::Number(p)
 }

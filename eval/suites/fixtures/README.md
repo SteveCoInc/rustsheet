@@ -77,3 +77,33 @@ docProps/app.xml so that their placeholder cached values are never mistaken for 
   LOOKUP, INDEX), the case of sheet and name lookups, and names, sheets and scopes the cache does not
   hold. The second probes 3-D spans of the cached sheets (`[1]Uses:Defines!$B$2`); it is a workbook of
   its own so that a span Excel for the web refused could not take the other questions down with it.
+- `external-link-uncached-lookups.xlsx` (T-0457): `external-link-cached-lookups.xlsx` with sheet `Refs` replaced the
+  same way (51 legacy formulas in column B, labels in column A) and two sheets added to the externalLink part's
+  `sheetNames`: `Sort` (index 3) with no `sheetData` at all and `Bare` (index 4) with an empty
+  `<sheetData sheetId="4"/>`; `56737` keeps its `refreshError` element. It probes VLOOKUP, HLOOKUP, MATCH and XLOOKUP
+  over one cell, a small range and whole columns or rows of those sheets, the same lookups over whole columns of the
+  cached `Uses`, ERROR.TYPE of each, and direct reads (ISBLANK, SUM, COUNTA, INDEX) of the uncached sheets.
+- `external-link-unsorted-approx-lookups.xlsx` (T-0479): `external-link-uncached-lookups.xlsx` with sheet `Refs` replaced
+  (23 legacy formulas in column B, labels in column A) and the externalLink part rewritten to two cached sheets, `Col`
+  (A1:A5 = 1,5,2,9,3, B1:B5 = 10..50) and `Row` (A1:E1 = 1,5,2,9,3, A2:E2 = 10..50). It probes approximate VLOOKUP, HLOOKUP
+  and MATCH (types 1 and -1) over whole columns and rows of those unsorted caches and over bounded ranges as controls.
+- `circular-keeps-cached-values.xlsx` (T-0461): built by `rustsheet-spec2xlsx` (sheet `S`), then the formulas
+  rewritten as plain (non-array) `<f>` cells with cached values, which a spec case cannot express, and the app name
+  replaced. A1 `=B1+1` (cached 5), B1 `=A1` (4), C1 `=A1*2` (999), D1 `=D1+1` (7), E1 `=D1+100` (0), F1 `=1+1` (55),
+  G1 `=F1*3` (0), H1 `=C1+1` (0), I1 `=A1+F1` (0), J1 `=IF(F1>100,A1,F1*10)` (0), K1 `=ROWS(A1:B1)` (0). Excel for the
+  web keeps every loop member and loop reader at its cached value (5, 4, 999, 7, 0, 0, 0) and recalculates F1 2,
+  G1 6, J1 20, K1 1 (recalc.md "A circular reference without iteration keeps the cells' values").
+- `valueless-cell-forms.xlsx` (T-4148): hand-written raw XML (no `build_xlsx`), shared strings "anchor" and "".
+  A1:A12 are `t="s"` to "", `<c t="str"/>`, `t="str"` with an empty `<v>`, `<is><t></t></is>`, `<c t="inlineStr"/>`,
+  `<c t="s"/>`, `<c/>`, `t="str"` "q", `<c t="n"/>`, `<c t="b"/>`, `<c t="e"/>` and `t="s"` with an empty `<v>`; each
+  row has ISBLANK, ISTEXT, COUNTA, LEN, `A&"|"` and TYPE of its A cell in B:G (legacy formulas). Excel for the web
+  reads every value-less cell as blank and only A1, A3, A4 and A8 as text (xlsx-storage.md "A cell that stores no
+  value is blank").
+- `valueless-cell-forms-ws-index.xlsx` (T-4743): the same raw-XML layout, three rows: A1 `t="s"` with a whitespace-only
+  `<v> </v>`, A2 `<c t="inlineStr"><is/></c>`, A3 `t="s"` to "anchor" (control); the same readers in B:G. Excel for the
+  web reads A1 as blank and A2 as the empty string (xlsx-storage.md "A cell that stores no value is blank").
+- `merged-covered-values.xlsx`, `merged-covered-formula.xlsx` (T-4148): hand-written raw XML. The first merges A1:D1
+  over A1 "anchor", B1 "x", C1 7, D1 "" (shared) and A2:B2 over A2 "y", B2 `<c t="str"/>`, with readers of the covered
+  cells in A4:N4; the second merges A1:B1 over A1 1 and a covered formula B1 `=A1+1`, with readers in A3:D3. Excel
+  keeps and calculates the covered content (xlsx-storage.md "A merged range keeps the values of its covered cells");
+  ours empties it on import (owner T-4722).

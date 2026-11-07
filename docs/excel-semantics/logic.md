@@ -54,10 +54,15 @@ count it (`COUNT(IFERROR(B1,1))` = 1, COUNTA 1); so does an omitted argument (`C
 and the cell itself shows 0 (as a consumer it reads as 0/FALSE/"": `NOT(IFERROR(B1,1))` TRUE, `IF(IFERROR(B1,1),..)` takes the false branch, `-IFERROR(B1,1)`, SUM, AVERAGE, MAX, PRODUCT and LEN of it are 0, `ISLOGICAL` FALSE, `LET(x,IFERROR(B1,1),ISBLANK(x))` TRUE; probes/counta-empty-value D9-D17, D25-D26). IFNA behaves the same (OR FALSE, `&` "", VLOOKUP 0).
 Evidence: gen-m2 7469c3e920e1ade4 Calc!A351, ef5c55a81783b7d5 Calc!A291, dd99be1f2454159f Calc!A110 (excel-graph);
 probes/iferror-blank-value D1:D23 and probes/omitted-arg-compare D1:D10 (excel-graph, 2026-10-09, T-0291).
-Ours: matches since T-0291 (`if_error_like` returns `CalcResult::EmptyArg`; `lookup_key` reads it as 0 and
+A blank cell as the fallback IFERROR takes is the same empty value: STDEV.P counts `IFERROR(1/0,<blank>)` as 0
+(probes/t2475-stat-subexpressions P!A158, excel-graph; statistics.md "Statistical argument-domain errors and extreme
+values (T-2621)").
+Ours: matches since T-0291 (`if_error_like` returns `CalcResult::EmptyArg`, for a blank fallback since T-2621; `lookup_key` reads it as 0 and
 `compare_values` reads any `EmptyArg`, an omitted argument included, as a blank cell; before T-0291 the six omitted-argument
 comparisons above were wrong). COUNTA reads its arguments in picked-reference context (TAKE, DROP, INDEX, OFFSET of a
-range stay references) and counts every element of an array value, the empty ones included (T-1395).
+range stay references) and counts every element of an array value, the empty ones included (T-1395). `CELL("contents", ref)` of a blank
+target is the same empty value since T-3053, and array arguments of VSTACK, HSTACK, TOCOL, TOROW, TAKE, CHOOSECOLS, FILTER
+and MAP reject it with `#VALUE!` (`VSTACK(IFERROR(Data!C11,5),1)`; information.md "CELL("contents", ref) as a VSTACK argument").
 Status: VERIFIED (excel-graph)
 Tasks: T-0235, T-0291, T-1294, T-1395
 See also lookup.md "VLOOKUP and HLOOKUP hand a blank result cell to their caller as 0": VLOOKUP, HLOOKUP and LOOKUP
@@ -83,3 +88,18 @@ Evidence: probes/t2280-ifs-one-cell-range-condition (excel-graph, 2026-10-21), C
 gen-m6/870c5e38f51ce5d4 Calc!A360 (`ROWS((IFS(Data!A$7,Data!D$10)*Data!C10))` is 1).
 Status: VERIFIED (excel-graph); implemented (T-2280, `ifs_pick`).
 Tasks: T-2280
+
+## IFS: a text condition with an array value spills its shape (T-2653)
+Rule: when an IFS condition is text not reading as a boolean, the `#VALUE!` result is an array of the broadcast shape of
+that pair's value and every *later* argument (conditions and values), at least 1x1; earlier scalar pairs do not count (an earlier array condition lifts the whole call: `IFS({TRUE,FALSE},{1;2},"x",5)` is 2x2).
+`IFS("x",{1,2;3,4})` is 2x2, `IFS("x",A1:B3)` 3x2, `IFS("x",5,TRUE,{1,2})` 1x2, `IFS("x",5,{TRUE,FALSE,TRUE},1)` 1x3,
+`IFS("x",5,"y",{1,2,3,4})` 1x4, `IFS("x",{1,2},{TRUE;FALSE},3)` 2x2, `IFS("x",5)` 1x1; `IFS(FALSE,{1,2},"x",5)` is 1x1.
+All have TYPE 64. A TRUE condition before the text one picks its value as usual. So a 3x2 value spills, or is `#SPILL!`
+when blocked (gen-m5/4260ce3226165deb Calc!A208).
+Evidence: probes/t2653-ifs-text-condition-array-value, probes/t2653-ifs-text-condition-shape-sources (excel-graph,
+2026-10-25); gen-m5/4260ce3226165deb Calc!A208.
+Untested: a later scalar error argument (`IFS("x",5,TRUE,1/0)`) and mismatched later shapes (`IFS("x",{1,2},TRUE,{1,2,3})`); the engine gives `#VALUE!` in every element.
+Status: VERIFIED (excel-graph); implemented (T-2653, `ifs_text_condition_error`).
+Tasks: T-2653
+
+See also: IF error arguments are recorded in criteria.md "Zero and negative SUMIFS criteria; IF error arguments; RIGHT numeric-text num_chars" (T-2980).

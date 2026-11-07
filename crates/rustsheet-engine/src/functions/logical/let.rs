@@ -101,7 +101,9 @@ pub(super) fn assign_variable_ids(node: &mut Node, target: &str, id: u32) {
         Node::UnaryKind { right, .. } => assign_variable_ids(right, target, id),
         Node::ImplicitIntersection { child, .. }
         | Node::SpillRangeOperator { child }
-        | Node::Group { child, .. } => {
+        | Node::Group { child, .. }
+        | Node::UnaryPlus { child }
+        | Node::Spaced { child, .. } => {
             assign_variable_ids(child, target, id);
         }
         Node::OpRangeKind { left, right }
@@ -134,7 +136,7 @@ impl Model {
 
     /// LET; with `as_reference` the body is evaluated in reference context, so a union there
     /// stays its areas: `SUM(LET(x,(A1,B2),x))` is 6 (probes/multiarea-letbind H8). Each value
-    /// and the body are evaluated once (`read_once` in functions/logical/lambda.rs relies on it).
+    /// and the body are evaluated once (`read_once` in `functions/logical/read_once.rs` relies on it).
     pub(crate) fn let_impl(
         &mut self,
         args: &[Node],
@@ -189,11 +191,24 @@ impl Model {
                     cell,
                     format!("LET: variable name '{name}' is already bound"),
                 )),
-                _ => Err(CalcResult::new_error(
-                    Error::VALUE,
-                    cell,
-                    format!("LET: argument {} must be a variable name", 2 * i + 1),
-                )),
+                // Excel refuses a name under a unary plus typed (`LET(+x,1,x)`, Graph PATCH 400,
+                // docs/excel-semantics/syntax.md "A typed unary plus stays in the formula text",
+                // T-2887), as it refuses a repeated name. A plus over a non-name is unprobed.
+                other => {
+                    let plus_name = matches!(
+                        other,
+                        Node::UnaryPlus { child } if matches!(**child, Node::NamedVariableKind { .. })
+                    );
+                    Err(CalcResult::new_error(
+                        if plus_name {
+                            Error::ERROR
+                        } else {
+                            Error::VALUE
+                        },
+                        cell,
+                        format!("LET: argument {} must be a variable name", 2 * i + 1),
+                    ))
+                }
             };
             let name = match name {
                 Ok(name) => {
@@ -224,12 +239,15 @@ impl Model {
             // Eagerly evaluate the binding value and cache it.
             // CalcResult::Range stores only bounds (no cell data), so range bindings are
             // effectively lazy — values are only read when a consuming function iterates the range.
-            let binding = self.bind_argument(&cloned[2 * i + 1], cell);
-            self.variable_stack.insert(raw_id, binding, cell);
+            let (binding, marked) = self.bind_argument(&cloned[2 * i + 1], cell);
+            self.variable_stack
+                .insert_marked(raw_id, binding, marked, cell);
         }
 
-        // Evaluate the body with all bindings in scope.
-        let result = read_body(self, &cloned[args.len() - 1]);
+        // Evaluate the body with all bindings in scope; its ERROR.TYPE/CELL mark is LET's
+        // (`number_mark.rs`).
+        let body = &cloned[args.len() - 1];
+        let result = self.passing_mark(body, |model| read_body(model, body));
         self.close_over(&result, &bound_ids, mark, cell);
 
         // Remove only the ids introduced by this LET frame.
@@ -246,9 +264,25 @@ impl Model {
     /// called `LET(f,INDEX(A1:A3,2),f(2))` is `#REF!`, let-name-call-refs H5). An argument that
     /// may stand for several areas is read in reference context, so a union stays its areas
     /// wherever it comes from: written out, another variable, IF, CHOOSE or LET
-    /// (probes/multiarea-let H1, multiarea-letbind H1:H3 and H7).
-    pub(crate) fn bind_argument(&mut self, node: &Node, cell: CellReferenceIndex) -> Binding {
+    /// (probes/multiarea-let H1, multiarea-letbind H1:H3 and H7). Also whether the value carries
+    /// the ERROR.TYPE/CELL mark ([`Model::binding_marked`]).
+    pub(crate) fn bind_argument(
+        &mut self,
+        node: &Node,
+        cell: CellReferenceIndex,
+    ) -> (Binding, bool) {
+        self.binding_marked(node, |model| model.bind_argument_value(node, cell))
+    }
+
+    /// [`Self::bind_argument`] without the mark.
+    fn bind_argument_value(&mut self, node: &Node, cell: CellReferenceIndex) -> Binding {
         let node = node.ungrouped();
+        // An empty slot, `(1,)` or `(,2)`, is omitted like a missing argument (arrays.md
+        // ISOMITTED, A24-A25 and A34), and a variable bound to an omitted parameter hands the
+        // omission on, so ISOMITTED of a LET name for it stays TRUE as before T-2649.
+        if matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node) {
+            return Binding::Omitted;
+        }
         let is_span = matches!(node, Node::SheetSpanKind { .. });
         // XLOOKUP, TAKE, DROP and TRIMRANGE bind the reference they pick, so calling the name is
         // `#REF!` as for OFFSET (probes/let-name-call-forms H7:H9, H11; T-1232).
@@ -323,13 +357,52 @@ impl Model {
                 _ => {}
             }
         }
-        RefArg::from(self.variable_value(node, cell))
+        // The copy is charged like a read in value context (`evaluate_node_in_context`;
+        // SPEC-0024 step 3, T-2805).
+        let value = self.variable_value(node, cell);
+        RefArg::from(self.charged(value, cell))
+    }
+
+    /// The one-cell reference `node` is bound to, when it is a variable bound to one: what TAKE,
+    /// DROP and TRIMRANGE read for their array, where a value read gives the cell's value
+    /// (`TYPE(TAKE(LET(v,A2,v),1))` is 1, not a 1x1 array's 64, and `ISREF` of it TRUE;
+    /// probes/t2622-take-let-reference-lambda-text P2, P15, P21-P29; T-2622).
+    pub(crate) fn cell_variable_reference(&self, node: &Node) -> Option<CalcResult> {
+        match self.variable_binding(node.ungrouped())? {
+            Binding::Value(reference @ CalcResult::Range { left, right })
+            | Binding::ReadOnce(reference @ CalcResult::Range { left, right })
+                if left == right =>
+            {
+                Some(reference.clone())
+            }
+            _ => None,
+        }
+    }
+
+    /// What `node` is bound to when it is a variable in scope.
+    fn variable_binding(&self, node: &Node) -> Option<&Binding> {
+        match node {
+            Node::NamedVariableKind { id: Some(id), .. } => self.variable_stack.get(*id as usize),
+            _ => None,
+        }
+    }
+
+    /// Whether `node` is a variable bound to an omitted LAMBDA parameter ([`Binding::Omitted`]).
+    pub(crate) fn is_omitted_variable(&self, node: &Node) -> bool {
+        matches!(self.variable_binding(node), Some(Binding::Omitted))
     }
 
     /// Whether `node` is a variable bound to an array of references ([`Binding::Grid`]), which
     /// [`Model::variable_reference`] hands on.
     pub(crate) fn is_grid_variable(&self, node: &Node) -> bool {
-        matches!(node, Node::NamedVariableKind { id: Some(id), .. }
-            if matches!(self.variable_stack.get(*id as usize), Some(Binding::Grid(_))))
+        matches!(self.variable_binding(node), Some(Binding::Grid(_)))
+    }
+
+    /// Whether `node` is a LET variable or LAMBDA parameter bound to a union's areas.
+    pub(crate) fn is_areas_variable(&self, node: &Node) -> bool {
+        matches!(
+            self.variable_binding(node).map(Binding::resolved),
+            Some(Binding::Areas(_))
+        )
     }
 }

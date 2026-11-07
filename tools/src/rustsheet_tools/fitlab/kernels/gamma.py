@@ -35,6 +35,7 @@ from rustsheet_tools.fitlab.exact import (
     to_double,
 )
 from rustsheet_tools.fitlab.fit import Fit
+from rustsheet_tools.fitlab.holdout import REFERENCE
 from rustsheet_tools.fitlab.score import Candidate, candidate
 from rustsheet_tools.fitlab.sweep import Arg, numeric_arg
 
@@ -91,7 +92,7 @@ def _exact_ln(v: Fraction) -> float:
 def gamma_int_candidates() -> list[Candidate]:
     """GAMMA(n): correctly rounded, libm, and the factorial products per rounding and order."""
     out = [
-        candidate("correctly rounded", lambda x: to_double(math.factorial(_positive_int(_arg(x)) - 1))),
+        candidate(REFERENCE, lambda x: to_double(math.factorial(_positive_int(_arg(x)) - 1))),
         candidate("libm tgamma", lambda x: math.gamma(float(_arg(x)))),
     ]
     for name, rnd in ROUNDINGS.items():
@@ -104,7 +105,7 @@ def gamma_int_candidates() -> list[Candidate]:
 def gammaln_int_candidates() -> list[Candidate]:
     """GAMMALN(n): correctly rounded, libm, and logarithms of the factorial products."""
     out = [
-        candidate("correctly rounded", _gammaln_int(exact_value, True, _exact_ln)),
+        candidate(REFERENCE, _gammaln_int(exact_value, True, _exact_ln)),
         candidate("libm lgamma", lambda x: math.lgamma(float(_arg(x)))),
     ]
     for name, rnd in ROUNDINGS.items():
@@ -151,7 +152,7 @@ def gamma_half_candidates() -> list[Candidate]:
         return to_double(half_int_gamma(_arg(x), exact_sqrt_pi, exact_value, downward=False))
 
     out = [
-        candidate("correctly rounded", exact),
+        candidate(REFERENCE, exact),
         candidate("libm tgamma", lambda x: math.gamma(float(_arg(x)))),
     ]
     for name, rnd in ROUNDINGS.items():

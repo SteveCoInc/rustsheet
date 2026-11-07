@@ -1,0 +1,157 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4129: does Excel for the web open and render a pivot whose Product item B carries one of the item flags c (child items), e (expanded) or m (missing), each set to 1 (d and f make the web refuse the file: pivots.md)? Data!A1:D9 has Region, Product, Year and Sales over eight records: East A 2024 10, East A 2025 4, East B 2024 5, East B 2025 8, East C 2024 3, West A 2024 20, West A 2025 6, West B 2025 7 (West/B/2024 and West/C are empty intersections). Each sheet is one builder-v2 pivot at A3: rows Region and Product, Sum of Sales, B's flag: IC: c, IE: e, IM: m. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4129",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-1075",
+  "PV-1077",
+  "PV-1080"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Year",
+    "D1": "Sales",
+    "A2": "East",
+    "B2": "A",
+    "C2": 2024,
+    "D2": 10,
+    "A3": "East",
+    "B3": "A",
+    "C3": 2025,
+    "D3": 4,
+    "A4": "East",
+    "B4": "B",
+    "C4": 2024,
+    "D4": 5,
+    "A5": "East",
+    "B5": "B",
+    "C5": 2025,
+    "D5": 8,
+    "A6": "East",
+    "B6": "C",
+    "C6": 2024,
+    "D6": 3,
+    "A7": "West",
+    "B7": "A",
+    "C7": 2024,
+    "D7": 20,
+    "A8": "West",
+    "B8": "A",
+    "C8": 2025,
+    "D8": 6,
+    "A9": "West",
+    "B9": "B",
+    "C9": 2025,
+    "D9": 7
+   }
+  },
+  {
+   "name": "IC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IC",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "fields": {
+       "Product": {
+        "item_attrs": {
+         "B": {
+          "c": true
+         }
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "IE",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IE",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "fields": {
+       "Product": {
+        "item_attrs": {
+         "B": {
+          "e": true
+         }
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "IM",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IM",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "fields": {
+       "Product": {
+        "item_attrs": {
+         "B": {
+          "m": true
+         }
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A9)"
+   }
+  }
+ ]
+}

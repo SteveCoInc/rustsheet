@@ -47,6 +47,7 @@ macro_rules! lifting_table_functions {
             | Function::ForecastLinear
             | Function::ForecastEts
             | Function::ForecastEtsConfint
+            | Function::ForecastEtsSeasonality
             | Function::ForecastEtsStat
             | Function::TTest
             | Function::TTestCompat
@@ -66,6 +67,7 @@ macro_rules! lifting_table_functions {
             | Function::Trimmean
             | Function::Address
             | Function::Sequence
+            | Function::Randarray
             | Function::Makearray
             | Function::Take
             | Function::Drop
@@ -358,6 +360,7 @@ macro_rules! lifting_table_functions {
             | Function::Len
             | Function::Lenb
             | Function::Value
+            | Function::Char
             | Function::Code
             | Function::Unichar
             | Function::Unicode
@@ -384,6 +387,7 @@ macro_rules! lifting_table_functions {
             | Function::Replaceb
             | Function::Concatenate
             | Function::Textjoin
+            | Function::Arraytotext
             | Function::Dollar
             | Function::Fixed
             | Function::Numbervalue

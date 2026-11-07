@@ -1,0 +1,84 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "What a column edit made in the application does to a filtered table's hidden rows. Table Sales on S!A1:C7 (Cat a,b,a,c,a,b; Val 1-6; Ext 10-60) with a values filter on Cat keeping \"a\" (rows 3, 5, 7 hidden). Sheet F: A1:A4 SUBTOTAL 3, 103, 9, 109 over Sales[Val]; A5:A8 the same over Sales[Ext]; A9 ROWS(Sales); A10 COLUMNS(Sales). SUBTOTAL 3 against 103 tells filtered rows from rows left hidden by hand (T-4371). The edit: delete_column at A deletes Cat, the column holding the table's only filter criterion.",
+  "tags": [
+    "M8",
+    "tables",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "C1": "Ext",
+        "A2": "a",
+        "B2": 1,
+        "C2": 10,
+        "A3": "b",
+        "B3": 2,
+        "C3": 20,
+        "A4": "a",
+        "B4": 3,
+        "C4": 30,
+        "A5": "c",
+        "B5": 4,
+        "C5": 40,
+        "A6": "a",
+        "B6": 5,
+        "C6": 50,
+        "A7": "b",
+        "B7": 6,
+        "C7": 60
+      },
+      "hidden_rows": [
+        3,
+        5,
+        7
+      ],
+      "tables": [
+        {
+          "name": "Sales",
+          "ref": "A1:C7",
+          "filter": true
+        }
+      ]
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUBTOTAL(3,Sales[Val])",
+        "A2": "=SUBTOTAL(103,Sales[Val])",
+        "A3": "=SUBTOTAL(9,Sales[Val])",
+        "A4": "=SUBTOTAL(109,Sales[Val])",
+        "A5": "=SUBTOTAL(3,Sales[Ext])",
+        "A6": "=SUBTOTAL(103,Sales[Ext])",
+        "A7": "=SUBTOTAL(9,Sales[Ext])",
+        "A8": "=SUBTOTAL(109,Sales[Ext])",
+        "A9": "=ROWS(Sales)",
+        "A10": "=COLUMNS(Sales)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_column",
+      "sheet": "S",
+      "column": "A"
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4",
+    "F!A5",
+    "F!A6",
+    "F!A7",
+    "F!A8",
+    "F!A9",
+    "F!A10"
+  ]
+}

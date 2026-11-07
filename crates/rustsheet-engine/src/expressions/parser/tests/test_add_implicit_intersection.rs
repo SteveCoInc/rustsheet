@@ -73,8 +73,46 @@ fn simple_test() {
         // (probes/legacy-if-arm-other-references M12, T-2326).
         ("IF(TRUE,INDEX(B1:B6,3))", "IF(TRUE,INDEX(B1:B6,3))"),
         ("IF(TRUE,INDEX(B1:C6,0,1))", "@IF(TRUE,INDEX(B1:C6,0,1))"),
-        // Unevidenced shapes keep the `@`: a 2-D range (INDEX gives a row) and IFS.
-        ("IF(TRUE,INDEX(B1:C6,3))", "@IF(TRUE,INDEX(B1:C6,3))"),
+        // Any range shape with literal whole-number indexes, a literal arm and CHOOSE lose it; a
+        // computed or non-integer index and IFS keep it (probes/t3134-legacy-if-index-arm-shapes).
+        ("IF(TRUE,INDEX(B1:C6,3))", "IF(TRUE,INDEX(B1:C6,3))"),
+        (
+            "ABS(IF(TRUE,INDEX(B1:B6,3),5))",
+            "ABS(IF(TRUE,INDEX(B1:B6,3),5))",
+        ),
+        ("CHOOSE(1,INDEX(B1:B6,3))", "CHOOSE(1,INDEX(B1:B6,3))"),
+        ("IF(TRUE,INDEX(B1:B6,3.5))", "@IF(TRUE,INDEX(B1:B6,3.5))"),
+        (
+            "ABS(IF(TRUE,INDEX(B1:B6,1+2)))",
+            "ABS(@IF(TRUE,INDEX(B1:B6,1+2)))",
+        ),
+        (
+            "IF(TRUE,INDEX(B1:B6,3),B1:B6)",
+            "@IF(TRUE,INDEX(B1:B6,3),B1:B6)",
+        ),
+        // A bare range condition (unprobed) is intersected first, so the call is still one cell; an
+        // array one is not a scalar, so the call keeps its `@` (probes/t3134-legacy-if-index-arm-shapes I50).
+        ("IF(B1:B6,INDEX(B1:B6,3))", "IF(@B1:B6,INDEX(B1:B6,3))"),
+        (
+            "IF({TRUE,FALSE},INDEX(B1:B6,3))",
+            "@IF({TRUE,FALSE},INDEX(B1:B6,3))",
+        ),
+        // An array-constant CHOOSE index over one-cell arms stays whole and the `@` goes on the
+        // call; range arms keep both (probes/t3134-legacy-if-index-arm-shapes I54, K54,
+        // legacy-choose-array-index; T-3168).
+        (
+            "CHOOSE({1,2},INDEX(B1:B6,3),5)",
+            "@CHOOSE({1,2},INDEX(B1:B6,3),5)",
+        ),
+        (
+            "ABS(CHOOSE({1,2},INDEX(B1:B6,3),5))",
+            "ABS(@CHOOSE({1,2},INDEX(B1:B6,3),5))",
+        ),
+        (
+            "SUM(CHOOSE({1,2},INDEX(B1:B6,3),5))",
+            "SUM(CHOOSE({1,2},INDEX(B1:B6,3),5))",
+        ),
+        ("CHOOSE({1,2},H1:H2,I1:I2)", "@CHOOSE(@{1,2},H1:H2,I1:I2)"),
         (
             "_xlfn.IFS(TRUE,INDEX(B1:B6,3))",
             "@IFS(TRUE,INDEX(B1:B6,3))",
@@ -204,4 +242,264 @@ fn defined_names_and_dynamic_functions() {
             "{formula}"
         );
     }
+}
+
+// T-3856: a name whose body is one literal or one cell, of any sheet, reads as that body: no `@`
+// at the root, under ABS or as an IF arm, and a number body is a literal INDEX index; an array
+// constant, a range, a one-cell range and a computed body take the `@`
+// (probes/t3856-legacy-at-name-body, probes/t3297-legacy-if-index-arm-name-table I35, I36).
+#[test]
+fn defined_names_by_their_body() {
+    let worksheets = vec!["Sheet1".to_string(), "S2".to_string()];
+    let names = [
+        ("nNum", "3"),
+        ("nTxt", "\"x\""),
+        ("nBool", "TRUE"),
+        ("nCell", "Sheet1!$Z$3"),
+        ("nOther", "=S2!$A$3"),
+        ("nArr1", "{3}"),
+        ("nRng", "Sheet1!$Z$1:$Z$6"),
+        ("nCalc", "1+2"),
+        ("nCellR", "Sheet1!$Z$3:$Z$3"),
+        ("n2d", "{1,2;3,4}"),
+    ]
+    .map(|(name, body)| (name.to_string(), None, body.to_string()))
+    .to_vec();
+    let mut parser = new_parser(worksheets, names, HashMap::new());
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet1".to_string(),
+        row: 30,
+        column: 1,
+    };
+    let cases = [
+        ("nNum", "nNum"),
+        ("ABS(nTxt)", "ABS(nTxt)"),
+        ("IF(TRUE,nBool)", "IF(TRUE,nBool)"),
+        ("ABS(IF(TRUE,nCell))", "ABS(IF(TRUE,nCell))"),
+        ("IF(TRUE,nOther)", "IF(TRUE,nOther)"),
+        ("INDEX(Z1:Z6,nNum)", "INDEX(Z1:Z6,nNum)"),
+        ("ABS(INDEX(Z1:Z6,3,1))", "ABS(INDEX(Z1:Z6,3,1))"),
+        ("INDEX(Z1:Z6,A20)", "@INDEX(Z1:Z6,A20)"),
+        ("INDEX(Z1:Z6,0)", "@INDEX(Z1:Z6,0)"),
+        // Over a 2-D array-bodied name one index is a row, not one cell
+        // (probes/t4273-legacy-at-name-body-more A45).
+        ("INDEX(n2d,1)", "@INDEX(n2d,1)"),
+        ("INDEX(n2d,2)+0", "@INDEX(n2d,2)+0"),
+        ("INDEX(nRng,3)", "INDEX(nRng,3)"),
+        ("IF(TRUE,INDEX(Z1:Z6,nNum))", "IF(TRUE,INDEX(Z1:Z6,nNum))"),
+        ("INDEX(Z1:Z6,nCell)", "@INDEX(Z1:Z6,nCell)"),
+        (
+            "ABS(IF(TRUE,INDEX(Z1:Z6,nTxt)))",
+            "ABS(@IF(TRUE,INDEX(Z1:Z6,nTxt)))",
+        ),
+        (
+            "SUM(IF(TRUE,INDEX(Z1:Z6,nBool)))",
+            "SUM(IF(TRUE,INDEX(Z1:Z6,nBool)))",
+        ),
+        ("nArr1", "@nArr1"),
+        ("ABS(nRng)", "ABS(@nRng)"),
+        ("IF(TRUE,nCalc)", "@IF(TRUE,nCalc)"),
+        (
+            "IF(TRUE,INDEX(Z1:Z6,nCellR))",
+            "@IF(TRUE,INDEX(Z1:Z6,@nCellR))",
+        ),
+        ("SUM(nRng)", "SUM(nRng)"),
+        ("INDEX(Z1:Z6,3)", "INDEX(Z1:Z6,3)"),
+    ];
+    for (formula, expected) in cases {
+        let mut t = parser.parse(formula, &cell_reference);
+        add_implicit_intersection(&mut t, true);
+        assert_eq!(
+            to_english_localized_string(&t, &cell_reference),
+            expected,
+            "{formula}"
+        );
+    }
+}
+
+// T-4273: a negative number or an error literal reads as that body, without the `@`; a
+// parenthesized body and a body that is another name take it; spaces around one token are
+// trimmed; a relative one-cell body reads as a cell; INDEX over an array-bodied name with a row
+// and a column index is one element (probes/t4273-legacy-at-name-body-more rows 30-36 and 45).
+#[test]
+fn defined_names_by_their_body_more() {
+    let worksheets = vec!["Sheet1".to_string()];
+    let names = [
+        ("nNum", "3"),
+        ("nRng", "Sheet1!$Z$1:$Z$6"),
+        ("n2d", "{1,2;3,4}"),
+        ("nRel", "Sheet1!Z3"),
+        ("nNeg", "-3"),
+        ("nErr", "#N/A"),
+        ("nPar", "(3)"),
+        ("nPad", " 3 "),
+        ("nName", "nNum"),
+        ("nNameRng", "nRng"),
+    ]
+    .map(|(name, body)| (name.to_string(), None, body.to_string()))
+    .to_vec();
+    let mut parser = new_parser(worksheets, names, HashMap::new());
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet1".to_string(),
+        row: 30,
+        column: 1,
+    };
+    let cases = [
+        ("nRel", "nRel"),
+        ("INDEX(Z1:Z6,nRel)", "@INDEX(Z1:Z6,nRel)"),
+        ("nNeg", "nNeg"),
+        ("ABS(nNeg)", "ABS(nNeg)"),
+        ("IF(TRUE,nNeg)", "IF(TRUE,nNeg)"),
+        ("INDEX(Z1:Z6,nNeg)", "@INDEX(Z1:Z6,nNeg)"),
+        (
+            "SUM(IF(TRUE,INDEX(Z1:Z6,nNeg)))",
+            "SUM(IF(TRUE,INDEX(Z1:Z6,nNeg)))",
+        ),
+        ("nErr", "nErr"),
+        ("ABS(IF(TRUE,nErr))", "ABS(IF(TRUE,nErr))"),
+        ("IF(TRUE,INDEX(Z1:Z6,nErr))", "@IF(TRUE,INDEX(Z1:Z6,nErr))"),
+        ("nPar", "@nPar"),
+        ("INDEX(Z1:Z6,nPar)", "@INDEX(Z1:Z6,@nPar)"),
+        ("nPad", "nPad"),
+        ("INDEX(Z1:Z6,nPad)", "INDEX(Z1:Z6,nPad)"),
+        ("nName", "@nName"),
+        ("SUM(nName)", "SUM(nName)"),
+        ("ABS(nNameRng)", "ABS(@nNameRng)"),
+        ("INDEX(n2d,1,1)", "INDEX(n2d,1,1)"),
+        ("ABS(INDEX(n2d,1,1))", "ABS(INDEX(n2d,1,1))"),
+        ("INDEX(n2d,1,1)+0", "INDEX(n2d,1,1)+0"),
+        ("IF(TRUE,INDEX(n2d,1,1))", "IF(TRUE,INDEX(n2d,1,1))"),
+        ("ABS(INDEX(n2d,1))", "ABS(@INDEX(n2d,1))"),
+    ];
+    for (formula, expected) in cases {
+        let mut t = parser.parse(formula, &cell_reference);
+        add_implicit_intersection(&mut t, true);
+        assert_eq!(
+            to_english_localized_string(&t, &cell_reference),
+            expected,
+            "{formula}"
+        );
+    }
+}
+
+// T-3297: a single-cell INDEX arm over a 4-argument form, a union, a sheet-qualified range, an
+// out-of-range literal, a defined name or a table area shows no `@`; a negated or boolean index
+// keeps it; an array-constant CHOOSE index over cell, computed or text arms moves it to the call,
+// over a range arm keeps both (probes/t3297-legacy-if-index-arm-more-shapes and -name-table).
+#[test]
+fn single_cell_index_arms_of_every_area_kind() {
+    let worksheets = vec!["Sheet1".to_string()];
+    let names = vec![("Rng".to_string(), None, "Sheet1!$B$1:$B$6".to_string())];
+    let mut parser = new_parser(worksheets, names, HashMap::new());
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet1".to_string(),
+        row: 30,
+        column: 8,
+    };
+    let cases = [
+        ("IF(TRUE,INDEX(B1:B6,3,1,1))", "IF(TRUE,INDEX(B1:B6,3,1,1))"),
+        (
+            "ABS(IF(TRUE,INDEX((B1:B6,C1:C6),3,1,2)))",
+            "ABS(IF(TRUE,INDEX((B1:B6,C1:C6),3,1,2)))",
+        ),
+        (
+            "SUM(IF(TRUE,INDEX((B1:B6,C1:C6),3,1)))",
+            "SUM(IF(TRUE,INDEX((B1:B6,C1:C6),3,1)))",
+        ),
+        ("IF(TRUE,INDEX(B1:B6,99))", "IF(TRUE,INDEX(B1:B6,99))"),
+        ("IF(TRUE,INDEX(B1:C6,3,99))", "IF(TRUE,INDEX(B1:C6,3,99))"),
+        (
+            "IF(TRUE,INDEX(Sheet1!B1:B6,3))",
+            "IF(TRUE,INDEX(Sheet1!B1:B6,3))",
+        ),
+        ("IF(TRUE,INDEX(Rng,3))", "IF(TRUE,INDEX(Rng,3))"),
+        ("ABS(CHOOSE(1,INDEX(Rng,3)))", "ABS(CHOOSE(1,INDEX(Rng,3)))"),
+        ("IF(TRUE,INDEX(Rng,3),5)", "IF(TRUE,INDEX(Rng,3),5)"),
+        ("IF(TRUE,INDEX(B1:B6,-3))", "@IF(TRUE,INDEX(B1:B6,-3))"),
+        ("IF(TRUE,INDEX(B1:B6,TRUE))", "@IF(TRUE,INDEX(B1:B6,TRUE))"),
+        (
+            "SUM(IF(TRUE,INDEX(B1:B6,TRUE)))",
+            "SUM(IF(TRUE,INDEX(B1:B6,TRUE)))",
+        ),
+        (
+            "CHOOSE(B1:B6,INDEX(B1:B6,3))",
+            "CHOOSE(@B1:B6,INDEX(B1:B6,3))",
+        ),
+        ("CHOOSE({1,2},A1,B1)", "@CHOOSE({1,2},A1,B1)"),
+        ("CHOOSE({1;2},A1,B1)", "@CHOOSE({1;2},A1,B1)"),
+        ("CHOOSE({1,2},A1+1,5)", "@CHOOSE({1,2},A1+1,5)"),
+        ("CHOOSE({1,2},\"a\",TRUE)", "@CHOOSE({1,2},\"a\",TRUE)"),
+        ("CHOOSE({1,2},B1:B2,5)", "@CHOOSE(@{1,2},B1:B2,5)"),
+        (
+            "CHOOSE({1,2},INDEX(B1:B6,3),B1:B2)",
+            "@CHOOSE(@{1,2},INDEX(B1:B6,3),B1:B2)",
+        ),
+    ];
+    for (formula, expected) in cases {
+        let mut t = parser.parse(formula, &cell_reference);
+        add_implicit_intersection(&mut t, true);
+        assert_eq!(
+            to_english_localized_string(&t, &cell_reference),
+            expected,
+            "{formula}"
+        );
+    }
+}
+
+// T-2723: a unary plus is the identity, so a legacy formula gains the `@` it gains without it,
+// a literal under a plus included (`IF(+TRUE,…)`, `CHOOSE(+1,…)`).
+#[test]
+fn a_unary_plus_changes_no_implicit_intersection() {
+    let mut parser = new_parser(vec!["Sheet1".to_string()], vec![], HashMap::new());
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet1".to_string(),
+        row: 1,
+        column: 1,
+    };
+    let mut legacy = |formula: &str| {
+        let mut t = parser.parse(formula, &cell_reference);
+        add_implicit_intersection(&mut t, true);
+        to_english_localized_string(&t, &cell_reference)
+    };
+    for (formula, plus) in [
+        ("N(IF(TRUE,A1:A3))", "N(IF(+TRUE,A1:A3))"),
+        ("N(CHOOSE(1,A1:A3,{2;3}))", "N(CHOOSE(+1,A1:A3,{2;3}))"),
+        ("SIN(A1:A10)", "SIN(+A1:A10)"),
+        ("SUM((A1:A10*1))", "SUM(+(A1:A10*1))"),
+    ] {
+        let expected = legacy(formula);
+        let with_plus = legacy(plus);
+        assert_eq!(
+            with_plus.replace('+', ""),
+            expected.replace('+', ""),
+            "{plus}"
+        );
+    }
+}
+
+// T-3134 review: the single-cell IF test decides on the shape the analysis already has, so IFs
+// nested in each other's condition stay linear (an extra pass over each condition doubled the work
+// per level: depth 22 took 2 s).
+#[test]
+fn nested_if_conditions_stay_linear() {
+    let mut parser = new_parser(vec!["Sheet1".to_string()], vec![], HashMap::new());
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet1".to_string(),
+        row: 1,
+        column: 1,
+    };
+    let depth = 60;
+    let formula = format!(
+        "{}A1:A2,1,1){}",
+        "IF(".repeat(depth),
+        ",1,1)".repeat(depth - 1)
+    );
+    let start = std::time::Instant::now();
+    let mut t = parser.parse(&formula, &cell_reference);
+    add_implicit_intersection(&mut t, true);
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(5),
+        "{:?}",
+        start.elapsed()
+    );
 }

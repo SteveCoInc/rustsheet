@@ -15,13 +15,14 @@ use crate::{
     model::{FmtSettings, Model},
     types::{
         Alignment, ArrayKind, BorderItem, Cell, CellType, Col, Color, HorizontalAlignment,
-        MergedCell, SheetProperties, SheetState, Style, Theme, VerticalAlignment,
+        SheetProperties, SheetState, Style, Theme, VerticalAlignment,
     },
 };
 
 use crate::user_model::history::{
     ColumnData, Diff, DiffList, DiffType, History, QueueDiffs, RowData,
 };
+use crate::workbook_check::SpillTally;
 
 use super::border_utils::is_max_border;
 
@@ -212,8 +213,10 @@ fn update_style(old_value: &Style, style_path: &str, value: &str) -> Result<Styl
 pub struct UserModel {
     pub(crate) model: Model,
     history: History,
-    send_queue: Vec<QueueDiffs>,
+    pub(super) send_queue: Vec<QueueDiffs>,
     pause_evaluation: bool,
+    /// What the diffs applied by the current undo, redo or external list restore (T-3426).
+    pub(super) restored_spills: SpillTally,
 }
 
 /// Given the index of the currently selected sheet, returns the index that same
@@ -251,6 +254,7 @@ impl UserModel {
             history: History::default(),
             send_queue: vec![],
             pause_evaluation: false,
+            restored_spills: SpillTally::default(),
         }
     }
 
@@ -270,6 +274,7 @@ impl UserModel {
             history: History::default(),
             send_queue: vec![],
             pause_evaluation: false,
+            restored_spills: SpillTally::default(),
         })
     }
 
@@ -284,6 +289,7 @@ impl UserModel {
             history: History::default(),
             send_queue: vec![],
             pause_evaluation: false,
+            restored_spills: SpillTally::default(),
         })
     }
 
@@ -315,7 +321,7 @@ impl UserModel {
             old_value,
             new_value: name.to_string(),
         }]);
-        self.model.workbook.name = name.to_string();
+        self.model.set_workbook_name(name);
     }
 
     /// Undoes last change if any, places the change in the redo list and evaluates the model if needed
@@ -324,6 +330,7 @@ impl UserModel {
     /// * [`UserModel::redo`]
     pub fn undo(&mut self) -> Result<(), String> {
         if let Some(diff_list) = self.history.undo() {
+            self.restored_spills = SpillTally::default();
             self.apply_undo_diff_list(&diff_list)?;
             self.send_queue.push(QueueDiffs {
                 r#type: DiffType::Undo,
@@ -339,6 +346,7 @@ impl UserModel {
     /// * [`UserModel::redo`]
     pub fn redo(&mut self) -> Result<(), String> {
         if let Some(diff_list) = self.history.redo() {
+            self.restored_spills = SpillTally::default();
             self.apply_diff_list(&diff_list)?;
             self.send_queue.push(QueueDiffs {
                 r#type: DiffType::Redo,
@@ -383,41 +391,6 @@ impl UserModel {
     /// * [`UserModel::pause_evaluation`]
     pub fn evaluate(&mut self) {
         self.model.evaluate();
-    }
-
-    /// Returns the list of pending diffs and removes them from the queue
-    ///
-    /// This is used together with [`apply_external_diffs`](UserModel::apply_external_diffs) to keep two remote models
-    /// in sync.
-    ///
-    /// See also:
-    /// * [`UserModel::apply_external_diffs`]
-    pub fn flush_send_queue(&mut self) -> Vec<u8> {
-        // This can never fail :O:
-        let q = bitcode::encode(&self.send_queue);
-        self.send_queue = vec![];
-        q
-    }
-
-    /// This are external diffs that need to be applied to the model
-    ///
-    /// This is used together with [`flush_send_queue`](UserModel::flush_send_queue) to keep two remote models in sync
-    ///
-    /// See also:
-    /// * [`UserModel::flush_send_queue`]
-    pub fn apply_external_diffs(&mut self, diff_list_str: &[u8]) -> Result<(), String> {
-        if let Ok(queue_diffs_list) = bitcode::decode::<Vec<QueueDiffs>>(diff_list_str) {
-            for queue_diff in queue_diffs_list {
-                if matches!(queue_diff.r#type, DiffType::Redo) {
-                    self.apply_diff_list(&queue_diff.list)?;
-                } else {
-                    self.apply_undo_diff_list(&queue_diff.list)?;
-                }
-            }
-        } else {
-            return Err("Error parsing diff list".to_string());
-        }
-        Ok(())
     }
 
     /// Set the input in a cell
@@ -660,15 +633,12 @@ impl UserModel {
     /// exactly `new_index`.
     ///
     /// The reorder is undoable/redoable, and the new order is preserved when the
-    /// workbook is saved. Cross-sheet formula references stay valid across the
-    /// move (sheet order is a position, not an identity — references key off the
-    /// sheet name/id). The selection follows the same sheet across the move.
+    /// workbook is saved. References key off sheet names, so they stay valid,
+    /// except that a 3-D span whose moved end crosses its other end shrinks, as in
+    /// Excel ([`Model::move_sheet`]). The selection follows the same sheet.
     ///
     /// Moving a sheet to its current position is a no-op (no history entry). Fails
     /// if either index is out of range.
-    ///
-    /// See also:
-    /// * [`Model::move_sheet`]
     pub fn move_sheet(&mut self, sheet_index: u32, new_index: u32) -> Result<(), String> {
         let sheet_count = self.model.workbook.worksheets.len() as u32;
         if sheet_index >= sheet_count {
@@ -681,11 +651,12 @@ impl UserModel {
             return Ok(());
         }
         let selected = self.get_selected_sheet();
-        self.model.move_sheet(sheet_index, new_index)?;
+        let rewritten = self.model.move_sheet_rewriting(sheet_index, new_index)?;
         self.set_selected_sheet(selected_sheet_after_move(selected, sheet_index, new_index))?;
         self.push_diff_list(vec![Diff::MoveSheet {
             sheet_index,
             new_index,
+            rewritten,
         }]);
         Ok(())
     }
@@ -801,6 +772,15 @@ impl UserModel {
     /// See also:
     /// * [`Model::range_clear_contents`]
     pub fn range_clear_contents(&mut self, range: &Area) -> Result<(), String> {
+        let diff_list = self.range_clear_contents_diffs(range)?;
+        self.push_diff_list(diff_list);
+        self.evaluate_if_not_paused();
+        Ok(())
+    }
+
+    /// [`Self::range_clear_contents`] without pushing its history entry or evaluating: the diffs that
+    /// undo it, for an edit that records the clear with other changes as one step.
+    fn range_clear_contents_diffs(&mut self, range: &Area) -> Result<DiffList, String> {
         let sheet = range.sheet;
         // TODO: full rows/columns
         let mut old_value = Vec::new();
@@ -829,9 +809,7 @@ impl UserModel {
             old_value,
         }];
         diff_list.extend(link_diffs);
-        self.push_diff_list(diff_list);
-        self.evaluate_if_not_paused();
-        Ok(())
+        Ok(diff_list)
     }
 
     /// Returns the diffs that remove the links of the cells in `range`, so that
@@ -1106,25 +1084,41 @@ impl UserModel {
         Ok(())
     }
 
-    /// Deletes `row_count` rows starting at `row`.
-    ///
-    /// History: a `Diff::DeleteRow` is created for
-    /// each row, ordered **bottom → top**.  Undo therefore recreates rows from
-    /// top → bottom and redo removes them bottom → top, avoiding index drift.
-    ///
-    /// See also [`Model::delete_rows`].
+    /// Deletes `row_count` rows starting at `row`, as one history step that records the rows, and
+    /// the extents of the tables it resizes (T-3634). See also [`Model::delete_rows`].
     pub fn delete_rows(&mut self, sheet: u32, row: i32, row_count: i32) -> Result<(), String> {
+        // Refuse before any change: the table branch clears a row and then deletes, so a refusal of
+        // the delete would otherwise leave an unrecorded clear (T-3259).
+        self.model.check_delete_rows(sheet, row, row_count)?;
+        let diff_list = if let Some(area) = self.model.kept_data_row(sheet, row, row_count) {
+            // The delete keeps a table's first data row and clears it, and deletes the table's
+            // other data rows (the same two steps as [`Model::delete_rows`], T-2338, T-3259): one
+            // history step of the clear and the shorter delete, so undo restores both.
+            let mut diff_list = self.range_clear_contents_diffs(&area)?;
+            if row_count > 1 {
+                diff_list.extend(self.delete_rows_diffs(sheet, row + 1, row_count - 1)?);
+            }
+            diff_list
+        } else {
+            self.delete_rows_diffs(sheet, row, row_count)?
+        };
+        self.push_diff_list(diff_list);
+        self.evaluate_if_not_paused();
+        Ok(())
+    }
+
+    /// [`Self::delete_rows`] of plain rows without pushing its history entry or evaluating.
+    fn delete_rows_diffs(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        row_count: i32,
+    ) -> Result<DiffList, String> {
         let worksheet = self.model.workbook.worksheet(sheet)?;
         let mut old_data = Vec::new();
         // Collect data for all rows to be deleted
         for r in row..row + row_count {
-            let mut row_data = None;
-            for rd in &worksheet.rows {
-                if rd.r == r {
-                    row_data = Some(rd.clone());
-                    break;
-                }
-            }
+            let row_data = worksheet.rows.iter().find(|rd| rd.r == r).cloned();
             // SpillCells are transient; save their style as EmptyCell so undo can
             // restore the style index, letting evaluate() recreate the SpillCell correctly.
             let data = worksheet
@@ -1158,28 +1152,28 @@ impl UserModel {
         })?;
 
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
-        self.model.delete_rows(sheet, row, row_count)?;
+        let old_tables = self.model.table_extents(sheet)?;
+        let snapshot = self.rewrite_snapshot(sheet)?;
+        let rewritten = self.model.delete_rows_rewriting(sheet, row, row_count)?;
+        let tables = self.model.changed_table_extents(sheet, old_tables)?;
 
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
         diff_list.extend(link_diffs);
+        diff_list.extend(self.rewritten_snapshot_diffs(sheet, snapshot)?);
         diff_list.push(Diff::DeleteRows {
             sheet,
             row,
             count: row_count,
             old_data,
+            tables,
+            rewritten,
         });
-        self.push_diff_list(diff_list);
-        self.evaluate_if_not_paused();
-        Ok(())
+        Ok(diff_list)
     }
 
-    /// Deletes `column_count` columns starting at `column`.
-    ///
-    /// History: pushes one `Diff::DeleteColumn`
-    /// per column, **right → left**, so replaying the list is always safe with
-    /// respect to index shifts.
-    ///
-    /// See also [`Model::delete_columns`].
+    /// Deletes `column_count` columns starting at `column`, as one history step that records the
+    /// columns, the tables it changes (T-4652) and the formula cells it rewrites past what
+    /// re-inserting the columns undoes (T-4668). See also [`Model::delete_columns`].
     pub fn delete_columns(
         &mut self,
         sheet: u32,
@@ -1188,7 +1182,6 @@ impl UserModel {
     ) -> Result<(), String> {
         let worksheet = self.model.workbook.worksheet(sheet)?;
         let mut old_data = Vec::new();
-        // Collect data for all columns to be deleted
         for c in column..column + column_count {
             let mut column_data = None;
             for col in &worksheet.cols {
@@ -1238,16 +1231,21 @@ impl UserModel {
         })?;
 
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
-        self.model.delete_columns(sheet, column, column_count)?;
-
+        let snapshot = self.rewrite_snapshot(sheet)?;
+        let (tables, rewritten, shown) =
+            (self.model).delete_columns_keeping_tables(sheet, column, column_count)?;
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
         diff_list.extend(link_diffs);
+        diff_list.extend(self.rewritten_snapshot_diffs(sheet, snapshot)?);
         diff_list.push(Diff::DeleteColumns {
             sheet,
             column,
             count: column_count,
             old_data,
+            tables,
+            rewritten,
         });
+        diff_list.extend(shown.into_iter().map(|row| Diff::row_shown(sheet, row)));
         self.push_diff_list(diff_list);
         self.evaluate_if_not_paused();
         Ok(())
@@ -1874,7 +1872,7 @@ impl UserModel {
     /// Identical border-adjacency logic as [`Self::get_cell_style`] but applied to the CF-overlaid style.
     /// Use this when you need icon-set or data-bar decorations in addition to the base style.
     pub fn get_extended_cell_style(
-        &self,
+        &mut self,
         sheet: u32,
         row: i32,
         column: i32,
@@ -2147,11 +2145,13 @@ impl UserModel {
 
     /// Delete an existing defined name
     pub fn delete_defined_name(&mut self, name: &str, scope: Option<u32>) -> Result<(), String> {
-        let old_value = self.model.get_defined_name_formula(name, scope)?;
+        let old = self.model.find_defined_name(name, scope)?;
         let diff_list = vec![Diff::DeleteDefinedName {
             name: name.to_string(),
             scope,
-            old_value,
+            old_value: old.formula.clone(),
+            hidden: old.hidden,
+            comment: old.comment.clone(),
         }];
         self.push_diff_list(diff_list);
         self.model.delete_defined_name(name, scope)?;
@@ -2271,32 +2271,6 @@ impl UserModel {
     }
 
     // **** Private methods ****** //
-
-    /// Returns a snapshot diff of the merged cells of the sheet when the
-    /// current list differs from `old_merged_cells`, and nothing otherwise.
-    ///
-    /// Structural actions (insert, delete or move of rows and columns) displace
-    /// merged ranges on their own when they are (re)played, but their undo
-    /// cannot always reconstruct the original ranges (a fully deleted merge is
-    /// gone, deleting rows above a merge and re-inserting them displaces it).
-    /// The snapshot has `old_value == new_value` — a no-op when applied — and
-    /// must go *before* the structural diff in the list, so that on undo
-    /// (replayed in reverse) it runs last and restores the exact original list.
-    pub(super) fn merged_cells_snapshot_diffs(
-        &self,
-        sheet: u32,
-        old_merged_cells: Vec<MergedCell>,
-    ) -> Result<Vec<Diff>, String> {
-        if self.model.get_merged_cells(sheet)? != old_merged_cells.as_slice() {
-            Ok(vec![Diff::SetMergedCells {
-                sheet,
-                old_value: old_merged_cells.clone(),
-                new_value: old_merged_cells,
-            }])
-        } else {
-            Ok(vec![])
-        }
-    }
 
     pub(crate) fn push_diff_list(&mut self, diff_list: DiffList) {
         self.send_queue.push(QueueDiffs {

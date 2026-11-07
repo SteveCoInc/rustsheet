@@ -1,9 +1,88 @@
 //! Walking a formula tree: the children of a node, and searching for calls of given functions.
 
-use super::{chain, Node};
+use super::spacing::is_empty_call_run;
+use super::{chain, ArrayNode, Node, TOO_MANY_PARENTHESES_MESSAGE, TOO_MANY_SIGNS_MESSAGE};
+use crate::expressions::token::Error;
 use crate::functions::Function;
 
+/// The pattern of the nodes with exactly one child, binding it to `$child`: one list for the
+/// shared and the mutable walks below.
+macro_rules! one_child {
+    ($child:ident) => {
+        Node::SheetSpanKind {
+            reference: $child,
+            ..
+        } | Node::ImplicitIntersection { child: $child, .. }
+            | Node::SpillRangeOperator { child: $child }
+            | Node::Group { child: $child, .. }
+            | Node::UnaryPlus { child: $child }
+            | Node::Spaced { child: $child, .. }
+            | Node::UnaryKind { right: $child, .. }
+            | Node::LambdaDefKind { body: $child, .. }
+    };
+}
+
 impl Node {
+    /// Whether the tree holds a negative zero, a number or an array constant element (`{-0}`
+    /// folds its sign into the element). The derived `PartialEq` holds `-0` equal to `0` while
+    /// the printers keep the sign, so a cache keyed by tree equality must not take such a tree
+    /// (the xlsx importer's R1C1 text cache, T-3318).
+    #[must_use]
+    pub fn has_negative_zero(&self) -> bool {
+        let negative_zero = |n: f64| n == 0.0 && n.is_sign_negative();
+        let mut pending = vec![self];
+        while let Some(node) = pending.pop() {
+            let found = match node {
+                Node::NumberKind(n) => negative_zero(*n),
+                Node::ArrayKind(rows) => rows
+                    .iter()
+                    .flatten()
+                    .any(|item| matches!(item, ArrayNode::Number(n) if negative_zero(*n))),
+                _ => false,
+            };
+            if found {
+                return true;
+            }
+            node.push_children(&mut pending);
+        }
+        false
+    }
+
+    /// Whether the tree holds a parse error at any depth. Such a tree carries the formula's own
+    /// text and positions, so the import never reuses its printed form for another copy of the
+    /// formula (T-3326). An explicit stack, as above.
+    #[must_use]
+    pub fn has_parse_error(&self) -> bool {
+        self.find_parse_error(|_| true).is_some()
+    }
+
+    /// The message of a parse error, at any depth, for a formula past Excel's 256-parenthesis cap
+    /// ([`super::TOO_MANY_PARENTHESES_MESSAGE`]) or its sign cap
+    /// ([`super::TOO_MANY_SIGNS_MESSAGE`]). Stored, such a formula makes Excel refuse the whole
+    /// workbook (createSession 501; docs/excel-semantics/syntax.md "Formula nesting depth cap",
+    /// T-3869), so the xlsx importer reads this.
+    #[must_use]
+    pub fn syntax_cap_error(&self) -> Option<&str> {
+        self.find_parse_error(|message| {
+            message == TOO_MANY_PARENTHESES_MESSAGE || message == TOO_MANY_SIGNS_MESSAGE
+        })
+    }
+
+    /// The message of the first parse error in the tree that `wanted` accepts. An explicit
+    /// stack, as above.
+    fn find_parse_error(&self, wanted: impl Fn(&str) -> bool) -> Option<&str> {
+        let mut pending = vec![self];
+        while let Some(node) = pending.pop() {
+            if let Node::ParseErrorKind { message, .. } = node {
+                if wanted(message) {
+                    return Some(message);
+                }
+            }
+            node.push_children(&mut pending);
+        }
+        None
+    }
+
     /// Whether the tree holds a call of one of `kinds` at any depth. SUBTOTAL and AGGREGATE skip
     /// every cell whose formula does (docs/excel-semantics/numbers.md "SUBTOTAL and AGGREGATE
     /// over hidden and filtered rows", probes/subtotal-hidden-filtered Nest sheet). An explicit
@@ -21,16 +100,39 @@ impl Node {
         false
     }
 
-    /// Whether the tree holds a LAMBDA call, written out as `LAMBDA(x,x)(1)`.
-    pub(crate) fn contains_lambda_call(&self) -> bool {
+    /// How many nodes the tree holds, itself included: what cloning it costs (SPEC-0024 section 1,
+    /// "LAMBDA values made"). Walked with an explicit stack like [`Node::contains_function`].
+    pub(crate) fn node_count(&self) -> u64 {
+        let mut pending = vec![self];
+        let mut count: u64 = 0;
+        while let Some(node) = pending.pop() {
+            count = count.saturating_add(1);
+            node.push_children(&mut pending);
+        }
+        count
+    }
+
+    /// Whether the tree holds, at any depth, a node for which `is_target` holds. Walked with an
+    /// explicit stack like [`Node::contains_function`]: a formula's tree is untrusted input.
+    pub(crate) fn contains_node(&self, mut is_target: impl FnMut(&Node) -> bool) -> bool {
         let mut pending = vec![self];
         while let Some(node) = pending.pop() {
-            if matches!(node, Node::LambdaCallKind { .. }) {
+            if is_target(node) {
                 return true;
             }
             node.push_children(&mut pending);
         }
         false
+    }
+
+    /// Whether the tree holds a LAMBDA call, written out as `LAMBDA(x,x)(1)`.
+    pub(crate) fn contains_lambda_call(&self) -> bool {
+        self.contains_node(|node| matches!(node, Node::LambdaCallKind { .. }))
+    }
+
+    /// Whether the tree holds a spill reference (`A1#`, [`Node::SpillRangeOperator`]).
+    pub(crate) fn contains_spill_reference(&self) -> bool {
+        self.contains_node(|node| matches!(node, Node::SpillRangeOperator { .. }))
     }
 
     /// Whether the tree holds a legacy N or T (SPEC-0012), the one fact of a legacy formula its
@@ -89,31 +191,65 @@ impl Node {
                 *node = area;
                 continue;
             }
-            match node {
-                Node::FunctionKind { args, .. } | Node::NamedFunctionKind { args, .. } => {
-                    pending.extend(args.iter_mut());
+            node.push_children_mut(&mut pending);
+        }
+    }
+
+    /// Whether the tree holds whitespace written in the formula ([`Node::Spaced`], SPEC-0023)
+    /// or another node only the written tree holds ([`Node::SheetRefErrorKind`]).
+    pub(crate) fn has_spaces(&self) -> bool {
+        let mut pending = vec![self];
+        while let Some(node) = pending.pop() {
+            if matches!(node, Node::Spaced { .. } | Node::SheetRefErrorKind { .. }) {
+                return true;
+            }
+            node.push_children(&mut pending);
+        }
+        false
+    }
+
+    /// The tree without the whitespace written in it: every [`Node::Spaced`] replaced by its
+    /// child, every [`Node::SheetRefErrorKind`] by the bare `#REF!`, and the run of an empty call
+    /// removed with the argument that holds it ([`is_empty_call_run`]). An explicit stack keeps
+    /// the walk off the call stack.
+    pub(crate) fn strip_spaces(&mut self) {
+        let mut pending = vec![self];
+        while let Some(node) = pending.pop() {
+            while let Node::Spaced { child, .. } = node {
+                let child = std::mem::replace(&mut **child, Node::EmptyArgKind);
+                *node = child;
+            }
+            if let Node::SheetRefErrorKind { .. } = node {
+                *node = Node::ErrorKind(Error::REF);
+            }
+            if let Node::FunctionKind { args, .. } = node {
+                if is_empty_call_run(args) {
+                    args.clear();
                 }
-                Node::SheetSpanKind {
-                    reference: child, ..
-                }
-                | Node::ImplicitIntersection { child, .. }
-                | Node::SpillRangeOperator { child }
-                | Node::Group { child, .. }
-                | Node::UnaryKind { right: child, .. }
-                | Node::LambdaDefKind { body: child, .. } => pending.push(child),
-                Node::OpRangeKind { left, right }
-                | Node::OpIntersectKind { left, right, .. }
-                | Node::OpUnionKind { left, right, .. } => {
-                    pending.extend([&mut **left, &mut **right]);
-                }
-                Node::LambdaCallKind { lambda, args } => {
-                    pending.push(lambda);
-                    pending.extend(args.iter_mut());
-                }
-                other => {
-                    if let Ok((left, right)) = chain::value_operands_mut(other) {
-                        pending.extend([left, right]);
-                    }
+            }
+            node.push_children_mut(&mut pending);
+        }
+    }
+
+    /// [`Node::push_children`] for the walks that rewrite the tree in place.
+    pub(crate) fn push_children_mut<'a>(&'a mut self, pending: &mut Vec<&'a mut Node>) {
+        match self {
+            Node::FunctionKind { args, .. } | Node::NamedFunctionKind { args, .. } => {
+                pending.extend(args.iter_mut());
+            }
+            one_child!(child) => pending.push(child),
+            Node::OpRangeKind { left, right }
+            | Node::OpIntersectKind { left, right, .. }
+            | Node::OpUnionKind { left, right, .. } => {
+                pending.extend([&mut **left, &mut **right]);
+            }
+            Node::LambdaCallKind { lambda, args } => {
+                pending.push(lambda);
+                pending.extend(args.iter_mut());
+            }
+            other => {
+                if let Ok((left, right)) = chain::value_operands_mut(other) {
+                    pending.extend([left, right]);
                 }
             }
         }
@@ -126,14 +262,7 @@ impl Node {
             Node::FunctionKind { args, .. } | Node::NamedFunctionKind { args, .. } => {
                 pending.extend(args);
             }
-            Node::SheetSpanKind {
-                reference: child, ..
-            }
-            | Node::ImplicitIntersection { child, .. }
-            | Node::SpillRangeOperator { child }
-            | Node::Group { child, .. }
-            | Node::UnaryKind { right: child, .. }
-            | Node::LambdaDefKind { body: child, .. } => pending.push(child),
+            one_child!(child) => pending.push(child),
             Node::OpRangeKind { left, right }
             | Node::OpIntersectKind { left, right, .. }
             | Node::OpUnionKind { left, right, .. } => pending.extend([&**left, &**right]),

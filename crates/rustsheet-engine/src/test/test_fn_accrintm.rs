@@ -73,12 +73,29 @@ fn fn_accrintm_error_issue_after_settlement() {
 }
 
 #[test]
-fn fn_accrintm_error_issue_equals_settlement() {
-    // Boundary: same-day is error per Microsoft spec, not zero accrual
+fn fn_accrintm_issue_equals_settlement_is_zero() {
+    // Excel: equal dates accrue nothing, 0 and not #NUM!, on every basis and from serial 0 to
+    // 9999-12-31 (probes/accrint-zero-results B1:B40; financial.md "ACCRINT, ACCRINTM, PRICEMAT
+    // and YIELDMAT: amount domains (T-4114)").
     let mut model = new_empty_model();
-    model._set("A1", "=ACCRINTM(39539, 39539, 0.1, 1000, 3)");
+    let serials = [0, 1, 59, 60, 61, 366, 45000, 2_958_465];
+    let mut cells = Vec::new();
+    for (row, serial) in serials.iter().enumerate() {
+        for basis in 0..=4 {
+            let cell = format!("{}{}", ["A", "B", "C", "D", "E"][basis], row + 1);
+            model._set(
+                &cell,
+                &format!("=ACCRINTM({serial},{serial},0.05,1000,{basis})"),
+            );
+            cells.push(cell);
+        }
+    }
+    model._set("F1", "=ACCRINTM(39539, 39539, 0.1, 1000, 3)");
+    cells.push("F1".to_string());
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    for cell in cells {
+        assert_eq!(model._get_text(&cell), *"0", "{cell}");
+    }
 }
 
 #[test]

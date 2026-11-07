@@ -2,10 +2,9 @@
 //! an array and a range (SPEC-0011; probes/stat-argument-modes H353-H373,
 //! probes/stat-later-argument-lift H49-H55). The kernels are closed form.
 
-use statrs::distribution::{ContinuousCDF, LogNormal};
-
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{num_error, number_or_error};
+use crate::functions::statistical::normal::normal_quantile;
 use crate::functions::statistical::special::{normal_cdf, SQRT_2PI};
 use crate::functions::Function;
 use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
@@ -48,8 +47,10 @@ impl Model {
         let result = if cumulative {
             normal_cdf(x.ln(), mean, std_dev)
         } else {
-            // Same kernel as `normal_pdf` with the extra `x` factor; this order reproduces
-            // the cached last digits in LOGNORM.xlsx.
+            // Not `normal_pdf`'s kernel: `LOGNORM.DIST(1,0,1,FALSE)` is 0.39894228040143265,
+            // one ulp under the K that `NORM.S.DIST(0,FALSE)` returns (probes-numeric
+            // m9-normpdf-lognorm-dist A4), and no form T-0975 scored fits the grid. This order
+            // keeps the cached last digits it matched in LOGNORM.xlsx until T-4321 finds Excel's.
             let d = (x.ln() - mean) / std_dev;
             (-0.5 * d * d).exp() / (x * SQRT_2PI * std_dev)
         };
@@ -85,8 +86,8 @@ impl Model {
         if p <= 0.0 || p >= 1.0 || std_dev <= 0.0 {
             return Err(num_error(cell));
         }
-        let dist = LogNormal::new(mean, std_dev).map_err(|_| num_error(cell))?;
-        let result = dist.inverse_cdf(p);
+        // EXP of NORM.INV's quantile, so the PPND16 tails reach LOGNORM.INV too (T-0925).
+        let result = normal_quantile(p, mean, std_dev, cell)?.exp();
         if !result.is_finite() {
             return Err(num_error(cell));
         }

@@ -155,17 +155,17 @@ fn financial_1900_serial_reads_two_epochs_on() {
     assert_eq!(Excel1900.serial_from_financial_1900_serial(45000), 45000);
 }
 
-// ACCRINT with calc_method FALSE takes a settlement up to the last 1904 date, 2957003, though it
-// reads past 9999-12-31 (probes/date-system-1904-financial-settlement-bound, T-1492, T-1494).
+// ACCRINT, COUPNUM and the TBILL functions read a 1904 serial as the date itself, 1462 days on,
+// and their coupon dates start on the workbook's first day (T-2337).
 #[test]
-fn accrint_settlement_limit_is_the_last_1904_date_read_for_calc_false() {
+fn calendar_1900_serial_reads_the_date_itself() {
     use DateSystem::{Excel1900, Excel1904};
-    assert_eq!(Excel1900.accrint_settlement_limit(false), 2_958_465);
-    assert_eq!(
-        Excel1904.accrint_settlement_limit(false),
-        Excel1904.financial_1900_serial(2_957_003.0) as i64
-    );
-    assert_eq!(Excel1904.accrint_settlement_limit(true), 2_958_465);
+    assert_eq!(Excel1904.calendar_1900_serial(0.0), 1462.0);
+    assert_eq!(Excel1904.calendar_1900_serial(10.5), 1472.5);
+    assert_eq!(Excel1904.calendar_1900_serial(-1.0), -1.0);
+    assert_eq!(Excel1900.calendar_1900_serial(45000.0), 45000.0);
+    assert_eq!(Excel1904.first_coupon_1900_serial(), 1462);
+    assert_eq!(Excel1900.first_coupon_1900_serial(), 1);
 }
 
 // The odd-period functions read a 1904 serial 2 * 1462 days on, so the last 1904 serial they read
@@ -197,6 +197,19 @@ fn fractional_and_repeated_elapsed_seconds() {
         (value, "[s].000", "271433.376"),
         (value, "[hh]:mm:ss.0", "75:23:53.4"),
         (value, "[ss].000", "271433.376"),
+        // probes/t3575-fraction-after-elapsed A1-A12 (excel-graph 2026-11-01).
+        (12345.678, "[h].0", "296296.2"),
+        (12345.678, "[h].00", "296296.20"),
+        (12345.678, "[m].0", "17777776.2"),
+        (12345.678, "h.0", "16.2"),
+        (12345.678, "mm.0", "16.2"),
+        (5.0, "[h].0", "120.0"),
+        (5.0, "mm.0", "00.0"),
+        // probes/t3575-fraction-after-elapsed-b (excel-graph 2026-11-01).
+        (0.123_456_7, "h:mm.000", "2:57.659"),
+        (0.123_456_7, "h mm.0", "2 57.7"),
+        (0.123_456_7, "m.0", "57.7"),
+        (0.123_456_7, "mm.0 h:mm", "57.7 2:57"),
         (-value, "[h]:m:s.000", "-75:23:53.376"),
         (two_03_04, "[hh]:mm:ss.0", "02:03:04.0"),
         (
@@ -229,11 +242,12 @@ fn fractional_and_repeated_elapsed_seconds() {
         );
     }
     // gen-m10 T!A16, T!A20: past 9999-12-31 a fraction of a second is #VALUE!; four zeros are
-    // unprobed and stay an error.
+    // an error (probes/t3575-fraction-after-elapsed-b A6, A27).
     for (value, format) in [
         (1_234_567_890.0, "[mm]:ss.0"),
         (1_234_567_890.0, "h:mm:ss.00"),
         (1.0, "s.0000"),
+        (1.0, "h.0000"),
     ] {
         assert_eq!(
             format_in(value, format, DateSystem::Excel1900),
@@ -302,4 +316,87 @@ fn fraction_digits_round_into_the_next_day() {
         ),
         "1900-01-01 00:00:00.000"
     );
+}
+
+// probes/text-format-aaa-weekday-d (T-2745): a run's last letter before `m/pm` or `/p` is the AM/PM token's.
+#[test]
+fn a_run_before_am_pm_gives_its_last_letter_to_the_token() {
+    let cases = [
+        (1.0, "aaaAAAaaa", "Sunday"),
+        (1.0, "aaaAAAa", "Sundaya"),
+        (0.75, "aaam/pm", "aaPM"),
+        (0.75, "aaaAM/PM", "SatPM"),
+        (0.75, "aaaa/p", "Satp"),
+    ];
+    for (v, format, expected) in cases {
+        assert_eq!(
+            format_in(v, format, DateSystem::Excel1900),
+            expected,
+            "{format}"
+        );
+    }
+}
+
+// probes/text-format-aaa-weekday and -b (T-1880): three or more of one `a` are the weekday.
+#[test]
+fn a_runs_are_the_weekday() {
+    let cases = [
+        (1.0, "aaa", "Sun"),
+        (1.0, "aaaa", "Sunday"),
+        (1.0, "aaaaaaaaaa", "Sunday"),
+        (1.0, "AAA", "Sun"),
+        (1.0, "AAAA", "Sunday"),
+        (1.0, "aa", "aa"),
+        (1.0, "aAa", "aAa"),
+        (1.0, "AAa", "AAa"),
+        (1.0, "aaa\\a", "Suna"),
+        (1.0, "aaaA", "SunA"),
+        (1.0, "Aaaa", "ASun"),
+        (1.0, "aaaAAA", "Sunday"),
+        (1.0, "aaAA", "aaAA"),
+        (45000.0, "aaa", "Wed"),
+        (0.75, "aaa AM/PM", "Sat PM"),
+    ];
+    for (value, format, expected) in cases {
+        assert_eq!(
+            format_in(value, format, DateSystem::Excel1900),
+            expected,
+            "{format}"
+        );
+    }
+}
+
+/// Only the last hour before a marker and the last hour of the section take the 12-hour clock
+/// (probes/t3710-ampm-hour-tokens).
+#[test]
+fn am_pm_switches_only_some_hour_tokens() {
+    let cases = [
+        ("h|hh|mm|ss|h:mm:ss.00 AM/PM", "13|13|02|12|1:02:12.48 PM"),
+        ("h h AM/PM h h", "13 1 PM 13 1"),
+        ("h AM/PM|h", "1 PM|1"),
+        ("h:mm|h:mm AM/PM", "13:02|1:02 PM"),
+    ];
+    for (format, expected) in cases {
+        assert_eq!(
+            format_in(45000.5432, format, DateSystem::Excel1900),
+            expected,
+            "{format}"
+        );
+    }
+}
+
+/// A calendar prefix alone is no date token: a negative value prints its minus and the literals
+/// (probes/t2388-b1-negative; docs/excel-semantics/number-formats.md "Bare digits beside a date token").
+#[test]
+fn lone_calendar_prefix_keeps_the_minus_of_a_negative() {
+    assert_eq!(super::text(-3.0, "b1"), "-");
+    assert_eq!(super::text(-3.0, "b1 x"), "- x");
+    assert_eq!(super::text(3.0, "b1 x"), " x");
+}
+
+#[test]
+fn lone_calendar_prefix_in_other_sections() {
+    assert_eq!(super::text(-3.0, "0;b1 x"), " x");
+    assert_eq!(super::text(-3.0, "b2"), "-");
+    assert_eq!(super::text(-3_000_000.0, "b1"), "-");
 }

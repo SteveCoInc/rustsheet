@@ -6,6 +6,7 @@ pub use crate::external_links::ExternalBook;
 pub use crate::iteration::Iteration;
 use crate::{
     cf_types::ConditionalFormatting,
+    constants::{DEFAULT_WINDOW_HEIGHT, DEFAULT_WINDOW_WIDTH},
     expressions::token::Error,
     pivot::{PivotCache, PivotTable},
     text::Text,
@@ -151,6 +152,17 @@ pub struct WorkbookView {
     pub window_height: i64,
 }
 
+impl WorkbookView {
+    /// A view of `sheet` with the default window size.
+    pub(crate) fn new(sheet: u32) -> Self {
+        Self {
+            sheet,
+            window_width: DEFAULT_WINDOW_WIDTH,
+            window_height: DEFAULT_WINDOW_HEIGHT,
+        }
+    }
+}
+
 /// An internal representation of an IronCalc Workbook
 #[derive(Encode, Decode, Debug, PartialEq, Clone)]
 pub struct Workbook {
@@ -178,6 +190,11 @@ pub struct DefinedName {
     pub name: String,
     pub formula: String,
     pub sheet_id: Option<u32>,
+    /// `<definedName hidden="1">`: Excel's Name Manager does not list the name, but formulas
+    /// still evaluate it. Kept so a saved workbook does not unhide it (T-3301).
+    pub hidden: bool,
+    /// `<definedName comment="...">`, the Name Manager comment, kept through a round trip.
+    pub comment: Option<String>,
 }
 
 /// * state:
@@ -471,69 +488,14 @@ pub struct Comment {
     pub cell_ref: String,
 }
 
-// ECMA-376-1:2016 section 18.5.1.2
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
-pub struct Table {
-    pub name: String,
-    pub display_name: String,
-    pub sheet_name: String,
-    pub reference: String,
-    pub totals_row_count: u32,
-    pub header_row_count: u32,
-    pub header_row_dxf_id: Option<u32>,
-    pub data_dxf_id: Option<u32>,
-    pub totals_row_dxf_id: Option<u32>,
-    pub columns: Vec<TableColumn>,
-    pub style_info: TableStyleInfo,
-    pub has_filters: bool,
-}
+pub use crate::table_types::{
+    CustomFilter, DateGroupItem, FilterColumn, FilterCriterion, Table, TableColumn, TableExtent,
+    TableStyleInfo,
+};
 
 /// Whether two sheet names name the same sheet: sheet names match ignoring case.
 pub(crate) fn sheet_names_match(a: &str, b: &str) -> bool {
     a.to_uppercase() == b.to_uppercase()
-}
-
-impl Table {
-    /// Whether the table is on the sheet `sheet_name` ([`sheet_names_match`]).
-    pub(crate) fn is_on_sheet(&self, sheet_name: &str) -> bool {
-        sheet_names_match(&self.sheet_name, sheet_name)
-    }
-}
-
-// totals_row_label vs totals_row_function might be mutually exclusive. Use an enum?
-// the totals_row_function is an enum not String methinks
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
-pub struct TableColumn {
-    pub id: u32,
-    pub name: String,
-    pub totals_row_label: Option<String>,
-    pub header_row_dxf_id: Option<u32>,
-    pub data_dxf_id: Option<u32>,
-    pub totals_row_dxf_id: Option<u32>,
-    pub totals_row_function: Option<String>,
-}
-
-impl Default for TableColumn {
-    fn default() -> Self {
-        TableColumn {
-            id: 0,
-            name: "Column".to_string(),
-            totals_row_label: None,
-            totals_row_function: None,
-            data_dxf_id: None,
-            header_row_dxf_id: None,
-            totals_row_dxf_id: None,
-        }
-    }
-}
-
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Default)]
-pub struct TableStyleInfo {
-    pub name: Option<String>,
-    pub show_first_column: bool,
-    pub show_last_column: bool,
-    pub show_row_stripes: bool,
-    pub show_column_stripes: bool,
 }
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Clone, Default)]

@@ -3,6 +3,7 @@ use crate::{
     calc_result::CalcResult,
     expressions::{parser::ArrayNode, parser::Node, token::Error, types::CellReferenceIndex},
     model::Model,
+    variable_stack::Binding,
 };
 
 impl Model {
@@ -12,24 +13,9 @@ impl Model {
     /// rather than just the final one. The output has the same shape as `array`.
     /// With 2 arguments the first element seeds the accumulator (not included in output).
     pub(crate) fn fn_scan(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        if args.len() < 2 || args.len() > 3 {
-            return CalcResult::new_args_number_error(cell);
-        }
-
-        let (array_idx, lambda_idx, has_initial) = if args.len() == 3 {
-            (1, 2, true)
-        } else {
-            (0, 1, false)
-        };
-
-        let lambda_result = self.evaluate_node_in_context(&args[lambda_idx], cell);
-        if lambda_result.is_error() {
-            return lambda_result;
-        }
-
-        let data = match self.lambda_cells(&args[array_idx], cell, false) {
-            Ok(d) => d,
-            Err(e) => return e,
+        let (data, mut caller, has_initial) = match self.fold_operands(args, cell) {
+            Ok(operands) => operands,
+            Err(error) => return error,
         };
 
         if data.rows() == 0 || data.columns() == 0 {
@@ -39,10 +25,12 @@ impl Model {
         let num_rows = data.rows();
         let num_cols = data.columns();
 
+        // The accumulator is a binding, so that the first call takes `initial_value` as a reference
+        // where it is one (`Model::lambda_initial_value`); each later call takes the step's value.
         let mut accumulator = if has_initial {
             self.lambda_initial_value(&args[0], cell)
         } else {
-            data.at(0, 0)
+            (Binding::Value(data.at(0, 0)), false)
         };
 
         let mut result = vec![vec![ArrayNode::Empty; num_cols]; num_rows];
@@ -51,7 +39,7 @@ impl Model {
         // slot in the output is that seed value itself (not the result of calling lambda).
         let mut start_col = 0;
         if !has_initial {
-            let seed = match self.lambda_result_value(accumulator.clone(), cell) {
+            let seed = match self.lambda_result_value(data.at(0, 0), cell) {
                 Ok(value) => value,
                 Err(error) => return error,
             };
@@ -59,16 +47,21 @@ impl Model {
             start_col = 1;
         }
 
-        let mut caller = self.lambda_caller(&lambda_result, 2);
         for (i, result_row) in result.iter_mut().enumerate() {
             let col_start = if i == 0 { start_col } else { 0 };
             for (j, slot) in result_row.iter_mut().enumerate().skip(col_start) {
-                accumulator =
-                    self.call_lambda_caller(&mut caller, [accumulator, data.at(i, j)], cell);
-                let value = match self.lambda_result_value(accumulator.clone(), cell) {
+                let step = self
+                    .call_lambda_caller_binding(
+                        &mut caller,
+                        [accumulator, (Binding::Value(data.at(i, j)), false)],
+                        cell,
+                    )
+                    .into_single_area(cell);
+                let value = match self.lambda_result_value(step.clone(), cell) {
                     Ok(value) => value,
                     Err(error) => return error,
                 };
+                accumulator = (Binding::Value(step), false);
                 *slot = calc_result_to_element(value);
             }
         }

@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "a80f980e99d1480a7aff547ce0c1492fdf50ac29bb94944e21dd45b62c548f3b",
+  "definitions": {
+   "SUMXMY2": "75e3a541c3378a0e"
+  },
+  "arguments_sha256": "d7712d01b00db16e781d61311b4fbf3960efb0a95adce0ee528d909d7b4396f5"
+ },
+ "sheets": {
+  "S": {
+   "H6": {
+    "t": "e",
+    "why": "the arrays differ in length",
+    "f": "=SUMXMY2({5,6},{1,2,3})"
+   }
+  }
+ }
+}

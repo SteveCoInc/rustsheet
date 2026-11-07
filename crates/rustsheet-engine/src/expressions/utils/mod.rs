@@ -1,9 +1,23 @@
+use std::sync::OnceLock;
+
+use regex_syntax::hir::{Class, ClassUnicodeRange, Hir, HirKind};
+
 use super::types::*;
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 
 pub mod shift;
 #[cfg(test)]
 mod test;
+
+/// The column number `column_number` (the letters read so far) becomes with the upper-case letter
+/// `letter` after it, or `None` past `i32`. Checked: a long letter run (e.g. `ISERROR` after a
+/// sheet prefix) overflows i32, and a wrapped value could land back in range and lex as a valid
+/// column (found by fuzzing, T-0021).
+pub(crate) fn push_column_letter(column_number: i32, letter: char) -> Option<i32> {
+    column_number
+        .checked_mul(26)
+        .and_then(|n| n.checked_add((letter as i32) - 64))
+}
 
 /// Converts column letter identifier to number.
 pub fn column_to_number(column: &str) -> Result<i32, String> {
@@ -20,12 +34,7 @@ pub fn column_to_number(column: &str) -> Result<i32, String> {
         if !character.is_ascii_uppercase() {
             return Err("Column identifier can use only A-Z characters".to_string());
         }
-        // Checked: a long letter run (e.g. `ISERROR` after a sheet prefix) overflows i32, and a
-        // wrapped value could land back in range and lex as a valid column (found by fuzzing,
-        // T-0021).
-        column_number = column_number
-            .checked_mul(26)
-            .and_then(|n| n.checked_add((character as i32) - 64))
+        column_number = push_column_letter(column_number, character)
             .ok_or_else(|| "Column is not valid.".to_string())?;
     }
 
@@ -36,17 +45,25 @@ pub fn column_to_number(column: &str) -> Result<i32, String> {
 }
 
 /// If input number is outside valid range `None` is returned.
-pub fn number_to_column(mut i: i32) -> Option<String> {
+pub fn number_to_column(i: i32) -> Option<String> {
+    let mut buffer = [0u8; 3];
+    column_letters(i, &mut buffer).map(|letters| letters.iter().map(|&b| char::from(b)).collect())
+}
+
+/// The letters of column `i` (`A` to `XFD`, at most three), written at the end of `buffer`, with
+/// no allocation (T-3384); `None` outside the valid range.
+pub fn column_letters(mut i: i32, buffer: &mut [u8; 3]) -> Option<&[u8]> {
     if !is_valid_column_number(i) {
         return None;
     }
-    let mut column = "".to_string();
-    while i > 0 {
-        let r = ((i - 1) % 26) as u8;
-        column.insert(0, (65 + r) as char);
+    let mut start = buffer.len();
+    while i > 0 && start > 0 {
+        start -= 1;
+        // Below 26, so the cast keeps it.
+        buffer[start] = b'A' + ((i - 1) % 26) as u8;
         i = (i - 1) / 26;
     }
-    Some(column)
+    Some(&buffer[start..])
 }
 
 /// Checks if column number is in valid range.
@@ -70,6 +87,35 @@ pub fn is_valid_column(column: &str) -> bool {
 
 pub fn is_valid_row(row: i32) -> bool {
     (1..=LAST_ROW).contains(&row)
+}
+
+/// Whether the block of `width` columns by `height` rows whose top left cell is (`row`, `column`)
+/// is at least one cell and lies within the grid, so `row + height` and `column + width` cannot
+/// overflow.
+pub fn is_valid_block(row: i32, column: i32, width: i32, height: i32) -> bool {
+    is_valid_row(row)
+        && is_valid_column_number(column)
+        && (1..=LAST_ROW - row + 1).contains(&height)
+        && (1..=LAST_COLUMN - column + 1).contains(&width)
+}
+
+/// [`is_valid_block`] as a `Result`, for an area read from untrusted input such as an external
+/// diff (T-2896).
+pub(crate) fn check_block(row: i32, column: i32, width: i32, height: i32) -> Result<(), String> {
+    if is_valid_block(row, column, width, height) {
+        Ok(())
+    } else {
+        Err(format!("The range at R{row}C{column} is outside the sheet"))
+    }
+}
+
+/// Whether the `count` rows (or columns) from `first`, shifted by `delta`, lie within
+/// `1..=last`: [`is_valid_block`] along one axis, with a shift. Computed in `i64`, since a move
+/// read from an external diff can carry any `i32` (T-2896).
+pub(crate) fn moved_span_in_grid(first: i32, count: i32, delta: i32, last: i32) -> bool {
+    let first = i64::from(first) + i64::from(delta);
+    let span_last = first + i64::from(count) - 1;
+    (1..=i64::from(last)).contains(&first) && (1..=i64::from(last)).contains(&span_last)
 }
 
 fn is_valid_row_str(row: &str) -> bool {
@@ -231,6 +277,16 @@ fn leading_number(text: &[u8], position: &mut usize) -> Option<i32> {
     (*position > start).then_some(number)
 }
 
+/// The A1 cell `name` is spelled like (`f1`, `AB12`, any case), if it is one.
+pub fn parse_spelled_a1_cell(name: &str) -> Option<ParsedReference> {
+    parse_reference_a1(&name.to_ascii_uppercase())
+}
+
+/// Whether `name` is spelled like an A1 cell (`f1`, `AB12`, any case).
+pub fn spelled_like_a1_cell(name: &str) -> bool {
+    parse_spelled_a1_cell(name).is_some()
+}
+
 pub fn parse_reference_a1(r: &str) -> Option<ParsedReference> {
     let chars = r.chars();
     let mut absolute_column = false;
@@ -291,17 +347,23 @@ pub fn parse_reference_a1(r: &str) -> Option<ParsedReference> {
 /// probes/r1c1-let-name-r1c1). The R1C1 storage form escapes the ones it would read back as
 /// a cell ([`reads_as_r1c1_cell`]).
 pub fn is_valid_a1_identifier(name: &str) -> bool {
-    is_identifier_text(name)
+    is_name_text(name) && parse_reference_a1(name).is_none()
 }
 
-/// The rules every name follows: its characters, and not `TRUE`, `FALSE` or an A1 cell.
-fn is_identifier_text(name: &str) -> bool {
+/// The rules every name follows in either grammar mode: its characters, and not `TRUE` or
+/// `FALSE`. An A1 cell (`F1`) passes: [`is_valid_a1_identifier`] refuses it, and in R1C1 mode,
+/// where it is no reference, Excel takes it as a LET name or LAMBDA parameter
+/// (probes/t3897-r1c1-let-cell-names A11, A12, T-3897).
+pub(crate) fn is_name_text(name: &str) -> bool {
     // https://support.microsoft.com/en-us/office/names-in-formulas-fc2935f9-115d-4bef-a370-3aa8bb4c91f1
     // https://github.com/MartinTrummer/excel-names/
     let upper = name.to_uppercase();
     let len = upper.chars().count();
 
-    let mut chars = upper.chars();
+    // The characters as typed, not their uppercase: `ǰ` and `ΐ` uppercase to a letter and
+    // combining marks, yet Excel loads `LET(ǰ,1,ǰ+1)` and `LET(ΐ,1,ΐ+1)` (2; excel-graph,
+    // 2026-11-06, T-1856).
+    let mut chars = name.chars();
 
     if len > 255 || len == 0 {
         return false;
@@ -315,17 +377,14 @@ fn is_identifier_text(name: &str) -> bool {
     // A letter of any script: Excel for the web loads `LET(é,1,É+1)` (2) and `LET(Ä,2,ä*10)` (20)
     // (probes/let-name-non-ascii, T-1387). An ASCII-only test rejected `é` but passed `ß`, whose
     // uppercase is `SS`.
-    if !(first.is_alphabetic() || first == '_' || first == '\\') {
+    if !(is_letter_name_start(first) || first == '_' || first == '\\') {
         return false;
     }
     if upper == *"TRUE" || upper == *"FALSE" {
         return false;
     }
-    if parse_reference_a1(name).is_some() {
-        return false;
-    }
     for ch in chars {
-        if !(ch.is_alphanumeric() || ch == '_' || ch == '.' || ch == '\\') {
+        if !(ch.is_alphanumeric() || is_mark(ch) || ch == '_' || ch == '.' || ch == '\\') {
             return false;
         }
     }
@@ -333,11 +392,58 @@ fn is_identifier_text(name: &str) -> bool {
     true
 }
 
+/// Whether the letter `c` may start a name: `char::is_alphabetic`, except what Excel refuses there
+/// although Unicode calls it alphabetic. Excel for the web refuses (createSession 501
+/// `FileCorruptTryRepair`) a workbook whose formula starts a name with an uppercase circled
+/// letter (`LET(Ⓐ,1,Ⓐ+1)`, `Ⓑ`, `Ⓜ`, `Ⓩ`, `Ⓐx`, `LAMBDA(Ⓐ,Ⓐ+1)(1)`, `=Ⓑ+1`) or a mark (U+0345,
+/// U+093E, and the non-alphabetic U+0301 and U+0307), while `ⓐ`, `ⓩ`, U+1F130, U+1F150 and `aⒶ`
+/// load (`rustsheet-oracle recalc -b excel-graph`, 2026-11-06, T-1856; refused inputs cannot be
+/// committed: docs/excel-semantics/references.md "Characters of a name").
+pub(crate) fn is_letter_name_start(c: char) -> bool {
+    c.is_alphabetic() && (c.is_ascii() || !(matches!(c, '\u{24B6}'..='\u{24CF}') || is_mark(c)))
+}
+
+/// Whether `c` is a mark (`\p{M}`), by regex-syntax's Unicode tables. After a name's first
+/// character Excel loads every mark, alphabetic or not: `LET(a`+U+0301`,1,..)`, `i`+U+0307,
+/// `a`+U+0345 and `क`+U+093E are 2 (probes/t1856-name-characters A11:A14, T-1856).
+pub(crate) fn is_mark(c: char) -> bool {
+    static RANGES: OnceLock<Vec<ClassUnicodeRange>> = OnceLock::new();
+    let ranges = RANGES.get_or_init(|| {
+        // The spelling is fixed and known to regex-syntax; a failure leaves the class empty
+        // (no mark is refused) rather than panicking.
+        match regex_syntax::Parser::new()
+            .parse(r"\p{M}")
+            .map(Hir::into_kind)
+        {
+            Ok(HirKind::Class(Class::Unicode(class))) => class.ranges().to_vec(),
+            _ => Vec::new(),
+        }
+    });
+    let at = ranges.partition_point(|range| range.end() < c);
+    ranges.get(at).is_some_and(|range| range.start() <= c)
+}
+
+/// The typographic quotes U+201C and U+201D, which Excel reads as name characters: a stored
+/// `“D”` (an app's "smart quotes" around a string) is an undefined name, so `=“D”` and
+/// `=“N/A”` are `#NAME?`, `ISREF(“D”)` is FALSE and `IF(FALSE,“D”,1)` is 1
+/// (corpus-bench/48354 D2:D6, probes/t0481-curly-quote-names; docs/excel-semantics/references.md
+/// "Undefined names may contain typographic quotes").
+pub(crate) fn is_typographic_quote(char: char) -> bool {
+    matches!(char, '\u{201C}' | '\u{201D}')
+}
+
+/// Whether `name` holds a typographic quote and is otherwise a valid name, read with each quote as
+/// a letter: never a cell or a column (`“A1”` is a name), in A1 and R1C1 mode alike.
+pub(crate) fn is_quoted_name(name: &str) -> bool {
+    name.contains(is_typographic_quote)
+        && is_valid_a1_identifier(&name.replace(is_typographic_quote, "_"))
+}
+
 /// Whether `name` is a valid defined or table name: one that Excel does not read as an R1C1
 /// reference ([`is_r1c1_shaped`]; that also refuses "R", "C", "r" and "c"). `R0C1` passes, as
 /// Excel loads it (T-1657: its uses are `#NAME?` there).
 pub fn is_valid_identifier(name: &str) -> bool {
-    !is_r1c1_shaped(name) && is_identifier_text(name)
+    !is_r1c1_shaped(name) && is_valid_a1_identifier(name)
 }
 
 /// Whether `name` is made only of letters and digits and reads as an A1 cell (`NLG1`): the one
@@ -356,10 +462,15 @@ pub(crate) fn name_needs_quoting(name: &str) -> bool {
         // ADDRESS(…, "") emits a bare "!" prefix; an empty name is never quoted.
         None => return false,
         Some(c) if c.is_ascii_digit() || c == '.' => return true,
-        Some(c) if !(c.is_alphabetic() || c == '_') => return true,
+        // A first character the lexer refuses (`is_letter_name_start`: Ⓐ-Ⓩ, a mark) is quoted, so
+        // `'Ⓐ'!A1` reads back (T-1856).
+        Some(c) if !(is_letter_name_start(c) || c == '_') => return true,
         Some(_) => {}
     }
-    if chars.any(|c| !(c.is_alphanumeric() || c == '_' || c == '.')) {
+    // A mark after the first character leaves the name unquoted: Excel's FORMULATEXT of a
+    // reference to sheet `a`+U+0301 or `x`+U+20DD, typed quoted, shows no quotes
+    // (probes/t4446-defined-name-characters A20, A22, excel-graph, T-4446).
+    if chars.any(|c| !(c.is_alphanumeric() || is_mark(c) || c == '_' || c == '.')) {
         return true;
     }
     if parse_reference_a1(name).is_some() {
@@ -382,10 +493,79 @@ pub(crate) fn bare_defined_name(name: &str) -> &str {
     name.rsplit_once('!').map_or(name, |(_, bare)| bare)
 }
 
+/// Whether INDIRECT text may spell `prefix` without quotes: letters, digits, '_' and '.' only,
+/// a leading digit and a cell-shaped name included (`2024`, `Q1`, `x.y`; `Co A`, `P&L` and `O'B`
+/// are not). Looser than [`name_needs_quoting`] (probes/indirect-sheet-scoped-name,
+/// docs/excel-semantics/lookup.md "INDIRECT of `Sheet!Name` text").
+pub(crate) fn is_indirect_unquoted_sheet(prefix: &str) -> bool {
+    prefix
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '_' || c == '.')
+}
+
+/// INDIRECT text whose unquoted sheet prefix starts with a digit (`2024!B1`) with the prefix
+/// quoted (`'2024'!B1`), which the lexer reads; any other text is returned as it is.
+pub(crate) fn quote_digit_leading_sheet(text: &str) -> std::borrow::Cow<'_, str> {
+    match text.rsplit_once('!') {
+        Some((prefix, rest))
+            if prefix.starts_with(|c: char| c.is_ascii_digit())
+                && is_indirect_unquoted_sheet(prefix) =>
+        {
+            format!("'{prefix}'!{rest}").into()
+        }
+        _ => text.into(),
+    }
+}
+
+/// INDIRECT reference text (A1 or R1C1) with the spaces Excel accepts taken out, or `None` when
+/// its whitespace makes it no reference (`#REF!`). Any leading whitespace is refused; trailing
+/// spaces and line feeds are dropped; outside a quoted sheet name a space may only stand next to
+/// the range colon or after the `!`, and no other whitespace (tab, NBSP, a space between two
+/// references, a space before the `!`) is allowed (probes/t3656-indirect-spaces-reversed,
+/// docs/excel-semantics/lookup.md "INDIRECT reference text: where spaces are allowed").
+pub(crate) fn indirect_reference_text(text: &str) -> Option<String> {
+    if text.starts_with(char::is_whitespace) {
+        return None;
+    }
+    let text = text.trim_end_matches([' ', '\n']);
+    let mut out = String::with_capacity(text.len());
+    let mut quoted = false;
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\'' {
+            quoted = !quoted;
+        } else if !quoted && (c == ' ' || c == '\n') {
+            // A line feed counts as a space next to the colon (`"A1:"&CHAR(10)&"B2"` = A1:B2;
+            // probes/t3747-indirect-whitespace Sheet1!F24, rows 60-73).
+            while chars.peek().is_some_and(|&n| n == ' ' || n == '\n') {
+                chars.next();
+            }
+            if out.ends_with([':', '!']) || chars.peek() == Some(&':') {
+                continue;
+            }
+            return None;
+        } else if !quoted && c.is_whitespace() {
+            return None;
+        }
+        out.push(c);
+    }
+    Some(out)
+}
+
+/// The sheet name a `Sheet!` prefix spells: `'O''B'` is `O'B`, an unquoted prefix is itself.
+/// `None` for a quoted prefix without its closing quote.
+pub(crate) fn unquote_sheet_prefix(prefix: &str) -> Option<String> {
+    match prefix.strip_prefix('\'') {
+        Some(quoted) => Some(quoted.strip_suffix('\'')?.replace("''", "'")),
+        None => Some(prefix.to_string()),
+    }
+}
+
 /// Points the sheet prefix of a qualified defined name (`Data!Local`) at `new_sheet` when the
 /// name is scoped to the renamed sheet (`scope == Some(renamed)`). A name with no prefix, and a
 /// linked workbook's `[1]!Name`, are left as they are. A workbook name read through a sheet
-/// prefix has no scope here: no Excel evidence yet for rewriting it.
+/// prefix has no scope here and is left alone: its text is the workbook's file name, which a sheet
+/// rename never touches (probes/sheet-ops/sheet-ops-rename-workbook-name-via-prefix, T-2834).
 pub(crate) fn rename_defined_name_sheet(
     name: &mut String,
     scope: Option<u32>,
@@ -398,9 +578,56 @@ pub(crate) fn rename_defined_name_sheet(
     }
 }
 
+/// The own-workbook prefix, `[0]!Name`: Excel reads it from a file as the workbook-scoped name
+/// (probes/workbook-name-own-book-prefix, T-2834).
+pub(crate) const OWN_BOOK_NAME_PREFIX: &str = "[0]!";
+
+/// The text of a defined name. Stored (R1C1) and exported, a workbook name written with a prefix
+/// (`'Budget.xlsx'!loc`, or `Feb!loc` in an unnamed workbook) is `[0]!loc`, the own-workbook
+/// prefix Excel reads from a file as that name, so the text survives a sheet or workbook rename
+/// (probes/workbook-name-own-book-prefix, T-2834). So is an undefined workbook name shown bare
+/// (`defined` false), which only a `[0]!` the parser read can be: a use a sheet-scoped add left
+/// bound to the workbook name (`name_binding::pin_unresolved_name`, T-4049). A linked
+/// workbook's `[1]!Name` and a sheet-scoped name keep their text.
+pub(crate) fn defined_name_text(
+    name: &str,
+    scope: Option<u32>,
+    defined: bool,
+    stored: bool,
+) -> String {
+    match name.rsplit_once('!') {
+        Some((prefix, bare))
+            if stored && scope.is_none() && !prefix.is_empty() && !name.starts_with('[') =>
+        {
+            format!("{OWN_BOOK_NAME_PREFIX}{bare}")
+        }
+        None if stored && scope.is_none() && !defined && !name.starts_with('[') => {
+            format!("{OWN_BOOK_NAME_PREFIX}{name}")
+        }
+        _ => name.to_string(),
+    }
+}
+
 /// Quotes a string sheet name if it needs to
 /// NOTE: Invalid characters in a sheet name \, /, *, \[, \], :, ?
+///
+/// A sheet of another workbook, `[book]Sheet`, is left bare when `Sheet` needs no quotes and
+/// otherwise quoted whole: Excel writes `[1]Sort!$B:$C` and `'[1]XA Data Pull'!$J:$J` in the
+/// files it saves (corpus-bench 59932 and 52450, T-4140), and ADDRESS prints `[Book1]Sheet1!$A$1`
+/// (docs/excel-semantics/references.md). A 3-D span of that workbook's sheets, `[1]Uses:Defines`,
+/// follows a span of this workbook's (`sheet_span_text`): bare unless either end needs quotes,
+/// as the fixture Excel for the web opened holds it (fixtures/external-link-cached-3d-span;
+/// Excel's own saved form for it is unprobed).
 pub fn quote_name(name: &str) -> String {
+    if let Some((book, sheet)) = name.strip_prefix('[').and_then(|rest| rest.split_once(']')) {
+        let bare = match sheet.split_once(':') {
+            Some((first, last)) => !name_needs_quoting(first) && !name_needs_quoting(last),
+            None => !name_needs_quoting(sheet),
+        };
+        if !book.contains('[') && bare {
+            return name.to_string();
+        }
+    }
     if name_needs_quoting(name) {
         return format!("'{}'", name.replace('\'', "''"));
     };
@@ -410,6 +637,32 @@ pub fn quote_name(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unquote_sheet_prefix_undoubles_quotes() {
+        assert_eq!(unquote_sheet_prefix("CoB").as_deref(), Some("CoB"));
+        assert_eq!(unquote_sheet_prefix("'Co A'").as_deref(), Some("Co A"));
+        assert_eq!(unquote_sheet_prefix("'O''B'").as_deref(), Some("O'B"));
+        assert_eq!(unquote_sheet_prefix("'CoB"), None);
+    }
+
+    #[test]
+    fn digit_leading_sheet_is_quoted() {
+        assert_eq!(quote_digit_leading_sheet("2024!B1"), "'2024'!B1");
+        for same in ["Q1!B1", "'2024'!B1", "B1", "2 4!B1", "2&4!B1"] {
+            assert_eq!(quote_digit_leading_sheet(same), same);
+        }
+    }
+
+    #[test]
+    fn indirect_unquoted_sheet_names() {
+        for ok in ["CoB", "2024", "Q1", "x.y", "a_b"] {
+            assert!(is_indirect_unquoted_sheet(ok), "{ok}");
+        }
+        for bad in ["Co A", "P&L", "O'B", "'CoB'"] {
+            assert!(!is_indirect_unquoted_sheet(bad), "{bad}");
+        }
+    }
 
     #[test]
     fn test_quote_name() {
@@ -443,5 +696,14 @@ mod tests {
 
         assert_eq!(quote_name("B1048576"), "'B1048576'");
         assert_eq!(quote_name("B1048577"), "B1048577");
+        // Another workbook's sheet: bare unless the sheet needs quotes, then quoted whole (T-4140).
+        assert_eq!(quote_name("[1]Sort"), "[1]Sort");
+        assert_eq!(quote_name("[1]XA Data Pull"), "'[1]XA Data Pull'");
+        assert_eq!(quote_name("[1]56737"), "'[1]56737'");
+        assert_eq!(quote_name("[1]O'B"), "'[1]O''B'");
+        assert_eq!(quote_name("[Book1.xlsx]Sheet1"), "[Book1.xlsx]Sheet1");
+        assert_eq!(quote_name("[1]Uses:Defines"), "[1]Uses:Defines");
+        assert_eq!(quote_name("[1]Uses:Q 4"), "'[1]Uses:Q 4'");
+        assert_eq!(quote_name("[[1]Sheet"), "'[[1]Sheet'");
     }
 }

@@ -24,6 +24,16 @@ def test_let_names_are_prefixed() -> None:
     assert prefix_bound_names("=A1:A3 LET(x,A2:B2,x)") == "=A1:A3 LET(_xlpm.x,A2:B2,_xlpm.x)"
 
 
+def test_names_written_with_the_prefix_are_the_files_text() -> None:
+    # `_xlpm._xlpm.x` declares `_xlpm.x` and `LET(x,2,_xlpm.x*3)` binds its use, as the engine
+    # reads the same text (probes/t4224-doubled-xlpm-prefix A7, A8, A13; T-4224).
+    assert prefix_bound_names("=LET(x,2,_xlpm.x*3)") == "=LET(_xlpm.x,2,_xlpm.x*3)"
+    assert (
+        prefix_bound_names("=LET(_xlpm._xlpm.x,1,_xlpm._xlpm.x+1)") == "=LET(_xlpm._xlpm.x,1,_xlpm._xlpm.x+1)"
+    )
+    assert prefix_bound_names("=LET(x,2,_xlpm._xlpm.x*3)") == "=LET(_xlpm.x,2,_xlpm._xlpm.x*3)"
+
+
 def test_non_ascii_names_are_prefixed() -> None:
     # Unprefixed, Excel for the web refused `=LET(é,1,é+1)` as a corrupt file (T-1387).
     assert prefix_bound_names("=LET(é,1,É+1)") == "=LET(_xlpm.é,1,_xlpm.É+1)"
@@ -156,3 +166,33 @@ def test_bare_function_names_cell_must_exist_and_be_a_formula() -> None:
         build_xlsx({"sheets": [{"name": "S", "cells": {"A1": "=1"}, "bare_function_names": ["B1"]}]})
     with pytest.raises(ValueError, match="not a formula"):
         build_xlsx({"sheets": [{"name": "S", "cells": {"A1": 5}, "bare_function_names": ["A1"]}]})
+
+
+def test_conditional_formats_and_data_validations_are_written_with_prefixed_formulas() -> None:
+    """T-3263: a formula conditional format and a custom data validation, formulas prefixed like cells'."""
+    spec = {
+        "sheets": [
+            {
+                "name": "S",
+                "cells": {"A1": 1},
+                "conditional_formats": [{"ref": "A1:A3", "formula": "=XLOOKUP(1,{1},{1})=A1"}],
+                "data_validations": [{"ref": "B2", "formula": "=LET(x,1,x)=1"}],
+            }
+        ]
+    }
+    sheet = zipfile.ZipFile(io.BytesIO(build_xlsx(spec))).read("xl/worksheets/sheet1.xml").decode()
+    assert (
+        '<conditionalFormatting sqref="A1:A3"><cfRule type="expression" priority="1">'
+        "<formula>_xlfn.XLOOKUP(1,{1},{1})=A1</formula></cfRule></conditionalFormatting>"
+    ) in sheet
+    assert re.search(
+        r'<dataValidation type="custom"[^>]* sqref="B2"><formula1>_xlfn.LET\(_xlpm.x,1,_xlpm.x\)=1</formula1>',
+        sheet,
+    )
+
+
+def test_a_rule_xlsxwriter_refuses_is_an_error() -> None:
+    with pytest.raises(ValueError, match="conditional format on A0"):
+        build_xlsx(
+            {"sheets": [{"name": "S", "cells": {}, "conditional_formats": [{"ref": "A0", "formula": "=1"}]}]}
+        )

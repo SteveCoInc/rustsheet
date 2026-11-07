@@ -4,16 +4,21 @@
 //! and PIVOTBY".
 
 use std::cmp::Ordering;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 use std::borrow::Cow;
 
+use super::group_order::{compare_aggregates, key_cmp};
+use crate::area_budget::text_units;
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
-    functions::spill_functions::{cell_key, sort_key_cmp, CellKey},
-    functions::util::collation::cmp_text,
+    functions::{
+        spill_functions::{
+            cell_key, has_intransitive_text, unique_cell_key, unique_first_lines, CellKey,
+        },
+        util::{collation::cmp_text_pairwise, sort_indices_pairwise},
+    },
 };
 
 /// How the groups are ordered: GROUPBY's `sort_order` (PIVOTBY's `row_sort_order` and
@@ -21,11 +26,26 @@ use crate::{
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum SortOrder {
     /// By the key fields, `ascending[i]` for field `i`; fields not named ascend
-    /// ([`Grouping::sort_by_keys`]).
-    Keys(Vec<bool>),
+    /// ([`Grouping::sort_by_keys`]). `named` lists the fields `sort_order` names, in written
+    /// order: a table relationship sorts by them first ([`Grouping::sort_table_by_keys`]).
+    Keys {
+        ascending: Vec<bool>,
+        named: Vec<usize>,
+    },
     /// By the aggregate of value column `column` (0-based among the value columns), with
     /// [`Grouping::sort_by_aggregate`].
     Value { column: usize, ascending: bool },
+}
+
+/// The directions [`Grouping::new`] builds its tree in for `sort`: a hierarchy's key directions
+/// (probes/t4241-groupby-intransitive-runs Calc!C, E), ascending for a table relationship
+/// (`order` [`ParentOrder::Flat`]) and for a sort by a value, which match Excel on intransitive
+/// runs (probes/t4344-groupby-descending-search B55:E66, probes/t4359-groupby-value-sort-parents).
+pub(crate) fn tree_directions(sort: &SortOrder, order: ParentOrder) -> &[bool] {
+    match sort {
+        SortOrder::Keys { ascending, .. } if order != ParentOrder::Flat => ascending,
+        _ => &[],
+    }
 }
 
 /// `#VALUE!` for an invalid GROUPBY or PIVOTBY argument.
@@ -65,21 +85,15 @@ pub(crate) enum SetId {
     All,
     /// Set `n` of PIVOTBY's relative sets (`RelativeSets`).
     Pivot(usize),
+    /// Set `n` of PIVOTBY's parent sets, `relative_to` 3 and 4 (`ParentSets`): unique within
+    /// one PIVOTBY call only, which is all a set id needs (the sets of one call are compared).
+    ParentCell(usize),
     /// Parent `group` at sort level `level` of `axis` ([`Grouping::sort_by_aggregate`]).
     Parent {
         axis: Axis,
         level: usize,
         group: usize,
     },
-}
-
-/// A key as its group shows it: the blank key as the number 0 (G!A1, PIVOTBY's column keys too:
-/// probes/groupby-pivotby-followup G!A821), every other key as first spelled.
-pub(crate) fn shown_key(key: &ArrayNode) -> ArrayNode {
-    match key {
-        ArrayNode::Empty => ArrayNode::Number(0.0),
-        other => other.clone(),
-    }
 }
 
 /// Empty text, the filler of total rows, corners and empty PIVOTBY cells (not a blank: G!AC33).
@@ -92,55 +106,200 @@ pub(crate) fn empty_text() -> ArrayNode {
 pub(crate) struct Group {
     pub(crate) keys: Vec<ArrayNode>,
     pub(crate) rows: Vec<usize>,
-    /// The keys as they group ([`group_key`]), built once by [`Grouping::new`] so that comparing
-    /// key prefixes later converts no text.
-    cells: Vec<CellKey>,
+    /// The keys as they group: per field, the id of the group's class in that field's level of
+    /// [`Grouping::new`]'s tree, so that comparing key prefixes later compares no text.
+    cells: Vec<usize>,
+    /// Per field, the position of the group's class among its parent's classes, in the order
+    /// [`Grouping::new`] built them (its `ascending`): texts sort by it, not by comparing them
+    /// again.
+    ranks: Vec<usize>,
+    /// Whether any row reached the group's leaf; a leaf none reaches holds every row
+    /// ([`Grouping::new`] step 4).
+    reached: bool,
+}
+
+impl Group {
+    /// The id of the group's leaf class, which no other group of its grouping has, whether or
+    /// not a row reached it: it names the group across the sorts. (Its first row does not: a
+    /// leaf no row reaches holds every row, so it shares its first row with a reached group;
+    /// probes/t4382-pivotby-intransitive-paths Calc!B2, T-4403.)
+    pub(crate) fn leaf_id(&self) -> usize {
+        self.cells.last().copied().unwrap_or(usize::MAX)
+    }
+
+    /// Orders two groups' keys in `field`: texts under one parent (equal keys in the fields
+    /// before it) by their rank, the order [`Grouping::new`] sorted them in, `built` (ascending
+    /// or not), so `"AB"` before `"ab"&U+00AD` (probes/t4195-groupby-intransitive Calc!B31:B38);
+    /// anything else by [`key_cmp`].
+    fn key_order(
+        &self,
+        other: &Group,
+        field: usize,
+        (ascending, built): (bool, bool),
+        cell: CellReferenceIndex,
+    ) -> Ordering {
+        let (Some(x), Some(y)) = (self.keys.get(field), other.keys.get(field)) else {
+            return Ordering::Equal;
+        };
+        match (x, y, self.ranks.get(field), other.ranks.get(field)) {
+            (ArrayNode::String(_), ArrayNode::String(_), Some(a), Some(b))
+                if self.cells.get(..field) == other.cells.get(..field) =>
+            {
+                if ascending == built {
+                    a.cmp(b)
+                } else {
+                    b.cmp(a)
+                }
+            }
+            _ => key_cmp(x, y, ascending, cell),
+        }
+    }
 }
 
 /// Rows grouped by a key tuple: the unit GROUPBY lays out as rows and PIVOTBY as a grid.
 pub(crate) struct Grouping {
     pub(crate) groups: Vec<Group>,
+    /// The directions [`Grouping::new`] built the groups in, per field (ascending past the end):
+    /// the ranks' order.
+    ascending: Vec<bool>,
+    /// Each grouped source row with the ids of the classes it reached, one per field from the
+    /// first (fewer when it reached no leaf; [`Grouping::new`] step 3), as [`Group::cells`] holds
+    /// them.
+    paths: Vec<(usize, Vec<usize>)>,
+    /// Per field, the source rows (in source order) that reached each class of it, by class id:
+    /// a subtotal's and a value sort parent's rows ([`Grouping::class_rows`]).
+    reached_by: Vec<HashMap<usize, Vec<usize>>>,
+    /// Every grouped source row, in source order.
+    every: Vec<usize>,
 }
 
 impl Grouping {
-    /// Groups `rows` (indices into `keys`, one key tuple per row) like UNIQUE: text is
-    /// case-insensitive and numbers compare exactly ([`group_key`]). The key is built once per row
-    /// and looked up in a hash map, so grouping is O(rows x key fields). The groups are in order
-    /// of first appearance until [`Grouping::sort_by_keys`]. `limit(n)` is the error `n` groups
-    /// would give (the output size check, SPEC-0006 step 6); grouping stops at the first group
-    /// that does not fit, so no more groups are built than the output can hold.
+    /// Groups `rows` (indices into `keys`, one key tuple per row) as Excel's GROUPBY and PIVOTBY
+    /// do, with each field sorted ascending or not by `ascending` (ascending past its end). Two
+    /// keys of a field are one when Excel's `=` finds them equal (case folded, `ß` with `ss`, the
+    /// prefix rule: probes/t4086-groupby-weightless, probes/t4088-groupby-multifield B14:B21;
+    /// T-4088); numbers compare exactly ([`group_key`]). Excel's model, from
+    /// probes/t4195-groupby-intransitive, probes/t4241-groupby-intransitive-runs and the hold-out
+    /// probes/t4342-groupby-tree-holdout (docs/excel-semantics/coercion.md "GROUPBY on an
+    /// intransitive run"), is a tree over UNIQUE's sorted keys:
+    /// 1. The keys are the rows UNIQUE keeps ([`unique_first_lines`]), sorted on whole rows by
+    ///    SORT's merge ([`sort_indices_pairwise`]), each field in its direction ([`Keys::sorted`]).
+    /// 2. Classes are built field by field over that list: under one parent a key joins the last
+    ///    class when its field `=` the field of the class's first key, else it starts a class; a
+    ///    class shows its first key's spelling (so `abc` for (`ABC`,y), (`abc`,x): t4342 Calc!B51).
+    /// 3. Each row descends the tree by a lower-bound search over its parent's classes, in the
+    ///    direction its first two classes run in (T-4344: on an intransitive run a descending
+    ///    field's can run ascending), over [0, n-1] ([`Tree::descend`]); it is in no group when the
+    ///    class found is not `=` to it.
+    /// 4. A leaf no row reaches aggregates every row (t4241 Calc!C8, F2): such a row is in two
+    ///    groups.
+    ///
+    /// While `=` is transitive (no key text outside ASCII) this is grouping by equality, the
+    /// groups in key order, and each row descends as the first row equal to it does. The groups
+    /// come out in tree order, which [`Grouping::sort_by_keys`] keeps for the same `ascending`.
+    /// Every comparison is charged to `spend`. Fails only with `spend`'s error or `limit`'s.
+    /// `limit(n)` is the error `n` groups would give (the output size check, SPEC-0006 step 6);
+    /// the tree stops at the first group that does not fit, before any row descends it.
     pub(crate) fn new(
         keys: &[Vec<ArrayNode>],
         rows: impl IntoIterator<Item = usize>,
-        limit: impl Fn(usize) -> Option<(Error, String)>,
-    ) -> Result<Self, (Error, String)> {
-        let mut index: HashMap<Vec<CellKey>, usize> = HashMap::new();
-        let mut groups: Vec<Group> = Vec::new();
-        for row in rows {
-            let Some(tuple) = keys.get(row) else {
-                continue;
+        ascending: &[bool],
+        limit: impl Fn(usize) -> Option<CalcResult>,
+        mut spend: impl FnMut(u64) -> Result<(), CalcResult>,
+        cell: CellReferenceIndex,
+    ) -> Result<Self, CalcResult> {
+        let rows: Vec<usize> = rows.into_iter().filter(|&row| row < keys.len()).collect();
+        let fields = rows
+            .first()
+            .and_then(|&row| keys.get(row))
+            .map_or(0, Vec::len);
+        let lines = Keys {
+            keys,
+            rows: &rows,
+            ascending,
+            cell,
+        };
+        let first = unique_first_lines(
+            rows.len(),
+            fields,
+            |line, field| lines.at(line, field),
+            &mut spend,
+            cell,
+        )?;
+        let sorted = lines.sorted(&first, fields, &mut spend)?;
+        let tree = Tree::build(&lines, &sorted, fields, limit, &mut spend)?;
+        let intransitive =
+            has_intransitive_text(rows.len(), fields, |line, field| lines.at(line, field));
+        // members[leaf]: the lines that reach it; reached[line]: the classes the line reached.
+        let mut members: Vec<Vec<usize>> = vec![Vec::new(); tree.leaves()];
+        let mut reached: Vec<Vec<usize>> = vec![Vec::new(); rows.len()];
+        for line in 0..rows.len() {
+            // While `=` is transitive a row descends as the first row equal to it (UNIQUE's).
+            let classes = match first.get(line) {
+                Some(&kept) if !intransitive && kept < line => {
+                    reached.get(kept).cloned().unwrap_or_default()
+                }
+                _ => tree.descend(&lines, line, fields, &mut spend)?,
             };
-            let cells: Vec<CellKey> = tuple.iter().map(group_key).collect();
-            match index.entry(cells.clone()) {
-                Entry::Occupied(entry) => {
-                    if let Some(group) = groups.get_mut(*entry.get()) {
-                        group.rows.push(row);
-                    }
-                }
-                Entry::Vacant(entry) => {
-                    if let Some(error) = limit(groups.len() + 1) {
-                        return Err(error);
-                    }
-                    entry.insert(groups.len());
-                    groups.push(Group {
-                        keys: tuple.iter().map(positive_zero).collect(),
-                        rows: vec![row],
-                        cells,
-                    });
-                }
+            let leaf = classes.last().copied().filter(|_| classes.len() == fields);
+            if let Some(entry) = leaf.and_then(|leaf| members.get_mut(leaf)) {
+                entry.push(line);
+            }
+            if let Some(slot) = reached.get_mut(line) {
+                *slot = classes;
             }
         }
-        Ok(Grouping { groups })
+        let mut groups = Vec::with_capacity(members.len());
+        for (leaf, members) in members.into_iter().enumerate() {
+            let path = tree.path(leaf);
+            let reached = !members.is_empty();
+            // A leaf no row reaches holds every row: charged per row, so crafted intransitive
+            // keys with many such leaves end as the work budget's error, not as leaves x rows
+            // of memory (directive 5).
+            let rows_of_leaf: Vec<usize> = if reached {
+                members
+                    .iter()
+                    .filter_map(|&line| rows.get(line).copied())
+                    .collect()
+            } else {
+                spend(u64::try_from(rows.len()).unwrap_or(u64::MAX))?;
+                rows.clone()
+            };
+            groups.push(Group {
+                keys: path
+                    .iter()
+                    .enumerate()
+                    .map(|(field, node)| {
+                        lines
+                            .at(node.key, field)
+                            .map_or_else(empty_text, positive_zero)
+                    })
+                    .collect(),
+                rows: rows_of_leaf,
+                cells: path.iter().map(|node| node.id).collect(),
+                ranks: path.iter().map(|node| node.rank).collect(),
+                reached,
+            });
+        }
+        let mut reached_by: Vec<HashMap<usize, Vec<usize>>> = vec![HashMap::new(); fields];
+        for (&row, path) in rows.iter().zip(&reached) {
+            for (classes, &class) in reached_by.iter_mut().zip(path) {
+                classes.entry(class).or_default().push(row);
+            }
+        }
+        for members in reached_by.iter_mut().flat_map(HashMap::values_mut) {
+            members.sort_unstable();
+        }
+        let paths = rows.iter().copied().zip(reached).collect();
+        let mut every = rows;
+        every.sort_unstable();
+        Ok(Grouping {
+            groups,
+            ascending: ascending.to_vec(),
+            paths,
+            reached_by,
+            every,
+        })
     }
 
     /// The number of key fields.
@@ -151,7 +310,7 @@ impl Grouping {
     /// For each group, the id of its first `level` keys (groups sharing them share the id; all
     /// 0 for level 0): the key prefixes of PIVOTBY's relative sets.
     pub(crate) fn prefix_ids(&self, level: usize) -> Vec<usize> {
-        let mut index: HashMap<&[CellKey], usize> = HashMap::new();
+        let mut index: HashMap<&[usize], usize> = HashMap::new();
         self.groups
             .iter()
             .map(|group| {
@@ -163,17 +322,100 @@ impl Grouping {
     }
 
     /// For each of `height` source rows, the index of its group (`usize::MAX` for rows in no
-    /// group: headers and filtered rows).
+    /// group: headers and filtered rows). A row in a group no row reached too ([`Grouping::new`]
+    /// step 4) maps to the group it reached; such a group gets only the rows in no other
+    /// (PIVOTBY's columns give such a group every record instead, [`Grouping::unreached`];
+    /// `relative_to` 0 to 2 sets unprobed; 3 and 4 read the grid's cells instead, `ParentSets`).
     pub(crate) fn group_of(&self, height: usize) -> Vec<usize> {
         let mut group_of = vec![usize::MAX; height];
-        for (index, group) in self.groups.iter().enumerate() {
-            for &row in &group.rows {
-                if let Some(entry) = group_of.get_mut(row) {
-                    *entry = index;
+        for reached in [true, false] {
+            for (index, group) in self.groups.iter().enumerate() {
+                if group.reached != reached {
+                    continue;
+                }
+                for &row in &group.rows {
+                    if let Some(entry) = group_of.get_mut(row).filter(|entry| **entry == usize::MAX)
+                    {
+                        *entry = index;
+                    }
                 }
             }
         }
         group_of
+    }
+
+    /// For each of `height` source rows, the ids of the classes it reached ([`Grouping::paths`]):
+    /// empty for rows in no class (headers, filtered rows, or a first field no class equals).
+    pub(crate) fn reached_classes(&self, height: usize) -> Vec<&[usize]> {
+        let mut classes: Vec<&[usize]> = vec![&[]; height];
+        for (row, path) in &self.paths {
+            if let Some(slot) = classes.get_mut(*row) {
+                *slot = path;
+            }
+        }
+        classes
+    }
+
+    /// The source rows (in source order) of class `class` of field `field` as a parent: those
+    /// whose descent reached it, a row that reached no leaf under it included, and every row
+    /// when none did, as a leaf no row reaches holds every row ([`Grouping::new`] step 4). A
+    /// subtotal's rows, whatever the sort, and a value sort's parent's
+    /// (probes/t4359-groupby-value-sort-parents, probes/t4359-groupby-value-sort-holdout; T-4359).
+    /// While `=` is transitive that is the rows of the class's groups.
+    fn class_rows(&self, field: usize, class: usize) -> &[usize] {
+        self.reached_by
+            .get(field)
+            .and_then(|classes| classes.get(&class))
+            .map_or(&self.every[..], Vec::as_slice)
+    }
+
+    /// Whether some row's descent reached class `class` of field `field`. A PIVOTBY column
+    /// subtotal of a class none reached holds every record of its line, as its leaves do
+    /// (probes/t4388-pivotby-intransitive-subtotals columns D and E; T-4388).
+    pub(crate) fn class_reached(&self, field: usize, class: usize) -> bool {
+        self.reached_by
+            .get(field)
+            .is_some_and(|classes| classes.contains_key(&class))
+    }
+
+    /// The class ids of group `group`'s first `level` keys, the prefix a subtotal at that level
+    /// covers (empty when there is no such group).
+    pub(crate) fn prefix(&self, group: usize, level: usize) -> &[usize] {
+        self.groups
+            .get(group)
+            .and_then(|group| group.cells.get(..level))
+            .unwrap_or_default()
+    }
+
+    /// The indices of the groups no row reached ([`Grouping::new`] step 4), which hold every row.
+    pub(crate) fn unreached(&self) -> Vec<usize> {
+        self.groups
+            .iter()
+            .enumerate()
+            .filter(|(_, group)| !group.reached)
+            .map(|(index, _)| index)
+            .collect()
+    }
+
+    /// Sorts the groups stably by `cmp` with [`sort_indices_pairwise`], which cannot panic: texts
+    /// compare by rank under one parent and by `cmp_text` across parents ([`Group::key_order`]),
+    /// and a `sort_order` naming a later field first can mix the two into a cycle, which
+    /// `slice::sort_by` may panic on.
+    fn sort_groups(&mut self, mut cmp: impl FnMut(&Group, &Group) -> Ordering) {
+        let mut order: Vec<usize> = (0..self.groups.len()).collect();
+        let groups = &self.groups;
+        sort_indices_pairwise(&mut order, |a, b| match (groups.get(a), groups.get(b)) {
+            (Some(x), Some(y)) => cmp(x, y),
+            _ => Ordering::Equal,
+        });
+        let mut slots: Vec<Option<Group>> = std::mem::take(&mut self.groups)
+            .into_iter()
+            .map(Some)
+            .collect();
+        self.groups = order
+            .into_iter()
+            .filter_map(|index| slots.get_mut(index).and_then(Option::take))
+            .collect();
     }
 
     /// Sorts the groups by their keys, field by field, `ascending[i]` for field `i` (ascending
@@ -183,13 +425,51 @@ impl Grouping {
     /// G!A761), matching the exact `cell_key` grouping. (Errors against text, booleans and the
     /// blank key: unprobed, SPEC-0006.)
     pub(crate) fn sort_by_keys(&mut self, ascending: &[bool], cell: CellReferenceIndex) {
-        self.groups.sort_by(|a, b| {
-            a.keys
+        let built = self.ascending.clone();
+        let direction =
+            |directions: &[bool], field: usize| directions.get(field).copied().unwrap_or(true);
+        self.sort_groups(|a, b| {
+            (0..a.keys.len().min(b.keys.len()))
+                .map(|field| {
+                    let directions = (direction(ascending, field), direction(&built, field));
+                    a.key_order(b, field, directions, cell)
+                })
+                .find(|ordering| ordering.is_ne())
+                .unwrap_or(Ordering::Equal)
+        });
+    }
+
+    /// Sorts the groups of a GROUPBY table relationship (`field_relationship` 1) by their keys:
+    /// the fields `sort_order` names first, in written order, then the others ascending in column
+    /// order, so `sort_order` 2 sorts by the second key and then the first, and `{-1,2}` and
+    /// `{2,-1}` differ, where a hierarchy always sorts in column order (probes/t3838-groupby-
+    /// option-order G!B179-B216 against G!B217-B229). A descending field reverses its ascending
+    /// order whole, so the blank key sorts first there (G!B205, B207), where a hierarchy keeps it
+    /// last (G!B217). Mixed types descending in a table: unprobed, read the same way.
+    pub(crate) fn sort_table_by_keys(
+        &mut self,
+        ascending: &[bool],
+        named: &[usize],
+        cell: CellReferenceIndex,
+    ) {
+        let fields = self.groups.first().map_or(0, |group| group.keys.len());
+        let priority: Vec<usize> = named
+            .iter()
+            .copied()
+            .chain((0..fields).filter(|field| !named.contains(field)))
+            .collect();
+        let built = self.ascending.clone();
+        self.sort_groups(|a, b| {
+            priority
                 .iter()
-                .zip(&b.keys)
-                .enumerate()
-                .map(|(field, (x, y))| {
-                    key_cmp(x, y, ascending.get(field).copied().unwrap_or(true), cell)
+                .map(|&field| {
+                    let built = built.get(field).copied().unwrap_or(true);
+                    let ordering = a.key_order(b, field, (true, built), cell);
+                    if ascending.get(field).copied().unwrap_or(true) {
+                        ordering
+                    } else {
+                        ordering.reverse()
+                    }
                 })
                 .find(|ordering| ordering.is_ne())
                 .unwrap_or(Ordering::Equal)
@@ -214,7 +494,9 @@ impl Grouping {
     /// key cells: numbers < text < FALSE < TRUE < errors, errors last ascending and first
     /// descending (B34-B37; groupby-sort-filter-args2 B27-B28, B37). A parent's value is the
     /// function of all its rows, not of its children's values (AVERAGE and `100-SUM(x)` over two
-    /// keys, args2 B22-B25), at every level (three keys, args2 B19-B21).
+    /// keys, args2 B22-B25), at every level (three keys, args2 B19-B21). On an intransitive run
+    /// a parent's rows are [`Grouping::class_rows`] (t4344 Calc!D56; T-4359), so a shown subtotal
+    /// is the value its parent sorted by.
     ///
     /// `aggregate` also gets the group one level up as a relative set (PIVOTBY's `relative_to` 4 sorts
     /// rows by it, 3 columns: `RelativeTo::of_sort`); `None` at the top level. The parents' rows
@@ -242,28 +524,24 @@ impl Grouping {
         // The rows of the previous level's parents, handed to `aggregate` as the group one level up.
         let mut previous_rows: Vec<Vec<usize>> = Vec::new();
         for level in 0..fields.saturating_sub(1) {
-            let mut index: HashMap<(usize, &CellKey), usize> = HashMap::new();
+            let mut index: HashMap<(usize, usize), usize> = HashMap::new();
             let mut parent_rows: Vec<Vec<usize>> = Vec::new();
             // The previous level's parent of each parent.
             let mut above: Vec<usize> = Vec::new();
             let mut parents = Vec::with_capacity(self.groups.len());
             for (group, parent) in self.groups.iter().zip(&previous) {
-                let key = group.cells.get(level).unwrap_or(&CellKey::Empty);
+                let key = group.cells.get(level).copied().unwrap_or(usize::MAX);
                 let id = *index.entry((*parent, key)).or_insert_with(|| {
-                    parent_rows.push(Vec::new());
+                    parent_rows.push(self.class_rows(level, key).to_vec());
                     above.push(*parent);
                     parent_rows.len() - 1
                 });
-                if let Some(rows) = parent_rows.get_mut(id) {
-                    rows.extend_from_slice(&group.rows);
-                }
                 parents.push(id);
             }
             let values = parent_rows
-                .iter_mut()
+                .iter()
                 .zip(&above)
                 .map(|(rows, &parent)| {
-                    rows.sort_unstable();
                     if !parents_by_value {
                         return ArrayNode::Empty;
                     }
@@ -344,27 +622,89 @@ fn parent_set(axis: Axis, level: usize, rows: &[Vec<usize>], group: usize) -> Op
     })
 }
 
-/// [`key_cmp`] for two aggregates that may be missing (they never are: the indices come from
-/// the same groups).
-fn compare_aggregates(
-    a: Option<&ArrayNode>,
-    b: Option<&ArrayNode>,
-    ascending: bool,
+/// The key tuples of a grouping's rows as lines (a line is an index into `rows`), and how two
+/// lines' keys compare in one field ([`Grouping::new`]).
+struct Keys<'a> {
+    keys: &'a [Vec<ArrayNode>],
+    rows: &'a [usize],
+    /// Per field, whether it sorts ascending (ascending past the end).
+    ascending: &'a [bool],
     cell: CellReferenceIndex,
-) -> Ordering {
-    match (a, b) {
-        (Some(a), Some(b)) => key_cmp(a, b, ascending, cell),
-        _ => Ordering::Equal,
+}
+
+impl<'a> Keys<'a> {
+    /// Line `line`'s key in `field`.
+    fn at(&self, line: usize, field: usize) -> Option<&'a ArrayNode> {
+        self.rows
+            .get(line)
+            .and_then(|&row| self.keys.get(row))
+            .and_then(|tuple| tuple.get(field))
+    }
+
+    /// The work units of comparing two lines' keys in `field` ([`text_units`] of two texts).
+    fn units(&self, a: usize, b: usize, field: usize) -> u64 {
+        match (self.at(a, field), self.at(b, field)) {
+            (Some(ArrayNode::String(x)), Some(ArrayNode::String(y))) => {
+                text_units(x.len() + y.len()).max(1)
+            }
+            _ => 1,
+        }
+    }
+
+    /// Two lines' keys in `field` in that field's direction: texts by Excel's `<` and `=`
+    /// ([`cmp_text_pairwise`], reversed descending), keys with one [`group_key`] equal, anything
+    /// else by [`key_cmp`] (the blank key last both ways).
+    fn cmp(&self, a: usize, b: usize, field: usize) -> Ordering {
+        let ascending = self.ascending.get(field).copied().unwrap_or(true);
+        match (self.at(a, field), self.at(b, field)) {
+            (Some(ArrayNode::String(x)), Some(ArrayNode::String(y))) => {
+                let ordering = cmp_text_pairwise(x, y);
+                if ascending {
+                    ordering
+                } else {
+                    ordering.reverse()
+                }
+            }
+            (Some(x), Some(y)) if group_key(x) == group_key(y) => Ordering::Equal,
+            (Some(x), Some(y)) => key_cmp(x, y, ascending, self.cell),
+            _ => Ordering::Equal,
+        }
+    }
+
+    /// The lines UNIQUE keeps (`first[line] == line`), sorted on whole rows by SORT's merge
+    /// ([`sort_indices_pairwise`]), each field in its direction: probes/t4241-groupby-intransitive-
+    /// runs Calc!C (`sort_order` -1 reverses the first field) and E (-2, the second).
+    fn sorted(
+        &self,
+        first: &[usize],
+        fields: usize,
+        mut spend: impl FnMut(u64) -> Result<(), CalcResult>,
+    ) -> Result<Vec<usize>, CalcResult> {
+        let mut sorted: Vec<usize> = (0..first.len())
+            .filter(|&line| first.get(line) == Some(&line))
+            .collect();
+        let mut cost = 0u64;
+        sort_indices_pairwise(&mut sorted, |a, b| {
+            (0..fields)
+                .map(|field| {
+                    cost = cost.saturating_add(self.units(a, b, field));
+                    self.cmp(a, b, field)
+                })
+                .find(|ordering| ordering.is_ne())
+                .unwrap_or(Ordering::Equal)
+        });
+        spend(cost)?;
+        Ok(sorted)
     }
 }
 
-/// A key cell as it groups: `cell_key`, except that -0 is 0. Excel stores a cell `=-0` as 0, so
-/// 0, `=-0` and `=0` are one group (probes/groupby-pivotby-followup G!A781); the engine keeps the
-/// sign of a computed -0.
+/// A key cell's bucket as it groups: UNIQUE's (`unique_cell_key`: a text by its collation key),
+/// except that -0 is 0. Excel stores a cell `=-0` as 0, so 0, `=-0` and `=0` are one group
+/// (probes/groupby-pivotby-followup G!A781); the engine keeps the sign of a computed -0.
 fn group_key(node: &ArrayNode) -> CellKey {
     match node {
         ArrayNode::Number(n) if *n == 0.0 => cell_key(&ArrayNode::Number(0.0)),
-        other => cell_key(other),
+        other => unique_cell_key(other),
     }
 }
 
@@ -373,22 +713,6 @@ fn positive_zero(node: &ArrayNode) -> ArrayNode {
     match node {
         ArrayNode::Number(n) if *n == 0.0 => ArrayNode::Number(0.0),
         other => other.clone(),
-    }
-}
-
-/// [`sort_key_cmp`] with numbers compared exactly (see [`Grouping::sort_by_keys`]), and text
-/// compared in place with the comparator `sort_key_cmp` reaches (`cmp_text`, through
-/// `compare_values`) instead of converting and cloning both strings on every comparison.
-fn key_cmp(a: &ArrayNode, b: &ArrayNode, ascending: bool, cell: CellReferenceIndex) -> Ordering {
-    let ordering = match (a, b) {
-        (ArrayNode::Number(x), ArrayNode::Number(y)) => x.total_cmp(y),
-        (ArrayNode::String(x), ArrayNode::String(y)) => cmp_text(x, y),
-        _ => return sort_key_cmp(a, b, ascending, cell),
-    };
-    if ascending {
-        ordering
-    } else {
-        ordering.reverse()
     }
 }
 
@@ -443,8 +767,9 @@ impl Aggregates {
 
 impl Grouping {
     /// The key cells and the source rows (in source order) of a group or subtotal line: a
-    /// group's keys as shown, or a subtotal's ([`Grouping::subtotal_label_cells`]) over all its
-    /// groups' rows ([`Grouping::rows_of`]). `None` for a group that does not exist.
+    /// group's keys as shown, or a subtotal's ([`Grouping::subtotal_label_cells`]) over the rows
+    /// of the class it subtotals ([`Grouping::subtotal_rows`]). `None` for a group that does not
+    /// exist.
     pub(crate) fn line_parts(
         &self,
         line: Line,
@@ -453,12 +778,14 @@ impl Grouping {
         match line {
             Line::Group(index) => {
                 let group = self.groups.get(index)?;
-                let label = group.keys.iter().map(shown_key).collect();
+                // A blank key is a true blank in the array (INDEX TYPE 1, COUNT skips it); it displays 0
+                // when spilled (G!A1; T-2460, T-2854).
+                let label = group.keys.clone();
                 Some((label, Cow::Borrowed(&group.rows[..])))
             }
-            Line::Subtotal { level, start, end } => Some((
+            Line::Subtotal { level, start, .. } => Some((
                 self.subtotal_label_cells(level, start, key_columns),
-                Cow::Owned(self.rows_of(start, end)),
+                Cow::Borrowed(self.subtotal_rows(level, start)),
             )),
         }
     }
@@ -528,7 +855,7 @@ impl Grouping {
     /// calls no function.
     pub(crate) fn sort_by_key_order(&mut self, order: &SortOrder, cell: CellReferenceIndex) {
         match order {
-            SortOrder::Keys(ascending) => self.sort_by_keys(ascending, cell),
+            SortOrder::Keys { ascending, .. } => self.sort_by_keys(ascending, cell),
             SortOrder::Value { .. } => self.sort_by_keys(&[], cell),
         }
     }
@@ -548,19 +875,23 @@ impl Grouping {
             .unwrap_or(group.cells.len())
     }
 
-    /// The source rows of the groups `start..end`, in source order: a subtotal's function gets
-    /// its values in source order, as a group's does (`LAMBDA(x,ARRAYTOTEXT(x))`: East is
-    /// "10, 30, 5", probes/groupby-subtotals G!A331, G!A1081).
-    pub(crate) fn rows_of(&self, start: usize, end: usize) -> Vec<usize> {
-        let mut rows: Vec<usize> = self
+    /// The source rows, in source order, of the subtotal of the groups from `start` that share
+    /// their first `level` keys: the [`Grouping::class_rows`] of that prefix's class, which while
+    /// `=` is transitive are the rows of those groups. A subtotal's function gets its values in
+    /// source order, as a group's does (`LAMBDA(x,ARRAYTOTEXT(x))`: East is "10, 30, 5",
+    /// probes/groupby-subtotals G!A331, G!A1081). On an intransitive run, whatever the sort, it
+    /// counts a row that reached the class but no leaf under it, and not the extra rows of a leaf
+    /// no row reaches (probes/t4359-groupby-value-sort-holdout Calc!E, F; T-4359).
+    pub(crate) fn subtotal_rows(&self, level: usize, start: usize) -> &[usize] {
+        let field = level.saturating_sub(1);
+        match self
             .groups
-            .get(start..end)
-            .unwrap_or_default()
-            .iter()
-            .flat_map(|group| group.rows.iter().copied())
-            .collect();
-        rows.sort_unstable();
-        rows
+            .get(start)
+            .and_then(|group| group.cells.get(field))
+        {
+            Some(&class) => self.class_rows(field, class),
+            None => &[],
+        }
     }
 
     /// The key cells of the subtotal of the groups from `start` that share their first `level`
@@ -577,7 +908,7 @@ impl Grouping {
             .map_or(&[][..], |group| &group.keys[..]);
         (0..key_columns)
             .map(|field| match keys.get(field) {
-                Some(key) if field < level => shown_key(key),
+                Some(key) if field < level => key.clone(),
                 _ => empty_text(),
             })
             .collect()
@@ -604,320 +935,9 @@ pub(crate) fn subtotal_levels(depth: isize) -> usize {
     depth.unsigned_abs().saturating_sub(1)
 }
 
+mod tree;
+
+use tree::Tree;
+
 #[cfg(test)]
-mod tests {
-    use super::{Axis, Grouping, Line, ParentOrder};
-    use crate::expressions::{parser::ArrayNode, types::CellReferenceIndex};
-    use std::cmp::Ordering;
-
-    const CELL: CellReferenceIndex = CellReferenceIndex {
-        sheet: 0,
-        row: 1,
-        column: 1,
-    };
-
-    fn text(s: &str) -> ArrayNode {
-        ArrayNode::String(s.into())
-    }
-
-    /// The first key of each group and its rows, after sorting with `ascending`.
-    fn sorted(keys: &[ArrayNode], ascending: bool) -> Vec<(ArrayNode, Vec<usize>)> {
-        let keys: Vec<Vec<ArrayNode>> = keys.iter().map(|key| vec![key.clone()]).collect();
-        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None)
-            .unwrap_or(Grouping { groups: Vec::new() });
-        grouping.sort_by_keys(&[ascending], CELL);
-        grouping
-            .groups
-            .into_iter()
-            .map(|group| (group.keys[0].clone(), group.rows))
-            .collect()
-    }
-
-    #[test]
-    fn case_folded_first_spelling_and_blank_last_both_ways() {
-        let keys = [
-            text("West"),
-            ArrayNode::Empty,
-            text("east"),
-            ArrayNode::Number(2.0),
-            text("East"),
-            ArrayNode::Boolean(true),
-        ];
-        let ascending = sorted(&keys, true);
-        assert_eq!(
-            ascending,
-            [
-                (ArrayNode::Number(2.0), vec![3]),
-                (text("east"), vec![2, 4]),
-                (text("West"), vec![0]),
-                (ArrayNode::Boolean(true), vec![5]),
-                (ArrayNode::Empty, vec![1]),
-            ]
-        );
-        // Descending reverses every type but keeps the blank key last (G!A145).
-        let descending = sorted(&keys, false);
-        assert_eq!(
-            descending
-                .iter()
-                .map(|(key, _)| key.clone())
-                .collect::<Vec<_>>(),
-            [
-                ArrayNode::Boolean(true),
-                text("West"),
-                text("east"),
-                ArrayNode::Number(2.0),
-                ArrayNode::Empty,
-            ]
-        );
-    }
-
-    #[test]
-    fn two_key_fields_sort_lexicographically() {
-        let keys = vec![
-            vec![text("b"), ArrayNode::Number(2.0)],
-            vec![text("a"), ArrayNode::Number(3.0)],
-            vec![text("b"), ArrayNode::Number(1.0)],
-            vec![text("a"), ArrayNode::Number(3.0)],
-        ];
-        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None)
-            .unwrap_or(Grouping { groups: Vec::new() });
-        grouping.sort_by_keys(&[true, false], CELL);
-        let rows: Vec<Vec<usize>> = grouping.groups.into_iter().map(|g| g.rows).collect();
-        assert_eq!(rows, [vec![1, 3], vec![0], vec![2]]);
-    }
-
-    #[test]
-    fn value_sort_keeps_parents_with_equal_aggregates_together() {
-        // Parents a and b both sum to 4: they keep key order and their children do not
-        // interleave; b's children tie at 2 and keep key order (w before y).
-        let keys = vec![
-            vec![text("a"), text("x")],
-            vec![text("b"), text("y")],
-            vec![text("a"), text("z")],
-            vec![text("b"), text("w")],
-        ];
-        let values = [1.0, 2.0, 3.0, 2.0];
-        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None)
-            .unwrap_or(Grouping { groups: Vec::new() });
-        let mut calls = 0;
-        let order = (ParentOrder::ByValue, Axis::Rows);
-        let sums = grouping.sort_by_aggregate(true, order, CELL, |rows, _| {
-            calls += 1;
-            ArrayNode::Number(rows.iter().map(|&row| values[row]).sum())
-        });
-        let leaves: Vec<_> = (0..4)
-            .map(|i| sums.of_line(Line::Group(i)).cloned())
-            .collect();
-        let rows: Vec<Vec<usize>> = grouping.groups.iter().map(|g| g.rows.clone()).collect();
-        assert_eq!(rows, [vec![0], vec![2], vec![3], vec![1]]);
-        assert_eq!(
-            leaves,
-            [1.0, 3.0, 2.0, 2.0].map(|n| Some(ArrayNode::Number(n)))
-        );
-        // One call per group and one per parent, and the subtotal lines get the parents' sums
-        // without another call.
-        assert_eq!(calls, 6);
-        let subtotals: Vec<_> = grouping
-            .lines(1, false)
-            .into_iter()
-            .filter(|line| matches!(line, Line::Subtotal { .. }))
-            .map(|line| sums.of_line(line).cloned())
-            .collect();
-        assert_eq!(
-            subtotals,
-            [Some(ArrayNode::Number(4.0)), Some(ArrayNode::Number(4.0))]
-        );
-        assert_eq!(calls, 6);
-    }
-
-    /// Three-key groups a/x/1, a/x/2, a/y/1, b/x/1, already in key order.
-    fn three_keys() -> Grouping {
-        let keys: Vec<Vec<ArrayNode>> = [
-            ("a", "x", 1.0),
-            ("a", "x", 2.0),
-            ("a", "y", 1.0),
-            ("b", "x", 1.0),
-        ]
-        .iter()
-        .map(|(a, b, c)| vec![text(a), text(b), ArrayNode::Number(*c)])
-        .collect();
-        Grouping::new(&keys, 0..keys.len(), |_| None).unwrap_or(Grouping { groups: Vec::new() })
-    }
-
-    #[test]
-    fn subtotal_lines_after_and_before_their_groups() {
-        let grouping = three_keys();
-        let subtotal = |level, start, end| Line::Subtotal { level, start, end };
-        // Depth 2: the first level only (probes/groupby-subtotals G!A1).
-        assert_eq!(
-            grouping.lines(1, false),
-            [
-                Line::Group(0),
-                Line::Group(1),
-                Line::Group(2),
-                subtotal(1, 0, 3),
-                Line::Group(3),
-                subtotal(1, 3, 4)
-            ]
-        );
-        // Depth 3: the deepest subtotal first below the groups (G!A61) ...
-        assert_eq!(
-            grouping.lines(2, false),
-            [
-                Line::Group(0),
-                Line::Group(1),
-                subtotal(2, 0, 2),
-                Line::Group(2),
-                subtotal(2, 2, 3),
-                subtotal(1, 0, 3),
-                Line::Group(3),
-                subtotal(2, 3, 4),
-                subtotal(1, 3, 4),
-            ]
-        );
-        // ... and the shallowest first above them (G!A91).
-        assert_eq!(
-            grouping.lines(2, true),
-            [
-                subtotal(1, 0, 3),
-                subtotal(2, 0, 2),
-                Line::Group(0),
-                Line::Group(1),
-                subtotal(2, 2, 3),
-                Line::Group(2),
-                subtotal(1, 3, 4),
-                subtotal(2, 3, 4),
-                Line::Group(3),
-            ]
-        );
-        assert_eq!(
-            grouping.lines(0, true),
-            (0..4).map(Line::Group).collect::<Vec<_>>()
-        );
-        assert_eq!(grouping.rows_of(0, 3), [0, 1, 2]);
-        assert_eq!(
-            grouping.subtotal_label_cells(1, 3, 3),
-            [text("b"), text(""), text("")]
-        );
-    }
-
-    /// Every kind of key cell a sort meets: each `ArrayNode` variant, numbers at the edges of the
-    /// 15-digit comparison (-0/+0, subnormals, 0.1+0.2 against 0.3, infinities, NaN), texts that
-    /// differ only in case, accents, expansions (`æ`, `ß`), skipped characters, the ASCII fast
-    /// path against the general one and lone surrogates, and every error kind.
-    fn sort_pool() -> Vec<ArrayNode> {
-        use crate::{expressions::token::Error, text::Text};
-        let numbers = [
-            f64::NEG_INFINITY,
-            -f64::MAX,
-            -1.0,
-            -1e-300,
-            -5e-324,
-            -0.0,
-            0.0,
-            5e-324,
-            1e-300,
-            0.1 + 0.2,
-            0.3,
-            0.999_999_999_999_999_9,
-            1.0,
-            1.0 + f64::EPSILON,
-            1.000_000_000_000_001,
-            123_456_789_012_345.6,
-            123_456_789_012_345.7,
-            f64::MAX,
-            f64::INFINITY,
-            f64::NAN,
-            -f64::NAN,
-        ];
-        let texts = [
-            "", " ", "\u{a0}", "\t", "\n", "\u{1}", "a", "A", "b", "B", "z", "ä", "Ä", "á", "à",
-            "ã", "å", "ª", "ae", "AE", "æ", "Æ", "ss", "SS", "ß", "th", "þ", "o", "ö", "ø", "d",
-            "đ", "ð", "i", "I", "ı", "İ", "ab", "a'b", "a-b", "a–b", "a—b", "-a", "'a", "a-", "1",
-            "-1", "'1", "10", "½", "¹", "~", "+", "€", "<", "😀", "\u{fffd}", "a\u{a0}b",
-        ];
-        let units: [&[u16]; 5] = [
-            &[0xD83D],
-            &[0xDE00],
-            &[0xD83D, 0xDE00],
-            &[0x61, 0xD800],
-            &[0xDC00, 0xD800],
-        ];
-        numbers
-            .into_iter()
-            .map(ArrayNode::Number)
-            .chain(texts.into_iter().map(text))
-            .chain(
-                units
-                    .into_iter()
-                    .map(|u| ArrayNode::String(Text::from_utf16(u.to_vec()))),
-            )
-            .chain([ArrayNode::Boolean(false), ArrayNode::Boolean(true)])
-            .chain(Error::ALL.into_iter().map(ArrayNode::Error))
-            .chain([ArrayNode::Empty])
-            .collect()
-    }
-
-    /// Checks that `cmp` is a total order on `pool`: reflexive, antisymmetric and transitive
-    /// (`slice::sort_by` may panic otherwise, since Rust 1.81). Exhaustive over all triples, on
-    /// a precomputed table.
-    fn assert_total_order(
-        pool: &[ArrayNode],
-        name: &str,
-        cmp: impl Fn(&ArrayNode, &ArrayNode) -> Ordering,
-    ) {
-        let n = pool.len();
-        let table: Vec<Vec<Ordering>> = pool
-            .iter()
-            .map(|a| pool.iter().map(|b| cmp(a, b)).collect())
-            .collect();
-        for i in 0..n {
-            assert_eq!(
-                table[i][i],
-                Ordering::Equal,
-                "{name}: {:?} not equal to itself",
-                pool[i]
-            );
-            for j in 0..n {
-                assert_eq!(
-                    table[i][j],
-                    table[j][i].reverse(),
-                    "{name}: not antisymmetric on {:?}, {:?}",
-                    pool[i],
-                    pool[j]
-                );
-                for k in 0..n {
-                    let (ij, jk) = (table[i][j], table[j][k]);
-                    // a <= b <= c implies a <= c, strictly when either step is strict.
-                    let implied = match (ij, jk) {
-                        (Ordering::Equal, step) | (step, Ordering::Equal) => Some(step),
-                        (x, y) if x == y => Some(x),
-                        _ => None,
-                    };
-                    if let Some(implied) = implied {
-                        assert_eq!(
-                            table[i][k], implied,
-                            "{name}: not transitive on {:?}, {:?}, {:?}",
-                            pool[i], pool[j], pool[k]
-                        );
-                    }
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn sort_comparators_are_total_orders_on_mixed_types() {
-        use crate::functions::spill_functions::sort_key_cmp;
-        let pool = sort_pool();
-        for ascending in [true, false] {
-            // SORT, SORTBY and UNIQUE (through `compare_values`), and GROUPBY/PIVOTBY.
-            assert_total_order(&pool, "sort_key_cmp", |a, b| {
-                sort_key_cmp(a, b, ascending, CELL)
-            });
-            assert_total_order(&pool, "key_cmp", |a, b| {
-                super::key_cmp(a, b, ascending, CELL)
-            });
-        }
-    }
-}
+mod tests;

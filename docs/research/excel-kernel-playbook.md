@@ -113,6 +113,10 @@ The oracle is the bottleneck, so every cell should answer a question.
 
 ## 4. Traps
 
+- **Probe literals carry 15 significant digits.** Excel cuts a formula literal to 15 significant digits
+  (numbers.md), so a ladder written as `2047.9999999999995` probes 2047.99999999999. Pick ladder points with at most
+  15 digits (dyadic offsets such as x0 + m*2^-k), or pass the input through a cell holding the exact double. T-4290's
+  first ladder lost its sub-1E-11 rungs this way.
 - **Exact-match rate is no objective until you are close.** Any smooth near-miss scores 22-40%. A model 1E-12 off
   scored the same as a random smooth model, and fewer roundings score higher regardless of truth. The rate rewards
   you only in the last few ulps. Use per-x-bin match rates to see where the error lives: a rate that falls with x
@@ -127,6 +131,11 @@ The oracle is the bottleneck, so every cell should answer a question.
   ranges. Every method that worked was validated this way first, and the false peaks were caught this way.
 - **Published sources and memory are no evidence.** Ten-plus libraries were swept and none matched any kernel.
   Use them for structure hints (break points, degrees), never for coefficients.
+- **Read oracle values with a round-trip parser.** `serde_json` without its `float_roundtrip` feature (the
+  engine's dev-dependency has none) misreads some doubles by an ulp: `-999.9487113072481` came back as
+  `...248`. A fit harness that read the oracle JSON that way scored every form against corrupted values, and a
+  positive control (our PPMT, bit-exact in the eval) failed on 194 of 480 cells until the values were passed as
+  strings and parsed with `str::parse::<f64>` (T-3552). Python's `json` is exact.
 - **Error-curve shape is a rounding fingerprint, not approximation error.** The "±3-ulp drift" in the ERFC tail
   was a staircase from binade crossings of Horner intermediates. Only exact simulation explains it.
 

@@ -3,12 +3,12 @@ id: T-2427
 title: "FREQUENCY: an error argument is that error, and the result has one row per bin cell plus one even for a single or text bin (gen-m9, 140 cells)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
 depends_on: []
-campaign: visible
+campaign: semantics
 ---
 
 ## Goal
@@ -138,16 +138,29 @@ Examples:
 Cells:
 - gen-m9/b5aef3645cec1b95.case.json (1): Calc!A72
 
+T-2496 probe (probes/t2496-fin-subexpressions, each case's Data sheet copied as Dnn, every call and compound argument read through a TYPE/shape summary, excel-graph, 2026-10-25; probes/tbill-error-order-inner-calls for the T-bill cells): the innermost diverging sub-expression of 2 gen-m9 financial cells moved here from T-2496.
+
+| gen-m9 cell | innermost sub-expression | Excel | ours |
+|---|---|---|---|
+| gen-m9/b6a02893a8d6b151 Calc!A245 | `FREQUENCY(2.5,Data!E10:E11)` (bins TRUE, FALSE: no number); ODDFYIELD lifts over it | 2x1 {0;1} (cell #SPILL!) | 1x1 {1} (cell #NUM!) |
+| gen-m9/d0854366830dcdee Calc!A183 | `FREQUENCY(0.1,Data!A11:A11)` (bin "Hello World"); CUMIPMT lifts over it | 2x1 {0;1} (cell #SPILL!) | 1x1 {1} (cell #VALUE!) |
+
+
+Owned gen-m9 cells (T-2524 trace, 2026-10-26; arguments evaluated by the engine, which agree with Excel): 1 known-failure
+line in eval/baseline/gen-m9.txt, 1 visibly off:
+- gen-m9/530c636749a85209 Calc!A174 `FREQUENCY((DSUM(..)/SUMIF(..)),COUPDAYS(..))`: data_array #DIV/0!, bins 180; Excel #DIV/0!, ours #VALUE!
+
 ## Acceptance criteria
-- [ ] Visible parity (gen-m9, T-2258): these 1 known-failure lines disappear from eval/baseline/gen-m9.txt
+- [x] Visible parity (gen-m9, T-2258): these 1 known-failure lines disappear from eval/baseline/gen-m9.txt
       (`make eval-baseline`), with no new known-failure lines in any baseline.
-- [ ] Visible parity (gen-m9, T-2257): the 3 visibly-off known-failure lines listed under "T-2257 sweep" in Context disappear
+- [x] Visible parity (gen-m9, T-2257): the 3 visibly-off known-failure lines listed under "T-2257 sweep" in Context disappear
       from eval/baseline/gen-m9.txt (`make eval-baseline`), with no new known-failure lines in any baseline.
-- [ ] Visible parity (gen-m9, T-2255 and T-2256): these 151 known-failure lines (139 from T-2255, 12 from T-2256) disappear from eval/baseline/gen-m9.txt
+- [~] (partly; rest in T-2624) Visible parity (gen-m9, T-2255 and T-2256): these 151 known-failure lines (139 from T-2255, 12 from T-2256) disappear from eval/baseline/gen-m9.txt
       (`make eval-baseline`), with no new known-failure lines in any baseline.
-- [ ] Unit tests: `ROWS(FREQUENCY({1;2;3},2))` is 2, `FREQUENCY(NA(),{1;2})` is `#N/A`, an error bins is its error.
-- [ ] statistics.md's entry gets an "Ours:" line naming this task.
-- [ ] `make check` green; reviewers approve.
+- [x] Unit tests: `ROWS(FREQUENCY({1;2;3},2))` is 2, `FREQUENCY(NA(),{1;2})` is `#N/A`, an error bins is its error.
+- [x] statistics.md's entry gets an "Ours:" line naming this task.
+- [x] Visible parity (gen-m9, T-2496): the 2 known-failure lines of the T-2496 probe block above disappear from eval/baseline/gen-m9.txt (`make eval-baseline`), with no new known-failure lines in any baseline.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - FREQUENCY over a union (references.md, unchanged).
@@ -157,3 +170,27 @@ Decision 0083 (gap triage 2026-10-23, T-2255): every cell this task owns has the
 last-digit difference), so the task is in the campaign. Its target is that every cell it owns has Excel's type, error and text,
 or is within half a unit of the 15th significant digit of Excel's value; the visible-parity criterion under Acceptance criteria
 states it.
+
+
+## Outcome
+FREQUENCY skips text/booleans/blanks, returns two rows when no bin is numeric, and an error argument is the result
+(scalar errors before array errors, data before bins); T.TEST lets an error `type` beat a bad `tails` when the samples are
+good. Probe: probes/frequency-bins. Eval: gen-m9 known failures 5755 -> 5657 (98 net; 162 baseline lines removed, including cells of other functions that now pass; none new), probes baseline
+unchanged apart from its new case. 19 FREQUENCY cells stay off because their other arguments are other functions' gaps
+(ODDFYIELD/ODDLYIELD, FORECAST.ETS*, EXPAND, DB, NPER, WRAPCOLS, FILTER, INDIRECT/MAP); the acceptance lines for those are
+not met; they move to T-2624 and the remaining gen-m9 lines stay in the baseline.
+
+Review fixes (2026-10-27, after reviewer-excel-fidelity's REQUEST_CHANGES of 2026-10-26):
+- An error element now propagates only from the data array (`numeric_flat_with_element_errors`, replacing the
+  hand-rolled loop). An error element of the bins array keeps `main`'s `#VALUE!`, because no oracle cell covers it
+  and corpus-bench/53062 points the other way (T-2636).
+- An error cell in a data range keeps `main`'s data-first order against a scalar bins error, UNVERIFIED (T-2636).
+  A scalar bins error still beats an error element of the data array (probes/frequency-bins B1-B3).
+- The T.TEST change went to `main` separately (`t_dist.rs` takes `main`'s side in the merge), and its test cells
+  still pass.
+- The T-2636 notes are refreshed (statistics.md, the prob.rs TODO, the T-2636 task). The `"2"` text-bin rule stays
+  UNVERIFIED.
+- Eval on main 7f6b373a merged in: gen-m9 3,753 -> 3,598 (155 fixed), probes 2,891 -> 2,886 (5 fixed;
+  frequency-bins 38/38), 0 regressions.
+- The steward's blocker of 2026-10-27 (the same two gaps) is resolved by the routes it offered, without new probes:
+  confine element errors to the data array, and keep `main`'s data-first order. Its probe list moves to T-2636.

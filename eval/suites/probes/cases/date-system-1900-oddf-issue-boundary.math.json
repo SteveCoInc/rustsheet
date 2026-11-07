@@ -1,0 +1,77 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "64fd632e6c354e4f68f5d7e8b41bdd6d70c7f5dd3b8d6d779bd268f1a417f91f",
+  "definitions": {
+   "ODDFPRICE": "01474ee9e21d1dba"
+  },
+  "arguments_sha256": "cb9caa35f7bdc6c433f549eaf701c544be83d30634d1d8134899e066a955f0e4"
+ },
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "n",
+    "v": "98.595076550525283019838296223104611040697762346359",
+    "f": "=ODDFPRICE(DATE(2024,2,1),DATE(2025,7,1),DATE(2023,7,1),DATE(2024,7,1),0.05,0.06,100,2,0)"
+   },
+   "A10": {
+    "t": "e",
+    "why": "a first period of exactly one period (DFC = E): #NUM!",
+    "f": "=ODDFPRICE(DATE(2024,2,1),DATE(2025,7,1),DATE(2024,1,1),DATE(2024,7,1),0.05,0.06,100,2,4)"
+   },
+   "A11": {
+    "t": "e",
+    "why": "a first period of exactly one period (DFC = E): #NUM!",
+    "f": "=ODDFPRICE(DATE(2024,2,1),DATE(2025,7,15),DATE(2024,1,15),DATE(2024,7,15),0.05,0.06,100,2,0)"
+   },
+   "A12": {
+    "t": "n",
+    "v": "98.623210638519695025326153192312057238214890269266",
+    "f": "=ODDFPRICE(DATE(2024,2,1),DATE(2025,7,15),DATE(2024,1,16),DATE(2024,7,15),0.05,0.06,100,2,0)"
+   },
+   "A2": {
+    "t": "e",
+    "why": "a first period of exactly one period (DFC = E): #NUM!",
+    "f": "=ODDFPRICE(DATE(2024,2,1),DATE(2025,1,15),DATE(2024,1,15),DATE(2024,7,15),0.05,0.06,100,2,0)"
+   },
+   "A3": {
+    "t": "e",
+    "why": "a first period of exactly one period (DFC = E): #NUM!",
+    "f": "=ODDFPRICE(DATE(2024,2,1),DATE(2025,6,30),DATE(2023,12,31),DATE(2024,6,30),0.05,0.06,100,2,0)"
+   },
+   "A4": {
+    "t": "n",
+    "v": "98.656243074424330309429174607290313975325851233836",
+    "f": "=ODDFPRICE(DATE(2024,2,1),DATE(2025,7,1),DATE(2024,1,2),DATE(2024,7,1),0.05,0.06,100,2,0)"
+   },
+   "A5": {
+    "t": "n",
+    "v": "98.655567201232075643245849984260637699805098870438",
+    "f": "=ODDFPRICE(DATE(2024,2,1),DATE(2025,7,1),DATE(2023,12,31),DATE(2024,7,1),0.05,0.06,100,2,0)"
+   },
+   "A6": {
+    "t": "e",
+    "why": "a first period of exactly one period (DFC = E): #NUM!",
+    "f": "=ODDFPRICE(DATE(2024,2,1),DATE(2025,7,1),DATE(2024,1,1),DATE(2024,7,1),0.05,0.06,100,2,1)"
+   },
+   "A7": {
+    "t": "e",
+    "why": "a first period of exactly one period (DFC = E): #NUM!",
+    "f": "=ODDFPRICE(DATE(2024,5,1),DATE(2025,7,1),DATE(2024,4,1),DATE(2024,7,1),0.05,0.06,100,4,0)"
+   },
+   "A8": {
+    "t": "e",
+    "why": "a first period of exactly one period (DFC = E): #NUM!",
+    "f": "=ODDFPRICE(DATE(2024,2,1),DATE(2025,1,1),DATE(2024,1,1),DATE(2024,7,1),0.05,0.06,100,2,0)"
+   },
+   "A9": {
+    "t": "e",
+    "why": "a first period of exactly one period (DFC = E): #NUM!",
+    "f": "=ODDFPRICE(DATE(2024,3,1),DATE(2025,7,1),DATE(2024,1,1),DATE(2024,7,1),0.05,0.06,100,2,0)"
+   }
+  }
+ }
+}

@@ -4,10 +4,10 @@ use bitcode::{Decode, Encode};
 
 use crate::{
     cf_types::CfRule,
-    tables::RewrittenFormula,
+    formula_rewrite::{RewrittenCell, RewrittenFormula},
     types::{
-        Cell, Col, Color, Link, MergedCell, Row, SheetState, Style, StyleIncludes, Table, Theme,
-        Worksheet,
+        Cell, Col, Color, Link, MergedCell, Row, SheetState, Style, StyleIncludes, Table,
+        TableExtent, Theme, Worksheet,
     },
 };
 
@@ -24,8 +24,19 @@ pub(crate) struct ColumnData {
 }
 
 impl Diff {
-    /// A `SetCellValue` of the user input `value`, typed rather than written through the legacy
-    /// entry.
+    /// A `SetRowHidden` that shows a hidden row. A column delete's diff list ends with these
+    /// for the rows it showed (T-4371), so an undo hides them before it restores the filter.
+    pub(crate) fn row_shown(sheet: u32, row: i32) -> Self {
+        Diff::SetRowHidden {
+            sheet,
+            row,
+            new_value: false,
+            old_value: true,
+        }
+    }
+
+    /// A `SetCellValue` of the user input `value` from outside the engine, typed rather than
+    /// written through the legacy entry.
     pub(crate) fn set_cell_value(
         sheet: u32,
         row: i32,
@@ -39,6 +50,7 @@ impl Diff {
             column,
             new_value: value.to_string(),
             legacy: false,
+            external: true,
             old_value: Box::new(old_value),
         }
     }
@@ -54,6 +66,11 @@ pub(crate) enum Diff {
         new_value: String,
         /// `new_value` was written through the legacy entry (SPEC-0012), so redo must be too.
         legacy: bool,
+        /// `new_value` came from outside the engine (an embedder's input or pasted text), not
+        /// from the engine's own print of a formula (a fill, a copy, a merge), so redo reads it
+        /// as [`Model::set_user_input`](crate::Model::set_user_input) does: a padded bare column
+        /// `T[ Col ]` is no column there and the column in the engine's text (T-4023).
+        external: bool,
         old_value: Box<Option<Cell>>,
     },
     SetArrayValue {
@@ -161,6 +178,12 @@ pub(crate) enum Diff {
         row: i32,
         count: i32,
         old_data: Vec<RowData>,
+        /// The extents, before the delete, of the tables it resized, which the undo puts back
+        /// (T-3634); redo's delete resizes them again.
+        tables: Vec<TableExtent>,
+        /// The formula cells the delete rewrote past what re-inserting the rows undoes, as they
+        /// were, which the undo puts back (T-4668); redo's delete rewrites them again.
+        rewritten: Vec<RewrittenCell>,
     },
     InsertColumns {
         sheet: u32,
@@ -172,6 +195,12 @@ pub(crate) enum Diff {
         column: i32,
         count: i32,
         old_data: Vec<ColumnData>,
+        /// The tables the delete changed, as they were before it, which the undo puts back
+        /// (T-4652); redo's delete changes them again.
+        tables: Vec<(String, Table)>,
+        /// The formula cells the delete rewrote past what re-inserting the columns undoes, as
+        /// they were, which the undo puts back (T-4668); redo's delete rewrites them again.
+        rewritten: Vec<RewrittenCell>,
     },
     DeleteSheet {
         sheet: u32,
@@ -211,6 +240,8 @@ pub(crate) enum Diff {
         sheet_index: u32,
         /// Index the worksheet was moved to.
         new_index: u32,
+        /// The formulas whose 3-D spans the move rewrote (T-1691).
+        rewritten: Vec<RewrittenFormula>,
     },
     SetSheetColor {
         index: u32,
@@ -240,6 +271,10 @@ pub(crate) enum Diff {
         name: String,
         scope: Option<u32>,
         old_value: String,
+        /// The deleted name's `hidden` flag and Name Manager `comment`, which an undo puts back
+        /// (T-4637).
+        hidden: bool,
+        comment: Option<String>,
     },
     UpdateDefinedName {
         name: String,

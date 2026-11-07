@@ -4,6 +4,18 @@ use crate::expressions::{parser::ArrayNode, token::Error, types::CellReferenceIn
 use crate::number_format::cmp_excel_precision;
 use crate::text::Text;
 
+/// Rows and columns of the range with corners `left` and `right`, in order.
+pub(crate) fn range_dims(left: CellReferenceIndex, right: CellReferenceIndex) -> (usize, usize) {
+    (
+        usize::try_from(right.row - left.row + 1).unwrap_or(0),
+        usize::try_from(right.column - left.column + 1).unwrap_or(0),
+    )
+}
+
+/// The message that marks an array element's error (`functions::statistical::element_errors`),
+/// which [`CalcResult::untagged`] drops when the error leaves a call as its value (T-3080).
+pub(crate) const ARRAY_ELEMENT_ERROR: &str = "Error in array argument";
+
 #[derive(Clone)]
 pub struct Range {
     pub left: CellReferenceIndex,
@@ -60,6 +72,15 @@ impl CalcResult {
         }
     }
 
+    /// Rows and columns of a range or array result (1x1 for anything else).
+    pub(crate) fn shape(&self) -> (usize, usize) {
+        match self {
+            CalcResult::Range { left, right } => range_dims(*left, *right),
+            CalcResult::Array(array) => (array.len(), array.first().map_or(0, Vec::len)),
+            _ => (1, 1),
+        }
+    }
+
     pub fn new_error(error: Error, origin: CellReferenceIndex, message: String) -> CalcResult {
         CalcResult::Error {
             error,
@@ -67,6 +88,20 @@ impl CalcResult {
             message,
         }
     }
+    /// The call's value with an array element's error tag ([`ARRAY_ELEMENT_ERROR`]) dropped: the
+    /// tag lets the call that read the element let another argument's error win, and once the
+    /// error is a call's value it is a plain error, so an outer call sees it as its data
+    /// argument's own (statistics.md "An error element of an array argument is that error";
+    /// `SMALL(SMALL({1,#N/A,3},2)/1.005,"a*")` is #N/A, gen-m9/1b31092a0d79e5f1 A363, T-3080).
+    pub(crate) fn untagged(self) -> CalcResult {
+        match self {
+            CalcResult::Error { ref message, .. } if message == ARRAY_ELEMENT_ERROR => {
+                self.without_message()
+            }
+            other => other,
+        }
+    }
+
     /// An error with its message dropped, anything else as it is: a lifted kernel copies a
     /// data argument's error into every element, and an empty message allocates nothing.
     pub(crate) fn without_message(self) -> CalcResult {

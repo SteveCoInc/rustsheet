@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::{
+    area_budget::visit_units,
     calc_result::CalcResult,
     cast::calc_result_to_array_node,
     expressions::{
@@ -24,8 +25,8 @@ use crate::{
     nested_array::{NestedArray, NestedKind},
 };
 
-use super::eta_min_args;
 use super::grouping::{at, empty_text, value_error, Relative, SetId};
+use crate::functions::kinds::arg_counts;
 
 /// What one aggregate cell is computed from: the rows of its group (or grid cell) and its
 /// relative set, the second argument of a two-argument function (SPEC-0006 `Aggregate`).
@@ -116,8 +117,9 @@ pub(crate) fn is_function_array(arg: &Node) -> bool {
 }
 
 /// How many arguments GROUPBY and PIVOTBY pass to a function passed by name: its minimum argument
-/// count (`eval/catalog/excel-functions.tsv`) when that is 1 or 2, `None` (the whole result
-/// `#VALUE!`) for 0 and for 3 or more. Two arguments, the values and the relative set: PERCENTOF
+/// count (`eval/catalog/excel-functions.tsv`) when that is 1 or 2, one for a function that takes
+/// none or one (ROW), `None` (the whole result `#VALUE!`) for one that takes none only (NOW)
+/// and for 3 or more. Two arguments, the values and the relative set: PERCENTOF
 /// (G!S97), CORREL, PEARSON, RSQ, COVARIANCE.P (`#N/A` per group, as the sizes differ; in the
 /// total, the same array twice: about 1 for CORREL, PEARSON and RSQ, the variance 161.7225 for
 /// COVARIANCE.P, functions2 G!B326), and IF, ROUND, SUMIF (`#VALUE!` per cell: an array result);
@@ -125,8 +127,12 @@ pub(crate) fn is_function_array(arg: &Node) -> bool {
 /// G!A281-A501, probes/groupby-eta-arity G!A1-A141 for the rest).
 fn eta_arity(kind: &Function) -> Option<usize> {
     let name = kind.to_localized_name(get_default_language());
-    let min = eta_min_args::min_args(&name);
+    let min = arg_counts::min_args(&name);
     match min {
+        // One that takes none or one gets one (ROW, COLUMN, SHEET, SHEETS, RANDARRAY): each
+        // group's value is ROW's or COLUMN's `#VALUE!`, SHEET's or SHEETS' `#N/A`
+        // (probes/t4450-eta-special-forms E109:H124, J59:J63).
+        0 if arg_counts::takes_count(&name, 1) => Some(1),
         1 => Some(1),
         2 => Some(2),
         _ => None,
@@ -136,7 +142,8 @@ fn eta_arity(kind: &Function) -> Option<usize> {
 /// How many arguments a LAMBDA gets: one when it needs at most one (`LAMBDA([x],1)`, and
 /// `LAMBDA(x,[y],ISOMITTED(y))` is TRUE: an optional second parameter is not passed), two when it
 /// needs two; three or more required parameters make the whole result `#VALUE!` (G!A381, G!A401,
-/// functions2 G!A601). A LAMBDA without parameters: unprobed, `#VALUE!`.
+/// functions2 G!A601). A LAMBDA without parameters is `#VALUE!` too, alone, beside an eta function
+/// or through LET (probes/t4449-groupby-function-array-edges G!C9:C12, G!C33:C36).
 fn lambda_arity(required: usize, total: usize) -> Option<usize> {
     match required {
         0 | 1 if total >= 1 => Some(1),
@@ -264,7 +271,7 @@ impl Model {
             return self.function_grid(arg, cell);
         }
         let value = self
-            .evaluate_options(std::slice::from_ref(arg), cell)?
+            .evaluate_options(std::slice::from_ref(arg), &[], cell)?
             .pop()
             .flatten()
             .unwrap_or(CalcResult::EmptyArg);
@@ -276,9 +283,15 @@ impl Model {
     }
 
     /// The elements of an array of functions written with HSTACK, VSTACK and TRANSPOSE, stacked as
-    /// those functions stack values (a shorter part padded with `#N/A`, which then is the
-    /// result: unprobed). An error value in it is the result (`HSTACK(SUM,NA())` is `#N/A`: G!A781,
-    /// functions2 G!A701).
+    /// those functions stack values (a shorter part padded with `#N/A`; the padded grid is 2-D,
+    /// so [`Model::function_argument`] makes it `#VALUE!`, not `#N/A`:
+    /// probes/t4449-groupby-function-array-edges G!C1, G!C2, G!C25). An error value in it is the
+    /// result (`HSTACK(SUM,NA())` is `#N/A`: G!A781, functions2 G!A701), the first in argument
+    /// order (depth first, not reading or column-major order) when there are several, also after
+    /// a value and in a 2-D array, where it beats the `#VALUE!` of the 2-D check
+    /// (`HSTACK(1/0,NA())` is `#DIV/0!`, `HSTACK(5,NA())` `#N/A`: t4449 G!C3:C8;
+    /// `HSTACK(VSTACK(SUM,1/0),VSTACK(NA(),MAX))` `#DIV/0!` and
+    /// `VSTACK(HSTACK(SUM,NA()),HSTACK(1/0,MAX))` `#N/A`: t4485 G!C2, G!C9).
     fn function_grid(
         &mut self,
         node: &Node,
@@ -457,7 +470,10 @@ impl Model {
                 }
             };
             list.push(Aggregator {
-                caller: self.lambda_caller(lambda, arity).keeping_references(),
+                caller: self
+                    .lambda_caller(lambda, arity)
+                    .keeping_references()
+                    .snapping_root(),
                 call,
                 label,
             });
@@ -609,6 +625,11 @@ impl Model {
             functions.refused = Some(error);
             return Err(ArrayNode::Error(Error::ERROR));
         }
+        // The call's visits go to the formula's work budget too (SPEC-0024); past it the formula
+        // is the budget's error (`with_area_budget`), whatever this cell holds.
+        if self.spend_work(visit_units(cost), cell).is_err() {
+            return Err(ArrayNode::Error(Error::VALUE));
+        }
         functions.visits = visits;
         let column_of = |rows: &[usize]| {
             CalcResult::Array(
@@ -623,6 +644,15 @@ impl Model {
         };
         Ok(match &mut aggregator.call {
             Call::One => self.call_lambda_caller(&mut aggregator.caller, [input], cell),
+            // An empty set cannot be passed: a PIVOTBY cell whose `relative_to` 3 or 4 parent
+            // holds no record of its line is `#VALUE!` (PERCENTOF's is `#DIV/0!`, its total
+            // being 0; probes/t4382-pivotby-intransitive-paths Calc!C7, D7,
+            // probes/t4402-pivotby-parent-sets-holdout; T-4402). The arm covers every relative
+            // set, but that evidence is `relative_to` 3 and 4 only: an empty 0 to 2 set is
+            // unprobed (coercion.md "PIVOTBY's other paths on intransitive runs").
+            Call::Two if relative.rows.is_empty() => {
+                CalcResult::new_error(Error::VALUE, cell, "the relative set is empty".to_string())
+            }
             Call::Two => {
                 let all = column_of(relative.rows);
                 self.call_lambda_caller(&mut aggregator.caller, [input, all], cell)
@@ -674,33 +704,4 @@ fn transpose(grid: Vec<Vec<Element>>) -> Vec<Vec<Element>> {
         }
     }
     columns
-}
-
-#[cfg(test)]
-mod tests {
-    use super::eta_min_args::entries;
-
-    /// The table is generated from the catalog; it must list exactly the names whose minimum is not 1.
-    #[test]
-    fn table_matches_catalog() {
-        let catalog = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../eval/catalog/excel-functions.tsv"
-        ));
-        let mut expected: Vec<(&str, u8)> = catalog
-            .lines()
-            .filter(|line| !line.starts_with('#'))
-            .skip(1)
-            .filter_map(|line| {
-                let mut columns = line.split('\t');
-                let name = columns.next()?;
-                let min: u8 = columns.nth(1)?.parse().ok()?;
-                (min != 1).then_some((name, min))
-            })
-            .collect();
-        expected.sort_unstable();
-        let mut actual: Vec<(&str, u8)> = entries().collect();
-        actual.sort_unstable();
-        assert_eq!(actual, expected);
-    }
 }

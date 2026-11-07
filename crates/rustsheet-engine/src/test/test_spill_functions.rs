@@ -399,6 +399,31 @@ fn filter_no_match_with_if_empty() {
     assert_eq!(model._get_text("C1"), "No results");
 }
 
+// Excel: probes/t3654-filter-result-types (docs/excel-semantics/arrays.md "FILTER: the type of
+// each include element and of the result").
+#[test]
+fn filter_include_text_lone_blank_and_blank_if_empty() {
+    let mut model = new_empty_model();
+    model._set("A1", "10");
+    model._set("A2", "20");
+    model._set("A3", "30");
+    model._set("D1", "=ARRAYTOTEXT(FILTER(A1:A3,{\"true\";0;\"FALSE\"}))");
+    model._set("D2", "=FILTER(A1:A3,{\" TRUE\";1;0})");
+    model._set("D3", "=ISBLANK(FILTER(Z1,TRUE))");
+    model._set("D4", "=FILTER(Z1,TRUE)&\"|\"");
+    model._set("D5", "=FILTER(A1:A3,{0;0;0},Z1)&\"|\"");
+    model._set("D6", "=ROWS(FILTER(A1:A3,{0;0;0},Z1))");
+    model._set("D7", "=FILTER(A1:A3,{0;#N/A;0},\"none\")");
+    model.evaluate();
+    assert_eq!(model._get_text("D1"), "10");
+    assert_eq!(model._get_text("D2"), "#VALUE!");
+    assert_eq!(model._get_text("D3"), "TRUE");
+    assert_eq!(model._get_text("D4"), "|");
+    assert_eq!(model._get_text("D5"), "0|");
+    assert_eq!(model._get_text("D6"), "1");
+    assert_eq!(model._get_text("D7"), "#N/A");
+}
+
 // Excel: upstream MAX_MIN.xlsx H39/H40/H43; probes/min-max-reference-forms E1-E3.
 #[test]
 fn filter_if_empty_is_the_value_itself() {
@@ -475,6 +500,90 @@ fn filter_string_include_returns_value_error() {
     model._set("B1", "=FILTER(A1:A3,\"=5\")");
     model.evaluate();
     assert_eq!(model._get_text("B1"), "#VALUE!");
+}
+
+// T-3506: a one-cell reference to an error cell is a 1x1 array holding the error, as array or as
+// include, so FILTER checks the shape and the include first (gen-m7 arg-pairs, excel-graph;
+// docs/excel-semantics/arrays.md "A one-cell error reference is a 1x1 array in TOCOL, TOROW and
+// FILTER").
+#[test]
+fn filter_one_cell_error_reference_is_a_one_by_one_array() {
+    let mut model = new_empty_model();
+    model._set("G9", "=1/0");
+    for row in 1..=3 {
+        model._set(&format!("A{row}"), &row.to_string());
+    }
+    // An include of 0 leaves nothing (gen-m7/68e7f10771a7118a A10798).
+    model._set("C1", "=FILTER(G9,0)");
+    // A 1x1 array against a 3-row include (gen-m7/ee81c689b5fde629 A1160).
+    model._set("C2", "=FILTER(G9,A1:A3>0,-2.5)");
+    // A 1x1 include against 3 rows and 2 columns (gen-m7/d7a127bd9334c2b4 A2380).
+    model._set("C3", "=FILTER(A1:B3,G9,-2.5)");
+    // Kept, the error is the one element; as a fitting include it is the error
+    // (probes/t4477-filter-include-error-shapes J19, J71).
+    model._set("C4", "=FILTER(G9,TRUE)");
+    model._set("C5", "=FILTER(A1,G9)");
+    // A literal error is still the error (gen-m7/ee81c689b5fde629 A977).
+    model._set("C6", "=FILTER(#DIV/0!,A1:A3>0)");
+    model.evaluate();
+    assert_eq!(model._get_text("C1"), "#CALC!");
+    assert_eq!(model._get_text("C2"), "#VALUE!");
+    assert_eq!(model._get_text("C3"), "#VALUE!");
+    assert_eq!(model._get_text("C4"), "#DIV/0!");
+    assert_eq!(model._get_text("C5"), "#DIV/0!");
+    assert_eq!(model._get_text("C6"), "#DIV/0!");
+}
+
+// T-4477: an include's shape is checked before its elements, so a wrongly shaped include holding
+// an error is `#VALUE!` (probes/t4477-filter-include-error-shapes J27:L39); a right-shaped one is
+// its error (J43:L47).
+#[test]
+fn filter_wrongly_shaped_range_include_with_an_error_is_value() {
+    let mut model = new_empty_model();
+    for row in 1..=3 {
+        model._set(&format!("A{row}"), &row.to_string());
+        model._set(&format!("B{row}"), &row.to_string());
+    }
+    model._set("C1", "=1/0");
+    model._set("C2", "TRUE");
+    model._set("C3", "TRUE");
+    model._set("D1", "=FILTER(A1:A3,C1:C2)");
+    model._set("D2", "=FILTER(A1:A3,(C1:C2))");
+    model._set("D3", "=FILTER(A1:A3,{1;#N/A})");
+    model._set("D4", "=FILTER(A1:A3,{1;#N/A;1})");
+    model._set("D5", "=FILTER(A1:B3,C1:C3)");
+    model.evaluate();
+    assert_eq!(model._get_text("D1"), "#VALUE!");
+    assert_eq!(model._get_text("D2"), "#VALUE!");
+    assert_eq!(model._get_text("D3"), "#VALUE!");
+    assert_eq!(model._get_text("D4"), "#N/A");
+    assert_eq!(model._get_text("D5"), "#DIV/0!");
+}
+
+// T-4477: a one-cell error reached through LET, INDEX or IF is a 1x1 array, as a written one is
+// (probes/t4477-filter-include-error-shapes J51:L59, J67:L71).
+#[test]
+fn filter_indirect_one_cell_error_reference_is_a_one_by_one_array() {
+    let mut model = new_empty_model();
+    model._set("G9", "=1/0");
+    model._set("G2", "0");
+    for row in 1..=3 {
+        model._set(&format!("A{row}"), &row.to_string());
+        model._set(&format!("B{row}"), &row.to_string());
+    }
+    model._set("D1", "=FILTER(A1:B3,LET(x,G9,x))");
+    model._set("D2", "=FILTER(A1:B3,INDEX(G1:G9,9))");
+    model._set("D3", "=FILTER(A1:B3,IF(TRUE,G9))");
+    model._set("D4", "=FILTER(LET(x,G9,x),G2)");
+    model._set("D5", "=ROWS(FILTER(INDEX(G1:G9,9),TRUE))");
+    model._set("D6", "=FILTER(INDEX(G1:G9,9),TRUE)");
+    model.evaluate();
+    assert_eq!(model._get_text("D1"), "#VALUE!");
+    assert_eq!(model._get_text("D2"), "#VALUE!");
+    assert_eq!(model._get_text("D3"), "#VALUE!");
+    assert_eq!(model._get_text("D4"), "#CALC!");
+    assert_eq!(model._get_text("D5"), "1");
+    assert_eq!(model._get_text("D6"), "#DIV/0!");
 }
 
 #[test]
@@ -669,4 +778,88 @@ fn sort_error_argument_wins_over_invalid_sort_index_and_order() {
     assert_eq!(model._get_text("A1"), "#N/A");
     assert_eq!(model._get_text("A2"), "#VALUE!");
     assert_eq!(model._get_text("A3"), "#VALUE!");
+}
+
+// T-3667: CHOOSEROWS, CHOOSECOLS, VSTACK and HSTACK read a one-cell error reference as a 1x1 array
+// (probes/one-cell-error-ref-array-functions, excel-graph; arrays.md "A one-cell error reference
+// is a 1x1 array ..."). A literal error is still the error.
+#[test]
+fn choose_and_stack_read_a_one_cell_error_reference_as_a_one_by_one_array() {
+    let mut model = new_empty_model();
+    model._set("G9", "=1/0");
+    model._set("D1", "1");
+    model._set("E1", "4");
+    model._set("A1", "=CHOOSEROWS(G9,2)");
+    model._set("A2", "=CHOOSECOLS(G9,0)");
+    model._set("A3", "=CHOOSEROWS(#DIV/0!,2)");
+    model._set("A4", "=CHOOSEROWS(G9,1)");
+    model._set("A5", "=VSTACK(D1:E1,G9)");
+    model._set("A8", "=HSTACK(G9,D1:E1)");
+    model._set("A10", "=VSTACK(D1:E1,#DIV/0!)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#VALUE!");
+    assert_eq!(model._get_text("A2"), "#VALUE!");
+    assert_eq!(model._get_text("A3"), "#DIV/0!");
+    assert_eq!(model._get_text("A4"), "#DIV/0!");
+    assert_eq!(model._get_text("A5"), "1");
+    assert_eq!(model._get_text("B5"), "4");
+    assert_eq!(model._get_text("A6"), "#DIV/0!");
+    assert_eq!(model._get_text("B6"), "#N/A");
+    assert_eq!(model._get_text("A8"), "#DIV/0!");
+    assert_eq!(model._get_text("B8"), "1");
+    assert_eq!(model._get_text("C8"), "4");
+    assert_eq!(model._get_text("A10"), "#DIV/0!");
+}
+
+// T-4447: SORT floors a fractional sort_order and sort_index, snapped up just below an integer,
+// as SORTBY's sort_order (probes/t4447-sort-fractional-keys E2, I2 and E17; B3 is the
+// one-column analogue of I10's `3-2^-23` over two columns).
+#[test]
+fn sort_floors_fractional_keys_with_the_near_integer_snap() {
+    let mut model = new_empty_model();
+    model._set("A1", "3");
+    model._set("A2", "1");
+    model._set("A3", "2");
+    model._set("B1", "=TEXTJOIN(\",\",,SORT(A1:A3,1,-0.5))");
+    model._set("B2", "=TEXTJOIN(\",\",,SORT(A1:A3,1-2^-23,-1))");
+    model._set("B3", "=SORT(A1:A3,2-2^-23)");
+    model._set("B4", "=SORT(A1:A3,1,2-2^-22)");
+    model.evaluate();
+    assert_eq!(model._get_text("B1"), "3,2,1");
+    assert_eq!(model._get_text("B2"), "3,2,1");
+    assert_eq!(model._get_text("B3"), "#VALUE!");
+    assert_eq!(model._get_text("B4"), "#VALUE!");
+}
+
+// T-4479: SORT and SORTBY read a text sort_order apart, and Excel does too
+// (probes/t4479-sort-bad-argument-order; docs/excel-semantics/arrays.md "SORT and SORTBY: which
+// of several bad arguments wins"). SORT's text order fails only after by_col is read, while a
+// computed error order is itself at once; SORTBY's text order is `#VALUE!` at once, before a
+// later pair's error, while its blank or FALSE order fails only in validation.
+#[test]
+fn sort_and_sortby_read_a_text_sort_order_apart() {
+    let mut model = new_empty_model();
+    model._set("A1", "3");
+    model._set("A2", "1");
+    model._set("A3", "2");
+    model._set("C1", "c");
+    model._set("C2", "a");
+    model._set("C3", "b");
+    model._set("E1", "=SORT(A1:A3,1,\"a\",NA())");
+    model._set("E2", "=SORT(A1:A3,1,\"a\"+1,NA())");
+    model._set("E3", "=SORT(A1:A3,\"x\",Z1,SQRT(-1))");
+    model._set("E4", "=SORTBY(A1:A3,C1:C3,\"a\",C1:C3,NA())");
+    model._set("E5", "=SORTBY(A1:A3,C1:C3,\"a\",NA(),1)");
+    model._set("E6", "=SORTBY(A1:A3,C1:C3,Z1,C1:C3,NA())");
+    model._set("E7", "=SORTBY(A1:A3,C1:C3,TRUE,C1:C3,NA())");
+    model._set("E8", "=SORTBY(A1:A3,C1:C3,0,C1:C2,1/0)");
+    model.evaluate();
+    assert_eq!(model._get_text("E1"), "#N/A");
+    assert_eq!(model._get_text("E2"), "#VALUE!");
+    assert_eq!(model._get_text("E3"), "#VALUE!");
+    assert_eq!(model._get_text("E4"), "#VALUE!");
+    assert_eq!(model._get_text("E5"), "#VALUE!");
+    assert_eq!(model._get_text("E6"), "#N/A");
+    assert_eq!(model._get_text("E7"), "#N/A");
+    assert_eq!(model._get_text("E8"), "#DIV/0!");
 }
