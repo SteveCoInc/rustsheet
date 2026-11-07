@@ -79,9 +79,10 @@ committed before the fill, so the engine no longer reads an empty argument as 0 
   "an optional empty argument is omitted", with H_omitted committed in bf24d2c55 before its fill: 14/14.
 - **No fit:** each cell is `#N/A` or the omitted call's value, and nothing numeric is tuned.
 - **Code:**
-  - `Model::is_written_empty` (logical/let.rs) is the one definition of an empty argument node or a variable bound to
-    nothing; `complex_pair_of` now uses it. `Model::toolpak_empty_required` (same file) gives the `#N/A` from the
-    argument nodes, before lifting, so T-4872 and T-4873 can reuse it.
+  - `Model::is_written_empty` (new functions/empty_args.rs) is the one definition of an empty argument node or a
+    variable bound to nothing. `complex_pair_of` and LET's `bind_argument_value` now use it. `Model::toolpak_empty_required`
+    (same file) gives the `#N/A` from the argument nodes, before lifting, so T-4872 and T-4873 can reuse it. The design
+    review moved both out of let.rs.
   - The check is on the nodes, not the values. A first draft checked lifted values, and that regressed gen-m6/
     b54448af3fde07ca A297: there `IFNA(<blank>,..)` evaluates to an empty value, and Excel keeps the start's
     `#VALUE!`.

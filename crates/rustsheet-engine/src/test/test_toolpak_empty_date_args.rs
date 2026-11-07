@@ -24,6 +24,7 @@ fn empty_required_is_na_and_empty_optional_is_omitted() {
         ("B5", "=NETWORKDAYS.INTL(45000,45030,11,)", "27"),
         ("B6", "=LET(h,,WORKDAY(45000,10,h))", "45014"),
         ("B7", "=LAMBDA(a,r,WEEKNUM(a,r))(45010,)", "12"),
+        // DAYS is not a `ToolPak` function: its empty argument is still read as 0 (control row A31).
         ("C1", "=DAYS(10,)", "10"),
     ];
     for (cell, formula, _) in cells {

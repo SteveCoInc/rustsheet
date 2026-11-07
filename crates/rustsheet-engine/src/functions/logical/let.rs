@@ -280,7 +280,7 @@ impl Model {
         // An empty slot, `(1,)` or `(,2)`, is omitted like a missing argument (arrays.md
         // ISOMITTED, A24-A25 and A34), and a variable bound to an omitted parameter hands the
         // omission on, so ISOMITTED of a LET name for it stays TRUE as before T-2649.
-        if matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node) {
+        if self.is_written_empty(node) {
             return Binding::Omitted;
         }
         let is_span = matches!(node, Node::SheetSpanKind { .. });
@@ -390,32 +390,6 @@ impl Model {
     /// Whether `node` is a variable bound to an omitted LAMBDA parameter ([`Binding::Omitted`]).
     pub(crate) fn is_omitted_variable(&self, node: &Node) -> bool {
         matches!(self.variable_binding(node), Some(Binding::Omitted))
-    }
-
-    /// Whether the argument `node` is written empty (`F(x,)`) or is a LET or LAMBDA variable bound
-    /// to nothing: the two read alike wherever Excel tells an empty argument from a value
-    /// (`IMSUB("1",)` and `LET(e,,IMSUB("1",e))`, `WORKDAY(1,5,)` and `LET(h,,WORKDAY(1,5,h))`).
-    pub(crate) fn is_written_empty(&self, node: &Node) -> bool {
-        matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node)
-    }
-
-    /// The Analysis `ToolPak` rule for a written-empty required argument (T-4870): `#N/A` where one of
-    /// the first `required` arguments is written empty ([`Model::is_written_empty`]): `EDATE(,1)`,
-    /// `WORKDAY(1,)` and `LET(e,,EDATE(1,e))` (probes/t4870-empty-date-args), as for MROUND,
-    /// RANDBETWEEN, IMSUB and IMDIV. It is a rule of the formula's text: a blank cell, and a value
-    /// that only evaluates to empty (`EDATE(1/0,IFNA(<blank>,..))` is the start's `#VALUE!`,
-    /// gen-m6/b54448af3fde07ca A297), are read as before. Excel's order against another argument's
-    /// error when both are written that way is unprobed.
-    pub(crate) fn toolpak_empty_required(
-        &self,
-        args: &[Node],
-        required: usize,
-        cell: CellReferenceIndex,
-    ) -> Option<CalcResult> {
-        args.iter()
-            .take(required)
-            .any(|arg| self.is_written_empty(arg))
-            .then(|| CalcResult::new_error(Error::NA, cell, String::new()))
     }
 
     /// Whether `node` is a variable bound to an array of references ([`Binding::Grid`]), which
