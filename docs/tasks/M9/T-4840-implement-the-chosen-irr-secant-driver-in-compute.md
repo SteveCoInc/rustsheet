@@ -28,7 +28,7 @@ Plan: docs/research/irr-2026-11-07/plan.md (T-4833). Phase 2/3 result. Absorbs T
 ## Owned probe cases (T-4844)
 Every visibly-off cell of these cases, where the engine's 50-step fallback is `#NUM!` or gives the root's digits and
 Excel returns its guess-independent second stage's value (financial.md "IRR's second stage ignores the guess and reads
-only NPV's values"):
+only NPV's values"). The 21 step-cap cells of these cases are T-4839's, listed there:
 - probes/t4844-irr-guess-ladder
 - probes/t4844-irr-pad-ladder
 - probes/t4844-irr-stage-invariance

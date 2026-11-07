@@ -946,8 +946,15 @@ steps. IRR's secant takes at most 50 steps per run (200 on the flows where Excel
 at most 50 steps ("IRR's fallback when the secant fails"; Excel's own cap there lies between 29 and 119). A run that reaches its
 cap gives `#NUM!` (or, for IRR, moves on to the next stage). Every oracle cell of the fit sets finishes
 well inside the caps.
-Evidence: none for Excel; this is a resource limit, not an Excel observation. Probing Excel's caps, the
-fallback path and overflowing trial rates is T-1686.
+Evidence: none for Excel's caps themselves; the engine's caps are resource limits, not Excel observations. Probing
+Excel's caps, the fallback path and overflowing trial rates is T-1686. Excel runs past the 50 steps the engine allows
+outside `IRR_LONG_RUN_RANGE` (6..54 flows), on longer series:
+- On 61 flows, the secant from guesses -0.9..-0.5 converges at its 54th to 195th step to Excel's bits on all 18 cells
+  (probes/t4844-irr-guess-ladder P!A393:A401, the annuity t3406-irr-num-boundary A75, 57 to 195 steps; P!A432:A440,
+  A77, 54 to 192 steps). The engine is `#NUM!` there.
+- On t3406 A51 padded to 592 to 928 flows (probes/t4844-irr-pad-ladder P!A32:A34), Excel is `#DIV/0!`: its failing run
+  from 0.1 reaches the step-62 point whose discount underflows. The engine stops at step 50 and is `#NUM!`.
+These 21 cells are T-4839's (excel-graph, 2026-11-07).
 Status: DEVIATION (decision 0014)
 Implemented in: `xirr_bracket` (`WALK_CAP`), `compute_xirr` (`BISECTION_CAP`), `irr_secant` (`irr_secant_steps`),
 `irr_fallback` (`IRR_FALLBACK_STEPS`) (functions/financial/financial_util.rs)
@@ -4938,9 +4945,11 @@ Tasks: T-3411, T-4213, T-4386
 
 ## IRR's second stage ignores the guess and reads only NPV's values (T-4844)
 Rule (partial; the stage's method is still unknown): where IRR's secant from the guess fails, Excel's value does not
-depend on the guess. IRR is the secant of "IRR is a secant in d" from the guess. When that run fails, the value comes
+depend on the guess. IRR first runs the secant of "IRR is a secant in d" from the guess. When that run fails, the value comes
 from a stage that sees only the flows' NPV values, and that stage stops on the same absolute |NPV| < 1e-7 test. On
-long level annuities the engine's secant is Excel's to the bit, the failing runs included.
+long level annuities the engine's secant, run without its 50-step cap (the "exact replica" below, capped at 200 or 400
+steps), is Excel's to the bit, the failing runs included. The shipped secant stops at 50 steps on these 55+ flow
+series, outside `IRR_LONG_RUN_RANGE`, and misses 21 cells for that reason alone ("The IRR and XIRR solver caps").
 - **Guess ladder** (probes/t4844-irr-guess-ladder: 12 annuities of probes/t3406-irr-num-boundary, A6 A8 A10 A11 A28 A30
   A32 A51 A53 A55 A75 A77, 21 to 61 flows, roots -0.06 to -0.22, each from 37 guesses -0.9..0.9 by 0.05).
   - Every cell is a number. Excel gives the default call's bits on exactly the 227 guess cells where the engine's
@@ -4961,8 +4970,9 @@ long level annuities the engine's secant is Excel's to the bit, the failing runs
 - **Path-invariant transforms** (probes/t4844-irr-stage-invariance, the same four annuities):
   - 1, 2, 5 and 20 trailing zeros never move X. The stage depends on NPV's values, not on the number of flows.
   - Flows times 2^k (exact; the secant's path in d is unchanged) leave X unchanged until |NPV(X)|·2^k reaches 1e-7,
-    with NPV the engine's `irr_npv`: |NPV(X)| = 1.37E-10, 8.3E-12, 2.07E-10 and 8.8E-8 put the crossing at 2^9.5,
-    2^13.6, 2^8.9 and 2^0.18. X moves at 2^10, not by 2^10, 2^10 and 2^1, on all four.
+    with NPV the engine's `irr_npv`. For A6, |NPV(X)| is 1.37E-10 (crossing at 2^9.5) and X first moves at 2^10. A10's
+    is 8.3E-12 (crossing 2^13.6), and X has not moved by 2^10. A51's is 2.07E-10 (crossing 2^8.9), and X moves at 2^10.
+    A77's is 8.8E-8 (crossing 2^0.18), and X moves at 2^1.
   - Past the crossing the value is the root to about 1E-15, and at 2^30 (flows near 4E+11) every one is `#NUM!`.
   - Negating the flows moves X by 1E-13 to 6E-12 relative: the stage is not symmetric in NPV's sign, as the secant's
     start offset (toward larger |NPV|) is not.
@@ -4970,7 +4980,8 @@ long level annuities the engine's secant is Excel's to the bit, the failing runs
   secant's last-step error under a 1e-7 step test, not bisection's (about 1E-8) or Newton's from above (its stop
   iterates on these flows are within 1E-15 of the root).
 - **Refuted as the stage** on the 12 annuities and the 4 negated sets, in exact arithmetic with the engine's
-  twice-rounded NPV unless noted. The scratch scripts are not committed.
+  twice-rounded NPV unless noted. The candidate scans are scratch code. docs/research/irr-2026-11-07/replay.py
+  reproduces the counts above (the 227/214 split, the fixed points, the padding thresholds, the 2^k crossings).
   - Restarts from the failed run from 0.1: from any single iterate (the first 120), from any ordered pair of them
     (plain doubles), and chains of up to 8 restarts from the last iterate, the older one, the smallest |NPV|, the
     farthest point, the last far point or a bracket's midpoint.

@@ -41,9 +41,13 @@ reads only NPV's values"):
 - The trailing-zero underflow thresholds equal the replica's predictions on all four annuities, so Excel's failing
   run from 0.1 makes the replica's excursions and runs at least 62 steps. The ladder is a new way to see how far an
   Excel run goes.
-- The stage's method is not found. The refuted candidates are listed in financial.md: restarts, fixed and
+- The stage's method is not found (docs/research/irr-2026-11-07/replay.py reproduces the counts above). The refuted candidates are listed in financial.md: restarts, fixed and
   flow-derived starts, Newton from v = 0 in four arithmetics, secant variants, the VB clamp and Brent. Across all IRR
   probe cells, Excel is a Newton-from-v = 0 iterate on 132 of the 517 cells off the root by more than 1e-14, and is
   not on the other 385.
-Eval: the three new cases add 356 visibly-off cells (engine `#NUM!` from its 50-step fallback, or the root's digits).
-They are owned by T-4840 and recorded as known failures in eval/baseline/probes.txt. No existing cell moves.
+Eval: the three new cases add 356 visibly-off cells, recorded as known failures in eval/baseline/probes.txt. No
+existing cell moves. 335 of them are the engine's 50-step Newton fallback being `#NUM!` or giving the root's digits
+where Excel returns the second stage's value; T-4840 owns those. The other 21 are the engine's 50-step secant cap,
+which applies on these 55+ flow series (outside `IRR_LONG_RUN_RANGE`). There Excel's secant converges at steps 54 to
+195 (guess ladder P!A393:A401, P!A432:A440) or reaches its step-62 underflow (pad ladder P!A32:A34, `#DIV/0!`);
+T-4839 owns those, and financial.md "The IRR and XIRR solver caps" records them (fidelity review).
