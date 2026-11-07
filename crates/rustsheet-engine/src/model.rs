@@ -241,6 +241,23 @@ pub struct CellIndex {
     pub column: i32,
 }
 
+/// Runs `run` on `parser` switched to the default locale and language, then puts `locale` and
+/// `language` (the active ones) back. For callers that also borrow other fields of the model
+/// ([`Model::with_default_parser`] is this on the model's own parser).
+pub(crate) fn with_default_locale<R>(
+    parser: &mut Parser,
+    locale: &'static Locale,
+    language: &'static Language,
+    run: impl FnOnce(&mut Parser) -> R,
+) -> R {
+    parser.set_locale(get_default_locale());
+    parser.set_language(get_default_language());
+    let result = run(parser);
+    parser.set_locale(locale);
+    parser.set_language(language);
+    result
+}
+
 impl Model {
     pub(crate) fn get_next_variable_id(&mut self) -> usize {
         let id = self.last_variable_id;
@@ -459,18 +476,15 @@ impl Model {
     /// the English language and locale regardless of the user's active
     /// language. This temporarily switches the parser, parses, and restores it.
     pub(crate) fn parse_internal_formula(&mut self, body: &str, context: &CellReferenceRC) -> Node {
-        self.parse_internal_with(|parser| parser.parse(body, context))
+        self.with_default_parser(|parser| parser.parse(body, context))
     }
 
-    fn parse_internal_with(&mut self, parse: impl FnOnce(&mut Parser) -> Node) -> Node {
-        let locale = self.locale;
-        let language = self.language;
-        self.parser.set_locale(get_default_locale());
-        self.parser.set_language(get_default_language());
-        let node = parse(&mut self.parser);
-        self.parser.set_locale(locale);
-        self.parser.set_language(language);
-        node
+    /// Runs `run` with the parser switched to the default locale and language (formulas kept
+    /// outside of cells are stored in English), then restores the active ones. The one place
+    /// that switch is made (T-4693).
+    pub(crate) fn with_default_parser<R>(&mut self, run: impl FnOnce(&mut Parser) -> R) -> R {
+        let (locale, language) = (self.locale, self.language);
+        with_default_locale(&mut self.parser, locale, language, run)
     }
 
     /// Returns completion information for a formula being edited in a cell.

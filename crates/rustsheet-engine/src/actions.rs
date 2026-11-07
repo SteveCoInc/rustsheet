@@ -463,23 +463,24 @@ impl Model {
         // Phase 2: displace formula fields (requires &mut self.parser) then write back.
         // CF formulas are stored in English, so parse them with the default
         // locale/language regardless of the active ones.
-        let locale = self.locale;
-        let language = self.language;
-        self.parser.set_locale(get_default_locale());
-        self.parser.set_language(get_default_language());
-        for (idx, new_range, rule, anchor_row, anchor_col) in phase1 {
-            let context = CellReferenceRC {
-                sheet: sheet_name.clone(),
-                row: anchor_row,
-                column: anchor_col,
-            };
-            let new_rule =
-                displace_cf_rule_formulas(&mut self.parser, rule, &context, displacement);
+        let displaced: Vec<_> = self.with_default_parser(|parser| {
+            phase1
+                .into_iter()
+                .map(|(idx, new_range, rule, anchor_row, anchor_col)| {
+                    let context = CellReferenceRC {
+                        sheet: sheet_name.clone(),
+                        row: anchor_row,
+                        column: anchor_col,
+                    };
+                    let new_rule = displace_cf_rule_formulas(parser, rule, &context, displacement);
+                    (idx, new_range, new_rule)
+                })
+                .collect()
+        });
+        for (idx, new_range, new_rule) in displaced {
             self.workbook.worksheets[sheet as usize].conditional_formatting[idx].range = new_range;
             self.workbook.worksheets[sheet as usize].conditional_formatting[idx].cf_rule = new_rule;
         }
-        self.parser.set_locale(locale);
-        self.parser.set_language(language);
     }
 
     /// The columns of the cells in `row` of `sheet`, ascending (descending if `descending`); an
