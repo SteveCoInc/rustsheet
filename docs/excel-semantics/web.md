@@ -141,7 +141,8 @@ item, an error as an item (an error as a field passes through, T-4006 section, T
 is not a number, a number or boolean data_field, and an array data_field, pivot_table or field name (an array of items
 lifts). It propagates an error in a single-cell pivot_table even inside a pivot, where Excel picks the pivot like
 any of its cells (probes/t2085-getpivotdata-items Q!E20:E23; T-4805), and answers `#NUM!` for an overflowing aggregate,
-as Excel does (the T-2085 section's "Overflow" paragraph). Count pivots of an all-numeric field match
+as Excel does, with one data field (the T-2085 section's "Overflow" paragraph; its two-data-field probe cells DF Q!K1:L3
+are `#REF!` until T-4804). Count pivots of an all-numeric field match
 Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674; they cannot tell COUNT from COUNTA).
 Max, Min, Product, Var and StdDev pivots: see the T-2085 section's "Aggregates over one record or none" paragraph.
 Structural edits: see "Pivot tables and structural edits" below. xlsx export writes pivots (T-4176; pivots.md "Excel for the web opens engine-exported pivot parts"), except a grouped cache, dropped with its pivots (T-4734).
