@@ -853,9 +853,9 @@ Engine (T-1929): the wrappers compute through the same compositions, so each ide
   (mean - x)/(sigma/sqrt(n)) matches 240 of 240 in columns I and J (there sigma/sqrt(n) is exactly 1) but only 24 of
   the 30, and the plain-double (mean - x)*sqrt(n)/sigma 30 of 30 but only 141 of 240. The mean and the sample
   standard deviation are not separated by these probes (plain and twice-rounded forms both match). One value is
-  #DIV/0! with sigma given too and sigma < 0 is #NUM! (the T-1048/T-1049 rules below). Unprobed: a plain-double
-  sigma/sqrt(n) that underflows stays #DIV/0! (the fork's guard) and a non-finite p is #NUM!, including an
-  omitted sigma that overflows to infinity (T-1942). No held-out cell separates the three z formulas at the p level.
+  #DIV/0! with sigma given too and sigma < 0 is #NUM! (the T-1048/T-1049 rules below). Probed (T-1942): a sigma/sqrt(n) that
+  underflows and a non-finite p are #NUM!, including an omitted sigma that overflows to infinity (probes/t1942-ztest-
+  numeric-edges A1:A5, A8:A11; "Z.TEST numeric edges (T-1942)" below). No held-out cell separates the three z formulas at the p level.
 - `T.DIST(x,n,TRUE)` for x < 0 = `T.DIST.2T(-x,n)/2` is NOT routed. The engine's T.DIST.2T is statrs' 2*(1 - cdf(x)),
   which cancels to 0 for a large x, so the routed T.DIST(-1E6,10,TRUE) was 0 (Excel 1.230468749943611E-56) and the
   T.INV of it #NUM! (ironcalc-calc T_DIST.xlsx "T.DIST T.INV T.DIST.RT" D19, E19). Taking T.DIST.2T from the lower

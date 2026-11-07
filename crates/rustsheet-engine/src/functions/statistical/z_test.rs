@@ -194,7 +194,7 @@ fn z_test_element(
     }
     let n = data.count as f64;
     // No sigma/sqrt(n) guard: a sigma whose quotient by sqrt(n) underflows (2^-1074 with n = 4, 5, 9)
-    // is #NUM! like any z past the double range, not #DIV/0! (probes/t1942-ztest-numeric-edges
+    // is #NUM!, not #DIV/0! (probes/t1942-ztest-numeric-edges
     // A8:A10, excel-graph, T-1942), and `z_test_p` already gives that.
     // A NaN p (an omitted sigma over data whose sum overflows) is #NUM!, not a NaN number
     // (probes/t1942-ztest-numeric-edges A4:A5).
