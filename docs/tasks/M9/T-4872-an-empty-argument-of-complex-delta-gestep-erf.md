@@ -77,3 +77,19 @@ omitted forms A48:A54 keep the values the engine gives today.
 - After the fill all 54 cells pass. Docs: engineering.md, "An empty argument of the ToolPak engineering functions".
 - Eval delta: probes +1 case (54 cells, all pass; baseline `C` line). Every other suite: fixed 0 / regressions 0, and
   no new F line.
+
+## Landing notes
+- PR #3929, head 96ec4d6deaaeb63d260b612e4dc20520761f9ac9, not enqueued. All three reviewers (security, design,
+  excel-fidelity) APPROVE on that head (round 2). Round 1's blocking finding, that trimming let over-long calls
+  return values, is fixed.
+- CI is red on one job: eval (Excel-compatibility gate),
+  https://github.com/SteveCoInc/rustsheet/actions/runs/42364985136/job/128381219960. The cause is
+  `math sidecars: probes, probes-numeric: stale` (`make eval-math-check`): the new case
+  probes/t4872-atp-empty-argument has Gate A one-call cells (ERF, BESSEL) with no `*.math.json` sidecar. Every
+  other job is green.
+- Next step: in the worktree, `cd tools && uv run rustsheet-accuracy math --suite probes` (it writes the case's
+  `.math.json`; point `RUSTSHEET_EVAL_BIN` at this branch's release binary). Commit the sidecar alone. It is
+  generated data, so no reviewer needs to re-run unless the code changes. Check that `make eval-math-check` passes,
+  push, wait for green CI, then enqueue.
+- Don't repeat this: the math run took more than 10 minutes here and was cut off by `timeout 600`. Run it in the
+  background, without a short timeout.
