@@ -792,7 +792,45 @@ pub(crate) fn compute_xirr(
 
 #[cfg(test)]
 mod tests {
-    use super::{irr_secant, irr_secant_steps, SecantStop};
+    use super::{compute_irr, irr_secant, irr_secant_steps, SecantStop};
+
+    #[test]
+    fn a_flat_secant_run_settled_in_npv_noise_returns_its_last_iterate() {
+        // probes-numeric/t4213-irr-r4-fresh A54 (excel-graph 2026-11-04): the run from 0.1 goes
+        // flat at |NPV| 1.9E-7 after steps of 1E-15 and 1E-16, and the fallback does not settle in
+        // 50 steps; Excel returns 0.00039315942751105837, the run's last iterate (T-4232).
+        let flows = [
+            -1_131_978_225.607_16,
+            98_002_923.723_673_3,
+            21_696_225.355_004,
+            52_228_684.352_508_3,
+            20_028_804.833_025_7,
+            34_243_960.302_812_3,
+            104_842_267.057_231,
+            72_591_568.080_263_1,
+            25_574_378.609_922_3,
+            38_968_511.313_006_5,
+            105_574_539.656_531,
+            26_758_326.724_997_5,
+            47_510_829.894_130_3,
+            54_621_508.270_792_5,
+            82_001_354.056_707_8,
+            21_517_478.846_233_9,
+            39_393_839.831_909_3,
+            63_581_706.707_312_6,
+            24_235_076.262_499_4,
+            25_210_139.231_082_3,
+            36_504_458.741_005_1,
+            56_900_029.785_096_3,
+            25_852_073.503_074_7,
+            59_165_481.421_347_5,
+        ];
+        assert!(matches!(
+            irr_secant(&flows, 0.1),
+            Err(SecantStop::Settled(_))
+        ));
+        assert_eq!(compute_irr(&flows, 0.1), Ok(0.000_393_159_427_511_058_37));
+    }
 
     /// t3347-irr-conventional-holdout P!A138: -11890081760.62, then 40 flows of 13.03.
     fn a138() -> Vec<f64> {
