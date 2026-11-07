@@ -2689,6 +2689,7 @@ C	probes/t4667-ifs-second-pair-and-num-value-error.case.json	76
 C	probes/t4686-rich-value-option-residue.case.json	44
 C	probes/t4697-large-small-median-mixed-sheet-refs.case.json	17
 C	probes/t4698-pivot-repeat-labels.case.json	651
+C	probes/t4699-pivot-blank-collapsed.case.json	582
 C	probes/t4701-index-one-index-ref-grid.case.json	16
 C	probes/t4703-fraction-tail-no-pre-point-and-two-points.case.json	66
 C	probes/t4704-mixed-xlookup-grid-readers.case.json	109
@@ -9440,6 +9441,7 @@ F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B10
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B11
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B9
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!F9
+F	probes/t4699-pivot-blank-collapsed.case.json	CV4!C3
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!A1
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!A18
 F	probes/t4713-beta-inv-beta-above-1-cut.case.json	S!A19
@@ -10032,6 +10034,7 @@ TC	probes/t4505-pivot-calc-field-functions.case.json	176
 TC	probes/t4505-pivot-calc-fields.case.json	274
 TC	probes/t4584-pivot-page-window.case.json	80
 TC	probes/t4698-pivot-repeat-labels.case.json	510
+TC	probes/t4699-pivot-blank-collapsed.case.json	449
 TC	probes/t4745-pivot-classic-subtotal-caption.case.json	187
 TC	probes/t4767-pivot-group-items.case.json	170
 TC	probes/t4767-pivot-record-tuples.case.json	40
@@ -10152,5 +10155,6 @@ TF	probes/t4164-pivot-date-times.case.json	WOe1!A6
 TF	probes/t4164-pivot-date-times.case.json	WOe1!A7
 TF	probes/t4164-pivot-date-times.case.json	WOeN!A4
 TF	probes/t4164-pivot-date-times.case.json	WOeN!A5
+TF	probes/t4699-pivot-blank-collapsed.case.json	CV4!C3
 TF	probes/t4767-pivot-group-items.case.json	GD!A6
 TF	probes/t4767-pivot-group-items.case.json	GDA!A6

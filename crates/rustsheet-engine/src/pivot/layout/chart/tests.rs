@@ -544,3 +544,22 @@ fn a_series_named_by_several_labels_has_no_name() {
     };
     assert_eq!(series.name(), None);
 }
+
+#[test]
+fn a_collapsed_items_data_field_lines_plot_with_an_empty_hidden_label() {
+    // probes/t4699-pivot-blank-collapsed CV3 and CV4: East collapsed over a hidden Product, with
+    // Sum and Count of Val on rows inside it. Each data field line plots, its hidden level an
+    // empty label (UNVERIFIED, T-4938).
+    let case = read("t4699-pivot-blank-collapsed", "case");
+    for sheet in ["CV3", "CV4"] {
+        let (cache, table) = probe_pivot(&case, sheet);
+        let (_, data) = chart(&table, &cache);
+        let labels = labels(&data);
+        assert_eq!(labels[0], ["East", "", "Sum of Val"], "{sheet}");
+        assert_eq!(labels[1], ["East", "", "Count of Val"], "{sheet}");
+        assert_eq!(labels[2], ["West", "A", "Sum of Val"], "{sheet}");
+        assert_eq!(data.series.len(), 1, "{sheet}");
+        let values = numbers(&data.series[0]);
+        assert_eq!(values[..3], [Some(21.0), Some(4.0), Some(7.0)], "{sheet}");
+    }
+}

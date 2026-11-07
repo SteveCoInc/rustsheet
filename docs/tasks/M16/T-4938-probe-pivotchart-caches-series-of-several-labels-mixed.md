@@ -31,6 +31,8 @@ tools/src/rustsheet_tools/pivot_chart.py.
   - a hidden item, a page-field selection and a label filter (filtered values left out);
   - column fields with Values on columns, so each series has several labels (its name);
   - a collapsed outer row item beside expanded ones (mixed-depth `c:multiLvlStrCache` levels);
+  - a collapsed row item with Values inside it, directly and past a hidden field (t4699 CV, CV3 shapes: the
+    engine labels the hidden level empty, pivots.md "Blank rows and collapsed items beyond an outer row field");
   - a date row field, and a number row field whose pivot field and cache field `numFmtId` differ (labels);
   - a pivot with no row field, and one with no data field.
 - [ ] `chart_data` matches them, or the differences are fixed or filed; pivots.md updated.
