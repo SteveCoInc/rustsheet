@@ -254,8 +254,8 @@ impl Model {
     }
 }
 
-/// GROWTH's prediction e^(intercept + Σ m_j x_j), with the two edges of LOGEST's factors
-/// b = e^intercept and e^(Σ m_j x_j) that Excel shows (statistics.md "GROWTH is #NUM! once LOGEST's b
+/// GROWTH's prediction `e^(intercept + Σ m_j x_j)`, with the two edges of LOGEST's factors
+/// `b = e^intercept` and `e^(Σ m_j x_j)` that Excel shows (statistics.md "GROWTH is #NUM! once LOGEST's b
 /// overflows"; probes/t4590-growth-overflow):
 /// - `#NUM!` where b overflows, though the prediction may be finite (Int A8:A15, accuracy/GROWTH/s1
 ///   A104); a slopes' factor past the double range is not an error (Slope A4:A8);
