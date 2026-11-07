@@ -3,7 +3,7 @@ id: T-1089
 title: "Load bare newer function names in xlsx as #NAME? and export eta arguments as _xleta."
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
