@@ -844,7 +844,9 @@ Evidence: oracle excel-graph, 2026-11-07, T-4890 (docs/research/xlsx-round-trip/
   - the source's styles.xml;
   - `<t></t>` written as `<t/>`.
 
-An empty `modified`, or another malformed W3CDTF value, is not probed.
+An empty `modified`, or another malformed W3CDTF value, is not probed. Given a package with no `created`, Excel's own save
+writes one set to the save time; a `created` that is present is kept (T-4909 re-probe: valueless-cell-forms R1/E5 came
+back with `2026-11-07T18:28:37Z`, equal to `modified`; poi link-external-workbook-a kept 2021-09-28T20:02:21Z).
 Ours: a source that records no creation date gets no `created` element. Since T-4909 the fixtures
 valueless-cell-forms R1/E5 and R1/all saves open in Excel for the web (excel-graph, 2026-11-07; sha256
 863551c9e9271ac5da13b1e95dbe6d3b2f6fd0ec22a01703b6b6ccb6aec98610 and

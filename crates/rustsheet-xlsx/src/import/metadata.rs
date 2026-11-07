@@ -9,6 +9,9 @@ use crate::error::XlsxError;
 use super::util::get_value_or_default;
 use super::xml::XmlNode;
 
+/// `Application` when app.xml names none, or there is no app.xml.
+const UNKNOWN_APPLICATION: &str = "Unknown application";
+
 struct AppData {
     application: String,
     app_version: String,
@@ -46,7 +49,7 @@ fn load_app<R: Read + std::io::Seek>(archive: &mut Package<R>) -> Result<AppData
     let doc = XmlNode::parse(file)?;
     let app_data = &doc;
 
-    let application = get_value_or_default(app_data, "Application", "Unknown application");
+    let application = get_value_or_default(app_data, "Application", UNKNOWN_APPLICATION);
     let app_version = get_value_or_default(app_data, "AppVersion", "");
     Ok(AppData {
         application,
@@ -59,7 +62,7 @@ fn load_app<R: Read + std::io::Seek>(archive: &mut Package<R>) -> Result<AppData
 /// a missing or unreadable part leaves its fields at the defaults.
 pub(super) fn load_metadata<R: Read + std::io::Seek>(archive: &mut Package<R>) -> Metadata {
     let app = load_app(archive).unwrap_or_else(|_| AppData {
-        application: "Unknown application".to_string(),
+        application: UNKNOWN_APPLICATION.to_string(),
         app_version: String::new(),
     });
     let core = load_core(archive).unwrap_or_else(|_| CoreData {
@@ -104,6 +107,6 @@ mod tests {
         let metadata = load_metadata(&mut package);
         assert_eq!(metadata.creator, "Apache POI");
         assert_eq!(metadata.created, "2009-05-23T12:04:04Z");
-        assert_eq!(metadata.application, "Unknown application");
+        assert_eq!(metadata.application, super::UNKNOWN_APPLICATION);
     }
 }
