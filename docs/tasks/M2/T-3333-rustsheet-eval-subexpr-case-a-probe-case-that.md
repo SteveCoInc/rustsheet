@@ -3,7 +3,7 @@ id: T-3333
 title: "rustsheet-eval subexpr-case: a probe case that asks Excel for every subexpression of a visibly-off spec-case cell, and show the first one that diverges"
 milestone: M2
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -47,24 +47,24 @@ all of its children match Excel.
   cell must not land in the M0-M2 exit row, so the case carries its source case's milestone tag.
 
 ## Acceptance criteria
-- [ ] `rustsheet-eval subexpr-case <suite/case> <Sheet!A1> [--out PATH]` writes a valid
+- [x] `rustsheet-eval subexpr-case <suite/case> <Sheet!A1> [--out PATH]` writes a valid
       `rustsheet-case/v1` spec case under `eval/suites/probes/cases/` named
       `subexpr-<source stem>-<cell>`. It holds the source case's input cells, one cell per distinct
       non-literal subexpression in post-order (children first), the full formula as its last
       cell, a `check` list of those cells and the source case's milestone tag. Its description
       names the source case and cell and maps each cell to its subexpression text.
-- [ ] It refuses an xlsx-backed case (calipers, poi, ironcalc-calc) with a clear error and no
+- [x] It refuses an xlsx-backed case (calipers, poi, ironcalc-calc) with a clear error and no
       panic. It also refuses a cell that holds no formula.
-- [ ] `--culprit <probe case>` reads the case's oracle sidecar and the engine's values. It prints
+- [x] `--culprit <probe case>` reads the case's oracle sidecar and the engine's values. It prints
       the innermost visibly-off node whose children all match (decision 0083's rule, `closeness.rs`;
       no second rule), or `no divergent node`.
-- [ ] Rust tests cover: relative and absolute same-sheet references keep their targets; LET/LAMBDA
+- [x] Rust tests cover: relative and absolute same-sheet references keep their targets; LET/LAMBDA
       and volatile nodes are skipped; a hand-written oracle sidecar where only an inner call is off
       gives that call as the culprit; a sidecar where everything matches gives `no divergent node`.
-- [ ] Demonstrated on one gen-m9 cell from report.json `unattributed_off`. The case is filled with
+- [x] Demonstrated on one gen-m9 cell from report.json `unattributed_off`. The case is filled with
       excel-graph and committed, and `--culprit` output is pasted in the task Outcome. If the
       culprit is not already owned, add it to the owning task or file a follow-up.
-- [ ] docs/architecture/eval-harness.md "CLI" documents the command. `make check` green; reviewers approve.
+- [x] docs/architecture/eval-harness.md "CLI" documents the command. `make check` green; reviewers approve.
 
 ## Out of scope
 - Workbook ddmin, AST hoisting and literal shrinking (§11 stages 2-5). File them as follow-ups if
@@ -72,3 +72,29 @@ all of its children match Excel.
 - Running it over all 935 unattributed cells, or re-owning them. That is the owners' and the
   gap-triager's work.
 - xlsx-backed cases (no spec to copy the inputs from).
+
+## Outcome
+- Engine: `rustsheet_engine::subexpressions` (`#[doc(hidden)]` testing hook beside `call_arguments`,
+  crates/rustsheet-engine/src/subexpressions.rs): parses with the engine parser, makes every reference absolute and
+  sheet-qualified, and prints each node with the engine printer, children before parents; each node is `Literal`,
+  `Reference`, `Scoped` (reads a LET/LAMBDA name), `Positional` (`ROW()`/`COLUMN()`/`SHEET()` without an argument,
+  `INDIRECT`, `CELL`) or `Computed`. Parentheses, whitespace and an automatic `@` are not nodes of their own.
+- Harness: `rustsheet-eval subexpr-case <suite/case> <Sheet!A1> [--out PATH]` (crates/rustsheet-eval/src/subexpr_case.rs)
+  writes `probes/subexpr-<stem>-<sheet>-<cell>`: the source case's sheets plus a `Subexpr` sheet, one cell per distinct
+  checkable node, whole formula last, the source's milestone tag; volatile nodes skipped through `volatile::is_volatile`.
+  It refuses xlsx suites, non-formula cells and `sheet_ops` cases. `--culprit` runs the probe case and prints each
+  visibly-off node (`Visible::is_off`, decision 0083) whose checked children all match, or `no divergent node`.
+  Documented in docs/architecture/eval-harness.md "CLI".
+- Demonstration on gen-m9/05d44f6dd6cfc567 Calc!A178 (report.json `unattributed_off`), filled with excel-graph:
+  ```
+  $ rustsheet-eval subexpr-case --culprit probes/subexpr-05d44f6dd6cfc567-calc-a178.case.json
+  Subexpr!A6: =CHISQ.DIST(CHISQ.DIST.RT(1.5,7)%,8,(PI()=(Data!$B$9+1)))
+      expected: 9.825189899531443e-9
+      actual  : 9.825189899531435e-9
+  ```
+  Every inner node is bit-exact (A1:A5), so the outer CHISQ.DIST density (8 degrees, x 0.009823096598068504) is the
+  culprit. T-3219 already owns the cell (report.json's `unattributed_off` is about function attribution, not
+  ownership): the localization is added to T-3219's cell list; no new task.
+- Eval delta: +1 probe case (6 cells, 5 pass); 1 new known failure (Subexpr!A6, owned by T-3219); no regressions.
+- Follow-ups: none. Stages 2-5 of §11 (ddmin, hoisting, literal shrinking) not filed: wait to see whether stage 1
+  is used.
