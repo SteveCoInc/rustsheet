@@ -1558,6 +1558,7 @@ C	probes/t2594-nested-aggregates.case.json	32
 C	probes/t2598-engineering-scientific.case.json	12
 C	probes/t2601-index-scalar-forms-t-n.case.json	56
 C	probes/t2603-xnpv-no-number-values.case.json	24
+C	probes/t2605-single-boolean-cell.case.json	41
 C	probes/t2606-pivotby-total-gate-layouts.case.json	42
 C	probes/t2609-nested-operators-and-lifts.case.json	50
 C	probes/t2609-nested-operators-d04.case.json	17
