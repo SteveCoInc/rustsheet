@@ -556,7 +556,7 @@ fn stringify(
             context,
             match rewrite {
                 Rewrite::Displace(displacement)
-                    if displacement.keeps(*absolute_row, *absolute_column) =>
+                    if displacement.keeps(!*absolute_row && !*absolute_column) =>
                 {
                     &DisplaceData::None
                 }
@@ -589,10 +589,12 @@ fn stringify(
                 (*absolute_row1, *row1, *absolute_row2, *row2),
                 (*absolute_column1, *column1, *absolute_column2, *column2),
             );
-            // A range is kept when any corner's edited axis is relative: a range mixing a relative
-            // and an absolute corner is unprobed (T-4760).
+            // Only a wholly relative range is kept: column edits, mixed references and a range with
+            // an absolute corner are unprobed and displace as before (T-4875).
             let kept = matches!(rewrite, Rewrite::Displace(displacement)
-                if displacement.keeps(*absolute_row1 && *absolute_row2, *absolute_column1 && *absolute_column2));
+            if displacement.keeps(
+                !(*absolute_row1 || *absolute_row2 || *absolute_column1 || *absolute_column2)
+            ));
             let displace_data = if kept {
                 &DisplaceData::None
             } else {

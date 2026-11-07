@@ -636,8 +636,8 @@ The undo of a delete puts back each name and each conditional format the delete 
 ### Relative references in a name (T-4747)
 Status: VERIFIED (excel-graph, 2026-11-07). Predictions were committed before the fill, and they were wrong.
 - **A relative reference in a name does not move, when the name is used from another sheet.** Name `Rel` = `=Data!A5` (anchored at A1), used from Calc!A1 and
-  Calc!A3, after `insert_row 4` on Data (Data!An = n*10): A1 40, A3 60, the literal addresses A5 and A7. After
-  `delete_row 4`: 60 and 80 (A5, A7 again). The absolute names of T-4702 shift; relative ones are left alone.
+  Calc!A3, after `insert_row 4` on Data (Data!An = n*10): A1 40, A3 60, the cells A5 and A7, the same A1-anchored offsets as
+  before the edit. After `delete_row 4`: 60 and 80 (A5, A7 again). The absolute names of T-4702 shift; relative ones are left alone.
   Evidence: probes/sheet-ops/t4747-name-relative-insert-row and -delete-row.
 - **The same holds when the name is used from the edited sheet itself** (T-4760). With the same `Rel` used from Data!A1,
   A3 and A20, after `insert_row 4` on Data: A1 40, A3 60, and A20 (now A21) 240. After `delete_row 4`: 60, 80, and A20
@@ -645,18 +645,18 @@ Status: VERIFIED (excel-graph, 2026-11-07). Predictions were committed before th
   reads the same offset from its new address: A21 reads A25, which is old A24. Evidence:
   probes/sheet-ops/t4760-name-relative-same-sheet-insert-row and -delete-row (excel-graph, 2026-11-07; predictions
   were committed before the fill).
-- Unprobed: column edits; a mixed reference (`$A5`, `A$5`); a range with one relative and one absolute corner; a
-  relative reference whose row is deleted.
-- The engine matches (T-4760). `Model::displace_defined_names` sets `Displacement::keep_relative`. A row edit then
-  leaves every relative row, and a column edit every relative column, of a name's references. A range stays put when
-  any corner's edited axis is relative. The column and mixed cases follow that reading by hand, without a probe.
-  Unit tests: test/user_model/test_relative_name_edits.rs.
+- Unprobed (T-4875): column edits, a mixed reference (`$A5`, `A$5`), a range with one absolute and one relative
+  corner, a relative reference whose row is deleted, and the no-edit A1-anchoring control.
+- The engine matches the probed case (T-4760). `Model::displace_defined_names` sets `Displacement::keep_relative`. A
+  row insert or delete then leaves a wholly relative reference or range in a name where it is. Column edits and mixed
+  or half-absolute references still displace as before, until T-4875 probes them. Unit tests:
+  test/user_model/test_relative_name_edits.rs.
 
 Still unprobed (T-4761, the harness cannot express them yet):
 - how Excel spells a rewritten name in Name Manager (the engine stores `#REF!` and `S!$C$1:$C$1`);
 - row and column moves, which leave names alone in the engine;
 - a sheet-scoped name, and an unqualified reference in a name;
-- a relative name used from the edited sheet itself (the using cell moves too), and a no-edit control for the file-text anchoring at A1: run these before T-4760 changes the engine.
+- a no-edit control for the file-text anchoring at A1 (T-4875). The same-sheet use was probed by T-4760 (above).
 
 ## Characters of a name
 Rule: a name in a formula (a LET or LAMBDA name, or an unbound use) may not start with a mark (`\p{M}`) or an

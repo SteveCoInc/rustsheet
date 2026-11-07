@@ -34,10 +34,10 @@ Calc!A1 and Calc!A3. Code: `displace_defined_names` in crates/rustsheet-engine/s
   either: Data!A1 40/60, A3 60/80, and the moved A20 reads 240 both ways. Recorded in references.md "Relative references
   in a name".
 - Engine: `Displacement::keep_relative` (stringify/displacement.rs), which `Model::displace_defined_names` sets. Under it,
-  a row edit leaves a relative row of a name's references and a column edit leaves a relative column. A range stays
-  put when any corner's edited axis is relative. Cell formulas, conditional formats and table edits keep
-  `keep_relative: false`. Column edits and mixed references follow that per-axis reading by hand and are unprobed.
-- Unit tests: test/user_model/test_relative_name_edits.rs. A relative name stays and an absolute one shifts under row
-  and column edits, and a same-sheet read gives the literal address.
+  a row insert or delete leaves a wholly relative reference or range in a name where it is. Column edits, mixed
+  references and half-absolute ranges are unprobed and still displace as before. They are T-4875's to probe (review
+  round 1, reviewer-excel-fidelity). Cell formulas, conditional formats and table edits keep `keep_relative: false`.
+- Unit tests: test/user_model/test_relative_name_edits.rs. Under a row edit a relative name stays and an absolute one
+  shifts. A column edit and a mixed `$A5` still displace. A same-sheet read keeps its offset.
 - Eval delta: probes known failures 8069 -> 8065. The four T-4747 cells are fixed, the two new t4760 cases pass (8
   cells), and t4702 still passes. 0 regressions.
