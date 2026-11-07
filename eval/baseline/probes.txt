@@ -2704,6 +2704,7 @@ C	probes/t4844-irr-pad-ladder.case.json	48
 C	probes/t4844-irr-stage-invariance.case.json	60
 C	probes/t4861-indirect-r1c1-shaped-sheet-prefix.case.json	42
 C	probes/t4871-empty-mode-args.case.json	31
+C	probes/t4874-numbervalue-empty-separator.case.json	69
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
