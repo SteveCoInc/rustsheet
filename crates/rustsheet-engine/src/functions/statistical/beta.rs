@@ -76,22 +76,18 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
 }
 
 /// BETA.INV's quantile for p above 1/2 where the upper-tail search of [`beta_quantile`] rounds to
-/// 1: Excel's AS 109 structure, `1 - y` with y the lower quantile of Beta(beta, alpha) at the exact
-/// `1 - p` (the flip of docs/excel-semantics/statistics.md "BETA.INV at a huge shape is AS 109's
-/// Newton search (T-1538)"), so exactly 1 wherever y is below half an ulp of 1. Excel answers that
-/// at all 124 evidenced points where y is a normal double (`BETA.INV(1-1E-8,2,0.1)` = 1 at
-/// y = 3.9E-81, `BETA.INV(1-1E-16,2,1)` = 1 at y = 5E-17; 1 - 2^-53 where y is above 2^-54,
-/// accuracy/BETA.INV/s1 A123), and `#NUM!` at 154 of the 162 where y is 0 or subnormal
-/// (`BETA.INV(1-1E-10,2,0.03)`, y = 1.7E-334). There it stays `None` (`#NUM!`), as it was before
-/// T-3351: the 8 cells where Excel still answers 1 (probes/t3351-beta-inv-p-near-1 A199, A209-A211,
-/// C199; probes-numeric/t3351-beta-inv-sweep A88, A89, A122) follow no cut in y or p found so far
-/// (statistics.md "BETA.INV where the quantile rounds to 1 (T-3351)"), so no threshold is chosen.
+/// 1: Excel's AS 109 flip, `1 - y` with y the lower quantile of Beta(beta, alpha) at the exact
+/// `1 - p` (statistics.md "BETA.INV at a huge shape is AS 109's Newton search (T-1538)"), so 1
+/// wherever y is a normal double below half an ulp of 1 (`BETA.INV(1-1E-8,2,0.1)`, y = 3.9E-81).
+/// A y of 0 or a subnormal one stays `None` (`#NUM!`), as before T-3351: Excel is `#NUM!` at most
+/// such points and 1 at a few that no cut found so far separates, so no threshold is chosen. The
+/// evidence and its counts are in statistics.md "BETA.INV where the quantile rounds to 1 (T-3351)".
 ///
-/// y is the crossing of the search's own lower tail (`bratio::beta_search_tails`) over the whole
-/// of [0, 1], at most 65 cdfs and no statrs start (lift/kinds/statistical.rs `QUANTILE_WEIGHT`
-/// charges it); at a shape above 1E5 it is T-1538's crossing (`inverse_beta::beta_lower_crossing`),
-/// as [`beta_quantile`] takes there. `lower_quantile_underflows` finds a y below the normal doubles
-/// without a search, as for p of 1/2 or less.
+/// y is the crossing of the search's own lower tail (`bratio::beta_search_tails`) over [0, 1], at
+/// most 65 cdfs and no statrs start (lift/kinds/statistical.rs `QUANTILE_WEIGHT` charges it); at a
+/// shape above 1E5 it is T-1538's crossing (`inverse_beta::beta_lower_crossing`), as
+/// [`beta_quantile`] takes there (no evidenced cell reaches that branch yet: TODO(T-4865)).
+/// `lower_quantile_underflows` finds a y below the normal doubles without a search.
 fn upper_quantile_near_one(alpha: f64, beta: f64, p: f64) -> Option<f64> {
     // 1 - p is exact for p in (1/2, 1).
     let q = 1.0 - p;

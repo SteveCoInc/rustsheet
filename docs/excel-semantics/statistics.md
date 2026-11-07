@@ -6769,7 +6769,9 @@ Rule: for p above 1/2, BETA.INV(p, alpha, beta) is 1 - y, y the lower quantile o
 flip). Where y is a normal double below half an ulp of 1 the answer is exactly 1, not `#NUM!`: `BETA.INV(1-1E-8,2,0.1)`
 = 1 (y = 3.9E-81), `BETA.INV(1-1E-6,0.5,0.3)` = 1, `BETA.INV(1-1E-16,2,1)` = 1 (y = 5E-17), and 1 - 2^-53 where y is
 above 2^-54 (`BETA.INV(0.999999999999999,6.87566761020923,0.991674132119787)`, accuracy/BETA.INV/s1 A123). Excel
-answers 1 - y at all 124 evidenced points with a normal y and `#NUM!` at none. Where y is 0 or subnormal Excel is
+answers 1 - y at every evidenced point with a normal y and `#NUM!` at none: 130 eval cells move from `#NUM!` to Excel's
+value on this path (129 distinct suite formulas over probes, probes-numeric and gen-m9, counted by building main and
+the T-3351 branch and diffing verdicts, plus Gate A s1 A123). Where y is 0 or subnormal Excel is
 `#NUM!` at 154 points (`BETA.INV(1-1E-8,2,0.01)`, y = 3.7E-801; `BETA.INV(1-1E-10,2,0.03)`, y = 1.7E-334;
 `BETAINV(1-1E-16,2,0.01)`) and still 1 at 8: `BETA.INV(1-6E-10,2,0.03)` (y = 1.5E-308), `BETA.INV(1-5E-10,0.5,0.03)` to
 `BETA.INV(1-3E-10,0.5,0.03)` (y down to 1.4E-317), `BETA.INV(1-6E-10,10,0.03)` (y = 2.4E-309) and three sweep points
@@ -6801,8 +6803,9 @@ whatever the true y, and the refinement on the upper tail landed on 1). Since T-
 above 1/2 rounds to 1, the flipped tail is solved on the search's own kernel (`beta.rs` `upper_quantile_near_one`) and
 the answer is 1 - y for a normal y; a y of 0 or a subnormal one stays `#NUM!`, as before (no threshold chosen, so no
 fit). The 8 points above where Excel is 1 at such a y, the two inconsistent classes and the lower-tail mirror stay as
-they were: `#NUM!` (T-4865).
-Status: VERIFIED (excel-graph); the reason for the `#NUM!`s UNVERIFIED
+they were: `#NUM!` (T-4865). At a shape above 1E5 y is T-1538's `beta_lower_crossing` instead; no evidenced cell
+reaches that branch (UNVERIFIED, probe listed in T-4865).
+Status: VERIFIED (excel-graph) for the normal-y rule; the reason for the `#NUM!`s and the shape above 1E5 UNVERIFIED
 Tasks: T-3351, T-4865
 
 ## BINOM.DIST's pmf at k = 0 is #NUM! when p = 1 (T-2435)
