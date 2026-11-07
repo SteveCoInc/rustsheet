@@ -14,7 +14,7 @@ depends_on: []
 CHISQ.INV / CHISQ.INV.RT match Excel on the visibly-off round-trip cells of the t4974 unit-x .5 probe (PR #4002 group G02).
 
 ## Context
-Found by T-4974, which filled the probe suggestions of PR #4002 (docs/research/probe-suggestions-2026-11-07 on that branch)
+Found by T-4974, which filled the probe suggestions of PR #4002 (docs/research/probe-suggestions-2026-11-07, merged to main as 8001d80b1)
 with excel-graph. The predictions there came from a prototype of the 2026-11-07 Excel-parity fixes that is not on main;
 compare against them before designing a fix.
 - G02 asks whether Excel keeps the leading-factor start and Halley steps past unit x = .5; 28 of these 32 cells match the

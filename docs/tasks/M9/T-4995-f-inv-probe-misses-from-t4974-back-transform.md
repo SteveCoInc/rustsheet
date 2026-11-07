@@ -14,7 +14,7 @@ depends_on: []
 F.INV / F.INV.RT / FINV match Excel on the visibly-off cells of the t4974 F probes (PR #4002 groups G08, G09).
 
 ## Context
-Found by T-4974, which filled the probe suggestions of PR #4002 (docs/research/probe-suggestions-2026-11-07 on that branch)
+Found by T-4974, which filled the probe suggestions of PR #4002 (docs/research/probe-suggestions-2026-11-07, merged to main as 8001d80b1)
 with excel-graph. The predictions there came from a prototype of the 2026-11-07 Excel-parity fixes that is not on main;
 compare against them before designing a fix.
 - G09: `F.INV(1E-300,11,3)` (E7) and `F.INV(1E-250,11,3)` (E11) are `#NUM!` in Excel, numbers in the engine; B9, D8 differ in the

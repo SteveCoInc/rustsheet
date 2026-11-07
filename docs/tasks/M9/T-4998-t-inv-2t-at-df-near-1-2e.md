@@ -14,7 +14,7 @@ depends_on: []
 T.INV.2T at df near 1.2E+8 matches Excel (PR #4002 group G11).
 
 ## Context
-Found by T-4974, which filled the probe suggestions of PR #4002 (docs/research/probe-suggestions-2026-11-07 on that branch)
+Found by T-4974, which filled the probe suggestions of PR #4002 (docs/research/probe-suggestions-2026-11-07, merged to main as 8001d80b1)
 with excel-graph. The predictions there came from a prototype of the 2026-11-07 Excel-parity fixes that is not on main;
 compare against them before designing a fix.
 - `T.INV.2T(0.5,123456789)` (A34) Excel 0.6744897431508498, ours 0.6744897634720731 (8th digit); the prototype of PR #4002's

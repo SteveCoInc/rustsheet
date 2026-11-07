@@ -8854,6 +8854,10 @@ settle these points; each compares Excel with that PR's prototype prediction.
   including both t3443 audit rows (F122, F123 = 0).
 - T.DIST.RT at df 1000 (t4974-t-dist-df1000-central-endpoint): `T.DIST.RT(0.5,1000)` is 0.30859254041693746 and
   `T.DIST.RT(0.8513,1000)` 0.19740326475142156, as the earlier probes gave.
+- The other groups disagree with the prototype only in some cells and settle no rule here: the gamma small-x prefactor
+  (55 cells visibly off) and far upper tail (17), Loader's store chain (3), BETA.INV's tiny-shape `#NUM!` boundary (80) and
+  endpoint saturation (29), and F.INV's tiny tail (9; `F.INV(1E-300,11,3)` and `F.INV(1E-250,11,3)` are `#NUM!` in Excel).
+  What Excel does there is for the owner tasks below to record when they fit it; the cells are the evidence.
 Evidence: probes/t4974-* (excel-graph, 2026-11-07). The visibly-off cells against ours are owned by T-4994 (BETA.INV),
 T-4995 (F.INV), T-4996 (CHISQ.INV), T-4997 (IRR) and T-4998 (T.INV.2T).
 Ours: matches every SKEW/SKEW.P/KURT cell; the other groups are known failures (eval/baseline/probes.txt).

@@ -14,7 +14,7 @@ depends_on: []
 BETA.INV (and BETAINV, F.INV through AS 109) matches Excel on the visibly-off cells of the t4974 BETA.INV probes (PR #4002 groups G07, G21, G22, G23).
 
 ## Context
-Found by T-4974, which filled the probe suggestions of PR #4002 (docs/research/probe-suggestions-2026-11-07 on that branch)
+Found by T-4974, which filled the probe suggestions of PR #4002 (docs/research/probe-suggestions-2026-11-07, merged to main as 8001d80b1)
 with excel-graph. The predictions there came from a prototype of the 2026-11-07 Excel-parity fixes that is not on main;
 compare against them before designing a fix.
 - G22 (DBL_MIN residual) is falsified: Excel's quantile continues smoothly through p = DBL_MIN (A6 `BETA.INV(2.22507385850721E-308,..)`
