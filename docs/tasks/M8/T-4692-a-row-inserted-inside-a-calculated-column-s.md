@@ -50,4 +50,7 @@ does, and a probe cell scores it.
 - Docs: xlsx-storage.md ("A calculated column is saved as `calculatedColumnFormula`...") and references.md
   ("Calculated columns") state Excel's rule and ours. Excel saves each filled cell with `s="1"`; ours keeps the cell's
   own style (unscored).
+- Directive 5 (security review): an insert that would fill more than 2^20 calculated-column cells is refused
+  before it changes anything (`Model::refuse_oversized_column_fill`), a DEVIATION entry in references.md; unit test
+  `a_huge_insert_into_calculated_columns_is_refused`.
 - Eval delta: +5 probe cases, +60 passing cells; known failures 6392 -> 6392, regressions 0.

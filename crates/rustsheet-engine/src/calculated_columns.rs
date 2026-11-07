@@ -445,6 +445,11 @@ impl Model {
     }
 }
 
+/// The most calculated-column cells one row insert fills ([`Model::refuse_oversized_column_fill`]):
+/// one whole column, 2^20 cells, as many as `limits::check_array_cells` allows in an
+/// array (directive 5; a DEVIATION, decision 0014).
+pub(crate) const MAX_INSERT_FILL_CELLS: u64 = 1 << 20;
+
 /// The calculated-column fill of one typed cell ([`Model::calculated_column_fill`]).
 pub(crate) struct ColumnFill {
     /// The table's name.
@@ -555,7 +560,8 @@ impl Model {
     /// column's first data cell moved and printed at the column's first data row after the tables
     /// followed the edit, as the fill stores it (`T[[#This Row],[Col]]*2` stays so, as in Excel).
     /// The two rows differ after a row insert at the first data row: `A2*2` stays `A2*2`, the
-    /// formula Excel fills into the inserted row (T-4692, unprobed for the stored text).
+    /// formula Excel fills into the inserted row and saves as `calculatedColumnFormula` (T-4692: the
+    /// cached `table1.xml` of probes/table-edits/t4692-insert-row-first-data).
     pub(crate) fn set_displaced_column_formulas(&mut self, displaced: Vec<DisplacedColumnFormula>) {
         let (locale, language) = (self.locale, self.language);
         self.parser.set_locale(get_default_locale());
@@ -593,6 +599,40 @@ impl Model {
         }
         self.parser.set_locale(locale);
         self.parser.set_language(language);
+    }
+
+    /// Refuses a row insert of `count` rows at `row` on `sheet` that would fill more than
+    /// [`MAX_INSERT_FILL_CELLS`] calculated-column cells ([`Model::fill_inserted_data_rows`]),
+    /// before the insert changes anything (directive 5: one call must not write an unbounded
+    /// number of cells). Excel fills them all; the cap is a DEVIATION (decision 0014;
+    /// references.md "Rows inserted into a calculated column's table"). It counts every calculated
+    /// column of each table whose first data row to its last row (the totals row, if any) holds
+    /// `row`, the inserts that add data rows, so it may refuse a little early, never late.
+    pub(crate) fn refuse_oversized_column_fill(
+        &self,
+        sheet: u32,
+        row: i32,
+        count: i32,
+    ) -> Result<(), String> {
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        let columns: usize = (self.workbook.tables.values())
+            .filter(|table| table.is_on_sheet(&sheet_name))
+            .filter(|table| bounds(table).is_some_and(|b| b.data.0 <= row && row <= b.bottom))
+            .map(|table| {
+                (table.columns.iter())
+                    .filter(|c| c.calculated_column_formula.is_some())
+                    .count()
+            })
+            .sum();
+        let cells = u64::try_from(columns)
+            .unwrap_or(u64::MAX)
+            .saturating_mul(u64::try_from(count).unwrap_or(0));
+        if cells > MAX_INSERT_FILL_CELLS {
+            return Err(format!(
+                "Cannot insert rows because that would fill {cells} calculated-column cells (at most {MAX_INSERT_FILL_CELLS})"
+            ));
+        }
+        Ok(())
     }
 
     /// Writes each calculated column's formula into the rows `rows` (first, last) that a row

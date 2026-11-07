@@ -1008,7 +1008,7 @@ impl Model {
         if !self.can_insert_rows(sheet, row, row_count)? {
             return Err("Cannot insert rows because that would break an array formula".to_string());
         }
-        self.refuse_table_off_sheet(sheet, row, row_count, true)?;
+        self.refuse_table_row_insert(sheet, row, row_count)?;
         // Written so it cannot overflow: `row_count` can be any `i32` (T-2896).
         let max_row = self.workbook.worksheet(sheet)?.dimension().max_row;
         if !utils::is_valid_row(row) || row_count > LAST_ROW - max_row {

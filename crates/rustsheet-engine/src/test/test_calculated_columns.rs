@@ -884,3 +884,34 @@ fn an_inserted_row_fills_no_plain_column() {
     model.insert_rows(0, 3, 1).unwrap();
     assert_eq!(model.get_cell_formula(0, 3, 3).unwrap(), None);
 }
+
+/// A row insert that would fill more than `MAX_INSERT_FILL_CELLS` calculated-column cells is
+/// refused before it changes anything (directive 5, a DEVIATION: Excel fills them all; T-4692).
+#[test]
+fn a_huge_insert_into_calculated_columns_is_refused() {
+    let mut model = Model::new_empty("book", "en", "UTC", "en").unwrap();
+    for (column, name) in [(1, "A"), (2, "B"), (3, "C")] {
+        model
+            .set_user_input(0, 1, column, name.to_string())
+            .unwrap();
+    }
+    model
+        .add_table_with_totals(0, "T", (1, 1, 2, 3), false, false)
+        .unwrap();
+    for column in 1..=3 {
+        model
+            .set_typed_user_input(0, 2, column, "=ROW()".to_string())
+            .unwrap();
+    }
+    // Three calculated columns: 400,000 rows would fill 1,200,000 cells, past 2^20.
+    let refused = model.insert_rows(0, 2, 400_000);
+    assert!(refused.is_err());
+    assert_eq!(model.workbook.tables["T"].reference, "A1:C2");
+    assert_eq!(
+        model.get_cell_formula(0, 2, 1).unwrap().as_deref(),
+        Some("=ROW()")
+    );
+    assert_eq!(model.get_cell_formula(0, 3, 1).unwrap(), None);
+    // An insert below the table fills nothing and is not refused.
+    model.insert_rows(0, 4, 400_000).unwrap();
+}

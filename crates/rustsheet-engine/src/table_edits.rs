@@ -619,6 +619,19 @@ impl Model {
         Ok(())
     }
 
+    /// Refuses the insert of `count` rows at `row` on `sheet` that would push a table off the sheet
+    /// ([`Model::refuse_table_off_sheet`]) or fill too many calculated-column cells
+    /// ([`Model::refuse_oversized_column_fill`]), before it changes anything.
+    pub(crate) fn refuse_table_row_insert(
+        &self,
+        sheet: u32,
+        row: i32,
+        count: i32,
+    ) -> Result<(), String> {
+        self.refuse_table_off_sheet(sheet, row, count, true)?;
+        self.refuse_oversized_column_fill(sheet, row, count)
+    }
+
     /// Refuses an insert of `count` rows (`rows`) or columns at `at` that would push a cell of a
     /// table on `sheet` past the last row (column), even when the cells pushed off are empty: Excel
     /// answers 409 `InsertDeleteConflict` (excel-graph 2026-10-28, T-2845). A table that merely ends

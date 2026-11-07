@@ -3089,10 +3089,23 @@ formula, filled down (`=A3*2` in a new C3 of T on A1:C4 with C2 typed `=A2*2`; `
 Ours: the same, from the stored column formula (`Model::fill_inserted_data_rows`, after the tables follow the insert);
 undo of the insert deletes the rows and with them the filled cells. A plain column (no column formula) fills nothing,
 and so does an insert above the header row or below the table (unprobed for a plain column). The saved form is in
-xlsx-storage.md, "A calculated column is saved as `calculatedColumnFormula` plus one formula per row".
+xlsx-storage.md, "A calculated column is saved as `calculatedColumnFormula` plus one formula per row". An insert that would fill more than 2^20
+cells is refused (next entry).
 Status: VERIFIED (excel-graph; desktop unprobed; rule 3's no-re-fill half on 3 of 4 runs; rule 7a-7f by probes/t3003-*)
 Implemented in: rules 1-5 and 8, crates/rustsheet-engine/src/calculated_columns.rs (T-2958, T-3024); rule 7 (7a-7d), the same file (T-2968, T-3218)
 Tasks: T-2957, T-2958, T-2968, T-2969, T-2983, T-3023, T-3024, T-3025, T-3033, T-3003, T-3218, T-4692
+
+## A row insert that would fill more than 2^20 calculated-column cells is refused
+Rule: Excel fills the column formula into every data row a row insert adds (previous entry), however many rows and
+calculated columns; ours refuses the whole insert, before it changes anything, when the rows inserted times the
+calculated columns of the tables whose data rows it grows exceed 2^20 (`MAX_INSERT_FILL_CELLS`,
+`Model::refuse_oversized_column_fill`), so one call cannot write an unbounded number of cells (CLAUDE.md directive 5).
+The bound is one whole column, as many cells as an array may hold (`limits::check_array_cells`). It counts every
+table whose first data row to last row holds the insert row, so it may refuse a little early.
+Evidence: none needed for the limit (decision 0014); Excel's fill is probes/table-edits/t4692-*.
+Status: DEVIATION (decision 0014)
+Implemented in: crates/rustsheet-engine/src/calculated_columns.rs, crates/rustsheet-engine/src/table_edits.rs
+Tasks: T-4692
 
 ## Unknown function call names: spelling in FORMULATEXT
 Rule (excel-graph, 2026-10-16, T-1719): a call to a name that is no function (`=foo(1)`) is `#NAME?`
