@@ -3,7 +3,7 @@ id: T-4721
 title: "engineering.md: settle four superseded UNVERIFIED notes (reciprocal IM* kernels past 2^27 on a real argument, the other IM* overflows, T-2420/T-2421's probe-pending status, IMLOG2's T-2044 candidates) and probe what no cell decides"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
