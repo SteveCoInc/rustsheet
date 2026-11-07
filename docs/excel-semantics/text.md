@@ -742,6 +742,23 @@ Status: VERIFIED (excel-graph); implemented: first-character separators and empt
 after the separators with every space removed (T-2151, `numbervalue_of` in text/string_format.rs), the trailing
 colon after a bare hour (T-2352, in the shared clock parser).
 
+## NUMBERVALUE reads a written-empty separator as empty text: `#VALUE!` (T-4874)
+Rule: a written-empty `decimal_separator` or `group_separator` of NUMBERVALUE (`NUMBERVALUE("1.5",,",")`,
+`NUMBERVALUE("1.5",".",)`, `NUMBERVALUE("1.5",,)`) is `#VALUE!`, as `""` and a blank cell are there. It is not omitted:
+`NUMBERVALUE("1.5")` is 1.5. A LET or LAMBDA variable bound to nothing reads the same (`LET(e,,NUMBERVALUE("1.5",e))`
+and `LAMBDA(a,g,NUMBERVALUE(a,".",g))("1,234.5",)` are `#VALUE!`). This differs from TEXTBEFORE, TEXTAFTER,
+TEXTSPLIT, TAKE, DROP, SORT, XLOOKUP and XMATCH, whose written-empty optional arguments are omitted
+(lookup.md "XLOOKUP and XMATCH read a written-empty mode as omitted (T-4871)"), so the "newer function, empty = omitted"
+pattern does not hold for NUMBERVALUE (a 2013 function).
+Evidence: probes/t4874-numbervalue-empty-sep A1:A25 (excel-graph, 2026-11-07). Predictions were committed before the
+fill: H_omitted, the task's predicted rule, scored 7/25 (only the cells that are `#VALUE!` either way); H_value, the
+engine as it stood, scored 25/25. Texts "1.5", "1,234.5", "1.234,5", "2,5", "50%" and "1:30", each with an empty decimal
+separator, an empty group separator and both; controls `NUMBERVALUE("1.5",Z1)` (blank), `NUMBERVALUE("1.5","")`.
+Ours: `fn_numbervalue` (functions/text/string_format.rs), unchanged: the empty argument reaches the separator check as
+an empty value.
+Status: VERIFIED (excel-graph)
+Tasks: T-4874
+
 ## NUMBERVALUE removes group separators only before the decimal separator (T-3647)
 Rule: the group separator's first character is removed only from the text before the first decimal separator. After
 it, the character stays, so a digit reads as a digit and anything else leaves text VALUE cannot read (`#VALUE!`):

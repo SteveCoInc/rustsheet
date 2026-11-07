@@ -3,7 +3,7 @@ id: T-4874
 title: "NUMBERVALUE with a written-empty decimal or group separator follows Excel (probe empty-as-omitted)"
 milestone: M5
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -36,15 +36,35 @@ the fill.
 - How it avoids fitting: each cell is the default-separator parse or `#VALUE!`; nothing numeric is tuned.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph) calls NUMBERVALUE with an empty decimal_separator, an empty
+- [x] A probes case (excel-probe skill, excel-graph) calls NUMBERVALUE with an empty decimal_separator, an empty
       group_separator and both, on "1.5", "1,234.5", "1.234,5", "2,5", "50%" and "1:30", plus
       `LET(e,,NUMBERVALUE("1.5",e))` and, as controls, the blank-cell and `""` forms.
-- [ ] The engine's predictions (empty = omitted) are committed in a commit before the oracle fill.
-- [ ] After the fill every probe cell passes; text.md (or coercion.md beside the NUMBERVALUE entries) states the rule
+- [x] The engine's predictions (empty = omitted) are committed in a commit before the oracle fill.
+- [x] After the fill every probe cell passes; text.md (or coercion.md beside the NUMBERVALUE entries) states the rule
       with its cells.
-- [ ] No new F line in any eval/baseline file (the gen-m5 cells above keep passing); `make check` green; reviewers
+- [x] No new F line in any eval/baseline file (the gen-m5 cells above keep passing); `make check` green; reviewers
       approve.
 
 ## Out of scope
 - The legacy text functions (SUBSTITUTE, FIND, SEARCH, LEFT, RIGHT, MID, REPT, FIXED, DOLLAR), which read an empty
   argument as 0 today; a follow-up probe only if this one shows the rule reaches them.
+
+## Outcome
+- **Finding (prediction falsified):** NUMBERVALUE reads a written-empty `decimal_separator` or `group_separator` as an
+  empty value, so the call is `#VALUE!`. The same goes for a LET or LAMBDA variable bound to nothing. It is not omitted.
+  This is unlike the dynamic-array and newer text functions (T-4871). The engine already did this, so there is no code
+  change.
+- **Evidence:** probes/t4874-numbervalue-empty-sep, 25 cells, filled by excel-graph on 2026-11-07. Predictions were
+  committed in 8e1d37d8a, before the fill:
+
+  | Hypothesis | Cells matched |
+  |---|---|
+  | H_omitted (the task's predicted rule) | 7/25 (only the cells that are `#VALUE!` either way) |
+  | H_value (the engine as it stood) | 25/25 |
+
+  The blank-cell and `""` controls are `#VALUE!` too.
+- **No fit.** Every cell is a parse or `#VALUE!`.
+- **Docs:** text.md "NUMBERVALUE reads a written-empty separator as empty text: `#VALUE!` (T-4874)".
+- **Eval:** one new case, 25/25.
+- **No follow-up:** the legacy text functions are out of scope, and this probe gives no reason to expect the omitted
+  rule there.
