@@ -54,3 +54,6 @@ refuse" helper for `evaluate_as_reference`, the INDEX call sites (index.rs) and
 ## Out of scope
 - An oracle check of cached linked ranges, unless a fixtures workbook with an externalLink cache
   can be built for the probe.
+
+## Resumed
+Resumed by an opus run at 2026-11-07 12:20 UTC (branch idle since 09:33 with only its claim; work-loop step 2).
