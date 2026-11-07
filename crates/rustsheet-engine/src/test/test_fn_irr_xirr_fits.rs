@@ -381,3 +381,29 @@ fn irr_secant_runs_up_to_200_steps_on_the_evidenced_flows() {
     ];
     assert_eq!(got, expected.map(f64::to_bits));
 }
+
+#[test]
+fn irr_checks_the_discount_domain_at_convergence() {
+    // T-4975 item 11: an intermediate iterate past v = 0 (d > 1) no longer fails the run; only the
+    // discount it converges to must be positive. probes/t2565-irr-guess-sweeps P!C157 (guess
+    // 2697.5242098806502) and gen-m9/a91bad4e84f49739 Calc!A369 (`IRR(Data!C5:E5)`), both
+    // visibly off before.
+    let got = results(&[
+        "=IRR({2.5,1,-123456789.123},2697.5242098806502)",
+        "=IRR({0.3,-2.5,1.005})",
+    ]);
+    let expected = [7_026.083_663_321_499_f64, 6.909_808_543_634_389];
+    assert_eq!(got, expected.map(f64::to_bits));
+    // probes/irr-guess-edges P!A28 and A29: the numbers of D!A1:D12 in row order, from the
+    // default guess and from 0.5, are #DIV/0! in Excel (#NUM! before).
+    assert_errors(&[
+        (
+            "=IRR({0,1.005,1E+15,2,42,1E+15,-0.0001,2,-0.5,1E-15,-1,1E+15,-1,0,0.3,123456789.123,1.005,0,-1,0,1E-15,0.3,1})",
+            "#DIV/0!",
+        ),
+        (
+            "=IRR({0,1.005,1E+15,2,42,1E+15,-0.0001,2,-0.5,1E-15,-1,1E+15,-1,0,0.3,123456789.123,1.005,0,-1,0,1E-15,0.3,1},0.5)",
+            "#DIV/0!",
+        ),
+    ]);
+}

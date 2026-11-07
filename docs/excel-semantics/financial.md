@@ -1802,6 +1802,20 @@ Status: VERIFIED (excel-graph) for the cells; the rule is a FITTED proxy (decisi
 Implemented in: `irr_flat_is_div_zero`, `IRR_FLAT_DIV_ZERO_NPV` (functions/financial/financial_util.rs)
 Tasks: T-3347, T-3548
 
+## IRR's discount domain is checked at convergence
+Rule: IRR's secant in d = 1 - v may step past the pole (d > 1, a negative discount v) and come back: only the iterate
+it stops at must be a positive discount, and a run that stops at v <= 0 fails (retry from 0.1, then the fallback). The
+zero-step stall test measures NPV against the discounted absolute flows at the iterate, `sum |c_i|·|v|^i`, not the
+largest flow. With the old per-iterate `d > 1` rejection (kept from the fit, unprobed) these were off:
+probes/t2565-irr-guess-sweeps P!C157 `IRR({2.5,1,-123456789.123},2697.5242098806502)` is 7026.083663321499 (ours was
+7026.0836627623075), gen-m9/a91bad4e84f49739 Calc!A369 `IRR({0.3,-2.5,1.005})` 6.909808543634389 (ours
+6.909808543634611, the fallback's root), and probes/irr-guess-edges P!A28, A29 (`IRR(D!A1:D12)` and guess 0.5) are
+`#DIV/0!` (ours `#NUM!`): the run now reaches an NPV it cannot evaluate. No eval or Gate A cell moved the other way.
+Evidence: the cells above (excel-graph); docs/research/excel-parity-findings-2026-11-07.md §11.
+Status: VERIFIED (excel-graph) for the cells; the stall scale is a structural choice, not a fit
+Implemented in: `irr_secant` (functions/financial/financial_util.rs)
+Tasks: T-2928, T-4975
+
 ## RATE: an empty guess is guess 0, not the default 0.1
 Rule: an empty guess argument (`RATE(48,-200,8000,0,1,)`) or a reference to an empty cell behaves as
 guess 0, not the default 0.1: the result has the same bits as an explicit `0` (0.008052981923885287)

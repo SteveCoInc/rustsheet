@@ -437,7 +437,7 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
     // the t3411 fresh sweeps are `#DIV/0!` in Excel exactly where the secant's step lands there
     // (financial.md "IRR is #DIV/0! where its secant cannot evaluate NPV", T-3407).
     let npv = |d: f64| irr_npv(values, 1.0 - d).ok_or(SecantStop::DivZero);
-    let peak = largest_flow(values);
+    let magnitudes: Vec<f64> = values.iter().map(|c| c.abs()).collect();
     let mut d0 = extended_quotient(guess, 1.0 + guess);
     let mut f0 = npv(d0)?;
     let mut d1 = d0 - if f0 > 0.0 { 1e-3 } else { -1e-3 };
@@ -458,26 +458,38 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
         let d2 = d1 - extended_quotient(f1 * (d1 - d0), f1 - f0);
         // An iterate of exactly d = 1 is v = 0, and NPV's 1/v divides by zero: Excel's
         // `#DIV/0!` (`IRR({-1,1E+300})`, probes/irr-guess-edges A39; financial.md "IRR's far-root
-        // bound", T-2802). The call ends there, without the retry from 0.1. Past 1 the run fails
-        // as before (the d > 1 guard is kept from the fit, unprobed).
+        // bound", T-2802). The call ends there, without the retry from 0.1. Past 1 (a negative
+        // discount) the run goes on: only the discount it converges to must be positive, checked
+        // at the stop below (T-4975 item 11; financial.md "IRR's discount domain is checked at
+        // convergence").
         if d2 == 1.0 {
             return Err(SecantStop::DivZero);
         }
-        if !d2.is_finite() || d2 > 1.0 {
+        if !d2.is_finite() {
             return Err(SecantStop::Failed);
         }
         let f2 = npv(d2)?;
         largest_npv = largest_npv.max(f2.abs());
-        // A zero step also stops when NPV is within 1e-7 of the largest flow: on the 2^-53 grid
+        // A zero step also stops when NPV is within 1e-7 of the flows' scale (below): on the 2^-53 grid
         // `IRR({-2500000,-1000000,123456789123000})` cannot get NPV under 1e-7 (1.2E-6 at
         // Excel's 7026.083663633989), yet Excel returns it (probes/t2565-irr-guess-sweeps
-        // A107-C141). The bound is fitted: anything from 1E-20 to 1E-7 of the largest flow
+        // A107-C141). The bound is fitted: anything from 1E-20 to 1E-7 of the scale
         // scores the same, and an absolute residual from 1E-5 to 0.1 would too.
         // Past [`IRR_SHORT_RUN_STEPS`] a stalled zero step is no stop: the run goes flat on its
         // next step and fails. Excel is `#NUM!` on all 6 stalled stops in eval and Gate A between the
         // 41st step and its cap; all of them lie outside [`IRR_LONG_RUN_RANGE`] (T-3408).
-        let stalled = d2 == d1 && f2.abs() < 1e-7 * peak && step < IRR_SHORT_RUN_STEPS;
+        // The scale is the discounted absolute flows at the iterate, `sum |c_i|·|v|^i`, the size
+        // NPV's rounding is relative to, rather than the largest flow, which a deep discount puts
+        // far below the sum's own rounding (T-4975 item 11).
+        let stalled = d2 == d1
+            && step < IRR_SHORT_RUN_STEPS
+            && irr_npv(&magnitudes, (1.0 - d2).abs()).is_some_and(|scale| f2.abs() < 1e-7 * scale);
         if (d2 - d1).abs() < 1e-7 && (f2.abs() < 1e-7 || stalled) {
+            // Excel's root is a positive discount factor: a run that converges at v <= 0 has no
+            // rate and fails (the retry and the fallback decide).
+            if 1.0 - d2 <= 0.0 {
+                return Err(SecantStop::Failed);
+            }
             return irr_from_discount(1.0 - d2).ok_or(SecantStop::Failed);
         }
         (d0, f0, d1, f1) = (d1, f1, d2, f2);
