@@ -1,0 +1,42 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "NUMBERVALUE with a written-empty decimal or group separator (T-4874), on six texts, plus the LET and LAMBDA paths and the blank-cell and empty-text controls (Z1 blank). Predictions in docs/research/t4874/predictions.tsv committed before the excel-graph fill: H_omitted (the en-US default separator) against H_value (#VALUE!).",
+  "tags": [
+    "M5",
+    "text",
+    "probe"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=NUMBERVALUE(\"1.5\",,\",\")",
+        "A2": "=NUMBERVALUE(\"1.5\",\".\",)",
+        "A3": "=NUMBERVALUE(\"1.5\",,)",
+        "A4": "=NUMBERVALUE(\"1,234.5\",,\",\")",
+        "A5": "=NUMBERVALUE(\"1,234.5\",\".\",)",
+        "A6": "=NUMBERVALUE(\"1,234.5\",,)",
+        "A7": "=NUMBERVALUE(\"1.234,5\",,\",\")",
+        "A8": "=NUMBERVALUE(\"1.234,5\",\".\",)",
+        "A9": "=NUMBERVALUE(\"1.234,5\",,)",
+        "A10": "=NUMBERVALUE(\"2,5\",,\",\")",
+        "A11": "=NUMBERVALUE(\"2,5\",\".\",)",
+        "A12": "=NUMBERVALUE(\"2,5\",,)",
+        "A13": "=NUMBERVALUE(\"50%\",,\",\")",
+        "A14": "=NUMBERVALUE(\"50%\",\".\",)",
+        "A15": "=NUMBERVALUE(\"50%\",,)",
+        "A16": "=NUMBERVALUE(\"1:30\",,\",\")",
+        "A17": "=NUMBERVALUE(\"1:30\",\".\",)",
+        "A18": "=NUMBERVALUE(\"1:30\",,)",
+        "A19": "=NUMBERVALUE(\"1,5\",,\".\")",
+        "A20": "=NUMBERVALUE(\"1.234,5\",\",\",)",
+        "A21": "=LET(e,,NUMBERVALUE(\"1.5\",e))",
+        "A22": "=LAMBDA(a,g,NUMBERVALUE(a,\".\",g))(\"1,234.5\",)",
+        "A23": "=NUMBERVALUE(\"1.5\",Z1)",
+        "A24": "=NUMBERVALUE(\"1.5\",\"\")",
+        "A25": "=NUMBERVALUE(\"1.5\",\".\",Z1)"
+      }
+    }
+  ]
+}
