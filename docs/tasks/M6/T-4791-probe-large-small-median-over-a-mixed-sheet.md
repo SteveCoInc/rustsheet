@@ -3,7 +3,7 @@ id: T-4791
 title: "Probe LARGE/SMALL/MEDIAN over a mixed-sheet grid whose first element is a value or an error: {own; error; off} and {value; own; off}"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
