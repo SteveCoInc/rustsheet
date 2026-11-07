@@ -45,10 +45,12 @@ Work is partitioned into **lanes** so that parallel workers rarely touch the sam
   minutes and 10 tasks per run, then landing its own PRs until minute 110 (decisions 0022, 0025,
   0229). Each walks the `**Critical lane:**` list in `docs/status.md`, then
   `functions` (every `functions-*` lane; allowlist and rules in `routines.md`).
-- One task in flight per lane, three in `engine` (decision 0269). `make next-task` enforces it: it
-  skips tasks claimed by a pushed branch and lanes whose slots are all taken by branches that moved
-  in the last 2 hours (handoffs, and branches whose task
-  is already done on main, excepted).
+- One task in flight per lane and tier, three per tier in `engine` (decisions 0269, 0331).
+  `make next-task` enforces it: it skips tasks claimed by a pushed branch and lanes whose slots for
+  the asking tier are all taken by branches that moved in the last 2 hours (handoffs, and branches
+  whose task is already done on main, excepted). A sonnet branch in flight never hides the lane's
+  opus tasks, nor the reverse. A branch's tier is its own task file's (`opus` once it was handed off
+  or re-reviewed after the review-round limit); a branch with no task file takes a slot of both.
 - The functions work is split into the nine `functions-*` lanes above so several workers can fix
   functions at once; plain `functions` is retired for open tasks (`scripts/tasks.py validate`).
   Pick the lane by the module the fix touches; a fix spanning families takes the lane of its main
