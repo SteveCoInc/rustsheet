@@ -7,7 +7,8 @@ xl/tables/table1.xml (and for the blank forms xl/worksheets/sheet1.xml):
 - upper-case: Cat's filter lists "A" and "C" (the cells hold a and c);
 - blank-kept: A6 ("a", visible) is removed and Cat's filter adds blank="1";
 - blank-rejected: A6 is removed and Cat's filter is unchanged;
-- custom: Cat's criterion is a custom filter, equals a or equals c.
+- custom: Cat's criterion is a custom filter, equals a or equals c;
+- custom-upper: the same custom filter with operands A and C (T-4965: is a custom equal case-insensitive?).
 Run (tools venv): cd tools && uv run python ../docs/research/t4895/uploads.py <out-dir>; then
 `uv run rustsheet-oracle recalc -b excel-graph <out-dir>/<variant>.xlsx` for each. Prints each file's sha256.
 """
@@ -38,6 +39,15 @@ PATCHES = {
             (
                 CAT,
                 '<filterColumn colId="0"><customFilters><customFilter val="a"/><customFilter val="c"/>'
+                "</customFilters></filterColumn>",
+            )
+        ]
+    },
+    "custom-upper": {
+        "xl/tables/table1.xml": [
+            (
+                CAT,
+                '<filterColumn colId="0"><customFilters><customFilter val="A"/><customFilter val="C"/>'
                 "</customFilters></filterColumn>",
             )
         ]

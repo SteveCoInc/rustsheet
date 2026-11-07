@@ -609,9 +609,9 @@ pub(crate) fn range_ref(id: SheetId, a1: &str) -> Result<RangeRef, rustsheet::Ed
 
 /// Adds the spec table `table` on sheet `id`: its range and rows, each of its `criteria` as the
 /// values filter spec2xlsx writes for it, so a column delete that takes one re-applies the
-/// others (T-4803, T-4939), and its calculated columns. It runs before the sheet's number formats
-/// are set, so a filter lists the kept rows' General text, as spec2xlsx writes it. `hidden_rows`
-/// are its sheet's (one-based).
+/// others (T-4803, T-4939), and its calculated columns. It runs before the sheet's number
+/// formats are set, so a filter lists the kept rows' General text, as spec2xlsx writes it.
+/// `hidden_rows` are its sheet's (one-based).
 fn add_table(
     tx: &mut rustsheet::Txn<'_>,
     id: SheetId,

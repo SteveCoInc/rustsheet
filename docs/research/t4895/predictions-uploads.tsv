@@ -8,3 +8,5 @@ upper-case	e347a535c1b194dc1c7ff88c6146f2e62b9d1829d662fc4ebdd5f417e95debbb	2,4,
 blank-kept	ee7c25a89695a5fd97f46edc1a51b2aeb2f4dac47c4ab0f9d0ccca6d81c3292b	2,4,5,6	2,4,5,6
 blank-rejected	1a515789baa4c5d92d150894d22048e97c6e8d31830adb0eecb083bae2641ca6	2,4,5,6	2,4,5
 custom	5eb28dc19fbbdb2ff533b7a460bc1c47d94ad6fb9b400776a465eac88e44b873	2,4,6	2,4,5,6
+custom-upper	87f6a4ab97b83f44110c369a6bf96526d8ed46e151138a708aecad684813c4a9	2,4,5,6	2,4,5,6
+# T-4965 prediction, written before the fill: custom equal "A"/"C" is case-insensitive like the values filter (upper-case row), so 2,4,5,6; case-sensitive would hide every row (none visible).
