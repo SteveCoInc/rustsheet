@@ -33,4 +33,4 @@ added poi EverythingTests!J1328. Some prose still names T-1075, which decision 0
 - Any change to which cells are listed, or to their decisions.
 
 ## Outcome
-The tsv comment lines of exit-exceptions.tsv and phase1-exceptions.tsv and the three coercion.md entries (J1328, MODE G936/H936/K936, J136) now name T-4373 and decision 0324. Comment lines only; no listed cell or decision changed. Other docs/excel-semantics mentions of T-1075 (items for other cells) are left for their own entries. Eval delta: none.
+The tsv comment lines of exit-exceptions.tsv and phase1-exceptions.tsv and the three coercion.md entries (J1328, MODE G936/H936/K936, J136) now name T-4373 and decision 0324. Comment lines only; no listed cell or decision changed. The same repointing in engineering.md (K25, N6, AL12/AL26), financial.md (IRR C4) and numbers.md (ATAN2_POWER D14/D26). The remaining docs/excel-semantics mentions of T-1075 concern cells decision 0324 did not move and are left. Eval delta: none.

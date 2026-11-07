@@ -859,7 +859,7 @@ and the oracle calibration found IMARGUMENT differing by ulps between Excel for 
   "-6.58066304055116+7.58155274274654i" and its imaginary part 7.58155274274654, the engine's digits, against the
   Mac cache's ...655
   (probes/t3410-irr-zero-root-imcos Calc!C9, C11, C12, excel-graph, 2026-10-31); decision 0196 names it M14
-  desktop-only evidence (T-1075 item 24).
+  desktop-only evidence (T-4373, decision 0324).
 - Where `cosh 2y` overflows (|y| above about 355) IMTAN gives `i` (`-i` for a negative imaginary part) and
   IMCOT `-i`, never `#NUM!`: IMTAN("1+400i") = "i", IMTAN("1-400i") = "-i", IMCOT("1+400i") = "-i",
   IMTAN/IMCOT("1+355i") and ("1+356i") the same; at y = 354 the real part is still the tiny
@@ -1128,7 +1128,7 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   `IMREAL(IMTAN(COMPLEX(5,0,"i")))`, -3.38051500624659. The desktop disagrees: COMPLEXs.xlsx N6 (Mac 16.0300) caches
   that formula as -3.38051500624658, the libm double-angle value. Status: VERIFIED (excel-graph), the web value followed
   under decision 0039 item 4 by decision 0188 R6, which moves N6 off its desktop value: N6 is now a known failure and a
-  line of eval/milestones/exit-exceptions.tsv and phase1-exceptions.tsv, and the desktop check is T-1075 item 17 (M14).
+  line of eval/milestones/exit-exceptions.tsv and phase1-exceptions.tsv, and the desktop check is T-4373 (decision 0324).
   Ours (T-2534, T-2774): all six take SIN, COS and TAN's kernels and the limit (`real_trig`; IMTAN since T-2774, which
   fixed the 40 gen-m9 and 14 probes IMTAN-of-a-real cells and regressed only N6).
 - **sinh and cosh inside IMSIN and IMCOS are (EXP(t) ∓ EXP(-t))/2, also for small t; IMSINH's are not.**
@@ -1336,7 +1336,7 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   formula: ironcalc-calc/ENGINEERING/COMPLEXs.xlsx Sheet1!AL26 `IMREAL(IMSQRT(COMPLEX(-1,0)))` is 6.12323399573677E-17
   and AL12 (of -12) 2.12115047744981E-16. Status: VERIFIED (excel-graph), the web value followed under decision 0039
   item 4 by decision 0188 R6, which moves AL12 and AL26 off their desktop values: they are now known failures and lines
-  of eval/milestones/exit-exceptions.tsv and phase1-exceptions.tsv, and the desktop check is T-1075 item 16 (M14).
+  of eval/milestones/exit-exceptions.tsv and phase1-exceptions.tsv, and the desktop check is T-4373 (decision 0324).
   Implemented in `imsqrt` (T-2536): the half angle of Excel's ATAN2 kernel through Excel's SIN and COS for every
   argument, which leaves all the other IMSQRT cells of the suites (about 560 formulas) unchanged. Unprobed: where that
   kernel errs (a subnormal x, y/x overflowing) ours takes libm `atan2`, and x < 0 with a -0 imaginary part takes
