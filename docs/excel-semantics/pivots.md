@@ -227,9 +227,14 @@ Rule:
   DLit!A4 `1/15/2024`). On probes/t4164-pivot-date-times, whose source is `m/d/yyyy h:mm`, midnight shows
   `4/17/2024` (WEq1!A4), not the source format's `4/17/2024 0:00`, and 8 a.m. shows `4/17/2024 8:00` (WEq1!A5).
   The rendered rowItems point at the `<n>` items 45292, 45293 and 45323 (x = 3, 4, 5), while the `<d>` items are
-  listed first. The engine matches (T-4807: a date item's label cell gets that format). UNVERIFIED: a time part
-  with seconds (taken as `h:mm`), a time-only item below 1, a date item's subtotal label (`<item> Total`) and a
-  selected date page item, which keep their earlier rendering. The saved cache field (`containsMixedTypes="1"`, count 6) carries `minDate="2024-01-01T00:00:00"` but
+  listed first. The engine matches (T-4807: a date item's label cell gets that format). An item below 1 is the
+  exception: in a 1904 workbook Excel's refresh shows serial 0 as `12:00:00 AM`, a time, not `1/1/1904`
+  (pivot-export/t4177-cache-dates-1904-refresh P!A4, excel-graph, 2026-11-07; serials 1 to 1462 of the same pivot show
+  `1/2/1904` ... `1/2/1908`). VERIFIED for that cell only; the engine still shows `1/1/1904` there (T-4943). Without
+  `refreshOnLoad` (t4177-cache-dates-1904 P!A4) Excel keeps the label cell's exported format and shows `1/1/1904`.
+  UNVERIFIED: a 1900-system item below 1, a time part with seconds (taken as `h:mm`), a date item's subtotal label
+  (`<item> Total`) and a selected date page item, which keep their earlier rendering.
+  The saved cache field (`containsMixedTypes="1"`, count 6) carries `minDate="2024-01-01T00:00:00"` but
   `maxDate="1900-01-01T12:51:04"`, below its own minDate; nothing reads these attributes, so the quirk is recorded only.
 - **Saved order.** In the saved cache Excel lists the shared items in source order first and the
   stale ones (old items no record holds) after them, while the pivot field's items keep the old order

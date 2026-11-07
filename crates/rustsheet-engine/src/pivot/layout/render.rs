@@ -136,7 +136,9 @@ pub enum CellFormat {
 /// date items"): Excel shows it as `m/d/yyyy`, with ` h:mm` when it has a time part, whatever the
 /// source cells' format. probes/t2085-getpivotdata-items D!A4:A6 and t4130-pivot-date-filters
 /// (source `m/d/yyyy`) read `1/1/2024`; t4164-pivot-date-times (source `m/d/yyyy h:mm`) reads
-/// `4/17/2024` for midnight and `4/17/2024 8:00` for 8 a.m.
+/// `4/17/2024` for midnight and `4/17/2024 8:00` for 8 a.m. Not covered yet: an item below 1, which
+/// Excel shows as a time (a 1904 workbook's serial 0 is `12:00:00 AM`, t4177-cache-dates-1904-refresh
+/// P!A4; T-4943).
 fn date_item_format(serial: f64) -> CellFormat {
     CellFormat::Code(if serial.fract() == 0.0 {
         "m/d/yyyy"

@@ -110,8 +110,10 @@ date format on label cells, so the 7 pivot-export sidecars whose export changed 
 (`rustsheet-oracle fill -b excel-graph --force`): Excel shows the exported labels as `1/1/1900` ...
 `3/2/1900`. Post-merge eval delta: probes text 115 -> 1 (114 fixed), pivot-export text 139 -> 125 (14
 fixed), gen-pivot 258 cells fixed, 0 regressions.
+Review round 1 (adoption): pivots.md now records the 1904 serial 0 `12:00:00 AM` exception (VERIFIED for that
+cell; T-4943 narrowed to it); xlsx-storage.md updated; the remaining UNVERIFIED edges are T-5049.
 
-## Handoff (resumed)
+## Handoff (resumed; superseded by the Outcome above)
 Tried (sonnet run): read the render path. Date labels render in `item_cell` (crates/rustsheet-engine/src/pivot/layout/render.rs:125) as
 `PivotCell::Number`; `RenderedCell.number_format` is a `numFmtId` applied by `set_pivot_number_format` (pivot/grid.rs ~700), so
 label cells could already carry a format. The blocker: `CacheField` (pivot.rs:104) keeps no source number format, and
