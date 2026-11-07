@@ -1647,6 +1647,15 @@ placeholder denominator prints its own text by that entry and hands on only its 
     for nothing due (`# ?/7|?0.###` on 0.0123 " 123/7|000000.00", `# ?/3|??0.?0?` on 0.04 " 1/3|5 00.000",
     `# ?/64|#?#.0##` on 0.07 " 7/64|00000.00", `# ?/100|?0.###` on 0.5 " 1/1  |00.0");
   - a `?` that then prints a zero for nothing due takes one (`# ?/250|?0?.#0` on 0.0789 " 789/250|00000.00").
+- **No placeholder before the point** (`# ?/7 .0`, `# ?/7 .??`, `# ??/7 .#`, `# ?/7 .#0?`, `# ?/7|.0`, `# ?/7 ..0`; T-4703):
+  the spilled digits still print, all of them, right before the (first) point, after any literal: `# ?/7 .0` on 0.0123 is
+  " 123/7 0000.0", on 123.456 "123 57/7 25.0", on 0.1 " 1/7 0.0" (the denominator 10 spills its `0`), `# ?/7|.0` on
+  0.0123 " 123/7|0000.0", `# ?/7 ..0` " 123/7 0000..0"; with nothing spilled (0.5, 1.75) nothing prints there. The
+  decimals follow "After the point" unchanged.
+- **A second point** adds nothing: the second `.` is a literal and the placeholders after it follow "After the point"
+  (`# ?/7 ?.?.?` on 0.0123 " 123/7 0000. .0", `# ?/7 0.0.0` " 123/7 00000.0.0", `# ?/7 #.#.#` " 123/7 00000.0.",
+  `# ?/7 ?..?` " 123/7 0000.. ", on 0.5 `# ?/7 ?.?.?` " 1/7  .0. "); the engine already matched all 30 such cells.
+  Evidence (excel-graph 2026-11-07): probes/t4703-fraction-tail-no-pre-point-and-two-points (66 cells).
 - **After the point** nothing spills and nothing owed is paid. Left to right, each placeholder prints a zero for a lacking
   digit, leaving the space due as it was. Otherwise it prints, outside a run of blanks, a pending zero (then a space is
   due). Otherwise, while a space is due, it prints its *blank*: a space for `?`, nothing for `#`, a zero for `0`; the

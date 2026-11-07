@@ -510,16 +510,23 @@ nper + 1 is a value, the split of "IPMT and PPMT split Excel's discounted paymen
 60.5849877072275,1)` 5.466510612214358. At nper + 1 it is `#NUM!`: `PPMT(0.0449398904217299,315,314,-3107.59202412783,
 0,1)`, `PPMT(0.0805588428682658,227,226,16.1638393072709,0,0)` and `IPMT(0.0104741966355263,249,248,340880.668375193,0,0)`;
 so is a period of 0.5 (`IPMT(0.00268654404805728,0.5,11,-557.559050130903,0,0)`), 0 or -1.
-Unprobed: IPMT at a period strictly between nper and nper + 1 (the engine takes PPMT's bound for both). The only IPMT
-cells in that band, probes/t4314-ipmt-balance-overflow D1:D2 (`IPMT(1E-300,1,1E-10,1E-300)`, period 1 over nper 1E-10),
-are `#NUM!` for a subnormal `1-Q` ("IPMT is #NUM! where its discounted balance fails"), so they do not settle the band;
-the Gate A definition keeps the closed form there and the cells keep their math value (T-4516).
+IPMT shares PPMT's band (T-4530): at a period strictly between nper and nper + 1 it is a value, the interest half of
+the same discounted split. `IPMT(0.05,12.5,12,-1234.56789,98.7654321,0)` is 8.026614067003484,
+`IPMT(0.05,12.000000001,12,..)` 11.040527695008135 and `IPMT(0.05,(13-2^-49),12,..)`, the double below nper + 1,
+4.938271605000011; rates 0, 1E-10 and -0.5, types 0 and 1 and nper 12.5 alike, with no `#NUM!` anywhere in the band.
+The engine's split was predicted bit for bit on all 160 cells before the fill (H_value, against H_nper: IPMT `#NUM!`
+past nper). probes/t4314-ipmt-balance-overflow D1:D2 (`IPMT(1E-300,1,1E-10,1E-300)`, period 1 over nper 1E-10) are
+`#NUM!` for a subnormal `1-Q` ("IPMT is #NUM! where its discounted balance fails"), not for the band; the Gate A
+definition keeps the closed form there and the cells keep their math value (T-4516).
 Evidence: accuracy/PPMT/s1 A112, A118 (values), A128, A137, A139 (`#NUM!`); accuracy/IPMT/s1 A113, A114, A117, A120,
 A123, A139 (`#NUM!`) (excel-graph, 2026-11-06, T-4109); gen-m9 a91bad4e84f49739 A354 `PPMT(1,0.5,323,401723)` and
 c0681a8b150ce301 A375 `PPMT(0.1,9,1.5,404118,62,1)` (`#NUM!`); "Financial edge-pool smoke check" (IPMT 13 of 12).
-Status: VERIFIED (excel-graph) for PPMT; IPMT's band UNVERIFIED
+probes/t4530-ipmt-band A1:J16 (IPMT and PPMT side by side at periods nper, nper + 1E-9, nper + 0.5, nper + 0.999 and
+the double below nper + 1; excel-graph, 2026-11-07; predictions in `docs/research/t4530/predictions.tsv` committed
+before the fill; math values in its `.math.json`).
+Status: VERIFIED (excel-graph) for PPMT and IPMT
 Implemented in: `period_payments` (`period >= period_count + 1.0`, functions/financial/annuity.rs)
-Tasks: T-4109
+Tasks: T-4109, T-4530
 
 ## PDURATION's domain
 Rule: `PDURATION(rate, pv, fv)` is `(LN(fv) - LN(pv)) / LN(1+rate)`, with `1+rate` a double. A rate, pv or fv of 0 or
@@ -4929,6 +4936,20 @@ the engine's stop. What decides which iterate Excel returns, and when it is `#NU
   docs/research/t3411/gen_sweep.py): Excel returns a number on 104 and `#NUM!` on 46. The branch's engine returned 59
   of the 104 (57 bit-exact) and was `#NUM!` on 45 where Excel returns a root (T-3548's type rule); T-4232 owns the
   visibly-off cells. On main (the stop iterate) the case scores 102 of 150 (56 of the 104 numbers bit-exact).
+- Re-measured on main 22a804e85 (after T-3408's 200-step secant, decision 0320), over all 4,336 IRR cells with an
+  Excel value (3,436 of eval/suites and Gate A's 900), the one-step-past return is still not Excel's rule (T-4213,
+  2026-11-07). It makes 15 cells bit-exact: the 12 above, plus t4213-irr-r4-fresh A95 and Gate A r4-T-3407 A285 and
+  r4-T-3411 A286. Three cells move away from Excel:
+  - t3411-irr-r4-fresh A129 (bit-exact to 2.2E-16 off);
+  - Gate A s1 A275, `-8.620634135425576E-7` in Excel and on main, -8.62063413320513E-7 one step past (2.2E-16 off,
+    still inside the envelope);
+  - t2927-irr-fallback-sweep A46, from 4 ulp to 6 ulp, past the 15th digit.
+
+  On Excel's two stop-iterate cells, the step past is 1 ulp of v, and it lowers |P|: A129 6.1E-5 to 3.05E-5, A275
+  9.5E-7 to 1.2E-7. The same holds on the winners (A44 3.6E-7 to 2.4E-7, -1 ulp). Nothing else separates them either:
+  steps 10 and 21 against 2 to 43 on the winners, flows 5 and 11 against 2 to 14, largest |c| 1E+9 and 1.5E+11.
+  Taking the extra step only when it keeps the stopping step's direction is the one rule found that keeps A129 on the
+  fit lab's train side. It is refuted on the test side: it still loses A275 and drops A286.
 Evidence: the oracle values of the cases above; `python3 -I docs/research/t3411/fallback_iterates.py .` prints the
 counts of the first four points, each iterate's step and stopping step size (an exact replay of the engine's
 secant, then Newton from v = 0). The NPV variants and the Illinois and two-point secants were scratch code.

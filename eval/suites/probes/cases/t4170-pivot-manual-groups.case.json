@@ -1,0 +1,508 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4170: manual (discrete) groups of a text field, as Excel saves them: the base cacheField Product with <fieldGroup par>, and an added cacheField Product2 (databaseField=0) with <fieldGroup base>, <discretePr> and <groupItems> (F, then Group2, Group1, North). Data!A1:B9 is Product and S over eight records A 1, B 2, C 4, D 8, E 16, F 32, A 64, C 128 (S distinct powers of two, so a sum names its records). Groups: Group2 = A, B (67), Group1 = C, D (140; named so that a renumbering by position would swap the two labels), North = E alone (a renamed group of one, 16); F is left ungrouped (32). The pivotField of Product2 lists Group2, Group1, North, F. One builder-v2 pivot per sheet over its own cache: MC compact rows Product2, Product; MO outline form; MT tabular; MS tabular with Product2's subtotals sum and count; MG rows Product2 alone; MB rows Product alone (the group field off the axes); MP as MC with Product2's pivotField items in the order North, F, Group1, Group2, which is neither the groupItems order (F first), nor the groups then the ungrouped items, nor each group's first source item (Group2, Group1, North, F), nor sorted (F, Group1, Group2, North). Calc: GETPIVOTDATA on group labels, an ungrouped item, a base item, pairs of the two fields, case and spacing, and fields not in the pivot. Pivot cells are in the sidecar's pivots section.",
+ "tags": [
+  "probe",
+  "pivot",
+  "getpivotdata",
+  "T-4170",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Product",
+    "B1": "S",
+    "A2": "A",
+    "B2": 1,
+    "A3": "B",
+    "B3": 2,
+    "A4": "C",
+    "B4": 4,
+    "A5": "D",
+    "B5": 8,
+    "A6": "E",
+    "B6": 16,
+    "A7": "F",
+    "B7": 32,
+    "A8": "A",
+    "B8": 64,
+    "A9": "C",
+    "B9": 128
+   }
+  },
+  {
+   "name": "MC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "Compact",
+     "source": "Data!A1:B9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product2",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "discrete": {
+         "name": "Product2",
+         "groups": [
+          {
+           "name": "Group2",
+           "items": [
+            "A",
+            "B"
+           ]
+          },
+          {
+           "name": "Group1",
+           "items": [
+            "C",
+            "D"
+           ]
+          },
+          {
+           "name": "North",
+           "items": [
+            "E"
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "MO",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "Outline",
+     "source": "Data!A1:B9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product2",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "discrete": {
+         "name": "Product2",
+         "groups": [
+          {
+           "name": "Group2",
+           "items": [
+            "A",
+            "B"
+           ]
+          },
+          {
+           "name": "Group1",
+           "items": [
+            "C",
+            "D"
+           ]
+          },
+          {
+           "name": "North",
+           "items": [
+            "E"
+           ]
+          }
+         ]
+        },
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Product2": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "S": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      },
+      "table": {
+       "compact": false,
+       "compactData": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "MT",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "Tabular",
+     "source": "Data!A1:B9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product2",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "discrete": {
+         "name": "Product2",
+         "groups": [
+          {
+           "name": "Group2",
+           "items": [
+            "A",
+            "B"
+           ]
+          },
+          {
+           "name": "Group1",
+           "items": [
+            "C",
+            "D"
+           ]
+          },
+          {
+           "name": "North",
+           "items": [
+            "E"
+           ]
+          }
+         ]
+        },
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product2": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "S": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "MS",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "TabularSubtotals",
+     "source": "Data!A1:B9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product2",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "discrete": {
+         "name": "Product2",
+         "groups": [
+          {
+           "name": "Group2",
+           "items": [
+            "A",
+            "B"
+           ]
+          },
+          {
+           "name": "Group1",
+           "items": [
+            "C",
+            "D"
+           ]
+          },
+          {
+           "name": "North",
+           "items": [
+            "E"
+           ]
+          }
+         ]
+        },
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product2": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "subtotals": [
+         "sum",
+         "count"
+        ]
+       },
+       "S": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "MG",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "GroupOnly",
+     "source": "Data!A1:B9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product2"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "discrete": {
+         "name": "Product2",
+         "groups": [
+          {
+           "name": "Group2",
+           "items": [
+            "A",
+            "B"
+           ]
+          },
+          {
+           "name": "Group1",
+           "items": [
+            "C",
+            "D"
+           ]
+          },
+          {
+           "name": "North",
+           "items": [
+            "E"
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "MB",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "BaseOnly",
+     "source": "Data!A1:B9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "discrete": {
+         "name": "Product2",
+         "groups": [
+          {
+           "name": "Group2",
+           "items": [
+            "A",
+            "B"
+           ]
+          },
+          {
+           "name": "Group1",
+           "items": [
+            "C",
+            "D"
+           ]
+          },
+          {
+           "name": "North",
+           "items": [
+            "E"
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "MP",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PivotFieldOrder",
+     "source": "Data!A1:B9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product2",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "S"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "discrete": {
+         "name": "Product2",
+         "groups": [
+          {
+           "name": "Group2",
+           "items": [
+            "A",
+            "B"
+           ]
+          },
+          {
+           "name": "Group1",
+           "items": [
+            "C",
+            "D"
+           ]
+          },
+          {
+           "name": "North",
+           "items": [
+            "E"
+           ]
+          }
+         ]
+        }
+       },
+       "Product2": {
+        "item_order": [
+         "North",
+         "F",
+         "Group1",
+         "Group2"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "MC Product2 Group2",
+    "B1": "=GETPIVOTDATA(\"S\",MC!$A$3,\"Product2\",\"Group2\")",
+    "A2": "MC Product2 Group1",
+    "B2": "=GETPIVOTDATA(\"S\",MC!$A$3,\"Product2\",\"Group1\")",
+    "A3": "MC Product2 North (group of one)",
+    "B3": "=GETPIVOTDATA(\"S\",MC!$A$3,\"Product2\",\"North\")",
+    "A4": "MC Product2 F (ungrouped)",
+    "B4": "=GETPIVOTDATA(\"S\",MC!$A$3,\"Product2\",\"F\")",
+    "A5": "MC Product2 group1 (case)",
+    "B5": "=GETPIVOTDATA(\"S\",MC!$A$3,\"Product2\",\"group1\")",
+    "A6": "MC Product2 \"Group 1\"",
+    "B6": "=GETPIVOTDATA(\"S\",MC!$A$3,\"Product2\",\"Group 1\")",
+    "A7": "MC Product2 A (a base item)",
+    "B7": "=GETPIVOTDATA(\"S\",MC!$A$3,\"Product2\",\"A\")",
+    "A8": "MC Product A",
+    "B8": "=GETPIVOTDATA(\"S\",MC!$A$3,\"Product\",\"A\")",
+    "A9": "MC Product E",
+    "B9": "=GETPIVOTDATA(\"S\",MC!$A$3,\"Product\",\"E\")",
+    "A10": "MC Product2 Group2, Product A",
+    "B10": "=GETPIVOTDATA(\"S\",MC!$A$3,\"Product2\",\"Group2\",\"Product\",\"A\")",
+    "A11": "MC Product2 Group1, Product A",
+    "B11": "=GETPIVOTDATA(\"S\",MC!$A$3,\"Product2\",\"Group1\",\"Product\",\"A\")",
+    "A12": "MC Product2 F, Product F",
+    "B12": "=GETPIVOTDATA(\"S\",MC!$A$3,\"Product2\",\"F\",\"Product\",\"F\")",
+    "A13": "MC grand total",
+    "B13": "=GETPIVOTDATA(\"S\",MC!$A$3)",
+    "A14": "MT Product2 Group1",
+    "B14": "=GETPIVOTDATA(\"S\",MT!$A$3,\"Product2\",\"Group1\")",
+    "A15": "MS Product2 Group2 (sum and count subtotals)",
+    "B15": "=GETPIVOTDATA(\"S\",MS!$A$3,\"Product2\",\"Group2\")",
+    "A16": "MG Product2 Group2",
+    "B16": "=GETPIVOTDATA(\"S\",MG!$A$3,\"Product2\",\"Group2\")",
+    "A17": "MG Product A (base not in the pivot)",
+    "B17": "=GETPIVOTDATA(\"S\",MG!$A$3,\"Product\",\"A\")",
+    "A18": "MB Product A",
+    "B18": "=GETPIVOTDATA(\"S\",MB!$A$3,\"Product\",\"A\")",
+    "A19": "MB Product2 Group2 (group field not in the pivot)",
+    "B19": "=GETPIVOTDATA(\"S\",MB!$A$3,\"Product2\",\"Group2\")"
+   }
+  }
+ ],
+ "expected": {}
+}

@@ -1,6 +1,7 @@
+use super::prepare::{apply_cached_overrides, prepare_spec};
 use super::scoring::graph_hides_subnormal;
 use super::*;
-use crate::case::ORACLE_FORMAT;
+use crate::case::{CASE_FORMAT, ORACLE_FORMAT};
 use crate::engine::Evaluated;
 use crate::suite::{oracle_sidecar, SuiteManifest};
 

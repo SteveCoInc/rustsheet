@@ -3,7 +3,7 @@ id: T-4213
 title: "IRR at a root within 0.03 of zero: Excel's last iterate and ours sit a different 1E-16 from the root (9 unowned t3411 fresh-sweep cells, 2 at the 11th digit, decision 0267 Tier A)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: blocked
 priority: P1
 size: S
 tier: opus
@@ -107,3 +107,65 @@ and residual-scale A31, A32, A48, A49 (financial.md "IRR's returns where the sec
 - probes-numeric/t3411-irr-r4-fresh-2.case.json (3): Calc!A64, A119, A125
 - probes-numeric/t3411-irr-residual-scale.case.json (6): Calc!A22, A23, A31, A32, A48, A49
 - Gate A: accuracy/IRR/r4-T-3411!Calc!A286 (known-failures.tsv; two flows within 5E-10 of a zero root).
+
+## Outcome (round 2, 2026-11-07: no code change, blocked)
+Round 2 ported draft #3211's change onto main 22a804e85 (after T-3408), re-derived and not copied: `irr_fallback`
+returns the Newton iterate one step past its stop where that iterate is a positive discount factor. It was then
+measured and not shipped, because three cells move away from Excel. Main's code is unchanged.
+- Measured with two release builds of `rustsheet-eval` (main and the change). Each ran `run` over every suite and
+  `accuracy --json`, and every IRR cell with an Excel value was compared: 3,436 eval/suites cells and Gate A's 900
+  points, 4,336 in all. Cells absent from report.json's failing list count as bit-exact.
+- R4.1 tiered table on the fit lab's split (`holdout.is_holdout`, keys `suite/case` and `Sheet!A1`). The split and
+  the default 5-point margin were fixed before scoring. Each cell gives bit-exact / within 4 ulp / within 15 digits:
+
+  | side | cells | main | one step past | correctly rounded |
+  |---|---|---|---|---|
+  | train | 3,038 | 2,474 / 2,503 / 2,506 | 2,486 / 2,513 / 2,516 | 669 / 857 / 964 |
+  | test | 1,298 | 1,060 / 1,065 / 1,066 | 1,061 / 1,067 / 1,068 | 306 / 386 / 429 |
+
+  The change beats the correctly rounded root on both sides. Its test exact rate, 81.74%, is within the margin of
+  train's 81.83%. So the accept rule would take it. The no-regression rule refuses it.
+- 65 cells change and no type changes:
+  - 15 become bit-exact: t2927-irr-fallback-sweep A79, A80, A135, A137; t3347-irr-conventional-holdout A41;
+    t3411-irr-r4-fresh-2 A43, A44; t3411-irr-residual-scale A31, A32, A48, A49; t3478-irr-r4-wide A292;
+    t4213-irr-r4-fresh A95; Gate A r4-T-3407 A285 and r4-T-3411 A286.
+  - 4 t2927 cells come within 4 ulp: A8, A59, A65, A142.
+  - 3 move away from Excel:
+    - t3411-irr-r4-fresh A129 (train), bit-exact to 2.2E-16 off;
+    - Gate A s1 A275 (test), bit-exact to 2.2E-16 off, still inside the envelope. The first attempt's measurement
+      covered eval/suites only and did not see this one;
+    - t2927-irr-fallback-sweep A46 (test), from 4 ulp to 6 ulp, past the 15th digit.
+  - The other 43 stay in their tier.
+- Narrowing. The only rule found on the train side that keeps A129 is to take the step past only when it keeps the
+  stopping step's direction. It still loses A275 on test and drops A286, so nothing narrower can ship. The step past
+  is 1 ulp of v on both losers and on most winners, and it lowers |P| on both. The step count, flow count, largest
+  |c| and stopping step do not separate them either (financial.md "IRR's returns where the secant fails are Newton
+  iterates", re-measured bullet).
+- The fresh Gate A batch `r4-T-4213` was not drawn. It exists to test a frozen model, and no model ships. The A275
+  loss already refuses this one on Gate A's own points. Decision 0267 item 5's probe allowance was not used. No
+  probes-numeric case was added.
+- Eval delta: 0, since no engine change was made. `rustsheet-eval accuracy` on main: 0 failing, and A286 stays a
+  known failure owned here. Each case's `passed` is unchanged.
+
+## Blocked because
+Blocked because: time-boxed (decision 0056)
+- Three attempts have run: draft #3211's two, and this re-measurement with a train-side narrowing. None reproduces
+  which Newton iterate Excel returns at the noise floor. Returning the iterate one step past the stop fixes 8 of
+  this task's cells, but it moves t3411-irr-r4-fresh A129, Gate A s1 A275 and t2927 A46 away from Excel. Decision
+  0267 item 6 does not cover IRR.
+- Refuted models, so they are not tried again:
+  - a relative noise-floor stop on the secant (#3211);
+  - one step past, as is or narrowed to same-direction steps (above);
+  - stop rules on the step size or |P| (financial.md).
+- Decision 0267 accepts the cells left, and all 26 stay off on main:
+  - probes-numeric/t3411-irr-r4-fresh-2 (8): Calc!A30, A32, A37, A43, A44, A64, A119, A125
+  - probes-numeric/t3411-irr-r4-fresh-3 (3): Calc!A38, A45, A109
+  - probes-numeric/t3411-irr-r4-fresh-4 (1): Calc!A110
+  - probes-numeric/t3347-irr-conventional-sweep (2): P!A33, A82
+  - probes-numeric/t3347-irr-conventional-holdout (4): P!A12, A20, A22, A41
+  - probes-numeric/t3411-irr-r4-fresh (1): Calc!A146
+  - probes-numeric/t3411-irr-residual-scale (6): Calc!A22, A23, A31, A32, A48, A49
+  - Gate A: accuracy/IRR/r4-T-3411!Calc!A286
+- Unblocks on a model that tells A129 and A275 (stop iterate) apart from A43, A44 and A286 (one past). The
+  replica's own iterates do not do it, so it would need Excel's own Newton arithmetic, or evidence of what Excel
+  tests at the stop.
