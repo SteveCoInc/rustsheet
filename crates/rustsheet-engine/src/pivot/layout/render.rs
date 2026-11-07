@@ -38,7 +38,8 @@
 //!   (probes/t4698-pivot-repeat-labels; pivots.md "Repeat item labels").
 //! - **Items** render as in pivots.md: a number as a number, a boolean as `TRUE`/`FALSE`, an
 //!   error as its text and a blank as `(blank)` (t4134 I2); a Values level item is the data
-//!   field's caption.
+//!   field's caption. A date group item is its serial in m/d/yyyy (probes/t4767-pivot-group-items
+//!   GD!A6, GDA!A6).
 //! - **Values.** An intersection no record reaches is blank, or `missingCaption` with
 //!   `showMissing` (t4137 K2); an error is `errorCaption` with `showError` (K3, t4135 EC).
 //!   Every value cell, subtotals' and grand totals' too, carries its data field's `numFmtId`
@@ -71,7 +72,9 @@ use crate::expressions::token::Error;
 use crate::number_format::number_to_text;
 
 use super::super::result::{page_selection, AxisTree, PivotComputeError, PivotResult};
-use super::super::{Aggregate, CacheItem, ItemType, PivotCache, PivotField, PivotTable};
+use super::super::{
+    Aggregate, CacheField, CacheItem, ItemType, PivotCache, PivotField, PivotTable,
+};
 use super::lines::{label_columns, levels, AxisLine, Level, PivotLayout};
 
 /// The caption above a pivot's row labels (`rowHeaderCaption` replaces it).
@@ -113,9 +116,9 @@ pub struct RenderedCell {
     /// The cell's value.
     pub value: PivotCell,
     /// The `numFmtId` the cell shows its value in: a value cell's data field's
-    /// ([`DataField::number_format`](super::super::DataField::number_format)); `None` for a
-    /// label, a caption, and a value cell whose data field has none, whose cell format is left
-    /// as it is.
+    /// ([`DataField::number_format`](super::super::DataField::number_format)), or m/d/yyyy for a
+    /// date group item's label ([`item_format`]); `None` for any other label, a caption, and a
+    /// value cell whose data field has none, whose cell format is left as it is.
     pub number_format: Option<u32>,
 }
 
@@ -130,6 +133,18 @@ fn item_cell(item: &CacheItem) -> PivotCell {
         CacheItem::Error(error) => PivotCell::Text(error.to_string()),
         CacheItem::Missing => PivotCell::Text(BLANK_ITEM.to_string()),
     }
+}
+
+/// The built-in `numFmtId` of m/d/yyyy, the format a date group item's label shows in.
+const DATE_GROUP_ITEM_FORMAT: u32 = 14;
+
+/// The `numFmtId` an item's label cell shows it in: a date group item (`<groupItems><d>` of a
+/// grouped field, [`CacheField::is_grouped`]) shows as m/d/yyyy whatever its source field holds
+/// (pivots.md "Capability matrix 3", probes/t4767-pivot-group-items GD!A6, GDA!A6 `1/1/2020`
+/// over 43831). Any other label keeps its cell's format; an ungrouped date field's items are
+/// T-4807's (the source cells' format).
+fn item_format(field: &CacheField, item: &CacheItem) -> Option<u32> {
+    (field.is_grouped() && matches!(item, CacheItem::Date(_))).then_some(DATE_GROUP_ITEM_FORMAT)
 }
 
 /// An item's label as text, for a subtotal's `<item> Total` and a caption filter
@@ -242,13 +257,22 @@ impl Cells<'_> {
         Some(field.caption.as_str())
     }
 
-    /// The label of `line`'s level `level` (its `x` is `x`) on `axis`.
-    fn label(&self, axis: &Axis<'_>, line: &AxisLine, level: usize, x: u32) -> Option<PivotCell> {
+    /// The label of `line`'s level `level` (its `x` is `x`) on `axis`, and the `numFmtId` its
+    /// cell shows it in ([`item_format`]).
+    fn label(
+        &self,
+        axis: &Axis<'_>,
+        line: &AxisLine,
+        level: usize,
+        x: u32,
+    ) -> Option<(PivotCell, Option<u32>)> {
         match axis.levels.get(level)? {
-            Level::Values => Some(PivotCell::Text(self.data_caption(x)?.to_string())),
+            Level::Values => Some((PivotCell::Text(self.data_caption(x)?.to_string()), None)),
             Level::Field { depth, .. } => {
                 let (field, item) = axis.item(line.node, *depth)?;
-                Some(item_cell(self.cache_item(field, item)?))
+                let cache_field = self.cache.fields.get(field as usize)?;
+                let item = cache_field.items.get(item as usize)?;
+                Some((item_cell(item), item_format(cache_field, item)))
             }
         }
     }
@@ -367,9 +391,9 @@ impl Cells<'_> {
                 // An empty-text item's label cell is left empty (pivots.md "Pivot field names
                 // for duplicate and blank source headers", probes/t4627-pivot-field-name-collisions
                 // P_Rec!A6, a row item; a column item's is taken to match, UNVERIFIED).
-                let cell = cell.filter(|c| !matches!(c, PivotCell::Text(t) if t.is_empty()));
-                if let (Some(cell), Some((row, column))) = (cell, place(i, level)) {
-                    self.put(row, column, cell);
+                let cell = cell.filter(|(c, _)| !matches!(c, PivotCell::Text(t) if t.is_empty()));
+                if let (Some((cell, format)), Some((row, column))) = (cell, place(i, level)) {
+                    self.put_formatted(row, column, cell, format);
                 }
             }
         }
@@ -410,9 +434,9 @@ impl Cells<'_> {
             }
             let cell = self.label(axis, line, level, 0);
             // An empty-text item's label stays empty here too, as on its own line.
-            let cell = cell.filter(|c| !matches!(c, PivotCell::Text(t) if t.is_empty()));
-            if let (Some(cell), Some((row, column))) = (cell, at) {
-                self.put(row, column, cell);
+            let cell = cell.filter(|(c, _)| !matches!(c, PivotCell::Text(t) if t.is_empty()));
+            if let (Some((cell, format)), Some((row, column))) = (cell, at) {
+                self.put_formatted(row, column, cell, format);
             }
         }
     }
