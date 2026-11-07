@@ -4,7 +4,10 @@ use crate::arithmetic::{extended_quotient, flush_subnormal};
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error, LiftCost};
 use crate::functions::math_and_trigonometry::excel_tan;
-use crate::functions::statistical::inverse_beta::{t_inverse_cdf, t_quantile_beta_root};
+use crate::functions::statistical::bratio::kernel_tails;
+use crate::functions::statistical::inverse_beta::{
+    beta_small_quantile, t_inverse_cdf, t_quantile_beta_root, SmallBetaQuantile,
+};
 use crate::functions::statistical::loader::excel_t_density_df_one_overflows;
 use crate::functions::statistical::paired::{MarkedSample, PairedSamplesError, PairedValues};
 use crate::functions::statistical::special::{
@@ -14,6 +17,7 @@ use crate::functions::statistical::student_t::{
     student_t_centre, student_t_density, student_t_tail_at, student_t_tails, t_density,
 };
 use crate::functions::Function;
+use crate::x87_exp::excel_exp;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
@@ -377,6 +381,26 @@ fn t_tail_closed_form(df: f64, q: f64) -> Option<f64> {
     Some(df.sqrt() * (-0.5 * ln_x).exp() * (1.0 - x).sqrt())
 }
 
+/// Magnitude `t > 0` with `P(T > t) = q` where its beta argument y = df/(df + t^2) is in the
+/// power-law tail of `I_y(df/2, 1/2)` = 2q: Excel's Newton iterate from the power-law seed
+/// (`inverse_beta::beta_small_quantile`, statistics.md "Student-t quantile in the small-beta tail
+/// is a Newton iterate from the power-law seed", T-3363) against the kernel T.DIST takes at y,
+/// back-transformed as t = fl(sqrt(fl(df * fl(fl(1/y) - 1)))) like the rest of the quantile; where
+/// y·y underflows, y = EXP of the seed's ln y through Excel's EXP (`TINV(1E-200,2)` =
+/// 1.0000000000000101E+100, gen-m9/7980ffb6095a340d A312; libm's exp is 1 ulp off at
+/// `T.INV.2T(4.46E-308,2)`, probes/t4541-t-inv-2t-tiny-p B8). Excel's bits on all of gen-m9's probed points from df 2 to 14
+/// (`TINV(1E-100,5)` = 1.801609952626993E+20, 1db18890916ee643 A144, where the old closed form was
+/// 39 ulp high; `TINV(1E-200,8)`, `TINV(1E-300,4)`, `CONFIDENCE.T(1E-200,0.01,15)`). `None` outside
+/// the tail.
+fn t_small_beta_quantile(df: f64, q: f64) -> Option<f64> {
+    let a = 0.5 * df;
+    let y = match beta_small_quantile(a, 0.5, 2.0 * q, |y| kernel_tails(y, 1.0 - y, a, 0.5).0)? {
+        SmallBetaQuantile::Root(y) => y,
+        SmallBetaQuantile::LogSeed(ln_y) => excel_exp(ln_y),
+    };
+    Some((df * (1.0 / y - 1.0)).sqrt())
+}
+
 /// Magnitude `t > 0` with `P(T < -t) = q` for a small `q` at df 1 (every other df takes
 /// [`t_rounded_y_quantile`]); bounded time.
 /// Excel gives finite values down to the smallest p it accepts (probes-numeric `t1531-t-tiny-p`:
@@ -446,6 +470,9 @@ const T_ROUNDED_Y_MIN_DF: f64 = 2.0;
 /// `T_QUANTILE_WEIGHT`). A deep tail keeps
 /// [`t_tail_closed_form`].
 fn t_rounded_y_quantile(df: f64, q: f64) -> f64 {
+    if let Some(t) = t_small_beta_quantile(df, q) {
+        return t;
+    }
     if q < T_TAIL_P {
         if let Some(t) = t_tail_closed_form(df, q) {
             return t;

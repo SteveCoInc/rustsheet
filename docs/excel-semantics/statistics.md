@@ -5504,6 +5504,41 @@ Implemented in: functions/statistical/t_dist.rs `t_rounded_y_quantile` (every df
 Ours: this form from df 2 (T-2511); 10 of T-3061's cells and the bit-level remainder are T-3061 and T-3399.
 Tasks: T-3061, T-2511, T-3399
 
+## Student-t quantile in the small-beta tail is a Newton iterate from the power-law seed (T-3363)
+Rule: from df 2, where the beta argument y = df/(df + t^2) of T.INV, T.INV.2T, TINV and CONFIDENCE.T is in the
+power-law tail of `I_y(a, 1/2)` = p (a = df/2, p = 2q, q the one-sided tail), Excel's y is a finite-precision Newton
+iterate, not the correctly rounded root, and t = fl(sqrt(fl(df * fl(fl(1/y) - 1)))) as away from the centre:
+```
+lnB  = ln Γ(a) + ln Γ(1/2) - ln Γ(a + 1/2)
+ln y = (LN(p) + (LN(a) + lnB)) / a          (this grouping; another moves the bits)
+domain: |a(1-b)(2-b)(3-b)/(6(a+3)) · y^3| <= 2^-52 at the seed y = EXP(ln y), b = 1/2  (the omitted third series term)
+if fl(y·y) = 0: y = EXP(ln y), no correction (df 2 at 1E-200)
+y -= (1-b)/(a+1) · y^2                       (first series correction)
+Newton on I_y(a, b) - p with density y^(a-1)(1-y)^(b-1)/B, keeping the iterate of least |residual|;
+the first step is always taken; from the second residual r on, stop when fl(LN(p) + r/p) = LN(p) or r/p changes
+sign; also stop at |r| < 2^-1022 or when the squared step underflows.
+```
+- On gen-m9's cells (excel-graph) this is Excel's value bit for bit at every probed (df, p): `TINV(1E-100,5)` =
+  1.801609952626993E+20 (1db18890916ee643 A144), `TINV(1E-200,8)` = 2.405205857517846E+25 (0620505280d2ea6e A152),
+  `TINV(1E-100,9)` = 333415394242.96606 (139684e68fb2fc3b A90), `TINV(1E-100,10)` = 27485906095.604824
+  (a5342a7e24fd803e A118), `TINV(1E-300,4)` = 1.565084580073275E+75 (41248d1cb153c66e A331),
+  `CONFIDENCE.T(1E-200,0.01,15)` = 1668175619766.5225 (8f2ac25945af87da A289, df 14), `T.INV(1E-20,2)` =
+  -7071067811.865476 (0bbab6206b5c9a07 A315), `TINV(1E-100,2)` = 1E+50 (44a8841352dc48e9 A74), `TINV(1E-200,2)` =
+  1.0000000000000101E+100 (7980ffb6095a340d A312, the logarithmic seed), and the controls `TINV(1E-100,3)`,
+  `TINV(1E-300,9)`, `TINV(1E-200,9)`, `T.INV.2T(1E-200,7)`. The previous closed form (leading term and first correction
+  in log space, "Student-t quantile is SQRT(df*(1/y-1))..." above) was 22 to 221 ulp off on most of these.
+- The first step is observable at df 2: the seed's relative residual there (3E-15 at `T.INV(1E-20,2)`, 9E-15 at
+  `TINV(1E-100,2)`) is below half an ulp of LN(p), and stopping at the seed is 11 and 22 ulp off. At df 3 and above
+  the step lands within the cdf's noise and the least-residual rule keeps the right iterate.
+- The domain comes from the series, not from probed points. The engine takes this form ahead of the old closed form
+  and the rounded-y crossing wherever its domain holds.
+Evidence: the gen-m9 cells above (excel-graph). The rule is the one an independent prototype found
+(docs/research/excel-parity-findings-2026-11-07.md item 8), re-measured on this main.
+Implemented in: functions/statistical/inverse_beta.rs `beta_small_quantile`, `newton_least_residual`;
+t_dist.rs `t_small_beta_quantile`.
+Status: VERIFIED (excel-graph)
+Tasks: T-3363, T-4975
+
 ## Two-tailed Student-t quantile with p near 1 is accurate in Excel (T-3349)
 Rule: for df from 2 up, `T.INV.2T(p,df)` with p just below or above 1 returns the small quantile to the 15th digit of
 the exact value: Excel's result shows no 1 - p/2 cancellation. TINV and CONFIDENCE.T were probed at df 2 (n = 3) only:

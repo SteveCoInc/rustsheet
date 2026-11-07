@@ -44,7 +44,8 @@ use statrs::function::beta::{checked_beta_reg, checked_ln_beta};
 use super::bratio::beta_dist_lower_tail;
 use super::incomplete_beta::ln_near_one;
 use super::incomplete_gamma::gamma_ur;
-use super::special::nearest_crossing;
+use super::special::{ln_gamma, nearest_crossing};
+use crate::x87_exp::excel_exp;
 
 /// The most Newton steps one inversion for BETA.INV or F.INV takes. The steps grow with -log10 of
 /// the probability, about 2.3 a decade, and stop at 377 where `x * x` underflows (p near 1E-162,
@@ -286,6 +287,116 @@ pub(crate) fn t_quantile_beta_root(df: f64, q: f64) -> f64 {
         T_MAX_NEWTON_STEPS,
         T_MAX_STEP_ADJUSTMENTS,
     )
+}
+
+/// The most Newton steps [`beta_small_quantile`] takes. From its seed the iterate settles in two or
+/// three steps on every probed point; the cap only bounds the call.
+const SMALL_QUANTILE_MAX_STEPS: u32 = 16;
+
+/// The root of [`beta_small_quantile`]: x itself, or ln x where x·x underflows.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum SmallBetaQuantile {
+    /// The iterate x with `I_x(a, b)` = p.
+    Root(f64),
+    /// ln x of the logarithmic seed: x·x underflows at the seed, so the caller back-transforms in
+    /// log space (`TINV(1E-200,2)`).
+    LogSeed(f64),
+}
+
+/// The x with `I_x(a, b)` = p for a p so small that x is in the power-law tail
+/// `I_x` ~ x^a/(a B(a, b)) (1 + a(1-b)/(a+1) x + ...), as Excel's Student-t inverse reaches it: a
+/// finite-precision iterate, not the correctly rounded root (docs/excel-semantics/statistics.md
+/// "Student-t quantile in the small-beta tail is a Newton iterate from the power-law seed", T-3363):
+/// - the seed ln x = (ln p + (ln a + ln B))/a, grouped so, and x = EXP(ln x) by Excel's EXP;
+/// - `None` unless the omitted third series term, |a(1-b)(2-b)(3-b)/(6(a+3)) x^3| at the seed, is
+///   at most `f64::EPSILON`: a domain from the series itself, not from probed points;
+/// - [`SmallBetaQuantile::LogSeed`] where x·x underflows at the seed;
+/// - otherwise the first correction x - (1-b)/(a+1) x^2, then Newton steps against `cdf` with the
+///   density x^(a-1) (1-x)^(b-1) / B, keeping the iterate of least absolute residual
+///   ([`newton_least_residual`]: it stops where ln p no longer moves with the relative residual,
+///   fl(ln p + r/p) = ln p, where that residual changes sign, where the squared step underflows or
+///   where the residual is below the smallest normal double); at most
+///   [`SMALL_QUANTILE_MAX_STEPS`] steps.
+///
+/// `cdf` is the caller's `I_x(a, b)`, so that each quantile crosses its own distribution's kernel.
+pub(crate) fn beta_small_quantile(
+    a: f64,
+    b: f64,
+    p: f64,
+    cdf: impl Fn(f64) -> f64,
+) -> Option<SmallBetaQuantile> {
+    if !(a > 0.0 && b > 0.0 && p > 0.0 && p < 1.0) {
+        return None;
+    }
+    let ln_beta = ln_gamma(a) + ln_gamma(b) - ln_gamma(a + b);
+    let ln_p = p.ln();
+    let ln_x = (ln_p + (a.ln() + ln_beta)) / a;
+    if !ln_x.is_finite() || ln_x >= 0.0 {
+        return None;
+    }
+    let seed = excel_exp(ln_x);
+    let third = a * (1.0 - b) * (2.0 - b) * (3.0 - b) / (6.0 * (a + 3.0)) * seed.powi(3);
+    if third.abs() > f64::EPSILON {
+        return None;
+    }
+    let square = seed * seed;
+    if square == 0.0 {
+        return Some(SmallBetaQuantile::LogSeed(ln_x));
+    }
+    let first = seed - (1.0 - b) / (a + 1.0) * square;
+    let density = |x: f64| ((a - 1.0) * x.ln() + (b - 1.0) * (-x).ln_1p() - ln_beta).exp();
+    Some(SmallBetaQuantile::Root(newton_least_residual(
+        first,
+        p,
+        cdf,
+        density,
+        SMALL_QUANTILE_MAX_STEPS,
+    )))
+}
+
+/// A bounded Newton search for the x in (0, 1) with `cdf(x)` = p from `start`, returning the iterate
+/// of least absolute residual seen ([`beta_small_quantile`]'s stopping rules, T-3363). It always
+/// takes the first step: at df 2 Excel's quantile is one step past the seed even where the seed's
+/// relative residual is below half an ulp of ln p (`T.INV(1E-20,2)` = -7071067811.865476 and
+/// `TINV(1E-100,2)` = 1E+50, gen-m9/0bbab6206b5c9a07 A315 and 44a8841352dc48e9 A74, 11 and 22 ulp
+/// off at the seed). From the second residual on it stops where fl(ln p + r/p) = ln p or where r
+/// changes sign; at any residual below the smallest normal double; and where a step is not finite,
+/// its square underflows or it leaves (0, 1). At most `max_steps` evaluations of `cdf`.
+pub(crate) fn newton_least_residual(
+    start: f64,
+    p: f64,
+    cdf: impl Fn(f64) -> f64,
+    density: impl Fn(f64) -> f64,
+    max_steps: u32,
+) -> f64 {
+    let ln_p = p.ln();
+    let mut x = start;
+    let mut best = (x, f64::INFINITY);
+    let mut previous: Option<f64> = None;
+    for _ in 0..max_steps {
+        let residual = cdf(x) - p;
+        if !residual.is_finite() {
+            break;
+        }
+        if residual.abs() < best.1 {
+            best = (x, residual.abs());
+        }
+        let relative = residual / p;
+        let settled = previous.is_some_and(|r| ln_p + relative == ln_p || r * relative < 0.0);
+        if settled || residual.abs() < f64::MIN_POSITIVE {
+            break;
+        }
+        previous = Some(relative);
+        let step = residual / density(x);
+        if !step.is_finite() || step * step == 0.0 {
+            break;
+        }
+        x -= step;
+        if !(x > 0.0 && x < 1.0) {
+            break;
+        }
+    }
+    best.0
 }
 
 /// statrs' `StudentsT::inverse_cdf` (location 0, scale 1) with [`inv_beta_reg`]'s caps, at most
