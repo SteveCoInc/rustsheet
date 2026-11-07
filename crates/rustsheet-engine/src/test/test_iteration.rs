@@ -320,3 +320,36 @@ fn a_lookup_vector_whose_build_joined_is_not_cached() {
     assert_eq!(cached, walked);
     assert_eq!(walked, "4");
 }
+
+/// An edited workbook can hold other values than a fresh load with the same edit (T-0495): a
+/// sweep stops once its largest change is below `max_change`, and each calculation resumes from
+/// the previous values (docs/excel-semantics/recalc.md, "How excel-graph calculates a probe
+/// workbook"), so where a converging cycle stops depends on where it started. Here `A1` converges
+/// towards `B1`: after `B1` goes from 1 to 2 the edited model starts from about 1, the fresh one
+/// from 0, and both stop within `max_change` of 2 at different values. With a delta of 0 both
+/// run to the fixed point and agree.
+#[test]
+fn a_converged_cycle_depends_on_the_previous_values() {
+    let run = |max_change: f64| {
+        let cells = [("A1", "=A1/2+B1/2"), ("B1", "1")];
+        let mut edited = model_with(32767, max_change, &cells);
+        edited.evaluate();
+        edited._set("B1", "2");
+        edited.evaluate();
+        let mut fresh = model_with(32767, max_change, &[("A1", "=A1/2+B1/2"), ("B1", "2")]);
+        fresh.evaluate();
+        let value = |m: &Model| match m.get_cell_value_by_index(0, 1, 1).unwrap() {
+            crate::cell::CellValue::Number(n) => n,
+            other => panic!("{other:?}"),
+        };
+        (value(&edited), value(&fresh))
+    };
+    let (edited, fresh) = run(0.001);
+    assert_ne!(edited, fresh);
+    assert!(
+        (edited - 2.0).abs() < 0.002 && (fresh - 2.0).abs() < 0.002,
+        "{edited} {fresh}"
+    );
+    let (edited, fresh) = run(0.0);
+    assert_eq!(edited, fresh);
+}
