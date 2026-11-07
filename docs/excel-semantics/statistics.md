@@ -2516,6 +2516,34 @@ Evidence: eval/accuracy/tables/{T.TEST,TTEST,F.TEST,FTEST}/s1 (excel-graph, 2026
 Status: VERIFIED (excel-graph) for the cited cells; the A136 rule is a one-cell hypothesis.
 Tasks: T-4097, T-4579
 
+## Paired T.TEST is erratic where the differences are near-constant or the samples offset (T-4579)
+Rule: none of the simple forms reproduces Excel's paired T.TEST (type 1). Excel is often far from the math where
+the differences are near-constant or both samples sit on large offsets.
+- **Near-constant differences** (2 to 4 pairs; probes/t4579-ttest-paired Div, 27 rows, predictions committed before
+  the excel-graph fill, 2026-11-07). `#DIV/0!` does not follow the sign of either variance of the double differences:
+  - The one-pass `(Σd² - (Σd)²/n)/(n-1)` hypothesis behind TTEST/s1 A136 holds on 14 of 27 rows. Rows where it is
+    positive (2E-13) are `#DIV/0!`, and rows where it is 0 or negative are numbers.
+  - The two-pass variance (the engine) holds on 8 of 27 rows.
+  - Exactly constant differences are `#DIV/0!`.
+- **Offset samples** (Off, 24 rows: offsets 1E3 to 1E6, a shared spread, a paired effect of 1E-9 to 1E-6):
+  - 11 rows are `#DIV/0!`, where the math is a number.
+  - The other 13 are up to 1E5 relative off the math. Excel is less accurate than double differences here.
+  - Neither exact differences nor per-sample deviations `(x - m_x) - (y - m_y)` match. The offset point TTEST/s1 A101
+    is within 1E-15 of the math in Excel, but these rows show that A101 is not Excel's general behavior.
+- **Forms tried and rejected** on all 51 rows:
+  - one-pass over the differences, as `(Σd² - (Σd)²/n)/(n-1)` and `(nΣd² - (Σd)²)/(n(n-1))`;
+  - raw sums `Σx² - 2Σxy + Σy² - (Σx - Σy)²/n`;
+  - centred covariance terms.
+
+  None is within 1E-9 on any number cell. The best agrees on 22 of the 51 error-or-number outcomes.
+- **Reversed argument orders** (Rev): `T.TEST({5},{3,3,3,3},2,3)` is `#DIV/0!`, and
+  `T.TEST({1E+200,1E+200,-1E+200},{1,2,4},1,2)` and `F.TEST({1E+200,1E+200,-1E+200},{1,2,4})` are `#NUM!`. These match
+  the T-4097 rules with the special sample second, and the engine already gives all three.
+Evidence: probes/t4579-ttest-paired (excel-graph, 2026-11-07), docs/research/t4579.
+Status: VERIFIED (excel-graph) as observations. Excel's algorithm is not identified, and the engine keeps the
+two-pass double differences.
+Tasks: T-4579
+
 ## T.DIST.RT follows the rounded y beyond t = 1 (T-0969)
 Rule: away from the deep tail, T.DIST.RT (and so T.DIST, T.DIST.2T and TDIST) takes the tail at
 y = n/(n + t^2) as the worksheet rounds it, fl(n / fl(n + fl(t*t))), as T.TEST does, once t > 1 and

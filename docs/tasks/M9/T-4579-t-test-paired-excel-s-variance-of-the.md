@@ -3,7 +3,7 @@ id: T-4579
 title: "T.TEST paired: Excel's variance of the differences (a negative one-pass variance is #DIV/0!, offset pairs keep their digits)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: todo
 priority: P2
 size: S
 tier: opus
@@ -33,8 +33,15 @@ point of the T.TEST and TTEST tables leaving the envelope; the rule is probed be
   differences, or deviations taken per sample before subtracting: to be found).
 - Code: `t_test_p` in crates/rustsheet-engine/src/functions/statistical/t_dist.rs (the `TTestType::Paired` arm).
 
+- Probe 1 (T-4579, 2026-11-07): probes/t4579-ttest-paired refutes A136's one-pass hypothesis and shows that Excel's
+  paired test is erratic on offset samples: `#DIV/0!` or up to 1E5 off the math, see statistics.md "Paired T.TEST is
+  erratic ...". No simple form fits, so the next step is research into Excel's algorithm, not a guard. Also owns the
+  probe's visibly-off cells: probes/t4579-ttest-paired Div! A1, A3, A4, A5, A6, A8, A9, A10, A11, A12, A13, A14, A15,
+  A16, A17, A18, A20, A21, A22, A23, A24, A25, A26, A27; Off! A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13,
+  A14, A15, A16, A17, A18, A19, A20, A21, A22, A23, A24.
+
 ## Acceptance criteria
-- [ ] A probe (excel-probe skill, excel-graph) separates the hypotheses for A136's `#DIV/0!` (pairs with a negative,
+- [x] A probe (excel-probe skill, excel-graph) separates the hypotheses for A136's `#DIV/0!` (pairs with a negative,
       zero and tiny positive one-pass variance of the differences) and for A101's digits; the finding is in statistics.md.
       The same probe takes the reversed argument order of two T-4097 rules, both evidenced only with the special sample
       second: a Welch test of one number before a constant sample (`T.TEST({5},{3,3,3,3},2,3)`, against gen-m9
