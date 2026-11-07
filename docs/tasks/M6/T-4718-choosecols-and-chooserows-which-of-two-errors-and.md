@@ -3,7 +3,7 @@ id: T-4718
 title: "CHOOSECOLS and CHOOSEROWS: which of two errors, and uncoercible text against a later error, wins in the index list (lookup.md UNVERIFIED): probe and match"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
