@@ -275,7 +275,8 @@ Status: VERIFIED (excel-graph).
 Ours: the "Several data fields", "Blank and empty data_field", "Aggregates over one record or none" and "Overflow"
 paragraphs are implemented (T-4804; `getpivotdata.rs` `pivot_data_field`, `pivot_index.rs` `supported`,
 `pivot/layout.rs` `aggregate`): DF passes every cell. Which data field wins when one's caption is another's source
-name is unprobed; the engine takes the caption. The rest answers `#REF!` for most of these until T-4805 (items,
+name is unprobed, and the engine answers `#REF!` there (T-4911 to probe). The other shapes of this section answer
+`#REF!` for most of these until T-4805 (items,
 records, arguments and arrays) and T-4806 (shown values and shapes). The calculated-field cells (LY G1:G3) are T-5039's, and the date items' shown text is
 T-4807's.
 

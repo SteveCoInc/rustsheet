@@ -30,7 +30,10 @@ default `"Values"` name and items written in the caption's own case.
   `""`. The omitted form is still SPEC-0015 unknown 8.
 - The several-data-field and Values-pair paths are covered only by the eval case, with no unit test in
   `test/test_fn_getpivotdata.rs`.
-- The caption-versus-source-name precedence (caption wins) is already marked unprobed. It has no task id yet.
+- The caption-versus-source-name tie is unprobed and answers `#REF!` (#3950 review round 2); probe it, and implement
+  Excel's pick if it has one. Also mark unprobed: the Values field beside another field on one axis (unknown 10,
+  every pair `#REF!`), and a blank-cell data_field inside a different pivot's area (`#REF!`); and treat an omitted
+  data_field like `""` in web.md's list of unknowns (both are evidenced `#REF!`, DF A7, A14, A16).
 
 ## Acceptance criteria
 - [ ] web.md "GETPIVOTDATA on other pivot shapes (T-2085)" "Ours" and SPEC-0015 mark each inference above
