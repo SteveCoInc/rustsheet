@@ -3,7 +3,7 @@ id: T-4628
 title: "A loaded #REF!C4:C7 keeps its range: FORMULATEXT after an xlsx round trip of a deleted-sheet reference (probe first)"
 milestone: M8
 lane: engine
-status: blocked
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -56,7 +56,7 @@ FORMULATEXT of the loaded file is unprobed: it may keep `=SUM(#REF!C4:C7)`.
 - Eval delta: +9 passing cells (new case); no regressions.
 
 ## Blocked because
-Blocked because: review-round limit
+Resumed after the review-round limit (step 5c).
 - Round 3 (head 8485758bc, after a merge of origin/main that resolved a sheet_undo.rs conflict): security APPROVE,
   design APPROVE (3 MINOR: `Lexer::typed` always equals `double_star_exponent`, two flags for one concept; a
   hand-written print-by-context dispatch in sheet_undo.rs, now gone with the revert below; an over-long doc line),
