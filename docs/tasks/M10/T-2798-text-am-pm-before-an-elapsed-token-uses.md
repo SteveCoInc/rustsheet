@@ -3,7 +3,7 @@ id: T-2798
 title: "TEXT: AM/PM before an elapsed token uses the 12-hour clock for it"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -23,3 +23,10 @@ Exit owners (decision 0096; the 2026-10-27 planner run names each cell the `.cas
 - [ ] S!A13 passes and leaves eval/baseline/probes.txt; probe other elapsed tokens (`AM/PM [mm]`, `[s]`) first.
 - [ ] `make check` green; reviewers approve.
 
+
+## Outcome
+Already satisfied on `origin/main`: `probes/text-elapsed-two-tokens` has no `F` line in
+`eval/baseline/probes.txt` (all 14 cells pass), and `TEXT(1.5,"AM/PM [h]")` prints "PM 12" (also
+pinned in `formatter/test/test_general.rs`). No code change, eval delta 0. Note: a 29 h serial
+(`AM/PM [hh]` on 1+5/24) prints "AM 12" in the engine; no oracle cell covers it, so it is
+unverified against Excel and not changed here.
