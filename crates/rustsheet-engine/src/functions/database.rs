@@ -16,6 +16,7 @@ use super::criteria::{build_criteria_with, CriteriaFlavor};
 use super::lift::LiftCost;
 use super::statistical::variance::{variance_result, VarianceKind};
 use super::Function;
+use crate::area_budget::visit_units;
 
 /// The resolved `database`, `field` and `criteria` of one D-function element.
 struct DbQuery {
@@ -151,9 +152,20 @@ impl Model {
                     | Node::EmptyArgKind
             )
         });
+        // A call that cannot lift is still charged its scan, records x criteria cells
+        // (`db_element_cost`), to the formula's work budget, without the per-call cap of a lifted
+        // call (so a whole-column database still computes): before audit 2 item 3 it was priced as
+        // one unit, and a DCOUNT over n records and n criteria rows grew as n^2 unbounded
+        // (directive 5; DEVIATION, statistics.md "Database function argument modes").
+        let scan = self.db_element_cost(args, cell);
         let cost = if may_lift {
-            self.db_element_cost(args, cell)
+            scan
         } else {
+            if let LiftCost::Cells(visits) = scan {
+                if let Err(error) = self.spend_work(visit_units(visits), cell) {
+                    return error;
+                }
+            }
             LiftCost::Unit
         };
         // A `field` that is a reference to an error cell is `#VALUE!` in Excel, while an error
