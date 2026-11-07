@@ -768,3 +768,130 @@ fn flags_map_to_modes_and_regressions_are_refused_by_default() {
         }
     );
 }
+
+mod r1_rule {
+    use super::super::r1::{violations, Delta};
+    use super::super::{Item, Verdict};
+
+    fn item(kind: &'static str, key: &str, verdict: Verdict) -> Item {
+        Item {
+            scenario: "R0",
+            kind,
+            key: key.into(),
+            verdict,
+            detail: None,
+            candidate: None,
+            weight: super::super::xmldiff::unit_weight(verdict),
+        }
+    }
+
+    #[test]
+    fn only_what_the_edits_explain_may_change() {
+        let delta: Delta = ["Sheet1!A1".to_string(), "Sheet1!B2".to_string()].into();
+        // Already lost in R0: not the edit's doing.
+        let plain = vec![item(
+            "element",
+            "/officeDocument[0]/theme[0]:/theme/x[0]",
+            Verdict::Lost,
+        )];
+        let edited = vec![
+            plain[0].clone(),
+            // The edited cell and a cell its value changed.
+            item("semantic", "cell Sheet1!A1 input", Verdict::Changed),
+            item("semantic", "value Sheet1!B2", Verdict::Changed),
+            // Derived counts and range (N9, N10), and an appended cell format.
+            item(
+                "attribute",
+                "/officeDocument[0]/styles[0]:/styleSheet/cellXfs[0]@count",
+                Verdict::Changed,
+            ),
+            item(
+                "attribute",
+                "/officeDocument[0]/worksheet[Sheet1][0]:/worksheet/dimension[0]@ref",
+                Verdict::Changed,
+            ),
+            item(
+                "element",
+                "/officeDocument[0]/styles[0]:/styleSheet/cellXfs[0]/xf[9]",
+                Verdict::Added,
+            ),
+            // An unrelated loss the export made because of the edit: a violation.
+            item(
+                "element",
+                "/officeDocument[0]/worksheet[Sheet1][0]:/worksheet/extLst[0]",
+                Verdict::Lost,
+            ),
+            item("semantic", "value Sheet1!C3", Verdict::Changed),
+            // A style record lost, not added: a violation too.
+            item(
+                "element",
+                "/officeDocument[0]/styles[0]:/styleSheet/cellXfs[0]/xf[2]",
+                Verdict::Lost,
+            ),
+        ];
+        let found = violations("R1/E1", &plain, edited, &delta);
+        let keys: Vec<&str> = found.iter().map(|i| i.key.as_str()).collect();
+        assert_eq!(
+            keys,
+            [
+                "/officeDocument[0]/worksheet[Sheet1][0]:/worksheet/extLst[0]",
+                "value Sheet1!C3",
+                "/officeDocument[0]/styles[0]:/styleSheet/cellXfs[0]/xf[2]",
+            ]
+        );
+        assert!(found.iter().all(|i| i.scenario == "R1/E1"));
+    }
+}
+
+mod exceptions_self_test {
+    use std::collections::BTreeMap;
+
+    use super::super::exceptions::{apply, Exception};
+    use super::super::{CaseResult, Item, Verdict};
+    use crate::runner::CaseStatus;
+
+    fn case(keys: &[&str]) -> CaseResult {
+        CaseResult {
+            id: "rt/a.xlsx".into(),
+            suite: "rt".into(),
+            status: CaseStatus::Fail,
+            message: None,
+            millis: 0,
+            checked: 10,
+            scenarios: BTreeMap::from([("R0", 10)]),
+            items: keys
+                .iter()
+                .map(|k| Item {
+                    scenario: "R0",
+                    kind: "element",
+                    key: (*k).into(),
+                    verdict: Verdict::Lost,
+                    detail: None,
+                    candidate: None,
+                    weight: 1,
+                })
+                .collect(),
+        }
+    }
+
+    fn exception(item: &str) -> Exception {
+        Exception {
+            case: "rt/a.xlsx".into(),
+            item: item.into(),
+            owner: "T-4514".into(),
+        }
+    }
+
+    #[test]
+    fn an_exception_excuses_its_item_and_a_stale_one_is_reported() {
+        let mut r = case(&["/x"]);
+        let used = [exception("R0 element /x lost")];
+        assert!(apply(&mut [&mut r], &used).is_empty());
+        assert!(r.items.is_empty());
+        assert_eq!(r.status, CaseStatus::Pass);
+        // The item is gone (fixed): the exception now excuses nothing and is stale.
+        let mut fixed = case(&[]);
+        let stale = apply(&mut [&mut fixed], &used);
+        assert_eq!(stale.len(), 1);
+    }
+}
