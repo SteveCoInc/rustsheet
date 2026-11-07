@@ -280,3 +280,5 @@ probes/linest-modes (oracle, excel-graph), for the multi-predictor exact-fit reg
     of B, C, D, E).
   - KERNEL 9 with the applied diagonal in the engine: fixed 259 (probes 223, ironcalc-calc 32, gen-m9 4), REGRESSIONS 6.
     It trades 62 fixes for 3 regressions, so it is not taken. The merge commit of origin/main is kept (pushed).
+
+Resumed 2026-11-07 12:05 UTC by an opus run (worker step 2, branch idle 6 h).
