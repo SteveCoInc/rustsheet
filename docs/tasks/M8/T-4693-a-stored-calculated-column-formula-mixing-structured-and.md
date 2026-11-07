@@ -3,7 +3,7 @@ id: T-4693
 title: "A stored calculated-column formula mixing structured and A1 references follows edits; one default-locale parser helper (T-4274 review follow-ups)"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
