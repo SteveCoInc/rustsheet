@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-4642: a second copy of probes/t4618-order-after-active-backward with identical sheets (a second refill).",
+ "description": "T-4642: a second copy of probes/t4618-order-after-active-backward with identical sheets. The oracle filled it from the same upload as t4642-backward-refill (same produced_at and workbook name), so it is the same fill scored twice, not a second fill.",
  "tags": [
   "M8",
   "syntax",

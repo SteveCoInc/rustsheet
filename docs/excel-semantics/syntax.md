@@ -399,7 +399,7 @@ the order Excel loads the workbook and on what each use of N met first. Every ba
 - A qualified use reads the new name in every probe. The one exception, t4618-order-after-active-backward Q!A1 (tabs P,
   Q, R, R active, P's `=N` then Q's `=P!N`; `#NAME?` on 2026-11-06 15:57 UTC), does not reproduce. Two copies with
   identical sheets (the same input sha256 f800e58a…) refilled on 2026-11-07 read 1 there: probes/t4642-backward-refill
-  and -refill-b. Both came from one upload, so they may count as one fill. Every one-variable variant reads 1 too
+  and -refill-b. Both were filled from one upload, with the same timestamp, so they are one fill scored twice. Every one-variable variant reads 1 too
   (excel-graph, 2026-11-07, T-4642):
   - Q after the active R (t4642-qualified-after-active);
   - a fourth tab Z after R (t4642-fourth-tab-before);

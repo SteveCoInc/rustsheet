@@ -39,7 +39,7 @@ make the engine match.
 Done 2026-11-07. The cell does not reproduce, so there is no engine change.
 - **Probes** (excel-graph, 2026-11-07, all 7 pass with ours):
   - probes/t4642-backward-refill and -refill-b copy t4618-order-after-active-backward with identical sheets (the same
-    input sha256 f800e58a…). Both read Q!A1 = 1. The two came from one upload, so they may be one fill.
+    input sha256 f800e58a…). Both read Q!A1 = 1. They are one fill scored twice: one upload, one timestamp.
   - The one-variable variants all read the qualified use as 1:
     - t4642-qualified-after-active (Q after the active R);
     - t4642-fourth-tab-before (a fourth tab Z);

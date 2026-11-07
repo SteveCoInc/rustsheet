@@ -27,7 +27,7 @@ or requiring N agreeing fills before a value is a target. The task applies the d
   refill that is not committed. It is an F line in eval/baseline/probes.txt against the 10-30 value. Ours is 485.
 - probes/t4618-order-after-active-backward Q!A1 (T-4642) is a third such cell. It was `#NAME?` on 2026-11-06, and the
   same input sha256 (f800e58a…) reads 1 in the copies probes/t4642-backward-refill and -refill-b, filled 2026-11-07.
-  Those two came from one upload. Every one-variable variant reads 1, and no rule explains the old value. It is an F
+  Those two are one fill, from one upload. Every one-variable variant reads 1, and no rule explains the old value. It is an F
   line in eval/baseline/probes.txt against the 11-06 value. Ours is 1.
 - Raised by the excel-fidelity review of T-3590 (PR #2685), MINOR finding 1.
 
