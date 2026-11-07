@@ -1,0 +1,1092 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "cabd943389121683e03f5ae09fa72fd5e36b5b89829cabd4a1d942121d8ad246",
+  "definitions": {
+   "BETA.INV": "a9652f0571fdcdd2",
+   "BETAINV": "a9652f0571fdcdd2"
+  },
+  "arguments_sha256": "88ae6f04d57233c068a6d088df4a7e6f924342a5bd341833c11761fabaec55f9"
+ },
+ "sheets": {
+  "Calc": {
+   "A118": {
+    "t": "n",
+    "v": "0.99999949999987498555966051391032454736261068067009",
+    "f": "=BETA.INV(1-1E-6,2,1)"
+   },
+   "A119": {
+    "t": "n",
+    "v": "0.99999994999999877631773120570416237054120949624228",
+    "f": "=BETA.INV(1-1E-7,2,1)"
+   },
+   "A120": {
+    "t": "n",
+    "v": "0.99999999499999996237620343523393803625192168022046",
+    "f": "=BETA.INV(1-1E-8,2,1)"
+   },
+   "A121": {
+    "t": "n",
+    "v": "0.99999999950000001401596573872062303427686529124678",
+    "f": "=BETA.INV(1-1E-9,2,1)"
+   },
+   "A122": {
+    "t": "n",
+    "v": "0.99999999994999999586173144983856788812515691418491",
+    "f": "=BETA.INV(1-1E-10,2,1)"
+   },
+   "A123": {
+    "t": "n",
+    "v": "0.99999999999950001106085993575755058627484281514214",
+    "f": "=BETA.INV(1-1E-12,2,1)"
+   },
+   "A124": {
+    "t": "n",
+    "v": "0.99999999999999500399638918678308806761786424063054",
+    "f": "=BETA.INV(1-1E-14,2,1)"
+   },
+   "A125": {
+    "t": "n",
+    "v": "0.99999999999999950039963891867943200910535306618523",
+    "f": "=BETA.INV(1-1E-15,2,1)"
+   },
+   "A126": {
+    "t": "n",
+    "v": "0.99999999999999994448884876874217143807446108567022",
+    "f": "=BETA.INV(1-1E-16,2,1)"
+   },
+   "A181": {
+    "t": "n",
+    "v": "0.99999989999995499709593093970409332310065543670636",
+    "f": "=BETA.INV(1-1E-6,10,1)"
+   },
+   "A182": {
+    "t": "n",
+    "v": "0.99999998999999955526353045168191180222185886067568",
+    "f": "=BETA.INV(1-1E-7,10,1)"
+   },
+   "A183": {
+    "t": "n",
+    "v": "0.99999999899999999047524065094775008574785996505976",
+    "f": "=BETA.INV(1-1E-8,10,1)"
+   },
+   "A184": {
+    "t": "n",
+    "v": "0.99999999990000000278319314885940185073971400655669",
+    "f": "=BETA.INV(1-1E-9,10,1)"
+   },
+   "A185": {
+    "t": "n",
+    "v": "0.99999999998999999917214628993460142785222861168014",
+    "f": "=BETA.INV(1-1E-10,10,1)"
+   },
+   "A186": {
+    "t": "n",
+    "v": "0.99999999999990000221217196715239497625641976378175",
+    "f": "=BETA.INV(1-1E-12,10,1)"
+   },
+   "A187": {
+    "t": "n",
+    "v": "0.99999999999999900079927783735462080935723214603199",
+    "f": "=BETA.INV(1-1E-14,10,1)"
+   },
+   "A188": {
+    "t": "n",
+    "v": "0.99999999999999990007992778373586643377940720635976",
+    "f": "=BETA.INV(1-1E-15,10,1)"
+   },
+   "A55": {
+    "t": "n",
+    "v": "0.99999800000099994248872847890652420498848795991582",
+    "f": "=BETA.INV(1-1E-6,0.5,1)"
+   },
+   "A56": {
+    "t": "n",
+    "v": "0.99999980000001010527115903215644998108675828939879",
+    "f": "=BETA.INV(1-1E-7,0.5,1)"
+   },
+   "A57": {
+    "t": "n",
+    "v": "0.99999997999999999950481549836354386213277667625729",
+    "f": "=BETA.INV(1-1E-8,0.5,1)"
+   },
+   "A58": {
+    "t": "n",
+    "v": "0.99999999800000005756386287028669892557789252373809",
+    "f": "=BETA.INV(1-1E-9,0.5,1)"
+   },
+   "A59": {
+    "t": "n",
+    "v": "0.99999999979999998346192580183673278522494466661781",
+    "f": "=BETA.INV(1-1E-10,0.5,1)"
+   },
+   "A60": {
+    "t": "n",
+    "v": "0.99999999999800004424344124296383791904059424957589",
+    "f": "=BETA.INV(1-1E-12,0.5,1)"
+   },
+   "A61": {
+    "t": "n",
+    "v": "0.9999999999999800159855567472821125829470086718568",
+    "f": "=BETA.INV(1-1E-14,0.5,1)"
+   },
+   "A62": {
+    "t": "n",
+    "v": "0.99999999999999800159855567471922563954616777958966",
+    "f": "=BETA.INV(1-1E-15,0.5,1)"
+   },
+   "A63": {
+    "t": "n",
+    "v": "0.9999999999999997779553950749687042412253104601454",
+    "f": "=BETA.INV(1-1E-16,0.5,1)"
+   },
+   "B197": {
+    "t": "n",
+    "v": "2.1966392676781175095935995450934499195179879942015e-304",
+    "f": "=BETA.INV(8E-10,0.03,2)"
+   },
+   "B198": {
+    "t": "n",
+    "v": "2.562676837795885974153202186855170658483167151213e-306",
+    "f": "=BETA.INV(7E-10,0.03,2)"
+   },
+   "B199": {
+    "t": "n",
+    "v": "1.5036064820234732648063392572740289179522950192133e-308",
+    "f": "=BETA.INV(6E-10,0.03,2)"
+   },
+   "B200": {
+    "t": "n",
+    "v": "3.449525192529128030342793166427280026930517340268e-311",
+    "f": "=BETA.INV(5E-10,0.03,2)"
+   },
+   "B201": {
+    "t": "n",
+    "v": "2.0296705678960401961168944994283890804474674428216e-314",
+    "f": "=BETA.INV(4E-10,0.03,2)"
+   },
+   "B202": {
+    "t": "n",
+    "v": "1.3893158822962216989186792129999555978759416788463e-318",
+    "f": "=BETA.INV(3E-10,0.03,2)"
+   },
+   "B203": {
+    "t": "n",
+    "v": "3.1873234078588074660775965631284094711753304712191e-321",
+    "f": "=BETA.INV(2.5E-10,0.03,2)"
+   },
+   "B206": {
+    "t": "n",
+    "v": "2.2448741470897986781548658064332194155123287081348e-303",
+    "f": "=BETA.INV(8E-10,0.03,0.5)"
+   },
+   "B207": {
+    "t": "n",
+    "v": "2.6189493492004786548673624100389036271036535085159e-305",
+    "f": "=BETA.INV(7E-10,0.03,0.5)"
+   },
+   "B208": {
+    "t": "n",
+    "v": "1.5366234085667585468232064216436483795787999816026e-307",
+    "f": "=BETA.INV(6E-10,0.03,0.5)"
+   },
+   "B209": {
+    "t": "n",
+    "v": "3.5252715538627633462832095509969028304392003913257e-310",
+    "f": "=BETA.INV(5E-10,0.03,0.5)"
+   },
+   "B210": {
+    "t": "n",
+    "v": "2.0742390669338393119290440706994149740154713815027e-313",
+    "f": "=BETA.INV(4E-10,0.03,0.5)"
+   },
+   "B211": {
+    "t": "n",
+    "v": "1.4198231599513853505939235680638828025329468024785e-317",
+    "f": "=BETA.INV(3E-10,0.03,0.5)"
+   },
+   "B212": {
+    "t": "n",
+    "v": "3.2573122141622675859638216536331993708073846632725e-320",
+    "f": "=BETA.INV(2.5E-10,0.03,0.5)"
+   },
+   "B213": {
+    "t": "n",
+    "v": "1.9165741261585558711932400325362278037466938741832e-323",
+    "f": "=BETA.INV(2E-10,0.03,0.5)"
+   },
+   "D197": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=BETA.INV(0.4,2,1E-3)"
+   },
+   "D198": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=BETA.INV(0.5,2,1E-3)"
+   },
+   "D199": {
+    "t": "n",
+    "v": "0.99999999999999999999999999999999999999999999993567",
+    "f": "=BETA.INV(0.1,2,1E-3)"
+   },
+   "D200": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=BETA.INV(0.3,0.5,1E-3)"
+   },
+   "D201": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=BETA.INV(0.5,10,1E-3)"
+   },
+   "D202": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=BETA.INV(0.5,2,1E-4)"
+   },
+   "D204": {
+    "t": "n",
+    "v": "0.9999999999999999999999999999997083492783716928584",
+    "f": "=BETA.INV(0.5,2,0.01)"
+   },
+   "D205": {
+    "t": "n",
+    "v": "0.99999999999999988041777683765696124694228965660205",
+    "f": "=BETA.INV(0.3,2,0.01)"
+   },
+   "D206": {
+    "t": "n",
+    "v": "0.99999999996550474807355264500848322633487802119343",
+    "f": "=BETA.INV(0.5,2,0.03)"
+   },
+   "D207": {
+    "t": "n",
+    "v": "0.99999646686509982778249730552661300930655281722032",
+    "f": "=BETA.INV(0.5,0.5,0.05)"
+   },
+   "D208": {
+    "t": "n",
+    "v": "0.99998410999578977103863318688611102389979764974357",
+    "f": "=BETA.INV(0.01,2,1E-3)"
+   },
+   "D209": {
+    "t": "n",
+    "v": "0.9996233639424482025399266521452680819790644683641",
+    "f": "=BETA.INV(0.5,2,0.1)"
+   },
+   "D210": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=BETA.INV(0.49,2,1E-3)"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "A1": {
+    "f": "=BETA.INV(1-1E-6,0.5,1E-3)",
+    "why": "no single value"
+   },
+   "A10": {
+    "f": "=BETA.INV(1-1E-6,0.5,3E-3)",
+    "why": "no single value"
+   },
+   "A100": {
+    "f": "=BETA.INV(1-1E-6,2,0.1)",
+    "why": "no single value"
+   },
+   "A101": {
+    "f": "=BETA.INV(1-1E-7,2,0.1)",
+    "why": "no single value"
+   },
+   "A102": {
+    "f": "=BETA.INV(1-1E-8,2,0.1)",
+    "why": "no single value"
+   },
+   "A103": {
+    "f": "=BETA.INV(1-1E-9,2,0.1)",
+    "why": "no single value"
+   },
+   "A104": {
+    "f": "=BETA.INV(1-1E-10,2,0.1)",
+    "why": "no single value"
+   },
+   "A105": {
+    "f": "=BETA.INV(1-1E-12,2,0.1)",
+    "why": "no single value"
+   },
+   "A106": {
+    "f": "=BETA.INV(1-1E-14,2,0.1)",
+    "why": "no single value"
+   },
+   "A107": {
+    "f": "=BETA.INV(1-1E-15,2,0.1)",
+    "why": "no single value"
+   },
+   "A108": {
+    "f": "=BETA.INV(1-1E-16,2,0.1)",
+    "why": "no single value"
+   },
+   "A109": {
+    "f": "=BETA.INV(1-1E-6,2,0.3)",
+    "why": "no single value"
+   },
+   "A11": {
+    "f": "=BETA.INV(1-1E-7,0.5,3E-3)",
+    "why": "no single value"
+   },
+   "A110": {
+    "f": "=BETA.INV(1-1E-7,2,0.3)",
+    "why": "no single value"
+   },
+   "A111": {
+    "f": "=BETA.INV(1-1E-8,2,0.3)",
+    "why": "no single value"
+   },
+   "A112": {
+    "f": "=BETA.INV(1-1E-9,2,0.3)",
+    "why": "no single value"
+   },
+   "A113": {
+    "f": "=BETA.INV(1-1E-10,2,0.3)",
+    "why": "no single value"
+   },
+   "A114": {
+    "f": "=BETA.INV(1-1E-12,2,0.3)",
+    "why": "no single value"
+   },
+   "A115": {
+    "f": "=BETA.INV(1-1E-14,2,0.3)",
+    "why": "no single value"
+   },
+   "A116": {
+    "f": "=BETA.INV(1-1E-15,2,0.3)",
+    "why": "no single value"
+   },
+   "A117": {
+    "f": "=BETA.INV(1-1E-16,2,0.3)",
+    "why": "no single value"
+   },
+   "A12": {
+    "f": "=BETA.INV(1-1E-8,0.5,3E-3)",
+    "why": "no single value"
+   },
+   "A127": {
+    "f": "=BETA.INV(1-1E-6,10,1E-3)",
+    "why": "no single value"
+   },
+   "A128": {
+    "f": "=BETA.INV(1-1E-7,10,1E-3)",
+    "why": "no single value"
+   },
+   "A129": {
+    "f": "=BETA.INV(1-1E-8,10,1E-3)",
+    "why": "no single value"
+   },
+   "A13": {
+    "f": "=BETA.INV(1-1E-9,0.5,3E-3)",
+    "why": "no single value"
+   },
+   "A130": {
+    "f": "=BETA.INV(1-1E-9,10,1E-3)",
+    "why": "no single value"
+   },
+   "A131": {
+    "f": "=BETA.INV(1-1E-10,10,1E-3)",
+    "why": "no single value"
+   },
+   "A132": {
+    "f": "=BETA.INV(1-1E-12,10,1E-3)",
+    "why": "no single value"
+   },
+   "A133": {
+    "f": "=BETA.INV(1-1E-14,10,1E-3)",
+    "why": "no single value"
+   },
+   "A134": {
+    "f": "=BETA.INV(1-1E-15,10,1E-3)",
+    "why": "no single value"
+   },
+   "A135": {
+    "f": "=BETA.INV(1-1E-16,10,1E-3)",
+    "why": "no single value"
+   },
+   "A136": {
+    "f": "=BETA.INV(1-1E-6,10,3E-3)",
+    "why": "no single value"
+   },
+   "A137": {
+    "f": "=BETA.INV(1-1E-7,10,3E-3)",
+    "why": "no single value"
+   },
+   "A138": {
+    "f": "=BETA.INV(1-1E-8,10,3E-3)",
+    "why": "no single value"
+   },
+   "A139": {
+    "f": "=BETA.INV(1-1E-9,10,3E-3)",
+    "why": "no single value"
+   },
+   "A14": {
+    "f": "=BETA.INV(1-1E-10,0.5,3E-3)",
+    "why": "no single value"
+   },
+   "A140": {
+    "f": "=BETA.INV(1-1E-10,10,3E-3)",
+    "why": "no single value"
+   },
+   "A141": {
+    "f": "=BETA.INV(1-1E-12,10,3E-3)",
+    "why": "no single value"
+   },
+   "A142": {
+    "f": "=BETA.INV(1-1E-14,10,3E-3)",
+    "why": "no single value"
+   },
+   "A143": {
+    "f": "=BETA.INV(1-1E-15,10,3E-3)",
+    "why": "no single value"
+   },
+   "A144": {
+    "f": "=BETA.INV(1-1E-16,10,3E-3)",
+    "why": "no single value"
+   },
+   "A145": {
+    "f": "=BETA.INV(1-1E-6,10,0.01)",
+    "why": "no single value"
+   },
+   "A146": {
+    "f": "=BETA.INV(1-1E-7,10,0.01)",
+    "why": "no single value"
+   },
+   "A147": {
+    "f": "=BETA.INV(1-1E-8,10,0.01)",
+    "why": "no single value"
+   },
+   "A148": {
+    "f": "=BETA.INV(1-1E-9,10,0.01)",
+    "why": "no single value"
+   },
+   "A149": {
+    "f": "=BETA.INV(1-1E-10,10,0.01)",
+    "why": "no single value"
+   },
+   "A15": {
+    "f": "=BETA.INV(1-1E-12,0.5,3E-3)",
+    "why": "no single value"
+   },
+   "A150": {
+    "f": "=BETA.INV(1-1E-12,10,0.01)",
+    "why": "no single value"
+   },
+   "A151": {
+    "f": "=BETA.INV(1-1E-14,10,0.01)",
+    "why": "no single value"
+   },
+   "A152": {
+    "f": "=BETA.INV(1-1E-15,10,0.01)",
+    "why": "no single value"
+   },
+   "A153": {
+    "f": "=BETA.INV(1-1E-16,10,0.01)",
+    "why": "no single value"
+   },
+   "A154": {
+    "f": "=BETA.INV(1-1E-6,10,0.03)",
+    "why": "no single value"
+   },
+   "A155": {
+    "f": "=BETA.INV(1-1E-7,10,0.03)",
+    "why": "no single value"
+   },
+   "A156": {
+    "f": "=BETA.INV(1-1E-8,10,0.03)",
+    "why": "no single value"
+   },
+   "A157": {
+    "f": "=BETA.INV(1-1E-9,10,0.03)",
+    "why": "no single value"
+   },
+   "A158": {
+    "f": "=BETA.INV(1-1E-10,10,0.03)",
+    "why": "no single value"
+   },
+   "A159": {
+    "f": "=BETA.INV(1-1E-12,10,0.03)",
+    "why": "no single value"
+   },
+   "A16": {
+    "f": "=BETA.INV(1-1E-14,0.5,3E-3)",
+    "why": "no single value"
+   },
+   "A160": {
+    "f": "=BETA.INV(1-1E-14,10,0.03)",
+    "why": "no single value"
+   },
+   "A161": {
+    "f": "=BETA.INV(1-1E-15,10,0.03)",
+    "why": "no single value"
+   },
+   "A162": {
+    "f": "=BETA.INV(1-1E-16,10,0.03)",
+    "why": "no single value"
+   },
+   "A163": {
+    "f": "=BETA.INV(1-1E-6,10,0.1)",
+    "why": "no single value"
+   },
+   "A164": {
+    "f": "=BETA.INV(1-1E-7,10,0.1)",
+    "why": "no single value"
+   },
+   "A165": {
+    "f": "=BETA.INV(1-1E-8,10,0.1)",
+    "why": "no single value"
+   },
+   "A166": {
+    "f": "=BETA.INV(1-1E-9,10,0.1)",
+    "why": "no single value"
+   },
+   "A167": {
+    "f": "=BETA.INV(1-1E-10,10,0.1)",
+    "why": "no single value"
+   },
+   "A168": {
+    "f": "=BETA.INV(1-1E-12,10,0.1)",
+    "why": "no single value"
+   },
+   "A169": {
+    "f": "=BETA.INV(1-1E-14,10,0.1)",
+    "why": "no single value"
+   },
+   "A17": {
+    "f": "=BETA.INV(1-1E-15,0.5,3E-3)",
+    "why": "no single value"
+   },
+   "A170": {
+    "f": "=BETA.INV(1-1E-15,10,0.1)",
+    "why": "no single value"
+   },
+   "A171": {
+    "f": "=BETA.INV(1-1E-16,10,0.1)",
+    "why": "no single value"
+   },
+   "A172": {
+    "f": "=BETA.INV(1-1E-6,10,0.3)",
+    "why": "no single value"
+   },
+   "A173": {
+    "f": "=BETA.INV(1-1E-7,10,0.3)",
+    "why": "no single value"
+   },
+   "A174": {
+    "f": "=BETA.INV(1-1E-8,10,0.3)",
+    "why": "no single value"
+   },
+   "A175": {
+    "f": "=BETA.INV(1-1E-9,10,0.3)",
+    "why": "no single value"
+   },
+   "A176": {
+    "f": "=BETA.INV(1-1E-10,10,0.3)",
+    "why": "no single value"
+   },
+   "A177": {
+    "f": "=BETA.INV(1-1E-12,10,0.3)",
+    "why": "no single value"
+   },
+   "A178": {
+    "f": "=BETA.INV(1-1E-14,10,0.3)",
+    "why": "no single value"
+   },
+   "A179": {
+    "f": "=BETA.INV(1-1E-15,10,0.3)",
+    "why": "no single value"
+   },
+   "A18": {
+    "f": "=BETA.INV(1-1E-16,0.5,3E-3)",
+    "why": "no single value"
+   },
+   "A180": {
+    "f": "=BETA.INV(1-1E-16,10,0.3)",
+    "why": "no single value"
+   },
+   "A189": {
+    "f": "=BETA.INV(1-1E-16,10,1)",
+    "why": "no single value"
+   },
+   "A19": {
+    "f": "=BETA.INV(1-1E-6,0.5,0.01)",
+    "why": "no single value"
+   },
+   "A190": {
+    "f": "=BETAINV(1-1E-8,2,1E-3)",
+    "why": "no single value"
+   },
+   "A191": {
+    "f": "=BETAINV(1-1E-12,2,1E-3)",
+    "why": "no single value"
+   },
+   "A192": {
+    "f": "=BETAINV(1-1E-8,2,0.01)",
+    "why": "no single value"
+   },
+   "A193": {
+    "f": "=BETAINV(1-1E-12,2,0.01)",
+    "why": "no single value"
+   },
+   "A194": {
+    "f": "=BETAINV(1-1E-8,2,0.1)",
+    "why": "no single value"
+   },
+   "A195": {
+    "f": "=BETAINV(1-1E-12,2,0.1)",
+    "why": "no single value"
+   },
+   "A196": {
+    "f": "=BETA.INV(1-1E-8,2,0.01,3,5)",
+    "why": "no single value"
+   },
+   "A197": {
+    "f": "=BETA.INV(1-8E-10,2,0.03)",
+    "why": "no single value"
+   },
+   "A198": {
+    "f": "=BETA.INV(1-7E-10,2,0.03)",
+    "why": "no single value"
+   },
+   "A199": {
+    "f": "=BETA.INV(1-6E-10,2,0.03)",
+    "why": "no single value"
+   },
+   "A2": {
+    "f": "=BETA.INV(1-1E-7,0.5,1E-3)",
+    "why": "no single value"
+   },
+   "A20": {
+    "f": "=BETA.INV(1-1E-7,0.5,0.01)",
+    "why": "no single value"
+   },
+   "A200": {
+    "f": "=BETA.INV(1-5E-10,2,0.03)",
+    "why": "no single value"
+   },
+   "A201": {
+    "f": "=BETA.INV(1-4E-10,2,0.03)",
+    "why": "no single value"
+   },
+   "A202": {
+    "f": "=BETA.INV(1-3E-10,2,0.03)",
+    "why": "no single value"
+   },
+   "A203": {
+    "f": "=BETA.INV(1-2.5E-10,2,0.03)",
+    "why": "no single value"
+   },
+   "A204": {
+    "f": "=BETA.INV(1-2E-10,2,0.03)",
+    "why": "no single value"
+   },
+   "A205": {
+    "f": "=BETA.INV(1-1.5E-10,2,0.03)",
+    "why": "no single value"
+   },
+   "A206": {
+    "f": "=BETA.INV(1-8E-10,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A207": {
+    "f": "=BETA.INV(1-7E-10,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A208": {
+    "f": "=BETA.INV(1-6E-10,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A209": {
+    "f": "=BETA.INV(1-5E-10,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A21": {
+    "f": "=BETA.INV(1-1E-8,0.5,0.01)",
+    "why": "no single value"
+   },
+   "A210": {
+    "f": "=BETA.INV(1-4E-10,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A211": {
+    "f": "=BETA.INV(1-3E-10,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A212": {
+    "f": "=BETA.INV(1-2.5E-10,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A213": {
+    "f": "=BETA.INV(1-2E-10,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A214": {
+    "f": "=BETA.INV(1-1.5E-10,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A22": {
+    "f": "=BETA.INV(1-1E-9,0.5,0.01)",
+    "why": "no single value"
+   },
+   "A23": {
+    "f": "=BETA.INV(1-1E-10,0.5,0.01)",
+    "why": "no single value"
+   },
+   "A24": {
+    "f": "=BETA.INV(1-1E-12,0.5,0.01)",
+    "why": "no single value"
+   },
+   "A25": {
+    "f": "=BETA.INV(1-1E-14,0.5,0.01)",
+    "why": "no single value"
+   },
+   "A26": {
+    "f": "=BETA.INV(1-1E-15,0.5,0.01)",
+    "why": "no single value"
+   },
+   "A27": {
+    "f": "=BETA.INV(1-1E-16,0.5,0.01)",
+    "why": "no single value"
+   },
+   "A28": {
+    "f": "=BETA.INV(1-1E-6,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A29": {
+    "f": "=BETA.INV(1-1E-7,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A3": {
+    "f": "=BETA.INV(1-1E-8,0.5,1E-3)",
+    "why": "no single value"
+   },
+   "A30": {
+    "f": "=BETA.INV(1-1E-8,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A31": {
+    "f": "=BETA.INV(1-1E-9,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A32": {
+    "f": "=BETA.INV(1-1E-10,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A33": {
+    "f": "=BETA.INV(1-1E-12,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A34": {
+    "f": "=BETA.INV(1-1E-14,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A35": {
+    "f": "=BETA.INV(1-1E-15,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A36": {
+    "f": "=BETA.INV(1-1E-16,0.5,0.03)",
+    "why": "no single value"
+   },
+   "A37": {
+    "f": "=BETA.INV(1-1E-6,0.5,0.1)",
+    "why": "no single value"
+   },
+   "A38": {
+    "f": "=BETA.INV(1-1E-7,0.5,0.1)",
+    "why": "no single value"
+   },
+   "A39": {
+    "f": "=BETA.INV(1-1E-8,0.5,0.1)",
+    "why": "no single value"
+   },
+   "A4": {
+    "f": "=BETA.INV(1-1E-9,0.5,1E-3)",
+    "why": "no single value"
+   },
+   "A40": {
+    "f": "=BETA.INV(1-1E-9,0.5,0.1)",
+    "why": "no single value"
+   },
+   "A41": {
+    "f": "=BETA.INV(1-1E-10,0.5,0.1)",
+    "why": "no single value"
+   },
+   "A42": {
+    "f": "=BETA.INV(1-1E-12,0.5,0.1)",
+    "why": "no single value"
+   },
+   "A43": {
+    "f": "=BETA.INV(1-1E-14,0.5,0.1)",
+    "why": "no single value"
+   },
+   "A44": {
+    "f": "=BETA.INV(1-1E-15,0.5,0.1)",
+    "why": "no single value"
+   },
+   "A45": {
+    "f": "=BETA.INV(1-1E-16,0.5,0.1)",
+    "why": "no single value"
+   },
+   "A46": {
+    "f": "=BETA.INV(1-1E-6,0.5,0.3)",
+    "why": "no single value"
+   },
+   "A47": {
+    "f": "=BETA.INV(1-1E-7,0.5,0.3)",
+    "why": "no single value"
+   },
+   "A48": {
+    "f": "=BETA.INV(1-1E-8,0.5,0.3)",
+    "why": "no single value"
+   },
+   "A49": {
+    "f": "=BETA.INV(1-1E-9,0.5,0.3)",
+    "why": "no single value"
+   },
+   "A5": {
+    "f": "=BETA.INV(1-1E-10,0.5,1E-3)",
+    "why": "no single value"
+   },
+   "A50": {
+    "f": "=BETA.INV(1-1E-10,0.5,0.3)",
+    "why": "no single value"
+   },
+   "A51": {
+    "f": "=BETA.INV(1-1E-12,0.5,0.3)",
+    "why": "no single value"
+   },
+   "A52": {
+    "f": "=BETA.INV(1-1E-14,0.5,0.3)",
+    "why": "no single value"
+   },
+   "A53": {
+    "f": "=BETA.INV(1-1E-15,0.5,0.3)",
+    "why": "no single value"
+   },
+   "A54": {
+    "f": "=BETA.INV(1-1E-16,0.5,0.3)",
+    "why": "no single value"
+   },
+   "A6": {
+    "f": "=BETA.INV(1-1E-12,0.5,1E-3)",
+    "why": "no single value"
+   },
+   "A64": {
+    "f": "=BETA.INV(1-1E-6,2,1E-3)",
+    "why": "no single value"
+   },
+   "A65": {
+    "f": "=BETA.INV(1-1E-7,2,1E-3)",
+    "why": "no single value"
+   },
+   "A66": {
+    "f": "=BETA.INV(1-1E-8,2,1E-3)",
+    "why": "no single value"
+   },
+   "A67": {
+    "f": "=BETA.INV(1-1E-9,2,1E-3)",
+    "why": "no single value"
+   },
+   "A68": {
+    "f": "=BETA.INV(1-1E-10,2,1E-3)",
+    "why": "no single value"
+   },
+   "A69": {
+    "f": "=BETA.INV(1-1E-12,2,1E-3)",
+    "why": "no single value"
+   },
+   "A7": {
+    "f": "=BETA.INV(1-1E-14,0.5,1E-3)",
+    "why": "no single value"
+   },
+   "A70": {
+    "f": "=BETA.INV(1-1E-14,2,1E-3)",
+    "why": "no single value"
+   },
+   "A71": {
+    "f": "=BETA.INV(1-1E-15,2,1E-3)",
+    "why": "no single value"
+   },
+   "A72": {
+    "f": "=BETA.INV(1-1E-16,2,1E-3)",
+    "why": "no single value"
+   },
+   "A73": {
+    "f": "=BETA.INV(1-1E-6,2,3E-3)",
+    "why": "no single value"
+   },
+   "A74": {
+    "f": "=BETA.INV(1-1E-7,2,3E-3)",
+    "why": "no single value"
+   },
+   "A75": {
+    "f": "=BETA.INV(1-1E-8,2,3E-3)",
+    "why": "no single value"
+   },
+   "A76": {
+    "f": "=BETA.INV(1-1E-9,2,3E-3)",
+    "why": "no single value"
+   },
+   "A77": {
+    "f": "=BETA.INV(1-1E-10,2,3E-3)",
+    "why": "no single value"
+   },
+   "A78": {
+    "f": "=BETA.INV(1-1E-12,2,3E-3)",
+    "why": "no single value"
+   },
+   "A79": {
+    "f": "=BETA.INV(1-1E-14,2,3E-3)",
+    "why": "no single value"
+   },
+   "A8": {
+    "f": "=BETA.INV(1-1E-15,0.5,1E-3)",
+    "why": "no single value"
+   },
+   "A80": {
+    "f": "=BETA.INV(1-1E-15,2,3E-3)",
+    "why": "no single value"
+   },
+   "A81": {
+    "f": "=BETA.INV(1-1E-16,2,3E-3)",
+    "why": "no single value"
+   },
+   "A82": {
+    "f": "=BETA.INV(1-1E-6,2,0.01)",
+    "why": "no single value"
+   },
+   "A83": {
+    "f": "=BETA.INV(1-1E-7,2,0.01)",
+    "why": "no single value"
+   },
+   "A84": {
+    "f": "=BETA.INV(1-1E-8,2,0.01)",
+    "why": "no single value"
+   },
+   "A85": {
+    "f": "=BETA.INV(1-1E-9,2,0.01)",
+    "why": "no single value"
+   },
+   "A86": {
+    "f": "=BETA.INV(1-1E-10,2,0.01)",
+    "why": "no single value"
+   },
+   "A87": {
+    "f": "=BETA.INV(1-1E-12,2,0.01)",
+    "why": "no single value"
+   },
+   "A88": {
+    "f": "=BETA.INV(1-1E-14,2,0.01)",
+    "why": "no single value"
+   },
+   "A89": {
+    "f": "=BETA.INV(1-1E-15,2,0.01)",
+    "why": "no single value"
+   },
+   "A9": {
+    "f": "=BETA.INV(1-1E-16,0.5,1E-3)",
+    "why": "no single value"
+   },
+   "A90": {
+    "f": "=BETA.INV(1-1E-16,2,0.01)",
+    "why": "no single value"
+   },
+   "A91": {
+    "f": "=BETA.INV(1-1E-6,2,0.03)",
+    "why": "no single value"
+   },
+   "A92": {
+    "f": "=BETA.INV(1-1E-7,2,0.03)",
+    "why": "no single value"
+   },
+   "A93": {
+    "f": "=BETA.INV(1-1E-8,2,0.03)",
+    "why": "no single value"
+   },
+   "A94": {
+    "f": "=BETA.INV(1-1E-9,2,0.03)",
+    "why": "no single value"
+   },
+   "A95": {
+    "f": "=BETA.INV(1-1E-10,2,0.03)",
+    "why": "no single value"
+   },
+   "A96": {
+    "f": "=BETA.INV(1-1E-12,2,0.03)",
+    "why": "no single value"
+   },
+   "A97": {
+    "f": "=BETA.INV(1-1E-14,2,0.03)",
+    "why": "no single value"
+   },
+   "A98": {
+    "f": "=BETA.INV(1-1E-15,2,0.03)",
+    "why": "no single value"
+   },
+   "A99": {
+    "f": "=BETA.INV(1-1E-16,2,0.03)",
+    "why": "no single value"
+   },
+   "B204": {
+    "f": "=BETA.INV(2E-10,0.03,2)",
+    "why": "no single value"
+   },
+   "B205": {
+    "f": "=BETA.INV(1.5E-10,0.03,2)",
+    "why": "no single value"
+   },
+   "B214": {
+    "f": "=BETA.INV(1.5E-10,0.03,0.5)",
+    "why": "no single value"
+   },
+   "C197": {
+    "f": "=BETA.INV(1-8E-10,10,0.03)",
+    "why": "no single value"
+   },
+   "C198": {
+    "f": "=BETA.INV(1-7E-10,10,0.03)",
+    "why": "no single value"
+   },
+   "C199": {
+    "f": "=BETA.INV(1-6E-10,10,0.03)",
+    "why": "no single value"
+   },
+   "C200": {
+    "f": "=BETA.INV(1-5E-10,10,0.03)",
+    "why": "no single value"
+   },
+   "C201": {
+    "f": "=BETA.INV(1-4E-10,10,0.03)",
+    "why": "no single value"
+   },
+   "C202": {
+    "f": "=BETA.INV(1-3E-10,10,0.03)",
+    "why": "no single value"
+   },
+   "C203": {
+    "f": "=BETA.INV(1-2.5E-10,10,0.03)",
+    "why": "no single value"
+   },
+   "C204": {
+    "f": "=BETA.INV(1-2E-10,10,0.03)",
+    "why": "no single value"
+   },
+   "D203": {
+    "f": "=BETA.INV(0.51,2,1E-3)",
+    "why": "no single value"
+   }
+  }
+ }
+}

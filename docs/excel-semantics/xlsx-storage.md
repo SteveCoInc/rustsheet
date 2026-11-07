@@ -83,8 +83,10 @@ Ours: the importer empties every covered cell (`clear_covered_cells`) because co
 no content is an engine invariant (merge, autofill and clipboard rely on it), so these cells are
 visibly off and poi/bug66675.xlsx and other census files lose covered values on a round trip.
 Evidence: fixtures/merged-covered-values, fixtures/merged-covered-formula (excel-graph, 2026-11-06, T-4148).
-Status: VERIFIED (excel-graph); not implemented (owner task in the fixtures' baseline entries).
-What Excel's UI merge then does with such a range (unmerge, edit, autofill) is UNVERIFIED.
+Status: VERIFIED (excel-graph); not implemented (T-5044 owns the fixtures' off cells).
+What Excel's UI merge then does with such a range (unmerge, edit, paste, autofill, a delete of the anchor's row) is
+UNVERIFIED; docs/specs/SPEC-0036-merged-covered-content.md states our rule for each operation and which probe (T-5048)
+settles it.
 
 ## Import resource limits reject a workbook outright
 Rule: the importer rejects a workbook with `XlsxError::Limit` when its zip lists more than 5,000

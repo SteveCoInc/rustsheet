@@ -51,9 +51,9 @@ pub(super) fn without_lines(tables: &[PivotTable]) -> Vec<PivotTable> {
 }
 
 /// The Excel-saved pivot of `tests/example.xlsx` comes back equal, its saved `rowItems` and
-/// `colItems` included, whether they are written back as read (the engine has not laid it out)
-/// or from the engine's layout once it has: the engine's lines for it are Excel's, written as
-/// Excel writes them.
+/// `colItems` included, whether they are written back as read (the engine has not laid it out, or
+/// laid it out to the cells it already shows) or from the engine's layout without them: the
+/// engine's lines for it are Excel's, written as Excel writes them.
 #[test]
 fn an_excel_saved_pivot_round_trips() {
     let mut model = load_from_xlsx("tests/example.xlsx", "en", "UTC", "en").unwrap();
@@ -71,12 +71,19 @@ fn an_excel_saved_pivot_round_trips() {
     assert_eq!(back.workbook.pivot_caches, model.workbook.pivot_caches);
     assert_eq!(back.workbook.pivot_tables, saved);
 
-    // Laid out by the engine, it holds no saved lines and gets the engine's, equal to Excel's.
+    // Laid out again by the engine over the same cache, where it already shows the same cells,
+    // it keeps its saved lines (T-4825): nothing changed, so the source-preserving export can
+    // keep its parts.
     let placed = model
         .plan_pivot_render(0, &mut PivotBudget::default())
         .unwrap();
-    let pivot = placed.placements.into_iter().next().unwrap().pivot;
-    assert!(!pivot.opaque.iter().any(OpaqueEntry::is_layout_lines));
+    let mut pivot = placed.placements.into_iter().next().unwrap().pivot;
+    assert_eq!(
+        pivot, saved[0],
+        "an unchanged layout leaves the pivot as read"
+    );
+    // Without saved lines, it gets the engine's, equal to Excel's.
+    pivot.opaque.retain(|entry| !entry.is_layout_lines());
     model.workbook.pivot_tables = vec![pivot];
     let back = round_trip(&model);
     assert_eq!(back.workbook.pivot_tables, saved);
@@ -89,6 +96,34 @@ fn an_excel_saved_pivot_round_trips() {
     let style = table.find("<pivotTableStyleInfo").unwrap();
     let extensions = table.find("<extLst>").unwrap();
     assert!(table.find("<colItems").unwrap() < data && data < style && style < extensions);
+}
+
+/// Laid out again where the sheet no longer shows the pivot's cells, the pivot drops its saved
+/// lines: they no longer describe what the layout writes, so the export writes the engine's
+/// (T-4176). Only an unchanged layout keeps them (T-4825).
+#[test]
+fn a_changed_layout_drops_the_saved_lines() {
+    let mut model = load_from_xlsx("tests/example.xlsx", "en", "UTC", "en").unwrap();
+    let saved = model.workbook.pivot_tables[0].clone();
+    assert!(saved.opaque.iter().any(OpaqueEntry::is_layout_lines));
+    let sheet = model
+        .workbook
+        .worksheets
+        .iter()
+        .position(|w| w.sheet_id == saved.sheet_id)
+        .unwrap();
+    let sheet = u32::try_from(sheet).unwrap();
+    let row = i32::try_from(saved.location.bottom + 1).unwrap();
+    let column = i32::try_from(saved.location.right + 1).unwrap();
+    model
+        .set_user_input(sheet, row, column, "edited".to_string())
+        .unwrap();
+    let placed = model
+        .plan_pivot_render(0, &mut PivotBudget::default())
+        .unwrap();
+    let pivot = placed.placements.into_iter().next().unwrap().pivot;
+    assert!(!pivot.opaque.iter().any(OpaqueEntry::is_layout_lines));
+    assert_eq!(without_lines(&[pivot]), without_lines(&[saved]));
 }
 
 /// The case builder's pivots of `tests/pivot_tables.xlsx` (probes/getpivotdata-real-pivot) come
