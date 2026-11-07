@@ -1074,9 +1074,9 @@ PV-1072	metadata	pivotTableDefinition/pivotFields/pivotField/extLst		none	unknow
 PV-1073	layout	pivotTableDefinition/pivotFields/pivotField/items		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-1074	layout	pivotTableDefinition/pivotFields/pivotField/items/item		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-1075	layout	pivotTableDefinition/pivotFields/pivotField/items/item@c	false	layout	yes	in	PV1	todo	probes/t4129-pivot-item-flags IC
-PV-1076	layout	pivotTableDefinition/pivotFields/pivotField/items/item@d	false	layout	no	in	PV1	todo	T-4129 runs: the web refuses the file (FileCorruptTryRepair); pivots.md; M14 T-4730
+PV-1076	layout	pivotTableDefinition/pivotFields/pivotField/items/item@d	false	layout	no	in	PV1	todo	T-4129 runs: the web refuses the file (FileCorruptTryRepair); pivots.md; out of scope (decision 0266)
 PV-1077	layout	pivotTableDefinition/pivotFields/pivotField/items/item@e	true	layout	yes	in	PV1	todo	probes/t4129-pivot-item-flags IE
-PV-1078	layout	pivotTableDefinition/pivotFields/pivotField/items/item@f	false	layout	no	in	PV1	todo	T-4129 runs: the web refuses the file (FileCorruptTryRepair); pivots.md; M14 T-4730
+PV-1078	layout	pivotTableDefinition/pivotFields/pivotField/items/item@f	false	layout	no	in	PV1	todo	T-4129 runs: the web refuses the file (FileCorruptTryRepair); pivots.md; out of scope (decision 0266)
 PV-1079	filtering	pivotTableDefinition/pivotFields/pivotField/items/item@h	false	values	unknown	in	PV2	todo	
 PV-1080	layout	pivotTableDefinition/pivotFields/pivotField/items/item@m	false	layout	yes	in	PV1	todo	probes/t4129-pivot-item-flags IM
 PV-1081	captions	pivotTableDefinition/pivotFields/pivotField/items/item@n		text	unknown	in	PV1	todo	
@@ -1093,7 +1093,7 @@ PV-1091	layout	pivotTableDefinition/pivotFields/pivotField@compact	true	layout	y
 PV-1092	totals	pivotTableDefinition/pivotFields/pivotField@countASubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1093	totals	pivotTableDefinition/pivotFields/pivotField@countSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1094	aggregation	pivotTableDefinition/pivotFields/pivotField@dataField	false	values	yes	in	PV1	todo	probes/t4123-pivot-capture C
-PV-1095	layout	pivotTableDefinition/pivotFields/pivotField@dataSourceSort		layout	no	in	PV1	todo	T-4129 runs: the web refuses the file (FileCorruptTryRepair); pivots.md; M14 T-4730
+PV-1095	layout	pivotTableDefinition/pivotFields/pivotField@dataSourceSort		layout	no	in	PV1	todo	T-4129 runs: the web refuses the file (FileCorruptTryRepair); pivots.md; out of scope (decision 0266)
 PV-1096	layout	pivotTableDefinition/pivotFields/pivotField@defaultAttributeDrillState	false	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags FA
 PV-1097	totals	pivotTableDefinition/pivotFields/pivotField@defaultSubtotal	true	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1098	ui	pivotTableDefinition/pivotFields/pivotField@dragOff	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	

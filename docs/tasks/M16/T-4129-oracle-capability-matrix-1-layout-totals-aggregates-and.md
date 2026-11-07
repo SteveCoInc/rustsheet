@@ -18,7 +18,7 @@ Graph cannot create pivots; Excel for the web renders authored definitions (orac
 
 ## Acceptance criteria
 - [x] `web` filled for every row of these families, each citing a probe.
-- [x] Refused rows have M14 tasks.
+- [x] Refused rows have M14 tasks: none filed, because decision 0266 closes M14 to new tasks; the refusal is recorded in pivots.md instead.
 - [x] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -34,8 +34,9 @@ cites a probe and sheet in `evidence`: 140 are `yes` and 3 are `no`.
   - every location, axis and totals attribute;
   - the x14 pivotTableDefinition and pivotField extensions.
 - **Refuse (no).** Three flags make the web refuse the file (`FileCorruptTryRepair`): `pivotField@dataSourceSort`,
-  `item@d` and `item@f` (with no calculatedItems). They are filed as M14 T-4730. Decision 0266 closes M14, so
-  T-4730 was filed `dropped`, and decision 0274 makes these rows non-blocking.
+  `item@d` and `item@f` (with no calculatedItems). No M14 task is filed:
+  decision 0266 closes M14 to new tasks, so the refusal is recorded in pivots.md, and decision 0274 makes these
+  rows non-blocking.
 - **Repair.** Nothing was repaired on open. Excel silently drops `item@m="1"`, `item@e="1"` (the default) and a
   pivotField's `axis="axisValues"` when it saves.
 
@@ -58,5 +59,5 @@ Harness changes:
 - the snapshot pivot reader no longer takes the x14 `<x14:pivotTableDefinition>` for the root, which had dropped a
   pivot from the sidecar.
 
-Owners of the new off cells (decision 0245): T-4163 (show-as), T-4698 (X14F fillDownLabels) and the new T-4733
+Owners of the new off cells (decision 0245): T-4163 (show-as), T-4698 (X14F fillDownLabels) and the new T-4745
 (gridDropZones and subtotalCaption).

@@ -1269,7 +1269,7 @@ Rule: Excel for the web refuses to open a workbook (createSession 501 `FileCorru
 Evidence: T-4129 runs (excel-graph, 2026-11-06), one pivot per flag, bisected from the FA sheet of
 probes/t4129-pivot-layout-flags and the sheets of probes/t4129-pivot-item-flags.
 Status: a builder observation, not committable as a probe: Excel saves nothing for a file it refuses.
-What desktop Excel does is M14 T-4730 (dropped, decision 0266). The case builder does not refuse these
+What desktop Excel does is out of scope (decision 0266). The case builder does not refuse these
 flags; a case that sets one cannot be filled.
 
 ## Show-values-as modes as Excel for the web renders them
