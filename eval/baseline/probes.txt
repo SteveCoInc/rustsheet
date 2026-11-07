@@ -10116,12 +10116,8 @@ F	probes/t4857-f-kinds.case.json	Calc!A549
 F	probes/t4857-f-kinds.case.json	Calc!A552
 F	probes/t4857-f-kinds.case.json	Calc!A557
 F	probes/t4857-f-kinds.case.json	Calc!A558
-F	probes/t4857-f-kinds.case.json	Calc!A605
-F	probes/t4857-f-kinds.case.json	Calc!A606
 F	probes/t4857-f-kinds.case.json	Calc!A607
 F	probes/t4857-f-kinds.case.json	Calc!A608
-F	probes/t4857-f-kinds.case.json	Calc!A659
-F	probes/t4857-f-kinds.case.json	Calc!A660
 F	probes/t4857-f-kinds.case.json	Calc!A661
 F	probes/t4857-f-kinds.case.json	Calc!A662
 F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!A11

@@ -4369,9 +4369,9 @@ Rule: every argument of F.DIST, F.DIST.RT, FDIST, F.INV, F.INV.RT and FINV reads
   so is the text element `"2.5"` of a lifted array; an empty cell and an omitted flag are FALSE.
 - F.TEST and FTEST: every sample kind of "F.TEST of a single value (T-2455)" and its neighbours holds in both
   positions; an omitted sample is `#VALUE!` (see that entry).
-Ours: every kind cell has Excel's type and error, except the omitted F.TEST sample (T-4882). The values are a
+Ours: every kind cell has Excel's type and error (the omitted F.TEST sample since T-4882). The values are a
 separate matter: `rustsheet-eval show` passes 514 of the 669 scored cells bit for bit; 125 are within 4 ulp, 26 are
-further off, and 4 are the F.TEST error mismatch. The 26 are quantile values (F.INV, F.INV.RT and FINV at the
+further off, and the 4 F.TEST omitted-sample cells matched after T-4882. The 26 are quantile values (F.INV, F.INV.RT and FINV at the
 probe's p and df, among them `F.INV(0.3,TRUE,10)` and its reference and `(1=1)` forms, A302, A308, A319, and the
 F.INV.RT and FINV rows from A389), the engine's quantile digits rather than the argument reading (T-4883).
 Status: VERIFIED (excel-graph)
@@ -6658,7 +6658,7 @@ F.TEST checks its samples in order, each one's error or blank one-cell reference
 `#DIV/0!` and `FTEST(NA(),B10:B10)` `#N/A` (A77, A78), so for F.TEST the blank does not beat an earlier sample's error; a
 computed blank (`FTEST(IF(TRUE,B10),{1;2;3})`) is `#VALUE!` too (A79). An omitted sample is `#VALUE!` in either
 position, for both names: `F.TEST(,{2;3;3;9})`, `F.TEST({2;3;3;9},)`, `FTEST(,{2;3;3;9})` and `FTEST({2;3;3;9},)`
-(probes/t4857-f-kinds A605, A606, A659, A660, excel-graph 2026-11-07); ours is the one-value `#DIV/0!` (T-4882).
+(probes/t4857-f-kinds A605, A606, A659, A660, excel-graph 2026-11-07); ours matches since T-4882.
 Ours: since T-2455 (`fn_f_test`, `f_test_sample`, `is_blank_one_cell` in functions/statistical/fisher.rs). The paired
 functions' blank-cell `#VALUE!` followed in T-2426.
 Status: VERIFIED (excel-graph)
