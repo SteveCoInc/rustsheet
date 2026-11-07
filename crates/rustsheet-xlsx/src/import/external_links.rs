@@ -88,6 +88,7 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
         .collect();
     let mut cells = HashMap::new();
     let mut refresh_error_sheets = Vec::new();
+    let mut cached_sheets = Vec::new();
     for sheet_data in book.descendants().filter(|n| n.has_tag_name("sheetData")) {
         let Some(sheet) = sheet_data
             .attribute("sheetId")
@@ -95,6 +96,9 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
         else {
             continue;
         };
+        if !cached_sheets.contains(&sheet) {
+            cached_sheets.push(sheet);
+        }
         // The fixture shows "1"; "true" is the other xsd:boolean spelling of it.
         if matches!(sheet_data.attribute("refreshError"), Some("1" | "true"))
             && !refresh_error_sheets.contains(&sheet)
@@ -120,6 +124,7 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
         sheet_names,
         defined_names,
         cells,
+        cached_sheets,
         refresh_error_sheets,
     }
 }
@@ -151,6 +156,7 @@ mod tests {
         assert_eq!(book.sheet_names, ["Uses", "Defines"]);
         // The refreshError sheet is kept (fixtures/external-link-uncached-lookups Refs!B38, T-0472).
         assert_eq!(book.refresh_error_sheets, [2]);
+        assert_eq!(book.cached_sheets, [0, 1, 2]);
         assert_eq!(book.defined_names.len(), 2);
         assert_eq!(book.defined_names[0].sheet_id, None);
         assert_eq!(book.defined_names[1].sheet_id, Some(1));

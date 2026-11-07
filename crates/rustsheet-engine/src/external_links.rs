@@ -54,6 +54,10 @@ pub struct ExternalBook {
     pub defined_names: Vec<DefinedName>,
     /// The cached cell values, keyed by (sheet index, row, column).
     pub cells: HashMap<(u32, i32, i32), SpillValue>,
+    /// The sheets the cache has a `sheetData` element for, in order: only these are written back,
+    /// as Excel left out the rest (fixtures/external-link-uncached-lookups.xlsx caches no
+    /// `sheetData` for its sheet 3 and an empty one for sheet 4; T-4143).
+    pub cached_sheets: Vec<u32>,
     /// The sheets whose `sheetData` is marked `refreshError="1"`: Excel failed to refresh them, and
     /// a cell of one that the cache does not hold reads `#REF!`, not `#BLOCKED!`
     /// (`ERROR.TYPE('[1]56737'!$B$2)` is 4; fixtures/external-link-uncached-lookups Refs!B38, T-0472).

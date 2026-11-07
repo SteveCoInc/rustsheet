@@ -142,12 +142,13 @@ fn external_link_xml(book: &ExternalBook) -> String {
     xml
 }
 
-/// The `sheetData` elements of `book`'s cache: one per sheet name, and one per other sheet the
-/// cache holds cells of or marks `refreshError`, in sheet order. Empty for a book with neither.
+/// The `sheetData` elements of `book`'s cache, in sheet order: one per sheet it was read with
+/// ([`ExternalBook::cached_sheets`]), and one per other sheet it holds cells of or marks
+/// `refreshError`. Empty for a book with none.
 fn sheet_data_set(book: &ExternalBook) -> String {
     let mut cells: Vec<(&(u32, i32, i32), &SpillValue)> = book.cells.iter().collect();
     cells.sort_unstable_by_key(|(key, _)| **key);
-    let mut sheets: Vec<u32> = (0..u32::try_from(book.sheet_names.len()).unwrap_or(u32::MAX))
+    let mut sheets: Vec<u32> = (book.cached_sheets.iter().copied())
         .chain(cells.iter().map(|((sheet, _, _), _)| *sheet))
         .chain(book.refresh_error_sheets.iter().copied())
         .collect();
@@ -231,6 +232,7 @@ mod tests {
                 ((0, 1, 1), SpillValue::Text("<Hi>".into())),
                 ((0, 2, 1), SpillValue::Error(Error::NA)),
             ]),
+            cached_sheets: Vec::new(),
             refresh_error_sheets: vec![2],
         };
         let xml = external_link_xml(&book);
@@ -242,6 +244,21 @@ mod tests {
         ));
         assert!(
             external_link_rels(&book).contains(r#"Target="a&amp;b.xlsx" TargetMode="External""#)
+        );
+    }
+
+    // fixtures/external-link-uncached-lookups.xlsx: no `sheetData` for sheet 1, an empty one for 2.
+    #[test]
+    fn writes_sheet_data_only_for_the_sheets_it_was_read_with() {
+        let book = ExternalBook {
+            sheet_names: vec!["A".to_string(), "B".to_string(), "C".to_string()],
+            cells: HashMap::from([((0, 1, 1), SpillValue::Number(1.5))]),
+            cached_sheets: vec![0, 2],
+            ..ExternalBook::default()
+        };
+        assert_eq!(
+            sheet_data_set(&book),
+            r#"<sheetData sheetId="0"><row r="1"><cell r="A1"><v>1.5</v></cell></row></sheetData><sheetData sheetId="2"></sheetData>"#
         );
     }
 }
