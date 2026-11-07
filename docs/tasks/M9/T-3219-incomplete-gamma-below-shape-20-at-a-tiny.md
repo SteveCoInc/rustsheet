@@ -34,6 +34,10 @@ Cells (from T-2638; run `make eval-show CASE=...` for the values):
   gen-m9/984cba67bbe6972b A42 `CHISQ.DIST(37.5,6,FALSE)`, A140, A217, gen-m9/68d8ffb69ff739d8 A341, gen-m9/a54c738c697617c3 A212,
   gen-m9/a7bf0d8d81d33ba6 A152, and gen-m9/0a614cfe974b59c3 A178 (`CHISQ.DIST(AGGREGATE(...),...)`, 3 ulp off before T-2638 and
   4 after).
+  gen-m9/05d44f6dd6cfc567 Calc!A178 is localized (T-3333, probes/subexpr-05d44f6dd6cfc567-calc-a178, excel-graph): its
+  inner `CHISQ.DIST.RT(1.5,7)%` (0.009823096598068504) and `PI()=(Data!$B$9+1)` (FALSE) are bit-exact, and only the
+  outer density `CHISQ.DIST(0.009823096598068504,8,FALSE)` is off: Excel 9.825189899531443E-09, ours ...435E-09
+  (Subexpr!A6, baselined).
 - CHIINV: gen-m9/285d87cea1aaa73c A261 and gen-m9/4ab2ba98d26c8a5e A85 `CHIINV(0.975,5)`; gen-m9/73f053591a54bc43 A108 (MOD of
   `CHISQ.INV.RT(0.975,5)`).
 - Type mismatches T-2638 owned by the decision-0159 rule (other causes may own them; check first):
