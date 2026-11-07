@@ -3,7 +3,7 @@ id: T-4870
 title: "An empty argument of EDATE, EOMONTH, WORKDAY, NETWORKDAYS, WEEKNUM and YEARFRAC follows Excel (probe the Analysis ToolPak #N/A rule)"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
