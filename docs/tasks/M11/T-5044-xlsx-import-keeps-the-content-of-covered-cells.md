@@ -3,7 +3,7 @@ id: T-5044
 title: "xlsx import keeps the content of covered cells of a merged range (SPEC-0036 S1)"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
