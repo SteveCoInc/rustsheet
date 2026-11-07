@@ -3,7 +3,7 @@ id: T-5053
 title: "Correct the T-4766 array-compare note: exact-boundary evidence, the 15-digit literal cut, unprobed edges"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
