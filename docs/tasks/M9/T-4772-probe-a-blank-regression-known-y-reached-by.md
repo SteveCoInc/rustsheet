@@ -3,7 +3,7 @@ id: T-4772
 title: "Probe a blank regression known_y reached by OFFSET, INDIRECT, LET and XLOOKUP (T-4310 follow-up)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -22,11 +22,16 @@ No Excel result backs that yet (excel-fidelity review of #3829, MINOR). See docs
 "RANK, LARGE, SMALL and the regression functions: a cell picked by ... (T-4310)".
 
 ## Acceptance criteria
-- [ ] A probe case covers `LINEST(OFFSET(Data!A4,0,0),1/0)`, `LINEST(INDIRECT("Data!A4"),1/0)`,
+- [x] A probe case covers `LINEST(OFFSET(Data!A4,0,0),1/0)`, `LINEST(INDIRECT("Data!A4"),1/0)`,
       `LINEST(LET(y,Data!A4,y),1/0)` and `LINEST(XLOOKUP(..),1/0)` (blank result), the same forms without x, and
       TREND, LOGEST and GROWTH of each, filled from excel-graph.
-- [ ] Ours matches every cell, or each off cell has an owner task; the statistics.md entry is extended.
-- [ ] `make check` green; reviewers approve.
+- [x] Ours matches every cell, or each off cell has an owner task; the statistics.md entry is extended.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+Added probes/t4772-blank-y-offset-indirect-let-xlookup (32 cells, filled from excel-graph). Excel gives `#DIV/0!` with
+`1/0` as known_x and `#VALUE!` alone for all four forms and all four functions, exactly as the plain blank reference;
+the engine already matched, so no engine change. statistics.md entry extended. Eval delta: +32 passing probe cells.

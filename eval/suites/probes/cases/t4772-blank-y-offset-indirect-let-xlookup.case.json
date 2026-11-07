@@ -1,0 +1,56 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4772: LINEST, LOGEST, TREND and GROWTH given a blank known_y reached by OFFSET, INDIRECT, LET or XLOOKUP, with 1/0 as known_x and alone (T-4310 follow-up)",
+ "tags": [
+  "M9",
+  "probe"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=LINEST(OFFSET(Data!$A$4,0,0),1/0)",
+    "A2": "=LINEST(OFFSET(Data!$A$4,0,0))",
+    "A3": "=LINEST(INDIRECT(\"Data!A4\"),1/0)",
+    "A4": "=LINEST(INDIRECT(\"Data!A4\"))",
+    "A5": "=LINEST(LET(y,Data!$A$4,y),1/0)",
+    "A6": "=LINEST(LET(y,Data!$A$4,y))",
+    "A7": "=LINEST(XLOOKUP(5,Data!$A$1,Data!$A$4),1/0)",
+    "A8": "=LINEST(XLOOKUP(5,Data!$A$1,Data!$A$4))",
+    "A9": "=LOGEST(OFFSET(Data!$A$4,0,0),1/0)",
+    "A10": "=LOGEST(OFFSET(Data!$A$4,0,0))",
+    "A11": "=LOGEST(INDIRECT(\"Data!A4\"),1/0)",
+    "A12": "=LOGEST(INDIRECT(\"Data!A4\"))",
+    "A13": "=LOGEST(LET(y,Data!$A$4,y),1/0)",
+    "A14": "=LOGEST(LET(y,Data!$A$4,y))",
+    "A15": "=LOGEST(XLOOKUP(5,Data!$A$1,Data!$A$4),1/0)",
+    "A16": "=LOGEST(XLOOKUP(5,Data!$A$1,Data!$A$4))",
+    "A17": "=TREND(OFFSET(Data!$A$4,0,0),1/0)",
+    "A18": "=TREND(OFFSET(Data!$A$4,0,0))",
+    "A19": "=TREND(INDIRECT(\"Data!A4\"),1/0)",
+    "A20": "=TREND(INDIRECT(\"Data!A4\"))",
+    "A21": "=TREND(LET(y,Data!$A$4,y),1/0)",
+    "A22": "=TREND(LET(y,Data!$A$4,y))",
+    "A23": "=TREND(XLOOKUP(5,Data!$A$1,Data!$A$4),1/0)",
+    "A24": "=TREND(XLOOKUP(5,Data!$A$1,Data!$A$4))",
+    "A25": "=GROWTH(OFFSET(Data!$A$4,0,0),1/0)",
+    "A26": "=GROWTH(OFFSET(Data!$A$4,0,0))",
+    "A27": "=GROWTH(INDIRECT(\"Data!A4\"),1/0)",
+    "A28": "=GROWTH(INDIRECT(\"Data!A4\"))",
+    "A29": "=GROWTH(LET(y,Data!$A$4,y),1/0)",
+    "A30": "=GROWTH(LET(y,Data!$A$4,y))",
+    "A31": "=GROWTH(XLOOKUP(5,Data!$A$1,Data!$A$4),1/0)",
+    "A32": "=GROWTH(XLOOKUP(5,Data!$A$1,Data!$A$4))"
+   }
+  },
+  {
+   "name": "Data",
+   "cells": {
+    "A1": 5,
+    "A2": true,
+    "A3": "7"
+   }
+  }
+ ]
+}

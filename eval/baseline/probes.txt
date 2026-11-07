@@ -2663,6 +2663,7 @@ C	probes/t4720-fixed-sign-and-exponent-digits.case.json	37
 C	probes/t4721-im-overflow-residue.case.json	25
 C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/t4765-growth-factor-edges.case.json	24
+C	probes/t4772-blank-y-offset-indirect-let-xlookup.case.json	32
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
