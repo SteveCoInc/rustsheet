@@ -6,20 +6,20 @@
 //! trivially (nothing was applied).
 
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::{Mutex, MutexGuard};
 
 use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyBytes, PyDict, PyInt, PyList};
+use pyo3::types::{PyBool, PyDict, PyInt, PyList};
 use pyo3::{create_exception, IntoPyObjectExt};
 
+use crate::lone::{lone_cells, lone_str_to_py, may_hold_lone_surrogate};
 use crate::pivots::{self, PivotOp};
 
 use rustsheet::{
     parse_cell, parse_range, resolve_sheet_by_name, ChangeSet, Clock, DateSystem, EditError,
-    ErrorKind, Input, Iteration, LoadError, LoadOptions, Password, RangeRef, RefError, SaveOptions,
+    ErrorKind, Input, Iteration, LoadError, LoadOptions, Password, RefError, SaveOptions,
     SheetChange, SheetId, Txn, Value, Workbook, WorkbookOptions, XlError,
 };
 
@@ -129,57 +129,6 @@ impl PyFormula {
     fn __repr__(&self) -> String {
         format!("Formula({:?})", self.text)
     }
-}
-
-/// The little-endian UTF-16 bytes of `units`, which Python decodes with `surrogatepass`.
-fn utf16_le_bytes(units: &[u16]) -> Vec<u8> {
-    units.iter().flat_map(|u| u.to_le_bytes()).collect()
-}
-
-/// A Python `str` holding exactly `units`, lone surrogates included (`str` can, `String` cannot).
-fn lone_str_to_py(py: Python<'_>, units: &[u16]) -> PyResult<Py<PyAny>> {
-    let bytes = PyBytes::new(py, &utf16_le_bytes(units));
-    Ok(bytes
-        .call_method1("decode", ("utf-16-le", "surrogatepass"))?
-        .unbind())
-}
-
-/// Cheap guard: a lone surrogate always shows as U+FFFD in the lossy text.
-fn may_hold_lone_surrogate(text: &str) -> bool {
-    text.contains('\u{FFFD}')
-}
-
-/// Exact UTF-16 units of lone-surrogate cells, keyed by (row, column) offset in a range.
-type LoneCells = HashMap<(usize, usize), std::sync::Arc<[u16]>>;
-
-/// The exact UTF-16 units of every lone-surrogate text cell of `arr`, the values of range `r`,
-/// keyed by (row, column) offset in the range.
-fn lone_cells(wb: &Workbook, r: &str, arr: &rustsheet::Array) -> Result<LoneCells, RefError> {
-    let range = wb.range_ref(r)?;
-    let mut lone = HashMap::new();
-    for row in 0..arr.rows() {
-        for col in 0..arr.cols() {
-            let Some(Value::Text(s)) = arr.get(row, col) else {
-                continue;
-            };
-            if !may_hold_lone_surrogate(s) {
-                continue;
-            }
-            let at = |origin: u32, offset: usize| {
-                u32::try_from(offset)
-                    .ok()
-                    .and_then(|o| origin.checked_add(o))
-            };
-            let (Some(rr), Some(cc)) = (at(range.top, row), at(range.left, col)) else {
-                continue;
-            };
-            let cell = RangeRef::new(range.sheet, rr, cc, rr, cc)?;
-            if let Some(units) = wb.text_utf16(cell)? {
-                lone.insert((row, col), units);
-            }
-        }
-    }
-    Ok(lone)
 }
 
 pub(crate) fn value_to_py(py: Python<'_>, value: Value) -> PyResult<Py<PyAny>> {
@@ -460,10 +409,24 @@ impl PyWorkbook {
         Ok(Self::wrap(wb))
     }
 
-    /// Saves to an xlsx file (the GIL is released while saving).
-    fn save_xlsx(&self, py: Python<'_>, path: &str) -> PyResult<()> {
-        py.detach(|| lock(&self.wb).save_xlsx(path, SaveOptions::default()))
-            .map_err(|e| PySaveError::new_err(e.to_string()))
+    /// Saves to an xlsx file (the GIL is released while saving). With `report`, returns what the
+    /// save left out as `(item, reason)` pairs (SPEC-0033 D7): the source part's name and the
+    /// reason's name (`NotPreserved`, `Policy`, ...).
+    #[pyo3(signature = (path, report=false))]
+    fn save_xlsx(
+        &self,
+        py: Python<'_>,
+        path: &str,
+        report: bool,
+    ) -> PyResult<Option<Vec<(String, String)>>> {
+        let saved = py
+            .detach(|| lock(&self.wb).save_xlsx_with_report(path, SaveOptions::default()))
+            .map_err(|e| PySaveError::new_err(e.to_string()))?;
+        Ok(report.then(|| {
+            (saved.dropped.into_iter())
+                .map(|d| (d.item, d.reason.name().to_string()))
+                .collect()
+        }))
     }
 
     /// Returns the workbook as xlsx bytes.
@@ -984,14 +947,4 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     m.add("WrongPasswordError", py.get_type::<PyWrongPasswordError>())?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::utf16_le_bytes;
-
-    #[test]
-    fn lone_units_become_little_endian_bytes() {
-        assert_eq!(utf16_le_bytes(&[0x61, 0xDE00]), [0x61, 0x00, 0x00, 0xDE]);
-    }
 }

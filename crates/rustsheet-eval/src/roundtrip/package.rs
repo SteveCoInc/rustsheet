@@ -287,15 +287,18 @@ impl Package {
         self.parts
             .keys()
             .filter(|p| rels_source(p).is_none() && p.as_str() != CONTENT_TYPES)
-            .map(|p| {
-                let key = self
-                    .keys
-                    .get(p)
-                    .cloned()
-                    .unwrap_or_else(|| format!("orphan:{p}"));
-                (key, p.as_str())
-            })
+            .map(|p| (self.key_of(p), p.as_str()))
             .collect()
+    }
+
+    /// The key of the part named `name` (any spelling of it): the D2 key when the part is reached
+    /// from the root, `orphan:<name>` when it is not.
+    pub(crate) fn key_of(&self, name: &str) -> String {
+        let p = part_key(name);
+        self.keys
+            .get(&p)
+            .cloned()
+            .unwrap_or_else(|| format!("orphan:{p}"))
     }
 }
 

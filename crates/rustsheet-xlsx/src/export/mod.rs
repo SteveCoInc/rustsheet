@@ -12,6 +12,7 @@ mod pivot_charts;
 mod pivot_drawings;
 mod pivots;
 mod preserving;
+mod report;
 mod rich_errors;
 mod shared_strings;
 mod styles;
@@ -25,10 +26,12 @@ pub use pivot_charts::{
     rewrite_pivot_chart, PivotChartError, PivotChartFrame, MAX_CHART_PART_BYTES,
 };
 pub use preserving::{save_preserving, SaveTier};
+pub use report::{DropReason, Dropped, SaveReport};
 pub(crate) use rich_errors::rich_error_vm;
 pub(crate) use worksheets::exported_error_literal;
 mod xml_constants;
 
+use std::collections::BTreeSet;
 use std::io::BufWriter;
 use std::{
     fs,
@@ -122,18 +125,19 @@ pub fn save_to_xlsx(model: &Model, file_name: &str) -> Result<(), XlsxError> {
 /// Writes `model` as an xlsx package, its pivot caches and pivot tables included ([`pivots`]:
 /// the ones it cannot write faithfully are dropped and logged).
 pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<W, XlsxError> {
-    write_package(model, writer, None)
+    write_package(model, writer, None).map(|(writer, _)| writer)
 }
 
 /// Writes `model` as [`save_xlsx_to_writer`] does, also keeping the `PivotChart` drawings of the
 /// package `source` it was loaded from ([`pivot_drawings`], T-4950); `pristine` is `source` as
-/// imported (SPEC-0034 D2). The regenerated tier of [`save_preserving`].
+/// imported (SPEC-0034 D2). The regenerated tier of [`save_preserving`]. Also returns the source
+/// parts it kept, by part key, for the save report (T-4562).
 pub(super) fn save_regenerated<W: Write + Seek>(
     model: &Model,
     pristine: &Model,
     source: &[u8],
     writer: W,
-) -> Result<W, XlsxError> {
+) -> Result<(W, BTreeSet<String>), XlsxError> {
     write_package(model, writer, Some((pristine, source)))
 }
 
@@ -141,7 +145,7 @@ fn write_package<W: Write + Seek>(
     model: &Model,
     writer: W,
     source: Option<(&Model, &[u8])>,
-) -> Result<W, XlsxError> {
+) -> Result<(W, BTreeSet<String>), XlsxError> {
     let workbook = &model.workbook;
     let selected_sheet = match workbook.views.get(&0) {
         Some(view) => view.sheet,
@@ -319,7 +323,7 @@ fn write_package<W: Write + Seek>(
     }
 
     let writer = zip.finish()?;
-    Ok(writer)
+    Ok((writer, drawings.sources()))
 }
 
 /// Exports a model to an icalc file

@@ -7,6 +7,7 @@
 //! (T-4514) build on the same results.
 
 mod by_scenario;
+mod dropped;
 mod exceptions;
 mod package;
 mod package_diff;
@@ -47,11 +48,13 @@ pub enum Verdict {
     Added,
     /// The output failed a package-validator check (D6); the item is the check.
     PackageInvalid,
+    /// Not written, and the save report says why, for a reason the scenario accepts (D7.2): a pass.
+    Dropped,
 }
 
 impl Verdict {
     fn passes(self) -> bool {
-        self == Verdict::Kept
+        matches!(self, Verdict::Kept | Verdict::Dropped)
     }
 
     /// The verdict as a baseline line spells it.
@@ -63,6 +66,7 @@ impl Verdict {
             Verdict::Lost => "lost",
             Verdict::Added => "added",
             Verdict::PackageInvalid => "package-invalid",
+            Verdict::Dropped => "dropped",
         }
     }
 }
