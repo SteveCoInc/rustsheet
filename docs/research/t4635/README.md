@@ -53,3 +53,11 @@ Rule R (frozen; gen3.py is the fresh sweep that tests it, generated after the fr
   shape 4 up. The cut between 1.1 and 1.15 is unknown (Cut sheet narrows it).
 Predicted for gen3: Fresh column A (0.97 of the cut) a number, B (1.03) `#NUM!`, the same in C and D; shapes 0.3 and
 0.7 numbers.
+
+## Third and fourth fills (excel-graph 2026-11-07): rule R holds
+
+Fresh sweep (gen3): 84 of 84 cells as rule R predicted (0.97 of the cut a number, 1.03 `#NUM!`, both forms, 21
+shapes from 1.25 to 3.47); shapes 0.3 and 0.7 numbers at 1.79E308. Cut sheet: shapes 1.11 to 1.14 are numbers at
+every y to 1E306, so the low regime ends in [1.1, 1.11). Chi-squared (gen4): every cell as predicted. The engine
+implements rule R (gamma.rs `huge_ratio_num_error`); statistics.md "GAMMA.DIST at a huge finite x / beta (T-4635)"
+records it.
