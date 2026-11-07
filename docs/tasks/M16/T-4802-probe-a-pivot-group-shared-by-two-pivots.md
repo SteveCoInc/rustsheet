@@ -37,6 +37,15 @@ memory: one discrete or date-level group seen by two pivots of one cache, and th
   probe needs the snapshot's `PivotCacheField` (crates/rustsheet-eval/src/xlsx_snapshot/pivots.rs) to keep them, or
   another committed record of the saved parts.
 
+- The refresh's own readings for groups (T-4171; pivots.md entry above, "The engine's own readings"): a base item
+  new to the source becomes a group item of its own after the old ones; the refresh is refused when that item's label
+  equals a group's ignoring case, when a date level's base gains a blank, or when the source gains a column named as
+  an added field; an added field whose base left the source goes with it; and whether Excel tolerates a grouped
+  field's `<item x>` past its rebuilt groups without `refreshOnLoad` (t4128 G has it on), or on a date group or a
+  manual group (the importer drops such an item on a `refreshOnLoad` numeric range group only, and refuses the pivot
+  otherwise); and what Excel does with a bare `<fieldGroup par>` whose `par` is not an added field grouping that field
+  (the importer skips the cache).
+
 ## Acceptance criteria
 - [ ] Builder v2 (Python and the Rust mirror, same refusals, goldens) puts two pivots on one cache.
 - [ ] Probe cases with sidecars for the shared group, the saved `par`, `base` and `discretePr`, and the shapes above; entries in docs/excel-semantics/pivots.md;

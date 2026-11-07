@@ -195,10 +195,12 @@ fn test_fn_gamma_inv_huge_shape() {
     model._set("A3", "=GAMMA.INV(1,1E13,1)");
     model._set("A4", "=GAMMA.INV(0.5,1E9,1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"1.000265824");
-    assert_eq!(model._get_text("A2"), *"1.000265824");
+    // The closed-form branch: Excel's start is 1.000265824 times a and the scale, 2.66e-4 off the
+    // math, so ours is the true median, about a - 1/3 (decision 0188 R3, T-3364).
+    assert_eq!(model._get_text("A1"), *"1");
+    assert_eq!(model._get_text("A2"), *"1");
     assert_eq!(model._get_text("A3"), *"#NUM!");
-    // Below the cut the search's true quantile, about a - 1/3.
+    // Where Excel's search converges, its true quantile, about a - 1/3.
     assert_eq!(model._get_text("A4"), *"999999999.7");
 }
 
