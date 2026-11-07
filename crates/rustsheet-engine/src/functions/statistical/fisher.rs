@@ -254,7 +254,9 @@ const F_QUANTILE_REFINE_P_MIN: f64 = 1e-15;
 /// Where the search converged its cdf misses by its rounding noise: at most 2E-13 on every such
 /// estimate of the eval suites' literal-argument calls (23 distinct, p 1E-20 to 1.1E-15; T-1871).
 /// A guard between the two, not a fit: every value from 2E-13 to 5E-12 keeps and drops the same
-/// estimates.
+/// estimates. It only shrinks the keep region of the FITTED(T-0974) cut [`F_QUANTILE_REFINE_P_MIN`]:
+/// a dropped estimate takes the accurate crossing, so a converged estimate that misses by more
+/// (possible at a large df1, where the cdf's own rounding grows) loses nothing but the start.
 const F_QUANTILE_ESTIMATE_RESIDUAL_MAX: f64 = 1e-12;
 
 /// Whether statrs' estimate `x` solves the lower-tail target `lower` to
@@ -264,12 +266,13 @@ fn estimate_solves(df1: f64, df2: f64, x: f64, lower: f64) -> bool {
 }
 
 /// Quantile of the F distribution for `p` (the right tail's when `right_tail`) in [0, 1]: statrs'
-/// search (the capped port of `inverse_beta.rs`, T-1848) as a start where it is reliable, refined to
-/// the crossing of [`f_cdf`] or [`f_sf`] (`special::refine_increasing`) in the upper tail and from a
-/// lower-tail probability of [`F_QUANTILE_REFINE_P_MIN`] up; below it the estimate is kept where it
-/// solves the target ([`estimate_solves`], one cdf) and otherwise dropped for the crossing without a
-/// start. At most 512 Newton steps and 129 cdfs, or 66 cdfs without a
-/// start. From a df of [`F_QUANTILE_STATRS_DF_MAX`], Excel's BETA.INV mapped to F (T-1538).
+/// search (the capped port of `inverse_beta.rs`, T-1848) as a start where it is reliable, refined
+/// to the crossing of [`f_cdf`] or [`f_sf`] (`special::refine_increasing`) in the upper tail and
+/// from a lower-tail probability of [`F_QUANTILE_REFINE_P_MIN`] up. Below that the estimate is
+/// kept where it solves the target ([`estimate_solves`]: one cdf) and otherwise dropped for the
+/// crossing without a start (1 + 65 cdfs). At most 512 Newton steps and 129 cdfs on any path; 65
+/// cdfs where statrs gives no estimate. From a df of [`F_QUANTILE_STATRS_DF_MAX`], Excel's
+/// BETA.INV mapped to F (T-1538).
 fn f_quantile(df1: f64, df2: f64, p: f64, right_tail: bool) -> f64 {
     let lower = if right_tail { 1.0 - p } else { p };
     if lower <= 0.0 {
@@ -910,11 +913,14 @@ mod tests {
         );
     }
 
-    // T-1871: deep-tail quantiles where Excel is the math (50-digit mpmath). statrs' estimate at
-    // a tiny p can be no root (A168: 1.87E-14 against 1.7E-40), and the crossing of the Cephes
-    // tail was 8.4E-5 (A154) and 1.8% (A155) off until `large_prefactor` took brcomp's far branch.
+    // T-1871: deep-tail quantiles within 1E-14 relative of Excel (Excel is the 50-digit math at the
+    // first three; they are 50, 59 and 12 ulp from Excel's bits). statrs' estimate at a tiny p can be
+    // no root (A168: 1.87E-14 against 1.7E-40), and the crossing of the Cephes tail was 8.4E-5
+    // (A154) and 1.8% (A155) off until `large_prefactor` took brcomp's far branch. The last two
+    // are 53 and 9 ulp off Excel's bits (Excel's own tiny-p arithmetic, TODO(T-4894)); before,
+    // 1E16 and 2.5E-12 relative.
     #[test]
-    fn deep_tail_quantiles_are_excels() {
+    fn deep_tail_quantiles_are_within_fourteen_digits() {
         let cases = [
             // accuracy/F.INV/s1 A154, A168; accuracy/F.INV.RT/s1 A155.
             (

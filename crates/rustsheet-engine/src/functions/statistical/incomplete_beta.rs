@@ -429,14 +429,18 @@ fn large_prefactor(a: f64, b: f64, x: f64, y: f64) -> f64 {
     (a * ln_near_one(x, y) + b * ln_near_one(y, x) - ln_beta).exp()
 }
 
-/// One term of [`large_prefactor`]'s exponent, `e - ln(v/v0)` for `e = v/v0 - 1`: `rlog1(e)` near
-/// the mean, and from |e| > 0.6 on `e - ln(v/v0)` from `v` itself, as TOMS 708 `brcomp` takes it
-/// (its labels 111 and 121). Far below the mean `e` is -1 plus a tiny `v/v0`, which `1 + e` keeps
-/// only to about 2^-53/(v/v0) relative: `F.INV(4.56622854140627E-172,29,7719)` (x near 2.5E-15 at
-/// shapes 14.5 and 3859.5) crossed a tail 8.4E-5 off with `rlog1(e)` (accuracy/F.INV/s1 A154;
-/// accuracy/F.INV.RT/s1 A155, 1.8% off, likewise; T-1871).
+/// One term of [`large_prefactor`]'s exponent, `e - ln(v/v0)` for `e = v/v0 - 1`: `rlog1(e)`, but
+/// from e < -0.6 on `e - ln(v/v0)` from `v` itself, TOMS 708 `brcomp`'s far branch (its labels 111
+/// and 121). Far below the mean `e` is -1 plus a tiny `v/v0`, which `1 + e` keeps only to about
+/// 2^-53/(v/v0) relative: `F.INV(4.56622854140627E-172,29,7719)` (x near 2.5E-15 at shapes 14.5
+/// and 3859.5) crossed a tail 8.4E-5 off with `rlog1(e)` (accuracy/F.INV/s1 A154;
+/// accuracy/F.INV.RT/s1 A155, 1.8% off, likewise; T-1871). TOMS takes the branch for e > 0.6 too,
+/// where nothing cancels; there `rlog1(e)` is kept, since the branch only re-rounds the term and
+/// moved `BETADIST(0.925987407725148,691.377340906423,16.7922142692129)` and
+/// `F.DIST.RT(4.6348085950674,51,1254)` further from Excel and the math (BETADIST/s1 A171,
+/// F.DIST.RT/s1 A148, 19 and 33 ulp; T-1871 review).
 fn brcomp_log_term(e: f64, v: f64, v0: f64) -> f64 {
-    if e.abs() > 0.6 {
+    if e < -0.6 {
         e - (v / v0).ln()
     } else {
         rlog1(e)
@@ -828,6 +832,13 @@ mod tests {
             (upper / 4.695_097_943_991_835e-162 - 1.0).abs() < 1e-13,
             "{upper:e}"
         );
+    }
+
+    // x = 0 reaches the far branch as ln 0 = -inf: an infinite exponent, a zero prefactor, no NaN.
+    #[test]
+    fn large_prefactor_at_zero_is_zero() {
+        assert_eq!(brcomp_log_term(-1.0, 0.0, 0.5), f64::INFINITY);
+        assert_eq!(large_prefactor(14.5, 3859.5, 0.0, 1.0), 0.0);
     }
 
     #[test]
