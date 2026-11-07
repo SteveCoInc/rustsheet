@@ -244,11 +244,35 @@ const F_QUANTILE_STATRS_P_MIN: f64 = 1e-20;
 /// FITTED(T-0974, 61 cells, p 1E-20..1E-10, df 1..99999; nearest cells either side p 1.1E-16 and 1E-15)
 const F_QUANTILE_REFINE_P_MIN: f64 = 1e-15;
 
+/// The largest relative miss `|F(x)/p - 1|` of the lower tail ([`f_quantile_tail`]) at statrs'
+/// estimate x for which [`f_quantile`] keeps that estimate unrefined below
+/// [`F_QUANTILE_REFINE_P_MIN`]. statrs' AS 109 search stops on an absolute step test, so in the
+/// deep tail it can stop where its x is no root at all: `F.INV(1.04122706037508E-20,1,161)` was
+/// 1.87E-14 against Excel's and the math's 1.7082817524148195E-40 (cdf 1E13 times the target;
+/// accuracy/F.INV/s1 A168), `F.INV(1E-16,1,2)` 2.4E-16 against 2E-32 (gen-m9/c6cfda6bd10cae93
+/// A114) and `F.INV(1E-20,4,6)` 2.5E-12 relative off (cdf 5E-12 off; gen-m9/3a25a03eb94fcfbd A44).
+/// Where the search converged its cdf misses by its rounding noise: at most 2E-13 on every such
+/// estimate of the eval suites' literal-argument calls (23 distinct, p 1E-20 to 1.1E-15; T-1871).
+/// A guard between the two, not a fit: every value from 2E-13 to 5E-12 keeps and drops the same
+/// estimates. It only shrinks the keep region of T-0974's fitted cut [`F_QUANTILE_REFINE_P_MIN`]:
+/// a dropped estimate takes the accurate crossing, so a converged estimate that misses by more
+/// (possible at a large df1, where the cdf's own rounding grows) loses nothing but the start.
+const F_QUANTILE_ESTIMATE_RESIDUAL_MAX: f64 = 1e-12;
+
+/// Whether statrs' estimate `x` solves the lower-tail target `lower` to
+/// [`F_QUANTILE_ESTIMATE_RESIDUAL_MAX`] (one cdf).
+fn estimate_solves(df1: f64, df2: f64, x: f64, lower: f64) -> bool {
+    (f_quantile_tail(df1, df2, x, false) / lower - 1.0).abs() <= F_QUANTILE_ESTIMATE_RESIDUAL_MAX
+}
+
 /// Quantile of the F distribution for `p` (the right tail's when `right_tail`) in [0, 1]: statrs'
-/// search (the capped port of `inverse_beta.rs`, T-1848) as a start where it is reliable, refined to
-/// the crossing of [`f_cdf`] or [`f_sf`] (`special::refine_increasing`) in the upper tail and from a
-/// lower-tail probability of [`F_QUANTILE_REFINE_P_MIN`] up. At most 512 Newton steps and 129 cdfs, or 65 cdfs without a
-/// start. From a df of [`F_QUANTILE_STATRS_DF_MAX`], Excel's BETA.INV mapped to F (T-1538).
+/// search (the capped port of `inverse_beta.rs`, T-1848) as a start where it is reliable, refined
+/// to the crossing of [`f_cdf`] or [`f_sf`] (`special::refine_increasing`) in the upper tail and
+/// from a lower-tail probability of [`F_QUANTILE_REFINE_P_MIN`] up. Below that the estimate is
+/// kept where it solves the target ([`estimate_solves`]: one cdf) and otherwise dropped for the
+/// crossing without a start (1 + 65 cdfs). At most 512 Newton steps and 129 cdfs on any path; 65
+/// cdfs where statrs gives no estimate. From a df of [`F_QUANTILE_STATRS_DF_MAX`], Excel's
+/// BETA.INV mapped to F (T-1538).
 fn f_quantile(df1: f64, df2: f64, p: f64, right_tail: bool) -> f64 {
     let lower = if right_tail { 1.0 - p } else { p };
     if lower <= 0.0 {
@@ -276,9 +300,15 @@ fn f_quantile(df1: f64, df2: f64, p: f64, right_tail: bool) -> f64 {
     // keeps the digits 1 - p loses. statrs' estimate is kept unrefined only for a deep lower tail,
     // the tail it was given: for a deep upper tail it solved the rounded 1 - p, which
     // `F.INV.RT(1E-16,9,3)` misses by 7% (Excel 60647458731.09812, gen-m9/0a9226016e8f5f33 A45).
-    if estimate.is_finite() && lower < F_QUANTILE_REFINE_P_MIN {
-        return estimate;
-    }
+    let estimate = if estimate.is_finite() && lower < F_QUANTILE_REFINE_P_MIN {
+        if estimate_solves(df1, df2, estimate, lower) {
+            return estimate;
+        }
+        // statrs stopped short of a root (see `F_QUANTILE_ESTIMATE_RESIDUAL_MAX`): no start.
+        f64::NAN
+    } else {
+        estimate
+    };
     if lower > 0.5 {
         let upper = if right_tail { p } else { 1.0 - p };
         refine_increasing(
@@ -881,5 +911,46 @@ mod tests {
             (upper - 97_570.089_441_084_84).abs() <= 2e-15 * upper,
             "{upper}"
         );
+    }
+
+    // T-1871: deep-tail quantiles within 1E-14 relative of Excel (Excel is the 50-digit math at the
+    // first three; they are 50, 59 and 12 ulp from Excel's bits). statrs' estimate at a tiny p can be
+    // no root (A168: 1.87E-14 against 1.7E-40), and the crossing of the Cephes tail was 8.4E-5
+    // (A154) and 1.8% (A155) off until `large_prefactor` took brcomp's far branch. The last two
+    // are 53 and 9 ulp off Excel's bits (Excel's own tiny-p arithmetic, TODO(T-4894)); before,
+    // 1E16 and 2.5E-12 relative.
+    #[test]
+    fn deep_tail_quantiles_are_within_fourteen_digits() {
+        let cases = [
+            // accuracy/F.INV/s1 A154, A168; accuracy/F.INV.RT/s1 A155.
+            (
+                4.566_228_541_406_27e-172,
+                29.0,
+                7719.0,
+                false,
+                6.547_980_469_317_685e-13,
+            ),
+            (
+                1.041_227_060_375_08e-20,
+                1.0,
+                161.0,
+                false,
+                1.708_281_752_414_819_5e-40,
+            ),
+            (
+                4.695_097_943_991_8e-162,
+                3216.0,
+                23.0,
+                true,
+                241_639_249_736_357.75,
+            ),
+            // gen-m9/c6cfda6bd10cae93 A114, gen-m9/3a25a03eb94fcfbd A44.
+            (1e-16, 1.0, 2.0, false, 1.999_999_999_999_986e-32),
+            (1e-20, 4.0, 6.0, false, 6.123_724_357_374_616e-11),
+        ];
+        for (p, df1, df2, right_tail, excel) in cases {
+            let x = f_quantile(df1, df2, p, right_tail);
+            assert!((x / excel - 1.0).abs() < 1e-14, "{p:e} {df1} {df2}: {x:e}");
+        }
     }
 }
