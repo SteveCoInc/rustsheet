@@ -2216,22 +2216,61 @@ the web would trigger it, is UNVERIFIED: the oracle cannot create a pivot throug
 (decision 0266). T-4182 records this and is dropped unless a desktop-saved file shows a flag.
 
 ## Excel for the web rewrites a PivotChart's caches when it renders the pivot
-Rule: when Excel for the web renders a pivot on open, it rewrites the caches of a chart bound to it (`c:pivotSource`):
-the series' `c:tx`, `c:cat` and `c:val` references become the pivot's rendered ranges (`'C'!$A$4:$A$6`, `'C'!$B$4:$B$6`:
-the item rows and the Grand Total row), and their caches hold the plotted points only, without the grand total
-(`c:strCache` East, West; `c:numCache` 18, 27; the series name `Total`), replacing the stale caches the file held
-(`Stale`, StaleX, StaleY, 999, 998). It also rewrites `c:pivotSource`'s name to the uploaded file's name and adds its
-`c:pivotFmts` data labels and the c16 series id. For a pivot collapsed to `#SPILL!` (CS) all three references
-become the anchor `CS!$A$3`; the category cache keeps East and West, and the value cache has `ptCount` 2 and one point,
-0.
-Evidence: probes/t4130-pivot-chart-cache (excel-graph, 2026-11-07, T-4130): the chart parts of the oracle's cached
-download of that run (input sha256 c78d1952…), not a committed file (the sidecars do not record charts). The charts
-are written by tools/src/rustsheet_tools/pivot_chart.py. Consequence for plan.md §7: Excel-saved chart caches are an
-oracle for PivotChartData (T-4186), read from a downloaded file.
-Status: VERIFIED (excel-graph, cached download) for a one-series column chart over a one-field pivot, but the download
-is not committed, so as repository evidence it is UNVERIFIED until a committed file records the chart's caches
-(T-4187, whose criteria include that record). T-4186 checked `PivotChartData` against the pivot cells of the sidecar
-(East 18, West 27) and against two Excel-saved corpus files ("A PivotChart plots the pivot's item lines" below).
+Rule: when Excel for the web renders a pivot on open, it rewrites the series of a chart bound to it (`c:pivotSource`),
+one series per plotted column line, whatever the part held:
+- `c:tx` reads the series' column from the location's first row down to the row above the first data row
+  (`'C'!$B$3`; with a column field `M!$B$3:$B$4`, the data field's caption row and the item row), cached as the
+  series' name: `Total` with no column field, the column item (`A`, `B`, `C`) with one;
+- `c:cat` reads the row-label column and `c:val` the series' column, both from the first data row down to the
+  location's last row, the Grand Total row included (`'C'!$A$4:$A$6`, `'C'!$B$4:$B$6`; `M!$A$5:$A$7`, `M!$D$5:$D$7`),
+  while their caches hold the plotted points only (`c:strCache` East, West; `c:numCache` 18, 27);
+- a cell no record reaches has no `c:pt` (M's series C: `ptCount` 2, one point, 3 for East);
+- the stale caches the file held (`Stale`, StaleX, StaleY, 999, 998) are gone, and a one-series chart over a pivot of
+  three column items gets three series, `c:idx`/`c:order` 0 to 2;
+- a sheet named `C` is quoted in the references (`'C'!$B$3`), as an R1C1-shaped name is in formulas; `CS`, `F` and
+  `M` are not;
+- the value cache's `c:formatCode` is the data field's number format (next entry but one).
+
+Excel also rewrites what lies outside the series: `c:pivotSource`'s name becomes the uploaded file's name, it adds the
+c16r2 namespace, `c:date1904`, `c:lang`, the c14 style, one `c:pivotFmt` per series (with `c:marker` none and a deleted
+`c:dLbl` carrying an empty c15 extension), the `c:dLbls`, axis, `c:dispBlanksAs` and `c:printSettings` defaults, a
+value axis `c:numFmt` with the cache's format code and `sourceLinked="1"`, and on each series a c16 `uniqueId`
+`{0000000N-XXXX-XXXX-XXXX-XXXXXXXXXXXX}`, N the series' number from 1 and the rest one per chart.
+For a pivot collapsed to `#SPILL!` (CS) all three references become the anchor `CS!$A$3`; the category cache holds
+East and West, and the value cache has `ptCount` 2 and one point, 0, at index 0.
+Evidence: probes/t4187-pivot-chart-caches (excel-graph, 2026-11-07, T-4187): Excel's saved file is committed byte for
+byte as eval/roundtrip/excel-saved/cases/t4187-pivot-chart-caches.xlsx (sha256 cc3a1b7a…, the oracle's download for
+input sha256 dfa8f50e…), charts `xl/charts/chart1.xml` (C), `chart2.xml` (CS), `chart3.xml` (F) and `chart4.xml` (M);
+the sidecar holds the pivots' cells. Sheets C and CS repeat probes/t4130-pivot-chart-cache (T-4130), whose download
+showed the same caches but was not committed. The input charts are written by tools/src/rustsheet_tools/pivot_chart.py.
+Correction: this entry's earlier wording (T-4130) put all three references on the rendered ranges, `c:tx` included
+(`'C'!$A$4:$A$6`, `'C'!$B$4:$B$6`); that was wrong for `c:tx`. The committed file shows `c:tx` reads the header cell
+`'C'!$B$3`, and only `c:cat` and `c:val` read the item and Grand Total rows.
+Status: VERIFIED (excel-graph, committed file) for one-series clustered column charts over one-row-field pivots, with
+and without a column field. UNVERIFIED (probe pending: T-4938): several row fields (a `c:multiLvlStrRef` and its
+reference's columns), a series of several labels, a pivot with no row field or no data field. UNVERIFIED (probe
+pending: T-4953): Values on rows, error values, non-integer values' spelling, a collapsed pivot with several series, a
+pivot with no header row above its values, a quote in a label, and chart types other than a clustered column
+(pivot_chart.py writes only that).
+Implemented in: crates/rustsheet-xlsx/src/export/pivot_charts.rs (`rewrite_pivot_chart`, T-4187), which writes the
+series as listed above and reproduces Excel's four saved chart parts byte for byte, both from Excel's own parts and
+from a part with Excel's series formatting and the input's stale references and caches. It keeps
+everything outside the series as the part has it (so not the `c:pivotSource` name, the added `c:pivotFmts` or the axis
+`c:numFmt`), gives a series past the part's last the last one's formatting and its `uniqueId` renumbered (no id where
+the part has none), names a series of several labels by its labels joined with a space (UNVERIFIED, T-4938), leaves an error point out,
+and for Values on rows takes the first data field's format code (UNVERIFIED, T-4953; the `pivotFmts`, axis `numFmt`
+and `uniqueId` readings too). The export does not call it yet: a save that regenerates the package drops drawings and
+charts (T-4950).
+
+## A rewritten PivotChart part is capped
+Rule: the export's PivotChart rewrite refuses (`PivotChartError::TooLarge`) a chart part whose rewritten text would
+pass 64 MiB (`MAX_CHART_PART_BYTES`), checked before each piece is appended. Each series copies its template's
+formatting children and the category cache, so one large series times many column lines would otherwise multiply
+without bound. Excel caps a chart at 255 series; 255 series of about 4,000 categories fit. What Excel writes for a
+PivotChart past its own limits is unknown; the caller keeps or drops the part as it decides (T-4950).
+Evidence: none for Excel; a resource limit (CLAUDE.md directive 5, T-4187 security review).
+Status: DEVIATION (decision 0014)
+Implemented in: crates/rustsheet-xlsx/src/export/pivot_charts.rs (`Output`, T-4187).
 
 ## A PivotChart plots the pivot's item lines
 Rule: a chart bound to a pivot (`c:pivotSource`) plots one category per row leaf and one series per column line, and
@@ -2268,16 +2307,22 @@ expanded ones); a date item's label; whether the pivot field's or the cache fiel
 category of a pivot with no row level; and a pivot with no data field. The engine's chart tests also check every
 plotted point of 30 probe pivots against the cells Excel rendered, which shows the values at the lines it plots are
 Excel's pivot cells, not that Excel's chart plots those lines. Writing the caches back on export, and a pivot
-collapsed to `#SPILL!`, are T-4187's.
+collapsed to `#SPILL!`, are T-4187's (previous entry).
 
 ## A PivotChart's value cache format code differs by Excel version
 Rule: a pivot chart's `c:numCache` `c:formatCode` is the data field's `numFmtId` code in an Excel 16 file and
-`General` in an Excel 12 one, even where the pivot field carries a format.
+`General` in an Excel 12 one, even where the pivot field carries a format. Current Excel for the web writes the data
+field's code too: `#,##0.00` for a data field with `numFmtId="4"`, `General` for one with none.
 Evidence: forum-mso-de-104083.xlsx (Excel 16): every series' `c:formatCode` is format 168
 (`_-* #,##0\ _€_-;…`), the data field Summe's `numFmtId="168"`; WithChartSheet.xlsx (Excel 12): `c:formatCode`
-`General`, though pivotTable5's Cost field is `numFmtId="6"` (its data fields carry none).
-Status: VERIFIED (corpus files) as what the two files hold; which format current Excel writes, and from which
-attribute, is the export's to settle (T-4187).
+`General`, though pivotTable5's Cost field is `numFmtId="6"` (its data fields carry none);
+probes/t4187-pivot-chart-caches (excel-graph, 2026-11-07, T-4187), the committed
+eval/roundtrip/excel-saved/cases/t4187-pivot-chart-caches.xlsx: F's data field `numFmtId="4"` gives
+`<c:formatCode>#,##0.00</c:formatCode>` (and the value axis `c:numFmt formatCode="#,##0.00" sourceLinked="1"`), C's and
+M's, with no `numFmtId`, `General`. The input caches all said `General`.
+Status: VERIFIED (corpus files; excel-graph, committed file) for a data field's built-in format and none. UNVERIFIED
+(probe pending: T-4953): a custom format, built-in 14 (the engine's en-US `m/d/yyyy`), a percent format, and which data
+field's code a series of Values on rows gets. Implemented in: crates/rustsheet-xlsx/src/export/pivot_charts.rs (`format_code`, T-4187).
 
 ## GETPIVOTDATA against a pivot collapsed to #SPILL!
 Rule: GETPIVOTDATA whose pivot reference is the anchor of a pivot collapsed to `#SPILL!` returns:
