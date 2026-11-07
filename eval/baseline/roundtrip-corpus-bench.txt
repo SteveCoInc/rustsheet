@@ -929,7 +929,7 @@ F	roundtrip-corpus-bench/127-32/1_127-32_input.xlsx	* 205 ed70b6a9be12566b
 F	roundtrip-corpus-bench/13-1/1_13-1_input.xlsx	* 253 80f4883d57df019c
 F	roundtrip-corpus-bench/130-9/1_130-9_input.xlsx	* 330 60411fc4f1f48d86
 F	roundtrip-corpus-bench/131-38/1_131-38_input.xlsx	* 188 d13ae1459e418eef
-F	roundtrip-corpus-bench/132-4/1_132-4_input.xlsx	* 217 1617c9fb65939c72
+F	roundtrip-corpus-bench/132-4/1_132-4_input.xlsx	* 216 2b8ccff715c58db2
 F	roundtrip-corpus-bench/13894/1_13894_input.xlsx	* 372 4dabbeea664de7da
 F	roundtrip-corpus-bench/142-19/1_142-19_input.xlsx	* 190 2bef492f1dda506d
 F	roundtrip-corpus-bench/142-32/1_142-32_input.xlsx	* 295 88c145f059f9b3bb
@@ -966,7 +966,7 @@ F	roundtrip-corpus-bench/23-28/1_23-28_input.xlsx	* 348 868e61d10b82de73
 F	roundtrip-corpus-bench/236-22/1_236-22_input.xlsx	* 199 509ffb3ee3503fe9
 F	roundtrip-corpus-bench/237-21/1_237-21_input.xlsx	* 470 6ab73e816820e1d3
 F	roundtrip-corpus-bench/247-14/1_247-14_input.xlsx	* 277 4c8aa12431241c76
-F	roundtrip-corpus-bench/248-48/1_248-48_input.xlsx	* 359 427a8a2d25945f38
+F	roundtrip-corpus-bench/248-48/1_248-48_input.xlsx	* 349 1010664968a5505e
 F	roundtrip-corpus-bench/249-48/1_249-48_input.xlsx	* 290 072f49806bef326f
 F	roundtrip-corpus-bench/254-34/1_254-34_input.xlsx	* 267 b1a20aebb2fc48dd
 F	roundtrip-corpus-bench/263-1/1_263-1_input.xlsx	* 200 044915c6dc078c76
@@ -1117,7 +1117,7 @@ F	roundtrip-corpus-bench/57275/1_57275_input.xlsx	* 4 179036c506f93fa3
 F	roundtrip-corpus-bench/57354/1_57354_input.xlsx	* 1 c76aa7893e514757
 F	roundtrip-corpus-bench/57376/1_57376_input.xlsx	* 29999 ddd0fc8545feb05a
 F	roundtrip-corpus-bench/57427/1_57427_input.xlsx	* 1 61bdb7d633737ce0
-F	roundtrip-corpus-bench/575-15/1_575-15_input.xlsx	* 963 9e48bf6fd5418ab6
+F	roundtrip-corpus-bench/575-15/1_575-15_input.xlsx	* 962 3260366193825cb1
 F	roundtrip-corpus-bench/575-16/1_575-16_input.xlsx	* 242 44bfe6151ecbf178
 F	roundtrip-corpus-bench/577-40/1_577-40_input.xlsx	* 357 6f7efc2df646ab67
 F	roundtrip-corpus-bench/57783/1_57783_input.xlsx	* 1 03c83ab578454119

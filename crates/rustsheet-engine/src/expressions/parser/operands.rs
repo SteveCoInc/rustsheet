@@ -11,7 +11,8 @@ use super::super::utils::{
 };
 use super::reference_operators::is_reference_operand;
 use super::structured_reference::{
-    is_unresolved_structured_reference, TableExtent, TABLE_SHEET_NOT_FOUND,
+    is_external_table_name, is_unresolved_structured_reference, TableExtent, TABLE_NOT_FOUND,
+    TABLE_SHEET_NOT_FOUND,
 };
 use super::*;
 use crate::functions::kinds::arg_counts;
@@ -895,6 +896,20 @@ impl Parser {
                 .and_then(|table| TableExtent::of(table, Some((*data_start, *data_end))));
         }
         if let Node::ParseErrorKind { message, .. } = &lowered {
+            // A table of a linked workbook is `#REF!` whatever the link caches (references.md
+            // "A structured reference into a linked workbook is `#REF!`"), but the formula keeps
+            // its text, which Excel stores back as written (corpus-bench 33094 Sheet1!B5,
+            // `VLOOKUP([1]!Table3[[#This Row],[Resource Name]],…)`; T-4144). Typed, it stays a
+            // parse error: Excel refuses it (probes/t3213-typed-parse-errors A9).
+            if is_external_table_name(&reference.table_name)
+                && message.starts_with(TABLE_NOT_FOUND)
+                && (self.loaded || !(self.typed || self.external))
+            {
+                return Node::StructuredReferenceKind {
+                    reference: Box::new(reference),
+                    lowered: Box::new(Node::ErrorKind(token::Error::REF)),
+                };
+            }
             if self.loaded
                 && !message.starts_with(TABLE_SHEET_NOT_FOUND)
                 && is_unresolved_structured_reference(message)
