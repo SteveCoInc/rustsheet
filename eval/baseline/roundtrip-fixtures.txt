@@ -359,7 +359,6 @@ F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/E5 element /core-prope
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -497,7 +496,6 @@ F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/all element /core-prop
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/all element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-cached-3d-span.xlsx	R1/all element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -635,7 +633,6 @@ F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/E5 element /core-p
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -773,7 +770,6 @@ F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/all element /core-
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/all element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-cached-index-array.xlsx	R1/all element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -915,7 +911,6 @@ F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/E5 element /core-prope
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -1052,7 +1047,6 @@ F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/all element /core-prop
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/all element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R1/all element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -1193,7 +1187,6 @@ F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/E5 element /core-proper
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -1330,7 +1323,6 @@ F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/all element /core-prope
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/all element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-cached-ranges.xlsx	R1/all element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -1467,7 +1459,6 @@ F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/E5 element /core-properti
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -1605,7 +1596,6 @@ F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/all element /core-propert
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/all element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-cached-text.xlsx	R1/all element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -1747,7 +1737,6 @@ F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/E5 element /core-pro
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -1884,7 +1873,6 @@ F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/all element /core-pr
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/all element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-uncached-lookups.xlsx	R1/all element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -2021,7 +2009,6 @@ F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/E5 element /c
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/E5 element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/E5 element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
@@ -2159,7 +2146,6 @@ F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/all element /
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:description[0] added
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:subject[0] added
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dc:title[0] added
-F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:created[0] added
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/all element /core-properties[0]:/coreProperties/dcterms:modified[0] added candidate-N2
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/all element /extended-properties[0]:/Properties/ep:AppVersion[0] changed candidate-N3
 F	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	R1/all element /extended-properties[0]:/Properties/ep:Application[0] changed candidate-N3
