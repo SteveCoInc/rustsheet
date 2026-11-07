@@ -3,7 +3,7 @@ id: T-4743
 title: "Probe whitespace-only shared-string <v> and a bare <is/>; fix the clear_covered_cells doc comment"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
