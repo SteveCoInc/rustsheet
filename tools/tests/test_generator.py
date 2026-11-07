@@ -1434,3 +1434,51 @@ def test_arg_pairs_spaces_dynamic_array_calls_by_the_tallest_result(tmp_path: Pa
         # A spilling function lists no `check`, so every oracle-recorded cell (spill members too) is scored.
         assert specs[0]["check"] == ([] if stride == SPILL_ROW_STRIDE else [f"Calc!{a1}" for a1 in anchors])
     assert SPILL_ROW_STRIDE > 12 * 5
+
+
+def test_arg_pairs_getpivotdata_queries_the_case_pivot(tmp_path: Path) -> None:
+    # T-4006: GETPIVOTDATA calls get the case's `Pivot` sheet; a forced `range` pivot reference is a cell or the
+    # whole of the pivot, a forced value argument takes the class form, and every unforced argument is a valid name.
+    path = tmp_path / "report.json"
+    rows = [
+        {
+            "name": "GETPIVOTDATA",
+            "unseen_pairs": [
+                {"params": ["data_field", "pivot_table"], "classes": ["zero", "range"]},
+                {"params": ["field", "item"], "classes": ["boolean", "blank"]},
+            ],
+        }
+    ]
+    path.write_text(json.dumps({"argument_coverage": rows}))
+    specs, skipped = generate_arg_pairs(catalog(), load_unseen_pairs(path), 0, milestone="M6")
+    assert skipped == {}
+    [spec] = specs
+    data_sheet, calc, pivot = spec["sheets"]
+    data = data_sheet["cells"]
+    assert pivot["name"] == "Pivot"
+    [table] = pivot["pivot_tables"]
+    control, *calls = [_split_args(text[1:]) for text in calc["cells"].values()]
+    # The first call is a valid query, so a pivot Excel did not build cannot pass for a batch of misses.
+    field = sorted(n for n in (table["row"], table.get("column")) if n)[0]
+    assert control[1][:3] == [quoted(table["value"]), "Pivot!$H$3", quoted(field)]
+    assert len(calls) == 2 * CALLS_PER_PAIR
+    assert spec["check"] == [f"Calc!{a1}" for a1 in calc["cells"]]
+    axis_names = {quoted(n) for n in (table["row"], table.get("column")) if n}
+    for k, (name, args) in enumerate(calls):
+        assert name == "GETPIVOTDATA"
+        variant = k % CALLS_PER_PAIR
+        assert re.fullmatch(r"Pivot!\$[A-Z]+\$\d+(:\$[A-Z]+\$\d+)?", args[1])
+        if k < CALLS_PER_PAIR:
+            # Forced data_field=zero against the pivot; the second call adds a valid field/item pair.
+            assert args[0] == "0" if variant == 0 else data[args[0].split("!")[1]] == 0
+            assert (":" in args[1]) == (variant == 1)
+            assert len(args) == 2 + 2 * variant
+            if variant == 1:
+                assert args[2] in axis_names
+        else:
+            # Forced field=boolean and item=blank, against the pivot's data field at its top-left cell.
+            assert args[0] == quoted(table["value"])
+            assert ":" not in args[1]
+            assert len(args) == 4
+            assert args[2] == "TRUE" if variant == 0 else _is_class("boolean", data[args[2].split("!")[1]])
+            assert re.fullmatch(r"Data!H\d", args[3])

@@ -271,8 +271,8 @@ Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
   Beta (all formulas the cache records as missing) after the listed M. Excel shows M, Alpha, Zed, Beta
   (J2!A4:A7), which is source order, not ascending (Alpha, Beta, Zed) and not descending.
 
-The default order of a newly created pivot (ascending, by type) is a UI action and not reachable from a
-file.
+The order of a newly created pivot is a UI action and not reachable from a file: Excel's UI may sort its
+items ascending (by type), unprobed (T-4869).
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader`)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`item_cell`: how an item renders; T-4149)
@@ -359,6 +359,74 @@ opens the file (refreshOnLoad), rebuilds the groups and renders its own items wi
 xlsx importer instead refuses the pivot (`item index 6 is past the field's items`,
 crates/rustsheet-xlsx/src/import/pivots/table.rs), so it is not rendered (T-4171).
 Status: VERIFIED (excel-graph; evidence in web.md, the tolerance by t4128 G's sidecar)
+
+## Manual groups and date levels as Excel for the web renders them
+Rule (manual groups, probes/t4170-pivot-manual-groups): Excel for the web opens and renders a refreshOnLoad pivot
+whose cache holds a discrete group in the shape Excel saves: the source field Product with a `par`-only
+`<fieldGroup par="2"/>`, and an added field Product2 (`databaseField="0"`) with `<fieldGroup base="0">`, a
+`<discretePr>` entry per Product shared item and `<groupItems>` F, Group2, Group1, North (the ungrouped item first,
+then the groups). Groups: Group2 = A, B; Group1 = C, D; North = E alone; F ungrouped; S values are distinct powers of
+two (A 1 and 64, B 2, C 4 and 128, D 8, E 16, F 32).
+- Labels: each group shows its `<groupItems>` text as written. Group2, listed first, stays `Group2` and Group1
+  stays `Group1` (no renumbering by position), and the renamed group shows `North` (MC!A4, A7, A10).
+- Order: the group field's rows follow its pivotField's `<item x>` order. MP lists them (`item_order`) North, F, Group1, Group2 and
+  shows them in that order (MP!A4, A6, A8, A11), which rules out the `<groupItems>` order (F, Group2, Group1, North),
+  the groups then the ungrouped items, the order of each group's first source item (both Group2, Group1, North, F,
+  as MC shows them), and sorting by label (F, Group1, Group2, North).
+- An ungrouped item is an item of the group field under its own label, with itself as its one inner item (MC!A12 F,
+  A13 F, 32). A group of one is a group row with its one item under it (North 16, E 16).
+- Compact (MC): a group row carries its total (Group2 67, Group1 140); the inner rows are the base items (A 65,
+  B 2). Outline form (MO, `compact="0"`): Product2 and Product get a column each, the header row names them, and a
+  group's total is on its own row (C4 67). Tabular (MT): the first inner item shares the group's row, and a
+  `<group> Total` row follows each group, ungrouped F and the group of one too (`Group2 Total` 67, `North Total`
+  16, `F Total` 32). Custom subtotals sum and count on Product2 (MS) give `Group2 Sum` 67 and `Group2 Count` 3 (the
+  records A, B, A), `North Count` 1 and `F Count` 1.
+- The group field alone (MG) lists Group2 67, Group1 140, North 16, F 32. The source field alone (MB, Product2 off
+  the axes) lists A to F with their own totals (C 132): the group does not change it.
+- Excel saved `<groupItems>` as the file listed them (the sidecars' `cache_fields`).
+
+Rule (date levels, probes/t4170-pivot-date-levels): Excel for the web opens and renders a refreshOnLoad pivot whose
+date field Date is grouped by months in place (`<fieldGroup par="3" base="0">`, the last added field) with two added
+fields Quarters and Years (`<fieldGroup base="0">`), each `rangePr` from 2019-01-01 to 2020-12-31 with `autoStart`
+and `autoEnd` off. Records: 2018-12-15 1 (before startDate), 2019-01-10 2, 2019-02-20 4, 2019-04-05 8, 2019-11-30
+16, 2020-01-10 32, 2020-07-04 64, 2021-01-15 128 (past endDate), 2019-01-25 256.
+- Nesting: rows Years, Quarters, Date show each month under its quarter under its year, so January splits by year
+  (2019 Jan 258, 2020 Jan 32; DC!A9, A17). Date alone (DM) adds January of both years (290). Years and Date (DY,
+  Quarters off the axes) show the months under each year. Groups without a record are not shown (2019 has Qtr1,
+  Qtr2, Qtr4; `showAll="0"`).
+- The record before startDate shows as `<1/1/2019` at each level, nested under itself (DC!A4:A6, 1 each), and the
+  one past endDate as `>12/31/2020` at each level (A20:A22, 128).
+- Compact (DC) and outline form (DO): each year and quarter row carries its total (2019 286, Qtr1 262). Tabular (DT):
+  `Qtr1 Total` and `2019 Total` rows, and `<1/1/2019 Total` and `>12/31/2020 Total` at both outer levels. Custom
+  subtotals sum and count on Years (DS) give `2019 Sum` 286 and `2019 Count` 5 (its five records), `<1/1/2019 Count`
+  1; Quarters keeps its default `Total` rows.
+- Years on the columns (DX, Quarters on the rows): columns `<1/1/2019`, 2019, 2020, `>12/31/2020`, Grand Total; rows
+  include `<1/1/2019` and `>12/31/2020` for Quarters too; Qtr1 is 262 under 2019 and 32 under 2020.
+- Excel saved each level's `<groupItems>` as the builder wrote them (Excel's own labels, sidecar `cache_fields`).
+
+Evidence: probes/t4170-pivot-manual-groups (MC, MO, MT, MS, MG, MB, MP) and probes/t4170-pivot-date-levels (DC, DO, DT,
+DS, DY, DM, DX) (excel-graph, 2026-11-07, T-4170); the sidecars' `pivots` sections hold every cell, the layout lines
+and the saved group items. GETPIVOTDATA on these pivots: web.md "GETPIVOTDATA on manual groups and date levels". The
+part shapes follow Excel-authored caches: ClosedXML's pivot-table/shared-group-field.xlsx and
+shared-nested-dategroup.xlsx (Excel 15.0300) and corpus-bench 52379 and 59932 (Excel 16.0300), whose in-place field's
+`par` names the last added field (48357 writes none). Excel saved the date field's `maxDate` as 2021-01-16 though
+its last date is 2021-01-15, and its `minDate` as 2018-12-15, its first date (probes/t4170-pivot-date-levels sidecar,
+every pivot's `cache_fields[0].shared_flags`; VERIFIED for this field, which holds whole dates only; how Excel derives
+the two in general is T-4654's question). From the oracle's cached downloads only (input sha256 463d15ec… and
+1de4cf34…, not committed, so UNVERIFIED; T-4802 commits evidence of them): Excel saved the `par`, `base` and
+`discretePr` as written.
+Status: VERIFIED (excel-graph) for these shapes: one discrete group of a text field into three groups and one
+ungrouped item (in its first-item order and in MP's order), and one date field with months, quarters and years from a startDate to an endDate, on the rows (DX:
+Years on the columns), compact, outline and tabular, default or sum and count subtotals. These probes give `web` yes
+for catalog rows PV-0022, PV-0023, PV-0026 (`groupBy` months, quarters, years), PV-0122 to PV-0125 (`discretePr`),
+PV-0232, PV-0236 and PV-0237 (`rangePr@groupBy`, `fieldGroup@base`, `@par`), which T-4767 fills. UNVERIFIED (T-4802):
+a group shared by two pivots of one cache, a group renamed through its item's `n`, discrete groups over numbers,
+dates, blanks or errors, a group field on the columns or pages, days,
+hours, minutes or seconds beside other levels, levels that skip one, the base field off the axes with only added
+levels shown, the shape without `par`, and `showAll="1"` on a level.
+Implemented in: the case builder (tools/src/rustsheet_tools/pivot_groups.py, the `discrete` and `date_group` field
+entries; Rust mirror crates/rustsheet-eval/src/pivot_definition/groups.rs). The engine renders none of the pivots but
+DM (T-4171: the importer skips the manual-group cache, and the load-time refresh loses the added date fields).
 
 ## A pivot that would meet a foreign cell collapses to #SPILL!
 Rule: when a pivot's layout would overwrite cells it does not own, Excel for the web renders nothing
@@ -1257,6 +1325,24 @@ Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`MAX_PIVOT_WORK`, `
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`MAX_PIVOT_CELLS`, `location`; T-4147)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`MAX_PIVOT_TEXT_BYTES`; T-4149)
 Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`PivotBudget`; T-4151)
+Implemented in: crates/rustsheet/src/edit/pivot.rs (`PivotError::Limit`: a pivot the API creates, sets
+or refreshes past a limit is not added or changed, and nothing is written; T-4178)
+
+## A pivot created through the API
+Rule: `Txn::add_pivot_table` builds the cache from the source as Excel's refresh reads it and lays the
+pivot out from the top-left cell of its location, with no `<items>` on its fields, so each axis shows its
+items in source order (first appearance) and a blank as `(blank)`, as a refreshed file pivot does ("Items
+show in the order the pivot field lists them"). Excel's UI may sort the items of a pivot it creates
+ascending (by type); unprobed (T-4869). Three rules are the API's own choices, not Excel's evidenced
+behavior: a sheet's pivot names are unique (`PivotError::DuplicateName`), `Txn::set_pivot_table` edits
+a pivot where it is (`PivotError::Moved`), and a new pivot replaces whatever its anchor cell holds (what
+Excel's UI does with a non-empty destination is unprobed). Past its anchor, a layout that meets a stored
+value or formula collapses to `#SPILL!` at the anchor ("A pivot that would meet a foreign cell collapses
+to #SPILL!"), and one that meets a Table, a merged range or another pivot, or passes the sheet's edge,
+collapses the same way ("The grid writer's own readings", UNVERIFIED).
+Evidence: none for a pivot Excel creates (T-4869); the rest follows the refresh entries above.
+Status: UNVERIFIED (probe pending: T-4869)
+Implemented in: crates/rustsheet/src/edit/pivot.rs (`Txn::add_pivot_table`, `Txn::set_pivot_table`; T-4178)
 
 ## Pivots without refreshOnLoad keep their saved cells; a source edit does not re-render
 Rule: Excel for the web does not re-render a pivot whose cache lacks `refreshOnLoad` when it opens the
@@ -1285,7 +1371,7 @@ stored or honoured by Excel for the web"). Not probed:
 desktop Excel (M14). In (c) the range write is the session's first call, so it lands after the load's
 refresh: East 5 shows that refresh read the blank B2.
 Status: VERIFIED (excel-graph)
-Implemented in: crates/rustsheet/src/edit/pivot.rs (`Workbook::refresh_pivots_on_load`, `Txn::refresh_pivot_table`; T-4151)
+Implemented in: crates/rustsheet/src/edit/pivot.rs (`Workbook::refresh_pivots_on_load`, `Txn::refresh_pivot_table`; T-4151, public since T-4178)
 
 ## Pivot field names for duplicate and blank source headers
 Rule: on refresh Excel names each cache field after its source header, made unique ignoring case:

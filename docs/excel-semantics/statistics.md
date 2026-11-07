@@ -3496,8 +3496,37 @@ without that check (see "Incomplete beta L140 and bfrac: the prefactor is Excel'
 Implemented for BETA.DIST's and NEGBINOM.DIST's cdfs (`bratio::l140_overflows`, T-3576); the other callers of the
 kernel (BINOM.DIST's family, F, T, BETA.INV) are unprobed at such shapes.
 
-Still open: bfrac at number_s 1E+20 (40, 100 and 1000 failures, probes/t3576-negbinom-cdf-huge-s A50:A52) is `#NUM!`
-while bfrac at 1E+15 and below is 0. UNVERIFIED which quantity fails there.
+On bfrac the cut is the shapes' sum, not a size (T-4238): the cdf is `#NUM!` where the oriented first shape absorbs
+the second, fl(a0 + b0) = a0 after bratio's swap (`NEGBINOM.DIST(40,6E+17,0.323212154487823,TRUE)`, b = 41, is `#NUM!`;
+`(40,5E+17,..)` is 0; 100 failures (b = 101) cut between 1E+18 and 2E+18, 1000 failures between 9E+18 and 1E+19).
+- Orientation: the swap counts, the raw argument order does not. `BETA.DIST(0.676787845512177,41,6E+17,TRUE)`, swapped
+  to a0 = 6E+17, is `#NUM!`, as are `(0.1|0.5|0.9,41,6E+17,TRUE)` and `NEGBINOM.DIST(6E+17,40,..,TRUE)`. Where the
+  first shape is the one absorbed and no swap gives it back, Excel answers:
+  `BETA.DIST(2.84921687181174E-198,25002804469.8703,7.87993781085058E+38,TRUE)` is 0 (Gate A accuracy/BETA.DIST/s1
+  A183, r4-T-3879 A181, A182), and `(1E-19,41,6E+17,TRUE)` is 2.2611819787179575E-100. Not always: Gate A
+  accuracy/BETA.DIST/s1 A186 `BETA.DIST(1.16481965482714E-239,11670.8736712835,1.83368089638147E+214,TRUE)`, on bfrac
+  with the first shape absorbed, is `#NUM!` in Excel (ours 0; T-4733 owns it), so that orientation has its own,
+  unknown rule.
+- A whole or fractional b0 alike (`(0.5,7E+17,57.5,TRUE)`, `(0.5,6E+17,41.25,TRUE)` and `(0.5,1E+19,1000.5,TRUE)` are
+  `#NUM!`).
+- Still open (T-4824): x0 near 1 answers. `(0.999,6E+17,41,TRUE)`, `(0.999,7E+17,57,TRUE)` and `(0.999,7E+17,57.5,TRUE)`
+  are 0 and the swapped `(0.001,41,6E+17,TRUE)` is 1, while `(0.99,6E+17,41,TRUE)` is `#NUM!`. The mechanism of the cut
+  in x0 (0.99, 0.999) is UNVERIFIED. Before T-4238 the engine matched these six cells (0 and 1); the absorption rule,
+  which has no x0 cut, makes them `#NUM!`, a disclosed loss (decision 0082's precedent) that T-4824 is to restore.
+- BETA.DIST's density is `#NUM!` where alpha absorbs beta and both shapes exceed 1 (Excel's Loader density):
+  `BETA.DIST(0.323212154487823,6E+17,41,FALSE)`, `(0.9|0.5,6E+17,41,FALSE)` and `BETA.DIST(0.1,1E+200,2,FALSE)` (t3007
+  A20) are `#NUM!`. The density has no swap: `(0.5,41,6E+17,FALSE)` is 0, and so is
+  `BETA.DIST(2.63749596488496E-295,664.598766737767,4.73696273024973E+93,FALSE)` (Gate A s1 A190). A shape below 1 is
+  off that branch: `BETA.DIST(0.1,1E+290,0.5,FALSE)` (t3007 A6) is 0.
+- The cdf's absorption rule applies on bfrac only: L140 cells keep their own rule (R above).
+
+Evidence: probes/t4238-negbinom-bfrac-huge-s (126 cells: number_s 1E+15 to 1E+20 and the cut rows, failures 40, 100,
+1000, each through NEGBINOM.DIST, BETA.DIST's cdf and its density; all 126 matched H_absorb). The first rule (either
+shape absorbed) failed Gate A's A181:A183 and A190, so it was narrowed to the oriented first shape and tested fresh:
+probes/t4238-r2-absorb-orientation (38 cells, H_oriented against H_raw: every discriminating cell matched H_oriented;
+A12, A13 broke the rule at x0 0.999) and probes/t4238-r3-absorb-whole-shape (12 cells, H_x against H_frac: H_x on all
+12). Predictions for each round in `docs/research/t4238/` were committed before its excel-graph fill (2026-11-07).
+Implemented as `bratio::bfrac_shapes_absorbed` (cdf) and `bratio::first_shape_absorbs` (density, both shapes above 1).
 
 The p dependence: p 0.001 (bpser) is 0. p 0.9, 0.99 and 0.999999 are `#NUM!` at both 1E+13 and 999999999999999.
 p 1 - 1E-13 and 1 - 1E-14 at 1E+13 are 1, through bfrac on the swapped call. At 999999999999999, p 1 - 1E-13 is
@@ -3508,8 +3537,10 @@ A fill, where `NEGBINOM.DIST(28,999999999999999,0.323212154487823,TRUE)` was `#N
 `(14,999999999999999,0.0712044717475044,TRUE)` and `(6,1E+15,0.847418271232675,TRUE)`. probes/t3576-negbinom-cdf-huge-s
 A1:A89 (excel-graph, 2026-11-04). `docs/research/t3576/bup_partial_sum.py` prints the branch, ln R and the partial-sum log of each of its
 cells. probes/t3576-r2-ratio-overflow-sweep A1:A54 (excel-graph, 2026-11-04).
-Ours: `#NUM!` at every L140 cell above (T-3576); a value at the three bfrac cells at 1E+20.
-Status: VERIFIED (excel-graph) for the probed cells and the L140 rule (fresh sweep); the bfrac cut at 1E+20 UNVERIFIED
+Ours: `#NUM!` at every L140 cell above (T-3576) and at every absorbed bfrac cell (T-4238). That includes x0 0.999, where
+Excel answers and main matched before T-4238 (six cells, T-4824).
+Status: VERIFIED (excel-graph) for the probed cells, the L140 rule (fresh sweep) and the bfrac absorption rule up to x0
+0.99 (T-4238's three predicted rounds); x0 near 1 UNVERIFIED
 Tasks: T-3576
 
 ## BETA.DIST and F.DIST at basym points; BETA.INV takes the nearest end there (T-3443)
@@ -8517,3 +8548,17 @@ Ours: matches all 156 cells since T-4310 (the name, INDEX, IF and parenthesized 
 `#VALUE!` before, 16 cells).
 Status: VERIFIED (excel-graph)
 Tasks: T-4310
+
+## CHISQ.TEST over whole columns, blanks, text and booleans (T-1689)
+Rule: CHISQ.TEST's degrees of freedom come from the shape of the ranges, not their used area, and a pair with a blank,
+text or boolean on either side is skipped (adds 0 to the statistic), as the engine already does. Evidence (excel-graph
+2026-11-07, probes/t1689-chisq-test-blanks-text-booleans, 24 cells; the formulas sit on their own sheet, so no whole
+column holds a formula or an error: an earlier layout with formulas inside the columns read a circular reference and
+propagated an `#N/A`, and is not evidence): every whole-column CHISQ.TEST over ten data rows is exactly 1 (df 1048575,
+so p is 1 to double precision): `A:A` with `B:B`, `D:D` with `E:E` (a blank inside), `G:G` with `H:H` (text),
+`J:J` with `K:K` (TRUE), the blank, text and FALSE in the second column, and the two-column `A:B` with `D:E`. A 10-row range
+with a blank, text or TRUE in either range gives 0.9979532433280144 (the skipped pair drops from the statistic and
+keeps the df; all-numeric: 0.997224951291803). 3x3 ranges with a blank, text or TRUE in the actual or the expected range
+give 0.8616386653047765 (all-numeric 0.8444645822929768); different shapes are `#N/A` (`A21:C23` with `E21:F23`, with
+`E21:G24`). The engine matches 23 of 24 cells; F!A1 is 1 ulp off (a numeric ulp, baselined). The unit test
+`chisq_test_over_whole_columns_counts_every_cell` is consistent with the 1-D and 2-D whole-column cells.
