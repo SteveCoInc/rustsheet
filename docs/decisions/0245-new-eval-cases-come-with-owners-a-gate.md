@@ -37,3 +37,6 @@
   - A PR that edits an existing case's file or sidecar answers for every unowned visibly-off cell
     of that case, not only the ones it changed.
   - The ownership rule itself (decision 0136, T-3623) is unchanged.
+  - Engine-export cases (`<name>.export.json`, the `export` suite kind of T-4177) are eval cases too: the gate counts
+    the `.export.json` suffix with `.case.json` and `.xlsx`, so a new pivot-export case cannot reach the baseline with
+    an unowned visibly-off cell. Without it the gate would skip them silently (T-4177).
