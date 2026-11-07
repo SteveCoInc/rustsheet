@@ -3,7 +3,7 @@ id: T-4355
 title: "Probe a negative and a spilled kept subnormal saved to xlsx"
 milestone: M11
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -22,3 +22,6 @@ T-2211 flushes only `0 < v < MIN_POSITIVE` on save (evidenced: probes/subnormal-
 
 ## Out of scope
 - Negative zero and other number spellings in the file.
+
+## Outcome
+Probe `probes/subnormal-saved-negative-and-array` (excel-graph 2026-11-07): a negative kept subnormal (`=0-EXP(-745)`, `=0-EXP(-720)`) and a spilled array kept subnormal are saved as `<v>0</v>`; the in-memory value is kept (`=0` companions FALSE, `*2^1000` recovers it). `saved_number` now flushes either sign (the spill/array arms are confirmed); export test and numbers.md updated. Desktop Excel's save stays an M14 question. The array-context comparison `(EXP({-745,-708}))=0` is TRUE in Excel (probe D1): filed as T-4766. Eval delta: no scored change; the new probe's off cell D1 is owned by T-4766. This supersedes draft PR #3390 and salvage task T-4672.
