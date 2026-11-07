@@ -78,29 +78,36 @@ pub fn escape_xml(s: &'_ str) -> Cow<'_, str> {
         } else if c == '_' && starts_xlsx_escape_pattern(&bytes[i..]) {
             result.push_str("_x005F_");
         } else {
-            match escape_char(c) {
-                Value::Str(esc) => result.push_str(esc),
-                Value::Char(ch) => result.push(ch),
-            }
+            push_markup_escaped(&mut result, c);
         }
         i += c.len_utf8();
     }
     Cow::Owned(result)
 }
 
+/// Appends `c` to `out`, escaping the markup characters only.
+fn push_markup_escaped(out: &mut String, c: char) {
+    match escape_char(c) {
+        Value::Str(esc) => out.push_str(esc),
+        Value::Char(ch) => out.push(ch),
+    }
+}
+
 /// Escapes `s` for a plain XML attribute value: the markup characters only, with no `_xHHHH_`
-/// convention. For attributes whose readers (relationship targets, `sheetName@val`,
-/// `definedName`) do not decode `_xHHHH_`, so a literal `_x0041_` must stay as written.
+/// convention, for attributes whose readers (relationship targets, `sheetName@val`,
+/// `definedName`) do not decode it, so a literal `_x0041_` stays as written. Characters XML 1.0
+/// forbids (C0 controls other than tab, LF and CR) are dropped: no reader could decode them, and
+/// written raw they would make the whole part unparsable.
 pub fn escape_attribute(s: &'_ str) -> Cow<'_, str> {
-    if !s.chars().any(|c| matches!(escape_char(c), Value::Str(_))) {
+    if !s
+        .chars()
+        .any(|c| matches!(escape_char(c), Value::Str(_)) || needs_xlsx_escape(c))
+    {
         return Cow::Borrowed(s);
     }
     let mut result = String::with_capacity(s.len() + 8);
-    for c in s.chars() {
-        match escape_char(c) {
-            Value::Str(esc) => result.push_str(esc),
-            Value::Char(ch) => result.push(ch),
-        }
+    for c in s.chars().filter(|c| !needs_xlsx_escape(*c)) {
+        push_markup_escaped(&mut result, c);
     }
     Cow::Owned(result)
 }
@@ -154,6 +161,7 @@ mod tests {
             "_x0041_&lt;&amp;&gt;"
         );
         assert!(matches!(escape_attribute("plain"), Cow::Borrowed(_)));
+        assert_eq!(escape_attribute("a\x01b\x1F\tc").as_ref(), "ab\tc");
     }
 
     // --- export output ---

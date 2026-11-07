@@ -1,6 +1,9 @@
 //! The values Excel cached for the workbooks this one links to (`xl/externalLinks/*.xml`).
 
-use std::{collections::HashMap, io::Read};
+use std::{
+    collections::{HashMap, HashSet},
+    io::Read,
+};
 
 use rustsheet_engine::{
     expressions::token::{get_error_by_english_name, Error},
@@ -90,8 +93,8 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
     let mut refresh_error_sheets = Vec::new();
     let mut data_sheets = Vec::new();
     // Sets keep the dedup linear in the untrusted count of `sheetData` elements.
-    let mut seen_data = std::collections::HashSet::new();
-    let mut seen_errors = std::collections::HashSet::new();
+    let mut seen_data = HashSet::new();
+    let mut seen_errors = HashSet::new();
     for sheet_data in book.descendants().filter(|n| n.has_tag_name("sheetData")) {
         let Some(sheet) = sheet_data
             .attribute("sheetId")
