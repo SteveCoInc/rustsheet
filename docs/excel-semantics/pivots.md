@@ -1306,7 +1306,10 @@ Rule: Excel for the web refuses to open a workbook (createSession 501 `FileCorru
 `unsupportedWorkbook`) if a pivot has any of the following:
 - a pivotField with `dataSourceSort="1"`;
 - an item with `d="1"`;
-- an item with `f="1"` and no `calculatedItems`.
+- an item with `f="1"` and no `calculatedItems`;
+- a `percent` dataField with `baseItem="9"` on a two-item field (Product), past its last item (T-4161
+  run, excel-graph, 2026-11-07). That every `baseItem` past the field's last item other than (previous)
+  and (next) is refused is UNVERIFIED (probe pending: T-4750).
 
 `allDrilled="1"` and `defaultAttributeDrillState="1"` on the same field open.
 Evidence: T-4129 runs (excel-graph, 2026-11-06), one pivot per flag, bisected from the FA sheet of
@@ -1340,7 +1343,8 @@ columns Year, and Sum of Sales. The data are East A 10/4, B 5/8, C 3/– and Wes
   empty.
 - **percentOfParentRow** (PPR): each value is divided by its parent row item. For East and West the
   parent is the grand total row: East/2024 is 18/38. The Grand Total row is 1.
-- **percentOfParentCol** (PPC): with one column field it equals percentOfRow.
+- **percentOfParentCol** (PPC): with one column field it equals percentOfRow (except a row total of 0,
+  which is empty; see T-4161).
 - **percentOfRunningTotal** in Product (PRT): this is the running total divided by the Region total.
   Subtotal and Grand Total rows are empty.
 - **rankAscending and rankDescending** in Product (RA, RD): each column is ranked within its Region,
@@ -1350,7 +1354,138 @@ columns Year, and Sum of Sales. The data are East A 10/4, B 5/8, C 3/– and Wes
 Evidence: probes/t4129-pivot-show-as and probes/t4129-pivot-show-as-x14 (excel-graph, 2026-11-06,
 T-4129). The sidecars' `pivots` sections hold every cell.
 Status: VERIFIED (excel-graph) for these shapes. Ties, division by zero, a missing base item, (next),
-and the other base fields are T-4161. The engine is T-4163.
+and the other base fields are in the next entry (T-4161). The engine is T-4163.
+
+## Show-values-as edge cases (T-4161)
+Rule: each mode's base items, ties, running totals, subtotal and grand-total cells and division by
+zero render as listed below, per mode. This extends the entry above, mode by mode. Every pivot below has rows Region (outer) and Product, columns
+Year, and Sum of Sales, unless it says otherwise. The cases are probes/t4161-pivot-show-as-base-items (BI),
+-running-rank (RR), -zeros (Z), -edges (E), -running-zero (RZ) and -nested-parent (NP), all excel-graph,
+2026-11-07, T-4161. Each case's description lists its data. "Empty" means an empty cell.
+
+**Where the base field sits.** This applies to difference, percent, percentDiff, runTotal,
+percentOfRunningTotal and the two ranks.
+- Base field the inner row field (Product): items are compared within their outer item only. A
+  subtotal row and the Grand Total row are empty. The Grand Total column shows values (BI DPP, PPN, QPP; RR
+  RAP, RDP).
+- Base field the outer row field (Region): each row is compared with the row of the same inner item
+  under the other Region: West/A with East/A, and the West subtotal row with the East one. The Grand Total
+  column shows values and the Grand Total row is empty. BI DRP: West/A/2023 is 20 - 10 = 10, and the West
+  row in 2023 is 20 - 15 = 5.
+- Base field the column field (Year): the Grand Total column is empty. Subtotal rows and the Grand Total
+  row show values (BI DYP, PY1, DY1; RR RDY, RTY, PTY).
+
+**Base items.**
+- **(previous) and (next)** (`baseItem` 1048828 and 1048829) do not cross outer items. Under Product,
+  the first item in each Region (for previous) or its last (for next) is its own base, as is the first or
+  last Year (BI DPP, PPN, DYP, DYN). The cell of an item that is its own base is shown as that mode shows
+  the base item's own cell. Difference and percentDiff leave it empty. Percent shows 1, or leaves it empty
+  where the value is empty (BI PYP column 2023, PYN column 2025).
+- **A base item missing from the parent.** Product C is the base item and West has no C. **Every cell of
+  West's product rows is `#N/A`**, the Grand Total column too, even where the value is empty. This holds
+  for difference, percent and percentDiff (BI PPC, DPC, QPC, rows 10 and 11). West's subtotal row stays
+  empty, like every subtotal row under an inner base field.
+- A base item that exists, over a missing combination, is only an empty base. BI QRN has base field
+  Region and base item (next). The base of East/C would be West/C, which does not exist, so East/C's
+  cells are empty, not `#N/A`.
+- A `baseItem` past the field's last item: Excel for the web refuses the file. See "Pivot flags Excel
+  for the web refuses".
+
+**difference.** An empty value and an empty base both count as 0, even when both are empty: E D0
+West/A/2025 is 0, and BI DYP East/C/2025 is 0 - 3 = -3. The base item's own cells are empty.
+
+**percent (% of).**
+- The base item's own cells are 1. They are empty where the value is empty, and `#DIV/0!` where the
+  value is 0 (Z PC A/2024; E P0 the East row in 2023).
+- In any other cell, the first rule that applies decides:
+  1. An empty value is `#NULL!`, also when the base is empty: E P0 West/A/2025 and the West row in
+     2025 have an empty value and an empty base.
+  2. A present value over an empty base is empty (BI PYP East/B/2025; BI PY1 East/B/2023).
+  3. A base of 0 gives `#DIV/0!` (Z PC, PY).
+  4. Otherwise the cell is value/base.
+
+**percentDiff (% difference from).** The base item's own cells are always empty, even when the base
+is 0 (Z PD A). The other cells follow percent's rules (`#NULL!`, empty, `#DIV/0!`). The result is
+(value - base)/base with the base's sign: E Q0 East/A/2024 is (2 - (-4))/(-4) = -1.5, not 1.5.
+
+**runTotal (running total in).**
+- An empty intersection shows the running total so far (RR RTT West/C/2024 is 27). At the run's first
+  item it shows 0 (RR RTY West/C/2024).
+- Under the inner field, the total restarts at each outer item (RR RTT; T-4129 RT).
+- Under the outer field, it runs across Regions. A West row is East plus West for the same inner item,
+  subtotal rows included: RR RTR West in 2024 is 13 + 27 = 40, and West/A in 2024 is 5 + 20 = 25.
+- Under the column field, it runs across Years. The Grand Total row runs (40, 73) and the Grand Total
+  column is empty (RR RTY).
+
+**percentOfRunningTotal (% running total in).**
+- The running total is divided by the run's total, which is its last value. The last item of the run
+  is therefore 1, an empty intersection included (RR PTR West/C/2024).
+  - Under the outer Region, the run's total is the same inner item's total over all Regions (for the
+    subtotal rows, the Grand Total row): RR PTR East/A/2024 is 5/25 and East in 2024 is 13/40.
+  - Under Year, it is the row's Grand Total (RR PTY).
+- **Over a total of 0, a cell whose own value is 0 is empty, and a cell with a nonzero value is
+  `#DIV/0!`.** What an empty value over a total of 0 shows is UNVERIFIED (probe pending: T-4750). RZ PRY: East/A (-4, then 4) is `#DIV/0!` in both years, while East/B (0, 0) is empty. In
+  E PRY's Grand Total row, 2023 (value 0) is empty, while 2024 (3) and 2025 (-3, running total 0) are
+  `#DIV/0!`. In Z PRT and in RZ PRP's Grand Total column, a total of 0 over 0s is empty.
+
+**rankAscending and rankDescending.**
+- **Ties share a rank, and the ranks are dense.** RR RDP East/2024 is A = B = 5, ranked 1, and C = 3,
+  ranked 2 (not 3). RR RAP East/2025 is A 1, then B = C = 2. Z RA East/2024 is A = C = 0, ranked 1, and B
+  2.
+- Negative values rank below 0 (Z RA East/2025: B -5 is 1, C 0 is 2, A 4 is 3).
+- Under the outer Region, the subtotal rows are ranked against each other. Each product is ranked
+  against the same product in the other Region (RR RAR, RDR). An equal pair ties at 1: B's Grand Total is
+  13 in both Regions.
+- Under Year, each row is ranked across the Years. The Grand Total row is ranked and the Grand Total
+  column is empty (RR RDY).
+- Empty intersections are empty and are not ranked (T-4129).
+
+**percentOfRow, percentOfCol and percentOfTotal.** An empty intersection is 0. **A denominator of 0 is
+`#DIV/0!` on every cell divided by it**, the totals included:
+- percentOfRow: Z PR East/B, East/C and West, and E PR's Grand Total row;
+- percentOfCol: E PCo's 2023 column and its Grand Total column;
+- percentOfTotal: every cell of E PT, whose grand total is 0.
+
+**index.** (value × grand total)/(row total × column total). An empty intersection is 0.
+- A row or column total of 0 is `#DIV/0!` (Z IX East/B, East/C, West; E IX 2023 and both Grand
+  Totals).
+- A grand total of 0 over nonzero row and column totals gives 0 (E IX 2024, 2025).
+- With three row fields, the Grand Total column is 1 at every level (NP IX3).
+
+**percentOfParent (% of parent total).**
+- Each row is divided by its ancestor on the base field, in the same column, however deep it is. With
+  rows Region, Product and Kind and base field Region, East/A/x in 2024 is 1/7 (the East row), not 1/3
+  (East/A) (NP PPR_).
+- The base field's own rows are 1. Rows above the base field are empty (NP PPP, Region rows), and so is
+  the Grand Total row.
+- An empty intersection below the base field is 0 (NP PPR_ East/A/y/2025). With base field Kind, the
+  innermost field, each leaf is its own parent: it is 1, or empty where the value is empty (NP PPK).
+- On a column field (NP PPY: columns Year, then Kind; base field Year), the Kind columns are divided by
+  their Year's subtotal column. Each `Year Total` column is 1, the Grand Total column is empty, and the
+  Grand Total row shows values.
+- **A parent of 0 leaves the cell empty, whatever the value** (Z PP West; E PP East/A/2023 is -4 over 0).
+
+**percentOfParentRow and percentOfParentCol.**
+- Each cell is divided by its immediate parent on that axis.
+  - NP PPRow: Kind by Product, Product by Region, Region by the Grand Total row. The Grand Total row
+    is 1.
+  - NP PPCol: Kind by its `Year Total` column, and a `Year Total` column by the Grand Total column.
+    The Grand Total column is 1.
+- **A parent of 0 leaves the cell empty** (E PPR East/2023 and East/A/2023; Z PPR West/A, West/B).
+- With one column field, percentOfParentCol divides by the row's Grand Total. It equals percentOfRow
+  except that **a row total of 0 is an empty cell, not `#DIV/0!`** (Z PPC East/B; E PPC Grand Total row).
+
+Evidence: the six cases above (excel-graph, 2026-11-07, T-4161). The sidecars' `pivots` sections hold
+every cell.
+Status: VERIFIED (excel-graph) for these shapes: one data field, Values not on an axis, every item
+visible, and items in cache order. These are UNVERIFIED (probe pending: T-4750):
+- (previous) and (next) over hidden items or a custom sort;
+- percent or percentDiff where the value is empty and the base is 0;
+- percentOfRunningTotal where the value is empty and the total is 0;
+- whether every `baseItem` past the field's last item is refused, beyond the one probed;
+- two data fields, or Values on rows.
+
+The engine is T-4163.
 
 ## Layout and totals flags as Excel for the web renders them
 Rule, per flag (each one on its own pivot of rows Region and Product with Sum of Sales):

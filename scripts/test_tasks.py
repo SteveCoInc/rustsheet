@@ -153,7 +153,7 @@ def run_next(
     root: Path,
     tier: str,
     claims: tuple[set[str], set[str]] = (set(), set()),
-    active: frozenset[tuple[str, str, str]] = frozenset(),
+    active: frozenset[tuple[str, str, str, str]] = frozenset(),
     lane: str | None = None,
     limited: dict[str, str] | None = None,
 ) -> str:
@@ -164,7 +164,7 @@ def run_next_line(
     root: Path,
     tier: str,
     claims: tuple[set[str], set[str]] = (set(), set()),
-    active: frozenset[tuple[str, str, str]] = frozenset(),
+    active: frozenset[tuple[str, str, str, str]] = frozenset(),
     lane: str | None = None,
     limited: dict[str, str] | None = None,
 ) -> str:
@@ -278,7 +278,7 @@ class BranchClaims(unittest.TestCase):
             # T-0001 is recent, so its lane is busy; T-0003's handoff waits for opus and keeps
             # harness free.
             self.assertEqual(
-                tasks.branch_claims(fetch=False), ({"T-0001"}, {"T-0003"}, {("engine", "T-0001", "agent/engine/T-0001-new")}, {})
+                tasks.branch_claims(fetch=False), ({"T-0001"}, {"T-0003"}, {("engine", "T-0001", "agent/engine/T-0001-new", "")}, {})
             )
 
     def test_blocked_task_on_its_branch_frees_the_lane_but_stays_claimed(self) -> None:
@@ -301,7 +301,7 @@ class BranchClaims(unittest.TestCase):
         with mock.patch.object(tasks.subprocess, "run", side_effect=fake_run):
             # T-0002 was blocked a minute ago: nobody restarts it, but research may take its next task.
             self.assertEqual(
-                tasks.branch_claims(fetch=False), ({"T-0001", "T-0002"}, set(), {("engine", "T-0001", "agent/engine/T-0001-working")}, {})
+                tasks.branch_claims(fetch=False), ({"T-0001", "T-0002"}, set(), {("engine", "T-0001", "agent/engine/T-0001-working", "")}, {})
             )
 
     def test_task_blocked_on_a_stale_branch_stays_claimed(self) -> None:
