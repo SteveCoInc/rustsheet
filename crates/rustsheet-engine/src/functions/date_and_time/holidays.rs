@@ -30,7 +30,7 @@ impl Model {
         }
         Ok(args
             .get(holidays_at)
-            .filter(|arg| !self.is_written_empty(arg)))
+            .filter(|arg| !self.is_empty_argument(arg)))
     }
 
     /// The serials of a holidays argument, read whole: a range is not intersected

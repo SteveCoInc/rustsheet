@@ -10,30 +10,26 @@ use crate::{
 };
 
 impl Model {
-    /// Whether the argument `node` is written empty (`F(x,)`) or is a LET or LAMBDA variable bound
-    /// to nothing: the two read alike wherever Excel tells an empty argument from a value
-    /// (`IMSUB("1",)` and `LET(e,,IMSUB("1",e))`, `WORKDAY(1,5,)` and `LET(h,,WORKDAY(1,5,h))`).
-    pub(crate) fn is_written_empty(&self, node: &Node) -> bool {
+    /// Whether the argument `node` is empty as written: an empty argument (`f(1,)`), or a
+    /// variable bound to an omitted LAMBDA parameter or an empty LET value, which hands the
+    /// emptiness on (probes/eng-imsub-imdiv-lambda-let-empty, t4873-empty-arg-let-lambda). A
+    /// formula that evaluates to a blank (`IFERROR(<blank>,0)`) is not one.
+    pub(crate) fn is_empty_argument(&self, node: &Node) -> bool {
         matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node)
     }
 
-    /// The positions among the first `required` arguments that are written empty
-    /// ([`Model::is_written_empty`]), read once from the formula's text before lifting: an argument
-    /// that only evaluates to nothing is not one (`EDATE(<#VALUE! start>,IFNA(<blank>,..))` stays
-    /// the start's `#VALUE!`, gen-m6/b54448af3fde07ca A297).
-    pub(crate) fn written_empty_required(&self, args: &[Node], required: usize) -> Vec<usize> {
-        args.iter()
-            .take(required)
-            .enumerate()
-            .filter(|(_, arg)| self.is_written_empty(arg))
-            .map(|(index, _)| index)
-            .collect()
+    /// [`Model::is_empty_argument`] for each of the first `N` arguments (`false` past the last).
+    pub(crate) fn empty_arguments<const N: usize>(&self, args: &[Node]) -> [bool; N] {
+        std::array::from_fn(|index| {
+            args.get(index)
+                .is_some_and(|node| self.is_empty_argument(node))
+        })
     }
 }
 
 /// The Analysis `ToolPak` rule for a written-empty required argument (T-4870): the first arguments'
 /// values, each replaced by `na` where that argument is written empty (`empty` from
-/// [`Model::written_empty_required`]). A kernel swaps its arguments through this before reading them
+/// [`Model::empty_arguments`]). A kernel swaps its arguments through this before reading them
 /// in Excel's order, so it meets the `#N/A` at that argument's turn and a lifted call gives it per
 /// element, as MROUND and GCD read theirs (arrays.md "MROUND keeps its scalar rules", coercion.md):
 /// `EDATE(,1)` and `EDATE(,1/0)` are `#N/A`, `EDATE(1/0,)` `#DIV/0!`, `YEARFRAC(1,,9)` `#NUM!`
@@ -42,15 +38,10 @@ impl Model {
 /// where they are.
 pub(crate) fn written_empty_or<'a, const N: usize>(
     values: [&'a CalcResult; N],
-    empty: &[usize],
+    empty: [bool; N],
     na: &'a CalcResult,
 ) -> [&'a CalcResult; N] {
-    let mut index = 0;
-    values.map(|value| {
-        let swapped = if empty.contains(&index) { na } else { value };
-        index += 1;
-        swapped
-    })
+    std::array::from_fn(|index| if empty[index] { na } else { values[index] })
 }
 
 /// The `#N/A` [`written_empty_or`] hands a kernel.

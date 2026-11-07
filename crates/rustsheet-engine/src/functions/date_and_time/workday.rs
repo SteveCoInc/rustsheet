@@ -90,7 +90,7 @@ impl Model {
         holidays_at: usize,
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        let empty = self.written_empty_required(args, 2);
+        let empty = self.empty_arguments::<2>(args);
         let holidays_arg = match self.holidays_arg(args, holidays_at, cell) {
             Ok(arg) => arg,
             Err(error) => return error,
@@ -108,7 +108,7 @@ impl Model {
             LiftCost::Prepared(read),
             cell,
             &mut |model, values| {
-                number_or_error(model.workday_of(values, &empty, holidays_at, &holidays, cell))
+                number_or_error(model.workday_of(values, empty, holidays_at, &holidays, cell))
             },
         )
     }
@@ -143,7 +143,7 @@ impl Model {
     fn workday_of(
         &self,
         values: &[CalcResult],
-        empty: &[usize],
+        empty: [bool; 2],
         holidays_at: usize,
         holidays: &Result<Holidays, HolidaysError>,
         cell: CellReferenceIndex,

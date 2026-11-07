@@ -79,13 +79,15 @@ committed before the fill, so the engine no longer reads an empty argument as 0 
   "an optional empty argument is omitted", with H_omitted committed in bf24d2c55 before its fill: 14/14.
 - **No fit:** each cell is `#N/A` or the omitted call's value, and nothing numeric is tuned.
 - **Code:**
-  - `Model::is_written_empty` (functions/util/empty_args.rs) is the one definition of an empty argument node or a
-    variable bound to nothing. `complex_pair_of` and LET's `bind_argument_value` now use it. The design review moved
-    it out of let.rs.
-  - `Model::written_empty_required` finds the written-empty required arguments once, from the nodes, before lifting.
+  - One definition of an empty argument node or a variable bound to nothing: `Model::is_empty_argument`, with
+    `Model::empty_arguments::<N>()` for the first N arguments. T-4873 (#3930) added both in let.rs while this PR was in
+    review. This PR's own `is_written_empty`/`written_empty_required` were the same concept, so the merge with main
+    keeps T-4873's names and moves both into functions/util/empty_args.rs, which is where the design review wanted
+    them. `complex_pair_of`, LET's `bind_argument_value` (T-4902) and the date functions use them.
+  - `Model::empty_arguments` finds the written-empty required arguments once, from the nodes, before lifting.
     Each per-element kernel passes its required arguments through `written_empty_or`, which swaps in a borrowed `#N/A`
     without copying the values. The kernel meets the `#N/A` at that argument's own turn, and a lifted call gives one
-    result per element. T-4872 and T-4873 can reuse both.
+    result per element.
     An intermediate `na_at_written_empty` cloned the whole values slice for every element. The security review flagged
     that the clone included a holidays array and was uncharged work, so it was replaced.
   - Two earlier drafts failed review or gates and were replaced:

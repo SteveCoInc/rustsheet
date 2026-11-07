@@ -9,6 +9,11 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+# Seeded generators other crates' tests reuse (`rustsheet_engine::test_support`, T-4756): only a
+# dev-dependency turns it on, so no release build carries them.
+test-support = []
+
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 ryu = "1.0"

@@ -375,3 +375,41 @@ fn dates_follow_the_date_system() {
     let back = round_trip(&model);
     assert_eq!(back.workbook.pivot_caches, model.workbook.pivot_caches);
 }
+
+/// Seeds of the fixed-point property: T-4155's 48, so it sees the same pivots its engine
+/// properties do.
+const FIXED_POINT_SEEDS: u64 = 48;
+
+/// Import, export and import is a fixed point over generated pivots (T-4756; plan §6 layer 5 of
+/// docs/research/pivot-tables-2026-11-04/plan.md): for each seed, a second save and reload gives
+/// the same pivot caches, pivot tables and rendered Sheet1 cells as the first reload.
+#[test]
+fn import_export_import_is_a_fixed_point_over_generated_pivots() {
+    use rustsheet_engine::test_support::{add_sum_pivot, pivot_records, pivot_sheet_text};
+    for seed in 0..FIXED_POINT_SEEDS {
+        let empty = Model::new_empty("model", "en", "UTC", "en").unwrap();
+        let model = add_sum_pivot(empty, &pivot_records(seed)).unwrap();
+        let once = round_trip(&model);
+        let twice = round_trip(&once);
+        // Not vacuous: the reload keeps the pivot and its rendered report.
+        assert_eq!(once.workbook.pivot_tables.len(), 1, "seed {seed}");
+        assert_eq!(
+            pivot_sheet_text(&once).unwrap(),
+            pivot_sheet_text(&model).unwrap(),
+            "seed {seed}: the first reload renders what was saved"
+        );
+        assert_eq!(
+            twice.workbook.pivot_caches, once.workbook.pivot_caches,
+            "seed {seed}: caches"
+        );
+        assert_eq!(
+            twice.workbook.pivot_tables, once.workbook.pivot_tables,
+            "seed {seed}: tables"
+        );
+        assert_eq!(
+            pivot_sheet_text(&twice).unwrap(),
+            pivot_sheet_text(&once).unwrap(),
+            "seed {seed}: rendered cells"
+        );
+    }
+}

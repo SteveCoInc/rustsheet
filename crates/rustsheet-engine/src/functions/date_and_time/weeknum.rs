@@ -144,14 +144,14 @@ impl Model {
         // A written-empty return_type is omitted, type 1 (`WEEKNUM(45000,)` is 11:
         // probes/t4870-empty-date-args A16, t4870-r2-empty-optional A5, A6, A14; T-4870).
         let args = match args {
-            [serial, return_type] if self.is_written_empty(return_type) => {
+            [serial, return_type] if self.is_empty_argument(return_type) => {
                 std::slice::from_ref(serial)
             }
             _ => args,
         };
-        let empty = self.written_empty_required(args, 1);
+        let empty = self.empty_arguments::<1>(args);
         let result = self.lift_call(Function::Weeknum, args, cell, &mut |model, values| {
-            model.weeknum_of(values, &empty, cell)
+            model.weeknum_of(values, empty, cell)
         });
         if matches!(result, CalcResult::Array(_)) {
             // A WEEKNUM that lifts over an array empties the state, whatever its types
@@ -167,7 +167,7 @@ impl Model {
     fn weeknum_of(
         &mut self,
         values: &[CalcResult],
-        empty: &[usize],
+        empty: [bool; 1],
         cell: CellReferenceIndex,
     ) -> CalcResult {
         let (serial, return_type) = match values {

@@ -840,7 +840,7 @@ its fill:
   before everything, one scalar) 6/24. The miss, A18, was a slip in the hand-written TSV. H_order's stated rule reads
   the start first and so gives `#VALUE!`, as A2 does.
 
-Ours: `Model::written_empty_required` and `written_empty_or` (functions/util/empty_args.rs). The written-empty
+Ours: `Model::empty_arguments` and `written_empty_or` (functions/util/empty_args.rs). The written-empty
 arguments are found once from the nodes, then read as `#N/A` inside each per-element kernel.
 `Model::holidays_arg` (date_and_time/holidays.rs) drops an empty holidays argument, and WEEKNUM drops an empty
 return_type.

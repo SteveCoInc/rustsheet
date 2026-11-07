@@ -29,9 +29,9 @@ impl Model {
     /// multi-cell range (SPEC-0011 `LiftArrays`; probes/scalar-lift-shapes H6,
     /// probes/date-argument-modes).
     pub(crate) fn fn_yearfrac(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let empty = self.written_empty_required(args, 2);
+        let empty = self.empty_arguments::<2>(args);
         self.lift_call(Function::Yearfrac, args, cell, &mut |model, values| {
-            model.yearfrac_of(values, &empty, cell)
+            model.yearfrac_of(values, empty, cell)
         })
     }
 
@@ -39,7 +39,7 @@ impl Model {
     fn yearfrac_of(
         &self,
         values: &[CalcResult],
-        empty: &[usize],
+        empty: [bool; 2],
         cell: CellReferenceIndex,
     ) -> CalcResult {
         let (start, end, basis) = match values {

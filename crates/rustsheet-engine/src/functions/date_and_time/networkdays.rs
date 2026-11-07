@@ -53,14 +53,14 @@ impl Model {
             None => Ok(Holidays::none()),
         };
         let read = holidays.as_ref().map_or(0, |holidays| holidays.read);
-        let empty = self.written_empty_required(args, 2);
+        let empty = self.empty_arguments::<2>(args);
         self.lift_call_costed(
             kind,
             args,
             LiftCost::Prepared(read),
             cell,
             &mut |model, values| {
-                number_or_error(model.networkdays_of(values, &empty, holidays_at, &holidays, cell))
+                number_or_error(model.networkdays_of(values, empty, holidays_at, &holidays, cell))
             },
         )
     }
@@ -74,7 +74,7 @@ impl Model {
     fn networkdays_of(
         &self,
         values: &[CalcResult],
-        empty: &[usize],
+        empty: [bool; 2],
         holidays_at: usize,
         holidays: &Result<Holidays, CalcResult>,
         cell: CellReferenceIndex,
