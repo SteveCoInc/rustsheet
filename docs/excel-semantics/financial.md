@@ -811,6 +811,35 @@ Status: VERIFIED (excel-graph) for the bracket, the midpoint and the step test. 
 (T-2328), flows dated before the first included. It is a fitted rule, not a known mechanism.
 Tasks: T-1525, T-0916, T-1533, T-1583, T-1591, T-2328, T-2329, T-2728, T-2045, T-3268 (the negative-root stop), T-3353 (unscaled over long spans), T-3484 (near-zero roots, R3 candidate)
 
+## XIRR where XNPV has no root: sometimes the guess bisected toward 0, sometimes #NUM! (T-4251)
+Rule (partial; no separating rule found): on some flows whose signs change but whose XNPV never crosses 0, Excel's
+XIRR is not `#NUM!`. It is the guess s (1E-5 for a guess of 0) halved until the bisection's step test passes, the
+value [0, s] bisected with the upper end replaced every step: s/2^25 for s = 0.1. On other such flows it is `#NUM!`,
+and so is one series with two real roots that the engine's model solves.
+- s/2^k (excel-graph, probes/t4251-xirr-no-root-bracket):
+  - `XIRR({-100,200,-300},{1,2,3})` with no guess or 0.1, 0.5, 1, 2, 0.01, 0, 10 (A1:A5, A7, A13):
+    2.9802322387695314E-09 (0.1/2^25), 3.725290298461914E-09 (0.5/2^27, 1/2^28 and 2/2^29), 4.76837158203125E-09
+    (0.01/2^21), 4.8828125E-09 (1E-5/2^11), 4.6566128730773926E-09 (10/2^31). This is t3312-xirr-xnpv-inner-calls
+    Calc!A30's value, where T-4251 found it.
+  - The negated flows `{100,-200,300}` (A8), the same flows on days 0, 365, 730 and 0, 3650, 7300 (A9, A10), and
+    `{-100,50,-300}` on days 1..3 (A11): 0.1/2^25.
+- `#NUM!` with the same shape of XNPV (signs change, XNPV negative at every rate): `{-100,1,-100}` (A12), the
+  reversed `{-300,200,-100}` (A14) and `{-100,300,-300}` (A15) on days 1..3. A negative guess is `#NUM!` too (A6),
+  as for a bracket walk with no upward chain.
+- `#NUM!` with roots: `XIRR({-100,350,-300},{0,365,730})` (A16) has roots at r = 0.5 and 1. The engine's walk
+  brackets [0.4, 0.8], where XNPV(0.8) = +1.85 has the sign opposite to values[0], so its bisection ends at the
+  bracket's end, 0.7999999880790711. Excel is `#NUM!`.
+- One-sign flows `{-1,-2}` are `#NUM!` (A17), as before.
+- Neither the sum of the values, XNPV(0), the sign of XNPV's change from 0 to the guess, nor where |XNPV| is least
+  separates A1:A11 from A12, A14 and A15. Next probe: vary one value at a time between A1 (`{-100,200,-300}`) and
+  A15 (`{-100,300,-300}`) and between A1 and A12, and check A16's neighbours with one root.
+Evidence: probes/t4251-xirr-no-root-bracket A1:A17 (excel-graph, 2026-11-07; the engine's values were committed as
+predictions before the fill, in T-4251's task file)
+Ours: `#NUM!` on all of the first group, and 0.7999999880790711 on A16 (`xirr_bracket`, `compute_xirr`,
+functions/financial/financial_util.rs)
+Status: VERIFIED (excel-graph) for the cells; the rule UNVERIFIED
+Tasks: T-4251
+
 ## IRR is a secant in d = 1 - v = r/(1 + r) from d0 and d0 -+ 0.001 (fitted, 263/263 bit-exact)
 Rule: IRR runs the secant method on NPV as a function of d = 1 - v = r/(1 + r), v = 1/(1 + r) (T-3120 moved
 the state from v to d; the T-1533 text below, written for the secant in v, holds for d with the signs flipped):

@@ -254,6 +254,7 @@ probes/t4170-pivot-date-levels.case.json	11
 probes/t4170-pivot-manual-groups.case.json	10
 probes/t4238-r2-absorb-orientation.case.json	2
 probes/t4238-r3-absorb-whole-shape.case.json	4
+probes/t4251-xirr-no-root-bracket.case.json	12
 probes/t4254-beta-t-l140-zero-cut.case.json	27
 probes/t4254-beta-t-zero-wide.case.json	12
 probes/t4255-gamma-window-exact-ratio.case.json	1
