@@ -329,7 +329,7 @@ struct TailArguments {
 /// evidenced elementary series and fractions stay.
 fn tail_from(args: &TailArguments, n: f64) -> f64 {
     let (z, y) = (args.z, args.y);
-    if args.inside_one && log_gamma_ratio(0.5 * n).is_some() {
+    if args.inside_one && (log_gamma_ratio(0.5 * n).is_some() || n.fract() != 0.0) {
         if let Some((w, _)) = t_kernel_tails(0.5 * n, y, z) {
             return 0.5 * w;
         }
