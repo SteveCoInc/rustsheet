@@ -3,7 +3,7 @@ id: T-4747
 title: "Probe defined names under row and column edits: relative references, sheet-scoped names, moves, and the stored spelling of a rewritten name (T-4702 follow-up)"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
