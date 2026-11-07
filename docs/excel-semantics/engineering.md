@@ -229,6 +229,10 @@ Overflow: `value * F_from` is not allowed to overflow when the answer is represe
 `CONVERT(1E302,"J","J")` 1E+302. The engine divides first (`value / F_to * F_from`) when the
 product is infinite; every probed value fits, but whether Excel does this or uses extended
 precision is not distinguishable from the probes.
+Non-round values (T-4670): 48 seeded 15-digit values from 1E297 to 1.7E307 for m to m, m to ft, mi to km, in to cm, m2 to m2
+and m2 to ft2 (probes-numeric/t4670-convert-distance-overflow A1:A48, excel-graph, 2026-11-07) all match the divide-first path
+exactly, last digit included (`CONVERT(1.30209135723375E297,"m","m")` is 1.3020913572337498E+297, not the input), and
+A23:A24 (mi to km at E306 and E307) are `#NUM!`. No rule change.
 Backend: excel-desktop cached values + excel-graph (probes/convert-targets).
 Status: VERIFIED (for the evidenced conversions)
 Implemented in: `fn_convert` in functions/engineering/convert.rs (T-0922, T-1297, T-3861, T-4630)
