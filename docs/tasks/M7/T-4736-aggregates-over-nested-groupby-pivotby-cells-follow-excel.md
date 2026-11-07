@@ -3,7 +3,7 @@ id: T-4736
 title: "Aggregates over nested GROUPBY/PIVOTBY cells follow Excel's 2026-11 reads: SUM #N/A, COUNT skips, COUNTA one per cell"
 milestone: M7
 lane: engine
-status: in-progress
+status: blocked
 priority: P2
 size: S
 tier: opus
@@ -61,6 +61,22 @@ Any other cell that the eval run shows moving is handled the same way, and it is
 ## Out of scope
 - The element-wise lift reads (T-4737) and the lifted INDEX (T-4738).
 - Aggregates whose nested reading did not change (`NotAvailable`, `Value`).
+
+## Blocked because
+Blocked because: the decision-0329 regression run is refused in routine sessions (needs owner).
+- The one remaining step is the unrestricted `rustsheet-eval update-baseline --allow-regressions` run that decision 0329
+  item 3 allows, to raise five eval/baseline/visible-parity.txt lines by their superseded-cell counts. The auto-mode
+  permission classifier of the scheduled opus routine refused it in two sessions (2026-11-07 05:xx and 07:3x UTC). No
+  workaround was tried.
+- 2026-11-07 07:35 UTC (resume): `origin/main` was merged in to fix a conflict in eval/baseline/probes.txt (main had added
+  t2609 A56:A59 as F lines; this branch had dropped A50). On the merged tree, `update-baseline --suite probes` (no flag)
+  dropped t2609-nested-operators-and-lifts P!A56:A59, which this branch now passes. `make eval-check` then fails only the
+  visible-parity lock, for exactly the five expected cases: gen-m9/e85daedce5c2675e +1, probes/t2436/e85daedce5c2675e +2,
+  t2592-nested-groupby-cells +3, t2594-nested-aggregates +4, t2625-nested-consumers +5 (15 cells, equal to the
+  "supersedes" list). Every other suite reports 0 regressions.
+- To unblock: in a session where the owner allows that command, run it once and check that its diff touches only those
+  five visible-parity lines. Then run `make check-fast` and the review panel (design, security, excel-fidelity), set
+  `status: done` with an Outcome, and mark PR #3859 ready.
 
 ## Landing notes
 - Branch agent/engine/T-4736-nested-aggregates-november, no PR yet (opened by the 2026-11-07 opus run at its landing window).
