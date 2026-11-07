@@ -143,6 +143,31 @@ fn the_data_field_is_the_caption_or_the_source_name_ignoring_case() {
     ]);
 }
 
+// A caption naming one data field and a source name naming another is unprobed, so `#REF!`; a
+// caption equal to its own field's source name still resolves (T-4804 review follow-up, T-4911).
+#[test]
+fn a_caption_and_a_source_name_naming_different_data_fields_is_ref() {
+    let mut model = model();
+    let pivot = &mut model.workbook.pivot_tables[1];
+    let data = |caption: &str, field, function| DataField {
+        caption: caption.to_string(),
+        field,
+        function,
+        ..DataField::default()
+    };
+    pivot.data_fields = vec![
+        data("Sales", 2, Aggregate::Sum),
+        data("Region", 2, Aggregate::Max),
+        data("Count of Region", 0, Aggregate::Count),
+    ];
+    pivot.column_fields = vec![AxisField::Values];
+    model._set("H40", r#"=GETPIVOTDATA("Sales",$A$20)"#);
+    model._set("H41", r#"=GETPIVOTDATA("Region",$A$20)"#);
+    model.evaluate();
+    assert_eq!(model._get_text("H40"), "49");
+    assert_eq!(model._get_text("H41"), "#REF!");
+}
+
 #[test]
 fn another_aggregates_caption_or_an_unknown_field_is_ref() {
     check(&[

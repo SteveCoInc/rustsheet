@@ -42,7 +42,7 @@ pair whose only item is the chosen data field's caption, and a source name share
 the only data field only when the cell is inside the pivot's location. Every aggregate over no records is 0, and Var and
 StdDev over one record are `#DIV/0!` (`pivot/layout.rs` `aggregate`, with a unit test). Overflow is `#NUM!` on the
 two-data-field pivot as on one. Which data field wins when one's caption is another's source name is unprobed, so
-that is `#REF!` (SPEC-0015 GETPIVOTDATA step 2, web.md "Ours"; T-4911 to probe it; adopted-PR review round 2).
+that is `#REF!` (SPEC-0015 GETPIVOTDATA step 2, web.md "Ours"; T-4911 to probe it).
 
 Eval delta: probes 24 fixed (every owned cell of probes/t2085-getpivotdata-data-fields, which now passes 365/365),
 0 regressions in every suite; `eval/baseline/probes.txt` re-recorded with `make eval-baseline`.
