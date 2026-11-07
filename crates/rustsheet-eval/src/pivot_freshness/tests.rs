@@ -269,3 +269,116 @@ fn an_empty_parent_row_is_compared_unless_its_fields_flags_leave_it_blank() {
     let check = records::check(&saved[0], table, &cache, today).expect("checks");
     assert_eq!((check.compared, check.differing), (9, 0));
 }
+
+/// The sidecar `pivots` an oracle fill of `bytes` would capture if Excel rendered each pivot on
+/// open as it saved it: every cell of each saved area, empty ones included (T-4972).
+fn on_open_of(bytes: &[u8]) -> Vec<OraclePivot> {
+    let snapshot = read_snapshot(bytes).expect("snapshot");
+    (snapshot.pivots.iter())
+        .map(|d| {
+            let (first, last) = saved_area(d).expect("an area");
+            let sheet = (snapshot.sheets.iter().find(|s| s.name == d.sheet)).expect("its sheet");
+            let mut cells = BTreeMap::new();
+            for row in first.row..=last.row {
+                for col in first.col..=last.col {
+                    let at = Addr { row, col };
+                    let v = sheet
+                        .cells
+                        .get(&at)
+                        .map_or(Value::Empty, |c| c.value.clone());
+                    cells.insert(at.to_string(), v);
+                }
+            }
+            OraclePivot {
+                definition: d.clone(),
+                cells,
+                text: BTreeMap::new(),
+            }
+        })
+        .collect()
+}
+
+#[test]
+fn excel_s_on_open_render_is_check_c_s_evidence_and_its_cells_are_scored() {
+    let mut saved = saved_of(REFRESH_ON_LOAD);
+    let mut on_open = on_open_of(REFRESH_ON_LOAD);
+    // Excel's on-open render of PivotSum shows another value at its first number cell.
+    let sum = (on_open.iter_mut()).find(|o| o.definition.name == "PivotSum");
+    let sum = sum.expect("PivotSum");
+    let (at, n) = (sum.cells.iter())
+        .find_map(|(a, v)| match v {
+            Value::Number(n) => Some((a.clone(), *n)),
+            _ => None,
+        })
+        .expect("a number");
+    sum.cells.insert(at.clone(), Value::Number(n + 1.0));
+    attach_on_open(&mut saved, &on_open);
+    // A stale pivot is compared too: the on-open render does not depend on the saved cells.
+    saved[1].row_items.clear();
+    let (pivots, cells) = classify(&saved, REFRESH_ON_LOAD);
+    let got: Vec<_> = (pivots.iter())
+        .map(|p| {
+            let r = p.refresh.as_ref().expect("a refreshOnLoad cache");
+            (
+                p.name.as_str(),
+                r.outcome,
+                r.on_open,
+                r.compared,
+                r.differing,
+            )
+        })
+        .collect();
+    let compared = RefreshOutcome::Compared;
+    assert_eq!(
+        got,
+        vec![
+            ("PivotSum", compared, true, 25, 1),
+            ("PivotAvg", compared, true, 8, 0)
+        ]
+    );
+    // Their cells are the case's, and check (b) leaves the same cells unscored.
+    assert_eq!(cells.len(), 25 + 8);
+    let failing: Vec<_> = cells.iter().filter(|c| !c.verdict.is_pass()).collect();
+    assert_eq!(failing.len(), 1);
+    assert_eq!(failing[0].cell, at);
+    assert!(failing[0].from_excel);
+    assert!(pivots[0].render_unscored.is_some() && pivots[0].render.is_some());
+    let mut case = CaseResult::empty("s/x.xlsx", "s", CaseStatus::Fail);
+    case.pivot_freshness = pivots;
+    let summary = &summarize(std::slice::from_ref(&case))[0];
+    assert_eq!(
+        (
+            summary.refresh_on_open,
+            summary.refresh_cells,
+            summary.refresh_passed,
+            summary.refresh_compared,
+            summary.render_cells
+        ),
+        (2, 33, 32, 2, 0)
+    );
+    let mut md = String::new();
+    write_markdown(&[case], &mut md);
+    assert!(
+        md.contains("| s/x.xlsx | P!PivotSum | compared | on open | 1 / 25 |"),
+        "{md}"
+    );
+}
+
+#[test]
+fn a_refresh_that_fails_scores_excel_s_on_open_area_against_nothing() {
+    let mut saved = saved_of(REFRESH_ON_LOAD);
+    attach_on_open(&mut saved, &on_open_of(REFRESH_ON_LOAD));
+    let open = saved[1].on_open.clone().expect("attached");
+    let (check, cells) = refresh_on_open(&saved[1], &open, Err("no source".into()));
+    assert_eq!(check.outcome, RefreshOutcome::Failed);
+    assert_eq!(check.first.as_deref(), Some("no source"));
+    assert_eq!((check.compared, check.differing), (8, open.cells.len()));
+    assert_eq!(cells.len(), 8);
+    // A sidecar of other pivots, or an area that does not parse, attaches nothing.
+    let mut other = on_open_of(REFRESH_ON_LOAD);
+    other[0].definition.name = "Elsewhere".into();
+    other[1].definition.location = "nope".into();
+    let mut saved = saved_of(REFRESH_ON_LOAD);
+    attach_on_open(&mut saved, &other);
+    assert!(saved.iter().all(|p| p.on_open.is_none()));
+}

@@ -1,0 +1,615 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "Company",
+     "shared_flags": {
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Action Club"
+      }
+     ]
+    },
+    {
+     "name": "Payment method",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Credit"
+      },
+      {
+       "t": "s",
+       "v": "MC"
+      },
+      {
+       "t": "s",
+       "v": "Visa"
+      }
+     ]
+    },
+    {
+     "name": "OrderNo",
+     "shared_flags": {
+      "count": "4"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "1014"
+      },
+      {
+       "t": "s",
+       "v": "1029"
+      },
+      {
+       "t": "s",
+       "v": "1038"
+      },
+      {
+       "t": "s",
+       "v": "1129"
+      }
+     ]
+    },
+    {
+     "name": "Ship date",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "1993-10-20T00:00:00",
+      "minDate": "1988-05-26T00:00:00"
+     }
+    },
+    {
+     "name": "Items total",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20108",
+      "minValue": "134.85"
+     }
+    },
+    {
+     "name": "Tax rate",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "1",
+      "maxValue": "0",
+      "minValue": "0"
+     },
+     "shared_items": [
+      {
+       "t": "n",
+       "v": "0"
+      }
+     ]
+    },
+    {
+     "name": "Amount paid",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20108",
+      "minValue": "134.85"
+     }
+    }
+   ],
+   "cells": {
+    "B10": {
+     "t": "empty"
+    },
+    "B11": {
+     "t": "empty"
+    },
+    "B12": {
+     "t": "empty"
+    },
+    "B13": {
+     "t": "s",
+     "v": "Action Club Total"
+    },
+    "B14": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "empty"
+    },
+    "B4": {
+     "t": "empty"
+    },
+    "B5": {
+     "t": "s",
+     "v": "Company"
+    },
+    "B6": {
+     "t": "s",
+     "v": "Action Club"
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "B8": {
+     "t": "empty"
+    },
+    "B9": {
+     "t": "empty"
+    },
+    "C10": {
+     "t": "s",
+     "v": "MC Total"
+    },
+    "C11": {
+     "t": "s",
+     "v": "Visa"
+    },
+    "C12": {
+     "t": "s",
+     "v": "Visa Total"
+    },
+    "C13": {
+     "t": "empty"
+    },
+    "C14": {
+     "t": "empty"
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "empty"
+    },
+    "C5": {
+     "t": "s",
+     "v": "Payment method"
+    },
+    "C6": {
+     "t": "s",
+     "v": "Credit"
+    },
+    "C7": {
+     "t": "s",
+     "v": "Credit Total"
+    },
+    "C8": {
+     "t": "s",
+     "v": "MC"
+    },
+    "C9": {
+     "t": "empty"
+    },
+    "D10": {
+     "t": "empty"
+    },
+    "D11": {
+     "t": "s",
+     "v": "1038"
+    },
+    "D12": {
+     "t": "empty"
+    },
+    "D13": {
+     "t": "empty"
+    },
+    "D14": {
+     "t": "empty"
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "empty"
+    },
+    "D5": {
+     "t": "s",
+     "v": "OrderNo"
+    },
+    "D6": {
+     "t": "s",
+     "v": "1014"
+    },
+    "D7": {
+     "t": "empty"
+    },
+    "D8": {
+     "t": "s",
+     "v": "1029"
+    },
+    "D9": {
+     "t": "s",
+     "v": "1129"
+    },
+    "E10": {
+     "t": "n",
+     "v": 21112.8
+    },
+    "E11": {
+     "t": "n",
+     "v": 10152.0
+    },
+    "E12": {
+     "t": "n",
+     "v": 10152.0
+    },
+    "E13": {
+     "t": "n",
+     "v": 31399.649999999998
+    },
+    "E14": {
+     "t": "n",
+     "v": 31399.649999999998
+    },
+    "E3": {
+     "t": "s",
+     "v": "Tax rate"
+    },
+    "E4": {
+     "t": "n",
+     "v": 0.0
+    },
+    "E5": {
+     "t": "s",
+     "v": "Sum Amount paid"
+    },
+    "E6": {
+     "t": "n",
+     "v": 134.85
+    },
+    "E7": {
+     "t": "n",
+     "v": 134.85
+    },
+    "E8": {
+     "t": "n",
+     "v": 20108.0
+    },
+    "E9": {
+     "t": "n",
+     "v": 1004.8
+    },
+    "F10": {
+     "t": "n",
+     "v": 21112.8
+    },
+    "F11": {
+     "t": "n",
+     "v": 10152.0
+    },
+    "F12": {
+     "t": "n",
+     "v": 10152.0
+    },
+    "F13": {
+     "t": "n",
+     "v": 31399.649999999998
+    },
+    "F14": {
+     "t": "n",
+     "v": 31399.649999999998
+    },
+    "F3": {
+     "t": "s",
+     "v": "Values"
+    },
+    "F4": {
+     "t": "empty"
+    },
+    "F5": {
+     "t": "s",
+     "v": "Sum Items total"
+    },
+    "F6": {
+     "t": "n",
+     "v": 134.85
+    },
+    "F7": {
+     "t": "n",
+     "v": 134.85
+    },
+    "F8": {
+     "t": "n",
+     "v": 20108.0
+    },
+    "F9": {
+     "t": "n",
+     "v": 1004.8
+    },
+    "G10": {
+     "t": "n",
+     "v": 21112.8
+    },
+    "G11": {
+     "t": "n",
+     "v": 10152.0
+    },
+    "G12": {
+     "t": "n",
+     "v": 10152.0
+    },
+    "G13": {
+     "t": "n",
+     "v": 31399.649999999998
+    },
+    "G14": {
+     "t": "n",
+     "v": 31399.649999999998
+    },
+    "G3": {
+     "t": "empty"
+    },
+    "G4": {
+     "t": "s",
+     "v": "Total Sum Amount paid"
+    },
+    "G5": {
+     "t": "empty"
+    },
+    "G6": {
+     "t": "n",
+     "v": 134.85
+    },
+    "G7": {
+     "t": "n",
+     "v": 134.85
+    },
+    "G8": {
+     "t": "n",
+     "v": 20108.0
+    },
+    "G9": {
+     "t": "n",
+     "v": 1004.8
+    },
+    "H10": {
+     "t": "n",
+     "v": 21112.8
+    },
+    "H11": {
+     "t": "n",
+     "v": 10152.0
+    },
+    "H12": {
+     "t": "n",
+     "v": 10152.0
+    },
+    "H13": {
+     "t": "n",
+     "v": 31399.649999999998
+    },
+    "H14": {
+     "t": "n",
+     "v": 31399.649999999998
+    },
+    "H3": {
+     "t": "empty"
+    },
+    "H4": {
+     "t": "s",
+     "v": "Total Sum Items total"
+    },
+    "H5": {
+     "t": "empty"
+    },
+    "H6": {
+     "t": "n",
+     "v": 134.85
+    },
+    "H7": {
+     "t": "n",
+     "v": 134.85
+    },
+    "H8": {
+     "t": "n",
+     "v": 20108.0
+    },
+    "H9": {
+     "t": "n",
+     "v": 1004.8
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 3,
+   "first_data_row": 3,
+   "first_header_row": 1,
+   "location": "B3:H14",
+   "name": "PivotTable1",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "t": "default",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1,
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 2,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "t": "default",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2,
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "t": "default",
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "Pivot1",
+   "text": {
+    "B13": "Action Club Total",
+    "B14": "Grand Total",
+    "B5": "Company",
+    "B6": "Action Club",
+    "C10": "MC Total",
+    "C11": "Visa",
+    "C12": "Visa Total",
+    "C5": "Payment method",
+    "C6": "Credit",
+    "C7": "Credit Total",
+    "C8": "MC",
+    "D11": "1038",
+    "D5": "OrderNo",
+    "D6": "1014",
+    "D8": "1029",
+    "D9": "1129",
+    "E10": "21112.8",
+    "E11": "10152",
+    "E12": "10152",
+    "E13": "31399.65",
+    "E14": "31399.65",
+    "E3": "Tax rate",
+    "E4": "0",
+    "E5": "Sum Amount paid",
+    "E6": "134.85",
+    "E7": "134.85",
+    "E8": "20108",
+    "E9": "1004.8",
+    "F10": "21112.8",
+    "F11": "10152",
+    "F12": "10152",
+    "F13": "31399.65",
+    "F14": "31399.65",
+    "F3": "Values",
+    "F5": "Sum Items total",
+    "F6": "134.85",
+    "F7": "134.85",
+    "F8": "20108",
+    "F9": "1004.8",
+    "G10": "21112.8",
+    "G11": "10152",
+    "G12": "10152",
+    "G13": "31399.65",
+    "G14": "31399.65",
+    "G4": "Total Sum Amount paid",
+    "G6": "134.85",
+    "G7": "134.85",
+    "G8": "20108",
+    "G9": "1004.8",
+    "H10": "21112.8",
+    "H11": "10152",
+    "H12": "10152",
+    "H13": "31399.65",
+    "H14": "31399.65",
+    "H4": "Total Sum Items total",
+    "H6": "134.85",
+    "H7": "134.85",
+    "H8": "20108",
+    "H9": "1004.8"
+   }
+  }
+ ],
+ "sheets": {
+  "Pivot1": {},
+  "Sheet1": {}
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "c937d6734512874f467fcd25253775f70aed32a2b3b45447a45e4c0984a2b07e",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-07T22:36:41+00:00",
+  "version": null,
+  "workbook_name": "605cabdd95f11fbe3b300e06ef4f4915a16e444f9b8cd7f3747c6bac21c0ef4b.xlsx"
+ }
+}

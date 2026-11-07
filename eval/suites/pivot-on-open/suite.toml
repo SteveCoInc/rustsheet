@@ -1,0 +1,22 @@
+name = "pivot-on-open"
+description = "Excel's on-open render of the pivot-corpus refreshOnLoad pivots (T-4972, decision 0349): copies of the four pivot-corpus-closedxml workbooks with a refreshOnLoad cache, each scored against its excel-graph sidecar; check (c) scores each refreshOnLoad pivot's refresh against the area Excel renders on open"
+kind = "xlsx"
+root = "cases"
+include = ["*.xlsx"]
+# Byte-for-byte copies of ClosedXML's test files (MIT, LICENSE-ClosedXML beside this file), from
+# https://github.com/ClosedXML/ClosedXML at 057f5976c788d97e8eac86d1a528bd5411d9386e, the
+# pivot-corpus-closedxml pin (ClosedXML.Tests/Resource/...):
+#   TemplateWithTableSourcePivotTables.xlsx  TryToLoad/TemplateWithTableSourcePivotTables.xlsx
+#   PivotMixedDataTypesInTableColumn.xlsx    Other/PivotTableReferenceFiles/PivotMixedDataTypesInTableColumn/input.xlsx
+#   PivotSubtotalsSource.xlsx                Other/PivotTableReferenceFiles/PivotSubtotalsSource/input.xlsx
+#   PivotTableWithNoneTheme.xlsx             Other/PivotTableReferenceFiles/PivotTableWithNoneTheme/inputfile.xlsx
+# pivot-corpus-lo holds no refreshOnLoad cache, so nothing of LibreOffice's (MPL-2.0) is copied.
+license = "MIT"
+origin = "https://github.com/ClosedXML/ClosedXML (ClosedXML.Tests/Resource, rev 057f5976c788d97e8eac86d1a528bd5411d9386e) + Excel oracle (expectations)"
+# The files are Excel-saved, so their pivots are classified (T-4131); each sidecar's values and
+# pivot areas are what Excel shows on open, and replace the saved cells (decision 0349).
+use_cached_values = true
+require_excel_authored = true
+gate = true
+baseline = "cells"
+milestone = ["M16"]
