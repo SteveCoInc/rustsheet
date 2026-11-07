@@ -10,6 +10,10 @@
 //! Train, 112 Hold and 170 fresh-sweep cells of probes/t4467-literal-large-exponent and -fresh
 //! (excel-graph, 2026-11-06), where the nearest double holds at 90, 62 and 20:
 //! `=2.036E-77` is 2.0360000000000002E-77, one ulp above the nearest double.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::unreadable_literal)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use crate::x87_register::Register;
 

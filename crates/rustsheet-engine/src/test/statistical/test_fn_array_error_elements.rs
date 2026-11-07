@@ -44,8 +44,8 @@ const CASES: &[(&str, &str)] = &[
 fn error_element_of_an_array_argument_is_that_error() {
     for (formula, expected) in CASES {
         let mut model = new_empty_model();
-        model._set("A1", &format!("={formula}"));
+        model.set_a1("A1", &format!("={formula}"));
         model.evaluate();
-        assert_eq!(model._get_text("A1"), *expected, "{formula}");
+        assert_eq!(model.get_text_a1("A1"), *expected, "{formula}");
     }
 }

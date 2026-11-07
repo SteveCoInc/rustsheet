@@ -10,6 +10,9 @@
 //!
 //! The costs are conservative placeholders in `regex_engine`'s units (about a nanosecond each);
 //! T-1974 fits them.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::too_many_lines)]
+// LINT-DEBT-END
 
 use regex_automata::{
     util::{captures::Captures, primitives::NonMaxUsize},
@@ -279,7 +282,9 @@ impl<'a> Backtracker<'a> {
         };
         if chunk.stamp != stamp {
             charge(self.work, to_u64(words).saturating_mul(VISITED_WORD))?;
-            if chunk.words.len() != words {
+            if chunk.words.len() == words {
+                chunk.words.fill(0);
+            } else {
                 let held = visited
                     .bytes
                     .saturating_sub(chunk.words.len() * std::mem::size_of::<u64>())
@@ -290,8 +295,6 @@ impl<'a> Backtracker<'a> {
                 }
                 visited.bytes = held;
                 chunk.words = vec![0; words];
-            } else {
-                chunk.words.fill(0);
             }
             chunk.stamp = stamp;
         }

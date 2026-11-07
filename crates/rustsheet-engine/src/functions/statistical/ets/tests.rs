@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::cast_precision_loss))]
+// LINT-DEBT-END
 use super::{
     build_series, completion_setting, detect_season, interpolate, DuplicateAggregate, Point,
     SeriesOptions, MAX_ACF_WORK,
@@ -34,7 +37,7 @@ fn a_period_four_signal_has_season_four() {
 
 #[test]
 fn a_straight_line_has_no_season() {
-    let y: Vec<f64> = (0..24).map(|t| 3.0 + 2.0 * t as f64).collect();
+    let y: Vec<f64> = (0..24).map(|t| 3.0 + 2.0 * f64::from(t)).collect();
     assert_eq!(detect_season(&y), Ok(0));
     assert_eq!(detect_season(&[1.0, 2.0, 3.0]), Ok(0));
 }

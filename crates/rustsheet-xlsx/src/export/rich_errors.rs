@@ -8,6 +8,9 @@
 //! one `_error` value per kind, whatever the number of cells, in a fixed order, so `vm="k"` is
 //! the same kind in every exported workbook. `subType` (the reason) is 0: it does not change the
 //! error, and Excel itself writes 0 for `#SPILL!` and `#CALC!` (ERROR.TYPE.xlsx).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string, clippy::manual_let_else)]
+// LINT-DEBT-END
 
 use rustsheet_engine::{
     expressions::token::Error,

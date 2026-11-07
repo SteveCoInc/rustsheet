@@ -1,8 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 use std::cmp::Ordering;
 
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
-use crate::reference_operators::RefArg;
+use crate::reference_operators::{RefArg, RefGrid};
 use crate::{
     calc_result::CalcResult, cast::calc_result_to_array_node, expressions::parser::Node,
     expressions::token::Error, model::Model,
@@ -220,6 +223,18 @@ fn xlookup_orientation(rows: usize, columns: usize, return_rows: usize) -> Optio
         (1, _) => Some(false),
         _ => None,
     }
+}
+
+/// Which lifted XLOOKUP reads stay a [`RefGrid`] (SPEC-0014 amendment "Mixed grids").
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum XlookupGrid {
+    /// None: the value form.
+    None,
+    /// One holding a miss's range `if_not_found` as its reference element; all hits are their
+    /// array of values.
+    Misses,
+    /// Every lifted read, for a per-element caller ([`Model::xlookup_reference_elements`]).
+    Elements,
 }
 
 impl Model {
@@ -498,8 +513,8 @@ impl Model {
         cell: CellReferenceIndex,
         as_reference: bool,
     ) -> CalcResult {
-        // Without `keep_grid` the read is a value: never a grid.
-        self.xlookup_read(args, cell, as_reference, false)
+        // Without a grid kept the read is a value: never a grid.
+        self.xlookup_read(args, cell, as_reference, XlookupGrid::None)
             .into_single_area(cell)
     }
 
@@ -515,20 +530,38 @@ impl Model {
         cell: CellReferenceIndex,
         as_reference: bool,
     ) -> RefArg {
-        match self.xlookup_read(args, cell, as_reference, true) {
+        match self.xlookup_read(args, cell, as_reference, XlookupGrid::Misses) {
             RefArg::Value(value) if as_reference => RefArg::from(value),
             read => read,
         }
     }
 
-    /// [`Self::xlookup_impl`] and [`Self::xlookup_reference`]: `keep_grid` keeps a range
-    /// `if_not_found` under a lifted `lookup_value` as the reference element of each miss.
+    /// XLOOKUP read in a per-element caller's reference argument (SPEC-0014 rule 6): a lifted
+    /// `lookup_value` is always a grid of its elements, so the caller runs once per element even
+    /// with no reference among them. A value element, hit or miss, is a non-reference argument
+    /// and an error element its error: `COUNTIF(XLOOKUP({2;9},A1:A3,B1:B3,"x"),">0")` and the
+    /// three-argument form spill 2x1 (`#VALUE!` twice, then `#VALUE!` and `#N/A`), and `{2}`
+    /// gives a 1x1 `#VALUE!` (probes/t4704-mixed-xlookup-grid-readers A64:C74, probes/t4742-
+    /// countif-array-range-arg). Any other XLOOKUP is [`Self::xlookup_reference`]'s read.
+    pub(crate) fn xlookup_reference_elements(
+        &mut self,
+        args: &[Node],
+        cell: CellReferenceIndex,
+    ) -> RefArg {
+        match self.xlookup_read(args, cell, true, XlookupGrid::Elements) {
+            RefArg::Value(value) => RefArg::from(value),
+            read => read,
+        }
+    }
+
+    /// [`Self::xlookup_impl`], [`Self::xlookup_reference`] and
+    /// [`Self::xlookup_reference_elements`]: `grid` says which lifted reads stay a grid.
     fn xlookup_read(
         &mut self,
         args: &[Node],
         cell: CellReferenceIndex,
         as_reference: bool,
-        keep_grid: bool,
+        grid: XlookupGrid,
     ) -> RefArg {
         if args.len() < 3 || args.len() > 6 {
             return RefArg::Value(CalcResult::new_args_number_error(cell));
@@ -569,7 +602,7 @@ impl Model {
         let if_not_found = match if_not_found {
             // A range kept for the misses: one reference element per miss. Never a keyed
             // lookup: one with a reference if_not_found is not keyed (`tailed_array.rs`).
-            NotFound::Range(range) if keep_grid => {
+            NotFound::Range(range) if grid != XlookupGrid::None => {
                 let lifted = match LiftedArg::read_all(self, criteria, cell) {
                     Ok(lifted) => lifted,
                     Err(error) => return RefArg::Value(error),
@@ -581,8 +614,10 @@ impl Model {
                 return match (finished, read) {
                     (error @ CalcResult::Error { .. }, _) => RefArg::Value(error),
                     // A grid holds at least one reference element; all hits are their array.
-                    (_, RefArg::Grid(grid)) if !grid.holds_reference() => {
-                        RefArg::Value(grid.to_values())
+                    (_, RefArg::Grid(read))
+                        if grid == XlookupGrid::Misses && !read.holds_reference() =>
+                    {
+                        RefArg::Value(read.to_values())
                     }
                     (_, read) => read,
                 };
@@ -606,7 +641,15 @@ impl Model {
         );
         let result = regexes.finish(self, result, cell);
         self.keep_keyed_regexes(args, cell, regexes);
-        RefArg::Value(result)
+        match result {
+            CalcResult::Array(rows) if lifts && grid == XlookupGrid::Elements => {
+                match RefGrid::of_values(&rows) {
+                    Some(elements) => RefArg::Grid(elements),
+                    None => RefArg::Value(CalcResult::Array(rows)),
+                }
+            }
+            result => RefArg::Value(result),
+        }
     }
 
     /// XLOOKUP's `if_not_found` (`#N/A` when omitted or empty). A range stays a reference in the

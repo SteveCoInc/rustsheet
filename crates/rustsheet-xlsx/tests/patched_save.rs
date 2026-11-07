@@ -10,8 +10,8 @@ use std::io::{Cursor, Read, Write};
 
 use rustsheet_engine::expressions::types::Area;
 use rustsheet_engine::Model;
-use rustsheet_xlsx::export::{save_preserving, save_xlsx_to_writer, SaveTier};
-use rustsheet_xlsx::import::load_from_xlsx_bytes;
+use rustsheet_xlsx::export::{save_preserving, save_xlsx_to_writer, SaveReport, SaveTier};
+use rustsheet_xlsx::import::{load_from_xlsx_bytes, ImportLimits};
 
 const SHEET: &str = "xl/worksheets/sheet1.xml";
 const STYLES: &str = "xl/styles.xml";
@@ -43,8 +43,15 @@ fn save_after(bytes: &[u8], edit: impl FnOnce(&mut Model)) -> (Vec<u8>, SaveTier
     let mut model = load(bytes);
     edit(&mut model);
     model.evaluate();
-    let (out, tier) = save_preserving(&model, &pristine, bytes, Cursor::new(Vec::new())).unwrap();
-    (out.into_inner(), tier)
+    let (out, report) = save_preserving(
+        &model,
+        &pristine,
+        bytes,
+        &ImportLimits::default(),
+        Cursor::new(Vec::new()),
+    )
+    .unwrap();
+    (out.into_inner(), report.tier)
 }
 
 /// Every entry of a package, decompressed.
@@ -504,4 +511,99 @@ fn a_new_number_format_and_a_new_font_are_appended_to_the_source_styles() {
     let reloaded = load(&out);
     assert!(reloaded.get_style_for_cell(0, 1, 1).unwrap().font.b);
     assert_eq!(value(&out, (3, 1)), "x");
+}
+
+/// Saves `bytes` after `edit` as `save_after` does, returning the save report (T-4562).
+fn report_after(bytes: &[u8], edit: impl FnOnce(&mut Model)) -> SaveReport {
+    let pristine = load(bytes);
+    let mut model = load(bytes);
+    edit(&mut model);
+    model.evaluate();
+    save_preserving(
+        &model,
+        &pristine,
+        bytes,
+        &ImportLimits::default(),
+        Cursor::new(Vec::new()),
+    )
+    .unwrap()
+    .1
+}
+
+/// The report's drops as (item, reason name) pairs.
+fn drops(report: &SaveReport) -> Vec<(String, &'static str)> {
+    (report.dropped.iter())
+        .map(|d| (d.item.clone(), d.reason.name()))
+        .collect()
+}
+
+#[test]
+fn the_save_report_names_what_each_tier_left_out() {
+    let custom = r#"<root xmlns="urn:x"/>"#;
+    let chain = r#"<calcChain xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><c r="A2" i="1"/></calcChain>"#;
+    let src = with_entry(&source(), "customXml/item1.xml", custom);
+    let src = with_entry(&src, "xl/calcChain.xml", chain);
+    let src = rezip(
+        &src,
+        RELS,
+        "</Relationships>",
+        r#"<Relationship Id="rIdCC" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/calcChain" Target="calcChain.xml"/><Relationship Id="rIdCX" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml" Target="../customXml/item1.xml"/></Relationships>"#,
+    );
+    let src = rezip(
+        &src,
+        TYPES,
+        "</Types>",
+        r#"<Override PartName="/xl/calcChain.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.calcChain+xml"/></Types>"#,
+    );
+    // Unchanged: the source, byte for byte, nothing dropped.
+    let report = report_after(&src, |_| {});
+    assert_eq!(report.tier, SaveTier::Verbatim);
+    assert!(report.dropped.is_empty());
+    // A cell edit that keeps the formula cells: patched, the chain kept.
+    let report = report_after(&src, |m| m.set_user_input(0, 1, 1, "5".into()).unwrap());
+    assert!(
+        matches!(report.tier, SaveTier::Patched { .. }),
+        "{report:?}"
+    );
+    assert!(report.dropped.is_empty(), "{report:?}");
+    // A formula replaced by a constant: patched, the chain dropped by policy.
+    let report = report_after(&src, |m| m.set_user_input(0, 2, 1, "9".into()).unwrap());
+    assert!(
+        matches!(report.tier, SaveTier::Patched { .. }),
+        "{report:?}"
+    );
+    assert_eq!(drops(&report), [("xl/calcChain.xml".to_string(), "Policy")]);
+    // A renamed sheet regenerates: the unmodelled custom XML is not preserved, the chain is
+    // dropped by policy, and no modelled part is named.
+    let report = report_after(&src, |m| m.workbook.worksheets[0].name = "Renamed".into());
+    assert!(
+        matches!(report.tier, SaveTier::Regenerated { .. }),
+        "{report:?}"
+    );
+    let mut got = drops(&report);
+    got.sort();
+    assert_eq!(
+        got,
+        [
+            ("customXml/item1.xml".to_string(), "NotPreserved"),
+            ("xl/calcChain.xml".to_string(), "Policy"),
+        ]
+    );
+}
+
+/// The report reads the source within the limits it was loaded with (directive 5): over them it
+/// says so, rather than reporting that nothing was dropped.
+#[test]
+fn a_source_the_report_cannot_read_within_the_load_limits_is_reported() {
+    let src = source();
+    let pristine = load(&src);
+    let mut model = load(&src);
+    model.workbook.worksheets[0].name = "Renamed".into();
+    let tight = ImportLimits {
+        max_zip_entries: 1,
+        ..ImportLimits::default()
+    };
+    let (_, report) =
+        save_preserving(&model, &pristine, &src, &tight, Cursor::new(Vec::new())).unwrap();
+    assert_eq!(drops(&report), [(String::new(), "LimitExceeded")]);
 }

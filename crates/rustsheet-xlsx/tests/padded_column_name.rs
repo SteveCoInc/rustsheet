@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, reason = "tests")]
 //! A defined name whose stored body is a padded bare column `T[ Col ]` loads as `#REF!`, as Excel
 //! loads it (probes/t3258-name-padded-column-0..2, T-3258, T-4022); `T[ [Col] ]` is the column.

@@ -864,7 +864,23 @@ FALSE, `*2^1000` recovers -2^-74), and so is a spilled array element (`=EXP({-74
 companion FALSE, the -708 element a normal 3.3075530036384078E-308); probes/subnormal-saved-negative-and-array, excel-graph
 2026-11-07 (T-4355). RustSheet's export flushes a kept subnormal of either sign in every number `<v>` (T-2211, T-4355,
 `saved_number` in export/worksheets.rs). Desktop Excel's save is unprobed (M14, decision 0039).
-In an array expression the kept subnormal compares equal to 0: `(EXP({-745,-708}))=0` is TRUE in excel-graph (same probe, D1) though a spilled cell's `=0` companion is FALSE (T-4766).
+Comparison over an array or range (T-4766): when either operand of `=`, `<>`, `<`, `>`, `<=`, `>=` is an array or a range,
+Excel reads a left number that exceeds the right one by less than 2^-1026 as equal to it; a left number below the right one
+keeps its order, and a scalar comparison stays exact. So `(EXP({-745,-708}))=0` is {TRUE,FALSE} (probes/subnormal-saved-negative-and-array
+D1) while `(EXP(-745))=0`, `INDEX(EXP({-745,-708}),1)=0` and `=A30=0` of a spilled cell are FALSE; `(EXP(-745)+{0,0})=0`,
+`(A30:B30)=0` and `(A30#)=0` are TRUE; `EXP({-745,-708})>0` and `<>0` are FALSE at the kept element; `0=EXP({-745})` is FALSE and
+`0<EXP({-745})` TRUE; `EXP({-744})=EXP({-745})` is TRUE, `EXP({-744})>EXP({-745})` FALSE and `EXP({-745})<EXP({-744})` TRUE; the
+same holds with the array on the left, the right or both sides (probes/t4766-array-subnormal-compare,
+probes/t4766-array-subnormal-order, 144-cell operand matrix). The switch for `(EXP({a}))=0` lies between a = -711.17 (TRUE) and
+-711.16 (FALSE), around 2^-1026 (-1026 ln 2 = -711.1648; probes/t4766-array-subnormal-exp-boundary, -order A1:A21). The
+constant 2^-1026 was chosen from those cells, then checked on a fresh sweep made after the rule was frozen
+(probes/t4766-array-subnormal-fresh, 94 cells: exact m*2^-1074 built by subtraction, m log-uniform in [2^44, 2^52) and
+2^48 +-1, pairs, and negative operands): the engine matches all 94. The value exactly at 2^-1026 and the gap between two normal
+numbers are not separately probed. POWER flushes a subnormal result (`(2^-1023)=0` TRUE, `POWER(2,-1022)=0` FALSE;
+probes/t4766-array-subnormal-boundary), as this file already says, so 2^-k cannot build test values. The saved 0 of a spilled
+kept subnormal (A3 of the first probe) cannot use decision 0042's companion, which is TRUE in array context (T-5051).
+Implemented in `arithmetic::within_array_compare_gap` (`handle_comparison`).
+Status: VERIFIED (excel-graph) for the probed cells; the mechanism is UNVERIFIED.
 Range edges (T-2203, probes-numeric/t2203-exp-range-edges, excel-graph 2026-10-22, 527 rows): the last finite
 argument is 709.782712893384 (ln DBL_MAX; EXP = 1.7976931348622732E308, not quite DBL_MAX), and the first
 `#NUM!` is its successor double 709.7827128933841; every argument above it, up to 710.5, is `#NUM!`. At the other
@@ -2376,14 +2392,41 @@ engine matches both. **A delete that leaves another criterion shows only the row
 (T-4755, probes/t4755-two-criteria-filtered-table-*): with a values filter on `Cat` keeping "a" and "c" (rows 3, 7)
 and one on `Ext` rejecting 40 (row 5), the control gives 3 = 103 = 3 and 9 = 109 = 9; deleting column A gives
 3 = 103 = 5 and 9 = 109 = 17: rows 3 and 7 are visible again, row 5 stays hidden and still filtered
-(`SUBTOTAL(3,..)` of it is 0). The engine matches (T-4803): after a column delete that takes a criterion and leaves
-another inside the table, it shows each hidden data row that every kept criterion keeps, by the text the row's cell
-displays in that criterion's column (`rows_kept_by_criteria`, crates/rustsheet-engine/src/table_edits.rs), for a table read
-from a file and for one given its criteria with `Txn::filter_table_column` (the eval adapter's spec `"criteria"`). Rule
-(ours, T-4803): only a values filter without date groups is evaluated (blank rows by `blank`, other rows by their text
-among `values`, ignoring case); a row with any other kept criterion stays hidden. A row hidden in the file that the kept
-criteria keep is shown too, as the one-criterion delete shows it (above); with two criteria that is unprobed, as are
-case differences and number formats in the kept column.
+(`SUBTOTAL(3,..)` of it is 0). **Excel re-applies the kept criteria to every data row** (T-4895, T-4939, excel-graph
+2026-11-07; predictions committed before each fill in docs/research/t4895/ and docs/research/t4939/): a row every
+kept criterion keeps is visible afterwards and a row one rejects is hidden, whatever its state before, matched by the
+text the row's cell displays in that criterion's column, ignoring case:
+- A row hidden in the file that both criteria keep is shown by the delete too (probes/t4895-two-criteria-hand-hidden-*:
+  row 4, "a" and 30, also written hidden; the control gives `SUBTOTAL(3,S!B4)` = 0, the delete 1 and 3 = 103 = 5,
+  9 = 109 = 17). One earlier fill of the delete case without its `COLUMNS(Sales)` reader returned the
+  control's values; two later fills with the reader (`COLUMNS` = 2, so the delete ran) reproduced the result above,
+  (the 13:36 fill is kept in docs/research/t4895/second-fill/, the 13:37 one is the case's sidecar), and the first
+  fill's sidecars are kept in docs/research/t4895/first-fill/.
+- Visible rows the kept criterion rejects are hidden, and the match is by displayed text
+  (probes/t4895-two-criteria-number-format-*): with `Ext` formatted `0.00` (10.00 .. 60.00) and its kept values
+  filter listing the General text 10, 20, 30, 50, 60, the control reads the file's hidden rows (3 = 103 = 3) but the
+  delete of `Cat` hides **every** data row, rows 2, 4 and 6 that were visible included (3 = 103 = 9 = 109 = 0; two
+  fills). The positive control (docs/research/t4939/control.py, its uploads and predictions beside it) lists the
+  displayed text 10.00, 20.00, 30.00, 50.00, 60.00 instead: the control still reads rows 3, 5 and 7 hidden, and the
+  delete shows rows 2-4, 6 and 7 and hides row 5 (3 = 103 = 5, 9 = 109 = 17), so the displayed text matches and the
+  General text does not.
+- Uploads of patched spec2xlsx workbooks (Cat keeps a and c, Ext rejects 40, delete_column C; sha256 of each in
+  docs/research/t4895/predictions-uploads.tsv, the recalculated values in docs/research/t4895/uploads/): kept values
+  "A" and "C" over cells a and c keep them (case is ignored); a visible row whose kept cell is blank stays visible
+  under `blank="1"` and is hidden without it; a kept custom filter (equals a, or equals c) shows row 5, which only the
+  deleted criterion hid.
+
+The engine follows this (T-4803, T-4939): after a column delete that takes a criterion and leaves another inside the
+table, `rows_decided_by_criteria` (crates/rustsheet-engine/src/table_edits.rs) re-applies the kept criteria to each
+data row, rows without a row record included, by `FilterCriterion::keeps_text` (table_types.rs), for a table read from
+a file and for one given its criteria with `Txn::filter_table_column`. The eval adapter's spec `"criteria"` lists the
+kept rows' General text, as spec2xlsx writes it (`add_table` in crates/rustsheet-eval/src/engine.rs runs before the
+number formats are set). Rule (ours where unprobed): a values filter without date groups is evaluated (blank rows by
+`blank`, other rows by their text among `values`), and a custom filter whose conditions all have the `equal` operator
+(or none) and a text operand without a wildcard (`*`, `?`, `~`), combined by `and`. A row whose verdict hangs on any
+other kept criterion (a custom filter with another operator or a numeric operand, top 10, dynamic, date groups, color)
+keeps its state, unless an evaluated criterion rejects it. The undo puts back every row the delete showed or hid.
+Kept top10, dynamic, date-group and color criteria are unprobed.
 A manual hide made in the application inside a filtered table, and hidden rows outside the table (the engine keeps
 them hidden), are unprobed. A worksheet autoFilter (no table) and an autoFilter holding only a
 `<sortState>` are unprobed; ours reads the latter as not filtered.
@@ -2848,15 +2891,28 @@ argument wins: `QUOTIENT(1/0,)` is `#DIV/0!`, `QUOTIENT(TRUE,)` `#VALUE!` (A9:A1
 empty hands the emptiness on: `LET(e,,QUOTIENT(7,e))`, `LET(e,,QUOTIENT(e,2))`, `LAMBDA(a,b,QUOTIENT(a,b))(7,)` and
 `LET(e,,SERIESSUM(2,e,1,{1,2}))` are `#N/A` (-let-lambda A1:A4). Only the argument as written counts: a formula that
 gives a blank (an IFERROR or VLOOKUP of an empty cell) is read as 0, not `#N/A` (gen-m5/6efa59fc1257c475 Calc!A229,
-gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there); MROUND itself reads it so too (`MROUND(VLOOKUP("x",C1:D1,2,FALSE),1)` and `MROUND(5,INDEX(D1:D2,1))` are 0, `CEILING.MATH(2.675,INDEX(D1:D2,1))` 0, `FLOOR.PRECISE(-2.5,INDEX(D1:D2,1))` 0: probes/t4901-mround-blank-let-lambda-roundings A1, A2, A8, A9, excel-graph, 2026-11-07, T-4901). A LET value or LAMBDA parameter left empty is an omission in CEILING.MATH (3, A4:A5) and FLOOR.PRECISE (-3, A6:A7). But a call that returns its own *written-empty* branch hands the omission on: `MROUND(IF(TRUE,),1)`, `MROUND(IF(FALSE,1,),1)`, `MROUND(CHOOSE(1,,2),1)`, `MROUND(IFERROR(,1),1)`, `MROUND(5,IF(TRUE,))` and `QUOTIENT(IF(TRUE,),1)` are `#N/A` and `CEILING.MATH(2.675,IF(TRUE,))` is 3 (A3, A10, A12:A16); `MROUND(IF(FALSE,1),1)` is `#VALUE!` (A11, FALSE). Ours reads the IF/CHOOSE/IFERROR forms as 0 (T-4912). UNVERIFIED: where empty coefficients rank against an `x`,
-`n` or `m` error (ours checks them after, as every coefficient error).
+gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). MROUND itself reads it so too (`MROUND(VLOOKUP("x",C1:D1,2,FALSE),1)` and `MROUND(5,INDEX(D1:D2,1))` are 0, `CEILING.MATH(2.675,INDEX(D1:D2,1))` 0, `FLOOR.PRECISE(-2.5,INDEX(D1:D2,1))` 0: probes/t4901-mround-blank-let-lambda-roundings A1, A2, A8, A9, excel-graph, 2026-11-07, T-4901). A LET value or LAMBDA parameter left empty is an omission in CEILING.MATH (3, A4:A5) and FLOOR.PRECISE (-3, A6:A7). But a call that returns its own *written-empty* branch hands the omission on: `MROUND(IF(TRUE,),1)`, `MROUND(IF(FALSE,1,),1)`, `MROUND(CHOOSE(1,,2),1)`, `MROUND(IFERROR(,1),1)`, `MROUND(5,IF(TRUE,))` and `QUOTIENT(IF(TRUE,),1)` are `#N/A` and `CEILING.MATH(2.675,IF(TRUE,))` is 3 (A3, A10, A12:A16); `MROUND(IF(FALSE,1),1)` is `#VALUE!` (A11, FALSE). Ours reads the IF/CHOOSE/IFERROR forms as 0 (T-4912). Empty coefficients rank after `x`, `n` and `m`: with the
+coefficients empty, `SERIESSUM(1/0,1,1,)` is `#DIV/0!`, `SERIESSUM(2,"x",1,)` `#VALUE!` and `SERIESSUM(2,1,NA(),)` `#N/A`
+(t4903 B1:B3), and an `m` error that is not `#N/A` also beats them: `SERIESSUM(2,1,1/0,)` is `#DIV/0!`,
+`SERIESSUM(2,1,"x",)` `#VALUE!` (B4:B5; B3 alone could not tell, as empty coefficients are `#N/A` themselves). Ours checks
+the coefficients after, as every coefficient error. An empty argument beside an array lifts element by element:
+`ROWS(QUOTIENT(,{2;4}))` is 2 and `COLUMNS(QUOTIENT({7,8},))` is 2, with `INDEX(QUOTIENT({7,8},),1,2)` `#N/A` (t4903
+A1:A3; the t4873 A7:A8 spills showed only `#SPILL!`).
+The one-argument SQRTPI and FACTDOUBLE can be given an empty argument only through LET or LAMBDA, and they follow
+the same rule (T-4923). `LET(e,,SQRTPI(e))`, `LAMBDA(a,b,SQRTPI(b))(1,)`, `LET(e,,FACTDOUBLE(e))` and
+`LAMBDA(a,b,FACTDOUBLE(b))(1,)` are `#N/A`. An operator over the omission reads it as 0: `LET(e,,SQRTPI(e+0))` is 0
+and `LET(e,,FACTDOUBLE(e+0))` is 1. So does a blank cell: `SQRTPI(Z1)` is 0 and `FACTDOUBLE(Z1)` is 1. An IF that
+lifts it is still an array: `ROWS(LET(e,,SQRTPI(IF({1;1},e))))` is 2.
 Evidence: probes/t4873-empty-arg-quotient-ceiling Calc!A1:B8, probes/t4873-empty-arg-let-lambda Calc!A1:A4 (excel-graph,
-2026-11-07, T-4873; predictions committed before the fill).
-Ours: `Model::atp_number` (functions/lift/mod.rs) reads MROUND's, QUOTIENT's and SERIESSUM's numbers, told which
-arguments are empty by `Model::empty_arguments` (logical/let.rs); `series_coefficients`
-refuses empty coefficients. Before T-4873 QUOTIENT and SERIESSUM read an empty argument as 0.
+2026-11-07, T-4873; predictions committed before the fill); probes/t4903-empty-arg-quotient-seriessum-lift Calc!A1:B5
+(excel-graph, 2026-11-07, T-4903; predictions committed before the fill, 8/8 held); probes/t4923-sqrtpi-factdouble-omitted A1:A13 (excel-graph,
+2026-11-07; H_na 13/13, H_zero, the omission as 0, 9/13; predictions committed before the fill).
+Ours: `Model::atp_number` (functions/lift/mod.rs) reads MROUND's, QUOTIENT's, SERIESSUM's and SQRTPI's numbers, told
+which arguments are empty by `Model::empty_arguments` (functions/util/empty_args.rs). FACTDOUBLE swaps its argument
+through `written_empty_or`, and `series_coefficients` refuses empty coefficients. Before T-4873 QUOTIENT and SERIESSUM
+read an empty argument as 0, and before T-4923 SQRTPI and FACTDOUBLE read the omission as 0.
 Status: VERIFIED (excel-graph)
-Tasks: T-4873, T-4901, T-4912
+Tasks: T-4873, T-4901, T-4903, T-4912, T-4923
 
 ## An empty significance of the 2010+ roundings is omitted (T-4873)
 Rule: CEILING.MATH, FLOOR.MATH (Excel 2013), CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING (Excel 2010) read a written-empty

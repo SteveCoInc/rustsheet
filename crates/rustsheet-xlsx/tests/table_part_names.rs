@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, reason = "tests")]
 //! A table part may name itself by `name`, `displayName` or both; formulas reach it through whichever
 //! exists (T-2208, docs/excel-semantics/xlsx-storage.md). Table parts are untrusted: never a panic.
@@ -15,7 +18,8 @@ fn workbook(attrs: &str) -> Vec<u8> {
     workbook_with_formula(attrs, "SUM(Table1[Year])")
 }
 
-/// As [`workbook`], with `formula` in `Table!H50` and `FORMULATEXT(H50)` in `Table!H51`.
+/// As [`workbook`], with `formula` in `Table!H50` and `_xlfn.FORMULATEXT(H50)` in `Table!H51`
+/// (FORMULATEXT is a newer function: stored bare it is `#NAME?`, T-1089).
 fn workbook_with_formula(attrs: &str, formula: &str) -> Vec<u8> {
     let mut src =
         zip::ZipArchive::new(Cursor::new(std::fs::read("tests/example.xlsx").unwrap())).unwrap();
@@ -36,7 +40,7 @@ fn workbook_with_formula(attrs: &str, formula: &str) -> Vec<u8> {
                 .replace(
                     "</sheetData>",
                     &format!(
-                        r#"<row r="50"><c r="H50"><f>{formula}</f></c></row><row r="51"><c r="H51"><f>FORMULATEXT(H50)</f></c></row></sheetData>"#
+                        r#"<row r="50"><c r="H50"><f>{formula}</f></c></row><row r="51"><c r="H51"><f>_xlfn.FORMULATEXT(H50)</f></c></row></sheetData>"#
                     ),
                 )
                 .into_bytes();

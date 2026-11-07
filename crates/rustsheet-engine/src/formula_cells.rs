@@ -1,6 +1,9 @@
 //! Writing a formula into a cell. A typed formula and a legacy one (`set_cell_with_legacy_formula`)
 //! are parsed differently and stored through the same node setter, so a legacy tree is stored as
 //! it was rewritten, its N/T markers included (SPEC-0012), not re-read from its display text.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_sign_loss)]
+// LINT-DEBT-END
 
 use std::sync::Arc;
 
@@ -85,7 +88,10 @@ impl Model {
         printer: FormulaPrinter<'_>,
     ) -> Result<Option<String>, String> {
         let worksheet = self.workbook.worksheet(sheet)?;
-        let Some(formula_index) = worksheet.cell(row, column).and_then(|c| c.get_formula()) else {
+        let Some(formula_index) = worksheet
+            .cell(row, column)
+            .and_then(super::types::Cell::get_formula)
+        else {
             return Ok(None);
         };
         let formula = self.written_formula(sheet, formula_index)?;
@@ -261,7 +267,7 @@ impl Model {
         style: i32,
     ) -> Result<(), String> {
         self.set_cell_with_formula_index(sheet, row, column, formula_index, style)?;
-        let cell = CellReferenceIndex { sheet, row, column };
+        let cell = CellReferenceIndex { sheet, column, row };
         let parsed_formula =
             &self.parsed_formulas[sheet as usize][formula_index as usize].evaluated;
         if let Some(units) = self.compute_node_units(parsed_formula, &cell) {

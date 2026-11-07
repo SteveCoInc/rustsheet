@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::match_same_arms
+)]
+// LINT-DEBT-END
 use chrono::Datelike;
 
 use super::num_error;
@@ -5,7 +12,13 @@ use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
     formatter::dates::from_excel_date,
-    functions::{util::near_integer::near_integer_whole, Function},
+    functions::{
+        util::{
+            empty_args::{written_empty_na, written_empty_or},
+            near_integer::near_integer_whole,
+        },
+        Function,
+    },
     model::Model,
     tailed_array::range_corners,
 };
@@ -135,8 +148,17 @@ impl Model {
     /// Both arguments lift over arrays and refuse a multi-cell range (SPEC-0011 `LiftArrays`,
     /// probes/date-argument-modes).
     pub(crate) fn fn_weeknum(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        // A written-empty return_type is omitted, type 1 (`WEEKNUM(45000,)` is 11:
+        // probes/t4870-empty-date-args A16, t4870-r2-empty-optional A5, A6, A14; T-4870).
+        let args = match args {
+            [serial, return_type] if self.is_empty_argument(return_type) => {
+                std::slice::from_ref(serial)
+            }
+            _ => args,
+        };
+        let empty = self.empty_arguments::<1>(args);
         let result = self.lift_call(Function::Weeknum, args, cell, &mut |model, values| {
-            model.weeknum_of(values, cell)
+            model.weeknum_of(values, empty, cell)
         });
         if matches!(result, CalcResult::Array(_)) {
             // A WEEKNUM that lifts over an array empties the state, whatever its types
@@ -149,12 +171,19 @@ impl Model {
     /// WEEKNUM of one element. Once both arguments convert and the serial is valid, it updates
     /// the stale `return_type` state, or reads it for a `return_type` of 22+ or negative (SPEC-0017
     /// rules 2, 4 and 5).
-    fn weeknum_of(&mut self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
+    fn weeknum_of(
+        &mut self,
+        values: &[CalcResult],
+        empty: [bool; 1],
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
         let (serial, return_type) = match values {
             [serial] => (serial, None),
             [serial, return_type] => (serial, Some(return_type)),
             _ => return CalcResult::new_args_number_error(cell),
         };
+        let na = written_empty_na(cell);
+        let [serial] = written_empty_or([serial], empty, &na);
         // A boolean serial is #VALUE!, before the return_type is read (`WEEKNUM(<FALSE cell>,1)`;
         // dates.md "WEEKNUM of a boolean serial is #VALUE!", gen-m6, T-2276); WEEKDAY and
         // ISOWEEKNUM read it as 1. A typed or array-constant boolean is `#VALUE!` too

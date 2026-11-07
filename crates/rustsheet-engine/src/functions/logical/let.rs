@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 use crate::{
     calc_result::CalcResult,
     expressions::{
@@ -280,7 +283,7 @@ impl Model {
         // An empty slot, `(1,)` or `(,2)`, is omitted like a missing argument (arrays.md
         // ISOMITTED, A24-A25 and A34), and a variable bound to an omitted parameter hands the
         // omission on, so ISOMITTED of a LET name for it stays TRUE as before T-2649.
-        if matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node) {
+        if self.is_empty_argument(node) {
             return Binding::Omitted;
         }
         let is_span = matches!(node, Node::SheetSpanKind { .. });
@@ -390,22 +393,6 @@ impl Model {
     /// Whether `node` is a variable bound to an omitted LAMBDA parameter ([`Binding::Omitted`]).
     pub(crate) fn is_omitted_variable(&self, node: &Node) -> bool {
         matches!(self.variable_binding(node), Some(Binding::Omitted))
-    }
-
-    /// Whether the argument `node` is empty as written: an empty argument (`f(1,)`), or a
-    /// variable bound to an omitted LAMBDA parameter or an empty LET value, which hands the
-    /// emptiness on (probes/eng-imsub-imdiv-lambda-let-empty, t4873-empty-arg-let-lambda). A
-    /// formula that evaluates to a blank (`IFERROR(<blank>,0)`) is not one.
-    pub(crate) fn is_empty_argument(&self, node: &Node) -> bool {
-        matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node)
-    }
-
-    /// [`Model::is_empty_argument`] for each of the first `N` arguments (`false` past the last).
-    pub(crate) fn empty_arguments<const N: usize>(&self, args: &[Node]) -> [bool; N] {
-        std::array::from_fn(|index| {
-            args.get(index)
-                .is_some_and(|node| self.is_empty_argument(node))
-        })
     }
 
     /// Whether `node` is a variable bound to an array of references ([`Binding::Grid`]), which

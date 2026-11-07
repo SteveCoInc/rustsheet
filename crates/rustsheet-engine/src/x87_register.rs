@@ -6,6 +6,10 @@
 //!
 //! Only finite, normal-range values are modelled: the exponent is an `i32`, far wider than the
 //! x87's, and no operation here can overflow or underflow it from double operands.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use crate::arithmetic::{
     extended_div, round_extended_to_double, round_extended_to_subnormal, round_to_bits,

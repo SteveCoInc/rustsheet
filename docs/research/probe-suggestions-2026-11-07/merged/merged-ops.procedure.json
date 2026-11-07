@@ -1,0 +1,111 @@
+{
+ "format": "merged-ops-procedure/draft",
+ "description": "the covered-cells spec (excel-parity-findings-2026-11-07.md section 1) UNVERIFIED rows: user operations on merged ranges whose covered cells hold content. The case format's sheet_ops has no merge/unmerge/clear/paste/autofill/navigation op, so these are operation scripts on a start workbook. Run each scenario on a FRESH copy of merged-covered-ops.xlsx (build: python3 -I build_merged_fixture.py merged-covered-ops.xlsx). After the op, read the listed range's formulas and values, and the sheet's merged areas. engine = what the engine at the integration commit does (merged/engine-predictions.txt, produced by merged/predict against the same file).",
+ "start_workbook": "merged-covered-ops.xlsx",
+ "read_api_hint": "Office JS: range.formulas, range.values, sheet.getRange(r).getMergedAreasOrNullObject().address (ExcelApi 1.13). Graph REST: GET .../range(address='M!B2:C3')?$select=formulas,values; merged areas need Office JS or desktop VBA (Range.MergeArea / MergeCells).",
+ "scenarios": [
+  {
+   "id": "U0-baseline",
+   "priority": "control",
+   "op": "none (open the file, recalculate)",
+   "read": ["M!B2:C3"],
+   "engine": {"B2": "5", "C2": "x", "B3": "=B2+1 -> 6", "C3": "", "merges": ["M!B2:C3"]},
+   "note": "Already VERIFIED for import by fixtures/merged-covered-*; this checks the hand-built file loads the same way before the ops."
+  },
+  {
+   "id": "U1-unmerge",
+   "priority": "P1",
+   "op": "Unmerge M!B2:C3 (Office JS range.unmerge(), Graph POST .../range(address='M!B2:C3')/unmerge, desktop Home > Merge & Center > Unmerge)",
+   "read": ["M!B2:C3"],
+   "engine": {"B2": "5", "C2": "x", "B3": "=B2+1 -> 6", "C3": "", "merges": []},
+   "falsifies_if": "C2/B3 come back empty (Excel discards covered content on unmerge)."
+  },
+  {
+   "id": "U2-clear-whole-range",
+   "priority": "P1",
+   "op": "Clear contents of M!B2:C3 (range.clear('Contents') / Graph POST .../range(address='M!B2:C3')/clear {\"applyTo\":\"Contents\"} / desktop select merged cell, Delete)",
+   "read": ["M!B2:C3"],
+   "engine": {"B2": "", "C2": "", "B3": "", "C3": "", "merges": ["M!B2:C3"]},
+   "falsifies_if": "C2 or B3 survive (Excel clears only the anchor). Desktop Delete on the selected merged cell is the UI form; record both API and UI results if they differ."
+  },
+  {
+   "id": "U2b-clear-anchor-address-only",
+   "priority": "P2",
+   "op": "Clear contents of M!B2 only (API address of the anchor alone; the UI cannot express this)",
+   "read": ["M!B2:C3"],
+   "engine": {"B2": "", "C2": "x", "B3": "=B2+1 -> 1", "C3": "", "merges": ["M!B2:C3"]},
+   "note": "Distinguishes 'clear walks the merged area' from 'clear walks the addressed cells'. Excel may also expand the address to the whole merge or refuse."
+  },
+  {
+   "id": "U3-copy-paste",
+   "priority": "P1",
+   "op": "Copy M!B2:C3, paste (all) at M!J10 (Office JS M!J10:K11.copyFrom('M!B2:C3', 'All') or desktop Ctrl+C / Ctrl+V)",
+   "read": ["M!J10:K11", "M!B2:C3"],
+   "engine": {"J10": "5", "K10": "x", "J11": "=J10+1 -> 6", "K11": "", "merges": ["M!B2:C3", "M!J10:K11"], "source": "unchanged"},
+   "falsifies_if": "K10/J11 arrive empty (Excel pastes only the anchor of a merged source)."
+  },
+  {
+   "id": "U3b-copy-paste-overlapping-own-source",
+   "priority": "P3",
+   "op": "Copy M!B2:C3, paste at M!C3 (target overlaps the source merge)",
+   "read": ["M!B2:D4"],
+   "engine": {"result": "paste returns Ok but changes nothing: B2:C3 as before, D2:D4 / B4:C4 empty, merges [M!B2:C3]"},
+   "note": "Excel either refuses ('cannot change part of a merged cell') or pastes; the engine silently does nothing. Record the error text if refused."
+  },
+  {
+   "id": "U4-cut-paste",
+   "priority": "P1",
+   "op": "Cut M!B2:C3, paste at M!J10 (Office JS M!B2:C3.moveTo('M!J10') ExcelApi 1.11, or desktop Ctrl+X / Ctrl+V)",
+   "read": ["M!J10:K11", "M!B2:C3"],
+   "engine": {"J10": "5", "K10": "x", "J11": "=J10+1 -> 6", "K11": "", "merges": ["M!J10:K11"], "source": "B2:C3 all empty, no merge"},
+   "falsifies_if": "covered content stays behind at C2/B3, or is lost."
+  },
+  {
+   "id": "U5-autofill-down",
+   "priority": "P1",
+   "op": "AutoFill M!B2:C3 down to M!B2:C7 (Office JS M!B2:C3.autoFill('M!B2:C7', 'FillDefault') ExcelApi 1.9, or desktop drag the fill handle)",
+   "read": ["M!B2:C7"],
+   "engine": {"B4": "5", "C4": "x", "B5": "=B4+1 -> 6", "C5": "", "B6": "5", "C6": "x", "B7": "=B6+1 -> 6", "C7": "", "merges": ["M!B2:C3", "M!B4:C5", "M!B6:C7"]},
+   "falsifies_if": "tiled covered cells are empty, or B4/B6 get a progression term (5 is a single number: Excel's FillDefault on one number copies it)."
+  },
+  {
+   "id": "U5b-autofill-right",
+   "priority": "P2",
+   "op": "AutoFill M!B2:C3 right to M!B2:G3",
+   "read": ["M!B2:G3"],
+   "engine": {"D2": "5", "E2": "x", "D3": "=D2+1 -> 6", "F2": "5", "G2": "x", "F3": "=F2+1 -> 6", "E3": "", "G3": "", "merges": ["M!B2:C3", "M!D2:E3", "M!F2:G3"]}
+  },
+  {
+   "id": "U5c-autofill-progression-with-covered-block",
+   "priority": "P1",
+   "op": "AutoFill F!B2:C5 down to F!B2:C9 (source has plain B2=1,B3=2,C2=10,C3=20 and merged B4:C5 with anchor B4=3, covered C4=100, B5=200)",
+   "read": ["F!B2:C9"],
+   "engine": {"B6": "4", "B7": "5", "B8": "6", "B9": "200", "C6": "30", "C7": "40", "C8": "100", "C9": "", "merges": ["F!B4:C5", "F!B8:C9"]},
+   "note": "the covered-cells spec (excel-parity-findings-2026-11-07.md section 1): progressions are detected over non-covered cells only (column B 1,2,3 -> 4,5,6; column C 10,20 -> 30,40) and a covered target copies its covered source. Excel may instead include covered values in the trend (B: 1,2,3,200; C: 10,20,100) or treat covered as blank."
+  },
+  {
+   "id": "U6-ctrl-arrow",
+   "priority": "P2",
+   "op": "Ctrl+arrow from each start cell (Office JS range.getRangeEdge(direction, activeCell) ExcelApi 1.13 returns the landing range; desktop: select, press Ctrl+arrow, read ActiveCell / Selection.Address)",
+   "starts": [
+    {"from": "N!A2", "dir": "Right", "engine": "F2"},
+    {"from": "N!B2 (merged B2:D2, empty anchor, covered C2='h')", "dir": "Right", "engine": "F2"},
+    {"from": "N!F2", "dir": "Left", "engine": "A2"},
+    {"from": "N!G2", "dir": "Left", "engine": "F2"},
+    {"from": "N!A8", "dir": "Right", "engine": "B8 (selection B8:D8)"},
+    {"from": "N!F8", "dir": "Left", "engine": "B8 (selection B8:D8)"},
+    {"from": "N!H1", "dir": "Down", "engine": "H6"},
+    {"from": "N!H6", "dir": "Up", "engine": "H1"}
+   ],
+   "falsifies_if": "Excel stops at the merged range B2:D2 / H2:H4 (it would then treat covered content 'h' as making the merged cell non-empty)."
+  },
+  {
+   "id": "U7-api-write-to-covered-cell",
+   "priority": "P3",
+   "op": "Write 'y' to the covered cell W!C2 by address (Graph PATCH .../range(address='W!C2') {\"values\":[[\"y\"]]} / Office JS range.values), then write 9 to the anchor W!B2",
+   "read": ["W!B2:C2"],
+   "engine": {"write C2": "refused (\"Cannot edit a cell that is part of a merged cell\"), C2 stays 2", "write B2": "accepted, B2=9, C2 still 2", "merges": ["W!B2:C2"]},
+   "note": "the covered-cells spec (excel-parity-findings-2026-11-07.md section 1) 'Editing a covered cell: UNVERIFIED for API writes'. Record the Graph error code if Excel refuses."
+  }
+ ]
+}

@@ -50,9 +50,9 @@ fn f_pdf_large_df_is_close_to_the_exact_density() {
     ];
     let mut model = new_empty_model();
     // x = 1E308, made by a product as in the probe (where it is a cell value).
-    model._set("B1", "=1E300*1E8");
+    model.set_a1("B1", "=1E300*1E8");
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
@@ -76,13 +76,13 @@ fn f_pdf_large_df_is_close_to_the_exact_density() {
 #[test]
 fn f_pdf_large_df_edges() {
     let mut model = new_empty_model();
-    model._set("A1", "=F.DIST(0,500,500,FALSE)");
-    model._set("A2", "=F.DIST(-1,500,500,FALSE)");
-    model._set("A3", "=F.DIST(2,5,10000000001,FALSE)");
+    model.set_a1("A1", "=F.DIST(0,500,500,FALSE)");
+    model.set_a1("A2", "=F.DIST(-1,500,500,FALSE)");
+    model.set_a1("A3", "=F.DIST(2,5,10000000001,FALSE)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"0");
-    assert_eq!(model._get_text("A2"), *"#NUM!");
-    assert_eq!(model._get_text("A3"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"0");
+    assert_eq!(model.get_text_a1("A2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), *"#NUM!");
 }
 
 // Excel stores Y = density·x, so its density is 0 once Y underflows, though the exact density is a
@@ -108,7 +108,7 @@ fn f_pdf_is_zero_once_density_times_x_underflows() {
         "=F.DIST(1E-300,2,1000,FALSE)",
     ];
     for (i, formula) in zero.iter().chain(&positive).enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, formula) in zero.iter().chain(&positive).enumerate() {
@@ -157,9 +157,9 @@ fn f_pdf_excel_range_steps() {
     // The subnormal Y's quantisation (2.1% and 11.6% from the exact density) is Excel's; its
     // value then differs from fl(Y/x) by about 7E-15 and 3.5E-14 relative (T-2647).
     let mut model = new_empty_model();
-    model._set("A1", "=F.DIST(1E-215,3,1000,FALSE)");
-    model._set("A2", "=F.DIST(1E-65,10,1000,FALSE)");
-    model._set("A3", "=F.DIST(1+2^-51,20,127,FALSE)");
+    model.set_a1("A1", "=F.DIST(1E-215,3,1000,FALSE)");
+    model.set_a1("A2", "=F.DIST(1E-65,10,1000,FALSE)");
+    model.set_a1("A3", "=F.DIST(1+2^-51,20,127,FALSE)");
     model.evaluate();
     for (cell, excel) in [
         ("A1", 6.422_853_395_936_16e-108),

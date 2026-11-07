@@ -20,7 +20,7 @@ fn simple_undo_redo() {
     assert!(model.undo().is_ok());
     assert!(!model.can_undo());
     assert!(model.can_redo());
-    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok(String::new()));
 
     // If I redo, I have the old value and formula
     assert!(model.redo().is_ok());

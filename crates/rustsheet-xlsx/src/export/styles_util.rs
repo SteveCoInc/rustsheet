@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::if_not_else, clippy::ref_option)]
+// LINT-DEBT-END
 use rustsheet_engine::types::{
     Alignment, Border, BorderItem, Color, Fill, HorizontalAlignment, VerticalAlignment,
 };
@@ -30,12 +33,12 @@ pub(crate) fn get_alignment(alignment: &Alignment) -> String {
     let horizontal = if alignment.horizontal != HorizontalAlignment::default() {
         format!(" horizontal=\"{}\"", alignment.horizontal)
     } else {
-        "".to_string()
+        String::new()
     };
     let vertical = if alignment.vertical != VerticalAlignment::default() {
         format!(" vertical=\"{}\"", alignment.vertical)
     } else {
-        "".to_string()
+        String::new()
     };
     format!("<alignment{wrap_text}{horizontal}{vertical}/>")
 }

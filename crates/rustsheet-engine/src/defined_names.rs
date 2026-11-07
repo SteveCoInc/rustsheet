@@ -508,7 +508,11 @@ impl Model {
         if !workbook_name_defined && self.loaded_uses_take_sheet_place(name, sheet) {
             return;
         }
-        let Ok(sheet_name) = self.workbook.worksheet(sheet).map(|ws| ws.get_name()) else {
+        let Ok(sheet_name) = self
+            .workbook
+            .worksheet(sheet)
+            .map(super::types::Worksheet::get_name)
+        else {
             return;
         };
         self.rewrite_shared_formulas(Some(sheet), |node| {
@@ -553,11 +557,10 @@ impl Model {
     fn active_sheet_context(&self) -> CellReferenceRC {
         let sheet = self.active_sheet();
         CellReferenceRC {
-            sheet: self
-                .workbook
-                .worksheet(sheet)
-                .map(|ws| ws.get_name())
-                .unwrap_or_else(|_| self.defined_name_context().sheet),
+            sheet: self.workbook.worksheet(sheet).map_or_else(
+                |_| self.defined_name_context().sheet,
+                super::types::Worksheet::get_name,
+            ),
             row: 1,
             column: 1,
         }
@@ -571,8 +574,7 @@ impl Model {
                 .workbook
                 .worksheets
                 .first()
-                .map(|ws| ws.get_name())
-                .unwrap_or_else(|| "Sheet1".to_string()),
+                .map_or_else(|| "Sheet1".to_string(), super::types::Worksheet::get_name),
             row: 1,
             column: 1,
         }
@@ -687,7 +689,7 @@ impl Model {
     ) -> Result<(), String> {
         if !is_valid_identifier(new_name) {
             return Err("Name: Invalid defined name".to_string());
-        };
+        }
         let name_upper = name.to_uppercase();
         let new_name_upper = new_name.to_uppercase();
 

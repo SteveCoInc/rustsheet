@@ -17,6 +17,16 @@
 //! The model is not bit-exact and reaches 15-digit parity only where the power term |P| is small
 //! (T-2586 r5-f-final RESULTS.md section 4: 99-100% of cells for |P| < 4, 87% for |P| in [4, 32),
 //! 10-36% above), but it beats the correctly rounded density on every region scored there.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::manual_midpoint,
+    clippy::many_single_char_names
+)]
+// LINT-DEBT-END
 
 use crate::arithmetic::{extended_product, extended_quotient, extended_sum};
 use crate::x87_exp::{dd_add, dd_div, dd_mul, dd_neg, dd_to_extended, excel_exp_extended};

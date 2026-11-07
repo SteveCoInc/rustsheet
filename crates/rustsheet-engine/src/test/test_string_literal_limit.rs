@@ -10,8 +10,8 @@ fn overlong_literal_typed_is_refused_and_the_cell_is_unchanged() {
     let literal = |n: usize| format!("=LEN(\"{}\")", "a".repeat(n));
     assert!(model.set_user_input(0, 1, 1, literal(4_096)).is_err());
     model.evaluate();
-    assert_eq!(model._get_formula("A1"), "=5");
+    assert_eq!(model.get_formula_a1("A1"), "=5");
     assert_eq!(model.set_user_input(0, 1, 2, literal(4_095)), Ok(()));
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "4095");
+    assert_eq!(model.get_text_a1("B1"), "4095");
 }

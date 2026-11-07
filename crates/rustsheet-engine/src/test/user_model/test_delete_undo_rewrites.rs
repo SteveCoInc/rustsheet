@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 //! Undo of a row or column delete puts back the conditional formats and defined names the delete
 //! rewrote, and redo rewrites them again (T-4702). Excel rewrites names as it rewrites cell

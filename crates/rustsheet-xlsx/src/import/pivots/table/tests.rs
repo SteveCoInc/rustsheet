@@ -10,8 +10,8 @@ use std::io::Cursor;
 
 use quick_xml::events::Event;
 use rustsheet_engine::pivot::{
-    CacheField, CacheItem, DateGroupItem, DynamicDate, FilterCondition, FilterCriteria,
-    FilterOperator, PivotFilter, PivotFilterKind,
+    AutoSortScope, CacheField, CacheItem, DateGroupItem, DynamicDate, FilterCondition,
+    FilterCriteria, FilterOperator, PivotFilter, PivotFilterKind, SortReference,
 };
 
 use super::*;
@@ -530,6 +530,74 @@ fn auto_show_is_read_from_the_kept_field_attributes() {
             top: true,
             measure: 0,
         })
+    );
+}
+
+#[test]
+fn custom_list_sort_is_read_from_the_kept_definition_attributes() {
+    // probes/t4130-pivot-sort CL0 writes `customListSort="0"` on the definition; absent is on.
+    assert!(read(CALC_TOP_SORT, &[2, 3, 6, 6]).options.custom_list_sort);
+    let off = CALC_TOP_SORT.replacen(
+        r#"name="CalcTopSort""#,
+        r#"name="CalcTopSort" customListSort="0""#,
+        1,
+    );
+    let pivot = read(&off, &[2, 3, 6, 6]);
+    assert!(!pivot.options.custom_list_sort);
+    // Kept verbatim, for export.
+    assert_eq!(
+        kept(&pivot, OpaqueOwner::Definition)
+            .matches(r#" customListSort="0""#)
+            .count(),
+        1
+    );
+}
+
+/// The fixture with `scope` as its sorted field's (field 1's) last child, read.
+fn with_scope(scope: &str) -> Result<PivotTable, String> {
+    let field = CALC_TOP_SORT.find(r#"sortType="descending""#).unwrap();
+    let end = field + CALC_TOP_SORT[field..].find("</items>").unwrap() + "</items>".len();
+    let xml = format!("{}{scope}{}", &CALC_TOP_SORT[..end], &CALC_TOP_SORT[end..]);
+    read_with(&xml, cache(&[2, 3, 6, 6]), usize::MAX).0
+}
+
+#[test]
+fn a_value_sort_scope_is_read_from_the_kept_field_element() {
+    // probes/t4164-pivot-value-sort SC2 as the case builder writes it: by data field 0 within
+    // the column item x 1 of field 2; the reference's and the area's other attributes are not
+    // read (t4130-pivot-sort SXA, SXR).
+    let scope = r#"<autoSortScope><pivotArea dataOnly="0" outline="0" fieldPosition="0" axis="axisRow" field="1"><references count="2"><reference field="4294967294" count="1" selected="0" sumSubtotal="0"><x v="0"/></reference><reference field="2" count="1" selected="0"><x v="1"/></reference></references></pivotArea></autoSortScope>"#;
+    let pivot = with_scope(scope).unwrap();
+    assert_eq!(
+        pivot.fields[1].auto_sort,
+        Some(AutoSortScope {
+            data_field: Some(0),
+            references: vec![SortReference {
+                field: 2,
+                items: vec![1],
+            }],
+        })
+    );
+    assert_eq!(pivot.fields[0].auto_sort, None);
+    // Kept verbatim, for export.
+    assert_eq!(
+        kept(&pivot, OpaqueOwner::Field(1)).matches(scope).count(),
+        1
+    );
+    // SV2: the second data field. A data reference with no `x`, a reference whose `field` is no
+    // number and an `x` with no `v` are not read.
+    let second = r#"<autoSortScope><pivotArea><references count="3"><reference field="4294967294"/><reference field="a"><x v="0"/></reference><reference field="4294967294"><x/><x v="1"/></reference></references></pivotArea></autoSortScope>"#;
+    assert_eq!(
+        with_scope(second).unwrap().fields[1].auto_sort,
+        Some(AutoSortScope {
+            data_field: Some(1),
+            references: Vec::new(),
+        })
+    );
+    // An empty scope names no data field.
+    assert_eq!(
+        with_scope("<autoSortScope/>").unwrap().fields[1].auto_sort,
+        Some(AutoSortScope::default())
     );
 }
 

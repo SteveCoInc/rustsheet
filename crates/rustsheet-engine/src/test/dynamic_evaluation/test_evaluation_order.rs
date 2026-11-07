@@ -18,20 +18,20 @@ use crate::test::util::new_empty_model;
 fn spill_reads_other_spill_area() {
     let mut model = new_empty_model();
 
-    model._set("B1", "=C1:C3");
-    model._set("C1", "=D1:D3");
-    model._set("D1", "5");
-    model._set("D2", "10");
-    model._set("D3", "15");
+    model.set_a1("B1", "=C1:C3");
+    model.set_a1("C1", "=D1:D3");
+    model.set_a1("D1", "5");
+    model.set_a1("D2", "10");
+    model.set_a1("D3", "15");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("C1"), "5");
-    assert_eq!(model._get_text("C2"), "10");
-    assert_eq!(model._get_text("C3"), "15");
-    assert_eq!(model._get_text("B1"), "5");
-    assert_eq!(model._get_text("B2"), "10");
-    assert_eq!(model._get_text("B3"), "15");
+    assert_eq!(model.get_text_a1("C1"), "5");
+    assert_eq!(model.get_text_a1("C2"), "10");
+    assert_eq!(model.get_text_a1("C3"), "15");
+    assert_eq!(model.get_text_a1("B1"), "5");
+    assert_eq!(model.get_text_a1("B2"), "10");
+    assert_eq!(model.get_text_a1("B3"), "15");
 }
 
 //         ║    C    |    D    |   E   |   F   |
@@ -47,19 +47,19 @@ fn spill_reads_other_spill_area() {
 fn independent_spills() {
     let mut model = new_empty_model();
 
-    model._set("C1", "=E1:E2");
-    model._set("D1", "=F1:F2");
-    model._set("E1", "1");
-    model._set("E2", "2");
-    model._set("F1", "3");
-    model._set("F2", "4");
+    model.set_a1("C1", "=E1:E2");
+    model.set_a1("D1", "=F1:F2");
+    model.set_a1("E1", "1");
+    model.set_a1("E2", "2");
+    model.set_a1("F1", "3");
+    model.set_a1("F2", "4");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("C1"), "1");
-    assert_eq!(model._get_text("C2"), "2");
-    assert_eq!(model._get_text("D1"), "3");
-    assert_eq!(model._get_text("D2"), "4");
+    assert_eq!(model.get_text_a1("C1"), "1");
+    assert_eq!(model.get_text_a1("C2"), "2");
+    assert_eq!(model.get_text_a1("D1"), "3");
+    assert_eq!(model.get_text_a1("D2"), "4");
 }
 
 //         ║    C    |   E   |
@@ -75,15 +75,15 @@ fn independent_spills() {
 fn spill_blocked_by_value() {
     let mut model = new_empty_model();
 
-    model._set("C1", "=E1:E2");
-    model._set("C2", "99");
-    model._set("E1", "1");
-    model._set("E2", "2");
+    model.set_a1("C1", "=E1:E2");
+    model.set_a1("C2", "99");
+    model.set_a1("E1", "1");
+    model.set_a1("E2", "2");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("C1"), "#SPILL!");
-    assert_eq!(model._get_text("C2"), "99");
+    assert_eq!(model.get_text_a1("C1"), "#SPILL!");
+    assert_eq!(model.get_text_a1("C2"), "99");
 }
 
 //         ║    A    |    C           |
@@ -102,13 +102,13 @@ fn spill_blocked_by_value() {
 fn non_spill_reads_spill_area() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=C3*2");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=C3*2");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("C1"), "1");
-    assert_eq!(model._get_text("C2"), "2");
-    assert_eq!(model._get_text("C3"), "3");
-    assert_eq!(model._get_text("A1"), "6");
+    assert_eq!(model.get_text_a1("C1"), "1");
+    assert_eq!(model.get_text_a1("C2"), "2");
+    assert_eq!(model.get_text_a1("C3"), "3");
+    assert_eq!(model.get_text_a1("A1"), "6");
 }

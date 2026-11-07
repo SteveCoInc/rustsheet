@@ -2,6 +2,9 @@
 //! records grouped by a key tuple, sorted by key or by an aggregate, and laid out with the
 //! subtotals of a total depth beyond 1 (T-1324). Excel: docs/excel-semantics/arrays.md "GROUPBY
 //! and PIVOTBY".
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_field_names)]
+// LINT-DEBT-END
 
 use std::cmp::Ordering;
 use std::collections::HashMap;

@@ -30,6 +30,7 @@ use rustsheet_engine::pivot::{
 
 use super::super::escape::escape_xml;
 use super::super::xml_constants::XML_DECLARATION;
+use super::show_as::data_field_elements;
 use super::MAIN_NS;
 use crate::import::PIVOT_SUBTOTAL_FUNCTIONS;
 
@@ -280,8 +281,19 @@ fn area_ref(area: &CellArea) -> String {
 /// Ends an element whose attributes are written: its kept attributes, then `children` and its
 /// kept elements, or `/>` when it has neither.
 fn close(xml: &mut String, opaque: &Opaque<'_>, owner: OpaqueOwner, name: &str, children: &str) {
-    xml.push_str(opaque.attributes(owner));
     let elements = opaque.elements(owner);
+    close_with(xml, opaque.attributes(owner), elements, name, children);
+}
+
+/// [`close`] with the kept `attributes` and `elements` given.
+fn close_with<S: AsRef<str>>(
+    xml: &mut String,
+    attributes: &str,
+    elements: &[S],
+    name: &str,
+    children: &str,
+) {
+    xml.push_str(attributes);
     if children.is_empty() && elements.is_empty() {
         xml.push_str("/>");
         return;
@@ -289,7 +301,7 @@ fn close(xml: &mut String, opaque: &Opaque<'_>, owner: OpaqueOwner, name: &str, 
     xml.push('>');
     xml.push_str(children);
     for element in elements {
-        xml.push_str(element);
+        xml.push_str(element.as_ref());
     }
     let _ = write!(xml, "</{name}>");
 }
@@ -552,8 +564,8 @@ fn data_fields_xml(table: &PivotTable, opaque: &Opaque<'_>) -> String {
                 data.function.consolidate_name()
             );
         }
-        // An x14 mode is the kept dataField extension's `pivotShowAs`, written back verbatim
-        // (`ShowDataAs::is_x14`): `showDataAs` cannot name it.
+        // An x14 mode is the dataField extension's `pivotShowAs` (`show_as`):
+        // `showDataAs` cannot name it (`ShowDataAs::is_x14`).
         if data.show_data_as != ShowDataAs::Normal && !data.show_data_as.is_x14() {
             let _ = write!(children, r#" showDataAs="{}""#, data.show_data_as.name());
         }
@@ -566,10 +578,12 @@ fn data_fields_xml(table: &PivotTable, opaque: &Opaque<'_>) -> String {
         if let Some(format) = data.number_format {
             let _ = write!(children, r#" numFmtId="{format}""#);
         }
-        close(
+        let owner = OpaqueOwner::DataField(position);
+        let elements = data_field_elements(data.show_data_as, opaque.elements(owner));
+        close_with(
             &mut children,
-            opaque,
-            OpaqueOwner::DataField(position),
+            opaque.attributes(owner),
+            &elements,
             "dataField",
             "",
         );

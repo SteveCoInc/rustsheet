@@ -1,0 +1,63 @@
+== cache
+slicerCacheDefinition Ignorable=x name=Slicer_Region sourceName=Region
+  pivotTables
+    pivotTable name=P_SL tabId=2
+  data
+    tabular pivotCacheId=1
+      items count=3
+        i s=1 x=0
+        i x=1
+        i x=2
+== cache
+slicerCacheDefinition Ignorable=x name=Slicer_Region1 sourceName=Region
+  pivotTables
+    pivotTable name=P_SA tabId=3
+  data
+    tabular pivotCacheId=2
+      items count=3
+        i s=1 x=0
+        i s=1 x=1
+        i s=1 x=2
+== cache
+slicerCacheDefinition Ignorable=x name=Slicer_Region2 sourceName=Region
+  pivotTables
+    pivotTable name=P_SM tabId=4
+  data
+    tabular crossFilter=none customListSort=0 pivotCacheId=3 showMissing=0 sortOrder=descending
+      items count=3
+        i s=1 x=0
+        i s=1 x=1
+        i nd=1 x=2
+== cache
+slicerCacheDefinition Ignorable=x name=Slicer_Region3 sourceName=Region
+  pivotTables
+    pivotTable name=P_SH tabId=5
+  data
+    tabular pivotCacheId=4
+      items count=3
+        i s=1 x=0
+        i x=1
+        i x=2
+  extLst
+    ext uri={470722E0-AACD-4C17-9CDC-17EF765DBC7E}
+      slicerCacheHideItemsWithNoData count=0
+== cache
+slicerCacheDefinition Ignorable=x name=Slicer_Region4 sourceName=Region
+  pivotTables
+    pivotTable name=P_SD tabId=6
+  data
+    tabular pivotCacheId=5
+      items count=3
+        i s=1 x=0
+        i x=1
+        i x=2
+== cache
+slicerCacheDefinition Ignorable=x name=Slicer_Region5 sourceName=Region
+  pivotTables
+    pivotTable name=P_SX tabId=7
+  data
+    tabular pivotCacheId=6
+      items count=3
+        i s=1 x=0
+        i s=1 x=1
+        i s=1 x=2

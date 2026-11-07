@@ -5,6 +5,14 @@
 //! is serial 1 and a date before it is 0 or below (`convert_to_serial_number`); the day counts
 //! read a serial as the `(year, month, day)` Excel shows for it (`excel_serial_to_ymd`). Excel:
 //! see docs/excel-semantics/financial.md#coupon-schedules-at-the-calendars-edges.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::match_same_arms
+)]
+// LINT-DEBT-END
 
 use chrono::{Datelike, NaiveDate};
 
@@ -216,11 +224,11 @@ pub(in crate::functions::financial) fn coupon_days_e(
     basis: u32,
 ) -> Result<f64, String> {
     match basis {
-        0 | 2 | 4 => Ok(360.0 / frequency as f64),
+        0 | 2 | 4 => Ok(360.0 / f64::from(frequency)),
         // The period PRICE, YIELD and DURATION use. The COUPDAYS function itself counts another
         // period on month-end schedules (`coupdays_actual`); keep the two apart.
         1 => coupon_period_days(settlement, maturity, frequency),
-        3 => Ok(365.0 / frequency as f64),
+        3 => Ok(365.0 / f64::from(frequency)),
         _ => Err("Invalid basis".to_string()),
     }
 }

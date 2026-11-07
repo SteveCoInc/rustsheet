@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_sign_loss)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 //! Running totals from the prefix cache (T-3456) give what SUM's walk gives: the same values to
@@ -138,7 +141,7 @@ fn evaluated_with_limit(cells: &[(String, String)], limit: usize) -> Model {
     let mut model = crate::test::util::new_empty_model();
     model.evaluation.sum_prefixes.limit = limit;
     for (cell, value) in cells {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model.evaluate();
     model
@@ -155,7 +158,7 @@ fn entries_without_states_count_against_the_limit() {
     let kept = model.evaluation.sum_prefixes.kept();
     assert!((1..=5).contains(&kept), "{kept}");
     for row in 1..=20 {
-        assert_eq!(model._get_text(&format!("B{row}")), "#DIV/0!", "B{row}");
+        assert_eq!(model.get_text_a1(&format!("B{row}")), "#DIV/0!", "B{row}");
     }
 }
 
@@ -175,7 +178,7 @@ fn hits_need_no_room_under_the_limit() {
     let reads = |limit: usize| {
         let model = evaluated_with_limit(&cells, limit);
         assert_eq!(model.evaluation.sum_prefixes.kept(), 10, "{limit}");
-        assert_eq!(model._get_text("C1"), "55");
+        assert_eq!(model.get_text_a1("C1"), "55");
         model.evaluation.cell_reads
     };
     assert_eq!(reads(10), reads(1_000));
@@ -192,7 +195,7 @@ fn error_hits_need_no_room_under_the_limit() {
     let reads = |limit: usize| {
         let model = evaluated_with_limit(&cells, limit);
         assert_eq!(model.evaluation.sum_prefixes.kept(), 1, "{limit}");
-        assert_eq!(model._get_text("B10"), "#DIV/0!");
+        assert_eq!(model.get_text_a1("B10"), "#DIV/0!");
         model.evaluation.cell_reads
     };
     assert_eq!(reads(2), reads(1_000));

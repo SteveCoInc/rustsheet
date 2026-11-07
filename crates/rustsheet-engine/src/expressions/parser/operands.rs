@@ -2,6 +2,14 @@
 //! their own so that the frame of `parse_operand`, which every nesting level of a formula keeps on
 //! the stack, stays small: an unoptimized build gives every local of every arm its own slot, and
 //! the whole match took about 11 KB per level (T-1110).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::manual_let_else,
+    clippy::needless_pass_by_value
+)]
+// LINT-DEBT-END
 
 use super::super::token::{self, TableReference, TokenType};
 use super::super::types::ParsedReference;
@@ -11,9 +19,13 @@ use super::super::utils::{
 };
 use super::reference_operators::is_reference_operand;
 use super::structured_reference::{
-    is_unresolved_structured_reference, TableExtent, TABLE_SHEET_NOT_FOUND,
+    is_external_table_name, is_unresolved_structured_reference, TableExtent, TABLE_NOT_FOUND,
+    TABLE_SHEET_NOT_FOUND,
 };
-use super::*;
+use super::{
+    with_sheet_span, ExpectedTokens, Function, Node, Parser, StructuredReference,
+    TOO_MANY_NESTED_CALLS_MESSAGE, XLPM_PREFIX,
+};
 use crate::functions::kinds::arg_counts;
 use crate::language::get_default_language;
 use crate::typed_input::TYPED_FORMULA_DOES_NOT_PARSE;
@@ -212,16 +224,16 @@ impl Parser {
         if self.lexer.is_a1_mode() {
             if !absolute_row1 {
                 row1 -= context.row;
-            };
+            }
             if !absolute_column1 {
                 column1 -= context.column;
-            };
+            }
             if !absolute_row2 {
                 row2 -= context.row;
-            };
+            }
             if !absolute_column2 {
                 column2 -= context.column;
-            };
+            }
         }
 
         let node = match sheet_index {
@@ -303,17 +315,15 @@ impl Parser {
         };
         // A sheet with no local definition reads the workbook-scoped name (docs/excel-semantics/
         // references.md "A sheet-qualified name falls back to the workbook name"; `Feb!loc`).
-        let (scope, formula) = match scope {
-            Some(sheet) => self
-                .get_defined_name(bare, sheet)
-                .unwrap_or((scope, String::new())),
-            None => {
-                let formula = self
-                    .defined_name_formula(None, bare)
-                    .map(str::to_owned)
-                    .unwrap_or_default();
-                (None, formula)
-            }
+        let (scope, formula) = if let Some(sheet) = scope {
+            self.get_defined_name(bare, sheet)
+                .unwrap_or((scope, String::new()))
+        } else {
+            let formula = self
+                .defined_name_formula(None, bare)
+                .map(str::to_owned)
+                .unwrap_or_default();
+            (None, formula)
         };
         // Excel shows a workbook name read through a sheet, or through the file's own-workbook
         // prefix `[0]!`, with the workbook's file name as its prefix, quoted as a sheet name
@@ -784,6 +794,7 @@ impl Parser {
             .functions
             .lookup_stored(&name)
             .filter(|_| !self.calls_bound_name(&name))
+            .filter(|kind| !self.needs_stored_prefix(&name, kind))
         {
             self.note_argument_count(&function_kind, &display_name, args.len());
             if self.loaded && function_kind == Function::Let {
@@ -824,6 +835,12 @@ impl Parser {
             args,
             id: None,
         })
+    }
+
+    /// Whether `name`, read from a file ([`Parser::set_file_names`]), calls `kind` without the
+    /// `_xlfn.` prefix Excel needs there: such a call is an unknown name, `#NAME?`.
+    fn needs_stored_prefix(&self, name: &str, kind: &Function) -> bool {
+        self.file_names && !name.starts_with('_') && kind.to_xlsx_string().starts_with("_xlfn.")
     }
 
     /// `TRUE` or `FALSE`, or the calls `TRUE()` and `FALSE()`.
@@ -895,6 +912,21 @@ impl Parser {
                 .and_then(|table| TableExtent::of(table, Some((*data_start, *data_end))));
         }
         if let Node::ParseErrorKind { message, .. } = &lowered {
+            // A table of a linked workbook is `#REF!` (references.md "A structured reference into
+            // a linked workbook is `#REF!`": corpus-bench 58994, a link part caching no cells; with
+            // cached cells it is unprobed, T-5036), but the formula keeps
+            // its text, which Excel stores back as written (corpus-bench 33094 Sheet1!B5,
+            // `VLOOKUP([1]!Table3[[#This Row],[Resource Name]],…)`; T-4144). Typed, it stays a
+            // parse error: Excel refuses it (probes/t3213-typed-parse-errors A9).
+            if is_external_table_name(&reference.table_name)
+                && message.starts_with(TABLE_NOT_FOUND)
+                && (self.loaded || !(self.typed || self.external))
+            {
+                return Node::StructuredReferenceKind {
+                    reference: Box::new(reference),
+                    lowered: Box::new(Node::ErrorKind(token::Error::REF)),
+                };
+            }
             if self.loaded
                 && !message.starts_with(TABLE_SHEET_NOT_FOUND)
                 && is_unresolved_structured_reference(message)

@@ -1,0 +1,76 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "What an element-wise lift reads of a nested GROUPBY/PIVOTBY cell in Excel since 2026-11 (T-4737, SPEC-0018 rule 4): ERROR.TYPE of one-level, two-level (including an #N/A inner top-left) and reference-body cells, and other lifted functions (LEN, ABS, UPPER, ROUND, NOT, ISLOGICAL) over a GROUPBY. Column B holds each cell's question and the prediction committed before the oracle fill.",
+  "tags": [
+    "M7",
+    "probe",
+    "dynamic-arrays",
+    "T-4737"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "P",
+      "cells": {
+        "A1": "=LET(r,ERROR.TYPE(_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,v))),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B1": "one level: lifted ERROR.TYPE(G); predict 64|3x3|#7;#7;#7;#7;3;3;#7;3;3",
+        "A2": "=LET(r,ERROR.TYPE(_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(w,w))))),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B2": "two levels (inner top-left \"a\"): ERROR.TYPE(G2); predict 64|3x3|#7;#7;#7;#7;3;3;#7;3;3",
+        "A3": "=LET(r,ERROR.TYPE(_xlfn.GROUPBY(D!A1:A5,D!C1:C5,LAMBDA(v,DROP(_xlfn.GROUPBY(D!A1:A5,D!E1:E5,LAMBDA(w,w)),,1)))),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B3": "two levels (inner top-left #N/A): ERROR.TYPE(G3); predict 64|3x2|#7;#7;#7;3;#7;3",
+        "A4": "=LET(r,SUM(--ISERR(_xlfn.GROUPBY(D!A1:A5,D!C1:C5,LAMBDA(v,DROP(_xlfn.GROUPBY(D!A1:A5,D!E1:E5,LAMBDA(w,w)),,1))))),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B4": "two levels (#N/A top-left): SUM(--ISERR(G3)); predict 1|2",
+        "A5": "=LET(r,ERROR.TYPE(_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(x,D!D2))),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B5": "reference body: ERROR.TYPE(GR); predict 64|3x3|#7;#7;#7;#7;3;3;#7;3;3",
+        "A6": "=LET(r,ERROR.TYPE(_xlfn.PIVOTBY(D!A2:A5,D!B2:B5,D!C2:C5,LAMBDA(v,v))),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B6": "PIVOTBY nested cells: ERROR.TYPE(P); predict listing with 3 at each nested cell",
+        "A7": "=LET(r,LEN(_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,v))),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B7": "LEN(G) (text lift); predict #3 at each nested cell",
+        "A8": "=LET(r,ABS(_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,v))),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B8": "ABS(G) (math lift); predict #3 at each nested cell",
+        "A9": "=LET(r,UPPER(_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,v))),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B9": "UPPER(G); predict #3 at each nested cell",
+        "A10": "=LET(r,ROUND(_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,v)),0),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B10": "ROUND(G,0) (two-argument lift); predict #3 at each nested cell",
+        "A11": "=LET(r,SUM(--ISLOGICAL(_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,v)))),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B11": "SUM(--ISLOGICAL(G)); predict 1|0",
+        "A12": "=LET(r,NOT(_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,v))),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B12": "NOT(G); predict #3 at each nested cell",
+        "A13": "=LET(r,ERROR.TYPE(INDEX(_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,v)),0,2)),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B13": "ERROR.TYPE(INDEX(G,0,2)) (a column of nested cells); predict 64|3x1|#7;3;3",
+        "A14": "=LET(r,ERROR.TYPE(INDEX(_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,_xlfn.GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(w,w)))),2,2)),t,TYPE(r),IF(t=64,\"64|\"&ROWS(r)&\"x\"&COLUMNS(r)&\"|\"&IFERROR(_xlfn.TEXTJOIN(\";\",FALSE,IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))),\"?\"),t&\"|\"&IFERROR(r&\"\",\"#\"&ERROR.TYPE(r))))",
+        "B14": "ERROR.TYPE of the INDEXed two-level cell (an array of nested cells); predict listing with 3 at nested cells"
+      }
+    },
+    {
+      "name": "D",
+      "cells": {
+        "A1": "k",
+        "B1": "c",
+        "C1": "u",
+        "D1": "w",
+        "E1": "e",
+        "A2": "a",
+        "B2": "x",
+        "C2": 1,
+        "D2": 10,
+        "E2": "=NA()",
+        "A3": "a",
+        "B3": "y",
+        "C3": 2,
+        "D3": 20,
+        "E3": 2,
+        "A4": "b",
+        "B4": "x",
+        "C4": 3,
+        "D4": 30,
+        "E4": 3,
+        "A5": "b",
+        "B5": "y",
+        "C5": 4,
+        "D5": 40,
+        "E5": 4
+      }
+    }
+  ]
+}

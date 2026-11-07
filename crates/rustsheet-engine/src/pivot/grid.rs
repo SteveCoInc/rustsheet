@@ -31,12 +31,12 @@ use std::collections::HashSet;
 
 use thiserror::Error as ThisError;
 
-use super::layout::{lay_out, render, PivotCell, RenderedCell, MAX_PIVOT_CELLS};
+use super::layout::{lay_out, render, CellFormat, PivotCell, RenderedCell, MAX_PIVOT_CELLS};
 use super::refresh::{field_map, refresh, SourceCells};
 use super::result::{compute_on, PivotComputeError, MAX_PIVOT_WORK};
 use super::{
     AxisField, CellArea, OpaqueEntry, PivotCache, PivotCacheError, PivotField, PivotFilter,
-    PivotGeometry, PivotTable, MAX_RECORD_VALUES,
+    PivotGeometry, PivotTable, SortReference, MAX_RECORD_VALUES,
 };
 use crate::expressions::parser::parse_range;
 use crate::expressions::token::Error;
@@ -108,15 +108,12 @@ impl Default for PivotBudget {
 
 impl PivotBudget {
     fn charge_work(&mut self, units: usize) -> Result<(), PivotRefreshError> {
-        match u64::try_from(units).ok().filter(|&u| u <= self.work) {
-            Some(units) => {
-                self.work -= units;
-                Ok(())
-            }
-            None => {
-                self.work = 0;
-                Err(PivotComputeError::Limit.into())
-            }
+        if let Some(units) = u64::try_from(units).ok().filter(|&u| u <= self.work) {
+            self.work -= units;
+            Ok(())
+        } else {
+            self.work = 0;
+            Err(PivotComputeError::Limit.into())
         }
     }
 
@@ -340,6 +337,26 @@ fn remap(
                 .unwrap_or_else(|| PivotField::new(None, field.items.len()))
         })
         .collect();
+    // A value sort's references follow their fields; a scope naming a field gone from the source
+    // sorts nothing and is dropped (UNVERIFIED, T-4664). As for the filters, a pivot read from a
+    // file keeps its `autoSortScope` verbatim, so only one made through the API gets here with one.
+    for field in &mut out.fields {
+        if let Some(scope) = &mut field.auto_sort {
+            let moved: Option<Vec<SortReference>> = (scope.references.iter())
+                .map(|reference| {
+                    let to = map.get(reference.field as usize).copied().flatten()?;
+                    Some(SortReference {
+                        field: to,
+                        items: reference.items.clone(),
+                    })
+                })
+                .collect();
+            match moved {
+                Some(references) => scope.references = references,
+                None => field.auto_sort = None,
+            }
+        }
+    }
     // What a field owns follows it; what a dropped field owned goes with it.
     out.opaque = (pivot.opaque.iter())
         .filter_map(|entry| match entry.owner.field() {
@@ -475,29 +492,34 @@ impl Model {
             }
         }
         let spilled = fits.is_none();
-        // Laid out again, the pivot's saved layout lines no longer describe its cells; the
-        // export writes the engine's in their place (T-4176).
-        pivot.opaque.retain(|entry| !entry.is_layout_lines());
-        let cells = match fits {
-            Some((layout, cells)) => {
-                pivot.location = layout.location;
-                pivot.geometry = layout.geometry;
-                cells
-            }
-            None => {
-                // The page counts are zeroed with the rest: evidenced only for a pivot with no
-                // page field (t4128 S; UNVERIFIED with page fields, T-4664).
-                pivot.location.bottom = pivot.location.top;
-                pivot.location.right = pivot.location.left;
-                pivot.geometry = PivotGeometry::default();
-                budget.charge_cells(1)?;
-                vec![RenderedCell {
-                    row: pivot.location.top,
-                    column: pivot.location.left,
-                    value: PivotCell::Error(Error::SPILL),
-                    number_format: None,
-                }]
-            }
+        // Laid out again, the pivot's saved layout lines describe its cells only when nothing
+        // changed: the same cache, the same location and geometry, and the cells the sheet
+        // already shows (checked below, with nothing to clear). A refresh-on-load of an unchanged
+        // pivot then leaves it as read, so the source-preserving export keeps its parts (T-4825,
+        // SPEC-0034). Otherwise the export writes the engine's lines in their place (T-4176).
+        let unchanged = fits.as_ref().is_some_and(|(layout, cells)| {
+            layout.location == pivot.location
+                && layout.geometry == pivot.geometry
+                && self.workbook.pivot_caches.get(pivot.cache as usize) == Some(cache)
+                && self.already_shown(sheet, cells)
+        });
+        let cells = if let Some((layout, cells)) = fits {
+            pivot.location = layout.location;
+            pivot.geometry = layout.geometry;
+            cells
+        } else {
+            // The page counts are zeroed with the rest: evidenced only for a pivot with no
+            // page field (t4128 S; UNVERIFIED with page fields, T-4664).
+            pivot.location.bottom = pivot.location.top;
+            pivot.location.right = pivot.location.left;
+            pivot.geometry = PivotGeometry::default();
+            budget.charge_cells(1)?;
+            vec![RenderedCell {
+                row: pivot.location.top,
+                column: pivot.location.left,
+                value: PivotCell::Error(Error::SPILL),
+                number_format: None,
+            }]
         };
         let written: HashSet<(u32, u32)> = cells.iter().map(|c| (c.row, c.column)).collect();
         // The two owned areas are disjoint, so no place is cleared twice. An array formula's
@@ -511,6 +533,9 @@ impl Model {
             }
         }
         budget.charge_cells(cleared.len())?;
+        if !(unchanged && cleared.is_empty()) {
+            pivot.opaque.retain(|entry| !entry.is_layout_lines());
+        }
         let taken = owned_areas(pivot.location, &pivot.geometry);
         blockers.placed.push((pivot.sheet_id, taken));
         Ok(PivotPlacement {
@@ -520,6 +545,41 @@ impl Model {
             cleared,
             cells,
             spilled,
+        })
+    }
+
+    /// Whether `sheet` already holds each of `cells`, rendered at their places (0-based): the same
+    /// text, number or error as a value, so writing them changes no cell's content. A formula is
+    /// never already shown, even with the same result, since the write replaces it. Number formats
+    /// are not compared: the layout lines hold items and counts, not formats.
+    fn already_shown(&self, sheet: u32, cells: &[RenderedCell]) -> bool {
+        let Ok(worksheet) = self.workbook.worksheet(sheet) else {
+            return false;
+        };
+        let one_based = |n: u32| i32::try_from(n).ok().and_then(|n| n.checked_add(1));
+        cells.iter().all(|rendered| {
+            let (Some(row), Some(column)) = (one_based(rendered.row), one_based(rendered.column))
+            else {
+                return false;
+            };
+            let Some(cell) = worksheet.cell(row, column) else {
+                return false;
+            };
+            if cell.has_formula() {
+                return false;
+            }
+            match (&rendered.value, cell) {
+                (PivotCell::Error(error), Cell::ErrorCell { ei, .. }) => error == ei,
+                (PivotCell::Error(_), _) | (_, Cell::ErrorCell { .. }) => false,
+                (PivotCell::Number(n), cell) => {
+                    cell.value(&self.workbook.shared_strings, self.language)
+                        == crate::cell::CellValue::Number(*n)
+                }
+                (PivotCell::Text(text), cell) => matches!(
+                    cell.value(&self.workbook.shared_strings, self.language),
+                    crate::cell::CellValue::String(s) if s == *text
+                ),
+            }
         })
     }
 
@@ -672,8 +732,8 @@ impl Model {
                         }
                     })
                     .map_err(PivotRefreshError::Write)?;
-                if let Some(id) = cell.number_format {
-                    self.set_pivot_number_format(sheet, row, column, id)
+                if let Some(format) = cell.number_format {
+                    self.set_pivot_number_format(sheet, row, column, format)
                         .map_err(PivotRefreshError::Write)?;
                 }
             }
@@ -690,19 +750,26 @@ impl Model {
         }))
     }
 
-    /// Gives the cell the number format `numFmtId` names in the workbook's styles (a built-in
-    /// one, or one of its `numFmts`; an id it does not hold is General, as `get_num_fmt` reads
-    /// it), keeping the rest of the cell's style: a value cell shows its data field's format
-    /// (pivots.md "Value cells show their data field's number format").
+    /// Gives the cell `format`, keeping the rest of the cell's style: a `numFmtId` is the one it
+    /// names in the workbook's styles (a built-in one, or one of its `numFmts`; an id it does not
+    /// hold is General, as `get_num_fmt` reads it), so a value cell shows its data field's format
+    /// (pivots.md "Value cells show their data field's number format") and a date group item's
+    /// label shows m/d/yyyy (pivots.md "Capability matrix 3", T-4957); a code is any other date
+    /// item's (T-4807).
     fn set_pivot_number_format(
         &mut self,
         sheet: u32,
         row: i32,
         column: i32,
-        num_fmt_id: u32,
+        format: CellFormat,
     ) -> Result<(), String> {
-        let id = i32::try_from(num_fmt_id).unwrap_or(0);
-        let code = get_num_fmt(id, &self.workbook.styles.num_fmts);
+        let code = match format {
+            CellFormat::Id(num_fmt_id) => {
+                let id = i32::try_from(num_fmt_id).unwrap_or(0);
+                get_num_fmt(id, &self.workbook.styles.num_fmts)
+            }
+            CellFormat::Code(code) => code.to_string(),
+        };
         let mut style = self.get_style_for_cell(sheet, row, column)?;
         if style.num_fmt == code {
             return Ok(());

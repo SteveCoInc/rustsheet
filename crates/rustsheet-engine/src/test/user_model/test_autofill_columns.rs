@@ -709,7 +709,7 @@ fn styles() {
 
     model.undo().unwrap();
 
-    assert_eq!(model.get_cell_content(0, 1, 4), Ok("".to_string()));
+    assert_eq!(model.get_cell_content(0, 1, 4), Ok(String::new()));
     // Check that cell A5 has A2 style
     let style = model.get_cell_style(0, 1, 5).unwrap();
     assert!(!style.font.i);
@@ -980,9 +980,9 @@ fn extend_left_completely_covers_cse() {
         .unwrap();
 
     // CSE is gone — F8:F10 are now overwritten with the fill value (empty from H8:H10).
-    assert_eq!(model.get_formatted_cell_value(0, 8, 6), Ok("".to_string()));
-    assert_eq!(model.get_formatted_cell_value(0, 9, 6), Ok("".to_string()));
-    assert_eq!(model.get_formatted_cell_value(0, 10, 6), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 8, 6), Ok(String::new()));
+    assert_eq!(model.get_formatted_cell_value(0, 9, 6), Ok(String::new()));
+    assert_eq!(model.get_formatted_cell_value(0, 10, 6), Ok(String::new()));
 }
 
 // When the fill target only partially covers a CSE array formula the operation must

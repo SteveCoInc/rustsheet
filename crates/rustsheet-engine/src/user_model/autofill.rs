@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::assigning_clones, clippy::too_many_lines)]
+// LINT-DEBT-END
 #![deny(missing_docs)]
 
 use std::collections::{HashMap, HashSet};
@@ -257,7 +260,7 @@ impl UserModel {
                 sheet,
                 row,
                 column,
-                new_value: "".to_string(),
+                new_value: String::new(),
                 legacy: false,
                 external: false,
                 old_value: Box::new(old_value),
@@ -417,6 +420,9 @@ impl UserModel {
             (fill_row_start, column1, fill_row_end, last_column),
             true,
         )?;
+        // Every target cell is written, which a data table's results refuse (T-0452).
+        let target = (fill_row_start, column1, fill_row_end, last_column);
+        self.model.refuse_data_table_overlap(sheet, target)?;
         self.apply_fill_merge_removal(sheet, &plan, &mut diff_list)?;
 
         let saved_cse = self.collect_and_clear_cse_in_fill_target(
@@ -451,7 +457,7 @@ impl UserModel {
                 detect_progression(&values, locale, &case_seed)
             };
             let mut progression_idx = 0;
-            for row_ref in row_range.iter() {
+            for row_ref in &row_range {
                 let row = *row_ref;
 
                 let old_value = saved_cse.get(&(row, column)).cloned().unwrap_or_else(|| {
@@ -502,7 +508,7 @@ impl UserModel {
                     sheet,
                     row,
                     column,
-                    new_value: target_value.to_string(),
+                    new_value: target_value.clone(),
                     legacy: self.model.cell_has_legacy_marker(sheet, row, column)?,
                     external: false,
                     old_value: Box::new(old_value),
@@ -568,7 +574,7 @@ impl UserModel {
             // we go right, we start from `last_column + 1` to `to_column`,
             anchor_column = column1;
             sign = 1;
-            column_range = (last_column + 1..to_column + 1).collect();
+            column_range = ((last_column + 1)..=to_column).collect();
         } else if to_column < column1 {
             // we go left, starting from `column1 - 1` all the way to `to_column`
             anchor_column = last_column;
@@ -591,6 +597,8 @@ impl UserModel {
             (row1, fill_col_start, last_row, fill_col_end),
             false,
         )?;
+        let target = (row1, fill_col_start, last_row, fill_col_end);
+        self.model.refuse_data_table_overlap(sheet, target)?;
         self.apply_fill_merge_removal(sheet, &plan, &mut diff_list)?;
 
         let saved_cse = self.collect_and_clear_cse_in_fill_target(
@@ -625,7 +633,7 @@ impl UserModel {
                 detect_progression(&values, locale, &case_seed)
             };
             let mut progression_idx = 0;
-            for column_ref in column_range.iter() {
+            for column_ref in &column_range {
                 let column = *column_ref;
 
                 // Save value and style first
@@ -679,7 +687,7 @@ impl UserModel {
                     sheet,
                     row,
                     column,
-                    new_value: target_value.to_string(),
+                    new_value: target_value.clone(),
                     legacy: self.model.cell_has_legacy_marker(sheet, row, column)?,
                     external: false,
                     old_value: Box::new(old_value),

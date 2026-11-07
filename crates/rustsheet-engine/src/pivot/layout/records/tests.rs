@@ -94,13 +94,13 @@ fn check(stem: &str, name: &str) -> usize {
                 checked += 1;
             }
             // A number outside the value area: a page or label item; an error is the error's.
-            ("n" | "e", None) | ("e", Some(_)) => {}
+            // So is any other cell no record reaches.
+            ("e", Some(_)) | (_, None) => {}
             // A label, a caption or an empty cell; a value cell no record reaches is empty, or
             // `missingCaption` (t4137 K2).
             (_, Some(records)) => {
                 assert!(records.is_empty(), "{stem} {name} {at}: {records:?}");
             }
-            (_, None) => {}
         }
     }
     // The grand total, the last row and column lines, covers every record the filters keep.

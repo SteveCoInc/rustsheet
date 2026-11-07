@@ -1,5 +1,8 @@
 //! Reading typed text as a number together with the format it implies ("$1,234.50" ->
 //! (1234.5, "$#,##0.00")), split from format.rs, which renders numbers.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use crate::cast::ends_with_dollar;
 use crate::mixed_fraction::mixed_fraction;
@@ -543,10 +546,10 @@ fn parse_percent_or_currency(
             }
             if options.decimal_digits > 0 {
                 let currency_format = &format!("#,##0.00{currency}");
-                return Ok(Some((f, Some(currency_format.to_string()))));
+                return Ok(Some((f, Some(currency_format.clone()))));
             }
             let currency_format = &format!("#,##0{currency}");
-            return Ok(Some((f, Some(currency_format.to_string()))));
+            return Ok(Some((f, Some(currency_format.clone()))));
         }
     }
     Ok(None)
@@ -804,7 +807,7 @@ fn parse_number(
     if len == 0 {
         return Err("Cannot parse number".to_string());
     }
-    let mut chars = String::from("");
+    let mut chars = String::new();
     let mut group_separator_index = Vec::new();
     // get the sign
     let sign = if characters[0] == '-' {
@@ -901,7 +904,7 @@ fn parse_number(
     }
     if position != len {
         return Err("Could not parse number".to_string());
-    };
+    }
     match parse_excel_number(&chars) {
         None => Err("Failed to parse to double".to_string()),
         Some(v) => Ok((

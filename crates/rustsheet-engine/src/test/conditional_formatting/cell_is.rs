@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 use crate::types::Color;
 
@@ -31,7 +34,7 @@ fn cell_is(operator: ValueOperator, formula: &str, formula2: Option<&str>) -> Cf
     CfRuleInput::CellIs {
         operator,
         formula: formula.to_string(),
-        formula2: formula2.map(|s| s.to_string()),
+        formula2: formula2.map(std::string::ToString::to_string),
         format: super::red_fill(),
         stop_if_true: false,
     }

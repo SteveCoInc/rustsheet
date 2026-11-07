@@ -6,6 +6,9 @@
 //! the lists. What is kept is charged, entry by entry ([`OpaqueEntry::cost`]), to the workbook's
 //! opaque budget (`MAX_OPAQUE_BYTES`), so the store never grows past it (web.md "Pivot caches past the import limits
 //! are dropped").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use std::cell::Cell;
 use std::collections::HashMap;
@@ -22,6 +25,7 @@ use rustsheet_engine::pivot::{
 use super::super::package::ImportLimits;
 use super::super::worksheets::parse_range;
 use super::filters::read_filters;
+use super::sort::read_auto_sort;
 use super::{
     at, attribute, index_attribute, local_name, shown, skip, walk, walk_keeping, Skip, Tag,
     MAX_AXIS_FIELDS, MAX_DATA_FIELDS,
@@ -67,30 +71,13 @@ const ROOT_TYPED: [&str; 21] = [
     "gridDropZones",
 ];
 
-/// The custom subtotal functions by their `ST_ItemType` names: an `<item t>` names its subtotal
-/// line so, and a `<pivotField>` asks for it with `<name>Subtotal="1"`. In the schema's order.
-/// `countA` is COUNTA and `count` Count Numbers, as ECMA-376 reads them and Excel computes them;
-/// Excel labels both lines `<item> Count` (`ItemType::Function`). Excel: see
-/// docs/excel-semantics/pivots.md "Which function the countA and count custom subtotals compute"
-/// (probes/t4622-pivot-count-subtotals).
-pub(crate) const SUBTOTAL_FUNCTIONS: [(&str, Aggregate); 11] = [
-    ("sum", Aggregate::Sum),
-    ("countA", Aggregate::Count),
-    ("avg", Aggregate::Average),
-    ("max", Aggregate::Max),
-    ("min", Aggregate::Min),
-    ("product", Aggregate::Product),
-    ("count", Aggregate::CountNums),
-    ("stdDev", Aggregate::StdDev),
-    ("stdDevP", Aggregate::StdDevP),
-    ("var", Aggregate::Var),
-    ("varP", Aggregate::VarP),
-];
+/// The custom subtotal functions by their `ST_ItemType` names, in the schema's order: the
+/// engine's one table ([`Aggregate::ITEM_TYPE_NAMES`]).
+pub(crate) const SUBTOTAL_FUNCTIONS: [(&str, Aggregate); 11] = Aggregate::ITEM_TYPE_NAMES;
 
 /// The function of the custom subtotal named `name` (`sum`, `countA`, ...).
 fn subtotal_function(name: &str) -> Option<Aggregate> {
-    let mut functions = SUBTOTAL_FUNCTIONS.iter();
-    functions.find(|(n, _)| *n == name).map(|(_, f)| *f)
+    Aggregate::from_item_type_name(name)
 }
 
 /// Whether `key` is a `<pivotField>` custom subtotal attribute (`sumSubtotal`, ...).
@@ -317,19 +304,21 @@ impl TableReader<'_> {
     ///   `fillDownLabelsDefault` is not read: Excel fills no existing field down for it (t4129 X14,
     ///   t4698 TW, TWE, OW).
     /// - The definition's `<filters>` are its typed filters (`filters::read_filters`, T-4165).
+    /// - A `<pivotField>`'s `autoSortScope` is its value sort's scope (`sort::read_auto_sort`,
+    ///   T-4827).
     fn read_extension(&mut self, owner: OpaqueOwner, xml: &str) -> Result<(), Skip> {
         match owner {
             OpaqueOwner::DataField(index) => {
-                let mut mode = None;
-                each_x14_element(xml, "dataField", |element| {
-                    if let Some(name) = attribute(element, "pivotShowAs")? {
-                        mode = Some(show_data_as(&name)?);
-                    }
-                    Ok(())
-                })?;
+                let mode = data_field_x14_show_as(xml).map_err(Skip)?;
                 let data = self.table.data_fields.get_mut(index as usize);
                 if let (Some(mode), Some(data)) = (mode, data) {
                     data.show_data_as = mode;
+                }
+            }
+            OpaqueOwner::Field(index) if element_name(xml) == "autoSortScope" => {
+                let scope = read_auto_sort(xml)?;
+                if let Some(field) = self.table.fields.get_mut(index as usize) {
+                    field.auto_sort = Some(scope);
                 }
             }
             OpaqueOwner::Field(index) => {
@@ -390,6 +379,9 @@ impl TableReader<'_> {
             page_wrap: number(element, "pageWrap")?.unwrap_or(defaults.page_wrap),
             page_over_then_down: flag(element, "pageOverThenDown", defaults.page_over_then_down)?,
             grid_drop_zones: flag(element, "gridDropZones", defaults.grid_drop_zones)?,
+            // Read, and kept verbatim for export (not in the root's typed attributes), as a
+            // field's `autoShow` is (T-4768).
+            custom_list_sort: flag(element, "customListSort", defaults.custom_list_sort)?,
         };
         Ok(())
     }
@@ -596,6 +588,21 @@ fn each_x14_element(
         }
         Ok(())
     })
+}
+
+/// The x14 `pivotShowAs` mode `xml`, an element kept inside a `<dataField>`, names (the last, if
+/// several), or the reason it cannot be read: an unknown mode or malformed XML. The importer reads
+/// a field's mode with it, and the exporter checks a kept extension against the model (T-4759).
+pub(crate) fn data_field_x14_show_as(xml: &str) -> Result<Option<ShowDataAs>, String> {
+    let mut mode = None;
+    let read = each_x14_element(xml, "dataField", |element| {
+        if let Some(name) = attribute(element, "pivotShowAs")? {
+            mode = Some(show_data_as(&name)?);
+        }
+        Ok(())
+    });
+    read.map_err(|skip| skip.0)?;
+    Ok(mode)
 }
 
 /// A `<dataField>` but its `fld`, which the caller checks against the cache.

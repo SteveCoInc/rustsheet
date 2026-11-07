@@ -8,6 +8,9 @@
 //! before the recalculation. They are then swept in row-major sheet order, each reading the values
 //! already updated in the sweep (Gauss-Seidel), until a sweep's largest change is strictly below
 //! the delta or the count is reached.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use std::collections::{HashMap, HashSet};
 
@@ -187,7 +190,7 @@ impl Model {
         members.sort_unstable();
         let positions: Vec<CellReferenceIndex> = members
             .iter()
-            .map(|&(sheet, row, column)| CellReferenceIndex { sheet, row, column })
+            .map(|&(sheet, row, column)| CellReferenceIndex { sheet, column, row })
             .collect();
         for at in &positions {
             let state = &self.evaluation.iteration;
@@ -250,14 +253,16 @@ impl Model {
     /// The value a member holds now, 0 for a formula never evaluated.
     fn current_value(&self, at: CellReferenceIndex) -> CalcResult {
         match self.fetch_cell(at) {
-            Some(Cell::CellFormula {
-                v: FormulaValue::Unevaluated,
-                ..
-            })
-            | Some(Cell::ArrayFormula {
-                v: FormulaValue::Unevaluated,
-                ..
-            }) => CalcResult::Number(0.0),
+            Some(
+                Cell::CellFormula {
+                    v: FormulaValue::Unevaluated,
+                    ..
+                }
+                | Cell::ArrayFormula {
+                    v: FormulaValue::Unevaluated,
+                    ..
+                },
+            ) => CalcResult::Number(0.0),
             Some(cell) => self.get_cell_value(cell, at),
             None => CalcResult::EmptyCell,
         }

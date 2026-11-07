@@ -6,6 +6,13 @@
 //! statistic keeps its one definition.
 //! Excel's rules are in docs/excel-semantics/numbers.md "AGGREGATE" (probes/aggregate-grid,
 //! probes/aggregate-args, probes/aggregate-overflow).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 
 use std::collections::HashSet;
 
@@ -90,16 +97,13 @@ impl Model {
         let mut rest: Vec<Node> = Vec::with_capacity(args.len() - 2);
         let mut cost: u64 = 0;
         for node in &args[2..2 + value_count] {
-            match self.evaluate_node_with_reference(node, cell) {
-                CalcResult::Array(rows) => {
-                    let size = rows.len().saturating_mul(rows.first().map_or(0, Vec::len));
-                    cost = cost.saturating_add(u64::try_from(size).unwrap_or(u64::MAX));
-                    rest.push(Node::ArrayKind(rows));
-                }
-                _ => {
-                    cost = cost.saturating_add(self.walk_cost(node, cell));
-                    rest.push(node.clone());
-                }
+            if let CalcResult::Array(rows) = self.evaluate_node_with_reference(node, cell) {
+                let size = rows.len().saturating_mul(rows.first().map_or(0, Vec::len));
+                cost = cost.saturating_add(u64::try_from(size).unwrap_or(u64::MAX));
+                rest.push(Node::ArrayKind(rows));
+            } else {
+                cost = cost.saturating_add(self.walk_cost(node, cell));
+                rest.push(node.clone());
             }
         }
         let mut lifted = vec![function, option];

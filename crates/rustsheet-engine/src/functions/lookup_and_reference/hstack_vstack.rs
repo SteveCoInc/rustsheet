@@ -118,7 +118,7 @@ impl Model {
                 if r < arr.len() {
                     row.extend(arr[r].iter().cloned());
                 } else {
-                    let ncols = arr.first().map(|r| r.len()).unwrap_or(0);
+                    let ncols = arr.first().map_or(0, std::vec::Vec::len);
                     row.extend(std::iter::repeat_n(na.clone(), ncols));
                 }
             }
@@ -224,7 +224,7 @@ impl Model {
 
         let max_cols = arrays
             .iter()
-            .filter_map(|a| a.first().map(|r| r.len()))
+            .filter_map(|a| a.first().map(std::vec::Vec::len))
             .max()
             .unwrap_or(0);
 

@@ -1,5 +1,8 @@
 //! A worksheet table's metadata (`Workbook::tables`) and the autoFilter criteria it keeps from its
 //! file (`Table::filter_columns`), which the export writes back and nothing re-applies.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_excessive_bools)]
+// LINT-DEBT-END
 
 use bitcode::{Decode, Encode};
 
@@ -99,8 +102,8 @@ pub struct FilterColumn {
 
 /// The criterion of a [`FilterColumn`]. Each kind is kept as the file wrote it, after the
 /// import checked it against the schema's types and enumerations, so the export writes back the
-/// filter Excel read and Excel still calls the table's hidden rows filtered (T-4004). Nothing
-/// re-applies a criterion.
+/// filter Excel read and Excel still calls the table's hidden rows filtered (T-4004). A column
+/// delete re-applies the kept ones it can tell ([`FilterCriterion::keeps_text`], T-4939).
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
 pub enum FilterCriterion {
     /// `<filters>`: the rows whose text is one of `values`, or whose date falls in one of
@@ -179,19 +182,36 @@ pub struct DateGroupItem {
 }
 
 /// One `<customFilter>`: `operator` is the file's attribute (absent means `equal`) and `val`
-/// the operand as text, both kept verbatim for the export only; re-applying a filter would need
-/// a typed operator.
+/// the operand as text, both kept verbatim for the export; [`CustomFilter::keeps_text`] reads
+/// the one form evidenced so far.
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
 pub struct CustomFilter {
     pub operator: Option<String>,
     pub val: String,
 }
 
+impl CustomFilter {
+    /// Whether the condition holds for a cell that displays `text`, when that can be told here:
+    /// an `equal` (or absent) operator with a text operand holds when the text is the operand,
+    /// ignoring case (docs/research/t4895/uploads/custom: equals a, or equals c, keeps rows 2-7's
+    /// a and c; T-4939). `None` for every other operator, an operand that reads as a number
+    /// (a number cell may be compared by value) and one with a wildcard (`*`, `?` or `~`): none
+    /// of them is probed.
+    #[must_use]
+    pub fn keeps_text(&self, text: &str) -> Option<bool> {
+        let equal = self.operator.as_deref().is_none_or(|op| op == "equal");
+        let plain = !self.val.contains(['*', '?', '~']) && self.val.trim().parse::<f64>().is_err();
+        (equal && plain).then(|| text.to_lowercase() == self.val.to_lowercase())
+    }
+}
+
 impl FilterCriterion {
     /// Whether the criterion keeps a data row whose cell in the filtered column displays `text`,
     /// when that can be told here: a values filter without date groups keeps a blank row when
-    /// `blank`, and another row when `values` holds its text, ignoring case (T-4803). `None` for
-    /// every other criterion, which nothing here evaluates.
+    /// `blank`, and another row when `values` holds its text, ignoring case (T-4803); a custom
+    /// filter keeps it when all (`and`) or any of its conditions hold, each by
+    /// [`CustomFilter::keeps_text`] (T-4939). `None` for every other criterion, and for a custom
+    /// filter with a condition that cannot be told.
     #[must_use]
     pub fn keeps_text(&self, text: &str) -> Option<bool> {
         match self {
@@ -206,6 +226,16 @@ impl FilterCriterion {
                 let text = text.to_lowercase();
                 values.iter().any(|v| v.to_lowercase() == text)
             }),
+            Self::Custom { and, conditions } if !conditions.is_empty() => {
+                let held = (conditions.iter())
+                    .map(|c| c.keeps_text(text))
+                    .collect::<Option<Vec<bool>>>()?;
+                Some(if *and {
+                    held.iter().all(|&h| h)
+                } else {
+                    held.iter().any(|&h| h)
+                })
+            }
             _ => None,
         }
     }

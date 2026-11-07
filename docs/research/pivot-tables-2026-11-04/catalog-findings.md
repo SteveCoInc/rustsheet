@@ -43,7 +43,8 @@ in scope unless a decision rules it out. `tools/src/rustsheet_tools/pivot_catalo
 
   It runs without the schemas.
 - **Hand-filled columns.** A row's `web`, `status` and `evidence` are filled by probes and
-  implementations. Regeneration keeps them, together with the row's id, so ids are stable. A row
+  implementations, and its `owner` (T-4952) names the open M16 task that owns it for the M16 exit row.
+  Regeneration keeps them, together with the row's id, so ids are stable. A row
   whose node leaves the walk stays, with status `retired`, so its id is never reused.
 - **Classification.** Path-keyword rules in `RULES` set the family, `affects` and stage. The first
   match wins, and no node is left uncategorized. The rules are a heuristic: a row whose probe shows

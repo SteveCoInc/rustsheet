@@ -1,0 +1,35 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4251: XIRR where XNPV has no root although the flows change sign (XIRR({-100,200,-300},{1,2,3}) is 0.1/2^25 in Excel): other guesses, the negated flows, longer day spans, other magnitudes, a reversed order, and two controls (a series with roots at 0.5 and 1, and one-sign flows).",
+ "tags": [
+  "M9",
+  "financial",
+  "xirr",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=XIRR({-100,200,-300},{1,2,3})",
+    "A2": "=XIRR({-100,200,-300},{1,2,3},0.5)",
+    "A3": "=XIRR({-100,200,-300},{1,2,3},1)",
+    "A4": "=XIRR({-100,200,-300},{1,2,3},2)",
+    "A5": "=XIRR({-100,200,-300},{1,2,3},0.01)",
+    "A6": "=XIRR({-100,200,-300},{1,2,3},-0.5)",
+    "A7": "=XIRR({-100,200,-300},{1,2,3},0)",
+    "A8": "=XIRR({100,-200,300},{1,2,3})",
+    "A9": "=XIRR({-100,200,-300},{0,365,730})",
+    "A10": "=XIRR({-100,200,-300},{0,3650,7300})",
+    "A11": "=XIRR({-100,50,-300},{1,2,3})",
+    "A12": "=XIRR({-100,1,-100},{1,2,3})",
+    "A13": "=XIRR({-100,200,-300},{1,2,3},10)",
+    "A14": "=XIRR({-300,200,-100},{1,2,3})",
+    "A15": "=XIRR({-100,300,-300},{1,2,3})",
+    "A16": "=XIRR({-100,350,-300},{0,365,730})",
+    "A17": "=XIRR({-1,-2},{1,2})"
+   }
+  }
+ ],
+ "expected": {}
+}

@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::manual_let_else,
+    clippy::match_same_arms,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 // https://c-rex.net/samples/ooxml/e1/Part4/OOXML_P4_DOCX_cfRule_topic_ID0EFKO4.html
 
 use std::collections::HashMap;
@@ -92,13 +100,13 @@ fn parse_x14_data_bars(ws: &XmlNode, theme: &Theme) -> HashMap<String, DataBarEx
                         };
                         let is_gradient = db_node.attribute("gradient") != Some("0");
                         let mut cfvo_iter = db_node.children().filter(|n| n.has_tag_name("cfvo"));
-                        let min = cfvo_iter.next().map(parse_cfvo_x14).unwrap_or(None);
-                        let max = cfvo_iter.next().map(parse_cfvo_x14).unwrap_or(None);
+                        let min = cfvo_iter.next().and_then(parse_cfvo_x14);
+                        let max = cfvo_iter.next().and_then(parse_cfvo_x14);
                         let negative_color = db_node
                             .children()
                             .find(|n| n.has_tag_name("negativeFillColor"))
                             .and_then(|n| get_color(n, theme).ok())
-                            .filter(|c| c.is_some())
+                            .filter(rustsheet_engine::types::Color::is_some)
                             .unwrap_or(Color::Rgb("#FF0000".to_string()));
                         map.insert(
                             id,
@@ -482,7 +490,7 @@ pub(super) fn load_conditional_formatting(
                     let formulas: Vec<String> = cf_rule
                         .children()
                         .filter(|n| n.has_tag_name("formula"))
-                        .filter_map(|n| n.text().map(|s| s.to_string()))
+                        .filter_map(|n| n.text().map(std::string::ToString::to_string))
                         .collect();
                     let formula = formulas.first().cloned().unwrap_or_default();
                     let formula2 = formulas.get(1).cloned();
@@ -579,7 +587,7 @@ pub(super) fn load_conditional_formatting(
                         .and_then(|el| el.children().find(|n| n.has_tag_name("ext")))
                         .and_then(|ex| ex.children().find(|n| n.has_tag_name("id")))
                         .and_then(|id| id.text())
-                        .map(|s| s.to_string());
+                        .map(std::string::ToString::to_string);
                     let (min, max, negative_color, is_gradient) =
                         match x14_id.as_deref().and_then(|id| x14_data_bars.get(id)) {
                             Some(ext) => (

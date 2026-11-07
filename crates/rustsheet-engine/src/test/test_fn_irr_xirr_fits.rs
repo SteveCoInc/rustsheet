@@ -15,7 +15,7 @@ use crate::test::util::new_empty_model;
 fn evaluated(formulas: &[&str]) -> Model {
     let mut model = new_empty_model();
     for (i, formula) in formulas.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     model

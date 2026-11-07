@@ -1,6 +1,9 @@
 //! Parsing of en-US time text for TIMEVALUE (clock text, "date clock" text).
 //!
 //! Excel: see docs/excel-semantics/dates.md#time-text.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use chrono::{DateTime, NaiveDateTime, Timelike};
 
@@ -98,7 +101,7 @@ pub(super) fn parse_time_string(
         return Some(serial - serial.floor());
     }
     if let Ok(dt) = DateTime::parse_from_rfc3339(text) {
-        return Some(dt.time().num_seconds_from_midnight() as f64 / SECONDS_PER_DAY_F64);
+        return Some(f64::from(dt.time().num_seconds_from_midnight()) / SECONDS_PER_DAY_F64);
     }
     // Date-only text has no clock, so TIMEVALUE is 0, not #VALUE! (probes/date-text-glued-month-2
     // column C rows 6-8, 10-11, 13-15: `"Jul1 , 2026"`, `"Jun31"`). The date must be in range for

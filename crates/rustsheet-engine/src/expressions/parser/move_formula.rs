@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::too_many_lines, elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 use super::{
     stringify::{open_range_flags, stringify_reference, to_string_moved, DisplaceData},
     Node, Reference,
@@ -47,7 +50,7 @@ pub(crate) fn move_formula(
 /// The text of reference `node` moved by `move_context`, or `None` when `node` is not a
 /// cell or range reference: every other node prints as `stringify` prints it.
 pub(super) fn moved_reference_text(node: &Node, move_context: &MoveContext) -> Option<String> {
-    use self::Node::*;
+    use self::Node::{RangeKind, ReferenceKind};
     let text = match node {
         ReferenceKind {
             sheet_name,
@@ -91,7 +94,7 @@ pub(super) fn moved_reference_text(node: &Node, move_context: &MoveContext) -> O
                 {
                     ref_sheet_name = source_sheet_name;
                 }
-            };
+            }
             let context = CellReferenceRC {
                 sheet: move_context.source_sheet_name.to_string(),
                 column: move_context.column,
@@ -184,7 +187,7 @@ pub(super) fn moved_reference_text(node: &Node, move_context: &MoveContext) -> O
                 {
                     ref_sheet_name = source_sheet_name;
                 }
-            };
+            }
             let context = CellReferenceRC {
                 sheet: move_context.source_sheet_name.to_string(),
                 column: move_context.column,

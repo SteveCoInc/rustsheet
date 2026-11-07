@@ -3,6 +3,8 @@
 //! `definition` (case builder v2) is loaded from the parts the builder writes for it instead, and
 //! rendered by the engine as Excel renders it on open (T-4152).
 
+use std::collections::HashMap;
+
 use rustsheet::{
     CellRef, EditError, Input, PivotDateGroupBy, PivotFunction, PivotParts, PivotRangeGroup,
     PivotTableInput, RangeRef, SheetId, Txn, Workbook,
@@ -14,6 +16,7 @@ use crate::case::{
 };
 use crate::cellref::Addr;
 use crate::engine::range_ref;
+use crate::pivot_definition::slicers::{slicer_parts, BuiltPivot};
 
 /// Writes the rendered cells of every pivot of `sheet` (sheet id `id`) as constants. They go in
 /// with the sheet's other values, before any formula reads them.
@@ -77,6 +80,7 @@ pub fn load_defined(workbook: &mut Workbook, spec: &CaseSpec) -> Result<(), Stri
         .flat_map(|sheet| sheet.pivot_tables.iter().map(move |pivot| (sheet, pivot)))
         .filter_map(|(sheet, pivot)| Some((sheet, pivot, pivot.definition.as_ref()?)));
     let mut parts = Vec::new();
+    let mut names = Vec::new();
     for (sheet, pivot, definition) in defined {
         if parts.len() == MAX_PIVOTS {
             return Err(format!("more than {MAX_PIVOTS} defined pivots"));
@@ -84,21 +88,65 @@ pub fn load_defined(workbook: &mut Workbook, spec: &CaseSpec) -> Result<(), Stri
         let cache_id = u32::try_from(parts.len() + 1).map_err(|e| e.to_string())?;
         let built = crate::pivot_definition::parts(spec, sheet, pivot, definition, cache_id)?;
         let id = workbook.sheet_id(&sheet.name).map_err(|e| e.to_string())?;
+        names.push(pivot.name.as_str());
         parts.push(PivotParts {
             cache_definition: built.cache_definition,
             cache_records: built.cache_records,
             cache_id,
             tables: vec![(id, built.table)],
+            slicer_caches: Vec::new(),
         });
     }
     if parts.is_empty() {
         return Ok(());
     }
+    add_slicer_caches(spec, &names, &mut parts)?;
     let skipped = workbook
         .load_pivot_parts(&parts)
         .map_err(|e| e.to_string())?;
     if skipped.iter().any(Option::is_none) {
         workbook.recalculate();
+    }
+    Ok(())
+}
+
+/// Adds to each of `parts` (the defined pivot `names[i]`'s) the slicer and timeline cache parts
+/// the case builder writes for the pivot (`pivot_definition::slicers`, T-4188), so the importer
+/// applies their selections as a load of the built file does.
+fn add_slicer_caches(
+    spec: &CaseSpec,
+    names: &[&str],
+    parts: &mut [PivotParts],
+) -> Result<(), String> {
+    if spec
+        .sheets
+        .iter()
+        .all(|s| s.slicers.is_empty() && s.timelines.is_empty())
+    {
+        return Ok(());
+    }
+    let mut built = HashMap::new();
+    for (name, part) in names.iter().zip(parts.iter()) {
+        let Some(&(sheet, _)) = part.tables.first() else {
+            continue;
+        };
+        built.insert(
+            (*name).to_string(),
+            BuiltPivot {
+                tab_id: sheet.get(),
+                cache_id: part.cache_id,
+                cache_definition: &part.cache_definition,
+            },
+        );
+    }
+    let slicers = slicer_parts(spec, &built)?;
+    drop(built);
+    for slicer in slicers {
+        if let Some(index) = names.iter().position(|n| *n == slicer.pivot) {
+            if let Some(part) = parts.get_mut(index) {
+                part.slicer_caches.push(slicer.xml);
+            }
+        }
     }
     Ok(())
 }
@@ -175,7 +223,7 @@ fn pivot_input(
 
 /// A spec pivot's grouping as the engine takes it: `by` names a date group (pivot.py
 /// `_DATE_GROUPS`), and its absence a numeric range.
-fn range_group(group: &PivotGroupSpec) -> Result<PivotRangeGroup, EditError> {
+pub(crate) fn range_group(group: &PivotGroupSpec) -> Result<PivotRangeGroup, EditError> {
     let by = match group.by.as_deref() {
         None => None,
         Some(by) => Some(

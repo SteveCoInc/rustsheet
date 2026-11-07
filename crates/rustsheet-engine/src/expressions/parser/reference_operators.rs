@@ -5,6 +5,9 @@
 //!
 //! Excel evidence: docs/excel-semantics/references.md "Intersection operator (space)" (gen-m1,
 //! T-0105) and "Union (comma) reference in a value context is #VALUE!" (gen-m1, T-0134).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_sign_loss)]
+// LINT-DEBT-END
 
 use crate::expressions::parser::depth::{
     Prefix, MAX_FORMULA_DEPTH, MAX_NESTING, MAX_PARENTHESES, OPERAND_NESTING, PRIMARY_DEPTH,

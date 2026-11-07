@@ -13,11 +13,11 @@ const JAN_10_2023: i32 = 44936; // Tuesday
 fn networkdays_calculates_weekdays_excluding_weekends() {
     let mut model = new_empty_model();
 
-    model._set("A1", &format!("=NETWORKDAYS({JAN_1_2023},{JAN_10_2023})"));
+    model.set_a1("A1", &format!("=NETWORKDAYS({JAN_1_2023},{JAN_10_2023})"));
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "7",
         "Should count 7 weekdays in 10-day span"
     );
@@ -27,11 +27,11 @@ fn networkdays_calculates_weekdays_excluding_weekends() {
 fn networkdays_handles_reverse_date_order() {
     let mut model = new_empty_model();
 
-    model._set("A1", &format!("=NETWORKDAYS({JAN_10_2023},{JAN_1_2023})"));
+    model.set_a1("A1", &format!("=NETWORKDAYS({JAN_10_2023},{JAN_1_2023})"));
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "-7",
         "Reversed dates should return negative count"
     );
@@ -41,14 +41,14 @@ fn networkdays_handles_reverse_date_order() {
 fn networkdays_excludes_holidays_from_weekdays() {
     let mut model = new_empty_model();
 
-    model._set(
+    model.set_a1(
         "A1",
         &format!("=NETWORKDAYS({JAN_1_2023},{JAN_10_2023},{JAN_9_2023})"),
     );
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "6",
         "Should exclude Monday holiday from 7 weekdays"
     );
@@ -58,11 +58,11 @@ fn networkdays_excludes_holidays_from_weekdays() {
 fn networkdays_handles_same_start_end_date() {
     let mut model = new_empty_model();
 
-    model._set("A1", &format!("=NETWORKDAYS({JAN_9_2023},{JAN_9_2023})"));
+    model.set_a1("A1", &format!("=NETWORKDAYS({JAN_9_2023},{JAN_9_2023})"));
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "1",
         "Same weekday date should count as 1 workday"
     );
@@ -72,16 +72,16 @@ fn networkdays_handles_same_start_end_date() {
 fn networkdays_accepts_holiday_ranges() {
     let mut model = new_empty_model();
 
-    model._set("B1", &JAN_2_2023.to_string());
-    model._set("B2", &JAN_6_2023.to_string());
-    model._set(
+    model.set_a1("B1", &JAN_2_2023.to_string());
+    model.set_a1("B2", &JAN_6_2023.to_string());
+    model.set_a1(
         "A1",
         &format!("=NETWORKDAYS({JAN_1_2023},{JAN_10_2023},B1:B2)"),
     );
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "5",
         "Should exclude 2 holidays from 7 weekdays"
     );
@@ -91,14 +91,14 @@ fn networkdays_accepts_holiday_ranges() {
 fn networkdays_intl_uses_standard_weekend_by_default() {
     let mut model = new_empty_model();
 
-    model._set(
+    model.set_a1(
         "A1",
         &format!("=NETWORKDAYS.INTL({JAN_1_2023},{JAN_10_2023})"),
     );
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "7",
         "Default should be Saturday-Sunday weekend"
     );
@@ -109,14 +109,14 @@ fn networkdays_intl_supports_numeric_weekend_patterns() {
     let mut model = new_empty_model();
 
     // Pattern 2 = Sunday-Monday weekend
-    model._set(
+    model.set_a1(
         "A1",
         &format!("=NETWORKDAYS.INTL({JAN_1_2023},{JAN_10_2023},2)"),
     );
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "6",
         "Sunday-Monday weekend should give 6 workdays"
     );
@@ -127,14 +127,14 @@ fn networkdays_intl_supports_single_day_weekends() {
     let mut model = new_empty_model();
 
     // Pattern 11 = Sunday only weekend
-    model._set(
+    model.set_a1(
         "A1",
         &format!("=NETWORKDAYS.INTL({JAN_1_2023},{JAN_10_2023},11)"),
     );
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "8",
         "Sunday-only weekend should give 8 workdays"
     );
@@ -145,14 +145,14 @@ fn networkdays_intl_supports_string_weekend_patterns() {
     let mut model = new_empty_model();
 
     // "0000110" = Friday-Saturday weekend
-    model._set(
+    model.set_a1(
         "A1",
         &format!("=NETWORKDAYS.INTL({JAN_1_2023},{JAN_10_2023},\"0000110\")"),
     );
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "8",
         "Friday-Saturday weekend should give 8 workdays"
     );
@@ -162,14 +162,14 @@ fn networkdays_intl_supports_string_weekend_patterns() {
 fn networkdays_intl_no_weekends_counts_all_days() {
     let mut model = new_empty_model();
 
-    model._set(
+    model.set_a1(
         "A1",
         &format!("=NETWORKDAYS.INTL({JAN_1_2023},{JAN_10_2023},\"0000000\")"),
     );
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "10",
         "No weekends should count all 10 days"
     );
@@ -179,14 +179,14 @@ fn networkdays_intl_no_weekends_counts_all_days() {
 fn networkdays_intl_combines_custom_weekends_with_holidays() {
     let mut model = new_empty_model();
 
-    model._set(
+    model.set_a1(
         "A1",
         &format!("=NETWORKDAYS.INTL({JAN_1_2023},{JAN_10_2023},\"0000110\",{JAN_9_2023})"),
     );
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "7",
         "Should exclude both weekend and holiday"
     );
@@ -196,61 +196,61 @@ fn networkdays_intl_combines_custom_weekends_with_holidays() {
 fn networkdays_validates_argument_count() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=NETWORKDAYS()");
-    model._set("A2", "=NETWORKDAYS(1,2,3,4)");
-    model._set("A3", "=NETWORKDAYS.INTL()");
-    model._set("A4", "=NETWORKDAYS.INTL(1,2,3,4,5)");
+    model.set_a1("A1", "=NETWORKDAYS()");
+    model.set_a1("A2", "=NETWORKDAYS(1,2,3,4)");
+    model.set_a1("A3", "=NETWORKDAYS.INTL()");
+    model.set_a1("A4", "=NETWORKDAYS.INTL(1,2,3,4,5)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("A2"), "#ERROR!");
-    assert_eq!(model._get_text("A3"), "#ERROR!");
-    assert_eq!(model._get_text("A4"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A3"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), "#ERROR!");
 }
 
 #[test]
 fn networkdays_rejects_invalid_dates() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=NETWORKDAYS(-1,100)");
-    model._set("A2", "=NETWORKDAYS(1,3000000)");
-    model._set("A3", "=NETWORKDAYS(\"text\",100)");
+    model.set_a1("A1", "=NETWORKDAYS(-1,100)");
+    model.set_a1("A2", "=NETWORKDAYS(1,3000000)");
+    model.set_a1("A3", "=NETWORKDAYS(\"text\",100)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "#NUM!");
-    assert_eq!(model._get_text("A2"), "#NUM!");
-    assert_eq!(model._get_text("A3"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "#NUM!");
+    assert_eq!(model.get_text_a1("A2"), "#NUM!");
+    assert_eq!(model.get_text_a1("A3"), "#VALUE!");
 }
 
 #[test]
 fn networkdays_intl_rejects_invalid_weekend_patterns() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=NETWORKDAYS.INTL(1,10,99)");
-    model._set("A2", "=NETWORKDAYS.INTL(1,10,\"111110\")");
-    model._set("A3", "=NETWORKDAYS.INTL(1,10,\"11111000\")");
-    model._set("A4", "=NETWORKDAYS.INTL(1,10,\"1111102\")");
+    model.set_a1("A1", "=NETWORKDAYS.INTL(1,10,99)");
+    model.set_a1("A2", "=NETWORKDAYS.INTL(1,10,\"111110\")");
+    model.set_a1("A3", "=NETWORKDAYS.INTL(1,10,\"11111000\")");
+    model.set_a1("A4", "=NETWORKDAYS.INTL(1,10,\"1111102\")");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "#NUM!");
-    assert_eq!(model._get_text("A2"), "#VALUE!");
-    assert_eq!(model._get_text("A3"), "#VALUE!");
-    assert_eq!(model._get_text("A4"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "#NUM!");
+    assert_eq!(model.get_text_a1("A2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), "#VALUE!");
 }
 
 #[test]
 fn networkdays_rejects_invalid_holidays() {
     let mut model = new_empty_model();
 
-    model._set("B1", "invalid");
-    model._set(
+    model.set_a1("B1", "invalid");
+    model.set_a1(
         "A1",
         &format!("=NETWORKDAYS({JAN_1_2023},{JAN_10_2023},B1)"),
     );
-    model._set(
+    model.set_a1(
         "A2",
         &format!("=NETWORKDAYS({JAN_1_2023},{JAN_10_2023},-1)"),
     );
@@ -258,12 +258,12 @@ fn networkdays_rejects_invalid_holidays() {
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "#VALUE!",
         "Should reject non-numeric holidays"
     );
     assert_eq!(
-        model._get_text("A2"),
+        model.get_text_a1("A2"),
         "#NUM!",
         "Should reject out-of-range holidays"
     );
@@ -274,11 +274,11 @@ fn networkdays_handles_weekend_only_periods() {
     let mut model = new_empty_model();
 
     let saturday = JAN_1_2023 - 1;
-    model._set("A1", &format!("=NETWORKDAYS({saturday},{JAN_1_2023})"));
+    model.set_a1("A1", &format!("=NETWORKDAYS({saturday},{JAN_1_2023})"));
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "0",
         "Weekend-only period should count 0 workdays"
     );
@@ -289,14 +289,14 @@ fn networkdays_ignores_holidays_outside_date_range() {
     let mut model = new_empty_model();
 
     let future_holiday = JAN_10_2023 + 100;
-    model._set(
+    model.set_a1(
         "A1",
         &format!("=NETWORKDAYS({JAN_1_2023},{JAN_10_2023},{future_holiday})"),
     );
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "7",
         "Out-of-range holidays should be ignored"
     );
@@ -306,14 +306,14 @@ fn networkdays_ignores_holidays_outside_date_range() {
 fn networkdays_handles_empty_holiday_ranges() {
     let mut model = new_empty_model();
 
-    model._set(
+    model.set_a1(
         "A1",
         &format!("=NETWORKDAYS({JAN_1_2023},{JAN_10_2023},B1:B3)"),
     );
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "7",
         "Empty holiday range should be treated as no holidays"
     );
@@ -323,11 +323,11 @@ fn networkdays_handles_empty_holiday_ranges() {
 fn networkdays_handles_minimum_valid_dates() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=NETWORKDAYS(1,7)");
+    model.set_a1("A1", "=NETWORKDAYS(1,7)");
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "5",
         "Should handle earliest Excel dates correctly"
     );
@@ -337,11 +337,11 @@ fn networkdays_handles_minimum_valid_dates() {
 fn networkdays_handles_large_date_ranges_efficiently() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=NETWORKDAYS(1,365)");
+    model.set_a1("A1", "=NETWORKDAYS(1,365)");
     model.evaluate();
 
     assert!(
-        !model._get_text("A1").starts_with('#'),
+        !model.get_text_a1("A1").starts_with('#'),
         "Large ranges should not error"
     );
 }
@@ -352,7 +352,7 @@ fn networkdays_handles_large_date_ranges_efficiently() {
 #[test]
 fn holidays_blank_cell_and_number_text_cell_for_all_four_functions() {
     let mut model = new_empty_model();
-    model._set("B1", "'44928");
+    model.set_a1("B1", "'44928");
     let calls = [
         ("NETWORKDAYS(44927,44936,{})", "7", "6"),
         ("NETWORKDAYS.INTL(44927,44936,1,{})", "7", "6"),
@@ -360,39 +360,39 @@ fn holidays_blank_cell_and_number_text_cell_for_all_four_functions() {
         ("WORKDAY.INTL(44927,1,1,{})", "44928", "44929"),
     ];
     for (i, (call, blank, text)) in calls.iter().enumerate() {
-        model._set(
+        model.set_a1(
             &format!("D{}", i + 1),
             &format!("={}", call.replace("{}", "C1")),
         );
-        model._set(
+        model.set_a1(
             &format!("E{}", i + 1),
             &format!("={}", call.replace("{}", "B1")),
         );
         model.evaluate();
         assert_eq!(
-            model._get_text(&format!("D{}", i + 1)),
+            model.get_text_a1(&format!("D{}", i + 1)),
             *blank,
             "{call} blank"
         );
         assert_eq!(
-            model._get_text(&format!("E{}", i + 1)),
+            model.get_text_a1(&format!("E{}", i + 1)),
             *text,
             "{call} text"
         );
     }
-    model._set("B2", "'abc");
-    model._set("D5", "=NETWORKDAYS(44927,44936,B2)");
+    model.set_a1("B2", "'abc");
+    model.set_a1("D5", "=NETWORKDAYS(44927,44936,B2)");
     model.evaluate();
     assert_eq!(
-        model._get_text("D5"),
+        model.get_text_a1("D5"),
         "#VALUE!",
         "non-number text stays #VALUE!"
     );
     // A range with number text: 1.005, "1.5" and 0.3 are all serial 1, outside the span.
-    model._set("F1", "1.005");
-    model._set("F2", "'1.5");
-    model._set("F3", "0.3");
-    model._set("D6", "=NETWORKDAYS(44927,44936,F1:F3)");
+    model.set_a1("F1", "1.005");
+    model.set_a1("F2", "'1.5");
+    model.set_a1("F3", "0.3");
+    model.set_a1("D6", "=NETWORKDAYS(44927,44936,F1:F3)");
     model.evaluate();
-    assert_eq!(model._get_text("D6"), "7");
+    assert_eq!(model.get_text_a1("D6"), "7");
 }

@@ -1,5 +1,8 @@
 //! Sheet prefixes of references: one sheet (`Data!A1`) or a 3-D span of sheets
 //! (`First:Last!A1`, docs/excel-semantics/references.md "3-D sheet-range references").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use crate::expressions::parser::{Node, Parser};
 use crate::functions::Function;

@@ -3,7 +3,7 @@ id: T-4872
 title: "An empty argument of COMPLEX, DELTA, GESTEP, ERF, ERFC, the BESSEL functions, CONVERT and the base conversions follows Excel (probe the Analysis ToolPak #N/A rule)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -41,15 +41,46 @@ number where the ToolPak rule says `#N/A`.
   numeric is tuned.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph) writes each argument of COMPLEX, DELTA, GESTEP, ERF, ERFC,
+- [x] A probes case (excel-probe skill, excel-graph) writes each argument of COMPLEX, DELTA, GESTEP, ERF, ERFC,
       BESSELJ, BESSELK, CONVERT, DEC2BIN, DEC2HEX, BIN2DEC, HEX2OCT and OCT2BIN empty, one at a time and all at once, plus
       `LAMBDA(a,b,DEC2BIN(a,b))(5,)` and `LET(e,,COMPLEX(1,e))` rows.
-- [ ] The engine's predictions (`#N/A` for every written-empty argument of these fixed-arity ToolPak functions,
+- [x] The engine's predictions (`#N/A` for every written-empty argument of these fixed-arity ToolPak functions,
       required or optional) are committed in a commit before the oracle fill.
-- [ ] After the fill every probe cell passes; engineering.md states the rule with its cells, including which optional
+- [x] After the fill every probe cell passes; engineering.md states the rule with its cells, including which optional
       arguments (places, upper_limit, step, suffix) follow it if any do not.
-- [ ] No new F line in any eval/baseline file; `make check` green; reviewers approve.
+- [x] No new F line in any eval/baseline file; `make check` green; reviewers approve.
 
 ## Out of scope
 - The IM* functions (already evidenced and implemented, T-2132).
 - BITAND/BITOR/BITXOR/BITLSHIFT/BITRSHIFT (Excel 2013 functions, not ToolPak; a follow-up if the rule turns out wider).
+
+## Predictions (committed before the oracle fill)
+probes/t4872-atp-empty-argument, sheet Calc: every cell of A1:A47 that writes an argument empty is `#N/A` (required or
+optional argument, also through the LAMBDA and LET rows A43:A47). The controls ERFC(1) (A17), BIN2DEC(101) (A35) and the
+omitted forms A48:A54 keep the values the engine gives today.
+
+## Outcome
+- Probe probes/t4872-atp-empty-argument (54 cells, excel-graph 2026-11-07). The predictions above were committed
+  in their own commit before the fill. They were **partly wrong**:
+  - A written-empty *required* argument is `#N/A`, and so is ERF's optional `upper_limit` (`ERF(6,)`).
+  - The other optional arguments (places, step, suffix) read as omitted: `DEC2BIN(5,)` is "101", `GESTEP(1,)` is 1,
+    `COMPLEX(1,1,)` is "1+i".
+  - LET and LAMBDA names bound to nothing behave the same way.
+- Engine: one helper, `Model::atp_lift_call` (functions/engineering/mod.rs). It drops trailing empty optionals and lifts
+  the call, with `#N/A` standing in for an empty argument among the first `strict` ones inside each element. It is applied to DELTA, GESTEP, BESSELI/J/K/Y, ERF,
+  CONVERT, COMPLEX and the nine base conversions with `places`. The omission test is main's `Model::is_empty_argument`
+  (util/empty_args.rs; the branch's own copy in let.rs was dropped in the merge). `complex_pair_of` now uses it in place of its inline copy.
+- A call with more arguments than the function's maximum is refused before any trimming, so it stays `#ERROR!`
+  (`DEC2BIN(5,,)`, `COMPLEX(1,1,,)`; review round 1). The unit test is engineering/test_empty_arguments.rs. `bind_argument_value`
+  in let.rs uses the same `is_empty_argument` helper.
+- Follow-up: T-4899 probes the six functions that share the code but are unprobed.
+- After the fill all 54 cells pass. Docs: engineering.md, "An empty argument of the ToolPak engineering functions".
+- Eval delta: probes +1 case (54 cells, all pass; baseline `C` line). Every other suite: fixed 0 / regressions 0, and
+  no new F line.
+- Round 2 (excel-fidelity review): Excel meets the `#N/A` at the empty argument's own turn and per element, as T-4870's
+  date rule does. Probe probes/t4872-r2-order-and-lift (14 cells, excel-graph; predictions in
+  docs/research/t4872/predictions-r2.tsv, committed before the fill). `atp_lift_call` replaced the earlier
+  `atp_arguments`, which returned `#N/A` before the lift, so every kernel now reads `#N/A` in its own argument order
+  (`COMPLEX(1/0,)` and `DEC2BIN(,1/0)` are `#DIV/0!`; `ROWS(COMPLEX({1;2},))` is 2). The 18 call sites lost their
+  repeated 4-line preamble, and the test file dropped its unneeded `#![allow(clippy::unwrap_used)]` (design MINORs).
+- Eval delta for round 2: the 9 round-2 known failures fixed (probes `F` lines 9 -> 0), 0 regressions.

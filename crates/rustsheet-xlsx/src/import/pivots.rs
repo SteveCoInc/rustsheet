@@ -3,14 +3,28 @@
 //! Every part is streamed with a pull parser, never built into a tree: a records part can hold
 //! millions of values, and [`CacheBuilder`] counts the SPEC-0015 limits before each push, so
 //! nothing past them is allocated (CLAUDE.md directive 5). Anything the model cannot hold
-//! faithfully (an OLAP or external source, a calculated field, a cache saved without
-//! records, a bad index, a limit) skips that cache, with every pivot on it, or that pivot: it is
-//! logged and dropped whole, never truncated or guessed, so GETPIVOTDATA on it is `#REF!` and the
-//! rest of the workbook loads as usual (docs/excel-semantics/web.md "GETPIVOTDATA against a pivot
-//! table"). A grouped field imports as its group items ([`groups`], T-4225).
+//! faithfully (an OLAP or external source, a cache saved without records, a bad index, a limit)
+//! skips that cache, with every pivot on it, or that pivot: it is logged and dropped whole, never
+//! truncated or guessed, so GETPIVOTDATA on it is `#REF!` and the rest of the workbook loads as
+//! usual (docs/excel-semantics/web.md "GETPIVOTDATA against a pivot table"). A grouped field
+//! imports as its group items ([`groups`], T-4225). A calculated field (`cacheField@formula`,
+//! T-4174) imports as a field with its formula and no records, after the other fields; a cache
+//! whose formula Excel for the web refuses, or the engine cannot compute
+//! (`check_calculated_fields`), is skipped.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::float_cmp,
+    clippy::print_stderr,
+    clippy::too_many_lines,
+    elided_lifetimes_in_paths
+)]
+// LINT-DEBT-END
 
 mod filters;
 mod groups;
+mod slicers;
+mod sort;
 mod table;
 
 use std::cell::Cell;
@@ -20,20 +34,24 @@ use std::io::{BufRead, Read, Seek};
 use quick_xml::events::{BytesStart, Event};
 use rustsheet_engine::expressions::token::get_error_by_english_name;
 use rustsheet_engine::pivot::{
-    CacheBuilder, CacheItem, CacheSource, DateGroupBy, DateGroupError, NumberGroupError,
-    PivotCache, PivotCacheError, PivotTable, RecordValue, MAX_FIELDS, MAX_ITEMS, MAX_RECORD_VALUES,
+    check_calculated_fields, CacheBuilder, CacheField, CacheItem, CacheSource,
+    CalculatedFieldError, DateGroupBy, DateGroupError, NumberGroupError, PivotCache,
+    PivotCacheError, PivotTable, RecordValue, MAX_CALCULATED_FIELDS, MAX_FIELDS, MAX_ITEMS,
+    MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::DateSystem;
 
 use self::groups::{apply_groups, FieldGroup, RangeGroup};
-pub(crate) use self::table::SUBTOTAL_FUNCTIONS;
+pub(crate) use self::slicers::MAX_SLICER_CACHES;
+use self::slicers::{apply_slicer_cache, load_slicer_caches, pivots_by_name, read_slicer_cache};
+pub(crate) use self::table::{data_field_x14_show_as, SUBTOTAL_FUNCTIONS};
 use self::table::{flag, read_pivot_table};
 use super::iso_date::pivot_cache_date_serial;
 use super::package::{
     part_folder_and_rels, part_key, resolve_relative_target, ImportLimits, Package,
 };
-use super::xml::{find_start_attribute, start_attribute, XmlNode};
-use super::{parse_relationships, Relationship};
+use super::xml::{find_start_attribute, start_attribute};
+use super::{part_relationships, Relationship};
 use crate::error::XlsxError;
 
 /// Most pivot fields on one axis of a pivot (SPEC-0015 "Untrusted-input limits").
@@ -77,6 +95,12 @@ impl From<NumberGroupError> for Skip {
     }
 }
 
+impl From<CalculatedFieldError> for Skip {
+    fn from(error: CalculatedFieldError) -> Self {
+        Skip(error.to_string())
+    }
+}
+
 impl From<PivotCacheError> for Skip {
     fn from(error: PivotCacheError) -> Self {
         Skip(error.to_string())
@@ -109,11 +133,14 @@ pub(super) struct PivotSheet {
 }
 
 /// The pivot caches listed in the workbook (`caches`: each `<pivotCache>`'s `cacheId` and
-/// `r:id`, resolved through the workbook relationships `rels`) and the pivot tables of `sheets`.
+/// `r:id`, resolved through the workbook relationships `rels`) and the pivot tables of `sheets`,
+/// filtered by the slicer and timeline caches the workbook's extension list names
+/// (`slicer_caches`: their `r:id`s; [`slicers`], T-4188).
 pub(super) fn load_pivots<R: Read + Seek>(
     archive: &mut Package<R>,
     rels: &HashMap<String, Relationship>,
     caches: &[(Option<String>, Option<String>)],
+    slicer_caches: &[String],
     sheets: &[PivotSheet],
     date_system: DateSystem,
 ) -> (Vec<PivotCache>, Vec<PivotTable>) {
@@ -174,6 +201,14 @@ pub(super) fn load_pivots<R: Read + Seek>(
             Err(reason) => log_skip("pivot table", part, &reason),
         }
     }
+    load_slicer_caches(
+        archive,
+        rels,
+        slicer_caches,
+        &mut pivot_tables,
+        &pivot_caches,
+        date_system,
+    );
     (pivot_caches, pivot_tables)
 }
 
@@ -301,6 +336,7 @@ fn finish_cache<B: BufRead>(
         records_id: _,
         groups,
         grouping_fields,
+        calculated,
         refresh_on_load,
         source_name,
     } = definition;
@@ -309,6 +345,11 @@ fn finish_cache<B: BufRead>(
     cache.refresh_on_load = refresh_on_load;
     cache.source_name = source_name;
     apply_groups(&mut cache, &groups, grouping_fields, values_left)?;
+    // Excel for the web refuses a file whose calculated field calls NOW, TODAY, RAND or
+    // INDIRECT, holds an array constant or a cell reference, or names no field (pivots.md
+    // "Pivot flags Excel for the web refuses", T-4505); the engine refuses a few more shapes.
+    cache.fields.extend(calculated);
+    check_calculated_fields(&cache.fields)?;
     Ok(cache)
 }
 
@@ -324,6 +365,9 @@ pub struct PivotParts<'a> {
     pub cache_records: &'a [u8],
     /// The `cacheId` the tables name the cache by.
     pub cache_id: u32,
+    /// The slicer and timeline cache parts that drive the tables (T-4188), each applied to the
+    /// tables it names as a package's are.
+    pub slicer_caches: &'a [&'a [u8]],
 }
 
 /// Reads `parts` as the importer reads a package's: the cache, then each `pivotTableDefinition`
@@ -347,6 +391,7 @@ pub fn read_pivot_parts(
 ) -> Result<(PivotCache, Vec<PivotTable>), XlsxError> {
     let limits = ImportLimits::default();
     let size = (tables.iter().map(|(_, part)| part.len()))
+        .chain(parts.slicer_caches.iter().map(|part| part.len()))
         .chain([parts.cache_definition.len(), parts.cache_records.len()])
         .fold(0_u64, |total, len| total.saturating_add(len as u64));
     if size > limits.max_uncompressed_bytes {
@@ -379,24 +424,21 @@ pub fn read_pivot_parts(
     );
     let mut pivots = Vec::with_capacity(tables.len());
     for &(sheet_id, part) in tables.iter().take(MAX_PIVOTS_PER_SHEET) {
-        let mut pivot = read_pivot_table(part, sheet_id, &caches, &ids, &limits, &left)
+        let pivot = read_pivot_table(part, sheet_id, &caches, &ids, &limits, &left)
             .map_err(|Skip(reason)| XlsxError::Workbook(reason))?;
-        pivot.cache = cache_index;
         pivots.push(pivot);
+    }
+    let by_name = pivots_by_name(&pivots);
+    for &part in parts.slicer_caches.iter().take(MAX_SLICER_CACHES) {
+        let cache = read_slicer_cache(part, &limits, date_system)
+            .map_err(|Skip(reason)| XlsxError::Workbook(reason))?;
+        apply_slicer_cache(&cache, &mut pivots, &by_name, &caches);
+    }
+    for pivot in &mut pivots {
+        pivot.cache = cache_index;
     }
     let [cache] = caches;
     Ok((cache, pivots))
-}
-
-/// The relationships of a part in document order; none when the part has no relationships part.
-fn part_relationships<R: Read + Seek>(
-    archive: &mut Package<R>,
-    rels_path: &str,
-) -> Result<Vec<(String, Relationship)>, XlsxError> {
-    match archive.open_optional(rels_path)? {
-        Some(file) => parse_relationships(&XmlNode::parse(file)?),
-        None => Ok(Vec::new()),
-    }
 }
 
 /// The pivot table parts of the worksheet part `sheet`, in relationship order.
@@ -630,6 +672,8 @@ struct Definition {
     groups: Vec<FieldGroup>,
     /// The names of the grouping fields (`databaseField="0"`), which follow the database fields.
     grouping_fields: Vec<String>,
+    /// The calculated fields (`formula`, `databaseField="0"`), which follow every other field.
+    calculated: Vec<CacheField>,
     /// `refreshOnLoad` (default off).
     refresh_on_load: bool,
     /// `worksheetSource@name`, kept for export (`PivotCache::source_name`).
@@ -651,6 +695,7 @@ fn read_definition<B: BufRead>(
     let mut field_count = 0;
     let mut groups: Vec<FieldGroup> = Vec::new();
     let mut grouping_fields: Vec<String> = Vec::new();
+    let mut calculated: Vec<CacheField> = Vec::new();
     // Group items and discrete indices over all groups, counted against MAX_ITEMS as they are read.
     let mut group_values = 0_usize;
     walk(part, |path, tag| {
@@ -699,25 +744,51 @@ fn read_definition<B: BufRead>(
             let Some(builder) = builder.as_mut() else {
                 return skip("a cacheField outside cacheFields");
             };
-            if attribute(element, "formula")?.is_some() {
-                return skip("a calculated field");
-            }
+            let formula = attribute(element, "formula")?;
             let Some(field_name) = attribute(element, "name")? else {
                 return skip("a cacheField without a name");
             };
             limits.check_text(&field_name)?;
-            if field_count as usize + grouping_fields.len() >= MAX_FIELDS {
+            if field_count as usize + grouping_fields.len() + calculated.len() >= MAX_FIELDS {
                 return Err(PivotCacheError::TooManyFields.into());
+            }
+            let database = attribute(element, "databaseField")?.as_deref() != Some("0");
+            // A calculated field has no record values; Excel and the case builder write it
+            // `databaseField="0"` after the other fields (`pivot_definition.py`). One that is a
+            // database field, a field after one, and one with a child other than an empty
+            // `<sharedItems/>` are unprobed (UNVERIFIED, T-4897), and skipped.
+            if let Some(formula) = formula {
+                limits.check_text(&formula)?;
+                if database {
+                    return skip("a calculated field that is a database field");
+                }
+                if calculated.len() >= MAX_CALCULATED_FIELDS {
+                    return Err(CalculatedFieldError::TooMany.into());
+                }
+                calculated.push(CacheField {
+                    name: field_name,
+                    formula: Some(formula),
+                    ..CacheField::default()
+                });
+                return Ok(());
+            }
+            if !calculated.is_empty() {
+                return skip("a cache field after a calculated field");
             }
             // A grouping field (`Quarters`, `Years`) has no record values; Excel writes them
             // after the database fields, and the records part holds only those.
-            if attribute(element, "databaseField")?.as_deref() == Some("0") {
+            if !database {
                 grouping_fields.push(field_name);
             } else if grouping_fields.is_empty() {
                 builder.add_field(field_name)?;
                 field_count += 1;
             } else {
                 return skip("a database field after a grouping field");
+            }
+        } else if !calculated.is_empty() && path.len() >= FIELD.len() {
+            // Inside a calculated field: every later field is refused above.
+            if !(at(path, &FIELD) && name == "sharedItems") {
+                return skip("a calculated field with child elements");
             }
         } else if at(path, &FIELD) && name == "fieldGroup" {
             // The field just opened: a grouping field, or a database field grouped in place.
@@ -786,6 +857,7 @@ fn read_definition<B: BufRead>(
             records_id,
             groups,
             grouping_fields,
+            calculated,
             refresh_on_load,
             source_name,
         }),

@@ -1,3 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    elided_lifetimes_in_paths
+)]
+// LINT-DEBT-END
 use super::text_kernel::{lambda_argument_error, text_result};
 use super::util::{substitute_element, utf16_len};
 use crate::cast::value_number_text;

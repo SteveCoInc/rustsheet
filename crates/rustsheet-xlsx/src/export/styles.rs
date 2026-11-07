@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::if_not_else)]
+// LINT-DEBT-END
 use rustsheet_engine::types::{CellXfs, Font, NumFmt, Styles, Workbook};
 
 use crate::export::{
@@ -55,9 +58,8 @@ fn get_fills_xml(styles: &Styles) -> String {
         if fill_count < 2 {
             fill_count += 1;
             continue;
-        } else {
-            fills_str.push(get_fill_xml(fill));
         }
+        fills_str.push(get_fill_xml(fill));
         fill_count += 1;
     }
     let fill_count = fills.len();
@@ -95,7 +97,7 @@ fn get_cell_number_formats_xml(styles: &Styles) -> String {
     let num_fmts_str: Vec<String> = num_fmts.iter().map(num_fmt_xml).collect();
     let num_fmt_count = num_fmts.len();
     if num_fmt_count == 0 {
-        return "".to_string();
+        return String::new();
     }
     format!(
         "<numFmts count=\"{num_fmt_count}\">{}</numFmts>",
@@ -202,6 +204,12 @@ fn get_cell_xfs_xml(styles: &Styles) -> String {
 // <cellStyle xfId="0" name="Normal" builtinId="0"/>
 fn get_cell_styles_xml(styles: &Styles) -> String {
     let cell_styles = &styles.cell_styles;
+    // Excel for the web refuses an empty `<cellStyles count="0"></cellStyles>` (T-4909,
+    // docs/excel-semantics/xlsx-storage.md); a table without named styles writes no element, as
+    // a source without one had none.
+    if cell_styles.is_empty() {
+        return String::new();
+    }
     let mut cell_styles_str: Vec<String> = vec![];
     for cell_style in cell_styles {
         let xf_id = cell_style.xf_id;

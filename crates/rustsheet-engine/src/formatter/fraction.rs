@@ -19,6 +19,9 @@
 //!   returns `None`);
 //! - a `,` right after the denominator scales the value up ([`fraction_scale`]), and a fixed
 //!   denominator past 32768 is replaced by a picked one ([`LARGE_FIXED_MAX_DENOMINATOR`]).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms, clippy::too_many_lines)]
+// LINT-DEBT-END
 
 use super::parser::{NumberPart, TextToken};
 use crate::decimal_round::{round_decimal, RoundMode};
@@ -109,22 +112,21 @@ pub(super) fn format_fraction(
         }
         Denominator::Placeholders(kinds) => kinds.clone(),
     };
-    let (mut numerator, denominator) = match fixed {
-        Some(denominator) => (
+    let (mut numerator, denominator) = if let Some(denominator) = fixed {
+        (
             round_numerator((value - integer) * denominator),
             denominator,
-        ),
-        None => {
-            let max_denominator = match &fraction.denominator {
-                Denominator::Fixed(_) => LARGE_FIXED_MAX_DENOMINATOR,
-                // Past 15 digits 10^n - 1 is no longer exact in a double; no such bound can bind.
-                Denominator::Placeholders(kinds) => {
-                    let digits = i32::try_from(kinds.len()).unwrap_or(i32::MAX).min(15);
-                    10.0_f64.powi(digits) - 1.0
-                }
-            };
-            last_convergent(value - integer, max_denominator)
-        }
+        )
+    } else {
+        let max_denominator = match &fraction.denominator {
+            Denominator::Fixed(_) => LARGE_FIXED_MAX_DENOMINATOR,
+            // Past 15 digits 10^n - 1 is no longer exact in a double; no such bound can bind.
+            Denominator::Placeholders(kinds) => {
+                let digits = i32::try_from(kinds.len()).unwrap_or(i32::MAX).min(15);
+                10.0_f64.powi(digits) - 1.0
+            }
+        };
+        last_convergent(value - integer, max_denominator)
     };
     let overflows = match fixed {
         Some(_) => numerator > MAX_FIXED_NUMERATOR,

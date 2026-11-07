@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::unreadable_literal)]
+// LINT-DEBT-END
 use super::bessel_excel::{
     miller_stays_finite, EXCEL_MAX_ORDER, LN_COMPUTED_ZERO, MAX_ORDER, MILLER_ACCURACY,
     MILLER_RESCALE, MILLER_RESCALE_FACTOR,
@@ -162,7 +165,7 @@ pub(crate) fn bessel_i(n: i32, x: f64) -> f64 {
     // `BESSELI(1E+15,2)` (probes/eng-besselk-underflow-bit-shift), so the overflow is returned.
     if x.abs() > MILLER_RESCALE {
         return f64::INFINITY;
-    };
+    }
     in_miller(n, x)
 }
 
