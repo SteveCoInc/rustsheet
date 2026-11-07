@@ -8,7 +8,7 @@ priority: P3
 size: S
 tier: opus
 depends_on: []
---- Any change to which cells are listed.
+---
 
 ## Goal
 No comment line of eval/milestones/exit-exceptions.tsv or phase1-exceptions.tsv names the dropped T-1075 as owner of a cell decision 0324 gave to T-4373.
@@ -22,4 +22,5 @@ Left over from T-4646 (PR #4028): scripts/check_governance.py refuses any edit t
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
+
 - Any change to which cells are listed.
