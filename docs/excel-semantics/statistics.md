@@ -8529,5 +8529,7 @@ give 0.8616386653047765 (all-numeric 0.8444645822929768); different shapes are `
 probes/t1942-ztest-numeric-edges (excel-graph, 2026-11-07): `Z.TEST({1,2},1,2^-1074)` and `Z.TEST({1,2},1,2024*2^-1074)`
 (subnormal sigma, built by arithmetic because a subnormal literal makes Excel refuse the workbook), `Z.TEST({1,2},0,1E-308)`
 (z overflows), an omitted sigma with a data sum that overflows (9E307, 9E307, 1) and one that overflows to infinity (9E307,
-8E307 against x = -9E307) are all `#NUM!`, as `z_test.rs` computes. 36 held-out cells (random data, n not a perfect square,
-sigma given and omitted, x zero and not) match the z formula of "Engine (T-1929)" at the p level.
+8E307 against x = -9E307) are all `#NUM!`. So is a sigma of 2^-1074 whose quotient by sqrt(n) underflows to 0 in plain
+doubles (n = 4, 5, 9; A8:A10), as is the 2024*2^-1074 control at n = 4: Excel has no `#DIV/0!` for an underflowing
+sigma/sqrt(n), and the engine's fork guard for it was removed. 36 held-out cells (random data, n not a perfect square, sigma
+given and omitted, x zero and not) match the z formula of "Engine (T-1929)" at the p level; in plain doubles `fl(mean-x)*sqrt(n)/sigma` and `(mean-x)/(sigma/sqrt(n))` differ in z on 15 of the 36.

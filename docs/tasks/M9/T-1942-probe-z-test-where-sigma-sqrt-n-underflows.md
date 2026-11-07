@@ -37,7 +37,7 @@ docs/excel-semantics/statistics.md (the T-1778 section, "Engine (T-1929)").
 - Z.TEST argument coercion (T-1813).
 
 ## Outcome
-Probe `probes/t1942-ztest-numeric-edges` filled from excel-graph (43 cells, all pass). Z.TEST edges (subnormal sigma, z
-overflow, overflowing sums) are all `#NUM!`, already what the engine returns; 36 held-out z cells matched with no change.
-GAMMA.DIST with a subnormal x/b flushes to 0 (was ~1.6E-154): fixed in `gamma.rs`. Eval: probes +43 cells, 0 regressions,
-baseline updated. Rules recorded in statistics.md.
+Probe `probes/t1942-ztest-numeric-edges` filled from excel-graph (47 cells, all pass). Z.TEST with a subnormal sigma, an
+overflowing z or overflowing sums is `#NUM!`, including where sigma/sqrt(n) underflows (n = 4, 5, 9): the fork's `#DIV/0!`
+guard was wrong and is removed. 36 held-out z cells matched with no change. GAMMA.DIST with a subnormal x/b flushes to 0
+(was ~1.6E-154): fixed in `gamma.rs`. Eval: probes +47 cells, 0 regressions, baseline updated. Rules in statistics.md.
