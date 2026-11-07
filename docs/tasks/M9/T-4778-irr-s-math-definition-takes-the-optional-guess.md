@@ -3,7 +3,7 @@ id: T-4778
 title: "IRR's math definition takes the optional guess: 25 counted IRR cells with a guess have no math value (argument count)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
