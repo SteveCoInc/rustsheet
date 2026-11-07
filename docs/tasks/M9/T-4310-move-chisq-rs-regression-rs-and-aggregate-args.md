@@ -3,7 +3,7 @@ id: T-4310
 title: "Move chisq.rs, regression.rs and aggregate_args.rs from a hand-rolled Node::ReferenceKind check to evaluate_picked_reference_arg (T-2883 follow-up)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
