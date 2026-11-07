@@ -4,8 +4,8 @@ use super::erf::gamma_half_lower;
 use super::gamma_x87::excel_gamma;
 use super::gammaln::excel_gammaln;
 use super::incomplete_gamma::{
-    excel_lower, excel_small_shape_quantile, gamma_cdf, gamma_density, gamma_quantile,
-    huge_shape_quantile, Tail, DIRECT_SHAPE_MAX, HUGE_SHAPE_MIN,
+    excel_lower, excel_lower_density, excel_small_shape_quantile, gamma_cdf, gamma_density,
+    gamma_quantile, huge_shape_quantile, Tail, DIRECT_SHAPE_MAX, HUGE_SHAPE_MIN,
 };
 use super::normal::normal_quantile;
 
@@ -224,7 +224,8 @@ impl Model {
             // A subnormal density is 0, as in Excel (`(x)=0` TRUE: probes-numeric/m9-gamma-dist-a500
             // B22; docs/excel-semantics/numbers.md "Distribution densities").
             flush_subnormal(
-                log_form_density(alpha, x, beta_scale)
+                excel_lower_density(alpha, x, extended_quotient(x, beta_scale))
+                    .or_else(|| log_form_density(alpha, x, beta_scale))
                     .or_else(|| gamma_density(alpha, x, beta_scale))
                     .unwrap_or_else(|| dist.pdf(x)),
             )

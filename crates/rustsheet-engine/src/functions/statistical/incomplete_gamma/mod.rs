@@ -513,8 +513,32 @@ fn excel_form_lower(a: f64, x: f64, exponent: f64) -> Option<f64> {
     if sum.is_nan() {
         return None;
     }
-    let lead = excel_exp(exponent) / excel_exp(excel_gammaln(a + 1.0));
-    Some(lead * excel_exp(-x) * sum)
+    Some(excel_leading_factor(a, exponent) * excel_exp(-x) * sum)
+}
+
+/// Excel's leading factor x^a / Gamma(a + 1) of the lower tail, `EXP(exponent)/EXP(GAMMALN(a+1))`
+/// with `exponent` the double a·LN(x) (T-3060, T-3412), shared by the cdf form
+/// ([`excel_form_lower`]) and the density ([`excel_lower_density`]).
+fn excel_leading_factor(a: f64, exponent: f64) -> f64 {
+    excel_exp(exponent) / excel_exp(excel_gammaln(a + 1.0))
+}
+
+/// GAMMA.DIST's and CHISQ.DIST's density at `x` for shape `a` above 1 where y = x / scale (`y`,
+/// as the caller divides) is a normal double of at most 1: the cdf's leading factor times e^-y
+/// times a / x, Excel's density there (T-3412 follow-up). On the density cells of eval/ with
+/// literal arguments, split 30% by a hash of (case, cell) before scoring, it is bit-exact at 70 of
+/// 128 train and 32 of 53 test cells below shape 20, within 1 ulp at 112 and 52, and never more
+/// than 4 ulp off, where the engine's log forms were bit-exact at 29 and 14 and over 4 ulp off at
+/// 33 and 21; from shape 20 (fit-audit-t2638-ratio-min, t3252-gamma-prefactor-window and others)
+/// at 128 of 158 against 96, 1 over 4 ulp against 61. The orders tried (the factor times a / x
+/// last, or (e^-y a) / x, or y and the scale in place of x) are 47 to 56 of the 128 train cells.
+/// `None` elsewhere and where the result is not a normal double.
+pub(crate) fn excel_lower_density(a: f64, x: f64, y: f64) -> Option<f64> {
+    if !(a > 1.0 && y >= f64::MIN_POSITIVE && y <= 1.0 && x > 0.0) {
+        return None;
+    }
+    let density = excel_leading_factor(a, a * excel_ln(y)) * excel_exp(-y) * (a / x);
+    density.is_normal().then_some(density)
 }
 
 /// The shape from which the pair is Temme's uniform asymptotic expansion ([`temme_pair`]) and not a

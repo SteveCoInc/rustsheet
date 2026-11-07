@@ -8,8 +8,8 @@ use super::element_errors::array_element_error;
 use super::erf::{gamma_half_lower, gamma_half_upper};
 use super::gamma::log_form_density;
 use super::incomplete_gamma::{
-    excel_lower, gamma_cdf, gamma_density, gamma_quantile, gamma_sf, huge_shape_quantile, Tail,
-    HUGE_SHAPE_MIN,
+    excel_lower, excel_lower_density, gamma_cdf, gamma_density, gamma_quantile, gamma_sf,
+    huge_shape_quantile, Tail, HUGE_SHAPE_MIN,
 };
 use super::normal::normal_quantile;
 use crate::arithmetic::flush_subnormal;
@@ -187,7 +187,8 @@ impl Model {
             // which is 154 ulp below the exact 1/SQRT(2*PI()*1E-300) (gen-m9/3e98b26cf6713e77
             // A268, T-2638).
             let scale = 1.0 / dist.rate();
-            log_form_density(dist.shape(), x, scale)
+            excel_lower_density(dist.shape(), x, x / CHI_SQUARED_SCALE)
+                .or_else(|| log_form_density(dist.shape(), x, scale))
                 .or_else(|| gamma_density(dist.shape(), x, scale))
                 .unwrap_or_else(|| dist.pdf(x))
         };
