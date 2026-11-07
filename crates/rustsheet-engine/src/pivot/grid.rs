@@ -555,7 +555,9 @@ impl Model {
     }
 
     /// Whether `sheet` already holds each of `cells`, rendered at their places (0-based): the same
-    /// text, number or error, so writing them changes no value.
+    /// text, number or error as a value, so writing them changes no cell's content. A formula is
+    /// never already shown, even with the same result, since the write replaces it. Number formats
+    /// are not compared: the layout lines hold items and counts, not formats.
     fn already_shown(&self, sheet: u32, cells: &[RenderedCell]) -> bool {
         let Ok(worksheet) = self.workbook.worksheet(sheet) else {
             return false;
@@ -569,6 +571,9 @@ impl Model {
             let Some(cell) = worksheet.cell(row, column) else {
                 return false;
             };
+            if cell.has_formula() {
+                return false;
+            }
             match (&rendered.value, cell) {
                 (PivotCell::Error(error), Cell::ErrorCell { ei, .. }) => error == ei,
                 (PivotCell::Error(_), _) | (_, Cell::ErrorCell { .. }) => false,
