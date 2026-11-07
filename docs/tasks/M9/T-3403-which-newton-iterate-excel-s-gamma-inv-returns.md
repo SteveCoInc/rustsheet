@@ -3,7 +3,7 @@ id: T-3403
 title: "Which Newton iterate Excel's GAMMA.INV returns once the steps from the leading-factor root cycle (A355, A169, A107 left by T-3311)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -69,3 +69,18 @@ bit-level misses left then go to a `defer: phase-1b` follow-up.
 ## Out of scope
 - The deep tail below p = 1E-12 and shapes above 5, where the root test is T-3294's question (its Context has
   T-3311's fresh-sweep evidence).
+
+## Outcome
+Not the rule for which iterate Excel returns, but the gates around T-3311's nearest-F rule were the larger error:
+dropping them makes the quantile at shapes 1 to 20 and p up to 1.0000000827E-10 the nearest-F Newton steps from
+the root alone (`closed_form::excel_newton_quantile`, with a convergence check; docs/excel-semantics/statistics.md
+"Ours (T-3403)"), retiring `TINY_QUANTILE_CHECK` and `NEWTON_START_MAX` (fitted lock falls by one).
+- Rules for the cycle tried, over 865 quantile cells with Excel's arguments (literal p, shape 1 to 100): nearest-F 537
+  bit-exact; fixed step counts 0 to 120 at best 258; a step under 1E-16 to 1E-8 of x at best 368; a residual under
+  1E-16 to 1E-12 of p at best 396; nearest-F after the root-first check 472 with 43 cells over 64 ulp.
+- Evidence and fresh sweep (probes-numeric/t3403-fresh-sweep, 180 cells, frozen at 3fa09266 before the fill): in
+  statistics.md and decision 0348.
+- Eval against the T-3412 branch: gated 1 fixed, 11 closer, 1 visibly fixed (A355 `CHISQ.INV(1E-20,10)`), 1 lost
+  (A265 `CHIINV(1-1E-10,7)`, 0 to 1 ulp) and 5 farther by 1 to 2 ulp, under the owner's ruling (decision 0348);
+  ungated 189 fixed, 178 visibly fixed, 18 newly visibly off (6 quantiles and 12 cdf cells that take them), which
+  T-5014 owns with the question of which iterate Excel returns. A107 (decision 0210) stays 1 ulp off.

@@ -780,12 +780,7 @@ fn gamma_quantile_within(shape: f64, scale: f64, p: f64, tail: Tail, budget: u32
     // Then Newton steps from the root where it is close, the lower tail being the smaller one
     // in either function: `CHISQ.INV.RT(1-1E-16,3)` is Excel's first step (T-3311).
     let tiny = (small == Tail::Lower)
-        .then(|| {
-            (tail == Tail::Lower)
-                .then(|| excel_tiny_quantile(shape, target))
-                .flatten()
-                .or_else(|| excel_newton_quantile(shape, target))
-        })
+        .then(|| excel_newton_quantile(shape, target))
         .flatten();
     let x = if shape == 1.0 {
         exponential_quantile(small, target) * scale
@@ -912,8 +907,8 @@ mod huge_shape;
 mod lower_form;
 mod near_mode;
 
+use closed_form::excel_newton_quantile;
 pub(crate) use closed_form::excel_small_shape_quantile;
-use closed_form::{excel_newton_quantile, excel_tiny_quantile};
 pub(crate) use density::{accurate_gamma_density, gamma_density};
 pub(crate) use huge_shape::{huge_shape_quantile, HUGE_SHAPE_MIN};
 #[cfg(test)]
