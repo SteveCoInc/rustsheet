@@ -3,7 +3,7 @@ id: T-4741
 title: "LARGE, SMALL and MEDIAN over a mixed XLOOKUP grid: the first element decides between an error and #N/A (probes/t4704 A49:C49, A58:C58)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -18,8 +18,16 @@ LARGE, SMALL and MEDIAN over a mixed XLOOKUP grid that holds an error element an
 - Fix: the first element decides (the reference element yields `#N/A` before the later error is reached); T-4714 (todo) changes the same function to the first off-sheet reference; do them in order.
 
 ## Acceptance criteria
-- [ ] Calc A49:C49 and A58:C58 of probes/t4704 pass, with the `{2;9}` order still passing. SMALL and MAX in the reference-first order are not probed; add them to the probe in this task.
-- [ ] `make check` green; reviewers approve.
+- [x] Calc A49:C49 and A58:C58 of probes/t4704 pass, with the `{2;9}` order still passing. SMALL and MAX in the reference-first order are not probed; add them to the probe in this task.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other readers of a mixed XLOOKUP grid (T-4704).
+
+## Outcome
+`RefGrid::order_statistic_error` returns `#N/A` as soon as the first element is an off-sheet reference, before it looks for an error element; a value or error first element keeps the old rule. Probe extended (refilled on excel-graph, 2026-11-07; the 103 earlier cells unchanged): SMALL over the reference-first grid `{9;2}` is `#N/A` (Calc A88:C88) and MAX `#DIV/0!` (A91:C91), so MAX takes the error in either order while the order statistics stop at the reference. Recorded in lookup.md and SPEC-0014; unit test added. Eval delta: `probes/t4704-mixed-xlookup-grid-readers` 103 -> 109 passing; six known failures (Calc A49:C49, A58:C58) removed from the baseline, the six new cells pass.
+
+## Landing notes
+- PR #3882. The code head is fb1125193: security, design and excel-fidelity all approved it. After that come two `make catch-up` merges of `origin/main` (f91bd3026, 293157c93) and this notes commit. None of these needs a reviewer re-run.
+- Enqueued at 08:33Z on f91bd3026 with CI green. The queue removed it at 08:41Z with `MERGE_CONFLICT`: a PR merged ahead of it touched `eval/baseline/probes.txt` again. The second catch-up cleared it.
+- Next step: wait for CI to go green on the head after this commit, then call `enable_pr_auto_merge` (SQUASH). If the queue removes it for a baseline conflict again, run `make catch-up PR=3882` again.
