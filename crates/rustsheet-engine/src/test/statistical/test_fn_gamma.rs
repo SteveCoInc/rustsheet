@@ -206,7 +206,8 @@ fn test_fn_gamma_inv_huge_shape() {
 
 /// GAMMA.DIST's density is `#NUM!` where shape / x overflows, whatever the scale and the density
 /// (probes-numeric/t3316-gamma-density-overflow, -nonzero; T-3316), and its cdf is `#NUM!` from a
-/// shape of 1.85E+76 (T-3271's interim cut, T-3855); 0 on the near side of each and for a huge x
+/// shape of 1E+56 to 1E+77 at an x / beta below 1 (the band the probes bound, T-3316, T-3855); 0
+/// on the near side of each, past the band, at an x / beta of 1 or more and for a huge x
 /// (probes/t2435-dist-extremes A25:A31, A92:A102; fit-audit-t3271-density-cut A43, A45, A48).
 #[test]
 fn test_fn_gamma_dist_huge_shape_cuts() {
@@ -231,6 +232,19 @@ fn test_fn_gamma_dist_huge_shape_cuts() {
         ("A17", "=GAMMA.DIST(1E-300,1E+9,1E-6,FALSE)", "#NUM!"),
         ("A18", "=GAMMA.DIST(1E-200,1E+9,1E+100,FALSE)", "0"),
         ("A19", "=GAMMA.DIST(2,1.85E+76,1E+10,FALSE)", "#NUM!"),
+        // probes-numeric/fit-audit-t3271-cdf-cut A6, A28, A32, A36 and t3316-gamma-cdf-huge-shape
+        // A1; fit-audit A28's x / beta of 1 and A36's shape past the band are 0 in Excel.
+        ("A20", "=GAMMA.DIST(2,1E+70,1E+10,TRUE)", "#NUM!"),
+        ("A21", "=GAMMA.DIST(2,1E+56,1E+10,TRUE)", "#NUM!"),
+        ("A22", "=GAMMA.DIST(2,1E+55,1E+10,TRUE)", "0"),
+        ("A23", "=GAMMA.DIST(1,1.85E+76,1,TRUE)", "0"),
+        ("A24", "=GAMMA.DIST(1E+50,1E+77,1,TRUE)", "0"),
+        ("A25", "=GAMMA.DIST(1E-100,1E+100,1,TRUE)", "0"),
+        (
+            "A26",
+            "=GAMMADIST(2,1.853468349736796E+76,10000000000.5,TRUE)",
+            "#NUM!",
+        ),
     ];
     for (cell, formula, _) in cells {
         model._set(cell, formula);

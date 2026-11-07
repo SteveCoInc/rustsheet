@@ -1680,6 +1680,75 @@ switches there is open, T-3469), and past x = 600 it is unmeasured.
   Q are not one prefactor's two uses; the density's T-3147 evidence predates this correction and was not re-scored
   with the direct deviance (UNVERIFIED for the density).
 
+## Incomplete gamma at a small x: three rounded factors (T-3219)
+Rule: at a shape a above 1 and y = x/beta at most 1, Excel's GAMMA.DIST, GAMMADIST and CHISQ.DIST (cdf and
+density) build the prefactor from three separately rounded doubles: `power = EXP(a*LN(y))`,
+`norm = EXP(GAMMALN(a+1))` and `decay = EXP(-y)`.
+- cdf: `P = (power*decay/norm)*series`, the series 1 + y/(a+1) + y^2/((a+1)(a+2)) + ...; CHISQ.DIST.RT and CHIDIST
+  take 1 - P there.
+- density: `(power/norm)*a/x*EXP(-y)`.
+- The order is observable at 1 ulp: `CHISQ.DIST(1.5,6,TRUE)` = 0.04050543974481387 (gen-m9/35e8168aae2b00f8 A119)
+  needs the decay before the normalization, and `CHISQ.DIST(1.5,5,TRUE)` = 0.08693018545560456 (probes/
+  stat-argument-modes H152) and `GAMMA.DIST(200000,2,1000000,TRUE)` = 0.017523096306421772 (probes-numeric/
+  m9-gamma-dist-a2 A21) rule out the series before it.
+Excel is the less accurate side here, reproducibly: `GAMMA.DIST(2,8,10,TRUE)` = 5.316161131057619E-11 (ironcalc-calc
+BETA_GAMMA.xlsx BETA_DIST!L3), `GAMMA.DIST(1E-5,9,2,TRUE)` = 5.38226469068969E-54 (GAMMA.xlsx E16), P(30, 0.3) =
+5.806457425277688E-49 (gen-m9/68d8ffb69ff739d8 A341) and `CHISQ.DIST(1E-10,8,FALSE)` = 1.0416666666145884E-32
+(gen-m9/984cba67bbe6972b A49); the accurate prefactor `powf * exp / tgamma` was 17, 6, 118 and 37 ulp from them.
+On the factors they are 1, 0, 5 and 2 ulp off, all within 15 digits: the engine's EXP, LN and GAMMALN leave a residue
+of a few ulp where |a LN(y)| is large (36 at A341, 95 at A49). The research prototype measured 77/77 small-shape
+small-x literal cdfs within 2 ulp and 170/170 densities within 4 ulp (docs/research/excel-parity-findings-2026-11-07.md
+item 5).
+The quantiles do not take this form: the inverse's own cdf (`excel_form_lower`) normalizes before the decay, which
+gives Excel's first Newton iterate at `CHISQ.INV.RT(1-1E-16,3)` (gen-m9/ecc87f80077959e0 A301), and the
+leading-factor root's residual check (`excel_tiny_quantile`) stays on the accurate exponent it was fitted with.
+Where a factor is not a normal double (y^a underflows, Gamma(a+1) overflows past 170) or the result is not normal,
+the stable prefactor applies.
+Engine eval against main 317e3567f (every suite, per cell, ulps of Excel): 469 cells closer, 96 farther; 216 cells
+newly within 15 digits, 21 newly visibly off. All 21 are in probes-numeric/t3311-gamma-inv-lower-tail-cdf
+(ungated), deep lower-tail cdfs where an ulp of the double exponent a LN(y) moves P by tens of ulp and the
+engine's LN lands on a different double (the staircase of "Deep lower tail at a shape above 1"); that case has 292
+cells closer and 85 farther. No gated cell regresses (gen-m9 1766 to 1756 known failures, ironcalc-calc 266 to 263,
+probes 6854 to 6848), and Gate A is unchanged.
+Ours: `incomplete_gamma/mod.rs` `LogSeriesFactors`, `small_x_factors`, used by `pair_with` (`Exponent::Excel`) and
+`density.rs` `density_with`.
+Status: VERIFIED (excel-graph)
+Tasks: T-3219, T-4975
+
+## Small gamma quantiles: Halley steps on Excel's cdf (T-3146)
+Rule: at shapes 1 to 20 where the unit quantile is at most 1/2, Excel's CHISQ.INV, CHISQ.INV.RT, CHIINV and
+GAMMA.INV start from the leading-factor root `EXP((LN(p_low)+GAMMALN(a)+LN(a))/a)` of the lower-tail probability
+p_low (p, or 1 - p for a right-tail p) and take Halley steps `x -= t/(1 - t*((a-1)/x - 1)/2)` on the leading-factor
+series form of P (`EXP(a*LN(x))/EXP(GAMMALN(a+1))*EXP(-x)*series`) and Excel's density, with t = (p - Q)/f for a
+right-tail search and (P - p)/f for a lower-tail one. The upper tail there is `(0.5 - P) + 0.5`, each operation a
+double, not `1 - P`: exact on 51/51 cells of probes-numeric/t3148-gamma-quantile-flat-band against 45/51 for 1 - P
+(research prototype, docs/research/excel-parity-findings-2026-11-07.md item 6). That makes Q flat for up to 0.75 ulp
+of p, which is where Excel lands. When the rounded cdf cycles, the first iterate with the smallest residual is kept.
+Evidence (excel-graph), all bit-exact on the rule:
+- `CHIINV(0.975,5)` = 0.8312116134866638, 10 ulp above the true quantile (gen-m9/285d87cea1aaa73c A261,
+  4ab2ba98d26c8a5e A85). Through MOD it also fixes gen-m9/73f053591a54bc43 A108.
+- `CHISQ.INV.RT(((-0.0001)+1),3)` = 0.005214832329030269, 3,084 ulp from the true quantile
+  (gen-m9/4250f880ab640c49 A371).
+- `CHISQ.INV(1E-20,10)` = 0.0005210568413974334 (gen-m9/c2974c061384fdd9 A355).
+The switch between searching Q and searching P at 1 - p for a right-tail p is bracketed, not measured: somewhere in
+(0.9999, 0.9999462]; 0.9999 is taken (UNVERIFIED inside the bracket). Above it, the engine keeps T-3311's Newton
+steps (or the crossing) for the P search instead of Halley's. The findings' rule applies Halley there too. Against
+the rule as implemented, that variant moved 43 cells closer and 9 farther (13 gen-m9 cells such as
+`CHIINV(1-1E-16,8)`, 6 to 0 ulp), but it regresses one gated cell: `CHIINV(1-1E-10,7)` = 0.005605668625082421
+(gen-m9/eced4bb6a0234c9e A265) is bit-exact on Newton and 1 ulp off on Halley. Both are within 15 digits there; the
+P-search method above the switch is open.
+GAMMA.INV takes the rule too: Excel's `CHISQ.INV(p,2a)` is twice `GAMMA.INV(p,a,1)` (T-3311 sheet W).
+Engine eval against item 5's head (every suite, per cell, ulps of Excel): 431 closer, 55 farther; 136 cells newly
+within 15 digits, 7 newly visibly off. Those 7 are all GAMMA.INV-derived cells of the ungated
+probes-numeric/t3311-gamma-inv-lower-tail-cdf and t3311-fresh-sweep-2, such as `GAMMA.INV(1E-8,1.5,1)`, 4 to 9 ulp.
+By function: GAMMA.INV 190 closer / 20 farther, CHISQ.INV 107 / 8, CHISQ.INV.RT 32 / 0, CHIINV 9 / 0.
+t3148-gamma-quantile-flat-band goes from 167 to 206 of 361 cells passing, and from 68 to 51 visibly off.
+Gated, with item 5 against main: gen-m9 1766 to 1736 known failures, ironcalc-calc 266 to 262, no regression. Gate A is unchanged.
+Ours: `incomplete_gamma/closed_form.rs` `excel_halley_quantile`, taken in `gamma_quantile_within` after
+`excel_tiny_quantile` and before `excel_newton_quantile`.
+Status: VERIFIED (excel-graph) for the cells above; the Q/P switch is UNVERIFIED inside its bracket.
+Tasks: T-3146, T-4975
+
 ## HYPGEOM.DIST: per-call cap and lifting (T-1873)
 Rule: HYPGEOM.DIST and HYPGEOMDIST lift every argument over an array and over a two-cell range on the formula's own rows,
 each element the scalar call (stat-argument-modes H331-H336, H338-H342: every argument over `{v;v}`, the first over a
@@ -1875,11 +1944,20 @@ LN, EXP and GAMMALN are Excel's own (`x87_log10.rs`, `x87_exp.rs`, `gammaln.rs`)
   `campaign: visible`; the cdf evidence is mixed (T-3269).
 - Inputs: Excel reads at most 15 significant digits of a typed number, so a probe of `POISSON.DIST(7,1.0999999999999999,FALSE)`
   is a probe at a different mean (the 17-digit cells were dropped from the t2055 probes).
+- The k = 2..5 constants are not Excel's stirlerr, but the exact value is not Excel's pmf either (T-4975 audit 1,
+  engine eval on main 317e3567f plus items 5 and 6). With `stirlerr_exact` at every count, `POISSON.DIST(4,4.8,FALSE)`
+  (t2055-poisson-pmf-sweep A48) becomes Excel's double, but 48 other pmf cells move 1 to 4 ulp
+  off, 46 of them from bit-exact). 9 are gated, the cells listed in `POISSON_STIRLERR_2_TO_5`'s comment: gen-m9 b9a32ce9a1fd0d71 A183,
+  5cebac1f02bf30f2 A362, c7664e494e418395 A370, 91e167cd8d7eb652 A260, 7fd0a98183c6babf A107, a5342a7e24fd803e A47,
+  5919660b7bb4d195 A50, 1b31092a0d79e5f1 A358 and ironcalc-calc POISSON.xlsx D9. A GAMMALN-based Stirling error
+  `GAMMALN(k+1) - (k+0.5)*LN(k) + k - LN(SQRT(2*PI()))` in seven operation orders, on the engine's x87 GAMMALN and LN,
+  is 9 to 458 ulp from the exact value at k = 2 to 6, nowhere near the constants' -13, -12, -29 and -34. So the
+  constants stay until T-3247 finds the cause.
 Evidence: probes-numeric/t2055-poisson-pmf-sweep, t2055-poisson-pmf-switch, t1048-poisson (excel-graph, 2026-10-30 and
 2026-10-14); gen-m9 POISSON and POISSON.DIST cells (excel-graph); ironcalc-calc STATISTICAL/POISSON.xlsx (Excel-cached).
 Ours: `statistical/poisson.rs` `excel_poisson_pmf`, on `loader.rs` `excel_bd0` and `stirlerr_exact`.
 Status: VERIFIED (excel-graph) for the two forms and the switch; the k = 2..5 stirlerr is a fitted proxy
-Tasks: T-2055
+Tasks: T-2055, T-4975
 
 ## Overflowing arguments, PERMUT's limit and argument error order (T-1290)
 Rule: an F.DIST, F.DIST.RT or FDIST call whose `deg_freedom1 * x` overflows a double is `#DIV/0!` for the cdf and the
@@ -7279,14 +7357,26 @@ probes/t2435-dist-extremes A100:A102. A workbook of 34 cdf and density cells at 
 A cdf that is not 0 keeps its value: at a shape of 1E+300, x = 1E+300 is 0.5 (probes/incomplete-gamma-cap E3), and a huge
 x at a huge shape keeps its density of 0 (`GAMMA.DIST(1E+307,1E+10,0.5,FALSE)` is 0, t2435-dist-extremes A31).
 `GAMMA.DIST(1E+10,1E+10,1,TRUE)` is Excel's 0.5000013298076014 since T-1891 (Temme's expansion).
-Ours: rule 1 exactly (T-3316). For rule 2 the engine keeps T-3271's shape cut of 1.85E+76 for the cdf of a positive x and,
-since T-3316, for the density at an x/beta below 1 as well; it replaces T-3271's (shape - 1)·(-LN(x/beta)) density cut,
-which the fit audit refuted. Below 1.85E+76 the engine is 0 where Excel is `#NUM!` (and, from there up, `#NUM!` where Excel
-is 0 at beta = 1).
+Rule 2's edges, from the same cells (113 probed points at a shape from 1E+40, T-4975 audit 2):
+- at an x/beta of 1 or more Excel is 0 at all 16 probed points (shapes 1E+56 to 1E+200), so the `#NUM!` needs
+  x/beta below 1 in the cdf as well as in the density;
+- below 1E+56 every probed point is 0 (6);
+- at an x/beta below 1 Excel is still `#NUM!` at 1.853468349736796E+76 (x/beta 2E-10: gen-m9/40425341c5034eed A265,
+  `GAMMADIST(2,123456789.123*42^42,10000000000.5,TRUE)`) and 0 at 1E+100 and 1E+200 (x/beta 1E-100: fit-audit A36,
+  A39), so the upper edge is in (1.8535E+76, 1E+100), unprobed inside;
+- inside [1E+56, 1.85E+76], at an x/beta below 1, 47 of the 89 points are `#NUM!` and 42 are 0, unexplained.
+Ours: rule 1 exactly (T-3316). For rule 2 the engine returns `#NUM!` for a computed 0 of the cdf or the density at an
+x/beta below 1 and a shape in [1E+56, 1E+77] (`HUGE_SHAPE_NUM_BAND`, T-4975 audit 2; 1E+77 is a choice inside the
+upper bracket). That is right at 72 of the 114 points (the 113 probed and gen-m9 A265): all 24 outside the band or at an
+x/beta of 1 or more and 48 inside it, where Excel's 0 points stay wrong until T-3855 finds the arithmetic. T-3271's
+interim cut, `#NUM!` for every cdf of a positive x from 1.85E+76 up and for the density there at an x/beta below 1, was
+right at 60: it gave 0 at all 87 points of the band below 1.85E+76 and `#NUM!` at the 9 zeros past it or at an
+x/beta of 1 or more (fit-audit A28, A29, A32, A34:A39). It had replaced T-3271's (shape - 1)·(-LN(x/beta)) density cut,
+which the fit audit refuted.
 Status: VERIFIED (excel-graph) for rule 1, its cut pinned to 2 parts in 1E+5; rule 2 VERIFIED at the probed cells, its
 mechanism UNVERIFIED
 Tasks: T-2435, T-1891, T-2982, T-3271, T-3316, T-3530, T-3855
-Implemented in: `gamma_dist_of` (rule 1), `huge_shape_num_error` and `HUGE_SHAPE_CDF_CUT` (rule 2, interim)
+Implemented in: `gamma_dist_of` (rule 1), `huge_shape_num_error` and `HUGE_SHAPE_NUM_BAND` (rule 2, interim)
 (crates/rustsheet-engine/src/functions/statistical/gamma.rs)
 
 ## LINEST and LOGEST: shapes, one point, collinear columns, exact fits and check order (T-1741)
