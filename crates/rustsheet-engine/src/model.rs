@@ -1861,6 +1861,8 @@ impl Model {
         if self.workbook.worksheet(sheet)?.is_covered_cell(row, column) {
             return Err("Cannot edit a cell that is part of a merged cell".to_string());
         }
+        // Excel refuses any write into a data table's results (T-0452, recalc.md).
+        self.refuse_data_table_write(sheet, row, column)?;
         match self.get_cell_structure(sheet, row, column)? {
             CellStructure::SingleCell => {
                 // noop

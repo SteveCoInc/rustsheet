@@ -278,6 +278,47 @@ Status: VERIFIED (excel-graph) for the rules above; the unprobed choices are not
 Implemented in: crates/rustsheet-engine/src/data_tables.rs, crates/rustsheet-engine/src/data_table_memo.rs, crates/rustsheet-xlsx/src/import/sheet_data.rs (`data_table`), crates/rustsheet-xlsx/src/export/data_tables.rs
 Tasks: T-0428, T-0441, T-0446, T-0453
 
+## Data tables follow row and column edits around them and refuse edits that cut through them
+Rule: Excel treats a data table's region, its result cells with the row above and the column left
+of them, as one block (for the column table B4:B6 with formula B3 and values A4:A6, A3:B6):
+- an insert of rows or columns strictly inside the region is refused: a row at 4 or 5, a column at
+  B, and a cell insert at B5 shifting down;
+- a delete that takes some of the region's rows (columns) but not all is refused: row 3 (the
+  formula row), row 5, rows 4:6 (all the results, not the formula row), column A (the values) or
+  column B;
+- any write into a result cell is refused, a value, a formula or a clear, the top-left result cell
+  included; writes beside the results (a value in A5, a new formula in B3, a value in C5) are
+  accepted, and the table recomputes (A5 = 7 makes B5 72; B3 `=D1*100` makes B4:B6 100, 200, 300);
+- an insert above or left of the region (row 1, row 3, column A) moves the table and its input
+  cell with the cells; one below or right (row 7, column C) leaves the table where it is and moves
+  only an input it passes (column C moves D1 to E1: `{=TABLE(,E1)}`);
+- deleting the input's row or column makes the input `#REF!`: every result is `#REF!` and its
+  FORMULATEXT `{=TABLE(,#REF!)}` (row 1, column D); the table's own formula is `#REF!` too there,
+  as it read D1;
+- deleting every row (rows 3:6, 2:7) or column (A:B) of the region deletes the table; readers of
+  the results are `#REF!`.
+Excel for the web answers each refused edit with a 500 `GeneralException`; the desktop message is
+"Cannot change part of a data table." The workbook is left as it was.
+Evidence: probes/t0452-data-table-row-column-edits (excel-graph, 2026-11-07) for the accepted edits.
+The refused edits and writes, and rows 3:6, were probed by upload (excel-graph, 2026-11-07, T-0452):
+the probes/t0452 sheet R1 before its edit, one upload per edit, file sha256
+da35d6f0e7353fe27a726f1287ba7afaf29e2cfe1d17fcdecc06300829e13301.
+Ours: matches. `insert_rows`, `delete_rows`, `insert_columns` and `delete_columns` refuse an edit
+that cuts through a region with the message "Cannot change part of a data table" before they
+change anything, and otherwise move each table and its inputs, mark a deleted input `Deleted`, or
+drop a table whose region is deleted. Every cell write the write guard sees
+(`prepare_cell_for_user_input`: typed and stored input, values, clears, fills, pastes) into a
+result cell is refused with the same message, through the engine and the facade, whose edit then
+rolls back. Unprobed, our choices: a row or column move (`move_rows_action`,
+`move_columns_action`) that shifts any line of a region is refused whole; an insert that would push
+a table's results past the last row or column deletes the table, and one that pushes an input
+there makes it `#REF!`; copying a sheet copies its tables (Graph has no sheet copy to probe it
+with). The `UserModel` undo of a row or column delete moves a table back but does not restore an input
+the delete made `#REF!` or a table it deleted (T-4940).
+Status: VERIFIED (excel-graph) for the rules above; the unprobed choices are not
+Implemented in: crates/rustsheet-engine/src/data_table_edits.rs, crates/rustsheet-engine/src/actions.rs, crates/rustsheet-engine/src/model.rs (`prepare_cell_for_user_input`)
+Tasks: T-0452
+
 ## Data tables re-evaluate the workbook at most 2^25 formulas per recalculation
 Rule: Excel's limit on the work of data tables is unprobed; it is expected to compute every
 result cell of every table, however large the model.

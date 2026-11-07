@@ -3,7 +3,7 @@ id: T-0452
 title: "Data tables follow structural edits and refuse writes into their result cells"
 milestone: M11
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -33,12 +33,28 @@ Probe Excel first (excel-probe skill) for:
 Record the answers in docs/excel-semantics/recalc.md.
 
 ## Acceptance criteria
-- [ ] Probe cases cover the edits above and are oracle-filled; recalc.md records the rules.
-- [ ] Row and column inserts and deletes move or shrink a table's range and its inputs, or mark the
+- [x] Probe cases cover the edits above and are oracle-filled; recalc.md records the rules.
+- [x] Row and column inserts and deletes move or shrink a table's range and its inputs, or mark the
       inputs `Deleted`, as Excel does. Unit tests cover each.
-- [ ] Writing into a result cell is an error through the engine and the facade, and an undo of
+- [x] Writing into a result cell is an error through the engine and the facade, and an undo of
       `add_data_table` still works.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Recompute cost (T-0453).
+
+## Outcome
+- Probed (excel-graph, 2026-11-07): Excel treats a data table's region (results plus the row above
+  and column left) as one block. Inserts strictly inside it and deletes taking part of it are
+  refused, as is every write into a result cell (value, formula, clear). Edits above or left move
+  the table and its input; deleting the input's row or column makes it `#REF!`; deleting the whole
+  region deletes the table. probes/t0452-data-table-row-column-edits (60 cells, the accepted edits)
+  plus 22 single-edit uploads for the refusals (sha256 recorded in recalc.md).
+- Engine: `data_table_edits.rs` refuses the splitting edits before anything changes and moves,
+  `#REF!`s or drops tables after the accepted ones (`insert_rows`, `delete_rows`,
+  `insert_columns`, `delete_columns`); row and column moves touching a region are refused
+  (unprobed, our choice); `prepare_cell_for_user_input` refuses writes into results, so the
+  facade's `Txn::set` errors and rolls back. Undo of `add_data_table` is tested.
+- Copying a sheet: Graph has no sheet copy; recorded as unprobed (the copy keeps its tables).
+- Eval delta: probes +60 cells, all pass (on main the engine passed 36/60). No existing case moved.
+- Follow-up: T-4940 (UserModel undo of a delete that `#REF!`ed an input or dropped a table).
