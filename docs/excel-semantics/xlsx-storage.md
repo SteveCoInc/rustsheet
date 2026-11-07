@@ -807,7 +807,7 @@ Evidence: oracle excel-graph, 2026-11-07, T-4890 (docs/research/xlsx-round-trip/
 Excel for the web opened and saved all 104 patched saves of the fixtures and of 23 of the 24 sampled corpus cases (the
 24th, an `.xlsm`, Graph cannot open even as the source): R0, R1/E6 and R1/all. Among them:
 - 79 rewrote a worksheet;
-- 38 grew a `<dimension>`;
+- 38 changed (grew) a `<dimension>`;
 - 2 hold a cell outside its row's `spans`;
 - 15 copied a calcChain;
 - 6 added the metadata parts;
@@ -816,7 +816,7 @@ Excel for the web opened and saved all 104 patched saves of the fixtures and of 
 
 51 of the 52 R0 saves come back from Excel's save the same as the source does after Excel's save, apart from the
 ids, dates and customXml every SharePoint save writes. The 52nd has a calcChain too large to compare.
-Status: VERIFIED (Excel for the web; desktop not observed) for the spans, the dimension, a copied calcChain, the added
+Status: VERIFIED (excel-graph; desktop not observed) for the spans, the dimension, a copied calcChain, the added
 metadata parts, and appended styles and strings. UNVERIFIED (not exercised by the standard edits): a dropped calcChain and
 rows emptied by clearing. Tasks: T-4560, T-4561, T-4623, T-4890, T-4180.
 

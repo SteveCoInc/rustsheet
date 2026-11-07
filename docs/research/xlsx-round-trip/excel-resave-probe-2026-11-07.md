@@ -75,13 +75,13 @@ table below, the hint tally of the patched saves, and each R0 save that differs 
 - **External links** (the 7 fixtures external-link-*). The regenerated save keeps `[1]Sheet!A1` formulas but drops
   `xl/externalLinks/*` and `<externalReferences>`. Every one of these R1/all saves also has the empty `created`
   element, so the rule was isolated on external-link-cached-text R1/E5:
-  - c0f37b44…20 is refused.
+  - c0f37b44…02 is refused.
   - Without core.xml (10d86a14…65) it is still refused.
-  - Without only the empty `created` (9b892ce5…5d) it is still refused.
+  - Without only the empty `created` (9b892ce5…65) it is still refused.
   - Positive control: with the source's externalLink part, its relationship, its override and `<externalReferences>`
     added back (299381fb…e5), it opens.
   - Negative control: valueless-cell-forms R1/E5 without the empty `created` opens, and the same package with one
-    `[1]Uses!$A$1` formula added (dbeb46ad…c6) is refused.
+    `[1]Uses!$A$1` formula added (dbeb46a9…c7) is refused.
   - Their R0 and R1/E6 saves are patched, keep the parts, and open.
   - Fix: the existing T-4143.
 
