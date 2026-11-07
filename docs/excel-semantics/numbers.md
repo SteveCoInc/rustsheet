@@ -2343,7 +2343,7 @@ How the probe makes a filtered row: the table's autoFilter holds a values filter
 exactly the visible rows, and the hidden rows are written `hidden="1"`; Excel reads such a file as filtered without
 re-applying the filter. A worksheet-level autoFilter (no table), a manual hide inside a filtered table made in the
 application, and hidden columns are unprobed.
-Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036); probes/t4194-subtotal-nested-skip (90 cells, excel-graph, 2026-11-04, T-4194); probes/t4003-filter-column-criterion (30 cells, excel-graph, 2026-11-05, T-4003; first seen on the T-3081 throwaway uploads, xlsx-storage.md "Table parts in the export").
+Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036); probes/t4371-filtered-table-delete-filtered-column, -delete-other-column, -insert-inside and -insert-left (42 cells, excel-graph, 2026-11-07, T-4371); probes/t4194-subtotal-nested-skip (90 cells, excel-graph, 2026-11-04, T-4194); probes/t4003-filter-column-criterion (30 cells, excel-graph, 2026-11-05, T-4003; first seen on the T-3081 throwaway uploads, xlsx-storage.md "Table parts in the export").
 **Which filter makes a table filtered (T-4003):** on a table A1:B7 (`Cat` a,b,a,c,a,b, `Val` 1-6), a values filter on
 `Cat` keeping "a" with rows 3, 5 and 7 hidden gives `SUBTOTAL(9,..[Val])` = `SUBTOTAL(109,..)` = 9 and
 `SUBTOTAL(3,..[Cat])` = `SUBTOTAL(103,..)` = 3; a criterion-less filterColumn (on column 0 or on column 1) with rows 3
@@ -2353,9 +2353,17 @@ this per table (`has_active_criterion`, crates/rustsheet-xlsx/src/import/tables.
 criterion there (unprobed). Decided where Excel shows nothing: the API's `Txn::add_table(.., filtered: true)` means a
 table whose filter has a criterion that hides its hidden rows (what spec2xlsx writes and Excel reads as filtered), so it
 stays filtered in the engine, and its xlsx export writes a values filter on the first column keeping the visible rows'
-text, which Excel and our import read as filtered (T-4363; xlsx-storage.md "Table parts in the export"). A column delete that takes the last kept criterion of a filter read from a file
-unfilters the table, so the engine agrees with its own export; whether Excel unfilters the rows when the filtered column
-is deleted in the application is unprobed (T-4371). A worksheet autoFilter (no table) and an autoFilter holding only a
+text, which Excel and our import read as filtered (T-4363; xlsx-storage.md "Table parts in the export"). **A column delete in the application that takes the table's only criterion unfilters the table and shows the rows
+the filter hid** (T-4371, probes/t4371-filtered-table-*, excel-graph 2026-11-07): on a table A1:C7 (`Cat` a,b,a,c,a,b,
+`Val` 1-6, `Ext` 10-60) with the values filter on `Cat` keeping "a" (rows 3, 5, 7 hidden), deleting column A gives
+`SUBTOTAL(3,..[Val])` = `SUBTOTAL(103,..)` = 6 and SUBTOTAL 9 = 109 = 21: the rows are visible again, not left hidden by
+hand (103 would then be 3). Deleting column C (no criterion; `Sales[Ext]` becomes `#REF!`), inserting a column inside the
+table at B, or inserting one left of it at A keeps the filter (3 = 103 = 3, 9 = 109 = 9) and the hidden rows. The
+engine follows it: a column delete that takes the last kept criterion of a filter read from a file, or the first
+column of an API-filtered table (where its export writes the criterion, T-4363), unfilters the table and unhides its
+data rows (`resize_tables`, crates/rustsheet-engine/src/table_edits.rs); the undo hides them again. Unprobed: a delete
+that leaves another criterion, rows hidden by hand inside a filtered table (the engine cannot tell them from filtered
+ones and shows them too), and hidden rows outside the table (the engine keeps them hidden). A worksheet autoFilter (no table) and an autoFilter holding only a
 `<sortState>` are unprobed; ours reads the latter as not filtered.
 Status: VERIFIED
 Engine gaps: none known. SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,
