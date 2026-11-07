@@ -24,9 +24,9 @@ use thiserror::Error as ThisError;
 
 use super::added_groups::derive_added;
 use super::{
-    group_by_dates, group_by_numbers, ungroup_dates, CacheBuilder, CacheField, CacheItem,
-    CacheSource, CellArea, DateGroupBy, DateGroupError, DateGroups, ItemKey, NumberGroupError,
-    PivotCache, PivotCacheError, RecordValue, MAX_FIELDS, MAX_ITEMS, MAX_RECORDS,
+    group_by_dates, group_by_numbers, keep_ungrouped, ungroup_dates, CacheBuilder, CacheField,
+    CacheItem, CacheSource, CellArea, DateGroupBy, DateGroupError, DateGroups, ItemKey,
+    NumberGroupError, PivotCache, PivotCacheError, RecordValue, MAX_FIELDS, MAX_ITEMS, MAX_RECORDS,
     MAX_RECORD_VALUES,
 };
 use crate::calc_result::CalcResult;
@@ -164,7 +164,10 @@ pub fn refresh(
         };
         // A grouped field's items are its labels, in cache order, which `NumberGroups::new`
         // and `group_by_dates` take back unchanged.
-        *field = regroup(field, &grouping, &prior.items).map_err(|_| PivotCacheError::Group)?;
+        let base = std::mem::take(field);
+        let grouped =
+            regroup(&base, &grouping, &prior.items).map_err(|_| PivotCacheError::Group)?;
+        *field = keep_ungrouped(base, grouped);
     }
     fresh.fields.extend(added);
     // The calculated fields are no source columns: they follow the fields read, as written
@@ -567,9 +570,16 @@ impl SharedItemsFlags {
     /// Excel-saved caches carry them (oss-engines.md §5; the case builder's `shared_items`).
     #[must_use]
     pub fn of(field: &CacheField) -> SharedItemsFlags {
+        SharedItemsFlags::of_items(&field.items)
+    }
+
+    /// The flags of `items`, as [`SharedItemsFlags::of`] derives a field's: for a list that is
+    /// not a field's items, such as a grouped field's own values (the xlsx export, T-4734).
+    #[must_use]
+    pub fn of_items(items: &[CacheItem]) -> SharedItemsFlags {
         let mut flags = SharedItemsFlags::default();
         let mut whole = true;
-        for item in &field.items {
+        for item in items {
             match item {
                 CacheItem::Missing => flags.contains_blank = true,
                 CacheItem::Text(_) | CacheItem::Boolean(_) | CacheItem::Error(_) => {

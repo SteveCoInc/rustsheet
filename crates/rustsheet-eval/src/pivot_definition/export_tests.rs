@@ -74,12 +74,6 @@ fn every_probe_pivot_round_trips_through_the_export() {
                     .unwrap()
                     .into_inner();
                 let back = load_from_xlsx_bytes(&bytes, "back", "en", "UTC").unwrap();
-                if is_grouped {
-                    // Dropped with its pivots until grouped fields export (T-4734).
-                    assert!(back.pivot_tables.is_empty(), "{what}");
-                    grouped += 1;
-                    continue;
-                }
                 assert_eq!(back.pivot_caches, model.workbook.pivot_caches, "{what}");
                 let tables =
                     |t: &[PivotTable]| t.iter().cloned().map(without_lines).collect::<Vec<_>>();
@@ -89,11 +83,14 @@ fn every_probe_pivot_round_trips_through_the_export() {
                     "{what}"
                 );
                 checked += 1;
+                // Grouped fields export with their groups (T-4734).
+                grouped += usize::from(is_grouped);
             }
         }
     }
     eprintln!(
-        "{checked} probe pivots round-trip, {grouped} grouped dropped, {not_loaded} not loaded"
+        "{checked} probe pivots round-trip, {grouped} of them grouped, {not_loaded} not loaded"
     );
     assert!(checked >= 100, "only {checked} probe pivots checked");
+    assert!(grouped >= 15, "only {grouped} grouped probe pivots checked");
 }

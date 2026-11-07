@@ -17,19 +17,19 @@ use super::layout_lines;
 use crate::export::save_xlsx_to_writer;
 use crate::import::{load_from_xlsx, load_from_xlsx_bytes};
 
-fn export(model: &Model) -> Vec<u8> {
+pub(super) fn export(model: &Model) -> Vec<u8> {
     save_xlsx_to_writer(model, Cursor::new(Vec::new()))
         .unwrap()
         .into_inner()
 }
 
-fn round_trip(model: &Model) -> Model {
+pub(super) fn round_trip(model: &Model) -> Model {
     let workbook = load_from_xlsx_bytes(&export(model), "back", "en", "UTC").unwrap();
     Model::from_workbook(workbook, "en").unwrap()
 }
 
 /// The part `name` of the package `bytes`.
-fn part(bytes: &[u8], name: &str) -> String {
+pub(super) fn part(bytes: &[u8], name: &str) -> String {
     let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).unwrap();
     let mut text = String::new();
     archive
@@ -42,7 +42,7 @@ fn part(bytes: &[u8], name: &str) -> String {
 
 /// `tables` without their kept `rowItems` and `colItems`, as the engine leaves a pivot it lays out
 /// again.
-fn without_lines(tables: &[PivotTable]) -> Vec<PivotTable> {
+pub(super) fn without_lines(tables: &[PivotTable]) -> Vec<PivotTable> {
     let mut tables = tables.to_vec();
     for table in &mut tables {
         table.opaque.retain(|entry| !entry.is_layout_lines());
@@ -317,10 +317,11 @@ fn classic_layout_and_subtotal_captions_round_trip() {
     assert!(!plain.contains("gridDropZones") && !plain.contains("subtotalCaption"));
 }
 
-/// A grouped cache is dropped with its pivots: the import keeps no base values to write the
-/// group back from (T-4734).
+/// A range grouping whose field keeps no values of its own (built through the API without
+/// `group_by_numbers`) has nothing to write the shared items from: the cache is dropped with its
+/// pivots (T-4734).
 #[test]
-fn a_grouped_cache_is_dropped_with_its_pivots() {
+fn a_range_group_without_its_own_values_is_dropped_with_its_pivots() {
     let mut cache = mixed_cache();
     cache.fields[2].number_groups = Some(NumberGroups {
         start: 0.0,
