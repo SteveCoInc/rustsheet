@@ -812,13 +812,30 @@ Evidence:
   `rowPageCount=2`, `colPageCount=2`.
 
 Capture window (T-4123, `snapshot.py` `pivot_area`): the `rowPageCount` rows above the location, minus
-one blank row, and `3 * colPageCount - 1` columns wide. Both shapes above are consistent with it. In G8
-the second pair starts at E, three columns after B, and the five-column window ends at F. A capture
-cannot see past its own window, though, so a page cell outside it would go unseen (row 1 of K4,
-rows 1–4 of G8).
-Status: VERIFIED (excel-graph) for the rendering; the window is consistent with both probes, not
-independently confirmed (probe pending: T-4584). Page grids filled down with `pageWrap` are
-T-4650's (G8 cannot tell the orders apart).
+one blank row, and `3 * colPageCount - 1` columns wide. In G8 the second pair starts at E, three columns
+after B, and the five-column window ends at F.
+- probes/t4584-pivot-page-window (T-4584) reads every cell of rows 1–15, from column A to at least three
+  columns past the window, with `ISBLANK` and `&""` formulas on other sheets. It has nine pivots at D12,
+  each with one data field and no axis field. Excel's saved `rowPageCount` by `colPageCount` for each:
+  - PivA: 1 page field, defaults: 1 by 1.
+  - PivB: 2 fields, `pageWrap` 1, over then down: 2 by 1.
+  - PivC: 2 fields, `pageWrap` 1, down then over: 1 by 2.
+  - PivD: 3 fields, `pageWrap` 2, over then down: 2 by 2.
+  - PivE: 3 fields, `pageWrap` 2, down then over: 2 by 2.
+  - PivF: 5 fields, `pageWrap` 3, over then down, one item selected: 2 by 3.
+  - PivG: 5 fields, `pageWrap` 3, down then over, one field `(Multiple Items)`: 3 by 2.
+  - PivH: 4 fields, no wrap, over then down: 1 by 4.
+  - PivI: 6 fields, no wrap, down then over, one item selected: 6 by 1.
+
+  No non-blank cell lies outside the window. The margin read is at least two rows and two columns on
+  every side (more above and to the left). Inside the window, the reads match the sidecar capture cell
+  for cell.
+- The same case shows the down-then-over order. PivE puts Region and Product down D9:D10 and Channel at
+  G9. PivG puts Region, Product and Channel down D8:D10, and Year and Rep down G8:G9. The last page row
+  is always the one two rows above the location (row 10), and the location does not move.
+
+Status: VERIFIED (excel-graph) for the rendering and for the capture window (probes/t4584-pivot-page-window,
+T-4584). T-4650 can cite the down-then-over and no-wrap grids above.
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`page_area`: `rowPageCount`
 rows ending one row above the location, three columns per page column; T-4149)
 

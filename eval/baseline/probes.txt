@@ -2610,6 +2610,7 @@ C	probes/t4578-prob-sum-tolerance.case.json	24
 C	probes/t4579-ttest-paired.case.json	54
 C	probes/t4582-pivot-item-edges.case.json	45
 C	probes/t4583-pivot-row-labels.case.json	204
+C	probes/t4584-pivot-page-window.case.json	3280
 C	probes/t4585-pivot-field-names.case.json	13
 C	probes/t4586-pivot-refresh-on-load.case.json	41
 C	probes/t4587-api-name-sheet-order-case.case.json	4
@@ -10069,6 +10070,7 @@ TC	probes/t4170-pivot-manual-groups.case.json	167
 TC	probes/t4187-pivot-chart-caches.case.json	38
 TC	probes/t4505-pivot-calc-field-functions.case.json	176
 TC	probes/t4505-pivot-calc-fields.case.json	274
+TC	probes/t4584-pivot-page-window.case.json	80
 TC	probes/t4698-pivot-repeat-labels.case.json	510
 TC	probes/t4745-pivot-classic-subtotal-caption.case.json	187
 TC	probes/t4767-pivot-group-items.case.json	170
