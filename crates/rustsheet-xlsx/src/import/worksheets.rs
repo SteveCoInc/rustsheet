@@ -324,6 +324,23 @@ pub(super) fn find_or_add_formula(
     index
 }
 
+/// Whether a constant (formula-less) cell of type `cell_type` stores no value: no `<v>`, an empty
+/// `<v>` for a shared string (an index of nothing), or no `<is>` for an inline string. A `t="str"`
+/// cell with an empty `<v>` does store one, the empty string (fixtures/valueless-cell-forms A3), and
+/// `t="d"` keeps its own rule.
+fn is_valueless_constant(
+    cell_type: &str,
+    cell_value: Option<&str>,
+    rich_text_inline: Option<&str>,
+) -> bool {
+    match cell_type {
+        "b" | "n" | "e" | "str" => cell_value.is_none(),
+        "s" => cell_value.is_none_or(|v| v.trim().is_empty()),
+        "inlineStr" => rich_text_inline.is_none(),
+        _ => false,
+    }
+}
+
 pub(super) enum CellArrayKind {
     None,
     DynamicArray(i32, i32),
@@ -356,6 +373,15 @@ pub(super) fn get_cell_from_excel(
     //   s (Shared String)
     //   str (String)
 
+    if formula_index == -1
+        && anchor_cell.is_none()
+        && is_valueless_constant(cell_type, cell_value, rich_text_inline.as_deref())
+    {
+        // Excel reads a constant cell that stores no value as blank whatever its `t`: ISBLANK is
+        // TRUE, COUNTA skips it and TYPE is 1 (fixtures/valueless-cell-forms; T-4148,
+        // docs/excel-semantics/xlsx-storage.md "A cell that stores no value is blank").
+        return Cell::EmptyCell { s: cell_style };
+    }
     if formula_index == -1 {
         match cell_type {
             "b" => {

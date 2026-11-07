@@ -230,6 +230,26 @@ fn decodes_xlsx_control_char_escapes_in_text_values() {
     assert_eq!(get("A1"), Some(Value::Text("\u{1}".into())));
 }
 
+#[test]
+fn valueless_str_and_inline_constants_are_blank() {
+    // fixtures/valueless-cell-forms: no `<v>` / no `<is>` is blank, an empty one is "" (T-4148).
+    let sheet = r#"<worksheet><sheetData><row r="1"><c r="A1" t="str"/><c r="B1" t="str"></c><c r="C1" t="str"><v></v></c><c r="D1" t="inlineStr"/><c r="E1" t="inlineStr"><is><t></t></is></c><c r="F1" t="inlineStr"><is/></c><c r="G1" t="str"><v>q</v></c></row></sheetData></worksheet>"#;
+    let cells =
+        parse_sheet(sheet, "sheet1.xml", &[], &[], DateSystem::Excel1900).unwrap_or_default();
+    let get = |s: &str| {
+        Addr::parse(s)
+            .and_then(|a| cells.get(&a))
+            .map(|c| c.value.clone())
+    };
+    assert_eq!(get("A1"), None);
+    assert_eq!(get("B1"), None);
+    assert_eq!(get("C1"), Some(Value::Text(String::new())));
+    assert_eq!(get("D1"), None);
+    assert_eq!(get("E1"), Some(Value::Text(String::new())));
+    assert_eq!(get("F1"), Some(Value::Text(String::new())));
+    assert_eq!(get("G1"), Some(Value::Text("q".into())));
+}
+
 mod defined_name_tests {
     use crate::xlsx_snapshot::*;
 
