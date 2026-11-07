@@ -23,6 +23,9 @@ T-4635 records state its R4 guards and cell counts exactly.
   88 and 104 cells in different places (84 straddling cells, 4 low-shape cells, 16 Cut-sheet cells); the Outcome
   calls the first fill a hold-out although it shaped the candidate list, and the sweep straddles the cut rather than
   being log-uniform.
+- Also unprobed: an overflowing y = x / beta above shape 1E300 (`OVERFLOW_SHAPES` in
+  tools/src/rustsheet_tools/accuracy/defs/gamma_dist.py stops there, T-4625), where the Gate A definition gives no
+  value; a cell there would say whether the overflowing-y `#NUM!` holds at every shape.
 - Probe design as in docs/research/t4635 (beta 1E-8, x = y * 1E-8; Excel for the web refuses a typed literal from
   1E307 up).
 

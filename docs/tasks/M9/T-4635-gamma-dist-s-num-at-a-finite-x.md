@@ -59,6 +59,8 @@ oracle evidence brackets, and the Gate A definition gives those points a value o
 
 ## Progress
 - 2026-11-07: resumed by an opus run (branch idle 4 h, no PR); first fill in, second bracket probe next.
+- 2026-11-07: PR #3896 adopted as an orphan (idle 4 h after its landing notes, which this commit replaces); round 2's
+  open excel-fidelity findings (R4.1 hash hold-out, R4.2 Gate A batch) are answered in the Outcome.
 
 ## Outcome
 - Four probes (excel-graph 2026-11-07; generators, predictions committed before each fill and results in
@@ -72,37 +74,34 @@ oracle evidence brackets, and the Gate A definition gives those points a value o
 - Gate A: `_huge_ratio_domain` replaces the `HUGE_RATIO_MIN` / `HUGE_RATIO_SHAPES` no-value box with rule R (GAMMA.DIST,
   CHISQ.DIST, and a new CHISQ.DIST.RT domain); no value only in the unprobed edges, shapes in (1.1, 1.11) where y^a
   overflows and shapes below 1.01 where only y / a * 4 does. Sidecars refreshed for the changed definitions.
-- R4 guards (decision 0188). The 4 / a quotient is a structural model chosen from ranked candidates (4 - a,
-  exp(k (4 - a)), a / (a - 1) and 4 / a scored on the second fill's brackets; only 4 / a fits all), so it owes the
-  hold-out and fresh sweep: hold-out, the first fill (320 cells, fixed before the second probe was written; the model
-  was chosen on the second) fits 320/320; fresh sweep, gen3 after the freeze, 104/104 (84 cut-straddling points at
-  0.97 and 1.03 of the predicted cut). The answer is a domain error or 1 / 0, so the bit-exact / 4-ulp / 15-digit
-  counts are all equal to the cell counts, and the correctly rounded candidate (no `#NUM!` at a finite y) scores
-  0 of the `#NUM!` cells. Gate A envelope: the fresh sweep's points are domain errors or 1 / 0 by rule R, all inside.
-  `HUGE_RATIO_POWER_SHAPE_MAX` = 1.1 is a cut inside its evidence bracket [1.1, 1.11), tagged FITTED (fitted lock
-  96 -> 97 by `check_fitted.py --update`): its hold-out is the first fill (1.1 at 1E298 and 1.25 to 2.51 below 1E308,
-  fixed before the cut was placed, all as the cut predicts) and its fresh check the Cut sheet of gen3 (shapes 1.11 to
-  1.14, 16 of 16 numbers where y^a overflows).
+- R4 guards (decision 0188). The 4 / a quotient is a structural model chosen from ranked candidates, so it owes the
+  hold-out and the fresh sweep; `HUGE_RATIO_POWER_SHAPE_MAX` = 1.1 is a cut inside its evidence bracket [1.1, 1.11),
+  tagged FITTED (fitted lock 96 -> 97, decision 0339). The first fill shaped the candidate list.
+  - R4.1 hold-out: the fit lab's hash split (`rustsheet-fitlab huge-ratio-gamma|huge-ratio-chisq|huge-ratio-chisq-rt
+    --holdout-only`, fitlab/kernels/gamma_huge_ratio.py; default 5-point margin) over every cell of the five probes at
+    a finite y from 1E200 (GAMMA.DIST/GAMMADIST 1,198 cells, CHISQ.DIST 22, CHISQ.DIST.RT/CHIDIST 22; the outcome is
+    `#NUM!` or 1 / 0, so the bit-exact, 4-ulp and 15-digit counts are equal). Train / test exact:
+
+    | candidate | gamma | chisq | chisq-rt |
+    |---|---|---|---|
+    | 4/a (rule R) | 845/845, 353/353 | 13/13, 9/9 | 17/17, 5/5 |
+    | 4/a no power (cut 1.1 against no power branch) | 811/845, 335/353 | 13/13, 9/9 | 17/17, 5/5 |
+    | exp(k(4-a)), k = ln 2 / 2 | 811/845, 342/353 | 12/13, 8/9 | 16/17, 4/5 (refused) |
+    | a/(a-1) | 801/845, 338/353 | 12/13, 8/9 | 15/17, 5/5 |
+    | 4-a | 790/845, 329/353 | 12/13, 8/9 | 16/17, 4/5 (refused) |
+    | correctly rounded (no `#NUM!` at a finite y) | 555/845, 244/353 | 12/13, 6/9 | 16/17, 2/5 |
+
+    Rule R is the only candidate exact on both sides of every fit; the power branch's 52 GAMMA.DIST cells (shapes
+    1.01 to 1.1) are what "no power" misses (the chi-squared cells have no shape in that range).
+  - R4.2 fresh sweep: Gate A batch GAMMA.DIST/r4-T-4635 (120 points, `generate --stratum aimed`, the definition's
+    `_huge_ratio_point`: y log-uniform within 10% of rule R's cut on either side at shapes 1.01 to 1.1 and 1.11 to 4,
+    and shapes 0.3 to 1 and 4 to 10 from y 1E300 up; beta 1E-100 to 1E-8, so x stays below 1E301). Drawn and committed
+    after the freeze, filled on excel-graph 2026-11-07: 120 of 120 as predicted (48 `#NUM!`, 72 numbers);
+    `rustsheet-eval accuracy`: ENVELOPE_PLACEHOLDER. The chi-squared functions get no batch: their x = 2y would be a
+    literal of 1E307 or more, which Excel for the web refuses (first fill), and they share GAMMA.DIST's kernel at
+    y = x / 2 (the chisq-huge-x probe writes x as a product instead).
+  - The earlier probe ladder stays: the first fill (320 cells), the gen3 sweep after the freeze (104/104: 84 cells at
+    0.97 and 1.03 of the cut, 4 at shapes 0.3 and 0.7, and the Cut sheet's 16, shapes 1.11 to 1.14, all numbers where
+    y^a overflows).
 - Follow-up: T-4877 (a probe below shape 1.01, wording of the sweep counts; filed in #3912).
 - Eval delta: +1,230 passing probe cells in the four new cases; probes/t4625-gamma-dist-ratio-overflow 58 -> 62 of 62.
-
-## Landing notes
-- PR #3896. The head after this push is this commit; the previous head 861e7c290 was red on the eval gate's
-  `make eval-math-check` (probes/subexpr-05d44f6dd6cfc567-calc-a178 CHISQ.DIST.RT sidecar, stale after the catch-up
-  merge of main). This push regenerates it (`eval-math-check` current locally), adds the Rust unit test
-  `huge_ratio_cuts` in gamma.rs, fixes the fresh-sweep count in its doc comment, and cites T-4877 in the Outcome.
-- Reviews. Round 1 (27f18d65c): security, design and excel-fidelity APPROVE. Round 2 (861e7c290, after decision 0339
-  was added for the governance gate on quality/fitted.json): design REQUEST_CHANGES (T-4877 missing on the branch and
-  no Rust unit test; this push fixes both, since T-4877 merged to main in #3912). Excel-fidelity REQUEST_CHANGES on
-  the R4 paperwork, still open:
-  1. R4.1 hold-out: use the fit lab's hash split (tools fitlab/holdout.py, T-3360; default 5-point margin) over the
-     t4635 and t4625-gamma-dist-ratio-overflow cells. Score 4/a, 4-a, a/(a-1), exp(k(4-a)) and "no #NUM! at a finite
-     y", and the power-shape cut 1.1 against "no power branch". Paste the train/test table and margin into the Outcome,
-     and correct decision 0339's context, which wrongly says a hold-out split is "not meaningful".
-  2. R4.2: add an `r4-T-4635` batch to the Gate A tables of GAMMA.DIST (and CHISQ.DIST / CHISQ.DIST.RT) per SPEC-0029
-     "The R4 guards". Fill it, and record the `rustsheet-eval accuracy` envelope count. Keep the probe ladder.
-  3. MINOR: README line 13-14 has a garbled sentence. T-4877 should also note the overflowing-y quotient at shapes
-     above 1E300.
-- Next step: do 1 and 2, push once, re-run design and excel-fidelity on that head (round 3, the last before the
-  review-round limit), then enqueue when CI is green.
-- Do not repeat: decision 0339 cannot waive an R4 guard; argue from the fit-lab result instead.

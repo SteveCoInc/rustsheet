@@ -252,8 +252,10 @@ def _huge_ratio_point(rng: random.Random) -> list[Arg]:
     elif pick < 0.25:
         a, y = rng.uniform(4.0, 10.0), log_uniform(rng, 1e300, largest)
     else:
-        a = rng.uniform(HUGE_RATIO_QUOTIENT_SHAPE_MIN, HUGE_RATIO_POWER_SHAPE_MAX) if pick < 0.5 else rng.uniform(
-            HUGE_RATIO_POWER_NUMBER_SHAPE, 4.0
+        a = (
+            rng.uniform(HUGE_RATIO_QUOTIENT_SHAPE_MIN, HUGE_RATIO_POWER_SHAPE_MAX)
+            if pick < 0.5
+            else rng.uniform(HUGE_RATIO_POWER_NUMBER_SHAPE, 4.0)
         )
         cut = _huge_ratio_cut(a)
         y = min(largest, log_uniform(rng, cut / HUGE_RATIO_AIMED_SPREAD, cut * HUGE_RATIO_AIMED_SPREAD))

@@ -11,7 +11,7 @@ Hypothesis H, predicted before the fill:
 - `#NUM!` exactly for 1 < a < 2.5 at x / beta 1E308, and a number for a = 1 and a >= 2.5.
 - Every shape is a number at x / beta 1E200.
 - CHISQ.DIST and CHIDIST at df 2 to 5, x 1E200 and 1E290 (Excel for the web refuses a workbook with x 1E307 or more, first
-  fill), show what the shared incomplete gamma does below the cut; a `#NUM!` there would be
+  fill), show what the shared incomplete gamma does below the cut; a `#NUM!` there would show that the cut
   comes from the shared incomplete gamma.
 
 The ratio cut is unknown. The 1E250 to 1.7E308 columns locate it. Nothing is tuned to the fill: the rule recorded is

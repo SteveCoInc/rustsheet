@@ -13,11 +13,12 @@
     (decision 0188 R4, reviewer-excel-fidelity check 7 (a)).
   - R4 guards. The outcome is categorical (`#NUM!` or 1 / 0), so the bit-exact, 4-ulp and 15-digit counts equal the
     cell counts. The y^a branch was proposed from the first fill and placed on the second fill's Lo sheet (shapes
-    1.01 to 1.3). The fresh check came after the freeze: the Cut sheet of probes/t4635-gamma-dist-huge-ratio-fresh
-    (shapes 1.11 to 1.14, y 1E285 to 1E306), whose 16 cells are all numbers as the cut predicts. The correctly
-    rounded candidate (no `#NUM!` at a finite y) misses every `#NUM!` cell of the regime. A 30% hold-out split is not
-    meaningful for a single cut on a categorical outcome, so the fresh check stands in for it. The structural 4 / a
-    quotient is a model (check 7 (c)), not a tag; its fresh sweep scores 84 of 84 cut-straddling cells (T-4635 Outcome).
+    1.01 to 1.3). R4.1: the fit lab's hash hold-out split (fitlab/kernels/gamma_huge_ratio.py, 5-point margin) scores
+    rule R with the cut at 1.1 at 845/845 train and 353/353 test GAMMA.DIST cells, against 811/845 and 335/353 with no
+    power branch and 555/845 and 244/353 for the correctly rounded candidate (no `#NUM!` at a finite y). R4.2: the
+    fresh Gate A batch GAMMA.DIST/r4-T-4635, drawn after the freeze around the cut, is 120 of 120 as predicted, and the
+    Cut sheet of probes/t4635-gamma-dist-huge-ratio-fresh (shapes 1.11 to 1.14, y 1E285 to 1E306) has 16 numbers as
+    the cut predicts. The structural 4 / a quotient is a model (check 7 (c)), not a tag (T-4635 Outcome has the table).
   - The tag is `FITTED(T-4635, 2 cells, shape 1.1..1.11)`.
 - **Decision:** add the new tag to `quality/fitted.json` (`scripts/check_fitted.py --update`), so
   functions/statistical/gamma.rs goes from 6 to 7 tags.
