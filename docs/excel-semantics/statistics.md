@@ -8824,9 +8824,11 @@ are visible, not only last-digit:
   once-rounded square; the bias subtraction magnifies it and KURT is 3.9999999999979536 (gen-m9/27601819397dd56e A200).
   `KURT({0.2,7,3.14159,-2.5})` is -0.7628272385808703 (gen-m9/7bd219ec0c0c5e22 A386) and a 9-value KURT
   0.734384233823282 (gen-m9/c2974c061384fdd9 A20); both separate (z²)² from the chained product.
-Ruled out on a replay of 465 cached Excel KURT, SKEW and SKEW.P calls, split in two halves by case and cell hash (both
-halves support the rule): compensated summation, normalizing by a reciprocal, VAR/STDEV's one-pass variance, raw
-moments and an unstored extended accumulator each lose many cells the rule matches.
+Hold-out (T-4328, R4.1): over 651 Excel-valued SKEW, SKEW.P and KURT cells, with a 30% hash hold-out, the rule is
+bit-exact on 190 of 190 hold-out cells against 170 for the correctly rounded binary64 form; it also matches all 204 cells
+of the later adversarial probe probes/t4974-moments-x87-adversarial. An external replay (reported with the fix, not
+re-run here) also ruled out compensated summation, a reciprocal normalization, VAR/STDEV's one-pass variance, raw
+moments and an unstored extended accumulator.
 Evidence: gen-m9 and probes/t2475-stat-subexpressions (excel-graph); the eval cells of KURT (295 of 295) and SKEW
 (335 of 335).
 Ours: as Excel since T-4328 (`standardized_moment` in count_and_average.rs, shared by `fn_skew`, `fn_skew_p` and

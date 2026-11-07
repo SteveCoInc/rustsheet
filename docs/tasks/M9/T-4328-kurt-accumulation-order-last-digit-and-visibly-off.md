@@ -92,10 +92,24 @@ Cells:
   loops are gone; the zero or overflowing m2 stays `#DIV/0!` (T-2432).
 - Two visible effects: the twice-rounded FSQRT (`SKEW({1E-15,1,2})`, d208bbafc3bc1997 A262 and T-2791's P!A520) and the
   square-and-square fourth power (`KURT({0.1,42,123456789.123,0.1})`, 27601819397dd56e A200).
-- R4: ranked candidates replayed on 465 cached Excel KURT/SKEW/SKEW.P calls, split by case/cell hash into two halves,
-  both supporting the chosen form; compensated summation, reciprocal normalization, VAR/STDEV's one-pass variance, raw
-  moments and an unstored extended accumulator each lose many matching cells (statistics.md "Standardized moments use
-  stored x87 operations (T-4328)").
+- R4.1 hold-out (review round 1). The split and the margin were fixed before scoring (docs/research/t4328/r41_holdout.py,
+  its docstring). Cells: every Excel-valued cell whose whole formula is one SKEW, SKEW.P or KURT call, over the 276 cases
+  in docs/research/t4328/moment_cases.txt (651 cells: SKEW 245, SKEW.P 234, KURT 172; 133 cases). Hold-out: the first
+  byte of sha256(case!cell) below 77 (about 30%). Accept only if, on hold-out, the chosen model's bit-exact count beats the
+  reference by at least 5 cells and it loses no 15-digit cell the reference keeps. Chosen: this branch (stored x87,
+  (z·z)·(z·z)). Reference: main e74590224 (correctly rounded binary64 per operation, chained powers).
+
+  | half | n | stored x87 exact / 4 ulp / 15 digits | correctly rounded exact / 4 ulp / 15 digits |
+  |---|---:|---|---|
+  | train | 461 | 461 / 461 / 461 | 422 / 448 / 451 |
+  | hold-out | 190 | 190 / 190 / 190 | 170 / 185 / 188 |
+
+  Accepted: +20 bit-exact on hold-out (margin 5), no 15-digit cell lost. The alternatives Thomas Delteil's earlier
+  replay ruled out (compensated summation, reciprocal normalization, the one-pass variance, raw moments, an unstored
+  extended accumulator) were not re-run here.
+- R4.2 fresh sweep: probes/t4974-moments-x87-adversarial (204 cells, PR #4002, filled by excel-graph after the model
+  was frozen in the first T-4328 commit): 204 of 204 bit-exact, so every point is inside the Gate A envelope. Caveat: it
+  is an adversarial set in `probes`, not a log-uniform `probes-numeric` sweep.
 - Eval: 57 known-failure lines leave the baseline (52 gen-m9, including all 48 owned cells and the 3 visibly off;
   4 probes, T-1754's deferred Q36 and H13 among them; ironcalc MEADIAN_KURT_SKEW_HARMEAN F2), none added. KURT 295/295,
   SKEW 335/335; Gate B 462 → 464 of 506. Unit tests: test_fn_moments.rs (bit-exact Excel values and the `#DIV/0!` edges).

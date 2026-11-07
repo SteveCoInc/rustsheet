@@ -24,7 +24,7 @@ copied as `eval/suites/probes/cases/t4974-<group>.case.json` (the `val-` prefix 
 - [x] The 24 cases have excel-graph `.oracle.json` and Gate A `.math.json` sidecars.
 - [x] Their failing cells are baselined (`make eval-baseline`) and every visibly-off cell has an owner task.
 - [x] The per-group outcome (which inferred rules Excel confirms or falsifies) is in the Outcome note.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The merged-range scenarios M1-M6: they are operation scripts, not cases (`sheet_ops` has no unmerge, clear,
