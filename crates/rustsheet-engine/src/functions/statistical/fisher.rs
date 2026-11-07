@@ -4,7 +4,8 @@ use crate::arithmetic::{extended_quotient, flush_subnormal};
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error};
 use crate::functions::statistical::bratio::{
-    f_closed_or_ported_tails, kernel_tails, l140_overflows, past_evidenced_shapes,
+    bfrac_past_evidence, branch, f_closed_or_ported_tails, half_complement, kernel_tails,
+    l140_overflows, Branch,
 };
 use crate::functions::statistical::f_density::excel_f_density;
 use crate::functions::statistical::f_test_tail::f_test_bratio_p;
@@ -100,18 +101,18 @@ fn f_bup_sum_overflows(df1: f64, df2: f64, x: f64) -> bool {
 fn f_tail(df1: f64, df2: f64, x: f64, upper: bool) -> f64 {
     let (u, v) = f_beta_arguments(df1, df2, x);
     let (a, b) = (df1 / 2.0, df2 / 2.0);
-    // T-4435's regions take the large-shape expansion on the double-double ratio: b0 = df1/2 of 40 or
-    // more at a huge df2 (where the port would run bfrac past T-3571's shapes) before the port, and
-    // b0 below 40 at df2/2 under the old bound where the port declines (past L140's 9 bup terms)
-    // after it. From that bound up the fallback keeps the double ratio and the double density, the
-    // arithmetic T-4017's and T-4119's cells track.
-    let region_two = a >= L140_MAX_SHAPE && past_evidenced_shapes(b);
-    let (lower, upper_tail) = region_two
+    // T-4435's regions take the large-shape expansion on the double-double ratio: where bratio would run
+    // bfrac past T-3571's shapes (b0 = df1/2 of 40 or more at a huge df2), before the port; and on
+    // L140 bup+bgrat points the port declines (past its 9 bup terms) at df2/2 under the old bound,
+    // after it. basym, the closed forms and a shape of 1 keep their kernels. From the old bound up the
+    // fallback keeps the double ratio and the double density, the arithmetic T-4017's and T-4119's
+    // cells track.
+    let (lower, upper_tail) = bfrac_past_evidence(a, b, u, v)
         .then(|| f_large_shape_tails(df1, df2, x))
         .flatten()
         .or_else(|| f_closed_or_ported_tails(u, v, a, b))
         .or_else(|| {
-            (b < T4119_MIN_SHAPE)
+            (b < T4119_MIN_SHAPE && branch(a, b, u, v) == Some(Branch::L140BupBgrat))
                 .then(|| f_large_shape_tails(df1, df2, x))
                 .flatten()
         })
@@ -126,15 +127,12 @@ fn f_tail(df1: f64, df2: f64, x: f64, upper: bool) -> f64 {
     }
 }
 
-/// bratio's L140 (bup+bgrat) is for b0 below this; from it bfrac or basym take a huge df2.
-const L140_MAX_SHAPE: f64 = 40.0;
-
 /// (lower, upper) F tails above the mean in T-4435's regions: the upper tail `I_v(df2/2, df1/2)` by the
 /// large-shape expansion (`large_shape_beta::large_shape_lower_pair`), with its small side
 /// u = df1 x/(df1 x + df2) formed in double-double, since the double u's rounding is multiplied by
 /// about |ln tail| in the tail. On T-4435's grid (docs/research/t4435; 60-digit mpmath at the exact
 /// ratio):
-/// - region 1 (df1 20 to 79, df2 1E4 to 2E6, past L140's 9 bup terms; tails to 1E-200) is within
+/// - region 1 (df1 21 to 79, df2 1E4 to 2E6, past L140's 9 bup terms; tails to 1E-200) is within
 ///   3.7E-16, against 5.6E-12 by Cephes' fraction and 1.4E-13 by the expansion on the double ratio;
 /// - region 2 (df1 80 to 400, df2 1E5 to 1E10) is within 1.3E-15, against 5.2E-8 by bfrac.
 ///
@@ -147,11 +145,11 @@ fn f_large_shape_tails(df1: f64, df2: f64, x: f64) -> Option<(f64, f64)> {
     let scaled = dd_mul((df1, 0.0), (x, 0.0));
     let total = dd_add(scaled, (df2, 0.0));
     let u = dd_div(scaled, total);
-    if !(u.0 > a / (a + b)) {
+    if u.0.is_nan() || u.0 <= a / (a + b) {
         return None;
     }
     let upper = large_shape_lower_pair(b, a, df2 / total.0, u)?;
-    Some((1.0 - upper, upper))
+    Some((half_complement(upper), upper))
 }
 
 /// P(F <= x) for the F distribution: `I_u(df1/2, df2/2)` ([`f_tail`]).
@@ -902,6 +900,31 @@ mod tests {
                 "F.DIST.RT({x},{df1},{df2}) = {got} against {reference}"
             );
         }
+    }
+
+    /// T-4435's regions, against 40-digit mpmath at the exact ratio (docs/research/t4434/mathref.py):
+    /// region 2 (df1 80 to 400, bfrac's calls at a huge df2) was 4.7E-8 to 8.8E-8 off by bfrac
+    /// (`FDIST(1.5,80,1E10)`, probes-numeric/t4045-f-dist-rt-zero-cut E3), region 1 (df1 21 to 79 at
+    /// df2 1E5 to 1E6, past L140's 9 bup terms) 2E-13 to 1.2E-11 off by Cephes' fraction.
+    #[test]
+    fn f_tails_at_a_huge_shape_outside_the_old_bounds_follow_the_math() {
+        for (df1, df2, x, reference) in [
+            (80.0, 1e10, 1.5, 0.0025481924241211686),
+            (80.0, 1e10, 1.4, 0.010567980346381957),
+            (200.0, 1e10, 1.5, 5.9245419296008984e-06),
+            (24.0, 1e6, 5.0, 9.72630506010578e-15),
+            (24.0, 1e6, 20.0, 2.4748557825776378e-86),
+            (40.0, 1e6, 1.5, 0.021876418947230438),
+            (24.0, 1e5, 5.0, 9.939500327850076e-15),
+        ] {
+            let got = f_tail(df1, df2, x, true);
+            assert!(
+                (got / reference - 1.0).abs() < 2e-15,
+                "F.DIST.RT({x},{df1},{df2}) = {got} against {reference}"
+            );
+        }
+        let lower = f_tail(80.0, 1e10, 1.5, false);
+        assert!((lower / 0.9974518075758788 - 1.0).abs() < 2e-16, "{lower}");
     }
 
     // Excel's F quantile at a huge df is its BETA.INV mapped to F (probes-numeric, excel-graph).

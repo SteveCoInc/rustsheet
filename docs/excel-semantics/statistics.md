@@ -5187,6 +5187,22 @@ per region:
 - Per decade, the counts within 1E-15 / 1E-14 / 1E-12 relative and the worst cells are in T-4434's Outcome. The case
   adds no `#NUM!` band: T-4044's band is at df1 61 to 79 and df2 1E10, outside both regions.
 
+**Why the F route was 4.7E-8 off where BETA.DIST was not (T-4435).** `FDIST(1.5,80,1E10)` and T-4214's
+`BETA.DIST(1-q/a,a,40,TRUE)` reach the same branch, bfrac at (a0, b0) = (5E9, 40), but only the F call is swapped by
+bratio (λ < 0). There x0 is the caller's rounded complement near 1, and bfrac's prefactor, Excel's density at x0
+times x0·y0, raises it to the power a0. In T-4214's unswapped orientation x0 is the caller's own double, and y0 = 1 - x0
+is exact. `BETA.DIST(y,40,5E9,TRUE)` is swapped the same way and shows the same 4.67E-8.
+
+Ours since T-4435 (the `accuracy` stage, not Excel's arithmetic):
+- These calls take the large-shape expansion at a of 2000 and up and b up to 200: L140 points past the port's 9 bup
+  terms, and bfrac past a0 = 5000. F's tails there form the ratio, and the expansion its gamma density, in
+  double-double.
+- On T-4435's 800-point grid (docs/research/t4435) every point the change takes is within 1.6E-14 of the 60-digit
+  math, and most within 1E-15. Before, they were up to 5.2E-8 off.
+- The old a >= 1E6, b < 40 region keeps T-4119's arithmetic, which t4017's bit-exact cells track. basym, the closed
+  forms and L140's port at 9 or fewer bup terms are unchanged.
+- Seven ungated cells where Excel is 3.8E-14 to 1.2E-12 off the math now show the gap visibly (decision 0341).
+
 Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209, T-4053 (df1 = 2; decision 0267).
 
 ## F-distribution df limit (T-1530)

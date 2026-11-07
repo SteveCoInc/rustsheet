@@ -3,8 +3,12 @@ math. This sets the expansion's lower bound on a from the math alone; no Excel v
 
     tools/.venv/bin/python -I docs/research/t4435/boundary.py make          # boundary-references.json
     tools/.venv/bin/python -I docs/research/t4435/boundary.py case DIR      # scratch eval root
-    target/release/rustsheet-eval show --all --root DIR t4435/grid.case.json > show.txt   (a build that forces the expansion)
+    target/release/rustsheet-eval show --all --root DIR t4435/grid.case.json > show.txt
     tools/.venv/bin/python -I docs/research/t4435/boundary.py score show.txt
+
+The table in large_shape_beta.rs's MIN_SHAPE comment was measured with a scratch build (not committed) that ran
+`large_shape_lower` first in `bratio::ported_tails_with` at every a of 100 and up, against main's build for the old
+kernels. A plain build scores whatever kernel dispatch picks.
 
 Points: `BETA.DIST(x,a,b,TRUE)` = I_x(a, b) with a in 100 to 2E4, b in 1.5 to 200 (b/a at most 0.5), and 1 - x =
 r b/a for r in 0.5, 0.8, 1, 1.25, 2 (the mean is at r = 1), 1 - x kept below 0.5. x is rounded to 12 significant

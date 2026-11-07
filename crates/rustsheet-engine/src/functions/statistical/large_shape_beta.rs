@@ -53,6 +53,10 @@ const MIN_SHAPE: f64 = 2000.0;
 /// double ratio and the double density: T-4017's sweep has Excel's bits there on that arithmetic.
 pub(super) const T4119_MIN_SHAPE: f64 = 1e6;
 
+/// The expansion's upper bound on b before T-4435: from it up the expansion is new, so it takes the
+/// double-double r at every a.
+const T4119_MAX_SECOND_SHAPE: f64 = 40.0;
+
 /// The largest second shape the expansion is used at: T-4435's region 2 (b0 = df1/2 of 40 to 200,
 /// df1 up to 400), the range T-4434's sweep and T-4435's grids cover. Past it TOMS 708's other
 /// branches keep the point, `#NUM!` included: `BETA.DIST(0.1,1E+200,1E+100,TRUE)` is `#NUM!`
@@ -73,7 +77,13 @@ const SERIES_TOLERANCE: f64 = 1e-17;
 /// and 0 < x, y < 1; `None` elsewhere or where a step is not finite, and the caller keeps its
 /// kernel.
 pub(super) fn large_shape_lower(a: f64, b: f64, x: f64, y: f64) -> Option<f64> {
-    expansion(a, b, x, (y, 0.0), false)
+    expansion(
+        a,
+        b,
+        x,
+        (y, 0.0),
+        a < T4119_MIN_SHAPE || b >= T4119_MAX_SECOND_SHAPE,
+    )
 }
 
 /// [`large_shape_lower`] with y = 1 - x given as a double-double (head, tail), for a caller that
@@ -84,9 +94,12 @@ pub(super) fn large_shape_lower_pair(a: f64, b: f64, x: f64, y: (f64, f64)) -> O
     expansion(a, b, x, y, true)
 }
 
-/// The expansion, with r formed in double-double ([`gamma_power_ratio`]) when `precise`. Only T-4435's
-/// F calls take that ([`large_shape_lower_pair`]); every other caller keeps the double density, the
-/// arithmetic T-2528's and T-4119's cells were measured on (t4017's bit-exact cells track it).
+/// The expansion, with r formed in double-double ([`gamma_power_ratio`]) when `precise`: below
+/// [`T4119_MIN_SHAPE`] or from [`T4119_MAX_SECOND_SHAPE`] (T-4435's new range, where the deep tails of BETA.DIST at a of 2000 to 3000 are
+/// up to 1E-13 off the math with the double density; probes-numeric t3568-r5-bup-hold A285) and on
+/// F's double-double calls ([`large_shape_lower_pair`]). From that bound up every other caller keeps
+/// the double density, the arithmetic T-2528's and T-4119's cells were measured on (t4017's bit-exact
+/// cells track it).
 fn expansion(a: f64, b: f64, x: f64, y: (f64, f64), precise: bool) -> Option<f64> {
     if !(a >= MIN_SHAPE
         && a.is_finite()
@@ -151,7 +164,7 @@ fn gamma_power_ratio(b: f64, z: f64) -> f64 {
     let ln_ratio = dd_add(ln_double_double(z), dd_neg(ln_double_double(b)));
     let exponent = dd_add(dd_mul((b, 0.0), ln_ratio), dd_neg(two_sum(z, -b)));
     let exponent = dd_add(exponent, dd_neg(stirlerr_exact(b)));
-    if !(exponent.0 > MIN_RATIO_EXPONENT) {
+    if exponent.0.is_nan() || exponent.0 <= MIN_RATIO_EXPONENT {
         return accurate_gamma_density(b, z, 1.0).map_or(0.0, |density| density * z);
     }
     let power = dd_exp(exponent);

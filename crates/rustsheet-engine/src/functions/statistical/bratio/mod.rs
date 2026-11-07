@@ -165,6 +165,18 @@ pub(crate) fn dispatch(a: f64, b: f64, x: f64, y: f64) -> Option<Dispatch> {
     })
 }
 
+/// The branch bratio takes for K(a, b, x, y) (see [`dispatch`]); `None` off its domain. F's tails ask it
+/// to route T-4435's regions (`fisher.rs` `f_tail`).
+pub(crate) fn branch(a: f64, b: f64, x: f64, y: f64) -> Option<Branch> {
+    dispatch(a, b, x, y).map(|d| d.branch)
+}
+
+/// Whether bratio takes bfrac for K(a, b, x, y) at an a0 past T-3571's shapes, where the port runs the
+/// large-shape expansion instead ([`ported_tails_with`], T-4435).
+pub(crate) fn bfrac_past_evidence(a: f64, b: f64, x: f64, y: f64) -> bool {
+    dispatch(a, b, x, y).is_some_and(|d| d.branch == Branch::Bfrac && past_evidenced_shapes(d.a0))
+}
+
 /// Whether Excel's incomplete beta K(a, b, x, y) is `#NUM!` because bratio's L140 bup sum overflows
 /// ([`bup::l140_bup_sum_overflows`]): a huge shape beside one below 40, as in
 /// `NEGBINOM.DIST(28,1E+13,0.323212154487823,TRUE)` and `BETA.DIST(0.323212154487823,1E+13,29,TRUE)`
@@ -465,7 +477,7 @@ fn basym_oriented(d: &Dispatch) -> Option<(f64, f64)> {
 
 /// (0.5 - v) + 0.5, each step an x87 op stored to a double: bratio's complement and bpser's
 /// series factor 1 - b/n.
-pub(super) fn half_complement(v: f64) -> f64 {
+pub(crate) fn half_complement(v: f64) -> f64 {
     extended_sum(extended_sum(0.5, -v), 0.5)
 }
 
