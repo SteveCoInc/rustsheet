@@ -8627,3 +8627,29 @@ probes/t1942-ztest-numeric-edges (excel-graph, 2026-11-07): `Z.TEST({1,2},1,2^-1
 doubles (n = 4, 5, 9; A8:A10), as is the 2024*2^-1074 control at n = 4: Excel has no `#DIV/0!` for an underflowing
 sigma/sqrt(n), and the engine's fork guard for it was removed. 36 held-out cells (random data, n not a perfect square, sigma
 given and omitted, x zero and not) match the z formula of "Engine (T-1929)" at the p level; in plain doubles `fl(mean-x)*sqrt(n)/sigma` and `(mean-x)/(sigma/sqrt(n))` differ in z on 15 of the 36.
+
+## SKEW, SKEW.P and KURT are stored x87 operations (T-4328)
+Rule: SKEW, SKEW.P and KURT standardize the data as `z = (x - mean)/sqrt(m2/divisor)` with a two-pass mean and
+`m2 = Σ(x - mean)²` (divisor n - 1 for SKEW and KURT, n for SKEW.P), and sum the cubes `(z·z)·z` or fourth powers
+`(z·z)·(z·z)` in input order. Every operation is an x87 one stored to a double, so it rounds twice (64-bit significand,
+then binary64), the square root included. Both roundings are visible:
+- FSQRT double rounding: SKEW's variance 0.999999999999999 has the twice-rounded root 0.9999999999999996, not the
+  0.9999999999999994 of one rounding: `SKEW({1E-15,1,2})` (as `SKEW(Data!D11:D12,Data!D10)`) is
+  2.4980018054066022E-15 (gen-m9/d208bbafc3bc1997 A262; the plain binary64 loop gave 2.9976021664879227E-15).
+- Power order: the fourth power is `(z·z)·(z·z)`, not `((z·z)·z)·z`. At z = 1.4999999999999234, z² rounds twice to
+  2.24999999999977, one ulp below the once-rounded square, and the bias subtraction magnifies it:
+  `KURT({0.2,7,3.14159,-2.5})` is -0.7628272385808703 (gen-m9/7bd219ec0c0c5e22 A279; binary64 gave ...8685).
+- More cells now exact: `KURT({0.1,42,123456789.123,0.1})` 3.9999999999979536 (gen-m9/27601819397dd56e A200),
+  the nine-value KURT 0.734384233823282 (gen-m9/c2974c061384fdd9 A55), KURT(-0.0001,100,2,0.1,42) 1.51497677145435
+  (27601819397dd56e A108), `KURT({1,..,10})` -1.2000000000000002 (gen-m9/a013a45a8fbcab4f A2, a54c738c697617c3 A41) and
+  KURT(3,5,2,8,9,4,7,1,TRUE) -1.4331834319526635 (probes/stats-evidence-floor-t1623).
+The statistics combine as `fl(n/fl((n-1)(n-2)))·Σz³` (SKEW), `Σz³/n` (SKEW.P) and
+`fl(fl(n(n+1))/fl((n-1)(n-2)(n-3)))·Σz⁴ - fl(3(n-1)(n-1))/fl((n-2)(n-3))` (KURT), each stored.
+Overflowing squares and zero variance stay `#DIV/0!` ("Overflowing squares (T-2432)").
+Evidence: the gen-m9 and probe cells cited (excel-graph). The research replay (docs/research/excel-parity-findings-
+2026-11-07.md item 2: 465 cached calls, train/holdout by case and cell hash) rejected compensated summation, reciprocal
+normalization, a one-pass variance, raw moments and unstored extended accumulators.
+Ours: `Moment` and `standardized_moment` (functions/statistical/count_and_average.rs) since T-4975; the three
+copy-pasted binary64 loops are gone.
+Status: VERIFIED (excel-graph)
+Tasks: T-4328, T-4975
