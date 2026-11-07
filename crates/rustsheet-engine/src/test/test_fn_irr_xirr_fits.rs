@@ -407,3 +407,20 @@ fn irr_checks_the_discount_domain_at_convergence() {
         ),
     ]);
 }
+
+#[test]
+fn irr_secant_cap_is_the_same_for_every_call() {
+    // T-4975 audit 3: probes-numeric/t3478-irr-r4-wide Calc!A206, whose largest flow (4.7E+8) was
+    // outside the long cap's training box, so its run stopped at 50 steps and was #NUM!.
+    let got = results(&[
+        "=IRR({-466383321.854056,3602903.77027555,11883179.3894947,10170065.7109031,6380517.86458303,1450414.65489934,12053622.5684458,9761577.23690692,4723702.18738595,13954374.168184,1948909.77982285,1521967.75462305,1903606.31559473,6219742.45447484,5021479.79737767,11247062.8492215,12565660.4212703,975394.321243717,12643033.4354266,11881291.9671628,14396710.0095129,3754495.40967869,5823106.16523961,10920824.4648419,15739809.7660733,6240870.52051412,6828064.55051699,5715666.44535026,10074110.7706943,808257.810304779,14265901.8345943,6905324.43894212,13005472.6427097},16396220.611551)",
+    ]);
+    assert_eq!(got, [(-0.031_819_409_296_013_46_f64).to_bits()]);
+    // A trailing zero flow leaves NPV unchanged, and so the root: it used to move the call out of
+    // the box (54 to 55 flows) and turn it #NUM!.
+    let got = results(&[
+        "=IRR(VSTACK(-50,SEQUENCE(53,1,1,0)),-0.9)",
+        "=IRR(VSTACK(-50,SEQUENCE(53,1,1,0),0),-0.9)",
+    ]);
+    assert_eq!(got[0], got[1]);
+}

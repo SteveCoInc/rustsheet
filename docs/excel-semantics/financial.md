@@ -972,7 +972,7 @@ outside `IRR_LONG_RUN_RANGE` (6..54 flows), on longer series:
   from 0.1 reaches the step-62 point whose discount underflows. The engine stops at step 50 and is `#NUM!`.
 These 21 cells are T-4839's (excel-graph, 2026-11-07).
 Status: DEVIATION (decision 0014)
-Implemented in: `xirr_bracket` (`WALK_CAP`), `compute_xirr` (`BISECTION_CAP`), `irr_secant` (`irr_secant_steps`),
+Implemented in: `xirr_bracket` (`WALK_CAP`), `compute_xirr` (`BISECTION_CAP`), `irr_secant` (`IRR_SECANT_STEPS`, `IRR_STALL_STEPS`),
 `irr_fallback` (`IRR_FALLBACK_STEPS`) (functions/financial/financial_util.rs)
 Tasks: T-0916, T-1686
 
@@ -1798,8 +1798,11 @@ there, and only for 27 to 144 flows with the largest |flow| 1.3E+4 to 6.7E+14.
   t3347-irr-r4-fresh A52, A53, A58, A74, A109). The engine was `#NUM!` there and is `#DIV/0!` now: wrong either way.
   Those roots are the "near -10%" returns of T-3347's Goal, so Excel's secant does not take the engine's path on them.
 Evidence: the cells above (excel-graph); the cut is scored by an engine run with the rule and without it
+- **No guess or flow-range gate (T-4975 audit 3).** The cut used to apply only to runs from the guess 0.1 and to 27..144
+  flows of largest |c| 1.3E+4..6.7E+14; dropping both conditions moves no cell of probes, probes-numeric, gen-m9 or
+  ironcalc-calc and no Gate A point, so the cut now applies to every flat run.
 Status: VERIFIED (excel-graph) for the cells; the rule is a FITTED proxy (decision 0188 R4, decision 0316)
-Implemented in: `irr_flat_is_div_zero`, `IRR_FLAT_DIV_ZERO_NPV` (functions/financial/financial_util.rs)
+Implemented in: `IRR_FLAT_DIV_ZERO_NPV` in `irr_secant` (functions/financial/financial_util.rs)
 Tasks: T-3347, T-3548
 
 ## IRR's discount domain is checked at convergence
@@ -4958,11 +4961,17 @@ The earlier, partial picture (kept for its evidence):
 Evidence: probes-numeric/t3411-irr-r4-fresh and t3411-irr-r4-fresh-2 (excel-graph, 2026-11-02; fresh sweeps with
 50-digit roots in their `.math.tsv`, docs/research/t3411/gen_sweep.py), plus the cells named above. The replica behind
 the step counts was scratch code and is not committed.
+- **The cap applies to every call (T-4975 audit 3).** The 200-step cap no longer depends on a training-set box of flow
+  count, largest flow and guess (50 steps outside it): `IRR(VSTACK(-50,SEQUENCE(53,1,1,0)),-0.9)` returned its root
+  while the same flows with a trailing 0 (NPV unchanged) were `#NUM!`, and probes-numeric/t3478-irr-r4-wide A206
+  (largest flow 4.7E+8) was `#NUM!` where Excel returns -0.03181940929601346. Without the box 23 eval cells pass that
+  failed (probes 21, gen-m9 2), none is lost, and Gate A is unchanged. The stall bound of 50 steps stays
+  (`IRR_STALL_STEPS`).
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
-Ours: `irr_secant` takes up to 200 steps (`IRR_LONG_RUN_STEPS`, FITTED, decision 0320) on 6..54 flows with the largest
-|c| in 5.6E-9..2.2E+8 and a guess in -0.99934..9.81E+7 (`IRR_LONG_RUN_RANGE`, the range of the returning train runs
-whose run and retry differ; the cap is a train-score plateau point, not Excel's), 50
-elsewhere; a stalled zero step stops a run only within its first 50 steps (the old cap, inside the 41..69 bracket, not
+Ours: `irr_secant` takes up to 200 steps (`IRR_SECANT_STEPS`, FITTED, decision 0320; the cap is a train-score plateau
+point, not Excel's) on every run since T-4975 (audit 3); before, only on 6..54 flows with the largest |c| in
+5.6E-9..2.2E+8 and a guess in -0.99934..9.81E+7 (`IRR_LONG_RUN_RANGE`, the range of the returning train runs whose run
+and retry differ), and 50 elsewhere; a stalled zero step stops a run only within its first 50 steps (the old cap, inside the 41..69 bracket, not
 fitted; T-3408). Earlier, a 213-step cap without the stall limit was tried
 (T-3806) and dropped because it loses A227, and a 185-step one (T-3548) because it loses Gate A A228.
 Tasks: T-3411, T-3806 (dropped), T-3548, T-3408
@@ -5049,8 +5058,8 @@ Rule (partial; the stage's method is still unknown): where IRR's secant from the
 depend on the guess. IRR first runs the secant of "IRR is a secant in d" from the guess. When that run fails, the value comes
 from a stage that sees only the flows' NPV values, and that stage stops on the same absolute |NPV| < 1e-7 test. On
 long level annuities the engine's secant, run without its 50-step cap (the "exact replica" below, capped at 200 or 400
-steps), is Excel's to the bit, the failing runs included. The shipped secant stops at 50 steps on these 55+ flow
-series, outside `IRR_LONG_RUN_RANGE`, and misses 21 cells for that reason alone ("The IRR and XIRR solver caps").
+steps), is Excel's to the bit, the failing runs included. The secant stopped at 50 steps on these 55+ flow
+series, outside `IRR_LONG_RUN_RANGE`, and missed 21 cells for that reason alone (T-4975 audit 3 lifted the box) ("The IRR and XIRR solver caps").
 - **Guess ladder** (probes/t4844-irr-guess-ladder: 12 annuities of probes/t3406-irr-num-boundary, A6 A8 A10 A11 A28 A30
   A32 A51 A53 A55 A75 A77, 21 to 61 flows, roots -0.06 to -0.22, each from 37 guesses -0.9..0.9 by 0.05).
   - Every cell is a number. Excel gives the default call's bits on exactly the 227 guess cells where the engine's
