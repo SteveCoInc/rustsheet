@@ -8653,3 +8653,54 @@ Ours: `Moment` and `standardized_moment` (functions/statistical/count_and_averag
 copy-pasted binary64 loops are gone.
 Status: VERIFIED (excel-graph)
 Tasks: T-4328, T-4975
+
+## BINOM.DIST's pmf stores its deviance subtractions on bd0's log form (T-4975)
+Rule: in BINOM.DIST's own interior pmf (BINOMDIST's, and BINOM.DIST.RANGE's one-point range), where either of Loader's
+two deviances bd0(k, np), bd0(n-k, nq) takes its log form, Excel stores R's sequential subtractions
+`lc = fl(fl(S - bd0(k, np)) - bd0(n-k, nq))` (S the stirlerr sum, stored) to doubles before adding the extended -lf/2
+and calling EXP. `BINOM.DIST.RANGE(7,1E-20,6)` is 6.999999999999857E-120 (gen-m9/9cca17438a7e6f8a A360), where the
+unstored extended chain was 154 ulp high (7.000000000000068E-120). The store follows bd0's existing x87 branch
+decision, not a binary64 one: `BINOM.DIST(2,10,0.3,FALSE)` sits on the series side of the x87 cut only and stays
+0.23347444050000005 unstored (storing it there moves it off by one ulp). The scaled callers keep the extended chain:
+BETA.DIST's density and NEGBINOM.DIST's pmf.
+Fit (literal cells of probes-numeric t2513-r3-binom-pmf-a/-hold/-n, t2513-verify-r3-binom-pmf-h,
+t2146-binom-negbinom-pmf-fresh, t2145-binomial-sweep, t2145-binom-range-sweep, t3352-binom-negbinom-sweep,
+m9-legacy-binomdist; exact / within 4 ulp / within 15 digits):
+
+| candidate | BINOM.DIST (13,324) | BINOM.DIST.RANGE (790) |
+|---|---|---|
+| extended chain (before) | 4,315 / 9,811 / 11,062 | 591 / 726 / 762 |
+| store X = fl(-bd0p - bd0q) only | 4,255 / 9,700 / 10,993 | 591 / 723 / 752 |
+| per-branch store, unstored S | 4,863 / 10,305 / 11,365 | 621 / 743 / 770 |
+| **both subtractions stored when either bd0 is log** | 5,039 / 10,408 / 11,445 | 620 / 743 / 770 |
+| both stored always (series too) | 5,099 / 10,412 / 11,456 | 620 / 743 / 770 (breaks the series control) |
+
+The research replay (findings item 3, fixed train/holdout of 2,251 interior pmfs) gave 228/1117 → 469/1117 (train) and
+242/1134 → 471/1134 (holdout) exact.
+Evidence: the cells cited (excel-graph).
+Ours: `LoaderExponent::{Probability, ScaledProbability}` and `Bd0Branch::store` in functions/statistical/loader.rs,
+selected in binom.rs, since T-4975.
+Status: VERIFIED (excel-graph) for the cells cited; the rule is a structural fit (bit-exact on about 38% of the pmf
+cells)
+Tasks: T-2146, T-4352, T-4975
+
+## LOGNORM.DIST's density is a TwoSum chain of its negative log (T-4321)
+Rule: LOGNORM.DIST(x, mean, sigma, FALSE) accumulates the negative log density in a fixed order as a compensated
+(TwoSum) chain, and adds the low-order residuals back with the wrong sign:
+- d = LN(x) - mean (Excel's LN, stored x87 subtraction);
+- half = fl(fl(fl(d·d)/fl(sigma·sigma))·0.5), the squares before the quotient, each stored; where either square is not a
+  normal double, fl(fl(d/sigma)²·0.5);
+- (h, e1) = TwoSum(half, LN(sigma)), (h, e2) = TwoSum(h, ln √(2π)) with the correctly rounded 0.9189385332046728,
+  (h, e3) = TwoSum(h, LN(x));
+- the density is `EXP(-h)·(1 + (e1 + e2 + e3))` with Excel's EXP (the residual kept positive after the head is
+  negated), 0 where `half` overflows.
+So `LOGNORM.DIST(1,0,1,FALSE)` is EXP(-0.9189385332046728) = 0.39894228040143265, one ulp under 1/√(2π)
+(probes-numeric/m9-normpdf-lognorm-dist A4), `LOGNORM.DIST(40,0,0.5,FALSE)` 3.0218137820578166E-14
+(gen-m9/b4173fe25109a238 A48, 34 ulp off the true density), `LOGNORM.DIST(1,1,0.1,FALSE)` 7.694598626706419E-22
+(gen-m9/3a25a03eb94fcfbd A220), `LOGNORM.DIST(37.5,1.5,3.14159,FALSE)` 0.0026942612028169207 (85f48d5cdfb24555 A310)
+and `LOGNORM.DIST(10,0.2,3.14159,FALSE)` 0.010150659136505528 (caa1eed48b1883fe A250).
+Evidence: the cells cited (excel-graph); the research prototype (findings item 10) matched all 120 density-sweep cells of
+m9-normpdf-lognorm-dist and 200 Gate A points.
+Ours: `lognormal_density` (functions/statistical/log_normal.rs) since T-4975.
+Status: VERIFIED (excel-graph)
+Tasks: T-4321, T-4975
