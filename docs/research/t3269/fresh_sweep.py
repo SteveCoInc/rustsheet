@@ -19,12 +19,14 @@ CASE = Path(__file__).resolve().parents[3] / (
 )
 
 
-def write_case(path: Path, description: str, cells: dict[str, str], hypotheses: dict[str, str]) -> None:
-    """Write a one-sheet (Calc) probes-numeric case; fresh_sweep_2.py shares it."""
+def write_case(
+    path: Path, description: str, cells: dict[str, str], hypotheses: dict[str, str], task: str = "T-3269"
+) -> None:
+    """Write a one-sheet (Calc) probes-numeric case; fresh_sweep_2.py and t3469/fresh_sweep_3.py share it."""
     case = {
         "format": "rustsheet-case/v1",
         "description": description,
-        "tags": ["M9", "probe", "statistics", "T-3269", "poisson", "chisq", "sweep"],
+        "tags": ["M9", "probe", "statistics", task, "poisson", "chisq", "sweep"],
         "expected": {},
         "hypotheses": hypotheses,
         "sheets": [{"name": "Calc", "cells": cells}],
