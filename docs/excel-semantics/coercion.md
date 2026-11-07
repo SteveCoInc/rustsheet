@@ -1278,7 +1278,7 @@ Numeric text in a one-cell argument is a 0 factor too, like non-numeric text: wi
 CONFLICTING (decision 0030 2: Excel 15 is below AppVersion 16; decision 0039: the web value is the Phase 1-3 target):
 poi/FormulaEvalTestData_Copy.xlsx (AppVersion 15.0300, Excel 2013) caches `#VALUE!` for EverythingTests!J1328
 `SUMPRODUCT(G1330:G1330,I1330:I1330)` (G1330 the text "4", I1330 the number 2), where Microsoft 365 gives 0 on the same shape
-(probe A45). The engine follows M365, and J1328 stays a known failure until a 16.x desktop value decides (T-1075, M14).
+(probe A45). The engine follows M365, and J1328 stays a known failure until a 16.x desktop value decides (T-4373, decision 0324).
 Status: VERIFIED (excel-graph); CONFLICTING with the Excel 15 cached J1328.
 Tasks: T-0944, T-2150, T-2296, T-2450, T-2573, T-2921
 
@@ -1318,7 +1318,7 @@ CONFLICTING (decision 0030 2: Excel 15 is below AppVersion 16; decision 0039: th
 target; decision 0067): poi/FormulaEvalTestData_Copy.xlsx (Excel 15) caches `#VALUE!` for EverythingTests!G936
 `MODE(C9,E16,"1",B8)`, H936 `MODE(B8,"1",2,3)` and K936 `MODE("1",1,#DIV/0!,2,3)`, where Microsoft 365 gives
 `#N/A`, `#N/A` and `#DIV/0!` on the same inputs (probes/mode-typed-text-no-mode A3, A4, A2). The engine follows
-M365, and the three cells are known failures until a 16.x desktop value decides (T-1075, M14). M936
+M365, and the three cells are known failures until a 16.x desktop value decides (T-4373, decision 0324). M936
 `MODE(B9,2,D7)` (`#VALUE!`, blank single-cell reference) and D936, F936, I936, J936, L936 agree with M365.
 Status: VERIFIED (excel-graph); CONFLICTING with the Excel 15 cached G936, H936, K936
 Implemented in: `collect_mode_values` (mode_functions.rs); MODE.SNGL/MODE.MULT share it (typed text and
@@ -1436,7 +1436,7 @@ probes/and-or-xor-picked-text, 70 cells, excel-graph, T-1685). A direct LAMBDA i
 When nothing but skipped text is left, the result is `#VALUE!` (`AND("1")`, `AND("")`, `OR("","")`). An
 error argument wins (`AND("1",#N/A)` = `#N/A`). OR and XOR behave the same.
 CONFLICTING (decision 0030 2: Excel 15 is below AppVersion 16; decision 0039: the web value is the Phase 1-3
-target, and the desktop check is T-1075 item 7): poi/FormulaEvalTestData_Copy.xlsx
+target, and the desktop check is owned by T-4373, decision 0324): poi/FormulaEvalTestData_Copy.xlsx
 EverythingTests!J136 caches `#VALUE!` for `AND("1",1)`, where current Excel for the web gives TRUE. The engine
 follows the web, and J136 stays a known failure until a 16.x desktop value decides (M14). I136 `AND(E14,E17,"1")`
 is not a conflict: E14 and E17 hold text or are empty, so every argument is skipped and both versions give `#VALUE!`.

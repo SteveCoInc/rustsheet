@@ -3,7 +3,7 @@ id: T-4646
 title: "Point the stale T-1075 references at T-4373 and decision 0324"
 milestone: M9
 lane: functions-math
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,3 +31,6 @@ added poi EverythingTests!J1328. Some prose still names T-1075, which decision 0
 
 ## Out of scope
 - Any change to which cells are listed, or to their decisions.
+
+## Outcome
+The tsv comment lines of exit-exceptions.tsv and phase1-exceptions.tsv and the three coercion.md entries (J1328, MODE G936/H936/K936, J136) now name T-4373 and decision 0324. Comment lines only; no listed cell or decision changed. Other docs/excel-semantics mentions of T-1075 (items for other cells) are left for their own entries. Eval delta: none.
