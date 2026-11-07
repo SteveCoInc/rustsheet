@@ -2051,7 +2051,7 @@ Evidence: gen-m7 cases above (excel-graph, 2026-10-21, T-2225); probes/t4475-sca
 Ours: implemented (T-2306): `fn_scan` and `fn_reduce` hand error values to the LAMBDA and SCAN keeps an error step in its slot.
 Since T-2307, `lambda_initial_value` keeps a reference initial_value a reference; since T-4475 it binds it with
 `Model::bind_argument`, as a LAMBDA call binds an argument (the 3-D span read as its `#VALUE!`), and REDUCE and SCAN pass that
-binding to the first call (`call_lambda_caller_bound`); ISREF of a parameter bound to a union is TRUE (references.md
+binding to the first call (`call_lambda_caller_binding`); ISREF of a parameter bound to a union is TRUE (references.md
 union entry). D11 and F11 (REDUCE keeping a returned reference) pass since T-4478.
 A blank cell taken into an array by HSTACK counts as a 0 argument when an element reaches AVERAGE: `REDUCE(<3x1 text array>,
 HSTACK(Data!Z1:Z2,{1;2}),_xleta.AVERAGE)` is 1.125 = AVERAGE(AVERAGE(AVERAGE(AVERAGE(texts,0),1),0),2) (gen-m7/f19581ac44da1653 Calc!A2088,
