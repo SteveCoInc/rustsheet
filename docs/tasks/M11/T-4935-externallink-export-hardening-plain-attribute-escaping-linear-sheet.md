@@ -3,7 +3,7 @@ id: T-4935
 title: "externalLink export hardening: plain attribute escaping, linear sheet dedup, non-finite cached numbers"
 milestone: M11
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -39,3 +39,10 @@ These are the MINOR findings of the T-4143 review (PR #3958, security and design
 
 ## Out of scope
 - How Excel opens a saved part (T-4936).
+
+## Outcome
+- Added `escape_attribute` (markup characters only, no `_xHHHH_`) in `export/escape.rs`; the externalLink rels `Target`, `sheetName@val` and `definedName` attributes use it, so `_x0041_` round-trips (no importer decodes `_xHHHH_` there). Cached text still uses `escape_text`.
+- Importer dedups `sheetData` sheetIds with `HashSet`s (linear).
+- The cell export has no non-finite handling (`saved_number` only flushes subnormals), so a non-finite cached number is written as `t="e"` `#NUM!` (engine never produces one; API-built books only). Test added.
+- The unnamed-column skip is documented in `cell_xml`.
+- Eval delta: none (export-only change).

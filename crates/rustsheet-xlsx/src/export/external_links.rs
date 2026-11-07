@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use rustsheet_engine::expressions::utils::number_to_column;
 use rustsheet_engine::types::{ExternalBook, SpillValue, Workbook};
 
-use super::escape::{escape_text, escape_xml};
+use super::escape::{escape_attribute, escape_text};
 use super::worksheets::{exported_error_literal, saved_number};
 use super::xml_constants::XML_DECLARATION;
 
@@ -92,7 +92,7 @@ pub(super) fn external_link_rels_xml(book: &ExternalBook) -> Option<String> {
     writes_book(book).then(|| {
         format!(
             "{XML_DECLARATION}\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"{EXTERNAL_LINK_PATH_RELATIONSHIP}\" Target=\"{}\" TargetMode=\"External\"/></Relationships>",
-            escape_xml(&book.target)
+            escape_attribute(&book.target)
         )
     })
 }
@@ -111,7 +111,7 @@ pub(super) fn external_link_xml(book: &ExternalBook) -> String {
     if !book.sheet_names.is_empty() {
         xml.push_str("<sheetNames>");
         for name in &book.sheet_names {
-            xml.push_str(&format!("<sheetName val=\"{}\"/>", escape_xml(name)));
+            xml.push_str(&format!("<sheetName val=\"{}\"/>", escape_attribute(name)));
         }
         xml.push_str("</sheetNames>");
     }
@@ -124,8 +124,8 @@ pub(super) fn external_link_xml(book: &ExternalBook) -> String {
                 .unwrap_or_default();
             xml.push_str(&format!(
                 "<definedName name=\"{}\" refersTo=\"{}\"{sheet_id}/>",
-                escape_xml(&name.name),
-                escape_xml(&name.formula)
+                escape_attribute(&name.name),
+                escape_attribute(&name.formula)
             ));
         }
         xml.push_str("</definedNames>");
@@ -181,10 +181,15 @@ fn sheet_data(book: &ExternalBook) -> SheetData<'_> {
 /// A cached `<cell>`, typed as the import reads it back (`str`, `b`, `e`, or a number untyped).
 /// A cell whose column has no name is left out: the import never caches one.
 fn cell_xml(row: i32, column: i32, value: &SpillValue) -> String {
+    // Only an API-built book has a column with no name; the caller opens its `<row>` first, so
+    // the row can be empty, which `CT_Row` allows.
     let Some(column) = number_to_column(column) else {
         return String::new();
     };
     let (kind, text) = match value {
+        // Excel rejects `NaN`/`inf` in `<v>`; the engine never caches one, so an API-built book
+        // is the only source. Saved as `#NUM!`, the error such a number stands for.
+        SpillValue::Number(v) if !v.is_finite() => (" t=\"e\"", "#NUM!".to_string()),
         SpillValue::Number(v) => ("", saved_number(*v).to_string()),
         SpillValue::Text(text) => (" t=\"str\"", escape_text(text).into_owned()),
         SpillValue::Boolean(b) => (" t=\"b\"", if *b { "1" } else { "0" }.to_string()),
@@ -242,6 +247,27 @@ mod tests {
         );
         let rels = external_link_rels_xml(&book()).unwrap();
         assert!(rels.contains("Target=\"a&amp;b.xlsx\" TargetMode=\"External\""));
+    }
+
+    #[test]
+    fn underscore_lookalike_escapes_in_attributes_are_written_plain() {
+        let mut b = book();
+        b.target = "_x0041_.xlsx".into();
+        b.sheet_names = vec!["_x0041_".into()];
+        assert!(external_link_rels_xml(&b)
+            .unwrap()
+            .contains("Target=\"_x0041_.xlsx\""));
+        assert!(external_link_xml(&b).contains("<sheetName val=\"_x0041_\"/>"));
+    }
+
+    #[test]
+    fn a_non_finite_cached_number_is_written_as_num_error() {
+        for v in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert_eq!(
+                cell_xml(1, 1, &SpillValue::Number(v)),
+                "<cell r=\"A1\" t=\"e\"><v>#NUM!</v></cell>"
+            );
+        }
     }
 
     #[test]

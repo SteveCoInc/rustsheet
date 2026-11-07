@@ -912,6 +912,11 @@ writes, from the fixtures and the corpora:
   unprobed; T-4937).
 - **Cached text.** A `t="str"` cache cell's `_xHHHH_` escapes are decoded as a shared string's are. Status: UNVERIFIED (no
   Excel-written cache with an escape was seen; the ST_Xstring rule is assumed to apply, as for inline strings above).
+- **Attributes are literal.** The rels `Target`, `sheetName@val` and `definedName@name`/`refersTo` are read and written as plain
+  XML attributes, with no `_xHHHH_` decoding (T-4935), so `_x0041_` round-trips unchanged; XML-forbidden control characters
+  (API-built books only) are dropped. Status: UNVERIFIED (whether Excel decodes `_xHHHH_` there is unprobed; T-4936/T-4937).
+- **Non-finite cached numbers.** The engine never caches one; an API-built book's `NaN`/`inf` is saved as `t="e"` `#NUM!`.
+  This is RustSheet's choice (hardening), not Excel evidence.
 Evidence: the files named above (Excel-written); the round trip of every fixtures `external-link-*` case, poi/ref-56737 and
 corpus-bench/59932 keeps the books and every cell value (crates/rustsheet-xlsx/tests/external_link_export.rs).
 Implemented in: `export/external_links.rs`, `import/external_links.rs`, `export/workbook_xml_rels.rs`.

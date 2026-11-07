@@ -1,6 +1,9 @@
 //! The values Excel cached for the workbooks this one links to (`xl/externalLinks/*.xml`).
 
-use std::{collections::HashMap, io::Read};
+use std::{
+    collections::{HashMap, HashSet},
+    io::Read,
+};
 
 use rustsheet_engine::{
     expressions::token::{get_error_by_english_name, Error},
@@ -89,6 +92,9 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
     let mut cells = HashMap::new();
     let mut refresh_error_sheets = Vec::new();
     let mut data_sheets = Vec::new();
+    // Sets keep the dedup linear in the untrusted count of `sheetData` elements.
+    let mut seen_data = HashSet::new();
+    let mut seen_errors = HashSet::new();
     for sheet_data in book.descendants().filter(|n| n.has_tag_name("sheetData")) {
         let Some(sheet) = sheet_data
             .attribute("sheetId")
@@ -96,12 +102,12 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
         else {
             continue;
         };
-        if !data_sheets.contains(&sheet) {
+        if seen_data.insert(sheet) {
             data_sheets.push(sheet);
         }
         // The fixture shows "1"; "true" is the other xsd:boolean spelling of it.
         if matches!(sheet_data.attribute("refreshError"), Some("1" | "true"))
-            && !refresh_error_sheets.contains(&sheet)
+            && seen_errors.insert(sheet)
         {
             refresh_error_sheets.push(sheet);
         }
