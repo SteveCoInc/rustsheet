@@ -2717,6 +2717,7 @@ C	probes/t4871-empty-mode-args.case.json	31
 C	probes/t4873-empty-arg-let-lambda.case.json	11
 C	probes/t4873-empty-arg-quotient-ceiling.case.json	55
 C	probes/t4874-numbervalue-empty-separator.case.json	69
+C	probes/t4928-iseven-isodd-omitted.case.json	12
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
