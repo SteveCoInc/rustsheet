@@ -3,7 +3,7 @@ id: T-1689
 title: "Probe CHISQ.TEST over whole columns and ranges with blanks: degrees of freedom and blank pairs"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
