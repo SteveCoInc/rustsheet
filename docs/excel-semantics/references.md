@@ -3269,3 +3269,10 @@ and under ABS, for every area kind: a union (`INDEX((B1:B6,C1:C6),3,1)`, `,3,1,2
 range with row and column, and a name whose body is a range or a cell (`INDEX(Rng,3)`, `INDEX(One,1)`). Values equal the typed
 twins' (3, 30, 3, 3, 3, 3). `INDEX(B1:C6,3)` (row only, two columns) is `#REF!` in all three forms. Evidence:
 probes/t4212-legacy-index-root-area-kinds (excel-graph); the engine matches all 42 cells.
+
+## FORMULATEXT of a reference a delete removed is `#REF!`
+
+`=FORMULATEXT(S!C2)` after a delete removes S!C2 (formula text `=FORMULATEXT(#REF!)`) is `#REF!` in Excel, plain
+cell or table cell alike (probes/table-edits/t4274-calc-column-delete-row-2 F!A1, excel-graph, T-4274). The engine
+gave `#ERROR!` ("not a reference"); `fn_formulatext` now returns the `#REF!` argument unchanged (T-4770). Other
+literal-error arguments (`FORMULATEXT(#N/A)`) are not evidenced and stay `#ERROR!`.
