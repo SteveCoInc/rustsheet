@@ -3,7 +3,7 @@ id: T-3462
 title: "rustsheet-gen --policy typed-input: draw typed number, currency, percent, fraction and E-notation entries (entered cells) with value, type and format readers for gen-m2"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
