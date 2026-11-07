@@ -3,7 +3,7 @@ id: T-0950
 title: "Legacy (CSE) array formulas fill a range larger than their result (repeat 1x1/row/column, #N/A elsewhere)"
 milestone: M9
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -30,12 +30,26 @@ and the evaluator's array-formula path): check whether it needs a short spec fir
 directive 4) and split if it is bigger than M.
 
 ## Acceptance criteria
-- [ ] The H46:J136 F lines of poi/MatrixFormulaEvalTestData.xlsx disappear from eval/baseline/poi.txt
+- [x] The H46:J136 F lines of poi/MatrixFormulaEvalTestData.xlsx disappear from eval/baseline/poi.txt
       (those that stay need a documented reason) with no new F lines in any baseline.
-- [ ] corpus-bench/13894 F20:F25 pass, so its whole-case `F` line leaves eval/baseline/corpus-bench.txt
+- [x] corpus-bench/13894 F20:F25 pass, so its whole-case `F` line leaves eval/baseline/corpus-bench.txt
       if no other cell of the case fails.
-- [ ] Unit tests for the 1x1, row and column broadcast and the `#N/A` fill.
-- [ ] `make check` green; reviewers approve.
+- [x] Unit tests for the 1x1, row and column broadcast and the `#N/A` fill.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Dynamic-array spilling (`#SPILL!`), which is a different mechanism.
+
+## Outcome
+- The CSE branch of `Model::set_cells_with_result` (model.rs) now reads each cell of the declared range through
+  `arithmetic::bcast_get`, the broadcast helper that already exists, instead of an exact-index lookup. A one-row or
+  one-column result repeats (a 1x1 result fills every cell), and a cell past the result is `#N/A`. Before, it was
+  `#VALUE!`. A scalar result already filled the range.
+- Unit tests: test/array_formulas/test_cse_larger_range.rs covers the 1x1, row and column broadcasts, a 2x2 result's
+  `#N/A` fill, and the fill that IFERROR does not catch.
+- Eval delta (`make eval-check` with poi and corpus-bench fetched): poi known failures 111 -> 24 (fixed 87; every
+  MatrixFormulaEvalTestData.xlsx H46:J136 F line is gone). corpus-bench 3 -> 2 (fixed 1: the whole-case F line of
+  13894). 0 regressions in every suite.
+- `make eval-baseline` wrote eval/baseline/poi.txt and corpus-bench.txt. It then refused at its roundtrip step, on
+  roundtrip-poi/54436.xlsx, and that case fails the same way on `origin/main` without this change. Its evidence-floor
+  step was run on its own afterwards (no change). Follow-up: T-4829.
