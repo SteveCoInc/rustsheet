@@ -3,7 +3,7 @@ id: T-2798
 title: "TEXT: AM/PM before an elapsed token uses the 12-hour clock for it"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
