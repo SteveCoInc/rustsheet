@@ -3,7 +3,7 @@ id: T-3730
 title: "T.TEST and TTEST: the 9 visibly-off gen-m9 cells only time-boxed T-0969 owns stray 5 to 19 ulp from the rounded-y rule that gives 1 to 8"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -88,3 +88,17 @@ double before the tail", or else record why it cannot.
 ## Visible-parity stage
 Target (decision 0114): the 9 listed cells are within half a unit of Excel's 15th significant digit. Their bits are
 Phase 1b: whatever is still bit-level when the target is met goes to T-3254.
+
+## Outcome
+2026-11-07. Visible-parity target met: all 9 cells are within 15 digits; 5 are bit-exact.
+- Trace: the statistic is not the gap (plain-double means, variances, pooled/Welch forms and t^2 unchanged). The tail
+  at the rounded y departs: at df 13 to 16 the integer-df series applied Excel's GAMMALN-sum 1/B to the tail after
+  1 minus the centre, where Excel applies it to the centre; a fractional Welch df took Cephes' fractions.
+- Fix (structural, no fitted constant): `student_t::normalized_kernel_tail` (t <= 1, df/2 in [6.5, 8]) and, for a
+  df with no series, the kernel call ahead of `centre_tail`, both the ported K(df/2, 1/2, y, 1 - y) T.DIST already
+  takes. statistics.md "T.TEST's centre tail at df 13 to 16 is the TOMS 708 kernel".
+- `make eval`: 28 cells fixed, 0 regressions (gen-m9 1769 -> 1750, ironcalc-calc 266 -> 263, probes 7844 -> 7838).
+- Still bit-level (Phase 1b, T-3254): 09b47629f54b9817 A144 (+2 ulp), afc00c8b70e78baf A238 (+1), 9bc247733a1ca9fa
+  A139 (+1), d5fd9e05e9e6f466 A246 (-6).
+- Overlap: this moves part of T.TEST's tail onto the kernel, which T-2930 owns; T-2930 keeps the complement probe
+  and the remaining branches.

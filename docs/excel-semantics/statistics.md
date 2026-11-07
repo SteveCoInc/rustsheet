@@ -2481,6 +2481,26 @@ t1048-ttest A3/B3 (6 ulp) and t1049-ttest A48 (5 ulp), all Welch.
 Status: VERIFIED (excel-graph)
 Tasks: T-0969, T-2993
 
+## T.TEST's centre tail at df 13 to 16 is the TOMS 708 kernel (T-3730)
+Rule: at the rounded y of "T.TEST rounds y = df/(df+t^2) to a double before the tail", where t <= 1 and df/2 is in
+[6.5, 8] (df 13 to 16, Welch's fractional df included), T.TEST's tail is w/2 of the ported TOMS 708 kernel
+K(df/2, 1/2, y, 1 - y), the call T.DIST takes from df 3. Its prefactor is Excel's GAMMALN-sum normalization
+(bpser's at df 13 and 15, algdiv at df 16), applied to the central probability before it is subtracted from one.
+The integer-df series instead scaled the tail by that normalization after the subtraction, 5 to 19 ulp off.
+A df with no integer series (a fractional Welch df outside that band, or one past 1000) also takes the kernel
+ahead of Cephes' fractions.
+- The statistic was not the gap: the plain-double sums, the pooled and Welch forms and t^2 are unchanged.
+- gen-m9 928d08e3e1eecb5f A393 (-18 ulp), ce312817dc9c7f0b A228 (-19), 9bc247733a1ca9fa A254 (+10), f82473275380882e
+  A308 (+8) and c7664e494e418395 A219 (-5) are now bit-exact. 09b47629f54b9817 A144 (+5 to +2), afc00c8b70e78baf
+  A238 (+5 to +1), 9bc247733a1ca9fa A139 (+7 to +1) and d5fd9e05e9e6f466 A246 (+25 to -6) are within 15 digits.
+- `make eval` fixes 28 cells and regresses none: 19 gen-m9 cells, ironcalc-calc `STATISTICAL/T_TEST.xlsx` F4, F7 and
+  F8, and probes `stat-argument-modes` H535, H536, H541, H542 and `stat-test-lift` P64, P66.
+- Unprobed: T.TEST beyond t = 1 at these df, and the complement form (T-2930, which owns the rest of the move).
+Evidence: the gen-m9 cells above (excel-graph). Unit test: `test_fn_t_test_centre_tail_kernel`.
+Ours: `student_t.rs` `normalized_kernel_tail` and the kernel call in `tail_from` before `centre_tail`.
+Status: VERIFIED (excel-graph)
+Tasks: T-3730, T-2930
+
 ## T.TEST, TTEST, F.TEST and FTEST: Gate A tables (T-4097)
 Rule: on the Gate A tables `accuracy/{T.TEST,TTEST}/s1` (200 points each) and `accuracy/{F.TEST,FTEST}/s1` (120 each),
 excel-graph 2026-11-06, one-row array literals, Excel's errors are the rules of the entries cited by

@@ -492,6 +492,3 @@ F	ironcalc-calc/STATISTICAL/T_DIST.xlsx	T.DIST.2T T.INV.2T!D50
 F	ironcalc-calc/STATISTICAL/T_DIST.xlsx	T.DIST.2T T.INV.2T!D51
 F	ironcalc-calc/STATISTICAL/T_DIST.xlsx	T.DIST.2T T.INV.2T!D60
 F	ironcalc-calc/STATISTICAL/T_DIST.xlsx	T.DIST.2T T.INV.2T!D62
-F	ironcalc-calc/STATISTICAL/T_TEST.xlsx	Sheet1!F4
-F	ironcalc-calc/STATISTICAL/T_TEST.xlsx	Sheet1!F7
-F	ironcalc-calc/STATISTICAL/T_TEST.xlsx	Sheet1!F8

@@ -30,7 +30,9 @@
 //!   ([`kernel_tail`], T-2509), ahead of every rule below, which now covers df 1 and 2 and the
 //!   points the kernel does not take;
 //! - for df 13 to 16 the series tail is scaled by Excel's 1/B(n/2, 1/2) over the exact one: Excel's
-//!   BETA.DIST forms B from GAMMALNs there ([`log_gamma_ratio`], T-0969 attempt 10).
+//!   BETA.DIST forms B from GAMMALNs there ([`log_gamma_ratio`], T-0969 attempt 10), except up to
+//!   t = 1, where the tail is the ported kernel's ([`normalized_kernel_tail`], T-3730), and a df
+//!   with no series (T.TEST's fractional Welch df) takes the kernel ahead of the fractions.
 //!
 //! Every loop is bounded: [`SERIES_MAX_DF`] / 2 series terms, [`TAYLOR_TERMS`] Taylor terms and
 //! [`MAX_POWER_SERIES_TERMS`] power-series terms a call.
@@ -293,12 +295,38 @@ fn tail_from(args: &TailArguments, n: f64) -> f64 {
     if y <= z {
         return 0.5 * power_series(0.5 * n, y, ratio);
     }
+    if let Some(tail) = normalized_kernel_tail(args, n) {
+        return tail;
+    }
     if let Some(tail) = args.series.as_ref().map(exact_series_tail) {
         if tail.0 > MIN_SERIES_TAIL {
             return excel_prefactor_scale(tail, 0.5 * n);
         }
     }
+    // No integer-df series (a fractional Welch df, or a df past `SERIES_MAX_DF`): the ported
+    // kernel ahead of Cephes' fractions, as T.DIST takes it (T-3730: gen-m9 c7664e494e418395
+    // A219 and 9bc247733a1ca9fa A139 go from 7 and 9 ulp off to 0 and 1).
+    if args.series.is_none() {
+        if let Some((w, _)) = t_kernel_tails(0.5 * n, y, z) {
+            return 0.5 * w;
+        }
+    }
     centre_tail(args, n, z, ratio)
+}
+
+/// L = w/2 of the ported kernel K(n/2, 1/2, y, z) where Excel's normalization is the GAMMALN sum
+/// ([`log_gamma_ratio`], df 13 to 16, Welch's fractional df among them) and t <= 1: there the
+/// kernel's own prefactor (bpser's GAMMALN sum at df 13 and 15, algdiv at df 16) is that
+/// normalization, applied to the centre before 1 minus it, where the series scaled the tail
+/// after it (statistics.md "T.TEST's centre tail at df 13 to 16 is the TOMS 708 kernel", T-3730).
+/// `None` elsewhere, so the elementary series and fractions keep their evidenced cells.
+fn normalized_kernel_tail(args: &TailArguments, n: f64) -> Option<f64> {
+    let a = 0.5 * n;
+    if !args.inside_one || log_gamma_ratio(a).is_none() {
+        return None;
+    }
+    let (w, _) = t_kernel_tails(a, args.y, args.z)?;
+    Some(0.5 * w)
 }
 
 /// L = `I_y(n/2, 1/2)`/2 for 0 < t^2 < n and an integer n (or T.TEST's fractional Welch df,
