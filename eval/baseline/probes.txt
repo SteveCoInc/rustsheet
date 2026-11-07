@@ -3078,7 +3078,6 @@ F	probes/bond-extreme-coupon-yield.case.json	Calc!C89
 F	probes/bond-extreme-coupon-yield.case.json	Calc!C91
 F	probes/convert-unit-names.case.json	Sheet1!B961
 F	probes/convert-unit-names.case.json	Sheet1!B969
-F	probes/coup-calendar-edges.case.json	S!J12
 F	probes/fin-argument-modes.case.json	Sheet1!H80
 F	probes/fin-coupon-walk-bounds-c.case.json	Sheet1!I13
 F	probes/fin-coupon-walk-bounds-c.case.json	Sheet1!I14
@@ -9753,9 +9752,6 @@ F	probes/yield-newton-step-cap.case.json	N!B5
 F	probes/yield-newton-step-cap.case.json	N!C1
 F	probes/yield-newton-step-cap.case.json	N!C2
 F	probes/yield-newton-step-cap.case.json	N!C4
-F	probes/yield-start-one-input.case.json	S!B67
-F	probes/yield-start-term-basis.case.json	S!A52
-F	probes/yield-start-term-basis.case.json	S!B50
 TC	probes/displayed-text-formats.case.json	28
 TC	probes/displayed-text-long-text-b.case.json	11
 TC	probes/displayed-text-long-text.case.json	24

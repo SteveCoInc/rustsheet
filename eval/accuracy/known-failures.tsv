@@ -276,9 +276,13 @@ accuracy/CUMIPMT/r4-T-3141!Calc!A186	T-4390	tiny rate 8.4E-10, 1 periods of type
 accuracy/CUMIPMT/r4-T-3141!Calc!A197	T-4390	tiny rate 2.6E-10, 3 periods of type 1: PMT·m - CUMPRINC cancels; ours 6.4E-08 off Excel, 3.6E-08 off the math
 accuracy/CUMIPMT/r4-T-3141!Calc!A199	T-4390	tiny rate 2.2E-09, 5 periods of type 0: PMT·m - CUMPRINC cancels; ours 2.9E-08 off Excel, 4.5E-08 off the math
 accuracy/YIELD/s1!Calc!A225	T-4523	Excel #NUM! (its Newton leaves PRICE's domain at a price and redemption near 0.01); the engine converges to the root
-accuracy/YIELD/s1!Calc!A230	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
-accuracy/YIELD/s1!Calc!A252	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
-accuracy/YIELD/s1!Calc!A261	T-2788	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
+accuracy/YIELD/s1!Calc!A230	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
+accuracy/YIELD/s1!Calc!A252	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
+accuracy/YIELD/s1!Calc!A261	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
+accuracy/YIELD/r4-T-2788!Calc!A194	T-4523	Excel #NUM! (its Newton leaves PRICE's domain at a price near 0.035, redemption 100); the engine converges to the root
+accuracy/YIELD/r4-T-2788!Calc!A239	T-4523	Excel #NUM! (its Newton leaves PRICE's domain at a price and redemption near 0.014); the engine converges to the root
+accuracy/YIELD/r4-T-2788!Calc!A252	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
+accuracy/YIELD/r4-T-2788!Calc!A267	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
 accuracy/F.INV.RT/s1!Calc!A155	T-1871	deep-tail F quantile (p 4.7E-162, df 3216, 23): the engine is 1.8% off; Excel matches the math
 accuracy/F.INV.RT/s1!Calc!A112	T-4568	Excel 0.9% below the math at p = DBL_MIN (df 29, 57); the engine returns the math
 accuracy/F.INV.RT/s1!Calc!A142	T-4568	Excel #NUM! at p 1.5E-247 (df 9, 51); the engine returns the math
