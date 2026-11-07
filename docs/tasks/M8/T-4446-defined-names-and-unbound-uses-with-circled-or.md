@@ -3,7 +3,7 @@ id: T-4446
 title: "Defined names with circled letters, marks and İ: probe which ones Excel keeps, and the decomposed use i+U+0307 of a defined İ"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
