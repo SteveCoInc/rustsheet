@@ -3,7 +3,7 @@ id: T-5061
 title: "COUNTBLANK over a merged range's covered cells (fixtures merged-covered-values I4): Excel 1, ours 3"
 milestone: M9
 lane: functions-math
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: sonnet
