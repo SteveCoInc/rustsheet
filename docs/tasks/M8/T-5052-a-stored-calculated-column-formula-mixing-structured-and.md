@@ -3,7 +3,7 @@ id: T-5052
 title: "A stored calculated-column formula mixing structured and A1 references follows column and row edits (T-4693 split)"
 milestone: M8
 lane: engine
-status: todo
+status: dropped
 priority: P2
 size: S
 tier: opus
@@ -30,3 +30,10 @@ like a plain one (its A1 part displaced, its structured part kept).
 
 ## Out of scope
 - `#This Row` cell evaluation after a column insert (T-4680).
+
+## Outcome (dropped, 2026-11-07, decision 0266)
+Dropped: both acceptance criteria need a desktop-Excel probe (a table saved after insert_column A, its cached
+`calculatedColumnFormula`), and `rustsheet-oracle status` shows `excel-desktop n/a`; excel-graph cannot author it.
+Decision 0266 rule 1 puts work whose only evidence is desktop Excel out of scope, and rule 2 keeps the current
+behavior (a mixed formula's text kept unchanged) as implemented. The context above is kept in case a later decision
+reopens desktop work.
