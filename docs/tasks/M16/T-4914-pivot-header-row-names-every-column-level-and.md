@@ -79,6 +79,7 @@ Owner of these visibly-off cells (decision 0245), 90 values and texts on 56 shee
 - gen-pivot/f9e7edbb5b74011a P06!O5:P5
 - gen-pivot/f9e7edbb5b74011a P10!L5
 - gen-pivot/f9e7edbb5b74011a P11!L5:N7
+- probes/t4699-pivot-blank-collapsed CV4!C3 (the Values field's `Values` header in tabular form; T-4699)
 
 Also owner of these pivot-corpus render cells (T-4906, Excel-saved files: docs/excel-semantics/pivots.md "What the Excel-saved pivot corpus shows (T-4906)"), 8 render cells of 8 fresh pivots:
 - pivot-corpus-closedxml/TryToLoad/TemplateWithTableSourcePivotTables.xlsx StressedAssetsPivot!D4

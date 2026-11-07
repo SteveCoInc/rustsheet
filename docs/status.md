@@ -21,7 +21,7 @@ CI on `main` is green: of the last 40 `ci.yml` push runs on `main`, 39 succeeded
 Milestones: the current milestone stays M6 (decision 0027 order), and its exit fails only on its probes.
 - M6's probes have 82 visibly-off cells. 79 are the GETPIVOTDATA probes t2085-getpivotdata-layouts, -items and -data-fields (from T-2085), owned by T-4804 (#3950, orphaned and conflicting), T-4805 and T-4806. The other 3 are t4742-countif-array-range-arg, owned by T-4826, T-4863 and T-4946. The morning run's 34 cells are closed: #3847 (T-4714) and T-4739 to T-4742 merged.
 - `make exit-owners MILESTONE=M6` reports 0, as do M10 and M11.
-  - M7 listed 33 cells: 26 gen-m7/21b4eef18424ce94 spill cells and 7 probe cells, that T-4737 superseded under decision 0329 item 3. This PR names them in T-4913 (the owner-tool fix for decision-superseded cells), and M7 now reports 0.
+  - M7 listed 33 cells: 26 gen-m7/21b4eef18424ce94 spill cells and 7 probe cells, which T-4737 superseded under decision 0329 item 3. This PR names them in T-4913 (the owner-tool fix for decision-superseded cells), and M7 now reports 0.
   - M8 still lists t4618-order-after-active-backward Q!A1. T-3610, an M9 harness task, owns it and names it in its acceptance criteria.
   - M9 listed 2. The COUNTBLANK fixture cell is still owned by T-4722 (M11). New is t3409-r4-gamma-inv-search-sweep Calc!A234, a CHISQ.INV.RT point where ours equals the math sidecar and Excel is about 2.7E-4 off. It is inside decision 0337's R3 region (shape 1E9 or more) and lacks only its math-over-excel.tsv mark, as do Calc!A226 and its neighbours. This PR files T-5015 to mark them.
 - The frozen M1 list has 0 known failures (89/89 cases), and the M0–M2 probes have 0.

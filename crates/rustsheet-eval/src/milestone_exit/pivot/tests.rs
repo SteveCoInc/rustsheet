@@ -175,7 +175,7 @@ fn every_measure_but_the_unmeasured_corpus_render_holds() {
 }
 
 #[test]
-fn a_row_below_the_floor_fails_evidence_and_leaves_owners_unmeasured() {
+fn a_row_below_the_floor_fails_evidence_and_with_no_owner_fails_owners() {
     let mut r = met();
     r.pivot_features.rows[0].cells = 29;
     r.pivot_features.rows[0].passed = 29;
@@ -183,9 +183,68 @@ fn a_row_below_the_floor_fails_evidence_and_leaves_owners_unmeasured() {
     let p = row.pivot.clone().unwrap_or_default();
     assert_eq!(p.stages[0].below_floor, vec!["PV-0001"]);
     assert_eq!(p.stages[0].evidence_met, Some(false));
-    assert_eq!(p.stages[0].owners_met, None);
-    assert_eq!((p.evidence_met, p.owners_met), (Some(false), None));
+    assert_eq!(p.stages[0].unowned, vec!["PV-0001"]);
+    assert_eq!(p.stages[0].owners_met, Some(false));
+    // The other stage has nothing remaining: its owners hold.
+    assert_eq!(p.stages[1].owners_met, Some(true));
+    assert_eq!((p.evidence_met, p.owners_met), (Some(false), Some(false)));
     assert!(!row.exit);
+    let mut md = String::new();
+    write_markdown(&summarize(&r), &mut md);
+    assert!(
+        md.contains("| PV1 | 1 | 0 | 0/1 | not met | 1 | not met |"),
+        "{md}"
+    );
+    assert!(
+        md.contains("PV1 remaining rows with no open M16 owner (1 of 1): PV-0001."),
+        "{md}"
+    );
+    assert!(md.contains("M16 evidence not met, owners not met;"), "{md}");
+}
+
+#[test]
+fn a_remaining_row_an_open_m16_task_owns_meets_owners() {
+    let mut r = met();
+    r.pivot_features.rows[0].cells = 29;
+    r.pivot_features.rows[0].owner = "T-0001".into();
+    let p = m16(&r).pivot.unwrap_or_default();
+    assert_eq!((p.stages[0].remaining, p.stages[0].unowned.len()), (1, 0));
+    assert_eq!(
+        (p.stages[0].owners_met, p.owners_met),
+        (Some(true), Some(true))
+    );
+    // Evidence still fails: an owner is not evidence.
+    assert_eq!(p.evidence_met, Some(false));
+}
+
+#[test]
+fn owners_are_per_stage_and_the_milestone_needs_every_stage() {
+    // PV1's remaining row is owned, PV2's is not. A done or missing owner cannot reach here:
+    // `scripts/tasks.py validate` refuses it (scripts/test_tasks.py).
+    let mut r = met();
+    r.pivot_features.rows[0].cells = 29;
+    r.pivot_features.rows[0].owner = "T-0001".into();
+    r.pivot_features.rows[1].passed = 44;
+    let p = m16(&r).pivot.unwrap_or_default();
+    assert_eq!(
+        (p.stages[0].owners_met, p.stages[1].owners_met),
+        (Some(true), Some(false))
+    );
+    assert_eq!(p.stages[1].unowned, vec!["PV-0002"]);
+    assert_eq!(p.owners_met, Some(false));
+}
+
+#[test]
+fn an_out_of_scope_row_is_never_remaining_or_unowned() {
+    // PV-0004 is `out (decision 0274)` with no cell and no owner.
+    let r = met();
+    assert!(r.pivot_features.rows[3].owner.is_empty());
+    let p = m16(&r).pivot.unwrap_or_default();
+    assert!(p
+        .stages
+        .iter()
+        .all(|s| s.stage != "out" && s.unowned.is_empty()));
+    assert_eq!(p.owners_met, Some(true));
 }
 
 #[test]
@@ -194,7 +253,10 @@ fn a_failing_cell_at_the_floor_is_a_remaining_row() {
     r.pivot_features.rows[1].passed = 44;
     let p = m16(&r).pivot.unwrap_or_default();
     assert_eq!(p.stages[1].evidence_met, Some(true));
-    assert_eq!((p.stages[1].remaining, p.stages[1].owners_met), (1, None));
+    assert_eq!(
+        (p.stages[1].remaining, p.stages[1].owners_met),
+        (1, Some(false))
+    );
 }
 
 #[test]
