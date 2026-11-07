@@ -3,7 +3,7 @@ id: T-4911
 title: "GETPIVOTDATA T-4804 review follow-ups: mark the unprobed Values-field, blank-cell and nested-Values inferences, probe them, add a multi-data-field unit test"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
