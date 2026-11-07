@@ -3,7 +3,7 @@ id: T-2085
 title: "Probe GETPIVOTDATA on unprobed pivot shapes: several data fields, empty average, number and date items, filters (SPEC-0015)"
 milestone: M6
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
