@@ -3,7 +3,7 @@ id: T-4872
 title: "An empty argument of COMPLEX, DELTA, GESTEP, ERF, ERFC, the BESSEL functions, CONVERT and the base conversions follows Excel (probe the Analysis ToolPak #N/A rule)"
 milestone: M9
 lane: functions-engineering
-status: done
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -99,3 +99,22 @@ omitted forms A48:A54 keep the values the engine gives today.
   `rustsheet-accuracy math --suite probes --function ERF --function ERFC`, the only stale entries (a full-suite run
   times out on an unrelated point). `make eval-math-check` is current, and `make check-fast` and `rustsheet-eval
   check` pass with 0 regressions.
+
+## Landing notes (2026-11-07, opus worker, adopted PR #3929)
+- PR #3929, not enqueued. The head is the commit that adds these notes; CI on it has not run yet. On 001f759b3 the
+  security and design reviewers APPROVE (MINOR: drop the unneeded `#![allow(clippy::unwrap_used)]` in
+  test/engineering/test_empty_arguments.rs; the 4-line `atp_arguments` preamble repeats in 18 functions).
+  excel-fidelity returned REQUEST_CHANGES (BLOCKING): `atp_arguments` returns `#N/A` before any argument is read and
+  before `lift_call`. So an earlier argument's error loses, and an array in another argument gives one scalar.
+- The round-2 probe settles it: probes/t4872-r2-order-and-lift (14 cells, excel-graph 2026-11-07; predictions in
+  docs/research/t4872/predictions-r2.tsv, pushed before the fill). Excel follows T-4870's date rule. The `#N/A` comes
+  at the empty argument's own turn (`COMPLEX(1/0,)` and `ERF(1/0,)` are `#DIV/0!`), DEC2BIN reads places first
+  (`DEC2BIN(,1/0)` is `#DIV/0!`), and it lifts per element (`ROWS(COMPLEX({1;2},))` is 2). The 9 cells the engine
+  gets wrong are new-coverage known failures owned by this task. engineering.md records the rule.
+- Next step: keep `atp_arguments`' trailing-empty trimming and its over-long refusal. Drop its early `#N/A` and
+  instead build the strict empties into each kernel with main's `empty_arguments` / `written_empty_or` /
+  `written_empty_na` (functions/util/empty_args.rs), the way EDATE and WORKDAY do, so the `#N/A` is met in each
+  function's argument order inside the lift. Then the round-2 cells pass. Re-run the full panel (fidelity found the
+  blocker); `make eval-baseline` should show the 9 lines fixed.
+- Don't repeat: a full `rustsheet-accuracy math --suite probes` times out on an unrelated point (600 s). Run it with
+  `--function <NAME>` for only the stale entries (`math --check` lists them).

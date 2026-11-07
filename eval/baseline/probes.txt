@@ -2719,6 +2719,7 @@ C	probes/t4870-r2-empty-optional.case.json	14
 C	probes/t4870-r3-order-and-lift.case.json	24
 C	probes/t4871-empty-mode-args.case.json	31
 C	probes/t4872-atp-empty-argument.case.json	54
+C	probes/t4872-r2-order-and-lift.case.json	14
 C	probes/t4873-empty-arg-let-lambda.case.json	11
 C	probes/t4873-empty-arg-quotient-ceiling.case.json	55
 C	probes/t4874-numbervalue-empty-separator.case.json	69
@@ -9852,6 +9853,15 @@ F	probes/t4844-irr-stage-invariance.case.json	P!A6
 F	probes/t4844-irr-stage-invariance.case.json	P!A60
 F	probes/t4844-irr-stage-invariance.case.json	P!A7
 F	probes/t4844-irr-stage-invariance.case.json	P!A8
+F	probes/t4872-r2-order-and-lift.case.json	Calc!A1
+F	probes/t4872-r2-order-and-lift.case.json	Calc!A11
+F	probes/t4872-r2-order-and-lift.case.json	Calc!A12
+F	probes/t4872-r2-order-and-lift.case.json	Calc!A13
+F	probes/t4872-r2-order-and-lift.case.json	Calc!A3
+F	probes/t4872-r2-order-and-lift.case.json	Calc!A5
+F	probes/t4872-r2-order-and-lift.case.json	Calc!A6
+F	probes/t4872-r2-order-and-lift.case.json	Calc!A8
+F	probes/t4872-r2-order-and-lift.case.json	Calc!A9
 F	probes/t4895-two-criteria-number-format-delete-one.case.json	F!A1
 F	probes/t4895-two-criteria-number-format-delete-one.case.json	F!A2
 F	probes/t4895-two-criteria-number-format-delete-one.case.json	F!A3
