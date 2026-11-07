@@ -3,7 +3,7 @@ id: T-2605
 title: "Probe QUARTILE/PERCENTRANK of a single boolean cell and a bad significance on empty data"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -22,8 +22,11 @@ same error reaches A57 and A58, and gen-m9/d0854366830dcdee Calc!A218
 Those cells pass once the single TRUE cell reads as Excel reads it.
 
 ## Acceptance criteria
-- [ ] A new probe case with oracle values covers those cells (QUARTILE, QUARTILE.EXC, PERCENTILE.INC/.EXC, PERCENTRANK.INC/.EXC of a TRUE and a FALSE cell; PERCENTRANK of an empty and a text cell with significance 0 and 2), and every cell passes or its cause is recorded in statistics.md.
-- [ ] `make check` green; reviewers approve.
+- [x] A new probe case with oracle values covers those cells (QUARTILE, QUARTILE.EXC, PERCENTILE.INC/.EXC, PERCENTRANK.INC/.EXC of a TRUE and a FALSE cell; PERCENTRANK of an empty and a text cell with significance 0 and 2), and every cell passes or its cause is recorded in statistics.md.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+New probe `probes/t2605-single-boolean-cell` (41 cells, oracle from excel-graph). Excel reads a single TRUE/FALSE cell as empty data (`#NUM!` for QUARTILE/PERCENTILE, `#N/A` for PERCENTRANK) and PERCENTRANK of empty/text data is `#N/A` whatever the significance. The engine already matches: 41/41 pass, so no engine change and no baseline change. Recorded in statistics.md.
