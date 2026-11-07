@@ -3,7 +3,7 @@ id: T-4888
 title: "IRR's secant runs on past the pole: continue the run at d > 1 instead of failing, with an absolute stall bound"
 milestone: M9
 lane: functions-financial
-status: blocked
+status: in-progress
 priority: P1
 size: S
 tier: opus
@@ -77,7 +77,7 @@ the sidecars were written, in #3910) and are regenerated.
 Follow-ups: none new. T-4840 owns t4838's 26 cells and t4888-irr-stall-sweep's 60; the flat secant stays T-4838's.
 
 ## Blocked because
-Blocked because: review-round limit
+Resumed after the review-round limit (step 5c).
 
 The excel-fidelity reviewer's round-3 findings on head 7e0d968f are still open. Security and design approved that head.
 - MAJOR: the stall rule's relative half (`IRR_STALL_RELATIVE` = 1e-12) and the two-part form were shaped after seeing
