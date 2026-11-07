@@ -9,6 +9,7 @@
   rustsheet-gen --policy numeric-fp --seed 0              # suite gen-m2 (M2 near-zero snapping)
   rustsheet-gen --policy numeric-fp --milestone M5        # suite gen-m5 (M5 rounding chains, 15-digit cuts)
   rustsheet-gen --policy arg-pairs --milestone M2 --seed 0 # suite gen-m2 (argument-class pairs no Excel cell covers)
+  rustsheet-gen --milestone M16 --seed 0                  # suite gen-pivot (M16 pivot tables; same as --policy pivots)
 
 Creates eval/suites/<suite>/suite.toml if missing (non-gating until oracle sidecars exist).
 """
@@ -17,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +30,9 @@ from rustsheet_tools.gen.number_formats import generate_number_formats
 from rustsheet_tools.gen.numeric_fp import generate_numeric_fp
 from rustsheet_tools.gen.numeric_rules import generate_numeric_rules
 from rustsheet_tools.gen.operators_refs import generate_operators_refs
+from rustsheet_tools.gen.pivot_suite import MILESTONE as PIVOT_MILESTONE
+from rustsheet_tools.gen.pivot_suite import SUITE as PIVOT_SUITE
+from rustsheet_tools.gen.pivot_suite import generate_pivot_suite
 from rustsheet_tools.gen.tables import generate_tables
 
 SUITE_TOML = """name = "{name}"
@@ -41,6 +46,48 @@ gate = false
 baseline = "cells"
 milestone = ["{milestone}"]
 """
+
+
+PIVOT_POLICY = "pivots"
+# The whole-suite policies that take only a seed: policy -> (default suite, its description, milestone, generator).
+SEED_POLICIES: dict[str, tuple[str, str, str, Callable[[int], list[dict[str, Any]]]]] = {
+    "numeric-rules": (
+        "probes-numeric",
+        "Floating-point rule probes from rustsheet-gen --policy numeric-rules; pending until the Excel oracle fills expectations",
+        "M1",
+        generate_numeric_rules,
+    ),
+    "operators-refs": (
+        "gen-m1",
+        "M1 operator and reference probes from rustsheet-gen --policy operators-refs; expectations from the Excel oracle",
+        "M1",
+        generate_operators_refs,
+    ),
+    "names-3d": (
+        "gen-m8a",
+        "M8 defined-name and 3-D reference probes from rustsheet-gen --policy names-3d; expectations from the Excel oracle",
+        "M8",
+        generate_names_3d,
+    ),
+    "tables": (
+        "gen-m8b",
+        "M8 Excel table and structured-reference probes from rustsheet-gen --policy tables; expectations from the Excel oracle",
+        "M8",
+        generate_tables,
+    ),
+    "number-formats": (
+        "gen-m10",
+        "M10 number-format displayed-text probes from rustsheet-gen --policy number-formats; expectations from the Excel oracle",
+        "M10",
+        generate_number_formats,
+    ),
+    PIVOT_POLICY: (
+        PIVOT_SUITE,
+        "M16 pivot tables from rustsheet-gen --milestone M16; expectations from the Excel oracle",
+        PIVOT_MILESTONE,
+        generate_pivot_suite,
+    ),
+}
 
 
 def write_suite(root: Path, name: str, description: str, milestone: str, specs: list[dict[str, Any]]) -> None:
@@ -89,6 +136,7 @@ def main() -> None:
             "number-formats",
             "numeric-fp",
             "arg-pairs",
+            PIVOT_POLICY,
         ],
         default="random",
         help=(
@@ -101,7 +149,9 @@ def main() -> None:
             "the M5 rounding chains and 15-digit cuts (suite gen-m2 or gen-m5, T-3139, T-3204); "
             "arg-pairs: calls passing the argument-class pairs --report lists as unseen for the functions of "
             "exactly --milestone, or --functions (suite gen-<milestone>, T-3278); "
-            "all seven ignore --count/--formulas/--depth and all but numeric-fp and arg-pairs ignore --milestone"
+            "pivots: M16 pivot tables from a covering array over the PV1 pivot dimensions (suite gen-pivot, T-4132; "
+            "--milestone M16 with the default policy selects it too); "
+            "all eight ignore --count/--formulas/--depth and all but numeric-fp and arg-pairs ignore --milestone"
         ),
     )
     ap.add_argument(
@@ -130,50 +180,10 @@ def main() -> None:
     args = ap.parse_args()
 
     root = repo_root()
-    if args.policy == "numeric-rules":
-        write_suite(
-            root,
-            args.suite or "probes-numeric",
-            "Floating-point rule probes from rustsheet-gen --policy numeric-rules; pending until the Excel oracle fills expectations",
-            "M1",
-            generate_numeric_rules(args.seed),
-        )
-        return
-    if args.policy == "operators-refs":
-        write_suite(
-            root,
-            args.suite or "gen-m1",
-            "M1 operator and reference probes from rustsheet-gen --policy operators-refs; expectations from the Excel oracle",
-            "M1",
-            generate_operators_refs(args.seed),
-        )
-        return
-    if args.policy == "names-3d":
-        write_suite(
-            root,
-            args.suite or "gen-m8a",
-            "M8 defined-name and 3-D reference probes from rustsheet-gen --policy names-3d; expectations from the Excel oracle",
-            "M8",
-            generate_names_3d(args.seed),
-        )
-        return
-    if args.policy == "tables":
-        write_suite(
-            root,
-            args.suite or "gen-m8b",
-            "M8 Excel table and structured-reference probes from rustsheet-gen --policy tables; expectations from the Excel oracle",
-            "M8",
-            generate_tables(args.seed),
-        )
-        return
-    if args.policy == "number-formats":
-        write_suite(
-            root,
-            args.suite or "gen-m10",
-            "M10 number-format displayed-text probes from rustsheet-gen --policy number-formats; expectations from the Excel oracle",
-            "M10",
-            generate_number_formats(args.seed),
-        )
+    policy = PIVOT_POLICY if args.policy == "random" and args.milestone == PIVOT_MILESTONE else args.policy
+    if policy in SEED_POLICIES:
+        suite, description, milestone, generate = SEED_POLICIES[policy]
+        write_suite(root, args.suite or suite, description, milestone, generate(args.seed))
         return
     if args.policy == "numeric-fp":
         try:

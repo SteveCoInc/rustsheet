@@ -2276,3 +2276,56 @@ Evidence (Excel-saved desktop files, cached cells and pivotTable parts): pivot-c
 These are non-en-US desktop workbooks, so they are no evidence for what en-US Excel writes
 (decision 0030): the English captions stay the ones the en-US probes give ("Caption attributes...").
 Status: VERIFIED (Excel-saved files) as a storage fact; no rule for the engine follows from it.
+
+## What the gen-pivot batch found (T-4132)
+The first gen-pivot batch (eval/suites/gen-pivot, seed 0 of `rustsheet-gen --milestone M16`: 104 pivots, one per sheet,
+each case's description naming its sheets' covering-array levels; excel-graph, 2026-11-07) shows these rules. Each is
+VERIFIED (excel-graph) for the shapes cited; wider claims are marked. Each has an engine task that owns its cells.
+- **Header labels in outline and tabular form.** The header row names every column level, one per cell from the first
+  data column: the Values field as `Values` (or `dataCaption`), then each column field by name (gen-pivot/2251b0f5e5a256e1
+  P12!M5:O5 `Values`, `Rep`, `Channel`; the second column field `When` at gen-pivot/01865529b5a09c0b P02!Q5). With the
+  Values field on rows, its header cell reads `Values` (P02!L7). T-4914.
+- **Field and item captions.** A pivotField's `name` replaces the field's header (`Product field`,
+  gen-pivot/2251b0f5e5a256e1 P03!L7) and an item's `n` its label, in its subtotal label too (`West shown`,
+  gen-pivot/01865529b5a09c0b P04!M10; `Silver shown Total`, gen-pivot/a6d74990f3ae755e P06!L11). Excel for the web opens
+  both (catalog PV-1113, PV-1081). T-4915.
+- **Custom subtotals and the Values field.** A custom subtotal line of a field with the Values field inside it reads
+  `<item> <Function> of <source field>` per data field: `Bronze Sum of Score`, `Bronze Sum of Units` under data fields
+  Sum of Score and Min of Units (gen-pivot/2251b0f5e5a256e1 P04!L13:L15). T-4916.
+- **One custom subtotal in compact or outline form sits on the item's line**, as a default subtotal does: no
+  `<item> <Function>` line (gen-pivot/640780d7b6f4ad53 P05!L8 `Web shown` with its values; gen-pivot/36996978427905b2
+  P01, gen-pivot/f9e7edbb5b74011a P09, gen-pivot/ec473260bb2065b3 P05). Two or more functions, or tabular form, give one
+  line per function after the children (gen-pivot/2251b0f5e5a256e1 P04, P10). T-4925.
+- **Two custom subtotals cross blank.** Where a row field's custom subtotal line meets a column field's custom subtotal
+  column the cell is blank (gen-pivot/2251b0f5e5a256e1 P10!P9:U16, gen-pivot/ec473260bb2065b3 P06). T-4926.
+- **Date-time items are rounded to the second** on refresh: 366.99999999 is the item 367 (gen-pivot/2251b0f5e5a256e1
+  P05!N14), 60.999988426 is 60.99998842592593 (gen-pivot/ca5c8fa99c13d747 P08!M8). Those cells alone only show a unit
+  coarser than about 2 ms; the whole second is shown by the refreshed cache's `xsd:dateTime` items (for example
+  `1900-02-28T23:59:59` in the gen-pivot/ca5c8fa99c13d747 P08 cache field `When`). Values without a date format are
+  unprobed. T-4917.
+- **A value cell whose records hold no value its aggregate reads is blank**: Count over blanks
+  (gen-pivot/01865529b5a09c0b P01!O20), CountNums (gen-pivot/2251b0f5e5a256e1 P01!N6), Var and Max over records with no
+  number (gen-pivot/f9e7edbb5b74011a P01!O9, gen-pivot/a6d74990f3ae755e P01!R13). This answers the T-4633 question of
+  "Aggregates over text, blanks, booleans and errors". T-4918.
+- **Classic layout with no row field** keeps the data caption at the corner and labels the value row `Total`
+  (gen-pivot/01865529b5a09c0b P08!L5, L8; gen-pivot/2251b0f5e5a256e1 P07!L9). T-4919.
+- **Record filters on a refreshed date field.** When the saved cache lists a date field's values as numbers (the case
+  builder does), the refresh appends date items (above). Hidden items on such a field then hide every appended item, so
+  the pivot shows no record (gen-pivot/a6d74990f3ae755e P02, P08, P12; gen-pivot/ca5c8fa99c13d747 P04: `rowItems` 0), and
+  a selected page item lands on the refreshed list's item at its index (gen-pivot/462f10551d480f9d P01!M3 shows 365 for
+  2958465). New items of other kinds beside hidden ones are unprobed. T-4920.
+- **A page field with one visible item shows it**, not `(Multiple Items)` (gen-pivot/01865529b5a09c0b P05!M3 `Cy`,
+  gen-pivot/2251b0f5e5a256e1 P08!M2 `Gold`); two or more show `(Multiple Items)` (P11 of 2251b0f5e5a256e1). This answers
+  the page-selection question of T-4657. T-4921.
+- **A missingCaption of `-` shows 0**: every empty intersection of every pivot with `missingCaption="-"` and
+  `showMissing` is the number 0, shown in the data field's format (`0`, `0.00`; gen-pivot/ca5c8fa99c13d747 P01!O9:AJ28,
+  gen-pivot/ec473260bb2065b3 P03), while `n/a` shows as the caption (gen-pivot/f9e7edbb5b74011a P08). Which other captions
+  read as numbers is unprobed. T-4922.
+- **No row field, non-compact, Values on columns: no row-label column.** The first column is the first data column
+  (gen-pivot/640780d7b6f4ad53 P02 at L5:DC8, gen-pivot/f9e7edbb5b74011a P07, gen-pivot/462f10551d480f9d P08). T-4924.
+- **A collapsed item with the Values field inside it** keeps one line per data field under the item
+  (gen-pivot/36996978427905b2 P05!L6:L8). T-4927.
+- Date items show in the source cells' date format, as on probes/t2085-getpivotdata-items D: T-4807 owns the gen-pivot
+  cells too.
+
+Status: VERIFIED (excel-graph) for the cells cited; the unprobed extensions above are UNVERIFIED.

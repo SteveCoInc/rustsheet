@@ -146,6 +146,15 @@ gen-m9/f82473275380882e.case.json	2
 gen-m9/fa25422d6f18c157.case.json	52
 gen-m9/fd9fa22d212080d6.case.json	3
 gen-m9/fec39efaba9284c3.case.json	3
+gen-pivot/01865529b5a09c0b.case.json	72
+gen-pivot/2251b0f5e5a256e1.case.json	410
+gen-pivot/36996978427905b2.case.json	127
+gen-pivot/462f10551d480f9d.case.json	134
+gen-pivot/640780d7b6f4ad53.case.json	305
+gen-pivot/a6d74990f3ae755e.case.json	379
+gen-pivot/ca5c8fa99c13d747.case.json	350
+gen-pivot/ec473260bb2065b3.case.json	1112
+gen-pivot/f9e7edbb5b74011a.case.json	236
 ironcalc-calc/ENGINEERING/COMPLEXs.xlsx	4
 ironcalc-calc/FINANCIAL/CUMPRINC_CUMIPMT.xlsx	1
 ironcalc-calc/FINANCIAL/IRR.xlsx	3

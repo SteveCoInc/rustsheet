@@ -523,8 +523,24 @@ Implemented so far (`rustsheet-gen --policy`): `random` (the catalog-driven P0 g
 `numeric-rules` (dense floating-point probes, suite `probes-numeric`), `operators-refs` (M1
 operators and references only, no functions, suite `gen-m1`; T-0117), `names-3d` (suite `gen-m8a`,
 T-1606), `tables` (suite `gen-m8b`, T-1607), `number-formats` (suite `gen-m10`, T-1611) and
-`numeric-fp` (suite `gen-m2`, T-3139). All but `random` are whole-suite policies rather than
-per-workbook draws.
+`numeric-fp` (suite `gen-m2`, T-3139) and `pivots` (suite `gen-pivot`, T-4132; `--milestone M16` selects it). All
+but `random` are whole-suite policies rather than per-workbook draws.
+
+`pivots` (tools/src/rustsheet_tools/gen/pivot_suite.py, plan §6 layer 2 of
+docs/research/pivot-tables-2026-11-04/plan.md) builds one pivot per row of a seeded covering array
+(gen/covering.py: AETG-style greedy, each group of factors with its own strength, a constraint that rules out
+combinations a pivot cannot show). The factors are the PV1 dimensions: layout (compact, outline, tabular),
+subtotals (top, bottom, none, custom functions), the Values field (single data field, first or last on rows or
+columns), filters (page field at (All), on one item, on several items; hidden axis items), 0-3 row, 0-2 column and
+1-3 data fields, the eleven aggregates, grand totals, the data pool, captions and one layout extra (blank rows,
+repeat labels, a collapsed item, classic layout, a data-field number format). It is 3-wise over layout x subtotals x
+Values position x filters and pairwise over everything (seed 0: 104 rows, 2,120 required combinations). Show-values-as,
+the plan's fifth 3-wise dimension, and the other PV2+ dimensions (label/value filters, sorts, groups, calculated
+fields) are deferred to their stages (`DEFERRED`). Each pivot gets its own source block (gen/pivot_data.py) in A:I of
+its sheet from one edge pool (plain, types, blanks, errors, case variants, dates with times, ties, many items),
+which reuses gen/pools.py's error literals, date serials and time fractions. Pivots use case builder v2's `definition`
+(pivot_definition.py) at L5; twelve sheets make a case, plus a `Q` sheet of COUNTA controls. Each case lists the
+pivot catalog ids its pivots exercise in `pivot_features` and names each sheet's levels in its description.
 
 `numeric-fp` implements the cancellation part of the `numeric_fp` row for M2 and M5: X = base·(1±k·2^-52)
 against b = base (bases 1, 2, 0.5, 2^20, 1.5; k = 0..9; both signs; exact doubles built on an
