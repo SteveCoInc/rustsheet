@@ -3172,7 +3172,10 @@ Ours: `incomplete_beta.rs::shape_one_tails` (w = `x87_exp::excel_one_minus_exp`(
 Status: VERIFIED (excel-graph) for the complement down to w1 of about 1E-16, and for w at |z| >= 1 (T-3764); w's form
 below |z| = 1 PARTIAL (71 cells for it, 6 contrary cells with no form, T-3886); below 2^-53 UNVERIFIED but for the
 four t3568 cells
-Tasks: T-3007, T-2511, T-3150, T-3170, T-3886, T-3764
+- NEGBINOM.DIST's cdf at number_s 1 takes the same branch, I_p(1, f + 1) from p through log1p (T-4242):
+  `NEGBINOM.DIST(70991230,1,8.02387331627331E-281,TRUE)` is 5.696246441102946E-273 in Excel, the math, where fl(1 - p)
+  is 1 (accuracy/NEGBINOM.DIST/r4-T-3576 A125). The engine's binomial walk was 9.4E-8 off there.
+Tasks: T-3007, T-2511, T-3150, T-3170, T-3886, T-3764, T-4242
 
 ## Excel's log1p is a 14-term atanh series in alnrel's variable (T-2464)
 Rule: for ln(1 + a) with -0.375 <= a < 0, i.e. ln(1 - x) at x <= 0.375 (the beta density, BINOM.DIST(0,n,p), bgrat's

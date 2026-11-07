@@ -211,7 +211,7 @@ pub(crate) fn half_half_cdf(x: f64, y: f64) -> f64 {
 /// `None` for other shapes and points. A w1 below 2^-53 is 0 or 2^-53 by the complement, as
 /// Excel's is on the four such t3568-r5-bup cells (`BETA.DIST(0.95591070645675,826.0,1.0,TRUE)`
 /// is 2^-53, t3568-r5-bup-fresh B744); the rest of that region has no evidence (TODO(T-3150)).
-fn shape_one_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
+pub(crate) fn shape_one_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
     let swap = x > 0.5;
     let (a0, b0, x0, y0) = if swap { (b, a, y, x) } else { (a, b, x, y) };
     if a0 != 1.0 || b0 == 1.0 || y0 <= A1_CLOSED_FORM_MAX_Y {

@@ -11,7 +11,7 @@ use statrs::distribution::{Binomial, Discrete, DiscreteCDF, NegativeBinomial};
 
 use super::bratio::{closed_or_ported_tails, dispatch, l140_overflows, ported_tails, Branch};
 use super::discrete::{binomial_cdf, binomial_pmf, binomial_range, odds, times_ratio};
-use super::incomplete_beta::closed_form_tails;
+use super::incomplete_beta::{closed_form_tails, shape_one_tails};
 use super::loader::excel_dbinom_exponent;
 
 use crate::arithmetic::flush_subnormal;
@@ -310,7 +310,14 @@ impl Model {
             // Not [`closed_or_ported_tails`]: the flush is backed for the port only, so the closed
             // form's result is returned as it was.
             let (x, y, a, b) = (probability_s, 1.0 - probability_s, number_s, number_f + 1.0);
-            if let Some((lower, _)) = closed_form_tails(x, y, a, b) {
+            // At r = 1 past the closed form's reach (y0 > 0.9) it takes bratio's shape-one branch,
+            // which works from p through log1p, as BETA.DIST's kernel does: at a tiny p, fl(1 - p)
+            // is 1 and a form through y loses p (`NEGBINOM.DIST(70991230,1,8.02387331627331E-281,
+            // TRUE)` is Excel's 5.696246441102946E-273, the math; accuracy/NEGBINOM.DIST/r4-T-3576
+            // A125, T-4242).
+            if let Some((lower, _)) =
+                closed_form_tails(x, y, a, b).or_else(|| shape_one_tails(x, y, a, b))
+            {
                 return Ok(lower);
             }
             // Excel's kernel is `#NUM!` where bratio's L140 bup sum overflows (T-3576).
