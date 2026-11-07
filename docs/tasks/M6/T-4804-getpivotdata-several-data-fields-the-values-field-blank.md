@@ -24,6 +24,11 @@ Owner of these visibly-off cells (decision 0245):
 - probes/t2085-getpivotdata-data-fields Q!A1:A5, Q!A8, Q!A12, Q!A13, Q!A15, Q!A17, Q!C6, Q!F6, Q!G5, Q!G6, Q!H6,
   Q!I5, Q!I6, Q!J6, Q!K1:K3, Q!L1:L3
 
+Owner of these visibly-off cells (decision 0245; moved from T-4174, which now loads and renders a cache with a
+calculated field): GETPIVOTDATA naming a calculated data field answers `#REF!` in the engine, where Excel answers by
+the field's name or caption (web.md "GETPIVOTDATA on other pivot shapes (T-2085)", "Calculated fields", LY G1:G3):
+- probes/t2085-getpivotdata-layouts Q!G1:G3
+
 ## Acceptance criteria
 - [ ] The cells above pass, and no other case regresses (`make eval-baseline`).
 - [ ] SPEC-0015's resolution rules and web.md's "Ours" line say what the engine now does.

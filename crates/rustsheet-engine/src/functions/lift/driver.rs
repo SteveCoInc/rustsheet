@@ -94,7 +94,7 @@ impl LiftedArg {
 
     /// The grid slot at output position (`row`, `column`), `None` for a scalar: a dimension of
     /// length 1 stretches, a position past a shorter array is `#N/A`
-    /// (probes/ifs-array-criteria H11, H33-H37). A nested GROUPBY cell is read as its top-left
+    /// (probes/ifs-array-criteria H11, H33-H37). A nested GROUPBY cell is read as `#VALUE!`
     /// (`ArrayNode::scalar`, SPEC-0018 rule 4).
     pub(crate) fn element(&self, row: usize, column: usize) -> Option<&ArrayNode> {
         match self {
@@ -548,7 +548,7 @@ fn scalar_numbers(values: &[CalcResult], grid_index: usize) -> Option<ArgBuf<f64
 /// An array element as a scalar value, by value: a string element moves, not copied. A LAMBDA
 /// element reaches the kernel as that LAMBDA, so each kernel's rule for a LAMBDA value applies
 /// (`ISERROR(SCAN(..))` over LAMBDAs is FALSE per element, probes/lambda-arrays B8), and a nested
-/// GROUPBY cell as its top-left (`ArrayNode::scalar`, SPEC-0018 rule 4).
+/// GROUPBY cell as `#VALUE!` (`ArrayNode::scalar`, SPEC-0018 rule 4).
 fn array_node_into_calc_result(node: ArrayNode, cell: CellReferenceIndex) -> CalcResult {
     match node {
         ArrayNode::String(text) => CalcResult::String(text),

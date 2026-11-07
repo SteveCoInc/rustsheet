@@ -167,6 +167,12 @@ pub fn refresh(
         *field = regroup(field, &grouping, &prior.items).map_err(|_| PivotCacheError::Group)?;
     }
     fresh.fields.extend(added);
+    // The calculated fields are no source columns: they follow the fields read, as written
+    // (T-4174). One whose name a source column now takes, or whose formula names a field gone
+    // from the source, is unprobed (UNVERIFIED, T-4664, T-4897): the first keeps the name for the
+    // source field (`field_map`), the second leaves the pivot without a result.
+    let calculated = cache.fields.iter().filter(|f| f.formula.is_some());
+    fresh.fields.extend(calculated.cloned());
     Ok(fresh)
 }
 

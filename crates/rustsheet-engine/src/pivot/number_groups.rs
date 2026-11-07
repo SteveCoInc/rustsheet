@@ -311,6 +311,7 @@ pub fn group_by_numbers(
         number_groups: Some(groups),
         date_groups: None,
         added_group: None,
+        formula: None,
     })
 }
 
