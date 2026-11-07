@@ -3,7 +3,7 @@ id: T-4756
 title: "Pivot import, export and import is a fixed point over generated pivots"
 milestone: M16
 lane: quality
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
