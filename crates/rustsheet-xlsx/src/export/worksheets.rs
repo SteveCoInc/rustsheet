@@ -55,7 +55,7 @@ use super::{
 /// probes/subnormal-saved-negative-and-array); desktop Excel's save is unprobed, and `-0.0` keeps
 /// its spelling. A stored positive constant is already 0 once loaded (numbers.md "A subnormal cell constant
 /// reads as 0"), so the constant arm changes nothing observable.
-fn saved_number(v: f64) -> f64 {
+pub(super) fn saved_number(v: f64) -> f64 {
     if v != 0.0 && v.abs() < f64::MIN_POSITIVE {
         0.0
     } else {

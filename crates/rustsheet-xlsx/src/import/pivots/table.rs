@@ -22,6 +22,7 @@ use rustsheet_engine::pivot::{
 use super::super::package::ImportLimits;
 use super::super::worksheets::parse_range;
 use super::filters::read_filters;
+use super::sort::read_auto_sort;
 use super::{
     at, attribute, index_attribute, local_name, shown, skip, walk, walk_keeping, Skip, Tag,
     MAX_AXIS_FIELDS, MAX_DATA_FIELDS,
@@ -317,6 +318,8 @@ impl TableReader<'_> {
     ///   `fillDownLabelsDefault` is not read: Excel fills no existing field down for it (t4129 X14,
     ///   t4698 TW, TWE, OW).
     /// - The definition's `<filters>` are its typed filters (`filters::read_filters`, T-4165).
+    /// - A `<pivotField>`'s `autoSortScope` is its value sort's scope (`sort::read_auto_sort`,
+    ///   T-4827).
     fn read_extension(&mut self, owner: OpaqueOwner, xml: &str) -> Result<(), Skip> {
         match owner {
             OpaqueOwner::DataField(index) => {
@@ -330,6 +333,12 @@ impl TableReader<'_> {
                 let data = self.table.data_fields.get_mut(index as usize);
                 if let (Some(mode), Some(data)) = (mode, data) {
                     data.show_data_as = mode;
+                }
+            }
+            OpaqueOwner::Field(index) if element_name(xml) == "autoSortScope" => {
+                let scope = read_auto_sort(xml)?;
+                if let Some(field) = self.table.fields.get_mut(index as usize) {
+                    field.auto_sort = Some(scope);
                 }
             }
             OpaqueOwner::Field(index) => {

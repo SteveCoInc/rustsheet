@@ -14,6 +14,7 @@
 
 mod filters;
 mod groups;
+mod sort;
 mod table;
 
 use std::cell::Cell;
@@ -37,8 +38,8 @@ use super::iso_date::pivot_cache_date_serial;
 use super::package::{
     part_folder_and_rels, part_key, resolve_relative_target, ImportLimits, Package,
 };
-use super::xml::{find_start_attribute, start_attribute, XmlNode};
-use super::{parse_relationships, Relationship};
+use super::xml::{find_start_attribute, start_attribute};
+use super::{part_relationships, Relationship};
 use crate::error::XlsxError;
 
 /// Most pivot fields on one axis of a pivot (SPEC-0015 "Untrusted-input limits").
@@ -403,17 +404,6 @@ pub fn read_pivot_parts(
     }
     let [cache] = caches;
     Ok((cache, pivots))
-}
-
-/// The relationships of a part in document order; none when the part has no relationships part.
-fn part_relationships<R: Read + Seek>(
-    archive: &mut Package<R>,
-    rels_path: &str,
-) -> Result<Vec<(String, Relationship)>, XlsxError> {
-    match archive.open_optional(rels_path)? {
-        Some(file) => parse_relationships(&XmlNode::parse(file)?),
-        None => Ok(Vec::new()),
-    }
 }
 
 /// The pivot table parts of the worksheet part `sheet`, in relationship order.

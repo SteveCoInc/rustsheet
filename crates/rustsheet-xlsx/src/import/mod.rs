@@ -86,6 +86,17 @@ fn load_relationships<R: Read + Seek>(
         .collect())
 }
 
+/// The relationships of a part in document order; none when the part has no relationships part.
+pub(super) fn part_relationships<R: Read + Seek>(
+    archive: &mut Package<R>,
+    rels_path: &str,
+) -> Result<Vec<(String, Relationship)>, XlsxError> {
+    match archive.open_optional(rels_path)? {
+        Some(file) => parse_relationships(&XmlNode::parse(file)?),
+        None => Ok(Vec::new()),
+    }
+}
+
 /// The `<Relationship>` elements of a relationships part with their `Id`s, in document order.
 fn parse_relationships(doc: &XmlNode) -> Result<Vec<(String, Relationship)>, XlsxError> {
     let mut rels = Vec::new();

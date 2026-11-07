@@ -1,0 +1,29 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "ISEVEN and ISODD of a LET value or LAMBDA parameter bound to nothing (T-4928), with operator and lifted forms and non-ToolPak controls (Z1 blank). Predictions in docs/research/t4928/predictions.tsv committed before the excel-graph fill: H_na (#N/A for the rule rows) against H_zero (the engine before T-4928).",
+  "tags": [
+    "M5",
+    "information",
+    "probe"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=LET(e,,ISEVEN(e))",
+        "A2": "=LET(e,,ISODD(e))",
+        "A3": "=LAMBDA(a,b,ISEVEN(b))(1,)",
+        "A4": "=LAMBDA(a,b,ISODD(b))(1,)",
+        "A5": "=LET(e,,ISEVEN(e+0))",
+        "A6": "=LET(e,,ISODD(e+0))",
+        "A7": "=ROWS(LET(e,,ISEVEN(IF({1;1},e))))",
+        "A8": "=LET(e,,ISNUMBER(e))",
+        "A9": "=LET(e,,ISBLANK(e))",
+        "A10": "=LET(e,,TYPE(e))",
+        "A11": "=ISEVEN(Z1)",
+        "A12": "=ISODD(Z1)"
+      }
+    }
+  ]
+}

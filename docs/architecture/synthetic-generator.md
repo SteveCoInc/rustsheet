@@ -557,6 +557,37 @@ both operands through TRUNC (with and without 20 digits), INT, `MOD(..,2^21)`, R
 cut stops being b (computed exactly with `decimal`), with every picker (plain references included) and wrapper, each
 cell tagged `round15=eq|ne/trunc15=eq|ne`: 4,252 cells. Other milestones are refused.
 
+`typed-input` (suite `gen-m2`, T-3462; module `gen/typed_input.py`) writes two cases of 160 typed entries
+(`{"entered": "..."}` in `A<n>`, text as a user types it), each with three readers: `=A<n>+0` (the number, or
+#VALUE! when the entry stayed text), `=ISTEXT(A<n>)` and `=CELL("format",A<n>)`; all four cells are checked and
+tagged `typed-input/<stratum>/<variant>`. Each case draws 20 entries from each of eight strata (an equal 1/8
+share; the seed picks the variants and digits and shuffles the rows):
+- `plain`: integers, decimals, leading zeros, 15 and 16–20 significant digits (with and without a point), a
+  leading or trailing `.`, and the zero forms (`0.`, `.0`, `-0`, `00`);
+- `sign`: `+`, `-`, `(..)`, `(-..)`, a trailing `-`, `-$` and `$-`, `($..)`, a sign or parenthesis with spaces,
+  doubled signs;
+- `currency`: `$` (with and without a space), a trailing `$` or `€`, valid grouping (`1,234,567`, with and without
+  `$` and decimals) and invalid grouping (`1,23`, `12,34.5`, `1,2345`, `,1`, `1,`);
+- `percent`: a trailing `%` (with a space before or after), a leading or doubled `%`, `%` with `$`, grouping, a
+  sign, parentheses, E-notation and a mixed fraction;
+- `e-notation`: `1E3`, `1e+3`, `1.5E-7`, `.5E2`, `E5`, `1E` / `1E+` / `1E-`, `**` (syntax.md), exponents 305–308,
+  past 308 and below -300, a signed mantissa, a space before the `E`;
+- `fraction`: mixed fractions, `0 n/d`, improper (`1 7/2`), denominators of 100–9999 and with a leading zero, a
+  zero denominator, a decimal numerator, a sign or `$` in front, and `n/dddd` (a four-digit second group);
+- `spacing`: a body from the other strata with leading or trailing spaces, CHAR(160) or a tab, or a doubled inner
+  space;
+- `near-miss`: `1.2.3`, `1,,234`, `$`, `-`, `+`, `()`, `%`, `.`, `1e`, `1//2`, letters (`k q x z`) glued to
+  digits, `0x..`, `1,2.3.`.
+
+Exclusions (redrawn, never written): text starting with `=`; text over 255 characters; and any date shape, digit
+groups joined by `/` or `-` (spaces around the separator ignored, as dates.md says Excel ignores them) with no
+four-digit group. A year-less date such as `1/2` or `1 / 2` reads in the oracle's current year, which the pinned
+clock cannot reproduce (dates.md "The en-US date-text grammar"), so bare `n/d` fractions and the task's `1/0` and
+`1 /2` near misses are not drawn; `n/dddd` and `1-2-2026` are. Month names, clocks and dates are T-3463. On
+excel-graph `CELL("format")` is #VALUE! (coercion.md, probes/typed-paren-number-input), so that reader scores
+only on a desktop oracle; the format Excel chose is in excel-graph's `ENTERED` log. The engine standing in for
+Excel scores the seed-0 batch's 1,280 cells with no crash or timeout.
+
 ---
 
 ## 6. Value generators (per-type edge pools)

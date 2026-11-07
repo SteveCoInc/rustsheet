@@ -1,10 +1,24 @@
 use rustsheet_engine::types::Workbook;
 
+use super::external_links;
 use super::rich_errors::{rich_value_parts, METADATA_RELATIONSHIP};
 use super::xml_constants::{XML_DECLARATION, XML_WORKSHEET};
 
+/// The relationship id of the first externalLink part: they come right after the sheets, as
+/// Excel numbers them (eval/suites/fixtures/cases/external-link-cached-text.xlsx: sheets rId1–rId3,
+/// externalLink rId4). The pivot caches follow them: no evidenced file has both, so that order is
+/// RustSheet's choice; relationship ids carry no meaning (T-4143).
+pub(crate) fn first_external_link_id(workbook: &Workbook) -> usize {
+    workbook.worksheets.len() + 1
+}
+
+/// The relationship id of the first pivot cache, right after the externalLink parts (`PivotPlan`).
+pub(crate) fn first_pivot_cache_id(workbook: &Workbook) -> usize {
+    first_external_link_id(workbook) + workbook.external_books.len()
+}
+
 /// With `rich`, the workbook also relates to the rich-value parts (T-1014). `pivot_caches` are
-/// the relationships to the pivot caches, numbered right after the sheets' (`PivotPlan`).
+/// the relationships to the pivot caches, numbered from [`first_pivot_cache_id`] (`PivotPlan`).
 pub(crate) fn get_workbook_xml_rels(
     workbook: &Workbook,
     rich: bool,
@@ -17,7 +31,11 @@ pub(crate) fn get_workbook_xml_rels(
             "<Relationship Id=\"rId{id}\" Type=\"{XML_WORKSHEET}\" Target=\"worksheets/sheet{id}.xml\"/>"
         ));
     }
-    let mut id = worksheet_count + pivot_caches.len();
+    relationships_str.extend(external_links::workbook_relationships(
+        workbook,
+        first_external_link_id(workbook),
+    ));
+    let mut id = first_pivot_cache_id(workbook) + pivot_caches.len();
     relationships_str.extend(pivot_caches);
     relationships_str.push(
         format!("<Relationship Id=\"rId{id}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>")

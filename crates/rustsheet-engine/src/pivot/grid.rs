@@ -36,7 +36,7 @@ use super::refresh::{field_map, refresh, SourceCells};
 use super::result::{compute_on, PivotComputeError, MAX_PIVOT_WORK};
 use super::{
     AxisField, CellArea, OpaqueEntry, PivotCache, PivotCacheError, PivotField, PivotFilter,
-    PivotGeometry, PivotTable, MAX_RECORD_VALUES,
+    PivotGeometry, PivotTable, SortReference, MAX_RECORD_VALUES,
 };
 use crate::expressions::parser::parse_range;
 use crate::expressions::token::Error;
@@ -340,6 +340,26 @@ fn remap(
                 .unwrap_or_else(|| PivotField::new(None, field.items.len()))
         })
         .collect();
+    // A value sort's references follow their fields; a scope naming a field gone from the source
+    // sorts nothing and is dropped (UNVERIFIED, T-4664). As for the filters, a pivot read from a
+    // file keeps its `autoSortScope` verbatim, so only one made through the API gets here with one.
+    for field in &mut out.fields {
+        if let Some(scope) = &mut field.auto_sort {
+            let moved: Option<Vec<SortReference>> = (scope.references.iter())
+                .map(|reference| {
+                    let to = map.get(reference.field as usize).copied().flatten()?;
+                    Some(SortReference {
+                        field: to,
+                        items: reference.items.clone(),
+                    })
+                })
+                .collect();
+            match moved {
+                Some(references) => scope.references = references,
+                None => field.auto_sort = None,
+            }
+        }
+    }
     // What a field owns follows it; what a dropped field owned goes with it.
     out.opaque = (pivot.opaque.iter())
         .filter_map(|entry| match entry.owner.field() {

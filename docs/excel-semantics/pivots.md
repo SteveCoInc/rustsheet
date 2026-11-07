@@ -947,6 +947,8 @@ Rule (each aggregate in a value field that also holds other kinds of value):
   East/A of Err holds one number beside `#N/A` and shows `#N/A` (A_stdDev!L6, A_var!L6).
 - **Empty intersections.** An intersection with no records is blank for every aggregate, Count and
   CountNums included.
+- **Blank records.** A Sum cell whose records are all blank is blank too, not 0 (an item whose one record has
+  no value).
 
 Evidence: probes/t4135-pivot-aggregates (excel-graph, 2026-11-06, T-4135). Each sheet A_<aggregate> has
 rows Region, columns Kind and six value fields. The Data!A2:H5 records are East/B, East/A, East/A and
@@ -962,14 +964,19 @@ West/A, and East/A row 4 holds the odd value: text `abc`, a blank, `TRUE` or `#N
 - **One value:** A_stdDev and A_var are `#DIV/0!` at East/B (B6:G6) and West/A (H7:M7), and at I6
   (East/A Txt: 10 and `abc`). A_stdDevp and A_varp are 0 there.
 - **Empty intersections:** West/B (B7:G7) is blank on every sheet.
+- **Blank records:** probes/t4164-pivot-value-sort (excel-graph, 2026-11-07, T-4164) SEd B7 and SEa B4: Sum of Amt
+  of item D, whose one record has a blank Amt, is blank (found by T-4827).
 Status: VERIFIED (excel-graph)
 UNVERIFIED (probe pending: T-4633): a cell whose records hold no
-number at all (only text, blanks or booleans) is unprobed; the engine gives it the worksheet
-functions' answers (Sum, Max, Min and Product 0, Average, StdDev and Var `#DIV/0!`, StdDevp and Varp
-`#DIV/0!` with no number). A date in a value field counts as its serial number, also unprobed. When
+number at all (only text, blanks or booleans) is unprobed beyond a Sum over blanks alone; the engine shows that one
+blank and gives the rest the worksheet functions' answers (Sum over text or booleans, Max, Min and Product 0, Average,
+StdDev and Var `#DIV/0!`, StdDevp and Varp `#DIV/0!` with no number), and a Sum total that covers only blank
+records blank too. A show-values-as mode reads such a blank Sum cell as empty, not as 0 (also UNVERIFIED,
+T-4633). A date in a value field counts as its serial number, also unprobed. When
 a cell or total covers two different errors, the engine shows the first in accumulation order, also
 unprobed (T-4633).
-Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotResult::value_as`), crates/rustsheet-engine/src/pivot/accumulate.rs (`Accumulator::finish`)
+Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotResult::value_as`; a blank Sum in
+`PivotResult::plain_as`, T-4827), crates/rustsheet-engine/src/pivot/accumulate.rs (`Accumulator::finish`)
 
 ## Summation order of Sum, Average and Product totals
 Rule:
@@ -1909,13 +1916,16 @@ Evidence: the probes of the previous entry (excel-graph, 2026-11-07, T-4130); th
 every cell. Data: Product sums Apple 30, Apricot 4, Banana 12, Cherry 11, Grape 6 (filters); Ant 28, Bee 14, Cat 18,
 cached in the order Bee, Ant, Cat (sorts).
 Status: VERIFIED (excel-graph) for these shapes. Ties, filter order and filters over totals are the next entries' (T-4164); the engine is
-T-4165 (filters, Top-N, AutoShow), T-4827 (value sorts) and T-4768 (label sorts). The engine's own readings around the
+T-4165 (filters, Top-N, AutoShow), T-4827 (value sorts: "Value sorts: ties, blanks and errors") and T-4768 (label
+sorts). The engine's own readings around the
 filters are "Pivot filters: the engine's own readings".
 Implemented in: crates/rustsheet-engine/src/pivot/filter.rs (`apply`; T-4165) (every caption, value, Top-N, date,
 month, quarter and relative date filter, the values list, iconFilter, AutoShow and two filtered fields: the
 t4130-pivot-label-filters, value-filters, date-filters, relative-date-filters, filter-attrs and field-filters cells pass
 in value)
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/filters.rs (`read_filters`, DLit's dropped date filter; T-4165)
+Implemented in: crates/rustsheet-engine/src/pivot/sort.rs (`value_sorts`; T-4827) (the value sorts SV, SVA, SVC, SVR,
+SXA, SXR and SV2 pass; the label sorts SA, SD, NA, CL1 and CL0 are T-4768's)
 
 ## Top-N filters at their edges: ties, N past the end, exact thresholds, signs
 Rule, per shape (rows one field, Sum of one data field, one `top10` filter):
@@ -2019,8 +2029,20 @@ Rule (`autoSortScope` on a data field, rows Product):
 
 Evidence: probes/t4164-pivot-value-sort (excel-graph, 2026-11-07, T-4164).
 Status: VERIFIED (excel-graph) for these shapes. UNVERIFIED (probe pending: T-4799): whether a blank ties with a real
-0 (no item held 0) and the order of several errors; ties of an inner field sorted under an outer field (unprobed).
-Implemented in: not yet in the engine (T-4827, split from T-4165).
+0 (no item held 0; the engine ties them, by the cache order) and the order of several errors (the engine keeps the
+cache order in both directions); ties of an inner field sorted under an outer field (unprobed; the engine breaks them
+by the cache order, as for an outer field). UNVERIFIED (unprobed, T-4799), the engine's own readings: a
+`reference@x` is an index into the field's `<items>` (every probe lists them in cache order, so a cache index fits
+too) and only its first `x` is read; a reference to a field on no axis, on the sorted field's own axis or past
+the cache is ignored; a scope whose data field (the data reference's `x`) or column item is past the definition's, or
+that has no data reference, sorts nothing, as does a scope under `sortType="manual"`; an item `showAll` shows with no
+record sorts as 0; a value sort on a column field reads as on a row field, the row items its scope; the value is the
+one a value filter ranks by, so a Count or Average item with no number sorts as its cell shows it (0, `#DIV/0!` last).
+A value sort by a calculated data field leaves the pivot without a result, as a value filter by one does
+(UNVERIFIED, T-4897).
+Implemented in: crates/rustsheet-engine/src/pivot/sort.rs (`value_sorts`; T-4827) (STd, STa, STo, STc, STca, SEd,
+SEa, SCd, SCa and SC2, and t4130-pivot-sort SV, SVA, SVC, SVR, SXA, SXR and SV2, pass)
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/sort.rs (`read_auto_sort`; T-4827)
 
 ## A field shows its items in the `<items>` order, not the cache's, until a sort applies
 Rule: with no sort (`sortType` absent or `manual`) a field shows its items in the order of its `<item>` elements,
@@ -2037,8 +2059,9 @@ Evidence: probes/t4164-pivot-item-order (excel-graph, 2026-11-07, T-4164); `item
 `<item>` elements in an order of their own (T-4164). IOD (`descending`) shows Cat, Bee, Ant, which is also its items
 order, so it does not tell the two apart.
 Status: VERIFIED (excel-graph) for these shapes.
-Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (the items order: IO, IOM and IOO pass); the sorts
-are T-4768's (label) and T-4827's (value, split from T-4165).
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (the items order: IO, IOM and IOO pass); the
+label sorts are T-4768's (IOA)
+Implemented in: crates/rustsheet-engine/src/pivot/sort.rs (`value_sorts`; T-4827) (IOV passes)
 
 ## useWholeDay: a date filter compares the item's day, not the criterion's
 Rule: a date filter compares an item's full date-time with the criterion unless its x15 `pivotFilter` carries

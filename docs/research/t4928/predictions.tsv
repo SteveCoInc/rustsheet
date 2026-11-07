@@ -1,0 +1,13 @@
+cell	formula	kind	H_na	H_zero(engine before T-4928)
+A1	=LET(e,,ISEVEN(e))	rule	#N/A	TRUE
+A2	=LET(e,,ISODD(e))	rule	#N/A	FALSE
+A3	=LAMBDA(a,b,ISEVEN(b))(1,)	rule	#N/A	TRUE
+A4	=LAMBDA(a,b,ISODD(b))(1,)	rule	#N/A	FALSE
+A5	=LET(e,,ISEVEN(e+0))	lift	TRUE	TRUE
+A6	=LET(e,,ISODD(e+0))	lift	FALSE	FALSE
+A7	=ROWS(LET(e,,ISEVEN(IF({1;1},e))))	lift	2.0	2.0
+A8	=LET(e,,ISNUMBER(e))	ctl	FALSE	FALSE
+A9	=LET(e,,ISBLANK(e))	ctl	TRUE	TRUE
+A10	=LET(e,,TYPE(e))	ctl	1.0	1.0
+A11	=ISEVEN(Z1)	ctl	TRUE	TRUE
+A12	=ISODD(Z1)	ctl	FALSE	FALSE

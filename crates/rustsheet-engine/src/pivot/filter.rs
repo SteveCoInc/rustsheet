@@ -41,7 +41,7 @@ use crate::functions::util::collation::{
 use crate::text::Text;
 
 use super::layout::item_text;
-use super::result::{charge, units, Order, PivotComputeError};
+use super::result::{axis_fields, charge, units, Order, PivotComputeError};
 use super::{AxisField, CacheItem, PivotCache, PivotTable};
 
 mod model;
@@ -51,7 +51,8 @@ pub use model::{
     AutoShow, DateGroupItem, DynamicDate, FilterCondition, FilterCriteria, FilterOperator,
     PivotFilter, PivotFilterKind, RelativeUnit,
 };
-use rank::{Ranking, ValueStep};
+use rank::Ranking;
+pub(super) use rank::ValueStep;
 
 /// What [`apply`] keeps.
 pub(super) struct Kept {
@@ -125,13 +126,7 @@ pub(super) fn apply(
     for (index, axis) in axes.iter().enumerate() {
         let across = (axes.iter().enumerate())
             .any(|(other, a)| other != index && a.iter().any(|f| matches!(f, AxisField::Field(_))));
-        let fields: Vec<u32> = axis
-            .iter()
-            .filter_map(|f| match f {
-                AxisField::Field(index) => Some(*index),
-                AxisField::Values => None,
-            })
-            .collect();
+        let fields = axis_fields(axis);
         for (depth, &field) in fields.iter().enumerate() {
             let filters = by_field.get(&field).map_or(&[][..], Vec::as_slice);
             let auto_show = table.fields.get(field as usize).and_then(|f| f.auto_show);
@@ -168,6 +163,7 @@ pub(super) fn apply(
                     measure,
                     // An item of an outer field, or across the other axis's items, is a total.
                     total: depth + 1 < fields.len() || across,
+                    within: &[],
                 };
                 step.run(&rank, &mut kept, work)?;
             }
