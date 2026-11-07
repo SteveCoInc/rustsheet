@@ -75,7 +75,9 @@ recorded, the nightly gate no longer reports it, and a passing check is no evide
     `F roundtrip-poi/54436.xlsx#R0 * 296 2cd19df138a87ec5`.
 - **Other #3892 lines:** I compared every round-trip baseline's current `#R0` failing lines with the baseline before
   #3892 (`a2bae4dec^`).
-  - calipers, corpus-bench, fixtures and poi have identical sets, except 54436.
+  - calipers and fixtures have identical sets.
+  - poi gained only the 54436 line.
+  - corpus-bench gained none, and lost one line (`1726/1_1726_input.xlsx`), fixed since.
   - excel-saved did not exist then.
   - So 54436 was the only #3800 regression that #3892 recorded, and there is no further task to file.
 - **Follow-up:** T-5046 drops the ratchet's legacy per-case path and fixes the quality-gates wording, as #4007
