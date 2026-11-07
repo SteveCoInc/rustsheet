@@ -3,7 +3,7 @@ id: T-4739
 title: "OFFSET over a mixed XLOOKUP grid gives a 2x1 result (probes/t4704 B4:C4, A5, B7:C7, A8)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
