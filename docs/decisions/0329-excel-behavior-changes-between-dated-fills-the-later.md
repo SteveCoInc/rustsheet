@@ -13,10 +13,13 @@
     - An element-wise lift reads a nested cell as an error, not as its top-left. Evidence:
       t2360-array-lambda-holidays-refill-1106 P!C1, C9, C17, C25, C33 and
       t2311-pivotby-value-columns-error-refill-1106 P!C12.
-    - `&""` over an INDEXed row makes each nested cell `#VALUE!`. Evidence: t2625-refill-1106 A32 (the October fill was
-      one `#N/A`).
-  - The t2592 and t2594 copies were refilled twice on 2026-11-06, and the two fills are identical. One rule explains
-    every changed cell across five probes. The new T-2609 probes, filled the same day, agree with it
+    - The lifted read's error is `#VALUE!`: `IFERROR(G&"","#"&ERROR.TYPE(G))` gives "#3" at every nested cell, over a raw
+      GROUPBY (t2475-stat-subexpressions-refill-1106 P!A64, 1x1 and multi-cell nested cells) and over
+      `INDEX(PIVOTBY(..),4,0)` (t2625-refill-1106 A32). In October the fallback ERROR.TYPE read the cell's non-error
+      top-left and gave `#N/A`, so A32 was one `#N/A` and A64 a `?` listing.
+  - The t2592 and t2594 copies were refilled twice on 2026-11-06, and the two fills are identical (one refill of each
+    is committed; the second is not, as in decision 0284). One rule explains every changed cell across six probes.
+    The new T-2609 probes, written to test it and filled the same day, agree with it
     (t2609-nested-operators-and-lifts A44:A47, -one-cell A27). So this is a behavior change, not variation between
     fills.
   - The opposite kind of case is a single cell whose value flips between fills of the same bytes with no rule behind
@@ -38,7 +41,8 @@
   1. **When a fill is a change.** A later fill's value for a cell is a behavior change when all of these hold:
      - a byte-identical copy of the input (same sha256, or a case that builds the same bytes) gives the new value;
      - either two fills of that copy agree, or one rule, stated in docs/excel-semantics/, explains the changed cells
-       of at least two probes;
+       of at least two probes and is confirmed by at least one newly written probe cell filled on the later date (so a
+       rule written after the fact must still predict a fresh cell);
      - the copy's other cells agree with the earlier fill.
      Any other difference between fills is variation, and T-3610 decides how it is scored.
   2. **Target.** For a behavior change, the later fill is the target (directive 1, "current"). The engine moves to it
@@ -58,15 +62,16 @@
      - t2594-nested-aggregates A26:A29;
      - t2625-nested-consumers A13, A17, A20, A25, A26 and A32;
      - t2360-array-lambda-holidays P!C1, C9, C17, C25 and C33;
-     - t2311-pivotby-value-columns-error P!C12.
+     - t2311-pivotby-value-columns-error P!C12;
+     - t2475-stat-subexpressions P!A64 (October `64|13x3|?`, which ours gives today).
      The October cells of probes/t2475-stat-subexpressions P!A62, A63 and gen-m9/17c110a53924beb8 Calc!A300 are
      superseded too. Ours already gives their November values, so they are F lines against the October values today.
-     They stay F lines, and they need no regression run.
+     They stay F lines, and they need no regression run. Unlike them, t2475 P!A64 passes today and needs the run.
 - **Consequences:**
   - T-4736 owns the aggregate reads: SUM, COUNT and COUNTA, the t2592, t2594 and t2625 cells except A32, and SUM over a
     reference-body result (t2609 A50).
-    T-4737 owns the element-wise lift and operator reads: the t2360, t2311 and t2625 A32 cells, t2609 A44:A46,
-    -one-cell A27 and the t2475 refill's P!A64. T-4738 owns the lifted INDEX top-left (t2609 A56:A59). Each task's PR
+    T-4737 owns the element-wise lift reads: the t2360, t2311 and t2625 A32 cells, t2609 A44:A46, -one-cell A27, and
+    the t2475 refill's P!A64 (superseding the October t2475 P!A64). T-4738 owns the lifted INDEX top-left (t2609 A56:A59). Each task's PR
     makes the one allowed regression run for the superseded cells it lists.
   - Known failures fall by the refill cells each task fixes and rise by the October cells it supersedes; the gap
     list shows both. No gate or script changes.

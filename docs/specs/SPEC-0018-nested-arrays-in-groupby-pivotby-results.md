@@ -58,15 +58,16 @@ paragraph starting "A LAMBDA array result is shown as `#VALUE!`, but the cell ho
    - A function that lifts element by element over the result reads each nested cell as an error, not as its top-left:
      `SUM(--ISERROR(PIVOTBY(..)))` counts every nested cell (t2360-array-lambda-holidays-refill-1106 P!C1, C9, C17, C25, C33:
      12, 9, 6, 3, 12; t2311-pivotby-value-columns-error-refill-1106 P!C12: 12). The error is not `#N/A`: over a two-level cell whose
-     inner top-left is `#N/A`, ISNA is 0 and ISERROR TRUE (probes/t2609-nested-operators-and-lifts A44:A47, -one-cell A27). Which
-     error it is is not probed (T-4737). Engine task: T-4737.
+     inner top-left is `#N/A`, ISNA is 0 and ISERROR TRUE (probes/t2609-nested-operators-and-lifts A44:A47, -one-cell A27). It is
+     `#VALUE!`: the lifted fallback `"#"&ERROR.TYPE(G)` of `IFERROR(G&"",..)` gives "#3" at every nested cell, 1x1 and
+     multi-cell, over a raw GROUPBY and over an INDEXed PIVOTBY row (t2475-stat-subexpressions-refill-1106 P!A64,
+     t2625-nested-consumers-refill-1106 A32). A two-level cell's error type is not probed. Engine task: T-4737.
    - A lifted INDEX that selects nested cells gives each one's top-left: `INDEX(G,{2;3},2)` is `{3;1}`, SUM 4
      (t2609-nested-operators-and-lifts A56:A59). Engine task: T-4738.
    - An operator over the whole result keeps its shape: `&""` gives 3x3 (A13), and each nested cell becomes `#VALUE!`, whatever
      its size, kind or depth and whatever the operator (`+ - * / ^ % & =`, unary minus, against a scalar, a constant, a range or
      another result): probes/t2609-nested-operators-and-lifts A1:A30, -one-cell A1:A26, A28:A30 and -d04 A1:A17 (excel-graph,
-     2026-11-06, T-2609). Ours does that (`own_error`, `array_node_to_number`). `&""` over an INDEXed row of nested cells does the
-     same (t2625-nested-consumers-refill-1106 A32; T-4737).
+     2026-11-06, T-2609). Ours does that (`own_error`, `array_node_to_number`); this did not change in November.
    - An operator on one nested cell taken out by INDEX works on its array: `+0`, `--` and `&""` leave `64|2x1|3` (A16:A18).
    - SUM over a result that holds nested cells is `#N/A`, with other arguments too (`SUM(1,GROUPBY(..),2)`); COUNT skips the nested
      cells (0 over GROUPBY, 90 over the t2625 PIVOTBY, whose scalar cells it counts); COUNTA counts each nested cell as one value
@@ -78,7 +79,8 @@ paragraph starting "A LAMBDA array result is shown as `#VALUE!`, but the cell ho
      (`SUM(--ISERROR(..))` 0: t2360-array-lambda-holidays P!C1, C9, C17, C25, and 1 at C33, where only the Total's non-top-left
      element was `#N/A`; t2311-pivotby-value-columns-error P!C12 0), and SUM, COUNT and COUNTA flattened nested cells (SUM 220,
      COUNT 16, COUNTA 19: t2592-nested-groupby-cells A6:A8; t2594-nested-aggregates A26:A29; t2625-nested-consumers A13, A17, A20,
-     A25, A26; and one `#N/A` for t2625 A32). These sidecars stay committed; the cells become known failures as the engine tasks
+     A25, A26), and a lifted ERROR.TYPE read a nested cell's non-error top-left, as `#N/A` (one `#N/A` for t2625 A32, a
+     `64|13x3|?` listing for t2475-stat-subexpressions P!A64). These sidecars stay committed; the cells become known failures as the engine tasks
      above land. Ours follows them until then (T-2594's `NestedReading::Flatten`).
 5. **MAP, BYROW, BYCOL and REDUCE hand the LAMBDA each nested cell whole.**
    - MAP, BYROW and BYCOL with a scalar step return an array of the result's shape (3x3, 3x1, 1x3; A1:A5), and a scalar step over PIVOTBY

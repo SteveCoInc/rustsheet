@@ -69,8 +69,8 @@ Done 2026-11-07.
 - **Engine tasks filed:**
   - T-4736: aggregates (SUM `#N/A`, COUNT skips, COUNTA one per cell), the t2592, t2594 and t2625 cells, and t2609
     A50;
-  - T-4737: lifts read an error, the t2360, t2311 and t2625 A32 cells, t2609 A44:A46, -one-cell A27 and the t2475
-    refill's A64;
+  - T-4737: lifts read `#VALUE!`, the t2360, t2311 and t2625 A32 cells, t2609 A44:A46, -one-cell A27 and the t2475
+    refill's A64 (superseding the October t2475 A64, which ours passes today: review round 1);
   - T-4738: the lifted INDEX top-left, t2609 A56:A59.
   Each task lists the cells it fixes and the cells it supersedes.
 - **Eval delta:** none (docs only).
