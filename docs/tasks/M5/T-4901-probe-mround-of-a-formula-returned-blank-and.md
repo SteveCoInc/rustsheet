@@ -3,7 +3,7 @@ id: T-4901
 title: "Probe MROUND of a formula-returned blank and LET/LAMBDA omissions in the newer roundings (T-4873 follow-up)"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
