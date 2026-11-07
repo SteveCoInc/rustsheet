@@ -32,7 +32,7 @@ probes/t4590-growth-overflow Int A2:A7 show GROWTH is 0 where the prediction is 
 
 ## Acceptance criteria
 - [x] The probe is filled and its rule recorded in statistics.md. The engine follows it, and Int A2:A7 pass.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The least-squares digits (T-4763, T-2006).
