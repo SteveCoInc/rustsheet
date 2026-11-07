@@ -8524,3 +8524,28 @@ keeps the df; all-numeric: 0.997224951291803). 3x3 ranges with a blank, text or 
 give 0.8616386653047765 (all-numeric 0.8444645822929768); different shapes are `#N/A` (`A21:C23` with `E21:F23`, with
 `E21:G24`). The engine matches 23 of 24 cells; F!A1 is 1 ulp off (a numeric ulp, baselined). The unit test
 `chisq_test_over_whole_columns_counts_every_cell` is consistent with the 1-D and 2-D whole-column cells.
+
+## Standardized moments use stored x87 operations (T-4328)
+Rule: SKEW, SKEW.P and KURT behave as if every operation were an x87 operation in extended precision stored to a
+double: each sum, difference, product, quotient and square root rounds first to a 64-bit significand and then to a
+double (numbers.md "Division rounds twice"). The order is a two-pass mean and m2 = Σ(x - mean)² in input order,
+s = sqrt(m2/d) (d = n - 1 for SKEW and KURT, n for SKEW.P), z = (x - mean)/s, the cube (z·z)·z and the fourth power
+(z·z)·(z·z) (square and square, not ((z·z)·z)·z), summed in input order. SKEW is (n/((n-1)(n-2)))·Σz³, SKEW.P Σz³/n and
+KURT (n(n+1)/((n-1)(n-2)(n-3)))·Σz⁴ - 3(n-1)²/((n-2)(n-3)), the bias factor formed before it scales the sum. Two effects
+are visible, not only last-digit:
+- The twice-rounded root: `SKEW({1E-15,1,2})` (variance 0.999999999999999, whose twice-rounded root is
+  0.9999999999999996 against 0.9999999999999994 once rounded) is 2.4980018054066022E-15 (gen-m9/d208bbafc3bc1997 A262,
+  probes/t2475-stat-subexpressions P!A520); the nearly symmetric data amplifies the one-ulp root.
+- The power order: in `KURT({0.1,42,123456789.123,0.1})` z = 1.4999999999999234 and z² rounds twice to one ulp below the
+  once-rounded square; the bias subtraction magnifies it and KURT is 3.9999999999979536 (gen-m9/27601819397dd56e A200).
+  `KURT({0.2,7,3.14159,-2.5})` is -0.7628272385808703 (gen-m9/7bd219ec0c0c5e22 A386) and a 9-value KURT
+  0.734384233823282 (gen-m9/c2974c061384fdd9 A20); both separate (z²)² from the chained product.
+Ruled out on a replay of 465 cached Excel KURT, SKEW and SKEW.P calls, split in two halves by case and cell hash (both
+halves support the rule): compensated summation, normalizing by a reciprocal, VAR/STDEV's one-pass variance, raw
+moments and an unstored extended accumulator each lose many cells the rule matches.
+Evidence: gen-m9 and probes/t2475-stat-subexpressions (excel-graph); the eval cells of KURT (295 of 295) and SKEW
+(335 of 335).
+Ours: as Excel since T-4328 (`standardized_moment` in count_and_average.rs, shared by `fn_skew`, `fn_skew_p` and
+`fn_kurt`; tests in test_fn_moments.rs). The zero or overflowing m2 stays `#DIV/0!` ("Overflowing squares (T-2432)").
+Status: VERIFIED (excel-graph)
+Tasks: T-4328
