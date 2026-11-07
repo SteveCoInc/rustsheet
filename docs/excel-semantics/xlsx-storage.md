@@ -62,8 +62,11 @@ Rule: a constant (formula-less) cell that stores no value reads as blank in Exce
 stores the empty string is text: `t="s"` to an empty shared string, `<c t="str"><v></v></c>` (an empty
 `<v>`, unlike a missing one) and `<is><t></t></is>` give ISBLANK FALSE, ISTEXT TRUE, COUNTA 1, LEN 0
 and TYPE 2. So a missing `<v>` and an empty `<v>` differ for `t="str"` but not for `t="s"` (an empty
-index names no string; it is not shared string 0).
-Evidence: fixtures/valueless-cell-forms (excel-graph, 2026-11-06, T-4148).
+index names no string; it is not shared string 0). A whitespace-only index, `<c t="s"><v> </v></c>`, is
+blank too (ISBLANK TRUE, COUNTA 0, TYPE 1), and a bare `<c t="inlineStr"><is/></c>` (an `<is>` with no `<t>`)
+is the empty string, as `<is><t></t></is>` is (ISBLANK FALSE, ISTEXT TRUE, COUNTA 1, LEN 0, TYPE 2).
+Evidence: fixtures/valueless-cell-forms (excel-graph, 2026-11-06, T-4148) and
+fixtures/valueless-cell-forms-ws-index (excel-graph, 2026-11-07, T-4743).
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-xlsx/src/import/worksheets.rs (`is_valueless_constant`). A spill
 member's cached value and `t="d"` keep their own rules.
