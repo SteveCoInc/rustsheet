@@ -221,6 +221,19 @@ impl UserModel {
             width: source_last_column - source_first_column + 1,
             height: source_last_row - source_first_row + 1,
         };
+        // Refused before anything changes: a paste over part of a data table's results, which
+        // its clear of the target would refuse later, and a cut from them (T-0452).
+        self.model.refuse_data_table_clear(target_area)?;
+        if is_cut {
+            let source = Area {
+                sheet: source_sheet,
+                row: area.row,
+                column: area.column,
+                width: area.width,
+                height: area.height,
+            };
+            self.model.refuse_data_table_cut(&source)?;
+        }
 
         // The merges of the copied area, captured before the containment
         // step below can remove target merges: when the paste overlaps its

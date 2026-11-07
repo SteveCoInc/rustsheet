@@ -34,5 +34,8 @@ with its whole region is there again.
 - [ ] A diff whose data tables break `DataTable::check` is refused.
 - [ ] `make check` green; reviewers approve.
 
+- A range clear (or a paste) over every result cell deletes the table too (T-0452); its undo restores the
+  cells but not the table. Restore it the same way.
+
 ## Out of scope
 - The facade (its row and column edits are harness-only and have no undo).

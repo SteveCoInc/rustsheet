@@ -4,12 +4,14 @@
 //!
 //! Excel treats a data table's region, its result cells with the row above and the column left of
 //! them, as one block: an insert or delete of rows or columns that cuts through it, and any write
-//! into a result cell, is refused (excel-graph 2026-11-07). An edit outside the region moves the
-//! table and its input cells; deleting every row (column) of the region deletes the table, and
-//! deleting an input cell's row (column) makes that input `#REF!`.
+//! into a result cell, is refused (excel-graph 2026-11-07), as is a clear of some of the results.
+//! An edit outside the region moves the table and its input cells; deleting every row (column) of
+//! the region, or clearing every result cell, deletes the table, and deleting an input cell's row
+//! (column) makes that input `#REF!`.
 
 use crate::{
     constants::{LAST_COLUMN, LAST_ROW},
+    expressions::types::Area,
     model::Model,
     types::{DataTable, DataTableInput, MergedCell},
 };
@@ -144,9 +146,9 @@ impl Model {
         ))
     }
 
-    /// Puts the merged ranges back on `sheet` as they were (the caller remaps them), and the tables as the
-    /// edit of `count` lines at `at` left them (see [`Model::refuse_data_table_split`]): moved,
-    /// with their inputs moved or `#REF!`, or gone.
+    /// Puts the merged ranges back on `sheet` as they were (the caller remaps them), and the
+    /// tables as the edit of `count` lines at `at` left them (see
+    /// [`Model::refuse_data_table_split`]): moved, with their inputs moved or `#REF!`, or gone.
     pub(crate) fn restore_write_guards(
         &mut self,
         sheet: u32,
@@ -159,6 +161,66 @@ impl Model {
             .iter()
             .filter_map(|t| t.displaced(rows, at, count))
             .collect();
+        Ok(())
+    }
+
+    /// The result ranges of the data tables on `area`'s sheet that a clear of `area` removes: Excel
+    /// accepts a clear that covers every result cell of a table (the results alone, the region
+    /// or more) and deletes the table, and refuses one that covers only some of them
+    /// (excel-graph 2026-11-07, recalc.md).
+    ///
+    /// # Errors
+    /// [`DATA_TABLE_PART`] when `area` covers some but not all of a table's results.
+    fn data_tables_cleared(&self, area: &Area) -> Result<Vec<(i32, i32, i32, i32)>, String> {
+        let ws = self.workbook.worksheet(area.sheet)?;
+        let (top, left) = (area.row, area.column);
+        let bottom = area.row.saturating_add(area.height).saturating_sub(1);
+        let right = area.column.saturating_add(area.width).saturating_sub(1);
+        let mut cleared = Vec::new();
+        for table in &ws.data_tables {
+            let (t, l, b, r) = table.range;
+            if t > bottom || b < top || l > right || r < left {
+                continue;
+            }
+            if top <= t && b <= bottom && left <= l && r <= right {
+                cleared.push(table.range);
+            } else {
+                return Err(DATA_TABLE_PART.to_string());
+            }
+        }
+        Ok(cleared)
+    }
+
+    /// Refuses a clear or paste over `area` that covers part of a data table's results
+    /// ([`Model::data_tables_cleared`]), before anything changes.
+    pub(crate) fn refuse_data_table_clear(&self, area: &Area) -> Result<(), String> {
+        self.data_tables_cleared(area).map(drop)
+    }
+
+    /// Removes the data tables a clear of `area` deletes, or refuses the clear when it covers part
+    /// of a table's results ([`Model::data_tables_cleared`]). The caller then clears the cells.
+    pub(crate) fn clear_data_tables(&mut self, area: &Area) -> Result<(), String> {
+        let cleared = self.data_tables_cleared(area)?;
+        if !cleared.is_empty() {
+            let ws = self.workbook.worksheet_mut(area.sheet)?;
+            ws.data_tables.retain(|t| !cleared.contains(&t.range));
+        }
+        Ok(())
+    }
+
+    /// Refuses a cut whose source `area` holds a data table's result cell: the cut clears its
+    /// source cell by cell, which the results refuse. Unprobed in Excel, our choice (recalc.md).
+    pub(crate) fn refuse_data_table_cut(&self, area: &Area) -> Result<(), String> {
+        let ws = self.workbook.worksheet(area.sheet)?;
+        let bottom = area.row.saturating_add(area.height).saturating_sub(1);
+        let right = area.column.saturating_add(area.width).saturating_sub(1);
+        let meets = |t: &DataTable| {
+            let (top, left, b, r) = t.range;
+            top <= bottom && area.row <= b && left <= right && area.column <= r
+        };
+        if ws.data_tables.iter().any(meets) {
+            return Err(DATA_TABLE_PART.to_string());
+        }
         Ok(())
     }
 

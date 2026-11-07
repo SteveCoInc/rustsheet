@@ -46,15 +46,20 @@ Record the answers in docs/excel-semantics/recalc.md.
 ## Outcome
 - Probed (excel-graph, 2026-11-07): Excel treats a data table's region (results plus the row above
   and column left) as one block. Inserts strictly inside it and deletes taking part of it are
-  refused, as is every write into a result cell (value, formula, clear). Edits above or left move
-  the table and its input; deleting the input's row or column makes it `#REF!`; deleting the whole
-  region deletes the table. probes/t0452-data-table-row-column-edits (60 cells, the accepted edits)
-  plus 22 single-edit uploads for the refusals (sha256 recorded in recalc.md).
+  refused, as is every write into a result cell (value, formula) and a clear of some of them; a
+  clear of every result deletes the table. Edits above or left move the table and its input;
+  deleting the input's row or column makes it `#REF!`; deleting the whole region deletes the table.
+  probes/t0452-data-table-row-column-edits (60 cells, the accepted edits) plus 34 single-edit
+  uploads, each listed in recalc.md with its response.
 - Engine: `data_table_edits.rs` refuses the splitting edits before anything changes and moves,
   `#REF!`s or drops tables after the accepted ones (`insert_rows`, `delete_rows`,
   `insert_columns`, `delete_columns`); row and column moves touching a region are refused
   (unprobed, our choice); `prepare_cell_for_user_input` refuses writes into results, so the
-  facade's `Txn::set` errors and rolls back. Undo of `add_data_table` is tested.
+  facade's `Txn::set` errors and rolls back. `range_clear_contents` and `range_clear_all` refuse a
+  clear of some results and delete a table whose results they cover; a paste over some results, or
+  a cut from them (our choice), is refused before it changes anything. Undo of `add_data_table` is
+  tested.
 - Copying a sheet: Graph has no sheet copy; recorded as unprobed (the copy keeps its tables).
 - Eval delta: probes +60 cells, all pass (on main the engine passed 36/60). No existing case moved.
-- Follow-up: T-4940 (UserModel undo of a delete that `#REF!`ed an input or dropped a table).
+- Follow-ups: T-4940 (UserModel undo of a delete or clear that `#REF!`ed an input or dropped a
+  table); T-4947 (probe a move through a table, a cut from it and a sheet copy).

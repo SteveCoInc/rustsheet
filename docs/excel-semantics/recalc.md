@@ -286,9 +286,13 @@ of them, as one block (for the column table B4:B6 with formula B3 and values A4:
 - a delete that takes some of the region's rows (columns) but not all is refused: row 3 (the
   formula row), row 5, rows 4:6 (all the results, not the formula row), column A (the values) or
   column B;
-- any write into a result cell is refused, a value, a formula or a clear, the top-left result cell
-  included; writes beside the results (a value in A5, a new formula in B3, a value in C5) are
-  accepted, and the table recomputes (A5 = 7 makes B5 72; B3 `=D1*100` makes B4:B6 100, 200, 300);
+- a write into a result cell is refused, a value or a formula, the top-left result cell included,
+  and so is a clear of some but not all of the results (B5, B5:C5); writes beside the results (a
+  value in A5, a new formula in B3, a value in C5) are accepted, and the table recomputes (A5 = 7
+  makes B5 72; B3 `=D1*100` makes B4:B6 100, 200, 300);
+- a clear that covers every result cell deletes the table, whether it covers the results alone
+  (B4:B6), the region (A3:B6, contents or all) or more (A1:H9): the results are blank and their
+  readers see empty cells (`SUM` 0, `FORMULATEXT` `#N/A`);
 - an insert above or left of the region (row 1, row 3, column A) moves the table and its input
   cell with the cells; one below or right (row 7, column C) leaves the table where it is and moves
   only an input it passes (column C moves D1 to E1: `{=TABLE(,E1)}`);
@@ -297,27 +301,40 @@ of them, as one block (for the column table B4:B6 with formula B3 and values A4:
   as it read D1;
 - deleting every row (rows 3:6, 2:7) or column (A:B) of the region deletes the table; readers of
   the results are `#REF!`.
-Excel for the web answers each refused edit with a 500 `GeneralException`; the desktop message is
-"Cannot change part of a data table." The workbook is left as it was.
-Evidence: probes/t0452-data-table-row-column-edits (excel-graph, 2026-11-07) for the accepted edits.
-The refused edits and writes, and rows 3:6, were probed by upload (excel-graph, 2026-11-07, T-0452):
-the probes/t0452 sheet R1 before its edit, one upload per edit, file sha256
-da35d6f0e7353fe27a726f1287ba7afaf29e2cfe1d17fcdecc06300829e13301.
+Excel for the web answers each refused edit with a 500 `GeneralException` and leaves the workbook as
+it was. Desktop Excel's wording ("Cannot change part of a data table.") is unprobed; the engine's
+message borrows it.
+Evidence: probes/t0452-data-table-row-column-edits (excel-graph, 2026-11-07) for the accepted row
+and column edits. The rest was probed by upload (excel-graph, 2026-11-07, T-0452): the probes/t0452
+sheet R1 before its edit (file sha256
+da35d6f0e7353fe27a726f1287ba7afaf29e2cfe1d17fcdecc06300829e13301), one upload and one Graph call
+per edit, then a full rebuild and a read of A1:J8:
+- refused (500 `GeneralException`, A1:J8 unchanged): range `insert` Down of `4:4`, `5:5` and `B5`;
+  `insert` Right of `B:B`; `delete` Up of `3:3`, `4:4`, `5:5` and `4:6`; `delete` Left of `A:A`
+  and `B:B`; `PATCH values` 99 into B4 and into B5; `clear` Contents of B5 and of B5:C5;
+- accepted: `insert` Down of `1:1`, `2:2`, `3:3`, `7:7`; `insert` Right of `A:A`, `C:C`;
+  `delete` Up of `1:1`, `3:6`, `2:7`; `delete` Left of `D:D`, `A:B`; `PATCH values` A5 = 7,
+  B3 = `=D1*100`, C5 = 9, D1 = 5; `clear` Contents of B4:B6, A3:B6, A1:H9; `clear` All of A3:B6.
 Ours: matches. `insert_rows`, `delete_rows`, `insert_columns` and `delete_columns` refuse an edit
 that cuts through a region with the message "Cannot change part of a data table" before they
 change anything, and otherwise move each table and its inputs, mark a deleted input `Deleted`, or
 drop a table whose region is deleted. Every cell write the write guard sees
-(`prepare_cell_for_user_input`: typed and stored input, values, clears, fills, pastes) into a
+(`prepare_cell_for_user_input`: typed and stored input, values, single-cell clears, fills) into a
 result cell is refused with the same message, through the engine and the facade, whose edit then
-rolls back. Unprobed, our choices: a row or column move (`move_rows_action`,
-`move_columns_action`) that shifts any line of a region is refused whole; an insert that would push
-a table's results past the last row or column deletes the table, and one that pushes an input
-there makes it `#REF!`; copying a sheet copies its tables (Graph has no sheet copy to probe it
-with). The `UserModel` undo of a row or column delete moves a table back but does not restore an input
-the delete made `#REF!` or a table it deleted (T-4940).
+rolls back. `range_clear_contents` and `range_clear_all` refuse an area over some of a table's
+results and delete a table whose results the area covers. A paste is refused before it changes
+anything when its target covers some of a table's results; one over every result replaces the
+table. Unprobed, our choices: a row or column move (`move_rows_action`, `move_columns_action`) that
+shifts any line of a region is refused whole, and so is a cut whose source holds a result cell; a
+paste over every result replaces the table as a clear does; a single-cell clear of a one-cell
+table is refused; an insert that would push a table's results past the last row or column deletes
+the table, and one that pushes an input there makes it `#REF!`; copying a sheet copies its tables
+(Graph has no sheet copy to probe it with). T-4947 probes the move, the cut and the copy. The
+`UserModel` undo of a row or column delete moves a table back but does not restore an input the
+delete made `#REF!` or a table it deleted, nor does the undo of a clear that deleted one (T-4940).
 Status: VERIFIED (excel-graph) for the rules above; the unprobed choices are not
-Implemented in: crates/rustsheet-engine/src/data_table_edits.rs, crates/rustsheet-engine/src/actions.rs, crates/rustsheet-engine/src/model.rs (`prepare_cell_for_user_input`)
-Tasks: T-0452
+Implemented in: crates/rustsheet-engine/src/data_table_edits.rs, crates/rustsheet-engine/src/actions.rs, crates/rustsheet-engine/src/model.rs (`prepare_cell_for_user_input`, `range_clear_contents`, `range_clear_all`), crates/rustsheet-engine/src/user_model/clipboard.rs (`paste_from_clipboard`)
+Tasks: T-0452, T-4940, T-4947
 
 ## Data tables re-evaluate the workbook at most 2^25 formulas per recalculation
 Rule: Excel's limit on the work of data tables is unprobed; it is expected to compute every
