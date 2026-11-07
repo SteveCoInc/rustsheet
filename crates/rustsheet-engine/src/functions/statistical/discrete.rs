@@ -12,6 +12,10 @@
 //! back to statrs. The terms of a walk start in a tail, where they can be far below the smallest
 //! double (`0.5^3000`), and grow towards the mode, so a walk carries a power-of-two exponent beside
 //! its double-doubles.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss)]
+#![cfg_attr(test, expect(clippy::float_cmp, clippy::unreadable_literal))]
+// LINT-DEBT-END
 
 use crate::x87_exp::{dd_add, dd_div, dd_div_small, dd_mul, two_sum};
 

@@ -1,5 +1,8 @@
 //! The shared-string part of a patched save (SPEC-0034 D3.3): new strings appended after the
 //! source's, with `uniqueCount` set and `count` moved by the change in references.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string)]
+// LINT-DEBT-END
 
 use quick_xml::events::Event;
 use quick_xml::Reader;

@@ -380,9 +380,10 @@ pub(in crate::functions::text) fn each_match(
     let mut empty_at = None;
     loop {
         let found = match empty_at.take() {
-            Some(at) => match finder.retry(text, at)? {
-                Some(m) => Found { m, retried: true },
-                None => {
+            Some(at) => {
+                if let Some(m) = finder.retry(text, at)? {
+                    Found { m, retried: true }
+                } else {
                     let Some(c) = text.get(at..).and_then(|rest| rest.chars().next()) else {
                         return Ok(());
                     };
@@ -392,7 +393,7 @@ pub(in crate::functions::text) fn each_match(
                     from = at + c.len_utf8();
                     continue;
                 }
-            },
+            }
             None => match finder.find_from(text, from)? {
                 Some(m) => Found { m, retried: false },
                 None => return Ok(()),

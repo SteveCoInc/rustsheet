@@ -24,10 +24,10 @@ fn dynamic_link(model: &Model, row: i32, column: i32) -> Option<Link> {
 #[test]
 fn without_friendly_name_displays_the_location() {
     let mut model = new_empty_model();
-    model._set("A1", "=HYPERLINK(\"https://www.ironcalc.com/\")");
+    model.set_a1("A1", "=HYPERLINK(\"https://www.ironcalc.com/\")");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "https://www.ironcalc.com/");
+    assert_eq!(model.get_text_a1("A1"), "https://www.ironcalc.com/");
     assert_eq!(
         dynamic_link(&model, 1, 1),
         Some(external("https://www.ironcalc.com/"))
@@ -40,19 +40,19 @@ fn without_friendly_name_displays_the_location() {
 #[test]
 fn friendly_name_is_displayed() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=HYPERLINK(\"https://www.ironcalc.com/\", \"IronCalc\")",
     );
     // the friendly name can be a number or come from a reference
-    model._set("A2", "=HYPERLINK(\"https://www.ironcalc.com/\", 42)");
-    model._set("A3", "=HYPERLINK(\"https://www.ironcalc.com/\", B3)");
-    model._set("B3", "Click here");
+    model.set_a1("A2", "=HYPERLINK(\"https://www.ironcalc.com/\", 42)");
+    model.set_a1("A3", "=HYPERLINK(\"https://www.ironcalc.com/\", B3)");
+    model.set_a1("B3", "Click here");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "IronCalc");
-    assert_eq!(model._get_text("A2"), "42");
-    assert_eq!(model._get_text("A3"), "Click here");
+    assert_eq!(model.get_text_a1("A1"), "IronCalc");
+    assert_eq!(model.get_text_a1("A2"), "42");
+    assert_eq!(model.get_text_a1("A3"), "Click here");
     for row in 1..=3 {
         assert_eq!(
             dynamic_link(&model, row, 1),
@@ -64,11 +64,11 @@ fn friendly_name_is_displayed() {
 #[test]
 fn location_can_come_from_a_reference() {
     let mut model = new_empty_model();
-    model._set("B1", "https://www.ironcalc.com/");
-    model._set("A1", "=HYPERLINK(B1, \"IronCalc\")");
+    model.set_a1("B1", "https://www.ironcalc.com/");
+    model.set_a1("A1", "=HYPERLINK(B1, \"IronCalc\")");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "IronCalc");
+    assert_eq!(model.get_text_a1("A1"), "IronCalc");
     assert_eq!(
         dynamic_link(&model, 1, 1),
         Some(external("https://www.ironcalc.com/"))
@@ -78,10 +78,10 @@ fn location_can_come_from_a_reference() {
 #[test]
 fn a_hash_prefix_is_an_internal_link() {
     let mut model = new_empty_model();
-    model._set("A1", "=HYPERLINK(\"#Sheet1!A5\", \"Jump to A5\")");
+    model.set_a1("A1", "=HYPERLINK(\"#Sheet1!A5\", \"Jump to A5\")");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "Jump to A5");
+    assert_eq!(model.get_text_a1("A1"), "Jump to A5");
     assert_eq!(
         dynamic_link(&model, 1, 1),
         Some(Link::Internal {
@@ -117,7 +117,7 @@ fn dynamic_links_are_rebuilt_on_every_evaluation() {
 #[test]
 fn dynamic_links_are_in_the_links_list() {
     let mut model = new_empty_model();
-    model._set("A1", "=HYPERLINK(\"https://www.ironcalc.com/\")");
+    model.set_a1("A1", "=HYPERLINK(\"https://www.ironcalc.com/\")");
     model.evaluate();
     // an explicit worksheet link on another cell
     model
@@ -138,7 +138,7 @@ fn dynamic_links_are_in_the_links_list() {
 #[test]
 fn an_explicit_link_takes_precedence() {
     let mut model = new_empty_model();
-    model._set("A1", "=HYPERLINK(\"https://www.ironcalc.com/\")");
+    model.set_a1("A1", "=HYPERLINK(\"https://www.ironcalc.com/\")");
     model.evaluate();
     model
         .set_cell_link(0, 1, 1, external("https://www.example.com"))
@@ -157,30 +157,30 @@ fn an_explicit_link_takes_precedence() {
 fn errors() {
     let mut model = new_empty_model();
     // wrong number of arguments
-    model._set("A1", "=HYPERLINK()");
-    model._set("A2", "=HYPERLINK(\"a\", \"b\", \"c\")");
+    model.set_a1("A1", "=HYPERLINK()");
+    model.set_a1("A2", "=HYPERLINK(\"a\", \"b\", \"c\")");
     // an error in the location propagates and creates no link
-    model._set("A3", "=HYPERLINK(1/0)");
+    model.set_a1("A3", "=HYPERLINK(1/0)");
     // an error in the friendly name propagates and creates no link either:
     // a cell displaying an error is not clickable
-    model._set("A4", "=HYPERLINK(\"https://www.ironcalc.com/\", 1/0)");
+    model.set_a1("A4", "=HYPERLINK(\"https://www.ironcalc.com/\", 1/0)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("A2"), "#ERROR!");
-    assert_eq!(model._get_text("A3"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A3"), "#DIV/0!");
     assert_eq!(dynamic_link(&model, 3, 1), None);
-    assert_eq!(model._get_text("A4"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A4"), "#DIV/0!");
     assert_eq!(dynamic_link(&model, 4, 1), None);
 }
 
 #[test]
 fn fixing_an_erroring_friendly_name_attaches_the_link() {
     let mut model = new_empty_model();
-    model._set("A1", "=HYPERLINK(\"https://www.ironcalc.com/\", B1)");
-    model._set("B1", "=1/0");
+    model.set_a1("A1", "=HYPERLINK(\"https://www.ironcalc.com/\", B1)");
+    model.set_a1("B1", "=1/0");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A1"), "#DIV/0!");
     assert_eq!(dynamic_link(&model, 1, 1), None);
 
     // once the friendly name stops erroring the link comes back
@@ -188,7 +188,7 @@ fn fixing_an_erroring_friendly_name_attaches_the_link() {
         .set_user_input(0, 1, 2, "Click here".to_string())
         .unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "Click here");
+    assert_eq!(model.get_text_a1("A1"), "Click here");
     assert_eq!(
         dynamic_link(&model, 1, 1),
         Some(external("https://www.ironcalc.com/"))
@@ -200,20 +200,20 @@ fn fixing_an_erroring_friendly_name_attaches_the_link() {
 #[test]
 fn an_error_link_location_is_the_result_over_an_array_friendly_name() {
     let mut model = new_empty_model();
-    model._set("A1", "=HYPERLINK(NA(), 5)");
-    model._set("A2", "=HYPERLINK(NA(), {1,2})");
-    model._set("A3", "=HYPERLINK(NA(), B5:C6)");
+    model.set_a1("A1", "=HYPERLINK(NA(), 5)");
+    model.set_a1("A2", "=HYPERLINK(NA(), {1,2})");
+    model.set_a1("A3", "=HYPERLINK(NA(), B5:C6)");
     // a lifted non-error link_location still lifts
-    model._set("A4", "=HYPERLINK(\"#A1\", {1,2})");
+    model.set_a1("A4", "=HYPERLINK(\"#A1\", {1,2})");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "#N/A");
-    assert_eq!(model._get_text("A2"), "#N/A");
-    assert_eq!(model._get_text("B2"), "");
-    assert_eq!(model._get_text("A3"), "#N/A");
-    assert_eq!(model._get_text("B3"), "");
-    assert_eq!(model._get_text("A4"), "1");
-    assert_eq!(model._get_text("B4"), "2");
+    assert_eq!(model.get_text_a1("A1"), "#N/A");
+    assert_eq!(model.get_text_a1("A2"), "#N/A");
+    assert_eq!(model.get_text_a1("B2"), "");
+    assert_eq!(model.get_text_a1("A3"), "#N/A");
+    assert_eq!(model.get_text_a1("B3"), "");
+    assert_eq!(model.get_text_a1("A4"), "1");
+    assert_eq!(model.get_text_a1("B4"), "2");
 }
 
 // probes/t2277-hyperlink-location-length A1-A15: a link_location of more than 255 characters
@@ -221,19 +221,19 @@ fn an_error_link_location_is_the_result_over_an_array_friendly_name() {
 #[test]
 fn a_location_past_255_characters_is_value_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=HYPERLINK(REPT(\"a\",255),1)");
-    model._set("A2", "=HYPERLINK(REPT(\"a\",256),1)");
-    model._set("A3", "=HYPERLINK(\"#\"&REPT(\"a\",254),1)");
-    model._set("A4", "=HYPERLINK(\"#\"&REPT(\"a\",255),1)");
-    model._set("A5", "=HYPERLINK(REPT(\"a\",256))");
-    model._set("A6", "=HYPERLINK(REPT(\"a\",256),{1,2})");
+    model.set_a1("A1", "=HYPERLINK(REPT(\"a\",255),1)");
+    model.set_a1("A2", "=HYPERLINK(REPT(\"a\",256),1)");
+    model.set_a1("A3", "=HYPERLINK(\"#\"&REPT(\"a\",254),1)");
+    model.set_a1("A4", "=HYPERLINK(\"#\"&REPT(\"a\",255),1)");
+    model.set_a1("A5", "=HYPERLINK(REPT(\"a\",256))");
+    model.set_a1("A6", "=HYPERLINK(REPT(\"a\",256),{1,2})");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("A2"), "#VALUE!");
-    assert_eq!(model._get_text("A3"), "1");
-    assert_eq!(model._get_text("A4"), "#VALUE!");
-    assert_eq!(model._get_text("A5"), "#VALUE!");
-    assert_eq!(model._get_text("A6"), "#VALUE!");
-    assert_eq!(model._get_text("B6"), "");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), "1");
+    assert_eq!(model.get_text_a1("A4"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A5"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A6"), "#VALUE!");
+    assert_eq!(model.get_text_a1("B6"), "");
 }

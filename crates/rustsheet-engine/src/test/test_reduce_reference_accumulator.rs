@@ -13,16 +13,16 @@ fn results(formulas: &[&str]) -> Vec<String> {
     model.add_sheet("Sheet2").unwrap();
     model.add_sheet("Sheet3").unwrap();
     for (cell, value) in [("A1", "1"), ("A2", "2"), ("A3", "3"), ("A4", "x")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("Sheet2!A1", "5");
-    model._set("Sheet3!A1", "7");
+    model.set_a1("Sheet2!A1", "5");
+    model.set_a1("Sheet3!A1", "7");
     for (i, formula) in formulas.iter().enumerate() {
-        model._set(&format!("E{}", i + 1), formula);
+        model.set_a1(&format!("E{}", i + 1), formula);
     }
     model.evaluate();
     (1..=formulas.len())
-        .map(|i| model._get_text(&format!("E{i}")))
+        .map(|i| model.get_text_a1(&format!("E{i}")))
         .collect()
 }
 
@@ -55,14 +55,16 @@ fn reduce_spills_a_returned_range_and_a_3d_initial_value_is_value_error() {
     model.add_sheet("Sheet2").unwrap();
     model.add_sheet("Sheet3").unwrap();
     for (cell, value) in [("A1", "1"), ("A2", "2"), ("A3", "3")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("C1", "=REDUCE(A1,A2:A3,LAMBDA(p_a,p_v,p_a:p_v))");
-    model._set("D1", "=REDUCE(Sheet2:Sheet3!A1,{1},LAMBDA(a,v,a))");
+    model.set_a1("C1", "=REDUCE(A1,A2:A3,LAMBDA(p_a,p_v,p_a:p_v))");
+    model.set_a1("D1", "=REDUCE(Sheet2:Sheet3!A1,{1},LAMBDA(a,v,a))");
     model.evaluate();
-    let spill: Vec<String> = (1..=4).map(|r| model._get_text(&format!("C{r}"))).collect();
+    let spill: Vec<String> = (1..=4)
+        .map(|r| model.get_text_a1(&format!("C{r}")))
+        .collect();
     assert_eq!(spill, ["1", "2", "3", ""]);
-    assert_eq!(model._get_text("D1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("D1"), "#VALUE!");
 }
 
 #[test]
@@ -93,16 +95,16 @@ fn a_range_between_parameters_keeps_its_text() {
     // The names are not read as column labels, so the text shows them as written, and a column
     // label next to one bound name stays a column range (not probed: this pins the current reading).
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("E1", "=REDUCE(A1,A2:A3,LAMBDA(a,v,ROWS(a:v)))");
-    model._set("E2", "=LAMBDA(a,COLUMNS(a:C))(A1)");
+    model.set_a1("A1", "1");
+    model.set_a1("E1", "=REDUCE(A1,A2:A3,LAMBDA(a,v,ROWS(a:v)))");
+    model.set_a1("E2", "=LAMBDA(a,COLUMNS(a:C))(A1)");
     model.evaluate();
     assert_eq!(
-        model._get_formula("E1"),
+        model.get_formula_a1("E1"),
         "=REDUCE(A1,A2:A3,LAMBDA(a,v,ROWS(a:v)))"
     );
-    assert_eq!(model._get_formula("E2"), "=LAMBDA(a,COLUMNS(A:C))(A1)");
-    assert_eq!(model._get_text("E2"), "3");
+    assert_eq!(model.get_formula_a1("E2"), "=LAMBDA(a,COLUMNS(A:C))(A1)");
+    assert_eq!(model.get_text_a1("E2"), "3");
 }
 
 #[test]
@@ -120,14 +122,16 @@ fn reduce_ending_on_a_whole_column_stays_within_the_array_bound() {
     // `#ERROR!` (arrays.md "Array results above 1,048,576 cells are #ERROR!").
     let mut model = new_empty_model();
     for (cell, value) in [("A1", "1"), ("A2", "2"), ("C1", "5"), ("C3", "7")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("E1", "=ROWS(REDUCE(0,A1:A2,LAMBDA(a,v,C:C)))");
-    model._set("E2", "=SUM(REDUCE(0,A1:A2,LAMBDA(a,v,C:C)))");
-    model._set("E3", "=ISREF(REDUCE(0,A1:A2,LAMBDA(a,v,C:C)))");
-    model._set("E4", "=ROWS(REDUCE(0,A1:A2,LAMBDA(a,v,C:D))+0)");
-    model._set("E5", "=ROWS(REDUCE(0,A1:A2,LAMBDA(a,v,C:C))+0)");
+    model.set_a1("E1", "=ROWS(REDUCE(0,A1:A2,LAMBDA(a,v,C:C)))");
+    model.set_a1("E2", "=SUM(REDUCE(0,A1:A2,LAMBDA(a,v,C:C)))");
+    model.set_a1("E3", "=ISREF(REDUCE(0,A1:A2,LAMBDA(a,v,C:C)))");
+    model.set_a1("E4", "=ROWS(REDUCE(0,A1:A2,LAMBDA(a,v,C:D))+0)");
+    model.set_a1("E5", "=ROWS(REDUCE(0,A1:A2,LAMBDA(a,v,C:C))+0)");
     model.evaluate();
-    let actual: Vec<String> = (1..=5).map(|i| model._get_text(&format!("E{i}"))).collect();
+    let actual: Vec<String> = (1..=5)
+        .map(|i| model.get_text_a1(&format!("E{i}")))
+        .collect();
     assert_eq!(actual, ["1048576", "12", "TRUE", "#ERROR!", "1048576"]);
 }

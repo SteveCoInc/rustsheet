@@ -352,7 +352,6 @@ F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocum
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]:/workbook/workbookPr[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 element /officeDocument[0]:/workbook/xr:revisionPtr[0] lost candidate-N6
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /custom-properties[0] lost
-F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/calcChain[0] lost candidate-N1
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/customXml[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/customXml[0]/customXmlProps[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/customXml[1] lost

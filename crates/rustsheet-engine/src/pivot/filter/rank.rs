@@ -117,6 +117,12 @@ impl Ranking {
                 let ranked = ranked(top, work)?;
                 // N is a whole count; one below 1 keeps nothing (UNVERIFIED, T-4799).
                 let n = n.floor();
+                #[expect(
+                    clippy::cast_precision_loss,
+                    clippy::cast_possible_truncation,
+                    clippy::cast_sign_loss,
+                    reason = "a list length is exact in f64, and `n` is a whole number in 1..len"
+                )]
                 let cut = if n < 1.0 {
                     None
                 } else if n >= ranked.len() as f64 {
@@ -271,16 +277,14 @@ impl ValueStep<'_> {
                 let held = column.get(record as usize);
                 in_scope &= *held.ok_or(PivotComputeError::Malformed)? == wanted;
             }
-            let index = match cells.get(key.as_slice()) {
-                Some(&index) => index,
-                None => {
-                    let index = accumulators.len();
-                    let parent: Box<[u32]> =
-                        key.get(..self.parents.len()).unwrap_or_default().into();
-                    accumulators.push((parent, item, Accumulator::new(), false));
-                    cells.insert(key.as_slice().into(), index);
-                    index
-                }
+            let index = if let Some(&index) = cells.get(key.as_slice()) {
+                index
+            } else {
+                let index = accumulators.len();
+                let parent: Box<[u32]> = key.get(..self.parents.len()).unwrap_or_default().into();
+                accumulators.push((parent, item, Accumulator::new(), false));
+                cells.insert(key.as_slice().into(), index);
+                index
             };
             if let (true, Some((_, _, accumulator, reached))) =
                 (in_scope, accumulators.get_mut(index))

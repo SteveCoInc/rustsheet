@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::unnecessary_wraps)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::expressions::types::Area;
@@ -21,14 +24,14 @@ fn area(sheet: u32, row: i32, column: i32, width: i32, height: i32) -> Area {
 #[test]
 fn merge_keeps_anchor_content() {
     let mut model = new_empty_model();
-    model._set("B2", "5");
+    model.set_a1("B2", "5");
     model.evaluate();
 
     // Merge B2:C3
     model.merge_cells(&area(0, 2, 2, 2, 2)).unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text("B2"), "5");
+    assert_eq!(model.get_text_a1("B2"), "5");
     assert_eq!(
         model.get_merged_cells(0).unwrap(),
         &[MergedCell {
@@ -43,8 +46,8 @@ fn merge_keeps_anchor_content() {
 #[test]
 fn merge_with_more_than_one_content_cell_is_rejected() {
     let mut model = new_empty_model();
-    model._set("B2", "5");
-    model._set("C3", "hello");
+    model.set_a1("B2", "5");
+    model.set_a1("C3", "hello");
     model.evaluate();
 
     assert_eq!(
@@ -53,22 +56,22 @@ fn merge_with_more_than_one_content_cell_is_rejected() {
     );
     // nothing changed
     assert!(model.get_merged_cells(0).unwrap().is_empty());
-    assert_eq!(model._get_text("B2"), "5");
-    assert_eq!(model._get_text("C3"), "hello");
+    assert_eq!(model.get_text_a1("B2"), "5");
+    assert_eq!(model.get_text_a1("C3"), "hello");
 }
 
 #[test]
 fn merge_moves_the_single_content_cell_to_the_anchor() {
     let mut model = new_empty_model();
-    model._set("C3", "hello");
+    model.set_a1("C3", "hello");
     model.evaluate();
 
     // Merge B2:C3: the only content is at C3, not at the anchor
     model.merge_cells(&area(0, 2, 2, 2, 2)).unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text("B2"), "hello");
-    assert_eq!(model._get_text("C3"), "");
+    assert_eq!(model.get_text_a1("B2"), "hello");
+    assert_eq!(model.get_text_a1("C3"), "");
     assert_eq!(
         model.get_merged_cells(0).unwrap(),
         &[MergedCell {
@@ -83,17 +86,17 @@ fn merge_moves_the_single_content_cell_to_the_anchor() {
 #[test]
 fn merge_moves_a_formula_to_the_anchor_unchanged() {
     let mut model = new_empty_model();
-    model._set("A1", "10");
-    model._set("C3", "=A1+1");
+    model.set_a1("A1", "10");
+    model.set_a1("C3", "=A1+1");
     model.evaluate();
 
     model.merge_cells(&area(0, 2, 2, 2, 2)).unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text("B2"), "11");
-    assert_eq!(model._get_formula("B2"), "=A1+1");
-    assert!(!model._has_formula("C3"));
-    assert_eq!(model._get_text("C3"), "");
+    assert_eq!(model.get_text_a1("B2"), "11");
+    assert_eq!(model.get_formula_a1("B2"), "=A1+1");
+    assert!(!model.has_formula_a1("C3"));
+    assert_eq!(model.get_text_a1("C3"), "");
 }
 
 fn thin(color: &str) -> Option<BorderItem> {
@@ -106,7 +109,7 @@ fn thin(color: &str) -> Option<BorderItem> {
 #[test]
 fn merge_copies_the_content_cell_style_to_the_whole_range() {
     let mut model = new_empty_model();
-    model._set("C2", "7");
+    model.set_a1("C2", "7");
     // the empty anchor B2 is red, the content cell C2 is blue and bold
     let mut anchor_style = model.get_style_for_cell(0, 2, 2).unwrap();
     anchor_style.fill.color = Color::Rgb("#FF0000".to_string());
@@ -121,7 +124,7 @@ fn merge_copies_the_content_cell_style_to_the_whole_range() {
 
     // the content moved to the anchor and every cell of the merge shows the
     // content cell's style; the anchor's red is forgotten
-    assert_eq!(model._get_text("B2"), "7");
+    assert_eq!(model.get_text_a1("B2"), "7");
     for (row, column) in [(2, 2), (2, 3), (3, 2), (3, 3)] {
         let style = model.get_style_for_cell(0, row, column).unwrap();
         assert_eq!(style.fill.color, Color::Rgb("#0000FF".to_string()));
@@ -214,7 +217,7 @@ fn merge_moves_anchor_borders_to_the_perimeter() {
 fn merge_moves_interior_content_cell_borders_to_the_perimeter() {
     let mut model = new_empty_model();
     // C3 sits strictly inside B2:D4 and has content and a full outline
-    model._set("C3", "x");
+    model.set_a1("C3", "x");
     model.set_cell_style(0, 3, 3, &full_outline()).unwrap();
     model.evaluate();
 
@@ -223,7 +226,7 @@ fn merge_moves_interior_content_cell_borders_to_the_perimeter() {
 
     // the borders come from the cell with content, wherever it sat: its
     // outline wraps the merged cell as a whole
-    assert_eq!(model._get_text("B2"), "x");
+    assert_eq!(model.get_text_a1("B2"), "x");
     assert_outline_wraps_b2_d4(&model);
 }
 
@@ -231,14 +234,14 @@ fn merge_moves_interior_content_cell_borders_to_the_perimeter() {
 fn merge_moves_edge_content_cell_borders_to_the_perimeter() {
     let mut model = new_empty_model();
     // D3 sits on the right edge of B2:D4 with content and a full outline
-    model._set("D3", "x");
+    model.set_a1("D3", "x");
     model.set_cell_style(0, 3, 4, &full_outline()).unwrap();
     model.evaluate();
 
     model.merge_cells(&area(0, 2, 2, 3, 3)).unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text("B2"), "x");
+    assert_eq!(model.get_text_a1("B2"), "x");
     assert_outline_wraps_b2_d4(&model);
 }
 
@@ -247,7 +250,7 @@ fn merge_spreads_a_partial_content_cell_border() {
     let mut model = new_empty_model();
     // D4, the bottom-right corner of B2:D4, has content and only a bottom
     // border
-    model._set("D4", "x");
+    model.set_a1("D4", "x");
     let style = Style {
         border: Border {
             bottom: thin("#444444"),
@@ -263,7 +266,7 @@ fn merge_spreads_a_partial_content_cell_border() {
 
     // the merged cell has that bottom border, spread along its bottom edge,
     // and nothing else
-    assert_eq!(model._get_text("B2"), "x");
+    assert_eq!(model.get_text_a1("B2"), "x");
     for row in 2..5 {
         for column in 2..5 {
             let border = model.get_style_for_cell(0, row, column).unwrap().border;
@@ -280,7 +283,7 @@ fn merge_single_row_wraps_the_content_cell_outline() {
     let mut model = new_empty_model();
     // C2, in the middle of the single-row merge B2:D2, has content and a
     // full outline
-    model._set("C2", "x");
+    model.set_a1("C2", "x");
     model.set_cell_style(0, 2, 3, &full_outline()).unwrap();
     model.evaluate();
 
@@ -337,7 +340,7 @@ fn merge_spreads_a_left_border_along_the_left_edge() {
 #[test]
 fn merge_without_styles_does_not_create_cells() {
     let mut model = new_empty_model();
-    model._set("B2", "5");
+    model.set_a1("B2", "5");
     model.merge_cells(&area(0, 2, 2, 2, 2)).unwrap();
     // stamping is skipped when nothing changes: the covered cells stay
     // style-less so row/column styles are still inherited
@@ -417,13 +420,13 @@ fn covered_cell_write_rejected() {
     // the anchor is editable
     model.set_user_input(0, 2, 2, "42".to_string()).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("B2"), "42");
+    assert_eq!(model.get_text_a1("B2"), "42");
 
     // after unmerging, the covered cell is editable again
     model.unmerge_cells(&area(0, 2, 2, 2, 2)).unwrap();
     model.set_user_input(0, 3, 3, "43".to_string()).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("C3"), "43");
+    assert_eq!(model.get_text_a1("C3"), "43");
 }
 
 #[test]
@@ -445,82 +448,82 @@ fn array_formula_over_merge_rejected() {
 #[test]
 fn spill_into_merge_is_spill_error() {
     let mut model = new_empty_model();
-    model._set("A1", "10");
-    model._set("A2", "20");
-    model._set("A3", "30");
+    model.set_a1("A1", "10");
+    model.set_a1("A2", "20");
+    model.set_a1("A3", "30");
     // C2:D3 merged blocks the spill of C1
     model.merge_cells(&area(0, 2, 3, 2, 2)).unwrap();
-    model._set("C1", "=A1:A3");
+    model.set_a1("C1", "=A1:A3");
     model.evaluate();
 
-    assert_eq!(model._get_text("C1"), "#SPILL!");
+    assert_eq!(model.get_text_a1("C1"), "#SPILL!");
 
     // unmerging lets the formula spill again
     model.unmerge_cells(&area(0, 2, 3, 2, 2)).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "10");
-    assert_eq!(model._get_text("C2"), "20");
-    assert_eq!(model._get_text("C3"), "30");
+    assert_eq!(model.get_text_a1("C1"), "10");
+    assert_eq!(model.get_text_a1("C2"), "20");
+    assert_eq!(model.get_text_a1("C3"), "30");
 }
 
 #[test]
 fn merge_over_dynamic_spill_children() {
     let mut model = new_empty_model();
-    model._set("A1", "10");
-    model._set("A2", "20");
-    model._set("A3", "30");
-    model._set("C1", "=A1:A3");
+    model.set_a1("A1", "10");
+    model.set_a1("A2", "20");
+    model.set_a1("A3", "30");
+    model.set_a1("C1", "=A1:A3");
     model.evaluate();
-    assert_eq!(model._get_text("C3"), "30");
+    assert_eq!(model.get_text_a1("C3"), "30");
 
     // Merging over the spill children (not the anchor) resets the anchor,
     // which then re-evaluates to #SPILL! because the merge blocks it.
     model.merge_cells(&area(0, 2, 3, 2, 2)).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "#SPILL!");
+    assert_eq!(model.get_text_a1("C1"), "#SPILL!");
 
     model.unmerge_cells(&area(0, 2, 3, 2, 2)).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "10");
-    assert_eq!(model._get_text("C3"), "30");
+    assert_eq!(model.get_text_a1("C1"), "10");
+    assert_eq!(model.get_text_a1("C3"), "30");
 }
 
 #[test]
 fn merge_over_dynamic_anchor_moves_the_formula() {
     let mut model = new_empty_model();
-    model._set("A1", "10");
-    model._set("A2", "20");
-    model._set("A3", "30");
+    model.set_a1("A1", "10");
+    model.set_a1("A2", "20");
+    model.set_a1("A3", "30");
     // C2 spills C2:C4
-    model._set("C2", "=A1:A3");
+    model.set_a1("C2", "=A1:A3");
     model.evaluate();
-    assert_eq!(model._get_text("C4"), "30");
+    assert_eq!(model.get_text_a1("C4"), "30");
 
     // B2:C3 covers the anchor C2, the only cell with content (its spill cells
     // don't count): the formula moves to the merge anchor B2, where its spill
     // is blocked by the merge itself
     model.merge_cells(&area(0, 2, 2, 2, 2)).unwrap();
     model.evaluate();
-    assert!(model._has_formula("B2"));
-    assert_eq!(model._get_formula("B2"), "=A1:A3");
-    assert_eq!(model._get_text("B2"), "#SPILL!");
-    assert!(!model._has_formula("C2"));
-    assert_eq!(model._get_text("C2"), "");
-    assert_eq!(model._get_text("C4"), "");
+    assert!(model.has_formula_a1("B2"));
+    assert_eq!(model.get_formula_a1("B2"), "=A1:A3");
+    assert_eq!(model.get_text_a1("B2"), "#SPILL!");
+    assert!(!model.has_formula_a1("C2"));
+    assert_eq!(model.get_text_a1("C2"), "");
+    assert_eq!(model.get_text_a1("C4"), "");
 }
 
 #[test]
 fn reference_to_covered_cell_is_zero() {
     let mut model = new_empty_model();
-    model._set("B2", "7");
+    model.set_a1("B2", "7");
     // merge B2:C2
     model.merge_cells(&area(0, 2, 2, 2, 1)).unwrap();
-    model._set("E1", "=C2");
-    model._set("E2", "=SUM(B2:C2)");
+    model.set_a1("E1", "=C2");
+    model.set_a1("E2", "=SUM(B2:C2)");
     model.evaluate();
 
-    assert_eq!(model._get_text("E1"), "0");
-    assert_eq!(model._get_text("E2"), "7");
+    assert_eq!(model.get_text_a1("E1"), "0");
+    assert_eq!(model.get_text_a1("E2"), "7");
 }
 
 #[test]
@@ -583,7 +586,7 @@ fn merge_structure() {
 #[test]
 fn duplicate_sheet_copies_merges() {
     let mut model = new_empty_model();
-    model._set("B2", "5");
+    model.set_a1("B2", "5");
     model.merge_cells(&area(0, 2, 2, 2, 2)).unwrap();
 
     let (_, new_sheet) = model.duplicate_sheet(0).unwrap();
@@ -626,7 +629,7 @@ fn insert_rows_displaces_merges() {
     ];
     for (insert_at, expected) in cases {
         let mut model = new_empty_model();
-        model._set("B2", "5");
+        model.set_a1("B2", "5");
         model.merge_cells(&area(0, 2, 2, 2, 3)).unwrap();
         model.insert_rows(0, insert_at, 1).unwrap();
         assert_eq!(
@@ -652,7 +655,7 @@ fn delete_rows_displaces_merges() {
     ];
     for (delete_at, count, expected) in cases {
         let mut model = new_empty_model();
-        model._set("B2", "5");
+        model.set_a1("B2", "5");
         model.merge_cells(&area(0, 2, 2, 2, 3)).unwrap();
         model.delete_rows(0, delete_at, count).unwrap();
         assert_eq!(
@@ -667,7 +670,7 @@ fn delete_rows_displaces_merges() {
 fn insert_and_delete_columns_displace_merges() {
     // merge B2:D3 (columns 2-4)
     let mut model = new_empty_model();
-    model._set("B2", "5");
+    model.set_a1("B2", "5");
     model.merge_cells(&area(0, 2, 2, 3, 2)).unwrap();
 
     // insert a column inside: grows
@@ -712,7 +715,7 @@ fn insert_rows_clamps_merges_at_the_bottom() {
 #[test]
 fn move_columns_with_merges() {
     let mut model = new_empty_model();
-    model._set("B2", "5");
+    model.set_a1("B2", "5");
     // merge B2:C3 (columns 2-3)
     model.merge_cells(&area(0, 2, 2, 2, 2)).unwrap();
 
@@ -726,14 +729,14 @@ fn move_columns_with_merges() {
     model.move_columns_action(0, 2, 2, 2).unwrap();
     model.evaluate();
     assert_eq!(model.get_merged_cells(0).unwrap(), &[merged(2, 4, 2, 2)]);
-    assert_eq!(model._get_text("D2"), "5");
-    assert_eq!(model._get_text("B2"), "");
+    assert_eq!(model.get_text_a1("D2"), "5");
+    assert_eq!(model.get_text_a1("B2"), "");
 }
 
 #[test]
 fn move_columns_displaced_zone_shifts_merge() {
     let mut model = new_empty_model();
-    model._set("D2", "7");
+    model.set_a1("D2", "7");
     // merge D2:E3 (columns 4-5)
     model.merge_cells(&area(0, 2, 4, 2, 2)).unwrap();
 
@@ -742,13 +745,13 @@ fn move_columns_displaced_zone_shifts_merge() {
     model.move_columns_action(0, 2, 1, 4).unwrap();
     model.evaluate();
     assert_eq!(model.get_merged_cells(0).unwrap(), &[merged(2, 3, 2, 2)]);
-    assert_eq!(model._get_text("C2"), "7");
+    assert_eq!(model.get_text_a1("C2"), "7");
 }
 
 #[test]
 fn move_rows_with_merges() {
     let mut model = new_empty_model();
-    model._set("B2", "5");
+    model.set_a1("B2", "5");
     // merge B2:C3 (rows 2-3)
     model.merge_cells(&area(0, 2, 2, 2, 2)).unwrap();
 
@@ -762,7 +765,7 @@ fn move_rows_with_merges() {
     model.move_rows_action(0, 2, 2, 2).unwrap();
     model.evaluate();
     assert_eq!(model.get_merged_cells(0).unwrap(), &[merged(4, 2, 2, 2)]);
-    assert_eq!(model._get_text("B4"), "5");
+    assert_eq!(model.get_text_a1("B4"), "5");
 }
 
 // ── Merge & center, merge across, merge down ─────────────────────────────────
@@ -770,14 +773,14 @@ fn move_rows_with_merges() {
 #[test]
 fn merge_center_centers_the_whole_range() {
     let mut model = new_empty_model();
-    model._set("B2", "5");
+    model.set_a1("B2", "5");
     model.evaluate();
 
     model.merge_cells_center(&area(0, 2, 2, 2, 2)).unwrap();
     assert_eq!(model.get_merged_cells(0).unwrap(), &[merged(2, 2, 2, 2)]);
-    assert_eq!(model._get_text("B2"), "5");
+    assert_eq!(model.get_text_a1("B2"), "5");
     for cell in ["B2", "C2", "B3", "C3"] {
-        let reference = model._parse_reference(cell);
+        let reference = model.parse_a1(cell);
         let style = model
             .get_style_for_cell(0, reference.row, reference.column)
             .unwrap();
@@ -815,8 +818,8 @@ fn merge_center_keeps_the_rest_of_the_alignment() {
 #[test]
 fn merge_across_merges_each_row() {
     let mut model = new_empty_model();
-    model._set("C2", "top");
-    model._set("B4", "bottom");
+    model.set_a1("C2", "top");
+    model.set_a1("B4", "bottom");
     model.evaluate();
 
     // B2:C4 becomes three one-row merges
@@ -827,17 +830,17 @@ fn merge_across_merges_each_row() {
         &[merged(2, 2, 2, 1), merged(3, 2, 2, 1), merged(4, 2, 2, 1)]
     );
     // each row's single content cell moved to its own anchor
-    assert_eq!(model._get_text("B2"), "top");
-    assert_eq!(model._get_text("C2"), "");
-    assert_eq!(model._get_text("B4"), "bottom");
+    assert_eq!(model.get_text_a1("B2"), "top");
+    assert_eq!(model.get_text_a1("C2"), "");
+    assert_eq!(model.get_text_a1("B4"), "bottom");
 }
 
 #[test]
 fn merge_across_is_all_or_nothing() {
     let mut model = new_empty_model();
     // the second row has two cells with content: nothing must change
-    model._set("B3", "a");
-    model._set("C3", "b");
+    model.set_a1("B3", "a");
+    model.set_a1("C3", "b");
     model.evaluate();
 
     assert_eq!(
@@ -845,8 +848,8 @@ fn merge_across_is_all_or_nothing() {
         Err("Cannot merge cells: more than one cell has content".to_string())
     );
     assert!(model.get_merged_cells(0).unwrap().is_empty());
-    assert_eq!(model._get_text("B3"), "a");
-    assert_eq!(model._get_text("C3"), "b");
+    assert_eq!(model.get_text_a1("B3"), "a");
+    assert_eq!(model.get_text_a1("C3"), "b");
 }
 
 #[test]
@@ -863,8 +866,8 @@ fn merge_across_a_single_column_is_rejected() {
 #[test]
 fn merge_down_merges_each_column() {
     let mut model = new_empty_model();
-    model._set("B3", "left");
-    model._set("C2", "right");
+    model.set_a1("B3", "left");
+    model.set_a1("C2", "right");
     model.evaluate();
 
     // B2:C4 becomes two one-column merges
@@ -874,17 +877,17 @@ fn merge_down_merges_each_column() {
         model.get_merged_cells(0).unwrap(),
         &[merged(2, 2, 1, 3), merged(2, 3, 1, 3)]
     );
-    assert_eq!(model._get_text("B2"), "left");
-    assert_eq!(model._get_text("B3"), "");
-    assert_eq!(model._get_text("C2"), "right");
+    assert_eq!(model.get_text_a1("B2"), "left");
+    assert_eq!(model.get_text_a1("B3"), "");
+    assert_eq!(model.get_text_a1("C2"), "right");
 }
 
 #[test]
 fn merge_down_is_all_or_nothing() {
     let mut model = new_empty_model();
     // the second column has two cells with content: nothing must change
-    model._set("C2", "a");
-    model._set("C3", "b");
+    model.set_a1("C2", "a");
+    model.set_a1("C3", "b");
     model.evaluate();
 
     assert_eq!(
@@ -892,8 +895,8 @@ fn merge_down_is_all_or_nothing() {
         Err("Cannot merge cells: more than one cell has content".to_string())
     );
     assert!(model.get_merged_cells(0).unwrap().is_empty());
-    assert_eq!(model._get_text("C2"), "a");
-    assert_eq!(model._get_text("C3"), "b");
+    assert_eq!(model.get_text_a1("C2"), "a");
+    assert_eq!(model.get_text_a1("C3"), "b");
 }
 
 #[test]

@@ -6,64 +6,64 @@ use crate::test::util::{new_empty_model, round_trip_value, within_fifteen_digits
 fn empty_argument_cumulative() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=BETA.DIST(0.234, 2, 2.5, , 0.15, 1.2)");
-    model._set("A2", "=BETA.DIST(0.234, 2, 2.5, C15 , 0.15, 1.2)");
+    model.set_a1("A1", "=BETA.DIST(0.234, 2, 2.5, , 0.15, 1.2)");
+    model.set_a1("A2", "=BETA.DIST(0.234, 2, 2.5, C15 , 0.15, 1.2)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"0.588288667");
-    assert_eq!(model._get_text("A2"), *"0.588288667");
+    assert_eq!(model.get_text_a1("A1"), *"0.588288667");
+    assert_eq!(model.get_text_a1("A2"), *"0.588288667");
 }
 
 #[test]
 fn arguments() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=BETA.DIST()");
-    model._set("A2", "=BETA.DIST(3)");
-    model._set("A3", "=BETA.DIST(3, 2)");
-    model._set("A4", "=BETA.DIST(3, 2, 3)");
-    model._set("A5", "=BETA.DIST(3, 2, 3, 1)");
-    model._set("A6", "=BETA.DIST(3, 2, 3, 1, 1)");
-    model._set("A7", "=BETA.DIST(3, 2, 3, 1, 1, 10)");
-    model._set("A8", "=BETA.DIST(3, 2, 3, 1, 1, 10, 1)");
+    model.set_a1("A1", "=BETA.DIST()");
+    model.set_a1("A2", "=BETA.DIST(3)");
+    model.set_a1("A3", "=BETA.DIST(3, 2)");
+    model.set_a1("A4", "=BETA.DIST(3, 2, 3)");
+    model.set_a1("A5", "=BETA.DIST(3, 2, 3, 1)");
+    model.set_a1("A6", "=BETA.DIST(3, 2, 3, 1, 1)");
+    model.set_a1("A7", "=BETA.DIST(3, 2, 3, 1, 1, 10)");
+    model.set_a1("A8", "=BETA.DIST(3, 2, 3, 1, 1, 10, 1)");
 
-    model._set("A9", "=BETA.DIST(0.23, 2, 3, 1)"); // Missing interval parameters
-    model._set("A10", "=BETA.DIST(0.23, 2, 3, 1, 0)"); // Missing interval end
-    model._set("A11", "=BETA.DIST(0.23, 2, 3, 1, , 1)"); // Empty interval start
+    model.set_a1("A9", "=BETA.DIST(0.23, 2, 3, 1)"); // Missing interval parameters
+    model.set_a1("A10", "=BETA.DIST(0.23, 2, 3, 1, 0)"); // Missing interval end
+    model.set_a1("A11", "=BETA.DIST(0.23, 2, 3, 1, , 1)"); // Empty interval start
 
-    model._set("B1", "=BETA.INV()");
-    model._set("B2", "=BETA.INV(0.5)");
-    model._set("B3", "=BETA.INV(0.5, 2)");
-    model._set("B4", "=BETA.INV(0.5, 2, 2)"); // Missing interval parameters
-    model._set("B5", "=BETA.INV(0.5, 2, 2, 0)"); // Missing interval end
-    model._set("B6", "=BETA.INV(0.5, 2, 2, 0, 1)");
-    model._set("B7", "=BETA.INV(0.5, 2, 2, 0, 1, 10)");
+    model.set_a1("B1", "=BETA.INV()");
+    model.set_a1("B2", "=BETA.INV(0.5)");
+    model.set_a1("B3", "=BETA.INV(0.5, 2)");
+    model.set_a1("B4", "=BETA.INV(0.5, 2, 2)"); // Missing interval parameters
+    model.set_a1("B5", "=BETA.INV(0.5, 2, 2, 0)"); // Missing interval end
+    model.set_a1("B6", "=BETA.INV(0.5, 2, 2, 0, 1)");
+    model.set_a1("B7", "=BETA.INV(0.5, 2, 2, 0, 1, 10)");
 
-    model._set("B8", "=BETA.INV(0.5, 2, 2, , 1)"); // Empty interval start
+    model.set_a1("B8", "=BETA.INV(0.5, 2, 2, , 1)"); // Empty interval start
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
-    assert_eq!(model._get_text("A5"), *"#NUM!");
-    assert_eq!(model._get_text("A6"), *"#NUM!");
-    assert_eq!(model._get_text("A7"), *"0.215820759");
-    assert_eq!(model._get_text("A8"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A5"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A6"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A7"), *"0.215820759");
+    assert_eq!(model.get_text_a1("A8"), *"#ERROR!");
 
-    assert_eq!(model._get_text("A9"), *"0.22845923");
-    assert_eq!(model._get_text("A10"), *"0.22845923");
-    assert_eq!(model._get_text("A11"), *"0.22845923");
+    assert_eq!(model.get_text_a1("A9"), *"0.22845923");
+    assert_eq!(model.get_text_a1("A10"), *"0.22845923");
+    assert_eq!(model.get_text_a1("A11"), *"0.22845923");
 
-    assert_eq!(model._get_text("B1"), *"#ERROR!");
-    assert_eq!(model._get_text("B2"), *"#ERROR!");
-    assert_eq!(model._get_text("B3"), *"#ERROR!");
-    assert_eq!(model._get_text("B4"), *"0.5");
-    assert_eq!(model._get_text("B5"), *"0.5");
-    assert_eq!(model._get_text("B6"), *"0.5");
-    assert_eq!(model._get_text("B7"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B4"), *"0.5");
+    assert_eq!(model.get_text_a1("B5"), *"0.5");
+    assert_eq!(model.get_text_a1("B6"), *"0.5");
+    assert_eq!(model.get_text_a1("B7"), *"#ERROR!");
 }
 
 // T-1543: `statrs`' Beta inverse_cdf panics from p about 1E-200 and does not finish for
@@ -71,19 +71,19 @@ fn arguments() {
 #[test]
 fn test_fn_beta_inv_tiny_probability_is_bounded() {
     let mut model = new_empty_model();
-    model._set("A1", "=BETA.INV(1E-300,5,2)");
-    model._set("A2", "=BETA.INV(1E-200,1,1)");
-    model._set("A3", "=BETA.INV(1E-100,1000,1)");
-    model._set("A4", "=BETA.INV(1E-300,1E5,1E5)");
-    model._set("A5", "=BETA.INV(1E-100,0.5,100)");
+    model.set_a1("A1", "=BETA.INV(1E-300,5,2)");
+    model.set_a1("A2", "=BETA.INV(1E-200,1,1)");
+    model.set_a1("A3", "=BETA.INV(1E-100,1000,1)");
+    model.set_a1("A4", "=BETA.INV(1E-300,1E5,1E5)");
+    model.set_a1("A5", "=BETA.INV(1E-100,0.5,100)");
     model.evaluate();
     // Excel (probes-numeric t1543-inverse-cdf-tiny-p) agrees to 6 digits at A2-A5; at A1 it gives
     // 6.988271195E-61 (an Excel quirk, see statistics.md).
-    assert_eq!(model._get_text("A1"), "6.98827E-61");
-    assert_eq!(model._get_text("A2"), "1E-200");
-    assert_eq!(model._get_text("A3"), "0.794328235");
-    assert_eq!(model._get_text("A4"), "0.458650995");
-    assert_eq!(model._get_text("A5"), "7.8736E-203");
+    assert_eq!(model.get_text_a1("A1"), "6.98827E-61");
+    assert_eq!(model.get_text_a1("A2"), "1E-200");
+    assert_eq!(model.get_text_a1("A3"), "0.794328235");
+    assert_eq!(model.get_text_a1("A4"), "0.458650995");
+    assert_eq!(model.get_text_a1("A5"), "7.8736E-203");
 }
 
 // T-3664: at a shape of exactly 1 and p of 1E-15 or more the quantile is the closed form, not the
@@ -94,10 +94,10 @@ fn test_fn_beta_inv_tiny_probability_is_bounded() {
 #[test]
 fn test_fn_beta_inv_shape_one_closed_form() {
     let mut model = new_empty_model();
-    model._set("A1", "=BETA.INV(0.999,1,100)");
-    model._set("A2", "=BETA.INV(0.001,100,1)");
-    model._set("A3", "=BETA.INV(0.25,1,1)");
-    model._set("A4", "=BETA.INV(1E-300,1,1)");
+    model.set_a1("A1", "=BETA.INV(0.999,1,100)");
+    model.set_a1("A2", "=BETA.INV(0.001,100,1)");
+    model.set_a1("A3", "=BETA.INV(0.25,1,1)");
+    model.set_a1("A4", "=BETA.INV(1E-300,1,1)");
     model.evaluate();
     let number = |cell: &str| round_trip_value(&model, cell).parse::<f64>().unwrap();
     for (cell, excel) in [
@@ -121,10 +121,10 @@ fn test_fn_beta_inv_shape_one_closed_form() {
 #[test]
 fn test_fn_beta_dist_shape_one_complement_past_unit_exponent() {
     let mut model = new_empty_model();
-    model._set("A1", "=BETA.DIST(0.9094554,241.0,1.0,TRUE)");
-    model._set("A2", "=BETA.DIST(0.912187876,136.0,1.0,TRUE)");
-    model._set("A3", "=BETA.DIST(0.9965,1414.0,1.0,TRUE)");
-    model._set("A4", "=BETA.DIST(0.95591070645675,826.0,1.0,TRUE)");
+    model.set_a1("A1", "=BETA.DIST(0.9094554,241.0,1.0,TRUE)");
+    model.set_a1("A2", "=BETA.DIST(0.912187876,136.0,1.0,TRUE)");
+    model.set_a1("A3", "=BETA.DIST(0.9965,1414.0,1.0,TRUE)");
+    model.set_a1("A4", "=BETA.DIST(0.95591070645675,826.0,1.0,TRUE)");
     model.evaluate();
     let number = |cell: &str| round_trip_value(&model, cell).parse::<f64>().unwrap();
     for (cell, excel) in [
@@ -143,10 +143,10 @@ fn test_fn_beta_dist_shape_one_complement_past_unit_exponent() {
 #[test]
 fn test_fn_beta_dist_l140_prefactor_underflow_is_zero() {
     let mut model = new_empty_model();
-    model._set("A1", "=BETA.DIST(0.7115070068952,2160.0,30.5,TRUE)");
-    model._set("A2", "=BETA.DIST(0.749267,2496.51,16.8,TRUE)");
-    model._set("A3", "=BETA.DIST(0.74342,2420.0,33.6362,TRUE)");
-    model._set("A4", "=BETADIST(0.74342,2420.0,33.6362)");
+    model.set_a1("A1", "=BETA.DIST(0.7115070068952,2160.0,30.5,TRUE)");
+    model.set_a1("A2", "=BETA.DIST(0.749267,2496.51,16.8,TRUE)");
+    model.set_a1("A3", "=BETA.DIST(0.74342,2420.0,33.6362,TRUE)");
+    model.set_a1("A4", "=BETADIST(0.74342,2420.0,33.6362)");
     model.evaluate();
     for cell in ["A1", "A2", "A3", "A4"] {
         assert_eq!(round_trip_value(&model, cell), "0.0", "{cell}");
@@ -189,7 +189,7 @@ fn test_fn_beta_inv_upper_quantile_rounding_to_one() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, excel)) in cases.iter().enumerate() {
@@ -197,7 +197,7 @@ fn test_fn_beta_inv_upper_quantile_rounding_to_one() {
         let value = round_trip_value(&model, &cell);
         match excel.parse::<f64>() {
             Ok(x) => assert_eq!(value.parse::<f64>().ok(), Some(x), "{formula}: {value}"),
-            Err(_) => assert_eq!(model._get_text(&cell), *excel, "{formula}"),
+            Err(_) => assert_eq!(model.get_text_a1(&cell), *excel, "{formula}"),
         }
     }
 }

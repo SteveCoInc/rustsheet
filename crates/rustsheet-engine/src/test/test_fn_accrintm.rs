@@ -12,9 +12,9 @@ fn fn_accrintm_microsoft_example() {
     // Serials 39539 (2008-04-01) / 39614 (2008-06-15)
     // rate=0.1, par=1000, basis=3 (Actual/365), 75 days
     let mut model = new_empty_model();
-    model._set("A1", "=ACCRINTM(39539, 39614, 0.1, 1000, 3)");
+    model.set_a1("A1", "=ACCRINTM(39539, 39614, 0.1, 1000, 3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"20.54794521");
+    assert_eq!(model.get_text_a1("A1"), *"20.54794521");
 }
 
 #[test]
@@ -22,9 +22,9 @@ fn fn_accrintm_defaults() {
     // 3-arg form: par defaults to 1000, basis defaults to 0 (US 30/360)
     // Same date pair as microsoft_example, basis 0: 74 days / 360
     let mut model = new_empty_model();
-    model._set("A1", "=ACCRINTM(39539, 39614, 0.1)");
+    model.set_a1("A1", "=ACCRINTM(39539, 39614, 0.1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"20.55555556");
+    assert_eq!(model.get_text_a1("A1"), *"20.55555556");
 }
 
 #[test]
@@ -32,32 +32,32 @@ fn fn_accrintm_all_bases() {
     // Source: P2 spec research, all 5 basis options with same date pair
     // 2024-01-15 to 2024-03-15, 60 actual calendar days, leap year 2024
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINTM(DATE(2024,1,15), DATE(2024,3,15), 0.1, 1000, 0)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=ACCRINTM(DATE(2024,1,15), DATE(2024,3,15), 0.1, 1000, 1)",
     );
-    model._set(
+    model.set_a1(
         "A3",
         "=ACCRINTM(DATE(2024,1,15), DATE(2024,3,15), 0.1, 1000, 2)",
     );
-    model._set(
+    model.set_a1(
         "A4",
         "=ACCRINTM(DATE(2024,1,15), DATE(2024,3,15), 0.1, 1000, 3)",
     );
-    model._set(
+    model.set_a1(
         "A5",
         "=ACCRINTM(DATE(2024,1,15), DATE(2024,3,15), 0.1, 1000, 4)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"16.66666667"); // basis 0: 60/360
-    assert_eq!(model._get_text("A2"), *"16.39344262"); // basis 1: 60/366 (leap)
-    assert_eq!(model._get_text("A3"), *"16.66666667"); // basis 2: 60/360
-    assert_eq!(model._get_text("A4"), *"16.43835616"); // basis 3: 60/365
-    assert_eq!(model._get_text("A5"), *"16.66666667"); // basis 4: 60/360
+    assert_eq!(model.get_text_a1("A1"), *"16.66666667"); // basis 0: 60/360
+    assert_eq!(model.get_text_a1("A2"), *"16.39344262"); // basis 1: 60/366 (leap)
+    assert_eq!(model.get_text_a1("A3"), *"16.66666667"); // basis 2: 60/360
+    assert_eq!(model.get_text_a1("A4"), *"16.43835616"); // basis 3: 60/365
+    assert_eq!(model.get_text_a1("A5"), *"16.66666667"); // basis 4: 60/360
 }
 
 // =============================================================================
@@ -67,9 +67,9 @@ fn fn_accrintm_all_bases() {
 #[test]
 fn fn_accrintm_error_issue_after_settlement() {
     let mut model = new_empty_model();
-    model._set("A1", "=ACCRINTM(39614, 39539, 0.1, 1000, 3)");
+    model.set_a1("A1", "=ACCRINTM(39614, 39539, 0.1, 1000, 3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 #[test]
@@ -83,18 +83,18 @@ fn fn_accrintm_issue_equals_settlement_is_zero() {
     for (row, serial) in serials.iter().enumerate() {
         for basis in 0..=4 {
             let cell = format!("{}{}", ["A", "B", "C", "D", "E"][basis], row + 1);
-            model._set(
+            model.set_a1(
                 &cell,
                 &format!("=ACCRINTM({serial},{serial},0.05,1000,{basis})"),
             );
             cells.push(cell);
         }
     }
-    model._set("F1", "=ACCRINTM(39539, 39539, 0.1, 1000, 3)");
+    model.set_a1("F1", "=ACCRINTM(39539, 39539, 0.1, 1000, 3)");
     cells.push("F1".to_string());
     model.evaluate();
     for cell in cells {
-        assert_eq!(model._get_text(&cell), *"0", "{cell}");
+        assert_eq!(model.get_text_a1(&cell), *"0", "{cell}");
     }
 }
 
@@ -102,38 +102,38 @@ fn fn_accrintm_issue_equals_settlement_is_zero() {
 fn fn_accrintm_error_zero_rate() {
     // rate <= 0 → #NUM! (covers both zero and negative)
     let mut model = new_empty_model();
-    model._set("A1", "=ACCRINTM(39539, 39614, 0, 1000, 3)");
+    model.set_a1("A1", "=ACCRINTM(39539, 39614, 0, 1000, 3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 #[test]
 fn fn_accrintm_error_zero_par() {
     // par <= 0 → #NUM! (covers both zero and negative)
     let mut model = new_empty_model();
-    model._set("A1", "=ACCRINTM(39539, 39614, 0.1, 0, 3)");
+    model.set_a1("A1", "=ACCRINTM(39539, 39614, 0.1, 0, 3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 #[test]
 fn fn_accrintm_error_invalid_basis() {
     // basis outside 0-4 → #NUM! (delegated to fn_yearfrac)
     let mut model = new_empty_model();
-    model._set("A1", "=ACCRINTM(39539, 39614, 0.1, 1000, 5)");
+    model.set_a1("A1", "=ACCRINTM(39539, 39614, 0.1, 1000, 5)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 #[test]
 fn fn_accrintm_error_arg_count() {
     // Too few (2) and too many (6) arguments
     let mut model = new_empty_model();
-    model._set("A1", "=ACCRINTM(39539, 39614)");
-    model._set("A2", "=ACCRINTM(39539, 39614, 0.1, 1000, 3, 1)");
+    model.set_a1("A1", "=ACCRINTM(39539, 39614)");
+    model.set_a1("A2", "=ACCRINTM(39539, 39614, 0.1, 1000, 3, 1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
 }
 
 // =============================================================================
@@ -147,18 +147,18 @@ fn fn_accrintm_basis0_vs_basis4_month_end() {
     // Basis 0 (US): D1=15, D2=31 stays (D1<30). days=76. 76/360
     // Basis 4 (EU): D1=15, D2=31→30. days=75. 75/360
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINTM(DATE(2023,1,15), DATE(2023,3,31), 0.1, 1000, 0)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=ACCRINTM(DATE(2023,1,15), DATE(2023,3,31), 0.1, 1000, 4)",
     );
     model.evaluate();
-    assert_ne!(model._get_text("A1"), model._get_text("A2"));
-    assert_eq!(model._get_text("A1"), *"21.11111111");
-    assert_eq!(model._get_text("A2"), *"20.83333333");
+    assert_ne!(model.get_text_a1("A1"), model.get_text_a1("A2"));
+    assert_eq!(model.get_text_a1("A1"), *"21.11111111");
+    assert_eq!(model.get_text_a1("A2"), *"20.83333333");
 }
 
 #[test]
@@ -169,18 +169,18 @@ fn fn_accrintm_basis0_feb28_leap_vs_nonleap() {
     // Non-leap 2023: Feb 28 IS last day → adjusted to "Feb 30", 105 days
     // Leap 2024: Feb 28 is NOT last day → no adjustment, D1=28, 107 days
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINTM(DATE(2023,2,28), DATE(2023,6,15), 0.1, 1000, 0)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=ACCRINTM(DATE(2024,2,28), DATE(2024,6,15), 0.1, 1000, 0)",
     );
     model.evaluate();
-    assert_ne!(model._get_text("A1"), model._get_text("A2"));
-    assert_eq!(model._get_text("A1"), *"29.16666667"); // non-leap: 105/360
-    assert_eq!(model._get_text("A2"), *"29.72222222"); // leap: 107/360
+    assert_ne!(model.get_text_a1("A1"), model.get_text_a1("A2"));
+    assert_eq!(model.get_text_a1("A1"), *"29.16666667"); // non-leap: 105/360
+    assert_eq!(model.get_text_a1("A2"), *"29.72222222"); // leap: 107/360
 }
 
 #[test]
@@ -190,12 +190,12 @@ fn fn_accrintm_cross_year_spanning_feb29() {
     // is_feb_29_between_dates returns true (Feb 29 2024 within range) → /366
     // 121 actual days
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINTM(DATE(2023,11,15), DATE(2024,3,15), 0.1, 1000, 1)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"33.06010929");
+    assert_eq!(model.get_text_a1("A1"), *"33.06010929");
 }
 
 #[test]
@@ -204,15 +204,15 @@ fn fn_accrintm_leap_feb28_to_mar1_contrast() {
     // Non-leap: 1 actual day (Feb 28→Mar 1), /365
     // Basis 1 (Actual/Actual)
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINTM(DATE(2024,2,28), DATE(2024,3,1), 0.1, 1000, 1)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=ACCRINTM(DATE(2023,2,28), DATE(2023,3,1), 0.1, 1000, 1)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"0.546448087"); // 2/366
-    assert_eq!(model._get_text("A2"), *"0.273972603"); // 1/365
+    assert_eq!(model.get_text_a1("A1"), *"0.546448087"); // 2/366
+    assert_eq!(model.get_text_a1("A2"), *"0.273972603"); // 1/365
 }

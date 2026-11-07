@@ -24,7 +24,7 @@ fn data() -> Model {
         ("G1", "50"),
         ("G2", "60"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
 }
@@ -62,11 +62,15 @@ fn readers_see_the_hit_as_a_value_and_the_miss_as_the_range() {
         (format!("=INDEX(INDEX({X_F},2),2,1)"), "#REF!"),
     ];
     for (row, (formula, _)) in (1..).zip(&cases) {
-        model._set(&format!("K{row}"), formula);
+        model.set_a1(&format!("K{row}"), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in (1..).zip(&cases) {
-        assert_eq!(model._get_text(&format!("K{row}")), *expected, "{formula}");
+        assert_eq!(
+            model.get_text_a1(&format!("K{row}")),
+            *expected,
+            "{formula}"
+        );
     }
 }
 
@@ -76,13 +80,13 @@ fn readers_see_the_hit_as_a_value_and_the_miss_as_the_range() {
 #[test]
 fn offset_lifts_over_a_mixed_grid() {
     let mut model = data();
-    model._set("K1", &format!("=OFFSET({X_G},0,0)"));
-    model._set("L1", &format!("=ROWS(OFFSET({X_G},0,0))"));
-    model._set("M1", &format!("=COLUMNS(OFFSET({X_G},0,0))"));
-    model._set("K4", &format!("=OFFSET({X_G},1,0)"));
-    model._set("L4", &format!("=ROWS(OFFSET({X_G},1,0))"));
+    model.set_a1("K1", &format!("=OFFSET({X_G},0,0)"));
+    model.set_a1("L1", &format!("=ROWS(OFFSET({X_G},0,0))"));
+    model.set_a1("M1", &format!("=COLUMNS(OFFSET({X_G},0,0))"));
+    model.set_a1("K4", &format!("=OFFSET({X_G},1,0)"));
+    model.set_a1("L4", &format!("=ROWS(OFFSET({X_G},1,0))"));
     // A scalar XLOOKUP is still the reference it picks.
-    model._set(
+    model.set_a1(
         "K7",
         "=OFFSET(XLOOKUP(2,$A$1:$A$3,$B$1:$B$3,$G$1:$G$2),1,0)",
     );
@@ -97,7 +101,7 @@ fn offset_lifts_over_a_mixed_grid() {
         ("L4", "2"),
         ("K7", "30"),
     ] {
-        assert_eq!(model._get_text(cell), expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell}");
     }
 }
 
@@ -107,12 +111,12 @@ fn offset_lifts_over_a_mixed_grid() {
 #[test]
 fn rank_lifts_over_a_mixed_grid() {
     let mut model = data();
-    model._set("K1", &format!("=RANK(60,{X_G})"));
-    model._set("K4", &format!("=RANK.EQ(60,{X_G})"));
-    model._set("K7", &format!("=RANK.AVG(60,{X_G})"));
-    model._set("K10", &format!("=RANK(20,{X_G})"));
-    model._set("K13", &format!("=RANK(50,{X_G})"));
-    model._set("L1", &format!("=ROWS(RANK(60,{X_G}))"));
+    model.set_a1("K1", &format!("=RANK(60,{X_G})"));
+    model.set_a1("K4", &format!("=RANK.EQ(60,{X_G})"));
+    model.set_a1("K7", &format!("=RANK.AVG(60,{X_G})"));
+    model.set_a1("K10", &format!("=RANK(20,{X_G})"));
+    model.set_a1("K13", &format!("=RANK(50,{X_G})"));
+    model.set_a1("L1", &format!("=ROWS(RANK(60,{X_G}))"));
     model.evaluate();
     for (cell, expected) in [
         ("K1", "#VALUE!"),
@@ -127,7 +131,7 @@ fn rank_lifts_over_a_mixed_grid() {
         ("K14", "2"),
         ("L1", "2"),
     ] {
-        assert_eq!(model._get_text(cell), expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell}");
     }
 }
 
@@ -137,22 +141,22 @@ fn rank_lifts_over_a_mixed_grid() {
 fn order_statistics_are_na_only_for_references_on_another_sheet() {
     let mut model = data();
     model.add_sheet("Sheet2").unwrap();
-    model._set("Sheet2!A1", "=LARGE(OFFSET(Sheet1!$G$1,{0;1},0),1)");
-    model._set("Sheet2!A2", "=SMALL(OFFSET(Sheet1!$G$1,{0;1},0),1)");
-    model._set("Sheet2!A3", "=MEDIAN(OFFSET(Sheet1!$G$1,{0;1},0))");
-    model._set(
+    model.set_a1("Sheet2!A1", "=LARGE(OFFSET(Sheet1!$G$1,{0;1},0),1)");
+    model.set_a1("Sheet2!A2", "=SMALL(OFFSET(Sheet1!$G$1,{0;1},0),1)");
+    model.set_a1("Sheet2!A3", "=MEDIAN(OFFSET(Sheet1!$G$1,{0;1},0))");
+    model.set_a1(
         "Sheet2!A4",
         "=LARGE(XLOOKUP({2;9},Sheet1!$A$1:$A$3,Sheet1!$B$1:$B$3,Sheet1!$G$1:$G$2),1)",
     );
-    model._set("K1", "=LARGE(OFFSET($G$1,{0;1},0),1)");
-    model._set("K2", "=MEDIAN(OFFSET($G$1,{0;1},0))");
-    model._set("K3", &format!("=LARGE({X_G},1)"));
+    model.set_a1("K1", "=LARGE(OFFSET($G$1,{0;1},0),1)");
+    model.set_a1("K2", "=MEDIAN(OFFSET($G$1,{0;1},0))");
+    model.set_a1("K3", &format!("=LARGE({X_G},1)"));
     model.evaluate();
     for cell in ["Sheet2!A1", "Sheet2!A2", "Sheet2!A3", "Sheet2!A4"] {
-        assert_eq!(model._get_text(cell), *"#N/A", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#N/A", "{cell}");
     }
     for cell in ["K1", "K2", "K3"] {
-        assert_eq!(model._get_text(cell), *"#VALUE!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#VALUE!", "{cell}");
     }
 }
 
@@ -164,19 +168,19 @@ fn order_statistics_over_mixed_sheets_follow_the_first_element() {
     model.add_sheet("Sheet2").unwrap();
     let own_first = "{\"Sheet2!A1\";\"Sheet1!G1\"}";
     let other_first = "{\"Sheet1!G1\";\"Sheet2!A1\"}";
-    model._set("Sheet2!B1", &format!("=LARGE(INDIRECT({own_first}),1)"));
-    model._set("Sheet2!B2", &format!("=SMALL(INDIRECT({own_first}),1)"));
-    model._set("Sheet2!B3", &format!("=MEDIAN(INDIRECT({own_first}))"));
-    model._set("Sheet2!B4", &format!("=LARGE(INDIRECT({other_first}),1)"));
-    model._set(
+    model.set_a1("Sheet2!B1", &format!("=LARGE(INDIRECT({own_first}),1)"));
+    model.set_a1("Sheet2!B2", &format!("=SMALL(INDIRECT({own_first}),1)"));
+    model.set_a1("Sheet2!B3", &format!("=MEDIAN(INDIRECT({own_first}))"));
+    model.set_a1("Sheet2!B4", &format!("=LARGE(INDIRECT({other_first}),1)"));
+    model.set_a1(
         "Sheet2!B5",
         "=LARGE(INDIRECT({\"Sheet2!A1\";\"Sheet1!G1\";\"Sheet1!G2\"}),1)",
     );
     model.evaluate();
     for cell in ["Sheet2!B1", "Sheet2!B2", "Sheet2!B3", "Sheet2!B5"] {
-        assert_eq!(model._get_text(cell), *"#VALUE!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#VALUE!", "{cell}");
     }
-    assert_eq!(model._get_text("Sheet2!B4"), *"#N/A");
+    assert_eq!(model.get_text_a1("Sheet2!B4"), *"#N/A");
 }
 
 // Over an error element beside an off-sheet reference the first element decides: the reference
@@ -185,22 +189,22 @@ fn order_statistics_over_mixed_sheets_follow_the_first_element() {
 #[test]
 fn order_statistics_over_an_error_and_a_reference_follow_the_first_element() {
     let mut model = data();
-    model._set("I1", "5");
-    model._set("I2", "=1/0");
-    model._set("I3", "7");
+    model.set_a1("I1", "5");
+    model.set_a1("I2", "=1/0");
+    model.set_a1("I3", "7");
     model.add_sheet("Sheet2").unwrap();
     let grid =
         |keys: &str| format!("XLOOKUP({keys},Sheet1!$A$1:$A$3,Sheet1!$I$1:$I$3,Sheet1!$G$1:$G$2)");
     let (reference_first, error_first) = (grid("{9;2}"), grid("{2;9}"));
     for (row, grid) in [(1, &reference_first), (2, &error_first)] {
-        model._set(&format!("Sheet2!A{row}"), &format!("=LARGE({grid},1)"));
-        model._set(&format!("Sheet2!B{row}"), &format!("=SMALL({grid},1)"));
-        model._set(&format!("Sheet2!C{row}"), &format!("=MEDIAN({grid})"));
-        model._set(&format!("Sheet2!D{row}"), &format!("=MAX({grid})"));
+        model.set_a1(&format!("Sheet2!A{row}"), &format!("=LARGE({grid},1)"));
+        model.set_a1(&format!("Sheet2!B{row}"), &format!("=SMALL({grid},1)"));
+        model.set_a1(&format!("Sheet2!C{row}"), &format!("=MEDIAN({grid})"));
+        model.set_a1(&format!("Sheet2!D{row}"), &format!("=MAX({grid})"));
     }
     model.evaluate();
     for cell in ["Sheet2!A1", "Sheet2!B1", "Sheet2!C1"] {
-        assert_eq!(model._get_text(cell), *"#N/A", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#N/A", "{cell}");
     }
     for cell in [
         "Sheet2!D1",
@@ -209,7 +213,7 @@ fn order_statistics_over_an_error_and_a_reference_follow_the_first_element() {
         "Sheet2!C2",
         "Sheet2!D2",
     ] {
-        assert_eq!(model._get_text(cell), *"#DIV/0!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#DIV/0!", "{cell}");
     }
 }
 
@@ -219,24 +223,24 @@ fn order_statistics_over_an_error_and_a_reference_follow_the_first_element() {
 #[test]
 fn criteria_calls_lift_over_every_xlookup_element() {
     let mut model = data();
-    model._set(
+    model.set_a1(
         "K1",
         "=COUNTIF(XLOOKUP({2;9},$A$1:$A$3,$B$1:$B$3,\"x\"),\">0\")",
     );
-    model._set(
+    model.set_a1(
         "L1",
         "=ROWS(SUMIF(XLOOKUP({2;3},$A$1:$A$3,$B$1:$B$3,\"x\"),\">0\"))",
     );
-    model._set("M1", "=COUNTIF(XLOOKUP({2;9},$A$1:$A$3,$B$1:$B$3),\">0\")");
-    model._set(
+    model.set_a1("M1", "=COUNTIF(XLOOKUP({2;9},$A$1:$A$3,$B$1:$B$3),\">0\")");
+    model.set_a1(
         "N1",
         "=COLUMNS(COUNTIF(XLOOKUP({2},$A$1:$A$3,$B$1:$B$3,\"x\"),\">0\"))",
     );
-    model._set(
+    model.set_a1(
         "O1",
         "=COUNTIF(XLOOKUP(2,$A$1:$A$3,$B$1:$B$3,\"x\"),\">0\")",
     );
-    model._set(
+    model.set_a1(
         "P1",
         "=ROWS(SUMIF($A$1:$A$2,\">0\",XLOOKUP({2;3},$A$1:$A$3,$B$1:$B$3,\"x\")))",
     );
@@ -251,7 +255,7 @@ fn criteria_calls_lift_over_every_xlookup_element() {
         ("O1", "1"),
         ("P1", "2"),
     ] {
-        assert_eq!(model._get_text(cell), expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell}");
     }
 }
 
@@ -260,20 +264,20 @@ fn criteria_calls_lift_over_every_xlookup_element() {
 #[test]
 fn an_all_hit_lift_is_an_array_of_values() {
     let mut model = data();
-    model._set(
+    model.set_a1(
         "K1",
         "=ISREF(INDEX(XLOOKUP({2;3},$A$1:$A$3,$B$1:$B$3,$F$1:$F$2),1,1))",
     );
-    model._set("K2", "=SUM(XLOOKUP({2;3},$A$1:$A$3,$B$1:$B$3,$F$1:$F$2))");
-    model._set(
+    model.set_a1("K2", "=SUM(XLOOKUP({2;3},$A$1:$A$3,$B$1:$B$3,$F$1:$F$2))");
+    model.set_a1(
         "K3",
         "=COUNTIF(XLOOKUP({2;9},$A$1:$A$3,$B$1:$B$3,$G$1:$G$2),\">0\")",
     );
     model.evaluate();
-    assert_eq!(model._get_text("K1"), *"FALSE");
-    assert_eq!(model._get_text("K2"), *"50");
-    assert_eq!(model._get_text("K3"), *"#VALUE!");
-    assert_eq!(model._get_text("K4"), *"2");
+    assert_eq!(model.get_text_a1("K1"), *"FALSE");
+    assert_eq!(model.get_text_a1("K2"), *"50");
+    assert_eq!(model.get_text_a1("K3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("K4"), *"2");
 }
 
 // The mixed grid's element stays within the size the grids were built for (T-1956).

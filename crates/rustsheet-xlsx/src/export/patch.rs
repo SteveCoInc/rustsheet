@@ -21,6 +21,13 @@
 //! What the patch leaves as the source had it is listed in docs/excel-semantics/xlsx-storage.md
 //! ("A patched package keeps the source's hints"): row `spans`, a `<dimension>` that only grows,
 //! and a `<row>` emptied by clearing its cells.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::format_push_string,
+    clippy::too_many_lines,
+    clippy::unnecessary_wraps
+)]
+// LINT-DEBT-END
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Cursor;
@@ -856,51 +863,47 @@ fn insert_cells(
     let mut tail_rows = String::new();
     for (row, cells) in inserts {
         let at_row = (row, 0);
-        match find_row(&index.rows, row) {
-            Some(r) => match r.insert_at {
-                Some(close) => {
-                    for (column, text) in cells {
-                        let next = r.cells.partition_point(|c| c.column < column);
-                        let at = r.cells.get(next).map_or(close, |c| c.start);
-                        edits.push(Edit {
-                            at,
-                            remove: 0,
-                            key: (row, column),
-                            text,
-                        });
-                    }
-                }
-                None => {
-                    // `<row .../>`: written out once as a full row.
-                    let open = xml[r.start..r.end].trim_end_matches("/>");
-                    let body: String = cells.into_iter().map(|(_, t)| t).collect();
+        if let Some(r) = find_row(&index.rows, row) {
+            if let Some(close) = r.insert_at {
+                for (column, text) in cells {
+                    let next = r.cells.partition_point(|c| c.column < column);
+                    let at = r.cells.get(next).map_or(close, |c| c.start);
                     edits.push(Edit {
-                        at: r.start,
-                        remove: r.end - r.start,
-                        key: at_row,
-                        text: format!("{open}>{body}</row>"),
+                        at,
+                        remove: 0,
+                        key: (row, column),
+                        text,
                     });
                 }
-            },
-            None => {
+            } else {
+                // `<row .../>`: written out once as a full row.
+                let open = xml[r.start..r.end].trim_end_matches("/>");
                 let body: String = cells.into_iter().map(|(_, t)| t).collect();
-                let text = format!(r#"<row r="{row}">{body}</row>"#);
-                let next = index.rows.partition_point(|r| r.r < row);
-                match (index.rows.get(next), &index.tail) {
-                    (Some(next), _) => edits.push(Edit {
-                        at: next.start,
-                        remove: 0,
-                        key: at_row,
-                        text,
-                    }),
-                    (None, Tail::Before(at)) => edits.push(Edit {
-                        at: *at,
-                        remove: 0,
-                        key: at_row,
-                        text,
-                    }),
-                    (None, Tail::Empty(..)) => tail_rows.push_str(&text),
-                }
+                edits.push(Edit {
+                    at: r.start,
+                    remove: r.end - r.start,
+                    key: at_row,
+                    text: format!("{open}>{body}</row>"),
+                });
+            }
+        } else {
+            let body: String = cells.into_iter().map(|(_, t)| t).collect();
+            let text = format!(r#"<row r="{row}">{body}</row>"#);
+            let next = index.rows.partition_point(|r| r.r < row);
+            match (index.rows.get(next), &index.tail) {
+                (Some(next), _) => edits.push(Edit {
+                    at: next.start,
+                    remove: 0,
+                    key: at_row,
+                    text,
+                }),
+                (None, Tail::Before(at)) => edits.push(Edit {
+                    at: *at,
+                    remove: 0,
+                    key: at_row,
+                    text,
+                }),
+                (None, Tail::Empty(..)) => tail_rows.push_str(&text),
             }
         }
     }

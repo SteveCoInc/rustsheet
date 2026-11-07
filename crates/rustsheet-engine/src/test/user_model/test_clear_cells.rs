@@ -15,14 +15,14 @@ fn basic() {
             height: 1,
         })
         .unwrap();
-    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok(String::new()));
     model.undo().unwrap();
     assert_eq!(
         model.get_formatted_cell_value(0, 1, 1),
         Ok("$100 ".to_string())
     );
     model.redo().unwrap();
-    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok(String::new()));
 
     model.set_user_input(0, 1, 1, "300").unwrap();
     // clear contents keeps the formatting
@@ -40,14 +40,14 @@ fn basic() {
             height: 1,
         })
         .unwrap();
-    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok(String::new()));
     model.undo().unwrap();
     assert_eq!(
         model.get_formatted_cell_value(0, 1, 1),
         Ok("$300 ".to_string())
     );
     model.redo().unwrap();
-    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok(String::new()));
     model.set_user_input(0, 1, 1, "400").unwrap();
     // clear contents keeps the formatting
     assert_eq!(
@@ -68,9 +68,9 @@ fn clear_empty_cell() {
             height: 1,
         })
         .unwrap();
-    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok(String::new()));
     model.undo().unwrap();
-    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok(String::new()));
 }
 
 #[test]
@@ -85,9 +85,9 @@ fn clear_all_empty_cell() {
             height: 1,
         })
         .unwrap();
-    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok(String::new()));
     model.undo().unwrap();
-    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok(String::new()));
 }
 
 #[test]

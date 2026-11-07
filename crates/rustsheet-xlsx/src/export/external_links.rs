@@ -7,6 +7,7 @@
 //! workbook part, so `[n]` in a saved formula names the same book it did in the source.
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 
 use rustsheet_engine::expressions::utils::number_to_column;
 use rustsheet_engine::types::{ExternalBook, SpillValue, Workbook};
@@ -111,7 +112,7 @@ pub(super) fn external_link_xml(book: &ExternalBook) -> String {
     if !book.sheet_names.is_empty() {
         xml.push_str("<sheetNames>");
         for name in &book.sheet_names {
-            xml.push_str(&format!("<sheetName val=\"{}\"/>", escape_xml(name)));
+            let _ = write!(xml, "<sheetName val=\"{}\"/>", escape_xml(name));
         }
         xml.push_str("</sheetNames>");
     }
@@ -122,11 +123,12 @@ pub(super) fn external_link_xml(book: &ExternalBook) -> String {
                 .sheet_id
                 .map(|id| format!(" sheetId=\"{id}\""))
                 .unwrap_or_default();
-            xml.push_str(&format!(
+            let _ = write!(
+                xml,
                 "<definedName name=\"{}\" refersTo=\"{}\"{sheet_id}/>",
                 escape_xml(&name.name),
                 escape_xml(&name.formula)
-            ));
+            );
         }
         xml.push_str("</definedNames>");
     }
@@ -140,12 +142,12 @@ pub(super) fn external_link_xml(book: &ExternalBook) -> String {
                 ""
             };
             if rows.is_empty() {
-                xml.push_str(&format!("<sheetData sheetId=\"{sheet}\"{refresh_error}/>"));
+                let _ = write!(xml, "<sheetData sheetId=\"{sheet}\"{refresh_error}/>");
                 continue;
             }
-            xml.push_str(&format!("<sheetData sheetId=\"{sheet}\"{refresh_error}>"));
+            let _ = write!(xml, "<sheetData sheetId=\"{sheet}\"{refresh_error}>");
             for (row, cells) in rows {
-                xml.push_str(&format!("<row r=\"{row}\">"));
+                let _ = write!(xml, "<row r=\"{row}\">");
                 for (column, value) in cells {
                     xml.push_str(&cell_xml(*row, *column, value));
                 }

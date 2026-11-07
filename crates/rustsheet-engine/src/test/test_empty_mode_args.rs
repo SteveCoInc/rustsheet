@@ -18,7 +18,7 @@ fn empty_lookup_modes_and_expand_sizes_are_omitted() {
         ("C2", "2"),
         ("C3", "1"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     let cells = [
         ("E5", "=XLOOKUP(2,A1:A3,B1:B3,,,)", "20"),
@@ -38,10 +38,10 @@ fn empty_lookup_modes_and_expand_sizes_are_omitted() {
         ("E31", "=ROWS(EXPAND(A1:B1,,))", "1"),
     ];
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {
-        assert_eq!(model._get_text(cell), expected, "{cell} {formula}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell} {formula}");
     }
 }

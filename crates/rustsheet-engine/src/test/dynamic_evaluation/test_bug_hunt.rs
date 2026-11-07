@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, clippy::panic)]
 
 // A battery of tests aimed at the evaluation algorithm.
@@ -38,14 +41,14 @@ fn number(model: &Model, cell: &str) -> f64 {
 fn cse_placeholder_read_before_cse_anchor_evaluates() {
     let mut model = new_empty_model();
     model.set_user_array_formula(0, 1, 2, 1, 2, "=5").unwrap();
-    model._set("A1", "=B2*2");
+    model.set_a1("A1", "=B2*2");
 
     model.evaluate();
-    assert_eq!(model._get_text("B2"), "5");
-    assert_eq!(model._get_text("A1"), "10");
+    assert_eq!(model.get_text_a1("B2"), "5");
+    assert_eq!(model.get_text_a1("A1"), "10");
 
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "10");
+    assert_eq!(model.get_text_a1("A1"), "10");
 }
 
 //         ║    A    |       B        |
@@ -59,13 +62,13 @@ fn cse_placeholder_read_before_cse_anchor_evaluates() {
 fn cse_placeholder_read_by_earlier_dynamic_anchor() {
     let mut model = new_empty_model();
     model.set_user_array_formula(0, 1, 1, 1, 2, "=5").unwrap();
-    model._set("B1", "=SEQUENCE(A2+1)");
+    model.set_a1("B1", "=SEQUENCE(A2+1)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A2"), "5");
-        assert_eq!(model._get_text("B1"), "1");
-        assert_eq!(model._get_text("B6"), "6");
+        assert_eq!(model.get_text_a1("A2"), "5");
+        assert_eq!(model.get_text_a1("B1"), "1");
+        assert_eq!(model.get_text_a1("B6"), "6");
     }
 }
 
@@ -81,8 +84,8 @@ fn cse_reading_its_own_spill_cell_is_circular() {
 
     for _ in 0..2 {
         model.evaluate();
-        assert!(model._is_circular("A1"));
-        assert!(model._is_circular("A2"));
+        assert!(model.is_circular_a1("A1"));
+        assert!(model.is_circular_a1("A2"));
     }
 }
 
@@ -100,7 +103,7 @@ fn two_cse_arrays_reading_each_other_are_circular() {
     for _ in 0..2 {
         model.evaluate();
         for cell in ["A1", "A2", "B1", "B2"] {
-            assert!(model._is_circular(cell), "{cell}");
+            assert!(model.is_circular_a1(cell), "{cell}");
         }
     }
 }
@@ -118,19 +121,19 @@ fn dynamic_anchor_and_cse_array_reading_each_other_are_circular() {
     model
         .set_user_array_formula(0, 1, 1, 1, 2, "=B1+1")
         .unwrap();
-    model._set("B1", "=SEQUENCE(A2)");
+    model.set_a1("B1", "=SEQUENCE(A2)");
 
     let mut snapshots = Vec::new();
     for _ in 0..2 {
         model.evaluate();
         snapshots.push((
-            model._get_text("A1"),
-            model._get_text("A2"),
-            model._get_text("B1"),
+            model.get_text_a1("A1"),
+            model.get_text_a1("A2"),
+            model.get_text_a1("B1"),
         ));
     }
     assert_eq!(snapshots[0], snapshots[1], "not a fixed point");
-    assert!(model._is_circular("B1"));
+    assert!(model.is_circular_a1("B1"));
 }
 
 //         ║    A    |       B       |      C       |
@@ -146,15 +149,15 @@ fn cse_array_reading_future_dynamic_spill_is_retracted() {
     model
         .set_user_array_formula(0, 1, 1, 1, 2, "=C3*2")
         .unwrap();
-    model._set("B1", "=SEQUENCE(A1)");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("B1", "=SEQUENCE(A1)");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "6");
-        assert_eq!(model._get_text("A2"), "6");
-        assert_eq!(model._get_text("B1"), "1");
-        assert_eq!(model._get_text("B6"), "6");
+        assert_eq!(model.get_text_a1("A1"), "6");
+        assert_eq!(model.get_text_a1("A2"), "6");
+        assert_eq!(model.get_text_a1("B1"), "1");
+        assert_eq!(model.get_text_a1("B6"), "6");
     }
 }
 
@@ -175,8 +178,8 @@ fn cse_over_another_cse_area_is_refused() {
     assert!(result.is_err(), "overlapping CSE array was accepted");
 
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "5");
-    assert_eq!(model._get_text("B2"), "5");
+    assert_eq!(model.get_text_a1("B1"), "5");
+    assert_eq!(model.get_text_a1("B2"), "5");
 }
 
 //         ║    B    |      C       |
@@ -190,15 +193,15 @@ fn cse_over_another_cse_area_is_refused() {
 #[test]
 fn cse_over_dynamic_anchor_clears_its_spill() {
     let mut model = new_empty_model();
-    model._set("C5", "=SEQUENCE(2)");
+    model.set_a1("C5", "=SEQUENCE(2)");
     model.evaluate();
-    assert_eq!(model._get_text("C6"), "2");
+    assert_eq!(model.get_text_a1("C6"), "2");
 
     model.set_user_array_formula(0, 5, 2, 2, 1, "=5").unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("B5"), "5");
-    assert_eq!(model._get_text("C5"), "5");
-    assert_eq!(model._get_text("C6"), "");
+    assert_eq!(model.get_text_a1("B5"), "5");
+    assert_eq!(model.get_text_a1("C5"), "5");
+    assert_eq!(model.get_text_a1("C6"), "");
 }
 
 // `#` on a CSE anchor gives its declared range.
@@ -206,11 +209,11 @@ fn cse_over_dynamic_anchor_clears_its_spill() {
 fn spill_range_operator_on_cse_anchor() {
     let mut model = new_empty_model();
     model.set_user_array_formula(0, 1, 1, 1, 2, "=5").unwrap();
-    model._set("B1", "=SUM(A1#)");
+    model.set_a1("B1", "=SUM(A1#)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("B1"), "10");
+        assert_eq!(model.get_text_a1("B1"), "10");
     }
 }
 
@@ -224,37 +227,37 @@ fn spill_range_operator_on_cse_anchor() {
 #[test]
 fn countblank_over_future_spill_area() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(COUNTBLANK(C2:C3)+1)");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(COUNTBLANK(C2:C3)+1)");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "1");
-        assert_eq!(model._get_text("A2"), "");
+        assert_eq!(model.get_text_a1("A1"), "1");
+        assert_eq!(model.get_text_a1("A2"), "");
     }
 }
 
 #[test]
 fn isblank_of_future_spill_position() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(IF(ISBLANK(C3),1,3))");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(IF(ISBLANK(C3),1,3))");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A3"), "3");
+        assert_eq!(model.get_text_a1("A3"), "3");
     }
 }
 
 #[test]
 fn indirect_into_future_spill_area() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(SUM(INDIRECT(\"C3\")))");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(SUM(INDIRECT(\"C3\")))");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A3"), "3");
+        assert_eq!(model.get_text_a1("A3"), "3");
     }
 }
 
@@ -266,49 +269,49 @@ fn indirect_into_future_spill_area() {
 #[test]
 fn sequence_of_indirect_reference() {
     let mut model = new_empty_model();
-    model._set("C1", "=SEQUENCE(3)");
-    model._set("A1", "=SEQUENCE(INDIRECT(\"C3\"))");
-    model._set("B1", "=SEQUENCE(INDIRECT(\"C3\")*1)");
+    model.set_a1("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(INDIRECT(\"C3\"))");
+    model.set_a1("B1", "=SEQUENCE(INDIRECT(\"C3\")*1)");
 
     model.evaluate();
-    assert_eq!(model._get_text("A3"), "3");
-    assert_eq!(model._get_text("B3"), "3");
+    assert_eq!(model.get_text_a1("A3"), "3");
+    assert_eq!(model.get_text_a1("B3"), "3");
 }
 
 #[test]
 fn indirect_range_in_a_scalar_argument_lifts_or_dereferences() {
     let mut model = new_empty_model();
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("C1", "=SEQUENCE(3)");
     // SEQUENCE's rows lift over a range since T-1834 (probes/m7-argument-modes F1), and a range
     // INDIRECT returns lifts like a written one (SPEC-0011 open question 6, scalar-lift-open-a
     // W31-W36): one SEQUENCE per cell, each element its call's top-left, 1.
-    model._set("A3", "=SEQUENCE(INDIRECT(\"C1:C3\"))");
-    model._set("H1", "=SEQUENCE(INDIRECT(\"C2:C3\"))");
+    model.set_a1("A3", "=SEQUENCE(INDIRECT(\"C1:C3\"))");
+    model.set_a1("H1", "=SEQUENCE(INDIRECT(\"C2:C3\"))");
     // The string and boolean casts dereference too.
-    model._set("E2", "=LEN(INDIRECT(\"C2\"))");
-    model._set("E3", "=IF(INDIRECT(\"C3\"),\"yes\",\"no\")");
+    model.set_a1("E2", "=LEN(INDIRECT(\"C2\"))");
+    model.set_a1("E3", "=IF(INDIRECT(\"C3\"),\"yes\",\"no\")");
 
     model.evaluate();
     for cell in ["A3", "A4", "A5"] {
-        assert_eq!(model._get_text(cell), "1", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "1", "{cell}");
     }
-    assert_eq!(model._get_text("A6"), "");
-    assert_eq!(model._get_text("H1"), "1");
-    assert_eq!(model._get_text("H2"), "1");
-    assert_eq!(model._get_text("E2"), "1");
-    assert_eq!(model._get_text("E3"), "yes");
+    assert_eq!(model.get_text_a1("A6"), "");
+    assert_eq!(model.get_text_a1("H1"), "1");
+    assert_eq!(model.get_text_a1("H2"), "1");
+    assert_eq!(model.get_text_a1("E2"), "1");
+    assert_eq!(model.get_text_a1("E3"), "yes");
 }
 
 #[test]
 fn defined_name_cell_into_future_spill_area() {
     let mut model = new_empty_model();
     model.new_defined_name("spot", None, "Sheet1!$C$3").unwrap();
-    model._set("A1", "=SEQUENCE(spot)");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(spot)");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A3"), "3");
+        assert_eq!(model.get_text_a1("A3"), "3");
     }
 }
 
@@ -318,60 +321,60 @@ fn defined_name_range_over_future_spill_area() {
     model
         .new_defined_name("area", None, "Sheet1!$C$1:$C$3")
         .unwrap();
-    model._set("A1", "=SEQUENCE(SUM(area))");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(SUM(area))");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A6"), "6");
+        assert_eq!(model.get_text_a1("A6"), "6");
     }
 }
 
 #[test]
 fn let_binding_of_future_spill_position() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(LET(x,C3,x))");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(LET(x,C3,x))");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A3"), "3");
+        assert_eq!(model.get_text_a1("A3"), "3");
     }
 }
 
 #[test]
 fn xlookup_into_future_spill_area() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(XLOOKUP(3,C1:C3,C1:C3))");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(XLOOKUP(3,C1:C3,C1:C3))");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A3"), "3");
+        assert_eq!(model.get_text_a1("A3"), "3");
     }
 }
 
 #[test]
 fn sumif_over_future_spill_area() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(SUMIF(C1:C3,\">1\"))");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(SUMIF(C1:C3,\">1\"))");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A5"), "5");
+        assert_eq!(model.get_text_a1("A5"), "5");
     }
 }
 
 #[test]
 fn rows_of_spill_range_before_anchor() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(ROWS(C1#))");
-    model._set("C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(ROWS(C1#))");
+    model.set_a1("C1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A3"), "3");
+        assert_eq!(model.get_text_a1("A3"), "3");
     }
 }
 
@@ -380,13 +383,13 @@ fn rows_of_spill_range_before_anchor() {
 #[test]
 fn error_values_in_spill_read_by_earlier_anchor() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(1,1,C2)");
-    model._set("C1", "=SEQUENCE(3)/0");
+    model.set_a1("A1", "=SEQUENCE(1,1,C2)");
+    model.set_a1("C1", "=SEQUENCE(3)/0");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("C2"), "#DIV/0!");
-        assert_eq!(model._get_text("A1"), "#DIV/0!");
+        assert_eq!(model.get_text_a1("C2"), "#DIV/0!");
+        assert_eq!(model.get_text_a1("A1"), "#DIV/0!");
     }
 }
 
@@ -405,18 +408,18 @@ fn error_values_in_spill_read_by_earlier_anchor() {
 #[test]
 fn stale_read_through_scalar_chain_is_redone() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(D1)");
-    model._set("B1", "=SEQUENCE(3)");
-    model._set("D1", "=B2+B1");
-    model._set("E1", "=A3");
+    model.set_a1("A1", "=SEQUENCE(D1)");
+    model.set_a1("B1", "=SEQUENCE(3)");
+    model.set_a1("D1", "=B2+B1");
+    model.set_a1("E1", "=A3");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("D1"), "3");
-        assert_eq!(model._get_text("A1"), "1");
-        assert_eq!(model._get_text("A2"), "2");
-        assert_eq!(model._get_text("A3"), "3");
-        assert_eq!(model._get_text("E1"), "3");
+        assert_eq!(model.get_text_a1("D1"), "3");
+        assert_eq!(model.get_text_a1("A1"), "1");
+        assert_eq!(model.get_text_a1("A2"), "2");
+        assert_eq!(model.get_text_a1("A3"), "3");
+        assert_eq!(model.get_text_a1("E1"), "3");
     }
 }
 
@@ -434,15 +437,15 @@ fn stale_read_through_scalar_chain_is_redone() {
 #[test]
 fn earlier_reader_of_contended_cell_sees_winner() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(1,1,B2)");
-    model._set("B1", "=SEQUENCE(3)");
-    model._set("A2", "=SEQUENCE(1,2)");
+    model.set_a1("A1", "=SEQUENCE(1,1,B2)");
+    model.set_a1("B1", "=SEQUENCE(3)");
+    model.set_a1("A2", "=SEQUENCE(1,2)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("B2"), "2");
-        assert_eq!(model._get_text("A2"), "#SPILL!");
-        assert_eq!(model._get_text("A1"), "2");
+        assert_eq!(model.get_text_a1("B2"), "2");
+        assert_eq!(model.get_text_a1("A2"), "#SPILL!");
+        assert_eq!(model.get_text_a1("A1"), "2");
     }
 }
 
@@ -457,16 +460,16 @@ fn earlier_reader_of_contended_cell_sees_winner() {
 #[test]
 fn existing_spill_blocks_an_anchor_earlier_in_the_sheet() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(1,1,A2+B2)");
-    model._set("B1", "=SEQUENCE(3)");
-    model._set("A2", "=SEQUENCE(1,2)");
+    model.set_a1("A1", "=SEQUENCE(1,1,A2+B2)");
+    model.set_a1("B1", "=SEQUENCE(3)");
+    model.set_a1("A2", "=SEQUENCE(1,2)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A2"), "1");
-        assert_eq!(model._get_text("B2"), "2");
-        assert_eq!(model._get_text("A1"), "3");
-        assert_eq!(model._get_text("B1"), "#SPILL!");
+        assert_eq!(model.get_text_a1("A2"), "1");
+        assert_eq!(model.get_text_a1("B2"), "2");
+        assert_eq!(model.get_text_a1("A1"), "3");
+        assert_eq!(model.get_text_a1("B1"), "#SPILL!");
     }
 }
 
@@ -479,35 +482,35 @@ fn existing_spill_blocks_an_anchor_earlier_in_the_sheet() {
 fn contention_toggled_by_input_keeps_the_existing_spill() {
     let build = |a5: &str| {
         let mut model = new_empty_model();
-        model._set("A5", a5);
-        model._set("C1", "=SEQUENCE(A5)");
-        model._set("A2", "=SEQUENCE(1,3)");
-        model._set("D1", "=SUM(A2:C2)");
+        model.set_a1("A5", a5);
+        model.set_a1("C1", "=SEQUENCE(A5)");
+        model.set_a1("A2", "=SEQUENCE(1,3)");
+        model.set_a1("D1", "=SUM(A2:C2)");
         model
     };
 
     let mut model = build("1");
     model.evaluate();
-    assert_eq!(model._get_text("C2"), "3");
-    assert_eq!(model._get_text("D1"), "6");
+    assert_eq!(model.get_text_a1("C2"), "3");
+    assert_eq!(model.get_text_a1("D1"), "6");
 
-    model._set("A5", "3");
+    model.set_a1("A5", "3");
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("C1"), "#SPILL!");
-        assert_eq!(model._get_text("C2"), "3");
-        assert_eq!(model._get_text("D1"), "6");
+        assert_eq!(model.get_text_a1("C1"), "#SPILL!");
+        assert_eq!(model.get_text_a1("C2"), "3");
+        assert_eq!(model.get_text_a1("D1"), "6");
     }
 
-    model._set("A5", "1");
+    model.set_a1("A5", "1");
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "1");
-    assert_eq!(model._get_text("D1"), "6");
+    assert_eq!(model.get_text_a1("C1"), "1");
+    assert_eq!(model.get_text_a1("D1"), "6");
 
     let mut fresh = build("3");
     fresh.evaluate();
-    assert_eq!(fresh._get_text("C2"), "2");
-    assert_eq!(fresh._get_text("A2"), "#SPILL!");
+    assert_eq!(fresh.get_text_a1("C2"), "2");
+    assert_eq!(fresh.get_text_a1("A2"), "#SPILL!");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -517,25 +520,25 @@ fn contention_toggled_by_input_keeps_the_existing_spill() {
 #[test]
 fn two_anchors_reading_each_others_value_are_circular() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(B1)");
-    model._set("B1", "=SEQUENCE(A1)");
+    model.set_a1("A1", "=SEQUENCE(B1)");
+    model.set_a1("B1", "=SEQUENCE(A1)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert!(model._is_circular("A1"));
-        assert!(model._is_circular("B1"));
+        assert!(model.is_circular_a1("A1"));
+        assert!(model.is_circular_a1("B1"));
     }
 }
 
 #[test]
 fn indirect_into_own_spill_area_is_circular() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(SUM(INDIRECT(\"A2\"))+2)");
+    model.set_a1("A1", "=SEQUENCE(SUM(INDIRECT(\"A2\"))+2)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert!(model._is_circular("A1"));
-        assert_eq!(model._get_text("A2"), "");
+        assert!(model.is_circular_a1("A1"));
+        assert_eq!(model.get_text_a1("A2"), "");
     }
 }
 
@@ -544,24 +547,24 @@ fn indirect_into_own_spill_area_is_circular() {
 #[test]
 fn mutual_area_dependency_is_a_fixed_point() {
     let mut model = new_empty_model();
-    model._set("A1", "=B2:B3");
-    model._set("B1", "=A2:A3");
+    model.set_a1("A1", "=B2:B3");
+    model.set_a1("B1", "=A2:A3");
 
     model.evaluate();
     let first: Vec<String> = ["A1", "A2", "A3", "B1", "B2", "B3"]
         .iter()
-        .map(|c| model._get_text(c))
+        .map(|c| model.get_text_a1(c))
         .collect();
     model.evaluate();
     let second: Vec<String> = ["A1", "A2", "A3", "B1", "B2", "B3"]
         .iter()
-        .map(|c| model._get_text(c))
+        .map(|c| model.get_text_a1(c))
         .collect();
     assert_eq!(first, second);
     assert!(
         ["A1", "A2", "A3", "B1", "B2", "B3"]
             .iter()
-            .any(|c| model._is_circular(c)),
+            .any(|c| model.is_circular_a1(c)),
         "expected a circular reference, got {first:?}"
     );
 }
@@ -579,17 +582,17 @@ fn mutual_area_dependency_is_a_fixed_point() {
 #[test]
 fn running_reader_of_a_cycle_member_is_redone() {
     let mut model = new_empty_model();
-    model._set("A4", "=D3:D5");
-    model._set("D3", "=D5+2");
-    model._set("D4", "=SEQUENCE(D3)");
+    model.set_a1("A4", "=D3:D5");
+    model.set_a1("D3", "=D5+2");
+    model.set_a1("D4", "=SEQUENCE(D3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("D3"), "2");
-        assert!(model._is_circular("D4"));
-        assert!(model._is_circular("A4"));
-        assert_eq!(model._get_text("A5"), "");
-        assert_eq!(model._get_text("A6"), "");
+        assert_eq!(model.get_text_a1("D3"), "2");
+        assert!(model.is_circular_a1("D4"));
+        assert!(model.is_circular_a1("A4"));
+        assert_eq!(model.get_text_a1("A5"), "");
+        assert_eq!(model.get_text_a1("A6"), "");
         assert_eq!(super::oracle::violations(&mut model), Vec::<String>::new());
     }
 }
@@ -603,16 +606,16 @@ fn running_reader_of_a_cycle_member_is_redone() {
 #[test]
 fn volatile_shape_read_by_earlier_anchor_is_consistent() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(COUNT(C1:C5))");
-    model._set("C1", "=SEQUENCE(RANDBETWEEN(1,5))");
+    model.set_a1("A1", "=SEQUENCE(COUNT(C1:C5))");
+    model.set_a1("C1", "=SEQUENCE(RANDBETWEEN(1,5))");
 
     for _ in 0..4 {
         model.evaluate();
         let c_cells = (1..=5)
-            .filter(|r| !model._get_text_at(0, *r, 3).is_empty())
+            .filter(|r| !model.get_text_by_index(0, *r, 3).is_empty())
             .count();
         let a_cells = (1..=5)
-            .filter(|r| !model._get_text_at(0, *r, 1).is_empty())
+            .filter(|r| !model.get_text_by_index(0, *r, 1).is_empty())
             .count();
         assert_eq!(a_cells, c_cells);
         assert_eq!(number(&model, "Sheet1!A1"), 1.0);
@@ -628,12 +631,12 @@ fn volatile_shape_read_by_earlier_anchor_is_consistent() {
 fn cross_sheet_reader_before_spill() {
     let mut model = new_empty_model();
     model.add_sheet("Sheet2").unwrap();
-    model._set("A1", "=SEQUENCE(Sheet2!C3)");
-    model._set("Sheet2!C1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(Sheet2!C3)");
+    model.set_a1("Sheet2!C1", "=SEQUENCE(3)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert_eq!(model._get_text("A3"), "3");
+        assert_eq!(model.get_text_a1("A3"), "3");
     }
 }
 
@@ -641,13 +644,13 @@ fn cross_sheet_reader_before_spill() {
 fn cross_sheet_spill_cycle_is_circular() {
     let mut model = new_empty_model();
     model.add_sheet("Sheet2").unwrap();
-    model._set("A1", "=Sheet2!B2+2");
-    model._set("Sheet2!B1", "=SEQUENCE(Sheet1!A1)");
+    model.set_a1("A1", "=Sheet2!B2+2");
+    model.set_a1("Sheet2!B1", "=SEQUENCE(Sheet1!A1)");
 
     for _ in 0..2 {
         model.evaluate();
-        assert!(model._is_circular("Sheet2!B1"));
-        assert_eq!(model._get_text("A1"), "2");
+        assert!(model.is_circular_a1("Sheet2!B1"));
+        assert_eq!(model.get_text_a1("A1"), "2");
     }
 }
 
@@ -660,13 +663,13 @@ fn cross_sheet_spill_cycle_is_circular() {
 #[test]
 fn break_and_restore_spill_matches_fresh_model() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(3)");
     model.evaluate();
-    model._set("A2", "x");
+    model.set_a1("A2", "x");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#SPILL!");
-    assert_eq!(model._get_text("A3"), "");
-    model._set("A2", "");
+    assert_eq!(model.get_text_a1("A1"), "#SPILL!");
+    assert_eq!(model.get_text_a1("A3"), "");
+    model.set_a1("A2", "");
     model.evaluate();
 
     for cell in ["A1", "A2", "A3", "A4"] {
@@ -676,7 +679,7 @@ fn break_and_restore_spill_matches_fresh_model() {
             "A3" => "3",
             _ => "",
         };
-        assert_eq!(model._get_text(cell), expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell}");
     }
 }
 
@@ -697,40 +700,40 @@ fn undo_of_spill_break_then_shrink_leaves_no_orphan() {
     model.set_user_input(0, 1, 1, "=SEQUENCE(2)").unwrap();
     assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("1".to_string()));
     assert_eq!(model.get_formatted_cell_value(0, 2, 1), Ok("2".to_string()));
-    assert_eq!(model.get_formatted_cell_value(0, 3, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 3, 1), Ok(String::new()));
 }
 
 // Insert a row through a spill area.
 #[test]
 fn insert_row_through_spill_area() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(3)");
-    model._set("B5", "=A3");
+    model.set_a1("A1", "=SEQUENCE(3)");
+    model.set_a1("B5", "=A3");
     model.evaluate();
 
     model.insert_rows(0, 2, 1).unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("A2"), "2");
-    assert_eq!(model._get_text("A3"), "3");
-    assert_eq!(model._get_text("A4"), "");
-    assert_eq!(model._get_formula("B6"), "=A4");
-    assert_eq!(model._get_text("B6"), "0");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "2");
+    assert_eq!(model.get_text_a1("A3"), "3");
+    assert_eq!(model.get_text_a1("A4"), "");
+    assert_eq!(model.get_formula_a1("B6"), "=A4");
+    assert_eq!(model.get_text_a1("B6"), "0");
 }
 
 // Delete the row holding the anchor: the spill must go with it.
 #[test]
 fn delete_anchor_row_clears_spill() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(3)");
     model.evaluate();
 
     model.delete_rows(0, 1, 1).unwrap();
     model.evaluate();
 
     for cell in ["A1", "A2", "A3"] {
-        assert_eq!(model._get_text(cell), "", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "", "{cell}");
     }
 }
 
@@ -738,26 +741,26 @@ fn delete_anchor_row_clears_spill() {
 #[test]
 fn delete_row_inside_spill_area() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(3)");
     model.evaluate();
 
     model.delete_rows(0, 2, 1).unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("A2"), "2");
-    assert_eq!(model._get_text("A3"), "3");
-    assert_eq!(model._get_text("A4"), "");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "2");
+    assert_eq!(model.get_text_a1("A3"), "3");
+    assert_eq!(model.get_text_a1("A4"), "");
 }
 
 // Clearing a range that contains a spill area with the range API.
 #[test]
 fn range_clear_over_spill_area_then_reenter() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(3)");
-    model._set("B1", "=A3*2");
+    model.set_a1("A1", "=SEQUENCE(3)");
+    model.set_a1("B1", "=A3*2");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "6");
+    assert_eq!(model.get_text_a1("B1"), "6");
 
     let area = Area {
         sheet: 0,
@@ -768,14 +771,14 @@ fn range_clear_over_spill_area_then_reenter() {
     };
     model.range_clear_contents(&area).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "");
-    assert_eq!(model._get_text("B1"), "0");
+    assert_eq!(model.get_text_a1("A1"), "");
+    assert_eq!(model.get_text_a1("B1"), "0");
 
-    model._set("A1", "=SEQUENCE(2)");
+    model.set_a1("A1", "=SEQUENCE(2)");
     model.evaluate();
-    assert_eq!(model._get_text("A2"), "2");
-    assert_eq!(model._get_text("A3"), "");
-    assert_eq!(model._get_text("B1"), "0");
+    assert_eq!(model.get_text_a1("A2"), "2");
+    assert_eq!(model.get_text_a1("A3"), "");
+    assert_eq!(model.get_text_a1("B1"), "0");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -783,7 +786,7 @@ fn range_clear_over_spill_area_then_reenter() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 fn snapshot(model: &Model, cells: &[&str]) -> Vec<String> {
-    cells.iter().map(|c| model._get_text(c)).collect()
+    cells.iter().map(|c| model.get_text_a1(c)).collect()
 }
 
 //         ║       B        |    C    |    D    |
@@ -803,11 +806,11 @@ fn contention_with_a_dependency_keeps_history() {
     let cells = ["B4", "C4", "D4", "C3", "C5", "D3"];
 
     let mut history = new_empty_model();
-    history._set("B4", "=SEQUENCE(1,3)");
+    history.set_a1("B4", "=SEQUENCE(1,3)");
     history.evaluate();
-    history._set("D3", "=D4+1");
+    history.set_a1("D3", "=D4+1");
     history.evaluate();
-    history._set("C3", "=D2:D4");
+    history.set_a1("C3", "=D2:D4");
     history.evaluate();
     let after_history = snapshot(&history, &cells);
     history.evaluate();
@@ -815,9 +818,9 @@ fn contention_with_a_dependency_keeps_history() {
     assert_eq!(after_history, ["1", "2", "3", "#SPILL!", "", "4"]);
 
     let mut fresh = new_empty_model();
-    fresh._set("B4", "=SEQUENCE(1,3)");
-    fresh._set("D3", "=D4+1");
-    fresh._set("C3", "=D2:D4");
+    fresh.set_a1("B4", "=SEQUENCE(1,3)");
+    fresh.set_a1("D3", "=D4+1");
+    fresh.set_a1("C3", "=D2:D4");
     fresh.evaluate();
     let after_fresh = snapshot(&fresh, &cells);
     fresh.evaluate();
@@ -842,11 +845,11 @@ fn cycle_blame_does_not_depend_on_stale_spill_cells() {
     let cells = ["C1", "C4", "D2", "D3", "D4"];
 
     let mut history = new_empty_model();
-    history._set("D2", "=C2:C4");
+    history.set_a1("D2", "=C2:C4");
     history.evaluate();
-    history._set("C1", "=SEQUENCE(C4)");
+    history.set_a1("C1", "=SEQUENCE(C4)");
     history.evaluate();
-    history._set("C4", "=D4*2");
+    history.set_a1("C4", "=D4*2");
     history.evaluate();
     let after_history = snapshot(&history, &cells);
     assert_eq!(
@@ -856,19 +859,19 @@ fn cycle_blame_does_not_depend_on_stale_spill_cells() {
     history.evaluate();
     assert_eq!(after_history, snapshot(&history, &cells));
     assert_eq!(after_history, ["#CALC!", "0", "0", "", ""]);
-    assert!(history._is_circular("D2"));
+    assert!(history.is_circular_a1("D2"));
 
     let mut fresh = new_empty_model();
-    fresh._set("D2", "=C2:C4");
-    fresh._set("C1", "=SEQUENCE(C4)");
-    fresh._set("C4", "=D4*2");
+    fresh.set_a1("D2", "=C2:C4");
+    fresh.set_a1("C1", "=SEQUENCE(C4)");
+    fresh.set_a1("C4", "=D4*2");
     fresh.evaluate();
     let after_fresh = snapshot(&fresh, &cells);
     assert_eq!(super::oracle::violations(&mut fresh), Vec::<String>::new());
     fresh.evaluate();
     assert_eq!(after_fresh, snapshot(&fresh, &cells));
     assert_eq!(after_fresh, ["#CALC!", "0", "0", "", ""]);
-    assert!(fresh._is_circular("D2"));
+    assert!(fresh.is_circular_a1("D2"));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -887,39 +890,39 @@ fn cse_array_survives_row_and_column_shifts() {
     model.insert_rows(0, 1, 1).unwrap();
     model.evaluate();
     for cell in ["B4", "C4", "B5", "C5", "B6", "C6"] {
-        assert_eq!(model._get_text(cell), "5", "{cell} after insert row");
+        assert_eq!(model.get_text_a1(cell), "5", "{cell} after insert row");
     }
     for cell in ["B3", "C3", "B7", "C7"] {
-        assert_eq!(model._get_text(cell), "", "{cell} after insert row");
+        assert_eq!(model.get_text_a1(cell), "", "{cell} after insert row");
     }
 
     // Delete a row above: back to B3:C5.
     model.delete_rows(0, 1, 1).unwrap();
     model.evaluate();
     for cell in ["B3", "C3", "B4", "C4", "B5", "C5"] {
-        assert_eq!(model._get_text(cell), "5", "{cell} after delete row");
+        assert_eq!(model.get_text_a1(cell), "5", "{cell} after delete row");
     }
     for cell in ["B6", "C6"] {
-        assert_eq!(model._get_text(cell), "", "{cell} after delete row");
+        assert_eq!(model.get_text_a1(cell), "", "{cell} after delete row");
     }
 
     // Insert a column at the anchor column: the array moves to C3:D5.
     model.insert_columns(0, 2, 1).unwrap();
     model.evaluate();
     for cell in ["C3", "D3", "C4", "D4", "C5", "D5"] {
-        assert_eq!(model._get_text(cell), "5", "{cell} after insert column");
+        assert_eq!(model.get_text_a1(cell), "5", "{cell} after insert column");
     }
     for cell in ["B3", "B4", "B5", "E3"] {
-        assert_eq!(model._get_text(cell), "", "{cell} after insert column");
+        assert_eq!(model.get_text_a1(cell), "", "{cell} after insert column");
     }
 
     // Delete a column before: back to B3:C5.
     model.delete_columns(0, 1, 1).unwrap();
     model.evaluate();
     for cell in ["B3", "C3", "B4", "C4", "B5", "C5"] {
-        assert_eq!(model._get_text(cell), "5", "{cell} after delete column");
+        assert_eq!(model.get_text_a1(cell), "5", "{cell} after delete column");
     }
     for cell in ["D3", "D4", "D5"] {
-        assert_eq!(model._get_text(cell), "", "{cell} after delete column");
+        assert_eq!(model.get_text_a1(cell), "", "{cell} after delete column");
     }
 }

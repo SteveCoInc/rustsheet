@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(elided_lifetimes_in_paths))]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, reason = "tests")]
 //! Tests of [`refresh`] against the cache-level expectations of the item and field-name probes:
 //! each source is the probe's data sheet, each old cache what the case builder saved, and each

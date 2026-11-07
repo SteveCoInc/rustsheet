@@ -2,6 +2,9 @@
 //! shared by TIMEVALUE and the number coercion of text (`functions::date_and_time::time_text`)
 //! and by typed input (`parse_formatted`). It sits in the formatter, below both, next to the
 //! date text it builds on (T-1953). Excel: see docs/excel-semantics/dates.md#time-text.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use chrono::{NaiveTime, Timelike};
 
@@ -87,7 +90,7 @@ pub(crate) fn parse_hour_only_am_pm(text: &str) -> Option<f64> {
         return None;
     }
     let time = NaiveTime::from_hms_opt(hour_from_12h(hour, is_pm), 0, 0)?;
-    Some(time.num_seconds_from_midnight() as f64 / SECONDS_PER_DAY_F64)
+    Some(f64::from(time.num_seconds_from_midnight()) / SECONDS_PER_DAY_F64)
 }
 
 /// "Date clock" text (`"1/2/2020 10:11:12.5"`, `"July 1, 2026 6 PM"`) as the unwrapped serial:

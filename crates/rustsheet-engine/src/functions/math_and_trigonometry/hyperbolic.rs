@@ -9,6 +9,9 @@
 //! ATANH and ACOTH are x87 code (T-0917, numbers.md "ATANH and ACOTH"): a halved FYL2X of a
 //! quotient (`0.5 * excel_ln`, exact: halving commutes with both roundings) or the atanh power series with its running term in an 80-bit
 //! register ([`atanh_series`]), each branch on its own range.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::manual_midpoint)]
+// LINT-DEBT-END
 
 use crate::arithmetic::{
     extended_div, extended_mul, extended_of, extended_quotient, extended_sum, store_extended,

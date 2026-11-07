@@ -1,3 +1,13 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::manual_let_else,
+    clippy::unused_self
+)]
+// LINT-DEBT-END
 use crate::calc_result::Range;
 use crate::functions::statistical::paired::SecondMark;
 use crate::nested_array::nested_array_error;

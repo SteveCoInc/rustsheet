@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::too_many_lines)]
+// LINT-DEBT-END
 use std::collections::HashMap;
 
 use crate::expressions::{

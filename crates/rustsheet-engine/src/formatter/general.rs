@@ -1,4 +1,11 @@
 //! The General number format: fixed or E notation (T-0938).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 
 use crate::decimal_round::{round_decimal, RoundMode};
 

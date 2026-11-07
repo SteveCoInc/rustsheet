@@ -7,6 +7,9 @@
 //! the value-position flag `arrays` ([`legacy_array_context`], [`returns_an_argument`]) decides
 //! evaluation results as well as where an `@` goes: a change to it needs a probe's legacy values,
 //! not only its FORMULATEXT (SPEC-0012 "Placement", item 4).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms)]
+// LINT-DEBT-END
 
 use super::if_arm::{is_reference_arm, leaves_choose_index_whole, returns_range_arm};
 use super::lifted::lifts_arrays_at;

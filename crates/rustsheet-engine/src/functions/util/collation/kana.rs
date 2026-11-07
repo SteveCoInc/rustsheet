@@ -1,5 +1,8 @@
 //! Kana weights for the collation (probes/t3275-collation-width-kana; docs/excel-semantics/coercion.md
 //! "Full-width and half-width forms, kana, voicing and the long-vowel mark").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms)]
+// LINT-DEBT-END
 
 use super::{
     other, Element, HALF_WIDTH_KANA, HIRAGANA, KATAKANA, NORMAL_KANA, NO_ACCENT, OTHER_BASE,

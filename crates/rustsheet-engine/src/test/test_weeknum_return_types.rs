@@ -17,17 +17,17 @@ fn test_weeknum_return_types_11_to_17_and_21() {
         ("A8", "=WEEKNUM(44561,21)"), // ISO week numbering
     ];
     for (cell, formula) in formulas {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
 
     model.evaluate();
 
     // All 11-17 variations should yield 53
     for cell in ["A1", "A2", "A3", "A4", "A5", "A6", "A7"] {
-        assert_eq!(model._get_text(cell), *"53", "{cell} should be 53");
+        assert_eq!(model.get_text_a1(cell), *"53", "{cell} should be 53");
     }
     // ISO week (return_type 21)
-    assert_eq!(model._get_text("A8"), *"52");
+    assert_eq!(model.get_text_a1("A8"), *"52");
 }
 
 /// Excel numbers 1900's weeks as if serial 1 were a Sunday
@@ -52,12 +52,12 @@ fn test_weeknum_1900_anchors_on_a_sunday_serial_1() {
         ("=WEEKNUM(367,2)", "1"),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", i + 1)),
+            model.get_text_a1(&format!("A{}", i + 1)),
             *expected,
             "{formula}"
         );
@@ -69,15 +69,15 @@ fn weeknum_return_type_snaps_near_an_integer() {
     // probes/t4454-near-midnight-date-args AA1:AB4 (T-4454): 2^-22 + 2^-33 below an integer is
     // that type, 2^-22 + 9*2^-36 below truncates.
     let mut model = new_empty_model();
-    model._set("A1", "=WEEKNUM(45019,2-(2^-22+2^-33))");
-    model._set("A2", "=WEEKNUM(45019,2-(2^-22+9*2^-36))");
-    model._set("A3", "=WEEKNUM(45017,17-2^-23)");
-    model._set("A4", "=WEEKNUM(45017,17-1E-6)");
+    model.set_a1("A1", "=WEEKNUM(45019,2-(2^-22+2^-33))");
+    model.set_a1("A2", "=WEEKNUM(45019,2-(2^-22+9*2^-36))");
+    model.set_a1("A3", "=WEEKNUM(45017,17-2^-23)");
+    model.set_a1("A4", "=WEEKNUM(45017,17-1E-6)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"15");
-    assert_eq!(model._get_text("A2"), *"14");
-    assert_eq!(model._get_text("A3"), *"13");
-    assert_eq!(model._get_text("A4"), *"14");
+    assert_eq!(model.get_text_a1("A1"), *"15");
+    assert_eq!(model.get_text_a1("A2"), *"14");
+    assert_eq!(model.get_text_a1("A3"), *"13");
+    assert_eq!(model.get_text_a1("A4"), *"14");
 }
 
 #[test]
@@ -91,12 +91,12 @@ fn weeknum_negative_return_type_snaps_within_half_the_positive_window() {
         ("-(2^-22+9*2^-36)", false),
     ] {
         let mut model = new_empty_model();
-        model._set("A1", "=WEEKNUM(100,99)");
-        model._set("A2", &format!("=WEEKNUM(100,{edge})"));
-        model._set("A3", "=WEEKNUM(100,2)");
+        model.set_a1("A1", "=WEEKNUM(100,99)");
+        model.set_a1("A2", &format!("=WEEKNUM(100,{edge})"));
+        model.set_a1("A3", "=WEEKNUM(100,2)");
         model.evaluate();
         let expected = if snaps { "#NUM!" } else { "16" };
-        assert_eq!(model._get_text("A2"), *expected, "{edge}");
-        assert_eq!(model._get_text("A1"), *expected, "{edge}");
+        assert_eq!(model.get_text_a1("A2"), *expected, "{edge}");
+        assert_eq!(model.get_text_a1("A1"), *expected, "{edge}");
     }
 }

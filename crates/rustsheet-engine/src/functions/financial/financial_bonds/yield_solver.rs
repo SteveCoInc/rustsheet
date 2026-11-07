@@ -1,5 +1,13 @@
 //! YIELD's Newton as Excel runs it ([`yield_start`], [`excel_yield_newton`]), and ODDFYIELD's,
 //! the same Newton with its own slope ([`odd_first_yield`]).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::manual_midpoint
+)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use super::super::dates::{days_30_360_eu_ymd, days_30_360_us_ymd};
 use super::coupon_schedule::coupon_count;

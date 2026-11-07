@@ -1,3 +1,9 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(
+    test,
+    expect(clippy::ignore_without_reason, clippy::unreadable_literal)
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
 

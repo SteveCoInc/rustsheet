@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+// LINT-DEBT-END
 // DOLLAR, FIXED, NUMBERVALUE, PROPER, REPLACE, ARRAYTOTEXT
 
 use crate::{

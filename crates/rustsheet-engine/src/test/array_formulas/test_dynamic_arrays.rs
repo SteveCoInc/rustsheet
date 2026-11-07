@@ -11,11 +11,11 @@ fn spill_preserves_background_color_in_column_direction() {
     let mut model = new_empty_model();
 
     // Put values in A4:A8
-    model._set("A4", "10");
-    model._set("A5", "20");
-    model._set("A6", "30");
-    model._set("A7", "40");
-    model._set("A8", "50");
+    model.set_a1("A4", "10");
+    model.set_a1("A5", "20");
+    model.set_a1("A6", "30");
+    model.set_a1("A7", "40");
+    model.set_a1("A8", "50");
 
     // Set background color on D5 and D6 (which will be in the spill range of D2)
     // D2 + 5 rows = D2:D6, so D5 and D6 are in the spill area
@@ -28,13 +28,13 @@ fn spill_preserves_background_color_in_column_direction() {
     model.set_cell_style(0, 6, 4, &style_d6).unwrap();
 
     // Enter =A4:A8 in D2 — it spills into D3:D6
-    model._set("D2", "=A4:A8");
+    model.set_a1("D2", "=A4:A8");
     model.evaluate();
 
     // Spill values should be correct
-    assert_eq!(model._get_text("D2"), "10");
-    assert_eq!(model._get_text("D5"), "40");
-    assert_eq!(model._get_text("D6"), "50");
+    assert_eq!(model.get_text_a1("D2"), "10");
+    assert_eq!(model.get_text_a1("D5"), "40");
+    assert_eq!(model.get_text_a1("D6"), "50");
 
     // Background colors in the spill area must be preserved
     let style_d5_after = model.get_style_for_cell(0, 5, 4).unwrap();
@@ -57,11 +57,11 @@ fn spill_preserves_background_color_in_row_direction() {
     let mut model = new_empty_model();
 
     // Put values in A1:E1
-    model._set("A1", "10");
-    model._set("B1", "20");
-    model._set("C1", "30");
-    model._set("D1", "40");
-    model._set("E1", "50");
+    model.set_a1("A1", "10");
+    model.set_a1("B1", "20");
+    model.set_a1("C1", "30");
+    model.set_a1("D1", "40");
+    model.set_a1("E1", "50");
 
     // Set background color on D3 and E3 (which will be in the spill range of B3)
     // =A1:E1 entered in B3 spills right: B3:F3, so D3 and E3 are spill cells
@@ -74,13 +74,13 @@ fn spill_preserves_background_color_in_row_direction() {
     model.set_cell_style(0, 3, 5, &style_e3).unwrap();
 
     // Enter =A1:E1 in B3 — it spills right into C3:F3
-    model._set("B3", "=A1:E1");
+    model.set_a1("B3", "=A1:E1");
     model.evaluate();
 
     // Spill values should be correct
-    assert_eq!(model._get_text("B3"), "10");
-    assert_eq!(model._get_text("D3"), "30");
-    assert_eq!(model._get_text("E3"), "40");
+    assert_eq!(model.get_text_a1("B3"), "10");
+    assert_eq!(model.get_text_a1("D3"), "30");
+    assert_eq!(model.get_text_a1("E3"), "40");
 
     // Background colors in the spill area must be preserved
     let style_d3_after = model.get_style_for_cell(0, 3, 4).unwrap();
@@ -102,25 +102,25 @@ fn spill_preserves_background_color_in_row_direction() {
 fn dynamic_formula_spills_array() {
     let mut model = new_empty_model();
     // Put data in B1:B3
-    model._set("B1", "10");
-    model._set("B2", "20");
-    model._set("B3", "30");
+    model.set_a1("B1", "10");
+    model.set_a1("B2", "20");
+    model.set_a1("B3", "30");
 
     // Dynamic formula in A1 that returns a 5×1 array
-    model._set("A1", "=B1:B5");
+    model.set_a1("A1", "=B1:B5");
     model.evaluate();
 
     // A1 (anchor) holds 10; A2 and A3 are spill cells
-    assert_eq!(model._get_text("A1"), "10");
-    assert_eq!(model._get_text("A2"), "20");
-    assert_eq!(model._get_text("A3"), "30");
+    assert_eq!(model.get_text_a1("A1"), "10");
+    assert_eq!(model.get_text_a1("A2"), "20");
+    assert_eq!(model.get_text_a1("A3"), "30");
 
     // A1 has a formula; spill cells do not
-    assert!(model._has_formula("A1"));
-    assert!(!model._has_formula("A2"));
-    assert!(!model._has_formula("A3"));
+    assert!(model.has_formula_a1("A1"));
+    assert!(!model.has_formula_a1("A2"));
+    assert!(!model.has_formula_a1("A3"));
 
-    let cell_a1 = model._get_cell("A1");
+    let cell_a1 = model.get_cell_a1("A1");
     assert!(matches!(
         cell_a1,
         Cell::ArrayFormula {
@@ -132,7 +132,7 @@ fn dynamic_formula_spills_array() {
     ));
 
     // Spill cells point back to the anchor
-    let cell_a2 = model._get_cell("A2");
+    let cell_a2 = model.get_cell_a1("A2");
     assert!(matches!(
         cell_a2,
         Cell::SpillCell {
@@ -142,7 +142,7 @@ fn dynamic_formula_spills_array() {
         }
     ));
 
-    let cell_a5 = model._get_cell("A5");
+    let cell_a5 = model.get_cell_a1("A5");
     assert!(matches!(
         cell_a5,
         Cell::SpillCell {
@@ -157,17 +157,17 @@ fn dynamic_formula_spills_array() {
 fn dynamic_formula_spill_error() {
     let mut model = new_empty_model();
     // Put data in B1:B3
-    model._set("B1", "10");
-    model._set("B2", "20");
-    model._set("B3", "30");
-    model._set("A3", "value");
+    model.set_a1("B1", "10");
+    model.set_a1("B2", "20");
+    model.set_a1("B3", "30");
+    model.set_a1("A3", "value");
 
     // Dynamic formula in A1 that returns a 5×1 array
-    model._set("A1", "=B1:B5");
+    model.set_a1("A1", "=B1:B5");
     model.evaluate();
 
     // A1 should show a spill error because A3 is blocking the spill
-    assert_eq!(model._get_text("A1"), "#SPILL!");
+    assert_eq!(model.get_text_a1("A1"), "#SPILL!");
 }
 
 // ── Dynamic formula: user enters range formula that spills ─────────────────
@@ -175,21 +175,21 @@ fn dynamic_formula_spill_error() {
 #[test]
 fn user_range_formula_spills() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
 
     // User enters =A1:A3 in B2 — it should spill into B3 and B4
-    model._set("B2", "=A1:A3");
+    model.set_a1("B2", "=A1:A3");
     model.evaluate();
 
-    assert_eq!(model._get_text("B2"), "1");
-    assert_eq!(model._get_text("B3"), "2");
-    assert_eq!(model._get_text("B4"), "3");
+    assert_eq!(model.get_text_a1("B2"), "1");
+    assert_eq!(model.get_text_a1("B3"), "2");
+    assert_eq!(model.get_text_a1("B4"), "3");
 
-    assert!(model._has_formula("B2"));
-    assert!(!model._has_formula("B3"));
-    assert!(!model._has_formula("B4"));
+    assert!(model.has_formula_a1("B2"));
+    assert!(!model.has_formula_a1("B3"));
+    assert!(!model.has_formula_a1("B4"));
 }
 
 // ── Dynamic formula: re-evaluate shrinks the spill range ───────────────────
@@ -197,19 +197,19 @@ fn user_range_formula_spills() {
 #[test]
 fn dynamic_formula_spill_shrinks_on_re_evaluate() {
     let mut model = new_empty_model();
-    model._set("B1", "1");
-    model._set("B2", "2");
-    model._set("B3", "3");
+    model.set_a1("B1", "1");
+    model.set_a1("B2", "2");
+    model.set_a1("B3", "3");
 
-    model._set("A1", "=B1:B3");
+    model.set_a1("A1", "=B1:B3");
     model.evaluate();
-    assert_eq!(model._get_text("A3"), "3");
+    assert_eq!(model.get_text_a1("A3"), "3");
 
     // Replace B3 so the range B1:B2 is shorter — but the dynamic formula
     // still references B1:B3, so A3 stays. This just confirms stable re-eval.
-    model._set("B3", "99");
+    model.set_a1("B3", "99");
     model.evaluate();
-    assert_eq!(model._get_text("A3"), "99");
+    assert_eq!(model.get_text_a1("A3"), "99");
 }
 
 // ── Dynamic formula: writing into a spill cell clears the spill ────────────
@@ -217,11 +217,11 @@ fn dynamic_formula_spill_shrinks_on_re_evaluate() {
 #[test]
 fn writing_into_spill_cell_clears_spill() {
     let mut model = new_empty_model();
-    model._set("B1", "10");
-    model._set("B2", "20");
-    model._set("B3", "30");
+    model.set_a1("B1", "10");
+    model.set_a1("B2", "20");
+    model.set_a1("B3", "30");
 
-    model._set("A1", "=B1:B3");
+    model.set_a1("A1", "=B1:B3");
     model.evaluate();
 
     // A2 is a spill cell. Writing into it should succeed (unlike CSE spills).
@@ -229,7 +229,7 @@ fn writing_into_spill_cell_clears_spill() {
 
     // After clearing the spill, the anchor (A1) should have been reset to an
     // unevaluated DynamicFormula and the other spill cells cleared.
-    let cell_a1 = model._get_cell("A1");
+    let cell_a1 = model.get_cell_a1("A1");
     assert!(
         matches!(
             cell_a1,
@@ -243,7 +243,7 @@ fn writing_into_spill_cell_clears_spill() {
     );
 
     // A3 should have been cleared (no longer a spill cell)
-    assert_eq!(model._get_text("A3"), "");
+    assert_eq!(model.get_text_a1("A3"), "");
 }
 
 // ── Dynamic formula: re-evaluate after spill is broken works ───────────────
@@ -251,23 +251,23 @@ fn writing_into_spill_cell_clears_spill() {
 #[test]
 fn dynamic_formula_re_evaluates_after_spill_broken() {
     let mut model = new_empty_model();
-    model._set("B1", "1");
-    model._set("B2", "2");
-    model._set("B3", "3");
+    model.set_a1("B1", "1");
+    model.set_a1("B2", "2");
+    model.set_a1("B3", "3");
 
-    model._set("A1", "=B1:B3");
+    model.set_a1("A1", "=B1:B3");
     model.evaluate();
 
     // Write into A2 to break the spill
     model.set_user_input(0, 2, 1, "999".to_string()).unwrap();
 
     // Now clear A2 to let the spill restore, then re-evaluate
-    model._cell_clear_contents(0, 2, 1).unwrap();
+    model.clear_contents_at(0, 2, 1).unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("A2"), "2");
-    assert_eq!(model._get_text("A3"), "3");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "2");
+    assert_eq!(model.get_text_a1("A3"), "3");
 }
 
 // ── CSE array formula: array result fills declared range ──────────────────
@@ -275,9 +275,9 @@ fn dynamic_formula_re_evaluates_after_spill_broken() {
 #[test]
 fn cse_array_formula_fills_declared_range() {
     let mut model = new_empty_model();
-    model._set("B1", "5");
-    model._set("B2", "10");
-    model._set("B3", "15");
+    model.set_a1("B1", "5");
+    model.set_a1("B2", "10");
+    model.set_a1("B3", "15");
 
     // Array formula A1:A3 = B1:B3 * 2
     model
@@ -285,9 +285,9 @@ fn cse_array_formula_fills_declared_range() {
         .unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "10");
-    assert_eq!(model._get_text("A2"), "20");
-    assert_eq!(model._get_text("A3"), "30");
+    assert_eq!(model.get_text_a1("A1"), "10");
+    assert_eq!(model.get_text_a1("A2"), "20");
+    assert_eq!(model.get_text_a1("A3"), "30");
 }
 
 // ── CSE array formula: spill cells cannot be modified ─────────────────────
@@ -300,8 +300,8 @@ fn cse_spill_cells_are_locked() {
 
     // A2 and A3 are spill cells of a CSE formula — writes must be rejected.
     assert!(model.set_user_input(0, 2, 1, "42".to_string()).is_err());
-    assert!(model._cell_clear_contents(0, 2, 1).is_err());
-    assert!(model._cell_clear_all(0, 2, 1).is_err());
+    assert!(model.clear_contents_at(0, 2, 1).is_err());
+    assert!(model.clear_all_at(0, 2, 1).is_err());
 }
 
 #[test]
@@ -309,14 +309,14 @@ fn cse_cannot_user_input_anchor() {
     let mut model = new_empty_model();
     model.set_user_array_formula(0, 1, 1, 1, 3, "=1+1").unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("A2"), "2");
+    assert_eq!(model.get_text_a1("A2"), "2");
 
-    assert!(model.set_user_input(0, 1, 1, "".to_string()).is_err());
+    assert!(model.set_user_input(0, 1, 1, String::new()).is_err());
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "2");
-    assert_eq!(model._get_text("A2"), "2");
-    assert_eq!(model._get_text("A3"), "2");
+    assert_eq!(model.get_text_a1("A1"), "2");
+    assert_eq!(model.get_text_a1("A2"), "2");
+    assert_eq!(model.get_text_a1("A3"), "2");
 }
 
 // ── CSE array formula: existing styles in the selected range are preserved ────
@@ -338,9 +338,9 @@ fn cse_array_formula_preserves_background_color_in_column_direction() {
     model.set_user_array_formula(0, 1, 1, 1, 3, "=123").unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "123");
-    assert_eq!(model._get_text("A2"), "123");
-    assert_eq!(model._get_text("A3"), "123");
+    assert_eq!(model.get_text_a1("A1"), "123");
+    assert_eq!(model.get_text_a1("A2"), "123");
+    assert_eq!(model.get_text_a1("A3"), "123");
 
     // Background colors on A2 and A3 must be preserved
     let style_a2_after = model.get_style_for_cell(0, 2, 1).unwrap();
@@ -375,9 +375,9 @@ fn cse_array_formula_preserves_background_color_in_row_direction() {
     model.set_user_array_formula(0, 1, 1, 3, 1, "=456").unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "456");
-    assert_eq!(model._get_text("B1"), "456");
-    assert_eq!(model._get_text("C1"), "456");
+    assert_eq!(model.get_text_a1("A1"), "456");
+    assert_eq!(model.get_text_a1("B1"), "456");
+    assert_eq!(model.get_text_a1("C1"), "456");
 
     // Background colors on B1 and C1 must be preserved
     let style_b1_after = model.get_style_for_cell(0, 1, 2).unwrap();

@@ -51,6 +51,9 @@
 //! The pass charges one work unit per cell of each shown data field, the cells of a run again for
 //! percentOfRunningTotal and a sort per run and column for the ranks, and counts every shown
 //! value against [`super::MAX_PIVOT_NODES`] as it is stored (CLAUDE.md directive 5).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::comparison_chain, clippy::match_same_arms)]
+// LINT-DEBT-END
 
 use std::collections::HashMap;
 

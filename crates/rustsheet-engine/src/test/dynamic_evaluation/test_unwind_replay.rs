@@ -14,12 +14,12 @@ use super::test_order_independence::{build, describe, random_sheet, snapshot};
 /// `column(i) = column(i+1) + 0` for rows `1..n`, and `last` in row `n`.
 fn reverse_chain(model: &mut Model, column: &str, n: i32, last: &str) {
     for row in 1..n {
-        model._set(
+        model.set_a1(
             &format!("{column}{row}"),
             &format!("={column}{}+0", row + 1),
         );
     }
-    model._set(&format!("{column}{n}"), last);
+    model.set_a1(&format!("{column}{n}"), last);
 }
 
 // A1 = A2+1, A2 = A3+1, ..., A(n) = 1. Natural order meets A1 first, so the
@@ -31,13 +31,13 @@ fn reverse_chain_with_a_tiny_limit() {
         model.set_max_evaluation_depth(max_depth);
         let n = 50;
         for row in 1..n {
-            model._set(&format!("A{row}"), &format!("=A{}+1", row + 1));
+            model.set_a1(&format!("A{row}"), &format!("=A{}+1", row + 1));
         }
-        model._set(&format!("A{n}"), "1");
+        model.set_a1(&format!("A{n}"), "1");
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "50", "max_depth = {max_depth}");
-        assert_eq!(model._get_text("A25"), "26", "max_depth = {max_depth}");
-        assert_eq!(model._get_text("A49"), "2", "max_depth = {max_depth}");
+        assert_eq!(model.get_text_a1("A1"), "50", "max_depth = {max_depth}");
+        assert_eq!(model.get_text_a1("A25"), "26", "max_depth = {max_depth}");
+        assert_eq!(model.get_text_a1("A49"), "2", "max_depth = {max_depth}");
     }
 }
 
@@ -50,13 +50,13 @@ fn ring_longer_than_the_limit() {
         model.set_max_evaluation_depth(max_depth);
         let n = 10;
         for row in 1..n {
-            model._set(&format!("A{row}"), &format!("=A{}+1", row + 1));
+            model.set_a1(&format!("A{row}"), &format!("=A{}+1", row + 1));
         }
-        model._set(&format!("A{n}"), "=A1+1");
+        model.set_a1(&format!("A{n}"), "=A1+1");
         model.evaluate();
         for row in 1..=n {
             assert!(
-                model._is_circular(&format!("A{row}")),
+                model.is_circular_a1(&format!("A{row}")),
                 "A{row}, max_depth = {max_depth}"
             );
         }
@@ -95,17 +95,17 @@ fn long_reverse_chains_with_the_default_limits() {
     let n = 20_000;
     let mut model = new_empty_model();
     for row in 1..n {
-        model._set(&format!("A{row}"), &format!("=A{}+1", row + 1));
-        model._set(
+        model.set_a1(&format!("A{row}"), &format!("=A{}+1", row + 1));
+        model.set_a1(
             &format!("B{row}"),
             &format!("=IF(TRUE,SUM(1,IF(TRUE,B{}+0,0)),0)", row + 1),
         );
     }
-    model._set(&format!("A{n}"), "1");
-    model._set(&format!("B{n}"), "1");
+    model.set_a1(&format!("A{n}"), "1");
+    model.set_a1(&format!("B{n}"), "1");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "20000");
-    assert_eq!(model._get_text("B1"), "20000");
+    assert_eq!(model.get_text_a1("A1"), "20000");
+    assert_eq!(model.get_text_a1("B1"), "20000");
 }
 
 // The stack limit alone, with the number of formulas unbounded.
@@ -115,7 +115,7 @@ fn the_stack_limit_alone_is_enough() {
     model.set_max_evaluation_depth(usize::MAX);
     reverse_chain(&mut model, "A", 5_000, "7");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "7");
+    assert_eq!(model.get_text_a1("A1"), "7");
 }
 
 // A chain that leads into a ring: the ring is circular, and the chain carries
@@ -126,12 +126,12 @@ fn chain_into_a_ring() {
         let mut model = new_empty_model();
         model.set_max_evaluation_depth(max_depth);
         reverse_chain(&mut model, "A", 12, "=B1");
-        model._set("B1", "=B2+1");
-        model._set("B2", "=B3+1");
-        model._set("B3", "=B1+1");
+        model.set_a1("B1", "=B2+1");
+        model.set_a1("B2", "=B3+1");
+        model.set_a1("B3", "=B1+1");
         model.evaluate();
         for cell in ["B1", "B2", "B3", "A12", "A1"] {
-            assert!(model._is_circular(cell), "{cell}, {max_depth}");
+            assert!(model.is_circular_a1(cell), "{cell}, {max_depth}");
         }
     }
 }
@@ -146,9 +146,9 @@ fn three_deep_branches() {
         reverse_chain(&mut model, "B", 30, "1");
         reverse_chain(&mut model, "C", 30, "10");
         reverse_chain(&mut model, "D", 30, "100");
-        model._set("A1", "=B1+C1+D1");
+        model.set_a1("A1", "=B1+C1+D1");
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "111", "max_depth = {max_depth}");
+        assert_eq!(model.get_text_a1("A1"), "111", "max_depth = {max_depth}");
     }
 }
 
@@ -160,11 +160,11 @@ fn conflict_restart_through_a_deep_chain() {
     for max_depth in [1, 2, usize::MAX] {
         let mut model = new_empty_model();
         model.set_max_evaluation_depth(max_depth);
-        model._set("A1", "=SEQUENCE(1,1,B3+D1)");
-        model._set("B1", "=SEQUENCE(3)");
+        model.set_a1("A1", "=SEQUENCE(1,1,B3+D1)");
+        model.set_a1("B1", "=SEQUENCE(3)");
         reverse_chain(&mut model, "D", 40, "0");
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "3", "max_depth = {max_depth}");
+        assert_eq!(model.get_text_a1("A1"), "3", "max_depth = {max_depth}");
         assert_eq!(
             model.evaluation.restarts_in_last_evaluation, 1,
             "max_depth = {max_depth}"
@@ -179,16 +179,16 @@ fn stale_read_at_the_bottom_of_a_deep_chain() {
     for max_depth in [1, 2, usize::MAX] {
         let mut model = new_empty_model();
         model.set_max_evaluation_depth(max_depth);
-        model._set("A1", "=SEQUENCE(1,1,5)");
-        model._set("B1", "=SEQUENCE(3)");
+        model.set_a1("A1", "=SEQUENCE(1,1,5)");
+        model.set_a1("B1", "=SEQUENCE(3)");
         reverse_chain(&mut model, "D", 40, "=B3");
         model.evaluate();
-        assert_eq!(model._get_text("D1"), "3", "max_depth = {max_depth}");
+        assert_eq!(model.get_text_a1("D1"), "3", "max_depth = {max_depth}");
         assert_eq!(model.evaluation.restarts_in_last_evaluation, 0);
 
-        model._set("A1", "=SEQUENCE(1,1,D1)");
+        model.set_a1("A1", "=SEQUENCE(1,1,D1)");
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "3", "max_depth = {max_depth}");
+        assert_eq!(model.get_text_a1("A1"), "3", "max_depth = {max_depth}");
         assert_eq!(
             model.evaluation.restarts_in_last_evaluation, 1,
             "max_depth = {max_depth}"
@@ -210,8 +210,8 @@ fn deep_chain_outside_a_pass() {
         column: 1,
     };
     model.evaluate_cell(a1);
-    assert_eq!(model._get_text("A1"), "9");
-    assert_eq!(model._get_text("A49"), "9");
+    assert_eq!(model.get_text_a1("A1"), "9");
+    assert_eq!(model.get_text_a1("A49"), "9");
     assert!(model.evaluation.stack.is_empty());
 }
 
@@ -222,10 +222,10 @@ fn deep_chain_outside_a_pass() {
 fn an_abandoned_run_leaves_no_link() {
     let mut model = new_empty_model();
     model.set_max_evaluation_depth(1);
-    model._set("A1", "=HYPERLINK(\"https://www.ironcalc.com/\", B1)");
-    model._set("B1", "=1/0");
+    model.set_a1("A1", "=HYPERLINK(\"https://www.ironcalc.com/\", B1)");
+    model.set_a1("B1", "=1/0");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A1"), "#DIV/0!");
     assert!(model.links.is_empty());
 }
 

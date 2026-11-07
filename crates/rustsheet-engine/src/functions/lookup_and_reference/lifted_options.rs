@@ -2,6 +2,13 @@
 //! array, element by element. Each element is the top-left cell of the call with that element in
 //! the argument's place, or that call's error (docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY
 //! lift over an array `field_headers` or total depth", probes/groupby-lifted-args, T-2359).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 
 use crate::{
     calc_result::CalcResult,

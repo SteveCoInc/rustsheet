@@ -17,7 +17,7 @@ fn model_with_data() -> crate::model::Model {
         ("D2", "y"),
         ("D3", "x"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
 }
@@ -25,11 +25,11 @@ fn model_with_data() -> crate::model::Model {
 fn check(cells: &[(&str, &str, &str)]) {
     let mut model = model_with_data();
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {
-        assert_eq!(model._get_text(cell), *expected, "{cell} {formula}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell} {formula}");
     }
 }
 
@@ -122,13 +122,13 @@ fn later_elements_are_empty_unless_every_entry_is_equal() {
 #[test]
 fn a_lifted_call_over_a_large_array_is_charged_per_element() {
     let mut model = new_empty_model();
-    model._set("A1", "=ROWS(TOCOL(SEQUENCE(131072),SEQUENCE(1100,1,0,0)))");
-    model._set("B1", "=ROWS(UNIQUE(SEQUENCE(131072),SEQUENCE(1100,1,0,0)))");
-    model._set("C1", "=ROWS(TOCOL(SEQUENCE(131072),SEQUENCE(2,1,0,0)))");
+    model.set_a1("A1", "=ROWS(TOCOL(SEQUENCE(131072),SEQUENCE(1100,1,0,0)))");
+    model.set_a1("B1", "=ROWS(UNIQUE(SEQUENCE(131072),SEQUENCE(1100,1,0,0)))");
+    model.set_a1("C1", "=ROWS(TOCOL(SEQUENCE(131072),SEQUENCE(2,1,0,0)))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("B1"), "#ERROR!");
-    assert_eq!(model._get_text("C1"), "2");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("C1"), "2");
 }
 
 #[test]

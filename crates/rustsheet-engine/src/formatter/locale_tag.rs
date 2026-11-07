@@ -2,6 +2,9 @@
 //! it, with names from [`crate::locale::excel_date_names`]. Evidence: probes/text-locale-date-names,
 //! probes/text-locale-name-tables, probes/text-locale-am-neutral (excel-graph, 2026-10-18);
 //! docs/excel-semantics/number-formats.md "Locale tags localize date names".
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use chrono::NaiveDate;
 

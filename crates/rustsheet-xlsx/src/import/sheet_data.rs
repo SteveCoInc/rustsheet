@@ -5,6 +5,17 @@
 //! part once with `quick-xml`: cells inside `sheetData` become `Cell`s row by
 //! row, and every other element goes into a small tree (the worksheet without
 //! its cells) that the rest of the importer reads.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::manual_let_else,
+    clippy::too_many_lines,
+    clippy::unnecessary_wraps,
+    elided_lifetimes_in_paths
+)]
+// LINT-DEBT-END
 
 use std::collections::HashMap;
 use std::io::BufRead;
@@ -545,49 +556,43 @@ impl SheetDataReader<'_> {
                                 context,
                                 false,
                             )?;
-                            match self.index_map.get(&si) {
-                                Some(index) => {
-                                    // The index for that formula already exists meaning we bumped into a daughter cell first:
-                                    // it holds a placeholder, which the formula replaces. (Inserting
-                                    // it there instead would move every formula after it, and the
-                                    // cells that already point at them would point at the wrong one.)
-                                    formula_index = *index;
-                                    self.formula_lookup
-                                        .entry(formula.clone())
-                                        .or_insert(formula_index);
-                                    if let Some(slot) =
-                                        self.shared_formulas.get_mut(formula_index as usize)
-                                    {
-                                        *slot = formula;
-                                    }
+                            if let Some(index) = self.index_map.get(&si) {
+                                // The index for that formula already exists meaning we bumped into a daughter cell first:
+                                // it holds a placeholder, which the formula replaces. (Inserting
+                                // it there instead would move every formula after it, and the
+                                // cells that already point at them would point at the wrong one.)
+                                formula_index = *index;
+                                self.formula_lookup
+                                    .entry(formula.clone())
+                                    .or_insert(formula_index);
+                                if let Some(slot) =
+                                    self.shared_formulas.get_mut(formula_index as usize)
+                                {
+                                    *slot = formula;
                                 }
-                                None => {
-                                    // We haven't met any of the daughter cells
-                                    // If the formula is already present that index is used
-                                    formula_index = find_or_add_formula(
-                                        formula,
-                                        &mut self.shared_formulas,
-                                        &mut self.formula_lookup,
-                                    );
-                                    self.index_map.insert(si, formula_index);
-                                }
+                            } else {
+                                // We haven't met any of the daughter cells
+                                // If the formula is already present that index is used
+                                formula_index = find_or_add_formula(
+                                    formula,
+                                    &mut self.shared_formulas,
+                                    &mut self.formula_lookup,
+                                );
+                                self.index_map.insert(si, formula_index);
                             }
                         }
                         None => {
                             // It's a daughter cell
-                            match self.index_map.get(&si) {
-                                Some(index) => {
-                                    formula_index = *index;
-                                }
-                                None => {
-                                    // Haven't bumped into the anchor cell yet. We insert a placeholder.
-                                    // Note that it is perfectly possible that the formula of the anchor cell
-                                    // is already in the set of array formulas. This will lead to the above mention duplicity.
-                                    // This is not a problem
-                                    self.shared_formulas.push(String::new());
-                                    formula_index = self.shared_formulas.len() as i32 - 1;
-                                    self.index_map.insert(si, formula_index);
-                                }
+                            if let Some(index) = self.index_map.get(&si) {
+                                formula_index = *index;
+                            } else {
+                                // Haven't bumped into the anchor cell yet. We insert a placeholder.
+                                // Note that it is perfectly possible that the formula of the anchor cell
+                                // is already in the set of array formulas. This will lead to the above mention duplicity.
+                                // This is not a problem
+                                self.shared_formulas.push(String::new());
+                                formula_index = self.shared_formulas.len() as i32 - 1;
+                                self.index_map.insert(si, formula_index);
                             }
                         }
                     }
@@ -963,7 +968,7 @@ mod tests {
 
     #[test]
     fn first_row_without_r_is_row_one() {
-        let positions = read_positions(r#"<row><c><v>1</v></c></row>"#);
+        let positions = read_positions(r"<row><c><v>1</v></c></row>");
         assert_eq!(positions.unwrap(), vec![(1, 1)]);
     }
 

@@ -188,9 +188,9 @@ fn cse_on_dynamic_array_clears_old_spill() {
     assert_eq!(model.get_formatted_cell_value(0, 3, 8), Ok("1".to_string()));
 
     // H4:H8 must be empty — the old spill must have been cleared
-    assert_eq!(model.get_formatted_cell_value(0, 4, 8), Ok("".to_string()));
-    assert_eq!(model.get_formatted_cell_value(0, 5, 8), Ok("".to_string()));
-    assert_eq!(model.get_formatted_cell_value(0, 8, 8), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 4, 8), Ok(String::new()));
+    assert_eq!(model.get_formatted_cell_value(0, 5, 8), Ok(String::new()));
+    assert_eq!(model.get_formatted_cell_value(0, 8, 8), Ok(String::new()));
 }
 
 // Regression test for: cell styling lost when undoing an edit that caused a spill error

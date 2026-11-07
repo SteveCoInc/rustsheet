@@ -9,26 +9,26 @@ use crate::test::util::new_empty_model;
 /// The probe's data: M1 "1+2i", M2 3, M3 blank, M4 TRUE, M5 "x", M6 "2-i", M7 =1/0, M8 "3+4j",
 /// M9 ="".
 fn set_data(model: &mut crate::Model) {
-    model._set("M1", "1+2i");
-    model._set("M2", "3");
-    model._set("M4", "TRUE");
-    model._set("M5", "x");
-    model._set("M6", "2-i");
-    model._set("M7", "=1/0");
-    model._set("M8", "3+4j");
-    model._set("M9", "=\"\"");
+    model.set_a1("M1", "1+2i");
+    model.set_a1("M2", "3");
+    model.set_a1("M4", "TRUE");
+    model.set_a1("M5", "x");
+    model.set_a1("M6", "2-i");
+    model.set_a1("M7", "=1/0");
+    model.set_a1("M8", "3+4j");
+    model.set_a1("M9", "=\"\"");
 }
 
 fn check(cases: &[(&str, &str)]) {
     let mut model = new_empty_model();
     set_data(&mut model);
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -149,20 +149,20 @@ fn the_im_functions_refuse_a_boolean() {
 #[test]
 fn the_cells_read_are_capped() {
     let mut model = new_empty_model();
-    model._set("A1", "1+2i");
-    model._set("A2", "3");
+    model.set_a1("A1", "1+2i");
+    model.set_a1("A2", "3");
     // 2^20 rows x 256 columns = 2^28 cells, above the 2^27 cap; nothing is filled there.
-    model._set("C1", "=IMSUM(XA1:XFD1048576)");
+    model.set_a1("C1", "=IMSUM(XA1:XFD1048576)");
     // Two whole columns, clipped to the two used rows.
-    model._set("C2", "=IMSUM(A:A,A:A)");
-    model._set("C3", "=IMPRODUCT(A:A)");
+    model.set_a1("C2", "=IMSUM(A:A,A:A)");
+    model.set_a1("C3", "=IMPRODUCT(A:A)");
     // The used area reaches row 1,048,576: 1,048,576 x 130 columns = 2^27 + 2^21 cells.
-    model._set("E1048576", "1");
-    model._set("C4", "=IMSUM(A1:DZ1048576)");
+    model.set_a1("E1048576", "1");
+    model.set_a1("C4", "=IMSUM(A1:DZ1048576)");
     model.evaluate();
-    assert_eq!(model._get_text("C1"), *"#ERROR!");
-    assert_eq!(model._get_text("C2"), *"8+4i");
+    assert_eq!(model.get_text_a1("C1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("C2"), *"8+4i");
     // A:A holds blank cells past A2, so the product is 0.
-    assert_eq!(model._get_text("C3"), *"0");
-    assert_eq!(model._get_text("C4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("C3"), *"0");
+    assert_eq!(model.get_text_a1("C4"), *"#ERROR!");
 }

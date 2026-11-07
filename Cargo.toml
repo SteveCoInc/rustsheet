@@ -17,8 +17,8 @@ repository = "https://github.com/SteveCoInc/rustsheet"
 rust-version = "1.88"
 
 # Workspace-wide lint policy. See docs/process/quality-gates.md.
-# Crates opt in with `[lints] workspace = true`. Forked crates carry a
-# temporary, explicit allow-list in their lib.rs ("lint debt") that may only shrink.
+# Crates opt in with `[lints] workspace = true`. Lint debt inherited from the fork lives
+# in per-file `LINT-DEBT` `#![expect(...)]` blocks that may only shrink (decision 0335).
 [workspace.lints.rust]
 unsafe_code = "deny"
 unused_must_use = "deny"

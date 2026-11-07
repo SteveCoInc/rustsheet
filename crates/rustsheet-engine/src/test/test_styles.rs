@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::types::StyleIncludes;
@@ -27,7 +34,7 @@ fn test_model_set_cells_with_values_styles() {
 #[test]
 fn test_create_named_style() {
     let mut model = new_empty_model();
-    model._set("A1", "42");
+    model.set_a1("A1", "42");
 
     let mut style = model.get_style_for_cell(0, 1, 1).unwrap();
     assert!(!style.font.b);
@@ -400,7 +407,7 @@ fn test_named_style_partial_includes() {
 fn test_apply_partial_named_style_merges_with_cell_format() {
     use crate::types::Style;
     let mut model = new_empty_model();
-    model._set("A1", "0.5");
+    model.set_a1("A1", "0.5");
     // A1 is bold
     let mut bold = model.get_style_for_cell(0, 1, 1).unwrap();
     bold.font.b = true;
@@ -516,7 +523,7 @@ fn test_update_named_style_changes_includes() {
     );
 
     // Applying the style now stamps the font too
-    model._set("A1", "0.5");
+    model.set_a1("A1", "0.5");
     let mut italic = model.get_style_for_cell(0, 1, 1).unwrap();
     italic.font.i = true;
     model.set_cell_style(0, 1, 1, &italic).unwrap();
@@ -533,7 +540,7 @@ fn test_update_named_style_changes_includes() {
         model.workbook.styles.get_style_includes("pct").unwrap(),
         partial
     );
-    model._set("B1", "0.5");
+    model.set_a1("B1", "0.5");
     let mut italic = model.get_style_for_cell(0, 1, 2).unwrap();
     italic.font.i = true;
     model.set_cell_style(0, 1, 2, &italic).unwrap();

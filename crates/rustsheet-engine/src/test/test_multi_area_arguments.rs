@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, reason = "tests")]
 
 //! Unions and multi-area intersections as aggregate arguments (SPEC-0004 step 2, T-1062).
@@ -21,18 +24,18 @@ fn model() -> Model {
         ("D4", "9"),
         ("Data!A1", "11"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
 }
 
 fn results(model: &mut Model, cases: &[(&str, &str, &str)]) {
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cases {
-        assert_eq!(model._get_text(cell), *expected, "{cell}: {formula}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell}: {formula}");
     }
 }
 
@@ -71,7 +74,7 @@ fn aggregates_walk_each_area_as_written() {
 #[test]
 fn order_statistics_take_a_union() {
     let mut model = model();
-    model._set("E1", "=1/0");
+    model.set_a1("E1", "=1/0");
     results(
         &mut model,
         &[
@@ -96,7 +99,7 @@ fn order_statistics_take_a_union() {
 #[test]
 fn union_argument_errors() {
     let mut model = model();
-    model._set("E1", "=1/0");
+    model.set_a1("E1", "=1/0");
     results(
         &mut model,
         &[
@@ -118,7 +121,7 @@ fn union_argument_errors() {
 #[test]
 fn whole_column_union() {
     let mut model = model();
-    model._set("C1", "2");
+    model.set_a1("C1", "2");
     results(&mut model, &[("H1", "=SUM((A:A,C:C))", "10")]);
 }
 
@@ -127,22 +130,22 @@ fn union_at_and_over_the_area_cap() {
     // DEVIATION (references.md "Union area cap"): MAX_AREAS areas are summed, one more is
     // `#VALUE!` before any area is walked.
     let mut model = model();
-    model._set("Z1", &format!("=SUM({})", balanced_union("A1", MAX_AREAS)));
-    model._set(
+    model.set_a1("Z1", &format!("=SUM({})", balanced_union("A1", MAX_AREAS)));
+    model.set_a1(
         "Z2",
         &format!("=SUM({})", balanced_union("A1", MAX_AREAS + 1)),
     );
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), MAX_AREAS.to_string());
-    assert_eq!(model._get_text("Z2"), "#VALUE!");
-    assert_eq!(model._get_error_message("Z2"), TOO_MANY_AREAS);
+    assert_eq!(model.get_text_a1("Z1"), MAX_AREAS.to_string());
+    assert_eq!(model.get_text_a1("Z2"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("Z2"), TOO_MANY_AREAS);
 }
 
 /// `count` rows of column A holding 1, from row 1.
 fn model_with_ones_in_column_a(count: i32) -> Model {
     let mut model = new_empty_model();
     for row in 1..=count {
-        model._set(&format!("A{row}"), "1");
+        model.set_a1(&format!("A{row}"), "1");
     }
     model
 }
@@ -152,12 +155,12 @@ fn whole_columns_over_sparse_data_cost_what_the_data_costs() {
     // T-1497: a union area is walked over its existing cells, so MAX_AREAS copies of A:A over
     // one cell in row 1,000 are a step or two each, well inside the walk budget.
     let mut model = model();
-    model._set("A1000", "1");
-    model._set("Z1", &format!("=SUM({})", balanced_union("A:A", MAX_AREAS)));
-    model._set("Z2", &format!("=SUM({})", balanced_union("A:A", 16)));
+    model.set_a1("A1000", "1");
+    model.set_a1("Z1", &format!("=SUM({})", balanced_union("A:A", MAX_AREAS)));
+    model.set_a1("Z2", &format!("=SUM({})", balanced_union("A:A", 16)));
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), (2 * MAX_AREAS).to_string());
-    assert_eq!(model._get_text("Z2"), "32");
+    assert_eq!(model.get_text_a1("Z1"), (2 * MAX_AREAS).to_string());
+    assert_eq!(model.get_text_a1("Z2"), "32");
 }
 
 #[test]
@@ -174,7 +177,7 @@ fn a_union_walked_by_a_lambda_costs_what_its_data_costs() {
         ("Big!B1048576", "1"),
         ("Big!C1048576", "2"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     let nine = ["(B:B,C:C)"; 9].join(",");
     results(
@@ -219,10 +222,10 @@ fn a_union_walk_costs_its_own_columns_not_the_rows_others_fill() {
     // visits only the cells of B and C.
     let mut model = new_empty_model();
     for (cell, value) in [("B1", "5"), ("B10000", "1"), ("C10000", "2")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for row in 1..=9_000 {
-        model._set(&format!("G{row}"), "1");
+        model.set_a1(&format!("G{row}"), "1");
     }
     results(
         &mut model,
@@ -240,11 +243,11 @@ fn only_a_union_area_over_more_than_a_chunk_of_rows_builds_the_column_index() {
     // the sheet without one, and its writes keep paying nothing for it.
     let mut model = new_empty_model();
     for row in 1..=3_000 {
-        model._set(&format!("A{row}"), "1");
+        model.set_a1(&format!("A{row}"), "1");
     }
-    model._set("Z1", "=SUM((A1:A1000,A5))");
+    model.set_a1("Z1", "=SUM((A1:A1000,A5))");
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), "1001");
+    assert_eq!(model.get_text_a1("Z1"), "1001");
     let indexed = |model: &Model| {
         model
             .workbook
@@ -254,9 +257,9 @@ fn only_a_union_area_over_more_than_a_chunk_of_rows_builds_the_column_index() {
             .has_column_index()
     };
     assert!(!indexed(&model));
-    model._set("Z2", "=SUM((A:A,A5))");
+    model.set_a1("Z2", "=SUM((A:A,A5))");
     model.evaluate();
-    assert_eq!(model._get_text("Z2"), "3001");
+    assert_eq!(model.get_text_a1("Z2"), "3001");
     assert!(indexed(&model));
 }
 
@@ -264,11 +267,11 @@ fn only_a_union_area_over_more_than_a_chunk_of_rows_builds_the_column_index() {
 fn indexed_model() -> Model {
     let mut model = new_empty_model();
     for row in 1..=3_000 {
-        model._set(&format!("A{row}"), "1");
+        model.set_a1(&format!("A{row}"), "1");
     }
-    model._set("Z1", "=SUM((A:A,A5))");
+    model.set_a1("Z1", "=SUM((A:A,A5))");
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), "3001");
+    assert_eq!(model.get_text_a1("Z1"), "3001");
     model
 }
 
@@ -288,15 +291,15 @@ fn the_column_index_is_dropped_after_more_updates_than_cells_and_rebuilt_by_the_
     assert!(has_index(&model));
     // adding cells grows the index along with the updates, so it stands
     for row in 1..=3_000 {
-        model._set(&format!("B{row}"), "1");
+        model.set_a1(&format!("B{row}"), "1");
     }
     assert!(has_index(&model));
     // a structural edit moves every cell: a removal and an addition each, more than the cells
     model.insert_rows(0, 1, 1).unwrap();
     assert!(!has_index(&model));
-    model._set("Y1", "=SUM((A:B,A5))");
+    model.set_a1("Y1", "=SUM((A:B,A5))");
     model.evaluate();
-    assert_eq!(model._get_text("Y1"), "6001");
+    assert_eq!(model.get_text_a1("Y1"), "6001");
     assert!(has_index(&model));
 }
 
@@ -327,12 +330,12 @@ fn an_indexed_union_walk_meets_cells_in_row_major_order() {
     // makes the whole columns span more than a chunk of rows, so they take the index walk.
     let mut model = new_empty_model();
     for (cell, value) in [("A2", "=1/0"), ("B1", "=NA()"), ("A3", "4"), ("A2000", "1")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for column in [
         "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q",
     ] {
-        model._set(&format!("{column}5"), "1");
+        model.set_a1(&format!("{column}5"), "1");
     }
     results(
         &mut model,
@@ -356,13 +359,13 @@ fn a_let_bound_union_shares_the_walk_budget_across_arguments() {
     let mut model = model_with_ones_in_column_a(1 << 16);
     let union = balanced_union("A:A", 16);
     let within = vec!["x"; 15].join(",");
-    model._set("Z1", &format!("=LET(x,{union},SUM({within}))"));
+    model.set_a1("Z1", &format!("=LET(x,{union},SUM({within}))"));
     let past = vec!["x"; 16].join(",");
-    model._set("Z2", &format!("=LET(x,{union},SUM({past}))"));
+    model.set_a1("Z2", &format!("=LET(x,{union},SUM({past}))"));
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), (15 * 16 * 65536).to_string());
-    assert_eq!(model._get_text("Z2"), "#VALUE!");
-    assert_eq!(model._get_error_message("Z2"), TOO_MANY_AREA_CELLS);
+    assert_eq!(model.get_text_a1("Z1"), (15 * 16 * 65536).to_string());
+    assert_eq!(model.get_text_a1("Z2"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("Z2"), TOO_MANY_AREA_CELLS);
 }
 
 #[test]
@@ -371,9 +374,9 @@ fn a_dense_union_repeated_by_a_lambda_is_bounded() {
     // walk of dense data stops at MAX_AREA_WALK steps: 300 walks of (A:A,A:A) over 65,536
     // filled rows are 39,937,800 steps, past it.
     let mut model = model_with_ones_in_column_a(1 << 16);
-    model._set("Z1", "=SUM(MAP(A1:A300,LAMBDA(r,SUM((A:A,A:A)))))");
+    model.set_a1("Z1", "=SUM(MAP(A1:A300,LAMBDA(r,SUM((A:A,A:A)))))");
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("Z1"), "#VALUE!");
 }
 
 #[test]
@@ -382,18 +385,18 @@ fn aggregate_of_a_union_obeys_the_walk_budget() {
     // AGGREGATE's reference form, which walks area by area: 256 copies of A:A over 65,536
     // filled rows are past it, sixteen are not.
     let mut model = model_with_ones_in_column_a(1 << 16);
-    model._set(
+    model.set_a1(
         "Z1",
         &format!("=AGGREGATE(9,4,{})", balanced_union("A:A", 256)),
     );
-    model._set(
+    model.set_a1(
         "Z2",
         &format!("=AGGREGATE(9,4,{})", balanced_union("A:A", 16)),
     );
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), "#VALUE!");
-    assert_eq!(model._get_error_message("Z1"), TOO_MANY_AREA_CELLS);
-    assert_eq!(model._get_text("Z2"), (16 * 65536).to_string());
+    assert_eq!(model.get_text_a1("Z1"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("Z1"), TOO_MANY_AREA_CELLS);
+    assert_eq!(model.get_text_a1("Z2"), (16 * 65536).to_string());
 }
 
 #[test]
@@ -431,15 +434,15 @@ fn subtotal_of_a_union_obeys_the_walk_budget() {
     // copies of A:A over 65,536 filled rows are past it, so SUBTOTAL answers `#VALUE!`; a
     // handful of whole columns is walked.
     let mut model = model_with_ones_in_column_a(1 << 16);
-    model._set(
+    model.set_a1(
         "Z1",
         &format!("=SUBTOTAL(9,{})", balanced_union("A:A", 256)),
     );
-    model._set("Z2", &format!("=SUBTOTAL(9,{})", balanced_union("A:A", 16)));
+    model.set_a1("Z2", &format!("=SUBTOTAL(9,{})", balanced_union("A:A", 16)));
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), "#VALUE!");
-    assert_eq!(model._get_error_message("Z1"), TOO_MANY_AREA_CELLS);
-    assert_eq!(model._get_text("Z2"), (16 * 65536).to_string());
+    assert_eq!(model.get_text_a1("Z1"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("Z1"), TOO_MANY_AREA_CELLS);
+    assert_eq!(model.get_text_a1("Z2"), (16 * 65536).to_string());
 }
 
 #[test]
@@ -489,7 +492,7 @@ fn three_d_operand_beside_and_inside_a_union() {
         ("Sheet2!A1", "100"),
         ("Sheet2!B2", "200"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     results(
         &mut model,
@@ -569,7 +572,7 @@ fn choose_and_let_hand_a_3d_reference_to_the_aggregates() {
         ("Data3!A2", "2"),
         ("K1", "abc"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     results(
         &mut model,
@@ -661,7 +664,7 @@ fn union_bindings_held_at_once_are_capped() {
             ("Z3", &x15, &(MAX_AREAS / 2).to_string()),
         ],
     );
-    assert_eq!(model._get_error_message("Z2"), TOO_MANY_AREAS);
+    assert_eq!(model.get_error_message_a1("Z2"), TOO_MANY_AREAS);
 }
 
 #[test]
@@ -788,7 +791,7 @@ fn union_bodied_name_over_the_area_cap() {
             ("Z2", "=SUM(over)", "#VALUE!"),
         ],
     );
-    assert_eq!(model._get_error_message("Z2"), TOO_MANY_AREAS);
+    assert_eq!(model.get_error_message_a1("Z2"), TOO_MANY_AREAS);
 }
 
 #[test]
@@ -815,15 +818,15 @@ fn a_spill_into_a_union_area_is_read_after_its_anchor_runs() {
     // after the union was read must restart the reader, not be missed or reported circular,
     // both when the spill appears and when it grows.
     let mut model = new_empty_model();
-    model._set("A1", "=SUM((D:D,E:E))");
-    model._set("B1", "=COUNT((D1:D10,E:E))");
-    model._set("D1", "=SEQUENCE(C1)");
-    model._set("C1", "3");
+    model.set_a1("A1", "=SUM((D:D,E:E))");
+    model.set_a1("B1", "=COUNT((D1:D10,E:E))");
+    model.set_a1("D1", "=SEQUENCE(C1)");
+    model.set_a1("C1", "3");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "6");
-    assert_eq!(model._get_text("B1"), "3");
-    model._set("C1", "5");
+    assert_eq!(model.get_text_a1("A1"), "6");
+    assert_eq!(model.get_text_a1("B1"), "3");
+    model.set_a1("C1", "5");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "15");
-    assert_eq!(model._get_text("B1"), "5");
+    assert_eq!(model.get_text_a1("A1"), "15");
+    assert_eq!(model.get_text_a1("B1"), "5");
 }

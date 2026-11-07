@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::assigning_clones,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 #![deny(missing_docs)]
 
 use std::{
@@ -687,8 +695,7 @@ impl UserModel {
                     .iter()
                     .map(|cf| cf.priority)
                     .max()
-                    .map(|m| m + 1)
-                    .unwrap_or(1);
+                    .map_or(1, |m| m + 1);
                 self.model
                     .workbook
                     .worksheet_mut(sheet)?
@@ -726,7 +733,7 @@ impl UserModel {
             .has_headers(false)
             .from_reader(csv_reader);
         for r in reader.records().flatten() {
-            let row_data: Vec<String> = r.iter().map(|v| v.to_string()).collect();
+            let row_data: Vec<String> = r.iter().map(std::string::ToString::to_string).collect();
             max_width = max_width.max(row_data.len() as i32);
             records.push(row_data);
         }
@@ -776,7 +783,7 @@ impl UserModel {
                     sheet,
                     row,
                     column,
-                    new_value: value.to_string(),
+                    new_value: value.clone(),
                     legacy: false,
                     external: true,
                     old_value: Box::new(old_value),
@@ -786,7 +793,7 @@ impl UserModel {
                     sheet,
                     row,
                     column,
-                    value.to_string(),
+                    value.clone(),
                     &mut diff_list,
                 )?;
                 column += 1;

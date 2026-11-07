@@ -12,6 +12,9 @@
 //!   <tableStyleInfo name="TableStyleMedium2" showFirstColumn="0" ... />
 //! </table>
 //! ```
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string)]
+// LINT-DEBT-END
 
 use std::collections::HashSet;
 

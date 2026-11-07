@@ -7,31 +7,31 @@ use crate::test::util::new_empty_model;
 #[test]
 fn substitute_result_over_32767_chars_is_value_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=LEN(SUBSTITUTE(REPT(\"a\",20000),\"a\",\"bb\"))");
-    model._set("A2", "=LEN(SUBSTITUTE(REPT(\"a\",16383),\"a\",\"bb\"))");
-    model._set("A3", "=LEN(SUBSTITUTE(REPT(\"a\",16384),\"a\",\"bb\"))");
-    model._set("A4", "=LEN(SUBSTITUTE(REPT(\"a\",32767),\"a\",\"b\"))");
-    model._set("A5", "=LEN(SUBSTITUTE(REPT(\"a\",32767),\"a\",\"bb\",1))");
-    model._set("A6", "=LEN(SUBSTITUTE(REPT(\"a\",32767),\"a\",\"bb\",2))");
-    model._set(
+    model.set_a1("A1", "=LEN(SUBSTITUTE(REPT(\"a\",20000),\"a\",\"bb\"))");
+    model.set_a1("A2", "=LEN(SUBSTITUTE(REPT(\"a\",16383),\"a\",\"bb\"))");
+    model.set_a1("A3", "=LEN(SUBSTITUTE(REPT(\"a\",16384),\"a\",\"bb\"))");
+    model.set_a1("A4", "=LEN(SUBSTITUTE(REPT(\"a\",32767),\"a\",\"b\"))");
+    model.set_a1("A5", "=LEN(SUBSTITUTE(REPT(\"a\",32767),\"a\",\"bb\",1))");
+    model.set_a1("A6", "=LEN(SUBSTITUTE(REPT(\"a\",32767),\"a\",\"bb\",2))");
+    model.set_a1(
         "A7",
         "=LEN(SUBSTITUTE(REPT(\"a\",32767),\"a\",REPT(\"b\",32767),1))",
     );
-    model._set(
+    model.set_a1(
         "A8",
         "=LEN(SUBSTITUTE(REPT(\"a\",32767),\"z\",REPT(\"b\",32767),1))",
     );
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"32766");
-    assert_eq!(model._get_text("A3"), *"#VALUE!");
-    assert_eq!(model._get_text("A4"), *"32767");
-    assert_eq!(model._get_text("A5"), *"#VALUE!");
-    assert_eq!(model._get_text("A6"), *"#VALUE!");
-    assert_eq!(model._get_text("A7"), *"#VALUE!");
-    assert_eq!(model._get_text("A8"), *"32767");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"32766");
+    assert_eq!(model.get_text_a1("A3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), *"32767");
+    assert_eq!(model.get_text_a1("A5"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A6"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A7"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A8"), *"32767");
 }
 
 // Oracle: probes/substitute-instance-num-bound (excel-graph, T-2279): instance_num is valid for
@@ -39,19 +39,19 @@ fn substitute_result_over_32767_chars_is_value_error() {
 #[test]
 fn substitute_instance_num_above_2_pow_31_minus_2_is_value_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=SUBSTITUTE(\"bbb\",\"b\",\"x\",2147483646.9)");
-    model._set("A2", "=SUBSTITUTE(\"bbb\",\"b\",\"x\",2147483647)");
-    model._set("A3", "=SUBSTITUTE(\"abc\",\"z\",\"x\",1E+15)");
-    model._set("A4", "=SUBSTITUTE(\"abc\",\"\",\"x\",1E+15)");
-    model._set("A5", "=SUBSTITUTE(\"bbb\",\"b\",\"x\",1.5)");
-    model._set("A6", "=SUBSTITUTE(\"\",\"b\",\"x\",1E+15)");
+    model.set_a1("A1", "=SUBSTITUTE(\"bbb\",\"b\",\"x\",2147483646.9)");
+    model.set_a1("A2", "=SUBSTITUTE(\"bbb\",\"b\",\"x\",2147483647)");
+    model.set_a1("A3", "=SUBSTITUTE(\"abc\",\"z\",\"x\",1E+15)");
+    model.set_a1("A4", "=SUBSTITUTE(\"abc\",\"\",\"x\",1E+15)");
+    model.set_a1("A5", "=SUBSTITUTE(\"bbb\",\"b\",\"x\",1.5)");
+    model.set_a1("A6", "=SUBSTITUTE(\"\",\"b\",\"x\",1E+15)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"bbb");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
-    assert_eq!(model._get_text("A3"), *"#VALUE!");
-    assert_eq!(model._get_text("A4"), *"#VALUE!");
-    assert_eq!(model._get_text("A5"), *"xbb");
-    assert_eq!(model._get_text("A6"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), *"bbb");
+    assert_eq!(model.get_text_a1("A2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A5"), *"xbb");
+    assert_eq!(model.get_text_a1("A6"), *"#VALUE!");
 }

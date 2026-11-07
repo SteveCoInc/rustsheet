@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::if_not_else, clippy::too_many_lines)]
+// LINT-DEBT-END
 use super::escape::escape_xml;
 use super::styles_util::{get_color_attrs, get_color_xml};
 use rustsheet_engine::cf_types::{
@@ -438,12 +441,10 @@ fn build_cf_rule_xml(
 
             let min_cfvo = min
                 .as_ref()
-                .map(cfvo_xml)
-                .unwrap_or_else(|| r#"<cfvo type="min"/>"#.to_string());
+                .map_or_else(|| r#"<cfvo type="min"/>"#.to_string(), cfvo_xml);
             let max_cfvo = max
                 .as_ref()
-                .map(cfvo_xml)
-                .unwrap_or_else(|| r#"<cfvo type="max"/>"#.to_string());
+                .map_or_else(|| r#"<cfvo type="max"/>"#.to_string(), cfvo_xml);
             let pos_color = get_color_xml(positive_color, "color");
             let show_val = if !show_value { r#" showValue="0""# } else { "" };
 
@@ -457,14 +458,12 @@ fn build_cf_rule_xml(
             let gradient_attr = if !is_gradient { r#" gradient="0""# } else { "" };
             let x14_min = min
                 .as_ref()
-                .map(cfvo_x14_xml)
-                .unwrap_or_else(|| r#"<x14:cfvo type="autoMin"/>"#.to_string());
+                .map_or_else(|| r#"<x14:cfvo type="autoMin"/>"#.to_string(), cfvo_x14_xml);
             let x14_max = max
                 .as_ref()
-                .map(cfvo_x14_xml)
-                .unwrap_or_else(|| r#"<x14:cfvo type="autoMax"/>"#.to_string());
+                .map_or_else(|| r#"<x14:cfvo type="autoMax"/>"#.to_string(), cfvo_x14_xml);
             let neg_color_xml = format!(
-                r#"<x14:negativeFillColor {} />"#,
+                r"<x14:negativeFillColor {} />",
                 get_color_attrs(negative_color)
             );
             let x14_entry = format!(

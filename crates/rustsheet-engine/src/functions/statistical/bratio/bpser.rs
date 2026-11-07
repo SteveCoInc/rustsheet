@@ -1,6 +1,9 @@
 //! Excel's bpser, TOMS 708's power series for `I_x(a, b)`, and the ln B it takes (SPEC-0025's
 //! `bpser.rs`): bratio's w = bpser(a0, b0, x0), w1 = bpser(b0, a0, y0), bpser for min(a, b) > 1 and
 //! L140's series term ([`super::bup`]).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 use super::super::beta_density::algdiv;
 use super::super::gammaln::excel_gammaln;

@@ -21,6 +21,10 @@
 //! T-4119's grid (docs/research/t4119: 640 F tails at df1 3 to 79, df2 2.1E6 to 5E7, against 60-digit
 //! mpmath) puts the expansion's worst error over the whole region at 2.1E-14, so the cut is gone
 //! (decision 0267, accuracy).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, clippy::many_single_char_names)]
+#![cfg_attr(test, expect(clippy::float_cmp, clippy::unreadable_literal))]
+// LINT-DEBT-END
 
 use super::incomplete_beta::{rlog1, stirling_correction};
 use super::incomplete_gamma::{accurate_gamma_density, gamma_ur};

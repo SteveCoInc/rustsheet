@@ -150,17 +150,17 @@ fn parenthesis_runs_nest_as_deep_as_excel_allows() {
         assert!(has_too_many_parentheses(&parse(&split)));
         let mut model = crate::test::util::new_empty_model();
         let formula = format!("={}", nested("(", "-A2", ")", MAX_PARENTHESES));
-        model._set("A1", &formula);
-        model._set("A2", "3");
+        model.set_a1("A1", &formula);
+        model.set_a1("A2", "3");
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "-3");
-        assert_eq!(model._get_formula("A1"), formula);
+        assert_eq!(model.get_text_a1("A1"), "-3");
+        assert_eq!(model.get_formula_a1("A1"), formula);
         // A called group at the end of a run, and inside one (probes/paren-call-*).
-        model._set("B1", "=(((LAMBDA(x,x+1))))(2)");
-        model._set("B2", "=((LAMBDA(x,x*2))(3)+1)");
+        model.set_a1("B1", "=(((LAMBDA(x,x+1))))(2)");
+        model.set_a1("B2", "=((LAMBDA(x,x*2))(3)+1)");
         model.evaluate();
-        assert_eq!(model._get_text("B1"), "3");
-        assert_eq!(model._get_text("B2"), "7");
+        assert_eq!(model.get_text_a1("B1"), "3");
+        assert_eq!(model.get_text_a1("B2"), "7");
     });
 }
 
@@ -253,10 +253,10 @@ fn parenthesis_runs_around_operators_are_bounded_by_depth() {
         assert!(!matches!(parse(&deepest), Node::ParseErrorKind { .. }));
         assert!(is_too_deep(&parse(&nested("(", "1", "+1)", levels + 1))));
         let mut model = crate::test::util::new_empty_model();
-        model._set("A1", &format!("={deepest}"));
+        model.set_a1("A1", &format!("={deepest}"));
         model.evaluate();
-        assert_eq!(model._get_text("A1"), (levels + 1).to_string());
-        assert_eq!(model._get_formula("A1"), format!("={deepest}"));
+        assert_eq!(model.get_text_a1("A1"), (levels + 1).to_string());
+        assert_eq!(model.get_formula_a1("A1"), format!("={deepest}"));
     });
 }
 
@@ -341,12 +341,12 @@ fn unary_minus_run_at_the_limit_evaluates() {
         // `apply_unary_chain`) and print on a small stack.
         let mut model = crate::test::util::new_empty_model();
         let minuses = "-".repeat(MAX_SIGNS);
-        model._set("A1", &format!("={minuses}1"));
-        model._set("A2", &format!("={}TRUE", &minuses[1..]));
+        model.set_a1("A1", &format!("={minuses}1"));
+        model.set_a1("A2", &format!("={}TRUE", &minuses[1..]));
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "1");
-        assert_eq!(model._get_text("A2"), "-1");
-        assert_eq!(model._get_formula("A1"), format!("={minuses}1"));
+        assert_eq!(model.get_text_a1("A1"), "1");
+        assert_eq!(model.get_text_a1("A2"), "-1");
+        assert_eq!(model.get_formula_a1("A1"), format!("={minuses}1"));
     });
 }
 
@@ -392,12 +392,12 @@ fn nested_unions_at_the_limit_parse_evaluate_and_print() {
             Node::OpUnionKind { .. }
         ));
         let mut model = crate::test::util::new_empty_model();
-        model._set("B1", &format!("={formula}"));
-        model._set("B2", &format!("={right} A1"));
+        model.set_a1("B1", &format!("={formula}"));
+        model.set_a1("B2", &format!("={right} A1"));
         model.evaluate();
-        assert_eq!(model._get_text("B1"), "#VALUE!");
-        assert_eq!(model._get_text("B2"), "#VALUE!");
-        assert_eq!(model._get_formula("B2"), format!("={right} A1"));
+        assert_eq!(model.get_text_a1("B1"), "#VALUE!");
+        assert_eq!(model.get_text_a1("B2"), "#VALUE!");
+        assert_eq!(model.get_formula_a1("B2"), format!("={right} A1"));
     });
 }
 
@@ -443,24 +443,24 @@ fn operator_chains_as_long_as_excel_allows_evaluate_and_print() {
             ),
         ];
         for (cell, formula, _) in &cases {
-            model._set(cell, &format!("={formula}"));
+            model.set_a1(cell, &format!("={formula}"));
         }
         model.evaluate();
         for (cell, formula, expected) in &cases {
-            assert_eq!(model._get_text(cell), *expected, "{cell}");
-            assert_eq!(model._get_formula(cell), format!("={formula}"), "{cell}");
+            assert_eq!(model.get_text_a1(cell), *expected, "{cell}");
+            assert_eq!(model.get_formula_a1(cell), format!("={formula}"), "{cell}");
         }
         // A power chain prints as written, `=1^1^1` (probes/power-chain-text, T-1331).
         let power = format!("={}", chain("^", EXCEL_LONGEST_CHAIN));
-        model._set("A3", &power);
+        model.set_a1("A3", &power);
         model.evaluate();
-        assert_eq!(model._get_text("A3"), "1");
-        assert_eq!(model._get_formula("A3"), power);
+        assert_eq!(model.get_text_a1("A3"), "1");
+        assert_eq!(model.get_formula_a1("A3"), power);
         // A chain of references evaluates, and moves with its cell.
         let references = vec!["A1"; EXCEL_LONGEST_CHAIN].join("+");
-        model._set("B1", &format!("={references}"));
+        model.set_a1("B1", &format!("={references}"));
         model.evaluate();
-        assert_eq!(model._get_text("B1"), "16777216");
+        assert_eq!(model.get_text_a1("B1"), "16777216");
         let cell = |row| crate::expressions::types::CellReferenceIndex {
             sheet: 0,
             row,
@@ -480,7 +480,7 @@ fn operator_chains_as_long_as_excel_allows_evaluate_and_print() {
             Ok(format!("={}", vec!["A2"; EXCEL_LONGEST_CHAIN].join("+")))
         );
         let tree = parse(&chain("&", EXCEL_LONGEST_CHAIN));
-        assert!(tree.clone() == tree);
+        assert_eq!(tree.clone(), tree);
     });
 }
 
@@ -562,23 +562,23 @@ fn sign_runs_at_the_cap_survive_every_walk_under_the_deepest_nesting() {
             let levels = deepest_levels_over(&run);
             assert!(levels > 60, "{levels}");
             let mut model = crate::test::util::new_empty_model();
-            model._set("C1", "2");
-            model._set("A1", &format!("={}", nested_over(levels, &run, "C1")));
-            model._set("A2", &format!("={run}C1"));
-            model._set("A3", &format!("=-({}C1)", signs(MAX_SIGNS - 2, space)));
+            model.set_a1("C1", "2");
+            model.set_a1("A1", &format!("={}", nested_over(levels, &run, "C1")));
+            model.set_a1("A2", &format!("={run}C1"));
+            model.set_a1("A3", &format!("=-({}C1)", signs(MAX_SIGNS - 2, space)));
             model.evaluate();
             for cell in ["A1", "A2", "A3"] {
-                assert!(!model._get_text(cell).starts_with('#'), "{cell}");
+                assert!(!model.get_text_a1(cell).starts_with('#'), "{cell}");
             }
-            assert_eq!(model._get_formula("A2"), format!("={run}C1"));
+            assert_eq!(model.get_formula_a1("A2"), format!("={run}C1"));
             assert_eq!(model.insert_rows(0, 1, 1), Ok(()));
             assert_eq!(model.rename_sheet("Sheet1", "Renamed"), Ok(()));
             model.evaluate();
             assert_eq!(
-                model._get_formula("A2"),
+                model.get_formula_a1("A2"),
                 format!("={}", nested_over(levels, &run, "C2"))
             );
-            assert_eq!(model._get_formula("A3"), format!("={run}C2"));
+            assert_eq!(model.get_formula_a1("A3"), format!("={run}C2"));
             assert!(has_too_many_signs(&parse(&format!(
                 "{}C1",
                 signs(MAX_SIGNS, space)
@@ -618,7 +618,7 @@ fn sign_run_tree_walks_fit_a_quarter_of_the_stack() {
             .stack_size(quarter)
             .spawn(move || {
                 let copy = tree.clone();
-                assert!(copy == tree);
+                assert_eq!(copy, tree);
                 let text = to_rc_format(&copy);
                 assert_eq!(text.matches('-').count(), MAX_SIGNS / 2);
                 let _ = run_static_analysis_on_node(&copy);
@@ -719,7 +719,7 @@ fn heaviest_wrapper_shapes_take_every_walk_on_a_2_mib_stack() {
                 let tree = parse(&formula);
                 assert!(!matches!(tree, Node::ParseErrorKind { .. }), "{tree:?}");
                 let copy = tree.clone();
-                assert!(copy == tree);
+                assert_eq!(copy, tree);
                 assert!(!to_rc_format(&copy).is_empty());
                 let mut stripped = copy;
                 stripped.strip_spaces();
@@ -729,11 +729,14 @@ fn heaviest_wrapper_shapes_take_every_walk_on_a_2_mib_stack() {
                 drop(stripped);
                 drop(tree);
                 let mut model = crate::test::util::new_empty_model();
-                model._set("B1", "2");
-                model._set("A1", &format!("={formula}"));
+                model.set_a1("B1", "2");
+                model.set_a1("A1", &format!("={formula}"));
                 model.evaluate();
-                assert!(!model._get_text("A1").starts_with('#'));
-                assert_eq!(model._get_formula("A1"), format!("={}", formula.trim_end()));
+                assert!(!model.get_text_a1("A1").starts_with('#'));
+                assert_eq!(
+                    model.get_formula_a1("A1"),
+                    format!("={}", formula.trim_end())
+                );
                 drop(model);
             });
         assert!(walk.is_ok_and(|handle| handle.join().is_ok()));

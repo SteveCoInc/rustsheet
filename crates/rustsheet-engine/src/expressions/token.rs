@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 use std::fmt;
 
 use bitcode::{Decode, Encode};
@@ -203,18 +206,18 @@ impl Error {
 
     pub fn to_localized_error_string(&self, language: &Language) -> String {
         match self {
-            Error::NULL => language.errors.null.to_string(),
-            Error::REF => language.errors.r#ref.to_string(),
-            Error::NAME => language.errors.name.to_string(),
-            Error::VALUE => language.errors.value.to_string(),
-            Error::DIV => language.errors.div.to_string(),
-            Error::NA => language.errors.na.to_string(),
-            Error::NUM => language.errors.num.to_string(),
-            Error::ERROR => language.errors.error.to_string(),
-            Error::NIMPL => language.errors.nimpl.to_string(),
-            Error::SPILL => language.errors.spill.to_string(),
-            Error::CALC => language.errors.calc.to_string(),
-            Error::CIRC => language.errors.circ.to_string(),
+            Error::NULL => language.errors.null.clone(),
+            Error::REF => language.errors.r#ref.clone(),
+            Error::NAME => language.errors.name.clone(),
+            Error::VALUE => language.errors.value.clone(),
+            Error::DIV => language.errors.div.clone(),
+            Error::NA => language.errors.na.clone(),
+            Error::NUM => language.errors.num.clone(),
+            Error::ERROR => language.errors.error.clone(),
+            Error::NIMPL => language.errors.nimpl.clone(),
+            Error::SPILL => language.errors.spill.clone(),
+            Error::CALC => language.errors.calc.clone(),
+            Error::CIRC => language.errors.circ.clone(),
             // Not in `Language` (SPEC-0003): the en-US names in every language.
             Error::GETTINGDATA | Error::CONNECT | Error::BLOCKED | Error::FIELD | Error::BUSY => {
                 self.to_string()

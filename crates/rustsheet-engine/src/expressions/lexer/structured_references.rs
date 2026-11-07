@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::doc_link_with_quotes)]
+// LINT-DEBT-END
 // Grammar:
 // structured references -> table_name "[" arguments "]"
 //  arguments -> table_reference | "["specifier"]"  "," table_reference
@@ -139,20 +142,19 @@ impl Lexer {
         let mut position = self.position;
         while position < self.len {
             let next_char = self.chars[position];
-            if next_char != end_char {
-                position += 1;
-                if next_char == '\'' {
-                    if position == self.len {
-                        return Err(LexerError {
-                            position: self.position,
-                            message: "Invalid column name".to_string(),
-                        });
-                    }
-                    // skip next char
-                    position += 1;
-                }
-            } else {
+            if next_char == end_char {
                 break;
+            }
+            position += 1;
+            if next_char == '\'' {
+                if position == self.len {
+                    return Err(LexerError {
+                        position: self.position,
+                        message: "Invalid column name".to_string(),
+                    });
+                }
+                // skip next char
+                position += 1;
             }
         }
         let chars: String = self.chars[self.position..position].iter().collect();
@@ -324,12 +326,11 @@ impl Lexer {
                     table_reference: None,
                     spacing,
                 });
-            } else {
-                return Err(LexerError {
-                    position: self.position,
-                    message: "Invalid structured reference".to_string(),
-                });
             }
+            return Err(LexerError {
+                position: self.position,
+                message: "Invalid structured reference".to_string(),
+            });
         } else if peek_char != Some('[') {
             // Expecting MyTable[MyColumn]
             self.position -= 1;

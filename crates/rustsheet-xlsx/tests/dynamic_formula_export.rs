@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, reason = "tests")]
 
 //! T-1552: a formula typed in RustSheet whose legacy reading would intersect a range is saved as

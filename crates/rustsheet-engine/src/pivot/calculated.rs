@@ -239,7 +239,11 @@ fn spelled_cell(row: i32, column: i32) -> Option<String> {
 fn check_node(node: &Node) -> Result<(), CalculatedFieldError> {
     use CalculatedFieldError::{ArrayConstant, Function as Call, Reference, Unsupported};
     match node {
+        Node::FunctionKind { kind, .. } if REFUSED_FUNCTIONS.contains(kind) => {
+            Err(Call(kind.to_xlsx_string()))
+        }
         Node::BooleanKind(_)
+        | Node::FunctionKind { .. }
         | Node::NumberKind(_)
         | Node::StringKind(_)
         | Node::ErrorKind(_)
@@ -252,10 +256,6 @@ fn check_node(node: &Node) -> Result<(), CalculatedFieldError> {
         | Node::UnaryPlus { .. }
         | Node::Group { .. }
         | Node::Spaced { .. } => Ok(()),
-        Node::FunctionKind { kind, .. } if REFUSED_FUNCTIONS.contains(kind) => {
-            Err(Call(kind.to_xlsx_string()))
-        }
-        Node::FunctionKind { .. } => Ok(()),
         Node::ArrayKind(_) => Err(ArrayConstant),
         Node::ReferenceKind { .. }
         | Node::RangeKind { .. }

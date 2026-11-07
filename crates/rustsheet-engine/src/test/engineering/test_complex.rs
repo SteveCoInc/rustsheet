@@ -4,115 +4,115 @@ use crate::test::util::new_empty_model;
 #[test]
 fn fn_complex() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=COMPLEX(3, 4.5, "i")"#);
-    model._set("A2", r#"=COMPLEX(3, -5)"#);
-    model._set("A3", r#"=COMPLEX(0, 42, "j")"#);
+    model.set_a1("A1", r#"=COMPLEX(3, 4.5, "i")"#);
+    model.set_a1("A2", r"=COMPLEX(3, -5)");
+    model.set_a1("A3", r#"=COMPLEX(0, 42, "j")"#);
 
-    model._set("B1", "=COMPLEX()");
-    model._set("B2", r#"=COMPLEX(1,2, "i", 1)"#);
+    model.set_a1("B1", "=COMPLEX()");
+    model.set_a1("B2", r#"=COMPLEX(1,2, "i", 1)"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "3+4.5i");
-    assert_eq!(model._get_text("A2"), "3-5i");
-    assert_eq!(model._get_text("A3"), "42j");
+    assert_eq!(model.get_text_a1("A1"), "3+4.5i");
+    assert_eq!(model.get_text_a1("A2"), "3-5i");
+    assert_eq!(model.get_text_a1("A3"), "42j");
 
-    assert_eq!(model._get_text("B1"), *"#ERROR!");
-    assert_eq!(model._get_text("B2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B2"), *"#ERROR!");
 }
 
 #[test]
 fn complex_suffix_error_wins_over_number_errors() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=COMPLEX(1/0,1,"x")"#);
-    model._set("A2", "=COMPLEX(NA(),1,1/0)");
-    model._set("A3", r#"=COMPLEX(1/0,1,"j")"#);
-    model._set("A4", "=COMPLEX(1/0,1,1)");
-    model._set("A5", r#"=COMPLEX(1/0,1,"J")"#);
+    model.set_a1("A1", r#"=COMPLEX(1/0,1,"x")"#);
+    model.set_a1("A2", "=COMPLEX(NA(),1,1/0)");
+    model.set_a1("A3", r#"=COMPLEX(1/0,1,"j")"#);
+    model.set_a1("A4", "=COMPLEX(1/0,1,1)");
+    model.set_a1("A5", r#"=COMPLEX(1/0,1,"J")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A4"), *"#VALUE!");
-    assert_eq!(model._get_text("A5"), *"#VALUE!");
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"#DIV/0!");
-    assert_eq!(model._get_text("A3"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A4"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A5"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A3"), *"#DIV/0!");
 }
 
 #[test]
 fn fn_imabs() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMABS("3+4i")"#);
+    model.set_a1("A1", r#"=IMABS("3+4i")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "5");
+    assert_eq!(model.get_text_a1("A1"), "5");
 }
 
 #[test]
 fn fn_imaginary() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMAGINARY("3+4i")"#);
+    model.set_a1("A1", r#"=IMAGINARY("3+4i")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "4");
+    assert_eq!(model.get_text_a1("A1"), "4");
 }
 
 #[test]
 fn fn_imreal() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMREAL("3+4i")"#);
+    model.set_a1("A1", r#"=IMREAL("3+4i")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "3");
+    assert_eq!(model.get_text_a1("A1"), "3");
 }
 
 #[test]
 fn fn_imargument() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMARGUMENT("4+3i")"#);
+    model.set_a1("A1", r#"=IMARGUMENT("4+3i")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "0.643501109");
+    assert_eq!(model.get_text_a1("A1"), "0.643501109");
 }
 
 #[test]
 fn fn_imconjugate() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMCONJUGATE("3+4i")"#);
-    model._set("A2", r#"=IMCONJUGATE("12.7-32j")"#);
+    model.set_a1("A1", r#"=IMCONJUGATE("3+4i")"#);
+    model.set_a1("A2", r#"=IMCONJUGATE("12.7-32j")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "3-4i");
-    assert_eq!(model._get_text("A2"), "12.7+32j");
+    assert_eq!(model.get_text_a1("A1"), "3-4i");
+    assert_eq!(model.get_text_a1("A2"), "12.7+32j");
 }
 
 #[test]
 fn fn_imcos() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMCOS("4+3i")"#);
+    model.set_a1("A1", r#"=IMCOS("4+3i")"#);
     // In macos non intel this is "-6.58066304055116+7.58155274274655i"
-    model._set("A2", r#"=COMPLEX(-6.58066304055116, 7.58155274274654)"#);
-    model._set("A3", r#"=IMABS(IMSUB(A1, A2)) < G1"#);
+    model.set_a1("A2", r"=COMPLEX(-6.58066304055116, 7.58155274274654)");
+    model.set_a1("A3", r"=IMABS(IMSUB(A1, A2)) < G1");
 
     // small number
-    model._set("G1", "0.0000001");
+    model.set_a1("G1", "0.0000001");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A3"), "TRUE");
+    assert_eq!(model.get_text_a1("A3"), "TRUE");
 }
 
 #[test]
 fn fn_imsin() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMSIN("4+3i")"#);
+    model.set_a1("A1", r#"=IMSIN("4+3i")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "-7.61923172032141-6.548120040911i");
+    assert_eq!(model.get_text_a1("A1"), "-7.61923172032141-6.548120040911i");
 }
 
 /// IMSIN and IMCOS take sinh y and cosh y as (u ∓ 1/u)/2 with u = EXP(y) below IMSINH's band too
@@ -120,24 +120,24 @@ fn fn_imsin() {
 #[test]
 fn imsin_imcos_small_imaginary_part_takes_the_reciprocal_form() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMSIN("0+0.0080407127044978i")"#);
-    model._set(
+    model.set_a1("A1", r#"=IMSIN("0+0.0080407127044978i")"#);
+    model.set_a1(
         "A2",
         r#"=IMCOS("-0.437695624558513-0.000131316980692306i")"#,
     );
-    model._set("A3", r#"=IMSIN("-4i")"#);
-    model._set("A4", r#"=IMSIN("1E-200+1E-200i")"#);
+    model.set_a1("A3", r#"=IMSIN("-4i")"#);
+    model.set_a1("A4", r#"=IMSIN("1E-200+1E-200i")"#);
 
     model.evaluate();
 
     // The EXP pair gives ...908i and ...7094i here.
-    assert_eq!(model._get_text("A1"), "0.00804079934755902i");
+    assert_eq!(model.get_text_a1("A1"), "0.00804079934755902i");
     assert_eq!(
-        model._get_text("A2"),
+        model.get_text_a1("A2"),
         "0.905730792422698-0.0000556591552727565i"
     );
-    assert_eq!(model._get_text("A3"), "-27.2899171971278i");
-    assert_eq!(model._get_text("A4"), "1E-200");
+    assert_eq!(model.get_text_a1("A3"), "-27.2899171971278i");
+    assert_eq!(model.get_text_a1("A4"), "1E-200");
 }
 
 /// IMSIN and IMCOS of a complex number take sin x and cos x from SIN and COS's own kernel (x
@@ -147,27 +147,27 @@ fn imsin_imcos_small_imaginary_part_takes_the_reciprocal_form() {
 #[test]
 fn imsin_imcos_near_half_pi_take_the_x87_reduction() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMSIN("1.5707963267949+709.7i")"#);
-    model._set("A2", r#"=IMCOS("1.5707963267949+709.7i")"#);
-    model._set("A3", r#"=IMSIN("4.71238898038469+79.1718046156471i")"#);
-    model._set("A4", r#"=IMCOS("4.71238898038469+79.1718046156471i")"#);
+    model.set_a1("A1", r#"=IMSIN("1.5707963267949+709.7i")"#);
+    model.set_a1("A2", r#"=IMCOS("1.5707963267949+709.7i")"#);
+    model.set_a1("A3", r#"=IMSIN("4.71238898038469+79.1718046156471i")"#);
+    model.set_a1("A4", r#"=IMCOS("4.71238898038469+79.1718046156471i")"#);
 
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "8.27492013840132E+307-2.88915216855774E+293i"
     );
     assert_eq!(
-        model._get_text("A2"),
+        model.get_text_a1("A2"),
         "-2.88915216855774E+293-8.27492013840132E+307i"
     );
     assert_eq!(
-        model._get_text("A3"),
+        model.get_text_a1("A3"),
         "-1.2101741480848E+34-2223964481544680000i"
     );
     assert_eq!(
-        model._get_text("A4"),
+        model.get_text_a1("A4"),
         "-2223964481544680000+1.2101741480848E+34i"
     );
 }
@@ -175,34 +175,37 @@ fn imsin_imcos_near_half_pi_take_the_x87_reduction() {
 #[test]
 fn fn_imaginary_misc() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMAGINARY("3.4i")"#);
-    model._set("A2", r#"=IMAGINARY("-3.4")"#);
+    model.set_a1("A1", r#"=IMAGINARY("3.4i")"#);
+    model.set_a1("A2", r#"=IMAGINARY("-3.4")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "3.4");
-    assert_eq!(model._get_text("A2"), "0");
+    assert_eq!(model.get_text_a1("A1"), "3.4");
+    assert_eq!(model.get_text_a1("A2"), "0");
 }
 
 #[test]
 fn fn_imcosh() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMCOSH("4+3i")"#);
+    model.set_a1("A1", r#"=IMCOSH("4+3i")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "-27.0349456030742+3.85115333481178i");
+    assert_eq!(
+        model.get_text_a1("A1"),
+        "-27.0349456030742+3.85115333481178i"
+    );
 }
 
 #[test]
 fn fn_imcot() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMCOT("4+3i")"#);
+    model.set_a1("A1", r#"=IMCOT("4+3i")"#);
 
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         // Excel: ironcalc-calc/ENGINEERING/COMPLEXs.xlsx T25, U25 (T-0907).
         "0.00490118239430447-0.999266927805902i"
     );
@@ -214,19 +217,19 @@ fn fn_imcot() {
 #[test]
 fn fn_imtan_imcot_large_imaginary_part() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMTAN("1+400i")"#);
-    model._set("A2", r#"=IMTAN("1-400i")"#);
-    model._set("A3", r#"=IMCOT("1+400i")"#);
-    model._set("A4", r#"=IMTAN("1.5707963267948966")"#);
+    model.set_a1("A1", r#"=IMTAN("1+400i")"#);
+    model.set_a1("A2", r#"=IMTAN("1-400i")"#);
+    model.set_a1("A3", r#"=IMCOT("1+400i")"#);
+    model.set_a1("A4", r#"=IMTAN("1.5707963267948966")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "i");
-    assert_eq!(model._get_text("A2"), "-i");
-    assert_eq!(model._get_text("A3"), "-i");
+    assert_eq!(model.get_text_a1("A1"), "i");
+    assert_eq!(model.get_text_a1("A2"), "-i");
+    assert_eq!(model.get_text_a1("A3"), "-i");
     // Near π/2 the double-angle denominator is (close to) 0: a finite number, never NaN.
     assert!(model
-        ._get_text("A4")
+        .get_text_a1("A4")
         .parse::<f64>()
         .is_ok_and(f64::is_finite));
 }
@@ -235,12 +238,12 @@ fn fn_imtan_imcot_large_imaginary_part() {
 #[test]
 fn fn_imtan() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMTAN("4+3i")"#);
+    model.set_a1("A1", r#"=IMTAN("4+3i")"#);
 
     model.evaluate();
 
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         // Excel: ironcalc-calc/ENGINEERING/COMPLEXs.xlsx N25, O25 (T-0907).
         "0.00490825806749606+1.00070953606723i"
     );
@@ -249,56 +252,56 @@ fn fn_imtan() {
 #[test]
 fn fn_power() {
     let mut model = new_empty_model();
-    model._set("A2", r#"=IMPOWER("4+3i", 3)"#);
-    model._set("A3", r#"=IMABS(IMSUB(IMPOWER("-i", -3), "-1"))<G1"#);
-    model._set("A3", r#"=IMABS(IMSUB(IMPOWER("-1", 0.5), "i"))<G1"#);
+    model.set_a1("A2", r#"=IMPOWER("4+3i", 3)"#);
+    model.set_a1("A3", r#"=IMABS(IMSUB(IMPOWER("-i", -3), "-1"))<G1"#);
+    model.set_a1("A3", r#"=IMABS(IMSUB(IMPOWER("-1", 0.5), "i"))<G1"#);
 
-    model._set("A1", r#"=IMABS(IMSUB(B1, "-1"))<G1"#);
-    model._set("B1", r#"=IMPOWER("i", 2)"#);
+    model.set_a1("A1", r#"=IMABS(IMSUB(B1, "-1"))<G1"#);
+    model.set_a1("B1", r#"=IMPOWER("i", 2)"#);
 
     // small number
-    model._set("G1", "0.0000001");
+    model.set_a1("G1", "0.0000001");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "TRUE");
-    assert_eq!(model._get_text("A2"), "-44+117i");
-    assert_eq!(model._get_text("A3"), "TRUE");
-    assert_eq!(model._get_text("A3"), "TRUE");
+    assert_eq!(model.get_text_a1("A1"), "TRUE");
+    assert_eq!(model.get_text_a1("A2"), "-44+117i");
+    assert_eq!(model.get_text_a1("A3"), "TRUE");
+    assert_eq!(model.get_text_a1("A3"), "TRUE");
 }
 
 #[test]
 fn im_sub_div_power_edge_cases() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMDIV("1","1E-200")"#);
-    model._set("A2", r#"=IMDIV("-3-4i","1E-200+0i")"#);
-    model._set("A3", r#"=IMSUB("","1+i")"#);
-    model._set("A4", r#"=IMSUB(B9,"1+i")"#);
-    model._set("A5", r#"=IMDIV("3+4i","1+2j")"#);
-    model._set("A6", r#"=IMPOWER("0",0)"#);
-    model._set("A7", r#"=IMDIV("1E+308","1E-308")"#);
-    model._set("A8", r#"=IMSUB("1E+308","-1E+308")"#);
-    model._set("A9", r#"=IMPOWER("",2)"#);
-    model._set("A10", r#"=IMPOWER("i",2)"#);
-    model._set("A11", r#"=IMPOWER("1+i",100)"#);
-    model._set("A12", r#"=IMPOWER("-j",3)"#);
+    model.set_a1("A1", r#"=IMDIV("1","1E-200")"#);
+    model.set_a1("A2", r#"=IMDIV("-3-4i","1E-200+0i")"#);
+    model.set_a1("A3", r#"=IMSUB("","1+i")"#);
+    model.set_a1("A4", r#"=IMSUB(B9,"1+i")"#);
+    model.set_a1("A5", r#"=IMDIV("3+4i","1+2j")"#);
+    model.set_a1("A6", r#"=IMPOWER("0",0)"#);
+    model.set_a1("A7", r#"=IMDIV("1E+308","1E-308")"#);
+    model.set_a1("A8", r#"=IMSUB("1E+308","-1E+308")"#);
+    model.set_a1("A9", r#"=IMPOWER("",2)"#);
+    model.set_a1("A10", r#"=IMPOWER("i",2)"#);
+    model.set_a1("A11", r#"=IMPOWER("1+i",100)"#);
+    model.set_a1("A12", r#"=IMPOWER("-j",3)"#);
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "1E+200");
-    assert_eq!(model._get_text("A2"), "-3E+200-4E+200i");
-    assert_eq!(model._get_text("A3"), "#NUM!");
-    assert_eq!(model._get_text("A4"), "-1-i");
-    assert_eq!(model._get_text("A5"), "#NUM!");
-    assert_eq!(model._get_text("A6"), "#NUM!");
-    assert_eq!(model._get_text("A7"), "#NUM!");
-    assert_eq!(model._get_text("A8"), "#NUM!");
-    assert_eq!(model._get_text("A9"), "#NUM!");
-    assert_eq!(model._get_text("A10"), "-1+1.22514845490862E-16i");
+    assert_eq!(model.get_text_a1("A1"), "1E+200");
+    assert_eq!(model.get_text_a1("A2"), "-3E+200-4E+200i");
+    assert_eq!(model.get_text_a1("A3"), "#NUM!");
+    assert_eq!(model.get_text_a1("A4"), "-1-i");
+    assert_eq!(model.get_text_a1("A5"), "#NUM!");
+    assert_eq!(model.get_text_a1("A6"), "#NUM!");
+    assert_eq!(model.get_text_a1("A7"), "#NUM!");
+    assert_eq!(model.get_text_a1("A8"), "#NUM!");
+    assert_eq!(model.get_text_a1("A9"), "#NUM!");
+    assert_eq!(model.get_text_a1("A10"), "-1+1.22514845490862E-16i");
     assert_eq!(
-        model._get_text("A11"),
+        model.get_text_a1("A11"),
         "-1125899906842640-0.551513671875006i"
     );
-    assert_eq!(model._get_text("A12"), "-1.83772268236293E-16+j");
+    assert_eq!(model.get_text_a1("A12"), "-1.83772268236293E-16+j");
 }
 
 /// Excel: empty text is `#NUM!` in every one-argument IM* function, a blank cell is 0
@@ -306,39 +309,39 @@ fn im_sub_div_power_edge_cases() {
 #[test]
 fn empty_text_is_num_error_blank_is_zero() {
     let mut model = new_empty_model();
-    model._set("B1", r#"="""#);
-    model._set("A1", r#"=IMSQRT("")"#);
-    model._set("A2", "=IMSQRT(B1)");
-    model._set("A3", r#"=IMREAL("")"#);
-    model._set("A4", r#"=IMLN("")"#);
-    model._set("A5", "=IMSQRT(C1)");
-    model._set("A6", "=IMCOS(C1)");
+    model.set_a1("B1", r#"="""#);
+    model.set_a1("A1", r#"=IMSQRT("")"#);
+    model.set_a1("A2", "=IMSQRT(B1)");
+    model.set_a1("A3", r#"=IMREAL("")"#);
+    model.set_a1("A4", r#"=IMLN("")"#);
+    model.set_a1("A5", "=IMSQRT(C1)");
+    model.set_a1("A6", "=IMCOS(C1)");
     model.evaluate();
     for cell in ["A1", "A2", "A3", "A4"] {
-        assert_eq!(model._get_text(cell), *"#NUM!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#NUM!", "{cell}");
     }
-    assert_eq!(model._get_text("A5"), *"0");
-    assert_eq!(model._get_text("A6"), *"1");
+    assert_eq!(model.get_text_a1("A5"), *"0");
+    assert_eq!(model.get_text_a1("A6"), *"1");
 }
 
 #[test]
 fn im_overflow_edges() {
     // probes/eng-im-overflow-edges (excel-graph): A2, A3, A8, A27, A55, A64.
     let mut model = new_empty_model();
-    model._set("B1", r#"=IMPRODUCT(A1,"1E200","1E200")"#);
-    model._set("B2", r#"=IMPRODUCT("1E200","1E200",A1)"#);
-    model._set("B3", r#"=IMCOSH("710.4+0i")"#);
-    model._set("B4", r#"=IMSIN("710.4i")"#);
-    model._set("B5", r#"=IMSECH("711+1.5i")"#);
-    model._set("B6", r#"=IMCSCH("710.4+0i")"#);
+    model.set_a1("B1", r#"=IMPRODUCT(A1,"1E200","1E200")"#);
+    model.set_a1("B2", r#"=IMPRODUCT("1E200","1E200",A1)"#);
+    model.set_a1("B3", r#"=IMCOSH("710.4+0i")"#);
+    model.set_a1("B4", r#"=IMSIN("710.4i")"#);
+    model.set_a1("B5", r#"=IMSECH("711+1.5i")"#);
+    model.set_a1("B6", r#"=IMCSCH("710.4+0i")"#);
     model.evaluate();
 
-    assert_eq!(model._get_text("B1"), *"0");
-    assert_eq!(model._get_text("B2"), *"#VALUE!");
-    assert_eq!(model._get_text("B3"), *"#NUM!");
-    assert_eq!(model._get_text("B4"), *"#NUM!");
-    assert_eq!(model._get_text("B5"), *"0");
-    assert_eq!(model._get_text("B6"), *"0");
+    assert_eq!(model.get_text_a1("B1"), *"0");
+    assert_eq!(model.get_text_a1("B2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("B3"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B4"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B5"), *"0");
+    assert_eq!(model.get_text_a1("B6"), *"0");
 }
 
 // IMSINH and IMCOSH take the log form below x = -708 (not -709) and past x = 709, with Excel's EXP:
@@ -427,15 +430,15 @@ fn fn_imsec_band_hyperbolic_parts() {
 #[test]
 fn fn_imcsc_imlog2_imcot_of_zero_are_num() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMCSC("0")"#);
-    model._set("A2", r#"=IMLOG2("0")"#);
-    model._set("A3", r#"=IMCOT("0")"#);
+    model.set_a1("A1", r#"=IMCSC("0")"#);
+    model.set_a1("A2", r#"=IMLOG2("0")"#);
+    model.set_a1("A3", r#"=IMCOT("0")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "#NUM!");
-    assert_eq!(model._get_text("A2"), "#NUM!");
-    assert_eq!(model._get_text("A3"), "#NUM!");
+    assert_eq!(model.get_text_a1("A1"), "#NUM!");
+    assert_eq!(model.get_text_a1("A2"), "#NUM!");
+    assert_eq!(model.get_text_a1("A3"), "#NUM!");
 }
 
 // Excel: probes-numeric/t3589-im-hyperbolic-small-x-sweep C42, C58, C68 and D102 (excel-graph, T-3609): a small real
@@ -444,25 +447,25 @@ fn fn_imcsc_imlog2_imcot_of_zero_are_num() {
 #[test]
 fn small_real_imsech_imcsch_take_the_reciprocal() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMSECH("6.17632662504393E-06")"#);
-    model._set("A2", r#"=IMSECH("-1.71603860095587E-05")"#);
-    model._set("A3", r#"=IMSECH("9.70217965965262E-05")"#);
-    model._set("A4", r#"=IMCSCH("-1.05118886127103E-06")"#);
-    model._set("A5", r#"=IMCSCH("1E-200")"#);
-    model._set("A6", r#"=IMCSCH("1E-307")"#);
-    model._set("A7", r#"=IMCSCH("1E-308")"#);
-    model._set("A8", r#"=IMCSCH("2E-309")"#);
+    model.set_a1("A1", r#"=IMSECH("6.17632662504393E-06")"#);
+    model.set_a1("A2", r#"=IMSECH("-1.71603860095587E-05")"#);
+    model.set_a1("A3", r#"=IMSECH("9.70217965965262E-05")"#);
+    model.set_a1("A4", r#"=IMCSCH("-1.05118886127103E-06")"#);
+    model.set_a1("A5", r#"=IMCSCH("1E-200")"#);
+    model.set_a1("A6", r#"=IMCSCH("1E-307")"#);
+    model.set_a1("A7", r#"=IMCSCH("1E-308")"#);
+    model.set_a1("A8", r#"=IMCSCH("2E-309")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "0.999999999980927");
-    assert_eq!(model._get_text("A2"), "0.999999999852761");
-    assert_eq!(model._get_text("A3"), "0.999999995293386");
-    assert_eq!(model._get_text("A4"), "-951303.839721704");
-    assert_eq!(model._get_text("A5"), "1E+200");
-    assert_eq!(model._get_text("A6"), "1E+307");
-    assert_eq!(model._get_text("A7"), "#NUM!");
-    assert_eq!(model._get_text("A8"), "#NUM!");
+    assert_eq!(model.get_text_a1("A1"), "0.999999999980927");
+    assert_eq!(model.get_text_a1("A2"), "0.999999999852761");
+    assert_eq!(model.get_text_a1("A3"), "0.999999995293386");
+    assert_eq!(model.get_text_a1("A4"), "-951303.839721704");
+    assert_eq!(model.get_text_a1("A5"), "1E+200");
+    assert_eq!(model.get_text_a1("A6"), "1E+307");
+    assert_eq!(model.get_text_a1("A7"), "#NUM!");
+    assert_eq!(model.get_text_a1("A8"), "#NUM!");
 }
 
 // Excel: probes-numeric/t3721-im-hyperbolic-small-x-fresh-sweep C390, t3982-r4-imsech-real-cosh A5, A49 and
@@ -471,17 +474,17 @@ fn small_real_imsech_imcsch_take_the_reciprocal() {
 #[test]
 fn real_imsech_above_the_libm_cut_takes_the_form() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMSECH("-0.00802240437783925")"#);
-    model._set("A2", r#"=IMSECH("-0.000301650878487426")"#);
-    model._set("A3", r#"=IMSECH("-0.000112746312425845")"#);
-    model._set("A4", r#"=IMSECH("0.00483608995950115")"#);
+    model.set_a1("A1", r#"=IMSECH("-0.00802240437783925")"#);
+    model.set_a1("A2", r#"=IMSECH("-0.000301650878487426")"#);
+    model.set_a1("A3", r#"=IMSECH("-0.000112746312425845")"#);
+    model.set_a1("A4", r#"=IMSECH("0.00483608995950115")"#);
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "0.99996782137691");
-    assert_eq!(model._get_text("A2"), "0.999999954503376");
-    assert_eq!(model._get_text("A3"), "0.999999993644134");
-    assert_eq!(model._get_text("A4"), "0.999988306230907");
+    assert_eq!(model.get_text_a1("A1"), "0.99996782137691");
+    assert_eq!(model.get_text_a1("A2"), "0.999999954503376");
+    assert_eq!(model.get_text_a1("A3"), "0.999999993644134");
+    assert_eq!(model.get_text_a1("A4"), "0.999988306230907");
 }
 
 // Excel: gen-m9 (excel-graph, T-2258): IMLN and IMLOG10 of 0 or 0i are #NUM!, not "-inf" (T-2389).
@@ -497,11 +500,11 @@ fn fn_imln_imlog10_of_zero_are_num() {
     .iter()
     .enumerate()
     {
-        model._set(&format!("A{}", i + 1), &format!("={f}"));
+        model.set_a1(&format!("A{}", i + 1), &format!("={f}"));
     }
     model.evaluate();
     for i in 1..=4 {
-        assert_eq!(model._get_text(&format!("A{i}")), "#NUM!");
+        assert_eq!(model.get_text_a1(&format!("A{i}")), "#NUM!");
     }
 }
 
@@ -580,8 +583,8 @@ fn im_reciprocal_kernels_match_the_sweep() {
 #[test]
 fn imabs_and_imargument_kernels() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMABS("-23.1234-45.899i")"#);
-    model._set("A2", r#"=IMARGUMENT("-23.1234-45.899i")"#);
+    model.set_a1("A1", r#"=IMABS("-23.1234-45.899i")"#);
+    model.set_a1("A2", r#"=IMARGUMENT("-23.1234-45.899i")"#);
     model.evaluate();
     let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
         Ok(CellValue::Number(n)) => n.to_bits(),
@@ -597,9 +600,9 @@ fn imabs_and_imargument_kernels() {
 #[test]
 fn impower_angle_is_excels_atan2_kernel() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMPOWER("1000+1i",1)"#);
+    model.set_a1("A1", r#"=IMPOWER("1000+1i",1)"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1000+1i");
+    assert_eq!(model.get_text_a1("A1"), "1000+1i");
 }
 
 // IMSIN, IMCOS, IMTAN, IMSEC, IMCSC and IMCOT of a real number take SIN, COS and TAN's kernels and
@@ -742,12 +745,12 @@ fn tiny_x_hyperbolics_take_libm_cosh() {
 fn assert_texts(cases: &[(&str, &str)]) {
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -759,29 +762,35 @@ fn assert_texts(cases: &[(&str, &str)]) {
 #[test]
 fn logs_round_the_modulus_twice_and_overflowing_quotients() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMLOG10("0.999999999999999+1E-8i")"#);
-    model._set("A2", r#"=IMLOG2("1E-8-0.999999999999999i")"#);
-    model._set("A3", r#"=IMLOG10("0.999999999999999+1i")"#);
-    model._set("A4", r#"=IMLOG10("1E-300+1E20i")"#);
-    model._set("A5", r#"=IMLOG2("-1E-300-1E20i")"#);
-    model._set("A6", r#"=IMLOG10("1E-20+1E20i")"#);
-    model._set("A7", r#"=IMSQRT("1E-300+1E20i")"#);
-    model._set("A8", r#"=IMSQRT("-1E-300-1E20i")"#);
-    model._set("A9", r#"=IMSQRT("1E-20+1E20i")"#);
+    model.set_a1("A1", r#"=IMLOG10("0.999999999999999+1E-8i")"#);
+    model.set_a1("A2", r#"=IMLOG2("1E-8-0.999999999999999i")"#);
+    model.set_a1("A3", r#"=IMLOG10("0.999999999999999+1i")"#);
+    model.set_a1("A4", r#"=IMLOG10("1E-300+1E20i")"#);
+    model.set_a1("A5", r#"=IMLOG2("-1E-300-1E20i")"#);
+    model.set_a1("A6", r#"=IMLOG10("1E-20+1E20i")"#);
+    model.set_a1("A7", r#"=IMSQRT("1E-300+1E20i")"#);
+    model.set_a1("A8", r#"=IMSQRT("-1E-300-1E20i")"#);
+    model.set_a1("A9", r#"=IMSQRT("1E-20+1E20i")"#);
     model.evaluate();
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         "-3.85730986621315E-16+4.34294481903252E-09i"
     );
     assert_eq!(
-        model._get_text("A2"),
+        model.get_text_a1("A2"),
         "-1.28137060152597E-15-2.26618005648665i"
     );
-    assert_eq!(model._get_text("A3"), "0.15051499783199+0.341094088460461i");
-    assert_eq!(model._get_text("A4"), *"#NUM!");
-    assert_eq!(model._get_text("A5"), *"#NUM!");
-    assert_eq!(model._get_text("A6"), "20+0.682188176920921i");
-    assert_eq!(model._get_text("A7"), "10000000000");
-    assert_eq!(model._get_text("A8"), "10000000000");
-    assert_eq!(model._get_text("A9"), "7071067811.86548+7071067811.86547i");
+    assert_eq!(
+        model.get_text_a1("A3"),
+        "0.15051499783199+0.341094088460461i"
+    );
+    assert_eq!(model.get_text_a1("A4"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A5"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A6"), "20+0.682188176920921i");
+    assert_eq!(model.get_text_a1("A7"), "10000000000");
+    assert_eq!(model.get_text_a1("A8"), "10000000000");
+    assert_eq!(
+        model.get_text_a1("A9"),
+        "7071067811.86548+7071067811.86547i"
+    );
 }

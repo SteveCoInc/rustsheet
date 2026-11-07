@@ -364,12 +364,12 @@ fn probe_data_strings(stem: &str) -> Vec<Text> {
     let cells = sheet["cells"].as_object().unwrap();
     let mut model = crate::test::util::new_empty_model();
     for (cell, formula) in cells {
-        model._set(cell, formula.as_str().unwrap());
+        model.set_a1(cell, formula.as_str().unwrap());
     }
     model.evaluate();
     cells
         .keys()
-        .map(|cell| Text::from(model._get_text(cell)))
+        .map(|cell| Text::from(model.get_text_a1(cell)))
         .collect()
 }
 

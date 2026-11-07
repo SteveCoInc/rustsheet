@@ -24,7 +24,7 @@ fn shares_bytes(a: &Text, b: &Text) -> bool {
 /// The texts of the array `formula` gives in B1 of a sheet whose A1 holds a 1,000-byte text.
 fn array_texts(formula: &str) -> Vec<Text> {
     let mut model = new_empty_model();
-    model._set("A1", r#"=REPT("a",1000)"#);
+    model.set_a1("A1", r#"=REPT("a",1000)"#);
     model.evaluate();
     let context = CellReferenceRC {
         sheet: "Sheet1".to_string(),
@@ -101,7 +101,7 @@ fn concatenating_over_an_array_pays_for_each_text_it_makes() {
     const N: u64 = NODE_UNITS;
     const C: u64 = CELL_UNITS;
     let mut model = new_empty_model();
-    model._set("A1", r#"=ROWS(SEQUENCE(4)&"abcdefg")"#);
+    model.set_a1("A1", r#"=ROWS(SEQUENCE(4)&"abcdefg")"#);
     model.evaluate();
     // ROWS, `&`, SEQUENCE, 4 and the literal (7 bytes): five nodes and the literal's text; the
     // four cells SEQUENCE builds and the four `&` builds; and the four texts `&` makes, "1abcdefg"
@@ -117,10 +117,10 @@ fn concatenating_past_the_budget_is_the_budget_error() {
     // 1,000 texts of 1,001 bytes: about 250,000 units of text, past a limit of 100,000.
     let mut model = new_empty_model();
     model.area_budget.limit = 100_000;
-    model._set("A1", r#"=IFERROR(ROWS(SEQUENCE(1000)&REPT("a",1000)),0)"#);
-    model._set("A2", r#"=ROWS(SEQUENCE(10)&REPT("a",1000))"#);
+    model.set_a1("A1", r#"=IFERROR(ROWS(SEQUENCE(1000)&REPT("a",1000)),0)"#);
+    model.set_a1("A2", r#"=ROWS(SEQUENCE(10)&REPT("a",1000))"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK);
-    assert_eq!(model._get_text("A2"), "10");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK);
+    assert_eq!(model.get_text_a1("A2"), "10");
 }
