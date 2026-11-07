@@ -130,6 +130,7 @@ fn a_table_named_with_a_circled_letter_or_a_mark_loads() {
         assert_eq!(cell(&bytes, 50).unwrap(), "5935", "{table_name}");
     }
 }
+
 /// A loaded structured reference to such a table: `ⓐ[Year]` reads it, as Excel's `SUM(ⓐ[h])`
 /// does; Excel refuses the workbook at load for `Ⓐ[h]` and a first mark, which the engine loads as
 /// a parse error (`#ERROR!`), its stand-in for every refused name (references.md "Characters of a

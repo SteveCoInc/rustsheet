@@ -680,8 +680,8 @@ fails createSession with 501 `FileCorruptTryRepair` and has no oracle cells, so 
   but its xlsx import does not check the name: a table part named `Ⓐ`, `ⓐ` or U+0301 + `a` loads with the table and
   its cells (T-4753); a loaded `SUM(ⓐ[Year])` reads the table, and `SUM(Ⓐ[Year])` and the U+0301 + `a` twin, which
   Excel refuses at load, load as `#ERROR!` with their text kept (FORMULATEXT `=SUM(Ⓐ[Year])`), the engine's stand-in
-  for every refused name (tests/table_part_names.rs, on tests/example.xlsx's patched table part). spec2xlsx cannot write these tables (XlsxWriter's `add_table` refuses the
-  names), so they are not in a case. The lexer's `is_alphanumeric` checks after a reference (`lexer/ranges.rs`) were
+  for every refused name (tests/table_part_names.rs, on tests/example.xlsx's patched table part). spec2xlsx cannot
+  write these tables (XlsxWriter's `add_table` refuses the names), so they are not in a case. The lexer's `is_alphanumeric` checks after a reference (`lexer/ranges.rs`) were
   left as they are: the B1/B2 + U+0301 cells above pass with them.
 - spec2xlsx writes a defined name that XlsxWriter's Python `\w` check refuses (`ⓐ`, a mark, `नाम`) into workbook.xml
   itself (T-4446); before, XlsxWriter dropped it with only a warning. It still drops cell-like names (`NA1`, `R0C1`):
