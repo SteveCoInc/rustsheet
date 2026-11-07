@@ -2692,6 +2692,7 @@ C	probes/t4772-blank-y-offset-indirect-let-xlookup.case.json	32
 C	probes/t4791-large-small-median-mixed-first-element.case.json	12
 C	probes/t4793-growth-one-factor-underflow.case.json	4
 C	probes/t4793-growth-several-x.case.json	10
+C	probes/t4871-empty-mode-args.case.json	31
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
