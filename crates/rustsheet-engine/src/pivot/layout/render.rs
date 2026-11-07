@@ -609,7 +609,8 @@ fn render_within(
     Ok(cells.out)
 }
 
-/// The level of `line`'s own (last) `x`: the level a subtotal line totals.
+/// The index of the deepest level `line` covers (its repeated levels plus its own items), which
+/// is the level a subtotal line totals; `None` for an empty line.
 fn line_depth(line: &AxisLine) -> Option<usize> {
     (line.repeat as usize + line.items.len()).checked_sub(1)
 }
