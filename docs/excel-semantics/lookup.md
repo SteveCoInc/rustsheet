@@ -1001,9 +1001,12 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
       `CELL("row",..)`, spills `#VALUE!`, 1 (A34:A35). ISREF of the whole result is FALSE (A29), and
       ISNUMBER lifts to TRUE, FALSE (C30:D30).
   Ours (T-4570): implemented by SPEC-0014's "Mixed grids" amendment (a `RefElement::Value` beside the reference
-  elements, T-4569's spec). Every cell above matches but two: one-argument INDEX keeps the element as a 1x1 *value*
-  array, so it shows `#VALUE!`, ROWS 1 and `#REF!` at (2,1) as Excel, but `INDEX(that,1,1)` does not hand the range
-  back (t4563 V25:V26; T-4701). Unprobed and ours: a whole-column key (`SUM(XLOOKUP(A:A,..,H1))`) builds the grid in
+  elements, T-4569's spec). Every cell above matches: one-argument INDEX keeps a reference element as a 1x1 array of
+  references where a reference is taken, so `INDEX(that,1,1)` hands the range back (t4563 V25:V26; T-4701). The same
+  holds over a lifted OFFSET or INDIRECT, and `SUM` of the one-index INDEX reads only the element's **top-left cell**
+  (`SUM(INDEX(OFFSET(Data!A1,{0;1},0,2),2))` is 2 over Data!A2:A3 = 2, 4; over the XLOOKUP grid's range element
+  Data!A1:A2 it is 1; probes/t4701-index-one-index-ref-grid A5, B5, C3, excel-graph 2026-11-07). Unprobed and ours:
+  a whole-column key (`SUM(XLOOKUP(A:A,..,H1))`) builds the grid in
   full, as the keyed head-and-tail reading (SPEC-0020 Amendment 2) holds values only.
   ADDRESS's sheet_text lifts like its other arguments: `ADDRESS(1,1,1,TRUE,{"S1";"S2"})` is 2x1 `'S1'!$A$1`,
   `'S2'!$A$1` (a name that reads as a cell reference is quoted), a 1x2 and the range D1:D2 (`x!$A$1`, `y!$A$1`) alike,
