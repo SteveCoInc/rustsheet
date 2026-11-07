@@ -12,7 +12,7 @@ use crate::{
     formatter::dates::{
         excel_serial_to_ymd, real_date_to_serial, shift_displayed_date, shift_months,
     },
-    functions::Function,
+    functions::{util::toolpak_empty_required, Function},
     model::Model,
 };
 
@@ -34,6 +34,9 @@ impl Model {
     /// EDATE of one element. A boolean date or month count is `#VALUE!` (`{TRUE;45000}` gives
     /// `#VALUE!`, 45031: docs/excel-semantics/arrays.md "Scalar arguments lift").
     fn edate_of(&self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
+        if let Some(empty) = toolpak_empty_required(values, 2, cell) {
+            return empty;
+        }
         let [start, months] = values else {
             return CalcResult::new_args_number_error(cell);
         };
@@ -69,6 +72,9 @@ impl Model {
 
     /// EOMONTH of one element. A negative date is `#NUM!`; a boolean is `#VALUE!`, as for EDATE.
     fn eomonth_of(&self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
+        if let Some(empty) = toolpak_empty_required(values, 2, cell) {
+            return empty;
+        }
         let [start, months] = values else {
             return CalcResult::new_args_number_error(cell);
         };

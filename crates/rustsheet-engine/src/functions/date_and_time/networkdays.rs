@@ -11,6 +11,7 @@ use crate::{
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
     functions::{
         lift::{number_or_error, LiftCost},
+        util::toolpak_empty_required,
         Function,
     },
     model::Model,
@@ -43,7 +44,12 @@ impl Model {
         if !(2..=holidays_at + 1).contains(&args.len()) {
             return CalcResult::new_args_number_error(cell);
         }
-        let holidays = match args.get(holidays_at) {
+        // A written-empty holidays is omitted (`NETWORKDAYS(45000,45030,)` is 23:
+        // probes/t4870-r2-empty-optional A3, A11; T-4870).
+        let holidays = match args
+            .get(holidays_at)
+            .filter(|arg| !self.is_written_empty(arg))
+        {
             Some(arg) => self
                 .holiday_serials(arg, cell)
                 .map(|(serials, scalar)| Holidays::new(serials, scalar))
@@ -75,6 +81,9 @@ impl Model {
         holidays: &Result<Holidays, CalcResult>,
         cell: CellReferenceIndex,
     ) -> Result<f64, CalcResult> {
+        if let Some(empty) = toolpak_empty_required(values, 2, cell) {
+            return Err(empty);
+        }
         let [start, end, rest @ ..] = values else {
             return Err(CalcResult::new_args_number_error(cell));
         };

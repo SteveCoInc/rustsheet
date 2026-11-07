@@ -11,7 +11,7 @@ use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, types::CellReferenceIndex},
     formatter::dates::{excel_serial_to_ymd, month_arithmetic_date},
-    functions::Function,
+    functions::{util::toolpak_empty_required, Function},
     model::Model,
 };
 
@@ -33,6 +33,9 @@ impl Model {
 
     /// YEARFRAC of one element.
     fn yearfrac_of(&self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
+        if let Some(empty) = toolpak_empty_required(values, 2, cell) {
+            return empty;
+        }
         let (start, end, basis) = match values {
             [start, end] => (start, end, None),
             [start, end, basis] => (start, end, Some(basis)),

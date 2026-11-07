@@ -139,6 +139,7 @@ mod test_sumx_pairing;
 mod test_table_insert_limit;
 mod test_tailed_array;
 mod test_this_row;
+mod test_toolpak_empty_date_args;
 mod test_trigonometric;
 mod test_true_false;
 mod test_typed_parse_errors;

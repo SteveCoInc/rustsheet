@@ -392,6 +392,13 @@ impl Model {
         matches!(self.variable_binding(node), Some(Binding::Omitted))
     }
 
+    /// Whether the argument `node` is written empty (`F(x,)`) or is a LET or LAMBDA variable bound
+    /// to nothing: the two read alike wherever Excel tells an empty argument from a value
+    /// (`IMSUB("1",)` and `LET(e,,IMSUB("1",e))`, `WORKDAY(1,5,)` and `LET(h,,WORKDAY(1,5,h))`).
+    pub(crate) fn is_written_empty(&self, node: &Node) -> bool {
+        matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node)
+    }
+
     /// Whether `node` is a variable bound to an array of references ([`Binding::Grid`]), which
     /// [`Model::variable_reference`] hands on.
     pub(crate) fn is_grid_variable(&self, node: &Node) -> bool {

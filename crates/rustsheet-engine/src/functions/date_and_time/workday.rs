@@ -15,6 +15,7 @@ use crate::{
     formatter::dates::DATE_OUT_OF_RANGE_MESSAGE,
     functions::{
         lift::{number_or_error, LiftCost},
+        util::toolpak_empty_required,
         Function,
     },
     model::Model,
@@ -92,8 +93,13 @@ impl Model {
         if !(2..=holidays_at + 1).contains(&args.len()) {
             return CalcResult::new_args_number_error(cell);
         }
+        // A written-empty holidays is omitted (`WORKDAY(45000,10,)` is `WORKDAY(45000,10)`:
+        // probes/t4870-r2-empty-optional A1, A9, A13; T-4870).
+        let holidays_arg = args
+            .get(holidays_at)
+            .filter(|arg| !self.is_written_empty(arg));
         let holidays = self
-            .workday_holidays(args.get(holidays_at), cell)
+            .workday_holidays(holidays_arg, cell)
             .map_err(|error| HolidaysError {
                 error: bare_error(&error.error, cell),
                 ..error
@@ -144,6 +150,9 @@ impl Model {
         holidays: &Result<Holidays, HolidaysError>,
         cell: CellReferenceIndex,
     ) -> Result<f64, CalcResult> {
+        if let Some(empty) = toolpak_empty_required(values, 2, cell) {
+            return Err(empty);
+        }
         let [start, days, rest @ ..] = values else {
             return Err(CalcResult::new_args_number_error(cell));
         };
