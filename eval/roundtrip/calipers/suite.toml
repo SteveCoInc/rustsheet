@@ -9,7 +9,9 @@ include = ["**/golden.xlsx", "roundtrip/**/init.xlsx"]
 exclude = ["_disabled/**"]
 license = "MIT"
 origin = "https://github.com/fundamental-research-labs/calipers (verification/cases)"
-scenarios = ["R0"]
+# R0 and the standard edits together (SPEC-0033 D1, T-4514). Every scenario reruns every case, so the
+# per-edit scenarios run on the fixtures; `R1/all` measures the corpus with all six edits at once.
+scenarios = ["R0", "R1/all"]
 # Not in `make check`, as the calipers cell suite is not (its heavy workbooks and the time budget).
 # `rustsheet-eval roundtrip --check --suite roundtrip-calipers` gates it; `make eval` reports it.
 gate = false

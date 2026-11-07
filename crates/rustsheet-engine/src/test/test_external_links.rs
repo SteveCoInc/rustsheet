@@ -797,3 +797,49 @@ fn cached_extents_are_per_sheet_and_follow_the_cache() {
     model.set_user_input(0, 1, 1, "x".into()).unwrap();
     assert_eq!(eval(&mut model, "=SUM([1]Defines!$B:$B)"), "150");
 }
+
+/// A `LiftArrays` argument (the Analysis `ToolPak` functions: EDATE, the IM* functions, COMPLEX,
+/// ISEVEN) reads a reference into another workbook as a reference: several cells are refused like
+/// a written range (`#VALUE!`), one cell is the value INDEX would pick, empty without a cache
+/// (`EDATE(…!A1,1)` is 31). Before T-4859 a multi-cell one was lifted over its `#BLOCKED!` cells
+/// into an array the cell's static shape had not allowed for, a debug-build panic the nightly
+/// `formula_eval` fuzz run found on 2026-11-05 (run 42019157715):
+/// `IMAGINARY('[thoerANCRRAY(1'!A1:B2)`. Excel: probes/external-ref-no-link-lift-arrays.
+#[test]
+fn lift_arrays_arguments_read_an_external_reference_as_a_reference() {
+    let mut model = new_empty_model();
+    // The fuzz model: a spill next to the formula's cell, C3.
+    model.set_a1("B2", "=SEQUENCE(2,2)");
+    model.set_a1("C3", "=IMAGINARY('[thoerANCRRAY(1'!A1:B2)");
+    model.evaluate();
+    assert_eq!(model.get_text_a1("C3"), "#VALUE!");
+
+    let x = "'[other.xlsx]Sheet1'!A1:B2";
+    let one = "'[other.xlsx]Sheet1'!A1";
+    for (formula, expected) in [
+        (format!("=EDATE({x},1)"), "#VALUE!"),
+        (format!("=IMAGINARY({x})"), "#VALUE!"),
+        (format!("=IMABS({x})"), "#VALUE!"),
+        (format!("=COMPLEX({x},1)"), "#VALUE!"),
+        (format!("=ISEVEN({x})"), "#VALUE!"),
+        (
+            "=IMAGINARY([other.xlsx]Sheet1!A1:B2)".to_string(),
+            "#VALUE!",
+        ),
+        (format!("=ROWS(EDATE({x},1))"), "#VALUE!"),
+        (format!("=ERROR.TYPE(EDATE({x},1))"), "3"),
+        (format!("=ERROR.TYPE(INDEX(EDATE({x},1),2,2))"), "3"),
+        (format!("=ERROR.TYPE(EDATE({one},1))"), "#N/A"),
+        (format!("=EDATE({one},1)"), "31"),
+        (format!("=IMAGINARY({one})"), "0"),
+        (format!("=ISEVEN({one})"), "TRUE"),
+        (format!("=COMPLEX({one},1)"), "i"),
+    ] {
+        assert_eq!(eval(&mut model, &formula), expected, "{formula}");
+    }
+
+    // A cached linked workbook still reads its cache: one cell its value, several refused.
+    let mut model = linked();
+    assert_eq!(eval(&mut model, "=COMPLEX([1]Defines!$B$2,0)"), "142");
+    assert_eq!(eval(&mut model, "=EDATE([1]Uses!$A$1:$A$3,1)"), "#VALUE!");
+}

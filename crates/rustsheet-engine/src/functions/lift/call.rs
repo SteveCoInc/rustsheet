@@ -12,6 +12,7 @@ use super::kinds::{ArgKind, ArgKinds, KernelWork};
 use super::number_result;
 use crate::expressions::parser::is_multi_sheet_span;
 use crate::expressions::types::CellReferenceIndex;
+use crate::external_reference::may_be_external;
 use crate::functions::Function;
 use crate::limits::{check_range_size, too_many_visits, MAX_LIFTED_CELL_VISITS};
 use crate::{
@@ -68,6 +69,11 @@ impl Model {
     /// `EDATE(Sheet1:Sheet2!A1,1)` (scalar-lift-open-e W1-W9). A DROP, TRIMRANGE or XLOOKUP that
     /// returns several cells is refused like TAKE, INDEX and IF (scalar-lift-open-e W10-W15, W20,
     /// W22), and one that returns one cell is its value (W16-W19, W21; T-1801).
+    /// A reference into another workbook is a reference too: several cells are refused,
+    /// `EDATE('[other.xlsx]Sheet1'!A1:B2,1)` is `#VALUE!`, and one cell is the value INDEX picks,
+    /// empty without a cache (`EDATE(…!A1,1)` is 31; probes/external-ref-no-link-lift-arrays).
+    /// Read as a value, the range would be an array of `#BLOCKED!` that the call lifts over, a
+    /// shape the cell's static analysis does not allow for (T-4859).
     fn evaluate_as_reference(&mut self, node: &Node, cell: CellReferenceIndex) -> CalcResult {
         match node.ungrouped() {
             Node::FunctionKind { kind, args } => {
@@ -76,6 +82,17 @@ impl Model {
                 }
             }
             node if is_multi_sheet_span(node) => return refused_range(cell),
+            node if may_be_external(node) => {
+                if let Some(areas) = self.external_reference(node, cell) {
+                    return match areas.as_deref() {
+                        Ok([area]) if area.extent() == (1, 1) => {
+                            self.external_picked_value(*area, cell)
+                        }
+                        Ok(_) => refused_range(cell),
+                        Err(error) => error.clone(),
+                    };
+                }
+            }
             _ => {}
         }
         self.evaluate_node_in_context(node, cell)

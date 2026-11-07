@@ -1716,10 +1716,6 @@
   "crates/rustsheet-xlsx/src/import/theme.rs": [
     "clippy::print_stderr"
   ],
-  "crates/rustsheet-xlsx/src/import/util.rs": [
-    "clippy::float_cmp",
-    "clippy::print_stdout"
-  ],
   "crates/rustsheet-xlsx/src/import/workbook.rs": [
     "clippy::struct_field_names"
   ],

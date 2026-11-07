@@ -47,6 +47,7 @@ use crate::{
     utils as common,
 };
 
+use crate::arithmetic::bcast_get;
 use crate::evaluation::{CellKey, Evaluation, FormulaCell, Seen};
 use crate::limits::{spill_past_grid_error, spills_past_grid};
 use crate::number_mark::MarkCarrier;
@@ -723,13 +724,18 @@ impl Model {
                     };
                 }
                 Some((false, (original_width, original_height))) => {
-                    // CSE array formula: fill the declared range with the array values.
-                    // Use relative indices for get_value_from_array (1-based).
+                    // CSE array formula: fill the declared range with the array values. A
+                    // range larger than the result broadcasts a one-row or one-column result
+                    // and is `#N/A` past it (arrays.md "Legacy (CSE) array formula over a
+                    // larger range": poi/MatrixFormulaEvalTestData.xlsx H46:J136,
+                    // corpus-bench/13894 F20:F25, Excel-cached).
                     for r in row..row + original_height {
                         for c in column..column + original_width {
-                            let rel_row = r - row + 1;
-                            let rel_col = c - column + 1;
-                            let value = self.get_value_from_array(array, rel_row, rel_col);
+                            let value = usize::try_from(r - row)
+                                .ok()
+                                .zip(usize::try_from(c - column).ok())
+                                .and_then(|(i, j)| bcast_get(array, i, j))
+                                .cloned();
                             let new_cell = if r == row && c == column {
                                 let fv = match value {
                                     Some(node) => array_node_to_formula_value(node),
@@ -749,7 +755,7 @@ impl Model {
                             } else {
                                 let sv = match value {
                                     Some(node) => array_node_to_spill_value(node),
-                                    None => SpillValue::Error(Error::VALUE),
+                                    None => SpillValue::Error(Error::NA),
                                 };
                                 let existing_style =
                                     self.workbook.worksheets[sheet as usize].get_style(r, c);

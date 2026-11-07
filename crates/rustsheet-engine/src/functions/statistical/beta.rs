@@ -8,7 +8,8 @@ use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error, value_error};
 use crate::functions::statistical::beta_density::beta_density_small_shape;
 use crate::functions::statistical::bratio::{
-    beta_dist_cdf, beta_search_tails, dispatch, l140_overflows, Branch,
+    beta_dist_cdf, beta_search_tails, bfrac_shapes_absorbed, dispatch, first_shape_absorbs,
+    l140_overflows, Branch,
 };
 use crate::functions::statistical::incomplete_beta::beta_density;
 use crate::functions::statistical::inverse_beta::{beta_inverse_cdf, beta_quantile_crossing};
@@ -253,7 +254,9 @@ impl Model {
             // A subnormal cdf is kept only at beta = 1, the closed form t^alpha, and is 0 at any
             // other beta, 1.0000001 included (`(x)=0` FALSE at B2, B3, B6, B7, B11, B12 of
             // probes/t2737-subnormal-cdf-shapes, TRUE at B1, B4, B5, B8:B10; T-2737).
-            if l140_overflows(alpha, beta_param, t, 1.0 - t) {
+            if l140_overflows(alpha, beta_param, t, 1.0 - t)
+                || bfrac_shapes_absorbed(alpha, beta_param, t, 1.0 - t)
+            {
                 return Err(num_error(cell));
             }
             let cdf = beta_dist_cdf(t, 1.0 - t, alpha, beta_param);
@@ -263,6 +266,14 @@ impl Model {
                 flush_subnormal(cdf)
             }
         } else {
+            // On the Loader branch (both shapes above 1) the density is #NUM! where alpha absorbs
+            // beta, as the cdf is on bfrac: `BETA.DIST(0.32..,6E+17,41,FALSE)`
+            // and `BETA.DIST(0.1,1E+200,2,FALSE)` are #NUM! (probes/t4238-negbinom-bfrac-huge-s,
+            // t3007-beta-dist-ln-x-overflow A20; T-4238), while `BETA.DIST(0.1,1E+290,0.5,FALSE)`,
+            // off that branch, is 0 (t3007 A6).
+            if alpha > 1.0 && beta_param > 1.0 && first_shape_absorbs(alpha, beta_param) {
+                return Err(num_error(cell));
+            }
             // general-interval beta pdf: f_X(x) = f_T(t) / (B - A), t=(x-A)/(B-A). A subnormal
             // density is 0, as in Excel (`(x)=0` TRUE: probes-numeric/t2513-r3-m1-residual-hold E863,
             // E875, E957; docs/excel-semantics/numbers.md "Distribution densities"). Both shapes

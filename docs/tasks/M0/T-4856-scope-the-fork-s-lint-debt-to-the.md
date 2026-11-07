@@ -37,12 +37,15 @@ The fork's lint exemptions cover only the files that still violate them, so post
   ignored_unit_patterns, range_minus_one, bool_to_int_with_if, single_char_pattern, match_bool,
   elidable_lifetime_names, ref_as_ptr, unnecessary_join, manual_assert. Not `manual_midpoint`: `f64::midpoint`
   can round differently near overflow, so that needs evidence.
-- Lock: 91 crate-wide entries became 916 (file, lint) entries for 37 distinct lints, in 431 files. Every other file
+- Lock: 91 crate-wide entries became 914 (file, lint) entries for 37 distinct lints, in 430 files. Every other file
   of the two crates is now under full pedantic clippy. `expect` fails the build once a file is clean, so the
   entry must then be deleted.
 - Python Sphinx docs (T-4257) and the engine/xlsx crate docs and READMEs no longer present the IronCalc API as the
   entry point. They name the `rustsheet` crate and `rustsheet.Workbook` instead.
 - The xlsx examples `deep_chain` and `forward_chain` share `examples/chain/mod.rs` and write through a locked
   stdout handle instead of carrying exemptions; duplicated lines 2872 → 2806.
+- Rebased on main at 37 newer commits: the pivot filter code (pivot/filter.rs, filter/rank.rs) that landed meanwhile
+  violated 13 previously crate-allowed lints. Fixed in place: `if let`, merged arms, a module-level type, and
+  `f64::from`. The exact whole-day comparison and the bounded casts carry a statement-level `expect` with a reason.
 - Follow-ups: T-4847 to T-4855 (duplicate concepts); the per-file cast/float debt remains for `quality`-lane tasks.
 - Eval delta: none expected. The renames are test-only, and the clippy fixes do not change semantics.

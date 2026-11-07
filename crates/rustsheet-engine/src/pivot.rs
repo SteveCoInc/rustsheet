@@ -27,7 +27,9 @@ use crate::model::Model;
 use crate::types::sheet_names_match;
 
 mod accumulate;
+mod added_groups;
 mod date_groups;
+mod filter;
 mod grid;
 pub(crate) mod layout;
 mod model;
@@ -38,7 +40,12 @@ mod refresh;
 mod result;
 mod show_as;
 
+pub use added_groups::{group_by_discrete, AddedGroup};
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
+pub use filter::{
+    AutoShow, DateGroupItem, DynamicDate, FilterCondition, FilterCriteria, FilterOperator,
+    PivotFilter, PivotFilterKind, RelativeUnit,
+};
 pub use grid::{PivotBudget, PivotPlacement, PivotRefresh, PivotRefreshError, PivotSwap};
 pub use layout::{
     lay_out, render, AxisLine, PivotCell, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM,
@@ -56,7 +63,8 @@ pub use refresh::{
     SourceCells,
 };
 pub use result::{
-    compute, AxisNode, AxisTree, PivotComputeError, PivotResult, MAX_PIVOT_NODES, MAX_PIVOT_WORK,
+    compute, compute_on, AxisNode, AxisTree, PivotComputeError, PivotResult, MAX_PIVOT_NODES,
+    MAX_PIVOT_WORK,
 };
 
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").
@@ -110,6 +118,10 @@ pub struct CacheField {
     /// For a field grouped by dates, its grouping: `items` are then the group labels and
     /// GETPIVOTDATA also picks a group by its calendar value (T-4246).
     pub date_groups: Option<DateGroups>,
+    /// For a field Excel added to group another (`databaseField="0"`: a date field's `Quarters`
+    /// and `Years`, a manual group field), the base field it derives from, so a refresh builds it
+    /// again from the source (T-4171).
+    pub added_group: Option<AddedGroup>,
 }
 
 /// One value of a cache field.
@@ -162,6 +174,10 @@ pub enum PivotCacheError {
     /// A refresh found values a field's saved range grouping cannot group (`refresh`).
     #[error("a refreshed pivot field no longer fits its grouping")]
     Group,
+    /// A manual group (`<discretePr>`) gives an item of its base field no group item
+    /// ([`group_by_discrete`]).
+    #[error("a manual pivot group does not cover its base field's items")]
+    Discrete,
 }
 
 /// One value of a record handed to [`CacheBuilder::push_record`].
@@ -209,7 +225,25 @@ impl ItemKey {
     }
 }
 
+impl PivotCache {
+    /// How many of the cache's fields Excel added to group another ([`AddedGroup`]): each is
+    /// derived again over every record on a refresh (T-4171).
+    #[must_use]
+    pub fn added_group_count(&self) -> usize {
+        (self.fields.iter())
+            .filter(|f| f.added_group.is_some())
+            .count()
+    }
+}
+
 impl CacheField {
+    /// Whether the field's items are group items a refresh builds again: a range grouping, or a
+    /// field Excel added to group another ([`AddedGroup`]).
+    #[must_use]
+    pub fn is_grouped(&self) -> bool {
+        self.number_groups.is_some() || self.date_groups.is_some() || self.added_group.is_some()
+    }
+
     /// Whether two of the field's text items differ only in case (folded as a refresh finds an
     /// item, [`ItemKey::identity`]). The import interns inline values exactly, so a file can
     /// yield such a field, but Excel for the web calls a file whose shared items hold one corrupt

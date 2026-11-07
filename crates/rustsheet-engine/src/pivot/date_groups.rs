@@ -260,6 +260,7 @@ pub fn group_by_dates(
         records,
         number_groups: None,
         date_groups: Some(groups),
+        added_group: None,
     })
 }
 
@@ -312,6 +313,7 @@ pub fn ungroup_dates(base: &CacheField) -> Result<CacheField, DateGroupError> {
         records,
         number_groups: None,
         date_groups: None,
+        added_group: None,
     })
 }
 
@@ -461,6 +463,7 @@ mod tests {
             records: vec![2, 0, 1, 3, 4, 2],
             number_groups: None,
             date_groups: None,
+            added_group: None,
         };
         let field = ungroup_dates(&base).unwrap();
         assert_eq!(

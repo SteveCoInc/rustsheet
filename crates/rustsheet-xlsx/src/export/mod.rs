@@ -130,7 +130,7 @@ pub fn save_xlsx_to_writer<W: Write + Seek>(model: &Model, writer: W) -> Result<
         table_parts.push(next_part..next_part + tables.len());
         next_part += tables.len();
     }
-    let pivots = PivotPlan::new(workbook);
+    let pivots = PivotPlan::new(workbook, model.pivot_today());
     // The workbook relates to its sheets as `rId1`..., then to its pivot caches.
     let first_cache_id = workbook.worksheets.len() + 1;
     let mut zip = zip::ZipWriter::new(writer);

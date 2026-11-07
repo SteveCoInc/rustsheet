@@ -24,10 +24,10 @@
     and so on; the `_a1` suffix marks an A1-text argument). Every machine-applicable fix was applied with
     `cargo clippy --fix` for the lints listed in T-4856's Outcome, except `manual_midpoint`, which can round
     differently and needs Excel evidence. In xlsx, `if_not_else`'s fixes did not compile, so it stays debt.
-    The lock went from 91 crate-wide entries to 916 file-level entries for 37 distinct lints, across 431 of
+    The lock went from 91 crate-wide entries to 914 file-level entries for 37 distinct lints, across 430 of
     roughly 1,090 files. Every crate-wide entry is gone, and 25 of the fork's lints are at zero.
   - The progress report's "lint allows" count (`quality/lint-debt.json`, summed per key) now counts
-    (file, lint) pairs, so it jumps from 91 to 916 at this change. That jump is a change of unit, not a regression.
+    (file, lint) pairs, so it jumps from 91 to 914 at this change. That jump is a change of unit, not a regression.
   - A cast or float lint is fixed per file, with a reason and evidence for any semantic choice, as `quality`-lane
     tasks. Deleting the file's whole block once it is empty is part of the fix.
   - `scripts/check_file_size.py` does not count a `LINT-DEBT` block's lines: the blocks would otherwise push

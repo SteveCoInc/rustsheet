@@ -33,10 +33,10 @@ use thiserror::Error as ThisError;
 
 use super::layout::{lay_out, render, PivotCell, RenderedCell, MAX_PIVOT_CELLS};
 use super::refresh::{field_map, refresh, SourceCells};
-use super::result::{compute, PivotComputeError, MAX_PIVOT_WORK};
+use super::result::{compute_on, PivotComputeError, MAX_PIVOT_WORK};
 use super::{
-    AxisField, CellArea, OpaqueEntry, PivotCache, PivotCacheError, PivotField, PivotGeometry,
-    PivotTable, MAX_RECORD_VALUES,
+    AxisField, CellArea, OpaqueEntry, PivotCache, PivotCacheError, PivotField, PivotFilter,
+    PivotGeometry, PivotTable, MAX_RECORD_VALUES,
 };
 use crate::expressions::parser::parse_range;
 use crate::expressions::token::Error;
@@ -300,6 +300,20 @@ fn remap(
     for page in &mut out.page_fields {
         page.field = to(page.field)?;
     }
+    // A filter follows its field; one on a field gone from the source goes with it (UNVERIFIED,
+    // T-4664). A pivot read from a file also keeps its `<filters>` verbatim, whose `fld` is a
+    // field index (`OpaqueEntry::holds_field_index`), so a renumbering refuses it above with
+    // `FieldsMoved`, and an identity map returns before this; only a pivot whose filters are not
+    // kept verbatim (made through the API) gets here with filters.
+    out.filters = (pivot.filters.iter())
+        .filter_map(|filter| {
+            let field = map.get(filter.field as usize).copied().flatten()?;
+            Some(PivotFilter {
+                field,
+                ..filter.clone()
+            })
+        })
+        .collect();
     for data in &mut out.data_fields {
         data.field = to(data.field)?;
         // A base field gone from the source falls back to the first field, the schema's default
@@ -341,6 +355,14 @@ fn remap(
 }
 
 impl Model {
+    /// Today as the pivots' relative date filters read it (`compute_on`): the serial day TODAY
+    /// gives, from the workbook's clock in its time zone, never the host's directly (CLAUDE.md
+    /// directive 5); `None` when the clock's instant has no serial.
+    #[must_use]
+    pub fn pivot_today(&self) -> Option<f64> {
+        crate::tz::excel_serial_for_now(&self.tz, self.now_unix_millis()).map(f64::floor)
+    }
+
     /// The plan that refreshes the cache at `cache_index` from its source and lays out again
     /// every pivot over it, within `budget`. Changes nothing.
     ///
@@ -361,6 +383,8 @@ impl Model {
         let area = source.ok_or(PivotCacheError::Source)?.area;
         let rows = (area.bottom - area.top) as usize + 1;
         budget.charge_work(rows.saturating_mul((area.right - area.left) as usize + 1))?;
+        // A field Excel added to group another is derived again over every record (T-4171).
+        budget.charge_work(rows.saturating_mul(old.added_group_count()))?;
         // The record values the other caches hold count against the workbook's limit.
         let others: usize = (0u32..)
             .zip(caches)
@@ -430,7 +454,7 @@ impl Model {
             .position(|w| w.sheet_id == pivot.sheet_id)
             .and_then(|i| u32::try_from(i).ok())
             .ok_or(PivotRefreshError::Missing)?;
-        let result = compute(&pivot, cache, &mut budget.work)?;
+        let result = compute_on(&pivot, cache, self.pivot_today(), &mut budget.work)?;
         let layout = match lay_out(&pivot, cache, &result, &mut budget.work) {
             Ok(layout) => Some(layout),
             Err(PivotComputeError::PastSheet) => None,

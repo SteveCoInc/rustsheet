@@ -13,6 +13,8 @@
 
 use bitcode::{Decode, Encode};
 
+use super::filter::{AutoShow, PivotFilter};
+
 /// `dataField@baseItem` when absent: no base item (MS-OI29500 §18.10.1.22, §18.10.1.44).
 pub const NO_BASE_ITEM: u32 = 1_048_832;
 
@@ -41,6 +43,10 @@ pub struct PivotTable {
     pub data_fields: Vec<DataField>,
     /// The pivot-wide layout flags and captions.
     pub options: PivotOptions,
+    /// `<filters>`, in file order (`pivot::filter`). The importer reads them from the
+    /// `<filters>` element it keeps in [`PivotTable::opaque`], which is what the export writes
+    /// (T-4165).
+    pub filters: Vec<PivotFilter>,
     /// The definition's elements and attributes the model does not read, verbatim.
     ///
     /// The export (T-4176) writes each entry back into the part as it is, unescaped and
@@ -67,6 +73,7 @@ impl PivotTable {
             page_fields: Vec::new(),
             data_fields: Vec::new(),
             options: PivotOptions::default(),
+            filters: Vec::new(),
             opaque: Vec::new(),
         }
     }
@@ -210,6 +217,11 @@ pub struct PivotField {
     pub subtotal_caption: Option<String>,
     /// `<items>`, in file order: the order the field shows its items in.
     pub items: Vec<PivotItem>,
+    /// The legacy `AutoShow` (`autoShow`, `itemPageCount`, `topAutoShow`, `rankBy`), when
+    /// `autoShow` is on: a count Top-N on the field (`pivot::filter`). The importer reads it from
+    /// the field's attributes it keeps in [`PivotTable::opaque`], which is what the export writes
+    /// (T-4165).
+    pub auto_show: Option<AutoShow>,
 }
 
 impl Default for PivotField {
@@ -238,6 +250,7 @@ impl PivotField {
             fill_down_labels: false,
             subtotal_caption: None,
             items: Vec::new(),
+            auto_show: None,
         }
     }
 

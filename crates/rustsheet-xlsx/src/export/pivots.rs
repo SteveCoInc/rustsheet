@@ -27,7 +27,7 @@ use std::fmt::Write as _;
 use std::io::{Seek, Write};
 
 use rustsheet_engine::pivot::{
-    compute, lay_out, OpaqueEntry, PivotLayout, PivotTable, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
+    compute_on, lay_out, OpaqueEntry, PivotLayout, PivotTable, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::Workbook;
 use zip::write::SimpleFileOptions;
@@ -73,8 +73,9 @@ pub(super) struct PivotPlan {
 }
 
 impl PivotPlan {
-    /// The pivot parts of `workbook`.
-    pub(super) fn new(workbook: &Workbook) -> PivotPlan {
+    /// The pivot parts of `workbook`, laid out on the day `today` (`Model::pivot_today`), which
+    /// the relative date filters read.
+    pub(super) fn new(workbook: &Workbook, today: Option<f64>) -> PivotPlan {
         let date_system = workbook.settings.date_system;
         // Per model cache, its part number once written.
         let mut cache_parts = vec![None; workbook.pivot_caches.len()];
@@ -110,7 +111,7 @@ impl PivotPlan {
                     log_drop("pivot table", &pivot.name, "its cache is not exported");
                     continue;
                 };
-                let lines = layout_lines(pivot, pivot_cache, &mut work);
+                let lines = layout_lines(pivot, pivot_cache, today, &mut work);
                 // At most one cache per model cache, so the id fits.
                 let cache_id = u32::try_from(*part).unwrap_or(u32::MAX);
                 tables.push(ExportedTable {
@@ -269,12 +270,13 @@ fn relationships(kind: &str, target: &str) -> String {
 fn layout_lines(
     pivot: &PivotTable,
     pivot_cache: &rustsheet_engine::pivot::PivotCache,
+    today: Option<f64>,
     work: &mut u64,
 ) -> Option<PivotLayout> {
     if pivot.opaque.iter().any(OpaqueEntry::is_layout_lines) {
         return None;
     }
-    let result = compute(pivot, pivot_cache, work).ok()?;
+    let result = compute_on(pivot, pivot_cache, today, work).ok()?;
     let layout = lay_out(pivot, pivot_cache, &result, work).ok()?;
     (layout.location == pivot.location && layout.geometry == pivot.geometry).then_some(layout)
 }

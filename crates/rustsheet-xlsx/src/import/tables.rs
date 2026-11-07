@@ -253,10 +253,15 @@ fn has_active_criterion(auto_filter: &XmlNode, width: usize) -> bool {
 }
 
 /// Whether a `<filterColumn>`'s first child counts as a criterion for SUBTOTAL: any element but a
-/// `<colorFilter>` with no `dxfId`, which Excel reads as no criterion (excel-graph, T-4404;
-/// docs/excel-semantics/xlsx-storage.md, "Table parts in the export").
+/// `<colorFilter>` with no `dxfId` (T-4404) and a `<filters>` with no element inside it and no
+/// true `blank` (`<filters/>`, `<filters></filters>`, `<filters blank="0"/>`; T-4749), which
+/// Excel reads as no criterion (excel-graph; docs/excel-semantics/xlsx-storage.md, "Table parts
+/// in the export").
 fn is_criterion(child: &XmlNode) -> bool {
-    !(child.has_tag_name("colorFilter") && child.attribute("dxfId").is_none())
+    let empty_values = child.has_tag_name("filters")
+        && child.children().next().is_none()
+        && !get_bool_false(child, "blank");
+    !(empty_values || (child.has_tag_name("colorFilter") && child.attribute("dxfId").is_none()))
 }
 
 /// Re-decides `has_filters` once the workbook's `dxf_count` differential formats are known: a
@@ -283,6 +288,8 @@ pub(super) fn drop_dangling_color_filters(tables: &mut HashMap<String, Table>, d
             usize::try_from(column.col_id).is_ok_and(|id| id < width)
                 && !dangling(&column.criterion)
                 && column.criterion != FilterCriterion::Other
+                // An empty values filter is no criterion either (`is_criterion`, T-4749).
+                && !column.criterion.is_empty_values()
         });
     }
 }
@@ -380,6 +387,20 @@ mod tests {
         assert!(!active(
             r#"<autoFilter><filterColumn colId="2"><filters/></filterColumn></autoFilter>"#
         ));
+        // T-4749: an empty values filter is no criterion; `blank="1"` alone is one.
+        for empty in [
+            "<filters/>",
+            "<filters></filters>",
+            r#"<filters blank="0"/>"#,
+        ] {
+            let column = format!(
+                r#"<autoFilter><filterColumn colId="0">{empty}</filterColumn></autoFilter>"#
+            );
+            assert!(!active(&column), "{empty}");
+        }
+        assert!(active(
+            r#"<autoFilter><filterColumn colId="0"><filters blank="1"/></filterColumn></autoFilter>"#
+        ));
         assert!(active(&format!(
             "<autoFilter>{bare}{past}{values}</autoFilter>"
         )));
@@ -453,6 +474,17 @@ mod tests {
             "a dangling dxf and a criterion-less column"
         );
         assert!(!table("1"), "dxf 1 of 1 dangles");
+        assert!(
+            !table_with(r#"<filterColumn colId="1"><filters/></filterColumn>"#, "1"),
+            "a dangling dxf and an empty values filter (T-4749)"
+        );
+        assert!(
+            table_with(
+                r#"<filterColumn colId="1"><filters blank="1"/></filterColumn>"#,
+                "1"
+            ),
+            "a dangling dxf and a blank-only values filter"
+        );
     }
 
     /// Filter values are decoded from the file's `_xHHHH_` escapes, so the export's encoding

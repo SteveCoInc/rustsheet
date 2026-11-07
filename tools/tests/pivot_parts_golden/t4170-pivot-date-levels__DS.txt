@@ -1,0 +1,119 @@
+== cache_definition
+pivotCacheDefinition createdVersion=6 id=rId1 minRefreshableVersion=3 recordCount=9 refreshOnLoad=1 refreshedVersion=6
+  cacheSource type=worksheet
+    worksheetSource ref=A1:B10 sheet=Data
+  cacheFields count=4
+    cacheField name=Date numFmtId=0
+      sharedItems containsDate=1 containsNonDate=0 containsSemiMixedTypes=0 containsString=0 maxDate=2021-01-15T00:00:00 minDate=2018-12-15T00:00:00
+      fieldGroup base=0 par=3
+        rangePr autoEnd=0 autoStart=0 endDate=2020-12-31T00:00:00 groupBy=months startDate=2019-01-01T00:00:00
+        groupItems count=14
+          s v=<1/1/2019
+          s v=Jan
+          s v=Feb
+          s v=Mar
+          s v=Apr
+          s v=May
+          s v=Jun
+          s v=Jul
+          s v=Aug
+          s v=Sep
+          s v=Oct
+          s v=Nov
+          s v=Dec
+          s v=>12/31/2020
+    cacheField name=S numFmtId=0
+      sharedItems containsInteger=1 containsNumber=1 containsSemiMixedTypes=0 containsString=0 maxValue=256 minValue=1
+    cacheField databaseField=0 name=Quarters numFmtId=0
+      fieldGroup base=0
+        rangePr autoEnd=0 autoStart=0 endDate=2020-12-31T00:00:00 groupBy=quarters startDate=2019-01-01T00:00:00
+        groupItems count=6
+          s v=<1/1/2019
+          s v=Qtr1
+          s v=Qtr2
+          s v=Qtr3
+          s v=Qtr4
+          s v=>12/31/2020
+    cacheField databaseField=0 name=Years numFmtId=0
+      fieldGroup base=0
+        rangePr autoEnd=0 autoStart=0 endDate=2020-12-31T00:00:00 groupBy=years startDate=2019-01-01T00:00:00
+        groupItems count=4
+          s v=<1/1/2019
+          s v=2019
+          s v=2020
+          s v=>12/31/2020
+== cache_records
+pivotCacheRecords count=9
+  r
+    d v=2018-12-15T00:00:00
+    n v=1
+  r
+    d v=2019-01-10T00:00:00
+    n v=2
+  r
+    d v=2019-02-20T00:00:00
+    n v=4
+  r
+    d v=2019-04-05T00:00:00
+    n v=8
+  r
+    d v=2019-11-30T00:00:00
+    n v=16
+  r
+    d v=2020-01-10T00:00:00
+    n v=32
+  r
+    d v=2020-07-04T00:00:00
+    n v=64
+  r
+    d v=2021-01-15T00:00:00
+    n v=128
+  r
+    d v=2019-01-25T00:00:00
+    n v=256
+== table
+pivotTableDefinition applyAlignmentFormats=0 applyBorderFormats=0 applyFontFormats=0 applyNumberFormats=0 applyPatternFormats=0 applyWidthHeightFormats=1 cacheId=1 compact=0 compactData=0 createdVersion=6 dataCaption=Values indent=0 itemPrintTitles=1 minRefreshableVersion=3 name=TabularSubtotals outline=0 outlineData=0 updatedVersion=6 useAutoFormatting=1
+  location firstDataCol=1 firstDataRow=1 firstHeaderRow=1 ref=A3:B4
+  pivotFields count=4
+    pivotField axis=axisRow compact=0 outline=0 showAll=0
+      items count=15
+        item x=0
+        item x=1
+        item x=2
+        item x=3
+        item x=4
+        item x=5
+        item x=6
+        item x=7
+        item x=8
+        item x=9
+        item x=10
+        item x=11
+        item x=12
+        item x=13
+        item t=default
+    pivotField compact=0 dataField=1 outline=0 showAll=0
+    pivotField axis=axisRow compact=0 outline=0 showAll=0
+      items count=7
+        item x=0
+        item x=1
+        item x=2
+        item x=3
+        item x=4
+        item x=5
+        item t=default
+    pivotField axis=axisRow compact=0 countSubtotal=1 defaultSubtotal=0 outline=0 showAll=0 sumSubtotal=1
+      items count=6
+        item x=0
+        item x=1
+        item x=2
+        item x=3
+        item t=sum
+        item t=count
+  rowFields count=3
+    field x=3
+    field x=2
+    field x=0
+  dataFields count=1
+    dataField baseField=0 baseItem=0 fld=1 name=Sum of S
+  pivotTableStyleInfo name=PivotStyleLight16 showColHeaders=1 showColStripes=0 showLastColumn=1 showRowHeaders=1 showRowStripes=0

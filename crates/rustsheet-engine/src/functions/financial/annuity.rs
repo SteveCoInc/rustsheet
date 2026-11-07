@@ -26,9 +26,9 @@ use crate::{
 
 /// `P = (1+r)^n` as Excel's PV and FV compute it: `1+r` with Excel's `+` and the power with its `^`
 /// (right-to-left square-and-multiply for an integer `n`). With [`annuity_factor_rounded`] this
-/// matches all
-/// 308 PV and 308 FV cells of probes-numeric/m9-fin-pv-fv (docs/excel-semantics/financial.md
-/// "Annuity evaluation order"; fit lab `annuity-pv`, `annuity-fv`, T-1524).
+/// matches all 308 PV and 308 FV cells of probes-numeric/m9-fin-pv-fv
+/// (docs/excel-semantics/financial.md "Annuity evaluation order"; fit lab `annuity-pv`,
+/// `annuity-fv`, T-1524).
 pub(super) fn annuity_power(rate: f64, nper: f64) -> Result<f64, Error> {
     power(extended_sum(1.0, rate), nper)
 }

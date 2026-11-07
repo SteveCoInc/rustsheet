@@ -18,6 +18,7 @@
 )]
 // LINT-DEBT-END
 
+mod filters;
 mod groups;
 mod table;
 
@@ -743,6 +744,7 @@ fn read_definition<B: BufRead>(
             groups.push(FieldGroup {
                 field,
                 base,
+                par: attribute(element, "par")?.and_then(|par| par.parse::<u32>().ok()),
                 ..FieldGroup::default()
             });
         } else if at(path, &GROUP) {

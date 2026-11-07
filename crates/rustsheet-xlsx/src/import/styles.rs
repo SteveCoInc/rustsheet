@@ -18,7 +18,9 @@ use super::xml::XmlNode;
 
 use crate::error::XlsxError;
 
-use super::util::{get_attribute, get_bool, get_bool_false, get_color_indexed, get_number};
+use super::util::{
+    get_attribute, get_bool, get_bool_false, get_color_indexed, get_number, strip_alpha,
+};
 
 /// The first `<tag>` child of the stylesheet root; a file without one is malformed input, so
 /// it is a typed error rather than an index panic (T-0118, poi 47889 and friends).
@@ -53,12 +55,9 @@ fn parse_indexed_colors(style_sheet: &XmlNode) -> Option<Vec<String>> {
         .children()
         .filter(|n| n.has_tag_name("rgbColor"))
         .map(|n| match n.attribute("rgb") {
-            // ARGB (drop the alpha byte) or bare RGB; `is_ascii` guards the byte slice.
-            Some(raw) if raw.len() == 8 && raw.is_ascii() => {
-                format!("#{}", raw[2..].to_ascii_uppercase())
-            }
-            Some(raw) if raw.len() == 6 && raw.is_ascii() => {
-                format!("#{}", raw.to_ascii_uppercase())
+            // ARGB (drop the alpha byte) or bare RGB.
+            Some(raw) if matches!(raw.len(), 6 | 8) && raw.is_ascii() => {
+                format!("#{}", strip_alpha(raw).to_ascii_uppercase())
             }
             _ => String::new(),
         })

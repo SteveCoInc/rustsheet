@@ -2,8 +2,9 @@
 #![cfg_attr(test, expect(clippy::float_cmp, clippy::unreadable_literal))]
 // LINT-DEBT-END
 use super::{
-    beta_dist_l140_zero, beta_dist_lower_tail, closed_or_ported_tails, dispatch, half_complement,
-    l140_bup_prefactor_underflows, l140_overflows, l140_zero_tails, Branch,
+    beta_dist_l140_zero, beta_dist_lower_tail, bfrac_shapes_absorbed, closed_or_ported_tails,
+    dispatch, first_shape_absorbs, half_complement, l140_bup_prefactor_underflows, l140_overflows,
+    l140_zero_tails, Branch,
 };
 
 fn branch(a: f64, b: f64, x: f64) -> (Branch, bool) {
@@ -605,6 +606,34 @@ fn l140_bup_sum_overflow_is_excels_num_error() {
     assert!(beta(0.3, 2.401e16, 21.5));
     assert!(beta(0.7, 21.5, 2.401e16));
     assert!(!beta(0.3, 2.261e16, 21.5));
+}
+
+// On bfrac Excel's cdf is #NUM! exactly where the shapes' sum absorbs the smaller shape (T-4238):
+// probes/t4238-negbinom-bfrac-huge-s A5 (40 failures at 5E+17, 0) and A6 (6E+17, #NUM!), G11 (1000
+// at 9E+18, 0) and G12 (1E+19, #NUM!), excel-graph. L140 cells are not bfrac's.
+#[test]
+fn bfrac_absorbed_shape_is_excels_num_error() {
+    let p = 0.323_212_154_487_823;
+    let negbinom = |f: f64, s: f64| bfrac_shapes_absorbed(s, f + 1.0, p, 1.0 - p);
+    assert!(!negbinom(40.0, 5e17));
+    assert!(negbinom(40.0, 6e17));
+    assert!(!negbinom(1000.0, 9e18));
+    assert!(negbinom(1000.0, 1e19));
+    assert!(negbinom(40.0, 1e20));
+    assert!(!negbinom(28.0, 1e13), "L140, not bfrac");
+    assert!(first_shape_absorbs(1e200, 2.0));
+    assert!(!first_shape_absorbs(1e15, 41.0));
+    // The first shape absorbed is a value in Excel (Gate A accuracy/BETA.DIST/s1 A183).
+    assert!(!first_shape_absorbs(
+        25_002_804_469.870_3,
+        7.879_937_810_850_58e38
+    ));
+    assert!(!bfrac_shapes_absorbed(
+        25_002_804_469.870_3,
+        7.879_937_810_850_58e38,
+        2.849_216_871_811_74e-198,
+        1.0
+    ));
 }
 
 // BETA.DIST's cdf is Excel's exact 0 where L140 bup's prefactor leaves the normal range, as F's

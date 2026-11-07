@@ -135,8 +135,9 @@ fn item_cell(item: &CacheItem) -> PivotCell {
     }
 }
 
-/// An item's label as text, for a subtotal's `<item> Total`.
-fn item_text(item: &CacheItem) -> String {
+/// An item's label as text, for a subtotal's `<item> Total` and a caption filter
+/// (`pivot::filter`).
+pub(crate) fn item_text(item: &CacheItem) -> String {
     match item_cell(item) {
         PivotCell::Text(text) => text,
         PivotCell::Number(n) => number_to_text(n),

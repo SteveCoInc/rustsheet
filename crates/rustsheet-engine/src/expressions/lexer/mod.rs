@@ -136,9 +136,10 @@ pub struct Lexer {
     /// reads the column as no column, as Excel does, and refuses the prefix (see
     /// [`Lexer::set_engine_text`]).
     engine_text: bool,
-    /// Whether `**` is a number's exponent marker, as `E` is: text a user types, which Excel
-    /// reads so (`=2**3` stores `=2000`; see [`Lexer::set_typed`]).
-    double_star_exponent: bool,
+    /// Whether the formula is text a user types ([`Lexer::set_typed`]): then `**` is a number's
+    /// exponent marker, as `E` is (`=2**3` stores `=2000`), and `#REF!` followed by a cell or
+    /// range is refused (T-4628, see `consume_deleted_sheet_reference`).
+    typed: bool,
     /// Whether whitespace between tokens of the formula last set held a TAB or an NBSP, which
     /// Excel refuses in typed text ([`Lexer::skipped_refused_whitespace`]).
     refused_whitespace: bool,
@@ -172,7 +173,7 @@ impl Lexer {
             locale,
             language,
             engine_text: true,
-            double_star_exponent: false,
+            typed: false,
             refused_whitespace: false,
             peeked: None,
             number_text: String::new(),
@@ -183,9 +184,10 @@ impl Lexer {
     /// its exponent marker `E`: `=2**3` is `=2000`, `=1.5**2` `=150`, `=2**-1` `=0.2`; `**` not
     /// written where an `E` would be (after a reference or `)`, before a space, a fraction or a
     /// second exponent) is refused (syntax.md "`**` in a typed number is `E`",
-    /// probes/t3283-typed-double-star, t3213-typed-parse-errors A5).
+    /// probes/t3283-typed-double-star, t3213-typed-parse-errors A5), and where `#REF!` before a
+    /// cell or range is refused (probes/t4628-deleted-sheet-reference-text).
     pub(crate) fn set_typed(&mut self, typed: bool) {
-        self.double_star_exponent = typed;
+        self.typed = typed;
         self.peeked = None;
     }
 
@@ -382,7 +384,7 @@ impl Lexer {
                     }
                     '#' => {
                         let error = self.consume_error();
-                        if error == TokenType::Error(Error::REF) {
+                        if error == TokenType::Error(Error::REF) && !self.typed {
                             self.consume_deleted_sheet_reference();
                         }
                         error
@@ -890,9 +892,12 @@ impl Lexer {
         self.consume_range(Some(sheet_name))
     }
 
-    /// Skips the cell or range after a `#REF!` in A1 (`#REF!C4:C7`): Excel displays a reference
-    /// to a deleted sheet that way, and the whole is the #REF! error (T-2340,
-    /// probes/table-edits/table-delete-sheet), so the displayed text reads back as what it was.
+    /// Skips the cell or range after a `#REF!` in A1 (`#REF!C4:C7`), except in typed text: the
+    /// display of a reference to a deleted sheet (T-2340), which a fill or paste re-enters, and a
+    /// file's stored text read back as the #REF! error. Excel refuses that text typed in
+    /// (probes/t4628-deleted-sheet-reference-text, T-4628), so typed text leaves the cell or
+    /// range to the parser, which refuses it. Excel for the web refuses a file storing it; what
+    /// desktop Excel does is unprobed, so loaded text keeps reading it (an engine choice).
     fn consume_deleted_sheet_reference(&mut self) {
         if self.mode != LexerMode::A1
             || !matches!(self.peek_char(), Some(c) if c.is_ascii_alphabetic() || c == '$')
