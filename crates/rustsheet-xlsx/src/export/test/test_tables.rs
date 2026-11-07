@@ -181,28 +181,48 @@ fn totals_row_constants_get_custom_metadata() {
     }
 }
 
-/// An API-filtered table with no kept criterion is written as a criterion-less filterColumn,
-/// which Excel reads as not filtered (T-4003), and so does our import: the round trip loses the
-/// filter. TODO(T-4363): write a criterion Excel reads as filtered.
+/// An API-filtered table with no kept criterion is written with a values filter on its first
+/// column keeping its visible data rows' text, which Excel reads as filtered (T-4003), and so
+/// does our import: the round trip keeps SUBTOTAL 9 equal to 109 (T-4363).
 #[test]
-fn a_filtered_table_without_a_criterion_exports_unfiltered() {
+fn a_filtered_table_without_a_criterion_exports_its_visible_values() {
     let mut model = new_empty_model();
-    for (row, input) in [(1, "Qty"), (2, "1"), (3, "2")] {
-        model.set_user_input(0, row, 1, input.to_string()).unwrap();
+    for (row, input) in [(1, "Qty"), (2, "1"), (3, "2"), (4, ""), (5, "4"), (6, "1")] {
+        if !input.is_empty() {
+            model.set_user_input(0, row, 1, input.to_string()).unwrap();
+        }
     }
-    model.add_table(0, "Sales", (1, 1, 3, 1), true).unwrap();
+    model.add_table(0, "Sales", (1, 1, 6, 1), true).unwrap();
+    // Row 3 (2) hidden; rows 2 and 6 hold the same 1; row 4 is blank.
+    model.set_row_hidden(0, 3, true).unwrap();
+    for (row, function) in [(8, 9), (9, 109)] {
+        model
+            .set_user_input(0, row, 3, format!("=SUBTOTAL({function},Sales[Qty])"))
+            .unwrap();
+    }
+    model.evaluate();
     let temp_file_name = "temp_file_test_filtered_table.xlsx";
     save_to_xlsx(&model, temp_file_name).unwrap();
     let table_xml = part_text(temp_file_name, "xl/tables/table1.xml");
-    let reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    let mut reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
     fs::remove_file(temp_file_name).unwrap();
 
     assert!(
-        table_xml.contains(r#"<autoFilter ref="A1:A3"><filterColumn colId="0"/></autoFilter>"#),
+        table_xml.contains(
+            r#"<autoFilter ref="A1:A6"><filterColumn colId="0"><filters blank="1"><filter val="1"/><filter val="4"/></filters></filterColumn></autoFilter>"#
+        ),
         "{table_xml}"
     );
-    assert!(model.workbook.tables["Sales"].has_filters);
-    assert!(!reloaded.workbook.tables["Sales"].has_filters);
+    assert!(reloaded.workbook.tables["Sales"].has_filters);
+    reloaded.evaluate();
+    for row in [8, 9] {
+        assert_eq!(
+            reloaded.get_formatted_cell_value(0, row, 3).unwrap(),
+            "6",
+            "row {row}"
+        );
+        assert_eq!(model.get_formatted_cell_value(0, row, 3).unwrap(), "6");
+    }
 }
 
 #[test]
