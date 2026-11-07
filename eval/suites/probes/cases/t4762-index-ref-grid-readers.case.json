@@ -1,0 +1,58 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4762: readers of a one-index INDEX over a column of references (T-4701 follow-up). Data!A1:A3 = 1, 2, 4; C1:C3 = 1, 2, 3; E1:E3 = 10, 20, 30. Column A over OFFSET(Data!A1,{0;1},0,2) (element 2 = Data!A2:A3), B over INDIRECT({\"Data!A1\";\"Data!A2:A3\"}) (element 2 = Data!A2:A3), C over XLOOKUP({2;9},..,Data!A1:A2) (element 2 = the range Data!A1:A2). Rows 1-5: AVERAGE, MAX, MIN, PRODUCT, COUNT of INDEX(r,2); rows 6-7: ROWS and COLUMNS of INDEX(INDEX(r,2),1,1); row 8: SUM(INDEX(INDEX(r,2),1)); row 9: ROWS(INDEX(INDEX(r,2),1)). Top-left reads give A/B 2, 2, 2, 2, 1 and C 1, 1, 1, 1, 1; whole-element reads give A/B 3, 4, 2, 8, 2 and C 1.5, 2, 1, 2, 2.",
+  "tags": [
+    "M6",
+    "lookup",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=AVERAGE(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2))",
+        "A2": "=MAX(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2))",
+        "A3": "=MIN(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2))",
+        "A4": "=PRODUCT(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2))",
+        "A5": "=COUNT(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2))",
+        "A6": "=ROWS(INDEX(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2),1,1))",
+        "A7": "=COLUMNS(INDEX(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2),1,1))",
+        "A8": "=SUM(INDEX(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2),1))",
+        "A9": "=ROWS(INDEX(INDEX(OFFSET(Data!$A$1,{0;1},0,2),2),1))",
+        "B1": "=AVERAGE(INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2))",
+        "B2": "=MAX(INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2))",
+        "B3": "=MIN(INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2))",
+        "B4": "=PRODUCT(INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2))",
+        "B5": "=COUNT(INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2))",
+        "B6": "=ROWS(INDEX(INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2),1,1))",
+        "B7": "=COLUMNS(INDEX(INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2),1,1))",
+        "B8": "=SUM(INDEX(INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2),1))",
+        "B9": "=ROWS(INDEX(INDEX(INDIRECT({\"Data!A1\";\"Data!A2:A3\"}),2),1))",
+        "C1": "=AVERAGE(INDEX(XLOOKUP({2;9},Data!$C$1:$C$3,Data!$E$1:$E$3,Data!$A$1:$A$2),2))",
+        "C2": "=MAX(INDEX(XLOOKUP({2;9},Data!$C$1:$C$3,Data!$E$1:$E$3,Data!$A$1:$A$2),2))",
+        "C3": "=MIN(INDEX(XLOOKUP({2;9},Data!$C$1:$C$3,Data!$E$1:$E$3,Data!$A$1:$A$2),2))",
+        "C4": "=PRODUCT(INDEX(XLOOKUP({2;9},Data!$C$1:$C$3,Data!$E$1:$E$3,Data!$A$1:$A$2),2))",
+        "C5": "=COUNT(INDEX(XLOOKUP({2;9},Data!$C$1:$C$3,Data!$E$1:$E$3,Data!$A$1:$A$2),2))",
+        "C6": "=ROWS(INDEX(INDEX(XLOOKUP({2;9},Data!$C$1:$C$3,Data!$E$1:$E$3,Data!$A$1:$A$2),2),1,1))",
+        "C7": "=COLUMNS(INDEX(INDEX(XLOOKUP({2;9},Data!$C$1:$C$3,Data!$E$1:$E$3,Data!$A$1:$A$2),2),1,1))",
+        "C8": "=SUM(INDEX(INDEX(XLOOKUP({2;9},Data!$C$1:$C$3,Data!$E$1:$E$3,Data!$A$1:$A$2),2),1))",
+        "C9": "=ROWS(INDEX(INDEX(XLOOKUP({2;9},Data!$C$1:$C$3,Data!$E$1:$E$3,Data!$A$1:$A$2),2),1))"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A1": 1,
+        "A2": 2,
+        "A3": 4,
+        "C1": 1,
+        "C2": 2,
+        "C3": 3,
+        "E1": 10,
+        "E2": 20,
+        "E3": 30
+      }
+    }
+  ],
+  "expected": {}
+}
