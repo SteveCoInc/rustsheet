@@ -3,7 +3,7 @@ id: T-4772
 title: "Probe a blank regression known_y reached by OFFSET, INDIRECT, LET and XLOOKUP (T-4310 follow-up)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
