@@ -1,0 +1,61 @@
+{
+  "format": "rustsheet-case/v1",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe"
+  ],
+  "description": "T-4747: names added through the API scoped to Calc (Loc = =Data!$A$5) and scoped to Data with an unqualified body (Un = =$A$5, Data active), insert_row 4 on Data. Prediction if both shift: Calc!A1 50, Data!B1 50 (the old row 5). Not shifting: 40, 40.",
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=Loc"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A1": 10,
+        "A2": 20,
+        "A3": 30,
+        "A4": 40,
+        "A5": 50,
+        "A6": 60,
+        "A7": 70,
+        "A8": 80,
+        "A9": 90,
+        "A10": 100,
+        "A11": 110,
+        "A12": 120,
+        "B1": "=Un"
+      }
+    }
+  ],
+  "active_sheet": "Data",
+  "api_names": [
+    {
+      "name": "Loc",
+      "formula": "=Data!$A$5",
+      "sheet": "Calc"
+    },
+    {
+      "name": "Un",
+      "formula": "=$A$5",
+      "sheet": "Data"
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "insert_row",
+      "sheet": "Data",
+      "row": 4
+    }
+  ],
+  "check": [
+    "Calc!A1",
+    "Data!B1"
+  ],
+  "expected": {}
+}
