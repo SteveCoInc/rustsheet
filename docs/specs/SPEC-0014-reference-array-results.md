@@ -279,7 +279,7 @@ an array value. In detail:
     (reference first) gives `#N/A` (A49:C49, A58:C58). Ours puts an error first always (T-4741).
   - Per-element callers (`ref_lift.rs`): `Value(v)` calls the scalar function with `v` as a value argument. That is
     `#VALUE!` where a reference is required, and N reads the value. `put_back` keeps the result.
-    Probed (probes/t4704, T-4704): OFFSET over a mixed grid spills a 2x1 of `#VALUE!` (A4:C8; ours a scalar, T-4739);
+    Probed (probes/t4704, T-4704): OFFSET over a mixed grid spills a 2x1 of `#VALUE!` (A4:C8; matched by T-4739, which reads XLOOKUP in its reference form in `offset_source`);
     FORMULATEXT (`#VALUE!`, `#N/A`) and INDIRECT (`#REF!`, `#VALUE!`) match; COUNTIF and SUMIF over an XLOOKUP with a
     text if_not_found spill a 2x1 of `#VALUE!`, with a miss or all hits (A64:C74; ours a scalar, T-4742).
   - ROWS/COLUMNS, ISREF and the pass-throughs (IF, CHOOSE, LET, VSTACK, TAKE, DROP) need no change: they handle

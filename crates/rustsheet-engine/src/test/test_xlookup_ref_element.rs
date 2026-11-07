@@ -70,6 +70,37 @@ fn readers_see_the_hit_as_a_value_and_the_miss_as_the_range() {
     }
 }
 
+// OFFSET lifts over the elements of a mixed grid: a 2x1 result, `#VALUE!` for the hit (a value)
+// and for the moved miss (a two-cell range read as a value), whatever the offset
+// (probes/t4704-mixed-xlookup-grid-readers A4:C8, T-4739).
+#[test]
+fn offset_lifts_over_a_mixed_grid() {
+    let mut model = data();
+    model._set("K1", &format!("=OFFSET({X_G},0,0)"));
+    model._set("L1", &format!("=ROWS(OFFSET({X_G},0,0))"));
+    model._set("M1", &format!("=COLUMNS(OFFSET({X_G},0,0))"));
+    model._set("K4", &format!("=OFFSET({X_G},1,0)"));
+    model._set("L4", &format!("=ROWS(OFFSET({X_G},1,0))"));
+    // A scalar XLOOKUP is still the reference it picks.
+    model._set(
+        "K7",
+        "=OFFSET(XLOOKUP(2,$A$1:$A$3,$B$1:$B$3,$G$1:$G$2),1,0)",
+    );
+    model.evaluate();
+    for (cell, expected) in [
+        ("K1", "#VALUE!"),
+        ("K2", "#VALUE!"),
+        ("L1", "2"),
+        ("M1", "1"),
+        ("K4", "#VALUE!"),
+        ("K5", "#VALUE!"),
+        ("L4", "2"),
+        ("K7", "30"),
+    ] {
+        assert_eq!(model._get_text(cell), expected, "{cell}");
+    }
+}
+
 // LARGE, SMALL and MEDIAN over references on another sheet are #N/A, on the formula's own sheet
 // the value view's #VALUE! (t4569 A12, A13, A22, A31, A43, Local!E1:E3).
 #[test]

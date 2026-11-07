@@ -3,7 +3,7 @@ id: T-4739
 title: "OFFSET over a mixed XLOOKUP grid gives a 2x1 result (probes/t4704 B4:C4, A5, B7:C7, A8)"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -19,8 +19,18 @@ depends_on: [T-4704]
 - Code: `functions/lookup_and_reference/offset.rs`; SPEC-0014 "As implemented (T-4570)" per-element callers.
 
 ## Acceptance criteria
-- [ ] Calc B4:C4, A5, B7:C7 and A8 of probes/t4704 pass.
-- [ ] `make check` green; reviewers approve.
+- [x] Calc B4:C4, A5, B7:C7 and A8 of probes/t4704 pass.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other readers of a mixed XLOOKUP grid (T-4704).
+
+## Outcome
+- `offset_source` (offset.rs) reads an XLOOKUP argument in its reference form
+  (`xlookup_reference`), as the per-element callers and the aggregates already do, so a lifted
+  XLOOKUP with a range if_not_found reaches `offset_over_grid` as its mixed grid: the hit (a value)
+  gives `#VALUE!` and the miss is OFFSET of the range, a two-cell range read as `#VALUE!`. Any
+  other XLOOKUP reads as before (the reference it picks, or its value).
+- Unit test `offset_lifts_over_a_mixed_grid`; SPEC-0014 and lookup.md notes say it now matches.
+- Eval delta: probes/t4704 Calc B4:C4, A5, B7:C7, A8 now pass (6 known failures removed from
+  eval/baseline/probes.txt); 0 regressions in every suite.
