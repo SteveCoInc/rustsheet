@@ -156,8 +156,10 @@ pub(super) struct Graph {
     content_types: HashMap<String, String>,
     /// The workbook part's key.
     workbook: Option<String>,
-    /// The relationship ids of the workbook's `<sheet>` elements, in `<sheets>` order.
-    sheet_ids: Vec<String>,
+    /// Each workbook `<sheet>`'s relationship id mapped to its `sheetId`: a sheet's identity that
+    /// renaming, moving and dropping other sheets all keep (the export writes the model's
+    /// `sheetId`, which the importer reads from the source).
+    sheet_ids: HashMap<String, String>,
 }
 
 impl Graph {
@@ -203,7 +205,10 @@ impl Graph {
             {
                 graph.sheet_ids = (doc.descendants())
                     .filter(|n| n.has_tag_name("sheet"))
-                    .filter_map(|n| n.attribute_ns(R_NS, "id").map(str::to_string))
+                    .filter_map(|n| {
+                        let id = n.attribute_ns(R_NS, "id")?;
+                        Some((id.to_string(), n.attribute("sheetId")?.to_string()))
+                    })
                     .collect();
             }
         }
@@ -286,10 +291,13 @@ impl Graph {
             let workbook = self.workbook.as_deref() == Some(part.as_str());
             for edge in self.edges.get(&part).into_iter().flatten() {
                 let n = ordinal.entry(edge.kind.as_str()).or_default();
-                // A sheet is labelled by its place in `<sheets>`, which a save keeps, not by where
-                // its relationship sits in a `.rels` (a source may list them in any order).
-                let label = match self.sheet_ids.iter().position(|s| *s == edge.id) {
-                    Some(at) if workbook && edge.kind == "worksheet" => format!("sheet {at}"),
+                // A sheet is labelled by its `sheetId`, not by where its relationship sits in a
+                // `.rels` or where it sits in `<sheets>`: either moves when sheets are reordered,
+                // or when a chartsheet or macrosheet the export drops sat before it.
+                let label = match self.sheet_ids.get(&edge.id) {
+                    Some(sheet_id) if workbook && edge.kind == "worksheet" => {
+                        format!("sheetId {sheet_id}")
+                    }
                     _ => n.to_string(),
                 };
                 let child = format!("{id}/{}[{label}]", edge.kind);
@@ -832,5 +840,50 @@ mod tests {
                 "{part}: {got:?}"
             );
         }
+    }
+
+    /// A two-sheet book whose second sheet (`sheetId` 2) holds a table; `swapped` lists the sheets
+    /// in the other order, in `<sheets>` and in the `.rels`, as a save after moving them would.
+    fn two_sheets(swapped: bool) -> Vec<u8> {
+        let r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        let (first, second) = if swapped {
+            ("rId2", "rId1")
+        } else {
+            ("rId1", "rId2")
+        };
+        let sheets = if swapped {
+            format!(
+                r#"<sheet name="B" sheetId="2" r:id="{second}"/><sheet name="A" sheetId="1" r:id="{first}"/>"#
+            )
+        } else {
+            format!(
+                r#"<sheet name="A" sheetId="1" r:id="{first}"/><sheet name="B" sheetId="2" r:id="{second}"/>"#
+            )
+        };
+        let workbook = format!(r#"<workbook xmlns:r="{r}"><sheets>{sheets}</sheets></workbook>"#);
+        let wb_rels = rels(&[
+            (first, "worksheet", "worksheets/sheet1.xml", false),
+            (second, "worksheet", "worksheets/sheet2.xml", false),
+        ]);
+        zip(&[
+            (
+                "_rels/.rels",
+                rels(&[("rId1", "officeDocument", "xl/workbook.xml", false)]),
+            ),
+            ("xl/workbook.xml", workbook),
+            ("xl/_rels/workbook.xml.rels", wb_rels),
+            ("xl/worksheets/sheet1.xml", "<worksheet/>".into()),
+            ("xl/worksheets/sheet2.xml", "<worksheet/>".into()),
+            (
+                "xl/worksheets/_rels/sheet2.xml.rels",
+                rels(&[("rId1", "table", "../tables/table1.xml", false)]),
+            ),
+            ("xl/tables/table1.xml", "<table/>".into()),
+        ])
+    }
+
+    #[test]
+    fn a_sheet_is_matched_by_its_sheet_id_wherever_it_moved() {
+        assert!(drops(&two_sheets(false), &two_sheets(true)).is_empty());
     }
 }
