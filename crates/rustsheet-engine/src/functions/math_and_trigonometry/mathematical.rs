@@ -3,7 +3,7 @@ use crate::arithmetic::{divide, extended_quotient, extended_sqrt, flush_subnorma
 use crate::cast::NumberOrArray;
 use crate::decimal_round::{round_decimal, round_function, RoundMode};
 use crate::expressions::types::CellReferenceIndex;
-use crate::functions::lift::{div_error, num_error, number_result, value_error};
+use crate::functions::lift::{div_error, num_error, number_result};
 use crate::functions::statistical::IfsShape;
 use crate::functions::util::aggregate_args::{
     AggregatePolicy, ArgReading, ErrorRule, GridReading, NestedReading, NumberRules,
@@ -587,10 +587,12 @@ impl Model {
     /// while numeric text is read (probes/radians-sqrtpi-munit, docs/excel-semantics/numbers.md
     /// "RADIANS, SQRTPI and MUNIT", T-1282).
     pub(crate) fn fn_sqrtpi(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        // A LET or LAMBDA omission is the `ToolPak` `#N/A` (`LET(e,,SQRTPI(e))`;
+        // probes/t4923-sqrtpi-factdouble-omitted A1, A2; T-4923).
+        let [empty] = self.empty_arguments::<1>(args);
         self.lift_call(Function::Sqrtpi, args, cell, &mut |model, values| {
             let number = match values {
-                [CalcResult::Boolean(_)] => return value_error(cell),
-                [value] => model.kernel_number(value, cell),
+                [value] => model.atp_number(value, empty, cell),
                 _ => return CalcResult::new_args_number_error(cell),
             };
             match number {

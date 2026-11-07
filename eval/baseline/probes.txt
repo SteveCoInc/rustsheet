@@ -549,6 +549,7 @@ C	probes/external-ref-no-link-index.case.json	54
 C	probes/external-ref-no-link-let-index.case.json	7
 C	probes/external-ref-no-link-let.case.json	20
 C	probes/external-ref-no-link-lift-arrays.case.json	19
+C	probes/external-ref-no-link-lift-picked.case.json	48
 C	probes/external-ref-no-link-shapes.case.json	20
 C	probes/external-ref-no-link.case.json	10
 C	probes/fact-large-arguments.case.json	18
@@ -2630,6 +2631,7 @@ C	probes/t4602-clock-text-colon-am-pm-and-spaces.case.json	95
 C	probes/t4603-im-reciprocal-tiny-parts.case.json	78
 C	probes/t4606-ifs-array-criterion-value-error.case.json	86
 C	probes/t4607-xnpv-xirr-column-errors-and-day-minus-one.case.json	96
+C	probes/t4608-dollarde-dollarfr-fraction-edges.case.json	192
 C	probes/t4609-pivot-row-labels-2.case.json	298
 C	probes/t4610-row-column-array-error-element.case.json	13
 C	probes/t4611-randarray-min-max-whole-arrays.case.json	13
@@ -2717,6 +2719,7 @@ C	probes/t4871-empty-mode-args.case.json	31
 C	probes/t4873-empty-arg-let-lambda.case.json	11
 C	probes/t4873-empty-arg-quotient-ceiling.case.json	55
 C	probes/t4874-numbervalue-empty-separator.case.json	69
+C	probes/t4923-sqrtpi-factdouble-omitted.case.json	13
 C	probes/t4928-iseven-isodd-omitted.case.json	12
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
