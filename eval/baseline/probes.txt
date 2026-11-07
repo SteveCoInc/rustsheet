@@ -1247,6 +1247,7 @@ C	probes/sheet-ops/t4272-3d-span-delete-end.case.json	6
 C	probes/sheet-ops/t4272-3d-span-delete-middle.case.json	6
 C	probes/sheet-ops/t4272-3d-span-delete-start.case.json	6
 C	probes/sheet-ops/t4272-3d-span-delete-two-sheet-end.case.json	6
+C	probes/sheet-ops/t4272-3d-span-delete-two-sheet-start.case.json	6
 C	probes/sheet-ops/t4272-3d-span-feb-insert-column.case.json	7
 C	probes/sheet-ops/t4272-3d-span-jan-delete-inner-row.case.json	7
 C	probes/sheet-ops/t4272-3d-span-jan-delete-row.case.json	7
