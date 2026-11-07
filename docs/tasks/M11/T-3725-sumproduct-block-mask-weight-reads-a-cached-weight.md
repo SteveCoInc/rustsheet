@@ -23,9 +23,13 @@ masks, so at the amount column every call fell back to the operators. Each call 
 arrays of 180,000 elements: `arithmetic_on_values` was the largest leaf under `fn_sumproduct`
 (2026-11-01 samples).
 
-`*` is `times` = `finite_or_num(extended_product)`, with no flush between products, and a mask
-element is 1 or 0. So where every mask is TRUE, an element is the cell's number times each weight's,
-each product `extended_product`-rounded; anywhere else it is a zero. The weight's cells are read as
+`*` is `times` = `finite_or_num(extended_product)`, and `finite_or_num` flushes a subnormal result
+to 0 (numbers.md "Subnormal results become 0"). A mask element is 1 or 0. So where every mask is
+TRUE, an element is the cell's number times each weight's, each product `extended_product`-rounded
+and flushed; anywhere else it is a zero. Every cell of a masked block meets at least one `*`, so
+the cell's own number is flushed too: a kept subnormal times TRUE is 0. That also closes the same
+gap in T-3230's mask-only path, which showed only when the masked argument followed another
+SUMPRODUCT argument, such as `SUMPRODUCT(1E+100 column, block*mask)`. The weight's cells are read as
 `*` reads a range operand, which is how `BlockNumbers` already reads the block.
 
 ## Acceptance criteria
@@ -42,6 +46,9 @@ each product `extended_product`-rounded; anywhere else it is a zero. The weight'
       (probes-numeric/double-rounding-ops A1) pin the values. Mutating the error position, the
       broadcast, the bound or the rounding fails them.
 - [x] calipers `pv26_002` release `evaluate()` before and after, in the Outcome.
+- [x] Each product is flushed as `*` flushes it: a test sums only underflowing products (a cell times
+      1E-110 times 1E+100, a kept subnormal times TRUE, a masked argument after a 1E+100 column) and
+      compares them with the pass caches off. Before the flush it gave 1.6E-209 where `*` gives 0.
 - [x] `make check` green; reviewers approve.
 
 ## Out of scope

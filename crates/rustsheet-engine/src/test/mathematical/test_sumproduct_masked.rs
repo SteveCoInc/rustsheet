@@ -477,3 +477,51 @@ fn a_weighted_sum_by_hand() {
     assert_eq!(number("Sheet1!A4"), Ok(CellValue::Number(product)));
     assert_eq!(model.evaluation.ifs_cache.masked, 2);
 }
+
+/// `*` flushes a product below the smallest normal double to 0 (`times`; numbers.md "Subnormal
+/// results become 0"), so a masked block flushes each product too: a cell times a weight that
+/// underflows stays 0 when a second weight, or an earlier SUMPRODUCT argument, would grow it back
+/// to a normal number. Sheet2!A1:A64 holds 1 and 1E-200 and a kept subnormal formula result,
+/// B1:B64 1E-110, C1:C64 and D1:D64 1E+100, and E1:E64 a mask key.
+#[test]
+fn underflowing_products_flush_as_the_operators_do() {
+    let fill = |model: &mut Model| {
+        model.new_sheet();
+        for row in 1..=64 {
+            let value = match row % 4 {
+                0 => "1E-200",
+                // A kept subnormal, built by subtraction (numbers.md).
+                1 => "=3E-308-2.5E-308",
+                _ => "1",
+            };
+            model._set(&format!("Sheet2!A{row}"), value);
+            model._set(&format!("Sheet2!B{row}"), "1E-110");
+            model._set(&format!("Sheet2!C{row}"), "1E+100");
+            model._set(&format!("Sheet2!D{row}"), "1E+100");
+            model._set(&format!("Sheet2!E{row}"), &format!("k{}", (row % 4).min(2)));
+        }
+    };
+    let block = "Sheet2!$A$1:$A$64";
+    // k0 picks the 1E-200 rows, k1 the kept subnormals: only their products are summed.
+    let mask = "(Sheet2!$E$1:$E$64=\"k0\")";
+    let subnormals = "(Sheet2!$E$1:$E$64=\"k1\")";
+    let tiny = "Sheet2!$B$1:$B$64";
+    let big = "Sheet2!$C$1:$C$64";
+    let formulas: Vec<String> = vec![
+        format!("=COUNT({block})"),
+        format!("=SUMPRODUCT({block}*{mask}*{tiny}*{big})"),
+        format!("=SUMPRODUCT({block}*{tiny}*{mask}*{big})"),
+        format!("=SUMPRODUCT(Sheet2!$D$1:$D$64,{block}*{mask}*{tiny})"),
+        format!("=SUMPRODUCT(Sheet2!$D$1:$D$64,{block}*{subnormals})"),
+        format!("=SUMPRODUCT({block}*{subnormals}*{big})"),
+    ];
+    let (results, masked) = cached_and_walked(&fill, &formulas);
+    for ((cached, walked), formula) in results.iter().zip(&formulas) {
+        assert_eq!(cached, walked, "{formula}");
+    }
+    assert_eq!(
+        masked,
+        formulas.len() - 1,
+        "every SUMPRODUCT read a masked block"
+    );
+}

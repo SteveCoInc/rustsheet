@@ -40,9 +40,10 @@ enum Factors {
 /// An operand may also be a weight ([`Weight`], T-3725): a cached block as tall as the block or
 /// one row, as wide or one column, but not one cell (calipers `pv26_002`'s
 /// `block*header_mask*amount_column`). Where the masks are TRUE the element is the cell's number
-/// times each weight's at its row and column, rounded as `*` rounds each product
-/// (`extended_product`); a mask that is FALSE makes a zero, before or after a weight, since no
-/// product overflows (the bound, below). A weight's errors stand at its positions like a mask's.
+/// times each weight's at its row and column, rounded and flushed as `*` rounds and flushes each
+/// product (`times`: `extended_product`, then a subnormal is 0); a mask that is FALSE makes a
+/// zero, before or after a weight, since no product overflows (the bound, below). A weight's
+/// errors stand at its positions like a mask's.
 struct MaskedBlock {
     numbers: Arc<BlockNumbers>,
     rows: usize,
@@ -98,8 +99,8 @@ impl MaskedBlock {
     fn weigh(&mut self, numbers: Arc<BlockNumbers>, rows: usize, columns: usize) -> bool {
         let shaped = (rows == self.rows || rows == 1) && (columns == self.columns || columns == 1);
         let bound = self.bound * numbers.largest;
-        // `bound` is never NaN (finite magnitudes, stored only below the bound); the test says so.
-        if !shaped || rows * columns == 1 || bound >= Self::BOUND || bound.is_nan() {
+        // `bound` is never NaN: finite magnitudes, stored only below the bound.
+        if !shaped || rows * columns == 1 || bound >= Self::BOUND {
             return false;
         }
         // Its error at index k (row by row) is first met at its row and column of the block; the
@@ -172,10 +173,16 @@ impl MaskedBlock {
             && self.column_on.get(j).copied().unwrap_or(false);
         if on {
             let index = i.saturating_mul(self.columns).saturating_add(j);
+            // At least one `*` multiplies every cell, and `*` flushes each product below the
+            // smallest normal double to 0 (`times`; numbers.md "Subnormal results become 0"): a
+            // kept subnormal times TRUE is 0, and so is a product that underflows before a
+            // weight would grow it back.
             let number = self.numbers.values.get(index).copied().unwrap_or(0.0);
-            self.weights.iter().fold(number, |product, weight| {
-                extended_product(product, weight.get(i, j))
-            })
+            self.weights
+                .iter()
+                .fold(flush_subnormal(number), |product, weight| {
+                    flush_subnormal(extended_product(product, weight.get(i, j)))
+                })
         } else {
             0.0
         }
