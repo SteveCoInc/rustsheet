@@ -3,7 +3,7 @@ id: T-4714
 title: "LARGE/SMALL/MEDIAN over a mixed-sheet reference grid: the first element's sheet decides #VALUE! vs #N/A"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
