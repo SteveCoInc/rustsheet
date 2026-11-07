@@ -3,7 +3,7 @@ id: T-4861
 title: "INDIRECT of an unquoted R1C1-shaped sheet prefix with a later mark (C1+U+0301!B1) is #REF! (probe the boundary first)"
 milestone: M8
 lane: engine
-status: done
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
