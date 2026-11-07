@@ -10,6 +10,10 @@
     "t": "n",
     "v": 2.0
    },
+   "A3": {
+    "t": "n",
+    "v": 2.0
+   },
    "B1": {
     "t": "e",
     "v": "#DIV/0!"
@@ -21,15 +25,23 @@
    "B3": {
     "t": "e",
     "v": "#N/A"
+   },
+   "B4": {
+    "t": "e",
+    "v": "#DIV/0!"
+   },
+   "B5": {
+    "t": "e",
+    "v": "#VALUE!"
    }
   }
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "e2355392fef12e48b9a91854e4e90016ce7708f29c1d95f3ff58c08823652b2c",
+  "input_sha256": "8750187f68412a16dca0901fe2515c0e056f363043e44e2c2cb806f7ce84c76a",
   "kind": "excel-graph",
-  "produced_at": "2026-11-07T15:20:42+00:00",
+  "produced_at": "2026-11-07T16:07:07+00:00",
   "version": null,
-  "workbook_name": "8eca9f22b6efe8b020cf0d241c5b4d15f2d4d637d77779d4f3db75657f975071.xlsx"
+  "workbook_name": "1e6dd2f674c54aa83638eb87e768ad32ff29be4485b99bb500133e90e60bcf0a.xlsx"
  }
 }

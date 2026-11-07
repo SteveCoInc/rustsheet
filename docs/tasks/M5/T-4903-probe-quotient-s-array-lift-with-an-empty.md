@@ -36,8 +36,8 @@ in each element, and which error wins when SERIESSUM's coefficients are empty an
 - The 2010+ roundings (T-4873 settled them).
 
 ## Outcome
-Probe `t4903-empty-arg-quotient-seriessum-lift` (excel-graph, 2026-11-07), predictions committed before the fill, 5/5
+Probe `t4903-empty-arg-quotient-seriessum-lift` (excel-graph, 2026-11-07), predictions committed before the fill, 8/8
 held: `INDEX(QUOTIENT({7,8},),1,2)` `#N/A`, `ROWS(QUOTIENT(,{2;4}))` 2, and SERIESSUM with empty coefficients gives
-`#DIV/0!`, `#VALUE!`, `#N/A` for an erroring x, n, m (x, n, m rank first, as the engine does). numbers.md lost its
+`#DIV/0!`, `#VALUE!`, `#N/A` for an erroring x, n, m (x, n, m rank first, as the engine does; B4:B5 added after fidelity review because B3 `#N/A` could not tell an m error from the empty coefficients, A3 COLUMNS added for the lift). numbers.md lost its
 UNVERIFIED note. The let.rs duplicate was already gone on main (it uses `is_empty_argument`). No engine change; no
 math sidecar entries (no Gate A one-call cell); `math --check` current.

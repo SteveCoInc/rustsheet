@@ -2866,17 +2866,19 @@ empty hands the emptiness on: `LET(e,,QUOTIENT(7,e))`, `LET(e,,QUOTIENT(e,2))`, 
 gives a blank (an IFERROR or VLOOKUP of an empty cell) is read as 0, not `#N/A` (gen-m5/6efa59fc1257c475 Calc!A229,
 gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). Empty coefficients rank after `x`, `n` and `m`: with the
 coefficients empty, `SERIESSUM(1/0,1,1,)` is `#DIV/0!`, `SERIESSUM(2,"x",1,)` `#VALUE!` and `SERIESSUM(2,1,NA(),)` `#N/A`
-(t4903 B1:B3; ours checks the coefficients after, as every coefficient error). An empty argument beside an array lifts
-element by element: `INDEX(QUOTIENT({7,8},),1,2)` is `#N/A` and `ROWS(QUOTIENT(,{2;4}))` is 2 (t4903 A1:A2; the
-t4873 A7:A8 spills showed only `#SPILL!`).
+(t4903 B1:B3), and an `m` error that is not `#N/A` also beats them: `SERIESSUM(2,1,1/0,)` is `#DIV/0!`,
+`SERIESSUM(2,1,"x",)` `#VALUE!` (B4:B5; B3 alone could not tell, as empty coefficients are `#N/A` themselves). Ours checks
+the coefficients after, as every coefficient error. An empty argument beside an array lifts element by element:
+`ROWS(QUOTIENT(,{2;4}))` is 2 and `COLUMNS(QUOTIENT({7,8},))` is 2, with `INDEX(QUOTIENT({7,8},),1,2)` `#N/A` (t4903
+A1:A3; the t4873 A7:A8 spills showed only `#SPILL!`).
 The one-argument SQRTPI and FACTDOUBLE can be given an empty argument only through LET or LAMBDA, and they follow
 the same rule (T-4923). `LET(e,,SQRTPI(e))`, `LAMBDA(a,b,SQRTPI(b))(1,)`, `LET(e,,FACTDOUBLE(e))` and
 `LAMBDA(a,b,FACTDOUBLE(b))(1,)` are `#N/A`. An operator over the omission reads it as 0: `LET(e,,SQRTPI(e+0))` is 0
 and `LET(e,,FACTDOUBLE(e+0))` is 1. So does a blank cell: `SQRTPI(Z1)` is 0 and `FACTDOUBLE(Z1)` is 1. An IF that
 lifts it is still an array: `ROWS(LET(e,,SQRTPI(IF({1;1},e))))` is 2.
 Evidence: probes/t4873-empty-arg-quotient-ceiling Calc!A1:B8, probes/t4873-empty-arg-let-lambda Calc!A1:A4 (excel-graph,
-2026-11-07, T-4873; predictions committed before the fill); probes/t4903-empty-arg-quotient-seriessum-lift Calc!A1:B3
-(excel-graph, 2026-11-07, T-4903; predictions committed before the fill, 5/5 held); probes/t4923-sqrtpi-factdouble-omitted A1:A13 (excel-graph,
+2026-11-07, T-4873; predictions committed before the fill); probes/t4903-empty-arg-quotient-seriessum-lift Calc!A1:B5
+(excel-graph, 2026-11-07, T-4903; predictions committed before the fill, 8/8 held); probes/t4923-sqrtpi-factdouble-omitted A1:A13 (excel-graph,
 2026-11-07; H_na 13/13, H_zero, the omission as 0, 9/13; predictions committed before the fill).
 Ours: `Model::atp_number` (functions/lift/mod.rs) reads MROUND's, QUOTIENT's, SERIESSUM's and SQRTPI's numbers, told
 which arguments are empty by `Model::empty_arguments` (functions/util/empty_args.rs). FACTDOUBLE swaps its argument
