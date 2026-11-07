@@ -457,9 +457,9 @@ all 1-based cells of Calc, oracle values read with `make eval-show`):
   records) and AB18 (DCOUNTA 6, all six records); probes/db-header-criteria-shapes AB44 (unmatched header over a blank condition,
   DSUM 15). A text condition under an unknown header (">2", AB43) matches nothing, DSUM 0, which the entry's numeric
   condition does not do. The Db!N1:N2 shape is also in gen-m9 (for example
-  `DCOUNTA(Db!A1:D12,DAY(7593),Db!N1:N2)` in the 02b7cfabebd2cc0a case).
+  `DCOUNTA(Db!A1:D12,DAY(7593),Db!N1:N2)` in gen-m9/f61a73cd9af21e6d).
 - Computed criterion: probes/db-computed-criteria-shapes AB25/AB26 (header "Zzz" over `=B2>2`: DSUM 12, DCOUNTA 4) and
-  AB23/AB24 (blank header over the same formula); the Db!O1:O2 shape is in gen-m9 (`DCOUNTA(Db!A1:D12,5,Db!O1:O2)`).
+  AB23/AB24 (blank header over the same formula); the Db!O1:O2 shape is in gen-m9 (`DCOUNTA(Db!A1:D12,5,Db!O1:O2)` in gen-m9/88cabddc4935351c).
 - Header-only criteria range `#VALUE!`: probes/db-header-criteria-shapes AB2 (`DSUM(A1:E6,2,H1)`) and AB3 (two-cell
   one-row block); a header over a blank row matches every record: AB45 (`P1:P2`, 15) and AB56 (`H1:H3`, trailing blank
   row, 15); the twelve-function version is db-front-end-sweep (T-3650).
