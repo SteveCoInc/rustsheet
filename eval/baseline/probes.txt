@@ -2637,6 +2637,7 @@ C	probes/t4666-union-variable-isref.case.json	11
 C	probes/t4667-ifs-second-pair-and-num-value-error.case.json	76
 C	probes/t4686-rich-value-option-residue.case.json	44
 C	probes/t4697-large-small-median-mixed-sheet-refs.case.json	17
+C	probes/t4698-pivot-repeat-labels.case.json	651
 C	probes/t4701-index-one-index-ref-grid.case.json	16
 C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
@@ -7862,9 +7863,6 @@ F	probes/t4129-pivot-layout-flags.case.json	GZ!C8
 F	probes/t4129-pivot-layout-flags.case.json	GZ!C9
 F	probes/t4129-pivot-layout-flags.case.json	SC!A10
 F	probes/t4129-pivot-layout-flags.case.json	SC!A7
-F	probes/t4129-pivot-layout-flags.case.json	X14F!A5
-F	probes/t4129-pivot-layout-flags.case.json	X14F!A6
-F	probes/t4129-pivot-layout-flags.case.json	X14F!A9
 F	probes/t4222-regression-flag-ranges.case.json	Calc!A1
 F	probes/t4222-regression-flag-ranges.case.json	Calc!A101
 F	probes/t4222-regression-flag-ranges.case.json	Calc!A103
@@ -9350,4 +9348,5 @@ TC	probes/t4161-pivot-show-as-running-rank.case.json	349
 TC	probes/t4161-pivot-show-as-running-zero.case.json	40
 TC	probes/t4161-pivot-show-as-zeros.case.json	434
 TC	probes/t4169-pivot-number-formats.case.json	76
+TC	probes/t4698-pivot-repeat-labels.case.json	510
 TC	probes/typed-mixed-fraction-number-format.case.json	31

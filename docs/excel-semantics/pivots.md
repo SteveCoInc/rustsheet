@@ -465,7 +465,8 @@ above reproduced; T-4149)
 Rule:
 - A row and column intersection with no records is a blank cell, not 0 (compact C!D6, West/C).
 - In tabular form an outer item's label shows on its first line only; the lines below it leave the
-  outer cell blank (T!A6, A7, A10).
+  outer cell blank (T!A6, A7, A10), unless the field repeats its labels ("Repeat item labels"
+  below).
 - A subtotal line reads `<item> Total` in the outer field's column, with the inner field's cell blank
   (T!A8 `East Total`, B8 blank; A11 `West Total`), and the grand total line reads `Grand Total`
   (T!A12).
@@ -503,6 +504,45 @@ attributes below).
 Status: VERIFIED (excel-graph) for the probes listed. UNVERIFIED (probe pending: T-4657): number
 and date item subtotal labels; (T-4650): the Values-inside and Values-axis captions and header.
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`render`; T-4149)
+
+## Repeat item labels
+Rule: a pivot field whose x14 extension sets `fillDownLabels="1"` ("Repeat Item Labels", saved as
+`<extLst><ext uri="{2946ED86-A175-432a-8AC1-64E0C546D7DE}"><x14:pivotField fillDownLabels="1"/>`
+in the `<pivotField>`) shows its item's label on every line of the item's children, in its own
+label column, where it would otherwise show on the item's first line only. The lines (`rowItems`,
+`colItems`) do not change. In detail (rows Region, Product, Year and Sum of Sales over the data of
+t4129, every pivot at A3):
+- **Per field, not inherited.** With the flag on Region only, `East` fills A4:A11 but Product's
+  cells below its first line stay blank (T3R!B5); with it on Product only, `A` fills B5 and Region
+  stays blank (T3P!A5:A11); with both, both fill (T3A). On the innermost field it changes nothing
+  (TIN).
+- **Subtotal lines of inner fields repeat it too**: `East` beside `A Total` (T3R!A6, A9, A11). The
+  field's own subtotal line reads `East Total` alone (T3R!A12), the grand total line is unchanged
+  (A19), and so are `insertBlankRow` lines (TBR!A8:C8, blank) and a collapsed item's one line
+  (TSD!A4:B4). With no subtotal the next item's lines follow directly (TND!A4:A8).
+- **Outline form fills too**: the outer item keeps its own line and its label repeats on every
+  child line below it, Product's and Year's (OST!A5:A7, O3!A5:A12), with subtotals at the top or
+  at the bottom (OB!A5:A7 then `East Total` in A8; the item's own line A4 still reads `East`).
+- **Compact form fills nothing** (CF!A5:A7 show the Products): a cell belongs to the deepest level
+  of the line placed in it. In MX, Region (compact, flagged) shares column A with Product
+  (tabular, flagged): Product's `A` repeats on its Year lines (MX!A6) and Region fills nothing.
+- **On columns** the label repeats across the children's columns (CC!B4:D4 `East`, F4:G4 `West`).
+- **A blank item** repeats as `(blank)` (TBL!A8).
+- **The table-wide `fillDownLabelsDefault="1"` fills no existing field** (TW, TWE, OW; t4129 X14).
+
+Evidence: probes/t4698-pivot-repeat-labels (excel-graph, 2026-11-07, T-4698): T3R, T3P, T3A,
+TND, TBR, TSD, TIN, TW, TWE, OST, OB, O3, OW, CF, MX, CC, TBL; probes/t4129-pivot-layout-flags X14,
+X14F (T-4129). The sidecars' `row_items`/`col_items` equal the engine's unflagged lines.
+The engine's own readings, not probed (UNVERIFIED, T-4764): a flagged level whose column it
+shares with a deeper level the line leaves unlabelled (the engine fills nothing); an inner column
+field's subtotal column under a flagged outer column field (the engine fills, as on rows); the
+Values field on a flagged field's axis (the engine fills field levels only); an explicit
+`fillDownLabels="0"` beside the table default, and custom subtotal lines under a flagged field
+(filled as default subtotal lines are).
+Status: VERIFIED (excel-graph) for the probes listed; UNVERIFIED (T-4764) for the readings above.
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`read_extension`: the typed
+`PivotField::fill_down_labels`, the extension kept verbatim for export; T-4698)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`Cells::fill_down`; T-4698)
 
 ## Caption attributes, empty and error captions, page captions, custom subtotal labels
 Rule:
@@ -687,8 +727,8 @@ placement and grand totals off; (T-4650): the Values field away from the innermo
 after a collapsed item (it adds one); custom subtotals after the children in plain outline form; a
 collapsed item whose field has Values inside it (several data fields: one line, the first data field's
 values); a collapsed item on columns, in a middle field, or in a field with
-`subtotalTop="0"` or custom subtotals (one line, the data field's own aggregate). (T-4698): repeat item
-labels (`fillDownLabels`, saved in `extLst`), which the model keeps opaque and the renderer ignores.
+`subtotalTop="0"` or custom subtotals (one line, the data field's own aggregate). Repeat item labels
+change no line (probes/t4698-pivot-repeat-labels, every sheet; "Repeat item labels" below).
 Items with no data (`showAll`): docs/excel-semantics/web.md "GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)" (t4311 H,
 a grouped row field) and crates/rustsheet-engine/src/pivot/result.rs; an axis of several fields, a
 rendered column field and an item the page filter empties are UNVERIFIED (T-4657).
@@ -1531,8 +1571,10 @@ Rule, per flag (each one on its own pivot of rows Region and Product with Sum of
   `firstHeaderRow` is 2.
 - `numFmtId="3"` on the Year row field (NF): it renders. The saved labels are numbers; their display
   format is not captured.
-- x14 pivotTableDefinition `fillDownLabelsDefault="1"` (X14): **existing fields are not filled down**.
-  (Our reading, not evidenced: the setting is a default for fields added later.) A field's own x14 `fillDownLabels="1"` (X14F)
+- x14 pivotTableDefinition `fillDownLabelsDefault="1"` (X14): **existing fields are not filled down**,
+  in tabular and outline form, with or without an empty x14 pivotField extension on the fields
+  (probes/t4698-pivot-repeat-labels TW, TWE, OW). (Our reading, not evidenced: the setting is a
+  default for fields added later, which a file cannot probe; UNVERIFIED, T-4764.) A field's own x14 `fillDownLabels="1"` (X14F)
   repeats its labels: `East` on every East product row.
 - A `formats` entry whose pivotArea has `axis="axisValues"` (AV): it renders.
 
