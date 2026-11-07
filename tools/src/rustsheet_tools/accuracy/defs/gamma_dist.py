@@ -226,7 +226,7 @@ def _huge_ratio_domain(fa: float, y: float) -> str | None:
     return None
 
 
-# The aimed draw of T-4635's fresh sweep (`generate GAMMA.DIST --batch r4-T-4635 --stratum aimed`): y within 10% of
+# The aimed draw of T-4635's investigation batch (`generate GAMMA.DIST --batch e-T-4635 --stratum aimed`): y within 10% of
 # rule R's cut, x below 1E301 (Excel for the web refuses a workbook holding an x literal of 1E307 or more, T-4635's
 # first fill), so beta is 1E-8 or smaller.
 HUGE_RATIO_AIMED_SPREAD = 1.1

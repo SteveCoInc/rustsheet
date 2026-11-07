@@ -93,13 +93,19 @@ oracle evidence brackets, and the Gate A definition gives those points a value o
 
     Rule R is the only candidate exact on both sides of every fit; the power branch's 52 GAMMA.DIST cells (shapes
     1.01 to 1.1) are what "no power" misses (the chi-squared cells have no shape in that range).
-  - R4.2 fresh sweep: Gate A batch GAMMA.DIST/r4-T-4635 (120 points, `generate --stratum aimed`, the definition's
-    `_huge_ratio_point`: y log-uniform within 10% of rule R's cut on either side at shapes 1.01 to 1.1 and 1.11 to 4,
-    and shapes 0.3 to 1 and 4 to 10 from y 1E300 up; beta 1E-100 to 1E-8, so x stays below 1E301). Drawn and committed
-    after the freeze, filled on excel-graph 2026-11-07: 120 of 120 as predicted (48 `#NUM!`, 72 numbers);
-    `rustsheet-eval accuracy`: its 120 points are in the envelope (the gate: 44,843 points, 0 failing). The chi-squared functions get no batch: their x = 2y would be a
-    literal of 1E307 or more, which Excel for the web refuses (first fill), and they share GAMMA.DIST's kernel at
-    y = x / 2 (the chisq-huge-x probe writes x as a product instead).
+  - R4.2 fresh sweep: Gate A batch GAMMA.DIST/r4-T-4635, 200 points, 100% log-uniform over the whole domain
+    (`generate --stratum log-uniform`, SPEC-0029), drawn and committed after the freeze, before its excel-graph fill
+    (2026-11-07): 200 of 200 in the envelope (164 numbers, 36 domain errors: 18 an overflowing x / beta, 18 a density
+    at a subnormal x / beta). As a full-domain sweep it lands no point in rule R's region (y near 1E307 is a
+    vanishing share of the log-uniform domain); it checks that the change moves nothing elsewhere.
+  - Rule R's region gets an investigation batch, GAMMA.DIST/e-T-4635 (120 points, `--stratum aimed`, the definition's
+    `_huge_ratio_point`: y log-uniform within 10% of the cut on either side at shapes 1.01 to 1.1 and 1.11 to 4, and
+    shapes 0.3 to 1 and 4 to 10 from y 1E300 up; beta 1E-100 to 1E-8, so x stays below 1E301), also drawn after the
+    freeze and committed before its fill: 120 of 120 as predicted (39 rule R `#NUM!`, 4 overflowing x / beta, 77
+    numbers). `rustsheet-eval accuracy`: 45,043 points, 0 failing, every point of both batches in the envelope.
+  - Known gap: the chi-squared functions get no batch. Their x = 2y would be a literal of 1E307 or more, which Excel
+    for the web refuses (first fill); they share GAMMA.DIST's kernel at y = x / 2, and probes/t4635-chisq-huge-x
+    (x written as a product) covers them. T-4877 holds the gap.
   - The earlier probe ladder stays: the first fill (320 cells), the gen3 sweep after the freeze (104/104: 84 cells at
     0.97 and 1.03 of the cut, 4 at shapes 0.3 and 0.7, and the Cut sheet's 16, shapes 1.11 to 1.14, all numbers where
     y^a overflows).
