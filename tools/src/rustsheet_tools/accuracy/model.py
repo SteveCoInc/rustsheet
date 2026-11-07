@@ -53,6 +53,7 @@ class OverBudgetError(Exception):
     budget counts series terms, not seconds, so the same point is dropped on every machine (T-3680)."""
 
 
+# The budget state is per process and not thread-safe: `work_budget` blocks must not run concurrently.
 _WORK: dict[str, int | None] = {"spent": 0, "limit": None}
 
 

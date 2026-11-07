@@ -41,16 +41,16 @@ VERSION = "1"  # bump when a definition or the sampler changes what a batch woul
 DPS = (60, 80)  # the value is the dps-80 one; dps 60 is the convergence check
 CONVERGENCE = mpmath.mpf("1e-45")  # relative agreement the two precisions must reach
 DIGITS = 50  # significant digits written
-# A hang guard, never a drop: a point past it fails the whole run (PointTimeoutError), so no run
-# writes a sidecar that depends on the machine's speed or load. Points are dropped only by the
-# definitions' deterministic budgets (mpmath's maxterms and maxprec, the bracket's steps). The
+# HANG_LIMIT is a hang guard, never a drop: a point past it fails the whole run (PointTimeoutError),
+# so no run writes a sidecar that depends on the machine's speed or load. Points are dropped only by
+# the definitions' deterministic budgets (mpmath's maxterms and maxprec, the bracket's steps). The
 # slowest committed point, probes-numeric/t3350-r4-chisq-inv-sweep A237, takes about 10 s (T-3680).
-# Summed-expansion terms a point may spend at each precision (`model.spend`): the deterministic
-# drop that replaced the 10 s clock. Calibrated on 2026-11-04 over every gamma-family cell of probes
-# and probes-numeric: the costliest cell that had a value under the clock spends 1.51M terms
-# (t3505-gamma-inv-budget-band A32, GAMMA.INV(0.5,1000000,1)); the clock had dropped cells needing
-# 0.24M to 1.9M (t3350-chisq-inv-huge-df A15, A200). About 10 µs a term, so at most about 20 s per
-# precision on a loaded 4-core machine (T-3680).
+# WORK_BUDGET is the summed-expansion terms (`model.spend`) a point may spend at each precision. It
+# replaced a 10 s clock that dropped cells needing 0.24M to 1.9M terms (t3350-chisq-inv-huge-df A15,
+# A200); calibrated on 2026-11-04 over every gamma-family cell of probes and probes-numeric, the
+# costliest cell that had a value spends 1.51M terms (t3505-gamma-inv-budget-band A32,
+# GAMMA.INV(0.5,1000000,1)). About 10 µs a term: at most about 20 s per precision on a loaded
+# 4-core machine (T-3680).
 WORK_BUDGET: int | None = 2_000_000
 HANG_LIMIT = 600.0  # seconds per point (both precisions)
 MAX_REDRAWS = 20  # a point whose math overflows is redrawn this many times, then dropped
@@ -64,7 +64,7 @@ class PointTimeoutError(Exception):
 
 
 @contextlib.contextmanager
-def time_limit(seconds: float) -> Iterator[None]:
+def hang_guard(seconds: float) -> Iterator[None]:
     """Raises `PointTimeoutError` in the block after `seconds` (SIGALRM; a no-op off the main
     thread or where the platform has no interval timer)."""
     if not hasattr(signal, "setitimer") or threading.current_thread() is not threading.main_thread():
@@ -114,7 +114,7 @@ def compute_value(evaluate: Callable[[], mpmath.mpf]) -> MathValue:
     composite's, T-3993): its value at dps 80 checked against dps 60, with the same drops."""
     results: list[mpmath.mpf | DomainError] = []
     try:
-        with time_limit(HANG_LIMIT):
+        with hang_guard(HANG_LIMIT):
             for dps in DPS:
                 with mpmath.workdps(dps), work_budget(WORK_BUDGET):
                     try:

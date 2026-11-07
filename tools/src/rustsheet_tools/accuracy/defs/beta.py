@@ -138,34 +138,44 @@ def _series(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
     return 1 - other if other <= 1 - COMPLEMENT_MARGIN else _tail_series(a, b, x)
 
 
+def _via_series(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
+    """`_series`, with its NoConvergence as NoValueError (the sampler redraws)."""
+    try:
+        return _series(a, b, x)
+    except mpmath.libmp.NoConvergence as err:
+        msg = f"the incomplete beta did not converge ({err})"
+        raise NoValueError(msg) from err
+
+
 def _betainc(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
-    """I_x(a, b): mpmath's `betainc` up to a + b = MPMATH_SHAPE_CAP, with `_series` where it gives up
-    (its hypsum loses the cancelling series at shapes of a few thousand,
-    probes-numeric/t3571-r5-bfrac-fresh A239); `_series` alone above that cap; mpmath alone again
-    above a shape of SERIES_SHAPE_CAP. Both budgets are
-    deterministic, so a cell gets the same value or the same skip on any machine (T-3680).
-    NoValueError (the sampler redraws) where no series converges within its budget; a ValueError
-    from mpmath's hypsum (the point is dropped) where it gave up and the fallback
-    did too."""
-    if a + b > MPMATH_SHAPE_CAP and max(a, b) <= SERIES_SHAPE_CAP:
-        try:
-            return _series(a, b, x)
-        except mpmath.libmp.NoConvergence as err:
-            msg = f"the incomplete beta did not converge ({err})"
-            raise NoValueError(msg) from err
+    """I_x(a, b) by regime. Both budgets are deterministic, so a cell gets the same value or the same
+    skip on any machine (T-3680):
+    - a + b up to MPMATH_SHAPE_CAP: mpmath's `betainc`; where it gives up (its hypsum loses the
+      cancelling series at shapes of a few thousand, probes-numeric/t3571-r5-bfrac-fresh A239),
+      `_series` takes over;
+    - above that cap, up to a shape of SERIES_SHAPE_CAP: `_series` alone;
+    - a shape above SERIES_SHAPE_CAP: mpmath alone.
+    NoValueError where no series converges within its budget; a ValueError from mpmath's hypsum (the
+    point is dropped) where it gave up and the fallback did too."""
+    big = max(a, b) > SERIES_SHAPE_CAP
+    if a + b > MPMATH_SHAPE_CAP and not big:
+        return _via_series(a, b, x)
     try:
         return mpmath.betainc(a, b, 0, x, regularized=True)
-    except (mpmath.libmp.NoConvergence, ValueError) as err:
-        first = err
-    try:
-        if max(a, b) > SERIES_SHAPE_CAP:
-            raise first
-        return _series(a, b, x)
-    except (mpmath.libmp.NoConvergence, ValueError):
-        if isinstance(first, mpmath.libmp.NoConvergence):
-            msg = f"the incomplete beta did not converge ({first})"
-            raise NoValueError(msg) from first
-        raise first from None
+    except (mpmath.libmp.NoConvergence, ValueError) as first:
+        if big:
+            raise _as_no_value(first) from None
+        try:
+            return _series(a, b, x)
+        except (mpmath.libmp.NoConvergence, ValueError):
+            raise _as_no_value(first) from None
+
+
+def _as_no_value(err: Exception) -> Exception:
+    """NoValueError for a NoConvergence (the sampler redraws), else `err` itself."""
+    if isinstance(err, mpmath.libmp.NoConvergence):
+        return NoValueError(f"the incomplete beta did not converge ({err})")
+    return err
 
 
 def lower_tail(x: mpmath.mpf, a: mpmath.mpf, b: mpmath.mpf) -> mpmath.mpf:
