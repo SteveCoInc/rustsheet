@@ -3,7 +3,7 @@ id: T-4630
 title: "CONVERT mi to km and in to cm: Excel for the web is one ulp from the engine (calipers formulas_engineering D26, D27, J26, J27)"
 milestone: M9
 lane: functions-engineering
-status: blocked
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -41,7 +41,7 @@ Cells:
 - The light-year and parsec factors (T-2047), unless the same rule fixes them.
 
 ## Blocked because
-Blocked because: review-round limit
+Resumed after the review-round limit (step 5c).
 
 The excel-fidelity review's round 3 (adopted by an opus run, 2026-11-06 22:25 UTC, on 8c46dc5f7; c396ece22 adds only
 a `make catch-up` merge) asked for changes. Design and security approved 8c46dc5f7. The open findings:
