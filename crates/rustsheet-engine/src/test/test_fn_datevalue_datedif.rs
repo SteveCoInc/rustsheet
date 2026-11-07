@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::match_same_arms)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::test::util::new_empty_model;
@@ -6,17 +9,17 @@ use crate::types::{Cell, FormulaValue};
 // Helper to evaluate a formula and return the formatted text
 fn eval_formula(formula: &str) -> String {
     let mut model = new_empty_model();
-    model._set("A1", formula);
+    model.set_a1("A1", formula);
     model.evaluate();
-    model._get_text("A1")
+    model.get_text_a1("A1")
 }
 
 // Helper that evaluates a formula and returns the raw value of A1 as a Result<f64, String>
 fn eval_formula_raw_number(formula: &str) -> Result<f64, String> {
     let mut model = new_empty_model();
-    model._set("A1", formula);
+    model.set_a1("A1", formula);
     model.evaluate();
-    match model._get_cell("A1") {
+    match model.get_cell_a1("A1") {
         Cell::NumberCell { v, .. } => Ok(*v),
         Cell::CellFormula {
             v: FormulaValue::Number(v),
@@ -28,7 +31,7 @@ fn eval_formula_raw_number(formula: &str) -> Result<f64, String> {
         } => Ok(*v),
         Cell::BooleanCell { v, .. } => Ok(if *v { 1.0 } else { 0.0 }),
         Cell::ErrorCell { ei, .. } => Err(format!("{ei}")),
-        _ => Err(model._get_text("A1")),
+        _ => Err(model.get_text_a1("A1")),
     }
 }
 
@@ -140,23 +143,23 @@ fn test_datevalue_error_conditions() {
 #[test]
 fn test_datevalue_arguments() {
     let mut model = new_empty_model();
-    model._set("A1", "=DATEVALUE()");
-    model._set("A2", "=DATEVALUE(\"2023-01-02\")");
-    model._set("A3", "=DATEVALUE(\"2023-01-02\", \"2023-01-03\")");
+    model.set_a1("A1", "=DATEVALUE()");
+    model.set_a1("A2", "=DATEVALUE(\"2023-01-02\")");
+    model.set_a1("A3", "=DATEVALUE(\"2023-01-02\", \"2023-01-03\")");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"44928");
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"44928");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
 }
 
 // Helper to set and evaluate a single DATEDIF call
 fn eval_datedif(unit: &str) -> String {
     let mut model = new_empty_model();
     let formula = format!("=DATEDIF(\"2020-01-01\", \"2021-06-15\", \"{unit}\")");
-    model._set("A1", &formula);
+    model.set_a1("A1", &formula);
     model.evaluate();
-    model._get_text("A1")
+    model.get_text_a1("A1")
 }
 
 #[test]
@@ -193,16 +196,16 @@ fn test_datedif_md() {
 fn test_datedif_edge_and_error_cases() {
     let mut model = new_empty_model();
     // Leap-year spanning
-    model._set("A1", "=DATEDIF(\"2/28/2020\", \"3/1/2020\", \"D\")");
+    model.set_a1("A1", "=DATEDIF(\"2/28/2020\", \"3/1/2020\", \"D\")");
     // End date before start date => #NUM!
-    model._set("A2", "=DATEDIF(\"2/1/2021\", \"1/1/2021\", \"D\")");
+    model.set_a1("A2", "=DATEDIF(\"2/1/2021\", \"1/1/2021\", \"D\")");
     // Invalid unit => #NUM! (T-2288)
-    model._set("A3", "=DATEDIF(\"1/1/2020\", \"1/1/2021\", \"Z\")");
+    model.set_a1("A3", "=DATEDIF(\"1/1/2020\", \"1/1/2021\", \"Z\")");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"2");
-    assert_eq!(model._get_text("A2"), *"#NUM!");
-    assert_eq!(model._get_text("A3"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"2");
+    assert_eq!(model.get_text_a1("A2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), *"#NUM!");
 }
 
 #[test]
@@ -214,9 +217,9 @@ fn test_datedif_mixed_case_unit() {
 fn test_datedif_error_propagation() {
     // Invalid date in arguments should propagate #VALUE!
     let mut model = new_empty_model();
-    model._set("A1", "=DATEDIF(\"bad\", \"bad\", \"Y\")");
+    model.set_a1("A1", "=DATEDIF(\"bad\", \"bad\", \"Y\")");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
 }
 
 // An unknown unit is #NUM! for a well-ordered in-calendar pair, whatever the unit's type

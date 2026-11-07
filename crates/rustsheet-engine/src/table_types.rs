@@ -1,5 +1,8 @@
 //! A worksheet table's metadata (`Workbook::tables`) and the autoFilter criteria it keeps from its
 //! file (`Table::filter_columns`), which the export writes back and nothing re-applies.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_excessive_bools)]
+// LINT-DEBT-END
 
 use std::collections::HashMap;
 

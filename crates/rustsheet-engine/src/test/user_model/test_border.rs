@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::too_many_lines)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::test::user_model::util::new_empty_user_model;
@@ -516,15 +519,15 @@ fn borders_top() {
                 style: BorderStyle::Thin,
                 color: Color::Rgb("#FF5566".to_string()),
             };
-            let bottom = if row != 4 {
-                None
-            } else {
+            let bottom = if row == 4 {
                 Some(border_item.clone())
+            } else {
+                None
             };
-            let top = if row != 5 {
-                None
-            } else {
+            let top = if row == 5 {
                 Some(border_item.clone())
+            } else {
+                None
             };
             let expected_border = Border {
                 diagonal_up: false,
@@ -641,15 +644,15 @@ fn borders_right() {
                 style: BorderStyle::Thin,
                 color: Color::Rgb("#FF5566".to_string()),
             };
-            let left = if column != 9 {
-                None
-            } else {
+            let left = if column == 9 {
                 Some(border_item.clone())
+            } else {
+                None
             };
-            let right = if column != 8 {
-                None
-            } else {
+            let right = if column == 8 {
                 Some(border_item.clone())
+            } else {
+                None
             };
             let expected_border = Border {
                 diagonal_up: false,
@@ -699,10 +702,10 @@ fn borders_bottom() {
                 color: Color::Rgb("#FF5566".to_string()),
             };
             // The top will also have a value for all but the first one
-            let bottom = if row != 8 {
-                None
-            } else {
+            let bottom = if row == 8 {
                 Some(border_item.clone())
+            } else {
+                None
             };
             let expected_border = Border {
                 diagonal_up: false,
@@ -751,10 +754,10 @@ fn borders_left() {
                 style: BorderStyle::Thin,
                 color: Color::Rgb("#FF5566".to_string()),
             };
-            let left = if column != 6 {
-                None
-            } else {
+            let left = if column == 6 {
                 Some(border_item.clone())
+            } else {
+                None
             };
             let expected_border = Border {
                 diagonal_up: false,
@@ -892,53 +895,59 @@ fn none_borders_get_neighbour() {
 fn heavier_borders() {
     let mut model = new_empty_user_model();
 
-    model._set_cell_border("F5", "#F2F2F2");
+    model.set_cell_border_a1("F5", "#F2F2F2");
 
     // We set an outer border in F4:
-    model._set_cell_border("F4", "#000000");
+    model.set_cell_border_a1("F4", "#000000");
 
     // We check the border between F4 and F5
     let border_item = BorderItem {
         style: BorderStyle::Thin,
         color: Color::Rgb("#000000".to_string()),
     };
-    assert_eq!(model._get_cell_border("F5").top, Some(border_item.clone()));
+    assert_eq!(
+        model.get_cell_border_a1("F5").top,
+        Some(border_item.clone())
+    );
 
     // But the border is actually NOT changed (because it is lighter)
     let border_item2 = BorderItem {
         style: BorderStyle::Thin,
         color: Color::Rgb("#F2F2F2".to_string()),
     };
-    assert_eq!(model._get_cell_actual_border("F5").top, Some(border_item2));
+    assert_eq!(
+        model.get_cell_actual_border_a1("F5").top,
+        Some(border_item2)
+    );
 
-    model._set_cell_border("F6", "#000000");
+    model.set_cell_border_a1("F6", "#000000");
 }
 
 #[test]
 fn lighter_borders() {
     let mut model = new_empty_user_model();
 
-    model._set_cell_border("F5", "#000000");
+    model.set_cell_border_a1("F5", "#000000");
 
     // We set an outer border all around that is "lighter":
-    model._set_cell_border("F4", "#F2F2F2");
-    model._set_cell_border("G5", "#F2F2F2");
-    model._set_cell_border("F6", "#F2F2F2");
-    model._set_cell_border("E5", "#F2F2F2");
+    model.set_cell_border_a1("F4", "#F2F2F2");
+    model.set_cell_border_a1("G5", "#F2F2F2");
+    model.set_cell_border_a1("F6", "#F2F2F2");
+    model.set_cell_border_a1("E5", "#F2F2F2");
 
     // We check the border around F5
     let border_item = BorderItem {
         style: BorderStyle::Thin,
         color: Color::Rgb("#F2F2F2".to_string()),
     };
-    let border = model._get_cell_border("F5");
+    let border = model.get_cell_border_a1("F5");
     assert_eq!(border.top, Some(border_item.clone()));
     assert_eq!(border.right, Some(border_item.clone()));
     assert_eq!(border.bottom, Some(border_item.clone()));
     assert_eq!(border.left, Some(border_item.clone()));
 
     // The border is actually changed (because it is heavier)
-    let actual_border = model._get_cell_actual_border("F5");
+    let actual_border = model.get_cell_actual_border_a1("F5");
     assert_eq!(actual_border.top, Some(border_item.clone()));
     assert_eq!(actual_border.right, Some(border_item.clone()));
     assert_eq!(actual_border.bottom, Some(border_item.clone()));
@@ -954,7 +963,7 @@ fn lighter_borders() {
         style: BorderStyle::Thin,
         color: Color::Rgb("#000000".to_string()),
     };
-    let border = model._get_cell_border("F5");
+    let border = model.get_cell_border_a1("F5");
     assert_eq!(border.top, Some(border_item.clone()));
     assert_eq!(border.right, Some(border_item.clone()));
     assert_eq!(border.bottom, Some(border_item.clone()));
@@ -965,10 +974,10 @@ fn lighter_borders() {
 fn autofill() {
     let mut model = new_empty_user_model();
 
-    model._set_area_border("C4:F6", "#F4F4F4", "All");
+    model.set_area_border_a1("C4:F6", "#F4F4F4", "All");
 
     // Set a border in D2
-    model._set_cell_border("D2", "#000000");
+    model.set_cell_border_a1("D2", "#000000");
     // now we extend to D8
     model
         .auto_fill_rows(
@@ -987,14 +996,14 @@ fn autofill() {
         style: BorderStyle::Thin,
         color: Color::Rgb("#000000".to_string()),
     };
-    let border = model._get_cell_border("D4");
+    let border = model.get_cell_border_a1("D4");
     assert_eq!(border.top, Some(border_item.clone()));
     assert_eq!(border.right, Some(border_item.clone()));
     assert_eq!(border.bottom, Some(border_item.clone()));
     assert_eq!(border.left, Some(border_item.clone()));
 
     // E5
-    let border_e5 = model._get_cell_border("E5");
+    let border_e5 = model.get_cell_border_a1("E5");
     assert_eq!(border_e5.left, Some(border_item.clone()));
 
     // but it hasn't really changed
@@ -1002,7 +1011,7 @@ fn autofill() {
         style: BorderStyle::Thin,
         color: Color::Rgb("#F4F4F4".to_string()),
     };
-    let border_e5_actual = model._get_cell_actual_border("E5");
+    let border_e5_actual = model.get_cell_actual_border_a1("E5");
     assert_eq!(border_e5_actual.left, Some(border_item.clone()));
 }
 
@@ -1010,20 +1019,20 @@ fn autofill() {
 fn border_top() {
     let mut model = new_empty_user_model();
 
-    model._set_area_border("C4:F6", "#000000", "All");
+    model.set_area_border_a1("C4:F6", "#000000", "All");
 
     // We set all with a lighter color in the top
-    model._set_area_border("C4:F6", "#F2F2F2", "Top");
+    model.set_area_border_a1("C4:F6", "#F2F2F2", "Top");
 
     // C3 doesn't have a border in the bottom
-    assert_eq!(model._get_cell_actual_border("C3").bottom, None);
+    assert_eq!(model.get_cell_actual_border_a1("C3").bottom, None);
 
     // But C4 was changed
     let border_item = BorderItem {
         style: BorderStyle::Thin,
         color: Color::Rgb("#F2F2F2".to_string()),
     };
-    assert_eq!(model._get_cell_actual_border("C4").top, Some(border_item));
+    assert_eq!(model.get_cell_actual_border_a1("C4").top, Some(border_item));
 
     model.undo().unwrap();
 
@@ -1032,5 +1041,5 @@ fn border_top() {
         style: BorderStyle::Thin,
         color: Color::Rgb("#000000".to_string()),
     };
-    assert_eq!(model._get_cell_actual_border("C4").top, Some(border_item));
+    assert_eq!(model.get_cell_actual_border_a1("C4").top, Some(border_item));
 }

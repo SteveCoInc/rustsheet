@@ -1,3 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::manual_midpoint
+)]
+// LINT-DEBT-END
 use std::collections::HashMap;
 use std::rc::Rc;
 

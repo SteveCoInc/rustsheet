@@ -1,5 +1,15 @@
 //! INDEX: one cell, row, column or area of a reference or an array, lifted element-wise over
 //! array indices (docs/excel-semantics/lookup.md).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::needless_pass_by_value
+)]
+// LINT-DEBT-END
 
 use super::drop_take::Edge;
 use crate::arithmetic::bcast_get;

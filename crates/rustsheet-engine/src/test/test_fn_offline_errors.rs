@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::too_many_lines)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::test::util::new_empty_model;
@@ -6,126 +9,126 @@ use crate::test::util::new_empty_model;
 #[test]
 fn offline_functions_return_their_errors() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=IMAGE("https://example.invalid/none.png")"#);
-    model._set("A2", r#"=_xlfn.STOCKHISTORY("QZXQZXQ",DATE(2020,1,2))"#);
-    model._set("A3", r#"=_xlfn.FIELDVALUE(B1,"Price")"#);
-    model._set("B1", "5");
-    model._set("A4", "=ERROR.TYPE(A1)");
-    model._set("A5", "=ERROR.TYPE(A2)");
-    model._set("A6", "=ERROR.TYPE(A3)");
+    model.set_a1("A1", r#"=IMAGE("https://example.invalid/none.png")"#);
+    model.set_a1("A2", r#"=_xlfn.STOCKHISTORY("QZXQZXQ",DATE(2020,1,2))"#);
+    model.set_a1("A3", r#"=_xlfn.FIELDVALUE(B1,"Price")"#);
+    model.set_a1("B1", "5");
+    model.set_a1("A4", "=ERROR.TYPE(A1)");
+    model.set_a1("A5", "=ERROR.TYPE(A2)");
+    model.set_a1("A6", "=ERROR.TYPE(A3)");
     model.evaluate();
     // The stored names are not formula literals, so VALUETOTEXT spells the error.
-    model._set("C1", "=VALUETOTEXT(A1)");
-    model._set("C2", "=VALUETOTEXT(A2)");
-    model._set("C3", "=VALUETOTEXT(A3)");
+    model.set_a1("C1", "=VALUETOTEXT(A1)");
+    model.set_a1("C2", "=VALUETOTEXT(A2)");
+    model.set_a1("C3", "=VALUETOTEXT(A3)");
     model.evaluate();
-    assert_eq!(model._get_text("C1"), *"#BLOCKED!");
-    assert_eq!(model._get_text("C2"), *"#CONNECT!");
-    assert_eq!(model._get_text("C3"), *"#FIELD!");
-    assert_eq!(model._get_text("A4"), *"11");
-    assert_eq!(model._get_text("A5"), *"10");
-    assert_eq!(model._get_text("A6"), *"13");
+    assert_eq!(model.get_text_a1("C1"), *"#BLOCKED!");
+    assert_eq!(model.get_text_a1("C2"), *"#CONNECT!");
+    assert_eq!(model.get_text_a1("C3"), *"#FIELD!");
+    assert_eq!(model.get_text_a1("A4"), *"11");
+    assert_eq!(model.get_text_a1("A5"), *"10");
+    assert_eq!(model.get_text_a1("A6"), *"13");
 }
 
 #[test]
 fn argument_errors_win_except_for_fieldvalue_value() {
     let mut model = new_empty_model();
-    model._set("A1", "=IMAGE(1/0)");
-    model._set("A2", r#"=IMAGE("x",1/0)"#);
-    model._set("A3", "=_xlfn.STOCKHISTORY(1/0,DATE(2020,1,2))");
-    model._set("A4", r#"=_xlfn.FIELDVALUE(1/0,"Price")"#);
-    model._set("A5", "=_xlfn.FIELDVALUE(5,1/0)");
-    model._set("A6", "=ERROR.TYPE(A4)");
+    model.set_a1("A1", "=IMAGE(1/0)");
+    model.set_a1("A2", r#"=IMAGE("x",1/0)"#);
+    model.set_a1("A3", "=_xlfn.STOCKHISTORY(1/0,DATE(2020,1,2))");
+    model.set_a1("A4", r#"=_xlfn.FIELDVALUE(1/0,"Price")"#);
+    model.set_a1("A5", "=_xlfn.FIELDVALUE(5,1/0)");
+    model.set_a1("A6", "=ERROR.TYPE(A4)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#DIV/0!");
-    assert_eq!(model._get_text("A2"), *"#DIV/0!");
-    assert_eq!(model._get_text("A3"), *"#DIV/0!");
-    assert_eq!(model._get_text("A5"), *"#DIV/0!");
-    assert_eq!(model._get_text("A6"), *"13");
+    assert_eq!(model.get_text_a1("A1"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A2"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A3"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A5"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A6"), *"13");
 }
 
 #[test]
 fn image_of_empty_or_number_is_value_error() {
     let mut model = new_empty_model();
-    model._set("B1", "5");
-    model._set("A1", "=IMAGE(B1)");
-    model._set("A2", "=IMAGE(B2)");
+    model.set_a1("B1", "5");
+    model.set_a1("A1", "=IMAGE(B1)");
+    model.set_a1("A2", "=IMAGE(B2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"#VALUE!");
 }
 
 #[test]
 fn fieldvalue_of_an_array_is_an_array_of_field_errors() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=_xlfn.FIELDVALUE({1,2},"Price")"#);
-    model._set("C1", "=VALUETOTEXT(A1)");
-    model._set("C2", "=VALUETOTEXT(B1)");
+    model.set_a1("A1", r#"=_xlfn.FIELDVALUE({1,2},"Price")"#);
+    model.set_a1("C1", "=VALUETOTEXT(A1)");
+    model.set_a1("C2", "=VALUETOTEXT(B1)");
     model.evaluate();
-    assert_eq!(model._get_text("C1"), *"#FIELD!");
-    assert_eq!(model._get_text("C2"), *"#FIELD!");
+    assert_eq!(model.get_text_a1("C1"), *"#FIELD!");
+    assert_eq!(model.get_text_a1("C2"), *"#FIELD!");
 }
 
 #[test]
 fn wrong_argument_counts_are_errors() {
     let mut model = new_empty_model();
-    model._set("A1", "=IMAGE()");
-    model._set("A2", r#"=IMAGE("a","b","c","d","e","f")"#);
-    model._set("A3", r#"=_xlfn.STOCKHISTORY("A")"#);
-    model._set("A4", r#"=_xlfn.FIELDVALUE("A")"#);
+    model.set_a1("A1", "=IMAGE()");
+    model.set_a1("A2", r#"=IMAGE("a","b","c","d","e","f")"#);
+    model.set_a1("A3", r#"=_xlfn.STOCKHISTORY("A")"#);
+    model.set_a1("A4", r#"=_xlfn.FIELDVALUE("A")"#);
     model.evaluate();
     for cell in ["A1", "A2", "A3", "A4"] {
-        assert_eq!(model._get_text(cell), *"#ERROR!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#ERROR!", "{cell}");
     }
 }
 
 #[test]
 fn image_stockhistory_and_fieldvalue_lift_over_arrays() {
     let mut model = new_empty_model();
-    model._set("Q1", "a");
-    model._set("Q2", "b");
-    model._set("A1", r#"=IMAGE({"a","b"})"#);
-    model._set("A3", "=_xlfn.STOCKHISTORY(Q1:Q2,DATE(2020,1,2))");
-    model._set("A6", r#"=_xlfn.FIELDVALUE(5,{"a","b"})"#);
-    model._set("D1", r#"=IMAGE("https://example.invalid/none.png")"#);
-    model._set("D2", "=ERROR.TYPE(IMAGE(TRUE))");
+    model.set_a1("Q1", "a");
+    model.set_a1("Q2", "b");
+    model.set_a1("A1", r#"=IMAGE({"a","b"})"#);
+    model.set_a1("A3", "=_xlfn.STOCKHISTORY(Q1:Q2,DATE(2020,1,2))");
+    model.set_a1("A6", r#"=_xlfn.FIELDVALUE(5,{"a","b"})"#);
+    model.set_a1("D1", r#"=IMAGE("https://example.invalid/none.png")"#);
+    model.set_a1("D2", "=ERROR.TYPE(IMAGE(TRUE))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("B1"), *"#VALUE!");
-    assert_eq!(model._get_text("A3"), *"#CONNECT!");
-    assert_eq!(model._get_text("A4"), *"#CONNECT!");
-    assert_eq!(model._get_text("A6"), *"#FIELD!");
-    assert_eq!(model._get_text("B6"), *"#FIELD!");
-    assert_eq!(model._get_text("D1"), *"#BLOCKED!");
-    assert_eq!(model._get_text("D2"), *"3");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("B1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), *"#CONNECT!");
+    assert_eq!(model.get_text_a1("A4"), *"#CONNECT!");
+    assert_eq!(model.get_text_a1("A6"), *"#FIELD!");
+    assert_eq!(model.get_text_a1("B6"), *"#FIELD!");
+    assert_eq!(model.get_text_a1("D1"), *"#BLOCKED!");
+    assert_eq!(model.get_text_a1("D2"), *"3");
 }
 
 #[test]
 fn error_type_lifts_over_arrays_and_elements_keep_their_errors() {
     let mut model = new_empty_model();
-    model._set("A1", "=ERROR.TYPE({#DIV/0!,5})");
-    model._set("A3", r#"=IMAGE({#DIV/0!,"x"})"#);
-    model._set("A5", r#"=_xlfn.FIELDVALUE({1;2},"p")"#);
-    model._set("C5", r#"=_xlfn.FIELDVALUE(1,1/0)"#);
+    model.set_a1("A1", "=ERROR.TYPE({#DIV/0!,5})");
+    model.set_a1("A3", r#"=IMAGE({#DIV/0!,"x"})"#);
+    model.set_a1("A5", r#"=_xlfn.FIELDVALUE({1;2},"p")"#);
+    model.set_a1("C5", r"=_xlfn.FIELDVALUE(1,1/0)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"2");
-    assert_eq!(model._get_text("B1"), *"#N/A");
-    assert_eq!(model._get_text("A3"), *"#DIV/0!");
-    assert_eq!(model._get_text("B3"), *"#VALUE!");
-    assert_eq!(model._get_text("A5"), *"#FIELD!");
-    assert_eq!(model._get_text("A6"), *"#FIELD!");
-    assert_eq!(model._get_text("C5"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A1"), *"2");
+    assert_eq!(model.get_text_a1("B1"), *"#N/A");
+    assert_eq!(model.get_text_a1("A3"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("B3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A5"), *"#FIELD!");
+    assert_eq!(model.get_text_a1("A6"), *"#FIELD!");
+    assert_eq!(model.get_text_a1("C5"), *"#DIV/0!");
 }
 
 #[test]
 fn fieldvalue_broadcast_over_huge_ranges_is_bounded() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=_xlfn.FIELDVALUE(SEQUENCE(1048576),SEQUENCE(1,16384))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
 }
 
 // probes/rich-errors-shapes-urls (excel-graph, T-1189).
@@ -143,46 +146,46 @@ fn image_url_shapes_match_the_probe() {
         ("A8", "file:///c:/a.png", "#VALUE!"),
     ];
     for (cell, source, _) in sources {
-        model._set(cell, &format!(r#"=IMAGE("{source}")"#));
+        model.set_a1(cell, &format!(r#"=IMAGE("{source}")"#));
     }
     model.evaluate();
     for (cell, source, expected) in sources {
-        assert_eq!(model._get_text(cell), *expected, "{source}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{source}");
     }
 }
 
 #[test]
 fn a_later_argument_error_lifts_over_an_array_first_argument() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         r#"=IMAGE({"https://x.invalid/a.png","https://x.invalid/b.png"},1/0)"#,
     );
-    model._set("A2", r#"=STOCKHISTORY({"A";"B"},1/0)"#);
-    model._set("C2", r#"=STOCKHISTORY("A",1/0)"#);
+    model.set_a1("A2", r#"=STOCKHISTORY({"A";"B"},1/0)"#);
+    model.set_a1("C2", r#"=STOCKHISTORY("A",1/0)"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#DIV/0!");
-    assert_eq!(model._get_text("B1"), *"#DIV/0!");
-    assert_eq!(model._get_text("A2"), *"#DIV/0!");
-    assert_eq!(model._get_text("A3"), *"#DIV/0!");
-    assert_eq!(model._get_text("C2"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A1"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("B1"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A2"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A3"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("C2"), *"#DIV/0!");
 }
 
 #[test]
 fn fieldvalue_keeps_error_elements_of_an_array_field_name() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=_xlfn.FIELDVALUE(5,{"a",#DIV/0!,#N/A})"#);
-    model._set("A2", r#"=_xlfn.FIELDVALUE({1;2},{"a",#N/A})"#);
-    model._set("A4", r#"=_xlfn.FIELDVALUE({1,#N/A},"Price")"#);
+    model.set_a1("A1", r#"=_xlfn.FIELDVALUE(5,{"a",#DIV/0!,#N/A})"#);
+    model.set_a1("A2", r#"=_xlfn.FIELDVALUE({1;2},{"a",#N/A})"#);
+    model.set_a1("A4", r#"=_xlfn.FIELDVALUE({1,#N/A},"Price")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#FIELD!");
-    assert_eq!(model._get_text("B1"), *"#DIV/0!");
-    assert_eq!(model._get_text("C1"), *"#N/A");
+    assert_eq!(model.get_text_a1("A1"), *"#FIELD!");
+    assert_eq!(model.get_text_a1("B1"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("C1"), *"#N/A");
     // A 1-row `field_name` repeats down a column `value`.
-    assert_eq!(model._get_text("B2"), *"#N/A");
-    assert_eq!(model._get_text("B3"), *"#N/A");
-    assert_eq!(model._get_text("A3"), *"#FIELD!");
-    assert_eq!(model._get_text("B4"), *"#FIELD!");
+    assert_eq!(model.get_text_a1("B2"), *"#N/A");
+    assert_eq!(model.get_text_a1("B3"), *"#N/A");
+    assert_eq!(model.get_text_a1("A3"), *"#FIELD!");
+    assert_eq!(model.get_text_a1("B4"), *"#FIELD!");
 }
 
 // probes/rich-errors-image-sizing (excel-graph, T-1345).
@@ -191,7 +194,7 @@ fn image_sizing_height_and_width_are_validated() {
     let mut model = new_empty_model();
     let cases = [
         (
-            r#"sizing 0"#,
+            r"sizing 0",
             r#"=IMAGE("https://x.invalid/a.png","alt",0)"#,
             "#BLOCKED!",
         ),
@@ -348,11 +351,15 @@ fn image_sizing_height_and_width_are_validated() {
         ),
     ];
     for (i, (_, formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, (name, _, expected)) in cases.iter().enumerate() {
-        assert_eq!(model._get_text(&format!("A{}", i + 1)), *expected, "{name}");
+        assert_eq!(
+            model.get_text_a1(&format!("A{}", i + 1)),
+            *expected,
+            "{name}"
+        );
     }
 }
 
@@ -360,11 +367,11 @@ fn image_sizing_height_and_width_are_validated() {
 #[test]
 fn fieldvalue_field_name_shorter_than_value_is_na_past_its_end() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=_xlfn.FIELDVALUE({1,2,3},{"a","b"})"#);
+    model.set_a1("A1", r#"=_xlfn.FIELDVALUE({1,2,3},{"a","b"})"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#FIELD!");
-    assert_eq!(model._get_text("B1"), *"#FIELD!");
-    assert_eq!(model._get_text("C1"), *"#N/A");
+    assert_eq!(model.get_text_a1("A1"), *"#FIELD!");
+    assert_eq!(model.get_text_a1("B1"), *"#FIELD!");
+    assert_eq!(model.get_text_a1("C1"), *"#N/A");
 }
 
 /// probes/rich-errors-image-array-options (T-1370): array options broadcast with the source and are
@@ -373,24 +380,24 @@ fn fieldvalue_field_name_shorter_than_value_is_na_past_its_end() {
 fn image_array_options_lift_with_the_source() {
     let mut model = new_empty_model();
     let url = r#""https://a.invalid/x.png""#;
-    model._set(
+    model.set_a1(
         "A1",
         &format!(r#"=ERROR.TYPE(IMAGE({{{url},{url}}},"alt",{{0,9}}))"#),
     );
-    model._set(
+    model.set_a1(
         "A5",
         &format!(r#"=ERROR.TYPE(IMAGE({{{url},{url},{url}}},"alt",{{0,9}}))"#),
     );
-    model._set(
+    model.set_a1(
         "A9",
         &format!(r#"=ERROR.TYPE(IMAGE({url},"alt",{{0;9;1}}))"#),
     );
-    model._set(
+    model.set_a1(
         "A13",
         &format!(r#"=ERROR.TYPE(IMAGE({url},"alt",{{3,3}},{{5,-1}}))"#),
     );
     model.evaluate();
-    let row = |cells: [&str; 3]| cells.map(|c| model._get_text(c));
+    let row = |cells: [&str; 3]| cells.map(|c| model.get_text_a1(c));
     assert_eq!(row(["A1", "B1", "C1"]), ["11", "3", ""]);
     assert_eq!(row(["A5", "B5", "C5"]), ["11", "3", "7"]);
     assert_eq!(row(["A9", "A10", "A11"]), ["11", "3", "11"]);
@@ -402,11 +409,11 @@ fn image_array_options_lift_with_the_source() {
 #[test]
 fn stockhistory_of_an_empty_cell_stock_or_start_date_is_value_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=_xlfn.STOCKHISTORY(Z1,DATE(2020,1,2))");
-    model._set("A2", r#"=_xlfn.STOCKHISTORY("QZXQZXQ",Z1)"#);
-    model._set("A3", "=_xlfn.STOCKHISTORY(Z1,1/0)");
-    model._set("A4", "=_xlfn.STOCKHISTORY(Z1,Z1)");
-    model._set("A5", r#"=_xlfn.STOCKHISTORY("QZXQZXQ",DATE(2020,1,2))"#);
+    model.set_a1("A1", "=_xlfn.STOCKHISTORY(Z1,DATE(2020,1,2))");
+    model.set_a1("A2", r#"=_xlfn.STOCKHISTORY("QZXQZXQ",Z1)"#);
+    model.set_a1("A3", "=_xlfn.STOCKHISTORY(Z1,1/0)");
+    model.set_a1("A4", "=_xlfn.STOCKHISTORY(Z1,Z1)");
+    model.set_a1("A5", r#"=_xlfn.STOCKHISTORY("QZXQZXQ",DATE(2020,1,2))"#);
     model.evaluate();
     for (cell, expected) in [
         ("A1", "#VALUE!"),
@@ -415,6 +422,6 @@ fn stockhistory_of_an_empty_cell_stock_or_start_date_is_value_error() {
         ("A4", "#VALUE!"),
         ("A5", "#CONNECT!"),
     ] {
-        assert_eq!(model._get_text(cell), *expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell}");
     }
 }

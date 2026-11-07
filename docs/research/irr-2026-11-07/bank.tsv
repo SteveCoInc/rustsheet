@@ -1,0 +1,32 @@
+candidate	typed	typed_train	typed_test	exact	exact_train	exact_test	type_gained	type_lost
+engine	2000	1432	568	1857	1338	519	0	0
+base, cap 50	1709	1223	486	1633	1172	461	24	315
+base, cap 200	1754	1257	497	1752	1257	495	25	271
+vb: r-half clamp, cap 200	1862	1328	534	1718	1233	485	25	163
+vb: d-half clamp, cap 200	1796	1282	514	1720	1234	486	26	230
+vb: flat nudge + r-half clamp, cap 200	1874	1337	537	1723	1237	486	37	163
+rate: hold on flat, cap 50	1868	1333	535	1744	1248	496	109	241
+rate: hold on flat + run on past d = 1, cap 50	1933	1374	559	1809	1289	520	109	176
+rate: hold on flat + run on past d = 1, cap 200	1990	1418	572	1935	1379	556	118	128
+bank: H2 nudge	1765	1266	499	1757	1261	496	37	272
+bank: H2+H10 nudge, second flat #DIV/0!	1725	1237	488	1717	1232	485	44	319
+bank: H4 run on	1823	1301	522	1821	1301	520	25	202
+bank: H8 scaled tolerance	1775	1264	511	1377	985	392	116	341
+bank: H11 no retry after a pole	1724	1235	489	1722	1235	487	24	300
+bank: H12 Newton fallback	1944	1388	556	1815	1304	511	1	57
+bank: H13 keep older	1792	1277	515	1742	1241	501	112	320
+bank: H14 slope	1782	1277	505	1751	1257	494	82	300
+bank: H15 clamp inside the pole	1811	1294	517	1765	1263	502	25	214
+bank: H1+H7 hold (no run on)	1921	1374	547	1866	1335	531	118	197
+bank: RATE+H3 restart	1989	1418	571	1936	1383	553	117	128
+bank: RATE+H8 scaled tolerance	1849	1311	538	1438	1025	413	119	270
+bank: RATE+H12 Newton fallback	2046	1454	592	1942	1385	557	94	48
+bank: RATE+H13 keep older	1887	1338	549	1834	1300	534	130	243
+bank: RATE+H14 slope	1914	1361	553	1856	1320	536	125	211
+bank: RATE run on + H2+H10 nudge, no hold	1794	1281	513	1786	1276	510	44	250
+bank: RATE, H5 r-half for run on	2030	1445	585	1831	1310	521	118	88
+bank: RATE, H6 d-half for run on	1963	1399	564	1834	1312	522	119	156
+bank: RATE, H15 inside for run on	1976	1410	566	1877	1340	537	118	142
+bank: RATE, H6 d-half + H12	2023	1439	584	1842	1319	523	95	72
+bank: RATE+H12+H13	1941	1373	568	1839	1305	534	106	165
+bank: RATE, H5 r-half + H12	2017	1435	582	1812	1298	514	94	77

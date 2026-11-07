@@ -2,6 +2,14 @@
 //! argument is read once and sorted once per call (`sorted_data.rs`); `k`, `x` and
 //! `significance` lift over arrays and ranges (probes/stat-argument-modes,
 //! probes/stat-whole-lift W21-W47).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
+// LINT-DEBT-END
 
 use super::sorted_data::{DataArg, DataOrder, SortedNumbers};
 use crate::decimal_round::{cut_to_15_digits, decimal_to_f64};

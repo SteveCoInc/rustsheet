@@ -11,6 +11,15 @@
 //! T-4174) imports as a field with its formula and no records, after the other fields; a cache
 //! whose formula Excel for the web refuses, or the engine cannot compute
 //! (`check_calculated_fields`), is skipped.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::float_cmp,
+    clippy::print_stderr,
+    clippy::too_many_lines,
+    elided_lifetimes_in_paths
+)]
+// LINT-DEBT-END
 
 mod filters;
 mod groups;

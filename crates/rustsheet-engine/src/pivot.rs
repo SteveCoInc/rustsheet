@@ -11,6 +11,9 @@
 //! them back. A row or column move shifts a pivot with its cells, or is refused when it would
 //! split one ([`Model::move_pivots`]; T-2401; docs/excel-semantics/web.md "Pivot tables and
 //! structural edits").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use std::collections::{HashMap, HashSet};
 

@@ -19,6 +19,9 @@
 //! resolves the last two to their range as they stand at the refresh, a dynamic name's OFFSET or
 //! INDEX body included (pivots.md "A pivot over a defined name or a Table reads it again at the
 //! refresh", probes/t4506-pivot-named-sources; T-4506).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_excessive_bools)]
+// LINT-DEBT-END
 
 use std::collections::{HashMap, HashSet};
 
@@ -141,7 +144,7 @@ impl SourceCells for Model {
         else {
             return CacheItem::Missing;
         };
-        let reference = CellReferenceIndex { sheet, row, column };
+        let reference = CellReferenceIndex { sheet, column, row };
         match self.get_cell_value(cell, reference) {
             CalcResult::Number(n) if self.is_date_style(cell.get_style()) => CacheItem::Date(n),
             CalcResult::Number(n) => CacheItem::Number(n),

@@ -1,3 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::float_cmp,
+    clippy::match_same_arms,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 use super::locale_tag::{self, LocaleTag};
 use super::numerals::Numerals;
 use crate::number_format::{parse_excel_number, parse_finite_number};
@@ -153,7 +162,7 @@ impl Lexer {
             chars,
             position: 0,
             len,
-            error_message: "".to_string(),
+            error_message: String::new(),
             error_position: 0,
             pending_locale: None,
             section_started: false,
@@ -189,19 +198,18 @@ impl Lexer {
     fn consume_string(&mut self) -> Option<String> {
         let mut position = self.position;
         let len = self.len;
-        let mut chars = "".to_string();
+        let mut chars = String::new();
         while position < len {
             let x = self.chars[position];
             position += 1;
             // Excel: `""` inside a literal is not an escaped quote but the end of one literal and
             // the start of the next, so `0 """Millions"""` shows `42 Millions`
             // (probes/format-doubled-quotes C1-C11; docs/excel-semantics/number-formats.md).
-            if x != '"' {
-                chars.push(x);
-            } else {
+            if x == '"' {
                 self.position = position;
                 return Some(chars);
             }
+            chars.push(x);
         }
         None
     }
@@ -209,7 +217,7 @@ impl Lexer {
     fn consume_number(&mut self) -> Option<f64> {
         let mut position = self.position;
         let len = self.len;
-        let mut chars = "".to_string();
+        let mut chars = String::new();
         // first optional '-' sign
         if position < len && self.chars[position] == '-' {
             chars.push('-');
@@ -370,7 +378,7 @@ impl Lexer {
         let colors = [
             "black", "white", "red", "green", "blue", "yellow", "magenta", "cyan",
         ];
-        let mut chars = "".to_string();
+        let mut chars = String::new();
         while let Some(ch) = self.read_next_char() {
             if ch == ']' {
                 let lc = chars.to_lowercase();
@@ -383,14 +391,12 @@ impl Lexer {
                 if let Ok(index) = chars[5..].trim().parse::<i32>() {
                     if index < 57 && index > 0 {
                         return Some(index);
-                    } else {
-                        return None;
                     }
+                    return None;
                 }
                 return None;
-            } else {
-                chars.push(ch);
             }
+            chars.push(ch);
         }
         None
     }

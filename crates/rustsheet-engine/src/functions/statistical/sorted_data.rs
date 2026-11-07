@@ -273,7 +273,7 @@ mod tests {
     fn the_data_is_read_and_prepared_once_per_call() {
         let mut model = new_empty_model();
         for (row, value) in [1, 2, 4, 3, 7, 5, 8, 6].iter().enumerate() {
-            model._set(&format!("A{}", row + 1), &value.to_string());
+            model.set_a1(&format!("A{}", row + 1), &value.to_string());
         }
         model.evaluate();
         let context = CellReferenceRC {
@@ -329,7 +329,7 @@ mod tests {
     fn a_bad_k_does_not_sort_the_data() {
         let mut model = new_empty_model();
         for row in 1..=8 {
-            model._set(&format!("A{row}"), &row.to_string());
+            model.set_a1(&format!("A{row}"), &row.to_string());
         }
         model.evaluate();
         let context = CellReferenceRC {
@@ -372,7 +372,7 @@ mod tests {
     fn a_data_error_wins_over_a_bad_k() {
         let mut model = new_empty_model();
         for (cell, value) in [("B1", "3"), ("B2", "=NA()"), ("B3", "5")] {
-            model._set(cell, value);
+            model.set_a1(cell, value);
         }
         let cases = [
             ("C1", "=LARGE(B1:B3,0)"),
@@ -384,12 +384,12 @@ mod tests {
             ("C7", "=INDEX(QUARTILE.EXC(B1:B3,{9;9}),2)"),
         ];
         for (cell, formula) in cases {
-            model._set(cell, formula);
+            model.set_a1(cell, formula);
         }
         model.evaluate();
         for (cell, formula) in cases {
-            assert_eq!(model._get_text(cell), "#N/A", "{formula}");
+            assert_eq!(model.get_text_a1(cell), "#N/A", "{formula}");
         }
-        assert_eq!(model._get_error_message("C1"), "");
+        assert_eq!(model.get_error_message_a1("C1"), "");
     }
 }

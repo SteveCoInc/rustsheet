@@ -4,8 +4,9 @@
 
 use std::collections::BTreeMap;
 
-use rustsheet::{LoadOptions, SaveOptions, Workbook};
+use rustsheet::{LoadOptions, SaveOptions, SaveReport, Workbook};
 
+use super::dropped;
 use super::package::Package;
 use super::r1::{self, Edit};
 use super::{score, Item, Sides, Verdict};
@@ -181,9 +182,10 @@ pub(super) fn load_stored(bytes: &[u8], name: Option<&str>) -> Result<Workbook, 
     Ok(workbook)
 }
 
-fn save(workbook: &Workbook) -> Result<Vec<u8>, R0Error> {
+/// Saves `workbook`, with the save report that tells `dropped` items (D7) from lost ones.
+fn save(workbook: &Workbook) -> Result<(Vec<u8>, SaveReport), R0Error> {
     workbook
-        .to_xlsx_bytes(SaveOptions::default())
+        .to_xlsx_bytes_with_report(SaveOptions::default())
         .map_err(|e| R0Error::Engine(format!("save failed: {e}")))
 }
 
@@ -196,14 +198,15 @@ pub(super) fn r0(
     name: Option<&str>,
 ) -> Result<(Vec<Item>, usize, Vec<u8>), R0Error> {
     let workbook = load(bytes, name)?;
-    let out = save(&workbook)?;
+    let (out, report) = save(&workbook)?;
     let sides = Sides {
         source,
         source_bytes: bytes,
         saved: &workbook,
         name: name.unwrap_or("workbook"),
     };
-    let (items, checked) = score(R0, &sides, &out);
+    let (mut items, checked) = score(R0, &sides, &out);
+    dropped::apply(&mut items, source, &report);
     Ok((items, checked, out))
 }
 
@@ -223,14 +226,15 @@ fn run_r1(
     let Some(delta) = delta else {
         return Ok((None, outcome, None));
     };
-    let out = save(&workbook)?;
+    let (out, report) = save(&workbook)?;
     let sides = Sides {
         source,
         source_bytes: bytes,
         saved: &workbook,
         name: name.unwrap_or("workbook"),
     };
-    let (items, checked) = score(label, &sides, &out);
+    let (mut items, checked) = score(label, &sides, &out);
+    dropped::apply(&mut items, source, &report);
     let found = r1::violations(label, plain, items, &delta);
     Ok((Some((found, checked)), outcome, Some(out)))
 }

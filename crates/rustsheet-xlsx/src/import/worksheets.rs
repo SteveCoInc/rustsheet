@@ -1,3 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::needless_pass_by_value,
+    clippy::print_stdout,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use rustsheet_engine::expressions::parser::{
@@ -187,11 +196,10 @@ fn load_comments<R: Read + std::io::Seek>(
                 .descendants()
                 .filter(|n| n.has_tag_name("t"))
                 .map(|n| n.text().unwrap_or_default().to_string())
-                .collect::<Vec<String>>()
-                .join("");
+                .collect::<String>();
             let cell_ref = get_attribute(comment, "ref")?.to_string();
             // TODO: Read author_name from the list of authors
-            let author_name = "".to_string();
+            let author_name = String::new();
             comments.push(Comment {
                 text,
                 author_name,
@@ -217,9 +225,9 @@ enum ParseReferenceError {
 // There is a similar named function in rustsheet_engine. We probably should fix both at the same time.
 // NB: Maybe use regexes for this?
 fn parse_reference(s: &str) -> Result<CellReferenceRC, ParseReferenceError> {
-    let mut sheet_name = "".to_string();
-    let mut column = "".to_string();
-    let mut row = "".to_string();
+    let mut sheet_name = String::new();
+    let mut column = String::new();
+    let mut row = String::new();
     let mut state = "sheet"; // "sheet", "col", "row"
     for ch in s.chars() {
         match state {
@@ -619,34 +627,32 @@ fn load_hyperlinks(
             parse_range(cell_ref).map_err(XlsxError::Xml)?;
         let tooltip = node.attribute("tooltip").map(str::to_string);
         let rel_id = node.relationship_id();
-        let link = match rel_id {
-            Some(rel_id) => {
-                let target = match hyperlink_rels.get(rel_id) {
-                    Some(target) => target.clone(),
-                    // dangling relationship id, skip the hyperlink
-                    None => continue,
-                };
-                // An external link may also point to a location inside the target
-                // document. We keep it as a fragment of the target.
-                let target = match node.attribute("location") {
-                    Some(location) => format!("{target}#{location}"),
-                    None => target,
-                };
-                Link::External { target, tooltip }
-            }
-            None => {
-                let location = match node.attribute("location") {
-                    Some(location) if !location.is_empty() => location.to_string(),
-                    // a hyperlink with neither r:id nor location is malformed, skip it
-                    _ => continue,
-                };
-                Link::Internal { location, tooltip }
-            }
+        let link = if let Some(rel_id) = rel_id {
+            let target = match hyperlink_rels.get(rel_id) {
+                Some(target) => target.clone(),
+                // dangling relationship id, skip the hyperlink
+                None => continue,
+            };
+            // An external link may also point to a location inside the target
+            // document. We keep it as a fragment of the target.
+            let target = match node.attribute("location") {
+                Some(location) => format!("{target}#{location}"),
+                None => target,
+            };
+            Link::External { target, tooltip }
+        } else {
+            let location = match node.attribute("location") {
+                Some(location) if !location.is_empty() => location.to_string(),
+                // a hyperlink with neither r:id nor location is malformed, skip it
+                _ => continue,
+            };
+            Link::Internal { location, tooltip }
         };
         // The range is expanded to one link per cell. A corrupt or malicious file
         // could use an enormous range (up to the whole sheet); in that case only
         // the top-left cell gets the link instead of exhausting memory.
-        let cell_count = (row_end - row_start + 1) as i64 * (column_end - column_start + 1) as i64;
+        let cell_count =
+            i64::from(row_end - row_start + 1) * i64::from(column_end - column_start + 1);
         if cell_count > MAX_HYPERLINK_RANGE_CELLS {
             links.insert((row_start, column_start), link);
             continue;
@@ -785,9 +791,9 @@ fn get_sheet_view(ws: &XmlNode) -> SheetView {
         }
     } else {
         SheetView {
-            frozen_rows,
-            frozen_columns,
             is_selected,
+            frozen_columns,
+            frozen_rows,
             show_grid_lines,
             ..Default::default()
         }
@@ -833,7 +839,7 @@ pub(super) fn load_sheet<R: Read + std::io::Seek>(
     // read as a tree.
     let SheetDataXml {
         worksheet,
-        mut sheet_data,
+        sheet_data,
         rows,
         shared_formulas,
         data_tables,
@@ -856,8 +862,6 @@ pub(super) fn load_sheet<R: Read + std::io::Seek>(
     let color = load_sheet_color(ws, theme)?;
 
     let merged_cells = load_merge_cells(ws)?;
-
-    merged_cells::clear_covered_cells(&mut sheet_data, &merged_cells);
 
     let links = load_hyperlinks(ws, &settings.hyperlink_rels)?;
 
@@ -900,7 +904,7 @@ pub(super) fn load_sheet<R: Read + std::io::Seek>(
             rows,
             shared_formulas,
             sheet_data,
-            name: sheet_name.to_string(),
+            name: sheet_name.clone(),
             sheet_id,
             // Placeholder: `load_sheets` sets the rank from the sheet's position.
             load_rank: 0,
@@ -964,10 +968,10 @@ pub(super) fn load_sheets<R: Read + std::io::Seek>(
                 .get(rel_id)
                 .ok_or_else(|| XlsxError::Xml("Corrupt XML structure".to_string()))?;
             let settings = SheetSettings {
-                name: sheet_name.to_string(),
+                name: sheet_name.clone(),
                 id: sheet.sheet_id,
                 state: state.clone(),
-                comments: comments.to_vec(),
+                comments: comments.clone(),
                 hyperlink_rels: hyperlink_rels.clone(),
                 date_system: workbook.date_system,
             };

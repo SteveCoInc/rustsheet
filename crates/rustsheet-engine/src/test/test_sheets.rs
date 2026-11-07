@@ -5,33 +5,33 @@ use crate::test::util::new_empty_model;
 #[test]
 fn test_add_remove_sheets() {
     let mut model = new_empty_model();
-    model._set("A1", "7");
-    model._set("A2", "=Sheet2!C3");
+    model.set_a1("A1", "7");
+    model.set_a1("A2", "=Sheet2!C3");
     model.evaluate();
     assert_eq!(model.workbook.get_worksheet_names(), ["Sheet1"]);
-    assert_eq!(model._get_text("A2"), "#REF!");
+    assert_eq!(model.get_text_a1("A2"), "#REF!");
 
     // Add a sheet
     model.new_sheet();
     assert_eq!(model.workbook.get_worksheet_names(), ["Sheet1", "Sheet2"]);
-    assert_eq!(model._get_text("A2"), "0");
-    model._set("Sheet2!A1", "=Sheet1!A1");
+    assert_eq!(model.get_text_a1("A2"), "0");
+    model.set_a1("Sheet2!A1", "=Sheet1!A1");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!A1"), "7");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), "7");
 
     // Rename the first sheet
     let r = model.rename_sheet("Sheet1", "Ricci");
     assert!(r.is_ok());
 
     assert_eq!(model.workbook.get_worksheet_names(), ["Ricci", "Sheet2"]);
-    assert_eq!(model._get_text("Sheet2!A1"), "7");
-    assert_eq!(model._get_formula("Sheet2!A1"), "=Ricci!A1");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), "7");
+    assert_eq!(model.get_formula_a1("Sheet2!A1"), "=Ricci!A1");
 
     // Remove the first sheet
     let r = model.delete_sheet_by_name("Ricci");
     assert!(r.is_ok());
     assert_eq!(model.workbook.get_worksheet_names(), ["Sheet2"]);
-    assert_eq!(model._get_text("Sheet2!A1"), "#REF!");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), "#REF!");
 }
 
 #[test]
@@ -71,30 +71,30 @@ fn test_rename_one_sheet() {
 #[test]
 fn test_rename_and_formula() {
     let mut model = new_empty_model();
-    model._set("A1", "=A2*3");
-    model._set("A2", "42");
+    model.set_a1("A1", "=A2*3");
+    model.set_a1("A2", "42");
     model.evaluate();
     let r = model.rename_sheet("Sheet1", "Sheet2");
     assert!(r.is_ok());
     model.new_sheet();
     assert_eq!(model.workbook.get_worksheet_names(), ["Sheet2", "Sheet1"]);
-    model._set("Sheet2!A3", "= A1 * 3");
+    model.set_a1("Sheet2!A3", "= A1 * 3");
     model.evaluate();
-    assert_eq!(model._get_formula("Sheet2!A3"), "= A1 * 3");
+    assert_eq!(model.get_formula_a1("Sheet2!A3"), "= A1 * 3");
 }
 
 #[test]
 fn test_correct_quoting() {
     let mut model = new_empty_model();
     model.new_sheet();
-    model._set("Sheet2!B3", "400");
-    model._set("A1", "=Sheet2!B3*2");
+    model.set_a1("Sheet2!B3", "400");
+    model.set_a1("A1", "=Sheet2!B3*2");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "800");
+    assert_eq!(model.get_text_a1("A1"), "800");
     let r = model.rename_sheet("Sheet2", "New Sheet");
     assert!(r.is_ok());
-    assert_eq!(model._get_text("A1"), "800");
-    assert_eq!(model._get_formula("A1"), "='New Sheet'!B3*2");
+    assert_eq!(model.get_text_a1("A1"), "800");
+    assert_eq!(model.get_formula_a1("A1"), "='New Sheet'!B3*2");
 }
 
 #[test]
@@ -114,22 +114,22 @@ fn test_cannot_delete_last_sheet() {
 #[test]
 fn test_ranges() {
     let mut model = new_empty_model();
-    model._set("A1", "=SUM(Sheet2!A1:C3)*Sheet3!A2");
+    model.set_a1("A1", "=SUM(Sheet2!A1:C3)*Sheet3!A2");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#REF!");
+    assert_eq!(model.get_text_a1("A1"), "#REF!");
     model.new_sheet();
-    assert_eq!(model._get_text("A1"), "#REF!");
+    assert_eq!(model.get_text_a1("A1"), "#REF!");
     model.new_sheet();
-    assert_eq!(model._get_text("A1"), "0");
+    assert_eq!(model.get_text_a1("A1"), "0");
 
-    model._set("Sheet3!A2", "42");
-    model._set("Sheet2!A1", "2");
+    model.set_a1("Sheet3!A2", "42");
+    model.set_a1("Sheet2!A1", "2");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "84");
+    assert_eq!(model.get_text_a1("A1"), "84");
     let r = model.rename_sheet("Sheet2", "Other Sheet");
     assert!(r.is_ok());
     assert_eq!(
-        model._get_formula("A1"),
+        model.get_formula_a1("A1"),
         "=SUM('Other Sheet'!A1:C3)*Sheet3!A2"
     );
 }
@@ -138,25 +138,25 @@ fn test_ranges() {
 fn test_insert_sheet() {
     // Set a formula with a wrong sheet
     let mut model = new_empty_model();
-    model._set("A1", "=Bacchus!A3");
-    model._set("A2", "=Dionysus!A3");
+    model.set_a1("A1", "=Bacchus!A3");
+    model.set_a1("A2", "=Dionysus!A3");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#REF!");
-    assert_eq!(model._get_text("A2"), "#REF!");
+    assert_eq!(model.get_text_a1("A1"), "#REF!");
+    assert_eq!(model.get_text_a1("A2"), "#REF!");
 
     // Insert the sheet at the end and check the formula
     assert!(model.insert_sheet("Bacchus", 1, None).is_ok());
     model.set_user_input(1, 3, 1, "42".to_string()).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "42");
-    assert_eq!(model._get_text("A2"), "#REF!");
+    assert_eq!(model.get_text_a1("A1"), "42");
+    assert_eq!(model.get_text_a1("A2"), "#REF!");
 
     // Insert a sheet in between the other two
     assert!(model.insert_sheet("Dionysus", 1, None).is_ok());
     model.set_user_input(1, 3, 1, "111".to_string()).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "42");
-    assert_eq!(model._get_text("A2"), "111");
+    assert_eq!(model.get_text_a1("A1"), "42");
+    assert_eq!(model.get_text_a1("A2"), "111");
     assert_eq!(
         model.workbook.get_worksheet_names(),
         ["Sheet1", "Dionysus", "Bacchus"]
@@ -183,26 +183,26 @@ fn test_insert_sheet() {
 fn test_rename_sheet() {
     let mut model = new_empty_model();
     model.new_sheet();
-    model._set("A1", "=NewSheet!A3");
+    model.set_a1("A1", "=NewSheet!A3");
     model.set_user_input(1, 3, 1, "25".to_string()).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#REF!");
+    assert_eq!(model.get_text_a1("A1"), "#REF!");
     assert!(model.rename_sheet("Sheet2", "NewSheet").is_ok());
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "25");
+    assert_eq!(model.get_text_a1("A1"), "25");
 }
 
 #[test]
 fn test_rename_sheet_by_index() {
     let mut model = new_empty_model();
     model.new_sheet();
-    model._set("A1", "=NewSheet!A1");
+    model.set_a1("A1", "=NewSheet!A1");
     model.set_user_input(1, 1, 1, "25".to_string()).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#REF!");
+    assert_eq!(model.get_text_a1("A1"), "#REF!");
     assert!(model.rename_sheet_by_index(1, "NewSheet").is_ok());
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "25");
+    assert_eq!(model.get_text_a1("A1"), "25");
 }
 
 #[test]
@@ -216,33 +216,33 @@ fn test_rename_sheet_by_index_error() {
 #[test]
 fn test_delete_sheet_by_index() {
     let mut model = new_empty_model();
-    model._set("A1", "7");
-    model._set("A2", "=Sheet2!C3");
+    model.set_a1("A1", "7");
+    model.set_a1("A2", "=Sheet2!C3");
     model.evaluate();
     assert_eq!(model.workbook.get_worksheet_names(), ["Sheet1"]);
-    assert_eq!(model._get_text("A2"), "#REF!");
+    assert_eq!(model.get_text_a1("A2"), "#REF!");
 
     // Add a sheet
     model.new_sheet();
     assert_eq!(model.workbook.get_worksheet_names(), ["Sheet1", "Sheet2"]);
-    assert_eq!(model._get_text("A2"), "0");
-    model._set("Sheet2!A1", "=Sheet1!A1");
+    assert_eq!(model.get_text_a1("A2"), "0");
+    model.set_a1("Sheet2!A1", "=Sheet1!A1");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!A1"), "7");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), "7");
 
     // Rename the first sheet
     let r = model.rename_sheet("Sheet1", "Ricci");
     assert!(r.is_ok());
 
     assert_eq!(model.workbook.get_worksheet_names(), ["Ricci", "Sheet2"]);
-    assert_eq!(model._get_text("Sheet2!A1"), "7");
-    assert_eq!(model._get_formula("Sheet2!A1"), "=Ricci!A1");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), "7");
+    assert_eq!(model.get_formula_a1("Sheet2!A1"), "=Ricci!A1");
 
     // Remove the first sheet
     let r = model.delete_sheet_by_name("Ricci");
     assert!(r.is_ok());
     assert_eq!(model.workbook.get_worksheet_names(), ["Sheet2"]);
-    assert_eq!(model._get_text("Sheet2!A1"), "#REF!");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), "#REF!");
 }
 
 #[test]

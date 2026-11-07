@@ -1,8 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_sign_loss, clippy::manual_let_else)]
+// LINT-DEBT-END
 use std::sync::OnceLock;
 
 use regex_syntax::hir::{Class, ClassUnicodeRange, Hir, HirKind};
 
-use super::types::*;
+use super::types::ParsedReference;
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 
 pub mod shift;
@@ -38,9 +41,10 @@ pub fn column_to_number(column: &str) -> Result<i32, String> {
             .ok_or_else(|| "Column is not valid.".to_string())?;
     }
 
-    match is_valid_column_number(column_number) {
-        true => Ok(column_number),
-        false => Err("Column is not valid.".to_string()),
+    if is_valid_column_number(column_number) {
+        Ok(column_number)
+    } else {
+        Err("Column is not valid.".to_string())
     }
 }
 
@@ -291,8 +295,8 @@ pub fn parse_reference_a1(r: &str) -> Option<ParsedReference> {
     let chars = r.chars();
     let mut absolute_column = false;
     let mut absolute_row = false;
-    let mut row = "".to_string();
-    let mut column = "".to_string();
+    let mut row = String::new();
+    let mut column = String::new();
     let mut state = 1; // 1(column), 2(row)
 
     for ch in chars {
@@ -657,7 +661,7 @@ pub fn quote_name(name: &str) -> String {
     }
     if name_needs_quoting(name) {
         return format!("'{}'", name.replace('\'', "''"));
-    };
+    }
     name.to_string()
 }
 

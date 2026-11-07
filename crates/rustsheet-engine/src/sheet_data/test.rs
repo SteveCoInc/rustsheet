@@ -262,7 +262,7 @@ fn natural_order_whatever_the_order_of_insertion() {
     // two chunks, and a row longer than the linear search limit, filled
     // from the right
     for column in (1..=20).rev() {
-        data.set_cell(2000, column, number(column as f64));
+        data.set_cell(2000, column, number(f64::from(column)));
     }
     data.set_cell(5, 7, number(0.0));
     data.set_cell(5, 3, number(0.0));

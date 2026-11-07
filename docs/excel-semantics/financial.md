@@ -5141,6 +5141,41 @@ Ours: `irr_fallback` takes one more Newton step from its stop iterate and is `#N
 2..148 flows whose largest |c| is 6.4E-12..2.2E+82, the evidenced range (`IRR_ROOT_RESIDUAL_FLOWS`).
 Tasks: T-3411
 
+## IRR's failure handlers scored offline: RATE's driver with the Newton fallback leads (T-4836)
+Rule (leads and refutations, no implementation): on the 2,555 numeric IRR cells of the `irr-type` fit (26 probe
+cases), each failure handler of plan.md's Phase 2 bank (docs/research/irr-2026-11-07/plan.md H1-H15; H13-H15 from
+the lineage table, lineage.md) was scored for Excel's outcome type and bits, on the exact replica of "IRR is a secant
+in d", on both sides of the fit lab's split. The engine on main types 2,000 cells (train 1,432, test 568) and is
+bit-exact on 1,857 (1,338, 519). Counts are typed / bit-exact; gained and lost are typed cells against the engine.
+- **Lead: RATE's driver plus the Newton fallback** (hold on a flat secant, run on past d = 1, cap 200 with RATE's
+  1e-4 return tests, then Newton on P(v) from v = 0 with the 1e-4 residual cut where both runs fail): 2,046 / 1,942,
+  train 1,454 / 1,385 and test 592 / 557, gaining 94 typed cells and losing 48. It is the only candidate above the
+  engine on every count and on both sides. Without the fallback the RATE transplant is 1,990 / 1,935.
+- Next: RATE's driver with VB's r-half clamp in place of the run on (H5) is 2,030 / 1,831 (+118 / -88). Adding the
+  fallback to it gives 2,017 / 1,812, and the d-half clamp (H6) with the fallback 2,023 / 1,842. So the clamps help
+  the type but cost bits, and the fallback does not combine with them as it does with the run on.
+- Refuted as Excel's rule on this data (each loses to its base on both sides):
+  - **H8, VB's flow-scaled stop** (|NPV| < max|c| x 1e-9): 1,775 / 1,377 on the base and 1,849 / 1,438 on RATE's
+    driver, against 1,754 / 1,752 and 1,990 / 1,935. It loses about 400 bit-exact cells, so the main stop is
+    absolute, as "IRR is a secant in d" found on m9-fin-irr-rate.
+  - **H13, RATE's keep-the-older-iterate** (T-3963): 1,887 / 1,834 on RATE's driver (-243 typed).
+  - **H14, the previous slope reused at a flat secant**: 1,914 / 1,856 on RATE's driver.
+  - **H2 and H10, VB's nudge** with or without `#DIV/0!` for a second flat: 1,765 and 1,725 on the base, 1,794 on
+    RATE's run on.
+  - **H11, no retry after a pole crossing**: 1,724 on the base (the retry from 0.1 after a pole stays).
+- Neutral: **H3, RATE's restart** at steps 3..16 changes 1 typed and 1 bit-exact cell on RATE's driver (1,989 /
+  1,936). H15, a clamp just inside the pole at r = 1000, is 1,976 / 1,877 on RATE's driver.
+- Not scored: H9 (another NPV arithmetic for long series), which no source in lineage.md supports; it stays a Phase 4
+  question.
+The shortlist (RATE's driver; with the fallback; with H5 and the fallback; with H5) disagrees on 235 cells, the RATE
+driver and its fallback variant on 104. Each model's value on every cell is in
+docs/research/irr-2026-11-07/predictions.tsv, the full table in bank.tsv; `bank.py` there reproduces both.
+Correction to lineage.md's H15: formulajs's clamp at r = -0.999999999 is the far side of d = 1 (v = 1E+9, d = 1 - 1E+9)
+and does not apply to a crossing from below; its upper clamp r = 1000 (d = 1000/1001) does, and that is what was scored.
+Evidence: no new oracle data; the cells of the 26 IRR probe cases (excel-graph, 2026-10-06 to 2026-11-07)
+Status: UNVERIFIED (offline scores of candidate rules; T-4838's engineered probes decide)
+Tasks: T-4836, T-4838
+
 ## IRR over an error element
 Rule: IRR (probes/fin-irr-error-array, T-2390, excel-graph) gives `#VALUE!`, whatever the kind, when its values hold an
 error: in an array constant (`IRR({-100,#N/A,60})`, also `#DIV/0!`, `#NUM!`, `#VALUE!`, `#REF!`, `#NAME?`, first, middle or last,

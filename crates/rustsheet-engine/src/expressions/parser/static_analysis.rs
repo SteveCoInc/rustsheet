@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::match_same_arms,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 use super::reference_operators::{at_outside, wrong_range_shape};
 use super::{for_each_chain_operand_mut, Node};
 use crate::functions::lift::lifting_table_functions;
@@ -271,7 +279,7 @@ pub(super) fn add_legacy_intersection(node: &mut Node, add: bool, arrays: bool) 
                 *node = Node::automatic_at(node.clone());
             }
         }
-    };
+    }
 }
 
 /// The result of the static analysis of a node
@@ -332,7 +340,7 @@ pub(crate) fn run_static_analysis_on_node(node: &Node) -> StaticResult {
         }
         Node::ArrayKind(array) => {
             let n = array.len() as i32;
-            let m = array.first().map(|row| row.len() as i32).unwrap_or(0);
+            let m = array.first().map_or(0, |row| row.len() as i32);
             StaticResult::Array(n, m)
         }
         Node::RangeKind {

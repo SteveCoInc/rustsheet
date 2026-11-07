@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
+// LINT-DEBT-END
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
@@ -43,7 +51,7 @@ impl LookupTable {
     pub(super) fn columns(&self) -> i32 {
         match self {
             LookupTable::Range { left, right } => right.column - left.column + 1,
-            LookupTable::Array(array) => array.first().map_or(0, |row| row.len()) as i32,
+            LookupTable::Array(array) => array.first().map_or(0, std::vec::Vec::len) as i32,
             LookupTable::External(area) => area.last_column - area.first_column + 1,
         }
     }
@@ -613,7 +621,7 @@ impl Model {
         let last_used = self
             .workbook
             .worksheet(sheet)
-            .map_or(LAST_ROW, |ws| ws.last_used_row());
+            .map_or(LAST_ROW, crate::types::Worksheet::last_used_row);
         let last = row2.min(last_used);
         self.record_seen_empty_range(sheet, last.max(row1 - 1) + 1, column, row2, column);
         last
@@ -629,7 +637,7 @@ impl Model {
         let last_used = self
             .workbook
             .worksheet(sheet)
-            .map_or(LAST_COLUMN, |ws| ws.last_used_column());
+            .map_or(LAST_COLUMN, crate::types::Worksheet::last_used_column);
         let last = column2.min(last_used);
         self.record_seen_empty_range(sheet, row, last.max(column1 - 1) + 1, row, column2);
         last

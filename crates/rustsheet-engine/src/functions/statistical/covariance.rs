@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss)]
+// LINT-DEBT-END
 use super::paired::{MarkedSample, PairedSamplesError, PairedValues};
 use crate::expressions::types::CellReferenceIndex;
 use crate::{

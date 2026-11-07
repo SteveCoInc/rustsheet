@@ -47,9 +47,6 @@ path = "src/bin/test.rs"
 unsafe_code = "deny"
 unused_must_use = "deny"
 rust_2018_idioms = { level = "warn", priority = -1 }
-# LINT-DEBT-BEGIN (inherited from the IronCalc fork; entries may only be removed, never added — see docs/process/quality-gates.md)
-elided_lifetimes_in_paths = "allow"  # 50 at fork time
-# LINT-DEBT-END
 
 [lints.clippy]
 all = { level = "warn", priority = -1 }
@@ -65,38 +62,3 @@ must_use_candidate = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 similar_names = "allow"
-# LINT-DEBT-BEGIN (inherited from the IronCalc fork; entries may only be removed, never added — see docs/process/quality-gates.md)
-assigning_clones = "allow"  # 1 at fork time
-cast_lossless = "allow"  # 4 at fork time
-cast_possible_truncation = "allow"  # 22 at fork time
-cast_possible_wrap = "allow"  # 8 at fork time
-cast_precision_loss = "allow"  # 2 at fork time
-cast_sign_loss = "allow"  # 19 at fork time
-cloned_instead_of_copied = "allow"  # 2 at fork time
-dbg_macro = "allow"  # 2 at fork time
-float_cmp = "allow"  # 2 at fork time
-format_push_string = "allow"  # 4 at fork time
-if_not_else = "allow"  # 24 at fork time
-implicit_clone = "allow"  # 12 at fork time
-inconsistent_struct_constructor = "allow"  # 2 at fork time
-items_after_statements = "allow"  # 1 at fork time
-manual_assert = "allow"  # 4 at fork time
-manual_assert_eq = "allow"  # 1 at fork time
-manual_let_else = "allow"  # 32 at fork time
-manual_string_new = "allow"  # 48 at fork time
-map_unwrap_or = "allow"  # 14 at fork time
-match_same_arms = "allow"  # 18 at fork time
-needless_pass_by_value = "allow"  # 10 at fork time
-needless_raw_string_hashes = "allow"  # 6 at fork time
-print_stderr = "allow"  # 2 at fork time
-print_stdout = "allow"  # 32 at fork time
-redundant_closure_for_method_calls = "allow"  # 14 at fork time
-redundant_else = "allow"  # 2 at fork time
-ref_option = "allow"  # 4 at fork time
-single_match_else = "allow"  # 6 at fork time
-struct_field_names = "allow"  # 2 at fork time
-too_many_lines = "allow"  # 20 at fork time
-unnecessary_join = "allow"  # 4 at fork time
-unnecessary_wraps = "allow"  # 4 at fork time
-wildcard_imports = "allow"  # 1 at fork time
-# LINT-DEBT-END

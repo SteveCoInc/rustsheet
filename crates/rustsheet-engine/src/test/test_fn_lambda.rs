@@ -5,19 +5,19 @@ use crate::test::util::new_empty_model;
 #[test]
 fn simple_evaluation() {
     let mut model = new_empty_model();
-    model._set("A1", "=LAMBDA(x, y, x + y)(1, 2)");
+    model.set_a1("A1", "=LAMBDA(x, y, x + y)(1, 2)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"3");
+    assert_eq!(model.get_text_a1("A1"), *"3");
 }
 
 #[test]
 fn evaluation_in_let() {
     let mut model = new_empty_model();
-    model._set("A1", "=LET(x, 1, y, LAMBDA(a, b, a + b), y(x, 22))");
+    model.set_a1("A1", "=LET(x, 1, y, LAMBDA(a, b, a + b), y(x, 22))");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"23");
+    assert_eq!(model.get_text_a1("A1"), *"23");
 }
 
 #[test]
@@ -26,10 +26,10 @@ fn evaluation_with_defined_name() {
     model
         .new_defined_name("MySum", None, "=LAMBDA(x, y, x + y)")
         .unwrap();
-    model._set("A1", "=MySum(1, 2)");
+    model.set_a1("A1", "=MySum(1, 2)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"3");
+    assert_eq!(model.get_text_a1("A1"), *"3");
 }
 
 // Regression: a defined-name LAMBDA that returns an array must spill.
@@ -42,30 +42,30 @@ fn defined_name_lambda_spills_array() {
     model
         .new_defined_name("MySeq", None, "=LAMBDA(n, SEQUENCE(n))")
         .unwrap();
-    model._set("A1", "=MySeq(3)");
+    model.set_a1("A1", "=MySeq(3)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"1");
-    assert_eq!(model._get_text("A2"), *"2");
-    assert_eq!(model._get_text("A3"), *"3");
+    assert_eq!(model.get_text_a1("A1"), *"1");
+    assert_eq!(model.get_text_a1("A2"), *"2");
+    assert_eq!(model.get_text_a1("A3"), *"3");
 }
 
 #[test]
 fn wrong_number_of_arguments() {
     let mut model = new_empty_model();
-    model._set("A1", "=LAMBDA(x, y, x + y)(1)");
+    model.set_a1("A1", "=LAMBDA(x, y, x + y)(1)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
 }
 
 #[test]
 fn returns_calculation_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=LAMBDA(x, y, x + y)");
+    model.set_a1("A1", "=LAMBDA(x, y, x + y)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#CALC!");
+    assert_eq!(model.get_text_a1("A1"), *"#CALC!");
 }
 
 #[test]
@@ -84,12 +84,12 @@ fn sheet_local_name_takes_precedence_over_global() {
         .new_defined_name("MyFn", Some(1), "=LAMBDA(x, x * 3)")
         .unwrap();
 
-    model._set("A1", "=MyFn(5)");
-    model._set("Sheet2!A1", "=MyFn(5)");
+    model.set_a1("A1", "=MyFn(5)");
+    model.set_a1("Sheet2!A1", "=MyFn(5)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"10");
-    assert_eq!(model._get_text("Sheet2!A1"), *"15");
+    assert_eq!(model.get_text_a1("A1"), *"10");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), *"15");
 }
 
 #[test]
@@ -97,43 +97,43 @@ fn let_bound_variable_captured_in_lambda_body() {
     let mut model = new_empty_model();
     // `a` is bound by LET; the LAMBDA body references `a` as a closure variable.
     // f(2) should return 2 + 1 = 3.
-    model._set("A1", "=LET(a, 1, f, LAMBDA(x, x + a), f(2))");
+    model.set_a1("A1", "=LET(a, 1, f, LAMBDA(x, x + a), f(2))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"3");
+    assert_eq!(model.get_text_a1("A1"), *"3");
 }
 
 #[test]
 fn optional_parameter_omitted() {
     let mut model = new_empty_model();
     // b is optional; calling with one arg should use default (a/2 = 6).
-    model._set("A1", "=LAMBDA(a, [b], IF(ISOMITTED(b), a/2, a*b))(12)");
+    model.set_a1("A1", "=LAMBDA(a, [b], IF(ISOMITTED(b), a/2, a*b))(12)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"6");
+    assert_eq!(model.get_text_a1("A1"), *"6");
 }
 
 #[test]
 fn optional_parameter_provided() {
     let mut model = new_empty_model();
-    model._set("A1", "=LAMBDA(a, [b], IF(ISOMITTED(b), a/2, a*b))(12, 3)");
+    model.set_a1("A1", "=LAMBDA(a, [b], IF(ISOMITTED(b), a/2, a*b))(12, 3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"36");
+    assert_eq!(model.get_text_a1("A1"), *"36");
 }
 
 #[test]
 fn optional_parameter_too_many_args_is_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=LAMBDA(a, [b], a+1)(1, 2, 3)");
+    model.set_a1("A1", "=LAMBDA(a, [b], a+1)(1, 2, 3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
 }
 
 #[test]
 fn required_arg_missing_is_error() {
     let mut model = new_empty_model();
     // `a` is required; calling with no args is an error.
-    model._set("A1", "=LAMBDA(a, [b], a+1)()");
+    model.set_a1("A1", "=LAMBDA(a, [b], a+1)()");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
 }
 
 // A reference given to a LAMBDA, or bound by a LET, stays a reference, also
@@ -141,61 +141,61 @@ fn required_arg_missing_is_error() {
 #[test]
 fn a_single_cell_is_passed_as_a_reference() {
     let mut model = new_empty_model();
-    model._set("A1", "text");
-    model._set("A2", "7");
-    model._set("B5", "3");
-    model._set("C1", "=LAMBDA(x, MAX(x))(A1)");
-    model._set("C2", "=LAMBDA(x, MAX(x))(A2)");
-    model._set("C3", "=LAMBDA(x, ROW(x))(B5)");
-    model._set("C4", "=LAMBDA(x, COLUMN(x))(B5)");
-    model._set("C5", "=LAMBDA(x, OFFSET(x, 1, 0))(A1)");
-    model._set("C6", "=LAMBDA(x, ROWS(x))(B5)");
-    model._set("C9", "=LET(x, A1, MAX(x))");
-    model._set("C10", "=LET(x, B5, ROW(x))");
-    model._set("C11", "=LET(x, A2, y, B5, OFFSET(x, 0, 0)+y)");
+    model.set_a1("A1", "text");
+    model.set_a1("A2", "7");
+    model.set_a1("B5", "3");
+    model.set_a1("C1", "=LAMBDA(x, MAX(x))(A1)");
+    model.set_a1("C2", "=LAMBDA(x, MAX(x))(A2)");
+    model.set_a1("C3", "=LAMBDA(x, ROW(x))(B5)");
+    model.set_a1("C4", "=LAMBDA(x, COLUMN(x))(B5)");
+    model.set_a1("C5", "=LAMBDA(x, OFFSET(x, 1, 0))(A1)");
+    model.set_a1("C6", "=LAMBDA(x, ROWS(x))(B5)");
+    model.set_a1("C9", "=LET(x, A1, MAX(x))");
+    model.set_a1("C10", "=LET(x, B5, ROW(x))");
+    model.set_a1("C11", "=LET(x, A2, y, B5, OFFSET(x, 0, 0)+y)");
     model.evaluate();
 
-    assert_eq!(model._get_text("C1"), *"0");
-    assert_eq!(model._get_text("C2"), *"7");
-    assert_eq!(model._get_text("C3"), *"5");
-    assert_eq!(model._get_text("C4"), *"2");
-    assert_eq!(model._get_text("C5"), *"7");
-    assert_eq!(model._get_text("C6"), *"1");
-    assert_eq!(model._get_text("C9"), *"0");
-    assert_eq!(model._get_text("C10"), *"5");
-    assert_eq!(model._get_text("C11"), *"10");
+    assert_eq!(model.get_text_a1("C1"), *"0");
+    assert_eq!(model.get_text_a1("C2"), *"7");
+    assert_eq!(model.get_text_a1("C3"), *"5");
+    assert_eq!(model.get_text_a1("C4"), *"2");
+    assert_eq!(model.get_text_a1("C5"), *"7");
+    assert_eq!(model.get_text_a1("C6"), *"1");
+    assert_eq!(model.get_text_a1("C9"), *"0");
+    assert_eq!(model.get_text_a1("C10"), *"5");
+    assert_eq!(model.get_text_a1("C11"), *"10");
 }
 
 #[test]
 fn a_single_cell_parameter_is_a_value_where_a_value_is_wanted() {
     let mut model = new_empty_model();
-    model._set("A1", "text");
-    model._set("A2", "7");
-    model._set("C1", "=LAMBDA(x, x)(A1)");
-    model._set("C2", "=LAMBDA(x, x)(A2)");
-    model._set("C3", "=LAMBDA(x, x&\"!\")(A1)");
-    model._set("C4", "=LAMBDA(x, x+1)(A2)");
-    model._set("C5", "=LAMBDA(x, IF(x=\"text\", 1, 2))(A1)");
-    model._set("C6", "=LAMBDA(x, ISBLANK(x))(A3)");
-    model._set("C7", "=LAMBDA(x, ISTEXT(x))(A1)");
-    model._set("C8", "=LAMBDA(x, LEN(x))(A1)");
-    model._set("C9", "=LET(x, A2, x*2)");
-    model._set("C10", "=LAMBDA(x, TYPE(x))(A2)");
+    model.set_a1("A1", "text");
+    model.set_a1("A2", "7");
+    model.set_a1("C1", "=LAMBDA(x, x)(A1)");
+    model.set_a1("C2", "=LAMBDA(x, x)(A2)");
+    model.set_a1("C3", "=LAMBDA(x, x&\"!\")(A1)");
+    model.set_a1("C4", "=LAMBDA(x, x+1)(A2)");
+    model.set_a1("C5", "=LAMBDA(x, IF(x=\"text\", 1, 2))(A1)");
+    model.set_a1("C6", "=LAMBDA(x, ISBLANK(x))(A3)");
+    model.set_a1("C7", "=LAMBDA(x, ISTEXT(x))(A1)");
+    model.set_a1("C8", "=LAMBDA(x, LEN(x))(A1)");
+    model.set_a1("C9", "=LET(x, A2, x*2)");
+    model.set_a1("C10", "=LAMBDA(x, TYPE(x))(A2)");
     model.evaluate();
 
-    assert_eq!(model._get_text("C1"), *"text");
-    assert_eq!(model._get_text("C2"), *"7");
-    assert_eq!(model._get_text("C3"), *"text!");
-    assert_eq!(model._get_text("C4"), *"8");
-    assert_eq!(model._get_text("C5"), *"1");
-    assert_eq!(model._get_text("C6"), *"TRUE");
-    assert_eq!(model._get_text("C7"), *"TRUE");
-    assert_eq!(model._get_text("C8"), *"4");
-    assert_eq!(model._get_text("C9"), *"14");
-    assert_eq!(model._get_text("C10"), *"1");
+    assert_eq!(model.get_text_a1("C1"), *"text");
+    assert_eq!(model.get_text_a1("C2"), *"7");
+    assert_eq!(model.get_text_a1("C3"), *"text!");
+    assert_eq!(model.get_text_a1("C4"), *"8");
+    assert_eq!(model.get_text_a1("C5"), *"1");
+    assert_eq!(model.get_text_a1("C6"), *"TRUE");
+    assert_eq!(model.get_text_a1("C7"), *"TRUE");
+    assert_eq!(model.get_text_a1("C8"), *"4");
+    assert_eq!(model.get_text_a1("C9"), *"14");
+    assert_eq!(model.get_text_a1("C10"), *"1");
     // Nothing spills from a single cell
-    assert_eq!(model._get_text("D1"), *"");
-    assert_eq!(model._get_text("C11"), *"");
+    assert_eq!(model.get_text_a1("D1"), *"");
+    assert_eq!(model.get_text_a1("C11"), *"");
 }
 
 // A defined name that stands for a cell is a reference wherever one is
@@ -203,34 +203,34 @@ fn a_single_cell_parameter_is_a_value_where_a_value_is_wanted() {
 #[test]
 fn a_defined_name_for_a_single_cell_is_a_reference() {
     let mut model = new_empty_model();
-    model._set("K1", "text");
-    model._set("K2", "7");
+    model.set_a1("K1", "text");
+    model.set_a1("K2", "7");
     model
         .new_defined_name("TextCell", None, "Sheet1!$K$1")
         .unwrap();
     model
         .new_defined_name("Later", None, "=LAMBDA(x, x+1)")
         .unwrap();
-    model._set("A1", "=ROW(TextCell)");
-    model._set("A2", "=COLUMN(TextCell)");
-    model._set("A3", "=OFFSET(TextCell, 1, 0)");
-    model._set("A4", "=ROWS(TextCell)");
-    model._set("A5", "=TextCell&\"!\"");
-    model._set("A6", "=LEN(TextCell)");
-    model._set("A7", "=IF(TextCell=\"text\", 1, 2)");
-    model._set("A8", "=TextCell");
-    model._set("A9", "=Later(1)");
+    model.set_a1("A1", "=ROW(TextCell)");
+    model.set_a1("A2", "=COLUMN(TextCell)");
+    model.set_a1("A3", "=OFFSET(TextCell, 1, 0)");
+    model.set_a1("A4", "=ROWS(TextCell)");
+    model.set_a1("A5", "=TextCell&\"!\"");
+    model.set_a1("A6", "=LEN(TextCell)");
+    model.set_a1("A7", "=IF(TextCell=\"text\", 1, 2)");
+    model.set_a1("A8", "=TextCell");
+    model.set_a1("A9", "=Later(1)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"1");
-    assert_eq!(model._get_text("A2"), *"11");
-    assert_eq!(model._get_text("A3"), *"7");
-    assert_eq!(model._get_text("A4"), *"1");
-    assert_eq!(model._get_text("A5"), *"text!");
-    assert_eq!(model._get_text("A6"), *"4");
-    assert_eq!(model._get_text("A7"), *"1");
-    assert_eq!(model._get_text("A8"), *"text");
-    assert_eq!(model._get_text("A9"), *"2");
+    assert_eq!(model.get_text_a1("A1"), *"1");
+    assert_eq!(model.get_text_a1("A2"), *"11");
+    assert_eq!(model.get_text_a1("A3"), *"7");
+    assert_eq!(model.get_text_a1("A4"), *"1");
+    assert_eq!(model.get_text_a1("A5"), *"text!");
+    assert_eq!(model.get_text_a1("A6"), *"4");
+    assert_eq!(model.get_text_a1("A7"), *"1");
+    assert_eq!(model.get_text_a1("A8"), *"text");
+    assert_eq!(model.get_text_a1("A9"), *"2");
 }
 
 // A called LET name or LAMBDA parameter that holds a value: a number or boolean is #NAME?, text
@@ -239,24 +239,24 @@ fn a_defined_name_for_a_single_cell_is_a_reference() {
 #[test]
 fn called_variable_holding_a_value() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("C1", "=LET(f, 1, f(2))");
-    model._set("C2", "=LET(f, \"a\", f(2))");
-    model._set("C3", "=LET(f, 1/0, f(2))");
-    model._set("C4", "=LET(f, INDEX(A1:A2, 2), f(2))");
-    model._set("C5", "=LAMBDA(f, f(2))(TRUE)");
-    model._set("C6", "=LET(f, {1;\"a\"}, f(2))");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("C1", "=LET(f, 1, f(2))");
+    model.set_a1("C2", "=LET(f, \"a\", f(2))");
+    model.set_a1("C3", "=LET(f, 1/0, f(2))");
+    model.set_a1("C4", "=LET(f, INDEX(A1:A2, 2), f(2))");
+    model.set_a1("C5", "=LAMBDA(f, f(2))(TRUE)");
+    model.set_a1("C6", "=LET(f, {1;\"a\"}, f(2))");
     model.evaluate();
 
-    assert_eq!(model._get_text("C1"), *"#NAME?");
-    assert_eq!(model._get_text("C2"), *"0");
-    assert_eq!(model._get_text("C3"), *"#DIV/0!");
-    assert_eq!(model._get_text("C4"), *"#REF!");
-    assert_eq!(model._get_text("C5"), *"#NAME?");
-    assert_eq!(model._get_text("C6"), *"#NAME?");
+    assert_eq!(model.get_text_a1("C1"), *"#NAME?");
+    assert_eq!(model.get_text_a1("C2"), *"0");
+    assert_eq!(model.get_text_a1("C3"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("C4"), *"#REF!");
+    assert_eq!(model.get_text_a1("C5"), *"#NAME?");
+    assert_eq!(model.get_text_a1("C6"), *"#NAME?");
     // C7 is C6's spill.
-    assert_eq!(model._get_text("C7"), *"0");
+    assert_eq!(model.get_text_a1("C7"), *"0");
 }
 
 #[test]
@@ -264,29 +264,29 @@ fn duplicate_parameters_are_refused_in_any_case() {
     // Excel for the web refuses `LAMBDA(x,x,x)(1,2)`, `LAMBDA(x,X,x+X)(1,2)` and
     // `LAMBDA(ä,Ä,ä+Ä)(1,2)` (docs/excel-semantics/references.md, T-1387).
     let mut model = new_empty_model();
-    model._set("A1", "=LAMBDA(x,x,x)(1,2)");
-    model._set("A2", "=LAMBDA(x,X,x+X)(1,2)");
-    model._set("A3", "=LAMBDA(ä,Ä,ä+Ä)(1,2)");
-    model._set("A4", "=LAMBDA(x,[X],x)(1)");
-    model._set("A5", "=LAMBDA(ß,ß*2)(3)");
+    model.set_a1("A1", "=LAMBDA(x,x,x)(1,2)");
+    model.set_a1("A2", "=LAMBDA(x,X,x+X)(1,2)");
+    model.set_a1("A3", "=LAMBDA(ä,Ä,ä+Ä)(1,2)");
+    model.set_a1("A4", "=LAMBDA(x,[X],x)(1)");
+    model.set_a1("A5", "=LAMBDA(ß,ß*2)(3)");
     model.evaluate();
     for cell in ["A1", "A2", "A3", "A4"] {
-        assert_eq!(model._get_text(cell), *"#ERROR!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#ERROR!", "{cell}");
     }
-    assert_eq!(model._get_text("A5"), *"6");
+    assert_eq!(model.get_text_a1("A5"), *"6");
 }
 
 // Messages are not Excel-visible; the value stays `#NAME?`.
 #[test]
 fn calling_a_number_or_boolean_variable_is_name_with_a_message() {
     let mut model = new_empty_model();
-    model._set("A1", "=LET(f, 1, f(2))");
-    model._set("A2", "=LET(f, TRUE, f(2))");
+    model.set_a1("A1", "=LET(f, 1, f(2))");
+    model.set_a1("A2", "=LET(f, TRUE, f(2))");
     model.evaluate();
 
     for cell in ["A1", "A2"] {
-        assert_eq!(model._get_text(cell), *"#NAME?");
-        assert_eq!(model._get_error_message(cell), "A value cannot be called");
+        assert_eq!(model.get_text_a1(cell), *"#NAME?");
+        assert_eq!(model.get_error_message_a1(cell), "A value cannot be called");
     }
 }
 
@@ -295,23 +295,23 @@ fn a_call_of_a_call_is_chained() {
     // probes/lambda-escaping-closures H8 and H10 (excel-graph): a LAMBDA returned by a call is
     // called by the next `(...)` (T-2038).
     let mut model = new_empty_model();
-    model._set("A1", "=LAMBDA(a,LAMBDA(b,a*b))(3)(4)");
-    model._set("A2", "=LAMBDA(a,LAMBDA(b,LAMBDA(c,a*100+b*10+c)))(1)(2)(3)");
-    model._set("A4", "=(LAMBDA(a,LAMBDA(b,a&b)))(\"x\")(\"y\")");
-    model._set("A3", "=LET(f,LAMBDA(a,LAMBDA(b,a-b)),f(10)(4))");
-    model._set("A5", "=LAMBDA(x,x)(1)(2)");
+    model.set_a1("A1", "=LAMBDA(a,LAMBDA(b,a*b))(3)(4)");
+    model.set_a1("A2", "=LAMBDA(a,LAMBDA(b,LAMBDA(c,a*100+b*10+c)))(1)(2)(3)");
+    model.set_a1("A4", "=(LAMBDA(a,LAMBDA(b,a&b)))(\"x\")(\"y\")");
+    model.set_a1("A3", "=LET(f,LAMBDA(a,LAMBDA(b,a-b)),f(10)(4))");
+    model.set_a1("A5", "=LAMBDA(x,x)(1)(2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "12");
-    assert_eq!(model._get_text("A2"), "123");
-    assert_eq!(model._get_text("A4"), "xy");
-    assert_eq!(model._get_text("A3"), "6");
+    assert_eq!(model.get_text_a1("A1"), "12");
+    assert_eq!(model.get_text_a1("A2"), "123");
+    assert_eq!(model.get_text_a1("A4"), "xy");
+    assert_eq!(model.get_text_a1("A3"), "6");
     // A returned value is called like a LET-bound one (probes/chained-calls-lambda B4).
-    assert_eq!(model._get_text("A5"), "#NAME?");
-    model._set("A6", "=SUM(LAMBDA(x,x)(1)(2))");
-    model._set("A7", "=LAMBDA(x,x)(\"a\")(2)");
+    assert_eq!(model.get_text_a1("A5"), "#NAME?");
+    model.set_a1("A6", "=SUM(LAMBDA(x,x)(1)(2))");
+    model.set_a1("A7", "=LAMBDA(x,x)(\"a\")(2)");
     model.evaluate();
-    assert_eq!(model._get_text("A6"), "#NAME?");
-    assert_eq!(model._get_text("A7"), "0");
+    assert_eq!(model.get_text_a1("A6"), "#NAME?");
+    assert_eq!(model.get_text_a1("A7"), "0");
     // Excel for the web refuses a workbook holding a call followed by a space and `(4)`, or a
     // call of SUM's result (probes T-2038, docs/excel-semantics/references.md "Calling a call's
     // result"): the engine reads them as syntax errors.
@@ -319,23 +319,23 @@ fn a_call_of_a_call_is_chained() {
         ("B1", "=LAMBDA(a,LAMBDA(b,a*b))(3) (4)"),
         ("B2", "=SUM(1)(2)"),
     ] {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "#ERROR!");
-    assert_eq!(model._get_text("B2"), "#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("B2"), "#ERROR!");
     // The text round-trips.
-    assert_eq!(model._get_formula("A1"), "=LAMBDA(a,LAMBDA(b,a*b))(3)(4)");
+    assert_eq!(model.get_formula_a1("A1"), "=LAMBDA(a,LAMBDA(b,a*b))(3)(4)");
     assert_eq!(
-        model._get_formula("A2"),
+        model.get_formula_a1("A2"),
         "=LAMBDA(a,LAMBDA(b,LAMBDA(c,a*100+b*10+c)))(1)(2)(3)"
     );
     assert_eq!(
-        model._get_formula("A3"),
+        model.get_formula_a1("A3"),
         "=LET(f,LAMBDA(a,LAMBDA(b,a-b)),f(10)(4))"
     );
     assert_eq!(
-        model._get_formula("A4"),
+        model.get_formula_a1("A4"),
         "=(LAMBDA(a,LAMBDA(b,a&b)))(\"x\")(\"y\")"
     );
 }
@@ -347,7 +347,7 @@ fn a_call_of_a_reference_function_result_is_chained() {
     // refuses the others (`SUM(1)(2)`, `ABS(1)(2)`, `IFERROR`, `IFNA`), which stay syntax errors.
     let mut model = new_empty_model();
     for (cell, value) in [("A1", "1"), ("A2", "2"), ("A3", "3")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     let cases = [
         ("=IF(TRUE,LAMBDA(x,x*2))(3)", "6"),
@@ -371,15 +371,15 @@ fn a_call_of_a_reference_function_result_is_chained() {
         ("=IFNA(LAMBDA(x,x*2),0)(3)", "#ERROR!"),
     ];
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("C{}", row + 1), formula);
+        model.set_a1(&format!("C{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, value)) in cases.iter().enumerate() {
         let cell = format!("C{}", row + 1);
-        assert_eq!(model._get_text(&cell), *value, "{formula}");
+        assert_eq!(model.get_text_a1(&cell), *value, "{formula}");
         if *value != "#ERROR!" {
             // FORMULATEXT prints the callee bare (probes/chained-calls-builtin-if-text C1).
-            assert_eq!(model._get_formula(&cell), *formula);
+            assert_eq!(model.get_formula_a1(&cell), *formula);
         }
     }
 }
@@ -393,9 +393,9 @@ fn a_long_call_chain_is_bounded_like_nesting() {
     let refused = model.set_user_input(0, 1, 1, format!("=LAMBDA(x,x){chain}"));
     assert!(refused.unwrap_err().contains("nested too deeply"));
     let short = "(1)".repeat(20);
-    model._set("A2", &format!("=LAMBDA(x,x){short}"));
+    model.set_a1("A2", &format!("=LAMBDA(x,x){short}"));
     model.evaluate();
-    assert_eq!(model._get_formula("A2"), format!("=LAMBDA(x,x){short}"));
+    assert_eq!(model.get_formula_a1("A2"), format!("=LAMBDA(x,x){short}"));
 }
 
 // T-2925: no LAMBDA outlives the formula that made it, so a root cell's LAMBDAs are dropped once it
@@ -406,20 +406,20 @@ fn a_root_cells_lambdas_are_dropped_once_it_is_evaluated() {
     model
         .new_defined_name("AddOne", None, "=LAMBDA(x, x + 1)")
         .unwrap();
-    model._set(
+    model.set_a1(
         "A1",
         "=SUM(MAP(SEQUENCE(10),LAMBDA(z,MAP(z,LAMBDA(y,y+z)))))",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=A1+SUM(MAP(SEQUENCE(5),LAMBDA(z,AddOne(z))))+REDUCE(0,{1,2},_xleta.SUM)",
     );
-    model._set("A3", "=LET(f,LAMBDA(x,LAMBDA(y,x*y)),f(3)(4))");
+    model.set_a1("A3", "=LET(f,LAMBDA(x,LAMBDA(y,x*y)),f(3)(4))");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"110");
-    assert_eq!(model._get_text("A2"), *"133");
-    assert_eq!(model._get_text("A3"), *"12");
+    assert_eq!(model.get_text_a1("A1"), *"110");
+    assert_eq!(model.get_text_a1("A2"), *"133");
+    assert_eq!(model.get_text_a1("A3"), *"12");
     assert!(model.lambdas.is_empty());
     assert!(model.eta_lambdas.is_empty());
     assert!(model.lambda_captures.is_empty());
@@ -429,7 +429,7 @@ fn a_root_cells_lambdas_are_dropped_once_it_is_evaluated() {
 
     // A second evaluation gives the same values from a model with no LAMBDA left over.
     model.evaluate();
-    assert_eq!(model._get_text("A2"), *"133");
+    assert_eq!(model.get_text_a1("A2"), *"133");
     assert!(model.lambdas.is_empty());
 }
 
@@ -438,15 +438,15 @@ fn a_root_cells_lambdas_are_dropped_once_it_is_evaluated() {
 #[test]
 fn uncalled_lambda_joined_as_text_is_value_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=LAMBDA(x,x)&\"\"");
-    model._set("A2", "=\"a\"&LET(f,LAMBDA(x,x),f)");
-    model._set("A3", "=ERROR.TYPE(LAMBDA(x,x)&LAMBDA(y,y))");
-    model._set("A4", "=IFERROR(LAMBDA(x,x)&\"\",\"e\")");
+    model.set_a1("A1", "=LAMBDA(x,x)&\"\"");
+    model.set_a1("A2", "=\"a\"&LET(f,LAMBDA(x,x),f)");
+    model.set_a1("A3", "=ERROR.TYPE(LAMBDA(x,x)&LAMBDA(y,y))");
+    model.set_a1("A4", "=IFERROR(LAMBDA(x,x)&\"\",\"e\")");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_text("A2"), "#VALUE!");
-    assert_eq!(model._get_text("A3"), "3");
-    assert_eq!(model._get_text("A4"), "e");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), "3");
+    assert_eq!(model.get_text_a1("A4"), "e");
 }
 
 /// CONCAT, TEXTJOIN and CONCATENATE of an uncalled LAMBDA are `#VALUE!`, not `#N/IMPL!`
@@ -454,17 +454,17 @@ fn uncalled_lambda_joined_as_text_is_value_error() {
 #[test]
 fn uncalled_lambda_read_as_text_by_functions_is_value_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=CONCAT(\"a\",LAMBDA(x,x))");
-    model._set("A2", "=TEXTJOIN(\",\",TRUE,LAMBDA(x,x))");
-    model._set("A3", "=TEXTJOIN(LAMBDA(x,x),TRUE,\"a\",\"b\")");
-    model._set("A4", "=ERROR.TYPE(CONCAT(LET(f,LAMBDA(x,x),f),\"\"))");
-    model._set("A5", "=ERROR.TYPE(CONCATENATE(LAMBDA(x,x),\"\"))");
+    model.set_a1("A1", "=CONCAT(\"a\",LAMBDA(x,x))");
+    model.set_a1("A2", "=TEXTJOIN(\",\",TRUE,LAMBDA(x,x))");
+    model.set_a1("A3", "=TEXTJOIN(LAMBDA(x,x),TRUE,\"a\",\"b\")");
+    model.set_a1("A4", "=ERROR.TYPE(CONCAT(LET(f,LAMBDA(x,x),f),\"\"))");
+    model.set_a1("A5", "=ERROR.TYPE(CONCATENATE(LAMBDA(x,x),\"\"))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
-    assert_eq!(model._get_text("A3"), *"#VALUE!");
-    assert_eq!(model._get_text("A4"), *"3");
-    assert_eq!(model._get_text("A5"), *"3");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), *"3");
+    assert_eq!(model.get_text_a1("A5"), *"3");
 }
 
 /// A one-cell TRIMRANGE of a cell or a LET variable bound to one is a one-cell reference, and a
@@ -473,18 +473,18 @@ fn uncalled_lambda_read_as_text_by_functions_is_value_error() {
 #[test]
 fn one_cell_trimrange_is_a_reference() {
     let mut model = new_empty_model();
-    model._set("A2", "5");
-    model._set("A3", "t");
-    model._set("B1", "=TYPE(TRIMRANGE(A2))");
-    model._set("B2", "=TYPE(TRIMRANGE(LET(v,A2,v)))");
-    model._set("B3", "=ROWS(A2-TRIMRANGE(A3))");
-    model._set("B4", "=MAKEARRAY(1,2,LAMBDA(r,c,TRIMRANGE(A2,2,2)))");
+    model.set_a1("A2", "5");
+    model.set_a1("A3", "t");
+    model.set_a1("B1", "=TYPE(TRIMRANGE(A2))");
+    model.set_a1("B2", "=TYPE(TRIMRANGE(LET(v,A2,v)))");
+    model.set_a1("B3", "=ROWS(A2-TRIMRANGE(A3))");
+    model.set_a1("B4", "=MAKEARRAY(1,2,LAMBDA(r,c,TRIMRANGE(A2,2,2)))");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), *"1");
-    assert_eq!(model._get_text("B2"), *"1");
-    assert_eq!(model._get_text("B3"), *"#VALUE!");
-    assert_eq!(model._get_text("B4"), *"5");
-    assert_eq!(model._get_text("C4"), *"5");
+    assert_eq!(model.get_text_a1("B1"), *"1");
+    assert_eq!(model.get_text_a1("B2"), *"1");
+    assert_eq!(model.get_text_a1("B3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("B4"), *"5");
+    assert_eq!(model.get_text_a1("C4"), *"5");
 }
 
 #[test]
@@ -550,19 +550,19 @@ fn names_starting_with_a_mark_or_an_uppercase_circled_letter_are_refused() {
         .chain(accepted.iter().map(|(formula, _)| *formula))
         .enumerate()
     {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, formula) in refused.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *"#ERROR!",
             "{formula}"
         );
     }
     for (row, (formula, expected)) in accepted.iter().enumerate() {
         let cell = format!("A{}", refused.len() + row + 1);
-        assert_eq!(model._get_text(&cell), *expected, "{formula}");
+        assert_eq!(model.get_text_a1(&cell), *expected, "{formula}");
     }
 }
 
@@ -573,18 +573,18 @@ fn a_sheet_name_starting_with_a_refused_name_character_is_quoted() {
     let mut model = new_empty_model();
     model.add_sheet("Ⓐ").unwrap();
     model.add_sheet("ⓑ").unwrap();
-    // `_set` parses its sheet prefix byte by byte, so these go in by sheet index.
+    // `set_a1` parses its sheet prefix byte by byte, so these go in by sheet index.
     model.set_user_input(1, 1, 1, "5".to_string()).unwrap();
     model.set_user_input(2, 1, 1, "7".to_string()).unwrap();
-    model._set("A1", "='Ⓐ'!A1+1");
-    model._set("A2", "=FORMULATEXT(A1)");
-    model._set("A3", "=ⓑ!A1+1");
-    model._set("A4", "=FORMULATEXT(A3)");
+    model.set_a1("A1", "='Ⓐ'!A1+1");
+    model.set_a1("A2", "=FORMULATEXT(A1)");
+    model.set_a1("A3", "=ⓑ!A1+1");
+    model.set_a1("A4", "=FORMULATEXT(A3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"6");
-    assert_eq!(model._get_text("A2"), *"='Ⓐ'!A1+1");
-    assert_eq!(model._get_text("A3"), *"8");
-    assert_eq!(model._get_text("A4"), *"=ⓑ!A1+1");
+    assert_eq!(model.get_text_a1("A1"), *"6");
+    assert_eq!(model.get_text_a1("A2"), *"='Ⓐ'!A1+1");
+    assert_eq!(model.get_text_a1("A3"), *"8");
+    assert_eq!(model.get_text_a1("A4"), *"=ⓑ!A1+1");
 }
 
 /// Special forms and reference functions passed by name (probes/t4450-eta-special-forms):
@@ -594,35 +594,35 @@ fn a_sheet_name_starting_with_a_refused_name_character_is_quoted() {
 fn special_forms_passed_by_name() {
     let mut model = new_empty_model();
     for (cell, value) in [("A1", "1"), ("A2", "3"), ("A3", "5")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (cell, value) in [("B1", "2"), ("B2", "4"), ("B3", "6")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("D1", "=ERROR.TYPE(_xleta.LAMBDA)");
-    model._set("D2", "=LET(f,_xleta.LAMBDA,f(1))");
-    model._set("D3", "=ROWS(MAP(A1:A3,_xleta.LAMBDA))");
-    model._set("D4", "=ROWS(BYROW(A1:B3,_xleta.LET))");
-    model._set("D5", "=ISBLANK(LET(f,_xleta.IF,f(TRUE,A1)))");
-    model._set("D6", "=ARRAYTOTEXT(MAP(A1:A3,B1:B3,_xleta.CHOOSE))");
-    model._set("D7", "=ARRAYTOTEXT(MAP(A1:A3,{7;8;9},_xleta.IF))");
-    model._set("D8", "=ARRAYTOTEXT(MAP(A1:A3,B1:B3,_xleta.IFERROR))");
-    model._set("D9", "=ARRAYTOTEXT(MAP(A1:A3,{1;2;1},_xleta.INDEX))");
-    model._set("D10", "=ROWS(LET(f,_xleta.IF,f(TRUE,A1:A3)))");
-    model._set("D11", "=ISBLANK(LET(f,_xleta.IF,f(TRUE,(A1,B1))))");
+    model.set_a1("D1", "=ERROR.TYPE(_xleta.LAMBDA)");
+    model.set_a1("D2", "=LET(f,_xleta.LAMBDA,f(1))");
+    model.set_a1("D3", "=ROWS(MAP(A1:A3,_xleta.LAMBDA))");
+    model.set_a1("D4", "=ROWS(BYROW(A1:B3,_xleta.LET))");
+    model.set_a1("D5", "=ISBLANK(LET(f,_xleta.IF,f(TRUE,A1)))");
+    model.set_a1("D6", "=ARRAYTOTEXT(MAP(A1:A3,B1:B3,_xleta.CHOOSE))");
+    model.set_a1("D7", "=ARRAYTOTEXT(MAP(A1:A3,{7;8;9},_xleta.IF))");
+    model.set_a1("D8", "=ARRAYTOTEXT(MAP(A1:A3,B1:B3,_xleta.IFERROR))");
+    model.set_a1("D9", "=ARRAYTOTEXT(MAP(A1:A3,{1;2;1},_xleta.INDEX))");
+    model.set_a1("D10", "=ROWS(LET(f,_xleta.IF,f(TRUE,A1:A3)))");
+    model.set_a1("D11", "=ISBLANK(LET(f,_xleta.IF,f(TRUE,(A1,B1))))");
     model.evaluate();
 
-    assert_eq!(model._get_text("D1"), *"5");
-    assert_eq!(model._get_text("D2"), *"#NAME?");
-    assert_eq!(model._get_text("D3"), *"#VALUE!");
-    assert_eq!(model._get_text("D4"), *"#VALUE!");
-    assert_eq!(model._get_text("D5"), *"TRUE");
-    assert_eq!(model._get_text("D6"), *", #VALUE!, #VALUE!");
-    assert_eq!(model._get_text("D7"), *"7, 8, 9");
-    assert_eq!(model._get_text("D8"), *"1, 3, 5");
-    assert_eq!(model._get_text("D9"), *"1, #REF!, 5");
-    assert_eq!(model._get_text("D10"), *"#VALUE!");
-    assert_eq!(model._get_text("D11"), *"TRUE");
+    assert_eq!(model.get_text_a1("D1"), *"5");
+    assert_eq!(model.get_text_a1("D2"), *"#NAME?");
+    assert_eq!(model.get_text_a1("D3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("D4"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("D5"), *"TRUE");
+    assert_eq!(model.get_text_a1("D6"), *", #VALUE!, #VALUE!");
+    assert_eq!(model.get_text_a1("D7"), *"7, 8, 9");
+    assert_eq!(model.get_text_a1("D8"), *"1, 3, 5");
+    assert_eq!(model.get_text_a1("D9"), *"1, #REF!, 5");
+    assert_eq!(model.get_text_a1("D10"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("D11"), *"TRUE");
 }
 
 /// A function passed by name and called through LET with a count it does not take is `#VALUE!`;
@@ -630,20 +630,20 @@ fn special_forms_passed_by_name() {
 #[test]
 fn function_by_name_called_without_arguments() {
     let mut model = new_empty_model();
-    model._set("A1", "=LET(f,_xleta.SUM,f())");
-    model._set("A2", "=LET(f,_xleta.PI,f())");
-    model._set("A3", "=LET(f,_xleta.ROW,f())");
-    model._set("A4", "=LET(f,_xleta.SUM,f(1,2))");
-    model._set("A5", "=LET(f,_xleta.ABS,f(1,2))");
-    model._set("A6", "=ERROR.TYPE(LET(f,_xleta.IF,f()))");
+    model.set_a1("A1", "=LET(f,_xleta.SUM,f())");
+    model.set_a1("A2", "=LET(f,_xleta.PI,f())");
+    model.set_a1("A3", "=LET(f,_xleta.ROW,f())");
+    model.set_a1("A4", "=LET(f,_xleta.SUM,f(1,2))");
+    model.set_a1("A5", "=LET(f,_xleta.ABS,f(1,2))");
+    model.set_a1("A6", "=ERROR.TYPE(LET(f,_xleta.IF,f()))");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"3.141592654");
-    assert_eq!(model._get_text("A3"), *"3");
-    assert_eq!(model._get_text("A4"), *"3");
-    assert_eq!(model._get_text("A5"), *"#VALUE!");
-    assert_eq!(model._get_text("A6"), *"3");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"3.141592654");
+    assert_eq!(model.get_text_a1("A3"), *"3");
+    assert_eq!(model.get_text_a1("A4"), *"3");
+    assert_eq!(model.get_text_a1("A5"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A6"), *"3");
 }
 
 /// A wrong argument count at any link of a chained call is `#VALUE!`, ahead of an error argument;
@@ -681,12 +681,12 @@ fn a_chained_call_with_a_wrong_count_at_a_link_is_value_error() {
         ),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", i + 1)),
+            model.get_text_a1(&format!("A{}", i + 1)),
             *expected,
             "{formula}"
         );

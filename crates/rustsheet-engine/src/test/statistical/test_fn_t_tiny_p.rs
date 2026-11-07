@@ -3,15 +3,15 @@ use crate::test::util::new_empty_model;
 #[test]
 fn formulas_near_the_limits_do_not_panic() {
     let mut model = new_empty_model();
-    model._set("A1", "=T.INV.2T(1.9999999999999998,1)");
-    model._set("A2", "=T.INV(1E-300,99999)");
-    model._set("A3", "=CONFIDENCE.T(1E-300,1,100000)");
+    model.set_a1("A1", "=T.INV.2T(1.9999999999999998,1)");
+    model.set_a1("A2", "=T.INV(1E-300,99999)");
+    model.set_a1("A3", "=CONFIDENCE.T(1E-300,1,100000)");
     model.evaluate();
     // Excel gives -63712901546918.43; the last digits are T-1542's.
-    let a1: f64 = model._get_text("A1").parse().unwrap_or(f64::NAN);
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap_or(f64::NAN);
     assert!((a1 / -63_712_901_546_918.43 - 1.0).abs() < 1e-6, "{a1}");
-    assert_ne!(model._get_text("A2"), *"#NUM!");
-    assert_ne!(model._get_text("A3"), *"#NUM!");
+    assert_ne!(model.get_text_a1("A2"), *"#NUM!");
+    assert_ne!(model.get_text_a1("A3"), *"#NUM!");
 }
 
 /// A two-tailed p whose half is below the smallest normal double is p = 0: T.INV.2T and TINV
@@ -23,25 +23,25 @@ fn two_tailed_p_with_a_subnormal_half_is_zero() {
     let mut model = new_empty_model();
     let below = "4.4501477170144E-308";
     let above = "4.45014771701441E-308";
-    model._set("A1", &format!("=T.INV.2T({below},1)"));
-    model._set("A2", &format!("=T.INV.2T({below},2)"));
-    model._set("A3", &format!("=TINV({below},30)"));
-    model._set("A4", &format!("=CONFIDENCE.T({below},1,2)"));
-    model._set("A5", &format!("=CONFIDENCE.T({below},1,31)"));
-    model._set("A6", "=T.INV.2T(2.22507385850721E-308,9)");
-    model._set("B1", &format!("=T.INV.2T({above},1)"));
-    model._set("B2", &format!("=T.INV.2T({above},2)"));
-    model._set("B3", &format!("=TINV({above},30)"));
-    model._set("B4", &format!("=CONFIDENCE.T({above},1,2)"));
-    model._set("B5", &format!("=CONFIDENCE.T({above},1,31)"));
-    model._set("B6", "=T.INV(2.22507385850721E-308,9)");
+    model.set_a1("A1", &format!("=T.INV.2T({below},1)"));
+    model.set_a1("A2", &format!("=T.INV.2T({below},2)"));
+    model.set_a1("A3", &format!("=TINV({below},30)"));
+    model.set_a1("A4", &format!("=CONFIDENCE.T({below},1,2)"));
+    model.set_a1("A5", &format!("=CONFIDENCE.T({below},1,31)"));
+    model.set_a1("A6", "=T.INV.2T(2.22507385850721E-308,9)");
+    model.set_a1("B1", &format!("=T.INV.2T({above},1)"));
+    model.set_a1("B2", &format!("=T.INV.2T({above},2)"));
+    model.set_a1("B3", &format!("=TINV({above},30)"));
+    model.set_a1("B4", &format!("=CONFIDENCE.T({above},1,2)"));
+    model.set_a1("B5", &format!("=CONFIDENCE.T({above},1,31)"));
+    model.set_a1("B6", "=T.INV(2.22507385850721E-308,9)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A1"), *"#DIV/0!");
     for cell in ["A2", "A3", "A4", "A5", "A6"] {
-        assert_eq!(model._get_text(cell), *"#NUM!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#NUM!", "{cell}");
     }
     for cell in ["B1", "B2", "B3", "B4", "B5", "B6"] {
-        let value: f64 = model._get_text(cell).parse().unwrap_or(f64::NAN);
-        assert!(value.is_finite(), "{cell}: {}", model._get_text(cell));
+        let value: f64 = model.get_text_a1(cell).parse().unwrap_or(f64::NAN);
+        assert!(value.is_finite(), "{cell}: {}", model.get_text_a1(cell));
     }
 }

@@ -26,6 +26,9 @@
 //! starts threads only at the search's start in the `PikeVM`, while the scan starts one at every
 //! position until it has a match, so the scan overcharges it: a visit or two a byte, linear in
 //! the span, never less than the work done.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::format_push_string))]
+// LINT-DEBT-END
 
 use regex_automata::{
     nfa::thompson::{State, NFA},
@@ -159,14 +162,14 @@ impl Reach {
                     break;
                 };
                 if let State::Match { .. } = nfa.state(id) {
-                    if !is_boundary(haystack, at) {
-                        split = true;
-                    } else {
+                    if is_boundary(haystack, at) {
                         matched = true;
                         // The `PikeVM` drops the threads below a match.
                         if !split {
                             break;
                         }
+                    } else {
+                        split = true;
                     }
                 } else if let Some(to) = step(nfa, id, byte, &mut visits) {
                     self.close(nfa, haystack, at + 1, to, &mut visits);

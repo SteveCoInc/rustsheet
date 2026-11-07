@@ -14,6 +14,7 @@ use xlsx::base::{Model, UserModel};
 use xlsx::import;
 
 mod facade;
+mod lone;
 mod pivots;
 mod raw_model;
 mod types;

@@ -16,6 +16,9 @@
 //! what a recomputation reads there depends on it: a table is memoized only if the spills it read
 //! are the ones it started from. The comparison is conservative: an edit to a cell read only on
 //! the way to a value that does not matter still recomputes.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -261,7 +264,7 @@ impl Model {
         let (top, left, bottom, right) = table.range;
         (top..=bottom)
             .flat_map(|row| (left..=right).map(move |column| (row, column)))
-            .map(|(row, column)| self.held(CellReferenceIndex { sheet, row, column }, None))
+            .map(|(row, column)| self.held(CellReferenceIndex { sheet, column, row }, None))
             .map(|held| held.ok().flatten())
             .collect()
     }
@@ -289,7 +292,7 @@ impl Model {
                     .push((sheet, data.last_row(), data.last_column()));
             }
             for &(row, column) in &sheet_reads.cells {
-                let at = CellReferenceIndex { sheet, row, column };
+                let at = CellReferenceIndex { sheet, column, row };
                 state
                     .cells
                     .insert((sheet, row, column), self.held(at, spills).ok()?);
@@ -302,7 +305,7 @@ impl Model {
                     rows_left = rows_left.checked_sub(1)?;
                     data.columns_in_row_between(row, column1, column2, &mut columns);
                     for &column in &columns {
-                        let at = CellReferenceIndex { sheet, row, column };
+                        let at = CellReferenceIndex { sheet, column, row };
                         state
                             .cells
                             .insert((sheet, row, column), self.held(at, spills).ok()?);

@@ -117,10 +117,10 @@ fn cut_paste() {
     assert!(style_d4.font.b);
 
     // range A1:B2 must be empty
-    assert_eq!(model.get_cell_content(0, 1, 1), Ok("".to_string()));
-    assert_eq!(model.get_cell_content(0, 1, 2), Ok("".to_string()));
-    assert_eq!(model.get_cell_content(0, 2, 1), Ok("".to_string()));
-    assert_eq!(model.get_cell_content(0, 2, 2), Ok("".to_string()));
+    assert_eq!(model.get_cell_content(0, 1, 1), Ok(String::new()));
+    assert_eq!(model.get_cell_content(0, 1, 2), Ok(String::new()));
+    assert_eq!(model.get_cell_content(0, 2, 1), Ok(String::new()));
+    assert_eq!(model.get_cell_content(0, 2, 2), Ok(String::new()));
 }
 
 #[test]
@@ -140,7 +140,7 @@ fn cut_paste_different_sheet() {
         .unwrap();
 
     assert_eq!(model.get_cell_content(1, 4, 4), Ok("42".to_string()));
-    assert_eq!(model.get_cell_content(0, 1, 1), Ok("".to_string()));
+    assert_eq!(model.get_cell_content(0, 1, 1), Ok(String::new()));
 }
 
 #[test]
@@ -191,8 +191,8 @@ fn copy_paste_internal() {
 
     model.undo().unwrap();
 
-    assert_eq!(model.get_cell_content(0, 4, 4), Ok("".to_string()));
-    assert_eq!(model.get_cell_content(0, 4, 5), Ok("".to_string()));
+    assert_eq!(model.get_cell_content(0, 4, 4), Ok(String::new()));
+    assert_eq!(model.get_cell_content(0, 4, 5), Ok(String::new()));
     // cell D4 must not be bold
     let style_d4 = model.get_cell_style(0, 4, 4).unwrap();
     assert!(!style_d4.font.b);

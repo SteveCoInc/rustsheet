@@ -19,6 +19,21 @@ LIMIT = 1000  # lines
 EXEMPT_PARTS = {"test", "tests"}  # test files may be long tables of cases
 
 
+def count_lines(path: Path) -> int:
+    """Lines of `path`, not counting a `LINT-DEBT` block (decision 0335): it is debt metadata that
+    shrinks as the file is fixed, so it neither pushes a file over the limit nor counts as growth."""
+    n, in_debt = 0, False
+    with path.open(encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if line.startswith("// LINT-DEBT-BEGIN"):
+                in_debt = True
+            if not in_debt:
+                n += 1
+            if line.startswith("// LINT-DEBT-END"):
+                in_debt = False
+    return n
+
+
 def tracked_sources() -> list[Path]:
     out = subprocess.run(["git", "ls-files", "*.rs", "*.py"], cwd=ROOT, capture_output=True, text=True, check=True)
     return [ROOT / p for p in out.stdout.split()]
@@ -30,7 +45,7 @@ def sizes() -> dict[str, int]:
         rel = p.relative_to(ROOT)
         if EXEMPT_PARTS & set(rel.parts) or not p.exists():
             continue
-        n = sum(1 for _ in p.open(encoding="utf-8", errors="replace"))
+        n = count_lines(p)
         if n > LIMIT:
             result[str(rel)] = n
     return result

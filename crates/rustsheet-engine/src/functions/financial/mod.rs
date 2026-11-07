@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss)]
+// LINT-DEBT-END
 use crate::{
     calc_result::{CalcResult, Range},
     constants::{LAST_COLUMN, LAST_ROW},
@@ -116,7 +119,7 @@ impl Model {
                 })?;
                 for row in row1..=row2 {
                     for column in column1..=column2 {
-                        let cell_ref = CellReferenceIndex { sheet, row, column };
+                        let cell_ref = CellReferenceIndex { sheet, column, row };
                         match self.evaluate_cell(cell_ref) {
                             CalcResult::Number(value) => values.push(value),
                             error @ CalcResult::Error { .. } => return Err(error),

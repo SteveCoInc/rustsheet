@@ -460,14 +460,15 @@ impl Model {
             } else {
                 Call::One
             };
-            let label = match labels.as_ref().and_then(|labels| labels.get(index)) {
-                Some(Element::Value(value)) => value.clone(),
-                _ => {
-                    if is_lambda {
-                        custom.push(list.len());
-                    }
-                    default_label
+            let label = if let Some(Element::Value(value)) =
+                labels.as_ref().and_then(|labels| labels.get(index))
+            {
+                value.clone()
+            } else {
+                if is_lambda {
+                    custom.push(list.len());
                 }
+                default_label
             };
             list.push(Aggregator {
                 caller: self

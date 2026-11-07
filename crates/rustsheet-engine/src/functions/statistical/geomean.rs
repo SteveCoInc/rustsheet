@@ -1,3 +1,7 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, clippy::many_single_char_names)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 use crate::expressions::types::CellReferenceIndex;
 use crate::x87_exp::power_of_two;
 use crate::{

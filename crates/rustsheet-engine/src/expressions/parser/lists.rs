@@ -1,5 +1,8 @@
 //! Comma-separated lists inside an operand: function arguments and the rows
 //! of an array constant.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_sign_loss)]
+// LINT-DEBT-END
 
 use crate::expressions::parser::{ArrayNode, ExpectedTokens, Node, Parser, Run};
 use crate::expressions::token::{OpSum, TokenType};

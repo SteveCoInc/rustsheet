@@ -8,7 +8,11 @@ use crate::{model::Model, test::util::new_empty_model};
 /// The displayed text of each cell of the `width` x `height` block at A`row`, row by row.
 fn block(model: &Model, row: i32, width: i32, height: i32) -> Vec<Vec<String>> {
     (row..row + height)
-        .map(|r| (1..=width).map(|c| model._get_text_at(0, r, c)).collect())
+        .map(|r| {
+            (1..=width)
+                .map(|c| model.get_text_by_index(0, r, c))
+                .collect()
+        })
         .collect()
 }
 

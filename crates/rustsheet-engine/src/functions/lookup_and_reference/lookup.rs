@@ -1,4 +1,7 @@
 //! LOOKUP (both forms) and the vector reading MATCH shares with it.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+// LINT-DEBT-END
 
 use crate::cast::scalar_as_array;
 use crate::constants::{LAST_COLUMN, LAST_ROW};

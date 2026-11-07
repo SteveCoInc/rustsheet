@@ -37,7 +37,10 @@ fn deepest_with_inner_on_2_mib_stack(
                     .is_ok()
             })?;
             model.evaluate();
-            Some((accepted, vec![model._get_text("A1"), model._get_text("A2")]))
+            Some((
+                accepted,
+                vec![model.get_text_a1("A1"), model.get_text_a1("A2")],
+            ))
         })
         .ok()?;
     handle.join().ok()?
@@ -102,12 +105,12 @@ fn signed_parentheses_at_the_parenthesis_cap_evaluate_on_a_small_stack() {
                 model.set_user_input(0, 1, 2, "2".to_string()).ok()?;
                 model.set_user_input(0, 1, 1, formula.clone()).ok()?;
                 model.evaluate();
-                let before = (model._get_formula("A1"), model._get_text("A1"));
+                let before = (model.get_formula_a1("A1"), model.get_text_a1("A1"));
                 model.insert_rows(0, 1, 1).ok()?;
                 model.rename_sheet("Sheet1", "Renamed").ok()?;
                 model.evaluate();
                 let moved = nested(open, &inner.replace("B1", "B2"), close, levels);
-                let after = (model._get_formula("A2"), model._get_text("A2"));
+                let after = (model.get_formula_a1("A2"), model.get_text_a1("A2"));
                 Some((formula, before, moved, after))
             });
         let result = handle.ok().and_then(|h| h.join().ok()).flatten();
@@ -124,7 +127,7 @@ fn signed_parentheses_at_the_parenthesis_cap_evaluate_on_a_small_stack() {
     assert!(model.set_typed_user_input(0, 1, 1, past.clone()).is_err());
     assert_eq!(model.set_user_input(0, 1, 1, past), Ok(()));
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
 }
 
 /// SPEC-0023: whitespace costs no nesting level, so a shape typed with spaces at every level, a
@@ -151,12 +154,12 @@ fn spaced_shapes_nest_as_deep_as_bare_ones_on_a_2_mib_stack() {
                 let formula = nested(open, "B1", close, spaced);
                 model.set_user_input(0, 1, 1, formula.clone()).ok()?;
                 model.evaluate();
-                let before = (model._get_formula("A1"), model._get_text("A1"));
+                let before = (model.get_formula_a1("A1"), model.get_text_a1("A1"));
                 model.insert_rows(0, 1, 1).ok()?;
                 model.rename_sheet("Sheet1", "Renamed").ok()?;
                 model.evaluate();
                 let moved = nested(open, "B2", close, spaced);
-                Some((formula, before, moved, model._get_formula("A2")))
+                Some((formula, before, moved, model.get_formula_a1("A2")))
             });
         let result = handle.ok().and_then(|h| h.join().ok()).flatten();
         let (formula, (text, value), moved, after) = result.unwrap_or_default();
@@ -217,18 +220,18 @@ fn parenthesised_chain_nested_to_the_limit_and_past_it_never_overflows() {
             assert!(typed.is_err(), "{levels} levels were accepted");
             assert_eq!(model.set_user_input(0, 1, 1, formula), Ok(()), "{levels}");
             model.evaluate();
-            assert_eq!(model._get_text("A1"), "#ERROR!", "{levels}");
+            assert_eq!(model.get_text_a1("A1"), "#ERROR!", "{levels}");
             continue;
         }
         let result = model.set_user_input(0, 1, 1, formula.clone());
         assert!(result.is_ok(), "{levels} levels were refused: {result:?}");
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "5.55112E-17", "{levels}");
-        assert_eq!(model._get_formula("A1"), formula, "{levels}");
+        assert_eq!(model.get_text_a1("A1"), "5.55112E-17", "{levels}");
+        assert_eq!(model.get_formula_a1("A1"), formula, "{levels}");
         assert_eq!(model.insert_rows(0, 1, 1), Ok(()), "{levels}");
         assert_eq!(model.rename_sheet("Sheet1", "Renamed"), Ok(()), "{levels}");
         model.evaluate();
-        assert_eq!(model._get_formula("A2"), nested_over("B2"), "{levels}");
-        assert_eq!(model._get_text("A2"), "5.55112E-17", "{levels}");
+        assert_eq!(model.get_formula_a1("A2"), nested_over("B2"), "{levels}");
+        assert_eq!(model.get_text_a1("A2"), "5.55112E-17", "{levels}");
     }
 }

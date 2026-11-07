@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+// LINT-DEBT-END
 use std::borrow::Cow;
 
 use super::casefold::{char_offsets, fold_for_match};
@@ -214,7 +217,7 @@ pub(crate) fn substitute(text: &str, old_text: &str, new_text: &str, instance_nu
         if let (Some(head), Some(tail)) = (text.get(..left), text.get(right..)) {
             return format!("{head}{new_text}{tail}");
         }
-    };
+    }
     text.to_string()
 }
 
@@ -415,12 +418,11 @@ pub(super) fn substitute_element(
     if substitute_exceeds_limit(&text, &old_text, &new_text, instance_num) {
         return Err(Error::VALUE);
     }
-    Ok(ArrayNode::String(match instance_num {
-        Some(n) => substitute(&text, &old_text, &new_text, n).into(),
-        None => {
-            let (text, old_text, new_text): (&str, &str, &str) = (&text, &old_text, &new_text);
-            text.replace(old_text, new_text).into()
-        }
+    Ok(ArrayNode::String(if let Some(n) = instance_num {
+        substitute(&text, &old_text, &new_text, n).into()
+    } else {
+        let (text, old_text, new_text): (&str, &str, &str) = (&text, &old_text, &new_text);
+        text.replace(old_text, new_text).into()
     }))
 }
 
@@ -627,7 +629,7 @@ mod tests {
         );
         assert_eq!(
             text_before("xAbC", &["B", "x"], 1, Case::Insensitive),
-            Some("".to_string())
+            Some(String::new())
         );
         assert_eq!(text_before("abc", &[], 1, Case::Sensitive), None);
     }

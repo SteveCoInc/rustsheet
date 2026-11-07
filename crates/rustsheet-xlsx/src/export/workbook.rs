@@ -23,6 +23,9 @@
 //! of the workbook.
 //!
 //! It also may hold state properties like the selected tab
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 //! # bookViews
 //!
@@ -84,8 +87,7 @@ pub(crate) fn get_workbook_xml(
         sheet: workbook
             .worksheets
             .first()
-            .map(|ws| ws.name.clone())
-            .unwrap_or_else(|| "Sheet1".to_string()),
+            .map_or_else(|| "Sheet1".to_string(), |ws| ws.name.clone()),
         row: 1,
         column: 1,
     };
@@ -103,7 +105,7 @@ pub(crate) fn get_workbook_xml(
             })?;
             format!(" localSheetId=\"{excel_local_sheet_id}\"")
         } else {
-            "".to_string()
+            String::new()
         };
         // A formula that fails to parse stringifies back to itself unchanged.
         let formula_body = defined_name

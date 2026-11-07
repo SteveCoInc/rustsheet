@@ -2,6 +2,14 @@
 //! their own so that the frame of `parse_operand`, which every nesting level of a formula keeps on
 //! the stack, stays small: an unoptimized build gives every local of every arm its own slot, and
 //! the whole match took about 11 KB per level (T-1110).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::manual_let_else,
+    clippy::needless_pass_by_value
+)]
+// LINT-DEBT-END
 
 use super::super::token::{self, TableReference, TokenType};
 use super::super::types::ParsedReference;
@@ -14,7 +22,10 @@ use super::structured_reference::{
     is_external_table_name, is_unresolved_structured_reference, TableExtent, TABLE_NOT_FOUND,
     TABLE_SHEET_NOT_FOUND,
 };
-use super::*;
+use super::{
+    with_sheet_span, ExpectedTokens, Function, Node, Parser, StructuredReference,
+    TOO_MANY_NESTED_CALLS_MESSAGE, XLPM_PREFIX,
+};
 use crate::functions::kinds::arg_counts;
 use crate::language::get_default_language;
 use crate::typed_input::TYPED_FORMULA_DOES_NOT_PARSE;
@@ -213,16 +224,16 @@ impl Parser {
         if self.lexer.is_a1_mode() {
             if !absolute_row1 {
                 row1 -= context.row;
-            };
+            }
             if !absolute_column1 {
                 column1 -= context.column;
-            };
+            }
             if !absolute_row2 {
                 row2 -= context.row;
-            };
+            }
             if !absolute_column2 {
                 column2 -= context.column;
-            };
+            }
         }
 
         let node = match sheet_index {
@@ -304,17 +315,15 @@ impl Parser {
         };
         // A sheet with no local definition reads the workbook-scoped name (docs/excel-semantics/
         // references.md "A sheet-qualified name falls back to the workbook name"; `Feb!loc`).
-        let (scope, formula) = match scope {
-            Some(sheet) => self
-                .get_defined_name(bare, sheet)
-                .unwrap_or((scope, String::new())),
-            None => {
-                let formula = self
-                    .defined_name_formula(None, bare)
-                    .map(str::to_owned)
-                    .unwrap_or_default();
-                (None, formula)
-            }
+        let (scope, formula) = if let Some(sheet) = scope {
+            self.get_defined_name(bare, sheet)
+                .unwrap_or((scope, String::new()))
+        } else {
+            let formula = self
+                .defined_name_formula(None, bare)
+                .map(str::to_owned)
+                .unwrap_or_default();
+            (None, formula)
         };
         // Excel shows a workbook name read through a sheet, or through the file's own-workbook
         // prefix `[0]!`, with the workbook's file name as its prefix, quoted as a sheet name

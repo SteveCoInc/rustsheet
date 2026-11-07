@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::assigning_clones,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 use crate::{
     model::Model,
     number_format::{get_default_num_fmt_id, get_new_num_fmt_index, get_num_fmt},
@@ -36,7 +44,7 @@ impl Styles {
         if let Some(index) = get_default_num_fmt_id(format_code) {
             return Some(index);
         }
-        for item in self.num_fmts.iter() {
+        for item in &self.num_fmts {
             if item.format_code == format_code {
                 return Some(item.num_fmt_id);
             }
@@ -75,7 +83,7 @@ impl Styles {
         } else {
             num_fmt_id = get_new_num_fmt_index(&self.num_fmts);
             self.num_fmts.push(NumFmt {
-                format_code: num_fmt.to_string(),
+                format_code: num_fmt.clone(),
                 num_fmt_id,
             });
         }

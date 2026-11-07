@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::unused_self
+)]
+// LINT-DEBT-END
 use super::util::collation::cmp_text_pairwise;
 use crate::functions::util::array_node_to_calc_result;
 use crate::functions::util::near_integer::near_integer_whole;
@@ -493,19 +501,7 @@ impl Model {
             keys.push((index as usize - 1, ascending));
         }
 
-        if !by_col {
-            // Sort rows by the key columns.
-            let mut row_indices: Vec<usize> = (0..num_rows).collect();
-            stoppable(|| {
-                sort_indices_pairwise(&mut row_indices, |a, b| {
-                    first_unequal(keys.iter().map(|&(key, ascending)| {
-                        sort_key_cmp(&data[a][key], &data[b][key], ascending, cell)
-                    }))
-                });
-            });
-
-            CalcResult::Array(row_indices.iter().map(|&r| data[r].clone()).collect())
-        } else {
+        if by_col {
             // Sort columns by the key rows.
             let mut col_indices: Vec<usize> = (0..num_cols).collect();
             stoppable(|| {
@@ -521,6 +517,18 @@ impl Model {
                     .map(|row| col_indices.iter().map(|&c| row[c].clone()).collect())
                     .collect(),
             )
+        } else {
+            // Sort rows by the key columns.
+            let mut row_indices: Vec<usize> = (0..num_rows).collect();
+            stoppable(|| {
+                sort_indices_pairwise(&mut row_indices, |a, b| {
+                    first_unequal(keys.iter().map(|&(key, ascending)| {
+                        sort_key_cmp(&data[a][key], &data[b][key], ascending, cell)
+                    }))
+                });
+            });
+
+            CalcResult::Array(row_indices.iter().map(|&r| data[r].clone()).collect())
         }
     }
 

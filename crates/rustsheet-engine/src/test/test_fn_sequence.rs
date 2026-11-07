@@ -5,74 +5,74 @@ use crate::test::util::new_empty_model;
 #[test]
 fn test_sequence_basic() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SEQUENCE(3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("A2"), "2");
-    assert_eq!(model._get_text("A3"), "3");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "2");
+    assert_eq!(model.get_text_a1("A3"), "3");
 }
 
 #[test]
 fn test_sequence_rows_cols() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(2,3)");
+    model.set_a1("A1", "=SEQUENCE(2,3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "2");
-    assert_eq!(model._get_text("C1"), "3");
-    assert_eq!(model._get_text("A2"), "4");
-    assert_eq!(model._get_text("B2"), "5");
-    assert_eq!(model._get_text("C2"), "6");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "2");
+    assert_eq!(model.get_text_a1("C1"), "3");
+    assert_eq!(model.get_text_a1("A2"), "4");
+    assert_eq!(model.get_text_a1("B2"), "5");
+    assert_eq!(model.get_text_a1("C2"), "6");
 }
 
 #[test]
 fn test_sequence_start_step() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(4,1,10,5)");
+    model.set_a1("A1", "=SEQUENCE(4,1,10,5)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "10");
-    assert_eq!(model._get_text("A2"), "15");
-    assert_eq!(model._get_text("A3"), "20");
-    assert_eq!(model._get_text("A4"), "25");
+    assert_eq!(model.get_text_a1("A1"), "10");
+    assert_eq!(model.get_text_a1("A2"), "15");
+    assert_eq!(model.get_text_a1("A3"), "20");
+    assert_eq!(model.get_text_a1("A4"), "25");
 }
 
 #[test]
 fn test_sequence_negative_step() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(3,1,10,-1)");
+    model.set_a1("A1", "=SEQUENCE(3,1,10,-1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "10");
-    assert_eq!(model._get_text("A2"), "9");
-    assert_eq!(model._get_text("A3"), "8");
+    assert_eq!(model.get_text_a1("A1"), "10");
+    assert_eq!(model.get_text_a1("A2"), "9");
+    assert_eq!(model.get_text_a1("A3"), "8");
 }
 
 #[test]
 fn test_sequence_wrong_arg_count() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE()");
+    model.set_a1("A1", "=SEQUENCE()");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
 
-    model._set("B1", "=SEQUENCE(1,1,1,1,1)");
+    model.set_a1("B1", "=SEQUENCE(1,1,1,1,1)");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), "#ERROR!");
 }
 
 #[test]
 fn test_sequence_invalid_rows() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(0)");
+    model.set_a1("A1", "=SEQUENCE(0)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#CALC!");
+    assert_eq!(model.get_text_a1("A1"), "#CALC!");
 }
 
 #[test]
 fn test_sequence_rows_exceeds_sheet_limit() {
     // LAST_ROW is 1_048_576; one beyond that must return #VALUE!
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(1048577)");
+    model.set_a1("A1", "=SEQUENCE(1048577)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
 }
 
 #[test]
@@ -82,75 +82,75 @@ fn test_sequence_cols_exceeds_sheet_limit() {
     // are #VALUE! (`SEQUENCE(3,123456789)`, gen-m9/f2bd5f380ec002bf A177), and other shapes the
     // bound's #ERROR!, before anything is allocated.
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(1,16385)");
-    model._set("A2", "=COLUMNS(SEQUENCE(1,16385))");
-    model._set("A3", "=COLUMNS(SEQUENCE(2,524288))");
-    model._set("A4", "=SEQUENCE(3,123456789)");
-    model._set("A5", "=SEQUENCE(2,524289)");
+    model.set_a1("A1", "=SEQUENCE(1,16385)");
+    model.set_a1("A2", "=COLUMNS(SEQUENCE(1,16385))");
+    model.set_a1("A3", "=COLUMNS(SEQUENCE(2,524288))");
+    model.set_a1("A4", "=SEQUENCE(3,123456789)");
+    model.set_a1("A5", "=SEQUENCE(2,524289)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#SPILL!");
-    assert_eq!(model._get_text("A2"), "16385");
-    assert_eq!(model._get_text("A3"), "524288");
-    assert_eq!(model._get_text("A4"), "#VALUE!");
-    assert_eq!(model._get_text("A5"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "#SPILL!");
+    assert_eq!(model.get_text_a1("A2"), "16385");
+    assert_eq!(model.get_text_a1("A3"), "524288");
+    assert_eq!(model.get_text_a1("A4"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A5"), "#VALUE!");
 }
 
 #[test]
 fn test_sequence_rows_cols_exceeds_max_size() {
     // If rows * columns exceeds MAX_SIZE (1_048_576, one whole column), must return #ERROR!
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(1025,1024)");
+    model.set_a1("A1", "=SEQUENCE(1025,1024)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
 }
 
 #[test]
 fn test_sequence_omit_rows() {
     // =SEQUENCE(,12,,2.5) — rows omitted (default 1), cols=12, start omitted (default 1), step=2.5
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(,12,,2.5)");
+    model.set_a1("A1", "=SEQUENCE(,12,,2.5)");
     model.evaluate();
     // 1 row × 12 columns: 1, 3.5, 6, 8.5, 11, 13.5, 16, 18.5, 21, 23.5, 26, 28.5
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "3.5");
-    assert_eq!(model._get_text("C1"), "6");
-    assert_eq!(model._get_text("L1"), "28.5");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "3.5");
+    assert_eq!(model.get_text_a1("C1"), "6");
+    assert_eq!(model.get_text_a1("L1"), "28.5");
     // No second row
-    assert_eq!(model._get_text("A2"), "");
+    assert_eq!(model.get_text_a1("A2"), "");
     // No 13th column
-    assert_eq!(model._get_text("M1"), "");
+    assert_eq!(model.get_text_a1("M1"), "");
 }
 
 #[test]
 fn test_sequence_omit_cols() {
     // =SEQUENCE(3,,10) — cols omitted (default 1), start=10, step omitted (default 1)
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(3,,10)");
+    model.set_a1("A1", "=SEQUENCE(3,,10)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "10");
-    assert_eq!(model._get_text("A2"), "11");
-    assert_eq!(model._get_text("A3"), "12");
-    assert_eq!(model._get_text("B1"), "");
-    assert_eq!(model._get_text("A4"), "");
+    assert_eq!(model.get_text_a1("A1"), "10");
+    assert_eq!(model.get_text_a1("A2"), "11");
+    assert_eq!(model.get_text_a1("A3"), "12");
+    assert_eq!(model.get_text_a1("B1"), "");
+    assert_eq!(model.get_text_a1("A4"), "");
 }
 
 #[test]
 fn test_sequence_omit_start() {
     // =SEQUENCE(3,1,,5) — start omitted (default 1), step=5
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(3,1,,5)");
+    model.set_a1("A1", "=SEQUENCE(3,1,,5)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("A2"), "6");
-    assert_eq!(model._get_text("A3"), "11");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "6");
+    assert_eq!(model.get_text_a1("A3"), "11");
 }
 
 #[test]
 fn test_sequence_accumulates_its_step() {
     // Excel adds the step to the previous value (ironcalc-calc SEQUENCE.xlsx I9:I11, L14:M14).
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(5,1,10,2.2)");
-    model._set("C1", "=SEQUENCE(1,5,12.7,0.1)");
+    model.set_a1("A1", "=SEQUENCE(5,1,10,2.2)");
+    model.set_a1("C1", "=SEQUENCE(1,5,12.7,0.1)");
     model.evaluate();
     let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
         Ok(crate::cell::CellValue::Number(n)) => n.to_bits(),
@@ -167,25 +167,25 @@ fn test_sequence_argument_error_beats_zero_extent() {
     // gen-m7 (T-2316): an error in any argument beats an invalid extent; then an invalid extent
     // beats a zero one (a rows past the grid beats a zero columns); alone, 0 stays `#CALC!`.
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(0,1,1/0)");
-    model._set("A2", "=SEQUENCE(1,0,1,NA())");
-    model._set("A3", "=SEQUENCE(1E+15,0)");
-    model._set("A4", "=SEQUENCE(0)");
-    model._set("A5", "=SEQUENCE(0,4,1,2)");
-    model._set("A6", "=SEQUENCE(-1,0)");
+    model.set_a1("A1", "=SEQUENCE(0,1,1/0)");
+    model.set_a1("A2", "=SEQUENCE(1,0,1,NA())");
+    model.set_a1("A3", "=SEQUENCE(1E+15,0)");
+    model.set_a1("A4", "=SEQUENCE(0)");
+    model.set_a1("A5", "=SEQUENCE(0,4,1,2)");
+    model.set_a1("A6", "=SEQUENCE(-1,0)");
     // A negative columns beats a zero rows, but one within 2^-23 + 2^-34 below 0 is a zero columns
     // (gen-m7/c36ff5f42a1a4d47 A359, probes/empty-array-args-sequence A100:A134).
-    model._set("A7", "=SEQUENCE(0,-1)");
-    model._set("A8", "=SEQUENCE(0,-1E-8)");
+    model.set_a1("A7", "=SEQUENCE(0,-1)");
+    model.set_a1("A8", "=SEQUENCE(0,-1E-8)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#DIV/0!");
-    assert_eq!(model._get_text("A2"), "#N/A");
-    assert_eq!(model._get_text("A3"), "#VALUE!");
-    assert_eq!(model._get_text("A4"), "#CALC!");
-    assert_eq!(model._get_text("A5"), "#CALC!");
-    assert_eq!(model._get_text("A6"), "#VALUE!");
-    assert_eq!(model._get_text("A7"), "#VALUE!");
-    assert_eq!(model._get_text("A8"), "#CALC!");
+    assert_eq!(model.get_text_a1("A1"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A2"), "#N/A");
+    assert_eq!(model.get_text_a1("A3"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), "#CALC!");
+    assert_eq!(model.get_text_a1("A5"), "#CALC!");
+    assert_eq!(model.get_text_a1("A6"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A7"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A8"), "#CALC!");
 }
 
 // T-4465: SEQUENCE and RANDARRAY read an extent by the shared near-integer rule: within
@@ -194,26 +194,26 @@ fn test_sequence_argument_error_beats_zero_extent() {
 #[test]
 fn sequence_and_randarray_extents_snap_near_an_integer() {
     let mut model = new_empty_model();
-    model._set("C1", "=ROWS(SEQUENCE(1-1.5*2^-23))");
-    model._set("C2", "=ROWS(SEQUENCE(1000-(2^-22+2^-33)))");
-    model._set("C3", "=ROWS(SEQUENCE(1000-(2^-22+2^-32)))");
-    model._set("C4", "=COLUMNS(SEQUENCE(1,2-2^-22))");
-    model._set("C5", "=SEQUENCE(0-2^-23)");
-    model._set("C6", "=SEQUENCE(0-1.5*2^-23)");
-    model._set("C7", "=ROWS(RANDARRAY(2-2^-22))");
+    model.set_a1("C1", "=ROWS(SEQUENCE(1-1.5*2^-23))");
+    model.set_a1("C2", "=ROWS(SEQUENCE(1000-(2^-22+2^-33)))");
+    model.set_a1("C3", "=ROWS(SEQUENCE(1000-(2^-22+2^-32)))");
+    model.set_a1("C4", "=COLUMNS(SEQUENCE(1,2-2^-22))");
+    model.set_a1("C5", "=SEQUENCE(0-2^-23)");
+    model.set_a1("C6", "=SEQUENCE(0-1.5*2^-23)");
+    model.set_a1("C7", "=ROWS(RANDARRAY(2-2^-22))");
     // No probe cell reads RANDARRAY's columns; it shares `randarray_extent` with rows (hand-written).
-    model._set("C8", "=COLUMNS(RANDARRAY(1,2-(2^-22+2^-32)))");
-    model._set("C9", "=RANDARRAY(0-2^-23)");
-    model._set("C10", "=RANDARRAY(0-1.5*2^-23)");
+    model.set_a1("C8", "=COLUMNS(RANDARRAY(1,2-(2^-22+2^-32)))");
+    model.set_a1("C9", "=RANDARRAY(0-2^-23)");
+    model.set_a1("C10", "=RANDARRAY(0-1.5*2^-23)");
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "1");
-    assert_eq!(model._get_text("C2"), "1000");
-    assert_eq!(model._get_text("C3"), "999");
-    assert_eq!(model._get_text("C4"), "2");
-    assert_eq!(model._get_text("C5"), "#CALC!");
-    assert_eq!(model._get_text("C6"), "#VALUE!");
-    assert_eq!(model._get_text("C7"), "2");
-    assert_eq!(model._get_text("C8"), "1");
-    assert_eq!(model._get_text("C9"), "#CALC!");
-    assert_eq!(model._get_text("C10"), "#VALUE!");
+    assert_eq!(model.get_text_a1("C1"), "1");
+    assert_eq!(model.get_text_a1("C2"), "1000");
+    assert_eq!(model.get_text_a1("C3"), "999");
+    assert_eq!(model.get_text_a1("C4"), "2");
+    assert_eq!(model.get_text_a1("C5"), "#CALC!");
+    assert_eq!(model.get_text_a1("C6"), "#VALUE!");
+    assert_eq!(model.get_text_a1("C7"), "2");
+    assert_eq!(model.get_text_a1("C8"), "1");
+    assert_eq!(model.get_text_a1("C9"), "#CALC!");
+    assert_eq!(model.get_text_a1("C10"), "#VALUE!");
 }

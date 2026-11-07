@@ -11,6 +11,9 @@
 //! while the tree is built. Text is handed over as XML 1.0 requires: entity
 //! references resolved, line endings normalized to `\n`, attribute values with
 //! their line breaks and tabs turned into spaces.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms, elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use std::borrow::Cow;
 use std::io::BufRead;
@@ -361,7 +364,7 @@ mod tests {
         assert_eq!(root.attribute("x"), Some("1"));
         assert_eq!(root.attribute("y"), Some("a&b"));
         assert_eq!(root.attribute("z"), None);
-        let children: Vec<&str> = root.children().map(|n| n.tag_name()).collect();
+        let children: Vec<&str> = root.children().map(super::XmlNode::tag_name).collect();
         assert_eq!(children, vec!["b", "b", "c"]);
         let bs: Vec<Option<&str>> = root
             .children()
@@ -370,7 +373,7 @@ mod tests {
             .collect();
         assert_eq!(bs, vec![Some("hi"), None]);
         assert_eq!(root.text(), Some("t"));
-        let all: Vec<&str> = root.descendants().map(|n| n.tag_name()).collect();
+        let all: Vec<&str> = root.descendants().map(super::XmlNode::tag_name).collect();
         assert_eq!(all, vec!["a", "b", "b", "c", "d"]);
         assert_eq!(
             root.child("c").unwrap().child("d").unwrap().text(),

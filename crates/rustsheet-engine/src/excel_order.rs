@@ -10,6 +10,9 @@
 //! (recalc.md "The order Excel calculates a freshly loaded workbook in"). The order is only
 //! observable through those states, so the default pass keeps its own order and this one runs
 //! after it only where a reader ran (`Model::evaluate`).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use std::collections::{HashMap, HashSet};
 
@@ -277,15 +280,12 @@ mod tests {
         let mut order = Vec::new();
         while !list.is_empty() {
             let cell = list.remove(0);
-            match reads[cell as usize].iter().find(|&&p| !done[p as usize]) {
-                Some(&p) => {
-                    let at = list.iter().position(|&c| c == p).unwrap_or(list.len());
-                    list.insert(at + 1, cell);
-                }
-                None => {
-                    done[cell as usize] = true;
-                    order.push(cell);
-                }
+            if let Some(&p) = reads[cell as usize].iter().find(|&&p| !done[p as usize]) {
+                let at = list.iter().position(|&c| c == p).unwrap_or(list.len());
+                list.insert(at + 1, cell);
+            } else {
+                done[cell as usize] = true;
+                order.push(cell);
             }
         }
         order
@@ -293,12 +293,7 @@ mod tests {
 
     fn chained(reads: &[Vec<u32>], budget: u64) -> Layout {
         let mut layout = Layout::new(reads.to_vec());
-        run_chain(
-            &mut layout,
-            reads.len(),
-            budget,
-            |layout, cell, may_block| layout.run(cell, may_block),
-        );
+        run_chain(&mut layout, reads.len(), budget, Layout::run);
         layout
     }
 

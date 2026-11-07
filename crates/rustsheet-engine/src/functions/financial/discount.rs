@@ -9,6 +9,13 @@
 //! the date order and the amounts are checked after every read, so an error argument wins over an
 //! invalid amount (probes/discount-argument-check-order, T-2484; financial.md "Discount securities
 //! check order"). Moved out of `financial/mod.rs` (T-1372).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::float_cmp
+)]
+// LINT-DEBT-END
 
 use super::dates::{is_less_than_one_year, DateReading};
 use super::number_or_error;

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, reason = "tests")]
 //! A table part may name itself by `name`, `displayName` or both; formulas reach it through whichever
 //! exists (T-2208, docs/excel-semantics/xlsx-storage.md). Table parts are untrusted: never a panic.

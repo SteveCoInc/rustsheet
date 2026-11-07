@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::needless_pass_by_value, clippy::too_many_lines)]
+// LINT-DEBT-END
 use crate::arithmetic::{extended_sqrt, power};
 use crate::cast::number_text_too_long;
 use crate::functions::lift::{num_error, value_error};

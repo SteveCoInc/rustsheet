@@ -14,15 +14,21 @@ Candidates, all on the fitted secant in d = 1 - v with the retry from 0.1 (finan
 - `rate`: RATE's fitted driver (financial.md "RATE holds on a flat secant and runs on below -1"): hold at d1 on a flat
   secant and return it when |f1| < 1e-4 and 1 + r > 1e-4; run on past d = 1; at the cap return the last iterate
   under the same tests.
+- `bank`: the hypothesis bank of T-4836 (plan.md Phase 2, H1-H16; the H13-H16 mechanisms come from the lineage table,
+  docs/research/irr-2026-11-07/lineage.md), each handler alone on the base and in combinations on the RATE transplant:
+  RATE's restart (H3), the flow-scaled tolerance (H8), `#DIV/0!` for a second flat (H10), no retry after a pole
+  crossing (H11), the Newton fallback from v = 0 (H12), RATE's keep-the-older-iterate (H13), the previous slope
+  reused (H14) and a clamp just inside the pole (H15).
 """
 
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from rustsheet_tools.fitlab.exact import X87
 from rustsheet_tools.fitlab.fit import Fit
+from rustsheet_tools.fitlab.kernels.irr_fallback import irr_fallback_newton
 from rustsheet_tools.fitlab.kernels.irr_secant_d import _npv_v_running
 from rustsheet_tools.fitlab.kernels.solvers import NoResultError, floats
 from rustsheet_tools.fitlab.score import Candidate, ExcelError
@@ -70,6 +76,10 @@ CASES = [
 STEP = 1e-3  # the fitted start offset in d
 FAR_ROOT = 1e7  # IRR_FAR_ROOT_BOUND
 HELD = 1e-4  # RATE's acceptance tests for a held or capped iterate
+RESTART_STEPS = (3, 16)  # RATE's restart window (T-3698), in RATE's 1-based step count
+RESTART_F = (1.3e-7, 1e-4)  # RATE's restart |f1| window (T-3698)
+SCALED_TOL = 1e-9  # VB's NPV tolerance, max|c| * 1e-7 * 0.01 (lineage.md, "Function stop")
+INSIDE_POLE = 1000 / 1001  # d at r = 1000, formulajs's upper clamp (lineage.md, "Pole"; H15)
 
 # How a run ends (the event tracer, plan.md Phase 0 item 2).
 CONVERGED = "converged"
@@ -96,6 +106,13 @@ class Options:
     clamp: str | None = None  # "r-half" or "d-half"
     hold: bool = False
     run_on: bool = False
+    restart: bool = False  # H3: RATE's one restart from d0 on an early flat secant
+    scaled: bool = False  # H8: the function stop is |NPV| < max|c| * 1e-9 (VB), not 1e-7
+    flat_div0: bool = False  # H10: a flat secant that the nudge does not cure is #DIV/0!
+    retry_after_pole: bool = True  # H11 when False: a run that crossed the pole ends the call
+    fallback: bool = False  # H12: Newton on P(v) from v = 0 where both runs fail, #NUM! at |NPV| >= 1e-4
+    keep_older: bool = False  # H13: a step with f2 = f1 keeps (d0, f0) and replaces d1 (RATE, T-3963)
+    slope: bool = False  # H14: a flat secant on distinct iterates steps with the previous slope, halved
 
 
 @dataclass
@@ -203,6 +220,8 @@ def _next_iterate(d0: float, d1: float, f0: float, f1: float, opts: Options) -> 
         return 2 * d1 - 1
     if d2 >= 1 and opts.clamp == "d-half":
         return (d1 + 1) * 0.5
+    if d2 >= 1 and opts.clamp == "inside":
+        return max(INSIDE_POLE, d1)
     if d2 == 1:
         raise _EndedError(AT_POLE, "#DIV/0!")
     if d2 > 1 and not opts.run_on:
@@ -210,16 +229,37 @@ def _next_iterate(d0: float, d1: float, f0: float, f1: float, opts: Options) -> 
     return d2
 
 
-def _secant(flows: list[float], guess: float, opts: Options, run: Run) -> None:
+def _secant(flows: list[float], guess: float, opts: Options, run: Run, *, restarted: bool = False) -> None:
     peak = max(abs(c) for c in flows)
+    tol = peak * SCALED_TOL if opts.scaled else 1e-7
     d0 = X87.div(guess, 1 + guess)
     f0 = npv_at(flows, d0)
     d1 = d0 - (STEP if f0 > 0 else -STEP)
     f1 = npv_at(flows, d1)
     run.iterates.extend([d0, d1])
+    slope: float | None = None
     for step in range(opts.cap):
         run.step = step
         if f1 == f0:
+            first, last = RESTART_STEPS
+            if (
+                opts.restart
+                and not restarted
+                and d1 != d0
+                and first <= step + 1 <= last
+                and RESTART_F[0] <= abs(f1) < RESTART_F[1]
+                and (rate := rate_of(d0)) is not None
+            ):
+                run.event = "restart"
+                _secant(flows, rate, opts, run, restarted=True)
+                return
+            if opts.slope and d1 != d0 and slope:
+                d2 = d1 - X87.div(f1, slope * 0.5)
+                if not math.isfinite(d2):
+                    raise _EndedError(NOT_FINITE)
+                d0, f0, d1, f1 = d1, f1, d2, npv_at(flows, d2)
+                run.iterates.append(d2)
+                continue
             if opts.hold and f1 != 0:
                 _held(run, d1, f1, HELD_FLAT)
                 return
@@ -228,19 +268,43 @@ def _secant(flows: list[float], guess: float, opts: Options, run: Run) -> None:
             d0 = d0 - STEP if d1 > d0 else d0 + STEP
             f0 = npv_at(flows, d0)
             if f1 == f0:
-                raise _EndedError(FLAT)
+                raise _EndedError(FLAT, "#DIV/0!" if opts.flat_div0 else None)
+        if d1 != d0:
+            slope = X87.div(f1 - f0, d1 - d0)
         d2 = _next_iterate(d0, d1, f0, f1, opts)
         f2 = npv_at(flows, d2)
         run.iterates.append(d2)
         stalled = d2 == d1 and abs(f2) < 1e-7 * peak and step < 50
-        if abs(d2 - d1) < 1e-7 and (abs(f2) < 1e-7 or stalled):
-            _accept(run, d2, CONVERGED if abs(f2) < 1e-7 else STALLED)
+        if abs(d2 - d1) < 1e-7 and (abs(f2) < tol or stalled):
+            _accept(run, d2, CONVERGED if abs(f2) < tol else STALLED)
             return
-        d0, f0, d1, f1 = d1, f1, d2, f2
+        if opts.keep_older and f2 == f1:
+            d1, f1 = d2, f2
+        else:
+            d0, f0, d1, f1 = d1, f1, d2, f2
     run.step = opts.cap
     if not (opts.hold and abs(d1 - d0) < HELD):
         raise _EndedError(CAP)
     _held(run, d1, f1, HELD_CAP)
+
+
+_NEWTON = irr_fallback_newton()
+
+
+def _fallback(flows: list[float]) -> float | None:
+    """H12: the engine's fallback, Newton on P(v) from v = 0 (`irr_fallback_newton`), with the 1e-4 residual cut
+    (financial.md "IRR's fallback is #NUM! when NPV at its root is 1E-4 or more")."""
+    try:
+        rate = _NEWTON([*flows], 0.1)
+    except (NoResultError, ZeroDivisionError, OverflowError, ValueError):
+        return None
+    if not 1 + rate < FAR_ROOT:
+        return None
+    try:
+        residual = npv_at(flows, X87.div(rate, 1 + rate))
+    except _DivZeroError:
+        return None
+    return rate if abs(residual) < HELD else None
 
 
 def irr(flows: list[float], guess: float, opts: Options) -> Outcome:
@@ -256,6 +320,11 @@ def irr(flows: list[float], guess: float, opts: Options) -> Outcome:
             return Outcome(run.rate, runs)
         if run.error is not None:
             return Outcome(run.error, runs)
+        if not opts.retry_after_pole and POLE in run.event:
+            break
+    if opts.fallback and (rate := _fallback(flows)) is not None:
+        runs.append(Run(rate=rate, event="fallback"))
+        return Outcome(rate, runs)
     return Outcome("#NUM!", runs)
 
 
@@ -303,6 +372,34 @@ CANDIDATES: dict[str, tuple[Options, str]] = {
     "rate: hold on flat + run on past d = 1, cap 50": (Options(cap=50, hold=True, run_on=True), "rate"),
     "rate: hold on flat + run on past d = 1, cap 200": (Options(cap=200, hold=True, run_on=True), "rate"),
 }
+# T-4836's bank: each handler alone on the base at cap 200, then each on the RATE transplant (H1 + H4 + H7).
+_BASE = Options(cap=200)
+_RATE = Options(cap=200, hold=True, run_on=True)
+BANK: dict[str, Options] = {
+    "H2 nudge": replace(_BASE, nudge=True),
+    "H2+H10 nudge, second flat #DIV/0!": replace(_BASE, nudge=True, flat_div0=True),
+    "H4 run on": replace(_BASE, run_on=True),
+    "H8 scaled tolerance": replace(_BASE, scaled=True),
+    "H11 no retry after a pole": replace(_BASE, retry_after_pole=False),
+    "H12 Newton fallback": replace(_BASE, fallback=True),
+    "H13 keep older": replace(_BASE, keep_older=True),
+    "H14 slope": replace(_BASE, slope=True),
+    "H15 clamp inside the pole": replace(_BASE, clamp="inside"),
+    "H1+H7 hold (no run on)": replace(_BASE, hold=True),
+    "RATE+H3 restart": replace(_RATE, restart=True),
+    "RATE+H8 scaled tolerance": replace(_RATE, scaled=True),
+    "RATE+H12 Newton fallback": replace(_RATE, fallback=True),
+    "RATE+H13 keep older": replace(_RATE, keep_older=True),
+    "RATE+H14 slope": replace(_RATE, slope=True),
+    "RATE run on + H2+H10 nudge, no hold": replace(_RATE, nudge=True, flat_div0=True, hold=False),
+    "RATE, H5 r-half for run on": replace(_RATE, run_on=False, clamp="r-half"),
+    "RATE, H6 d-half for run on": replace(_RATE, run_on=False, clamp="d-half"),
+    "RATE, H15 inside for run on": replace(_RATE, run_on=False, clamp="inside"),
+    "RATE, H6 d-half + H12": replace(_RATE, run_on=False, clamp="d-half", fallback=True),
+    "RATE+H12+H13": replace(_RATE, fallback=True, keep_older=True),
+    "RATE, H5 r-half + H12": replace(_RATE, run_on=False, clamp="r-half", fallback=True),
+}
+CANDIDATES.update({f"bank: {name}": (opts, "bank") for name, opts in BANK.items()})
 
 
 def candidates() -> list[Candidate]:

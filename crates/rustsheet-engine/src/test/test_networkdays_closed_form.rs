@@ -1,6 +1,15 @@
 //! NETWORKDAYS and NETWORKDAYS.INTL count their span in closed form (T-1808). The differential test
 //! keeps the per-day loops they replaced as the oracle, reading serial 0 as a date as Excel does
 //! (T-1254).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::trivially_copy_pass_by_ref
+)]
+// LINT-DEBT-END
 
 use std::collections::HashSet;
 use std::fmt::Write;
@@ -176,7 +185,7 @@ fn closed_forms_match_the_per_day_loops() {
             };
             let networkdays = format!("A{row}");
             let networkdays_intl = format!("B{row}");
-            model._set(
+            model.set_a1(
                 &networkdays,
                 &format!("=NETWORKDAYS({start},{end}{holiday_arg})"),
             );
@@ -190,7 +199,7 @@ fn closed_forms_match_the_per_day_loops() {
             } else {
                 mask
             };
-            model._set(
+            model.set_a1(
                 &networkdays_intl,
                 &format!("=NETWORKDAYS.INTL({start},{end}{intl_holidays})"),
             );
@@ -215,7 +224,7 @@ fn closed_forms_match_the_per_day_loops() {
                 round_trip_value(&model, &cell),
                 value,
                 "{system:?} {cell}: {}",
-                model._get_formula(&cell)
+                model.get_formula_a1(&cell)
             );
         }
     }
@@ -228,8 +237,8 @@ fn whole_range_spans_cost_no_per_day_loop() {
     // the bound leaves room for a loaded runner.
     let mut model = new_empty_model();
     for row in 1..=1_000 {
-        model._set(&format!("A{row}"), "=NETWORKDAYS(1,2958465)");
-        model._set(
+        model.set_a1(&format!("A{row}"), "=NETWORKDAYS(1,2958465)");
+        model.set_a1(
             &format!("B{row}"),
             "=NETWORKDAYS.INTL(1,2958465,\"0000011\")",
         );

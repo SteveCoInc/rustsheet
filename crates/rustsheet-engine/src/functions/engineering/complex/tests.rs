@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::unnecessary_wraps))]
+// LINT-DEBT-END
 use crate::functions::engineering::complex::Suffix;
 
 use super::reading::{split_inumber, Inumber};

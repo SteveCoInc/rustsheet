@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string)]
+// LINT-DEBT-END
 // Taken from :
 
 // https://docs.rs/xml-rs/latest/src/xml/escape.rs.html#1-125
