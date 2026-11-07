@@ -75,7 +75,13 @@ pub enum EditError {
     /// The table name is invalid or taken, or its range or header row is not valid.
     #[error("invalid table: {0}")]
     Table(String),
-    /// A pivot table could not be registered (`Txn::add_pivot_table`, test support).
+    /// A pivot table could not be created, set or refreshed ([`Txn::add_pivot_table`],
+    /// [`Txn::set_pivot_table`], [`Txn::refresh_pivot_table`]), and why: a malformed source or
+    /// field, an unknown pivot, a limit. The edit then changes nothing.
+    ///
+    /// [`Txn::add_pivot_table`]: crate::Txn::add_pivot_table
+    /// [`Txn::set_pivot_table`]: crate::Txn::set_pivot_table
+    /// [`Txn::refresh_pivot_table`]: crate::Txn::refresh_pivot_table
     #[error("invalid pivot table: {0}")]
     Pivot(#[from] crate::edit::PivotError),
     /// Any other engine error, passed through verbatim.

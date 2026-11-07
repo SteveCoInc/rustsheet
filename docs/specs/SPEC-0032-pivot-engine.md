@@ -146,8 +146,9 @@ refresh is ordered after that calculation.
 - The facade's open path refreshes every marked cache after the first recalculation. It then
   recalculates what depends on the pivots (GETPIVOTDATA, and formulas that read pivot cells).
 - `Txn` refreshes a pivot when asked to (`Txn::refresh_pivot_table`). `Txn::add_pivot_table` builds
-  the cache from the source as it is (the snapshot a refresh gives) and lays out only a grouped
-  pivot; laying out every new pivot is T-4152's (eval adapter) and T-4178's (public API).
+  the cache from the source as it is (the snapshot a refresh gives) and lays out every new pivot from
+  its anchor (T-4178); the doc-hidden `Txn::register_pivot_table` keeps the eval adapter's baked
+  pivots unrendered, laying out only a grouped one.
 - The refresh on open plans every marked cache within one shared work and cell budget, and writes
   and recalculates only when at least one plan succeeds.
 - Auto Refresh is added only as T-4182 evidences it.
@@ -269,7 +270,30 @@ Errors:
   written.
 
 Drill-down is `PivotView::records(cell)`, which returns an iterator of record indices (T-4184). The
-Python binding mirrors all of this (T-4178). `pivot_places` stays doc-hidden harness support.
+Python binding mirrors the API (T-4178) for the pivots it can define: one row field, an optional column
+field and one data field (no grouping, unused items or `showAll`). `pivot_places` stays doc-hidden harness support.
+
+As built (T-4178, `crates/rustsheet/src/edit/pivot.rs`, `crates/rustsheet/src/pivot_view.rs`):
+- `add_pivot_table` refuses a name another pivot of the sheet has (`PivotError::DuplicateName`) and
+  lays the pivot out from the top-left cell of `PivotTableInput::location`.
+- `set_pivot_table` replaces the pivot's definition and cache in place (a new cache when another pivot
+  shares the old one), keeps its anchor (`PivotError::Moved` otherwise), and lays it out through the
+  grid writer over its old area, so the cells it no longer writes are cleared. What a loaded pivot held
+  beyond the input (styles, formats, page fields, options) is dropped.
+- The Txn ops record their cells in the edit's undo log, so `Workbook::edit`'s `ChangeSet` lists them
+  (the facade's rule for every op; they return `()`).
+- `PivotError::Limit` gathers the cache limits and `PivotComputeError::Limit`, and `PivotError::Source`
+  the cache's `Source`; the other engine errors keep their variants.
+- `PivotView` holds the name, sheet, location, source range, field names and data field captions, read
+  from the definition alone, so a view costs no layout. The cells are `Workbook::pivot_table_cells(sheet,
+  name)`'s, computed on each call from the engine's own `plan_pivot_render` (read-only), so they are what
+  a layout would write now, `#SPILL!` collapse included, as facade `Value`s. A struct with no lifetime
+  cannot compute them lazily, which is why they are a `Workbook` call; T-4184's `records` can follow the
+  same shape.
+- Python mirrors only one row field, an optional column field and one data field (no grouping, unused
+  items or `showAll`): `Transaction.add_pivot_table(name, **definition)`, `set_pivot_table(sheet, name,
+  **definition)`, `refresh_pivot_table(sheet, name)`, `Workbook.pivot_table(sheet, name)` (a dict) and
+  `Workbook.pivot_table_cells(sheet, name)` (A1 to value).
 
 ### Untrusted-input limits
 Every pivot part comes from an untrusted file (directive 5). The import limits of SPEC-0015 stay (`MAX_RECORDS`,
