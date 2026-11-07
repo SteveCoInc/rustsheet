@@ -101,6 +101,16 @@ UNVERIFIED edges (seconds, time-only items, date subtotal labels, a selected dat
 Eval delta: probes text failures 754 -> 640 (114 fixed: t2085-getpivotdata-items D!A4:A6, 86 in
 t4130-pivot-date-filters, 25 in t4164-pivot-date-times), 0 regressions; value known failures unchanged.
 
+Adopted as an orphan (work-loop step 0.3): merging `origin/main` met T-4957's date group item format
+(`numFmtId` 14). `item_format` now gives a grouped field's date item `CellFormat::Id(14)` and any other
+date item `date_item_format`; T-4957's ungrouped-date test now expects `m/d/yyyy`. The applied
+`number_formats` make a refresh of t4170's date column read date items, so the added-groups test's
+expected cache holds `CacheItem::Date` (the CI failure on the pre-merge head). The export now writes a
+date format on label cells, so the 7 pivot-export sidecars whose export changed were refilled
+(`rustsheet-oracle fill -b excel-graph --force`): Excel shows the exported labels as `1/1/1900` ...
+`3/2/1900`. Post-merge eval delta: probes text 115 -> 1 (114 fixed), pivot-export text 139 -> 125 (14
+fixed), gen-pivot 258 cells fixed, 0 regressions.
+
 ## Handoff (resumed)
 Tried (sonnet run): read the render path. Date labels render in `item_cell` (crates/rustsheet-engine/src/pivot/layout/render.rs:125) as
 `PivotCell::Number`; `RenderedCell.number_format` is a `numFmtId` applied by `set_pivot_number_format` (pivot/grid.rs ~700), so
