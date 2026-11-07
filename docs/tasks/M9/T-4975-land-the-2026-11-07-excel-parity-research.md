@@ -16,7 +16,9 @@ main, with the evidence cells the file cites passing, Gate A unchanged or improv
 regressions; likewise the addendum (`docs/research/excel-parity-findings-2026-11-07-addendum.md`,
 PR #4005, sections A–D, which supersede the "Held" section), addendum 2
 (`docs/research/excel-parity-findings-2026-11-07-addendum-2.md`, PR #4030: sections F, G, its IRR
-model and its text/lookup/database audit) and the audit findings.
+model and its text/lookup/database audit), addendum 3
+(`docs/research/excel-parity-findings-2026-11-07-addendum-3.md`, PR #4048: section H, IRR's uniform
+secant in d = 1 − v with two retries, which supersedes addendum 2's IRR model) and the audit findings.
 
 Owner ruling (2026-11-07): land all items in **one PR** under this one task, overriding the
 one-task-one-lane and S/M size rules (CLAUDE.md directive 4) for this hand-off only. Second ruling (2026-11-07): trust the research findings as written, and
