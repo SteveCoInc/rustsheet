@@ -24,8 +24,9 @@ filtering (`import/pivots/slicers.rs`), so a change to their model view is a tri
 
 ## Acceptance criteria
 - [ ] The group is kept whole with its attach elements remapped, or dropped whole and reported (unit tests).
-- [ ] A table slicer and a pivot slicer survive a fallback save when their targets are unchanged. They are dropped with
-      `StaleAfterEdit` when their ids or their pivot change (fixture tests).
+- [ ] A table slicer and a pivot slicer survive a fallback save when their targets and ids are unchanged. A group whose
+      ids the export renumbered is dropped (fixture tests). The `PivotOrTableEdit` and `DefinedNameEdit` triggers are
+      T-5004's.
 - [ ] An Excel for the web re-save probe (T-4890's `--save-dir`, `rustsheet-oracle resave`, `package-diff`) shows the saves open and keep what this task keeps. Findings go into docs/excel-semantics/xlsx-storage.md (D5.8).
 - [ ] The round-trip baselines are rerecorded; entries only shrink.
 - [ ] `make check` green; reviewers approve.

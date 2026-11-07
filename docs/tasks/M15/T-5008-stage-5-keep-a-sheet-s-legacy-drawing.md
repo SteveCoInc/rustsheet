@@ -32,7 +32,8 @@ keeps them (poi/45540_form_Footer.xlsx, poi/WithEmbeded.xlsx). Legacy notes are 
       `<controls>`, `<oleObjects>`, including inside `mc:AlternateContent`), or dropped whole and reported (unit tests).
 - [ ] A sheet with notes, a threaded comment, a form control and an OLE object keeps all four through a fallback save
       (fixture test).
-- [ ] An edited note drops the group, which is reported as `StaleAfterEdit`.
+- [ ] The group can be dropped as one unit through the call T-5004's `NotesEdit` trigger uses (unit test of the drop;
+      the trigger and its scoring are T-5004's).
 - [ ] An Excel for the web re-save probe (T-4890's `--save-dir`, `rustsheet-oracle resave`, `package-diff`) shows the saves open and keep what this task keeps. Findings go into docs/excel-semantics/xlsx-storage.md (D5.8). ActiveX and OLE retention also gets a desktop Excel check (M14) before its entry is VERIFIED (D5.7).
 - [ ] The round-trip baselines are rerecorded; entries only shrink.
 - [ ] `make check` green; reviewers approve.

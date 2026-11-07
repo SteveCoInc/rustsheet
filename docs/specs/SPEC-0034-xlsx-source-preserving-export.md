@@ -368,7 +368,7 @@ re-emitted.
     - a style index (`dxfId`, `s`), against the styles section it indexes;
     - a table `id` (`x15:tableSlicerCache tableId`; the export numbers tables from 1, `export/tables.rs`);
     - a `pivotCacheId`;
-    - a sheet `tabId` or `localSheetId`;
+    - a sheet's `tabId` (its `sheetId`) or `localSheetId` (its position), which are compared separately;
     - a `shapeId`;
     - an external-link index `[n]` in kept formula text;
     - a custom-view `guid` that pairs `customSheetViews` with `customWorkbookViews`.
@@ -402,7 +402,7 @@ workbook-wide content):
 | `SheetRenamed(S)` | sheet-name-bound fragments and kept parts, workbook-wide, whose text names S | `StaleAfterStructuralEdit { sheet: S }` |
 | `SheetDeleted(S)` | every fragment of S; every root and coupling group attached to S, with its closure, except parts something kept still references (D5.2); everything else whose text names S; id-bound fragments that hold S's `localSheetId` or `tabId` | `OwnerDeleted` |
 | `SheetAdded`, `SheetMoved(S)` | content addressing sheets by name or relationship is unaffected. Id-bound fragments holding a sheet position (`localSheetId`, `activeTab`) are dropped when the position changed | `StaleAfterStructuralEdit { sheet: S }` (the added or moved sheet) |
-| `DefinedNameEdit` | nothing: names are modelled, and fragments that name them are text that resolves at load | — |
+| `DefinedNameEdit` | a slicer or timeline group whose cache `name` no longer has its matching workbook defined name (corpus-bench 118-8 holds `<definedName name="Slicer_Customer">#N/A</definedName>` per cache). Otherwise nothing: names are modelled, and fragments that name them are text that resolves at load | `StaleAfterEdit { sheet: the slicer's sheet }` |
 | *(M4)* `RowsOrColumns(S)` | range-bound fragments of S; every `ReplayIfClean` root and coupling group anchored to S, until stage 5c's shifter rewrites them | `StaleAfterStructuralEdit { sheet: S }` |
 
 - **Never kept stale** (decision 0275 D4). A kept item still in the output after its trigger fired is a SaveReport bug
@@ -453,7 +453,8 @@ docs/excel-semantics/xlsx-storage.md:
 - **Groups and ids:**
   - a legacy drawing group kept whole, against one with a member missing;
   - a `threadedComment` without its legacy comments, which must never be written, as the probe confirms;
-  - a slicer cache whose `tableId` or `pivotCacheId` no longer matches.
+  - a slicer cache whose `tableId` or `pivotCacheId` no longer matches;
+  - a kept slicer cache whose defined name was removed.
 - **Content types:**
   - ActiveX and OLE kept in a `.xlsx`;
   - VBA kept with and without its `codeName` attributes.
