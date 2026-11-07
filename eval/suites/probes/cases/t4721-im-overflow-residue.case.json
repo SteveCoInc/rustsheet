@@ -1,0 +1,52 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4721: IM* overflow residue. Rows 1-3: IMSEC/IMCSC/IMTAN of a real argument at and past 2^27 (B:D). Rows 4-6: IMLN/IMLOG10/IMLOG2 of a modulus past DBL_MAX (hypot overflows). Rows 7-9: IMCONJUGATE/IMREAL/IMAGINARY of the largest parts. Row 10: IMDIV by tiny divisors to place the cut. A holds the description.",
+ "tags": [
+  "M9",
+  "engineering",
+  "probe"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "IMSEC real arg: 134217727.99 / 134217728 / 1E+10",
+    "B1": "=IMSEC(\"134217727.99\")",
+    "C1": "=IMSEC(\"134217728\")",
+    "D1": "=IMSEC(\"1E+10\")",
+    "A2": "IMCSC real arg: 134217727.99 / 134217728 / 1E+10",
+    "B2": "=IMCSC(\"134217727.99\")",
+    "C2": "=IMCSC(\"134217728\")",
+    "D2": "=IMCSC(\"1E+10\")",
+    "A3": "IMTAN real arg: 134217727.99 / 134217728 / 1E+10",
+    "B3": "=IMTAN(\"134217727.99\")",
+    "C3": "=IMTAN(\"134217728\")",
+    "D3": "=IMTAN(\"1E+10\")",
+    "A4": "IMLN modulus past DBL_MAX: 1E307+1E307i / 9.9E307+9.9E307i / -9E307-9E307i",
+    "B4": "=IMLN(\"1E307+1E307i\")",
+    "C4": "=IMLN(\"9.9E307+9.9E307i\")",
+    "D4": "=IMLN(\"-9E307-9E307i\")",
+    "A5": "IMLOG10 modulus past DBL_MAX: 1E307+1E307i / 9.9E307+9.9E307i / -9E307-9E307i",
+    "B5": "=IMLOG10(\"1E307+1E307i\")",
+    "C5": "=IMLOG10(\"9.9E307+9.9E307i\")",
+    "D5": "=IMLOG10(\"-9E307-9E307i\")",
+    "A6": "IMLOG2 modulus past DBL_MAX: 1E307+1E307i / 9.9E307+9.9E307i / -9E307-9E307i",
+    "B6": "=IMLOG2(\"1E307+1E307i\")",
+    "C6": "=IMLOG2(\"9.9E307+9.9E307i\")",
+    "D6": "=IMLOG2(\"-9E307-9E307i\")",
+    "A7": "IMCONJUGATE of the largest parts",
+    "B7": "=IMCONJUGATE(\"9.99999999999999E307-9.99999999999999E307i\")",
+    "A8": "IMREAL of the largest parts",
+    "B8": "=IMREAL(\"9.99999999999999E307-9.99999999999999E307i\")",
+    "A9": "IMAGINARY of the largest parts",
+    "B9": "=IMAGINARY(\"9.99999999999999E307-9.99999999999999E307i\")",
+    "A10": "IMDIV cut: 1/1E-308, 1/2.3E-308, 1/1E-307, 1E-300/1E-308",
+    "B10": "=IMDIV(\"1\",\"1E-308\")",
+    "C10": "=IMDIV(\"1\",\"2.3E-308\")",
+    "D10": "=IMDIV(\"1\",\"1E-307\")",
+    "E10": "=IMDIV(\"1E-300\",\"1E-308\")"
+   }
+  }
+ ]
+}

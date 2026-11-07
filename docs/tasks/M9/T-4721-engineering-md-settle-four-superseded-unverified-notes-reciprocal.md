@@ -3,7 +3,7 @@ id: T-4721
 title: "engineering.md: settle four superseded UNVERIFIED notes (reciprocal IM* kernels past 2^27 on a real argument, the other IM* overflows, T-2420/T-2421's probe-pending status, IMLOG2's T-2044 candidates) and probe what no cell decides"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -64,3 +64,11 @@ settles four other notes of the same file; the two tasks share no note.
 ## Out of scope
 - The four notes T-4604 settles, the large-y note (T-2631), the IMSINH/IMCOSH band cuts (T-2797) and any last-digit
   work (T-2538, T-4001, T-4012).
+
+## Outcome
+New probe probes/t4721-im-overflow-residue (excel-graph, 25 cells, all pass; no engine change, no baseline change, no
+math sidecar since it has no Gate A one-call cell). Findings: IMSEC/IMCSC/IMTAN of a real argument are numbers at
+134217727.99 and `#NUM!` at 134217728 and 1E+10; IMLN/IMLOG10/IMLOG2 of a modulus past DBL_MAX are `#NUM!`;
+IMCONJUGATE/IMREAL/IMAGINARY return the largest parts unchanged; the IMDIV cut lies between 1E-308 (`#NUM!`) and
+2.3E-308 (a number). engineering.md notes 1-4 now cite these cells or the entries that settled them. Eval delta: one
+new passing case, 0 regressions.
