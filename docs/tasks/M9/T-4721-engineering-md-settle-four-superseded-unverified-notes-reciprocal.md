@@ -3,7 +3,7 @@ id: T-4721
 title: "engineering.md: settle four superseded UNVERIFIED notes (reciprocal IM* kernels past 2^27 on a real argument, the other IM* overflows, T-2420/T-2421's probe-pending status, IMLOG2's T-2044 candidates) and probe what no cell decides"
 milestone: M9
 lane: functions-engineering
-status: blocked
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
@@ -74,7 +74,7 @@ IMCONJUGATE/IMREAL/IMAGINARY return the largest parts unchanged; the IMDIV cut l
 new passing case, 0 regressions.
 
 ## Blocked because
-Blocked because: review-round limit
+Resumed after the review-round limit (step 5c).
 
 Three fidelity rounds ran (heads bcd6c01a7, 2a81cae4e, 000f53490). Design and security approved bcd6c01a7. The round-3
 findings (T-2044 Status line still calling the candidates UNVERIFIED; T-1827 entry Evidence/Tasks lines; IMDIV cause
