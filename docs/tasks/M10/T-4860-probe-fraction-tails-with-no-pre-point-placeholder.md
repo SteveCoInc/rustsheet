@@ -32,5 +32,5 @@ against the code (`# ?/16 .0` on 0.5), and the engine matching it.
 ## Outcome
 Probe `probes/t4860-fraction-tail-no-pre-point-lacking` (24 cells: `# ?/16 .0`, `# ?/100 .0?`, `# ?/16|.0`,
 `# ?/100 .##`, `# ?/16 .?`, `# ?/100|.0` on 0.5, 0.25, 0.3, 1.75), filled from excel-graph 2026-11-07. The engine
-already matches all 24 cells, so no engine change and no baseline change. number-formats.md "No placeholder before the
+already matches all 24 cells, so no engine change; the probes baseline gains the new passing case. number-formats.md "No placeholder before the
 point" now states that lacking digits print nothing before the point. Eval delta: +24 passing probe cells, 0 failing.
