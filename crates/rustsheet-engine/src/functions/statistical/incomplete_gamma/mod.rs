@@ -143,12 +143,17 @@ pub(crate) fn gamma_ur(a: f64, x: f64) -> f64 {
 }
 
 /// POISSON's cdf Q(k + 1, mean): Excel's far upper tail ([`excel_tail`], T-3269), its form far
-/// above the mean (T-4302) or in the upper gamma window (T-4322) where they apply, else
-/// [`gamma_ur`].
+/// above the mean (T-4302), in the upper gamma window (T-4322) or below x = a + 1 at a shape under
+/// 20 ([`excel_lower_region_upper`], T-3412) where they apply, else [`gamma_ur`].
 pub(crate) fn poisson_upper(a: f64, x: f64) -> f64 {
     excel_tail::excel_far_upper(a, x, &mut Terms(MAX_TERMS))
         .or_else(|| excel_tail::excel_far_above_mean(a, x, &mut Terms(MAX_TERMS)))
         .or_else(|| excel_tail::excel_window_upper(a, x, &mut Terms(MAX_TERMS)))
+        .or_else(|| {
+            (a > 0.0 && x.is_finite())
+                .then(|| excel_lower_region_upper(a, x, Exponent::Accurate, &mut Terms(MAX_TERMS)))
+                .flatten()
+        })
         .unwrap_or_else(|| gamma_ur(a, x))
 }
 
@@ -436,6 +441,55 @@ pub(crate) fn excel_small_shape_lower(a: f64, x: f64) -> Option<f64> {
     // P is then about e^-16 / Gamma(a + 1), under 2E-7, so the pair takes it from the series (it
     // takes 1 - Q only where Q is at most 1/2).
     excel_form_lower(a, x, exponent)
+}
+
+/// GAMMA.DIST's and CHISQ.DIST's cdf P(a, x) wherever Excel takes its leading-factor series form
+/// ([`excel_form_lower`]): below shape 1 where [`excel_small_shape_lower`] takes it, and from
+/// shape 1 to [`DIRECT_SHAPE_MAX`] at a normal x up to 1 ([`excel_mid_shape_lower`]). `None`
+/// elsewhere.
+pub(crate) fn excel_lower(a: f64, x: f64) -> Option<f64> {
+    excel_small_shape_lower(a, x).or_else(|| excel_mid_shape_lower(a, x))
+}
+
+/// P(a, x) above shape 1 and below [`DIRECT_SHAPE_MAX`] at a normal x of at most 1: Excel's
+/// leading-factor series form, with no a·LN(x) gate (T-3412). Excel's cdf there is a staircase in
+/// x, since LN(x) moves by an ulp only every few ulps of x, which the accurate pair is not: on the
+/// cells with Excel's own arguments (literals, or column-A quantiles substituted from the oracle;
+/// probes-numeric/t3311-gamma-inv-lower-tail-cdf, t1049-chisqdist, m9-gamma-dist-a2, -a9,
+/// m9-chisq-dist), split 30% by a hash of (case, cell) before scoring, the form is bit-exact at 123
+/// of 251 train cells and 60 of 124 test cells and within 4 ulp at all 370 normal results, where
+/// the pair is bit-exact at 20 and 10 and over 16 ulp off at 134 (`GAMMA.DIST(0.9,9,1,TRUE)` 13
+/// ulp, `CHISQ.DIST(0.5,20,TRUE)` 19 ulp to 1). Above x = 1 the form is no closer than the pair
+/// (6 of 51 bit-exact against 10), and the quantiles' lower tail takes the same cut at 1
+/// (`quantile_tail`). Shape 1 is e^-x's closed pair, and from [`DIRECT_SHAPE_MAX`] the pair's
+/// prefactor is Stirling's (57 of 73 bit-exact against 55, not taken). `None` elsewhere, where
+/// the result is not a normal double, or where the series runs out of terms.
+fn excel_mid_shape_lower(a: f64, x: f64) -> Option<f64> {
+    if !(a > 1.0 && a < DIRECT_SHAPE_MAX && x >= f64::MIN_POSITIVE && x <= 1.0) {
+        return None;
+    }
+    excel_form_lower(a, x, a * excel_ln(x)).filter(|lower| lower.is_normal())
+}
+
+/// Q(a, x) from shape 1 to [`DIRECT_SHAPE_MAX`] below x = a + 1, where the pair takes Q as the
+/// complement of the series' P: Excel's complement is (0.5 - P) + 0.5, not 1 - P (the two differ
+/// for P below 1/4), with P its leading-factor form up to x = 1 ([`excel_mid_shape_lower`]) and the
+/// pair's series above. On the CHISQ.DIST.RT and POISSON cdf cells with Excel's own arguments
+/// (the same hash split as [`excel_mid_shape_lower`]), it is bit-exact up to x = 1 at 51 of 51
+/// train and 32 of 33 test cells, where 1 - P of the pair is at 43 and 27, and above it at 69 of 98
+/// and 20 of 31, against 58 and 16 (T-3412). From shape 20 it is not Excel's (POISSON: 45 of 86
+/// against 71), so the callers keep their kernels there. `form` is the pair's large-shape exponent
+/// (unused below shape 20). `None` elsewhere, or past `terms`.
+fn excel_lower_region_upper(a: f64, x: f64, form: Exponent, terms: &mut Terms) -> Option<f64> {
+    if !(a > 1.0 && a < DIRECT_SHAPE_MAX && x > 0.0 && x < a + 1.0) {
+        return None;
+    }
+    let lower = match excel_mid_shape_lower(a, x) {
+        Some(lower) => lower,
+        None => pair_with(a, x, terms, form).0,
+    };
+    let upper = (0.5 - lower) + 0.5;
+    (!upper.is_nan()).then_some(upper)
 }
 
 /// The leading-factor series form of P(a, x) for x below 1 at any shape below 1, ungated (T-3060):
@@ -733,6 +787,10 @@ fn accurate_tail(a: f64, scaled: f64, upper: bool) -> f64 {
             return q;
         }
         if let Some(q) = half_integer::half_integer_upper(a, scaled, &mut Terms(MAX_TERMS)) {
+            return q;
+        }
+        if let Some(q) = excel_lower_region_upper(a, scaled, Exponent::Excel, &mut Terms(MAX_TERMS))
+        {
             return q;
         }
     }

@@ -8,7 +8,8 @@ use super::element_errors::array_element_error;
 use super::erf::{gamma_half_lower, gamma_half_upper};
 use super::gamma::log_form_density;
 use super::incomplete_gamma::{
-    gamma_cdf, gamma_density, gamma_quantile, gamma_sf, huge_shape_quantile, Tail, HUGE_SHAPE_MIN,
+    excel_lower, gamma_cdf, gamma_density, gamma_quantile, gamma_sf, huge_shape_quantile, Tail,
+    HUGE_SHAPE_MIN,
 };
 use super::normal::normal_quantile;
 use crate::arithmetic::flush_subnormal;
@@ -178,7 +179,8 @@ impl Model {
         let result = if cumulative && is_one_degree(&dist) {
             gamma_half_lower(x / 2.0)
         } else if cumulative {
-            gamma_cdf(&dist, x)
+            // Excel's leading-factor form where it takes it (T-3412); x / 2 is exact.
+            excel_lower(dist.shape(), x / CHI_SQUARED_SCALE).unwrap_or_else(|| gamma_cdf(&dist, x))
         } else {
             // CHISQ.DIST's density is GAMMA.DIST's at scale 2, its log forms included:
             // `CHISQ.DIST(1E-300,1,FALSE)` is within 1 ulp of Excel's 3.9894228040142567E+149,
