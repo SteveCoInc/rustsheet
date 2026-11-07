@@ -3,7 +3,7 @@ id: T-4958
 title: "BETA.INV at beta 1 caps at 0.999999 and the flipped quantile rounding to 1 is 1 (T-4713 split)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
