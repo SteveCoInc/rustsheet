@@ -3,7 +3,7 @@ id: T-4628
 title: "A loaded #REF!C4:C7 keeps its range: FORMULATEXT after an xlsx round trip of a deleted-sheet reference (probe first)"
 milestone: M8
 lane: engine
-status: done
+status: blocked
 priority: P3
 size: S
 tier: opus
@@ -48,10 +48,27 @@ FORMULATEXT of the loaded file is unprobed: it may keep `=SUM(#REF!C4:C7)`.
   were built with spec2xlsx from one-cell specs (`=SUM(#REF!C4:C7)`, `=#REF!$A$1`, `=ISREF(#REF!A1)`, `=SUM(#REF!A:A)`,
   `=SUM(#REF!1:2)`, `=#REF!A1`, each with `=FORMULATEXT(A1)` in A2; and `legacy_formulas: ["A1"]` for the legacy form)
   and `rustsheet-oracle recalc -b excel-graph`. A defined name over the
-  deleted sheet is now stored as the bare `#REF!` (`delete_sheet_in_name_node`), since its A1 text is parsed again.
-- references.md "A deleted table or sheet" records it; desktop Excel's own file form is an M14 question.
-- Follow-up filed: T-4757 (T-4446 review MINOR: sheet names with a later mark, INDIRECT and Mc).
+  deleted sheet keeps main's stored `#REF!$C$4` (untyped text reads it back as `#REF!`; review round 3 dropped an
+  unevidenced change to the bare `#REF!`); a stored `<definedName>` of that form is unprobed (T-4794).
+- references.md "A deleted table or sheet" records it; desktop Excel's own file form is an M14 question (T-4794).
+- Follow-ups filed: T-4757 (T-4446 review MINOR: sheet names with a later mark, INDIRECT and Mc); T-4794 (desktop
+  Excel's file form of a deleted-sheet reference, cell and defined name, M14).
 - Eval delta: +9 passing cells (new case); no regressions.
+
+## Blocked because
+Blocked because: review-round limit
+- Round 3 (head 8485758bc, after a merge of origin/main that resolved a sheet_undo.rs conflict): security APPROVE,
+  design APPROVE (3 MINOR: `Lexer::typed` always equals `double_star_exponent`, two flags for one concept; a
+  hand-written print-by-context dispatch in sheet_undo.rs, now gone with the revert below; an over-long doc line),
+  excel-fidelity REQUEST_CHANGES: [MAJOR] `delete_sheet_in_name_node` stored a defined name over a deleted sheet as
+  the bare `#REF!` with no evidence, and no longer needed since round 3 limits the refusal to typed text; [MINOR] stale
+  "typed, external and loaded" comments; [MINOR] no follow-up for the M14 desktop file form.
+- Fixed after round 3, in the commit that blocks (not yet reviewed): `delete_sheet_in_name_node` dropped, sheet_undo.rs
+  and stringify.rs back to main's `rewrite_formulas_edited` call (names keep `#REF!$C$4`); the comments in
+  test_autofill_rows.rs and wrong_reference.rs say typed text only; references.md says the name keeps `#REF!$C$4`
+  and a stored `<definedName>` of that form is unprobed; T-4794 filed (M14, desktop Excel's file form).
+- Next (work-loop step 5c, after 2 h idle): run the full panel on the current head. Open design MINOR to settle or
+  file: merge `typed` and `double_star_exponent` in the lexer.
 
 ## Landing notes
 Resumed 2026-11-07 05:55 UTC by an opus run (worker step 2, branch idle 2 h): round 3 reviewers next.

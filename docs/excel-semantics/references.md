@@ -3034,7 +3034,7 @@ T-4655): Excel cannot write one, so no Excel file is lost, and a crafted `*#REF!
 references stored under `DELETED_SHEET`. Status: DEVIATION (decision 0014, directive 5: Excel's reaction to such a file
 is unknown, and the sentinel must not collide). Workbook names lose the sheet the same way (probes/table-edits/t2612-delete-sheet-then-add-names,
 excel-graph 2026-11-06): with nm = `S!$C$4` and rng = `S!$C$4:$C$7`, `=nm` and `=SUM(rng)` stay `#REF!` after the new S
-is added and `ISREF(nm)` is FALSE; the engine stores such a name as the bare `#REF!` (`delete_sheet_in_name_node`; `#REF!$C$4` before T-4628, which the lexer no longer reads). How Excel's Name Manager shows it is unprobed. The `#REF!` display also covers a sheet that never existed (a loaded `Nope!A1`), an engine choice with
+is added and `ISREF(nm)` is FALSE; the engine stores such a name as `#REF!$C$4`, which untyped text reads back as `#REF!`, and exports that text as it is. Whether Excel loads a stored `<definedName>` of that form, and how its Name Manager shows the name, is unprobed (T-4628 probed only cell `<f>` forms). The `#REF!` display also covers a sheet that never existed (a loaded `Nope!A1`), an engine choice with
 no evidence; its stored text and export keep the name. The adapter's delete_table clears the whole table range (header, text and Qty columns: COUNTA 0 each)
 and keeps the rows in place: `S!C9` still 99 and `SUM(S!C9:C10)` still 104 with unshifted text
 (T-2341, table-delete-table-cells, excel-graph 2026-10-22).

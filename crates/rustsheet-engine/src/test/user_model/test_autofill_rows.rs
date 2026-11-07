@@ -1116,8 +1116,8 @@ fn failed_autofill_rows_does_not_corrupt_cse() {
 #[test]
 fn fill_and_paste_of_a_deleted_sheet_reference_stay_ref() {
     // The display `=SUM(#REF!C4:C7)` of a reference to a deleted sheet is re-entered by a fill
-    // or paste as the engine's own text, which reads back as `#REF!`; only typed, external and
-    // loaded text refuse it, as Excel does (probes/t4628-deleted-sheet-reference-text, T-4628).
+    // or paste as the engine's own text, which reads back as `#REF!`; only typed text refuses
+    // it, as Excel does (probes/t4628-deleted-sheet-reference-text, T-4628).
     let mut model = UserModel::from_model(new_empty_model());
     model.new_sheet().unwrap();
     model.set_user_input(0, 1, 1, "=SUM(Sheet2!C4:C7)").unwrap();

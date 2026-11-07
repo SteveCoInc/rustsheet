@@ -2,7 +2,6 @@
 
 use super::wrong_reference::DELETED_SHEET;
 use crate::expressions::parser::{for_each_chain_operand_mut, Node};
-use crate::expressions::token::Error;
 use crate::expressions::utils::rename_defined_name_sheet;
 use crate::types::sheet_names_match;
 
@@ -185,8 +184,8 @@ pub(crate) fn move_sheet_in_node(node: &mut Node, from: u32, to: u32, sheet_name
 /// Deleting a middle sheet keeps the ends.
 ///
 /// A plain reference to the deleted sheet loses its sheet for good: it becomes a wrong reference
-/// to [`DELETED_SHEET`], displayed as `#REF!C4:C7` and exported as `#REF!`, so a sheet added later under the
-/// old name does not revive it (probes/table-edits/t2612-delete-sheet-then-add, T-2612).
+/// to [`DELETED_SHEET`], displayed as `#REF!C4:C7` and exported as `#REF!`, so a sheet added
+/// later under the old name does not revive it (probes/table-edits/t2612-delete-sheet-then-add, T-2612).
 pub(crate) fn delete_sheet_in_node(node: &mut Node, deleted: u32, sheet_names: &[String]) {
     shrink_spans(node, sheet_names, |low, high| {
         if deleted == low {
@@ -198,24 +197,6 @@ pub(crate) fn delete_sheet_in_node(node: &mut Node, deleted: u32, sheet_names: &
         }
     });
     for_each_sheet_reference_mut(node, &mut |node| lose_deleted_sheet(node, deleted));
-}
-
-/// [`delete_sheet_in_node`] for a defined name's formula, which is stored as A1 text and parsed
-/// again: a reference to the deleted sheet becomes the bare `#REF!` error, as the lexer does not
-/// read `#REF!$C$4` (Excel refuses that text, probes/t4628-deleted-sheet-reference-text, T-4628).
-/// The name still evaluates to `#REF!` and `ISREF` of it is FALSE
-/// (probes/table-edits/t2612-delete-sheet-then-add-names).
-pub(crate) fn delete_sheet_in_name_node(node: &mut Node, deleted: u32, sheet_names: &[String]) {
-    delete_sheet_in_node(node, deleted, sheet_names);
-    for_each_sheet_reference_mut(node, &mut |node| {
-        if let Node::WrongReferenceKind { sheet_name, .. }
-        | Node::WrongRangeKind { sheet_name, .. } = node
-        {
-            if sheet_name.as_deref() == Some(DELETED_SHEET) {
-                *node = Node::ErrorKind(Error::REF);
-            }
-        }
-    });
 }
 
 /// `node` as a wrong reference to [`DELETED_SHEET`] when it is a reference or range on the sheet
