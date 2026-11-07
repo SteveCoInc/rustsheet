@@ -3,7 +3,7 @@ id: T-4923
 title: "A LET or LAMBDA omission in SQRTPI and FACTDOUBLE follows Excel (probe the ToolPak #N/A rule)"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -38,18 +38,35 @@ argument is a LET value or LAMBDA parameter bound to nothing (`LET(e,,SQRTPI(e))
   decides which, and no numeric constant is involved.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph) has these rows. Rule rows: `LET(e,,SQRTPI(e))`,
+- [x] A probes case (excel-probe skill, excel-graph) has these rows. Rule rows: `LET(e,,SQRTPI(e))`,
       `LAMBDA(a,b,SQRTPI(b))(1,)`, `LET(e,,FACTDOUBLE(e))`, `LAMBDA(a,b,FACTDOUBLE(b))(1,)`. Lift rows:
       `ROWS(LET(e,,SQRTPI(IF({1;1},e))))` and `LET(e,,SQRTPI(e+0))` (does an operator turn the omission into 0?). Control
       rows: `LET(e,,GCD(e,4))`, `LET(e,,GCD(4,e))`, `LAMBDA(a,b,LCM(a,b))(4,)` and `LET(e,,MULTINOMIAL(e,4))`.
-- [ ] The predictions are committed in a commit before the oracle fill: `#N/A` for the four rule rows, and today's
+- [x] The predictions are committed in a commit before the oracle fill: `#N/A` for the four rule rows, and today's
       answers for the rest.
-- [ ] After the fill every probe cell passes. numbers.md "A written-empty argument of a ToolPak function is #N/A"
+- [x] After the fill every probe cell passes. numbers.md "A written-empty argument of a ToolPak function is #N/A"
       names SQRTPI and FACTDOUBLE with their cells, or states that they read the omission as 0 if Excel says so (then
       no engine change is made).
-- [ ] No new F line in any eval/baseline file; `make check` green; reviewers approve.
+- [x] No new F line in any eval/baseline file; `make check` green; reviewers approve.
 
 ## Out of scope
 - RANDBETWEEN's LET form: the harness skips volatile cells.
 - ISEVEN and ISODD (functions-logic, T-4928).
 - MROUND of a formula-returned blank and the newer roundings (T-4901).
+
+## Outcome
+- **Finding:** SQRTPI and FACTDOUBLE follow the `ToolPak` rule. A LET value or LAMBDA parameter bound to nothing is
+  `#N/A`. An operator over it (`e+0`) or a blank cell reads as 0.
+- **Evidence:** probes/t4923-sqrtpi-factdouble-omitted, 13 cells, excel-graph, 2026-11-07. Predictions were committed in
+  819775fd6, before the fill. H_na scored 13/13 and H_zero (the engine before this change) 9/13. The GCD, LCM and
+  MULTINOMIAL controls passed as the engine already gave them. Nothing is fitted: each cell is `#N/A` or the value the
+  engine already gave.
+- **Code:**
+  - `fn_sqrtpi` reads through `Model::atp_number`, which also folds its boolean `#VALUE!`.
+  - `fn_factdouble` swaps its argument through `written_empty_or`.
+  - Both take the empty flag from `Model::empty_arguments::<1>`.
+  - Unit test: test/test_sqrtpi_factdouble_omitted.rs.
+- **Docs:** numbers.md "A written-empty argument of a ToolPak function is #N/A" now names SQRTPI and FACTDOUBLE with
+  their cells. It also fixes the entry's stale path for `empty_arguments`, which T-4870 moved to
+  functions/util/empty_args.rs.
+- **Eval:** one new case, 13/13.
