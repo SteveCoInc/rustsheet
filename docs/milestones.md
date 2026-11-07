@@ -386,7 +386,17 @@ styles and conditional formats beyond preservation, UI-only commands.
   accepted deviations; rendered layouts match Excel's `rowItems`/`colItems`.
 - Every remaining catalog row has a filed task or an out-of-scope ruling; rows Excel for the web cannot
   render are M14 tasks and do not block (decision 0039).
-- Measured by report.json's `milestone_exit` M16 row; until that row exists M16 counts as not met.
+- Measured by report.json's `milestone_exit` M16 row (T-4127): gen-pivot, pivot-corpus-lo and
+  pivot-corpus-closedxml with none of their scored cells visibly off (`n/a`, so not met, when a
+  fetched suite is absent), the M16 probe row (the pivot probes) with no visibly-off cell, and per
+  catalog stage the 30-oracle-cell floor for every in-scope row the web can render, the layout
+  check, and the owners of the remaining rows, not measured until rows map to tasks (T-4952). The
+  probe row leaves out only R3 passes and M14-owned cells.
+  Limitation: the corpus suites measure import and formula cells (plan check (a)); the re-render of
+  fresh corpus pivots (check (b)) is not measured, because freshness is decided by the engine's own
+  render, so a wrongly rendered fresh pivot reads as stale. The row's `corpus_render_met` stays not
+  measured until freshness is decided without the renderer (T-4906), and M16 cannot be met before.
+  `scripts/phase1_exit.py` lists M16 among the Phase 1 milestones.
 
 ## M14 — Desktop-oracle parity (Phase 4)
 

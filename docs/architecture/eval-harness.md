@@ -559,6 +559,31 @@ and every `v15_checkpoint` function of catalog milestone M9 must be `meets_rate`
 one `meets_rate` call. The M8 row (decision 0146 item 2, T-0096) reads gen-m8a (`gen_suite`), and as
 `more_suites` gen-m8b and the `poi M8 subset` (the report's `poi_m8_subset`, at 99.5% with no
 `blocked_cases`, the crashed or errored poi cases holding a subset formula, listed as `case!*`).
+The M16 row (decision 0274 item 6, T-4127; `milestone_exit/pivot.rs`) reads gen-pivot (`gen_suite`)
+and, as `more_suites`, pivot-corpus-lo and pivot-corpus-closedxml, each with at least one scored cell
+and none visibly off. Both corpus suites are fetched and `gate = false`, so a run without them prints
+`n/a` and the row is not met. Those suite columns measure plan check (a) only: import and the formula
+cells against Excel's cached values. Its probes are the `probes` cases tagged M16 (the `pivots` cases of
+the plan) with no visibly-off cell but R3 passes and M14-owned cells (`pivot.probe_off`, with the cells
+left out in `pivot.probe_left_out`; decision 0188 R3 and decision 0274 item 5): M16's criterion is
+decision 0083's rule, not decision 0188 R1(c), so Phase 1b cells count, `probe_r1c_off` stays null, and
+`exit_owners.py` lists every visibly-off probe cell but those two classes. The probe measure covers only
+the cases the probe-milestone rules assign to M16: pivot probes tagged otherwise are judged under R1(c)
+in their own rows, as are t2085-getpivotdata-data-fields, -items and -layouts (M6) and
+gen-m9-17c110a53924beb8-refill-1106 (M9), whose 556 pivot-area cells count in the M6 and M9 rows. The
+row's `pivot` object adds, per catalog stage of eval/catalog/pivot-features.tsv (`stages`): the
+in-scope rows, those Excel for the web cannot render (`web` = `no`, M14's, not blocking), the rest at
+the 30-oracle-cell floor (`evidenced`, the "Pivot features" cell counts) and `below_floor` by id
+(`evidence_met`); the `remaining` rows, below the floor or with a failing cell, whose owner criterion
+(`owners_met`) is null, not measured, while any remains, since no row-to-task mapping exists yet
+(T-4952). Milestone-wide it adds the layout criterion (`layout_met`: false when a sidecar pivot is
+missing or misplaced, null while the engine emits no `rowItems`/`colItems` to compare), the corpus
+render criterion (`corpus_render_met`, plan check (b): fresh corpus pivots re-rendered from their saved
+cache must reproduce Excel's saved cells), and the pivot-corpus fresh and stale counts, shown only.
+`pivot_freshness` decides "fresh" by the engine's own render, so a fresh file the engine renders wrongly
+is called stale and is never scored; `corpus_render_met` therefore stays null, not measured, until
+freshness is decided without the renderer (T-4906), and until then M16 cannot be met. `exit` needs
+every one of these met.
 
 The "Fifteen-digit parity checkpoint" section (`v15_checkpoint`, decision 0094) also prints the
 Phase 1 line of decision 0114: the in-scope functions that are covered and have at most one cell in
