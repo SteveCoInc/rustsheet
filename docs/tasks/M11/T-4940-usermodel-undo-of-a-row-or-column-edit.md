@@ -27,15 +27,15 @@ with its whole region is there again.
   `restore_table_extents`); the data tables need the same, checked as untrusted input
   (`DataTable::check`), since external diffs are untrusted
   (test/user_model/test_external_diffs_untrusted.rs).
+- A range clear (or a paste) over every result cell deletes the table too (T-0452); its undo
+  restores the cells but not the table.
 
 ## Acceptance criteria
 - [ ] Undo of a row delete and of a column delete that made an input `#REF!` restores it, and undo
       of one that deleted a table restores it with its results; redo deletes again. Unit tests.
+- [ ] Undo of a range clear that deleted a table restores it; redo deletes it again.
 - [ ] A diff whose data tables break `DataTable::check` is refused.
 - [ ] `make check` green; reviewers approve.
-
-- A range clear (or a paste) over every result cell deletes the table too (T-0452); its undo restores the
-  cells but not the table. Restore it the same way.
 
 ## Out of scope
 - The facade (its row and column edits are harness-only and have no undo).

@@ -319,21 +319,22 @@ Ours: matches. `insert_rows`, `delete_rows`, `insert_columns` and `delete_column
 that cuts through a region with the message "Cannot change part of a data table" before they
 change anything, and otherwise move each table and its inputs, mark a deleted input `Deleted`, or
 drop a table whose region is deleted. Every cell write the write guard sees
-(`prepare_cell_for_user_input`: typed and stored input, values, single-cell clears, fills) into a
+(`prepare_cell_for_user_input`: typed and stored input, values, single-cell clears) into a
 result cell is refused with the same message, through the engine and the facade, whose edit then
 rolls back. `range_clear_contents` and `range_clear_all` refuse an area over some of a table's
-results and delete a table whose results the area covers. A paste is refused before it changes
-anything when its target covers some of a table's results; one over every result replaces the
-table. Unprobed, our choices: a row or column move (`move_rows_action`, `move_columns_action`) that
-shifts any line of a region is refused whole, and so is a cut whose source holds a result cell; a
+results and delete a table whose results the area covers. A paste (`paste_from_clipboard`,
+`paste_csv_string`) is refused before it changes anything when its target covers some of a table's
+results; one over every result replaces the table. Unprobed, our choices: a row or column move (`move_rows_action`, `move_columns_action`) that
+shifts any line of a region is refused whole, and so is a cut whose source holds a result cell
+and an autofill whose target holds one, before either changes anything; a
 paste over every result replaces the table as a clear does; a single-cell clear of a one-cell
 table is refused; an insert that would push a table's results past the last row or column deletes
 the table, and one that pushes an input there makes it `#REF!`; copying a sheet copies its tables
-(Graph has no sheet copy to probe it with). T-4947 probes the move, the cut and the copy. The
+(Graph has no sheet copy to probe it with). T-4947 probes the move, the cut, the fill, the one-cell clear and the copy. The
 `UserModel` undo of a row or column delete moves a table back but does not restore an input the
 delete made `#REF!` or a table it deleted, nor does the undo of a clear that deleted one (T-4940).
 Status: VERIFIED (excel-graph) for the rules above; the unprobed choices are not
-Implemented in: crates/rustsheet-engine/src/data_table_edits.rs, crates/rustsheet-engine/src/actions.rs, crates/rustsheet-engine/src/model.rs (`prepare_cell_for_user_input`, `range_clear_contents`, `range_clear_all`), crates/rustsheet-engine/src/user_model/clipboard.rs (`paste_from_clipboard`)
+Implemented in: crates/rustsheet-engine/src/data_table_edits.rs, crates/rustsheet-engine/src/actions.rs, crates/rustsheet-engine/src/model.rs (`prepare_cell_for_user_input`, `range_clear_contents`, `range_clear_all`), crates/rustsheet-engine/src/user_model/clipboard.rs (`paste_from_clipboard`, `paste_csv_string`), crates/rustsheet-engine/src/user_model/autofill.rs
 Tasks: T-0452, T-4940, T-4947
 
 ## Data tables re-evaluate the workbook at most 2^25 formulas per recalculation

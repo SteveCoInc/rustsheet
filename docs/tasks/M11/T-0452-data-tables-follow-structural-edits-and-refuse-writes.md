@@ -49,15 +49,16 @@ Record the answers in docs/excel-semantics/recalc.md.
   refused, as is every write into a result cell (value, formula) and a clear of some of them; a
   clear of every result deletes the table. Edits above or left move the table and its input;
   deleting the input's row or column makes it `#REF!`; deleting the whole region deletes the table.
-  probes/t0452-data-table-row-column-edits (60 cells, the accepted edits) plus 34 single-edit
+  probes/t0452-data-table-row-column-edits (60 cells, the accepted edits) plus 33 single-edit
   uploads, each listed in recalc.md with its response.
 - Engine: `data_table_edits.rs` refuses the splitting edits before anything changes and moves,
   `#REF!`s or drops tables after the accepted ones (`insert_rows`, `delete_rows`,
   `insert_columns`, `delete_columns`); row and column moves touching a region are refused
   (unprobed, our choice); `prepare_cell_for_user_input` refuses writes into results, so the
   facade's `Txn::set` errors and rolls back. `range_clear_contents` and `range_clear_all` refuse a
-  clear of some results and delete a table whose results they cover; a paste over some results, or
-  a cut from them (our choice), is refused before it changes anything. Undo of `add_data_table` is
+  clear of some results and delete a table whose results they cover; a paste over some results
+  (`paste_from_clipboard`, `paste_csv_string`), a cut from them and a fill into them (our choice
+  for the last two) are refused before they change anything. Undo of `add_data_table` is
   tested.
 - Copying a sheet: Graph has no sheet copy; recorded as unprobed (the copy keeps its tables).
 - Eval delta: probes +60 cells, all pass (on main the engine passed 36/60). No existing case moved.

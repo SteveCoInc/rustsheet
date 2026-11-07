@@ -92,6 +92,16 @@ impl DataTable {
     }
 }
 
+/// The first and last row and column of `area`, as `(top, left, bottom, right)`.
+pub(crate) fn area_bounds(area: &Area) -> (i32, i32, i32, i32) {
+    (
+        area.row,
+        area.column,
+        area.row.saturating_add(area.height).saturating_sub(1),
+        area.column.saturating_add(area.width).saturating_sub(1),
+    )
+}
+
 impl Model {
     /// Refuses inserting `count` rows (`rows`) or columns at `at` on `sheet`, or deleting `-count`
     /// of them from `at`, when that cuts through a data table's region, before it changes anything.
@@ -173,9 +183,7 @@ impl Model {
     /// [`DATA_TABLE_PART`] when `area` covers some but not all of a table's results.
     fn data_tables_cleared(&self, area: &Area) -> Result<Vec<(i32, i32, i32, i32)>, String> {
         let ws = self.workbook.worksheet(area.sheet)?;
-        let (top, left) = (area.row, area.column);
-        let bottom = area.row.saturating_add(area.height).saturating_sub(1);
-        let right = area.column.saturating_add(area.width).saturating_sub(1);
+        let (top, left, bottom, right) = area_bounds(area);
         let mut cleared = Vec::new();
         for table in &ws.data_tables {
             let (t, l, b, r) = table.range;
@@ -208,15 +216,19 @@ impl Model {
         Ok(())
     }
 
-    /// Refuses a cut whose source `area` holds a data table's result cell: the cut clears its
-    /// source cell by cell, which the results refuse. Unprobed in Excel, our choice (recalc.md).
-    pub(crate) fn refuse_data_table_cut(&self, area: &Area) -> Result<(), String> {
-        let ws = self.workbook.worksheet(area.sheet)?;
-        let bottom = area.row.saturating_add(area.height).saturating_sub(1);
-        let right = area.column.saturating_add(area.width).saturating_sub(1);
+    /// Refuses an edit that writes into every cell of `(top, left, bottom, right)` on `sheet`, a
+    /// fill target or a cut's source (which it clears cell by cell), when that holds a result cell
+    /// of a data table, before the edit changes anything: each of those writes is refused. A fill
+    /// into data-table results is unprobed in Excel, our choice (recalc.md).
+    pub(crate) fn refuse_data_table_overlap(
+        &self,
+        sheet: u32,
+        (top, left, bottom, right): (i32, i32, i32, i32),
+    ) -> Result<(), String> {
+        let ws = self.workbook.worksheet(sheet)?;
         let meets = |t: &DataTable| {
-            let (top, left, b, r) = t.range;
-            top <= bottom && area.row <= b && left <= right && area.column <= r
+            let (t, l, b, r) = t.range;
+            t <= bottom && top <= b && l <= right && left <= r
         };
         if ws.data_tables.iter().any(meets) {
             return Err(DATA_TABLE_PART.to_string());

@@ -339,8 +339,13 @@ fn a_clear_over_every_result_deletes_the_table_and_over_some_is_refused() {
 fn pastes_over_part_of_a_data_table_are_refused_unchanged() {
     let mut model = crate::UserModel::from_model(edit_model());
     let refused = Err("Cannot change part of a data table".to_string());
+    model.merge_cells(&area(5, 3, 2, 1)).unwrap();
     model.set_selected_cell(5, 1).unwrap();
-    assert_eq!(model.paste_csv_string(&area(5, 1, 2, 1), "7\t8"), refused);
+    assert_eq!(
+        model.paste_csv_string(&area(5, 1, 4, 1), "7\t8\t9\t1"),
+        refused
+    );
+    assert_eq!(model.get_model().get_merged_cells(0).unwrap().len(), 1);
     assert_eq!(model.get_formatted_cell_value(0, 5, 1), Ok("2".to_string()));
     assert_eq!(
         model.get_formatted_cell_value(0, 5, 2),
@@ -352,4 +357,22 @@ fn pastes_over_part_of_a_data_table_are_refused_unchanged() {
         .data_tables
         .is_empty());
     assert_eq!(model.get_formatted_cell_value(0, 1, 8), Ok("6".to_string()));
+}
+
+/// A fill whose target holds a result cell is refused before it changes anything (our choice,
+/// unprobed): each write into the results would be.
+#[test]
+fn fills_into_a_data_table_are_refused_unchanged() {
+    let mut model = crate::UserModel::from_model(edit_model());
+    let refused = Err("Cannot change part of a data table".to_string());
+    model.merge_cells(&area(5, 3, 2, 1)).unwrap();
+    assert_eq!(model.auto_fill_rows(&area(3, 2, 3, 1), 6), refused);
+    assert_eq!(model.auto_fill_columns(&area(5, 1, 1, 1), 4), refused);
+    assert_eq!(model.get_model().get_merged_cells(0).unwrap().len(), 1);
+    assert_eq!(
+        model.get_formatted_cell_value(0, 5, 2),
+        Ok("22".to_string())
+    );
+    assert_eq!(model.get_formatted_cell_value(0, 3, 3), Ok(String::new()));
+    model.auto_fill_rows(&area(1, 4, 1, 1), 2).unwrap();
 }

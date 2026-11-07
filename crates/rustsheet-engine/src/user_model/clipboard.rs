@@ -225,14 +225,8 @@ impl UserModel {
         // its clear of the target would refuse later, and a cut from them (T-0452).
         self.model.refuse_data_table_clear(target_area)?;
         if is_cut {
-            let source = Area {
-                sheet: source_sheet,
-                row: area.row,
-                column: area.column,
-                width: area.width,
-                height: area.height,
-            };
-            self.model.refuse_data_table_cut(&source)?;
+            let source = crate::data_table_edits::area_bounds(area);
+            self.model.refuse_data_table_overlap(source_sheet, source)?;
         }
 
         // The merges of the copied area, captured before the containment
@@ -752,6 +746,8 @@ impl UserModel {
         // Merged cells in the target are replaced by the paste (or reject
         // it); plain text carries no merges, so contained ones just go
         let mut diff_list = Vec::new();
+        // Refused before the merges go: its clear would refuse it (T-0452).
+        self.model.refuse_data_table_clear(&paste_area)?;
         self.remove_merges_replaced_by_paste(&paste_area, &[], &mut diff_list)?;
 
         // Capture old values BEFORE clearing so undo can restore them correctly.

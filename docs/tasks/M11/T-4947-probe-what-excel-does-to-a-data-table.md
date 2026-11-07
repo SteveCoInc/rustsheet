@@ -1,6 +1,6 @@
 ---
 id: T-4947
-title: "Probe what Excel does to a data table on a row or column move through it, a cut from its results and a sheet copy"
+title: "Probe what Excel does to a data table on a row or column move through it, a cut or fill over its results, a one-cell clear and a sheet copy"
 milestone: M11
 lane: research
 status: todo
@@ -24,6 +24,9 @@ them and refuse edits that cut through them").
   desktop backend (or a desktop-saved file holding a copied sheet with a table) can.
 - Graph range `moveTo` may answer the move and the cut, as the T-0452 uploads did for inserts (each
   refused edit is a 500 `GeneralException`). Record each upload's edit, response and sha256.
+- An autofill whose target holds a result cell is refused (`refuse_data_table_overlap`), and a
+  single-cell clear of a one-cell table is refused by the write guard, although a clear covering
+  every result of a larger table deletes it (probed): probe both.
 - A paste over every result cell replaces the table, as a clear of them deletes it (probed); a paste
   over the whole results is unprobed too.
 
