@@ -2588,8 +2588,8 @@ crates/rustsheet/src/pivot_view.rs (`Workbook::pivot_cell_records`, T-4184).
 Rule: the default captions (`Row Labels`, `Column Labels`, `(Multiple Items)`) are not stored in
 the pivot definition: the saved cells hold them in the saving Excel's UI language, with no
 `rowHeaderCaption` or `colHeaderCaption`. The `Values` caption is stored, in that language, as
-`dataCaption`. The en-US engine renders the English captions, so the pivot-corpus classifies such a pivot stale
-(T-4131). That an en-US Excel refresh of such a file writes the English captions is an inference from
+`dataCaption`. The en-US engine renders the English captions, so the pivot-corpus reports such a pivot's render and does not
+score it (T-4906; a `dataCaption` other than `Values` or `Data` marks it). That an en-US Excel refresh of such a file writes the English captions is an inference from
 the captions not being stored, not observed (UNVERIFIED).
 Evidence (Excel-saved desktop files, cached cells and pivotTable parts): pivot-corpus-lo
 `xlsx/pivot-table/shared-numgroup.xlsx` (Hungarian, A3 `Sorcímkék`, `dataCaption="Értékek"`),
@@ -2652,3 +2652,43 @@ VERIFIED (excel-graph) for the shapes cited; wider claims are marked. Each has a
   cells too.
 
 Status: VERIFIED (excel-graph) for the cells cited; the unprobed extensions above are UNVERIFIED.
+
+## What the Excel-saved pivot corpus shows (T-4906)
+The pivot-corpus suites (pivot-corpus-lo, pivot-corpus-closedxml: Excel-saved files of LibreOffice's and ClosedXML's
+test data) score the re-render of each pivot whose saved records give its saved values (eval-harness.md "Pivot
+freshness"). Its fresh pivots' saved cells show these readings. They are Excel-saved cells, not oracle probes: a pivot
+without `refreshOnLoad` keeps the cells the file held when Excel opened it ("Pivots without refreshOnLoad keep their
+saved cells"), so a file another program wrote and Excel re-saved may carry that program's render. Each is
+UNVERIFIED until its owner task probes it, and each task owns the corpus cells it explains.
+- **`x14:pivotTableDefinition hideValuesRow="1"` with several data fields on columns and no column field**: no
+  `Values` header row. The data fields' captions head their columns on the location's first row, beside the row
+  field's header, and the body starts on the next row; `firstHeaderRow` is 0. The engine writes the `Values` row and
+  shifts the body down one row (pivot-corpus-lo `xlsx/column-style-autofilter.xlsx` DesktopUsage!A1:C5, ServerDistros,
+  `xlsx/pivot-table/PivotTableCellFormatsTest_3_DataFieldInColumn_ColumnLabelColor.xlsx` Sheet1!G4:I10;
+  pivot-corpus-closedxml `ClearPivotTableRenderedRangeWhenLoading/inputfile.xlsx` Sheet1!A1:D6; poi `DataTableCities.xlsx`
+  PivotTable!B5:E19; calipers `officejs/pivot_two_data/golden.xlsx` Pivot!A1:C5, a pivot made through Office.js; 17
+  Excel-saved pivots carry the flag in column-style-autofilter alone). With one data field it changes nothing ("Layout and totals flags as
+  Excel for the web renders them", X14). T-4966.
+- **An empty `missingCaption` leaves an empty intersection blank**: with `missingCaption=""` (and `showMissing` on)
+  the cells no record reaches hold nothing, not an empty string (pivot-corpus-closedxml
+  `PivotMixedDataTypesInTableColumn/input.xlsx` pvt5!B3:G19, pvt3!B12). The engine writes `""`. T-4967.
+- **A data field saved with no `name`** is captioned with its source field's name alone (`mail` for a Count of mail;
+  pivot-corpus-lo `xlsx/pivottable_tabular_mode.xlsx` pivot!C3, `xlsx/pivottable_duplicated_member_filter.xlsx`
+  pivot!B3). The engine writes `""`. Both files' pivots were first written by LibreOffice, so the caption may be its
+  render. T-4968.
+- **A page field with a hidden item and no `multipleItemSelectionAllowed`** shows `(All)`, not `(Multiple Items)`
+  (pivot-corpus-lo `xlsx/pivottable_rowcolpage_field_filter.xlsx` Sheet2!B2; its values are the engine's, its record filter
+  included). T-4969.
+- **A value sort under a show-values-as data field** (`sortType="descending"`, `autoSortScope` on a Count shown as
+  `percentOfRow`) orders items whose counts tie otherwise than the engine's cache-order tie break (pivot-corpus-lo
+  `xlsx/column-style-autofilter.xlsx` TopDesktopDistrosVsServerUsage!A19:C63, from Ubuntu GNOME and Antergos, both 19).
+  T-4970.
+- Further corpus evidence for gen-pivot rules above: item `n` captions, a renamed manual group included (`Other` where
+  the engine shows `Group1`; column-style-autofilter AlternateDesktopDistroTable!A2, ServerPlatforms!A6:A13), T-4915;
+  the header labels of outline and tabular form (`xlsx/pivot/Pivot3_Column_Grand_Subtotals.xlsx` Sheet2!C3 `Name`,
+  `xlsx/pivot-table/PivotTableCellFormatsTest_1_DataFieldInRow_RowLabelColor.xlsx` Sheet1!G5 `Values`), T-4914; a page
+  field with one visible item (`xlsx/tdf89139_pivot_table.xlsx` pivot!B1 `окт`), T-4921; a Count over blank records
+  is blank (column-style-autofilter CPUVendor!B12, `(blank)`), T-4918; a pivot's own merged label cells
+  (`PivotSubtotalsSource/input.xlsx` Pivot1, which the engine refuses to lay out), T-4677.
+
+Status: UNVERIFIED (Excel-saved corpus files; probe pending: T-4966, T-4967, T-4968, T-4969, T-4970).

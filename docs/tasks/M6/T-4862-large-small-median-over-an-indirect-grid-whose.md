@@ -3,7 +3,7 @@ id: T-4862
 title: "LARGE/SMALL/MEDIAN over an INDIRECT grid whose first element is a #REF! (bad sheet name) is #N/A beside an off-sheet reference, where a cell error value propagates"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -26,3 +26,7 @@ element's origin). Notes: lookup.md "A grid with references on both sheets".
 
 ## Out of scope
 - Value-first grids (t4791 H7:H12 already pass).
+
+## Outcome
+`RefGrid::order_statistic_error` skips `#REF!` elements when choosing the first error ahead of the off-sheet `#N/A`.
+Eval: probes t4791 H4:H6 now pass (3 cells fixed, baseline updated), no regressions (t4704 unchanged). lookup.md records the rule.
