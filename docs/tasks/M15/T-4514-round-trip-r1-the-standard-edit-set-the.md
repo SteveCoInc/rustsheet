@@ -35,27 +35,36 @@ each naming its decision or task, and a self-test fails on an exception that exc
 - Excel goldens (T-4180).
 
 ## Outcome
-- `roundtrip/r1.rs` adds the standard edit set E1–E6 through the facade's `edit`, with `Δ(E)` taken from the edits'
-  change sets (inputs and changed values) and the delta rule `violations`. A failing item of the edited save is
-  allowed only when it is one of these:
-  - already failing in R0;
-  - a fact about a Δ cell;
-  - an appended number format or cell format;
-  - a derived count or range (N9, N10).
+- `roundtrip/r1.rs` adds the standard edit set E1–E6 through the facade's `edit`. `Δ(E)` comes from the edits' change
+  sets and keeps two cell sets:
+  - written cells explain their input, formula, computed flag and value, and their style only under E6;
+  - value-changed cells explain their value only.
 
-  Anything else is kept with scenario `R1/<edit>`.
-- Implementation choices (also recorded in SPEC-0033 D1, D5 and D8):
-  - The edits act on the first sheet in tab order.
-  - Each edit is its own transaction. A refused edit (a target inside a spill) counts as `n/a`.
-  - Violations ratchet in the baseline rather than failing outright, while E6 forces regeneration (T-4623).
-- `R0/again` saves our own R0 output again (idempotence). `roundtrip/exceptions.rs` adds the `exceptions` manifest key,
-  and a stale exception fails `--check` and `--update-baseline`.
-- `CaseResult::scenarios` keeps each scenario's checked count. The CLI and the report give one rate per family: R0, R1
-  and R0/again.
-- Scenario sets: the fixtures run all nine scenarios; the corpora run `R0` and `R1/all`. Every scenario reruns
-  every case, so all nine on the corpora took 22 minutes.
-- Per-edit kept rates, from one run of every scenario on the corpora (300 s per case; Calipers' two heaviest
-  workbooks timed out under nine scenarios):
+  Appended number and cell formats and the style counts are explained only under E6. The shared-string counts are
+  explained only under E5, and `dimension@ref` only on the edited sheet.
+- R0 matching: an R0 item excuses the same R1 item only up to its weight, so a larger `<truncated>` tail stays a
+  violation. Validator items also match on their detail.
+- Edit targets:
+  - E1 and E2 skip spill and array members. The new facade query `Workbook::in_spill` is in `crates/rustsheet/src/spill.rs`.
+  - E1 and E2 move on to their next candidate (64 at most) when the engine refuses a write because of its target.
+  - Any other edit error is a `scenario error` item, which keeps the case's R0 items.
+  - The CLI line counts refused writes and `n/a` edits.
+- `roundtrip/scenarios.rs` holds the one table of scenarios: R0, `R0/again` (idempotence), and `R1/E1` … `R1/E6`
+  and `R1/all`. `suite.rs` validates manifests against it, the runner dispatches on it, and the rates line groups
+  by its families. `KeptRate::of` is `of_scenarios` over every scenario.
+- `roundtrip/exceptions.rs`:
+  - the `exceptions` manifest key names a file inside the suite;
+  - each exception's owner is `T-<n>` or `decision <nnnn>`;
+  - a stale exception fails `--check` and `--update-baseline`;
+  - excused items are counted in the output.
+- Decision 0336: violations ratchet in the baseline until T-4623, T-4831 and T-4832 burn the known ones down. The
+  first sheet in tab order stands in for the first visible one until T-4868.
+- Scenario sets: the fixtures run all nine scenarios; the corpora run `R0` and `R1/all`. All nine on the corpora took
+  22 minutes.
+- Per-edit kept rates, from one uncommitted run of every scenario on the corpora (300 s per case). This is a
+  different population from the committed baselines: under nine scenarios, Calipers' two 1.4M-formula workbooks
+  timed out, so they are missing here. That is why Calipers' E6 (80.18%) is lower than its committed R1 (87.88%).
+  The run used round 1's rule; round 2's stricter rule moves R1 by under 0.3 points in the committed baselines.
 
   | edit | calipers | poi | corpus-bench |
   |---|---|---|---|
@@ -68,15 +77,16 @@ each naming its decision or task, and a self-test fails on an exception that exc
   | R0/again (idempotence) | 99.991% | 99.9997% | 100% |
 
 - E6 dominates the edit losses: a new style still regenerates the whole package (T-4623). E5 regenerates when the
-  source has no `sharedStrings.xml` yet, and E2 when the formula is in a shared-formula group; these are T-4831 and T-4832.
-- The committed baselines on main's code, 541/350/912/29 cases, all scored:
+  source has no `sharedStrings.xml` yet (T-4831), and E2 when the formula is in a shared-formula group (T-4832).
+- The committed baselines on main's code, with all 541/350/912/29 cases scored:
 
-  | suite | R0 | R1 |
-  |---|---|---|
-  | roundtrip-calipers | 99.99% | 87.88% |
-  | roundtrip-poi | 99.99% | 92.79% |
-  | roundtrip-corpus-bench | 100.00% | 84.92% |
-  | roundtrip-fixtures | 100.00% (R0/again 100%) | 89.93% |
+  | suite | R0 | R1 | refused writes | `n/a` edits |
+  |---|---|---|---|---|
+  | roundtrip-calipers | 99.99% | 87.88% | 0 | 738 |
+  | roundtrip-poi | 99.99% | 92.79% | 5 | 583 |
+  | roundtrip-corpus-bench | 100.00% | 84.72% | 7 | 980 |
+  | roundtrip-fixtures | 100.00% (R0/again 100%) | 89.92% | 0 | 74 |
 
-  `--update-baseline` over all four took 8 min 36 s at the nightly's 300 s per case.
+  Most `n/a` edits come from first sheets with no numeric constant, no formula or no empty cell in the used range.
+  `--update-baseline` over all four took 9 min 27 s at the nightly's 300 s per case.
 
