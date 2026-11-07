@@ -319,6 +319,28 @@ impl RefGrid {
         &self.elements
     }
 
+    /// The grid of the elements' row-major indices, as numbers: how a per-element caller hands
+    /// its elements to the lift driver, whose lifted arguments hold values only (OFFSET over a
+    /// grid, the RANK family's `ref`). [`Self::element_at`] reads an index back.
+    pub(crate) fn index_array(&self) -> Vec<Vec<ArrayNode>> {
+        (0..self.rows)
+            .map(|row| {
+                (0..self.columns)
+                    .map(|column| ArrayNode::Number((row * self.columns + column) as f64))
+                    .collect()
+            })
+            .collect()
+    }
+
+    /// The element an [`Self::index_array`] value names; `None` for anything else.
+    pub(crate) fn element_at(&self, index: &CalcResult) -> Option<&RefElement> {
+        match index {
+            // The index is a whole number below the grid's length, as `index_array` builds it.
+            CalcResult::Number(index) => self.elements.get(*index as usize),
+            _ => None,
+        }
+    }
+
     /// Whether any element is a reference, not an error: what makes a lifted OFFSET or
     /// INDIRECT carry the ERROR.TYPE/CELL mark (`number_mark.rs`; statistics.md "An array of
     /// references is #NUM! in the paired functions").

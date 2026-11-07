@@ -1,7 +1,7 @@
 use crate::calc_result::Range;
 use crate::functions::statistical::paired::SecondMark;
 use crate::nested_array::nested_array_error;
-use crate::reference_operators::{Ranges, RefArg};
+use crate::reference_operators::{Ranges, RefArg, RefGrid};
 use statrs::distribution::{Continuous, Gamma};
 
 use super::element_errors::array_element_error;
@@ -370,7 +370,7 @@ impl Model {
         node: &Node,
         cell: CellReferenceIndex,
     ) -> Result<Vec<Option<f64>>, CalcResult> {
-        self.numbers_from_ranked_arg(node, cell, false)
+        self.numbers_from_ranked_arg(node, cell, None)
     }
 
     /// [`Self::numbers_from_reference_arg`] of an element-wise expression of whole columns or of
@@ -418,20 +418,32 @@ impl Model {
     /// an array that is not a reference (`IF(..)`, arithmetic) is an array of its own shape holding
     /// `#VALUE!`, or the element's error where the element is one (docs/excel-semantics/statistics.md,
     /// "RANK of a non-reference array"; probes/rank-nonref-12..14). LARGE and SMALL accept such arrays.
+    ///
+    /// An array of references (a lifted XLOOKUP's mixed grid, OFFSET or INDIRECT) is handed back
+    /// whole, as [`RankData::PerElement`]: the family lifts over its elements (SPEC-0014
+    /// amendment "Per-element callers"; probes/t4704-mixed-xlookup-grid-readers A25:C38, T-4740).
     pub(crate) fn numbers_from_rank_ref_arg(
         &mut self,
         node: &Node,
         cell: CellReferenceIndex,
-    ) -> Result<Vec<Option<f64>>, CalcResult> {
-        self.numbers_from_ranked_arg(node, cell, true)
+    ) -> Result<RankData, CalcResult> {
+        let mut grid = None;
+        let numbers = self.numbers_from_ranked_arg(node, cell, Some(&mut grid));
+        match grid {
+            Some(grid) => Ok(RankData::PerElement(grid)),
+            None => numbers.map(RankData::Numbers),
+        }
     }
 
+    /// `rank_grid` is the RANK family's slot for an array of references; LARGE and SMALL pass
+    /// `None`.
     fn numbers_from_ranked_arg(
         &mut self,
         node: &Node,
         cell: CellReferenceIndex,
-        arrays_are_value_errors: bool,
+        rank_grid: Option<&mut Option<RefGrid>>,
     ) -> Result<Vec<Option<f64>>, CalcResult> {
+        let arrays_are_value_errors = rank_grid.is_some();
         // The `@` of a non-reference array is its top-left value, which the RANK family takes as
         // it takes the whole array: `#VALUE!`, or the element's error, in one cell
         // (`RANK(5,@IF(A1:B2>0,A1:B2))`, `RANK(5,@{3,4})`; probes/rank-at-if-ref H1, H31, K28).
@@ -471,14 +483,17 @@ impl Model {
             }
             // LARGE and SMALL over an array of references on another sheet are `#N/A`, on the
             // formula's own sheet its value view (SPEC-0014 amendment rule 5,
-            // [`RefGrid::order_statistic_error`]). The RANK family is unprobed and keeps the
-            // value view.
-            RefArg::Grid(grid) if !arrays_are_value_errors => {
-                match grid.order_statistic_result(cell.sheet, cell) {
+            // [`RefGrid::order_statistic_error`]). The RANK family takes the grid itself.
+            RefArg::Grid(grid) => match rank_grid {
+                Some(slot) => {
+                    *slot = Some(grid);
+                    return Ok(Vec::new());
+                }
+                None => match grid.order_statistic_result(cell.sheet, cell) {
                     Some(error) => return Err(error),
                     None => grid.to_values(),
-                }
-            }
+                },
+            },
             single => single.into_single_area(cell),
         };
         match single {
@@ -690,4 +705,12 @@ impl Model {
 
         CalcResult::Number(p)
     }
+}
+
+/// The RANK family's `ref` ([`Model::numbers_from_rank_ref_arg`]).
+pub(crate) enum RankData {
+    /// The numbers of a reference, an array or a scalar, read once.
+    Numbers(Vec<Option<f64>>),
+    /// An array of references, ranked against element by element.
+    PerElement(RefGrid),
 }

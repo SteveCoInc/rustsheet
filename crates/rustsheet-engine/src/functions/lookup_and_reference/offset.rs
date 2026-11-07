@@ -4,7 +4,6 @@
 use super::ref_lift::{lifts_one_by_one, may_hand_on_grid};
 use crate::calc_result::{CalcResult, Range};
 use crate::constants::{LAST_COLUMN, LAST_ROW};
-use crate::expressions::parser::ArrayNode;
 use crate::expressions::parser::Node;
 use crate::expressions::token::Error;
 use crate::expressions::types::CellReferenceIndex;
@@ -147,21 +146,12 @@ impl Model {
             Ok(lifted) => lifted,
             Err(error) => return RefArg::Value(error),
         };
-        let (rows, columns) = grid.dims();
-        let indices = (0..rows)
-            .map(|row| {
-                (0..columns)
-                    .map(|column| ArrayNode::Number((row * columns + column) as f64))
-                    .collect()
-            })
-            .collect();
-        lifted.insert(0, LiftedArg::Grid(indices));
+        lifted.insert(0, LiftedArg::Grid(grid.index_array()));
         self.lift_references(lifted, cell, &mut |model, values| {
-            let Some((CalcResult::Number(index), values)) = values.split_first() else {
+            let Some((index, values)) = values.split_first() else {
                 return CalcResult::new_error(Error::VALUE, cell, "Not an element".to_string());
             };
-            // The index is a whole number below the grid's length, exactly as built above.
-            match grid.elements().get(*index as usize) {
+            match grid.element_at(index) {
                 Some(RefElement::Reference(reference)) => model.offset_of(reference, values, cell),
                 Some(RefElement::Error(error)) => {
                     CalcResult::new_error(error.clone(), cell, "Error element".to_string())
