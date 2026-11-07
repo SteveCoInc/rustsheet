@@ -43,6 +43,11 @@ pub(crate) enum CachedBlanks {
 /// data is `#BLOCKED!`").
 #[derive(Encode, Decode, Debug, PartialEq, Clone, Default)]
 pub struct ExternalBook {
+    /// Where the linked workbook is, as the `externalLinkPath` relationship of its part stores it
+    /// (`56737.xlsx`, `file:///C:/Data/Book.xlsx`): never opened (directive 5), only saved back
+    /// so Excel can refresh the link (T-4143). Empty when the link names no target: it is not to a
+    /// workbook (DDE, OLE) or its part or relationship is missing.
+    pub target: String,
     /// Its sheet names in `sheetNames` order; a sheet's index here is its `sheetId` in the cache.
     pub sheet_names: Vec<String>,
     /// Its defined names; `sheet_id` is the index in `sheet_names` of a sheet-scoped name's sheet.

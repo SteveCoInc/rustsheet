@@ -8,7 +8,8 @@ use rustsheet_engine::{
 };
 
 use super::{
-    package::{resolve_target, Package},
+    package::{part_folder_and_rels, resolve_target, Package},
+    parse_relationships,
     util::parse_cell_number,
     worksheets::parse_cell_reference,
     xml::XmlNode,
@@ -40,7 +41,30 @@ fn load_external_book<R: Read + std::io::Seek>(
     let part = archive.open_optional(path).ok()??;
     let doc = XmlNode::parse(part).ok()?;
     let book = doc.descendants().find(|n| n.has_tag_name("externalBook"))?;
-    Some(read_external_book(book))
+    let mut external_book = read_external_book(book);
+    external_book.target = book
+        .relationship_id()
+        .and_then(|id| link_target(archive, path, id))
+        .unwrap_or_default();
+    Some(external_book)
+}
+
+/// The target of relationship `id` of the externalLink part at `path`: the linked workbook's
+/// path as stored (`externalLinkPath`, `TargetMode="External"`). `None` when the part has no
+/// readable relationships part or no such relationship.
+fn link_target<R: Read + std::io::Seek>(
+    archive: &mut Package<R>,
+    path: &str,
+    id: &str,
+) -> Option<String> {
+    let (_, rels_path) = part_folder_and_rels(path);
+    let rels = archive.open_optional(&rels_path).ok()??;
+    let doc = XmlNode::parse(rels).ok()?;
+    parse_relationships(&doc)
+        .ok()?
+        .into_iter()
+        .find(|(rel_id, _)| rel_id == id)
+        .map(|(_, rel)| rel.target)
 }
 
 fn read_external_book(book: &XmlNode) -> ExternalBook {
@@ -92,6 +116,7 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
         }
     }
     ExternalBook {
+        target: String::new(),
         sheet_names,
         defined_names,
         cells,
