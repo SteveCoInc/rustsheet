@@ -3,7 +3,7 @@ id: T-4805
 title: "GETPIVOTDATA: number, date and boolean items, a repeated field, text, blank and error records, error arguments, array data_field and field name (T-2085 evidence)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
