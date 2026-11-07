@@ -11,7 +11,7 @@ use crate::calc_result::{CalcResult, Range};
 use crate::expressions::parser::{ArrayNode, Node};
 use crate::expressions::token::Error;
 use crate::expressions::types::CellReferenceIndex;
-use crate::functions::util::{cell_number, coerced_cell_number};
+use crate::functions::util::{array_node_to_calc_result, cell_number, coerced_cell_number};
 use crate::model::Model;
 use crate::nested_array::NestedKind;
 use crate::reference_operators::{RefArg, RefElement, RefGrid};
@@ -85,6 +85,11 @@ pub(crate) enum GridReading {
     /// over "5" and -3 is -3, `VARA(OFFSET(A4,{0;3;4},0))` over "5", 7 and -3 is 50
     /// (probes/t3533-lift-*, T-3533). Blanks and errors are as under `TopLeft`.
     TopLeftElements,
+    /// MEDIAN's (SPEC-0014 amendment rule 5): [`RefGrid::order_statistic_error`] when the grid's
+    /// references are on another sheet than the formula's (`MEDIAN(OFFSET(Data!G1,{0;1},0))` is
+    /// `#N/A` from Calc), else the value view (`MEDIAN(OFFSET(A1,{0;1;2},0))` is `#VALUE!`;
+    /// probes/t4569-xlookup-ref-element-max-min A22, A42, A43, probes/t2065-lift-median).
+    OrderStatistic,
 }
 
 /// How the walker reads a nested cell of a GROUPBY or PIVOTBY result in an array argument
@@ -377,6 +382,16 @@ impl Model {
     {
         let items = walk.policy.errors == ErrorRule::Items;
         let read = match read {
+            RefArg::Grid(grid) if walk.policy.grids == GridReading::OrderStatistic => {
+                if let Some(error) = grid.order_statistic_error(cell.sheet) {
+                    return Err(CalcResult::new_error(
+                        error,
+                        cell,
+                        "Array of references on another sheet".to_string(),
+                    ));
+                }
+                RefArg::Grid(grid).into_ranges_or_value()
+            }
             RefArg::Grid(grid) if walk.policy.grids != GridReading::Values => {
                 return self.walk_top_left_cells(&grid, cell, walk, visit);
             }
@@ -552,6 +567,15 @@ impl Model {
                     cell,
                     String::new(),
                 ))?,
+                // A value element is read as an array element under either reading, as
+                // `TopLeftElements` reads a top-left cell (SPEC-0014 amendment rule 3): SUM skips
+                // a text or TRUE hit beside G1:G2's element, AVERAGEA counts the text as 0
+                // (probes/t4569-xlookup-ref-element-max-min A50:A63).
+                RefElement::Value(value) => visit(
+                    self,
+                    ItemSource::ArrayElement,
+                    array_node_to_calc_result(value, cell),
+                )?,
             }
         }
         Ok(())

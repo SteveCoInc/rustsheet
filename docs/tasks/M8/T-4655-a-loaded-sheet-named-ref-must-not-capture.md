@@ -3,7 +3,7 @@ id: T-4655
 title: "A loaded sheet named *#REF! must not capture deleted-sheet references; confirm the saved <f> of a lost reference"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -30,14 +30,21 @@ The `<f>` text the engine saves for such a reference is the one Excel writes, ba
 - T-4628 covers loading a `#REF!C4:C7` back. This task covers the save side and the name collision.
 
 ## Acceptance criteria
-- [ ] Loading a workbook with a sheet named `*#REF!` (or any name `is_valid_sheet_name` refuses) cannot make
+- [x] Loading a workbook with a sheet named `*#REF!` (or any name `is_valid_sheet_name` refuses) cannot make
       references to a deleted sheet resolve to it. Choose one fix and test it: refuse or rename the sheet on load
       (record which, with a `DEVIATION` entry if Excel's behaviour on such a file is unknown), or use a sentinel the
       R1C1 lexer cannot produce from a sheet name.
-- [ ] The saved `<f>` of a reference lost by delete-then-add is confirmed against a workbook Excel saved, using the
+- [x] The saved `<f>` of a reference lost by delete-then-add is confirmed against a workbook Excel saved, using the
       `excel-probe` skill and an oracle-saved file. Otherwise the inferred note in references.md stays and the
       Outcome says why.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Loading `#REF!C4:C7` back (T-4628).
+
+## Outcome
+- The xlsx loader (`load_workbook`) refuses any sheet name containing `*` with `XlsxError::Workbook`; Excel forbids
+  `*`, so only crafted files are affected. Recorded as a DEVIATION in references.md. Test:
+  `crates/rustsheet-xlsx/tests/sheet_name_star_import.rs`.
+- The saved `<f>` was not confirmed against an Excel-saved file: the oracle returns values and FORMULATEXT, not file
+  XML, so the inferred note in references.md stays. Eval delta: none.

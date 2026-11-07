@@ -42,6 +42,7 @@ from rustsheet_tools.fitlab.sweep import (
     parse_arg,
     parse_matrix_arg,
     split_args,
+    unquoted,
 )
 from rustsheet_tools.fitlab.sweep import (
     Arg as RawArg,
@@ -231,19 +232,9 @@ class _Parser:
 
 def _closing(text: str, start: int) -> int | None:
     """The index of the `)` that closes the parenthesis opened just before `start`."""
-    depth, quoted = 1, False
-    for i in range(start, len(text)):
-        ch = text[i]
-        if ch == '"':
-            quoted = not quoted
-        elif quoted:
-            continue
-        elif ch in "({":
-            depth += 1
-        elif ch in ")}":
-            depth -= 1
-            if depth == 0:
-                return i if ch == ")" else None
+    for i, ch, depth in unquoted(text, start):
+        if depth < 0:
+            return i if ch == ")" else None
     return None
 
 

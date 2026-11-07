@@ -45,3 +45,15 @@
   - A composite whose inner function gains a definition later (GAMMA, F.DIST.RT; T-3798, T-3783) gets its value at
     the next regeneration with no further work.
   - Option (a) stays available (`composite.compute(rounded=False)`) for scoring only.
+  - **Not R3 evidence on its own** (amended 2026-11-06, T-4432, from the excel-fidelity review of #3439): a
+    composite cell whose Excel value is more than 1e-4 from its (b) value backs no MATH-OVER-EXCEL entry (decision
+    0188 R3) when that distance comes from rounding the math does not model, not from an inaccurate Excel function:
+    - an inner call that underflows and is flushed, so the (b) value is exactly 0 or 1 (probes
+      t3566-beta-inv-tiny-shape-and-range Calc!A147 and eight more cells of that case, where the inner BETA.INV is
+      flushed);
+    - an outermost `+` or `-` that Excel snaps to 0 (numbers.md "Near-zero snapping"), which (b)'s exact outer node
+      does not do: about 921 cells, among them probes t3677-sumx-running-overflow-snap Calc!A16.
+
+    Such a cell can back an R3 case only with evidence that the outer function itself is off, at the doubles Excel
+    passed it (a one-call probe at those inputs), and an R3 case still needs its own decision record with an owner
+    ruling.

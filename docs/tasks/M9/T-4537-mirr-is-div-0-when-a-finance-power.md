@@ -3,7 +3,7 @@ id: T-4537
 title: "MIRR is #DIV/0! when a finance power overflows under a later negative flow"
 milestone: M9
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -35,3 +35,8 @@ after the first, so the Gate A known failure accuracy/MIRR/s1 A125 goes.
 
 ## Out of scope
 - MIRR's power underflow and the reinvest power's errors (financial.md "MIRR's evaluation order", T-1995).
+
+## Outcome
+Probed (probes/fin-mirr-overflow-negative, excel-graph): a negative flow divided by an infinite finance power is
+`#DIV/0!`; negative flows before the first overflowing power leave `#NUM!`. `mirr_of` returns `#DIV/0!` in that case;
+semantics entry updated; accuracy/MIRR/s1 A125 passes and its known-failure line is removed.

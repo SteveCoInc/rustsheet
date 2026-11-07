@@ -3,7 +3,7 @@ id: T-4606
 title: "AVERAGEIFS, AVERAGEIF, MAXIFS and MINIFS with an array criterion over an error in the value range: probe positions past the first, and match"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -37,14 +37,20 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4606-ifs-array-cri
 - Show every position with INDEX(..,1,k), and with ERROR.TYPE beside it.
 
 ## Acceptance criteria
-- [ ] probes/t4606-ifs-array-criterion-value-error is committed with its excel-graph oracle sidecar.
-- [ ] Every probe cell passes, or each visibly-off cell has an owner task.
-- [ ] criteria.md "*IF(S) lift array criteria" states the per-position error rule for the five functions with the
+- [x] probes/t4606-ifs-array-criterion-value-error is committed with its excel-graph oracle sidecar.
+- [x] Every probe cell passes, or each visibly-off cell has an owner task.
+- [x] criteria.md "*IF(S) lift array criteria" states the per-position error rule for the five functions with the
       cells, and "probed only at position 1" is gone.
-- [ ] If the engine changes, a unit test pins one changed cell.
-- [ ] No new known-failure line in eval/baseline/probes.txt.
-- [ ] `make check` green; reviewers approve.
+- [x] If the engine changes, a unit test pins one changed cell.
+- [x] No new known-failure line in eval/baseline/probes.txt.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - AVERAGEIF numeric-like criteria with a resized average_range (T-4540).
 - A `NA()` or non-range first argument with an array criterion: excel-graph refuses that workbook (criteria.md).
+
+## Outcome
+Probed excel-graph (probes/t4606-ifs-array-criterion-value-error, 86 cells): AVERAGEIFS, AVERAGEIF, MAXIFS, MINIFS and
+SUMIFS agree at every position of an array criterion over an error in the value range (error only where selected rows
+include it). Ours already matches every cell, so no engine change. criteria.md states the rule. Note the task's second
+pair `B>0` drops row 3 only, not the error rows. Eval delta: +86 passing probe cells, no new known-failure line (one generated checked-cells line in eval/baseline/probes.txt).

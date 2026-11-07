@@ -435,6 +435,8 @@ fn bulk_delete_columns_round_trip() {
             column,
             count,
             old_data,
+            tables: _,
+            rewritten: _,
         } => {
             assert_eq!(*sheet, 0);
             assert_eq!(*column, 3);

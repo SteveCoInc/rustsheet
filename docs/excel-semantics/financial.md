@@ -1851,18 +1851,24 @@ one past 2958465 is `#NUM!` (A6, A7, A16). A zero first value gives 2.9802322387
 XNPV is `#NUM!` when its ranges contain empty cells, and a whole column counts every cell, not the
 used area: `XNPV(0.1,Data!A:A,Data!B:B)` is #NUM! although Data holds only A1:B2, where
 `XNPV(0.1,Data!A1:A2,Data!B1:B2)` is finite.
-Unprobed: which error XNPV gives for a whole column whose used area holds a cell error or a text date
-(the engine returns that error, then #NUM! for the skipped cells); XIRR dates strictly between -1 and 0
-(the engine truncates first, so -0.5 becomes -1 and is #NUM!).
+A cell error in the used area of a whole column wins over the empty-cell `#NUM!`, XNPV and XIRR alike, and a whole
+column reads the same as the same cells as a range: `#N/A` or `#DIV/0!` in the last or a middle values or dates
+cell is that error (probes/t4607-xnpv-xirr-column-errors-and-day-minus-one rows 1-8, all four forms). A text date
+"1/1/2010" in the dates column is read as its number by XIRR (0.18863303065299983 last, 0.16333606839179998 in the
+middle) and a text number "60" in the values column too, where XNPV is `#NUM!` for them
+(rows 9, 10, 13, 14 in all four forms); non-date text "x" is `#VALUE!` for XIRR and `#NUM!` for XNPV (rows 11, 12).
+Dates strictly between -1 and 0 (-0.5, -1E-9) are `#NUM!` for XNPV and XIRR as the first, a later or a last date, with
+0 first or not, in array constants and cells (rows 15-22), as a date truncated to -1 would be.
 Evidence: probes/xirr-xnpv-whole-column-nogaps A1-A8, probes/whole-column-empty-walkers E1, E5, E7,
 F3, F4, F6, F7, F9 (excel-graph, 2026-10-07, T-1114); probes/xirr-mismatched-empties X1-X14,
-probes/xirr-early-dates A1-A16 (excel-graph, 2026-10-08, T-1124).
+probes/xirr-early-dates A1-A16 (excel-graph, 2026-10-08, T-1124),
+probes/t4607-xnpv-xirr-column-errors-and-day-minus-one (excel-graph, 2026-11-06, T-4607; the engine already matched).
 Status: VERIFIED (these cells). XNPV matches since T-1114 (the used-area clip applies the empty-cell
 error to the cells it skips, `get_array_of_numbers_generic`). XIRR follows the empty-as-0, date-range
 and later-date rules since T-1124. Its values still miss in the last digits (the early stop above).
 The zero-first-value result and the date-0-first root match since T-1583 and T-0916 (the solver entry
 "XIRR is a bracketing bisection, not Newton" above; T-1155 done).
-Tasks: T-1114, T-1124, T-2329
+Tasks: T-1114, T-1124, T-2329, T-4607
 
 ## DB and VDB period cap
 Rule: RustSheet returns `#NUM!` for DB with a `period`, and VDB with an `end_period`, whose integer part is above
@@ -2004,11 +2010,12 @@ is `#DIV/0!` (accuracy/MIRR/s1 A125): finance rate 1E+200, five flows with posit
 the first index whose finance power (1+fr)^2 = 1E+400 overflows. With a positive flow and the first flow the only
 negative one, a finance overflow is `#NUM!` instead (`MIRR({-100,50,80},1E+200,0.1)` and `-1E+200`, "MIRR error and edge
 cases" A15, A24); with no positive flow it is `#DIV/0!` (A29).
-Hypotheses for T-4537 to probe (neither is settled by A125): (a) any negative flow after the first makes a finance
-overflow `#DIV/0!`; (b) only a negative flow whose own finance power overflows does (a negative flow at index 1 under
-1E+200, whose power is finite, would then stay `#NUM!`).
-Evidence: accuracy/MIRR/s1 A125 (excel-graph, 2026-11-06, T-4116).
-Ours: `#NUM!` (`fn_mirr` takes the finance overflow's error from whether a positive flow exists); T-4537.
+Settled by probes/fin-mirr-overflow-negative (T-4537, excel-graph, 2026-11-06): hypothesis (b) holds. A finance
+overflow is `#DIV/0!` when a negative flow is divided by an infinite finance power (A3, A4, A7, A8, A10 and A125's
+index 2), and stays `#NUM!` when every negative flow sits before the first overflowing power (a negative flow at
+index 1 under 1E+200 or 1E+300 is `#NUM!`: A2, A5, A6; a final power that overflows only after the last flow, A11).
+Evidence: accuracy/MIRR/s1 A125, probes/fin-mirr-overflow-negative (excel-graph, 2026-11-06).
+Implemented in: `mirr_of` in functions/financial/mirr.rs (T-4537).
 Status: VERIFIED (excel-graph)
 Tasks: T-4116, T-4537
 
@@ -2672,6 +2679,37 @@ So none of these is Excel's, and A1 and D1 are not evidence for a per-period for
 |nper·L| 1, "PMT is a discounted payment") in CUMPRINC's `1 - v^nper` moves none of the 168 cells and no gated cell
 (see T-3179's Outcome), so the evidence does not place a switch there and the kernel keeps `-expm1`.
 
+## CUMPRINC where `v^nper` underflows, at deep leading exponents (T-4059)
+Rule: where `1 - v^nper` is 1 in doubles, Excel's CUMPRINC over a short range (at most 32 periods) is T-3141's core
+`C = pv·((1-v^m)·v^(nper-end+1))` (type 1 `-C`, type 0 `-(C·(1+rate))`; "CUMIPMT and CUMPRINC over many periods") at
+every leading exponent `(nper-end+1)·L` probed. That is not only below 0.3, where the engine's geometric sum takes
+over (`GEOMETRIC_MIN_LEAD`), but out to 695. The geometric sum is an ulp or more off on 100 of the 170 points
+from 0.3 up.
+Evidence: accuracy/CUMPRINC/e-T-4059 and accuracy/CUMIPMT/e-T-4059. Each has 200 points from the aimed draw
+(`annuity_cumulative._underflowed`), filled from excel-graph on 2026-11-06:
+- rates 1E-4 to 2.9;
+- leading exponents 0.012 to 695;
+- m·L 0.003 to 4.8;
+- nper up to 9.3E14;
+- type 1 from period 2.
+
+T-3141's core at every leading exponent is to the bit on 199 of the 200 CUMPRINC principals and on all 200 CUMIPMT
+interests. Main's forms get 81 and 151. From a leading exponent of 0.3 up, the geometric sum gets 70 of 170
+CUMPRINC principals to the bit. The first aimed draw, accuracy/CUMPRINC/e-T-3141 and accuracy/CUMIPMT/e-T-3141
+(200 points each, filled 2026-11-06; T-3141's fit data for dropping its 0.3 cut), gives the same split: the core
+matches 399 of 400, and its only miss is the CUMIPMT entry below.
+
+Open misses:
+- `CUMPRINC(0.273951989085243,2756,134494.948128047,9,9,1)` (e-T-4059 A119; lead 665, result -3.2E-285) is
+  -3.166759757937701E-285 in Excel. The core gives -3.1667597579380603E-285, 962 ulps away, and the math is
+  -3.1667597579377963E-285. Excel is 3.0E-14 off the math relative and the core 8.3E-14, so at a result this
+  deep Excel keeps digits that the core loses. Its form there is open.
+- `CUMIPMT(0.103414751928719,17312013078,200894.020467694,17312013077,17312013078,1)` (accuracy/CUMIPMT/e-T-3141 A41;
+  the last two periods of a type 1 loan at 0.1034) is -5128.51360859488 in Excel. Ours is -5128.513608594883, 4 ulps
+  off with any principal form, so the miss sits in the `PMT·m` half of `PMT·m - CUMPRINC`.
+Status: PARTLY VERIFIED (excel-graph, Gate A e-T-3141 and e-T-4059 batches; A119 and the CUMIPMT miss are open, T-4710)
+Tasks: T-4059, T-3141
+
 ## CUMIPMT and CUMPRINC work cap
 Rule: RustSheet charges each lifted CUMIPMT or CUMPRINC element for its kernel's bound, 2^8 units against SPEC-0011's
 2^27 visit cap, so one call lifts at most 524,288 elements: `ROWS(CUMPRINC(SEQUENCE(524289)*0+0.004,1024,1000,1,32,1))`
@@ -2865,14 +2903,28 @@ Rule: AMORLINC and AMORDEGRC read cost, date_purchased, first_period, salvage, p
 error, text or boolean is returned; text "1" is 1), and a date that does not floor to 0-2958465 (9999-12-31) is `#NUM!` as it
 is read (`AMORLINC(2400,-1,NA(),..)` and `AMORLINC(2400,39679,2958466,NA(),..)` are `#NUM!`, `AMORLINC(NA(),-1,..)` `#N/A`;
 dates 0 and 0.5 pass, `AMORLINC(2400,0.5,NA(),..)` is `#N/A`). Then the values are checked, all `#NUM!`: a negative cost or
-salvage, a salvage above the cost, a negative period, a rate of 0 or less, a purchase after the first period (one on
-it is valid: `AMORLINC(2400,1,1,300,1,0.15,1)` is 360). A salvage *equal* to the cost is no error: both functions are 0
-at the periods probed, 1 to 5 (`AMORLINC(99977.707698474,42751,42993,99977.707698474,2,0.213533204746625)` is 0;
-accuracy/AMORDEGRC/s1 A114, A118, A128, A130, A131 and accuracy/AMORLINC/s1 A124, A125, excel-graph, 2026-11-06,
-T-4111), though AMORDEGRC's walk would charge `rate·remain` at period 1 there. Period 0 and periods below 1 with a
-salvage equal to the cost are unprobed; ours is `#NUM!` (T-4504). Only then the basis is read: its error, text or boolean, then
+salvage, a salvage above the cost, a cost of 0 (with its salvage of 0: `AMORLINC(0,39679,39813,0,0,0.15,1)` and
+`AMORDEGRC(0,..,0,1,..)` are `#NUM!`), a negative period, a rate of 0 or less, a purchase after the first period (one on
+it is valid: `AMORLINC(2400,1,1,300,1,0.15,1)` is 360). Only then the basis is read: its error, text or boolean, then
 `#NUM!` for any basis but 0, 1, 3 or 4 (`AMORLINC(-1,39679,39813,300,1,0.15,NA())` is `#NUM!`). AMORDEGRC's asset-life check
-comes last (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is `#N/A`). A purchase date below 1 is serial 0, the day before
+comes next (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is `#N/A`). Last, a salvage *equal* to a positive cost is 0 at
+every period, with no charge computed:
+- Both functions are 0 at periods 0, 0.0001, 0.5, 1 to 8 and 1.5, AMORDEGRC's half period and the rest periods after it
+  included (rates 0.15, 0.25 and 0.4, prorated and full first periods), and AMORLINC at rates 0.5, 1 and 2
+  (probes/amor-salvage-equal-cost A1-C18, E7-E9; also `AMORLINC(99977.707698474,42751,42993,99977.707698474,2,
+  0.213533204746625)`, accuracy/AMORDEGRC/s1 A114, A118, A128, A130, A131 and accuracy/AMORLINC/s1 A124, A125, T-4111).
+- Every check above still wins: AMORDEGRC at rates 0.5, 0.6, 1 and 2 is `#NUM!` (periods 0, 0.5 and 1), a basis of
+  `NA()` is `#N/A` (rate 0.5 too), bases 2 and 5 `#NUM!`, and a purchase after the first period, a rate of 0 and a
+  period of -1 `#NUM!` (E1-E6, E10-E20, E25).
+- It is an early 0, not the walk's salvage comparison turned to `<=`: a remain *equal* to a salvage below the cost
+  still charges (`AMORDEGRC(2400,39679,39813,2070,1,0.15,1)` is 776 with the remain 2070 before period 1, and
+  `(..,1293.75,2,..)` 485 with the remain 1293.75 before period 2; G1-G6). AMORLINC charges what fits as before
+  (G7-G10).
+- It leaves the value an AMORDEGRC below period 1 reads as it was, at any period, AMORLINC included (which otherwise
+  leaves its first charge): 485 + the call + a fraction is 970 for each (F2-F6), and an AMORDEGRC below period 1
+  with a salvage equal to the cost is 0, not the 485 left before it (F1, F7, F8).
+Evidence: probes/amor-salvage-equal-cost (81 cells, excel-graph, 2026-11-06, T-4504; predictions committed before the
+fill: the early 0 was the alternative, `remain <= salvage` the pick). A purchase date below 1 is serial 0, the day before
 serial 1: `AMORDEGRC(2400,0,366,300,1,0.15,1)` is 562 (366 days), `AMORDEGRC(2400,0,1,..)` 899, `AMORDEGRC(2400,1,366,..)` 563,
 `AMORLINC(46557,0,39881,440,0,0.1)` 46117.
 AMORDEGRC with a period strictly between 0 and 1 returns a value the previous AMORDEGRC or AMORLINC left behind
@@ -2885,7 +2937,8 @@ other position, `NA()` and `1/0` in every pair, booleans and text alone, purchas
 excel-graph, 2026-10-24, T-2485) and probes/amordegrc-fractional-period (32 cells). Every order cell fits the rule.
 Dates -1, -0.5, 0, 1E-15, 0.5, 0.99, 1 and 2958466 were probed (-0.5 is `#NUM!`, A410-A412, A843-A845); 2958465.5 is
 inferred (the floor is taken from the shared reader's other functions).
-Ours: since T-2485 (`amortization_of` and `amor_date` in functions/financial/amortization.rs).
+Ours: since T-2485 (`amortization_of` and `amor_date` in functions/financial/amortization.rs); the salvage equal to
+the cost since T-4504 (`amortization_values_valid` and the early return in `amortization_of`).
 Status: VERIFIED (excel-graph)
 Tasks: T-2485, T-1895, T-4111, T-4504
 

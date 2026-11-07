@@ -661,3 +661,36 @@ fn undoing_the_delete_of_an_over_cap_name_restores_it() {
     assert_eq!(model.get_formatted_cell_value(0, 2, 1), Ok("1".to_string()));
     assert_eq!(model.get_defined_name_list().len(), 1);
 }
+
+/// T-4637: undoing the delete of a hidden, commented (loaded) name restores both; redo deletes it
+/// again, and a name added through the API has neither flag.
+#[test]
+fn undo_delete_restores_hidden_and_comment() {
+    let mut model = new_empty_user_model();
+    model
+        .new_defined_name("plain", None, "Sheet1!$A$1")
+        .unwrap();
+    model
+        .new_defined_name("loaded", None, "Sheet1!$A$2")
+        .unwrap();
+    for name in &mut model.model.workbook.defined_names {
+        if name.name == "loaded" {
+            name.hidden = true;
+            name.comment = Some("note".to_string());
+        }
+    }
+    model.delete_defined_name("loaded", None).unwrap();
+    model.delete_defined_name("plain", None).unwrap();
+    model.undo().unwrap();
+    model.undo().unwrap();
+    let names = &model.model.workbook.defined_names;
+    let flags = |n: &str| {
+        let d = names.iter().find(|d| d.name == n).unwrap();
+        (d.hidden, d.comment.clone())
+    };
+    assert_eq!(flags("loaded"), (true, Some("note".to_string())));
+    assert_eq!(flags("plain"), (false, None));
+    model.redo().unwrap();
+    model.redo().unwrap();
+    assert!(model.get_defined_name_list().is_empty());
+}

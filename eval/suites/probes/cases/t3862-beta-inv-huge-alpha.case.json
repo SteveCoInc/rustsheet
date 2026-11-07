@@ -1,0 +1,62 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "BETA.INV at a huge first shape (T-3862): on the Gate A tables Excel is #NUM! from alpha 1.55E+145 and a number (0.5, 0.999999 or the quantile) up to 5.18E+114. Row r has alpha = 1E+(105+5r), 1E+110 to 1E+160: A BETA.INV(1E-10,alpha,1E-100), B BETA.INV(1E-100,alpha,1E-100), C BETA.INV(1E-10,alpha,0.5), D BETA.INV(1E-10,alpha,10). (Wider fills with BETA.INV(0.1,alpha,1E+100) did not finish: createSession retries exhausted.)",
+  "tags": [
+    "M9",
+    "statistical",
+    "beta",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": "=BETA.INV(1E-10,1E+110,1E-100)",
+        "B1": "=BETA.INV(1E-100,1E+110,1E-100)",
+        "C1": "=BETA.INV(1E-10,1E+110,0.5)",
+        "D1": "=BETA.INV(1E-10,1E+110,10)",
+        "A2": "=BETA.INV(1E-10,1E+115,1E-100)",
+        "B2": "=BETA.INV(1E-100,1E+115,1E-100)",
+        "C2": "=BETA.INV(1E-10,1E+115,0.5)",
+        "D2": "=BETA.INV(1E-10,1E+115,10)",
+        "A3": "=BETA.INV(1E-10,1E+120,1E-100)",
+        "B3": "=BETA.INV(1E-100,1E+120,1E-100)",
+        "C3": "=BETA.INV(1E-10,1E+120,0.5)",
+        "D3": "=BETA.INV(1E-10,1E+120,10)",
+        "A4": "=BETA.INV(1E-10,1E+125,1E-100)",
+        "B4": "=BETA.INV(1E-100,1E+125,1E-100)",
+        "C4": "=BETA.INV(1E-10,1E+125,0.5)",
+        "D4": "=BETA.INV(1E-10,1E+125,10)",
+        "A5": "=BETA.INV(1E-10,1E+130,1E-100)",
+        "B5": "=BETA.INV(1E-100,1E+130,1E-100)",
+        "C5": "=BETA.INV(1E-10,1E+130,0.5)",
+        "D5": "=BETA.INV(1E-10,1E+130,10)",
+        "A6": "=BETA.INV(1E-10,1E+135,1E-100)",
+        "B6": "=BETA.INV(1E-100,1E+135,1E-100)",
+        "C6": "=BETA.INV(1E-10,1E+135,0.5)",
+        "D6": "=BETA.INV(1E-10,1E+135,10)",
+        "A7": "=BETA.INV(1E-10,1E+140,1E-100)",
+        "B7": "=BETA.INV(1E-100,1E+140,1E-100)",
+        "C7": "=BETA.INV(1E-10,1E+140,0.5)",
+        "D7": "=BETA.INV(1E-10,1E+140,10)",
+        "A8": "=BETA.INV(1E-10,1E+145,1E-100)",
+        "B8": "=BETA.INV(1E-100,1E+145,1E-100)",
+        "C8": "=BETA.INV(1E-10,1E+145,0.5)",
+        "D8": "=BETA.INV(1E-10,1E+145,10)",
+        "A9": "=BETA.INV(1E-10,1E+150,1E-100)",
+        "B9": "=BETA.INV(1E-100,1E+150,1E-100)",
+        "C9": "=BETA.INV(1E-10,1E+150,0.5)",
+        "D9": "=BETA.INV(1E-10,1E+150,10)",
+        "A10": "=BETA.INV(1E-10,1E+155,1E-100)",
+        "B10": "=BETA.INV(1E-100,1E+155,1E-100)",
+        "C10": "=BETA.INV(1E-10,1E+155,0.5)",
+        "D10": "=BETA.INV(1E-10,1E+155,10)",
+        "A11": "=BETA.INV(1E-10,1E+160,1E-100)",
+        "B11": "=BETA.INV(1E-100,1E+160,1E-100)",
+        "C11": "=BETA.INV(1E-10,1E+160,0.5)",
+        "D11": "=BETA.INV(1E-10,1E+160,10)"
+      }
+    }
+  ],
+  "expected": {}
+}

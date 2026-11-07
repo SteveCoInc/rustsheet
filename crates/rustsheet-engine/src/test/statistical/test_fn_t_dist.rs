@@ -290,3 +290,54 @@ fn t_density_flushes_a_subnormal_result() {
     assert_eq!(model._get_text("A2"), *"0");
     assert_eq!(model._get_text("A3"), *"1E-12");
 }
+
+#[test]
+fn t_density_is_num_where_x_squared_overflows() {
+    // Excel's density squares x first: from 2^512, where fl(x x) overflows, it is #NUM! at every df
+    // and either sign, while 2^512 - 2^460 (H2, two doubles below 2^512) is a number (0 here: the density underflows)
+    // (probes/t3554-tdist-density-huge-x A2:B13 and A20:B24; statistics.md "T.DIST's density is
+    // #NUM! at a huge x").
+    let mut model = new_empty_model();
+    model._set("H1", "=2^512");
+    model._set("H2", "=2^512*(1-2^-52)");
+    for (row, df) in ["2", "24", "1E+10", "1E+300"].iter().enumerate() {
+        let row = row + 1;
+        model._set(&format!("A{row}"), &format!("=T.DIST(H1,{df},FALSE)"));
+        model._set(&format!("B{row}"), &format!("=T.DIST(-H1,{df},FALSE)"));
+        model._set(&format!("C{row}"), &format!("=T.DIST(H2,{df},FALSE)"));
+        model._set(&format!("D{row}"), &format!("=T.DIST(-H2,{df},FALSE)"));
+    }
+    // Gate A accuracy/T.DIST/s1 A85 and e-T-3425 A103.
+    model._set("E1", "=T.DIST(1.01778553276442E+236,2,FALSE)");
+    model._set("E2", "=T.DIST(-4.62236657470614E+224,11,FALSE)");
+    model._set("E3", "=T.DIST(1E+160,1,FALSE)");
+    model.evaluate();
+    for row in 1..=4 {
+        assert_eq!(model._get_text(&format!("A{row}")), *"#NUM!", "row {row}");
+        assert_eq!(model._get_text(&format!("B{row}")), *"#NUM!", "row {row}");
+        assert_eq!(model._get_text(&format!("C{row}")), *"0", "row {row}");
+        assert_eq!(model._get_text(&format!("D{row}")), *"0", "row {row}");
+    }
+    for cell in ["E1", "E2", "E3"] {
+        assert_eq!(model._get_text(cell), *"#NUM!", "{cell}");
+    }
+}
+
+#[test]
+fn t_density_at_df_one_is_div0_where_its_denominator_overflows() {
+    // df 1's density is 1/fl(pi fl(1 + fl(x x))): #DIV/0! once the denominator overflows (from
+    // 7.6E+153, while 7.55E+153 is a number), and a subnormal quotient is 0
+    // (probes/t3554-tdist-density-df1-div0; statistics.md "T.DIST's density is #NUM! at a huge x").
+    let mut model = new_empty_model();
+    model._set("A1", "=T.DIST(7.6E+153,1,FALSE)");
+    model._set("A2", "=T.DIST(-1E+154,1,FALSE)");
+    model._set("A3", "=T.DIST(7.6E+153,1.5,FALSE)");
+    model._set("A4", "=T.DIST(7.55E+153,1,FALSE)");
+    model._set("A5", "=T.DIST(-3.8E+153,1,FALSE)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"#DIV/0!");
+    assert_eq!(model._get_text("A2"), *"#DIV/0!");
+    assert_eq!(model._get_text("A3"), *"#DIV/0!");
+    assert_eq!(model._get_text("A4"), *"0");
+    assert_eq!(model._get_text("A5"), *"0");
+}

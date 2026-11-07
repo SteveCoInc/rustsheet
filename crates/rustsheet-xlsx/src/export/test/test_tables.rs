@@ -289,6 +289,53 @@ fn excel_authored_tables_keep_their_formula_text() {
     assert!(formulas > 100, "{formulas}");
 }
 
+/// T-4157: the Excel-authored tables.xlsx carries `dataDxfId` on table columns and `headerRowDxfId`
+/// alone on Table7; import reads each from its own attribute and the export writes every one back.
+#[test]
+fn excel_authored_table_dxf_ids_round_trip() {
+    let model = load_from_xlsx("tests/calc_test_tables/tables.xlsx", "en", "UTC", "en").unwrap();
+    let table7 = &model.workbook.tables["Table7"];
+    assert_eq!(
+        (table7.header_row_dxf_id, table7.data_dxf_id),
+        (Some(17), None),
+        "the header style is not copied into the data style"
+    );
+    let data_ids: Vec<_> = table7.columns.iter().map(|c| c.data_dxf_id).collect();
+    assert_eq!(
+        data_ids,
+        [13, 11, 9, 7, 5, 3].map(Some),
+        "Table7 column dataDxfId"
+    );
+
+    let temp_file_name = "temp_file_test_excel_table_dxf_ids.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    fs::remove_file(temp_file_name).unwrap();
+    for (name, table) in &model.workbook.tables {
+        let back = &reloaded.workbook.tables[name];
+        assert_eq!(
+            (
+                table.header_row_dxf_id,
+                table.data_dxf_id,
+                table.totals_row_dxf_id
+            ),
+            (
+                back.header_row_dxf_id,
+                back.data_dxf_id,
+                back.totals_row_dxf_id
+            ),
+            "{name}"
+        );
+        let ids = |t: &rustsheet_engine::types::Table| {
+            t.columns
+                .iter()
+                .map(|c| (c.header_row_dxf_id, c.data_dxf_id, c.totals_row_dxf_id))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(ids(back), ids(table), "{name} columns");
+    }
+}
+
 /// The filters of the Excel-authored tables.xlsx (a custom filter on Table4, a values filter on
 /// Table16) are written back as the file had them, and read again (T-2838).
 #[test]
@@ -624,4 +671,54 @@ fn a_calculated_column_keeps_its_column_formula() {
         columns[1].calculated_column_formula.as_deref(),
         Some("T[[#This Row],[Qty]]*2")
     );
+}
+
+/// After a row or column insert or delete, the exported `calculatedColumnFormula` is the text
+/// Excel saves for the same edit: the first data cell's formula as the edit displaced it
+/// (T-4274 probes/table-edits/t4274-calc-column-*, the tables of their cached excel-graph
+/// workbooks). The table is t2957-a1-reference's: T on A1:C4, C2 typed so the column fills.
+#[test]
+fn a_calculated_column_formula_follows_row_and_column_edits() {
+    type Edit = fn(&mut rustsheet_engine::UserModel) -> Result<(), String>;
+    let cases: [(&str, Edit, &str); 5] = [
+        ("=A2*2", |u| u.insert_columns(0, 1, 1), "B2*2"),
+        ("=A2*2", |u| u.delete_columns(0, 2, 1), "A2*2"),
+        ("=A2*2", |u| u.insert_rows(0, 1, 1), "A3*2"),
+        ("=A2*2", |u| u.insert_rows(0, 3, 1), "A2*2"),
+        (
+            "=[@Col]*2",
+            |u| u.insert_columns(0, 1, 1),
+            "T[[#This Row],[Col]]*2",
+        ),
+    ];
+    for (index, (typed, edit, saved)) in cases.into_iter().enumerate() {
+        let mut model = new_empty_model();
+        let cells = [
+            (1, 1, "Col"),
+            (1, 2, "Other"),
+            (1, 3, "Calc"),
+            (2, 1, "1"),
+            (3, 1, "2"),
+        ];
+        for (row, column, input) in cells.into_iter().chain([(4, 1, "4")]) {
+            model
+                .set_user_input(0, row, column, input.to_string())
+                .unwrap();
+        }
+        model.add_table(0, "T", (1, 1, 4, 3), false).unwrap();
+        model
+            .set_typed_user_input(0, 2, 3, typed.to_string())
+            .unwrap();
+        let mut user = rustsheet_engine::UserModel::from_model(model);
+        edit(&mut user).unwrap();
+        let temp_file_name = format!("temp_file_test_calculated_column_edit_{index}.xlsx");
+        save_to_xlsx(user.get_model(), &temp_file_name).unwrap();
+        let table_xml = part_text(&temp_file_name, "xl/tables/table1.xml");
+        fs::remove_file(&temp_file_name).unwrap();
+        let element = format!("<calculatedColumnFormula>{saved}</calculatedColumnFormula>");
+        assert!(
+            table_xml.contains(&element),
+            "{typed} case {index}: {table_xml}"
+        );
+    }
 }

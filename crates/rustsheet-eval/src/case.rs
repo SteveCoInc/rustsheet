@@ -212,6 +212,14 @@ pub struct FilterColumnSpec {
     /// `false`: the filterColumn holds no criterion.
     #[serde(default = "crate::suite::default_true")]
     pub criterion: bool,
+    /// `true`: the filterColumn holds a `<colorFilter/>` with no `dxfId`, which Excel reads as no
+    /// criterion (probes/t4558-color-filter-subtotal, T-4558).
+    #[serde(default)]
+    pub color: bool,
+    /// `false` with `color`: the colorFilter says `cellColor="0"` (a font colour); Excel reads it
+    /// as no criterion too, so the engine adapter does not consult it.
+    #[serde(default = "crate::suite::default_true")]
+    pub cell_color: bool,
 }
 
 /// A what-if data table in a spec sheet: `ref` holds its result cells; `row_input` alone is a
@@ -230,8 +238,8 @@ pub struct DataTableSpec {
 /// A pivot table in a spec sheet (T-1705): `row` (and optionally `column`) are text fields of the
 /// `source` range's header row, `value` a number field aggregated by `function` (`sum` when absent).
 /// A pivot with a `definition` (case builder v2, T-4122) has none of those: Excel renders it from the
-/// definition on open, and the engine adapter does not register it until the engine renders pivots
-/// (T-4152 and SPEC-0032).
+/// definition on open, and the engine adapter loads the builder's parts for it and has the engine
+/// render it the same way (`pivot_definition`, T-4152).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PivotTableSpec {
@@ -278,8 +286,9 @@ pub struct PivotTableSpec {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub column_show_all: bool,
     /// The pivot's definition, one-to-one with `pivotTableDefinition`
-    /// (`tools/src/rustsheet_tools/pivot_definition.py`, which validates it). Kept opaque here: only
-    /// spec2xlsx reads it so far; T-4152 types it when the adapter builds the pivot from it.
+    /// (`tools/src/rustsheet_tools/pivot_definition.py`, which validates it). Kept as JSON: the
+    /// adapter writes it out as the builder's parts (`pivot_definition`, T-4152), never reading
+    /// it into a model of its own.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub definition: Option<serde_json::Value>,
 }

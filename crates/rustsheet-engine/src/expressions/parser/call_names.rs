@@ -70,7 +70,10 @@ impl CallNameSpellings {
         walk_names(node, &mut Vec::new(), &mut |site, name, declared| {
             let spelling = match (declared, site) {
                 (Some(declared), _) => declared.to_string(),
-                (None, NameSite::Declaration | NameSite::Parameter) => return,
+                (
+                    None,
+                    NameSite::Declaration | NameSite::Parameter | NameSite::DefinedName { .. },
+                ) => return,
                 (None, NameSite::Callee | NameSite::Use) => {
                     let key = spelling_key(name);
                     match self.defined.get(&key) {

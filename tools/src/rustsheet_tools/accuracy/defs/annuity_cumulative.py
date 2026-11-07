@@ -219,6 +219,39 @@ def _large_rate(rng: random.Random) -> list[Arg]:
     return [r, n, _amount(rng), start, rng.randint(start, n), _type(rng)]
 
 
+# The aimed draw (`generate --stratum aimed`, evidence batch e-T-4059; T-4059): T-3141's core, a short range where
+# `1 - v^nper` is 1 in doubles. s1 does not draw it, so its points stay as committed. The engine constants below are
+# copied as they stood when e-T-4059 was drawn: the draw must keep reproducing that batch, even after the engine moves.
+UNDERFLOWED_NPER_LOG = 40.0  # nper·L from which v^nper is below 2^-53 (from about 36.7), so 1 - v^nper is 1
+SHORT_PERIODS = 32  # the engine's CUMULATIVE_LOOP_PERIODS: a range of at most 32 periods is a short one
+GEOMETRIC_MIN_LEAD = 0.3  # the engine's cut between the core and the geometric sum (T-3067, T-3141)
+DEEPEST_LEAD = 700.0  # below 708, where v^(nper-end+1) leaves the normal doubles
+LARGEST_NPER = 1e15  # below 2^53, so every period is an exact integer
+
+
+def _underflowed(rng: random.Random) -> list[Arg]:
+    """A short range (at most 32 periods) where v^nper underflows: T-3141's core. The rate is fractional (1E-4 to 3);
+    the leading exponent (nper-end+1)·L is below the engine's 0.3 cut one time in three, else log-uniform from 0.3 to
+    700, so ranges far from nper whose leading power is still normal are drawn; m·L is log-uniform from 0.01 to 5,
+    across PMT's expm1 switch at 1; type 1 starts from period 2 (its period 1 is the whole payment); nper is from the
+    least that holds the range and underflows to 1E15, near that least one time in two."""
+    r = log_uniform(rng, 1e-4, 0.05) if rng.random() < 0.5 else log_uniform(rng, 0.05, 3)
+    u = math.log1p(r)
+    lead = (
+        rng.uniform(0, GEOMETRIC_MIN_LEAD)
+        if rng.random() < 1 / 3
+        else log_uniform(rng, GEOMETRIC_MIN_LEAD, DEEPEST_LEAD)
+    )
+    after = max(1, round(lead / u))  # nper - end + 1
+    count = min(SHORT_PERIODS, max(1, round(log_uniform(rng, 0.01, 5) / u)))
+    kind = rng.randrange(2)
+    least = max(after + count - 1 + kind, math.ceil(UNDERFLOWED_NPER_LOG / u))
+    top = min(LARGEST_NPER, least * 1e3) if rng.random() < 0.5 else LARGEST_NPER
+    nper = round(log_uniform(rng, least, max(least, top)))
+    end = nper - after + 1
+    return [r, nper, _amount(rng), end - count + 1, end, kind]
+
+
 EDGES: tuple[Shape, ...] = (
     _single,
     _whole_term,
@@ -249,6 +282,7 @@ def _definition(function: str, value: Callable[[Sequence[MathArg]], mpmath.mpf])
                 any_edge(EDGES),
                 f"{function}: [rate, nper, pv, start_period, end_period, type] by stratum.",
             ),
+            aimed=_underflowed,
             sources=(MANY_SOURCE, DOMAIN_SOURCE, ONE_PERIOD_SOURCE, CAP_SOURCE, SWEEP_SOURCE),
         )
     )

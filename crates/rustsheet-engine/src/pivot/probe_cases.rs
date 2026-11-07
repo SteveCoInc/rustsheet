@@ -8,11 +8,22 @@ use serde_json::Value as Json;
 
 use crate::expressions::token::get_error_by_english_name;
 use crate::expressions::utils::number_to_column;
+use crate::model::Model;
 use crate::pivot::{
     read_source, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea,
     DataField, PageField, PivotCache, PivotField, PivotItem, PivotTable, RecordValue, SourceArea,
     SourceCells, MAX_RECORD_VALUES,
 };
+
+/// The pivot sheets of probes/t4634-pivot-total-order-4 that the result, line and render tests
+/// check: Sum beside each other aggregate (X1 to X12) and alone (S1, O1 to O4), Average alone (A1
+/// to A3), Var, Varp and `StdDevp` totals (V1 to V7), two fields per axis (T1 to T3), and Count or
+/// `CountNums` beside only Max, Min, Product or a variance (C1 to C7).
+pub(crate) const T4634_SHEETS: &[&str] = &[
+    "S1", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12", "A1", "A2",
+    "A3", "O1", "O2", "O3", "O4", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "T1", "T2", "T3", "C1",
+    "C2", "C3", "C4", "C5", "C6", "C7",
+];
 
 pub(crate) fn read(stem: &str, kind: &str) -> Json {
     let path = format!(
@@ -69,6 +80,8 @@ pub(crate) fn cache_item(value: Option<&Json>) -> CacheItem {
 struct CaseCells<'a> {
     cells: &'a Json,
     area: SourceArea,
+    /// Whether a formula cell reads as empty, as the case builder caches it, rather than panics.
+    formulas_blank: bool,
 }
 
 impl SourceCells for CaseCells<'_> {
@@ -77,7 +90,14 @@ impl SourceCells for CaseCells<'_> {
     }
 
     fn value(&self, _: u32, row: u32, column: u32) -> CacheItem {
-        cache_item(self.cells.get(address(column, row)))
+        let cell = self.cells.get(address(column, row));
+        let formula = cell
+            .and_then(Json::as_str)
+            .is_some_and(|t| t.starts_with('='));
+        if self.formulas_blank && formula {
+            return CacheItem::Missing;
+        }
+        cache_item(cell)
     }
 }
 
@@ -86,6 +106,28 @@ impl SourceCells for CaseCells<'_> {
 /// builder lists them (`pivot_definition.py` `_Field.items`). A formula in the source panics:
 /// the case file holds no evaluated value for it.
 pub(crate) fn source_cache(case: &Json, source: &str) -> PivotCache {
+    case_cache(case, source, false)
+}
+
+/// The cache the case builder saves for `source` (`pivot_definition.py`): [`source_cache`] with
+/// each formula cell, header or record, read as empty, and each field named after its header
+/// cell's text, a formula header under its formula, or `names` when the spec gives them
+/// (`cache_names`). Excel's refresh on open renames such fields and appends the formula cells'
+/// items.
+pub(crate) fn builder_cache(case: &Json, source: &str, names: Option<&Json>) -> PivotCache {
+    let mut cache = case_cache(case, source, true);
+    let (sheet_name, range) = source.split_once('!').unwrap();
+    let (left, top) = position(range.split_once(':').unwrap().0);
+    let cells = &sheet(case, sheet_name)["cells"];
+    for (column, field) in (left..).zip(&mut cache.fields) {
+        let given = names.map(|n| &n[(column - left) as usize]);
+        let header = given.unwrap_or(&cells[address(column, top)]);
+        field.name = header.as_str().unwrap().to_string();
+    }
+    cache
+}
+
+fn case_cache(case: &Json, source: &str, formulas_blank: bool) -> PivotCache {
     let (name, range) = source.split_once('!').unwrap();
     let (from, to) = range.split_once(':').unwrap();
     let ((left, top), (right, bottom)) = (position(from), position(to));
@@ -100,6 +142,7 @@ pub(crate) fn source_cache(case: &Json, source: &str) -> PivotCache {
                 right,
             },
         },
+        formulas_blank,
     };
     let prior = PivotCache {
         source: Some(CacheSource {
@@ -114,20 +157,7 @@ pub(crate) fn source_cache(case: &Json, source: &str) -> PivotCache {
 }
 
 pub(crate) fn aggregate_named(name: &str) -> Aggregate {
-    match name {
-        "sum" => Aggregate::Sum,
-        "count" => Aggregate::Count,
-        "average" => Aggregate::Average,
-        "max" => Aggregate::Max,
-        "min" => Aggregate::Min,
-        "product" => Aggregate::Product,
-        "countNums" => Aggregate::CountNums,
-        "stdDev" => Aggregate::StdDev,
-        "stdDevp" => Aggregate::StdDevP,
-        "var" => Aggregate::Var,
-        "varp" => Aggregate::VarP,
-        _ => panic!("unknown aggregate {name}"),
-    }
+    Aggregate::from_consolidate_name(name).unwrap_or_else(|| panic!("unknown aggregate {name}"))
 }
 
 /// A custom subtotal line's function by its `item@t`, as the importer reads it.
@@ -152,7 +182,21 @@ pub(crate) fn item_of(cache: &PivotCache, field: u32, value: &Json) -> u32 {
 /// The pivot the case builder writes for the definition of sheet `name`'s pivot.
 pub(crate) fn probe_pivot(case: &Json, name: &str) -> (PivotCache, PivotTable) {
     let spec = &sheet(case, name)["pivot_tables"][0];
-    let cache = source_cache(case, spec["source"].as_str().unwrap());
+    probe_pivot_over(
+        case,
+        name,
+        source_cache(case, spec["source"].as_str().unwrap()),
+    )
+}
+
+/// [`probe_pivot`] over `cache`, a cache of the pivot's source read some other way (the
+/// engine's own refresh over a [`probe_model`], whose formulas it evaluates).
+pub(crate) fn probe_pivot_over(
+    case: &Json,
+    name: &str,
+    cache: PivotCache,
+) -> (PivotCache, PivotTable) {
+    let spec = &sheet(case, name)["pivot_tables"][0];
     let definition = &spec["definition"];
     let field = |name: &str| {
         u32::try_from(cache.fields.iter().position(|f| f.name == name).unwrap()).unwrap()
@@ -208,6 +252,10 @@ pub(crate) fn probe_pivot(case: &Json, name: &str) -> (PivotCache, PivotTable) {
             None
         };
         let mut pivot_field = PivotField::new(axis, cache_field.items.len());
+        // The builder writes `showAll="0"` on every field (`pivot_definition.py`), and refuses
+        // it in `attrs` today; a spec that sets it is read as given.
+        let attrs = &definition["fields"][&cache_field.name]["attrs"];
+        pivot_field.show_all = attrs["showAll"].as_bool().unwrap_or(false);
         let spec = &definition["fields"][&cache_field.name];
         if axis.is_some() {
             // The builder lists the field's `order` first, then the rest in first-seen order.
@@ -229,6 +277,15 @@ pub(crate) fn probe_pivot(case: &Json, name: &str) -> (PivotCache, PivotTable) {
         for hidden in spec["hidden"].as_array().into_iter().flatten() {
             pivot_field.hide(item_of(&cache, index, hidden));
         }
+        // `collapsed` items are written `sd="0"`.
+        for collapsed in spec["collapsed"].as_array().into_iter().flatten() {
+            let item = item_of(&cache, index, collapsed);
+            for listed in &mut pivot_field.items {
+                if listed.index == Some(item) {
+                    listed.expanded = false;
+                }
+            }
+        }
         if let Some(subtotals) = spec["subtotals"].as_array() {
             pivot_field.default_subtotal = false;
             pivot_field.custom_subtotals = subtotals
@@ -248,21 +305,35 @@ pub(crate) fn probe_pivot(case: &Json, name: &str) -> (PivotCache, PivotTable) {
     }
     table.data_fields = data
         .iter()
-        .map(|d| DataField {
-            caption: d["name"].as_str().unwrap_or_default().to_string(),
-            field: field(d["field"].as_str().unwrap()),
-            function: aggregate_named(d["subtotal"].as_str().unwrap_or("sum")),
-            ..DataField::default()
+        .map(|d| {
+            let (name, subtotal) = (d["field"].as_str().unwrap(), d["subtotal"].as_str());
+            let subtotal = subtotal.unwrap_or("sum");
+            DataField {
+                caption: d["name"].as_str().map_or_else(
+                    || format!("{} of {name}", aggregate_named(subtotal).word()),
+                    str::to_string,
+                ),
+                field: field(name),
+                function: aggregate_named(subtotal),
+                ..DataField::default()
+            }
         })
         .collect();
     let options = &definition["table"];
+    let text = |key: &str| options[key].as_str().map(str::to_string);
     table.options.show_error = options["showError"].as_bool().unwrap_or(false);
-    table.options.error_caption = options["errorCaption"].as_str().map(str::to_string);
-    table.options.missing_caption = options["missingCaption"].as_str().map(str::to_string);
+    table.options.error_caption = text("errorCaption");
+    table.options.missing_caption = text("missingCaption");
+    table.options.row_header_caption = text("rowHeaderCaption");
+    table.options.column_header_caption = text("colHeaderCaption");
+    table.options.grand_total_caption = text("grandTotalCaption");
+    // `dataCaption="Values"` unless `table` sets it (`_TABLE_DEFAULTS`).
+    table.options.data_caption = text("dataCaption").or_else(|| Some("Values".to_string()));
     // The form flags as the builder writes them: `outline` and `outlineData` on unless `table`
     // sets them (`_TABLE_DEFAULTS`), the rest at the schema's default unless set.
     let flag = |value: &Json, default: bool| value.as_bool().unwrap_or(default);
     let o = &mut table.options;
+    o.show_missing = flag(&options["showMissing"], o.show_missing);
     o.compact = flag(&options["compact"], o.compact);
     o.outline = flag(&options["outline"], true);
     o.compact_data = flag(&options["compactData"], o.compact_data);
@@ -278,8 +349,40 @@ pub(crate) fn probe_pivot(case: &Json, name: &str) -> (PivotCache, PivotTable) {
         pivot_field.compact = flag(&attrs["compact"], pivot_field.compact);
         pivot_field.outline = flag(&attrs["outline"], pivot_field.outline);
         pivot_field.subtotal_top = flag(&attrs["subtotalTop"], pivot_field.subtotal_top);
+        pivot_field.insert_blank_row = flag(&attrs["insertBlankRow"], pivot_field.insert_blank_row);
     }
     (cache, table)
+}
+
+/// A model holding the case's sheets, in order, and their cells: a text starting with `=` is a
+/// formula, evaluated by [`Model::evaluate`] like any other.
+pub(crate) fn probe_model(case: &Json) -> Model {
+    let mut model = Model::new_empty("probe", "en", "UTC", "en").unwrap();
+    for (index, spec) in (0u32..).zip(case["sheets"].as_array().unwrap()) {
+        let name = spec["name"].as_str().unwrap();
+        if index == 0 {
+            model.rename_sheet_by_index(0, name).unwrap();
+        } else {
+            model.add_sheet(name).unwrap();
+        }
+        for (at, value) in spec["cells"].as_object().unwrap() {
+            let (column, row) = position(at);
+            let (row, column) = (
+                i32::try_from(row + 1).unwrap(),
+                i32::try_from(column + 1).unwrap(),
+            );
+            match value {
+                Json::String(text) => model.set_user_input(index, row, column, text.clone()),
+                Json::Number(n) => {
+                    model.update_cell_with_number(index, row, column, n.as_f64().unwrap())
+                }
+                Json::Bool(b) => model.update_cell_with_bool(index, row, column, *b),
+                other => panic!("case cell {at}: {other}"),
+            }
+            .unwrap();
+        }
+    }
+    model
 }
 
 /// A diagonal pivot: record `i` is row item `i` and column item `i`, Sum of its index.

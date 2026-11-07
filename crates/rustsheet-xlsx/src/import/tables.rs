@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Read;
 
 use super::package::Package;
@@ -31,9 +32,13 @@ pub(crate) fn load_table<R: Read + std::io::Seek>(
 ) -> Result<Table, XlsxError> {
     let file = archive.open(path)?;
     let document = XmlNode::parse(file)?;
+    parse_table(&document, sheet_name)
+}
 
+/// Builds a [`Table`] from the parsed `<table>` part.
+fn parse_table(document: &XmlNode, sheet_name: &str) -> Result<Table, XlsxError> {
     // table
-    let table = &document;
+    let table = document;
 
     // Name and display name are normally the same and are unique in a workbook
     // They also need to be different from any defined name
@@ -79,8 +84,8 @@ pub(crate) fn load_table<R: Read + std::io::Seek>(
         None
     };
 
-    // style index of the header row of the table
-    let data_dxf_id = if let Some(index_str) = table.attribute("headerRowDxfId") {
+    // style index of the data area of the table
+    let data_dxf_id = if let Some(index_str) = table.attribute("dataDxfId") {
         index_str.parse::<u32>().ok()
     } else {
         None
@@ -143,8 +148,8 @@ pub(crate) fn load_table<R: Read + std::io::Seek>(
             None
         };
 
-        // style index of the header row of the table column
-        let data_dxf_id = if let Some(index_str) = table_column.attribute("headerRowDxfId") {
+        // style index of the data area of the table column
+        let data_dxf_id = if let Some(index_str) = table_column.attribute("dataDxfId") {
             index_str.parse::<u32>().ok()
         } else {
             None
@@ -251,6 +256,34 @@ fn is_criterion(child: &XmlNode) -> bool {
     !(child.has_tag_name("colorFilter") && child.attribute("dxfId").is_none())
 }
 
+/// Re-decides `has_filters` once the workbook's `dxf_count` differential formats are known: a
+/// color filter whose `dxfId` is not one of them counts as no criterion, as the export writes it
+/// (it drops a dangling id, and a `<colorFilter/>` with none is manual hides), so SUBTOTAL over
+/// the table does not change across a save (T-4558; Excel refuses such a source file, so there is
+/// no oracle value for it: docs/excel-semantics/xlsx-storage.md, "Table parts in the export").
+pub(super) fn drop_dangling_color_filters(tables: &mut HashMap<String, Table>, dxf_count: usize) {
+    let dangling = |criterion: &FilterCriterion| {
+        matches!(
+            criterion,
+            FilterCriterion::Color { dxf_id, .. }
+                if dxf_id.is_none_or(|id| usize::try_from(id).map_or(true, |i| i >= dxf_count))
+        )
+    };
+    for table in tables.values_mut().filter(|t| t.has_filters) {
+        if !table.filter_columns.iter().any(|c| dangling(&c.criterion)) {
+            continue;
+        }
+        let width = table.columns.len();
+        // `Other` is also what a criterion-less `<filterColumn/>` and a `<colorFilter/>` without a
+        // `dxfId` import as, and neither is a criterion, so only the rest keeps the table filtered.
+        table.has_filters = table.filter_columns.iter().any(|column| {
+            usize::try_from(column.col_id).is_ok_and(|id| id < width)
+                && !dangling(&column.criterion)
+                && column.criterion != FilterCriterion::Other
+        });
+    }
+}
+
 /// A `<filterColumn>`'s column and criterion; `None` for one without a valid `colId`, which
 /// Excel's schema requires. The criterion is its first element, read by
 /// [`filter_criteria::criterion`]; the column's `hiddenButton` and `showButton` are not kept.
@@ -266,8 +299,45 @@ fn filter_column(node: &XmlNode) -> Option<FilterColumn> {
 
 #[cfg(test)]
 mod tests {
-    use super::{filter_column, has_active_criterion, XmlNode};
+    use super::{
+        drop_dangling_color_filters, filter_column, has_active_criterion, parse_table, Table,
+        XmlNode,
+    };
     use rustsheet_engine::types::FilterCriterion;
+
+    /// T-4157: a table and its columns read the data-area style from `dataDxfId`, not from
+    /// `headerRowDxfId` (a copy-paste slip inherited from IronCalc).
+    #[test]
+    fn data_dxf_id_is_read_from_data_dxf_id() {
+        let node = XmlNode::parse_str(
+            r#"<table name="T" displayName="T" ref="A1:B3" headerRowDxfId="1" dataDxfId="2" totalsRowDxfId="3"><tableColumns count="2"><tableColumn id="1" name="a" headerRowDxfId="4" dataDxfId="5"/><tableColumn id="2" name="b" headerRowDxfId="6"/></tableColumns></table>"#,
+        )
+        .unwrap();
+        let table = parse_table(&node, "S").unwrap();
+        assert_eq!(
+            (
+                table.header_row_dxf_id,
+                table.data_dxf_id,
+                table.totals_row_dxf_id
+            ),
+            (Some(1), Some(2), Some(3))
+        );
+        assert_eq!(
+            (
+                table.columns[0].header_row_dxf_id,
+                table.columns[0].data_dxf_id
+            ),
+            (Some(4), Some(5))
+        );
+        assert_eq!(
+            (
+                table.columns[1].header_row_dxf_id,
+                table.columns[1].data_dxf_id
+            ),
+            (Some(6), None),
+            "no dataDxfId is no data style, not the header's"
+        );
+    }
 
     fn criterion(xml: &str) -> FilterCriterion {
         let node = XmlNode::parse_str(xml).unwrap();
@@ -321,6 +391,65 @@ mod tests {
         assert!(active(
             r#"<autoFilter><filterColumn colId="1"><colorFilter dxfId="0"/></filterColumn></autoFilter>"#
         ));
+    }
+
+    /// T-4558: a color filter's dangling `dxfId` leaves the table unfiltered, as the export writes it.
+    #[test]
+    fn dangling_color_filter_dxf_is_no_criterion() {
+        let table_with = |extra: &str, dxf: &str| {
+            let node = XmlNode::parse_str(&format!(
+                r#"<autoFilter><filterColumn colId="0"><colorFilter dxfId="{dxf}"/></filterColumn>{extra}</autoFilter>"#
+            ))
+            .unwrap();
+            let mut t = Table {
+                name: "T".to_string(),
+                display_name: "T".to_string(),
+                reference: "A1:B2".to_string(),
+                totals_row_count: 0,
+                header_row_count: 1,
+                header_row_dxf_id: None,
+                data_dxf_id: None,
+                totals_row_dxf_id: None,
+                columns: vec![],
+                style_info: rustsheet_engine::types::TableStyleInfo {
+                    name: None,
+                    show_first_column: false,
+                    show_last_column: false,
+                    show_row_stripes: true,
+                    show_column_stripes: false,
+                },
+                has_filters: true,
+                filter_columns: node
+                    .children()
+                    .filter(|n| n.has_tag_name("filterColumn"))
+                    .filter_map(filter_column)
+                    .collect(),
+                sheet_name: "S".to_string(),
+            };
+            t.columns = vec![
+                rustsheet_engine::types::TableColumn {
+                    id: 1,
+                    name: "a".to_string(),
+                    totals_row_label: None,
+                    totals_row_function: None,
+                    data_dxf_id: None,
+                    header_row_dxf_id: None,
+                    totals_row_dxf_id: None,
+                    calculated_column_formula: None,
+                };
+                2
+            ];
+            let mut tables = std::collections::HashMap::from([("T".to_string(), t)]);
+            drop_dangling_color_filters(&mut tables, 1);
+            tables["T"].has_filters
+        };
+        let table = |dxf: &str| table_with("", dxf);
+        assert!(table("0"), "dxf 0 of 1 exists");
+        assert!(
+            !table_with(r#"<filterColumn colId="1"/>"#, "1"),
+            "a dangling dxf and a criterion-less column"
+        );
+        assert!(!table("1"), "dxf 1 of 1 dangles");
     }
 
     /// Filter values are decoded from the file's `_xHHHH_` escapes, so the export's encoding

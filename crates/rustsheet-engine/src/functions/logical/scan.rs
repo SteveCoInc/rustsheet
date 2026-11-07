@@ -50,11 +50,13 @@ impl Model {
         for (i, result_row) in result.iter_mut().enumerate() {
             let col_start = if i == 0 { start_col } else { 0 };
             for (j, slot) in result_row.iter_mut().enumerate().skip(col_start) {
-                let step = self.call_lambda_caller_bound(
-                    &mut caller,
-                    [accumulator, (Binding::Value(data.at(i, j)), false)],
-                    cell,
-                );
+                let step = self
+                    .call_lambda_caller_binding(
+                        &mut caller,
+                        [accumulator, (Binding::Value(data.at(i, j)), false)],
+                        cell,
+                    )
+                    .into_single_area(cell);
                 let value = match self.lambda_result_value(step.clone(), cell) {
                     Ok(value) => value,
                     Err(error) => return error,

@@ -1,0 +1,58 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4619: WEEKNUM negative return_type snap window. A3 sets Monday, A2 is the edge type, A1 =WEEKNUM(100,99) reads the state left by A2 (state read = snapped to 0 or floored to -1).",
+ "tags": [
+  "M6",
+  "probe",
+  "dates"
+ ],
+ "sheets": [
+  {
+   "name": "N1",
+   "cells": {
+    "A1": "=WEEKNUM(100,99)",
+    "A2": "=WEEKNUM(100,-(2^-22+2^-33))",
+    "A3": "=WEEKNUM(100,2)"
+   }
+  },
+  {
+   "name": "N2",
+   "cells": {
+    "A1": "=WEEKNUM(100,99)",
+    "A2": "=WEEKNUM(100,-2^-23)",
+    "A3": "=WEEKNUM(100,2)"
+   }
+  },
+  {
+   "name": "N3",
+   "cells": {
+    "A1": "=WEEKNUM(100,99)",
+    "A2": "=WEEKNUM(100,-(2^-23+2^-34))",
+    "A3": "=WEEKNUM(100,2)"
+   }
+  },
+  {
+   "name": "N4",
+   "cells": {
+    "A1": "=WEEKNUM(100,99)",
+    "A2": "=WEEKNUM(100,-(2^-22+9*2^-36))",
+    "A3": "=WEEKNUM(100,2)"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "N1!A1",
+  "N1!A2",
+  "N1!A3",
+  "N2!A1",
+  "N2!A2",
+  "N2!A3",
+  "N3!A1",
+  "N3!A2",
+  "N3!A3",
+  "N4!A1",
+  "N4!A2",
+  "N4!A3"
+ ]
+}

@@ -1,0 +1,103 @@
+== cache_definition
+pivotCacheDefinition createdVersion=6 id=rId1 minRefreshableVersion=3 recordCount=6 refreshOnLoad=1 refreshedVersion=6
+  cacheSource type=worksheet
+    worksheetSource ref=A1:E7 sheet=Data
+  cacheFields count=5
+    cacheField name=Region numFmtId=0
+      sharedItems count=2
+        s v=East
+        s v=West
+    cacheField name=Product numFmtId=0
+      sharedItems count=3
+        s v=A
+        s v=B
+        s v=C
+    cacheField name=Sales numFmtId=0
+      sharedItems containsInteger=1 containsNumber=1 containsSemiMixedTypes=0 containsString=0 maxValue=20 minValue=3
+    cacheField name=Units numFmtId=0
+      sharedItems containsInteger=1 containsNumber=1 containsSemiMixedTypes=0 containsString=0 count=6 maxValue=6 minValue=1
+        n v=1
+        n v=2
+        n v=3
+        n v=4
+        n v=5
+        n v=6
+    cacheField name=Risky numFmtId=0
+      sharedItems containsInteger=1 containsMixedTypes=1 containsNumber=1 count=6 maxValue=6 minValue=1
+        n v=1
+        n v=2
+        e v=#DIV/0!
+        n v=4
+        n v=5
+        n v=6
+== cache_records
+pivotCacheRecords count=6
+  r
+    x v=0
+    x v=0
+    n v=10
+    x v=0
+    x v=0
+  r
+    x v=1
+    x v=0
+    n v=20
+    x v=1
+    x v=1
+  r
+    x v=0
+    x v=1
+    n v=5
+    x v=2
+    x v=2
+  r
+    x v=1
+    x v=1
+    n v=7
+    x v=3
+    x v=3
+  r
+    x v=0
+    x v=2
+    n v=3
+    x v=4
+    x v=4
+  r
+    x v=0
+    x v=0
+    n v=4
+    x v=5
+    x v=5
+== table
+pivotTableDefinition applyAlignmentFormats=0 applyBorderFormats=0 applyFontFormats=0 applyNumberFormats=0 applyPatternFormats=0 applyWidthHeightFormats=1 cacheId=1 createdVersion=6 dataCaption=Values indent=0 itemPrintTitles=1 minRefreshableVersion=3 name=Pages outline=1 outlineData=1 updatedVersion=6 useAutoFormatting=1
+  location colPageCount=1 firstDataCol=1 firstDataRow=1 firstHeaderRow=1 ref=A6:B7 rowPageCount=3
+  pivotFields count=5
+    pivotField axis=axisPage showAll=0
+      items count=3
+        item x=0
+        item x=1
+        item t=default
+    pivotField axis=axisPage showAll=0
+      items count=4
+        item x=0
+        item x=1
+        item x=2
+        item t=default
+    pivotField dataField=1 showAll=0
+    pivotField axis=axisPage multipleItemSelectionAllowed=1 showAll=0
+      items count=7
+        item h=1 x=0
+        item h=1 x=1
+        item x=2
+        item x=3
+        item x=4
+        item x=5
+        item t=default
+    pivotField showAll=0
+  pageFields count=3
+    pageField fld=0 hier=-1
+    pageField fld=1 hier=-1 item=0
+    pageField fld=3 hier=-1
+  dataFields count=1
+    dataField baseField=0 baseItem=0 fld=2 name=Sum of Sales
+  pivotTableStyleInfo name=PivotStyleLight16 showColHeaders=1 showColStripes=0 showLastColumn=1 showRowHeaders=1 showRowStripes=0

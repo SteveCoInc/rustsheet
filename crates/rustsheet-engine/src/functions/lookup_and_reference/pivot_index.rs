@@ -39,6 +39,12 @@ impl PivotIndexes {
         self.pivots.clear();
     }
 
+    /// Drops the index of the pivot at position `pivot`, whose definition or cache changed in
+    /// place (the grid writer, T-4151).
+    pub(crate) fn forget(&mut self, pivot: usize) {
+        self.pivots.remove(&pivot);
+    }
+
     /// How many indices were built so far.
     #[cfg(test)]
     pub(crate) fn builds(&self) -> u64 {
@@ -380,6 +386,7 @@ mod tests {
                 date_groups: None,
             }],
             record_count: 4,
+            refresh_on_load: false,
         }
     }
 

@@ -1,0 +1,64 @@
+== cache_definition
+pivotCacheDefinition createdVersion=6 id=rId1 minRefreshableVersion=3 recordCount=8 refreshOnLoad=1 refreshedVersion=6
+  cacheSource type=worksheet
+    worksheetSource ref=A1:B9 sheet=D2
+  cacheFields count=2
+    cacheField name=K numFmtId=0
+      sharedItems containsBlank=1 containsInteger=1 containsMixedTypes=1 containsNumber=1 count=8 maxValue=2 minValue=1
+        s v=a
+        b v=0
+        n v=1
+        s v=b
+        b v=1
+        n v=2
+        e v=#N/A
+        m
+    cacheField name=V numFmtId=0
+      sharedItems containsInteger=1 containsNumber=1 containsSemiMixedTypes=0 containsString=0 maxValue=1 minValue=1
+== cache_records
+pivotCacheRecords count=8
+  r
+    x v=5
+    n v=1
+  r
+    x v=3
+    n v=1
+  r
+    x v=4
+    n v=1
+  r
+    x v=6
+    n v=1
+  r
+    x v=7
+    n v=1
+  r
+    x v=2
+    n v=1
+  r
+    x v=0
+    n v=1
+  r
+    x v=1
+    n v=1
+== table
+pivotTableDefinition applyAlignmentFormats=0 applyBorderFormats=0 applyFontFormats=0 applyNumberFormats=0 applyPatternFormats=0 applyWidthHeightFormats=1 cacheId=1 createdVersion=6 dataCaption=Values indent=0 itemPrintTitles=1 minRefreshableVersion=3 name=Types outline=1 outlineData=1 updatedVersion=6 useAutoFormatting=1
+  location firstDataCol=1 firstDataRow=1 firstHeaderRow=1 ref=A3:B4
+  pivotFields count=2
+    pivotField axis=axisRow showAll=0
+      items count=9
+        item x=0
+        item x=1
+        item x=2
+        item x=3
+        item x=4
+        item x=5
+        item x=6
+        item x=7
+        item t=default
+    pivotField dataField=1 showAll=0
+  rowFields count=1
+    field x=0
+  dataFields count=1
+    dataField baseField=0 baseItem=0 fld=1 name=Count of V subtotal=count
+  pivotTableStyleInfo name=PivotStyleLight16 showColHeaders=1 showColStripes=0 showLastColumn=1 showRowHeaders=1 showRowStripes=0

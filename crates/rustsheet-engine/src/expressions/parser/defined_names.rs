@@ -43,7 +43,8 @@ impl Parser {
     /// written with that sheet's prefix so a sheet rename rewrites it; `None` outside such a body
     /// or when no sheet defines `name`, which then reads the workbook name as anywhere else.
     /// Tab order and the active sheet play no part (probes/t4554-api-name-scoped-name-choice,
-    /// -first, -last: First < Last < S2 with tabs First, S2, Last; T-4587).
+    /// -first, -last: First < Last < S2 with tabs First, S2, Last; T-4587). A sheet-scoped name's
+    /// body takes the same sheet, not its own (probes/t4621-api-sheet-name-body, -first, -last).
     pub(super) fn api_body_sheet_name(&self, name: &str) -> Option<Node> {
         if !self.api_name_body {
             return None;

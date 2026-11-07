@@ -604,7 +604,8 @@ def _defined(
     pivot = DefinedPivot(raw, rows[0], rows[1:])
     top, left = xlsxwriter.utility.xl_cell_to_rowcol(str(raw["location"]).replace("$", ""))
     cells = pivot.footprint(top, left)
-    if overlap := taken & cells:
+    # A pivot saved without refreshOnLoad may hold spec cells: they are its saved render (T-4586).
+    if pivot.refresh_on_load and (overlap := taken & cells):
         msg = f"pivot {pivot.name} needs empty cells at {sorted(overlap)} (Excel shows #SPILL! otherwise)"
         raise ValueError(msg)
     taken |= cells

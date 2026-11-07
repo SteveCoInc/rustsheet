@@ -1,0 +1,527 @@
+//! A pivot's cells: the captions, item labels, values and page area its layout lines give
+//! (SPEC-0032 "Rendering and the grid", T-4149). [`render`] is a pure function of the
+//! definition, the cache, the [`PivotResult`] and the [`PivotLayout`]; writing the cells into the
+//! grid and owning the area are T-4151's, and number formats T-4169's.
+//!
+//! Evidence: the `pivots` cells of every probe sidecar in scope (docs/excel-semantics/pivots.md
+//! "Rendered pivot cells", "Caption attributes, empty and error captions...", "Page fields render
+//! above the location", "A tabular pivot's first row header is the field name only when every
+//! pivotField has compact="0"", "Items show in the order the pivot field lists them"):
+//! - **Column header.** With an axis field on columns, the location's top row holds `Column
+//!   Labels` (`colHeaderCaption`) over the first data column, or the first column field's name
+//!   when every pivot field has `compact="0"` (probes/t4583-pivot-row-labels C1, C2); with only
+//!   Values on columns it holds `Values` (`dataCaption`; t4137 K1, t4138 G9). Each column line
+//!   labels its levels from `r` on, one header row per level below the top row.
+//! - **Row header.** The last header row holds `Row Labels` (`rowHeaderCaption`) over the first
+//!   label column, or the first row field's name when every pivot field has `compact="0"`, which
+//!   wins over `rowHeaderCaption` too (probes/t4609-pivot-row-labels-2 L5); each
+//!   further label column holds the name of the first field in it (t4123 T, T2; t4138 G3, G4).
+//!   Each row line labels its levels from `r` on, each in its label column (compact form puts
+//!   several levels in one column; the sidecars hold values only, so indentation is not
+//!   evidenced and a label is the item's text alone).
+//! - **One data field** with Values on no axis: its caption sits at the location's corner when
+//!   both axes have a field (t4123 C), over the data column when the column axis is empty (t4138
+//!   G1, G8), and as the row label when only the row axis is empty (G7).
+//! - **Totals.** A default subtotal reads `<item> Total`, a custom one `<item> <Function>` (t4137
+//!   K5, t4622 B1), the grand total `Grand Total` (`grandTotalCaption`), or `Total <data field>`
+//!   with Values on its axis (t4138 G6, t4135 `A_sum`).
+//! - **Items** render as in pivots.md: a number as a number, a boolean as `TRUE`/`FALSE`, an
+//!   error as its text and a blank as `(blank)` (t4134 I2); a Values level item is the data
+//!   field's caption.
+//! - **Values.** An intersection no record reaches is blank, or `missingCaption` with
+//!   `showMissing` (t4137 K2); an error is `errorCaption` with `showError` (K3, t4135 EC).
+//! - **Page fields** take two cells, the field's name and `(All)`, the selected item or
+//!   `(Multiple Items)` when it hides items (t4137 K4), in the `rowPageCount` rows ending one row
+//!   above the location, three columns per page column (t4138 G8).
+//!
+//! Each cell copies its label, so the cells' text is bounded by [`MAX_PIVOT_TEXT_BYTES`]
+//! (pivots.md "A pivot result is bounded in work and nodes", DEVIATION); their count is bounded
+//! by the layout's cell cap.
+//!
+//! The engine's own readings where no probe shows Excel's (pivots.md "Rendered pivot cells",
+//! UNVERIFIED):
+//! - a number or date item's subtotal label (`number_to_text` of its value), a page field whose
+//!   hidden items leave one item, and a selected number, boolean or blank page item (T-4657);
+//! - a subtotal label with Values inside its field (`<item> <data field>`), the grand-total
+//!   caption with Values on its axis, and the header over a Values level in a label column of
+//!   its own (left empty) (T-4650).
+
+use crate::expressions::token::Error;
+use crate::number_format::number_to_text;
+
+use super::super::result::{page_selection, AxisTree, PivotComputeError, PivotResult};
+use super::super::{Aggregate, CacheItem, ItemType, PivotCache, PivotTable};
+use super::lines::{label_columns, levels, AxisLine, Level, PivotLayout};
+
+/// The caption above a pivot's row labels (`rowHeaderCaption` replaces it).
+pub const ROW_LABELS: &str = "Row Labels";
+/// The caption above a pivot's column labels (`colHeaderCaption` replaces it).
+pub const COLUMN_LABELS: &str = "Column Labels";
+/// The caption above the data fields' captions (`dataCaption` replaces it).
+pub const VALUES: &str = "Values";
+/// The label of a blank item, and the text GETPIVOTDATA takes for that item on an ungrouped
+/// field (probes/t4236-pivot-date-groups).
+pub const BLANK_ITEM: &str = "(blank)";
+/// The label of the grand-total line (`grandTotalCaption` replaces it).
+pub const GRAND_TOTAL: &str = "Grand Total";
+/// A page field with no selection and no hidden item.
+pub const ALL_ITEMS: &str = "(All)";
+/// A page field that hides items.
+pub const MULTIPLE_ITEMS: &str = "(Multiple Items)";
+
+/// The value of one rendered pivot cell; an empty cell is not rendered.
+#[derive(Debug, Clone, PartialEq)]
+pub enum PivotCell {
+    /// A caption, an item label, or a caption standing for a value.
+    Text(String),
+    /// A number item's label or a value.
+    Number(f64),
+    /// A value's error.
+    Error(Error),
+}
+
+/// One rendered cell: its sheet row and column (0-based) and its value.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RenderedCell {
+    /// The cell's row.
+    pub row: u32,
+    /// The cell's column.
+    pub column: u32,
+    /// The cell's value.
+    pub value: PivotCell,
+}
+
+/// How an item renders as a label (pivots.md "Items show in the order the pivot field lists
+/// them"): a date is its serial, as Excel writes an ungrouped date field's label cell
+/// (probes/t4236-pivot-date-groups reads `43496.9999884259`).
+fn item_cell(item: &CacheItem) -> PivotCell {
+    match item {
+        CacheItem::Text(text) => PivotCell::Text(text.clone()),
+        CacheItem::Number(n) | CacheItem::Date(n) => PivotCell::Number(*n),
+        CacheItem::Boolean(b) => PivotCell::Text(if *b { "TRUE" } else { "FALSE" }.to_string()),
+        CacheItem::Error(error) => PivotCell::Text(error.to_string()),
+        CacheItem::Missing => PivotCell::Text(BLANK_ITEM.to_string()),
+    }
+}
+
+/// An item's label as text, for a subtotal's `<item> Total`.
+fn item_text(item: &CacheItem) -> String {
+    match item_cell(item) {
+        PivotCell::Text(text) => text,
+        PivotCell::Number(n) => number_to_text(n),
+        PivotCell::Error(error) => error.to_string(),
+    }
+}
+
+/// One axis as the renderer reads it.
+struct Axis<'a> {
+    tree: &'a AxisTree,
+    levels: Vec<Level<'a>>,
+    lines: &'a [AxisLine],
+}
+
+impl Axis<'_> {
+    fn has_field(&self) -> bool {
+        self.levels.iter().any(|l| matches!(l, Level::Field { .. }))
+    }
+
+    fn has_values(&self) -> bool {
+        self.levels.iter().any(|l| matches!(l, Level::Values))
+    }
+
+    /// The first field level's cache field.
+    fn first_field(&self) -> Option<u32> {
+        self.levels.iter().find_map(|level| match level {
+            Level::Field { depth, .. } => self.tree.fields().get(*depth).copied(),
+            Level::Values => None,
+        })
+    }
+
+    /// The cache item of tree field `depth` on the path to `node`.
+    fn item(&self, node: u32, depth: usize) -> Option<(u32, u32)> {
+        let nodes = self.tree.nodes();
+        let wanted = u32::try_from(depth + 1).ok()?;
+        let mut at = nodes.get(node as usize)?;
+        while at.depth > wanted {
+            at = nodes.get(at.parent? as usize)?;
+        }
+        let field = *self.tree.fields().get(depth)?;
+        (at.depth == wanted).then_some((field, at.item?))
+    }
+}
+
+/// The cells being rendered, and what their text depends on.
+struct Cells<'a> {
+    table: &'a PivotTable,
+    cache: &'a PivotCache,
+    out: Vec<RenderedCell>,
+    /// The text bytes the cells may still take ([`MAX_PIVOT_TEXT_BYTES`]).
+    text_left: usize,
+    /// A cell's text passed `text_left`: nothing more is kept and the render fails.
+    over: bool,
+}
+
+impl Cells<'_> {
+    fn put(&mut self, row: u32, column: u32, value: PivotCell) {
+        if let PivotCell::Text(text) = &value {
+            match self.text_left.checked_sub(text.len()) {
+                Some(left) if !self.over => self.text_left = left,
+                _ => self.over = true,
+            }
+        }
+        if !self.over {
+            self.out.push(RenderedCell { row, column, value });
+        }
+    }
+
+    fn text(&mut self, row: u32, column: u32, text: &str) {
+        self.put(row, column, PivotCell::Text(text.to_string()));
+    }
+
+    fn field_name(&self, field: u32) -> Option<&str> {
+        self.cache
+            .fields
+            .get(field as usize)
+            .map(|f| f.name.as_str())
+    }
+
+    fn cache_item(&self, field: u32, item: u32) -> Option<&CacheItem> {
+        self.cache
+            .fields
+            .get(field as usize)?
+            .items
+            .get(item as usize)
+    }
+
+    fn data_caption(&self, data_field: u32) -> Option<&str> {
+        let field = self.table.data_fields.get(data_field as usize)?;
+        Some(field.caption.as_str())
+    }
+
+    /// The label of `line`'s level `level` (its `x` is `x`) on `axis`.
+    fn label(&self, axis: &Axis<'_>, line: &AxisLine, level: usize, x: u32) -> Option<PivotCell> {
+        match axis.levels.get(level)? {
+            Level::Values => Some(PivotCell::Text(self.data_caption(x)?.to_string())),
+            Level::Field { depth, .. } => {
+                let (field, item) = axis.item(line.node, *depth)?;
+                Some(item_cell(self.cache_item(field, item)?))
+            }
+        }
+    }
+
+    /// The text of a subtotal or grand-total line of `axis`, or `None` for an item's line.
+    fn total_label(&self, axis: &Axis<'_>, line: &AxisLine) -> Option<String> {
+        let options = &self.table.options;
+        let depth = (line.repeat as usize + line.items.len()).checked_sub(1);
+        let item = || -> Option<String> {
+            match axis.levels.get(depth?)? {
+                Level::Field { depth: d, .. } => {
+                    let (field, item) = axis.item(line.node, *d)?;
+                    Some(item_text(self.cache_item(field, item)?))
+                }
+                Level::Values => None,
+            }
+        };
+        // Values inside the subtotalled field: one line per data field (T-4650).
+        let values_inside = || {
+            let inner = depth.map_or(0, |d| d + 1);
+            axis.levels
+                .iter()
+                .skip(inner)
+                .any(|l| matches!(l, Level::Values))
+        };
+        match line.kind {
+            ItemType::Grand if axis.has_values() => Some(format!(
+                "Total {}",
+                self.data_caption(line.data_field).unwrap_or_default()
+            )),
+            ItemType::Grand => Some(
+                options
+                    .grand_total_caption
+                    .clone()
+                    .unwrap_or_else(|| GRAND_TOTAL.to_string()),
+            ),
+            ItemType::Default if values_inside() => Some(format!(
+                "{} {}",
+                item()?,
+                self.data_caption(line.data_field).unwrap_or_default()
+            )),
+            ItemType::Default => Some(format!("{} Total", item()?)),
+            ItemType::Function(function) => {
+                Some(format!("{} {}", item()?, Aggregate::word(function)))
+            }
+            _ => None,
+        }
+    }
+
+    /// The labels of `axis`'s lines; `place(i, level)` is the cell of line `i`'s label at
+    /// `level`.
+    fn lines(&mut self, axis: &Axis<'_>, place: impl Fn(u32, usize) -> Option<(u32, u32)>) {
+        for (i, line) in (0u32..).zip(axis.lines) {
+            // An `insertBlankRow` line is empty (probes/t4168-pivot-layout-options BR, BR2).
+            if line.kind == ItemType::Blank {
+                continue;
+            }
+            let end = line.repeat as usize + line.items.len();
+            if let Some(text) = self.total_label(axis, line) {
+                let level = if line.kind == ItemType::Grand {
+                    0
+                } else {
+                    end.saturating_sub(1)
+                };
+                if let Some((row, column)) = place(i, level) {
+                    self.put(row, column, PivotCell::Text(text));
+                }
+                continue;
+            }
+            for (level, &x) in (line.repeat as usize..).zip(&line.items) {
+                let cell = self.label(axis, line, level, x);
+                // An empty-text item's label cell is left empty (pivots.md "Pivot field names
+                // for duplicate and blank source headers", probes/t4627-pivot-field-name-collisions
+                // P_Rec!A6, a row item; a column item's is taken to match, UNVERIFIED).
+                let cell = cell.filter(|c| !matches!(c, PivotCell::Text(t) if t.is_empty()));
+                if let (Some(cell), Some((row, column))) = (cell, place(i, level)) {
+                    self.put(row, column, cell);
+                }
+            }
+        }
+    }
+
+    /// The value cell of `row` by `column`, or `None` for a blank.
+    fn value(
+        &self,
+        result: &PivotResult,
+        [rows, columns]: [&Axis<'_>; 2],
+        row: &AxisLine,
+        column: &AxisLine,
+    ) -> Option<PivotCell> {
+        let options = &self.table.options;
+        let data = if rows.has_values() {
+            row.data_field
+        } else if columns.has_values() {
+            column.data_field
+        } else {
+            0
+        };
+        let field = self.table.data_fields.get(data as usize)?;
+        let function = match (row.kind, column.kind) {
+            (ItemType::Function(f), _) | (_, ItemType::Function(f)) => f,
+            _ => field.function,
+        };
+        match result.value_as(row.node, column.node, data as usize, function) {
+            None => options
+                .missing_caption
+                .clone()
+                .filter(|_| options.show_missing)
+                .map(PivotCell::Text),
+            Some(Ok(n)) => Some(PivotCell::Number(n)),
+            Some(Err(error)) => Some(match &options.error_caption {
+                Some(caption) if options.show_error => PivotCell::Text(caption.clone()),
+                _ => PivotCell::Error(error),
+            }),
+        }
+    }
+}
+
+/// Most bytes of text one pivot's rendered cells hold together (SPEC-0032 "Untrusted-input
+/// limits"): a label is copied into every cell that shows it, so a long item or caption on many
+/// lines would otherwise cost lines times its length. 128 MiB, about 32 bytes for each of
+/// [`MAX_PIVOT_CELLS`](super::MAX_PIVOT_CELLS) cells.
+pub const MAX_PIVOT_TEXT_BYTES: usize = 1 << 27;
+
+/// The cells of `table`'s pivot over `cache`, from its `result` ([`compute`](super::super::compute))
+/// and `layout` ([`lay_out`](super::lay_out)), in no particular order: every non-empty cell of
+/// the location and of the page area above it (see the module documentation).
+///
+/// # Errors
+/// [`PivotComputeError::Malformed`] when `result` or `layout` is not over `table` and `cache`
+/// (a line's node or item is not in the result's tree or the cache), and
+/// [`PivotComputeError::Limit`] when the cells' text passes [`MAX_PIVOT_TEXT_BYTES`].
+pub fn render(
+    table: &PivotTable,
+    cache: &PivotCache,
+    result: &PivotResult,
+    layout: &PivotLayout,
+) -> Result<Vec<RenderedCell>, PivotComputeError> {
+    render_within(table, cache, result, layout, MAX_PIVOT_TEXT_BYTES)
+}
+
+/// [`render`] with at most `text_bytes` bytes of text.
+fn render_within(
+    table: &PivotTable,
+    cache: &PivotCache,
+    result: &PivotResult,
+    layout: &PivotLayout,
+    text_bytes: usize,
+) -> Result<Vec<RenderedCell>, PivotComputeError> {
+    let options = &table.options;
+    let rows = Axis {
+        tree: result.rows(),
+        levels: levels(table, &table.row_fields),
+        lines: &layout.rows,
+    };
+    let columns = Axis {
+        tree: result.columns(),
+        levels: levels(table, &table.column_fields),
+        lines: &layout.columns,
+    };
+    check_lines(&rows)?;
+    check_lines(&columns)?;
+    let (top, left) = (layout.location.top, layout.location.left);
+    let geometry = &layout.geometry;
+    let (data_row, data_column) = (
+        top.saturating_add(geometry.first_data_row),
+        left.saturating_add(geometry.first_data_column),
+    );
+    let header_row = data_row.saturating_sub(1).max(top);
+    let mut cells = Cells {
+        table,
+        cache,
+        out: Vec::with_capacity(
+            layout
+                .rows
+                .len()
+                .saturating_add(2)
+                .saturating_mul(layout.columns.len().saturating_add(2)),
+        ),
+        text_left: text_bytes,
+        over: false,
+    };
+    let named = !table.fields.is_empty() && table.fields.iter().all(|f| !f.compact);
+    let name = |field: Option<u32>| {
+        let field = cache.fields.get(field? as usize)?;
+        Some(field.name.clone())
+    };
+
+    // The column header over the first data column.
+    if !columns.levels.is_empty() {
+        let caption = if columns.has_field() {
+            let named = name(columns.first_field()).filter(|_| named);
+            named.or_else(|| options.column_header_caption.clone())
+        } else {
+            options.data_caption.clone()
+        };
+        let fallback = if columns.has_field() {
+            COLUMN_LABELS
+        } else {
+            VALUES
+        };
+        cells.text(top, data_column, caption.as_deref().unwrap_or(fallback));
+    }
+    // The row header and the label columns' field names.
+    let label_column = label_columns(&rows.levels, options);
+    if rows.has_field() {
+        let named = name(rows.first_field()).filter(|_| named);
+        let caption = named.or_else(|| options.row_header_caption.clone());
+        cells.text(header_row, left, caption.as_deref().unwrap_or(ROW_LABELS));
+        let mut seen = 0;
+        for (level, &column) in rows.levels.iter().zip(&label_column) {
+            if column == seen {
+                continue;
+            }
+            seen = column;
+            if let Level::Field { depth, .. } = level {
+                if let Some(text) = name(rows.tree.fields().get(*depth).copied()) {
+                    cells.text(header_row, left.saturating_add(column), &text);
+                }
+            }
+        }
+    }
+    // One data field with Values on no axis: its caption.
+    if !rows.has_values() && !columns.has_values() {
+        if let Some(caption) = cells.data_caption(0).map(str::to_string) {
+            if columns.levels.is_empty() {
+                cells.text(header_row, data_column, &caption);
+            } else if rows.has_field() {
+                cells.text(top, left, &caption);
+            } else if let Some(column) = data_column.checked_sub(1).filter(|&c| c >= left) {
+                cells.text(data_row, column, &caption);
+            }
+        }
+    }
+    let row_place = |i: u32, level: usize| {
+        let column = *label_column.get(level)?;
+        Some((data_row.checked_add(i)?, left.checked_add(column)?))
+    };
+    cells.lines(&rows, row_place);
+    let column_place = |i: u32, level: usize| {
+        let row = top
+            .checked_add(1)?
+            .checked_add(u32::try_from(level).ok()?)?;
+        Some((row, data_column.checked_add(i)?))
+    };
+    cells.lines(&columns, column_place);
+
+    for (r, row) in (data_row..).zip(&layout.rows).filter(|(_, l)| l.values) {
+        for (c, column) in (data_column..)
+            .zip(&layout.columns)
+            .filter(|(_, l)| l.values)
+        {
+            if let Some(value) = cells.value(result, [&rows, &columns], row, column) {
+                cells.put(r, c, value);
+            }
+        }
+    }
+    page_area(&mut cells, layout);
+    if cells.over {
+        return Err(PivotComputeError::Limit);
+    }
+    Ok(cells.out)
+}
+
+/// Every line's node is in its axis's tree.
+fn check_lines(axis: &Axis<'_>) -> Result<(), PivotComputeError> {
+    let nodes = axis.tree.nodes().len();
+    if axis.lines.iter().all(|l| (l.node as usize) < nodes) {
+        Ok(())
+    } else {
+        Err(PivotComputeError::Malformed)
+    }
+}
+
+/// The page fields' names and selections, above the location.
+fn page_area(cells: &mut Cells<'_>, layout: &PivotLayout) {
+    let table = cells.table;
+    let pages = table.page_fields.len();
+    let wrap = match table.options.page_wrap as usize {
+        0 => pages,
+        wrap => wrap.min(pages),
+    };
+    let first_row = layout
+        .location
+        .top
+        .checked_sub(layout.geometry.row_page_count.saturating_add(1));
+    for (k, page) in table.page_fields.iter().enumerate() {
+        let (row, column) = if table.options.page_over_then_down {
+            (k / wrap, k % wrap)
+        } else {
+            (k % wrap, k / wrap)
+        };
+        let row = first_row.and_then(|r| r.checked_add(u32::try_from(row).ok()?));
+        let column = u32::try_from(column.saturating_mul(3))
+            .ok()
+            .and_then(|c| layout.location.left.checked_add(c));
+        let (Some(row), Some(column)) = (row, column) else {
+            continue;
+        };
+        let Some(name) = cells.field_name(page.field).map(str::to_string) else {
+            continue;
+        };
+        let hides = table
+            .fields
+            .get(page.field as usize)
+            .is_some_and(|f| f.hidden.iter().any(|word| *word != 0));
+        let selection = match page_selection(table, page) {
+            Some(item) => cells.cache_item(page.field, item).map(item_cell),
+            None if hides => Some(PivotCell::Text(MULTIPLE_ITEMS.to_string())),
+            None => Some(PivotCell::Text(ALL_ITEMS.to_string())),
+        };
+        cells.text(row, column, &name);
+        if let Some(selection) = selection {
+            cells.put(row, column.saturating_add(1), selection);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

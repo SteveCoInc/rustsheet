@@ -4,7 +4,7 @@ use bitcode::{Decode, Encode};
 
 use crate::{
     cf_types::CfRule,
-    formula_rewrite::RewrittenFormula,
+    formula_rewrite::{RewrittenCell, RewrittenFormula},
     types::{
         Cell, Col, Color, Link, MergedCell, Row, SheetState, Style, StyleIncludes, Table,
         TableExtent, Theme, Worksheet,
@@ -170,6 +170,9 @@ pub(crate) enum Diff {
         /// The extents, before the delete, of the tables it resized, which the undo puts back
         /// (T-3634); redo's delete resizes them again.
         tables: Vec<TableExtent>,
+        /// The formula cells the delete rewrote past what re-inserting the rows undoes, as they
+        /// were, which the undo puts back (T-4668); redo's delete rewrites them again.
+        rewritten: Vec<RewrittenCell>,
     },
     InsertColumns {
         sheet: u32,
@@ -181,6 +184,12 @@ pub(crate) enum Diff {
         column: i32,
         count: i32,
         old_data: Vec<ColumnData>,
+        /// The tables the delete changed, as they were before it, which the undo puts back
+        /// (T-4652); redo's delete changes them again.
+        tables: Vec<(String, Table)>,
+        /// The formula cells the delete rewrote past what re-inserting the columns undoes, as
+        /// they were, which the undo puts back (T-4668); redo's delete rewrites them again.
+        rewritten: Vec<RewrittenCell>,
     },
     DeleteSheet {
         sheet: u32,
@@ -251,6 +260,10 @@ pub(crate) enum Diff {
         name: String,
         scope: Option<u32>,
         old_value: String,
+        /// The deleted name's `hidden` flag and Name Manager `comment`, which an undo puts back
+        /// (T-4637).
+        hidden: bool,
+        comment: Option<String>,
     },
     UpdateDefinedName {
         name: String,
