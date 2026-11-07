@@ -3,7 +3,7 @@ id: T-4726
 title: "CI eval job gates poi and corpus-bench: cached pinned fetch, failing fetch, --require-fetched; local make eval targets fetch missing suites (SPEC-0035)"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus

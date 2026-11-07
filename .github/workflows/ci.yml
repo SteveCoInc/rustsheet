@@ -130,10 +130,34 @@ jobs:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@1.97
       - uses: Swatinem/rust-cache@v2
+      # Decision 0344 (SPEC-0035 D2): the fetched gate suites, poi and corpus-bench, gate here, read
+      # from a cache keyed on their pins. No restore-keys: a partial match would restore another pin.
+      - id: fetched-suites
+        if: needs.changes.outputs.gates != 'false'
+        uses: actions/cache@v4
+        with:
+          path: |
+            eval/.cache/suites/poi
+            eval/.cache/suites/corpus-bench
+          key: fetched-suites-v1-${{ hashFiles('eval/suites/poi/suite.toml', 'eval/suites/corpus-bench/suite.toml') }}
+      # On a miss, fetch them; three failures fail the job, never skip a gate (as nightly.yml's fetch).
+      - if: needs.changes.outputs.gates != 'false' && steps.fetched-suites.outputs.cache-hit != 'true'
+        run: |
+          make build
+          for attempt in 1 2 3; do
+            scripts/eval_guard.sh target/release/rustsheet-eval fetch --suite poi --suite corpus-bench && exit 0
+            sleep 30
+          done
+          exit 1
       # Decision 0125: one run of the suites judges both the baseline gate (eval-check) and the
       # evidence floor; running them as two steps rebuilt the release binary and reran the suites.
       # Decision 0249: not on a push to main, whose merge group already ran it.
+      # Decision 0344: no make target fetches here (EVAL_FETCH empty), and a gate suite left unfetched
+      # fails the run (--require-fetched, T-4725) instead of printing `skipping`.
       - if: needs.changes.outputs.gates != 'false'
+        env:
+          EVAL_FETCH: ""
+          EVAL_GATE_FLAGS: --require-fetched
         run: make eval-gates
       # Decision 0243: the math sidecar check needs the release binary eval-gates built and tools/.
       - if: needs.changes.outputs.gates != 'false'
@@ -145,6 +169,9 @@ jobs:
       # keeps one per merge.
       - name: Full report (informational)
         if: ${{ failure() || github.ref == 'refs/heads/main' }}
+        # It fetches nothing (decision 0344): it scores poi and corpus-bench from the job's cache.
+        env:
+          EVAL_FETCH: ""
         run: make eval
       - uses: actions/upload-artifact@v4
         if: ${{ failure() || github.ref == 'refs/heads/main' }}
