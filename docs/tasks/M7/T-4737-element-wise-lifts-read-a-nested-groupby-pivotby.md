@@ -41,7 +41,10 @@ Cells this task supersedes (decision 0329 item 3):
 - t2360-array-lambda-holidays P!C1, C9, C17, C25, C33;
 - t2311-pivotby-value-columns-error P!C12;
 - t2625-nested-consumers P!A32;
-- t2475-stat-subexpressions P!A64 (October `64|13x3|?`; ours passes it today).
+- t2475-stat-subexpressions P!A64 (October `64|13x3|?`; ours passes it today);
+- gen-m9/17c110a53924beb8 Calc!A300 (October `#N/A` for an operator over a raw GROUPBY; its 2026-11-06 refill,
+  probes/gen-m9-17c110a53924beb8-refill-1106, gives the `#VALUE!` ours returns, T-2686's Outcome; named here by the
+  steward 2026-11-07 because `make unowned-off` found no open owner).
 
 Earlier-only candidates (decision 0329 item 3). These are cells with an October fill only that read a nested cell through a
 lift. Supersede one only after you commit a refill copy of its case that shows the November value; otherwise keep it
