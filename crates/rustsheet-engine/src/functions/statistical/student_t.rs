@@ -129,6 +129,16 @@ fn unflushed_upper_tail(t: f64, n: f64) -> f64 {
     if n + t * t == n {
         return 0.5;
     }
+    // At df 1 inside t = 1 Excel's tail is the integer-df series at the worksheet's rounded
+    // y = fl(1/fl(1 + fl(t·t))) with complement fl(1 - y), as T.TEST's tail is: `T.DIST.2T(1.005-1,1)`
+    // = 0.9968169276635932 (gen-m9/928d08e3e1eecb5f A231), where the exact tail at t is 23 ulp
+    // off; t = 0.1, 0.5 and 1 are the same either way (probes-numeric m9-t-dist-2t A2-A4).
+    if n == 1.0 && t <= 1.0 {
+        return tail_at(n / (n + t * t), n);
+    }
+    if let Some(tail) = large_df_centre_tail(t, n) {
+        return tail;
+    }
     if let Some(tail) = kernel_tail(t, n) {
         return tail;
     }
@@ -180,6 +190,31 @@ fn kernel_tail(t: f64, n: f64) -> Option<f64> {
     let a = 0.5 * n;
     let (w, _) = t_kernel_tails(a, y, z)?;
     Some(0.5 * w)
+}
+
+/// L for t < 1 at an integer df past the series bound, n > [`SERIES_MAX_DF`]: the central
+/// fraction ([`centre_tail`] on z, t^2/n and n/t^2, never on the rounded y), not the kernel, whose
+/// bpser prefactor loses digits to cancellation in its logarithm there: `T.DIST.2T(0.5,1E+8)` =
+/// 0.6170750785521777 (gen-m9/787ba8d801105a60 A91) is 6 ulp off through the kernel and 2 through
+/// this fraction. The bound is exclusive: the kernel is Excel's bits at df 1000
+/// (`T.DIST.RT(.5,1000)` = 0.30859254041693746, probes-numeric m9-t-dist-rt A123, and
+/// probes-numeric t0969-t-tail-grid B1553), which the fraction is not. `None` elsewhere.
+fn large_df_centre_tail(t: f64, n: f64) -> Option<f64> {
+    if !(n > SERIES_MAX_DF && t < 1.0) {
+        return None;
+    }
+    let ratio = gamma_ratio(n)?;
+    let (z, y) = beta_arguments(t, n);
+    let square = t * t;
+    let args = TailArguments {
+        z,
+        y,
+        square_over_n: square / n,
+        n_over_square: n / square,
+        inside_one: true,
+        series: None,
+    };
+    Some(centre_tail(&args, n, z, ratio))
 }
 
 /// L beyond t = 1 at df 1, and at df 2 where [`closed_form_tail`] does not take it (fl(1 - y) > 0.9,
@@ -785,6 +820,57 @@ mod tests {
         assert!(close(density, 0.053_990_966_514_132_89), "{density}");
         let density = student_t_density(0.0, 1e6).unwrap_or(f64::NAN);
         assert!(close(density, 0.398_942_180_665_875_06), "{density}");
+    }
+
+    #[test]
+    fn df_one_inside_one_is_the_tail_at_the_rounded_y() {
+        // gen-m9/928d08e3e1eecb5f A231 `T.DIST.2T(1.005-1,1)`: t = fl(1.005 - 1). Excel's
+        // 0.9968169276635932 is I_y(1/2, 1/2) at y = fl(1/fl(1 + t·t)); the exact tail at t gives
+        // ...5881 (23 ulp).
+        let t = 1.005 - 1.0;
+        assert_eq!(2.0 * student_t_tails(t, 1.0).1, 0.996_816_927_663_593_2);
+        // Controls that stay bit-exact (probes-numeric m9-t-dist-2t A2-A4, m9-t-dist-rt A3, A4,
+        // m9-t-dist-cdf A3).
+        assert_eq!(2.0 * student_t_tails(0.1, 1.0).1, 0.936_548_965_138_892_9);
+        assert_eq!(2.0 * student_t_tails(0.5, 1.0).1, 0.704_832_764_699_133_5);
+        assert_eq!(2.0 * student_t_tails(1.0, 1.0).1, 0.500_000_000_000_000_1);
+        assert_eq!(student_t_tails(0.5, 1.0).1, 0.352_416_382_349_566_74);
+        assert_eq!(student_t_tails(1.0, 1.0).1, 0.250_000_000_000_000_06);
+        assert_eq!(student_t_tails(0.5, 1.0).0, 0.647_583_617_650_433_3);
+    }
+
+    #[test]
+    fn large_df_centre_is_the_central_fraction_past_the_series_bound() {
+        // gen-m9/787ba8d801105a60 A91 `T.DIST.2T(0.5,1E+8)` = 0.6170750785521777: the kernel's
+        // beta prefactor cancels in its log there (6 ulp); the central fraction is within 2.
+        assert!(ulps(2.0 * student_t_tails(0.5, 1e8).1, 0.617_075_078_552_177_7) <= 2);
+        // Through df 1000 the series bound is inclusive and the kernel stays: `T.DIST.RT(.5,1000)`
+        // (probes-numeric m9-t-dist-rt A123) and `T.DIST.2T(0.5,1000)` (m9-t-dist-2t A99) are
+        // Excel's bits, which the central fraction is not at df 1000.
+        assert_eq!(student_t_tails(0.5, 1000.0).1, 0.308_592_540_416_937_46);
+        assert_eq!(
+            2.0 * student_t_tails(0.5, 1000.0).1,
+            0.617_185_080_833_874_9
+        );
+        assert_eq!(
+            2.0 * student_t_tails(0.1, 1000.0).1,
+            0.920_364_369_023_604_1
+        );
+        // df 999 keeps the kernel and df 1001 takes the central fraction.
+        assert_eq!(
+            student_t_tails(0.5, 999.0).1,
+            kernel_tail(0.5, 999.0).unwrap_or(f64::NAN)
+        );
+        assert!(large_df_centre_tail(0.5, 1000.0).is_none());
+        assert!(large_df_centre_tail(0.5, 999.0).is_none());
+        let centre = large_df_centre_tail(0.5, 1001.0).unwrap_or(f64::NAN);
+        assert_eq!(student_t_tails(0.5, 1001.0).1, centre);
+        assert!(ulps(centre, kernel_tail(0.5, 1001.0).unwrap_or(f64::NAN)) <= 4);
+        // Beyond t = 1 the kernel stays at every df (`T.DIST.RT(2,1E6)`, `large_df_cells`).
+        assert!(large_df_centre_tail(1.5, 1e6).is_none());
+        // probes-numeric m9-t-dist-2t A110, A111 (df 1E6): within 4 ulp of Excel.
+        assert!(ulps(2.0 * student_t_tails(0.5, 1e6).1, 0.617_075_187_472_371_3) <= 4);
+        assert!(ulps(2.0 * student_t_tails(0.1, 1e6).1, 0.920_344_345_492_043_1) <= 4);
     }
 
     #[test]

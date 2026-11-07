@@ -4275,6 +4275,27 @@ double-double series, a Cephes deep tail, incbcf/incbd from z, and df 2's closed
 Status: VERIFIED (excel-graph) for the call form and bgrat at b = 1/2; the bup arithmetic and the T density UNVERIFIED
 Tasks: T-2509, T-2513, T-0969
 
+## Student t tails at df 1 inside t = 1 and past the series bound inside t = 1 (T-2930)
+Rule: two regions of T.DIST, T.DIST.RT, T.DIST.2T and TDIST outside "Student t tails are one kernel call":
+- df 1 and t <= 1: L is `I_y(1/2, 1/2)`/2 at the worksheet's rounded y = fl(1/fl(1 + fl(t·t))), with complement
+  fl(1 - y), as T.TEST's tail ("T.TEST rounds y = df/(df+t^2) to a double before the tail"), not the exact Cauchy tail
+  at t. `T.DIST.2T(1.005-1,1)` (t = 0.004999999999999893) is 0.9968169276635932 in Excel (gen-m9/928d08e3e1eecb5f
+  A231); the exact tail gives 0.9968169276635881 (23 ulp). The controls `T.DIST.2T(0.1,1)` = 0.9365489651388929,
+  `T.DIST.2T(0.5,1)` = 0.7048327646991335, `T.DIST.2T(1,1)` = 0.5000000000000001, `T.DIST.RT(0.5,1)` and
+  `T.DIST(0.5,1,TRUE)` (probes-numeric m9-t-dist-2t A2-A4, m9-t-dist-rt A3, A4, m9-t-dist-cdf A3) are the same bits
+  either way.
+- an integer df n above 1000 (the integer-df series bound) and t < 1: L is the Student-t central fraction on z,
+  t²/n and n/t², never the rounded y. The kernel's bpser prefactor cancels in its logarithm there:
+  `T.DIST.2T(0.5,1E+8)` = 0.6170750785521777 (gen-m9/787ba8d801105a60 A91) is 6 ulp off through the kernel and 2
+  through the fraction. The bound is exclusive: at df 1000 the kernel is Excel's bits (`T.DIST.RT(.5,1000)` =
+  0.30859254041693746, probes-numeric m9-t-dist-rt A123; t0969-t-tail-grid B1553) and the fraction is not, so
+  `n >= 1000` regresses those cells. df 999 keeps the kernel; df 1001 has no probed cell (a probe of df 999/1000/1001
+  is pending).
+Evidence: the cells above (excel-graph); docs/research/excel-parity-findings-2026-11-07.md item 9.
+Implemented in: functions/statistical/student_t.rs `unflushed_upper_tail` (df 1), `large_df_centre_tail`.
+Status: VERIFIED (excel-graph) at the cited cells; df 1001 to 1E6 inferred from the 1E6 and 1E8 cells
+Tasks: T-2930, T-4975
+
 ## F's incomplete-beta arguments keep r >= 1 (T-3567)
 Rule: F.DIST(x,m,n,TRUE), F.DIST.RT and FDIST (m, n truncated) form mx = fl(m·x) and r = fl(n/mx) when mx <= n, else
 r = fl(mx/n), so r >= 1. The smaller incomplete-beta argument is fl(1/fl(1 + r)) and the larger fl(r/fl(1 + r)):
