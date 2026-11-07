@@ -444,27 +444,36 @@ pub(crate) fn excel_small_shape_lower(a: f64, x: f64) -> Option<f64> {
 }
 
 /// GAMMA.DIST's and CHISQ.DIST's cdf P(a, x) wherever Excel takes its leading-factor series form
-/// ([`excel_form_lower`]): below shape 1 where [`excel_small_shape_lower`] takes it, and from
-/// shape 1 to [`DIRECT_SHAPE_MAX`] at a normal x up to 1 ([`excel_mid_shape_lower`]). `None`
-/// elsewhere.
+/// ([`excel_form_lower`]): below shape 1 where [`excel_small_shape_lower`] takes it, and above
+/// shape 1 at a normal x up to 1 ([`excel_lower_above_shape_one`]). `None` elsewhere.
 pub(crate) fn excel_lower(a: f64, x: f64) -> Option<f64> {
-    excel_small_shape_lower(a, x).or_else(|| excel_mid_shape_lower(a, x))
+    excel_small_shape_lower(a, x).or_else(|| excel_lower_above_shape_one(a, x))
 }
 
-/// P(a, x) above shape 1 and below [`DIRECT_SHAPE_MAX`] at a normal x of at most 1: Excel's
-/// leading-factor series form, with no a·LN(x) gate (T-3412). Excel's cdf there is a staircase in
-/// x, since LN(x) moves by an ulp only every few ulps of x, which the accurate pair is not: on the
-/// cells with Excel's own arguments (literals, or column-A quantiles substituted from the oracle;
-/// probes-numeric/t3311-gamma-inv-lower-tail-cdf, t1049-chisqdist, m9-gamma-dist-a2, -a9,
-/// m9-chisq-dist), split 30% by a hash of (case, cell) before scoring, the form is bit-exact at 123
-/// of 251 train cells and 60 of 124 test cells and within 4 ulp at all 370 normal results, where
-/// the pair is bit-exact at 20 and 10 and over 16 ulp off at 134 (`GAMMA.DIST(0.9,9,1,TRUE)` 13
-/// ulp, `CHISQ.DIST(0.5,20,TRUE)` 19 ulp to 1). Above x = 1 the form is no closer than the pair
-/// (6 of 51 bit-exact against 10), and the quantiles' lower tail takes the same cut at 1
-/// (`quantile_tail`). Shape 1 is e^-x's closed pair, and from [`DIRECT_SHAPE_MAX`] the pair's
-/// prefactor is Stirling's (57 of 73 bit-exact against 55, not taken). `None` elsewhere, where
-/// the result is not a normal double, or where the series runs out of terms.
-fn excel_mid_shape_lower(a: f64, x: f64) -> Option<f64> {
+/// P(a, x) above shape 1 at a normal x of at most 1: Excel's leading-factor series form, with no
+/// a·LN(x) gate and no upper shape (T-3412). Excel's cdf there is a staircase in x, since LN(x)
+/// moves by an ulp only every few ulps of x; the accurate pair is smooth.
+///
+/// Evidence, on cells with Excel's own arguments (literals, or column-A quantiles substituted from
+/// the oracle): below shape 20 (probes-numeric/t3311-gamma-inv-lower-tail-cdf, t1049-chisqdist,
+/// m9-gamma-dist-a2, -a9, m9-chisq-dist), split 30% by a hash of (case, cell) before scoring, the
+/// form is bit-exact at 123 of 251 train cells and 60 of 124 test cells and within 4 ulp at all 370
+/// normal results, where the pair is bit-exact at 20 and 10 and over 16 ulp off at 134
+/// (`GAMMA.DIST(0.9,9,1,TRUE)` 13 ulp to 0, `CHISQ.DIST(0.5,20,TRUE)` 14 to 1). At shapes 40 to
+/// 100 (fit-audit-t2638-ratio-min, t3252-gamma-prefactor-window) it is within 7 ulp at all 18
+/// cells, where the ratio and `rcomp` prefactors are 6 to 552 off. Fresh sweeps taken after each
+/// freeze (decision 0188 R4.2; docs/research/t3412/fresh_sweep.py): probes-numeric/t3412-fresh-sweep,
+/// shapes 1 to 20, GAMMA.DIST 90 of 90 within 4 ulp (42 bit-exact; the pair 1 and 56 over 16 ulp)
+/// and CHISQ.DIST 50 of 50 (27; the pair 2); t3412-fresh-sweep-2, shapes 20 to 170, GAMMA.DIST 55 of
+/// 60 within 4 ulp and CHISQ.DIST 27 of 30, every other cell within 16 (the pair: 42 and 19 cells
+/// over 16 ulp), no cell farther. Above x = 1 the form is not Excel's (6 of 51 bit-exact, the pair 10;
+/// neither is Excel's there, TODO(T-3412)), and the quantiles' lower tail takes the same cut at 1
+/// (`quantile_tail`). Shape 1 is e^-x's closed pair. From about shape 170 Gamma(a + 1) overflows and
+/// the form is 0, which is not a normal double, so the pair keeps it (0 too, as Excel at shapes
+/// 1E9 to 1E200: t2435-dist-extremes, fit-audit-t3271-cdf-cut, t3316-gamma-cdf-huge-shape).
+/// `None` elsewhere, where the result is not a normal double, or where the series runs out of
+/// terms.
+fn excel_lower_above_shape_one(a: f64, x: f64) -> Option<f64> {
     if !(a > 1.0 && x >= f64::MIN_POSITIVE && x <= 1.0) {
         return None;
     }
@@ -473,18 +482,20 @@ fn excel_mid_shape_lower(a: f64, x: f64) -> Option<f64> {
 
 /// Q(a, x) from shape 1 to [`DIRECT_SHAPE_MAX`] below x = a + 1, where the pair takes Q as the
 /// complement of the series' P: Excel's complement is (0.5 - P) + 0.5, not 1 - P (the two differ
-/// for P below 1/4), with P its leading-factor form up to x = 1 ([`excel_mid_shape_lower`]) and the
-/// pair's series above. On the CHISQ.DIST.RT and POISSON cdf cells with Excel's own arguments
-/// (the same hash split as [`excel_mid_shape_lower`]), it is bit-exact up to x = 1 at 51 of 51
-/// train and 32 of 33 test cells, where 1 - P of the pair is at 43 and 27, and above it at 69 of 98
-/// and 20 of 31, against 58 and 16 (T-3412). From shape 20 it is not Excel's (POISSON: 45 of 86
-/// against 71), so the callers keep their kernels there. `form` is the pair's large-shape exponent
-/// (unused below shape 20). `None` elsewhere, or past `terms`.
+/// for P below 1/4), with P its leading-factor form up to x = 1 ([`excel_lower_above_shape_one`])
+/// and the pair's series above. On the CHISQ.DIST.RT and POISSON cdf cells with Excel's own
+/// arguments (the hash split above), it is bit-exact up to x = 1 at 51 of 51 train and 32 of 33 test
+/// cells, where 1 - P of the pair is at 43 and 27, and above it at 69 of 98 and 20 of 31, against 58
+/// and 16 (T-3412). On the fresh sweep (probes-numeric/t3412-fresh-sweep) CHISQ.DIST.RT is
+/// bit-exact at 53 of 60 cells (1 - P: 47) and POISSON's cdf at 43 of 50 (38). From shape 20 it is
+/// not Excel's (POISSON: 45 of 86 against 71 for the callers' kernels), so they keep their kernels
+/// there. `form` is the pair's large-shape exponent (unused below shape 20). `None` elsewhere, or
+/// past `terms`.
 fn excel_lower_region_upper(a: f64, x: f64, form: Exponent, terms: &mut Terms) -> Option<f64> {
     if !(a > 1.0 && a < DIRECT_SHAPE_MAX && x > 0.0 && x < a + 1.0) {
         return None;
     }
-    let lower = match excel_mid_shape_lower(a, x) {
+    let lower = match excel_lower_above_shape_one(a, x) {
         Some(lower) => lower,
         None => pair_with(a, x, terms, form).0,
     };
