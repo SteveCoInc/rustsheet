@@ -28,7 +28,8 @@ copied as `eval/suites/probes/cases/t4974-<group>.case.json` (the `val-` prefix 
 
 ## Out of scope
 - The merged-range scenarios M1-M6: they are operation scripts, not cases (`sheet_ops` has no unmerge, clear,
-  paste, autofill or edge op); excel-graph cannot run copy, autofill or edge navigation.
+  paste, autofill or edge op); excel-graph cannot run copy, autofill or edge navigation. SPEC-0036 (T-4722) and its
+  tasks T-5044, T-5045, T-5047 and T-5048 own covered-cell content.
 - Fixing the engine where a probe falsifies a rule (owner tasks).
 
 ## Outcome
