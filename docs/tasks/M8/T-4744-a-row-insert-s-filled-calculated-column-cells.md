@@ -3,7 +3,7 @@ id: T-4744
 title: "A row insert's filled calculated-column cells take Excel's style (s=1 in the cached workbook) (T-4692 review follow-up)"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
