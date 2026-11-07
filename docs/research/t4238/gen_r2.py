@@ -8,6 +8,7 @@ Run: python3 docs/research/t4238/gen_r2.py > eval/suites/probes/cases/t4238-r2-a
 """
 
 import json
+import sys
 
 # (x, alpha, beta) points, one per row: column A TRUE, column B FALSE.
 POINTS = """
@@ -38,7 +39,8 @@ def main() -> None:
         "sheets": [{"name": "Calc", "cells": cells}],
         "expected": {},
     }
-    print(json.dumps(case, indent=2))
+    sys.stdout.write(json.dumps(case, indent=2) + "\n")
 
 
-main()
+if __name__ == "__main__":
+    main()
