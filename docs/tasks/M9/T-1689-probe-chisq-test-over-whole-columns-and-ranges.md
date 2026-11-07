@@ -3,7 +3,7 @@ id: T-1689
 title: "Probe CHISQ.TEST over whole columns and ranges with blanks: degrees of freedom and blank pairs"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -26,10 +26,24 @@ Probe these with the `excel-probe` skill:
 - Text and booleans in either range.
 
 ## Acceptance criteria
-- [ ] A probe case (≥ 8 cells) covers whole columns, blanks, text and booleans in 1-D and 2-D
+- [x] A probe case (≥ 8 cells) covers whole columns, blanks, text and booleans in 1-D and 2-D
       ranges, and is oracle-filled.
-- [ ] The unit test's expectation agrees with the evidence, or is corrected with the fix.
-- [ ] `make check` green; reviewers approve.
+- [x] The unit test's expectation agrees with the evidence, or is corrected with the fix.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - CHISQ.INV and CHISQ.DIST accuracy.
+
+## Outcome
+Probe `probes/t1689-chisq-test-blanks-whole-columns` (24 cells, excel-graph filled, Gate A sidecar
+written). Findings, all matched by the engine except last-digit differences:
+- Whole columns count every cell for the degrees of freedom: `CHISQ.TEST(W!A:A,W!B:B)` =
+  `CHISQ.DIST.RT(stat,1048575)` = 0.5124423901432269 (A1, A19); a 2-row range gives 0 (A2). The
+  existing unit test `chisq_test_over_whole_columns_counts_every_cell` is therefore right as it
+  is (it uses a statistic of 1, so the new probe adds a discriminating one).
+- A pair with a blank, text or boolean cell on either side is skipped alike (A6:A11, A13:A15 agree
+  across blank, text and boolean). Whether a skipped pair counts in the degrees of freedom is not
+  separated by this probe (filed nowhere: the engine matches within ulp on all 18 cells).
+- `CHISQ.TEST(A:B, C:D)` with C:D empty is `#DIV/0!` (A24).
+- Seven cells are 1 to 4 ulp off (A6:A8, A10:A11, A17:A18): follow-up T-4864.
+Eval delta: probes +24 cells, 17 pass, 7 numeric-ulp (owned by T-4864); no existing case changed.

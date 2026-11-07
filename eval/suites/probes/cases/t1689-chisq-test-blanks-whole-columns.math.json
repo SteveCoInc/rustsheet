@@ -1,0 +1,71 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "7491798886fc63b27fd29dc04c1c74663b30843900c56753b3553601152b3df1",
+  "definitions": {
+   "CHISQ.DIST.RT": "01f5d761e8de8277",
+   "CHISQ.TEST": "1c6c57fe197c6811"
+  },
+  "arguments_sha256": "181817c1ec808ff4b7a88875f9e7eb75714ecb35bb247152f2586bf5666ed1ba"
+ },
+ "sheets": {
+  "Calc": {
+   "A12": {
+    "t": "n",
+    "v": "0.19266055964483325980658374413705863000583616373639",
+    "f": "=CHISQ.TEST(H!I1:J3,H!K1:L3)"
+   },
+   "A16": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=CHISQ.TEST(H!B1:B6,H!B1:B6)"
+   },
+   "A19": {
+    "t": "n",
+    "v": "0.51244239014322693565612214191503021190279578926406",
+    "f": "=CHISQ.DIST.RT(((33381-1000)^2)/1000,1048575)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=CHISQ.TEST(W!A1:A2,W!B1:B2)"
+   },
+   "A20": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=CHISQ.DIST.RT(((33381-1000)^2)/1000,1)"
+   },
+   "A21": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=CHISQ.DIST.RT(((33381-1000)^2)/1000,2)"
+   },
+   "A22": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=CHISQ.DIST.RT(((33381-1000)^2)/1000,3)"
+   },
+   "A23": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=CHISQ.TEST(W!A1:B2,W!A1:B2)"
+   },
+   "A5": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=CHISQ.TEST(W2!A1:A4,W2!B1:B4)"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "A18": {
+    "f": "=CHISQ.TEST(H!B1:B6,H!K1:L3)",
+    "why": "no single value"
+   }
+  }
+ }
+}

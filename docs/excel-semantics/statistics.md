@@ -8472,3 +8472,14 @@ Ours: matches all 156 cells since T-4310 (the name, INDEX, IF and parenthesized 
 `#VALUE!` before, 16 cells).
 Status: VERIFIED (excel-graph)
 Tasks: T-4310
+
+## CHISQ.TEST over whole columns, blanks, text and booleans (T-1689)
+Rule: CHISQ.TEST takes its degrees of freedom from the shape of the ranges, so a whole column pair counts
+1,048,575 (`CHISQ.TEST(A:A,B:B)` with a statistic of 1,048,2xx is 0.5124423901432269 = `CHISQ.DIST.RT(stat,1048575)`,
+not the used area's df). A pair with a blank, text or boolean cell on either side is skipped alike (blank, text and boolean at the
+same position give the same value, A6, A7, A8-vs-A6 pattern); whether a skipped pair counts in the degrees of freedom is
+not separated by this probe. Whole columns of blanks as the expected range (`CHISQ.TEST(A:B,C:D)`, C:D empty) are `#DIV/0!`.
+Evidence: probes/t1689-chisq-test-blanks-whole-columns (Calc A1, A4, A19:A22 for the df; A6:A18 for the skipped pairs; A24 for the empty expected range).
+Ours: matches every value to within 1 to 4 ulp (7 cells, T-4864).
+Status: VERIFIED (excel-graph)
+Tasks: T-1689, T-4864
