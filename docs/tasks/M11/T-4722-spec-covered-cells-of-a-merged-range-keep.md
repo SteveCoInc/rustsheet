@@ -35,6 +35,9 @@ and how export writes it. Probe the UI-side questions with the excel-probe skill
       cells, each rule citing evidence or marked UNVERIFIED with a probe task.
 - [ ] Implementation tasks are filed from it (size S/M each), one of them owning the visibly-off cells of
       fixtures/merged-covered-values and fixtures/merged-covered-formula.
+- [ ] The implementation tasks own these visibly-off cells (until then this task owns them):
+      fixtures/merged-covered-values.xlsx A4:N4
+      fixtures/merged-covered-formula.xlsx B1 A3:D3
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
