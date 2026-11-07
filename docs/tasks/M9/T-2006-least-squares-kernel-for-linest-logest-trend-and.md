@@ -282,3 +282,16 @@ probes/linest-modes (oracle, excel-graph), for the multi-predictor exact-fit reg
     It trades 62 fixes for 3 regressions, so it is not taken. The merge commit of origin/main is kept (pushed).
 
 Resumed 2026-11-07 12:05 UTC by an opus run (worker step 2, branch idle 6 h).
+
+## Landing notes (2026-11-07 12:35 UTC, fourth opus run)
+- **Committed: standard errors from the centred design under KERNEL 9 with an intercept.** Slope j is
+  sqrt(se_y² · C⁻¹_jj), the intercept sqrt(se_y² · (1/n + xm'·C⁻¹·xm)), C = Xc'Xc summed row by row, inverted with
+  `invert_matrix`; se_y² is the QR tail over df. Python replica on t4222 Calc!A32 `LOGEST({2,4,5,4,5},{1..5})` row 2:
+  slope 0.08794233738872581 and intercept 0.29167173630524657, both Excel's bits. Rejected (each 1 ulp off on one of
+  the two): sqrt(var)/|r11|, sqrt(var/r11²), sqrt(var)/sqrt(sxx), and for the intercept any form through R's
+  r11 instead of sxx (sqrt(var·(1/n + xm²/r11²)), sqrt(var/r00² + (xm·se1)²)). The (D'D)⁻¹ form stays for const=FALSE.
+- `make eval-check` on this branch (main as of the third run's merge): fixed 325 (probes 283, ironcalc-calc 38,
+  gen-m9 4), REGRESSIONS 7: linest-modes L85, M85, L106 (multi-predictor exact fits, see the third notes),
+  regression-trend N35, O34, O35 (x near 1E10), ironcalc-calc TREND_GROWTH Sheet1!K5. t4222 A32, B32 are fixed.
+- Still owed before a PR: the 7 regressions above, acceptance criterion 1 (fitlab `regression` kernel and the
+  candidate table in statistics.md), the R4 hold-out and fresh sweep, and replacing the `KERNEL` scaffold with one form.

@@ -180,7 +180,11 @@ fn fit_kernel(
         let xm: Vec<f64> = cols.iter().map(|c| mean(c)).collect();
         let yc: Vec<f64> = y.iter().map(|v| v - ym).collect();
         let mut all = vec![vec![1.0; n]];
-        all.extend(cols.iter().zip(&xm).map(|(c, m)| c.iter().map(|v| v - m).collect::<Vec<f64>>()));
+        all.extend(
+            cols.iter()
+                .zip(&xm)
+                .map(|(c, m)| c.iter().map(|v| v - m).collect::<Vec<f64>>()),
+        );
         let (b, tail) = householder(&all, &yc, false)?;
         let mut intercept = ym;
         for (bj, mj) in b[1..].iter().zip(&xm) {
@@ -192,7 +196,11 @@ fn fit_kernel(
     }
     let xm: Vec<f64> = cols.iter().map(|c| mean(c)).collect();
     let mut all = vec![vec![1.0; n]];
-    all.extend(cols.iter().zip(&xm).map(|(c, m)| c.iter().map(|v| v - m).collect::<Vec<f64>>()));
+    all.extend(
+        cols.iter()
+            .zip(&xm)
+            .map(|(c, m)| c.iter().map(|v| v - m).collect::<Vec<f64>>()),
+    );
     let (b, _) = householder(&all, y, KERNEL != 7)?;
     let mut intercept = b[0];
     for (bj, mj) in b[1..].iter().zip(&xm) {
@@ -382,8 +390,33 @@ fn regress(
         f64::NAN
     };
 
-    // Standard errors: sqrt(se_y² · (D'D)^{-1}_{j,j})
-    let se_beta: Vec<f64> = {
+    // Standard errors: sqrt(se_y² · (D'D)^{-1}_{j,j}). With the QR kernel and an intercept they
+    // come from the centred design: slope j is sqrt(se_y² · C^{-1}_{j,j}) and the intercept
+    // sqrt(se_y² · (1/n + xm'·C^{-1}·xm)), C = Xc'Xc (probes/t4222-regression-flag-ranges Calc!A32,
+    // B32, LOGEST, bit-exact where the (D'D)^{-1} form is 1 ulp off).
+    let se_beta: Vec<f64> = if qr_stats && const_term {
+        let xm: Vec<f64> = (0..p)
+            .map(|j| mean(&x.iter().map(|r| r[j]).collect::<Vec<f64>>()))
+            .collect();
+        let mut ctc = vec![vec![0.0_f64; p]; p];
+        for row in x {
+            for r in 0..p {
+                for c in 0..p {
+                    ctc[r][c] += (row[r] - xm[r]) * (row[c] - xm[c]);
+                }
+            }
+        }
+        let inv = invert_matrix(&ctc)?;
+        let mut quad = 0.0;
+        for r in 0..p {
+            for c in 0..p {
+                quad += xm[r] * inv[r][c] * xm[c];
+            }
+        }
+        let mut se = vec![(var_y * (1.0 / n as f64 + quad)).sqrt()];
+        se.extend((0..p).map(|j| (var_y * inv[j][j]).sqrt()));
+        se
+    } else {
         let inv = invert_matrix(&dtd)?;
         (0..k).map(|j| (var_y * inv[j][j]).sqrt()).collect()
     };
