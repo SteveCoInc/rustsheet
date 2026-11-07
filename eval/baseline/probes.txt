@@ -2668,6 +2668,7 @@ C	probes/t4724-vdb-straight-from-zero.case.json	50
 C	probes/t4745-pivot-classic-subtotal-caption.case.json	254
 C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/t4765-growth-factor-edges.case.json	24
+C	probes/t4772-blank-y-offset-indirect-let-xlookup.case.json	32
 C	probes/t4793-growth-one-factor-underflow.case.json	4
 C	probes/t4793-growth-several-x.case.json	10
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
