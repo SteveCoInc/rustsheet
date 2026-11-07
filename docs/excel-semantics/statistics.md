@@ -8472,3 +8472,17 @@ Ours: matches all 156 cells since T-4310 (the name, INDEX, IF and parenthesized 
 `#VALUE!` before, 16 cells).
 Status: VERIFIED (excel-graph)
 Tasks: T-4310
+
+## CHISQ.TEST over whole columns, blanks, text and booleans (T-1689)
+Rule: CHISQ.TEST's degrees of freedom come from the shape of the ranges, not their used area, and a pair with a blank,
+text or boolean on either side is skipped (adds 0 to the statistic), as the engine already does. Evidence (excel-graph
+2026-11-07, probes/t1689-chisq-test-blanks-text-booleans, 24 cells; the formulas sit on their own sheet, so no whole
+column holds a formula or an error: an earlier layout with formulas inside the columns read a circular reference and
+propagated an `#N/A`, and is not evidence): every whole-column CHISQ.TEST over ten data rows is exactly 1 (df 1048575,
+so p is 1 to double precision): `A:A` with `B:B`, `D:D` with `E:E` (a blank inside), `G:G` with `H:H` (text),
+`J:J` with `K:K` (TRUE), the blank, text and FALSE in the second column, and the two-column `A:B` with `D:E`. A 10-row range
+with a blank, text or TRUE in either range gives 0.9979532433280144 (the skipped pair drops from the statistic and
+keeps the df; all-numeric: 0.997224951291803). 3x3 ranges with a blank, text or TRUE in the actual or the expected range
+give 0.8616386653047765 (all-numeric 0.8444645822929768); different shapes are `#N/A` (`A21:C23` with `E21:F23`, with
+`E21:G24`). The engine matches 23 of 24 cells; F!A1 is 1 ulp off (a numeric ulp, baselined). The unit test
+`chisq_test_over_whole_columns_counts_every_cell` is consistent with the 1-D and 2-D whole-column cells.
