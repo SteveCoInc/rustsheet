@@ -892,4 +892,31 @@ fn beta_inv_refused_elements_are_charged_one() {
     assert!(units(&text, 1, 513) > MAX_LIFTED_CELL_VISITS);
     let searched = [number(0.5), number(2.0), grid(1, 513)];
     assert!(units(&searched, 1, 513) > MAX_LIFTED_CELL_VISITS);
+    // The boundaries are refused as the kernel refuses them: p of 0 or 1, an alpha of 0, B == A,
+    // and a blank B (0, so B <= A = 0); a NaN reads as no known number and is searched.
+    for refused in [
+        [number(0.0), number(2.0), grid(1, 513)],
+        [number(1.0), number(2.0), grid(1, 513)],
+        [number(0.5), number(0.0), grid(1, 513)],
+    ] {
+        assert_eq!(units(&refused, 1, 513), 513);
+    }
+    let equal_bounds = [
+        number(0.5),
+        number(2.0),
+        number(3.0),
+        number(1.0),
+        number(1.0),
+    ];
+    assert_eq!(units(&equal_bounds, 1, 1), 1);
+    let blank_b = [
+        number(0.5),
+        number(2.0),
+        grid(1, 513),
+        number(0.0),
+        LiftedArg::Scalar(CalcResult::EmptyCell),
+    ];
+    assert_eq!(units(&blank_b, 1, 513), 513);
+    let nan = [number(f64::NAN), number(2.0), grid(1, 513)];
+    assert!(units(&nan, 1, 513) > MAX_LIFTED_CELL_VISITS);
 }

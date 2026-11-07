@@ -1082,8 +1082,15 @@ computes it (2^27 units, `limits::MAX_LIFTED_CELL_VISITS`, over 2^18 and 2^17 an
 `ROWS(BETA.INV(SEQUENCE(513)/514,2,3))`, unit test `quantile_kernels_are_charged_their_weight`). At the bound of the caps,
 512 BETA.INV elements take about 1.7 s and 1,024 T.INV elements about 1.6 s, the 2 s budget of the Bessel entries
 (engineering.md "BESSEL order cap"). Showing that a slow cdf and a long search never coincide would allow larger lifts.
+Since T-2607, a BETA.INV or BETAINV element is charged by value (`ValueWork::BetaQuantile`). An element that reaches
+the search still costs 2^18. An element `Model::beta_inv_of` refuses before it is charged 1: an error in any argument,
+a probability outside (0, 1), an alpha or beta of 0 or less, or B <= A, where a logical reads as 1 or 0 and a blank as
+0. A text is charged as searched, since it may read as any number. So a lift of refused elements runs past 512.
+`BETAINV(1+2^-52,-1,..,MAKEARRAY(4,51638,..),..)` is `#SPILL!` as in Excel (gen-m9/4250f880ab640c49 A237; unit test
+`beta_inv_refused_elements_are_charged_one`). The cap on real searches is unchanged. F.INV and the T quantiles keep the
+flat charge.
 Status: VERIFIED (excel-graph)
-Tasks: T-1848, T-1849, T-1871
+Tasks: T-1848, T-1849, T-1871, T-2607
 
 ## Incomplete gamma: per-call cap and lifting (T-1872)
 Rule: CHISQ.DIST, CHISQ.DIST.RT, CHIDIST, CHISQ.INV, CHISQ.INV.RT, CHIINV, GAMMA.DIST, GAMMADIST, GAMMA.INV, GAMMAINV,
