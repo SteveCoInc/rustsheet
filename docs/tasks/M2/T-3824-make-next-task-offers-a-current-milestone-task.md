@@ -3,7 +3,7 @@ id: T-3824
 title: "make next-task offers a current-milestone task over a lane busy only with later-milestone work"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
