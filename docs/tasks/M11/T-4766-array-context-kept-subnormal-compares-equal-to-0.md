@@ -36,8 +36,8 @@ one keeps its order, and scalar comparisons stay exact. `arithmetic::handle_comp
   2^48 units, built from the 15-digit multiplier 281474976710656, not equal) and by the -order bracket, so there is no
   hold-out split. Probe 5, -fresh (94 cells: exact m*2^-1074 built by subtraction, m log-uniform in [2^44, 2^52) with seed 4766
   and 2^48 +-1, pairs, negative operands), was written after the rule was frozen, and the engine matches all 94. A standalone
-  prediction that assumed exact operands missed E4:E6 (E5 and E6 among them): Excel cuts the 16-digit literal 1125899906842624
-  to 15 digits (1125899906842620), so those gaps are 2^48-5, 2^48-4 and 2^48-3 units and read TRUE; the engine matches because it
+  prediction that assumed exact operands missed E5 and E6 (E4 is TRUE either way): Excel cuts the 16-digit literal 1125899906842624
+  to 15 digits (1125899906842620), so the gaps of E4:E6 are 2^48-5, 2^48-4 and 2^48-3 units and read TRUE; the engine matches because it
   reproduces that cut. There is no keep-matched branch. Unprobed, the engine's choice: two normal numbers less than 2^-1026
   apart, and an empty range element read as 0 against a tiny number.
 - A3 (the saved 0 of the spilled subnormal) stays a known failure and moves to T-5051 with the new case's S!A30: decision 0042's

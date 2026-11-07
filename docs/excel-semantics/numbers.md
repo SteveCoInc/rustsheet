@@ -873,12 +873,12 @@ D1) while `(EXP(-745))=0`, `INDEX(EXP({-745,-708}),1)=0` and `=A30=0` of a spill
 same holds with the array on the left, the right or both sides (probes/t4766-array-subnormal-compare,
 probes/t4766-array-subnormal-order, 144-cell operand matrix). The switch for `(EXP({a}))=0` lies between a = -711.17 (TRUE) and
 -711.16 (FALSE), around 2^-1026 (-1026 ln 2 = -711.1648; probes/t4766-array-subnormal-exp-boundary, -order A1:A21). The
-constant 2^-1026 was chosen from those cells, then checked on a fresh sweep made after the rule was frozen
+constant 2^-1026 is bracketed by those cells and pinned to the ulp by fresh A1/A2, then checked on a fresh sweep made after the rule was frozen
 (probes/t4766-array-subnormal-fresh, 94 cells: exact m*2^-1074 built by subtraction, m log-uniform in [2^44, 2^52) and
 2^48 +-1, pairs, and negative operands): the engine matches all 94. The strict `<` is pinned to the ulp: fresh S!A2 builds
 exactly 2^48 * 2^-1074 = 2^-1026 (its multiplier 281474976710656 has 15 digits, so it is not cut) and `(...+{0})=0` is FALSE
-there, while A1 (2^48-1 units) is TRUE. Fresh E4:E6 are TRUE because the 16-digit literal 1125899906842624 is cut to 15
-significant digits (1125899906842620), so their gaps are 2^48-5, 2^48-4 and 2^48-3 units; the engine matches Excel there because
+there, while A1 (2^48-1 units) is TRUE. Fresh E5 and E6 are TRUE only because the 16-digit literal 1125899906842624 is cut to 15
+significant digits (1125899906842620), so the gaps of E4:E6 are 2^48-5, 2^48-4 and 2^48-3 units (E4 is TRUE either way); the engine matches Excel there because
 it reproduces that cut when building the operands. Not probed, the engine's choice: two normal numbers less than 2^-1026 apart
 (below about 2^-974), and an empty range element read as 0 against a tiny number (`within_array_compare_gap` fires only for
 Number/Number). POWER flushes a subnormal result (`(2^-1023)=0` TRUE, `POWER(2,-1022)=0` FALSE;
