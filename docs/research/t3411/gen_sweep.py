@@ -16,7 +16,8 @@ t3411-irr-r4-fresh-3: seed "T-3411/r4-fresh-3", round 3; t3411-irr-r4-fresh-4: s
 round 4; t3407-irr-r4-fresh: seed "T-3407/r4-fresh", T-3407's overflow rule; t4213-irr-r4-fresh: seed
 "T-4213/r4-fresh", T-4213's near-zero roots, its own six strata, below; t3347-irr-r4-fresh: seed
 "T-3347/r4-fresh", T-3347's flat-secant #DIV/0! cut, its own six strata of long series, below;
-t3408-irr-r4-fresh: seed "T-3408/r4-fresh", T-3408's 200-step secant cap, its own six strata, below)
+t3408-irr-r4-fresh: seed "T-3408/r4-fresh", T-3408's 200-step secant cap, its own six strata, below;
+t4232-irr-r4-fresh: seed "T-4232/r4-fresh", T-4232's settled flat secant, T-4213's six near-zero strata)
 """
 
 from __future__ import annotations
@@ -44,13 +45,14 @@ FROZEN = {
     "t4213-irr-r4-fresh": "T-4213: the fallback returns the Newton iterate one step past its stop",
     "t3347-irr-r4-fresh": "T-3347: a secant run flat after a zero step is #DIV/0! once its |NPV| passed 3E+226",
     "t3408-irr-r4-fresh": "T-3408: a secant run takes up to 200 steps on 6..54 flows, |c| 5.6E-9..9.6E+8",
+    "t4232-irr-r4-fresh": "T-4232: a flat secant run settled under |NPV| 1E-4 returns its last iterate after the fallback",
 }
 # The task a sweep belongs to (its seed, description and tags name it): the case name's tNNNN prefix.
 TASK = "T-" + NAME[1:5]
 # T-4213's sweep: conventional flows whose root is 1E-7..0.05 in absolute value (log-uniform), the
 # flows' scale rising by stratum so the secant's NPV noise crosses its 1e-7 stop.
 NEAR_ZERO_SCALES = [(1.0, 1e4), (1e4, 1e7), (1e7, 1e9), (1e9, 1e11), (1e11, 1e13), (1.0, 1e13)]
-NEAR_ZERO = TASK == "T-4213"
+NEAR_ZERO = TASK in ("T-4213", "T-4232")
 # T-3347's sweep: long conventional series whose secant from 0.1 jumps far toward r = -1, then stalls
 # (n flows, root band, inflow spread); the inflows' scale is log-uniform 1E-2..1E+9 in every stratum.
 FLAT_STRATA = [

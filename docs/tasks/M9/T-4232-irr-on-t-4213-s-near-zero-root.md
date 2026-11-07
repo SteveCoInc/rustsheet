@@ -3,7 +3,7 @@ id: T-4232
 title: "IRR on T-4213's near-zero-root sweep: 45 cells #NUM! where Excel returns a root, and A53/A149 at the noise floor (decision 0267)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: blocked
 priority: P2
 size: M
 tier: opus
@@ -44,3 +44,85 @@ decision 0267 accepts what is left.
 - probes-numeric/t4213-irr-r4-fresh.case.json (47): Calc!A2, A4, A6, A8, A16, A17, A20, A23, A26, A36, A38, A41, A43,
   A45, A47, A48, A49, A50, A51, A52, A53, A54, A56, A58, A60, A62, A63, A64, A65, A68, A69, A70, A72, A73, A90, A92, A93,
   A98, A99, A127, A132, A137, A138, A140, A143, A145, A149
+
+## Attempt 1 (2026-11-07, opus run): a flat secant run that settled in NPV noise
+Finding (excel-graph evidence, probes-numeric/t4213-irr-r4-fresh, filled 2026-11-04): on the large-flow strata the
+secant from 0.1 goes flat (f1 = f0 after a nonzero step) in NPV's rounding noise, never reaching the 1e-7 residual
+stop, and the fallback's 50-step Newton search gives up. Excel's value there is bit for bit one of the run's last
+secant iterates. Whether Excel returns or is `#NUM!` is decided by the smallest |NPV| at an iterate reached by two
+steps under 1e-7 in a row: all 31 Excel numbers among those flat runs have it at most 9.73E-5 (A90), all 42 Excel
+`#NUM!` cells at least 1.12E-4 (A81). That is the bracket of `IRR_ROOT_RESIDUAL` (1E-4, T-3411), so no new
+constant. Which iterate Excel returns is the last one on 23 of the 31, an earlier one (`d0`'s predecessor or the
+other point of a two-point oscillation) on 8; the replica's NPV noise does not separate them (as T-4213 found).
+
+Model (frozen and pushed at f85247120 "frozen before the fresh sweep", before either fresh sweep was drawn):
+`irr_secant` returns `SecantStop::Settled(rate at d1)` on such a flat run within `IRR_ROOT_RESIDUAL_FLOWS`;
+`compute_irr` returns it only where `irr_fallback` finds no root. Scored candidates (all IRR cells of eval, cells
+bit-exact against main / newly off): secant-first, min-|NPV| iterate +71/-4; secant-first, last iterate +74/-6;
+fallback-first, min-|NPV| +58/-1; **fallback-first, last iterate +59/-1 (chosen)**, plus 24 cells from `#NUM!` to
+within 15 digits. The one cell lost: t3411-irr-r4-fresh-2 A39 (Excel `#NUM!`, settled |NPV| 6.5E-5). The two-step
+guard was added after a one-step guard broke t3478-irr-r4-wide A58 (flows under 1E-5, a run that jumps to d = 4 and
+back). On this task's case: 108 -> 121 of 150 bit-exact, type mismatches 39 -> 23.
+
+Fresh sweeps (drawn after the freeze, filled from excel-graph 2026-11-07):
+- probes-numeric/t4232-irr-r4-fresh (gen_sweep.py seed "T-4232/r4-fresh", T-4213's six near-zero strata): main
+  101/150 bit-exact (42 type mismatches), the model 113/150 (19 type mismatches).
+- Gate A accuracy/IRR/r4-T-4232 (300 points, `rustsheet-accuracy generate IRR --batch r4-T-4232`): main 13 points
+  outside the envelope, the model 10 (A215, A229, A261, A279, A286 move in; none out). Outside with the model:
+  A148, A175, A209, A236, A243, A245, A288, A291, A292, A298.
+- Gate A overall: 44180 -> 44205 points in the envelope; 22 known-failures lines become stale (r4-T-3411 and
+  r4-T-3407 IRR points now inside). **But two points move out**: accuracy/IRR/r4-T-3411 A296
+  `IRR({-341718254096.523,120486762928.076,207737518998.484})` and r4-T-3407 A249, both Excel `#NUM!` where the
+  model now returns the root. Reviewer check 7 fails a structural model that moves a point out, so this needs either a
+  rule that keeps them or a regression decision record (decision 0082's precedent).
+- Tried after the freeze and NOT kept (it would make the fresh sweeps training data): use the settled iterate only
+  when the fallback ran out of steps, not when it converged and rejected its root. It keeps r4-T-3411 A296 but not
+  r4-T-3407 A249 or fresh-2 A39. Patch kept out of the repo.
+
+## Attempt 2 (2026-11-07 05:20-05:50 UTC, opus run): no rule keeps the three Excel #NUM! settled runs
+- Gate A governance settles the open question of attempt 1: `scripts/accuracy_governance.py` lets a new
+  `known-failures.tsv` line name only a point whose batch the same diff adds ("a committed point that fails is a
+  regression"), and has no decision-record bypass. So accuracy/IRR/r4-T-3411 A296 and r4-T-3407 A249 cannot be
+  listed, and a regression decision record (decision 0082's route) does not apply to Gate A. The model can land only
+  with a rule that keeps them `#NUM!`.
+- Measured on the branch head (engine instrumented locally, not committed): every IRR cell of `rustsheet-eval run
+  --filter irr` and of Gate A where the model returns the settled iterate because `irr_fallback` finds no root.
+  137 such cells with an oracle value: Excel returns a number on 134 and is `#NUM!` on 3 (r4-T-3411 A296, r4-T-3407
+  A249, probes-numeric/t3411-irr-r4-fresh-2 A39). For each: the smallest settled |NPV|, the flow count, the largest
+  |flow|, |NPV| over the largest |flow| and over the sum of |flows|, the step it went flat at, the last |NPV|, the
+  run's largest |NPV| and the guess. The three `#NUM!` cells sit inside the numbers' range on every one:
+  - settled |NPV| 3.05E-5, 4.53E-5, 6.53E-5; 28 Excel numbers lie in 3.0E-5..9.73E-5 among them (t3406-irr-num-boundary
+    A124 at the same 3.05E-5 as A296, s1 A260 4.62E-5 and A259 4.86E-5 either side of A249);
+  - flows 3, 114, 44 against 11..146; largest |flow| 3.4E+11, 1.0E+11, 3.9E+10 against up to 7.2E+11;
+  - |NPV|/largest |flow| 8.9E-17, 4.5E-16, 1.7E-15 against 1.8E-17..2.4E-15; flat at step 6, 9, 42 against 5..136.
+  Only "3 flows" isolates A296, and only for that cell: a keep-matched branch (reviewer-excel-fidelity check 7).
+- A lower settled cut (under 3.05E-5) would keep all three, but it would be chosen to avoid those cells, not by score:
+  every cut from 1E-4 down to 3.05E-5 scores better on the cells above (it drops 28 Excel numbers to keep 3). That is
+  a keep-matched cut, so it is not proposed. Excel's own NPV noise near 1E-4 (which the engine does not replicate,
+  T-4213) is the likely separator.
+
+## Blocked because: time-boxed (decision 0056)
+Two attempts recorded. The flat-settled model (pushed on this branch,
+draft PR #3825) fixes about 85 cells but moves two committed Gate A points out of the envelope, which governance does
+not allow; no rule in the flows separates them (attempt 2). Decision 0267 accepts the cells left. Unblocking needs one
+of: an owner ruling that allows listing a regressed committed Gate A point (a change to accuracy_governance.py, a
+protected gate), or a replica of Excel's NPV noise good enough to separate the three settled `#NUM!` runs.
+
+## Landing notes (2026-11-07 03:05 UTC, opus run, landing window closing)
+Resumed 2026-11-07 05:20 UTC by an opus run (worker step 2, branch idle 2 h).
+- Branch agent/functions-financial/T-4232-irr-near-zero-root; draft PR #3825, head 820a8a987 plus this notes commit (CI expected red until the gaps below are closed). Not enqueued, no
+  reviewer has run.
+- Not done yet: the hold-out table (fit lab split, `tools/src/rustsheet_tools/fitlab/holdout.py`, margin 5 points)
+  for the chosen candidate, main and the correctly rounded root; `known-failures.tsv` lines owned by T-4232 for the 10 r4-T-4232 points outside the envelope and removal
+  of the 22 stale lines; `make eval-baseline` (CI's eval gate will report fresh-2 A39 as a regression); a
+  financial.md entry under "IRR's returns where the secant fails are Newton iterates".
+- Done after the notes: probes-numeric/t4232-irr-r4-fresh.math.json is committed (`rustsheet-accuracy math --suite
+  probes-numeric --function IRR`, which also rewrote t3347-irr-conventional-sweep.math.json: reverted, the check
+  passes on the committed one); `make eval-math-check` is current; a unit test pins t4213-irr-r4-fresh A54
+  (`a_flat_secant_run_settled_in_npv_noise_returns_its_last_iterate`); fmt and clippy are clean.
+- Next step: decide the two Gate A points moved out. Look for a rule in the flows that separates r4-T-3411 A296,
+  r4-T-3407 A249 and fresh-2 A39 (all Excel `#NUM!`, settled under 1E-4) from the 31+ settled Excel numbers, on
+  a fresh hold-out; if none, a regression decision record (`make new-decision`) for 3 lost cells against about 85
+  gained, then the review panel (design, security, excel-fidelity).
+- Do not repeat: secant-first ordering (loses 3-5 bit-exact cells where today's fallback already gives Excel's
+  bits: t3411-irr-r4-fresh A129, fresh-2 A108, t3347-irr-conventional-sweep A100); a one-step convergence guard.
