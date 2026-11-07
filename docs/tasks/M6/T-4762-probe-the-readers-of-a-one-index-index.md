@@ -3,7 +3,7 @@ id: T-4762
 title: "Probe the readers of a one-index INDEX over a column of references (AVERAGE, MAX, ROWS of the nested INDEX, SUM of INDEX(INDEX(r,2),1))"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
