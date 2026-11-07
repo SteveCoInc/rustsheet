@@ -709,7 +709,7 @@ F	roundtrip-poi/51470.xlsx#R1/all	* 229 25d4c634e83e5e06
 F	roundtrip-poi/51585.xlsx#R1/all	* 10029 4a6a92815a1993e5
 F	roundtrip-poi/51710.xlsx#R1/all	* 26583 e88515258f72eb33
 F	roundtrip-poi/51963.xlsx#R1/all	* 229 783d881e59445c1c
-F	roundtrip-poi/52348.xlsx#R1/all	* 335 7c6ee437c035ba38
+F	roundtrip-poi/52348.xlsx#R1/all	* 334 7c0d3f75e58c2ad8
 F	roundtrip-poi/52425.xlsx#R1/all	* 163 055d2c301b145c52
 F	roundtrip-poi/52575_main.xlsx#R0	* 221 ae22a0d85f904dad
 F	roundtrip-poi/53101.xlsx#R1/all	* 270 bb9492a29aae2109
@@ -717,7 +717,7 @@ F	roundtrip-poi/53105.xlsx#R1/all	* 266 385d2357e507f24c
 F	roundtrip-poi/53568.xlsx#R1/all	* 4486 b69ed89e54506236
 F	roundtrip-poi/53798.xlsx#R1/all	* 346 f1ebf5f859a4b530
 F	roundtrip-poi/53798_shiftNegative_TMPL.xlsx#R1/all	* 346 f1ebf5f859a4b530
-F	roundtrip-poi/54288.xlsx#R1/all	* 563 5a31852e8ddf3a3a
+F	roundtrip-poi/54288.xlsx#R1/all	* 562 ecc9078c69cd298e
 F	roundtrip-poi/54436.xlsx#R0	* 296 2cd19df138a87ec5
 F	roundtrip-poi/54607.xlsx#R1/all	* 263 8b7f30dd185acb68
 F	roundtrip-poi/54764-2.xlsx#R0	!EngineError
@@ -747,7 +747,7 @@ F	roundtrip-poi/57826.xlsx#R1/all	* 612 98ceec296d90ac74
 F	roundtrip-poi/57893-many-merges.xlsx#R1/all	* 128 473b31cb2d2a2e84
 F	roundtrip-poi/57914.xlsx#R1/all	* 4 05ecfb0acb27db3b
 F	roundtrip-poi/58106.xlsx#R1/all	* 287 1cbd0e8c127136e8
-F	roundtrip-poi/58325_db.xlsx#R1/all	* 557 c2ef432f72eb66ef
+F	roundtrip-poi/58325_db.xlsx#R1/all	* 556 25730b28397f1c22
 F	roundtrip-poi/58325_lt.xlsx#R1/all	* 100 99fb15fee1c1ff6d
 F	roundtrip-poi/58616.xlsx#R0	!InvalidCase
 F	roundtrip-poi/59021.xlsx#R0	!EngineError
@@ -770,7 +770,7 @@ F	roundtrip-poi/64508.xlsx#R0	* 1 4104e5ce01c743e5
 F	roundtrip-poi/64667.xlsx#R0	* 1 4104e5ce01c743e5
 F	roundtrip-poi/64667.xlsx#R1/all	* 485 6b2c8c89e9f4abce
 F	roundtrip-poi/65016.xlsx#R0	* 1 4104e5ce01c743e5
-F	roundtrip-poi/65016.xlsx#R1/all	* 212 1c01887f375f8710
+F	roundtrip-poi/65016.xlsx#R1/all	* 210 1d48844c15187c5b
 F	roundtrip-poi/66365.xlsx#R0	* 2 eb8ba75aa320657f
 F	roundtrip-poi/AmpersandHeader.xlsx#R1/all	* 270 5ed04e490cca7793
 F	roundtrip-poi/BrNotClosed.xlsx#R1/all	* 255 0ed7c687492bfcf3
@@ -804,7 +804,7 @@ F	roundtrip-poi/bug64512_embed.xlsx#R1/all	* 336 79b0e237b6588876
 F	roundtrip-poi/bug65306.xlsx#R1/all	* 126 63fe0bf9b2af9daa
 F	roundtrip-poi/bug65464.xlsx#R1/all	* 450 e383e638528ab3d8
 F	roundtrip-poi/bug66215.xlsx#R1/all	* 238 7bdb069dd70570a4
-F	roundtrip-poi/bug66675.xlsx#R1/all	* 339 b68110cda37cdcbf
+F	roundtrip-poi/bug66675.xlsx#R1/all	* 338 68c1feb8454ebe29
 F	roundtrip-poi/bug67784.xlsx#R0	* 6 a2dd96991e9b9e0e
 F	roundtrip-poi/bug69812.xlsx#R1/all	* 113 3e7afa3434e22aa2
 F	roundtrip-poi/chartTitle_noTitle.xlsx#R1/all	* 1245 275b98c6b3573423
@@ -820,9 +820,9 @@ F	roundtrip-poi/evaluate_formula_with_structured_table_references.xlsx#R1/all	* 
 F	roundtrip-poi/formula-eval.xlsx#R1/all	* 84 7d3b3f18a007bf99
 F	roundtrip-poi/github-321.xlsx#R1/all	* 114 037180ff63ca519e
 F	roundtrip-poi/invalid_cell_reference.xlsx#R0	!EngineError
-F	roundtrip-poi/link-external-workbook-a.xlsx#R1/all	* 34 8dc5beb3edbd7b3f
+F	roundtrip-poi/link-external-workbook-a.xlsx#R1/all	* 33 1b16383e8b613853
 F	roundtrip-poi/link-external-workbook-b.xlsx#R0	* 4 ae8bef3e867ec041
-F	roundtrip-poi/link-external-workbook-b.xlsx#R1/all	* 34 b814464d8b2b427e
+F	roundtrip-poi/link-external-workbook-b.xlsx#R1/all	* 33 020d54b21e7cd90e
 F	roundtrip-poi/noSharedStringTable.xlsx#R1/all	* 132 8ba4793fe7ad8d5f
 F	roundtrip-poi/npe.xlsx#R1/all	* 1397 b4b58e4504fdc780
 F	roundtrip-poi/picture.xlsx#R0	* 4 56d2f7965d1ba28b
@@ -846,6 +846,6 @@ F	roundtrip-poi/xlmmacro.xlsm#R1/all	* 182 93ad0bebadb6c235
 F	roundtrip-poi/xlookup.xlsx#R1/all	* 1 50a248930821e1ec
 F	roundtrip-poi/xlsx-corrupted.xlsx#R0	* 1 cf0fb6f1a83dde39
 F	roundtrip-poi/xlsx-corrupted.xlsx#R1/all	* 597 3ccf4167609c94b8
-F	roundtrip-poi/xlsx-jdbc.xlsx#R1/all	* 33 41d08a743242e112
+F	roundtrip-poi/xlsx-jdbc.xlsx#R1/all	* 30 021dfe4c83d2d1be
 F	roundtrip-poi/xssf-enum.xltx.xlsx#R0	* 1 cf0fb6f1a83dde39
 F	roundtrip-poi/xxe_in_schema.xlsx#R1/all	* 182 f51717a2e3d2940d
