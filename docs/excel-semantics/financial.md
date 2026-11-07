@@ -461,7 +461,7 @@ plus ironcalc-calc FINANCIAL/IPMT_PPMT.xlsx, Mac Excel cached values):
   would have been fixed by it. The probe is done (probes/t3179-cumipmt-ipmt-sum: Excel's IPMT there is ...485, so
   CUMIPMT has a form of its own, "CUMIPMT of one period is not that period's IPMT"); that form is open (T-4197).
 Status: VERIFIED to the bit (Mac Excel cached values and excel-graph probes).
-Implemented in: `discounted_split`, `discounted_balance`, `discount_complement`, `payment_factor` and
+Implemented in: `discounted_split`, `discounted_balance`, `excel_one_minus_exp` (x87_exp.rs), `payment_factor` and
 `period_payments`' `SplitForm` (crates/rustsheet-engine/src/functions/financial/annuity.rs, T-2243). Where the form
 is not finite (`1-Q` or `A` past the double range), and for CUMIPMT's `SplitForm::Exact`, the forms of the entries
 named above still decide.
@@ -2670,9 +2670,25 @@ T-3067 notes (float64 fit, 2026-10-28; nothing changed in the kernel):
   intermediates for Kahan's product and quotient and for the exponent (at most 25 of 36 distinct principals), the
   extended-precision LN in Kahan's divide (25), libm's expm1 (19 to 21), `1 - EXP` throughout (5), and every per-period
   and geometric ordering of the T-3067 notes (at most 21).
+- **The grouped balance drop (T-4975 item 13; docs/research/excel-parity-findings-2026-11-07.md §13).** Excel's
+  CUMPRINC is PPMT summed in closed form on PMT's own discounted balance: with `(A, L)` PMT's `A = pv/(1-Q(-nper·L))`
+  and [`growth_log`]'s L, `tail = EXP(-(nper-end+1)·L)` and `drop = 1 - EXP(-m·L)` (Excel's 1 - e^x: its Kahan expm1
+  below |x| = 1), the principal is `-(A·(drop·tail))`, times `1+rate` for type 0; type 1 counts m from period 2 and adds
+  PMT itself when the range starts at period 1. The three products (both exponents and the balance's) are Excel's
+  twice-rounded `*`: with single roundings `CUMPRINC(0.01,101,100000,1,12,1)` is -8240.63855087535, an ulp off Excel's
+  -8240.638550875348 (probes/fin-cumprinc-form-boundaries F2). Over the 2,095 literal-argument CUMPRINC cells of the
+  probe cases where A has a value (1,108 type 0, 766 type 1, 221 type 1 from period 1) it is bit-exact on 2,093; the two
+  misses are 1 ulp (t3524-cumprinc-lead-fresh-sweep A432 `CUMPRINC(0.000191183178824413,376,271.075222,1,238,1)` and
+  t3524-cumprinc-tiny-rate-sweep A476). It replaced the fitted selectors `GEOMETRIC_MIN_LEAD` (T-3067, T-3524) and
+  T-4349's short band, and the payment's `discount_complement` went for the shared `excel_one_minus_exp`. Through the
+  exact `PMT·m - CUMPRINC` it fixes CUMPRINC_CUMIPMT.xlsx G29 (`CUMIPMT(0.0083,36,8000,3,10,0)` -459.6252739600568,
+  visibly off before) and T-3731's 37 visibly-off tiny-rate-structure cells (A10 `CUMIPMT(2E-5,100,100000,12,12,1)`
+  -1.7801601439258548, H2, O10). Eval: 868 cells fixed (probes 842, ironcalc-calc 14, gen-m9 12), none lost; Gate A's
+  32 CUMIPMT known failures (T-4390) became stale and left eval/accuracy/known-failures.tsv. The earlier forms stay
+  for a rate lost in `1+rate` and where A has no value.
 Status: PARTLY VERIFIED (excel-graph; visibly right but for A7 (= G2) and A10 near period 1E15, fin-cumipmt-period-bound
 A18, fin-cumprinc-near-1e15 E7, and the CUMIPMT cells that amplify our CUMPRINC's last bits (gate-edges A1-A4, A6, A7,
-E3-E10, H3, gen-m9 A352: T-3413; tiny-rate-structure's other 37: T-3776 (blocked time-boxed after T-3552 and T-3731 found no form); T-3118 moved 7 off the bit, decision 0197: gen-m9 A329,
+E3-E10, H3, gen-m9 A352: T-3413, to re-measure on the grouped balance drop; tiny-rate-structure's other 37 pass since T-4975 (T-3776 was blocked time-boxed); T-3118 moved 7 off the bit, decision 0197: gen-m9 A329,
 `CUMPRINC_CUMIPMT.xlsx` G3, overflow-and-forms A8, A12, A14, gate-edges A1, tiny-rate-structure F2) and T-3141 (the
 underflowed principal's bits); the short sums' last digits in T-1374)
 Tasks: T-1845, T-1890, T-2192, T-2363, T-2514, T-2521, T-3067, T-3118, T-3141, T-3413, T-3552, T-3731, T-3776, T-1374
