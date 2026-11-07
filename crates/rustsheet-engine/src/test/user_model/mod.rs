@@ -39,6 +39,7 @@ mod test_on_paste_styles;
 mod test_paste_csv;
 mod test_paste_merged_cells;
 mod test_recursive;
+mod test_relative_name_edits;
 mod test_rename_sheet;
 mod test_row_column;
 mod test_sheet_state;

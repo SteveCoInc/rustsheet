@@ -554,7 +554,14 @@ fn stringify(
             absolute_column,
         } => stringify_reference(
             context,
-            displace_data,
+            match rewrite {
+                Rewrite::Displace(displacement)
+                    if displacement.keeps(*absolute_row, *absolute_column) =>
+                {
+                    &DisplaceData::None
+                }
+                _ => displace_data,
+            },
             &Reference {
                 sheet_name,
                 sheet_index: *sheet_index,
@@ -582,8 +589,19 @@ fn stringify(
                 (*absolute_row1, *row1, *absolute_row2, *row2),
                 (*absolute_column1, *column1, *absolute_column2, *column2),
             );
+            // A range is kept when any corner's edited axis is relative: a range mixing a relative
+            // and an absolute corner is unprobed (T-4760).
+            let kept = matches!(rewrite, Rewrite::Displace(displacement)
+                if displacement.keeps(*absolute_row1 && *absolute_row2, *absolute_column1 && *absolute_column2));
+            let displace_data = if kept {
+                &DisplaceData::None
+            } else {
+                displace_data
+            };
             let grown = match (rewrite, context) {
-                (Rewrite::Displace(displacement), Some(context)) if !full_row && !full_column => {
+                (Rewrite::Displace(displacement), Some(context))
+                    if !kept && !full_row && !full_column =>
+                {
                     let at =
                         |absolute, value, origin| if absolute { value } else { value + origin };
                     displacement.range_corners(

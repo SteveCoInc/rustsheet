@@ -639,7 +639,18 @@ Status: VERIFIED (excel-graph, 2026-11-07). Predictions were committed before th
   Calc!A3, after `insert_row 4` on Data (Data!An = n*10): A1 40, A3 60, the literal addresses A5 and A7. After
   `delete_row 4`: 60 and 80 (A5, A7 again). The absolute names of T-4702 shift; relative ones are left alone.
   Evidence: probes/sheet-ops/t4747-name-relative-insert-row and -delete-row.
-- The engine shifts them (50/70 both ways), anchoring the name at A1 of the edited sheet: a mismatch, owned by T-4760.
+- **The same holds when the name is used from the edited sheet itself** (T-4760). With the same `Rel` used from Data!A1,
+  A3 and A20, after `insert_row 4` on Data: A1 40, A3 60, and A20 (now A21) 240. After `delete_row 4`: 60, 80, and A20
+  (now A19) 240. Calc!A1 reads 40 and 60, as in T-4747. The name's text keeps `Data!A5`. A formula cell that moves
+  reads the same offset from its new address: A21 reads A25, which is old A24. Evidence:
+  probes/sheet-ops/t4760-name-relative-same-sheet-insert-row and -delete-row (excel-graph, 2026-11-07; predictions
+  were committed before the fill).
+- Unprobed: column edits; a mixed reference (`$A5`, `A$5`); a range with one relative and one absolute corner; a
+  relative reference whose row is deleted.
+- The engine matches (T-4760). `Model::displace_defined_names` sets `Displacement::keep_relative`. A row edit then
+  leaves every relative row, and a column edit every relative column, of a name's references. A range stays put when
+  any corner's edited axis is relative. The column and mixed cases follow that reading by hand, without a probe.
+  Unit tests: test/user_model/test_relative_name_edits.rs.
 
 Still unprobed (T-4761, the harness cannot express them yet):
 - how Excel spells a rewritten name in Name Manager (the engine stores `#REF!` and `S!$C$1:$C$1`);

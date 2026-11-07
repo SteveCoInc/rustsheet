@@ -259,6 +259,13 @@ impl Model {
     /// own: A1 of the edited sheet anchors them, which only a relative reference reads (unprobed).
     /// A name the edit does not change keeps its text as stored.
     pub(crate) fn displace_defined_names(&mut self, sheet: u32, displacement: Displacement) {
+        // Excel leaves a relative reference in a name where it is, whichever sheet uses the name
+        // (probes/sheet-ops/t4747-name-relative-*, t4760-name-relative-same-sheet-*, excel-graph);
+        // absolute ones shift (T-4702).
+        let displacement = Displacement {
+            keep_relative: true,
+            ..displacement
+        };
         if !matches!(
             displacement.data,
             DisplaceData::Row { .. } | DisplaceData::Column { .. }

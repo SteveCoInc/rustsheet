@@ -23,6 +23,10 @@ pub(crate) struct Displacement<'a> {
     /// The tables (lowercase) a column insert or delete left of them moves whole, with no
     /// change to their column list: a `#This Row` reference to one keeps its text (T-4680).
     pub(crate) moved_tables: &'a [String],
+    /// Whether a relative axis of a reference stays where it is: a row edit leaves a relative
+    /// row, a column edit a relative column. Set for defined names, whose relative references
+    /// Excel does not move (references.md "Relative references in a name", T-4747, T-4760).
+    pub(crate) keep_relative: bool,
 }
 
 /// The data rows `rows` and columns `columns` of a table on `sheet`, before the edit.
@@ -43,7 +47,19 @@ impl Displacement<'_> {
             deleted_columns: &[],
             deleted_tables: &[],
             moved_tables: &[],
+            keep_relative: false,
         }
+    }
+
+    /// Whether this edit leaves a reference with these flags (of every corner, for a range)
+    /// where it is, under [`Displacement::keep_relative`].
+    pub(super) fn keeps(&self, absolute_rows: bool, absolute_columns: bool) -> bool {
+        self.keep_relative
+            && match self.data {
+                DisplaceData::Row { .. } => !absolute_rows,
+                DisplaceData::Column { .. } => !absolute_columns,
+                _ => false,
+            }
     }
 
     /// The displacements of the two corners of the plain range `rows` x `columns` on sheet
