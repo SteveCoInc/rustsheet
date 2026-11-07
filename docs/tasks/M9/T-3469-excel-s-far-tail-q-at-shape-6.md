@@ -64,8 +64,8 @@ Cells this task owns:
   lands first records it in both)
 
 ## Acceptance criteria
-- [ ] The cells above within 15 digits of Excel, or a probe recorded in statistics.md showing why not.
-- [ ] Any change passes decision 0188 R4 (hold-out split, fresh sweep, FITTED tags), and no cell regresses
+- [x] The cells above within 15 digits of Excel, or a probe recorded in statistics.md showing why not.
+- [x] Any change passes decision 0188 R4 (hold-out split, fresh sweep, FITTED tags), and no cell regresses
       (main-vs-HEAD per cell).
 - [ ] `make check` green; reviewers approve.
 
@@ -93,3 +93,25 @@ t3269-fresh-sweep-2 A173 and A233 (shape 3/2, 17 and 21 ulp), which move to T-49
 Adopted as an orphan PR (#3905) by the opus worker, which closed the task on this change: every owned cell is
 within 15 digits, and the three remaining Second-extension cells moved to T-4954. The change is a choice of formula
 already used by the cdf and density (`direct_deviance`), not a scored fit: no constant moves, no FITTED tag.
+
+Decision 0188 R4 for this structural-model choice (kind (c); review round 1). Columns are n, bit-exact, within 4 ulp,
+within 15 digits, inside the Gate A envelope (decision 0188 R2); "ratio" is the old exponent, "direct" this change.
+- R4.1 hold-out: T-3269's split unchanged (docs/research/t3269/holdout-split.tsv, 1058 cells, fit set all train);
+  ratio = holdout-head.json (T-3269's head), direct = holdout-t3469.json (this branch's binary);
+  docs/research/t3469/holdout.out. All cells: train ratio 792 157 591 661 792, direct 792 165 611 678 792; test
+  ratio 266 43 202 216 266, direct 266 44 207 221 266. In the form's range (30 < x <= 600, shapes 3/2 to 11):
+  train 455 89 411 430 against 455 96 430 446; test 157 27 150 150 against 157 28 155 155. Per cell (ulps of Excel)
+  27 closer, 0 farther, 1031 the same (`holdout.py compare head t3469`).
+- R4.2 fresh sweep: probes-numeric/t3469-fresh-sweep-3 (200 cells, docs/research/t3469/fresh_sweep_3.py, seed
+  34693), committed unfilled in c466178b2 after the freeze a9735e107 (crates/ unchanged since), then filled once from
+  excel-graph (2026-11-07). Ratio = the merge base a300350e built in its own worktree, direct = this branch. All
+  cells: ratio 200 38 168 174 200, direct 200 39 171 177 200; in the form's range (174 cells) ratio 174 38 159 164
+  174, direct 174 39 162 167 174. Per cell 4 closer (A5 `POISSON(9,30.146,TRUE)` 22 to 9 ulp, A51
+  `POISSON(9,204.407,TRUE)` 219 to 2, A160 `CHISQ.DIST.RT(287.258,9)` 82 to 0, A200 `CHISQ.DIST.RT(934.622,21)` 506
+  to 2), 0 farther, 196 the same. The direct form does not do worse than the ratio form at any hold-out or sweep cell.
+- Gate A: all 1058 hold-out cells and all 200 sweep cells are inside the envelope for both forms; no point is
+  outside it (largest relative error against the 50-digit Q 9.7e-14 on the hold-out, 9.6e-14 on the sweep).
+- The sweep's visibly-off cells now have owners: six inside the form's range, unchanged by this change except A5
+  (shape 3/2 A29, A144, A174 at 18 to 28 ulp; shape 5/2 A27, A175 at 5; A5 at 9), to T-4954; sixteen past x = 600
+  or above shape 11, where the accurate kernel stays (12 to 901 ulp), to T-3640 (deferred): Excel is not the
+  accurate kernel there either, and the shape-3/2 misses are not confined to fresh-sweep-2.

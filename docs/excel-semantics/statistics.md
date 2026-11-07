@@ -1648,8 +1648,8 @@ switches there is open, T-3469), and past x = 600 it is unmeasured.
   tried (Excel's LN, ln x - ln a, x87 ops, -a rlog) changes it. Half-integer shapes below x = 30 are none of the forms
   tried (T-3285).
 - Correction (T-3469): the exponent is not the ratio form a ln(x/a) + (a - x) T-3269 took but -B, Loader's direct
-  deviance B = a ln(a/x) + (x - a) (`density::direct_deviance`, as the far-above-the-mean cdf and the density take
-  it). The two are the same number, but x/a and a/x round differently before the log, and |ln Q| of 30 to 90
+  deviance B = a ln(a/x) + (x - a) (`density::direct_deviance`, as the far-above-the-mean cdf at shapes 31 to 301,
+  T-4302, and the density at shape 20 and above, T-4308, take it). The two are the same number, but x/a and a/x round differently before the log, and |ln Q| of 30 to 90
   magnifies that. With B, at the same switch and shape range: gen-m9/43c6227e0ff368c7 A108 `POISSON(5,42,-1)` 25 to
   0 ulp, gen-m9/5919660b7bb4d195 A80 `POISSON(9,100,..)` and its twin probes-numeric/t1049-chisqdistrt A28 72 to 0,
   t3269-shape6-misses A46 `POISSON(5,38,TRUE)` 26 to 0, A67 and A68 (and their twins t2561-chisq-dist-rt-past-edge
@@ -1659,7 +1659,20 @@ switches there is open, T-3469), and past x = 600 it is unmeasured.
   are fixed, 29 more are closer and none is farther. Still off and not this form's rounding: t3269-shape6-misses A69
   `POISSON(4,42,TRUE)` (shape 5, 6 ulp), t3269-fresh-sweep-2 A173 `CHISQ.DIST.RT(69.988,3)` and A233
   `CHISQ.DIST.RT(61.3502,3)` (shape 3/2, 17 and 21 ulp), and gen-m9/caa1eed48b1883fe A59 `CHIDIST(100,9)` (1 ulp).
-  The x / a = 10 cells above shape 11 (A183, A184, 5 ulp) are outside the form's range.
+  The x / a = 10 cells above shape 11 (A183, A184, 5 ulp) are outside the form's range. Decision 0188 R4 (the
+  T-3469 Outcome): on T-3269's hold-out 27 cells closer and none farther than the ratio form, and on a fresh sweep
+  (probes-numeric/t3469-fresh-sweep-3, 200 cells) 4 closer and none farther; every cell inside the Gate A envelope.
+  That sweep adds shape-3/2 misses at x 30.9 to 33.3 (A29, A144, A174, 18 to 28 ulp; T-4954) and cells past x = 600
+  and above shape 11 where Excel is not the accurate kernel (12 to 901 ulp; T-3640).
+- Quirk (T-3469): at shapes 3 to 11 past x = 30 Excel's Q and its density take different exponents for the same
+  Stirling prefactor. Q's far tail (shapes 3/2 to 11, 30 < x <= 600) is -B, the direct deviance, above; the density
+  below shape 20 above the mode (x > 1.4a) keeps the ratio form a ln(x/a) + (a - x) (`density::density_with`,
+  `excel_ratio_exponent`): `CHISQ.DIST(40,10,FALSE)` is Excel's 6.870512074795199E-6 bit for bit with the ratio
+  form, and in T-3147's fit Loader's saddle point (R's `dpois_raw`, whose deviance far from the mode is this direct
+  one) was never more often exact than the ratio form ("Found in T-3147" above). Only at shape 20 and above does
+  the density take the direct deviance too (T-4308). So at shapes 3 to 11 above 1.4a and past x = 30 Excel's pdf and
+  Q are not one prefactor's two uses; the density's T-3147 evidence predates this correction and was not re-scored
+  with the direct deviance (UNVERIFIED for the density).
 
 ## HYPGEOM.DIST: per-call cap and lifting (T-1873)
 Rule: HYPGEOM.DIST and HYPGEOMDIST lift every argument over an array and over a two-cell range on the formula's own rows,

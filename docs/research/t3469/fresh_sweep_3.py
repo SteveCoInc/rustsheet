@@ -11,43 +11,22 @@ re-running writes the same case, eval/suites/probes-numeric/cases/t3469-fresh-sw
 Run (repo root): tools/.venv/bin/python -I docs/research/t3469/fresh_sweep_3.py
 """
 
-import math
 import random
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "docs/research/t3269"))
-from fresh_sweep import write_case  # noqa: E402
+from fresh_sweep import shape_sweep, write_case  # noqa: E402
 
 CASE = ROOT / "eval/suites/probes-numeric/cases/t3469-fresh-sweep-3.case.json"
-rng = random.Random(34693)
-
-
-def log_uniform(lo: float, hi: float) -> float:
-    return math.exp(rng.uniform(math.log(lo), math.log(hi)))
-
-
-def shape(lo: float, hi: float) -> float:
-    return min(max(round(2.0 * log_uniform(lo, hi)) / 2.0, lo), hi)
-
-
 plan = (
     [(1.5, 11.0, 30.0, 600.0)] * 160
     + [(1.5, 11.0, 27.0, 34.0)] * 15
     + [(1.5, 11.0, 500.0, 700.0)] * 10
     + [(10.5, 12.5, 30.0, 600.0)] * 15
 )
-cells, hypotheses = {}, {}
-for n, (a_lo, a_hi, x_lo, x_hi) in enumerate(plan, 1):
-    a = shape(a_lo, a_hi)
-    x = float(f"{log_uniform(x_lo, x_hi):.6g}")
-    if a.is_integer() and n % 2:
-        formula, label = f"=POISSON({int(a) - 1},{x:g},TRUE)", f"fresh3/poisson/a={a:g}/x={x:g}"
-    else:
-        formula, label = f"=CHISQ.DIST.RT({2 * x:g},{int(2 * a)})", f"fresh3/chisq/a={a:g}/x={x:g}"
-    cells[f"A{n}"] = formula
-    hypotheses[f"Calc!A{n}"] = label
+cells, hypotheses = shape_sweep(random.Random(34693), plan, "fresh3")
 write_case(
     CASE,
     "T-3469 fresh log-uniform sweep after the direct-deviance far-tail form was frozen (decision 0188 R4.2): "

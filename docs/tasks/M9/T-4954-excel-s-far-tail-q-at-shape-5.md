@@ -12,8 +12,8 @@ campaign: visible
 ---
 
 ## Goal
-The three cells of T-3469's "Second extension" that the direct-deviance exponent did not move match Excel within 15
-digits, or a probe recorded in statistics.md shows why not.
+The three cells of T-3469's "Second extension" that the direct-deviance exponent did not move, and the six of
+T-3469's fresh sweep the form misses, match Excel within 15 digits, or a probe recorded in statistics.md shows why not.
 
 ## Context
 - T-3469 switched `incomplete_gamma/excel_tail.rs::excel_far_upper`'s prefactor exponent from the ratio form
@@ -31,6 +31,10 @@ digits, or a probe recorded in statistics.md shows why not.
 Cells this task owns:
 - probes-numeric/t3269-shape6-misses.case.json (1): Calc!A69
 - probes-numeric/t3269-fresh-sweep-2.case.json (2): Calc!A173, A233
+- probes-numeric/t3469-fresh-sweep-3.case.json (6, T-3469's R4.2 sweep inside the form's range, ulps of Excel's
+  value, the same on the ratio form): shape 3/2 Calc!A29 `CHISQ.DIST.RT(61.7076,3)` (18), A144
+  `CHISQ.DIST.RT(66.6632,3)` (22), A174 `CHISQ.DIST.RT(65.0478,3)` (28); shape 5/2 A27 `CHISQ.DIST.RT(444.398,5)` (5),
+  A175 `CHISQ.DIST.RT(66.124,5)` (5); shape 10 next to the cut A5 `POISSON(9,30.146,TRUE)` (9; 22 on the ratio form)
 
 ## Acceptance criteria
 - [ ] The cells above within 15 digits of Excel, or a probe recorded in statistics.md showing why not.
