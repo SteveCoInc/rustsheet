@@ -9824,11 +9824,6 @@ F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B10
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B11
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B9
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!F9
-F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!A26
-F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!A29
-F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!A32
-F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!A35
-F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!A38
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!A49
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!A58
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!A65

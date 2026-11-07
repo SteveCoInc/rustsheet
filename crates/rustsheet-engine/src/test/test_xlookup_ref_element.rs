@@ -101,6 +101,36 @@ fn offset_lifts_over_a_mixed_grid() {
     }
 }
 
+// The RANK family lifts over the elements of a mixed grid: the hit (a value) is #VALUE!, the miss
+// ranks against its range G1:G2 = 50, 60 (probes/t4704-mixed-xlookup-grid-readers A25:C38,
+// T-4740).
+#[test]
+fn rank_lifts_over_a_mixed_grid() {
+    let mut model = data();
+    model._set("K1", &format!("=RANK(60,{X_G})"));
+    model._set("K4", &format!("=RANK.EQ(60,{X_G})"));
+    model._set("K7", &format!("=RANK.AVG(60,{X_G})"));
+    model._set("K10", &format!("=RANK(20,{X_G})"));
+    model._set("K13", &format!("=RANK(50,{X_G})"));
+    model._set("L1", &format!("=ROWS(RANK(60,{X_G}))"));
+    model.evaluate();
+    for (cell, expected) in [
+        ("K1", "#VALUE!"),
+        ("K2", "1"),
+        ("K4", "#VALUE!"),
+        ("K5", "1"),
+        ("K7", "#VALUE!"),
+        ("K8", "1"),
+        ("K10", "#VALUE!"),
+        ("K11", "#N/A"),
+        ("K13", "#VALUE!"),
+        ("K14", "2"),
+        ("L1", "2"),
+    ] {
+        assert_eq!(model._get_text(cell), expected, "{cell}");
+    }
+}
+
 // LARGE, SMALL and MEDIAN over references on another sheet are #N/A, on the formula's own sheet
 // the value view's #VALUE! (t4569 A12, A13, A22, A31, A43, Local!E1:E3).
 #[test]

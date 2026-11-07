@@ -291,7 +291,7 @@ an array value. In detail:
     in. This covers MODE, PERCENTILE, QUARTILE, the IFS family's criteria ranges, and TEXTJOIN. Each is a
     probe task before it opts in. RANK, RANK.EQ and RANK.AVG are probed (probes/t4704 A25:C38, T-4704): they lift per
     element, `#VALUE!` for the hit and the rank in the referenced range for the miss, so they do not fall back
-    (ours does, T-4740).
+    (matched by T-4740).
 - **Bounds** (directive 5). No new budget. An XLOOKUP grid has the lifted lookup_value's shape, which the lift
   already passes through `check_array_size`. Each element is one `xlookup_one` call charged to
   `MAX_LIFTED_CELL_VISITS`, as today. A miss stores one `Range` (the shared if_not_found) and copies no cells. A
@@ -328,7 +328,12 @@ Where the implementation departs from the text above, or settles what it left op
 - **Order statistics.** `RefGrid::order_statistic_error` is the one scan: `None` (the value view, `#VALUE!`) when
   the first element is a reference on the formula's own sheet, else the first error element, else `#N/A`, when any
   reference element is on another sheet (T-4714). LARGE and SMALL read it in their data reader (`numbers_from_ranked_arg`;
-  the RANK family keeps the value view), MEDIAN through `GridReading::OrderStatistic`.
+  the RANK family does not), MEDIAN through `GridReading::OrderStatistic`.
+- **RANK family (T-4740).** `numbers_from_rank_ref_arg` hands any array of references back whole
+  (`RankData::PerElement`), and `rank_per_element` lifts over its elements as OFFSET over a grid does
+  (`RefGrid::index_array`): a reference element ranks against its own range, a value element is `#VALUE!`, an
+  error element is itself. This covers a lifted OFFSET or INDIRECT as `ref` too, which is unprobed (it was the
+  value view, `#VALUE!` per element; T-4801 probes it).
 
 ### Test plan and rollout
 T-4570 implements it: the t4543 W45:W46, t4563 and t4569 cells it owns leave eval/baseline. Unit tests: a mixed

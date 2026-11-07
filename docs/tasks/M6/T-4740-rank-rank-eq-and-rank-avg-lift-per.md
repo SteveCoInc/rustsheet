@@ -3,7 +3,7 @@ id: T-4740
 title: "RANK, RANK.EQ and RANK.AVG lift per element over a mixed XLOOKUP grid (probes/t4704 A26, A29, A32, A35, A38)"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -18,8 +18,20 @@ depends_on: [T-4704]
 - T-4570 left RANK on the value view (`statistical/chisq.rs numbers_from_ranked_arg`); the evidence says the reference element is read as a range.
 
 ## Acceptance criteria
-- [ ] Calc A26, A29, A32, A35 and A38 of probes/t4704 pass; SPEC-0014 "As implemented (T-4570)" drops its RANK fallback.
-- [ ] `make check` green; reviewers approve.
+- [x] Calc A26, A29, A32, A35 and A38 of probes/t4704 pass; SPEC-0014 "As implemented (T-4570)" drops its RANK fallback.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other readers of a mixed XLOOKUP grid (T-4704).
+
+## Outcome
+- `numbers_from_rank_ref_arg` (statistical/chisq.rs) hands an array of references back whole as
+  `RankData::PerElement`. `rank_per_element` (rank_eq_avg.rs) lifts over its elements, broadcast with a lifted
+  `number` or `order`: a reference element ranks against its own range, a value element is `#VALUE!`, an error
+  element is itself, each after `number`'s error. Each element is charged as the largest referenced range.
+- `RefGrid::index_array` and `RefGrid::element_at` are the one way a per-element caller hands its elements to the lift
+  driver; OFFSET over a grid (`offset_over_grid`) now uses them too.
+- The same path takes a lifted OFFSET or INDIRECT `ref`, which is unprobed (before, its value view gave `#VALUE!`
+  per element; no eval cell moved). T-4801 probes it.
+- Unit test `rank_lifts_over_a_mixed_grid`; SPEC-0014 and lookup.md updated.
+- Eval delta: probes/t4704 Calc A26, A29, A32, A35, A38 now pass (5 known failures removed); 0 regressions in every suite.
