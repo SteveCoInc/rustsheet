@@ -3,7 +3,7 @@ id: T-2789
 title: "Probe COMBINA's number_chosen in (-1, 0) and below -1 against number 0, (0, 1) and 1 (T-2621 follow-up)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
