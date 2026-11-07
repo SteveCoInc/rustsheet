@@ -319,17 +319,24 @@ struct TailArguments {
     series: Option<SeriesArguments>,
 }
 
-/// L from its [`TailArguments`] (module doc). Inside t = 1 where Excel's 1/B(n/2, 1/2) is a sum of
-/// GAMMALNs ([`log_gamma_ratio`], df 13 to 16, Welch's fractional df among them) the tail is one
-/// call into the ported kernel, K(n/2, 1/2, y, z), as T.DIST's from df 3 ([`kernel_tail`]): the
-/// series there scaled the tail by that normalization, which belongs to the central probability
-/// before it is taken from one, and T.TEST's p-values were 5 to 19 ulp off Excel (gen-m9
-/// 928d08e3e1eecb5f A393 `T.TEST(Data!B3:C11,Data!B4:E6,2,2)` = 0.7772031601919551, ce312817dc9c7f0b
-/// A228, 9bc247733a1ca9fa A139, A254; T-3730). Elsewhere (beyond t = 1, or no GAMMALN form) the
-/// evidenced elementary series and fractions stay.
+/// L from its [`TailArguments`] (module doc). Two regions are one call into the ported kernel,
+/// K(n/2, 1/2, y, z) at T.TEST's z = fl(1 - y), as T.DIST's tail is from df 3 ([`kernel_tail`]),
+/// because the series' normalization is not Excel's there (T-3730):
+/// - inside t = 1 where Excel's 1/B(n/2, 1/2) is a sum of GAMMALNs ([`log_gamma_ratio`], df 13
+///   to 16): the series scaled the *tail* by that normalization, which belongs to the central
+///   probability before it is taken from one. `T.TEST(Data!B3:C11,Data!B4:E6,2,2)` =
+///   0.7772031601919551 (gen-m9/928d08e3e1eecb5f A393) was 18 ulp off; also ce312817dc9c7f0b
+///   A228, 9bc247733a1ca9fa A254, f82473275380882e A308 and probes/stat-argument-modes H536;
+/// - Welch's fractional df at every t, where the tail took the Gamma-ratio recurrence and Cephes'
+///   fractions: `TTEST(Data!B11:E12,Data!C6:E8,1,3)` = 0.09084506673248453 (c7664e494e418395
+///   A219), 9bc247733a1ca9fa A139 and 22 more T.TEST cells of gen-m9 and probes-numeric
+///   t1048/t1049-ttest come to Excel's bits or within an ulp, none moves away.
+///
+/// Elsewhere (an integer df beyond t = 1, or with no GAMMALN form) the evidenced elementary series
+/// and fractions stay.
 fn tail_from(args: &TailArguments, n: f64) -> f64 {
     let (z, y) = (args.z, args.y);
-    if args.inside_one && (log_gamma_ratio(0.5 * n).is_some() || n.fract() != 0.0) {
+    if (args.inside_one && log_gamma_ratio(0.5 * n).is_some()) || n.fract() != 0.0 {
         if let Some((w, _)) = t_kernel_tails(0.5 * n, y, z) {
             return 0.5 * w;
         }
@@ -785,11 +792,12 @@ mod tests {
         assert_eq!(student_t_tail_at(1.0, 5.0), 0.5);
         assert_eq!(student_t_tail_at(0.0, 5.0), 0.0);
         assert!(student_t_tail_at(f64::NAN, 5.0).is_nan());
-        // A fractional (Welch) df, t1048-ttest B27 `T.TEST(D1:D10,F1:F11,2,3)`: within 5 ulp of
-        // Excel's 0.32079800240540124, where libm's Gamma ratio and Cephes' plain fraction are
-        // 9 and 111 ulp off on t1048-ttest cells.
+        // A fractional (Welch) df, t1048-ttest B27 `T.TEST(D1:D10,F1:F11,2,3)`: one kernel call,
+        // within an ulp of Excel's 0.32079800240540124 (4 ulp through the Gamma-ratio recurrence
+        // and Cephes' fractions; libm's Gamma ratio and Cephes' plain fraction are 9 and 111 ulp
+        // off on t1048-ttest cells).
         let welch = 2.0 * student_t_tail_at(0.946_466_489_851_057_3, 18.405_961_938_104_15);
-        assert!(ulps(welch, 0.320_798_002_405_401_24) <= 5);
+        assert!(ulps(welch, 0.320_798_002_405_401_24) <= 1);
     }
 
     #[test]

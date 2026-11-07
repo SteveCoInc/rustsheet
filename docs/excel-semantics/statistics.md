@@ -2506,12 +2506,23 @@ the double t and at the exact t, so the gap is not in the statistic (probes-nume
   orders and seven ways to form t² all give one y each, yet Excel is 1 to 8 ulp from the exact tail there and on the
   other side of it from ours at A42 (Excel 0.3571628041352982, exact at fl(y) 0.3571628041352981, true
   0.35716280413529768), where one ulp of y moves p by about 27 ulp. That is the tail's noise, not the statistic.
+- The tail at that y is the ported TOMS 708 kernel K(df/2, 1/2, y, fl(1 - y)), the call T.DIST makes, in two regions
+  (T-3730, T-4975): inside t = 1 at df 13 to 16, where the series scaled the tail by Excel's GAMMALN normalization (which
+  belongs to the central probability before it is taken from one), and at Welch's fractional df at every t. The
+  statistic in plain doubles (sequential sums, sum of squared deviations over n - 1, pooled or Welch) is unchanged.
+  Of the nine cells T-3730 lists, gen-m9 928d08e3e1eecb5f A393 (`T.TEST(Data!B3:C11,Data!B4:E6,2,2)` =
+  0.7772031601919551, 18 ulp before), ce312817dc9c7f0b A228, 9bc247733a1ca9fa A254, f82473275380882e A308 and
+  c7664e494e418395 A219 are now Excel's bits; 9bc247733a1ca9fa A139 and afc00c8b70e78baf A238 are 1 ulp off,
+  09b47629f54b9817 A144 and d5fd9e05e9e6f466 A246 within 4 ulp (all within 15 digits). Over gen-m9, probes,
+  probes-numeric and ironcalc-calc 56 T.TEST/TTEST cells move closer to Excel and none moves away (ironcalc-calc
+  `T_TEST.xlsx` F4, F7, F8; probes/stat-argument-modes H535-H542; t1048-ttest A15-B36). Integer df beyond t = 1 and
+  integer df outside 13 to 16 keep the elementary series, which those cells already fit.
 Evidence: probes-numeric `t1048-ttest`, `t1049-ttest`; ironcalc-calc `STATISTICAL/T_TEST.xlsx`. Exact values: mpmath
 `betainc` at 50 digits (T-0969 attempt 5, 2026-10-20; T-2993, 2026-11-05).
 Ours: `student_t.rs` `student_t_tail_at` since T-0969 attempt 5. T.TEST/TTEST visibly-off cells went from 19 to 3:
 t1048-ttest A3/B3 (6 ulp) and t1049-ttest A48 (5 ulp), all Welch.
 Status: VERIFIED (excel-graph)
-Tasks: T-0969, T-2993
+Tasks: T-0969, T-2993, T-3730
 
 ## T.TEST, TTEST, F.TEST and FTEST: Gate A tables (T-4097)
 Rule: on the Gate A tables `accuracy/{T.TEST,TTEST}/s1` (200 points each) and `accuracy/{F.TEST,FTEST}/s1` (120 each),
