@@ -9,6 +9,7 @@
 //! rest of the workbook loads as usual (docs/excel-semantics/web.md "GETPIVOTDATA against a pivot
 //! table"). A grouped field imports as its group items ([`groups`], T-4225).
 
+mod filters;
 mod groups;
 mod table;
 
@@ -734,6 +735,7 @@ fn read_definition<B: BufRead>(
             groups.push(FieldGroup {
                 field,
                 base,
+                par: attribute(element, "par")?.and_then(|par| par.parse::<u32>().ok()),
                 ..FieldGroup::default()
             });
         } else if at(path, &GROUP) {

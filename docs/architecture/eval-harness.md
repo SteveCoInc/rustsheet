@@ -94,6 +94,15 @@ as that suite is, and it never records an empty baseline:
 - `roundtrip-calipers` stays `gate = false`, like the calipers cell suite. `rustsheet-eval roundtrip --check --suite
   roundtrip-calipers` gates it on demand.
 
+Scenarios (T-4514): a suite lists them in `scenarios`, with `R0` as the default:
+- `R0/again` saves our own R0 output again (idempotence).
+- `R1/E1` … `R1/E6` and `R1/all` apply SPEC-0033's standard edits through the facade's `edit` (`roundtrip/r1.rs`),
+  and keep only the delta violations: failing items the plain save did not have and the edits' change set does
+  not explain.
+- Each scenario reruns the case in the same worker, and its checked count is kept per scenario, so the CLI and the
+  report give a rate per family.
+- `exceptions = "<file>"` names per-case exceptions (`roundtrip/exceptions.rs`). A stale exception fails the gate.
+
 `rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. Each suite's line and report section
 give its kept rate: source items compared, less those the failing items cover (`Item::weight`: a lost element's
 subtree, a lost part's elements, a `<truncated>` item's hidden differences), over the items compared (`KeptRate`,

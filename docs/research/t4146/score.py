@@ -23,6 +23,8 @@ import forms  # noqa: E402
 from rustsheet_tools.fitlab.holdout import DEFAULT_MARGIN, HOLDOUT_PERMILLE, HOLDOUT_SALT  # noqa: E402
 import hashlib  # noqa: E402
 
+import mpmath  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -33,13 +35,26 @@ def is_holdout(case: str, key: str) -> bool:
 
 
 def exact(func: str, r: float, n: float, pmt: float, x: float, t: float) -> float:
-    fr, fn = Fraction(r), int(n)
-    p = (1 + fr) ** fn
+    if not n.is_integer():
+        return _exact_real(func, r, n, pmt, x, t)
+    fr = Fraction(r)
+    p = (1 + fr) ** int(n)
     k = (1 + fr) if t else Fraction(1)
     a = k * (p - 1) / fr
     if func == "FV":
         return float(-(Fraction(x) * p + Fraction(pmt) * a))
     return float(-(Fraction(x) + Fraction(pmt) * a) / p)
+
+
+def _exact_real(func: str, r: float, n: float, pmt: float, x: float, t: float) -> float:
+    # (1+r)^n is irrational at a non-integer n (T-4244): 80-digit mpmath, rounded once to a double.
+    with mpmath.workdps(80):
+        fr = mpmath.mpf(r)
+        p = (1 + fr) ** mpmath.mpf(n)
+        a = ((1 + fr) if t else 1) * (p - 1) / fr
+        if func == "FV":
+            return float(-(mpmath.mpf(x) * p + mpmath.mpf(pmt) * a))
+        return float(-(mpmath.mpf(x) + mpmath.mpf(pmt) * a) / p)
 
 
 def ulps(a: float, b: float) -> int:
@@ -79,4 +94,5 @@ def main() -> None:
         print(f"{func} {side:5} {c:18} bit-exact {ex}/{n}  4ulp {u4}/{n}")
 
 
-main()
+if __name__ == "__main__":
+    main()
