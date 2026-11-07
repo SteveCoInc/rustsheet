@@ -59,4 +59,4 @@ sidecar; all 37 cells pass with no engine change. FIXED/DOLLAR keep the minus si
 from zero, ties included; TEXT prints a full 3-digit exponent under a single placeholder. text.md and numbers.md now
 state the observed results. The case writes `1.5*10^308` for the 1.5E+308 row: the Graph workbook service rejects the
 literal `1.5E+308` in a formula as an unsupported workbook (value is identical). No Gate A definition covers FIXED,
-DOLLAR or TEXT, so there is no math sidecar. Eval delta: +37 passing probe cells, no baseline change.
+DOLLAR or TEXT, so there is no math sidecar. Eval delta: +37 passing probe cells, no new known-failure lines (the probes baseline gains only the generated coverage line).
