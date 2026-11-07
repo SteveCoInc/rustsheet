@@ -94,6 +94,15 @@ as that suite is, and it never records an empty baseline:
 - `roundtrip-calipers` stays `gate = false`, like the calipers cell suite. `rustsheet-eval roundtrip --check --suite
   roundtrip-calipers` gates it on demand.
 
+Scenarios (T-4514): a suite lists them in `scenarios`, with `R0` as the default:
+- `R0/again` saves our own R0 output again (idempotence).
+- `R1/E1` … `R1/E6` and `R1/all` apply SPEC-0033's standard edits through the facade's `edit` (`roundtrip/r1.rs`),
+  and keep only the delta violations: failing items the plain save did not have and the edits' change set does
+  not explain.
+- Each scenario reruns the case in the same worker, and its checked count is kept per scenario, so the CLI and the
+  report give a rate per family.
+- `exceptions = "<file>"` names per-case exceptions (`roundtrip/exceptions.rs`). A stale exception fails the gate.
+
 `rustsheet-eval roundtrip` writes `eval/runs/latest/roundtrip.{json,md}`. Each suite's line and report section
 give its kept rate: source items compared, less those the failing items cover (`Item::weight`: a lost element's
 subtree, a lost part's elements, a `<truncated>` item's hidden differences), over the items compared (`KeptRate`,
@@ -565,5 +574,19 @@ Gate B for its `function rate` line, as `n/a` with the missing suites when the r
 rustsheet-eval suites | fetch [--suite S] | run [--suite S] [--filter X] | check [--evidence-floor] | update-baseline [--allow-regressions]
                | evidence-floor [--update [--allow-increase]] | accuracy [--json PATH] [--timeout S]
                | show <case-id> [--all] | cases <suite> | snapshot <file.xlsx>
+               | subexpr-case <suite/case> <Sheet!A1> [--out PATH] | subexpr-case --culprit <probes/case>
 ```
 `snapshot` is the **only** xlsx value parser in the repo. Python tools call it.
+
+`subexpr-case` (T-3333; synthetic-generator.md §11 stage 1) localizes a visibly-off cell whose formula nests several
+calls. It writes `eval/suites/probes/cases/subexpr-<source stem>-<sheet>-<cell>.case.json`: the source spec case's
+sheets with their constant cells and only the formula cells the formula reads (one level), plus a sheet `Subexpr` holding, from A1 down, one cell per distinct subexpression of the formula,
+children first and the whole formula last, every reference absolute and sheet-qualified (the engine's
+`subexpressions` hook prints them, so relative references keep their targets). Literals, bare references, nodes that
+read a LET or LAMBDA name, volatile nodes (`volatile::is_volatile`) and nodes that depend on their own cell (`ROW()`,
+`COLUMN()`, `SHEET()` without an argument, `INDIRECT`, `CELL`) get no cell; the description lists each with the reason.
+The case keeps the source's milestone tag (decision 0051) and refuses xlsx-backed suites, cells without a formula and
+cases with `sheet_ops`. A node whose value spills spills from its own cell (or reads `#SPILL!` against the next cell)
+on both sides alike. After `rustsheet-oracle fill -b excel-graph --suite probes --case <id>`, `--culprit` runs the case
+and prints each visibly-off node (decision 0083, `Visible::is_off`) whose checked children all match Excel, with both
+values, or `no divergent node`.

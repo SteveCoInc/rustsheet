@@ -319,6 +319,28 @@ impl RefGrid {
         &self.elements
     }
 
+    /// The grid of the elements' row-major indices, as numbers: how a per-element caller hands
+    /// its elements to the lift driver, whose lifted arguments hold values only (OFFSET over a
+    /// grid, the RANK family's `ref`). [`Self::element_at`] reads an index back.
+    pub(crate) fn index_array(&self) -> Vec<Vec<ArrayNode>> {
+        (0..self.rows)
+            .map(|row| {
+                (0..self.columns)
+                    .map(|column| ArrayNode::Number((row * self.columns + column) as f64))
+                    .collect()
+            })
+            .collect()
+    }
+
+    /// The element an [`Self::index_array`] value names; `None` for anything else.
+    pub(crate) fn element_at(&self, index: &CalcResult) -> Option<&RefElement> {
+        match index {
+            // The index is a whole number below the grid's length, as `index_array` builds it.
+            CalcResult::Number(index) => self.elements.get(*index as usize),
+            _ => None,
+        }
+    }
+
     /// Whether any element is a reference, not an error: what makes a lifted OFFSET or
     /// INDIRECT carry the ERROR.TYPE/CELL mark (`number_mark.rs`; statistics.md "An array of
     /// references is #NUM! in the paired functions").
@@ -337,9 +359,17 @@ impl RefGrid {
     /// `None` when they read its value view: `#N/A` when a reference element is on another sheet
     /// than `sheet`, the formula's (`LARGE(OFFSET(Data!G1,{0;1},0),1)` is `#N/A` from Calc,
     /// `LARGE(OFFSET(Local!A1,{0;1},0),1)` `#VALUE!` from Local; probes/t4569-xlookup-ref-element-
-    /// max-min Calc!A31, A40, Local!E1:E5, F1:F8). An error element comes first, as it does for
-    /// the other aggregates (unprobed). A grid with references on both sheets is `#N/A` (unprobed).
+    /// max-min Calc!A31, A40, Local!E1:E5, F1:F8). A reference first element decides: `#VALUE!`
+    /// from an own-sheet one, `#N/A` from an off-sheet one, even beside an own-sheet reference or a
+    /// later error element (probes/t4697-large-small-median-mixed-sheet-refs H1:H6, H9, H16, H17;
+    /// `LARGE(XLOOKUP({9;2},..,Data!I1:I3,Data!G1:G2),1)`, SMALL and MEDIAN of it are `#N/A`,
+    /// probes/t4704-mixed-xlookup-grid-readers Calc!A49, A58, A88). A value or error first element
+    /// keeps the any-off-sheet rule, with the first error element ahead of `#N/A` (t4697 H14, H15;
+    /// the `{2;9}` order of that grid is `#DIV/0!`, t4704 A46, A52, A55).
     pub(crate) fn order_statistic_error(&self, sheet: u32) -> Option<Error> {
+        if let Some(RefElement::Reference(first)) = self.elements.first() {
+            return (first.left.sheet != sheet).then_some(Error::NA);
+        }
         let off_sheet = self.elements.iter().any(
             |element| matches!(element, RefElement::Reference(range) if range.left.sheet != sheet),
         );

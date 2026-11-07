@@ -20,7 +20,10 @@ use crate::{
     formula_rewrite::{RewrittenCell, RewrittenFormula},
     model::Model,
     table_edits::{bounds, Bounds},
-    types::{Cell, Table, TableColumn, TableExtent, TableStyleInfo, Worksheet},
+    types::{
+        Cell, FilterColumn, FilterCriterion, Table, TableColumn, TableExtent, TableStyleInfo,
+        Worksheet,
+    },
 };
 
 /// Gives every formula cell of `worksheet` whose shared formula is one of `by_row` (index, parsed
@@ -252,6 +255,79 @@ impl Model {
         self.workbook.tables.insert(name.to_string(), table);
         self.reset_tables();
         Ok(())
+    }
+
+    /// Gives the filtered table `name` a values filter on its column `column` (0-based) that
+    /// rejects exactly the data rows `rejected` (1-based sheet rows): it keeps the text every other
+    /// data row displays, plus blank rows when one of them is blank, the filter Excel writes when
+    /// those rows' values are unchecked in its filter menu (spec2xlsx's `"criteria"`, T-4755). The
+    /// criterion is kept as an imported one is (`Table::filter_columns`, replacing one already on
+    /// that column), so a column edit treats it the same way (T-4803); no row is hidden here (hide
+    /// the rejected rows with [`Model::set_row_hidden`]). Returns the table as it was before, which
+    /// [`Model::restore_table`] puts back.
+    ///
+    /// # Errors
+    /// There is no table with that exact name, it is not filtered, `column` is outside it, a
+    /// rejected row is not one of its data rows, or a rejected row displays the same text
+    /// (ignoring case) as a kept one, which no values filter can tell apart.
+    pub fn filter_table_column(
+        &mut self,
+        name: &str,
+        column: u32,
+        rejected: &[i32],
+    ) -> Result<Table, String> {
+        let table = (self.workbook.tables.get(name)).ok_or_else(|| format!("No table '{name}'"))?;
+        let before = table.clone();
+        if !table.has_filters {
+            return Err(format!("Table '{name}' is not filtered"));
+        }
+        let b = bounds(table).ok_or_else(|| format!("Table '{name}' has no range"))?;
+        let at = i32::try_from(column)
+            .ok()
+            .and_then(|c| b.left.checked_add(c))
+            .filter(|&c| c <= b.right)
+            .ok_or_else(|| format!("Column {column} is outside table '{name}'"))?;
+        if let Some(row) = rejected
+            .iter()
+            .find(|r| !(b.data.0..=b.data.1).contains(*r))
+        {
+            return Err(format!("Row {row} is not a data row of table '{name}'"));
+        }
+        let sheet = (self.get_sheet_index_by_name(&table.sheet_name))
+            .ok_or_else(|| format!("No sheet '{}'", table.sheet_name))?;
+        let rejected: HashSet<i32> = rejected.iter().copied().collect();
+        let mut kept = Vec::new();
+        let mut dropped = HashSet::new();
+        for row in b.data.0..=b.data.1 {
+            let text = self.get_formatted_cell_value(sheet, row, at)?;
+            if rejected.contains(&row) {
+                dropped.insert(text.to_lowercase());
+            } else {
+                kept.push(text);
+            }
+        }
+        if let Some(text) = kept.iter().find(|t| dropped.contains(&t.to_lowercase())) {
+            return Err(format!("'{text}' is both kept and rejected"));
+        }
+        let blank = kept.iter().any(String::is_empty);
+        kept.retain(|t| !t.is_empty());
+        kept.sort_unstable();
+        kept.dedup();
+        let criterion = FilterCriterion::Values {
+            values: kept,
+            blank,
+            calendar_type: None,
+            date_groups: Vec::new(),
+        };
+        if let Some(table) = self.workbook.tables.get_mut(name) {
+            table.filter_columns.retain(|f| f.col_id != column);
+            table.filter_columns.push(FilterColumn {
+                col_id: column,
+                criterion,
+            });
+            table.filter_columns.sort_by_key(|f| f.col_id);
+        }
+        Ok(before)
     }
 
     /// Removes the table `name` (the undo of [`Model::add_table`]); its cells stay.

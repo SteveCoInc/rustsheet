@@ -1,0 +1,31 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4870 round 2: a written-empty optional argument of WORKDAY, NETWORKDAYS, WEEKNUM, YEARFRAC and the .INTL pair at fresh arguments, and a LET or LAMBDA parameter bound to nothing there. Predictions (H_omitted: the call with the argument left out) in docs/research/t4870/predictions-r2.tsv, committed before the excel-graph fill.",
+  "tags": [
+    "M6",
+    "dates",
+    "probe"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=WORKDAY(45000,10,)",
+        "A2": "=WORKDAY(45000,-7,)",
+        "A3": "=NETWORKDAYS(45000,45030,)",
+        "A4": "=NETWORKDAYS(45030,45000,)",
+        "A5": "=WEEKNUM(45010,)",
+        "A6": "=WEEKNUM(44927,)",
+        "A7": "=YEARFRAC(45000,45200,)",
+        "A8": "=YEARFRAC(44985,45350,)",
+        "A9": "=WORKDAY.INTL(45000,10,11,)",
+        "A10": "=WORKDAY.INTL(45000,10,\"0000011\",)",
+        "A11": "=NETWORKDAYS.INTL(45000,45030,11,)",
+        "A12": "=NETWORKDAYS.INTL(45000,45030,\"1000001\",)",
+        "A13": "=LET(h,,WORKDAY(45000,10,h))",
+        "A14": "=LAMBDA(a,r,WEEKNUM(a,r))(45010,)"
+      }
+    }
+  ]
+}

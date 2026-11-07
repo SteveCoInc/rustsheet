@@ -4,11 +4,14 @@
 //! oracle sidecar (Excel's saved `pivots`: cells, `rowItems`/`colItems` and `location`), so every
 //! expectation comes from the committed probe files, never from the engine.
 
+use std::collections::HashMap;
+
 use serde_json::Value as Json;
 
 use crate::expressions::token::get_error_by_english_name;
 use crate::expressions::utils::number_to_column;
 use crate::model::Model;
+use crate::pivot::{compute_on, lay_out, render, PivotCell, MAX_PIVOT_WORK};
 use crate::pivot::{
     read_source, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea,
     DataField, PageField, PivotCache, PivotField, PivotItem, PivotTable, RecordValue, ShowDataAs,
@@ -24,6 +27,12 @@ pub(crate) const T4634_SHEETS: &[&str] = &[
     "A3", "O1", "O2", "O3", "O4", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "T1", "T2", "T3", "C1",
     "C2", "C3", "C4", "C5", "C6", "C7",
 ];
+
+/// The pivot sheets of probes/t4745-pivot-classic-subtotal-caption: classic layout with a
+/// column field (GC), two data fields (GV) and one row field (G1); subtotalCaption in outline
+/// form at the top (SO) and at the bottom (SB), compact form (SK), over custom subtotals (SF), on
+/// columns (SCC) and with a `?` for the item (SQ).
+pub(crate) const T4745_SHEETS: &[&str] = &["GC", "GV", "G1", "SO", "SB", "SK", "SF", "SCC", "SQ"];
 
 pub(crate) fn read(stem: &str, kind: &str) -> Json {
     let path = format!(
@@ -258,8 +267,10 @@ pub(crate) fn probe_pivot_over(
         pivot_field.show_all = attrs["showAll"].as_bool().unwrap_or(false);
         let spec = &definition["fields"][&cache_field.name];
         if axis.is_some() {
-            // The builder lists the field's `order` first, then the rest in first-seen order.
-            let first: Vec<u32> = spec["order"]
+            // The builder lists the field's `item_order` (the `<item>` elements alone) or its
+            // `order` (the cache and the items) first, then the rest in first-seen order.
+            let listed = spec.get("item_order").unwrap_or(&spec["order"]);
+            let first: Vec<u32> = listed
                 .as_array()
                 .into_iter()
                 .flatten()
@@ -351,6 +362,7 @@ pub(crate) fn probe_pivot_over(
     o.row_grand_totals = flag(&options["rowGrandTotals"], o.row_grand_totals);
     o.column_grand_totals = flag(&options["colGrandTotals"], o.column_grand_totals);
     o.page_over_then_down = flag(&options["pageOverThenDown"], o.page_over_then_down);
+    o.grid_drop_zones = flag(&options["gridDropZones"], o.grid_drop_zones);
     if let Some(wrap) = options["pageWrap"].as_u64() {
         o.page_wrap = u32::try_from(wrap).unwrap();
     }
@@ -360,6 +372,7 @@ pub(crate) fn probe_pivot_over(
         pivot_field.outline = flag(&attrs["outline"], pivot_field.outline);
         pivot_field.subtotal_top = flag(&attrs["subtotalTop"], pivot_field.subtotal_top);
         pivot_field.insert_blank_row = flag(&attrs["insertBlankRow"], pivot_field.insert_blank_row);
+        pivot_field.subtotal_caption = attrs["subtotalCaption"].as_str().map(str::to_string);
         // The field's raw `extLst` (`xml.extLst`), whose x14 `fillDownLabels` the importer types.
         // The match is deliberately narrow: the probes write the flag as `fillDownLabels="1"`
         // only (t4129 X14F, t4698); the importer's own reading is tested in
@@ -439,4 +452,78 @@ pub(crate) fn diagonal(n: u32, data: bool) -> (PivotCache, PivotTable) {
         }];
     }
     (cache, table)
+}
+
+/// The cells `table` over `cache` renders on the day `today` (`compute_on`), by address.
+fn rendered(
+    table: &PivotTable,
+    cache: &PivotCache,
+    today: Option<f64>,
+) -> HashMap<String, PivotCell> {
+    let mut work = MAX_PIVOT_WORK;
+    let result = compute_on(table, cache, today, &mut work).unwrap();
+    let layout = lay_out(table, cache, &result, &mut work).unwrap();
+    let mut cells = HashMap::new();
+    for cell in render(table, cache, &result, &layout).unwrap() {
+        let at = address(cell.column, cell.row);
+        assert!(
+            cells.insert(at.clone(), cell.value).is_none(),
+            "{at} rendered twice"
+        );
+    }
+    cells
+}
+
+/// A sidecar cell as a rendered one; `None` for an empty cell.
+fn expected(cell: &Json) -> Option<PivotCell> {
+    match cell["t"].as_str().unwrap() {
+        "empty" => None,
+        "s" => Some(PivotCell::Text(cell["v"].as_str().unwrap().to_string())),
+        "n" => Some(PivotCell::Number(cell["v"].as_f64().unwrap())),
+        "e" => Some(PivotCell::Error(
+            get_error_by_english_name(cell["v"].as_str().unwrap()).unwrap(),
+        )),
+        other => panic!("cell type {other}"),
+    }
+}
+
+/// The cells of sheet `name`'s pivot (`table` over `cache`, rendered on the day `today`) that are
+/// not the ones Excel saved in probe `stem`'s sidecar, but the cells `skip`. Every sidecar cell
+/// is compared, an empty one included, and every rendered cell must lie in the sidecar's capture
+/// window.
+pub(crate) fn sidecar_differences(
+    stem: &str,
+    name: &str,
+    cache: &PivotCache,
+    table: &PivotTable,
+    today: Option<f64>,
+    skip: &[&str],
+) -> Vec<String> {
+    let oracle = read(stem, "oracle");
+    let mut actual = rendered(table, cache, today);
+    let pivot = oracle["pivots"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["sheet"] == name)
+        .unwrap();
+    let mut wrong = Vec::new();
+    for (at, cell) in pivot["cells"].as_object().unwrap() {
+        let mine = actual.remove(at);
+        if skip.contains(&at.as_str()) {
+            continue;
+        }
+        let excel = expected(cell);
+        if mine != excel {
+            wrong.push(format!("{at}: Excel {excel:?}, engine {mine:?}"));
+        }
+    }
+    for (at, cell) in actual {
+        wrong.push(format!("{at}: outside the capture window, engine {cell:?}"));
+    }
+    wrong.sort();
+    wrong
+        .into_iter()
+        .map(|w| format!("{stem} {name} {w}"))
+        .collect()
 }

@@ -4,7 +4,8 @@ use std::io::{Cursor, Write};
 
 use rustsheet_engine::expressions::token::Error;
 use rustsheet_engine::pivot::{
-    Aggregate, Axis, AxisField, CellArea, DataField, ShowDataAs, MAX_FIELDS, MAX_ITEMS, MAX_RECORDS,
+    Aggregate, Axis, AxisField, CellArea, DataField, OpaqueNode, ShowDataAs, MAX_FIELDS, MAX_ITEMS,
+    MAX_RECORDS,
 };
 
 use super::super::package::ImportLimits;
@@ -825,4 +826,121 @@ fn show_all_is_on_unless_written_off() {
         assert_eq!(pivot.fields[0].show_all, show_all, "{attribute:?}");
         assert!(pivot.fields[1].show_all, "{attribute:?}");
     }
+}
+
+/// A source field's bare `<fieldGroup par>` only names the field Excel added to group it, as Excel
+/// saves a manual group (probes/t4170-pivot-manual-groups: Product beside Product2): the field
+/// keeps its own items, and each added field keeps its base so a refresh derives it again (T-4171).
+#[test]
+fn a_par_only_field_group_groups_nothing_and_added_fields_keep_their_base() {
+    let definition = grouped_definition().replacen(
+        r#"<s v="North"/></sharedItems></cacheField>"#,
+        r#"<s v="North"/></sharedItems><fieldGroup par="6"/></cacheField>"#,
+        1,
+    );
+    let (caches, pivots) = load(&grouped_parts(definition));
+    assert_eq!((caches.len(), pivots.len()), (1, 1));
+    let fields = &caches[0].fields;
+    assert_eq!(fields[2].items, [text("East"), text("West"), text("North")]);
+    assert_eq!(fields[2].records, [0, 1, 2, 0]);
+    assert!(!fields[2].is_grouped());
+    // Date is grouped in place, so it is no added field; Quarters and Years derive from it.
+    assert_eq!(fields[0].added_group, None);
+    let base = |field: usize| fields[field].added_group.as_ref().map(|g| g.base);
+    assert_eq!(
+        [base(3), base(4), base(5), base(6)],
+        [Some(0), Some(0), Some(1), Some(2)]
+    );
+    assert_eq!(fields[3].added_group.as_ref().unwrap().discrete, None);
+    assert_eq!(
+        fields[6].added_group.as_ref().unwrap().discrete,
+        Some(vec![0, 1, 0])
+    );
+    // A bare `par` that names no added field grouping this one is refused: an added field with
+    // another base (Quarters, base Date), a database field, a field past the cache, no index.
+    for par in ["3", "1", "9", "x"] {
+        let definition = grouped_definition().replacen(
+            r#"<s v="North"/></sharedItems></cacheField>"#,
+            &format!(r#"<s v="North"/></sharedItems><fieldGroup par="{par}"/></cacheField>"#),
+            1,
+        );
+        assert_no_cache(&grouped_parts(definition));
+    }
+    // A bare group without `par` is still refused (`a_group_without_items_...`), and so is a
+    // `par` beside nothing on an added field.
+    let added = grouped_definition().replacen(
+        r#"<fieldGroup base="2"><discretePr count="3"><x v="0"/><x v="1"/><x v="0"/></discretePr>"#,
+        r#"<fieldGroup par="2"><discretePr count="0">"#,
+        1,
+    );
+    assert_no_cache(&grouped_parts(added));
+}
+
+/// A `refreshOnLoad` cache's numeric range group may list `<item x>` past the groups the
+/// importer rebuilds: Excel rebuilds them on open and lays the field out again, so the item is
+/// dropped (probes/t4128-pivot-spike G; pivots.md "Numeric and date group labels are rewritten by
+/// Excel"). Without `refreshOnLoad`, on a date or manual group (unprobed, T-4802) or on an
+/// ungrouped field, it is still refused (T-4171).
+#[test]
+fn an_item_past_the_rebuilt_groups_is_dropped_on_a_refresh_on_load_cache() {
+    // Bands (field 5) groups Amount by tens into 5 items.
+    let stale = GROUPED_TABLE.replacen(
+        "<pivotField/><pivotField/></pivotFields>",
+        r#"<pivotField><items count="3"><item x="1"/><item x="5" n="Stale"/><item x="0"/></items></pivotField><pivotField/></pivotFields>"#,
+        1,
+    );
+    let on_load = |definition: String| {
+        definition.replacen(r#" r:id="rId1">"#, r#" r:id="rId1" refreshOnLoad="1">"#, 1)
+    };
+    let parts = with(
+        grouped_parts(on_load(grouped_definition())),
+        TABLE_PART,
+        table(&stale),
+    );
+    let (caches, pivots) = load(&parts);
+    assert!(caches[0].refresh_on_load);
+    assert!(caches[0].fields[5].number_groups.is_some());
+    let [pivot] = &pivots[..] else {
+        panic!("one pivot");
+    };
+    let indices: Vec<Option<u32>> = pivot.fields[5].items.iter().map(|i| i.index).collect();
+    assert_eq!(indices, [Some(1), Some(0)]);
+    // The dropped item's `n` is kept nowhere.
+    assert!(pivot.opaque.iter().all(|e| match &e.node {
+        OpaqueNode::Attributes(xml) | OpaqueNode::Element(xml) => !xml.contains("Stale"),
+    }));
+    assert_no_pivot(&with(
+        grouped_parts(grouped_definition()),
+        TABLE_PART,
+        table(&stale),
+    ));
+    // Date (14 month items) and Zone (2 manual groups) refuse an item past theirs.
+    let date = GROUPED_TABLE.replacen(
+        r#"<item x="0"/></items></pivotField><pivotField dataField="1"/>"#,
+        r#"<item x="0"/><item x="14"/></items></pivotField><pivotField dataField="1"/>"#,
+        1,
+    );
+    let zone = GROUPED_TABLE.replacen(
+        "<pivotField/></pivotFields>",
+        r#"<pivotField><items count="1"><item x="2"/></items></pivotField></pivotFields>"#,
+        1,
+    );
+    for body in [date, zone] {
+        let parts = with(
+            grouped_parts(on_load(grouped_definition())),
+            TABLE_PART,
+            table(&body),
+        );
+        assert_no_pivot(&parts);
+    }
+    let ungrouped = TABLE_BODY.replacen(r#"<item x="0"/>"#, r#"<item x="0"/><item x="2"/>"#, 1);
+    let parts = with(parts_on_load(), TABLE_PART, table(&ungrouped));
+    assert_no_pivot(&parts);
+}
+
+/// [`parts`] with a `refreshOnLoad` cache.
+fn parts_on_load() -> Vec<(String, String)> {
+    let definition =
+        definition(FIELDS).replacen(r#" r:id="rId1">"#, r#" r:id="rId1" refreshOnLoad="1">"#, 1);
+    with(parts(), DEFINITION_PART, definition)
 }

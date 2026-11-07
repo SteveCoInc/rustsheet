@@ -353,8 +353,8 @@ PV-0351	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems@maxValue		
 PV-0352	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems@minDate		values	unknown	in	PV1	todo	
 PV-0353	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems@minValue		values	unknown	in	PV1	todo	
 PV-0354	captions	pivotCacheDefinition/cacheFields/cacheField@caption		text	unknown	in	PV1	todo	
-PV-0355	calculated	pivotCacheDefinition/cacheFields/cacheField@databaseField	true	values	yes	in	PV3	todo	probes/t4130-pivot-calc-items CF; probes/t4128-pivot-spike K
-PV-0356	calculated	pivotCacheDefinition/cacheFields/cacheField@formula		values	yes	in	PV3	todo	probes/t4130-pivot-calc-items CF; probes/t4128-pivot-spike K
+PV-0355	calculated	pivotCacheDefinition/cacheFields/cacheField@databaseField	true	values	yes	in	PV3	todo	probes/t4130-pivot-calc-items CF; probes/t4128-pivot-spike K; probes/t4505-pivot-calc-fields LV
+PV-0356	calculated	pivotCacheDefinition/cacheFields/cacheField@formula		values	yes	in	PV3	todo	probes/t4130-pivot-calc-items CF; probes/t4128-pivot-spike K; probes/t4505-pivot-calc-fields LV
 PV-0357	olap-datamodel	pivotCacheDefinition/cacheFields/cacheField@hierarchy	0	none	unknown	out (decision 0274)	out	todo	
 PV-0358	metadata	pivotCacheDefinition/cacheFields/cacheField@level	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0359	cache	pivotCacheDefinition/cacheFields/cacheField@mappingCount		values	unknown	in	PV1	todo	

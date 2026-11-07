@@ -139,6 +139,8 @@ pub(crate) struct BlockNumbers {
     /// The first cell, row by row, that reads as no number, and its error: the cell's own, or
     /// `#VALUE!` for a text that is no number.
     pub(crate) first_error: Option<(usize, Error)>,
+    /// The largest magnitude of `values`, which bounds the products a weight forms (T-3725).
+    pub(crate) largest: f64,
 }
 
 /// The values of a cached range ordered for the criteria [`IndexedCriterion`] describes.
@@ -274,7 +276,7 @@ impl Model {
             return None;
         }
         let mut first_error = None;
-        let values = (0..view.len)
+        let values: Box<[f64]> = (0..view.len)
             .map(|index| {
                 let number = view
                     .get(index)
@@ -285,9 +287,13 @@ impl Model {
                 })
             })
             .collect();
+        let largest = values
+            .iter()
+            .fold(0.0f64, |largest, value| largest.max(value.abs()));
         let numbers = Arc::new(BlockNumbers {
             values,
             first_error,
+            largest,
         });
         if !self.evaluation.range_values.charge(view.len) {
             return None;

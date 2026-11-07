@@ -31,6 +31,10 @@ Ideas: the reduction product in x87 or in another order; lnw from a product of q
 factor; Stirling's series for lnGamma(a + b) and lnGamma(b) with Excel's own constants; a probe at a = 1.5 .. 2 to pin the
 unreduced pieces (k at a = 2.5 is -1 to +1).
 
+Cells (T-2940): probes/t2829-ftest-a306-shapes S!A1, A2, A5, A6, A7, A8, A9, A10, A11, A12, F.TEST and `2*F.DIST.RT(..,23,12)`
+near 1.24E-69 at a = 6, b = 11.5, the k = -3 point above (ours about 25 ulp below Excel, first wrong at the 15th digit),
+and A5, A6 at its b = 11 twin (k = -1); T-2829's Outcome and statistics.md trace each miss to Excel's stored ln B.
+
 ## Acceptance criteria
 - [ ] A candidate scored on all 99 grid cells and on BETA.DIST's bpser cells with a shape above 8 (`uv run rustsheet-fitlab`
       or the script above); the best form and its score in statistics.md.

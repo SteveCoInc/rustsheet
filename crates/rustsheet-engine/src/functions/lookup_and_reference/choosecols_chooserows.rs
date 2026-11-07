@@ -5,9 +5,16 @@ use crate::functions::util::array_node_to_calc_result;
 use crate::limits::check_array_cells;
 use crate::{
     calc_result::CalcResult,
-    expressions::{parser::Node, token::Error, types::CellReferenceIndex},
+    expressions::{
+        parser::{ArrayNode, Node},
+        token::Error,
+        types::CellReferenceIndex,
+    },
     model::Model,
 };
+
+/// One index argument: whether it is an array or multi-cell range, and its elements or its error.
+type IndexArg = (bool, Result<Vec<Vec<ArrayNode>>, CalcResult>);
 
 impl Model {
     // ── CHOOSECOLS ────────────────────────────────────────────────────────────
@@ -86,7 +93,8 @@ impl Model {
     /// is 1-based, negative from the end; 0 or past `count` is `#VALUE!`, and an error element is
     /// itself. An error in any argument beats that `#VALUE!`, so the scan goes on past a bad index
     /// (docs/excel-semantics/lookup.md "CHOOSEROWS and CHOOSECOLS: an error argument beats an
-    /// out-of-range index"). The result is bounded before it is built (CLAUDE.md directive 5).
+    /// out-of-range index"; which problem wins: the entry "which problem wins in the index list").
+    /// The result is bounded before it is built (CLAUDE.md directive 5).
     fn chosen_indices(
         &mut self,
         args: &[Node],
@@ -95,26 +103,60 @@ impl Model {
         cell: CellReferenceIndex,
     ) -> Result<Vec<usize>, CalcResult> {
         let count = i64::try_from(count).unwrap_or(i64::MAX);
-        let mut indices = Vec::with_capacity(args.len());
-        let mut out_of_range = false;
+        // Excel scans every single-value argument first, in argument order, and only then the array and
+        // multi-cell range arguments, in argument order (docs/excel-semantics/lookup.md "CHOOSEROWS
+        // and CHOOSECOLS: which problem wins in the index list", T-4718). So `CHOOSECOLS(r,{"x"},NA())`
+        // is `#N/A` and `CHOOSECOLS(r,"x",NA())` is `#VALUE!`.
+        let mut lists: Vec<IndexArg> = Vec::with_capacity(args.len());
         // Elements read so far, in range or not: the scan goes on past a bad index, so the bound counts
         // what is read, not only what is picked.
         let mut scanned = 0usize;
         for arg in args {
-            let list = self.eval_to_array(arg, cell)?;
-            let added = list.len().saturating_mul(list.first().map_or(0, Vec::len));
-            scanned = scanned.saturating_add(added);
-            if let Some((error, message)) = check_array_cells(scanned, other) {
-                return Err(CalcResult::new_error(error, cell, message));
+            let result = self.evaluate_node_in_context(arg, cell);
+            let multi = match &result {
+                CalcResult::Array(_) => true,
+                CalcResult::Range { left, right } => left != right,
+                _ => false,
+            };
+            let list = self.result_to_array(result, cell);
+            if let Ok(list) = &list {
+                let added = list.len().saturating_mul(list.first().map_or(0, Vec::len));
+                scanned = scanned.saturating_add(added);
+                if let Some((error, message)) = check_array_cells(scanned, other) {
+                    return Err(CalcResult::new_error(error, cell, message));
+                }
             }
-            for node in list.iter().flatten() {
-                let n = self.cast_number_ref(&array_node_to_calc_result(node, cell), cell)? as i64;
-                if n == 0 || n.unsigned_abs() > count.unsigned_abs() {
-                    out_of_range = true;
+            lists.push((multi, list));
+        }
+        let mut per_arg: Vec<Vec<usize>> = vec![Vec::new(); lists.len()];
+        let mut out_of_range = false;
+        for pass_multi in [false, true] {
+            for (slot, (multi, list)) in lists.iter().enumerate() {
+                if *multi != pass_multi {
                     continue;
                 }
-                let index = if n > 0 { n - 1 } else { count + n };
-                indices.push(usize::try_from(index).unwrap_or(0));
+                let list = match list {
+                    Ok(list) => list,
+                    Err(error) => return Err(error.clone()),
+                };
+                // A 2-D index is `#VALUE!` whatever it holds, errors included (probes/t4718 A21:A26).
+                if list.len() > 1 && list.first().is_some_and(|row| row.len() > 1) {
+                    return Err(CalcResult::new_error(
+                        Error::VALUE,
+                        cell,
+                        "Index must be a single row or column".to_string(),
+                    ));
+                }
+                for node in list.iter().flatten() {
+                    let n =
+                        self.cast_number_ref(&array_node_to_calc_result(node, cell), cell)? as i64;
+                    if n == 0 || n.unsigned_abs() > count.unsigned_abs() {
+                        out_of_range = true;
+                        continue;
+                    }
+                    let index = if n > 0 { n - 1 } else { count + n };
+                    per_arg[slot].push(usize::try_from(index).unwrap_or(0));
+                }
             }
         }
         if out_of_range {
@@ -124,6 +166,7 @@ impl Model {
                 "Index out of range".to_string(),
             ));
         }
+        let indices: Vec<usize> = per_arg.into_iter().flatten().collect();
         Ok(indices)
     }
 }

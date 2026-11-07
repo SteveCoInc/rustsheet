@@ -106,3 +106,29 @@ fn test_choose_huge_negative_index_is_out_of_range() {
     model.evaluate();
     assert_eq!(model._get_text("E1"), "#VALUE!");
 }
+
+/// probes/t4718-choose-index-error-order A13, A16, A20, A21, A30, A41 (T-4718): single-value index
+/// arguments are scanned before array and range ones, and a 2-D index is `#VALUE!`.
+#[test]
+fn test_choose_index_problem_order() {
+    let mut model = new_empty_model();
+    for (i, f) in [
+        r#"=CHOOSECOLS(D1:F2,"x",NA())"#,
+        r#"=CHOOSECOLS(D1:F2,{"x",#N/A},1/0)"#,
+        r#"=CHOOSECOLS(D1:F2,{"x"},NA())"#,
+        "=CHOOSECOLS(D1:F2,{1,2;3,1})",
+        "=CHOOSEROWS(D1:F2,{1,#N/A;2,3})",
+        "=CHOOSEROWS(D1:F2,{#N/A},1/0)",
+    ]
+    .iter()
+    .enumerate()
+    {
+        model._set(&format!("H{}", i + 1), f);
+    }
+    model.evaluate();
+    let got: Vec<String> = (1..=6).map(|i| model._get_text(&format!("H{i}"))).collect();
+    assert_eq!(
+        got,
+        ["#VALUE!", "#DIV/0!", "#N/A", "#VALUE!", "#VALUE!", "#DIV/0!"]
+    );
+}

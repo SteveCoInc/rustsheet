@@ -1,0 +1,56 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4238 round 2: which shape's absorption makes BETA.DIST's and NEGBINOM.DIST's cdf (and BETA.DIST's density) #NUM!. Predictions in docs/research/t4238/predictions-r2.tsv committed before the fill. H_oriented: #NUM! on bfrac where fl(a0 + b0) = a0 after bratio's swap (density: fl(alpha + beta) = alpha, both shapes above 1); H_raw: the same on the raw arguments.",
+  "tags": [
+    "M9",
+    "statistical",
+    "beta",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=BETA.DIST(0.676787845512177,41,6E+17,TRUE)",
+        "B1": "=BETA.DIST(0.676787845512177,41,6E+17,FALSE)",
+        "A2": "=BETA.DIST(0.676787845512177,41,5E+17,TRUE)",
+        "B2": "=BETA.DIST(0.676787845512177,41,5E+17,FALSE)",
+        "A3": "=BETA.DIST(0.676787845512177,101,2E+18,TRUE)",
+        "B3": "=BETA.DIST(0.676787845512177,101,2E+18,FALSE)",
+        "A4": "=BETA.DIST(0.676787845512177,101,1E+18,TRUE)",
+        "B4": "=BETA.DIST(0.676787845512177,101,1E+18,FALSE)",
+        "A5": "=BETA.DIST(0.676787845512177,1001,1E+19,TRUE)",
+        "B5": "=BETA.DIST(0.676787845512177,1001,1E+19,FALSE)",
+        "A6": "=BETA.DIST(0.676787845512177,1001,9E+18,TRUE)",
+        "B6": "=BETA.DIST(0.676787845512177,1001,9E+18,FALSE)",
+        "A7": "=BETA.DIST(0.1,41,6E+17,TRUE)",
+        "B7": "=BETA.DIST(0.1,41,6E+17,FALSE)",
+        "A8": "=BETA.DIST(0.9,41,6E+17,TRUE)",
+        "B8": "=BETA.DIST(0.9,41,6E+17,FALSE)",
+        "A9": "=BETA.DIST(0.5,41,6E+17,TRUE)",
+        "B9": "=BETA.DIST(0.5,41,6E+17,FALSE)",
+        "A10": "=BETA.DIST(0.9,6E+17,41,TRUE)",
+        "B10": "=BETA.DIST(0.9,6E+17,41,FALSE)",
+        "A11": "=BETA.DIST(0.5,6E+17,41,TRUE)",
+        "B11": "=BETA.DIST(0.5,6E+17,41,FALSE)",
+        "A12": "=BETA.DIST(0.999,7E+17,57.5,TRUE)",
+        "B12": "=BETA.DIST(0.999,7E+17,57.5,FALSE)",
+        "A13": "=BETA.DIST(0.001,57.5,7E+17,TRUE)",
+        "B13": "=BETA.DIST(0.001,57.5,7E+17,FALSE)",
+        "A14": "=BETA.DIST(1E-19,41,6E+17,TRUE)",
+        "B14": "=BETA.DIST(1E-19,41,6E+17,FALSE)",
+        "A15": "=BETA.DIST(0.25,3E+20,2.5,TRUE)",
+        "B15": "=BETA.DIST(0.25,3E+20,2.5,FALSE)",
+        "A16": "=BETA.DIST(0.75,2.5,3E+20,TRUE)",
+        "B16": "=BETA.DIST(0.75,2.5,3E+20,FALSE)",
+        "A17": "=NEGBINOM.DIST(6E+17,40,0.323212154487823,TRUE)",
+        "B17": "=NEGBINOM.DIST(6E+17,40,0.676787845512177,TRUE)",
+        "A18": "=NEGBINOM.DIST(40,6E+17,0.323212154487823,TRUE)",
+        "B18": "=NEGBINOM.DIST(40,6E+17,0.676787845512177,TRUE)",
+        "A19": "=NEGBINOM.DIST(2E+18,100.5,0.323212154487823,TRUE)",
+        "B19": "=NEGBINOM.DIST(2E+18,100.5,0.676787845512177,TRUE)"
+      }
+    }
+  ],
+  "expected": {}
+}
