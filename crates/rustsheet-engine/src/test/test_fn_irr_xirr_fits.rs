@@ -236,8 +236,9 @@ fn irr_where_the_secant_fails_finds_the_root_nearest_v_zero() {
 }
 
 #[test]
-fn irr_fallback_tests_the_residual_one_newton_step_past_its_stop() {
-    // T-3411 round 4: where both secant runs fail, a root Newton settles on is #NUM! when |NPV|
+fn irr_last_attempt_keeps_the_former_residual_cut_cells() {
+    // T-3411 round 4, now through the d = -0.1 attempt (T-4975 audit 3): where every secant attempt
+    // fails Excel is #NUM!; these cells pinned the removed Newton fallback's residual cut, |NPV|
     // one step past the stop is 1E-4 or more. probes-numeric/t3478-irr-r4-wide A90 (1.22E-4 there)
     // is #NUM!; A79 and A292 return although at the stop iterate itself their residuals are 8.8E-4
     // and 1.3E-4 (their last digits are T-3408's, so only the type is pinned here).
@@ -426,21 +427,49 @@ fn irr_secant_cap_is_the_same_for_every_call() {
 }
 
 #[test]
-fn irr_retries_from_the_discount_seed() {
-    // T-4975 audit 3: where the guess's run and the retry from 0.1 fail, a run from v = 1.1 finds
-    // Excel's digits (probes/irr-fallback-roots P!A12 and P!A22; ironcalc-calc IRR.xlsx General!L17),
-    // which the Newton fallback missed by 37 and 17 ulps.
+fn irr_last_attempt_starts_at_d_minus_a_tenth() {
+    // T-4975 audit 3 (addendum 3, section H): where the guess's and the default guess's attempts
+    // fail, the attempt from d = -0.1 finds Excel's digits (probes/irr-fallback-roots P!A12 and
+    // P!A22; ironcalc-calc IRR.xlsx General!L17 at update 125), which the Newton fallback missed by
+    // 37 and 17 ulps; its signed start offset gives the negated flows their own digits
+    // (probes-numeric/t2927-irr-fallback-sweep A80).
     let got = results(&[
         "=IRR({42,1,1,-1})",
         "=IRR({42,1,1,-1},0.5)",
+        "=IRR({-42,-1,-1,1})",
         "=IRR({-400,1,1,1,1,1})",
         "=IRR({-400,1,1,1,1,1},0.01)",
     ]);
     let expected = [
         -0.746_704_476_653_737_1_f64,
         -0.746_704_476_653_737_1,
+        -0.746_704_476_653_740_7,
         -0.673_736_675_180_840_5,
         -0.673_736_675_180_840_5,
+    ];
+    assert_eq!(got, expected.map(f64::to_bits));
+}
+
+#[test]
+fn irr_runs_two_hundred_updates_for_every_input() {
+    // Addendum 3, section H: gen-m9/31474c20fc1dafd6 Calc!A173 (`IRR(Data!C1:E7)`, a 1E+15 flow,
+    // Excel after update 51) and ba4ddb817a8e700e Calc!A373 (`IRR(Data!C1:E11,Data!A8*Data!D6)`,
+    // update 68), the numbers of their ranges in row order; probes-numeric/
+    // t3347-irr-conventional-holdout P!A25 (returned at update 200 under the 1e-4 test) and P!A118
+    // (the twice-rounded 1 - d); t3347-irr-r4-fresh A52 (a root the error classifier pre-empted).
+    let got = results(&[
+        "=IRR({-0.5,42,1.005,123456789.123,-0.5,0.3,1E+15,0.3,42,1,0.3,1,0.5,-1})",
+        "=IRR({-2.5,100,42,0.1,-1,0.2,0.3,123456789.123,-2.5,2,7,2.5,-1,0.5,2.5,1E-15,1E+15,100,123456789.123,1.005},-0.5)",
+        "=IRR({-3059548204.29,521255991.15,945998930.48,996766465.97,595003477.29})",
+        "=IRR({-4644417054.85,1623802700.37,1743057871.25,1275367027.61})",
+        "=IRR({5269092526.48884,-118527.360339241,-17182.2159040934,-88912.399751738,-35803.7486524801,-68708.7537575748,-107014.260861857,-21219.4170843404,-58236.3903095811,-75317.1992186433,-73521.1582838103,-78264.948216601,-95601.7612564427,-20004.8379456876,-59614.8055900756,-74062.3546290729,-97283.3914088112,-56129.0503653067,-58145.8255470416,-48409.3532170003,-108090.158585088,-45997.9318202708,-82924.7421268438,-101200.667800715,-41772.6685472847,-105413.239889478,-98553.098519149,-68569.2483676826,-71791.9560824583,-42447.9076549358,-36765.1911876846,-83375.1900307704,-94787.7252673916,-40639.5229742157,-80558.5784522469,-27717.2344386984,-105699.720411514,-105617.163696477,-70476.7499653863,-83168.7929195298,-27640.5447601861,-91856.4988985311,-24406.4093294585,-89850.9757171176,-117269.72585201,-82518.7550353443,-34096.4975927237,-108777.801358874,-28523.4697883074,-110926.061182294,-53382.79917888,-53307.0761355066,-79383.8284492618,-55281.6599406716,-47144.5323918044,-113927.080482745,-29801.1090065886,-109438.395331364,-39439.0385560273,-12302.2295282068,-54378.50934114,-70093.3876903242,-65168.6387331095,-16411.9046245493,-107064.04835217,-108617.700161449,-76046.5078982186,-20292.8797531886,-24074.7263918106,-94623.8331158653,-12844.4873074928,-12965.3916524786,-66770.9335877795,-118521.93093073,-96674.1135094589,-71059.4908587591,-7154.82148693787,-21139.4469608767,-105361.705483859,-30816.8471759608,-64283.4027977171,-57448.2712778636,-59790.9597607717,-65830.6080500559,-54058.2006948844,-90658.4735698973,-77739.4062014091,-50702.6344094987})",
+    ]);
+    let expected = [
+        661.407_639_121_985_5_f64,
+        39.426_895_723_824_34,
+        -6.722_756_777_233_219e-5,
+        -0.000_244_917_238_009_900_73,
+        -0.098_593_648_815_817_34,
     ];
     assert_eq!(got, expected.map(f64::to_bits));
 }

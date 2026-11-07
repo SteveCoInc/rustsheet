@@ -972,8 +972,9 @@ outside `IRR_LONG_RUN_RANGE` (6..54 flows), on longer series:
   from 0.1 reaches the step-62 point whose discount underflows. The engine stops at step 50 and is `#NUM!`.
 These 21 cells are T-4839's (excel-graph, 2026-11-07).
 Status: DEVIATION (decision 0014)
-Implemented in: `xirr_bracket` (`WALK_CAP`), `compute_xirr` (`BISECTION_CAP`), `irr_secant` (`IRR_SECANT_STEPS`, `IRR_STALL_STEPS`),
-`irr_fallback` (`IRR_FALLBACK_STEPS`) (functions/financial/financial_util.rs)
+Implemented in: `xirr_bracket` (`WALK_CAP`), `compute_xirr` (`BISECTION_CAP`), `irr_secant` (`IRR_SECANT_STEPS`),
+(the Newton fallback `irr_fallback`, `IRR_FALLBACK_STEPS`, until T-4975: "IRR is one uniform secant in d = 1 - v,
+then two retries") (functions/financial/financial_util.rs)
 Tasks: T-0916, T-1686
 
 ## IRR's guess range
@@ -1166,7 +1167,8 @@ Evidence: probes/irr-fallback-roots A1-A24 (excel-graph, 2026-10-26); the gen-m9
 probes-numeric/t2927-irr-fallback-sweep (excel-graph, 2026-10-27).
 Status: VERIFIED (excel-graph) for which flows return; UNVERIFIED for the method (not Newton, finding 6) and the step cap
 (between 29 and 119)
-Implemented in: `irr_fallback`, `IRR_FALLBACK_STEPS` (functions/financial/financial_util.rs)
+Implemented in: `irr_fallback`, `IRR_FALLBACK_STEPS` until T-4975, which replaced the fallback by the attempt from
+d = -0.1 ("IRR is one uniform secant in d = 1 - v, then two retries"; it gives Excel's digits on these roots)
 Tasks: T-2727, T-1686, T-2131, T-2927 (sweep), T-2928 (returned digits), T-3117 (power-of-two probe)
 
 ## RATE is a secant on the FV residual
@@ -1815,9 +1817,9 @@ Tasks: T-3347, T-3548
 
 ## IRR's discount domain is checked at convergence
 Rule: IRR's secant in d = 1 - v may step past the pole (d > 1, a negative discount v) and come back: only the iterate
-it stops at must be a positive discount, and a run that stops at v <= 0 fails (retry from 0.1, then the fallback). The
+it stops at must be a positive discount, and a run that stops at v <= 0 fails (then the next attempt). The
 zero-step stall test measures NPV against the discounted absolute flows at the iterate, `sum |c_i|·|v|^i`, not the
-largest flow. With the old per-iterate `d > 1` rejection (kept from the fit, unprobed) these were off:
+largest flow (T-4975 audit 3 then removed the stall stop and the Newton fallback). With the old per-iterate `d > 1` rejection (kept from the fit, unprobed) these were off:
 probes/t2565-irr-guess-sweeps P!C157 `IRR({2.5,1,-123456789.123},2697.5242098806502)` is 7026.083663321499 (ours was
 7026.0836627623075), gen-m9/a91bad4e84f49739 Calc!A369 `IRR({0.3,-2.5,1.005})` 6.909808543634389 (ours
 6.909808543634611, the fallback's root), and probes/irr-guess-edges P!A28, A29 (`IRR(D!A1:D12)` and guess 0.5) are
@@ -1843,26 +1845,40 @@ Status: DEVIATION (decision 0014)
 Implemented in: `array_of_numbers_from`, `push_flow` (functions/financial/mod.rs)
 Tasks: T-4976, T-4975
 
-## IRR's third run starts from the discount seed v = 1.1
-Rule: where the guess's secant run and the retry from 0.1 both fail, IRR runs the same secant (200 steps) once more
-from d = 1 - 1.1 (v = 1.1, r = -1/11) before the Newton fallback; that run stops only on the residual (|d2 - d1| < 1e-7
-and |NPV| < 1e-7), not on a stalled zero step. It gives Excel's bits on the fallback controls of
-docs/research addendum 2 ("Still open", IRR): `IRR({-400,1,1,1,1,1})` -0.6737366751808405 at the run's step 125 and
-`IRR({42,1,1,-1})` -0.7467044766537371 at step 47, from every guess (probes/irr-fallback-roots P!A12:A15, A22:A24;
-ironcalc-calc IRR.xlsx General!L17), where the Newton fallback was 15 to 35 ulp off (T-2928). Eval: 278 more cells pass
-than with the fallback (probes 1144 fixed in all against 866 before this rule, gen-m9 17 against 15, ironcalc-calc 16
-against 14), none lost, and 17 Gate A IRR known failures became stale and were removed.
-Tried and not kept (each fails a gate): the seed as the second run in place of 0.1 (20 regressions, among them
-probes/solver-iteration-traces I!B13:B16 and t2657-pv-irr-div0 I!C2:C6, G2:G6, which the retry from 0.1 matches); the
-stalled-step stop in the seed run (probes/t3406-irr-num-boundary A130, A131 and t4844-irr-stage-invariance A24, 1E+11
-scale flows where Excel is `#NUM!`, come back as roots); RATE's flat-secant hold (`|f| < 1e-4` returns the held
-iterate), in every run or in the seed run only: 23 more probe cells and 51 stale Gate A lines, but t3406 A103 regresses
-and 4 Gate A points (r4-T-3411 A296, s1 A230, A219, r4-T-3407 A249: 1E+10 to 1E+11 scale flows, Excel `#NUM!`) leave
-the envelope. Excel's remaining `#DIV/0!` cells are path-dependent (t3406 n = 60, A81-A84) and get no threshold.
-Evidence: the cells above (excel-graph and Excel for Mac's cached ironcalc values); addendum 2.
-Status: VERIFIED (excel-graph) for the cells; the seed's place in the chain is inferred
-Implemented in: `compute_irr`, `IRR_SEED_DISCOUNT`, `irr_secant` (functions/financial/financial_util.rs)
-Tasks: T-4978, T-2928, T-4975
+## IRR is one uniform secant in d = 1 - v, then two retries
+Rule (addendum 3 of docs/research/excel-parity-findings-2026-11-07.md, section H; T-4975 audit 3): IRR runs one secant
+kernel in d = 1 - v = r/(1 + r) from d0 and d0 -+ 0.001 (toward larger |NPV|), up to 200 updates per attempt for every
+input, with no dependence on the flow count, their size or the guess. On a flat slope (f1 = f0) the older endpoint is
+replaced by d0 -+ 0.001 (away from d1) and re-evaluated; if the residuals are still equal the attempt fails, otherwise the
+run goes on, even at NPV's rounding floor (no zero-step stop). It stops when |step| and |NPV| are both below 1e-7, 1e-4 at
+the 200th update, and returns the new iterate. NPV's running product, the secant expression and `1 - d` are Excel's
+twice-rounded operators. Attempts: the supplied guess, then the default d = 0.1/1.1, then the literal d = -0.1 (not a rate
+guess of -0.1, and not Newton). Intermediate discounts may be negative; the final one must be positive and within the
+far-root bound. Where every attempt fails the call is `#NUM!`, or `#DIV/0!` where one went flat far out (decision 0316's
+error-only classifier, now read only after every attempt failed); an attempt that cannot evaluate NPV is `#DIV/0!`.
+Evidence (each bit-exact in `test_fn_irr_xirr_fits.rs`):
+- gen-m9/31474c20fc1dafd6 Calc!A173 (661.4076391219855) and ba4ddb817a8e700e Calc!A373 (39.42689572382434) reach Excel
+  after updates 51 and 68, outside the old 6..54-flow, 2.2E+8-peak box (a 1E+15 flow).
+- ironcalc-calc IRR.xlsx General!L17 `IRR({-400,1,1,1,1,1})` -0.6737366751808405 at the d = -0.1 attempt's update 125;
+  `{42,1,1,-1}` -0.7467044766537371 at update 47, and its negation ...7407 (probes-numeric/t2927-irr-fallback-sweep A80):
+  the start offset's sign. The removed Newton fallback gave ...8422 and ...7408.
+- probes-numeric/t3347-irr-conventional-holdout P!A25 -6.722756777233219E-5 at update 200 (update 199 is another grid
+  point); P!A118 -0.00024491723800990073 needs the twice-rounded `1 - d`.
+- probes-numeric/t3478-irr-r4-wide A206 -0.03181940929601346 and t3347-irr-r4-fresh A52 -0.09859364881581734 (the
+  classifier used to pre-empt it with `#DIV/0!`).
+- A trailing zero flow leaves the result unchanged (`IRR(VSTACK(-50,SEQUENCE(53,1,1,0)),-0.9)` with and without one).
+Eval: against main, probes 1340 cells fixed (with T-4975's other items: 866 before this rule), gen-m9 18, ironcalc-calc
+16, none lost; Gate A reported 68 IRR known failures stale, removed from eval/accuracy/known-failures.tsv as it instructs,
+with 0 failing points. Removed: the coverage box `IRR_LONG_RUN_RANGE` (T-3408), the `guess == 0.1` gate of the flat
+classifier and its flow range (T-3347), the zero-step stall stop and its bound (T-3120, T-3408), and the Newton fallback
+with its residual cut and range (T-2727, T-3411). An interim rule of this change (a third run from v = 1.1 with the
+fallback kept, addendum 2) fixed 278 cells but kept the Newton digits elsewhere; it is superseded.
+Still open: which error Excel returns where no attempt converges is path-dependent (t3406 n = 60: A81, A82 `#DIV/0!`, A83
+`#NUM!`, A84 `#DIV/0!`); no threshold is added for it.
+Status: VERIFIED (excel-graph and cached Excel values) for the cells; the mechanism is inferred (validated on train and
+holdout splits of the cached evidence, addendum 3; no fresh sweep)
+Implemented in: `irr_secant`, `compute_irr`, `IRR_SECANT_STEPS`, `IRR_LAST_START` (functions/financial/financial_util.rs)
+Tasks: T-4978, T-2928, T-3347, T-3408, T-4975
 
 ## RATE: an empty guess is guess 0, not the default 0.1
 Rule: an empty guess argument (`RATE(48,-200,8000,0,1,)`) or a reference to an empty cell behaves as
@@ -4994,8 +5010,8 @@ the step counts was scratch code and is not committed.
   count, largest flow and guess (50 steps outside it): `IRR(VSTACK(-50,SEQUENCE(53,1,1,0)),-0.9)` returned its root
   while the same flows with a trailing 0 (NPV unchanged) were `#NUM!`, and probes-numeric/t3478-irr-r4-wide A206
   (largest flow 4.7E+8) was `#NUM!` where Excel returns -0.03181940929601346. Without the box 23 eval cells pass that
-  failed (probes 21, gen-m9 2), none is lost, and Gate A is unchanged. The stall bound of 50 steps stays
-  (`IRR_STALL_STEPS`).
+  failed (probes 21, gen-m9 2), none is lost, and Gate A is unchanged. The zero-step stall stop and its 50-step
+  bound went too, with the rest of the kernel's rules in "IRR is one uniform secant in d = 1 - v, then two retries".
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
 Ours: `irr_secant` takes up to 200 steps (`IRR_SECANT_STEPS`, FITTED, decision 0320; the cap is a train-score plateau
 point, not Excel's) on every run since T-4975 (audit 3); before, only on 6..54 flows with the largest |c| in

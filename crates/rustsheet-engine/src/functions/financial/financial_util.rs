@@ -283,89 +283,51 @@ fn irr_npv(values: &[f64], v: f64) -> Option<f64> {
 /// FITTED(T-2727, 35 cells, IRR roots with 1 + r 1E+4..2E+15; cut bracketed 9999999.994..1E+7)
 const IRR_FAR_ROOT_BOUND: f64 = 1e7;
 
-/// The most Newton steps of [`irr_fallback`]: a run that needs 119 is `#NUM!` in Excel
-/// (gen-m9/abb7d565af89b849 A254) and the slowest probed root that returns needs 29 (`{42,1,1,-1}`).
-const IRR_FALLBACK_STEPS: usize = 50;
-
-/// The largest |NPV| (as [`irr_npv`] evaluates it, one Newton step past the stop) at which
-/// [`irr_fallback`] returns the root it reached: a larger residual is `#NUM!` (financial.md "IRR's
-/// fallback is `#NUM!` when NPV at its root is 1E-4 or more"; T-3411). Over every IRR cell in eval
-/// (169 cases), the cut moves no cell anywhere in 9.16E-5..1.22E-4: Excel's largest returning
-/// residual is 9.155E-5 (probes-numeric/t3411-irr-r4-fresh A37 and A140) and its smallest `#NUM!`
-/// one 1.2207E-4 (t3478-irr-r4-wide A90). Those residuals are 3 and 4 times 2^-15, the rounding
-/// step of NPV sums of flows near 1E+11, so the round value is placed between the two.
-/// Excel follows the absolute cut across scales: probes-numeric/t3411-irr-residual-scale scales those
-/// cells' flows by 1E-6..1E+4 and Excel turns `#NUM!` as the flows grow (A37's flows times 10, A79's
-/// times 10) exactly where this cut does, on all 72 cells. Applied only within
-/// [`IRR_ROOT_RESIDUAL_FLOWS`] (decision 0188 R4.3); outside it the root is returned, as before T-3411.
-/// FITTED(T-3411, 59264 cells, the 170 IRR cases: fallback roots of 2..148 flows, largest |c| 6.4E-12..2.2E+82; cut bracketed 9.155E-5..1.2207E-4)
-const IRR_ROOT_RESIDUAL: f64 = 1e-4;
-
-/// The flow sets [`IRR_ROOT_RESIDUAL`] is evidenced on: at most 148 flows (the longest scored series,
-/// probes-numeric/t3411-irr-r4-fresh*) with the largest |flow| from 6.4E-12
-/// (t3478-irr-r4-wide A287) to 2.2E+82 (A25).
-const IRR_ROOT_RESIDUAL_FLOWS: (usize, f64, f64) = (148, 6.4e-12, 2.2e82);
-
-/// The largest |flow| of `values` (0 when empty): the scale the IRR solver's flow ranges and the
-/// secant's stalled-step bound are measured on.
-fn largest_flow(values: &[f64]) -> f64 {
-    values.iter().fold(0.0_f64, |m, c| m.max(c.abs()))
-}
-
-/// Whether [`IRR_ROOT_RESIDUAL`] applies to `values` ([`IRR_ROOT_RESIDUAL_FLOWS`]).
-fn irr_root_residual_applies(values: &[f64]) -> bool {
-    let (most_flows, smallest, largest) = IRR_ROOT_RESIDUAL_FLOWS;
-    let peak = largest_flow(values);
-    values.len() <= most_flows && (smallest..=largest).contains(&peak)
-}
-
-/// The |NPV| above which a secant run that goes flat after a zero step (d1 = d0 and f1 = f0, so the
-/// next step is 0/0) is `#DIV/0!` rather than failed, measured on the largest |NPV| the run
-/// evaluated (financial.md "IRR is #DIV/0! on a flat secant after a far step"; T-3347, decision
-/// 0316). On long conventional series the first step from 0.1 jumps far toward r = -1, where NPV is
-/// 1E+200 or more, comes back and stalls. Placed on the train side of the fit lab's split (decision
-/// 0188 R4.1): the largest train `#NUM!` run reaches 1.556E+226 (probes/t3406-irr-num-boundary
-/// A65), the smallest train `#DIV/0!` run above it 6.57E+230 (A81), and the round value sits in that
-/// bracket (the test side's smallest `#DIV/0!` above, 5.16E+226 at probes-numeric/t3411-irr-r4-fresh-4
-/// A86, is in it too). Over every IRR cell in eval it moves 19 cells to Excel's `#DIV/0!` (13 train,
-/// 6 test) and none away; on its fresh sweep, drawn after the freeze (probes-numeric/t3347-irr-r4-fresh,
-/// R4.2), 8 more and none away. It is a proxy, not Excel's mechanism: two `#DIV/0!` runs reach only
-/// 1.3E+215 and 3.0E+221 (t3411-irr-r4-fresh A85, -3 A24), and on 11 runs past the cut Excel returns
-/// the root (roots -0.04 to -0.11): the engine's `#NUM!` there becomes `#DIV/0!`, wrong either way
-/// (T-3548). It applies to every run (T-4975 audit 3): the training-set box of 27..144 flows of
-/// largest |c| 1.3E+4..6.7E+14 and the `guess == 0.1` classifier it sat behind moved no eval cell
-/// and no Gate A point when dropped (probes, probes-numeric, gen-m9, ironcalc-calc and Gate A
-/// compared with and without them), so they were evidence boundaries, not Excel rules.
+/// The |NPV| above which a search that ends on a flat secant after a zero step is `#DIV/0!` rather
+/// than `#NUM!`: decision 0316's error-only classifier (financial.md "IRR is #DIV/0! on a flat secant
+/// after a far step"; T-3347). On long conventional series a run jumps far toward r = -1, where NPV
+/// is 1E+200 or more, comes back and stalls. Placed on the train side of the fit lab's split
+/// (decision 0188 R4.1): the largest train `#NUM!` run reaches 1.556E+226
+/// (probes/t3406-irr-num-boundary A65), the smallest train `#DIV/0!` run above it 6.57E+230 (A81).
+/// It is a proxy, not Excel's mechanism: which error Excel gives where no attempt converges is
+/// path-dependent (t3406 n = 60 gives A81, A82 `#DIV/0!`, A83 `#NUM!`, A84 `#DIV/0!`; addendum 3 of
+/// docs/research/excel-parity-findings-2026-11-07.md, "Still open"). Since T-4975 it is read only
+/// after every attempt has failed ([`compute_irr`]), so it cannot pre-empt a root a retry finds
+/// (probes-numeric/t3347-irr-r4-fresh A52), and it applies to every input.
 /// FITTED(T-3347, 36 cells, flat zero-step IRR runs past 1E+200 of 27..144 flows, largest |c| 1.3E+4..6.7E+14, guess 0.1; cut bracketed 1.556E+226..6.57E+230 on train)
 const IRR_FLAT_DIV_ZERO_NPV: f64 = 3e226;
 
-/// The steps an IRR secant run takes before it fails. Excel finishes runs longer than 50 steps on
-/// the run's own digits: every train and test run that reaches the residual stop at its 51st to
-/// 200th step is Excel's value bit for bit (83 cells; t3411-irr-r4-fresh A53 at the 90th step,
-/// t3411-irr-r4-fresh-3 A53 at the 200th). Past 200 steps Excel's outcome is no clean function of
-/// the step count: on the fit lab's train side it returns the run's own value after 241 to 291 steps
-/// (t3411-irr-r4-fresh A2, t2927-irr-fallback-sweep A97 at 256, t3411-irr-r4-fresh-4 A63,
-/// t3411-irr-r4-fresh A70) and the retry's after 217 to 287 (t3411-irr-r4-fresh-2 A63, A54, A57,
-/// A74; t3411-irr-r4-fresh A142; t3478-irr-r4-wide A240; t3411-irr-r4-fresh-3 A74). So 200 is not
-/// Excel's cap: it is a point on the train-score plateau of 200..216 steps (64 of the 87 train cells
-/// whose result depends on the cap; 291 scores 61, 50 scores 12). `docs/research/t3408/bounds.py`
-/// prints the table from the replay's cell lists (financial.md "IRR's secant runs longer than 50
-/// steps"; T-3408, decision 0320). Until T-4975 (audit 3) it applied only inside the training set's
-/// box of 6..54 flows, largest |c| 5.6E-9..2.2E+8 and guess -0.99934..9.81E+7, and every other run
-/// stopped at 50: `IRR(VSTACK(-50,SEQUENCE(53,1,1,0)),-0.9)` returned its root while the same flows
-/// with a trailing 0 (55 flows, NPV unchanged) were `#NUM!`, and t3478-irr-r4-wide A206 (largest
-/// |c| 4.7E+8) was `#NUM!` where Excel returns -0.03181940929601346. Applied to every run, it fixes
-/// 23 eval cells and loses none, and Gate A is unchanged. It is also the solver's directive-5 bound
-/// (financial.md "The IRR and XIRR solver caps").
+/// The updates of one IRR secant attempt ([`irr_secant`]), for every input: no dependence on the
+/// flow count, their size or the guess (addendum 3 of docs/research/excel-parity-findings-2026-11-07.md,
+/// section H; T-4975 audit 3). The initial NPV evaluations and a flat slope's resampling are not
+/// updates. Excel finishes runs of 51 to 200 updates on the run's own digits (83 cells; T-3408,
+/// decision 0320): gen-m9/31474c20fc1dafd6 Calc!A173 and ba4ddb817a8e700e Calc!A373 reach Excel
+/// after updates 51 and 68 with a 1E+15 flow, and probes-numeric/t3347-irr-conventional-holdout
+/// P!A25 returns at update 200 itself (update 199 is another grid point). Until T-4975 the 200
+/// applied only inside a training-set box of flows, peak and guess (50 updates outside), so
+/// appending a zero flow turned a root `#NUM!` and t3478-irr-r4-wide A206 was `#NUM!`.
 /// FITTED(T-3408, 80 cells, IRR secant runs of 51..200 steps: 6..54 flows, largest |c| 5.6E-9..2.2E+8, guess -0.99934..9.81E+7; cap 200 = train-score plateau 200..216, no Excel cap)
 const IRR_SECANT_STEPS: usize = 200;
 
-/// The steps within which a stalled zero step still stops a run (financial.md "The IRR and XIRR
-/// solver caps"). It sits in a bracket of 41..69 steps: Excel returns every stalled stop in eval up
-/// to the 41st step (t3478-irr-r4-wide A260) and is `#NUM!` on all six from there to Excel's cap
-/// (70th to 189th: probes/irr-guess-edges-2 A25-A27, Gate A r4-T-3411 A228 and A215,
-/// t3478-irr-r4-wide A227; T-3408).
-const IRR_STALL_STEPS: usize = 50;
+/// The stop's bound on |step| and |NPV| at every update but the last: Microsoft's documented
+/// 0.00001 percent for the step, and the residual's chosen by scoring (T-1533). The last update
+/// takes [`IRR_LAST_UPDATE_TOLERANCE`].
+const IRR_TOLERANCE: f64 = 1e-7;
+
+/// The bound on |step| and |NPV| at the [`IRR_SECANT_STEPS`]th update (addendum 3, section H;
+/// t3347-irr-conventional-holdout P!A25 returns there), as RATE's cap test (`RATE_CAP_TOLERANCE`).
+const IRR_LAST_UPDATE_TOLERANCE: f64 = 1e-4;
+
+/// The secant's start offset in d and a flat slope's resampling step (T-1533).
+const IRR_OFFSET: f64 = 1e-3;
+
+/// The coordinate d = 1 - v of IRR's last attempt, after the guess's and the default guess's: the
+/// literal d = -0.1, not a rate guess of -0.1 (addendum 3, section H). Its signed start offset
+/// explains the last attempt's negation-sensitive digits: `IRR({42,1,1,-1})` is -0.7467044766537371
+/// at its update 47 and the negated flows give ...7407 (probes-numeric/t2927-irr-fallback-sweep
+/// A80); ironcalc-calc IRR.xlsx General!L17 `IRR({-400,1,1,1,1,1})` is -0.6737366751808405 at
+/// update 125. It replaced T-2727's Newton fallback from v = 0, whose digits were 15 to 35 ulp off.
+const IRR_LAST_START: f64 = -0.1;
 
 /// The rate 1/v - 1 at a converged discount factor `v`, or `None` past [`IRR_FAR_ROOT_BOUND`].
 fn irr_from_discount(v: f64) -> Option<f64> {
@@ -373,123 +335,93 @@ fn irr_from_discount(v: f64) -> Option<f64> {
     (x < IRR_FAR_ROOT_BOUND).then_some(x - 1.0)
 }
 
-/// One run of IRR's secant from d = `start`, or why it stopped without a root: [`SecantStop::Failed`]
-/// on a flat secant, a converged discount factor that is not positive or no stop in
-/// [`IRR_SECANT_STEPS`] steps; with `may_stall` false only the residual stop ends the run (the
-/// seed run of [`compute_irr`]);
-/// [`SecantStop::DivZero`] at v = 0 or where NPV cannot be evaluated. The state is
-/// d = 1 - v = r/(1 + r), so from v = 0.5 down the iterates' v = 1 - d sit on Excel's grid of multiples of 2^-53
-/// (probes/t2565-irr-guess-sweeps), and each step is anchored on the newer iterate.
-/// Chosen by scoring on the fit set (financial.md "IRR is a secant in d = 1 - v"): the start offset
-/// of 1E-3 toward larger |NPV| (+1E-3 on both sides scores 121 of 263) and the 1E-7 residual stop
-/// (1E-6 scores 188, 1E-8 180). Not fits: the 1E-7 step stop is Microsoft's documented 0.00001
-/// percent, and the step cap is [`IRR_SECANT_STEPS`] (financial.md "The IRR and XIRR solver caps").
-/// T-3478 measured both past the fit set on a fresh 300-point sweep (probes-numeric/t3478-irr-r4-wide):
-/// in aggregate the shipped pair scores 232 of 300 against Excel, against 146 and 126 for offsets
-/// 1E-4 and 1E-2 and 224 and 217 for residuals 1E-6 and 1E-8 (financial.md "RATE and IRR secant
-/// constants past their fit sets"). The tag covers these constants only: the sweep's 50 cells off
-/// Excel come from the step cap, the fallback, the residual's absolute scale and Excel errors not
-/// yet explained (T-3548).
+/// How an attempt of [`irr_secant`] ended without a root.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum SecantStop {
+    /// No root; `far_flat` when it went flat after a zero step having seen an |NPV| past
+    /// [`IRR_FLAT_DIV_ZERO_NPV`] (the error-only classifier, read after every attempt failed).
+    Failed { far_flat: bool },
+    /// An iterate reached v = 0, or NPV could not be evaluated: the call is `#DIV/0!`.
+    DivZero,
+}
+
+/// One attempt of IRR's secant in d = 1 - v = r/(1 + r) from d0 = `start` (addendum 3 of
+/// docs/research/excel-parity-findings-2026-11-07.md, section H; financial.md "IRR is a secant in
+/// d = 1 - v"): d1 = d0 -+ [`IRR_OFFSET`] toward larger |NPV|, then up to [`IRR_SECANT_STEPS`]
+/// updates `d2 = d1 - f1·(d1 - d0)/(f1 - f0)`, every operation and NPV's running product Excel's
+/// twice-rounded operator, `1 - d` included. Where the two residuals are equal the older endpoint
+/// is replaced by `d0 -+ IRR_OFFSET` (away from d1) and re-evaluated; if they are still equal the
+/// attempt fails. It stops when |d2 - d1| and |f2| are below [`IRR_TOLERANCE`]
+/// ([`IRR_LAST_UPDATE_TOLERANCE`] at the last update) and returns the new iterate's rate.
+/// Intermediate discounts may be negative; the final one must be positive and within
+/// [`IRR_FAR_ROOT_BOUND`] (T-2928, T-4975 item 11). `DivZero` at v = 0 or where NPV cannot be
+/// evaluated (T-2802, T-3407).
 /// FITTED(T-1533, 263 cells, IRR of 2..41 flows, |c| 1E-6..1E+9, guess -0.99..100, roots -0.99..99; T-3478 sweep, 231 Excel roots: 2..148 flows, |c| 2.3E-15..4.0E+12, guess -0.9997..9.8E+7, roots -0.9997..9.0E+5)
-/// The zero-step stop's bound (below):
-/// FITTED(T-3120, 36 cells, IRR of {-2.5,-1,123456789.123} over a guess sweep)
-fn irr_secant(values: &[f64], start: f64, may_stall: bool) -> Result<f64, SecantStop> {
-    // An NPV the run cannot evaluate (a discount power out of the double range, or a sum that is
-    // not finite) ends the call with `#DIV/0!`, worksheet NPV's error for the same sum, and without
-    // the retry from 0.1: probes/t3406-irr-num-boundary A69-A72 and A84-A94, the 7 long-series
-    // hold-out cells of probes-numeric/t3347-irr-conventional-holdout (A123..A143) and 28 cells of
-    // the t3411 fresh sweeps are `#DIV/0!` in Excel exactly where the secant's step lands there
-    // (financial.md "IRR is #DIV/0! where its secant cannot evaluate NPV", T-3407).
-    let npv = |d: f64| irr_npv(values, 1.0 - d).ok_or(SecantStop::DivZero);
-    let magnitudes: Vec<f64> = values.iter().map(|c| c.abs()).collect();
-    let mut d0 = start;
-    let mut f0 = npv(d0)?;
-    let mut d1 = d0 - if f0 > 0.0 { 1e-3 } else { -1e-3 };
-    let mut f1 = npv(d1)?;
-    let mut largest_npv = f0.abs().max(f1.abs());
-    for step in 0..IRR_SECANT_STEPS {
-        if f1 == f0 {
-            // After a zero step (d1 = d0) the next step is 0/0: `#DIV/0!` where the run went far
-            // (probes-numeric/t3347-irr-conventional-holdout A131 and A138; T-3347).
-            return Err(if d1 == d0 && largest_npv > IRR_FLAT_DIV_ZERO_NPV {
-                SecantStop::DivZero
-            } else {
-                SecantStop::Failed
-            });
-        }
-        let d2 = d1 - extended_quotient(f1 * (d1 - d0), f1 - f0);
-        // An iterate of exactly d = 1 is v = 0, and NPV's 1/v divides by zero: Excel's
-        // `#DIV/0!` (`IRR({-1,1E+300})`, probes/irr-guess-edges A39; financial.md "IRR's far-root
-        // bound", T-2802). The call ends there, without the retry from 0.1. Past 1 (a negative
-        // discount) the run goes on: only the discount it converges to must be positive, checked
-        // at the stop below (T-4975 item 11; financial.md "IRR's discount domain is checked at
-        // convergence").
-        if d2 == 1.0 {
+fn irr_secant(values: &[f64], start: f64) -> Result<f64, SecantStop> {
+    let npv = |d: f64| {
+        let v = extended_sum(1.0, -d);
+        if v == 0.0 {
             return Err(SecantStop::DivZero);
         }
+        irr_npv(values, v).ok_or(SecantStop::DivZero)
+    };
+    let mut d0 = start;
+    let mut f0 = npv(d0)?;
+    let mut d1 = d0 - if f0 > 0.0 { IRR_OFFSET } else { -IRR_OFFSET };
+    let mut f1 = npv(d1)?;
+    let mut largest_npv = f0.abs().max(f1.abs());
+    // Whether the attempt met a flat slope after a zero step having gone far: the error-only
+    // classifier's case (T-3347), read only if the attempt then fails.
+    let mut far_flat = false;
+    for update in 1..=IRR_SECANT_STEPS {
+        if f1 == f0 {
+            far_flat |= d1 == d0 && largest_npv > IRR_FLAT_DIV_ZERO_NPV;
+            d0 += if d1 <= d0 { -IRR_OFFSET } else { IRR_OFFSET };
+            f0 = npv(d0)?;
+            largest_npv = largest_npv.max(f0.abs());
+            if f1 == f0 {
+                return Err(SecantStop::Failed { far_flat });
+            }
+        }
+        let d2 = extended_sum(
+            d1,
+            -extended_quotient(
+                extended_product(f1, extended_sum(d1, -d0)),
+                extended_sum(f1, -f0),
+            ),
+        );
         if !d2.is_finite() {
-            return Err(SecantStop::Failed);
+            return Err(SecantStop::Failed { far_flat });
         }
         let f2 = npv(d2)?;
         largest_npv = largest_npv.max(f2.abs());
-        // A zero step also stops when NPV is within 1e-7 of the flows' scale (below): on the 2^-53 grid
-        // `IRR({-2500000,-1000000,123456789123000})` cannot get NPV under 1e-7 (1.2E-6 at
-        // Excel's 7026.083663633989), yet Excel returns it (probes/t2565-irr-guess-sweeps
-        // A107-C141). The bound is fitted: anything from 1E-20 to 1E-7 of the scale
-        // scores the same, and an absolute residual from 1E-5 to 0.1 would too.
-        // Past [`IRR_STALL_STEPS`] a stalled zero step is no stop: the run goes flat on its
-        // next step and fails. Excel is `#NUM!` on all 6 stalled stops in eval and Gate A between the
-        // 41st step and its cap (T-3408).
-        // The scale is the discounted absolute flows at the iterate, `sum |c_i|·|v|^i`, the size
-        // NPV's rounding is relative to, rather than the largest flow, which a deep discount puts
-        // far below the sum's own rounding (T-4975 item 11).
-        let stalled = may_stall
-            && d2 == d1
-            && step < IRR_STALL_STEPS
-            && irr_npv(&magnitudes, (1.0 - d2).abs()).is_some_and(|scale| f2.abs() < 1e-7 * scale);
-        if (d2 - d1).abs() < 1e-7 && (f2.abs() < 1e-7 || stalled) {
-            // Excel's root is a positive discount factor: a run that converges at v <= 0 has no
-            // rate and fails (the retry and the fallback decide).
-            if 1.0 - d2 <= 0.0 {
-                return Err(SecantStop::Failed);
-            }
-            return irr_from_discount(1.0 - d2).ok_or(SecantStop::Failed);
+        let tolerance = if update == IRR_SECANT_STEPS {
+            IRR_LAST_UPDATE_TOLERANCE
+        } else {
+            IRR_TOLERANCE
+        };
+        if (d2 - d1).abs() < tolerance && f2.abs() < tolerance {
+            let v = extended_sum(1.0, -d2);
+            return if v > 0.0 {
+                irr_from_discount(v).ok_or(SecantStop::Failed { far_flat })
+            } else {
+                Err(SecantStop::Failed { far_flat })
+            };
         }
         (d0, f0, d1, f1) = (d1, f1, d2, f2);
     }
-    Err(SecantStop::Failed)
-}
-
-/// The discount factor v = 1/(1 + r) IRR's last secant run starts from, after the guess's run and
-/// the retry from 0.1 failed ([`compute_irr`]): r = -1/11. Excel's value, from the two-flow-set
-/// controls that run reproduces bit for bit (addendum 2 of docs/research/excel-parity-findings-2026-11-07.md).
-const IRR_SEED_DISCOUNT: f64 = 1.1;
-
-/// Why a run of [`irr_secant`] stopped without a root.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum SecantStop {
-    /// No root: the call retries from 0.1, then falls back ([`compute_irr`]).
-    Failed,
-    /// An iterate reached v = 0, or NPV could not be evaluated: the call is `#DIV/0!`.
-    DivZero,
+    Err(SecantStop::Failed { far_flat })
 }
 
 /// The smallest guess IRR refuses as too large: 2^53.
 const IRR_GUESS_BOUND: f64 = 9_007_199_254_740_992.0;
 
-/// IRR as Excel computes it: a secant on NPV in d = 1 - v = r/(1 + r), v = 1/(1 + r), from
-/// d0 = guess/(1 + guess) and d1 = d0 -+ 0.001 (toward larger |NPV|), each step anchored on the
-/// newer iterate. It stops at the first iterate with |d2 - d1| < 1e-7 and |NPV| < 1e-7 (or a zero
-/// step, see [`irr_secant`]) and returns 1/(1 - d2) - 1; a run that fails is retried once from 0.1,
-/// then once from the discount seed v = [`IRR_SEED_DISCOUNT`] (T-4975 audit 3).
-/// Leading zero flows are dropped first. This matches all 263 cells of the fit set
-/// (probes/solver-iteration-traces sheet I, probes-numeric/m9-fin-irr-rate; fit lab `irr`,
-/// `irr_secant_d`, T-3120, T-3205) and 180 of the 181 of probes/t2565-irr-guess-sweeps.
-/// Not Excel facts, kept from the fit: the v <= 0 check at convergence, no retry when the guess is
-/// already 0.1, and `#NUM!` for flows without a sign change. Where every run fails,
-/// [`irr_fallback`] runs a Newton search from v = 0 (fitted, T-2727). A root with 1 + r at or past
-/// [`IRR_FAR_ROOT_BOUND`] is `#NUM!` from either. A run's step cap is [`IRR_SECANT_STEPS`], 200,
-/// a directive-5 bound too (financial.md "The IRR and XIRR solver caps").
+/// IRR as Excel computes it (addendum 3 of docs/research/excel-parity-findings-2026-11-07.md,
+/// section H): [`irr_secant`] from the guess's d = guess/(1 + guess), then from the default guess's
+/// d = 0.1/1.1, then from d = [`IRR_LAST_START`], returning the first root found. Where every
+/// attempt fails the call is `#NUM!`, or `#DIV/0!` where one went flat far out (decision 0316's
+/// error-only classifier, [`IRR_FLAT_DIV_ZERO_NPV`]); an attempt that reaches v = 0 or cannot
+/// evaluate NPV ends the call with `#DIV/0!` (T-3407). Leading zero flows are dropped first.
 pub(crate) fn compute_irr(values: &[f64], guess: f64) -> Result<f64, (Error, String)> {
     // Excel: a guess at or above 2^53 is #VALUE! too, before the sign-change check:
     // `IRR({-100,60,60},2^53-1)` and `(..,9E+15)` converge, `(..,2^53)` and `(..,1E+16)` are #VALUE!,
@@ -507,98 +439,31 @@ pub(crate) fn compute_irr(values: &[f64], guess: f64) -> Result<f64, (Error, Str
     }
     // Leading zero flows are dropped: `IRR({0,-100,110},0.05)` and `IRR({0,0,-100,110},10)` are
     // `IRR({-100,110},..)`'s 0.09999999999999987, not the secant's value on the full flows
-    // (probes/irr-guess-edges A33, m9-fin-irr-rate A173 and A175; T-3120). For the fallback they
-    // make v = 0 a root of P: `IRR({0,2,-1})` returns about -0.5 (gen-m9/3c06f9298f65a3ba A394).
+    // (probes/irr-guess-edges A33, m9-fin-irr-rate A173 and A175; T-3120).
     let values = values
         .iter()
         .position(|&c| c != 0.0)
         .map_or(values, |first| &values[first..]);
     let div_zero = || (Error::DIV, "Division by zero".to_string());
-    let mut result = irr_secant(values, extended_quotient(guess, 1.0 + guess), true);
-    // A failed run is retried once from the default guess 0.1, unless that was the guess
-    if result == Err(SecantStop::Failed) && guess != 0.1 {
-        result = irr_secant(values, extended_quotient(0.1, 1.1), true);
-    }
-    // Then once more from the discount seed v = 1.1 (d = 1 - 1.1), with the residual stop only
-    // (T-4975 audit 3; docs/research addendum 2, "Still open", IRR): `IRR({-400,1,1,1,1,1})` is
-    // Excel's -0.6737366751808405 at that run's step 125 and `IRR({42,1,1,-1})` -0.7467044766537371
-    // at step 47 (probes/irr-fallback-roots P!A12:A15, A22:A24; ironcalc-calc IRR.xlsx L17), where
-    // the Newton fallback was 15 to 35 ulp off. Letting the stalled-step stop end this run too
-    // returns roots of 1E+11-scale flows where Excel is `#NUM!` (probes/t3406-irr-num-boundary
-    // A130, A131; t4844-irr-stage-invariance A24), so it does not.
-    if result == Err(SecantStop::Failed) {
-        result = irr_secant(values, 1.0 - IRR_SEED_DISCOUNT, false);
-    }
-    match result {
-        Ok(root) => Some(root),
-        Err(SecantStop::DivZero) => return Err(div_zero()),
-        Err(SecantStop::Failed) => None,
-    }
-    .or_else(|| irr_fallback(values))
-    .filter(|r| r.is_finite())
-    .ok_or_else(|| (Error::NUM, "Failed to converge".to_string()))
-}
-
-/// Where both secant runs fail, Excel still finds some roots and not others: it behaves as
-/// Newton's method on the NPV polynomial in v, `sum c_i v^i`, started at v = 0 (r = +inf), and is
-/// `#NUM!` when the root it reaches is not a positive discount factor, when a negative root lies
-/// nearer 0 (P changes sign on [-v, 0)), when NPV at the root is [`IRR_ROOT_RESIDUAL`] or more
-/// in magnitude, or when the run does not settle in [`IRR_FALLBACK_STEPS`] steps. This fits every probed
-/// cell (financial.md "IRR's fallback when the secant fails", probes/irr-fallback-roots A1-A24, 15
-/// gen-m9 cells): `{42,1,1,-1}` (-0.7467) and `{-400,1,1,1,1,1}` (-0.6737) return from every
-/// guess while `{1,3,-1}`, `{1,7,-1}` and `{1,20,-1}`, whose root nearest v = 0 is negative, are
-/// `#NUM!`; `{1E+15,-0.0001,1,-2.5,-0.0001}` (gen-m9/abb7d565af89b849 A254) needs 119 steps to
-/// reach its root and is `#NUM!`. The method is fitted, not Excel's code: the returned digits are
-/// 15 to 35 ulp from Excel's on the probed roots (T-1686, T-2131).
-/// `values` has no leading zero flow ([`compute_irr`] drops them).
-/// Range (T-3385, flow sets read from the cases): the probe's A1-A24 are 3 to 6 flows of |c| 0.3 to
-/// 400 with roots -0.75 and 6.91; every gen-m9 IRR that reaches this fallback (a superset of the 15
-/// cells) has 2 to 29 flows of |c| 1E-15 to 1E+15, and only 4 of its 68 calls return a root.
-/// FITTED(T-2727, 39 cells, within IRR of 2..29 flows, |c| 1E-15..1E+15, roots -0.93..661, mostly #NUM!)
-fn irr_fallback(values: &[f64]) -> Option<f64> {
-    // Horner for P(v) and P'(v), highest power first
-    let polynomial = |v: f64| {
-        let (mut p, mut dp) = (0.0_f64, 0.0_f64);
-        for &c in values.iter().rev() {
-            dp = dp * v + p;
-            p = p * v + c;
+    let starts = [
+        extended_quotient(guess, 1.0 + guess),
+        extended_quotient(0.1, 1.1),
+        IRR_LAST_START,
+    ];
+    let mut far_flat = false;
+    for start in starts {
+        match irr_secant(values, start) {
+            Ok(root) if root.is_finite() => return Ok(root),
+            Ok(_) => {}
+            Err(SecantStop::DivZero) => return Err(div_zero()),
+            Err(SecantStop::Failed { far_flat: far }) => far_flat |= far,
         }
-        (p, dp)
-    };
-    let mut v = 0.0_f64;
-    for _ in 0..IRR_FALLBACK_STEPS {
-        let (p, dp) = polynomial(v);
-        if dp == 0.0 {
-            return None;
-        }
-        let next = v - p / dp;
-        if !next.is_finite() {
-            return None;
-        }
-        if (next - v).abs() < 1e-7 * next.abs().max(1.0) {
-            // A sign change of P on [-next, 0) is a negative root nearer v = 0 than the one
-            // Newton reached: Excel is `#NUM!` there (gen-m9/1b60bf99d71424e7 A117, root v = 8.41
-            // past one at -4.6E-5; 1cd3096e3e87c965 A277, 4.06 past -4.01).
-            let nearer_negative_root =
-                (polynomial(-next).0 > 0.0) != values.first().is_some_and(|&c| c > 0.0);
-            // Excel is `#NUM!` at a root whose NPV is not within [`IRR_ROOT_RESIDUAL`] of 0,
-            // measured one Newton step past the stop (T-3411 round 4: at the stop iterate itself
-            // the check loses probes-numeric/t3478-irr-r4-wide A79 and A292, whose residuals fall
-            // under the cut only one step later). The stop iterate is still what is returned.
-            let (p_next, dp_next) = polynomial(next);
-            let past = next - p_next / dp_next;
-            let settled = !irr_root_residual_applies(values)
-                || (past.is_finite()
-                    && irr_npv(values, past).is_some_and(|f| f.abs() < IRR_ROOT_RESIDUAL));
-            return if next > 0.0 && !nearer_negative_root && settled {
-                irr_from_discount(next)
-            } else {
-                None
-            };
-        }
-        v = next;
     }
-    None
+    if far_flat {
+        Err(div_zero())
+    } else {
+        Err((Error::NUM, "Failed to converge".to_string()))
+    }
 }
 
 /// XNPV: the sum of `value_i / (1 + rate)^((date_i - date_0)/365)`, days counted from the first date;
@@ -752,23 +617,7 @@ pub(crate) fn compute_xirr(
 
 #[cfg(test)]
 mod tests {
-    use super::{compute_irr, irr_secant, SecantStop};
-
-    /// t3347-irr-conventional-holdout P!A138: -11890081760.62, then 40 flows of 13.03.
-    fn a138() -> Vec<f64> {
-        let mut flows = vec![-11_890_081_760.62];
-        flows.extend(std::iter::repeat_n(13.03, 40));
-        flows
-    }
-
-    #[test]
-    fn the_flat_secant_div_zero_cut_applies_to_every_run() {
-        // From 0.1 the run jumps far (|NPV| 1.8E+278), stalls and goes flat: `#DIV/0!` (T-3347).
-        assert_eq!(
-            irr_secant(&a138(), 0.1 / 1.1, true),
-            Err(SecantStop::DivZero)
-        );
-    }
+    use super::compute_irr;
 
     #[test]
     fn the_secant_cap_does_not_depend_on_the_flows_or_the_guess() {
