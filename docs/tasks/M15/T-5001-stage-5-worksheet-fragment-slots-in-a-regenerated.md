@@ -20,18 +20,23 @@ autoFilter, protection, ignoredErrors, and unknown `ext` entries.
 SPEC-0034 D5.4:
 - the worksheet writer declares the elements, attributes and `ext` URIs it owns, and everything else is a fragment;
 - a fragment is read from the source part at save time with the patcher's bounded scan;
-- it is emitted at its `CT_Worksheet` position, with its namespace declarations, and `mc:Ignorable` is rebuilt.
+- it is emitted at its `CT_Worksheet` position, or for `mc:AlternateContent`, an element with no slot or an
+  unknown-namespace element, by D5.4's placement rules;
+- each fragment carries its namespace declarations, counting prefixes named in `mc:` attribute values;
+- `mc:Ignorable` is rebuilt.
 
-Fragments are classified as relationship-bound, range-bound, sheet-name-bound, index-bound or inert. This task emits
-the inert, range-bound and sheet-name-bound fragments. Relationship-bound ones are dropped and reported until T-5002.
-Index-bound ones are kept only while D3.3's prefix test holds.
+This task builds the one classifier (relationship-bound, range-bound, sheet-name-bound, id-bound, inert) that T-5003
+reuses. Relationship-bound fragments are dropped and reported until T-5002 and T-5008 remap them. Id-bound fragments
+are kept only while the export writes the same id.
 
 ## Acceptance criteria
-- [ ] The owned set is declared next to the worksheet writer. One classifier serves all three parts (T-5003 reuses it).
-- [ ] Fragments are emitted in schema order next to regenerated siblings (unit tests). Data validation, auto-filter,
-      page setup and an unknown ext survive a fallback save (fixture tests).
-- [ ] Hostile input (depth, count, a malformed fragment) drops the fragment with `LimitExceeded`, never panics.
-- [ ] An Excel for the web re-save probe (T-4890's `--save-dir`, `rustsheet-oracle resave`, `package-diff`) shows the saves open and keep what this task keeps; findings go into docs/excel-semantics/xlsx-storage.md.
+- [ ] The owned set is declared next to the worksheet writer, and the classifier lives in one module.
+- [ ] Fragments are emitted in schema order next to regenerated siblings, including an `mc:AlternateContent` block and a
+      no-slot element (unit tests).
+- [ ] Data validation, auto-filter, page setup and an unknown ext survive a fallback save (fixture tests).
+- [ ] Hostile input (depth, count, emitted bytes, a malformed fragment) drops the fragment with `LimitExceeded` and
+      never panics.
+- [ ] An Excel for the web re-save probe (T-4890's `--save-dir`, `rustsheet-oracle resave`, `package-diff`) shows the saves open and keep what this task keeps. Findings go into docs/excel-semantics/xlsx-storage.md (D5.8).
 - [ ] The round-trip baselines are rerecorded; entries only shrink.
 - [ ] `make check` green; reviewers approve.
 

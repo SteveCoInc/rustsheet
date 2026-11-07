@@ -30,6 +30,6 @@ spec when that lands. T-5004 builds the invalidation machinery. This task adds t
 - Shifting instead of dropping (T-5007).
 
 ## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275): M15 waits until Phase 1 parity exits. Unblock when
-docs/status.md has the line `**Phase 1:** exited <date>`. An owner-directed session may claim it earlier
-(decision 0306).
+Deferred to Phase 2 (decisions 0027, 0275), and it depends on M4's structural-edit API (row and column insert and
+delete, `RefMap`). Unblock when docs/status.md has the line `**Phase 1:** exited <date>` and M4's structural-edit API
+exists. An owner-directed session may claim it earlier (decision 0306), once that API exists.

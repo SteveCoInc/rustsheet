@@ -26,7 +26,8 @@ expected-delta rule is R1's, `roundtrip/r1.rs`.
       items, a deleted sheet's parts reported `OwnerDeleted`.
 - [ ] The fixtures suite runs them, and the corpus suites run R2/rename and R2/delete. The baselines are recorded under
       a decision record if they add failing items.
-- [ ] SPEC-0033 says sheet-level R2 is scored now.
+- [ ] SPEC-0033 is edited to say sheet-level R2 is scored now: the Non-goals bullet "R2 implementation", the D1
+      table's R2 row (the milestone column), and Rollout item 5's "R2 scoring follows M4".
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

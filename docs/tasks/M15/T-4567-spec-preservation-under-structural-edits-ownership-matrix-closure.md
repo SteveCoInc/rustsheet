@@ -55,16 +55,41 @@ preservation fields.
 - **D5.7 Measurement** (R2 sheet-level scenarios, re-save probes) and **D5.8** (what Excel behaviour stays UNVERIFIED).
 - SPEC-0033 D7's `Policy` and `ClosureReachesRegenerated` are now defined.
 
+Review round 1 (design, Excel fidelity) reshaped it:
+- **Active** is VBA only. Excel keeps ActiveX and OLE in a plain `.xlsx`.
+- **Coupling groups** are added: the legacy drawing group (VML, notes, threaded comments, controls, OLE) and the slicer
+  and timeline groups.
+- **Pivot charts** are excluded by `c:pivotSource`, since they are bound by that text, not by a relationship.
+- **An id-bound class** is added: table, pivot cache, sheet and shape ids, and external-link indexes.
+- **Unknown sheet-reached parts** are `ReplayIfClean`, and the rest of the richData family is `Drop`.
+- **Placement and namespaces:** `mc:AlternateContent` and no-slot elements have placement rules, and namespace capture
+  counts prefixes named in `mc:` values.
+- **Triggers** form a closed set.
+- **`StaleAfterEdit`** is a new reason in SPEC-0033 D7 for non-structural edits, scored `dropped` when R1 or R2 explains
+  it.
+- **Limits:** an output byte cap and deterministic drop order.
+- **Probes:** D5.8 has more of them, and desktop checks are required for VBA, ActiveX and printer settings.
+
 Tasks filed, all M15 and `blocked` (decision 0306):
-- T-4999: matrix and closure;
+- T-4999: matrix, closure and coupling groups;
 - T-5000: package- and workbook-scoped parts;
-- T-5001: worksheet fragments;
-- T-5002: sheet-anchored parts with their attach elements;
+- T-5001: worksheet fragments and the one classifier;
+- T-5002: drawings, charts, images, background picture and printer settings;
 - T-5003: workbook and styles fragments, and the absPath option;
-- T-5004: invalidation on sheet and modelled-feature edits;
+- T-5004: invalidation;
 - T-5005: R2 sheet-level scenarios;
 - T-5006: stage 5b, row and column invalidation after M4;
-- T-5007: spec for stage 5c, the shifter.
+- T-5007: spec for stage 5c, the shifter;
+- T-5008: the legacy drawing group;
+- T-5009: slicer and timeline groups;
+- T-5010: VBA into macro-enabled files.
 
-Order: T-4562, then T-4999 and T-5005, then T-5000, T-5001 and T-5003, then T-5002, then T-5004. T-4950 now points at
-T-5002 and T-5004.
+Order:
+1. T-4562.
+2. T-4999 and T-5005.
+3. T-5000, T-5001 and T-5003.
+4. T-5002.
+5. T-5008, T-5009 and T-5010.
+6. T-5004.
+
+T-4950 now points at T-5002 and T-5004.

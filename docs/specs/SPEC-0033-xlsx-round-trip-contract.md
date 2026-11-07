@@ -301,6 +301,9 @@ pub enum DropReason {
     Policy,
     /// A structural edit on this sheet made range-bound content stale (decision 0275 D4).
     StaleAfterStructuralEdit { sheet: String },
+    /// A content edit (a modelled feature, the notes, a pivot or table, the style table) made kept content
+    /// stale, on this sheet or workbook-wide (`None`) (SPEC-0034 D5.5).
+    StaleAfterEdit { sheet: Option<String> },
     /// Its owner (a sheet, a table) was deleted.
     OwnerDeleted,
     /// Its relationship closure reaches a part the export regenerates (the closure rule of T-4567, SPEC-0034 stage 5).
@@ -325,7 +328,8 @@ pub enum DropReason {
      entries come with fragments.
 2. **What a `dropped` verdict accepts.** An item in the report is `dropped` (pass) only for these reasons:
    - `Policy` or `ActiveContentInPlainFormat`, in any scenario;
-   - `StaleAfterStructuralEdit` or `OwnerDeleted`, in an R2 run whose edit explains it.
+   - `StaleAfterStructuralEdit` or `OwnerDeleted`, in an R2 run whose edit explains it;
+   - `StaleAfterEdit`, in an R1 or R2 run whose edits explain it (R1's `Δ(E)`, D5).
 
    `NotPreserved`, `ClosureReachesRegenerated`, `LimitExceeded` and `UnmappableRelationship` remain `lost`. The
    report says why, but that is not a reason to pass. A `LimitExceeded` drop of a hostile-set case passes.

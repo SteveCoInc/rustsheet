@@ -34,7 +34,10 @@ the gain, as every fallback save of a workbook holding these parts loses them to
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- Sheet-anchored parts (T-5002); `Active` content into non-macro files (reported only).
+- Sheet-anchored parts (T-5002, T-5008, T-5009).
+- VBA (T-5010).
+- Unknown parts reached from a sheet, which are `ReplayIfClean` (D5.1): T-5001 and T-5004 handle their sheet's
+  triggers.
 
 ## Blocked because
 Deferred to Phase 2 (decisions 0027, 0275): M15 waits until Phase 1 parity exits. Unblock when

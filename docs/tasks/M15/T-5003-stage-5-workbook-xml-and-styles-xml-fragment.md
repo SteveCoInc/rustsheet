@@ -17,7 +17,8 @@ Examples are fileVersion, workbookPr attributes the model lacks, fileRecoveryPr,
 `tableStyles`, and the slicer-style ext. `SaveOptions::strip_abs_path` drops the absolute path.
 
 ## Context
-SPEC-0034 D5.4, using T-5001's classifier. Decision 0275 D6 keeps `x15ac:absPath` as Excel keeps it, with an option
+SPEC-0034 D5.4, using T-5001's classifier, with the `CT_Workbook` and `CT_Stylesheet` orders it lists.
+Unknown attributes on `workbookPr` are kept, including the `codeName` that T-5010's kept VBA needs. Decision 0275 D6 keeps `x15ac:absPath` as Excel keeps it, with an option
 to strip it. Index-bound style fragments (a `dxfId`) are kept only while the dxf section is prefix-stable.
 
 ## Acceptance criteria

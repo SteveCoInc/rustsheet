@@ -12,28 +12,36 @@ spec: docs/specs/SPEC-0034-xlsx-source-preserving-export.md
 ---
 
 ## Goal
-One ownership table and one closure computation decide, for every part of the source package, whether a regenerated
-save keeps it. Every part not kept is reported.
+One ownership table, one closure computation and one coupling-group detector decide, for every part of the source
+package, whether a regenerated save keeps it. Every part that is not kept is reported.
 
 ## Context
-SPEC-0034 D5.1 (the matrix), D5.2 (the closure rule) and D5.6 (the limits). The table lives in `export/ownership.rs`,
-keyed by relationship type and then content type, never by part name. This task computes the decision and reports
-it. Writing the kept parts is T-5000 onward. The package plumbing already exists: `PartNames`,
-`parse_relationships`, `resolve_target` (crates/rustsheet-xlsx/src/import/package.rs).
+SPEC-0034 D5.1 (the matrix), D5.2 (coupling groups, the closure rule, the `c:pivotSource` exclusion) and D5.6 (limits,
+with the deterministic drop order). The table lives in `export/ownership.rs`, keyed by relationship type and then by
+content type, never by part name. This task computes the decision and reports it. Writing the parts is T-5000 onward.
+The package plumbing already exists: `PartNames`, `parse_relationships` and `resolve_target`
+(crates/rustsheet-xlsx/src/import/package.rs).
 
 ## Acceptance criteria
-- [ ] `export/ownership.rs` holds the D5.1 table, with one row per relationship type listed there, and `policy_of(rel_type,
-      content_type)`, whose unknown default follows D5.2.
-- [ ] `closure(source, root)` follows internal relationships only, within the D5.6 depth and size limits. It returns the
-      parts, or the limit that was hit.
-- [ ] For a Regenerated save with a source, each source part gets a decision (kept, or dropped with SPEC-0033 D7's
-      reason). The parts that are dropped appear in the SaveReport (T-4562).
-- [ ] Unit tests cover each policy, the unknown default both ways, a closure that reaches a `Modelled` part, a shared
-      part, an external target, and each limit.
+- [ ] `export/ownership.rs` holds the D5.1 table, one row per relationship type listed there.
+- [ ] `policy_of(rel_type, content_type, reached_from)` gives the unknown defaults (package/workbook-reached, or
+      sheet-reached).
+- [ ] `closure(source, root)` follows internal relationships only, within the D5.6 depth and size limits.
+- [ ] The legacy-drawing and slicer coupling groups are detected per sheet, as D5.2 defines them.
+- [ ] Each source part of a Regenerated save with a source gets a decision: kept, or dropped with a SPEC-0033 D7 reason.
+      The drops appear in the SaveReport (T-4562).
+- [ ] Limits are applied in source part-name order, so the result is deterministic.
+- [ ] Unit tests cover:
+  - each policy, and the unknown defaults both ways;
+  - a closure that reaches a `Modelled` part, and a chart holding `c:pivotSource`;
+  - a shared part, and an external target;
+  - each coupling group;
+  - each limit.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- Writing kept parts (T-5000, T-5002); fragments (T-5001, T-5003).
+- Writing kept parts (T-5000, T-5002, T-5008 to T-5010).
+- Fragments (T-5001, T-5003).
 
 ## Blocked because
 Deferred to Phase 2 (decisions 0027, 0275): M15 waits until Phase 1 parity exits. Unblock when

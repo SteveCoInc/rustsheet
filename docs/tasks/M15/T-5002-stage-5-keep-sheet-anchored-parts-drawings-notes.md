@@ -12,27 +12,26 @@ spec: docs/specs/SPEC-0034-xlsx-source-preserving-export.md
 ---
 
 ## Goal
-A regenerated save keeps a sheet's drawings (with their charts and images), legacy notes and VML, threaded comments,
-form controls and printer settings. They are written with the attach elements that reference them: `<drawing>`,
-`<legacyDrawing>`, `<legacyDrawingHF>`, `<picture>`, `<controls>`, `<oleObjects>`, and `pageSetup r:id`.
+A regenerated save keeps a sheet's drawings with their charts, images and chart style parts, its background picture
+and its printer settings. Each is written with the attach element that references it: `<drawing>`, `<picture>`, or
+the `r:id` of `pageSetup`.
 
 ## Context
 SPEC-0034:
-- D5.1 makes these parts `ReplayIfClean`, anchored to their sheet.
-- Under D5.3, a root is kept only if its attach element is a kept fragment, with its `r:id` remapped to the fresh
-  relationship. Otherwise the root is dropped with `UnmappableRelationship`.
-- D5.4 covers relationship-bound fragments.
+- D5.1 makes these `ReplayIfClean` and attach-bound;
+- D5.3 remaps the attach element's `r:id` to the fresh relationship, or drops the root with `UnmappableRelationship`.
 
-T-4950 writes pivot-bound drawings from the model. Its drawings are excluded here by the closure rule: they reach a
-`pivotTable`. Legacy notes are read by the importer but not exported, so D5.1's pristine-against-live comparison
-applies to them.
+D5.2 excludes two kinds of drawing:
+- a drawing holding `a14:compatExt` shapes is part of the legacy-drawing group, handled by T-5008;
+- a drawing whose charts hold `c:pivotSource` is T-4950's, written from the model. Pivot charts are bound by that text,
+  not by a relationship.
 
 ## Acceptance criteria
 - [ ] Each attach element is remapped, or its root is dropped and reported (unit tests).
-- [ ] A sheet with a chart, a note, a form control and printer settings keeps all four through a fallback save
+- [ ] A sheet with a chart, an image, a background picture and printer settings keeps all four through a fallback save
       (fixture test).
-- [ ] Notes edited in the model drop the source's comments part, which is reported.
-- [ ] An Excel for the web re-save probe (T-4890's `--save-dir`, `rustsheet-oracle resave`, `package-diff`) shows the saves open and keep what this task keeps; findings go into docs/excel-semantics/xlsx-storage.md.
+- [ ] A pivot chart's drawing is left to T-4950, and a compatExt drawing is left to T-5008 (unit tests).
+- [ ] An Excel for the web re-save probe (T-4890's `--save-dir`, `rustsheet-oracle resave`, `package-diff`) shows the saves open and keep what this task keeps. Findings go into docs/excel-semantics/xlsx-storage.md (D5.8).
 - [ ] The round-trip baselines are rerecorded; entries only shrink.
 - [ ] `make check` green; reviewers approve.
 
