@@ -897,9 +897,11 @@ or the data field's index at the Values level (`i` repeats it).
 - On columns every item shares its first child's line, and subtotal lines follow the children.
 - A field has subtotal lines only when a field other than Values is inside it. They are one
   `t="default"` line, or one line per custom subtotal in the field's order (`t="sum"`, `t="count"`).
-  Custom subtotal lines follow the item's children in compact form too (in plain outline form,
-  `outline` on and `compact` off, it is the engine's reading: UNVERIFIED, T-4699), and the item's own line
-  holds no values (t4168 F2: `East` B4 blank, `East Sum` B7 after `A` and `B`).
+  Custom subtotal lines follow the item's children in compact form too, and in plain outline form
+  (`outline` on, `compact` off: t4699 OC), and the item's own line
+  holds no values (t4168 F2: `East` B4 blank, `East Sum` B7 after `A` and `B`). They come in the
+  functions' fixed order, not the field's (t4699 CU; "Blank rows and collapsed items beyond an outer
+  row field" below).
 - A row field with `insertBlankRow` has a `<i t="blank" r="0"><x v="item"/></i>` line after each
   item, below its subtotal lines, and its cells are all blank: tabular (t4168 BR, A7:C7 and
   A12:C12, before the grand total) and compact (BR2, after the children, whose subtotal is on top).
@@ -922,6 +924,7 @@ lines (T-4147):
   t4616-pivot-total-order-3 (every sheet);
 - probes/t4168-pivot-layout-options F1 to F3, BR, BR2, SD, SD2 (T-4168: eleven custom subtotals
   tabular and compact, blank rows, collapsed items);
+- probes/t4699-pivot-blank-collapsed, every sheet (T-4699: the entry below);
 - the lines of probes/t4128-pivot-spike S (its #SPILL! location is the grid's, T-4151);
 - the Excel-saved pivot of crates/rustsheet-xlsx/tests/example.xlsx: three compact row fields whose
   `<items>` list the cache items out of order, so `x` is the position in `<items>`, not the cache index.
@@ -951,17 +954,75 @@ The engine's own readings, not probed:
 Status: VERIFIED (excel-graph) for the probes listed. UNVERIFIED (probe pending: T-4649): subtotal
 placement and grand totals off; (T-4650): the Values field away from the innermost level and
 `outlineData`; the unlisted-item positions are an engine convention for files Excel does not write.
-(T-4699): `insertBlankRow` on the innermost row field or a column field (the engine adds no line) and
-after a collapsed item (it adds one); custom subtotals after the children in plain outline form; a
-collapsed item whose field has Values inside it (several data fields: one line, the first data field's
-values); a collapsed item on columns, in a middle field, or in a field with
-`subtotalTop="0"` or custom subtotals (one line, the data field's own aggregate). Repeat item labels
+The blank-row and collapsed-item readings T-4699 listed are VERIFIED (excel-graph) since T-4699:
+"Blank rows and collapsed items beyond an outer row field" below. Repeat item labels
 change no line (probes/t4698-pivot-repeat-labels, every sheet; "Repeat item labels" below).
 Items with no data (`showAll`): docs/excel-semantics/web.md "GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)" (t4311 H,
 a grouped row field) and crates/rustsheet-engine/src/pivot/result.rs; an axis of several fields, a
 rendered column field and an item the page filter empties are UNVERIFIED (T-4657).
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`lay_out`, `AxisPlan::lines`; T-4147;
 `blank_line`, `collapsed`, T-4168)
+
+## Blank rows and collapsed items beyond an outer row field
+Rule (rows Region, Product unless noted; East and A are items):
+- **`insertBlankRow` adds a line only after an item of a row field with a field inside it.** On the
+  innermost row field there is none, in compact or tabular form, and on a column field none either: no
+  blank line and no blank column.
+- **A collapsed item keeps its blank line.** With `insertBlankRow` on Region and East collapsed, East's
+  one line is followed by `<i t="blank" r="0"><x v="0"/></i>`, compact and tabular.
+- **A collapsed item is one line wherever its field is.** On columns it is one column, its own tuple,
+  with its total and no `Total` column; in a middle field (rows Region, Product, Size, A collapsed) each
+  `A` is one line showing its total, with no Size lines and no `A Total` (tabular: the `Size` cell
+  blank, `<x v="0"/><x v="0"/>` on East's first line).
+- **Its subtotal settings do not matter.** With `subtotalTop="0"`, or custom subtotals (`count` and
+  `max`) on its field, the collapsed item still has one line showing the data field's own aggregate (Sum
+  21), and no subtotal line; the expanded West keeps its own.
+- **Custom subtotal lines come in a fixed order.** Whatever the field's order, Excel shows its custom
+  subtotal lines in the order, in a pivot field's `ST_ItemType` names, sum, countA, avg, max, min,
+  product, count, stdDev, stdDevP, var, varP, where `countA` is Count and `count` is Count Numbers
+  (`countSubtotal`); in `ST_DataConsolidateFunction` names the same order is sum, count, average,
+  max, min, product, countNums, stdDev, stdDevp, var, varp. CU's field lists `count` (Count Numbers)
+  then `max` in its `<items>`, and Excel shows `West Max` before `West Count` and writes `t="max"`
+  before `t="count"`; CR lists all eleven in reverse, and Excel shows them in the order above.
+- **Custom subtotals in plain outline form** (`compact="0"`, `outline` on) follow the item's children,
+  one line per function, and the item's own line holds no values, as in compact form.
+- **A collapsed item keeps the Values level inside it.** With Values inside the collapsed field, East
+  keeps one line per data field, each with East's total, and the field levels inside are hidden: no
+  Product lines and no `East Sum of Val` subtotal lines. In compact form the data field lines are below
+  East's own line, which holds no values; in tabular form there is no separate own line, and East's
+  first line is its `Sum of Val` line (CV4: `x` 0, 1048832, 0).
+  Values directly inside (rows Region, Values) or past a field (rows Region, Product, Values: Product
+  hidden) are the same. The hidden field's `x` is `1048832` (`<x v="0"/><x v="1048832"/><x v="0"/>` in
+  tabular form); in compact form the data field lines after East's own line are `r="2"`, counting the
+  hidden level as repeated though East's line has one `x`.
+
+Evidence (excel-graph, 2026-11-07): probes/t4699-pivot-blank-collapsed, the sidecar's `pivots`
+cells and `row_items`/`col_items`:
+- BI and BI2 (insertBlankRow on Product: no blank line, A3:B11 and A3:C11), BC (on the column field
+  Product: no blank column, A3:J8);
+- BS (compact: East 21 at A4:B4, the blank line row 5) and BS2 (tabular, row 5);
+- CC (columns Product, Size, A collapsed: B4 `A`, B6 14, no `A Total`), CM (compact: A5 `A` 14, no Size
+  lines under it), CM2 (tabular: B4 `A`, C4 blank, D4 14, `B Total` at B7 and no `A Total`);
+- CB (`subtotalTop="0"`: East 21 at A4:B4, `West Total` 17 at A9:B9), CU (compact: East 21, `West Max`
+  7 at A9:B9 before `West Count` 4 at A10:B10), CU2 (tabular, the same at A8:C9); CR (all eleven listed
+  in reverse: `East Sum` 21 at A7:B7 through `East Varp` 8.6875 at A17:B17, `rowItems` `sum`, `countA`,
+  `avg`, `max`, `min`, `product`, `count`, `stdDev`, `stdDevP`, `var`, `varP`);
+- OC (plain outline: `East` B4 and C4 blank, `East Sum` 21 and `East Count` 4 at A7:C8 after A and B);
+- CV (rows Region, Values: `East` B4 blank, `Sum of Val` 21 and `Count of Val` 4 at A5:B6), CV2 (rows
+  Region, Values, Product: the same, no Product lines and no East subtotals), CV3 (rows Region, Product,
+  Values, compact: the same at A4:B6, `rowItems` `<i r="2"><x v="0"/></i>`), CV4 (CV3 in tabular form:
+  `East` A4, `Sum of Val` C4 with D4 21, `rowItems` `<x v="0"/><x v="1048832"/><x v="0"/>`). The
+  gen-pivot shape of T-4927 (gen-pivot/36996978427905b2 P05, "What the gen-pivot batch found") is the
+  CV3 rule.
+
+Status: VERIFIED (excel-graph) for the shapes above. UNVERIFIED (probe pending: T-4993): a collapsed
+item of a field in a middle position with Values deeper still, and `insertBlankRow` on a field with
+Values inside it. UNVERIFIED (T-4938): the label a pivot chart gives a hidden level (empty, the
+engine's reading). CV4!C3, the `Values`
+header in tabular form, is T-4914's.
+Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`AxisPlan::lines`, `blank_line`,
+`collapsed`, `values_from`, `HIDDEN`, `subtotals` for the fixed order: `Aggregate`'s `Ord`, model.rs;
+T-4699); crates/rustsheet-engine/src/pivot/layout/chart.rs (a hidden level's tuple and label).
 
 ## Aggregates over text, blanks, booleans and errors
 Rule (each aggregate in a value field that also holds other kinds of value):
@@ -2647,7 +2708,8 @@ VERIFIED (excel-graph) for the shapes cited; wider claims are marked. Each has a
 - **No row field, non-compact, Values on columns: no row-label column.** The first column is the first data column
   (gen-pivot/640780d7b6f4ad53 P02 at L5:DC8, gen-pivot/f9e7edbb5b74011a P07, gen-pivot/462f10551d480f9d P08). T-4924.
 - **A collapsed item with the Values field inside it** keeps one line per data field under the item
-  (gen-pivot/36996978427905b2 P05!L6:L8). T-4927.
+  (gen-pivot/36996978427905b2 P05!L6:L8). T-4927. The rule is probed in full by probes/t4699-pivot-blank-collapsed CV to CV4 and implemented
+  in lines.rs since T-4699 ("Blank rows and collapsed items beyond an outer row field").
 - Date items show in the source cells' date format, as on probes/t2085-getpivotdata-items D: T-4807 owns the gen-pivot
   cells too.
 

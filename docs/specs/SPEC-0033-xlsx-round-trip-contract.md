@@ -301,6 +301,9 @@ pub enum DropReason {
     Policy,
     /// A structural edit on this sheet made range-bound content stale (decision 0275 D4).
     StaleAfterStructuralEdit { sheet: String },
+    /// A content edit (a modelled feature, the notes, a pivot or table, the style table) made kept content
+    /// stale, on this sheet or workbook-wide (`None`) (SPEC-0034 D5.5).
+    StaleAfterEdit { sheet: Option<String> },
     /// Its owner (a sheet, a table) was deleted.
     OwnerDeleted,
     /// Its relationship closure reaches a part the export regenerates (the closure rule of T-4567, SPEC-0034 stage 5).
@@ -325,7 +328,8 @@ pub enum DropReason {
      entries come with fragments.
 2. **What a `dropped` verdict accepts.** An item in the report is `dropped` (pass) only for these reasons:
    - `Policy` or `ActiveContentInPlainFormat`, in any scenario;
-   - `StaleAfterStructuralEdit` or `OwnerDeleted`, in an R2 run whose edit explains it.
+   - `StaleAfterStructuralEdit` or `OwnerDeleted`, in an R2 run whose edit explains it;
+   - `StaleAfterEdit`, in an R1 or R2 run whose edits explain it (R1's `Δ(E)`, D5).
 
    `NotPreserved`, `ClosureReachesRegenerated`, `LimitExceeded` and `UnmappableRelationship` remain `lost`. The
    report says why, but that is not a reason to pass. A `LimitExceeded` drop of a hostile-set case passes.
@@ -351,9 +355,11 @@ milestone = ["M15"]
 
 - **Discovery and fetch.** These reuse the `xlsx` kind's machinery (`include`, `exclude`, `[fetch]`, licence and
   origin keys). There is one case discoverer, not two (directive 3).
-- **Baseline.** `eval/baseline/<suite>.txt` is the ordinary cells-mode file: `C` gives a case's item count, and each
-  `F` line holds a failing item, `<scenario> <kind> <item key> <verdict>`. The ratchet is the usual one. A line may disappear (fixed). A new
-  failing item is a regression unless the case is new (new coverage). `update-baseline` refuses regressions.
+- **Baseline.** `eval/baseline/<suite>.txt` is the ordinary cells-mode file, keyed by case and scenario,
+  `<case>#<scenario>` (decision 0345, T-4961): `C` gives the item count of a case's scenario, and each
+  `F` line holds a failing item of it, `<scenario> <kind> <item key> <verdict>`. The ratchet is the usual one, per key, so a new scenario
+  is a new key and cannot turn an existing scenario's loss into new coverage. A line may disappear (fixed). A new
+  failing item is a regression unless the key is new (new coverage). `update-baseline` refuses regressions.
   `--allow-regressions` needs a decision record, as everywhere.
   A corpus suite (Calipers, POI, corpus-bench) uses `baseline = "cases"` instead. Its item lines would run to
   tens of megabytes (about 550,000 on the first run, T-4173). Each failing case is one `F` line,

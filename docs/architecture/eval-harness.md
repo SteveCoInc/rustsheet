@@ -603,12 +603,23 @@ gen-m9-17c110a53924beb8-refill-1106 (M9), whose 556 pivot-area cells count in th
 row's `pivot` object adds, per catalog stage of eval/catalog/pivot-features.tsv (`stages`): the
 in-scope rows, those Excel for the web cannot render (`web` = `no`, M14's, not blocking), the rest at
 the 30-oracle-cell floor (`evidenced`, the "Pivot features" cell counts) and `below_floor` by id
-(`evidence_met`); the `remaining` rows, below the floor or with a failing cell, whose owner criterion
-(`owners_met`) is null, not measured, while any remains, since no row-to-task mapping exists yet
-(T-4952). Milestone-wide it adds the layout criterion (`layout_met`: false when a sidecar pivot is
-missing or misplaced, null while the engine emits no `rowItems`/`colItems` to compare), the corpus
-render criterion (`corpus_render_met`, plan check (b): fresh corpus pivots re-rendered from their saved
-cache must reproduce Excel's saved cells), and the pivot-corpus fresh and stale counts, shown only.
+(`evidence_met`); the `remaining` rows, below the floor or with a failing cell; and the owner
+criterion (`owners_met`, T-4952): every remaining row is owned, with the ones that are not listed in
+`unowned` by id (report.md lists them per stage below the table). One rule decides ownership: a row is
+owned when the catalog's hand-filled `owner` column (kept across regeneration by
+tools/src/rustsheet_tools/pivot_catalog.py) names a task; it must be an open M16 task (`todo`,
+`in-progress` or `blocked`, scripts/tasks.py `OPEN`). The harness reads no task file (code may not read
+docs/tasks, decision 0066), so `scripts/tasks.py validate` (`make hygiene`, which always runs) enforces
+it the way it enforces `TODO(T-nnnn)` owners: it fails while an `owner` names a done, dropped, missing or
+other-milestone task (scripts/pivot_owners.py), so the PR that closes a task re-points or clears its
+rows, and a row left remaining reads unowned again. The run fails on an `owner` that is not `T-<digits>`.
+A row with an `out` scope is owned by the decision its scope cites (`out (decision 0274)`, or a later
+decision's rule in `RULES`): it is not in scope, so it is never remaining; a row Excel for the web cannot
+render is M14's and never remaining either. Milestone-wide it adds the layout criterion (`layout_met`:
+false when a sidecar pivot is missing or misplaced, null while the engine emits no `rowItems`/`colItems`
+to compare), the corpus render criterion (`corpus_render_met`, plan check (b): fresh corpus pivots
+re-rendered from their saved cache must reproduce Excel's saved cells), and the pivot-corpus fresh and
+stale counts, shown only.
 `pivot_freshness` decides "fresh" by the engine's own render, so a fresh file the engine renders wrongly
 is called stale and is never scored; `corpus_render_met` therefore stays null, not measured, until
 freshness is decided without the renderer (T-4906), and until then M16 cannot be met. `exit` needs

@@ -390,7 +390,8 @@ styles and conditional formats beyond preservation, UI-only commands.
   pivot-corpus-closedxml with none of their scored cells visibly off (`n/a`, so not met, when a
   fetched suite is absent), the M16 probe row (the pivot probes) with no visibly-off cell, and per
   catalog stage the 30-oracle-cell floor for every in-scope row the web can render, the layout
-  check, and the owners of the remaining rows, not measured until rows map to tasks (T-4952). The
+  check, and the owners of the remaining rows: each needs its catalog `owner` to be an open M16 task
+  (T-4952; the row lists the unowned ids). The
   probe row leaves out only R3 passes and M14-owned cells.
   Limitation: the corpus suites measure import and formula cells (plan check (a)); the re-render of
   fresh corpus pivots (check (b)) is not measured, because freshness is decided by the engine's own
