@@ -3,7 +3,7 @@ id: T-4765
 title: "Probe GROWTH's zero where LOGEST's slopes' factor is subnormal: the cut, several x, a subnormal b, const FALSE"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
