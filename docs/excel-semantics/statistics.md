@@ -5562,6 +5562,11 @@ sign; also stop at |r| < 2^-1022 or when the squared step underflows.
 - The first step is observable at df 2: the seed's relative residual there (3E-15 at `T.INV(1E-20,2)`, 9E-15 at
   `TINV(1E-100,2)`) is below half an ulp of LN(p), and stopping at the seed is 11 and 22 ulp off. At df 3 and above
   the step lands within the cdf's noise and the least-residual rule keeps the right iterate.
+- EXP is Excel's own (`x87_exp::excel_exp`): libm's exp puts `T.INV.2T(4.46E-308,2)` (probes/t4541-t-inv-2t-tiny-p
+  B8, Excel 4.735137238103876E+153) an ulp low. Open: `T.INV(4.4501477170144E-308,2)` and
+  `T.INV(4.45014771701441E-308,2)` (t4541 K4, K5; Excel -3.3519519824856895E+153) come out an ulp low in the
+  logarithmic-seed region, where the old closed form had them. Rounding sqrt(df·(1/y - 1)) once there fixes K4 and K5
+  but puts ten other t4541 cells (B5, B6, B10, E5, E6, E10, H5, H10, K1, K9) an ulp off, so the chain of doubles stays.
 - The domain comes from the series, not from probed points. The engine takes this form ahead of the old closed form
   and the rounded-y crossing wherever its domain holds.
 Evidence: the gen-m9 cells above (excel-graph). The rule is the one an independent prototype found
