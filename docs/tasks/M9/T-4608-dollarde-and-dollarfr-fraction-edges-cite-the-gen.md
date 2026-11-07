@@ -3,7 +3,7 @@ id: T-4608
 title: "DOLLARDE and DOLLARFR fraction edges: probe fractions below 1, non-integer fractions and fractions from 1E9 up (10^k-1, 10^k, 10^k+1), and match"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
