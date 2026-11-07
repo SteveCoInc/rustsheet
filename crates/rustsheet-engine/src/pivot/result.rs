@@ -167,7 +167,7 @@ impl AxisTree {
     }
 
     /// `node` and its ancestors, the root last.
-    fn ancestors(&self, node: u32) -> impl Iterator<Item = u32> + '_ {
+    pub(crate) fn ancestors(&self, node: u32) -> impl Iterator<Item = u32> + '_ {
         std::iter::successors(Some(node), |&n| {
             self.nodes.get(n as usize).and_then(|n| n.parent)
         })

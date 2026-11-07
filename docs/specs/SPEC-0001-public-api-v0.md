@@ -156,6 +156,7 @@ impl Workbook {
     pub fn set(&mut self, r: impl Into<Target>, input: impl Into<Input>) -> Result<ChangeSet, EditError>; // one-cell edit()
     pub fn pivot_table(&self, sheet: SheetId, name: &str) -> Option<PivotView>; // read-only view; SPEC-0032 "API", T-4178
     pub fn pivot_table_cells(&self, sheet: SheetId, name: &str) -> Result<Vec<(CellRef, Value)>, PivotError>; // computed on call; T-4178
+    pub fn pivot_cell_records(&self, sheet: SheetId, name: &str, cell: CellRef) -> Result<Vec<u32>, PivotError>; // Show Details' records, record order; T-4184
 }
 impl Txn<'_> {
     pub fn set(&mut self, r: impl Into<Target>, input: impl Into<Input>) -> Result<(), EditError>;
