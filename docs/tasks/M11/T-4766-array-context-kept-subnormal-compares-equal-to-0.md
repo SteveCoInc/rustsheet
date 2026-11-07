@@ -3,7 +3,7 @@ id: T-4766
 title: "Array-context kept subnormal compares equal to 0 in Excel (probe cells A3 and D1)"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
