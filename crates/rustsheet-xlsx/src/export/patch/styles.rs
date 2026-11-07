@@ -9,6 +9,7 @@ use rustsheet_engine::types::{Border, CellXfs, Fill, Font, NumFmt, Styles};
 
 use super::super::styles::{cell_xf_xml, font_xml, num_fmt_xml};
 use super::super::styles_util::{get_border_xml, get_fill_xml};
+use super::tag::{attr_span, set_attr};
 use super::MAX_DEPTH;
 
 /// The records the live style table appended to the pristine one, section by section.
@@ -56,11 +57,13 @@ struct Section {
 }
 
 /// One section as the source stores it: where its start tag is, where its records end (before
-/// `</name>`, or the whole `<name/>` element when empty), and how many records it holds.
+/// `</name>`, or the whole `<name/>` element when empty), how many records it holds, and its
+/// `count` when it has one.
 struct Found {
     start: (usize, usize),
     end: Option<usize>,
     records: usize,
+    count: Option<String>,
 }
 
 /// `xml` (the source's `styles.xml`) with `added` appended. `pristine` is the source's table as
@@ -69,9 +72,20 @@ struct Found {
 ///
 /// # Errors
 /// A fallback reason: a section with new records that the source lacks (`numFmts` excepted, which
-/// is created), records the importer did not count the same way, a prefixed or nested root, or a
-/// part that does not parse.
+/// is created), records the importer did not count the same way, a new fill at index 0 or 1, a
+/// prefixed or nested root, or a part that does not parse.
 pub(super) fn patch(xml: &str, pristine: &Styles, added: &Appended<'_>) -> Result<String, String> {
+    // Fills 0 and 1 are the reserved `none` and `gray125` patterns (ECMA-376 Part 1 §18.8.21): a
+    // new fill there would not be drawn as written.
+    if !added.fills.is_empty() && pristine.fills.len() < 2 {
+        return Err("styles.xml has fewer than the two reserved fills".into());
+    }
+    // quick-xml skips a leading byte-order mark without counting it in its offsets: the scan runs
+    // on the text after it, and the mark is put back.
+    let (bom, xml) = match xml.strip_prefix('\u{feff}') {
+        Some(body) => ("\u{feff}", body),
+        None => ("", xml),
+    };
     let sections = [
         Section {
             name: "numFmts",
@@ -122,15 +136,18 @@ pub(super) fn patch(xml: &str, pristine: &Styles, added: &Appended<'_>) -> Resul
                     ));
                 }
                 let (start, end) = f.start;
-                let tag = &xml[start..end];
+                let tag = xml
+                    .get(start..end)
+                    .ok_or("styles.xml: a tag off a char boundary")?;
                 match f.end {
                     Some(close) => {
                         edits.push((close, 0, records));
-                        edits.push((start, end - start, with_count(tag, total)));
+                        edits.push((start, end - start, set_attr(tag, "count", |_| total)));
                     }
                     None => {
                         // `<name .../>`: written out with its records.
-                        let open = with_count(tag.trim_end_matches("/>").trim_end(), total);
+                        let open =
+                            set_attr(tag.trim_end_matches("/>").trim_end(), "count", |_| total);
                         edits.push((
                             start,
                             end - start,
@@ -154,10 +171,15 @@ pub(super) fn patch(xml: &str, pristine: &Styles, added: &Appended<'_>) -> Resul
     edits.sort_by_key(|e| (std::cmp::Reverse(e.0), std::cmp::Reverse(e.1)));
     let mut out = xml.to_string();
     for (at, remove, text) in edits {
-        out.replace_range(at..at + remove, &text);
+        let end = at + remove;
+        if !(out.is_char_boundary(at) && out.is_char_boundary(end)) {
+            return Err("styles.xml: an edit off a char boundary".into());
+        }
+        out.replace_range(at..end, &text);
     }
-    // Each section the patch appended to must hold exactly the records it meant to, or the save
-    // regenerates. Sections it left alone are the source's, whatever they hold.
+    // Each section the patch appended to must hold exactly the records it meant to, and say so in
+    // its `count` when it has one, or the save regenerates. Sections it left alone are the
+    // source's, whatever they hold.
     let (_, again) = scan(&out, &sections)?;
     for (section, at) in sections.iter().zip(&again) {
         if section.new.is_empty() {
@@ -171,8 +193,12 @@ pub(super) fn patch(xml: &str, pristine: &Styles, added: &Appended<'_>) -> Resul
                 section.record
             ));
         }
+        let count = at.as_ref().and_then(|f| f.count.as_deref());
+        if count.is_some_and(|c| c != want.to_string()) {
+            return Err(format!("the patched {} count is not {want}", section.name));
+        }
     }
-    Ok(out)
+    Ok(format!("{bom}{out}"))
 }
 
 /// The root's start tag end, and each section's position, scanning only the root's children.
@@ -205,10 +231,14 @@ fn scan(xml: &str, sections: &[Section]) -> Result<(usize, Vec<Option<Found>>), 
                         if e.name().as_ref() != local || found[i].is_some() {
                             return Err(format!("styles.xml has a prefixed or second {local}"));
                         }
+                        let tag = xml
+                            .get(start..end)
+                            .ok_or("styles.xml: a tag off a char boundary")?;
                         found[i] = Some(Found {
                             start: (start, end),
                             end: None,
                             records: 0,
+                            count: attr_span(tag, "count").map(|(s, e)| tag[s..e].to_string()),
                         });
                         if !empty {
                             open = Some(i);
@@ -244,16 +274,4 @@ fn scan(xml: &str, sections: &[Section]) -> Result<(usize, Vec<Option<Found>>), 
     }
     let root_end = root_end.ok_or("styles.xml has no root")?;
     Ok((root_end, found))
-}
-
-/// A section's start tag with its `count` set to `n`, or the tag as it was when it has none.
-fn with_count(tag: &str, n: usize) -> String {
-    let needle = " count=\"";
-    let Some(at) = tag.find(needle).map(|i| i + needle.len()) else {
-        return tag.to_string();
-    };
-    let Some(len) = tag[at..].find('"') else {
-        return tag.to_string();
-    };
-    format!("{}{n}{}", &tag[..at], &tag[at + len..])
 }

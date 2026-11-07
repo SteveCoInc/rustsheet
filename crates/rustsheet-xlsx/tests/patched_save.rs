@@ -477,8 +477,8 @@ fn a_new_number_format_and_a_new_font_are_appended_to_the_source_styles() {
         BTreeSet::from([SHEET.into(), STYLES.into()])
     );
     let after = part(&out, STYLES);
-    // Every source byte up to the first appended record is kept: the source's records keep
-    // their indexes, so every `s=` in the package still names its style.
+    // The source's records keep their indexes, so every `s=` in the package still names its
+    // style.
     assert_eq!(
         section(&after, "cellXfs", "xf"),
         (xfs + 2, xfs + 2),
@@ -490,6 +490,16 @@ fn a_new_number_format_and_a_new_font_are_appended_to_the_source_styles() {
         "{after}"
     );
     assert!(after.contains(r#"formatCode="0.000""#), "{after}");
+    // Each section's source records are its first records, byte for byte.
+    for name in ["fonts", "cellXfs"] {
+        let body = |s: &str| {
+            let open = s.find(&format!("<{name} ")).unwrap();
+            let open = s[open..].find('>').unwrap() + open + 1;
+            let close = s[open..].find(&format!("</{name}>")).unwrap() + open;
+            s[open..close].to_string()
+        };
+        assert!(body(&after).starts_with(&body(&before)), "{name}: {after}");
+    }
     assert_eq!(value(&out, (4, 1)), "0.500");
     let reloaded = load(&out);
     assert!(reloaded.get_style_for_cell(0, 1, 1).unwrap().font.b);
