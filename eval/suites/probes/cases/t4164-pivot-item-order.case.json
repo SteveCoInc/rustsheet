@@ -1,0 +1,263 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4164: does Excel for the web show a field's items in the order of its `<items>` elements or of the cache's shared items, and what does a sort do to that order? The data are t4130-pivot-sort's: Product in source order Bee, Ant, Cat, sums Ant 28, Bee 14, Cat 18. Each sheet is one builder-v2 pivot at A3, rows Product, Sum of Sales. The cache lists Bee, Ant, Cat (x 0, 1, 2) and the field's `<item>` elements are written x 2, 0, 1 (Cat, Bee, Ant; `item_order`): IO with no sortType; IOM sortType manual; IOA ascending; IOD descending; IOV descending by Sum of Sales (autoSortScope). IOO writes the cache as Cat, Ant, Bee (`order`) and the `<item>` elements x 2, 0, 1 (Bee, Cat, Ant). Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4164",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0016",
+  "PV-0017",
+  "PV-0018",
+  "PV-1034",
+  "PV-1085"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Year",
+    "D1": "Sales",
+    "A2": "East",
+    "B2": "Bee",
+    "C2": 2024,
+    "D2": 10,
+    "A3": "East",
+    "B3": "Bee",
+    "C3": 2025,
+    "D3": 1,
+    "A4": "East",
+    "B4": "Ant",
+    "C4": 2024,
+    "D4": 2,
+    "A5": "East",
+    "B5": "Ant",
+    "C5": 2025,
+    "D5": 6,
+    "A6": "East",
+    "B6": "Cat",
+    "C6": 2024,
+    "D6": 5,
+    "A7": "West",
+    "B7": "Bee",
+    "C7": 2024,
+    "D7": 3,
+    "A8": "West",
+    "B8": "Ant",
+    "C8": 2025,
+    "D8": 20,
+    "A9": "West",
+    "B9": "Cat",
+    "C9": 2024,
+    "D9": 4,
+    "A10": "West",
+    "B10": "Cat",
+    "C10": 2025,
+    "D10": 9
+   }
+  },
+  {
+   "name": "IO",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IO",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "item_order": [
+         "Cat",
+         "Bee"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "IOM",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IOM",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "item_order": [
+         "Cat",
+         "Bee"
+        ],
+        "attrs": {
+         "sortType": "manual"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "IOA",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IOA",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "item_order": [
+         "Cat",
+         "Bee"
+        ],
+        "attrs": {
+         "sortType": "ascending"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "IOD",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IOD",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "item_order": [
+         "Cat",
+         "Bee"
+        ],
+        "attrs": {
+         "sortType": "descending"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "IOV",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IOV",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "item_order": [
+         "Cat",
+         "Bee"
+        ],
+        "attrs": {
+         "sortType": "descending"
+        },
+        "xml": {
+         "autoSortScope": "<autoSortScope><pivotArea dataOnly=\"0\" outline=\"0\" fieldPosition=\"0\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\" selected=\"0\"><x v=\"0\"/></reference></references></pivotArea></autoSortScope>"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "IOO",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IOO",
+     "source": "Data!A1:D10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "order": [
+         "Cat",
+         "Ant"
+        ],
+        "item_order": [
+         "Bee"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A40)"
+   }
+  }
+ ],
+ "expected": {}
+}

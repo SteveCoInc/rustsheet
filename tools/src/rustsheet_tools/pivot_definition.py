@@ -21,6 +21,7 @@ oracle-spike.md runs 1, 4-6). The definition maps one-to-one onto `pivotTableDef
                               "subtotals": ["sum", "count"],         # custom subtotals (none: [])
                               "group": {"start": 0, "end": 100, "interval": 10},   # numeric fieldGroup
                               "item_attrs": {"B": {"d": True}},          # other `<item>` attributes
+                              "item_order": ["C", "A"],              # `<item>` order only (T-4164)
                               "xml": {"autoSortScope": "<autoSortScope>...</autoSortScope>",  # raw children
                                       "extLst": "<extLst>...</extLst>"}}},  # after `items` (T-4130)
        "calculated": [{"name": "Double", "formula": "Sales*2"}],    # calculated cache fields
@@ -87,7 +88,17 @@ _DEFINITION_KEYS = {
     "area",
     "calculated_items",
 }
-_FIELD_KEYS = {"attrs", "hidden", "collapsed", "subtotals", "group", "order", "item_attrs", "xml"}
+_FIELD_KEYS = {
+    "attrs",
+    "hidden",
+    "collapsed",
+    "subtotals",
+    "group",
+    "order",
+    "item_order",
+    "item_attrs",
+    "xml",
+}
 # `<item>` attributes the builder writes itself (`x`, and `h`/`sd` from `hidden`/`collapsed`), which
 # `item_attrs` may not set; `t` marks a subtotal item, not a value item.
 _MANAGED_ITEM = {"x", "h", "sd", "t"}
@@ -640,7 +651,7 @@ class DefinedPivot:
         for k, v in enumerate(values):
             if _key(v) in f.calculated and _key(v) not in own_f:
                 flags[k] = flags.get(k, "") + ' f="1"'
-        items = "".join(f'<item x="{k}"{flags.get(k, "")}/>' for k in range(len(values)))
+        items = "".join(f'<item x="{k}"{flags.get(k, "")}/>' for k in self._item_order(f, keys, len(values)))
         tails = ["default"] if subtotals is None else list(subtotals)
         items += "".join(f'<item t="{t}"/>' for t in tails)
         ext = self._field_ext(f)
@@ -648,6 +659,23 @@ class DefinedPivot:
             f'<pivotField{head} showAll="0"{attrs}><items count="{len(values) + len(tails)}">{items}</items>'
             f"{ext}</pivotField>"
         )
+
+    def _item_order(self, f: _Field, keys: dict[Any, int], count: int) -> list[int]:
+        """The order of the field's `<item>` elements: the items `item_order` lists first, in that order,
+        then the rest by index. Unlike `order` it leaves the cache's shared items as they are, so a case can
+        ask whether Excel shows the `<items>` order or the cache order (T-4164)."""
+        listed = f.spec.get("item_order", [])
+        if not isinstance(listed, list):
+            raise ValueError(f"pivot {self.name}: item_order of {f.name!r} is a list of items")
+        first: list[int] = []
+        for raw in listed:
+            k = keys.get(_key(cached_value(raw)))
+            if k is None:
+                raise ValueError(f"pivot {self.name}: item_order item {raw!r} is not in field {f.name!r}")
+            if k in first:
+                raise ValueError(f"pivot {self.name}: item_order of {f.name!r} repeats an item")
+            first.append(k)
+        return first + [k for k in range(count) if k not in first]
 
     def _field_ext(self, f: _Field) -> str:
         """The field's raw children after `items` (its `xml` slots `autoSortScope` and `extLst`), in
