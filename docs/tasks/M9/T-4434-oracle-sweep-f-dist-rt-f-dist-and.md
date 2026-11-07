@@ -3,7 +3,7 @@ id: T-4434
 title: "Oracle sweep: F.DIST.RT, F.DIST and BETA.DIST where an incomplete-beta shape is huge but outside large_shape_beta (df2 1E4 to 2E6, or df1 80 to 400), the engine 1E-13 to 9E-8 off the math and no Excel cell"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
