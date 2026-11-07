@@ -228,11 +228,11 @@ pub(super) fn format_fraction(
         .iter()
         .rposition(|t| matches!(t, TextToken::Digit(_)))
         .filter(|end| *end >= fraction.denominator_at);
-    let mut trailing = trailing_end
-        .map_or_else(Vec::new, |end| {
-            trailing_digits(&tokens[fraction.denominator_at..=end], handed_on)
-        })
-        .into_iter();
+    let (trailing, mut before_point) = trailing_end.map_or_else(
+        || (Vec::new(), String::new()),
+        |end| trailing_digits(&tokens[fraction.denominator_at..=end], handed_on),
+    );
+    let mut trailing = trailing.into_iter();
     for (index, token) in tokens.iter().enumerate() {
         if index == fraction.denominator_at {
             push_denominator(&mut text, &denominator_text, blank, blank_spaces);
@@ -271,7 +271,12 @@ pub(super) fn format_fraction(
             TextToken::Digit(_) if in_trailing => {
                 text.push_str(&part.numerals.digits(&trailing.next().unwrap_or_default()));
             }
-            TextToken::Period if in_trailing => text.push('.'),
+            TextToken::Period if in_trailing => {
+                // The spilled digits no placeholder before the point took print right before it
+                // (T-4703; number-formats.md "Placeholders after a fraction").
+                text.push_str(&part.numerals.digits(&std::mem::take(&mut before_point)));
+                text.push('.');
+            }
             TextToken::Literal(c) => text.push(*c),
             TextToken::Text(t) => text.push_str(t),
             TextToken::Ghost(_) => text.push(' '),
@@ -386,7 +391,7 @@ fn picked_denominator(code: &str, picked: &str, question_numerator: bool) -> (St
 /// " 123/7|0000.0", `.0#` " 123/7|0000.00", `# ?/7|0.0#` " 123/7|00000.0"
 /// (probes/t4594-fraction-tail-point-explore rows 3, 6, 2, 22; number-formats.md "Placeholders
 /// after a fraction").
-fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
+fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> (Vec<String>, String) {
     let HandedOn {
         spilled,
         mut lacking,
@@ -486,7 +491,14 @@ fn trailing_digits(tokens: &[TextToken], handed_on: HandedOn) -> Vec<String> {
         };
         printed.push(text);
     }
-    printed
+    // With no placeholder before the point the spilled digits print right before it, all of them
+    // (`# ?/7 .0` on 0.0123 is " 123/7 0000.0"; probes/t4703-fraction-tail-no-pre-point-and-two-points).
+    let before_point = if takes_all.is_none() && point.is_some() {
+        spilled.collect()
+    } else {
+        String::new()
+    };
+    (printed, before_point)
 }
 
 /// How the literals between a fraction's integer part and its numerator print.

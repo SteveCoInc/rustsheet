@@ -345,6 +345,27 @@ numbers as for a sheet reference, UNVERIFIED).
 Status: VERIFIED (Excel for the web; error name inferred from errorType 10 and ERROR.TYPE 11)
 Tasks: T-0124, T-1381, T-1382, T-1454, T-1487, T-1535, T-1537, T-1546, T-1554
 
+## An Analysis ToolPak argument refuses a multi-cell reference into another workbook
+Rule: a `LiftArrays` argument (EDATE, the IM* functions, COMPLEX, ISEVEN and the other functions
+that lift over an array and refuse a multi-cell range) reads a reference into another workbook
+with no cached data as the reference it is, not as its `#BLOCKED!` cells:
+- **Several cells** are refused like a written range of this workbook. `EDATE(…!A1:B2,1)`,
+  `IMAGINARY(…!A1:B2)`, `IMABS`, `COMPLEX(…,1)` and `ISEVEN` are `#VALUE!` (ERROR.TYPE 3, ROWS
+  `#VALUE!`), with the quoted and the unquoted prefix alike. The bare `…!A1:B2` and `…!A1:B2*1`
+  spill four `#BLOCKED!` instead ("External reference with no cached data", above).
+- **One cell** reads empty, as the cell INDEX picks does: `EDATE(…!A1,1)` is 31,
+  `IMAGINARY(…!A1)` 0, `ISEVEN(…!A1)` TRUE, `COMPLEX(…!A1,1)` "i", and ERROR.TYPE of them `#N/A`.
+  The bare `…!A1` is `#BLOCKED!`.
+
+Evidence: probes/external-ref-no-link-lift-arrays Calc!A1:A16, D1:D13 (excel-graph, 2026-11-07,
+T-4859), with local-range controls D8:D9.
+Ours: matches. A reference into a linked workbook whose cache the workbook holds reads the same
+way: one cell is its cached value (`COMPLEX([1]Defines!$B$2,0)` is "142"), several are refused.
+That case is not probed.
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/functions/lift/call.rs (`evaluate_as_reference`)
+Tasks: T-4859
+
 ## Cached values of a linked workbook (`[n]Sheet!A1`, `[n]!Name`, `[0]!Name`)
 Rule: in xlsx, Excel writes a reference into another workbook with the 1-based index of its
 `externalReference` in `workbook.xml`: `[1]Sheet!$A$1`, a workbook-scoped defined name of that book
@@ -682,8 +703,18 @@ fails createSession with 501 `FileCorruptTryRepair` and has no oracle cells, so 
   is referenced unquoted: `=ⓑ!B1` and `='ⓑ'!B1` both read it and FORMULATEXT shows `=ⓑ!B1` for both. A mark after
   the first character needs no quotes: FORMULATEXT of a quoted reference to sheet `a` + U+0301 or `x` + U+20DD shows
   `=á!B1`, `=x⃝!B1` (probes/t4446-defined-name-characters A12:A23). The engine matches: `name_needs_quoting` takes
-  a later mark as a name character (T-4446). Whether INDIRECT text `á!B1` (unquoted, `is_indirect_unquoted_sheet`)
-  reads the sheet is unprobed.
+  a later mark as a name character (T-4446). Every mark class after the first character holds, and INDIRECT agrees
+  (probes/t4757-later-mark-sheet-names, excel-graph, 2026-11-07, T-4757; Sheet1!A1:A20, each prediction committed
+  before the fill held). For sheets `a` + U+0301 (Mn), `क` + U+093E (Mc, alphabetic), `x` + U+0F3E (Mc, not
+  alphabetic) and the cell-shaped `B1` + U+0301:
+  - the quoted reference reads B1, and FORMULATEXT writes the name unquoted (`=का!B1`, `=x༾!B1`, `=B1́!B1`; a cell
+    address followed by a mark is not a cell here either);
+  - INDIRECT of the unquoted text (`INDIRECT("á!B1")`, `"का!B1"`, `"x༾!B1"`, `"B1́!B1"`) and of the quoted text both
+    read B1. Ours matches all of these.
+  The R1C1-shaped `C1` + U+0301 behaves differently. As a sheet name it loads, `='C1́'!B1` reads it, FORMULATEXT keeps
+  the quotes (`='C1́'!B1`), and `INDIRECT("'C1́'!B1")` reads it. But **`INDIRECT("C1́!B1")` unquoted is `#REF!`**
+  (Sheet1!A19). Ours reads 23 (T-4861). Whether every R1C1-shaped unquoted INDIRECT prefix is refused (`C1D!B1`,
+  `R1C1!B1`, `RC!B1` against sheets so named) is unprobed (T-4861, probe first).
 - Table names (T-4446): a table named `Ⓐ`, `ⓐ` or U+0301 + `a` loads while no formula uses it; `SUM(ⓐ[h])` reads it
   (3), while `SUM(Ⓐ[h])` and a structured reference to U+0301 + `a` are refused at load (hand-built workbooks,
   2026-11-07). The engine's table-name check (`is_valid_identifier`, `Model::add_table`) refuses `Ⓐ` and a first mark,
