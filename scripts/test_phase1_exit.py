@@ -162,6 +162,40 @@ class Phase1Exit(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("milestone M10\tnot met\tno milestone_exit row", text)
 
+    def test_m16_is_a_phase1_milestone(self) -> None:
+        # Decision 0274: M16 joins Phase 1; its row is T-4127's.
+        self.assertIn("M16", phase1_exit.PHASE1_MILESTONES)
+        rows = [{"milestone": m, "exit": True} for m in phase1_exit.PHASE1_MILESTONES if m != "M16"]
+        code, text = self.run_main(report(milestone_exit=rows))
+        self.assertEqual(code, 1)
+        self.assertIn("milestone M16\tnot met\tno milestone_exit row", text)
+
+    def test_the_m16_line_names_each_measure(self) -> None:
+        m16 = {
+            "milestone": "M16",
+            "exit": False,
+            "gen_suite": "gen-pivot",
+            "gen_met": False,
+            "more_suites": [{"name": "pivot-corpus-lo", "met": None}],
+            "probes_met": True,
+            "pivot": {
+                "stages": [{"stage": "PV1", "rows": 10, "web_cannot_render": 1, "evidenced": 4}],
+                "evidence_met": False,
+                "owners_met": None,
+                "layout_met": None,
+                "corpus_render_met": None,
+            },
+        }
+        rows = [{"milestone": m, "exit": True} for m in phase1_exit.PHASE1_MILESTONES if m != "M16"]
+        code, text = self.run_main(report(milestone_exit=[*rows, m16]))
+        self.assertEqual(code, 1)
+        self.assertIn(
+            "milestone M16\tnot met\texit row not met: gen-pivot not met; pivot-corpus-lo n/a; probes met; "
+            "evidence not met (PV1 4/9 at the floor); owners n/a; layout n/a; corpus render n/a",
+            text,
+        )
+        self.assertEqual(self.failing(text), "Phase 1 exit: not met: milestone M16")
+
     def test_phase1_met_false(self) -> None:
         code, text = self.run_main(
             report(v15_checkpoint={"phase1_met": False, "phase1_line": "not met (1/2)"})

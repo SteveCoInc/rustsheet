@@ -208,11 +208,19 @@ data is `#BLOCKED!`" below), and not a value, with a link part that caches no ta
 `sheetNames` (empty `sheetData`, no `definedNames`).
 Evidence: corpus-bench/58994/1_58994_input.xlsx Sheet1!F8 (excel-graph sidecar, 2026-10-26, gap triage).
 Whether a link part that *does* cache the table's cells changes it is unprobed.
-Ours: the lexer reads `[1]!Table3[#Data]` as a structured reference whose table name keeps the prefix; no such table exists, so a stored formula is `#REF!`. A typed one is refused, as Excel
+The formula keeps its text: Excel stores it back as written, `<f>VLOOKUP([1]!Table3[[#This Row],[Resource Name]],[1]Data!E:J,6,0)</f>`
+(corpus-bench/33094/1_33094_input.xlsx Sheet1!B5, its link part caching the Data sheet's cells but, as every
+externalLink part, no table definition). Its cached value is 20 and the case has no oracle value: the 20 was
+presumably calculated with the other book open (an inference; nothing in the file says so), so whether Excel gives
+`#REF!` for a link part that caches cells, as 33094's does, is unprobed (T-5036). FORMULATEXT of such a cell is
+unprobed.
+Ours: the lexer reads `[1]!Table3[#Data]` as a structured reference whose table name keeps the prefix; no such table
+exists, so a stored formula evaluates to `#REF!` while keeping its text, which the xlsx export writes as written
+(`is_external_table_name`, T-4144). A typed one is refused, as Excel
 refuses it (Graph PATCH 400, probes/t3213-typed-parse-errors A9; T-3213). The sheet-qualified form `[1]Sheet!Table3[Col]` and
 the empty-bracket `[1]!Table3[]` are unprobed (the latter lexes as an external name; T-0482).
-Status: VERIFIED (excel-graph)
-Tasks: T-0482
+Status: VERIFIED (excel-graph; the stored text from the file)
+Tasks: T-0482, T-4144
 
 ## External reference with no cached data is `#BLOCKED!`
 Rule: `SUM('[link-external-workbook-a.xlsx]Sheet0'!A1:B1)` whose externalBook part holds no cached
@@ -356,15 +364,21 @@ with no cached data as the reference it is, not as its `#BLOCKED!` cells:
 - **One cell** reads empty, as the cell INDEX picks does: `EDATE(…!A1,1)` is 31,
   `IMAGINARY(…!A1)` 0, `ISEVEN(…!A1)` TRUE, `COMPLEX(…!A1,1)` "i", and ERROR.TYPE of them `#N/A`.
   The bare `…!A1` is `#BLOCKED!`.
+- **Picked by IF, CHOOSE, INDEX or LET**, the reference reads the same: `EDATE(IF(TRUE,…!A1:B2),1)`,
+  `CHOOSE(1,…!A1:B2)`, `INDEX(…!A1:B2,0,0)` and `LET(a,1,…!A1:B2)` are `#VALUE!` (ERROR.TYPE 3,
+  ROWS `#VALUE!`), and `INDEX(…!A1:B2,1,1)`, `IF(TRUE,…!A1)`, `CHOOSE(1,…!A1)` and `LET(a,1,…!A1)`
+  are 31 (ERROR.TYPE `#N/A`, ROWS 1); IMAGINARY likewise, with 0 for one cell.
 
 Evidence: probes/external-ref-no-link-lift-arrays Calc!A1:A16, D1:D13 (excel-graph, 2026-11-07,
-T-4859), with local-range controls D8:D9.
+T-4859), with local-range controls D8:D9; probes/external-ref-no-link-lift-picked Calc!A1:E46
+(excel-graph, 2026-11-07, T-4878): column A the call, D ROWS of it, E ERROR.TYPE of it.
 Ours: matches. A reference into a linked workbook whose cache the workbook holds reads the same
 way: one cell is its cached value (`COMPLEX([1]Defines!$B$2,0)` is "142"), several are refused.
 That case is not probed.
 Status: VERIFIED (excel-graph)
-Implemented in: crates/rustsheet-engine/src/functions/lift/call.rs (`evaluate_as_reference`)
-Tasks: T-4859
+Implemented in: crates/rustsheet-engine/src/functions/lift/call.rs (`evaluate_as_reference`,
+through `pick_reference` for the picked forms)
+Tasks: T-4859, T-4878
 
 ## Cached values of a linked workbook (`[n]Sheet!A1`, `[n]!Name`, `[0]!Name`)
 Rule: in xlsx, Excel writes a reference into another workbook with the 1-based index of its

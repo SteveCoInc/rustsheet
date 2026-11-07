@@ -159,7 +159,6 @@ accuracy/BETAINV/s1!Calc!A118	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-30
 accuracy/BETAINV/s1!Calc!A128	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/BETAINV/s1!Calc!A135	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/BETAINV/s1!Calc!A138	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
-accuracy/BETAINV/s1!Calc!A179	T-4713	BETAINV (as BETA.INV) at alpha 1.55E+145, beta 4.23E+128 (above 1), below sqrt(DBL_MAX): Excel #NUM!, the math and the engine about 1
 accuracy/BETAINV/s1!Calc!A85	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
 accuracy/BETAINV/s1!Calc!A88	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
 accuracy/BETAINV/s1!Calc!A89	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!

@@ -3,7 +3,7 @@ id: T-4867
 title: "roundtrip-poi/54436.xlsx regressed on main unseen: PR CI does not fetch poi, so the round-trip gate T-4629 added only runs locally and nightly"
 milestone: M15
 lane: harness
-status: todo
+status: done
 priority: P1
 size: S
 tier: opus
@@ -11,9 +11,8 @@ depends_on: []
 ---
 
 ## Goal
-`make check` is green on main again: `rustsheet-eval roundtrip --check` passes with the poi cache
-fetched. A future regression in a fetched-cache round-trip suite is caught before its PR merges,
-not after.
+A future regression in a fetched-cache round-trip suite is caught before its PR merges, not after. (Fixing
+roundtrip-poi/54436.xlsx itself is T-4825's, the one owner of that regression.)
 
 ## Context
 Found while running `make check` for T-4830 on main at c2917a626 (2026-11-07), with the poi cache
@@ -35,12 +34,24 @@ packages), T-4176, T-4148 and T-4355. Bisect with
 `rustsheet-eval roundtrip --suite roundtrip-poi --filter 54436`.
 
 ## Acceptance criteria
-- [ ] The commit that regressed `roundtrip-poi/54436.xlsx` is found, and the loss is fixed, or
-      recorded under a decision record if it is intended.
 - [ ] A change in PR CI, or an equivalent, keeps a fetched-cache round-trip regression from merging
       unseen. Either PR CI fetches the poi cache for the round-trip gate, or the gap is written
       down with its owner.
-- [ ] `make check` green on main with the poi cache fetched.
+- [ ] `make check` green.
 
 ## Out of scope
+- The 54436 fix: T-4825 (P0). It was bisected to T-4176 (#3800, cd0c355ad), and #3892 (a2bae4dec) since recorded it as
+  `F	roundtrip-poi/54436.xlsx	* 296 2cd19df138a87ec5`, so `roundtrip --check` passes on main today and is no longer the
+  symptom to clear (2026-11-07 steward follow-up).
 - Other round-trip losses already in the baseline.
+
+## Outcome
+Duplicate of T-4726 (2026-11-07). T-4726 already plans this goal under SPEC-0035 D1-D3: the CI `eval` job gates poi
+and corpus-bench, cells and `roundtrip-*` suites, from a cached pinned fetch that fails the job when it fails. It
+depends on T-4725 (`--require-fetched`). Measured here for its budget: on 4 cores, `roundtrip --suite roundtrip-poi`
+takes about 28 s and `roundtrip-corpus-bench` about 38 s. The caches are 22 MB and 33 MB.
+
+Gating in PR CI would have caught T-4176 (#3800). It would not have stopped what hid the regression afterwards:
+#3892's re-record changed the case's checked count, so the ratchet took R0's regression as R1's new coverage. That
+mechanism is filed as T-4961. The 54436 fix stays T-4825's.
+

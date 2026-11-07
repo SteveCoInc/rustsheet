@@ -11,6 +11,7 @@ use crate::{
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
     functions::{
         lift::{number_or_error, LiftCost},
+        util::empty_args::{written_empty_na, written_empty_or},
         Function,
     },
     model::Model,
@@ -40,10 +41,11 @@ impl Model {
         holidays_at: usize,
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        if !(2..=holidays_at + 1).contains(&args.len()) {
-            return CalcResult::new_args_number_error(cell);
-        }
-        let holidays = match args.get(holidays_at) {
+        let holidays_arg = match self.holidays_arg(args, holidays_at, cell) {
+            Ok(arg) => arg,
+            Err(error) => return error,
+        };
+        let holidays = match holidays_arg {
             Some(arg) => self
                 .holiday_serials(arg, cell)
                 .map(|(serials, scalar)| Holidays::new(serials, scalar))
@@ -51,13 +53,14 @@ impl Model {
             None => Ok(Holidays::none()),
         };
         let read = holidays.as_ref().map_or(0, |holidays| holidays.read);
+        let empty = self.empty_arguments::<2>(args);
         self.lift_call_costed(
             kind,
             args,
             LiftCost::Prepared(read),
             cell,
             &mut |model, values| {
-                number_or_error(model.networkdays_of(values, holidays_at, &holidays, cell))
+                number_or_error(model.networkdays_of(values, empty, holidays_at, &holidays, cell))
             },
         )
     }
@@ -71,6 +74,7 @@ impl Model {
     fn networkdays_of(
         &self,
         values: &[CalcResult],
+        empty: [bool; 2],
         holidays_at: usize,
         holidays: &Result<Holidays, CalcResult>,
         cell: CellReferenceIndex,
@@ -78,6 +82,8 @@ impl Model {
         let [start, end, rest @ ..] = values else {
             return Err(CalcResult::new_args_number_error(cell));
         };
+        let na = written_empty_na(cell);
+        let [start, end] = written_empty_or([start, end], empty, &na);
         // NETWORKDAYS.INTL reads the weekend before the dates: `NETWORKDAYS.INTL(NA(),45030,99)` is
         // `#NUM!` and `NETWORKDAYS.INTL(1/0,45030,NA())` `#VALUE!` (probes/date-text-weekend-3d
         // Q2, Q32, Q33).

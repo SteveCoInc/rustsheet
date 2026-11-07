@@ -1,4 +1,4 @@
-use super::pivot_index::{nested_axis, PivotQuery};
+use super::pivot_index::{nested_axis, values_on_axis, PivotQuery};
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
@@ -63,7 +63,7 @@ impl Model {
         let Some(pivot) = pivot else {
             return no_answer(cell);
         };
-        match self.getpivotdata_on(pivot, &data_field, &args[2..], cell) {
+        match self.getpivotdata_on(pivot, (&args[0], &data_field), &args[2..], cell) {
             Some(result) => result,
             None => no_answer(cell),
         }
@@ -97,36 +97,80 @@ impl Model {
         found.next().is_none().then_some(pivot)
     }
 
+    /// The data field `data_field` (its node, and its value) names on pivot `pivot`, `None` for
+    /// `#REF!` (docs/excel-semantics/web.md "GETPIVOTDATA on other pivot shapes (T-2085)").
+    fn pivot_data_field(
+        &mut self,
+        pivot: usize,
+        (node, value): (&Node, &CalcResult),
+        cell: CellReferenceIndex,
+    ) -> Option<usize> {
+        let table = self.workbook.pivot_tables.get(pivot)?;
+        let cache = self.workbook.pivot_caches.get(table.cache as usize)?;
+        match value {
+            // A blank cell inside the pivot's area is its only data field (J7; DF S1!C3, A18);
+            // a blank cell outside it is `#REF!`, on the pivot's sheet or another (DF A15, A17),
+            // as is a blank cell with several data fields (DF A6, A20). `""` and an omitted
+            // argument are `#REF!` (DF A7, A14, A16).
+            CalcResult::EmptyCell => {
+                if table.data_fields.len() != 1 {
+                    return None;
+                }
+                let CalcResult::Range { left, right } =
+                    self.evaluate_node_with_reference(node, cell)
+                else {
+                    return None;
+                };
+                (left == right && self.pivot_at(left, right) == Some(pivot)).then_some(0)
+            }
+            // A caption, then a source field name, ignoring case, untrimmed (H1, H2, H10, H19). A
+            // source name two data fields share picks the first (DF A1); `"Values"` names no data
+            // field (DF A10). Which wins when one field's caption is another's source name is
+            // unprobed: the caption does here.
+            CalcResult::String(name) => {
+                let name = name.to_lowercase();
+                let fields = &table.data_fields;
+                fields
+                    .iter()
+                    .position(|d| d.caption.to_lowercase() == name)
+                    .or_else(|| {
+                        fields.iter().position(|d| {
+                            cache
+                                .fields
+                                .get(d.field as usize)
+                                .is_some_and(|f| f.name.to_lowercase() == name)
+                        })
+                    })
+            }
+            _ => None,
+        }
+    }
+
     /// GETPIVOTDATA against pivot `pivot`, `None` for `#REF!`. Names are resolved here, once per
     /// call, never per record.
     fn getpivotdata_on(
         &mut self,
         pivot: usize,
-        data_field: &CalcResult,
+        data_field: (&Node, &CalcResult),
         pairs: &[Node],
         cell: CellReferenceIndex,
     ) -> Option<CalcResult> {
         let axis = self.pivot_axis(pivot)?.to_vec();
+        let data = self.pivot_data_field(pivot, data_field, cell)?;
         let table = self.workbook.pivot_tables.get(pivot)?;
         let cache = self.workbook.pivot_caches.get(table.cache as usize)?;
         let field_name = |field: u32| cache.fields.get(field as usize).map(|f| f.name.as_str());
-        // Only a pivot with one data field gets here (`pivot_axis`).
-        let data = table.data_fields.first()?;
-        match data_field {
-            // A blank cell is the only data field (J7); `""` and an omitted argument stay
-            // `#REF!` (SPEC-0015 unknown 8).
-            CalcResult::EmptyCell => {}
-            // The caption or the source field name, ignoring case, untrimmed (H1, H2, H10, H19).
-            CalcResult::String(name) => {
-                let name = name.to_lowercase();
-                if data.caption.to_lowercase() != name
-                    && field_name(data.field)?.to_lowercase() != name
-                {
-                    return None;
-                }
-            }
-            _ => return None,
-        }
+        // The Values field, when the pivot shows several data fields, is a pair field by its
+        // caption (`dataCaption`, `Values` by default) whose one item is the chosen data
+        // field's caption (DF A8; another data field's is `#REF!`, A9, A11).
+        let values = values_on_axis(table).then(|| {
+            let caption = table.options.data_caption.as_deref().unwrap_or("Values");
+            let chosen = table
+                .data_fields
+                .get(data)
+                .map(|d| d.caption.to_lowercase());
+            (caption.to_lowercase(), chosen)
+        });
         // A field with no item (H15); a pair on a pivot with nested axis fields (unknown 10).
         if pairs.len() % 2 == 1 || (!pairs.is_empty() && nested_axis(table)) {
             return None;
@@ -145,7 +189,11 @@ impl Model {
                 return None;
             };
             let name = name.to_lowercase();
-            let position = axis_names.iter().position(|n| *n == name)?;
+            // The Values field takes the position after the axis fields'.
+            let position = match &values {
+                Some((caption, _)) if *caption == name => axis.len(),
+                _ => axis_names.iter().position(|n| *n == name)?,
+            };
             if positions.contains(&position) {
                 return None;
             }
@@ -161,7 +209,7 @@ impl Model {
             cell,
             &mut |model, items| {
                 let mut query = PivotQuery {
-                    data_field: 0,
+                    data_field: data,
                     items: query_items.clone().into_boxed_slice(),
                 };
                 for ((&position, item), &omitted) in positions.iter().zip(items).zip(&omitted) {
@@ -172,6 +220,17 @@ impl Model {
                     // calendar value or an ungrouped date item it equals, and is otherwise
                     // SPEC-0015 unknown 3, as is a boolean; `""` or a blank cell unprobed, an
                     // error in a pair unprobed.
+                    if position == query.items.len() {
+                        let chosen = values.as_ref().and_then(|(_, chosen)| chosen.as_deref());
+                        match item {
+                            CalcResult::String(name)
+                                if Some(name.to_lowercase().as_str()) == chosen =>
+                            {
+                                continue
+                            }
+                            _ => return no_answer(cell),
+                        }
+                    }
                     let found = match item {
                         _ if omitted => model.pivot_blank_item(pivot, position),
                         CalcResult::String(name) => model.pivot_item(pivot, position, name),

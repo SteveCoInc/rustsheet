@@ -3,7 +3,7 @@ id: T-4778
 title: "IRR's math definition takes the optional guess: 25 counted IRR cells with a guess have no math value (argument count)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -41,15 +41,20 @@ Cells this task owns for their math value:
 - probes-numeric/t3478-irr-r4-wide.case.json (2): Calc!A79, Calc!A292
 
 ## Acceptance criteria
-- [ ] IRR's definition has an optional `guess` call parameter (cited like RATE's), and `_irr` ignores it. A unit test
+- [x] IRR's definition has an optional `guess` call parameter (cited like RATE's), and `_irr` ignores it. A unit test
       shows `IRR({42,1,1,-1},0.5)` and `IRR({42,1,1,-1})` give the same math value.
-- [ ] `cd tools && uv run rustsheet-accuracy math --suite probes` and `--suite probes-numeric` regenerate the eight
+- [~] `cd tools && uv run rustsheet-accuracy math --suite probes` and `--suite probes-numeric` regenerate the eight
       sidecars, and each cell above has a math value or a NoValueError skip (`no single value`) listed in the Outcome.
       `rustsheet-accuracy math --check` passes, and `rustsheet-accuracy verify IRR` shows no change.
-- [ ] After `make eval`, the Outcome lists how many of the 25 cells are Phase 1b evidence (`r1c_left_out`) and how many
+- [x] After `make eval`, the Outcome lists how many of the 25 cells are Phase 1b evidence (`r1c_left_out`) and how many
       still count, with Excel-minus-math for those. `eval/baseline/` gains no new line.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - XIRR's guess (no counted XIRR cell lacks a math value for it today).
 - IRR or RATE with several sign changes (T-4779), and any engine change to IRR.
+
+## Outcome
+IRR's definition has an optional `guess` call parameter (cited like RATE's) and `_irr` ignores it; `test_irr_guess_does_not_change_the_math_value` shows `IRR({42,1,1,-1},0.5)` equals `IRR({42,1,1,-1})`. Regenerated the probes and probes-numeric math sidecars (the definition fingerprint also made the XNPV sidecars stale, so those were regenerated); `rustsheet-accuracy math --check` is current and `verify IRR` shows 0 differences.
+
+Of the 25 cells, 23 now have a math value and are Phase 1b evidence (`r1c_left_out` = phase1b). 2 still count: t3408-irr-r4-fresh Calc!A31 (Excel 0.00015881166665066, math 0.00015881166692471, Excel minus math -2.7e-13; a mismatch whose owner is T-3548) and t2565-irr-guess-sweeps P!C157, which has no sidecar entry at all (no value and no skip), filed as T-4797. The second acceptance bullet is therefore met for 24 of 25 cells. `eval/baseline/` gains no line.

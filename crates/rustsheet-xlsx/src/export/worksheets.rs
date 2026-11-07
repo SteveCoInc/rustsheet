@@ -55,7 +55,7 @@ use super::{
 /// probes/subnormal-saved-negative-and-array); desktop Excel's save is unprobed, and `-0.0` keeps
 /// its spelling. A stored positive constant is already 0 once loaded (numbers.md "A subnormal cell constant
 /// reads as 0"), so the constant arm changes nothing observable.
-fn saved_number(v: f64) -> f64 {
+pub(super) fn saved_number(v: f64) -> f64 {
     if v != 0.0 && v.abs() < f64::MIN_POSITIVE {
         0.0
     } else {
@@ -178,15 +178,22 @@ fn external_link_count(worksheet: &Worksheet) -> usize {
         .count()
 }
 
+/// The id of the worksheet's first relationship after its external links and its `tables`
+/// table parts, which [`get_worksheet_xml_rels`] numbers `rId1` on.
+pub(crate) fn first_id_after_tables(worksheet: &Worksheet, tables: usize) -> usize {
+    external_link_count(worksheet) + tables + 1
+}
+
 /// The rels part of the worksheet (`xl/worksheets/_rels/sheetN.xml.rels`) holding one
 /// relationship per external link, then one per table part (`tables` are the part numbers of
 /// the sheet's tables), or `None` if the worksheet has neither.
-/// `pivot_tables` are the sheet's relationships to its pivot tables, numbered after its other
-/// ones from the id it is given (`PivotPlan::sheet_relationships`).
+/// `after_tables` are the sheet's relationships to its pivot tables and its kept drawing,
+/// numbered from [`first_id_after_tables`] (`PivotPlan::sheet_relationships`,
+/// `DrawingPlan::sheet_relationship`).
 pub(crate) fn get_worksheet_xml_rels(
     worksheet: &Worksheet,
     tables: std::ops::Range<usize>,
-    pivot_tables: impl FnOnce(usize) -> Vec<String>,
+    after_tables: Vec<String>,
 ) -> Option<String> {
     let mut relationships_str: Vec<String> = vec![];
     let mut rel_id = 0;
@@ -205,7 +212,7 @@ pub(crate) fn get_worksheet_xml_rels(
             "<Relationship Id=\"rId{rel_id}\" Type=\"{TABLE_RELATIONSHIP}\" Target=\"../tables/table{table}.xml\"/>"
         ));
     }
-    relationships_str.extend(pivot_tables(rel_id + 1));
+    relationships_str.extend(after_tables);
     if relationships_str.is_empty() {
         return None;
     }
@@ -253,6 +260,7 @@ pub(crate) fn get_worksheet_xml(
     dimension: &str,
     is_sheet_selected: bool,
     table_count: usize,
+    drawing: Option<&str>,
 ) -> String {
     let mut sheet_data_str: Vec<String> = vec![];
     let mut cols_str: Vec<String> = vec![];
@@ -441,6 +449,9 @@ pub(crate) fn get_worksheet_xml(
     let hyperlinks_section = get_hyperlinks_section(worksheet);
     let table_parts_section =
         get_table_parts_section(table_count, external_link_count(worksheet) + 1);
+    // CT_Worksheet puts `<drawing>` after the hyperlinks and before the table parts.
+    let drawing_section =
+        drawing.map_or_else(String::new, |id| format!("<drawing r:id=\"{id}\"/>"));
 
     format!(
         "{XML_DECLARATION}\
@@ -458,6 +469,7 @@ pub(crate) fn get_worksheet_xml(
   {merge_cells_section}\
   {cf_sections}\
   {hyperlinks_section}\
+  {drawing_section}\
   {table_parts_section}\
   {cf_ext_lst}\
 </worksheet>"

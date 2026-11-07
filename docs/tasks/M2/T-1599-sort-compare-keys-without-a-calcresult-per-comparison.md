@@ -3,7 +3,7 @@ id: T-1599
 title: "SORT: compare keys without a CalcResult per comparison and move rows instead of cloning"
 milestone: M2
 lane: perf
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -29,3 +29,12 @@ result for every pair, blanks last, errors as now); SORTBY may share the fix.
 
 ## Out of scope
 - Changing SORT's ordering rules.
+
+## Outcome
+`sort_key_cmp` now compares number/number and text/text keys in place (`cmp_excel_precision`,
+`cmp_text_pairwise`, the same calls `compare_values_pairwise` makes), so those comparisons clone no text and
+build no `CalcResult`; every other pair takes the old path, so ordering is unchanged. SORTBY shares the fix.
+Release timing of `REDUCE(0,SEQUENCE(3000),LAMBDA(a,x,SORT(VSTACK(a,x))))` (best of 3, `Model::evaluate`):
+322 ms before, 268 ms after. The 2.15 s in Context is stale: SORT no longer dominates at this size, so the
+remaining cost is elsewhere. `fn_sort` still clones rows: its `data` is borrowed and shared across lifted
+by_col elements, so moving rows needs a restructure and is not done here. SORT/SORTBY tests pass (94); no eval change.

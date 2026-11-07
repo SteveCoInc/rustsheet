@@ -14,7 +14,9 @@
 //! Region by Product pivot, its totals included, with a Sum and an Average data field, and with
 //! a hidden Product item and a page selection on Region; and, rows Region then Product, a
 //! captionNotEqual and a count Top-1 filter on the inner Product, ranked within each Region
-//! (`pivot::filter`, T-4165).
+//! (`pivot::filter`, T-4165); and, rows Region then Product, both sorted descending by their Sum
+//! (`autoSortScope`), Region over the whole field and Product within each Region (`pivot::sort`,
+//! T-4827).
 //!
 //! `cargo bench -p rustsheet --bench pivot [-- FILTER...]`
 
@@ -25,9 +27,10 @@ use std::io::Write;
 
 use rustsheet::{Input, PivotFunction, PivotTableInput, Workbook};
 use rustsheet_engine::pivot::{
-    compute, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CellArea, DataField,
-    FilterCondition, FilterCriteria, FilterOperator, PageField, PivotCache, PivotField,
-    PivotFilter, PivotFilterKind, PivotTable, RecordValue, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
+    compute, Aggregate, AutoSortScope, Axis, AxisField, CacheBuilder, CacheItem, CellArea,
+    DataField, FilterCondition, FilterCriteria, FilterOperator, PageField, PivotCache, PivotField,
+    PivotFilter, PivotFilterKind, PivotTable, RecordValue, SortType, MAX_PIVOT_WORK,
+    MAX_RECORD_VALUES,
 };
 
 const RECORDS: u32 = 100_000;
@@ -202,6 +205,21 @@ fn inner_filtered(cache: &PivotCache) -> PivotTable {
     table
 }
 
+/// Rows Region then Product, Sum of Sales, both sorted descending by it: an outermost sort (one
+/// order for the field) and an inner one (per Region).
+fn value_sorted(cache: &PivotCache) -> PivotTable {
+    let mut table = inner_filtered(cache);
+    table.filters.clear();
+    for field in table.fields.iter_mut().take(2) {
+        field.sort_type = SortType::Descending;
+        field.auto_sort = Some(AutoSortScope {
+            data_field: Some(0),
+            references: Vec::new(),
+        });
+    }
+    table
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let filters: Vec<String> = std::env::args()
         .skip(1)
@@ -221,11 +239,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         ("result tree over 100,000 records", Some(false)),
         ("result tree with filters", Some(true)),
         ("result tree with inner caption and Top-N filters", None),
+        ("result tree with outer and inner value sorts", None),
     ] {
         if !filters.is_empty() && !filters.iter().any(|f| name.contains(f.as_str())) {
             continue;
         }
-        let table = filtered.map_or_else(|| inner_filtered(&source), |f| table(&source, f));
+        let table = match filtered {
+            Some(f) => table(&source, f),
+            None if name.contains("value sorts") => value_sorted(&source),
+            None => inner_filtered(&source),
+        };
         let t = common::timings(RUNS, || {
             let mut work = MAX_PIVOT_WORK;
             assert!(compute(&table, &source, &mut work).is_ok(), "{name}");

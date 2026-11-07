@@ -155,7 +155,9 @@ fn another_aggregates_caption_or_an_unknown_field_is_ref() {
 #[test]
 fn a_blank_cell_is_the_only_data_field() {
     check(&[
-        ("=GETPIVOTDATA(Z1,$A$3)", "49"), // J7
+        ("=GETPIVOTDATA(C3,$A$3)", "49"), // J7: a blank cell inside the pivot
+        // A blank cell outside it is `#REF!` (probes/t2085-getpivotdata-data-fields Q!A17).
+        ("=GETPIVOTDATA(Z1,$A$3)", "#REF!"),
         // `""` and an omitted argument: SPEC-0015 unknown 8.
         (r#"=GETPIVOTDATA("",$A$3)"#, "#REF!"),
         ("=GETPIVOTDATA(,$A$3)", "#REF!"),
@@ -320,16 +322,16 @@ fn every_aggregate_runs_over_the_picked_records() {
 }
 
 #[test]
-fn aggregates_with_no_records_are_zero_except_var_and_stddev() {
-    // probes/getpivotdata-empty-intersection (Excel 0 for these five); Var/StdDev are unprobed
-    // and stay `#REF!` (SPEC-0015 unknown 2).
+fn every_aggregate_with_no_records_is_zero() {
+    // probes/getpivotdata-empty-intersection and probes/t2085-getpivotdata-data-fields Q!B6:J6
+    // (SPEC-0015 unknown 2).
     for (function, expected) in [
         (Aggregate::Average, "0"),
         (Aggregate::Count, "0"),
         (Aggregate::Max, "0"),
         (Aggregate::Min, "0"),
-        (Aggregate::Var, "#REF!"),
-        (Aggregate::StdDev, "#REF!"),
+        (Aggregate::Var, "0"),
+        (Aggregate::StdDev, "0"),
     ] {
         let mut model = model();
         model.workbook.pivot_tables[0].data_fields[0].function = function;

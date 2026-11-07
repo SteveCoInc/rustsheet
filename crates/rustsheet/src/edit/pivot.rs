@@ -11,10 +11,10 @@
 //! [`ChangeSet`]: super::ChangeSet
 
 use rustsheet_engine::pivot::{
-    read_source, regroup, Aggregate, Axis, AxisField, CacheField, CacheItem, CacheSource, CellArea,
-    DataField, DateGroupError, NumberGroupError, PivotBudget, PivotCache, PivotCacheError,
-    PivotComputeError, PivotField, PivotRefresh, PivotRefreshError, PivotSwap, PivotTable,
-    RangeGrouping, RegroupError, MAX_RECORD_VALUES,
+    keep_ungrouped, read_source, regroup, Aggregate, Axis, AxisField, CacheField, CacheItem,
+    CacheSource, CellArea, DataField, DateGroupError, NumberGroupError, PivotBudget, PivotCache,
+    PivotCacheError, PivotComputeError, PivotField, PivotRefresh, PivotRefreshError, PivotSwap,
+    PivotTable, RangeGrouping, RegroupError, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::Model;
 
@@ -680,7 +680,10 @@ impl Txn<'_> {
                 return Err(PivotError::GroupedWithColumn.into());
             }
             if let Some(field) = cache.fields.get_mut(row as usize) {
-                *field = grouped(field, group)?;
+                // Grouped in place, it keeps its own values for the export (T-4734).
+                let base = std::mem::take(field);
+                let regrouped = grouped(&base, group)?;
+                *field = keep_ungrouped(base, regrouped);
             }
         }
         let fields = pivot_fields(&cache, row, column, [input.show_all, input.column_show_all]);

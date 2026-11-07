@@ -182,6 +182,10 @@ pub struct Parser {
     /// The formula is read from a file (xlsx import, `Input::StoredFormula`): a structured
     /// reference to an unknown table or column is `#REF!` (see [`Parser::set_loaded`]).
     loaded: bool,
+    /// The formula is an xlsx file's `<f>` text exactly as the file holds it (see
+    /// [`Parser::set_file_names`]): a newer function stored without its `_xlfn.` prefix is then no
+    /// function. Not set for the harness's case formulas, whose builder adds the prefixes.
+    file_names: bool,
     /// The formula is untyped text from outside the engine (`Model::set_user_input` called by an
     /// embedder or the bindings), not text the engine printed and re-enters itself: a padded bare
     /// column then reads as no column, as typed or loaded text does (see [`Parser::set_external`]).
@@ -265,6 +269,7 @@ impl Parser {
             bound_names: Vec::new(),
             typed: false,
             loaded: false,
+            file_names: false,
             external: false,
             api_name_body: false,
             r1c1_entry: false,
@@ -284,6 +289,17 @@ impl Parser {
     /// anywhere else (typed text, a re-parse after `remove_table`) it stays a parse error.
     pub fn set_loaded(&mut self, loaded: bool) {
         self.loaded = loaded;
+    }
+
+    /// Reads the next formulas' function names as an xlsx file stores them (`true`), or as typed
+    /// (`false`, the default). Excel recognises a function added after Excel 2007 in a file only
+    /// under its `_xlfn.` prefix: `PERCENTOF(1,2)` stored bare is `#NAME?`, `_xlfn.PERCENTOF(1,2)`
+    /// is 0.5 (docs/excel-semantics/xlsx-storage.md "Newer functions need `_xlfn.` in the file",
+    /// probes/catalog/function-name-forms A1-A2, T-0040). The xlsx cell importer sets it; the
+    /// harness's case formulas (`Input::StoredFormula`) do not, since their builder adds the
+    /// prefixes.
+    pub fn set_file_names(&mut self, file_names: bool) {
+        self.file_names = file_names;
     }
 
     /// Reads the next formulas as untyped text from outside the engine (`true`), or as the
@@ -308,6 +324,13 @@ impl Parser {
     pub(crate) fn set_typed(&mut self, typed: bool) {
         self.typed = typed;
         self.lexer.set_typed(typed);
+    }
+
+    /// Reads a quoted text not followed by `!` as a name (`true`), as a pivot calculated field's
+    /// formula writes a field name (`lexer::Lexer::set_quoted_names`), or as a sheet prefix
+    /// (`false`, the default).
+    pub(crate) fn set_quoted_names(&mut self, quoted_names: bool) {
+        self.lexer.set_quoted_names(quoted_names);
     }
 
     /// Reads the next typed formulas as typed with the workbook in R1C1 reference style (`true`)
