@@ -8704,3 +8704,40 @@ m9-normpdf-lognorm-dist and 200 Gate A points.
 Ours: `lognormal_density` (functions/statistical/log_normal.rs) since T-4975.
 Status: VERIFIED (excel-graph)
 Tasks: T-4321, T-4975
+
+## LINEST and LOGEST solve by a centered, pivoted Householder QR (T-2690)
+Rule: Excel's least-squares results (LINEST, LOGEST, TREND, GROWTH) match a Householder QR far better than the normal
+equations; Microsoft documents LINEST as a QR since Excel 2003. The structural model that fits best:
+- With a constant, the x columns and y are centered on their double means (`Σv/n`); the first reflector is the column of
+  ones, then the x columns are pivoted, the remaining column of largest norm first (the later on a tie). The intercept
+  is `ȳ - Σ βj x̄j`: `LINEST(B2:B9,A2:A9)`'s intercept 0.0357142857142847 is that cancellation at 9.025 (linest-modes L1).
+- Each reflector is `v = x - alpha e1`, `alpha = -sign(head)·|x|`, `|v|² = new_head² + tail` with the unchanged tail
+  summed on its own, and each target reflects as `t -= (v·t)·(2/|v|²)·v`, the dot summed in row order from the head.
+  The pivot column is reflected too, and its new head (not alpha) is R's diagonal, so a y proportional to it gives the
+  exact ratio: the two-point `LINEST(A12:A13,B12:B13)` is exactly 0.5 and -1.5 (linest-modes K134:L134), where an
+  alpha diagonal gives 0.49999999999999994.
+- Collinear columns (rest at most 1E-10 of the column's norm, carried over, unprobed: T-2569) are dropped with
+  coefficient 0, standard error 0, and the degrees of freedom count only the kept ones.
+- Statistics: ss_resid is the sum of squares of `Qᵀy` past the rank, ss_reg is ss_tot less it (linest-modes K12
+  167.60023809523813; the fitted part of `Qᵀy` gives ...238), r² = 1 - ss_resid/ss_tot, standard errors from the rows
+  of R⁻¹ and, for b, `var_y·(1/n + |R⁻ᵀx̄|²)`.
+Fit (bit-exact of 761 numeric Gate A points of accuracy/{LINEST,LOGEST,TREND,GROWTH}/s1, scored as literal formulas):
+normal equations (before) 251; centered QR, reflected diagonal, `2·d/|v|²`
+334; plus a ones reflector first and `d·(2/|v|²)` **413**; with the dot accumulated in an x87 register 358; with the
+x reflectors' alpha always positive 350; with the sign flipped only without a constant 378. The const=FALSE subset
+(205 points): normal equations 100, the kept model 120. One-variable evidence cells (python replay): the kept model fits
+linest-modes K134 and K183, LINEST_LOGEST.xlsx D2, G2 and G4 and growth-modes K6/K8 (the GROWTH fit); it misses
+linest-modes K1 (1.9976190476190474; every variant tried gives ...472, ...476 or ...478) and Gate A LINEST A184.
+Left open (the model's misses, Excel's arithmetic not identified): the noise coefficients of linest-modes K106:P107 (y in x,
+Excel 1.4E-16 where ours is 0 and F 3.1E+34 where ours is `#NUM!`); one-variable fits without a constant on
+linest-modes/logest-modes/growth-modes D2:D9 against A2:A9 (`LOGEST(D2:D9,A2:A9,FALSE)` 1.9295282207785776, ours ...778;
+the normal equations' `Σxy/Σx²` gives Excel's value there, and on LINEST_LOGEST.xlsx G4, but loses 20 const=FALSE Gate A
+points); Gate A LINEST/s1 A184 (an intercept over x from 1E-44 to 8.8E+33: Excel 5206016, one ulp of slope off the
+exact fit; ours 5201920, six ulp of slope off; outside the envelope).
+Evidence: probes/linest-modes, logest-modes, growth-modes, regression-trend (excel-graph); ironcalc-calc
+LINEST_LOGEST.xlsx and TREND_GROWTH.xlsx (Excel-cached); eval/accuracy/tables/{LINEST,LOGEST,TREND,GROWTH}/s1.
+Ours: `householder_qr` and `linear_regression` (functions/statistical/linest.rs) since T-4975; GROWTH keeps its
+product of exponential factors (trend.rs) on the new fit. `solve_system`, `invert_matrix` and `independent_columns` are
+gone.
+Status: VERIFIED (excel-graph) for the cells cited; the model is a structural fit, not Excel's code
+Tasks: T-2690, T-2006, T-2569, T-4975

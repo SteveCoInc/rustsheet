@@ -326,36 +326,3 @@ pub(super) fn known_points(
     };
     Ok(KnownPoints { ys, points, p })
 }
-
-/// The x columns kept when the normal equations are singular, in ascending order: a column that
-/// is, to rounding, a combination of the intercept and the columns kept after it is dropped with
-/// coefficient 0, as Excel's LINEST drops a collinear column. The last column is tried first:
-/// `LINEST(B2:B9,A2:E9,TRUE,TRUE)` with E = 2A drops A, not E (A's se is exactly 0, linest-modes
-/// K106:O107), and one point drops its x (K141). So a zero-variance x gives the mean of y
-/// (`TREND(A1:A6,G1:G6)` is 4.5, trend O20). The cut-off is ours, unprobed: TODO(T-2569).
-pub(super) fn independent_columns(x: &[Vec<f64>], p: usize, const_term: bool) -> Vec<usize> {
-    let n = x.len();
-    let mut basis: Vec<Vec<f64>> = Vec::new();
-    if const_term && n > 0 {
-        basis.push(vec![1.0 / (n as f64).sqrt(); n]);
-    }
-    let mut kept = Vec::new();
-    for j in (0..p).rev() {
-        let column: Vec<f64> = x.iter().map(|row| row[j]).collect();
-        let norm = column.iter().map(|v| v * v).sum::<f64>().sqrt();
-        let mut residual = column;
-        for b in &basis {
-            let dot: f64 = residual.iter().zip(b).map(|(r, bi)| r * bi).sum();
-            for (r, bi) in residual.iter_mut().zip(b) {
-                *r -= dot * bi;
-            }
-        }
-        let rest = residual.iter().map(|v| v * v).sum::<f64>().sqrt();
-        if norm > 0.0 && rest > 1e-10 * norm {
-            basis.push(residual.iter().map(|v| v / rest).collect());
-            kept.push(j);
-        }
-    }
-    kept.reverse();
-    kept
-}
