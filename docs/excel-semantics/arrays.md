@@ -1006,7 +1006,7 @@ excel-graph, 2026-11-06, over the T-2592 data; `G` is the T-2592 GROUPBY, `V` is
   (T-4661). The engine still follows the October reads, so the refilled cells above are known failures until T-4736 (SUM, COUNT,
   COUNTA, and SUM over a reference body), T-4737 (lifts read an error; `&""` over an INDEXed row) and T-4738 (the lifted INDEX top-left)
   land. Each of them turns its share of the October cells (t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26, A32, t2360
-  P!C1, C9, C17, C25, C33, t2311 P!C12, t2475 P!A64) into superseded known failures, with the October sidecars kept (decision 0329 item 3).
+  P!C1, C9, C17, C25, C33, t2311 P!C12, t2475 P!A64; and gen-m9/e85daedce5c2675e Calc!A35, which wraps t2625 A26's COUNT, once a refill confirms it) into superseded known failures, with the October sidecars kept (decision 0329 item 3).
 Aggregates over nested GROUPBY and PIVOTBY cells (probes/t2594-nested-aggregates, excel-graph, 2026-10-24, T-2594, over the T-2592
 data): (October fills; by 2026-11-06 SUM is `#N/A` and COUNT skips nested cells, see the T-2609 list above) SUM, COUNT and COUNTA flatten a nested cell (SUM 220, COUNT 16, COUNTA 19 over GROUPBY; over PIVOTBY SUM 220, COUNT 16,
 COUNTA 32; `SUM(1,GROUPBY(..),2)` 223; A26:A29). Every other aggregate tried is `#N/A`: MIN, MAX, MINA, MAXA, AVERAGEA, PRODUCT,

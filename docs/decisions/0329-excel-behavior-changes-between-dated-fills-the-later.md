@@ -39,7 +39,8 @@
     invisible to the gap list. T-3610 may still choose it for variance cells; this record does not need it.
 - **Decision:**
   1. **When a fill is a change.** A later fill's value for a cell is a behavior change when all of these hold:
-     - a byte-identical copy of the input (same sha256, or a case that builds the same bytes) gives the new value;
+     - a copy of the input gives the new value: the same sha256, or a case with identical sheets (a description or tags
+       may differ, as for probes/gen-m9-17c110a53924beb8-refill-1106);
      - either two fills of that copy agree, or one rule, stated in docs/excel-semantics/, explains the changed cells
        of at least two probes and is confirmed by at least one newly written probe cell filled on the later date (so a
        rule written after the fact must still predict a fresh cell);
@@ -63,7 +64,12 @@
      - t2625-nested-consumers A13, A17, A20, A25, A26 and A32;
      - t2360-array-lambda-holidays P!C1, C9, C17, C25 and C33;
      - t2311-pivotby-value-columns-error P!C12;
-     - t2475-stat-subexpressions P!A64 (October `64|13x3|?`, which ours gives today).
+     - t2475-stat-subexpressions P!A64 (October `64|13x3|?`, which ours gives today);
+     - gen-m9/e85daedce5c2675e Calc!A35, conditionally. Its `BESSELJ(COUNT(PIVOTBY(..),Data!B3:B5,Data!D9:D10),0)` holds
+       the COUNT of t2625-nested-consumers P!A26 word for word, but the cell has an October fill only (2026-10-23), and
+       ours passes it today. It is superseded once a copy of the case refilled on or after 2026-11-06 shows the
+       November count (item 1). T-4736 files that refill before its regression run. If the refill keeps the October
+       value, the cell is not superseded, and T-4736 must keep it passing.
      The October cells of probes/t2475-stat-subexpressions P!A62, A63 and gen-m9/17c110a53924beb8 Calc!A300 are
      superseded too. Ours already gives their November values, so they are F lines against the October values today.
      They stay F lines, and they need no regression run. Unlike them, t2475 P!A64 passes today and needs the run.

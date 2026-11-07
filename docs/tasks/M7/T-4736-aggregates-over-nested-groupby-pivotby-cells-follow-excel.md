@@ -32,10 +32,16 @@ Cells this task fixes (probes):
 Cells this task supersedes (decision 0329 item 3; they become F lines against their October values):
 - t2592-nested-groupby-cells P!A6:A8;
 - t2594-nested-aggregates P!A26:A29;
-- t2625-nested-consumers P!A13, A17, A20, A25, A26.
+- t2625-nested-consumers P!A13, A17, A20, A25, A26;
+- gen-m9/e85daedce5c2675e Calc!A35, only once a refill confirms it (decision 0329 item 4). The cell is
+  `BESSELJ(COUNT(PIVOTBY(..),Data!B3:B5,Data!D9:D10),0)`, which wraps t2625 A26's COUNT. It has an October fill only, and ours
+  passes it today. Before the regression run, add a refill copy (`probes/gen-m9-e85daedce5c2675e-refill-1106`, identical sheets,
+  as probes/gen-m9-17c110a53924beb8-refill-1106 did) with the `excel-probe` skill. If the refill shows the November count,
+  supersede A35. If it does not, keep A35 passing.
 
 ## Acceptance criteria
 - [ ] Every cell under "fixes" passes; `make eval-show` shows each one.
+- [ ] The gen-m9/e85daedce5c2675e refill is committed, and A35 is handled as it shows.
 - [ ] The baseline diff adds F lines for exactly the cells under "supersedes", made by one
       `update-baseline --allow-regressions` run under decision 0329, and no other regression.
 - [ ] `NestedReading::Flatten` is removed, or kept only where a probe still shows flattening; arrays.md "Aggregates over

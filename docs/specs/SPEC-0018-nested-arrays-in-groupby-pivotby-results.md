@@ -56,7 +56,7 @@ paragraph starting "A LAMBDA array result is shown as `#VALUE!`, but the cell ho
    `{1;2;3;4}` is probes/scan-over-groupby A69:A72 (and `INDEX(..,1,2)`, group a's `{1;3}`, is `#SPILL!` at A68), landed with T-2398 (#2145).
 4. **Element-wise lifts read an error; SUM is `#N/A` and COUNT skips** (2026-11-06 fills, the target under decision 0329).
    - A function that lifts element by element over the result reads each nested cell as an error, not as its top-left:
-     `SUM(--ISERROR(PIVOTBY(..)))` counts every nested cell (t2360-array-lambda-holidays-refill-1106 P!C1, C9, C17, C25, C33:
+     `SUM(--ISERROR(GROUPBY(..)))` and over PIVOTBY count every nested cell (t2360-array-lambda-holidays-refill-1106 P!C1, C9, C17, C25, C33:
      12, 9, 6, 3, 12; t2311-pivotby-value-columns-error-refill-1106 P!C12: 12). The error is not `#N/A`: over a two-level cell whose
      inner top-left is `#N/A`, ISNA is 0 and ISERROR TRUE (probes/t2609-nested-operators-and-lifts A44:A47, -one-cell A27). It is
      `#VALUE!`: the lifted fallback `"#"&ERROR.TYPE(G)` of `IFERROR(G&"",..)` gives "#3" at every nested cell, 1x1 and
