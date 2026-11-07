@@ -36,6 +36,8 @@ Current suites:
 - `pivot-corpus-lo`, `pivot-corpus-closedxml`: the pivot-corpus (T-4131), Excel-saved workbooks with pivots from
   LibreOffice `sc/qa/unit/data` (a sparse fetch) and ClosedXML `ClosedXML.Tests/Resource`, scored against their
   cached values and each pivot classified fresh or stale (below); `gate = false`, cell baselines.
+- `gen-pivot`: M16 pivot tables from `rustsheet-gen --milestone M16` (T-4132): 9 cases of up to 12 pivots (104 in all) over a covering
+  array of the PV1 dimensions, oracle-filled and gated; its scored cells are the sidecars' pivot areas and their texts.
 
 ## Round-trip suites
 `eval/roundtrip/<name>/suite.toml` (SPEC-0033, T-4172) uses the same manifest with `kind = "roundtrip"`:
