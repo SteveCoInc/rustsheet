@@ -17,7 +17,9 @@ Sources:
   A118 and GAMMA.DIST/s1 A141). `_gamma_dist_domain` applies it in that shape range
   (`OVERFLOW_SHAPES`); outside it the point has no value. The same probe found an unexplained `#NUM!` at a finite
   x / beta of 1E308 at shapes 1.5 and 2 (B9, F9, B10, B11), not at 0.5, 1, 2.5, 2.9, 3, 10 or 1E5, and not at shape 2
-  from 1E200 down (F10-I11): a ratio above 1E200 between shapes 1 and 2.5 (`HUGE_RATIO_*`) has no value.
+  from 1E200 down (F10-I11). T-4635 explains it (statistics.md "GAMMA.DIST at a huge finite x / beta (T-4635)"):
+  above shape 1 a finite x / beta is `#NUM!` where y / shape * 4 overflows, and to shape 1.1 also where y^shape does,
+  in the chi-squared functions too (`_huge_ratio_domain`; the unprobed edges of `HUGE_RATIO_*` have no value).
 - statistics.md, "GAMMA.DIST at a huge shape (T-2435, T-3316)": rule 1, the density of a positive x is `#NUM!` where
   shape / x overflows a double; rule 2, from a shape of about 1E+55 a computed 0 is `#NUM!` at some points and not
   others, with no threshold (decision 0267 accepts those cells), so such a point has no math value.
@@ -93,9 +95,13 @@ DEEP_TAIL_LOG = -2000
 # T-4625: the shapes at which an overflowing x / beta is #NUM! in Excel's cells (probes/t4625-gamma-dist-ratio-overflow;
 # the low end is GAMMADIST/s1 A182).
 OVERFLOW_SHAPES = (3.7490322860808e-188, 1e300)
-# T-4625: finite x / beta above HUGE_RATIO_MIN is #NUM! at shapes 1.5 and 2 and a number at 1 and 2.5 (no rule found).
-HUGE_RATIO_MIN = 1e200
-HUGE_RATIO_SHAPES = (1.0, 2.5)  # open interval
+# T-4635 (statistics.md "GAMMA.DIST at a huge finite x / beta"): above shape 1 a finite y is #NUM! where y / a * 4
+# overflows, and up to HUGE_RATIO_POWER_SHAPE_MAX also where y^a does. Shape 1.11 is a number where y^a overflows, so
+# a shape strictly between the two has no value there; so has a shape below 1.01 where only y / a * 4 overflows (that
+# branch is probed only where y^a overflows first).
+HUGE_RATIO_POWER_SHAPE_MAX = 1.1
+HUGE_RATIO_POWER_NUMBER_SHAPE = 1.11
+HUGE_RATIO_QUOTIENT_SHAPE_MIN = 1.01
 DENSITY_GUARD_DPS = 10  # digits added to the density's exponent, besides the log10(a) it cancels
 
 
@@ -185,10 +191,35 @@ def _gamma_dist_domain(args: Sequence[MathArg]) -> str | None:
             msg = "an overflowing x / beta is probed #NUM! only at shapes 3.7E-188 to 1E300 (T-4625)"
             raise NoValueError(msg)
         return "x / beta overflows"
-    if ratio > HUGE_RATIO_MIN and HUGE_RATIO_SHAPES[0] < fa < HUGE_RATIO_SHAPES[1]:
-        msg = "Excel's #NUM! at a finite x / beta of 1E308 at shapes 1.5 and 2 has no rule (T-4625)"
-        raise NoValueError(msg)
+    huge = _huge_ratio_domain(fa, ratio)
+    if huge is not None:
+        return huge
     return None if cumulative else _density_domain(fx, fa, ratio)
+
+
+def _power_overflows(y: float, a: float) -> bool:
+    """Whether the double y^a overflows (the engine's `powf`)."""
+    try:
+        return math.isinf(y**a)
+    except OverflowError:
+        return True
+
+
+def _huge_ratio_domain(fa: float, y: float) -> str | None:
+    """Excel's #NUM! at a huge finite y = x / beta (T-4635), shared by GAMMA.DIST and the chi-squared functions."""
+    if fa <= 1:
+        return None
+    power = _power_overflows(y, fa)
+    quotient = math.isinf(y / fa * 4)
+    if power and HUGE_RATIO_POWER_SHAPE_MAX < fa < HUGE_RATIO_POWER_NUMBER_SHAPE and not quotient:
+        msg = "y^shape overflows between shapes 1.1 (#NUM!) and 1.11 (a number): unprobed (T-4635)"
+        raise NoValueError(msg)
+    if quotient and not power and fa < HUGE_RATIO_QUOTIENT_SHAPE_MIN:
+        msg = "y / shape * 4 overflows below shape 1.01 where y^shape does not: unprobed (T-4635)"
+        raise NoValueError(msg)
+    if quotient or (power and fa <= HUGE_RATIO_POWER_SHAPE_MAX):
+        return "a huge finite x / beta (T-4635)"
+    return None
 
 
 def _density_domain(fx: float, fa: float, ratio: float) -> str | None:
@@ -234,7 +265,18 @@ def _chisq_dist_domain(args: Sequence[MathArg]) -> str | None:
         return None
     if not cumulative and x == 0 and chi_shape(df) < 1:
         return "the density at 0 with one degree of freedom is infinite"
-    return None
+    return _chisq_huge_domain(x, df)
+
+
+def _chisq_huge_domain(x: MathArg, df: MathArg) -> str | None:
+    """T-4635's rule at y = x / 2 (probes/t4635-chisq-huge-x: df 3 from x = 1.4E308)."""
+    if not is_real(x) or not is_real(df) or float(real_arg(x)) <= 0:
+        return None
+    return _huge_ratio_domain(float(chi_shape(df)), float(real_arg(x)) / 2)
+
+
+def _chisq_dist_rt_domain(args: Sequence[MathArg]) -> str | None:
+    return _chisq_huge_domain(args[0], args[1])
 
 
 def _chisq_dist_rt(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -322,6 +364,7 @@ CHISQ_DIST_RT = register(
         function="CHISQ.DIST.RT",
         params=(_x((0.01, 100), ZERO_SOURCE), deg_freedom_param(DF_CUT, RT_TRUNC_SOURCE)),
         value=_chisq_dist_rt,
+        domain=_chisq_dist_rt_domain,
         tail=_chi_tail_x,
         tail_param="x",
         sources=(KERNEL_SOURCE, ZERO_SOURCE, HUGE_SOURCE, RT_TRUNC_SOURCE, MATH_SOURCE),
