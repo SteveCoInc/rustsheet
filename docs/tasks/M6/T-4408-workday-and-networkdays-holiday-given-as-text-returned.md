@@ -3,7 +3,7 @@ id: T-4408
 title: "WORKDAY and NETWORKDAYS holiday given as text returned by a formula directly as the argument: probe it"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
