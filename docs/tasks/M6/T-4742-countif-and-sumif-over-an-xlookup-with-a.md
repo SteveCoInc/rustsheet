@@ -3,7 +3,7 @@ id: T-4742
 title: "COUNTIF and SUMIF over an XLOOKUP with a text if_not_found spill a 2x1 result (probes/t4704 B64:C64, A65, B67:C67, A68, B70:C70, A71, B73:C73, A74)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
