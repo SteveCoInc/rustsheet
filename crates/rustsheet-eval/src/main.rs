@@ -177,6 +177,18 @@ enum Cmd {
     /// eval/roundtrip, validate the output and score what it kept; writes
     /// eval/runs/latest/roundtrip.{json,md}. `--check` gates the baselines, `--update-baseline`
     /// ratchets them (refusing regressions).
+    /// Score another writer's save of a workbook against our own (SPEC-0033's differ, as R0
+    /// scores an output against its source). T-4890's Excel re-save probe compares each patched
+    /// save with Excel's re-save of it.
+    PackageDiff {
+        /// Our package (the source side).
+        ours: PathBuf,
+        /// The other writer's save of it.
+        theirs: PathBuf,
+        /// Print the items as JSON instead of one line each.
+        #[arg(long)]
+        json: bool,
+    },
     Roundtrip {
         #[command(flatten)]
         sel: Selection,
@@ -859,6 +871,9 @@ fn run() -> Result<ExitCode> {
         println!("{}", serde_json::to_string(&comparison)?);
         return Ok(ExitCode::SUCCESS);
     }
+    if let Cmd::PackageDiff { ours, theirs, json } = &cli.cmd {
+        return cmd_package_diff(ours, theirs, *json);
+    }
     let root = find_root(cli.root)?;
     match cli.cmd {
         Cmd::Suites => cmd_suites(&root),
@@ -951,7 +966,9 @@ fn run() -> Result<ExitCode> {
         Cmd::Cases { suite } => cmd_cases(&root, &suite),
         Cmd::Accuracy { json, timeout } => cmd_accuracy(&root, json, timeout),
         Cmd::Roundtrip { sel, flags } => cmd_roundtrip(&root, &sel, flags),
-        Cmd::Snapshot { .. } | Cmd::Compare { .. } => unreachable!("handled above"),
+        Cmd::Snapshot { .. } | Cmd::Compare { .. } | Cmd::PackageDiff { .. } => {
+            unreachable!("handled above")
+        }
     }
 }
 
@@ -978,7 +995,14 @@ fn cmd_roundtrip(root: &Path, sel: &Selection, flags: roundtrip::Flags) -> Resul
     let suites = select_from(Suite::load_roundtrip(root)?, sel, flags.check)?;
     let mode = flags.mode();
     let timeout = Duration::from_secs(sel.timeout);
-    let (ok, lines) = roundtrip::command(root, &suites, sel.filter.as_deref(), timeout, mode)?;
+    let (ok, lines) = roundtrip::command(
+        root,
+        &suites,
+        sel.filter.as_deref(),
+        timeout,
+        mode,
+        flags.save_dir.as_deref(),
+    )?;
     for line in lines {
         println!("{line}");
     }
@@ -987,6 +1011,40 @@ fn cmd_roundtrip(root: &Path, sel: &Selection, flags: roundtrip::Flags) -> Resul
     } else {
         ExitCode::FAILURE
     })
+}
+
+/// `rustsheet-eval package-diff`: the failing items of `theirs` against `ours`, then a summary.
+fn cmd_package_diff(ours: &Path, theirs: &Path, json: bool) -> Result<ExitCode> {
+    let read = |p: &Path| std::fs::read(p).with_context(|| p.display().to_string());
+    let name = ours.file_name().map(|n| n.to_string_lossy().into_owned());
+    let (items, checked) = roundtrip::package_diff(
+        &read(ours)?,
+        &read(theirs)?,
+        name.as_deref().unwrap_or("workbook"),
+    )?;
+    let failing: Vec<&roundtrip::Item> = items
+        .iter()
+        .filter(|i| i.verdict != roundtrip::Verdict::Kept)
+        .collect();
+    if json {
+        println!("{}", serde_json::to_string(&failing)?);
+    } else {
+        for i in &failing {
+            println!(
+                "{} {} {} {}",
+                i.verdict.label(),
+                i.kind,
+                i.key,
+                i.detail.as_deref().unwrap_or("")
+            );
+        }
+    }
+    let lost: usize = failing.iter().map(|i| i.weight).sum();
+    eprintln!(
+        "{checked} items compared, {lost} not kept, {} failing",
+        failing.len()
+    );
+    Ok(ExitCode::SUCCESS)
 }
 
 fn main() -> ExitCode {

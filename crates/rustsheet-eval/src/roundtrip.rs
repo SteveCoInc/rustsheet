@@ -51,7 +51,9 @@ impl Verdict {
         self == Verdict::Kept
     }
 
-    pub(crate) fn label(self) -> &'static str {
+    /// The verdict as a baseline line spells it.
+    #[must_use]
+    pub fn label(self) -> &'static str {
         match self {
             Verdict::Kept => "kept",
             Verdict::Changed => "changed",
@@ -145,7 +147,12 @@ impl CaseResult {
 
 /// Runs every case of `suites` in parallel, each isolated against panics and `timeout`.
 #[must_use]
-pub fn run_suites(suites: &[&Suite], filter: Option<&str>, timeout: Duration) -> Vec<CaseResult> {
+pub fn run_suites(
+    suites: &[&Suite],
+    filter: Option<&str>,
+    timeout: Duration,
+    save_dir: Option<&Path>,
+) -> Vec<CaseResult> {
     let mut jobs = Vec::new();
     let mut failed = Vec::new();
     for suite in suites {
@@ -169,14 +176,19 @@ pub fn run_suites(suites: &[&Suite], filter: Option<&str>, timeout: Duration) ->
     }
     let mut results: Vec<CaseResult> = jobs
         .par_iter()
-        .map(|(suite, case)| run_case(suite, case, timeout))
+        .map(|(suite, case)| run_case(suite, case, timeout, save_dir))
         .collect();
     results.extend(failed);
     results
 }
 
 /// Runs one case: R0 in an isolated worker, so a panic or a hang is a verdict, not a crash.
-fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
+fn run_case(
+    suite: &Suite,
+    case: &CaseFile,
+    timeout: Duration,
+    save_dir: Option<&Path>,
+) -> CaseResult {
     let limit = LoadOptions::default().max_uncompressed_bytes;
     let mut bytes = Vec::new();
     let read = std::fs::File::open(&case.path)
@@ -189,9 +201,25 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
         .file_name()
         .map(|n| n.to_string_lossy().into_owned());
     let scenarios = suite.manifest.scenarios.clone();
+    let keep = save_dir.is_some();
     let (outcome, millis) = run_in_worker(format!("roundtrip:{}", case.id), timeout, move || {
-        scenarios::run_scenarios(&bytes, name.as_deref(), &scenarios)
+        scenarios::run_scenarios(&bytes, name.as_deref(), &scenarios, keep)
     });
+    // A save that cannot be written is only lost from the probe: the case is still scored, and
+    // its message says which file failed.
+    let mut unsaved = Vec::new();
+    if let (Some(dir), Ok(Ok(run))) = (save_dir, &outcome) {
+        for (label, bytes) in &run.outputs {
+            let file = format!(
+                "{}.{}.xlsx",
+                case.id.replace('/', "__"),
+                label.replace('/', "-")
+            );
+            if let Err(e) = std::fs::write(dir.join(&file), bytes) {
+                unsaved.push(format!("{file}: {e}"));
+            }
+        }
+    }
     let mut result = match outcome {
         Err((status, message)) => CaseResult::new(case, suite, status, Some(message)),
         Ok(Err(scenarios::R0Error::Source(e))) => {
@@ -216,6 +244,9 @@ fn run_case(suite: &Suite, case: &CaseFile, timeout: Duration) -> CaseResult {
         }
     };
     result.millis = millis;
+    if !unsaved.is_empty() {
+        result.message = Some(format!("not saved: {}", unsaved.join("; ")));
+    }
     result
 }
 
@@ -398,6 +429,26 @@ fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Ve
         items.push(item("part", key.clone(), Verdict::Added, None));
     }
     (items, checked)
+}
+
+/// Scores `theirs`, another writer's save of `ours`, as R0 scores an output against its source:
+/// validator problems, parts, elements and attributes, then the semantic facts, with our values
+/// as the saved side. Returns the items and how many of ours were compared (T-4890).
+///
+/// # Errors
+/// When `ours` is not a readable package or does not load.
+pub fn package_diff(ours: &[u8], theirs: &[u8], name: &str) -> anyhow::Result<(Vec<Item>, usize)> {
+    let source = Package::read(ours)?;
+    let saved = scenarios::load(ours, Some(name)).map_err(|e| match e {
+        scenarios::R0Error::Source(e) | scenarios::R0Error::Engine(e) => anyhow::anyhow!(e),
+    })?;
+    let sides = Sides {
+        source: &source,
+        source_bytes: ours,
+        saved: &saved,
+        name,
+    };
+    Ok(score(scenarios::R0, &sides, theirs))
 }
 
 /// The share of a run's source items that were kept (SPEC-0033 D2): the source items compared,
@@ -659,8 +710,12 @@ pub fn report_markdown(results: &[CaseResult]) -> String {
 }
 
 /// The mode flags of `rustsheet-eval roundtrip`.
-#[derive(clap::Args, Debug, Clone, Copy)]
+#[derive(clap::Args, Debug, Clone)]
 pub struct Flags {
+    /// Also write each case's saves (R0 and each further scenario) into this directory, as
+    /// `<case>.<scenario>.xlsx` (T-4890, for the Excel re-save probe). Never with a baseline mode.
+    #[arg(long, value_name = "DIR", conflicts_with_all = ["check", "update"])]
+    pub save_dir: Option<std::path::PathBuf>,
     /// Fail when a suite's baseline is out of date or regressed.
     #[arg(long, conflicts_with = "update")]
     pub check: bool,
@@ -676,7 +731,7 @@ pub struct Flags {
 impl Flags {
     /// The [`Mode`] these flags ask for.
     #[must_use]
-    pub fn mode(self) -> Mode {
+    pub fn mode(&self) -> Mode {
         match (self.check, self.update) {
             (true, _) => Mode::Check,
             (_, true) => Mode::Update {
@@ -715,6 +770,7 @@ pub fn command(
     filter: Option<&str>,
     timeout: Duration,
     mode: Mode,
+    save_dir: Option<&Path>,
 ) -> anyhow::Result<(bool, Vec<String>)> {
     if filter.is_some() && mode != Mode::Report {
         anyhow::bail!(
@@ -737,7 +793,10 @@ pub fn command(
             s.root().display()
         ));
     }
-    let mut results = run_suites(&suites, filter, timeout);
+    if let Some(dir) = save_dir {
+        std::fs::create_dir_all(dir)?;
+    }
+    let mut results = run_suites(&suites, filter, timeout, save_dir);
     let mut ok = true;
     for suite in &suites {
         let excused = exceptions::load(suite)?;

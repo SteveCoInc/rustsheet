@@ -5,6 +5,7 @@
   rustsheet-oracle recalc -b BACKEND in.xlsx      recalc one workbook, print formula values as JSON
   rustsheet-oracle fill -b BACKEND --suite S      write <case>.oracle.json for cases lacking one
   rustsheet-oracle calibrate -b BACKEND --suite S compare the oracle with an xlsx suite's cached values
+  rustsheet-oracle resave -b BACKEND DIR --out OUT have the backend open and save each DIR/*.xlsx (T-4890)
 
 Every workbook is sent with an embedded canary sheet (oracle/canary.py) whose poisoned cached
 values must come back recalculated; otherwise that workbook's results are refused.
@@ -321,6 +322,38 @@ def _drop_desktop_conflicts(
     return dropped
 
 
+def resave_all(backend: Any, inputs: list[Path], out: Path) -> dict[str, dict[str, str]]:
+    """Have `backend` open and save each workbook of `inputs` again, writing its save to
+    `out/<name>`. Returns, by file name, `{"status": "saved"}` or `{"status": "refused", "error": …}`:
+    a refusal is itself the finding (T-4890, the Excel re-save probe of the patch tier). The
+    workbooks go up as they are, without a canary: only the saved package matters here, not the
+    values.
+    """
+    out.mkdir(parents=True, exist_ok=True)
+    results: dict[str, dict[str, str]] = {}
+    for path in inputs:
+        try:
+            saved, _ = backend.recalc(path.read_bytes())
+        except OracleError as e:
+            results[path.name] = {"status": "refused", "error": str(e)}
+            continue
+        (out / path.name).write_bytes(saved)
+        results[path.name] = {"status": "saved"}
+    return results
+
+
+def cmd_resave(args: argparse.Namespace) -> int:
+    backend = _backend(args.backend)
+    inputs = sorted(args.input.glob("*.xlsx"))
+    if args.limit:
+        inputs = inputs[: args.limit]
+    results = resave_all(backend, inputs, args.out)
+    (args.out / "resave.json").write_text(json.dumps(results, indent=2, sort_keys=True) + "\n")
+    refused = sum(1 for r in results.values() if r["status"] == "refused")
+    print(f"{len(results)} workbooks, {refused} refused; Excel's saves in {args.out}")
+    return 0
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(prog="rustsheet-oracle", description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -350,6 +383,12 @@ def main() -> None:
     p.add_argument("--examples", type=int, default=50, help="disagreeing cells listed in the report")
     p.add_argument("--json", type=Path, help="also write every disagreeing cell as JSON here")
     p.set_defaults(fn=cmd_calibrate)
+    p = sub.add_parser("resave", help="have the backend open and save each workbook of a directory")
+    p.add_argument("-b", "--backend", required=True)
+    p.add_argument("input", type=Path, help="directory of .xlsx files")
+    p.add_argument("--out", type=Path, required=True, help="where the backend's saves go")
+    p.add_argument("--limit", type=int, default=0)
+    p.set_defaults(fn=cmd_resave)
     args = ap.parse_args()
     with tempfile.TemporaryDirectory():
         sys.exit(args.fn(args))
