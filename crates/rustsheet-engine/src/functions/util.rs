@@ -28,24 +28,6 @@ use existing_walk::{span, WalkBudget};
 
 use collation::cmp_text;
 
-/// The Analysis ToolPak rule for a written-empty required argument (T-4870): `#N/A` where one of
-/// the first `required` values is an empty argument, a LET or LAMBDA variable bound to nothing
-/// included (`EDATE(,1)`, `WORKDAY(1,)`, `LET(e,,EDATE(1,e))`: probes/t4870-empty-date-args), as
-/// for MROUND, RANDBETWEEN, IMSUB and IMDIV. A blank cell is a value, not an empty argument. It is
-/// checked before any other argument is read; Excel's order against another argument's error is
-/// unprobed.
-pub(crate) fn toolpak_empty_required(
-    values: &[CalcResult],
-    required: usize,
-    cell: CellReferenceIndex,
-) -> Option<CalcResult> {
-    values
-        .iter()
-        .take(required)
-        .any(|value| matches!(value, CalcResult::EmptyArg))
-        .then(|| CalcResult::new_error(Error::NA, cell, String::new()))
-}
-
 /// The number a referenced cell gives an aggregate: numbers count, booleans, text and empty cells
 /// are skipped (SPEC-0009 `CellNumbers::Numbers`).
 pub(crate) fn cell_number(value: &CalcResult) -> Option<f64> {

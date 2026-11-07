@@ -399,6 +399,25 @@ impl Model {
         matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node)
     }
 
+    /// The Analysis ToolPak rule for a written-empty required argument (T-4870): `#N/A` where one of
+    /// the first `required` arguments is written empty ([`Model::is_written_empty`]): `EDATE(,1)`,
+    /// `WORKDAY(1,)` and `LET(e,,EDATE(1,e))` (probes/t4870-empty-date-args), as for MROUND,
+    /// RANDBETWEEN, IMSUB and IMDIV. It is a rule of the formula's text: a blank cell, and a value
+    /// that only evaluates to empty (`EDATE(1/0,IFNA(<blank>,..))` is the start's `#VALUE!`,
+    /// gen-m6/b54448af3fde07ca A297), are read as before. Excel's order against another argument's
+    /// error when both are written that way is unprobed.
+    pub(crate) fn toolpak_empty_required(
+        &self,
+        args: &[Node],
+        required: usize,
+        cell: CellReferenceIndex,
+    ) -> Option<CalcResult> {
+        args.iter()
+            .take(required)
+            .any(|arg| self.is_written_empty(arg))
+            .then(|| CalcResult::new_error(Error::NA, cell, String::new()))
+    }
+
     /// Whether `node` is a variable bound to an array of references ([`Binding::Grid`]), which
     /// [`Model::variable_reference`] hands on.
     pub(crate) fn is_grid_variable(&self, node: &Node) -> bool {

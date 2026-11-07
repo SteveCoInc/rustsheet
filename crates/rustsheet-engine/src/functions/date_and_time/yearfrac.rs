@@ -11,7 +11,7 @@ use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, types::CellReferenceIndex},
     formatter::dates::{excel_serial_to_ymd, month_arithmetic_date},
-    functions::{util::toolpak_empty_required, Function},
+    functions::Function,
     model::Model,
 };
 
@@ -26,6 +26,9 @@ impl Model {
     /// multi-cell range (SPEC-0011 `LiftArrays`; probes/scalar-lift-shapes H6,
     /// probes/date-argument-modes).
     pub(crate) fn fn_yearfrac(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        if let Some(empty) = self.toolpak_empty_required(args, 2, cell) {
+            return empty;
+        }
         self.lift_call(Function::Yearfrac, args, cell, &mut |model, values| {
             model.yearfrac_of(values, cell)
         })
@@ -33,9 +36,6 @@ impl Model {
 
     /// YEARFRAC of one element.
     fn yearfrac_of(&self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
-        if let Some(empty) = toolpak_empty_required(values, 2, cell) {
-            return empty;
-        }
         let (start, end, basis) = match values {
             [start, end] => (start, end, None),
             [start, end, basis] => (start, end, Some(basis)),

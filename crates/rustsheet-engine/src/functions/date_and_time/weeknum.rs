@@ -5,10 +5,7 @@ use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
     formatter::dates::from_excel_date,
-    functions::{
-        util::{near_integer::near_integer_whole, toolpak_empty_required},
-        Function,
-    },
+    functions::{util::near_integer::near_integer_whole, Function},
     model::Model,
     tailed_array::range_corners,
 };
@@ -138,6 +135,17 @@ impl Model {
     /// Both arguments lift over arrays and refuse a multi-cell range (SPEC-0011 `LiftArrays`,
     /// probes/date-argument-modes).
     pub(crate) fn fn_weeknum(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        if let Some(empty) = self.toolpak_empty_required(args, 1, cell) {
+            return empty;
+        }
+        // A written-empty return_type is omitted, type 1 (`WEEKNUM(45000,)` is 11:
+        // probes/t4870-empty-date-args A16, t4870-r2-empty-optional A5, A6, A14; T-4870).
+        let args = match args {
+            [serial, return_type] if self.is_written_empty(return_type) => {
+                std::slice::from_ref(serial)
+            }
+            _ => args,
+        };
         let result = self.lift_call(Function::Weeknum, args, cell, &mut |model, values| {
             model.weeknum_of(values, cell)
         });
@@ -153,13 +161,8 @@ impl Model {
     /// the stale `return_type` state, or reads it for a `return_type` of 22+ or negative (SPEC-0017
     /// rules 2, 4 and 5).
     fn weeknum_of(&mut self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
-        if let Some(empty) = toolpak_empty_required(values, 1, cell) {
-            return empty;
-        }
-        // A written-empty return_type is omitted, type 1 (`WEEKNUM(45000,)` is 11:
-        // probes/t4870-empty-date-args A16, t4870-r2-empty-optional A5, A6, A14; T-4870).
         let (serial, return_type) = match values {
-            [serial] | [serial, CalcResult::EmptyArg] => (serial, None),
+            [serial] => (serial, None),
             [serial, return_type] => (serial, Some(return_type)),
             _ => return CalcResult::new_args_number_error(cell),
         };
