@@ -214,6 +214,7 @@ probes/t3585-rate-num-near-minus-one.case.json	7
 probes/t3638-subnormal-upper-tail.case.json	7
 probes/t3698-rate-flat-restart-fresh.case.json	25
 probes/t3698-rate-flat-restart.case.json	22
+probes/t3740-binom-range-past-mean-sweep.case.json	18
 probes/t3850-rate-same-state.case.json	46
 probes/t3862-beta-inv-huge-alpha.case.json	36
 probes/t3862-beta-inv-sqrt-dbl-max.case.json	61
@@ -236,6 +237,12 @@ probes/t4134-pivot-items.case.json	54
 probes/t4135-pivot-aggregates.case.json	852
 probes/t4137-pivot-captions.case.json	120
 probes/t4138-pivot-geometry.case.json	188
+probes/t4161-pivot-show-as-base-items.case.json	516
+probes/t4161-pivot-show-as-edges.case.json	298
+probes/t4161-pivot-show-as-nested-parent.case.json	280
+probes/t4161-pivot-show-as-running-rank.case.json	281
+probes/t4161-pivot-show-as-running-zero.case.json	36
+probes/t4161-pivot-show-as-zeros.case.json	363
 probes/t4254-beta-t-l140-zero-cut.case.json	49
 probes/t4254-beta-t-zero-wide.case.json	15
 probes/t4255-gamma-window-exact-ratio.case.json	1

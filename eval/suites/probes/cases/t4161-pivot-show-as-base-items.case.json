@@ -1,0 +1,572 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4161: base items of difference, percent and percentDiff in Excel for the web. Data!A1:D12: Region, Product, Year, Sales over eleven records: East A 2023 10, 2024 4, 2025 8; East B 2023 5, 2025 6 (2024 empty); East C 2024 3 (only); West A 2023 20, 2024 6, 2025 9; West B 2024 7, 2025 2 (2023 empty); West has no C. Each sheet is one builder-v2 pivot at A3: rows Region (outer) and Product, columns Year, Sum of Sales named Shown. Sheet name = mode letter (D difference, P percent, Q percentDiff), base field letter (Y Year, P Product, R Region), base item (P (previous) 1048828, N (next) 1048829, or an item index: Year 1 = 2024, Product 2 = C, Region 0 = East). PPC/DPC/QPC ask what a base item missing from a parent (West has no C) shows. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4161",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0108",
+  "PV-0111",
+  "PV-0112",
+  "PV-0891",
+  "PV-0892",
+  "PV-0896"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Year",
+    "D1": "Sales",
+    "A2": "East",
+    "B2": "A",
+    "C2": 2023,
+    "D2": 10,
+    "A3": "East",
+    "B3": "B",
+    "C3": 2023,
+    "D3": 5,
+    "A4": "West",
+    "B4": "A",
+    "C4": 2023,
+    "D4": 20,
+    "A5": "East",
+    "B5": "A",
+    "C5": 2024,
+    "D5": 4,
+    "A6": "East",
+    "B6": "C",
+    "C6": 2024,
+    "D6": 3,
+    "A7": "West",
+    "B7": "A",
+    "C7": 2024,
+    "D7": 6,
+    "A8": "West",
+    "B8": "B",
+    "C8": 2024,
+    "D8": 7,
+    "A9": "East",
+    "B9": "A",
+    "C9": 2025,
+    "D9": 8,
+    "A10": "East",
+    "B10": "B",
+    "C10": 2025,
+    "D10": 6,
+    "A11": "West",
+    "B11": "A",
+    "C11": 2025,
+    "D11": 9,
+    "A12": "West",
+    "B12": "B",
+    "C12": 2025,
+    "D12": 2
+   }
+  },
+  {
+   "name": "DYP",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DYP",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "difference",
+        "baseField": "Year",
+        "baseItem": 1048828
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "DYN",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DYN",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "difference",
+        "baseField": "Year",
+        "baseItem": 1048829
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PYP",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PYP",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percent",
+        "baseField": "Year",
+        "baseItem": 1048828
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PYN",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PYN",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percent",
+        "baseField": "Year",
+        "baseItem": 1048829
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "QYP",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_QYP",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentDiff",
+        "baseField": "Year",
+        "baseItem": 1048828
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "QYN",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_QYN",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentDiff",
+        "baseField": "Year",
+        "baseItem": 1048829
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PY1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PY1",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percent",
+        "baseField": "Year",
+        "baseItem": 1
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "DY1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DY1",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "difference",
+        "baseField": "Year",
+        "baseItem": 1
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "DPP",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DPP",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "difference",
+        "baseField": "Product",
+        "baseItem": 1048828
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PPN",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PPN",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percent",
+        "baseField": "Product",
+        "baseItem": 1048829
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "QPP",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_QPP",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentDiff",
+        "baseField": "Product",
+        "baseItem": 1048828
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PPC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PPC",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percent",
+        "baseField": "Product",
+        "baseItem": 2
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "DPC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DPC",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "difference",
+        "baseField": "Product",
+        "baseItem": 2
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "QPC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_QPC",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentDiff",
+        "baseField": "Product",
+        "baseItem": 2
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "DRP",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DRP",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "difference",
+        "baseField": "Region",
+        "baseItem": 1048828
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PR0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PR0",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percent",
+        "baseField": "Region",
+        "baseItem": 0
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "QRN",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_QRN",
+     "source": "Data!A1:D12",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentDiff",
+        "baseField": "Region",
+        "baseItem": 1048829
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A12)"
+   }
+  }
+ ]
+}

@@ -34,6 +34,7 @@ mod test_degrees_radians;
 mod test_error_propagation;
 mod test_external_links;
 mod test_fact_factdouble;
+mod test_filtered_table_edits;
 mod test_fn_accrint;
 mod test_fn_accrintm;
 mod test_fn_amortization_lift;

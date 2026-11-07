@@ -181,6 +181,79 @@ fn totals_row_constants_get_custom_metadata() {
     }
 }
 
+/// A value spilled into the totals row from a dynamic array beside the table gets the same bare
+/// `totalsRowFunction="custom"` as a constant: without it Excel refuses the file, with it Excel
+/// loads it and keeps the spill, and `Sales[[#Totals],[Val]]` reads the spilled value
+/// (excel-graph uploads, 2026-11-07, T-4421; xlsx-storage.md "Table parts in the export"). A
+/// totals cell the spill does not reach keeps no metadata.
+#[test]
+fn a_value_spilled_into_the_totals_row_gets_custom_metadata() {
+    for (formula, val_metadata, cat_total, val_total) in [
+        ("=HSTACK(1,\"y\",\"z\")", true, "y", "z"),
+        ("=SEQUENCE(1,2)", false, "2", "0"),
+    ] {
+        let mut model = new_empty_model();
+        for (row, column, input) in [
+            (1, 2, "Cat"),
+            (1, 3, "Val"),
+            (2, 2, "a"),
+            (2, 3, "1"),
+            (3, 2, "b"),
+            (3, 3, "2"),
+        ] {
+            model
+                .set_user_input(0, row, column, input.to_string())
+                .unwrap();
+        }
+        model
+            .add_table_with_totals(0, "Sales", (1, 2, 4, 3), false, true)
+            .unwrap();
+        // A4 spills over the totals row's B4, and C4 for the three-wide array.
+        for (row, column, input) in [
+            (4, 1, formula),
+            (1, 5, "=Sales[[#Totals],[Val]]"),
+            (2, 5, "=Sales[[#Totals],[Cat]]"),
+            (3, 5, "=ROWS(A4#)*10+COLUMNS(A4#)"),
+        ] {
+            model
+                .set_user_input(0, row, column, input.to_string())
+                .unwrap();
+        }
+        model.evaluate();
+        assert_eq!(model.get_formatted_cell_value(0, 2, 5).unwrap(), cat_total);
+        assert_eq!(model.get_formatted_cell_value(0, 1, 5).unwrap(), val_total);
+        let temp_file_name = "temp_file_test_totals_spill.xlsx";
+        save_to_xlsx(&model, temp_file_name).unwrap();
+        let table_xml = part_text(temp_file_name, "xl/tables/table1.xml");
+        let mut reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+        fs::remove_file(temp_file_name).unwrap();
+
+        assert!(
+            table_xml.contains(r#"name="Cat" totalsRowFunction="custom"></tableColumn>"#),
+            "{table_xml}"
+        );
+        assert_eq!(
+            table_xml.contains(r#"name="Val" totalsRowFunction="custom"></tableColumn>"#),
+            val_metadata,
+            "{table_xml}"
+        );
+        assert!(!table_xml.contains("totalsRowFormula"), "{table_xml}");
+        reloaded.evaluate();
+        assert_eq!(
+            reloaded.get_formatted_cell_value(0, 2, 5).unwrap(),
+            cat_total
+        );
+        assert_eq!(
+            reloaded.get_formatted_cell_value(0, 1, 5).unwrap(),
+            val_total
+        );
+        assert_eq!(
+            reloaded.get_formatted_cell_value(0, 3, 5).unwrap(),
+            if val_metadata { "13" } else { "12" }
+        );
+    }
+}
+
 /// An API-filtered table with no kept criterion is written with a values filter on its first
 /// column keeping its visible data rows' text, which Excel reads as filtered (T-4003), and so
 /// does our import: the round trip keeps SUBTOTAL 9 equal to 109 (T-4363).
@@ -589,7 +662,7 @@ fn a_color_filter_past_the_dxfs_drops_its_dxf_id() {
 
 /// A table filtered by a criterion from its file stays filtered while a criterion is left inside
 /// it, and stops being filtered when a column delete takes the last one, as the export then
-/// writes no filterColumn (T-4003).
+/// writes no filterColumn (T-4003), and shows the rows the filter hid, as Excel does (T-4371).
 #[test]
 fn deleting_the_filtered_column_unfilters_the_table() {
     let mut model = new_empty_model();
@@ -614,12 +687,16 @@ fn deleting_the_filtered_column_unfilters_the_table() {
             },
         }];
     }
+    model.set_row_hidden(0, 3, true).unwrap();
     model.delete_columns(0, 3, 1).unwrap();
     assert!(model.workbook.tables["Sales"].has_filters);
+    assert!(model.is_row_hidden(0, 3).unwrap());
     model.delete_columns(0, 1, 1).unwrap();
     let table = &model.workbook.tables["Sales"];
     assert!(table.filter_columns.is_empty());
     assert!(!table.has_filters);
+    // Excel shows the rows the filter hid (probes/t4371-filtered-table-delete-filtered-column).
+    assert!(!model.is_row_hidden(0, 3).unwrap());
 
     let temp_file_name = "temp_file_test_deleted_filter_column.xlsx";
     save_to_xlsx(&model, temp_file_name).unwrap();
