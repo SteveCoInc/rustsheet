@@ -5,7 +5,7 @@ use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
     formatter::dates::from_excel_date,
-    functions::Function,
+    functions::{util::near_integer::near_integer_whole, Function},
     model::Model,
     tailed_array::range_corners,
 };
@@ -178,8 +178,15 @@ impl Model {
         // A boolean return_type is #VALUE! (`WEEKNUM(100,TRUE)`); text that reads as a number
         // is accepted (`WEEKNUM(100,"2")` = 16; probes/weeknum-serial-0 C35-C38, T-1023).
         let return_type = match return_type {
+            // A positive return_type just below an integer counts as that integer, as LEFT's count
+            // does (`WEEKNUM(45019,2-2^-23)` is type 2's 15; probes/t4454-near-midnight-date-args
+            // AA1:AB4, T-4454); 2^-22 + 9*2^-36 below it truncates. A negative one floors with
+            // the same snap, not truncates: -0.5 reads as -1 (the stale state) and -2^-30 as 0
+            // (`#NUM!`; probes/t4470-weeknum-return-type-edges, T-4470). The negative-side window is
+            // half the positive one, as DATE/TIME's: -2^-23 and -(2^-23+2^-34) snap to 0, -(2^-22+2^-33)
+            // and -(2^-22+9*2^-36) floor to -1 (probes/t4619-weeknum-negative-snap-window, T-4619).
             Some(value) => match self.cast_number_no_bools_ref(value, cell) {
-                Ok(f) => f as i32,
+                Ok(f) => near_integer_whole(f) as i32,
                 Err(s) => return s,
             },
             None => 1,

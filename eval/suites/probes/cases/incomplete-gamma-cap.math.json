@@ -4,7 +4,17 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "79119f0b48c5efb575ba17ab03c8574fd5ece29591b1c728f35e22e20481ae13"
+  "input_sha256": "79119f0b48c5efb575ba17ab03c8574fd5ece29591b1c728f35e22e20481ae13",
+  "definitions": {
+   "CHISQ.DIST": "01f5d761e8de8277",
+   "CHISQ.DIST.RT": "01f5d761e8de8277",
+   "CHISQ.INV": "5d12acfc19639d7a",
+   "GAMMA.DIST": "01f5d761e8de8277",
+   "GAMMA.INV": "5d12acfc19639d7a",
+   "POISSON": "eee69c2ed987357d",
+   "POISSON.DIST": "eee69c2ed987357d"
+  },
+  "arguments_sha256": "fb268b581724edfa96b81535e05b08e28f930b1be4904b7ee9ee34f3af7f781d"
  },
  "sheets": {
   "Sheet1": {
@@ -12,6 +22,16 @@
     "t": "n",
     "v": "0.50000000132980760133810892720526886719133324471644",
     "f": "=GAMMA.DIST(1E16,1E16,1,TRUE)"
+   },
+   "E10": {
+    "t": "n",
+    "v": "0.50000265961520264223388089908104420792719608018989",
+    "f": "=POISSON(1E10,1E10,TRUE)"
+   },
+   "E11": {
+    "t": "n",
+    "v": "0.50000026596152026758780132126318020686143054869766",
+    "f": "=POISSON(1E12,1E12,TRUE)"
    },
    "E12": {
     "t": "n",
@@ -94,6 +114,10 @@
   "Sheet1": {
    "E13": {
     "f": "=GAMMA.DIST(72939615800,98419000000,0.741118,TRUE)",
+    "why": "no single value"
+   },
+   "E2": {
+    "f": "=POISSON(1E16,1E16,TRUE)",
     "why": "no single value"
    }
   }

@@ -22,17 +22,33 @@ reference is an ordinary value.
 Evidence: probes/is-functions-array-lift (Calc!A15, B15, D15, E15, J2, K2, L3, M30:N30, M32:N32;
 excel-graph oracle sidecar, 2026-10-06). Desktop Excel was not checked.
 Also covered by M34:P34 (`{4.5,-7,"3",TRUE}` -> TRUE, FALSE, FALSE, #VALUE!: parity of the truncated
-absolute value, text cast, boolean #VALUE!). UNVERIFIED sub-rules (no probe yet): an array
-expression derived from a range (`ISEVEN(Data!C1:C5+0)`), and the
-dynamic-array flag Excel writes for the range form. Magnitude >= 2^63 is settled below (T-2165).
-Legacy (pre-dynamic-array) formulas, UNVERIFIED for ISEVEN/ISODD (T-1774 moved them onto the
-SPEC-0011 `LiftArrays` table entry, so they follow the Analysis ToolPak rule probed for EDATE and
-YEARFRAC, probes/scalar-lift-shapes-c E, F, H, Q): a bare range gets no `@` and is `#VALUE!`, a
-value operation over a range (`ISEVEN(C1:C5+0)`) gets `@`, and `{5}` gets no `@`. Before T-1774 the
-hand-written arm gave the argument a scalar signature (`@` on the range and on `{5}`).
+absolute value, text cast, boolean #VALUE!). Magnitude >= 2^63 is settled below (T-2165).
+The refusal is of a reference, not of anything range-derived: a value operation over a range is an
+array and lifts, while every form that still yields a reference is refused like the bare range.
+Over Data!E1:E7 = 2, 3, "x", TRUE, #N/A, empty, -7.5, a dynamic `=ISEVEN(Data!E1:E7+0)` spills
+TRUE, FALSE, #VALUE!, FALSE, #N/A, TRUE, FALSE (the text is `#VALUE!`, TRUE is 1, the empty cell 0, the
+error passes through), and so do `-Data!E1:E7` and the 2-D `Data!E1:F7*1` (7x2); ISODD is the
+complement on the numbers. `IF(TRUE,Data!E1:E7)`, `INDEX(Data!E1:E7,0,1)`, `TAKE(Data!E1:E7,3)`,
+`(Data!E1:E7)`, a defined name for the range and `LET(x,Data!E1:E7,ISEVEN(x))` are each one `#VALUE!`
+with no spill. Each holds on a row inside the range's rows (row 2) and outside it (row 40): there is
+no implicit intersection in a dynamic formula. Evidence: probes/iseven-isodd-range-derived-arrays
+Calc!A2:V8, A40:V46 (excel-graph, 2026-11-06, T-4528).
+Legacy (pre-dynamic-array) formulas follow the Analysis ToolPak (`LiftArrays`) rule: a bare range
+gets no `@` and is `#VALUE!` on and off its rows (`=ISEVEN(Data!E1:E7)`), and a value operation over a
+range gets `@` (`=ISEVEN(@Data!E1:E7+0)`, FALSE on row 2, which reads E2 = 3, and `#VALUE!` on row 40).
+An array constant gets `@` as in a scalar argument, with one element or several and under a sign:
+`=ISEVEN(@{5})`, `=ISEVEN(@{2;3})` (TRUE, its first element), `=ISODD(@{2,3})`, `=ISEVEN(-@{5})`. This
+is not ISEVEN's own: `=EDATE(@{45000},1)`, `=EDATE(@{45000;45031},1)`, `=YEARFRAC(@{45000},46000)`,
+`=BIN2DEC(@{101})` and `=QUOTIENT(@{7},2)` show the same, so every `LiftArrays` argument reads an
+array constant as a scalar argument does and the call takes no `@` of its own. Evidence:
+probes/iseven-isodd-range-derived-arrays Leg!A2:N3, A40:N41 (excel-graph, 2026-11-06, T-4528). Ours
+put no `@` on the constant (and `@` on the call for a multi-element one) before T-4528, which changed
+only the shown text, as the values agree either way; `array_constant_context` in
+static_analysis/lifted.rs now gives a `LiftArrays` argument the scalar signature for its array
+constants. The dynamic-array flag Excel writes for the range form is not probed.
 Implemented in: `Model::lifted_parity` and the `ARRAYS_1` entry in functions/lift/kinds/general.rs.
 Status: VERIFIED (excel-graph)
-Tasks: T-0247, T-0248
+Tasks: T-0247, T-0248, T-4528
 
 ## IS* and TYPE over every scalar value kind
 Only a truly empty cell is blank: `ISBLANK` is FALSE for a formula returning `""`, a single space,
@@ -116,10 +132,10 @@ other arguments, a range `field_name`, and a one-cell range for IMAGE or STOCKHI
 `IMAGE(Q1:Q2)` (Q1="a", Q2="b") 2 and 1; `STOCKHISTORY({"A","B"},DATE(2020,1,2))` is 1x2 and `STOCKHISTORY(Q1:Q2,...)` 2x1, each
 element `#CONNECT!`; `FIELDVALUE(5,{"a","b"})` is 1x2 and `FIELDVALUE(Q1:R2,"Price")` 2x2 of `#FIELD!` (ERROR.TYPE 13), and
 `FIELDVALUE({1},"Price")` is 1x1. A one-cell range `value` of FIELDVALUE is a scalar: `ROWS(FIELDVALUE(Q1:Q1,"Price"))` is `#FIELD!`. A number
-or boolean `stock` is `#CONNECT!` (ERROR.TYPE 10; an empty-cell `stock` is UNVERIFIED, the engine gives `#CONNECT!`); text, boolean and empty-cell `value` of FIELDVALUE are `#FIELD!`.
+or boolean `stock` is `#CONNECT!` (ERROR.TYPE 10; an empty-cell `stock` is `#VALUE!` (ERROR.TYPE 3), see "STOCKHISTORY and IMAGE residue (T-4686)" below); text, boolean and empty-cell `value` of FIELDVALUE are `#FIELD!`.
 `IMAGE("")`, `IMAGE(TRUE)` and `IMAGE` of non-URL text (`"a"`, `"b"`) are `#VALUE!` (ERROR.TYPE 3), not `#BLOCKED!`; only a
 URL-shaped source reaches the fetch (which strings count as a URL: the T-1189 bullets below). `IMAGE(1/0,NA())` is `#DIV/0!` (a `source`
-error wins over an `alt_text` error; other orders are not probed). The raw IMAGE cells (A10, B10, A13, A14, A16, A19) and the `ROWS`/`COLUMNS` of `IMAGE("")` and `IMAGE(TRUE)` came back with an undecodable rich error type and stay pending; the wrapped `ERROR.TYPE` cells carry the evidence. The VERIFIED rules above cover argument kinds; the DEVIATION status below covers only the missing fetch.
+error wins over an `alt_text` error; the other orders are in "STOCKHISTORY and IMAGE residue (T-4686)" below). The raw IMAGE cells (A10, B10, A13, A14, A16, A19) and the `ROWS`/`COLUMNS` of `IMAGE("")` and `IMAGE(TRUE)` came back with an undecodable rich error type and stay pending; the wrapped `ERROR.TYPE` cells carry the evidence. The VERIFIED rules above cover argument kinds; the DEVIATION status below covers only the missing fetch.
 The engine lifts over array and range `source`/`stock`/`value`/`field_name` and gives `#VALUE!` for non-URL IMAGE sources (the URL rule is in the T-1189 bullets below); `ERROR.TYPE` lifts over arrays too (probes/rich-errors-arg-kinds F10:G10, F13:G14, F40:G41; over a direct multi-cell range it follows the IS* lifting evidence). Shapes, error elements and URLs (probes/rich-errors-shapes-urls, excel-graph, 2026-10-11, T-1189):
 - FIELDVALUE with two array arguments of different shapes broadcasts to the larger shape, all `#FIELD!` (no `#N/A`
   padding): `{1,2}` with `{"a","b","c"}` is 1x3, `{1;2}` with `{"a","b","c"}` 2x3, `{1,2,3}` with `{"a";"b"}` 2x3 (A2:C7). A `field_name`
@@ -145,9 +161,8 @@ The engine lifts over array and range `source`/`stock`/`value`/`field_name` and 
 - IMAGE option validation (probes/rich-errors-image-sizing, T-1345; every case wrapped in ERROR.TYPE, 11 = `#BLOCKED!`, 3 = `#VALUE!`):
   `sizing` 0, 1, 2, 1.5 (truncated) and TRUE reach the fetch; -1, 4, 9, text, `""` and an omitted `IMAGE(url,"alt",)` are
   `#VALUE!`. `sizing` 3 alone, or `IMAGE(url,,3)`, is `#VALUE!`; with a `height` (`3,10`), or `3,0,10`, `3,10,0` and `3,1.5,10.5`, it reaches the
-  fetch; `3,0,0`, a negative `height` or `width` and a text `height` are `#VALUE!`. `sizing` 0 or 1 with a `height` (`0,10`, `1,10,10`) is
-  `#VALUE!`. UNVERIFIED: a `width` without a `height` (`0,,10`, `3,,10`; the engine is `#VALUE!` for both), a negative `height` under `sizing` 2, `sizing` 2 with a `height`, `3,0` (height 0, no width), a fractional `sizing` near the limits (-0.5, 3.5), an
-  empty cell or numeric text as `sizing`/`height`.
+  fetch; `3,0,0`, a negative `height` or `width` and a non-numeric text `height` are `#VALUE!`. `sizing` 0 or 1 with a `height` (`0,10`, `1,10,10`) is
+  `#VALUE!`. The residue is settled in "STOCKHISTORY and IMAGE residue (T-4686)" below.
 - IMAGE with an array `sizing`, `height` or `width` lifts: the source and those options broadcast against each other and each
   element is checked on its own (`IMAGE({url,url},"alt",{0,9})` is `#BLOCKED!`, `#VALUE!`; `{9;0}` with a 1x2 source is 2x2;
   a scalar source with `{0;9;1}` is 3x1; a length-1 array repeats; a shorter array is `#N/A` past its end,
@@ -185,7 +200,7 @@ The engine lifts over array and range `source`/`stock`/`value`/`field_name` and 
   width `{5,5}` is `#N/A` in the third column; probed with an invalid sizing only) (probes/rich-errors-image-past-end, 8 cells, excel-graph, 2026-10-20, T-1962; VERIFIED).
 - IMAGE with an invalid `sizing` (`IMAGE({url,url},"alt",9)`) is `#VALUE!` per element (A16).
 - A `field_name` array shorter than the `FIELDVALUE` result along an axis wider than 1 is `#N/A` past its end:
-  `FIELDVALUE({1,2,3},{"a","b"})` is `#FIELD!`, `#FIELD!`, `#N/A`; `{1,2,3}` with `{"a";"b"}` is 2x3 of `#FIELD!`, and `{1;2;3}` with `{"a","b"}` is 3x2 of `#FIELD!`; the row-axis form (`{1;2;3}` with `{"a";"b"}`) is UNVERIFIED (probes/rich-errors-image-sizing). A
+  `FIELDVALUE({1,2,3},{"a","b"})` is `#FIELD!`, `#FIELD!`, `#N/A`; `{1,2,3}` with `{"a";"b"}` is 2x3 of `#FIELD!`, and `{1;2;3}` with `{"a","b"}` is 3x2 of `#FIELD!`; the row-axis form (`{1;2;3}` with `{"a";"b"}`) is 3x1, `#FIELD!`, `#FIELD!`, `#N/A` (probes/t4686-rich-value-option-residue D1:E6, T-4686). A
   shorter `value` is not padded (above).
 The engine matches all of these (A16 since T-1345; the option lift since T-1370; through the SPEC-0011 driver, `image_element`, since T-1962, which fixed the past-the-end order: `image_grid` made every past-the-end position `#N/A`).
 Excel fetches the image or the quotes; formulas here do no I/O (CLAUDE.md directive 5).
@@ -262,6 +277,28 @@ Status: VERIFIED (excel-graph, 2026-10-28); desktop UNVERIFIED (T-1075 item 9).
 Ours: matches since T-3030 (`cell_info` reads the top-left cell on the reference's own sheet; T-1230 to T-3030 read `cell.sheet`). CELL's `reference` argument has a vector signature, so a legacy formula does not intersect it.
 Also: `CELL({1,"row"},B2)` is `#VALUE!` (a non-string element) and `CELL({"row",1},B2)` spills 2, `#VALUE!`; `N(range)` with an error top-left cell is that error (Calc!J1, K1); the info_type array lifts per element.
 Tasks: T-1230
+
+## CELL("color"|"parentheses"|"prefix"|"protect"|"format"|"filename"|"width") is #VALUE! on Excel for the web
+Rule (excel-graph, 2026-11-06, T-3011): Excel for the web returns `#VALUE!` for `CELL(info_type, ref)` with info_type
+"color", "parentheses", "prefix", "protect" or "format", on a blank cell, a number, a text, a cell formatted
+`0.00;[Red]-0.00`, a cell formatted `0;(0)`, a reference on another sheet, a range, in upper or mixed case, and with no
+reference. "width" is `#VALUE!` on the web too (decision 0019: the POI fill saw `#VALUE!` on 9 `CELL("width")` cells where
+poi/47804.xlsx caches 10 and 11; no committed sidecar, since the oracle canary now refuses the call), and "filename" is `#VALUE!` (T-2052). Desktop Excel returns values for all seven (the calipers goldens
+formulas_information Sheet1 E140:N160 cache color 0, filename a path, format "G", parentheses 0, prefix "",
+protect 1, width 15 on General cells), so these cells are web-vs-desktop conflicts.
+On desktop, "width" alone is a two-cell row, not a scalar: in that golden each
+`=IFERROR(CELL("width",$C$5),"Error")` in N140 (through `$C$25` in N160) is a dynamic-array formula whose spill range is two cells wide
+(`<f t="array" ref="N140:O140">`, through `N160:O160`), and the spill cell in column O caches the boolean FALSE beside
+the width 15. Every other info type in the same rows (C140:M140) has a one-cell range. The web's `#VALUE!` does not
+spill, so the engine leaves O140:O160 empty (T-4373 owns those 21 cells with the N cells; they count toward no
+Phase 1 or exit measure, T-4644). What the FALSE means is UNVERIFIED: column C, the referenced cells, has
+`customWidth="1"` (15.84375) against the sheet's `defaultColWidth` 11.07421875, so FALSE fits "not the default width",
+but no cell at the default width was cached.
+Evidence: probes/t3011-cell-format-info-types A1:A38 (excel-graph, 2026-11-06).
+Status: VERIFIED (excel-graph); desktop values are out of scope (decision 0266).
+Ours: `cell_info` returns `#VALUE!` for all seven, matching the web. The calipers cells are Phase 1 rate exceptions
+(decision 0308).
+Tasks: T-3011, T-4207, T-4644
 
 ## CELL("row"/"col"/"address"/"type", range): no intersection; "type" reads the named sheet since 2026-10-28
 Rule (excel-graph, 2026-10-15): a legacy (non-array) `CELL(info_type, range)` gives the same value as its dynamic twin and is never implicitly intersected, whether the formula row or column is inside the range or not. `CELL("row",A1:A5)` is 1 and `CELL("address",A1:A5)` is `$A$1` in rows 3 and 8; `CELL("col",B20:D20)` is 2 in columns C, D (inside) and F, G (outside); `CELL("type",A1:A5)` is "v" (the top-left cell; the probe cannot tell it from an intersected cell, since both are numbers, so no-intersection for "type" rests on the vector signature, UNVERIFIED). `row`, `col` and `address` use the reference's own address (`CELL("row",Data!A2:A5)` is 2, `CELL("col",Data!C20:D20)` is 3). Since 2026-10-28 `"type"` reads the named sheet, like `"contents"` (previous entry, T-3030). The 2026-10-15 fill read the formula's own sheet: `CELL("type",Data!A7)` is "b" when Data!A7 is text but Calc!A7 is blank, `Data!A8` is "l" (Calc!A8 is text, Data!A8 blank) and `Data!A9` is "b" (Data!A9 a number, Calc!A9 blank).
@@ -400,6 +437,32 @@ Rule (probes/volatile-and-info-rand-true-false-sheet D1-D28, excel-graph, 2026-1
 `SHEET("Nope")`, `SHEET("")`, `SHEET(" T")` and `SHEET("S!A1")` are `#N/A`. A number, a boolean, an error and `ROW(A1)` are
 `#N/A`. A reference returned by OFFSET (1), INDIRECT (2), INDEX (`SHEET(INDEX(T!A1:B2,1,1))` 2), IF (`SHEET(IF(TRUE,U!A1))` 3)
 and a union of two areas on sheet T (`SHEET((T!A1,T!B2))` 2) all resolve to their sheet. Ours matches (T-1631).
+
+## SHEET and SHEETS of a LET variable or LAMBDA parameter
+Rule (probes/t4518-sheet-sheets-bound-variable D1:D26, excel-graph, 2026-11-06, T-4518; sheets Sheet1..Sheet3):
+SHEET of a bound variable is SHEET of what it is bound to. A reference gives its sheet, written or passed in by
+MAP, BYROW, BYCOL or a LAMBDA call (`LET(x,Sheet3!A1:B2,SHEET(x))` 3, `MAP(Sheet2!A1:A3,LAMBDA(r,SHEET(r)))` 2, 2, 2,
+`BYCOL(Sheet3!A1:B3,_xleta.SHEET)` 3, 3), and so does a union (`LET(x,(Sheet2!A1,Sheet2!B2),SHEET(x))` 2) or a
+variable bound to another (`LET(x,A1,y,x,SHEET(y))` 1). Text is a sheet name (`LET(x,"Sheet2",SHEET(x))` 2,
+`MAP({"Sheet2";"Sheet3"},_xleta.SHEET)` 2, 3; `"Sheet9"` `#N/A`). A number or a boolean is `#N/A`. A whole array is
+one `#N/A`, not lifted (`LET(x,{1,2},SHEET(x))`; a GROUPBY group, `GROUPBY(A1:A3,B1:B3,LAMBDA(v,SHEET(v)))` `#N/A`
+in each value cell). A bound error is that error: `LET(x,1/0,SHEET(x))` is `#DIV/0!`, while a written error
+argument is `#N/A` (section above). SHEETS of a parameter bound to a one-sheet reference is 1
+(`MAP(A1:A3,_xleta.SHEETS)` 1, 1, 1, `BYCOL(Sheet2!A1:B3,_xleta.SHEETS)` 1, 1), and of a GROUPBY group `#N/A`
+(probes/t4450-eta-special-forms J59). SHEETS of a parameter bound to a number, text or boolean is `#N/A`, and so
+is SHEETS of a parameter bound to a row of a LET-built array (probes/t4565-sheet-sheets-lambda-omitted-array D4:D8,
+excel-graph, 2026-11-06, T-4565: `MAP({1;2},_xleta.SHEETS)`, `MAP({"a";"b"},_xleta.SHEETS)`,
+`MAP({TRUE;FALSE},_xleta.SHEETS)` and `BYROW(LET(a,{1,2;3,4},a),_xleta.SHEETS)` give `#N/A` in each element). The same
+probe re-confirms the T-4518 SHEET rules for bound arrays and text (D9 `MAP(LET(a,{"Sheet2";"Sheet3"},a),_xleta.SHEET)` 2, 3;
+D10 `MAP({1;2},LAMBDA(r,SHEET(r)))` and D11 `BYROW({1,2;3,4},_xleta.SHEET)` `#N/A` per element). SHEET of a variable bound
+to a LAMBDA is `#N/A` (`LET(f,LAMBDA(x,x),SHEET(f))`, also inside a MAP, D1, D13). SHEET of an omitted optional parameter
+is `#N/A` in all three forms (`LAMBDA(x,[r],SHEET(r))(1)`, `LAMBDA([r],SHEET(r))()` and the empty slot
+`LAMBDA(x,[r],SHEET(r))(1,)`, D14:D16). A required parameter called with too few arguments is not an omitted
+parameter but a call error, `#VALUE!` before SHEET runs (`LAMBDA(r,SHEET(r))()` D2, `LAMBDA(r,ISOMITTED(r))()` D3; arrays.md).
+SHEETS written on a parameter or LET variable (`LAMBDA(r,SHEETS(r))()`, `LET(x,1,SHEETS(x))`, SHEETS of an omitted or
+LAMBDA-bound parameter) is unprobeable: the oracle's canary sheet guard refuses `SHEETS(<parameter>)`, because a count of
+sheets would include the canary. Ours treats a LET variable like a MAP parameter there (inferred, not probed). Ours matches
+every cell; SHEETS of any other bound value stays `#N/IMPL!`.
 Volatile functions through shape-stable formulas (probes/volatile-now-today-shapes, probes/volatile-and-info-rand-true-false-sheet):
 NOW, TODAY and RAND are numbers (`TYPE` 1, never text or boolean), `NOW()-NOW()` is 0 within one recalculation,
 `INT(NOW())=TODAY()`, `RAND()` is in [0,1) and two calls differ, `TRUE()` and `FALSE()` behave as the literals in
@@ -482,3 +545,25 @@ Phases 1-3 (decision 0039): the engine follows it in T-2190, which is expected t
 non-literal INFO, T-2113), and `INFO("numfile")` (canary-dependent). The engine also returns `#VALUE!` for `"numfile"` and its
 engine-only `"timezone"`/`"timezones"` (T-2190), unprobed and awaiting oracle confirmation (T-2182).
 Evidence: probes/info-sheets-info-types Alpha!D25:D49 (excel-graph, 2026-10-20, T-2115).
+Desktop Excel for Mac (16.0300) caches "16.0" for `INFO("release")` (calipers formula_stress_test Information!B3); the
+web is `#VALUE!` there too (probes/t4534-desktop-golden-web-values A2, A9). That cell is a Phase 1 rate exception
+(decision 0315).
+
+## STOCKHISTORY and IMAGE residue (T-4686)
+Rule: IMAGE option validation, all via `ERROR.TYPE` (11 = `#BLOCKED!`, 3 = `#VALUE!`), probes/t4686-rich-value-option-residue
+(excel-graph, 2026-11-06):
+- `sizing` truncates toward zero before the 0..3 check: `-0.5` and `-0.9` reach the fetch (A6, A14), `3.5` with `10,10` does too (A7), `2.9` too (A13).
+  A numeric-text `sizing` (`"1"`) is read as that number (A9); `""` and `"a"` stay `#VALUE!` (probes/rich-errors-image-sizing). An empty cell is 0 (A8).
+- `sizing` 0, 1 and 2 refuse a `height` and a `width`: `IMAGE(u,"alt",0,,10)` (A1), `(1,,10)` (A16), `(2,,10)` (A17), `(2,,0)` (A18), `(2,10)` (A4) and `(0,N1)` with N1 the text "10" (A11) are `#VALUE!`.
+- `sizing` 3 needs a nonzero `height` or `width`: `(3,,10)` (A2), `(3,N1,N1)` (A10), `(3,Z1,10)` with Z1 blank (A12) and `(3,10,Z1)` (A15) reach the
+  fetch, `(3,0)` (A5) is `#VALUE!`. Text that ordinary number coercion reads counts as that number for `height` and `width`: `"10"` (A10), `"10%"` (A19, A21) and `"$10"` (A20) reach the fetch.
+- Error order: the first error in argument order wins, for every position of an invalid option too. `IMAGE(u,NA(),1/0)` is `#N/A` (B1), `IMAGE(u,"alt",NA(),1/0)`
+  `#N/A` (B2), `IMAGE(u,1/0,"x")` `#DIV/0!` (B3), `IMAGE(NA(),1/0)` `#N/A` (B4), `IMAGE(u,"alt",1/0,NA())` `#DIV/0!` (B5), `IMAGE(u,"alt",0,NA(),1/0)` `#N/A` (B6),
+  `IMAGE(u,"alt",9,1/0)` `#DIV/0!` (B7: the error wins over the invalid `sizing`), `IMAGE(u,NA(),9)` `#N/A` (B8), `IMAGE(u,1/0,NA())` `#DIV/0!` (B9).
+- STOCKHISTORY: an empty-cell `stock` or `start_date` is `#VALUE!` (ERROR.TYPE 3), not `#CONNECT!`: `STOCKHISTORY(Z1,DATE(2020,1,2))` (C1),
+  `STOCKHISTORY("QZXQZXQ",Z1)` (C2) and `STOCKHISTORY(Z1,Z1)` (C4); an error argument still wins (`STOCKHISTORY(Z1,1/0)` is `#DIV/0!`, C3).
+  UNVERIFIED: an empty-cell `end_date` or later argument, an empty element of an array `stock` (and an empty-cell `start_date` beside an array `stock`; the engine gives `#CONNECT!` elements), and a text or boolean `start_date`.
+- FIELDVALUE row-axis broadcast: `FIELDVALUE({1;2;3},{"a";"b"})` is 3 rows by 1 column, `#FIELD!` (ERROR.TYPE 13), `#FIELD!`, `#N/A` (D1:D5).
+Status: VERIFIED (excel-graph); implemented (`image_options_valid`, `image_number` and `fn_stockhistory` in offline_errors.rs). Empty-cell height/width with `sizing` 0..2
+and date text as an IMAGE number stay UNVERIFIED.
+Tasks: T-4686

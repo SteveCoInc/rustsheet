@@ -93,3 +93,17 @@ docProps/app.xml so that their placeholder cached values are never mistaken for 
   G1 `=F1*3` (0), H1 `=C1+1` (0), I1 `=A1+F1` (0), J1 `=IF(F1>100,A1,F1*10)` (0), K1 `=ROWS(A1:B1)` (0). Excel for the
   web keeps every loop member and loop reader at its cached value (5, 4, 999, 7, 0, 0, 0) and recalculates F1 2,
   G1 6, J1 20, K1 1 (recalc.md "A circular reference without iteration keeps the cells' values").
+- `valueless-cell-forms.xlsx` (T-4148): hand-written raw XML (no `build_xlsx`), shared strings "anchor" and "".
+  A1:A12 are `t="s"` to "", `<c t="str"/>`, `t="str"` with an empty `<v>`, `<is><t></t></is>`, `<c t="inlineStr"/>`,
+  `<c t="s"/>`, `<c/>`, `t="str"` "q", `<c t="n"/>`, `<c t="b"/>`, `<c t="e"/>` and `t="s"` with an empty `<v>`; each
+  row has ISBLANK, ISTEXT, COUNTA, LEN, `A&"|"` and TYPE of its A cell in B:G (legacy formulas). Excel for the web
+  reads every value-less cell as blank and only A1, A3, A4 and A8 as text (xlsx-storage.md "A cell that stores no
+  value is blank").
+- `valueless-cell-forms-ws-index.xlsx` (T-4743): the same raw-XML layout, three rows: A1 `t="s"` with a whitespace-only
+  `<v> </v>`, A2 `<c t="inlineStr"><is/></c>`, A3 `t="s"` to "anchor" (control); the same readers in B:G. Excel for the
+  web reads A1 as blank and A2 as the empty string (xlsx-storage.md "A cell that stores no value is blank").
+- `merged-covered-values.xlsx`, `merged-covered-formula.xlsx` (T-4148): hand-written raw XML. The first merges A1:D1
+  over A1 "anchor", B1 "x", C1 7, D1 "" (shared) and A2:B2 over A2 "y", B2 `<c t="str"/>`, with readers of the covered
+  cells in A4:N4; the second merges A1:B1 over A1 1 and a covered formula B1 `=A1+1`, with readers in A3:D3. Excel
+  keeps and calculates the covered content (xlsx-storage.md "A merged range keeps the values of its covered cells");
+  ours empties it on import (owner T-4722).

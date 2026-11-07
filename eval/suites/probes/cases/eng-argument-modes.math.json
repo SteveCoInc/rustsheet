@@ -4,7 +4,21 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "9f507f2d73789be78beace3177551c352e14a7447dbffd40606964f47902ea30"
+  "input_sha256": "9f507f2d73789be78beace3177551c352e14a7447dbffd40606964f47902ea30",
+  "definitions": {
+   "BESSELI": "7b6d52d8d609219a",
+   "BESSELJ": "7b6d52d8d609219a",
+   "BESSELK": "7b6d52d8d609219a",
+   "BESSELY": "7b6d52d8d609219a",
+   "CONVERT": "8f956768ccba4018",
+   "ERF": "6f259dedefdf7d53",
+   "ERF.PRECISE": "6f259dedefdf7d53",
+   "ERFC": "6f259dedefdf7d53",
+   "ERFC.PRECISE": "6f259dedefdf7d53",
+   "IMABS": "cc6ee5ea46d490fa",
+   "IMARGUMENT": "cc6ee5ea46d490fa"
+  },
+  "arguments_sha256": "795a0112c678319ef1c3fcf38aa666aa51b4ee5314105ccab717e53e5bf6ba90"
  },
  "sheets": {
   "Calc": {
@@ -12,6 +26,11 @@
     "t": "n",
     "v": "2.5167162452886984415281917481223776723889473033969",
     "f": "=BESSELI(2.5,1)"
+   },
+   "A14": {
+    "t": "n",
+    "v": "8.2020997375328083989501312335958005249343832020997",
+    "f": "=CONVERT(2.5,\"m\",\"ft\")"
    },
    "A19": {
     "t": "n",
@@ -37,6 +56,16 @@
     "t": "n",
     "v": "0.28884436634648486840106216540858922262579404590346",
     "f": "=ERFC.PRECISE(0.75)"
+   },
+   "A27": {
+    "t": "n",
+    "v": "5.0",
+    "f": "=IMABS(\"3+4i\")"
+   },
+   "A29": {
+    "t": "n",
+    "v": "0.92729521800161223242851246292242880405707410857224",
+    "f": "=IMARGUMENT(\"3+4i\")"
    },
    "A3": {
     "t": "n",

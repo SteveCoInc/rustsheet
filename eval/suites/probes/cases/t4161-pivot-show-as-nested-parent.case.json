@@ -1,0 +1,280 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4161: % of parent modes with nested fields in Excel for the web. Data!A1:E10: Region, Product, Kind, Year, Sales over nine records: East A x 2024 1, East A y 2024 2, East B x 2024 4, West A x 2024 6, West B y 2024 8, East A x 2025 3, East B y 2025 5, West A y 2025 7, West B x 2025 9. Each sheet is one builder-v2 pivot at A3 with Sum of Sales named Shown. PPR_, PPP, PPK: rows Region, Product, Kind, columns Year, % of parent total with base field Region, Product, Kind; PPRow: the same rows, % of parent row total; IX3: the same rows, index; PPCol: rows Region, columns Year (outer) and Kind, % of parent column total; PPY: that layout, % of parent total with base field Year. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4161",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0109",
+  "PV-1254",
+  "PV-1255",
+  "PV-1256",
+  "PV-1271",
+  "PV-1272",
+  "PV-0891"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Kind",
+    "D1": "Year",
+    "E1": "Sales",
+    "A2": "East",
+    "B2": "A",
+    "C2": "x",
+    "D2": 2024,
+    "E2": 1,
+    "A3": "East",
+    "B3": "A",
+    "C3": "y",
+    "D3": 2024,
+    "E3": 2,
+    "A4": "East",
+    "B4": "B",
+    "C4": "x",
+    "D4": 2024,
+    "E4": 4,
+    "A5": "West",
+    "B5": "A",
+    "C5": "x",
+    "D5": 2024,
+    "E5": 6,
+    "A6": "West",
+    "B6": "B",
+    "C6": "y",
+    "D6": 2024,
+    "E6": 8,
+    "A7": "East",
+    "B7": "A",
+    "C7": "x",
+    "D7": 2025,
+    "E7": 3,
+    "A8": "East",
+    "B8": "B",
+    "C8": "y",
+    "D8": 2025,
+    "E8": 5,
+    "A9": "West",
+    "B9": "A",
+    "C9": "y",
+    "D9": 2025,
+    "E9": 7,
+    "A10": "West",
+    "B10": "B",
+    "C10": "x",
+    "D10": 2025,
+    "E10": 9
+   }
+  },
+  {
+   "name": "PPR_",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PPR_",
+     "source": "Data!A1:E10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Kind"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfParent",
+        "baseField": "Region"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PPP",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PPP",
+     "source": "Data!A1:E10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Kind"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfParent",
+        "baseField": "Product"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PPK",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PPK",
+     "source": "Data!A1:E10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Kind"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfParent",
+        "baseField": "Kind"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PPRow",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PPRow",
+     "source": "Data!A1:E10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Kind"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfParentRow"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PPCol",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PPCol",
+     "source": "Data!A1:E10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Year",
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfParentCol"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PPY",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PPY",
+     "source": "Data!A1:E10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Year",
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfParent",
+        "baseField": "Year"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "IX3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IX3",
+     "source": "Data!A1:E10",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Kind"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "index"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A10)"
+   }
+  }
+ ]
+}

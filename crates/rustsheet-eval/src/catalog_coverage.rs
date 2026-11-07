@@ -246,6 +246,7 @@ mod tests {
             graph_subnormal: false,
             kind: crate::runner::CellKind::Scored,
             math: None,
+            target: crate::runner::Target::Excel,
         };
         CaseResult {
             cells: vec![cell],

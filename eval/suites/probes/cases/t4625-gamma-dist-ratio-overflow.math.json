@@ -1,0 +1,328 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "78ce94ba1087f271f3765990310dbb17542b54891ecf47aa42c1a095584183e2",
+  "definitions": {
+   "GAMMA.DIST": "01f5d761e8de8277",
+   "GAMMADIST": "01f5d761e8de8277"
+  },
+  "arguments_sha256": "e5a37b7c848dc497c47fbb7c5d34ad88a0e1bd8e276e41060b53379fd5b11561"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A1": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,0.5,1E-10,TRUE)"
+   },
+   "A10": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=GAMMA.DIST(1E300,1,1E-8,TRUE)"
+   },
+   "A11": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=GAMMA.DIST(1E300,1,1E-8,FALSE)"
+   },
+   "A2": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,2,1E-10,TRUE)"
+   },
+   "A3": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,10,1E-10,TRUE)"
+   },
+   "A4": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,1E5,1E-10,TRUE)"
+   },
+   "A5": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,0.01,1E-10,TRUE)"
+   },
+   "A6": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,1E10,1E-10,TRUE)"
+   },
+   "A7": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,1E300,1E-10,TRUE)"
+   },
+   "A8": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,0.5,5E-9,TRUE)"
+   },
+   "A9": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=GAMMA.DIST(1E300,0.5,1E-8,TRUE)"
+   },
+   "B1": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,0.5,1E-10,FALSE)"
+   },
+   "B2": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,2,1E-10,FALSE)"
+   },
+   "B3": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,10,1E-10,FALSE)"
+   },
+   "B4": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,1E5,1E-10,FALSE)"
+   },
+   "B5": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,0.01,1E-10,FALSE)"
+   },
+   "B6": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,1E10,1E-10,FALSE)"
+   },
+   "B7": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,1E300,1E-10,FALSE)"
+   },
+   "B8": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,2,5E-9,TRUE)"
+   },
+   "C1": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,0.5,1E-10,TRUE)"
+   },
+   "C10": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=GAMMA.DIST(1E300,2.5,1E-8,TRUE)"
+   },
+   "C11": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=GAMMA.DIST(1E300,2.5,1E-8,FALSE)"
+   },
+   "C2": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,2,1E-10,TRUE)"
+   },
+   "C3": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,10,1E-10,TRUE)"
+   },
+   "C4": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,1E5,1E-10,TRUE)"
+   },
+   "C5": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,0.01,1E-10,TRUE)"
+   },
+   "C6": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,1E10,1E-10,TRUE)"
+   },
+   "C7": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,1E300,1E-10,TRUE)"
+   },
+   "C8": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,10,5E-9,TRUE)"
+   },
+   "C9": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=GAMMA.DIST(1E300,10,1E-8,TRUE)"
+   },
+   "D1": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,0.5,1E-10,FALSE)"
+   },
+   "D10": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=GAMMA.DIST(1E300,2.9,1E-8,TRUE)"
+   },
+   "D11": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=GAMMA.DIST(1E300,2.9,1E-8,FALSE)"
+   },
+   "D2": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,2,1E-10,FALSE)"
+   },
+   "D3": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,10,1E-10,FALSE)"
+   },
+   "D4": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,1E5,1E-10,FALSE)"
+   },
+   "D5": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,0.01,1E-10,FALSE)"
+   },
+   "D6": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,1E10,1E-10,FALSE)"
+   },
+   "D7": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMADIST(1E300,1E300,1E-10,FALSE)"
+   },
+   "D8": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,1E5,5E-9,TRUE)"
+   },
+   "D9": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=GAMMA.DIST(1E300,1E5,1E-8,TRUE)"
+   },
+   "E10": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=GAMMA.DIST(1E300,3,1E-8,TRUE)"
+   },
+   "E11": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=GAMMA.DIST(1E300,3,1E-8,FALSE)"
+   },
+   "E8": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,0.5,5E-9,FALSE)"
+   },
+   "E9": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=GAMMA.DIST(1E300,0.5,1E-8,FALSE)"
+   },
+   "F10": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=GAMMA.DIST(1E300,2,1E100,TRUE)"
+   },
+   "F11": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=GAMMA.DIST(1E300,2,1E100,FALSE)"
+   },
+   "F8": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,2,5E-9,FALSE)"
+   },
+   "G10": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=GAMMA.DIST(1E300,2,1E145,TRUE)"
+   },
+   "G11": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=GAMMA.DIST(1E300,2,1E145,FALSE)"
+   },
+   "G8": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,10,5E-9,FALSE)"
+   },
+   "G9": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=GAMMA.DIST(1E300,10,1E-8,FALSE)"
+   },
+   "H10": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=GAMMA.DIST(1E300,2,1E146,TRUE)"
+   },
+   "H11": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=GAMMA.DIST(1E300,2,1E146,FALSE)"
+   },
+   "H8": {
+    "t": "e",
+    "why": "x / beta overflows",
+    "f": "=GAMMA.DIST(1E300,1E5,5E-9,FALSE)"
+   },
+   "H9": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=GAMMA.DIST(1E300,1E5,1E-8,FALSE)"
+   },
+   "I10": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=GAMMA.DIST(1E300,2,1E150,TRUE)"
+   },
+   "I11": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=GAMMA.DIST(1E300,2,1E150,FALSE)"
+   }
+  }
+ },
+ "skipped": {
+  "Sheet1": {
+   "B10": {
+    "f": "=GAMMA.DIST(1E300,1.5,1E-8,TRUE)",
+    "why": "no single value"
+   },
+   "B11": {
+    "f": "=GAMMA.DIST(1E300,1.5,1E-8,FALSE)",
+    "why": "no single value"
+   },
+   "B9": {
+    "f": "=GAMMA.DIST(1E300,2,1E-8,TRUE)",
+    "why": "no single value"
+   },
+   "F9": {
+    "f": "=GAMMA.DIST(1E300,2,1E-8,FALSE)",
+    "why": "no single value"
+   }
+  }
+ }
+}

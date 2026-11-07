@@ -45,6 +45,13 @@ const SERIES: ArgKinds = ArgKinds::fixed(
 /// Each lifted element is charged the cells it builds.
 const SEQUENCE: ArgKinds =
     ArgKinds::fixed(1, &[Lift, Lift, Lift, Lift], Output { weight: 1 }).array();
+/// `RANDARRAY([rows], [columns], [min], [max], [whole_number])`: every argument lifts over an array
+/// and a range, one call per element whose value is that call's top-left
+/// (probes/t4519-row-column-randarray-over-arrays D2:H4; min, max and `whole_number`,
+/// probes/t4611-randarray-min-max-whole-arrays A1:A14; T-4611). Each lifted element is charged the
+/// cells it builds.
+const RANDARRAY: ArgKinds =
+    ArgKinds::fixed(0, &[Lift, Lift, Lift, Lift, Lift], Output { weight: 1 }).array();
 /// `MAKEARRAY(rows, cols, lambda)`: rows and cols lift (`MAKEARRAY(A1:A2,2,LAMBDA(r,c,r+c))` is
 /// 2x1 with first element 2, probes/m7-argument-modes F23:H23), the LAMBDA is read whole. Its
 /// kernel calls the LAMBDA once per cell, so a lifted element is charged 128 per cell (SPEC-0011
@@ -170,6 +177,7 @@ pub(super) fn arg_kinds(function: &Function) -> Option<&'static ArgKinds> {
         // unprobed and follows SPEC-0011's rule for scalar parameters.
         Function::Address => Some(&ADDRESS),
         Function::Sequence => Some(&SEQUENCE),
+        Function::Randarray => Some(&RANDARRAY),
         Function::Makearray => Some(&MAKEARRAY),
         Function::Take | Function::Drop => Some(&TAKE_DROP),
         Function::Expand => Some(&EXPAND),

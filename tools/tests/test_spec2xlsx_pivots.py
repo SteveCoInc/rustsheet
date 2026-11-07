@@ -6,8 +6,10 @@ import zipfile
 from typing import Any
 
 import pytest
+from spec_parts import spec_parts
 
 from rustsheet_tools.pivot import rendered_cells
+from rustsheet_tools.pivot_chart import _insert_drawing, chart_xml
 from rustsheet_tools.spec2xlsx import build_xlsx
 from rustsheet_tools.spec_cli import bake_pivots
 
@@ -46,9 +48,7 @@ _PIVOT = {
 }
 
 
-def _parts(spec: dict[str, Any]) -> dict[str, str]:
-    z = zipfile.ZipFile(io.BytesIO(build_xlsx(spec)))
-    return {n: z.read(n).decode() for n in z.namelist() if n.endswith((".xml", ".rels"))}
+_PARTS = (".xml", ".rels")  # relationships too: the pivot parts are linked through them
 
 
 def _cell(sheet_xml: str, a1: str) -> str:
@@ -60,7 +60,7 @@ def _cell(sheet_xml: str, a1: str) -> str:
 def test_pivot_parts_are_linked_and_byte_stable() -> None:
     spec = _spec(_PIVOT)
     assert build_xlsx(spec) == build_xlsx(spec)
-    parts = _parts(spec)
+    parts = spec_parts(spec, _PARTS)
     assert (
         '<pivotCaches><pivotCache cacheId="1" r:id="rIdPivotCache1"/></pivotCaches>'
         in parts["xl/workbook.xml"]
@@ -85,7 +85,7 @@ def test_pivot_parts_are_linked_and_byte_stable() -> None:
 def test_pivot_cells_are_rendered_in_compact_form() -> None:
     # Layout as excel-graph rendered it (probes/getpivotdata-real-pivot, T-1705): caption, column
     # labels, items, aggregates, blank for an empty intersection, grand totals.
-    sheet = _parts(_spec(_PIVOT))["xl/worksheets/sheet2.xml"]
+    sheet = spec_parts(_spec(_PIVOT), _PARTS)["xl/worksheets/sheet2.xml"]
     assert 't="s"' in _cell(sheet, "A3")
     assert "<v>15.5</v>" in _cell(sheet, "D5")  # East total: 10 + 5.5
     assert "<v>35.5</v>" in _cell(sheet, "D7")  # grand total
@@ -95,7 +95,7 @@ def test_pivot_cells_are_rendered_in_compact_form() -> None:
 
 def test_rows_only_average_pivot() -> None:
     pivot = {k: v for k, v in _PIVOT.items() if k != "column"} | {"function": "average", "location": "A10"}
-    parts = _parts(_spec(pivot))
+    parts = spec_parts(_spec(pivot), _PARTS)
     table = parts["xl/pivotTables/pivotTable1.xml"]
     assert '<location ref="A10:B13" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/>' in table
     assert 'subtotal="average"' in table
@@ -154,7 +154,7 @@ def test_range_grouped_pivot() -> None:
     # T-4228: the row field groups by `<rangePr>`, its items index the group labels, and the
     # builder renders no cells (Excel lays a grouped pivot out on load).
     spec = _grouped_spec(_GROUP)
-    parts = _parts(spec)
+    parts = spec_parts(spec, _PARTS)
     definition = parts["xl/pivotCache/pivotCacheDefinition1.xml"]
     assert (
         'minValue="1" maxValue="12"/><fieldGroup base="0"><rangePr autoStart="0" autoEnd="0" startNum="0"'
@@ -176,7 +176,7 @@ def test_range_grouped_pivot() -> None:
 def test_group_items_may_repeat_or_be_numbers() -> None:
     # T-4316 probes how Excel reads a label listed twice and a non-text `<groupItems>` item.
     spec = _grouped_spec(_GROUP | {"items": ["<0", "0-4", 3, "0-4", ">10"]})
-    definition = _parts(spec)["xl/pivotCache/pivotCacheDefinition1.xml"]
+    definition = spec_parts(spec, _PARTS)["xl/pivotCache/pivotCacheDefinition1.xml"]
     assert (
         '<groupItems count="5"><s v="&lt;0"/><s v="0-4"/><n v="3"/><s v="0-4"/><s v="&gt;10"/></groupItems>'
     ) in definition
@@ -227,7 +227,7 @@ def test_date_grouped_pivot_with_a_blank() -> None:
     spec = _grouped_spec(_DATE_GROUP)
     del spec["sheets"][0]["cells"]["A3"]
     spec["sheets"][0]["cells"]["A2"] = 43480.99999
-    parts = _parts(spec)
+    parts = spec_parts(spec, _PARTS)
     definition = parts["xl/pivotCache/pivotCacheDefinition1.xml"]
     assert (
         '<sharedItems containsSemiMixedTypes="0" containsNonDate="0" containsDate="1" containsString="0"'
@@ -272,7 +272,7 @@ def test_unused_row_items(show_all: bool) -> None:
     # keeps it, and the layout shows it (with a blank aggregate) only under showAll.
     pivot = _ROWS_ONLY | {"unused_items": ["North"], "show_all": show_all}
     spec = _spec(pivot, {"H1": "=1"})
-    parts = _parts(spec)
+    parts = spec_parts(spec, _PARTS)
     definition = parts["xl/pivotCache/pivotCacheDefinition1.xml"]
     assert '<s v="North"/>' in definition
     assert "refreshOnLoad" not in definition
@@ -287,7 +287,9 @@ def test_unused_row_items(show_all: bool) -> None:
 
 
 def test_pivot_without_unused_items_refreshes_on_load() -> None:
-    definition = _parts(_spec(_ROWS_ONLY, {"H1": "=1"}))["xl/pivotCache/pivotCacheDefinition1.xml"]
+    definition = spec_parts(_spec(_ROWS_ONLY, {"H1": "=1"}), _PARTS)[
+        "xl/pivotCache/pivotCacheDefinition1.xml"
+    ]
     assert 'refreshOnLoad="1"' in definition
 
 
@@ -302,3 +304,62 @@ def test_unused_items_on_a_grouped_field_are_refused() -> None:
     spec["sheets"][1]["pivot_tables"][0]["unused_items"] = ["x"]
     with pytest.raises(ValueError, match="unused_items are distinct texts"):
         build_xlsx(spec)
+
+
+def test_a_pivot_chart_is_a_drawing_with_a_bound_chart_and_its_given_caches() -> None:
+    # T-4130 (pivot_chart.py): the chart names its pivot in c:pivotSource and keeps the stale caches it is given.
+    pivot = {"name": "P_C", "source": "Data!A1:B3", "location": "A3",
+             "definition": {"rows": ["Region"], "data": [{"field": "Sales"}]}}  # fmt: skip
+    chart = {"pivot": "P_C", "anchor": "E3", "series_name": "C!$B$3", "categories": "C!$A$4:$A$5",
+             "values": "C!$B$4:$B$5", "cached_categories": ["X", "Y"], "cached_values": [999, 998]}  # fmt: skip
+    spec = {
+        "sheets": [
+            {
+                "name": "Data",
+                "cells": {"A1": "Region", "B1": "Sales", "A2": "East", "B2": 1, "A3": "West", "B3": 2},
+            },
+            {"name": "C", "cells": {}, "pivot_tables": [pivot], "pivot_charts": [chart]},
+        ]
+    }
+    z = zipfile.ZipFile(io.BytesIO(build_xlsx(spec)))
+    chart_xml = z.read("xl/charts/chart1.xml").decode()
+    assert "<c:pivotSource><c:name>[probe.xlsx]C!P_C</c:name>" in chart_xml
+    assert '<c:pt idx="0"><c:v>999</c:v></c:pt><c:pt idx="1"><c:v>998</c:v></c:pt>' in chart_xml
+    assert '<drawing r:id="rIdPivotChart2"/>' in z.read("xl/worksheets/sheet2.xml").decode()
+    assert "../drawings/drawing2.xml" in z.read("xl/worksheets/_rels/sheet2.xml.rels").decode()
+    assert "../charts/chart1.xml" in z.read("xl/drawings/_rels/drawing2.xml.rels").decode()
+    types = z.read("[Content_Types].xml").decode()
+    assert "/xl/charts/chart1.xml" in types and "/xl/drawings/drawing2.xml" in types
+
+
+_CHART = {"pivot": "P_C", "anchor": "E3", "categories": "C!$A$4:$A$5", "values": "C!$B$4:$B$5"}
+
+
+@pytest.mark.parametrize(
+    ("chart", "message"),
+    [
+        (["P_C"], "a pivot chart is an object"),
+        ({**_CHART, "colour": "red"}, "unknown keys"),
+        ({"pivot": "P_C"}, "names its pivot and anchor"),
+        ({**_CHART, "categories": "A4:A5"}, "sheet-qualified A1 reference"),
+        ({**_CHART, "values": 3}, "sheet-qualified A1 reference"),
+        ({**_CHART, "cached_values": ["x"]}, "cached_values are numbers"),
+        ({**_CHART, "cached_values": [True]}, "cached_values are numbers"),
+    ],
+)
+def test_pivot_chart_refusals(chart: Any, message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        chart_xml(chart, "C")
+
+
+def test_a_pivot_chart_must_name_a_pivot_and_a_sheet_keeps_one_drawing() -> None:
+    spec = {
+        "sheets": [
+            {"name": "Data", "cells": {"A1": "Region", "B1": "Sales", "A2": "East", "B2": 1}},
+            {"name": "C", "cells": {}, "pivot_charts": [{**_CHART, "pivot": "Nope"}]},
+        ]
+    }
+    with pytest.raises(ValueError, match="names no pivot of the workbook"):
+        build_xlsx(spec)
+    with pytest.raises(ValueError, match="already has a drawing"):
+        _insert_drawing("rId9")('<worksheet><drawing r:id="rId1"/></worksheet>')

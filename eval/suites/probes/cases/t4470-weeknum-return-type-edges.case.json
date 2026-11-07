@@ -1,0 +1,102 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4470: WEEKNUM return_type snap at the boundaries. Each sheet: A3 sets the start-weekday state (bottom to top), A2 is the edge return_type, A1 =WEEKNUM(100,99) reads the state left by A2. T1 1-2^-23, T18 18-2^-23, T21 21-2^-23, T22 22-2^-23, T2 2-2^-23, TN30 -2^-30, TNhalf -0.5, TN15 -1.5 (a negative type: truncation reads 0 or -1 as #NUM!/stale read, a floor reads the state).",
+ "tags": [
+  "M6",
+  "probe",
+  "dates"
+ ],
+ "sheets": [
+  {
+   "name": "T1",
+   "cells": {
+    "A1": "=WEEKNUM(100,99)",
+    "A2": "=WEEKNUM(100,1-2^-23)",
+    "A3": "=WEEKNUM(100,2)"
+   }
+  },
+  {
+   "name": "T18",
+   "cells": {
+    "A1": "=WEEKNUM(100,99)",
+    "A2": "=WEEKNUM(100,18-2^-23)",
+    "A3": "=WEEKNUM(100,1)"
+   }
+  },
+  {
+   "name": "T21",
+   "cells": {
+    "A1": "=WEEKNUM(100,99)",
+    "A2": "=WEEKNUM(100,21-2^-23)",
+    "A3": "=WEEKNUM(100,2)"
+   }
+  },
+  {
+   "name": "T22",
+   "cells": {
+    "A1": "=WEEKNUM(100,99)",
+    "A2": "=WEEKNUM(100,22-2^-23)",
+    "A3": "=WEEKNUM(100,2)"
+   }
+  },
+  {
+   "name": "TN30",
+   "cells": {
+    "A1": "=WEEKNUM(100,99)",
+    "A2": "=WEEKNUM(100,-2^-30)",
+    "A3": "=WEEKNUM(100,2)"
+   }
+  },
+  {
+   "name": "TNhalf",
+   "cells": {
+    "A1": "=WEEKNUM(100,99)",
+    "A2": "=WEEKNUM(100,-0.5)",
+    "A3": "=WEEKNUM(100,2)"
+   }
+  },
+  {
+   "name": "TN15",
+   "cells": {
+    "A1": "=WEEKNUM(100,99)",
+    "A2": "=WEEKNUM(100,-1.5)",
+    "A3": "=WEEKNUM(100,2)"
+   }
+  },
+  {
+   "name": "T2",
+   "cells": {
+    "A1": "=WEEKNUM(100,99)",
+    "A2": "=WEEKNUM(100,2-2^-23)",
+    "A3": "=WEEKNUM(100,1)"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "T1!A1",
+  "T1!A2",
+  "T1!A3",
+  "T18!A1",
+  "T18!A2",
+  "T18!A3",
+  "T21!A1",
+  "T21!A2",
+  "T21!A3",
+  "T22!A1",
+  "T22!A2",
+  "T22!A3",
+  "TN30!A1",
+  "TN30!A2",
+  "TN30!A3",
+  "TNhalf!A1",
+  "TNhalf!A2",
+  "TNhalf!A3",
+  "TN15!A1",
+  "TN15!A2",
+  "TN15!A3",
+  "T2!A1",
+  "T2!A2",
+  "T2!A3"
+ ]
+}

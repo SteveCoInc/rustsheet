@@ -38,9 +38,11 @@ use rustsheet_eval::lift_kinds;
 use rustsheet_eval::milestone_exit;
 use rustsheet_eval::milestone_lists::{self, MilestoneList};
 use rustsheet_eval::phase1_exceptions::Phase1Exceptions;
+use rustsheet_eval::pivot_features;
 use rustsheet_eval::probe_milestones::{self, Mapping, Rules};
-use rustsheet_eval::r1c::R1cCells;
+use rustsheet_eval::r1c::{mark_r3_math, R1cCells};
 use rustsheet_eval::report::RunReport;
+use rustsheet_eval::roundtrip;
 use rustsheet_eval::run_meta::RunMeta;
 use rustsheet_eval::runner::{run_suites, CaseResult, RunOptions};
 use rustsheet_eval::suite::{BaselineMode, FetchState, Suite, SuiteKind, ACCURACY_DIR};
@@ -168,6 +170,16 @@ enum Cmd {
         cached: PathBuf,
         recalculated: PathBuf,
     },
+    /// Round-trip fidelity (SPEC-0033): load and save each workbook of the suites under
+    /// eval/roundtrip, validate the output and score what it kept; writes
+    /// eval/runs/latest/roundtrip.{json,md}. `--check` gates the baselines, `--update-baseline`
+    /// ratchets them (refusing regressions).
+    Roundtrip {
+        #[command(flatten)]
+        sel: Selection,
+        #[command(flatten)]
+        flags: roundtrip::Flags,
+    },
     /// Gate A (SPEC-0029, decision 0188 R2): fail when a reference-table point of eval/accuracy
     /// is outside the envelope, a known-failure line is stale, an R3 mark lacks evidence or a
     /// table is defective.
@@ -252,7 +264,11 @@ fn find_root(explicit: Option<PathBuf>) -> Result<PathBuf> {
 }
 
 fn select(root: &Path, sel: &Selection, gate_only: bool) -> Result<Vec<Suite>> {
-    let all = Suite::load_all(&root.join("eval/suites"))?;
+    select_from(Suite::load_all(&root.join("eval/suites"))?, sel, gate_only)
+}
+
+/// [`select`] over a given list of suites (the round-trip suites use it too).
+fn select_from(all: Vec<Suite>, sel: &Selection, gate_only: bool) -> Result<Vec<Suite>> {
     let chosen: Vec<Suite> = all
         .into_iter()
         .filter(|s| {
@@ -274,9 +290,11 @@ fn select(root: &Path, sel: &Selection, gate_only: bool) -> Result<Vec<Suite>> {
                         }
                     };
                 }
+                // A round-trip suite over a cell suite's cache is fetched as that suite.
+                let fetch_as = s.manifest.cases_of.as_ref().unwrap_or(&s.manifest.name);
                 eprintln!(
-                    "skipping {}: not fetched (run `rustsheet-eval fetch --suite {}`)",
-                    s.manifest.name, s.manifest.name
+                    "skipping {}: not fetched (run `rustsheet-eval fetch --suite {fetch_as}`)",
+                    s.manifest.name
                 );
                 return false;
             }
@@ -300,6 +318,14 @@ fn execute(suites: &[Suite], sel: &Selection) -> Vec<CaseResult> {
     run_suites(&engine, suites, &opts)
 }
 
+/// [`execute`], with each cell's [`rustsheet_eval::runner::Target`] set from the R3 marks `r3`
+/// before any report counts the closeness buckets (decision 0310).
+fn execute_marked(suites: &[Suite], sel: &Selection, r3: &R3Marks) -> Vec<CaseResult> {
+    let mut results = execute(suites, sel);
+    mark_r3_math(&mut results, r3);
+    results
+}
+
 /// Fails unless every suite's `deviations` lines name an existing case and cite an accepted
 /// `Status: DEVIATION` semantics entry (decision 0036).
 fn check_deviations(root: &Path, suites: &[Suite]) -> Result<()> {
@@ -318,8 +344,11 @@ struct Milestones {
     exceptions: ExitExceptions,
     phase1_exceptions: Phase1Exceptions,
     /// `eval/accuracy/math-over-excel.tsv`: the R3 cells R1(c) and Gate B count as passing
-    /// where the engine returns the math (decision 0188 R3).
+    /// where the engine returns the math (decision 0188 R3), and the closeness buckets count as
+    /// `r3_math` (decision 0310).
     r3: R3Marks,
+    /// eval/catalog/pivot-features.tsv (T-4126); empty when the root has none.
+    pivot_catalog: Vec<pivot_features::CatalogRow>,
 }
 
 /// Loads the frozen lists and the probe-milestone mapping, and fails when a line of either names
@@ -357,6 +386,7 @@ fn load_milestones(root: &Path, catalog: &Catalog) -> Result<Milestones> {
         exceptions,
         phase1_exceptions,
         r3,
+        pivot_catalog: pivot_features::load(root)?,
     })
 }
 
@@ -396,6 +426,7 @@ fn score_milestones(
         .collect();
     report.catalog_coverage =
         catalog_coverage::summarize(catalog, results, &report.evidence, &generated);
+    report.pivot_features = pivot_features::summarize(&milestones.pivot_catalog, results);
     let generated_names: Vec<&str> = generated.keys().map(String::as_str).collect();
     report.v15_checkpoint = v15_checkpoint::summarize(
         catalog,
@@ -567,7 +598,7 @@ fn cmd_check(
     };
     // `plan_run` keeps the gate suites first, unchanged.
     let suites = &run[..gate_len];
-    let mut results = execute(&run, sel);
+    let mut results = execute_marked(&run, sel, &milestones.r3);
     let floor_results = floor.then(|| evidence_floor::floor_results(&run, &results));
     if floor {
         // The baseline gate judges the gate suites' results only, as a plain `check` does.
@@ -827,24 +858,7 @@ fn run() -> Result<ExitCode> {
     }
     let root = find_root(cli.root)?;
     match cli.cmd {
-        Cmd::Suites => {
-            for s in Suite::load_all(&root.join("eval/suites"))? {
-                let n = s.cases().map_or(0, |c| c.len());
-                let cases = match s.fetch_state() {
-                    FetchState::NotFetched => rustsheet_eval::run_meta::NOT_FETCHED.to_string(),
-                    _ => format!("{n} cases"),
-                };
-                println!(
-                    "{:<28} {:>12}  gate={:<5} license={:<20} {}",
-                    s.manifest.name,
-                    cases,
-                    s.manifest.gate,
-                    s.manifest.license,
-                    s.manifest.description
-                );
-            }
-            Ok(ExitCode::SUCCESS)
-        }
+        Cmd::Suites => cmd_suites(&root),
         Cmd::Fetch { suites } => {
             let all = Suite::load_all(&root.join("eval/suites"))?;
             let mut fetched = 0;
@@ -881,7 +895,7 @@ fn run() -> Result<ExitCode> {
                     std::mem::take(&mut milestones.phase1_exceptions).load_desktop_owned(&root)?;
             }
             let started = std::time::SystemTime::now();
-            let results = execute(&suites, &sel);
+            let results = execute_marked(&suites, &sel, &milestones.r3);
             let mut report = RunReport::build(
                 RustSheetEngine.name(),
                 &results,
@@ -929,8 +943,43 @@ fn run() -> Result<ExitCode> {
         Cmd::Show { case_id, all } => cmd_show(&root, &case_id, all),
         Cmd::Cases { suite } => cmd_cases(&root, &suite),
         Cmd::Accuracy { json, timeout } => cmd_accuracy(&root, json, timeout),
+        Cmd::Roundtrip { sel, flags } => cmd_roundtrip(&root, &sel, flags),
         Cmd::Snapshot { .. } | Cmd::Compare { .. } => unreachable!("handled above"),
     }
+}
+
+/// `rustsheet-eval suites`: the cell suites, then the round-trip suites (SPEC-0033).
+fn cmd_suites(root: &Path) -> Result<ExitCode> {
+    let mut all = Suite::load_all(&root.join("eval/suites"))?;
+    all.extend(Suite::load_roundtrip(root)?);
+    for s in all {
+        let n = s.cases().map_or(0, |c| c.len());
+        let cases = match s.fetch_state() {
+            FetchState::NotFetched => rustsheet_eval::run_meta::NOT_FETCHED.to_string(),
+            _ => format!("{n} cases"),
+        };
+        println!(
+            "{:<28} {:>12}  gate={:<5} license={:<20} {}",
+            s.manifest.name, cases, s.manifest.gate, s.manifest.license, s.manifest.description
+        );
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+/// `rustsheet-eval roundtrip` (SPEC-0033): the gate suites with `--check`, else the selection.
+fn cmd_roundtrip(root: &Path, sel: &Selection, flags: roundtrip::Flags) -> Result<ExitCode> {
+    let suites = select_from(Suite::load_roundtrip(root)?, sel, flags.check)?;
+    let mode = flags.mode();
+    let timeout = Duration::from_secs(sel.timeout);
+    let (ok, lines) = roundtrip::command(root, &suites, sel.filter.as_deref(), timeout, mode)?;
+    for line in lines {
+        println!("{line}");
+    }
+    Ok(if ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    })
 }
 
 fn main() -> ExitCode {

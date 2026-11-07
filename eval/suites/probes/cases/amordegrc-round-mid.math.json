@@ -1,0 +1,66 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "4db1eac203dfcd865f115ac06d366e4e03249fbd1ebcc205529c89cd0fcee19c",
+  "definitions": {
+   "AMORDEGRC": "46fbe91b5f5b4f82"
+  },
+  "arguments_sha256": "1b05fc792b8edd6faee41ac8aa036d17aad954c0965d1ccd52c1ee81fd618fbd"
+ },
+ "sheets": {},
+ "skipped": {
+  "Sheet1": {
+   "F1": {
+    "f": "=AMORDEGRC(8.78284247843786E20,39679,39813,300,0,1E-7,1)",
+    "why": "no single value"
+   },
+   "F2": {
+    "f": "=AMORDEGRC(8.88674751907764E20,39679,39813,300,0,1E-7,1)",
+    "why": "no single value"
+   },
+   "F3": {
+    "f": "=AMORDEGRC(6.38767720641861E20,39679,39813,300,0,1E-7,1)",
+    "why": "no single value"
+   },
+   "F4": {
+    "f": "=AMORDEGRC(3.47925977217322E18,39679,39813,300,0,1E-7,1)",
+    "why": "no single value"
+   },
+   "F5": {
+    "f": "=AMORDEGRC(2.22440844234809E20,39679,39813,300,0,1E-7,1)",
+    "why": "no single value"
+   },
+   "F6": {
+    "f": "=AMORDEGRC(7.03686653283163E20,39679,39813,300,0,1E-7,1)",
+    "why": "no single value"
+   },
+   "G1": {
+    "f": "=AMORDEGRC(6.58425714587141E18,39679,39813,300,1,1E-7,1)",
+    "why": "no single value"
+   },
+   "G2": {
+    "f": "=AMORDEGRC(9.09493126120155E18,39679,39813,300,1,1E-7,1)",
+    "why": "no single value"
+   },
+   "G3": {
+    "f": "=AMORDEGRC(7.60224684655605E18,39679,39813,300,1,1E-7,1)",
+    "why": "no single value"
+   },
+   "G4": {
+    "f": "=AMORDEGRC(8.30115688110333E18,39679,39813,300,1,1E-7,1)",
+    "why": "no single value"
+   },
+   "G5": {
+    "f": "=AMORDEGRC(8.26389129000042E18,39679,39813,300,1,1E-7,1)",
+    "why": "no single value"
+   },
+   "G6": {
+    "f": "=AMORDEGRC(5.13317060169337E18,39679,39813,300,1,1E-7,1)",
+    "why": "no single value"
+   }
+  }
+ }
+}

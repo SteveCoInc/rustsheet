@@ -228,6 +228,40 @@ def test_used_range(wb):
     assert wb.used_range("Sheet1") == "Sheet1!B2"
 
 
+def test_stored_cells_row_order_with_spill(wb):
+    wb.set("C7", 1)
+    wb.set("A1", 2)
+    wb.set("E1", rs.Formula("=SEQUENCE(2)"))
+    assert wb.stored_cells("Sheet1") == [
+        "Sheet1!A1",
+        "Sheet1!E1",
+        "Sheet1!E2",
+        "Sheet1!C7",
+    ]
+
+
+def test_stored_cells_sparse_extremes(wb):
+    wb.set("A1", 1)
+    wb.set("XFD1048576", 2)
+    assert wb.stored_cells("Sheet1") == ["Sheet1!A1", "Sheet1!XFD1048576"]
+
+
+def test_stored_cells_empty_sheet(wb):
+    assert wb.stored_cells("Sheet1") == []
+
+
+def test_stored_cells_quotes_sheet_name(wb):
+    with wb.edit() as tx:
+        tx.add_sheet("My Sheet")
+    wb.set("'My Sheet'!A1", 1)
+    assert wb.stored_cells("My Sheet") == ["'My Sheet'!A1"]
+
+
+def test_stored_cells_unknown_sheet(wb):
+    with pytest.raises(rs.RefError):
+        wb.stored_cells("Nope")
+
+
 def test_transaction_is_single_use(wb):
     tx = wb.edit()
     with tx:
@@ -624,3 +658,67 @@ def test_set_row_hidden_unknown_sheet_rolls_back(wb):
 def test_set_row_hidden_last_row_accepted(wb):
     with wb.edit() as tx:
         tx.set_row_hidden("Sheet1", 1048576)
+
+
+def _sales(wb, rows=3):
+    wb.set("A1", "Name")
+    wb.set("B1", "Qty")
+    for i, q in enumerate([1, 2, 4, 8][:rows]):
+        wb.set(f"A{i + 2}", f"n{i}")
+        wb.set(f"B{i + 2}", q)
+
+
+def test_add_table_structured_reference(wb):
+    _sales(wb)
+    with wb.edit() as tx:
+        tx.add_table("Sheet1!A1:B4", "Sales")
+    wb.set("D1", "=SUM(Sales[Qty])")
+    assert wb["D1"] == 7
+
+
+def test_add_table_totals_row(wb):
+    _sales(wb, rows=3)
+    wb.set("A5", "Total")
+    wb.set("B5", 7)
+    with wb.edit() as tx:
+        tx.add_table("Sheet1!A1:B5", "Sales", totals_row=True)
+    wb.set("D1", "=ROWS(Sales[#All])")
+    wb.set("D2", "=ROWS(Sales[#Data])")
+    wb.set("D3", "=ROWS(Sales[#Totals])")
+    assert (wb["D1"], wb["D2"], wb["D3"]) == (5, 3, 1)
+
+
+@pytest.mark.parametrize("second", [("Sheet1!A1:B4", "Sales"), ("Sheet1!B1:B4", "Other")])
+def test_add_table_duplicate_or_overlap_rolls_back(wb, second):
+    _sales(wb)
+    with wb.edit() as tx:
+        tx.add_table("Sheet1!A1:B4", "Sales")
+    with pytest.raises(rs.EditError):
+        with wb.edit() as tx:
+            tx.set_row_hidden("Sheet1", 2)
+            tx.add_table(*second)
+    # Nothing was left behind: the table list is as before, so the first table can still be used.
+    wb.set("D1", "=SUM(Sales[Qty])")
+    assert wb["D1"] == 7
+
+
+def test_add_table_failed_block_leaves_no_table(wb):
+    _sales(wb)
+    with pytest.raises(rs.EditError):
+        with wb.edit() as tx:
+            tx.add_table("Sheet1!A1:B4", "Sales")
+            tx.add_table("Sheet1!A1:B4", "Sales")
+    with wb.edit() as tx:
+        tx.add_table("Sheet1!A1:B4", "Sales")
+
+
+def test_add_table_on_sheet_added_in_same_block(wb):
+    with wb.edit() as tx:
+        tx.add_sheet("Data")
+        tx["Data!A1"] = "Name"
+        tx["Data!B1"] = "Qty"
+        tx["Data!A2"] = "x"
+        tx["Data!B2"] = 5
+        tx.add_table("Data!A1:B2", "T")
+    wb.set("D1", "=SUM(T[Qty])")
+    assert wb["D1"] == 5

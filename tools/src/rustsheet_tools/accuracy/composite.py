@@ -28,7 +28,7 @@ from typing import Any
 import mpmath
 
 from rustsheet_tools.accuracy import literal
-from rustsheet_tools.accuracy.model import REGISTRY, Definition, DomainError, NoValueError, Param
+from rustsheet_tools.accuracy.model import REGISTRY, Definition, DomainError, NoValueError, Param, Unfit
 from rustsheet_tools.accuracy.sampler import math_arg
 from rustsheet_tools.accuracy.tables import DOUBLE_MAX, MathValue, compute_value
 from rustsheet_tools.fitlab.exact import X87
@@ -40,7 +40,9 @@ from rustsheet_tools.fitlab.sweep import (
     arithmetic,
     cell_number,
     parse_arg,
+    parse_matrix_arg,
     split_args,
+    unquoted,
 )
 from rustsheet_tools.fitlab.sweep import (
     Arg as RawArg,
@@ -90,8 +92,8 @@ class Call:
 
 Node = Const | Neg | Op | Call
 # How a call-free argument is fitted to its parameter (`eval_math.fit_arg`): the argument, or why
-# it does not fit.
-FitArg = Callable[[Param, Any], literal.Arg | str]
+# it does not fit (an `Unfit`; a text argument is a plain str).
+FitArg = Callable[[Param, Any], literal.Arg | Unfit]
 
 
 class _Parser:
@@ -213,14 +215,16 @@ class _Parser:
         except ValueError:
             raise self.fail(f"argument count of {name}") from None
         fitted: list[literal.Arg | Node] = []
-        for param, arg in zip(params, args, strict=True):
+        for param, arg, text in zip(params, args, texts, strict=True):
             if isinstance(arg, Const | Neg | Op | Call):
                 if param.kind not in ("real", "int"):
                     raise self.fail(f"a call result for {name}'s {param.kind} parameter")
                 fitted.append(arg)
                 continue
-            value = self.fit(param, arg)
-            if isinstance(value, str):
+            # a matrix keeps its rows, which `parse_arg` flattens (T-4025)
+            shaped = parse_matrix_arg(text, self.sheet, self.book) if param.kind == "matrix" else arg
+            value = self.fit(param, shaped)
+            if isinstance(value, Unfit):
                 raise self.fail(f"{name}: {value}")
             fitted.append(value)
         return Call(definition, tuple(fitted))
@@ -228,19 +232,9 @@ class _Parser:
 
 def _closing(text: str, start: int) -> int | None:
     """The index of the `)` that closes the parenthesis opened just before `start`."""
-    depth, quoted = 1, False
-    for i in range(start, len(text)):
-        ch = text[i]
-        if ch == '"':
-            quoted = not quoted
-        elif quoted:
-            continue
-        elif ch in "({":
-            depth += 1
-        elif ch in ")}":
-            depth -= 1
-            if depth == 0:
-                return i if ch == ")" else None
+    for i, ch, depth in unquoted(text, start):
+        if depth < 0:
+            return i if ch == ")" else None
     return None
 
 

@@ -381,6 +381,18 @@ impl Model {
         Ok(self.lambda_caller(function, provided).snapping_root())
     }
 
+    /// Whether `lambda_result` is IF or CHOOSE passed by name, which read a reference given as a
+    /// value argument (any but the first) as [`picked_reference_read`] says, while a reference
+    /// condition or index reads as usual and IFERROR, INDEX and OFFSET return their references'
+    /// values (probes/t4450-eta-special-forms E25:G37, J1:J7, J23, J39:J51, L15:L23).
+    /// Excel: see docs/excel-semantics/arrays.md "Functions passed by name".
+    fn eta_blanks_references(&self, lambda_result: &CalcResult) -> bool {
+        matches!(
+            self.function_value(lambda_result),
+            Some(FunctionValue::Eta(Function::If | Function::Choose))
+        )
+    }
+
     /// What the LAMBDA `lambda_result` is ([`FunctionValue`]); `None` for anything else.
     pub(crate) fn function_value(&self, lambda_result: &CalcResult) -> Option<FunctionValue> {
         let CalcResult::Lambda(id) = lambda_result else {
@@ -408,12 +420,29 @@ impl Model {
         values: impl IntoIterator<Item = CalcResult>,
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        // `call_prepared` binds the parameters in order, so the i-th call takes the i-th value.
-        let mut values = values.into_iter();
+        let values = values
+            .into_iter()
+            .map(|value| (Binding::Value(value), false));
+        self.call_lambda_caller_binding(caller, values, cell)
+            .into_single_area(cell)
+    }
+
+    /// [`Self::call_lambda_caller`] with each parameter's binding and its ERROR.TYPE mark given,
+    /// as [`Model::bind_argument`] gives them (so one may be a union or an array of references:
+    /// SCAN's and REDUCE's `initial_value`, `Model::lambda_initial_value`), and the areas of a
+    /// union a reference-keeping `caller` returns kept: REDUCE's step
+    /// ([`Model::reduce_reference`]).
+    pub(crate) fn call_lambda_caller_binding(
+        &mut self,
+        caller: &mut LambdaCaller,
+        bindings: impl IntoIterator<Item = (Binding, bool)>,
+        cell: CellReferenceIndex,
+    ) -> RefArg {
+        // `call_prepared` binds the parameters in order, so the i-th call takes the i-th binding.
+        let mut bindings = bindings.into_iter();
         self.call_prepared(caller, cell, |_, _| {
-            values.next().map_or(Binding::Omitted, Binding::Value)
+            bindings.next().unwrap_or((Binding::Omitted, false))
         })
-        .into_single_area(cell)
     }
 
     /// One call of `caller` with argument nodes evaluated in the calling cell, as `call_lambda`
@@ -438,7 +467,7 @@ impl Model {
     ) -> RefArg {
         self.call_prepared(caller, cell, |model, i| match call_args.get(i) {
             Some(arg) => model.bind_argument(arg, cell),
-            None => Binding::Omitted,
+            None => (Binding::Omitted, false),
         })
     }
 
@@ -456,7 +485,7 @@ impl Model {
         &mut self,
         caller: &mut LambdaCaller,
         cell: CellReferenceIndex,
-        bind: impl FnMut(&mut Self, usize) -> Binding,
+        bind: impl FnMut(&mut Self, usize) -> (Binding, bool),
     ) -> RefArg {
         // Past the formula's work budget no LAMBDA runs, so a helper's loop over its remaining
         // elements does no work and the run ends at once; the formula's value is the budget's
@@ -504,7 +533,7 @@ impl Model {
         &mut self,
         caller: &mut LambdaCaller,
         cell: CellReferenceIndex,
-        mut bind: impl FnMut(&mut Self, usize) -> Binding,
+        mut bind: impl FnMut(&mut Self, usize) -> (Binding, bool),
     ) -> RefArg {
         let mut prepared = match caller.prepared.take() {
             Some(prepared) => prepared,
@@ -514,32 +543,39 @@ impl Model {
             Ok((ids, body)) => {
                 let mark = self.last_lambda_id;
                 let captured = self.bind_captures(&caller.lambda, cell);
+                let blanks_references = self.eta_blanks_references(&caller.lambda);
                 for (i, &(raw_id, once)) in ids.iter().enumerate() {
-                    let binding = match bind(self, i) {
+                    let (binding, marked) = bind(self, i);
+                    let binding = match binding {
+                        binding if blanks_references && i > 0 => {
+                            picked_reference_read(binding, cell)
+                        }
                         Binding::Value(value) if once => Binding::ReadOnce(value),
                         binding => binding,
                     };
-                    self.variable_stack.insert(raw_id, binding, cell);
+                    self.variable_stack
+                        .insert_marked(raw_id, binding, marked, cell);
                 }
                 // A body that picks a reference with XLOOKUP, TAKE or DROP, also as
                 // the arm an IF, CHOOSE, IFS or SWITCH picks or a LET body, is that reference:
                 // ISREF is TRUE, SUM skips its text and GROUPBY makes it `#VALUE!`
                 // (probes/lambda-body-picked-references, take-drop-over-ifs-switch-picks A78).
-                let result = match body.ungrouped() {
+                // The body's ERROR.TYPE/CELL mark is the call's (`number_mark.rs`).
+                let result = self.passing_mark(body, |model| match body.ungrouped() {
                     // A root `+`/`-` is never a reference, so a reference-keeping in-place call
                     // snaps it too: an in-place call passed to another one is bound in reference
                     // context (`bind_argument`), and `LAMBDA(a,x,a+x)(LAMBDA(a,x,a+x)(..),..)`
                     // snaps at each level (probes/t3095-snap-lambda-helpers B94, B117).
                     _ if caller.root_snap && matches!(body, Node::OpSumKind { .. }) => {
-                        RefArg::Value(self.evaluate_formula_root(body, cell, false))
+                        RefArg::Value(model.evaluate_formula_root(body, cell, false))
                     }
-                    _ if caller.references => self.evaluate_picked_reference_arg(body, cell),
+                    _ if caller.references => model.evaluate_picked_reference_arg(body, cell),
                     Node::FunctionKind {
                         kind: Function::Trimrange,
                         args,
-                    } if caller.trimrange_references => self.trimrange_reference(args, cell, true),
-                    _ => RefArg::Value(self.evaluate_node_in_context(body, cell)),
-                };
+                    } if caller.trimrange_references => model.trimrange_reference(args, cell, true),
+                    _ => RefArg::Value(model.evaluate_node_in_context(body, cell)),
+                });
                 // A LAMBDA the body made may read the parameters and the captures bound here.
                 // Most calls make no LAMBDA, and they list no ids (a plain call allocates nothing).
                 if self.last_lambda_id > mark {
@@ -637,6 +673,15 @@ impl Model {
             }
         };
         if let Some(kind) = self.eta_lambdas.get(&id) {
+            // Called with a count it does not take, `LET(f,SUM,f())`, it is `#VALUE!`, not
+            // SUM's own count error (probes/t4450-eta-special-forms E85:G85).
+            if !eta_takes_count(kind, provided) {
+                return Err(CalcResult::new_error(
+                    Error::VALUE,
+                    cell,
+                    format!("Function passed by name does not take {provided} argument(s)"),
+                ));
+            }
             return Ok(eta_definition(kind.clone(), provided));
         }
         let Some(definition) = self.lambdas.get(&id) else {
@@ -652,7 +697,9 @@ impl Model {
     }
 
     /// An unbound name: a function passed by name (eta-reduced, stored `_xleta.SUM`, any case,
-    /// `_xlfn.` allowed after the prefix) is a LAMBDA, `#NAME?` for anything else.
+    /// `_xlfn.` allowed after the prefix) is a LAMBDA, `#NAME?` for anything else, LET and LAMBDA
+    /// too: `ERROR.TYPE(_xleta.LET)` is 5, `LET(f,_xleta.LAMBDA,f(1))` is `#NAME?` and the
+    /// helpers given them are `#VALUE!` (probes/t4450-eta-special-forms E1:G19, J19:J35).
     /// Excel: see docs/excel-semantics/arrays.md "Functions passed by name".
     pub(crate) fn unbound_name(&mut self, name: &str, cell: CellReferenceIndex) -> CalcResult {
         let function = name
@@ -660,7 +707,8 @@ impl Model {
             .filter(|prefix| prefix.eq_ignore_ascii_case(ETA_PREFIX))
             .and_then(|_| name.get(ETA_PREFIX.len()..))
             // Stored formulas use the English function names, whatever the UI language.
-            .and_then(|function| get_default_language().functions.lookup_stored(function));
+            .and_then(|function| get_default_language().functions.lookup_stored(function))
+            .filter(|kind| !matches!(kind, Function::Let | Function::Lambda));
         match function {
             Some(kind) => self.eta_lambda(kind),
             None => CalcResult::new_error(
@@ -738,6 +786,36 @@ impl Model {
         self.named_lambdas.ids.insert(address, (definition, id));
         self.named_lambdas.named.insert(id);
         CalcResult::Lambda(id)
+    }
+}
+
+/// What IF and CHOOSE passed by name read for a value argument (`Model::eta_blanks_references`):
+/// a one-cell reference or a union is a blank (`MAP(A1:A3,B1:B3,IF)` three blanks,
+/// `LET(f,IF,f(TRUE,A1))` 0 with ISBLANK TRUE, `f(TRUE,(A1,B1))` ISBLANK TRUE), a reference to
+/// several cells `#VALUE!` (`f(TRUE,A1:A3)`, `CHOOSE`'s `f(2,A1,B1:B3)`), anything else itself
+/// (probes/t4450-eta-special-forms J23, J39:J51, L15:L23). A 3-D span and a lifted OFFSET grid are
+/// unprobed and read as several cells. Excel: see docs/excel-semantics/arrays.md "Functions passed
+/// by name".
+fn picked_reference_read(binding: Binding, cell: CellReferenceIndex) -> Binding {
+    let several = || {
+        Binding::Value(CalcResult::new_error(
+            Error::VALUE,
+            cell,
+            "IF or CHOOSE passed by name cannot pick a reference to several cells".to_string(),
+        ))
+    };
+    match binding.resolved() {
+        Binding::Value(CalcResult::Range { left, right })
+        | Binding::ReadOnce(CalcResult::Range { left, right }) => {
+            if left == right {
+                Binding::Value(CalcResult::EmptyCell)
+            } else {
+                several()
+            }
+        }
+        Binding::Areas(_) => Binding::Value(CalcResult::EmptyCell),
+        Binding::Span(_) | Binding::Grid(_) => several(),
+        Binding::Value(_) | Binding::ReadOnce(_) | Binding::Omitted | Binding::Shared(_) => binding,
     }
 }
 

@@ -34,6 +34,11 @@ pub trait Evaluated {
     fn sheet_names(&self) -> Vec<String> {
         Vec::new()
     }
+    /// The workbook's pivot tables and their locations (T-4124); empty when the engine has none
+    /// or cannot list them.
+    fn pivot_places(&self) -> Vec<rustsheet::PivotPlace> {
+        Vec::new()
+    }
 }
 
 pub trait Engine: Sync {
@@ -66,7 +71,7 @@ const HARNESS_CLOCK_MS: i64 = 1_667_906_008_578;
 
 /// Default workbook options on the harness clock, named as the oracle named the workbook: its
 /// file name without the extension the engine adds back (T-2042).
-fn harness_options(name: Option<&str>) -> Result<WorkbookOptions, String> {
+pub(crate) fn harness_options(name: Option<&str>) -> Result<WorkbookOptions, String> {
     Ok(WorkbookOptions {
         clock: Clock::fixed_unix_millis(HARNESS_CLOCK_MS).map_err(|e| e.to_string())?,
         name: name.map(|n| n.strip_suffix(".xlsx").unwrap_or(n).to_string()),
@@ -108,6 +113,10 @@ impl RustSheetEvaluated {
 }
 
 impl Evaluated for RustSheetEvaluated {
+    fn pivot_places(&self) -> Vec<rustsheet::PivotPlace> {
+        self.workbook.pivot_places()
+    }
+
     fn sheet_names(&self) -> Vec<String> {
         self.workbook.sheets().into_iter().map(|s| s.name).collect()
     }
@@ -294,8 +303,19 @@ impl Engine for RustSheetEngine {
                 Ok(entered)
             })
             .map_err(|e| e.to_string())?;
+        // Excel opens the built file, calculates and then refreshes its `refreshOnLoad` pivots
+        // before the oracle types any entry.
+        spec_pivots::load_defined(&mut workbook, spec)?;
         type_entries(&mut workbook, entered)?;
         apply_sheet_ops(&mut workbook, &spec.sheet_ops)?;
+        if let Some(active) = &spec.active_sheet {
+            let id = workbook
+                .sheet_id(active)
+                .map_err(|e| format!("active_sheet {active}: {e}"))?;
+            workbook
+                .set_active_sheet(id)
+                .map_err(|e| format!("active_sheet {active}: {e}"))?;
+        }
         define_api_names(&mut workbook, &spec.api_names)?;
         // The edit calculated once; an iterative case gets the oracle's other calculations.
         for _ in 1..calculations(spec) {
@@ -541,7 +561,7 @@ pub(crate) fn range_ref(id: SheetId, a1: &str) -> Result<RangeRef, rustsheet::Ed
 
 /// Whether the spec table's filter makes its sheet's hidden rows filtered: Excel calls them
 /// filtered only for a filterColumn with a criterion inside the table, not for a criterion-less
-/// one or one whose `colId` is past the table's width (probes/t4003-filter-column-criterion), and
+/// one, a `<colorFilter/>` without a dxfId (probes/t4558-color-filter-subtotal) or one whose `colId` is past the table's width (probes/t4003-filter-column-criterion), and
 /// the facade's `filtered` flag is that "filtered" (docs/excel-semantics/numbers.md, "SUBTOTAL and
 /// AGGREGATE over hidden and filtered rows").
 fn filters_hidden_rows(table: &TableSpec, range: RangeRef) -> bool {
@@ -550,7 +570,7 @@ fn filters_hidden_rows(table: &TableSpec, range: RangeRef) -> bool {
         && table
             .filter_column
             .as_ref()
-            .is_none_or(|c| c.criterion && u64::from(c.col_id) < width)
+            .is_none_or(|c| c.criterion && !c.color && u64::from(c.col_id) < width)
 }
 
 /// Gives each cell of `sheet` (sheet `id`) its spec number format.

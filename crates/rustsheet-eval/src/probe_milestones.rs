@@ -347,7 +347,8 @@ pub struct MilestoneRow {
     /// Of `visibly_off`, the numeric cells inside Gate A's envelope: Phase 1b evidence.
     #[serde(default)]
     pub phase1b: usize,
-    /// Of `visibly_off`, the R3 cells where the engine returns the math (decision 0188 R3).
+    /// The R3 cells where the engine returns the math (decision 0188 R3): the `r3_math` bucket,
+    /// not part of `visibly_off` (decision 0310).
     #[serde(default)]
     pub r3_pass: usize,
     /// Of `visibly_off`, the cells only open M14 tasks own (decision 0188 R7).
@@ -429,6 +430,9 @@ pub fn summarize(
                     R1c::M14Owned => s.m14_owned += 1,
                 }
                 s.visibly_off_cells.push(name);
+            } else if c.verdict.is_failure() && Visible::is_r3_math(c) {
+                // Math over Excel by design (decision 0310): not visibly off, and R1(c)'s R3 pass.
+                s.r3_pass += 1;
             }
             rows_of_case.insert(row);
         }
@@ -666,6 +670,7 @@ mod tests {
             graph_subnormal: false,
             kind: CellKind::Scored,
             math: None,
+            target: crate::runner::Target::Excel,
         }
     }
 
@@ -691,6 +696,9 @@ mod tests {
             defined_names: BTreeMap::new(),
             arguments: Vec::new(),
             reference_forms: crate::poi_m8_subset::ReferenceFormCells::default(),
+            pivot_layout: Vec::new(),
+            pivot_features: Vec::new(),
+            pivot_cells: crate::pivot_features::PivotCellTally::default(),
         }
     }
 

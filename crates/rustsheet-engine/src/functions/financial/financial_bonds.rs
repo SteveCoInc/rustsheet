@@ -141,8 +141,9 @@ impl CouponSchedule {
         // probes/bond-extreme-coupon-yield are bit-exact in the eval (T-2733).
         let accrued = rate / frequency as f64 * (a / e) * 100.0;
 
+        // `(n - 1) + DSC/E`, not `(DSC/E + n) - 1`: financial.md "YIELD stops short", T-2788.
         let v = 1.0 + yld / frequency as f64;
-        let first_term = redemption / growth(v, dsc_over_e + n - 1.0);
+        let first_term = redemption / growth(v, n - 1.0 + dsc_over_e);
 
         let mut second_term = 0.0;
         for k in 0..(n as u32) {
@@ -288,8 +289,8 @@ struct OddFirstSchedule {
     offset: f64,
     y: f64,
     accrued: f64,
-    /// The exponent shift of ODDFYIELD's slope ([`yield_solver::quasi_shift`], T-3031).
-    slope_shift: f64,
+    /// The schedule ODDFYIELD's slope runs on ([`yield_solver::SlopeTerms`], T-3031, T-3988).
+    slope: yield_solver::SlopeTerms,
 }
 
 impl OddFirstSchedule {
@@ -348,7 +349,7 @@ impl OddFirstSchedule {
                 offset: -1.0,
                 y,
                 accrued: a / e * (rate / m) * 100.0,
-                slope_shift: 0.0,
+                slope: yield_solver::SlopeTerms::short(n, y),
             })
         } else {
             // --- Long odd first coupon period (spans several quasi-coupon periods) ---
@@ -387,8 +388,8 @@ impl OddFirstSchedule {
 
             let nq = coup_number(first_coupon, settlement, num_months, true)?;
             let n = coupon_count(first_coupon, maturity, frequency)? as f64;
-            let slope_shift =
-                yield_solver::quasi_shift(settlement, first_coupon, frequency, basis, e)?;
+            let slope =
+                yield_solver::SlopeTerms::long(settlement, first_coupon, frequency, basis, e, n)?;
             let y = dsc / e;
             Ok(OddFirstSchedule {
                 m,
@@ -402,7 +403,7 @@ impl OddFirstSchedule {
                 offset: nq,
                 y,
                 accrued: 100.0 * rate / m * anl,
-                slope_shift,
+                slope,
             })
         }
     }

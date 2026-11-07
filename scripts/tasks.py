@@ -3,11 +3,14 @@
 
   scripts/tasks.py list [--lane L] [--status S] [--milestone M]
   scripts/tasks.py next --lane L [--tier T] [--no-fetch]  # best ready, unclaimed task in a lane
-                                         # that is not busy; handoffs (also on pushed agent/*
+                                         # not busy for its tier (decision 0331); handoffs (also on pushed agent/*
                                          # branches) count as opus, come first; --lane functions
                                          # means any functions-* lane (decision 0022); a task
                                          # blocked at the review-round limit on an idle branch
-                                         # comes next for opus, with its branch (decision 0095)
+                                         # comes next for opus, with its branch (decision 0095);
+                                         # a P0 is offered in a busy lane too, and when only the
+                                         # busy rule hides ready tasks it prints "lane L busy: T
+                                         # in flight on B" and exits 3, not 1 (decision 0330)
   scripts/tasks.py ready [--lane L] [--tier T] [--no-fetch]  # every task `next` could pick, in its
                                          # order, then "N ready" (queue health, decision 0021)
   scripts/tasks.py validate              # schema + dependency checks, every TODO(T-XXXX) in
@@ -43,6 +46,8 @@ import time
 from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
+
+import milestone_order
 
 ROOT = Path(__file__).resolve().parent.parent
 TASKS = ROOT / "docs" / "tasks"
@@ -655,6 +660,9 @@ def new_task(tasks: list[dict[str, object]], fetch: bool = True) -> int:
 AGENT_BRANCH = re.compile(r"^refs/remotes/origin/agent/([^/]+)/(T-\d{4})(?:-|$)")
 # An unresumed handoff; the opus run that picks it up renames it "## Handoff (resumed)".
 HANDOFF = re.compile(r"^## Handoff\s*$", re.M)
+# A branch whose task was ever handed off or re-reviewed after the review-round limit is the opus
+# worker's, resumed or not (work-loop steps 5b and 5c), whatever `tier:` its task file says.
+OPUS_BRANCH = re.compile(r"^## Handoff\b|^Resumed after the review-round limit", re.M)
 # Work-loop step 5's marker for a task blocked only because its review rounds ran out; a second
 # block writes "review-round limit, twice", which this does not match (decision 0095).
 REVIEW_LIMIT = re.compile(r"^Blocked because: review-round limit\s*$", re.M)
@@ -665,7 +673,7 @@ CLAIM_TTL_SECONDS = 24 * 3600  # a pushed agent/* branch younger than this claim
 
 def branch_claims(
     fetch: bool = True,
-) -> tuple[set[str], set[str], set[tuple[str, str]], dict[str, str]]:
+) -> tuple[set[str], set[str], set[tuple[str, str, str, str]], dict[str, str]]:
     """(claimed, handed_off, active, review_limited) from pushed `agent/<lane>/T-XXXX-*` branches.
 
     A pushed branch with a commit in the last 24 h is a claim: another worker must not start the
@@ -673,10 +681,12 @@ def branch_claims(
     at any age: main still says `todo`, and the blocker is recorded only on the branch (decision 0048).
     A branch whose task file has a `## Handoff` section was escalated to opus (step 5b); main
     still shows `tier: sonnet` until it merges (decision 0018).
-    `active` holds (lane, task id) for branches with a commit in the last 2 h that are not
-    unresumed handoffs (those wait for the opus worker) and whose task is not `status: blocked`
-    on the branch (it cannot progress, but stays claimed); `available` turns them into busy lanes
-    (decision 0022). `review_limited` maps task id -> branch for tasks blocked on their branch with
+    `active` holds (lane, task id, branch, tier) for branches with a commit in the last 2 h that are
+    not unresumed handoffs (those wait for the opus worker) and whose task is not `status: blocked`
+    on the branch (it cannot progress, but stays claimed); `available` turns them into lanes busy
+    for that tier (decisions 0022, 0331). The tier is the branch's own task file's: "opus" once it
+    was handed off or re-reviewed (`OPUS_BRANCH`), else its `tier:`, and "" when the branch has no
+    task file. `review_limited` maps task id -> branch for tasks blocked on their branch with
     the review-round-limit marker and no commit for 2 h: the opus worker re-reviews them
     (decision 0095). Best effort, like `git_task_ids`.
     """
@@ -688,7 +698,8 @@ def branch_claims(
         claimed: set[str] = set()
         handed: set[str] = set()
         blocked: set[str] = set()
-        recent: dict[str, str] = {}  # task id -> lane, for branches younger than BUSY_SECONDS
+        recent: dict[str, tuple[str, str]] = {}  # task id -> (lane, branch), younger than BUSY_SECONDS
+        tiers: dict[str, str] = {}  # task id -> tier of the task file on its branch
         limited: dict[str, str] = {}
         now = time.time()
         refs = git("for-each-ref", "--format=%(refname) %(committerdate:unix)", "refs/remotes/origin/agent")
@@ -704,7 +715,7 @@ def branch_claims(
             if age < CLAIM_TTL_SECONDS:
                 claimed.add(tid)
             if age < BUSY_SECONDS:
-                recent[tid] = lane
+                recent[tid] = (lane, ref.removeprefix("refs/remotes/origin/"))
             for name in git("ls-tree", "-r", "--name-only", ref, "--", "docs/tasks").splitlines():
                 if f"/{tid}-" not in name:
                     continue
@@ -712,14 +723,20 @@ def branch_claims(
                 if HANDOFF.search(text):
                     handed.add(tid)
                 try:
-                    if front_matter(text, Path(name)).get("status") == "blocked":
+                    fields = front_matter(text, Path(name))
+                    tiers[tid] = "opus" if OPUS_BRANCH.search(text) else str(fields.get("tier", ""))
+                    if fields.get("status") == "blocked":
                         blocked.add(tid)
                         branch = ref.removeprefix("refs/remotes/origin/")
                         if age >= BUSY_SECONDS and REVIEW_LIMIT.search(text) and SAFE_BRANCH.match(branch):
                             limited[tid] = branch
                 except ValueError:  # malformed front matter on a branch: not known to be blocked
                     pass
-        active = {(lane, tid) for tid, lane in recent.items() if tid not in handed | blocked}
+        active = {
+            (lane, tid, branch, tiers.get(tid, ""))
+            for tid, (lane, branch) in recent.items()
+            if tid not in handed | blocked
+        }
         return claimed | blocked, handed, active, limited
     except (OSError, subprocess.CalledProcessError) as e:
         print(f"warning: could not read agent branches ({e}); claims and handoffs on branches not seen",
@@ -776,27 +793,46 @@ def available(
     lane: str | None,
     tier: str | None,
     fetch: bool = True,
-) -> tuple[list[dict[str, object]], dict[str, str]]:
-    """(ready tasks a worker of `tier` may start in `lane`, branches to resume): best first: P0, then handoffs, then
-    tasks to re-review after the review-round limit (decision 0095), then campaign tasks and their
+) -> tuple[list[dict[str, object]], dict[str, str], dict[str, tuple[str, str]]]:
+    """(ready tasks a worker of `tier` may start in `lane`, branches to resume, busy lanes): best first: P0, then
+    handoffs, then tasks to re-review after the review-round limit (decision 0095), then campaign tasks and their
     open dependencies by stage (decisions 0083, 0094, 0114), then milestone and priority (a P0 never waits behind
-    an escalated lower-priority task; decision 0023). The map gives the branch of each re-review."""
+    an escalated lower-priority task; decision 0023). The first map gives the branch of each re-review. The second
+    maps each busy lane that hides a ready task of `tier` (and nothing else does) to one (task id, branch) in flight
+    there, so `next` can say the lane is busy rather than empty (decision 0330). A P0 is offered whatever its lane
+    is doing (decision 0330). A lane is busy for one tier at a time: a sonnet task in flight hides only sonnet
+    tasks, and an opus one only opus tasks (decision 0331)."""
     claimed, on_branches, active, limited = branch_claims(fetch=fetch)
 
     def resumable(t: dict[str, object]) -> bool:
         """An opus run resumes this task's branch: a handoff, or a re-review (decision 0095)."""
         return tier != "sonnet" and (handed_off(t, on_branches) or str(t["id"]) in limited)
 
-    # One task in flight per lane. A branch whose task is already done on main (merged, branch not
-    # yet deleted) leaves its lane free, so a looping worker can take the next task at once.
-    # The task's own `lane:` decides (the branch name is only a fallback for tasks not on main).
-    in_flight = Counter(
-        str(by_id[tid].get("lane")) if tid in by_id else lane
-        for lane, tid in active
-        if by_id.get(tid, {}).get("status") not in ("done", "dropped")
-    )
-    busy = {lane for lane, n in in_flight.items() if n >= LANE_SLOTS.get(lane, 1)}
-    cands = [
+    def tiers_of(tier_name: object) -> tuple[str, ...]:
+        """The tiers whose slots a task of `tier_name` takes: its own, or every tier when unknown."""
+        return (str(tier_name),) if tier_name in TIERS else tuple(TIERS)
+
+    # One task in flight per lane and tier (decisions 0022, 0331). A branch whose task is already done on
+    # main (merged, branch not yet deleted) leaves its lane free, so a looping worker can take the next task at
+    # once. The task's own `lane:` decides (the branch name is only a fallback for tasks not on main); its tier is
+    # the branch's task file's, else main's, and a branch of unknown tier takes a slot of every tier.
+    flights: dict[tuple[str, str], list[tuple[str, str]]] = {}
+    for branch_lane, tid, branch, branch_tier in sorted(active):
+        task = by_id.get(tid)
+        if task is not None and task.get("status") in ("done", "dropped"):
+            continue
+        flight_lane = str(task.get("lane")) if task is not None else branch_lane
+        flight_tier = branch_tier or (effective_tier(task, on_branches, limited) if task is not None else None)
+        for name in tiers_of(flight_tier):
+            flights.setdefault((flight_lane, name), []).append((tid, branch))
+    busy = {key for key, flying in flights.items() if len(flying) >= LANE_SLOTS.get(key[0], 1)}
+
+    def busy_key(t: dict[str, object]) -> tuple[str, str] | None:
+        """The (lane, tier) whose full slots hide `t`, if any."""
+        keys = [(str(t.get("lane")), name) for name in tiers_of(effective_tier(t, on_branches, limited))]
+        return next((key for key in keys if key in busy), None)
+
+    unclaimed = [
         t
         for t in tasks
         if ready(t, by_id)
@@ -805,9 +841,15 @@ def available(
         # Someone else's pushed claim; a handoff or a re-review is the opus worker's to resume
         # (decisions 0018, 0095).
         and (str(t["id"]) not in claimed or resumable(t))
-        # One task in flight per lane; a handoff or a re-review is resumed whatever its lane is doing.
-        and (t.get("lane") not in busy or resumable(t))
     ]
+    # One task in flight per lane and tier; a handoff or a re-review is resumed whatever its lane is doing, and a
+    # P0 is started whatever it is doing (decision 0330).
+    current, order = milestone_order.read(ROOT)  # current-milestone work passes later work (decision 0332)
+    cands = [t for t in unclaimed if (key := busy_key(t)) is None or resumable(t) or str(t.get("priority")) == "P0"
+             or milestone_order.passes_later_work(t, [by_id.get(i, {}) for i, _ in flights[key]], current, order)]
+    shown = {str(t.get("lane")) for t in cands}
+    hiding = {key[0]: key for t in unclaimed if (key := busy_key(t)) is not None and key[0] not in shown}
+    busy_lanes = {name: flights[hiding[name]][0] for name in sorted(hiding)}
     campaign = in_campaign(tasks, by_id)
     cands.sort(
         key=lambda t: (
@@ -820,7 +862,7 @@ def available(
             str(t["id"]),
         )
     )
-    return cands, limited
+    return cands, limited, busy_lanes
 
 
 def resume_note(t: dict[str, object], limited: dict[str, str]) -> str:
@@ -902,12 +944,19 @@ def main() -> int:
         print(f"{len(found)} tasks for issue #{number}")
         return 0 if found else 1
     if cmd in ("next", "ready"):
-        cands, limited = available(tasks, by_id, arg("--lane"), arg("--tier"), fetch="--no-fetch" not in sys.argv)
+        cands, limited, busy_lanes = available(
+            tasks, by_id, arg("--lane"), arg("--tier"), fetch="--no-fetch" not in sys.argv
+        )
         if cmd == "ready":
             for t in cands:
                 print(f"{t['id']}  {t.get('lane')!s:<9} {t['title']}{resume_note(t, limited)}")
             print(f"{len(cands)} ready")
             return 0
+        if not cands and busy_lanes:
+            # Ready work waits behind a task in flight: not a reason to plan more (decision 0330).
+            for name, (tid, branch) in busy_lanes.items():
+                print(f"lane {name} busy: {tid} in flight on {branch}")
+            return 3
         if not cands:
             print("no ready task")
             return 1

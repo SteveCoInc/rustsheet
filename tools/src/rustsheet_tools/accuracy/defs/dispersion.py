@@ -1,0 +1,242 @@
+"""Gate A dispersion I (T-4089: STDEV, STDEV.S, STDEVA, VAR, VAR.S, VARA, DEVSQ) and II (T-4090: STDEV.P, STDEVP,
+STDEVPA, VAR.P, VARP, VARPA, AVEDEV), decision 0271.
+
+The math, on the written literals' doubles x[1..n] with the exact mean m = (x[1] + ... + x[n]) / n:
+- DEVSQ is the exact sum of squared deviations S = sum((x[i] - m)^2) (statistics.md "DEVSQ is a two-pass sum": Excel
+  computes it in doubles with two passes; the math is the exact S);
+- VAR, VAR.S and VARA are the exact sample variance S / (n - 1), and STDEV, STDEV.S and STDEVA its square root
+  (statistics.md "VAR/STDEV switch between a one-pass and a two-pass formula": Excel's choice of formula moves at most
+  a few last digits, so the math is the exact variance either way);
+- VAR.P, VARP and VARPA are the exact population variance S / n, and STDEV.P, STDEVP and STDEVPA its square root (the
+  same entry: the population forms switch between the same two formulas with d = 0);
+- AVEDEV is the exact mean absolute deviation sum(|x[i] - m|) / n (Microsoft's AVEDEV page; statistics.md
+  "Statistical function argument modes" for what counts). Excel sums in doubles (numbers.md, double rounding), so
+  the math is the exact value.
+STDEVA and VARA over numbers are STDEV.S and VAR.S, and STDEVPA and VARPA are STDEV.P and VAR.P: they differ only in
+how text and booleans in a range count (statistics.md "VARA family: single-cell reference arguments"), and the
+sampler draws numbers only.
+
+Domain (an Excel error region, never a math value):
+- VAR and STDEV of one number is `#DIV/0!` (n - 1 = 0).
+- VAR and STDEV, population forms included: a one-pass sum of squares beyond the double range is `#NUM!`
+  (statistics.md: "`VAR.P` of 1E+200 twice is `#NUM!`"). The population forms of one number are 0, not an error.
+- AVEDEV: an overflow of its sum of the numbers, an absolute deviation or their sum is `#NUM!`, inferred from its two
+  sums and not probed. AVEDEV of one number is 0.
+- DEVSQ: an overflow in its two-pass form (the sum of the numbers, a squared deviation or their sum) is `#NUM!`,
+  inferred from statistics.md "DEVSQ is a two-pass sum" and not probed.
+The draws keep |x| at or below 1E+150, so no drawn point reaches an overflow; the rules keep an eval cell over
+larger literals from getting a value.
+Squares that are subnormal are flushed to 0 by Excel (statistics.md, `STDEV.S({0,2.2E-154})` is 0); the draws keep
+every number at or above 1E-60 in magnitude, so a deviation small enough to flush would need a number within 1E-154
+of the mean, which a draw does not aim at.
+
+The arity is drawn per stratum: 2 to 10 numbers (typical), offset data near the one-pass/two-pass switch (tail),
+small shapes such as equal numbers, one or two numbers and the argument limit (edge; the limit is 254 for VAR.S
+and STDEV.S), 50 to 255 numbers of mixed magnitudes (extreme) and a log-uniform count of log-uniform numbers (log-uniform).
+"""
+
+from __future__ import annotations
+
+import math
+import random
+from collections.abc import Callable, Sequence
+
+import mpmath
+
+from rustsheet_tools.accuracy.defs._common import real_args, signed_log_uniform
+from rustsheet_tools.accuracy.defs.aggregate import MAX_ARGS, running_total
+from rustsheet_tools.accuracy.literal import Arg, round15
+from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, Param, register
+from rustsheet_tools.accuracy.sampler import log_uniform
+
+DEVSQ_SOURCE = "statistics.md#devsq-is-a-two-pass-sum-t-1749"
+SWITCH_SOURCE = "statistics.md#varstdev-switch-between-a-one-pass-and-a-two-pass-formula"
+VARA_SOURCE = "statistics.md#vara-family-single-cell-reference-arguments"
+AVEDEV_SOURCE = "statistics.md#statistical-function-argument-modes"
+MAX_MAGNITUDE = 1e150  # every square and the one-pass sum of 255 squares stay inside the double range
+MIN_MAGNITUDE = 1e-60  # every nonzero deviation of a draw stays far above the subnormal squares Excel flushes
+
+
+def deviation_power_sum(xs: Sequence[mpmath.mpf], power: int, mean: mpmath.mpf | None = None) -> mpmath.mpf:
+    """The exact sum of the deviations from the exact mean raised to `power` (2: DEVSQ's S; 3 and 4: the
+    skewness and kurtosis moments, T-4091). A caller summing several powers passes the exact `mean` once."""
+    m = mpmath.fsum(xs) / len(xs) if mean is None else mean
+    return mpmath.fsum((x - m) ** power for x in xs)
+
+
+def squared_deviations(xs: Sequence[mpmath.mpf]) -> mpmath.mpf:
+    """The exact sum of squared deviations from the exact mean."""
+    return deviation_power_sum(xs, 2)
+
+
+def _devsq(args: Sequence[MathArg]) -> mpmath.mpf:
+    return squared_deviations(real_args(args))
+
+
+def _var(args: Sequence[MathArg]) -> mpmath.mpf:
+    xs = real_args(args)
+    if len(xs) < 2:
+        msg = "#DIV/0!: the sample variance of one number"
+        raise DomainError(msg)
+    return squared_deviations(xs) / (len(xs) - 1)
+
+
+def _stdev(args: Sequence[MathArg]) -> mpmath.mpf:
+    return mpmath.sqrt(_var(args))
+
+
+def _var_p(args: Sequence[MathArg]) -> mpmath.mpf:
+    xs = real_args(args)
+    return squared_deviations(xs) / len(xs)
+
+
+def _stdev_p(args: Sequence[MathArg]) -> mpmath.mpf:
+    return mpmath.sqrt(_var_p(args))
+
+
+def _avedev(args: Sequence[MathArg]) -> mpmath.mpf:
+    xs = real_args(args)
+    m = mpmath.fsum(xs) / len(xs)
+    return mpmath.fsum(abs(x - m) for x in xs) / len(xs)
+
+
+def squares_overflow(args: Sequence[MathArg]) -> str | None:
+    """VAR's and STDEV's `#NUM!`: a square, or the one-pass running sum of squares, beyond the double range
+    (statistics.md: `VAR.P` of 1E+200 twice is `#NUM!`)."""
+    squares = [float(x) * float(x) for x in real_args(args)]
+    if not all(math.isfinite(s) for s in squares):
+        return "a square is beyond the double range"
+    _, total = running_total(squares)
+    return None if math.isfinite(total) else "the sum of squares is beyond the double range"
+
+
+def _two_pass_overflow(args: Sequence[MathArg], deviation: Callable[[float], float], what: str) -> str | None:
+    """A two-pass form's `#NUM!`: the running sum of the numbers, a term (`deviation` of a number minus the double
+    mean) or the running sum of the terms beyond the double range."""
+    xs = [float(x) for x in real_args(args)]
+    _, total = running_total(xs)
+    if not math.isfinite(total):
+        return "the sum of the numbers is beyond the double range"
+    mean = total / len(xs)
+    terms = [deviation(x - mean) for x in xs]
+    if not all(math.isfinite(s) for s in terms):
+        return f"a {what} is beyond the double range"
+    _, total = running_total(terms)
+    return None if math.isfinite(total) else f"the sum of {what}s is beyond the double range"
+
+
+def deviations_overflow(args: Sequence[MathArg]) -> str | None:
+    """DEVSQ's `#NUM!`, inferred from its two-pass form (statistics.md "DEVSQ is a two-pass sum": the double mean, then
+    the squared deviations summed left to right) and not probed. The draws never reach it."""
+    return _two_pass_overflow(args, lambda d: d * d, "squared deviation")
+
+
+def absolute_deviations_overflow(args: Sequence[MathArg]) -> str | None:
+    """AVEDEV's `#NUM!`, inferred from its two sums (the double mean, then the absolute deviations) and not probed.
+    The draws never reach it."""
+    return _two_pass_overflow(args, abs, "absolute deviation")
+
+
+def _var_domain(args: Sequence[MathArg]) -> str | None:
+    if len(args) < 2:
+        return "#DIV/0!: the sample variance of one number"
+    return squares_overflow(args)
+
+
+# -- draws -------------------------------------------------------------------------------------
+
+
+def _number(rng: random.Random, lo: float = 1e-3, hi: float = 1e6) -> float:
+    return signed_log_uniform(rng, lo, hi)
+
+
+def _offset(rng: random.Random) -> list[float]:
+    """Offset data, where Excel's one-pass sum cancels and its switch picks the two-pass form (statistics.md: `VAR.P`
+    of {1000000003,1000000001,...}): a large offset plus a small spread, written to 15 digits."""
+    offset = signed_log_uniform(rng, 1.0, 1e9)
+    spread = abs(offset) * log_uniform(rng, 1e-9, 1e-1)
+    return [round15(offset + spread * rng.uniform(-1, 1)) for _ in range(rng.randint(2, 12))]
+
+
+def _edge(rng: random.Random, max_args: int) -> list[float]:
+    shape = rng.randrange(6)
+    if shape == 0:  # two numbers, the smallest sample
+        return [_number(rng), _number(rng)]
+    if shape == 1:  # equal numbers: S is exactly 0 (Excel's double mean of three or more may not be x)
+        x = _number(rng)
+        return [x] * rng.randint(2, 6)
+    if shape == 5:  # one number, the invalid neighbour: VAR and STDEV are #DIV/0!, DEVSQ is 0
+        return [_number(rng)]
+    if shape == 2:  # small integers, where Excel keeps the one-pass form ({1,2,4}: 2.333333333333334)
+        return [float(rng.randint(-20, 20)) for _ in range(rng.randint(2, 8))]
+    if shape == 3:  # the argument limit
+        return [_number(rng) for _ in range(max_args)]
+    # shape 4: magnitudes near the draw bounds
+    return [
+        signed_log_uniform(rng, MAX_MAGNITUDE / 1e3, MAX_MAGNITUDE, 0.5) for _ in range(rng.randint(2, 6))
+    ]
+
+
+def variance_draws(max_args: int) -> Callable[[str, random.Random], list[Arg]]:
+    """The draw of a function whose calls take at most `max_args` numbers."""
+
+    def draw(stratum: str, rng: random.Random) -> list[Arg]:
+        if stratum == "tail":
+            return list(_offset(rng))
+        if stratum == "edge":
+            return list(_edge(rng, max_args))
+        if stratum == "extreme":
+            return [_number(rng, 1e-20, 1e20) for _ in range(rng.randint(50, max_args))]
+        if stratum == "log-uniform":
+            count = max(2, round(log_uniform(rng, 2, max_args)))
+            return [_number(rng, MIN_MAGNITUDE, MAX_MAGNITUDE) for _ in range(count)]
+        return [_number(rng) for _ in range(rng.randint(2, 10))]
+
+    return draw
+
+
+_draw = variance_draws(MAX_ARGS)
+# A file holding a newer (`_xlfn.`) function with 255 arguments does not open in Excel; 254 does (syntax.md
+# "The repeating maxima", T-4089), so VAR.S and STDEV.S points take at most 254 numbers.
+_draw_xlfn = variance_draws(MAX_ARGS - 1)
+
+
+def variadic_definition(
+    function: str,
+    value: Callable[[Sequence[MathArg]], mpmath.mpf],
+    domain: Callable[[Sequence[MathArg]], str | None] | None,
+    sources: tuple[str, ...],
+    *,
+    draw: Callable[[str, random.Random], list[Arg]] = _draw,
+    param: str = "number",
+) -> Definition:
+    """Register a variadic one-parameter Definition (shared by the dispersion and shape/means modules)."""
+    return register(
+        Definition(
+            function=function,
+            params=(Param(param, "real", source=sources[0]),),
+            value=value,
+            domain=domain,
+            draw=draw,
+            variadic=True,
+            sources=(*sources, "decision 0271"),
+        )
+    )
+
+
+VAR = variadic_definition("VAR", _var, _var_domain, (SWITCH_SOURCE,))
+VAR_S = variadic_definition("VAR.S", _var, _var_domain, (SWITCH_SOURCE,), draw=_draw_xlfn)
+VARA = variadic_definition("VARA", _var, _var_domain, (SWITCH_SOURCE, VARA_SOURCE), param="value")
+STDEV = variadic_definition("STDEV", _stdev, _var_domain, (SWITCH_SOURCE,))
+STDEV_S = variadic_definition("STDEV.S", _stdev, _var_domain, (SWITCH_SOURCE,), draw=_draw_xlfn)
+STDEVA = variadic_definition("STDEVA", _stdev, _var_domain, (SWITCH_SOURCE, VARA_SOURCE), param="value")
+DEVSQ = variadic_definition("DEVSQ", _devsq, deviations_overflow, (DEVSQ_SOURCE,))
+VAR_P = variadic_definition("VAR.P", _var_p, squares_overflow, (SWITCH_SOURCE,), draw=_draw_xlfn)
+VARP = variadic_definition("VARP", _var_p, squares_overflow, (SWITCH_SOURCE,))
+VARPA = variadic_definition("VARPA", _var_p, squares_overflow, (SWITCH_SOURCE, VARA_SOURCE), param="value")
+STDEV_P = variadic_definition("STDEV.P", _stdev_p, squares_overflow, (SWITCH_SOURCE,), draw=_draw_xlfn)
+STDEVP = variadic_definition("STDEVP", _stdev_p, squares_overflow, (SWITCH_SOURCE,))
+STDEVPA = variadic_definition(
+    "STDEVPA", _stdev_p, squares_overflow, (SWITCH_SOURCE, VARA_SOURCE), param="value"
+)
+AVEDEV = variadic_definition("AVEDEV", _avedev, absolute_deviations_overflow, (AVEDEV_SOURCE,))

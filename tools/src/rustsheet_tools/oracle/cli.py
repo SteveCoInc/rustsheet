@@ -30,7 +30,14 @@ from rustsheet_tools import repo_root
 from rustsheet_tools.oracle.backends import BACKENDS, OracleError, OracleInfo
 from rustsheet_tools.oracle.calibrate import calibrate, to_markdown
 from rustsheet_tools.oracle.canary import checked_values, embed_canary
-from rustsheet_tools.snapshot import compare_workbooks, formula_values, is_undecoded, snapshot, suite_cases
+from rustsheet_tools.snapshot import (
+    compare_workbooks,
+    formula_values,
+    is_undecoded,
+    pivot_areas,
+    snapshot,
+    suite_cases,
+)
 from rustsheet_tools.spec2xlsx import build_xlsx
 
 GOLDEN_BACKENDS = {"excel-graph", "excel-desktop"}
@@ -69,6 +76,14 @@ def _recalc_cached(backend: Any, xlsx: bytes) -> tuple[dict[str, dict[str, Any]]
         raise
     meta.write_text(json.dumps(info.__dict__))
     return values, info, sha
+
+
+def _recalculated_pivots(backend: Any, sha: str, texts: dict[str, dict[str, str]]) -> list[dict[str, Any]]:
+    """Excel's render and layout of each pivot of the recalculated workbook `_recalc_cached` kept in
+    the cache (T-4123), with the displayed text of its cells from `texts` (`OracleInfo.pivot_texts`,
+    T-4169); none when that workbook is not there."""
+    out = _cache_paths(backend, sha)[0]
+    return pivot_areas(snapshot(out), texts) if out.exists() else []
 
 
 def cmd_status(_: argparse.Namespace) -> int:
@@ -142,7 +157,7 @@ def cmd_fill(args: argparse.Namespace) -> int:
             failed += 1
             print(f"FAIL {case}: {e}", file=sys.stderr)
             continue
-        oracle = {
+        oracle: dict[str, Any] = {
             "format": "rustsheet-oracle/v1",
             "source": {
                 "kind": info.kind,
@@ -157,6 +172,8 @@ def cmd_fill(args: argparse.Namespace) -> int:
         }
         if info.texts:  # displayed text of the cells the case lists in `text` (T-1610)
             oracle["text"] = info.texts
+        if pivots := _recalculated_pivots(backend, sha, info.pivot_texts):
+            oracle["pivots"] = pivots
         _report_undecoded(case, values)
         if spec:
             _report_hand_disagreements(case, spec, values)

@@ -87,8 +87,10 @@ mod merged_cells;
 mod mixed_fraction;
 mod model;
 mod name_key;
+mod name_load_order;
 mod nested_array;
 mod node_frames;
+mod number_mark;
 mod outside_cell;
 mod positions;
 mod range_values;
@@ -119,6 +121,7 @@ mod x87_exp;
 mod x87_log10;
 mod x87_log1p;
 mod x87_register;
+mod x87_table_read;
 
 #[cfg(test)]
 mod test;

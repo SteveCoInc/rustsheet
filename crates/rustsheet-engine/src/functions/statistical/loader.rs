@@ -272,6 +272,20 @@ fn loader_t_constant(n: f64) -> Dd {
     dd_add(sum, stirling)
 }
 
+/// The denominator fl(pi fl(1 + xx)) of Excel's df-1 density, xx = fl(t t).
+fn df_one_denominator(xx: f64) -> f64 {
+    extended_product(std::f64::consts::PI, extended_sum(1.0, xx))
+}
+
+/// Whether Excel's T.DIST(t, 1, FALSE) is `#DIV/0!`: fl(t t) is finite but the denominator
+/// fl(pi fl(1 + fl(t t))) overflows, |t| from about 7.56E+153 to 2^512 (`T.DIST(7.6E+153,1,FALSE)`
+/// is `#DIV/0!`, `T.DIST(7.55E+153,1,FALSE)` is 0; probes/t3554-tdist-density-df1-div0 A8:A10,
+/// probes/t3554-tdist-density-huge-x A1, A18; statistics.md "T.DIST's density is #NUM! at a huge x").
+pub(crate) fn excel_t_density_df_one_overflows(t: f64) -> bool {
+    let xx = extended_product(t, t);
+    xx.is_finite() && !df_one_denominator(xx).is_finite()
+}
+
 /// Excel's T.DIST(t, n, FALSE) for a truncated df n >= 1 (statistics.md "Student t density is
 /// Loader's dt", T-2513, T-2585), every operation an x87 one stored to a double:
 /// - df 1: `fl(1/fl(pi fl(1 + fl(t t))))`; df 2: `EXP(fl(-1.5 LN(fl(2 + fl(t t)))))`;
@@ -294,8 +308,9 @@ pub(crate) fn excel_t_density(t: f64, n: f64) -> Option<f64> {
         return None;
     }
     if n == 1.0 {
-        let denominator = extended_product(std::f64::consts::PI, extended_sum(1.0, xx));
-        let density = extended_quotient(1.0, denominator);
+        // A subnormal quotient is 0 (probes/t3554-tdist-density-df1-div0 A3:A8, |t| 3.8E+153 to
+        // 7.55E+153), as Excel's `/` flushes one (numbers.md "Subnormal results become 0").
+        let density = flush_subnormal(extended_quotient(1.0, df_one_denominator(xx)));
         return density.is_finite().then_some(density);
     }
     if n == 2.0 {
@@ -327,6 +342,86 @@ pub(crate) fn excel_t_density(t: f64, n: f64) -> Option<f64> {
     density.is_finite().then_some(density)
 }
 
+/// The ratio cut of Loader's own bd0, R nmath `bd0.c` (`fabs(x-np) < 0.1*(x+np)`), copied verbatim:
+/// the accurate form, not Excel's ([`EXCEL_BD0_CUT`]).
+const LOADER_BD0_CUT: f64 = 0.1;
+
+/// Loader's deviance bd0(x, M) = x ln(x / M) + M - x, accurately (R nmath `bd0.c`, Loader 2000):
+/// below the cut the odd series in v = (x - M) / (x + M), which avoids the cancellation of the log
+/// form near x = M, else the log form. M is a double-double, so the rounding of the caller's M
+/// (a product and a quotient of counts) does not reach the result: its low part enters through
+/// the first-order term d bd0 / dM = 1 - x / M, exact to O(lo^2 / M). Not Excel's bd0
+/// ([`excel_bd0`], an x87 model fitted to BETA.DIST and T.DIST cells): this is the math, for the
+/// kernels whose target is the Gate A envelope (HYPGEOM.DIST past its walk, T-4502).
+///
+/// For x > 0 and M > 0; the series has at most [`BD0_MAX_TERMS`] terms.
+pub(crate) fn loader_bd0(x: f64, m: Dd) -> f64 {
+    let correction = (1.0 - x / m.0) * m.1;
+    let d = x - m.0;
+    if d.abs() < LOADER_BD0_CUT * (x + m.0) {
+        let mut v = d / (x + m.0);
+        let mut sum = d * v;
+        if sum.abs() < f64::MIN_POSITIVE {
+            return sum + correction;
+        }
+        let mut ej = 2.0 * x * v;
+        v *= v;
+        for j in 1..BD0_MAX_TERMS {
+            ej *= v;
+            let next = sum + ej / f64::from(2 * j + 1);
+            if next == sum {
+                break;
+            }
+            sum = next;
+        }
+        return sum + correction;
+    }
+    x * (x / m.0).ln() + (m.0 - x) + correction
+}
+
+/// ln of the binomial probability of x successes in n trials, `dbinom_raw(x, n, p, q, log = TRUE)`
+/// of R nmath `dbinom.c` (Loader's saddle point), with the means n p and n q given as
+/// double-doubles: stirlerr(n) - stirlerr(x) - stirlerr(n - x) - bd0(x, n p) - bd0(n - x, n q) less
+/// half of ln(2 pi x (n - x) / n) ([`stirlerr_exact`], [`loader_bd0`]), and R's own forms at x = 0
+/// and x = n. For whole x and n with 0 <= x <= n, and n p, n q >= 0 summing to n; -inf where the
+/// probability is 0. Each piece is within a few ulp of its exact value and none is much larger than
+/// the result (the deviances are non-negative), so the result is within a few units of 2^-52 of its
+/// own magnitude, plus about 1E-15.
+pub(crate) fn loader_ln_binomial(x: f64, n: f64, np: Dd, nq: Dd) -> f64 {
+    if np.0 == 0.0 {
+        return if x == 0.0 { 0.0 } else { f64::NEG_INFINITY };
+    }
+    if nq.0 == 0.0 {
+        return if x == n { 0.0 } else { f64::NEG_INFINITY };
+    }
+    if x == 0.0 {
+        if n == 0.0 {
+            return 0.0;
+        }
+        // R: p < 0.1 ? -bd0(n, n q) - n p : n ln q, with p = n p / n.
+        return if np.0 < 0.1 * n {
+            -loader_bd0(n, nq) - (np.0 + np.1)
+        } else {
+            n * ((nq.0 + nq.1) / n).ln()
+        };
+    }
+    if x == n {
+        return if nq.0 < 0.1 * n {
+            -loader_bd0(n, np) - (nq.0 + nq.1)
+        } else {
+            n * ((np.0 + np.1) / n).ln()
+        };
+    }
+    if !(x > 0.0 && x < n) {
+        return f64::NEG_INFINITY;
+    }
+    let nx = n - x;
+    let stirling = stirlerr_exact(n).0 - stirlerr_exact(x).0 - stirlerr_exact(nx).0;
+    let deviance = loader_bd0(x, np) + loader_bd0(nx, nq);
+    let lf = LN_2PI + x.ln() + (-x / n).ln_1p();
+    stirling - deviance - 0.5 * lf
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(
@@ -335,6 +430,35 @@ mod tests {
     )]
     use super::*;
     use crate::test::util::{ulps, within_fifteen_digits};
+
+    // Loader's binomial log density against exact small binomial probabilities, in each of R's
+    // branches: the saddle point inside (with bd0's series near the mean and its log form away
+    // from it), and x = 0 and x = n with p and q on both sides of 0.1.
+    #[test]
+    fn loader_ln_binomial_is_the_exact_log() {
+        let cases: [(f64, f64, f64, f64); 7] = [
+            (3.0, 10.0, 0.5, 120.0 / 1024.0),
+            (5.0, 10.0, 0.5, 252.0 / 1024.0),
+            (2.0, 5.0, 0.3, 10.0 * 0.09 * 0.343),
+            (0.0, 5.0, 0.3, 0.168_07),
+            (0.0, 20.0, 0.05, 0.95f64.powi(20)),
+            (20.0, 20.0, 0.95, 0.95f64.powi(20)),
+            (5.0, 5.0, 0.3, 0.002_43),
+        ];
+        for (x, n, p, exact) in cases {
+            let ours = loader_ln_binomial(x, n, (n * p, 0.0), (n - n * p, 0.0));
+            assert!(
+                (ours - exact.ln()).abs() < 1E-14,
+                "b({x}; {n}, {p}): {ours} {}",
+                exact.ln()
+            );
+        }
+        // A mean's low part moves bd0 to first order: bd0(x, M + lo) = bd0(x, M) + (1 - x/M) lo.
+        let shifted = loader_bd0(10.0, (9.0, 1E-12));
+        let expected = loader_bd0(10.0, (9.0, 0.0)) + (1.0 - 10.0 / 9.0) * 1E-12;
+        assert_eq!(shifted, expected);
+        assert_eq!(loader_bd0(7.0, (7.0, 0.0)), 0.0);
+    }
 
     #[test]
     fn stirlerr_exact_matches_mpmath() {
@@ -495,5 +619,26 @@ mod tests {
         // Gate A T.DIST/r4-T-2585 A138: the subnormal product is flushed, as Excel's `*` does.
         assert_eq!(excel_t_density(-1.1002374143529E+20, 15.0), Some(0.0));
         assert_eq!(excel_t_density(f64::NAN, 5.0), None);
+        // probes/t3554-tdist-density-df1-div0 A1, A2 (normal) and A3 (subnormal, flushed).
+        assert_eq!(
+            excel_t_density(3.7e153, 1.0),
+            Some(2.325_126_999_151_137_3e-308)
+        );
+        assert_eq!(
+            excel_t_density(-3.75e153, 1.0),
+            Some(2.263_536_968_418_066_7e-308)
+        );
+        assert_eq!(excel_t_density(3.8e153, 1.0), Some(0.0));
+    }
+
+    #[test]
+    fn df_one_denominator_overflow_brackets_excel() {
+        // probes/t3554-tdist-density-df1-div0 A8:A10 and probes/t3554-tdist-density-huge-x A1, A2.
+        // 2^512 - 2^460, two doubles below 2^512 (the probed H2; 2^512's predecessor is unprobed).
+        let two_below = 2f64.powi(512) * (1.0 - f64::EPSILON);
+        assert!(!excel_t_density_df_one_overflows(7.55e153));
+        assert!(excel_t_density_df_one_overflows(7.6e153));
+        assert!(excel_t_density_df_one_overflows(-two_below));
+        assert!(!excel_t_density_df_one_overflows(2f64.powi(512)));
     }
 }

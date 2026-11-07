@@ -12,6 +12,7 @@ use crate::expressions::parser::parse_range;
 use crate::expressions::parser::stringify::{DataBlock, DisplaceData, Displacement};
 use crate::expressions::types::Area;
 use crate::expressions::utils::number_to_column;
+use crate::formula_rewrite::RewrittenCell;
 use crate::model::Model;
 use crate::types::{FilterColumn, Table, TableColumn};
 
@@ -28,6 +29,8 @@ struct TableEdits {
     deleted_columns: Vec<(String, String)>,
     /// The lowercase names of the tables a column delete removes whole (T-3733).
     deleted_tables: Vec<String>,
+    /// The lowercase names of the tables a column edit left of them moves whole (T-4680).
+    moved_tables: Vec<String>,
     /// The data blocks of the tables that grow with a row insert at their first data row or at
     /// their totals row, onto which plain ranges grow too (T-2321).
     grown_edges: Vec<DataBlock>,
@@ -147,6 +150,16 @@ pub(crate) struct Bounds {
     pub(crate) right: i32,
     pub(crate) bottom: i32,
     pub(crate) data: (i32, i32),
+}
+
+impl Bounds {
+    /// Whether the two ranges share a cell.
+    pub(crate) fn overlaps(&self, other: &Bounds) -> bool {
+        self.left <= other.right
+            && other.left <= self.right
+            && self.top <= other.bottom
+            && other.top <= self.bottom
+    }
 }
 
 /// The [`Bounds`] of `table`; `None` when its reference or row counts do not fit (directive 5).
@@ -356,8 +369,8 @@ fn edit_filter_columns(filters: &mut Vec<FilterColumn>, edit: ColumnEdit) {
 /// here too. The caller only ever clears the flag with this: a table the import left unfiltered
 /// (a criterion-less or out-of-range filterColumn) stays so. A criterion-less column counts here,
 /// since [`crate::types::FilterCriterion::Other`] also holds a criterion the import read but could
-/// not check; Excel's own result after deleting the filtered column in the application is unprobed
-/// (T-4371).
+/// not check. Excel unfilters the table when a delete in the application takes the filtered
+/// column, and shows the rows it hid (probes/t4371-filtered-table-delete-filtered-column, T-4371).
 fn kept_filter_inside(table: &Table) -> bool {
     table
         .filter_columns
@@ -407,12 +420,13 @@ fn inserted_headers(table: &Table, edit: ColumnEdit) -> Vec<(i32, i32, String)> 
 impl Model {
     /// Rewrites every formula (cells on every sheet, and the conditional formats of `sheet`) for
     /// the structural edit `displace_data` on `sheet`, then moves, grows or shrinks the tables
-    /// that follow it.
+    /// that follow it. Returns the cells a row or column delete rewrote past what re-inserting
+    /// them undoes ([`Model::displace_cells`]).
     pub(crate) fn displace_formulas(
         &mut self,
         sheet: u32,
         displace_data: &DisplaceData,
-    ) -> Result<(), String> {
+    ) -> Result<Vec<RewrittenCell>, String> {
         let edits = self.table_edits(displace_data);
         let displacement = Displacement {
             data: displace_data,
@@ -420,10 +434,22 @@ impl Model {
             grown_edges: &edits.grown_edges,
             deleted_columns: &edits.deleted_columns,
             deleted_tables: &edits.deleted_tables,
+            moved_tables: &edits.moved_tables,
         };
-        self.displace_cells(displacement)?;
+        let column_formulas = self.displaced_column_formulas(displacement);
+        let rewritten = self.displace_cells(displacement)?;
         self.displace_cf_ranges(sheet, displacement);
-        self.resize_tables(sheet, edits.resized)
+        self.displace_defined_names(sheet, displacement);
+        let resized: Vec<String> = edits.resized.iter().map(|(name, _)| name.clone()).collect();
+        self.resize_tables(sheet, edits.resized)?;
+        self.set_displaced_column_formulas(column_formulas);
+        if let DisplaceData::Row { row, delta, .. } = *displace_data {
+            if delta > 0 {
+                let last = row.saturating_add(delta - 1);
+                self.fill_inserted_data_rows(sheet, (row, last), &resized)?;
+            }
+        }
+        Ok(rewritten)
     }
 
     /// The first data row of the table on `sheet`, under a header row, whose data rows the row
@@ -471,6 +497,22 @@ impl Model {
             Vec::new()
         };
         (displace_data, kept)
+    }
+
+    /// The lowercase names of the tables on `sheet` that follow the column insert (`delta > 0`
+    /// columns left of `column`) or delete (columns `column..column - delta`). A formula such an
+    /// edit moves out of one of them is parsed in that table ([`Model::kept_table_holding`]), so
+    /// an unqualified `[@Col]` in the table's own cells names it at its new place (T-4680:
+    /// probes/table-edits/t4274-calc-column-structured-insert-column-a, `=[@Col]*2` reads 2, 4,
+    /// 8 after `insert_column` A). The text is kept either way: a column edit moves no cell to
+    /// another row.
+    pub(crate) fn column_edit_kept(&self, sheet: u32, column: i32, delta: i32) -> Vec<String> {
+        self.table_edits(&DisplaceData::Column {
+            sheet,
+            column,
+            delta,
+        })
+        .kept
     }
 
     /// The table in `kept` (lowercase names) on `sheet` whose range holds (`row`, `column`): a
@@ -525,6 +567,11 @@ impl Model {
                     edits
                         .grown_edges
                         .extend(grown_edge(table, sheet, displace_data));
+                    if resized.columns.is_none()
+                        && matches!(displace_data, DisplaceData::Column { .. })
+                    {
+                        edits.moved_tables.push(name.to_lowercase());
+                    }
                     if let Some(edit) = resized.columns {
                         let deleted = table.columns.iter().skip(edit.index).take(edit.deleted());
                         edits
@@ -550,6 +597,7 @@ impl Model {
             return Ok(());
         }
         let mut headers = Vec::new();
+        let mut shown = Vec::new();
         for (name, resized) in resized {
             if let Some(table) = self.workbook.tables.get_mut(&name) {
                 table.reference = resized.reference;
@@ -557,13 +605,34 @@ impl Model {
                     table.totals_row_count = 0;
                 }
                 if let Some(edit) = resized.columns {
+                    let filtered = table.has_filters;
                     edit_columns(&mut table.columns, edit);
-                    if !table.filter_columns.is_empty() {
+                    if table.filter_columns.is_empty() {
+                        // An API-filtered table holds no criteria; its export writes one on its
+                        // first column (T-4363), so deleting that column takes the filter.
+                        table.has_filters &= edit.delta >= 0 || edit.index > 0;
+                    } else {
                         edit_filter_columns(&mut table.filter_columns, edit);
-                        table.has_filters = table.has_filters && kept_filter_inside(table);
+                        table.has_filters &= kept_filter_inside(table);
+                    }
+                    if filtered && !table.has_filters {
+                        // Excel shows the rows the filter hid once a delete in the application takes
+                        // the table's last criterion (probes/t4371-filtered-table-delete-filtered-column:
+                        // SUBTOTAL 103 counts all six rows; docs/excel-semantics/numbers.md).
+                        shown.extend(bounds(table).map(|b| b.data));
                     }
                     headers.extend(inserted_headers(table, edit));
                 }
+            }
+        }
+        if !shown.is_empty() {
+            // One pass over the sheet's stored rows: a table may span a million rows.
+            let rows = &mut self.workbook.worksheet_mut(sheet)?.rows;
+            for row in rows
+                .iter_mut()
+                .filter(|r| shown.iter().any(|&(a, b)| (a..=b).contains(&r.r)))
+            {
+                row.hidden = false;
             }
         }
         for (row, column, name) in headers {
@@ -571,6 +640,19 @@ impl Model {
         }
         self.reset_tables();
         Ok(())
+    }
+
+    /// Refuses the insert of `count` rows at `row` on `sheet` that would push a table off the sheet
+    /// ([`Model::refuse_table_off_sheet`]) or fill too many calculated-column cells
+    /// ([`Model::refuse_oversized_column_fill`]), before it changes anything.
+    pub(crate) fn refuse_table_row_insert(
+        &self,
+        sheet: u32,
+        row: i32,
+        count: i32,
+    ) -> Result<(), String> {
+        self.refuse_table_off_sheet(sheet, row, count, true)?;
+        self.refuse_oversized_column_fill(sheet, row, count)
     }
 
     /// Refuses an insert of `count` rows (`rows`) or columns at `at` that would push a cell of a

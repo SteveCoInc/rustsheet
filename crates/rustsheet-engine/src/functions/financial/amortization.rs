@@ -158,8 +158,8 @@ impl Model {
     /// Reads the arguments in Excel's order (probes/amor-argument-check-order, T-2485; financial.md
     /// "AMORLINC and AMORDEGRC check order"): cost to rate left to right, each a number (an error,
     /// text or boolean is returned) and each date #NUM! off the calendar as it is read; then the
-    /// value checks; then the basis; then AMORDEGRC's asset life. The checks are written as the
-    /// valid ranges, so a NaN argument fails them too.
+    /// value checks; then the basis; then AMORDEGRC's asset life; then a salvage equal to the cost
+    /// is 0. The checks are written as the valid ranges, so a NaN argument fails them too.
     fn amortization_of(
         &self,
         values: &[CalcResult],
@@ -202,25 +202,33 @@ impl Model {
             rate,
             basis,
         };
+        // Checked after the basis (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is #N/A).
+        if matches!(kind, Amortization::Degressive) && asset_life_refused(rate) {
+            return Err(num_error(cell));
+        }
+        // Nothing to depreciate: 0 at every period, after every check above (the basis's `#N/A`,
+        // basis 2 and the asset life still win), and the value an AMORDEGRC below period 1 reads
+        // stays as it was, while such an AMORDEGRC is 0 itself. An early return, not the walk: a
+        // remain equal to a salvage below the cost still charges (`AMORDEGRC(2400,39679,39813,2070,
+        // 1,0.15,1)` is 776). probes/amor-salvage-equal-cost, T-4504.
+        if salvage == cost {
+            return Ok(Amortized::new(0.0, LeftOver::Keep));
+        }
         match kind {
             Amortization::Linear => asset.linear(period),
-            Amortization::Degressive => {
-                // Checked after the basis (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is #N/A).
-                if asset_life_refused(rate) {
-                    return Err(num_error(cell));
-                }
-                asset.degressive(period, DEGRESSIVE_LOOP_PERIODS)
-            }
+            Amortization::Degressive => asset.degressive(period, DEGRESSIVE_LOOP_PERIODS),
         }
         .map_err(|_| num_error(cell))
     }
 }
 
-/// AMORLINC's and AMORDEGRC's value checks beside the dates: `0 <= salvage < cost`, `period >= 0`
-/// and `rate > 0`, written as the valid ranges so that a NaN fails them. Also the lift's charge
+/// AMORLINC's and AMORDEGRC's value checks beside the dates: `0 <= salvage <= cost`, `cost > 0`,
+/// `period >= 0` and `rate > 0`, written as the valid ranges so that a NaN fails them. A salvage
+/// equal to the cost passes (it is 0 later), a cost of 0 does not (`AMORLINC(0,39679,39813,0,0,
+/// 0.15,1)` is #NUM!; probes/amor-salvage-equal-cost E21-E24, T-4504). Also the lift's charge
 /// (`ValueWork::Amortization`), which must refuse only what the kernel refuses.
 pub(crate) fn amortization_values_valid(cost: f64, salvage: f64, period: f64, rate: f64) -> bool {
-    cost >= 0.0 && salvage >= 0.0 && salvage < cost && period >= 0.0 && rate > 0.0
+    cost > 0.0 && salvage >= 0.0 && salvage <= cost && period >= 0.0 && rate > 0.0
 }
 
 /// Whether AMORDEGRC refuses the asset life `1 / rate` of a positive rate: only a life of 2 or

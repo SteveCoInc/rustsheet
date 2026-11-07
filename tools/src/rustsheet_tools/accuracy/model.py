@@ -18,10 +18,25 @@ import mpmath
 
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 
-Kind = Literal["real", "int", "bool", "array", "matrix"]
-MathArg: TypeAlias = "mpmath.mpf | bool | tuple[mpmath.mpf, ...] | tuple[tuple[mpmath.mpf, ...], ...]"
-"""An argument as the math sees it: the exact double (or integer) of the literal, a logical, an
-array literal's elements, or a matrix literal's rows."""
+Kind = Literal["real", "int", "bool", "array", "matrix", "text"]
+MathArg: TypeAlias = (
+    "mpmath.mpf | mpmath.mpc | bool | str | tuple[mpmath.mpf, ...] | tuple[tuple[mpmath.mpf, ...], ...]"
+)
+"""An argument as the math sees it: the exact double (or integer) of the literal, a logical, a complex
+number text's parsed parts (an `mpc` of the two exact doubles), a fixed-list text itself, an array
+literal's elements, or a matrix literal's rows."""
+
+NON_REAL = (bool, str, tuple, mpmath.mpc)
+"""The `MathArg` members that are not a real (a logical, a text, an array or matrix, a complex number's parts): the one
+`isinstance` tuple that narrows an argument to a real (`defs/_common.is_real` and `real_arg`), so a new `MathArg`
+member is added here only (T-4592)."""
+
+
+class Unfit(str):
+    """Why an eval cell's argument does not fit its parameter (`eval_math.fit_arg`): a reason, told
+    apart from a fitted text argument, which is a plain str (T-4084)."""
+
+    __slots__ = ()
 
 
 class DomainError(ValueError):
@@ -104,6 +119,12 @@ class Param:
     `truncates` cites the semantics entry showing that Excel truncates a non-integer given to this
     `int` parameter toward zero (F.DIST's, T.DIST's and CHISQ.INV.RT's df); without one an eval cell that passes a
     non-integer gets no math value, since whether Excel truncates is per function.
+    A `text` parameter (T-4084) is written as a string literal. With `choices` (distinct, non-empty
+    texts; an empty tuple is refused) it is drawn from that
+    fixed list (CONVERT's unit names, engineering.md "CONVERT unit names") and the math receives the
+    text; without (None), it is a complex number's text `a+bi` / `a-bj` whose two parts are drawn as reals
+    over this parameter's domain and ranges (engineering.md "Leading plus in IM*..."), and the math
+    receives the parsed parts as an `mpc`.
     """
 
     name: str
@@ -116,6 +137,24 @@ class Param:
     draw_hi: float | None = None
     optional: bool = False
     truncates: str = ""
+    choices: tuple[str, ...] | None = None
+
+    def __post_init__(self) -> None:
+        if self.choices is not None and self.kind != "text":
+            msg = f"{self.name}: only a text parameter takes choices"
+            raise ValueError(msg)
+        if self.choices is not None and self.kind == "text":
+            if not self.choices:
+                msg = f"{self.name}: empty choices (leave them out for a complex number)"
+                raise ValueError(msg)
+            if "" in self.choices or len(set(self.choices)) != len(self.choices):
+                msg = f"{self.name}: choices must be distinct, non-empty texts"
+                raise ValueError(msg)
+
+    @property
+    def is_complex(self) -> bool:
+        """Whether this is a complex number's text (a `text` parameter without `choices`)."""
+        return self.kind == "text" and self.choices is None
 
     def finite_bounds(self) -> list[tuple[float, bool, bool]]:
         """The finite domain bounds as (value, open, is_lower)."""
@@ -152,7 +191,10 @@ class Definition:
     (BETA.DIST's and BETA.INV's bounds, RATE's guess; T-3923): `params_for` accepts them after
     `params`, and `value` receives them when the call gives them. `rescaled_param` names the parameter
     they rescale (BETA.DIST's x, which [A, B] moves off [0, 1]): when a call gives call parameters,
-    that parameter's interval is not checked, and `domain` checks it instead."""
+    that parameter's interval is not checked, and `domain` checks it instead. `aimed` draws a whole
+    point inside one region the strata miss; only `generate --stratum aimed` reaches it, so the
+    default split, and every committed batch, stays as drawn (an `r4-*` sweep of a fix's region,
+    T-4059)."""
 
     function: str
     params: tuple[Param, ...]
@@ -169,6 +211,7 @@ class Definition:
     literal_arrays: bool = False
     call_params: tuple[Param, ...] = ()
     rescaled_param: str | None = None
+    aimed: Callable[[random.Random], list[Arg]] | None = None
 
     def __post_init__(self) -> None:
         if self.call_params and self.variadic:
@@ -214,11 +257,19 @@ class Definition:
         """Raises `DomainError` when `args` are outside the parameters' intervals or `domain`."""
         rescaled = self.rescaled_param if len(args) > len(self.params) else None
         for p, a in zip(self.params_for(len(args)), args, strict=True):
-            if p.kind in ("bool", "array", "matrix") or isinstance(a, (bool, tuple)) or p.name == rescaled:
-                continue  # an array's or a matrix's rules, and a rescaled parameter's, are the definition's `domain`
-            if not p.domain.contains(float(a)):
-                msg = f"{p.name} outside {p.domain.describe()}"
-                raise DomainError(msg)
+            if isinstance(a, mpmath.mpc):  # a complex number's parts each take the parameter's interval
+                parts = [a.real, a.imag]
+            elif (
+                p.kind in ("bool", "array", "matrix", "text") or isinstance(a, NON_REAL) or p.name == rescaled
+            ):
+                # an array's or a matrix's rules, a list text's and a rescaled parameter's are the definition's `domain`
+                continue
+            else:
+                parts = [a]
+            for part in parts:
+                if not p.domain.contains(float(part)):
+                    msg = f"{p.name} outside {p.domain.describe()}"
+                    raise DomainError(msg)
         if self.domain is not None and (why := self.domain(args)) is not None:
             raise DomainError(why)
 

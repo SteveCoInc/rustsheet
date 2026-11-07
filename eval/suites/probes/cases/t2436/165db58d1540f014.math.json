@@ -4,7 +4,12 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "2047643cbbe59023e9a191a32a799f71ee01a76c4118a39d4cb61aeb78e7a4be"
+  "input_sha256": "2047643cbbe59023e9a191a32a799f71ee01a76c4118a39d4cb61aeb78e7a4be",
+  "definitions": {
+   "KURT": "8061eaadc95c994e",
+   "PHI": "8e4045d7b4e4bcab"
+  },
+  "arguments_sha256": "d30dd7d774e9cb92998cd6bccb72573a7787f1d425f5ebcdb8dd14d2c1f110f0"
  },
  "sheets": {
   "Calc": {
@@ -12,6 +17,11 @@
     "t": "e",
     "why": "the density's z*z overflows",
     "f": "=PHI(1E+300)"
+   },
+   "A16": {
+    "t": "e",
+    "why": "the density's z*z overflows",
+    "f": "=KURT(PHI(1E+300))"
    }
   }
  }

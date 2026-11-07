@@ -1,0 +1,51 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4618: probes/t4618-last-of-three-tabs (tabs First, S2, Last; S2 active; N = =1 added through the API scoped to Last) reads 1 from =N on Last, loaded before the add, where probes/t4049-sheet-api-name-plain (two tabs, N scoped to the first and active S) and probes/t4587-sheet-api-name-inactive-sheet (N scoped to the first tab S, T active) leave =N #NAME?. The three tabs with N scoped to First and S2 active. Does =N on the first, inactive tab of three see N?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "S2",
+ "sheets": [
+  {
+   "name": "First",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "B1": "=FORMULATEXT(A1)"
+   }
+  },
+  {
+   "name": "S2",
+   "cells": {
+    "A1": "=First!N",
+    "A2": "=N"
+   }
+  },
+  {
+   "name": "Last",
+   "cells": {
+    "A1": "=First!N",
+    "A2": "=N"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "First!A1",
+  "First!A2",
+  "First!B1",
+  "S2!A1",
+  "S2!A2",
+  "Last!A1",
+  "Last!A2"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "First"
+  }
+ ]
+}

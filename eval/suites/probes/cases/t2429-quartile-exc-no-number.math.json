@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "d775f2dfe96b2005f50c8ea6bc34581d531484e844fabb8a0e072928890dbe6c",
+  "definitions": {
+   "QUARTILE.EXC": "a81d4390471743da"
+  },
+  "arguments_sha256": "2246f1f753d3542af33768226dc00d8f18393aebb7732c3e4517036f2e6dbf8c"
+ },
+ "sheets": {
+  "Calc": {
+   "A15": {
+    "t": "e",
+    "why": "quart 5 outside 1-3",
+    "f": "=QUARTILE.EXC(Data!A4:A6,5)"
+   }
+  }
+ }
+}

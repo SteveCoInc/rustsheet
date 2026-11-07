@@ -12,7 +12,10 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::{Reader, XmlVersion};
 use serde::{Deserialize, Serialize};
 
+mod pivots;
 mod tables;
+use pivots::read_sheet_pivots;
+pub use pivots::{PivotCacheField, PivotDef, PivotLine};
 use tables::read_sheet_tables;
 pub use tables::TableDef;
 
@@ -127,6 +130,10 @@ pub struct WorkbookSnapshot {
     /// Tables; absent in snapshots written before T-0434.
     #[serde(default)]
     pub tables: Vec<TableDef>,
+    /// Pivot tables as Excel saved them (location, layout lines, group labels); absent in
+    /// snapshots written before T-4123.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivots: Vec<PivotDef>,
 }
 
 impl WorkbookSnapshot {
@@ -166,13 +173,13 @@ impl WorkbookSnapshot {
 
 /// The package, with its parts found the way the importer finds them (case-insensitive names,
 /// backslash separators; see `PartNames`).
-struct Zip {
+pub(crate) struct Zip {
     archive: zip::ZipArchive<Cursor<Vec<u8>>>,
     names: PartNames,
 }
 
 impl Zip {
-    fn new(bytes: &[u8]) -> Result<Self, SnapshotError> {
+    pub(crate) fn new(bytes: &[u8]) -> Result<Self, SnapshotError> {
         if is_ole_compound_file(bytes) {
             return Err(classify_ole_compound_file(bytes, &ImportLimits::default()).into());
         }
@@ -180,11 +187,26 @@ impl Zip {
         let names = PartNames::from_archive(&archive)?;
         Ok(Zip { archive, names })
     }
+
+    /// The zip directory's entry names, in directory order (directories left out).
+    pub(crate) fn entry_names(&self) -> Result<Vec<String>, SnapshotError> {
+        let names = self.archive.file_names().collect::<Result<Vec<_>, _>>()?;
+        Ok(names
+            .into_iter()
+            .filter(|n| !n.ends_with('/'))
+            .map(|n| n.as_ref().to_string())
+            .collect())
+    }
+
+    /// The groups of entries that name the same part (OPC equivalence, as [`PartNames`] matches).
+    pub(crate) fn clashing_entries(&self) -> Vec<Vec<String>> {
+        self.names.clashes()
+    }
 }
 
 /// Zip-bomb guard (CLAUDE.md directive 5): one part may not inflate past the
 /// public API's default whole-package limit, so the harness reads what the API would.
-fn read_part(zip: &mut Zip, name: &str) -> Result<Option<String>, SnapshotError> {
+pub(crate) fn read_part(zip: &mut Zip, name: &str) -> Result<Option<String>, SnapshotError> {
     read_part_capped(
         zip,
         name,
@@ -197,6 +219,21 @@ fn read_part_capped(
     name: &str,
     limit: u64,
 ) -> Result<Option<String>, SnapshotError> {
+    let Some(bytes) = read_part_bytes_capped(zip, name, limit)? else {
+        return Ok(None);
+    };
+    String::from_utf8(bytes)
+        .map(Some)
+        .map_err(|_| SnapshotError::Malformed(format!("part {name} is not UTF-8")))
+}
+
+/// The bytes of part `name`, read through the same guard as [`read_part`]: at most `limit`
+/// bytes may inflate.
+pub(crate) fn read_part_bytes_capped(
+    zip: &mut Zip,
+    name: &str,
+    limit: u64,
+) -> Result<Option<Vec<u8>>, SnapshotError> {
     let Some(entry) = zip.names.entry(name) else {
         return Ok(None);
     };
@@ -205,24 +242,26 @@ fn read_part_capped(
         Err(zip::result::ZipError::FileNotFound) => return Ok(None),
         Err(e) => return Err(e.into()),
     };
-    let mut s = String::new();
-    (&mut file).take(limit + 1).read_to_string(&mut s)?;
-    if s.len() as u64 > limit {
+    let mut bytes = Vec::new();
+    (&mut file)
+        .take(limit.saturating_add(1))
+        .read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > limit {
         return Err(SnapshotError::Malformed(format!(
             "part {name} exceeds the {limit}-byte decompressed size limit"
         )));
     }
-    Ok(Some(s))
+    Ok(Some(bytes))
 }
 
-fn xml_err(part: &str, e: impl std::fmt::Display) -> SnapshotError {
+pub(crate) fn xml_err(part: &str, e: impl std::fmt::Display) -> SnapshotError {
     SnapshotError::Xml {
         part: part.to_string(),
         message: e.to_string(),
     }
 }
 
-fn attr(e: &BytesStart<'_>, key: &str) -> Option<String> {
+pub(crate) fn attr(e: &BytesStart<'_>, key: &str) -> Option<String> {
     e.attributes().flatten().find_map(|a| {
         (a.key.local_name().as_ref() == key)
             .then(|| {
@@ -252,7 +291,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         names: defined_names,
         file_app_name,
     } = parse_workbook(&workbook)?;
-    let sheet_names: Vec<String> = sheet_list.iter().map(|(n, _)| n.clone()).collect();
+    let sheet_names: Vec<String> = sheet_list.iter().map(|s| s.name.clone()).collect();
     let defined_names = defined_names
         .into_iter()
         .map(|(name, local, body)| DefinedName {
@@ -263,7 +302,8 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         .collect();
     let mut sheets = Vec::new();
     let mut tables = Vec::new();
-    for (name, rid) in sheet_list {
+    let mut pivot_reader = pivots::PivotReader::new();
+    for SheetRef { name, rid, .. } in sheet_list {
         let Some(target) = rels.get(&rid) else {
             continue;
         };
@@ -278,6 +318,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         };
         let cells = parse_sheet(&xml, &path, &shared, &rich_errors, date_system)?;
         read_sheet_tables(&mut zip, &path, &name, &mut tables)?;
+        read_sheet_pivots(&mut zip, &path, &name, &mut pivot_reader)?;
         sheets.push(SheetSnapshot { name, cells });
     }
     Ok(WorkbookSnapshot {
@@ -288,6 +329,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         sheets,
         defined_names,
         tables,
+        pivots: pivot_reader.pivots,
     })
 }
 
@@ -361,7 +403,7 @@ fn read_shared_strings(zip: &mut Zip) -> Result<Vec<String>, SnapshotError> {
     Ok(out)
 }
 
-fn resolve_entity(r: &quick_xml::events::BytesRef<'_>) -> String {
+pub(crate) fn resolve_entity(r: &quick_xml::events::BytesRef<'_>) -> String {
     if let Ok(Some(c)) = r.resolve_char_ref() {
         return c.to_string();
     }
@@ -409,6 +451,8 @@ pub(crate) struct Relationship {
     pub(crate) id: String,
     pub(crate) kind: String,
     pub(crate) target: String,
+    /// `TargetMode="External"`: the target is a URI outside the package.
+    pub(crate) external: bool,
 }
 
 /// The `<Relationship>` entries of a `.rels` part (`part` names it in errors); entries missing
@@ -421,7 +465,13 @@ pub(crate) fn relationships(xml: &str, part: &str) -> Result<Vec<Relationship>, 
             Event::Start(e) | Event::Empty(e) if e.local_name().as_ref() == "Relationship" => {
                 if let (Some(id), Some(target)) = (attr(&e, "Id"), attr(&e, "Target")) {
                     let kind = attr(&e, "Type").unwrap_or_default();
-                    out.push(Relationship { id, kind, target });
+                    let external = attr(&e, "TargetMode").is_some_and(|m| m == "External");
+                    out.push(Relationship {
+                        id,
+                        kind,
+                        target,
+                        external,
+                    });
                 }
             }
             Event::Eof => break,
@@ -458,18 +508,24 @@ fn raw_name(e: &BytesStart<'_>) -> Option<RawName> {
     Some((attr(e, "name")?, local, String::new()))
 }
 
-/// `(sheet name, relationship id)` per `<sheet>`.
-type SheetRef = (String, String);
+/// One `<sheet>` of `xl/workbook.xml`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SheetRef {
+    pub(crate) name: String,
+    /// Its `r:id`.
+    pub(crate) rid: String,
+    pub(crate) sheet_id: Option<String>,
+}
 
 /// What `parse_workbook` reads from `xl/workbook.xml`.
-struct ParsedWorkbook {
-    sheets: Vec<SheetRef>,
+pub(crate) struct ParsedWorkbook {
+    pub(crate) sheets: Vec<SheetRef>,
     date1904: bool,
     names: Vec<RawName>,
     file_app_name: Option<String>,
 }
 
-fn parse_workbook(xml: &str) -> Result<ParsedWorkbook, SnapshotError> {
+pub(crate) fn parse_workbook(xml: &str) -> Result<ParsedWorkbook, SnapshotError> {
     let mut reader = Reader::from_str(xml);
     let mut sheets = Vec::new();
     let mut names: Vec<RawName> = Vec::new();
@@ -492,7 +548,11 @@ fn parse_workbook(xml: &str) -> Result<ParsedWorkbook, SnapshotError> {
             Event::Start(e) | Event::Empty(e) => match e.local_name().as_ref() {
                 "sheet" => {
                     if let (Some(name), Some(rid)) = (attr(&e, "name"), attr(&e, "id")) {
-                        sheets.push((name, rid));
+                        sheets.push(SheetRef {
+                            name,
+                            rid,
+                            sheet_id: attr(&e, "sheetId"),
+                        });
                     }
                 }
                 "fileVersion" => file_app_name = attr(&e, "appName"),
@@ -535,6 +595,10 @@ struct PendingCell {
     f_attrs: Option<(Option<String>, Option<String>, Option<String>)>, // (t, si, ref)
     v_text: Option<String>,
     is_text: Option<String>,
+    /// The cell has a `<v>` or an `<is>` child, even an empty one: a `t="str"` or `t="inlineStr"`
+    /// constant without one stores no value and is blank (T-4148).
+    has_v: bool,
+    has_is: bool,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -578,11 +642,17 @@ fn parse_sheet(
                     cur.f_attrs = Some((attr(&e, "t"), attr(&e, "si"), attr(&e, "ref")));
                     field = Field::F;
                 }
-                "v" if in_cell => field = Field::V,
+                "v" if in_cell => {
+                    cur.has_v = true;
+                    field = Field::V;
+                }
+                "is" if in_cell => cur.has_is = true,
                 "t" if in_cell => field = Field::IsT,
                 _ => {}
             },
             Event::Empty(e) => match e.local_name().as_ref() {
+                "v" if in_cell => cur.has_v = true,
+                "is" if in_cell => cur.has_is = true,
                 "c" => {
                     let c = start_cell(&e, row_num, &mut next_col);
                     finish_cell(
@@ -740,6 +810,18 @@ fn finish_cell(
             }
         }
     };
+    // Excel reads a constant `t="str"` cell with no `<v>`, or an inline string with no `<is>`, as
+    // blank, while an empty `<v>` or `<is>` is the empty string (fixtures/valueless-cell-forms;
+    // docs/excel-semantics/xlsx-storage.md "A cell that stores no value is blank").
+    let valueless = formula_kind.is_none()
+        && match c.t.as_deref() {
+            Some("str") => !c.has_v,
+            Some("inlineStr") => !c.has_is,
+            _ => false,
+        };
+    if valueless {
+        return;
+    }
     let mut value = decode_value(
         c.t.as_deref(),
         c.v_text.as_deref(),
@@ -782,10 +864,8 @@ fn decode_value(
 ) -> Value {
     match (t.unwrap_or("n"), v) {
         ("inlineStr", _) => Value::Text(decode_xlsx_escapes(inline.unwrap_or_default())),
-        ("s", Some(v)) => v
-            .trim()
-            .parse::<usize>()
-            .ok()
+        ("s", Some(v)) => rustsheet_xlsx::util::parse_shared_string_index(v)
+            .and_then(|i| usize::try_from(i).ok())
             .and_then(|i| shared.get(i))
             .map_or(Value::Empty, |s| Value::Text(s.clone())),
         ("str", v) => Value::Text(decode_xlsx_escapes(v.unwrap_or_default())),

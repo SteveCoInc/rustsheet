@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "0e3ecc54368063e7a815714da23cd28a6c5f88f4a1954de96bbfbfef247a3262",
+  "definitions": {
+   "CONVERT": "8f956768ccba4018"
+  },
+  "arguments_sha256": "fccb8edd9b64bb7b5f0244cccd7b05143fbffcf37694d40700ca9d6eaf8e0cf7"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A1": {
+    "t": "e",
+    "why": "'Ym' and 'K' share no class (#N/A)",
+    "f": "=CONVERT(1,\"Ym\",\"K\")"
+   }
+  }
+ }
+}

@@ -1,0 +1,79 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4446: defined names whose characters XlsxWriter's \\w check refuses (spec2xlsx writes them into workbook.xml by hand): a lowercase circled letter, astral squared and negative squared letters, Devanagari with a spacing mark, an uppercase circled letter after the first character, an enclosing or combining mark after the first character, and İ with its decomposed use i+U+0307; plus sheets named Ⓐ, ⓑ, a+U+0301 and x+U+20DD (quoted and unquoted references and their FORMULATEXT), and a cell address followed by a mark (B1+U+0301 defined, B2+U+0301 unbound: names, not references; an R1C1-shaped C1+U+0301 is refused at load). A defined name starting with Ⓐ or a mark, a reference Ⓐ!B1 stored unquoted and a structured reference to a table named Ⓐ are refused at load, so they are not in this case (docs/excel-semantics/references.md \"Characters of a name\").",
+ "tags": [
+  "M8",
+  "names",
+  "probe"
+ ],
+ "names": {
+  "ⓐ": "=Sheet1!$B$1",
+  "🄰": "=Sheet1!$B$1",
+  "🅰": "=Sheet1!$B$1",
+  "नाम": "=Sheet1!$B$1",
+  "aⒶ": "=Sheet1!$B$1",
+  "a⃝": "=Sheet1!$B$1",
+  "á": "=Sheet1!$B$1",
+  "İ": "=Sheet1!$B$1",
+  "B1́": "=3"
+ },
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "B1": 5,
+    "A1": "=ⓐ+1",
+    "A2": "=INDIRECT(\"ⓐ\")",
+    "A3": "=🄰+1",
+    "A4": "=🅰+1",
+    "A5": "=नाम+1",
+    "A6": "=aⒶ+1",
+    "A7": "=a⃝+1",
+    "A8": "=á+1",
+    "A9": "=İ+1",
+    "A10": "=i̇+1",
+    "A11": "=ISREF(aⒶ)",
+    "A12": "='Ⓐ'!B1",
+    "A13": "=FORMULATEXT(A12)",
+    "A14": "=ⓑ!B1",
+    "A15": "=FORMULATEXT(A14)",
+    "A16": "='ⓑ'!B1",
+    "A17": "=FORMULATEXT(A16)",
+    "A18": "=ISREF(INDIRECT(\"🅰\"))",
+    "A19": "='á'!B1",
+    "A20": "=FORMULATEXT(A19)",
+    "A21": "='x⃝'!B1",
+    "A22": "=FORMULATEXT(A21)",
+    "A23": "=á!B1",
+    "A24": "=B1́+1",
+    "A25": "=ISERROR(B2́)",
+    "A26": "=ISREF(B2́)"
+   }
+  },
+  {
+   "name": "Ⓐ",
+   "cells": {
+    "B1": 7
+   }
+  },
+  {
+   "name": "ⓑ",
+   "cells": {
+    "B1": 9
+   }
+  },
+  {
+   "name": "á",
+   "cells": {
+    "B1": 11
+   }
+  },
+  {
+   "name": "x⃝",
+   "cells": {
+    "B1": 13
+   }
+  }
+ ],
+ "expected": {}
+}

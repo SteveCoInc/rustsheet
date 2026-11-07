@@ -1,0 +1,41 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4618: probes/t4618-last-of-three-tabs (tabs First, S2, Last, the earlier two holding only =Last!N) reads 1 from =N on Last after N = =1 is added through the API scoped to Last, where the same book with a bare =N on the earlier tabs too (probes/t4618-last-of-three-first-active, t4618-last-of-three-last-active) and every case with the scoped sheet first leave it #NAME?. Tabs S, T (S first and active): S!A1 =N comes before S!A2 =S!N, then S!A3 =N+1, N scoped to S. Does a bare use after the qualified one bind otherwise than the one before it?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=N",
+    "A2": "=S!N",
+    "A3": "=N+1",
+    "B1": "=FORMULATEXT(A1)"
+   }
+  },
+  {
+   "name": "T",
+   "cells": {
+    "A1": "=S!N"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "S!A1",
+  "S!A2",
+  "S!A3",
+  "S!B1",
+  "T!A1"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "S"
+  }
+ ]
+}

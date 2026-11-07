@@ -1,0 +1,88 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "cfee69ec07d4e778eb2ffc3c9e5850522df628e757765e87e5d6889e99fc804f",
+  "definitions": {
+   "ACCRINT": "c130f249b462c121",
+   "DURATION": "93982788afd6a279",
+   "MDURATION": "93982788afd6a279",
+   "PRICE": "93982788afd6a279",
+   "YIELD": "93982788afd6a279"
+  },
+  "arguments_sha256": "39c06f0e52a0e57430d0e9d4bbbb98ad198ebc193c9263e8245ea550e66bd1d0"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A10": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=PRICE(-1,43831,0.05,0.06,100,2)"
+   },
+   "A11": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=YIELD(-1,43831,0.05,90,100,2)"
+   },
+   "A12": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=DURATION(-1,43831,0.05,0.06,2)"
+   },
+   "A13": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=MDURATION(-1,43831,0.05,0.06,2)"
+   },
+   "A14": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=ACCRINT(-1,39264,39448,0.1,1000,2,0)"
+   },
+   "A15": {
+    "t": "e",
+    "why": "date -1000000000000000.0 is outside 1900-01-00..9999-12-31",
+    "f": "=ACCRINT(-1E15,39264,39448,0.1,1000,2,0)"
+   },
+   "A16": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=ACCRINT(39083,39264,-1,0.1,1000,2,0)"
+   },
+   "A17": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=ACCRINT(39083,-1,39448,0.1,1000,2,0)"
+   },
+   "A20": {
+    "t": "e",
+    "why": "settlement below 1 or not before the maturity",
+    "f": "=PRICE(0,43831,0.05,0.06,100,4)"
+   },
+   "A25": {
+    "t": "e",
+    "why": "the previous coupon date is before 1900-01-01: #NUM!",
+    "f": "=PRICE(1,2958435,0.05,0.06,100,4)"
+   },
+   "A26": {
+    "t": "e",
+    "why": "the previous coupon date is before 1900-01-01: #NUM!",
+    "f": "=DURATION(1,2958435,0.05,0.06,4)"
+   }
+  }
+ },
+ "skipped": {
+  "Sheet1": {
+   "A27": {
+    "f": "=ACCRINT(1,2958300,2958435,0.05,1000,4,0,TRUE)",
+    "why": "no single value"
+   },
+   "A28": {
+    "f": "=ACCRINT(1,40000,2958435,0.05,1000,4,0,TRUE)",
+    "why": "no single value"
+   }
+  }
+ }
+}

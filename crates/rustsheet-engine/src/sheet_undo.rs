@@ -1,7 +1,7 @@
 //! Taking a sheet out of a model and putting it back, so a caller can undo a delete.
 
 use crate::{
-    expressions::parser::stringify::{delete_sheet_in_node, to_english_string, to_rc_format},
+    expressions::parser::stringify::delete_sheet_in_node,
     formula_rewrite::RewrittenFormula,
     model::Model,
     pivot::PivotTable,
@@ -53,12 +53,8 @@ impl Model {
         let (tables, mut rewritten) = self.take_tables_of_sheet(sheet_index);
         let sheet_names = self.workbook.get_worksheet_names();
         rewritten.extend(
-            self.rewrite_formulas(Some(sheet_index as usize), |mut node, context| {
-                delete_sheet_in_node(&mut node, sheet_index, &sheet_names);
-                match context {
-                    Some(context) => to_english_string(&node, context),
-                    None => to_rc_format(&node),
-                }
+            self.rewrite_formulas_edited(Some(sheet_index as usize), |node| {
+                delete_sheet_in_node(node, sheet_index, &sheet_names);
             }),
         );
         let worksheet = self.workbook.worksheets.remove(sheet_index as usize);
@@ -128,6 +124,38 @@ mod tests {
         assert_eq!(
             model.get_formatted_cell_value(0, 1, 1).expect("value"),
             "42"
+        );
+    }
+
+    #[test]
+    fn a_sheet_added_under_a_deleted_name_does_not_revive_its_references() {
+        // probes/table-edits/t2612-delete-sheet-then-add (T-2612): Excel keeps `#REF!`.
+        let mut model = model();
+        let sheet = model.take_sheet(1).expect("take");
+        model.add_sheet("Two").expect("sheet");
+        model
+            .set_user_input(1, 1, 1, "41".to_string())
+            .expect("input");
+        model.evaluate();
+        assert_eq!(
+            model.get_formatted_cell_value(0, 1, 1).expect("value"),
+            "#REF!"
+        );
+        assert_eq!(
+            model.get_cell_formula(0, 1, 1).expect("formula").as_deref(),
+            Some("=#REF!A1+1")
+        );
+        // The undo puts the reference back once the new sheet is gone.
+        model.delete_sheet(1).expect("delete");
+        model.restore_sheet(1, sheet).expect("restore");
+        model.evaluate();
+        assert_eq!(
+            model.get_formatted_cell_value(0, 1, 1).expect("value"),
+            "42"
+        );
+        assert_eq!(
+            model.get_cell_formula(0, 1, 1).expect("formula").as_deref(),
+            Some("=Two!A1+1")
         );
     }
 

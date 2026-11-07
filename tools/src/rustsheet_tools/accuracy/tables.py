@@ -26,8 +26,16 @@ import mpmath
 
 from rustsheet_tools.accuracy import literal
 from rustsheet_tools.accuracy.model import Definition, DomainError, NoValueError, OverBudgetError, work_budget
-from rustsheet_tools.accuracy.sampler import STRATA, Sampler, math_arg, point_count, seed, stratum_counts
-from rustsheet_tools.fitlab.sweep import number_literal, split_args
+from rustsheet_tools.accuracy.sampler import (
+    AIMED,
+    STRATA,
+    Sampler,
+    math_arg,
+    point_count,
+    seed,
+    stratum_counts,
+)
+from rustsheet_tools.fitlab.sweep import is_array_literal, number_literal, split_args, string_literal
 
 VERSION = "1"  # bump when a definition or the sampler changes what a batch would contain
 DPS = (60, 80)  # the value is the dps-80 one; dps 60 is the convergence check
@@ -149,7 +157,7 @@ class Point:
 
 
 def formula(definition: Definition, args: Sequence[literal.Arg]) -> str:
-    """`=T.INV(1.87E-297,3937)`, or for an indexed definition the one element it reads:
+    """`=T.INV(1.87E-297,3937)`, `=IMABS("3-4E-05j")` (a text quoted, `literal.text`), or for an indexed definition the one element it reads:
     `=INDEX(MINVERSE({1,2;3,4}),2,1)`."""
     texts = [literal.text(a) for a in args]
     if definition.indexed:
@@ -172,7 +180,7 @@ def draw_points(
     counts = {stratum: total} if stratum is not None else stratum_counts(total)
     sampler = Sampler(definition, random.Random(seed(definition.function, batch)))
     points: list[Point] = []
-    for name in STRATA:
+    for name in (*STRATA, AIMED):
         for index in range(counts.get(name, 0)):
             for _ in range(MAX_REDRAWS):
                 args = sampler.draw(name, index)
@@ -201,14 +209,17 @@ def math_sidecar_bytes(
     sheets: dict[str, dict[str, dict[str, str]]],
     seed: int | None = None,
     skipped: dict[str, dict[str, dict[str, str]]] | None = None,
+    inputs: dict[str, Any] | None = None,
 ) -> bytes:
     """A `rustsheet-math/v1` sidecar for the case file `case_bytes`: the one envelope a table
     batch (with its `seed`) and an eval case's math references (`eval_math`, no seed, with the
-    candidates the generator dropped as `skipped` when there are any) share."""
+    candidates the generator dropped as `skipped` when there are any, and the `inputs` fingerprints
+    `math --check` compares, T-4231) share."""
     source: dict[str, Any] = {"generator": "rustsheet-accuracy", "version": VERSION, "dps": DPS[-1]}
     if seed is not None:
         source["seed"] = seed
     source["input_sha256"] = hashlib.sha256(case_bytes).hexdigest()
+    source.update(inputs or {})
     data: dict[str, Any] = {"format": MATH_FORMAT, "source": source, "sheets": sheets}
     if skipped:
         data["skipped"] = skipped
@@ -291,8 +302,13 @@ def parse_formula(definition: Definition, text: str) -> list[literal.Arg]:
         token = part.strip()
         if param.kind == "bool":
             args.append(token.upper() == "TRUE")
+        elif param.kind == "text":
+            if (string := string_literal(token)) is None:
+                msg = f"{text!r}: {param.name} is not a string literal"
+                raise ValueError(msg)
+            args.append(string)
         elif param.kind in ("array", "matrix"):
-            if not (token.startswith("{") and token.endswith("}")):
+            if not is_array_literal(token):
                 msg = f"{text!r}: {param.name} is not an array literal"
                 raise ValueError(msg)
             rows = [tuple(number_literal(t) for t in split_args(row)) for row in token[1:-1].split(";")]

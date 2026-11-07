@@ -8,17 +8,29 @@ function, batch and tool version give the same points.
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import math
 import random
+from collections.abc import Callable
 from decimal import Decimal
 
 import mpmath
 
-from rustsheet_tools.accuracy.literal import MAX_LITERAL, MIN_LITERAL, Arg, neighbour, round15
+from rustsheet_tools.accuracy.literal import (
+    COMPLEX_SUFFIXES,
+    MAX_LITERAL,
+    MIN_LITERAL,
+    Arg,
+    complex_text,
+    neighbour,
+    round15,
+)
 from rustsheet_tools.accuracy.model import Definition, MathArg, Param
+from rustsheet_tools.fitlab.sweep import read_complex_arg
 
 STRATA = ("typical", "tail", "edge", "extreme", "log-uniform")
+AIMED = "aimed"  # a definition's own region draw (`Definition.aimed`), never in the default split (T-4059)
 SHARES = (0.40, 0.15, 0.15, 0.20, 0.10)
 TAIL_DISTANCE = (1e-15, 1e-1)  # relative distance of a tail point from a finite domain bound
 TAIL_PROBABILITY = (1e-300, 1e-1)  # a distribution's tail probability, drawn log-uniform
@@ -50,9 +62,17 @@ def stratum_counts(count: int) -> dict[str, int]:
 
 
 def math_arg(param: Param, a: Arg) -> MathArg:
-    """The math's view of a drawn argument: the exact double (or integer) or the logical."""
+    """The math's view of a drawn argument: the exact double (or integer), the logical, a complex
+    number text's parts as Excel reads them (an `mpc` of `read_complex_arg`'s parts, each cut to 15
+    significant digits; ValueError for text that is no complex number) or a
+    fixed-list text itself."""
     if param.kind == "bool" or isinstance(a, bool):
         return bool(a)
+    if isinstance(a, str):
+        if not param.is_complex:
+            return a
+        re, im = read_complex_arg(a)
+        return mpmath.mpc(re, im)
     if param.kind == "matrix" and isinstance(a, tuple):
         return tuple(tuple(mpmath.mpf(x) for x in row) for row in a if isinstance(row, tuple))
     if isinstance(a, tuple):
@@ -96,6 +116,11 @@ class Sampler:
         self.definition = definition
         self.rng = rng
         self.edges = self._edge_candidates()
+        # One suffix per point for every complex text of the point (`literal.COMPLEX_SUFFIXES`); drawn
+        # only for a definition with one, so no other definition's draws move. `suffix` is meaningful
+        # only inside `draw()`, which sets it before the point's parameters are drawn.
+        self.has_complex = any(p.is_complex for p in definition.params)
+        self.suffix = COMPLEX_SUFFIXES[0]
 
     # -- per-parameter draws --------------------------------------------------------------
 
@@ -104,6 +129,11 @@ class Sampler:
         element, a matrix row by row: integers stay integers, reals take 15 digits)."""
         if param.kind == "matrix" and isinstance(x, tuple):
             return tuple(self._elements(row) for row in x if isinstance(row, tuple))
+        if param.kind == "text":
+            if not isinstance(x, str):
+                msg = f"{param.name}: {x!r} is not a text"
+                raise TypeError(msg)
+            return x
         if isinstance(x, tuple):
             return self._elements(x)
         if param.kind == "bool":
@@ -124,7 +154,7 @@ class Sampler:
 
     def inside(self, param: Param, a: Arg) -> Arg:
         """`a`, or the nearest literal inside the domain when rounding left it."""
-        if param.kind in ("bool", "array", "matrix") or isinstance(a, (bool, tuple)):
+        if param.kind in ("bool", "array", "matrix", "text") or isinstance(a, (bool, str, tuple)):
             return a
         if param.domain.contains(float(a)):
             return a
@@ -140,15 +170,32 @@ class Sampler:
             return int(value)
         return neighbour(bound, up=lower)
 
+    def text(self, param: Param, draw: Callable[[Param], Arg]) -> str:
+        """A text parameter's draw: one of its `choices`, or a complex number's text whose real and
+        imaginary parts are two draws of `draw` (`typical`, `extreme`, `whole_domain`) over the
+        parameter as a real, written with the point's suffix."""
+        if param.choices:
+            return self.rng.choice(param.choices)
+        part = dataclasses.replace(param, kind="real")
+        re, im = draw(part), draw(part)
+        if isinstance(re, (bool, str, tuple)) or isinstance(im, (bool, str, tuple)):
+            msg = f"{param.name}: a complex part is not a real"
+            raise TypeError(msg)
+        return complex_text(float(re), float(im), self.suffix)
+
     def typical(self, param: Param) -> Arg:
         """A draw over the parameter's typical range."""
         if param.kind == "bool":
             return self.rng.random() < 0.5
+        if param.kind == "text":
+            return self.text(param, self.typical)
         lo, hi = param.typical
         return self.inside(param, self.finish(param, _spread(self.rng, lo, hi)))
 
     def extreme(self, param: Param) -> Arg:
         """A draw over the parameter's extreme magnitude range, signed when the domain allows."""
+        if param.kind == "text":
+            return self.text(param, self.extreme)
         if param.extreme is None:
             return self.typical(param)
         x = _spread(self.rng, *param.extreme)
@@ -160,6 +207,8 @@ class Sampler:
         """A draw log-uniform over the parameter's whole valid domain (sign uniform if signed)."""
         if param.kind == "bool":
             return self.rng.random() < 0.5
+        if param.kind == "text":
+            return self.text(param, self.whole_domain)
         floor = 1.0 if param.kind == "int" else MIN_LITERAL
         cap = MAX_LITERAL if param.draw_hi is None else param.draw_hi
         lo = max(param.domain.lo, -cap)
@@ -175,8 +224,10 @@ class Sampler:
     def draw(self, stratum: str, index: int) -> list[Arg]:
         """Point number `index` of `stratum`."""
         d = self.definition
-        if d.draw is not None:
-            drawn = d.draw(stratum, self.rng)
+        if self.has_complex:
+            self.suffix = self.rng.choice(COMPLEX_SUFFIXES)
+        if stratum == AIMED or d.draw is not None:
+            drawn = self._whole(stratum)
             return [self.finish(p, a) for p, a in zip(d.params_for(len(drawn)), drawn, strict=True)]
         if stratum == "tail":
             return self._tail(index)
@@ -187,6 +238,19 @@ class Sampler:
         if stratum == "log-uniform":
             return [self.whole_domain(p) for p in d.params]
         return [self.typical(p) for p in d.params]
+
+    def _whole(self, stratum: str) -> list[Arg]:
+        """A whole point from the definition's own draw: `aimed`, or `draw` for any other stratum."""
+        d = self.definition
+        if stratum == AIMED:
+            if d.aimed is None:
+                msg = f"{d.function} has no aimed draw"
+                raise ValueError(msg)
+            return d.aimed(self.rng)
+        if d.draw is None:
+            msg = f"{d.function} has no draw"
+            raise ValueError(msg)
+        return d.draw(stratum, self.rng)
 
     def _extreme(self) -> list[Arg]:
         params = self.definition.params
@@ -244,7 +308,7 @@ class Sampler:
         inside, the nearest invalid literal outside, and the parameter's extra `edges`."""
         out: list[tuple[int, Arg]] = []
         for i, p in enumerate(self.definition.params):
-            if p.kind == "bool":
+            if p.kind in ("bool", "text"):  # a text's draws are its choices or its parts' ranges
                 continue
             values: list[float] = []
             for bound, is_open, lower in p.finite_bounds():

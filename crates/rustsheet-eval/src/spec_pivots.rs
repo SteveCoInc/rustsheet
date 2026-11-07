@@ -1,10 +1,13 @@
 //! A spec sheet's pivot tables in the engine adapter (T-2084, SPEC-0015): the rendered cells are
-//! written as constants, then the pivot is registered over its source.
+//! written as constants, then the pivot is registered over its source. A pivot with a
+//! `definition` (case builder v2) is loaded from the parts the builder writes for it instead, and
+//! rendered by the engine as Excel renders it on open (T-4152).
 
 use rustsheet::{
-    CellRef, EditError, Input, PivotDateGroupBy, PivotFunction, PivotRangeGroup, PivotTableInput,
-    RangeRef, SheetId, Txn,
+    CellRef, EditError, Input, PivotDateGroupBy, PivotFunction, PivotParts, PivotRangeGroup,
+    PivotTableInput, RangeRef, SheetId, Txn, Workbook,
 };
+use rustsheet_xlsx::import::MAX_PIVOTS;
 
 use crate::case::{
     split_qualified, CaseSpec, CellInput, PivotGroupItem, PivotGroupSpec, PivotTableSpec, SheetSpec,
@@ -48,7 +51,54 @@ pub fn add_pivots(
     id: SheetId,
 ) -> Result<(), EditError> {
     for pivot in &sheet.pivot_tables {
+        // A defined pivot is loaded once the cells are in (`load_defined`).
+        if pivot.definition.is_some() {
+            continue;
+        }
         tx.add_pivot_table(&pivot_input(spec, ids, sheet, id, pivot)?)?;
+    }
+    Ok(())
+}
+
+/// Loads every pivot of `spec` with a `definition` into `workbook`, whose cells are all in, from
+/// the parts the case builder writes for it (`pivot_definition`), as the xlsx importer loads the
+/// built file, then recalculates when one loaded: its `refreshOnLoad` cache is due, so the
+/// recalculation refreshes and renders it after calculating, the order Excel opens the file in.
+/// A pivot the importer drops is dropped here too, its cells left empty, as a load drops it: a
+/// calculated field (t4128 K), or the builder's numeric group
+/// labels past the rebuilt groups (t4128 G; pivots.md "Numeric and date group labels are
+/// rewritten by Excel").
+///
+/// # Errors
+/// A definition the builder would refuse, more pivots than a load keeps, or the engine refusing
+/// a sheet.
+pub fn load_defined(workbook: &mut Workbook, spec: &CaseSpec) -> Result<(), String> {
+    let defined = (spec.sheets.iter())
+        .flat_map(|sheet| sheet.pivot_tables.iter().map(move |pivot| (sheet, pivot)))
+        .filter_map(|(sheet, pivot)| Some((sheet, pivot, pivot.definition.as_ref()?)));
+    let mut parts = Vec::new();
+    for (sheet, pivot, definition) in defined {
+        if parts.len() == MAX_PIVOTS {
+            return Err(format!("more than {MAX_PIVOTS} defined pivots"));
+        }
+        let cache_id = u32::try_from(parts.len() + 1).map_err(|e| e.to_string())?;
+        let built = crate::pivot_definition::parts(spec, sheet, pivot, definition, cache_id)?;
+        let id = workbook.sheet_id(&sheet.name).map_err(|e| e.to_string())?;
+        parts.push(PivotParts {
+            cache_definition: built.cache_definition,
+            cache_records: built.cache_records,
+            cache_id,
+            tables: vec![(id, built.table)],
+        });
+    }
+    if parts.is_empty() {
+        return Ok(());
+    }
+    let skipped = workbook
+        .load_pivot_parts(&parts)
+        .map_err(|e| e.to_string())?;
+    if skipped.iter().any(Option::is_none) {
+        workbook.recalculate();
     }
     Ok(())
 }
@@ -60,6 +110,14 @@ fn pivot_input(
     id: SheetId,
     pivot: &PivotTableSpec,
 ) -> Result<PivotTableInput, EditError> {
+    // `row` and `value` default to empty only so a pivot with a `definition` parses (T-4122); a
+    // pivot without one needs both.
+    if pivot.row.is_empty() || pivot.value.is_empty() {
+        return Err(EditError::Engine(format!(
+            "pivot {} needs `row` and `value`, or a `definition`",
+            pivot.name
+        )));
+    }
     let (source_sheet, range) = split_qualified(&pivot.source)
         .unwrap_or_else(|| (sheet.name.clone(), pivot.source.clone()));
     let source_id = spec

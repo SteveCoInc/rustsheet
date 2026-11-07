@@ -152,7 +152,10 @@ impl Model {
                 Some(RefElement::Error(error)) => {
                     CalcResult::new_error(error.clone(), cell, "Error element".to_string())
                 }
-                None => CalcResult::new_error(Error::VALUE, cell, "Not an element".to_string()),
+                // OFFSET of a value is `#VALUE!`, as of any non-reference argument.
+                Some(RefElement::Value(_)) | None => {
+                    CalcResult::new_error(Error::VALUE, cell, "Not an element".to_string())
+                }
             }
         })
     }

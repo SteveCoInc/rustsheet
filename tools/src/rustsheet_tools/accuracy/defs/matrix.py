@@ -10,9 +10,13 @@ on those doubles are part of the definition (arrays.md):
   determinant past the double range; the edge draws overflow by orders of magnitude, where the two agree.
   An underflowing product is 0 (`{1E-200,0;0,1E-200}`), inside Gate A's 1E-300 absolute floor of the math 1E-400.
 - "MINVERSE: singularity rule": `#NUM!` only for an exactly-zero pivot (`{1,2;2,4}`). The definition reads a
-  zero determinant as `#NUM!`; its singular draws are 2x2 with one row twice the other, whose partial-pivot
-  multiplier is exactly 1/2 and whose last pivot is exactly 0, so the two agree. A singular matrix whose
-  elimination leaves a rounding residual (`{1,2,3;4,5,6;7,8,9}`) is a number in Excel and is never drawn.
+  zero determinant as `#NUM!` where Excel's elimination in doubles meets that zero pivot (`excel_zero_pivot`);
+  its singular draws are 2x2 with one row twice the other, whose partial-pivot multiplier is exactly 1/2 and
+  whose last pivot is exactly 0. A singular matrix whose elimination leaves a rounding residual
+  (`{1,2,3;4,5,6;7,8,9}`) is a number in Excel, the inverse of that residual, with no math value
+  (NoValueError, so an eval cell that reads one gets none, T-4025); it is never drawn. The reverse is not
+  modelled: a matrix that is nonsingular in exact arithmetic but whose elimination in doubles meets an
+  exactly-zero pivot (Excel's `#NUM!`) gets the exact inverse's number.
   An inverse element past the double range makes the whole result `#NUM!`
   (probes/minverse-overflow-computed-pivot), so any exact element past the range is a domain error.
 Not claimed, never drawn (NoValueError): MMULT of non-conformable matrices, an MMULT element or product past the
@@ -31,6 +35,7 @@ from rustsheet_tools.accuracy.defs._common import (
     by_stratum,
     domain_of,
     fraction_to_mpf,
+    is_real,
     one_of,
     signed_log_uniform,
 )
@@ -47,13 +52,15 @@ from rustsheet_tools.accuracy.model import (
 
 MDETERM_SOURCE = "arrays.md#mdeterm-partial-pivot-lu-no-singularity-cutoff"
 MINVERSE_SOURCE = "arrays.md#minverse-singularity-rule"
-SOURCES = (MDETERM_SOURCE, MINVERSE_SOURCE, "decision 0228")
+# MMULT's own entry: how it reads its two matrices (a blank or a non-number is `#VALUE!`, not 0)
+MMULT_SOURCE = "arrays.md#mmult-a-blank-first-argument-is-value-even-when-the-second-is-an-error"
+SOURCES = (MDETERM_SOURCE, MINVERSE_SOURCE, MMULT_SOURCE, "decision 0228")
 DOUBLE_MAX = Fraction(1.7976931348623157e308)
 
 Exact = list[list[Fraction]]
 
 
-def _exact(a: MathArg) -> Exact:
+def exact(a: MathArg) -> Exact:
     """A matrix argument's doubles as exact rationals (the literal's double is exact at any working precision)."""
     if not isinstance(a, tuple) or not all(isinstance(row, tuple) for row in a):
         msg = "a matrix argument is not a matrix"
@@ -65,15 +72,18 @@ def _exact(a: MathArg) -> Exact:
     return rows
 
 
-def _index(args: Sequence[MathArg]) -> tuple[int, int]:
+def index_of(args: Sequence[MathArg]) -> tuple[int, int]:
+    """INDEX's row and column, the last two arguments of an indexed definition (shared by the array regression)."""
     row, column = args[-2], args[-1]
-    assert not isinstance(row, (bool, tuple)) and not isinstance(column, (bool, tuple))
+    if not is_real(row) or not is_real(column):
+        msg = "INDEX's row and column are not numbers"
+        raise TypeError(msg)
     return int(row), int(column)
 
 
 def _element(m: Exact, args: Sequence[MathArg]) -> Fraction:
     """The INDEX row and column of `m` (1-based); NoValueError outside it (INDEX's #REF! is not claimed)."""
-    r, c = _index(args)
+    r, c = index_of(args)
     if not (1 <= r <= len(m) and 1 <= c <= len(m[0])):
         msg = f"INDEX({r},{c}) is outside the {len(m)}x{len(m[0])} result"
         raise NoValueError(msg)
@@ -106,6 +116,24 @@ def determinant(m: Exact) -> Fraction:
             if f:
                 a[r] = [x - f * y for x, y in zip(a[r], a[c], strict=True)]
     return det
+
+
+def excel_zero_pivot(m: Exact) -> bool:
+    """Whether Excel's elimination in doubles meets an exactly-zero pivot (arrays.md "MDETERM: partial-pivot LU,
+    no singularity cutoff": the largest absolute entry of the column, the first such row on ties, and rows updated
+    as `a[r][k] -= (a[r][c] / pivot) * a[c][k]`). Only then is MINVERSE `#NUM!` (arrays.md "MINVERSE: singularity
+    rule"): `{1,2;2,4}` meets one, `{1,2,3;4,5,6;7,8,9}` a residual pivot of 1.11E-16 instead."""
+    a = [[float(x) for x in row] for row in m]
+    n = len(a)
+    for c in range(n):
+        p = max(range(c, n), key=lambda r: (abs(a[r][c]), -r))
+        if a[p][c] == 0:
+            return True
+        a[c], a[p] = a[p], a[c]
+        for r in range(c + 1, n):
+            f = a[r][c] / a[c][c]
+            a[r] = [x - f * y for x, y in zip(a[r], a[c], strict=True)]
+    return False
 
 
 def inverse(m: Exact) -> Exact:
@@ -142,7 +170,7 @@ def product(a: Exact, b: Exact) -> Exact:
 
 
 def _mdeterm(args: Sequence[MathArg]) -> mpmath.mpf:
-    det = determinant(_exact(args[0]))
+    det = determinant(exact(args[0]))
     if abs(det) > DOUBLE_MAX:
         msg = "the pivot product is beyond the double range"
         raise DomainError(msg)
@@ -150,7 +178,15 @@ def _mdeterm(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _minverse(args: Sequence[MathArg]) -> mpmath.mpf:
-    inv = inverse(_exact(args[0]))
+    m = exact(args[0])
+    try:
+        inv = inverse(m)
+    except DomainError as err:
+        # Excel inverts the rounding residual into a number the math has no value for
+        if not excel_zero_pivot(m):
+            msg = "a singular matrix whose elimination in doubles leaves a residual pivot (Excel's number)"
+            raise NoValueError(msg) from err
+        raise
     if any(abs(x) > DOUBLE_MAX for row in inv for x in row):
         msg = "an inverse element is beyond the double range"
         raise DomainError(msg)
@@ -158,7 +194,7 @@ def _minverse(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _mmult(args: Sequence[MathArg]) -> mpmath.mpf:
-    prod = product(_exact(args[0]), _exact(args[1]))
+    prod = product(exact(args[0]), exact(args[1]))
     if any(abs(x) > DOUBLE_MAX for row in prod for x in row):
         msg = "a product element is beyond the double range (not claimed)"
         raise NoValueError(msg)
@@ -277,23 +313,22 @@ def _mmult_shape(rng: random.Random, hi: int) -> tuple[int, int, int]:
 
 
 def _mmult_draws() -> Callable[[str, random.Random], list[Arg]]:
-    def uniform(bound: float, hi: int) -> Callable[[random.Random], list[Arg]]:
+    def shaped(
+        hi: int, make: Callable[[random.Random, int, int], Matrix]
+    ) -> Callable[[random.Random], list[Arg]]:
+        """Both factors from `make(rng, rows, columns)`, with up to `hi` rows, columns and inner length."""
+
         def draw(rng: random.Random) -> list[Arg]:
             r, k, c = _mmult_shape(rng, hi)
-            return _mmult_point(
-                rng, _uniform(rng, r, k, bound), c, lambda k_, c_: _uniform(rng, k_, c_, bound)
-            )
+            return _mmult_point(rng, make(rng, r, k), c, lambda k_, c_: make(rng, k_, c_))
 
         return draw
+
+    def uniform(bound: float, hi: int) -> Callable[[random.Random], list[Arg]]:
+        return shaped(hi, lambda rng, rows, columns: _uniform(rng, rows, columns, bound))
 
     def logged(lo: float, hi_mag: float, hi: int) -> Callable[[random.Random], list[Arg]]:
-        def draw(rng: random.Random) -> list[Arg]:
-            r, k, c = _mmult_shape(rng, hi)
-            return _mmult_point(
-                rng, _log(rng, r, k, lo, hi_mag), c, lambda k_, c_: _log(rng, k_, c_, lo, hi_mag)
-            )
-
-        return draw
+        return shaped(hi, lambda rng, rows, columns: _log(rng, rows, columns, lo, hi_mag))
 
     def edge(rng: random.Random) -> list[Arg]:
         k = rng.randint(1, 6)
@@ -325,9 +360,9 @@ def _mmult_draws() -> Callable[[str, random.Random], list[Arg]]:
     )
 
 
-def _row_column(source: str) -> tuple[Param, Param]:
-    """INDEX's row and column of an indexed definition (not the catalog's parameters: the function's own end
-    before them)."""
+def row_column(source: str) -> tuple[Param, Param]:
+    """The last two parameters of an indexed definition: INDEX's row_num and column_num, not the function's own
+    (its catalog parameters end before them, so the catalog-order test skips these two)."""
     whole = Interval(1, float("inf"), lo_open=False)
     return Param("row_num", "int", whole, (1, 8), source=source), Param(
         "column_num", "int", whole, (1, 8), source=source
@@ -348,7 +383,7 @@ MDETERM = register(
 MINVERSE = register(
     Definition(
         function="MINVERSE",
-        params=(Param("array", "matrix", source=MINVERSE_SOURCE), *_row_column(MINVERSE_SOURCE)),
+        params=(Param("array", "matrix", source=MINVERSE_SOURCE), *row_column(MINVERSE_SOURCE)),
         value=_minverse,
         domain=domain_of(_minverse),
         draw=_square_draw("MINVERSE", indexed=True),
@@ -361,9 +396,9 @@ MMULT = register(
     Definition(
         function="MMULT",
         params=(
-            Param("array1", "matrix", source=MDETERM_SOURCE),
-            Param("array2", "matrix", source=MDETERM_SOURCE),
-            *_row_column(MDETERM_SOURCE),
+            Param("array1", "matrix", source=MMULT_SOURCE),
+            Param("array2", "matrix", source=MMULT_SOURCE),
+            *row_column(MMULT_SOURCE),
         ),
         value=_mmult,
         domain=domain_of(_mmult),

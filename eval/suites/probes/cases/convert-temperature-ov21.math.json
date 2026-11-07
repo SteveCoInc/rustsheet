@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "afd0445bcb070212f71e157e13750df94db8fedfa062aedf12fbb3c413b86cae",
+  "definitions": {
+   "CONVERT": "8f956768ccba4018"
+  },
+  "arguments_sha256": "27666accf6c8683ae527b4e2f8de86cd9c04fcb89e13f2c33333be206e44a98d"
+ },
+ "sheets": {},
+ "skipped": {
+  "Sheet1": {
+   "A1": {
+    "f": "=CONVERT(1E290,\"Ym\",\"km\")",
+    "why": "no single value"
+   }
+  }
+ }
+}

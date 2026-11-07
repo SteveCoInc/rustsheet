@@ -19,6 +19,7 @@ use crate::arithmetic::{flush_subnormal, TINY_SUBNORMAL_BELOW};
 use crate::constants::EXCEL_PRECISION;
 use crate::number_format::{significant_15, to_precision};
 use crate::x87_register::Register;
+use crate::x87_table_read::x87_table_read;
 
 /// How the final digit is chosen in stage 2.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -231,12 +232,14 @@ pub(crate) fn x87_decimal_to_f64(digits: u64, place: i64) -> Option<f64> {
 /// with positive exponents and past the 15-digit cut: `=0.190581435720431` is
 /// 0.19058143572043101 and `=1.234567891234567E+3` reads its 15 digits at n = 11
 /// (docs/excel-semantics/numbers.md "Decimals reach a double through an x87 multiply by 10^-n";
-/// probes-numeric/t4077-long-literal-x87, 516 cells, excel-graph). `None` outside n = 1..15.
+/// probes-numeric/t4077-long-literal-x87, 516 cells, excel-graph). Past 15 places either way the
+/// power comes from x87 tables ([`x87_table_read`], T-4467). `None` at places -15 to 15 outside
+/// n = 1..15 (the positive places 1 to 15 are unprobed and keep the nearest double).
 pub(crate) fn x87_text_to_f64(digits: u64, place: i64) -> Option<f64> {
     if digits >= X87_TEXT_DIGITS {
         return None;
     }
-    x87_multiply(digits, place)
+    x87_table_read(digits, place).or_else(|| x87_multiply(digits, place))
 }
 
 /// `digits` times 10^`place` through the x87 multiply, for `place` in -15..=-1 and nonzero `digits`.
@@ -329,6 +332,17 @@ pub(crate) fn round_shown_place(value: f64, precision: i32, is_scientific: bool)
 /// The returned mantissa is already shifted to one integer digit (it is not the full-scale value).
 pub(crate) fn round_scientific(value: f64, precision: i32) -> (f64, f64) {
     let shown = (i64::from(precision) + 1).clamp(1, SIGNIFICANT_DIGITS);
+    let (digits, exponent) = significant_digits(value, shown);
+    // The mantissa is built unscaled: scaling to the full magnitude first overflows for 1.80E+308
+    // (DBL_MAX rounds up past f64::MAX; probes/dbl-max-text-b, T-2106).
+    let rounded = decimal_to_f64(digits, 1 - shown).unwrap_or(f64::INFINITY);
+    (rounded.copysign(value), exponent as f64)
+}
+
+/// `|value|` rounded half away from zero to `shown` (1 to 15) significant digits: those digits as
+/// an integer and the decimal exponent of the first one. A carry adds a digit place
+/// (9.96 to two digits is 10 and exponent 1).
+fn significant_digits(value: f64, shown: i64) -> (u64, i64) {
     let (mantissa, mut exponent) = significant_15(value.abs(), false);
     let dropped = SIGNIFICANT_DIGITS - shown;
     let (mut digits, round_up) = if dropped == 0 {
@@ -341,10 +355,7 @@ pub(crate) fn round_scientific(value: f64, precision: i32) -> (f64, f64) {
         digits /= 10;
         exponent += 1;
     }
-    // The mantissa is built unscaled: scaling to the full magnitude first overflows for 1.80E+308
-    // (DBL_MAX rounds up past f64::MAX; probes/dbl-max-text-b, T-2106).
-    let rounded = decimal_to_f64(digits, 1 - shown).unwrap_or(f64::INFINITY);
-    (rounded.copysign(value), exponent as f64)
+    (digits, exponent)
 }
 
 /// `value` rounded to the digits an engineering mantissa of `group` integer placeholders and
@@ -356,13 +367,21 @@ pub(crate) fn round_engineering(value: f64, group: f64, precision: i32) -> (f64,
         // At most 15 significant digits (docs/excel-semantics/numbers.md, "Number → text").
         (integer_digits + f64::from(precision)).clamp(1.0, EXCEL_PRECISION as f64) as usize
     };
+    // Halves round away from zero, as everywhere in a shown number (`#,##0E+0` on 12.5 is
+    // "13E+0"; probes/t4062-grouping-in-scientific B1:B11).
+    let round = |v: f64, digits: usize| {
+        let shown = i64::try_from(digits).unwrap_or(SIGNIFICANT_DIGITS);
+        let (digits, exponent) = significant_digits(v, shown);
+        let rounded = decimal_to_f64(digits, exponent + 1 - shown).unwrap_or(f64::INFINITY);
+        rounded.copysign(v)
+    };
     let exponent = exponent_of(value);
-    let rounded = to_precision(value, digits_of(value, exponent));
+    let rounded = round(value, digits_of(value, exponent));
     let carried = exponent_of(rounded);
     if carried == exponent {
         (rounded, exponent)
     } else {
-        (to_precision(value, digits_of(rounded, carried)), carried)
+        (round(value, digits_of(rounded, carried)), carried)
     }
 }
 

@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
+use crate::reference_operators::RefArg;
 use crate::{
     calc_result::CalcResult, cast::calc_result_to_array_node, expressions::parser::Node,
     expressions::token::Error, model::Model,
@@ -496,8 +497,40 @@ impl Model {
         cell: CellReferenceIndex,
         as_reference: bool,
     ) -> CalcResult {
+        // Without `keep_grid` the read is a value: never a grid.
+        self.xlookup_read(args, cell, as_reference, false)
+            .into_single_area(cell)
+    }
+
+    /// XLOOKUP read where a reference is taken (SPEC-0014 amendment "Mixed grids"): under a
+    /// lifted `lookup_value` with a range `if_not_found`, the array of its hits as values and its
+    /// misses as that range, a reference element each (`INDEX(XLOOKUP({2;9},A1:A3,B1:B3,F1:F2),
+    /// 2,1)` is F1:F2, `SUM(XLOOKUP(..))` 23 with F1 = 3; probes/t4563-xlookup-not-found-ref-
+    /// element A1:A53, A73, A109). With no miss it is the array of hits. Any other XLOOKUP is
+    /// what [`Self::xlookup_impl`] gives with `as_reference`, a range as its reference.
+    pub(crate) fn xlookup_reference(
+        &mut self,
+        args: &[Node],
+        cell: CellReferenceIndex,
+        as_reference: bool,
+    ) -> RefArg {
+        match self.xlookup_read(args, cell, as_reference, true) {
+            RefArg::Value(value) if as_reference => RefArg::from(value),
+            read => read,
+        }
+    }
+
+    /// [`Self::xlookup_impl`] and [`Self::xlookup_reference`]: `keep_grid` keeps a range
+    /// `if_not_found` under a lifted `lookup_value` as the reference element of each miss.
+    fn xlookup_read(
+        &mut self,
+        args: &[Node],
+        cell: CellReferenceIndex,
+        as_reference: bool,
+        keep_grid: bool,
+    ) -> RefArg {
         if args.len() < 3 || args.len() > 6 {
-            return CalcResult::new_args_number_error(cell);
+            return RefArg::Value(CalcResult::new_args_number_error(cell));
         }
         let lookup_value = self.evaluate_node_in_context(&args[0], cell);
         let match_mode = match args.get(4) {
@@ -515,7 +548,7 @@ impl Model {
         // an array and `#SPILL!` where it is blocked (gen-m6/fe0972380d030e4a Calc!A224,
         // excel-graph).
         if !lifts && criteria[0].is_error() {
-            return criteria.swap_remove(0);
+            return RefArg::Value(criteria.swap_remove(0));
         }
         let if_not_found = self.xlookup_if_not_found(args.get(3), lifts, as_reference, cell);
         let table = self.xlookup_table(&args[1], &args[2], cell);
@@ -532,6 +565,34 @@ impl Model {
         // Over a tailed key the call is a keyed lookup (SPEC-0020 Amendment 2, section 3): its
         // tail's lift and regex state continue its head's.
         let mut regexes = self.keyed_regexes(args, cell);
+        let if_not_found = match if_not_found {
+            // A range kept for the misses: one reference element per miss. Never a keyed
+            // lookup: one with a reference if_not_found is not keyed (`tailed_array.rs`).
+            NotFound::Range(range) if keep_grid => {
+                let lifted = match LiftedArg::read_all(self, criteria, cell) {
+                    Ok(lifted) => lifted,
+                    Err(error) => return RefArg::Value(error),
+                };
+                let read = self.lift_references_costed(lifted, cost, cell, &mut |model, values| {
+                    model.xlookup_one(values, &table, &range, pick, &mut regexes, cell)
+                });
+                let finished = regexes.finish(self, CalcResult::EmptyArg, cell);
+                return match (finished, read) {
+                    (error @ CalcResult::Error { .. }, _) => RefArg::Value(error),
+                    // A grid holds at least one reference element; all hits are their array.
+                    (_, RefArg::Grid(grid)) if !grid.holds_reference() => {
+                        RefArg::Value(grid.to_values())
+                    }
+                    (_, read) => read,
+                };
+            }
+            NotFound::Range(_) => CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "Reference if_not_found with an array lookup_value".to_string(),
+            ),
+            NotFound::Value(value) => value,
+        };
         let result = self.lift_values_keyed(
             args,
             criteria,
@@ -544,33 +605,31 @@ impl Model {
         );
         let result = regexes.finish(self, result, cell);
         self.keep_keyed_regexes(args, cell, regexes);
-        result
+        RefArg::Value(result)
     }
 
     /// XLOOKUP's `if_not_found` (`#N/A` when omitted or empty). A range stays a reference in the
     /// reference form: `ISREF(XLOOKUP(9,A1:A3,B1:B3,C1))` is TRUE
     /// (probes/intersection-lookup-operand-errors H10). Under a lifted `lookup_value` an array
-    /// gives its first element and a reference, even a single cell, `#VALUE!`
-    /// (probes/xlookup-array-lookup-value-args A27-A31, A58).
+    /// gives its first element (probes/xlookup-array-lookup-value-args A27-A31, A58), and a
+    /// reference, even a single cell, is [`NotFound::Range`]: the reference element of each miss
+    /// where a reference is taken, `#VALUE!` per miss in the value view (probes/t4563-xlookup-
+    /// not-found-ref-element A57, A97).
     fn xlookup_if_not_found(
         &mut self,
         node: Option<&Node>,
         lifts: bool,
         as_reference: bool,
         cell: CellReferenceIndex,
-    ) -> CalcResult {
+    ) -> NotFound {
         let value = match node {
             Some(node) if lifts || as_reference => self.evaluate_node_with_reference(node, cell),
             Some(node) => self.evaluate_node_in_context(node, cell),
             None => CalcResult::EmptyArg,
         };
-        match value {
+        NotFound::Value(match value {
             CalcResult::EmptyArg => CalcResult::new_error(Error::NA, cell, "Not found".to_string()),
-            CalcResult::Range { .. } if lifts => CalcResult::new_error(
-                Error::VALUE,
-                cell,
-                "Reference if_not_found with an array lookup_value".to_string(),
-            ),
+            range @ CalcResult::Range { .. } if lifts => return NotFound::Range(range),
             CalcResult::Array(rows) if lifts => {
                 rows.first().and_then(|row| row.first()).map_or_else(
                     || CalcResult::new_error(Error::VALUE, cell, "Empty array".to_string()),
@@ -578,6 +637,14 @@ impl Model {
                 )
             }
             other => other,
-        }
+        })
     }
+}
+
+/// XLOOKUP's `if_not_found`, evaluated once.
+enum NotFound {
+    /// What a miss gives.
+    Value(CalcResult),
+    /// A range under a lifted `lookup_value`, a `CalcResult::Range`.
+    Range(CalcResult),
 }

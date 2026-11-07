@@ -7,90 +7,98 @@ merged since its last run.
 
 **Progress dashboard:** [docs/progress.md](progress.md), regenerated daily by the steward.
 
-## Snapshot — 2026-11-05, 19:43 UTC run (M7 is current)
+## Snapshot — 2026-11-06, 19:43 UTC run (M6 is current)
 
-This is the day's second run. It follows #3300, the 05:58 UTC run (squash-merged as 067ae657 at 11:47 UTC), and covers the 109 commits merged to `main` after c3de9423 (#3289, where that run's list stopped) up to b2f4a8bd (#3404), the head when this run started. `make eval` ran on 6e90f19c (b2f4a8bd plus this PR's first commit, task files and UPSTREAM.md only), on a clean tree.
+This run follows #3513, the 2026-11-06 05:53 UTC run, which was squash-merged as 2ad9ca9f. It covers the 221 commits merged to `main` after b30a0e59 (#3448, where that run's list stopped) up to ebe81baf (#3719), the head when this run started. `make eval` ran on ebe81baf; the tree held only this run's two new task files, which no case reads.
 
-- All 17 suites were scored. calipers, corpus-bench and poi were again not fetched in this container, so the first `make eval` skipped them; I ran `rustsheet-eval fetch` for the three and ran `make eval` again. Timeouts: 0 in every suite.
-- Eval gate: `make eval-lower-visible-lock` shows 0 regressions and 0 fixed in every gated suite. It lowered the visible-parity lock (decision 0093) from 3,140 allowed in 252 cases to 1,813 in-scope visibly-off cells in 228 cases (0 in new cases).
-- The dashboard has this run's numbers (`make progress-report`; the judgment blocks pass `--check`).
+- All 17 suites were scored. calipers, corpus-bench and poi were not in this container's cache, so I ran `rustsheet-eval fetch` for them before `make eval`. Timeouts: 0 in every suite.
+- Eval gate: `make eval-lower-visible-lock` shows 0 regressions and 0 fixed in every gated suite. It lowered the visible-parity lock (decision 0093) from 13,624 allowed in 304 cases to 4,962 in-scope visibly-off cells in 254 cases (0 in new cases). The allowance had grown because PRs since the last run added probe cases with their own lines.
+- Round-trip gate (`make check-fast`, with the corpora fetched): `roundtrip --check` reported `roundtrip-poi` out of date, with 52575_main.xlsx failing 221 items where the baseline records 224, an improvement no PR recorded because PR CI does not fetch the corpora. `rustsheet-eval roundtrip --update-baseline --suite roundtrip-poi` re-recorded that one line, and the check then passed. An all-suite `--update-baseline` refused, because roundtrip-calipers pv26_002 and pv26_2_002 timed out in this container; calipers is not in the round-trip gate set, and I recorded nothing for it.
+- The dashboard has this run's numbers (`make progress-report`; the judgment blocks pass `--check`). `make progress-report` first failed: the M15 and M16 sections of docs/milestones.md, added since the last run (#3511, #3516), wrote `**Exit criteria**` without the colon the generator reads. This PR adds the colon to both; the wording is otherwise unchanged.
 
-CI on `main` is green: 57 of the last 60 `ci.yml` push runs on `main` succeeded, 1 (b2f4a8bd) was still running, and 2 failed: 310eb55e (#3383) and e84e073b (#3344), at 16:36 and 16:38 UTC. In both, only the eval job's `actions/upload-artifact` step failed, after about 10 minutes, once the informational report step had passed. Push runs do not run the gate steps. The next 20 push runs passed, so I judged it an artifact-service failure, not a code one, and filed nothing.
+CI on `main` is green: the last 40 `ci.yml` push runs on `main` all succeeded. The latest scheduled Nightly eval (14:16 UTC, 7811739) and Nightly fuzz (11:26 UTC, f90f8172) runs both succeeded.
 
-M2's exit row is met for the first time: the M0–M2 probes (decision 0051) have 0 known failures (14 last run), since T-4288 (#3292) closed probes/t4224-doubled-xlpm-prefix. M2's other exit criteria are met (decision 0137), so by docs/milestones.md's phase order the current milestone is now M7: M5, M6 and M8 are met too.
-- M6 is met again: T-4260 (#3290) and T-4261 (#3299) closed the t4236 pivot date-group probes.
-- `make exit-owners` reports 0 for M7, and for M2, M6, M8, M9 and M10 as well. The frozen M1 list has 0 known failures (89/89 cases).
-- `make phase1-exit` found 80 M9 exit cells, and 40 visibly-off cells, with no open owner: probes/forecast-ets-longer-series K1:K42 (all but K37 and K38), whose only owner, T-3641, closed in #3392 when excel-graph still returned `#N/A`. T-4207 owns the FORECAST.ETS cells that decision 0266 orphaned, so I named this case there. Its `owners` line is now met, and the exit fails only on gate A, the function rate and M7, M9 and M10.
+Milestones: M7's exit row is now met, and M6's is not. The current milestone is therefore M6 (decision 0027 order).
+- M6 fails only on its probes: 108 visibly-off cells in two new XLOOKUP cases (t4563-xlookup-not-found-ref-element, 106; t4543-xlookup-not-found-address-sheet-lift, 2). They are newly probed, not regressions. T-4569 (spec amendment, draft #3679) and T-4570 (implementation, depends on it) own them, both functions-lookup.
+- M7's probes went from 86 visibly-off cells to 0 (T-4393's UNIQUE merge #3496, T-4471 #3520, and the PIVOTBY work).
+- `make exit-owners MILESTONE=M6` and `MILESTONE=M7` both report 0. The frozen M1 list has 0 known failures (89/89 cases), and the M0–M2 probes have 0.
+- Phase 1 still fails on gate A, the function rate, owners, and the M6, M9 and M10 rows (`make phase1-exit`, which also flags the dirty tree). Its owners line reports 2 visibly-off cells owned only by a deferred task.
 
 Hygiene:
 - lint-debt: 91 allow entries (= last run);
-- duplicated lines: 2,876 (baseline 2,878). Not lowered here: `quality/` is a protected path (`check_governance.py`), so a task PR records the drop;
+- duplicated lines: 2,872 (baseline 2,876; 2,876 last run). It is not lowered here: `quality/` is a protected path, so a task PR records the drop;
 - oversized files: 8 (= last run).
 
-Merged since c3de9423: 109 commits, from #3290 to #3404, plus #3300 itself. None were reverted. All were committed by GitHub, each with its PR's `(#n)` suffix; 22 of them are task-only `tasks:` PRs. Among them: T-4288's typed `_xlpm.` names (#3292), T-4260 and T-4261's pivot date groups (#3290, #3299), T-4265 and T-4266's encrypted and password-protected xlsx (#3330, #3364), T-3394's INDIRECT over qualified structured references (#3369), T-4342's GROUPBY and PIVOTBY tree over UNIQUE's keys (#3361), T-3815's XNPV element reads (#3375) and T-2900's Python `Transaction.define_name` (#3371).
+Merged since b30a0e59: 221 commits, from #3440 to #3719, #3513 among them. None were reverted. All were committed by GitHub with their PR's `(#n)` suffix; 31 of them are task-only `tasks:` PRs. Among them:
+- owner rulings: decision 0300 (#3508, nine R3 candidates keep Excel) and decision 0301 (#3514, T-3544's T.INV and F.INV points stay on Excel);
+- the Gate A tables for every remaining in-scope numeric function (T-4089 to T-4116 and others): `missing tables 0`;
+- pivot tables (M16): SPEC-0032, the pivot model, import, cache refresh, result tree and rowItems output (T-4121, T-4139, T-4141, T-4142, T-4147, T-4149) and about twenty probe tasks;
+- xlsx round-trip (M15): SPEC-0033 and SPEC-0034, the roundtrip suite kind and the source-preserving export (T-4167, T-4172, T-4173, T-4183, T-4559, T-4560, T-4561), plus the nightly corpus round-trip gate (T-4632, decision 0323);
+- M7 exit work: UNIQUE's merge (T-4393, T-4471) and PIVOTBY (T-4414, T-4428, T-4452);
+- T-3634 (#3701), the undo of a table-resizing row delete, which replaced the stuck #3379.
 
-Blocked: 35 on `main` (33 at 067ae657); new are T-2555 and T-4333, both time-boxed (decision 0056). No task on `main` is `Blocked because: review-round limit`.
+Blocked: 43 on `main` as merged into this PR (41 at 2ad9ca9f by the same count). New: T-3347 and T-4027 (IRR, both time-boxed, decision 0056), and T-4597, T-4613 and T-4623 (M15, deferred to Phase 2). No longer blocked: T-4173, T-4560 and T-4561, all done. No task on `main` is `Blocked because: review-round limit`.
 
-Open PRs: 12 at 20:40 UTC (11 last run), 5 of them drafts.
-- Orphaned-PR check (`agent/*` or `claude/*`, not draft, not queued, idle 4 h): none idle 4 h. #3379 (T-3634, head 16:42 UTC) is the oldest; #3386, #3387 and #3385 are younger.
-  - #3403 (T-4378) and #3405 (T-4379) carried `queue-dropped` at 19:42 UTC. Their opus session was live: it enqueued #3407 at 19:42, pushed to #3403 at 20:16, and both have since merged. I left them to it rather than race it.
-- Duplicate check: #3385 and #3387 both carry T-4357 (research, 16:43 and 16:46 UTC). Neither is green and reviewed, so neither is the survivor yet. Neither is closed: the rule closes one only after the other merges.
+Open PRs: 24 at 20:20 UTC (27 last run), 13 of them drafts.
+- Orphaned-PR check (`agent/*` or `claude/*`, not draft, not queued, idle 4 h):
+  - #3637 (T-4574, head 15:18 UTC) duplicates #3647, which merged T-4574 at 15:10 UTC. I closed it as the duplicate and deleted nothing. Its two probe cases (346 cells) and its follow-up T-4624 are not on `main`, so this PR files T-4673 to salvage them.
+  - #3720 (T-4602) carried `queue-dropped`, but its session pushed a merge of `main` at 19:45 UTC, so I left it to that live session.
+  - The other non-draft agent PRs are younger than 4 h.
+- Duplicate check: apart from #3637, no two open PRs carry the same task id.
 - Stale drafts (head 24 h or more, decision 0264):
-  - #3019 (T-3963, head 2026-11-04 19:50 UTC, 25 h): bucket 3, owner needed. The "Needs owner" entry below (T-4239) is on `main`.
-  - #3105 (T-3141, head 2026-11-04 07:13 UTC, 37 h): bucket 5. It is blocked on T-4059, a task that exists only on its branch. The CUMIPMT Gate A work on `main` is T-4110, and the branch holds two oracle-filled probe cases that `main` lacks. Filed salvage task T-4385.
-  - #3177 (T-3933, head 2026-11-04 14:26 UTC, 30 h): bucket 5. It is parked by decision 0267 (Phase 1b), and its statistics.md findings and research notes are not on `main`. Filed salvage task T-4387.
-  - #3211 (T-4213, head 2026-11-04 19:17 UTC, 25 h): bucket 5. It is time-boxed, with an oracle-filled fresh sweep and a T-4232 task file that are not on `main`. Filed salvage task T-4386.
-- Younger drafts: #3411 (T-4370) and #3390 (T-4355).
+  - #3211 (T-4213, head 2026-11-04 19:17 UTC, 48 h): bucket 1, superseded. Its salvage task T-4386 merged as #3473, so I closed it with a comment and deleted nothing.
+  - #3019 (T-3963, head 2026-11-04 19:50 UTC, 48 h): bucket 3, owner needed. The T-4239 entry below is on `main`.
+  - #3177 (T-3933, head 2026-11-04 14:26 UTC, 53 h): bucket 5. Its salvage task T-4387 is still open.
+  - #3390 (T-4355, head 2026-11-05 17:22 UTC, 26 h): bucket 5. The task is done on the branch and CI is green, but its review table is all pending, so it is not ready. Its probe and numbers.md entry are not on `main`, so this PR files the salvage task T-4672.
+- Younger drafts: #3428, #3443, #3488, #3505, #3679, #3700, #3717, #3721 and #3724.
 
 Queues:
-- `make ready-tasks LANE=functions` printed 28 (≥ 3), so I did not run the gap-triager.
-- M7's lanes: engine has 3 unclaimed ready M7 tasks, but `make ready-tasks LANE=engine` printed 0 because live branches hold its slots, and every failing M7 exit cell has an open owner. research has 28, and perf has 1 (Phase 2). harness printed 0 and has no M7 work. So I did not run the planner: new tasks would only queue behind the claims.
-- api printed 7, perf 16, quality 12, research 159, and `TIER=sonnet` 181 (≥ 10).
+- `make ready-tasks LANE=functions` printed 0 (< 3). Every functions-* lane with ready tasks was busy (its slot held by a live branch): unclaimed ready tasks were only in functions-stat (127), functions-financial (34), functions-text (14) and functions-engineering (1). So I ran the gap-triager for the lanes with none. It found no unowned failing cell there (the only 2 cells with no open owner are a SYD and a CHIDIST cell, owned only by deferred tasks) and filed five sonnet tasks from UNVERIFIED semantics notes: T-4684 and T-4685 (functions-lookup, M7), T-4686 (functions-logic, M9), T-4687 (functions-math, M5) and T-4688 (functions-criteria, M9). At the end of the run it printed 4, as slots had freed.
+- Current-milestone lanes (M6): every failing M6 exit cell is owned (T-4569, T-4570, functions-lookup), so I did not run the planner: new engine, api, harness, quality or research tasks would close no M6 exit cell.
+- `TIER=sonnet` printed 183 (≥ 10).
 
-Upstream IronCalc: `scripts/upstream-log.sh` listed four commits after bec55e1e, and UPSTREAM.md now records ae1fccd3. The code fixes need no port. Coupon dates on the 29th and 30th (67f7856b) are on `main` already ("Coupon dates keep the maturity's day" in financial.md, VERIFIED). So are NUMBERVALUE's whitespace, separator, empty-group and `%`-only rules (f6b52dee, ae1fccd3): text.md has them from T-3647, T-3746, T-2441 and T-3742. Filed T-4383 (FINANCIAL/1682.xlsx) and T-4384 (TEXT/NUMBERVALUE.xlsx) to add the new upstream workbooks to calc_tests, as T-3857 did.
+Upstream IronCalc: `scripts/upstream-log.sh` listed no commits after the last triaged one, so there was nothing to file.
 
-Issues: the one open issue, #2277, already has its tasks (T-0496 and others; `tasks.py issue 2277` finds 104).
+Issues: the one open issue, #2277, already has its task (T-0496; `tasks.py issue 2277` finds it), so I ran no intake.
 
 Oracle: excel-graph credentials are present (`rustsheet-oracle status`: excel-graph OK).
-- probes: 4 pending cases. `fill -b excel-graph --suite probes` wrote 0 sidecars: Excel for the web refused t0481-curly-quote-names-c and typed-if-one-argument again (`unsupportedWorkbook`), and the other two are known unfillable (T-1075).
-- As before, ironcalc-calc's 1 pending case is Excel-authored and poi's are web-vs-desktop conflicts (decision 0019), so I refilled neither. calipers and corpus-bench are scored from their own cached values.
+- probes: 4 pending cases. `fill -b excel-graph --suite probes` wrote 0 sidecars: Excel for the web refused t0481-curly-quote-names-c and typed-if-one-argument again, and the other two are known unfillable (T-1075).
+- As before, ironcalc-calc's 1 pending case is Excel-authored, and poi's are web-vs-desktop conflicts (decision 0019), so I refilled neither. calipers and corpus-bench are scored from their own cached values.
 
-Spot-audit: the last was 2026-11-01, so none is due; next on or after 2026-11-08.
+Spot-audit: the last was 2026-11-01, so none is due. The next is on or after 2026-11-08.
 
 **Critical lane:** engine
 
-(Ordered list read by both tier workers, which then fall back to `functions`. The current milestone is M7, since M2's
-exit is met this run.
+(Ordered list read by both tier workers, which then fall back to `functions`. The current milestone is M6: M7's exit
+row is met this run, and M6's reopened on new XLOOKUP probe cells.
 **Owner ruling, 2026-11-04: until Phase 1 exits, the critical lane is `engine` only.** Research probes and harness
 Gate A work close no Phase 1 exit criterion, and ranking them above `functions` kept workers off the exit blockers.
 The steward keeps this line as it is until the owner changes it.
-- The exit cells left are owned by live or blocked work, so this run raises no priority. M7's are owned by T-4359
-  (engine, #3409, live) and T-4382 (filed in #3407), and M10's by T-4370 (functions-text, draft #3411, live) and
-  T-4333 (blocked: time-boxed). M9's 1,152 visibly-off probe cells belong to the functions-stat and functions-financial
-  fit work.
-- A directive-5 crash P0 (a fuzz or panic report) still comes first: the session that files it starts it at once,
+- Every exit cell left is owned by open work, so this run raises no priority:
+  - M6's 108 probe cells: T-4569 and T-4570 (functions-lookup, reached through the `functions` fallback);
+  - M10's 54: T-4419, T-4594 and T-4648 (functions-text), T-4460 and T-4466 (research), and T-4333 (blocked: time-boxed);
+  - M9's 1,376 visibly-off probe cells: the functions-stat and functions-financial fit work.
+- A directive-5 crash P0 (a fuzz or panic report) still comes first. The session that files it starts it at once,
   rather than leaving it to wait behind these by milestone.
-- api, harness, quality and research have no M7 exit work on the critical path; perf stays out: Phase 2.)
+- api, harness, quality and research have no M6 exit work on the critical path. perf stays out: it is Phase 2 work.)
 
 ## Needs owner
 
-- **Decision 0188 R3 rulings** (no agent, steward included, adds an R3 / `MATH-OVER-EXCEL` case on its own): four tasks
-  are blocked on an owner ruling. Each one says where Excel is more than 1e-4 off the math, and which way the task
-  would go:
-  - T-3794: two-argument ERF where the two values nearly cancel;
-  - T-3775: SIN, COS, IMSIN and IMCOS at the 15-digit neighbour of k·pi/2;
-  - T-3484: XIRR near a zero root;
-  - T-4196: BESSELI at a large x and order 2 or more, and BESSELJ near a root (filed by T-4083, #3157).
-  Added 2026-11-04 (19:43 UTC run): these tasks were blocked on the owner but not listed here.
+- **Re-apply the worker routines from docs/process/routines.md** (added 2026-11-07, T-3821). Decision 0331 makes a
+  lane busy per tier, and both worker prompts now say so ("lanes that are busy for your tier"); decision 0332 (T-3824)
+  adds that a current-milestone task passes a lane busy only with later-milestone work. Agents never edit routines,
+  so please re-apply the sonnet and opus worker prompts.
 - **Owner ruling on RATE's keep-r0 secant model, T-4239** (2026-11-04). T-3963 found why RATE's same-state flat
   secants split (Excel keeps the older iterate when a step leaves the residual unchanged) and built the model on draft
   PR #3019: +78 bit-exact of 2,400 literal RATE cells, 59 against 9 on a blind fresh probe. But it moves five
   error-against-number points out of the Gate A envelope, which decision 0265 does not cover, and regresses 37 gated
   cells. Please choose: adopt it with those points accepted, or keep the merged rule (T-4239 has the details).
+- **Owner ruling on CUMPRINC's short-range cut, T-4400** (added 2026-11-06). T-4349 (decision 0296) found no rule that decides between the cut `GEOMETRIC_MIN_LEAD` and the geometric sum. Please choose: (1) keep the cut, so decision 0295 stands as a deviation from decision 0188 R4.3 until T-4390 lands; or (2) remove it, which regresses gated cells under decision 0083 (T-4400 lists them).
 
 Pruned 2026-11-04 at the owner's request: the direct pushes to `main` (none since 2026-10-19), the missed steward runs (both
 daily firings arriving again since 2026-11-03), the steward prompt drift (matches routines.md since 2026-11-02) and
-the RATE flat-secant ruling (T-3916, decided by decision 0265). The direct-push item's recommendation, a ruleset on
+the RATE flat-secant ruling (T-3916, decided by decision 0265). Ruled 2026-11-06 (decision 0300, keep Excel): T-3794, T-3775,
+T-3484 and T-4196, plus T-4277, T-4317, T-4318, T-4392 and T-4285. Ruled 2026-11-06 (decision 0301, keep Excel): T-3544. Resolved 2026-11-06: #3379 (T-3634), which #3701 replaced. The direct-push item's recommendation, a ruleset on
 `main` requiring a pull request, remains the owner's to take up or not.
 
 excel-desktop needs are not owner items (decision 0039): T-1016, T-1051 and the other desktop tasks wait in M14 (Phase 4), tracked by T-1074 and T-1075.

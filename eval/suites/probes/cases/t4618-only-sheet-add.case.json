@@ -1,0 +1,73 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4618: probes/t4554-api-name-local-name-body Last!D3 (=LD on Last, loaded before LD = =Dup is added through the API scoped to Last, after workbook adds WL = =LocLoc and WD = =Dup; S2 active) is 90, where probes/t4049-sheet-api-name-plain S!A1 is #NAME?. The same book and cells with only the sheet-scoped add (LD = =Dup on Last), no earlier workbook-scoped adds (WL, WD stay undefined). Do the workbook adds before it make Last!D3 see LD?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "S2",
+ "names": {
+  "S2!LocLoc": "=S2!$B$1",
+  "Dup": "=First!$B$2",
+  "S2!Dup": "=S2!$B$2",
+  "Last!Dup": "=Last!$B$2"
+ },
+ "sheets": [
+  {
+   "name": "First",
+   "cells": {
+    "B1": 1,
+    "B2": 10,
+    "D1": "=WL",
+    "D2": "=WD",
+    "D3": "=Last!LD",
+    "D4": "=Dup"
+   }
+  },
+  {
+   "name": "S2",
+   "cells": {
+    "B1": 7,
+    "B2": 70,
+    "D1": "=WL",
+    "D2": "=WD",
+    "D3": "=Last!LD",
+    "D4": "=Dup"
+   }
+  },
+  {
+   "name": "Last",
+   "cells": {
+    "B1": 9,
+    "B2": 90,
+    "D1": "=WL",
+    "D2": "=WD",
+    "D3": "=LD",
+    "D4": "=Dup"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "First!D1",
+  "First!D2",
+  "First!D3",
+  "First!D4",
+  "S2!D1",
+  "S2!D2",
+  "S2!D3",
+  "S2!D4",
+  "Last!D1",
+  "Last!D2",
+  "Last!D3",
+  "Last!D4"
+ ],
+ "api_names": [
+  {
+   "name": "LD",
+   "formula": "=Dup",
+   "sheet": "Last"
+  }
+ ]
+}

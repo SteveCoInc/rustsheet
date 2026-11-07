@@ -612,3 +612,33 @@ fn templates_are_kept_per_column() {
     assert!(lexer.key(formula, &at(42, 3)).is_some());
     assert_eq!(lexer.copies, copies + 1);
 }
+
+// T-4145: poi/bug69769.xlsx Tabelle1!B2 stores `<c t="s"><v>2 </v></c>`, which Excel opened as
+// the string at index 2; the snapshot reader trims, so the importer must too.
+#[test]
+fn shared_string_index_with_surrounding_whitespace_is_that_index() {
+    use crate::import::shared_strings::SharedStringTable;
+    use crate::import::worksheets::{get_cell_from_excel, CellArrayKind};
+    use rustsheet_engine::types::{Cell, DateSystem};
+    for (text, expected) in [("2 ", 2), (" 2", 2), ("2", 2), ("-1", -1), ("x", 0)] {
+        let cell = get_cell_from_excel(
+            Some(text),
+            None,
+            "s",
+            0,
+            -1,
+            "Sheet1",
+            "A1",
+            &mut SharedStringTable::default(),
+            None,
+            None,
+            CellArrayKind::None,
+            DateSystem::Excel1900,
+        );
+        assert_eq!(
+            cell,
+            Cell::SharedString { si: expected, s: 0 },
+            "<v>{text}</v>"
+        );
+    }
+}

@@ -79,10 +79,26 @@ fn tags_resolve_like_excel() {
     assert_eq!(names("E0412"), Some("삼월"));
     assert_eq!(names("120411"), Some("March"));
     assert_eq!(names("6040C"), Some("Rabi' Aoual"));
-    for silent in [
-        "", "zzz", "xx", "FFFF", "40C0", "0", "2000000", "40C,1", "+40C",
-    ] {
+    // A tag Excel cannot read, or an extended-hex reading with no locale and no calendar digit,
+    // changes nothing (`B2[$-zzz]` is a bare `B2`).
+    // So does a hex LCID before a `,`: only a BCP-47 name is a locale there (`[$-40C,1]mmmm` is
+    // "March"; probes/t4492-comma-suffix-reading, text-locale-date-names A106).
+    for silent in ["", "zzz", "xx", "+40C", "40C,1"] {
         assert_eq!(resolve(silent), LocaleTag::Silent, "{silent}");
+    }
+    // A hex LCID with no locale is en-US and Gregorian with `A/P` as written, under any calendar
+    // digit (probes/t4061-calendars-without-locale).
+    for no_locale in ["FFFF", "40C0", "0", "2000000"] {
+        match resolve(no_locale) {
+            LocaleTag::Names(n) => {
+                assert_eq!(
+                    (n.names.months[2], n.day_half),
+                    ("March", None),
+                    "{no_locale}"
+                );
+            }
+            other => panic!("{no_locale}: {other:?}"),
+        }
     }
     assert_eq!(resolve("F800"), LocaleTag::SystemDate);
     assert_eq!(resolve("X-SYSTIME"), LocaleTag::SystemTime);
@@ -167,6 +183,22 @@ fn a_tag_neither_hex_nor_bcp47_reads_as_extended_hex() {
     assert_eq!(text(0.75, "[$-zzzz]h A/P"), "6 P");
     // A BCP-47 language still comes first (`fr-FR_x` is French).
     assert_eq!(text(45000.0, "[$-fr-FR_x]mmmm"), "mars");
+}
+
+// probes/t4356-extended-hex-xeuro, t4356-private-use-prefix, t4356-private-use-value (T-4356).
+#[test]
+fn an_x_prefixed_tag_prints_ascii_digits_whatever_its_numeral_byte() {
+    for tag in ["x-euro", "X-euro", "x-abcd", "x-000000", "x-0000001"] {
+        assert_eq!(text(123.0, &format!("[$-{tag}]0")), "123", "{tag}");
+    }
+    // The same values without the prefix keep their numerals.
+    assert_eq!(text(123.0, "[$-1gdffc8]0"), "١٢٣");
+    assert_eq!(text(123.0, "[$-y-euro]0"), "١٢٣");
+    assert_eq!(text(123.0, "[$-x_euro]0"), "١٢٣");
+    assert_eq!(text(123.0, "[$-0d0000g0]0"), "๑๒๓");
+    // Bytes 32 and up take their digits too.
+    assert_eq!(text(123.0, "[$-y-euros]0"), "一二三");
+    assert_eq!(text(123.0, "[$-xx-euro]0"), "１２３");
 }
 
 #[test]
@@ -358,4 +390,115 @@ fn numeral_suffix_tags_print_script_digits() {
     assert_eq!(text(1000.0, "[$-ar-SA,200]0.00E+00"), "١.٠٠E+٠٣");
     assert_eq!(text(12.0, "[$$-ar-SA,200]#,##0.00"), "$١٢.٠٠");
     assert_eq!(text(-12.0, "[$-ar-SA,200]0"), "-١٢");
+}
+
+#[test]
+fn only_lcids_with_a_locale_print_a_language() {
+    // probes/t3666-lcid-sublanguage-sweep: 0x2412 and 0x812 have no locale, 0x412, 0xF412 and
+    // 0xF409 have one; 0xC00 is en-US.
+    let v = 45000.75;
+    let f = |tag: &str| text(v, &format!("[$-{tag}]mmmm|ddd|h A/P|h AM/PM"));
+    assert_eq!(f("2412"), "March|Wed|6 P|6 PM");
+    assert_eq!(f("812"), "March|Wed|6 P|6 PM");
+    assert_eq!(f("F412"), "3월|수|6 오후|6 오후");
+    assert_eq!(f("F409"), "March|Wed|6 PM|6 PM");
+    assert_eq!(f("C00"), "March|Wed|6 PM|6 PM");
+    assert_eq!(f("400C"), "March|Wed|6 P|6 PM");
+}
+
+#[test]
+fn a_weekday_written_with_a_has_its_own_code_after_b2() {
+    // probes/t3089-b2-weekday-a-codes.
+    assert_eq!(text(45000.0, "B2[$-40409]aaa|b"), "週三|23");
+    assert_eq!(text(45000.0, "B2[$-40409]AAAA|b"), "星期三|24");
+    assert_eq!(text(45000.0, "B2[$-40409]ddd aaa|b"), "週三 週三|2\u{f}");
+}
+
+// probes/t4480-lcid-sublanguage-fallback and text-locale-invalid-sublanguage (T-4480).
+#[test]
+fn assigned_and_high_sublanguage_lcids_have_a_locale() {
+    let code = "mmmm|ddd|h AM/PM|h A/P|h a/p";
+    let english = "March|Wed|6 PM|6 P|6 p";
+    // Unassigned sublanguages below 0x20, and all of 0x20 to 0x3C, have no locale.
+    for tag in [
+        "2412", "C12", "1412", "C11", "1807", "7C09", "8012", "BC09", "F012",
+    ] {
+        assert_eq!(
+            text(45000.75, &format!("[$-{tag}]{code}")),
+            english,
+            "{tag}"
+        );
+    }
+    // 0x3D to 0x3F fall back to the language's first table, as an assigned LCID does.
+    for tag in ["F412", "F812", "FC12", "412"] {
+        assert_eq!(
+            text(45000.75, &format!("[$-{tag}]{code}")),
+            "3월|수|6 오후|6 오후|6 오후",
+            "{tag}"
+        );
+    }
+    assert_eq!(
+        text(45000.75, &format!("[$-F40C]{code}")),
+        "mars|mer.|6 PM|6 PM|6 PM"
+    );
+    assert_eq!(
+        text(45000.75, &format!("[$-810]{code}")),
+        "marzo|mer|6 PM|6 PM|6 PM"
+    );
+    assert_eq!(
+        text(45000.75, &format!("[$-F409]{code}")),
+        "March|Wed|6 PM|6 PM|6 PM"
+    );
+}
+
+// probes/t4064-ru-md-names and t4065-french-regional-halves, -names (T-4064, T-4065).
+#[test]
+fn russian_and_french_variants_have_their_own_names() {
+    let code = "mmm|mmmm|ddd|d mmmm|h AM/PM";
+    assert_eq!(
+        text(44941.75, &format!("[$-819]{code}")),
+        "янв.|январь|вс|15 январь|6 PM"
+    );
+    assert_eq!(
+        text(44941.75, &format!("[$-ru-MD]{code}")),
+        "янв.|январь|вс|15 январь|6 PM"
+    );
+    assert_eq!(
+        text(44941.75, &format!("[$-F419]{code}")),
+        "янв|январь|Вс|15 январь|6 PM"
+    );
+    assert_eq!(
+        text(44941.75, &format!("[$-F819]{code}")),
+        "янв|Января|Вс|15 Января|6 PM"
+    );
+    assert_eq!(
+        text(44941.75, &format!("[$-FC19]{code}")),
+        "янв|января|Вс|15 января|6 PM"
+    );
+    assert_eq!(
+        text(44941.75, &format!("[$-419]{code}")),
+        "янв|Январь|Вс|15 Январь|6 PM"
+    );
+    assert_eq!(
+        text(0.25, "[$-2C0C]h AM/PM|h A/P|AM/PM"),
+        "6 mat.|6 mat.|mat."
+    );
+    assert_eq!(text(0.75, "[$-fr-CM]h AM/PM"), "6 soir");
+    assert_eq!(text(45000.0, "[$-380C]mmm|mmmm"), "mar.|mars");
+    assert_eq!(text(45000.0, "[$-1C0C]mmm|mmmm|ddd"), "Mars|Mars|mer.");
+}
+
+// probes/t4492-comma-suffix-reading and t4492-locale-comma-tag-shapes (T-4492).
+#[test]
+fn a_comma_tag_reads_its_suffix_as_extended_hex_and_only_a_bcp47_locale() {
+    assert_eq!(text(45000.75, "[$-ar-SA, 200]0"), "٤٥٠٠١");
+    assert_eq!(text(45000.75, "[$-ar-SA,2 00]0"), "၄၅၀၀၁");
+    assert_eq!(text(45000.75, "[$-ar-SA,20 0]0"), "肆伍零零壹");
+    assert_eq!(text(45000.75, "[$-ar-SA,g00]0"), "၄၅၀၀၁");
+    assert_eq!(text(45000.75, "[$-ar-SA,100000200]0"), "٤٥٠٠١");
+    assert_eq!(text(45000.75, "[$-ar-SA,FFFFFF00]0"), "45001");
+    assert_eq!(text(45000.75, "[$-409,200]mmmm"), "March");
+    assert_eq!(text(45000.75, "[$-40C,200]mmmm"), "March");
+    assert_eq!(text(45000.75, "[$-ja-JP,200]mmmm"), "3月");
+    assert_eq!(text(45000.75, "[$-ar-SA ,200]mmmm"), "مارس");
 }

@@ -4,10 +4,10 @@ use bitcode::{Decode, Encode};
 
 use crate::{
     cf_types::CfRule,
-    formula_rewrite::RewrittenFormula,
+    formula_rewrite::{RewrittenCell, RewrittenFormula},
     types::{
-        Cell, Col, Color, Link, MergedCell, Row, SheetState, Style, StyleIncludes, Table, Theme,
-        Worksheet,
+        Cell, Col, Color, Link, MergedCell, Row, SheetState, Style, StyleIncludes, Table,
+        TableExtent, Theme, Worksheet,
     },
 };
 
@@ -24,6 +24,17 @@ pub(crate) struct ColumnData {
 }
 
 impl Diff {
+    /// A `SetRowHidden` that shows a hidden row. A column delete's diff list ends with these
+    /// for the rows it showed (T-4371), so an undo hides them before it restores the filter.
+    pub(crate) fn row_shown(sheet: u32, row: i32) -> Self {
+        Diff::SetRowHidden {
+            sheet,
+            row,
+            new_value: false,
+            old_value: true,
+        }
+    }
+
     /// A `SetCellValue` of the user input `value` from outside the engine, typed rather than
     /// written through the legacy entry.
     pub(crate) fn set_cell_value(
@@ -167,6 +178,12 @@ pub(crate) enum Diff {
         row: i32,
         count: i32,
         old_data: Vec<RowData>,
+        /// The extents, before the delete, of the tables it resized, which the undo puts back
+        /// (T-3634); redo's delete resizes them again.
+        tables: Vec<TableExtent>,
+        /// The formula cells the delete rewrote past what re-inserting the rows undoes, as they
+        /// were, which the undo puts back (T-4668); redo's delete rewrites them again.
+        rewritten: Vec<RewrittenCell>,
     },
     InsertColumns {
         sheet: u32,
@@ -178,6 +195,12 @@ pub(crate) enum Diff {
         column: i32,
         count: i32,
         old_data: Vec<ColumnData>,
+        /// The tables the delete changed, as they were before it, which the undo puts back
+        /// (T-4652); redo's delete changes them again.
+        tables: Vec<(String, Table)>,
+        /// The formula cells the delete rewrote past what re-inserting the columns undoes, as
+        /// they were, which the undo puts back (T-4668); redo's delete rewrites them again.
+        rewritten: Vec<RewrittenCell>,
     },
     DeleteSheet {
         sheet: u32,
@@ -248,6 +271,10 @@ pub(crate) enum Diff {
         name: String,
         scope: Option<u32>,
         old_value: String,
+        /// The deleted name's `hidden` flag and Name Manager `comment`, which an undo puts back
+        /// (T-4637).
+        hidden: bool,
+        comment: Option<String>,
     },
     UpdateDefinedName {
         name: String,

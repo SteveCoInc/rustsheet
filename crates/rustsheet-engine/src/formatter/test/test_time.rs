@@ -237,6 +237,39 @@ fn fraction_digits_read_the_remainder_at_fifteen_digits() {
     }
 }
 
+/// Under `.000` the serial is cut as if 2^-72 days were added after the half step, so a tie up to
+/// about 1.8E-17 s below rounds up; after whole seconds the addition rounds away, and `.00` has no
+/// offset (probes/t4370-ulp-map-2 A76, A75, t4389-holdout A272; T-4389).
+#[test]
+fn millisecond_ties_take_the_serial_offset() {
+    let ctx = FormatContext::new(get_default_locale());
+    let cases = [
+        (
+            0.0045 / 86400.0 - 36.0 * 2f64.powi(-77),
+            "[h]:mm:ss.000",
+            "0:00:00.005",
+        ),
+        (
+            0.0045 / 86400.0 - 40.0 * 2f64.powi(-77),
+            "[h]:mm:ss.000",
+            "0:00:00.004",
+        ),
+        (
+            5.0605 / 86400.0 - 2f64.powi(-67),
+            "[h]:mm:ss.000",
+            "0:00:05.060",
+        ),
+        (0.005 / 86400.0 - 12.0 * 2f64.powi(-77), "s.00", "0.00"),
+    ];
+    for (value, format, expected) in cases {
+        assert_eq!(
+            format_number(value, format, &ctx).text,
+            expected,
+            "{value:e} {format}"
+        );
+    }
+}
+
 // probes/t4295-elapsed-with-month A1, D1, K1 (excel-graph): `[s]` before an hour or minute token
 // hands it the elapsed count, counted from the date section's register (18.5 days on 1h42m18s).
 #[test]
@@ -248,4 +281,19 @@ fn elapsed_second_moves_onto_a_later_hour_or_minute() {
     assert_eq!(text(value, "[s] d"), "6138 0");
     // A clock token before `[s]` keeps the section as parsed: `s [s]` is #VALUE! (T-3419).
     assert_eq!(text(value, "s [s] m"), "#VALUE!");
+}
+
+// probes/t4341-elapsed-second-forms A1:N3 (excel-graph, T-4341): the first hour token after `[s]`
+// takes the count even behind a minute token; else the first minute token does.
+#[test]
+fn elapsed_second_picks_the_first_hour_token_else_the_first_minute_token() {
+    let value = 1.7 / 24.0 + 0.3 / 1440.0;
+    assert_eq!(text(value, "[ss] m"), "18 26640");
+    assert_eq!(text(value, "[s] m m"), "18 26640 1");
+    assert_eq!(text(value, "[s] h m"), "18 444 42");
+    assert_eq!(text(value, "[s] m h"), "18 42 444");
+    assert_eq!(text(value, "d [s] m"), "0 18 26640");
+    assert_eq!(text(value, "[h] [s] m"), "#VALUE!");
+    assert_eq!(text(value, "[s].0 m"), "18.0 720");
+    assert_eq!(text(value, "s [s] h"), "#VALUE!");
 }

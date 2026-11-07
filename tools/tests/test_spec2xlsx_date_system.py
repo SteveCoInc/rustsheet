@@ -1,23 +1,16 @@
 """Workbook date system and per-cell number formats (T-1268)."""
 
-import io
-import zipfile
-
 import pytest
+from spec_parts import spec_parts
 
 from rustsheet_tools.spec2xlsx import build_xlsx
 
 
-def _parts(spec: dict[str, object]) -> dict[str, str]:
-    z = zipfile.ZipFile(io.BytesIO(build_xlsx(spec)))
-    return {n: z.read(n).decode() for n in z.namelist() if n.endswith(".xml")}
-
-
 def test_date_system_1904_is_written_and_1900_is_not() -> None:
     sheets = [{"name": "S", "cells": {"A1": 1}}]
-    assert 'date1904="1"' in _parts({"date_system": 1904, "sheets": sheets})["xl/workbook.xml"]
-    assert "date1904" not in _parts({"date_system": 1900, "sheets": sheets})["xl/workbook.xml"]
-    assert "date1904" not in _parts({"sheets": sheets})["xl/workbook.xml"]
+    assert 'date1904="1"' in spec_parts({"date_system": 1904, "sheets": sheets})["xl/workbook.xml"]
+    assert "date1904" not in spec_parts({"date_system": 1900, "sheets": sheets})["xl/workbook.xml"]
+    assert "date1904" not in spec_parts({"sheets": sheets})["xl/workbook.xml"]
 
 
 @pytest.mark.parametrize("system", [1901, "1904", True])
@@ -27,7 +20,7 @@ def test_other_date_systems_are_refused(system: object) -> None:
 
 
 def test_number_formats_reach_value_formula_and_blank_cells() -> None:
-    parts = _parts(
+    parts = spec_parts(
         {
             "sheets": [
                 {

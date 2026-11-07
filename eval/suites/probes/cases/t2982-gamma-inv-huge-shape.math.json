@@ -4,7 +4,17 @@
   "generator": "rustsheet-accuracy",
   "version": "1",
   "dps": 80,
-  "input_sha256": "b7e0e832666628b97fa0c74cd5434724cb69616689a96148f5d169912906a33f"
+  "input_sha256": "b7e0e832666628b97fa0c74cd5434724cb69616689a96148f5d169912906a33f",
+  "definitions": {
+   "CHIINV": "5d12acfc19639d7a",
+   "CHISQ.DIST": "01f5d761e8de8277",
+   "CHISQ.INV": "5d12acfc19639d7a",
+   "CHISQ.INV.RT": "5d12acfc19639d7a",
+   "GAMMA.DIST": "01f5d761e8de8277",
+   "GAMMA.INV": "5d12acfc19639d7a",
+   "GAMMAINV": "5d12acfc19639d7a"
+  },
+  "arguments_sha256": "2c4c31afd0527fbf7bddd3fdbea4f2c88e2e3aaab0779663d62a4030860691ed"
  },
  "sheets": {
   "S": {
@@ -563,10 +573,20 @@
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.INV(0.5,2E13)"
    },
+   "A92": {
+    "t": "n",
+    "v": "19999999999999.333333333333337283950617284094846169",
+    "f": "=CHIINV(0.5,2E13)"
+   },
    "A93": {
     "t": "n",
     "v": "19999999999999.333333333333337283950617284094846169",
     "f": "=CHISQ.INV.RT(0.5,2E13)"
+   },
+   "A94": {
+    "t": "n",
+    "v": "100004753501292617369.7479321760998009386533540955",
+    "f": "=GAMMAINV(0.999999,10000000000.5,1E+10)"
    },
    "A95": {
     "t": "n",

@@ -214,11 +214,13 @@ pub(super) fn elapsed_after_larger_clock(tokens: &[TextToken]) -> bool {
 /// `[s] m` prints like `s [m]`, the seconds field then the elapsed minutes counted from the date
 /// section's register ([`date_section_register`], which a clock token in front selects). So
 /// `TEXT(1.7/24+0.3/1440,"[s] m")` is "18 26640", `"[s] h"` "18 444", `"[s] m s"` "18 26640 18".
-/// The rewrite also drops the elapsed flag the parser gave a later `s`. Evidence:
-/// probes/t4295-elapsed-with-month A1:D9, K1:K9 (excel-graph, 2026-11-05, T-4295); `[ss]`, and a
-/// second hour or minute token after the first, are UNVERIFIED (not probed). A clock token before
-/// the `[s]` leaves the section as parsed, so [`elapsed_after_larger_clock`] keeps `s [s] m` and
-/// `h [s] m` `#VALUE!` like `s [s]` (UNVERIFIED with the `m` after; not probed).
+/// The rewrite also drops the elapsed flag the parser gave a later `s`. The first hour token takes
+/// the count even behind a minute token (`[s] m h` is "18 42 444"), else the first minute token
+/// does. Evidence: probes/t4295-elapsed-with-month A1:D9, K1:K9 (excel-graph, 2026-11-05, T-4295);
+/// probes/t4341-elapsed-second-forms (excel-graph, 2026-11-06, T-4341). A clock token before the
+/// `[s]` stops the rewrite, and [`elapsed_after_larger_clock`] keeps `s [s] m` `#VALUE!` like
+/// `s [s]`; a date token does not stop it (`d [s] m`); `[h] [s] m` and `[m] [s] h` are `#VALUE!`
+/// through the parser's two-bracketed-elapsed rule.
 pub(super) fn move_elapsed_second(tokens: &mut [TextToken]) {
     let Some(start) = tokens
         .iter()
@@ -229,12 +231,18 @@ pub(super) fn move_elapsed_second(tokens: &mut [TextToken]) {
     if tokens[..start].iter().any(|t| clock_unit(t).is_some()) {
         return;
     }
-    let Some(target) = tokens[start..].iter().position(|t| {
-        matches!(
-            t,
-            TextToken::Hour | TextToken::HourPadded | TextToken::Minute | TextToken::MinutePadded
-        )
-    }) else {
+    // The first hour token after `[s]` takes the count even behind a minute token, else the first
+    // minute token does (`[s] m h` is "18 42 444", `[s] m m` "18 26640 1"; probes/t4341).
+    let after = &tokens[start..];
+    let Some(target) = after
+        .iter()
+        .position(|t| matches!(t, TextToken::Hour | TextToken::HourPadded))
+        .or_else(|| {
+            after
+                .iter()
+                .position(|t| matches!(t, TextToken::Minute | TextToken::MinutePadded))
+        })
+    else {
         return;
     };
     for token in tokens.iter_mut() {
@@ -318,6 +326,33 @@ fn half_step_split(value: f64, scale: f64) -> (f64, f64) {
     (days, (shifted - days) * SECONDS_PER_DAY_F64 * scale)
 }
 
+/// Under `.000` Excel cuts the half step's serial `y` as if 2^-72 days (1.83E-17 s) were added to
+/// it first: a remainder up to about 1.8E-17 s below a millisecond tie rounds up, where T-4370's
+/// 15-digit rounding alone allows 5E-18 s at 0.005 s: `TEXT(0.0045/86400-36*2^-77,
+/// "[h]:mm:ss.000")` is "0:00:00.005", at -40 ulp ".004". The offset is in the serial, not in the
+/// seconds: the 71 cells of probes/t4389-holdout and t4389-confirm after whole seconds that tell
+/// the two apart all follow the serial. It moves `y` only below 2^-18 days (about 0.33 s); from
+/// 2^-19 days it is half an ulp, which the addition rounds to even, and Excel follows that in 29
+/// of the 40 probed cells there (t4389-confirm A1:A40; the rest are T-4419's). `.0` and `.00`
+/// show no offset (`TEXT(0.005/86400-12*2^-77,"s.00")` is "0.00"). The constant is a fit: every
+/// offset from 1.74E-17 to 1.86E-17 s scores the 538 `.000` cells of the t4323, t4332 and t4370
+/// fraction cases, and 2^-72 days is the power of two inside that window. Hold-out
+/// probes/t4389-holdout 368 of 368 (T-4370's model 337, the correctly rounded value 81); fresh
+/// sweep probes/t4389-fraction-fresh 120 of 120 (42 and 39) and t4389-confirm 69 of 80 (51 and
+/// 31), both drawn after the freeze (excel-graph 2026-11-05; docs/research/t4389).
+/// number-formats.md "Fraction digits of a second at a tie".
+/// FITTED(T-4389, 538 cells, offset 1.74E-17..1.86E-17 s, serial below 2^-18 days, `.000` only)
+fn millisecond_offset(shifted: f64, scale: f64) -> f64 {
+    /// 2^-72 days; from 2^-18 days up it is under half an ulp and the addition leaves `shifted`.
+    const OFFSET: f64 = 1.0 / 4_722_366_482_869_645_213_696.0;
+    // `scale` is exactly 10, 100 or 1000 (`10f64.powi`).
+    if scale > 500.0 {
+        shifted + OFFSET
+    } else {
+        shifted
+    }
+}
+
 /// The whole days and the whole units of `1/scale` second within the day that the clock shows,
 /// and the remainder in [0, 1) of a second the fraction digits read ([`fraction_digits`]): the
 /// half step's serial `y` ([`half_step`]) cut field by field, as Excel does. `frac(y)` is
@@ -330,7 +365,7 @@ fn half_step_split(value: f64, scale: f64) -> (f64, f64) {
 /// in the fresh sweep generated after it was frozen (probes/t4332-fraction-fresh, excel-graph
 /// 2026-11-05; the register 72). T-4332, number-formats.md "Fraction digits of a second at a tie".
 fn field_split(value: f64, scale: f64) -> (f64, f64, f64) {
-    let shifted = half_step(value, scale);
+    let shifted = millisecond_offset(half_step(value, scale), scale);
     let days = shifted.floor();
     let mut rest = shifted - days;
     let mut units = 0.0;

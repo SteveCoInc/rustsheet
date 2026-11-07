@@ -93,14 +93,42 @@ fn l140_bup_ret(density: f64, c: f64, x0: f64, y0: f64) -> Register {
 /// (-707.42, -708.42), (-708.38, -709.38) and (-708.28, -709.28) in its three families (df1 30, 20
 /// and 31 at df2 1E8, 1E7 and 1E8), which meet only around `ln(DBL_MIN)` = -708.396:
 /// `F.DIST.RT(47.6,30,1E8)` is a number and `F.DIST.RT(47.6666666667,30,1E8)` is 0 (statistics.md
-/// "Incomplete beta at a huge first shape", T-4045). Only F's tails ask it: BETA.DIST and the t are
-/// unprobed at this edge (T-4254), and BETA.DIST's cdf under F.INV's search must keep today's
-/// kernel there (`F.INV(1.43795578761177E-262,107702,58)`, accuracy/F.INV/s1 A146).
+/// "Incomplete beta at a huge first shape", T-4045). BETA.DIST's cdf takes the same edge
+/// (probes/t4456-beta-t-zero-cut C and D, a0 = 5E6 at b0 = 25.5 and 30: the first 0 is between
+/// ln ret -708 and -709, T-4456). F's tails and BETA.DIST's worksheet cdf (T-3764) ask it; the
+/// cdf under F.INV's search keeps today's kernel there (`F.INV(1.43795578761177E-262,107702,58)`,
+/// accuracy/F.INV/s1 A146). The t never reaches L140 (its second shape is 1/2).
 pub(super) fn l140_bup_prefactor_underflows(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
     let (_, c) = bup_split(b0);
     beta_density_small_shape(y0, c, a0).is_some_and(|density| {
         !density.is_normal() || !l140_bup_ret(density, c, x0, y0).store().is_normal()
     })
+}
+
+/// Whether Excel's L140 bup+bgrat tail w is exactly 0 at n >= 3 bup terms because bup's sum
+/// W = ret·S ([`l140_bup_ret`] times [`bup_power_sum`]) is below 2^-970, the smallest normal double
+/// divided by the double epsilon, though W itself is a normal double there. probes/
+/// t4437-beta-t-zero-bracket walks BETA.DIST by 0.5 in ln ret at (a, b) = (5E6, 3.5), (5E6, 4),
+/// (1E6, 3.5) and (5E6, 5.5). Each family's last number has W between 1.10 and 1.60 times 2^-970,
+/// and its first 0 has W between 0.67 and 0.97 times it (`BETA.DIST(0.999862932,5E6,3.5,TRUE)`
+/// row 9 is 1.1078134827430778E-292, row 10 is 0). The domain n >= 3 is part of the rule as frozen
+/// (docs/research/t4437/freeze2.md): the second fresh sweep after it, eight untouched families with
+/// n from 3 to 7 (probes/t4437-beta-zero-fresh2, rows 0.05 nats apart), puts 176 of 176 cells on the
+/// predicted side, every cut within 0.025 nats of 2^-970 (statistics.md "Where the exact 0 starts
+/// (T-4045)"). At n = 2 Excel's cut lies below the edge and moves with a0 (T-4564).
+pub(super) fn l140_bup_sum_flushed(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
+    /// 2^-970: Excel's L140 bup+bgrat tail is 0 below it at n >= 3.
+    const FLUSH: f64 = f64::MIN_POSITIVE / f64::EPSILON;
+    let (n, c) = bup_split(b0);
+    n >= 3.0
+        && beta_density_small_shape(y0, c, a0)
+            .filter(|density| density.is_normal())
+            .is_some_and(|density| {
+                let w = l140_bup_ret(density, c, x0, y0)
+                    .mul(Register::load(bup_power_sum(c, a0, y0, x0, n)))
+                    .store();
+                w < FLUSH
+            })
 }
 
 /// bratio's L140 for x0 > 0.7 and a0 > 15 (b0 < 40): w = bgrat(a0, c, x0, y0, bup(c, a0, y0, x0, n))

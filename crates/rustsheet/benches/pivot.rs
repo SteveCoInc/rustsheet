@@ -9,6 +9,11 @@
 //! Each recalculation rebuilds the index (it is dropped at each evaluation), so the timings
 //! include its one pass over the records.
 //!
+//! The same source, as a cache, also times the engine's result tree (`rustsheet_engine::pivot::
+//! compute`, SPEC-0032 stages 1 to 3, T-4142): the filtered records and every accumulator of the
+//! Region by Product pivot, its totals included, with a Sum and an Average data field, and with
+//! a hidden Product item and a page selection on Region.
+//!
 //! `cargo bench -p rustsheet --bench pivot [-- FILTER...]`
 
 mod common;
@@ -17,6 +22,10 @@ use std::error::Error;
 use std::io::Write;
 
 use rustsheet::{Input, PivotFunction, PivotTableInput, Workbook};
+use rustsheet_engine::pivot::{
+    compute, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CellArea, DataField, PageField,
+    PivotCache, PivotField, PivotTable, RecordValue, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
+};
 
 const RECORDS: u32 = 100_000;
 const REGIONS: u32 = 100;
@@ -94,6 +103,61 @@ fn cases() -> Vec<(&'static str, Vec<String>)> {
     ]
 }
 
+/// The bench source as a pivot cache: Region, Product and Sales.
+fn cache() -> Result<PivotCache, Box<dyn Error>> {
+    let mut builder = CacheBuilder::new(None, MAX_RECORD_VALUES);
+    for name in ["Region", "Product", "Sales"] {
+        builder.add_field(name.to_string())?;
+    }
+    for r in 0..RECORDS {
+        builder.push_record(vec![
+            RecordValue::Inline(CacheItem::Text(format!("R{}", r % REGIONS))),
+            RecordValue::Inline(CacheItem::Text(format!("P{}", (r / REGIONS) % PRODUCTS))),
+            RecordValue::Inline(CacheItem::Number(f64::from(r))),
+        ])?;
+    }
+    Ok(builder.finish())
+}
+
+/// Region rows, Product columns, Sum and Average of Sales; `filtered` hides one product and adds
+/// Region as a page field too, selecting nothing (`(All)`), so stage 1 tests every record.
+fn table(cache: &PivotCache, filtered: bool) -> PivotTable {
+    let area = CellArea {
+        top: 0,
+        left: 0,
+        bottom: 0,
+        right: 0,
+    };
+    let mut table = PivotTable::new("Bench".into(), 1, area, 0);
+    let items = |field: usize| cache.fields.get(field).map_or(0, |f| f.items.len());
+    table.fields = vec![
+        PivotField::new(Some(Axis::Row), items(0)),
+        PivotField::new(Some(Axis::Column), items(1)),
+        PivotField::new(None, items(2)),
+    ];
+    table.row_fields = vec![AxisField::Field(0)];
+    table.column_fields = vec![AxisField::Field(1), AxisField::Values];
+    table.data_fields = [Aggregate::Sum, Aggregate::Average]
+        .into_iter()
+        .map(|function| DataField {
+            field: 2,
+            function,
+            ..DataField::default()
+        })
+        .collect();
+    if filtered {
+        if let Some(product) = table.fields.get_mut(1) {
+            product.hide(3);
+        }
+        table.page_fields = vec![PageField {
+            field: 0,
+            item: None,
+            hierarchy: Some(-1),
+        }];
+    }
+    table
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let filters: Vec<String> = std::env::args()
         .skip(1)
@@ -106,6 +170,21 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         let mut wb = workbook(&formulas)?;
         let t = common::timings(RUNS, || wb.recalculate());
+        writeln!(out, "{name}: {t}")?;
+    }
+    let source = cache()?;
+    for (name, filtered) in [
+        ("result tree over 100,000 records", false),
+        ("result tree with filters", true),
+    ] {
+        if !filters.is_empty() && !filters.iter().any(|f| name.contains(f.as_str())) {
+            continue;
+        }
+        let table = table(&source, filtered);
+        let t = common::timings(RUNS, || {
+            let mut work = MAX_PIVOT_WORK;
+            assert!(compute(&table, &source, &mut work).is_ok(), "{name}");
+        });
         writeln!(out, "{name}: {t}")?;
     }
     Ok(())

@@ -66,9 +66,10 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     table. `ref` must not overlap the sheet's `cells`. The engine adapter ignores both (Phase 2,
     T-0428).
   * A sheet's `"pivot_tables": [{"name": "Pv", "source": "Data!A1:C7", "location": "E3", "row": "Region",
-    "column": "Product", "value": "Sales", "function": "sum"}]` writes pivot tables, rendered cells
-    included (rustsheet_tools/pivot.py, T-1705). An optional `"rendered"` map of the layout (filled by
-    `rustsheet-spec bake-pivots`) must equal it; the engine adapter writes it and registers the pivot (T-2084).
+    "column": "Product", "value": "Sales"}]` writes pivots with rendered cells (pivot.py, T-1705; `"rendered"`, by
+    `rustsheet-spec bake-pivots`, must equal them, T-2084); with a `"definition"` (pivot_definition.py, T-4122)
+    only the parts, and Excel renders it on open. A sheet's `"pivot_charts"` adds column charts bound to a pivot,
+    with the caches the spec gives (pivot_chart.py, T-4130).
   * Future functions get their `_xlfn.` prefixes from the builder's own table (the engine exporter's
     list plus `_BUILDER_ONLY_PREFIXES`), never from XlsxWriter's `use_future_functions`, which skips a
     whole formula once any call in it is prefixed (T-0052); LET/LAMBDA names are written as `_xlpm.x`.
@@ -84,6 +85,9 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     formats (`<cfRule type="expression">`) and `"data_validations": [{"ref": "A1", "formula": "=A1>0"}]`
     custom data validations, their formulas prefixed like cell formulas (T-3263). The engine adapter
     ignores both.
+  * `"active_sheet": "S2"` at the top level makes that sheet the workbook's active (and only selected)
+    sheet, `<workbookView activeTab>`; the first sheet otherwise (T-4394). Excel binds an unqualified
+    reference in an API-defined name to it. The engine adapter ignores it.
 """
 
 from __future__ import annotations
@@ -107,8 +111,10 @@ from rustsheet_tools.api_names import record_api_names
 from rustsheet_tools.custom_properties import json_properties, set_json_property
 from rustsheet_tools.oracle.package import patch_parts, read_parts
 from rustsheet_tools.pivot import PivotParts, pivot_tables, relationships_xml
+from rustsheet_tools.pivot_chart import write_pivot_charts
 from rustsheet_tools.sheetop import column_number, sheet_op
-from rustsheet_tools.spec_sheet_extras import add_range_formulas, set_column_widths
+from rustsheet_tools.spec_names import define_name
+from rustsheet_tools.spec_sheet_extras import activate_sheet, add_range_formulas, set_column_widths
 from rustsheet_tools.spec_tables import auto_filter, has_header_row
 
 # XlsxWriter stamps docProps/core.xml with the wall clock; a fixed instant keeps identical specs
@@ -420,9 +426,10 @@ def build_xlsx(spec: dict[str, Any]) -> bytes:
             (number, _add_data_table(ws, sheet, t)) for t in sheet.get("data_tables", ())
         )
 
+    activate_sheet(spec, worksheets)
     patches.pivots = pivot_tables(spec, _pivot_cell_writer(worksheets, patches, tables))
     for name, formula in spec.get("names", {}).items():
-        wb.define_name(name, _formula_text(formula, tables))
+        define_name(wb, name, _formula_text(formula, tables))
     _record_backend_steps(wb, spec, entered)
     wb.close()
     return _patch_package(buf.getvalue(), spec, patches)
@@ -487,7 +494,7 @@ def _patch_package(xlsx: bytes, spec: dict[str, Any], patches: _Patches) -> byte
     xlsx = _calculated_tables(xlsx, patches.calculated) if any(c for _, c in patches.calculated) else xlsx
     # Data tables and calculation settings are no-ops when the spec has none (T-0428).
     xlsx = _write_calculation(_write_data_tables(xlsx, patches.data_tables), spec.get("calculation"))
-    xlsx = _write_pivots(xlsx, patches.pivots)
+    xlsx = write_pivot_charts(_write_pivots(xlsx, patches.pivots), spec)
     return _store_numbers(xlsx, patches.lossy) if patches.lossy else xlsx
 
 

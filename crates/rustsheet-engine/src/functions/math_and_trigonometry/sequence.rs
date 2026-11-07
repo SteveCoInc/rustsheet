@@ -1,16 +1,12 @@
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
+use crate::functions::util::near_integer::near_integer_whole;
 use crate::functions::Function;
 use crate::limits::check_built_array_size;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
-
-/// What Excel adds to a SEQUENCE extent before flooring it: 2^-23, the single-precision epsilon,
-/// symmetric about 0 (probes/empty-array-args-sequence A120:A134), unlike `near_integer_floor`'s
-/// window. Probed near 0, 1 and 1048577 only (arrays.md).
-const EXTENT_EPSILON: f64 = f32::EPSILON as f64;
 
 impl Model {
     /// `=SEQUENCE(rows, [cols], [start], [step])`
@@ -52,11 +48,14 @@ impl Model {
         // (probes/empty-array-args-sequence A22:A62). Columns reach 1048576 like rows, past the
         // 16384 of the grid (`SEQUENCE(0,1048576)` is `#CALC!`, `SEQUENCE(0,1048577)` `#VALUE!`).
         let extent = |n: f64, name: &str| -> Result<usize, CalcResult> {
-            // Excel floors an extent within 2^-23 of the next integer up to it: `-1.19E-7` and
-            // `0.99999999` are 0 and 1, `-1.2E-7` and `0.999999` -1 and 0 (probes/
+            // An extent is floored, but one within 2^-22 + 2^-33 below an integer (half that below
+            // 0) reads as it, the shared `near_integer_whole` rule (arrays.md "Array-constructor extents
+            // just below an integer"): `1-(2^-22+2^-33)` is 1 and
+            // `1-(2^-22+2^-32)` 0, `-2^-23` is 0 and `-1.5*2^-23` -1, alike at 2, 1000 and 100000
+            // (probes/t4465-extent-near-integer-main B1:C63, hold-out and fresh sweep;
             // empty-array-args-sequence A120:A134; `SEQUENCE(0,-1E-8)` is `#CALC!`, gen-m7
             // c36ff5f42a1a4d47 A359).
-            let n = (n + EXTENT_EPSILON).floor() as i64;
+            let n = near_integer_whole(n) as i64;
             match usize::try_from(n) {
                 Ok(n) if n <= LAST_ROW as usize => Ok(n),
                 _ => Err(CalcResult::new_error(

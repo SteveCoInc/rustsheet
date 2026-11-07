@@ -399,6 +399,46 @@ Status: VERIFIED (excel-graph) for ROUND, ROUNDDOWN, literals and VALUE over the
 Implemented in: `x87_decimal_to_f64` in crates/rustsheet-engine/src/decimal_round.rs for ROUND and ROUNDDOWN (T-3931; kept digits below 1,000,000 and n = 1..15 only, the nearest double elsewhere; the number formats and INT keep the nearest double). Literals and number text: `parse_excel_number` in crates/rustsheet-engine/src/number_format.rs through `x87_text_to_f64` (T-3932, T-4077; the first 15 significant digits as written, any exponent, n = 1..15, the nearest double elsewhere). UNVERIFIED (no probe yet, T-4074): the readers that share `parse_excel_number` and were not probed for this conversion take it too: typed cell input (`parse_formatted.rs`, including percent text, where `4.91%` becomes the x87 read of 4.91 divided by 100), `"text"+0`, criteria operands, NUMBERVALUE (its `%` divisions too), AVERAGE's text arguments and DATEDIF's number text. A formula's number literal prints back (formulas are reparsed from their text) as text that reads to the same double: `=4910E-9` prints `4910e-9` and `=14550E-15` prints `14550e-15`, where the 15-digit text `4.91e-6` and `1.455e-11` would read one ulp off (`literal_text` in stringify/literals.rs); FORMULATEXT and xlsx export show that text, and how Excel prints such a literal is UNVERIFIED (T-4074).
 Tasks: T-3555, T-3658, T-3931, T-3932, T-3945, T-4077
 
+## Literals past n = 15 multiply by a table of 10^±16q (T-4467)
+Rule: number text and literals whose n (fraction digits less the exponent, after the 15-digit cut) is 16 or more read
+through two x87 power tables rather than as the nearest double. Write n = 16q + r with 0 <= r <= 15. Excel takes
+v = RN64(m × RN64(10^-r)), the n <= 15 model above. Then, if q <= 16, v = RN64(v × RN64(10^-16q)), one table entry.
+Past that (n >= 272), v = RN64(v × RN64(10^-16(q-16))) and then RN64(v × RN64(10^-256)). The result is stored to a
+double. A positive place of 16 or more (for example `=4E+126`, `=3.7E+47`) reads the same way with the positive powers
+10^r and 10^16q. Every table entry is 10^k rounded once to a 64-bit significand.
+- `=2.036E-77`, `=2036E-80` and `=20.36E-78` are all 2.0360000000000002E-77, one ulp above the nearest double
+  (probes/t4467-bessely-d32-refill E1:E3). So `BESSELY(2.036E-77,4)` is -1.7783214437962194E+308, the double model's
+  value at that x (t4458-bessely-tiny-x-cuts D32; engineering.md "BESSELY at a tiny x and a small order").
+- `=4E+126` is one ulp above 4E+126, and `=3.7E+47` one ulp below (Train A16, A67).
+- At n >= 272 the order matters: 10^-256 first misses 3 of Train's 17 cells there, and multiplying by the product of
+  the two entries misses 3 too.
+- Candidates ranked on Train only. Out of 200 cells, the nearest double gets 90, m × RN64(10^-n) 140, m / RN64(10^n)
+  128, binary or 1..15 + 2^k-times-16 tables 77 to 84 of the 100 literals, and one 10^-16q entry with the 10^-256
+  split 200. That last one is the model above, frozen before the hold-out was scored.
+- Literal and VALUE agree in every cell (columns A and B).
+- m is the digits as written, so trailing zeros change n = 16q + r and the read. `=2.036E-77`, `=2.0360E-77` and
+  `=2.03600E-77` are 2.0360000000000002E-77, while `=2.036000E-77` (m = 2036000, n = 83) is the nearest double
+  2.036E-77 (t4467-literal-large-exponent-sweep Zeros: 8 bases with 0 to 15-k trailing zeros, 100 literals, each as literal
+  and VALUE; the model fits 100, the nearest double 21).
+- Text longer than 15 digits is cut first, as at n <= 15, and the 15 kept digits go through the tables (sweep Long, 30
+  texts of 16 to 20 digits: the model fits 30, the nearest double of the full text 2; the nearest double of the cut
+  text also fits 30, so these cells confirm the cut, not the tables).
+Evidence: probes/t4467-literal-large-exponent (Train, 100 literals by seeded search, seed 4467001; Hold, 56, seed
+4467002; the split fixed in the case before scoring), excel-graph, 2026-11-06. The model fits Train 200/200 and Hold
+112/112 (nearest 62). Fresh sweep written after the freeze: probes/t4467-literal-large-exponent-fresh (85 literals,
+seed 4467003: 30 at n = 16..271, 25 at n >= 272, 20 with positive exponents, 10 controls), 170/170 (nearest 20), and
+probes/t4467-literal-large-exponent-sweep (seed 4467004): LogU, 120 literals log-uniform over the double range,
+240/240 (nearest 240 too: at random points the model is mostly the nearest double), plus the Zeros and Long sheets
+above. Fit lab split (decision 0188 R4.1, `fitlab/holdout.py`, applied to Train and Hold together, margin 5 points):
+the model is bit-exact at 225/225 train and 87/87 test cells, the nearest double at 103 and 49. Both are within 4 ulp
+and within 15 digits at every cell.
+Unprobed: a positive place of 1 to 15, which keeps the nearest double. A product past 10^±512 has no table entry
+and keeps the nearest double; no number Excel accepts gets there. Subnormal results are flushed as before.
+Status: VERIFIED (excel-graph) for literals and VALUE
+Implemented in: `x87_table_read` in crates/rustsheet-engine/src/x87_table_read.rs, through `x87_text_to_f64`
+(decimal_round.rs), so every reader of `parse_excel_number` takes it (numbers.md above lists them).
+Tasks: T-4467
+
 ## MOD is #NUM! for a huge quotient
 Rule: `MOD(n,d)` is `#NUM!` when `|n/d| >= 1.1259E+12` (exactly that decimal, not a power of two):
 `MOD(1125899999999,1)` = 0, `MOD(1125900000000,1)` = `#NUM!`. It depends only on the quotient, not on
@@ -819,8 +859,12 @@ FALSE and `EXP(-745)*2^1000` is exactly 2^-74 (`<v>5.2939559203393771E-23</v>`),
 reads its values from that file, so every value Excel for the web saves for a kept subnormal is 0, cached values
 included: ironcalc-calc `EXP_SIGN.xlsx` EXP_SIGN!B44 (`EXP(-745)`, Excel Online) caches 0 for the same reason. A normal
 result is written in full (`EXP(-708)`: `<v>3.3075530036384078E-308</v>`). Desktop Excel's save is not probed.
-RustSheet's export does this for a positive kept subnormal in every number `<v>` (T-2211, `saved_number` in
-export/worksheets.rs). A spilled or array kept subnormal is flushed too (inferred from the formula-cell evidence, unprobed); a negative one keeps its value; desktop Excel's save is unprobed (T-4355).
+A negative kept subnormal is saved as 0 too (`=0-EXP(-745)` and `=0-EXP(-720)` are 0 in the file, their `=0` companions
+FALSE, `*2^1000` recovers -2^-74), and so is a spilled array element (`=EXP({-745,-708})`: the -745 element 0, its `=0`
+companion FALSE, the -708 element a normal 3.3075530036384078E-308); probes/subnormal-saved-negative-and-array, excel-graph
+2026-11-07 (T-4355). RustSheet's export flushes a kept subnormal of either sign in every number `<v>` (T-2211, T-4355,
+`saved_number` in export/worksheets.rs). Desktop Excel's save is unprobed (M14, decision 0039).
+In an array expression the kept subnormal compares equal to 0: `(EXP({-745,-708}))=0` is TRUE in excel-graph (same probe, D1) though a spilled cell's `=0` companion is FALSE (T-4766).
 Range edges (T-2203, probes-numeric/t2203-exp-range-edges, excel-graph 2026-10-22, 527 rows): the last finite
 argument is 709.782712893384 (ln DBL_MAX; EXP = 1.7976931348622732E308, not quite DBL_MAX), and the first
 `#NUM!` is its successor double 709.7827128933841; every argument above it, up to 710.5, is `#NUM!`. At the other
@@ -870,7 +914,7 @@ of which print as 1) counts for `"<=1"`, `">=1"` and `"=1"` and not for `"<1"` o
 boundary (5E-15 above 1, 5E-16 below), not at a fixed ULP count, so it is neither an exact comparison nor a relative
 tolerance. All four functions agree on all 288 criteria cells; AVERAGEIF(S), MINIFS, MAXIFS and the D-functions agree too
 (probes/t4399-criteria-near-equal-others, 379 cells).
-Evidence: probes/t4399-criteria-near-equal-others (excel-graph, 2026-11-05; same rule for AVERAGEIF(S), MINIFS, MAXIFS, D-functions) and probes/t3072-criteria-near-equal-order (excel-graph, 2026-10-29): rows 1-12 (B = value, D = its text),
+Evidence: probes/t4399-criteria-near-equal-others (excel-graph, 2026-11-05; same rule for AVERAGEIF(S), MINIFS, MAXIFS, D-functions) and probes/t3072-criteria-near-equal-order (excel-graph, 2026-10-29). t3072 layout: rows 1-12 (B = value, D = its text),
 E:J COUNTIF, K:P SUMIF, Q:V COUNTIFS, W:AB SUMIFS in the order `<`, `<=`, `>`, `>=`, `=`, `<>`; e.g. F5
 `COUNTIF(B5,"<=1")` = 1 and G5 `">1"` = 0 for 1+22·2^-52, G6 = 1 for 1+23·2^-52; E10 `"<1"` = 0 for 1-4·2^-53,
 E11 = 1 for 1-5·2^-53.
@@ -1310,7 +1354,7 @@ Probe `probes-numeric/m9-hyperbolic` (268 cells, 255 distinct formulas, oracle: 
   either sign: `ASINH(1.61207503113639E-17)`, `ASINH(±1E-20)` and every argument down to `ASINH(8.48916619031883E-285)`
   are 0, and above the cut `ASINH(6.3701662356807E-14)` is 6.372680161348195E-14 (3.9e-4 relative off). Evidence:
   accuracy/ASINH/s1 Calc!A115, A70, A83, A112, A59 (excel-graph, 2026-11-01, T-3671). The engine's formula gives the same
-  values; Gate A counts these points as R3-eligible but unmarked (decision 0188 R3 needs an owner ruling).
+  values; Gate A counts these points as R3-eligible but unmarked: the owner keeps Excel as the target (decision 0300).
   The same two formulas also give all 33 ASINH and 17 ACOSH cells of ironcalc-calc TRIGONOMETRIC.xlsx sheet
   ASINH_ACOSH_ATANH (gap triage 2026-10-19). Implemented (T-2031): `fn_asinh`/`fn_acosh` evaluate these formulas.
 - Where `x*x` overflows a double (|x| above about 1.3407807929942596E154) ASINH and ACOSH return `#NUM!` (ln of infinity), for
@@ -1382,8 +1426,13 @@ Status: VERIFIED (excel-graph). Implemented in `fn_coth`, `fn_csch`, `fn_sech` (
 
 ### SINH and COSH overflow is `#NUM!` at once; SECH there is 0 (T-2169)
 Rule: SINH and COSH are `#NUM!` once `e^|x|` overflows a double, although the true sinh(710) = 1.117E+308 is finite:
-`SINH(710)`, `SINH(-710)`, `COSH(710)` and `COSH(-710)` are `#NUM!` (SINH(709.78) is a number, above; the cut in
-(709.78, 710) is unprobed). SECH of the same arguments is 0, not an error, as CSCH(710) is: `SECH(710)` = `SECH(-710)` = 0, so
+`SINH(710)`, `SINH(-710)`, `COSH(710)` and `COSH(-710)` are `#NUM!` (SINH(709.78) is a number, above). The cut is
+exactly where `e^|x|` overflows, at ln(DBL_MAX) = 709.782712893384, not at asinh(DBL_MAX) = 710.4758600739439 where
+the true sinh would overflow: SINH, COSH of ±ln(DBL_MAX) and of the double below it are numbers (±8.988465674311366E+307
+and ±8.988465674310344E+307), and from the next double up (709.7827128933841) through 709.79 ... 710.47, asinh(DBL_MAX)
+and its neighbours and 710.48 every SINH and COSH of either sign is `#NUM!` (probes/t4423-hyperbolic-overflow-band,
+excel-graph 2026-11-06, T-4423: rows 2 and 3 bracket the cut by adjacent doubles). So Excel rounds e^x to a double
+before the subtraction and halving, as the engine does. SECH of the same arguments is 0, not an error, as CSCH(710) is: `SECH(710)` = `SECH(-710)` = 0, so
 `(x)^SECH(710)` is `x^0` = 1 (`CEILING(-999999999999999.9,(-2.5)^SECH(710))` is -1E+15). The error is the function's own result
 and survives nesting, as for EXP: `ISERR(COSH(-710))` is TRUE, `ISNUMBER(SINH(134217728))` FALSE, and `ISODD(EXP(2^53+1))`,
 `ATAN(COSH(1E+15))`, `MOD(2^53+1,SINH(1E+9))`, `MOD(ACOT(SINH(1E+15)),<#REF!>)`, `GCD(EXP(1E+15),..)`,
@@ -1398,11 +1447,14 @@ gen-m5/ecd1b828aebad1e8 Calc!A185; the full list of 37 cells is in T-2169. A156 
 Past the smallest normal double the reciprocals read 0 too: `SECH(709.78)`, `SECH(-709.78)`, `CSCH(709.78)` and
 `CSCH(-709.78)` are 0 (accuracy/SECH/s1 Calc!A83, A84; accuracy/CSCH/s1 Calc!A84, A72, A79; excel-graph, 2026-11-01, T-3670),
 where the true values ±1.1156E-308 are subnormal (as are CSCH(-713.44) and CSCH(-717.64), 2.9E-310 and 4.3E-312). Graph
-reports a kept subnormal as 0 as well and those tables hold no `(x)=0` companion, so whether Excel flushes these is not
-told. From about |x| = 745 on (the tables' 803 to 993) the true value is below the smallest subnormal, so 0 is its
+reports a kept subnormal as 0 as well, but the T-4423 companions settle it: Excel flushes a subnormal SECH result to a
+true 0, as it does CSCH's (T-1143). `SECH(x)=0` is TRUE and `ISNUMBER(SECH(x))` TRUE at ±709.5, ±709.7, ±ln(DBL_MAX)
+and the double below it, where 1/cosh is 1.48E-308 to 1.11E-308, and `CSCH(±x)=0` TRUE likewise
+(probes/t4423-hyperbolic-overflow-band columns J to O). The engine flushes SECH with `arithmetic::flush_subnormal`
+(T-4423), as CSCH. From about |x| = 745 on (the tables' 803 to 993) the true value is below the smallest subnormal, so 0 is its
 correctly rounded double and no flush question arises.
-COSH(702.659631014027) and COSH(±709.78) are numbers within 1.2E-16 of the true value (accuracy/COSH/s1, T-3670); the cut in
-(709.78, 710) stays unprobed for COSH and SECH as for SINH. libm's cosh was finite up to 710.47 and ours now overflows just above 709.78, as SINH does.
+COSH(702.659631014027) and COSH(±709.78) are numbers within 1.2E-16 of the true value (accuracy/COSH/s1, T-3670); COSH
+cuts where SINH does, at ln(DBL_MAX) (T-4423, above), and SECH is 0 on both sides of it. libm's cosh was finite up to 710.47 and ours now overflows just above 709.78, as SINH does.
 Status: VERIFIED (excel-graph) for SINH, COSH and EXP. Implemented (T-2169): `hyperbolic::{sinh,cosh}` overflow to infinity and
 `number_fn` maps a non-finite result to `#NUM!`. That mapping applies to every one-number math function through `number_fn`
 (DEGREES, RADIANS, FACT, the reciprocal trig functions, ...); outside SINH, COSH and EXP it is unprobed (hand: Excel has no
@@ -1490,6 +1542,10 @@ hundreds (financial.md "PPMT discounts with an atanh-series log", probes-numeric
 is reachable (n*L above about 36.7). PMT's `1-Q` is this expm1 only for |x| < 1 and `1 - EXP(x)` from 1 on (probes/t3014-pmt-fv-type-alone
 column C, financial.md "PMT is a discounted payment", T-3014); whether that switch belongs to Excel's expm1 itself, and so
 to PPMT's `1-Q` at |x| >= 1 too, is not established.
+The same switch at |x| = 1 is in WEIBULL.DIST's and EXPON.DIST's cdfs and, since T-3764, in the incomplete beta's
+w = 1 - (1 - x0)^b0 at a0 = 1 (statistics.md "Incomplete beta at a shape of 1 outside the closed forms": all 508
+t3568-r5-bup cells at |x| 3.9 to 215, where Kahan's form misses 47). The engine's `x87_exp::excel_one_minus_exp` is that
+1 - e^x; the three older callers keep their own copies of the cut (T-4511 folds them in).
 Status: VERIFIED (excel-graph).
 
 ### SIN/COS/TAN/SEC/CSC/COT near multiples of PI(): oracle sweep (T-1008)
@@ -1599,9 +1655,14 @@ other 1,433 scored cells, 5 differ from libm by a few ulp and the rest are bit-e
 desktop Excel that saved the workbook agree.
 Evidence: poi/47813.xlsx Numbers!C92, B182, C272, B362, C452, B542, C632 (oracle sidecar
 `eval/suites/poi/oracle/47813.oracle.json` and the workbook's cached values). Oracle: excel-graph, 2026-10-04.
+Owner ruling (decision 0300, 2026-11-06, T-3775): at the 15-digit neighbour of k·pi/2, where Excel is 4.1E-4 off the math, Excel stays the target; no R3 case.
 Status: VERIFIED
 Tasks: T-0915
 
+Desktop Excel for Mac (16.0300) gives the correctly rounded values instead (calipers formulas_math_trig: `COS(PI()/2)`
+6.123233995736766E-17, `CSC(PI())` 8165619676597685); the web gives the k·6.1257422745431E-17 family for SIN, COS, TAN,
+SEC, CSC and COT at PI()/2, PI(), 3*PI()/2 and 2*PI() (probes/t4534-desktop-golden-web-values A12:A35), as the engine
+does. The 16 calipers cells are Phase 1 rate exceptions (decision 0315).
 ## ACOS is PI()/2 - ASIN(x)
 Rule: Excel's `ACOS(x)` is `π/2 - ASIN(x)` in doubles, on ASIN's kernel ("ASIN's formulation"). So `ACOS(0.5)` =
 1.0471975511965976, one ulp below the double nearest π/3: libm's 1.0471975511965979 is the correctly rounded value
@@ -1963,7 +2024,13 @@ unchanged (`=ROUNDDOWN(Data!E3,123456789.123)` → 0.5; `ROUND(Data!$B3,12345678
 `ROUNDDOWN(0.5, 1000000000000005.8)` → 0.5), yet `ROUND(1000000000000000.0,Data!$D$7)` evaluates to 0
 (it is the divisor in caa981b0753f455c A270, which is `#DIV/0!`; dd99be1f2454159f A159 is similar).
 Evidence: gen-m2/f7e6d351c8538ef5 A35, 893302d6c5b99e2e A136, 7469c3e920e1ade4 A336 (Calc sheet). Oracle: excel-graph, 2026-10-04 (gen-m2 sidecars, T-0203).
-Status: UNVERIFIED (the rule separating the two outcomes needs a probe before implementing; T-0218)
+Status: VERIFIED. The rule separating the two outcomes is "ROUND family: huge num_digits wrap" (probes/round-huge-digits,
+probes/round-huge-digits-wrap; T-0218, T-0268). Branch of each cell: ROUNDDOWN and ROUNDUP take the magnitude capped at 2^32-1
+modulo 65,536, so A35 `ROUNDDOWN(Data!E3,123456789.123)` (digits 52,501) and A336 `ROUNDDOWN(0.5,SUM(..))` (sum about 1E+15, acts
+as 65,535) keep a large positive digit count and return 0.5 unrounded. ROUND saturates to 32 bits and wraps k + e + 1:
+A136 `ROUND(Data!$B3,123456789)` (e = -15, count 123,456,775) stays positive without wrapping and returns 1E-15 unrounded;
+`ROUND(1E+15,1E+15)` (k = 2147483647, e = 15) wraps negative past the top and gives 0 (caa981b0753f455c A270).
+See: "ROUND family: huge num_digits wrap".
 Tasks: T-0218
 
 ## GAMMALN / GAMMALN.PRECISE (T-0926)
@@ -2243,7 +2310,15 @@ Scalar data and error order (probes/t4193-aggregate-scalar-data-error-order, exc
 - A direct error argument beats a range's error wherever it sits: with D1:D11 holding `#DIV/0!`,
   `AGGREGATE(9,k,Data!D1:D11,NA())` and `AGGREGATE(9,k,NA(),Data!D1:D11)` are `#N/A` under every option. Between two
   literal errors the first wins: `AGGREGATE(9,k,1/0,NA())` is `#DIV/0!` and `AGGREGATE(9,k,NA(),1/0)` `#N/A` (Win!A1:D8).
-Still unprobed: an empty-argument data (`AGGREGATE(14,0,,1)`) and a scalar from a name or LET.
+Empty and bound arguments (probes/t4426-aggregate-empty-and-bound-data, excel-graph, 2026-11-06, T-4426):
+an empty (present but omitted) data argument is `#VALUE!` for every function and option, with or without k
+(Calc!A1:C14, E1:E14); an empty k is `#VALUE!` for functions 1/4/9 even under option 0 where the data holds `#DIV/0!` (Calc!D1, D3, D5), and
+a real k of 0 for 14/15/16/19: the data range's error under option 0 (`#DIV/0!`), and under option 6 `#NUM!` for
+LARGE, SMALL and PERCENTILE.EXC (14/15/19, Calc!D8, D10, D14) but 1 for PERCENTILE.INC (16), its minimum at k=0
+(Calc!D12). A number bound by LET or a workbook name behaves as the literal it holds: `#VALUE!` in the reference form, a
+one-value array in the array form; a LET-bound text `"3"` is skipped in the array form and gives `#NUM!`
+(Bound!A30, A36, A42, A48, A54, A60). LET- and name-bound ranges and arrays behave as the range or array (Bound!A1:A60,
+BErr!A1:A60). Our engine already matched every cell.
 Known gaps: k rounding and boolean k in LARGE/SMALL (T-1034).
 The VAR.P last digit (probes/aggregate-grid B31, C31) has passed since T-1037.
 Implemented in: `fn_aggregate` (crates/rustsheet-engine/src/functions/aggregate.rs); the lift reuses
@@ -2272,7 +2347,7 @@ How the probe makes a filtered row: the table's autoFilter holds a values filter
 exactly the visible rows, and the hidden rows are written `hidden="1"`; Excel reads such a file as filtered without
 re-applying the filter. A worksheet-level autoFilter (no table), a manual hide inside a filtered table made in the
 application, and hidden columns are unprobed.
-Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036); probes/t4194-subtotal-nested-skip (90 cells, excel-graph, 2026-11-04, T-4194); probes/t4003-filter-column-criterion (30 cells, excel-graph, 2026-11-05, T-4003; first seen on the T-3081 throwaway uploads, xlsx-storage.md "Table parts in the export").
+Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036); probes/t4371-filtered-table-delete-filtered-column, -delete-other-column, -insert-inside and -insert-left (42 cells, excel-graph, 2026-11-07, T-4371); probes/t4194-subtotal-nested-skip (90 cells, excel-graph, 2026-11-04, T-4194); probes/t4003-filter-column-criterion (30 cells, excel-graph, 2026-11-05, T-4003; first seen on the T-3081 throwaway uploads, xlsx-storage.md "Table parts in the export").
 **Which filter makes a table filtered (T-4003):** on a table A1:B7 (`Cat` a,b,a,c,a,b, `Val` 1-6), a values filter on
 `Cat` keeping "a" with rows 3, 5 and 7 hidden gives `SUBTOTAL(9,..[Val])` = `SUBTOTAL(109,..)` = 9 and
 `SUBTOTAL(3,..[Cat])` = `SUBTOTAL(103,..)` = 3; a criterion-less filterColumn (on column 0 or on column 1) with rows 3
@@ -2281,10 +2356,18 @@ filter under `colId` 5 of the 2-column table with rows 3, 5, 7 hidden gives 21 a
 this per table (`has_active_criterion`, crates/rustsheet-xlsx/src/import/tables.rs); an empty `<filters/>` counts as a
 criterion there (unprobed). Decided where Excel shows nothing: the API's `Txn::add_table(.., filtered: true)` means a
 table whose filter has a criterion that hides its hidden rows (what spec2xlsx writes and Excel reads as filtered), so it
-stays filtered in the engine; its xlsx export still writes a criterion-less filterColumn, which Excel and our import
-read as not filtered (T-4363). A column delete that takes the last kept criterion of a filter read from a file
-unfilters the table, so the engine agrees with its own export; whether Excel unfilters the rows when the filtered column
-is deleted in the application is unprobed (T-4371). A worksheet autoFilter (no table) and an autoFilter holding only a
+stays filtered in the engine, and its xlsx export writes a values filter on the first column keeping the visible rows'
+text, which Excel and our import read as filtered (T-4363; xlsx-storage.md "Table parts in the export"). **A column delete in the application that takes the table's only criterion unfilters the table and shows the rows
+the filter hid** (T-4371, probes/t4371-filtered-table-*, excel-graph 2026-11-07): on a table A1:C7 (`Cat` a,b,a,c,a,b,
+`Val` 1-6, `Ext` 10-60) with the values filter on `Cat` keeping "a" (rows 3, 5, 7 hidden), deleting column A gives
+`SUBTOTAL(3,..[Val])` = `SUBTOTAL(103,..)` = 6 and SUBTOTAL 9 = 109 = 21: the rows are visible again, not left hidden by
+hand (103 would then be 3). Deleting column C (no criterion; `Sales[Ext]` becomes `#REF!`), inserting a column inside the
+table at B, or inserting one left of it at A keeps the filter (3 = 103 = 3, 9 = 109 = 9) and the hidden rows. The
+engine follows it: a column delete that takes the last kept criterion of a filter read from a file, or the first
+column of an API-filtered table (where its export writes the criterion, T-4363), unfilters the table and unhides its
+data rows (`resize_tables`, crates/rustsheet-engine/src/table_edits.rs); the undo hides them again. Unprobed: a delete
+that leaves another criterion, rows hidden by hand inside a filtered table (the engine cannot tell them from filtered
+ones and shows them too), and hidden rows outside the table (the engine keeps them hidden). A worksheet autoFilter (no table) and an autoFilter holding only a
 `<sortState>` are unprobed; ours reads the latter as not filtered.
 Status: VERIFIED
 Engine gaps: none known. SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,
@@ -2409,9 +2492,12 @@ gen-m6/9bd0bd18636e5f9b Calc!A4 (`SECH(CHOOSE(SIN(1E+15),..))`), gen-m6/3ee7ffc8
 More: `SIN(-2.5E+15)` and `CSC(1E+15)` are `#NUM!`, and a nested `ASIN(PI())` or `ASIN(100)` stays `#NUM!`
 (`A10<ASIN(PI())`, `CHOOSECOLS(0,ASIN(100))`): gen-m7/9ff3afcacd3bd0fc Calc!A24, gen-m7/f68fafa0ca2eba26 Calc!A37,
 gen-m7/93976dd9a3578ed9 Calc!A13, gen-m7/2bb922eef72e785e Calc!A30 (excel-graph, 2026-10-11, T-1275).
-Ours: COS, SIN, SEC and CSC compute a number; ACOS and ASIN yield a NaN number that `powf(0)` turns into 1 (and that
-comparisons read as FALSE).
-Status: VERIFIED for the observed cells; the exact threshold and TAN are UNVERIFIED.
+Ours: SIN, COS, TAN, COT, SEC and CSC are `#NUM!` for |x| >= 2^27 (`trig_arg` and `EXCEL_TRIG_LIMIT` in
+`functions/math_and_trigonometry/mathematical.rs` and `trig.rs`), so `ISERROR(SIN(1E+15))` is TRUE; out-of-domain
+ACOS and ASIN are `#NUM!` at once, nested too (`ACOS(1E+15)^0` is `#NUM!`, `ISERROR(ACOS(1E+15))` TRUE).
+Status: VERIFIED. The threshold (2^27, TAN included) is settled by "Trig of a huge angle" (probes/trig-huge-argument,
+T-1201); the out-of-domain ACOS/ASIN part by "Out-of-domain ACOS/ASIN/ACOSH/ATANH are `#NUM!` at once, even nested (T-1202)".
+See: "Trig of a huge angle", "Out-of-domain ACOS/ASIN/ACOSH/ATANH are `#NUM!` at once, even nested (T-1202)".
 Tasks: T-1192, T-1201, T-1202
 
 ## ASIN's formulation
@@ -2842,7 +2928,7 @@ Tasks: T-2269, T-2302
 ## TEXT of DBL_MAX with a scientific format prints the full 3-digit exponent (T-2106)
 Rule: `TEXT(2^1023*(2-2^-52),"0.00E+00")` is `1.80E+308`: the mantissa rounds up to 1.80, a decimal above DBL_MAX, so it is built from the rounded digits, and exponent digits beyond the `E+00` placeholders all print at the first placeholder.
 Evidence: probes/dbl-max-text-b A1 (oracle: excel-graph) `1.80E+308`; the 2-digit analogues gen-m10/4398098060a7fa9d A13 ("01.2E+14") and gen-m5/c0651f0e0fb544d0 A74 ("1.0E+15").
-Status: VERIFIED for DBL_MAX; the 3-digit single-placeholder case (`1E+100` under `0.0E+0` as `1.0E+100`) is UNVERIFIED (probe pending), assumed from the 2-digit cells.
+Status: VERIFIED for DBL_MAX; the 3-digit exponent under a single placeholder is printed in full: `TEXT(1E+100,"0.0E+0")` "1.0E+100", `"0E+0"` "1E+100", `"0.0E-0"` "1.0E100", `"##0.0E+0"` "10.0E+99"; 9.96E+99 rounds up to the same "1.0E+100"; 1E-100 gives "1.0E-100", "1E-100", "1.0E-100" and under `##0.0E+0` "100.0E-102"; -1E+100 is the same text with a minus sign; 1.5E+308 gives "1.5E+308", "2E+308" (the rounded mantissa goes above DBL_MAX and is printed from its digits), "1.5E308" and "150.0E+306" (probes/t4720-fixed-sign-and-exponent-digits A18:A37, excel-graph, 2026-11-06, T-4720; all match ours).
 Implemented in: formatter/format.rs, decimal_round.rs::round_scientific (T-2106).
 
 ## PERCENTOF: an error inside a reference or array is #NUM! (T-3653)

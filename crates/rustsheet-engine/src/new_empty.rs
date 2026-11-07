@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::{
-    constants::{DEFAULT_WINDOW_HEIGHT, DEFAULT_WINDOW_WIDTH},
     defined_names::{NameReference, ParsedDefinedName},
     expressions::{
         lexer::LexerMode,
@@ -516,6 +515,8 @@ impl Model {
                 name: defined_name.name.clone(),
                 formula,
                 sheet_id: Some(new_sheet_id),
+                hidden: defined_name.hidden,
+                comment: defined_name.comment.clone(),
             });
         }
         self.workbook.defined_names.extend(new_defined_names);
@@ -602,6 +603,8 @@ impl Model {
                 name: defined_name.name.clone(),
                 formula,
                 sheet_id: defined_name.sheet_id,
+                hidden: defined_name.hidden,
+                comment: defined_name.comment.clone(),
             });
         }
         self.workbook.defined_names = defined_names;
@@ -657,12 +660,8 @@ impl Model {
             return Ok(Vec::new());
         }
         let sheet_names = self.workbook.get_worksheet_names();
-        let rewritten = self.rewrite_formulas(None, |mut node, context| {
-            move_sheet_in_node(&mut node, sheet_index, new_index, &sheet_names);
-            match context {
-                Some(context) => to_english_string(&node, context),
-                None => to_rc_format(&node),
-            }
+        let rewritten = self.rewrite_formulas_edited(None, |node| {
+            move_sheet_in_node(node, sheet_index, new_index, &sheet_names);
         });
         self.reorder_sheet(sheet_index, new_index);
         Ok(rewritten)
@@ -765,14 +764,7 @@ impl Model {
         let now = dt.format("%Y-%m-%dT%H:%M:%SZ").to_string();
 
         let mut views = HashMap::new();
-        views.insert(
-            0,
-            WorkbookView {
-                sheet: 0,
-                window_width: DEFAULT_WINDOW_WIDTH,
-                window_height: DEFAULT_WINDOW_HEIGHT,
-            },
-        );
+        views.insert(0, WorkbookView::new(0));
 
         let sheet_name = match language.code.as_str() {
             "en" => "Sheet1".to_string(),
@@ -851,6 +843,7 @@ impl Model {
             clock,
             view_id: 0,
             variable_stack: VariableStack::default(),
+            number_mark: crate::number_mark::NumberMark::default(),
             last_variable_id: 0,
             lambdas: HashMap::new(),
             eta_lambdas: HashMap::new(),

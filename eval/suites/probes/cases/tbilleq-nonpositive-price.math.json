@@ -1,0 +1,66 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "d84d30f6fd5dfec589fb9bb299c2dfe6a9ae6505293b488d0c58828ee80f6dfb",
+  "definitions": {
+   "TBILLEQ": "d78f0dcbb4bdac42",
+   "TBILLPRICE": "d78f0dcbb4bdac42"
+  },
+  "arguments_sha256": "aae6c265a8b67b5bb8f613d4a5bb08344a9b1ef5457b2a4fc5bc10693dbd3a5a"
+ },
+ "sheets": {
+  "Calc": {
+   "A2": {
+    "t": "e",
+    "why": "a negative price: #NUM!",
+    "f": "=TBILLEQ(1000,1100,4)"
+   },
+   "A3": {
+    "t": "e",
+    "why": "a negative price: #NUM!",
+    "f": "=TBILLEQ(1000,1182,2)"
+   },
+   "A4": {
+    "t": "e",
+    "why": "a negative price: #NUM!",
+    "f": "=TBILLEQ(1000,1183,2)"
+   },
+   "A5": {
+    "t": "e",
+    "why": "a negative price: #NUM!",
+    "f": "=TBILLEQ(45332,45650,60)"
+   },
+   "B2": {
+    "t": "e",
+    "why": "a negative price: #NUM!",
+    "f": "=TBILLPRICE(1000,1100,4)"
+   },
+   "B3": {
+    "t": "e",
+    "why": "a negative price: #NUM!",
+    "f": "=TBILLPRICE(1000,1182,2)"
+   },
+   "B4": {
+    "t": "e",
+    "why": "a negative price: #NUM!",
+    "f": "=TBILLPRICE(1000,1183,2)"
+   },
+   "B5": {
+    "t": "e",
+    "why": "a negative price: #NUM!",
+    "f": "=TBILLPRICE(45332,45650,60)"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "B1": {
+    "f": "=TBILLPRICE(1000,1100,3.6)",
+    "why": "no single value"
+   }
+  }
+ }
+}

@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "96c46a1c98b59b2a7bc68a2e0d51a31ef5e5d6d4cd23978cb8cf45553ced0ece",
+  "definitions": {
+   "HYPGEOMDIST": "eee69c2ed987357d"
+  },
+  "arguments_sha256": "41becc1251c9becda886ef8f67bfb390af074ca3f9f8d556bc9976d19ce2ffd9"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "e",
+    "why": "sample_s outside [0, 2.14748e+09]",
+    "f": "=HYPGEOMDIST(1000000000000000.0,2,2,17)"
+   }
+  }
+ }
+}
