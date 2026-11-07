@@ -1,7 +1,7 @@
 //! A written-empty argument (`F(x,)`, `F(,x)`, or a LET or LAMBDA variable bound to nothing),
 //! told apart from a value by the formula's text: the node, not what it evaluates to. The
 //! value-level reading of the dynamic-array lookups' modes is `mode_or_default`
-//! (lookup_and_reference/xmatch.rs, T-4871).
+//! (`lookup_and_reference/xmatch.rs`, T-4871).
 
 use std::borrow::Cow;
 
