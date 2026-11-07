@@ -40,7 +40,7 @@
     {
       "op": "delete_column",
       "sheet": "Data",
-      "column": 4
+      "column": "D"
     }
   ],
   "check": [
