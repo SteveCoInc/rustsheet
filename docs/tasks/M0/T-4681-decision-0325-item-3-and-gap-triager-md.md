@@ -3,7 +3,7 @@ id: T-4681
 title: "Decision 0325 item 3 and gap-triager.md: restate R1(c)'s left-out rule exactly (T-3994 review follow-up)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
@@ -32,7 +32,7 @@ Decision 0325 item 3, and the sentence in .claude/agents/gap-triager.md that res
 ## Out of scope
 - Any change to the scripts or gates.
 
-## Handoff
+## Handoff (resumed)
 Sonnet run (2026-11-07) stopped before editing: the acceptance criteria change decision 0325 (a protected path,
 work-loop step 5b) and need an amendment record via `make new-decision` or an "Amended by" line that reviewers approve.
 Nothing was tried. Next: amend 0325 item 3 to R1(c)'s wording (left out when the engine is within epsilon of the math or
