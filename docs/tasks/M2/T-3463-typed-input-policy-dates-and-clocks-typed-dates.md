@@ -3,7 +3,7 @@ id: T-3463
 title: "Typed-input policy, dates and clocks: typed dates with a four-digit or two-digit year, month names, clocks, AM/PM and date-plus-clock entries"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
