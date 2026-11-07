@@ -3,7 +3,7 @@ id: T-4935
 title: "externalLink export hardening: plain attribute escaping, linear sheet dedup, non-finite cached numbers"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
