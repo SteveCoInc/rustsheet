@@ -3,7 +3,7 @@ id: T-4878
 title: "A LiftArrays argument that IF, CHOOSE, INDEX(...,0,0) or LET picks a reference into another workbook through: CHOOSE still trips the scalar-context debug_assert"
 milestone: M12
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: opus
