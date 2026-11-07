@@ -79,12 +79,18 @@ shared string, `=B1` is "x", `=C1` 7, `=ISBLANK(B1)` FALSE, `=ISTEXT(D1)` TRUE, 
 (`=ISBLANK(B2)` TRUE, `=COUNTA(A2:B2)` 1). A covered formula `=A1+1` in B1 of A1:B1 is recalculated
 (2), `=B1` is 2, ISFORMULA TRUE and `=COUNT(A1:B1)` 2. This is the file-level form of the
 "merge with Format Painter keeps the hidden values" behaviour.
-Ours: the importer empties every covered cell (`clear_covered_cells`) because covered cells holding
-no content is an engine invariant (merge, autofill and clipboard rely on it), so these cells are
-visibly off and poi/bug66675.xlsx and other census files lose covered values on a round trip.
+Ours: the importer keeps covered content (T-4975 item 1, docs/specs/SPEC-0036); until then it emptied
+every covered cell (`clear_covered_cells`) to keep an engine invariant "covered cells hold no
+content", so these cells were visibly off and poi/bug66675.xlsx and other census files lost covered
+values on a round trip. Copy- and cut-paste carry covered content and the recreated merge keeps it
+inside the pasted block, autofill copies it (never as a progression term), unmerge shows it and
+clear over the range clears it: SPEC-0036's rows, each UNVERIFIED against Excel's UI.
 Evidence: fixtures/merged-covered-values, fixtures/merged-covered-formula (excel-graph, 2026-11-06, T-4148).
-Status: VERIFIED (excel-graph); not implemented (owner task in the fixtures' baseline entries).
-What Excel's UI merge then does with such a range (unmerge, edit, autofill) is UNVERIFIED.
+Status: VERIFIED (excel-graph); implemented in crates/rustsheet-xlsx/src/import/worksheets.rs
+(`load_sheet` no longer clears), user_model/clipboard.rs (`recreate_pasted_merge`) and
+user_model/autofill.rs (`fill_covered_cell`).
+What Excel's UI does with such a range (unmerge, clear, paste, autofill, Ctrl+arrow) is UNVERIFIED
+(SPEC-0036 lists them as probe candidates).
 
 ## Import resource limits reject a workbook outright
 Rule: the importer rejects a workbook with `XlsxError::Limit` when its zip lists more than 5,000

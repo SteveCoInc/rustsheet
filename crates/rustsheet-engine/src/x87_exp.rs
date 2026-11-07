@@ -74,9 +74,11 @@ pub(crate) fn excel_expm1(x: f64) -> f64 {
 }
 
 /// Below this |x| Excel's 1 - e^x is minus its expm1 ([`excel_one_minus_exp`]). The value is the
-/// cut PMT's, WEIBULL.DIST's and EXPON.DIST's cells put between 0.99 and 1.35 (`annuity.rs`
-/// `PAYMENT_EXPM1_TO`, `weibull.rs` `weibull_cdf`, `exponential.rs` `EXPON_EXPM1_CUT`), copied, not
-/// fitted again; the incomplete beta's a0 = 1 tail takes it too (T-3764).
+/// cut PMT's, WEIBULL.DIST's and EXPON.DIST's cells put between 0.99 and 1.35 (PMT's
+/// 0.9896..1.0648 on probes/t3014-pmt-fv-type-alone, T-3014: `annuity.rs` `discounted_balance`
+/// takes this function since T-4975; `weibull.rs` `weibull_cdf`, `exponential.rs`
+/// `EXPON_EXPM1_CUT`), copied, not fitted again; the incomplete beta's a0 = 1 tail, IPMT, PPMT
+/// and CUMIPMT/CUMPRINC's balance drop take it too (T-3764, T-4975).
 const ONE_MINUS_EXP_EXPM1_TO: f64 = 1.0;
 
 /// Excel's 1 - e^x: minus Excel's expm1 ([`excel_expm1`], Kahan's form) for |x| below

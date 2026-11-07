@@ -418,8 +418,9 @@ fn test_exporting_merged_cells() {
 // section with the entries B2:C3 (valid), C3:D4 (overlaps the previous one),
 // A10:A10 (single cell), FOO (garbage) and E5:F6 (valid). The anchor B2 holds
 // the number 42 and the covered cell C2 the number 43. Import must keep only
-// the two valid ranges, keep the anchor content and clear the content left in
-// covered cells.
+// the two valid ranges and keep the content of the anchor and of the covered
+// cell, as Excel does (docs/excel-semantics/xlsx-storage.md "A merged range
+// keeps the values of its covered cells", T-4722).
 #[test]
 fn test_import_sanitizes_merged_cells() {
     let model = load_from_xlsx("tests/bad_merge_cells.xlsx", "en", "UTC", "en").unwrap();
@@ -443,8 +444,11 @@ fn test_import_sanitizes_merged_cells() {
     );
     // the anchor keeps its content
     assert_eq!(model.is_empty_cell(0, 2, 2), Ok(false));
-    // the covered cell is cleared
-    assert_eq!(model.is_empty_cell(0, 2, 3), Ok(true));
+    // the covered cell keeps its 43
+    assert_eq!(
+        model.get_formatted_cell_value(0, 2, 3),
+        Ok("43".to_string())
+    );
 }
 
 #[test]

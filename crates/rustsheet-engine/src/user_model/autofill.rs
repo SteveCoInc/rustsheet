@@ -24,7 +24,8 @@ const CUT_MERGE_ERROR: &str = "Cannot auto-fill: the fill size must fit whole me
 // already in the target are replaced by that pattern.
 struct MergedFillPlan {
     // source cells covered by a merge (every cell of a source merge except
-    // its anchor): they hold no content, and neither do their tiled copies
+    // its anchor): their content is copied to their tiled copies as it is,
+    // never as a progression term (`fill_covered_cell`)
     covered_source: HashSet<(i32, i32)>,
     // the tiled copies of the source merges, to create in the fill target
     new_merges: Vec<MergedCell>,
@@ -231,9 +232,14 @@ impl UserModel {
         Ok(())
     }
 
-    // The fill target cell is covered by a tiled merge: it gets no value,
-    // only the style and (lack of) link of its source cell, and its old
-    // content is cleared. `source` and `target` are `(row, column)` pairs.
+    // The fill target cell is covered by a tiled merge. A covered source that
+    // holds content is copied as a fill copies any cell (a formula's relative
+    // references shifted, `Model::fill_cell`), never as a progression term: a
+    // merged range keeps its covered content (docs/excel-semantics/
+    // xlsx-storage.md "A merged range keeps the values of its covered cells";
+    // docs/specs/SPEC-0036, whose autofill row is UNVERIFIED). An empty source
+    // clears the target. Either way the target takes the style and (lack of)
+    // link of its source cell. `source` and `target` are `(row, column)` pairs.
     fn fill_covered_cell(
         &mut self,
         sheet: u32,
@@ -245,20 +251,34 @@ impl UserModel {
         let (source_row, source_column) = source;
         let (row, column) = target;
         let old_style = self.model.get_cell_style_or_none(sheet, row, column)?;
-        // Going through prepare_cell_for_user_input keeps dynamic array
-        // formulas consistent (an anchor spilling into the cell is reset)
-        self.model.prepare_cell_for_user_input(sheet, row, column)?;
-        let worksheet = self.model.workbook.worksheet_mut(sheet)?;
-        if worksheet.cell(row, column).is_some() {
-            worksheet.cell_clear_contents(row, column)?;
-        }
-        if old_value.is_some() {
+        let source_is_empty = self.model.is_empty_cell(sheet, source_row, source_column)?;
+        if source_is_empty {
+            // Going through prepare_cell_for_user_input keeps dynamic array
+            // formulas consistent (an anchor spilling into the cell is reset)
+            self.model.prepare_cell_for_user_input(sheet, row, column)?;
+            let worksheet = self.model.workbook.worksheet_mut(sheet)?;
+            if worksheet.cell(row, column).is_some() {
+                worksheet.cell_clear_contents(row, column)?;
+            }
+            if old_value.is_some() {
+                diff_list.push(Diff::SetCellValue {
+                    sheet,
+                    row,
+                    column,
+                    new_value: "".to_string(),
+                    legacy: false,
+                    external: false,
+                    old_value: Box::new(old_value),
+                });
+            }
+        } else {
+            let new_value = self.model.fill_cell(sheet, source, target)?;
             diff_list.push(Diff::SetCellValue {
                 sheet,
                 row,
                 column,
-                new_value: "".to_string(),
-                legacy: false,
+                new_value,
+                legacy: self.model.cell_has_legacy_marker(sheet, row, column)?,
                 external: false,
                 old_value: Box::new(old_value),
             });
@@ -433,8 +453,9 @@ impl UserModel {
         for column in column1..=last_column {
             let mut index = 0;
             let locale = &self.model.locale;
-            // covered cells hold no content: the progression is detected over
-            // the rest and lands on the non-covered cells of the target
+            // covered cells are no progression terms: the progression is detected over
+            // the rest and lands on the non-covered cells of the target (a covered
+            // cell is copied as it is, `fill_covered_cell`)
             let values = if sign < 0 {
                 (row1..=last_row)
                     .rev()
@@ -609,8 +630,9 @@ impl UserModel {
         for row in row1..=last_row {
             let mut index = 0;
             let locale = &self.model.locale;
-            // covered cells hold no content: the progression is detected over
-            // the rest and lands on the non-covered cells of the target
+            // covered cells are no progression terms: the progression is detected over
+            // the rest and lands on the non-covered cells of the target (a covered
+            // cell is copied as it is, `fill_covered_cell`)
             let values = if sign < 0 {
                 (column1..=last_column)
                     .rev()
