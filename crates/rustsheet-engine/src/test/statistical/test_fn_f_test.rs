@@ -120,3 +120,23 @@ fn f_test_of_one_degree_of_freedom_each_is_the_asin_form() {
         6.909_871_037_288_267e-8_f64.to_bits()
     );
 }
+// Both shapes above 1 and one above 8: the balanced gamma-ratio ln B with bpser's split EXP
+// finish (T-4975, addendum section D) is Excel's value bit for bit at
+// probes/t2829-ftest-ln-beta-grid A4 and A5, each off before.
+#[test]
+fn f_test_balanced_ln_beta_with_the_split_finish() {
+    let mut model = new_empty_model();
+    let second = "1,-0.0001,123456789.123,0,1,0.3,7,100,0,1.005,1e-15,-0.0001,3.14159,1.005,3.14159,0.5,1,0.2,0.1,3.14159,100";
+    model._set(
+        "A1",
+        &format!("=F.TEST({{1.005,0.5,1,1,0.2,0.1}},{{{second}}})"),
+    );
+    model._set(
+        "A2",
+        &format!("=F.TEST({{1.005,0.5,1,1,0.2,0.1}},{{{second},1}})"),
+    );
+    model.evaluate();
+    let number = |cell: &str| round_trip_value(&model, cell).parse::<f64>().unwrap();
+    assert_eq!(number("A1"), 6.812_701_809_757_666e-39);
+    assert_eq!(number("A2"), 7.592_664_900_262_27e-39);
+}

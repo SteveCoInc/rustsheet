@@ -39,16 +39,28 @@ pub(super) fn bpser(a: f64, b: f64, x: f64) -> Option<f64> {
 }
 
 /// [`bpser`] with -L given by the caller: F.TEST's tail takes the series and EXP as BETA.DIST's
-/// do but forms ln B its own way (`f_test_tail::neg_ln_beta`, T-2681). `None` at a shape of 0,
-/// where fl(a·LN x) is not finite, or where the series has not settled within
-/// [`BPSER_MAX_TERMS`].
+/// do but forms ln B its own way (`f_test_tail::neg_ln_beta`, T-2681). `finish` picks the EXP
+/// finish: [`ExpFinish::Single`] fl(EXP(z)·s), or [`ExpFinish::Split`]'s
+/// fl(fl(EXP(zh)·s)·fl(1 + zl)), the low part applied after the series (F.TEST's balanced ln B,
+/// T-4975). `None` at a shape of 0, where fl(a·LN x) is not finite, or where the series has not
+/// settled within [`BPSER_MAX_TERMS`].
 pub(in super::super) fn bpser_with_ln_beta(
     a: f64,
     b: f64,
     x: f64,
     neg_ln_beta: Register,
+    finish: ExpFinish,
 ) -> Option<f64> {
-    bpser_series(a, b, x, neg_ln_beta, false)
+    bpser_series(a, b, x, neg_ln_beta, finish == ExpFinish::Split)
+}
+
+/// How a bpser caller finishes the series' EXP(z) (see [`bpser_with_ln_beta`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in super::super) enum ExpFinish {
+    /// fl(EXP(z)·s) with Excel's EXP of the extended z.
+    Single,
+    /// z split into its nearest double zh and the rest zl: fl(fl(EXP(zh)·s)·fl(1 + zl)).
+    Split,
 }
 
 /// The series and EXP of [`bpser`]; `split` forms I as the split-z product (see [`bpser`]).

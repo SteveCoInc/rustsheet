@@ -6789,6 +6789,21 @@ Ours: since T-2455 (`fn_quartile_inc`, QUARTILE and QUARTILE.INC); QUARTILE.EXC 
 Status: VERIFIED (excel-graph)
 Tasks: T-2455
 
+## F.TEST's bpser at a shape above 8: a balanced gamma-ratio ln B with the split EXP finish (T-4975)
+Rule: on F.TEST's bpser branch with min(a, b) > 1 and max(a, b) > 8, Excel's caller forms ln B as a balanced gamma
+ratio, not the accurate half-integer log-beta: with a the smaller shape, b the larger, c = a + b and
+w = del(b) - del(c) (TOMS algdiv's Stirling correction), h = fl(a + w), h = fl(h - a·LN(c)) (extended product),
+v = fl((b - 1/2)·log1p(-a/c)) and L = fl(h + v + GAMMALN(a)). It pairs with the series' split-exponent finish
+`(EXP(zh)·series)·(1 + zl)`, the low correction applied after the multiplication by the series; changing only ln B was
+the regression trap (gen-m9/a790a4d4a6a82756 A289).
+Evidence: probes/t2829-ftest-ln-beta-grid A4 and A5 (6.812701809757666E-39, 7.59266490026227E-39), off before, are
+bit-exact. On the 767 literal-argument F.TEST/FTEST cells of eval/: bit-exact 477 to 541 (no bit-exact cell lost),
+visibly off 88 to 63; 6 cells of t2829 that were within 15 digits move a few ulp out (A12, A15, A24, A41, A81, A97).
+Gate A unchanged (0 failing).
+Status: UNVERIFIED (the addendum's form, scored)
+Implemented in: functions/statistical/bratio/ln_beta.rs `neg_ln_beta_balanced`, functions/statistical/bratio/bpser.rs
+`ExpFinish`, functions/statistical/f_test_tail.rs `bpser`.
+
 ## F.TEST of a single value (T-2455)
 Rule: F.TEST takes any single value as a sample of at most one, so it is `#DIV/0!` whatever the value's type: `FTEST(5,{1;2;3})`,
 `FTEST({1;2;3},SUM(4))`, `FTEST(TRANSPOSE(5),{1;2;3})`, `FTEST(B1,{1;2;3})` with B1 = 5, `FTEST("5",..)`, `FTEST("abc",..)`,

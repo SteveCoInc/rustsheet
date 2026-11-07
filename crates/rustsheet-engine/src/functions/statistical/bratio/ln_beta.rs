@@ -10,8 +10,10 @@
 use super::super::beta_density::{algdiv, alnrel, stirling_del, ALGDIV_C};
 use super::super::gammaln::excel_gammaln;
 use super::super::half_integer_beta::{half_integer_beta, is_half_integer_shape};
+use crate::arithmetic::{extended_product, extended_sum};
 use crate::x87_exp::dd_to_extended;
 use crate::x87_log10::{excel_ln, ln_double_double_pair};
+use crate::x87_log1p::excel_ln_one_minus;
 use crate::x87_register::Register;
 
 /// TOMS's ln(sqrt(2 pi)) as `betaln` writes it.
@@ -71,6 +73,29 @@ pub(super) fn bcorr(a: f64, b: f64) -> f64 {
     let t = 1.0 / a;
     let t = t * t;
     (((((c5 * t + c4) * t + c3) * t + c2) * t + c1) * t + c0) / a + w
+}
+
+/// -ln B(a, b) for min(a, b) > 1 and max(a, b) > 8 as F.TEST's caller forms it (T-4975, addendum
+/// section D): a balanced gamma-ratio log-beta, not the accurate half-integer value. With a the
+/// smaller shape, b the larger, c = a + b and w = del(b) - del(c) (TOMS algdiv's Stirling
+/// correction): h = fl(a + w), h = fl(h - a·LN(c)) in the register, v = fl((b - 1/2)·log1p(-a/c))
+/// and L = fl(h + v + GAMMALN(a)). gen-m9/b6593d7dd13f2dac A306 (Excel 1.23966888990022E-69)
+/// comes inside the 15-digit window with it, paired with bpser's split EXP finish.
+pub(in super::super) fn neg_ln_beta_balanced(a: f64, b: f64) -> Register {
+    let (a, b) = if a < b { (a, b) } else { (b, a) };
+    let c = a + b;
+    let ratio = a / b;
+    let w = stirling_del(ratio / (ratio + 1.0), 1.0 / (ratio + 1.0), b);
+    let h = extended_sum(a, w);
+    let h = Register::load(h)
+        .add(Register::load(a).mul(Register::load(excel_ln(c))).neg())
+        .store();
+    let v = extended_product(b - 0.5, excel_ln_one_minus(a / c));
+    let l = Register::load(h)
+        .add(Register::load(v))
+        .add(Register::load(excel_gammaln(a)))
+        .store();
+    Register::load(-l)
 }
 
 /// The largest a + b for which [`neg_ln_beta_half_integer`] builds B(a, b) by its recurrence (one
