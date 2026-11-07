@@ -95,6 +95,7 @@ mod test_ifs_array_criteria;
 mod test_ifs_switch_lift;
 mod test_intersection_operator;
 mod test_inverted_ranges;
+mod test_iseven_isodd_omitted;
 mod test_issue_623;
 mod test_iteration;
 mod test_iteration_settings;
