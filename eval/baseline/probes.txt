@@ -2643,6 +2643,7 @@ C	probes/t4686-rich-value-option-residue.case.json	44
 C	probes/t4697-large-small-median-mixed-sheet-refs.case.json	17
 C	probes/t4698-pivot-repeat-labels.case.json	651
 C	probes/t4701-index-one-index-ref-grid.case.json	16
+C	probes/t4720-fixed-sign-and-exponent-digits.case.json	37
 C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
