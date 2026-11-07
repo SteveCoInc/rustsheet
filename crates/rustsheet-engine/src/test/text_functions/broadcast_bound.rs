@@ -74,3 +74,65 @@ fn text_budget_below_the_limit_stays_value() {
 
     assert_eq!(model._get_text("C1"), *"#VALUE!");
 }
+
+#[test]
+fn unary_text_transforms_share_the_text_budget() {
+    // Audit 2 item 1 (directive 5): the unary transforms copied every element without the
+    // broadcast text budget, so 4096 shared 32767-character texts built ~128 MiB. They now stop
+    // at the cap with LEFT's `#VALUE!` (DEVIATION, decision 0014).
+    let mut model = new_empty_model();
+    let source = r#"IF(SEQUENCE(4096),REPT("a",32767))"#;
+    let calls = [
+        "LEFT(#,32767)",
+        "UPPER(#)",
+        "LOWER(#)",
+        "PROPER(#)",
+        "TRIM(#)",
+        "CLEAN(#)",
+        "ASC(#)",
+        "DBCS(#)",
+    ];
+    for (row, call) in calls.iter().enumerate() {
+        let call = call.replace('#', source);
+        model._set(&format!("A{}", row + 1), &format!("=ROWS({call})"));
+    }
+    // Under the budget nothing changes.
+    model._set("B1", r#"=ROWS(UPPER(IF(SEQUENCE(16),REPT("a",32767))))"#);
+    model._set("B2", r#"=INDEX(UPPER({"ab","cd"}),1,2)"#);
+
+    model.evaluate();
+
+    for row in 1..=calls.len() {
+        assert_eq!(model._get_text(&format!("A{row}")), *"#VALUE!", "A{row}");
+    }
+    assert_eq!(model._get_text("B1"), *"16");
+    assert_eq!(model._get_text("B2"), *"CD");
+}
+
+#[test]
+fn arraytotext_is_built_under_the_text_budget() {
+    // Audit 2 item 1: 2048 x 32767 bytes of text passes the 64 MiB budget; the bounded builder
+    // charges each piece first and returns the budget's `#VALUE!` instead of aborting.
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        r#"=LEN(ARRAYTOTEXT(IF(SEQUENCE(2048),REPT("a",32767)),1))"#,
+    );
+    model._set(
+        "A2",
+        r#"=LEN(ARRAYTOTEXT(IF(SEQUENCE(2048),REPT("a",32767)),0))"#,
+    );
+    // Separators, quotes and doubled quotes as before.
+    model._set("C1", "1");
+    model._set("D1", r#"a"b"#);
+    model._set("C2", "TRUE");
+    model._set("A3", "=ARRAYTOTEXT(C1:E2,1)");
+    model._set("A4", "=ARRAYTOTEXT(C1:E2,0)");
+
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#VALUE!");
+    assert_eq!(model._get_text("A2"), *"#VALUE!");
+    assert_eq!(model._get_text("A3"), *r#"{1,"a""b",;TRUE,,}"#);
+    assert_eq!(model._get_text("A4"), *r#"1, a"b, , TRUE, , "#);
+}
