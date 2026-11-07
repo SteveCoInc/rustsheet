@@ -3251,6 +3251,27 @@ Implemented in: `TRIALS_LIMIT` in `crates/rustsheet-engine/src/functions/statist
 Status: VERIFIED (excel-graph)
 Tasks: T-2464, T-2645
 
+## BINOM.DIST pmf: a log-form bd0 stores the deviance subtractions (T-4362)
+Rule: in Excel's interior binomial pmf (BINOM.DIST/BINOMDIST with FALSE, and BINOM.DIST.RANGE's points), where either
+of Loader's deviances bd0(k, np), bd0(n - k, nq) takes its log form at bd0's own x87 cut, the exponent is
+E = fl(fl(S - bd0(k, np)) - bd0(n - k, nq)) - lf/2. Here S is the Stirling-error sum rounded to a double, each
+subtraction is a stored binary64 operation, and only then come the extended -lf/2 and EXP. Where both take the series
+form, the exponent stays in the x87 register as before.
+- `BINOM.DIST.RANGE(7,1E-20,6)` is 6.999999999999857E-120 (gen-m9 9cca17438a7e6f8a A360). With E in the register it
+  came out 7.000000000000068E-120 (154 ulp high), and storing only X = -bd0 - bd0 gave ...932E-120 (75 ulp).
+- The cut is bd0's x87 one, not a binary64 one: `BINOM.DIST(2,10,0.3,FALSE)` sits on its series side and stays
+  0.23347444050000005.
+- BETA.DIST's density and NEGBINOM.DIST's pmf share the kernel but keep the register chain (`LoaderExponent::
+  ScaledProbability`); their existing exact controls show a blanket store would be wrong.
+- `make eval` fixes 10 cells and regresses none: gen-m9 A360 and 27601819397dd56e A280, 2a18b2f5a4dc43ac A174,
+  60b0b6e69ad35a45 A357, 623663cacea53bbc A199, a013a45a8fbcab4f A145, c468f5046aadfbbc A397, d8266bc15533702a A287;
+  ironcalc-calc `STATISTICAL/BINOM.xlsx` BINOM.DIST.RANGE!E10; probes `t2435-dist-extremes` S!A14.
+- Not yet swept: the T-4361 tiny-p grid and its hold-out.
+Evidence: the cells above (excel-graph). Unit test: `test_fn_binom_pmf_stores_log_form_deviances`.
+Ours: `loader.rs` `excel_dbinom_exponent` with `LoaderExponent::Probability`.
+Status: VERIFIED (excel-graph) for the cited cells
+Tasks: T-4362, T-4361, T-4352
+
 ## BINOM.DIST pmf: closed forms at k = 0 and k = n, and one kernel with BETA.DIST (T-2513)
 Rule: BINOM.DIST(k,n,p,FALSE) takes Loader's (2000) own end branches, `if (x==0) return exp(n*log(1-p)); if (x==n)
 return exp(n*log(p));`, not R's dbinom_raw (which takes bd0 forms there), and in between shares one dbinom_raw with

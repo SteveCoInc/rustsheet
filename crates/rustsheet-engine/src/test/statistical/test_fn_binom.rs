@@ -511,3 +511,32 @@ fn negbinom_cdf_at_one_success_keeps_a_tiny_p() {
         other => panic!("expected number, got {other:?}"),
     }
 }
+
+// T-4362: where either of Loader's bd0 deviances takes its log form, Excel's binomial pmf exponent
+// is fl(fl(S - bd0(k, np)) - bd0(nk, nq)) - lf/2, the two subtractions stored before the extended
+// -lf/2 and EXP; keeping them in the x87 register put `BINOM.DIST.RANGE(7,1E-20,6)` 154 ulp high.
+// The cut is bd0's own x87 one: `BINOM.DIST(2,10,0.3,FALSE)` sits on its series side and keeps
+// the register chain. Excel values (excel-graph): gen-m9 9cca17438a7e6f8a A360, 2a18b2f5a4dc43ac
+// A174, 60b0b6e69ad35a45 A357, 623663cacea53bbc A199, c468f5046aadfbbc A397.
+#[test]
+fn test_fn_binom_pmf_stores_log_form_deviances() {
+    let mut model = new_empty_model();
+    model._set("A1", "=BINOM.DIST.RANGE(7,1E-20,6)");
+    model._set("A2", "=BINOM.DIST(2,6,1E-100,FALSE)");
+    model._set("A3", "=BINOM.DIST.RANGE(6,0.001,1)");
+    model._set("A4", "=BINOM.DIST.RANGE(9,0.975,4)");
+    model._set("A5", "=BINOMDIST(2,10,0.999999,FALSE)");
+    model._set("A6", "=BINOM.DIST(2,10,0.3,FALSE)");
+    model.evaluate();
+    let number = |cell: &str| round_trip_value(&model, cell).parse::<f64>().unwrap();
+    for (cell, excel) in [
+        ("A1", 6.999_999_999_999_857e-120_f64),
+        ("A2", 1.499_999_999_999_963_2e-199),
+        ("A3", 0.005_970_059_940_029_992),
+        ("A4", 1.111_959_709_167_485_7e-6),
+        ("A5", 4.499_991_001_039_641e-47),
+        ("A6", 0.233_474_440_500_000_05),
+    ] {
+        assert_eq!(number(cell).to_bits(), excel.to_bits(), "{cell}");
+    }
+}

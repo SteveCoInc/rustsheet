@@ -103,10 +103,7 @@ const EXCEL_BD0_CUT: f64 = 0.2;
 ///
 /// For k > 0 and M > 0; the series has at most [`BD0_MAX_TERMS`] terms.
 pub(crate) fn excel_bd0(k: f64, m: f64) -> f64 {
-    match bd0_branch(k, m) {
-        Bd0Branch::Series(sum) => sum.store(),
-        Bd0Branch::Log(t) => extended_sum(t, extended_sum(m, -k)),
-    }
+    bd0_branch(k, m).store(k, m)
 }
 
 /// [`excel_bd0`] as Excel's t density uses it, left in an x87 register: the series sum unstored,
@@ -126,6 +123,35 @@ enum Bd0Branch {
     Series(Register),
     /// The log form's t = fl(k LN(fl(k / M))).
     Log(f64),
+}
+
+impl Bd0Branch {
+    /// [`excel_bd0`]'s stored double: the series sum rounded once, or the log form
+    /// fl(t + fl(M - k)).
+    fn store(self, k: f64, m: f64) -> f64 {
+        match self {
+            Self::Series(sum) => sum.store(),
+            Self::Log(t) => extended_sum(t, extended_sum(m, -k)),
+        }
+    }
+
+    /// Whether the log form was taken.
+    fn is_log(&self) -> bool {
+        matches!(self, Self::Log(_))
+    }
+}
+
+/// What [`excel_dbinom_exponent`]'s EXP computes, which decides how X reaches it.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum LoaderExponent {
+    /// BINOM.DIST's own pmf (and BINOM.DIST.RANGE's points): where either bd0 takes its log form,
+    /// E = fl(fl(S - bd0(k, np)) - bd0(nk, nq)) - lf/2 with S the Stirling terms as a double, the
+    /// two deviance subtractions stored before the extended -lf/2 (T-4362:
+    /// `BINOM.DIST.RANGE(7,1E-20,6)` = 6.999999999999857E-120, 154 ulp off with X in the register).
+    Probability,
+    /// A pmf its caller scales or reshapes (BETA.DIST's density, NEGBINOM.DIST): X stays in the
+    /// x87 register, as their exact controls require.
+    ScaledProbability,
 }
 
 /// [`excel_bd0`]'s cut between its series and its log form.
@@ -175,20 +201,31 @@ const LN_2PI: f64 = 2.0 * LN_SQRT_2PI_CORRECTLY_ROUNDED;
 ///
 /// `None` where a piece is not finite (an n p or n q of 0, a ratio past the double range). Exposed
 /// for the binomial pmf, which shares it (T-2146).
-pub(crate) fn excel_dbinom_exponent(k: f64, n: f64, nk: f64, p: f64, q: f64) -> Option<Dd> {
+pub(crate) fn excel_dbinom_exponent(
+    k: f64,
+    n: f64,
+    nk: f64,
+    p: f64,
+    q: f64,
+    kind: LoaderExponent,
+) -> Option<Dd> {
     let np = extended_product(n, p);
     let nq = extended_product(n, q);
     if !(k > 0.0 && nk > 0.0 && np > 0.0 && nq > 0.0 && n.is_finite()) {
         return None;
     }
-    let bd0_p = excel_bd0(k, np);
-    let bd0_q = excel_bd0(nk, nq);
+    let branch_p = bd0_branch(k, np);
+    let branch_q = bd0_branch(nk, nq);
+    // The cut is bd0's own x87 decision, not a binary64 one: `BINOM.DIST(2,10,0.3,FALSE)` sits
+    // on the series side of it (but not of a binary64 cut) and stays 0.23347444050000005.
+    let store_x = kind == LoaderExponent::Probability && (branch_p.is_log() || branch_q.is_log());
+    let bd0_p = branch_p.store(k, np);
+    let bd0_q = branch_q.store(nk, nq);
     // A register loads a NaN or an infinity as 0, so a ratio past the double range (k / M for a
     // subnormal M) must stop here.
     if !(bd0_p.is_finite() && bd0_q.is_finite()) {
         return None;
     }
-    let x_part = Register::load(-bd0_p).add(Register::load(-bd0_q));
     let lf = Register::load(LN_2PI)
         .add(Register::load(excel_ln(k)))
         .add(Register::load(excel_ln(nk)))
@@ -196,10 +233,18 @@ pub(crate) fn excel_dbinom_exponent(k: f64, n: f64, nk: f64, p: f64, q: f64) -> 
     let (lf_hi, lf_lo) = lf.to_double_double();
     let parts = dd_add(stirlerr_exact(k), stirlerr_exact(nk));
     let stirling = dd_add(stirlerr_exact(n), (-parts.0, -parts.1));
-    let exponent = dd_add(
-        dd_add(stirling, (-0.5 * lf_hi, -0.5 * lf_lo)),
-        x_part.to_double_double(),
-    );
+    let exponent = if store_x {
+        // The Stirling terms rounded to a double, then each deviance subtracted as an x87 stored
+        // operation, and only then the extended -lf/2.
+        let deviance = extended_sum(extended_sum(stirling.0 + stirling.1, -bd0_p), -bd0_q);
+        dd_add((deviance, 0.0), (-0.5 * lf_hi, -0.5 * lf_lo))
+    } else {
+        let x_part = Register::load(-bd0_p).add(Register::load(-bd0_q));
+        dd_add(
+            dd_add(stirling, (-0.5 * lf_hi, -0.5 * lf_lo)),
+            x_part.to_double_double(),
+        )
+    };
     (exponent.0.is_finite() && exponent.1.is_finite()).then_some(exponent)
 }
 
@@ -218,7 +263,7 @@ pub(crate) fn excel_beta_density(x: f64, a: f64, b: f64) -> Option<f64> {
     let n = extended_sum(extended_sum(a, b), -2.0);
     let nk = extended_sum(n, -k);
     let q = extended_sum(1.0, -x);
-    let exponent = excel_dbinom_exponent(k, n, nk, x, q)?;
+    let exponent = excel_dbinom_exponent(k, n, nk, x, q, LoaderExponent::ScaledProbability)?;
     let ln_scale = excel_ln(extended_sum(n, 1.0));
     let total = dd_add((ln_scale, 0.0), exponent);
     if !total.0.is_finite() {

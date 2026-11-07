@@ -3,7 +3,7 @@ id: T-4362
 title: "BINOM.DIST.RANGE at a tiny p: Excel's 6.999999999999857E-120 for BINOM.DIST.RANGE(7,1E-20,6) (gen-m9 9cca17438a7e6f8a A360, the last unowned M9 rate cell)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
@@ -48,3 +48,15 @@ BINOM.DIST.RANGE returns Excel's double where p is tiny, starting with the one M
 `visible`: a numeric cell off Excel at the 14th digit where neither Excel nor the engine is correctly rounded, so
 neither `semantics` nor `accuracy` applies (decision 0114). Target: A360 and every T-4361 cell within 15 significant
 digits of Excel; bit-level residue moves to a `defer: phase-1b` follow-up.
+
+## Outcome
+2026-11-07, partial: A360 is bit-exact. The T-4361 sweep has not run, so the task stays in progress.
+- Form (structural, no fitted constant or new cut): where either bd0 takes its log form at bd0's own x87 cut, the
+  interior pmf's exponent is fl(fl(S - bd0_p) - bd0_q) - lf/2 (S the Stirling sum as a double), stored before the
+  extended -lf/2 and EXP. `loader.rs` `LoaderExponent::{Probability, ScaledProbability}`, `Bd0Branch::store`;
+  BETA.DIST's density and NEGBINOM.DIST keep the register chain. statistics.md "BINOM.DIST pmf: a log-form bd0
+  stores the deviance subtractions".
+- Storing only X = -bd0_p - bd0_q left A360 at 75 ulp; the Stirling sum must enter the stored chain.
+- `make eval`: 10 cells fixed (8 gen-m9, 1 ironcalc-calc, 1 probes), 0 regressions.
+- Remaining: score the T-4361 training and hold-out cases, the fresh sweep and the Gate A line (R4 guards). This also
+  moves interior pmfs with a log-form bd0, which T-4352 owns; T-4352 should re-score its 15 cells on this form.
