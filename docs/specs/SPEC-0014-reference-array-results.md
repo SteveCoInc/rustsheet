@@ -269,18 +269,24 @@ an array value. In detail:
     `#N/A` if the first reference element is on a sheet other than the formula's, and `#VALUE!` if it is on the
     formula's own sheet (probed, rule 5; t4697 H1:H6, H9, H16, H17 separate the first element from the last, any and
     the majority). T-4570 implemented "any reference element on another sheet"; T-4714 changes it to the first.
-    This is one scan of the elements in their argument reader. An error element comes first, as
-    for the other aggregates; this is unprobed and follows rule 4.
+    This is one scan of the elements in their argument reader. Probed (probes/t4704 A46:C61, T-4704): the
+    first element in order decides, an error or a reference, so `{2;9}` (error first) gives the error and `{9;2}`
+    (reference first) gives `#N/A` (A49:C49, A58:C58). Ours puts an error first always (T-4741).
   - Per-element callers (`ref_lift.rs`): `Value(v)` calls the scalar function with `v` as a value argument. That is
     `#VALUE!` where a reference is required, and N reads the value. `put_back` keeps the result.
+    Probed (probes/t4704, T-4704): OFFSET over a mixed grid spills a 2x1 of `#VALUE!` (A4:C8; ours a scalar, T-4739);
+    FORMULATEXT (`#VALUE!`, `#N/A`) and INDIRECT (`#REF!`, `#VALUE!`) match; COUNTIF and SUMIF over an XLOOKUP with a
+    text if_not_found spill a 2x1 of `#VALUE!`, with a miss or all hits (A64:C74; ours a scalar, T-4742).
   - ROWS/COLUMNS, ISREF and the pass-throughs (IF, CHOOSE, LET, VSTACK, TAKE, DROP) need no change: they handle
     elements without reading them.
   - **Readers already on the walker, unprobed for mixed grids.** VAR.S, VAR.P, STDEV.P (`GridReading::TopLeft`,
     variance.rs) and VARA, VARPA, STDEVA, STDEVPA (`TopLeftElements`) take the walker's `Value(v)` arm above with no
     change of their own, as STDEV.S (probed, rule 3) does. Their mixed-grid cells are unprobed.
   - **Unprobed readers** off the walker fall back to the value view, as rule 2 makes every reader that does not opt
-    in. This covers MODE, PERCENTILE, QUARTILE, RANK, the IFS family's criteria ranges, and TEXTJOIN. Each is a
-    probe task before it opts in.
+    in. This covers MODE, PERCENTILE, QUARTILE, the IFS family's criteria ranges, and TEXTJOIN. Each is a
+    probe task before it opts in. RANK, RANK.EQ and RANK.AVG are probed (probes/t4704 A25:C38, T-4704): they lift per
+    element, `#VALUE!` for the hit and the rank in the referenced range for the miss, so they do not fall back
+    (ours does, T-4740).
 - **Bounds** (directive 5). No new budget. An XLOOKUP grid has the lifted lookup_value's shape, which the lift
   already passes through `check_array_size`. Each element is one `xlookup_one` call charged to
   `MAX_LIFTED_CELL_VISITS`, as today. A miss stores one `Range` (the shared if_not_found) and copies no cells. A

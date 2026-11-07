@@ -3,7 +3,7 @@ id: T-4704
 title: "Probe readers of a mixed XLOOKUP grid that T-4570 left unprobed (FORMULATEXT, OFFSET, RANK, error beside an off-sheet reference, both-sheet grids)"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -39,3 +39,14 @@ by fallback, so every such choice is either confirmed or filed as a fix.
 
 ## Out of scope
 - One-index INDEX of a mixed grid (T-4701).
+
+## Outcome
+Probe `probes/t4704-mixed-xlookup-grid-readers` (Data and Calc, 29 probes of three columns each, 103 cells, excel-graph,
+2026-11-07). Results are in lookup.md (after "MEDIAN, LARGE and SMALL over a lifted OFFSET") and SPEC-0014 "As
+implemented (T-4570)". Matching ours: FORMULATEXT, INDIRECT, TAKE, DROP, the error-first order of LARGE, SMALL, MEDIAN and
+MAX, and RANK's shape. Mismatches, each with a fix task: OFFSET's 2x1 result (T-4739), RANK, RANK.EQ and RANK.AVG per
+element (T-4740), the first element deciding between an error and an off-sheet reference (T-4741; this replaces the
+"error comes first" fallback), COUNTIF and SUMIF over an XLOOKUP with a text if_not_found (T-4742).
+A grid with references on both the formula's sheet and another cannot be built from XLOOKUP (every miss is the one
+if_not_found reference); t4697 covers it with INDIRECT. The probe lays out one probe per three rows so a spill has room.
+Eval delta: 74 of the 103 cells pass; the 29 that do not are owned by T-4739 to T-4742 and sit in the probes baseline.
