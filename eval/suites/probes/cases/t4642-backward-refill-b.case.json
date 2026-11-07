@@ -1,0 +1,47 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4642: a second copy of probes/t4618-order-after-active-backward with identical sheets (a second refill).",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "R",
+ "sheets": [
+  {
+   "name": "P",
+   "cells": {
+    "A1": "=N",
+    "A2": "=N+1",
+    "B1": "=FORMULATEXT(A1)"
+   }
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=P!N"
+   }
+  },
+  {
+   "name": "R",
+   "cells": {
+    "A1": "=1+1"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "P!A1",
+  "P!A2",
+  "P!B1",
+  "Q!A1",
+  "R!A1"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=1",
+   "sheet": "P"
+  }
+ ]
+}

@@ -25,12 +25,16 @@ or requiring N agreeing fills before a value is a target. The task applies the d
 - probes/amordegrc-fraction-state-ai Sheet1!A1 (T-3393, decision 0284) is a second such cell. It was 0 on
   2026-10-30, and the same input sha256 (3f8ec3b8…) gives 485 in both 2026-11-05 fills: the copy -av, and an -ai
   refill that is not committed. It is an F line in eval/baseline/probes.txt against the 10-30 value. Ours is 485.
+- probes/t4618-order-after-active-backward Q!A1 (T-4642) is a third such cell. It was `#NAME?` on 2026-11-06, and the
+  same input sha256 (f800e58a…) reads 1 in the copies probes/t4642-backward-refill and -refill-b, filled 2026-11-07.
+  Those two came from one upload. Every one-variable variant reads 1, and no rule explains the old value. It is an F
+  line in eval/baseline/probes.txt against the 11-06 value. Ours is 1.
 - Raised by the excel-fidelity review of T-3590 (PR #2685), MINOR finding 1.
 
 ## Acceptance criteria
 - [ ] A decision record states the general rule, how a cell is shown to vary (how many fills, by whom, and what
       counts as the same bytes), and where such cells are listed. Re-filling until a run matches us is ruled out.
-- [ ] gen-m9 d912671baa1364aa Calc!A76, probes/amordegrc-fraction-state-ai Sheet1!A1 and decision 0112's LN cells are treated per the decision, and
+- [ ] gen-m9 d912671baa1364aa Calc!A76, probes/amordegrc-fraction-state-ai Sheet1!A1, probes/t4618-order-after-active-backward Q!A1 and decision 0112's LN cells are treated per the decision, and
       `make eval-baseline` records no regression.
 - [ ] `make check` green; reviewers approve.
 
