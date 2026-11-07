@@ -329,7 +329,10 @@ fn a_lookup_vector_whose_build_joined_is_not_cached() {
 /// from 0, and both stop within `max_change` of 2 at different values. With a delta of 0 both
 /// run to the fixed point and agree.
 #[test]
-#[expect(clippy::float_cmp, reason = "the two runs must differ, or agree, to the bit")]
+#[expect(
+    clippy::float_cmp,
+    reason = "the two runs must differ, or agree, to the bit"
+)]
 fn a_converged_cycle_depends_on_the_previous_values() {
     let run = |max_change: f64| {
         let cells = [("A1", "=A1/2+B1/2"), ("B1", "1")];
