@@ -3,7 +3,7 @@ id: T-5064
 title: "T-4736 follow-ups: correct the nested-cell bounds entry and SPEC-0018, and probe PERCENTOF over a nested cell"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
