@@ -660,12 +660,8 @@ impl Model {
             return Ok(Vec::new());
         }
         let sheet_names = self.workbook.get_worksheet_names();
-        let rewritten = self.rewrite_formulas(None, |mut node, context| {
-            move_sheet_in_node(&mut node, sheet_index, new_index, &sheet_names);
-            match context {
-                Some(context) => to_english_string(&node, context),
-                None => to_rc_format(&node),
-            }
+        let rewritten = self.rewrite_formulas_edited(None, |node| {
+            move_sheet_in_node(node, sheet_index, new_index, &sheet_names);
         });
         self.reorder_sheet(sheet_index, new_index);
         Ok(rewritten)
