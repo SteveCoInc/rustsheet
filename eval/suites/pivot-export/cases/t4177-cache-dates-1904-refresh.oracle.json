@@ -267,10 +267,10 @@
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "e32723ed4aca1b8036cdab9e22f56d338832b55165c403ffb83ca935ae5b2dfc",
+  "input_sha256": "ced9411f9c6f7ecb5f83a944653ec8d71352e05be363ba291728d6abaa7ebd74",
   "kind": "excel-graph",
-  "produced_at": "2026-11-07T13:34:32+00:00",
+  "produced_at": "2026-11-07T21:37:20+00:00",
   "version": null,
-  "workbook_name": "1b2cd474d41dd67a4a29408c84797074b0c30f0a346e043c5d4b72d626ab82b5.xlsx"
+  "workbook_name": "0b278604eb9d45a151092db4a494954966a0c8b02960da68abf9cffc44d59188.xlsx"
  }
 }

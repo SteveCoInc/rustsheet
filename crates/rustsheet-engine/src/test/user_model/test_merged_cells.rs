@@ -1183,3 +1183,65 @@ fn merge_down_selects_the_whole_merged_area() {
     assert_eq!((view.row, view.column), (2, 2));
     assert_eq!(view.range, [2, 2, 4, 3]);
 }
+
+/// A merged B2:C2 whose covered C2 holds 7, as an imported workbook leaves it (SPEC-0036 I1; the
+/// raw cell API writes covered cells, `set_user_input` refuses them).
+fn merged_with_covered_value() -> UserModel {
+    let mut model = new_empty_user_model();
+    model.set_user_input(0, 2, 2, "5").unwrap();
+    model.merge_cells(&area(0, 2, 2, 2, 1)).unwrap();
+    model.model.update_cell_with_number(0, 2, 3, 7.0).unwrap();
+    model.set_user_input(0, 5, 1, "=C2+1").unwrap();
+    model.evaluate();
+    model
+}
+
+#[test]
+fn covered_value_is_read_by_formulas_and_shows_after_unmerge() {
+    let mut model = merged_with_covered_value();
+    assert_eq!(model.get_formatted_cell_value(0, 5, 1).unwrap(), "8");
+
+    model.unmerge_cells(&area(0, 2, 2, 2, 1)).unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3).unwrap(), "7");
+
+    model.undo().unwrap();
+    assert_eq!(model.get_merged_cells(0).unwrap(), vec![merged(2, 2, 2, 1)]);
+    assert_eq!(model.get_formatted_cell_value(0, 5, 1).unwrap(), "8");
+    model.redo().unwrap();
+    assert!(model.get_merged_cells(0).unwrap().is_empty());
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3).unwrap(), "7");
+}
+
+#[test]
+fn range_clear_of_a_merged_range_clears_the_covered_value() {
+    let mut model = merged_with_covered_value();
+    model.range_clear_contents(&area(0, 2, 2, 2, 1)).unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3).unwrap(), "");
+    assert_eq!(model.get_formatted_cell_value(0, 5, 1).unwrap(), "1");
+
+    model.undo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3).unwrap(), "7");
+    assert_eq!(model.get_formatted_cell_value(0, 5, 1).unwrap(), "8");
+    model.redo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3).unwrap(), "");
+}
+
+#[test]
+fn deleting_the_anchor_row_makes_the_covered_cell_the_anchor_with_its_value() {
+    let mut model = new_empty_user_model();
+    model.set_user_input(0, 2, 2, "5").unwrap();
+    model.merge_cells(&area(0, 2, 2, 1, 2)).unwrap();
+    model.model.update_cell_with_number(0, 3, 2, 7.0).unwrap();
+    model.evaluate();
+
+    model.delete_rows(0, 2, 1).unwrap();
+    // the merge shrinks to a single cell whose anchor is the old covered B3, now B2
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2).unwrap(), "7");
+
+    model.undo().unwrap();
+    assert_eq!(model.get_merged_cells(0).unwrap(), vec![merged(2, 2, 1, 2)]);
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2).unwrap(), "5");
+    assert_eq!(model.get_formatted_cell_value(0, 3, 2).unwrap(), "7");
+    model.redo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2).unwrap(), "7");
+}

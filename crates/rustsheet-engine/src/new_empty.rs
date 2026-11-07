@@ -18,8 +18,8 @@ use crate::{
     },
     formula_rewrite::RewrittenFormula,
     functions::logical::NamedLambdas,
-    language::{get_default_language, get_language, Language},
-    locale::{get_default_locale, get_locale, Locale},
+    language::{get_language, Language},
+    locale::{get_locale, Locale},
     model::Model,
     tables::lower_this_row_cells,
     types::{
@@ -114,45 +114,48 @@ impl Model {
     // This function parses all the internal formulas in all the worksheets
     // (in the default language ("en") and locale ("en") and the RC format)
     pub(crate) fn parse_formulas(&mut self) {
-        let locale = self.locale;
-        let language = self.language;
-
         self.call_name_spellings
             .set_defined_names(&self.workbook.defined_names);
-        self.parser.set_locale(get_default_locale());
-        self.parser.set_language(get_default_language());
-        self.parser.set_lexer_mode(LexerMode::R1C1);
-        // The lookup of the shared formulas follows the parsed formulas: both
-        // are made from the lists of the sheets, here.
-        self.shared_formula_lookup.clear();
-        for worksheet in &mut self.workbook.worksheets {
-            let cell_reference = CellReferenceRC {
-                sheet: worksheet.get_name(),
-                row: 1,
-                column: 1,
-            };
-            let mut parse_formula = Vec::new();
-            for formula in &mut worksheet.shared_formulas {
-                let mut t = self.parser.parse(formula, &cell_reference);
-                // The list keeps the workbook's spelling of each called name, as a typed formula
-                // stores it (`shared_formula_index`); the sheets are read in order, and each list
-                // in the order its formulas were first met.
-                if self.call_name_spellings.apply(&mut t) {
-                    *formula = to_rc_format(&t);
-                }
-                parse_formula.push(crate::formula_cells::stored_formula(t));
-            }
+        // The fields are borrowed one by one: the helper needs the parser alone.
+        let Model {
+            parser,
+            workbook,
+            call_name_spellings,
+            shared_formula_lookup,
+            parsed_formulas,
+            locale,
+            language,
+            ..
+        } = self;
+        parser.with_default_locale(locale, language, |parser| {
+            parser.set_lexer_mode(LexerMode::R1C1);
             // The lookup of the shared formulas follows the parsed formulas: both
             // are made from the lists of the sheets, here.
-            self.shared_formula_lookup
-                .push(crate::model::build_shared_formula_lookup(
+            shared_formula_lookup.clear();
+            for worksheet in &mut workbook.worksheets {
+                let cell_reference = CellReferenceRC {
+                    sheet: worksheet.get_name(),
+                    row: 1,
+                    column: 1,
+                };
+                let mut parse_formula = Vec::new();
+                for formula in &mut worksheet.shared_formulas {
+                    let mut t = parser.parse(formula, &cell_reference);
+                    // The list keeps the workbook's spelling of each called name, as a typed
+                    // formula stores it (`shared_formula_index`); the sheets are read in order,
+                    // and each list in the order its formulas were first met.
+                    if call_name_spellings.apply(&mut t) {
+                        *formula = to_rc_format(&t);
+                    }
+                    parse_formula.push(crate::formula_cells::stored_formula(t));
+                }
+                shared_formula_lookup.push(crate::model::build_shared_formula_lookup(
                     &worksheet.shared_formulas,
                 ));
-            self.parsed_formulas.push(parse_formula);
-        }
-        self.parser.set_lexer_mode(LexerMode::A1);
-        self.parser.set_locale(locale);
-        self.parser.set_language(language);
+                parsed_formulas.push(parse_formula);
+            }
+            parser.set_lexer_mode(LexerMode::A1);
+        });
     }
 
     pub(crate) fn parse_defined_names(&mut self) {

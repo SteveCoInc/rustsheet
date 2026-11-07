@@ -7168,6 +7168,25 @@ Ours: `#NUM!` from the cut since T-3862 (functions/statistical/beta.rs `first_sh
 Status: VERIFIED (excel-graph) for the cut; the expression that squares pp UNVERIFIED
 Tasks: T-3862, T-4713, T-4700
 
+## BETA.INV at beta 1 caps at 0.999999 where its quantile rounds to 1 (T-4958)
+Rule: at beta = 1 and p up to 1/2, BETA.INV(p, alpha, 1) (and BETAINV) is the closed form p^(1/alpha) while that is
+below 1, and 0.999999 (1 - 1E-6) once it rounds to 1, not 1 - 2^-53 and not `#NUM!`.
+- probes/t4713-beta-inv-beta-above-1-cut F1:F17, `BETA.INV(0.1,a,1)`: for a = 1E+14 to 3.16E+16 (F1:F11) Excel is the
+  closed form, down to 0.9999999999999999 at F10 and F11 (ln(0.1)/a = -1.3E-16 and -7.3E-17, both above half an ulp
+  of 1). For a = 5.62E+16 to 1E+18 (F12:F17, ln(0.1)/a = -4.1E-17 and smaller) the closed form rounds to 1 and Excel
+  is 0.999999.
+- Above p = 1/2 the flip gives 1 instead ("BETA.INV where the quantile rounds to 1 (T-3351)"). The same 0.999999 is
+  T-4700's value at a tiny beta and a huge alpha ("BETA.INV is #NUM! once the square of AS 109's first shape
+  overflows (T-3862)", "Below the cut"). AS 109's start for a second shape of at most 1, 1 - 2/(t + 1), is within
+  1E-6 of 1 at every one of these alphas, so the value looks like a start clamped at 1 - 1E-6 that the search cannot
+  move once the root rounds to 1. That reading is UNVERIFIED, and it does not explain F1:F11, whose start is clamped
+  as well. At small alphas with a tiny beta, Excel's rounded-to-1 quantile is 1 - 2^-53 or `#NUM!` (T-3351's
+  entry), so the cap is not a general rule for a quantile that rounds to 1.
+Evidence: probes/t4713-beta-inv-beta-above-1-cut F1:F17 (excel-graph, 2026-11-07)
+Ours: `shape_one_quantile_cap` (functions/statistical/beta.rs), only at beta = 1, where it is evidenced
+Status: VERIFIED (excel-graph) for beta = 1; the mechanism and other shapes UNVERIFIED (T-4700)
+Tasks: T-4958, T-4713, T-4700
+
 ## BETA.INV and BETA.DIST's density are #NUM! where Loader's n - k is not positive (T-4713)
 Rule: with both shapes above 1, BETA.DIST(x, a, b, FALSE) is `#NUM!` at every x where its Loader counts
 k = fl(a - 1), n = fl(fl(a + b) - 2) leave nk = fl(n - k) at 0 or below (its LN(nk) has no value); BETA.INV and

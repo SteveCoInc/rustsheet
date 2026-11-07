@@ -864,7 +864,23 @@ FALSE, `*2^1000` recovers -2^-74), and so is a spilled array element (`=EXP({-74
 companion FALSE, the -708 element a normal 3.3075530036384078E-308); probes/subnormal-saved-negative-and-array, excel-graph
 2026-11-07 (T-4355). RustSheet's export flushes a kept subnormal of either sign in every number `<v>` (T-2211, T-4355,
 `saved_number` in export/worksheets.rs). Desktop Excel's save is unprobed (M14, decision 0039).
-In an array expression the kept subnormal compares equal to 0: `(EXP({-745,-708}))=0` is TRUE in excel-graph (same probe, D1) though a spilled cell's `=0` companion is FALSE (T-4766).
+Comparison over an array or range (T-4766): when either operand of `=`, `<>`, `<`, `>`, `<=`, `>=` is an array or a range,
+Excel reads a left number that exceeds the right one by less than 2^-1026 as equal to it; a left number below the right one
+keeps its order, and a scalar comparison stays exact. So `(EXP({-745,-708}))=0` is {TRUE,FALSE} (probes/subnormal-saved-negative-and-array
+D1) while `(EXP(-745))=0`, `INDEX(EXP({-745,-708}),1)=0` and `=A30=0` of a spilled cell are FALSE; `(EXP(-745)+{0,0})=0`,
+`(A30:B30)=0` and `(A30#)=0` are TRUE; `EXP({-745,-708})>0` and `<>0` are FALSE at the kept element; `0=EXP({-745})` is FALSE and
+`0<EXP({-745})` TRUE; `EXP({-744})=EXP({-745})` is TRUE, `EXP({-744})>EXP({-745})` FALSE and `EXP({-745})<EXP({-744})` TRUE; the
+same holds with the array on the left, the right or both sides (probes/t4766-array-subnormal-compare,
+probes/t4766-array-subnormal-order, 144-cell operand matrix). The switch for `(EXP({a}))=0` lies between a = -711.17 (TRUE) and
+-711.16 (FALSE), around 2^-1026 (-1026 ln 2 = -711.1648; probes/t4766-array-subnormal-exp-boundary, -order A1:A21). The
+constant 2^-1026 was chosen from those cells, then checked on a fresh sweep made after the rule was frozen
+(probes/t4766-array-subnormal-fresh, 94 cells: exact m*2^-1074 built by subtraction, m log-uniform in [2^44, 2^52) and
+2^48 +-1, pairs, and negative operands): the engine matches all 94. The value exactly at 2^-1026 and the gap between two normal
+numbers are not separately probed. POWER flushes a subnormal result (`(2^-1023)=0` TRUE, `POWER(2,-1022)=0` FALSE;
+probes/t4766-array-subnormal-boundary), as this file already says, so 2^-k cannot build test values. The saved 0 of a spilled
+kept subnormal (A3 of the first probe) cannot use decision 0042's companion, which is TRUE in array context (T-5051).
+Implemented in `arithmetic::within_array_compare_gap` (`handle_comparison`).
+Status: VERIFIED (excel-graph) for the probed cells; the mechanism is UNVERIFIED.
 Range edges (T-2203, probes-numeric/t2203-exp-range-edges, excel-graph 2026-10-22, 527 rows): the last finite
 argument is 709.782712893384 (ln DBL_MAX; EXP = 1.7976931348622732E308, not quite DBL_MAX), and the first
 `#NUM!` is its successor double 709.7827128933841; every argument above it, up to 710.5, is `#NUM!`. At the other

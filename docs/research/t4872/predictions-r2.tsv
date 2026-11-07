@@ -1,0 +1,17 @@
+# T-4872 round 2 (PR #3929 fidelity review). Prediction: T-4870's rule (dates.md) carries over: the #N/A of a
+# written-empty required argument comes at that argument's turn (an earlier argument's error wins) and lifts per element.
+cell	formula	prediction
+Calc!A1	=COMPLEX(1/0,)	#DIV/0!
+Calc!A2	=COMPLEX(,1/0)	#N/A
+Calc!A3	=ERF(1/0,)	#DIV/0!
+Calc!A4	=ERF(NA(),)	#N/A
+Calc!A5	=BESSELJ("x",)	#VALUE!
+Calc!A6	=CONVERT(1/0,"m",)	#DIV/0!
+Calc!A7	=DELTA(1/0,)	#DIV/0!
+Calc!A8	=DEC2BIN(,1/0)	#N/A
+Calc!A9	=ROWS(COMPLEX({1;2},))	2
+Calc!A10	=INDEX(COMPLEX({1;2},),1)	#N/A
+Calc!A11	=INDEX(BESSELJ({1;"x"},),2)	#VALUE!
+Calc!A12	=ROWS(DEC2BIN(,{1;2}))	2
+Calc!A13	=ROWS(ERF({1;2},))	2
+Calc!A14	=INDEX(ERF({1;2},),2)	#N/A

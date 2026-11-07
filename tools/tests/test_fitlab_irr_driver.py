@@ -9,6 +9,8 @@ import pytest
 from rustsheet_tools.fitlab.irr_transforms import negate, pad_leading, pad_trailing, scale_pow2
 from rustsheet_tools.fitlab.kernels import registry
 from rustsheet_tools.fitlab.kernels.irr_driver import (
+    BANK,
+    CANDIDATES,
     CAP,
     CONVERGED,
     Options,
@@ -25,7 +27,7 @@ FLOWS = [-1000.0, 300.0, 400.0, 500.0, 200.0]
 def test_irr_type_is_registered_and_scores_errors() -> None:
     fit = registry()["irr-type"]
     assert fit.errors
-    assert len(fit.candidates()) == 8
+    assert len(fit.candidates()) == len(CANDIDATES) == 8 + len(BANK)
 
 
 def test_a_conventional_run_converges_and_reports_its_step() -> None:
@@ -94,3 +96,19 @@ def test_trailing_zeros_keep_the_root() -> None:
     assert isinstance(root, float)
     assert isinstance(padded, float)
     assert abs(padded - root) < 1e-9
+
+
+@pytest.mark.parametrize("name", sorted(BANK))
+def test_every_bank_handler_is_inert_on_a_clean_run(name: str) -> None:
+    """T-4836: each handler acts only at a flat secant, a pole crossing, the cap or a failed call."""
+    assert irr(FLOWS, 0.1, BANK[name]).value == irr(FLOWS, 0.1, Options()).value
+
+
+def test_the_newton_fallback_returns_where_both_secant_runs_fail() -> None:
+    """H12 on `IRR({42,1,1,-1})` (financial.md "IRR's fallback when the secant fails": Excel -0.7467044766537371)."""
+    flows = [42.0, 1.0, 1.0, -1.0]
+    assert irr(flows, 0.1, Options(cap=200)).value == "#NUM!"
+    out = irr(flows, 0.1, BANK["H12 Newton fallback"])
+    assert isinstance(out.value, float)
+    assert abs(out.value - -0.7467044766537371) < 1e-13
+    assert out.runs[-1].event == "fallback"

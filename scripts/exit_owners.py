@@ -503,7 +503,9 @@ def all_off_cells(report: dict[str, Any]) -> list[OffCell]:
     outside Gate B and the R3 passes of Gate B's suites, then the probe rows' counted cells the first
     two lists lack (T-3428). Two exit rows read wider lists and are owned through `unowned` per
     milestone, not here: a gen suite's row counts every visibly-off cell (an R3 pass too), and M1's
-    frozen `m1-probes` list counts its Phase 1b cells."""
+    frozen `m1-probes` list counts its Phase 1b cells. A pivot whose layout is a baseline item (a
+    case's `pivot_layout` beside `layout_checked`, T-4944) is no cell and no exit criterion, so it is
+    left out here: `new_case_owners.layout_items` reads it for the cases a branch adds."""
     by_key = {
         (str(case["id"]), f"{c['sheet']}!{c['cell']}"): c
         for case in report.get("cases") or []

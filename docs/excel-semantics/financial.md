@@ -811,6 +811,35 @@ Status: VERIFIED (excel-graph) for the bracket, the midpoint and the step test. 
 (T-2328), flows dated before the first included. It is a fitted rule, not a known mechanism.
 Tasks: T-1525, T-0916, T-1533, T-1583, T-1591, T-2328, T-2329, T-2728, T-2045, T-3268 (the negative-root stop), T-3353 (unscaled over long spans), T-3484 (near-zero roots, R3 candidate)
 
+## XIRR where XNPV has no root: sometimes the guess bisected toward 0, sometimes #NUM! (T-4251)
+Rule (partial; no separating rule found): on some flows whose signs change but whose XNPV never crosses 0, Excel's
+XIRR is not `#NUM!`. It is the guess s (1E-5 for a guess of 0) halved until the bisection's step test passes, the
+value [0, s] bisected with the upper end replaced every step: s/2^25 for s = 0.1. On other such flows it is `#NUM!`,
+and so is one series with two real roots that the engine's model solves.
+- s/2^k (excel-graph, probes/t4251-xirr-no-root-bracket):
+  - `XIRR({-100,200,-300},{1,2,3})` with no guess or 0.1, 0.5, 1, 2, 0.01, 0, 10 (A1:A5, A7, A13):
+    2.9802322387695314E-09 (0.1/2^25), 3.725290298461914E-09 (0.5/2^27, 1/2^28 and 2/2^29), 4.76837158203125E-09
+    (0.01/2^21), 4.8828125E-09 (1E-5/2^11), 4.6566128730773926E-09 (10/2^31). This is t3312-xirr-xnpv-inner-calls
+    Calc!A30's value, where T-4251 found it.
+  - The negated flows `{100,-200,300}` (A8), the same flows on days 0, 365, 730 and 0, 3650, 7300 (A9, A10), and
+    `{-100,50,-300}` on days 1..3 (A11): 0.1/2^25.
+- `#NUM!` with the same shape of XNPV (signs change, XNPV negative at every rate): `{-100,1,-100}` (A12), the
+  reversed `{-300,200,-100}` (A14) and `{-100,300,-300}` (A15) on days 1..3. A negative guess is `#NUM!` too (A6),
+  as for a bracket walk with no upward chain.
+- `#NUM!` with roots: `XIRR({-100,350,-300},{0,365,730})` (A16) has roots at r = 0.5 and 1. The engine's walk
+  brackets [0.4, 0.8], where XNPV(0.8) = +1.85 has the sign opposite to values[0], so its bisection ends at the
+  bracket's end, 0.7999999880790711. Excel is `#NUM!`.
+- One-sign flows `{-1,-2}` are `#NUM!` (A17), as before.
+- Neither the sum of the values, XNPV(0), the sign of XNPV's change from 0 to the guess, nor where |XNPV| is least
+  separates A1:A11 from A12, A14 and A15. Next probe: vary one value at a time between A1 (`{-100,200,-300}`) and
+  A15 (`{-100,300,-300}`) and between A1 and A12, and check A16's neighbours with one root.
+Evidence: probes/t4251-xirr-no-root-bracket A1:A17 (excel-graph, 2026-11-07; the engine's values were committed as
+predictions before the fill, in T-4251's task file)
+Ours: `#NUM!` on all of the first group, and 0.7999999880790711 on A16 (`xirr_bracket`, `compute_xirr`,
+functions/financial/financial_util.rs)
+Status: VERIFIED (excel-graph) for the cells; the rule UNVERIFIED
+Tasks: T-4251
+
 ## IRR is a secant in d = 1 - v = r/(1 + r) from d0 and d0 -+ 0.001 (fitted, 263/263 bit-exact)
 Rule: IRR runs the secant method on NPV as a function of d = 1 - v = r/(1 + r), v = 1/(1 + r) (T-3120 moved
 the state from v to d; the T-1533 text below, written for the secant in v, holds for d with the signs flipped):
@@ -5111,6 +5140,41 @@ Ours: `irr_fallback` takes one more Newton step from its stop iterate and is `#N
 `IRR_ROOT_RESIDUAL` = 1E-4 or more; it still returns the stop iterate (T-3411 round 4). The check applies only to
 2..148 flows whose largest |c| is 6.4E-12..2.2E+82, the evidenced range (`IRR_ROOT_RESIDUAL_FLOWS`).
 Tasks: T-3411
+
+## IRR's failure handlers scored offline: RATE's driver with the Newton fallback leads (T-4836)
+Rule (leads and refutations, no implementation): on the 2,555 numeric IRR cells of the `irr-type` fit (26 probe
+cases), each failure handler of plan.md's Phase 2 bank (docs/research/irr-2026-11-07/plan.md H1-H15; H13-H15 from
+the lineage table, lineage.md) was scored for Excel's outcome type and bits, on the exact replica of "IRR is a secant
+in d", on both sides of the fit lab's split. The engine on main types 2,000 cells (train 1,432, test 568) and is
+bit-exact on 1,857 (1,338, 519). Counts are typed / bit-exact; gained and lost are typed cells against the engine.
+- **Lead: RATE's driver plus the Newton fallback** (hold on a flat secant, run on past d = 1, cap 200 with RATE's
+  1e-4 return tests, then Newton on P(v) from v = 0 with the 1e-4 residual cut where both runs fail): 2,046 / 1,942,
+  train 1,454 / 1,385 and test 592 / 557, gaining 94 typed cells and losing 48. It is the only candidate above the
+  engine on every count and on both sides. Without the fallback the RATE transplant is 1,990 / 1,935.
+- Next: RATE's driver with VB's r-half clamp in place of the run on (H5) is 2,030 / 1,831 (+118 / -88). Adding the
+  fallback to it gives 2,017 / 1,812, and the d-half clamp (H6) with the fallback 2,023 / 1,842. So the clamps help
+  the type but cost bits, and the fallback does not combine with them as it does with the run on.
+- Refuted as Excel's rule on this data (each loses to its base on both sides):
+  - **H8, VB's flow-scaled stop** (|NPV| < max|c| x 1e-9): 1,775 / 1,377 on the base and 1,849 / 1,438 on RATE's
+    driver, against 1,754 / 1,752 and 1,990 / 1,935. It loses about 400 bit-exact cells, so the main stop is
+    absolute, as "IRR is a secant in d" found on m9-fin-irr-rate.
+  - **H13, RATE's keep-the-older-iterate** (T-3963): 1,887 / 1,834 on RATE's driver (-243 typed).
+  - **H14, the previous slope reused at a flat secant**: 1,914 / 1,856 on RATE's driver.
+  - **H2 and H10, VB's nudge** with or without `#DIV/0!` for a second flat: 1,765 and 1,725 on the base, 1,794 on
+    RATE's run on.
+  - **H11, no retry after a pole crossing**: 1,724 on the base (the retry from 0.1 after a pole stays).
+- Neutral: **H3, RATE's restart** at steps 3..16 changes 1 typed and 1 bit-exact cell on RATE's driver (1,989 /
+  1,936). H15, a clamp just inside the pole at r = 1000, is 1,976 / 1,877 on RATE's driver.
+- Not scored: H9 (another NPV arithmetic for long series), which no source in lineage.md supports; it stays a Phase 4
+  question.
+The shortlist (RATE's driver; with the fallback; with H5 and the fallback; with H5) disagrees on 235 cells, the RATE
+driver and its fallback variant on 104. Each model's value on every cell is in
+docs/research/irr-2026-11-07/predictions.tsv, the full table in bank.tsv; `bank.py` there reproduces both.
+Correction to lineage.md's H15: formulajs's clamp at r = -0.999999999 is the far side of d = 1 (v = 1E+9, d = 1 - 1E+9)
+and does not apply to a crossing from below; its upper clamp r = 1000 (d = 1000/1001) does, and that is what was scored.
+Evidence: no new oracle data; the cells of the 26 IRR probe cases (excel-graph, 2026-10-06 to 2026-11-07)
+Status: UNVERIFIED (offline scores of candidate rules; T-4838's engineered probes decide)
+Tasks: T-4836, T-4838
 
 ## IRR over an error element
 Rule: IRR (probes/fin-irr-error-array, T-2390, excel-graph) gives `#VALUE!`, whatever the kind, when its values hold an
