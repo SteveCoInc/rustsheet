@@ -79,10 +79,3 @@ cached values) are 1 to 4 ulp off, and no open task lists them. All are within 1
 are type 1 (rows 2 to 17 and 31). H29 is type 0, `CUMPRINC(0.0083,36,8000,3,10,0)`: Excel -1604.273009770884, ours
 -1604.2730097708848, with the 50-digit math at -1604.27300977088443. Its CUMIPMT partner G29 is T-3413's.
 - ironcalc-calc/FINANCIAL/CUMPRINC_CUMIPMT.xlsx (10): Sheet1!H2, H3, H4, H5, H7, H12, H16, H17, H29, H31
-
-## Cells added by gap triage (2026-11-07)
-`make eval` on origin/main b9ae5216, every suite fetched. No open task lists these five cells. All five are one value,
-`CUMPRINC(0.01,360,100000,1,12,0)` with one argument taken through `@` of a two-cell range: Excel -362.8793467231,
-ours -362.8793467230999 (1 ulp, within 15 digits, Phase 1b). Every argument is read right: the five agree with Excel to 15 digits and with each other. So this is CUMPRINC's own
-last bit, not the `@` read.
-- probes/fin-remaining-later-argument-ranges.case.json (5): Sheet1!I75, I77, I79, I81, I83

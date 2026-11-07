@@ -18,8 +18,10 @@ have a reference, so decision 0188 R1(c) stops counting those cells for having n
 
 ## Context
 - Gap triage 2026-11-07 (`make eval` on origin/main b9ae5216, every suite fetched, excel-graph). `make unowned-off ALL=1`
-  lists 17 visibly-off cells with no open owner, all in probes/t3444-binom-range-inv-large-n. This task attaches the math
-  for two of them; T-4783 attaches it for the other 15.
+  lists 17 visibly-off cells with no open owner, all in probes/t3444-binom-range-inv-large-n. T-4773 attaches the math
+  for those 17 (including Range!B49 and B53, two of the not-converged skips below). This task is the split that
+  covers every other not-converged BINOM.DIST/NEGBINOM.DIST skip: the definition in discrete.py, and the other
+  sidecars.
 - 508 BINOM.DIST and NEGBINOM.DIST cdf cells in 7 sidecars are under `skipped` with `why: not converged`:
 
   | case | skipped |
@@ -54,8 +56,6 @@ have a reference, so decision 0188 R1(c) stops counting those cells for having n
   large n"). That scorer checks itself against the sidecar to 1E-12 relative, so it can cross-check the new values.
 - Cells R1(c) counts today only because they have no math value (visibly off, attributed, `r1c_left_out` empty).
   Decision 0325: this task names them, and their fit owners keep them:
-  - probes/t3444-binom-range-inv-large-n.case.json (2): Range!B49, B53 (bit-level owner T-4784, deferred: T-3447
-    listed them and is done)
   - probes/t3352-binom-negbinom-large-n.case.json (1): Calc!A52 (owner T-3961)
   - probes-numeric/t3352-binom-negbinom-sweep.case.json (2): Calc!A184, A208 (owner T-3961)
   - probes-numeric/t3960-binom-negbinom-small-p-cdf.case.json (34): Calc!A8, A29, A31, A35, A37, A44, A62, A68, A94,
@@ -77,11 +77,13 @@ have a reference, so decision 0188 R1(c) stops counting those cells for having n
 - [ ] The 7 sidecars above are regenerated. Each "not converged" BINOM.DIST/NEGBINOM.DIST skip is gone or gets a
       stated reason in the Outcome. `make eval-math-check` is current.
 - [ ] The Outcome gives the decision 0188 R1(c) counts before and after (probes and probes-numeric: counted, Phase 1b
-      evidence, R3 passing) and says, for each of the 56 cells above, whether it became Phase 1b evidence or stays
+      evidence, R3 passing) and says, for each of the 54 cells above, whether it became Phase 1b evidence or stays
       counted.
 - [ ] No eval/baseline file changes (math values do not score cells).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Engine changes, and any fit of Excel's cdf (T-3961, T-3959, T-3774, T-4746).
-- t3444's Inv!C and Inv!D cells, whose argument reads a BINOM.INV formula cell (T-4783).
+- The 17 t3444 cells T-4773 owns (Inv!C and Inv!D, whose argument reads a BINOM.INV formula cell, and Range!B49,
+  B53). If T-4773 lands a convergent BINOM.DIST route first, reuse it here rather than adding a second one
+  (directive 3); if this task lands first, T-4773 reuses this one.
