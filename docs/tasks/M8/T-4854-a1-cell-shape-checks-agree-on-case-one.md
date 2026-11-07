@@ -20,7 +20,7 @@ Found by the T-4856 duplicate-concept audit (one definition per concept, CLAUDE.
 
 ## Acceptance criteria
 - [ ] One case-insensitive A1-shape predicate behind all four callers.
-- [ ] Tests: lower-case `ab12` sheet/name is quoted/rejected exactly as `AB12` (probe if Excel's name dialog differs).
+- [ ] Probe how Excel treats `ab12` and `AB12` as a sheet name and a defined name; tests pin the probed answer for both.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
