@@ -2,6 +2,7 @@
 //! with `known_y`, and which x columns a singular fit drops (statistics.md "TREND: defaults,
 //! shapes, single points and error inputs", "LINEST, LOGEST, GROWTH: probe findings").
 
+use crate::area_budget::multiply_add_units;
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
 use crate::limits::check_array_cells;
@@ -167,6 +168,17 @@ pub(super) struct Grid {
     pub(super) cols: usize,
     /// Row-major.
     pub(super) elements: Vec<Element>,
+}
+
+/// The multiply-adds of the least-squares solve over `y` and `x` (`linest::linear_regression`):
+/// about n·(p+1)² for the QR of n points and p variables (p read as x's cells per y cell) and
+/// (p+1)³ for the substitutions, charged before the solve runs (directive 5; findings
+/// 2026-11-07 audit item 6).
+pub(super) fn solve_units(y: &Grid, x: &Grid) -> u64 {
+    let points = y.elements.len().max(1);
+    let columns = x.elements.len().div_ceil(points).max(1) + 1;
+    multiply_add_units(&[points, columns, columns])
+        .saturating_add(multiply_add_units(&[columns, columns, columns]))
 }
 
 impl Grid {

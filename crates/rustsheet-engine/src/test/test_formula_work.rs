@@ -426,3 +426,33 @@ fn a_formula_past_the_limit_leaves_no_stand_in_in_a_shared_index() {
         }
     }
 }
+
+// Dense matrix kernels charge their multiply-adds before they run (findings 2026-11-07 audit
+// item 6): inputs within every size limit whose cubic work is past the budget are refused at
+// once with the budget's error, while a small kernel still computes.
+#[test]
+fn matrix_kernels_charge_their_cubic_work_up_front() {
+    let refused = [
+        // 1000 x 1000 times 1000 x 1000: 1E+9 multiply-adds.
+        "=MMULT(SEQUENCE(1000,1000),SEQUENCE(1000,1000))",
+        // 700³ = 3.4E+8.
+        "=MDETERM(SEQUENCE(700,700))",
+        "=MINVERSE(SEQUENCE(600,600))",
+        // 2,000 points of 400 variables: 3.2E+8 for the QR.
+        "=LINEST(SEQUENCE(2000),SEQUENCE(2000,400))",
+        "=TREND(SEQUENCE(2000),SEQUENCE(2000,400))",
+    ];
+    for formula in refused {
+        let mut model = new_empty_model();
+        model._set("A1", formula);
+        model.evaluate();
+        assert_eq!(model._get_text("A1"), "#VALUE!", "{formula}");
+        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{formula}");
+    }
+    let mut model = new_empty_model();
+    model._set("A1", "=MDETERM({2,1;1,3})");
+    model._set("A2", "=INDEX(MMULT({1,2;3,4},{1;1}),2)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "5");
+    assert_eq!(model._get_text("A2"), "7");
+}

@@ -1,4 +1,4 @@
-use super::regression::{known_points, layout, Grid};
+use super::regression::{known_points, layout, solve_units, Grid};
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{LiftCost, LiftOptions};
@@ -393,6 +393,9 @@ impl Model {
             Ok(data) => data,
             Err(error) => return error,
         };
+        if let Err(error) = self.spend_work(solve_units(&data.0, &data.1), cell) {
+            return error;
+        }
         // An omitted flag is an empty argument: its default.
         let mut flag_arg = |index: usize| match args.get(index) {
             Some(node) => flag_input(self, node, cell),

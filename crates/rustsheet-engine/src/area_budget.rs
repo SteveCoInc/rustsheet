@@ -261,6 +261,22 @@ pub(crate) fn visit_units(visits: u64) -> u64 {
     visits.saturating_mul(VISIT_UNITS)
 }
 
+/// Work units of one multiply-add of a dense matrix kernel (MMULT's product, MDETERM's and
+/// MINVERSE's elimination, the regression solve), charged up front for the kernel's whole
+/// operation count so a cubic computation over bounded inputs cannot run past
+/// [`MAX_FORMULA_WORK`] (directive 5; findings 2026-11-07 audit item 6). One unit, as a cell
+/// visit: a multiply-add takes about a nanosecond, so the budget's worst case stays well under
+/// SPEC-0024's 10 s.
+pub(crate) const MULTIPLY_ADD_UNITS: u64 = 1;
+
+/// The units of a kernel of `dims[0]·dims[1]·…` multiply-adds ([`MULTIPLY_ADD_UNITS`] each),
+/// saturating, so an oversized kernel fails its charge and never wraps.
+pub(crate) fn multiply_add_units(dims: &[usize]) -> u64 {
+    dims.iter().fold(MULTIPLY_ADD_UNITS, |units, &d| {
+        units.saturating_mul(u64::try_from(d).unwrap_or(u64::MAX))
+    })
+}
+
 impl Model {
     /// Runs `f`, one formula's evaluation in `cell`, with a fresh [`AreaBudget`], and gives the
     /// budget it interrupted back afterwards: a cell evaluated while another formula runs has its

@@ -1741,6 +1741,11 @@ comparator that is not an order (T-4279 speeds the collation up). `rustsheet-eva
 `a_formula_past_the_limit_leaves_no_stand_in_in_a_shared_index`. The criteria functions (COUNTIF,
 SUMIFS, ...) take ranges, not bound arrays, and their comparisons go through the same count. The calibration figures above were measured before T-2804 charged the aggregates'
 reads, so an aggregate-heavy eval formula now spends more (`rustsheet-eval check` still has no formula past the limit).
+Dense matrix kernels charge their multiply-adds before they run (T-4975, findings 2026-11-07 audit item 6), one unit
+each (`MULTIPLY_ADD_UNITS`): MMULT m·k·n, MDETERM n³, MINVERSE 2n³, and LINEST, LOGEST, TREND and GROWTH about
+n·(p+1)² + (p+1)³ for n points of p variables. Inputs within every size limit whose cubic work passes the budget are
+refused at once (`MMULT(SEQUENCE(1000,1000),SEQUENCE(1000,1000))`, `MDETERM(SEQUENCE(700,700))`; the test
+`matrix_kernels_charge_their_cubic_work_up_front`), where before they ran unbounded.
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/area_budget.rs (`MAX_FORMULA_WORK`, `Model::spend_work`, `Model::with_area_budget`),
 crates/rustsheet-engine/src/model.rs (`evaluate_node_in_context`), crates/rustsheet-engine/src/functions/logical/lambda.rs
