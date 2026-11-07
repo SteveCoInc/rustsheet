@@ -2685,6 +2685,7 @@ C	probes/t4755-hand-hidden-filtered-table-control.case.json	22
 C	probes/t4755-hand-hidden-filtered-table-delete-filtered-column.case.json	22
 C	probes/t4755-two-criteria-filtered-table-control.case.json	22
 C	probes/t4755-two-criteria-filtered-table-delete-one.case.json	22
+C	probes/t4757-later-mark-sheet-names.case.json	20
 C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/t4765-growth-factor-edges.case.json	24
 C	probes/t4772-blank-y-offset-indirect-let-xlookup.case.json	32
@@ -11123,6 +11124,7 @@ F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!A7
 F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!A8
 F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!B5
 F	probes/t4755-two-criteria-filtered-table-delete-one.case.json	F!C5
+F	probes/t4757-later-mark-sheet-names.case.json	Sheet1!A19
 F	probes/t4765-growth-factor-edges.case.json	Cut!A1
 F	probes/t4765-growth-factor-edges.case.json	Cut!A5
 F	probes/t4765-growth-factor-edges.case.json	SmallB!A1

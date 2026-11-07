@@ -313,6 +313,7 @@ probes/t4634-pivot-total-order-4.case.json	1376
 probes/t4697-large-small-median-mixed-sheet-refs.case.json	5
 probes/t4704-mixed-xlookup-grid-readers.case.json	29
 probes/t4755-two-criteria-filtered-table-delete-one.case.json	10
+probes/t4757-later-mark-sheet-names.case.json	1
 probes/t4765-growth-factor-edges.case.json	4
 probes/t4793-growth-one-factor-underflow.case.json	1
 probes/t4793-growth-several-x.case.json	2
