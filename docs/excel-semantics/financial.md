@@ -4936,6 +4936,20 @@ the engine's stop. What decides which iterate Excel returns, and when it is `#NU
   docs/research/t3411/gen_sweep.py): Excel returns a number on 104 and `#NUM!` on 46. The branch's engine returned 59
   of the 104 (57 bit-exact) and was `#NUM!` on 45 where Excel returns a root (T-3548's type rule); T-4232 owns the
   visibly-off cells. On main (the stop iterate) the case scores 102 of 150 (56 of the 104 numbers bit-exact).
+- Re-measured on main 22a804e85 (after T-3408's 200-step secant, decision 0320), over all 4,336 IRR cells with an
+  Excel value (3,436 of eval/suites and Gate A's 900), the one-step-past return is still not Excel's rule (T-4213,
+  2026-11-07). It makes 15 cells bit-exact: the 12 above, plus t4213-irr-r4-fresh A95 and Gate A r4-T-3407 A285 and
+  r4-T-3411 A286. Three cells move away from Excel:
+  - t3411-irr-r4-fresh A129 (bit-exact to 2.2E-16 off);
+  - Gate A s1 A275, `-8.620634135425576E-7` in Excel and on main, -8.62063413320513E-7 one step past (2.2E-16 off,
+    still inside the envelope);
+  - t2927-irr-fallback-sweep A46, from 4 ulp to 6 ulp, past the 15th digit.
+
+  On Excel's two stop-iterate cells, the step past is 1 ulp of v, and it lowers |P|: A129 6.1E-5 to 3.05E-5, A275
+  9.5E-7 to 1.2E-7. The same holds on the winners (A44 3.6E-7 to 2.4E-7, -1 ulp). Nothing else separates them either:
+  steps 10 and 21 against 2 to 43 on the winners, flows 5 and 11 against 2 to 14, largest |c| 1E+9 and 1.5E+11.
+  Taking the extra step only when it keeps the stopping step's direction is the one rule found that keeps A129 on the
+  fit lab's train side. It is refuted on the test side: it still loses A275 and drops A286.
 Evidence: the oracle values of the cases above; `python3 -I docs/research/t3411/fallback_iterates.py .` prints the
 counts of the first four points, each iterate's step and stopping step size (an exact replay of the engine's
 secant, then Newton from v = 0). The NPV variants and the Illinois and two-point secants were scratch code.
