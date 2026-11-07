@@ -152,3 +152,52 @@ fn test_fn_beta_dist_l140_prefactor_underflow_is_zero() {
         assert_eq!(round_trip_value(&model, cell), "0.0", "{cell}");
     }
 }
+
+// T-3351: BETA.INV at p above 1/2 whose quantile rounds to 1 is AS 109's flip 1 - y, y the lower
+// quantile of Beta(beta, alpha) at 1 - p: exactly 1 (or 1 - 2^-53 where y is above 2^-54) for a
+// normal y, #NUM! where y underflows. A quantile that rounds to 1 at p of 1/2 or less, or underflows
+// at p above 1/2, stays #NUM!, which Excel is at some such points (accuracy/BETA.INV/s1 A89, A94).
+// Excel values (excel-graph) from probes/t3351-beta-inv-p-near-1 and accuracy/BETA.INV/s1.
+#[test]
+fn test_fn_beta_inv_upper_quantile_rounding_to_one() {
+    let cases = [
+        ("=BETA.INV(1-1E-8,2,0.1)", "1"),    // A102, y = 3.9E-81
+        ("=BETA.INV(1-1E-6,0.5,0.3)", "1"),  // A46
+        ("=BETA.INV(1-1E-16,2,1)", "1"),     // A126, y = 5E-17
+        ("=BETAINV(1-1E-12,2,0.1)", "1"),    // A195
+        ("=BETA.INV(1-7E-10,10,0.03)", "1"), // C198, y = 4.1E-307
+        // Hand-derived from A157 (Excel 1) mapped onto [3, 5]; no oracle cell yet, needs oracle
+        // confirmation (T-4865).
+        ("=BETA.INV(1-1E-9,10,0.03,3,5)", "5"),
+        ("=BETA.INV(1-1E-15,10,1)", "0.9999999999999999"), // A188, y = 1E-16
+        (
+            "=BETA.INV(0.999999999999999,6.87566761020923,0.991674132119787)",
+            "0.9999999999999999",
+        ), // s1 A123
+        ("=BETA.INV(1-1E-8,2,0.01)", "#NUM!"),             // A84, y = 3.7E-801
+        ("=BETA.INV(1-1E-10,2,0.03)", "#NUM!"),            // A95, y = 1.7E-334
+        ("=BETA.INV(0.51,2,1E-3)", "#NUM!"),               // D203, y = 1E-310
+        (
+            "=BETA.INV(0.120463618823915,4.85116218981846,3.81506961561941E-15)",
+            "#NUM!",
+        ), // s1 A89
+        (
+            "=BETA.INV(0.540825862774324,2.11840621275937E-15,0.719272803854574)",
+            "#NUM!",
+        ), // s1 A94
+        ("=BETA.INV(1-1E-8,0.5,1)", "0.99999998"),         // A57: away from 1, unchanged
+    ];
+    let mut model = new_empty_model();
+    for (row, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, (formula, excel)) in cases.iter().enumerate() {
+        let cell = format!("A{}", row + 1);
+        let value = round_trip_value(&model, &cell);
+        match excel.parse::<f64>() {
+            Ok(x) => assert_eq!(value.parse::<f64>().ok(), Some(x), "{formula}: {value}"),
+            Err(_) => assert_eq!(model._get_text(&cell), *excel, "{formula}"),
+        }
+    }
+}
