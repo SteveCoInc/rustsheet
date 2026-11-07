@@ -3,7 +3,7 @@ id: T-4661
 title: "Revise SPEC-0018 for Excel's 2026-11 nested-cell reads (lifts read an error, SUM is #N/A, COUNT skips)"
 milestone: M7
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -47,11 +47,30 @@ A25, A26, A32, t2360 P!C1, C9, C17, C25, C33, t2311 P!C12) into known failures, 
 (an Excel behavior change, CLAUDE.md directive 1 "current Microsoft 365 Excel"; relate it to T-3610).
 
 ## Acceptance criteria
-- [ ] A decision record says which fill is the target for cells whose Excel value changed between dated fills, and how the
+- [x] A decision record says which fill is the target for cells whose Excel value changed between dated fills, and how the
       superseded cells are scored.
-- [ ] SPEC-0018 rules 4 and 7 and "One reader" state the November reads with the cases above as evidence; engine tasks are filed
+- [x] SPEC-0018 rules 4 and 7 and "One reader" state the November reads with the cases above as evidence; engine tasks are filed
       for the change, each owning its cells.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The engine change itself (the filed tasks).
+
+## Outcome
+Done 2026-11-07.
+- **Decision 0329:** a later fill is a behavior change when a byte-identical copy reproduces it, either on two
+  agreeing fills or under one stated rule across at least two probes, and the copy's other cells agree. The later fill
+  is then the target, with no desktop confirmation needed (decision 0039). The earlier sidecar stays committed. Its
+  changed cells are superseded: they become F lines through one scoped `--allow-regressions` run in the task that moves
+  the engine, as decision 0284 did. Variation with no rule behind it stays T-3610's.
+- **SPEC-0018:** rule 4 now states the 2026-11-06 reads, and the October reads are listed as superseded. Rule 7 notes
+  which reads come from November fills, "One reader" says how `scalar` changes, and the plan lists the three engine
+  tasks. arrays.md's "Excel's change of 2026-11" entry points to the decision and the tasks.
+- **Engine tasks filed:**
+  - T-4736: aggregates (SUM `#N/A`, COUNT skips, COUNTA one per cell), the t2592, t2594 and t2625 cells, and t2609
+    A50;
+  - T-4737: lifts read an error, the t2360, t2311 and t2625 A32 cells, t2609 A44:A46, -one-cell A27 and the t2475
+    refill's A64;
+  - T-4738: the lifted INDEX top-left, t2609 A56:A59.
+  Each task lists the cells it fixes and the cells it supersedes.
+- **Eval delta:** none (docs only).

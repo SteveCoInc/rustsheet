@@ -1000,8 +1000,11 @@ excel-graph, 2026-11-06, over the T-2592 data; `G` is the T-2592 GROUPBY, `V` is
 - A lifted INDEX of nested cells gives each one's top-left: `INDEX(G,{2;3},2)` is `{3;1}`, SUM 4, no error (and-lifts A56:A59; ours `#VALUE!`).
 - A reference-body result: SUM reads each cell as its value (`SUM(GROUPBY(..,LAMBDA(x,D!D2)))` 60, A50), COUNT is 0 and COUNTA 9 (A51,
   A52); INDEX of a cell whose body points at a blank cell is a true blank (TYPE 1, `&""` "", A53) and at an `#N/A` cell `#N/A` (A54).
-- The engine follows Excel's October reads (SPEC-0018), so the refilled cells above are known failures; which fill is the target, and
-  the revision of SPEC-0018 rules 4 and 7, are T-4661's.
+- The November reads are the target (decision 0329: a behavior change, reproduced on byte-identical copies). SPEC-0018 rule 4 states them
+  (T-4661). The engine still follows the October reads, so the refilled cells above are known failures until T-4736 (SUM, COUNT,
+  COUNTA, and SUM over a reference body), T-4737 (lifts read an error; `&""` over an INDEXed row) and T-4738 (the lifted INDEX top-left)
+  land. Each of them turns its share of the October cells (t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26, A32, t2360
+  P!C1, C9, C17, C25, C33, t2311 P!C12) into superseded known failures, with the October sidecars kept (decision 0329 item 3).
 Aggregates over nested GROUPBY and PIVOTBY cells (probes/t2594-nested-aggregates, excel-graph, 2026-10-24, T-2594, over the T-2592
 data): (October fills; by 2026-11-06 SUM is `#N/A` and COUNT skips nested cells, see the T-2609 list above) SUM, COUNT and COUNTA flatten a nested cell (SUM 220, COUNT 16, COUNTA 19 over GROUPBY; over PIVOTBY SUM 220, COUNT 16,
 COUNTA 32; `SUM(1,GROUPBY(..),2)` 223; A26:A29). Every other aggregate tried is `#N/A`: MIN, MAX, MINA, MAXA, AVERAGEA, PRODUCT,
