@@ -25,6 +25,16 @@ Owner of these visibly-off pivot cells (decision 0245; T-4130's capability matri
 - probes/t4130-pivot-field-filters AS!A5:A6, AS!B5:B6, ASb!A4:A6, ASb!B4:B6
 - probes/t4130-pivot-sort
 
+T-4164's edge cases (pivots.md "Top-N filters at their edges", "Several filters on one field", "Filters on an inner
+field rank per parent", "Value sorts: ties, blanks and errors", "useWholeDay"; the item-order probe's value sort IOV;
+its label sort IOA is T-4768's). Owner of these visibly-off pivot cells (decision 0245):
+- probes/t4164-pivot-date-times WBt0!A4:A5, WBt0!B4:B5, WBt1!A4, WBt1!B4, WBtN!A4:A5, WBtN!B4:B5, WEq0!A4:A5, WEq0!B4, WEq1!A4:A7, WEq1!B4:B7, WEqN!A4:A5, WEqN!B4, WEqT0!A4, WEqT0!B4, WEqT1!A4, WEqT1!B4, WNt0!A4:A8, WNt0!B4:B8, WNt1!A4:A6, WNt1!B4:B6, WNtN!A4:A8, WNtN!B4:B8, WOe0!A6, WOe0!B6, WOe1!A8, WOe1!B8, WOeN!A6, WOeN!B6
+- probes/t4164-pivot-filter-order HP!A6, HP!B6, HT!A6, HT!B6, LP0!A5:A6, LP0!B5:B6, LP1!A5:A6, LP1!B5:B6, LT0!A5:A6, LT0!B5:B6, LT1!A5:A6, LT1!B5:B6, PL0!A5:A6, PL0!B5:B6, PL1!A5:A6, PL1!B5:B6, TL0!A5:A6, TL0!B5:B6, TL1!A5:A6, TL1!B5:B6, TV0!A5, TV0!B5, TV1!A5, TV1!B5, VT!A5:A6, VT!B5:B6, VT0!A5:A6, VT0!B5:B6
+- probes/t4164-pivot-filter-totals IPct!A6:A8, IPct!B4, IPct!B6:B8, ITop!A6:A8, ITop!B4, ITop!B6:B8, IVal!A6:A9, IVal!B4, IVal!B6:B9, OTop!A8, OTop!B8, SH1L!A5:A10, SH1L!B4:B10, SH1T!A6:A8, SH1T!B4, SH1T!B6:B8, SH1V!A6:A9, SH1V!B4, SH1V!B6:B9
+- probes/t4164-pivot-item-order IOV!A4:A6, IOV!B4:B6
+- probes/t4164-pivot-top-n NB2!A4:A6, NB2!B4:B6, NBP50!A4:A5, NBP50!B4:B5, NS3!A5:A6, NS3!B5:B6, NT3!A6:A7, NT3!B6:B7, TB1!A4:A6, TB1!B4:B6, TC2!A7, TC2!B7, TP40!A6, TP40!B6, TP40i!A5:A6, TP40i!B5:B6, TP40o!A5:A6, TP40o!B5:B6, TPb5!A4:A5, TPb5!B4:B5, TS110!A7, TS110!B7, TS50!A4:A5, TS50!B4, TS60!A6, TS60!B6, TSb10!A4:A5, TSb10!B4:B5, TSb10i!A5, TSb10i!B5, TSb10o!A5, TSb10o!B5
+- probes/t4164-pivot-value-sort SC2!A5:A9, SC2!B5:B9, SC2!C5:C9, SC2!D7:D9, SCa!A5, SCa!A8:A9, SCa!B5, SCa!B8:B9, SCa!C5, SCa!C8:C9, SCa!D5, SCa!D8:D9, SCd!A5:A6, SCd!A8, SCd!B5:B6, SCd!B8, SCd!C5:C6, SCd!C8, SCd!D5, SCd!D8, SEa!A4:A8, SEa!B4:B8, SEd!A4:A6, SEd!A8, SEd!B4:B8, STa!A4:A8, STa!B4, STa!B7:B8, STc!A4:A7, STc!B4, STc!B7, STca!A4:A8, STca!B4, STca!B7:B8, STd!A4:A7, STd!B4, STd!B7, STo!A4:A8, STo!B4:B5, STo!B7:B8
+
 ## Acceptance criteria
 - [ ] p-filters probes pass.
 - [ ] `make check` green; reviewers approve.

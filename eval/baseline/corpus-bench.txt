@@ -323,6 +323,5 @@ C	corpus-bench/CF_3712/1_CF_3712_input.xlsx	803
 C	corpus-bench/CF_6540/1_CF_6540_input.xlsx	776
 C	corpus-bench/CF_7938/1_CF_7938_input.xlsx	8
 C	corpus-bench/CF_8276/1_CF_8276_input.xlsx	4
-F	corpus-bench/13894/1_13894_input.xlsx	*
 F	corpus-bench/1726/1_1726_input.xlsx	*
 F	corpus-bench/50442/1_50442_input.xlsx	*

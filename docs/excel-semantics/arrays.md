@@ -517,6 +517,8 @@ H66:J68 has row 68 `#N/A` (47 `#N/A` fill cells in H46:J136). corpus-bench/13894
 cache) Sheet1!F14:F25: an IFERROR-wrapped legacy array formula whose result is 6x1 (`ROW(INDIRECT("1:"&ROWS(ucode)))`
 over the 6-cell `ucode`) leaves F20:F25 `#N/A`: the fill is not an error IFERROR can catch.
 Status: VERIFIED (Excel-cached)
+Implemented in: `Model::set_cells_with_result` (model.rs), CSE branch, through `arithmetic::bcast_get`; unit tests
+test/array_formulas/test_cse_larger_range.rs (T-0950).
 Tasks: T-0950
 
 ## FILTER: an array `if_empty` spills as an array

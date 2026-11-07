@@ -3,6 +3,10 @@
 # visibly off from Excel. A case with no line allows none. Only `--lower-visible-lock` lowers a line.
 fixtures/merged-covered-formula.xlsx	5
 fixtures/merged-covered-values.xlsx	10
+gen-m6/16b67941f34e0346.case.json	23
+gen-m6/2963992505456e99.case.json	21
+gen-m6/37eb2ebaf9386ade.case.json	13
+gen-m6/ccc550562ee5fd06.case.json	8
 gen-m9/0072265d385d8ab2.case.json	1
 gen-m9/01523d247594952e.case.json	2
 gen-m9/05d44f6dd6cfc567.case.json	2
@@ -167,6 +171,8 @@ probes/irr-guess-edges-2.case.json	3
 probes/irr-guess-edges.case.json	3
 probes/linest-modes.case.json	42
 probes/logest-modes.case.json	51
+probes/sheet-ops/t4747-name-relative-delete-row.case.json	2
+probes/sheet-ops/t4747-name-relative-insert-row.case.json	2
 probes/stat-argument-modes.case.json	9
 probes/stat-quantile-lift.case.json	9
 probes/subexpr-05d44f6dd6cfc567-calc-a178.case.json	1
@@ -192,6 +198,7 @@ probes/t2753-gamma-density-ratio-sweep.case.json	6
 probes/t2829-ftest-a306-shapes.case.json	8
 probes/t2829-ftest-ln-beta-grid.case.json	24
 probes/t2982-gamma-inv-huge-shape.case.json	2
+probes/t3002-db-computed-criteria-absolute-mixed.case.json	16
 probes/t3007-beta-dist-ln-x-overflow.case.json	5
 probes/t3012-gamma-dist-at-quantile.case.json	3
 probes/t3012-gamma-inv-small-shape.case.json	4
@@ -254,6 +261,14 @@ probes/t4161-pivot-show-as-nested-parent.case.json	280
 probes/t4161-pivot-show-as-running-rank.case.json	281
 probes/t4161-pivot-show-as-running-zero.case.json	36
 probes/t4161-pivot-show-as-zeros.case.json	363
+probes/t4164-pivot-date-times.case.json	60
+probes/t4164-pivot-filter-order.case.json	48
+probes/t4164-pivot-filter-totals.case.json	54
+probes/t4164-pivot-item-order.case.json	10
+probes/t4164-pivot-top-n.case.json	55
+probes/t4164-pivot-value-sort.case.json	97
+probes/t4170-pivot-date-levels.case.json	276
+probes/t4170-pivot-manual-groups.case.json	180
 probes/t4238-r2-absorb-orientation.case.json	2
 probes/t4238-r3-absorb-whole-shape.case.json	4
 probes/t4254-beta-t-l140-zero-cut.case.json	49
@@ -299,7 +314,11 @@ probes/t4627-pivot-field-name-collisions.case.json	87
 probes/t4634-pivot-total-order-4.case.json	1376
 probes/t4697-large-small-median-mixed-sheet-refs.case.json	5
 probes/t4704-mixed-xlookup-grid-readers.case.json	29
+probes/t4755-two-criteria-filtered-table-delete-one.case.json	10
+probes/t4757-later-mark-sheet-names.case.json	1
 probes/t4765-growth-factor-edges.case.json	4
+probes/t4793-growth-one-factor-underflow.case.json	1
+probes/t4793-growth-several-x.case.json	2
 probes/table-edits/t4274-calc-column-delete-row-2.case.json	1
 probes/table-edits/t4274-calc-column-structured-insert-column-a.case.json	1
 probes/yield-below-par-sweep.case.json	3

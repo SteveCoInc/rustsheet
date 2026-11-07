@@ -1,5 +1,6 @@
 #![allow(clippy::unwrap_used, reason = "tests")]
-//! A plain reference to a deleted sheet is saved as Excel's file holds it, `#REF!C4:C7`, and a
+//! A plain reference to a deleted sheet is saved as the bare `#REF!`, which Excel for the web loads
+//! (it refuses a stored `#REF!C4:C7`: probes/t4628-deleted-sheet-reference-text, T-4628), and a
 //! sheet added under the old name does not revive it (T-2612,
 //! probes/table-edits/t2612-delete-sheet-then-add).
 
@@ -28,6 +29,6 @@ fn a_reference_to_a_deleted_sheet_is_saved_as_ref() {
         .unwrap()
         .read_to_string(&mut xml)
         .unwrap();
-    assert!(xml.contains("<f>SUM(#REF!C4:C7)+#REF!$A$1</f>"), "{xml}");
+    assert!(xml.contains("<f>SUM(#REF!)+#REF!</f>"), "{xml}");
     assert!(!xml.contains("*#REF!"), "{xml}");
 }
