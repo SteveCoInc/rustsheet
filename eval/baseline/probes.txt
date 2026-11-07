@@ -2657,6 +2657,7 @@ C	probes/t4698-pivot-repeat-labels.case.json	651
 C	probes/t4701-index-one-index-ref-grid.case.json	16
 C	probes/t4719-text-unverified-residue.case.json	44
 C	probes/t4720-fixed-sign-and-exponent-digits.case.json	37
+C	probes/t4721-im-overflow-residue.case.json	25
 C	probes/t4762-index-one-index-readers.case.json	27
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
