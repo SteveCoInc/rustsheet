@@ -3,7 +3,7 @@ id: T-0495
 title: "An edited workbook evaluates to what a fresh load of it does (calipers pv26_014, pv23_019)"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
