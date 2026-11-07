@@ -8464,6 +8464,10 @@ parentheses behaves exactly like the plain reference. With Data!A1 = 5, A2 = TRU
   (the blank reference waits for x's error), and LINEST and TREND of it alone `#VALUE!`; only a computed blank such as
   `IFERROR(B10,1)` is `#VALUE!` at once (the T-2455 entry).
 Evidence: probes/t4310-rank-regression-picked-cells A1:A156 (excel-graph, 2026-11-07).
+T-4772 probed the same blank `known_y` reached by `OFFSET(Data!$A$4,0,0)`, `INDIRECT("Data!A4")`, `LET(y,Data!$A$4,y)` and
+`XLOOKUP(5,Data!$A$1,Data!$A$4)`: LINEST, LOGEST, TREND and GROWTH of each are `#DIV/0!` with `1/0` as `known_x` and
+`#VALUE!` alone, as for a plain reference (probes/t4772-blank-y-offset-indirect-let-xlookup A1:A32, excel-graph,
+2026-11-07; ours already matched, 32 of 32 cells).
 Ours: matches all 156 cells since T-4310 (the name, INDEX, IF and parenthesized blank y of the regression functions were
 `#VALUE!` before, 16 cells).
 Status: VERIFIED (excel-graph)

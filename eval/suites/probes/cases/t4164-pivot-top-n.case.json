@@ -1,0 +1,549 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4164: what Excel for the web keeps for a Top-N filter at its edges. Data!A1:B7 has Product and Sales in source order Kiwi 30, Apple 50, Fig 30, Date 20, Pear 10, Lime 10 (total 150): two ties at 30 (cache order Kiwi then Fig, alphabetical Fig then Kiwi) and two at 10 (cache Pear then Lime). Each sheet is one builder-v2 pivot at A3, rows Product, Sum of Sales, with one `<filter fld=\"0\" iMeasureFld=\"0\">` whose top10 filterVal equals its val: TC2 count top 2 (tie at the cut-off); TB1 count bottom 1 (tie); TC9 count top 9 of 6 items; TP40 percent top 40 (threshold 60 reached on a tied item); TPb5 percent bottom 5 (threshold 7.5, reached on a tied item); TS50 sum top 50 (reached exactly by Apple); TS60 sum top 60 (reached on a tied item, the threshold of TP40); TS110 sum top 110 (reached exactly by Apple, Kiwi and Fig); TSb10 sum bottom 10 (reached exactly by either tied 10). Which tied item a percent or sum filter takes: TP40i and TSb10i are TP40 and TSb10 with the field's `<item>` elements listing Fig (Lime) first (`item_order`; the cache and the source keep Kiwi and Pear first); TP40o and TSb10o write the cache, and the items with it, with Fig (Lime) first (`order`; the source still has Kiwi and Pear first). Neg!A1:B6 has Item and Amt A 1, B 0, C -3, D -8, E 2 (total -8); rows Item, Sum of Amt: NT3 count top 3 (a zero at the cut-off); NB2 count bottom 2; NP50 percent top 50 of a negative total; NBP50 percent bottom 50; NS3 sum top 3 (reached exactly by E and A, a zero next); NBS sum bottom 10 (a negative val, top or bottom, makes the web refuse the file: pivots.md). Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4164",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0072",
+  "PV-0089",
+  "PV-0090",
+  "PV-0936",
+  "PV-0937",
+  "PV-0938",
+  "PV-0939",
+  "PV-0940"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Product",
+    "B1": "Sales",
+    "A2": "Kiwi",
+    "B2": 30,
+    "A3": "Apple",
+    "B3": 50,
+    "A4": "Fig",
+    "B4": 30,
+    "A5": "Date",
+    "B5": 20,
+    "A6": "Pear",
+    "B6": 10,
+    "A7": "Lime",
+    "B7": 10
+   }
+  },
+  {
+   "name": "Neg",
+   "cells": {
+    "A1": "Item",
+    "B1": "Amt",
+    "A2": "A",
+    "B2": 1,
+    "A3": "B",
+    "B3": 0,
+    "A4": "C",
+    "B4": -3,
+    "A5": "D",
+    "B5": -8,
+    "A6": "E",
+    "B6": 2
+   }
+  },
+  {
+   "name": "TC2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TC2",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"2\" filterVal=\"2\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TB1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TB1",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 top=\"0\" val=\"1\" filterVal=\"1\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TC9",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TC9",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"9\" filterVal=\"9\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TP40",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TP40",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"percent\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 percent=\"1\" val=\"40\" filterVal=\"40\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TPb5",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TPb5",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"percent\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 top=\"0\" percent=\"1\" val=\"5\" filterVal=\"5\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TS50",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TS50",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"sum\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"50\" filterVal=\"50\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TS60",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TS60",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"sum\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"60\" filterVal=\"60\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TS110",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TS110",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"sum\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"110\" filterVal=\"110\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TSb10",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TSb10",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"sum\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 top=\"0\" val=\"10\" filterVal=\"10\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TP40i",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TP40i",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"percent\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 percent=\"1\" val=\"40\" filterVal=\"40\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "fields": {
+       "Product": {
+        "item_order": [
+         "Fig"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TP40o",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TP40o",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"percent\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 percent=\"1\" val=\"40\" filterVal=\"40\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "fields": {
+       "Product": {
+        "order": [
+         "Fig"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TSb10i",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TSb10i",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"sum\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 top=\"0\" val=\"10\" filterVal=\"10\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "fields": {
+       "Product": {
+        "item_order": [
+         "Lime"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TSb10o",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TSb10o",
+     "source": "Data!A1:B7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"sum\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 top=\"0\" val=\"10\" filterVal=\"10\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "fields": {
+       "Product": {
+        "order": [
+         "Lime"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "NT3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_NT3",
+     "source": "Neg!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Item"
+      ],
+      "data": [
+       {
+        "field": "Amt"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"3\" filterVal=\"3\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "NB2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_NB2",
+     "source": "Neg!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Item"
+      ],
+      "data": [
+       {
+        "field": "Amt"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 top=\"0\" val=\"2\" filterVal=\"2\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "NP50",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_NP50",
+     "source": "Neg!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Item"
+      ],
+      "data": [
+       {
+        "field": "Amt"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"percent\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 percent=\"1\" val=\"50\" filterVal=\"50\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "NBP50",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_NBP50",
+     "source": "Neg!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Item"
+      ],
+      "data": [
+       {
+        "field": "Amt"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"percent\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 top=\"0\" percent=\"1\" val=\"50\" filterVal=\"50\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "NS3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_NS3",
+     "source": "Neg!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Item"
+      ],
+      "data": [
+       {
+        "field": "Amt"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"sum\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"3\" filterVal=\"3\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "NBS",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_NBS",
+     "source": "Neg!A1:B6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Item"
+      ],
+      "data": [
+       {
+        "field": "Amt"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"sum\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 top=\"0\" val=\"10\" filterVal=\"10\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A40)"
+   }
+  }
+ ],
+ "expected": {}
+}

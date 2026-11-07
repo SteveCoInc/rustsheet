@@ -1,0 +1,298 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4164: does a filter on an inner field rank per parent or over the whole field, and do subtotals and grand totals count the items it removes? Data!A1:C7 has Region, Product and Sales: East A 10, B 3, C 6 (19); West A 1, B 9, C 4 (14); the field totals are A 11, B 12, C 10 (33). Each sheet is one builder-v2 pivot at A3, rows Region then Product, Sum of Sales: ITop count top 1 on Product (per parent East A and West B; over the field B in both); IVal valueGreaterThan 5 on Product (per cell East A, C and West B; over the field every item); IPct percent top 50 on Product (per parent A and B; over the field B and A in both); OTop count top 1 on Region; SH0 Product C hidden, no subtotalHiddenItems; SH1T, SH1V and SH1L the ITop, IVal and a captionNotEqual A filter with subtotalHiddenItems 1; SH1H SH0 with subtotalHiddenItems 1. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4164",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0071",
+  "PV-0072",
+  "PV-0089",
+  "PV-0100",
+  "PV-1079",
+  "PV-1247"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Sales",
+    "A2": "East",
+    "B2": "A",
+    "C2": 10,
+    "A3": "East",
+    "B3": "B",
+    "C3": 3,
+    "A4": "East",
+    "B4": "C",
+    "C4": 6,
+    "A5": "West",
+    "B5": "A",
+    "C5": 1,
+    "A6": "West",
+    "B6": "B",
+    "C6": 9,
+    "A7": "West",
+    "B7": "C",
+    "C7": 4
+   }
+  },
+  {
+   "name": "ITop",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_ITop",
+     "source": "Data!A1:C7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"1\" filterVal=\"1\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "IVal",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IVal",
+     "source": "Data!A1:C7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"valueGreaterThan\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThan\" val=\"5\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "IPct",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IPct",
+     "source": "Data!A1:C7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"percent\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 percent=\"1\" val=\"50\" filterVal=\"50\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "OTop",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_OTop",
+     "source": "Data!A1:C7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"0\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"1\" filterVal=\"1\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SH0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SH0",
+     "source": "Data!A1:C7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "hidden": [
+         "C"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SH1T",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SH1T",
+     "source": "Data!A1:C7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"1\" filterVal=\"1\"/></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "subtotalHiddenItems": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SH1V",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SH1V",
+     "source": "Data!A1:C7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"valueGreaterThan\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThan\" val=\"5\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "subtotalHiddenItems": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SH1L",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SH1L",
+     "source": "Data!A1:C7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"captionNotEqual\" evalOrder=\"-1\" id=\"1\" stringValue1=\"A\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"A\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      },
+      "table": {
+       "subtotalHiddenItems": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "SH1H",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SH1H",
+     "source": "Data!A1:C7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "hidden": [
+         "C"
+        ]
+       }
+      },
+      "table": {
+       "subtotalHiddenItems": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A40)"
+   }
+  }
+ ],
+ "expected": {}
+}

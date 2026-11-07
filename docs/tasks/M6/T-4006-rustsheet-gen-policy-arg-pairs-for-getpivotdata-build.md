@@ -3,7 +3,7 @@ id: T-4006
 title: "rustsheet-gen --policy arg-pairs for GETPIVOTDATA: build the case pivot so its unseen argument-class pairs get oracle-filled gen-m6 cells"
 milestone: M6
 lane: harness
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -48,20 +48,42 @@ FILTERXML) whose pairwise share is below 0.3.
   GETPIVOTDATA entry, citing the cells.
 
 ## Acceptance criteria
-- [ ] `rustsheet-gen --policy arg-pairs --functions GETPIVOTDATA` writes cases with a `Pivot` sheet and one call per
+- [x] `rustsheet-gen --policy arg-pairs --functions GETPIVOTDATA` writes cases with a `Pivot` sheet and one call per
       forced pair; a tools test covers a forced `range` pair and a forced non-range pair (`uv run pytest` green,
       ruff and mypy strict clean).
-- [ ] The new gen-m6 cases are committed with their excel-graph oracle sidecars and 0 fill failures (a workbook
+- [x] The new gen-m6 cases are committed with their excel-graph oracle sidecars and 0 fill failures (a workbook
       Excel refuses is a generator bug to fix, not a case to drop).
-- [ ] After `make eval`, GETPIVOTDATA has a `pairwise` share of at least 0.9 in report.json `argument_coverage`, or
+- [x] After `make eval`, GETPIVOTDATA has a `pairwise` share of at least 0.9 in report.json `argument_coverage`, or
       the PR lists the pairs left unseen and why (a hard domain, a shape Excel refuses to load).
-- [ ] Failing cells are known failures in eval/baseline/gen-m6.txt (`make eval-baseline`, 0 regressions), each owned
+- [x] Failing cells are known failures in eval/baseline/gen-m6.txt (`make eval-baseline`, 0 regressions), each owned
       by an open task, and `make exit-owners MILESTONE=M6` and `make unowned-off ALL=1` report no new unowned cell
       from the batch; the gen-m6 exit row (no visibly-off cell beyond its allowance) stays met or the PR names the
       owning tasks.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Engine fixes for the cells this batch finds (the owning functions-lookup tasks make them).
 - New pivot shapes (several data fields, filters, dates, other layouts) beyond what pivots.py builds today.
 - The other pivot-reading paths (PIVOTBY, GROUPBY: their M7 batches are done) and other milestones.
+
+## Outcome
+- `rustsheet-gen --policy arg-pairs` now targets GETPIVOTDATA (tools/src/rustsheet_tools/gen/arg_pairs.py,
+  `ArgPairs.pivot_call`). Each case gets the function's own `Pivot` sheet (built once from its own seeded stream by
+  gen/pivots.py). Arguments the pair does not force are valid names from that pivot. A forced `range` pivot
+  reference is the pivot's top-left cell or the whole pivot (`corner_ref`/`whole_ref`, now shared with
+  `pivot_call`). The field/item pair always comes whole.
+- Each pivot case opens with a valid control query at Calc!A1. Nearly every forced pair is a miss, so an all-error
+  batch could not otherwise tell a miss from a pivot Excel never built. Excel answers all four controls with 6.75.
+- Tests: `test_arg_pairs_getpivotdata_queries_the_case_pivot` covers a forced `range` pair (data_field/pivot_table)
+  and a forced non-range pair (field/item), plus the control. Design doc §6.7 is updated.
+- Batch: gen-m6 16b67941f34e0346, ccc550562ee5fd06, 37eb2ebaf9386ade and 2963992505456e99 (seed 4006, 721 calls
+  over the 360 unseen pairs of the 2026-11-07 report). All are excel-graph filled with 0 fill failures.
+- Coverage: GETPIVOTDATA's pairwise share goes from 0.09 to 0.997 on gen-m6 alone and single from 0.47 to 1.0. The
+  one pair gen-m6 lacks (field=number/item=number) was already seen in another suite, so it was not generated.
+- Eval delta: gen-m6 +4 cases, 764 checked cells, 65 new known failures (`make eval-baseline`, 0 regressions;
+  visible-parity lock +65 on the 4 cases). They are all wrong errors under two new Excel rules, recorded in
+  docs/excel-semantics/web.md "GETPIVOTDATA error arguments (T-4006)" and owned by T-4823 (functions-lookup,
+  sonnet):
+  - an error in `field` is the result (43 cells);
+  - a referenced error as `data_field` is `#REF!`, a typed one the result (22 cells).
+  `make exit-owners MILESTONE=M6` reports 0 unowned, and `make unowned-off ALL=1` lists no gen-m6 cell.

@@ -7,6 +7,14 @@ plain in-domain value, so the pair decides the result. Classes are read from the
 the classifier (crates/rustsheet-eval/src/argument_coverage.rs) is their one definition. A forced argument is a
 literal or a reference to a Data cell holding the class's value, the two shapes the classifier reads.
 
+A `pivot: true` function (GETPIVOTDATA, T-4006) queries the case's own pivot (gen/pivots.py, sheet `Pivot`):
+every argument the pair does not force is a valid name from that pivot (its data field, its top-left cell, one of
+its axis fields and an item of it), and a forced `range` pivot reference is a cell or the whole of it, so each call
+is a valid query apart from the forced pair. The field and item come together or not at all: Excel for the web
+refuses a workbook with an odd GETPIVOTDATA argument count of 5 or more (docs/excel-semantics/syntax.md). Each
+such case opens with one fully valid query, a control: almost every forced pair is a miss Excel answers with an
+error, so without it a pivot Excel failed to build would look the same as a batch of misses.
+
 Design: docs/architecture/synthetic-generator.md §6.7.
 """
 
@@ -19,7 +27,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from rustsheet_tools.gen.common import quoted
 from rustsheet_tools.gen.generator import Catalog, Gen, narrow_targets
+from rustsheet_tools.gen.pivots import PivotSource, build_source, corner_ref, whole_ref
 from rustsheet_tools.gen.pools import POOLS
 
 # Calls per pair: the first forces each class as a literal, the second as a reference to a Data cell holding
@@ -175,6 +185,41 @@ class ArgPairs:
                     args.append(self.unforced(p))
         return f"{fn.get('spelled', fn['name'])}({','.join(args)})"
 
+    def pivot_control(self, fn: dict[str, Any], source: PivotSource) -> str:
+        """A valid GETPIVOTDATA query of `source`: its data field, its top-left cell, an axis field and an item."""
+        field = sorted(source.axis)[0]
+        args = [
+            quoted(source.table["value"]),
+            corner_ref(source),
+            quoted(field),
+            quoted(source.axis[field][0]),
+        ]
+        return f"{fn.get('spelled', fn['name'])}({','.join(args)})"
+
+    def pivot_call(self, fn: dict[str, Any], pair: Pair, variant: int, source: PivotSource) -> str:
+        """GETPIVOTDATA with `pair` forced against `source` (module docstring). The field/item pair is passed
+        when either is forced, and on the second call otherwise, so a call without it (the grand total) and one
+        with it both meet the forced pair."""
+        rng = self.gen.rng
+        field = rng.choice(sorted(source.axis))
+        values = {
+            "data_field": quoted(source.table["value"]),
+            "pivot_table": corner_ref(source),
+            "field": quoted(field),
+            "item": quoted(rng.choice(source.axis[field])),
+        }
+        force = {pair.params[0]: pair.classes[0], pair.params[1]: pair.classes[1]}
+        by_name = {p["name"]: p for p in fn["params"]}
+        for name, cls in force.items():
+            if name == "pivot_table" and cls == "range":
+                values[name] = corner_ref(source) if variant == 0 else whole_ref(source)
+            else:
+                values[name] = self.forced(by_name[name], cls, variant)
+        names = ["data_field", "pivot_table"]
+        if variant == 1 or force.keys() & {"field", "item"}:
+            names += ["field", "item"]
+        return f"{fn.get('spelled', fn['name'])}({','.join(values[n] for n in names)})"
+
 
 def data_sheet(gen: Gen) -> dict[str, Any]:
     """The Data sheet: the generator's DATA_ROWS x DATA_COLS block (the ranges' contents), one cell per class in
@@ -205,8 +250,8 @@ def generate_arg_pairs(
     targets = [
         f
         for f in narrow_targets(catalog, own, milestone, functions, None)
-        # GETPIVOTDATA's arguments are names from a pivot, and a LAMBDA must be invoked: neither is a plain call.
-        if not f.get("pivot") and not f.get("invoke")
+        # A LAMBDA must be invoked: it is not a plain call.
+        if not f.get("invoke")
     ]
     dynamic = catalog.dynamic_array_names()
     specs: list[dict[str, Any]] = []
@@ -219,16 +264,29 @@ def generate_arg_pairs(
         gen = Gen(random.Random(f"arg-pairs-{seed}-{name}"), scoped, DATA_ROWS, DATA_COLS, 1)
         data = data_sheet(gen)
         maker = ArgPairs(gen)
+        # GETPIVOTDATA's names come from the case's one pivot, built from its own stream.
+        pivot = build_source(random.Random(f"arg-pairs-pivot-{seed}-{name}")) if fn.get("pivot") else None
         skipped: list[str] = []
         texts: list[str] = []
         for pair in pairs:
             if (why := skip_reason(fn, pair)) is not None:
                 skipped.append(f"{pair.label()} ({why})")
                 continue
-            texts += ["=" + maker.call(fn, pair, variant) for variant in range(calls_per_pair)]
+            texts += [
+                "="
+                + (
+                    maker.call(fn, pair, variant)
+                    if pivot is None
+                    else maker.pivot_call(fn, pair, variant, pivot)
+                )
+                for variant in range(calls_per_pair)
+            ]
         if skipped:
             skipped_by_fn[name] = skipped
-        chunks = [texts[i : i + MAX_FORMULAS] for i in range(0, len(texts), MAX_FORMULAS)]
+        per_case = MAX_FORMULAS if pivot is None else MAX_FORMULAS - 1
+        chunks = [texts[i : i + per_case] for i in range(0, len(texts), per_case)]
+        if pivot is not None:
+            chunks = [["=" + maker.pivot_control(fn, pivot), *chunk] for chunk in chunks]
         spills = fn["name"] in dynamic
         stride = SPILL_ROW_STRIDE if spills else ROW_STRIDE
         for part, chunk in enumerate(chunks, 1):
@@ -239,10 +297,15 @@ def generate_arg_pairs(
                     "format": "rustsheet-case/v1",
                     "description": (
                         f"generated arg-pairs seed={seed} milestone={milestone} {name} part {part}/{len(chunks)}: "
-                        f"{len(chunk)} calls over {len(pairs) - len(skipped)} unseen pairs{note}"
+                        f"{len(chunk)} calls over {len(pairs) - len(skipped)} unseen pairs"
+                        f"{'' if pivot is None else ', the first a valid control query'}{note}"
                     ),
                     "tags": ["generated", "arg-pairs", milestone, name],
-                    "sheets": [{"name": "Data", "cells": data}, {"name": "Calc", "cells": calc}],
+                    "sheets": [
+                        {"name": "Data", "cells": data},
+                        {"name": "Calc", "cells": calc},
+                        *([pivot.spec_sheet()] if pivot is not None else []),
+                    ],
                     "expected": {},
                     "check": [] if spills else [f"Calc!{a1}" for a1 in calc],
                 }
