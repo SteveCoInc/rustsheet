@@ -3,7 +3,7 @@ id: T-4901
 title: "Probe MROUND of a formula-returned blank and LET/LAMBDA omissions in the newer roundings (T-4873 follow-up)"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -34,3 +34,11 @@ FLOOR.PRECISE, give what Excel gives, decided by a small probe.
 
 ## Out of scope
 - QUOTIENT and SERIESSUM written-empty arguments (T-4873, evidenced).
+
+## Outcome
+Probe `probes/t4901-mround-blank-let-lambda-roundings` filled on excel-graph (16 cells). A VLOOKUP/INDEX blank is 0 in
+MROUND, CEILING.MATH and FLOOR.PRECISE and the LET/LAMBDA omissions give 3 and -3, all as ours. But a written-empty
+branch of IF, CHOOSE or IFERROR hands the omission on (`MROUND(IF(TRUE,),1)` is `#N/A`, `CEILING.MATH(2.675,IF(TRUE,))`
+is 3), which ours reads as 0: A3, A10, A12:A16 are off. The engine change needs the wrapper's condition evaluated, so it
+is filed as T-4912 (opus), which owns those cells. numbers.md records the rule with its cells and drops the MROUND
+UNVERIFIED. Eval delta: one new probe case, 7 new visibly-off cells owned by T-4912, no baseline change.
