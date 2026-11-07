@@ -25,6 +25,10 @@
 //! - **Totals.** A default subtotal reads `<item> Total`, a custom one `<item> <Function>` (t4137
 //!   K5, t4622 B1), the grand total `Grand Total` (`grandTotalCaption`), or `Total <data field>`
 //!   with Values on its axis (t4138 G6, t4135 `A_sum`).
+//! - **Repeat item labels.** A field with the x14 `fillDownLabels` shows its label on every line
+//!   below its first, inner subtotal lines included, in tabular and outline form and on columns;
+//!   a cell shared with a deeper level is that level's, so compact form fills nothing
+//!   (probes/t4698-pivot-repeat-labels; pivots.md "Repeat item labels").
 //! - **Items** render as in pivots.md: a number as a number, a boolean as `TRUE`/`FALSE`, an
 //!   error as its text and a blank as `(blank)` (t4134 I2); a Values level item is the data
 //!   field's caption.
@@ -48,7 +52,9 @@
 //!   hidden items leave one item, and a selected number, boolean or blank page item (T-4657);
 //! - a subtotal label with Values inside its field (`<item> <data field>`), the grand-total
 //!   caption with Values on its axis, and the header over a Values level in a label column of
-//!   its own (left empty) (T-4650).
+//!   its own (left empty) (T-4650);
+//! - Repeat Item Labels beside an unlabelled deeper level in the same column, on an inner column
+//!   field's subtotal, beside the Values field, and on custom subtotal lines (T-4764).
 
 use crate::expressions::token::Error;
 use crate::number_format::number_to_text;
@@ -282,6 +288,9 @@ impl Cells<'_> {
     /// `level`.
     fn lines(&mut self, axis: &Axis<'_>, place: impl Fn(u32, usize) -> Option<(u32, u32)>) {
         for (i, line) in (0u32..).zip(axis.lines) {
+            if self.over {
+                return;
+            }
             // An `insertBlankRow` line is empty (probes/t4168-pivot-layout-options BR, BR2).
             if line.kind == ItemType::Blank {
                 continue;
@@ -291,13 +300,17 @@ impl Cells<'_> {
                 let level = if line.kind == ItemType::Grand {
                     0
                 } else {
-                    end.saturating_sub(1)
+                    // A subtotal line repeats the labels above its own level (t4698 T3R!A6).
+                    let level = end.saturating_sub(1);
+                    self.fill_down(axis, line, level, |l| place(i, l));
+                    level
                 };
                 if let Some((row, column)) = place(i, level) {
                     self.put(row, column, PivotCell::Text(text));
                 }
                 continue;
             }
+            self.fill_down(axis, line, line.repeat as usize, |l| place(i, l));
             for (level, &x) in (line.repeat as usize..).zip(&line.items) {
                 let cell = self.label(axis, line, level, x);
                 // An empty-text item's label cell is left empty (pivots.md "Pivot field names
@@ -307,6 +320,48 @@ impl Cells<'_> {
                 if let (Some(cell), Some((row, column))) = (cell, place(i, level)) {
                     self.put(row, column, cell);
                 }
+            }
+        }
+    }
+
+    /// Repeat Item Labels: on `line`, the label of each level above `below` whose field has
+    /// `fillDownLabels` (the levels the line shares with the line before, which it does not
+    /// label itself), in that level's cell (pivots.md "Repeat item labels",
+    /// probes/t4698-pivot-repeat-labels). A cell belongs to the deepest level of the line placed
+    /// in it, so a level whose column it shares with the next level fills nothing: compact form
+    /// fills nothing down (CF), while a tabular field in a compact field's column does (MX!A6).
+    fn fill_down(
+        &mut self,
+        axis: &Axis<'_>,
+        line: &AxisLine,
+        below: usize,
+        place: impl Fn(usize) -> Option<(u32, u32)>,
+    ) {
+        for level in 0..below {
+            // Past the text limit nothing more is kept, so no more labels are made.
+            if self.over {
+                return;
+            }
+            let Some(Level::Field {
+                field: Some(field), ..
+            }) = axis.levels.get(level)
+            else {
+                continue;
+            };
+            if !field.fill_down_labels {
+                continue;
+            }
+            // Label columns only grow with the level, so the next level is the one that can
+            // share this one's cell.
+            let at = place(level);
+            if at.is_none() || at == place(level + 1) {
+                continue;
+            }
+            let cell = self.label(axis, line, level, 0);
+            // An empty-text item's label stays empty here too, as on its own line.
+            let cell = cell.filter(|c| !matches!(c, PivotCell::Text(t) if t.is_empty()));
+            if let (Some(cell), Some((row, column))) = (cell, at) {
+                self.put(row, column, cell);
             }
         }
     }

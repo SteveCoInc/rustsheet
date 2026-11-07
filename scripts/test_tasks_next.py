@@ -481,5 +481,62 @@ class BusyPerTier(unittest.TestCase):
         )
 
 
+class CurrentMilestonePassesLaterWork(unittest.TestCase):
+    """A current-milestone task passes a lane busy only with later-milestone work (decision 0332)."""
+
+    MILESTONES = "# M\n\n## Phase order\n\n| Phase | Milestones, in order |\n|---|---|\n| 1 | M0, M1, M2, M5, M9 |\n| 2 | M3 |\n\n## Next\n"
+
+    def board(self, root: Path, snapshot: bool = True) -> None:
+        (root / "docs").mkdir(parents=True, exist_ok=True)
+        (root / "docs/milestones.md").write_text(self.MILESTONES)
+        heading = "## Snapshot — 2026-11-07 (M2 is current)" if snapshot else "## Snapshot — 2026-11-07"
+        (root / "docs/status.md").write_text(f"# Status\n\n{heading}\n")
+        write_task(root, "T-0001", lane="research", milestone="M9", status="in-progress")
+        write_task(root, "T-0002", lane="research", milestone="M0", status="in-progress")
+        write_task(root, "T-0003", lane="research", milestone="M2", status="in-progress")
+        write_task(root, "T-0004", lane="research", milestone="M2")
+        write_task(root, "T-0005", lane="research", milestone="M3")
+
+    @staticmethod
+    def flying(*tids: str) -> frozenset[tuple[str, str, str, str]]:
+        return frozenset(("research", tid, f"agent/research/{tid}-x", "opus") for tid in tids)
+
+    def test_a_later_milestone_branch_lets_only_the_current_milestone_task_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.board(root)
+            later = self.flying("T-0001")
+            self.assertEqual(run_next(root, "opus", active=later, lane="research"), "T-0004")
+            self.assertEqual(run_ready(root, "opus", active=later), ["T-0004", "1 ready"])
+            # M3 is later than M9 in the phase order, though its number is lower: it is not passed.
+            self.assertEqual(tasks.milestone_order.read(root), ("M2", ["M0", "M1", "M2", "M5", "M9", "M3"]))
+
+    def test_an_m0_or_current_milestone_branch_is_not_passed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.board(root)
+            for tid in ("T-0002", "T-0003"):
+                self.assertEqual(
+                    run_next_line(root, "opus", active=self.flying(tid), lane="research"),
+                    f"lane research busy: {tid} in flight on agent/research/{tid}-x",
+                )
+
+    def test_no_snapshot_heading_turns_the_rule_off(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.board(root, snapshot=False)
+            self.assertEqual(run_next_exit(root, "opus", self.flying("T-0001"), "research"), 3)
+            self.assertEqual(run_ready(root, "opus", active=self.flying("T-0001")), ["0 ready"])
+
+    def test_the_pass_is_taken_once_per_lane_and_tier(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.board(root)
+            # T-0003 (M2) already passed T-0001 (M9): the lane holds a current-milestone task now.
+            self.assertEqual(run_next_exit(root, "opus", self.flying("T-0001", "T-0003"), "research"), 3)
+            # A branch whose task is not on main is of no known milestone: never passed.
+            self.assertEqual(run_next_exit(root, "opus", self.flying("T-0009"), "research"), 3)
+
+
 if __name__ == "__main__":
     unittest.main()

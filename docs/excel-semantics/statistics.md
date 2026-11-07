@@ -2503,18 +2503,59 @@ near 0.5 over two nearly equal samples) and TTEST A11 (4.7E-13), and every other
   (Σd² - (Σd)²/n)/(n - 1), is -1.1E-13 there, the only negative one among the tables' paired points; every paired
   point whose one-pass variance is positive is a number, including the ones VAR.S would switch to the two-pass form
   ("VAR/STDEV switch between a one-pass and a two-pass formula"). Hypothesis: a paired test is `#DIV/0!` when that
-  one-pass variance is 0 or below. T-4579 probes and implements it.
+  one-pass variance is 0 or below. REFUTED by T-4579's probe ("Paired T.TEST is erratic ..." below): positive
+  one-pass variances there are `#DIV/0!` too.
 - The paired offsets keep their digits: TTEST/s1 A101 (ten pairs, x near -108519.3, y near 204025.4, spread about
   1E-4) is 6.268514994599738E-70 in Excel, 1E-15 from the exact value of the doubles' exact differences, where the
   double differences x - y put ours 1.6E-9 off. Owned by T-4579.
 - Excel kept as the target (decision 0300): no table point and no probes or probes-numeric cell of these functions
-  (272 cells with a math value) is more than 1E-4 relative off the exact value, so the list is empty.
+  (272 cells with a math value) is more than 1E-4 relative off the exact value. probes/t4579-ttest-paired (T-4579)
+  adds such cells: see "Paired T.TEST is erratic ...".
 Ours: bit-exact with Excel on 214 of the 583 numeric points (T.TEST 54, TTEST 50, F.TEST 55, FTEST 55) and on every
 error point but A136; every point but A136 and A101 is inside the envelope (known failures owned by T-4579). The rest
 of the last-digit gaps are the tail noise of the entries above.
 Evidence: eval/accuracy/tables/{T.TEST,TTEST,F.TEST,FTEST}/s1 (excel-graph, 2026-11-06).
-Status: VERIFIED (excel-graph) for the cited cells; the A136 rule is a one-cell hypothesis.
+Status: VERIFIED (excel-graph) for the cited cells; the A136 hypothesis is refuted (T-4579, "Paired T.TEST is erratic ...").
 Tasks: T-4097, T-4579
+
+## Paired T.TEST is erratic where the differences are near-constant or the samples offset (T-4579)
+Rule: none of the simple forms reproduces Excel's paired T.TEST (type 1). Where the differences are near-constant
+or both samples sit on large offsets, Excel is often `#DIV/0!` or far from the math.
+- **Near-constant differences** (2 to 4 pairs; probes/t4579-ttest-paired Div, 27 rows). The predictions were
+  committed before the excel-graph fill, 2026-11-07. Excel is `#DIV/0!` on 22 of the 27 rows and a number on 5 (A8,
+  A12, A14, A17, A18).
+  - The rows are classified by the one-pass variance `(Σd² - (Σd)²/n)/(n-1)` of the double differences. All 8 rows
+    where it is positive (7.1E-15 to 4.5E-13) are `#DIV/0!`, the opposite of the hypothesis behind TTEST/s1 A136.
+    Of the 16 rows where it is 0 or negative, 11 are `#DIV/0!` and 5 are numbers (1 negative, A17; 4 zero, A8, A12,
+    A14, A18).
+  - The 3 rows whose double differences are exactly constant are `#DIV/0!`.
+  - That hypothesis (`#DIV/0!` exactly when the one-pass variance is <= 0) holds on 14 of 27 rows. The two-pass rule
+    the engine uses holds on 8.
+  - The 5 numbers are themselves far off the math. A8 is 3.88E-8 in Excel against the math's 6.3E-15. A18 is 8.3E-21
+    against 5.1E-42.
+- **Offset samples** (Off, 24 rows: offsets 1E3 to 1E6, a shared spread, and a paired effect of 1E-9 to 1E-6).
+  - 11 rows are `#DIV/0!` where the math is a number.
+  - The other 13 are off the math by between 2.3E-4 and 5.4E11 relative. For example, A9 is 9.57E-91 against the
+    math's 1.78E-102, and A14 is 5.2E-65 against 2.4E-74.
+  - Excel is far less accurate here than double differences. Neither exact differences nor per-sample deviations
+    `(x - m_x) - (y - m_y)` match. The offset point TTEST/s1 A101 is within 1E-15 of the math in Excel, but these rows
+    show that this is not Excel's general behavior.
+- **Forms tried and rejected** on all 51 rows:
+  - one-pass over the differences, as `(Σd² - (Σd)²/n)/(n-1)` and as `(nΣd² - (Σd)²)/(n(n-1))`;
+  - raw sums, `Σx² - 2Σxy + Σy² - (Σx - Σy)²/n`;
+  - centred covariance terms.
+
+  None is within 1E-9 on any cell where Excel gives a number. On the error-or-number outcome they agree with Excel on
+  25 or 26 of the 51 cells.
+- **Reversed argument orders** (Rev): `T.TEST({5},{3,3,3,3},2,3)` is `#DIV/0!`, and
+  `T.TEST({1E+200,1E+200,-1E+200},{1,2,4},1,2)` and `F.TEST({1E+200,1E+200,-1E+200},{1,2,4})` are `#NUM!`. These are
+  the T-4097 rules with the special sample second, and the engine already gives all three.
+- Excel stays the target (decision 0300) on the cells here that are more than 1E-4 off the math: the 13 Off numbers
+  and the 5 Div numbers. No owner ruling is needed.
+Evidence: probes/t4579-ttest-paired (excel-graph, 2026-11-07), docs/research/t4579.
+Status: VERIFIED (excel-graph) as observations. Excel's algorithm is not identified, and the engine keeps the
+two-pass double differences.
+Tasks: T-4579
 
 ## T.DIST.RT follows the rounded y beyond t = 1 (T-0969)
 Rule: away from the deep tail, T.DIST.RT (and so T.DIST, T.DIST.2T and TDIST) takes the tail at
@@ -3128,10 +3169,24 @@ Ours: `incomplete_beta.rs::shape_one_tails` (w = `x87_exp::excel_one_minus_exp`(
     not Excel's form.
   - It does make all 47 t3568-r5-bup column-B cells bit-exact (T-3764), plus 24 t4017-f-huge-df2 cells. Its wins and
     losses both span b0 from 1/2 to 1E10, so no shape cut separates them.
+- NEGBINOM.DIST's cdf at number_s 1 (p <= 1/2, so bratio's a0 is r = 1) takes the same branch, I_p(1, f + 1) from p
+  through log1p (T-4242). Every number_s 1 Gate A point now matches Excel to the bit:
+  - accuracy/NEGBINOM.DIST/r4-T-3576 A125: `NEGBINOM.DIST(70991230,1,8.02387331627331E-281,TRUE)` = 5.696246441102946E-273,
+    where fl(1 - p) is 1;
+  - r4-T-3576 A31 = 1.5750950518407722E-189;
+  - r4-T-2146 A152 = 4.9192873262661245E-261;
+  - s1 A124: `NEGBINOM.DIST(1,1,0.0434735949326795,TRUE)` = 0.0850572364089883. This is Excel's bits, one ulp from the
+    correctly rounded value, so it shows Excel's own shape-one arithmetic, not just accurate math.
+
+  r4-T-3576 A4, s1 A187 and gen-m9/1b31092a0d79e5f1 A37 already passed and still do. On the swapped side (number_f 0,
+  p > 0.9, where a0 = f + 1 = 1) NEGBINOM.DIST does not take this branch: `NEGBINOM.DIST(0,2,0.999,TRUE)` is 0.998001
+  and `NEGBINOM.DIST(0,10,0.999,TRUE)` is 0.9900448802097482 (probes-numeric/t2145-negbinom-sweep A420, A1080), and
+  `NEGBINOM.DIST(0,4,0.97176398482672,TRUE)` is 0.8917501630679979 (accuracy/NEGBINOM.DIST/s1 A107). The branch puts
+  all three an ulp low, while the engine's walk matches them.
 Status: VERIFIED (excel-graph) for the complement down to w1 of about 1E-16, and for w at |z| >= 1 (T-3764); w's form
 below |z| = 1 PARTIAL (71 cells for it, 6 contrary cells with no form, T-3886); below 2^-53 UNVERIFIED but for the
 four t3568 cells
-Tasks: T-3007, T-2511, T-3150, T-3170, T-3886, T-3764
+Tasks: T-3007, T-2511, T-3150, T-3170, T-3886, T-3764, T-4242
 
 ## Excel's log1p is a 14-term atanh series in alnrel's variable (T-2464)
 Rule: for ln(1 + a) with -0.375 <= a < 0, i.e. ln(1 - x) at x <= 0.375 (the beta density, BINOM.DIST(0,n,p), bgrat's
@@ -8380,3 +8435,18 @@ Ours: matches every cell cited (the engine is bit-exact with Excel on 777 of the
 the Gate A envelope).
 Status: VERIFIED (excel-graph) for the cells cited; the regions marked UNVERIFIED are not probed
 Tasks: T-4091
+
+## RANK, LARGE, SMALL and the regression functions: a cell picked by a name, INDEX, IF, CHOOSE or parentheses is the cell (T-4310)
+Rule: a one-cell argument reached through a defined name, `INDEX(range,k)`, `IF(TRUE,ref)`, `CHOOSE(1,ref)` or
+parentheses behaves exactly like the plain reference. With Data!A1 = 5, A2 = TRUE, A3 = "7" and A4 blank:
+- RANK, RANK.EQ and RANK.AVG of 5 over the cell are 1 for A1 and `#N/A` for A2, A3 and A4 in all six forms (a cell
+  holding a boolean or numeric text is no number, not `#NUM!`).
+- LARGE and SMALL of it with k = 1 are 5 for A1 and `#NUM!` for A2, A3 and A4 in all six forms.
+- LINEST, LOGEST, TREND and GROWTH with the blank A4 as `known_y` and `1/0` as `known_x` are `#DIV/0!` in all six forms
+  (the blank reference waits for x's error), and LINEST and TREND of it alone `#VALUE!`; only a computed blank such as
+  `IFERROR(B10,1)` is `#VALUE!` at once (the T-2455 entry).
+Evidence: probes/t4310-rank-regression-picked-cells A1:A156 (excel-graph, 2026-11-07).
+Ours: matches all 156 cells since T-4310 (the name, INDEX, IF and parenthesized blank y of the regression functions were
+`#VALUE!` before, 16 cells).
+Status: VERIFIED (excel-graph)
+Tasks: T-4310

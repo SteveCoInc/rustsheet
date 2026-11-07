@@ -48,9 +48,10 @@ impl Model {
         let y_arg = &args[0];
         let (value, marked) = self.evaluate_marked(y_arg, cell);
         let y = self.data_read(value, cell)?;
-        if matches!(y, DataRead::Scalar(Element::Blank))
-            && !matches!(*y_arg.resolved_at(cell.row), Node::ReferenceKind { .. })
-        {
+        // A blank cell however it is reached, by a name, INDEX, IF, CHOOSE or parentheses, waits
+        // like the plain reference: `LINEST(INDEX(Data!A1:A4,4),1/0)` is `#DIV/0!`
+        // (probes/t4310-rank-regression-picked-cells A121:A150, T-4310). Only a blank y asks.
+        if matches!(y, DataRead::Scalar(Element::Blank)) && !self.is_reference(y_arg, cell) {
             return Err(CalcResult::new_error(
                 Error::VALUE,
                 cell,

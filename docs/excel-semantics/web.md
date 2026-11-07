@@ -113,10 +113,12 @@ Engine (SPEC-0015): the workbook model holds pivot caches and pivot tables (`piv
 `crates/rustsheet-xlsx/src/import/pivots.rs` (T-2082). The importer skips, whole and logged, a cache with an OLAP,
 external, consolidation or scenario source, a calculated field, no records part
 (`saveData="0"`), a bad index, or a value it cannot read (an unknown error name, a `<d>` date before 1900, which
-includes time-only dates if Excel writes them so), and a pivot whose data field is shown as a calculation
-(`showDataAs`, such as % of total), whose index points past its cache, whose `axis` or `subtotal` is unknown, which has
+includes time-only dates if Excel writes them so), and a pivot whose `showDataAs` or x14 `pivotShowAs` is unknown,
+whose index points past its cache, whose `axis` or `subtotal` is unknown, which has
 no `location` or not one `pivotField` per cache field, or whose parts are reached outside the package (absolute,
-escaping or External targets), twice, or through a duplicate `cacheId`: GETPIVOTDATA against it is `#REF!`.
+escaping or External targets), twice, or through a duplicate `cacheId`: GETPIVOTDATA against it is `#REF!`. A pivot
+whose data field is shown as a calculation loads and renders since T-4163; GETPIVOTDATA against it stays `#REF!`
+(UNVERIFIED, T-4750: pivots.md "Show-values-as edge cases (T-4161)").
 The fuzz target `pivot_import` feeds hostile pivot parts to this importer and GETPIVOTDATA (T-4133, decision 0312).
 UNVERIFIED: what Excel answers for each of these (presumably it computes them, refreshing a cache saved without
 records); a known gap, not a deviation. A cache `<d>` date is converted to the workbook's date system (T-2393); one before

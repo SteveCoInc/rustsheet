@@ -3,7 +3,7 @@ id: T-4705
 title: "Tidy T-4570: one order-statistic error helper, re-wrap lift_references doc, tighten the XLOOKUP static shape to a reference if_not_found"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -35,3 +35,9 @@ MINOR findings from the PR #3757 reviews (design and Excel fidelity), deferred a
 
 ## Out of scope
 - Any behavior change beyond the static shape.
+
+## Outcome
+- `RefGrid::order_statistic_result(sheet, cell)` (reference_operators/areas.rs) builds the order-statistic `CalcResult` error once; `chisq.rs` and `aggregate_args.rs` call it.
+- `lift_references` doc comment re-wrapped.
+- `criteria_and_grid_static_result` gives an XLOOKUP the per-element shape only when `if_not_found` is a reference operand (`is_reference_operand`); unit test `an_xlookup_grid_needs_a_reference_if_not_found`.
+- Optional accessor: not added (no new reader joined). Eval delta: none expected (see PR).

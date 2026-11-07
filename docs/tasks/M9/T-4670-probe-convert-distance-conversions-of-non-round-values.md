@@ -3,7 +3,7 @@ id: T-4670
 title: "Probe CONVERT distance conversions of non-round values near the overflow path (1E298 to 1E308, m to m, m to ft, mi to km)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,3 +31,8 @@ in angstroms (T-4630), and the engine matched to it.
 
 ## Out of scope
 - The distance factors themselves (T-4630) and non-distance classes other than area.
+
+## Outcome
+Probe `probes-numeric/t4670-convert-distance-overflow` (48 cells, excel-graph, math sidecar; generator docs/research/t4670/gen_probe.py).
+The engine already matches every cell, so the overflow rule is unchanged; engineering.md "Overflow" cites the cells.
+No new known failures; no follow-ups.

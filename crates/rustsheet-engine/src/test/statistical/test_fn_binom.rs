@@ -492,3 +492,22 @@ fn binom_dist_range_past_the_mean_takes_the_upper_tails() {
         }
     }
 }
+
+// NEGBINOM.DIST's cdf at one success and a tiny p is I_p(1, f + 1) from p through log1p, Excel's
+// bratio shape-one branch, where fl(1 - p) is 1 (accuracy/NEGBINOM.DIST/r4-T-3576 A125, T-4242).
+#[test]
+fn negbinom_cdf_at_one_success_keeps_a_tiny_p() {
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        "=NEGBINOM.DIST(70991230,1,8.02387331627331E-281,TRUE)",
+    );
+    model.evaluate();
+    match model.get_cell_value_by_ref("Sheet1!A1") {
+        Ok(CellValue::Number(n)) => {
+            let excel = 5.696_246_441_102_946e-273;
+            assert!(((n - excel) / excel).abs() < 1e-14, "{n}");
+        }
+        other => panic!("expected number, got {other:?}"),
+    }
+}
