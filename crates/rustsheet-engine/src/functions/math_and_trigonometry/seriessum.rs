@@ -3,6 +3,7 @@ use crate::{
     calc_result::CalcResult,
     expressions::{
         parser::{is_multi_sheet_span, ArrayNode, Node},
+        token::Error,
         types::CellReferenceIndex,
     },
     functions::{
@@ -59,6 +60,12 @@ impl Model {
         if is_multi_sheet_span(node) {
             return Err(value_error(cell));
         }
+        // Excel: written-empty coefficients are `#N/A`, as an empty x, n or m is
+        // (probes/t4873-empty-arg-quotient-ceiling Calc!B4:B5). Reported after the x, n and m
+        // checks, as every coefficient error is.
+        if matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node) {
+            return Err(CalcResult::new_error(Error::NA, cell, String::new()));
+        }
         let result = self.evaluate_node_in_context(node, cell);
         let is_single = match &result {
             CalcResult::String(_) => true,
@@ -89,15 +96,15 @@ impl Model {
         let [x, n, m, _] = values else {
             return CalcResult::new_args_number_error(cell);
         };
-        let x = match self.cast_number_no_bools_ref(x, cell) {
+        let x = match self.atp_number(x, cell) {
             Ok(v) => v,
             Err(e) => return e,
         };
-        let n = match self.cast_number_no_bools_ref(n, cell) {
+        let n = match self.atp_number(n, cell) {
             Ok(v) => v,
             Err(e) => return e,
         };
-        let m = match self.cast_number_no_bools_ref(m, cell) {
+        let m = match self.atp_number(m, cell) {
             Ok(v) => v,
             Err(e) => return e,
         };

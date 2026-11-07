@@ -3,7 +3,7 @@ id: T-4873
 title: "An empty argument of QUOTIENT and SERIESSUM, and an empty significance of CEILING.MATH, FLOOR.MATH and the PRECISE roundings, follow Excel"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -43,14 +43,14 @@ a small probe whose predictions are committed before the fill.
   nothing numeric is tuned.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph) writes each argument of QUOTIENT and SERIESSUM empty (one at a
+- [x] A probes case (excel-probe skill, excel-graph) writes each argument of QUOTIENT and SERIESSUM empty (one at a
       time and all), and the significance and mode of CEILING.MATH and FLOOR.MATH and the significance of
       CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING empty, on a positive, a negative and a fractional number, plus a
       `LET(e,,QUOTIENT(7,e))` row and CEILING(2.5,) / FLOOR(2.5,) as legacy controls.
-- [ ] The engine's predictions (`#N/A` for the ToolPak pair, empty = omitted for the five rounding functions) are
+- [x] The engine's predictions (`#N/A` for the ToolPak pair, empty = omitted for the five rounding functions) are
       committed in a commit before the oracle fill.
-- [ ] After the fill every probe cell passes; numbers.md states the rule with its cells.
-- [ ] No new F line in any eval/baseline file; `make check` green; reviewers approve.
+- [x] After the fill every probe cell passes; numbers.md states the rule with its cells.
+- [x] No new F line in any eval/baseline file; `make check` green; reviewers approve.
 
 ## Out of scope
 - MROUND, GCD, LCM, MULTINOMIAL, RANDBETWEEN (already evidenced and implemented).
@@ -67,3 +67,13 @@ Cases `probes/t4873-empty-arg-quotient-ceiling` (Calc) and `probes/t4873-empty-a
 - Legacy controls keep empty = 0: H1 0, H2 `#DIV/0!`, H3 0, H4 `#DIV/0!`, H5 0.
 - LET/LAMBDA case: an empty LET value or omitted LAMBDA parameter acts as a written-empty argument: A1:A4 `#N/A`,
   A5 3, A6 -3, A7 3, A8 -3, A9 3, A10 -2, A11 0.
+
+## Outcome
+Every prediction held (66 cells, excel-graph 2026-11-07). A written-empty QUOTIENT or SERIESSUM argument (x, n, m and
+the coefficients too), or an empty LET value / omitted LAMBDA parameter handed in, is `#N/A` after an earlier argument's
+error or boolean; the five 2010+ roundings read an empty significance or mode as omitted (significance 1), while legacy
+CEILING/FLOOR keep empty = 0. MROUND's `#N/A` test moved into one helper, `Model::atp_number` (functions/lift/mod.rs),
+now shared by MROUND, QUOTIENT and SERIESSUM; `numbers_fn_empty_omitted` (mathematical.rs) carries the rounding rule.
+numbers.md: "A written-empty argument of a ToolPak function is #N/A" and "An empty significance of the 2010+ roundings
+is omitted". Eval delta: two new probe cases, 66/66 cells pass (45 were off before the fix); no baseline line added or
+removed. Note: Calc!A7:A8 spill into occupied cells (`#SPILL!` both sides), so they say nothing about array lifting.

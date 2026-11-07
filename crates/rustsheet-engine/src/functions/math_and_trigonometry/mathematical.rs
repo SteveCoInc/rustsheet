@@ -137,6 +137,15 @@ pub(crate) fn excel_atan2(x: f64, y: f64) -> Result<f64, Error> {
     })
 }
 
+/// How [`Model::numbers_fn_reading`] reads a written-empty argument.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum EmptyOptional {
+    /// As 0, the rule of the older functions (`ROUND(2.5,)`, `CEILING(2.5,)`).
+    Zero,
+    /// As omitted: the argument takes its default.
+    Default,
+}
+
 impl Model {
     /// MIN and MAX: folds every number of `args` with `pick`; 0 when there is none.
     ///
@@ -277,6 +286,35 @@ impl Model {
         cell: CellReferenceIndex,
         op: impl Fn([f64; N]) -> Result<f64, Error>,
     ) -> CalcResult {
+        self.numbers_fn_reading(kind, args, defaults, EmptyOptional::Zero, cell, op)
+    }
+
+    /// [`Model::numbers_fn`] for the roundings added in Excel 2010 and 2013 (CEILING.MATH,
+    /// FLOOR.MATH, CEILING.PRECISE, FLOOR.PRECISE, ISO.CEILING): a written-empty argument, or a
+    /// LET value or LAMBDA parameter left empty, takes its default as an omitted one does, so
+    /// `CEILING.MATH(2.675,)` is 3 where the legacy `CEILING(2.5,)` is 0
+    /// (probes/t4873-empty-arg-quotient-ceiling Calc!C1:G4, H1:H5; docs/excel-semantics/numbers.md
+    /// "An empty significance of the 2010+ roundings is omitted").
+    pub(crate) fn numbers_fn_empty_omitted<const N: usize>(
+        &mut self,
+        kind: Function,
+        args: &[Node],
+        defaults: [f64; N],
+        cell: CellReferenceIndex,
+        op: impl Fn([f64; N]) -> Result<f64, Error>,
+    ) -> CalcResult {
+        self.numbers_fn_reading(kind, args, defaults, EmptyOptional::Default, cell, op)
+    }
+
+    fn numbers_fn_reading<const N: usize>(
+        &mut self,
+        kind: Function,
+        args: &[Node],
+        defaults: [f64; N],
+        empty: EmptyOptional,
+        cell: CellReferenceIndex,
+        op: impl Fn([f64; N]) -> Result<f64, Error>,
+    ) -> CalcResult {
         // The driver's shortcut (T-1932): the arguments written, all numbers, then the defaults.
         let shortcut = |present: &[f64]| {
             let mut numbers = defaults;
@@ -289,9 +327,13 @@ impl Model {
             let mut numbers = defaults;
             for (index, slot) in numbers.iter_mut().enumerate() {
                 // A number, the usual argument, skips the coercion chain (T-1785 bench).
-                if let Some(CalcResult::Number(number)) = values.get(index) {
-                    *slot = *number;
-                    continue;
+                match values.get(index) {
+                    Some(CalcResult::Number(number)) => {
+                        *slot = *number;
+                        continue;
+                    }
+                    Some(CalcResult::EmptyArg) if empty == EmptyOptional::Default => continue,
+                    _ => {}
                 }
                 match model.kernel_number_or(values.get(index), *slot, cell) {
                     Ok(number) => *slot = number,
@@ -355,11 +397,21 @@ impl Model {
     /// `QUOTIENT(numerator, denominator)`, an Analysis `ToolPak` function: both arguments lift
     /// over an array and refuse a multi-cell range (probes/math-atp-array-lift C1-C2, C7-C8, C27-C28;
     /// scalar-lift-open-a Y19-Y20), and a boolean is `#VALUE!` (math-atp-array-lift C21, -b E11-E13).
-    /// Within one element the numerator's error wins (C29-C30).
+    /// Within one element the numerator's error wins (C29-C30). A written-empty argument, or a
+    /// LET value or LAMBDA parameter left empty, is `#N/A`, after an earlier argument's error
+    /// (probes/t4873-empty-arg-quotient-ceiling Calc!A1:A6, A9:A10, t4873-empty-arg-let-lambda
+    /// Calc!A1:A3).
     pub(crate) fn fn_quotient(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.lift_call(Function::Quotient, args, cell, &mut |model, values| {
-            let (value, divisor) = match model.two_numbers(values, cell) {
-                Ok(pair) => pair,
+            let [value, divisor] = values else {
+                return CalcResult::new_args_number_error(cell);
+            };
+            let value = match model.atp_number(value, cell) {
+                Ok(number) => number,
+                Err(error) => return error,
+            };
+            let divisor = match model.atp_number(divisor, cell) {
+                Ok(number) => number,
                 Err(error) => return error,
             };
             if divisor == 0.0 {
@@ -384,14 +436,7 @@ impl Model {
             // docs/excel-semantics/arrays.md).
             let mut numbers = [0.0; 2];
             for (slot, value) in numbers.iter_mut().zip(values) {
-                let number = match value {
-                    CalcResult::EmptyArg => {
-                        Err(CalcResult::new_error(Error::NA, cell, String::new()))
-                    }
-                    CalcResult::Boolean(_) => Err(value_error(cell)),
-                    other => model.kernel_number(other, cell),
-                };
-                match number {
+                match model.atp_number(value, cell) {
                     Ok(number) => *slot = number,
                     Err(error) => return error,
                 }

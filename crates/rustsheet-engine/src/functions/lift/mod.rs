@@ -38,7 +38,7 @@ use crate::{
 };
 
 impl Model {
-    /// The two numbers of EFFECT, NOMINAL, DOLLARDE, DOLLARFR and QUOTIENT, in order (the first
+    /// The two numbers of EFFECT, NOMINAL, DOLLARDE and DOLLARFR, in order (the first
     /// one's error wins); a boolean is `#VALUE!`.
     pub(crate) fn two_numbers(
         &self,
@@ -69,6 +69,23 @@ impl Model {
             CalcResult::String(text) => self.cast_number(text).ok_or_else(|| value_error(cell)),
             CalcResult::Lambda(_) => Err(Self::lambda_as_number_error(cell)),
             other => self.cast_number_ref(other, cell),
+        }
+    }
+
+    /// A number argument of an Analysis `ToolPak` kernel (MROUND, QUOTIENT, SERIESSUM's x, n and
+    /// m): [`Model::kernel_number`], except that a written-empty argument is `#N/A` and a boolean
+    /// `#VALUE!`, where most numeric functions read them as 0 and 0/1 (`MROUND(5,)`,
+    /// `QUOTIENT(7,)`, `SERIESSUM(2,,1,{1,2})`: docs/excel-semantics/numbers.md "A written-empty
+    /// argument of a `ToolPak` function is #N/A").
+    pub(crate) fn atp_number(
+        &self,
+        value: &CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Result<f64, CalcResult> {
+        match value {
+            CalcResult::EmptyArg => Err(CalcResult::new_error(Error::NA, cell, String::new())),
+            CalcResult::Boolean(_) => Err(value_error(cell)),
+            other => self.kernel_number(other, cell),
         }
     }
 
