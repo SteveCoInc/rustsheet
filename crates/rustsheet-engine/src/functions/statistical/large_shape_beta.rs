@@ -12,8 +12,8 @@
 //! `I_x(a, b) = Gamma(a+b) / (Gamma(a) nu^b) * (Q(b, z) + r * sum_n d_n J_n)`,
 //!
 //! r = z^b e^-z / Gamma(b), the `d_n` and `J_n` bgrat's recurrences from `J_0` = Q(b, z) / r. Each
-//! term is about (b/nu)^2 of the one before. At a of [`MIN_SHAPE`] or more and b below
-//! [`MAX_SECOND_SHAPE`], b/nu is at most 4E-5, so the series converges in a few terms.
+//! term is about ((b + 2n)/(2 nu))^2 of the one before. At a of [`MIN_SHAPE`] or more and b of at
+//! most [`MAX_SECOND_SHAPE`], b/nu is at most 0.1, so the series converges in a few terms.
 //!
 //! The expansion used to stop at b/a of 1E-6. That cut sent F tails at df2 of 2E6 to 5E7 and df1 of
 //! 40 to 79 to Cephes' fraction, 1E-11 to 7E-10 off the math. Those are the calls T-3754's L140
@@ -21,46 +21,79 @@
 //! T-4119's grid (docs/research/t4119: 640 F tails at df1 3 to 79, df2 2.1E6 to 5E7, against 60-digit
 //! mpmath) puts the expansion's worst error over the whole region at 2.1E-14, so the cut is gone
 //! (decision 0267, accuracy).
+//!
+//! T-4435 widened the bounds from a >= 1E6 and b < 40 to a >= 2000 and b <= 200. The calls past the
+//! old bounds took Cephes' fraction (b0 < 40 past the L140 port's 9 bup terms) or bfrac (b0 >= 40),
+//! 1E-13 to 5E-8 off the math, where T-4434's sweep (probes-numeric/
+//! t4434-huge-shape-outside-large-shape-beta) found Excel within a few units of |ln tail| ulp at
+//! b0 < 40. On T-4435's grid (docs/research/t4435: 600 F tails, 200 BETA.DIST, 60-digit mpmath) the
+//! worst error goes from 5.2E-8 to 1.7E-13. That point and every other past 1E-14 is on a kernel this
+//! change does not touch: L140's port in Excel's arithmetic (to 3.7 units of |ln tail| ulp), or a
+//! lower tail with a moderate a0. The expansion's own worst is 1.6E-14, at b of 100 to 200.
 
 use super::incomplete_beta::{rlog1, stirling_correction};
 use super::incomplete_gamma::{accurate_gamma_density, gamma_ur};
-use crate::x87_exp::{dd_mul, two_sum};
+use crate::x87_exp::{dd_add, dd_mul, two_sum};
 use crate::x87_log10::ln_double_double_pair;
 
-/// The smallest first shape the expansion is used at. Cephes' fraction is far worse above it (T-2528
-/// sweep against a 60-digit mpmath `betainc`: 1E-7 relative at a = 5E9, b = 2.5). Below it a tiny b
-/// still has a tiny b/a, but there the expansion's terms in 1/nu are not small: `BETA.DIST(0.997,3.366,
-/// 3.43E-18,TRUE)` is 1.43E-17 in Excel (probes-numeric/t2464-r2-bpser-small-tiny A10) and 4E-13 by
-/// it.
-const MIN_SHAPE: f64 = 1e6;
+/// The smallest first shape the expansion is used at, from the math alone (T-4435's boundary grid,
+/// docs/research/t4435/boundary.py: `BETA.DIST` at a = 100 to 2E4 and b = 1.5 to 200 against 60-digit
+/// mpmath, no Excel value read). The expansion is within 3.2E-15 at every a from 100 while b < 40,
+/// and within 3E-14 at b of 60 to 200 from a = 2000 (8.5E-14 at a tail of 4E-69, 5 units of
+/// |ln tail| ulp). The kernels it replaces grow with a: Cephes' fraction past L140's 9 bup terms and
+/// bfrac's density prefactor are 5E-15 to 1.3E-13 off at a = 2000 and up to 8.6E-13 at 2E4 (1E-7 at
+/// a = 5E9, T-2528). 2000 is the smallest a of the grid at which the expansion is at least as
+/// accurate at every b; at a = 500 to 1000 bfrac is sometimes the closer one. A tiny first shape is
+/// out: there the terms in 1/nu are not small (`BETA.DIST(0.997,3.366,3.43E-18,TRUE)` is 1.43E-17 in
+/// Excel, probes-numeric/t2464-r2-bpser-small-tiny A10, and 4E-13 by it).
+const MIN_SHAPE: f64 = 2000.0;
 
-/// The second shape below which the expansion is used: bratio's bgrat family (L140) is for b0 below
-/// 40, and from 40 Excel's other branches decide, `#NUM!` included: `BETA.DIST(0.1,1E+200,1E+100,
-/// TRUE)` is `#NUM!` (probes/t3007-beta-dist-ln-x-overflow S!A23), where the expansion's tail is 0.
-const MAX_SECOND_SHAPE: f64 = 40.0;
+/// The largest second shape the expansion is used at: T-4435's region 2 (b0 = df1/2 of 40 to 200,
+/// df1 up to 400), the range T-4434's sweep and T-4435's grids cover. Past it TOMS 708's other
+/// branches keep the point, `#NUM!` included: `BETA.DIST(0.1,1E+200,1E+100,TRUE)` is `#NUM!`
+/// (probes/t3007-beta-dist-ln-x-overflow S!A23), where the expansion's tail is 0.
+const MAX_SECOND_SHAPE: f64 = 200.0;
 
 /// bgrat's cap on the series' terms.
 const MAX_SERIES_TERMS: usize = 30;
 
 /// The deepest cut of [`legendre_fraction`]: it needs about 10 cbrt(b) partial quotients at its
-/// slowest, z = b + 1 (`incomplete_gamma`'s budget), and b is below [`MAX_SECOND_SHAPE`] here.
+/// slowest, z = b + 1 (`incomplete_gamma`'s budget), and b is at most [`MAX_SECOND_SHAPE`] here.
 const MAX_FRACTION_DEPTH: u32 = 1 << 14;
 
 /// The relative size of the last series term at which the series stops.
 const SERIES_TOLERANCE: f64 = 1e-17;
 
-/// `I_x(a, b)` with y = 1 - x given, for a of [`MIN_SHAPE`] or more, b below [`MAX_SECOND_SHAPE`]
+/// `I_x(a, b)` with y = 1 - x given, for a of [`MIN_SHAPE`] or more, b up to [`MAX_SECOND_SHAPE`]
 /// and 0 < x, y < 1; `None` elsewhere or where a step is not finite, and the caller keeps its
 /// kernel.
 pub(super) fn large_shape_lower(a: f64, b: f64, x: f64, y: f64) -> Option<f64> {
-    if !(a >= MIN_SHAPE && a.is_finite() && b > 0.0 && b < MAX_SECOND_SHAPE && x > 0.0 && y > 0.0) {
+    large_shape_lower_pair(a, b, x, (y, 0.0))
+}
+
+/// [`large_shape_lower`] with y = 1 - x given as a double-double (head, tail), for a caller that
+/// knows the small side past a double: the F tails' ratio df1 x/(df1 x + df2) (`fisher.rs`
+/// `f_large_shape_tails`, T-4435). Near x = 1 the expansion reads only y, and nu times y's rounding
+/// is a relative error of about |ln tail| ulp in the result.
+pub(super) fn large_shape_lower_pair(a: f64, b: f64, x: f64, y: (f64, f64)) -> Option<f64> {
+    if !(a >= MIN_SHAPE
+        && a.is_finite()
+        && b > 0.0
+        && b <= MAX_SECOND_SHAPE
+        && x > 0.0
+        && y.0 > 0.0)
+    {
         return None;
     }
     let bm1 = b - 1.0;
     let nu = a + 0.5 * bm1;
     // ln x in double-double, from 1 - y exactly when x is near 1: the rounding of a given x near 1
     // is what nu multiplies into z (each unit of z is a factor e on the result).
-    let x_pair = if x > 0.5 { two_sum(1.0, -y) } else { (x, 0.0) };
+    let x_pair = if x > 0.5 {
+        dd_add(two_sum(1.0, -y.0), (-y.1, 0.0))
+    } else {
+        (x, 0.0)
+    };
     let ln_x = ln_double_double_pair(x_pair);
     let (z, z_lo) = dd_mul((-nu, 0.0), ln_x);
     if z.is_nan() || z <= 0.0 {
@@ -222,6 +255,7 @@ mod tests {
     #[test]
     fn only_a_huge_first_shape_takes_the_expansion() {
         assert_eq!(large_shape_lower(100.0, 2.5, 0.99, 0.01), None);
+        assert_eq!(large_shape_lower(1e7, 200.5, 0.99, 0.01), None);
         assert_eq!(large_shape_lower(3.366, 3.43e-18, 0.997, 0.003), None);
         assert_eq!(large_shape_lower(1e200, 1e100, 0.1, 0.9), None);
         assert_eq!(large_shape_lower(5e9, 0.0, 0.99, 0.01), None);

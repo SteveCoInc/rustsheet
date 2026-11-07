@@ -15,10 +15,12 @@ mod bup;
 pub(super) mod ln_beta;
 
 use super::incomplete_beta::{beta_reg_tails, closed_form_tails, half_half_cdf, search_tails};
+use super::large_shape_beta::large_shape_lower;
 use crate::arithmetic::extended_sum;
 use crate::x87_exp::dd_add;
 use basym::basym;
 use bfrac::bfrac;
+pub(crate) use bfrac::past_evidenced_shapes;
 use bgrat::{bgrat_half, bgrat_increment};
 use bpser::bpser;
 use bup::{
@@ -405,6 +407,20 @@ fn ported_tails_with(
         }
         Branch::L140BupBpser => {
             let w = l140_bup_bpser(d.a0, d.b0, d.x0, d.y0, bup_sum)?;
+            (w, other(w))
+        }
+        // A huge a0 beside b0 of 40 to 200 takes the large-shape expansion, not bfrac (T-4435): bfrac's
+        // prefactor is Excel's density at x0, which loses digits as a0 grows, and on the swapped call
+        // (the F upper tail) x0 is the caller's rounded complement near 1, which a0 multiplies.
+        // `FDIST(1.5,80,1E10)` is 1 - I(40, 5E9) there, 4.7E-8 off the math by bfrac
+        // (probes-numeric/t4045-f-dist-rt-zero-cut E3); the expansion reads ln x0 from y0. Excel is
+        // itself up to 8.5E-9 off the math on those calls (T-4434's sweep, T-4214), so this is the
+        // `accuracy` stage, not Excel's arithmetic. BETA.DIST's, F's and BETA.INV's callers only, as
+        // for L140 bup+bgrat, and only past a0 = 5000: up to there T-3571's probes show Excel's own
+        // bfrac arithmetic, which the port keeps.
+        Branch::Bfrac if half_bgrat && past_evidenced_shapes(d.a0) => {
+            let w = large_shape_lower(d.a0, d.b0, d.x0, d.y0)
+                .map_or_else(|| bfrac(&d, BFRAC_EPS_FACTOR * EPS), Some)?;
             (w, other(w))
         }
         Branch::Bfrac => {

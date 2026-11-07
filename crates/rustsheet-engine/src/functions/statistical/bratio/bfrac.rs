@@ -27,6 +27,13 @@ const LENTZ_SHAPES: std::ops::RangeInclusive<f64> = 40.0..=5000.0;
 /// The x the probes cover, in standard deviations from the beta mean: z in [-8, -0.2].
 const LENTZ_Z: std::ops::RangeInclusive<f64> = -8.0..=-0.2;
 
+/// Whether bfrac's a0 is past the shapes T-3571's probes cover ([`LENTZ_SHAPES`]), where no probe shows
+/// Excel's bfrac arithmetic: the huge-a0 calls that take the large-shape expansion instead (T-4435;
+/// `bratio::ported_tails_with`, `fisher.rs` `f_tail`).
+pub(crate) fn past_evidenced_shapes(a0: f64) -> bool {
+    a0 > *LENTZ_SHAPES.end()
+}
+
 /// Whether a bfrac point lies where T-3571's model is evidenced: the unswapped call (bratio's λ >= 0,
 /// so a0 = a and x0 = x) with a and b in [40, 5000] and x from 8 to 0.2 standard deviations below the
 /// beta mean (`mkprobe.py`'s mu + z·sd). Everywhere else in bfrac's region (a0 < 40 with b0 >= 40,

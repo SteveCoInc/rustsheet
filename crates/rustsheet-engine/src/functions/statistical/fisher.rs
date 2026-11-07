@@ -13,11 +13,12 @@ use crate::functions::statistical::incomplete_beta::{
     beta_reg_tails, search_tails, A1_EXPM1_MAX_X,
 };
 use crate::functions::statistical::inverse_beta::{beta_lower_crossing, f_inverse_cdf};
+use crate::functions::statistical::large_shape_beta::large_shape_lower_pair;
 use crate::functions::statistical::paired::marked_number_error;
 use crate::functions::statistical::special::refine_increasing;
 use crate::functions::statistical::t_dist::sample_var;
 use crate::functions::Function;
-use crate::x87_exp::excel_exp;
+use crate::x87_exp::{dd_add, dd_div, dd_mul, excel_exp};
 use crate::x87_log10::excel_ln;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
@@ -99,15 +100,51 @@ fn f_bup_sum_overflows(df1: f64, df2: f64, x: f64) -> bool {
 fn f_tail(df1: f64, df2: f64, x: f64, upper: bool) -> f64 {
     let (u, v) = f_beta_arguments(df1, df2, x);
     let (a, b) = (df1 / 2.0, df2 / 2.0);
-    let (lower, upper_tail) = f_closed_or_ported_tails(u, v, a, b).unwrap_or_else(|| {
-        let (u, v) = f_kernel_arguments(df1, df2, x);
-        beta_reg_tails(u, v, a, b)
-    });
+    // At b0 = df1/2 of 40 or more the port has no Excel-arithmetic branch for a huge df2 (it would
+    // take the same expansion on the double ratio), so the double-double ratio goes first there.
+    let expansion_first = || {
+        (a >= L140_MAX_SHAPE)
+            .then(|| f_large_shape_tails(df1, df2, x))
+            .flatten()
+    };
+    let (lower, upper_tail) = expansion_first()
+        .or_else(|| f_closed_or_ported_tails(u, v, a, b))
+        .or_else(|| f_large_shape_tails(df1, df2, x))
+        .unwrap_or_else(|| {
+            let (u, v) = f_kernel_arguments(df1, df2, x);
+            beta_reg_tails(u, v, a, b)
+        });
     if upper {
         upper_tail
     } else {
         lower
     }
+}
+
+/// bratio's L140 (bup+bgrat) is for b0 below this; from it bfrac or basym take a huge df2.
+const L140_MAX_SHAPE: f64 = 40.0;
+
+/// (lower, upper) F tails above the mean at a huge df2/2 where the port's Excel arithmetic does not
+/// answer (L140 past its 9 bup terms, or b0 = df1/2 of 40 or more): the upper tail
+/// `I_v(df2/2, df1/2)` by the large-shape expansion (`large_shape_beta::large_shape_lower_pair`),
+/// with its small side u = df1 x/(df1 x + df2) formed in double-double. The double u's rounding is
+/// multiplied by about |ln tail| in the tail. T-4435's grid (docs/research/t4435; 60-digit mpmath at
+/// the exact ratio) has F.DIST.RT tails down to 1E-200 at df1 20 to 79 and df2 1E4 to 2E6: with u as
+/// a double the expansion is up to 1.4E-13 off there (4 units of |ln tail| ulp), with u in
+/// double-double 3.7E-16. Excel's arithmetic is not this (T-4434's sweep, probes-numeric/
+/// t4434-huge-shape-outside-large-shape-beta: Excel is within a few units of |ln tail| ulp of the
+/// math, not on it); this is decision 0114's `accuracy` stage. `None` below the mean, where the
+/// lower tail is the one formed directly (today's kernel), or outside the expansion's bounds.
+fn f_large_shape_tails(df1: f64, df2: f64, x: f64) -> Option<(f64, f64)> {
+    let (a, b) = (df1 / 2.0, df2 / 2.0);
+    let scaled = dd_mul((df1, 0.0), (x, 0.0));
+    let total = dd_add(scaled, (df2, 0.0));
+    let u = dd_div(scaled, total);
+    if !(u.0 > a / (a + b)) {
+        return None;
+    }
+    let upper = large_shape_lower_pair(b, a, df2 / total.0, u)?;
+    Some((1.0 - upper, upper))
 }
 
 /// P(F <= x) for the F distribution: `I_u(df1/2, df2/2)` ([`f_tail`]).
