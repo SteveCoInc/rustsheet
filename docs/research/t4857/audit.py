@@ -103,6 +103,7 @@ def audit(exclude: list[str], pending: tuple[str, ...] = ()) -> dict:
     with ProcessPoolExecutor() as pool:
         positions = dict(zip(ordered, pool.map(_position, ordered, chunksize=256), strict=True))
     kinds: Counter = Counter()
+    kind_cases: dict[str, Counter] = defaultdict(Counter)
     single: dict[str, Counter] = defaultdict(Counter)
     pairs: dict[str, Counter] = defaultdict(Counter)
     per_function: Counter = Counter()
@@ -111,6 +112,7 @@ def audit(exclude: list[str], pending: tuple[str, ...] = ()) -> dict:
             per_function[call.function] += 1
             for i, kind in enumerate(call.kinds):
                 kinds[f"{call.function}|{i}|{kind}"] += 1
+                kind_cases[f"{call.function}|{i}|{kind}"][cell.case] += 1
             group = next((g for g, fs in GROUPS.items() if call.function in fs), None)
             if group is None or not call.numbers or len(call.numbers) < 3:
                 continue
@@ -125,6 +127,7 @@ def audit(exclude: list[str], pending: tuple[str, ...] = ()) -> dict:
         "cells": len(cells),
         "per_function": dict(per_function),
         "kinds": dict(kinds),
+        "kind_cases": {k: [c for c, _ in v.most_common(4)] for k, v in kind_cases.items()},
         "single": {k: dict(v) for k, v in single.items()},
         "pairs": {k: dict(v) for k, v in pairs.items()},
     }

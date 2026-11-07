@@ -121,8 +121,10 @@ def lit(v: float) -> str:
 
 
 def r15(v: float) -> float:
-    """v rounded to 15 significant digits: the double Excel reads from its literal."""
-    return float(f"{v:.15g}")
+    """v rounded to 15 significant digits: the double Excel reads from its literal (v itself where the rounding
+    would leave the double range)."""
+    r = float(f"{v:.15g}")
+    return r if math.isfinite(r) else v
 
 
 def next_up(x: float) -> float:
@@ -247,7 +249,13 @@ class Case:
 
 def arg(v: float) -> tuple[str, float | None]:
     """The formula text of v, and the constant cell it needs (when 15 digits cannot hold it)."""
-    if v == r15(v) and not (0 < abs(v) < F.DBL_MIN):
+    # A formula literal past 9.99999999999999E+307 (`1E+308`) or below about 1E-308 (`1E-310`) makes the workbook
+    # fail to open in Excel for the web (FileCorruptTryRepair, T-4857 probe fill), so such a value is a constant
+    # cell; DBL_MAX is exact arithmetic, and a subnormal is never asked for (it reads as 0).
+    assert v == 0 or F.DBL_MIN <= abs(v), v
+    if abs(v) == F.DBL_MAX:
+        return ("-" if v < 0 else "") + "(2-2^-52)*2^1023", None
+    if v == r15(v) and abs(v) <= 9.99999999999999e307:
         return lit(v), None
     return "{B}", v
 
@@ -376,14 +384,14 @@ def domain(case: Case) -> None:
         for x in (-1.0, -1e-300, -0.0, 0.0, F.DBL_MIN, 1.7976931348623157e308, 1e308):
             call(case, fn, x, 3, 7, "domain/x")
         # A subnormal x three ways: a literal (number text below DBL_MIN reads as 0), 2^-1074, EXP(-720).
-        for text in ("1E-310", "2^-1074", "EXP(-720)", "2^-1022/2"):
+        for text in ("1E-308", "2^-1074", "EXP(-720)", "2^-1022/2"):
             case.add(_formula(fn, 3, 7, text), "domain/x-subnormal", companion="=ISNUMBER({A})")
     for fn in INV_FUNCS:
         for p in (-1e-300, -0.0, 0.0, F.DBL_MIN, 0.5, 1.0 - 2**-53, 1.0, 1.0 + 2**-52, 2.0):
             call(case, fn, p, 5, 7, "domain/p")
         for d1, d2 in ((0.999, 5), (5, 0.5), (1.5, 7), (7, 1.999), (10000000000.5, 3), (3, 10000000001)):
             call(case, fn, 0.3, d1, d2, "domain/df")
-        for text in ("1E-310", "2^-1074", "EXP(-720)"):
+        for text in ("1E-308", "2^-1074", "EXP(-720)"):
             case.add(f"={fn}({text},5,7)", "domain/p-subnormal", companion="=ISNUMBER({A})")
 
 
@@ -524,7 +532,7 @@ def edges_p(case: Case) -> None:
     centres = (1e-20, 1e-15, 0.5, F.DBL_MIN, 1e-300)
     for p0 in centres:
         pts = [next_down(p0), p0, next_up(p0)] + [p0 * (1 - s) for s in STEPS] + [p0 * (1 + s) for s in STEPS]
-        for p in sorted(set(pts)):
+        for p in sorted(x for x in set(pts) if x >= F.DBL_MIN):
             for fn, d1, d2 in (("F.INV", 5, 7), ("F.INV.RT", 5, 7), ("FINV", 30, 3)):
                 text, const = arg(p)
                 case.add(f"={fn}({text},{d1},{d2})", f"edge-p/{p0:g}/{fn}", const)
@@ -780,16 +788,8 @@ def kinds_case() -> dict:
     for k in (1, 2):
         case.add(f"=INDEX(F.DIST(2.5,5,10,{{TRUE;FALSE}}),{k})", f"kind/F.DIST/arg4/lift-array/{k}")
         case.add(f"=INDEX(F.DIST(2.5,5,10,Data!A5:A6),{k})", f"kind/F.DIST/arg4/lift-range/{k}")
-    # Too few and too many arguments.
-    for f in (
-        "=F.DIST(2.5,5,10)",
-        "=F.DIST(2.5,5,10,TRUE,1)",
-        "=F.DIST.RT(2.5,5)",
-        "=FDIST(2.5,5,10,1)",
-        "=F.INV(0.3,5)",
-        "=FINV(0.3,5,10,1)",
-    ):
-        case.add(f, "kind/arity")
+    # Too few or too many arguments are not probed: Excel refuses such a formula at entry, and a workbook that holds
+    # one does not open in Excel for the web ("FileCorruptTryRepair").
     # F.TEST and FTEST: argument kinds and shapes.
     cols = {
         "C1:C5": [1, 2, 4, 7, 11],
