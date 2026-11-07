@@ -2055,8 +2055,8 @@ A285). Both are references:
     variable bound to the span gives the same (H10, I10), unlike `LAMBDA(x,SUM(x))(Data1:Data3!A1)` (references.md).
   - The case calls a LAMBDA (`LAMBDA(a,v,COUNT(a))`). An uncommitted first fill wrote the bare names
     `REDUCE(A2,A3,COUNT)` and `REDUCE(A1,A1,PRODUCT)` and got `#VALUE!`, which is the unknown name a bare function name
-    is in a file ("Functions passed by name", xlsx-storage.md), not an eta result. The stored eta form
-    (`_xleta.COUNT`) does tell a reference from a value (A1767 above); with these initial-value forms it is unprobed.
+    is in a file ("Functions passed by name", below), not an eta result. The stored eta form
+    (`_xleta.COUNT`) does tell a reference from a value (A1767 above); with these initial-value forms it is probed in probes/t4666-union-variable-isref (excel-graph 2026-11-07, T-4666; the engine matches every cell): `REDUCE(IF(TRUE,A2),A3,_xleta.COUNT)` 1 and `SCAN(IF(TRUE,A2),A3,_xleta.COUNT)` 1 (the accumulator is the reference to the text "1", not counted), `REDUCE(XLOOKUP(2.5,A1:A3,A1:A3),A3,_xleta.COUNT)` 2, `REDUCE((A2,A3),A3,_xleta.COUNT)` 2, `REDUCE(IFERROR(A2,0),A3,_xleta.COUNT)` 2 (a plain value "1" is counted), `REDUCE(A1,A1,_xleta.PRODUCT)` 0 (references to TRUE are ignored).
 - The accumulator a step returns (row 11; T-4478's rule, "REDUCE keeps a returned reference"): REDUCE keeps a returned reference in the next step's `a`
   (`REDUCE(0,A1:A2,LAMBDA(a,v,IF(ISREF(a),"r",v)))` is "r", D11; the COUNT form 0, F11), SCAN does not
   (`SCAN(0,A1:A3,LAMBDA(a,v,ISREF(a)))` is FALSE at every step, G11; E11 {TRUE;"1";2.5}).
