@@ -6,9 +6,8 @@
 //! Book `n` of the model is part `externalLinkN.xml` and the `n`th `<externalReference>` of the
 //! workbook part, so `[n]` in a saved formula names the same book it did in the source.
 
-use std::fmt::Write;
-
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 
 use rustsheet_engine::expressions::utils::number_to_column;
 use rustsheet_engine::types::{ExternalBook, SpillValue, Workbook};

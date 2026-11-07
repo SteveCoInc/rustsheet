@@ -60,6 +60,10 @@ def rs_parse(text: str) -> tuple[list[str], list[str]]:
     is forbidden: an `allow` or any other attribute would escape the ratchet."""
     entries: set[str] = set()
     problems: list[str] = []
+    begins = len(re.findall(r"^// LINT-DEBT-BEGIN", text, re.M))
+    ends = len(re.findall(r"^// LINT-DEBT-END", text, re.M))
+    if begins != ends:
+        problems.append(f"{begins} LINT-DEBT-BEGIN line(s) but {ends} LINT-DEBT-END line(s)")
     for block in RS_BLOCK.findall(text):
         body = "\n".join(line for line in block.splitlines() if not line.strip().startswith("//"))
         attrs = re.findall(r"#!\[(.*?)\]\s*(?=#!\[|$)", body.strip(), re.S)

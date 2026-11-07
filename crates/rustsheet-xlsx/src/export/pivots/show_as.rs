@@ -16,9 +16,8 @@
 //! keeps only what it read whole) is written back as kept, and nothing is added: guessing inside
 //! it could make the part malformed.
 
-use std::fmt::Write;
-
 use std::borrow::Cow;
+use std::fmt::Write as _;
 
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;

@@ -58,6 +58,10 @@ class RustBlocks(unittest.TestCase):
         block = "// LINT-DEBT-BEGIN\n#![expect(\n    clippy::a,\n    clippy::b\n)]\n// LINT-DEBT-END\n"
         self.assertEqual(debt.rs_entries(block), ["clippy::a", "clippy::b"])
 
+    def test_an_unterminated_block_is_a_problem(self) -> None:
+        _, problems = debt.rs_parse("// LINT-DEBT-BEGIN\n#![expect(clippy::a)]\nfn f() {}\n")
+        self.assertEqual(len(problems), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
