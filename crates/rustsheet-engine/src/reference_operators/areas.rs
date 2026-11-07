@@ -396,7 +396,10 @@ impl RefGrid {
             return None;
         }
         let first_error = self.elements.iter().find_map(|element| match element {
-            RefElement::Error(error) => Some(error.clone()),
+            // A #REF! element is a failed INDIRECT (bad sheet name), not a cell's error value:
+            // it does not outrank the off-sheet #N/A (probes/t4791-large-small-median-mixed-
+            // first-element H4:H6, excel-graph).
+            RefElement::Error(error) if *error != Error::REF => Some(error.clone()),
             _ => None,
         });
         Some(first_error.unwrap_or(Error::NA))
