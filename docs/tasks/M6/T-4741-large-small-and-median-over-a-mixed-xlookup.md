@@ -3,7 +3,7 @@ id: T-4741
 title: "LARGE, SMALL and MEDIAN over a mixed XLOOKUP grid: the first element decides between an error and #N/A (probes/t4704 A49:C49, A58:C58)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
