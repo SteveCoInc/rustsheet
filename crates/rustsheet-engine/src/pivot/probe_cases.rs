@@ -361,6 +361,9 @@ pub(crate) fn probe_pivot_over(
         pivot_field.subtotal_top = flag(&attrs["subtotalTop"], pivot_field.subtotal_top);
         pivot_field.insert_blank_row = flag(&attrs["insertBlankRow"], pivot_field.insert_blank_row);
         // The field's raw `extLst` (`xml.extLst`), whose x14 `fillDownLabels` the importer types.
+        // The match is deliberately narrow: the probes write the flag as `fillDownLabels="1"`
+        // only (t4129 X14F, t4698); the importer's own reading is tested in
+        // crates/rustsheet-xlsx/src/import/pivots/table/tests.rs.
         let ext = definition["fields"][&cache_field.name]["xml"]["extLst"].as_str();
         pivot_field.fill_down_labels = ext.is_some_and(|x| x.contains(r#"fillDownLabels="1""#));
     }

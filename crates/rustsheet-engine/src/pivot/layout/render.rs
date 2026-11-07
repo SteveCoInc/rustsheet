@@ -288,6 +288,9 @@ impl Cells<'_> {
     /// `level`.
     fn lines(&mut self, axis: &Axis<'_>, place: impl Fn(u32, usize) -> Option<(u32, u32)>) {
         for (i, line) in (0u32..).zip(axis.lines) {
+            if self.over {
+                return;
+            }
             // An `insertBlankRow` line is empty (probes/t4168-pivot-layout-options BR, BR2).
             if line.kind == ItemType::Blank {
                 continue;
@@ -335,6 +338,10 @@ impl Cells<'_> {
         place: impl Fn(usize) -> Option<(u32, u32)>,
     ) {
         for level in 0..below {
+            // Past the text limit nothing more is kept, so no more labels are made.
+            if self.over {
+                return;
+            }
             let Some(Level::Field {
                 field: Some(field), ..
             }) = axis.levels.get(level)

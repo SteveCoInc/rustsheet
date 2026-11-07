@@ -1573,8 +1573,8 @@ Rule, per flag (each one on its own pivot of rows Region and Product with Sum of
   format is not captured.
 - x14 pivotTableDefinition `fillDownLabelsDefault="1"` (X14): **existing fields are not filled down**,
   in tabular and outline form, with or without an empty x14 pivotField extension on the fields
-  (probes/t4698-pivot-repeat-labels TW, TWE, OW). (Our reading: the setting is a default for
-  fields added later, which a file cannot probe.) A field's own x14 `fillDownLabels="1"` (X14F)
+  (probes/t4698-pivot-repeat-labels TW, TWE, OW). (Our reading, not evidenced: the setting is a
+  default for fields added later, which a file cannot probe; UNVERIFIED, T-4764.) A field's own x14 `fillDownLabels="1"` (X14F)
   repeats its labels: `East` on every East product row.
 - A `formats` entry whose pivotArea has `axis="axisValues"` (AV): it renders.
 

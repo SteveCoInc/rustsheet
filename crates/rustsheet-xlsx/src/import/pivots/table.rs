@@ -315,36 +315,29 @@ impl TableReader<'_> {
     ///   `fillDownLabelsDefault` is not read: Excel fills no existing field down for it (t4129 X14,
     ///   t4698 TW, TWE, OW).
     fn read_extension(&mut self, owner: OpaqueOwner, xml: &str) -> Result<(), Skip> {
-        let wanted = match owner {
-            OpaqueOwner::DataField(_) => ("dataField", "pivotShowAs"),
-            OpaqueOwner::Field(_) => ("pivotField", "fillDownLabels"),
-            _ => return Ok(()),
-        };
-        let mut value = None;
-        walk(xml.as_bytes(), |path, tag| {
-            if let Tag::Open(element) = tag {
-                if at(path, &["extLst", "ext"]) && local_name(element) == wanted.0 {
-                    if let Some(text) = attribute(element, wanted.1)? {
-                        value = Some(text);
-                    }
-                }
-            }
-            Ok(())
-        })?;
-        let Some(value) = value else {
-            return Ok(());
-        };
         match owner {
             OpaqueOwner::DataField(index) => {
-                let mode = show_data_as(&value)?;
-                if let Some(data) = self.table.data_fields.get_mut(index as usize) {
+                let mut mode = None;
+                each_x14_element(xml, "dataField", |element| {
+                    if let Some(name) = attribute(element, "pivotShowAs")? {
+                        mode = Some(show_data_as(&name)?);
+                    }
+                    Ok(())
+                })?;
+                let data = self.table.data_fields.get_mut(index as usize);
+                if let (Some(mode), Some(data)) = (mode, data) {
                     data.show_data_as = mode;
                 }
             }
             OpaqueOwner::Field(index) => {
-                if let Some(field) = self.table.fields.get_mut(index as usize) {
-                    // A malformed boolean reads as the default, as [`flag`] reads one.
-                    field.fill_down_labels = matches!(value.as_str(), "1" | "true");
+                let mut fill = None;
+                each_x14_element(xml, "pivotField", |element| {
+                    fill = Some(flag(element, "fillDownLabels", false)?);
+                    Ok(())
+                })?;
+                if let (Some(fill), Some(field)) = (fill, self.table.fields.get_mut(index as usize))
+                {
+                    field.fill_down_labels = fill;
                 }
             }
             _ => {}
@@ -549,6 +542,23 @@ impl TableReader<'_> {
         self.table.opaque.push(entry);
         Ok(())
     }
+}
+
+/// Calls `read` on each extension element named `name` (`<extLst><ext><x14:name>`) of `xml`, an
+/// element kept whole (already bounded by the opaque budget).
+fn each_x14_element(
+    xml: &str,
+    name: &str,
+    mut read: impl FnMut(&BytesStart) -> Result<(), Skip>,
+) -> Result<(), Skip> {
+    walk(xml.as_bytes(), |path, tag| {
+        if let Tag::Open(element) = tag {
+            if at(path, &["extLst", "ext"]) && local_name(element) == name {
+                read(element)?;
+            }
+        }
+        Ok(())
+    })
 }
 
 /// A `<dataField>` but its `fld`, which the caller checks against the cache.

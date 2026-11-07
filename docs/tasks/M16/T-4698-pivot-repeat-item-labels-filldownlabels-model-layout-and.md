@@ -26,7 +26,7 @@ for the web renders them"). The case builder now has a per-field `xml.extLst` sl
 ## Acceptance criteria
 - [x] A filled probe case covers repeat labels in tabular and outline form, table-wide and per field, and pivots.md records the result with the evidence cells.
 - [x] The model reads the flag(s) typed (round trip kept), and the render passes the probe in unit tests against the sidecar.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Styles and indentation.
@@ -56,6 +56,8 @@ Changes:
 Eval: probes known failures went from 6301 to 6298 (t4129 X14F!A5, A6, A9 fixed). There were
 0 regressions, and the new case passes in full.
 
-Unprobed readings are filed as T-4764. `make check-fast` is green locally; the reviewers are
-still to run.
+The baseline's new `C` and `TC` lines for probes/t4698-pivot-repeat-labels are the new case's
+generated count lines (its cells, all passing), not known failures. Unprobed readings are filed as
+T-4764. `make check-fast` is green locally. In review, security and fidelity approved, and
+the changes design requested are applied: one x14 extension walker, and `flag` for the boolean.
 

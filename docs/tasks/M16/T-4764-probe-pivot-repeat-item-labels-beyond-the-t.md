@@ -19,6 +19,7 @@ Split from T-4698, which implemented the probed shapes (crates/rustsheet-engine/
 - on columns with three fields, an inner field's subtotal column: the engine repeats the flagged outer label above it, as rows do (t4698 T3R!A6; CC has two column fields only);
 - the Values field on the same axis as a flagged field (several data fields on rows or columns), and a Values level between flagged fields: the engine fills field levels only;
 - an explicit `fillDownLabels="0"` beside `fillDownLabelsDefault="1"`, and custom subtotal lines (`sumSubtotal`...) under a flagged outer field (the engine fills them as it fills default subtotal lines).
+- whether `fillDownLabelsDefault="1"` is the default for fields added later (pivots.md "Layout and totals flags", X14 bullet): a file cannot add a field, so record what a probe can show (if nothing, say so and keep it UNVERIFIED with the reason).
 Write `probes/t4764-...` with the case builder's per-field `xml.extLst` slot and fill it with the excel-graph oracle.
 
 ## Acceptance criteria
