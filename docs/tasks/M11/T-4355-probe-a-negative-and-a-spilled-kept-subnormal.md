@@ -3,7 +3,7 @@ id: T-4355
 title: "Probe a negative and a spilled kept subnormal saved to xlsx"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
