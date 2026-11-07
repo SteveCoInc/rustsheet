@@ -1,0 +1,36 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "LiftArrays (Analysis ToolPak) functions over a multi-cell reference into another workbook with no externalLink part: refused like a written range (#VALUE!), or lifted over its #BLOCKED! cells? EDATE, IMAGINARY, IMABS, COMPLEX, ISEVEN; quoted and unquoted prefix; local-range controls (T-4859, fuzz formula_eval crash of 2026-11-05).",
+  "tags": [
+    "M8",
+    "references",
+    "external-reference",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=EDATE('[other.xlsx]Sheet1'!A1:B2,1)",
+        "A4": "=IMAGINARY('[other.xlsx]Sheet1'!A1:B2)",
+        "A7": "=IMABS('[other.xlsx]Sheet1'!A1:B2)",
+        "A10": "=COMPLEX('[other.xlsx]Sheet1'!A1:B2,1)",
+        "A13": "=ISEVEN('[other.xlsx]Sheet1'!A1:B2)",
+        "A16": "=IMAGINARY([other.xlsx]Sheet1!A1:B2)",
+        "D1": "=ROWS(EDATE('[other.xlsx]Sheet1'!A1:B2,1))",
+        "D2": "=ERROR.TYPE(EDATE('[other.xlsx]Sheet1'!A1:B2,1))",
+        "D3": "=ROWS(IMAGINARY('[other.xlsx]Sheet1'!A1:B2))",
+        "D4": "=ERROR.TYPE(IMAGINARY('[other.xlsx]Sheet1'!A1:B2))",
+        "D5": "=ERROR.TYPE(EDATE('[other.xlsx]Sheet1'!A1,1))",
+        "D6": "=ERROR.TYPE(IMAGINARY('[other.xlsx]Sheet1'!A1))",
+        "D7": "=ERROR.TYPE(INDEX(EDATE('[other.xlsx]Sheet1'!A1:B2,1),2,2))",
+        "D8": "=ERROR.TYPE(EDATE(F1:G2,1))",
+        "D9": "=ERROR.TYPE(IMAGINARY(F1:G2))",
+        "D10": "=EDATE('[other.xlsx]Sheet1'!A1,1)",
+        "D11": "=IMAGINARY('[other.xlsx]Sheet1'!A1)",
+        "D12": "=ISEVEN('[other.xlsx]Sheet1'!A1)",
+        "D13": "=COMPLEX('[other.xlsx]Sheet1'!A1,1)"
+      }
+    }
+  ]
+}

@@ -35,6 +35,16 @@ Evidence that settles the pivot filter and sort questions T-4164 left UNVERIFIED
   order changes the result (T-4164 showed a value filter and a count Top-N apply in `<filters>` order); and a
   filter's `evalOrder` other than -1, or filter `id`s written against their `<filters>` position (with two filters
   on one field, and on two fields), either of which may be what that order really follows.
+- T-4165 (the engine): its own readings where no probe decides, listed in pivots.md "Pivot filters: the engine's own
+  readings": filters on page fields and fields off the axes, the order between two fields' value filters and an
+  AutoShow beside `<filters>`, an inner-field filter beside a column field, error values under value filters and
+  Top-N, a count N below 1, caption filters on number items, date conditions on non-date items, values lists and
+  `dateGroupItem`s on date items, the week start of the relative week filters, DLit's drop rule on mixed fields,
+  `showAll` beside a filter, and GETPIVOTDATA on a filtered pivot; the percent Top-N's absolute reading over a
+  positive total with items of both signs (bottom 50 percent of 10, -20, 30: the absolute reading keeps -20 alone, the
+  share reading -20, 10 and 30); an unknown filter `type`, a floored count N and AutoShow's schema defaults; the dynamic
+  types other than the known ones; and the importer's new skips (a `filter@fld` past the cache, an unknown
+  `customFilter@operator` or `dateTimeGrouping`).
 - Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274. The engine is T-4165's.
 
 ## Acceptance criteria
