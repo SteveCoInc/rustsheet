@@ -1033,3 +1033,20 @@ fn the_small_x_prefactor_is_excels_three_rounded_factors() {
         gamma_cdf(&Gamma::new(8.0, 1.0).unwrap(), 0.2)
     );
 }
+
+/// T-3146: below a unit quantile of 1/2 at shapes 1 to 20 Excel's chi-squared quantile is Halley
+/// steps from the leading-factor root on its own cdf, the upper tail as (0.5 - P) + 0.5:
+/// gen-m9/285d87cea1aaa73c A261 and 4ab2ba98d26c8a5e A85 `CHIINV(0.975,5)`, 10 ulp above the true
+/// quantile; gen-m9/4250f880ab640c49 A371 `CHISQ.INV.RT(((-0.0001)+1),3)`, 3,084 ulp from it; and
+/// gen-m9/c2974c061384fdd9 `CHISQ.INV(1E-20,10)`.
+#[test]
+fn small_chi_squared_quantiles_are_excels_halley_landing() {
+    for (shape, p, tail, excel) in [
+        (2.5, 0.975, Tail::Upper, 0.831_211_613_486_663_8_f64),
+        (1.5, -0.0001 + 1.0, Tail::Upper, 0.005_214_832_329_030_269),
+        (5.0, 1e-20, Tail::Lower, 0.000_521_056_841_397_433_4),
+    ] {
+        let ours = gamma_quantile(shape, 2.0, p, tail);
+        assert_eq!(ours.to_bits(), excel.to_bits(), "({shape}, {p}): {ours}");
+    }
+}

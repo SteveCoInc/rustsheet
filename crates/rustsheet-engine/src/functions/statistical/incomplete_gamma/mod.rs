@@ -875,14 +875,18 @@ fn gamma_quantile_within(shape: f64, scale: f64, p: f64, tail: Tail, budget: u32
     // Only a lower-tail p of at most 1/2: the lower tail is both the tail given and the smaller one.
     // Then Newton steps from the root where it is close, the lower tail being the smaller one
     // in either function: `CHISQ.INV.RT(1-1E-16,3)` is Excel's first step (T-3311).
-    let tiny = (small == Tail::Lower)
-        .then(|| {
-            (tail == Tail::Lower)
-                .then(|| excel_tiny_quantile(shape, target))
-                .flatten()
-                .or_else(|| excel_newton_quantile(shape, target))
-        })
+    // Below a unit quantile of 1/2 at shapes 1 to 20, Excel's Halley steps on its own cdf come
+    // next, in either tail (T-3146).
+    let lower_root = (small == Tail::Lower && tail == Tail::Lower)
+        .then(|| excel_tiny_quantile(shape, target))
         .flatten();
+    let tiny = lower_root
+        .or_else(|| excel_halley_quantile(shape, p, tail))
+        .or_else(|| {
+            (small == Tail::Lower)
+                .then(|| excel_newton_quantile(shape, target))
+                .flatten()
+        });
     let x = if shape == 1.0 {
         exponential_quantile(small, target) * scale
     } else if let Some(unit) = tiny {
@@ -1008,7 +1012,7 @@ mod huge_shape;
 mod near_mode;
 
 pub(crate) use closed_form::excel_small_shape_quantile;
-use closed_form::{excel_newton_quantile, excel_tiny_quantile};
+use closed_form::{excel_halley_quantile, excel_newton_quantile, excel_tiny_quantile};
 pub(crate) use density::{accurate_gamma_density, gamma_density};
 pub(crate) use huge_shape::{huge_shape_quantile, HUGE_SHAPE_MIN};
 

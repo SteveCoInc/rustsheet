@@ -1715,6 +1715,40 @@ Ours: `incomplete_gamma/mod.rs` `LogSeriesFactors`, `small_x_factors`, used by `
 Status: VERIFIED (excel-graph)
 Tasks: T-3219, T-4975
 
+## Small gamma quantiles: Halley steps on Excel's cdf (T-3146)
+Rule: at shapes 1 to 20 where the unit quantile is at most 1/2, Excel's CHISQ.INV, CHISQ.INV.RT, CHIINV and
+GAMMA.INV start from the leading-factor root `EXP((LN(p_low)+GAMMALN(a)+LN(a))/a)` of the lower-tail probability
+p_low (p, or 1 - p for a right-tail p) and take Halley steps `x -= t/(1 - t*((a-1)/x - 1)/2)` on the leading-factor
+series form of P (`EXP(a*LN(x))/EXP(GAMMALN(a+1))*EXP(-x)*series`) and Excel's density, with t = (p - Q)/f for a
+right-tail search and (P - p)/f for a lower-tail one. The upper tail there is `(0.5 - P) + 0.5`, each operation a
+double, not `1 - P`: exact on 51/51 cells of probes-numeric/t3148-gamma-quantile-flat-band against 45/51 for 1 - P
+(research prototype, docs/research/excel-parity-findings-2026-11-07.md item 6). That makes Q flat for up to 0.75 ulp
+of p, which is where Excel lands. When the rounded cdf cycles, the first iterate with the smallest residual is kept.
+Evidence (excel-graph), all bit-exact on the rule:
+- `CHIINV(0.975,5)` = 0.8312116134866638, 10 ulp above the true quantile (gen-m9/285d87cea1aaa73c A261,
+  4ab2ba98d26c8a5e A85). Through MOD it also fixes gen-m9/73f053591a54bc43 A108.
+- `CHISQ.INV.RT(((-0.0001)+1),3)` = 0.005214832329030269, 3,084 ulp from the true quantile
+  (gen-m9/4250f880ab640c49 A371).
+- `CHISQ.INV(1E-20,10)` = 0.0005210568413974334 (gen-m9/c2974c061384fdd9 A355).
+The switch between searching Q and searching P at 1 - p for a right-tail p is bracketed, not measured: somewhere in
+(0.9999, 0.9999462]; 0.9999 is taken (UNVERIFIED inside the bracket). Above it, the engine keeps T-3311's Newton
+steps (or the crossing) for the P search instead of Halley's. The findings' rule applies Halley there too. Against
+the rule as implemented, that variant moved 43 cells closer and 9 farther (13 gen-m9 cells such as
+`CHIINV(1-1E-16,8)`, 6 to 0 ulp), but it regresses one gated cell: `CHIINV(1-1E-10,7)` = 0.005605668625082421
+(gen-m9/eced4bb6a0234c9e A265) is bit-exact on Newton and 1 ulp off on Halley. Both are within 15 digits there; the
+P-search method above the switch is open.
+GAMMA.INV takes the rule too: Excel's `CHISQ.INV(p,2a)` is twice `GAMMA.INV(p,a,1)` (T-3311 sheet W).
+Engine eval against item 5's head (every suite, per cell, ulps of Excel): 431 closer, 55 farther; 136 cells newly
+within 15 digits, 7 newly visibly off. Those 7 are all GAMMA.INV-derived cells of the ungated
+probes-numeric/t3311-gamma-inv-lower-tail-cdf and t3311-fresh-sweep-2, such as `GAMMA.INV(1E-8,1.5,1)`, 4 to 9 ulp.
+By function: GAMMA.INV 190 closer / 20 farther, CHISQ.INV 107 / 8, CHISQ.INV.RT 32 / 0, CHIINV 9 / 0.
+t3148-gamma-quantile-flat-band goes from 167 to 206 of 361 cells passing, and from 68 to 51 visibly off.
+Gated, with item 5 against main: gen-m9 1766 to 1736 known failures, ironcalc-calc 266 to 262, no regression. Gate A is unchanged.
+Ours: `incomplete_gamma/closed_form.rs` `excel_halley_quantile`, taken in `gamma_quantile_within` after
+`excel_tiny_quantile` and before `excel_newton_quantile`.
+Status: VERIFIED (excel-graph) for the cells above; the Q/P switch is UNVERIFIED inside its bracket.
+Tasks: T-3146, T-4975
+
 ## HYPGEOM.DIST: per-call cap and lifting (T-1873)
 Rule: HYPGEOM.DIST and HYPGEOMDIST lift every argument over an array and over a two-cell range on the formula's own rows,
 each element the scalar call (stat-argument-modes H331-H336, H338-H342: every argument over `{v;v}`, the first over a
