@@ -7,13 +7,16 @@
 //! are derived from the items ([`SharedItemsFlags`]), the ones Excel writes and opens
 //! (docs/excel-semantics/pivots.md "Shared-item flags Excel accepts for mixed fields"). The root's
 //! version attributes are the case builder's, which every filled pivot probe opened with
-//! (`tools/src/rustsheet_tools/pivot_definition.py`).
+//! (`tools/src/rustsheet_tools/pivot_definition.py`). A calculated field is written as the
+//! builder and Excel write it, `<cacheField name numFmtId="0" formula databaseField="0"/>` after
+//! the other fields, its formula as the file had it, with no record values (T-4174).
 
 use std::fmt::Write as _;
 
 use chrono::{Duration, NaiveDate};
 use rustsheet_engine::pivot::{
-    CacheField, CacheItem, PivotCache, SharedItemsFlags, MAX_ITEMS, MAX_RECORDS, MAX_RECORD_VALUES,
+    check_calculated_fields, CacheField, CacheItem, PivotCache, SharedItemsFlags, MAX_ITEMS,
+    MAX_RECORDS, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::DateSystem;
 
@@ -34,7 +37,8 @@ pub(super) struct Unwritable(pub(super) String);
 /// from: T-4734), no two text items of a field that differ only in case (Excel for the web calls
 /// such a file corrupt: docs/excel-semantics/pivots.md "Case-variant text items make Excel for the
 /// web call the file corrupt"), finite numbers, dates inside Excel's calendar, and every record
-/// an index into its field's items.
+/// an index into its field's items; calculated fields only after the others, and formulas the
+/// import would read back ([`check_calculated_fields`]).
 ///
 /// A cache's fields are public, so one built through the API or decoded need not respect the
 /// import limits: it is held to them here, before anything is written (directive 5), with
@@ -51,19 +55,29 @@ pub(super) fn check(
     if (cache.fields.iter()).any(CacheField::is_grouped) {
         return Err(Unwritable("a grouped cache field (T-4734)".into()));
     }
+    let first_calculated = (cache.fields.iter()).position(|f| f.formula.is_some());
+    let database = first_calculated.unwrap_or(cache.fields.len());
+    if cache
+        .fields
+        .iter()
+        .skip(database)
+        .any(|f| f.formula.is_none())
+    {
+        return Err(Unwritable("a cache field after a calculated field".into()));
+    }
+    check_calculated_fields(&cache.fields).map_err(|error| Unwritable(error.to_string()))?;
     let records = cache.record_count as usize;
-    let values = records.saturating_mul(cache.fields.len());
+    let values = records.saturating_mul(database);
     if records > MAX_RECORDS || values > values_left.min(MAX_RECORD_VALUES) {
         return Err(Unwritable(format!(
-            "{records} records of {} fields, past the cache limits",
-            cache.fields.len()
+            "{records} records of {database} fields, past the cache limits"
         )));
     }
     let items = (cache.fields.iter()).fold(0usize, |n, f| n.saturating_add(f.items.len()));
     if items > MAX_ITEMS {
         return Err(Unwritable(format!("{items} items, past the cache limits")));
     }
-    for field in &cache.fields {
+    for field in database_fields(cache) {
         if field.has_case_variant_texts() {
             return Err(Unwritable(format!(
                 "field {:?} holds texts that differ only in case",
@@ -128,6 +142,15 @@ pub(super) fn definition_xml(
         cache.fields.len()
     );
     for field in &cache.fields {
+        if let Some(formula) = &field.formula {
+            let _ = write!(
+                xml,
+                r#"<cacheField name="{}" numFmtId="0" formula="{}" databaseField="0"/>"#,
+                escape_xml(&field.name),
+                escape_xml(formula)
+            );
+            continue;
+        }
         let _ = write!(
             xml,
             r#"<cacheField name="{}" numFmtId="0"><sharedItems"#,
@@ -161,8 +184,8 @@ pub(super) fn records_xml(cache: &PivotCache) -> String {
     );
     for record in 0..records {
         xml.push_str("<r>");
-        for field in &cache.fields {
-            // Every field holds `record_count` records ([`check`]).
+        for field in database_fields(cache) {
+            // Every database field holds `record_count` records ([`check`]).
             let index = field.records.get(record).copied().unwrap_or_default();
             let _ = write!(xml, r#"<x v="{index}"/>"#);
         }
@@ -170,6 +193,11 @@ pub(super) fn records_xml(cache: &PivotCache) -> String {
     }
     xml.push_str("</pivotCacheRecords>");
     xml
+}
+
+/// The fields of `cache` that hold record values: all but the calculated fields.
+fn database_fields(cache: &PivotCache) -> impl Iterator<Item = &CacheField> {
+    cache.fields.iter().filter(|f| f.formula.is_none())
 }
 
 /// The `<sharedItems>` attributes of `flags`, each written only when it is not the schema's

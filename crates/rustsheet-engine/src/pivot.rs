@@ -25,6 +25,7 @@ use crate::types::sheet_names_match;
 
 mod accumulate;
 mod added_groups;
+mod calculated;
 mod date_groups;
 mod filter;
 mod grid;
@@ -38,6 +39,10 @@ mod result;
 mod show_as;
 
 pub use added_groups::{group_by_discrete, AddedGroup};
+pub use calculated::{
+    check_calculated_fields, CalculatedFieldError, MAX_CALCULATED_FIELDS,
+    MAX_CALCULATED_FORMULA_CHARS,
+};
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
 pub use filter::{
     AutoShow, DateGroupItem, DynamicDate, FilterCondition, FilterCriteria, FilterOperator,
@@ -83,7 +88,7 @@ pub struct PivotCache {
     pub source_name: Option<String>,
     /// The cache's fields, in cache order.
     pub fields: Vec<CacheField>,
-    /// How many records; every [`CacheField::records`] has this length.
+    /// How many records; every [`CacheField::records`] but a calculated field's has this length.
     pub record_count: u32,
     /// `refreshOnLoad`: the facade refreshes the cache after a loaded workbook's first
     /// recalculation (SPEC-0032 "Who refreshes, and when"; pivots.md, probes/t4128-pivot-spike R).
@@ -107,7 +112,7 @@ pub struct CacheField {
     /// The field's distinct values: its `<sharedItems>`, then the inline record values interned
     /// at import, so records only ever hold indices.
     pub items: Vec<CacheItem>,
-    /// Per record, an index into `items`.
+    /// Per record, an index into `items`; empty for a calculated field ([`CacheField::formula`]).
     pub records: Vec<u32>,
     /// For a field grouped by numeric ranges, its grouping: `items` are then the group labels
     /// and GETPIVOTDATA also picks a group by its lower bound (T-4235).
@@ -119,6 +124,11 @@ pub struct CacheField {
     /// and `Years`, a manual group field), the base field it derives from, so a refresh builds it
     /// again from the source (T-4171).
     pub added_group: Option<AddedGroup>,
+    /// For a calculated field (`cacheField@formula`, `databaseField="0"`), its formula as the
+    /// file writes it (`Units*Price`, no `=`). Such a field has no items and no records, follows
+    /// every other field of the cache, and is only a data field: its value in each cell is the
+    /// formula over that cell's sums (`calculated`, T-4174).
+    pub formula: Option<String>,
 }
 
 /// One value of a cache field.
