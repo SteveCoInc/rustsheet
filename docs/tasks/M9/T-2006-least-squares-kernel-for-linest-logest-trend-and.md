@@ -221,3 +221,35 @@ The table has no slope point for this formula, so Excel's b is not known to the 
 call's slope (index 1,1) would decide between the reflector forms. I would probe it before fitting further.
 
 Resumed 2026-11-07 00:20 UTC by an opus run (work-loop step (2): branch idle 9 h).
+
+## Landing notes (2026-11-07, second opus run)
+Resumed 00:20 UTC, stopped 00:50 UTC at the session's start-new-work limit. No PR: the gates still refuse the branch.
+Measured on this branch's own baseline (cut before main's newer probes; merge `origin/main` before scoring next time),
+`rustsheet-eval check`, all suites:
+- KERNEL 9 as the first run left it: fixed 218 (probes 183, ironcalc-calc 31, gen-m9 4), REGRESSIONS 28 (probes 26,
+  ironcalc-calc 2). 18 of the 26 were probes/t4222-regression-flag-ranges stats rows, which the first run's
+  147-cell LINEST-family diff did not include (the probe postdates it): KERNEL 9's coefficients mixed with the old
+  normal-equations residuals.
+- **Committed now: stats rows from the same QR.** ss_res is the squared tail of Q'(y - ym) (the reflected right-hand side
+  below row k), ss_reg = ss_tot - ss_res, r2 = ss_reg / ss_tot, se_y = sqrt(ss_res/df), F = ss_reg/(ss_res/df).
+  Python on t4222 Calc!A1 `LINEST({2,4,5,4,5},{1..5},TRUE,TRUE)`: all five of Excel's values bit-exact (r2 0.6, se_y
+  0.894427190999916, F 4.499999999999999, ss_reg 3.5999999999999996, ss_res 2.4000000000000004). Rejected: ss_res from
+  the residuals y - (b0 + b·x), y - (ym + b·(x - xm)) or (y - ym) - b·(x - xm) (each 1 ulp off on ss_res), and r2 = 1 -
+  ss_res/ss_tot (0.6000000000000001 or 0.5999999999999999). ss_reg = ‖head of Q'(y - ym)‖² ties with ss_tot - ss_res here.
+  Result: fixed 308 (probes 266, ironcalc-calc 38, gen-m9 4), REGRESSIONS 9.
+- Remaining 9 regressions:
+  - linest-modes L85, M85 (`LINEST(B2:B9,A2:C9,TRUE,TRUE)`, y is one of the x columns: Excel exactly 1 and 0; ours
+    0.9999999999999999 and 2.7E-16) and L106 (`LINEST(B2:B9,A2:E9,TRUE,TRUE)`: Excel 0, ours -1.2E-18). Multi-predictor
+    exact fits: Excel's QR leaves no noise here, so the column order, pivoting or the reflector differs for p > 1.
+    This is the next thing to score.
+  - t4222 Calc!A32, B32: LOGEST standard errors (row 2), 1 ulp. They still come from (D'D)^-1. Port the se to R^-1
+    (slopes: σ²·diag((R'R)^-1) on the centred design; intercept: σ²·(1/n + xm'(Xc'Xc)^-1 xm) is a candidate).
+  - regression-trend O34, O35, N35 (x near 1E10, see the first notes). Scored: the prediction ym + Σ b_j·(x_j - xm_j)
+    gives Excel's 3.6666666665000003 on O34, but over the whole eval it fixes 14 fewer cells than b0 + b·x (194 vs 208
+    with the old stats rows). Not taken; a mixed rule needs evidence.
+  - ironcalc-calc TREND_GROWTH.xlsx Sheet1!K5 (not looked at).
+- Gate A (`rustsheet-eval accuracy`) with the QR stats: 20 of the 21 T-2006 known-failure lines are stale (inside the
+  envelope), and only LOGEST/s1 A110 stays known. One new failing point, LINEST/s1 A184 (the intercept cancellation in
+  the first notes), is still unresolved.
+- Still owed before a PR: acceptance criteria 1 (fitlab `regression` kernel, candidate table in statistics.md), the R4
+  hold-out and the fresh sweep, and replacing the `KERNEL` scaffold with one form (clippy has not been run on it).

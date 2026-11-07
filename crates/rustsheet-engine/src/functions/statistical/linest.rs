@@ -112,7 +112,7 @@ fn mean(v: &[f64]) -> f64 {
 /// Householder QR least squares on the columns `cols` (each of length n); `None` when a
 /// diagonal of R is zero. `applied_diag`: R's diagonal is the reflected column's entry rather
 /// than -sign·norm.
-fn householder(cols: &[Vec<f64>], y: &[f64], applied_diag: bool) -> Option<Vec<f64>> {
+fn householder(cols: &[Vec<f64>], y: &[f64], applied_diag: bool) -> Option<(Vec<f64>, f64)> {
     let k = cols.len();
     let n = y.len();
     let mut a: Vec<Vec<f64>> = cols.to_vec();
@@ -157,17 +157,23 @@ fn householder(cols: &[Vec<f64>], y: &[f64], applied_diag: bool) -> Option<Vec<f
         }
         beta[j] = s / diag[j];
     }
-    Some(beta)
+    let tail: f64 = b[k..].iter().map(|v| v * v).sum();
+    Some((beta, tail))
 }
 
-fn fit_kernel(y: &[f64], x: &[Vec<f64>], p: usize, const_term: bool) -> Option<Vec<f64>> {
+fn fit_kernel(
+    y: &[f64],
+    x: &[Vec<f64>],
+    p: usize,
+    const_term: bool,
+) -> Option<(Vec<f64>, Option<f64>)> {
     let n = y.len();
     let cols: Vec<Vec<f64>> = (0..p).map(|j| x.iter().map(|r| r[j]).collect()).collect();
     if !const_term {
-        return householder(&cols, y, KERNEL == 6);
+        return householder(&cols, y, KERNEL == 6).map(|(b, t)| (b, Some(t)));
     }
     if p == 0 {
-        return Some(vec![mean(y)]);
+        return Some((vec![mean(y)], None));
     }
     if KERNEL == 9 {
         let ym = mean(y);
@@ -175,26 +181,26 @@ fn fit_kernel(y: &[f64], x: &[Vec<f64>], p: usize, const_term: bool) -> Option<V
         let yc: Vec<f64> = y.iter().map(|v| v - ym).collect();
         let mut all = vec![vec![1.0; n]];
         all.extend(cols.iter().zip(&xm).map(|(c, m)| c.iter().map(|v| v - m).collect::<Vec<f64>>()));
-        let b = householder(&all, &yc, false)?;
+        let (b, tail) = householder(&all, &yc, false)?;
         let mut intercept = ym;
         for (bj, mj) in b[1..].iter().zip(&xm) {
             intercept -= bj * mj;
         }
         let mut out = vec![intercept];
         out.extend(&b[1..]);
-        return Some(out);
+        return Some((out, Some(tail)));
     }
     let xm: Vec<f64> = cols.iter().map(|c| mean(c)).collect();
     let mut all = vec![vec![1.0; n]];
     all.extend(cols.iter().zip(&xm).map(|(c, m)| c.iter().map(|v| v - m).collect::<Vec<f64>>()));
-    let b = householder(&all, y, KERNEL != 7)?;
+    let (b, _) = householder(&all, y, KERNEL != 7)?;
     let mut intercept = b[0];
     for (bj, mj) in b[1..].iter().zip(&xm) {
         intercept -= bj * mj;
     }
     let mut out = vec![intercept];
     out.extend(&b[1..]);
-    Some(out)
+    Some((out, None))
 }
 
 // ─── Regression core ─────────────────────────────────────────────────────────
@@ -289,10 +295,13 @@ fn regress(
     }
 
     // Solve (D'D) β = D'Y
-    let beta = match KERNEL {
-        0 => solve_system(&dtd, &dty)?,
+    let (beta, qr_ss_res) = match KERNEL {
+        0 => (solve_system(&dtd, &dty)?, None),
         _ => fit_kernel(y, x, p, const_term)?,
     };
+    // KERNEL 9: ss_res is the squared tail of Q'(y - ym), ss_reg = ss_tot - ss_res and
+    // r2 = ss_reg / ss_tot (probes/t4222-regression-flag-ranges Calc!A3:B5, A23:B25, bit-exact).
+    let qr_stats = KERNEL == 9;
     // beta[0] = β_0 (intercept if const), beta[1..] = β_1..β_p
 
     // Excel output order: reverse x coefficients, intercept last.
@@ -332,11 +341,14 @@ fn regress(
         })
         .collect();
 
-    let ss_res: f64 = y
-        .iter()
-        .zip(fitted.iter())
-        .map(|(yi, fi)| (yi - fi).powi(2))
-        .sum();
+    let ss_res: f64 = match qr_ss_res {
+        Some(tail) if qr_stats => tail,
+        _ => y
+            .iter()
+            .zip(fitted.iter())
+            .map(|(yi, fi)| (yi - fi).powi(2))
+            .sum(),
+    };
     let df = n as f64 - k as f64;
 
     let ss_tot = if const_term {
@@ -347,7 +359,9 @@ fn regress(
     };
 
     let ss_reg = ss_tot - ss_res;
-    let r_sq = if ss_tot > 0.0 {
+    let r_sq = if ss_tot > 0.0 && qr_stats {
+        ss_reg / ss_tot
+    } else if ss_tot > 0.0 {
         1.0 - ss_res / ss_tot
     } else {
         1.0
