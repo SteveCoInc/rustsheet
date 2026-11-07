@@ -4936,6 +4936,68 @@ Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
 Ours: `irr_fallback` stops at the first step under 1e-7 max(|v|, 1) within 50 steps; unchanged.
 Tasks: T-3411, T-4213, T-4386
 
+## IRR's second stage ignores the guess and reads only NPV's values (T-4844)
+Rule (partial; the stage's method is still unknown): where IRR's secant from the guess fails, Excel's value does not
+depend on the guess. IRR is the secant of "IRR is a secant in d" from the guess. When that run fails, the value comes
+from a stage that sees only the flows' NPV values, and that stage stops on the same absolute |NPV| < 1e-7 test. On
+long level annuities the engine's secant is Excel's to the bit, the failing runs included.
+- **Guess ladder** (probes/t4844-irr-guess-ladder: 12 annuities of probes/t3406-irr-num-boundary, A6 A8 A10 A11 A28 A30
+  A32 A51 A53 A55 A75 A77, 21 to 61 flows, roots -0.06 to -0.22, each from 37 guesses -0.9..0.9 by 0.05).
+  - Every cell is a number. Excel gives the default call's bits on exactly the 227 guess cells where the engine's
+    secant from that guess fails (from about 0.05 up, and on a few lower guesses).
+  - It gives the secant's own bits, bit for bit with the engine's exact replica, on all 214 cells where that run
+    converges. On 3 more, the converged value happens to be the default's.
+  - The fixed point `IRR(flows, X)`, with X the default value passed by reference, is X itself on only 2 of the 12
+    (A118, A313). So X is not where Excel's secant from X stops.
+- **Padding ladder** (probes/t4844-irr-pad-ladder: four of the annuities, A6 A10 A51 A77, padded with trailing zeros to
+  N flows). Each is X up to the N at which the smallest 1 + r of the engine's failing run from 0.1 would underflow its
+  discount (x^(N-1) < 2^-1022): 892, 293, 580 and 183. It is `#DIV/0!` from the next grid point on (+2%: 910, 299,
+  592, 187). So:
+  - Excel's failing run makes the replica's excursions toward r = -1, and reaches at least its 62nd step: A51's
+    smallest x appears at step 62, and a run cut at step 40 would have moved the threshold to 724;
+  - no later stage visits a smaller 1 + r;
+  - "IRR is #DIV/0! where its secant cannot evaluate NPV" holds with trailing zeros, which shows the running product
+    covers the zero flows too.
+- **Path-invariant transforms** (probes/t4844-irr-stage-invariance, the same four annuities):
+  - 1, 2, 5 and 20 trailing zeros never move X. The stage depends on NPV's values, not on the number of flows.
+  - Flows times 2^k (exact; the secant's path in d is unchanged) leave X unchanged until |NPV(X)|·2^k reaches 1e-7,
+    with NPV the engine's `irr_npv`: |NPV(X)| = 1.37E-10, 8.3E-12, 2.07E-10 and 8.8E-8 put the crossing at 2^9.5,
+    2^13.6, 2^8.9 and 2^0.18. X moves at 2^10, not by 2^10, 2^10 and 2^1, on all four.
+  - Past the crossing the value is the root to about 1E-15, and at 2^30 (flows near 4E+11) every one is `#NUM!`.
+  - Negating the flows moves X by 1E-13 to 6E-12 relative: the stage is not symmetric in NPV's sign, as the secant's
+    start offset (toward larger |NPV|) is not.
+- **The stage's iterates.** Excel's X sits 1E-17 to 6E-12 from the 50-digit root, with either sign. That is the
+  secant's last-step error under a 1e-7 step test, not bisection's (about 1E-8) or Newton's from above (its stop
+  iterates on these flows are within 1E-15 of the root).
+- **Refuted as the stage** on the 12 annuities and the 4 negated sets, in exact arithmetic with the engine's
+  twice-rounded NPV unless noted. The scratch scripts are not committed.
+  - Restarts from the failed run from 0.1: from any single iterate (the first 120), from any ordered pair of them
+    (plain doubles), and chains of up to 8 restarts from the last iterate, the older one, the smallest |NPV|, the
+    farthest point, the last far point or a bracket's midpoint.
+  - The secant from one fixed start, every start in -0.995..0.1 by 0.005. It also fails from starts derived from the
+    flows: (S+/S-)^(1/T) - 1 with T a cash-weighted time, the same with the last flow's index, and two simple-interest
+    forms.
+  - Newton on P(v) from v = 0 (Horner, separate P and P', or ascending powers, each plain or twice-rounded, with the
+    stop iterate or the one after), and the secant restarted from its iterates.
+  - The secant from 0.1 with these changes: anchored on the better point, keeping the best two points, backtracking
+    while |NPV| grows, regula falsi or Illinois once bracketed, a step capped at 0.1 to 1 in d, the VB runtime's
+    flat-secant nudge (three forms), or run in r with the VB pole clamp (r1 - 1)/2 (offsets 1e-3 and 1e-5, NPV as
+    c_i/x^i or worksheet NPV's c_i/x^(i+1)). Also Brent's method on the run's first bracket (in d and in r, tolerances
+    1e-7 to 1e-12). The secant from 0.1 ping-pongs between r of about 0.1 and about -0.5 to -0.9 in d, v, r and x
+    alike.
+- **Across the IRR probe cases** (the 26 of docs/research/irr-2026-11-07/feasibility.py plus these three; plain
+  doubles): 517 cells have both secant runs failing and Excel's value at least 1E-14 relative from the root. On 132 of
+  them, Excel's value is bit for bit an iterate of Newton on P(v) from v = 0 (plain Horner): the engine's stop iterate
+  on 96, the next one on 34, others on 2. Their errors have either sign (73 +, 59 -), so a Newton stage is real on
+  those cells. On the other 385, which include these annuities, it is not.
+Evidence: the three cases above (excel-graph, 2026-11-07), generated by
+docs/research/irr-2026-11-07/probes.py.
+Status: VERIFIED (excel-graph) for the cells and the stage's guess independence, its NPV-only input and its absolute
+1e-7 stop; the stage's method is UNVERIFIED (unknown)
+Ours: the secant, its retry from 0.1, then `irr_fallback` (Newton from v = 0, 50 steps), which is guess-independent
+too but gives the root's digits, not X's, on these annuities.
+Tasks: T-4844, T-4845, T-4836
+
 ## IRR's fallback is `#NUM!` when NPV at its root is 1E-4 or more
 Rule (partial; the type rule where both secant runs fail): where Excel's IRR reaches the root by the fallback (the
 engine's `irr_fallback`, Newton on P(v) from v = 0), it is `#NUM!` when |NPV| at that root, evaluated as IRR's secant
