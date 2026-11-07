@@ -417,6 +417,9 @@ impl UserModel {
             (fill_row_start, column1, fill_row_end, last_column),
             true,
         )?;
+        // Every target cell is written, which a data table's results refuse (T-0452).
+        let target = (fill_row_start, column1, fill_row_end, last_column);
+        self.model.refuse_data_table_overlap(sheet, target)?;
         self.apply_fill_merge_removal(sheet, &plan, &mut diff_list)?;
 
         let saved_cse = self.collect_and_clear_cse_in_fill_target(
@@ -591,6 +594,8 @@ impl UserModel {
             (row1, fill_col_start, last_row, fill_col_end),
             false,
         )?;
+        let target = (row1, fill_col_start, last_row, fill_col_end);
+        self.model.refuse_data_table_overlap(sheet, target)?;
         self.apply_fill_merge_removal(sheet, &plan, &mut diff_list)?;
 
         let saved_cse = self.collect_and_clear_cse_in_fill_target(

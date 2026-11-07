@@ -68,11 +68,11 @@ omitted forms A48:A54 keep the values the engine gives today.
   - LET and LAMBDA names bound to nothing behave the same way.
 - Engine: one helper, `Model::atp_arguments` (functions/engineering/mod.rs). It returns `#N/A` for an empty argument
   among the first `strict` ones and drops trailing empty optionals. It is applied to DELTA, GESTEP, BESSELI/J/K/Y, ERF,
-  CONVERT, COMPLEX and the nine base conversions with `places`. The omission test is `Model::is_omitted_argument`
-  (let.rs). `complex_pair_of` now uses it in place of its inline copy.
+  CONVERT, COMPLEX and the nine base conversions with `places`. The omission test is main's `Model::is_empty_argument`
+  (util/empty_args.rs; the branch's own copy in let.rs was dropped in the merge). `complex_pair_of` now uses it in place of its inline copy.
 - A call with more arguments than the function's maximum is refused before any trimming, so it stays `#ERROR!`
   (`DEC2BIN(5,,)`, `COMPLEX(1,1,,)`; review round 1). The unit test is engineering/test_empty_arguments.rs. `bind_argument_value`
-  in let.rs uses the same `is_omitted_argument` helper.
+  in let.rs uses the same `is_empty_argument` helper.
 - Follow-up: T-4899 probes the six functions that share the code but are unprobed.
 - After the fill all 54 cells pass. Docs: engineering.md, "An empty argument of the ToolPak engineering functions".
 - Eval delta: probes +1 case (54 cells, all pass; baseline `C` line). Every other suite: fixed 0 / regressions 0, and

@@ -9,13 +9,18 @@
 //! row for pivots, docs/research/xlsx-round-trip-2026-11-04.md, now `Modelled`).
 //!
 //! A cache the export cannot write faithfully is dropped with every pivot on it, never written
-//! half: a grouped field (T-4734) or no worksheet source. A pivot whose sheet or cache is gone is
+//! half: a grouping of a shape the export does not write ([`groups`], T-4734) or no worksheet
+//! source. A pivot whose sheet or cache is gone is
 //! dropped too. Each drop is logged to stderr, as the importer logs a skipped part.
 //!
 //! Parts are numbered from 1 in the order written, and cache `n` has `cacheId` `n`: ids only
 //! cross-reference (SPEC-0033 D4), and the import maps a pivot to its cache by them.
 
 mod cache;
+#[cfg(test)]
+mod group_tests;
+mod groups;
+mod show_as;
 mod table;
 #[cfg(test)]
 mod tests;

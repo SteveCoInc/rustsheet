@@ -239,7 +239,8 @@ lays the pivot out (a render or refresh drops them), then the engine's when its 
 geometry the pivot holds. A cache is held to the import limits, and one with case-variant texts in a field is
 dropped (Excel for the web calls it corrupt). An axis field with no `<items>` gets one per cache
 item plus its subtotal lines (ClosedXML's invariant), a data field's pivot field `dataField="1"`. A grouped cache is
-dropped with its pivots until T-4734; a cache definition's unread rest is T-4735's. The source-preserving tiers
+written with its `<fieldGroup>`s in the shapes Excel saves, from each range-grouped field's kept own values
+(`CacheField::ungrouped`), and dropped with its pivots for any other shape (T-4734); a cache definition's unread rest is T-4735's. The source-preserving tiers
 (SPEC-0034) still keep an unchanged pivot's own parts byte for byte.
 
 ### PivotChart data (T-4186)
@@ -296,6 +297,18 @@ As built (T-4178, `crates/rustsheet/src/edit/pivot.rs`, `crates/rustsheet/src/pi
   items or `showAll`): `Transaction.add_pivot_table(name, **definition)`, `set_pivot_table(sheet, name,
   **definition)`, `refresh_pivot_table(sheet, name)`, `Workbook.pivot_table(sheet, name)` (a dict) and
   `Workbook.pivot_table_cells(sheet, name)` (A1 to value).
+- As built (T-4184, `crates/rustsheet/src/pivot_view.rs`): drill-down is not `PivotView::records`
+  but `Workbook::pivot_cell_records(sheet, name, cell) -> Result<Vec<u32>, PivotError>`, the same shape
+  as the cells: the cache record indices behind a value cell, in record order, from the engine's
+  `pivot::records_behind` (`layout/records.rs`) over the pivot laid out as `pivot_table_cells` lays it
+  out (filters applied; a subtotal's records are those under its item, a grand total's every kept
+  record). A cell that is no value cell (a label, a header, outside the pivot, on another sheet, any cell
+  of a pivot with no data field or collapsed to `#SPILL!`) is `PivotError::NotAValueCell`; a value cell
+  no record reaches gives none. It returns at most `MAX_RECORDS` indices, and its work is one
+  `PivotBudget::default()`, spent on the layout and then on the records. Python:
+  `Workbook.pivot_cell_records(sheet, name, a1) -> list[int]`. Excel's Show Details sheet (its row order
+  and columns) is unprobed (pivots.md "Show Details", T-4879). Top-N, value and label filters are not applied
+  yet (T-4165). The pivot is computed and laid out twice, for the plan and for the records (T-4896).
 
 ### Untrusted-input limits
 Every pivot part comes from an untrusted file (directive 5). The import limits of SPEC-0015 stay (`MAX_RECORDS`,

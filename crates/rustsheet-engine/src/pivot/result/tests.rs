@@ -12,7 +12,7 @@ use crate::pivot::probe_cases::{
     address, diagonal, position, probe_pivot, read, subtotal_named, T4634_SHEETS,
 };
 use crate::pivot::{
-    CacheBuilder, CellArea, DataField, ItemType, PageField, PivotItem, RecordValue,
+    AxisField, CacheBuilder, CellArea, DataField, ItemType, PageField, PivotItem, RecordValue,
     MAX_RECORD_VALUES,
 };
 
@@ -362,4 +362,40 @@ fn a_pivot_with_no_data_field_still_pays_for_its_cells() {
         compute(&table, &cache, &mut work),
         Err(PivotComputeError::Limit)
     );
+}
+
+#[test]
+fn a_sum_over_blank_records_alone_is_blank() {
+    // probes/t4164-pivot-value-sort SEd B7: item D's one record has a blank value; its Sum shows
+    // blank, not 0. A Count of the same cell keeps its 0 (UNVERIFIED, T-4633), and a total that
+    // covers a number is that number.
+    let mut builder = CacheBuilder::new(None, MAX_RECORD_VALUES);
+    builder.add_field("K".to_string()).unwrap();
+    builder.add_field("V".to_string()).unwrap();
+    for (k, v) in [
+        ("a", CacheItem::Number(1.0)),
+        ("b", CacheItem::Missing),
+        ("b", CacheItem::Missing),
+    ] {
+        builder
+            .push_record(vec![
+                RecordValue::Inline(CacheItem::Text(k.to_string())),
+                RecordValue::Inline(v),
+            ])
+            .unwrap();
+    }
+    let cache = builder.finish();
+    let (_, mut table) = small(&[], &[]);
+    table.fields = vec![
+        PivotField::new(Some(Axis::Row), cache.fields[0].items.len()),
+        PivotField::new(None, cache.fields[1].items.len()),
+    ];
+    let mut work = MAX_PIVOT_WORK;
+    let result = compute(&table, &cache, &mut work).unwrap();
+    let b = result.rows().find(&[1]).unwrap();
+    let a = result.rows().find(&[0]).unwrap();
+    assert_eq!(result.value(b, 0, 0), None);
+    assert_eq!(result.value(a, 0, 0), Some(Ok(1.0)));
+    assert_eq!(result.value(0, 0, 0), Some(Ok(1.0)));
+    assert_eq!(result.value_as(b, 0, 0, Aggregate::Count), Some(Ok(0.0)));
 }

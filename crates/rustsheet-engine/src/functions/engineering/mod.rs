@@ -33,7 +33,7 @@ impl Model {
         if args
             .iter()
             .take(strict)
-            .any(|a| self.is_omitted_argument(a))
+            .any(|a| self.is_empty_argument(a))
         {
             return Err(CalcResult::new_error(Error::NA, cell, String::new()));
         }
@@ -41,7 +41,7 @@ impl Model {
         while end > strict
             && args
                 .get(end - 1)
-                .is_some_and(|a| self.is_omitted_argument(a))
+                .is_some_and(|a| self.is_empty_argument(a))
         {
             end -= 1;
         }

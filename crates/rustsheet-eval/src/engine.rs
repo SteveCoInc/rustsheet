@@ -39,6 +39,15 @@ pub trait Evaluated {
     fn pivot_places(&self) -> Vec<rustsheet::PivotPlace> {
         Vec::new()
     }
+    /// The cells the engine would write for the pivot `name` on `sheet` if it laid it out again
+    /// from its saved definition and cache, changing nothing (T-4131): by cell, empty ones left
+    /// out.
+    ///
+    /// # Errors
+    /// Why the pivot cannot be laid out; by default, that the engine cannot lay out pivots.
+    fn pivot_cells(&self, _sheet: &str, _name: &str) -> Result<Vec<(Addr, Value)>, String> {
+        Err("this engine cannot lay out a pivot".into())
+    }
 }
 
 pub trait Engine: Sync {
@@ -112,9 +121,36 @@ impl RustSheetEvaluated {
     }
 }
 
+/// A facade value as the harness scores it; text as the facade gives it.
+fn harness_value(value: ApiValue) -> Value {
+    match value {
+        ApiValue::Number(n) => Value::Number(n),
+        ApiValue::Text(s) => Value::Text(s.to_string()),
+        ApiValue::Bool(b) => Value::Bool(b),
+        ApiValue::Error(e) => Value::Error(e.kind.stored_literal().to_string()),
+        // `ApiValue` is non-exhaustive; `Empty` and future variants score as empty.
+        _ => Value::Empty,
+    }
+}
+
 impl Evaluated for RustSheetEvaluated {
     fn pivot_places(&self) -> Vec<rustsheet::PivotPlace> {
         self.workbook.pivot_places()
+    }
+
+    fn pivot_cells(&self, sheet: &str, name: &str) -> Result<Vec<(Addr, Value)>, String> {
+        let id = self.workbook.sheet_id(sheet).map_err(|e| e.to_string())?;
+        let cells = (self.workbook.pivot_table_cells(id, name)).map_err(|e| e.to_string())?;
+        Ok(cells
+            .into_iter()
+            .map(|(cell, value)| {
+                let at = Addr {
+                    row: cell.row + 1,
+                    col: cell.col + 1,
+                };
+                (at, harness_value(value))
+            })
+            .collect())
     }
 
     fn sheet_names(&self) -> Vec<String> {
@@ -124,15 +160,11 @@ impl Evaluated for RustSheetEvaluated {
     fn value(&self, sheet: &str, addr: Addr) -> Option<Value> {
         let cell = self.cell(sheet, addr)?;
         Some(match self.workbook.value(cell).ok()? {
-            ApiValue::Number(n) => Value::Number(n),
             ApiValue::Text(s) => Value::Text(match self.workbook.text_utf16(cell) {
                 Ok(Some(units)) => render_lone_units(&units),
                 _ => s.to_string(),
             }),
-            ApiValue::Bool(b) => Value::Bool(b),
-            ApiValue::Error(e) => Value::Error(e.kind.stored_literal().to_string()),
-            // `ApiValue` is non-exhaustive; `Empty` and future variants score as empty.
-            _ => Value::Empty,
+            other => harness_value(other),
         })
     }
 

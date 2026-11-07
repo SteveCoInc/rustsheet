@@ -13,7 +13,7 @@ use crate::pivot::probe_cases::{
     address, builder_cache, position, probe_model, probe_pivot, probe_pivot_over, read, sheet,
 };
 use crate::pivot::{
-    Axis, CacheField, CacheItem, CacheSource, OpaqueEntry, OpaqueNode, OpaqueOwner,
+    AutoSortScope, Axis, CacheField, CacheItem, CacheSource, OpaqueEntry, OpaqueNode, OpaqueOwner,
 };
 
 const SPIKE: &str = "t4128-pivot-spike";
@@ -371,6 +371,31 @@ fn which_unread_parts_hold_field_indices() {
     }
     assert!(kept(definition, attributes(r#" name="open"#)));
     assert!(kept(definition, attributes(r#" a="1">"#)));
+}
+
+#[test]
+fn a_value_sort_scope_follows_its_fields() {
+    let (_, mut table) = probe_pivot(&read(SPIKE, "case"), "S");
+    let old = cache_of(&["Region", "Product", "Sales"]);
+    let scope = |field: u32| AutoSortScope {
+        data_field: Some(0),
+        references: vec![SortReference {
+            field,
+            items: vec![1],
+        }],
+    };
+    // Region's sort by Product's item x 1: both renumber, the item index stays.
+    table.fields[0].auto_sort = Some(scope(1));
+    let new = cache_of(&["Day", "SALES", "region", "Product"]);
+    let remapped = remap(&table, &old, &new).unwrap();
+    assert_eq!(remapped.fields[2].auto_sort, Some(scope(3)));
+    assert_eq!(remapped.fields[0].auto_sort, None);
+    // A reference to a field gone from the source drops the sort.
+    table.fields[0].auto_sort = Some(scope(2));
+    table.data_fields.clear();
+    let without_sales = cache_of(&["Product", "Region", "Day"]);
+    let dropped = remap(&table, &old, &without_sales).unwrap();
+    assert_eq!(dropped.fields[1].auto_sort, None);
 }
 
 #[test]

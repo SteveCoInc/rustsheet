@@ -1,0 +1,482 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-2085 (SPEC-0015 unknowns 1, 2, 8, 15, 16): GETPIVOTDATA on builder-v2 pivots Excel renders on open. Data!A1:D9 holds eight records (Region, Product, Sales, Units; West/C has none). M: rows Region, Values on columns, data fields Sum of Sales, Count of Sales and Sum of Units (the source name Sales is shared by two). Q!A1:A13 ask M by source name, caption, a blank cell (Q!Z1), \"\", the Values field as a pair or as data_field. Q!A14:A16 ask the one-data-field pivot S1 with \"\" and a blank cell. A_<aggregate> pivots (rows Region, columns Product, Sales under count, countNums, max, min, product, stdDev, stdDevp, var, varp): Q columns B:J rows 1-6 ask the grand total, East, East/A (10, 4), West/A (7, 9), East/C (2, one record) and West/C (no records). OV (Data2): Sum and Product of Big where East is 1E308+1E308 and West 1E200*1E200 (overflow); Q!K1:L3.",
+  "tags": [
+    "probe",
+    "getpivotdata",
+    "pivot",
+    "T-2085",
+    "M6"
+  ],
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "Region",
+        "B1": "Product",
+        "C1": "Sales",
+        "D1": "Units",
+        "A2": "East",
+        "B2": "A",
+        "C2": 10,
+        "D2": 1,
+        "A3": "East",
+        "B3": "A",
+        "C3": 4,
+        "D3": 2,
+        "A4": "East",
+        "B4": "B",
+        "C4": 5,
+        "D4": 3,
+        "A5": "West",
+        "B5": "A",
+        "C5": 7,
+        "D5": 4,
+        "A6": "West",
+        "B6": "B",
+        "C6": 3,
+        "D6": 5,
+        "A7": "West",
+        "B7": "B",
+        "C7": 6,
+        "D7": 6,
+        "A8": "East",
+        "B8": "C",
+        "C8": 2,
+        "D8": 7,
+        "A9": "West",
+        "B9": "A",
+        "C9": 9,
+        "D9": 8
+      }
+    },
+    {
+      "name": "Data2",
+      "cells": {
+        "A1": "Region",
+        "B1": "Big",
+        "A2": "East",
+        "B2": 1e+308,
+        "A3": "East",
+        "B3": 1e+308,
+        "A4": "West",
+        "B4": 1e+200,
+        "A5": "West",
+        "B5": 1e+200
+      }
+    },
+    {
+      "name": "M",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "Multi",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Values"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "sum",
+                "name": "Sum of Sales"
+              },
+              {
+                "field": "Sales",
+                "subtotal": "count",
+                "name": "Count of Sales"
+              },
+              {
+                "field": "Units",
+                "subtotal": "sum",
+                "name": "Sum of Units"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "S1",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "One",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "sum",
+                "name": "Sum of Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A_count",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "P_count",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "count",
+                "name": "count Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A_countNums",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "P_countNums",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "countNums",
+                "name": "countNums Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A_max",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "P_max",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "max",
+                "name": "max Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A_min",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "P_min",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "min",
+                "name": "min Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A_product",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "P_product",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "product",
+                "name": "product Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A_stdDev",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "P_stdDev",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "stdDev",
+                "name": "stdDev Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A_stdDevp",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "P_stdDevp",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "stdDevp",
+                "name": "stdDevp Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A_var",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "P_var",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "var",
+                "name": "var Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A_varp",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "P_varp",
+          "source": "Data!A1:D9",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "columns": [
+              "Product"
+            ],
+            "data": [
+              {
+                "field": "Sales",
+                "subtotal": "varp",
+                "name": "varp Sales"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "OV",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "Over",
+          "source": "Data2!A1:B5",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "data": [
+              {
+                "field": "Big",
+                "subtotal": "sum",
+                "name": "sum Big"
+              },
+              {
+                "field": "Big",
+                "subtotal": "product",
+                "name": "product Big"
+              }
+            ],
+            "columns": [
+              "Values"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Q",
+      "cells": {
+        "A1": "=GETPIVOTDATA(\"Sales\",M!$A$3)",
+        "A2": "=GETPIVOTDATA(\"Sum of Sales\",M!$A$3)",
+        "A3": "=GETPIVOTDATA(\"Count of Sales\",M!$A$3)",
+        "A4": "=GETPIVOTDATA(\"Units\",M!$A$3)",
+        "A5": "=GETPIVOTDATA(\"Sum of Units\",M!$A$3,\"Region\",\"East\")",
+        "A6": "=GETPIVOTDATA(Q!$Z$1,M!$A$3)",
+        "A7": "=GETPIVOTDATA(\"\",M!$A$3)",
+        "A8": "=GETPIVOTDATA(\"Sales\",M!$A$3,\"Values\",\"Sum of Sales\")",
+        "A9": "=GETPIVOTDATA(\"Sales\",M!$A$3,\"Values\",\"Count of Sales\")",
+        "A10": "=GETPIVOTDATA(\"Values\",M!$A$3)",
+        "A11": "=GETPIVOTDATA(\"Sales\",M!$A$3,\"Region\",\"West\",\"Values\",\"Sum of Units\")",
+        "A12": "=GETPIVOTDATA(\"Count of Sales\",M!$A$3,\"Region\",\"West\")",
+        "A13": "=GETPIVOTDATA(\"sum of units\",M!$A$3,\"Region\",\"West\")",
+        "A14": "=GETPIVOTDATA(\"\",S1!$A$3)",
+        "A15": "=GETPIVOTDATA(Q!$Z$1,S1!$A$3)",
+        "A16": "=GETPIVOTDATA(\"\",S1!$A$3,\"Region\",\"East\")",
+        "A17": "=GETPIVOTDATA(S1!$Z$1,S1!$A$3)",
+        "A18": "=GETPIVOTDATA(S1!$C$3,S1!$A$3)",
+        "A19": "=ISBLANK(S1!$C$3)",
+        "A20": "=GETPIVOTDATA(M!$C$3,M!$A$3)",
+        "B1": "=GETPIVOTDATA(\"count Sales\",A_count!$A$3)",
+        "B2": "=GETPIVOTDATA(\"count Sales\",A_count!$A$3,\"Region\",\"East\")",
+        "B3": "=GETPIVOTDATA(\"count Sales\",A_count!$A$3,\"Region\",\"East\",\"Product\",\"A\")",
+        "B4": "=GETPIVOTDATA(\"count Sales\",A_count!$A$3,\"Region\",\"West\",\"Product\",\"A\")",
+        "B5": "=GETPIVOTDATA(\"count Sales\",A_count!$A$3,\"Region\",\"East\",\"Product\",\"C\")",
+        "B6": "=GETPIVOTDATA(\"count Sales\",A_count!$A$3,\"Region\",\"West\",\"Product\",\"C\")",
+        "C1": "=GETPIVOTDATA(\"countNums Sales\",A_countNums!$A$3)",
+        "C2": "=GETPIVOTDATA(\"countNums Sales\",A_countNums!$A$3,\"Region\",\"East\")",
+        "C3": "=GETPIVOTDATA(\"countNums Sales\",A_countNums!$A$3,\"Region\",\"East\",\"Product\",\"A\")",
+        "C4": "=GETPIVOTDATA(\"countNums Sales\",A_countNums!$A$3,\"Region\",\"West\",\"Product\",\"A\")",
+        "C5": "=GETPIVOTDATA(\"countNums Sales\",A_countNums!$A$3,\"Region\",\"East\",\"Product\",\"C\")",
+        "C6": "=GETPIVOTDATA(\"countNums Sales\",A_countNums!$A$3,\"Region\",\"West\",\"Product\",\"C\")",
+        "D1": "=GETPIVOTDATA(\"max Sales\",A_max!$A$3)",
+        "D2": "=GETPIVOTDATA(\"max Sales\",A_max!$A$3,\"Region\",\"East\")",
+        "D3": "=GETPIVOTDATA(\"max Sales\",A_max!$A$3,\"Region\",\"East\",\"Product\",\"A\")",
+        "D4": "=GETPIVOTDATA(\"max Sales\",A_max!$A$3,\"Region\",\"West\",\"Product\",\"A\")",
+        "D5": "=GETPIVOTDATA(\"max Sales\",A_max!$A$3,\"Region\",\"East\",\"Product\",\"C\")",
+        "D6": "=GETPIVOTDATA(\"max Sales\",A_max!$A$3,\"Region\",\"West\",\"Product\",\"C\")",
+        "E1": "=GETPIVOTDATA(\"min Sales\",A_min!$A$3)",
+        "E2": "=GETPIVOTDATA(\"min Sales\",A_min!$A$3,\"Region\",\"East\")",
+        "E3": "=GETPIVOTDATA(\"min Sales\",A_min!$A$3,\"Region\",\"East\",\"Product\",\"A\")",
+        "E4": "=GETPIVOTDATA(\"min Sales\",A_min!$A$3,\"Region\",\"West\",\"Product\",\"A\")",
+        "E5": "=GETPIVOTDATA(\"min Sales\",A_min!$A$3,\"Region\",\"East\",\"Product\",\"C\")",
+        "E6": "=GETPIVOTDATA(\"min Sales\",A_min!$A$3,\"Region\",\"West\",\"Product\",\"C\")",
+        "F1": "=GETPIVOTDATA(\"product Sales\",A_product!$A$3)",
+        "F2": "=GETPIVOTDATA(\"product Sales\",A_product!$A$3,\"Region\",\"East\")",
+        "F3": "=GETPIVOTDATA(\"product Sales\",A_product!$A$3,\"Region\",\"East\",\"Product\",\"A\")",
+        "F4": "=GETPIVOTDATA(\"product Sales\",A_product!$A$3,\"Region\",\"West\",\"Product\",\"A\")",
+        "F5": "=GETPIVOTDATA(\"product Sales\",A_product!$A$3,\"Region\",\"East\",\"Product\",\"C\")",
+        "F6": "=GETPIVOTDATA(\"product Sales\",A_product!$A$3,\"Region\",\"West\",\"Product\",\"C\")",
+        "G1": "=GETPIVOTDATA(\"stdDev Sales\",A_stdDev!$A$3)",
+        "G2": "=GETPIVOTDATA(\"stdDev Sales\",A_stdDev!$A$3,\"Region\",\"East\")",
+        "G3": "=GETPIVOTDATA(\"stdDev Sales\",A_stdDev!$A$3,\"Region\",\"East\",\"Product\",\"A\")",
+        "G4": "=GETPIVOTDATA(\"stdDev Sales\",A_stdDev!$A$3,\"Region\",\"West\",\"Product\",\"A\")",
+        "G5": "=GETPIVOTDATA(\"stdDev Sales\",A_stdDev!$A$3,\"Region\",\"East\",\"Product\",\"C\")",
+        "G6": "=GETPIVOTDATA(\"stdDev Sales\",A_stdDev!$A$3,\"Region\",\"West\",\"Product\",\"C\")",
+        "H1": "=GETPIVOTDATA(\"stdDevp Sales\",A_stdDevp!$A$3)",
+        "H2": "=GETPIVOTDATA(\"stdDevp Sales\",A_stdDevp!$A$3,\"Region\",\"East\")",
+        "H3": "=GETPIVOTDATA(\"stdDevp Sales\",A_stdDevp!$A$3,\"Region\",\"East\",\"Product\",\"A\")",
+        "H4": "=GETPIVOTDATA(\"stdDevp Sales\",A_stdDevp!$A$3,\"Region\",\"West\",\"Product\",\"A\")",
+        "H5": "=GETPIVOTDATA(\"stdDevp Sales\",A_stdDevp!$A$3,\"Region\",\"East\",\"Product\",\"C\")",
+        "H6": "=GETPIVOTDATA(\"stdDevp Sales\",A_stdDevp!$A$3,\"Region\",\"West\",\"Product\",\"C\")",
+        "I1": "=GETPIVOTDATA(\"var Sales\",A_var!$A$3)",
+        "I2": "=GETPIVOTDATA(\"var Sales\",A_var!$A$3,\"Region\",\"East\")",
+        "I3": "=GETPIVOTDATA(\"var Sales\",A_var!$A$3,\"Region\",\"East\",\"Product\",\"A\")",
+        "I4": "=GETPIVOTDATA(\"var Sales\",A_var!$A$3,\"Region\",\"West\",\"Product\",\"A\")",
+        "I5": "=GETPIVOTDATA(\"var Sales\",A_var!$A$3,\"Region\",\"East\",\"Product\",\"C\")",
+        "I6": "=GETPIVOTDATA(\"var Sales\",A_var!$A$3,\"Region\",\"West\",\"Product\",\"C\")",
+        "J1": "=GETPIVOTDATA(\"varp Sales\",A_varp!$A$3)",
+        "J2": "=GETPIVOTDATA(\"varp Sales\",A_varp!$A$3,\"Region\",\"East\")",
+        "J3": "=GETPIVOTDATA(\"varp Sales\",A_varp!$A$3,\"Region\",\"East\",\"Product\",\"A\")",
+        "J4": "=GETPIVOTDATA(\"varp Sales\",A_varp!$A$3,\"Region\",\"West\",\"Product\",\"A\")",
+        "J5": "=GETPIVOTDATA(\"varp Sales\",A_varp!$A$3,\"Region\",\"East\",\"Product\",\"C\")",
+        "J6": "=GETPIVOTDATA(\"varp Sales\",A_varp!$A$3,\"Region\",\"West\",\"Product\",\"C\")",
+        "K1": "=GETPIVOTDATA(\"sum Big\",OV!$A$3)",
+        "L1": "=GETPIVOTDATA(\"product Big\",OV!$A$3)",
+        "K2": "=GETPIVOTDATA(\"sum Big\",OV!$A$3,\"Region\",\"East\")",
+        "L2": "=GETPIVOTDATA(\"product Big\",OV!$A$3,\"Region\",\"East\")",
+        "K3": "=GETPIVOTDATA(\"sum Big\",OV!$A$3,\"Region\",\"West\")",
+        "L3": "=GETPIVOTDATA(\"product Big\",OV!$A$3,\"Region\",\"West\")"
+      }
+    }
+  ],
+  "expected": {}
+}

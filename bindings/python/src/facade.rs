@@ -367,7 +367,7 @@ pub(crate) fn name_of(names: &[(SheetId, String)], id: SheetId) -> Option<&Strin
     names.iter().find(|(i, _)| *i == id).map(|(_, n)| n)
 }
 
-fn sheet_names(wb: &Workbook) -> Vec<(SheetId, String)> {
+pub(crate) fn sheet_names(wb: &Workbook) -> Vec<(SheetId, String)> {
     wb.sheets().into_iter().map(|s| (s.id, s.name)).collect()
 }
 
@@ -667,14 +667,23 @@ impl PyWorkbook {
         sheet: &str,
         name: &str,
     ) -> PyResult<Bound<'py, PyDict>> {
-        let (cells, names) = self
-            .read(py, |wb| {
-                let id = wb.sheet_id(sheet)?;
-                let cells = wb.pivot_table_cells(id, name)?;
-                Ok((cells, sheet_names(wb)))
-            })
-            .map_err(|e: EditError| edit_err(&e))?;
+        let (cells, names) =
+            (self.read(py, |wb| pivots::cells(wb, sheet, name))).map_err(|e| edit_err(&e))?;
         pivots::cells_to_py(py, cells, &names)
+    }
+
+    /// The source records behind the value cell `a1` (`B5`, or `Sheet!B5`) of the pivot `name` on
+    /// `sheet`, as record indices in record order (0 for the row below the source's header).
+    /// A cell that is no value cell, an unknown pivot or one past a limit raises `EditError`.
+    fn pivot_cell_records(
+        &self,
+        py: Python<'_>,
+        sheet: &str,
+        name: &str,
+        a1: &str,
+    ) -> PyResult<Vec<u32>> {
+        let records = self.read(py, |wb| pivots::cell_records(wb, sheet, name, a1));
+        records.map_err(|e| edit_err(&e))
     }
 
     /// The change set of the last edit as `{"inputs": [...], "values": [...], "sheets": [...]}`;

@@ -1,4 +1,4 @@
-use super::reference_operators::{at_outside, is_reference_operand, wrong_range_shape};
+use super::reference_operators::{at_outside, wrong_range_shape};
 use super::{for_each_chain_operand_mut, Node};
 use crate::functions::lift::lifting_table_functions;
 use crate::functions::lookup_and_reference::lifts_into_reference_elements;
@@ -414,7 +414,7 @@ fn criteria_static_result(args: &[Node], first: usize) -> StaticResult {
 /// once per element of an array of references in a range argument
 /// (`Function::per_reference_element`; SPEC-0014 rule 6,
 /// `COUNTIF(OFFSET(A1,{0;1},0),">0")` spills 1, 1, probes/reference-lift-consumers E57): a range
-/// argument that is a lifted OFFSET or INDIRECT, or an XLOOKUP with an `if_not_found`
+/// argument that is a lifted OFFSET or INDIRECT, or an XLOOKUP with a lifted `lookup_value`
 /// ([`lifts_into_reference_elements`]), gives the shape, the criteria
 /// (`args[first]`, `args[first + 2]`, ...) only without one. Anything else does not:
 /// `SUMIF(IF(TRUE,A1:A6),"a",B1:B6)` stays a scalar call (probes/legacy-if-arm-range-argument U12).
@@ -429,15 +429,12 @@ fn criteria_and_grid_static_result(kind: &Function, args: &[Node], first: usize)
             return None;
         }
         match arg.ungrouped() {
-            // An XLOOKUP's grid has its lookup_value's shape, one cell gives none, and only a
-            // reference `if_not_found` builds it (the engine's `NotFound::Range`).
+            // An XLOOKUP's grid has its lookup_value's shape, one cell gives none, whatever its
+            // `if_not_found` (probes/t4742-countif-array-range-arg A10:C22).
             Node::FunctionKind {
                 kind: Function::Xlookup,
                 args,
             } => {
-                if !args.get(3).is_some_and(is_reference_operand) {
-                    return None;
-                }
                 let (rows, columns) = run_static_analysis_on_node(args.first()?).counts()?;
                 ((rows, columns) != (1, 1)).then_some(StaticResult::Array(rows, columns))
             }

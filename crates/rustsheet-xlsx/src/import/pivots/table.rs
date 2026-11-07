@@ -22,6 +22,7 @@ use rustsheet_engine::pivot::{
 use super::super::package::ImportLimits;
 use super::super::worksheets::parse_range;
 use super::filters::read_filters;
+use super::sort::read_auto_sort;
 use super::{
     at, attribute, index_attribute, local_name, shown, skip, walk, walk_keeping, Skip, Tag,
     MAX_AXIS_FIELDS, MAX_DATA_FIELDS,
@@ -317,19 +318,21 @@ impl TableReader<'_> {
     ///   `fillDownLabelsDefault` is not read: Excel fills no existing field down for it (t4129 X14,
     ///   t4698 TW, TWE, OW).
     /// - The definition's `<filters>` are its typed filters (`filters::read_filters`, T-4165).
+    /// - A `<pivotField>`'s `autoSortScope` is its value sort's scope (`sort::read_auto_sort`,
+    ///   T-4827).
     fn read_extension(&mut self, owner: OpaqueOwner, xml: &str) -> Result<(), Skip> {
         match owner {
             OpaqueOwner::DataField(index) => {
-                let mut mode = None;
-                each_x14_element(xml, "dataField", |element| {
-                    if let Some(name) = attribute(element, "pivotShowAs")? {
-                        mode = Some(show_data_as(&name)?);
-                    }
-                    Ok(())
-                })?;
+                let mode = data_field_x14_show_as(xml).map_err(Skip)?;
                 let data = self.table.data_fields.get_mut(index as usize);
                 if let (Some(mode), Some(data)) = (mode, data) {
                     data.show_data_as = mode;
+                }
+            }
+            OpaqueOwner::Field(index) if element_name(xml) == "autoSortScope" => {
+                let scope = read_auto_sort(xml)?;
+                if let Some(field) = self.table.fields.get_mut(index as usize) {
+                    field.auto_sort = Some(scope);
                 }
             }
             OpaqueOwner::Field(index) => {
@@ -390,6 +393,9 @@ impl TableReader<'_> {
             page_wrap: number(element, "pageWrap")?.unwrap_or(defaults.page_wrap),
             page_over_then_down: flag(element, "pageOverThenDown", defaults.page_over_then_down)?,
             grid_drop_zones: flag(element, "gridDropZones", defaults.grid_drop_zones)?,
+            // Read, and kept verbatim for export (not in the root's typed attributes), as a
+            // field's `autoShow` is (T-4768).
+            custom_list_sort: flag(element, "customListSort", defaults.custom_list_sort)?,
         };
         Ok(())
     }
@@ -596,6 +602,21 @@ fn each_x14_element(
         }
         Ok(())
     })
+}
+
+/// The x14 `pivotShowAs` mode `xml`, an element kept inside a `<dataField>`, names (the last, if
+/// several), or the reason it cannot be read: an unknown mode or malformed XML. The importer reads
+/// a field's mode with it, and the exporter checks a kept extension against the model (T-4759).
+pub(crate) fn data_field_x14_show_as(xml: &str) -> Result<Option<ShowDataAs>, String> {
+    let mut mode = None;
+    let read = each_x14_element(xml, "dataField", |element| {
+        if let Some(name) = attribute(element, "pivotShowAs")? {
+            mode = Some(show_data_as(&name)?);
+        }
+        Ok(())
+    });
+    read.map_err(|skip| skip.0)?;
+    Ok(mode)
 }
 
 /// A `<dataField>` but its `fld`, which the caller checks against the cache.

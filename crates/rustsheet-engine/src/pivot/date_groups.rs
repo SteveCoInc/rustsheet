@@ -50,6 +50,21 @@ impl DateGroupBy {
         })
     }
 
+    /// The `groupBy` attribute's value, which [`DateGroupBy::parse`] reads back (the xlsx
+    /// export, T-4734).
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            DateGroupBy::Seconds => "seconds",
+            DateGroupBy::Minutes => "minutes",
+            DateGroupBy::Hours => "hours",
+            DateGroupBy::Days => "days",
+            DateGroupBy::Months => "months",
+            DateGroupBy::Quarters => "quarters",
+            DateGroupBy::Years => "years",
+        }
+    }
+
     /// How many group items the grouping has: the in-range ones plus the `<start` and `>end`
     /// items around them. `None` for years, whose count follows the range.
     fn fixed_item_count(self) -> Option<usize> {
@@ -214,7 +229,9 @@ fn in_range(value: f64, low: f64, high: f64) -> Option<usize> {
 
 /// Field `base` grouped by `groups`, `labels` being its `<groupItems>` labels: the grouped
 /// field's items are the labels and each record's item is the group its date falls in
-/// ([`DateGroups::item`]). A blank value goes in item 0, the label 59932 gives `(blank)`.
+/// ([`DateGroups::item`]); a caller grouping `base` in place keeps its values with
+/// [`keep_ungrouped`](super::keep_ungrouped) (T-4734). A blank value goes in item 0, the label
+/// 59932 gives `(blank)`.
 /// Which item Excel uses is UNVERIFIED: a refresh drops the date grouping of a field holding a
 /// blank (T-4236), so no probe can say. The one grouping step for dates, shared by the xlsx
 /// importer (`apply_groups`) and `Txn::add_pivot_table`.
@@ -254,6 +271,8 @@ pub fn group_by_dates(
         number_groups: None,
         date_groups: Some(groups),
         added_group: None,
+        formula: None,
+        ungrouped: None,
     })
 }
 
@@ -308,6 +327,8 @@ pub fn ungroup_dates(base: &CacheField) -> Result<CacheField, DateGroupError> {
         number_groups: None,
         date_groups: None,
         added_group: None,
+        formula: None,
+        ungrouped: None,
     })
 }
 
@@ -458,6 +479,8 @@ mod tests {
             number_groups: None,
             date_groups: None,
             added_group: None,
+            formula: None,
+            ungrouped: None,
         };
         let field = ungroup_dates(&base).unwrap();
         assert_eq!(

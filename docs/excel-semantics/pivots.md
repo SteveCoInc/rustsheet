@@ -66,7 +66,8 @@ committed; recalc input_sha256 3eed9bc4…, 00144ae5… and c81db4c1…, in the 
   does is open (T-4177).
 Not checked, all UNVERIFIED (T-4654): the exported shared-item order is the engine's (a cache's old items first,
 new ones appended), not the order Excel was seen to save (source order first, stale items after; "Item casing when
-cache and source disagree, and date items", t4612); `containsNonDate` and `minDate`/`maxDate` are never written.
+cache and source disagree, and date items", t4612); `containsNonDate` and `minDate`/`maxDate` are never written, except on a field grouped in place by dates (T-4734;
+next entry).
 The cache definition's unread attributes and elements are not kept: the export writes `numFmtId="0"`, the builder's
 version attributes and no refresh metadata or `extLst` (T-4735).
 Status: UNVERIFIED (probe pending: T-4177). The three runs above are scratch observations; T-4177's suite commits
@@ -77,6 +78,50 @@ drops them, `OpaqueEntry::is_layout_lines`), then the engine's; and it drops, wi
 holds two texts that differ only in case (next entry). A render that collapses to `#SPILL!` drops the saved lines
 too, and the export then writes the definition with no `rowItems`/`colItems`; what Excel saves for a collapsed
 pivot is UNVERIFIED (probe pending: T-4177).
+
+## Excel for the web opens engine-exported grouped pivot caches
+Rule: Excel for the web opens, without repair, and renders a refreshOnLoad pivot whose grouped cache the engine's
+export wrote (T-4734) in the case builder's shapes (`tools/src/rustsheet_tools/pivot_groups.py`, read off
+Excel-authored caches; its golden parts are the builder's output, not files Excel saved):
+- a field grouped in place by a range lists its own values as shared items (`<x v>` records), then
+  `<fieldGroup [par] base>` (`base` itself) with `<rangePr autoStart="0" autoEnd="0" ...>` (`startNum`, `endNum`,
+  `groupInterval`, or `groupBy`, `startDate`, `endDate`) and its group items as `<groupItems>`;
+- a date level Excel adds (`Quarters`, `Years`) is a `databaseField="0"` cacheField with no shared items and
+  `<fieldGroup base>`, its `rangePr` and `groupItems`; the in-place field's `par` names the last level;
+- a manual group is a `databaseField="0"` cacheField with `<fieldGroup base>`, a `<discretePr>` entry per base
+  shared item and `<groupItems>`; the base field has only `<fieldGroup par/>`.
+A field grouped in place by dates needs `containsNonDate="0"` (the schema's default is on) and `minDate`/`maxDate`
+on its `sharedItems`: without them Excel's refresh on open dropped the date grouping and listed each date (DC
+showed `44016`, `44211` where the months belong; every GETPIVOTDATA on a month or level was `#REF!`). The export
+writes them for such a field whose values are all dates, `minDate` and `maxDate` its first and last date. What Excel
+saved for the same field is in the sidecar eval/suites/probes/cases/t4170-pivot-date-levels.oracle.json
+(`pivots[0].cache_fields[0].shared_flags`: `containsNonDate="0"`, `minDate` 2018-12-15, its first date, and
+`maxDate` 2021-01-16, a day past its last date 2021-01-15). Whether the last-plus-one-day `maxDate` matters is
+T-4654's.
+Evidence: T-4734 oracle runs (excel-graph, 2026-11-07, `rustsheet-oracle` `_recalc_cached` of engine exports, not
+committed): the probe workbooks built from their case specs, loaded by the importer and saved by the regenerating
+export (`save_xlsx_to_writer`), each compared with the probe's sidecar:
+- t4170-pivot-manual-groups (input sha256 df3fc476…): 7 pivots, all 196 pivot cells and 19 GETPIVOTDATA cells
+  equal the sidecar;
+- t4170-pivot-date-levels: first run (no `containsNonDate`, 0c8366fd…) 402 of 410 pivot cells and 14 of 21 formula
+  cells differ, the months dropped; with `containsNonDate="0"`, `minDate`, `maxDate` (e0579e72…) all 410 pivot
+  cells and 21 formula cells equal;
+- t4236-pivot-date-groups-no-blank (f3b660b2…): all 349 formula cells equal (179 differed before the flags);
+- t4228-pivot-range-groups (2b8ff5a0…): all 168 formula cells equal; t4128-pivot-spike (2371c560…, G a numeric
+  range group): its 3 exported pivots' cells and both formula cells equal (pivot K is not imported, so not exported);
+- an API-built cache (Amount grouped by tens, Date by months with Quarters and Years added, Product2 a manual group;
+  a2befb89…): GETPIVOTDATA on Years `2019`, `2020`, `<1/1/2019` and the grand total gave 15, 16, 32 and 63, the
+  engine's answers.
+Status: UNVERIFIED (probe pending: T-4177, which commits engine-export re-render cases; the runs above are scratch
+observations). Not checked: a group renamed through its item's `n`, groups over blanks, a 1904 workbook (the
+import refuses its date groups, so the export drops them), and whether `autoStart`/`autoEnd` on (the model keeps
+no such flag; the export writes them off, which keeps the bounds the engine groups by) would change Excel's refresh.
+Implemented in: crates/rustsheet-xlsx/src/export/pivots/groups.rs (`check`, `write_field_group`,
+`write_date_flags`; T-4734). The model keeps a field's own values beside its range grouping
+(`CacheField::ungrouped`, kept by `group_by_numbers` and `group_by_dates`), and the export writes a grouping only
+when grouping those values again by the import's rule gives the field it holds; any other shape (a numeric level or
+a manual group beside a range grouping, two manual groups of one field, an added field before a database field)
+drops the cache and its pivots with a log line. The export's cache limits count the kept values too.
 
 ## Case-variant text items make Excel for the web call the file corrupt
 Rule: a cache field whose shared items list two texts that differ only in case (`East`, `east`) makes
@@ -161,8 +206,12 @@ Rule:
   new items for them, saved as date items (`<d v="2023-03-15T00:00:00"/>`). A date with a time part is
   its own item: 45000 and 45000.5 are two items under both formats probed. A date and an equal plain
   number in one field are two items as well. A time-only `h:mm` and an elapsed `[h]:mm` format count
-  as dates. The appended items render as their serials, as number cells. Their displayed format is
-  not captured by the sidecar (displayed text, T-4169).
+  as dates. The appended items render as their serials, as number cells. Their shown text is the source
+  cells' date format: on probes/t2085-getpivotdata-items sheet D (rows When over serials formatted m/d/yyyy) the
+  sidecar's pivot `text` shows 1/1/2024, 1/2/2024 and 2/1/2024 (D!A4:A6). The rendered rowItems point at the `<n>`
+  items 45292, 45293 and 45323 (x = 3, 4, 5), while the `<d>` items are listed first. The engine shows the serials
+  (T-4807). The saved cache field (`containsMixedTypes="1"`, count 6) carries `minDate="2024-01-01T00:00:00"` but
+  `maxDate="1900-01-01T12:51:04"`, below its own minDate; nothing reads these attributes, so the quirk is recorded only.
 - **Saved order.** In the saved cache Excel lists the shared items in source order first and the
   stale ones (old items no record holds) after them, while the pivot field's items keep the old order
   with the new ones appended: `rowItems` index the pivot field's order. See T-4654.
@@ -286,6 +335,7 @@ the formula over the sum of Sales, not the sum of the formula over the records. 
 Evidence: probes/t4128-pivot-spike K!D6 28.1, K!D7 38.1 (East Total, 19*2+0.1) and K!D11 92.1 (Grand
 Total, 46*2+0.1) (excel-graph, 2026-11-06, T-4128).
 Status: VERIFIED (excel-graph); the edge cases are the next entry's (T-4505)
+Implemented in: crates/rustsheet-engine/src/pivot/calculated.rs (T-4174)
 
 ## Calculated fields as Excel for the web renders them
 Rule, per shape (each its own pivot at A3, Sum data fields unless said; Data has Region, Product, Units, Price,
@@ -293,6 +343,9 @@ Zero, Unit Cost and Bob's, six records, the sums in the case description):
 - **Every level computes the formula over that cell's sums**, row and column totals included. Rev = Units*Price
   shows East Total 210 = 6×35 (not the rows' 150+5, nor the records' 85), West Total 207 = 9×23 and Grand Total
   870 = 15×58 (LV). With Region on columns, the Grand Total column of A is 360 = 9×40, not 150+40 (LC).
+- **An intersection no record reaches shows 0, not a blank**: in LC Product C has no East record, and C/East
+  (B7) is 0 = 0×0 like C/West (C7, Units 0). Whether that is the formula over sums of 0 (`Price/Units` would be
+  #DIV/0!) or always 0 is UNVERIFIED (probe pending: T-4897); the engine evaluates the formula over sums of 0.
 - **Operands need not be data fields**: LC shows only Sum of Rev, NV's Ut = Units*2 shows A 18 with no Units data
   field.
 - **The summary function of a data field over a calculated field is ignored**: Count, Average, Max and Min of Rev
@@ -330,9 +383,20 @@ probes/t4505-pivot-calc-field-functions FX, FR, FL, FK, FM, FN, FV, ET, EC, ES, 
 2026-11-07, T-4505); the sidecars' `pivots` sections hold every cell.
 Status: VERIFIED (excel-graph) for these shapes: rows Product, or Region and Product, LC with columns Region, Sum
 data fields but in CNT. The two saved-formula observations rest only on the oracle's cached downloads (input sha256
-1ad2d4d1… and d8291cc3…), not committed files, so they are UNVERIFIED; they matter only to what the engine's export
-writes, which is T-4174's (no probe can commit them: a sidecar holds cells, not the saved parts). Not probed: a calculated field with a number format, under show-values-as, on a
-grouped field, with a filter or Top-N by it, or referenced by GETPIVOTDATA. Implemented in: nothing yet (T-4174).
+1ad2d4d1… and d8291cc3…), not committed files, so they are UNVERIFIED; the engine's export writes each formula as it
+was read (a cycle stays `Ca = Cb+1`, not `#NAME?+1`), which no probe can check (a sidecar holds cells, not the saved
+parts). Not probed (UNVERIFIED, probe pending: T-4897, each the engine's choice): a calculated field with a number
+format, under show-values-as (the engine applies the mode to the formula's values), on a grouped field (the importer
+skips a cache with both), with a filter or Top-N by it (the engine has no result), beside a custom subtotal (it shows
+the formula's value), a field named in another case (matched ignoring case), an
+operand holding an error (the error enters the formula), a field that only names a cycle member (`#NAME?`), a
+formula whose value is an array (`#VALUE!`), empty (0) or a bare boolean (`Units>3`: 1 or 0), and the refusals the engine adds to the web's (web.md's
+skip list).
+Implemented in: crates/rustsheet-engine/src/pivot/calculated.rs (`check_calculated_fields`, `Plan`: the formula is
+read by the engine's parser, with `Parser::set_quoted_names` for `'Unit Cost'`, checked, and evaluated per cell with
+each field replaced by the cell's Sum, in an empty sandbox workbook on a fixed clock, drawing on the pivot's work
+budget), crates/rustsheet-engine/src/pivot/result.rs (`calculate`), crates/rustsheet-xlsx/src/import/pivots.rs and
+crates/rustsheet-xlsx/src/export/pivots/cache.rs (T-4174).
 
 ## A Top-N filter changes the subtotals and grand totals
 Rule: with a `top10 val="2"` count filter on Product by Sum of Sales, each region shows only its two
@@ -343,6 +407,8 @@ Evidence: probes/t4128-pivot-spike K!A5:C11 (excel-graph, 2026-11-06, T-4128): E
 19; West B 7, A 20, Total 27; Grand Total 46.
 Status: VERIFIED (excel-graph); ties, percent and sum Top-N, filter order and inner-field Top-N per parent:
 "Top-N filters at their edges" and the two entries after it (T-4164)
+Implemented in: crates/rustsheet-engine/src/pivot/sort/labels.rs (`display_order`; T-4768) (the label sort of the inner
+Product: every cell of K passes)
 
 ## Numeric and date group labels are rewritten by Excel
 Rule: verified and recorded by the M6 grouping work. See web.md "Grouped pivot fields import as their
@@ -883,6 +949,8 @@ Rule (each aggregate in a value field that also holds other kinds of value):
   East/A of Err holds one number beside `#N/A` and shows `#N/A` (A_stdDev!L6, A_var!L6).
 - **Empty intersections.** An intersection with no records is blank for every aggregate, Count and
   CountNums included.
+- **Blank records.** A Sum cell whose records are all blank is blank too, not 0 (an item whose one record has
+  no value).
 
 Evidence: probes/t4135-pivot-aggregates (excel-graph, 2026-11-06, T-4135). Each sheet A_<aggregate> has
 rows Region, columns Kind and six value fields. The Data!A2:H5 records are East/B, East/A, East/A and
@@ -898,14 +966,19 @@ West/A, and East/A row 4 holds the odd value: text `abc`, a blank, `TRUE` or `#N
 - **One value:** A_stdDev and A_var are `#DIV/0!` at East/B (B6:G6) and West/A (H7:M7), and at I6
   (East/A Txt: 10 and `abc`). A_stdDevp and A_varp are 0 there.
 - **Empty intersections:** West/B (B7:G7) is blank on every sheet.
+- **Blank records:** probes/t4164-pivot-value-sort (excel-graph, 2026-11-07, T-4164) SEd B7 and SEa B4: Sum of Amt
+  of item D, whose one record has a blank Amt, is blank (found by T-4827).
 Status: VERIFIED (excel-graph)
 UNVERIFIED (probe pending: T-4633): a cell whose records hold no
-number at all (only text, blanks or booleans) is unprobed; the engine gives it the worksheet
-functions' answers (Sum, Max, Min and Product 0, Average, StdDev and Var `#DIV/0!`, StdDevp and Varp
-`#DIV/0!` with no number). A date in a value field counts as its serial number, also unprobed. When
+number at all (only text, blanks or booleans) is unprobed beyond a Sum over blanks alone; the engine shows that one
+blank and gives the rest the worksheet functions' answers (Sum over text or booleans, Max, Min and Product 0, Average,
+StdDev and Var `#DIV/0!`, StdDevp and Varp `#DIV/0!` with no number), and a Sum total that covers only blank
+records blank too. A show-values-as mode reads such a blank Sum cell as empty, not as 0 (also UNVERIFIED,
+T-4633). A date in a value field counts as its serial number, also unprobed. When
 a cell or total covers two different errors, the engine shows the first in accumulation order, also
 unprobed (T-4633).
-Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotResult::value_as`), crates/rustsheet-engine/src/pivot/accumulate.rs (`Accumulator::finish`)
+Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotResult::value_as`; a blank Sum in
+`PivotResult::plain_as`, T-4827), crates/rustsheet-engine/src/pivot/accumulate.rs (`Accumulator::finish`)
 
 ## Summation order of Sum, Average and Product totals
 Rule:
@@ -1331,14 +1404,22 @@ it the layout fails with `PastSheet`, which the grid writer renders as `#SPILL!`
 still has them. A refresh of several pivots (one cache, or every `refreshOnLoad` cache on open)
 spends one budget of `MAX_PIVOT_WORK` work and `MAX_PIVOT_CELLS` cells written, cleared and
 scanned together (`PivotBudget`), not one per pivot.
-Evidence: none for Excel; the work, node, text and cell caps are resource limits (SPEC-0032
-"Untrusted-input limits", T-4142, T-4151).
+A calculated field's formula (T-4174) is at most 8,192 characters (`MAX_CALCULATED_FORMULA_CHARS`, Excel's cell
+formula limit) and a cache holds at most 256 calculated fields (`MAX_CALCULATED_FIELDS`); past either the importer
+skips the cache and `compute` has no result. Each formula is evaluated once per cell and once for the empty
+intersections, its node clone and its evaluator work charged to the pivot's budget (the same units), and the
+fields' dependencies are ordered without recursion (Kahn's algorithm), so a chain of 255 calculated fields costs no
+stack.
+Evidence: none for Excel; the work, node, text, cell and calculated-field caps are resource limits (SPEC-0032
+"Untrusted-input limits", T-4142, T-4151, T-4174).
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`MAX_PIVOT_WORK`, `MAX_PIVOT_NODES`, `charge`,
 `count_nodes`)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`MAX_PIVOT_CELLS`, `location`; T-4147)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`MAX_PIVOT_TEXT_BYTES`; T-4149)
 Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`PivotBudget`; T-4151)
+Implemented in: crates/rustsheet-engine/src/pivot/calculated.rs (`MAX_CALCULATED_FORMULA_CHARS`,
+`MAX_CALCULATED_FIELDS`, `Sandbox::evaluate`; T-4174)
 Implemented in: crates/rustsheet/src/edit/pivot.rs (`PivotError::Limit`: a pivot the API creates, sets
 or refreshes past a limit is not added or changed, and nothing is written; T-4178)
 
@@ -1577,6 +1658,13 @@ Evidence: probes/t4129-pivot-show-as and probes/t4129-pivot-show-as-x14 (excel-g
 T-4129). The sidecars' `pivots` sections hold every cell.
 Status: VERIFIED (excel-graph) for these shapes. Ties, division by zero, a missing base item, (next),
 and the other base fields are in the next entry (T-4161). The engine is T-4163.
+
+UNVERIFIED (T-4948): two dataField extension shapes the exporter writes (T-4759,
+`export/pivots/show_as.rs`) are seen in no Excel-saved file. Removing a stale x14 mode, when the
+model's mode is ECMA or `normal`, can leave an attribute-less `<x14:dataField/>` in its `<ext>`,
+beside a `showDataAs` or beside none. A kept `extLst` in a prefixed main namespace gains the
+extension as `<x:ext>`; Excel writes the main namespace unprefixed. Whether Excel for the web opens
+each shape, what it renders and what it saves back are unknown until T-4948 probes them.
 
 ## Show-values-as edge cases (T-4161)
 Rule: each mode's base items, ties, running totals, subtotal and grand-total cells and division by
@@ -1837,13 +1925,20 @@ Evidence: the probes of the previous entry (excel-graph, 2026-11-07, T-4130); th
 every cell. Data: Product sums Apple 30, Apricot 4, Banana 12, Cherry 11, Grape 6 (filters); Ant 28, Bee 14, Cat 18,
 cached in the order Bee, Ant, Cat (sorts).
 Status: VERIFIED (excel-graph) for these shapes. Ties, filter order and filters over totals are the next entries' (T-4164); the engine is
-T-4165 (filters, Top-N, AutoShow), T-4827 (value sorts) and T-4768 (label sorts). The engine's own readings around the
+T-4165 (filters, Top-N, AutoShow), T-4827 (value sorts: "Value sorts: ties, blanks and errors") and T-4768 (label
+sorts). The engine's own readings around the
 filters are "Pivot filters: the engine's own readings".
 Implemented in: crates/rustsheet-engine/src/pivot/filter.rs (`apply`; T-4165) (every caption, value, Top-N, date,
 month, quarter and relative date filter, the values list, iconFilter, AutoShow and two filtered fields: the
 t4130-pivot-label-filters, value-filters, date-filters, relative-date-filters, filter-attrs and field-filters cells pass
 in value)
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/filters.rs (`read_filters`, DLit's dropped date filter; T-4165)
+Implemented in: crates/rustsheet-engine/src/pivot/sort.rs (`value_sorts`; T-4827) (the value sorts SV, SVA, SVC, SVR,
+SXA, SXR and SV2 pass)
+Implemented in: crates/rustsheet-engine/src/pivot/sort/labels.rs (`display_order`; T-4768) and
+crates/rustsheet-xlsx/src/import/pivots/table.rs (`customListSort`, read from the kept definition attributes) (the
+label sorts SA, SD, NA, SM, CL1 and CL0 pass; the engine's own readings around them are "Label sorts: the engine's own
+readings")
 
 ## Top-N filters at their edges: ties, N past the end, exact thresholds, signs
 Rule, per shape (rows one field, Sum of one data field, one `top10` filter):
@@ -1854,7 +1949,8 @@ Rule, per shape (rows one field, Sum of one data field, one `top10` filter):
   running sum reaches the threshold (the percentage of the grand total, or the `val`): reaching exactly stops (sum
   50 keeps Apple 50 alone, TS50; sum 110 keeps Apple, Kiwi and Fig, TS110; sum 3 keeps 2 and 1, not the 0 after them,
   NS3). **They keep no ties**: of two tied items only the one first in the field's `<items>` order is taken, in
-  either direction. TP40 (percent 40 of 150) and TS60 (sum 60) keep Apple and Kiwi, not Fig; TPb5 (bottom 5 percent)
+  either direction (under a label sort the engine uses the sorted order instead, UNVERIFIED: "Label sorts: the
+  engine's own readings", T-4799). TP40 (percent 40 of 150) and TS60 (sum 60) keep Apple and Kiwi, not Fig; TPb5 (bottom 5 percent)
   and TSb10 (bottom sum 10) keep Pear, not Lime: there the `<items>`, the cache and the source all list Kiwi and Pear
   first. With only the `<item>` elements listing Fig and Lime first (`item_order`; the cache and the source keep Kiwi
   and Pear first), TP40i keeps Fig and TSb10i Lime; with the cache, and the items with it, listing them first
@@ -1947,8 +2043,43 @@ Rule (`autoSortScope` on a data field, rows Product):
 
 Evidence: probes/t4164-pivot-value-sort (excel-graph, 2026-11-07, T-4164).
 Status: VERIFIED (excel-graph) for these shapes. UNVERIFIED (probe pending: T-4799): whether a blank ties with a real
-0 (no item held 0) and the order of several errors; ties of an inner field sorted under an outer field (unprobed).
-Implemented in: not yet in the engine (T-4827, split from T-4165).
+0 (no item held 0; the engine ties them, by the cache order) and the order of several errors (the engine keeps the
+cache order in both directions); ties of an inner field sorted under an outer field (unprobed; the engine breaks them
+by the cache order, as for an outer field). UNVERIFIED (unprobed, T-4799), the engine's own readings: a
+`reference@x` is an index into the field's `<items>` (every probe lists them in cache order, so a cache index fits
+too) and only its first `x` is read; a reference to a field on no axis, on the sorted field's own axis or past
+the cache is ignored; a scope whose data field (the data reference's `x`) or column item is past the definition's, or
+that has no data reference, sorts nothing, as does a scope under `sortType="manual"`; an item `showAll` shows with no
+record sorts as 0; a value sort on a column field reads as on a row field, the row items its scope; the value is the
+one a value filter ranks by, so a Count or Average item with no number sorts as its cell shows it (0, `#DIV/0!` last).
+A value sort by a calculated data field leaves the pivot without a result, as a value filter by one does
+(UNVERIFIED, T-4897).
+Implemented in: crates/rustsheet-engine/src/pivot/sort.rs (`value_sorts`; T-4827) (STd, STa, STo, STc, STca, SEd,
+SEa, SCd, SCa and SC2, and t4130-pivot-sort SV, SVA, SVC, SVR, SXA, SXR and SV2, pass)
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/sort.rs (`read_auto_sort`; T-4827)
+
+## Label sorts: the engine's own readings
+Rule: none probed; these are what the engine (`pivot::sort::labels`, T-4768) does where the probes are silent (every
+probe's sorted field holds three texts). Each is UNVERIFIED (probe pending: T-4799):
+- a field of mixed item types sorts ascending numbers and dates (by value) first, then the names of the built-in
+  custom lists, then the other texts, then booleans (FALSE first), then errors, as the worksheet's SORT puts numbers
+  before text; descending reverses all of it; a blank item (`(blank)`) sorts last both ways;
+- texts the collation ties (`apple` and `Apple` in one cache) and errors keep the cache order ascending and the reverse
+  descending;
+- under `customListSort`, a name matches a built-in list ignoring ASCII case, and the listed names sort before every
+  other text, by list (abbreviated days, days, abbreviated months, months: the Custom Lists dialog's order) and then
+  by position; only the abbreviated day names are evidenced (CL1), the other three lists are Excel's other built-in
+  lists, unprobed;
+- a field grouped by ranges of numbers or dates sorts its groups in their own order (the cache's), reversed descending,
+  not by their labels' text; a manually grouped field sorts its group labels as texts;
+- a field with an `autoSortScope` is never label-sorted, also when its scope sorts nothing ("Value sorts: ties, blanks
+  and errors"), so it then keeps its `<items>` order;
+- a Top-N filter breaks its ties by the field's display order, the label sort's under one (the `<items>` order with
+  none, "Top-N filters at their edges");
+- a label sort applies to a column field as to a row field, and to an inner field across every parent (K is a row
+  field).
+Evidence: none (engine readings).
+Status: UNVERIFIED (probe pending: T-4799)
 
 ## A field shows its items in the `<items>` order, not the cache's, until a sort applies
 Rule: with no sort (`sortType` absent or `manual`) a field shows its items in the order of its `<item>` elements,
@@ -1965,8 +2096,9 @@ Evidence: probes/t4164-pivot-item-order (excel-graph, 2026-11-07, T-4164); `item
 `<item>` elements in an order of their own (T-4164). IOD (`descending`) shows Cat, Bee, Ant, which is also its items
 order, so it does not tell the two apart.
 Status: VERIFIED (excel-graph) for these shapes.
-Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (the items order: IO, IOM and IOO pass); the sorts
-are T-4768's (label) and T-4827's (value, split from T-4165).
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (the items order: IO, IOM and IOO pass)
+Implemented in: crates/rustsheet-engine/src/pivot/sort/labels.rs (`display_order`; T-4768) (IOA and IOD pass)
+Implemented in: crates/rustsheet-engine/src/pivot/sort.rs (`value_sorts`; T-4827) (IOV passes)
 
 ## useWholeDay: a date filter compares the item's day, not the criterion's
 Rule: a date filter compares an item's full date-time with the criterion unless its x15 `pivotFilter` carries
@@ -2096,8 +2228,56 @@ Evidence: probes/t4130-pivot-chart-cache (excel-graph, 2026-11-07, T-4130): the 
 download of that run (input sha256 c78d1952…), not a committed file (the sidecars do not record charts). The charts
 are written by tools/src/rustsheet_tools/pivot_chart.py. Consequence for plan.md §7: Excel-saved chart caches are an
 oracle for PivotChartData (T-4186), read from a downloaded file.
-Status: VERIFIED (excel-graph, cached download) for a one-series column chart over a one-field pivot. Several series,
-column fields and multi-level categories (`c:multiLvlStrCache`) are T-4186's to probe; the export is T-4187.
+Status: VERIFIED (excel-graph, cached download) for a one-series column chart over a one-field pivot, but the download
+is not committed, so as repository evidence it is UNVERIFIED until a committed file records the chart's caches
+(T-4187, whose criteria include that record). T-4186 checked `PivotChartData` against the pivot cells of the sidecar
+(East 18, West 27) and against two Excel-saved corpus files ("A PivotChart plots the pivot's item lines" below).
+
+## A PivotChart plots the pivot's item lines
+Rule: a chart bound to a pivot (`c:pivotSource`) plots one category per row leaf and one series per column line, and
+leaves out the grand totals. The two Excel-saved corpus charts show:
+- one category per row leaf, labelled outer level first; Values on rows is the inner level, so the categories form
+  a `c:multiLvlStrCache` whose levels are listed innermost first, each outer label only at the first point of its
+  run (WithChartSheet.xlsx: Year then Values on rows, `lvl` 1 holds 2005, 2006, 2007 at points 0, 2, 4, `lvl` 0 the
+  data fields at every point);
+- the grand-total row and column lines left out (both files);
+- with no column field and Values not on columns, one series named `Total`, whatever the cell above the values
+  holds (WithChartSheet.xlsx `c:tx` `Sheet2!$C$3`, cached `Total`);
+- a collapsed (`sd="0"`) column item as one series, named by its item alone, though its `c:tx` reference spans every
+  header row (forum-mso-de-104083.xlsx: `Tabelle1!$B$3:$B$6` cached `2015`);
+- no `c:pt` for a cell no record reaches (forum-mso-de-104083.xlsx: `ptCount` 53 with 51 points for 2015, 30 for
+  2017);
+- a number item's label in the field's number format: forum-mso-de-104083.xlsx's KW field (items 1 to 53, `numFmtId`
+  165 `"KW "00` on both the pivot field and the cache field) is cached `KW 01` to `KW 53`, while the pivot's own cells
+  hold the numbers.
+
+Evidence: POI `test-data/spreadsheet/WithChartSheet.xlsx` (the `poi` suite at 9958a2a2, sha256 792b9f21…, Excel 12):
+`xl/charts/chart1.xml` over `Sheet2!PivotTable2` (pivotTable5, `cacheId` 1: `pivotCacheDefinition2`; tabular,
+`dataOnRows`, grand totals on); LibreOffice `sc/qa/unit/data/xlsx/forum-mso-de-104083.xlsx` (the `pivot-corpus-lo`
+suite at b1653ced, sha256 c7182682…, Excel 16): `xl/charts/chart1.xml` over `Tabelle1!PivotTable2` (one row field,
+three date-group column fields, every year collapsed). Both files are fetched, not committed, so their pivots and
+chart caches are transcribed into crates/rustsheet-engine/src/pivot/layout/chart/tests.rs, which always runs (the
+LibreOffice file's 2,303 records reduced to the per-week, year, quarter and month sums the chart reads);
+crates/rustsheet-xlsx/tests/pivot_chart_corpus.rs also checks the files themselves when they are fetched.
+Status: VERIFIED (corpus files, T-4186) for the shapes above. UNVERIFIED (T-4938), the engine's reading: leaving out
+subtotal lines, an item's line with `subtotalTop` above its children, an outline item's own line and `insertBlankRow`
+lines (neither corpus chart has one: WithChartSheet.xlsx has item and grand-total lines only, forum-mso-de-104083.xlsx
+one row field); plotting show-as values as shown; leaving out filtered and hidden items; the name of a series with
+several labels (the engine gives none); the levels when categories differ in depth (a collapsed outer row item beside
+expanded ones); a date item's label; whether the pivot field's or the cache field's `numFmtId` formats a label; the
+category of a pivot with no row level; and a pivot with no data field. The engine's chart tests also check every
+plotted point of 30 probe pivots against the cells Excel rendered, which shows the values at the lines it plots are
+Excel's pivot cells, not that Excel's chart plots those lines. Writing the caches back on export, and a pivot
+collapsed to `#SPILL!`, are T-4187's.
+
+## A PivotChart's value cache format code differs by Excel version
+Rule: a pivot chart's `c:numCache` `c:formatCode` is the data field's `numFmtId` code in an Excel 16 file and
+`General` in an Excel 12 one, even where the pivot field carries a format.
+Evidence: forum-mso-de-104083.xlsx (Excel 16): every series' `c:formatCode` is format 168
+(`_-* #,##0\ _€_-;…`), the data field Summe's `numFmtId="168"`; WithChartSheet.xlsx (Excel 12): `c:formatCode`
+`General`, though pivotTable5's Cost field is `numFmtId="6"` (its data fields carry none).
+Status: VERIFIED (corpus files) as what the two files hold; which format current Excel writes, and from which
+attribute, is the export's to settle (T-4187).
 
 ## GETPIVOTDATA against a pivot collapsed to #SPILL!
 Rule: GETPIVOTDATA whose pivot reference is the anchor of a pivot collapsed to `#SPILL!` returns:
@@ -2169,3 +2349,91 @@ Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`read_field`: 
 `PivotField::subtotal_caption`; T-4745)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`Cells::total_label`;
 T-4745)
+
+## Show Details
+Rule (the engine's reading; Excel's Show Details sheet is not probed): the records behind a value cell, which the
+API returns as cache record indices (0 for the source row below the header) in cache record order, are: for an
+item cell, the records the pivot's filters keep (a page field's selection, hidden items) whose
+row and column items are the cell's; for a subtotal, those under its item; for a grand total, every kept record.
+Evidence that the set is right: summing, counting or averaging the returned records' source values gives Excel's
+value for every value cell of the probes in crates/rustsheet-engine/src/pivot/layout/records/tests.rs (t4137 K2,
+K4, K6; t4138 G1 to G9; t4164 SH0, SH1H with a hidden inner item; t4135 A_sum, A_count, A_average; t4634 T1 to T3,
+A1 to A3) and of the facade's tests (crates/rustsheet/tests/pivot_records.rs: getpivotdata-real-pivot, t4128 R).
+Not probed (UNVERIFIED, T-4879): the row order of the sheet Excel's Show Details creates, the columns it shows (all
+source fields, in which order, with which headers and number formats), whether it is a Table and how it is named,
+and what it lists for a calculated field, a grouped field, an OLAP or Data Model pivot, or a cell an error poisons.
+The API does not create that sheet. Top-N, value and label filters are not applied yet (T-4165): for a pivot
+with one, the API's records include records Excel's totals leave out (pivots.md "Filters on an inner field rank per
+parent; totals never count what a filter removes").
+Status: UNVERIFIED (probe pending: T-4879) for the Show Details sheet; the record set is checked as above.
+Implemented in: crates/rustsheet-engine/src/pivot/layout/records.rs (`records_behind`, T-4184);
+crates/rustsheet/src/pivot_view.rs (`Workbook::pivot_cell_records`, T-4184).
+
+## A non-English Excel saves its own UI language's default captions
+Rule: the default captions (`Row Labels`, `Column Labels`, `(Multiple Items)`) are not stored in
+the pivot definition: the saved cells hold them in the saving Excel's UI language, with no
+`rowHeaderCaption` or `colHeaderCaption`. The `Values` caption is stored, in that language, as
+`dataCaption`. The en-US engine renders the English captions, so the pivot-corpus classifies such a pivot stale
+(T-4131). That an en-US Excel refresh of such a file writes the English captions is an inference from
+the captions not being stored, not observed (UNVERIFIED).
+Evidence (Excel-saved desktop files, cached cells and pivotTable parts): pivot-corpus-lo
+`xlsx/pivot-table/shared-numgroup.xlsx` (Hungarian, A3 `Sorcímkék`, `dataCaption="Értékek"`),
+`xlsx/pivottable_invalid_formats.xlsx` (German, B3 `Spaltenbeschriftungen`, `dataCaption="Werte"`),
+`xlsx/tdf122471.xlsx` (Hungarian, B3 `Oszlopcímkék`), poi `ExcelPivotTableSample.xlsx` (German, B3
+`Spaltenbeschriftungen`, and its page field's multiple-items caption in German at B1).
+These are non-en-US desktop workbooks, so they are no evidence for what en-US Excel writes
+(decision 0030): the English captions stay the ones the en-US probes give ("Caption attributes...").
+Status: VERIFIED (Excel-saved files) as a storage fact; no rule for the engine follows from it.
+
+## What the gen-pivot batch found (T-4132)
+The first gen-pivot batch (eval/suites/gen-pivot, seed 0 of `rustsheet-gen --milestone M16`: 104 pivots, one per sheet,
+each case's description naming its sheets' covering-array levels; excel-graph, 2026-11-07) shows these rules. Each is
+VERIFIED (excel-graph) for the shapes cited; wider claims are marked. Each has an engine task that owns its cells.
+- **Header labels in outline and tabular form.** The header row names every column level, one per cell from the first
+  data column: the Values field as `Values` (or `dataCaption`), then each column field by name (gen-pivot/2251b0f5e5a256e1
+  P12!M5:O5 `Values`, `Rep`, `Channel`; the second column field `When` at gen-pivot/01865529b5a09c0b P02!Q5). With the
+  Values field on rows, its header cell reads `Values` (P02!L7). T-4914.
+- **Field and item captions.** A pivotField's `name` replaces the field's header (`Product field`,
+  gen-pivot/2251b0f5e5a256e1 P03!L7) and an item's `n` its label, in its subtotal label too (`West shown`,
+  gen-pivot/01865529b5a09c0b P04!M10; `Silver shown Total`, gen-pivot/a6d74990f3ae755e P06!L11). Excel for the web opens
+  both (catalog PV-1113, PV-1081). T-4915.
+- **Custom subtotals and the Values field.** A custom subtotal line of a field with the Values field inside it reads
+  `<item> <Function> of <source field>` per data field: `Bronze Sum of Score`, `Bronze Sum of Units` under data fields
+  Sum of Score and Min of Units (gen-pivot/2251b0f5e5a256e1 P04!L13:L15). T-4916.
+- **One custom subtotal in compact or outline form sits on the item's line**, as a default subtotal does: no
+  `<item> <Function>` line (gen-pivot/640780d7b6f4ad53 P05!L8 `Web shown` with its values; gen-pivot/36996978427905b2
+  P01, gen-pivot/f9e7edbb5b74011a P09, gen-pivot/ec473260bb2065b3 P05). Two or more functions, or tabular form, give one
+  line per function after the children (gen-pivot/2251b0f5e5a256e1 P04, P10). T-4925.
+- **Two custom subtotals cross blank.** Where a row field's custom subtotal line meets a column field's custom subtotal
+  column the cell is blank (gen-pivot/2251b0f5e5a256e1 P10!P9:U16, gen-pivot/ec473260bb2065b3 P06). T-4926.
+- **Date-time items are rounded to the second** on refresh: 366.99999999 is the item 367 (gen-pivot/2251b0f5e5a256e1
+  P05!N14), 60.999988426 is 60.99998842592593 (gen-pivot/ca5c8fa99c13d747 P08!M8). Those cells alone only show a unit
+  coarser than about 2 ms; the whole second is shown by the refreshed cache's `xsd:dateTime` items (for example
+  `1900-02-28T23:59:59` in the gen-pivot/ca5c8fa99c13d747 P08 cache field `When`). Values without a date format are
+  unprobed. T-4917.
+- **A value cell whose records hold no value its aggregate reads is blank**: Count over blanks
+  (gen-pivot/01865529b5a09c0b P01!O20), CountNums (gen-pivot/2251b0f5e5a256e1 P01!N6), Var and Max over records with no
+  number (gen-pivot/f9e7edbb5b74011a P01!O9, gen-pivot/a6d74990f3ae755e P01!R13). This answers the T-4633 question of
+  "Aggregates over text, blanks, booleans and errors". T-4918.
+- **Classic layout with no row field** keeps the data caption at the corner and labels the value row `Total`
+  (gen-pivot/01865529b5a09c0b P08!L5, L8; gen-pivot/2251b0f5e5a256e1 P07!L9). T-4919.
+- **Record filters on a refreshed date field.** When the saved cache lists a date field's values as numbers (the case
+  builder does), the refresh appends date items (above). Hidden items on such a field then hide every appended item, so
+  the pivot shows no record (gen-pivot/a6d74990f3ae755e P02, P08, P12; gen-pivot/ca5c8fa99c13d747 P04: `rowItems` 0), and
+  a selected page item lands on the refreshed list's item at its index (gen-pivot/462f10551d480f9d P01!M3 shows 365 for
+  2958465). New items of other kinds beside hidden ones are unprobed. T-4920.
+- **A page field with one visible item shows it**, not `(Multiple Items)` (gen-pivot/01865529b5a09c0b P05!M3 `Cy`,
+  gen-pivot/2251b0f5e5a256e1 P08!M2 `Gold`); two or more show `(Multiple Items)` (P11 of 2251b0f5e5a256e1). This answers
+  the page-selection question of T-4657. T-4921.
+- **A missingCaption of `-` shows 0**: every empty intersection of every pivot with `missingCaption="-"` and
+  `showMissing` is the number 0, shown in the data field's format (`0`, `0.00`; gen-pivot/ca5c8fa99c13d747 P01!O9:AJ28,
+  gen-pivot/ec473260bb2065b3 P03), while `n/a` shows as the caption (gen-pivot/f9e7edbb5b74011a P08). Which other captions
+  read as numbers is unprobed. T-4922.
+- **No row field, non-compact, Values on columns: no row-label column.** The first column is the first data column
+  (gen-pivot/640780d7b6f4ad53 P02 at L5:DC8, gen-pivot/f9e7edbb5b74011a P07, gen-pivot/462f10551d480f9d P08). T-4924.
+- **A collapsed item with the Values field inside it** keeps one line per data field under the item
+  (gen-pivot/36996978427905b2 P05!L6:L8). T-4927.
+- Date items show in the source cells' date format, as on probes/t2085-getpivotdata-items D: T-4807 owns the gen-pivot
+  cells too.
+
+Status: VERIFIED (excel-graph) for the cells cited; the unprobed extensions above are UNVERIFIED.

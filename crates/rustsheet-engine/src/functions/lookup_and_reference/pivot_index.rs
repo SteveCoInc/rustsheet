@@ -359,6 +359,12 @@ impl Model {
                 .get(table.cache as usize)
                 .and_then(|cache| cache.fields.get(data.field as usize))
                 .ok_or(Error::REF)?;
+            // A calculated field has no records to aggregate, so the engine answers `#REF!`.
+            // Excel answers by the field's name or caption (web.md "GETPIVOTDATA on other pivot
+            // shapes (T-2085)", LY G1:G3); implementing that is T-4804.
+            if field.formula.is_some() {
+                return Err(Error::REF);
+            }
             let mut records: Vec<u32> = Vec::new();
             for (tuple, tuple_records) in &index.tuples {
                 if tuple
@@ -396,6 +402,8 @@ mod tests {
                 number_groups: None,
                 date_groups: None,
                 added_group: None,
+                formula: None,
+                ungrouped: None,
             }],
             record_count: 4,
             refresh_on_load: false,
