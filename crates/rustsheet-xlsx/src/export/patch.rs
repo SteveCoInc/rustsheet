@@ -54,8 +54,9 @@ mod tag;
 #[cfg(test)]
 mod tests;
 
-/// Deepest element nesting the patcher reads in a worksheet (directive 5).
-const MAX_DEPTH: usize = 256;
+/// Deepest element nesting the patcher reads in a worksheet, and the `PivotChart` rewrite in a chart
+/// part (`pivot_charts`, T-4187) (directive 5).
+pub(super) const MAX_DEPTH: usize = 256;
 
 /// The styles part, as the importer reads it.
 const STYLES_PART: &str = "xl/styles.xml";
