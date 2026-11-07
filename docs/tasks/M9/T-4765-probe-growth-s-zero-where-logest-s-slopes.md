@@ -46,12 +46,14 @@ probes/t4590-growth-overflow Int A2:A7 show GROWTH is 0 where the prediction is 
   - NoConst: const FALSE is 0 too.
   - Over: F overflowing is `#NUM!` though the prediction is finite.
   - SmallB: a subnormal b is not flushed (A3 is about 1), which goes against H1.
-  - Multi: `#REF!` from a shape mismatch in my formulas, so several x stay unprobed.
+  - Multi: `#REF!` from a shape mismatch in my formulas, so several x stay unprobed. Follow-up T-4793 re-probes
+    them, with a subnormal product of normal factors.
 - Code: `growth_prediction` (functions/statistical/trend.rs) adds two rules to T-4590's b-overflow `#NUM!`: `#NUM!`
   where F overflows, and 0 where F is below DBL_MIN (`f64::MIN_POSITIVE`). The value elsewhere is unchanged. The cuts
   are the double range, so there are no constants.
 - Docs: the statistics.md entry is rewritten as "GROWTH is #NUM! once LOGEST's b or slopes' factor overflows, and 0
   once the slopes' factor is subnormal". New unit test `growth_slopes_factor_edges`.
+- Follow-up: T-4793 (several x; a subnormal product of normal factors). statistics.md marks both UNVERIFIED.
 - Eval delta:
   - probes/t4590-growth-overflow Int A2:A7 now pass (6 cells), and the new probe passes 20 of 24.
   - The other 4 are least-squares digits, about 1E-13 off, added to T-4763.

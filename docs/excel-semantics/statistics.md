@@ -7277,23 +7277,27 @@ the slopes' factor F = e^(Σ m_j x_j) at the new x:
   is a number. LOGEST's own b, `INDEX(LOGEST(..),1,2)`, is `#NUM!` from the same cut. The Gate A point GROWTH s1 A104
   (intercept 1289.95) is `#NUM!` by this rule.
 - `#NUM!` where F overflows, though b keeps the prediction finite (probes/t4765-growth-factor-edges Over A1: b =
-  e^-700, F = e^1400, prediction e^700).
+  e^-700, F = e^1400, prediction e^700; SmallB A4: b = e^-720, subnormal, F = e^720, prediction about 1).
 - 0 where F is below DBL_MIN, with const TRUE or FALSE. With const TRUE the prediction is about 1: a slope sum of
   -708.39 gives 1 and -708.4 gives 0 (Cut), at the DBL_MIN cut ln(DBL_MIN) = -708.396 (numbers.md "Subnormal results
   become 0"). With const FALSE a subnormal factor gives 0 (NoConst A2, A3).
-- A subnormal b is not an error and not a zero: c = -709 with an offsetting slope gives 0.9999999999999999 (SmallB A3).
+- A subnormal b with a normal F is neither an error nor a zero: c = -709 with an offsetting slope gives
+  0.9999999999999999 (SmallB A3), which fits b·F with an unflushed subnormal b that has lost a bit.
 - LOGEST's m = e^slope past the double range is not an error in GROWTH (t4590 Slope).
-Away from these edges the value is the single exponential. The product of the two factors is one ulp off Excel on
-ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where the single exponential is exact, so how Excel combines the
-factors between the edges is not identified. Several x are unprobed: the Multi rows of the t4765 probe were
-`#REF!` (the shapes of known_y and known_x disagreed). Whether F is one summed factor or one factor per variable
-is therefore open.
+Away from these edges the engine gives the single exponential. A subnormal product of two normal factors (b = e^-400, F
+= e^-310) is unprobed: the engine returns the subnormal, and Excel may return 0 (T-4793). The product of the two factors
+is one ulp off Excel on ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where the single exponential is exact, so how
+Excel combines the factors between the edges is not identified. Several x are unprobed: the Multi rows of the t4765
+probe were `#REF!` (the shapes of known_y and known_x disagreed). Whether F is one summed factor or one factor per
+variable is therefore open.
 Evidence: probes/t4590-growth-overflow (Int 15 rows, Slope 8) and probes/t4765-growth-factor-edges (Cut 10, SmallB 4,
 NoConst 4, Over 3; excel-graph, 2026-11-07). The predictions in docs/research/t4590 and docs/research/t4765 were
 committed before each fill.
-Status: VERIFIED (excel-graph). The probes' least-squares digits (5E-14 to 3E-13 off) are T-4763's.
+Status: VERIFIED (excel-graph) for one x: b overflow, F overflow, F below DBL_MIN, and a subnormal b. UNVERIFIED
+(inferred, T-4793): several x (summed F against one factor per variable) and a subnormal product of normal factors.
+The probes' least-squares digits (5E-14 to 3E-13 off) are T-4763's.
 Ours (T-4590, T-4765): `growth_prediction` in functions/statistical/trend.rs.
-Tasks: T-4590, T-4763, T-4765
+Tasks: T-4590, T-4763, T-4765, T-4793
 
 ## TRIMMEAN: an error percent before data with no number (T-1742)
 Rule: TRIMMEAN returns an error-valued percent before it reports data with no number: `TRIMMEAN(Data!E11:E11,<#N/A>)`

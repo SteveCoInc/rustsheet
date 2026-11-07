@@ -24,6 +24,10 @@ lie near the double range. Today they are 5E-14 to 3E-13 relative off, the least
   LINEST, LOGEST, TREND and GROWTH). This task should follow T-2006 and check whether its kernel clears these cells.
 - A form chosen by scoring oracle cells owes the decision 0188 R4 hold-out and fresh sweep.
 
+- SmallB! A3 may not be a least-squares digit. There, Excel's 0.9999999999999999 fits b·F with an unflushed subnormal
+  b = e^-709 (about 0.55·DBL_MIN) losing a bit, while every Cut/Int cell with a normal b is exactly 1 in Excel. Check
+  that before chasing it as a kernel digit (T-4765 fidelity review).
+
 ## Acceptance criteria
 - [ ] The owned cells pass, or the Outcome shows that they are what is left after T-2006's kernel and says why.
 - [ ] `make check` green; reviewers approve.
