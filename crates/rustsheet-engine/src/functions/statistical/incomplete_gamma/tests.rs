@@ -998,3 +998,38 @@ fn near_mode_pair_is_within_an_ulp_from_shape_1e3() {
     assert_eq!(pair(1.5e308, 1e308), (0.0, 1.0));
     assert_eq!(pair(1e308, 1e300), (0.0, 1.0));
 }
+
+/// T-3219: from a shape above 1 at x / beta up to 1, Excel's cdf and density are built from three
+/// separately rounded factors, EXP(a·LN(y)), EXP(GAMMALN(a+1)) and EXP(-y). Excel's own values,
+/// each 6 to 118 ulp from the prefactor's before: ironcalc-calc `BETA_GAMMA.xlsx` `BETA_DIST!L3`
+/// `GAMMA.DIST(2,8,10,TRUE)` (17 ulp before), GAMMA.xlsx E16 `GAMMA.DIST(1E-5,9,2,TRUE)` (6),
+/// gen-m9/68d8ffb69ff739d8 A341 P(30, 0.3) (118) and gen-m9/984cba67bbe6972b A49
+/// `CHISQ.DIST(1E-10,8,FALSE)` (37). The engine's EXP, LN and GAMMALN leave up to 5 ulp of residue
+/// (the exponent a·LN(y) is near -95 at A49 and -36 at A341). The order of the operations shows
+/// at 1 ulp, so cells that already passed are kept bit for bit: gen-m9/35e8168aae2b00f8 A119
+/// `CHISQ.DIST(1.5,6,TRUE)`, probes/stat-argument-modes H152 `CHISQ.DIST(1.5,5,TRUE)` and
+/// probes-numeric/m9-gamma-dist-a2 A21 `GAMMA.DIST(200000,2,1000000,TRUE)`.
+#[test]
+fn the_small_x_prefactor_is_excels_three_rounded_factors() {
+    for (a, y, excel, ulps) in [
+        (8.0, 0.2, 5.316_161_131_057_619e-11_f64, 1),
+        (9.0, 5e-6, 5.382_264_690_689_69e-54, 0),
+        (30.0, 0.3, 5.806_457_425_277_688e-49, 5),
+        (3.0, 0.75, 0.040_505_439_744_813_87, 0),
+        (2.5, 0.75, 0.086_930_185_455_604_56, 0),
+        (2.0, 0.2, 0.017_523_096_306_421_772, 0),
+    ] {
+        let ours = gamma_cdf(&Gamma::new(a, 1.0).unwrap(), y);
+        assert!(ulp_distance(ours, excel) <= ulps, "P({a},{y}): {ours:e}");
+        assert!(within_15_digits(ours, excel), "P({a},{y}): {ours:e}");
+    }
+    let ours = gamma_density(4.0, 1e-10, 2.0).unwrap();
+    let excel = 1.041_666_666_614_588_4e-32;
+    assert!(ulp_distance(ours, excel) <= 2, "{ours:e}");
+    assert!(within_15_digits(ours, excel), "{ours:e}");
+    // The quantiles keep the accurate exponent, which the factors leave alone.
+    assert_ne!(
+        pair_with(8.0, 0.2, &mut Terms(MAX_TERMS), Exponent::Accurate).0,
+        gamma_cdf(&Gamma::new(8.0, 1.0).unwrap(), 0.2)
+    );
+}

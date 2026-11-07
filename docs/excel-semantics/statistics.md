@@ -1680,6 +1680,41 @@ switches there is open, T-3469), and past x = 600 it is unmeasured.
   Q are not one prefactor's two uses; the density's T-3147 evidence predates this correction and was not re-scored
   with the direct deviance (UNVERIFIED for the density).
 
+## Incomplete gamma at a small x: three rounded factors (T-3219)
+Rule: at a shape a above 1 and y = x/beta at most 1, Excel's GAMMA.DIST, GAMMADIST and CHISQ.DIST (cdf and
+density) build the prefactor from three separately rounded doubles: `power = EXP(a*LN(y))`,
+`norm = EXP(GAMMALN(a+1))` and `decay = EXP(-y)`.
+- cdf: `P = (power*decay/norm)*series`, the series 1 + y/(a+1) + y^2/((a+1)(a+2)) + ...; CHISQ.DIST.RT and CHIDIST
+  take 1 - P there.
+- density: `(power/norm)*a/x*EXP(-y)`.
+- The order is observable at 1 ulp: `CHISQ.DIST(1.5,6,TRUE)` = 0.04050543974481387 (gen-m9/35e8168aae2b00f8 A119)
+  needs the decay before the normalization, and `CHISQ.DIST(1.5,5,TRUE)` = 0.08693018545560456 (probes/
+  stat-argument-modes H152) and `GAMMA.DIST(200000,2,1000000,TRUE)` = 0.017523096306421772 (probes-numeric/
+  m9-gamma-dist-a2 A21) rule out the series before it.
+Excel is the less accurate side here, reproducibly: `GAMMA.DIST(2,8,10,TRUE)` = 5.316161131057619E-11 (ironcalc-calc
+BETA_GAMMA.xlsx BETA_DIST!L3), `GAMMA.DIST(1E-5,9,2,TRUE)` = 5.38226469068969E-54 (GAMMA.xlsx E16), P(30, 0.3) =
+5.806457425277688E-49 (gen-m9/68d8ffb69ff739d8 A341) and `CHISQ.DIST(1E-10,8,FALSE)` = 1.0416666666145884E-32
+(gen-m9/984cba67bbe6972b A49); the accurate prefactor `powf * exp / tgamma` was 17, 6, 118 and 37 ulp from them.
+On the factors they are 1, 0, 5 and 2 ulp off, all within 15 digits: the engine's EXP, LN and GAMMALN leave a residue
+of a few ulp where |a LN(y)| is large (36 at A341, 95 at A49). The research prototype measured 77/77 small-shape
+small-x literal cdfs within 2 ulp and 170/170 densities within 4 ulp (docs/research/excel-parity-findings-2026-11-07.md
+item 5).
+The quantiles do not take this form: the inverse's own cdf (`excel_form_lower`) normalizes before the decay, which
+gives Excel's first Newton iterate at `CHISQ.INV.RT(1-1E-16,3)` (gen-m9/ecc87f80077959e0 A301), and the
+leading-factor root's residual check (`excel_tiny_quantile`) stays on the accurate exponent it was fitted with.
+Where a factor is not a normal double (y^a underflows, Gamma(a+1) overflows past 170) or the result is not normal,
+the stable prefactor applies.
+Engine eval against main 317e3567f (every suite, per cell, ulps of Excel): 469 cells closer, 96 farther; 216 cells
+newly within 15 digits, 21 newly visibly off. All 21 are in probes-numeric/t3311-gamma-inv-lower-tail-cdf
+(ungated), deep lower-tail cdfs where an ulp of the double exponent a LN(y) moves P by tens of ulp and the
+engine's LN lands on a different double (the staircase of "Deep lower tail at a shape above 1"); that case has 292
+cells closer and 85 farther. No gated cell regresses (gen-m9 1766 to 1756 known failures, ironcalc-calc 266 to 263,
+probes 6854 to 6848), and Gate A is unchanged.
+Ours: `incomplete_gamma/mod.rs` `LogSeriesFactors`, `small_x_factors`, used by `pair_with` (`Exponent::Excel`) and
+`density.rs` `density_with`.
+Status: VERIFIED (excel-graph)
+Tasks: T-3219, T-4975
+
 ## HYPGEOM.DIST: per-call cap and lifting (T-1873)
 Rule: HYPGEOM.DIST and HYPGEOMDIST lift every argument over an array and over a two-cell range on the formula's own rows,
 each element the scalar call (stat-argument-modes H331-H336, H338-H342: every argument over `{v;v}`, the first over a

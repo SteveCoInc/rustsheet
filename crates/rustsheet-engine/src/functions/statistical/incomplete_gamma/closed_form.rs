@@ -118,7 +118,9 @@ pub(super) fn excel_tiny_quantile(a: f64, p: f64) -> Option<f64> {
         return None;
     }
     // One cdf of a shape below 20 at x below 1: the series, at most `cdf_terms_bound(20)` terms.
-    let cdf = pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Excel).0;
+    // The accurate exponent, the meaning the check was fitted with: GAMMA.DIST's three rounded
+    // factors (T-3219) came after it.
+    let cdf = pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Accurate).0;
     ((cdf / p - 1.0).abs() <= TINY_QUANTILE_CHECK).then_some(x)
 }
 
