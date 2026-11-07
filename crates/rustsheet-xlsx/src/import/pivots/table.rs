@@ -252,14 +252,13 @@ impl TableReader<'_> {
                 self.read_field(cache, element)?;
                 |key| FIELD_TYPED.contains(&key) || is_subtotal_attribute(key)
             }
-            "item" => {
-                if self.read_item(cache, element)? {
-                    |key| matches!(key, "t" | "x" | "sd" | "s" | "h")
-                } else {
-                    // `h` on a line that names no cache item has nowhere typed to go.
-                    |key| matches!(key, "t" | "x" | "sd" | "s")
-                }
-            }
+            "item" => match self.read_item(cache, element)? {
+                Some(true) => |key| matches!(key, "t" | "x" | "sd" | "s" | "h"),
+                // `h` on a line that names no cache item has nowhere typed to go.
+                Some(false) => |key| matches!(key, "t" | "x" | "sd" | "s"),
+                // A dropped item keeps nothing.
+                None => |_| true,
+            },
             "field" => {
                 let axis_field = match attribute(element, "x")?.as_deref() {
                     Some("-2") => AxisField::Values,
@@ -446,8 +445,13 @@ impl TableReader<'_> {
         Ok(())
     }
 
-    /// An `<item>` of the last `<pivotField>`'s `<items>`; whether it names a cache item.
-    fn read_item(&mut self, cache: &PivotCache, element: &BytesStart) -> Result<bool, Skip> {
+    /// An `<item>` of the last `<pivotField>`'s `<items>`; whether it names a cache item, or
+    /// `None` when it is dropped.
+    fn read_item(
+        &mut self,
+        cache: &PivotCache,
+        element: &BytesStart,
+    ) -> Result<Option<bool>, Skip> {
         let current = self.table.fields.len().saturating_sub(1);
         let (Some(field), Some(cache_field)) =
             (self.table.fields.last_mut(), cache.fields.get(current))
@@ -461,6 +465,14 @@ impl TableReader<'_> {
         let index = if kind == ItemType::Data {
             let item = index_attribute(element, "x")?;
             if item as usize >= cache_field.items.len() {
+                if cache.refresh_on_load && cache_field.number_groups.is_some() {
+                    // Excel rebuilds a numeric range group's items on refresh and lays the field
+                    // out again, so an item past them is dropped, not refused
+                    // (probes/t4128-pivot-spike G; pivots.md "Numeric and date group labels are
+                    // rewritten by Excel"; T-4171). Date and manual groups are unprobed and still
+                    // refused (T-4802).
+                    return Ok(None);
+                }
                 return skip(format!("item index {item} is past the field's items"));
             }
             Some(item)
@@ -482,7 +494,7 @@ impl TableReader<'_> {
             }
         }
         field.items.push(item);
-        Ok(names_cache_item)
+        Ok(Some(names_cache_item))
     }
 
     /// The typed element that encloses what is at `path`: the innermost one, read last.

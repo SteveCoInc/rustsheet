@@ -2277,6 +2277,18 @@ Ours: `Placement::checked_totals` (pivot_placement.rs) takes the dropped writes 
 Status: VERIFIED (excel-graph)
 Tasks: T-2311, T-2578, T-2606, T-2967
 
+## EXPAND with a written-empty rows or columns keeps the array's size (T-4871)
+Rule: a written-empty `rows` or `columns` of EXPAND is the array's own row or column count, as an omitted `columns`
+is, not 0 (which is `#VALUE!` below the array's size). With A1:A2 and A1:B1 holding numbers:
+`ROWS(EXPAND(A1:B1,3,,0))` is 3 and `COLUMNS(..)` 2; `ROWS(EXPAND(A1:A2,,3,0))` is 2 and `COLUMNS(..)` 3;
+`EXPAND(A1:A2,,,0)` is 2x1; `ROWS(EXPAND(5,,,0))` is 1; `ROWS(EXPAND(A1:B1,,))` is 1. Padding still applies where a
+size is given: `INDEX(EXPAND(A1:B1,3,,"p"),3,2)` is "p", and without pad_with `INDEX(EXPAND(A1:A2,,3),2,3)` and
+`INDEX(EXPAND(A1:B1,3,),3,1)` are `#N/A`.
+Evidence: probes/t4871-empty-mode-args E21:E31 (excel-graph, 2026-11-07; predictions committed before the fill).
+Ours: `fn_expand` (functions/lookup_and_reference/expand.rs), the `CalcResult::EmptyArg` arms, as TAKE and DROP do.
+Status: VERIFIED (excel-graph)
+Tasks: T-4871
+
 ## EXPAND, WRAPROWS and WRAPCOLS: scalar arguments lift, EXPAND's pad_with does not
 Rule (probes/m7-argument-modes F7:H8, G42, K5-K7, excel-graph 2026-10-09; probes/m7-lift-take-drop-sortby rows 20-23,
 2026-10-21; T-1835): EXPAND's rows and columns, and WRAPROWS's and WRAPCOLS's wrap_count and pad_with, lift over an array

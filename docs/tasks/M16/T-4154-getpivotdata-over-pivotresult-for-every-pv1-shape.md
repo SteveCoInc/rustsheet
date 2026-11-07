@@ -25,6 +25,12 @@ renders them"). Cause: the engine answers `#REF!` for an item of a field on an a
 DX's pair B20, one field per axis, already agree):
 - probes/t4170-pivot-date-levels Calc!B1:B3, Calc!B5:B6, Calc!B8:B9, Calc!B11:B14
 
+Owner of these visibly-off cells (decision 0245; moved from T-4171, whose fix made the manual-group pivots load and
+render). Cause: the same SPEC-0015 unknown 10, on MC, MT and MS, whose rows are Product2 and Product: the engine
+answers `#REF!` for a group, an ungrouped item or a pair where Excel answers the total (MG and MB, one row field, and
+the grand total already agree; web.md "GETPIVOTDATA on manual groups and date levels"):
+- probes/t4170-pivot-manual-groups Calc!B1:B5, Calc!B8:B10, Calc!B12, Calc!B14
+
 ## Acceptance criteria
 - [ ] probes/getpivotdata-* pass; the SPEC-0015 unknowns T-2085 resolved are implemented.
 - [ ] `make check` green; reviewers approve.

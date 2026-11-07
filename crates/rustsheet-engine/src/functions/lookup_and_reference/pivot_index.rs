@@ -395,6 +395,7 @@ mod tests {
                 records: vec![0, 2, 2, 0],
                 number_groups: None,
                 date_groups: None,
+                added_group: None,
             }],
             record_count: 4,
             refresh_on_load: false,

@@ -11,6 +11,7 @@ mod pivot_read;
 mod pivot_view;
 mod refs;
 mod source;
+mod spill;
 mod value;
 mod workbook;
 
