@@ -58,9 +58,23 @@ fn starts_xlsx_escape_pattern(bytes: &[u8]) -> bool {
 ///
 /// Does not perform allocations if the given string does not contain escapable characters.
 pub fn escape_xml(s: &'_ str) -> Cow<'_, str> {
+    escape(s, true)
+}
+
+/// [`escape_xml`] for element text, where quotes need no escaping: they are written as they
+/// are, as Excel writes them in a chart part's `c:f` (`'C'!$B$3`, t4187's saved chart, T-4187).
+/// The chart rewrite also uses it for cached labels (`c:v`), where Excel's spelling of a quote or
+/// apostrophe is unevidenced (UNVERIFIED, T-4953).
+pub fn escape_xml_text(s: &'_ str) -> Cow<'_, str> {
+    escape(s, false)
+}
+
+fn escape(s: &'_ str, quotes: bool) -> Cow<'_, str> {
+    let quote = |c: char| quotes && matches!(c, '"' | '\'');
     // Fast path: if no special characters, return borrowed slice.
     let needs_escape = s.char_indices().any(|(i, c)| {
-        matches!(c, '<' | '>' | '"' | '\'' | '&' | '\n' | '\r')
+        matches!(c, '<' | '>' | '&' | '\n' | '\r')
+            || quote(c)
             || needs_xlsx_escape(c)
             || (c == '_' && starts_xlsx_escape_pattern(&s.as_bytes()[i..]))
     });
@@ -77,6 +91,8 @@ pub fn escape_xml(s: &'_ str) -> Cow<'_, str> {
             result.push_str(&format!("_x{:04X}_", c as u32));
         } else if c == '_' && starts_xlsx_escape_pattern(&bytes[i..]) {
             result.push_str("_x005F_");
+        } else if matches!(c, '"' | '\'') && !quotes {
+            result.push(c);
         } else {
             match escape_char(c) {
                 Value::Str(esc) => result.push_str(esc),

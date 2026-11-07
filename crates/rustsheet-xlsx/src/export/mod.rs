@@ -8,6 +8,7 @@ mod dxfs_styles;
 mod escape;
 mod external_links;
 mod patch;
+mod pivot_charts;
 mod pivots;
 mod preserving;
 mod rich_errors;
@@ -19,6 +20,9 @@ mod theme;
 mod workbook;
 mod workbook_xml_rels;
 mod worksheets;
+pub use pivot_charts::{
+    rewrite_pivot_chart, PivotChartError, PivotChartFrame, MAX_CHART_PART_BYTES,
+};
 pub use preserving::{save_preserving, SaveTier};
 pub(crate) use rich_errors::rich_error_vm;
 pub(crate) use worksheets::exported_error_literal;

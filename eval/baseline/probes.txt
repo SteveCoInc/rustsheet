@@ -2361,6 +2361,7 @@ C	probes/t4168-pivot-layout-options.case.json	279
 C	probes/t4169-pivot-number-formats.case.json	84
 C	probes/t4170-pivot-date-levels.case.json	431
 C	probes/t4170-pivot-manual-groups.case.json	215
+C	probes/t4187-pivot-chart-caches.case.json	52
 C	probes/t4192-xlookup-error-return-wildcard-binary.case.json	54
 C	probes/t4193-aggregate-scalar-data-error-order.case.json	94
 C	probes/t4194-subtotal-nested-skip.case.json	90
@@ -9948,6 +9949,7 @@ TC	probes/t4164-pivot-value-sort.case.json	180
 TC	probes/t4169-pivot-number-formats.case.json	76
 TC	probes/t4170-pivot-date-levels.case.json	283
 TC	probes/t4170-pivot-manual-groups.case.json	167
+TC	probes/t4187-pivot-chart-caches.case.json	38
 TC	probes/t4505-pivot-calc-field-functions.case.json	176
 TC	probes/t4505-pivot-calc-fields.case.json	274
 TC	probes/t4698-pivot-repeat-labels.case.json	510
