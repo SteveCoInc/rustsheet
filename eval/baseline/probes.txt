@@ -10148,9 +10148,6 @@ F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!A2
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!A3
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!A4
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!A5
-F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!A6
-F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!A7
-F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!A8
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!AA1
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!AA2
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!AA3
@@ -10248,9 +10245,6 @@ F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!F2
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!F3
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!F4
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!F5
-F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!F6
-F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!F7
-F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!F8
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!G1
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!G2
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!G3
@@ -10272,9 +10266,6 @@ F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!I8
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!J3
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!J4
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!J5
-F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!J6
-F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!J7
-F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!J8
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!K1
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!K2
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!K3
@@ -12056,13 +12047,11 @@ F	probes/t4974-f-inv-back-transform.case.json	P!AD1
 F	probes/t4974-f-inv-back-transform.case.json	P!AD11
 F	probes/t4974-f-inv-back-transform.case.json	P!AD2
 F	probes/t4974-f-inv-back-transform.case.json	P!AD3
-F	probes/t4974-f-inv-back-transform.case.json	P!AD7
 F	probes/t4974-f-inv-back-transform.case.json	P!AD9
 F	probes/t4974-f-inv-back-transform.case.json	P!AE1
 F	probes/t4974-f-inv-back-transform.case.json	P!AE11
 F	probes/t4974-f-inv-back-transform.case.json	P!AE2
 F	probes/t4974-f-inv-back-transform.case.json	P!AE3
-F	probes/t4974-f-inv-back-transform.case.json	P!AE7
 F	probes/t4974-f-inv-back-transform.case.json	P!AE9
 F	probes/t4974-f-inv-back-transform.case.json	P!AF1
 F	probes/t4974-f-inv-back-transform.case.json	P!AF11
@@ -12076,7 +12065,6 @@ F	probes/t4974-f-inv-back-transform.case.json	P!B12
 F	probes/t4974-f-inv-back-transform.case.json	P!B2
 F	probes/t4974-f-inv-back-transform.case.json	P!B3
 F	probes/t4974-f-inv-back-transform.case.json	P!B4
-F	probes/t4974-f-inv-back-transform.case.json	P!B7
 F	probes/t4974-f-inv-back-transform.case.json	P!B8
 F	probes/t4974-f-inv-back-transform.case.json	P!C1
 F	probes/t4974-f-inv-back-transform.case.json	P!C10
@@ -12085,7 +12073,6 @@ F	probes/t4974-f-inv-back-transform.case.json	P!C12
 F	probes/t4974-f-inv-back-transform.case.json	P!C2
 F	probes/t4974-f-inv-back-transform.case.json	P!C3
 F	probes/t4974-f-inv-back-transform.case.json	P!C4
-F	probes/t4974-f-inv-back-transform.case.json	P!C7
 F	probes/t4974-f-inv-back-transform.case.json	P!C8
 F	probes/t4974-f-inv-back-transform.case.json	P!D10
 F	probes/t4974-f-inv-back-transform.case.json	P!D11
