@@ -2169,3 +2169,22 @@ Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`read_field`: 
 `PivotField::subtotal_caption`; T-4745)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`Cells::total_label`;
 T-4745)
+
+## Show Details
+Rule (the engine's reading; Excel's Show Details sheet is not probed): the records behind a value cell, which the
+API returns as cache record indices (0 for the source row below the header) in cache record order, are: for an
+item cell, the records the pivot's filters keep (a page field's selection, hidden items) whose
+row and column items are the cell's; for a subtotal, those under its item; for a grand total, every kept record.
+Evidence that the set is right: summing, counting or averaging the returned records' source values gives Excel's
+value for every value cell of the probes in crates/rustsheet-engine/src/pivot/layout/records/tests.rs (t4137 K2,
+K4, K6; t4138 G1 to G9; t4164 SH0, SH1H with a hidden inner item; t4135 A_sum, A_count, A_average; t4634 T1 to T3,
+A1 to A3) and of the facade's tests (crates/rustsheet/tests/pivot_records.rs: getpivotdata-real-pivot, t4128 R).
+Not probed (UNVERIFIED, T-4879): the row order of the sheet Excel's Show Details creates, the columns it shows (all
+source fields, in which order, with which headers and number formats), whether it is a Table and how it is named,
+and what it lists for a calculated field, a grouped field, an OLAP or Data Model pivot, or a cell an error poisons.
+The API does not create that sheet. Top-N, value and label filters are not applied yet (T-4165): for a pivot
+with one, the API's records include records Excel's totals leave out (pivots.md "Filters on an inner field rank per
+parent; totals never count what a filter removes").
+Status: UNVERIFIED (probe pending: T-4879) for the Show Details sheet; the record set is checked as above.
+Implemented in: crates/rustsheet-engine/src/pivot/layout/records.rs (`records_behind`, T-4184);
+crates/rustsheet/src/pivot_view.rs (`Workbook::pivot_cell_records`, T-4184).

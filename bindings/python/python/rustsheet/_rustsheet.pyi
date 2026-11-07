@@ -212,6 +212,14 @@ class Workbook:
         `#SPILL!` at the anchor when the layout would meet a cell the pivot does not own.
         EditError for an unknown pivot or one past a limit, RefError for an unknown sheet.
         """
+    def pivot_cell_records(self, sheet: str, name: str, a1: str) -> list[int]:
+        """The source records behind the value cell `a1` (`"B5"` or `"Sheet!B5"`) of the pivot.
+
+        Record indices in record order, 0 for the row below the source's header: a data cell's
+        records, a subtotal's or a grand total's, after the pivot's filters; a value cell no
+        record reaches has none. EditError for a cell that is no value cell (a label, a header,
+        outside the pivot), an unknown pivot or one past a limit; RefError for an unknown sheet.
+        """
     @property
     def changes(self) -> dict[str, list[dict[str, Any]]] | None: ...
 
