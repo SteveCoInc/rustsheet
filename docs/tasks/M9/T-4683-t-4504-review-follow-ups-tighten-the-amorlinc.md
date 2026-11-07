@@ -3,7 +3,7 @@ id: T-4683
 title: "T-4504 review follow-ups: tighten the AMORLINC/AMORDEGRC salvage-equals-cost citations and probe a salvage one ulp below the cost"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
