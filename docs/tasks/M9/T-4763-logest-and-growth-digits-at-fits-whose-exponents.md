@@ -15,7 +15,7 @@ LOGEST's b and m and GROWTH's value match Excel's digits on the fits of probes/t
 lie near the double range. Today they are 5E-14 to 3E-13 relative off, the least-squares solve's last digits.
 
 ## Context
-- T-4590 implemented GROWTH's overflow and underflow edges from this probe. Its remaining cells are digits, not
+- T-4590 implemented GROWTH's overflow edge from this probe; the zero is T-4765's. Its remaining cells are digits, not
   edges.
 - Owned cells: probes/t4590-growth-overflow Int! A1, B1, B2, B4, B5, B6, B7, C4, C6, C7, C10, C11 and Slope! A4,
   A5. For example, Int!A1 `GROWTH({1.00709088702808e+152,1,9.92959039626498e-153},{1,2,3},2,TRUE)` is 1 in Excel
@@ -29,4 +29,4 @@ lie near the double range. Today they are 5E-14 to 3E-13 relative off, the least
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- GROWTH's overflow and underflow edges (T-4590).
+- GROWTH's overflow edge (T-4590) and the zero (T-4765).
