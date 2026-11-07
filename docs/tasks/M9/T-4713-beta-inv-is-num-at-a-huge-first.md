@@ -3,7 +3,7 @@ id: T-4713
 title: "BETA.INV is #NUM! at a huge first shape with a second shape above 1 from about 1E+16 (T-3862 split)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -33,10 +33,10 @@ Owner of the visibly-off cells of probes/t3862-beta-inv-huge-alpha D1:D9, probes
 H4:H25, and Gate A BETAINV/s1 A179: Excel `#NUM!` where ours is a number (an error against a number, `semantics`).
 
 ## Acceptance criteria
-- [ ] The boundary in alpha is bisected at two or more betas above 1 and p values, and the rule (a quantity of
+- [x] The boundary in alpha is bisected at two or more betas above 1 and p values, and the rule (a quantity of
   AS 109 or Excel's cdf that overflows, underflows or cannot move) is derived and recorded in statistics.md; or the
   negative result is recorded.
-- [ ] The probe cells above and BETAINV/s1 A179 pass where the rule covers them.
+- [x] The probe cells above and BETAINV/s1 A179 pass where the rule covers them.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -62,3 +62,24 @@ reads BETA.DIST's cdf and density at the start 1 - 2^-51 and GAMMALN(alpha), GAM
   so K is `#NUM!` exactly on the rows where G or H is.
 - Hypothesis L (ln B): Excel's ln B = GAMMALN(a) + GAMMALN(b) - GAMMALN(a + b) is a multiple of the ulp of
   GAMMALN(a) (64 at 1E+16); `#NUM!` follows a value of J - I (0 or very large), so K's `#NUM!` rows match a J - I pattern.
+
+## Probe 2 result
+Hypothesis K holds row for row: K1:K41 (`BETA.INV(0.1,a,2)`) is `#NUM!` on exactly the 30 rows where H
+(`BETA.DIST(1-2^-51,a,2,FALSE)`) is, and a number on the other 11. Hypothesis L (ln B from GAMMALN) does not separate
+them (J - I is 64 on both kinds of row). The density's `#NUM!` rows are exactly where Loader's count
+nk = fl(fl(a + b) - 2) - fl(a - 1) is 0: our density already gave Excel's own odd values on the other rows (H9
+1.236E+15, nk = 2) and 0 on these.
+
+## Outcome
+- Rule (statistics.md "BETA.INV and BETA.DIST's density are #NUM! where Loader's n - k is not positive (T-4713)"):
+  with both shapes above 1, Excel's Loader density is `#NUM!` at every x where nk <= 0, and BETA.INV/BETAINV are
+  `#NUM!` at every p on those shapes after AS 109's flip. It predicts all 469 BETA.INV cells with both shapes above 1
+  (below the sqrt(DBL_MAX) cut) of the four probes and all 41 densities; it is not a fit (no constant, no cut chosen).
+- Code: loader.rs `beta_density_counts` (k, n, nk, now shared with `excel_beta_density`) and
+  `beta_density_counts_vanish`; beta.rs's density returns `#NUM!` there, and `beta_quantile` returns NaN
+  (`newton_density_vanishes`, flipped shapes for p > 1/2). Unit tests in both modules.
+- Cells: probes/t3862-beta-inv-huge-alpha D1:D9, t3862-beta-inv-sqrt-dbl-max G5:G25 and H4:H25 now pass; Gate A
+  accuracy/BETAINV/s1 A179 passes and its known-failures.tsv line is removed. New probes: t4713-beta-inv-beta-above-1-cut
+  (222 cells) and t4713-beta-inv-cut-pieces (369 cells, 313 pass, the rest 15-digit-close cdf cells and ulp-level
+  quantiles). Their visibly-off cells E41 and F12:F17 (beta 1's 0.999999 cap, the flipped quantile at 1) go to T-4958.
+- In passing (recorded, not implemented): Excel's value here is often AS 109's unmoved start, bit for bit.

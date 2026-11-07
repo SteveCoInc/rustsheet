@@ -6992,7 +6992,7 @@ stays the second shape, is a number on both sides (5.85776711227727E-157) and so
 - It explains all 12 `#NUM!` cells of the Gate A class "`#NUM!` at a huge alpha" (alpha 5.1E+161 to 4.1E+296) and 12
   of the 13 BETAINV/s1 cells (A180:A190, A193; alpha 4.2E+154 to 1.1E+303, beta from 2E-266 to 2.7E+221, so also
   where the true quantile is interior, A188 at about 0.989, or tiny, A187 and A189 near a/(a + b)).
-- Not this rule: with beta above 1 Excel is `#NUM!` far lower. `BETA.INV(1E-10,a,10)` is 0.9999999999999956 at
+- Not this rule: with beta above 1 Excel is `#NUM!` far lower, where Loader's n - k vanishes (T-4713, the next entry). `BETA.INV(1E-10,a,10)` is 0.9999999999999956 at
   a = 1E+16 and `#NUM!` from 1E+18 (where AS 109's start pp/(pp + qq exp(2w)) rounds to 1), but `BETA.INV(0.1,a,2)` is
   `#NUM!` from 1E+16, where that start is 0.9999999999999996 and the quantile about 1 - 3.9E-16, so "the start rounds
   to 1" is refuted as the rule; BETAINV/s1 A179 (alpha 1.55E+145, beta 4.2E+128) is in this class (T-4713).
@@ -7007,9 +7007,36 @@ before each fill (task file). Fills with `BETA.INV(0.1,alpha,1E+100)` at those a
 retries exhausted).
 Ours: `#NUM!` from the cut since T-3862 (functions/statistical/beta.rs `first_shape_square_overflows`); below it
 1 - 2^-53 where Excel has 0.999999 or 1 - 1/e, and 5.888648679911079E-157 where Excel has 5.85776711227727E-157
-(T-4700); a number where beta is above 1 (T-4713).
+(T-4700); `#NUM!` where beta is above 1 and Loader's n - k vanishes since T-4713.
 Status: VERIFIED (excel-graph) for the cut; the expression that squares pp UNVERIFIED
 Tasks: T-3862, T-4713, T-4700
+
+## BETA.INV and BETA.DIST's density are #NUM! where Loader's n - k is not positive (T-4713)
+Rule: with both shapes above 1, BETA.DIST(x, a, b, FALSE) is `#NUM!` at every x where its Loader counts
+k = fl(a - 1), n = fl(fl(a + b) - 2) leave nk = fl(n - k) at 0 or below (its LN(nk) has no value); BETA.INV and
+BETAINV are `#NUM!` at every p on exactly those shapes after AS 109's flip ((alpha, beta) for p up to 1/2,
+(beta, alpha) above it), as their Newton step takes that density. nk only vanishes from a = 2^53, where a - 1 and
+a + b - 2 round onto the same double (or past each other: nk = -4 at `BETA.INV(0.4,2.23872113856835E+16,1.5)`), so
+the cut in alpha is ragged: `BETA.INV(0.1,a,2)` is `#NUM!` at a = 9.12E+15, 9.33E+15 and from 1E+16 to 1.78E+16 but
+a number at 9.55E+15, 9.77E+15 and 1.82E+16 to 1.91E+16, row for row where `BETA.DIST(1-2^-51,a,2,FALSE)` is.
+- Evidence: probes/t4713-beta-inv-cut-pieces (H1:H41 against K1:K41, alpha 10^15.9 to 10^16.3 by 10^0.01; A to D
+  above the first `#NUM!`), probes/t4713-beta-inv-beta-above-1-cut (40 rows a decade at four (p, beta) pairs, the
+  flipped p = 0.9, beta = 1), probes/t3862-beta-inv-sqrt-dbl-max G1:H25 and t3862-beta-inv-huge-alpha D1:D11
+  (excel-graph, 2026-11-07; predictions committed before each fill, task file). nk at or below 0 predicts `#NUM!` on
+  469 of the 469 BETA.INV cells of these cases with both shapes above 1 below the sqrt(DBL_MAX) cut, and on 41 of 41
+  densities; Gate A accuracy/BETAINV/s1 A179 (alpha 1.55E+145, beta 4.23E+128: fl(a + b) = a) is the same rule.
+- Refuted on the way: the true quantile's 1 - x below a threshold (`BETA.INV(0.1,a,2)` is the same double
+  1 - 2^-51 at a = 8.4E+15, 9.4E+15 and the `#NUM!` 1E+16); the start rounding to 1 (T-3862).
+- The flipped orientation is Excel's: `BETA.INV(0.9,a,2)` (k = 1, nk about a) is a number at every a from 1E+15 to
+  1E+16, where the unflipped counts vanish on most rows.
+- In passing: below the cut Excel's BETA.INV at these shapes is often AS 109's start pp/(pp + qq exp(2w)) unmoved,
+  bit for bit (every row of t4713-beta-inv-beta-above-1-cut A and C), and the moved root elsewhere (most of B and D);
+  ours is the crossing, within an ulp or two near 1. `BETA.INV(0.1,a,1)` is 0.999999 from a = 5.6E+16 (F12:F17, the
+  1 - 1E-6 cap T-4700 has at a tiny beta) and `BETA.INV(0.9,1E+16,2)` is 1 where ours is `#NUM!` (E41): T-4958.
+Ours: functions/statistical/loader.rs `beta_density_counts_vanish`, taken by beta.rs's density and by
+`beta_quantile` (`newton_density_vanishes`).
+Status: VERIFIED (excel-graph)
+Tasks: T-4713, T-4958
 
 ## F.INV.RT saturates at 3.696066238512854E+150/df1 in the far tail (T-2435)
 Rule: for a probability far in the tail and a df2 below 2, Excel's F quantile search stops at a
