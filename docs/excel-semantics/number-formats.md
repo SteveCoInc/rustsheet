@@ -1637,7 +1637,7 @@ t4043-placeholder-denominator-slots, t3711-fixed-denominator-then-placeholder, t
 t3532-numeral-digit-fields row 14 (the zeros take the numeral digits). The model matched every cell of those probes in an
 engine that was not merged; its placeholder-denominator part does not fit the mixed denominators of "Fraction formats"
 above (`# ?/#0` on 12.5 is "12 1/2", the model gives "12 1/02"; probes/t4204-fraction-denominator-mixed), so a
-placeholder denominator prints its own text by that entry and hands on only its lacking digits by this one.
+placeholder denominator prints its own text by that entry and hands on only its lacking digits by this one. Spilled digits under a narrow fixed denominator (probes/t4526-fixed-denominator-spill, 13 cells, excel-graph 2026-11-07; T-4526): `# ?/4|0` on 12.1 is "12 1/4|00", on 12.11 "12 11/4|000", on 12.12 "12 3/4|50", on 12.04 "12 1/4|50", on 12.2 "12 1/4|0", and `# ?/4 x0` on 12.1 "12 1/4 x00"; all follow this rule.
 - **A `.` among them** splits them like a number's point (T-4594). Before it the rules above hold, except that the last
   placeholder before the point, if a `?`, takes every spilled digit left (`# ?/7 ?.0` on 0.0123 is " 123/7 0000.0", not
   one digit), and zeros are left *pending* for the decimals:
