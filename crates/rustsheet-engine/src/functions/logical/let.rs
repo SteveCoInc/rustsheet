@@ -399,7 +399,7 @@ impl Model {
         matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node)
     }
 
-    /// The Analysis ToolPak rule for a written-empty required argument (T-4870): `#N/A` where one of
+    /// The Analysis `ToolPak` rule for a written-empty required argument (T-4870): `#N/A` where one of
     /// the first `required` arguments is written empty ([`Model::is_written_empty`]): `EDATE(,1)`,
     /// `WORKDAY(1,)` and `LET(e,,EDATE(1,e))` (probes/t4870-empty-date-args), as for MROUND,
     /// RANDBETWEEN, IMSUB and IMDIV. It is a rule of the formula's text: a blank cell, and a value

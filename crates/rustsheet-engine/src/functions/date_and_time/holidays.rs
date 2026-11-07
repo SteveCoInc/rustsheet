@@ -16,7 +16,7 @@ use crate::{
 
 impl Model {
     /// The holidays argument of WORKDAY(.INTL) or NETWORKDAYS(.INTL) (argument `holidays_at`), after
-    /// the checks the four share: the argument count, then the ToolPak `#N/A` for a written-empty
+    /// the checks the four share: the argument count, then the `ToolPak` `#N/A` for a written-empty
     /// date or day count ([`Model::toolpak_empty_required`]). A written-empty holidays is omitted
     /// (`WORKDAY(45000,10,)` is `WORKDAY(45000,10)` and `NETWORKDAYS(45000,45030,)` 23:
     /// probes/t4870-r2-empty-optional A1, A3, A9, A11, A13; T-4870).

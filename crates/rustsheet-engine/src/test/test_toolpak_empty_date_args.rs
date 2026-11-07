@@ -1,4 +1,4 @@
-//! A written-empty required argument of the ToolPak date functions is `#N/A`, and a written-empty
+//! A written-empty required argument of the `ToolPak` date functions is `#N/A`, and a written-empty
 //! optional one is omitted (T-4870; probes/t4870-empty-date-args and t4870-r2-empty-optional,
 //! excel-graph, 2026-11-07).
 
