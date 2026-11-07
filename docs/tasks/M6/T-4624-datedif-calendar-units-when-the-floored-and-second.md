@@ -3,7 +3,7 @@ id: T-4624
 title: "DATEDIF calendar units when the floored and second-rounded date orders differ: probe and match"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -26,12 +26,18 @@ end N-0.6 s), and any past-the-calendar cell not covered by probes/t4574-feb29-n
   just below 2958466 for the units other than "D" at the top of the calendar.
 
 ## Acceptance criteria
-- [ ] An excel-graph probe covers every unit with start and end on one floored day in reversed carried order, and
+- [x] An excel-graph probe covers every unit with start and end on one floored day in reversed carried order, and
   with an end just below 2958466, against integer controls.
-- [ ] The probe tells "Y"'s reading apart, e.g. `DATEDIF(44927,45292-0.4/86400,"y")`: 0 if floored, 1 if carried
+- [x] The probe tells "Y"'s reading apart, e.g. `DATEDIF(44927,45292-0.4/86400,"y")`: 0 if floored, 1 if carried
   (the engine carries it today, unevidenced).
-- [ ] dates.md records the result with cells; the engine matches every probe cell.
-- [ ] `make check` green; reviewers approve.
+- [x] dates.md records the result with cells; the engine matches every probe cell.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The ordinary near-midnight reads (T-4574).
+
+## Outcome
+Probe probes/t4624-datedif-reversed-and-calendar-end (60 cells, excel-graph) settles all three questions: "Y" carries
+(1, not 0), the carried-reversed pair reads y -1, m -1, d 0, ym 11, md 30, yd 365 at every N, and an end or start just
+below 2958466 is #NUM! in every unit. The engine already matched every cell, so no engine change; dates.md records the
+cells. Eval delta: 60 new passing probe cells, no regressions.
