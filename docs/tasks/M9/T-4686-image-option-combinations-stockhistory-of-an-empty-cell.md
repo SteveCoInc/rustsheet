@@ -3,7 +3,7 @@ id: T-4686
 title: "IMAGE option combinations, STOCKHISTORY of an empty cell and FIELDVALUE's row-axis broadcast that information.md leaves UNVERIFIED: probe and match"
 milestone: M9
 lane: functions-logic
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -45,18 +45,32 @@ the UNVERIFIED lists.
   crates/rustsheet-engine/src/functions/information/offline_errors.rs.
 
 ## Acceptance criteria
-- [ ] probes/t4686-rich-value-option-residue.case.json is committed with excel-graph oracle values and holds every
+- [x] probes/t4686-rich-value-option-residue.case.json is committed with excel-graph oracle values and holds every
       form of items 1-4. Item 2 covers at least `IMAGE(url,NA(),1/0)`, `IMAGE(url,"alt",NA(),1/0)` and
       `IMAGE(url,1/0,"x")`.
-- [ ] Every probe cell passes, or each cell that does not is listed in a new functions-logic task (`campaign:
+- [x] Every probe cell passes, or each cell that does not is listed in a new functions-logic task (`campaign:
       semantics` with a `## Visible-parity stage` section) filed with `make new-task` that names the case and its
       cells. Those new known failures are recorded with `make eval-baseline`.
-- [ ] information.md replaces each UNVERIFIED item above with the observed value and cites the probe cells. The
+- [x] information.md replaces each UNVERIFIED item above with the observed value and cites the probe cells. The
       "stored form" UNVERIFIED notes (undecodable rich values) stay.
-- [ ] Any engine change has a unit test in offline_errors.rs that pins the probed result.
-- [ ] `make check-fast` green; no new known-failure line in eval/baseline/ other than those owned as above; reviewers
+- [x] Any engine change has a unit test in offline_errors.rs that pins the probed result.
+- [x] `make check-fast` green; no new known-failure line in eval/baseline/ other than those owned as above; reviewers
       approve.
 
 ## Out of scope
 - The fetch itself (a DEVIATION, decision 0014) and the stored rich-value form of IMAGE's error cells.
 - STOCKHISTORY's other arguments beyond the empty-cell `stock`, and IMAGE's URL classification (T-1189's bullets).
+
+## Outcome
+Probe case `probes/t4686-rich-value-option-residue` (38 cells, excel-graph 2026-11-06) holds every form of items 1-4
+and passes in full. Nine cells differed from the engine and are fixed in `offline_errors.rs`:
+- IMAGE `sizing` truncates toward zero before the 0..3 check (-0.5, -0.9 are valid) and numeric text is a number for
+  `sizing`, `height` and `width`.
+- `sizing` 0, 1 and 2 all refuse a `height` and a `width` (2 was unchecked); `sizing` 3 needs a nonzero `height` or
+  `width` (a width alone is enough).
+- STOCKHISTORY of an empty-cell `stock` or `start_date` is `#VALUE!`, not `#CONNECT!`.
+Items 2 (error order) and 4 (FIELDVALUE row-axis, 3x1 of `#FIELD!`, `#FIELD!`, `#N/A`) already matched. Unit tests in
+`test_fn_offline_errors.rs` pin the probed results; `information.md` replaces the UNVERIFIED lists with the observed
+values ("STOCKHISTORY and IMAGE residue (T-4686)"). Still UNVERIFIED and noted there: an empty-cell `height`/`width`
+under `sizing` 0..2, date or currency text as an IMAGE number, and an empty `end_date` or array element of STOCKHISTORY.
+No new known failures; the baseline gains the 38 passing cells.

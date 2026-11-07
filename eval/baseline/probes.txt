@@ -2592,6 +2592,7 @@ C	probes/t4625-gamma-dist-ratio-overflow.case.json	62
 C	probes/t4626-matrix-text-elements.case.json	28
 C	probes/t4627-pivot-field-name-collisions.case.json	105
 C	probes/t4634-pivot-total-order-4.case.json	1643
+C	probes/t4686-rich-value-option-residue.case.json	38
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10

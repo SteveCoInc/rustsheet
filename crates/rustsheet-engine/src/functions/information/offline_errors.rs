@@ -5,13 +5,14 @@
 
 use crate::{
     calc_result::CalcResult,
-    cast::calc_result_to_array_node,
+    cast::{calc_result_to_array_node, number_text_too_long},
     expressions::{
         parser::{ArrayNode, Node},
         token::Error,
         types::CellReferenceIndex,
     },
     model::Model,
+    number_format::parse_excel_number,
 };
 
 use crate::functions::lift::{LiftCost, LiftOptions, LiftedArg};
@@ -37,28 +38,33 @@ fn is_url(text: &str) -> bool {
 }
 
 /// The number IMAGE reads from a `sizing`, `height` or `width` argument: a number, or a boolean
-/// (TRUE is 1: `IMAGE(url,"alt",TRUE)` is not `#VALUE!`), or an empty cell as 0 (UNVERIFIED).
-/// Text and an omitted argument have none.
+/// (TRUE is 1: `IMAGE(url,"alt",TRUE)` is not `#VALUE!`), or numeric text (`"1"` as `sizing`, a
+/// text `"10"` as `height` and `width` reach the fetch), or an empty cell as 0. Other text, `""`
+/// included, and an omitted argument have none (probes/t4686-rich-value-option-residue A8:A10).
+/// Only plain number text counts: a date or currency text is UNVERIFIED.
 fn image_number(value: &CalcResult) -> Option<f64> {
     match value {
         CalcResult::Number(n) => Some(*n),
         CalcResult::Boolean(b) => Some(f64::from(u8::from(*b))),
         CalcResult::EmptyCell => Some(0.0),
+        CalcResult::String(text) if !number_text_too_long(text) => parse_excel_number(text.trim()),
         _ => None,
     }
 }
 
 /// Whether IMAGE's `[alt_text]`-onward options (`options` is `sizing`, `height`, `width`) are
 /// valid; an invalid set makes IMAGE `#VALUE!` even for a URL source. Excel (probes/rich-errors-
-/// image-sizing, excel-graph, 2026-10-11, T-1345): `sizing` is 0 to 3 (a fraction truncates;
+/// image-sizing, excel-graph, 2026-10-11, T-1345; probes/t4686-rich-value-option-residue,
+/// 2026-11-06, T-4686): `sizing` truncates toward zero to 0 to 3 (-0.5 and -0.9 are 0, 3.5 is 3;
 /// -1, 4, 9, text, "" and an omitted `IMAGE(url,"alt",)` are `#VALUE!`); sizing 3 needs a
-/// `height`, `height` and `width` are not negative, and not both 0; sizing 0 and 1 refuse
-/// a `height`. An array-valued option is validated element by element by [`image_element`].
+/// nonzero `height` or `width`, `height` and `width` are not negative; sizing 0, 1 and 2 refuse
+/// a `height` and a `width` (`0,,10` and `2,10` are `#VALUE!`). An array-valued option is
+/// validated element by element by [`image_element`].
 fn image_options_valid(options: &[CalcResult]) -> bool {
     let Some(sizing) = options.first() else {
         return true;
     };
-    let Some(sizing) = image_number(sizing).filter(|s| (0.0..4.0).contains(s)) else {
+    let Some(sizing) = image_number(sizing).filter(|s| *s > -1.0 && *s < 4.0) else {
         return false;
     };
     let size = |value: Option<&CalcResult>| match value {
@@ -72,9 +78,8 @@ fn image_options_valid(options: &[CalcResult]) -> bool {
         return false;
     };
     match sizing.trunc() as u8 {
-        3 => height.is_some() && (height != Some(0.0) || width.is_some_and(|w| w != 0.0)),
-        0 | 1 => height.is_none() && width.is_none(),
-        _ => true,
+        3 => height.is_some_and(|h| h != 0.0) || width.is_some_and(|w| w != 0.0),
+        _ => height.is_none() && width.is_none(),
     }
 }
 
@@ -253,6 +258,15 @@ impl Model {
             Err(error) => error,
             Ok((LiftedArg::Grid(values), _)) => {
                 self.error_grid(values, &Error::CONNECT, true, cell)
+            }
+            // An empty-cell `stock` or `start_date` is `#VALUE!` before any fetch is tried
+            // (probes/t4686-rich-value-option-residue C1, C2, C4, excel-graph, 2026-11-06); other
+            // empty arguments are UNVERIFIED.
+            Ok((LiftedArg::Scalar(stock), options))
+                if matches!(stock, CalcResult::EmptyCell)
+                    || matches!(options.first(), Some(CalcResult::EmptyCell)) =>
+            {
+                CalcResult::new_error(Error::VALUE, cell, "Empty stock or start date".to_string())
             }
             Ok((LiftedArg::Scalar(_), _)) => CalcResult::new_error(
                 Error::CONNECT,
