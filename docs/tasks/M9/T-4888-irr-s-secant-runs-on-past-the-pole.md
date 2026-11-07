@@ -3,7 +3,7 @@ id: T-4888
 title: "IRR's secant runs on past the pole: continue the run at d > 1 instead of failing, with an absolute stall bound"
 milestone: M9
 lane: functions-financial
-status: done
+status: blocked
 priority: P1
 size: S
 tier: opus
@@ -73,4 +73,25 @@ the outlier T-2565 and T-3120 left. IRR cells off Excel outside t4838 and t4844 
 visibly-off numbers 113 -> 73). Also: the three t4844 math sidecars were stale (their case descriptions changed after
 the sidecars were written, in #3910) and are regenerated.
 Follow-ups: none new. T-4840 owns t4838's 26 cells and t4888-irr-stall-sweep's 60; the flat secant stays T-4838's.
+
+## Blocked because
+Blocked because: review-round limit
+
+The excel-fidelity reviewer's round-3 findings on head 7e0d968f are still open. Security and design approved that head.
+- MAJOR: the stall rule's relative half (`IRR_STALL_RELATIVE` = 1e-12) and the two-part form were shaped after seeing
+  probes/t4888-irr-stall-sweep's oracle values, so that sweep cannot be their fresh sweep (R4.1, R4.2). Freeze the
+  rule, draw a new seeded sweep, fill it, and report hold-or-not counts for the rule and for "no stall stop". The 4
+  misses (A152, A154, A159, A165, relative 1.1E-16..3.1E-16) sit inside the held band, so the true discriminator near a
+  root is still unknown.
+- MAJOR: report a Gate A envelope count, with the points outside it, for the fresh sweeps (t4838, t4888 and the new
+  one); both have math sidecars.
+- MAJOR: the FITTED tag says 3..40 flows and largest |c| 1.3E-7..1.3E+14, but `irr_stall_stops` checks only the largest
+  flow. Either enforce the flow-count range or narrow the tag, state the guess evidence (guess 0.1 plus t2565's), and
+  correct the cap's source: the sweep's stalled series reach 5.5E+17.
+- MINOR: the garbled sentence in `IRR_STALL_RESIDUAL`'s doc ("frozen before the fresh sweep T-4888's own fresh sweep
+  was drawn"; design flagged it too); the inline stall comment still says the bound is absolute only; financial.md
+  should call the A131/A1:A70 comparison "the replay's Newton model" and the stall sweep's decades "of the scale"; the
+  T-3120 entry's parenthetical on P!C157 needs its own sentence.
+Not in dispute: the run-on past the pole (130/130 on the seeded t4838 sweep, 65 earlier cells) and the 4..5-flow cap
+widening (12 fresh cells). A resumer may split those into their own PR if the stall rule needs more rounds.
 
