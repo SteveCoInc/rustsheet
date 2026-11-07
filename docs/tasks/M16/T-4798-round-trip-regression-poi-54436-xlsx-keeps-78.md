@@ -3,8 +3,8 @@ id: T-4798
 title: "Round-trip regression: poi/54436.xlsx keeps 78.79% after T-4176's pivot export rewrites the package (was 100.00%)"
 milestone: M16
 lane: engine
-status: todo
-priority: P0
+status: done
+priority: P3
 size: S
 tier: opus
 depends_on: []
@@ -57,3 +57,8 @@ UTC, before #3800; because of #3892's re-record (above) it will not go red on th
 
 ## Out of scope
 - Round-trip losses already in the baseline for other cases.
+
+## Outcome
+Duplicate of T-4825, which already owned this regression on `main` (as did T-4829, also closed, and T-4867, which keeps
+the PR-gate question). Filed by the 2026-11-07 steward PR (#3872); its new facts (the bisect, and #3892 recording the
+regression as an `F` line) and its acceptance criteria moved to T-4825, now P0. No change here.
