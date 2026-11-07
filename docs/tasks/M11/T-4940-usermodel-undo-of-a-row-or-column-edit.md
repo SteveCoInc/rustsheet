@@ -3,7 +3,7 @@ id: T-4940
 title: "UserModel undo of a row or column edit restores the data table inputs and tables it deleted"
 milestone: M11
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,11 +31,19 @@ with its whole region is there again.
   restores the cells but not the table.
 
 ## Acceptance criteria
-- [ ] Undo of a row delete and of a column delete that made an input `#REF!` restores it, and undo
+- [x] Undo of a row delete and of a column delete that made an input `#REF!` restores it, and undo
       of one that deleted a table restores it with its results; redo deletes again. Unit tests.
-- [ ] Undo of a range clear that deleted a table restores it; redo deletes it again.
-- [ ] A diff whose data tables break `DataTable::check` is refused.
-- [ ] `make check` green; reviewers approve.
+- [x] Undo of a range clear that deleted a table restores it; redo deletes it again.
+- [x] A diff whose data tables break `DataTable::check` is refused.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The facade (its row and column edits are harness-only and have no undo).
+
+## Outcome
+A new snapshot diff `Diff::SetDataTables` (old == new, pushed before the edit like
+`SetMergedCells`) records a sheet's data tables for `UserModel::delete_rows`/`delete_columns`,
+`range_clear_all` and `range_clear_contents` when the edit changes them, so undo gives back a
+`#REF!` input or a deleted table and redo deletes again. Applying it checks every table with
+`DataTable::check`, so a crafted diff is refused unchanged. Tests: `test_data_tables_undo.rs`.
+No eval delta (UserModel only); no new Excel quirk.
