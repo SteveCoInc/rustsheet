@@ -3,7 +3,7 @@ id: T-4825
 title: "Source-preserving export keeps an imported pivot's cache and records unchanged (roundtrip-poi 54436 regressed by T-4176)"
 milestone: M16
 lane: engine
-status: todo
+status: done
 priority: P0
 size: S
 tier: opus
@@ -46,3 +46,39 @@ recorded, the nightly gate no longer reports it, and a passing check is no evide
 
 ## Out of scope
 - Exporting pivots the API created or edited (T-4176's scope); only the unedited-import path.
+
+## Outcome
+- **Claim:** another worker had claimed this task, on branch `agent/engine/T-4825-poi-54436-pivot-preserve` (one
+  commit, the claim only). It had no progress. The owner had me let that claim lapse and take the task over.
+- **Root cause:**
+  - 54436's cache is `refreshOnLoad="1"`, so the load's recalculation refreshes its pivot.
+  - The refresh lays the pivot out again, and `place()` (`crates/rustsheet-engine/src/pivot/grid.rs`) always dropped
+    the saved `rowItems`/`colItems` (the T-4176 rule).
+  - The live pivot then differed from the pristine re-import. `export/patch.rs`'s `structure_differs` saw "the
+    workbook's pivot tables changed", so the save fell to `Regenerated`, which rewrites every pivot part (cacheId
+    30 to 1, the versions, the records and the `extLst` lost).
+  - It was not the pivot export itself: the source-preserving tiers were never reached.
+- **Fix:** a layout that changes nothing keeps the saved lines. "Nothing" means the same cache, location and
+  geometry, the cells the sheet already shows (`already_shown`: same text, number or error at each place), and no
+  cell to clear. Any other layout drops them, as before. SPEC-0032's export paragraph says so.
+- **Tests:**
+  - `workbook::tests::an_unedited_refresh_on_load_pivot_saves_its_parts_as_read` (facade): the `refreshOnLoad`
+    fixture `pivot_tables.xlsx` (its GETPIVOTDATA cells removed, since they cache a placeholder 0) loads, refreshes
+    and saves. Both pivots' cache definitions, records and tables, plus `workbook.xml` (the cacheIds), are the
+    source's bytes. The test fails without the fix.
+  - `export::pivots::tests::an_excel_saved_pivot_round_trips` now pins that an unchanged layout leaves the pivot
+    as read, and still checks the engine's lines, equal to Excel's, once the saved ones are removed.
+  - `a_changed_layout_drops_the_saved_lines` pins the other side: with a pivot cell edited, the layout drops them.
+- **Round trip:**
+  - `rustsheet-eval roundtrip --suite roundtrip-poi --filter 54436`: R0 and R1 keep 100.00%, 0 failing.
+  - The re-record (`rustsheet-eval roundtrip --update-baseline --timeout 300`) removed
+    `F roundtrip-poi/54436.xlsx#R0 * 296 2cd19df138a87ec5`.
+- **Other #3892 lines:** I compared every round-trip baseline's current `#R0` failing lines with the baseline before
+  #3892 (`a2bae4dec^`).
+  - calipers and fixtures have identical sets.
+  - poi gained only the 54436 line.
+  - corpus-bench gained none, and lost one line (`1726/1_1726_input.xlsx`), fixed since.
+  - excel-saved did not exist then.
+  - So 54436 was the only #3800 regression that #3892 recorded, and there is no further task to file.
+- **Follow-up:** T-5046 drops the ratchet's legacy per-case path and fixes the quality-gates wording, as #4007
+  promised.

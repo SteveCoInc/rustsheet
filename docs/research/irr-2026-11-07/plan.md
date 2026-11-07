@@ -273,10 +273,10 @@ Mark each cell as Excel-evidenced, contradicted or unknown.
 | The VBA `IRR` of Office (VBE7) | the "C code" Financial.vb was ported from; if a desktop oracle is ever available, VBA's IRR is a second, cheaper oracle for the lineage (T-1075) | not reachable via excel-graph |
 | Excel's fitted RATE (financial.md) | hold on flat, restart rule (T-3698), run on past -1, cap 200 with a 1e-4 return | fitted 782/782 |
 | Excel's fitted XIRR (bisection) and YIELD (Newton, 100-step cap) | the other solvers' caps and error codes | fitted |
-| LibreOffice `ScInterpreter::ScIRR` (sc/source/core/tool/interpr2.cxx) | Newton in r, 20 steps: a non-Excel baseline | to read |
-| Gnumeric `irr` (plugins/fn-financial, goal_seek) | Newton, then bracketing and "trawl" fallbacks: what a second stage can look like | to read |
-| Apache POI `Irr`, formulajs, IronCalc upstream | what other engines replicate (all Newton) | to read |
-| Lotus 1-2-3 / Multiplan `@IRR` docs, Microsoft KB articles on IRR `#NUM!`, "Function Improvements in Excel 2010" | historical constants (20 iterations, 0.00001%) and whether 2010 touched IRR | to search |
+| LibreOffice `ScInterpreter::ScIRR` (sc/source/core/tool/interpr2.cxx) | Newton in r, 20 steps: a non-Excel baseline | read: lineage.md (T-4835) |
+| Gnumeric `irr` (plugins/fn-financial, goal_seek) | Newton, then bracketing and "trawl" fallbacks: what a second stage can look like | read: lineage.md (T-4835) |
+| Apache POI `Irr`, formulajs, IronCalc upstream | what other engines replicate (all Newton) | read: lineage.md (T-4835) |
+| Lotus 1-2-3 / Multiplan `@IRR` docs, Microsoft KB articles on IRR `#NUM!`, "Function Improvements in Excel 2010" | historical constants (20 iterations, 0.00001%) and whether 2010 touched IRR | searched: lineage.md (T-4835) |
 
 Exit: the table, with a ranked list of mechanisms to test at each of the three events.
 
