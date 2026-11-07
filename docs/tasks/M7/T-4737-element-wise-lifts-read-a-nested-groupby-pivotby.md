@@ -3,7 +3,7 @@ id: T-4737
 title: "Element-wise lifts read a nested GROUPBY/PIVOTBY cell as an error (Excel 2026-11), not its top-left"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
