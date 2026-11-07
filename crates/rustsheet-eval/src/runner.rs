@@ -17,6 +17,7 @@ use crate::case::{CaseSpec, OraclePivot};
 use crate::case_log;
 use crate::cellref::Addr;
 use crate::engine::Engine;
+use crate::pivot_freshness::{self, PivotFreshness, SavedPivot};
 use crate::pivot_scoring::{self, PivotLayout};
 use crate::poi_m8_subset::ReferenceFormCells;
 use crate::spill_extent::SpillExtent;
@@ -213,6 +214,10 @@ pub struct CaseResult {
     /// The case's pivots whose layout is not Excel's (T-4124; empty without sidecar pivots).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pivot_layout: Vec<PivotLayout>,
+    /// An xlsx case's saved pivots, each fresh or stale (T-4131; empty unless the suite trusts
+    /// the workbook's cached values).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivot_freshness: Vec<PivotFreshness>,
     /// The spec case's `pivot_features` catalog ids (T-4126).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pivot_features: Vec<String>,
@@ -290,6 +295,7 @@ impl CaseResult {
             arguments: Vec::new(),
             reference_forms: ReferenceFormCells::default(),
             pivot_layout: Vec::new(),
+            pivot_freshness: Vec::new(),
             pivot_features: Vec::new(),
             pivot_cells: crate::pivot_features::PivotCellTally::default(),
         }
@@ -345,6 +351,8 @@ struct PreparedCase {
     reference_forms: ReferenceFormCells,
     /// The sidecar's pivots, whose layout is compared with the engine's (T-4124).
     pivots: Vec<OraclePivot>,
+    /// An xlsx case's pivots as Excel saved them, classified fresh or stale (T-4131).
+    saved_pivots: Vec<SavedPivot>,
     /// The spec case's pivot catalog ids and its sidecar pivot-area cell keys (T-4126).
     pivot_features: Vec<String>,
     pivot_keys: BTreeSet<String>,
@@ -484,9 +492,10 @@ fn run_isolated(
                 result.message = Some(e);
             }
         },
-        Ok(Ok((cells, scored, text, arguments, got, layout))) => {
+        Ok(Ok((cells, scored, text, arguments, got, (layout, freshness)))) => {
             check_values = got;
             result.pivot_layout = layout;
+            result.pivot_freshness = freshness;
             result.text = text;
             result.arguments = arguments;
             // Spill-extent cells (after `scored`) all fail but stay out of `checked` (decision 0063).
@@ -557,14 +566,15 @@ pub(crate) fn run_in_worker<T: Send + 'static>(
 const MISSING_SHEET: &str = "<missing sheet>";
 
 /// What a case's worker hands back: its scored cells, how many are expectations, the text
-/// verdicts, the calls seen and the check cells' values.
+/// verdicts, the calls seen, the check cells' values, and its pivots' layout verdicts and
+/// freshness.
 type Evaluation = (
     Vec<CellResult>,
     usize,
     Vec<TextResult>,
     Vec<CallSeen>,
     Vec<Value>,
-    Vec<PivotLayout>,
+    (Vec<PivotLayout>, Vec<PivotFreshness>),
 );
 
 /// Evaluates a prepared case and scores it (on the worker thread, inside the panic isolation);
@@ -600,7 +610,15 @@ fn evaluate_prepared(
         Vec::new()
     };
     let layout = pivot_scoring::compare_layouts(&prepared.pivots, evaluated.as_ref());
-    Ok((cells, scored, text, arguments, check_values, layout))
+    let freshness = pivot_freshness::classify(&prepared.saved_pivots, evaluated.as_ref());
+    Ok((
+        cells,
+        scored,
+        text,
+        arguments,
+        check_values,
+        (layout, freshness),
+    ))
 }
 
 fn panic_message(p: &(dyn std::any::Any + Send)) -> String {

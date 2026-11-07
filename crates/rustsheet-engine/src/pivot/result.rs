@@ -46,6 +46,8 @@
 //!      below its column (t4634 T1, O1 to O4, S1; t4616 S1, S4 to S6; t4135 `A_sum!S6`, S8).
 //!      Any other aggregate beside Sum switches Sum to the records as above (t4634 X1 to X12).
 //!
+//!    A calculated data field is fed nothing: once the cells are full its value is its formula
+//!    over each cell's Sums of the fields it names, extra accumulators (`pivot::calculated`).
 //! 4. **Show values as** (stage 6, `pivot::show_as`): a post-pass over the values above that
 //!    replaces each value of a data field with a show-values-as mode by what the mode shows, for
 //!    every cell, leaves, subtotals and grand totals alike (T-4163).
@@ -57,6 +59,8 @@
 //! against [`MAX_PIVOT_NODES`] as they are made, so an untrusted pivot is bounded (CLAUDE.md
 //! directive 5; pivots.md "A pivot result is bounded in work and nodes", DEVIATION).
 
+mod calculate;
+
 use std::collections::HashMap;
 
 use thiserror::Error as ThisError;
@@ -64,11 +68,13 @@ use thiserror::Error as ThisError;
 use crate::expressions::token::Error;
 
 use super::accumulate::{sum_in_order, Accumulator, CutCount};
+use super::calculated::Plan;
 use super::filter::{apply as apply_filters, FilterContext, Kept};
 use super::show_as::{show_values_as, Shown};
 use super::{
     Aggregate, Axis, AxisField, CacheItem, ItemType, PageField, PivotCache, PivotField, PivotTable,
 };
+use calculate::calculate;
 
 /// Most nodes one pivot result holds: axis nodes, plus one accumulator per (row node, column
 /// node, data field) that some record reaches (SPEC-0032 "Untrusted-input limits").
@@ -167,7 +173,7 @@ impl AxisTree {
     }
 
     /// `node` and its ancestors, the root last.
-    fn ancestors(&self, node: u32) -> impl Iterator<Item = u32> + '_ {
+    pub(crate) fn ancestors(&self, node: u32) -> impl Iterator<Item = u32> + '_ {
         std::iter::successors(Some(node), |&n| {
             self.nodes.get(n as usize).and_then(|n| n.parent)
         })
@@ -193,6 +199,17 @@ pub struct PivotResult {
     /// Per data field, the values its show-values-as mode shows (`show_as`); `None` for a field
     /// shown as itself.
     shown: Vec<Option<Shown>>,
+    /// Accumulators per cell: one per data field, then one per database field a calculated
+    /// field's formula reads (`calculated::Plan::operands`).
+    slots: usize,
+    /// Per data field, whether it is over a calculated field.
+    calculated_fields: Vec<bool>,
+    /// For a pivot with a calculated data field, per accumulator index, the value of the
+    /// calculated data field of that slot (`calculated`, T-4174); empty otherwise.
+    calculated: Vec<Option<Result<f64, Error>>>,
+    /// Per data field over a calculated field, its formula's value where no record reaches: over
+    /// sums of 0.
+    calculated_empty: Vec<Option<Result<f64, Error>>>,
 }
 
 impl PivotResult {
@@ -260,14 +277,38 @@ impl PivotResult {
         if data_field >= self.functions.len() {
             return None;
         }
-        let base = *self.cells.get(&(row, column))? as usize;
-        let accumulator = self.accumulators.get(base + data_field)?;
+        let base = self.cells.get(&(row, column)).map(|&base| base as usize);
+        // A calculated field shows its formula's value whatever the function, the data field's
+        // or a custom subtotal's (pivots.md "Calculated fields as Excel for the web renders
+        // them", CNT; a custom subtotal is unprobed: UNVERIFIED, T-4897), and where no record
+        // reaches, its formula over sums of 0 (LC B7).
+        if self.calculated_fields.get(data_field) == Some(&true) {
+            return match base {
+                Some(base) => self.calculated.get(base + data_field).cloned().flatten(),
+                None => self.calculated_empty.get(data_field).cloned().flatten(),
+            };
+        }
+        self.slot_as(row, column, base?, data_field, function)
+    }
+
+    /// The value under `function` of accumulator `slot` of the cell (`row`, `column`), whose
+    /// accumulators start at `base`: a data field's, or a calculated field's operand's. An
+    /// operand slot (`slot >= functions.len()`) has no function of its own: it is read as Sum.
+    fn slot_as(
+        &self,
+        row: u32,
+        column: u32,
+        base: usize,
+        slot: usize,
+        function: Aggregate,
+    ) -> Option<Result<f64, Error>> {
+        let accumulator = self.accumulators.get(base + slot)?;
         let total = !self.rows.is_leaf(row) || !self.columns.is_leaf(column);
         // A custom Count or CountNums subtotal under a Sum data field counts each inner-item
         // cell up to its first error (pivots.md "Which function the countA and count custom
         // subtotals compute", t4622). Under the other aggregates it is unprobed and keeps the
         // Count total rule (UNVERIFIED, T-4636).
-        let own = self.functions.get(data_field).copied();
+        let own = self.functions.get(slot).copied();
         if total
             && own == Some(Aggregate::Sum)
             && matches!(function, Aggregate::Count | Aggregate::CountNums)
@@ -645,35 +686,56 @@ pub fn compute_on(
     charge(work, sort_units(placed.len()))?;
     placed.sort_unstable();
 
-    let data: Vec<(&[u32], &[CacheItem])> = table
-        .data_fields
-        .iter()
-        .map(|d| {
-            cache
+    let data_fields: Vec<u32> = table.data_fields.iter().map(|d| d.field).collect();
+    let mut plan = Plan::new(&data_fields, &cache.fields, work)?;
+    let operands = plan.as_ref().map_or(&[][..], |p| p.operands.as_slice());
+    // Per accumulator slot, the field's records and items: `None` for a calculated data field,
+    // whose accumulator is fed nothing.
+    let data: Vec<Option<(&[u32], &[CacheItem])>> = (data_fields.iter().chain(operands))
+        .map(|&field| {
+            let f = cache
                 .fields
-                .get(d.field as usize)
-                .map(|f| (f.records.as_slice(), f.items.as_slice()))
-                .ok_or(PivotComputeError::Malformed)
+                .get(field as usize)
+                .ok_or(PivotComputeError::Malformed)?;
+            Ok(f.formula
+                .is_none()
+                .then_some((f.records.as_slice(), f.items.as_slice())))
         })
         .collect::<Result<_, _>>()?;
+    let calculated_fields: Vec<bool> = data
+        .iter()
+        .take(data_fields.len())
+        .map(Option::is_none)
+        .collect();
     let functions: Vec<Aggregate> = table.data_fields.iter().map(|d| d.function).collect();
+    // A calculated data field shows the Sum whatever its function, so the flags read it as Sum
+    // (UNVERIFIED, T-4897: no probe has a calculated field beside an error or a Sum-only check).
+    let flagged = || {
+        (functions.iter().zip(&calculated_fields))
+            .map(|(&f, &calculated)| if calculated { Aggregate::Sum } else { f })
+    };
     let mut result = PivotResult {
         records,
         rows,
         columns,
-        sum_only: functions.iter().all(|f| *f == Aggregate::Sum),
-        counts_mixed: functions
-            .iter()
-            .any(|f| !matches!(f, Aggregate::Count | Aggregate::CountNums)),
+        sum_only: flagged().all(|f| f == Aggregate::Sum),
+        counts_mixed: flagged().any(|f| !matches!(f, Aggregate::Count | Aggregate::CountNums)),
         functions,
         cells: HashMap::new(),
         accumulators: Vec::new(),
         shown: Vec::new(),
+        slots: data.len(),
+        calculated_fields,
+        calculated: Vec::new(),
+        calculated_empty: Vec::new(),
     };
     accumulate(&mut result, &placed, &data, work, &mut nodes)?;
     merge_crossings(&mut result, work)?;
     if result.sum_only {
         sum_children(&mut result, work)?;
+    }
+    if let Some(plan) = plan.as_mut() {
+        calculate(&mut result, plan, work)?;
     }
     result.shown = show_values_as(&result, table, work, &mut nodes)?;
     Ok(result)
@@ -684,7 +746,7 @@ pub fn compute_on(
 fn accumulate(
     result: &mut PivotResult,
     placed: &[(u32, u32, u32)],
-    data: &[(&[u32], &[CacheItem])],
+    data: &[Option<(&[u32], &[CacheItem])>],
     work: &mut u64,
     nodes: &mut usize,
 ) -> Result<(), PivotComputeError> {
@@ -735,7 +797,10 @@ fn accumulate(
         cuts.clear();
         cuts.resize(data.len(), CutCount::default());
         for &(_, _, record) in run {
-            for (d, ((records, items), cut)) in data.iter().zip(&mut cuts).enumerate() {
+            for (d, (field, cut)) in data.iter().zip(&mut cuts).enumerate() {
+                let Some((records, items)) = field else {
+                    continue;
+                };
                 let item = records
                     .get(record as usize)
                     .and_then(|&i| items.get(i as usize))
@@ -771,11 +836,12 @@ fn merge_crossings(result: &mut PivotResult, work: &mut u64) -> Result<(), Pivot
     let PivotResult {
         rows,
         columns,
-        functions,
+        slots,
         cells,
         accumulators,
         ..
     } = result;
+    let slots = *slots;
     let mut parts: Vec<(u32, u32)> = cells
         .keys()
         .filter(|&&(row, column)| rows.is_leaf(row) && !columns.is_leaf(column))
@@ -793,12 +859,12 @@ fn merge_crossings(result: &mut PivotResult, work: &mut u64) -> Result<(), Pivot
             cells
                 .len()
                 .saturating_add(parts.len().saturating_mul(depth))
-                .saturating_mul(functions.len()),
+                .saturating_mul(slots),
         ),
     )?;
     for (&(row, column), &base) in cells.iter() {
         if !rows.is_leaf(row) && !columns.is_leaf(column) {
-            for d in 0..functions.len() {
+            for d in 0..slots {
                 if let Some(acc) = accumulators.get_mut(base as usize + d) {
                     acc.clear_folds();
                 }
@@ -813,7 +879,7 @@ fn merge_crossings(result: &mut PivotResult, work: &mut u64) -> Result<(), Pivot
             let Some(&total) = cells.get(&(up, column)) else {
                 continue;
             };
-            for d in 0..functions.len() {
+            for d in 0..slots {
                 let folds = accumulators.get(part as usize + d).map(Accumulator::folds);
                 if let (Some(folds), Some(acc)) = (folds, accumulators.get_mut(total as usize + d))
                 {
@@ -872,11 +938,12 @@ fn sum_children(result: &mut PivotResult, work: &mut u64) -> Result<(), PivotCom
     let PivotResult {
         rows,
         columns,
-        functions,
+        slots,
         cells,
         accumulators,
         ..
     } = result;
+    let slots = *slots;
     let edges = child_cells(rows, columns, cells, work)?;
     let depth = |tree: &AxisTree, node: u32| tree.nodes.get(node as usize).map_or(0, |n| n.depth);
     let mut order: Vec<(std::cmp::Reverse<u32>, std::cmp::Reverse<u32>, u32)> = cells
@@ -898,14 +965,14 @@ fn sum_children(result: &mut PivotResult, work: &mut u64) -> Result<(), PivotCom
             order
                 .len()
                 .saturating_add(edges.len())
-                .saturating_mul(functions.len()),
+                .saturating_mul(slots),
         ),
     )?;
     for (_, _, base) in order {
         let from = edges.partition_point(|e| e.0 < base);
         let to = edges.partition_point(|e| e.0 <= base);
         let children = edges.get(from..to).unwrap_or_default();
-        for d in 0..functions.len() {
+        for d in 0..slots {
             let sum = if children.is_empty() {
                 accumulators
                     .get(base as usize + d)

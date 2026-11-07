@@ -49,6 +49,12 @@ pub mod themes;
 pub mod types;
 pub mod worksheet;
 
+/// Seeded generators shared with other crates' tests (T-4756); built for this crate's tests and
+/// behind the `test-support` feature, which only dev-dependencies enable.
+#[cfg(any(test, feature = "test-support"))]
+#[doc(hidden)]
+pub mod test_support;
+
 pub use crate::constants::COLUMN_WIDTH_FACTOR;
 pub use crate::constants::DEFAULT_COLUMN_WIDTH;
 pub use crate::constants::ROW_HEIGHT_FACTOR;

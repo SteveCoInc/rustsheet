@@ -7,6 +7,7 @@ gen-m6/16b67941f34e0346.case.json	23
 gen-m6/2963992505456e99.case.json	21
 gen-m6/37eb2ebaf9386ade.case.json	13
 gen-m6/ccc550562ee5fd06.case.json	8
+gen-m7/21b4eef18424ce94.case.json	26
 gen-m9/0072265d385d8ab2.case.json	1
 gen-m9/01523d247594952e.case.json	2
 gen-m9/05d44f6dd6cfc567.case.json	2
@@ -177,15 +178,20 @@ probes/stat-argument-modes.case.json	9
 probes/stat-quantile-lift.case.json	9
 probes/subexpr-05d44f6dd6cfc567-calc-a178.case.json	1
 probes/subnormal-saved-negative-and-array.case.json	1
+probes/t2085-getpivotdata-data-fields.case.json	24
+probes/t2085-getpivotdata-items.case.json	28
+probes/t2085-getpivotdata-layouts.case.json	36
 probes/t2311-pivotby-value-columns-error-refill-1106.case.json	1
+probes/t2311-pivotby-value-columns-error.case.json	1
 probes/t2360-array-lambda-holidays-refill-1106.case.json	5
+probes/t2360-array-lambda-holidays.case.json	5
 probes/t2429-hypgeom-huge-count.case.json	2
 probes/t2429-hypgeom-threshold.case.json	2
 probes/t2435-dist-extremes.case.json	19
 probes/t2436/4250f880ab640c49.case.json	3
 probes/t2436/abc2939ebd1e2365.case.json	6
 probes/t2475-stat-subexpressions-refill-1106.case.json	3
-probes/t2475-stat-subexpressions.case.json	4
+probes/t2475-stat-subexpressions.case.json	5
 probes/t2496-fin-subexpressions.case.json	2
 probes/t2565-irr-guess-sweeps.case.json	1
 probes/t2592-nested-groupby-cells-refill-1106.case.json	3
@@ -193,6 +199,7 @@ probes/t2594-nested-aggregates-refill-1106.case.json	4
 probes/t2609-nested-operators-and-lifts.case.json	8
 probes/t2609-nested-operators-one-cell.case.json	1
 probes/t2625-nested-consumers-refill-1106.case.json	6
+probes/t2625-nested-consumers.case.json	1
 probes/t2657-pv-irr-div0.case.json	22
 probes/t2753-gamma-density-ratio-sweep.case.json	6
 probes/t2829-ftest-a306-shapes.case.json	8

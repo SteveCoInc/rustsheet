@@ -3,7 +3,7 @@ id: T-4870
 title: "An empty argument of EDATE, EOMONTH, WORKDAY, NETWORKDAYS, WEEKNUM and YEARFRAC follows Excel (probe the Analysis ToolPak #N/A rule)"
 milestone: M6
 lane: functions-date
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -45,18 +45,64 @@ committed before the fill, so the engine no longer reads an empty argument as 0 
   decides which, there is no constant to tune.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph) covers, for each of EDATE, EOMONTH, WORKDAY, NETWORKDAYS,
+- [x] A probes case (excel-probe skill, excel-graph) covers, for each of EDATE, EOMONTH, WORKDAY, NETWORKDAYS,
       WEEKNUM, YEARFRAC, WORKDAY.INTL and NETWORKDAYS.INTL: each required argument written empty (one at a time, and all
       empty), each optional argument written empty (holidays, return_type, basis), a `LAMBDA(a,b,EDATE(a,b))(1,)` and a
       `LET(e,,EDATE(1,e))` row for the omitted-variable path, and WEEKDAY(45000,) and DAYS(10,) as non-ToolPak
       controls. The empty `weekend` argument stays with T-2591 and is not probed here.
-- [ ] The engine's predictions for every probe cell (the rule "a written-empty argument of a ToolPak function is
+- [x] The engine's predictions for every probe cell (the rule "a written-empty argument of a ToolPak function is
       `#N/A`" for required arguments, today's answers for the rest) are committed in a commit before the oracle fill.
-- [ ] After the fill, every cell of the probe passes; dates.md gets one entry stating the rule with its cells (or, if
+- [x] After the fill, every cell of the probe passes; dates.md gets one entry stating the rule with its cells (or, if
       Excel reads empties as 0, the entry says so and no engine change is made).
-- [ ] No new F line in any eval/baseline file; `make check` green; reviewers approve.
+- [x] No new F line in any eval/baseline file; `make check` green; reviewers approve.
 
 ## Out of scope
 - An empty `weekend` argument of WORKDAY.INTL and NETWORKDAYS.INTL (T-2591).
 - The financial ToolPak functions (functions-financial is busy; file a follow-up there if the rule holds).
 - Teaching the generator to write empty arguments (file a research or harness follow-up if the rule holds).
+
+## Outcome
+- **Finding:** in the ToolPak date functions (EDATE, EOMONTH, WORKDAY, NETWORKDAYS, WEEKNUM, YEARFRAC, WORKDAY.INTL,
+  NETWORKDAYS.INTL), a written-empty required argument is `#N/A`. The same holds for a LET or LAMBDA variable bound
+  to nothing. A written-empty optional argument (holidays, return_type, basis) is treated as omitted.
+- **Round 1:** probes/t4870-empty-date-args, 31 cells, excel-graph, 2026-11-07. Predictions were committed in bcbe3f155
+  before the fill:
+
+  | hypothesis | cells |
+  |---|---|
+  | H_na_req: required empty is `#N/A`, optional as today | 26/31 |
+  | H_na_all: any empty is `#N/A` | 25/31 |
+  | H_zero: the engine before this task | 3/31 |
+
+  The required cells all matched H_na_req. No hypothesis predicted the optional cells, which act as omitted.
+- **Round 2:** probes/t4870-r2-empty-optional, 14 fresh calls including the LET and LAMBDA paths. It tested
+  "an optional empty argument is omitted", with H_omitted committed in bf24d2c55 before its fill: 14/14.
+- **No fit:** each cell is `#N/A` or the omitted call's value, and nothing numeric is tuned.
+- **Code:**
+  - One definition of an empty argument node or a variable bound to nothing: `Model::is_empty_argument`, with
+    `Model::empty_arguments::<N>()` for the first N arguments. T-4873 (#3930) added both in let.rs while this PR was in
+    review. This PR's own `is_written_empty`/`written_empty_required` were the same concept, so the merge with main
+    keeps T-4873's names and moves both into functions/util/empty_args.rs, which is where the design review wanted
+    them. `complex_pair_of`, LET's `bind_argument_value` (T-4902) and the date functions use them.
+  - `Model::empty_arguments` finds the written-empty required arguments once, from the nodes, before lifting.
+    Each per-element kernel passes its required arguments through `written_empty_or`, which swaps in a borrowed `#N/A`
+    without copying the values. The kernel meets the `#N/A` at that argument's own turn, and a lifted call gives one
+    result per element.
+    An intermediate `na_at_written_empty` cloned the whole values slice for every element. The security review flagged
+    that the clone included a holidays array and was uncharged work, so it was replaced.
+  - Two earlier drafts failed review or gates and were replaced:
+    - The first checked the lifted values. It regressed gen-m6/b54448af3fde07ca A297, where `IFNA(<blank>,..)`
+      evaluates to an empty value and Excel keeps the start's `#VALUE!`.
+    - The second checked the nodes before everything, as one scalar. The fidelity review found that unevidenced
+      (MROUND and GCD read left to right and spread). Round 3 then confirmed the in-order, per-element shape.
+  - `Model::holidays_arg` (date_and_time/holidays.rs) holds the argument-count check and the empty-holidays filter
+    shared by WORKDAY(.INTL) and NETWORKDAYS(.INTL). WEEKNUM drops a written-empty return_type node, so the
+    return_type is read as type 1.
+  - Unit test: test/test_toolpak_empty_date_args.rs.
+- **Round 3:** probes/t4870-r3-order-and-lift has 24 cells. The predictions were committed in 9213a82eb, before the
+  fill. H_order scored 23/24 and H_first 6/24. The one miss, A18, was a slip in the hand-written TSV: H_order's rule
+  reads the start first, which gives `#VALUE!`, as in A2.
+- **Docs:** dates.md "A written-empty argument of the ToolPak date functions: required is `#N/A`, optional is omitted
+  (T-4870)".
+- **Eval:** 3 new cases, 69/69.
+- **Follow-ups:** none filed. The financial ToolPak functions and the generator are named in the task's Out of scope.

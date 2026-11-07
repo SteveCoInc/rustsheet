@@ -28,6 +28,8 @@ built-in lists, unprobed).
 Owner of these visibly-off pivot cells (decision 0245):
 - probes/t4130-pivot-sort SA!A4:A5, SA!B4:B5, SD!A4:A6, SD!B4:B6, NA!A4:A6, NA!B4:B6, CL1!A4:A5, CL1!B4:B5, CL0!A4, CL0!A6, CL0!B4, CL0!B6
 - probes/t4164-pivot-item-order IOA!A4, IOA!A6, IOA!B4, IOA!B6 (T-4164: `ascending` over a field whose `<items>` order is Cat, Bee, Ant shows Ant, Bee, Cat; pivots.md "A field shows its items in the `<items>` order")
+- probes/t4128-pivot-spike K!B5:B6, K!B8:B9, K!C5:C6, K!C8:C9, K!D5:D6, K!D8:D9 (moved from T-4174, whose calculated
+  field now renders: Product is `sortType="descending"`, so each region shows B before A; every other cell of K passes)
 
 ## Acceptance criteria
 - [ ] The engine renders SA, SD, NA, CL1 and CL0 as the sidecar shows (unit tests against it, and the cells pass in the eval).

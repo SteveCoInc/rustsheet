@@ -1,0 +1,48 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Written-empty arguments of the ToolPak date functions (T-4870): EDATE, EOMONTH, WORKDAY, NETWORKDAYS, WEEKNUM, YEARFRAC and the .INTL pair, one empty argument at a time and all empty, the LAMBDA and LET omitted-variable paths, and WEEKDAY and DAYS as controls. Predictions in docs/research/t4870/predictions.tsv committed before the excel-graph fill (H_zero, H_na_req, H_na_all).",
+  "tags": [
+    "M6",
+    "dates",
+    "probe"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=EDATE(,1)",
+        "A2": "=EDATE(1,)",
+        "A3": "=EDATE(,)",
+        "A4": "=EOMONTH(,1)",
+        "A5": "=EOMONTH(40000,)",
+        "A6": "=EOMONTH(,)",
+        "A7": "=WORKDAY(,1)",
+        "A8": "=WORKDAY(1,)",
+        "A9": "=WORKDAY(,)",
+        "A10": "=WORKDAY(1,5,)",
+        "A11": "=NETWORKDAYS(,1)",
+        "A12": "=NETWORKDAYS(1,)",
+        "A13": "=NETWORKDAYS(,)",
+        "A14": "=NETWORKDAYS(1,10,)",
+        "A15": "=WEEKNUM(,1)",
+        "A16": "=WEEKNUM(45000,)",
+        "A17": "=WEEKNUM(,)",
+        "A18": "=YEARFRAC(,1)",
+        "A19": "=YEARFRAC(1,)",
+        "A20": "=YEARFRAC(,)",
+        "A21": "=YEARFRAC(13816,16816,)",
+        "A22": "=WORKDAY.INTL(,5,1)",
+        "A23": "=WORKDAY.INTL(1,,1)",
+        "A24": "=WORKDAY.INTL(1,5,1,)",
+        "A25": "=NETWORKDAYS.INTL(,10,1)",
+        "A26": "=NETWORKDAYS.INTL(1,,1)",
+        "A27": "=NETWORKDAYS.INTL(1,10,1,)",
+        "A28": "=LAMBDA(a,b,EDATE(a,b))(1,)",
+        "A29": "=LET(e,,EDATE(1,e))",
+        "A30": "=WEEKDAY(45000,)",
+        "A31": "=DAYS(10,)"
+      }
+    }
+  ]
+}
