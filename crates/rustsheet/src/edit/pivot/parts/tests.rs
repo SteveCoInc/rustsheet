@@ -48,6 +48,7 @@ fn book(refresh_on_load: bool) -> (Workbook, PivotParts) {
                 r#"<pivotTableDefinition xmlns="{NS}" name="Pv" cacheId="1" dataCaption="Values" outline="1" outlineData="1"><location ref="D1:E2" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/><pivotFields count="2"><pivotField axis="axisRow" showAll="0"><items count="3"><item x="0"/><item x="1"/><item t="default"/></items></pivotField><pivotField dataField="1" showAll="0"/></pivotFields><rowFields count="1"><field x="0"/></rowFields><dataFields count="1"><dataField name="Sum of V" fld="1" baseField="0" baseItem="0"/></dataFields></pivotTableDefinition>"#
             ),
         )],
+        slicer_caches: Vec::new(),
     };
     (wb, parts)
 }

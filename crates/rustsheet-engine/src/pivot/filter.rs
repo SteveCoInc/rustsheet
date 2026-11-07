@@ -101,8 +101,14 @@ pub(super) fn apply(
         work,
         units(table.filters.len().saturating_add(table.fields.len())),
     )?;
+    // A timeline on a field replaces the pivot's own filters on it (probes/t4767-pivot-timelines
+    // TX: its dateBetween filter; UNVERIFIED, T-4962, for the other kinds); `result::filter`
+    // applies the timeline.
+    let filters: Vec<&PivotFilter> = (table.filters.iter())
+        .filter(|f| (table.fields.get(f.field as usize)).is_none_or(|p| p.timeline.is_none()))
+        .collect();
     let mut by_field: HashMap<u32, Vec<&PivotFilter>> = HashMap::new();
-    for filter in &table.filters {
+    for &filter in &filters {
         by_field.entry(filter.field).or_default().push(filter);
     }
     if by_field.is_empty() && table.fields.iter().all(|f| f.auto_show.is_none()) {
@@ -117,7 +123,7 @@ pub(super) fn apply(
         }
     }
     // 1. Item filters, in `<filters>` order (they commute).
-    for filter in &table.filters {
+    for &filter in &filters {
         let on = on_axis.get(filter.field as usize).copied().unwrap_or(false);
         if filter.kind.on_items() && on {
             item_filter(filter, cache, context, &mut kept, work)?;
