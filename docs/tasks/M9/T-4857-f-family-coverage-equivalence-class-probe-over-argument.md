@@ -109,6 +109,12 @@ decision 0267 item 5's probe freeze, citing the owner's request.
 - **Quirks recorded** in docs/excel-semantics/statistics.md: "F tails at the edges of the double range ... (T-4857)",
   "F family argument kinds, every position (T-4857)", "F quantiles at a tiny p leave the math abruptly ... (T-4857)",
   and the omitted-sample rule in "F.TEST of a single value (T-2455)".
+- **Baseline**: `make eval-baseline` recorded the kinds case's 155 known failures in eval/baseline/probes.txt (10
+  visibly off, added to visible-parity.txt; no regression anywhere). probes-numeric is not gated (`gate = false`), so
+  its cells have no baseline lines; their visibly-off cells all have owners. Math sidecars were written for the two
+  new cases only, with `rustsheet-accuracy`'s per-case step (`eval_math._job`): `--function F.DIST ...` would
+  recompute the 85 other F cases of probes-numeric for hours, so no existing sidecar changed
+  (`git diff origin/main...HEAD -- eval/suites` adds files only); `make eval-math-check` prints current.
 - **Not done**: xlsx suites (ironcalc-calc's F_DIST.xlsx and F_TEST.xlsx, the corpora) are not in the audit (tools do
   not parse xlsx values); where the zero band past the ratio overflow ends, and where the (30, 3) quantile jump sits
   exactly, are left to T-4881 and T-4884.

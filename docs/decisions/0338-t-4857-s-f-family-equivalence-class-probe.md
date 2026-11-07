@@ -16,12 +16,12 @@
   - The probe's numeric half has to live in probes-numeric: its cells are one-call numeric cells whose math sidecars
     feed Gate A's envelope reporting, as every other F sweep's do. Its argument-kind half goes to `probes`, which
     the freeze does not cover.
-- **Decision:** probes-numeric/t4857-f-classes (3,281 cells, generator docs/research/t4857/gen.py, seed 4857) is an
+- **Decision:** probes-numeric/t4857-f-classes (3,272 cells, generator docs/research/t4857/gen.py, seed 4857) is an
   exception to decision 0267 item 5's probe freeze, by the owner's request of 2026-11-07. Later oracle refills of its
   cells are allowed as for any case; new cells in it need their own decision.
 - **Consequences:**
   - T-4057's freeze check, once it lands, lists this case as a named exception.
-  - Its cells that the engine gets wrong enter eval/baseline through `make eval-baseline`, and each has an owner task
-    (decision 0245). Family cells first wrong at the 14th or 15th digit are Phase 1b residue under decision 0267
+  - probes-numeric is not gated (`gate = false`, so `make eval-baseline` writes no lines for it); each of the case's
+    visibly-off cells has an open owner task (decision 0245: T-4881, T-4883 to T-4887). Family cells first wrong at the 14th or 15th digit are Phase 1b residue under decision 0267
     item 2; they get no new work.
   - No other probes-numeric case is opened by this decision.
