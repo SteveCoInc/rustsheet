@@ -3,7 +3,7 @@ id: T-4770
 title: "FORMULATEXT of a cell reference a row delete removed is #REF!, not #ERROR!"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
