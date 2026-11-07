@@ -2869,6 +2869,7 @@ and `FLOOR(-2.5,)` `#DIV/0!`, `FLOOR(,)` 0 (H1:H5). A LET value or LAMBDA parame
 A5:A11). The same split as SORT's and TAKE's empty optionals (arrays.md) against the older functions' empty = 0.
 Evidence: probes/t4873-empty-arg-quotient-ceiling Calc!C1:H5, probes/t4873-empty-arg-let-lambda Calc!A5:A11 (excel-graph,
 2026-11-07, T-4873; predictions committed before the fill).
+A written-empty IF/CHOOSE/IFERROR branch as the significance is also omitted (`CEILING.MATH(2.675,IF(TRUE,))` is 3; T-4901, T-4912, see "A written-empty argument of a ToolPak function is #N/A" below).
 Ours: the five go through `numbers_fn_empty_omitted` (mathematical.rs), which keeps an empty argument's default. Before
 T-4873 they read it as 0 (`CEILING.MATH(2.675,)` was 0).
 Status: VERIFIED (excel-graph)
