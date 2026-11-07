@@ -3,7 +3,7 @@ id: T-4703
 title: "Probe fraction tails with no placeholder before the point and with a second point"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -31,3 +31,10 @@ the engine matching it or a follow-up task filed.
 
 ## Out of scope
 - Changing the rule for the shapes T-4594 probed.
+
+## Outcome
+- Probe `probes/t4703-fraction-tail-no-pre-point-and-two-points` (66 cells, excel-graph 2026-11-07).
+- Second-point shapes: engine already matched all cells. No-placeholder-before-point shapes: Excel prints every spilled
+  digit right before the point (`# ?/7 .0` on 0.0123 is " 123/7 0000.0"); the engine dropped them (18 cells). Fixed in
+  `fraction.rs` (`trailing_digits` returns the pre-point digits). Recorded in number-formats.md.
+- Eval delta: the new case 66/66 (was 48/66); no regressions expected, baseline checked below.
