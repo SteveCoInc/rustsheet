@@ -1816,6 +1816,22 @@ Status: VERIFIED (excel-graph) for the cells; the stall scale is a structural ch
 Implemented in: `irr_secant` (functions/financial/financial_util.rs)
 Tasks: T-2928, T-4975
 
+## IRR and XIRR over a huge blank range
+Rule: IRR, NPV and MIRR skip a blank cell of their values, so over a range that is not a whole column or row (which
+the used area trims) they read only its stored cells: `IRR(B1:XFC1000000)` with -100 in B1 and 110 in C1 is 10%, as
+over B1:C1, and the same range with no flows is `#NUM!` (no sign change). XIRR reads a blank value as a 0 flow, so it
+must read every position: such a call is charged its area (the per-call visit cap of 2^27 cells, then the formula's
+work budget) before it reads, and a sheet-scale range is `#ERROR!` "Too many cells to visit".
+Ours before: every position of the range was evaluated and XIRR pushed a 0 per blank one, so `IRR(B1:XFC1000000)`
+walked 1.6E+10 cells and `XIRR(B1:XFC1000000,..)` ran the process out of memory (the audit of
+docs/research/excel-parity-findings-2026-11-07.md, item 4; reproduced as a test killed for lack of memory).
+Evidence: IRR's and NPV's values are those of the stored flows (Excel skips blank values; financial.md "IRR's error
+order"); XIRR's result on a sheet-scale blank range is UNVERIFIED (probe candidate). The deviation is XIRR's refusal
+only (Excel: unprobed; ours `#ERROR!`); IRR, NPV and MIRR follow Excel.
+Status: DEVIATION (decision 0014)
+Implemented in: `array_of_numbers_from`, `push_flow` (functions/financial/mod.rs)
+Tasks: T-4976, T-4975
+
 ## RATE: an empty guess is guess 0, not the default 0.1
 Rule: an empty guess argument (`RATE(48,-200,8000,0,1,)`) or a reference to an empty cell behaves as
 guess 0, not the default 0.1: the result has the same bits as an explicit `0` (0.008052981923885287)

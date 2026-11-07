@@ -53,10 +53,41 @@ enum XnpvArgument {
     Dates,
 }
 
+/// What [`Model::array_of_numbers_from`] does with an empty cell and with a non-number one: a
+/// value to add, nothing, or the call's error.
+type CellHandlers<'a> = (
+    &'a dyn Fn() -> Result<Option<f64>, CalcResult>,
+    &'a dyn Fn() -> Result<Option<f64>, CalcResult>,
+);
+
 // See:
 // https://github.com/apache/openoffice/blob/c014b5f2b55cff8d4b0c952d5c16d62ecde09ca1/main/scaddins/source/analysis/financial.cxx
 
 impl Model {
+    /// Reads the cell at `position` as a flow of [`Model::array_of_numbers_from`]: a number is
+    /// added, an error ends the read, and an empty or non-number cell goes to its handler (numeric
+    /// text reads as its number with `text_as_number`).
+    fn push_flow(
+        &mut self,
+        position: CellReferenceIndex,
+        text_as_number: bool,
+        (handle_empty_cell, handle_non_number_cell): CellHandlers,
+        values: &mut Vec<f64>,
+    ) -> Result<(), CalcResult> {
+        let value = match self.evaluate_cell(position) {
+            CalcResult::Number(value) => Some(value),
+            error @ CalcResult::Error { .. } => return Err(error),
+            CalcResult::EmptyCell => handle_empty_cell()?,
+            CalcResult::String(text) if text_as_number => match self.cast_number(&text) {
+                Some(value) => Some(value),
+                None => handle_non_number_cell()?,
+            },
+            _ => handle_non_number_cell()?,
+        };
+        values.extend(value);
+        Ok(())
+    }
+
     fn get_array_of_numbers_generic(
         &mut self,
         arg: &Node,
@@ -114,32 +145,41 @@ impl Model {
                         format!("Invalid worksheet index: '{sheet}'"),
                     )
                 })?;
-                for row in row1..=row2 {
-                    for column in column1..=column2 {
-                        let cell_ref = CellReferenceIndex { sheet, row, column };
-                        match self.evaluate_cell(cell_ref) {
-                            CalcResult::Number(value) => values.push(value),
-                            error @ CalcResult::Error { .. } => return Err(error),
-                            CalcResult::EmptyCell => {
-                                if let Some(value) = handle_empty_cell()? {
-                                    values.push(value);
-                                }
-                            }
-                            CalcResult::String(text) if text_as_number => {
-                                match self.cast_number(&text) {
-                                    Some(value) => values.push(value),
-                                    None => {
-                                        if let Some(value) = handle_non_number_cell()? {
-                                            values.push(value);
-                                        }
-                                    }
-                                }
-                            }
-                            _ => {
-                                if let Some(value) = handle_non_number_cell()? {
-                                    values.push(value);
-                                }
-                            }
+                let handlers: CellHandlers = (&handle_empty_cell, &handle_non_number_cell);
+                if matches!(handle_empty_cell(), Ok(None)) {
+                    // A blank cell adds no flow (IRR, NPV, MIRR): only the stored cells are read,
+                    // in row-major order, so `IRR(B1:XFC1000000)` costs its stored cells, not its
+                    // 1.6E+10 positions, which ran the process out of memory (T-4976, directive 5).
+                    let range = Range {
+                        left,
+                        right: CellReferenceIndex {
+                            sheet,
+                            row: row2,
+                            column: column2,
+                        },
+                    };
+                    self.for_each_existing_cell(&range, *cell, &mut |model, position| {
+                        model.push_flow(position, text_as_number, handlers, &mut values)
+                    })?;
+                } else {
+                    // A blank cell refuses the call (XNPV: the walk ends at the first one, so it
+                    // costs at most the stored cells it passes) or is a flow (XIRR's 0), so every
+                    // position is read. A blank flow is charged first, its area, so a sheet-scale
+                    // walk is refused before it allocates (DEVIATION, directive 5; Excel's result
+                    // there is unprobed, docs/excel-semantics/financial.md "IRR and XIRR over a
+                    // huge blank range").
+                    if matches!(handle_empty_cell(), Ok(Some(_))) {
+                        let rows = u64::try_from(row2 - row1 + 1).unwrap_or(0);
+                        let columns = u64::try_from(column2 - column1 + 1).unwrap_or(0);
+                        if let Some(error) = self.spend_visits(rows.saturating_mul(columns), *cell)
+                        {
+                            return Err(error);
+                        }
+                    }
+                    for row in row1..=row2 {
+                        for column in column1..=column2 {
+                            let position = CellReferenceIndex { sheet, row, column };
+                            self.push_flow(position, text_as_number, handlers, &mut values)?;
                         }
                     }
                 }
