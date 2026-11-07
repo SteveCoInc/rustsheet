@@ -2655,6 +2655,7 @@ C	probes/table-edits/t3629-readd-other-area.case.json	6
 C	probes/table-edits/t3629-readd-same-area.case.json	6
 C	probes/table-edits/t3629-save-detached.case.json	6
 C	probes/table-edits/t4274-calc-column-delete-column-b.case.json	4
+C	probes/table-edits/t4274-calc-column-delete-row-2.case.json	6
 C	probes/table-edits/t4274-calc-column-insert-column-a.case.json	4
 C	probes/table-edits/t4274-calc-column-insert-row-1.case.json	4
 C	probes/table-edits/t4274-calc-column-insert-row-3.case.json	5
@@ -9313,6 +9314,7 @@ F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H17
 F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H3
 F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H5
 F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H9
+F	probes/table-edits/t4274-calc-column-delete-row-2.case.json	F!A1
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
