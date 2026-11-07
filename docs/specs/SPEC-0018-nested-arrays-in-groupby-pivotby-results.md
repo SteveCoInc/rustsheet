@@ -202,7 +202,7 @@ Nesting depth is bounded too. Each level needs one more GROUPBY call evaluated i
 recursion guard (`evaluation.rs`, `DEFAULT_MAX_DEPTH` and the stack guard) already limits it. A result whose `depth` would
 pass a constant `MAX_NESTED_DEPTH` (64) is `#ERROR!` anyway (DEVIATION, decision 0014), refused in `NestedArray::new`.
 That way `Drop`, `PartialEq` and the hash, which recurse through nested elements, never recurse deeper than that constant,
-even when the recursion guard is configured differently; `scalar()` is a loop. The cap is per call; the walk budget above is what bounds a whole evaluation once nested results are copied.
+even when the recursion guard is configured differently; `scalar()` does not recurse. The cap is per call; the walk budget above is what bounds a whole evaluation once nested results are copied.
 
 **Hash and equality.** `ArrayNode` derives `PartialEq`; `Nested` compares by content, kind included, at most
 `MAX_NESTED_DEPTH` deep. The lifting driver's class hash (functions/lift/driver.rs) hashes `scalar()`, the
