@@ -845,9 +845,13 @@ Evidence: oracle excel-graph, 2026-11-07, T-4890 (docs/research/xlsx-round-trip/
   - `<t></t>` written as `<t/>`.
 
 An empty `modified`, or another malformed W3CDTF value, is not probed.
-Ours: the regenerating export writes the empty element whenever the source records no creation date
-(`export/doc_props.rs` `get_core_xml`).
-Status: VERIFIED (excel-graph; desktop not observed); not implemented (T-4909).
+Ours: a source that records no creation date gets no `created` element. Since T-4909 the fixtures
+valueless-cell-forms R1/E5 and R1/all saves open in Excel for the web (excel-graph, 2026-11-07; sha256
+863551c9e9271ac5da13b1e95dbe6d3b2f6fd0ec22a01703b6b6ccb6aec98610 and
+a76a541e9fdb3004127fdaa24f09dfda74468c75fbe4406a50d9832f9592f109).
+Implemented in: `get_core_xml` (crates/rustsheet-xlsx/src/export/doc_props.rs), which also escapes the creator and the
+date.
+Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-4890, T-4909.
 
 ## An empty `cellStyles` makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose `xl/styles.xml` holds `<cellStyles count="0"></cellStyles>`,
@@ -859,9 +863,11 @@ Evidence: oracle excel-graph, 2026-11-07, T-4890.
 - With the element removed (5d941486ce51b2b3b71561c55f7615141666e81748e116d8885e1f7c41ab1310), it opens.
 - With the Normal style added (73e6065fe084b0a5d3b3e189dcfb2bf4de950cf2509a5edc10af9ce3a61fdb0a), it opens.
 
-Ours: the regenerating export writes the element with the table's count, even when the count is 0
-(`export/styles.rs`, the `cellStyles` section).
-Status: VERIFIED (excel-graph; desktop not observed); not implemented (T-4909).
+Ours: an empty cell-style table writes no `cellStyles` element. That keeps what such a source had; Excel's own save adds
+the Normal style. Since T-4909 the poi link-external-workbook-a R1/all save opens in Excel for the web (excel-graph,
+2026-11-07; sha256 5ee42e7bacd5654f47bcd8c88bb7861b55a8644ab8aac81c61e1a3001d70037a).
+Implemented in: `get_cell_styles_xml` (crates/rustsheet-xlsx/src/export/styles.rs).
+Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-4890, T-4909.
 
 ## A [n] reference without its externalLink part makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose formulas use `[1]Sheet!A1` while the package has no
