@@ -11,7 +11,7 @@ use crate::{
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
     functions::{
         lift::{number_or_error, LiftCost},
-        util::empty_args::na_at_written_empty,
+        util::empty_args::{written_empty_na, written_empty_or},
         Function,
     },
     model::Model,
@@ -60,12 +60,7 @@ impl Model {
             LiftCost::Prepared(read),
             cell,
             &mut |model, values| {
-                number_or_error(model.networkdays_of(
-                    &na_at_written_empty(values, &empty, cell),
-                    holidays_at,
-                    &holidays,
-                    cell,
-                ))
+                number_or_error(model.networkdays_of(values, &empty, holidays_at, &holidays, cell))
             },
         )
     }
@@ -79,6 +74,7 @@ impl Model {
     fn networkdays_of(
         &self,
         values: &[CalcResult],
+        empty: &[usize],
         holidays_at: usize,
         holidays: &Result<Holidays, CalcResult>,
         cell: CellReferenceIndex,
@@ -86,6 +82,11 @@ impl Model {
         let [start, end, rest @ ..] = values else {
             return Err(CalcResult::new_args_number_error(cell));
         };
+        let na = written_empty_na(cell);
+        let (start, end) = (
+            written_empty_or(start, 0, empty, &na),
+            written_empty_or(end, 1, empty, &na),
+        );
         // NETWORKDAYS.INTL reads the weekend before the dates: `NETWORKDAYS.INTL(NA(),45030,99)` is
         // `#NUM!` and `NETWORKDAYS.INTL(1/0,45030,NA())` `#VALUE!` (probes/date-text-weekend-3d
         // Q2, Q32, Q33).

@@ -11,7 +11,10 @@ use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, types::CellReferenceIndex},
     formatter::dates::{excel_serial_to_ymd, month_arithmetic_date},
-    functions::{util::empty_args::na_at_written_empty, Function},
+    functions::{
+        util::empty_args::{written_empty_na, written_empty_or},
+        Function,
+    },
     model::Model,
 };
 
@@ -28,17 +31,27 @@ impl Model {
     pub(crate) fn fn_yearfrac(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         let empty = self.written_empty_required(args, 2);
         self.lift_call(Function::Yearfrac, args, cell, &mut |model, values| {
-            model.yearfrac_of(&na_at_written_empty(values, &empty, cell), cell)
+            model.yearfrac_of(values, &empty, cell)
         })
     }
 
     /// YEARFRAC of one element.
-    fn yearfrac_of(&self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
+    fn yearfrac_of(
+        &self,
+        values: &[CalcResult],
+        empty: &[usize],
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
         let (start, end, basis) = match values {
             [start, end] => (start, end, None),
             [start, end, basis] => (start, end, Some(basis)),
             _ => return CalcResult::new_args_number_error(cell),
         };
+        let na = written_empty_na(cell);
+        let (start, end) = (
+            written_empty_or(start, 0, empty, &na),
+            written_empty_or(end, 1, empty, &na),
+        );
         // Excel reads `basis` first and range-checks it, then the start date, then the end date:
         // `YEARFRAC(1/0,45000,NA())` is #N/A and `YEARFRAC(NA(),45000,5)` is #NUM!
         // (probes/scalar-lift-open-d W1-W7, probes/yearfrac-basis-order; dates.md "Date

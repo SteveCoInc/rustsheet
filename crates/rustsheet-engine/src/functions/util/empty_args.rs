@@ -3,8 +3,6 @@
 //! value-level reading of the dynamic-array lookups' modes is `mode_or_default`
 //! (`lookup_and_reference/xmatch.rs`, T-4871).
 
-use std::borrow::Cow;
-
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
@@ -33,26 +31,29 @@ impl Model {
     }
 }
 
-/// The Analysis `ToolPak` rule for a written-empty required argument (T-4870): `values` with each
-/// position of `empty` ([`Model::written_empty_required`]) read as `#N/A`. A kernel that reads its
-/// arguments in Excel's order then meets the `#N/A` at that argument's turn, and a lifted call gives
-/// it per element, as MROUND and GCD read theirs (arrays.md "MROUND keeps its scalar rules",
-/// coercion.md): `EDATE(,1)` and `EDATE(,1/0)` are `#N/A`, `EDATE(1/0,)` `#DIV/0!`,
-/// `YEARFRAC(1,,9)` `#NUM!` (basis is read first) and `ROWS(EDATE({1;2},))` 2
-/// (probes/t4870-empty-date-args, t4870-r3-order-and-lift).
-pub(crate) fn na_at_written_empty<'a>(
-    values: &'a [CalcResult],
+/// The Analysis `ToolPak` rule for a written-empty required argument (T-4870): argument `index`'s
+/// value, or `na` where that argument is written empty (`empty` from
+/// [`Model::written_empty_required`]). A kernel swaps its arguments through this before reading them
+/// in Excel's order, so it meets the `#N/A` at that argument's turn and a lifted call gives it per
+/// element, as MROUND and GCD read theirs (arrays.md "MROUND keeps its scalar rules", coercion.md):
+/// `EDATE(,1)` and `EDATE(,1/0)` are `#N/A`, `EDATE(1/0,)` `#DIV/0!`, `YEARFRAC(1,,9)` `#NUM!`
+/// (basis is read first) and `ROWS(EDATE({1;2},))` 2 (probes/t4870-empty-date-args,
+/// t4870-r3-order-and-lift). Nothing is copied: the other arguments, holidays included, are read
+/// where they are.
+pub(crate) fn written_empty_or<'a>(
+    value: &'a CalcResult,
+    index: usize,
     empty: &[usize],
-    cell: CellReferenceIndex,
-) -> Cow<'a, [CalcResult]> {
-    if empty.is_empty() {
-        return Cow::Borrowed(values);
+    na: &'a CalcResult,
+) -> &'a CalcResult {
+    if empty.contains(&index) {
+        na
+    } else {
+        value
     }
-    let mut values = values.to_vec();
-    for &index in empty {
-        if let Some(value) = values.get_mut(index) {
-            *value = CalcResult::new_error(Error::NA, cell, String::new());
-        }
-    }
-    Cow::Owned(values)
+}
+
+/// The `#N/A` [`written_empty_or`] hands a kernel.
+pub(crate) fn written_empty_na(cell: CellReferenceIndex) -> CalcResult {
+    CalcResult::new_error(Error::NA, cell, String::new())
 }

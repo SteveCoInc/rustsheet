@@ -22,7 +22,7 @@ functions (T-4870).
   `XLOOKUP(2,A1:A3,B1:B3,,,IFNA(<blank>,1))` likely takes search_mode 1 in ours where Excel reads 0 (`#VALUE!`).
   Unprobed.
 - T-4870 (#3925) put the node-level rule in functions/util/empty_args.rs (`Model::is_written_empty`,
-  `Model::written_empty_required`, `na_at_written_empty`). Depends on it merging.
+  `Model::written_empty_required`, `written_empty_or`). Depends on it merging.
 - lookup.md "XLOOKUP and XMATCH read a written-empty mode as omitted (T-4871)".
 
 ## Acceptance criteria

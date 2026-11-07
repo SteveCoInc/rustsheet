@@ -12,7 +12,10 @@ use crate::{
     formatter::dates::{
         excel_serial_to_ymd, real_date_to_serial, shift_displayed_date, shift_months,
     },
-    functions::{util::empty_args::na_at_written_empty, Function},
+    functions::{
+        util::empty_args::{written_empty_na, written_empty_or},
+        Function,
+    },
     model::Model,
 };
 
@@ -21,7 +24,7 @@ impl Model {
     pub(crate) fn fn_edate(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         let empty = self.written_empty_required(args, 2);
         self.lift_call(Function::Edate, args, cell, &mut |model, values| {
-            model.edate_of(&na_at_written_empty(values, &empty, cell), cell)
+            model.edate_of(values, &empty, cell)
         })
     }
 
@@ -29,16 +32,26 @@ impl Model {
     pub(crate) fn fn_eomonth(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         let empty = self.written_empty_required(args, 2);
         self.lift_call(Function::Eomonth, args, cell, &mut |model, values| {
-            model.eomonth_of(&na_at_written_empty(values, &empty, cell), cell)
+            model.eomonth_of(values, &empty, cell)
         })
     }
 
     /// EDATE of one element. A boolean date or month count is `#VALUE!` (`{TRUE;45000}` gives
     /// `#VALUE!`, 45031: docs/excel-semantics/arrays.md "Scalar arguments lift").
-    fn edate_of(&self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
+    fn edate_of(
+        &self,
+        values: &[CalcResult],
+        empty: &[usize],
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
         let [start, months] = values else {
             return CalcResult::new_args_number_error(cell);
         };
+        let na = written_empty_na(cell);
+        let (start, months) = (
+            written_empty_or(start, 0, empty, &na),
+            written_empty_or(months, 1, empty, &na),
+        );
         let serial_number = match self.cast_number_no_bools_ref(start, cell) {
             Ok(c) => c.floor() as i64,
             Err(s) => return s,
@@ -70,10 +83,20 @@ impl Model {
     }
 
     /// EOMONTH of one element. A negative date is `#NUM!`; a boolean is `#VALUE!`, as for EDATE.
-    fn eomonth_of(&self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
+    fn eomonth_of(
+        &self,
+        values: &[CalcResult],
+        empty: &[usize],
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
         let [start, months] = values else {
             return CalcResult::new_args_number_error(cell);
         };
+        let na = written_empty_na(cell);
+        let (start, months) = (
+            written_empty_or(start, 0, empty, &na),
+            written_empty_or(months, 1, empty, &na),
+        );
         let serial_number = match self.cast_number_no_bools_ref(start, cell) {
             Ok(c) if c.floor() < 0.0 => return num_error(cell),
             Ok(c) => c.floor() as i64,

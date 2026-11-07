@@ -83,9 +83,11 @@ committed before the fill, so the engine no longer reads an empty argument as 0 
     variable bound to nothing. `complex_pair_of` and LET's `bind_argument_value` now use it. The design review moved
     it out of let.rs.
   - `Model::written_empty_required` finds the written-empty required arguments once, from the nodes, before lifting.
-    `na_at_written_empty` then reads those arguments as `#N/A` inside each function's per-element kernel. The kernel
-    meets the `#N/A` at that argument's own turn, and a lifted call gives one result per element. T-4872 and T-4873
-    can reuse both.
+    Each per-element kernel passes its required arguments through `written_empty_or`, which swaps in a borrowed `#N/A`
+    without copying the values. The kernel meets the `#N/A` at that argument's own turn, and a lifted call gives one
+    result per element. T-4872 and T-4873 can reuse both.
+    An intermediate `na_at_written_empty` cloned the whole values slice for every element. The security review flagged
+    that the clone included a holidays array and was uncharged work, so it was replaced.
   - Two earlier drafts failed review or gates and were replaced:
     - The first checked the lifted values. It regressed gen-m6/b54448af3fde07ca A297, where `IFNA(<blank>,..)`
       evaluates to an empty value and Excel keeps the start's `#VALUE!`.

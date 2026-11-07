@@ -6,7 +6,10 @@ use crate::{
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
     formatter::dates::from_excel_date,
     functions::{
-        util::{empty_args::na_at_written_empty, near_integer::near_integer_whole},
+        util::{
+            empty_args::{written_empty_na, written_empty_or},
+            near_integer::near_integer_whole,
+        },
         Function,
     },
     model::Model,
@@ -148,7 +151,7 @@ impl Model {
         };
         let empty = self.written_empty_required(args, 1);
         let result = self.lift_call(Function::Weeknum, args, cell, &mut |model, values| {
-            model.weeknum_of(&na_at_written_empty(values, &empty, cell), cell)
+            model.weeknum_of(values, &empty, cell)
         });
         if matches!(result, CalcResult::Array(_)) {
             // A WEEKNUM that lifts over an array empties the state, whatever its types
@@ -161,12 +164,19 @@ impl Model {
     /// WEEKNUM of one element. Once both arguments convert and the serial is valid, it updates
     /// the stale `return_type` state, or reads it for a `return_type` of 22+ or negative (SPEC-0017
     /// rules 2, 4 and 5).
-    fn weeknum_of(&mut self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
+    fn weeknum_of(
+        &mut self,
+        values: &[CalcResult],
+        empty: &[usize],
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
         let (serial, return_type) = match values {
             [serial] => (serial, None),
             [serial, return_type] => (serial, Some(return_type)),
             _ => return CalcResult::new_args_number_error(cell),
         };
+        let na = written_empty_na(cell);
+        let serial = written_empty_or(serial, 0, empty, &na);
         // A boolean serial is #VALUE!, before the return_type is read (`WEEKNUM(<FALSE cell>,1)`;
         // dates.md "WEEKNUM of a boolean serial is #VALUE!", gen-m6, T-2276); WEEKDAY and
         // ISOWEEKNUM read it as 1. A typed or array-constant boolean is `#VALUE!` too
