@@ -2632,6 +2632,7 @@ C	probes/t4642-no-bare-use.case.json	3
 C	probes/t4642-qualified-after-active.case.json	5
 C	probes/t4642-qualified-entered.case.json	6
 C	probes/t4666-union-variable-isref.case.json	11
+C	probes/t4667-ifs-second-pair-and-num-value-error.case.json	76
 C	probes/t4686-rich-value-option-residue.case.json	44
 C	probes/t4697-large-small-median-mixed-sheet-refs.case.json	17
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
