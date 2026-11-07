@@ -3,7 +3,7 @@ id: T-4244
 title: "FV and PV at non-integer nper: probe cancelling calls for the twice-rounded form (after T-4146)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
