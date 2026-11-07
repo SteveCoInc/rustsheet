@@ -3,7 +3,7 @@ id: T-3740
 title: "BINOM.DIST.RANGE past the mean: Excel's exact upper-tail form (21 probe rows within 6E-14)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
