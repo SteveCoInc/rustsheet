@@ -3,7 +3,7 @@ id: T-4144
 title: "An external structured reference [1]!Table[[#This Row],[Col]] loads as a reference, not #REF!"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
