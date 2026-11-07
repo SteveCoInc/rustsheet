@@ -4614,10 +4614,6 @@ F	probes/t2609-nested-operators-and-lifts.case.json	P!A44
 F	probes/t2609-nested-operators-and-lifts.case.json	P!A45
 F	probes/t2609-nested-operators-and-lifts.case.json	P!A46
 F	probes/t2609-nested-operators-and-lifts.case.json	P!A50
-F	probes/t2609-nested-operators-and-lifts.case.json	P!A56
-F	probes/t2609-nested-operators-and-lifts.case.json	P!A57
-F	probes/t2609-nested-operators-and-lifts.case.json	P!A58
-F	probes/t2609-nested-operators-and-lifts.case.json	P!A59
 F	probes/t2609-nested-operators-one-cell.case.json	P!A27
 F	probes/t2625-nested-consumers-refill-1106.case.json	P!A13
 F	probes/t2625-nested-consumers-refill-1106.case.json	P!A17
