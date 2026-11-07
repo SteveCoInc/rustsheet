@@ -3,7 +3,7 @@ id: T-4706
 title: "financial.md XNPV/XIRR column-error and day -1..0 entries say only what T-4607's cells isolate"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
