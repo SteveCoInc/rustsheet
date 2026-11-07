@@ -118,3 +118,4 @@ omitted forms A48:A54 keep the values the engine gives today.
   blocker); `make eval-baseline` should show the 9 lines fixed.
 - Don't repeat: a full `rustsheet-accuracy math --suite probes` times out on an unrelated point (600 s). Run it with
   `--function <NAME>` for only the stale entries (`math --check` lists them).
+- Resumed 2026-11-07 22:10 UTC by an opus worker run (step 2: idle opus branch), working the next step above.
