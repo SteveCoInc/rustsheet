@@ -20,7 +20,7 @@ use rustsheet_engine::{
         utils::number_to_column,
     },
     types::{Cell, DateGroupItem, FilterColumn, FilterCriterion, Table, Workbook, Worksheet},
-    ParsedFormula,
+    Model, ParsedFormula,
 };
 
 use super::{escape::escape_xml, xml_constants::XML_DECLARATION};
@@ -132,7 +132,52 @@ fn totals_row_metadata(
 /// of the sheet filtered for SUBTOTAL) is written as a `<filterColumn>` with no criterion:
 /// schema-valid, but how Excel reads it is unprobed (xlsx-storage.md "Table parts in the
 /// export"; T-3081 probes it).
-fn auto_filter(table: &Table, (c1, r1, c2, r2): (i32, i32, i32, i32), dxf_count: usize) -> String {
+/// The criterion written for a table filtered through the API with no kept criterion
+/// (`has_filters` and no `filter_columns`): a values filter on its first column that keeps the
+/// formatted text of each visible data row, plus `blank="1"` when a visible one is blank, which
+/// is the form spec2xlsx writes and Excel reads as filtered (T-4363; xlsx-storage.md, "Table parts
+/// in the export"). Excel does not re-apply it on load, so a text that is on a visible and a
+/// hidden row (which a re-applied filter would show) changes nothing there. `None` when the
+/// table is not such a table, has no header row or its range does not parse.
+pub(crate) fn api_filter_column(model: &Model, sheet: u32, table: &Table) -> Option<String> {
+    if !table.has_filters || !table.filter_columns.is_empty() || table.header_row_count == 0 {
+        return None;
+    }
+    let (column, top, _, bottom) = parse_range(&table.reference).ok()?;
+    let totals = i32::try_from(table.totals_row_count).ok()?;
+    let mut values: Vec<String> = Vec::new();
+    let mut blank = false;
+    for row in top.checked_add(1)?..=bottom.checked_sub(totals)? {
+        if model.is_row_hidden(sheet, row).unwrap_or(false) {
+            continue;
+        }
+        let text = model
+            .get_formatted_cell_value(sheet, row, column)
+            .unwrap_or_default();
+        if text.is_empty() {
+            blank = true;
+        } else {
+            values.push(text);
+        }
+    }
+    values.sort_unstable();
+    values.dedup();
+    let mut filters = String::new();
+    for value in &values {
+        filters.push_str(&format!("<filter val=\"{}\"/>", escape_xml(value)));
+    }
+    let blank = if blank { " blank=\"1\"" } else { "" };
+    Some(format!(
+        "<filterColumn colId=\"0\"><filters{blank}>{filters}</filters></filterColumn>"
+    ))
+}
+
+fn auto_filter(
+    table: &Table,
+    (c1, r1, c2, r2): (i32, i32, i32, i32),
+    dxf_count: usize,
+    api_filter: Option<String>,
+) -> String {
     if table.header_row_count == 0 {
         return String::new();
     }
@@ -151,7 +196,9 @@ fn auto_filter(table: &Table, (c1, r1, c2, r2): (i32, i32, i32, i32), dxf_count:
             .map(|column| filter_column(column, dxf_count))
             .collect()
     } else if table.has_filters {
-        "<filterColumn colId=\"0\"/>".to_string()
+        // A criterion-less filterColumn only when the filter could not be listed (unreachable for
+        // a table with a header row, which `api_filter_column` lists).
+        api_filter.unwrap_or_else(|| "<filterColumn colId=\"0\"/>".to_string())
     } else {
         String::new()
     };
@@ -281,6 +328,7 @@ pub(crate) fn get_table_xml(
     worksheet: &Worksheet,
     parsed_formulas: &[ParsedFormula],
     workbook: &Workbook,
+    api_filter: Option<String>,
 ) -> String {
     let dxf_count = workbook.styles.dxfs.len();
     let area = parse_range(&table.reference).unwrap_or((1, 1, 1, 1));
@@ -356,7 +404,7 @@ id=\"{id}\" name=\"{}\" displayName=\"{}\" ref=\"{}\"{header_row_count}{totals_r
         dxf_attribute("headerRowDxfId", table.header_row_dxf_id, dxf_count),
         dxf_attribute("dataDxfId", table.data_dxf_id, dxf_count),
         dxf_attribute("totalsRowDxfId", table.totals_row_dxf_id, dxf_count),
-        auto_filter(table, area, dxf_count),
+        auto_filter(table, area, dxf_count, api_filter),
         table.columns.len(),
         u8::from(style.show_first_column),
         u8::from(style.show_last_column),

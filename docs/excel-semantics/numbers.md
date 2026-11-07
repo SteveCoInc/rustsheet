@@ -2352,8 +2352,8 @@ filter under `colId` 5 of the 2-column table with rows 3, 5, 7 hidden gives 21 a
 this per table (`has_active_criterion`, crates/rustsheet-xlsx/src/import/tables.rs); an empty `<filters/>` counts as a
 criterion there (unprobed). Decided where Excel shows nothing: the API's `Txn::add_table(.., filtered: true)` means a
 table whose filter has a criterion that hides its hidden rows (what spec2xlsx writes and Excel reads as filtered), so it
-stays filtered in the engine; its xlsx export still writes a criterion-less filterColumn, which Excel and our import
-read as not filtered (T-4363). A column delete that takes the last kept criterion of a filter read from a file
+stays filtered in the engine, and its xlsx export writes a values filter on the first column keeping the visible rows'
+text, which Excel and our import read as filtered (T-4363; xlsx-storage.md "Table parts in the export"). A column delete that takes the last kept criterion of a filter read from a file
 unfilters the table, so the engine agrees with its own export; whether Excel unfilters the rows when the filtered column
 is deleted in the application is unprobed (T-4371). A worksheet autoFilter (no table) and an autoFilter holding only a
 `<sortState>` are unprobed; ours reads the latter as not filtered.

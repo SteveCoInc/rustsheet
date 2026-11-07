@@ -499,9 +499,17 @@ columns. A criterion that fails its check (an unknown element such as an `extLst
 outside the schema, a non-finite number) keeps only its column and is written back as a criterion-less
 `<filterColumn colId="N"/>`; a `<filterColumn>` without a valid `colId` is dropped, and the
 `hiddenButton`/`showButton` attributes are not kept. Only a kept criterion inside the table makes SUBTOTAL call the
-sheet's hidden rows filtered (T-4003). A table filtered through the API with no criterion is written as
-`<filterColumn colId="0"/>`. Both criterion-less forms are schema-valid, and since T-4003 our own import reads them
-back as not filtered, as Excel does (T-4363 tracks the API case).
+sheet's hidden rows filtered (T-4003). A table filtered through the API with no criterion (`has_filters`, no kept
+filterColumn) is written, since T-4363, as a values filter on its first column listing the formatted text of each
+visible data row (`blank="1"` when a visible one is blank; `export::tables::api_filter_column`), the form spec2xlsx
+writes; before, it was a criterion-less `<filterColumn colId="0"/>`, which Excel and our import read as not filtered.
+Excel reads our export as filtered (excel-graph upload of our export, 2026-11-07, T-4363: `Sales` A1:B7, `Cat`
+a,b,a,c,a,b and `Val` 1-6, added with `filtered: true` and rows 3 and 5 hidden, exported as
+`<filters><filter val="a"/><filter val="b"/></filters>`, "b" also on hidden row 3): `SUBTOTAL(9,Sales[Val])` and
+`109` both 15, `SUBTOTAL(3,Sales[Cat])` and `103` both 4, the engine's values before the export, and our re-import
+keeps the table filtered (`a_filtered_table_without_a_criterion_exports_its_visible_values`). Excel does not
+re-apply the filter on load, so a text on a visible and a hidden row changes nothing there. A table with every data
+row hidden gets an empty `<filters/>`, which our import reads as a criterion (unprobed in Excel).
 Excel keeps the kept criteria's meaning after our round trip (excel-graph, 2026-11-05, T-4004): on `Sales`-shaped
 tables (A1:B7, `Cat` a,b,a,c,a,b and `Val` 1-6, rows hidden as the filter would, no re-application) an
 openpyxl-written file and our import-then-export of it give the same `SUBTOTAL(3,[Cat])`, `SUBTOTAL(103,[Cat])`,
@@ -566,7 +574,7 @@ Evidence: crates/rustsheet-xlsx/tests/calc_test_tables/tables.xlsx (Excel-author
 Status: VERIFIED (web, T-3081, T-4005): Excel loads every filter form, and a constant totals cell with bare
 `custom` metadata; T-4003 and T-4004 own the filter differences.
 Implemented in: crates/rustsheet-xlsx/src/export/tables.rs
-Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005, T-4404
+Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005, T-4404, T-4363
 
 ## A calculated column is saved as `calculatedColumnFormula` plus one formula per row
 Rule (excel-graph downloads of the T-2957 probes, 2026-10-27): a column Excel filled (references.md, "Calculated
