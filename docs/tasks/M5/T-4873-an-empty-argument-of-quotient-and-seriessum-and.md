@@ -55,3 +55,15 @@ a small probe whose predictions are committed before the fill.
 ## Out of scope
 - MROUND, GCD, LCM, MULTINOMIAL, RANDBETWEEN (already evidenced and implemented).
 - AGGREGATE and SUBTOTAL (their empty-argument cells are already in probes and pass).
+
+## Predictions (committed before the oracle fill)
+Cases `probes/t4873-empty-arg-quotient-ceiling` (Calc) and `probes/t4873-empty-arg-let-lambda` (Calc).
+- ToolPak rule: every QUOTIENT and SERIESSUM cell with a written-empty x, n, m, numerator or denominator is `#N/A`
+  (main A1:A8, A10, B1:B3, B5:B7), except that an error argument before the empty one wins (A9 `#DIV/0!`). B4 (empty
+  coefficients) is the open question: predicted `#N/A`. B8 control: 10.
+- Empty = omitted for the 2010+ roundings: C1 3, C2 -2, C3 7, C4 3, C5 -3, C6 -2, C7 -2, C8 0, C9 3, C10 -2; D1 2,
+  D2 -3, D3 7, D4 2, D5 -2, D6 -3, D7 -3, D8 0, D9 2, D10 -4; E1 3, E2 -2, E3 7, E4 0; F1 2, F2 -3, F3 7, F4 0;
+  G1 3, G2 -2, G3 7, G4 0 (an empty number is 0, as today).
+- Legacy controls keep empty = 0: H1 0, H2 `#DIV/0!`, H3 0, H4 `#DIV/0!`, H5 0.
+- LET/LAMBDA case: an empty LET value or omitted LAMBDA parameter acts as a written-empty argument: A1:A4 `#N/A`,
+  A5 3, A6 -3, A7 3, A8 -3, A9 3, A10 -2, A11 0.

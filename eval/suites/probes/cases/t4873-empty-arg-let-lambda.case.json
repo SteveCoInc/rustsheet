@@ -1,0 +1,29 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4873: the empty-argument rows of t4873-empty-arg-quotient-ceiling handed in through a LET-bound empty value or an omitted LAMBDA parameter.",
+ "tags": [
+  "M7",
+  "probe",
+  "math",
+  "T-4873"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=LET(e,,QUOTIENT(7,e))",
+    "A2": "=LET(e,,QUOTIENT(e,2))",
+    "A3": "=LAMBDA(a,b,QUOTIENT(a,b))(7,)",
+    "A4": "=LET(e,,SERIESSUM(2,e,1,{1,2}))",
+    "A5": "=LET(e,,CEILING.MATH(2.675,e))",
+    "A6": "=LET(e,,FLOOR.MATH(-2.5,e))",
+    "A7": "=LET(e,,CEILING.PRECISE(2.675,e))",
+    "A8": "=LAMBDA(a,b,FLOOR.PRECISE(a,b))(-2.5,)",
+    "A9": "=LET(e,,ISO.CEILING(2.675,e))",
+    "A10": "=LET(e,,CEILING.MATH(-2.5,1,e))",
+    "A11": "=LET(e,,CEILING(2.5,e))"
+   }
+  }
+ ],
+ "expected": {}
+}
