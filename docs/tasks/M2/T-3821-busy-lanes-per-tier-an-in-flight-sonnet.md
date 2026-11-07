@@ -3,7 +3,7 @@ id: T-3821
 title: "Busy lanes per tier: an in-flight sonnet branch no longer hides the lane's ready opus tasks, and the reverse"
 milestone: M2
 lane: harness
-status: in-progress
+status: done
 priority: P1
 size: S
 tier: opus
@@ -48,20 +48,34 @@ stops finding "no ready task" in a critical lane only because a sonnet refactor 
   PR updates the routines.md text and adds a "Needs owner" line asking the owner to re-apply the prompts.
 
 ## Acceptance criteria
-- [ ] A decision record states the per-tier busy rule and the conflict count above, and amends decision 0022 by
+- [x] A decision record states the per-tier busy rule and the conflict count above, and amends decision 0022 by
       reference.
-- [ ] `python3 scripts/tasks.py next --lane engine --tier opus` offers a ready opus task when the lane's only
+- [x] `python3 scripts/tasks.py next --lane engine --tier opus` offers a ready opus task when the lane's only
       in-flight branch is a sonnet task's, and `--tier sonnet` still offers nothing in that lane. Tests in
       scripts/test_tasks.py cover four cases: a sonnet branch with opus and sonnet candidates, the mirror case, a
       handed-off branch (counts as opus), and a lane with one branch of each tier (nothing offered).
-- [ ] `ready` gives the same answer as `next` under the new rule, and so does T-3558's `lane ... busy` message: it
+- [x] `ready` gives the same answer as `next` under the new rule, and so does T-3558's `lane ... busy` message: it
       names only branches of the asking tier.
-- [ ] docs/process/agent-workflow.md and the two worker prompts in docs/process/routines.md describe the per-tier
+- [x] docs/process/agent-workflow.md and the two worker prompts in docs/process/routines.md describe the per-tier
       rule. docs/status.md "Needs owner" asks for the routines to be re-applied.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The P0 bypass and the `lane busy` message (T-3558).
 - Letting current-milestone exit work pass a lane busy with later-milestone work (T-3824).
 - The claim window, handoffs and review-limited branches (decisions 0018, 0095).
 - More than one task in flight per tier and lane.
+
+## Outcome
+- `scripts/tasks.py`: `branch_claims` reports each in-flight branch's tier (from the branch's task file: `opus`
+  once it has a `## Handoff` heading or the step-5c resume marker, else its `tier:`); `available` counts slots per
+  (lane, tier), falls back to `main`'s effective tier, and gives a branch of unknown tier a slot of both tiers.
+  `next`, `ready` and the `lane L busy` message share the rule; the message names a branch of the asking tier.
+- `scripts/test_tasks_next.py` `BusyPerTier`: the four cases of the acceptance criteria (sonnet branch, the mirror
+  case, a resumed handoff as opus plus an unknown-tier branch, one branch of each tier), and `branch_claims`
+  reading the tier from the branch. Existing fixtures carry the new tier field.
+- Decision 0331 (amends 0022 and 0269) with the 7-day overlap count: 1,445 overlapping same-lane PR pairs, 802
+  sharing a non-task file, 231 a code file; cross-tier 466 / 275 / 36.
+- agent-workflow.md, routines.md (both worker prompts and the concurrency paragraph) and the work-loop skill describe
+  the per-tier rule; docs/status.md "Needs owner" asks for the routines to be re-applied.
+- Eval delta: none (scripts and docs only).
