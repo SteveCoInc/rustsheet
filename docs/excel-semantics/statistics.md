@@ -2515,7 +2515,7 @@ Ours: bit-exact with Excel on 214 of the 583 numeric points (T.TEST 54, TTEST 50
 error point but A136; every point but A136 and A101 is inside the envelope (known failures owned by T-4579). The rest
 of the last-digit gaps are the tail noise of the entries above.
 Evidence: eval/accuracy/tables/{T.TEST,TTEST,F.TEST,FTEST}/s1 (excel-graph, 2026-11-06).
-Status: VERIFIED (excel-graph) for the cited cells; the A136 rule is a one-cell hypothesis.
+Status: VERIFIED (excel-graph) for the cited cells; the A136 hypothesis is refuted (T-4579, "Paired T.TEST is erratic ...").
 Tasks: T-4097, T-4579
 
 ## Paired T.TEST is erratic where the differences are near-constant or the samples offset (T-4579)
@@ -2526,7 +2526,8 @@ or both samples sit on large offsets, Excel is often `#DIV/0!` or far from the m
   A12, A14, A17, A18).
   - The rows are classified by the one-pass variance `(Σd² - (Σd)²/n)/(n-1)` of the double differences. All 8 rows
     where it is positive (7.1E-15 to 4.5E-13) are `#DIV/0!`, the opposite of the hypothesis behind TTEST/s1 A136.
-    Of the 16 rows where it is 0 or negative, 11 are `#DIV/0!` and 5 are numbers (2 negative, 3 zero).
+    Of the 16 rows where it is 0 or negative, 11 are `#DIV/0!` and 5 are numbers (1 negative, A17; 4 zero, A8, A12,
+    A14, A18).
   - The 3 rows whose double differences are exactly constant are `#DIV/0!`.
   - That hypothesis (`#DIV/0!` exactly when the one-pass variance is <= 0) holds on 14 of 27 rows. The two-pass rule
     the engine uses holds on 8.
