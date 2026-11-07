@@ -3,7 +3,7 @@ id: T-3740
 title: "BINOM.DIST.RANGE past the mean: Excel's exact upper-tail form (21 probe rows within 6E-14)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -38,9 +38,27 @@ BINOM.DIST.RANGE ranges whose lower end is past the mean are bit-exact with Exce
   lines (a passing listed point fails the check as stale).
 
 ## Acceptance criteria
-- [ ] The 21 rows' Range!A cells pass, or the remaining misses are characterized in statistics.md with the forms tried.
-- [ ] No other cell of probes/t3444-binom-range-inv-large-n or any gated case regresses.
+- [x] The 21 rows' Range!A cells pass, or the remaining misses are characterized in statistics.md with the forms tried.
+- [x] No other cell of probes/t3444-binom-range-inv-large-n or any gated case regresses.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - BINOM.DIST's own last digits (T-3447), which the other failing Range and Inv cells of the probe carry.
+
+## Outcome
+- Past the walk's budget, BINOM.DIST.RANGE with its lower end past the mean (`s1 - 1 > n·p`) now returns the upper-tail
+  difference `P(X > s1 - 1) - P(X > s2)` (`binom.rs` `excel_binom_upper_tail`). Each tail is the `w` of the same
+  bratio call whose `w1` is BINOM.DIST's cdf. This is the cancellation-free form, not a fit, and it has no constants.
+- The form was frozen, then tested on a fresh sweep drawn after the freeze: probes/t3740-binom-range-past-mean-sweep,
+  seed 374020261107. Predictions were committed before the excel-graph fill (f6bd2017d, docs/research/t3740).
+  - P1 held: Excel is within 1E-12 relative on 60 of 60 rows past the mean.
+  - P3 held: the 10 control rows below the mean are unchanged and equal Excel's cdf difference to the bit.
+  - P4 held: Excel's range is not its own cdf difference on 37 of the 60 rows.
+  - P2 failed on 9 of 60 rows near the mean, where the cdf difference sits nearer Excel's bits.
+  - Overall the form is visibly off on 19 rows against the cdf difference's 38, and bit-exact on 7 against 9.
+  - The form was not changed after the fill.
+- The 21 t3444 rows are characterized in statistics.md: none is bit-exact, and Excel's exact form is unknown. They are
+  handed to T-4746 with the sweep's visibly-off cells. No t3444 cell changed (eval-check: 0 regressions, 0 fixed).
+- Unit test `binom_dist_range_past_the_mean_takes_the_upper_tails` (Gate A A107, A85).
+- Eval delta: Gate A loses 9 known failures (accuracy/BINOM.DIST.RANGE/s1 A85, A91, A94, A101, A107, A146, A172,
+  A177, A180) and `eval-gates` has 0 failing. The new probe case adds 85 known failures, all owned by T-4746.

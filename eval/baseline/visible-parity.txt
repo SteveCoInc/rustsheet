@@ -212,6 +212,7 @@ probes/t3585-rate-num-near-minus-one.case.json	7
 probes/t3638-subnormal-upper-tail.case.json	7
 probes/t3698-rate-flat-restart-fresh.case.json	25
 probes/t3698-rate-flat-restart.case.json	22
+probes/t3740-binom-range-past-mean-sweep.case.json	18
 probes/t3850-rate-same-state.case.json	46
 probes/t3862-beta-inv-huge-alpha.case.json	36
 probes/t3862-beta-inv-sqrt-dbl-max.case.json	61

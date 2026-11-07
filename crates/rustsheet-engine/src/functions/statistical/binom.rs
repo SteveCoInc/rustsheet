@@ -174,6 +174,18 @@ impl Model {
         // Past the walk's budget Excel's range is its own BINOM.DIST cdf difference, to the bit
         // on 105 of the 126 probes/t3444-binom-range-inv-large-n Range rows (column A = column B);
         // the other 21, ranges from mean + 3 sd to mean + 5 sd, take a form not identified (T-3740).
+        // A range whose lower end is past the mean is the difference of the two upper tails,
+        // P(X > s1 - 1) - P(X > s2), each the w of the same bratio call the cdf takes: the cdf
+        // difference cancels there (to 0 on accuracy/BINOM.DIST.RANGE/s1 A85, A94, A101, A107,
+        // where Excel is within 1E-12 of the math; T-3740).
+        if lower >= 1 && (lower - 1) as f64 > n as f64 * p {
+            if let (Some(from), Some(past)) = (
+                excel_binom_upper_tail(n, p, lower - 1),
+                excel_binom_upper_tail(n, p, upper),
+            ) {
+                return Ok(from - past);
+            }
+        }
         let dist = Binomial::new(p, n).map_err(|_| num_error(cell))?;
         let cdf = |k: u64| binom_cdf_or_statrs(&dist, p, k);
         let prob = if lower == 0 {
@@ -474,6 +486,17 @@ fn excel_binom_cdf(n: u64, p: f64, k: u64) -> Option<f64> {
 /// form (statistics.md "BINOM.DIST pmf: closed forms at k = 0 and k = n").
 fn excel_binom_at_zero(n: u64, p: f64) -> f64 {
     excel_exp(n as f64 * excel_ln_one_minus(p))
+}
+
+/// Excel's binomial upper tail `P(X > k)` for `0 < p < 1`: the w of the bratio call
+/// [`excel_binom_cdf`] takes the w1 of (`I_p(k+1, n-k)`), a subnormal tail flushed to 0 as there,
+/// and 0 from k = n. `None` where neither a closed form nor the port applies (T-3740).
+fn excel_binom_upper_tail(n: u64, p: f64, k: u64) -> Option<f64> {
+    if k >= n {
+        return Some(0.0);
+    }
+    let (x, y, a, b) = (p, 1.0 - p, k as f64 + 1.0, (n - k) as f64);
+    closed_or_ported_tails(x, y, a, b).map(|(upper, _)| flush_subnormal(upper))
 }
 
 /// [`excel_binom_cdf`], else statrs' cdf of `dist` (`Binomial::new(p, n)`), the last resort of
