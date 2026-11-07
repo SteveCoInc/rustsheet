@@ -1600,8 +1600,8 @@ about 50 near 100 and 317 at `POISSON(16,510,TRUE)`). Over the 32 adjacent doubl
 drifts about 2 ulp a step and jumps by 64 ulp, one ulp of a number near |ln Q| = 92.
 
 Excel's far upper tail (T-3269; its subnormal results are flushed except at df 2 / k = 0, numbers.md "Subnormal results become 0", T-3638). Rule: at shapes 3/2 to 11 (POISSON's cdf at k from 1 to 10, CHISQ.DIST.RT and
-CHIDIST at df 3 to 22), for 30 < x <= 600, Excel's Q(a, x) is Stirling's ratio prefactor, sqrt(a / 2 pi) exp(a ln(x/a)
-+ (a - x) - correction(a)), the form T-2638 found above shape 20 away from the mode, times the continued fraction; at
+CHIDIST at df 3 to 22), for 30 < x <= 600, Excel's Q(a, x) is Stirling's prefactor, sqrt(a / 2 pi) exp(-B -
+correction(a)) with Loader's direct deviance B = a ln(a/x) + (x - a) (corrected by T-3469, below), times the continued fraction; at
 and below x = 30 it is the accurate Q at integer shapes. Above shape 11 Excel is not this form next to x = 30 (where it
 switches there is open, T-3469), and past x = 600 it is unmeasured.
 - The switch: probes-numeric/t3269-gamma-tail-switch (x from 26 to 40 by 0.5 at shapes 2 to 4) has Excel correctly
@@ -1647,6 +1647,19 @@ switches there is open, T-3469), and past x = 600 it is unmeasured.
   `CHISQ.DIST.RT(390,39)` +245) though within 5 at others (shapes 1.5, 4.5, 6, 7.5, 9, 10.5, 15.5); no ln(x/a) variant
   tried (Excel's LN, ln x - ln a, x87 ops, -a rlog) changes it. Half-integer shapes below x = 30 are none of the forms
   tried (T-3285).
+- Correction (T-3469): the exponent is not the ratio form a ln(x/a) + (a - x) T-3269 took but -B, Loader's direct
+  deviance B = a ln(a/x) + (x - a) (`density::direct_deviance`, as the far-above-the-mean cdf and the density take
+  it). The two are the same number, but x/a and a/x round differently before the log, and |ln Q| of 30 to 90
+  magnifies that. With B, at the same switch and shape range: gen-m9/43c6227e0ff368c7 A108 `POISSON(5,42,-1)` 25 to
+  0 ulp, gen-m9/5919660b7bb4d195 A80 `POISSON(9,100,..)` and its twin probes-numeric/t1049-chisqdistrt A28 72 to 0,
+  t3269-shape6-misses A46 `POISSON(5,38,TRUE)` 26 to 0, A67 and A68 (and their twins t2561-chisq-dist-rt-past-edge
+  R!A73, A75) 129 and 189 to 2, t3284-gamma-deep-upper-tail A165 and A166 (x / a = 10) 90 to 1, A69 and A70
+  `POISSON(3,40,TRUE)` 28 to 0. So the shape-6 spikes and the x / a = 10 misses were this one rounding, not
+  something tied to that shape or that x. On the whole eval (main a300350e against the change, per cell) 13 cells
+  are fixed, 29 more are closer and none is farther. Still off and not this form's rounding: t3269-shape6-misses A69
+  `POISSON(4,42,TRUE)` (shape 5, 6 ulp), t3269-fresh-sweep-2 A173 `CHISQ.DIST.RT(69.988,3)` and A233
+  `CHISQ.DIST.RT(61.3502,3)` (shape 3/2, 17 and 21 ulp), and gen-m9/caa1eed48b1883fe A59 `CHIDIST(100,9)` (1 ulp).
+  The x / a = 10 cells above shape 11 (A183, A184, 5 ulp) are outside the form's range.
 
 ## HYPGEOM.DIST: per-call cap and lifting (T-1873)
 Rule: HYPGEOM.DIST and HYPGEOMDIST lift every argument over an array and over a two-cell range on the formula's own rows,
