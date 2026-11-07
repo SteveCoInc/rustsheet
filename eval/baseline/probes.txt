@@ -1355,6 +1355,7 @@ C	probes/t1883-currency-locale-edges.case.json	63
 C	probes/t1923-calendar-digits.case.json	213
 C	probes/t1924-locale-tag-extended-hex.case.json	60
 C	probes/t1925-numeral-digits.case.json	128
+C	probes/t1942-ztest-numeric-edges.case.json	47
 C	probes/t2065-lift-averagea.case.json	1
 C	probes/t2065-lift-averageif.case.json	2
 C	probes/t2065-lift-concat.case.json	1

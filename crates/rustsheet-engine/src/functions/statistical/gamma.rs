@@ -135,11 +135,18 @@ pub(super) fn log_form_density(alpha: f64, x: f64, beta: f64) -> Option<f64> {
 /// the quotient rounded twice like the worksheet `/` (statrs scales by a rounded 1/b instead), and
 /// at shape 0.5 that is ERF.PRECISE(SQRT(x/b)). At another shape below 1 and an x/b below 1 it is
 /// Excel's own leading factor over the series ([`excel_small_shape_lower`], T-3060). An x of 0,
-/// and an x/b that underflows or overflows, keep the port's own branches:
+/// and an x/b that underflows to 0 or overflows, keep the port's own branches (a subnormal x/b is
+/// flushed to 0 first, T-1942):
 /// `GAMMA.DIST(1E300,1,1E-10,TRUE)` is #NUM! and `GAMMA.DIST(1E-300,2,1E100,TRUE)` is 0
 /// (probes/incomplete-gamma-cap E6, E7).
 fn gamma_dist_cdf(dist: &Gamma, x: f64, beta: f64) -> f64 {
     let scaled = extended_quotient(x, beta);
+    // A subnormal x / beta flushes to 0, so the cdf is 0: `GAMMA.DIST(2E-300,0.5,1E8,TRUE)` and
+    // `GAMMA.DIST(1E-300,0.5,1E10,TRUE)` are 0 (probes/t1942-ztest-numeric-edges A6:A7;
+    // excel-graph, T-1942).
+    if scaled > 0.0 && scaled < f64::MIN_POSITIVE {
+        return 0.0;
+    }
     if !(scaled > 0.0 && scaled.is_finite()) {
         return gamma_cdf(dist, x);
     }
