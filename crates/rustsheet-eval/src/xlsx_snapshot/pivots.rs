@@ -294,7 +294,9 @@ fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
             Event::Start(e) | Event::Empty(e) => {
                 let empty = matches!(event, Event::Empty(_));
                 match e.local_name().as_ref() {
-                    "pivotTableDefinition" => {
+                    // The root only: the x14 extension's `<x14:pivotTableDefinition>` has the same
+                    // local name and, read as the root, dropped the pivot (t4129-pivot-layout-flags X14).
+                    "pivotTableDefinition" if pivot.is_none() => {
                         pivot = Some(PivotDef {
                             name: kept_attr(e, "name", budget).ok()?.unwrap_or_default(),
                             sheet: sheet.to_string(),
@@ -451,6 +453,17 @@ mod tests {
         assert_eq!(p.row_items[1].x, vec![1]);
         assert_eq!(p.row_items[3].t.as_deref(), Some("grand"));
         assert_eq!(p.col_items[1].i, 1);
+    }
+
+    #[test]
+    fn the_x14_extension_does_not_replace_the_root() {
+        let xml = r#"<pivotTableDefinition xmlns="m" name="P_X14" cacheId="1">
+            <location ref="A3:C11" firstHeaderRow="1" firstDataRow="1" firstDataCol="2"/>
+            <extLst><ext uri="{962EF5D1-5CA2-4c93-8EF4-DBF5C05439D2}" xmlns:x14="x14">
+            <x14:pivotTableDefinition fillDownLabelsDefault="1"/></ext></extLst>
+            </pivotTableDefinition>"#;
+        let p = parse_pivot(xml, "P", &mut usize::MAX.clone()).expect("parses");
+        assert_eq!((p.name.as_str(), p.location.as_str()), ("P_X14", "A3:C11"));
     }
 
     #[test]

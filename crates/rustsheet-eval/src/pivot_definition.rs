@@ -51,7 +51,21 @@ const MAX_LIST: usize = 256;
 const SUBTOTALS: [&str; 11] = [
     "sum", "countA", "avg", "max", "min", "product", "count", "stdDev", "stdDevP", "var", "varP",
 ];
-/// `ST_ShowDataAs` plus the Excel 2010 modes the builder accepts (`SHOW_DATA_AS`).
+/// The Excel 2010 show-as modes (`SHOW_AS_X14`), written as the x14 data field extension's
+/// `pivotShowAs` with no `showDataAs`.
+const SHOW_AS_X14: [&str; 6] = [
+    "percentOfParent",
+    "percentOfParentRow",
+    "percentOfParentCol",
+    "percentOfRunningTotal",
+    "rankAscending",
+    "rankDescending",
+];
+const X14_NS: &str = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main";
+/// The x14 dataField extension's uri (`X14_DATA_FIELD_URI`).
+const X14_DATA_FIELD_URI: &str = "{E15A36E0-9728-4e99-A89B-3F7291B0FE68}";
+/// `ST_ShowDataAs`, the modes the builder writes as `showDataAs` (`SHOW_DATA_AS` less
+/// [`SHOW_AS_X14`]).
 const SHOW_DATA_AS: [&str; 9] = [
     "normal",
     "difference",
@@ -624,8 +638,13 @@ impl<'a> DefinedPivot<'a> {
         if hidden.is_some_and(|h| !h.is_empty()) && f.axis == Some("axisPage") {
             head.push_str(r#" multipleItemSelectionAllowed="1""#);
         }
+        let ext = Self::field_ext(f);
         if f.axis.is_none() {
-            return Ok(format!(r#"<pivotField{head} showAll="0"{extra}/>"#));
+            return Ok(if ext.is_empty() {
+                format!(r#"<pivotField{head} showAll="0"{extra}/>"#)
+            } else {
+                format!(r#"<pivotField{head} showAll="0"{extra}>{ext}</pivotField>"#)
+            });
         }
         let values: Vec<Option<Cached>> = if f.group().is_some() {
             (f.group_labels()?.into_iter())
@@ -647,6 +666,19 @@ impl<'a> DefinedPivot<'a> {
                 flags.entry(*k).or_default().push_str(attr);
             }
         }
+        // `item_attrs`: item text to its other `<item>` attributes.
+        if let Some(listed) = f.entry("item_attrs").and_then(Json::as_object) {
+            if listed.len() > MAX_LIST {
+                return Err(format!("item_attrs of {:?}", f.name));
+            }
+            for (text, extra) in listed {
+                let wanted = key(Some(&Cached::Text(text.clone())));
+                let k = keys.get(&wanted).ok_or_else(|| {
+                    format!("item_attrs item {text:?} is not in field {:?}", f.name)
+                })?;
+                flags.entry(*k).or_default().push_str(&attrs(Some(extra))?);
+            }
+        }
         let mut items = (0..values.len()).fold(String::new(), |mut out, k| {
             let flag = flags.get(&k).map_or("", String::as_str);
             let _ = write!(out, r#"<item x="{k}"{flag}/>"#);
@@ -657,9 +689,16 @@ impl<'a> DefinedPivot<'a> {
             let _ = write!(items, r#"<item t="{t}"/>"#);
         }
         Ok(format!(
-            r#"<pivotField{head} showAll="0"{extra}><items count="{}">{items}</items></pivotField>"#,
+            r#"<pivotField{head} showAll="0"{extra}><items count="{}">{items}</items>{ext}</pivotField>"#,
             values.len() + tails.len()
         ))
+    }
+
+    /// The field's raw `extLst` (`_field_ext`), as written.
+    fn field_ext(f: &Field<'_>) -> String {
+        (f.entry("xml").and_then(|x| x.get("extLst")))
+            .and_then(Json::as_str)
+            .map_or_else(String::new, |text| text.trim().to_string())
     }
 
     fn page_field(&self, field: usize, item: Option<&Key>) -> Result<String, String> {
@@ -679,11 +718,17 @@ impl<'a> DefinedPivot<'a> {
         if e.subtotal != "sum" {
             let _ = write!(attrs, r#" subtotal="{}""#, e.subtotal);
         }
+        let mut ext = String::new();
         if let Some(show) = e.raw.get("showDataAs").and_then(Json::as_str) {
-            if !SHOW_DATA_AS.contains(&show) {
+            if SHOW_AS_X14.contains(&show) {
+                ext = format!(
+                    r#"<extLst><ext uri="{X14_DATA_FIELD_URI}" xmlns:x14="{X14_NS}"><x14:dataField pivotShowAs="{show}"/></ext></extLst>"#
+                );
+            } else if SHOW_DATA_AS.contains(&show) {
+                let _ = write!(attrs, r#" showDataAs="{show}""#);
+            } else {
                 return Err(format!("showDataAs {show:?}"));
             }
-            let _ = write!(attrs, r#" showDataAs="{show}""#);
         }
         let base = match e.raw.get("baseField") {
             Some(Json::String(name)) => self.index(name)?.to_string(),
@@ -695,7 +740,11 @@ impl<'a> DefinedPivot<'a> {
         if let Some(format) = e.raw.get("numFmtId").and_then(Json::as_i64) {
             let _ = write!(attrs, r#" numFmtId="{format}""#);
         }
-        Ok(format!("<dataField{attrs}/>"))
+        Ok(if ext.is_empty() {
+            format!("<dataField{attrs}/>")
+        } else {
+            format!("<dataField{attrs}>{ext}</dataField>")
+        })
     }
 
     /// The author's XML for `slot`, as written (`_raw`).

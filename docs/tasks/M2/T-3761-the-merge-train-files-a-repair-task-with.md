@@ -3,7 +3,7 @@ id: T-3761
 title: "The merge train files a repair task with its evidence when it ejects a PR"
 milestone: M2
 lane: harness
-status: todo
+status: dropped
 priority: P1
 size: M
 tier: opus
@@ -43,3 +43,7 @@ with a short spec amendment and decision record.
 
 ## Out of scope
 - Waking the original session to repair its own PR (a separate probe).
+
+## Outcome
+Dropped 2026-11-07: the merge train it changes no longer exists. Decision 0247 moved merges to GitHub's merge queue, and
+decision 0252 deleted `scripts/merge_train.py` and its tooling, so there is nothing left to fix or measure.

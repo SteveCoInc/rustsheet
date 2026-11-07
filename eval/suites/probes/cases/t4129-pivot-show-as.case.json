@@ -1,0 +1,352 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4129: does Excel for the web open and render each ECMA-376 show-values-as mode (ST_ShowDataAs) written as dataField@showDataAs? Data!A1:D9 has Region, Product, Year and Sales over eight records: East A 2024 10, East A 2025 4, East B 2024 5, East B 2025 8, East C 2024 3, West A 2024 20, West A 2025 6, West B 2025 7 (West/B/2024 and West/C are empty intersections). Each sheet is one builder-v2 pivot at A3: rows Region (outer) and Product, columns Year, one data field Sum of Sales named Shown with the sheet's mode. N normal; DF difference from Product A (baseField Product, baseItem 0); DP difference from (previous) Year (baseItem 1048828); PC % of Product A; PD % difference from Product A; RT running total in Product; PR % of row total; PCo % of column total; PT % of grand total; IX index. The rendered values are evidence for T-4161 and T-4163. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4129",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0108",
+  "PV-0109",
+  "PV-0110",
+  "PV-0111",
+  "PV-0112",
+  "PV-0113",
+  "PV-0114",
+  "PV-0115",
+  "PV-0116",
+  "PV-0891",
+  "PV-0892",
+  "PV-0896"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Year",
+    "D1": "Sales",
+    "A2": "East",
+    "B2": "A",
+    "C2": 2024,
+    "D2": 10,
+    "A3": "East",
+    "B3": "A",
+    "C3": 2025,
+    "D3": 4,
+    "A4": "East",
+    "B4": "B",
+    "C4": 2024,
+    "D4": 5,
+    "A5": "East",
+    "B5": "B",
+    "C5": 2025,
+    "D5": 8,
+    "A6": "East",
+    "B6": "C",
+    "C6": 2024,
+    "D6": 3,
+    "A7": "West",
+    "B7": "A",
+    "C7": 2024,
+    "D7": 20,
+    "A8": "West",
+    "B8": "A",
+    "C8": 2025,
+    "D8": 6,
+    "A9": "West",
+    "B9": "B",
+    "C9": 2025,
+    "D9": 7
+   }
+  },
+  {
+   "name": "N",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_N",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "normal"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "DF",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DF",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "difference",
+        "baseField": "Product",
+        "baseItem": 0
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "DP",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DP",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "difference",
+        "baseField": "Year",
+        "baseItem": 1048828
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PC",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percent",
+        "baseField": "Product",
+        "baseItem": 0
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PD",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PD",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentDiff",
+        "baseField": "Product",
+        "baseItem": 0
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "RT",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RT",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "runTotal",
+        "baseField": "Product"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PR",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PR",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfRow"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PCo",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PCo",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfCol"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "PT",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_PT",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "percentOfTotal"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "IX",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_IX",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "name": "Shown",
+        "showDataAs": "index"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A9)"
+   }
+  }
+ ]
+}
