@@ -47,5 +47,12 @@ blank data row) and an empty `<filters></filters>` (every data row hidden).
 - Import: a `<filters>` with no element inside and no true `blank` is no criterion (`is_criterion`, also in the
   dangling-color re-decision), as Excel reads it; unit cases in `only_a_criterion_inside_the_table_filters` and
   `dangling_color_filter_dxf_is_no_criterion`.
+- The same rule, one definition (`FilterCriterion::is_empty_values`), in the import's dangling-color re-decision and
+  in the engine's column edits (`kept_filter_inside`: an empty values filter is no kept criterion, unit test
+  `an_empty_values_filter_is_no_kept_criterion`), and in the eval adapter (`filters_hidden_rows`: spec2xlsx writes a
+  values filter with no visible data row as `<filters></filters>`).
+- Probe case probes/t4749-empty-values-filter (12 cells, excel-graph): every data row of a `"filter": true` table
+  hidden reads as not filtered, as the unfiltered control; 12/12 pass. The `blank="1"` forms cannot be written by
+  spec2xlsx (a blank first-column cell in a filtered table is refused), so they stay as uploads.
 - Docs: xlsx-storage.md ("Table parts in the export") and numbers.md (which filter makes a table filtered).
-- No probe case: a spec case cannot express an API filter (as T-4363). Eval delta: see the PR.
+- Eval delta: probes +1 case (12 cells, all pass); every other suite unchanged (fixed 0, regressions 0).

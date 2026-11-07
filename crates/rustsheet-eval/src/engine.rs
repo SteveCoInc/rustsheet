@@ -244,7 +244,7 @@ impl Engine for RustSheetEngine {
                                 tx.add_table_with_rows(
                                     range,
                                     &table.name,
-                                    filters_hidden_rows(table, range),
+                                    filters_hidden_rows(table, range, &sheet.hidden_rows),
                                     (table.header_row, table.totals_row),
                                 )?;
                                 for (letter, formula) in &table.calculated {
@@ -561,16 +561,20 @@ pub(crate) fn range_ref(id: SheetId, a1: &str) -> Result<RangeRef, rustsheet::Ed
 
 /// Whether the spec table's filter makes its sheet's hidden rows filtered: Excel calls them
 /// filtered only for a filterColumn with a criterion inside the table, not for a criterion-less
-/// one, a `<colorFilter/>` without a dxfId (probes/t4558-color-filter-subtotal) or one whose `colId` is past the table's width (probes/t4003-filter-column-criterion), and
-/// the facade's `filtered` flag is that "filtered" (docs/excel-semantics/numbers.md, "SUBTOTAL and
-/// AGGREGATE over hidden and filtered rows").
-fn filters_hidden_rows(table: &TableSpec, range: RangeRef) -> bool {
+/// one, a `<colorFilter/>` without a dxfId (probes/t4558-color-filter-subtotal), one whose `colId`
+/// is past the table's width (probes/t4003-filter-column-criterion) or the empty `<filters>`
+/// spec2xlsx writes for a values filter when no data row is visible (`hidden_rows`, one-based;
+/// probes/t4749-empty-values-filter), and the facade's `filtered` flag is that "filtered"
+/// (docs/excel-semantics/numbers.md, "SUBTOTAL and AGGREGATE over hidden and filtered rows").
+fn filters_hidden_rows(table: &TableSpec, range: RangeRef, hidden_rows: &[u32]) -> bool {
     let width = (u64::from(range.right) + 1).saturating_sub(u64::from(range.left));
+    let first = range.top + u32::from(table.header_row);
+    let last = range.bottom.saturating_sub(u32::from(table.totals_row));
+    let keeps_a_row = (first..=last).any(|row| !hidden_rows.contains(&(row + 1)));
     table.filter
-        && table
-            .filter_column
-            .as_ref()
-            .is_none_or(|c| c.criterion && !c.color && u64::from(c.col_id) < width)
+        && table.filter_column.as_ref().map_or(keeps_a_row, |c| {
+            c.criterion && !c.color && u64::from(c.col_id) < width && keeps_a_row
+        })
 }
 
 /// Gives each cell of `sheet` (sheet `id`) its spec number format.

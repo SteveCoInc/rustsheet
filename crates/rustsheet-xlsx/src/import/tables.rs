@@ -258,7 +258,7 @@ fn is_criterion(child: &XmlNode) -> bool {
     let empty_values = child.has_tag_name("filters")
         && child.children().next().is_none()
         && !get_bool_false(child, "blank");
-    !(empty_values || child.has_tag_name("colorFilter") && child.attribute("dxfId").is_none())
+    !(empty_values || (child.has_tag_name("colorFilter") && child.attribute("dxfId").is_none()))
 }
 
 /// Re-decides `has_filters` once the workbook's `dxf_count` differential formats are known: a
@@ -286,11 +286,7 @@ pub(super) fn drop_dangling_color_filters(tables: &mut HashMap<String, Table>, d
                 && !dangling(&column.criterion)
                 && column.criterion != FilterCriterion::Other
                 // An empty values filter is no criterion either (`is_criterion`, T-4749).
-                && !matches!(
-                    &column.criterion,
-                    FilterCriterion::Values { values, blank: false, date_groups, .. }
-                        if values.is_empty() && date_groups.is_empty()
-                )
+                && !column.criterion.is_empty_values()
         });
     }
 }

@@ -561,8 +561,13 @@ repair):
   (`be41612037aa55ecd2ef1353dcb69e616f7cdc6bc3819bb44f0573db0e9d1fbd`) or with `<customFilters and="1"><customFilter
   val="a"/><customFilter operator="notEqual" val="a"/></customFilters>`
   (`a2838913b0e16de165c1f47ea5878614e996b0edda29bca43205d3c99414e5ea`) it reads 0 throughout, filtered.
+The same holds for a spec2xlsx table with every data row hidden (probes/t4749-empty-values-filter, 12 cells,
+excel-graph, 2026-11-07: SUBTOTAL 3 6, 103 0, 9 21, 109 0, as the unfiltered control).
 Rule (ours, T-4749): the import reads a `<filters>` with no element inside and no true `blank` as no criterion
-(`is_criterion`); the export writes an API-filtered table with no visible data row as that custom filter, which keeps
+(`is_criterion`; probed only as `<filters/>`, `<filters></filters>` and `<filters blank="0">`, so other attribute-only
+forms such as one with just `calendarType` follow the rule unprobed), a column edit does not count such a filter as a
+kept criterion (`FilterCriterion::is_empty_values`), the eval adapter does not count a spec values filter with no
+visible data row, and the export writes an API-filtered table with no visible data row as that custom filter, which keeps
 no row if re-applied (a values filter of the hidden rows' text would show them again).
 Excel keeps the kept criteria's meaning after our round trip (excel-graph, 2026-11-05, T-4004): on `Sales`-shaped
 tables (A1:B7, `Cat` a,b,a,c,a,b and `Val` 1-6, rows hidden as the filter would, no re-application) an
