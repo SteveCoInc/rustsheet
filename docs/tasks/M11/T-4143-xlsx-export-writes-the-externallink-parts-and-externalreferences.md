@@ -24,6 +24,10 @@ sheet names, defined names and cached cells into `Workbook::external_books`
 writes no part (`crates/rustsheet-xlsx/src/export/mod.rs`). This task models the parts, which is M11 cell content. The
 generic preservation of unmodelled parts is M15 (decision 0275).
 
+- Excel for the web refuses such a save outright (`FileCorruptTryRepair`; T-4890, docs/excel-semantics/xlsx-storage.md
+  "A [n] reference without its externalLink part makes Excel refuse the package"). Every regenerated save of a linked
+  workbook is therefore unopenable, not merely lossy.
+
 ## Acceptance criteria
 - [ ] Load, then save, then load again of every fixtures `external-link-*` case, poi ref-56737 and corpus-bench 59932
       gives the same external books (target, sheet names, defined names, cached values), and the same values for
