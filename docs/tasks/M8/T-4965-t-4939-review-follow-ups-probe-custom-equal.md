@@ -3,7 +3,7 @@ id: T-4965
 title: "T-4939 review follow-ups: probe custom equal case folding, fix the and/or wording, reuse Row::hidden_default, eval cases for the patched uploads"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
