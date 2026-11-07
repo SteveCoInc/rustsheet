@@ -3,7 +3,7 @@ id: T-4718
 title: "CHOOSECOLS and CHOOSEROWS: which of two errors, and uncoercible text against a later error, wins in the index list (lookup.md UNVERIFIED): probe and match"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -56,3 +56,11 @@ states the observed order in place of the two UNVERIFIED sentences.
 - Index lists of references to other sheets, lifted CHOOSECOLS over arrays of references, and the out-of-range rule
   itself (VERIFIED, T-2273).
 - TAKE, DROP, EXPAND and the other reshapers.
+
+## Outcome
+- Probe `probes/t4718-choose-index-error-order` (116 cells, both functions, excel-graph) committed. Excel scans single-value
+  index arguments first and array/multi-cell range arguments second, each in argument order (first error or uncoercible text
+  wins); a 2-D index is `#VALUE!` whatever it holds. Recorded in lookup.md (both UNVERIFIED sentences replaced).
+- Engine: `chosen_indices` now does the two passes and the 2-D rule (it differed on A5:A6, A13, A16:A17, A20:A26, A30:A32,
+  A39:A42, A51:A52, A54 and the B twins); unit test `test_choose_index_problem_order`.
+- Eval delta: probe case 116/116 pass; no baseline change needed.
