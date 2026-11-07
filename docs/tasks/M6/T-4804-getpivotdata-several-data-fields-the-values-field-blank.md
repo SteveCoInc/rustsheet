@@ -46,3 +46,16 @@ that is `#REF!` (SPEC-0015 GETPIVOTDATA step 2, web.md "Ours"; T-4911 to probe i
 
 Eval delta: probes 24 fixed (every owned cell of probes/t2085-getpivotdata-data-fields, which now passes 365/365),
 0 regressions in every suite; `eval/baseline/probes.txt` re-recorded with `make eval-baseline`.
+
+## Landing notes
+- PR #4027 (follow-up of the merged #3950; branch agent/functions-lookup/T-4804-caption-source-tie), head = the
+  commit adding these notes, on top of 45500c225. State at the 2026-11-07 opus run's minute 110: CI not yet run
+  on this head; draft.
+- Reviews: on d37b5fe security APPROVE and excel-fidelity APPROVE (its MINOR, a missing test, is now done); design
+  REQUEST_CHANGES (MAJOR: no unit test for the tie; MINOR: web.md wording; MINOR: process noise in this Outcome).
+  45500c225 fixed all three: test `a_caption_and_a_source_name_naming_different_data_fields_is_ref` in
+  test/test_fn_getpivotdata.rs ("Sales" 49 for a caption equal to its own source; "Region" `#REF!` for the tie).
+- Next: re-run reviewer-design on the current head (the others need no re-run: test and wording only), mark the PR
+  ready, enqueue once CI is green (`enable_pr_auto_merge`, SQUASH).
+- Do not repeat: the fix could not go into #3950 itself because #3950 was in a running merge group (pushes were
+  rejected and `disable_pr_auto_merge` did not release it); it merged on b1e0b6a with the caption-first guess.
