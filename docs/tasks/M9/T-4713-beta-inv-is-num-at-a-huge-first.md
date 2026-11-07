@@ -50,3 +50,15 @@ each spanning a quantile 1 - x of about 4E-15 to 4E-16), E the flipped p = 0.9, 
   start rule would put each column's cut at nearly the same 1 - x; telling them apart needs the cut row to differ.
 - E: flipped (pp = beta = 2, qq = alpha): numbers in every row if the cut belongs to the unflipped first shape.
 - F: beta = 1 is a closed form (x = p^(1/alpha)), predicted a number in every row.
+
+## Probe 1 result, probe 2 (predictions, committed before the fill)
+Probe 1 refutes hypothesis Q: A38:A40 (alpha 8.4E+15 to 9.4E+15) are 1 - 2^-51, the same double as AS 109's start at
+A41 (alpha 1E+16), which is `#NUM!`; B (beta 10) is a number up to 1E+17 with 1 - x = 4.4E-16; C (beta 3) a number to
+1E+16 with 1 - x = 2.2E-16. Excel's value is AS 109's unmoved start, bit for bit, on every row of A and C and most of D;
+in B it is often the moved root. E (flipped) and F (beta 1) are numbers throughout (F is 0.999999 from 5.6E+16).
+Probe 2 (probes/t4713-beta-inv-cut-pieces): extends A to D above their last numbers, and at alpha 7.9E+15 to 2E+16
+reads BETA.DIST's cdf and density at the start 1 - 2^-51 and GAMMALN(alpha), GAMMALN(alpha + 2).
+- Hypothesis K (the kernel): BETA.INV is `#NUM!` exactly where BETA.DIST's cdf or density at the iterate is `#NUM!`,
+  so K is `#NUM!` exactly on the rows where G or H is.
+- Hypothesis L (ln B): Excel's ln B = GAMMALN(a) + GAMMALN(b) - GAMMALN(a + b) is a multiple of the ulp of
+  GAMMALN(a) (64 at 1E+16); `#NUM!` follows a value of J - I (0 or very large), so K's `#NUM!` rows match a J - I pattern.
