@@ -3,7 +3,7 @@ id: T-4440
 title: "Probe overlapping unions and error, text and boolean cells in 3-D and union data of TRIMMEAN, Z.TEST and the PERCENTILE family"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -22,3 +22,6 @@ T-4309 probed the plain union and 3-D forms (probes/t4309-3d-union-trimmean-perc
 
 ## Out of scope
 -
+
+## Outcome
+Probed (probes/t4440-union-overlap-error-text-trimmean-percentile, 64 cells, excel-graph, 2026-11-07): an overlapping union counts twice, text and boolean cells are skipped, the first error in area order wins, in 3-D and union data of TRIMMEAN, Z.TEST, PERCENTILE, QUARTILE.EXC, PERCENTRANK and PERCENTRANK.EXC. The engine already matched all 64 cells, so no engine change. statistics.md lost its "unprobed". Eval delta: +64 passing probe cells, no baseline entries needed.
