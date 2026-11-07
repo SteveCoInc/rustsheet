@@ -224,6 +224,16 @@ and location. The ClosedXML invariants (oss-engines.md §4) are the checklist, a
 (T-4177) is the proof. Pivot parts move from the `Replay` class of the M15 ownership matrix (T-4183, T-4567; decision 0275) to
 modelled.
 
+As built (T-4176, `crates/rustsheet-xlsx/src/export/pivots.rs`): the regenerating export writes every cache as a
+`pivotCacheDefinition` (every item a shared item, the `sharedItems` flags from `SharedItemsFlags`, the source range or
+`worksheetSource@name`, now kept as `PivotCache::source_name`) with a `pivotCacheRecords` part of `<x v>` indices, and
+every pivot as a `pivotTableDefinition`: typed attributes where they differ from the schema's defaults, the verbatim
+rest on its owner, root children in schema order, and the engine's `rowItems`/`colItems` when its layout gives the
+location and geometry the pivot holds (the saved ones otherwise). An axis field with no `<items>` gets one per cache
+item plus its subtotal lines (ClosedXML's invariant), a data field's pivot field `dataField="1"`. A grouped cache is
+dropped with its pivots until T-4734; a cache definition's unread rest is T-4735's. The source-preserving tiers
+(SPEC-0034) still keep an unchanged pivot's own parts byte for byte.
+
 ### PivotChart data (T-4186)
 `PivotChartData { categories: Vec<Vec<CellValue>>, series: Vec<Series> }` is derived from the
 `PivotResult`:

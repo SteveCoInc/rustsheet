@@ -130,7 +130,7 @@ lifts). An error in a single-cell pivot_table propagates even inside a pivot, an
 (both unprobed, SPEC-0015 unknowns 13 and 16). Count pivots of an all-numeric field match
 Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674; they cannot tell COUNT from COUNTA).
 Max, Min, Product, Var and StdDev pivots are unprobed (UNVERIFIED: the worksheet functions' algorithms over the picked numbers).
-Structural edits: see "Pivot tables and structural edits" below. xlsx export drops pivots.
+Structural edits: see "Pivot tables and structural edits" below. xlsx export writes pivots (T-4176; pivots.md "Excel for the web opens engine-exported pivot parts"), except a grouped cache, dropped with its pivots (T-4734).
 
 ## GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)
 Probed (probes/t4248-getpivotdata-recordless-item, excel-graph): the cache lists "North" as a shared item no record uses

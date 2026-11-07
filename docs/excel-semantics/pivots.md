@@ -43,6 +43,30 @@ Status: VERIFIED (excel-graph) for rendering. The refusal of an inconsistent pac
 observation (T-4122 runs). It cannot become a filled probe, because Excel saves nothing for a file it
 refuses.
 
+## Excel for the web opens engine-exported pivot parts
+Rule: Excel for the web opens, without repair, a package whose pivot parts the engine's export wrote
+(`crates/rustsheet-xlsx/src/export/pivots.rs`): a cache that lists every value as a shared item, records of `<x v>`
+indices only, `sharedItems` flags derived from the items, the case builder's version attributes and `numFmtId="0"`
+on every cache field; a definition with only the non-default typed attributes, the kept rest, `rowItems`/`colItems`
+from the engine's layout, and for a pivot made through the API, generated `<items>` (`h="1"` on a hidden item) and
+no style or extension. It saves them back keeping the definition: the saved `location` and `rowItems`/`colItems`
+equal the exported ones, and the pivot cells equal the export's.
+Evidence: T-4176 oracle runs (excel-graph, 2026-11-07, `rustsheet-oracle recalc` of three exported workbooks, not
+committed: T-4177 is the suite that makes them cases):
+- crates/rustsheet-xlsx/tests/example.xlsx exported (an Excel-saved pivot over the Table `Table1`, no
+  `refreshOnLoad`): opened; Excel's saved `pivotTable1.xml` has our `location`, `rowItems` and `colItems`, and the
+  Sheet4 cells are unchanged;
+- crates/rustsheet-xlsx/tests/pivot_tables.xlsx exported (two `refreshOnLoad` pivots, PivotSum with a column
+  field): opened and re-rendered; both pivots' `location`, `rowItems` and `colItems` equal ours, and every constant
+  cell of sheet P but L2, M5 and N5 (spill cells of the sheet's GETPIVOTDATA array formulas, which our export writes
+  as part of the formula) is equal;
+- a cache of texts, a blank, a boolean, dates, numbers and `#N/A`, with a pivot holding nothing verbatim
+  (`refreshOnLoad` off): opened; Excel added its style info, `baseField="0" baseItem="0"` and an extension, and kept
+  the items as written.
+Status: VERIFIED (excel-graph) for these three files, a scratch observation until T-4177's suite; repair and
+re-render of other shapes are T-4177's.
+Implemented in: crates/rustsheet-xlsx/src/export/pivots.rs, pivots/cache.rs, pivots/table.rs (T-4176)
+
 ## Case-variant text items make Excel for the web call the file corrupt
 Rule: a cache field whose shared items list two texts that differ only in case (`East`, `east`) makes
 Excel for the web refuse the workbook (`FileCorruptTryRepair`). With them merged into one item, the

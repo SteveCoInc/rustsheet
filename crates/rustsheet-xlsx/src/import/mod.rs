@@ -48,6 +48,7 @@ pub use encryption::{
 pub use iso_date::{iso8601_to_date_system_serial, iso8601_to_serial};
 pub use ole::{classify_ole_compound_file, decrypt_ole_package};
 pub use package::{is_ole_compound_file, part_key, ImportLimits, PartNames};
+pub(crate) use pivots::SUBTOTAL_FUNCTIONS as PIVOT_SUBTOTAL_FUNCTIONS;
 pub use pivots::{read_pivot_parts, PivotParts, MAX_PIVOTS};
 pub use shared_strings::decode_xlsx_escapes;
 use shared_strings::read_shared_strings;

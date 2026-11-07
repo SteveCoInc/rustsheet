@@ -69,6 +69,9 @@ pub const MAX_FIELDS: usize = 16_384;
 pub struct PivotCache {
     /// The `worksheetSource`, kept for a later refresh; `None` for other sources.
     pub source: Option<CacheSource>,
+    /// `worksheetSource@name`: the defined name or Table the cache was read from, kept so the
+    /// export writes the source back (T-4176). A refresh does not resolve it yet (T-4506).
+    pub source_name: Option<String>,
     /// The cache's fields, in cache order.
     pub fields: Vec<CacheField>,
     /// How many records; every [`CacheField::records`] has this length.

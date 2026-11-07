@@ -25,6 +25,7 @@ use rustsheet_engine::pivot::{
 use rustsheet_engine::types::DateSystem;
 
 use self::groups::{apply_groups, FieldGroup, RangeGroup};
+pub(crate) use self::table::SUBTOTAL_FUNCTIONS;
 use self::table::{flag, read_pivot_table};
 use super::iso_date::pivot_cache_date_serial;
 use super::package::{
@@ -300,10 +301,12 @@ fn finish_cache<B: BufRead>(
         groups,
         grouping_fields,
         refresh_on_load,
+        source_name,
     } = definition;
     read_records(records, &mut builder, field_count, limits, date_system)?;
     let mut cache = builder.finish();
     cache.refresh_on_load = refresh_on_load;
+    cache.source_name = source_name;
     apply_groups(&mut cache, &groups, grouping_fields, values_left)?;
     Ok(cache)
 }
@@ -628,6 +631,8 @@ struct Definition {
     grouping_fields: Vec<String>,
     /// `refreshOnLoad` (default off).
     refresh_on_load: bool,
+    /// `worksheetSource@name`, kept for export (`PivotCache::source_name`).
+    source_name: Option<String>,
 }
 
 /// A `pivotCacheDefinition` part.
@@ -639,6 +644,7 @@ fn read_definition<B: BufRead>(
 ) -> Result<Definition, Skip> {
     let mut records_id = None;
     let mut refresh_on_load = false;
+    let mut source_name = None;
     let mut source: Option<Option<CacheSource>> = None;
     let mut builder: Option<CacheBuilder> = None;
     let mut field_count = 0;
@@ -675,7 +681,12 @@ fn read_definition<B: BufRead>(
                 _ => {}
             }
         } else if at(path, &[DEFINITION, "cacheSource"]) && name == "worksheetSource" {
-            // A named source (`name`: a defined name or a table) is kept as no source.
+            // A named source (`name`: a defined name or a table) is kept as no source, its name
+            // for export.
+            if let Some(name) = attribute(element, "name")? {
+                limits.check_text(&name)?;
+                source_name = Some(name);
+            }
             if let (Some(sheet_name), Some(range)) =
                 (attribute(element, "sheet")?, attribute(element, "ref")?)
             {
@@ -774,6 +785,7 @@ fn read_definition<B: BufRead>(
             groups,
             grouping_fields,
             refresh_on_load,
+            source_name,
         }),
         None => skip("no cacheFields"),
     }
