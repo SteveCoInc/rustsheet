@@ -1752,7 +1752,20 @@ on 2026-10-26 with createSession "retries exhausted", and opened on the 2026-10-
 Status: VERIFIED (excel-graph). Ours matches all three cells, and the other-sheet `#N/A` too (T-4570:
 `RefGrid::order_statistic_error`, read by LARGE and SMALL's data reader and MEDIAN's `GridReading::OrderStatistic`).
 This answers T-1075 item 18.
-Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570
+Mixed XLOOKUP grids (probes/t4704-mixed-xlookup-grid-readers, excel-graph, 2026-11-07, T-4704; `X(r)` is
+`XLOOKUP({2;9},Data!A1:A3,Data!B1:B3,Data!G1:G2)`: element 1 the hit 20, element 2 the reference G1:G2): the first
+element decides between an error and an off-sheet reference. With a `#DIV/0!` hit and the reference second,
+LARGE, SMALL, MEDIAN and MAX give `#DIV/0!` (A46, A52, A55, A61 with the grid `{2;9}`); with the reference first
+LARGE and MEDIAN give `#N/A` (A49, A58). SMALL and MAX with the reference first are not probed (they share the reader). Ours puts the error first (T-4741). A grid with references on both the
+formula's sheet and another cannot be built from XLOOKUP (every miss is the one if_not_found reference); see
+probes/t4697 for the INDIRECT form.
+Per-element readers of a mixed grid: FORMULATEXT gives `#VALUE!` then `#N/A` (A1:A2), INDIRECT `#REF!` then
+`#VALUE!` (A10:A11), OFFSET a 2x1 of `#VALUE!` (A4:A5, A7:A8; ours a scalar, T-4739), RANK, RANK.EQ and RANK.AVG
+`#VALUE!` for the hit and the rank in G1:G2 for the miss (`RANK(60,X)` 1, `RANK(20,X)` `#N/A`, `RANK(50,X)` 2;
+A25:A38; ours `#VALUE!` for the miss, T-4740). COUNTIF and SUMIF over an XLOOKUP with a text if_not_found spill a
+2x1 of `#VALUE!` whether the lookup misses or hits (A64:A74; ours a scalar, T-4742). TAKE and DROP keep the shape
+and match (A13:C22).
+Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742
 
 ## MATCH match_type that is a reference to an error cell is #REF! (excel-graph)
 Rule: `MATCH(30,A1:A5,M2)` with M2 `=NA()` gives `#REF!` (ERROR.TYPE 4) in Excel for the web, not the #N/A the
