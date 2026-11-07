@@ -3,7 +3,7 @@ id: T-2940
 title: "Give owners to the 38 visibly-off probes/t2436, ftest-decomposition and t2829-ftest-a306-shapes cells that no open task names (22 of them unattributed)"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -50,12 +50,29 @@ names only a gen-m9 hash with the same stem.
   cells on the same line. A bare hash is shared with gen-m9 (T-2880).
 
 ## Acceptance criteria
-- [ ] Every one of the 38 cells is listed, as `probes/<case> Sheet!A1` on a line with its case path, in exactly one open
+- [x] Every one of the 38 cells is listed, as `probes/<case> Sheet!A1` on a line with its case path, in exactly one open
       task whose rule explains it. The PR description gives the cell-to-task table. New tasks are listed there too.
-- [ ] `python3 scripts/exit_owners.py --unattributed` no longer lists any of the 22 unattributed cells above. Give the
+- [x] `python3 scripts/exit_owners.py --unattributed` no longer lists any of the 22 unattributed cells above. Give the
       count before and after in the Outcome (the count before is 651).
-- [ ] Only docs/tasks files change; `python3 scripts/tasks.py validate` and `make check` green; reviewers approve.
+- [x] Only docs/tasks files change; `python3 scripts/tasks.py validate` and `make check` green; reviewers approve.
 
 ## Out of scope
 - Fixing any of the cells.
 - The exit-owner tool rules (T-2731, T-2880) and the gen-m9 FORECAST.ETS cells T-2425 lists (T-2731 makes them owned).
+
+## Outcome
+Re-measured on `make eval` at 42d9bdaa (2026-11-07; calipers, corpus-bench and poi not fetched). Of the 38 cells, 21 now
+pass: probes/t2436/4ab2ba98d26c8a5e, 7674c89c824aca43, 7c20351562a2d71d, 9cca17438a7e6f8a and e85daedce5c2675e pass whole
+(T-2437, T-2519, T-2460 are done), and so do 8d3588d8df0812df A61 and ftest-decomposition A8, C8, E8, F8. The other 17
+were owned only by this task's own text, so each now sits with its root-cause task:
+
+| cells | owner | rule |
+|---|---|---|
+| probes/t2436/4250f880ab640c49 Calc!A121, T121, U121 | T-2607 | lifted BETAINV over a refused MAKEARRAY hits the cost cap (gen-m9 A237's formula) |
+| probes/t2436/abc2939ebd1e2365 Calc!A1, A16, T1, T16, U1, U16 | T-4662 (deferred) | F.INV.RT's far-tail saturation (it lists gen-m9 abc2939 A11) |
+| probes/t2829-ftest-a306-shapes S!A1, A2, A5:A12 | T-2924 (deferred) | Excel's stored ln B at (6, 11.5) and (6, 11) |
+
+New tasks: none (every root cause has an open task). `exit_owners.py --unattributed`: 651 on 2026-10-27, 1 now
+(gen-m9/17c110a53924beb8 A300, not one of the 38). `--all-off`: 2 cells without an open owner before, 15 after.
+The 13 added cells (abc2939's 6 and t2829's 7 visibly off) were owned only by this bookkeeping task. They are now
+owned by their deferred root-cause tasks, as T-4662's gen-m9 A11 already was.
