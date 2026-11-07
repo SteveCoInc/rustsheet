@@ -576,8 +576,8 @@ the criterion and called the rows filtered: 15 and 4). Probe case probes/t4558-c
 all read 6, 4, 21, 15. A source file with a dangling `dxfId` (past the workbook's dxfs) imports as unfiltered, the same
 as its export, which drops the id: SUBTOTAL is equal in memory and after a save. Excel refuses such a source file, so
 this is a choice that keeps the two equal, not an Excel value (T-4558).
-A totals-row cell holding a number, boolean or error constant gets no metadata (T-1607 covered label and formula
-cells only), and Excel refuses that file (`createSession` 501 `FileCorruptTryRepair` / `unsupportedWorkbook`): a
+A totals-row cell holding a number, boolean or error constant got no metadata until T-4005 (T-1607 covered label
+and formula cells only), and Excel refuses such a file (`createSession` 501 `FileCorruptTryRepair` / `unsupportedWorkbook`): a
 totals row with the label "Total" and the number 42 is refused, and so is the same file with 42 written as
 `totalsRowLabel="42"` or as a custom `<totalsRowFormula>42</totalsRowFormula>`, while it loads with a SUBTOTAL formula
 in that cell. **The form Excel loads for a constant is `totalsRowFunction="custom"` with no `<totalsRowFormula>`**
@@ -589,6 +589,17 @@ in that cell. **The form Excel loads for a constant is `totalsRowFunction="custo
 `custom` and `<totalsRowFormula>42</totalsRowFormula>`. The export writes the bare `custom` for a number, boolean or
 error totals cell (T-4005); an upload of our export of such a table (`Item`, `N`, `B`, `E` with totals "Total", 42,
 TRUE, `#N/A`) loads and `Sales[[#Totals],[N]]`, `[B]`, `[E]` read 42, TRUE, `#N/A`.
+**A value spilled into the totals row** from a dynamic array beside the table takes the same bare `custom`
+(excel-graph uploads of our export, 2026-11-07, T-4421; `Sales` B1:C5, `Cat` a,b,c and `Val` 1-3, totals row 5 with
+B5 and C5 empty, the dynamic array in A5, `Sales[[#Totals],[Val]]` in E1, `[Cat]` in E2, `ROWS(A5#)*10+COLUMNS(A5#)`
+in E5): before T-4421 the export wrote no metadata for B5 and C5 and Excel refused the file (`FileCorruptTryRepair`),
+and refused it too with the spilled cells' `<c>` removed, the `<f t="array" ref="A5:C5">` alone. With bare
+`totalsRowFunction="custom"` on both columns Excel loads it and keeps the spill, no `#SPILL!`: `=SEQUENCE(1,3)` spills
+1, 2, 3, E1 reads 3, E2 2, E5 13, the same with no cached values in B5:C5 and with stale ones (91, 92, 93, and 77
+in E1), so Excel recomputes them; `=HSTACK(1,"y","z")` (B5:C5 written `t="str"`) gives "z", "y", 13; `={1,TRUE,#N/A}`
+gives `#N/A`, TRUE, 13; `=SEQUENCE(1,2)` (custom on `Cat` only, C5 empty) gives 0, 2, 12. Ours gives the same values
+before and after the export (`a_value_spilled_into_the_totals_row_gets_custom_metadata`). A spill from above the table
+cannot reach the totals row: it would cross the header row, whose cells are never empty (unprobed).
 Recipe (throwaway, not kept, as T-1607's): openpyxl writes each table (`Table`, `AutoFilter`, `FilterColumn` with
 `Filters`, `CustomFilters` or `Top10`, and for T-4004 `DynamicFilter`, `ColorFilter` with a
 `DifferentialStyle` in `wb._differential_styles`, `IconFilter` and `Filters` of `DateGroupItem`s, hidden rows through
@@ -604,10 +615,10 @@ written as that error.
 Evidence: crates/rustsheet-xlsx/tests/calc_test_tables/tables.xlsx (Excel-authored, 9 tables) now round-trips
 (import, export, import) with the same values (generated test `test_tables_tables`) and the same formula text
 (`excel_authored_tables_keep_their_formula_text`, export/test/test_tables.rs).
-Status: VERIFIED (web, T-3081, T-4005): Excel loads every filter form, and a constant totals cell with bare
-`custom` metadata; T-4003 and T-4004 own the filter differences.
+Status: VERIFIED (web, T-3081, T-4005, T-4421): Excel loads every filter form, and a constant or spilled totals cell
+with bare `custom` metadata; T-4003 and T-4004 own the filter differences.
 Implemented in: crates/rustsheet-xlsx/src/export/tables.rs
-Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005, T-4404, T-4363
+Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005, T-4404, T-4363, T-4421
 
 ## A calculated column is saved as `calculatedColumnFormula` plus one formula per row
 Rule (excel-graph downloads of the T-2957 probes, 2026-10-27): a column Excel filled (references.md, "Calculated
