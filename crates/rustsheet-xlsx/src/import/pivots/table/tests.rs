@@ -222,6 +222,34 @@ fn tabular_form_and_custom_subtotals_are_typed_per_field() {
 }
 
 #[test]
+fn classic_layout_and_subtotal_captions_are_typed() {
+    // probes/t4129-pivot-layout-flags GZ and SC, on K5's shape.
+    let xml = SUBTOTALS
+        .replacen(
+            r#" compactData="0">"#,
+            r#" compactData="0" gridDropZones="1">"#,
+            1,
+        )
+        .replacen(
+            r#" showAll="0" compact="0" outline="0">"#,
+            r#" showAll="0" compact="0" outline="0" subtotalCaption="Tot &amp; all">"#,
+            1,
+        );
+    let pivot = read(&xml, &[2, 3, 6, 6, 6]);
+    assert!(pivot.options.grid_drop_zones);
+    assert_eq!(
+        pivot.fields[0].subtotal_caption.as_deref(),
+        Some("Tot & all")
+    );
+    assert_eq!(pivot.fields[1].subtotal_caption, None);
+    // Typed, so not kept verbatim as well.
+    let store: String = pivot.opaque.iter().map(text).collect();
+    assert!(!store.contains("gridDropZones") && !store.contains("subtotalCaption"));
+    let plain = read(SUBTOTALS, &[2, 3, 6, 6, 6]);
+    assert!(!plain.options.grid_drop_zones);
+}
+
+#[test]
 fn count_a_subtotal_is_counta_and_count_is_count_numbers() {
     // probes/t4622-pivot-count-subtotals B2: over 10, abc, a blank, 2 and 5, the countA line is 4
     // (C6) and the count line 3 (C7).

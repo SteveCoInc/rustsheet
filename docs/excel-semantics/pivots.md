@@ -1578,7 +1578,8 @@ Rule, per flag (each one on its own pivot of rows Region and Product with Sum of
 - `subtotalTop="0"` on Region in outline form (ST): the East row is left empty, and an `East Total` row
   follows its products.
 - `subtotalCaption="Tot"` on Region in tabular form (SC): **the subtotal label is `Tot` alone, with no
-  item name**. Both East's and West's subtotal rows read `Tot`.
+  item name**. Both East's and West's subtotal rows read `Tot`. More shapes: "subtotalCaption labels
+  a field's subtotal lines" below.
 - `subtotalHiddenItems="1"` with Product C hidden (SH): with the flag set, the hidden C is left out of
   East's subtotal (27, without C's 3) and of the Grand Total (60). The flag-off control is T-4164's,
   so whether the flag changes anything is not evidenced here.
@@ -1587,7 +1588,7 @@ Rule, per flag (each one on its own pivot of rows Region and Product with Sum of
   change.
 - `gridDropZones="1"`, tabular (GZ): the data caption `Sum of Sales` is at A3. `Row Labels` and
   `Product` head the row fields on row 4, and the value column's header reads `Total` (C4).
-  `firstHeaderRow` is 2.
+  `firstHeaderRow` is 2. More shapes: "Classic layout (gridDropZones)" below.
 - `numFmtId="3"` on the Year row field (NF): it renders. The saved labels are numbers; their display
   format is not captured.
 - x14 pivotTableDefinition `fillDownLabelsDefault="1"` (X14): **existing fields are not filled down**,
@@ -1744,3 +1745,50 @@ Evidence: probes/t4130-pivot-spill-getpivotdata Q!A1:B8 (excel-graph, 2026-11-07
 Status: VERIFIED (excel-graph). When the pivot recovers (the blocker removed and a refresh) is not probed. The engine
 is T-4154: it gives `#SPILL!` for the grand total (by either name) and for the unknown item, and 27 for the range
 reference; the named item (`#SPILL!`) and the non-anchor cell (`#REF!`) already agree.
+
+## Classic layout (gridDropZones)
+Rule: `gridDropZones="1"` (classic layout) changes a tabular pivot only when its column axis has
+no level at all (no column field and Values not on columns). It then keeps a column-header row
+anyway: the location grows by one row, `firstDataRow` and `firstHeaderRow` are both 2, the data
+field's caption sits at the location's corner (GZ!A3, G1!A3), the row fields' header row is the
+second row (`Row Labels`, then each further label column's field name: GZ!A4:B4, G1!A4), and the
+value column's header there reads `Total` (GZ!C4, G1!B4). The rows below, and `rowItems` and
+`colItems` (one empty `<i/>` column line), are the plain layout's. With a column field (GC: rows
+Region and Product, columns Year) or with two data fields on columns (GV), cells, lines and
+geometry are the plain tabular layout's (GC: `firstHeaderRow` 1, `firstDataRow` 2; `Sum of Sales`
+at A3 and `Column Labels` at C3 as without the flag).
+Evidence: probes/t4129-pivot-layout-flags GZ (T-4129); probes/t4745-pivot-classic-subtotal-caption
+GC, GV, G1 (excel-graph, 2026-11-07, T-4745).
+The engine's own readings, not probed (UNVERIFIED, T-4785): classic layout in compact or outline
+form (the engine applies the same rule), with no row field, with `colGrandTotals="0"`, and
+whether `grandTotalCaption` replaces the `Total` header (the engine always writes `Total`).
+Status: VERIFIED (excel-graph) for tabular pivots with row fields; UNVERIFIED (T-4785) for the
+readings above.
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`read_root`: the typed
+`PivotOptions::grid_drop_zones`; T-4745)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`geometry`; T-4745)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`render_within`,
+`CLASSIC_TOTAL`; T-4745)
+
+## subtotalCaption labels a field's subtotal lines
+Rule: a pivot field's `subtotalCaption` is the whole label of each of its default subtotal lines,
+with no item name: `Tot` where the line would read `East Total`, for every item of the field. It
+holds in tabular form (t4129 SC!A7, A10), in outline form with subtotals at the bottom (SB!A8,
+A12), in compact form with subtotals at the bottom (SK!A8, A12), and on columns (SCC!E4, H4).
+**A `?` in the caption stands for the subtotalled item**: `? Tot` reads `East Tot` and `West Tot`
+(SQ!A7, A10), not the field's name (MS-OI29500's note on `subtotalCaption` says the field name;
+Excel for the web writes the item).
+With subtotals at the top (outline form, SO) the subtotal shares the item's own line, which
+reads the item (`East`, SO!A4) as without the caption. Custom subtotal lines keep `<item>
+<Function>` (SF!A7:A8 `East Sum`, `East Count`): the caption does not replace them. `rowItems`
+and `colItems` do not change.
+Evidence: probes/t4129-pivot-layout-flags SC (T-4129); probes/t4745-pivot-classic-subtotal-caption
+SO, SB, SK, SF, SCC, SQ (excel-graph, 2026-11-07, T-4745).
+The engine's own readings, not probed (UNVERIFIED, T-4785): a subtotalCaption on a field with
+Values inside it (the engine keeps `<item> <data field>`), an empty `subtotalCaption=""` (the
+engine writes it, an empty label), and a caption with several `?` (the engine replaces each).
+Status: VERIFIED (excel-graph) for the shapes listed; UNVERIFIED (T-4785) for the readings above.
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`read_field`: the typed
+`PivotField::subtotal_caption`; T-4745)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`Cells::total_label`;
+T-4745)
