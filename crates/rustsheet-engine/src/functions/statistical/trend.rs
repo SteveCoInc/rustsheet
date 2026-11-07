@@ -5,6 +5,7 @@ use super::linest::{flag_range_value, linear_regression, predict, reconstruct_be
 use super::regression::{
     given, known_points, layout, shape_error, Element, Grid, KnownPoints, Layout,
 };
+use crate::arithmetic::flush_subnormal;
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{LiftCost, LiftOptions};
@@ -123,8 +124,10 @@ impl TrendData {
                 if point.iter().any(|v| v.is_nan()) {
                     return ArrayNode::Error(Error::VALUE);
                 }
-                let fitted = predict(&beta, &point, const_term);
-                ArrayNode::Number(if self.growth { fitted.exp() } else { fitted })
+                if !self.growth {
+                    return ArrayNode::Number(predict(&beta, &point, const_term));
+                }
+                growth_prediction(&beta, &point, const_term)
             })
             .collect();
         CalcResult::Array(
@@ -249,4 +252,35 @@ impl Model {
     pub(crate) fn fn_growth(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         self.trend_or_growth(args, true, cell)
     }
+}
+
+/// GROWTH's prediction `e^(intercept + Σ m_j x_j)` at the edges of LOGEST's factors, `b = e^intercept`
+/// and each variable's `e^(m_j x_j)`. Excel multiplies the variables' factors left to right in
+/// doubles, each partial product flushed to 0 once subnormal (statistics.md "GROWTH is #NUM! once
+/// LOGEST's b or a slope's factor overflows ..."):
+/// - `#NUM!` where b overflows (probes/t4590-growth-overflow `Int!`), a factor overflows
+///   (t4765-growth-factor-edges `Over!`), or a zero partial product meets an overflowing factor
+///   (t4793-growth-several-x `Multi!`);
+/// - 0 where a partial product is subnormal: the first factor alone (t4765 `Cut!`, `NoConst!`,
+///   t4793-growth-one-factor-underflow `One!A1`, `One!A3`), but not a later subnormal factor that
+///   the product before it lifts back (`One!A2`); and 0 where the prediction is subnormal
+///   (t4793 `SubProd!`).
+///
+/// Between the edges the value is the single exponential. `beta` holds the intercept first when
+/// `const_term`, as for [`predict`].
+fn growth_prediction(beta: &[f64], point: &[f64], const_term: bool) -> ArrayNode {
+    if const_term && beta[0].exp().is_infinite() {
+        return ArrayNode::Error(Error::NUM);
+    }
+    let mut product = 1.0;
+    for (m, x) in beta[usize::from(const_term)..].iter().zip(point) {
+        product = flush_subnormal(product * (m * x).exp());
+    }
+    if !product.is_finite() {
+        return ArrayNode::Error(Error::NUM);
+    }
+    if product == 0.0 {
+        return ArrayNode::Number(0.0);
+    }
+    ArrayNode::Number(flush_subnormal(predict(beta, point, const_term).exp()))
 }

@@ -936,9 +936,9 @@ reference-lift-consumers E201), XLOOKUP/XMATCH search_mode (probes/xlookup-array
 T-1958 XMATCH entry), INDIRECT's a1 (`INDIRECT("B1",{1})`, probes/t2577-indirect-ref-array A1:A22), TRIMRANGE's trim_cols
 (`TRIMRANGE(A1:B3,0,{0;1})`, probes/reference-lift-pass-through-b E7, E8), XLOOKUP's if_not_found and ADDRESS's
 sheet_text (probes/t4543-xlookup-not-found-address-sheet-lift; the entry "XLOOKUP's if_not_found and ADDRESS's
-sheet_text over an array" below). UNVERIFIED (not probed): which problem wins inside a
-CHOOSECOLS/CHOOSEROWS index list between uncoercible text and a later error, or between two errors (an error beats an
-out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible text's `#VALUE!` or the first error found at once).
+sheet_text over an array" below). Which problem wins inside a
+CHOOSECOLS/CHOOSEROWS index list: VERIFIED, see the T-4718 entry below the T-2273 one (an error beats an
+out-of-range index: the T-2273 entry).
 
 - **XLOOKUP's if_not_found and ADDRESS's sheet_text over an array** (T-4543; probes/t4543-xlookup-not-found-address-sheet-lift,
   excel-graph, 2026-11-06; Data A1:A3 = 1, 2, 3, B1:B3 = 10, 20, 30, D1:D2 = "x", "y"). XLOOKUP's if_not_found does
@@ -990,6 +990,15 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
       sheet `#VALUE!` (H7, H13), all Data `#N/A` (H8). `MAX` is 50 either order (H11, H12). A mixed XLOOKUP grid has
       a value hit, so only its reference element has a sheet: a reference on the formula's sheet is `#VALUE!` (H14)
       and one on Data `#N/A` (H15). `LARGE(CHOOSE({1;2},A1,Data!G1),1)` makes values, not references: 50 (H10).
+    - A first element that is an error or a value (probes/t4791-large-small-median-mixed-first-element, excel-graph
+      2026-11-07, T-4791; Local formulas, `INDIRECT` with `nosuch!A1` as the error element): `{"A1";"nosuch!A1";"Data!G1"}`
+      (own, error, off) is `#VALUE!` for LARGE, SMALL and MEDIAN (H1:H3), as the first-element rule says. With the error
+      first, `{"nosuch!A1";"A1";"Data!G1"}` is `#N/A` (H4:H6), **not** the element's `#REF!`, though a cell error value first
+      propagates (t4704). A value hit first, with the two misses lifted from `INDIRECT({"A1";"A1";"Data!G1"})` (own, off) or
+      `{"A1";"Data!G1";"A1"}` (off, own), is `#VALUE!` either way (H7:H12), so "the first reference element" would give
+      `#N/A` for the second order and is wrong; the lifted if_not_found may not pair by position, so the rule for a
+      value first is unresolved beyond: a value hit with an own-sheet reference is `#VALUE!` (H14 above, H7:H12).
+      Ours: H1:H3 and H7:H12 match; H4:H6 give `#REF!` (T-4862).
     - A text or TRUE hit beside the reference element is read as an array element: SUM, AVERAGE and COUNT skip it
       (50, 50, 0), AVERAGEA counts text as 0 and skips TRUE (25, 50), MAXA and MINA skip both (50, 50), and COUNTA
       is 2 (A50:A63; return C1:C3 or D1:D3 with C2 = "t", D2 = TRUE).
@@ -1005,7 +1014,15 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
   references where a reference is taken, so `INDEX(that,1,1)` hands the range back (t4563 V25:V26; T-4701). The same
   holds over a lifted OFFSET or INDIRECT, and `SUM` of the one-index INDEX reads only the element's **top-left cell**
   (`SUM(INDEX(OFFSET(Data!A1,{0;1},0,2),2))` is 2 over Data!A2:A3 = 2, 4; over the XLOOKUP grid's range element
-  Data!A1:A2 it is 1; probes/t4701-index-one-index-ref-grid A5, B5, C3, excel-graph 2026-11-07). Unprobed and ours:
+  Data!A1:A2 it is 1; probes/t4701-index-one-index-ref-grid A5, B5, C3, excel-graph 2026-11-07). ISREF of the nested
+  `INDEX(INDEX(..,2),1,1)` is TRUE (t4701 A4). The other aggregates read the top-left cell too, and COUNT counts
+  nothing (VERIFIED, excel-graph 2026-11-07, probes/t4762-index-one-index-readers, 27 cells, T-4762; element 2 is
+  Data!A2:A3 = 2, 4 for the lifted OFFSET and INDIRECT, Data!A1:A2 = 1, 2 for the XLOOKUP grid): AVERAGE, MAX and
+  PRODUCT of `INDEX(r,2)` are 2, 2, 2 (1, 1, 1 over the XLOOKUP grid), MIN over the descending G2:G3 = 5, 3 is 5 for
+  all three grids, and `COUNT(INDEX(r,2))` is **0** even though that top-left cell is a number (A5:C5). ROWS and
+  COLUMNS of the nested `INDEX(INDEX(r,2),1,1)` are 2 and 1 (the whole element, as its spill shows), and one index
+  into the 1x1 array of references hands the whole element back: `SUM(INDEX(INDEX(r,2),1))` is 6 (3 over the
+  XLOOKUP grid) and its ROWS 2 (A8:C9). Ours matches every cell (no code change). Unprobed and ours:
   a whole-column key (`SUM(XLOOKUP(A:A,..,H1))`) builds the grid in
   full, as the keyed head-and-tail reading (SPEC-0020 Amendment 2) holds values only.
   ADDRESS's sheet_text lifts like its other arguments: `ADDRESS(1,1,1,TRUE,{"S1";"S2"})` is 2x1 `'S1'!$A$1`,
@@ -1537,11 +1554,27 @@ earlier index is 0 or out of range: `CHOOSECOLS(Data!A1,1E+15,ACOSH(-0.3))` is `
 `#NUM!`, `CHOOSECOLS(SQRT(2958465),2,-2,INDEX(Data!A8:D12,6,2))` `#REF!`, `CHOOSEROWS(CHOOSEROWS(Data!D11:E12,1),1E-15,6,2-FLOOR(7,0))`
 `#DIV/0!`, `CHOOSEROWS(Data!B11:E11,2,-1,..SUMX2MY2(<mismatched>))` `#N/A` (gen-m6/121a7c17092038d9 Calc!A298, 07171fa3f7493f51 A333,
 ee56a4ed5a612a0d A19, 535caabe1e635e2d A136, 7ac4ea222977f3b4 A391; 26 cells in T-2273). This answers the UNVERIFIED "which problem
-wins inside a CHOOSECOLS/CHOOSEROWS index list" above for errors against bad indexes; which of two errors wins is still unprobed.
+wins inside a CHOOSECOLS/CHOOSEROWS index list" above for errors against bad indexes; which of two errors wins: the T-4718 entry below.
 Ours: implemented (T-2273): an out-of-range index is remembered and the scan goes on, so an error in any later argument wins and
-the `#VALUE!` is returned only if none is found. Between two errors, ours keeps the first in argument order (UNVERIFIED).
+the `#VALUE!` is returned only if none is found. Between two errors see the T-4718 entry below.
 Status: VERIFIED
 Tasks: T-2273
+
+## CHOOSEROWS and CHOOSECOLS: which problem wins in the index list (T-4718)
+Rule (excel-graph, probes/t4718-choose-index-error-order, 116 cells, 2026-11-07; read with `ERROR.TYPE`, same for both
+functions): index arguments are scanned in two passes. Pass 1 takes the single-value arguments (a number, text, an error
+value, a single-cell reference) in argument order; the first error or uncoercible text is the result (`"x",NA()` is `#VALUE!`,
+`NA(),"x"` is `#N/A`, `1/0,NA()` is `#DIV/0!`; A1:A2, A7:A8, A19, A43). Pass 2 takes the array literals and multi-cell ranges
+in argument order, each read row-major, the first error or uncoercible text of the first bad one being the result (`{"x",#N/A}`
+is `#VALUE!`, `{#N/A,"x"}` is `#N/A`, `{"x"},{#N/A}` is `#VALUE!`; A3:A4, A9:A10, A33:A34, A44). So any single-value
+problem beats every array problem, even one earlier in the list: `{"x",#N/A},1/0` is `#DIV/0!`, `{#N/A},"x"` is `#VALUE!`,
+`{"x"},NA()` is `#N/A`, `D4:F4,1/0` is `#DIV/0!` (A13, A16, A20, A30:A32, A39:A42). A 2-D index array or range is `#VALUE!`
+whatever it holds, even valid indexes (`{1,2;3,1}`) or errors (`{1,#N/A;#DIV/0!,2}`), in pass 2 order (A5:A6, A21:A26, A52,
+A54:A55). Out-of-range indexes only count when no problem is found (the T-2273 entry). An error array argument against an
+error index follows the first-error rule (`CHOOSECOLS(NA(),1/0)` is `#N/A`, `CHOOSECOLS(1/0,NA())` is `#DIV/0!`).
+Ours: implemented (T-4718, `chosen_indices`). A single-cell range counts as single-value (A45:A47).
+Status: VERIFIED
+Tasks: T-4718
 
 ## ADDRESS: argument errors first, sheet_text "TRUE"/"FALSE" quoted, bounds (T-2274, T-2275)
 Rule (excel-graph, gen-m6, 2026-10-21):
@@ -1744,7 +1777,20 @@ on 2026-10-26 with createSession "retries exhausted", and opened on the 2026-10-
 Status: VERIFIED (excel-graph). Ours matches all three cells, and the other-sheet `#N/A` too (T-4570:
 `RefGrid::order_statistic_error`, read by LARGE and SMALL's data reader and MEDIAN's `GridReading::OrderStatistic`).
 This answers T-1075 item 18.
-Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570
+Mixed XLOOKUP grids (probes/t4704-mixed-xlookup-grid-readers, excel-graph, 2026-11-07, T-4704; `X(r)` is
+`XLOOKUP({2;9},Data!A1:A3,Data!B1:B3,Data!G1:G2)`: element 1 the hit 20, element 2 the reference G1:G2): the first
+element decides between an error and an off-sheet reference. With a `#DIV/0!` hit and the reference second,
+LARGE, SMALL, MEDIAN and MAX give `#DIV/0!` (A46, A52, A55, A61 with the grid `{2;9}`); with the reference first
+LARGE and MEDIAN give `#N/A` (A49, A58). SMALL and MAX with the reference first are not probed (they share the reader). Ours puts the error first (T-4741). A grid with references on both the
+formula's sheet and another cannot be built from XLOOKUP (every miss is the one if_not_found reference); see
+probes/t4697 for the INDIRECT form.
+Per-element readers of a mixed grid: FORMULATEXT gives `#VALUE!` then `#N/A` (A1:A2), INDIRECT `#REF!` then
+`#VALUE!` (A10:A11), OFFSET a 2x1 of `#VALUE!` (A4:A5, A7:A8; matched since T-4739), RANK, RANK.EQ and RANK.AVG
+`#VALUE!` for the hit and the rank in G1:G2 for the miss (`RANK(60,X)` 1, `RANK(20,X)` `#N/A`, `RANK(50,X)` 2;
+A25:A38; matched since T-4740). COUNTIF and SUMIF over an XLOOKUP with a text if_not_found spill a
+2x1 of `#VALUE!` whether the lookup misses or hits (A64:A74; ours a scalar, T-4742). TAKE and DROP keep the shape
+and match (A13:C22).
+Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742
 
 ## MATCH match_type that is a reference to an error cell is #REF! (excel-graph)
 Rule: `MATCH(30,A1:A5,M2)` with M2 `=NA()` gives `#REF!` (ERROR.TYPE 4) in Excel for the web, not the #N/A the

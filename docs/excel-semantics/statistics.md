@@ -3194,10 +3194,24 @@ Ours: `incomplete_beta.rs::shape_one_tails` (w = `x87_exp::excel_one_minus_exp`(
     not Excel's form.
   - It does make all 47 t3568-r5-bup column-B cells bit-exact (T-3764), plus 24 t4017-f-huge-df2 cells. Its wins and
     losses both span b0 from 1/2 to 1E10, so no shape cut separates them.
+- NEGBINOM.DIST's cdf at number_s 1 (p <= 1/2, so bratio's a0 is r = 1) takes the same branch, I_p(1, f + 1) from p
+  through log1p (T-4242). Every number_s 1 Gate A point now matches Excel to the bit:
+  - accuracy/NEGBINOM.DIST/r4-T-3576 A125: `NEGBINOM.DIST(70991230,1,8.02387331627331E-281,TRUE)` = 5.696246441102946E-273,
+    where fl(1 - p) is 1;
+  - r4-T-3576 A31 = 1.5750950518407722E-189;
+  - r4-T-2146 A152 = 4.9192873262661245E-261;
+  - s1 A124: `NEGBINOM.DIST(1,1,0.0434735949326795,TRUE)` = 0.0850572364089883. This is Excel's bits, one ulp from the
+    correctly rounded value, so it shows Excel's own shape-one arithmetic, not just accurate math.
+
+  r4-T-3576 A4, s1 A187 and gen-m9/1b31092a0d79e5f1 A37 already passed and still do. On the swapped side (number_f 0,
+  p > 0.9, where a0 = f + 1 = 1) NEGBINOM.DIST does not take this branch: `NEGBINOM.DIST(0,2,0.999,TRUE)` is 0.998001
+  and `NEGBINOM.DIST(0,10,0.999,TRUE)` is 0.9900448802097482 (probes-numeric/t2145-negbinom-sweep A420, A1080), and
+  `NEGBINOM.DIST(0,4,0.97176398482672,TRUE)` is 0.8917501630679979 (accuracy/NEGBINOM.DIST/s1 A107). The branch puts
+  all three an ulp low, while the engine's walk matches them.
 Status: VERIFIED (excel-graph) for the complement down to w1 of about 1E-16, and for w at |z| >= 1 (T-3764); w's form
 below |z| = 1 PARTIAL (71 cells for it, 6 contrary cells with no form, T-3886); below 2^-53 UNVERIFIED but for the
 four t3568 cells
-Tasks: T-3007, T-2511, T-3150, T-3170, T-3886, T-3764
+Tasks: T-3007, T-2511, T-3150, T-3170, T-3886, T-3764, T-4242
 
 ## Excel's log1p is a 14-term atanh series in alnrel's variable (T-2464)
 Rule: for ln(1 + a) with -0.375 <= a < 0, i.e. ln(1 - x) at x <= 0.375 (the beta density, BINOM.DIST(0,n,p), bgrat's
@@ -3387,6 +3401,13 @@ same amount (up to 4.4E-12 from Excel, T-3447).
   57 train cells, 0 and 20 hold-out cells. The math sidecars skip 174 of 440 train and 84 of 200 hold-out cells ("not converged or too slow"), so the counts use `docs/research/t3960/score.py`: the sidecar value where it exists, else an
   outward pmf sum at 45 digits at the double nearest p (NEGBINOM.DIST as 1 - BINOM.DIST(r - 1, f + r, p)), which
   agrees with the sidecar to 1E-12 relative on every overlapping cell, which the script asserts. The error is not confined to the 11 owned cells. The model is T-3961's.
+- probes/t3444-binom-range-inv-large-n Inv shows the same at p = 0.001 (gap triage 2026-11-07, math from a direct pmf
+  sum at 40 digits). Columns C and D are BINOM.DIST's cdf at BINOM.INV's count and one below, at n 1E5, 1E6 and 1E7.
+  Excel is 2.5E-13 to 1.3E-12 below the math there: C36 `BINOM.DIST(95,100000,0.001,TRUE)` is 0.3311016442530485
+  against 0.33110164425313579, and D67 `BINOM.DIST(9999,10000000,0.001,TRUE)` is 0.4986681958001577 against
+  0.49866819580081081. Ours is within about 1E-14. At the median count (C31, C49, C67, BINOM.INV's alpha 0.5) Excel
+  is within 2E-15, so the error is not uniform in k. These cells have no sidecar math yet (T-4773; the other not-converged skips are
+  T-4775's), and T-4774 owns their last digits.
 Evidence: probes/t3352-binom-negbinom-large-n (excel-graph), probes-numeric/t3352-binom-negbinom-sweep (excel-graph,
 scored against 50-digit mpmath; T-3352's Outcome), probes-numeric/t3960-binom-negbinom-small-p-cdf and -hold (excel-graph).
 Implemented in: `crates/rustsheet-engine/src/functions/statistical/bratio/basym.rs`, `bratio::ported_tails`, and
@@ -3394,7 +3415,7 @@ Implemented in: `crates/rustsheet-engine/src/functions/statistical/bratio/basym.
 Status: VERIFIED (excel-graph) to 1E-11 of the math for p of 0.001 and above (the t3352 cases; at p below 0.01 with n
 1E5 or more or r 10 or more Excel is up to 1.1E-10 off, T-3960); last digits UNVERIFIED (Excel's arithmetic in basym and in Loader's
 kernel at a large n not identified)
-Tasks: T-3352, T-3447, T-3443, T-3444, T-2586, T-2146, T-3960, T-3961
+Tasks: T-3352, T-3447, T-3443, T-3444, T-2586, T-2146, T-3960, T-3961, T-4773, T-4774, T-4775
 
 ## BINOM.DIST.RANGE and BINOM.INV at a large n sit on BINOM.DIST's own cdf (T-3444)
 Rule: Excel's BINOM.INV (and CRITBINOM, equal on every probe row) is the smallest k whose BINOM.DIST(k, n, p, TRUE) is
@@ -7266,8 +7287,8 @@ accuracy/defs/array_regression.py) solves the normal equations in rational arith
   FALSE, match the exact value, so Excel does not multiply by an underflowed multiplier.
 - GROWTH s1 A104 is `#NUM!` where the prediction is 8.13890815167933E-18: two variables (x1 near 7.3E+7, x2 near
   77.9407 with a spread of 2E-4), whose ln fit's intercept is 1289.95, so b = e^1289.95 is past the double range. It
-  is the only table point with an intercept past ln(max double); unexplained, the intercept's overflow is the lead
-  (T-4590). Ours is 8.138904702791959E-18.
+  is the only table point with an intercept past ln(max double). The cause is that overflow: see "GROWTH is #NUM! once
+  LOGEST's b overflows" below (T-4590).
 - Excel off the exact value: LINEST s1 A197 (`INDEX(LINEST(<4 points from 1E-48 to 6E+20>,<2 variables>,FALSE,TRUE),5,1)`,
   ss_reg) is 0 where the exact value is 1.19E-52, the cancellation of ss_tot (3.9E+41) and ss_resid: more than 1E-4
   off, kept as the target under decision 0300; ours is 0 too. LINEST A184 (an intercept over data from 1E-44 to
@@ -7277,9 +7298,49 @@ accuracy/defs/array_regression.py) solves the normal equations in rational arith
   spread, mixed magnitudes) it is from 2E-9 to 20 relative off where Excel is within 2E-8, and TREND A193 (data from
   1E-45 to 1E+49) is `#NUM!` where Excel and the math are -1.3025416638036628E+49 (T-2006, known failures).
 Evidence: eval/accuracy/tables/{LINEST,LOGEST,TREND,GROWTH}/s1 (excel-graph, 2026-11-06, T-4096).
-Ours: as described; T-2006 (the solve), T-4590 (A104).
-Status: VERIFIED (excel-graph) for the table points; A104's cause UNVERIFIED
+Ours: as described; T-2006 (the solve). A104 passes since T-4590.
+Status: VERIFIED (excel-graph) for the table points and A104's cause (T-4590)
 Tasks: T-4096, T-2006, T-4590, T-2569
+
+## GROWTH is #NUM! once LOGEST's b or a slope's factor overflows, and 0 once a partial product or the result is subnormal (T-4590, T-4765, T-4793)
+Rule: GROWTH's prediction is e^(intercept + Σ m_j x_j), except at the edges of LOGEST's factors. Those factors are
+b = e^intercept and one factor per variable, e^(m_j x_j) at the new x. Excel multiplies the variables' factors left
+to right in doubles, and flushes each partial product to 0 once it is subnormal. A factor itself is used as it is,
+even when subnormal.
+- `#NUM!` where b overflows, meaning the intercept is past ln(DBL_MAX) = 709.7827: 709.7828 to 1290 are `#NUM!` and
+  709.7827 is a number. LOGEST's own b, `INDEX(LOGEST(..),1,2)`, is `#NUM!` from the same cut. The Gate A point
+  GROWTH s1 A104 (intercept 1289.95) is `#NUM!` by this rule.
+- `#NUM!` where a factor overflows, though the prediction may be finite (probes/t4765-growth-factor-edges Over A1:
+  b = e^-700, factor e^1400; SmallB A4: b = e^-720, factor e^720).
+- `#NUM!` where a partial product that was flushed to 0 meets an overflowing factor, giving 0·∞
+  (probes/t4793-growth-several-x Multi A1:A3: factors e^-720 then e^720, and so on up to ±800. That is `#NUM!`, not
+  e^0, so the factors are not one summed factor; the ±200 control, A4, gives e^1).
+- 0 where a partial product is subnormal.
+  - With one x the first factor is the product. A slope term of -708.39 gives 1 and -708.4 gives 0 (t4765 Cut), which
+    is the cut ln(DBL_MIN) = -708.396. With const FALSE the result is 0 too (NoConst A2, A3).
+  - With two x the order matters (probes/t4793-growth-one-factor-underflow).
+    - A first factor of e^-720 or e^-709 gives 0, though the sum is normal (One A1, A3).
+    - A first factor of e^600 times a later e^-720 gives a number (One A2). Excel's 2.0842828425754287E-52 is 3E-12
+      below e^(sum), which is the precision of the subnormal factor carried into the product.
+- 0 where the prediction itself is subnormal, though b and every factor are normal (t4793 SubProd A2:A4, A6:
+  b = e^-400 with factors e^-309 to e^-320, and b = e^-300 with e^-410). This is numbers.md "Subnormal results become
+  0".
+- A subnormal b with a normal factor is neither an error nor a zero. c = -709 with an offsetting slope gives
+  0.9999999999999999 (t4765 SmallB A3), which again shows a subnormal carried into a product.
+- LOGEST's m = e^slope past the double range is not an error in GROWTH (t4590 Slope).
+Between the edges the engine gives the single exponential. The product of the factors is one ulp off Excel on
+ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where the single exponential is exact. How Excel rounds the product
+between the edges, including One A2's lossy digits, is not identified (T-4763).
+Evidence: probes/t4590-growth-overflow (Int 15, Slope 8); probes/t4765-growth-factor-edges (Cut 10, SmallB 4,
+NoConst 4, Over 3); probes/t4793-growth-several-x (Multi 4, SubProd 6); probes/t4793-growth-one-factor-underflow
+(One 4). All excel-graph, 2026-11-07, with predictions in docs/research/t4590, t4765 and t4793 committed before each
+fill.
+Status: VERIFIED (excel-graph) for the edges, for one and two x. Not probed: three or more x; a zero partial product
+meeting a later factor below 1 but normal; and a later partial product that turns subnormal from two normal factors
+before b lifts it (factors e^-360 and e^-360, intercept 700). The last two are inferred 0. The probes' least-squares
+and product digits are T-4763's.
+Ours (T-4590, T-4765, T-4793): `growth_prediction` in functions/statistical/trend.rs.
+Tasks: T-4590, T-4763, T-4765, T-4793
 
 ## TRIMMEAN: an error percent before data with no number (T-1742)
 Rule: TRIMMEAN returns an error-valued percent before it reports data with no number: `TRIMMEAN(Data!E11:E11,<#N/A>)`
@@ -7545,7 +7606,7 @@ QUARTILE*, PERCENTILE* and TRIMMEAN are `#NUM!` (`QUARTILE(Data!E2,3)` with E2 =
 44a8841352dc48e9 A52). This answers T-2344's single-cell question and T-2066's (`QUARTILE` of one text cell).
 Evidence: gen-m9 (excel-graph, 2026-10-23, T-2256); 72 cells in T-2344.
 Ours: since T-2429 a cell holding text or a boolean is no number in QUARTILE*, PERCENTILE* and PERCENTRANK* ("A single cell holding a boolean is no number in the PERCENTILE and QUARTILE data"), and since T-2621 a cell holding nothing, text or a boolean in TRIMMEAN.
-T-2344 probed the same data given as a defined name, INDEX, OFFSET, IF or CHOOSE result (probes/t2344-percentile-name-index-data A1-A30, excel-graph, 2026-10-27): a reference of any of these forms holding one text (also numeric text "1") or boolean cell is no number, `#NUM!` for QUARTILE*/PERCENTILE* and `#N/A` for PERCENTRANK*, after quart's own error (`QUARTILE(INDEX(..),NA())` `#N/A`); ours since T-2344 (`percentile_numbers` reads the argument once in reference context). T-2883 probed the same data given as a defined name, an INDEX result or an IF result, for 14 statistical functions (probes/t2883-stat-name-index-data A1-A168, excel-graph, 2026-11-05): TRIMMEAN and Z.TEST read such a lone text, boolean or numeric-text cell as a plain reference does (TRIMMEAN `#NUM!`, Z.TEST `#N/A`; MODE, MODE.SNGL, CORREL, COVARIANCE.P, SLOPE, FORECAST, CHISQ.TEST, STDEV.S, VAR.P, AVERAGE, LARGE and RANK already did); ours since T-2883 (TRIMMEAN's data and Z.TEST's read the argument once with `evaluate_picked_reference_arg`, as `percentile_numbers`). LET, IFS, SWITCH, LAMBDA and OFFSET/CHOOSE picks of these functions are unprobed, and so is a union. A 3-D reference (`Sheet1:Data!A4:A6`) and a union (`(A1:A2,A4:A6)`) as the data of TRIMMEAN, Z.TEST, PERCENTILE, PERCENTILE.INC/.EXC, QUARTILE, QUARTILE.INC/.EXC and PERCENTRANK, PERCENTRANK.INC/.EXC are accepted, as in LARGE and SMALL: the areas are read as written (a 3-D range reads every sheet of its span, probed; an overlap counting twice, an error cell and text or boolean cells are by analogy with LARGE and SMALL, unprobed for these functions), e.g. `TRIMMEAN(Sheet1:Data!A4:A6,0.2)` 4, `Z.TEST((A1:A2,A4:A6),4,1)` 0.98732634066, `PERCENTILE((A1:A2,A4:A6),0.5)` 3, `PERCENTRANK.EXC(Sheet1:Data!A4:A6,3)` 0.142 (probes/t4309-3d-union-trimmean-percentile H1:H22, excel-graph, 2026-11-06, T-4309). Ours since T-4309 (`RefArg::into_areas_or_single`, `area_numbers`); it was `#VALUE!` after T-2883 (and `#REF!` for a 3-D reference before).
+T-2344 probed the same data given as a defined name, INDEX, OFFSET, IF or CHOOSE result (probes/t2344-percentile-name-index-data A1-A30, excel-graph, 2026-10-27): a reference of any of these forms holding one text (also numeric text "1") or boolean cell is no number, `#NUM!` for QUARTILE*/PERCENTILE* and `#N/A` for PERCENTRANK*, after quart's own error (`QUARTILE(INDEX(..),NA())` `#N/A`); ours since T-2344 (`percentile_numbers` reads the argument once in reference context). T-2883 probed the same data given as a defined name, an INDEX result or an IF result, for 14 statistical functions (probes/t2883-stat-name-index-data A1-A168, excel-graph, 2026-11-05): TRIMMEAN and Z.TEST read such a lone text, boolean or numeric-text cell as a plain reference does (TRIMMEAN `#NUM!`, Z.TEST `#N/A`; MODE, MODE.SNGL, CORREL, COVARIANCE.P, SLOPE, FORECAST, CHISQ.TEST, STDEV.S, VAR.P, AVERAGE, LARGE and RANK already did); ours since T-2883 (TRIMMEAN's data and Z.TEST's read the argument once with `evaluate_picked_reference_arg`, as `percentile_numbers`). LET, IFS, SWITCH, LAMBDA and OFFSET/CHOOSE picks of these functions are unprobed, and so is a union. A 3-D reference (`Sheet1:Data!A4:A6`) and a union (`(A1:A2,A4:A6)`) as the data of TRIMMEAN, Z.TEST, PERCENTILE, PERCENTILE.INC/.EXC, QUARTILE, QUARTILE.INC/.EXC and PERCENTRANK, PERCENTRANK.INC/.EXC are accepted, as in LARGE and SMALL: the areas are read as written (a 3-D range reads every sheet of its span, probed; an overlap counts twice, text and boolean cells are skipped, and the first error in area order wins, `(D2,D1,A1:A2)` `#N/A` but `(D1,D2,A1:A2)` `#DIV/0!`, all probed for TRIMMEAN, Z.TEST, PERCENTILE, QUARTILE.EXC, PERCENTRANK and PERCENTRANK.EXC in probes/t4440-union-overlap-error-text-trimmean-percentile H1:M10, excel-graph, 2026-11-07, T-4440; engine already matched), e.g. `TRIMMEAN(Sheet1:Data!A4:A6,0.2)` 4, `Z.TEST((A1:A2,A4:A6),4,1)` 0.98732634066, `PERCENTILE((A1:A2,A4:A6),0.5)` 3, `PERCENTRANK.EXC(Sheet1:Data!A4:A6,3)` 0.142 (probes/t4309-3d-union-trimmean-percentile H1:H22, excel-graph, 2026-11-06, T-4309). Ours since T-4309 (`RefArg::into_areas_or_single`, `area_numbers`); it was `#VALUE!` after T-2883 (and `#REF!` for a 3-D reference before).
 Status: VERIFIED (excel-graph)
 
 ## COVARIANCE: a boolean scalar is one value (T-2436)
@@ -8417,3 +8478,22 @@ Ours: matches every cell cited (the engine is bit-exact with Excel on 777 of the
 the Gate A envelope).
 Status: VERIFIED (excel-graph) for the cells cited; the regions marked UNVERIFIED are not probed
 Tasks: T-4091
+
+## RANK, LARGE, SMALL and the regression functions: a cell picked by a name, INDEX, IF, CHOOSE or parentheses is the cell (T-4310)
+Rule: a one-cell argument reached through a defined name, `INDEX(range,k)`, `IF(TRUE,ref)`, `CHOOSE(1,ref)` or
+parentheses behaves exactly like the plain reference. With Data!A1 = 5, A2 = TRUE, A3 = "7" and A4 blank:
+- RANK, RANK.EQ and RANK.AVG of 5 over the cell are 1 for A1 and `#N/A` for A2, A3 and A4 in all six forms (a cell
+  holding a boolean or numeric text is no number, not `#NUM!`).
+- LARGE and SMALL of it with k = 1 are 5 for A1 and `#NUM!` for A2, A3 and A4 in all six forms.
+- LINEST, LOGEST, TREND and GROWTH with the blank A4 as `known_y` and `1/0` as `known_x` are `#DIV/0!` in all six forms
+  (the blank reference waits for x's error), and LINEST and TREND of it alone `#VALUE!`; only a computed blank such as
+  `IFERROR(B10,1)` is `#VALUE!` at once (the T-2455 entry).
+Evidence: probes/t4310-rank-regression-picked-cells A1:A156 (excel-graph, 2026-11-07).
+T-4772 probed the same blank `known_y` reached by `OFFSET(Data!$A$4,0,0)`, `INDIRECT("Data!A4")`, `LET(y,Data!$A$4,y)` and
+`XLOOKUP(5,Data!$A$1,Data!$A$4)`: LINEST, LOGEST, TREND and GROWTH of each are `#DIV/0!` with `1/0` as `known_x` and
+`#VALUE!` alone, as for a plain reference (probes/t4772-blank-y-offset-indirect-let-xlookup A1:A32, excel-graph,
+2026-11-07; ours already matched, 32 of 32 cells).
+Ours: matches all 156 cells since T-4310 (the name, INDEX, IF and parenthesized blank y of the regression functions were
+`#VALUE!` before, 16 cells).
+Status: VERIFIED (excel-graph)
+Tasks: T-4310

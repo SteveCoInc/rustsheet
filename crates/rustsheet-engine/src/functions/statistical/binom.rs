@@ -11,7 +11,7 @@ use statrs::distribution::{Binomial, Discrete, DiscreteCDF, NegativeBinomial};
 
 use super::bratio::{closed_or_ported_tails, dispatch, l140_overflows, ported_tails, Branch};
 use super::discrete::{binomial_cdf, binomial_pmf, binomial_range, odds, times_ratio};
-use super::incomplete_beta::closed_form_tails;
+use super::incomplete_beta::{closed_form_tails, closed_or_shape_one_tails};
 use super::loader::excel_dbinom_exponent;
 
 use crate::arithmetic::flush_subnormal;
@@ -307,10 +307,22 @@ impl Model {
         if cumulative {
             // Then the bratio port's branches (T-2847), whose subnormal cdf is 0 in Excel
             // (`NEGBINOM.DIST(1,1000,0.48,TRUE)` = 0: probes/t2706-subnormal-density-paths A9:B9).
-            // Not [`closed_or_ported_tails`]: the flush is backed for the port only, so the closed
-            // form's result is returned as it was.
+            // Excel's closed forms come first. At one success (r = 1, p <= 1/2, so bratio's a0 is
+            // r) past their reach (y0 > 0.9) the cdf then takes bratio's shape-one branch, which
+            // works from p through log1p as BETA.DIST's kernel does; at a tiny p, fl(1 - p) is 1 and
+            // a form through y loses p (`NEGBINOM.DIST(70991230,1,8.02387331627331E-281,TRUE)` is
+            // Excel's 5.696246441102946E-273, the math; accuracy/NEGBINOM.DIST/r4-T-3576 A125,
+            // T-4242). Not on the swapped side (f = 0, p > 0.9): there Excel matches the walk below,
+            // and the branch is an ulp low (`NEGBINOM.DIST(0,2,0.999,TRUE)` is 0.998001,
+            // probes-numeric/t2145-negbinom-sweep A420). Not [`closed_or_ported_tails`]: the flush is
+            // backed for the port only, so these results are returned as they are.
             let (x, y, a, b) = (probability_s, 1.0 - probability_s, number_s, number_f + 1.0);
-            if let Some((lower, _)) = closed_form_tails(x, y, a, b) {
+            let closed = if number_s == 1.0 && probability_s <= 0.5 {
+                closed_or_shape_one_tails(x, y, a, b)
+            } else {
+                closed_form_tails(x, y, a, b)
+            };
+            if let Some((lower, _)) = closed {
                 return Ok(lower);
             }
             // Excel's kernel is `#NUM!` where bratio's L140 bup sum overflows (T-3576).

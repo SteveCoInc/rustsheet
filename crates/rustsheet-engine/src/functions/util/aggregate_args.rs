@@ -362,7 +362,7 @@ impl Model {
             // Not the shape the two evaluations give: read it as usual, its cells evaluated.
         }
         let read = read_arg(self);
-        let is_reference = matches!(*arg.ungrouped_at(cell.row), Node::ReferenceKind { .. });
+        let is_reference = arg.is_cell_reference_at(cell.row);
         self.walk_aggregate_read(read, is_reference, cell, walk, visit)
     }
 

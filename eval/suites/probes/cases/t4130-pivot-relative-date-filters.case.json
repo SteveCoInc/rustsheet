@@ -1,0 +1,809 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4130: does Excel for the web open and apply each relative date filter type of a pivot, evaluated against the day it opens the file? Data!A1:D16 has Set, Bucket, Date (formulas off TODAY(), m/d/yyyy) and Sales: set D Today/Yesterday/Tomorrow (TODAY(), -1, +1), set W Today/Minus7/Plus7, set M Today/MinusMonth/PlusMonth (EDATE -1, +1), set Qr Today/MinusQuarter/PlusQuarter (EDATE -3, +3), set Y Today/MinusYear/PlusYear (EDATE -12, +12). Each sheet is one builder-v2 pivot at A3 with page field Set on the sheet's set, rows Bucket then Date with every Bucket collapsed (so no date label renders and the cells do not depend on the day; a bucket whose only date is filtered out is gone), Sum of Sales, and one `<filter fld=\"2\">` dynamicFilter: Rtoday today, Ryest yesterday, Rtom tomorrow (set D); RtW thisWeek, RlW lastWeek, RnW nextWeek (W); RtM thisMonth, RlM lastMonth, RnM nextMonth (M); RtQ thisQuarter, RlQ lastQuarter, RnQ nextQuarter (Qr); RtY thisYear, RlY lastYear, RnY nextYear, Rytd yearToDate (Y); RtMv thisMonth whose val/maxVal and valIso/maxValIso hold January 2020. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4130",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0081",
+  "PV-0082",
+  "PV-0083",
+  "PV-0084",
+  "PV-0085",
+  "PV-0086",
+  "PV-0087",
+  "PV-0088",
+  "PV-0091",
+  "PV-0092",
+  "PV-0093",
+  "PV-0094",
+  "PV-0095",
+  "PV-0096",
+  "PV-0106",
+  "PV-0107",
+  "PV-0913",
+  "PV-0914",
+  "PV-0915",
+  "PV-0916",
+  "PV-0917",
+  "PV-0918"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Set",
+    "B1": "Bucket",
+    "C1": "Date",
+    "D1": "Sales",
+    "A2": "D",
+    "B2": "Today",
+    "C2": "=TODAY()",
+    "D2": 1,
+    "A3": "D",
+    "B3": "Yesterday",
+    "C3": "=TODAY()-1",
+    "D3": 2,
+    "A4": "D",
+    "B4": "Tomorrow",
+    "C4": "=TODAY()+1",
+    "D4": 3,
+    "A5": "W",
+    "B5": "Today",
+    "C5": "=TODAY()",
+    "D5": 4,
+    "A6": "W",
+    "B6": "Minus7",
+    "C6": "=TODAY()-7",
+    "D6": 5,
+    "A7": "W",
+    "B7": "Plus7",
+    "C7": "=TODAY()+7",
+    "D7": 6,
+    "A8": "M",
+    "B8": "Today",
+    "C8": "=TODAY()",
+    "D8": 7,
+    "A9": "M",
+    "B9": "MinusMonth",
+    "C9": "=EDATE(TODAY(),-1)",
+    "D9": 8,
+    "A10": "M",
+    "B10": "PlusMonth",
+    "C10": "=EDATE(TODAY(),1)",
+    "D10": 9,
+    "A11": "Qr",
+    "B11": "Today",
+    "C11": "=TODAY()",
+    "D11": 10,
+    "A12": "Qr",
+    "B12": "MinusQuarter",
+    "C12": "=EDATE(TODAY(),-3)",
+    "D12": 11,
+    "A13": "Qr",
+    "B13": "PlusQuarter",
+    "C13": "=EDATE(TODAY(),3)",
+    "D13": 12,
+    "A14": "Y",
+    "B14": "Today",
+    "C14": "=TODAY()",
+    "D14": 13,
+    "A15": "Y",
+    "B15": "MinusYear",
+    "C15": "=EDATE(TODAY(),-12)",
+    "D15": 14,
+    "A16": "Y",
+    "B16": "PlusYear",
+    "C16": "=EDATE(TODAY(),12)",
+    "D16": 15
+   },
+   "number_formats": {
+    "C2": "m/d/yyyy",
+    "C3": "m/d/yyyy",
+    "C4": "m/d/yyyy",
+    "C5": "m/d/yyyy",
+    "C6": "m/d/yyyy",
+    "C7": "m/d/yyyy",
+    "C8": "m/d/yyyy",
+    "C9": "m/d/yyyy",
+    "C10": "m/d/yyyy",
+    "C11": "m/d/yyyy",
+    "C12": "m/d/yyyy",
+    "C13": "m/d/yyyy",
+    "C14": "m/d/yyyy",
+    "C15": "m/d/yyyy",
+    "C16": "m/d/yyyy"
+   }
+  },
+  {
+   "name": "Rtoday",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_Rtoday",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "D"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "Yesterday",
+         "Tomorrow"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"today\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"today\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Ryest",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_Ryest",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "D"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "Yesterday",
+         "Tomorrow"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"yesterday\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"yesterday\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Rtom",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_Rtom",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "D"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "Yesterday",
+         "Tomorrow"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"tomorrow\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"tomorrow\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RtW",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RtW",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "W"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "Minus7",
+         "Plus7"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"thisWeek\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"thisWeek\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RlW",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RlW",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "W"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "Minus7",
+         "Plus7"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"lastWeek\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"lastWeek\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RnW",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RnW",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "W"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "Minus7",
+         "Plus7"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"nextWeek\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"nextWeek\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RtM",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RtM",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "M"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "MinusMonth",
+         "PlusMonth"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"thisMonth\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"thisMonth\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RlM",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RlM",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "M"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "MinusMonth",
+         "PlusMonth"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"lastMonth\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"lastMonth\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RnM",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RnM",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "M"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "MinusMonth",
+         "PlusMonth"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"nextMonth\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"nextMonth\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RtQ",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RtQ",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "Qr"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "MinusQuarter",
+         "PlusQuarter"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"thisQuarter\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"thisQuarter\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RlQ",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RlQ",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "Qr"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "MinusQuarter",
+         "PlusQuarter"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"lastQuarter\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"lastQuarter\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RnQ",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RnQ",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "Qr"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "MinusQuarter",
+         "PlusQuarter"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"nextQuarter\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"nextQuarter\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RtY",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RtY",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "Y"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "MinusYear",
+         "PlusYear"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"thisYear\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"thisYear\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RlY",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RlY",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "Y"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "MinusYear",
+         "PlusYear"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"lastYear\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"lastYear\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RnY",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RnY",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "Y"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "MinusYear",
+         "PlusYear"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"nextYear\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"nextYear\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Rytd",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_Rytd",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "Y"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "MinusYear",
+         "PlusYear"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"yearToDate\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"yearToDate\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "RtMv",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_RtMv",
+     "source": "Data!A1:D16",
+     "location": "A3",
+     "definition": {
+      "pages": [
+       {
+        "field": "Set",
+        "item": "M"
+       }
+      ],
+      "rows": [
+       "Bucket",
+       "Date"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Bucket": {
+        "collapsed": [
+         "Today",
+         "MinusMonth",
+         "PlusMonth"
+        ]
+       }
+      },
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"2\" type=\"thisMonth\" evalOrder=\"-1\" id=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><dynamicFilter type=\"thisMonth\" val=\"43831\" valIso=\"2020-01-01T00:00:00\" maxVal=\"43862\" maxValIso=\"2020-02-01T00:00:00\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A20)"
+   }
+  }
+ ],
+ "expected": {}
+}

@@ -1,0 +1,212 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4130: does Excel for the web open and compute a pivot's calculated items? It refuses every file whose pivot field lists a calculated item `f=\"1\"` (FileCorruptTryRepair, pivots.md), so these sheets write the item `f=\"0\"` to ask what the web does with the rest. Data!A1:D9 has Region, Product, Year and Sales: East A 2024 10, East A 2025 4, East B 2024 5, East B 2025 8, East C 2024 3, West A 2024 20, West A 2025 6, West B 2025 7 (Product sums A 40, B 20, C 3). Each sheet is one builder-v2 pivot at A3, rows Product, Sum of Sales: CI0 a cache `<calculatedItems>` with AB = A+B (Excel's pivotArea, cacheIndex 1, naming the appended shared item AB) and the pivotField item AB `f=\"0\"`; CIA0 the same with calculatedItem field 1 and a pivotArea writing every attribute (dataOnly 1, type normal, axis axisRow, field 1, offset A1, each reference flag 0); CF a calculated field Dbl = Sales*2+1 (data Sum of Sales and Sum of Dbl). Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4130",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0355",
+  "PV-0356",
+  "PV-0447",
+  "PV-0448",
+  "PV-0450",
+  "PV-0452",
+  "PV-0453",
+  "PV-0455",
+  "PV-0456",
+  "PV-0457",
+  "PV-0458",
+  "PV-0459",
+  "PV-0460",
+  "PV-0461",
+  "PV-0462",
+  "PV-0463",
+  "PV-0464",
+  "PV-0465",
+  "PV-0466",
+  "PV-0467",
+  "PV-0468",
+  "PV-0469",
+  "PV-0470",
+  "PV-0471",
+  "PV-0472",
+  "PV-0473",
+  "PV-0474",
+  "PV-0475",
+  "PV-0476",
+  "PV-0477",
+  "PV-0478",
+  "PV-0479",
+  "PV-0480",
+  "PV-0481",
+  "PV-0482",
+  "PV-0483",
+  "PV-0484",
+  "PV-0485",
+  "PV-0486",
+  "PV-0487",
+  "PV-0488",
+  "PV-0489"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Year",
+    "D1": "Sales",
+    "A2": "East",
+    "B2": "A",
+    "C2": 2024,
+    "D2": 10,
+    "A3": "East",
+    "B3": "A",
+    "C3": 2025,
+    "D3": 4,
+    "A4": "East",
+    "B4": "B",
+    "C4": 2024,
+    "D4": 5,
+    "A5": "East",
+    "B5": "B",
+    "C5": 2025,
+    "D5": 8,
+    "A6": "East",
+    "B6": "C",
+    "C6": 2024,
+    "D6": 3,
+    "A7": "West",
+    "B7": "A",
+    "C7": 2024,
+    "D7": 20,
+    "A8": "West",
+    "B8": "A",
+    "C8": 2025,
+    "D8": 6,
+    "A9": "West",
+    "B9": "B",
+    "C9": 2025,
+    "D9": 7
+   }
+  },
+  {
+   "name": "CI0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CI0",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "calculated_items": [
+       {
+        "field": "Product",
+        "name": "AB",
+        "formula": "A+B"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "item_attrs": {
+         "AB": {
+          "f": false
+         }
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CIA0",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CIA0",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "calculated_items": [
+       {
+        "field": "Product",
+        "name": "AB",
+        "formula": "A+B",
+        "attrs": {
+         "field": 1
+        },
+        "pivot_area": "<pivotArea cacheIndex=\"1\" outline=\"0\" fieldPosition=\"0\" type=\"normal\" dataOnly=\"1\" labelOnly=\"0\" grandRow=\"0\" grandCol=\"0\" collapsedLevelsAreSubtotals=\"0\" axis=\"axisRow\" field=\"1\" offset=\"A1\"><references count=\"1\"><reference field=\"1\" count=\"1\" selected=\"0\" byPosition=\"0\" relative=\"0\" defaultSubtotal=\"0\" sumSubtotal=\"0\" countASubtotal=\"0\" avgSubtotal=\"0\" maxSubtotal=\"0\" minSubtotal=\"0\" productSubtotal=\"0\" countSubtotal=\"0\" stdDevSubtotal=\"0\" stdDevPSubtotal=\"0\" varSubtotal=\"0\" varPSubtotal=\"0\"><x v=\"3\"/></reference></references></pivotArea>"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "item_attrs": {
+         "AB": {
+          "f": false
+         }
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "CF",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CF",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "Dbl",
+        "formula": "Sales*2+1"
+       }
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Dbl"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A20)"
+   }
+  }
+ ],
+ "expected": {}
+}

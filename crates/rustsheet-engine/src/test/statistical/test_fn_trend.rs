@@ -145,3 +145,66 @@ fn growth_reads_known_y_in_order() {
     // A text known_x comes before the sign.
     assert_eq!(eval_in(&mut model, "=GROWTH(0,C1)"), "#VALUE!");
 }
+
+// GROWTH is #NUM! once LOGEST's b = e^intercept overflows, though the prediction is about 1; LOGEST's
+// m = e^slope past the double range is no error in GROWTH (probes/t4590-growth-overflow Int A8,
+// Slope A6; statistics.md "GROWTH is #NUM! once LOGEST's b overflows", T-4590).
+#[test]
+fn growth_edges_of_logest_factors() {
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        "=GROWTH({1.34083918970474e+154,1,7.45801590286306e-155},{1,2,3},2,TRUE)",
+    );
+    model._set(
+        "A2",
+        "=GROWTH({1.70088776356759e+104,9.42397681616358e+138,5.22146968976414e+173},{0.3,0.4,0.5},0.4,FALSE)",
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#NUM!");
+    assert!(model._get_text("A2").ends_with("E+138"));
+}
+
+// GROWTH is 0 once LOGEST's slopes' factor e^(Σ m x) is below DBL_MIN, const TRUE or FALSE, and
+// #NUM! once it overflows (probes/t4765-growth-factor-edges Cut A7, NoConst A2, Over A1; statistics.md
+// "GROWTH is #NUM! once LOGEST's b or slopes' factor overflows", T-4765).
+#[test]
+fn growth_slopes_factor_edges() {
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        "=GROWTH({6.71591962806527e+153,1,1.48899935583079e-154},{1,2,3},2,TRUE)",
+    );
+    model._set(
+        "A2",
+        "=GROWTH({4.22244206240434e-93,6.82472147873421e-124,1.10307785338272e-154},{0.3,0.4,0.5},1,FALSE)",
+    );
+    model._set(
+        "A3",
+        "=GROWTH({9.92959039626498e-153,9.96473301010367e-77,1},{1,1.5,2},4,TRUE)",
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "0");
+    assert_eq!(model._get_text("A2"), "0");
+    assert_eq!(model._get_text("A3"), "#NUM!");
+}
+
+// GROWTH multiplies each variable's factor e^(m_j x_j) left to right, flushing each partial
+// product: factors e^-720 then e^720 are #NUM! (0·inf), not e^0; and a subnormal prediction from normal factors is 0 (probes/t4793-growth-several-x
+// Multi A1, SubProd A2; statistics.md "GROWTH is #NUM! once LOGEST's b or a slope's factor
+// overflows ...", T-4793).
+#[test]
+fn growth_per_variable_factors_and_subnormal_result() {
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        "=GROWTH({2.71828182845905;1.22540880546404e-156;6.02987024900035e+156;6.02987024900035e+156},{1,1;2,1;1,2;2,3},{2,2},TRUE)",
+    );
+    model._set(
+        "A2",
+        "=GROWTH({5.40702666934513e-208,1.52654561001656e-241,4.30983910745731e-275},{0.5,1,1.5},2,TRUE)",
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#NUM!");
+    assert_eq!(model._get_text("A2"), "0");
+}

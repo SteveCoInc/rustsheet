@@ -25,6 +25,17 @@
 //! - **Totals.** A default subtotal reads `<item> Total`, a custom one `<item> <Function>` (t4137
 //!   K5, t4622 B1), the grand total `Grand Total` (`grandTotalCaption`), or `Total <data field>`
 //!   with Values on its axis (t4138 G6, t4135 `A_sum`).
+//! - **Classic layout** (`gridDropZones`) with no column level: the data caption sits at the
+//!   location's corner and the header row heads the value column `Total` (t4129 GZ,
+//!   probes/t4745-pivot-classic-subtotal-caption G1); with a column level nothing changes (GC,
+//!   GV).
+//! - **subtotalCaption** is the whole label of a field's default subtotal lines, on rows and
+//!   columns, a `?` in it standing for the item; custom subtotal lines keep `<item> <Function>`
+//!   (t4129 SC, t4745 SB, SK, SF, SCC, SQ).
+//! - **Repeat item labels.** A field with the x14 `fillDownLabels` shows its label on every line
+//!   below its first, inner subtotal lines included, in tabular and outline form and on columns;
+//!   a cell shared with a deeper level is that level's, so compact form fills nothing
+//!   (probes/t4698-pivot-repeat-labels; pivots.md "Repeat item labels").
 //! - **Items** render as in pivots.md: a number as a number, a boolean as `TRUE`/`FALSE`, an
 //!   error as its text and a blank as `(blank)` (t4134 I2); a Values level item is the data
 //!   field's caption.
@@ -48,7 +59,13 @@
 //!   hidden items leave one item, and a selected number, boolean or blank page item (T-4657);
 //! - a subtotal label with Values inside its field (`<item> <data field>`), the grand-total
 //!   caption with Values on its axis, and the header over a Values level in a label column of
-//!   its own (left empty) (T-4650).
+//!   its own (left empty) (T-4650);
+//! - Repeat Item Labels beside an unlabelled deeper level in the same column, on an inner column
+//!   field's subtotal, beside the Values field, and on custom subtotal lines (T-4764).
+//! - classic layout in compact or outline form, with no row field, with Values on rows (the
+//!   corner left empty), with no data field, beside page fields, and beside
+//!   `grandTotalCaption` (always `Total`); a subtotalCaption with Values inside its field (kept
+//!   `<item> <data field>`), empty, or with several `?` (each replaced) (T-4785).
 
 use crate::expressions::token::Error;
 use crate::number_format::number_to_text;
@@ -68,6 +85,8 @@ pub const VALUES: &str = "Values";
 pub const BLANK_ITEM: &str = "(blank)";
 /// The label of the grand-total line (`grandTotalCaption` replaces it).
 pub const GRAND_TOTAL: &str = "Grand Total";
+/// The header of a classic-layout pivot's one empty column line (`gridDropZones`, t4129 GZ!C4).
+pub const CLASSIC_TOTAL: &str = "Total";
 /// A page field with no selection and no hidden item.
 pub const ALL_ITEMS: &str = "(All)";
 /// A page field that hides items.
@@ -233,19 +252,30 @@ impl Cells<'_> {
         }
     }
 
-    /// The text of a subtotal or grand-total line of `axis`, or `None` for an item's line.
-    fn total_label(&self, axis: &Axis<'_>, line: &AxisLine) -> Option<String> {
-        let options = &self.table.options;
-        let depth = (line.repeat as usize + line.items.len()).checked_sub(1);
-        let item = || -> Option<String> {
-            match axis.levels.get(depth?)? {
-                Level::Field { depth: d, .. } => {
-                    let (field, item) = axis.item(line.node, *d)?;
-                    Some(item_text(self.cache_item(field, item)?))
-                }
-                Level::Values => None,
+    /// The item a subtotal `line` of `axis` totals, as text.
+    fn line_item(&self, axis: &Axis<'_>, line: &AxisLine) -> Option<String> {
+        match axis.levels.get(line_depth(line)?)? {
+            Level::Field { depth: d, .. } => {
+                let (field, item) = axis.item(line.node, *d)?;
+                Some(item_text(self.cache_item(field, item)?))
             }
-        };
+            Level::Values => None,
+        }
+    }
+
+    /// The text of a subtotal or grand-total line of `axis`, or `None` for an item's line.
+    ///
+    /// # Errors
+    /// [`PivotComputeError::Limit`] when a `subtotalCaption`'s copies of the item would pass
+    /// the text left ([`MAX_PIVOT_TEXT_BYTES`]), checked before they are made.
+    fn total_label(
+        &self,
+        axis: &Axis<'_>,
+        line: &AxisLine,
+    ) -> Result<Option<String>, PivotComputeError> {
+        let options = &self.table.options;
+        let depth = line_depth(line);
+        let item = || self.line_item(axis, line);
         // Values inside the subtotalled field: one line per data field (T-4650).
         let values_inside = || {
             let inner = depth.map_or(0, |d| d + 1);
@@ -254,7 +284,7 @@ impl Cells<'_> {
                 .skip(inner)
                 .any(|l| matches!(l, Level::Values))
         };
-        match line.kind {
+        Ok(match line.kind {
             ItemType::Grand if axis.has_values() => Some(format!(
                 "Total {}",
                 self.data_caption(line.data_field).unwrap_or_default()
@@ -265,15 +295,36 @@ impl Cells<'_> {
                     .clone()
                     .unwrap_or_else(|| GRAND_TOTAL.to_string()),
             ),
-            ItemType::Default if values_inside() => Some(format!(
-                "{} {}",
-                item()?,
-                self.data_caption(line.data_field).unwrap_or_default()
-            )),
-            ItemType::Default => Some(format!("{} Total", item()?)),
+            ItemType::Default if values_inside() => item().map(|item| {
+                format!(
+                    "{item} {}",
+                    self.data_caption(line.data_field).unwrap_or_default()
+                )
+            }),
+            // `subtotalCaption` is the whole label (t4129 SC, t4745 SB, SK, SCC), a `?` in it
+            // standing for the item (t4745 SQ); custom subtotal lines keep `<item> <Function>`
+            // (t4745 SF).
+            ItemType::Default => match self.subtotal_caption(axis, depth) {
+                Some(caption) if caption.contains('?') => match item() {
+                    Some(item) => Some(expand_caption(caption, &item, self.text_left)?),
+                    None => None,
+                },
+                Some(caption) => Some(caption.to_string()),
+                None => item().map(|item| format!("{item} Total")),
+            },
             ItemType::Function(function) => {
-                Some(format!("{} {}", item()?, Aggregate::word(function)))
+                item().map(|item| format!("{item} {}", Aggregate::word(function)))
             }
+            _ => None,
+        })
+    }
+
+    /// The `subtotalCaption` of the field at `axis`'s level `depth`, if it sets one.
+    fn subtotal_caption<'f>(&self, axis: &Axis<'f>, depth: Option<usize>) -> Option<&'f str> {
+        match axis.levels.get(depth?)? {
+            Level::Field {
+                field: Some(field), ..
+            } => field.subtotal_caption.as_deref(),
             _ => None,
         }
     }
@@ -282,22 +333,34 @@ impl Cells<'_> {
     /// `level`.
     fn lines(&mut self, axis: &Axis<'_>, place: impl Fn(u32, usize) -> Option<(u32, u32)>) {
         for (i, line) in (0u32..).zip(axis.lines) {
+            if self.over {
+                return;
+            }
             // An `insertBlankRow` line is empty (probes/t4168-pivot-layout-options BR, BR2).
             if line.kind == ItemType::Blank {
                 continue;
             }
             let end = line.repeat as usize + line.items.len();
-            if let Some(text) = self.total_label(axis, line) {
+            // A label past the text limit fails the render, as [`Cells::put`] does.
+            let Ok(label) = self.total_label(axis, line) else {
+                self.over = true;
+                return;
+            };
+            if let Some(text) = label {
                 let level = if line.kind == ItemType::Grand {
                     0
                 } else {
-                    end.saturating_sub(1)
+                    // A subtotal line repeats the labels above its own level (t4698 T3R!A6).
+                    let level = end.saturating_sub(1);
+                    self.fill_down(axis, line, level, |l| place(i, l));
+                    level
                 };
                 if let Some((row, column)) = place(i, level) {
                     self.put(row, column, PivotCell::Text(text));
                 }
                 continue;
             }
+            self.fill_down(axis, line, line.repeat as usize, |l| place(i, l));
             for (level, &x) in (line.repeat as usize..).zip(&line.items) {
                 let cell = self.label(axis, line, level, x);
                 // An empty-text item's label cell is left empty (pivots.md "Pivot field names
@@ -307,6 +370,48 @@ impl Cells<'_> {
                 if let (Some(cell), Some((row, column))) = (cell, place(i, level)) {
                     self.put(row, column, cell);
                 }
+            }
+        }
+    }
+
+    /// Repeat Item Labels: on `line`, the label of each level above `below` whose field has
+    /// `fillDownLabels` (the levels the line shares with the line before, which it does not
+    /// label itself), in that level's cell (pivots.md "Repeat item labels",
+    /// probes/t4698-pivot-repeat-labels). A cell belongs to the deepest level of the line placed
+    /// in it, so a level whose column it shares with the next level fills nothing: compact form
+    /// fills nothing down (CF), while a tabular field in a compact field's column does (MX!A6).
+    fn fill_down(
+        &mut self,
+        axis: &Axis<'_>,
+        line: &AxisLine,
+        below: usize,
+        place: impl Fn(usize) -> Option<(u32, u32)>,
+    ) {
+        for level in 0..below {
+            // Past the text limit nothing more is kept, so no more labels are made.
+            if self.over {
+                return;
+            }
+            let Some(Level::Field {
+                field: Some(field), ..
+            }) = axis.levels.get(level)
+            else {
+                continue;
+            };
+            if !field.fill_down_labels {
+                continue;
+            }
+            // Label columns only grow with the level, so the next level is the one that can
+            // share this one's cell.
+            let at = place(level);
+            if at.is_none() || at == place(level + 1) {
+                continue;
+            }
+            let cell = self.label(axis, line, level, 0);
+            // An empty-text item's label stays empty here too, as on its own line.
+            let cell = cell.filter(|c| !matches!(c, PivotCell::Text(t) if t.is_empty()));
+            if let (Some(cell), Some((row, column))) = (cell, at) {
+                self.put(row, column, cell);
             }
         }
     }
@@ -453,10 +558,19 @@ fn render_within(
             }
         }
     }
+    // Classic layout with no column level: the column header row heads the axis's one empty
+    // line `Total` (t4129 GZ!C4, t4745 G1!B4).
+    let classic = options.grid_drop_zones && columns.levels.is_empty();
+    if classic {
+        cells.text(header_row, data_column, CLASSIC_TOTAL);
+    }
     // One data field with Values on no axis: its caption.
     if !rows.has_values() && !columns.has_values() {
         if let Some(caption) = cells.data_caption(0).map(str::to_string) {
-            if columns.levels.is_empty() {
+            if classic {
+                // At the location's corner, as with a column field (t4129 GZ!A3, t4745 G1!A3).
+                cells.text(top, left, &caption);
+            } else if columns.levels.is_empty() {
                 cells.text(header_row, data_column, &caption);
             } else if rows.has_field() {
                 cells.text(top, left, &caption);
@@ -493,6 +607,31 @@ fn render_within(
         return Err(PivotComputeError::Limit);
     }
     Ok(cells.out)
+}
+
+/// The index of the deepest level `line` covers (its repeated levels plus its own items), which
+/// is the level a subtotal line totals; `None` for an empty line.
+fn line_depth(line: &AxisLine) -> Option<usize> {
+    (line.repeat as usize + line.items.len()).checked_sub(1)
+}
+
+/// A `subtotalCaption` with each `?` replaced by `item` (probes/t4745-pivot-classic-subtotal-caption
+/// SQ), its size checked against `text_left` before the copies are made.
+///
+/// # Errors
+/// [`PivotComputeError::Limit`] when the label would pass `text_left`.
+fn expand_caption(
+    caption: &str,
+    item: &str,
+    text_left: usize,
+) -> Result<String, PivotComputeError> {
+    let marks = caption.matches('?').count();
+    // Each `?` is one byte.
+    let bytes = (caption.len() - marks).saturating_add(marks.saturating_mul(item.len()));
+    if bytes > text_left {
+        return Err(PivotComputeError::Limit);
+    }
+    Ok(caption.replace('?', item))
 }
 
 /// Every line's node is in its axis's tree.

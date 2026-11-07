@@ -14,9 +14,9 @@ PV-0012	aggregation	ST_DataConsolidateFunction=stdDevp		values	yes	in	PV1	todo	p
 PV-0013	aggregation	ST_DataConsolidateFunction=sum		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_sum
 PV-0014	aggregation	ST_DataConsolidateFunction=var		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_var
 PV-0015	aggregation	ST_DataConsolidateFunction=varp		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_varp
-PV-0016	sorting	ST_FieldSortType=ascending		layout	unknown	in	PV2	todo	
-PV-0017	sorting	ST_FieldSortType=descending		layout	unknown	in	PV2	todo	
-PV-0018	sorting	ST_FieldSortType=manual		layout	unknown	in	PV2	todo	
+PV-0016	sorting	ST_FieldSortType=ascending		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SA
+PV-0017	sorting	ST_FieldSortType=descending		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SD
+PV-0018	sorting	ST_FieldSortType=manual		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SM
 PV-0019	grouping	ST_GroupBy=days		values	unknown	in	PV3	todo	
 PV-0020	grouping	ST_GroupBy=hours		values	unknown	in	PV3	todo	
 PV-0021	grouping	ST_GroupBy=minutes		values	unknown	in	PV3	todo	
@@ -40,72 +40,72 @@ PV-0038	totals	ST_ItemType=stdDevP		layout	yes	in	PV1	todo	probes/t4168-pivot-la
 PV-0039	totals	ST_ItemType=sum		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-0040	totals	ST_ItemType=var		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-0041	totals	ST_ItemType=varP		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
-PV-0042	filtering	ST_PivotFilterType=M1		values	unknown	in	PV2	todo	
-PV-0043	filtering	ST_PivotFilterType=M10		values	unknown	in	PV2	todo	
-PV-0044	filtering	ST_PivotFilterType=M11		values	unknown	in	PV2	todo	
-PV-0045	filtering	ST_PivotFilterType=M12		values	unknown	in	PV2	todo	
-PV-0046	filtering	ST_PivotFilterType=M2		values	unknown	in	PV2	todo	
-PV-0047	filtering	ST_PivotFilterType=M3		values	unknown	in	PV2	todo	
-PV-0048	filtering	ST_PivotFilterType=M4		values	unknown	in	PV2	todo	
-PV-0049	filtering	ST_PivotFilterType=M5		values	unknown	in	PV2	todo	
-PV-0050	filtering	ST_PivotFilterType=M6		values	unknown	in	PV2	todo	
-PV-0051	filtering	ST_PivotFilterType=M7		values	unknown	in	PV2	todo	
-PV-0052	filtering	ST_PivotFilterType=M8		values	unknown	in	PV2	todo	
-PV-0053	filtering	ST_PivotFilterType=M9		values	unknown	in	PV2	todo	
-PV-0054	filtering	ST_PivotFilterType=Q1		values	unknown	in	PV2	todo	
-PV-0055	filtering	ST_PivotFilterType=Q2		values	unknown	in	PV2	todo	
-PV-0056	filtering	ST_PivotFilterType=Q3		values	unknown	in	PV2	todo	
-PV-0057	filtering	ST_PivotFilterType=Q4		values	unknown	in	PV2	todo	
-PV-0058	filtering	ST_PivotFilterType=captionBeginsWith		values	unknown	in	PV2	todo	
-PV-0059	filtering	ST_PivotFilterType=captionBetween		values	unknown	in	PV2	todo	
-PV-0060	filtering	ST_PivotFilterType=captionContains		values	unknown	in	PV2	todo	
-PV-0061	filtering	ST_PivotFilterType=captionEndsWith		values	unknown	in	PV2	todo	
-PV-0062	filtering	ST_PivotFilterType=captionEqual		values	unknown	in	PV2	todo	
-PV-0063	filtering	ST_PivotFilterType=captionGreaterThan		values	unknown	in	PV2	todo	
-PV-0064	filtering	ST_PivotFilterType=captionGreaterThanOrEqual		values	unknown	in	PV2	todo	
-PV-0065	filtering	ST_PivotFilterType=captionLessThan		values	unknown	in	PV2	todo	
-PV-0066	filtering	ST_PivotFilterType=captionLessThanOrEqual		values	unknown	in	PV2	todo	
-PV-0067	filtering	ST_PivotFilterType=captionNotBeginsWith		values	unknown	in	PV2	todo	
-PV-0068	filtering	ST_PivotFilterType=captionNotBetween		values	unknown	in	PV2	todo	
-PV-0069	filtering	ST_PivotFilterType=captionNotContains		values	unknown	in	PV2	todo	
-PV-0070	filtering	ST_PivotFilterType=captionNotEndsWith		values	unknown	in	PV2	todo	
-PV-0071	filtering	ST_PivotFilterType=captionNotEqual		values	unknown	in	PV2	todo	
-PV-0072	filtering	ST_PivotFilterType=count		values	unknown	in	PV2	todo	
-PV-0073	filtering	ST_PivotFilterType=dateBetween		values	unknown	in	PV2	todo	
-PV-0074	filtering	ST_PivotFilterType=dateEqual		values	unknown	in	PV2	todo	
-PV-0075	filtering	ST_PivotFilterType=dateNewerThan		values	unknown	in	PV2	todo	
-PV-0076	filtering	ST_PivotFilterType=dateNewerThanOrEqual		values	unknown	in	PV2	todo	
-PV-0077	filtering	ST_PivotFilterType=dateNotBetween		values	unknown	in	PV2	todo	
-PV-0078	filtering	ST_PivotFilterType=dateNotEqual		values	unknown	in	PV2	todo	
-PV-0079	filtering	ST_PivotFilterType=dateOlderThan		values	unknown	in	PV2	todo	
-PV-0080	filtering	ST_PivotFilterType=dateOlderThanOrEqual		values	unknown	in	PV2	todo	
-PV-0081	filtering	ST_PivotFilterType=lastMonth		values	unknown	in	PV2	todo	
-PV-0082	filtering	ST_PivotFilterType=lastQuarter		values	unknown	in	PV2	todo	
-PV-0083	filtering	ST_PivotFilterType=lastWeek		values	unknown	in	PV2	todo	
-PV-0084	filtering	ST_PivotFilterType=lastYear		values	unknown	in	PV2	todo	
-PV-0085	filtering	ST_PivotFilterType=nextMonth		values	unknown	in	PV2	todo	
-PV-0086	filtering	ST_PivotFilterType=nextQuarter		values	unknown	in	PV2	todo	
-PV-0087	filtering	ST_PivotFilterType=nextWeek		values	unknown	in	PV2	todo	
-PV-0088	filtering	ST_PivotFilterType=nextYear		values	unknown	in	PV2	todo	
-PV-0089	filtering	ST_PivotFilterType=percent		values	unknown	in	PV2	todo	
-PV-0090	filtering	ST_PivotFilterType=sum		values	unknown	in	PV2	todo	
-PV-0091	filtering	ST_PivotFilterType=thisMonth		values	unknown	in	PV2	todo	
-PV-0092	filtering	ST_PivotFilterType=thisQuarter		values	unknown	in	PV2	todo	
-PV-0093	filtering	ST_PivotFilterType=thisWeek		values	unknown	in	PV2	todo	
-PV-0094	filtering	ST_PivotFilterType=thisYear		values	unknown	in	PV2	todo	
-PV-0095	filtering	ST_PivotFilterType=today		values	unknown	in	PV2	todo	
-PV-0096	filtering	ST_PivotFilterType=tomorrow		values	unknown	in	PV2	todo	
-PV-0097	filtering	ST_PivotFilterType=unknown		values	unknown	in	PV2	todo	
-PV-0098	filtering	ST_PivotFilterType=valueBetween		values	unknown	in	PV2	todo	
-PV-0099	filtering	ST_PivotFilterType=valueEqual		values	unknown	in	PV2	todo	
-PV-0100	filtering	ST_PivotFilterType=valueGreaterThan		values	unknown	in	PV2	todo	
-PV-0101	filtering	ST_PivotFilterType=valueGreaterThanOrEqual		values	unknown	in	PV2	todo	
-PV-0102	filtering	ST_PivotFilterType=valueLessThan		values	unknown	in	PV2	todo	
-PV-0103	filtering	ST_PivotFilterType=valueLessThanOrEqual		values	unknown	in	PV2	todo	
-PV-0104	filtering	ST_PivotFilterType=valueNotBetween		values	unknown	in	PV2	todo	
-PV-0105	filtering	ST_PivotFilterType=valueNotEqual		values	unknown	in	PV2	todo	
-PV-0106	filtering	ST_PivotFilterType=yearToDate		values	unknown	in	PV2	todo	
-PV-0107	filtering	ST_PivotFilterType=yesterday		values	unknown	in	PV2	todo	
+PV-0042	filtering	ST_PivotFilterType=M1		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M1
+PV-0043	filtering	ST_PivotFilterType=M10		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M10
+PV-0044	filtering	ST_PivotFilterType=M11		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M11
+PV-0045	filtering	ST_PivotFilterType=M12		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M12
+PV-0046	filtering	ST_PivotFilterType=M2		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M2
+PV-0047	filtering	ST_PivotFilterType=M3		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M3
+PV-0048	filtering	ST_PivotFilterType=M4		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M4
+PV-0049	filtering	ST_PivotFilterType=M5		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M5
+PV-0050	filtering	ST_PivotFilterType=M6		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M6
+PV-0051	filtering	ST_PivotFilterType=M7		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M7
+PV-0052	filtering	ST_PivotFilterType=M8		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M8
+PV-0053	filtering	ST_PivotFilterType=M9		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M9
+PV-0054	filtering	ST_PivotFilterType=Q1		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters Q1
+PV-0055	filtering	ST_PivotFilterType=Q2		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters Q2
+PV-0056	filtering	ST_PivotFilterType=Q3		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters Q3
+PV-0057	filtering	ST_PivotFilterType=Q4		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters Q4
+PV-0058	filtering	ST_PivotFilterType=captionBeginsWith		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CBw
+PV-0059	filtering	ST_PivotFilterType=captionBetween		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CBt
+PV-0060	filtering	ST_PivotFilterType=captionContains		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CCo
+PV-0061	filtering	ST_PivotFilterType=captionEndsWith		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEw
+PV-0062	filtering	ST_PivotFilterType=captionEqual		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq
+PV-0063	filtering	ST_PivotFilterType=captionGreaterThan		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CGt
+PV-0064	filtering	ST_PivotFilterType=captionGreaterThanOrEqual		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CGe
+PV-0065	filtering	ST_PivotFilterType=captionLessThan		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CLt
+PV-0066	filtering	ST_PivotFilterType=captionLessThanOrEqual		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CLe
+PV-0067	filtering	ST_PivotFilterType=captionNotBeginsWith		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CNb
+PV-0068	filtering	ST_PivotFilterType=captionNotBetween		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CNbt
+PV-0069	filtering	ST_PivotFilterType=captionNotContains		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CNc
+PV-0070	filtering	ST_PivotFilterType=captionNotEndsWith		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CNew
+PV-0071	filtering	ST_PivotFilterType=captionNotEqual		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CNe
+PV-0072	filtering	ST_PivotFilterType=count		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters TC TB
+PV-0073	filtering	ST_PivotFilterType=dateBetween		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters DBt
+PV-0074	filtering	ST_PivotFilterType=dateEqual		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters DEq
+PV-0075	filtering	ST_PivotFilterType=dateNewerThan		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters DNt
+PV-0076	filtering	ST_PivotFilterType=dateNewerThanOrEqual		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters DNte
+PV-0077	filtering	ST_PivotFilterType=dateNotBetween		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters DNbt
+PV-0078	filtering	ST_PivotFilterType=dateNotEqual		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters DNe
+PV-0079	filtering	ST_PivotFilterType=dateOlderThan		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters DOld
+PV-0080	filtering	ST_PivotFilterType=dateOlderThanOrEqual		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters DOldEq
+PV-0081	filtering	ST_PivotFilterType=lastMonth		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RlM
+PV-0082	filtering	ST_PivotFilterType=lastQuarter		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RlQ
+PV-0083	filtering	ST_PivotFilterType=lastWeek		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RlW
+PV-0084	filtering	ST_PivotFilterType=lastYear		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RlY
+PV-0085	filtering	ST_PivotFilterType=nextMonth		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RnM
+PV-0086	filtering	ST_PivotFilterType=nextQuarter		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RnQ
+PV-0087	filtering	ST_PivotFilterType=nextWeek		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RnW
+PV-0088	filtering	ST_PivotFilterType=nextYear		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RnY
+PV-0089	filtering	ST_PivotFilterType=percent		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters TP
+PV-0090	filtering	ST_PivotFilterType=sum		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters TS
+PV-0091	filtering	ST_PivotFilterType=thisMonth		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RtM
+PV-0092	filtering	ST_PivotFilterType=thisQuarter		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RtQ
+PV-0093	filtering	ST_PivotFilterType=thisWeek		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RtW
+PV-0094	filtering	ST_PivotFilterType=thisYear		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RtY
+PV-0095	filtering	ST_PivotFilterType=today		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters Rtoday
+PV-0096	filtering	ST_PivotFilterType=tomorrow		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters Rtom
+PV-0097	filtering	ST_PivotFilterType=unknown		values	no	in	PV2	todo	refused: T-4130 run (pivots.md "Pivot flags Excel for the web refuses")
+PV-0098	filtering	ST_PivotFilterType=valueBetween		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters VBt
+PV-0099	filtering	ST_PivotFilterType=valueEqual		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters VEq
+PV-0100	filtering	ST_PivotFilterType=valueGreaterThan		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters VGt
+PV-0101	filtering	ST_PivotFilterType=valueGreaterThanOrEqual		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters VGe
+PV-0102	filtering	ST_PivotFilterType=valueLessThan		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters VLt
+PV-0103	filtering	ST_PivotFilterType=valueLessThanOrEqual		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters VLe
+PV-0104	filtering	ST_PivotFilterType=valueNotBetween		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters VNbt
+PV-0105	filtering	ST_PivotFilterType=valueNotEqual		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters VNe
+PV-0106	filtering	ST_PivotFilterType=yearToDate		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters Rytd
+PV-0107	filtering	ST_PivotFilterType=yesterday		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters Ryest
 PV-0108	show-values-as	ST_ShowDataAs=difference		values	yes	in	PV2	todo	probes/t4129-pivot-show-as DF DP
 PV-0109	show-values-as	ST_ShowDataAs=index		values	yes	in	PV2	todo	probes/t4129-pivot-show-as IX
 PV-0110	show-values-as	ST_ShowDataAs=normal		values	yes	in	PV2	todo	probes/t4129-pivot-show-as N
@@ -259,7 +259,7 @@ PV-0257	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/e		values	
 PV-0258	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/e/tpls		values	unknown	in	PV1	todo	
 PV-0259	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/e/tpls/tpl		values	unknown	in	PV1	todo	
 PV-0260	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/e/tpls/tpl@fld		values	unknown	in	PV1	todo	
-PV-0261	filtering	pivotCacheDefinition/cacheFields/cacheField/sharedItems/e/tpls/tpl@hier		values	unknown	in	PV2	todo	
+PV-0261	filtering	pivotCacheDefinition/cacheFields/cacheField/sharedItems/e/tpls/tpl@hier		values	no	in	PV2	todo	refused: T-4130 runs, scratch files (pivots.md "Capability matrix 2")
 PV-0262	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/e/tpls/tpl@item		values	unknown	in	PV1	todo	
 PV-0263	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/e/tpls@c		values	unknown	in	PV1	todo	
 PV-0264	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/e/x		values	unknown	in	PV1	todo	
@@ -280,7 +280,7 @@ PV-0278	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/m		values	
 PV-0279	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/m/tpls		values	unknown	in	PV1	todo	
 PV-0280	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/m/tpls/tpl		values	unknown	in	PV1	todo	
 PV-0281	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/m/tpls/tpl@fld		values	unknown	in	PV1	todo	
-PV-0282	filtering	pivotCacheDefinition/cacheFields/cacheField/sharedItems/m/tpls/tpl@hier		values	unknown	in	PV2	todo	
+PV-0282	filtering	pivotCacheDefinition/cacheFields/cacheField/sharedItems/m/tpls/tpl@hier		values	no	in	PV2	todo	refused: T-4130 runs, scratch files (pivots.md "Capability matrix 2")
 PV-0283	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/m/tpls/tpl@item		values	unknown	in	PV1	todo	
 PV-0284	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/m/tpls@c		values	unknown	in	PV1	todo	
 PV-0285	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/m/x		values	unknown	in	PV1	todo	
@@ -300,7 +300,7 @@ PV-0298	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/n		values	
 PV-0299	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/n/tpls		values	unknown	in	PV1	todo	
 PV-0300	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/n/tpls/tpl		values	unknown	in	PV1	todo	
 PV-0301	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/n/tpls/tpl@fld		values	unknown	in	PV1	todo	
-PV-0302	filtering	pivotCacheDefinition/cacheFields/cacheField/sharedItems/n/tpls/tpl@hier		values	unknown	in	PV2	todo	
+PV-0302	filtering	pivotCacheDefinition/cacheFields/cacheField/sharedItems/n/tpls/tpl@hier		values	no	in	PV2	todo	refused: T-4130 runs, scratch files (pivots.md "Capability matrix 2")
 PV-0303	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/n/tpls/tpl@item		values	unknown	in	PV1	todo	
 PV-0304	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/n/tpls@c		values	unknown	in	PV1	todo	
 PV-0305	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/n/x		values	unknown	in	PV1	todo	
@@ -321,7 +321,7 @@ PV-0319	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/s		values	
 PV-0320	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/s/tpls		values	unknown	in	PV1	todo	
 PV-0321	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/s/tpls/tpl		values	unknown	in	PV1	todo	
 PV-0322	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/s/tpls/tpl@fld		values	unknown	in	PV1	todo	
-PV-0323	filtering	pivotCacheDefinition/cacheFields/cacheField/sharedItems/s/tpls/tpl@hier		values	unknown	in	PV2	todo	
+PV-0323	filtering	pivotCacheDefinition/cacheFields/cacheField/sharedItems/s/tpls/tpl@hier		values	no	in	PV2	todo	refused: T-4130 runs, scratch files (pivots.md "Capability matrix 2")
 PV-0324	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/s/tpls/tpl@item		values	unknown	in	PV1	todo	
 PV-0325	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/s/tpls@c		values	unknown	in	PV1	todo	
 PV-0326	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems/s/x		values	unknown	in	PV1	todo	
@@ -353,8 +353,8 @@ PV-0351	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems@maxValue		
 PV-0352	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems@minDate		values	unknown	in	PV1	todo	
 PV-0353	cache	pivotCacheDefinition/cacheFields/cacheField/sharedItems@minValue		values	unknown	in	PV1	todo	
 PV-0354	captions	pivotCacheDefinition/cacheFields/cacheField@caption		text	unknown	in	PV1	todo	
-PV-0355	calculated	pivotCacheDefinition/cacheFields/cacheField@databaseField	true	values	unknown	in	PV3	todo	
-PV-0356	calculated	pivotCacheDefinition/cacheFields/cacheField@formula		values	unknown	in	PV3	todo	
+PV-0355	calculated	pivotCacheDefinition/cacheFields/cacheField@databaseField	true	values	yes	in	PV3	todo	probes/t4130-pivot-calc-items CF; probes/t4128-pivot-spike K; probes/t4505-pivot-calc-fields LV
+PV-0356	calculated	pivotCacheDefinition/cacheFields/cacheField@formula		values	yes	in	PV3	todo	probes/t4130-pivot-calc-items CF; probes/t4128-pivot-spike K; probes/t4505-pivot-calc-fields LV
 PV-0357	olap-datamodel	pivotCacheDefinition/cacheFields/cacheField@hierarchy	0	none	unknown	out (decision 0274)	out	todo	
 PV-0358	metadata	pivotCacheDefinition/cacheFields/cacheField@level	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0359	cache	pivotCacheDefinition/cacheFields/cacheField@mappingCount		values	unknown	in	PV1	todo	
@@ -445,49 +445,49 @@ PV-0443	source-refresh	pivotCacheDefinition/cacheSource/worksheetSource@ref		val
 PV-0444	source-refresh	pivotCacheDefinition/cacheSource/worksheetSource@sheet		values	unknown	in	PV1	todo	
 PV-0445	olap-datamodel	pivotCacheDefinition/cacheSource@connectionId	0	none	unknown	out (decision 0274)	out	todo	
 PV-0446	source-refresh	pivotCacheDefinition/cacheSource@type		values	unknown	in	PV1	todo	
-PV-0447	calculated	pivotCacheDefinition/calculatedItems		values	unknown	in	PV3	todo	
-PV-0448	calculated	pivotCacheDefinition/calculatedItems/calculatedItem		values	unknown	in	PV3	todo	
+PV-0447	calculated	pivotCacheDefinition/calculatedItems		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0448	calculated	pivotCacheDefinition/calculatedItems/calculatedItem		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
 PV-0449	metadata	pivotCacheDefinition/calculatedItems/calculatedItem/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0450	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea		values	unknown	in	PV3	todo	
+PV-0450	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
 PV-0451	metadata	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0452	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references		values	unknown	in	PV3	todo	
-PV-0453	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference		values	unknown	in	PV3	todo	
+PV-0452	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0453	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
 PV-0454	metadata	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0455	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference/x		values	unknown	in	PV3	todo	
-PV-0456	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference/x@v		values	unknown	in	PV3	todo	
-PV-0457	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@avgSubtotal	false	values	unknown	in	PV3	todo	
-PV-0458	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@byPosition	false	values	unknown	in	PV3	todo	
-PV-0459	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@count		values	unknown	in	PV3	todo	
-PV-0460	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@countASubtotal	false	values	unknown	in	PV3	todo	
-PV-0461	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@countSubtotal	false	values	unknown	in	PV3	todo	
-PV-0462	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@defaultSubtotal	false	values	unknown	in	PV3	todo	
-PV-0463	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@field		values	unknown	in	PV3	todo	
-PV-0464	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@maxSubtotal	false	values	unknown	in	PV3	todo	
-PV-0465	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@minSubtotal	false	values	unknown	in	PV3	todo	
-PV-0466	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@productSubtotal	false	values	unknown	in	PV3	todo	
-PV-0467	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@relative	false	values	unknown	in	PV3	todo	
-PV-0468	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@selected	true	values	unknown	in	PV3	todo	
-PV-0469	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@stdDevPSubtotal	false	values	unknown	in	PV3	todo	
-PV-0470	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@stdDevSubtotal	false	values	unknown	in	PV3	todo	
-PV-0471	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@sumSubtotal	false	values	unknown	in	PV3	todo	
-PV-0472	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@varPSubtotal	false	values	unknown	in	PV3	todo	
-PV-0473	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@varSubtotal	false	values	unknown	in	PV3	todo	
-PV-0474	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references@count		values	unknown	in	PV3	todo	
-PV-0475	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@axis		values	unknown	in	PV3	todo	
-PV-0476	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@cacheIndex	false	values	unknown	in	PV3	todo	
-PV-0477	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@collapsedLevelsAreSubtotals	false	values	unknown	in	PV3	todo	
-PV-0478	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@dataOnly	true	values	unknown	in	PV3	todo	
-PV-0479	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@field		values	unknown	in	PV3	todo	
-PV-0480	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@fieldPosition		values	unknown	in	PV3	todo	
-PV-0481	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@grandCol	false	values	unknown	in	PV3	todo	
-PV-0482	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@grandRow	false	values	unknown	in	PV3	todo	
-PV-0483	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@labelOnly	false	values	unknown	in	PV3	todo	
-PV-0484	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@offset		values	unknown	in	PV3	todo	
-PV-0485	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@outline	true	values	unknown	in	PV3	todo	
-PV-0486	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@type	normal	values	unknown	in	PV3	todo	
-PV-0487	calculated	pivotCacheDefinition/calculatedItems/calculatedItem@field		values	unknown	in	PV3	todo	
-PV-0488	calculated	pivotCacheDefinition/calculatedItems/calculatedItem@formula		values	unknown	in	PV3	todo	
-PV-0489	calculated	pivotCacheDefinition/calculatedItems@count		values	unknown	in	PV3	todo	
+PV-0455	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference/x		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0456	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference/x@v		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0457	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@avgSubtotal	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0458	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@byPosition	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0459	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@count		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0460	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@countASubtotal	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0461	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@countSubtotal	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0462	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@defaultSubtotal	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0463	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@field		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0464	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@maxSubtotal	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0465	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@minSubtotal	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0466	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@productSubtotal	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0467	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@relative	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0468	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@selected	true	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0469	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@stdDevPSubtotal	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0470	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@stdDevSubtotal	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0471	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@sumSubtotal	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0472	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@varPSubtotal	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0473	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references/reference@varSubtotal	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0474	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea/references@count		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0475	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@axis		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0476	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@cacheIndex	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0477	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@collapsedLevelsAreSubtotals	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0478	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@dataOnly	true	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0479	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@field		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0480	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@fieldPosition		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0481	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@grandCol	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0482	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@grandRow	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0483	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@labelOnly	false	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0484	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@offset		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0485	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@outline	true	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0486	calculated	pivotCacheDefinition/calculatedItems/calculatedItem/pivotArea@type	normal	values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0487	calculated	pivotCacheDefinition/calculatedItems/calculatedItem@field		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0488	calculated	pivotCacheDefinition/calculatedItems/calculatedItem@formula		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
+PV-0489	calculated	pivotCacheDefinition/calculatedItems@count		values	no	in	PV3	todo	refused with the item f=1: T-4130 runs (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-calc-items CI0 CIA0 (item f=0: opens, the item is not computed)
 PV-0490	olap-datamodel	pivotCacheDefinition/calculatedMembers		none	unknown	out (decision 0274)	out	todo	
 PV-0491	olap-datamodel	pivotCacheDefinition/calculatedMembers/calculatedMember		none	unknown	out (decision 0274)	out	todo	
 PV-0492	olap-datamodel	pivotCacheDefinition/calculatedMembers/calculatedMember/extLst		none	unknown	out (decision 0274)	out	todo	
@@ -697,7 +697,7 @@ PV-0695	cache	pivotCacheRecords/r/e		values	unknown	in	PV1	todo
 PV-0696	cache	pivotCacheRecords/r/e/tpls		values	unknown	in	PV1	todo	
 PV-0697	cache	pivotCacheRecords/r/e/tpls/tpl		values	unknown	in	PV1	todo	
 PV-0698	cache	pivotCacheRecords/r/e/tpls/tpl@fld		values	unknown	in	PV1	todo	
-PV-0699	filtering	pivotCacheRecords/r/e/tpls/tpl@hier		values	unknown	in	PV2	todo	
+PV-0699	filtering	pivotCacheRecords/r/e/tpls/tpl@hier		values	unknown	in	PV2	todo	UNVERIFIED: opened in T-4130 scratch runs, not committed (pivots.md "Capability matrix 2"); probe pending: T-4767
 PV-0700	cache	pivotCacheRecords/r/e/tpls/tpl@item		values	unknown	in	PV1	todo	
 PV-0701	cache	pivotCacheRecords/r/e/tpls@c		values	unknown	in	PV1	todo	
 PV-0702	cache	pivotCacheRecords/r/e/x		values	unknown	in	PV1	todo	
@@ -718,7 +718,7 @@ PV-0716	cache	pivotCacheRecords/r/m		values	unknown	in	PV1	todo
 PV-0717	cache	pivotCacheRecords/r/m/tpls		values	unknown	in	PV1	todo	
 PV-0718	cache	pivotCacheRecords/r/m/tpls/tpl		values	unknown	in	PV1	todo	
 PV-0719	cache	pivotCacheRecords/r/m/tpls/tpl@fld		values	unknown	in	PV1	todo	
-PV-0720	filtering	pivotCacheRecords/r/m/tpls/tpl@hier		values	unknown	in	PV2	todo	
+PV-0720	filtering	pivotCacheRecords/r/m/tpls/tpl@hier		values	unknown	in	PV2	todo	UNVERIFIED: opened in T-4130 scratch runs, not committed (pivots.md "Capability matrix 2"); probe pending: T-4767
 PV-0721	cache	pivotCacheRecords/r/m/tpls/tpl@item		values	unknown	in	PV1	todo	
 PV-0722	cache	pivotCacheRecords/r/m/tpls@c		values	unknown	in	PV1	todo	
 PV-0723	cache	pivotCacheRecords/r/m/x		values	unknown	in	PV1	todo	
@@ -738,7 +738,7 @@ PV-0736	cache	pivotCacheRecords/r/n		values	unknown	in	PV1	todo
 PV-0737	cache	pivotCacheRecords/r/n/tpls		values	unknown	in	PV1	todo	
 PV-0738	cache	pivotCacheRecords/r/n/tpls/tpl		values	unknown	in	PV1	todo	
 PV-0739	cache	pivotCacheRecords/r/n/tpls/tpl@fld		values	unknown	in	PV1	todo	
-PV-0740	filtering	pivotCacheRecords/r/n/tpls/tpl@hier		values	unknown	in	PV2	todo	
+PV-0740	filtering	pivotCacheRecords/r/n/tpls/tpl@hier		values	unknown	in	PV2	todo	UNVERIFIED: opened in T-4130 scratch runs, not committed (pivots.md "Capability matrix 2"); probe pending: T-4767
 PV-0741	cache	pivotCacheRecords/r/n/tpls/tpl@item		values	unknown	in	PV1	todo	
 PV-0742	cache	pivotCacheRecords/r/n/tpls@c		values	unknown	in	PV1	todo	
 PV-0743	cache	pivotCacheRecords/r/n/x		values	unknown	in	PV1	todo	
@@ -759,7 +759,7 @@ PV-0757	cache	pivotCacheRecords/r/s		values	unknown	in	PV1	todo
 PV-0758	cache	pivotCacheRecords/r/s/tpls		values	unknown	in	PV1	todo	
 PV-0759	cache	pivotCacheRecords/r/s/tpls/tpl		values	unknown	in	PV1	todo	
 PV-0760	cache	pivotCacheRecords/r/s/tpls/tpl@fld		values	unknown	in	PV1	todo	
-PV-0761	filtering	pivotCacheRecords/r/s/tpls/tpl@hier		values	unknown	in	PV2	todo	
+PV-0761	filtering	pivotCacheRecords/r/s/tpls/tpl@hier		values	unknown	in	PV2	todo	UNVERIFIED: opened in T-4130 scratch runs, not committed (pivots.md "Capability matrix 2"); probe pending: T-4767
 PV-0762	cache	pivotCacheRecords/r/s/tpls/tpl@item		values	unknown	in	PV1	todo	
 PV-0763	cache	pivotCacheRecords/r/s/tpls@c		values	unknown	in	PV1	todo	
 PV-0764	cache	pivotCacheRecords/r/s/x		values	unknown	in	PV1	todo	
@@ -898,79 +898,79 @@ PV-0896	show-values-as	pivotTableDefinition/dataFields/dataField@showDataAs	norm
 PV-0897	aggregation	pivotTableDefinition/dataFields/dataField@subtotal	sum	values	yes	in	PV1	todo	probes/t4135-pivot-aggregates
 PV-0898	aggregation	pivotTableDefinition/dataFields@count		values	yes	in	PV1	todo	probes/t4123-pivot-capture T
 PV-0899	metadata	pivotTableDefinition/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0900	filtering	pivotTableDefinition/filters		values	unknown	in	PV2	todo	
-PV-0901	filtering	pivotTableDefinition/filters/filter		values	unknown	in	PV2	todo	
-PV-0902	filtering	pivotTableDefinition/filters/filter/autoFilter		values	unknown	in	PV2	todo	
+PV-0900	filtering	pivotTableDefinition/filters		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq; probes/t4130-pivot-value-filters VGt
+PV-0901	filtering	pivotTableDefinition/filters/filter		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq; probes/t4130-pivot-value-filters VGt
+PV-0902	filtering	pivotTableDefinition/filters/filter/autoFilter		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq; probes/t4130-pivot-value-filters VGt
 PV-0903	metadata	pivotTableDefinition/filters/filter/autoFilter/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0904	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn		values	unknown	in	PV2	todo	
-PV-0905	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/colorFilter		values	unknown	in	PV2	todo	
-PV-0906	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/colorFilter@cellColor	true	values	unknown	in	PV2	todo	
+PV-0904	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq; probes/t4130-pivot-value-filters VGt
+PV-0905	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/colorFilter		values	no	in	PV2	todo	refused: T-4130 run (pivots.md "Pivot flags Excel for the web refuses")
+PV-0906	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/colorFilter@cellColor	true	values	no	in	PV2	todo	refused: T-4130 run (pivots.md "Pivot flags Excel for the web refuses")
 PV-0907	formatting	pivotTableDefinition/filters/filter/autoFilter/filterColumn/colorFilter@dxfId		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0908	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/customFilters		values	unknown	in	PV2	todo	
-PV-0909	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/customFilters/customFilter		values	unknown	in	PV2	todo	
-PV-0910	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/customFilters/customFilter@operator	equal	values	unknown	in	PV2	todo	
-PV-0911	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/customFilters/customFilter@val		values	unknown	in	PV2	todo	
-PV-0912	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/customFilters@and	false	values	unknown	in	PV2	todo	
-PV-0913	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/dynamicFilter		values	unknown	in	PV2	todo	
-PV-0914	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/dynamicFilter@maxVal		values	unknown	in	PV2	todo	
-PV-0915	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/dynamicFilter@maxValIso		values	unknown	in	PV2	todo	
-PV-0916	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/dynamicFilter@type		values	unknown	in	PV2	todo	
-PV-0917	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/dynamicFilter@val		values	unknown	in	PV2	todo	
-PV-0918	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/dynamicFilter@valIso		values	unknown	in	PV2	todo	
+PV-0908	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/customFilters		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq
+PV-0909	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/customFilters/customFilter		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq
+PV-0910	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/customFilters/customFilter@operator	equal	values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CGt; probes/t4130-pivot-value-filters VGt
+PV-0911	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/customFilters/customFilter@val		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq
+PV-0912	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/customFilters@and	false	values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CBt; probes/t4130-pivot-value-filters VBt
+PV-0913	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/dynamicFilter		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M1; probes/t4130-pivot-relative-date-filters Rtoday
+PV-0914	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/dynamicFilter@maxVal		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RtMv
+PV-0915	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/dynamicFilter@maxValIso		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RtMv
+PV-0916	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/dynamicFilter@type		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters M1; probes/t4130-pivot-relative-date-filters Rtoday
+PV-0917	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/dynamicFilter@val		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RtMv
+PV-0918	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/dynamicFilter@valIso		values	yes	in	PV2	todo	probes/t4130-pivot-relative-date-filters RtMv
 PV-0919	metadata	pivotTableDefinition/filters/filter/autoFilter/filterColumn/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0920	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters		values	unknown	in	PV2	todo	
-PV-0921	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem		values	unknown	in	PV2	todo	
-PV-0922	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@dateTimeGrouping		values	unknown	in	PV2	todo	
-PV-0923	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@day		values	unknown	in	PV2	todo	
-PV-0924	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@hour		values	unknown	in	PV2	todo	
-PV-0925	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@minute		values	unknown	in	PV2	todo	
-PV-0926	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@month		values	unknown	in	PV2	todo	
-PV-0927	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@second		values	unknown	in	PV2	todo	
-PV-0928	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@year		values	unknown	in	PV2	todo	
-PV-0929	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/filter		values	unknown	in	PV2	todo	
-PV-0930	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/filter@val		values	unknown	in	PV2	todo	
-PV-0931	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters@blank	false	values	unknown	in	PV2	todo	
-PV-0932	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters@calendarType	none	values	unknown	in	PV2	todo	
-PV-0933	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/iconFilter		values	unknown	in	PV2	todo	
-PV-0934	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/iconFilter@iconId		values	unknown	in	PV2	todo	
-PV-0935	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/iconFilter@iconSet		values	unknown	in	PV2	todo	
-PV-0936	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/top10		values	unknown	in	PV2	todo	
-PV-0937	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/top10@filterVal		values	unknown	in	PV2	todo	
-PV-0938	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/top10@percent	false	values	unknown	in	PV2	todo	
-PV-0939	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/top10@top	true	values	unknown	in	PV2	todo	
-PV-0940	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/top10@val		values	unknown	in	PV2	todo	
-PV-0941	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn@colId		values	unknown	in	PV2	todo	
-PV-0942	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn@hiddenButton	false	values	unknown	in	PV2	todo	
-PV-0943	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn@showButton	true	values	unknown	in	PV2	todo	
-PV-0944	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState		values	unknown	in	PV2	todo	
+PV-0920	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FVals
+PV-0921	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FDgi
+PV-0922	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@dateTimeGrouping		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FDgi
+PV-0923	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@day		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FDgi
+PV-0924	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@hour		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FDgi
+PV-0925	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@minute		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FDgi
+PV-0926	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@month		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FDgi
+PV-0927	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@second		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FDgi
+PV-0928	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/dateGroupItem@year		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FDgi
+PV-0929	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/filter		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FVals
+PV-0930	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters/filter@val		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FVals
+PV-0931	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters@blank	false	values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FVals
+PV-0932	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/filters@calendarType	none	values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FVals
+PV-0933	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/iconFilter		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FIcon
+PV-0934	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/iconFilter@iconId		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FIcon
+PV-0935	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/iconFilter@iconSet		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FIcon
+PV-0936	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/top10		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters TC
+PV-0937	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/top10@filterVal		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters TC TCv
+PV-0938	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/top10@percent	false	values	yes	in	PV2	todo	probes/t4130-pivot-value-filters TP
+PV-0939	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/top10@top	true	values	yes	in	PV2	todo	probes/t4130-pivot-value-filters TB
+PV-0940	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn/top10@val		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters TC
+PV-0941	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn@colId		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq
+PV-0942	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn@hiddenButton	false	values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FBtn
+PV-0943	filtering	pivotTableDefinition/filters/filter/autoFilter/filterColumn@showButton	true	values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FBtn
+PV-0944	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FSort
 PV-0945	metadata	pivotTableDefinition/filters/filter/autoFilter/sortState/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0946	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition		values	unknown	in	PV2	todo	
-PV-0947	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@customList		values	unknown	in	PV2	todo	
-PV-0948	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@descending	false	values	unknown	in	PV2	todo	
+PV-0946	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FSort
+PV-0947	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@customList		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FSort
+PV-0948	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@descending	false	values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FSort
 PV-0949	formatting	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@dxfId		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0950	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@iconId		values	unknown	in	PV2	todo	
-PV-0951	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@iconSet	3Arrows	values	unknown	in	PV2	todo	
-PV-0952	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@ref		values	unknown	in	PV2	todo	
-PV-0953	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@sortBy	value	values	unknown	in	PV2	todo	
-PV-0954	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState@caseSensitive	false	values	unknown	in	PV2	todo	
-PV-0955	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState@columnSort	false	values	unknown	in	PV2	todo	
-PV-0956	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState@ref		values	unknown	in	PV2	todo	
-PV-0957	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState@sortMethod	none	values	unknown	in	PV2	todo	
-PV-0958	filtering	pivotTableDefinition/filters/filter/autoFilter@ref		values	unknown	in	PV2	todo	
+PV-0950	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@iconId		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FSort
+PV-0951	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@iconSet	3Arrows	values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FSort
+PV-0952	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@ref		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FSort
+PV-0953	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState/sortCondition@sortBy	value	values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FSort
+PV-0954	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState@caseSensitive	false	values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FSort
+PV-0955	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState@columnSort	false	values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FSort
+PV-0956	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState@ref		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FSort
+PV-0957	filtering	pivotTableDefinition/filters/filter/autoFilter/sortState@sortMethod	none	values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FSort
+PV-0958	filtering	pivotTableDefinition/filters/filter/autoFilter@ref		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq
 PV-0959	metadata	pivotTableDefinition/filters/filter/autoFilter@xr:uid		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0960	metadata	pivotTableDefinition/filters/filter/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0961	filtering	pivotTableDefinition/filters/filter@description		values	unknown	in	PV2	todo	
-PV-0962	filtering	pivotTableDefinition/filters/filter@evalOrder	0	values	unknown	in	PV2	todo	
-PV-0963	filtering	pivotTableDefinition/filters/filter@fld		values	unknown	in	PV2	todo	
-PV-0964	filtering	pivotTableDefinition/filters/filter@iMeasureFld		values	unknown	in	PV2	todo	
-PV-0965	filtering	pivotTableDefinition/filters/filter@iMeasureHier		values	unknown	in	PV2	todo	
+PV-0961	filtering	pivotTableDefinition/filters/filter@description		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FMeta
+PV-0962	filtering	pivotTableDefinition/filters/filter@evalOrder	0	values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq; probes/t4130-pivot-filter-attrs FEo
+PV-0963	filtering	pivotTableDefinition/filters/filter@fld		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq
+PV-0964	filtering	pivotTableDefinition/filters/filter@iMeasureFld		values	yes	in	PV2	todo	probes/t4130-pivot-value-filters VM1
+PV-0965	filtering	pivotTableDefinition/filters/filter@iMeasureHier		values	no	in	PV2	todo	refused: T-4130 run (pivots.md "Pivot flags Excel for the web refuses")
 PV-0966	metadata	pivotTableDefinition/filters/filter@id		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0967	filtering	pivotTableDefinition/filters/filter@mpFld		values	unknown	in	PV2	todo	
-PV-0968	filtering	pivotTableDefinition/filters/filter@name		values	unknown	in	PV2	todo	
-PV-0969	filtering	pivotTableDefinition/filters/filter@stringValue1		values	unknown	in	PV2	todo	
-PV-0970	filtering	pivotTableDefinition/filters/filter@stringValue2		values	unknown	in	PV2	todo	
-PV-0971	filtering	pivotTableDefinition/filters/filter@type		values	unknown	in	PV2	todo	
-PV-0972	filtering	pivotTableDefinition/filters@count	0	values	unknown	in	PV2	todo	
+PV-0967	filtering	pivotTableDefinition/filters/filter@mpFld		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FMp
+PV-0968	filtering	pivotTableDefinition/filters/filter@name		values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FMeta
+PV-0969	filtering	pivotTableDefinition/filters/filter@stringValue1		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq CMix
+PV-0970	filtering	pivotTableDefinition/filters/filter@stringValue2		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CBt
+PV-0971	filtering	pivotTableDefinition/filters/filter@type		values	yes	in	PV2	todo	probes/t4130-pivot-label-filters CEq
+PV-0972	filtering	pivotTableDefinition/filters@count	0	values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FMf1 FTwo
 PV-0973	formatting	pivotTableDefinition/formats		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0974	formatting	pivotTableDefinition/formats/format		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0975	metadata	pivotTableDefinition/formats/format/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1021,55 +1021,55 @@ PV-1019	layout	pivotTableDefinition/location@firstDataRow		layout	yes	in	PV1	tod
 PV-1020	layout	pivotTableDefinition/location@firstHeaderRow		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-1021	layout	pivotTableDefinition/location@ref		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-1022	layout	pivotTableDefinition/location@rowPageCount	0	layout	yes	in	PV1	todo	probes/t4138-pivot-geometry G8
-PV-1023	filtering	pivotTableDefinition/pageFields		values	unknown	in	PV2	todo	
-PV-1024	filtering	pivotTableDefinition/pageFields/pageField		values	unknown	in	PV2	todo	
+PV-1023	filtering	pivotTableDefinition/pageFields		values	yes	in	PV2	todo	probes/t4130-pivot-field-filters PM PC; probes/t4137-pivot-captions K4
+PV-1024	filtering	pivotTableDefinition/pageFields/pageField		values	yes	in	PV2	todo	probes/t4130-pivot-field-filters PC
 PV-1025	metadata	pivotTableDefinition/pageFields/pageField/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1026	filtering	pivotTableDefinition/pageFields/pageField@cap		values	unknown	in	PV2	todo	
-PV-1027	filtering	pivotTableDefinition/pageFields/pageField@fld		values	unknown	in	PV2	todo	
-PV-1028	filtering	pivotTableDefinition/pageFields/pageField@hier		values	unknown	in	PV2	todo	
-PV-1029	filtering	pivotTableDefinition/pageFields/pageField@item		values	unknown	in	PV2	todo	
-PV-1030	filtering	pivotTableDefinition/pageFields/pageField@name		values	unknown	in	PV2	todo	
-PV-1031	filtering	pivotTableDefinition/pageFields@count		values	unknown	in	PV2	todo	
+PV-1026	filtering	pivotTableDefinition/pageFields/pageField@cap		values	yes	in	PV2	todo	probes/t4130-pivot-field-filters PC
+PV-1027	filtering	pivotTableDefinition/pageFields/pageField@fld		values	yes	in	PV2	todo	probes/t4130-pivot-field-filters PM PC; probes/t4137-pivot-captions K4
+PV-1028	filtering	pivotTableDefinition/pageFields/pageField@hier		values	yes	in	PV2	todo	probes/t4130-pivot-field-filters PC
+PV-1029	filtering	pivotTableDefinition/pageFields/pageField@item		values	yes	in	PV2	todo	probes/t4130-pivot-field-filters PM PC; probes/t4137-pivot-captions K4
+PV-1030	filtering	pivotTableDefinition/pageFields/pageField@name		values	yes	in	PV2	todo	probes/t4130-pivot-field-filters PC
+PV-1031	filtering	pivotTableDefinition/pageFields@count		values	yes	in	PV2	todo	probes/t4130-pivot-field-filters PM PC; probes/t4137-pivot-captions K4
 PV-1032	layout	pivotTableDefinition/pivotFields		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-1033	layout	pivotTableDefinition/pivotFields/pivotField		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
-PV-1034	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope		layout	unknown	in	PV2	todo	
-PV-1035	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea		layout	unknown	in	PV2	todo	
+PV-1034	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SV SVA SVR
+PV-1035	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SV SVA SVR
 PV-1036	metadata	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1037	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references		layout	unknown	in	PV2	todo	
-PV-1038	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference		layout	unknown	in	PV2	todo	
+PV-1037	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SV SVA SVR
+PV-1038	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SV SVA SVR
 PV-1039	metadata	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1040	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference/x		layout	unknown	in	PV2	todo	
-PV-1041	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference/x@v		layout	unknown	in	PV2	todo	
-PV-1042	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@avgSubtotal	false	layout	unknown	in	PV2	todo	
-PV-1043	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@byPosition	false	layout	unknown	in	PV2	todo	
-PV-1044	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@count		layout	unknown	in	PV2	todo	
-PV-1045	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@countASubtotal	false	layout	unknown	in	PV2	todo	
-PV-1046	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@countSubtotal	false	layout	unknown	in	PV2	todo	
-PV-1047	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@defaultSubtotal	false	layout	unknown	in	PV2	todo	
-PV-1048	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@field		layout	unknown	in	PV2	todo	
-PV-1049	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@maxSubtotal	false	layout	unknown	in	PV2	todo	
-PV-1050	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@minSubtotal	false	layout	unknown	in	PV2	todo	
-PV-1051	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@productSubtotal	false	layout	unknown	in	PV2	todo	
-PV-1052	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@relative	false	layout	unknown	in	PV2	todo	
-PV-1053	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@selected	true	layout	unknown	in	PV2	todo	
-PV-1054	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@stdDevPSubtotal	false	layout	unknown	in	PV2	todo	
-PV-1055	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@stdDevSubtotal	false	layout	unknown	in	PV2	todo	
-PV-1056	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@sumSubtotal	false	layout	unknown	in	PV2	todo	
-PV-1057	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@varPSubtotal	false	layout	unknown	in	PV2	todo	
-PV-1058	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@varSubtotal	false	layout	unknown	in	PV2	todo	
-PV-1059	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references@count		layout	unknown	in	PV2	todo	
-PV-1060	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@axis		layout	unknown	in	PV2	todo	
-PV-1061	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@cacheIndex	false	layout	unknown	in	PV2	todo	
-PV-1062	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@collapsedLevelsAreSubtotals	false	layout	unknown	in	PV2	todo	
-PV-1063	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@dataOnly	true	layout	unknown	in	PV2	todo	
-PV-1064	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@field		layout	unknown	in	PV2	todo	
-PV-1065	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@fieldPosition		layout	unknown	in	PV2	todo	
-PV-1066	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@grandCol	false	layout	unknown	in	PV2	todo	
-PV-1067	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@grandRow	false	layout	unknown	in	PV2	todo	
-PV-1068	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@labelOnly	false	layout	unknown	in	PV2	todo	
-PV-1069	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@offset		layout	unknown	in	PV2	todo	
-PV-1070	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@outline	true	layout	unknown	in	PV2	todo	
-PV-1071	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@type	normal	layout	unknown	in	PV2	todo	
+PV-1040	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference/x		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SV SVA SVR
+PV-1041	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference/x@v		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SV SV2
+PV-1042	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@avgSubtotal	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1043	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@byPosition	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1044	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@count		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SV SVA SVR
+PV-1045	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@countASubtotal	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1046	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@countSubtotal	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1047	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@defaultSubtotal	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1048	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@field		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SVC
+PV-1049	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@maxSubtotal	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1050	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@minSubtotal	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1051	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@productSubtotal	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1052	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@relative	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1053	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@selected	true	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SV SVA SVR
+PV-1054	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@stdDevPSubtotal	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1055	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@stdDevSubtotal	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1056	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@sumSubtotal	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1057	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@varPSubtotal	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1058	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references/reference@varSubtotal	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXR
+PV-1059	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/references@count		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SVC
+PV-1060	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@axis		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXA
+PV-1061	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@cacheIndex	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXA
+PV-1062	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@collapsedLevelsAreSubtotals	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXA
+PV-1063	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@dataOnly	true	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SV SVA SVR
+PV-1064	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@field		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXA
+PV-1065	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@fieldPosition		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SV SVA SVR
+PV-1066	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@grandCol	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXA
+PV-1067	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@grandRow	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXA
+PV-1068	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@labelOnly	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXA
+PV-1069	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@offset		layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXA
+PV-1070	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@outline	true	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SV SVA SVR
+PV-1071	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@type	normal	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SXA
 PV-1072	metadata	pivotTableDefinition/pivotFields/pivotField/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1073	layout	pivotTableDefinition/pivotFields/pivotField/items		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-1074	layout	pivotTableDefinition/pivotFields/pivotField/items/item		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
@@ -1077,16 +1077,16 @@ PV-1075	layout	pivotTableDefinition/pivotFields/pivotField/items/item@c	false	la
 PV-1076	layout	pivotTableDefinition/pivotFields/pivotField/items/item@d	false	layout	no	in	PV1	todo	T-4129 runs: the web refuses the file (FileCorruptTryRepair); pivots.md; out of scope (decision 0266)
 PV-1077	layout	pivotTableDefinition/pivotFields/pivotField/items/item@e	true	layout	yes	in	PV1	todo	probes/t4129-pivot-item-flags IE
 PV-1078	layout	pivotTableDefinition/pivotFields/pivotField/items/item@f	false	layout	no	in	PV1	todo	T-4129 runs: the web refuses the file (FileCorruptTryRepair); pivots.md; out of scope (decision 0266)
-PV-1079	filtering	pivotTableDefinition/pivotFields/pivotField/items/item@h	false	values	unknown	in	PV2	todo	
+PV-1079	filtering	pivotTableDefinition/pivotFields/pivotField/items/item@h	false	values	yes	in	PV2	todo	probes/t4130-pivot-field-filters IH; probes/t4137-pivot-captions K4
 PV-1080	layout	pivotTableDefinition/pivotFields/pivotField/items/item@m	false	layout	yes	in	PV1	todo	probes/t4129-pivot-item-flags IM
 PV-1081	captions	pivotTableDefinition/pivotFields/pivotField/items/item@n		text	unknown	in	PV1	todo	
-PV-1082	filtering	pivotTableDefinition/pivotFields/pivotField/items/item@s	false	values	unknown	in	PV2	todo	
+PV-1082	filtering	pivotTableDefinition/pivotFields/pivotField/items/item@s	false	values	no	in	PV2	todo	s=1 refused: T-4130 run (pivots.md "Pivot flags Excel for the web refuses"); probes/t4130-pivot-field-filters IS0 (s=0 opens)
 PV-1083	layout	pivotTableDefinition/pivotFields/pivotField/items/item@sd	true	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options SD SD2
 PV-1084	totals	pivotTableDefinition/pivotFields/pivotField/items/item@t	data	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1085	layout	pivotTableDefinition/pivotFields/pivotField/items/item@x		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-1086	layout	pivotTableDefinition/pivotFields/pivotField/items@count		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-1087	layout	pivotTableDefinition/pivotFields/pivotField@allDrilled	false	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags FA
-PV-1088	filtering	pivotTableDefinition/pivotFields/pivotField@autoShow	false	values	unknown	in	PV2	todo	
+PV-1088	filtering	pivotTableDefinition/pivotFields/pivotField@autoShow	false	values	yes	in	PV2	todo	probes/t4130-pivot-field-filters AS ASb
 PV-1089	totals	pivotTableDefinition/pivotFields/pivotField@avgSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1090	layout	pivotTableDefinition/pivotFields/pivotField@axis		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-1091	layout	pivotTableDefinition/pivotFields/pivotField@compact	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
@@ -1101,35 +1101,35 @@ PV-1099	ui	pivotTableDefinition/pivotFields/pivotField@dragToCol	true	none	unkno
 PV-1100	ui	pivotTableDefinition/pivotFields/pivotField@dragToData	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1101	ui	pivotTableDefinition/pivotFields/pivotField@dragToPage	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1102	ui	pivotTableDefinition/pivotFields/pivotField@dragToRow	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1103	filtering	pivotTableDefinition/pivotFields/pivotField@hiddenLevel	false	values	unknown	in	PV2	todo	
-PV-1104	filtering	pivotTableDefinition/pivotFields/pivotField@hideNewItems	false	values	unknown	in	PV2	todo	
-PV-1105	filtering	pivotTableDefinition/pivotFields/pivotField@includeNewItemsInFilter	false	values	unknown	in	PV2	todo	
+PV-1103	filtering	pivotTableDefinition/pivotFields/pivotField@hiddenLevel	false	values	no	in	PV2	todo	refused: T-4130 run (pivots.md "Pivot flags Excel for the web refuses")
+PV-1104	filtering	pivotTableDefinition/pivotFields/pivotField@hideNewItems	false	values	no	in	PV2	todo	refused: T-4130 run (pivots.md "Pivot flags Excel for the web refuses")
+PV-1105	filtering	pivotTableDefinition/pivotFields/pivotField@includeNewItemsInFilter	false	values	yes	in	PV2	todo	probes/t4130-pivot-field-filters HN2
 PV-1106	layout	pivotTableDefinition/pivotFields/pivotField@insertBlankRow	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options BR BR2
 PV-1107	ui	pivotTableDefinition/pivotFields/pivotField@insertPageBreak	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1108	filtering	pivotTableDefinition/pivotFields/pivotField@itemPageCount	10	values	unknown	in	PV2	todo	
+PV-1108	filtering	pivotTableDefinition/pivotFields/pivotField@itemPageCount	10	values	yes	in	PV2	todo	probes/t4130-pivot-field-filters AS ASb
 PV-1109	totals	pivotTableDefinition/pivotFields/pivotField@maxSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
-PV-1110	filtering	pivotTableDefinition/pivotFields/pivotField@measureFilter	false	values	unknown	in	PV2	todo	
+PV-1110	filtering	pivotTableDefinition/pivotFields/pivotField@measureFilter	false	values	yes	in	PV2	todo	probes/t4130-pivot-field-filters MF1
 PV-1111	totals	pivotTableDefinition/pivotFields/pivotField@minSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
-PV-1112	filtering	pivotTableDefinition/pivotFields/pivotField@multipleItemSelectionAllowed	false	values	unknown	in	PV2	todo	
+PV-1112	filtering	pivotTableDefinition/pivotFields/pivotField@multipleItemSelectionAllowed	false	values	yes	in	PV2	todo	probes/t4130-pivot-field-filters PM
 PV-1113	captions	pivotTableDefinition/pivotFields/pivotField@name		text	unknown	in	PV1	todo	
-PV-1114	sorting	pivotTableDefinition/pivotFields/pivotField@nonAutoSortDefault	false	layout	unknown	in	PV2	todo	
+PV-1114	sorting	pivotTableDefinition/pivotFields/pivotField@nonAutoSortDefault	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort NA
 PV-1115	aggregation	pivotTableDefinition/pivotFields/pivotField@numFmtId		values	yes	in	PV1	todo	probes/t4129-pivot-layout-flags NF
 PV-1116	layout	pivotTableDefinition/pivotFields/pivotField@outline	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
 PV-1117	totals	pivotTableDefinition/pivotFields/pivotField@productSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
-PV-1118	filtering	pivotTableDefinition/pivotFields/pivotField@rankBy		values	unknown	in	PV2	todo	
+PV-1118	filtering	pivotTableDefinition/pivotFields/pivotField@rankBy		values	yes	in	PV2	todo	probes/t4130-pivot-field-filters AS ASb
 PV-1119	olap-datamodel	pivotTableDefinition/pivotFields/pivotField@serverField	false	none	unknown	out (decision 0274)	out	todo	
 PV-1120	layout	pivotTableDefinition/pivotFields/pivotField@showAll	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture C (showAll 0); probes/t4311-pivot-showall-column-and-groups Calc B (GETPIVOTDATA on P!A13, showAll 1)
 PV-1121	ui	pivotTableDefinition/pivotFields/pivotField@showDropDowns	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1122	ui	pivotTableDefinition/pivotFields/pivotField@showPropAsCaption	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1123	ui	pivotTableDefinition/pivotFields/pivotField@showPropCell	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1124	ui	pivotTableDefinition/pivotFields/pivotField@showPropTip	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1125	sorting	pivotTableDefinition/pivotFields/pivotField@sortType	manual	layout	unknown	in	PV2	todo	
+PV-1125	sorting	pivotTableDefinition/pivotFields/pivotField@sortType	manual	layout	yes	in	PV2	todo	probes/t4130-pivot-sort SA SD SM
 PV-1126	totals	pivotTableDefinition/pivotFields/pivotField@stdDevPSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1127	totals	pivotTableDefinition/pivotFields/pivotField@stdDevSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1128	totals	pivotTableDefinition/pivotFields/pivotField@subtotalCaption		layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags SC
 PV-1129	totals	pivotTableDefinition/pivotFields/pivotField@subtotalTop	true	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags ST
 PV-1130	totals	pivotTableDefinition/pivotFields/pivotField@sumSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
-PV-1131	filtering	pivotTableDefinition/pivotFields/pivotField@topAutoShow	true	values	unknown	in	PV2	todo	
+PV-1131	filtering	pivotTableDefinition/pivotFields/pivotField@topAutoShow	true	values	yes	in	PV2	todo	probes/t4130-pivot-field-filters ASb
 PV-1132	olap-datamodel	pivotTableDefinition/pivotFields/pivotField@uniqueMemberProperty		none	unknown	out (decision 0274)	out	todo	
 PV-1133	totals	pivotTableDefinition/pivotFields/pivotField@varPSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1134	totals	pivotTableDefinition/pivotFields/pivotField@varSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
@@ -1197,7 +1197,7 @@ PV-1195	captions	pivotTableDefinition@colHeaderCaption		text	unknown	in	PV1	todo
 PV-1196	layout	pivotTableDefinition@compact	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
 PV-1197	layout	pivotTableDefinition@compactData	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
 PV-1198	metadata	pivotTableDefinition@createdVersion	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1199	sorting	pivotTableDefinition@customListSort	true	layout	unknown	in	PV2	todo	
+PV-1199	sorting	pivotTableDefinition@customListSort	true	layout	yes	in	PV2	todo	probes/t4130-pivot-sort CL1 CL0
 PV-1200	captions	pivotTableDefinition@dataCaption		text	unknown	in	PV1	todo	
 PV-1201	layout	pivotTableDefinition@dataOnRows	false	layout	yes	in	PV1	todo	probes/t4138-pivot-geometry G6
 PV-1202	layout	pivotTableDefinition@dataPosition		layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags DPo
@@ -1219,7 +1219,7 @@ PV-1217	olap-datamodel	pivotTableDefinition@mdxSubqueries	false	none	unknown	out
 PV-1218	formatting	pivotTableDefinition@mergeItem	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1219	metadata	pivotTableDefinition@minRefreshableVersion	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1220	captions	pivotTableDefinition@missingCaption		text	unknown	in	PV1	todo	
-PV-1221	filtering	pivotTableDefinition@multipleFieldFilters	true	values	unknown	in	PV2	todo	
+PV-1221	filtering	pivotTableDefinition@multipleFieldFilters	true	values	yes	in	PV2	todo	probes/t4130-pivot-filter-attrs FMf1 FMf0
 PV-1222	captions	pivotTableDefinition@name		text	unknown	in	PV1	todo	
 PV-1223	layout	pivotTableDefinition@outline	false	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
 PV-1224	layout	pivotTableDefinition@outlineData	false	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
@@ -1477,8 +1477,8 @@ PV-1475	olap-datamodel	x15:dataField@isCountDistinct	false	none	unknown	out (dec
 PV-1476	source-refresh	x15:pivotCacheIdVersion		values	unknown	in	PV1	todo	
 PV-1477	metadata	x15:pivotCacheIdVersion@cacheIdCreatedVersion		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1478	metadata	x15:pivotCacheIdVersion@cacheIdSupportedVersion		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1479	filtering	x15:pivotFilter		values	unknown	in	PV2	todo	
-PV-1480	filtering	x15:pivotFilter@useWholeDay		values	unknown	in	PV2	todo	
+PV-1479	filtering	x15:pivotFilter		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters DWd
+PV-1480	filtering	x15:pivotFilter@useWholeDay		values	yes	in	PV2	todo	probes/t4130-pivot-date-filters DWd
 PV-1481	olap-datamodel	x15:pivotTableData		none	unknown	out (decision 0274)	out	todo	
 PV-1482	olap-datamodel	x15:pivotTableData/pivotRow		none	unknown	out (decision 0274)	out	todo	
 PV-1483	olap-datamodel	x15:pivotTableData/pivotRow/c		none	unknown	out (decision 0274)	out	todo	

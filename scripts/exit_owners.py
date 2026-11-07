@@ -388,17 +388,23 @@ def names_beside_case(text: str, called: tuple[str, ...], a1: str) -> bool:
 
 @functools.lru_cache(maxsize=None)
 def names_whole_case(text: str, names: tuple[str, ...]) -> bool:
-    """Whether a line of `text` names the case and no cell: a task that lists cells beside a case
-    owns only those, even when they have since passed and left the report."""
+    """Whether a line of `text` names the case and no cell, so it owns every cell of the case: a
+    task that lists cells beside a case owns only those, even when they have since passed and left
+    the report. Per line, not per block (decision 0333: reading blocks would drop owners)."""
     return any(names_case(line, names) and not A1_TOKEN.search(line) for line in text.splitlines())
 
 
 def owned(cell: ExitCell, texts: list[str], called: tuple[str, ...]) -> bool:
-    """Whether one of `texts` owns `cell`, a case called by `called`."""
+    """Whether one of `texts` owns `cell`, a case called by `called`. A case that fails whole
+    (`WHOLE_CASE`: an engine error, a panic, a case that did not run) has no A1 name, so any block
+    that names the case owns it, beside a cell list or not: the task that fixes its cells owns the
+    failure that hides them (decision 0333)."""
     for text in texts:
         if not names_case(text, called):
             continue
-        if cell.a1 is not None and (
+        if cell.a1 is None:
+            return True
+        if (
             names_beside_case(text, called, cell.a1) or names_in_span(text, called, cell.a1)
         ):
             return True

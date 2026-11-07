@@ -555,9 +555,25 @@ field cells holding 2^(row-1), so each value is the set of matched records, and 
   the second record matches, and `DMAX(Data!B2:E4,4,..)` is 0 from its field;
   `DCOUNTA(Data!A2:C10,3,..)` and `DVARP(Data!A4:D9,1,..)` keep the records whose moved reference is a record row.
 Ours: matches every cell above since T-2617: `db_computed_condition` retargets unprefixed references to the
-database's sheet (`retarget_unqualified_references`) and `reads_records` checks the record area. Unprobed, ours
-also exempts a reference whose row is absolute but whose column is relative, and checks a range with one absolute
-row by its moved other corner.
+database's sheet (`retarget_unqualified_references`) and `reads_records` checks the record area.
+Mixed absolute references and references not written as a cell (probes/t3002-db-computed-criteria-absolute-mixed,
+excel-graph 2026-11-07, T-3002; same bitmask design):
+- An absolute row is enough to stay put and go unchecked, whatever the column: over Same!A5:C12 `=B$5>0`, `=B$13>0`,
+  `=B$2>0` and `=E$6>0` (a column outside A:C) match every record (Calc B21, B27, B29, B30), while `=E6>0` and
+  `=B13>0` match none. An absolute column alone is not: `=$B5>0` fails the first record, as `=B5>0` does (B22, B25).
+- A range with one absolute corner is checked by where the whole moved range lies: `SUM(B$5:B6)>0` and
+  `SUM($B5:B6)>0` match every record (each moved range overlaps the records), `SUM(B$13:B14)>0` none (B13:B14 to
+  B13:B20 never reaches rows 6-12) (B23, B24, B28). Ours matches all of these.
+- With the criterion on Db over a database on Data, a reference written as a cell is retargeted even as a function's
+  argument: `=OFFSET(B2,0,0)>0` reads Data and follows the record-area rule (all five records of Data!A1:C6; of
+  Data!A4:C9 only rows 8 and 9, whose moved B5, B6 are record rows), `<0` matches none (Calc B4:E5). A reference
+  built from text is not: `=INDIRECT("B2")<0` reads Db for every record (B2:E3).
+- `ROW()` and `COLUMN()` with no argument are the criteria cell's, the same for every record: `ISODD(INT(ROW()/2))`
+  matches every record and the other ROW bits none (ROW() is 2, the criteria row), `ISODD(COLUMN())` none (column R)
+  (Calc B6:E12). Ours gives the record's row (T-4858).
+- A structured this-row reference in a table on the criteria sheet reads the table row of the criteria cell for
+  every record: `=DbT[@Col]<0` (Db!AA2 = -7) matches every record and `ISODD(ROW(DbT[@Col]))` none (row 2) (B13:E14).
+  Ours matches no record with it (T-4858).
 Status: VERIFIED (excel-graph) for the values; the reference rule for a criterion away from the database is VERIFIED
 (T-2525, probes/db-criteria-formula-placement: relative references rebase onto the first record, absolute ones
 stay put); the record-area rule and the database-sheet rule are VERIFIED (T-2617, probes/db-computed-criteria-cross-sheet).

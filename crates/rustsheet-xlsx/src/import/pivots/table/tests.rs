@@ -222,6 +222,34 @@ fn tabular_form_and_custom_subtotals_are_typed_per_field() {
 }
 
 #[test]
+fn classic_layout_and_subtotal_captions_are_typed() {
+    // probes/t4129-pivot-layout-flags GZ and SC, on K5's shape.
+    let xml = SUBTOTALS
+        .replacen(
+            r#" compactData="0">"#,
+            r#" compactData="0" gridDropZones="1">"#,
+            1,
+        )
+        .replacen(
+            r#" showAll="0" compact="0" outline="0">"#,
+            r#" showAll="0" compact="0" outline="0" subtotalCaption="Tot &amp; all">"#,
+            1,
+        );
+    let pivot = read(&xml, &[2, 3, 6, 6, 6]);
+    assert!(pivot.options.grid_drop_zones);
+    assert_eq!(
+        pivot.fields[0].subtotal_caption.as_deref(),
+        Some("Tot & all")
+    );
+    assert_eq!(pivot.fields[1].subtotal_caption, None);
+    // Typed, so not kept verbatim as well.
+    let store: String = pivot.opaque.iter().map(text).collect();
+    assert!(!store.contains("gridDropZones") && !store.contains("subtotalCaption"));
+    let plain = read(SUBTOTALS, &[2, 3, 6, 6, 6]);
+    assert!(!plain.options.grid_drop_zones);
+}
+
+#[test]
 fn count_a_subtotal_is_counta_and_count_is_count_numbers() {
     // probes/t4622-pivot-count-subtotals B2: over 10, abc, a blank, 2 and 5, the countA line is 4
     // (C6) and the count line 3 (C7).
@@ -431,6 +459,40 @@ fn an_x14_show_values_as_mode_is_read_from_the_kept_extension() {
         result.unwrap_err(),
         r#"unknown showDataAs "percentOfNothing""#
     );
+}
+
+#[test]
+fn repeat_item_labels_are_read_from_the_kept_field_extension() {
+    // As Excel and the case builder write it (pivots.md "Repeat item labels",
+    // probes/t4698-pivot-repeat-labels): `fillDownLabels` in the x14 pivotField extension.
+    let ext = r#"<extLst><ext uri="{2946ED86-A175-432a-8AC1-64E0C546D7DE}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"><x14:pivotField fillDownLabels="1"/></ext></extLst>"#;
+    let xml = TABULAR_PERCENT.replacen(
+        "</items></pivotField>",
+        &format!("</items>{ext}</pivotField>"),
+        1,
+    );
+    let pivot = read(&xml, &[2, 3, 6]);
+    assert!(pivot.fields[0].fill_down_labels);
+    assert!(!pivot.fields[1].fill_down_labels);
+    // The extension is still kept verbatim, for export.
+    assert_eq!(kept(&pivot, OpaqueOwner::Field(0)), ext);
+    // Off and malformed read as the default; the definition-wide default fills no field
+    // (t4698 TW, TWE).
+    for value in ["0", "yes"] {
+        let off = xml.replace(
+            r#"fillDownLabels="1""#,
+            &format!(r#"fillDownLabels="{value}""#),
+        );
+        assert!(!read(&off, &[2, 3, 6]).fields[0].fill_down_labels);
+    }
+    let table = r#"<extLst><ext uri="{962EF5D1-5CA2-4c93-8EF4-DBF5C05439D2}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"><x14:pivotTableDefinition fillDownLabelsDefault="1"/></ext></extLst>"#;
+    let wide = TABULAR_PERCENT.replace(
+        "</pivotTableDefinition>",
+        &format!("{table}</pivotTableDefinition>"),
+    );
+    let pivot = read(&wide, &[2, 3, 6]);
+    assert!(pivot.fields.iter().all(|f| !f.fill_down_labels));
+    assert!(kept(&pivot, OpaqueOwner::Definition).contains(table));
 }
 
 #[test]

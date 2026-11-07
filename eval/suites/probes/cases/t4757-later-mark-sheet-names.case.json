@@ -1,0 +1,67 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4757: sheet names with a mark after the first character, beyond T-4446's Mn/Me probe. Sheets: a+U+0301 (Mn, B1 11), क+U+093E (Mc, alphabetic, B1 17), x+U+0F3E (Mc, not alphabetic, B1 13), the cell-shaped B1+U+0301 (B1 19) and the R1C1-shaped C1+U+0301 (B1 23). Each is read through a quoted reference with its FORMULATEXT, and through INDIRECT of the unquoted and quoted text. Predictions, committed before the fill: every quoted reference reads its B1; FORMULATEXT writes a+U+0301, क+U+093E, x+U+0F3E and B1+U+0301 unquoted (a mark after the first character joins the name; B1+U+0301 is not a cell, as T-4446 showed for a defined name) and C1+U+0301 quoted (R1C1-shaped); INDIRECT of the unquoted text reads B1 for all but C1+U+0301 (#REF!); INDIRECT of the quoted text reads B1 for all five.",
+ "tags": [
+  "M8",
+  "references",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": "='á'!B1",
+    "A2": "=FORMULATEXT(A1)",
+    "A3": "=INDIRECT(\"á!B1\")",
+    "A4": "=INDIRECT(\"'á'!B1\")",
+    "A5": "='का'!B1",
+    "A6": "=FORMULATEXT(A5)",
+    "A7": "=INDIRECT(\"का!B1\")",
+    "A8": "=INDIRECT(\"'का'!B1\")",
+    "A9": "='x༾'!B1",
+    "A10": "=FORMULATEXT(A9)",
+    "A11": "=INDIRECT(\"x༾!B1\")",
+    "A12": "=INDIRECT(\"'x༾'!B1\")",
+    "A13": "='B1́'!B1",
+    "A14": "=FORMULATEXT(A13)",
+    "A15": "=INDIRECT(\"B1́!B1\")",
+    "A16": "=INDIRECT(\"'B1́'!B1\")",
+    "A17": "='C1́'!B1",
+    "A18": "=FORMULATEXT(A17)",
+    "A19": "=INDIRECT(\"C1́!B1\")",
+    "A20": "=INDIRECT(\"'C1́'!B1\")"
+   }
+  },
+  {
+   "name": "á",
+   "cells": {
+    "B1": 11
+   }
+  },
+  {
+   "name": "का",
+   "cells": {
+    "B1": 17
+   }
+  },
+  {
+   "name": "x༾",
+   "cells": {
+    "B1": 13
+   }
+  },
+  {
+   "name": "B1́",
+   "cells": {
+    "B1": 19
+   }
+  },
+  {
+   "name": "C1́",
+   "cells": {
+    "B1": 23
+   }
+  }
+ ],
+ "expected": {}
+}

@@ -337,6 +337,15 @@ fn in_csch_negated_band(x: f64) -> bool {
     2.0 * x > 709.0 || 2.0 * x < -708.0
 }
 
+/// IMTAN and IMCOT answer `-sgn(y)`-style `±i` exactly once 2y > 709 or 2y < -708: the same cuts as
+/// [`in_csch_negated_band`] on y. Past the sine limit the cut is also where `#NUM!` stops
+/// (`IMTAN(COMPLEX(1E+10,354.5))` `#NUM!`, `354.500000000001` i; `-354` `#NUM!`, `-354.000000000001`
+/// -i; probes/t4425-imtan-imcot-switch, excel-graph, T-4425), and it lies below `cosh 2y`'s own
+/// overflow (y about 354.89 / 355.24), which an earlier model took.
+fn tan_saturates(y: f64) -> bool {
+    in_csch_negated_band(y)
+}
+
 /// The result of a reciprocal (IMCSCH) whose denominator `t` overflowed to
 /// infinity or NaN: Excel answers `0` where `inf / inf` is NaN. A zero or finite `t` is not this
 /// case and stays an error. Example: `IMCSCH("710.4+0i")` (probes/eng-im-overflow-edges A64).
@@ -391,7 +400,7 @@ pub(super) fn imcot((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
         return real_trig(x, suffix, cell, Some(0.0), |x| 1.0 / excel_tan(x));
     }
     let (sinh_2y, cosh_2y) = sec_sinh_cosh(2.0 * y);
-    if cosh_2y.is_infinite() {
+    if tan_saturates(y) {
         return complex_result(0.0, -y.signum(), suffix);
     }
     if past_trig_limit(x) {
@@ -613,9 +622,12 @@ pub(super) fn imtan((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
     if y == 0.0 {
         return real_trig(x, suffix, cell, None, excel_tan);
     }
-    // Past `cosh 2y`'s range the value is `±0 ± i` and Excel takes no sine of x
+    // Past `tan_saturates` the value is `±0 ± i` and Excel takes no sine of x
     // (`IMTAN("1E+10+700i")` is i; probes/im-trig-magnitude-grid, T-3642).
-    if past_trig_limit(x) && f64::cosh(2.0 * y).is_finite() {
+    if tan_saturates(y) {
+        return complex_result(0.0, y.signum(), suffix);
+    }
+    if past_trig_limit(x) {
         return num_error(cell);
     }
     let (x, y) = tan_parts(x, y);
@@ -697,6 +709,32 @@ mod tests {
         assert_eq!(text(imcot, -57.9375, 18.7089), "-4.00011374673746E-17-1i");
         assert_eq!(text(imcsc, 1e-20, 0.0), "100000000000000000000");
         assert_eq!(text(imcot, 1e-20, 0.0), "100000000000000000000");
+    }
+
+    // probes/t4425-imtan-imcot-switch (excel-graph): past 2^27 IMTAN and IMCOT are `#NUM!` up to
+    // y = 354.5 and down to y = -354, then exactly -/+i.
+    #[test]
+    fn imtan_imcot_switch_to_i_at_2y_709() {
+        let at = |f: fn(ComplexParts, CellReferenceIndex) -> CalcResult, y: f64| {
+            let cell = CellReferenceIndex {
+                sheet: 0,
+                row: 1,
+                column: 1,
+            };
+            match f((1e10, y, Suffix::I), cell) {
+                CalcResult::String(t) => t.to_string(),
+                CalcResult::Error { error, .. } => error.to_string(),
+                _ => String::from("other"),
+            }
+        };
+        assert_eq!(at(imtan, 354.5), "#NUM!");
+        assert_eq!(at(imtan, 354.500_000_000_001), "i");
+        assert_eq!(at(imcot, 354.500_000_000_001), "-i");
+        assert_eq!(at(imtan, -354.0), "#NUM!");
+        assert_eq!(at(imtan, -354.000_000_000_001), "-i");
+        assert_eq!(at(imcot, -354.000_000_000_001), "i");
+        // The control: x = 1 is exact i from the same y.
+        assert_eq!(text(imtan, 1.0, 354.5), "i");
     }
 
     // probes/im-trig-magnitude-grid C234, J13 and probes/im-trig-argument-cut C5 (excel-graph, T-3758):

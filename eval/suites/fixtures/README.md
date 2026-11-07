@@ -99,6 +99,9 @@ docProps/app.xml so that their placeholder cached values are never mistaken for 
   row has ISBLANK, ISTEXT, COUNTA, LEN, `A&"|"` and TYPE of its A cell in B:G (legacy formulas). Excel for the web
   reads every value-less cell as blank and only A1, A3, A4 and A8 as text (xlsx-storage.md "A cell that stores no
   value is blank").
+- `valueless-cell-forms-ws-index.xlsx` (T-4743): the same raw-XML layout, three rows: A1 `t="s"` with a whitespace-only
+  `<v> </v>`, A2 `<c t="inlineStr"><is/></c>`, A3 `t="s"` to "anchor" (control); the same readers in B:G. Excel for the
+  web reads A1 as blank and A2 as the empty string (xlsx-storage.md "A cell that stores no value is blank").
 - `merged-covered-values.xlsx`, `merged-covered-formula.xlsx` (T-4148): hand-written raw XML. The first merges A1:D1
   over A1 "anchor", B1 "x", C1 7, D1 "" (shared) and A2:B2 over A2 "y", B2 `<c t="str"/>`, with readers of the covered
   cells in A4:N4; the second merges A1:B1 over A1 1 and a covered formula B1 `=A1+1`, with readers in A3:D3. Excel

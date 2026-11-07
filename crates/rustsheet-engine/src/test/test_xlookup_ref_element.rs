@@ -70,6 +70,67 @@ fn readers_see_the_hit_as_a_value_and_the_miss_as_the_range() {
     }
 }
 
+// OFFSET lifts over the elements of a mixed grid: a 2x1 result, `#VALUE!` for the hit (a value)
+// and for the moved miss (a two-cell range read as a value), whatever the offset
+// (probes/t4704-mixed-xlookup-grid-readers A4:C8, T-4739).
+#[test]
+fn offset_lifts_over_a_mixed_grid() {
+    let mut model = data();
+    model._set("K1", &format!("=OFFSET({X_G},0,0)"));
+    model._set("L1", &format!("=ROWS(OFFSET({X_G},0,0))"));
+    model._set("M1", &format!("=COLUMNS(OFFSET({X_G},0,0))"));
+    model._set("K4", &format!("=OFFSET({X_G},1,0)"));
+    model._set("L4", &format!("=ROWS(OFFSET({X_G},1,0))"));
+    // A scalar XLOOKUP is still the reference it picks.
+    model._set(
+        "K7",
+        "=OFFSET(XLOOKUP(2,$A$1:$A$3,$B$1:$B$3,$G$1:$G$2),1,0)",
+    );
+    model.evaluate();
+    for (cell, expected) in [
+        ("K1", "#VALUE!"),
+        ("K2", "#VALUE!"),
+        ("L1", "2"),
+        ("M1", "1"),
+        ("K4", "#VALUE!"),
+        ("K5", "#VALUE!"),
+        ("L4", "2"),
+        ("K7", "30"),
+    ] {
+        assert_eq!(model._get_text(cell), expected, "{cell}");
+    }
+}
+
+// The RANK family lifts over the elements of a mixed grid: the hit (a value) is #VALUE!, the miss
+// ranks against its range G1:G2 = 50, 60 (probes/t4704-mixed-xlookup-grid-readers A25:C38,
+// T-4740).
+#[test]
+fn rank_lifts_over_a_mixed_grid() {
+    let mut model = data();
+    model._set("K1", &format!("=RANK(60,{X_G})"));
+    model._set("K4", &format!("=RANK.EQ(60,{X_G})"));
+    model._set("K7", &format!("=RANK.AVG(60,{X_G})"));
+    model._set("K10", &format!("=RANK(20,{X_G})"));
+    model._set("K13", &format!("=RANK(50,{X_G})"));
+    model._set("L1", &format!("=ROWS(RANK(60,{X_G}))"));
+    model.evaluate();
+    for (cell, expected) in [
+        ("K1", "#VALUE!"),
+        ("K2", "1"),
+        ("K4", "#VALUE!"),
+        ("K5", "1"),
+        ("K7", "#VALUE!"),
+        ("K8", "1"),
+        ("K10", "#VALUE!"),
+        ("K11", "#N/A"),
+        ("K13", "#VALUE!"),
+        ("K14", "2"),
+        ("L1", "2"),
+    ] {
+        assert_eq!(model._get_text(cell), expected, "{cell}");
+    }
+}
+
 // LARGE, SMALL and MEDIAN over references on another sheet are #N/A, on the formula's own sheet
 // the value view's #VALUE! (t4569 A12, A13, A22, A31, A43, Local!E1:E3).
 #[test]
@@ -93,6 +154,29 @@ fn order_statistics_are_na_only_for_references_on_another_sheet() {
     for cell in ["K1", "K2", "K3"] {
         assert_eq!(model._get_text(cell), *"#VALUE!", "{cell}");
     }
+}
+
+// Over references on both sheets the first element decides: own sheet first is #VALUE!, another
+// sheet first #N/A (T-4714; t4697 Local!H1:H6, H9, H16, H17).
+#[test]
+fn order_statistics_over_mixed_sheets_follow_the_first_element() {
+    let mut model = data();
+    model.add_sheet("Sheet2").unwrap();
+    let own_first = "{\"Sheet2!A1\";\"Sheet1!G1\"}";
+    let other_first = "{\"Sheet1!G1\";\"Sheet2!A1\"}";
+    model._set("Sheet2!B1", &format!("=LARGE(INDIRECT({own_first}),1)"));
+    model._set("Sheet2!B2", &format!("=SMALL(INDIRECT({own_first}),1)"));
+    model._set("Sheet2!B3", &format!("=MEDIAN(INDIRECT({own_first}))"));
+    model._set("Sheet2!B4", &format!("=LARGE(INDIRECT({other_first}),1)"));
+    model._set(
+        "Sheet2!B5",
+        "=LARGE(INDIRECT({\"Sheet2!A1\";\"Sheet1!G1\";\"Sheet1!G2\"}),1)",
+    );
+    model.evaluate();
+    for cell in ["Sheet2!B1", "Sheet2!B2", "Sheet2!B3", "Sheet2!B5"] {
+        assert_eq!(model._get_text(cell), *"#VALUE!", "{cell}");
+    }
+    assert_eq!(model._get_text("Sheet2!B4"), *"#N/A");
 }
 
 // A lift with no miss builds no grid: the hits are an ordinary array, so ISREF of an element is

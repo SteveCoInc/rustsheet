@@ -859,8 +859,12 @@ FALSE and `EXP(-745)*2^1000` is exactly 2^-74 (`<v>5.2939559203393771E-23</v>`),
 reads its values from that file, so every value Excel for the web saves for a kept subnormal is 0, cached values
 included: ironcalc-calc `EXP_SIGN.xlsx` EXP_SIGN!B44 (`EXP(-745)`, Excel Online) caches 0 for the same reason. A normal
 result is written in full (`EXP(-708)`: `<v>3.3075530036384078E-308</v>`). Desktop Excel's save is not probed.
-RustSheet's export does this for a positive kept subnormal in every number `<v>` (T-2211, `saved_number` in
-export/worksheets.rs). A spilled or array kept subnormal is flushed too (inferred from the formula-cell evidence, unprobed); a negative one keeps its value; desktop Excel's save is unprobed (T-4355).
+A negative kept subnormal is saved as 0 too (`=0-EXP(-745)` and `=0-EXP(-720)` are 0 in the file, their `=0` companions
+FALSE, `*2^1000` recovers -2^-74), and so is a spilled array element (`=EXP({-745,-708})`: the -745 element 0, its `=0`
+companion FALSE, the -708 element a normal 3.3075530036384078E-308); probes/subnormal-saved-negative-and-array, excel-graph
+2026-11-07 (T-4355). RustSheet's export flushes a kept subnormal of either sign in every number `<v>` (T-2211, T-4355,
+`saved_number` in export/worksheets.rs). Desktop Excel's save is unprobed (M14, decision 0039).
+In an array expression the kept subnormal compares equal to 0: `(EXP({-745,-708}))=0` is TRUE in excel-graph (same probe, D1) though a spilled cell's `=0` companion is FALSE (T-4766).
 Range edges (T-2203, probes-numeric/t2203-exp-range-edges, excel-graph 2026-10-22, 527 rows): the last finite
 argument is 709.782712893384 (ln DBL_MAX; EXP = 1.7976931348622732E308, not quite DBL_MAX), and the first
 `#NUM!` is its successor double 709.7827128933841; every argument above it, up to 710.5, is `#NUM!`. At the other
@@ -2343,7 +2347,7 @@ How the probe makes a filtered row: the table's autoFilter holds a values filter
 exactly the visible rows, and the hidden rows are written `hidden="1"`; Excel reads such a file as filtered without
 re-applying the filter. A worksheet-level autoFilter (no table), a manual hide inside a filtered table made in the
 application, and hidden columns are unprobed.
-Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036); probes/t4371-filtered-table-delete-filtered-column, -delete-other-column, -insert-inside and -insert-left (42 cells, excel-graph, 2026-11-07, T-4371); probes/t4194-subtotal-nested-skip (90 cells, excel-graph, 2026-11-04, T-4194); probes/t4003-filter-column-criterion (30 cells, excel-graph, 2026-11-05, T-4003; first seen on the T-3081 throwaway uploads, xlsx-storage.md "Table parts in the export").
+Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036); probes/t4371-filtered-table-delete-filtered-column, -delete-other-column, -insert-inside and -insert-left (42 cells, excel-graph, 2026-11-07, T-4371); probes/t4755-hand-hidden-filtered-table-control, -delete-filtered-column and probes/t4755-two-criteria-filtered-table-control, -delete-one (88 cells, excel-graph, 2026-11-07, T-4755); probes/t4194-subtotal-nested-skip (90 cells, excel-graph, 2026-11-04, T-4194); probes/t4003-filter-column-criterion (30 cells, excel-graph, 2026-11-05, T-4003; first seen on the T-3081 throwaway uploads, xlsx-storage.md "Table parts in the export").
 **Which filter makes a table filtered (T-4003):** on a table A1:B7 (`Cat` a,b,a,c,a,b, `Val` 1-6), a values filter on
 `Cat` keeping "a" with rows 3, 5 and 7 hidden gives `SUBTOTAL(9,..[Val])` = `SUBTOTAL(109,..)` = 9 and
 `SUBTOTAL(3,..[Cat])` = `SUBTOTAL(103,..)` = 3; a criterion-less filterColumn (on column 0 or on column 1) with rows 3
@@ -2361,12 +2365,23 @@ hand (103 would then be 3). Deleting column C (no criterion; `Sales[Ext]` become
 table at B, or inserting one left of it at A keeps the filter (3 = 103 = 3, 9 = 109 = 9) and the hidden rows. The
 engine follows it: a column delete that takes the last kept criterion of a filter read from a file, or the first
 column of an API-filtered table (where its export writes the criterion, T-4363), unfilters the table and unhides its
-data rows (`resize_tables`, crates/rustsheet-engine/src/table_edits.rs); the undo hides them again. Unprobed: a delete
-that leaves another criterion, rows hidden by hand inside a filtered table (the engine cannot tell them from filtered
-ones and shows them too), and hidden rows outside the table (the engine keeps them hidden). A worksheet autoFilter (no table) and an autoFilter holding only a
+data rows (`resize_tables`, crates/rustsheet-engine/src/table_edits.rs); the undo hides them again. **A row the
+filter keeps but the file writes hidden counts as filtered, and the delete shows it too** (T-4755,
+probes/t4755-hand-hidden-filtered-table-*, excel-graph 2026-11-07): the same table with the filter on `Cat` keeping
+"a" and "c" (rows 3 and 7 filtered) and row 4 ("a") also written `hidden="1"` gives, before any edit,
+`SUBTOTAL(3,S!B4)` = `SUBTOTAL(103,S!B4)` = 0 (skipped as filtered, not read as a manual hide) and 3 = 103 = 3 over
+`Sales[Val]`; deleting column A then shows all six rows (3 = 103 = 6, 9 = 109 = 21, every per-row SUBTOTAL 1). The
+engine matches both. **A delete that leaves another criterion shows only the rows the deleted criterion hid**
+(T-4755, probes/t4755-two-criteria-filtered-table-*): with a values filter on `Cat` keeping "a" and "c" (rows 3, 7)
+and one on `Ext` rejecting 40 (row 5), the control gives 3 = 103 = 3 and 9 = 109 = 9; deleting column A gives
+3 = 103 = 5 and 9 = 109 = 17: rows 3 and 7 are visible again, row 5 stays hidden and still filtered
+(`SUBTOTAL(3,..)` of it is 0). The engine shows all six rows (10 cells off; T-4803 owns them): its eval adapter adds
+the table through the API with no criteria, and by its code a table read from a file keeps every row hidden after such a delete (untested).
+A manual hide made in the application inside a filtered table, and hidden rows outside the table (the engine keeps
+them hidden), are unprobed. A worksheet autoFilter (no table) and an autoFilter holding only a
 `<sortState>` are unprobed; ours reads the latter as not filtered.
 Status: VERIFIED
-Engine gaps: none known. SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,
+Engine gaps: a delete that leaves another criterion (T-4803). SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,
 `Node::contains_function`).
 **Which formulas count as a nested SUBTOTAL or AGGREGATE (T-4194):** the cell's formula text, not what it evaluated. A
 call anywhere in the formula's own tree counts even when it never runs: `=IF(FALSE,SUBTOTAL(9,A1:A2),4)`,
@@ -2924,7 +2939,7 @@ Tasks: T-2269, T-2302
 ## TEXT of DBL_MAX with a scientific format prints the full 3-digit exponent (T-2106)
 Rule: `TEXT(2^1023*(2-2^-52),"0.00E+00")` is `1.80E+308`: the mantissa rounds up to 1.80, a decimal above DBL_MAX, so it is built from the rounded digits, and exponent digits beyond the `E+00` placeholders all print at the first placeholder.
 Evidence: probes/dbl-max-text-b A1 (oracle: excel-graph) `1.80E+308`; the 2-digit analogues gen-m10/4398098060a7fa9d A13 ("01.2E+14") and gen-m5/c0651f0e0fb544d0 A74 ("1.0E+15").
-Status: VERIFIED for DBL_MAX; the 3-digit single-placeholder case (`1E+100` under `0.0E+0` as `1.0E+100`) is UNVERIFIED (probe pending), assumed from the 2-digit cells.
+Status: VERIFIED for DBL_MAX; the 3-digit exponent under a single placeholder is printed in full: `TEXT(1E+100,"0.0E+0")` "1.0E+100", `"0E+0"` "1E+100", `"0.0E-0"` "1.0E100", `"##0.0E+0"` "10.0E+99"; 9.96E+99 rounds up to the same "1.0E+100"; 1E-100 gives "1.0E-100", "1E-100", "1.0E-100" and under `##0.0E+0` "100.0E-102"; -1E+100 is the same text with a minus sign; 1.5E+308 gives "1.5E+308", "2E+308" (the rounded mantissa goes above DBL_MAX and is printed from its digits), "1.5E308" and "150.0E+306" (probes/t4720-fixed-sign-and-exponent-digits A18:A37, excel-graph, 2026-11-06, T-4720; all match ours).
 Implemented in: formatter/format.rs, decimal_round.rs::round_scientific (T-2106).
 
 ## PERCENTOF: an error inside a reference or array is #NUM! (T-3653)

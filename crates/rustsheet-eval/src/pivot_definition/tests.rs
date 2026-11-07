@@ -62,6 +62,46 @@ fn an_order_lists_its_items_first() {
 }
 
 #[test]
+fn an_item_order_orders_the_items_but_not_the_cache() {
+    let parts = parts_of(&case(
+        r#"{"rows": ["K"], "data": [{"field": "V"}], "fields": {"K": {"item_order": [true, "east"]}}}"#,
+    ));
+    assert!(parts
+        .cache_definition
+        .contains(r#"count="3"><s v="east"/><m/><b v="1"/>"#));
+    assert!(
+        parts.table.contains(
+            r#"<items count="4"><item x="2"/><item x="0"/><item x="1"/><item t="default"/>"#
+        ),
+        "{}",
+        parts.table
+    );
+}
+
+#[test]
+fn an_item_order_refuses_what_the_python_builder_refuses() {
+    // T-4164: `_item_order`'s refusals (not a list, not in the field, repeated), and the
+    // `MAX_LIST` bound every list of a definition has.
+    for (bad, message) in [
+        (r#""east""#, "is a list of items"),
+        (r#"["north"]"#, "is not in field"),
+        (r#"["east", "east"]"#, "repeats an item"),
+    ] {
+        let definition = format!(
+            r#"{{"rows": ["K"], "data": [{{"field": "V"}}], "fields": {{"K": {{"item_order": {bad}}}}}}}"#
+        );
+        let error = try_parts(&definition).err().unwrap();
+        assert!(error.contains(message), "{bad}: {error}");
+    }
+    let many = serde_json::to_string(&vec!["east"; MAX_LIST + 1]).unwrap();
+    let definition = format!(
+        r#"{{"rows": ["K"], "data": [{{"field": "V"}}], "fields": {{"K": {{"item_order": {many}}}}}}}"#
+    );
+    let error = try_parts(&definition).err().unwrap();
+    assert!(error.contains("more than"), "{error}");
+}
+
+#[test]
 fn the_table_gets_the_builders_defaults_and_names() {
     let parts = parts_of(&case(
         r#"{"rows": ["K"], "data": [{"field": "V", "subtotal": "count"}, {"field": "V"}],
@@ -245,4 +285,51 @@ fn unbounded_sources_and_lists_are_refused() {
     assert!(parts(&spec, sheet, pivot, &bad, 1).is_err());
     let show = serde_json::json!({"rows": ["K"], "data": [{"field": "V", "showDataAs": "x\"/>"}]});
     assert!(parts(&spec, sheet, pivot, &show, 1).is_err());
+}
+
+/// The parts of `definition`, or the builder's refusal.
+fn try_parts(definition: &str) -> Result<Parts, String> {
+    let spec = case(definition);
+    let sheet = &spec.sheets[1];
+    let pivot = &sheet.pivot_tables[0];
+    parts(&spec, sheet, pivot, pivot.definition.as_ref().unwrap(), 7)
+}
+
+#[test]
+fn calculated_items_and_page_attributes_refuse_what_the_builder_refuses() {
+    // T-4130: `_calculated_items` keys, the managed `formula`, a raw pivotArea, and the
+    // managed pageField attributes.
+    let ok = try_parts(
+        r#"{"rows": ["K"], "data": [{"field": "V"}],
+            "calculated_items": [{"field": "K", "name": "Both", "formula": "east+west",
+                                  "attrs": {"field": 0}, "pivot_area": "<pivotArea outline=\"0\"/>"}]}"#,
+    )
+    .unwrap();
+    assert!(ok.cache_definition.contains(
+        r#"<calculatedItem formula="east+west" field="0"><pivotArea outline="0"/></calculatedItem>"#
+    ));
+    for bad in [
+        r#"{"field": "K", "name": "X", "formula": "1", "colour": "red"}"#,
+        r#"{"field": "K", "name": "X", "formula": "1", "attrs": {"formula": "2"}}"#,
+        r#"{"field": "K", "name": "X", "formula": "1", "pivot_area": "<references/>"}"#,
+        r#"{"field": "K", "name": "X", "formula": "1", "pivot_area": "<pivotArea a=\"&x;\"/>"}"#,
+        r#"{"field": "K", "name": "X"}"#,
+        r#"{"field": "K", "name": "east", "formula": "1"}"#,
+    ] {
+        let definition = format!(
+            r#"{{"rows": ["K"], "data": [{{"field": "V"}}], "calculated_items": [{bad}]}}"#
+        );
+        assert!(try_parts(&definition).is_err(), "{bad}");
+    }
+    assert!(try_parts(
+        r#"{"pages": [{"field": "K", "attrs": {"hier": 0}}], "data": [{"field": "V"}]}"#
+    )
+    .is_err());
+    let page = try_parts(
+        r#"{"pages": [{"field": "K", "attrs": {"cap": "C"}}], "data": [{"field": "V"}]}"#,
+    )
+    .unwrap();
+    assert!(page
+        .table
+        .contains(r#"<pageField fld="0" hier="-1" cap="C"/>"#));
 }

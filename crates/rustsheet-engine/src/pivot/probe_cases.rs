@@ -25,6 +25,12 @@ pub(crate) const T4634_SHEETS: &[&str] = &[
     "C2", "C3", "C4", "C5", "C6", "C7",
 ];
 
+/// The pivot sheets of probes/t4745-pivot-classic-subtotal-caption: classic layout with a
+/// column field (GC), two data fields (GV) and one row field (G1); subtotalCaption in outline
+/// form at the top (SO) and at the bottom (SB), compact form (SK), over custom subtotals (SF), on
+/// columns (SCC) and with a `?` for the item (SQ).
+pub(crate) const T4745_SHEETS: &[&str] = &["GC", "GV", "G1", "SO", "SB", "SK", "SF", "SCC", "SQ"];
+
 pub(crate) fn read(stem: &str, kind: &str) -> Json {
     let path = format!(
         "{}/../../eval/suites/probes/cases/{stem}.{kind}.json",
@@ -351,6 +357,7 @@ pub(crate) fn probe_pivot_over(
     o.row_grand_totals = flag(&options["rowGrandTotals"], o.row_grand_totals);
     o.column_grand_totals = flag(&options["colGrandTotals"], o.column_grand_totals);
     o.page_over_then_down = flag(&options["pageOverThenDown"], o.page_over_then_down);
+    o.grid_drop_zones = flag(&options["gridDropZones"], o.grid_drop_zones);
     if let Some(wrap) = options["pageWrap"].as_u64() {
         o.page_wrap = u32::try_from(wrap).unwrap();
     }
@@ -360,6 +367,13 @@ pub(crate) fn probe_pivot_over(
         pivot_field.outline = flag(&attrs["outline"], pivot_field.outline);
         pivot_field.subtotal_top = flag(&attrs["subtotalTop"], pivot_field.subtotal_top);
         pivot_field.insert_blank_row = flag(&attrs["insertBlankRow"], pivot_field.insert_blank_row);
+        pivot_field.subtotal_caption = attrs["subtotalCaption"].as_str().map(str::to_string);
+        // The field's raw `extLst` (`xml.extLst`), whose x14 `fillDownLabels` the importer types.
+        // The match is deliberately narrow: the probes write the flag as `fillDownLabels="1"`
+        // only (t4129 X14F, t4698); the importer's own reading is tested in
+        // crates/rustsheet-xlsx/src/import/pivots/table/tests.rs.
+        let ext = definition["fields"][&cache_field.name]["xml"]["extLst"].as_str();
+        pivot_field.fill_down_labels = ext.is_some_and(|x| x.contains(r#"fillDownLabels="1""#));
     }
     (cache, table)
 }
