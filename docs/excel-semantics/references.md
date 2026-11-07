@@ -3272,7 +3272,9 @@ probes/t4212-legacy-index-root-area-kinds (excel-graph); the engine matches all 
 
 ## FORMULATEXT of a reference a delete removed is `#REF!`
 
-`=FORMULATEXT(S!C2)` after a delete removes S!C2 (formula text `=FORMULATEXT(#REF!)`) is `#REF!` in Excel, plain
-cell or table cell alike (probes/table-edits/t4274-calc-column-delete-row-2 F!A1, excel-graph, T-4274). The engine
-gave `#ERROR!` ("not a reference"); `fn_formulatext` now returns the `#REF!` argument unchanged (T-4770). Other
-literal-error arguments (`FORMULATEXT(#N/A)`) are not evidenced and stay `#ERROR!`.
+`=FORMULATEXT(S!C2)` after a delete removes S!C2 is `#REF!` in Excel (probes/table-edits/t4274-calc-column-delete-row-2
+F!A1, excel-graph, T-4274; S!C2 is a table cell). UNVERIFIED: that a plain cell, same sheet or cross sheet, behaves the
+same (the engine unit tests assume it), and the rewritten formula text `=FORMULATEXT(#REF!)` (the oracle stores values
+only). The engine gave `#ERROR!` ("not a reference"); `fn_formulatext` now returns an evaluated `#REF!` argument
+unchanged (T-4770). That is wider than the evidence: an expression valued `#REF!` (`FORMULATEXT(A1+1)`, A1 `#REF!`)
+also gives `#REF!` and is unprobed. Other literal errors (`FORMULATEXT(#N/A)`) are unevidenced and stay `#ERROR!`.
