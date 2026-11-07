@@ -70,6 +70,20 @@ Cells this task owns for their math value (shared with T-3961, T-3959, T-3774 an
 The t3444 sidecar also drops 87 other Range cells as not converged (n up to 2^31 - 2, p 0.3 and 0.5). They are not
 visibly off today, but the same change should give them values.
 
+Wider scope (folded in from a parallel triage, PR #3845, which filed the same work): 508 BINOM.DIST/NEGBINOM.DIST cdf
+cells in 7 sidecars sit under `skipped` with `why: not converged`: probes-numeric/t3960-binom-negbinom-small-p-cdf 140,
+probes/t3444-binom-range-inv-large-n 89, probes/t3352-binom-negbinom-large-n 75, probes-numeric/t3960-...-hold 69,
+probes/t3740-binom-range-past-mean-sweep 67, probes-numeric/t3352-binom-negbinom-sweep 65,
+probes/t3576-negbinom-cdf-huge-s 3. Regenerate t3740 and t3576 too (case by case, `rustsheet-accuracy math --function`,
+T-4483; t3444 alone in the background, about 40 minutes, T-3993). That triage's scratch values from the converging
+other tail (`1 - betainc(k+1, n-k, 0, p)`, and `1 - betainc(f+1, s, 0, 1-p)` for NEGBINOM.DIST), dps 60 and 80 agreeing
+to 25 digits, are a cross-check: `BINOM.DIST(999,1000000,0.001,TRUE)` 0.4957884448330077066523817 (a 40-digit pmf sum
+gives 0.49578844483300770665), `BINOM.DIST(526,600000,0.001,TRUE)` 0.001107528039888733792235267,
+`NEGBINOM.DIST(1041120,4940,0.00472551518826802,TRUE)` 0.5199426990785873165819 and
+`NEGBINOM.DIST(3827391,6017,0.00159874266118577,TRUE)` 0.9244662311053954474342. The complement cancels about
+log10(1/cdf) digits where the cdf is tiny, so that route needs a raised dps or the direct form there; `binom_sf` and
+`negbinom_sf` already take the converging side and are the pattern to follow.
+
 ## Acceptance criteria
 - [ ] `binom_cdf` and `negbinom_cdf` (and the `_sf` forms, if they share the failure) return a value that agrees at
       dps 60 and 80 for every cell above and for the t3444 Range cells now skipped as `not converged`. A unit test pins

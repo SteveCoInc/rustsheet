@@ -1,12 +1,15 @@
 """Pivot tables in spec cases (T-1705)."""
 
+import io
 import re
+import zipfile
 from typing import Any
 
 import pytest
 from spec_parts import spec_parts
 
 from rustsheet_tools.pivot import rendered_cells
+from rustsheet_tools.pivot_chart import _insert_drawing, chart_xml
 from rustsheet_tools.spec2xlsx import build_xlsx
 from rustsheet_tools.spec_cli import bake_pivots
 
@@ -301,3 +304,62 @@ def test_unused_items_on_a_grouped_field_are_refused() -> None:
     spec["sheets"][1]["pivot_tables"][0]["unused_items"] = ["x"]
     with pytest.raises(ValueError, match="unused_items are distinct texts"):
         build_xlsx(spec)
+
+
+def test_a_pivot_chart_is_a_drawing_with_a_bound_chart_and_its_given_caches() -> None:
+    # T-4130 (pivot_chart.py): the chart names its pivot in c:pivotSource and keeps the stale caches it is given.
+    pivot = {"name": "P_C", "source": "Data!A1:B3", "location": "A3",
+             "definition": {"rows": ["Region"], "data": [{"field": "Sales"}]}}  # fmt: skip
+    chart = {"pivot": "P_C", "anchor": "E3", "series_name": "C!$B$3", "categories": "C!$A$4:$A$5",
+             "values": "C!$B$4:$B$5", "cached_categories": ["X", "Y"], "cached_values": [999, 998]}  # fmt: skip
+    spec = {
+        "sheets": [
+            {
+                "name": "Data",
+                "cells": {"A1": "Region", "B1": "Sales", "A2": "East", "B2": 1, "A3": "West", "B3": 2},
+            },
+            {"name": "C", "cells": {}, "pivot_tables": [pivot], "pivot_charts": [chart]},
+        ]
+    }
+    z = zipfile.ZipFile(io.BytesIO(build_xlsx(spec)))
+    chart_xml = z.read("xl/charts/chart1.xml").decode()
+    assert "<c:pivotSource><c:name>[probe.xlsx]C!P_C</c:name>" in chart_xml
+    assert '<c:pt idx="0"><c:v>999</c:v></c:pt><c:pt idx="1"><c:v>998</c:v></c:pt>' in chart_xml
+    assert '<drawing r:id="rIdPivotChart2"/>' in z.read("xl/worksheets/sheet2.xml").decode()
+    assert "../drawings/drawing2.xml" in z.read("xl/worksheets/_rels/sheet2.xml.rels").decode()
+    assert "../charts/chart1.xml" in z.read("xl/drawings/_rels/drawing2.xml.rels").decode()
+    types = z.read("[Content_Types].xml").decode()
+    assert "/xl/charts/chart1.xml" in types and "/xl/drawings/drawing2.xml" in types
+
+
+_CHART = {"pivot": "P_C", "anchor": "E3", "categories": "C!$A$4:$A$5", "values": "C!$B$4:$B$5"}
+
+
+@pytest.mark.parametrize(
+    ("chart", "message"),
+    [
+        (["P_C"], "a pivot chart is an object"),
+        ({**_CHART, "colour": "red"}, "unknown keys"),
+        ({"pivot": "P_C"}, "names its pivot and anchor"),
+        ({**_CHART, "categories": "A4:A5"}, "sheet-qualified A1 reference"),
+        ({**_CHART, "values": 3}, "sheet-qualified A1 reference"),
+        ({**_CHART, "cached_values": ["x"]}, "cached_values are numbers"),
+        ({**_CHART, "cached_values": [True]}, "cached_values are numbers"),
+    ],
+)
+def test_pivot_chart_refusals(chart: Any, message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        chart_xml(chart, "C")
+
+
+def test_a_pivot_chart_must_name_a_pivot_and_a_sheet_keeps_one_drawing() -> None:
+    spec = {
+        "sheets": [
+            {"name": "Data", "cells": {"A1": "Region", "B1": "Sales", "A2": "East", "B2": 1}},
+            {"name": "C", "cells": {}, "pivot_charts": [{**_CHART, "pivot": "Nope"}]},
+        ]
+    }
+    with pytest.raises(ValueError, match="names no pivot of the workbook"):
+        build_xlsx(spec)
+    with pytest.raises(ValueError, match="already has a drawing"):
+        _insert_drawing("rId9")('<worksheet><drawing r:id="rId1"/></worksheet>')
