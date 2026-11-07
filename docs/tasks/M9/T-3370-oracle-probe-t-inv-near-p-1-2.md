@@ -40,5 +40,5 @@ Probe with the `excel-probe` skill (a probes-numeric case), at df 2, 5, 30, 1000
 
 ## Outcome
 Probe `probes-numeric/m9-t-inv-centre` (50 cells) filled by excel-graph. Excel is the true quantile near p = 1/2 and out to
-c = 0.08 at every df; the engine is not at c = 0.08 (off 2.2E-14 to 1.2E-9). statistics.md "Centre quantiles are accurate"
-records it; where the switch to the rounded-y form lies in c = 0.08 to 0.1 is open, filed as T-5038 (no engine change here).
+c = 0.08 at every df; the engine is not at c = 0.08 (off 1.4E-15 at df 2, then 2.2E-14 at df 5 up to 1.2E-9 at df 1E6). statistics.md "Centre quantiles are accurate"
+records it; where the switch to the rounded-y form lies in c = 0.08 to 0.1 is open: probe T-5038, then the cut move T-3477 (no engine change here).

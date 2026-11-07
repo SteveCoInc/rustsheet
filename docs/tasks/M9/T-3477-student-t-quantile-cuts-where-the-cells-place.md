@@ -7,7 +7,7 @@ status: todo
 priority: P3
 size: M
 tier: opus
-depends_on: []
+depends_on: [T-5038]
 ---
 
 ## Goal
@@ -21,6 +21,8 @@ in the doc comments):
 - `T_CENTRE_C` (0.075): bracketed 0.05..0.1 by cells on both sides (a cut of 0.04 breaks gen-m9's six c = 0.05
   cells). t3349-t-inv-2t-sweep A98 (c 0.0787) and A195 (c 0.0985) come closer from the centre path at a cut of
   0.0999, so the cells favour 0.0985..0.1.
+  T-3370 adds that Excel is the true quantile at c = 0.08 (probes-numeric m9-t-inv-centre, T.INV(0.46|0.54,df),
+  T.INV.2T(0.92,df)), so the cut is at or above 0.08; T-5038 probes c = 0.085..0.099.
 - `T_TAIL_P` (1E-5): it moves 25 cells, all df 1 or 2. Lower cuts are worse; 1E-3 brings m9-t-inv-2t A3
   (`T.INV.2T(0.001,1)`) closer and 1E-2 is worse on net (4 worse, 2 better). The lean to 1E-3 rests on one cell.
 - `T_STATRS_MIN_P` (1E-8) moves no cell from 1E-20 to 1E-7 after T-2511 (only df 1 reaches it). It is a guard
