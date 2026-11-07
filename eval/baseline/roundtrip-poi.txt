@@ -372,7 +372,7 @@ F	roundtrip-poi/51470.xlsx	* 229 25d4c634e83e5e06
 F	roundtrip-poi/51585.xlsx	* 10029 4a6a92815a1993e5
 F	roundtrip-poi/51710.xlsx	* 26583 e88515258f72eb33
 F	roundtrip-poi/51963.xlsx	* 229 783d881e59445c1c
-F	roundtrip-poi/52348.xlsx	* 335 7c6ee437c035ba38
+F	roundtrip-poi/52348.xlsx	* 334 7c0d3f75e58c2ad8
 F	roundtrip-poi/52425.xlsx	* 163 055d2c301b145c52
 F	roundtrip-poi/52575_main.xlsx	* 221 ae22a0d85f904dad
 F	roundtrip-poi/53101.xlsx	* 270 bb9492a29aae2109
@@ -380,7 +380,7 @@ F	roundtrip-poi/53105.xlsx	* 266 385d2357e507f24c
 F	roundtrip-poi/53568.xlsx	* 4486 b69ed89e54506236
 F	roundtrip-poi/53798.xlsx	* 346 f1ebf5f859a4b530
 F	roundtrip-poi/53798_shiftNegative_TMPL.xlsx	* 346 f1ebf5f859a4b530
-F	roundtrip-poi/54288.xlsx	* 563 5a31852e8ddf3a3a
+F	roundtrip-poi/54288.xlsx	* 562 ecc9078c69cd298e
 F	roundtrip-poi/54436.xlsx	* 296 2cd19df138a87ec5
 F	roundtrip-poi/54607.xlsx	* 263 8b7f30dd185acb68
 F	roundtrip-poi/54764-2.xlsx	!EngineError
@@ -410,7 +410,7 @@ F	roundtrip-poi/57826.xlsx	* 612 98ceec296d90ac74
 F	roundtrip-poi/57893-many-merges.xlsx	* 128 473b31cb2d2a2e84
 F	roundtrip-poi/57914.xlsx	* 4 05ecfb0acb27db3b
 F	roundtrip-poi/58106.xlsx	* 287 1cbd0e8c127136e8
-F	roundtrip-poi/58325_db.xlsx	* 557 c2ef432f72eb66ef
+F	roundtrip-poi/58325_db.xlsx	* 556 25730b28397f1c22
 F	roundtrip-poi/58325_lt.xlsx	* 100 99fb15fee1c1ff6d
 F	roundtrip-poi/58616.xlsx	!InvalidCase
 F	roundtrip-poi/59021.xlsx	!EngineError
@@ -430,7 +430,7 @@ F	roundtrip-poi/62629_target.xlsm	* 1320 707f439d9b703b4a
 F	roundtrip-poi/63934.xlsx	* 251 c0a14c0838620a1e
 F	roundtrip-poi/64508.xlsx	* 1 4104e5ce01c743e5
 F	roundtrip-poi/64667.xlsx	* 486 e3ca2880cc7b0d4c
-F	roundtrip-poi/65016.xlsx	* 213 c2343913ff4b648d
+F	roundtrip-poi/65016.xlsx	* 211 0f1180c5e7170705
 F	roundtrip-poi/66365.xlsx	* 2 eb8ba75aa320657f
 F	roundtrip-poi/AmpersandHeader.xlsx	* 270 5ed04e490cca7793
 F	roundtrip-poi/BrNotClosed.xlsx	* 255 0ed7c687492bfcf3
@@ -463,7 +463,7 @@ F	roundtrip-poi/bug64512_embed.xlsx	* 336 79b0e237b6588876
 F	roundtrip-poi/bug65306.xlsx	* 126 63fe0bf9b2af9daa
 F	roundtrip-poi/bug65464.xlsx	* 450 e383e638528ab3d8
 F	roundtrip-poi/bug66215.xlsx	* 238 7bdb069dd70570a4
-F	roundtrip-poi/bug66675.xlsx	* 339 b68110cda37cdcbf
+F	roundtrip-poi/bug66675.xlsx	* 338 68c1feb8454ebe29
 F	roundtrip-poi/bug67784.xlsx	* 6 a2dd96991e9b9e0e
 F	roundtrip-poi/bug69812.xlsx	* 113 3e7afa3434e22aa2
 F	roundtrip-poi/chartTitle_noTitle.xlsx	* 1245 275b98c6b3573423
@@ -478,8 +478,8 @@ F	roundtrip-poi/evaluate_formula_with_structured_table_references.xlsx	* 141 ae2
 F	roundtrip-poi/formula-eval.xlsx	* 84 7d3b3f18a007bf99
 F	roundtrip-poi/github-321.xlsx	* 114 037180ff63ca519e
 F	roundtrip-poi/invalid_cell_reference.xlsx	!EngineError
-F	roundtrip-poi/link-external-workbook-a.xlsx	* 34 8dc5beb3edbd7b3f
-F	roundtrip-poi/link-external-workbook-b.xlsx	* 38 05b2874078b6c279
+F	roundtrip-poi/link-external-workbook-a.xlsx	* 33 1b16383e8b613853
+F	roundtrip-poi/link-external-workbook-b.xlsx	* 37 8b2bdd0e5cf888f2
 F	roundtrip-poi/noSharedStringTable.xlsx	* 132 8ba4793fe7ad8d5f
 F	roundtrip-poi/npe.xlsx	* 1397 b4b58e4504fdc780
 F	roundtrip-poi/picture.xlsx	* 233 f03e58a442dbc440
@@ -500,6 +500,6 @@ F	roundtrip-poi/workbookProtection_workbook_revision_protected.xlsx	* 371 ad2c7a
 F	roundtrip-poi/xlmmacro.xlsm	* 182 93ad0bebadb6c235
 F	roundtrip-poi/xlookup.xlsx	* 1 50a248930821e1ec
 F	roundtrip-poi/xlsx-corrupted.xlsx	* 598 9f76d8cb89b27c3e
-F	roundtrip-poi/xlsx-jdbc.xlsx	* 33 41d08a743242e112
+F	roundtrip-poi/xlsx-jdbc.xlsx	* 30 021dfe4c83d2d1be
 F	roundtrip-poi/xssf-enum.xltx.xlsx	* 1 cf0fb6f1a83dde39
 F	roundtrip-poi/xxe_in_schema.xlsx	* 182 f51717a2e3d2940d
