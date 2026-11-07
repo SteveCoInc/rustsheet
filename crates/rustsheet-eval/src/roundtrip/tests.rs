@@ -215,7 +215,12 @@ fn v8_and_r0_run_on_a_real_workbook() {
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../eval/suites/fixtures/cases");
     let path = root.join("circular-keeps-cached-values.xlsx");
     let bytes = std::fs::read(&path).expect("fixture");
-    let Ok((items, _)) = r0(&bytes, Some("circular-keeps-cached-values.xlsx")) else {
+    let Ok(source) = Package::read(&bytes) else {
+        panic!("the fixture is a package");
+    };
+    let Ok((items, _, _)) =
+        super::scenarios::r0(&source, &bytes, Some("circular-keeps-cached-values.xlsx"))
+    else {
         panic!("R0 runs on a fixture");
     };
     assert!(items.iter().all(|i| i.kind != "package"), "{items:?}");
@@ -246,6 +251,8 @@ fn a_new_loss_in_an_unchanged_case_is_a_regression() {
         message: None,
         millis: 0,
         checked: items.len(),
+        scenarios: std::collections::BTreeMap::from([("R0", items.len())]),
+        skipped: std::collections::BTreeMap::new(),
         items,
     };
     let before = case(vec![
@@ -284,6 +291,8 @@ fn lossy(checked: usize, lost: &[(&str, usize)]) -> CaseResult {
         message: None,
         millis: 0,
         checked,
+        scenarios: std::collections::BTreeMap::from([("R0", checked)]),
+        skipped: std::collections::BTreeMap::new(),
         items: lost
             .iter()
             .map(|(key, weight)| Item {
@@ -767,4 +776,201 @@ fn flags_map_to_modes_and_regressions_are_refused_by_default() {
             allow_regressions: true
         }
     );
+}
+
+mod r1_rule {
+    use rustsheet::{Value, Workbook, WorkbookOptions};
+
+    use super::super::r1::{apply, violations, Delta, Edit};
+    use super::super::{Item, Verdict};
+
+    fn item(kind: &'static str, key: &str, verdict: Verdict) -> Item {
+        Item {
+            scenario: "R0",
+            kind,
+            key: key.into(),
+            verdict,
+            detail: None,
+            candidate: None,
+            weight: super::super::xmldiff::unit_weight(verdict),
+        }
+    }
+
+    fn delta(styles: bool) -> Delta {
+        Delta {
+            written: ["Sheet1!A1".to_string(), "Sheet1!A9".to_string()].into(),
+            changed: ["Sheet1!B2".to_string()].into(),
+            created: ["Sheet1!A9".to_string()].into(),
+            restyled: if styles {
+                ["Sheet1!A1".to_string()].into()
+            } else {
+                std::collections::BTreeSet::default()
+            },
+            sheet: "Sheet1".into(),
+            strings: false,
+            styles,
+        }
+    }
+
+    #[test]
+    fn only_what_the_edits_explain_may_change() {
+        // Already lost in R0: not the edit's doing.
+        let plain = vec![item(
+            "element",
+            "/officeDocument[0]/theme[0]:/theme/x[0]",
+            Verdict::Lost,
+        )];
+        let edited = vec![
+            plain[0].clone(),
+            // The written cell's input, and a dependent's new cached value.
+            item("semantic", "cell Sheet1!A1 input", Verdict::Changed),
+            item("semantic", "value Sheet1!B2", Verdict::Changed),
+            // A cell the edit created gets a style fact of its own.
+            item("semantic", "cell Sheet1!A9 style", Verdict::Added),
+            // The edited sheet's dimension (N9).
+            item(
+                "attribute",
+                "/officeDocument[0]/worksheet[Sheet1]:/worksheet/dimension[0]@ref",
+                Verdict::Changed,
+            ),
+            // Violations: an unrelated loss, a value outside Δ, the dependent's formula (only its
+            // value may change), a written cell's style without E6, and a style record without E6.
+            item(
+                "element",
+                "/officeDocument[0]/worksheet[Sheet1]:/worksheet/extLst[0]",
+                Verdict::Lost,
+            ),
+            item("semantic", "value Sheet1!C3", Verdict::Changed),
+            item("semantic", "cell Sheet1!B2 formula", Verdict::Changed),
+            item("semantic", "cell Sheet1!A1 style", Verdict::Changed),
+            item(
+                "element",
+                "/officeDocument[0]/styles[0]:/styleSheet/cellXfs[0]/xf[9]",
+                Verdict::Added,
+            ),
+            // A created cell's style changed, not added, is not the edit's doing.
+            item("semantic", "cell Sheet1!A9 style", Verdict::Changed),
+            // A count that is not N10's.
+            item(
+                "attribute",
+                "/officeDocument[0]/worksheet[Sheet1]:/worksheet/mergeCells[0]@count",
+                Verdict::Changed,
+            ),
+        ];
+        let found = violations("R1/E1", &plain, edited.clone(), &delta(false));
+        let keys: Vec<&str> = found.iter().map(|i| i.key.as_str()).collect();
+        assert_eq!(
+            keys,
+            [
+                "/officeDocument[0]/worksheet[Sheet1]:/worksheet/extLst[0]",
+                "value Sheet1!C3",
+                "cell Sheet1!B2 formula",
+                "cell Sheet1!A1 style",
+                "/officeDocument[0]/styles[0]:/styleSheet/cellXfs[0]/xf[9]",
+                "cell Sheet1!A9 style",
+                "/officeDocument[0]/worksheet[Sheet1]:/worksheet/mergeCells[0]@count",
+            ]
+        );
+        assert!(found.iter().all(|i| i.scenario == "R1/E1"));
+        // Under E6 the restyled cell's style and the appended cell format are explained.
+        let with_e6 = violations("R1/E6", &plain, edited, &delta(true));
+        assert_eq!(with_e6.len(), 5, "{with_e6:?}");
+    }
+
+    #[test]
+    fn a_truncated_tail_is_excused_only_up_to_r0s_weight() {
+        let truncated = |weight| Item {
+            weight,
+            ..item(
+                "element",
+                "/officeDocument[0]/theme[0]:<truncated>",
+                Verdict::Changed,
+            )
+        };
+        let found = violations(
+            "R1/E1",
+            &[truncated(10)],
+            vec![truncated(10_000)],
+            &delta(false),
+        );
+        assert_eq!(found.iter().map(|i| i.weight).collect::<Vec<_>>(), [9_990]);
+        assert!(violations(
+            "R1/E1",
+            &[truncated(10)],
+            vec![truncated(10)],
+            &delta(false)
+        )
+        .is_empty());
+    }
+
+    #[test]
+    fn e1_skips_a_spill_member_for_the_next_constant() {
+        let mut wb = Workbook::new(&WorkbookOptions::default()).expect("workbook");
+        wb.edit(|t| {
+            t.set("Sheet1!A1", "=SEQUENCE(2)")?;
+            t.set("Sheet1!B5", 7.0)
+        })
+        .expect("seeded");
+        wb.recalculate();
+        let (delta, outcome) = apply(&mut wb, &[Edit::E1]).expect("applies");
+        let delta = delta.expect("E1 found a constant");
+        // A2 holds a number but is a spill member, so B5 is the first constant.
+        assert_eq!(outcome.refused, 0, "{outcome:?}");
+        assert!(delta.written.contains("Sheet1!B5"), "{delta:?}");
+        assert_eq!(wb.value("Sheet1!B5").expect("B5"), Value::Number(8.0));
+    }
+}
+
+mod exceptions_self_test {
+    use std::collections::BTreeMap;
+
+    use super::super::exceptions::{apply, Exception};
+    use super::super::{CaseResult, Item, Verdict};
+    use crate::runner::CaseStatus;
+
+    fn case(keys: &[&str]) -> CaseResult {
+        CaseResult {
+            id: "rt/a.xlsx".into(),
+            suite: "rt".into(),
+            status: CaseStatus::Fail,
+            message: None,
+            millis: 0,
+            checked: 10,
+            scenarios: BTreeMap::from([("R0", 10)]),
+            skipped: std::collections::BTreeMap::new(),
+            items: keys
+                .iter()
+                .map(|k| Item {
+                    scenario: "R0",
+                    kind: "element",
+                    key: (*k).into(),
+                    verdict: Verdict::Lost,
+                    detail: None,
+                    candidate: None,
+                    weight: 1,
+                })
+                .collect(),
+        }
+    }
+
+    fn exception(item: &str) -> Exception {
+        Exception {
+            case: "rt/a.xlsx".into(),
+            item: item.into(),
+            owner: "T-4514".into(),
+        }
+    }
+
+    #[test]
+    fn an_exception_excuses_its_item_and_a_stale_one_is_reported() {
+        let mut r = case(&["/x"]);
+        let used = [exception("R0 element /x lost")];
+        assert_eq!(apply(&mut [&mut r], &used).1, 1);
+        assert!(r.items.is_empty());
+        assert_eq!(r.status, CaseStatus::Pass);
+        // The item is gone (fixed): the exception now excuses nothing and is stale.
+        let mut fixed = case(&[]);
+        let (stale, _) = apply(&mut [&mut fixed], &used);
+        assert_eq!(stale.len(), 1);
+    }
 }
