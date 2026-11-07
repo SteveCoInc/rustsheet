@@ -1997,8 +1997,6 @@ The engine already matches all 20 cells.
 Status: VERIFIED (web) for the listed cells
 Tasks: T-1401, T-1402, T-1403
 
-A single cell holding TRUE or FALSE reads like a single text cell, as empty data (probes/t2605-single-boolean-cell, T-2605): `QUARTILE(A1,0/1/4/7)`, `QUARTILE.INC/.EXC`, `PERCENTILE(A1,0/7)`, `PERCENTILE.INC/.EXC` are `#NUM!` (a bad `k` too), and `PERCENTRANK`, `.INC`, `.EXC` are `#N/A`. `PERCENTRANK` of an empty or text cell is `#N/A` with significance 0, 2 or omitted: empty data beats the significance check. A typed boolean argument stays a one-element array (probes-numeric/t1748-typed-boolean-data).
-
 ## SKEW.P of two numbers is #DIV/0!
 Rule: `SKEW.P` of two numbers is `#DIV/0!`, like SKEW: `SKEW.P(E11:E11,A11:A12,A5:A7)` over -0.0001 and 1 (blank, FALSE,
 TRUE and "a" skipped) is `#DIV/0!`. Three numbers are enough: `SKEW.P(1,2,3)` is 0, `SKEW.P(1,2,4)` 0.3818017741606059; a constant series of
@@ -6798,6 +6796,7 @@ error (`QUARTILE.EXC(A1,NA())` `#N/A`, `QUARTILE.EXC(A1,1/0)` `#DIV/0!`, `QUARTI
 TRUE stays the one value 1 ("QUARTILE(TRUE,1)", but `QUARTILE.EXC(TRUE,1)` is `#NUM!` for one value). PERCENTRANK of it is
 `#N/A` and `MEDIAN(A1)` `#NUM!`. So `QUARTILE.EXC(Data!D7,HYPGEOMDIST(2,3,7,2^32))` with D7 TRUE is `#NUM!`
 (gen-m9/38e4fc309fe199ea A5).
+T-2605 (probes/t2605-single-boolean-cell, excel-graph, 2026-11-07, 41 cells) confirms FALSE reads the same as TRUE, and for every quart/k tried (`QUARTILE(A1,0/1/4/7)`, `PERCENTILE(A1,0/7)`, `PERCENTILE.EXC(A1,0.5)`): `#NUM!`. PERCENTRANK, `.INC` and `.EXC` of a boolean, an empty or a text cell are `#N/A` with significance 0, 2 or omitted: empty data comes before the significance check.
 Evidence: probes/t2429-quartile-exc-no-number A1-A24 (excel-graph, 2026-10-25).
 Ours: since T-2429 (`percentile_numbers`); `#VALUE!` before.
 Status: VERIFIED (excel-graph)

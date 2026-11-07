@@ -29,4 +29,4 @@ Those cells pass once the single TRUE cell reads as Excel reads it.
 -
 
 ## Outcome
-New probe `probes/t2605-single-boolean-cell` (41 cells, oracle from excel-graph). Excel reads a single TRUE/FALSE cell as empty data (`#NUM!` for QUARTILE/PERCENTILE, `#N/A` for PERCENTRANK) and PERCENTRANK of empty/text data is `#N/A` whatever the significance. The engine already matches: 41/41 pass, so no engine change and no baseline change. Recorded in statistics.md.
+New probe `probes/t2605-single-boolean-cell` (41 cells, oracle from excel-graph). Excel reads a single TRUE/FALSE cell as empty data (`#NUM!` for QUARTILE/PERCENTILE, `#N/A` for PERCENTRANK) and PERCENTRANK of empty/text data is `#N/A` whatever the significance. The engine already matches: 41/41 pass, so no engine change; the baseline gains the new case's `C` line and no `F` lines (written by `make eval-baseline`). Recorded in statistics.md.
