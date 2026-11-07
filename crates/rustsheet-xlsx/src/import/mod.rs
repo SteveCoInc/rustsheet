@@ -36,7 +36,7 @@ use rustsheet_engine::{
         parser::{new_parser_english, stringify::to_english_string},
         types::CellReferenceRC,
     },
-    types::{Metadata, Table, Workbook, WorkbookSettings, WorkbookView},
+    types::{Table, Workbook, WorkbookSettings, WorkbookView},
     Model,
 };
 
@@ -252,20 +252,7 @@ fn load_package<R: Read + Seek>(
         dn.formula = reparse_formula_hack(&dn.name, &dn.formula, &worksheet_names, &tables)?;
     }
     let external_books = load_external_books(archive, &rels, &workbook.external_references);
-    let metadata = match load_metadata(archive) {
-        Ok(metadata) => metadata,
-        Err(_) => {
-            // In case there is no metadata, add some
-            Metadata {
-                application: "Unknown application".to_string(),
-                app_version: "".to_string(),
-                creator: "".to_string(),
-                last_modified_by: "".to_string(),
-                created: "".to_string(),
-                last_modified: "".to_string(),
-            }
-        }
-    };
+    let metadata = load_metadata(archive);
     let mut views = HashMap::new();
     views.insert(
         0,
