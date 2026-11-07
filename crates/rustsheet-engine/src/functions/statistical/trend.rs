@@ -253,13 +253,25 @@ impl Model {
     }
 }
 
-/// GROWTH's prediction `e^(intercept + Σ m_j x_j)`, `#NUM!` where LOGEST's `b = e^intercept`
-/// overflows though the prediction may be finite (statistics.md "GROWTH is #NUM! once LOGEST's b
-/// overflows"; probes/t4590-growth-overflow Int!, accuracy/GROWTH/s1 A104). `beta` holds the
-/// intercept first when `const_term`, as for [`predict`].
+/// GROWTH's prediction `e^(intercept + Σ m_j x_j)` at the edges of LOGEST's factors `b = e^intercept`
+/// and the slopes' factor `F = e^(Σ m_j x_j)` (statistics.md "GROWTH is #NUM! once LOGEST's b or
+/// slopes' factor overflows ..."):
+/// - `#NUM!` where b overflows (probes/t4590-growth-overflow Int!, accuracy/GROWTH/s1 A104) or F
+///   overflows (probes/t4765-growth-factor-edges Over!), though the prediction may be finite;
+/// - 0 where F is below `DBL_MIN`, const TRUE or FALSE (`Cut!`: -708.39 is 1, -708.4 is 0;
+///   `NoConst!`), though the prediction may be about 1. A subnormal b is no zero (`SmallB!A3`).
+///
+/// `beta` holds the intercept first when `const_term`, as for [`predict`].
 fn growth_prediction(beta: &[f64], point: &[f64], const_term: bool) -> ArrayNode {
     if const_term && beta[0].exp().is_infinite() {
         return ArrayNode::Error(Error::NUM);
+    }
+    let slopes = predict(&beta[usize::from(const_term)..], point, false).exp();
+    if slopes.is_infinite() {
+        return ArrayNode::Error(Error::NUM);
+    }
+    if slopes < f64::MIN_POSITIVE {
+        return ArrayNode::Number(0.0);
     }
     ArrayNode::Number(predict(beta, point, const_term).exp())
 }

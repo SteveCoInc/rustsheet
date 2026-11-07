@@ -2661,6 +2661,7 @@ C	probes/t4719-text-unverified-residue.case.json	44
 C	probes/t4720-fixed-sign-and-exponent-digits.case.json	37
 C	probes/t4721-im-overflow-residue.case.json	25
 C	probes/t4762-index-one-index-readers.case.json	27
+C	probes/t4765-growth-factor-edges.case.json	24
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -9831,12 +9832,6 @@ F	probes/t4579-ttest-paired.case.json	Off!A7
 F	probes/t4579-ttest-paired.case.json	Off!A8
 F	probes/t4579-ttest-paired.case.json	Off!A9
 F	probes/t4590-growth-overflow.case.json	Int!A1
-F	probes/t4590-growth-overflow.case.json	Int!A2
-F	probes/t4590-growth-overflow.case.json	Int!A3
-F	probes/t4590-growth-overflow.case.json	Int!A4
-F	probes/t4590-growth-overflow.case.json	Int!A5
-F	probes/t4590-growth-overflow.case.json	Int!A6
-F	probes/t4590-growth-overflow.case.json	Int!A7
 F	probes/t4590-growth-overflow.case.json	Int!B1
 F	probes/t4590-growth-overflow.case.json	Int!B2
 F	probes/t4590-growth-overflow.case.json	Int!B4
@@ -9889,6 +9884,10 @@ F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!C67
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!C7
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!C70
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!C73
+F	probes/t4765-growth-factor-edges.case.json	Cut!A1
+F	probes/t4765-growth-factor-edges.case.json	Cut!A5
+F	probes/t4765-growth-factor-edges.case.json	SmallB!A1
+F	probes/t4765-growth-factor-edges.case.json	SmallB!A3
 F	probes/table-edits/t4274-calc-column-delete-row-2.case.json	F!A1
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
