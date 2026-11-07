@@ -3,7 +3,7 @@ id: T-3469
 title: "Excel's far-tail Q at shape 6 (x = 38, 42, 229.64986, 234.2428575) and POISSON(9,100) at x/a = 10"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -81,11 +81,15 @@ Owns the 19 ungated probes-numeric cells listed in decision 0203 under "Second e
 - `FAR_TAIL_MIN_X`'s tag says shape 2..4 but the cut applies at 1.5..11; cite the fresh-sweep-2 cells at x 27..34, shapes 5..11, or widen the tag.
 - R4.2: commit the frozen code before filling a fresh sweep (the T-3269 freeze could not be proven from git).
 
-## Progress (exponent correction)
+## Outcome
 `excel_far_upper` now takes Loader's direct deviance for the prefactor's exponent instead of the ratio form; the
 switch and the shape range are unchanged, so no FITTED cut moves (docs/excel-semantics/statistics.md, "Correction
 (T-3469)"). Per cell, main a300350e against the change: 13 cells fixed, 29 closer, 0 farther. Every cell under "Cells
 this task owns" is now within 15 digits of Excel: A80, A108 and t1049 A28 bit-exact; R!A73 and A75 2 ulp; A165 and
 A166 1 ulp; A183, A184 and caa1eed48b1883fe A59 unchanged (5, 5 and 1 ulp). POISSON passes Gate B (464 to 465/506).
 Of the second extension's 19 cells, still visibly off: t3269-shape6-misses A69 `POISSON(4,42,TRUE)` (6 ulp) and
-t3269-fresh-sweep-2 A173 and A233 (shape 3/2, 17 and 21 ulp), which stay with this task.
+t3269-fresh-sweep-2 A173 and A233 (shape 3/2, 17 and 21 ulp), which move to T-4954.
+
+Adopted as an orphan PR (#3905) by the opus worker, which closed the task on this change: every owned cell is
+within 15 digits, and the three remaining Second-extension cells moved to T-4954. The change is a choice of formula
+already used by the cdf and density (`direct_deviance`), not a scored fit: no constant moves, no FITTED tag.
