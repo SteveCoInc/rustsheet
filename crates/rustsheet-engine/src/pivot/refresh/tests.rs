@@ -484,7 +484,8 @@ fn a_grouped_field_is_grouped_again() {
         ..CacheField::default()
     };
     let expected = group_by_numbers(&read, [0.0, 9.0, 3.0], &grouped.fields[0].items).unwrap();
-    assert_eq!(fresh.fields[0], expected);
+    // Grouped in place, it keeps the values it was read with (T-4734).
+    assert_eq!(fresh.fields[0], keep_ungrouped(read, expected));
     assert_eq!(fresh.fields[0].records.len(), 3);
 
     let model = source(&[&plain(&["N", "1", "", "7"]), &plain(&["V", "1", "1", "1"])]);
@@ -567,10 +568,8 @@ fn a_date_grouped_field_is_grouped_again() {
         records: vec![0, 1, 2],
         ..CacheField::default()
     };
-    assert_eq!(
-        fresh.fields[0],
-        group_by_dates(&read, groups, months).unwrap()
-    );
+    let expected = group_by_dates(&read, groups, months).unwrap();
+    assert_eq!(fresh.fields[0], keep_ungrouped(read, expected));
     assert_eq!(fresh.fields[0].date_groups, Some(groups));
     assert_eq!(fresh.fields[0].records, [1, 5, 2]);
 }

@@ -66,7 +66,8 @@ committed; recalc input_sha256 3eed9bc4…, 00144ae5… and c81db4c1…, in the 
   does is open (T-4177).
 Not checked, all UNVERIFIED (T-4654): the exported shared-item order is the engine's (a cache's old items first,
 new ones appended), not the order Excel was seen to save (source order first, stale items after; "Item casing when
-cache and source disagree, and date items", t4612); `containsNonDate` and `minDate`/`maxDate` are never written.
+cache and source disagree, and date items", t4612); `containsNonDate` and `minDate`/`maxDate` are never written, except on a field grouped in place by dates (T-4734;
+next entry).
 The cache definition's unread attributes and elements are not kept: the export writes `numFmtId="0"`, the builder's
 version attributes and no refresh metadata or `extLst` (T-4735).
 Status: UNVERIFIED (probe pending: T-4177). The three runs above are scratch observations; T-4177's suite commits
@@ -77,6 +78,50 @@ drops them, `OpaqueEntry::is_layout_lines`), then the engine's; and it drops, wi
 holds two texts that differ only in case (next entry). A render that collapses to `#SPILL!` drops the saved lines
 too, and the export then writes the definition with no `rowItems`/`colItems`; what Excel saves for a collapsed
 pivot is UNVERIFIED (probe pending: T-4177).
+
+## Excel for the web opens engine-exported grouped pivot caches
+Rule: Excel for the web opens, without repair, and renders a refreshOnLoad pivot whose grouped cache the engine's
+export wrote (T-4734) in the case builder's shapes (`tools/src/rustsheet_tools/pivot_groups.py`, read off
+Excel-authored caches; its golden parts are the builder's output, not files Excel saved):
+- a field grouped in place by a range lists its own values as shared items (`<x v>` records), then
+  `<fieldGroup [par] base>` (`base` itself) with `<rangePr autoStart="0" autoEnd="0" ...>` (`startNum`, `endNum`,
+  `groupInterval`, or `groupBy`, `startDate`, `endDate`) and its group items as `<groupItems>`;
+- a date level Excel adds (`Quarters`, `Years`) is a `databaseField="0"` cacheField with no shared items and
+  `<fieldGroup base>`, its `rangePr` and `groupItems`; the in-place field's `par` names the last level;
+- a manual group is a `databaseField="0"` cacheField with `<fieldGroup base>`, a `<discretePr>` entry per base
+  shared item and `<groupItems>`; the base field has only `<fieldGroup par/>`.
+A field grouped in place by dates needs `containsNonDate="0"` (the schema's default is on) and `minDate`/`maxDate`
+on its `sharedItems`: without them Excel's refresh on open dropped the date grouping and listed each date (DC
+showed `44016`, `44211` where the months belong; every GETPIVOTDATA on a month or level was `#REF!`). The export
+writes them for such a field whose values are all dates, `minDate` and `maxDate` its first and last date. What Excel
+saved for the same field is in the sidecar eval/suites/probes/cases/t4170-pivot-date-levels.oracle.json
+(`pivots[0].cache_fields[0].shared_flags`: `containsNonDate="0"`, `minDate` 2018-12-15, its first date, and
+`maxDate` 2021-01-16, a day past its last date 2021-01-15). Whether the last-plus-one-day `maxDate` matters is
+T-4654's.
+Evidence: T-4734 oracle runs (excel-graph, 2026-11-07, `rustsheet-oracle` `_recalc_cached` of engine exports, not
+committed): the probe workbooks built from their case specs, loaded by the importer and saved by the regenerating
+export (`save_xlsx_to_writer`), each compared with the probe's sidecar:
+- t4170-pivot-manual-groups (input sha256 df3fc476…): 7 pivots, all 196 pivot cells and 19 GETPIVOTDATA cells
+  equal the sidecar;
+- t4170-pivot-date-levels: first run (no `containsNonDate`, 0c8366fd…) 402 of 410 pivot cells and 14 of 21 formula
+  cells differ, the months dropped; with `containsNonDate="0"`, `minDate`, `maxDate` (e0579e72…) all 410 pivot
+  cells and 21 formula cells equal;
+- t4236-pivot-date-groups-no-blank (f3b660b2…): all 349 formula cells equal (179 differed before the flags);
+- t4228-pivot-range-groups (2b8ff5a0…): all 168 formula cells equal; t4128-pivot-spike (2371c560…, G a numeric
+  range group): its 3 exported pivots' cells and both formula cells equal (pivot K is not imported, so not exported);
+- an API-built cache (Amount grouped by tens, Date by months with Quarters and Years added, Product2 a manual group;
+  a2befb89…): GETPIVOTDATA on Years `2019`, `2020`, `<1/1/2019` and the grand total gave 15, 16, 32 and 63, the
+  engine's answers.
+Status: UNVERIFIED (probe pending: T-4177, which commits engine-export re-render cases; the runs above are scratch
+observations). Not checked: a group renamed through its item's `n`, groups over blanks, a 1904 workbook (the
+import refuses its date groups, so the export drops them), and whether `autoStart`/`autoEnd` on (the model keeps
+no such flag; the export writes them off, which keeps the bounds the engine groups by) would change Excel's refresh.
+Implemented in: crates/rustsheet-xlsx/src/export/pivots/groups.rs (`check`, `write_field_group`,
+`write_date_flags`; T-4734). The model keeps a field's own values beside its range grouping
+(`CacheField::ungrouped`, kept by `group_by_numbers` and `group_by_dates`), and the export writes a grouping only
+when grouping those values again by the import's rule gives the field it holds; any other shape (a numeric level or
+a manual group beside a range grouping, two manual groups of one field, an added field before a database field)
+drops the cache and its pivots with a log line. The export's cache limits count the kept values too.
 
 ## Case-variant text items make Excel for the web call the file corrupt
 Rule: a cache field whose shared items list two texts that differ only in case (`East`, `east`) makes

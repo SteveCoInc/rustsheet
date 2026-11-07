@@ -403,6 +403,7 @@ mod tests {
                 date_groups: None,
                 added_group: None,
                 formula: None,
+                ungrouped: None,
             }],
             record_count: 4,
             refresh_on_load: false,

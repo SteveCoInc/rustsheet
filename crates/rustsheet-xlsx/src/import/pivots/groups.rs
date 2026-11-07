@@ -14,8 +14,8 @@
 //! (docs/excel-semantics/web.md "Grouped pivot fields import as their group items").
 
 use rustsheet_engine::pivot::{
-    group_by_dates, group_by_discrete, group_by_numbers, AddedGroup, CacheField, CacheItem,
-    DateGroupBy, DateGroups, PivotCache, PivotCacheError, MAX_ITEMS, MAX_RECORD_VALUES,
+    group_by_dates, group_by_discrete, group_by_numbers, keep_ungrouped, AddedGroup, CacheField,
+    CacheItem, DateGroupBy, DateGroups, PivotCache, PivotCacheError, MAX_ITEMS, MAX_RECORD_VALUES,
 };
 
 use super::{skip, Skip};
@@ -129,11 +129,9 @@ pub(super) fn apply_groups(
     let mut names = grouping_fields.into_iter();
     for (index, field) in derived {
         if let Some(existing) = cache.fields.get_mut(index) {
-            existing.items = field.items;
-            existing.records = field.records;
-            existing.number_groups = field.number_groups;
-            existing.date_groups = field.date_groups;
-            existing.added_group = field.added_group;
+            // Grouped in place: it keeps its own values, moved, for the export (T-4734).
+            let base = std::mem::take(existing);
+            *existing = keep_ungrouped(base, field);
         } else {
             // Sorted, and every grouping field has exactly one group, so this is the next one.
             let Some(name) = names.next() else {
