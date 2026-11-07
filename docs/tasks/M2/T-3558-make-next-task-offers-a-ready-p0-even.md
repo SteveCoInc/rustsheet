@@ -3,7 +3,7 @@ id: T-3558
 title: "make next-task offers a ready P0 even when its lane is busy, and says 'lane busy' rather than 'no ready task' when only the busy-lane rule hides ready tasks"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
