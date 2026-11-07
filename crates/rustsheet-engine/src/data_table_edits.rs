@@ -216,6 +216,32 @@ impl Model {
         Ok(())
     }
 
+    /// The data tables of `sheet`, to snapshot before an edit that moves or deletes them.
+    pub(crate) fn data_tables_of(&self, sheet: u32) -> Result<Vec<DataTable>, String> {
+        Ok(self.workbook.worksheet(sheet)?.data_tables.clone())
+    }
+
+    /// Replaces the data tables of `sheet` with `tables` (an undo or redo of an edit that moved
+    /// or deleted them). The tables can come from a peer's diff (directive 5), so each must pass
+    /// [`DataTable::check`] against the ones before it, or nothing changes.
+    pub(crate) fn restore_data_tables(
+        &mut self,
+        sheet: u32,
+        tables: &[DataTable],
+    ) -> Result<(), String> {
+        Self::check_data_tables(tables)?;
+        self.workbook.worksheet_mut(sheet)?.data_tables = tables.to_vec();
+        Ok(())
+    }
+
+    /// Checks that [`Model::restore_data_tables`] would accept `tables`, changing nothing.
+    pub(crate) fn check_data_tables(tables: &[DataTable]) -> Result<(), String> {
+        for (i, table) in tables.iter().enumerate() {
+            table.check(&tables[..i]).map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+
     /// Refuses an edit that writes into every cell of `(top, left, bottom, right)` on `sheet`, a
     /// fill target or a cut's source (which it clears cell by cell), when that holds a result cell
     /// of a data table, before the edit changes anything: each of those writes is refused. A fill
