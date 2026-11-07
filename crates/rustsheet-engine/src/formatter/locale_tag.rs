@@ -459,7 +459,8 @@ pub fn numerals(tag: &str) -> Numerals {
 
 /// The locale and numeral parts of a tag written `locale,N00`, the form Excel gives a cell typed
 /// with script digits (`[$-ar-SA,200]0`, `[$-,D00]h:mm`; probes/t3446-script-digits-forms): the
-/// hex after the comma holds the numeral byte of [`Numerals::from_byte`] above its low byte, so
+/// suffix after the comma, read as extended hex ([`numerals`]), holds the numeral byte of
+/// [`Numerals::from_byte`] above its low byte, so
 /// `,200` prints Arabic-Indic digits, `,D00` Thai and `,1200` Khmer, and `,0` ASCII
 /// (probes/t3891-numeral-tag-render A1:A30, excel-graph 2026-11-04). `,2000` prints fullwidth
 /// digits there, as byte 32 does in the LCID form (A28; probes/t4107-numeral-2000-suffix). Before the
