@@ -107,21 +107,17 @@ impl Model {
             row: 1,
             column: 1,
         };
-        for (index, defined_name) in self.workbook.defined_names.iter_mut().enumerate() {
-            let stored = defined_name.formula.trim_start();
-            let (eq, body) = stored.strip_prefix('=').map_or(("", stored), |b| ("=", b));
-            let node = self.parser.parse(body, &context);
-            let unchanged = to_english_string(&node, &context);
-            let text = print(node, Some(&context));
-            if text != unchanged {
-                let text = format!("{eq}{text}");
-                rewritten.push(RewrittenFormula {
+        let names =
+            self.rewrite_defined_names(&context, |node, context| print(node, Some(context)));
+        rewritten.extend(
+            names
+                .into_iter()
+                .map(|(index, original, text)| RewrittenFormula {
                     place: FormulaPlace::DefinedName(index),
-                    original: std::mem::replace(&mut defined_name.formula, text.clone()),
+                    original,
                     rewritten: text,
-                });
-            }
-        }
+                }),
+        );
         rewritten
     }
 
@@ -261,31 +257,47 @@ impl Model {
             row: 1,
             column: 1,
         };
-        let (locale, language) = (self.locale, self.language);
-        self.parser.set_locale(get_default_locale());
-        self.parser.set_language(get_default_language());
-        let mut changed = false;
-        for defined_name in &mut self.workbook.defined_names {
-            let stored = defined_name.formula.trim_start();
-            let (eq, body) = stored.strip_prefix('=').map_or(("", stored), |b| ("=", b));
-            let node = self.parser.parse(body, &context);
-            let displaced = to_string_displaced_keeping(
-                &node,
-                &context,
-                displacement,
-                get_default_locale(),
-                get_default_language(),
-            );
-            if displaced != to_english_string(&node, &context) {
-                defined_name.formula = format!("{eq}{displaced}");
-                changed = true;
-            }
-        }
-        self.parser.set_locale(locale);
-        self.parser.set_language(language);
-        if changed {
+        let changed = self.rewrite_defined_names(&context, |node, context| {
+            let (locale, language) = (get_default_locale(), get_default_language());
+            to_string_displaced_keeping(&node, context, displacement, locale, language)
+        });
+        if !changed.is_empty() {
             // Evaluation reads the parsed names, not the stored text.
             self.parse_defined_names();
         }
+    }
+
+    /// Prints each defined name's formula, parsed in English (as names are stored) on
+    /// `context`, with `print`, and stores the text, keeping a leading `=`, where it differs from
+    /// the name as parsed. Returns each changed name's index, formula before and formula after.
+    fn rewrite_defined_names(
+        &mut self,
+        context: &CellReferenceRC,
+        print: impl Fn(Node, &CellReferenceRC) -> String,
+    ) -> Vec<(usize, String, String)> {
+        let mut changed = Vec::new();
+        for index in 0..self.workbook.defined_names.len() {
+            let Some(original) = self
+                .workbook
+                .defined_names
+                .get(index)
+                .map(|n| n.formula.clone())
+            else {
+                continue;
+            };
+            let stored = original.trim_start();
+            let (eq, body) = stored.strip_prefix('=').map_or(("", stored), |b| ("=", b));
+            let node = self.parse_internal_formula(body, context);
+            let unchanged = to_english_string(&node, context);
+            let text = print(node, context);
+            if text != unchanged {
+                let text = format!("{eq}{text}");
+                if let Some(name) = self.workbook.defined_names.get_mut(index) {
+                    name.formula.clone_from(&text);
+                }
+                changed.push((index, original, text));
+            }
+        }
+        changed
     }
 }

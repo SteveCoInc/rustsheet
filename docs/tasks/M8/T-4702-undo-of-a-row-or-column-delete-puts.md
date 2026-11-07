@@ -50,11 +50,15 @@ Undo of a row or column delete leaves the conditional formats and defined names 
   docs/excel-semantics/references.md, "Row and column inserts and deletes rewrite defined names", records the
   results. It also records the `NA1` probe trap: that name is a cell address, so the first probe's A1 and A5 read the
   cell, not the name.
-- **The engine now rewrites names.** `Model::displace_defined_names` (actions.rs), called from `displace_formulas`,
+- **The engine now rewrites names.** `Model::displace_defined_names` (formula_rewrite.rs), called from `displace_formulas`,
   rewrites every name for `DisplaceData::Row`/`Column` with the cells' displacement. A name the edit does not change
   keeps its stored text. Moves, relative references in names and other-sheet scopes stay unprobed and unchanged.
+  `rewrite_defined_names` is shared with `rewrite_formulas` (sheet rename and delete). It parses names in English through
+  `parse_internal_formula`. The two anchor names differently, which is an open question for T-4747:
+  - A1 of the edited sheet here;
+  - A1 of the first remaining sheet there.
 - **Undo restores names and conditional formats.** `UserModel::rewrite_snapshot` and `rewritten_snapshot_diffs`
-  (user_model/common.rs) record one `UpdateConditionalFormatting` per changed rule and one `UpdateDefinedName` per
+  (user_model/diff_undo.rs) record one `UpdateConditionalFormatting` per changed rule and one `UpdateDefinedName` per
   changed name. Each diff has `old == new` set to the state before the delete, as `SetMergedCells` does:
   - redo replays them as no-ops before the delete rewrites again;
   - undo writes them back after the lines are inserted again.
@@ -65,4 +69,6 @@ Undo of a row or column delete leaves the conditional formats and defined names 
   - Undo and redo of a column delete and of a row delete, covering the formats, the names and a cell that reads them.
   - Refusal of a bad format index, a bad format range and an unknown name, on both undo and redo.
   - `cargo test -p rustsheet_engine`: 5,659 pass.
+- **Follow-up:** T-4747 probes relative-reference and sheet-scoped names, moves, and the stored spelling of a rewritten
+  name (from the excel-fidelity review).
 - **Eval delta:** 6 new probe cases (37 cells), all passing; 0 regressions (`make eval-baseline`).
