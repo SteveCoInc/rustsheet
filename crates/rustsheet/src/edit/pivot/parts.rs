@@ -23,6 +23,9 @@ pub struct PivotParts {
     pub cache_id: u32,
     /// Each `pivotTableDefinition` part and the sheet it sits on.
     pub tables: Vec<(SheetId, String)>,
+    /// Each slicer or timeline cache part's XML (`slicerCacheDefinition`,
+    /// `timelineCacheDefinition`; T-4188); the importer links it to its pivots by `tabId` and name.
+    pub slicer_caches: Vec<String>,
 }
 
 impl Workbook {
@@ -63,11 +66,14 @@ impl Workbook {
                 sheet_index(&self.model, *sheet)?;
                 tables.push((sheet.get(), xml.as_bytes()));
             }
+            let slicer_caches: Vec<&[u8]> =
+                part.slicer_caches.iter().map(String::as_bytes).collect();
             let read = read_pivot_parts(
                 XlsxPivotParts {
                     cache_definition: part.cache_definition.as_bytes(),
                     cache_records: part.cache_records.as_bytes(),
                     cache_id: part.cache_id,
+                    slicer_caches: &slicer_caches,
                 },
                 &tables,
                 index,

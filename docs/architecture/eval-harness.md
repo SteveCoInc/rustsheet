@@ -10,7 +10,7 @@ side by side.
 | key | meaning |
 |---|---|
 | `name`, `description`, `license`, `origin` | identity and provenance (license decides vendor vs fetch) |
-| `kind` | `xlsx` (workbooks) or `spec` (`*.case.json`); `roundtrip` only under `eval/roundtrip/` (below) |
+| `kind` | `xlsx` (workbooks), `spec` (`*.case.json`) or `export` (`*.export.json`, below); `roundtrip` only under `eval/roundtrip/` (below) |
 | `root`, `include`, `exclude` | where the cases are (globs relative to `root`) |
 | `use_cached_values` | for xlsx: Excel's cached `<v>` values are the oracle (when no sidecar exists) |
 | `require_excel_authored` | only trust caches written by Microsoft Excel (`docProps/app.xml`; XlsxWriter's fake `12.0000` rejected) |
@@ -19,7 +19,7 @@ side by side.
 | `gate` | part of the CI no-regression gate |
 | `baseline` | `cells` (default), `cases` (large corpora) or `none`; a round-trip suite's `cells` baseline lists fidelity items in the item slot |
 | `milestone` | which milestone(s) the suite measures |
-| `[fetch]` | optional pinned external source: `url` (`https://` or `file://`), exactly one pin (`rev` = 40-hex git commit, or `sha256` of a `.zip`/`.tar*` archive), optional `subdir` and `include` globs |
+| `[fetch]` | optional pinned external source: `url` (`https://` or `file://`), exactly one pin (`rev` = 40-hex git commit, or `sha256` of a `.zip`/`.tar*` archive), optional `subdir` and `include` globs; for a git source, optional `sparse`: non-cone `git sparse-checkout` patterns relative to the repository root (no `..`, no leading `/` or `-`), which make the fetch blob-less (`--filter=blob:none`) so only the matching files are downloaded (T-4131) |
 
 External suites (`[fetch]`) live in `eval/.cache/suites/<name>` (gitignored) after `rustsheet-eval fetch`;
 their `root` is that directory. A suite whose cache is missing or stale (marker `.rustsheet-fetched`
@@ -33,6 +33,35 @@ Current suites:
 - `smoke`: hand-written core semantics.
 - `probes`: Excel-behavior questions awaiting the oracle.
 - `gen-m2`: generator output (30 cases, 12,000 cells), oracle-filled and gated (T-0203).
+- `pivot-corpus-lo`, `pivot-corpus-closedxml`: the pivot-corpus (T-4131), Excel-saved workbooks with pivots from
+  LibreOffice `sc/qa/unit/data` (a sparse fetch) and ClosedXML `ClosedXML.Tests/Resource`, scored against their
+  cached values, each pivot classified fresh or stale and a fresh pivot's re-render scored (below); `gate = false`,
+  cell baselines.
+- `gen-pivot`: M16 pivot tables from `rustsheet-gen --milestone M16` (T-4132): 9 cases of up to 12 pivots (104 in all) over a covering
+  array of the PV1 dimensions, oracle-filled and gated; its scored cells are the sidecars' pivot areas and their texts.
+
+## Engine-export suites
+A suite of `kind = "export"` (T-4177, `export_case.rs`; the `pivot-export` suite) scores the engine's xlsx export
+against Excel opening it. A case is a `<name>.export.json`:
+- `source`, a `.case.json` or `.xlsx` path relative to the repository root (no `..`, not absolute), or `spec`, an inline spec case. The workbook is
+  built as the cell suites build it, or loaded and recalculated, so a `refreshOnLoad` pivot renders;
+- `pivots`: pivots added through `Txn::add_pivot_table` (`name`, sheet-qualified `source` and `location`, `row`,
+  `column`, `value`, `function`, a spec pivot's `group`);
+- `patches`: text edits of the saved package (`part`, a glob over part names; `find`; `replace`). Every part the glob
+  matches must hold `find`, and every edit must match a part, so an export that moves under an edit fails the case.
+  They give a file the API cannot: a `refreshOnLoad` cache, or one without attributes the export writes.
+
+`rustsheet-eval export <case> --out <file>` writes the package, deterministic for one build, and the oracle fill
+sends that file to Excel. The case scores as an xlsx case of that package: its formula cells against the sidecar's
+values, and every cell of the sidecar's pivot areas as well, as a spec case scores them. The engine's own
+`rowItems`/`colItems`, read back from its save of the evaluated workbook, are compared with Excel's in the "Pivot
+layout" section (`LinesDiffer`); they are reported, not ratcheted. A sidecar with `refused` (Excel's error text,
+which the fill writes when Excel for the web will not open the file: `OracleRefusedError`) makes the case
+`excel_refused`, SPEC-0033's verdict, which always fails. The case is rebuilt from the current engine on every
+run, so when the sidecar's `input_sha256` is not the package's the result notes that the export changed since the
+fill.
+T-4180 must decide how SPEC-0033's `excel-refused` maps onto the round-trip `Verdict` (`roundtrip.rs`), given that
+the cell runner already has it as `CaseStatus::ExcelRefused`, so the two kinds report a refusal the same way.
 
 ## Round-trip suites
 `eval/roundtrip/<name>/suite.toml` (SPEC-0033, T-4172) uses the same manifest with `kind = "roundtrip"`:
@@ -90,7 +119,8 @@ Each names its cell suite with `cases_of = "<suite>"` and takes that suite's `[f
 (`eval/.cache/suites/<suite>`, T-4629). So it is fetched, skipped with a message while not fetched, and gated exactly
 as that suite is, and it never records an empty baseline:
 - `roundtrip-poi` and `roundtrip-corpus-bench` are `gate = true`, like their cell suites. `make check` holds them
-  wherever the caches are fetched; CI, which fetches no corpus, skips them as it skips the cell suites.
+  after fetching the caches when they are missing or stale. CI gates them from its cached pinned fetch, and
+  fails rather than skips when one is not fetched (`--require-fetched`; decision 0344, SPEC-0035).
 - `roundtrip-calipers` stays `gate = false`, like the calipers cell suite. `rustsheet-eval roundtrip --check --suite
   roundtrip-calipers` gates it on demand.
 
@@ -256,8 +286,46 @@ value. Each sidecar pivot's layout is also compared with the engine's, matched b
 - `LinesNotEmitted`: Excel's location, but no `rowItems`/`colItems` from the engine yet (T-4147).
 
 Mismatches are listed in report.md's "Pivot layout" section and in report.json's `pivot_layout` per case.
-xlsx cases' sidecars are not read for pivots yet: their pivot cells are cached constants the importer keeps
-(pivot-corpus, T-4131).
+xlsx cases' sidecars are not read for pivots yet: their pivot cells are cached constants the importer keeps.
+
+Instead, each pivot of an xlsx case whose cached values the suite trusts (`trusts_cached_values`) is
+classified fresh or stale and its re-render and refresh scored (T-4131, T-4906;
+`crates/rustsheet-eval/src/pivot_freshness.rs` and `pivot_freshness/`). The workbook is loaded a second time into
+the importer's model without a recalculation, so every pivot holds the definition and cache Excel saved
+(`pivot_freshness/saved_model.rs`; the facade's evaluated workbook has already refreshed its `refreshOnLoad` caches).
+- **Freshness** is the file's own evidence and does not depend on the renderer: each value cell is found from
+  Excel's saved `<rowItems>`/`<colItems>` (at `firstDataRow`/`firstDataCol` inside `<location>`) and its value read
+  from the engine's result tree over the saved records (`rustsheet_engine::pivot::compute_on`), never from the
+  layout (`pivot_freshness/records.rs`). The pivot is `fresh` when every one equals Excel's saved cell; labels and
+  headers are not compared, and a compact or outline parent row's cell Excel left empty is skipped (its subtotal
+  shows only at the top). `stale` otherwise, with the first differing value or why the pivot could not be checked:
+  no data field, a cache saved without records, no layout lines for an axis with fields, lines that do not fit the
+  location, a pivot the importer skips (a non-worksheet or calculated-field cache it drops). The test reads the
+  engine's aggregation, so a pivot whose values the engine does not yet aggregate as Excel does is stale too
+  (T-4918's blank Count cells).
+- **Check (b), the re-render**: every pivot is laid out again from its saved definition and cache
+  (`Model::plan_pivot_render`, what `Workbook::pivot_table_cells` calls) and every cell of Excel's saved area (its
+  location and page rows, as the oracle fill captures it; at most 100,000 cells), and every engine cell outside it,
+  compared with Excel's: `render` per pivot. A fresh pivot's cells are scored cells of its case (no formula,
+  `from_excel` for an Excel-saved file), ratcheted by the cell baseline like any other; a pivot the engine does not
+  lay out scores its saved cells against nothing. A stale pivot's render is reported and never scored. A fresh pivot
+  whose saved `dataCaption` is neither `Values` nor `Data` was saved by a non-en-US Excel, whose default captions are
+  no en-US evidence (decision 0030; pivots.md "A non-English Excel saves its own UI language's default captions"):
+  its render is reported with `render_unscored` and not scored.
+- **Check (c), the refresh**: a pivot over a `refreshOnLoad` cache is refreshed from its source
+  (`Model::plan_pivot_refresh`, changing nothing) and compared with Excel's saved area: `refresh` per pivot. Excel
+  re-renders such a pivot on open, so its saved cells predate that refresh; they are compared (`compared`) only when
+  the pivot is fresh and the refreshed cache holds the saved cache's records, and are otherwise `not_comparable`;
+  `failed` when the engine does not refresh it. Reported, not scored: where comparable its cells are check (b)'s.
+
+report.json lists each pivot per case (`pivot_freshness`) and the counts per suite in `fresh_pivot_render`
+(`fresh`, `stale`, `fresh_unscored`, `fresh_rendered_exactly`, `render_cells`, `render_passed`,
+`render_visibly_off`, `refresh_compared`, `refresh_exact`, `refresh_not_comparable`, `refresh_failed`). The M16
+exit row's corpus render measure is to read the `pivot-corpus-*` rows: met when `render_cells > 0` and
+`render_visibly_off == 0` (wiring: T-4971). report.md's "Pivot freshness" section has the same counts, every stale
+pivot, every fresh pivot whose render is off or unscored, and every refresh check. The pivot files of calipers and
+poi are classified by their own suites' runs; corpus-bench's are not, since that suite does not trust its caches.
+The nightly eval fetches, runs and checks both pivot-corpus suites (decision 0346).
 Tools never re-derive case discovery: `rustsheet-eval cases <suite>` prints each case's path,
 sidecar path, formula-cell count and whether the suite trusts its cached values.
 
@@ -520,6 +588,42 @@ and every `v15_checkpoint` function of catalog milestone M9 must be `meets_rate`
 one `meets_rate` call. The M8 row (decision 0146 item 2, T-0096) reads gen-m8a (`gen_suite`), and as
 `more_suites` gen-m8b and the `poi M8 subset` (the report's `poi_m8_subset`, at 99.5% with no
 `blocked_cases`, the crashed or errored poi cases holding a subset formula, listed as `case!*`).
+The M16 row (decision 0274 item 6, T-4127; `milestone_exit/pivot.rs`) reads gen-pivot (`gen_suite`)
+and, as `more_suites`, pivot-corpus-lo and pivot-corpus-closedxml, each with at least one scored cell
+and none visibly off. Both corpus suites are fetched and `gate = false`, so a run without them prints
+`n/a` and the row is not met. Those suite columns measure plan check (a) only: import and the formula
+cells against Excel's cached values. Its probes are the `probes` cases tagged M16 (the `pivots` cases of
+the plan) with no visibly-off cell but R3 passes and M14-owned cells (`pivot.probe_off`, with the cells
+left out in `pivot.probe_left_out`; decision 0188 R3 and decision 0274 item 5): M16's criterion is
+decision 0083's rule, not decision 0188 R1(c), so Phase 1b cells count, `probe_r1c_off` stays null, and
+`exit_owners.py` lists every visibly-off probe cell but those two classes. The probe measure covers only
+the cases the probe-milestone rules assign to M16: pivot probes tagged otherwise are judged under R1(c)
+in their own rows, as are t2085-getpivotdata-data-fields, -items and -layouts (M6) and
+gen-m9-17c110a53924beb8-refill-1106 (M9), whose 556 pivot-area cells count in the M6 and M9 rows. The
+row's `pivot` object adds, per catalog stage of eval/catalog/pivot-features.tsv (`stages`): the
+in-scope rows, those Excel for the web cannot render (`web` = `no`, M14's, not blocking), the rest at
+the 30-oracle-cell floor (`evidenced`, the "Pivot features" cell counts) and `below_floor` by id
+(`evidence_met`); the `remaining` rows, below the floor or with a failing cell; and the owner
+criterion (`owners_met`, T-4952): every remaining row is owned, with the ones that are not listed in
+`unowned` by id (report.md lists them per stage below the table). One rule decides ownership: a row is
+owned when the catalog's hand-filled `owner` column (kept across regeneration by
+tools/src/rustsheet_tools/pivot_catalog.py) names a task; it must be an open M16 task (`todo`,
+`in-progress` or `blocked`, scripts/tasks.py `OPEN`). The harness reads no task file (code may not read
+docs/tasks, decision 0066), so `scripts/tasks.py validate` (`make hygiene`, which always runs) enforces
+it the way it enforces `TODO(T-nnnn)` owners: it fails while an `owner` names a done, dropped, missing or
+other-milestone task (scripts/pivot_owners.py), so the PR that closes a task re-points or clears its
+rows, and a row left remaining reads unowned again. The run fails on an `owner` that is not `T-<digits>`.
+A row with an `out` scope is owned by the decision its scope cites (`out (decision 0274)`, or a later
+decision's rule in `RULES`): it is not in scope, so it is never remaining; a row Excel for the web cannot
+render is M14's and never remaining either. Milestone-wide it adds the layout criterion (`layout_met`:
+false when a sidecar pivot is missing or misplaced, null while the engine emits no `rowItems`/`colItems`
+to compare), the corpus render criterion (`corpus_render_met`, plan check (b): fresh corpus pivots
+re-rendered from their saved cache must reproduce Excel's saved cells), and the pivot-corpus fresh and
+stale counts, shown only.
+`pivot_freshness` decides "fresh" by the engine's own render, so a fresh file the engine renders wrongly
+is called stale and is never scored; `corpus_render_met` therefore stays null, not measured, until
+freshness is decided without the renderer (T-4906), and until then M16 cannot be met. `exit` needs
+every one of these met.
 
 The "Fifteen-digit parity checkpoint" section (`v15_checkpoint`, decision 0094) also prints the
 Phase 1 line of decision 0114: the in-scope functions that are covered and have at most one cell in

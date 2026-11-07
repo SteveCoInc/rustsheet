@@ -17,6 +17,7 @@ line. The criteria and their measures are decision 0187's:
 - `owners`: `exit_owners.unowned_off` and `exit_owners.unowned` for every Phase 1 milestone list
   no cell (a cell owned only by a `defer:` task is unowned);
 - `milestone M<k>`: the report's `milestone_exit` row (an owner count rides beside a met row);
+  M16's line also names its suite, probe and catalog verdicts (decision 0274);
 - `manual`: the prose items decision 0146 checks outside the rows.
 Verdicts come from report.json and exit_owners.py; nothing is recomputed here. Exit 1 when any
 line is `not met` or `n/a` (an unmeasured criterion is never met), 2 when the report cannot be
@@ -42,8 +43,10 @@ CATALOG = ROOT / "eval" / "catalog"
 # Written by `rustsheet-eval accuracy` (accuracy::JSON_PATH), which `make eval` runs (decision 0268).
 ACCURACY = ROOT / "eval" / "runs" / "accuracy.json"
 MET, NOT_MET, MANUAL, NOT_MEASURED = "met", "not met", "manual", "n/a"
-# The Phase 1 milestones whose exit criteria the Phase 1 exit requires (docs/milestones.md).
-PHASE1_MILESTONES = ("M1", "M2", "M5", "M6", "M7", "M8", "M9", "M10", "M11")
+# The Phase 1 milestones whose exit criteria the Phase 1 exit requires (docs/milestones.md). A
+# milestone joins once the report has its `milestone_exit` row (a missing row reads `not met`):
+# M16, pivot tables, by decision 0274 with its row from T-4127.
+PHASE1_MILESTONES = ("M1", "M2", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M16")
 # Decision 0146: exit criteria measured outside the report's rows, with where they are written.
 MANUAL_ITEMS = (
     ("M1 parity bugs and API v0", "docs/milestones.md, M1 exit criteria (decision 0146 item 1)"),
@@ -197,6 +200,36 @@ def owners_line(off: int, deferred: int, per: dict[str, int]) -> Line:
     return Line("owners", MET if off == 0 and exits == 0 else NOT_MET, detail)
 
 
+def verdict_of(met: object) -> str:
+    """A `milestone_exit` measure's verdict: null is an input the run did not measure."""
+    return NOT_MEASURED if met is None else MET if met is True else NOT_MET
+
+
+def pivot_detail(row: dict[str, Any]) -> str:
+    """M16's measures (decision 0274): each required suite, the probe row, and the catalog
+    measures of `pivot`; empty for a row without them."""
+    pivot = row.get("pivot")
+    if not isinstance(pivot, dict):
+        return ""
+    suites = [(row.get("gen_suite"), row.get("gen_met"))] + [
+        (s.get("name"), s.get("met")) for s in row.get("more_suites") or [] if isinstance(s, dict)
+    ]
+    parts = [f"{name} {verdict_of(met)}" for name, met in suites if name]
+    parts.append(f"probes {verdict_of(row.get('probes_met'))}")
+    stages = ", ".join(
+        f"{s.get('stage')} {s.get('evidenced')}/{int(s.get('rows') or 0) - int(s.get('web_cannot_render') or 0)}"
+        for s in pivot.get("stages") or []
+        if isinstance(s, dict)
+    )
+    floor = f" ({stages} at the floor)" if stages else ""
+    parts.append(f"evidence {verdict_of(pivot.get('evidence_met'))}{floor}")
+    parts.append(f"owners {verdict_of(pivot.get('owners_met'))}")
+    parts.append(f"layout {verdict_of(pivot.get('layout_met'))}")
+    # Plan check (b), not measured until freshness is decided without the renderer (T-4906).
+    parts.append(f"corpus render {verdict_of(pivot.get('corpus_render_met'))}")
+    return "; ".join(parts)
+
+
 def milestone_lines(report: dict[str, Any], per: dict[str, int]) -> list[Line]:
     rows = {str(r.get("milestone")): r for r in report.get("milestone_exit") or []}
     lines = []
@@ -207,6 +240,8 @@ def milestone_lines(report: dict[str, Any], per: dict[str, int]) -> list[Line]:
             continue
         met = row.get("exit") is True
         detail = "exit row met" if met else "exit row not met"
+        if extra := pivot_detail(row):
+            detail += f": {extra}"
         if per.get(m):
             detail += f"; {per[m]} exit cells have no {m} owner (see owners)"
         lines.append(Line(f"milestone {m}", MET if met else NOT_MET, detail))

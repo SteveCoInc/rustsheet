@@ -3,6 +3,7 @@ use crate::value::{ErrorKind, XlError};
 use crate::WorkbookOptions;
 
 mod calculated_column;
+mod data_table;
 mod name_binding;
 mod typed_entry;
 

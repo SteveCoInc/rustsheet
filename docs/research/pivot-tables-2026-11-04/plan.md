@@ -199,6 +199,11 @@ cells pass".
    - (b) re-render from the saved cache must equal Excel's saved cells and `rowItems`/`colItems`, but only
      when the file is fresh, meaning its records reproduce its cells; stale files are reported, not scored;
    - (c) a full refresh from the source range, when `refreshOnLoad` is set.
+
+   T-4906 implements (b) and (c): a pivot is fresh when its saved records give every value Excel saved at the
+   cells its own `rowItems`/`colItems` place them, so freshness does not depend on the renderer; a fresh pivot's
+   saved area is scored cell by cell and its engine `rowItems`/`colItems` compared; (c) is compared where the
+   saved cells are a render of the records the source still holds (eval-harness.md "Pivot freshness").
 4. **Round trip through Excel.**
    - An engine-created or engine-edited pivot is exported, and the oracle opens it. A refusal
      (`OpenWorkbookBlockedWorkbook`) or a repair is a failure.

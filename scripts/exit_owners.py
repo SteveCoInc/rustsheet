@@ -87,6 +87,9 @@ PHASE1B = "phase1b"
 # The classes the function rate leaves out (decisions 0188 R3 and 0227); Gate B leaves out only
 # the R3 passes.
 RATE_LEFT_OUT = (R3_PASS, PHASE1B)
+# The classes M16's probe measure leaves out (decision 0274 item 5, decision 0188 R3): an R3 cell
+# where the engine returns the math passes and a desktop-owned (M14) cell never blocks.
+M16_PROBE_LEFT_OUT = (R3_PASS, "m14_owned")
 PASSING = ("pass", "deviation")
 # Spec cases are `<name>.case.json` files; tasks name them without the suffix.
 SPEC_SUFFIX = ".case.json"
@@ -273,9 +276,17 @@ def exit_cells(
             for case in row.get("failing_cases") or []:
                 if not by_case.get(case):
                     out.append(ExitCell(probe_row, str(case), WHOLE_CASE, ""))
+    # A row that reads every visibly-off probe cell (M16, decision 0274) has no R1(c) count. Only
+    # the M16 row carries a `pivot` measure, so that marks it; a null `probe_r1c_off` alone does
+    # not, as every row without a probe summary serializes it null.
+    every_off = exit_row.get("pivot") is not None
     for row in report.get("probe_milestones") or []:
         if row.get("milestone") == probe_row:
-            probe_off = set(probe_counted_cells(row))
+            if every_off:
+                visible = [str(c) for c in row.get("visibly_off_cells") or []]
+                probe_off = {c for c in visible if left_out.get(c) not in M16_PROBE_LEFT_OUT}
+            else:
+                probe_off = set(probe_counted_cells(row))
             for case, _count in row.get("failing_cases") or []:
                 cells = by_case.get(case, [])
                 if not cells:

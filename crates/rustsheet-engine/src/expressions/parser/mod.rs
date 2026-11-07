@@ -310,6 +310,13 @@ impl Parser {
         self.lexer.set_typed(typed);
     }
 
+    /// Reads a quoted text not followed by `!` as a name (`true`), as a pivot calculated field's
+    /// formula writes a field name (`lexer::Lexer::set_quoted_names`), or as a sheet prefix
+    /// (`false`, the default).
+    pub(crate) fn set_quoted_names(&mut self, quoted_names: bool) {
+        self.lexer.set_quoted_names(quoted_names);
+    }
+
     /// Reads the next typed formulas as typed with the workbook in R1C1 reference style (`true`)
     /// or in A1 style (`false`, the default); see `Model::set_typed_r1c1_user_input`.
     pub(crate) fn set_r1c1_entry(&mut self, r1c1_entry: bool) {

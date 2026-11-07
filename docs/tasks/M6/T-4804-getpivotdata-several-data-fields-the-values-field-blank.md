@@ -24,6 +24,9 @@ Owner of these visibly-off cells (decision 0245):
 - probes/t2085-getpivotdata-data-fields Q!A1:A5, Q!A8, Q!A12, Q!A13, Q!A15, Q!A17, Q!C6, Q!F6, Q!G5, Q!G6, Q!H6,
   Q!I5, Q!I6, Q!J6, Q!K1:K3, Q!L1:L3
 
+The calculated-field cells probes/t2085-getpivotdata-layouts Q!G1:G3, moved here from T-4174 after this task's PR
+was written, moved on to T-5039 (adopted PR #3950's merge of main).
+
 ## Acceptance criteria
 - [x] The cells above pass, and no other case regresses (`make eval-baseline`).
 - [x] SPEC-0015's resolution rules and web.md's "Ours" line say what the engine now does.

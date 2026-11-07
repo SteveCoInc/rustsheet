@@ -37,9 +37,11 @@ const NIGHT_ONE: [u8; 377] = [
 
 /// The timeout of 2026-11-03 (run 41573652529, artifact `timeout-03955d2d…`), cut the same way:
 /// A1 holds `=A1+1` with a decoded count of 50,529,030 and a delta of 3.7e-294. One recalculation
-/// took 6.7 s in a release build, and over 30 s under the fuzzer, before T-4048.
+/// took 6.7 s in a release build, and over 30 s under the fuzzer, before T-4048. Its three linked
+/// books (6, 3 and 3 empty sheet names, nothing else) were re-encoded when `ExternalBook` gained
+/// `target` and `data_sheets` (T-4143): the decoded workbook is the same, with both fields empty.
 #[rustfmt::skip]
-const NIGHT_TWO: [u8; 388] = [
+const NIGHT_TWO: [u8; 380] = [
     0, 0, 1, 2, 65, 49, 0, 0, 6, 83, 104, 101, 105, 116, 49, 1, 1, 255, 4, 0,
     4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -55,11 +57,10 @@ const NIGHT_TWO: [u8; 388] = [
     5, 73, 110, 116, 101, 114, 4, 2, 0, 2, 8, 1, 0, 0, 0, 0, 0, 0, 0, 1,
     4, 0, 4, 0, 4, 0, 4, 0, 1, 1, 1, 1, 1, 1, 1, 4, 0, 4, 0, 4,
     0, 4, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6, 110, 111, 114, 109, 97,
-    108, 4, 0, 4, 0, 0, 4, 115, 101, 101, 100, 3, 85, 84, 67, 2, 101, 110, 0, 3,
-    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3,
-    3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
+    108, 4, 0, 4, 0, 0, 4, 115, 101, 101, 100, 3, 85, 84, 67, 2, 101, 110, 0, 1,
+    0, 6, 3, 3, 3, 0, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3,
+    3, 3, 10, 0, 2, 54, 3, 10, 0, 0, 10, 0, 10, 0, 10, 0, 10, 0, 0, 0,
 ];
 
 /// Each decoded count is past 32,767, so it falls back to Excel's 100; each delta is finite and
