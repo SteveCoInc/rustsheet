@@ -2796,9 +2796,11 @@ pivot when it opens the file").
 - The refresh is real, though the cells do not show it. Excel saved the caches of four of the pivots again, rebuilt
   from their one-row Table sources: StressedLiabilityPivot, ShockedCurvePivot!GeneratedYieldCurvePivotTable and the
   two pivots of the StressedYieldCurveEntries cache. Some fields' shared items shrank to the one item that the source's
-  only record holds (`<m/>`). StressedLiabilityPivot's SchemeId goes from 55 items to 1, and
-  GeneratedYieldCurvePivotTable's CurveDate from 1543 to 1. The other fields keep their items: CurveType keeps 3 and
-  ShockBond 22. The `rowItems`/`colItems` were renumbered to match (StressedLiabilityPivot's first row line goes from
+  only record holds (`<m/>`). In StressedLiabilityPivot's cache, SchemeId went from 55 items to 1,
+  SchemeName from 53 to 1, Step from 5 to 1, CurveType from 3 to 1 and StressType from 2 to 1. In the
+  GeneratedYieldCurveEntries cache of GeneratedYieldCurvePivotTable, CurveDate went from 1543 to 1, while CurveType
+  kept its 3 items and ShockBond its 22. The `rowItems`/`colItems` were renumbered to match
+  (StressedLiabilityPivot's first row line goes from
   x = 52, 54 to 0, 0, and its column line from 4 to 0). Only the first of these caches has `missingItemsLimit="0"`.
   Which items such a refresh drops is UNVERIFIED (T-5057). "Item casing when cache and source disagree" (Saved order)
   saw a refresh after a source edit keep the stale items. The importer loads none of these four pivots ("cacheId ...

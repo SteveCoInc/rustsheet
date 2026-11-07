@@ -382,3 +382,29 @@ fn a_refresh_that_fails_scores_excel_s_on_open_area_against_nothing() {
     attach_on_open(&mut saved, &other);
     assert!(saved.iter().all(|p| p.on_open.is_none()));
 }
+
+#[test]
+fn a_pivot_the_engine_cannot_load_scores_excel_s_on_open_area_as_a_failed_refresh() {
+    let mut saved = saved_of(REFRESH_ON_LOAD);
+    attach_on_open(&mut saved, &on_open_of(REFRESH_ON_LOAD));
+    // A pivot the importer does not hold, and a package it refuses (decision 0349).
+    saved[1].name = "Other".into();
+    for (bytes, avg_why) in [
+        (REFRESH_ON_LOAD, "the importer did not load the pivot"),
+        (&b"not a zip"[..], "import: "),
+    ] {
+        let (pivots, cells) = classify(&saved, bytes);
+        let r = pivots[1].refresh.as_ref().expect("scored against nothing");
+        assert_eq!(
+            (r.outcome, r.on_open, r.compared),
+            (RefreshOutcome::Failed, true, 8)
+        );
+        assert!(r.first.as_deref().is_some_and(|w| w.starts_with(avg_why)));
+        assert!(pivots[1].render_unscored.is_some() && pivots[1].render.is_none());
+        // PivotSum loads and refreshes (25 cells); only a refused package fails it too.
+        assert_eq!(cells.len(), 25 + 8);
+    }
+    // Without Excel's on-open render, an unloaded pivot scores nothing.
+    let (pivots, cells) = classify(&saved_of(REFRESH_ON_LOAD), b"not a zip");
+    assert!(pivots.iter().all(|p| p.refresh.is_none()) && cells.is_empty());
+}

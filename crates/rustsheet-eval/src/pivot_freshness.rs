@@ -348,7 +348,7 @@ pub(crate) fn classify(
         .map(|p| {
             let (freshness, render, refresh) = match &model {
                 Ok(model) => classify_one(p, model),
-                Err(e) => (stale(p, format!("import: {e}")), None, Vec::new()),
+                Err(e) => unloaded(p, format!("import: {e}")),
             };
             if !refresh.is_empty() {
                 cells.extend(refresh);
@@ -376,6 +376,24 @@ fn stale(p: &SavedPivot, reason: String) -> PivotFreshness {
         render_unscored: None,
         refresh: None,
     }
+}
+
+/// Why a pivot scored by check (c) has no check (b) cells.
+const ON_OPEN_SCORED: &str =
+    "its area is scored by check (c), against Excel's render on open (T-4972)";
+
+/// A pivot the engine could not load, stale for `reason`. With Excel's on-open render, its
+/// refresh failed and that area is scored against nothing (decision 0349), so an importer that
+/// stops loading a pivot regresses its cells instead of dropping them.
+fn unloaded(p: &SavedPivot, reason: String) -> Classified {
+    let mut out = stale(p, reason.clone());
+    let Some(open) = &p.on_open else {
+        return (out, None, Vec::new());
+    };
+    let (check, cells) = refresh_on_open(p, open, Err(reason));
+    out.refresh = Some(check);
+    out.render_unscored = Some(ON_OPEN_SCORED.into());
+    (out, None, cells)
 }
 
 /// Check (c) of `p` against Excel's on-open render `open`: the refresh's cells against that area,
@@ -451,11 +469,7 @@ type Classified = (PivotFreshness, Option<Vec<CellResult>>, Vec<CellResult>);
 /// `p`'s classification and scores, its render's cells and its scored refresh cells.
 fn classify_one(p: &SavedPivot, model: &SavedModel) -> Classified {
     let Some(table) = model.table(&p.sheet, &p.name) else {
-        return (
-            stale(p, "the importer did not load the pivot".into()),
-            None,
-            Vec::new(),
-        );
+        return unloaded(p, "the importer did not load the pivot".into());
     };
     let mut out = match model.records(table, p) {
         Ok(check) => PivotFreshness {
@@ -512,8 +526,7 @@ fn classify_one(p: &SavedPivot, model: &SavedModel) -> Classified {
         None => refresh_on_saved(p, area, out.freshness, refreshed),
     });
     if !refresh_cells.is_empty() {
-        out.render_unscored =
-            Some("its area is scored by check (c), against Excel's render on open (T-4972)".into());
+        out.render_unscored = Some(ON_OPEN_SCORED.into());
         return (out, None, refresh_cells);
     }
     // `Values` is the en-US data caption (`Data` in a file first saved by an Excel before 2007
