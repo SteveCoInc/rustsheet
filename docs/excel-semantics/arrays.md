@@ -517,6 +517,8 @@ H66:J68 has row 68 `#N/A` (47 `#N/A` fill cells in H46:J136). corpus-bench/13894
 cache) Sheet1!F14:F25: an IFERROR-wrapped legacy array formula whose result is 6x1 (`ROW(INDIRECT("1:"&ROWS(ucode)))`
 over the 6-cell `ucode`) leaves F20:F25 `#N/A`: the fill is not an error IFERROR can catch.
 Status: VERIFIED (Excel-cached)
+Implemented in: `Model::set_cells_with_result` (model.rs), CSE branch, through `arithmetic::bcast_get`; unit tests
+test/array_formulas/test_cse_larger_range.rs (T-0950).
 Tasks: T-0950
 
 ## FILTER: an array `if_empty` spills as an array
@@ -999,7 +1001,8 @@ excel-graph, 2026-11-06, over the T-2592 data; `G` is the T-2592 GROUPBY, `V` is
   Consistent with it, an element-wise lift reads a two-level cell as an error that is not `#N/A`, even when the inner top-left is `#N/A`
   (`SUM(--ISERROR(G2))` 6, `ISTEXT` 3, `ISNA` over the `#N/A` form 0, `ISERROR` 3; and-lifts A44:A47; one-cell A27), and a reference-body
   cell as `#VALUE!` (`SUM(--ISERROR(..))` 6, `ISNUMBER` 0, REGEXEXTRACT `#VALUE!` per cell; A41, A42, A49).
-- A lifted INDEX of nested cells gives each one's top-left: `INDEX(G,{2;3},2)` is `{3;1}`, SUM 4, no error (and-lifts A56:A59; ours `#VALUE!`).
+- A lifted INDEX of nested cells gives each one's top-left: `INDEX(G,{2;3},2)` is `{3;1}`, SUM 4, no error (and-lifts A56:A59; ours matches since T-4738, `index_from_array` in index.rs). A top-left that is nested
+  again is unprobed; ours reads it as `#VALUE!`.
 - A reference-body result: SUM reads each cell as its value (`SUM(GROUPBY(..,LAMBDA(x,D!D2)))` 60, A50), COUNT is 0 and COUNTA 9 (A51,
   A52); INDEX of a cell whose body points at a blank cell is a true blank (TYPE 1, `&""` "", A53) and at an `#N/A` cell `#N/A` (A54).
 - The November reads are the target (decision 0329: a behavior change, reproduced on byte-identical copies). SPEC-0018 rule 4 states them
@@ -2005,11 +2008,12 @@ how many elements return one:
   `SCAN(0,A1:A3,LAMBDA(a,v,IF(v=2,B1:B3,v)))` and its `v=3` form are each one `#CALC!`, and so are ROWS, ARRAYTOTEXT and
   `INDEX(..,1)` of them (ERROR.TYPE 14; probes/t4476-lambda-range-results D1:H13);
 - an all-blank range is no exception: `MAP(A1:A2,LAMBDA(r,Z1:Z3))` and `SCAN(0,A1:A2,LAMBDA(a,v,Z1:Z3))` are `#CALC!` (D17:H21),
-  while the one-cell blank `Z1:Z1` gives 0, 0 (D25:G29).
+  while the one-cell blank `Z1:Z1` keeps blank elements: ARRAYTOTEXT is ", " (F25, F29), shown as 0 only when spilled
+  (D25:D30) and through `INDEX(..,1)` (G25, G29), not the number 0.
 A one-cell range is the control: its value is the element (`MAP(A1:A2,LAMBDA(r,J1:J1))` is 4, 4).
 REDUCE is not one of them: its last accumulator is its result, a multi-cell range included, so `REDUCE(0,A1:A2,LAMBDA(a,v,B1:B3))`
-spills "x", "y", "z" (ROWS 3, ARRAYTOTEXT "x, y, z", D33:G35) and ISREF of it is TRUE (D53); an all-blank range spills 0, 0, 0
-(D37:G39); a range handed on as the accumulator is a reference to the next step (`REDUCE(0,A1:A2,LAMBDA(a,v,IF(v=1,B1:B3,
+spills "x", "y", "z" (ROWS 3, ARRAYTOTEXT "x, y, z", D33:G35) and ISREF of it is TRUE (D53); an all-blank range keeps its blanks (`Z1:Z3`: ARRAYTOTEXT ", , ", F37), shown as 0 when
+spilled (D37:D39) and through `INDEX(..,1)` (G37), not the number 0; a range handed on as the accumulator is a reference to the next step (`REDUCE(0,A1:A2,LAMBDA(a,v,IF(v=1,B1:B3,
 COUNTA(a))))` is 3, D41); `J1:J1` is 4 and ISREF TRUE (D45, E53), and the array `{1;2}` spills (D49).
 Evidence: probes/map-scan-range-result (excel-graph 2026-10-18); probes/t4476-lambda-range-results (excel-graph, 2026-11-07,
 T-4476).

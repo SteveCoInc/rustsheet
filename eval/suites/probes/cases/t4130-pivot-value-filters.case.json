@@ -1,0 +1,419 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4130: does Excel for the web open and apply each value filter and Top-N type of a pivot? The data are t4130-pivot-label-filters' (Product sums Apple 30, Apricot 4, Banana 12, Cherry 11, Grape 6, total 63). Each sheet is one builder-v2 pivot at A3, rows Product, Sum of Sales, with one `<filter fld=\"1\" iMeasureFld=\"0\">`: VEq valueEqual 12; VNe valueNotEqual 12; VGt valueGreaterThan 11; VGe valueGreaterThanOrEqual 11; VLt valueLessThan 11; VLe valueLessThanOrEqual 11; VBt valueBetween 6 and 12; VNbt valueNotBetween 6 and 12; TC count top 2; TB count bottom 2 (top10 top 0); TP percent top 50; TS sum top 40; TCv count top 2 with a stale filterVal 999; VM1 valueGreaterThan 1 on the second data field (Count of Sales, iMeasureFld 1). Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4130",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0072",
+  "PV-0089",
+  "PV-0090",
+  "PV-0098",
+  "PV-0099",
+  "PV-0100",
+  "PV-0101",
+  "PV-0102",
+  "PV-0103",
+  "PV-0104",
+  "PV-0105",
+  "PV-0900",
+  "PV-0901",
+  "PV-0902",
+  "PV-0904",
+  "PV-0908",
+  "PV-0909",
+  "PV-0910",
+  "PV-0911",
+  "PV-0912",
+  "PV-0936",
+  "PV-0937",
+  "PV-0938",
+  "PV-0939",
+  "PV-0940",
+  "PV-0964"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Sales",
+    "A2": "East",
+    "B2": "Apple",
+    "C2": 10,
+    "A3": "East",
+    "B3": "Apricot",
+    "C3": 4,
+    "A4": "East",
+    "B4": "Banana",
+    "C4": 5,
+    "A5": "East",
+    "B5": "Cherry",
+    "C5": 3,
+    "A6": "West",
+    "B6": "Apple",
+    "C6": 20,
+    "A7": "West",
+    "B7": "Banana",
+    "C7": 7,
+    "A8": "West",
+    "B8": "Grape",
+    "C8": 6,
+    "A9": "West",
+    "B9": "Cherry",
+    "C9": 8
+   }
+  },
+  {
+   "name": "VEq",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_VEq",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"valueEqual\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter val=\"12\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "VNe",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_VNe",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"valueNotEqual\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"notEqual\" val=\"12\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "VGt",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_VGt",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"valueGreaterThan\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThan\" val=\"11\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "VGe",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_VGe",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"valueGreaterThanOrEqual\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThanOrEqual\" val=\"11\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "VLt",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_VLt",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"valueLessThan\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThan\" val=\"11\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "VLe",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_VLe",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"valueLessThanOrEqual\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThanOrEqual\" val=\"11\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "VBt",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_VBt",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"valueBetween\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters and=\"1\"><customFilter operator=\"greaterThanOrEqual\" val=\"6\"/><customFilter operator=\"lessThanOrEqual\" val=\"12\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "VNbt",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_VNbt",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"valueNotBetween\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"lessThan\" val=\"6\"/><customFilter operator=\"greaterThan\" val=\"12\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TC",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"2\" filterVal=\"12\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TB",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TB",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 top=\"0\" val=\"2\" filterVal=\"6\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TP",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TP",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"percent\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 percent=\"1\" val=\"50\" filterVal=\"30\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TS",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TS",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"sum\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"40\" filterVal=\"12\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "TCv",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_TCv",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"count\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"0\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><top10 val=\"2\" filterVal=\"999\"/></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "VM1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_VM1",
+     "source": "Data!A1:C9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Sales",
+        "subtotal": "count"
+       }
+      ],
+      "xml": {
+       "filters": "<filters count=\"1\"><filter fld=\"1\" type=\"valueGreaterThan\" evalOrder=\"-1\" id=\"1\" iMeasureFld=\"1\"><autoFilter ref=\"A1\"><filterColumn colId=\"0\"><customFilters><customFilter operator=\"greaterThan\" val=\"1\"/></customFilters></filterColumn></autoFilter></filter></filters>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A20)"
+   }
+  }
+ ],
+ "expected": {}
+}

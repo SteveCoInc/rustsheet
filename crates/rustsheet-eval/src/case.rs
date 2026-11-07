@@ -183,6 +183,12 @@ pub struct TableSpec {
     /// under `colId` 0.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub filter_column: Option<FilterColumnSpec>,
+    /// spec2xlsx's per-column values filters (T-4755): each rejects exactly its `hides` rows, and a
+    /// hidden data row none hides is one the filters keep. The engine adapter adds the table through
+    /// the facade, which holds no criteria, so it loads such a table filtered like any other
+    /// (`filters_hidden_rows`; T-4803 owns the cases where that differs from Excel).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub criteria: Vec<CriterionSpec>,
     /// The last row of `range` is the table's totals row (T-1607; the engine adapter adds it with
     /// `Txn::add_table_with_totals`, T-1671).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -198,6 +204,16 @@ pub struct TableSpec {
     /// each with `Txn::set_table_column_formula` (T-3033).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub calculated: BTreeMap<String, String>,
+}
+
+/// One values filter of a spec table's `criteria` (T-4755).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CriterionSpec {
+    /// The filtered column, 0-based in the table.
+    pub column: u32,
+    /// The 1-based sheet rows the filter rejects; each must be one of the sheet's `hidden_rows`.
+    pub hides: Vec<u32>,
 }
 
 /// The `<filterColumn>` of a filtered spec table (T-4003): Excel calls the hidden rows filtered

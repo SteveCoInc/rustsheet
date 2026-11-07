@@ -208,6 +208,11 @@ fn write_options(xml: &mut String, options: &PivotOptions) {
             options.page_over_then_down,
             defaults.page_over_then_down,
         ),
+        (
+            "gridDropZones",
+            options.grid_drop_zones,
+            defaults.grid_drop_zones,
+        ),
     ];
     for (name, value, default) in flags {
         if value != default {
@@ -382,6 +387,9 @@ fn field_xml(
     }
     if let Some(format) = field.number_format {
         let _ = write!(xml, r#" numFmtId="{format}""#);
+    }
+    if let Some(caption) = &field.subtotal_caption {
+        let _ = write!(xml, r#" subtotalCaption="{}""#, escape_xml(caption));
     }
     let items = items_xml(field, index, item_count, opaque);
     close(xml, opaque, owner, "pivotField", &items);

@@ -1,0 +1,175 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "85a20d67e382975d9f626f613162f3e1babbd3d23d0a407e2760f230b142ca15",
+  "definitions": {
+   "BETA.DIST": "a9652f0571fdcdd2",
+   "NEGBINOM.DIST": "eee69c2ed987357d"
+  },
+  "arguments_sha256": "40a8f324ea92609313c7f37d731b99389a7dc005ab588109a164350892fa496d"
+ },
+ "sheets": {
+  "Calc": {
+   "A10": {
+    "t": "n",
+    "v": "2.4962507485924373193691208841030731341555312646057e-27454494336404446",
+    "f": "=BETA.DIST(0.9,6E+17,41,TRUE)"
+   },
+   "A11": {
+    "t": "n",
+    "v": "1.1090772165410266008425699864668327017558918847731e-180617997398388066",
+    "f": "=BETA.DIST(0.5,6E+17,41,TRUE)"
+   },
+   "A14": {
+    "t": "n",
+    "v": "2.2611819787180543422216744476487151703438294536815e-100",
+    "f": "=BETA.DIST(1E-19,41,6E+17,TRUE)"
+   },
+   "A15": {
+    "t": "n",
+    "v": "1.4497754548328010265534967941761182919853897340325e-180617997398388717098",
+    "f": "=BETA.DIST(0.25,3E+20,2.5,TRUE)"
+   },
+   "A18": {
+    "t": "n",
+    "v": "5.7091068344119230762982969110213148076148403453706e-294307389491430961",
+    "f": "=NEGBINOM.DIST(40,6E+17,0.323212154487823,TRUE)"
+   },
+   "B12": {
+    "t": "n",
+    "v": "4.7853107072696012972326884327399584110680194353738e-304158241811604",
+    "f": "=BETA.DIST(0.999,7E+17,57.5,FALSE)"
+   },
+   "B13": {
+    "t": "n",
+    "v": "8.7873389866021163204851221644245027755938113654237e-304158241811604",
+    "f": "=BETA.DIST(0.001,57.5,7E+17,FALSE)"
+   },
+   "B14": {
+    "t": "n",
+    "v": "9.2576024874430018230163190097602335750854572612534e-80",
+    "f": "=BETA.DIST(1E-19,41,6E+17,FALSE)"
+   },
+   "B18": {
+    "t": "n",
+    "v": "2.2257202521508945319194744358680318988149786025024e-101728469657297866",
+    "f": "=NEGBINOM.DIST(40,6E+17,0.676787845512177,TRUE)"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "A1": {
+    "f": "=BETA.DIST(0.676787845512177,41,6E+17,TRUE)",
+    "why": "no single value"
+   },
+   "A12": {
+    "f": "=BETA.DIST(0.999,7E+17,57.5,TRUE)",
+    "why": "no single value"
+   },
+   "A13": {
+    "f": "=BETA.DIST(0.001,57.5,7E+17,TRUE)",
+    "why": "no single value"
+   },
+   "A16": {
+    "f": "=BETA.DIST(0.75,2.5,3E+20,TRUE)",
+    "why": "no single value"
+   },
+   "A17": {
+    "f": "=NEGBINOM.DIST(6E+17,40,0.323212154487823,TRUE)",
+    "why": "not converged"
+   },
+   "A2": {
+    "f": "=BETA.DIST(0.676787845512177,41,5E+17,TRUE)",
+    "why": "no single value"
+   },
+   "A3": {
+    "f": "=BETA.DIST(0.676787845512177,101,2E+18,TRUE)",
+    "why": "no single value"
+   },
+   "A4": {
+    "f": "=BETA.DIST(0.676787845512177,101,1E+18,TRUE)",
+    "why": "no single value"
+   },
+   "A5": {
+    "f": "=BETA.DIST(0.676787845512177,1001,1E+19,TRUE)",
+    "why": "no single value"
+   },
+   "A6": {
+    "f": "=BETA.DIST(0.676787845512177,1001,9E+18,TRUE)",
+    "why": "no single value"
+   },
+   "A7": {
+    "f": "=BETA.DIST(0.1,41,6E+17,TRUE)",
+    "why": "no single value"
+   },
+   "A8": {
+    "f": "=BETA.DIST(0.9,41,6E+17,TRUE)",
+    "why": "no single value"
+   },
+   "A9": {
+    "f": "=BETA.DIST(0.5,41,6E+17,TRUE)",
+    "why": "no single value"
+   },
+   "B1": {
+    "f": "=BETA.DIST(0.676787845512177,41,6E+17,FALSE)",
+    "why": "not converged"
+   },
+   "B10": {
+    "f": "=BETA.DIST(0.9,6E+17,41,FALSE)",
+    "why": "not converged"
+   },
+   "B11": {
+    "f": "=BETA.DIST(0.5,6E+17,41,FALSE)",
+    "why": "not converged"
+   },
+   "B15": {
+    "f": "=BETA.DIST(0.25,3E+20,2.5,FALSE)",
+    "why": "not converged"
+   },
+   "B16": {
+    "f": "=BETA.DIST(0.75,2.5,3E+20,FALSE)",
+    "why": "not converged"
+   },
+   "B17": {
+    "f": "=NEGBINOM.DIST(6E+17,40,0.676787845512177,TRUE)",
+    "why": "not converged"
+   },
+   "B2": {
+    "f": "=BETA.DIST(0.676787845512177,41,5E+17,FALSE)",
+    "why": "not converged"
+   },
+   "B3": {
+    "f": "=BETA.DIST(0.676787845512177,101,2E+18,FALSE)",
+    "why": "not converged"
+   },
+   "B4": {
+    "f": "=BETA.DIST(0.676787845512177,101,1E+18,FALSE)",
+    "why": "not converged"
+   },
+   "B5": {
+    "f": "=BETA.DIST(0.676787845512177,1001,1E+19,FALSE)",
+    "why": "not converged"
+   },
+   "B6": {
+    "f": "=BETA.DIST(0.676787845512177,1001,9E+18,FALSE)",
+    "why": "not converged"
+   },
+   "B7": {
+    "f": "=BETA.DIST(0.1,41,6E+17,FALSE)",
+    "why": "not converged"
+   },
+   "B8": {
+    "f": "=BETA.DIST(0.9,41,6E+17,FALSE)",
+    "why": "not converged"
+   },
+   "B9": {
+    "f": "=BETA.DIST(0.5,41,6E+17,FALSE)",
+    "why": "not converged"
+   }
+  }
+ }
+}

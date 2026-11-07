@@ -77,6 +77,41 @@ def test_filter_column_col_id_and_no_criterion() -> None:
         table(filter_column={"colId": 1})
 
 
+def test_criteria_filter_several_columns_and_keep_rows_hidden_by_hand() -> None:
+    """T-4755: one values filter per criterion; a hidden row no criterion hides is kept by the filters."""
+
+    def table(hidden: list[int], criteria: object, **options: object) -> str:
+        spec = {
+            "hidden_rows": hidden,
+            "tables": [{"name": "Data", "ref": "A1:B4", "filter": True, "criteria": criteria} | options],
+        }
+        return _table_parts(spec)["xl/tables/table1.xml"]
+
+    assert (
+        '<autoFilter ref="A1:B4"><filterColumn colId="0"><filters><filter val="7"/><filter val="a"/>'
+        '<filter val="c"/></filters></filterColumn></autoFilter>'
+    ) in table([3], [{"column": 0, "hides": []}])
+    two = table([2, 3, 4], [{"column": 0, "hides": [3]}, {"column": 1, "hides": [4]}])
+    assert (
+        '<filterColumn colId="0"><filters><filter val="a"/><filter val="c"/></filters></filterColumn>' in two
+    )
+    assert (
+        '<filterColumn colId="1"><filters><filter val="1"/><filter val="2"/></filters></filterColumn>' in two
+    )
+    with pytest.raises(ValueError, match="must list hidden data rows"):
+        table([3], [{"column": 0, "hides": [4]}])
+    with pytest.raises(ValueError, match="must be a distinct column"):
+        table([3], [{"column": 0, "hides": [3]}, {"column": 0, "hides": []}])
+    with pytest.raises(ValueError, match="must be a distinct column"):
+        table([3], [{"column": 2, "hides": [3]}])
+    with pytest.raises(ValueError, match="exactly column and hides"):
+        table([3], [{"column": 0}])
+    with pytest.raises(ValueError, match="non-empty list"):
+        table([3], [])
+    with pytest.raises(ValueError, match="cannot be combined"):
+        table([3], [{"column": 0, "hides": [3]}], filter_column={"col_id": 5})
+
+
 def test_unfiltered_table_has_an_empty_autofilter() -> None:
     parts = _table_parts({"tables": [{"name": "Plain", "ref": "A1:B4"}]})
     assert '<autoFilter ref="A1:B4"/>' in parts["xl/tables/table1.xml"]

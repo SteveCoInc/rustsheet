@@ -66,8 +66,8 @@ that returns a multi-cell range" are replaced by evidence.
 - **Probe:** probes/t4476-lambda-range-results (excel-graph, 2026-11-07, 81 cells), every formula of the Context, each with
   ROWS, ARRAYTOTEXT, `INDEX(..,1)` and ERROR.TYPE beside it. No gen-m7 REDUCE returns a multi-cell range (searched).
 - **Excel:** MAP and SCAN are one `#CALC!` when the LAMBDA returns a multi-cell range for any one element (first, middle
-  or last) and for an all-blank range; the one-cell blank range is 0. REDUCE returns its last accumulator as it is: a
-  multi-cell range spills ("x", "y", "z"; blank cells as 0), ISREF of it is TRUE, and a range accumulator reaches the
+  or last) and for an all-blank range; the one-cell blank range keeps blank elements (ARRAYTOTEXT ", ", F25, F29; 0 only when spilled or through INDEX). REDUCE returns its last accumulator as it is: a
+  multi-cell range spills ("x", "y", "z"; an all-blank range keeps its blanks: ARRAYTOTEXT ", , ", F37, shown as 0 only when spilled or through INDEX), ISREF of it is TRUE, and a range accumulator reaches the
   next step as a reference (COUNTA 3).
 - **Engine:** already matched on main (MAP and SCAN through `lambda_result_value`; REDUCE through T-4478/T-4494's
   `reduce_reference` and T-4475). No behavior change: `fn_reduce` now cites the probe cells, and a unit test
