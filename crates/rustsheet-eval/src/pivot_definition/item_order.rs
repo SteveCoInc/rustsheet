@@ -11,8 +11,9 @@ use serde_json::Value as Json;
 use super::{bounded, cached_json, key, Field, Key};
 
 /// The order of the field's `<item>` elements (`_item_order`): the items `item_order` lists
-/// first, in that order, then the rest by index. Unlike `order` it leaves the cache's shared
-/// items as they are (T-4164). It refuses what the Python builder refuses: an `item_order` that
+/// first, in that order, then the rest by index, or for a field a group adds in its own order
+/// (`Field::item_order`, `groups.rs`, T-4170). Unlike `order` it leaves the cache's shared items as
+/// they are (T-4164). It refuses what the Python builder refuses: an `item_order` that
 /// is not a list, an item not in the field, and a repeated item; and, as every list here, more
 /// than `MAX_LIST` entries.
 pub(super) fn item_order(
@@ -36,6 +37,7 @@ pub(super) fn item_order(
         }
         first.push(k);
     }
-    first.extend((0..count).filter(|k| !seen.contains(k)));
+    let rest: Vec<usize> = f.item_order.clone().unwrap_or_else(|| (0..count).collect());
+    first.extend(rest.into_iter().filter(|k| !seen.contains(k)));
     Ok(first)
 }
