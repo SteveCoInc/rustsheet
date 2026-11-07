@@ -1347,6 +1347,7 @@ C	probes/t1626-replaceb.case.json	27
 C	probes/t1626-rightb.case.json	29
 C	probes/t1626-searchb.case.json	26
 C	probes/t1683-formulatext-structured-refs.case.json	61
+C	probes/t1689-chisq-test-blanks-whole-columns.case.json	24
 C	probes/t1738-question-first-decimal.case.json	10
 C	probes/t1856-name-characters.case.json	37
 C	probes/t1883-currency-locale-edges.case.json	63
@@ -4562,6 +4563,13 @@ F	probes/stats-evidence-floor-t1623.case.json	S!Q36
 F	probes/subexpr-05d44f6dd6cfc567-calc-a178.case.json	Subexpr!A6
 F	probes/subnormal-saved-negative-and-array.case.json	S!A3
 F	probes/subnormal-saved-negative-and-array.case.json	S!D1
+F	probes/t1689-chisq-test-blanks-whole-columns.case.json	Calc!A10
+F	probes/t1689-chisq-test-blanks-whole-columns.case.json	Calc!A11
+F	probes/t1689-chisq-test-blanks-whole-columns.case.json	Calc!A17
+F	probes/t1689-chisq-test-blanks-whole-columns.case.json	Calc!A18
+F	probes/t1689-chisq-test-blanks-whole-columns.case.json	Calc!A6
+F	probes/t1689-chisq-test-blanks-whole-columns.case.json	Calc!A7
+F	probes/t1689-chisq-test-blanks-whole-columns.case.json	Calc!A8
 F	probes/t2311-pivotby-value-columns-error-refill-1106.case.json	P!C12
 F	probes/t2360-array-lambda-holidays-refill-1106.case.json	P!C1
 F	probes/t2360-array-lambda-holidays-refill-1106.case.json	P!C17
