@@ -1365,7 +1365,7 @@ C	probes/t2065-lift-sumsq.case.json	1
 C	probes/t2065-lift-vars.case.json	1
 C	probes/t2085-getpivotdata-data-fields.case.json	365
 C	probes/t2085-getpivotdata-items.case.json	130
-C	probes/t2085-getpivotdata-layouts.case.json	220
+C	probes/t2085-getpivotdata-layouts.case.json	235
 C	probes/t2127-trimrange-blank-shapes.case.json	63
 C	probes/t2135-fractional-second-edges-1900.case.json	50
 C	probes/t2135-fractional-second-edges-1904.case.json	50
@@ -4605,8 +4605,6 @@ F	probes/t2085-getpivotdata-layouts.case.json	CF!B6
 F	probes/t2085-getpivotdata-layouts.case.json	Q!A1
 F	probes/t2085-getpivotdata-layouts.case.json	Q!A11
 F	probes/t2085-getpivotdata-layouts.case.json	Q!A12
-F	probes/t2085-getpivotdata-layouts.case.json	Q!A13
-F	probes/t2085-getpivotdata-layouts.case.json	Q!A14
 F	probes/t2085-getpivotdata-layouts.case.json	Q!A2
 F	probes/t2085-getpivotdata-layouts.case.json	Q!A3
 F	probes/t2085-getpivotdata-layouts.case.json	Q!A5
@@ -10451,7 +10449,7 @@ TC	probes/fraction-overflow-scaled.case.json	80
 TC	probes/fraction-placeholder-past-2-30.case.json	75
 TC	probes/t2085-getpivotdata-data-fields.case.json	240
 TC	probes/t2085-getpivotdata-items.case.json	71
-TC	probes/t2085-getpivotdata-layouts.case.json	158
+TC	probes/t2085-getpivotdata-layouts.case.json	162
 TC	probes/t2729-hijri-locale-tag-names.case.json	3
 TC	probes/t2729-hijri-locale-tag.case.json	5
 TC	probes/t2932-b2-calendar-twice.case.json	5

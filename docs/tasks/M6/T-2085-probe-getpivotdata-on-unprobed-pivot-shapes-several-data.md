@@ -35,7 +35,11 @@ total or item the pivot does not show is `#REF!`.
 Not probed:
 - an array `pivot_table`, which no plain formula builds;
 - cache items differing only in case, and calculated items, which Excel for the web refuses;
-- grouped fields, already T-4228's.
+- grouped fields, already T-4228's;
+- a cache saved without records (`saveData="0"`), which the case builder cannot write.
+
+A range over two pivots is recorded as unstable: Excel answered from a different pivot on two loads of the same
+sheet, so the case does not ask it.
 
 T-2083 is done, so the rules that differ from today's engine went to new owner tasks instead of an edit to it:
 T-4804 (data fields and aggregates), T-4805 (items, records, arguments, arrays) and T-4806 (shown values and

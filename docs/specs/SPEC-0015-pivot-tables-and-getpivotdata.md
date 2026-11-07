@@ -48,7 +48,9 @@ table"; kept as implemented by T-1703).
 
 Unknowns. T-2085 probed them (docs/excel-semantics/web.md "GETPIVOTDATA on other pivot shapes (T-2085)"; probes
 t2085-getpivotdata-data-fields, -items and -layouts). Not probed are an array `pivot_table` (in 7), case-variant cache
-items (in 14: Excel for the web refuses the file) and calculated items (refused too). Until T-4804, T-4805 and T-4806
+items (in 14: Excel for the web refuses the file), calculated items (refused too) and a cache saved without records
+(in 12: the case builder cannot write one). A reference overlapping two pivots (in 9) has no stable answer: Excel's
+pick changed between two loads, so the engine keeps `#REF!`. Until T-4804, T-4805 and T-4806
 implement the evidence, T-2083 answers `#REF!` for each (or keeps today's T-1703 behavior where one exists), never a
 guessed value:
 1. several data fields: the `"Values"` field, what a blank `data_field` picks, and a source name

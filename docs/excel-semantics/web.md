@@ -91,7 +91,7 @@ returns the value of the pivot cell the field/item pairs pick, including subtota
   aggregate (Average East/A 7, Count 2, Max 10, Min 4) and the pair order does not matter. Evidence:
   probes/getpivotdata-empty-intersection (excel-graph, 2026-10-26, T-2404), plus gen-m6 8641fa604c5b8e14 Calc!A19,
   A25 and A39 (Count of Units; A19 names the source field `"Units"` as data_field on that Count pivot and Excel
-  accepts it). CountNums, Product, Var, VarP, StdDev and StdDevP over an empty intersection are not probed (the case builder cannot write them): ours stay `#REF!`.
+  accepts it). CountNums, Product, Var, VarP, StdDev and StdDevP over an empty intersection are 0 too: "GETPIVOTDATA on other pivot shapes (T-2085)" below, the "Aggregates over one record or none" paragraph.
 - `pivot_table` may be any cell of the pivot (`$C$6`, inside the data area) or a range covering it
   (`$A$3:$E$7`); a cell outside every pivot (`$H$30`, or the source data `Data!$A$1`) is `#REF!`.
 - An array of items lifts: `"Region",{"East";"West"}` spills 22, 27 and `"Product",{"A","B","C"}` spills
@@ -189,8 +189,9 @@ blank: Nord is 3. An error record is the error: Mid is `#N/A`, and so is the gra
 item is `#REF!` (E4, E5). A number, boolean or referenced number as data_field is `#REF!` (E6:E8). An error held by
 the pivot cell given as pivot_table is not passed through: the cell only picks the pivot, like any cell of it. So
 `GETPIVOTDATA("Val",E!B6,"Region","East")` with E!B6 holding `#N/A` is 5, the same as with the non-error cell E!A4,
-and with West it is 7. A range holding the error cell answers the same way (E20:E23). Without pairs both give the
-pivot's grand total, which is itself `#N/A` here (E11, E12). The engine passes the cell's error through today (T-1703's
+and with West it is 7. A range holding the error cell answers the same way (E20:E23). Without pairs both give `#N/A`
+(E11, E12), which is presumably the pivot's grand total (itself `#N/A` here) by the same rule. These cells cannot tell
+that apart from the error being passed through, so the no-pair form is UNVERIFIED. The engine passes the cell's error through today (T-1703's
 rule for a pivot_table with no pivot), which is wrong inside a pivot.
 
 **Arrays.** An array data_field lifts: `{"Sales","Units"}` spills 46 and `#REF!`, since Units is not a data field
@@ -205,11 +206,18 @@ rule for a pivot_table with no pivot), which is wrong inside a pivot.
 - A hidden row item C: the totals leave it out (grand total 44, East 19), and the pair `"Product","C"` is
   `#REF!` (A9:A12).
 
-**A range over two pivots** answers from the pivot at its top-left: Left, at A3. Left's field works (Region East
-21), while Right's field Product is `#REF!` (A13, A14, A16). Left is also first in the file, so which of the two
+**A range over two pivots** answers from one of them, and which one is not stable. TW holds Left (rows Region, at
+A3) and Right (rows Product, at F3), and `TW!$A$1:$J$12` covers both. Two fills of the same sheet disagreed. The first
+(commit 82ab72cda of this PR's history) answered from Left: Region East 21, Product A `#REF!`. A later fill answered
+from Right: Region East `#REF!`, Product A 30. Each time, the pivot Excel listed first in its PivotTables collection
+(the sidecar's `pivots` order) was the one that answered, and that order flipped between the two loads. The case no
+longer asks it, since no expected value is stable; a cell of one pivot (`TW!$F$3`) picks that pivot (A15).
+Status: UNVERIFIED which pivot a two-pivot range picks (load order, not position). The engine's `#REF!` stays. Left is also first in the file, so which of the two
 decides is UNVERIFIED.
 
-**Two row fields** Region and Product, the same in compact, tabular and outline form.
+**Two row fields** Region and Product, the same in compact, tabular and outline form. The TB and OL pivots set
+compact and outline on the table and on every pivotField, and Excel renders them as such: area A3:C11 with the
+data in column C, and "East Total" lines in TB. CP renders in compact form, A3:B11.
 - The grand total is 46, a Region subtotal 21 and an inner item 14. Both pairs in either order work: Product A
   with West is 16 (LY B1:D5).
 - The inner field alone, `"Product","A"`, is `#REF!`. It is not the Product A total, which the pivot does not show
@@ -239,6 +247,9 @@ Not probed:
 - Grouped fields: GETPIVOTDATA on a group label is T-4228's ("Grouped pivot fields import as their group items (T-4225)"
   below).
 - Calculated items: Excel for the web refuses them.
+- A cache saved without records (`saveData="0"`, SPEC-0015 unknown 12). The case builder writes every cache with its
+  records and marks it refreshOnLoad, and a saved, non-refreshing cache with no records part is not something it
+  can write. The importer skips such a cache, so the engine answers `#REF!` (the import list above).
 
 Evidence: probes/t2085-getpivotdata-data-fields, -items and -layouts (excel-graph, 2026-11-07, T-2085).
 Status: VERIFIED (excel-graph).

@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-2085 (SPEC-0015 unknowns 4, 9, 10, 11, 12): GETPIVOTDATA on builder-v2 pivots of other shapes, Excel renders each on open. Data!A1:D9 is the eight records of t2085-getpivotdata-data-fields. PF: rows Product, page field Region set to East (Q!A1:A6, A5:A6 point into the page area above the location); PA: the page field at (All) (Q!A7:A8). H: rows Product with item C hidden, columns Region (Q!A9:A12). TW: two pivots (Left at A3, Right at F3) and a range over both (Q!A13:A15). Two row fields Region, Product in compact (CP), tabular (TB) and outline (OL) form, and NS with Region's subtotals off: Q columns B:E ask the grand total, a Region subtotal, an inner item, an inner item alone, both reversed and an empty pair. SO (Dec!A1:C5, rows Region, Kind; East is 0.3 in record order before 0.2 and 0.1): Q!F1:F3 for the summation order, F4:F5 the two orders. CF: calculated field Double = Sales*2 (Q!G1:G3). ST: the T-4586 stale pivot (refreshOnLoad off over Stale!A1:B4, whose B2 is a formula the builder caches as missing; saved cells East 99, Grand Total 99, no West row; a render from the cache gives East 5, West 20, a refresh East 15): Q!H1:H3 ask its grand total, East and West, H4 reads ST!B4, H5 the source sum. Q!A16 asks the two-pivot range for Product A (Right's field).",
+  "description": "T-2085 (SPEC-0015 unknowns 4, 9, 10, 11, 12): GETPIVOTDATA on builder-v2 pivots of other shapes, Excel renders each on open. Data!A1:D9 is the eight records of t2085-getpivotdata-data-fields. PF: rows Product, page field Region set to East (Q!A1:A6, A5:A6 point into the page area above the location); PA: the page field at (All) (Q!A7:A8). H: rows Product with item C hidden, columns Region (Q!A9:A12). TW: two pivots (Left at A3, Right at F3); Q!A15 asks a cell of Right (a range over both is not asked: which pivot Excel picks changed between two loads, web.md). Two row fields Region, Product in compact (CP), tabular (TB) and outline (OL) form (TB and OL set compact and outline on the table and on every pivotField, which is what makes Excel render the form), and NS with Region's subtotals off: Q columns B:E ask the grand total, a Region subtotal, an inner item, an inner item alone, both reversed and an empty pair. SO (Dec!A1:C5, rows Region, Kind; East is 0.3 in record order before 0.2 and 0.1): Q!F1:F3 for the summation order, F4:F5 the two orders. CF: calculated field Double = Sales*2 (Q!G1:G3). ST: the T-4586 stale pivot (refreshOnLoad off over Stale!A1:B4, whose B2 is a formula the builder caches as missing; saved cells East 99, Grand Total 99, no West row; a render from the cache gives East 5, West 20, a refresh East 15): Q!H1:H3 ask its grand total, East and West, H4 reads ST!B4, H5 the source sum. Q!A16 asks the two-pivot range for Product A (Right's field).",
   "tags": [
     "probe",
     "getpivotdata",
@@ -246,7 +246,35 @@
             ],
             "table": {
               "outline": false,
-              "compact": false
+              "outlineData": false,
+              "compact": false,
+              "compactData": false
+            },
+            "fields": {
+              "Region": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Product": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Sales": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              },
+              "Units": {
+                "attrs": {
+                  "compact": false,
+                  "outline": false
+                }
+              }
             }
           }
         }
@@ -274,7 +302,35 @@
             ],
             "table": {
               "outline": true,
-              "compact": false
+              "outlineData": true,
+              "compact": false,
+              "compactData": false
+            },
+            "fields": {
+              "Region": {
+                "attrs": {
+                  "compact": false,
+                  "outline": true
+                }
+              },
+              "Product": {
+                "attrs": {
+                  "compact": false,
+                  "outline": true
+                }
+              },
+              "Sales": {
+                "attrs": {
+                  "compact": false,
+                  "outline": true
+                }
+              },
+              "Units": {
+                "attrs": {
+                  "compact": false,
+                  "outline": true
+                }
+              }
             }
           }
         }
@@ -424,10 +480,7 @@
         "A10": "=GETPIVOTDATA(\"Sales\",H!$A$3,\"Product\",\"C\")",
         "A11": "=GETPIVOTDATA(\"Sales\",H!$A$3,\"Region\",\"East\")",
         "A12": "=GETPIVOTDATA(\"Sales\",H!$A$3,\"Product\",\"A\")",
-        "A13": "=GETPIVOTDATA(\"Sales\",TW!$A$1:$J$12)",
-        "A14": "=GETPIVOTDATA(\"Sales\",TW!$A$1:$J$12,\"Region\",\"East\")",
         "A15": "=GETPIVOTDATA(\"Sales\",TW!$F$3)",
-        "A16": "=GETPIVOTDATA(\"Sales\",TW!$A$1:$J$12,\"Product\",\"A\")",
         "B1": "=GETPIVOTDATA(\"Sales\",CP!$A$3)",
         "B2": "=GETPIVOTDATA(\"Sales\",CP!$A$3,\"Region\",\"East\")",
         "B3": "=GETPIVOTDATA(\"Sales\",CP!$A$3,\"Region\",\"East\",\"Product\",\"A\")",
