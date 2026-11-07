@@ -8472,3 +8472,14 @@ Ours: matches all 156 cells since T-4310 (the name, INDEX, IF and parenthesized 
 `#VALUE!` before, 16 cells).
 Status: VERIFIED (excel-graph)
 Tasks: T-4310
+
+## CHISQ.TEST over whole columns, blanks, text and booleans (T-1689)
+Rule: CHISQ.TEST's degrees of freedom come from the shape of the ranges, not their used area, and a pair with a blank,
+text or boolean on either side is skipped (adds 0 to the statistic), as the engine already does. Evidence (excel-graph
+2026-11-07, probes/t1689-chisq-test-blanks-text-booleans, 15 cells): `CHISQ.TEST(A:A,B:B)` over ten numeric pairs is 0
+(df 1048575); `CHISQ.TEST(D1:D10,E1:E10)` with a blank, `G`/`H` with text, `J`/`K` with TRUE, and the same in the second
+range (`M`/`N`, `P`/`Q`, `S`/`T`) all give 0.9979532433280144, the one skipped pair dropping the statistic and keeping
+the df; 3x3 ranges with a blank, text in either range give 0.8616386653047765; different shapes are `#N/A`
+(`A21:C23` with `E21:F23`, with `E21:G24`), as is `CHISQ.TEST(D:D,E:E)` (a blank in D whole column); `CHISQ.TEST(G:G,H:H)`
+with text is 1. The engine matched all cells (A15 differs by 1 ulp), so the unit test
+`chisq_test_over_whole_columns_counts_every_cell` stands.

@@ -3,7 +3,7 @@ id: T-1689
 title: "Probe CHISQ.TEST over whole columns and ranges with blanks: degrees of freedom and blank pairs"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -33,3 +33,9 @@ Probe these with the `excel-probe` skill:
 
 ## Out of scope
 - CHISQ.INV and CHISQ.DIST accuracy.
+
+## Outcome
+- Probe `probes/t1689-chisq-test-blanks-text-booleans` (15 cells, excel-graph 2026-11-07): the engine matches 14 cells and
+  is 1 ulp off in A15 (a numeric ulp, not visibly off); no engine change. The unit test's expectation agrees with the
+  evidence (the comment there now cites it). Recorded in statistics.md.
+- Eval delta: new case only, regressions 0 (baseline written by `make eval-baseline`).

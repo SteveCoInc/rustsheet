@@ -231,7 +231,7 @@ fn paired_functions_over_whole_columns() {
 
 // CHISQ.TEST's degrees of freedom count every cell of the ranges, blank or not, so a whole column
 // is not its used area; the blank pairs past it add nothing to the statistic. The expectation is
-// the engine's behavior before T-1681, derived by hand, not oracle evidence (probe: T-1689).
+// the engine's behavior before T-1681; Excel agrees (probes/t1689-chisq-test-blanks-text-booleans, T-1689).
 #[test]
 fn chisq_test_over_whole_columns_counts_every_cell() {
     // One numeric pair, (2, 1): the statistic is 1.
