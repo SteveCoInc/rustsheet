@@ -230,7 +230,7 @@ fn aggregates_flatten_or_are_not_available() {
     assert_eq!(model._get_text("F1"), "220");
     assert_eq!(model._get_text("F2"), "16");
     assert_eq!(model._get_text("F3"), "19");
-    assert_eq!(model._get_text("F4"), "3");
+    assert_eq!(model._get_text("F4"), "#N/A");
     assert_eq!(model._get_text("F5"), "#N/A");
     assert_eq!(model._get_text("F6"), "#N/A");
     assert_eq!(model._get_text("F7"), "#CALC!");

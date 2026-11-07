@@ -1004,7 +1004,8 @@ excel-graph, 2026-11-06, over the T-2592 data; `G` is the T-2592 GROUPBY, `V` is
   cell and `#N/A` at each key (`SUM(--ISERR(G3))` 3), LEN, ABS, UPPER, ROUND and NOT give `#VALUE!` at each nested cell
   (LEN and UPPER still read the keys: `1;#3;#3;1;#3;#3;5;#3;#3`), ISLOGICAL counts none, and ERROR.TYPE of `INDEX(G,0,2)` or
   of an INDEXed two-level cell is 3 at each of its nested cells (probes/t4737-nested-cell-lift-error-type A1:A14, excel-graph,
-  2026-11-07; ours matches since T-4737, `ArrayNode::scalar` in nested_array.rs). REGEXEXTRACT's return_mode read through a
+  2026-11-07; ours matches since T-4737, `ArrayNode::scalar` in nested_array.rs). Other lifts (N, T, ISBLANK, ISREF, ISEVEN, IFERROR's value, ...)
+  are not probed: the engine reads them the same way, generalized from the thirteen probed ones. REGEXEXTRACT's return_mode read through a
   nested cell is `#VALUE!` per cell as well: probes/gen-m7-21b4eef18424ce94-refill-1107, a copy of gen-m7/21b4eef18424ce94
   refilled on 2026-11-07, gives `#VALUE!` at the 26 spill cells of Calc!A1504 where the October fill had "" (B1505, B1506,
   B1510, B1512, B1513, C1505, C1507:C1511, C1514, D1505, D1507, D1509:D1511, D1513, E1505:E1507, E1509:E1513), and the
@@ -1017,9 +1018,8 @@ excel-graph, 2026-11-06, over the T-2592 data; `G` is the T-2592 GROUPBY, `V` is
   P!A64 and the 26 gen-m7/21b4eef18424ce94 cells listed above (the refills t2360-refill-1106, t2311-refill-1106, t2625-refill-1106,
   t2475-refill-1106 and gen-m7-21b4eef18424ce94-refill-1107 replace them). For the rest the engine still follows the October reads, so
   the refilled cells above are known failures until T-4736 (SUM, COUNT,
-  COUNTA, and SUM over a reference body), T-4737 (lifts read an error; `&""` over an INDEXed row) and T-4738 (the lifted INDEX top-left)
-  land. Each of them turns its share of the October cells (t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26, A32, t2360
-  P!C1, C9, C17, C25, C33, t2311 P!C12, t2475 P!A64; and October-only cells such as gen-m9/e85daedce5c2675e Calc!A35, once a refill confirms each, decision 0329 item 3) into superseded known failures, with the October sidecars kept (decision 0329 item 3).
+  COUNTA, and SUM over a reference body) and T-4738 (the lifted INDEX top-left)
+  land. Each of them turns its share of the October cells (t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26; and October-only cells such as gen-m9/e85daedce5c2675e Calc!A35, once a refill confirms each, decision 0329 item 3) into superseded known failures, with the October sidecars kept (decision 0329 item 3).
 Aggregates over nested GROUPBY and PIVOTBY cells (probes/t2594-nested-aggregates, excel-graph, 2026-10-24, T-2594, over the T-2592
 data): (October fills; by 2026-11-06 SUM is `#N/A` and COUNT skips nested cells, see the T-2609 list above) SUM, COUNT and COUNTA flatten a nested cell (SUM 220, COUNT 16, COUNTA 19 over GROUPBY; over PIVOTBY SUM 220, COUNT 16,
 COUNTA 32; `SUM(1,GROUPBY(..),2)` 223; A26:A29). Every other aggregate tried is `#N/A`: MIN, MAX, MINA, MAXA, AVERAGEA, PRODUCT,

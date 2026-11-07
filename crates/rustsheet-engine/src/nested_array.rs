@@ -179,7 +179,8 @@ impl ArrayNode {
     /// every nested cell, one-level, two-level (also when the inner top-left is `#N/A`),
     /// reference-body and PIVOTBY alike, and LEN, ABS, UPPER, ROUND and NOT give `#VALUE!` there
     /// (probes/t4737-nested-cell-lift-error-type A1:A14; t2360-refill-1106 P!C33,
-    /// t2609-nested-operators-and-lifts A44:A47).
+    /// t2609-nested-operators-and-lifts A44:A47). Lifts not probed follow the same read, generalized
+    /// from the probed ones (docs/excel-semantics/arrays.md).
     pub(crate) fn scalar(&self) -> &ArrayNode {
         match self {
             ArrayNode::Nested(_) => &VALUE_ERROR,
