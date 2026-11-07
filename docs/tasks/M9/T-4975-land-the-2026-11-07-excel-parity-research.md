@@ -13,10 +13,13 @@ depends_on: []
 ## Goal
 Every root cause in `docs/research/excel-parity-findings-2026-11-07.md` items 1–13 is fixed on
 main, with the evidence cells the file cites passing, Gate A unchanged or improved, and no eval
-regressions. The held inverse-beta/F work stays out (it breaks Gate A).
+regressions; likewise the addendum (`docs/research/excel-parity-findings-2026-11-07-addendum.md`,
+PR #4005, sections A–D, which supersede the "Held" section) and the audit findings.
 
 Owner ruling (2026-11-07): land all items in **one PR** under this one task, overriding the
-one-task-one-lane and S/M size rules (CLAUDE.md directive 4) for this hand-off only. The size
+one-task-one-lane and S/M size rules (CLAUDE.md directive 4) for this hand-off only. Second ruling (2026-11-07): trust the research findings as written, and
+fix every one of them in this session (including the addendum and the audit section) rather than
+filing them as separate tasks; T-4976–T-4979 are closed by this PR. The size
 field says M because `scripts/tasks.py` refuses L; the real size is L.
 
 ## Context
@@ -45,13 +48,12 @@ this PR closes):
 - [ ] Each item's evidence cells (as listed in the findings file) match Excel, demonstrated by a
       unit test or eval case per item; items that do not reproduce on current main are recorded
       in the Outcome with the measurement.
+- [ ] Addendum sections A–D and audit findings 1–6 are fixed the same way.
 - [ ] Each item's Excel quirk has a `docs/excel-semantics/` entry.
 - [ ] `rustsheet-eval check` shows no new regressions; `eval/baseline/` updated via
       `make eval-baseline`; Gate A (`rustsheet-eval accuracy`) has no new failures.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- The "Held" inverse-beta/F section (BETA.INV, BETAINV, T.INV.2T, TINV, CONFIDENCE.T, FINV,
-  F.INV.RT): fails Gate A as prototyped.
-- The audit findings section (filed as follow-up tasks, not fixed here).
+- Addendum section E (an alternative to item 8 + section B; one definition is kept: item 8 + B).
 - The suggested probe groups.
