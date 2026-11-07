@@ -711,11 +711,13 @@ impl<'a> DefinedPivot<'a> {
                 flags.entry(k).or_default().push_str(r#" f="1""#);
             }
         }
-        let mut items = (0..values.len()).fold(String::new(), |mut out, k| {
-            let flag = flags.get(&k).map_or("", String::as_str);
-            let _ = write!(out, r#"<item x="{k}"{flag}/>"#);
-            out
-        });
+        let mut items = item_order::item_order(f, &keys, values.len())?
+            .into_iter()
+            .fold(String::new(), |mut out, k| {
+                let flag = flags.get(&k).map_or("", String::as_str);
+                let _ = write!(out, r#"<item x="{k}"{flag}/>"#);
+                out
+            });
         let tails = subtotals.unwrap_or_else(|| vec!["default"]);
         for t in &tails {
             let _ = write!(items, r#"<item t="{t}"/>"#);
@@ -970,5 +972,6 @@ mod calculated_items;
 mod checks;
 #[cfg(test)]
 mod export_tests;
+mod item_order;
 #[cfg(test)]
 mod tests;
