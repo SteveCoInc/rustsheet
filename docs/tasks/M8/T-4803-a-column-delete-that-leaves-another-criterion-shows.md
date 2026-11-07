@@ -3,7 +3,7 @@ id: T-4803
 title: "A column delete that leaves another criterion shows only the rows the deleted criterion hid"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
