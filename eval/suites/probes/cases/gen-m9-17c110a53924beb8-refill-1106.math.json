@@ -19,11 +19,11 @@
    "STANDARDIZE": "8e4045d7b4e4bcab",
    "STDEV.S": "4e5529ec43d57e03",
    "STDEVPA": "4e5529ec43d57e03",
-   "T.DIST.2T": "4920c5f1074a7dce",
-   "T.INV": "4920c5f1074a7dce",
-   "TDIST": "4920c5f1074a7dce",
+   "T.DIST.2T": "87aa5f145fe04d83",
+   "T.INV": "87aa5f145fe04d83",
+   "TDIST": "87aa5f145fe04d83",
    "TIME": "6ee22fff0f9f7716",
-   "TINV": "4920c5f1074a7dce",
+   "TINV": "87aa5f145fe04d83",
    "WEIBULL": "90a93c98b90756bc"
   },
   "arguments_sha256": "a144780f4794d6a3a28a72ff1e86ee4bf3f9097bd83fcb48a824aaeaf795b3f8"

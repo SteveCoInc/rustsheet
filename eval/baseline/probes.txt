@@ -2099,6 +2099,8 @@ C	probes/t3533-lift-varpa-bool.case.json	1
 C	probes/t3533-lift-varpa-multi.case.json	1
 C	probes/t3533-lift-varpa-num.case.json	1
 C	probes/t3533-lift-varpa-text.case.json	1
+C	probes/t3554-tdist-density-df1-div0.case.json	24
+C	probes/t3554-tdist-density-huge-x.case.json	58
 C	probes/t3559-collation-unprobed-blocks.case.json	955
 C	probes/t3575-fraction-after-elapsed-b.case.json	30
 C	probes/t3575-fraction-after-elapsed.case.json	15
@@ -2485,6 +2487,7 @@ C	probes/t4469-take-drop-if-one-cell-reference.case.json	52
 C	probes/t4470-weeknum-return-type-edges.case.json	24
 C	probes/t4473-textsplit-fold-gaps.case.json	117
 C	probes/t4474-textbefore-utf16-bounds.case.json	135
+C	probes/t4475-scan-reduce-reference-initial.case.json	64
 C	probes/t4477-filter-include-error-shapes.case.json	49
 C	probes/t4478-reduce-reference-in-callers.case.json	13
 C	probes/t4478-reduce-scan-reference-accumulator.case.json	117
@@ -2593,6 +2596,7 @@ C	probes/t4626-matrix-text-elements.case.json	28
 C	probes/t4627-pivot-field-name-collisions.case.json	105
 C	probes/t4634-pivot-total-order-4.case.json	1643
 C	probes/t4686-rich-value-option-residue.case.json	44
+C	probes/t4697-large-small-median-mixed-sheet-refs.case.json	17
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -9246,6 +9250,11 @@ F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B10
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B11
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B9
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!F9
+F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H1
+F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H17
+F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H3
+F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H5
+F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H9
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10

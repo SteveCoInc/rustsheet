@@ -3,7 +3,7 @@ id: T-4697
 title: "Probe LARGE/SMALL/MEDIAN over a reference grid with references on both the formula's sheet and another; tidy SPEC-0014 mixed-grid wording"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -29,10 +29,19 @@ formula's own sheet and some on another sheet. SPEC-0014's "Mixed grids" amendme
   - lookup.md's "MIN and MINA are 1 ... PRODUCT is 20" line runs past the wrap width.
 
 ## Acceptance criteria
-- [ ] The probe is filled (excel-graph) and recorded in lookup.md and SPEC-0014 rule 5; the "Order statistics" reader
+- [x] The probe is filled (excel-graph) and recorded in lookup.md and SPEC-0014 rule 5; the "Order statistics" reader
       states the evidenced rule instead of the fallback (amend T-4570 if the rule changes).
-- [ ] The three wording fixes above are made.
-- [ ] `make check` green; reviewers approve.
+- [x] The three wording fixes above are made.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The implementation (T-4570).
+
+## Outcome
+Probed `probes/t4697-large-small-median-mixed-sheet-refs` (excel-graph, 17 cells). Rule: over a grid of references on
+both sheets, the sheet of the FIRST element decides LARGE, SMALL and MEDIAN: `#VALUE!` when it is the formula's own
+sheet, `#N/A` when another (`{"A1";"Data!G1"}` vs `{"Data!G1";"A1"}`; three references starting on Local are
+`#VALUE!`, so not the last element). A mixed XLOOKUP grid has one reference element, so its sheet decides.
+Recorded in lookup.md and SPEC-0014 rule 5 (replacing the `#N/A` fallback); the three wording fixes are made.
+H16 and H17 rule out the majority. T-4714 implements the first-element rule (T-4570 is done).
+Eval delta: a new probe case; 5 known failures (Local H1, H3, H5, H9, H17) added to the baseline, owned by T-4714.
