@@ -22,8 +22,10 @@ Oracle evidence decides how a defined name's references move under the edits T-4
   - a relative column under `insert_column` and `delete_column` (the harness can do column ops:
     probes/sheet-ops/t4702-names-insert-column);
   - a mixed reference `$A5` or `A$5` under row and column edits;
-  - a range with one absolute and one relative corner (`Data!$A$5:A6`);
-  - the no-edit control for the A1 anchoring, and a relative reference whose row is deleted.
+  - a range with one absolute and one relative corner (`Data!$A$5:A6`), and a wholly relative range (`Data!A5:A7`)
+    under a row insert or delete, including one that spans the edited row;
+  - a wholly relative single reference whose own row is deleted (`Data!A5`, `delete_row 5`);
+  - the no-edit control for the A1 anchoring.
 - Rule and list: docs/excel-semantics/references.md "Relative references in a name".
 
 ## Acceptance criteria

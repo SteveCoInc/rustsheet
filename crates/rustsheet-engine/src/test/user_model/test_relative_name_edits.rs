@@ -35,9 +35,20 @@ fn a_row_edit_leaves_a_relative_name_and_shifts_an_absolute_one() {
     model.insert_rows(0, 4, 1).unwrap();
     assert_eq!(formula_of(&model, "Rel"), "Data!A5");
     assert_eq!(formula_of(&model, "Abs"), "Data!$A$6");
-    model.delete_rows(0, 4, 2).unwrap();
+    model.delete_rows(0, 4, 1).unwrap();
     assert_eq!(formula_of(&model, "Rel"), "Data!A5");
-    assert_eq!(formula_of(&model, "Abs"), "Data!$A$4");
+    assert_eq!(formula_of(&model, "Abs"), "Data!$A$5");
+}
+
+#[test]
+fn a_deleted_row_and_a_relative_range_still_displace() {
+    // Unprobed (T-4875): only a single reference whose row the edit does not delete stays put.
+    let mut deleted = model("Data!A5");
+    deleted.delete_rows(0, 5, 1).unwrap();
+    assert!(formula_of(&deleted, "Rel").contains("#REF!"));
+    let mut ranged = model("Data!A5:A7");
+    ranged.insert_rows(0, 4, 1).unwrap();
+    assert_eq!(formula_of(&ranged, "Rel"), "Data!A6:A8");
 }
 
 #[test]

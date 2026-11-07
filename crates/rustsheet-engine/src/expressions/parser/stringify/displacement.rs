@@ -23,10 +23,10 @@ pub(crate) struct Displacement<'a> {
     /// The tables (lowercase) a column insert or delete left of them moves whole, with no
     /// change to their column list: a `#This Row` reference to one keeps its text (T-4680).
     pub(crate) moved_tables: &'a [String],
-    /// Whether a row edit leaves a wholly relative reference (both axes of every corner relative)
-    /// where it is. Set for defined names, whose relative references Excel does not move under a
-    /// row insert or delete (references.md "Relative references in a name", T-4747, T-4760).
-    /// Column edits and mixed references are unprobed and displace as before (T-4875).
+    /// Whether a row edit leaves a wholly relative single-cell reference where it is. Set for
+    /// defined names, whose relative references Excel does not move under a row insert or delete
+    /// (references.md "Relative references in a name", T-4747, T-4760). Ranges, column edits,
+    /// mixed references and a deleted referenced row are unprobed and displace as before (T-4875).
     pub(crate) keep_relative: bool,
 }
 
@@ -52,10 +52,18 @@ impl Displacement<'_> {
         }
     }
 
-    /// Whether this edit leaves a reference whose corners are all wholly relative
-    /// (`all_relative`) where it is, under [`Displacement::keep_relative`].
-    pub(super) fn keeps(&self, all_relative: bool) -> bool {
-        self.keep_relative && all_relative && matches!(self.data, DisplaceData::Row { .. })
+    /// Whether this edit leaves a wholly relative single reference (`all_relative`) on row `row`
+    /// where it is, under [`Displacement::keep_relative`]: only a row insert, or a row delete that
+    /// does not take `row`, is probed (T-4760); a deleted row displaces as before (T-4875).
+    pub(super) fn keeps(&self, all_relative: bool, row: i32) -> bool {
+        let DisplaceData::Row {
+            row: edited, delta, ..
+        } = *self.data
+        else {
+            return false;
+        };
+        let deletes_row = delta < 0 && row >= edited && row < edited.saturating_sub(delta);
+        self.keep_relative && all_relative && !deletes_row
     }
 
     /// The displacements of the two corners of the plain range `rows` x `columns` on sheet

@@ -556,7 +556,9 @@ fn stringify(
             context,
             match rewrite {
                 Rewrite::Displace(displacement)
-                    if displacement.keeps(!*absolute_row && !*absolute_column) =>
+                    if context.is_some_and(|context| {
+                        displacement.keeps(!*absolute_row && !*absolute_column, row + context.row)
+                    }) =>
                 {
                     &DisplaceData::None
                 }
@@ -589,21 +591,8 @@ fn stringify(
                 (*absolute_row1, *row1, *absolute_row2, *row2),
                 (*absolute_column1, *column1, *absolute_column2, *column2),
             );
-            // Only a wholly relative range is kept: column edits, mixed references and a range with
-            // an absolute corner are unprobed and displace as before (T-4875).
-            let kept = matches!(rewrite, Rewrite::Displace(displacement)
-            if displacement.keeps(
-                !(*absolute_row1 || *absolute_row2 || *absolute_column1 || *absolute_column2)
-            ));
-            let displace_data = if kept {
-                &DisplaceData::None
-            } else {
-                displace_data
-            };
             let grown = match (rewrite, context) {
-                (Rewrite::Displace(displacement), Some(context))
-                    if !kept && !full_row && !full_column =>
-                {
+                (Rewrite::Displace(displacement), Some(context)) if !full_row && !full_column => {
                     let at =
                         |absolute, value, origin| if absolute { value } else { value + origin };
                     displacement.range_corners(
