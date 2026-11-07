@@ -3,7 +3,7 @@ id: T-3333
 title: "rustsheet-eval subexpr-case: a probe case that asks Excel for every subexpression of a visibly-off spec-case cell, and show the first one that diverges"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
