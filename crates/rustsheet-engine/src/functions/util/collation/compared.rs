@@ -24,7 +24,7 @@ pub(crate) const BYTE_TICKS: u64 = 1;
 /// the whole comparison's cost a character: about 70 ns at the worst, two texts equal to the end
 /// (`é`, `中`, release build, 2026-11-05; 95 to 140 ns a character for each of the six passes
 /// before T-4279, weighed 128).
-pub(super) const CHAR_TICKS: u64 = 48;
+pub(crate) const CHAR_TICKS: u64 = 48;
 
 /// Ticks of one byte a [`super::CollationKey`] is built from (UNIQUE, the exact-match lookup
 /// index, the *IF(S) cache): about 50 ns a byte for ASCII and 37 for `é` once the elements are
@@ -36,7 +36,7 @@ pub(super) const CHAR_TICKS: u64 = 48;
 pub(super) const KEY_TICKS: u64 = 64;
 
 /// Ticks of one byte [`super::fold_lookup`] folds (non-ASCII: about 31 ns).
-pub(super) const FOLD_TICKS: u64 = 32;
+pub(crate) const FOLD_TICKS: u64 = 32;
 
 thread_local! {
     /// The ticks of the comparisons, keys and folds since the evaluator last took them

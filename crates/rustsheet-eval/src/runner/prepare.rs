@@ -14,6 +14,7 @@ use crate::cellref::Addr;
 use crate::deviations::{self, Pin};
 use crate::formula_calls::calls_add_in;
 use crate::overrides;
+use crate::pivot_freshness;
 use crate::pivot_scoring;
 use crate::poi_m8_subset::{self, ReferenceFormCells};
 use crate::spill_extent::SpillExtent;
@@ -92,6 +93,12 @@ fn prepare_xlsx(suite: &Suite, case: &CaseFile) -> Result<PreparedCase, String> 
     } else {
         ReferenceFormCells::default()
     };
+    // Only cells the suite trusts as Excel's say whether a pivot's cache reproduces them (T-4131).
+    let saved_pivots = if suite.manifest.trusts_cached_values(&snapshot) {
+        pivot_freshness::saved_pivots(&snapshot)
+    } else {
+        Vec::new()
+    };
     let oracle = load_oracle(case)?;
     let workbook_name = oracle.as_ref().and_then(|o| o.source.workbook_name.clone());
     let (source, from_excel, lookup): (String, bool, Lookup) = if let Some(o) = oracle {
@@ -130,6 +137,7 @@ fn prepare_xlsx(suite: &Suite, case: &CaseFile) -> Result<PreparedCase, String> 
             defined_names: BTreeMap::new(),
             reference_forms,
             pivots: Vec::new(),
+            saved_pivots: Vec::new(),
             pivot_features: Vec::new(),
             pivot_keys: BTreeSet::new(),
         });
@@ -180,6 +188,7 @@ fn prepare_xlsx(suite: &Suite, case: &CaseFile) -> Result<PreparedCase, String> 
         defined_names,
         reference_forms,
         pivots: Vec::new(),
+        saved_pivots,
         pivot_features: Vec::new(),
         pivot_keys: BTreeSet::new(),
     })
@@ -340,6 +349,7 @@ pub(super) fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase
         defined_names: BTreeMap::new(),
         reference_forms: ReferenceFormCells::default(),
         pivots,
+        saved_pivots: Vec::new(),
         input: Prepared::Spec {
             spec: Box::new(spec),
         },

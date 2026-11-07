@@ -184,9 +184,8 @@ pub struct TableSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub filter_column: Option<FilterColumnSpec>,
     /// spec2xlsx's per-column values filters (T-4755): each rejects exactly its `hides` rows, and a
-    /// hidden data row none hides is one the filters keep. The engine adapter adds the table through
-    /// the facade, which holds no criteria, so it loads such a table filtered like any other
-    /// (`filters_hidden_rows`; T-4803 owns the cases where that differs from Excel).
+    /// hidden data row none hides is one the filters keep. The engine adapter gives the table each
+    /// criterion with `Txn::filter_table_column`, which derives the same values filter (T-4803).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub criteria: Vec<CriterionSpec>,
     /// The last row of `range` is the table's totals row (T-1607; the engine adapter adds it with

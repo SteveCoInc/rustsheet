@@ -1,0 +1,2755 @@
+{
+ "description": "generated pivots seed=0 case=4 milestone=M16 (rustsheet-gen --milestone M16, T-4132): rows 48-59 of the covering array, one builder-v2 pivot per sheet at L5 over the sheet's own A:I source, which Excel renders on open; Q holds one COUNTA control per sheet. P01 (row 48): layout=compact subtotals=top values=rows_start filter=page_all rows=1 cols=2 data=3 aggregate=var grand=no_rows pool=blanks caption=names extra=none; P02 (row 49): layout=tabular subtotals=custom values=rows_end filter=page_item rows=3 cols=0 data=2 aggregate=average grand=both pool=case caption=names extra=blank_row; P03 (row 50): layout=compact subtotals=bottom values=rows_end filter=page_all rows=0 cols=2 data=2 aggregate=countNums grand=no_cols pool=dates caption=subtotal_caption extra=none; P04 (row 51): layout=outline subtotals=none values=cols_end filter=none rows=3 cols=1 data=2 aggregate=sum grand=none pool=errors caption=error extra=repeat_labels; P05 (row 52): layout=tabular subtotals=none values=single filter=hidden rows=3 cols=1 data=1 aggregate=min grand=no_rows pool=plain caption=grand_caption extra=repeat_labels; P06 (row 53): layout=outline subtotals=none values=cols_start filter=none rows=3 cols=1 data=3 aggregate=stdDev grand=no_cols pool=dates caption=headers extra=repeat_labels; P07 (row 54): layout=tabular subtotals=top values=cols_end filter=hidden rows=0 cols=2 data=3 aggregate=varp grand=both pool=many caption=subtotal_caption extra=num_format; P08 (row 55): layout=compact subtotals=top values=cols_end filter=page_all rows=2 cols=1 data=3 aggregate=var grand=none pool=dates caption=missing extra=blank_row; P09 (row 56): layout=compact subtotals=custom values=rows_start filter=page_item rows=2 cols=0 data=3 aggregate=varp grand=none pool=blanks caption=none extra=blank_row; P10 (row 57): layout=tabular subtotals=custom values=rows_start filter=hidden rows=3 cols=0 data=2 aggregate=product grand=both pool=types caption=names extra=repeat_labels; P11 (row 58): layout=tabular subtotals=bottom values=rows_end filter=hidden rows=0 cols=2 data=3 aggregate=min grand=both pool=ties caption=error extra=none; P12 (row 59): layout=compact subtotals=top values=rows_end filter=page_multi rows=2 cols=2 data=3 aggregate=varp grand=none pool=dates caption=error extra=num_format",
+ "expected": {},
+ "format": "rustsheet-case/v1",
+ "pivot_features": [
+  "PV-0001",
+  "PV-0002",
+  "PV-0003",
+  "PV-0004",
+  "PV-0005",
+  "PV-0007",
+  "PV-0008",
+  "PV-0009",
+  "PV-0010",
+  "PV-0011",
+  "PV-0012",
+  "PV-0013",
+  "PV-0014",
+  "PV-0015",
+  "PV-0028",
+  "PV-0029",
+  "PV-0031",
+  "PV-0032",
+  "PV-0033",
+  "PV-0037",
+  "PV-0038",
+  "PV-0039",
+  "PV-0040",
+  "PV-0041",
+  "PV-0117",
+  "PV-0118",
+  "PV-0119",
+  "PV-0240",
+  "PV-0241",
+  "PV-0249",
+  "PV-0257",
+  "PV-0278",
+  "PV-0298",
+  "PV-0319",
+  "PV-0361",
+  "PV-0367",
+  "PV-0419",
+  "PV-0440",
+  "PV-0443",
+  "PV-0444",
+  "PV-0446",
+  "PV-0665",
+  "PV-0676",
+  "PV-0678",
+  "PV-0780",
+  "PV-0782",
+  "PV-0826",
+  "PV-0827",
+  "PV-0828",
+  "PV-0829",
+  "PV-0834",
+  "PV-0835",
+  "PV-0888",
+  "PV-0889",
+  "PV-0893",
+  "PV-0894",
+  "PV-0895",
+  "PV-0897",
+  "PV-0898",
+  "PV-1016",
+  "PV-1017",
+  "PV-1018",
+  "PV-1019",
+  "PV-1020",
+  "PV-1021",
+  "PV-1022",
+  "PV-1023",
+  "PV-1024",
+  "PV-1027",
+  "PV-1028",
+  "PV-1029",
+  "PV-1031",
+  "PV-1032",
+  "PV-1033",
+  "PV-1073",
+  "PV-1074",
+  "PV-1079",
+  "PV-1085",
+  "PV-1086",
+  "PV-1090",
+  "PV-1091",
+  "PV-1093",
+  "PV-1094",
+  "PV-1097",
+  "PV-1106",
+  "PV-1112",
+  "PV-1113",
+  "PV-1116",
+  "PV-1126",
+  "PV-1127",
+  "PV-1128",
+  "PV-1129",
+  "PV-1130",
+  "PV-1133",
+  "PV-1134",
+  "PV-1135",
+  "PV-1175",
+  "PV-1176",
+  "PV-1177",
+  "PV-1178",
+  "PV-1183",
+  "PV-1184",
+  "PV-1194",
+  "PV-1195",
+  "PV-1196",
+  "PV-1197",
+  "PV-1200",
+  "PV-1201",
+  "PV-1208",
+  "PV-1211",
+  "PV-1220",
+  "PV-1222",
+  "PV-1223",
+  "PV-1224",
+  "PV-1232",
+  "PV-1233",
+  "PV-1241",
+  "PV-1245",
+  "PV-1281",
+  "PV-1282"
+ ],
+ "sheets": [
+  {
+   "cells": {
+    "A1": "Region",
+    "A10": "East",
+    "A11": "South",
+    "A12": "West",
+    "A13": "South",
+    "A14": "West",
+    "A15": "South",
+    "A2": "North",
+    "A3": "West",
+    "A4": "North",
+    "A5": "West",
+    "A6": "South",
+    "A7": "East",
+    "A8": "North",
+    "A9": "South",
+    "B1": "Product",
+    "B10": "A",
+    "B11": "A",
+    "B12": "A",
+    "B13": "A",
+    "B14": "C",
+    "B15": "A",
+    "B2": "C",
+    "B3": "B",
+    "B4": "B",
+    "B5": "B",
+    "B6": "C",
+    "B7": "B",
+    "B8": "A",
+    "B9": "C",
+    "C1": "Channel",
+    "C10": "Web",
+    "C11": "Store",
+    "C13": "Web",
+    "C14": "Web",
+    "C4": "Store",
+    "C7": "Store",
+    "C9": "Store",
+    "D1": "Rep",
+    "D10": "Ann",
+    "D11": "Bo",
+    "D12": "Di",
+    "D13": "Ann",
+    "D14": "Cy",
+    "D15": "Ann",
+    "D2": "Bo",
+    "D3": "Di",
+    "D4": "Cy",
+    "D5": "Di",
+    "D6": "Bo",
+    "D7": "Ann",
+    "D8": "Bo",
+    "D9": "Ann",
+    "E1": "Tier",
+    "E10": "Silver",
+    "E11": "Silver",
+    "E12": "Silver",
+    "E13": "Silver",
+    "E14": "Gold",
+    "E15": "Silver",
+    "E2": "Gold",
+    "E3": "Gold",
+    "E4": "Gold",
+    "E5": "Gold",
+    "E6": "Gold",
+    "E7": "Silver",
+    "E8": "Silver",
+    "E9": "Bronze",
+    "F1": "When",
+    "F10": 1462,
+    "F11": 44957,
+    "F12": 44957,
+    "F13": 1462,
+    "F14": 59,
+    "F15": 1462,
+    "F2": 1462,
+    "F3": 44957,
+    "F4": 59,
+    "F5": 1462,
+    "F6": 59,
+    "F7": 1462,
+    "F8": 1462,
+    "F9": 59,
+    "G1": "Sales",
+    "G10": 0,
+    "G11": 0,
+    "G12": 7,
+    "G13": 1,
+    "G14": 5,
+    "G15": 7,
+    "G2": 2,
+    "G3": 3,
+    "G4": 100,
+    "G5": 7,
+    "G6": 20,
+    "G7": 100,
+    "G8": 2.25,
+    "G9": 0.5,
+    "H1": "Units",
+    "H10": 8,
+    "H11": 2,
+    "H12": 1,
+    "H13": 2,
+    "H14": 3,
+    "H15": 3,
+    "H2": 8,
+    "H3": 8,
+    "H4": 1,
+    "H5": 1,
+    "H6": 9,
+    "H7": 7,
+    "H8": 3,
+    "H9": 5,
+    "I1": "Score",
+    "I10": -1,
+    "I11": 0,
+    "I12": 0,
+    "I13": 2,
+    "I14": -1,
+    "I2": 0,
+    "I4": -1,
+    "I7": 8,
+    "I9": 1.5
+   },
+   "name": "P01",
+   "number_formats": {
+    "F10": "m/d/yyyy",
+    "F11": "m/d/yyyy",
+    "F12": "m/d/yyyy",
+    "F13": "m/d/yyyy",
+    "F14": "m/d/yyyy",
+    "F15": "m/d/yyyy",
+    "F2": "m/d/yyyy",
+    "F3": "m/d/yyyy",
+    "F4": "m/d/yyyy",
+    "F5": "m/d/yyyy",
+    "F6": "m/d/yyyy",
+    "F7": "m/d/yyyy",
+    "F8": "m/d/yyyy",
+    "F9": "m/d/yyyy"
+   },
+   "pivot_tables": [
+    {
+     "definition": {
+      "columns": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Score",
+        "name": "Measure 1",
+        "subtotal": "var"
+       },
+       {
+        "field": "Units",
+        "name": "Measure 2",
+        "subtotal": "max"
+       },
+       {
+        "field": "Sales",
+        "name": "Measure 3",
+        "subtotal": "sum"
+       }
+      ],
+      "fields": {
+       "Channel": {
+        "attrs": {
+         "name": "Channel field"
+        }
+       }
+      },
+      "pages": [
+       {
+        "field": "Rep"
+       }
+      ],
+      "rows": [
+       "Values",
+       "Channel"
+      ],
+      "table": {
+       "rowGrandTotals": false
+      }
+     },
+     "location": "L5",
+     "name": "PvP01",
+     "source": "P01!A1:I15"
+    }
+   ]
+  },
+  {
+   "cells": {
+    "A1": "Region",
+    "A2": "North",
+    "A3": "West",
+    "A4": "South",
+    "A5": "west",
+    "A6": "South",
+    "A7": "north",
+    "A8": "North",
+    "B1": "Product",
+    "B2": "C",
+    "B3": "C",
+    "B4": "B",
+    "B5": "C",
+    "B6": "C",
+    "B7": "A",
+    "B8": "C",
+    "C1": "Channel",
+    "C2": "Web",
+    "C3": "Store",
+    "C4": "Store",
+    "C5": "Web",
+    "C6": "Store",
+    "C7": "Web",
+    "C8": "Store",
+    "D1": "Rep",
+    "D2": "Cy",
+    "D3": "Ann",
+    "D4": "Di",
+    "D5": "Cy",
+    "D6": "Ann",
+    "D7": "Ann",
+    "D8": "Di",
+    "E1": "Tier",
+    "E2": "Bronze",
+    "E3": "Silver",
+    "E4": "Bronze",
+    "E5": "Bronze",
+    "E6": "Silver",
+    "E7": "Bronze",
+    "E8": "Silver",
+    "F1": "When",
+    "F2": 45291,
+    "F3": 45291,
+    "F4": 31,
+    "F5": 45291,
+    "F6": 31,
+    "F7": 366,
+    "F8": 366,
+    "G1": "Sales",
+    "G2": 20,
+    "G3": -4,
+    "G4": 2.25,
+    "G5": 20,
+    "G6": 3,
+    "G7": 10,
+    "G8": 2,
+    "H1": "Units",
+    "H2": 1,
+    "H3": 3,
+    "H4": 1,
+    "H5": 4,
+    "H6": 1,
+    "H7": 2,
+    "H8": 2,
+    "I1": "Score",
+    "I2": 0,
+    "I3": 1.5,
+    "I4": 0,
+    "I5": 4.25,
+    "I6": 2,
+    "I7": 8,
+    "I8": 0
+   },
+   "name": "P02",
+   "number_formats": {
+    "F2": "m/d/yyyy",
+    "F3": "m/d/yyyy",
+    "F4": "m/d/yyyy",
+    "F5": "m/d/yyyy",
+    "F6": "m/d/yyyy",
+    "F7": "m/d/yyyy",
+    "F8": "m/d/yyyy"
+   },
+   "pivot_tables": [
+    {
+     "definition": {
+      "columns": [],
+      "data": [
+       {
+        "field": "Score",
+        "name": "Measure 1",
+        "subtotal": "average"
+       },
+       {
+        "field": "Sales",
+        "name": "Measure 2",
+        "subtotal": "varp"
+       }
+      ],
+      "fields": {
+       "Channel": {
+        "attrs": {
+         "compact": false,
+         "insertBlankRow": true,
+         "name": "Channel field",
+         "outline": false
+        },
+        "subtotals": [
+         "count"
+        ]
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Rep": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Score": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Tier": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "When": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "subtotals": [
+         "stdDev",
+         "stdDevP"
+        ]
+       }
+      },
+      "pages": [
+       {
+        "field": "Rep",
+        "item": "Di"
+       }
+      ],
+      "rows": [
+       "Channel",
+       "When",
+       "Region",
+       "Values"
+      ],
+      "table": {
+       "compact": false,
+       "compactData": false,
+       "outline": false,
+       "outlineData": false
+      }
+     },
+     "location": "L5",
+     "name": "PvP02",
+     "source": "P02!A1:I8"
+    }
+   ]
+  },
+  {
+   "cells": {
+    "A1": "Region",
+    "A10": "East",
+    "A11": "West",
+    "A12": "North",
+    "A13": "North",
+    "A14": "South",
+    "A2": "West",
+    "A3": "East",
+    "A4": "East",
+    "A5": "West",
+    "A6": "East",
+    "A7": "West",
+    "A8": "East",
+    "A9": "North",
+    "B1": "Product",
+    "B10": "A",
+    "B11": "B",
+    "B12": "A",
+    "B13": "C",
+    "B14": "B",
+    "B2": "C",
+    "B3": "B",
+    "B4": "C",
+    "B5": "B",
+    "B6": "C",
+    "B7": "A",
+    "B8": "A",
+    "B9": "C",
+    "C1": "Channel",
+    "C10": "Store",
+    "C11": "Web",
+    "C12": "Web",
+    "C13": "Web",
+    "C14": "Web",
+    "C2": "Store",
+    "C3": "Store",
+    "C4": "Store",
+    "C5": "Store",
+    "C6": "Store",
+    "C7": "Store",
+    "C8": "Store",
+    "C9": "Store",
+    "D1": "Rep",
+    "D10": "Cy",
+    "D11": "Ann",
+    "D12": "Cy",
+    "D13": "Cy",
+    "D14": "Di",
+    "D2": "Cy",
+    "D3": "Ann",
+    "D4": "Bo",
+    "D5": "Cy",
+    "D6": "Bo",
+    "D7": "Di",
+    "D8": "Cy",
+    "D9": "Di",
+    "E1": "Tier",
+    "E10": "Silver",
+    "E11": "Bronze",
+    "E12": "Gold",
+    "E13": "Gold",
+    "E14": "Silver",
+    "E2": "Gold",
+    "E3": "Gold",
+    "E4": "Gold",
+    "E5": "Gold",
+    "E6": "Bronze",
+    "E7": "Bronze",
+    "E8": "Gold",
+    "E9": "Bronze",
+    "F1": "When",
+    "F10": 365.999988426,
+    "F11": 1462.25,
+    "F12": 44957.999988426,
+    "F13": 44957.5,
+    "F14": 44957.5,
+    "F2": 1462.99999999,
+    "F3": 365.999988426,
+    "F4": 365.5,
+    "F5": 44957.25,
+    "F6": 365.999988426,
+    "F7": 365.99999999,
+    "F8": 1462.99999999,
+    "F9": 365.75,
+    "G1": "Sales",
+    "G10": 100,
+    "G11": 3,
+    "G12": 1,
+    "G13": 12,
+    "G14": 0.5,
+    "G2": 0.5,
+    "G3": 2.25,
+    "G4": 0,
+    "G5": 0.5,
+    "G6": 0.5,
+    "G7": 0.5,
+    "G8": 0.5,
+    "G9": 2,
+    "H1": "Units",
+    "H10": 9,
+    "H11": 1,
+    "H12": 3,
+    "H13": 6,
+    "H14": 9,
+    "H2": 2,
+    "H3": 7,
+    "H4": 7,
+    "H5": 2,
+    "H6": 5,
+    "H7": 4,
+    "H8": 1,
+    "H9": 7,
+    "I1": "Score",
+    "I10": 8,
+    "I11": 2,
+    "I12": 8,
+    "I13": 1.5,
+    "I14": 1.5,
+    "I2": 2,
+    "I3": 0,
+    "I4": 0,
+    "I5": 8,
+    "I6": 1.5,
+    "I7": 2,
+    "I8": 1.5,
+    "I9": 1.5
+   },
+   "name": "P03",
+   "number_formats": {
+    "F10": "m/d/yyyy h:mm",
+    "F11": "m/d/yyyy h:mm",
+    "F12": "m/d/yyyy h:mm",
+    "F13": "m/d/yyyy h:mm",
+    "F14": "m/d/yyyy h:mm",
+    "F2": "m/d/yyyy h:mm",
+    "F3": "m/d/yyyy h:mm",
+    "F4": "m/d/yyyy h:mm",
+    "F5": "m/d/yyyy h:mm",
+    "F6": "m/d/yyyy h:mm",
+    "F7": "m/d/yyyy h:mm",
+    "F8": "m/d/yyyy h:mm",
+    "F9": "m/d/yyyy h:mm"
+   },
+   "pivot_tables": [
+    {
+     "definition": {
+      "columns": [
+       "Channel",
+       "When"
+      ],
+      "data": [
+       {
+        "field": "Score",
+        "subtotal": "countNums"
+       },
+       {
+        "field": "Sales",
+        "subtotal": "min"
+       }
+      ],
+      "fields": {
+       "Channel": {
+        "attrs": {
+         "subtotalCaption": "Sub"
+        }
+       }
+      },
+      "pages": [
+       {
+        "field": "Region"
+       }
+      ],
+      "rows": [
+       "Values"
+      ],
+      "table": {
+       "colGrandTotals": false
+      }
+     },
+     "location": "L5",
+     "name": "PvP03",
+     "source": "P03!A1:I14"
+    }
+   ]
+  },
+  {
+   "cells": {
+    "A1": "Region",
+    "A10": "East",
+    "A2": "West",
+    "A3": "North",
+    "A4": "West",
+    "A5": "East",
+    "A6": "West",
+    "A7": "East",
+    "A8": "South",
+    "A9": "South",
+    "B1": "Product",
+    "B10": "C",
+    "B2": "C",
+    "B3": {
+     "t": "e",
+     "v": "#NUM!"
+    },
+    "B4": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "B5": "A",
+    "B6": {
+     "t": "e",
+     "v": "#REF!"
+    },
+    "B7": "B",
+    "B8": {
+     "t": "e",
+     "v": "#REF!"
+    },
+    "B9": {
+     "t": "e",
+     "v": "#REF!"
+    },
+    "C1": "Channel",
+    "C10": "Web",
+    "C2": "Store",
+    "C3": "Store",
+    "C4": "Store",
+    "C5": "Store",
+    "C6": "Store",
+    "C7": "Web",
+    "C8": "Store",
+    "C9": "Store",
+    "D1": "Rep",
+    "D10": "Ann",
+    "D2": "Di",
+    "D3": "Ann",
+    "D4": "Bo",
+    "D5": "Di",
+    "D6": "Ann",
+    "D7": "Di",
+    "D8": "Di",
+    "D9": "Di",
+    "E1": "Tier",
+    "E10": "Bronze",
+    "E2": "Bronze",
+    "E3": "Bronze",
+    "E4": "Silver",
+    "E5": "Bronze",
+    "E6": "Silver",
+    "E7": "Bronze",
+    "E8": "Bronze",
+    "E9": "Silver",
+    "F1": "When",
+    "F10": 45382,
+    "F2": 45382,
+    "F3": 365,
+    "F4": 365,
+    "F5": 60,
+    "F6": 45382,
+    "F7": 45382,
+    "F8": 45382,
+    "F9": 365,
+    "G1": "Sales",
+    "G10": 0.5,
+    "G2": -4,
+    "G3": 1,
+    "G4": 20,
+    "G5": 5,
+    "G6": 0,
+    "G7": 1,
+    "G8": 20,
+    "G9": 0.5,
+    "H1": "Units",
+    "H10": 9,
+    "H2": 9,
+    "H3": 9,
+    "H4": 3,
+    "H5": 6,
+    "H6": 8,
+    "H7": 6,
+    "H8": 4,
+    "H9": 7,
+    "I1": "Score",
+    "I10": 4.25,
+    "I2": -1,
+    "I3": 4.25,
+    "I4": 8,
+    "I5": 1.5,
+    "I6": 0,
+    "I7": 8,
+    "I8": {
+     "t": "e",
+     "v": "#NUM!"
+    },
+    "I9": 2
+   },
+   "name": "P04",
+   "number_formats": {
+    "F10": "m/d/yyyy",
+    "F2": "m/d/yyyy",
+    "F3": "m/d/yyyy",
+    "F4": "m/d/yyyy",
+    "F5": "m/d/yyyy",
+    "F6": "m/d/yyyy",
+    "F7": "m/d/yyyy",
+    "F8": "m/d/yyyy",
+    "F9": "m/d/yyyy"
+   },
+   "pivot_tables": [
+    {
+     "definition": {
+      "columns": [
+       "Rep",
+       "Values"
+      ],
+      "data": [
+       {
+        "field": "Score",
+        "subtotal": "sum"
+       },
+       {
+        "field": "Units",
+        "subtotal": "sum"
+       }
+      ],
+      "fields": {
+       "Channel": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        },
+        "subtotals": []
+       },
+       "Region": {
+        "attrs": {
+         "compact": false
+        },
+        "subtotals": [],
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Rep": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Score": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Tier": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "When": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      },
+      "rows": [
+       "Region",
+       "Product",
+       "Channel"
+      ],
+      "table": {
+       "colGrandTotals": false,
+       "compact": false,
+       "compactData": false,
+       "errorCaption": "ERR",
+       "rowGrandTotals": false,
+       "showError": true
+      }
+     },
+     "location": "L5",
+     "name": "PvP04",
+     "source": "P04!A1:I10"
+    }
+   ]
+  },
+  {
+   "cells": {
+    "A1": "Region",
+    "A10": "South",
+    "A11": "East",
+    "A2": "South",
+    "A3": "East",
+    "A4": "North",
+    "A5": "North",
+    "A6": "South",
+    "A7": "West",
+    "A8": "South",
+    "A9": "South",
+    "B1": "Product",
+    "B10": "A",
+    "B11": "A",
+    "B2": "B",
+    "B3": "C",
+    "B4": "B",
+    "B5": "C",
+    "B6": "C",
+    "B7": "C",
+    "B8": "A",
+    "B9": "C",
+    "C1": "Channel",
+    "C10": "Web",
+    "C11": "Web",
+    "C2": "Store",
+    "C3": "Store",
+    "C4": "Store",
+    "C5": "Web",
+    "C6": "Store",
+    "C7": "Web",
+    "C8": "Web",
+    "C9": "Web",
+    "D1": "Rep",
+    "D10": "Di",
+    "D11": "Ann",
+    "D2": "Bo",
+    "D3": "Bo",
+    "D4": "Ann",
+    "D5": "Bo",
+    "D6": "Ann",
+    "D7": "Bo",
+    "D8": "Bo",
+    "D9": "Bo",
+    "E1": "Tier",
+    "E10": "Gold",
+    "E11": "Gold",
+    "E2": "Gold",
+    "E3": "Gold",
+    "E4": "Gold",
+    "E5": "Silver",
+    "E6": "Gold",
+    "E7": "Gold",
+    "E8": "Gold",
+    "E9": "Bronze",
+    "F1": "When",
+    "F10": 45291,
+    "F11": 45291,
+    "F2": 73050,
+    "F3": 31,
+    "F4": 45291,
+    "F5": 73050,
+    "F6": 31,
+    "F7": 45291,
+    "F8": 45291,
+    "F9": 31,
+    "G1": "Sales",
+    "G10": 100,
+    "G11": -4,
+    "G2": 3,
+    "G3": 3,
+    "G4": 12,
+    "G5": 2,
+    "G6": 100,
+    "G7": 2.25,
+    "G8": 20,
+    "G9": -4,
+    "H1": "Units",
+    "H10": 1,
+    "H11": 4,
+    "H2": 6,
+    "H3": 3,
+    "H4": 2,
+    "H5": 6,
+    "H6": 9,
+    "H7": 4,
+    "H8": 3,
+    "H9": 1,
+    "I1": "Score",
+    "I10": 2,
+    "I11": 4.25,
+    "I2": 8,
+    "I3": 8,
+    "I4": -1,
+    "I5": 2,
+    "I6": 8,
+    "I7": 4.25,
+    "I8": 2,
+    "I9": 4.25
+   },
+   "name": "P05",
+   "number_formats": {
+    "F10": "m/d/yyyy",
+    "F11": "m/d/yyyy",
+    "F2": "m/d/yyyy",
+    "F3": "m/d/yyyy",
+    "F4": "m/d/yyyy",
+    "F5": "m/d/yyyy",
+    "F6": "m/d/yyyy",
+    "F7": "m/d/yyyy",
+    "F8": "m/d/yyyy",
+    "F9": "m/d/yyyy"
+   },
+   "pivot_tables": [
+    {
+     "definition": {
+      "columns": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "min"
+       }
+      ],
+      "fields": {
+       "Channel": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Rep": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "hidden": [
+         "Bo"
+        ],
+        "subtotals": [],
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Score": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Tier": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "subtotals": []
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "When": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "rows": [
+       "Rep",
+       "Tier",
+       "Region"
+      ],
+      "table": {
+       "compact": false,
+       "compactData": false,
+       "grandTotalCaption": "All",
+       "outline": false,
+       "outlineData": false,
+       "rowGrandTotals": false
+      }
+     },
+     "location": "L5",
+     "name": "PvP05",
+     "source": "P05!A1:I11"
+    }
+   ]
+  },
+  {
+   "cells": {
+    "A1": "Region",
+    "A10": "West",
+    "A2": "South",
+    "A3": "East",
+    "A4": "North",
+    "A5": "West",
+    "A6": "East",
+    "A7": "West",
+    "A8": "West",
+    "A9": "South",
+    "B1": "Product",
+    "B10": "C",
+    "B2": "C",
+    "B3": "A",
+    "B4": "C",
+    "B5": "C",
+    "B6": "A",
+    "B7": "A",
+    "B8": "C",
+    "B9": "A",
+    "C1": "Channel",
+    "C10": "Store",
+    "C2": "Store",
+    "C3": "Web",
+    "C4": "Store",
+    "C5": "Web",
+    "C6": "Store",
+    "C7": "Store",
+    "C8": "Store",
+    "C9": "Store",
+    "D1": "Rep",
+    "D10": "Cy",
+    "D2": "Ann",
+    "D3": "Di",
+    "D4": "Cy",
+    "D5": "Di",
+    "D6": "Cy",
+    "D7": "Bo",
+    "D8": "Di",
+    "D9": "Bo",
+    "E1": "Tier",
+    "E10": "Gold",
+    "E2": "Bronze",
+    "E3": "Gold",
+    "E4": "Silver",
+    "E5": "Silver",
+    "E6": "Bronze",
+    "E7": "Bronze",
+    "E8": "Bronze",
+    "E9": "Silver",
+    "F1": "When",
+    "F10": 1462.5,
+    "F2": 73050.25,
+    "F3": 73050.25,
+    "F4": 73050.0,
+    "F5": 73050.5,
+    "F6": 1462.25,
+    "F7": 1462.25,
+    "F8": 73050.75,
+    "F9": 73050.999988426,
+    "G1": "Sales",
+    "G10": -4,
+    "G2": 10,
+    "G3": 3,
+    "G4": 0,
+    "G5": 2.25,
+    "G6": 1,
+    "G7": 0.5,
+    "G8": 12,
+    "G9": 20,
+    "H1": "Units",
+    "H10": 7,
+    "H2": 3,
+    "H3": 3,
+    "H4": 9,
+    "H5": 4,
+    "H6": 7,
+    "H7": 8,
+    "H8": 2,
+    "H9": 8,
+    "I1": "Score",
+    "I10": 1.5,
+    "I2": 4.25,
+    "I3": 4.25,
+    "I4": 8,
+    "I5": 2,
+    "I6": 8,
+    "I7": 4.25,
+    "I8": 4.25,
+    "I9": 8
+   },
+   "name": "P06",
+   "number_formats": {
+    "F10": "m/d/yyyy h:mm",
+    "F2": "m/d/yyyy h:mm",
+    "F3": "m/d/yyyy h:mm",
+    "F4": "m/d/yyyy h:mm",
+    "F5": "m/d/yyyy h:mm",
+    "F6": "m/d/yyyy h:mm",
+    "F7": "m/d/yyyy h:mm",
+    "F8": "m/d/yyyy h:mm",
+    "F9": "m/d/yyyy h:mm"
+   },
+   "pivot_tables": [
+    {
+     "definition": {
+      "columns": [
+       "Values",
+       "Channel"
+      ],
+      "data": [
+       {
+        "field": "Score",
+        "subtotal": "stdDev"
+       },
+       {
+        "field": "Score",
+        "subtotal": "countNums"
+       },
+       {
+        "field": "Units",
+        "subtotal": "min"
+       }
+      ],
+      "fields": {
+       "Channel": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Region": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Rep": {
+        "attrs": {
+         "compact": false
+        },
+        "subtotals": [],
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Score": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Tier": {
+        "attrs": {
+         "compact": false
+        },
+        "subtotals": []
+       },
+       "Units": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "When": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      },
+      "rows": [
+       "Rep",
+       "Tier",
+       "When"
+      ],
+      "table": {
+       "colGrandTotals": false,
+       "colHeaderCaption": "Cols",
+       "compact": false,
+       "compactData": false,
+       "dataCaption": "Measures",
+       "rowHeaderCaption": "Rows"
+      }
+     },
+     "location": "L5",
+     "name": "PvP06",
+     "source": "P06!A1:I10"
+    }
+   ]
+  },
+  {
+   "cells": {
+    "A1": "Region",
+    "A10": "North",
+    "A11": "North",
+    "A12": "North",
+    "A13": "West",
+    "A14": "West",
+    "A15": "South",
+    "A16": "West",
+    "A17": "East",
+    "A18": "East",
+    "A19": "North",
+    "A2": "South",
+    "A20": "North",
+    "A21": "South",
+    "A22": "South",
+    "A23": "North",
+    "A24": "North",
+    "A25": "North",
+    "A26": "East",
+    "A27": "East",
+    "A28": "West",
+    "A29": "South",
+    "A3": "South",
+    "A30": "South",
+    "A31": "South",
+    "A32": "East",
+    "A33": "North",
+    "A34": "South",
+    "A35": "West",
+    "A36": "East",
+    "A37": "East",
+    "A38": "West",
+    "A39": "North",
+    "A4": "North",
+    "A5": "West",
+    "A6": "South",
+    "A7": "South",
+    "A8": "East",
+    "A9": "North",
+    "B1": "Product",
+    "B10": "B",
+    "B11": "C",
+    "B12": "C",
+    "B13": "C",
+    "B14": "B",
+    "B15": "B",
+    "B16": "A",
+    "B17": "C",
+    "B18": "A",
+    "B19": "C",
+    "B2": "B",
+    "B20": "B",
+    "B21": "B",
+    "B22": "B",
+    "B23": "A",
+    "B24": "B",
+    "B25": "C",
+    "B26": "C",
+    "B27": "B",
+    "B28": "B",
+    "B29": "C",
+    "B3": "C",
+    "B30": "A",
+    "B31": "B",
+    "B32": "A",
+    "B33": "A",
+    "B34": "B",
+    "B35": "A",
+    "B36": "B",
+    "B37": "C",
+    "B38": "A",
+    "B39": "C",
+    "B4": "B",
+    "B5": "C",
+    "B6": "A",
+    "B7": "B",
+    "B8": "C",
+    "B9": "B",
+    "C1": "Channel",
+    "C10": "Store",
+    "C11": "Web",
+    "C12": "Store",
+    "C13": "Store",
+    "C14": "Store",
+    "C15": "Store",
+    "C16": "Store",
+    "C17": "Web",
+    "C18": "Web",
+    "C19": "Web",
+    "C2": "Web",
+    "C20": "Store",
+    "C21": "Web",
+    "C22": "Store",
+    "C23": "Store",
+    "C24": "Web",
+    "C25": "Web",
+    "C26": "Store",
+    "C27": "Web",
+    "C28": "Web",
+    "C29": "Web",
+    "C3": "Web",
+    "C30": "Store",
+    "C31": "Store",
+    "C32": "Store",
+    "C33": "Store",
+    "C34": "Web",
+    "C35": "Store",
+    "C36": "Store",
+    "C37": "Store",
+    "C38": "Store",
+    "C39": "Store",
+    "C4": "Store",
+    "C5": "Web",
+    "C6": "Web",
+    "C7": "Web",
+    "C8": "Store",
+    "C9": "Store",
+    "D1": "Rep",
+    "D10": "Rep09",
+    "D11": "Rep10",
+    "D12": "Rep11",
+    "D13": "Rep12",
+    "D14": "Rep13",
+    "D15": "Rep14",
+    "D16": "Rep15",
+    "D17": "Rep16",
+    "D18": "Rep17",
+    "D19": "Rep18",
+    "D2": "Rep01",
+    "D20": "Rep19",
+    "D21": "Rep20",
+    "D22": "Rep21",
+    "D23": "Rep22",
+    "D24": "Rep23",
+    "D25": "Rep24",
+    "D26": "Rep25",
+    "D27": "Rep26",
+    "D28": "Rep27",
+    "D29": "Rep28",
+    "D3": "Rep02",
+    "D30": "Rep29",
+    "D31": "Rep30",
+    "D32": "Rep31",
+    "D33": "Rep32",
+    "D34": "Rep04",
+    "D35": "Rep07",
+    "D36": "Rep13",
+    "D37": "Rep16",
+    "D38": "Rep16",
+    "D39": "Rep04",
+    "D4": "Rep03",
+    "D5": "Rep04",
+    "D6": "Rep05",
+    "D7": "Rep06",
+    "D8": "Rep07",
+    "D9": "Rep08",
+    "E1": "Tier",
+    "E10": "Bronze",
+    "E11": "Silver",
+    "E12": "Silver",
+    "E13": "Gold",
+    "E14": "Bronze",
+    "E15": "Gold",
+    "E16": "Bronze",
+    "E17": "Gold",
+    "E18": "Silver",
+    "E19": "Gold",
+    "E2": "Silver",
+    "E20": "Bronze",
+    "E21": "Silver",
+    "E22": "Gold",
+    "E23": "Bronze",
+    "E24": "Gold",
+    "E25": "Bronze",
+    "E26": "Gold",
+    "E27": "Silver",
+    "E28": "Silver",
+    "E29": "Gold",
+    "E3": "Bronze",
+    "E30": "Gold",
+    "E31": "Silver",
+    "E32": "Gold",
+    "E33": "Bronze",
+    "E34": "Silver",
+    "E35": "Bronze",
+    "E36": "Bronze",
+    "E37": "Silver",
+    "E38": "Bronze",
+    "E39": "Bronze",
+    "E4": "Silver",
+    "E5": "Gold",
+    "E6": "Bronze",
+    "E7": "Silver",
+    "E8": "Bronze",
+    "E9": "Gold",
+    "F1": "When",
+    "F10": 73050,
+    "F11": 61,
+    "F12": 73050,
+    "F13": 61,
+    "F14": 73050,
+    "F15": 73050,
+    "F16": 1462,
+    "F17": 73050,
+    "F18": 73050,
+    "F19": 61,
+    "F2": 73050,
+    "F20": 61,
+    "F21": 61,
+    "F22": 61,
+    "F23": 1462,
+    "F24": 1462,
+    "F25": 61,
+    "F26": 61,
+    "F27": 1462,
+    "F28": 1462,
+    "F29": 1462,
+    "F3": 1462,
+    "F30": 1462,
+    "F31": 73050,
+    "F32": 1462,
+    "F33": 1462,
+    "F34": 61,
+    "F35": 1462,
+    "F36": 73050,
+    "F37": 73050,
+    "F38": 61,
+    "F39": 1462,
+    "F4": 1462,
+    "F5": 61,
+    "F6": 61,
+    "F7": 73050,
+    "F8": 73050,
+    "F9": 1462,
+    "G1": "Sales",
+    "G10": 0.5,
+    "G11": 0,
+    "G12": 2.25,
+    "G13": -4,
+    "G14": 1,
+    "G15": 0.5,
+    "G16": 100,
+    "G17": 12,
+    "G18": 3,
+    "G19": 100,
+    "G2": -4,
+    "G20": 0.5,
+    "G21": 7,
+    "G22": 12,
+    "G23": 10,
+    "G24": 2.25,
+    "G25": 2.25,
+    "G26": 3,
+    "G27": 2,
+    "G28": 20,
+    "G29": 2.25,
+    "G3": 7,
+    "G30": 10,
+    "G31": -4,
+    "G32": 10,
+    "G33": 20,
+    "G34": 2.25,
+    "G35": 3,
+    "G36": 2.25,
+    "G37": -4,
+    "G38": 2.25,
+    "G39": 1,
+    "G4": 7,
+    "G5": 5,
+    "G6": 5,
+    "G7": 10,
+    "G8": 0,
+    "G9": 12,
+    "H1": "Units",
+    "H10": 9,
+    "H11": 3,
+    "H12": 2,
+    "H13": 6,
+    "H14": 3,
+    "H15": 7,
+    "H16": 4,
+    "H17": 9,
+    "H18": 5,
+    "H19": 4,
+    "H2": 4,
+    "H20": 9,
+    "H21": 2,
+    "H22": 1,
+    "H23": 7,
+    "H24": 3,
+    "H25": 3,
+    "H26": 7,
+    "H27": 9,
+    "H28": 1,
+    "H29": 6,
+    "H3": 9,
+    "H30": 7,
+    "H31": 5,
+    "H32": 5,
+    "H33": 1,
+    "H34": 7,
+    "H35": 1,
+    "H36": 6,
+    "H37": 9,
+    "H38": 4,
+    "H39": 7,
+    "H4": 1,
+    "H5": 8,
+    "H6": 6,
+    "H7": 8,
+    "H8": 8,
+    "H9": 7,
+    "I1": "Score",
+    "I10": 4.25,
+    "I11": -1,
+    "I12": 2,
+    "I13": 4.25,
+    "I14": 4.25,
+    "I15": 8,
+    "I16": 4.25,
+    "I17": 8,
+    "I18": 1.5,
+    "I19": 8,
+    "I2": 1.5,
+    "I20": 2,
+    "I21": 8,
+    "I22": 8,
+    "I23": 4.25,
+    "I24": 1.5,
+    "I25": 1.5,
+    "I26": -1,
+    "I27": 0,
+    "I28": 4.25,
+    "I29": -1,
+    "I3": 2,
+    "I30": 2,
+    "I31": 1.5,
+    "I32": 2,
+    "I33": 2,
+    "I34": 4.25,
+    "I35": 0,
+    "I36": 8,
+    "I37": 0,
+    "I38": 2,
+    "I39": 0,
+    "I4": 2,
+    "I5": 8,
+    "I6": 8,
+    "I7": 4.25,
+    "I8": -1,
+    "I9": 8
+   },
+   "name": "P07",
+   "number_formats": {
+    "F10": "m/d/yyyy",
+    "F11": "m/d/yyyy",
+    "F12": "m/d/yyyy",
+    "F13": "m/d/yyyy",
+    "F14": "m/d/yyyy",
+    "F15": "m/d/yyyy",
+    "F16": "m/d/yyyy",
+    "F17": "m/d/yyyy",
+    "F18": "m/d/yyyy",
+    "F19": "m/d/yyyy",
+    "F2": "m/d/yyyy",
+    "F20": "m/d/yyyy",
+    "F21": "m/d/yyyy",
+    "F22": "m/d/yyyy",
+    "F23": "m/d/yyyy",
+    "F24": "m/d/yyyy",
+    "F25": "m/d/yyyy",
+    "F26": "m/d/yyyy",
+    "F27": "m/d/yyyy",
+    "F28": "m/d/yyyy",
+    "F29": "m/d/yyyy",
+    "F3": "m/d/yyyy",
+    "F30": "m/d/yyyy",
+    "F31": "m/d/yyyy",
+    "F32": "m/d/yyyy",
+    "F33": "m/d/yyyy",
+    "F34": "m/d/yyyy",
+    "F35": "m/d/yyyy",
+    "F36": "m/d/yyyy",
+    "F37": "m/d/yyyy",
+    "F38": "m/d/yyyy",
+    "F39": "m/d/yyyy",
+    "F4": "m/d/yyyy",
+    "F5": "m/d/yyyy",
+    "F6": "m/d/yyyy",
+    "F7": "m/d/yyyy",
+    "F8": "m/d/yyyy",
+    "F9": "m/d/yyyy"
+   },
+   "pivot_tables": [
+    {
+     "definition": {
+      "columns": [
+       "Product",
+       "Rep",
+       "Values"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "numFmtId": 3,
+        "subtotal": "varp"
+       },
+       {
+        "field": "Score",
+        "subtotal": "varp"
+       },
+       {
+        "field": "Sales",
+        "subtotal": "stdDevp"
+       }
+      ],
+      "fields": {
+       "Channel": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false,
+         "subtotalCaption": "? Sub"
+        },
+        "hidden": [
+         "A"
+        ]
+       },
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Rep": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Score": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Tier": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "When": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "rows": [],
+      "table": {
+       "compact": false,
+       "compactData": false,
+       "outline": false,
+       "outlineData": false
+      }
+     },
+     "location": "L5",
+     "name": "PvP07",
+     "source": "P07!A1:I39"
+    }
+   ]
+  },
+  {
+   "cells": {
+    "A1": "Region",
+    "A2": "North",
+    "A3": "South",
+    "A4": "West",
+    "A5": "North",
+    "A6": "West",
+    "A7": "East",
+    "A8": "South",
+    "B1": "Product",
+    "B2": "A",
+    "B3": "B",
+    "B4": "A",
+    "B5": "A",
+    "B6": "A",
+    "B7": "B",
+    "B8": "B",
+    "C1": "Channel",
+    "C2": "Web",
+    "C3": "Store",
+    "C4": "Store",
+    "C5": "Web",
+    "C6": "Store",
+    "C7": "Web",
+    "C8": "Store",
+    "D1": "Rep",
+    "D2": "Cy",
+    "D3": "Cy",
+    "D4": "Di",
+    "D5": "Cy",
+    "D6": "Bo",
+    "D7": "Cy",
+    "D8": "Cy",
+    "E1": "Tier",
+    "E2": "Gold",
+    "E3": "Bronze",
+    "E4": "Gold",
+    "E5": "Silver",
+    "E6": "Silver",
+    "E7": "Gold",
+    "E8": "Silver",
+    "F1": "When",
+    "F2": 45291.99999999,
+    "F3": 366.25,
+    "F4": 366.25,
+    "F5": 59.999988426,
+    "F6": 59.99999999,
+    "F7": 59.5,
+    "F8": 45291.5,
+    "G1": "Sales",
+    "G2": 20,
+    "G3": 0.5,
+    "G4": 0,
+    "G5": 5,
+    "G6": 3,
+    "G7": 7,
+    "G8": 2,
+    "H1": "Units",
+    "H2": 9,
+    "H3": 1,
+    "H4": 4,
+    "H5": 4,
+    "H6": 7,
+    "H7": 3,
+    "H8": 5,
+    "I1": "Score",
+    "I2": 8,
+    "I3": -1,
+    "I4": 8,
+    "I5": 8,
+    "I6": 8,
+    "I7": 1.5,
+    "I8": 2
+   },
+   "name": "P08",
+   "number_formats": {
+    "F2": "m/d/yyyy h:mm",
+    "F3": "m/d/yyyy h:mm",
+    "F4": "m/d/yyyy h:mm",
+    "F5": "m/d/yyyy h:mm",
+    "F6": "m/d/yyyy h:mm",
+    "F7": "m/d/yyyy h:mm",
+    "F8": "m/d/yyyy h:mm"
+   },
+   "pivot_tables": [
+    {
+     "definition": {
+      "columns": [
+       "Region",
+       "Values"
+      ],
+      "data": [
+       {
+        "field": "Score",
+        "subtotal": "var"
+       },
+       {
+        "field": "Units",
+        "subtotal": "countNums"
+       },
+       {
+        "field": "Units",
+        "subtotal": "product"
+       }
+      ],
+      "fields": {
+       "Product": {
+        "attrs": {
+         "insertBlankRow": true
+        }
+       }
+      },
+      "pages": [
+       {
+        "field": "Rep"
+       }
+      ],
+      "rows": [
+       "Product",
+       "When"
+      ],
+      "table": {
+       "colGrandTotals": false,
+       "missingCaption": "n/a",
+       "rowGrandTotals": false,
+       "showMissing": true
+      }
+     },
+     "location": "L5",
+     "name": "PvP08",
+     "source": "P08!A1:I8"
+    }
+   ]
+  },
+  {
+   "cells": {
+    "A1": "Region",
+    "A10": "South",
+    "A11": "East",
+    "A12": "West",
+    "A13": "East",
+    "A14": "East",
+    "A15": "South",
+    "A2": "North",
+    "A3": "East",
+    "A4": "East",
+    "A5": "West",
+    "A6": "East",
+    "A7": "North",
+    "A8": "West",
+    "A9": "North",
+    "B1": "Product",
+    "B10": "C",
+    "B11": "A",
+    "B12": "C",
+    "B13": "A",
+    "B14": "A",
+    "B15": "B",
+    "B2": "C",
+    "B3": "C",
+    "B4": "C",
+    "B5": "C",
+    "B6": "C",
+    "B7": "B",
+    "B8": "B",
+    "B9": "C",
+    "C1": "Channel",
+    "C11": "Web",
+    "C14": "Web",
+    "C4": "Web",
+    "C5": "Web",
+    "C6": "Store",
+    "C7": "Store",
+    "C9": "Web",
+    "D1": "Rep",
+    "D10": "Di",
+    "D11": "Ann",
+    "D12": "Bo",
+    "D13": "Ann",
+    "D14": "Di",
+    "D15": "Di",
+    "D2": "Cy",
+    "D3": "Bo",
+    "D4": "Bo",
+    "D5": "Bo",
+    "D6": "Ann",
+    "D7": "Di",
+    "D8": "Bo",
+    "D9": "Cy",
+    "E1": "Tier",
+    "E10": "Gold",
+    "E11": "Silver",
+    "E12": "Bronze",
+    "E13": "Bronze",
+    "E14": "Bronze",
+    "E15": "Bronze",
+    "E2": "Gold",
+    "E3": "Bronze",
+    "E4": "Silver",
+    "E5": "Gold",
+    "E6": "Bronze",
+    "E7": "Bronze",
+    "E8": "Gold",
+    "E9": "Gold",
+    "F1": "When",
+    "F10": 1,
+    "F11": 44957,
+    "F12": 1,
+    "F13": 1,
+    "F14": 44957,
+    "F15": 367,
+    "F2": 44957,
+    "F3": 367,
+    "F4": 44957,
+    "F5": 44957,
+    "F6": 44957,
+    "F7": 44957,
+    "F8": 367,
+    "F9": 44957,
+    "G1": "Sales",
+    "G10": 3,
+    "G11": 3,
+    "G12": 2.25,
+    "G13": 0,
+    "G14": 7,
+    "G15": 0,
+    "G2": 2,
+    "G3": 100,
+    "G4": 12,
+    "G5": 20,
+    "G6": 0.5,
+    "G7": 20,
+    "G8": 3,
+    "G9": 0,
+    "H1": "Units",
+    "H10": 9,
+    "H11": 1,
+    "H12": 2,
+    "H13": 4,
+    "H14": 3,
+    "H15": 7,
+    "H2": 6,
+    "H3": 1,
+    "H4": 3,
+    "H5": 6,
+    "H6": 2,
+    "H7": 1,
+    "H8": 5,
+    "H9": 7,
+    "I1": "Score",
+    "I10": -1,
+    "I11": 4.25,
+    "I13": 4.25,
+    "I14": 0,
+    "I4": 0,
+    "I5": 1.5,
+    "I6": -1,
+    "I7": 0,
+    "I9": 2
+   },
+   "name": "P09",
+   "number_formats": {
+    "F10": "m/d/yyyy",
+    "F11": "m/d/yyyy",
+    "F12": "m/d/yyyy",
+    "F13": "m/d/yyyy",
+    "F14": "m/d/yyyy",
+    "F15": "m/d/yyyy",
+    "F2": "m/d/yyyy",
+    "F3": "m/d/yyyy",
+    "F4": "m/d/yyyy",
+    "F5": "m/d/yyyy",
+    "F6": "m/d/yyyy",
+    "F7": "m/d/yyyy",
+    "F8": "m/d/yyyy",
+    "F9": "m/d/yyyy"
+   },
+   "pivot_tables": [
+    {
+     "definition": {
+      "columns": [],
+      "data": [
+       {
+        "field": "Score",
+        "subtotal": "varp"
+       },
+       {
+        "field": "Score",
+        "subtotal": "countNums"
+       },
+       {
+        "field": "Sales",
+        "subtotal": "countNums"
+       }
+      ],
+      "fields": {
+       "When": {
+        "attrs": {
+         "insertBlankRow": true
+        },
+        "subtotals": [
+         "var"
+        ]
+       }
+      },
+      "pages": [
+       {
+        "field": "Region",
+        "item": "North"
+       },
+       {
+        "field": "Tier"
+       }
+      ],
+      "rows": [
+       "Values",
+       "When",
+       "Channel"
+      ],
+      "table": {
+       "colGrandTotals": false,
+       "rowGrandTotals": false
+      }
+     },
+     "location": "L5",
+     "name": "PvP09",
+     "source": "P09!A1:I15"
+    }
+   ]
+  },
+  {
+   "cells": {
+    "A1": "Region",
+    "A2": "East",
+    "A3": "South",
+    "A4": "West",
+    "A5": "South",
+    "A6": "East",
+    "A7": "North",
+    "B1": "Product",
+    "B2": "A",
+    "B3": "B",
+    "B4": "C",
+    "B5": "C",
+    "B6": "C",
+    "B7": "B",
+    "C1": "Channel",
+    "C2": "Store",
+    "C3": "Web",
+    "C4": "Store",
+    "C5": "Web",
+    "C6": "Store",
+    "C7": "Store",
+    "D1": "Rep",
+    "D2": "Di",
+    "D3": "Cy",
+    "D4": "Di",
+    "D5": "Ann",
+    "D6": "Ann",
+    "D7": "Di",
+    "E1": "Tier",
+    "E2": {
+     "t": "s",
+     "v": "1"
+    },
+    "E3": false,
+    "E4": "gold",
+    "E5": "Silver",
+    "E6": 1,
+    "E7": "Gold",
+    "F1": "When",
+    "F2": 73050,
+    "F3": 73050,
+    "F4": 44926,
+    "F5": 73050,
+    "F6": 73050,
+    "F7": 73050,
+    "G1": "Sales",
+    "G2": 12,
+    "G3": 2.25,
+    "G4": 2.25,
+    "G5": 20,
+    "G6": 20,
+    "G7": 3,
+    "H1": "Units",
+    "H2": 1,
+    "H3": 3,
+    "H4": 9,
+    "H5": 8,
+    "H6": 9,
+    "H7": 3,
+    "I1": "Score",
+    "I2": "abc",
+    "I3": {
+     "t": "s",
+     "v": "2"
+    },
+    "I4": "abc",
+    "I5": 1.5,
+    "I6": "abc",
+    "I7": 1.5
+   },
+   "name": "P10",
+   "number_formats": {
+    "F2": "m/d/yyyy",
+    "F3": "m/d/yyyy",
+    "F4": "m/d/yyyy",
+    "F5": "m/d/yyyy",
+    "F6": "m/d/yyyy",
+    "F7": "m/d/yyyy"
+   },
+   "pivot_tables": [
+    {
+     "definition": {
+      "columns": [],
+      "data": [
+       {
+        "field": "Score",
+        "name": "Measure 1",
+        "subtotal": "product"
+       },
+       {
+        "field": "Sales",
+        "name": "Measure 2",
+        "subtotal": "var"
+       }
+      ],
+      "fields": {
+       "Channel": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "subtotals": [
+         "sum"
+        ]
+       },
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Rep": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Score": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Tier": {
+        "attrs": {
+         "compact": false,
+         "name": "Tier field",
+         "outline": false
+        },
+        "hidden": [
+         "Silver",
+         false
+        ],
+        "subtotals": [
+         "varP"
+        ],
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "When": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "rows": [
+       "Values",
+       "Tier",
+       "Product",
+       "Region"
+      ],
+      "table": {
+       "compact": false,
+       "compactData": false,
+       "outline": false,
+       "outlineData": false
+      }
+     },
+     "location": "L5",
+     "name": "PvP10",
+     "source": "P10!A1:I7"
+    }
+   ]
+  },
+  {
+   "cells": {
+    "A1": "Region",
+    "A10": "North",
+    "A11": "West",
+    "A12": "South",
+    "A13": "South",
+    "A2": "West",
+    "A3": "South",
+    "A4": "South",
+    "A5": "North",
+    "A6": "West",
+    "A7": "North",
+    "A8": "South",
+    "A9": "South",
+    "B1": "Product",
+    "B10": "A",
+    "B11": "A",
+    "B12": "B",
+    "B13": "C",
+    "B2": "A",
+    "B3": "B",
+    "B4": "C",
+    "B5": "A",
+    "B6": "A",
+    "B7": "C",
+    "B8": "C",
+    "B9": "B",
+    "C1": "Channel",
+    "C10": "Web",
+    "C11": "Store",
+    "C12": "Store",
+    "C13": "Web",
+    "C2": "Web",
+    "C3": "Web",
+    "C4": "Store",
+    "C5": "Web",
+    "C6": "Store",
+    "C7": "Store",
+    "C8": "Web",
+    "C9": "Store",
+    "D1": "Rep",
+    "D10": "Ann",
+    "D11": "Ann",
+    "D12": "Ann",
+    "D13": "Di",
+    "D2": "Cy",
+    "D3": "Bo",
+    "D4": "Bo",
+    "D5": "Bo",
+    "D6": "Ann",
+    "D7": "Cy",
+    "D8": "Di",
+    "D9": "Ann",
+    "E1": "Tier",
+    "E10": "Bronze",
+    "E11": "Bronze",
+    "E12": "Bronze",
+    "E13": "Gold",
+    "E2": "Silver",
+    "E3": "Silver",
+    "E4": "Gold",
+    "E5": "Gold",
+    "E6": "Bronze",
+    "E7": "Silver",
+    "E8": "Gold",
+    "E9": "Bronze",
+    "F1": "When",
+    "F10": 366,
+    "F11": 45291,
+    "F12": 366,
+    "F13": 44957,
+    "F2": 45291,
+    "F3": 45291,
+    "F4": 45291,
+    "F5": 45291,
+    "F6": 45291,
+    "F7": 366,
+    "F8": 44957,
+    "F9": 366,
+    "G1": "Sales",
+    "G10": 10,
+    "G11": 0.3,
+    "G12": 10,
+    "G13": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "G2": 0.1,
+    "G3": 10,
+    "G4": 10,
+    "G5": 20,
+    "G6": 0.3,
+    "G7": 0.2,
+    "G8": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "G9": 10,
+    "H1": "Units",
+    "H10": 5,
+    "H11": 5,
+    "H12": 5,
+    "H13": 5,
+    "H2": 5,
+    "H3": 5,
+    "H4": 5,
+    "H5": 5,
+    "H6": 5,
+    "H7": 5,
+    "H8": 5,
+    "H9": 5,
+    "I1": "Score",
+    "I10": 8,
+    "I11": 0,
+    "I12": -1,
+    "I13": 4.25,
+    "I2": 8,
+    "I3": 8,
+    "I4": 2,
+    "I5": 2,
+    "I6": 0,
+    "I7": 2,
+    "I8": 4.25,
+    "I9": -1
+   },
+   "name": "P11",
+   "number_formats": {
+    "F10": "m/d/yyyy",
+    "F11": "m/d/yyyy",
+    "F12": "m/d/yyyy",
+    "F13": "m/d/yyyy",
+    "F2": "m/d/yyyy",
+    "F3": "m/d/yyyy",
+    "F4": "m/d/yyyy",
+    "F5": "m/d/yyyy",
+    "F6": "m/d/yyyy",
+    "F7": "m/d/yyyy",
+    "F8": "m/d/yyyy",
+    "F9": "m/d/yyyy"
+   },
+   "pivot_tables": [
+    {
+     "definition": {
+      "columns": [
+       "Rep",
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "subtotal": "min"
+       },
+       {
+        "field": "Sales",
+        "subtotal": "varp"
+       },
+       {
+        "field": "Units",
+        "subtotal": "countNums"
+       }
+      ],
+      "fields": {
+       "Channel": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Rep": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "hidden": [
+         "Cy",
+         "Di"
+        ]
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Score": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Tier": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "When": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "rows": [
+       "Values"
+      ],
+      "table": {
+       "compact": false,
+       "compactData": false,
+       "errorCaption": "ERR",
+       "outline": false,
+       "outlineData": false,
+       "showError": true
+      }
+     },
+     "location": "L5",
+     "name": "PvP11",
+     "source": "P11!A1:I13"
+    }
+   ]
+  },
+  {
+   "cells": {
+    "A1": "Region",
+    "A10": "East",
+    "A2": "South",
+    "A3": "North",
+    "A4": "East",
+    "A5": "South",
+    "A6": "West",
+    "A7": "West",
+    "A8": "North",
+    "A9": "South",
+    "B1": "Product",
+    "B10": "B",
+    "B2": "A",
+    "B3": "A",
+    "B4": "A",
+    "B5": "A",
+    "B6": "A",
+    "B7": "B",
+    "B8": "C",
+    "B9": "A",
+    "C1": "Channel",
+    "C10": "Web",
+    "C2": "Web",
+    "C3": "Store",
+    "C4": "Web",
+    "C5": "Web",
+    "C6": "Store",
+    "C7": "Web",
+    "C8": "Web",
+    "C9": "Web",
+    "D1": "Rep",
+    "D10": "Ann",
+    "D2": "Ann",
+    "D3": "Ann",
+    "D4": "Cy",
+    "D5": "Bo",
+    "D6": "Cy",
+    "D7": "Di",
+    "D8": "Cy",
+    "D9": "Di",
+    "E1": "Tier",
+    "E10": "Silver",
+    "E2": "Bronze",
+    "E3": "Bronze",
+    "E4": "Silver",
+    "E5": "Silver",
+    "E6": "Bronze",
+    "E7": "Bronze",
+    "E8": "Gold",
+    "E9": "Gold",
+    "F1": "When",
+    "F10": 73050.25,
+    "F2": 44957.999988426,
+    "F3": 59.5,
+    "F4": 59.99999999,
+    "F5": 73050.999988426,
+    "F6": 44957.99999999,
+    "F7": 59.999988426,
+    "F8": 44957.5,
+    "F9": 73050.25,
+    "G1": "Sales",
+    "G10": 5,
+    "G2": 1,
+    "G3": 100,
+    "G4": 2.25,
+    "G5": 100,
+    "G6": -4,
+    "G7": {
+     "t": "e",
+     "v": "#REF!"
+    },
+    "G8": 2.25,
+    "G9": 7,
+    "H1": "Units",
+    "H10": 4,
+    "H2": 8,
+    "H3": 1,
+    "H4": 2,
+    "H5": 7,
+    "H6": 5,
+    "H7": 7,
+    "H8": 7,
+    "H9": 6,
+    "I1": "Score",
+    "I10": 8,
+    "I2": 8,
+    "I3": 4.25,
+    "I4": 4.25,
+    "I5": 0,
+    "I6": 4.25,
+    "I7": 2,
+    "I8": 0,
+    "I9": -1
+   },
+   "name": "P12",
+   "number_formats": {
+    "F10": "m/d/yyyy h:mm",
+    "F2": "m/d/yyyy h:mm",
+    "F3": "m/d/yyyy h:mm",
+    "F4": "m/d/yyyy h:mm",
+    "F5": "m/d/yyyy h:mm",
+    "F6": "m/d/yyyy h:mm",
+    "F7": "m/d/yyyy h:mm",
+    "F8": "m/d/yyyy h:mm",
+    "F9": "m/d/yyyy h:mm"
+   },
+   "pivot_tables": [
+    {
+     "definition": {
+      "columns": [
+       "Rep",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales",
+        "numFmtId": 4,
+        "subtotal": "varp"
+       },
+       {
+        "field": "Score",
+        "subtotal": "sum"
+       },
+       {
+        "field": "Units",
+        "subtotal": "min"
+       }
+      ],
+      "fields": {
+       "Channel": {
+        "hidden": [
+         "Web"
+        ]
+       }
+      },
+      "pages": [
+       {
+        "field": "Channel"
+       },
+       {
+        "field": "Region"
+       }
+      ],
+      "rows": [
+       "When",
+       "Tier",
+       "Values"
+      ],
+      "table": {
+       "colGrandTotals": false,
+       "errorCaption": "ERR",
+       "rowGrandTotals": false,
+       "showError": true
+      }
+     },
+     "location": "L5",
+     "name": "PvP12",
+     "source": "P12!A1:I10"
+    }
+   ]
+  },
+  {
+   "cells": {
+    "A1": "=COUNTA(P01!A:A)",
+    "A10": "=COUNTA(P10!A:A)",
+    "A11": "=COUNTA(P11!A:A)",
+    "A12": "=COUNTA(P12!A:A)",
+    "A2": "=COUNTA(P02!A:A)",
+    "A3": "=COUNTA(P03!A:A)",
+    "A4": "=COUNTA(P04!A:A)",
+    "A5": "=COUNTA(P05!A:A)",
+    "A6": "=COUNTA(P06!A:A)",
+    "A7": "=COUNTA(P07!A:A)",
+    "A8": "=COUNTA(P08!A:A)",
+    "A9": "=COUNTA(P09!A:A)"
+   },
+   "name": "Q"
+  }
+ ],
+ "tags": [
+  "generated",
+  "pivot",
+  "M16"
+ ]
+}

@@ -570,14 +570,17 @@ excel-graph 2026-11-07, T-3002; same bitmask design):
   built from text is not: `=INDIRECT("B2")<0` reads Db for every record (B2:E3).
 - `ROW()` and `COLUMN()` with no argument are the criteria cell's, the same for every record: `ISODD(INT(ROW()/2))`
   matches every record and the other ROW bits none (ROW() is 2, the criteria row), `ISODD(COLUMN())` none (column R)
-  (Calc B6:E12). Ours gives the record's row (T-4858).
+  (Calc B6:E12). Ours matches since T-4858: `db_computed_condition` pins `ROW()` to the criteria row
+  (`Node::pin_cell_row`); `COLUMN()` already was the criteria column. The same pin applies to a criterion on the
+  database's own sheet, which no probe covers yet (UNVERIFIED there, T-4945).
 - A structured this-row reference in a table on the criteria sheet reads the table row of the criteria cell for
   every record: `=DbT[@Col]<0` (Db!AA2 = -7) matches every record and `ISODD(ROW(DbT[@Col]))` none (row 2) (B13:E14).
-  Ours matches no record with it (T-4858).
+  The table reference is not retargeted to the database's sheet, as unprefixed cell references are. Ours matches since
+  T-4858: the retarget skips structured references and the `#This Row` area is resolved at the criteria row.
 Status: VERIFIED (excel-graph) for the values; the reference rule for a criterion away from the database is VERIFIED
 (T-2525, probes/db-criteria-formula-placement: relative references rebase onto the first record, absolute ones
 stay put); the record-area rule and the database-sheet rule are VERIFIED (T-2617, probes/db-computed-criteria-cross-sheet).
-Tasks: T-2258, T-2422, T-2525, T-2553, T-2617
+Tasks: T-2258, T-2422, T-2525, T-2553, T-2617, T-4858
 
 ## Conditional-format text rules and wildcards (UNVERIFIED, T-2910)
 Rule (ours): the conditional-format text rules (contains, does not contain, begins with, ends with, equals;

@@ -20,16 +20,16 @@
    "DURATION": "93982788afd6a279",
    "EFFECT": "6be44e87e29a5079",
    "FV": "6deed963023981ca",
-   "FVSCHEDULE": "cd9c76178750f2c0",
+   "FVSCHEDULE": "0737cd3e9f06f8c1",
    "INTRATE": "d78f0dcbb4bdac42",
    "IPMT": "6deed963023981ca",
-   "IRR": "b7bd2ac117248389",
+   "IRR": "77573120311e2d70",
    "ISPMT": "6deed963023981ca",
    "MDURATION": "93982788afd6a279",
-   "MIRR": "cd9c76178750f2c0",
+   "MIRR": "0737cd3e9f06f8c1",
    "NOMINAL": "6be44e87e29a5079",
    "NPER": "4cd50fcaf39bfebb",
-   "NPV": "cd9c76178750f2c0",
+   "NPV": "0737cd3e9f06f8c1",
    "ODDFPRICE": "01474ee9e21d1dba",
    "ODDFYIELD": "01474ee9e21d1dba",
    "ODDLPRICE": "01474ee9e21d1dba",
@@ -50,13 +50,13 @@
    "TBILLPRICE": "d78f0dcbb4bdac42",
    "TBILLYIELD": "d78f0dcbb4bdac42",
    "VDB": "233e90ed5293d2f5",
-   "XIRR": "b7bd2ac117248389",
-   "XNPV": "cd9c76178750f2c0",
+   "XIRR": "77573120311e2d70",
+   "XNPV": "0737cd3e9f06f8c1",
    "YIELD": "93982788afd6a279",
    "YIELDDISC": "d78f0dcbb4bdac42",
    "YIELDMAT": "d78f0dcbb4bdac42"
   },
-  "arguments_sha256": "2256208451c0ba10ece5a75e204fedaf12e16f92e9eb327262af550b1afa93f6"
+  "arguments_sha256": "db83eb9a5fbfc685bcec4fa38109a35386ed7050ae3047563a0092e1ff8b1801"
  },
  "sheets": {
   "Sheet1": {
@@ -114,6 +114,11 @@
     "t": "n",
     "v": "-78.142855214971906058927584488509837395730763214908",
     "f": "=IPMT(0.01,2,36,8000,0,0)"
+   },
+   "H154": {
+    "t": "n",
+    "v": "0.11541278310055859437569045467428075556311663328491",
+    "f": "=IRR(K1:K5,0.1)"
    },
    "H157": {
     "t": "n",

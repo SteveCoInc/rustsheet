@@ -1861,6 +1861,8 @@ impl Model {
         if self.workbook.worksheet(sheet)?.is_covered_cell(row, column) {
             return Err("Cannot edit a cell that is part of a merged cell".to_string());
         }
+        // Excel refuses any write into a data table's results (T-0452, recalc.md).
+        self.refuse_data_table_write(sheet, row, column)?;
         match self.get_cell_structure(sheet, row, column)? {
             CellStructure::SingleCell => {
                 // noop
@@ -2537,6 +2539,8 @@ impl Model {
         if !self.can_clear_range(range)? {
             return Err("Cannot clear the range because it contains array formulas".to_string());
         }
+        // A clear over every result of a data table deletes it; over some of them it is refused.
+        self.clear_data_tables(range)?;
         let sheet = range.sheet;
         let ws = self.workbook.worksheet_mut(sheet)?;
         // Only the cells that exist, since an absent cell has no contents to clear, and the area
@@ -2650,6 +2654,7 @@ impl Model {
         if !self.can_clear_range(area)? {
             return Err("Cannot clear the range because it contains array formulas".to_string());
         }
+        self.clear_data_tables(area)?;
         let worksheet = self.workbook.worksheet_mut(area.sheet)?;
 
         let sheet_data = &mut worksheet.sheet_data;

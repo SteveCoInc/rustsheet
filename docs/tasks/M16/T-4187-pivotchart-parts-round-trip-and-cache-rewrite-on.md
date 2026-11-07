@@ -18,6 +18,12 @@ Depends on chart-part preservation (M11 unknown-part round trip). Program: docs/
 
 ## Acceptance criteria
 - [ ] Round-trip suite case with a PivotChart.
+- [ ] Records Excel-written chart caches in a committed file (the sidecar or a fixture), so that the claims of
+  docs/excel-semantics/pivots.md "Excel for the web rewrites a PivotChart's caches when it renders the pivot", today
+  from the oracle's cached download only (probes/t4130-pivot-chart-cache), become repository evidence: the web's
+  rewrite of `c:tx`/`c:cat`/`c:val`, and the `#SPILL!` chart's anchor references and one 0 point.
+- [ ] The value cache's `c:formatCode` as current Excel writes it (pivots.md "A PivotChart's value cache format code
+  differs by Excel version").
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

@@ -523,8 +523,24 @@ Implemented so far (`rustsheet-gen --policy`): `random` (the catalog-driven P0 g
 `numeric-rules` (dense floating-point probes, suite `probes-numeric`), `operators-refs` (M1
 operators and references only, no functions, suite `gen-m1`; T-0117), `names-3d` (suite `gen-m8a`,
 T-1606), `tables` (suite `gen-m8b`, T-1607), `number-formats` (suite `gen-m10`, T-1611) and
-`numeric-fp` (suite `gen-m2`, T-3139). All but `random` are whole-suite policies rather than
-per-workbook draws.
+`numeric-fp` (suite `gen-m2`, T-3139) and `pivots` (suite `gen-pivot`, T-4132; `--milestone M16` selects it). All
+but `random` are whole-suite policies rather than per-workbook draws.
+
+`pivots` (tools/src/rustsheet_tools/gen/pivot_suite.py, plan §6 layer 2 of
+docs/research/pivot-tables-2026-11-04/plan.md) builds one pivot per row of a seeded covering array
+(gen/covering.py: AETG-style greedy, each group of factors with its own strength, a constraint that rules out
+combinations a pivot cannot show). The factors are the PV1 dimensions: layout (compact, outline, tabular),
+subtotals (top, bottom, none, custom functions), the Values field (single data field, first or last on rows or
+columns), filters (page field at (All), on one item, on several items; hidden axis items), 0-3 row, 0-2 column and
+1-3 data fields, the eleven aggregates, grand totals, the data pool, captions and one layout extra (blank rows,
+repeat labels, a collapsed item, classic layout, a data-field number format). It is 3-wise over layout x subtotals x
+Values position x filters and pairwise over everything (seed 0: 104 rows, 2,120 required combinations). Show-values-as,
+the plan's fifth 3-wise dimension, and the other PV2+ dimensions (label/value filters, sorts, groups, calculated
+fields) are deferred to their stages (`DEFERRED`). Each pivot gets its own source block (gen/pivot_data.py) in A:I of
+its sheet from one edge pool (plain, types, blanks, errors, case variants, dates with times, ties, many items),
+which reuses gen/pools.py's error literals, date serials and time fractions. Pivots use case builder v2's `definition`
+(pivot_definition.py) at L5; twelve sheets make a case, plus a `Q` sheet of COUNTA controls. Each case lists the
+pivot catalog ids its pivots exercise in `pivot_features` and names each sheet's levels in its description.
 
 `numeric-fp` implements the cancellation part of the `numeric_fp` row for M2 and M5: X = base·(1±k·2^-52)
 against b = base (bases 1, 2, 0.5, 2^20, 1.5; k = 0..9; both signs; exact doubles built on an
@@ -540,6 +556,60 @@ both operands through TRUNC (with and without 20 digits), INT, `MOD(..,2^21)`, R
 `digits15` takes, per base and sign, the k one step either side of where X's rounded or truncated 15-significant-digit
 cut stops being b (computed exactly with `decimal`), with every picker (plain references included) and wrapper, each
 cell tagged `round15=eq|ne/trunc15=eq|ne`: 4,252 cells. Other milestones are refused.
+
+`typed-input` (suite `gen-m2`, T-3462; module `gen/typed_input.py`) writes two cases of 160 typed entries
+(`{"entered": "..."}` in `A<n>`, text as a user types it), each with three readers: `=A<n>+0` (the number, or
+#VALUE! when the entry stayed text), `=ISTEXT(A<n>)` and `=CELL("format",A<n>)`; all four cells are checked and
+tagged `typed-input/<stratum>/<variant>`. Each case draws 20 entries from each of eight strata (an equal 1/8
+share; the seed picks the variants and digits and shuffles the rows):
+- `plain`: integers, decimals, leading zeros, 15 and 16–20 significant digits (with and without a point), a
+  leading or trailing `.`, and the zero forms (`0.`, `.0`, `-0`, `00`);
+- `sign`: `+`, `-`, `(..)`, `(-..)`, a trailing `-`, `-$` and `$-`, `($..)`, a sign or parenthesis with spaces,
+  doubled signs;
+- `currency`: `$` (with and without a space), a trailing `$` or `€`, valid grouping (`1,234,567`, with and without
+  `$` and decimals) and invalid grouping (`1,23`, `12,34.5`, `1,2345`, `,1`, `1,`);
+- `percent`: a trailing `%` (with a space before or after), a leading or doubled `%`, `%` with `$`, grouping, a
+  sign, parentheses, E-notation and a mixed fraction;
+- `e-notation`: `1E3`, `1e+3`, `1.5E-7`, `.5E2`, `E5`, `1E` / `1E+` / `1E-`, `**` (syntax.md), exponents 305–308,
+  past 308 and below -300, a signed mantissa, a space before the `E`;
+- `fraction`: mixed fractions, `0 n/d`, improper (`1 7/2`), denominators of 100–9999 and with a leading zero, a
+  zero denominator, a decimal numerator, a sign or `$` in front, and `n/dddd` (a four-digit second group);
+- `spacing`: a body from the other strata with leading or trailing spaces, CHAR(160) or a tab, or a doubled inner
+  space;
+- `near-miss`: `1.2.3`, `1,,234`, `$`, `-`, `+`, `()`, `%`, `.`, `1e`, `1//2`, letters (`k q x z`) glued to
+  digits, `0x..`, `1,2.3.`.
+
+Exclusions (redrawn, never written): text starting with `=`; text over 255 characters; and any date shape, digit
+groups joined by `/` or `-` (spaces around the separator ignored, as dates.md says Excel ignores them) with no
+four-digit group. A year-less date such as `1/2` or `1 / 2` reads in the oracle's current year, which the pinned
+clock cannot reproduce (dates.md "The en-US date-text grammar"), so bare `n/d` fractions and the task's `1/0` and
+`1 /2` near misses are not drawn; `n/dddd` and `1-2-2026` are. Month names, clocks and dates are T-3463. On
+excel-graph `CELL("format")` is #VALUE! (coercion.md, probes/typed-paren-number-input), so that reader scores
+only on a desktop oracle; the format Excel chose is in excel-graph's `ENTERED` log. The engine standing in for
+Excel scored the number-only seed-0 batch's 1,280 cells with no crash or timeout.
+
+**Dates and clocks** (T-3463; module `gen/typed_dates.py`): each case also draws 40 entries from a `date`
+stratum and 40 from a `clock` stratum (twice a number stratum's share), so a case holds 240 entries and the
+seed-0 batch 160 dates and clocks, tagged `typed-input/date/<variant>` and `typed-input/clock/<variant>`:
+- `date`: `m/d/yyyy`, `m-d-yyyy`, `yyyy-m-d` and `yyyy/m/d` (one- or two-digit parts); two-digit years at the
+  29/30 pivot (`28`..`31`, `00`, `99`) and one-digit years; invalid days (`2/30`, `4/31`, `1/32`, `13/1`);
+  1900-02-29 (the leap-year bug) and its neighbours; other leap days (2000, 2023, 2024, 2100, 2400, 1904); year
+  edges (9999, 10000, 1899, `1/0/1900`); month names, full and three-letter in title, lower and upper case, as
+  `d-mmm-yyyy`, `mmm d, yyyy`, `d mmmm yyyy`, `mmm d, yy` and `d/mmm/yy`; month-year with a year
+  (`Jul-99`, `July 2026`); glued forms with a year (`1Jul2026`, `Jul2026`); a date and a clock in both orders
+  with one or two spaces; near misses (`1/2/3/4`, `Jul 32, 2026`, `Ju 1, 2026`, `July 1 2026`, `2026.01.01`,
+  `Jul-1-2026`, a weekday or `1st`);
+- `clock`: `h:mm`, `h:mm:ss`, fractional seconds, hours past 24, minutes and seconds past 59, `AM`/`PM`/`A`/`P`
+  with and without a space and in either case, `0:00 AM`, `12:00 AM`, `13:00 PM`, one-digit parts (`1:2:3`),
+  and near misses (`10:00 XM`, `1:2:3:4`, `10::00`, `:30`, `10:`, `25:00 PM`).
+
+Clock independence: a date part must write its year, since year-less text takes the current year of the
+machine that typed it (dates.md "The en-US date-text grammar"). `typed_dates.yearless` refuses a date or clock
+entry whose date part (what is left once clock tokens are removed) has one or two parts, numbers or a month
+name, with every number at most 31, or a month name alone; three parts, a four-digit number or a month-year
+number above 31 write the year, and a pure clock has no date part. The variants are built never to draw such
+text (a test draws each 200 times), and the policy redraws any that would. The engine standing in for Excel
+scores the seed-0 batch (2 cases, 1,920 cells) with no crash or timeout.
 
 ---
 
