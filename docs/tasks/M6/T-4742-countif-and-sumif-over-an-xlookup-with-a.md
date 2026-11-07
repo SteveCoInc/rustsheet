@@ -28,3 +28,13 @@ depends_on: [T-4704]
 A lifted XLOOKUP in a per-element caller's reference argument (COUNTIF, SUMIF, COUNTIFS, AVERAGEIF and the rest of `Function::per_reference_element`) is now always a grid of its elements, whatever its `if_not_found`: `Model::xlookup_reference_elements` (xlookup.rs, the `XlookupGrid::Elements` read) keeps the all-hits grid and wraps a value-`if_not_found` result in `RefGrid::of_values`; a value element is `#VALUE!` in the call, an error element its error. `lifts_into_reference_elements` and `criteria_and_grid_static_result` take any XLOOKUP, not only one with a reference `if_not_found`. New probe probes/t4742-countif-array-range-arg (excel-graph, 2026-11-07) covers the three-argument form, all misses, a 1x1 and a 1x2 lookup, a scalar lookup, SUMIF's sum_range, COUNTIFS, AVERAGEIF and an array criterion; COUNTIF over SEQUENCE, arithmetic and SORT arrays made the workbook fail to open on Excel for the web, so those probes were dropped (recorded in lookup.md). Unit test added; lookup.md and SPEC-0014 updated.
 
 Eval delta: probes known failures 7603 -> 7594 (fixed 12: probes/t4704 Calc B64:C64, A65, B67:C67, A68, B70:C70, A71, B73:C73, A74); the new case passes 38 of 41 cells, regressions 0. Follow-up: T-4826 owns probes/t4742 A40, C40, A41 (an array criterion beside the grid broadcasts to 2x2).
+
+## Landing notes
+- PR #3890. Security, design and excel-fidelity approved the code head a91ff5c66. Their MINOR findings are recorded in the PR body, and follow-up T-4863 is filed in #3898.
+- After the catch-up merge (ad8efcf2d), CI went red on `rust (test 3/3)`. The parser test `an_xlookup_grid_needs_a_reference_if_not_found` still asserted the old T-4705 rule. Commit 4bda9bd2f replaces it with `an_xlookup_grid_has_the_lookup_value_shape`, which asserts the probes/t4742 rule. The full engine lib suite passes locally (5701 passed). 7d182c75b merges the catch-up commit back in.
+- Next step:
+  1. Wait for CI to go green on the head after this commit.
+  2. Re-run reviewer-design and reviewer-excel-fidelity on the test change. It is a test-only diff, but it changes what is asserted.
+  3. Once both approve, call `enable_pr_auto_merge` (SQUASH).
+- Do not restore the old assertion: Excel's evidence (t4742 A10:C22) contradicts it.
+- One more fix in the task file: its Outcome says "38 of 41 cells"; the right count is 38 passing of 40 checked cells.
