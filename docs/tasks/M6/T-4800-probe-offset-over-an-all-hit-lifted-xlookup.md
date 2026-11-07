@@ -3,7 +3,7 @@ id: T-4800
 title: "Probe OFFSET over an all-hit lifted XLOOKUP with a range if_not_found (T-4739 follow-up)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
