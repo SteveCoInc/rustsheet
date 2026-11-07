@@ -32,5 +32,8 @@
     tasks. Deleting the file's whole block once it is empty is part of the fix.
   - `scripts/check_file_size.py` does not count a `LINT-DEBT` block's lines: the blocks would otherwise push
     files just under the 1,000-line limit over it, and inherited oversized files would grow.
-  - CLAUDE.md's rule against new lint-debt entries now covers new `LINT-DEBT` blocks and new entries in existing
-    blocks.
+  - CLAUDE.md's rule against new lint-debt entries (prime directive 2) is unchanged and applies as written. A new
+    `LINT-DEBT` block, or a new entry in one, is a new lint-debt entry. A lock entry records its scope
+    (`cfg(test) clippy::x` for a test-only one), so widening a test-only exemption to the whole file also fails.
+    The block may hold only `expect` attributes, so an `allow` cannot hide in it. A lint exemption outside a
+    block is an ordinary statement-level `#[expect(..., reason = "...")]` that reviewers judge on its reason.
