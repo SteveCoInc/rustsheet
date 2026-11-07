@@ -42,7 +42,7 @@ Evidence: none from Excel. probes/t4169-pivot-number-formats P1!E5:E11 and Q!B1 
 UNVERIFIED (owner T-4731): which ids Excel gives new custom formats when it saves. UNVERIFIED
 (eval-harness, owner T-4730): with two or more custom formats, the builder's and the spec adapter's
 numberings can differ (pivots.md "Value cells show their data field's number format").
-Status: UNVERIFIED
+Status: UNVERIFIED (probe pending: T-4731; eval-harness: T-4730)
 Implemented in: crates/rustsheet-engine/src/number_format.rs (`get_new_num_fmt_index`).
 Tasks: T-4169
 
