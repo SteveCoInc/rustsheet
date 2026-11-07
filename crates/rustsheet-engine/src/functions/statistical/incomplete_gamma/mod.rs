@@ -465,7 +465,7 @@ pub(crate) fn excel_lower(a: f64, x: f64) -> Option<f64> {
 /// prefactor is Stirling's (57 of 73 bit-exact against 55, not taken). `None` elsewhere, where
 /// the result is not a normal double, or where the series runs out of terms.
 fn excel_mid_shape_lower(a: f64, x: f64) -> Option<f64> {
-    if !(a > 1.0 && a < DIRECT_SHAPE_MAX && x >= f64::MIN_POSITIVE && x <= 1.0) {
+    if !(a > 1.0 && x >= f64::MIN_POSITIVE && x <= 1.0) {
         return None;
     }
     excel_form_lower(a, x, a * excel_ln(x)).filter(|lower| lower.is_normal())
