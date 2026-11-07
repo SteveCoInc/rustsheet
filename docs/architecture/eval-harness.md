@@ -118,7 +118,8 @@ Each names its cell suite with `cases_of = "<suite>"` and takes that suite's `[f
 (`eval/.cache/suites/<suite>`, T-4629). So it is fetched, skipped with a message while not fetched, and gated exactly
 as that suite is, and it never records an empty baseline:
 - `roundtrip-poi` and `roundtrip-corpus-bench` are `gate = true`, like their cell suites. `make check` holds them
-  wherever the caches are fetched; CI, which fetches no corpus, skips them as it skips the cell suites.
+  after fetching the caches when they are missing or stale. CI gates them from its cached pinned fetch, and
+  fails rather than skips when one is not fetched (`--require-fetched`; decision 0344, SPEC-0035).
 - `roundtrip-calipers` stays `gate = false`, like the calipers cell suite. `rustsheet-eval roundtrip --check --suite
   roundtrip-calipers` gates it on demand.
 
