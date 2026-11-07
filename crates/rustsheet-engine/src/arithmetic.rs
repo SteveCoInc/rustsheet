@@ -932,6 +932,9 @@ const ARRAY_COMPARE_EQUAL_GAP: f64 = f64::from_bits(1 << 48);
 /// EXP(-711.17) and EXP(-711.16), and a left number below the right one keeps its order:
 /// `0=EXP({-745})` is FALSE and `EXP({-745})<EXP({-744})` TRUE). Evidence:
 /// probes/t4766-array-subnormal-*; docs/excel-semantics/numbers.md "Worksheet EXP (T-1931)".
+/// The strict `<` is pinned to the ulp (fresh S!A2, a gap of exactly 2^-1026, is not equal; A1,
+/// 2^48-1 units, is). Unprobed, the engine's choice: two normal numbers less than 2^-1026 apart,
+/// and an empty range element read as 0 against a tiny number (only Number/Number fires).
 fn within_array_compare_gap(left: &CalcResult, right: &CalcResult) -> bool {
     match (left, right) {
         // Subtraction of two doubles this close is exact, so the gap is the true one.

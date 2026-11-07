@@ -32,12 +32,14 @@ one keeps its order, and scalar comparisons stay exact. `arithmetic::handle_comp
   ranges, `A30:B30`, single-element arrays, aggregates), -boundary (2^-k sweep; it showed POWER flushes subnormals, so 2^-k
   cannot build test values), -exp-boundary (EXP(a), a = -720..-708.4), -order (boundary a = -711.20..-711.00 by 0.01, switch
   between -711.17 and -711.16; a 144-cell =/</> matrix with the array left, right or both).
-- Fit guards (decision 0188 R4): the constant 2^-1026 was chosen from the -exp-boundary and -order cells (the hold-out).
-  Probe 5, -fresh (94 cells: exact m*2^-1074 built by subtraction, m log-uniform in [2^44, 2^52) with seed 4766 and 2^48 +-1,
-  pairs, negative operands), was written after the rule was frozen, and the engine matches all 94. A standalone prediction that
-  assumed exact operands missed E5 and E6; the engine matches Excel there because it reproduces Excel's arithmetic for building
-  the operands. The rule is a power-of-two constant inside the measured bracket and applies only below 2^-1026 gaps; there is no
-  keep-matched branch. Unprobed: a value exactly at 2^-1026 and the gap between two normal numbers.
+- Not a decision 0188 R4 fit: 2^-1026 is an oracle-measured boundary, pinned by fresh A1 (2^48-1 units, equal) and A2 (exactly
+  2^48 units, built from the 15-digit multiplier 281474976710656, not equal) and by the -order bracket, so there is no
+  hold-out split. Probe 5, -fresh (94 cells: exact m*2^-1074 built by subtraction, m log-uniform in [2^44, 2^52) with seed 4766
+  and 2^48 +-1, pairs, negative operands), was written after the rule was frozen, and the engine matches all 94. A standalone
+  prediction that assumed exact operands missed E4:E6 (E5 and E6 among them): Excel cuts the 16-digit literal 1125899906842624
+  to 15 digits (1125899906842620), so those gaps are 2^48-5, 2^48-4 and 2^48-3 units and read TRUE; the engine matches because it
+  reproduces that cut. There is no keep-matched branch. Unprobed, the engine's choice: two normal numbers less than 2^-1026
+  apart, and an empty range element read as 0 against a tiny number.
 - A3 (the saved 0 of the spilled subnormal) stays a known failure and moves to T-5051 with the new case's S!A30: decision 0042's
   companion `=(<formula>)=0` is TRUE in array context, so it cannot excuse a spilled element.
 - numbers.md "Worksheet EXP (T-1931)": the comparison rule, with every probe; unit test

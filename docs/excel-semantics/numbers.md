@@ -875,8 +875,13 @@ probes/t4766-array-subnormal-order, 144-cell operand matrix). The switch for `(E
 -711.16 (FALSE), around 2^-1026 (-1026 ln 2 = -711.1648; probes/t4766-array-subnormal-exp-boundary, -order A1:A21). The
 constant 2^-1026 was chosen from those cells, then checked on a fresh sweep made after the rule was frozen
 (probes/t4766-array-subnormal-fresh, 94 cells: exact m*2^-1074 built by subtraction, m log-uniform in [2^44, 2^52) and
-2^48 +-1, pairs, and negative operands): the engine matches all 94. The value exactly at 2^-1026 and the gap between two normal
-numbers are not separately probed. POWER flushes a subnormal result (`(2^-1023)=0` TRUE, `POWER(2,-1022)=0` FALSE;
+2^48 +-1, pairs, and negative operands): the engine matches all 94. The strict `<` is pinned to the ulp: fresh S!A2 builds
+exactly 2^48 * 2^-1074 = 2^-1026 (its multiplier 281474976710656 has 15 digits, so it is not cut) and `(...+{0})=0` is FALSE
+there, while A1 (2^48-1 units) is TRUE. Fresh E4:E6 are TRUE because the 16-digit literal 1125899906842624 is cut to 15
+significant digits (1125899906842620), so their gaps are 2^48-5, 2^48-4 and 2^48-3 units; the engine matches Excel there because
+it reproduces that cut when building the operands. Not probed, the engine's choice: two normal numbers less than 2^-1026 apart
+(below about 2^-974), and an empty range element read as 0 against a tiny number (`within_array_compare_gap` fires only for
+Number/Number). POWER flushes a subnormal result (`(2^-1023)=0` TRUE, `POWER(2,-1022)=0` FALSE;
 probes/t4766-array-subnormal-boundary), as this file already says, so 2^-k cannot build test values. The saved 0 of a spilled
 kept subnormal (A3 of the first probe) cannot use decision 0042's companion, which is TRUE in array context (T-5051).
 Implemented in `arithmetic::within_array_compare_gap` (`handle_comparison`).
