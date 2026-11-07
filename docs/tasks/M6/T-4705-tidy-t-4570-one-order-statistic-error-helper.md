@@ -3,7 +3,7 @@ id: T-4705
 title: "Tidy T-4570: one order-statistic error helper, re-wrap lift_references doc, tighten the XLOOKUP static shape to a reference if_not_found"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
