@@ -285,5 +285,6 @@ probes/t4844-irr-guess-ladder.case.json	269
 probes/t4844-irr-pad-ladder.case.json	31
 probes/t4844-irr-stage-invariance.case.json	56
 probes/t4857-f-kinds.case.json	10
+probes/t4863-xlookup-mode-lift-criteria.case.json	12
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
