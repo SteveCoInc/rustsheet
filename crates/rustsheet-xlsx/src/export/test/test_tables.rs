@@ -705,6 +705,45 @@ fn deleting_the_filtered_column_unfilters_the_table() {
     assert!(!table_xml.contains("filterColumn"), "{table_xml}");
 }
 
+/// A table loaded from a file with two criteria (values filters on Cat and Tag) keeps the rows
+/// the kept criterion rejects when a column delete takes the other, and shows the rest, as Excel
+/// does (probes/t4755-two-criteria-filtered-table-delete-one, T-4803).
+#[test]
+fn deleting_one_of_two_criteria_from_a_file_shows_the_rows_it_alone_hid() {
+    let mut model = new_empty_model();
+    let columns = [("Cat", ["a", "b", "a", "c"]), ("Val", ["1", "2", "3", "4"])];
+    for (column, (header, values)) in
+        (1..).zip(columns.iter().chain([&("Tag", ["x", "x", "y", "x"])]))
+    {
+        model
+            .set_user_input(0, 1, column, (*header).to_string())
+            .unwrap();
+        for (row, value) in (2..).zip(values) {
+            model
+                .set_user_input(0, row, column, (*value).to_string())
+                .unwrap();
+        }
+    }
+    model.add_table(0, "Sales", (1, 1, 5, 3), true).unwrap();
+    model.filter_table_column("Sales", 0, &[3]).unwrap();
+    model.filter_table_column("Sales", 2, &[4]).unwrap();
+    for row in [3, 4] {
+        model.set_row_hidden(0, row, true).unwrap();
+    }
+    let temp_file_name = "temp_file_test_two_criteria.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let mut reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    fs::remove_file(temp_file_name).unwrap();
+    assert_eq!(reloaded.workbook.tables["Sales"].filter_columns.len(), 2);
+
+    reloaded.delete_columns(0, 1, 1).unwrap();
+    let table = &reloaded.workbook.tables["Sales"];
+    assert!(table.has_filters);
+    assert_eq!(table.filter_columns.len(), 1);
+    assert!(!reloaded.is_row_hidden(0, 3).unwrap());
+    assert!(reloaded.is_row_hidden(0, 4).unwrap());
+}
+
 /// A column edit never makes a table filtered: one whose only filterColumn has no criterion is
 /// not filtered on import (as Excel reads it, T-4003) and stays so after an unrelated delete.
 #[test]

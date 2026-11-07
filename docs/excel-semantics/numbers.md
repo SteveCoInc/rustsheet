@@ -2375,13 +2375,19 @@ engine matches both. **A delete that leaves another criterion shows only the row
 (T-4755, probes/t4755-two-criteria-filtered-table-*): with a values filter on `Cat` keeping "a" and "c" (rows 3, 7)
 and one on `Ext` rejecting 40 (row 5), the control gives 3 = 103 = 3 and 9 = 109 = 9; deleting column A gives
 3 = 103 = 5 and 9 = 109 = 17: rows 3 and 7 are visible again, row 5 stays hidden and still filtered
-(`SUBTOTAL(3,..)` of it is 0). The engine shows all six rows (10 cells off; T-4803 owns them): its eval adapter adds
-the table through the API with no criteria, and by its code a table read from a file keeps every row hidden after such a delete (untested).
+(`SUBTOTAL(3,..)` of it is 0). The engine matches (T-4803): after a column delete that takes a criterion and leaves
+another inside the table, it shows each hidden data row that every kept criterion keeps, by the text the row's cell
+displays in that criterion's column (`rows_kept_by_criteria`, crates/rustsheet-engine/src/table_edits.rs), for a table read
+from a file and for one given its criteria with `Txn::filter_table_column` (the eval adapter's spec `"criteria"`). Rule
+(ours, T-4803): only a values filter without date groups is evaluated (blank rows by `blank`, other rows by their text
+among `values`, ignoring case); a row with any other kept criterion stays hidden. A row hidden in the file that the kept
+criteria keep is shown too, as the one-criterion delete shows it (above); with two criteria that is unprobed, as are
+case differences and number formats in the kept column.
 A manual hide made in the application inside a filtered table, and hidden rows outside the table (the engine keeps
 them hidden), are unprobed. A worksheet autoFilter (no table) and an autoFilter holding only a
 `<sortState>` are unprobed; ours reads the latter as not filtered.
 Status: VERIFIED
-Engine gaps: a delete that leaves another criterion (T-4803). SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,
+Engine gaps: SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,
 `Node::contains_function`).
 **Which formulas count as a nested SUBTOTAL or AGGREGATE (T-4194):** the cell's formula text, not what it evaluated. A
 call anywhere in the formula's own tree counts even when it never runs: `=IF(FALSE,SUBTOTAL(9,A1:A2),4)`,

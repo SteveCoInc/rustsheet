@@ -172,3 +172,27 @@ pub struct CustomFilter {
     pub operator: Option<String>,
     pub val: String,
 }
+
+impl FilterCriterion {
+    /// Whether the criterion keeps a data row whose cell in the filtered column displays `text`,
+    /// when that can be told here: a values filter without date groups keeps a blank row when
+    /// `blank`, and another row when `values` holds its text, ignoring case (T-4803). `None` for
+    /// every other criterion, which nothing here evaluates.
+    #[must_use]
+    pub fn keeps_text(&self, text: &str) -> Option<bool> {
+        match self {
+            Self::Values {
+                values,
+                blank,
+                date_groups,
+                ..
+            } if date_groups.is_empty() => Some(if text.is_empty() {
+                *blank
+            } else {
+                let text = text.to_lowercase();
+                values.iter().any(|v| v.to_lowercase() == text)
+            }),
+            _ => None,
+        }
+    }
+}
