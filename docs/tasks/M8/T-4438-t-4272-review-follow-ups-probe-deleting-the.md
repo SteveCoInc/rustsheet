@@ -3,7 +3,7 @@ id: T-4438
 title: "T-4272 review follow-ups: probe deleting the start of a two-sheet 3-D span and a backwards span in a defined name; share the sheet-edit stringify closure"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
