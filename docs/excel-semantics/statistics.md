@@ -3496,15 +3496,33 @@ without that check (see "Incomplete beta L140 and bfrac: the prefactor is Excel'
 Implemented for BETA.DIST's and NEGBINOM.DIST's cdfs (`bratio::l140_overflows`, T-3576); the other callers of the
 kernel (BINOM.DIST's family, F, T, BETA.INV) are unprobed at such shapes.
 
-On bfrac the cut is the shapes' sum, not a size (T-4238): the cdf is `#NUM!` exactly where fl(a0 + b0) equals a0 or
-b0, so the smaller shape is absorbed (`NEGBINOM.DIST(40,6E+17,0.323212154487823,TRUE)`, b = 41, is `#NUM!`;
-`(40,5E+17,..)` is 0; 100 failures (b = 101) cut between 1E+18 and 2E+18, 1000 failures between 9E+18 and 1E+19). BETA.DIST's density is
-`#NUM!` at the same points when both shapes exceed 1 (Excel's Loader density): `BETA.DIST(0.323212154487823,6E+17,41,FALSE)`
-and `BETA.DIST(0.1,1E+200,2,FALSE)` (t3007 A20) are `#NUM!`, while `BETA.DIST(0.1,1E+290,0.5,FALSE)` (t3007 A6), with a
-shape below 1, is 0. The cdf's absorption rule applies on bfrac only: L140 cells keep their own rule (R above). Evidence: probes/t4238-negbinom-bfrac-huge-s (126 cells: number_s 1E+15 to 1E+20 and the cut rows,
-failures 40, 100, 1000, each through NEGBINOM.DIST, BETA.DIST's cdf and its density; predictions in
-`docs/research/t4238/predictions.tsv` committed before the excel-graph fill; all 126 matched H_absorb).
-Implemented as `bratio::bfrac_shapes_absorbed` (cdf) and `bratio::shapes_absorb` (density, both shapes above 1).
+On bfrac the cut is the shapes' sum, not a size (T-4238): the cdf is `#NUM!` where the oriented first shape absorbs
+the second, fl(a0 + b0) = a0 after bratio's swap (`NEGBINOM.DIST(40,6E+17,0.323212154487823,TRUE)`, b = 41, is `#NUM!`;
+`(40,5E+17,..)` is 0; 100 failures (b = 101) cut between 1E+18 and 2E+18, 1000 failures between 9E+18 and 1E+19).
+- Orientation: the swap counts, the raw argument order does not. `BETA.DIST(0.676787845512177,41,6E+17,TRUE)`, swapped
+  to a0 = 6E+17, is `#NUM!`, as are `(0.1|0.5|0.9,41,6E+17,TRUE)` and `NEGBINOM.DIST(6E+17,40,..,TRUE)`. Where the
+  first shape is the one absorbed and no swap gives it back, Excel answers:
+  `BETA.DIST(2.84921687181174E-198,25002804469.8703,7.87993781085058E+38,TRUE)` is 0 (Gate A accuracy/BETA.DIST/s1
+  A183, r4-T-3879 A181, A182), and `(1E-19,41,6E+17,TRUE)` is 2.2611819787179575E-100.
+- A whole or fractional b0 alike (`(0.5,7E+17,57.5,TRUE)`, `(0.5,6E+17,41.25,TRUE)` and `(0.5,1E+19,1000.5,TRUE)` are
+  `#NUM!`).
+- Still open (T-4824): x0 near 1 answers. `(0.999,6E+17,41,TRUE)`, `(0.999,7E+17,57,TRUE)` and `(0.999,7E+17,57.5,TRUE)`
+  are 0 and the swapped `(0.001,41,6E+17,TRUE)` is 1, while `(0.99,6E+17,41,TRUE)` is `#NUM!`. The mechanism of the cut
+  in x0 (0.99, 0.999) is UNVERIFIED; ours is `#NUM!` there.
+- BETA.DIST's density is `#NUM!` where alpha absorbs beta and both shapes exceed 1 (Excel's Loader density):
+  `BETA.DIST(0.323212154487823,6E+17,41,FALSE)`, `(0.9|0.5,6E+17,41,FALSE)` and `BETA.DIST(0.1,1E+200,2,FALSE)` (t3007
+  A20) are `#NUM!`. The density has no swap: `(0.5,41,6E+17,FALSE)` is 0, and so is
+  `BETA.DIST(2.63749596488496E-295,664.598766737767,4.73696273024973E+93,FALSE)` (Gate A s1 A190). A shape below 1 is
+  off that branch: `BETA.DIST(0.1,1E+290,0.5,FALSE)` (t3007 A6) is 0.
+- The cdf's absorption rule applies on bfrac only: L140 cells keep their own rule (R above).
+
+Evidence: probes/t4238-negbinom-bfrac-huge-s (126 cells: number_s 1E+15 to 1E+20 and the cut rows, failures 40, 100,
+1000, each through NEGBINOM.DIST, BETA.DIST's cdf and its density; all 126 matched H_absorb). The first rule (either
+shape absorbed) failed Gate A's A181:A183 and A190, so it was narrowed to the oriented first shape and tested fresh:
+probes/t4238-r2-absorb-orientation (38 cells, H_oriented against H_raw: every discriminating cell matched H_oriented;
+A12, A13 broke the rule at x0 0.999) and probes/t4238-r3-absorb-whole-shape (12 cells, H_x against H_frac: H_x on all
+12). Predictions for each round in `docs/research/t4238/` were committed before its excel-graph fill (2026-11-07).
+Implemented as `bratio::bfrac_shapes_absorbed` (cdf) and `bratio::first_shape_absorbs` (density, both shapes above 1).
 
 The p dependence: p 0.001 (bpser) is 0. p 0.9, 0.99 and 0.999999 are `#NUM!` at both 1E+13 and 999999999999999.
 p 1 - 1E-13 and 1 - 1E-14 at 1E+13 are 1, through bfrac on the swapped call. At 999999999999999, p 1 - 1E-13 is
@@ -3515,9 +3533,9 @@ A fill, where `NEGBINOM.DIST(28,999999999999999,0.323212154487823,TRUE)` was `#N
 `(14,999999999999999,0.0712044717475044,TRUE)` and `(6,1E+15,0.847418271232675,TRUE)`. probes/t3576-negbinom-cdf-huge-s
 A1:A89 (excel-graph, 2026-11-04). `docs/research/t3576/bup_partial_sum.py` prints the branch, ln R and the partial-sum log of each of its
 cells. probes/t3576-r2-ratio-overflow-sweep A1:A54 (excel-graph, 2026-11-04).
-Ours: `#NUM!` at every L140 cell above (T-3576) and at every absorbed bfrac cell (T-4238).
-Status: VERIFIED (excel-graph) for the probed cells, the L140 rule (fresh sweep) and the bfrac absorption rule (T-4238's
-predicted probe)
+Ours: `#NUM!` at every L140 cell above (T-3576) and at every absorbed bfrac cell (T-4238), x0 0.999 included (T-4824).
+Status: VERIFIED (excel-graph) for the probed cells, the L140 rule (fresh sweep) and the bfrac absorption rule up to x0
+0.99 (T-4238's three predicted rounds); x0 near 1 UNVERIFIED
 Tasks: T-3576
 
 ## BETA.DIST and F.DIST at basym points; BETA.INV takes the nearest end there (T-3443)
