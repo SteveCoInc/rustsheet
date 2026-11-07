@@ -3,7 +3,7 @@ id: T-4874
 title: "NUMBERVALUE with a written-empty decimal or group separator follows Excel (probe empty-as-omitted)"
 milestone: M5
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -36,13 +36,13 @@ the fill.
 - How it avoids fitting: each cell is the default-separator parse or `#VALUE!`; nothing numeric is tuned.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph) calls NUMBERVALUE with an empty decimal_separator, an empty
+- [x] A probes case (excel-probe skill, excel-graph) calls NUMBERVALUE with an empty decimal_separator, an empty
       group_separator and both, on "1.5", "1,234.5", "1.234,5", "2,5", "50%" and "1:30", plus
       `LET(e,,NUMBERVALUE("1.5",e))` and, as controls, the blank-cell and `""` forms.
-- [ ] The engine's predictions (empty = omitted) are committed in a commit before the oracle fill.
-- [ ] After the fill every probe cell passes; text.md (or coercion.md beside the NUMBERVALUE entries) states the rule
+- [x] The engine's predictions (empty = omitted) are committed in a commit before the oracle fill.
+- [x] After the fill every probe cell passes; text.md (or coercion.md beside the NUMBERVALUE entries) states the rule
       with its cells.
-- [ ] No new F line in any eval/baseline file (the gen-m5 cells above keep passing); `make check` green; reviewers
+- [x] No new F line in any eval/baseline file (the gen-m5 cells above keep passing); `make check` green; reviewers
       approve.
 
 ## Out of scope
@@ -61,3 +61,18 @@ probes/t4874-numbervalue-empty-separator, sheet Calc, with a written-empty argum
 | 5 | 0.5 | 0.5 | 0.5 | 0.5 | #VALUE! | 0.5 | 0.5 | #VALUE! | #VALUE! | #VALUE! | #VALUE! |
 | 6 | 0.0625 | 0.0625 | 0.0625 | 0.0625 | #VALUE! | 0.0625 | 0.0625 | #VALUE! | #VALUE! | #VALUE! | #VALUE! |
 | 8 | 1.5 | 1234.5 | 1234.5 |  |  |  |  |  |  |  |  |
+
+## Outcome
+- Probe probes/t4874-numbervalue-empty-separator (69 cells, excel-graph 2026-11-07). The predictions above
+  (empty = omitted) were committed in a09e17aae before the fill, and they were **wrong**. Excel reads a written-empty
+  decimal or group separator as the empty value: `#VALUE!` for every text and every placement, the same as a blank cell
+  or `""`. A LET name bound to nothing gives the same (B8:D8).
+- The engine already gave `#VALUE!` there, so the predictions' engine change was reverted. Only a comment in
+  `fn_numbervalue` now cites the probe. After the fill, all 69 cells pass.
+- Docs: text.md, "NUMBERVALUE reads text as VALUE does, with its own separators", states the rule with its cells.
+  NUMBERVALUE does not follow the empty = omitted rule of the newer functions.
+- The legacy text functions (out of scope) need no follow-up probe: this probe gives no sign that the rule reaches them.
+- Eval delta: probes +1 case (69 cells, all pass; baseline `C` line from `make eval-baseline`). Every other suite:
+  fixed 0 / regressions 0. No new F line.
+- Follow-up filed here for PR #3920 (T-4803) and #3831's review: T-4895, probing the unprobed parts of the
+  filter re-apply rule.
