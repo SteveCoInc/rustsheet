@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::default_trait_access,
+    clippy::match_same_arms,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 use crate::{
     constants::{LAST_COLUMN, LAST_ROW},
     expressions::types::Area,
@@ -311,7 +318,7 @@ impl UserModel {
             }
 
             // We also need to overwrite those that have a row style
-            for row_s in styled_rows.iter() {
+            for row_s in styled_rows {
                 let row = row_s.r;
                 self.update_single_cell_border(
                     border_area,

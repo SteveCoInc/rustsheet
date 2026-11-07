@@ -5,6 +5,14 @@
 //! bound). The rule is Excel's own, probed with excel-graph (probes/t4228-pivot-range-groups,
 //! t4253-*, t4249-*; docs/excel-semantics/web.md "Grouped pivot fields import as their group
 //! items").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
+// LINT-DEBT-END
 
 use std::collections::HashMap;
 

@@ -1,3 +1,13 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(
+    test,
+    expect(
+        clippy::cast_precision_loss,
+        clippy::float_cmp,
+        clippy::unreadable_literal
+    )
+)]
+// LINT-DEBT-END
 use super::{
     divide, extended_product, extended_quotient, extended_sqrt, extended_sum, minus,
     operator_power, plus, power, times,

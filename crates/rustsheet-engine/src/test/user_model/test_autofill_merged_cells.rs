@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::unnecessary_wraps)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 // Autofill and merged cells.
@@ -470,7 +473,7 @@ fn fill_down_replicates_the_perimeter_borders_of_a_merged_cell() {
     let mut model = new_empty_user_model();
     // outline on B2, then merge B2:C3: the outline wraps the whole merged
     // cell, so its bottom/right sides live on non-anchor cells
-    model._set_cell_border("B2", "#111111");
+    model.set_cell_border_a1("B2", "#111111");
     model.merge_cells(&area(0, 2, 2, 2, 2)).unwrap();
 
     // fill down to row 5: one tile, B4:C5
@@ -478,19 +481,19 @@ fn fill_down_replicates_the_perimeter_borders_of_a_merged_cell() {
 
     // the tile keeps the full outline, including the sides that are not on
     // its anchor
-    let b4 = model._get_cell_border("B4");
+    let b4 = model.get_cell_border_a1("B4");
     assert_eq!(b4.left, thin("#111111"));
     assert_eq!(b4.top, thin("#111111"));
     assert_eq!([b4.right, b4.bottom], [None, None]);
-    let c4 = model._get_cell_border("C4");
+    let c4 = model.get_cell_border_a1("C4");
     assert_eq!(c4.top, thin("#111111"));
     assert_eq!(c4.right, thin("#111111"));
     assert_eq!([c4.left, c4.bottom], [None, None]);
-    let b5 = model._get_cell_border("B5");
+    let b5 = model.get_cell_border_a1("B5");
     assert_eq!(b5.left, thin("#111111"));
     assert_eq!(b5.bottom, thin("#111111"));
     assert_eq!([b5.right, b5.top], [None, None]);
-    let c5 = model._get_cell_border("C5");
+    let c5 = model.get_cell_border_a1("C5");
     assert_eq!(c5.right, thin("#111111"));
     assert_eq!(c5.bottom, thin("#111111"));
     assert_eq!([c5.left, c5.top], [None, None]);

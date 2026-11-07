@@ -15,6 +15,9 @@
 //!
 //! Parts are numbered from 1 in the order written, and cache `n` has `cacheId` `n`: ids only
 //! cross-reference (SPEC-0033 D4), and the import maps a pivot to its cache by them.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::print_stderr)]
+// LINT-DEBT-END
 
 mod cache;
 #[cfg(test)]

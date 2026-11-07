@@ -1,3 +1,13 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::manual_let_else
+)]
+#![cfg_attr(test, expect(clippy::unreadable_literal))]
+// LINT-DEBT-END
 use crate::{
     arithmetic::flush_subnormal,
     decimal_round::x87_text_to_f64,
@@ -76,7 +86,7 @@ pub fn get_default_num_fmt_id(num_fmt: &str) -> Option<i32> {
     for (index, default_num_fmt) in DEFAULT_NUM_FMTS.iter().enumerate() {
         if default_num_fmt == &num_fmt {
             return Some(index as i32);
-        };
+        }
     }
     None
 }
@@ -550,9 +560,8 @@ pub fn to_precision_str(value: f64, precision: usize) -> String {
     if !value.is_finite() {
         if value.is_infinite() {
             return "inf".to_string();
-        } else {
-            return "NaN".to_string();
         }
+        return "NaN".to_string();
     }
 
     let s = format!("{:.*e}", precision.saturating_sub(1), value);

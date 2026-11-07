@@ -1,29 +1,19 @@
-#  IronCalc
+# rustsheet-xlsx
 
-## 📚 About
+RustSheet's xlsx importer and exporter. It started as a fork of IronCalc's `ironcalc` crate (MIT).
 
-Xlsx importer and exporter for the IronCalc engine.
+This crate is internal to the workspace. Applications open and save workbooks through the
+[`rustsheet`](../rustsheet) crate (`rustsheet::Workbook::open`, `Workbook::save_xlsx`), which adds
+the load limits and typed errors this crate's API lacks.
 
-## Testing
+## Tests
 
-This module tests Excel compatibility. any file dropped into `tests/calc_tests` will be tested automatically.
+Every Excel-authored workbook in `tests/calc_tests` is checked automatically: before any
+`cargo test` run, `build.rs` generates one test per file.
 
-Before any `cargo test` run, `build.rs` builds a test for every file.
-
-We test documentation files (found as examples in <https://docs.ironcalc.com>), templates, and general test files.
-
-## Example files
-
-You can run any of the example files by `cargo run --example file-name`
-
-## 🚴 Usage
-
-The command
-
-```
-cargo build --release
+```bash
+cargo test -p rustsheet_xlsx
 ```
 
-Will produce a binary:
-
-- `/target/release/test` you can use to test that IronCalc computes the same results as Excel on a particular file
+The `test` binary (`cargo build --release -p rustsheet_xlsx`, then `target/release/test <file>`)
+checks that RustSheet computes the values Excel saved in a given xlsx file.

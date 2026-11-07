@@ -3,6 +3,9 @@
 //! "Deep lower tail at a shape above 1"): the root of the cdf's leading factor, with or without
 //! one Newton step; and, where that root is close but not Excel's value, Newton steps from it
 //! on Excel's cdf (T-3311). The first three moved out of `mod.rs` unchanged (T-3313).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use super::{
     excel_form_lower, gamma_density, pair_with, Exponent, Terms, DIRECT_SHAPE_MAX, MAX_TERMS,

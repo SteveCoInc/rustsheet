@@ -22,14 +22,14 @@ fn check(cells: &[(&str, &str, &str)]) {
         ("G6", "43831"),
         ("M1", "1E300"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {
-        assert_eq!(model._get_text(cell), *expected, "{cell}: {formula}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell}: {formula}");
     }
 }
 

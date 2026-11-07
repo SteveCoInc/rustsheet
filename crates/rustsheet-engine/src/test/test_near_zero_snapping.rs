@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, reason = "tests")]
 
 //! Excel snaps a near-zero result of a cell formula's outermost `+`/`-` or a SUM call to 0, but not of
@@ -66,27 +69,27 @@ fn only_opposite_signed_nonzero_addends_snap() {
 #[test]
 fn sum_snaps_everywhere_but_grouped_and_inner_arithmetic_do_not() {
     let mut model = new_empty_model();
-    model._set("A1", "=0.1+0.2-0.3");
-    model._set("A2", "=SUM(0.1,0.2,-0.3)");
-    model._set("A3", "=(0.1+0.2-0.3)");
-    model._set("A4", "=(0.1+0.2-0.3)*1");
-    model._set("A5", "=0.1+0.2-0.3+0");
-    model._set("A6", "=(SUM(0.1,0.2,-0.3))");
-    model._set("A7", "=SUM(0.1,0.2,-0.3)*1");
-    model._set("A8", "=SUM(0.1,0.2,-0.3,0)");
+    model.set_a1("A1", "=0.1+0.2-0.3");
+    model.set_a1("A2", "=SUM(0.1,0.2,-0.3)");
+    model.set_a1("A3", "=(0.1+0.2-0.3)");
+    model.set_a1("A4", "=(0.1+0.2-0.3)*1");
+    model.set_a1("A5", "=0.1+0.2-0.3+0");
+    model.set_a1("A6", "=(SUM(0.1,0.2,-0.3))");
+    model.set_a1("A7", "=SUM(0.1,0.2,-0.3)*1");
+    model.set_a1("A8", "=SUM(0.1,0.2,-0.3,0)");
     for row in 1..=8 {
-        model._set(&format!("B{row}"), &format!("=A{row}=0"));
+        model.set_a1(&format!("B{row}"), &format!("=A{row}=0"));
     }
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "TRUE");
-    assert_eq!(model._get_text("B2"), "TRUE");
-    assert_eq!(model._get_text("B3"), "FALSE");
-    assert_eq!(model._get_text("B4"), "FALSE");
-    assert_eq!(model._get_text("B5"), "FALSE");
+    assert_eq!(model.get_text_a1("B1"), "TRUE");
+    assert_eq!(model.get_text_a1("B2"), "TRUE");
+    assert_eq!(model.get_text_a1("B3"), "FALSE");
+    assert_eq!(model.get_text_a1("B4"), "FALSE");
+    assert_eq!(model.get_text_a1("B5"), "FALSE");
     // probes/near-zero-sum-forms: SUM snaps inside a group or an operation, but not after a zero addend.
-    assert_eq!(model._get_text("B6"), "TRUE");
-    assert_eq!(model._get_text("B7"), "TRUE");
-    assert_eq!(model._get_text("B8"), "FALSE");
+    assert_eq!(model.get_text_a1("B6"), "TRUE");
+    assert_eq!(model.get_text_a1("B7"), "TRUE");
+    assert_eq!(model.get_text_a1("B8"), "FALSE");
 }
 
 /// Every written level of parentheses around a whole formula is kept, and the group still
@@ -94,28 +97,28 @@ fn sum_snaps_everywhere_but_grouped_and_inner_arithmetic_do_not() {
 #[test]
 fn whole_formula_keeps_every_parenthesis_level() {
     let mut model = new_empty_model();
-    model._set("A1", "=((0.1+0.2-0.3))");
-    model._set("A2", "=(((0.1+0.2-0.3)))");
+    model.set_a1("A1", "=((0.1+0.2-0.3))");
+    model.set_a1("A2", "=(((0.1+0.2-0.3)))");
     model.evaluate();
-    assert_eq!(model._get_formula("A1"), "=((0.1+0.2-0.3))");
-    assert_eq!(model._get_formula("A2"), "=(((0.1+0.2-0.3)))");
-    assert_eq!(model._get_text("A1"), "5.55112E-17");
-    assert_eq!(model._get_text("A2"), "5.55112E-17");
+    assert_eq!(model.get_formula_a1("A1"), "=((0.1+0.2-0.3))");
+    assert_eq!(model.get_formula_a1("A2"), "=(((0.1+0.2-0.3)))");
+    assert_eq!(model.get_text_a1("A1"), "5.55112E-17");
+    assert_eq!(model.get_text_a1("A2"), "5.55112E-17");
 }
 
 /// AGGREGATE(9) and SUBTOTAL(9/109) snap like SUM (probes/near-zero-aggregate-forms B1-B5).
 #[test]
 fn aggregate_and_subtotal_sum_snap() {
     let mut model = new_empty_model();
-    model._set("A1", "0.1");
-    model._set("A2", "0.2");
-    model._set("A3", "-0.3");
-    model._set("B1", "=AGGREGATE(9,4,A1:A3)=0");
-    model._set("B2", "=SUBTOTAL(9,A1:A3)=0");
-    model._set("B3", "=SUBTOTAL(109,A1:A3)+0=0");
+    model.set_a1("A1", "0.1");
+    model.set_a1("A2", "0.2");
+    model.set_a1("A3", "-0.3");
+    model.set_a1("B1", "=AGGREGATE(9,4,A1:A3)=0");
+    model.set_a1("B2", "=SUBTOTAL(9,A1:A3)=0");
+    model.set_a1("B3", "=SUBTOTAL(109,A1:A3)+0=0");
     model.evaluate();
     for cell in ["B1", "B2", "B3"] {
-        assert_eq!(model._get_text(cell), "TRUE", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "TRUE", "{cell}");
     }
 }
 
@@ -135,36 +138,36 @@ fn array_operands_snap_element_by_element() {
     .enumerate()
     {
         let row = row + 1;
-        model._set(&format!("A{row}"), a);
-        model._set(&format!("B{row}"), b);
-        model._set(&format!("C{row}"), c);
+        model.set_a1(&format!("A{row}"), a);
+        model.set_a1(&format!("B{row}"), b);
+        model.set_a1(&format!("C{row}"), c);
     }
-    model._set("E1", "=A1:A4+B1:B4-C1:C4");
-    model._set("F1", "=-C1:C4+A1:A4+B1:B4");
-    model._set("G1", "=0+{0.1,1}+{0.2,1}-{0.3,2}");
-    model._set("G3", "=0.1+{0.2;0.2}-0.3");
-    model._set("H3", "=0+{0.1}+0.2-0.3");
-    model._set("I1", "=1+{3;7;8}*2^-52-1");
-    model._set("J1", "=1-{3;4;7}*2^-52-1");
-    model._set("K1", "=-1+(1+{3;7;8}*2^-52)");
-    model._set("M1", "=INDEX(E1#,1)=0");
-    model._set("M2", "=INDEX(A1:A4+B1:B4-C1:C4,1)=0");
+    model.set_a1("E1", "=A1:A4+B1:B4-C1:C4");
+    model.set_a1("F1", "=-C1:C4+A1:A4+B1:B4");
+    model.set_a1("G1", "=0+{0.1,1}+{0.2,1}-{0.3,2}");
+    model.set_a1("G3", "=0.1+{0.2;0.2}-0.3");
+    model.set_a1("H3", "=0+{0.1}+0.2-0.3");
+    model.set_a1("I1", "=1+{3;7;8}*2^-52-1");
+    model.set_a1("J1", "=1-{3;4;7}*2^-52-1");
+    model.set_a1("K1", "=-1+(1+{3;7;8}*2^-52)");
+    model.set_a1("M1", "=INDEX(E1#,1)=0");
+    model.set_a1("M2", "=INDEX(A1:A4+B1:B4-C1:C4,1)=0");
     model.evaluate();
     let zero = [
         "E1", "E2", "E4", "F1", "F2", "F4", "G1", "H1", "G3", "G4", "H3", "I1", "I2", "J1", "K1",
         "K2",
     ];
     for cell in zero {
-        assert_eq!(model._get_text(cell), "0", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "0", "{cell}");
     }
-    assert_eq!(model._get_text("E3"), "0.2");
-    assert_eq!(model._get_text("I3"), "1.77636E-15");
-    assert_eq!(model._get_text("J2"), "-8.88178E-16");
-    assert_eq!(model._get_text("J3"), "-1.55431E-15");
-    assert_eq!(model._get_text("K3"), "1.77636E-15");
+    assert_eq!(model.get_text_a1("E3"), "0.2");
+    assert_eq!(model.get_text_a1("I3"), "1.77636E-15");
+    assert_eq!(model.get_text_a1("J2"), "-8.88178E-16");
+    assert_eq!(model.get_text_a1("J3"), "-1.55431E-15");
+    assert_eq!(model.get_text_a1("K3"), "1.77636E-15");
     // A reader of the spill sees the snapped value; an operator under a call is not snapped.
-    assert_eq!(model._get_text("M1"), "TRUE");
-    assert_eq!(model._get_text("M2"), "FALSE");
+    assert_eq!(model.get_text_a1("M1"), "TRUE");
+    assert_eq!(model.get_text_a1("M2"), "FALSE");
 }
 
 /// A legacy formula intersects its range operands with its own row and snaps the result
@@ -177,9 +180,9 @@ fn legacy_intersected_ranges_snap_per_row() {
         .enumerate()
     {
         let row = row + 1;
-        model._set(&format!("A{row}"), a);
-        model._set(&format!("B{row}"), b);
-        model._set(&format!("C{row}"), c);
+        model.set_a1(&format!("A{row}"), a);
+        model.set_a1(&format!("B{row}"), b);
+        model.set_a1(&format!("C{row}"), c);
     }
     for row in 1..=2 {
         model
@@ -187,8 +190,8 @@ fn legacy_intersected_ranges_snap_per_row() {
             .unwrap();
     }
     model.evaluate();
-    assert_eq!(model._get_text("E1"), "0");
-    assert_eq!(model._get_text("E2"), "0");
+    assert_eq!(model.get_text_a1("E1"), "0");
+    assert_eq!(model.get_text_a1("E2"), "0");
 }
 
 /// A coerced addend (number, percent, time or date-time text, a text cell, TRUE) snaps exactly as
@@ -197,7 +200,7 @@ fn legacy_intersected_ranges_snap_per_row() {
 #[test]
 fn coerced_addends_snap_like_numbers() {
     let mut model = new_empty_model();
-    model._set("T1", "=\"1.5\"");
+    model.set_a1("T1", "=\"1.5\"");
     let cases = [
         ("A1", "=\"1.5\"-(1.5+7*2^-52)", "0"),
         ("A2", "=\"1.5\"-(1.5+8*2^-52)", "-1.77636E-15"),
@@ -211,10 +214,10 @@ fn coerced_addends_snap_like_numbers() {
         ("A10", "=\"0.1\"+\"0.2\"-\"0.3\"", "0"),
     ];
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cases {
-        assert_eq!(model._get_text(cell), expected, "{formula}");
+        assert_eq!(model.get_text_a1(cell), expected, "{formula}");
     }
 }

@@ -80,7 +80,7 @@ fn creating_a_link_is_a_single_undo_step() {
     // one undo reverts the link, the content and the style together
     model.undo().unwrap();
     assert_eq!(model.get_cell_link(0, 2, 2), Ok(None));
-    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 2, 2), Ok(String::new()));
     let style = model.get_cell_style(0, 2, 2).unwrap();
     assert!(!style.font.u);
     assert_eq!(style.font.color, Color::None);
@@ -608,7 +608,7 @@ fn overlapping_cut_paste_moves_the_link() {
         .paste_from_clipboard(0, clipboard.range, &clipboard.data, true)
         .unwrap();
 
-    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok(String::new()));
     assert_eq!(model.get_cell_link(0, 1, 1), Ok(None));
     assert_eq!(model.get_formatted_cell_value(0, 2, 1), Ok("a".to_string()));
     assert_eq!(model.get_cell_link(0, 2, 1), Ok(Some(example_link())));

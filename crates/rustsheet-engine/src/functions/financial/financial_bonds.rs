@@ -1,3 +1,14 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::many_single_char_names,
+    clippy::needless_pass_by_value
+)]
+// LINT-DEBT-END
 use chrono::{Datelike, NaiveDate};
 use std::cmp::Ordering;
 
@@ -93,7 +104,7 @@ struct CouponSchedule {
 impl CouponSchedule {
     fn new(settlement: i64, maturity: i64, frequency: u32, basis: u32) -> Result<Self, String> {
         Ok(CouponSchedule {
-            n: coupon_count(settlement, maturity, frequency)? as f64,
+            n: f64::from(coupon_count(settlement, maturity, frequency)?),
             e: coupon_days_e(settlement, maturity, frequency, basis)?,
             a: coupon_days_a(settlement, maturity, frequency, basis)?,
         })
@@ -109,7 +120,7 @@ impl CouponSchedule {
     /// 2.05e-298).
     fn discount_overflows(&self, yld: f64, frequency: u32) -> bool {
         let dsc_over_e = (self.e - self.a) / self.e;
-        power(1.0 + yld / frequency as f64, dsc_over_e + self.n - 1.0).is_err()
+        power(1.0 + yld / f64::from(frequency), dsc_over_e + self.n - 1.0).is_err()
     }
 
     /// The clean price (per `redemption` par) at the yield `yld`: a sum over every coupon, and no
@@ -125,13 +136,13 @@ impl CouponSchedule {
         let CouponSchedule { n, e, a } = *self;
         let dsc_over_e = (e - a) / e;
 
-        let coupon = 100.0 * rate / frequency as f64;
+        let coupon = 100.0 * rate / f64::from(frequency);
         // A single remaining coupon is discounted with simple (linear) interest, and its accrued
         // interest is `coupon · A/E`: all 78 single-coupon PRICE rows of the fresh sweep
         // probes-numeric/t2733-price-r4-fresh are bit-exact with it, 62 with the order below
         // (financial.md "PRICE, DURATION and MDURATION sum order at a huge coupon rate and yield").
         if n == 1.0 {
-            return (redemption + coupon) / (1.0 + dsc_over_e * yld / frequency as f64)
+            return (redemption + coupon) / (1.0 + dsc_over_e * yld / f64::from(frequency))
                 - coupon * (a / e);
         }
 
@@ -139,15 +150,15 @@ impl CouponSchedule {
         // `coupon · A/E`, and each coupon is discounted at `k + DSC/E` counted from k = 0 (not
         // `DSC/E + k - 1` from k = 1): with it all 240 PRICE cells of
         // probes/bond-extreme-coupon-yield are bit-exact in the eval (T-2733).
-        let accrued = rate / frequency as f64 * (a / e) * 100.0;
+        let accrued = rate / f64::from(frequency) * (a / e) * 100.0;
 
         // `(n - 1) + DSC/E`, not `(DSC/E + n) - 1`: financial.md "YIELD stops short", T-2788.
-        let v = 1.0 + yld / frequency as f64;
+        let v = 1.0 + yld / f64::from(frequency);
         let first_term = redemption / growth(v, n - 1.0 + dsc_over_e);
 
         let mut second_term = 0.0;
         for k in 0..(n as u32) {
-            second_term += coupon / growth(v, k as f64 + dsc_over_e);
+            second_term += coupon / growth(v, f64::from(k) + dsc_over_e);
         }
 
         first_term + second_term - accrued
@@ -158,11 +169,11 @@ impl CouponSchedule {
     fn dprice(&self, rate: f64, yld: f64, redemption: f64, frequency: u32) -> f64 {
         let CouponSchedule { n, e, a } = *self;
         let dsc_over_e = (e - a) / e;
-        let f = frequency as f64;
+        let f = f64::from(frequency);
         let v = 1.0 + yld / f;
         let mut slope = 0.0;
         for k in 1..=(n as u32) {
-            let t = k as f64 - 1.0 + dsc_over_e;
+            let t = f64::from(k) - 1.0 + dsc_over_e;
             slope -= t * 100.0 * rate / f / discount_growth(v, t + 1.0) / f;
         }
         let t = n - 1.0 + dsc_over_e;
@@ -310,7 +321,7 @@ impl OddFirstSchedule {
         frequency: u32,
         basis: u32,
     ) -> Result<Self, String> {
-        let m = frequency as f64;
+        let m = f64::from(frequency);
         let num_months = (12 / frequency) as i32;
 
         let settlement_d = from_excel_date(settlement)?;
@@ -332,7 +343,7 @@ impl OddFirstSchedule {
 
         if dfc < e {
             // --- Short odd first coupon period ---
-            let n = coupon_count(settlement, maturity, frequency)? as f64;
+            let n = f64::from(coupon_count(settlement, maturity, frequency)?);
             let dsc = days_between_not_neg(settlement_d, first_coupon_d, basis);
             let a = days_between_not_neg(issue_d, settlement_d, basis);
             let y = dsc / e;
@@ -353,7 +364,7 @@ impl OddFirstSchedule {
             })
         } else {
             // --- Long odd first coupon period (spans several quasi-coupon periods) ---
-            let nc = coupon_count(issue, first_coupon, frequency)? as i64;
+            let nc = i64::from(coupon_count(issue, first_coupon, frequency)?);
 
             let mut late_coupon = first_coupon_d;
             let mut dcnl = 0.0_f64;
@@ -387,7 +398,7 @@ impl OddFirstSchedule {
             };
 
             let nq = coup_number(first_coupon, settlement, num_months, true)?;
-            let n = coupon_count(first_coupon, maturity, frequency)? as f64;
+            let n = f64::from(coupon_count(first_coupon, maturity, frequency)?);
             let slope =
                 yield_solver::SlopeTerms::long(settlement, first_coupon, frequency, basis, e, n)?;
             let y = dsc / e;
@@ -627,8 +638,8 @@ impl Model {
         let dsc_over_e = (e - a) / e;
 
         let redemption = bond.redemption;
-        let coupon = redemption * bond.rate / frequency as f64;
-        let v = 1.0 + bond.yld_or_pr / frequency as f64;
+        let coupon = redemption * bond.rate / f64::from(frequency);
+        let v = 1.0 + bond.yld_or_pr / f64::from(frequency);
 
         // Each cash flow is discounted by Excel's `^` and its weighted term is `(t·cf)/v^t`, not
         // `t·(cf/v^t)`: with libm `powf` 6 of 12 DURATION cells miss by an ulp, and the zero-coupon
@@ -644,7 +655,7 @@ impl Model {
         };
         // Coupon terms `k + DSC/E` from k = 0, as PRICE's ([`CouponSchedule::price`], T-2733).
         for k in 0..(n as u32) {
-            add_cash_flow(k as f64 + dsc_over_e, coupon);
+            add_cash_flow(f64::from(k) + dsc_over_e, coupon);
         }
         add_cash_flow(dsc_over_e + n - 1.0, redemption);
 
@@ -653,7 +664,7 @@ impl Model {
         }
         // A coupon so large that the sums overflow is #NUM! (`DURATION(..,1E+306,0.05,2,0)`;
         // probes/bond-huge-yield-overflow B22, B23).
-        let duration = num / den / frequency as f64;
+        let duration = num / den / f64::from(frequency);
         if !duration.is_finite() {
             return Err(num_error(cell));
         }
@@ -681,7 +692,7 @@ impl Model {
         };
         let yld = self.cast_number_no_bools_ref(yld, cell)?;
         let frequency = self.cast_number_no_bools_ref(frequency, cell)?.floor() as u32;
-        Ok(duration / (1.0 + yld / frequency as f64))
+        Ok(duration / (1.0 + yld / f64::from(frequency)))
     }
 
     // PRICE(settlement, maturity, rate, yld, redemption, frequency, [basis])

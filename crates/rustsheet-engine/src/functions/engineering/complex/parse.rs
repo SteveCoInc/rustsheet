@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 use std::fmt;
 
 use crate::number_format::{complex_part_to_text, to_precision};

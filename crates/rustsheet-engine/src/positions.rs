@@ -1,6 +1,9 @@
 //! Where the cells and the dynamic spills of the workbook are, for the evaluation driver
 //! (`evaluation.rs`): every position in natural order, the dynamic anchors, and snapshots of
 //! their spills that an abandoned pass is rolled back to.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use std::collections::HashSet;
 

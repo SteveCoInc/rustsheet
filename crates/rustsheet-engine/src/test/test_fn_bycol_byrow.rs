@@ -8,53 +8,53 @@ use crate::test::util::new_empty_model;
 fn bycol_sum_each_column() {
     let mut model = new_empty_model();
     // 2×3 grid
-    model._set("A1", "1");
-    model._set("B1", "2");
-    model._set("C1", "3");
-    model._set("A2", "4");
-    model._set("B2", "5");
-    model._set("C2", "6");
+    model.set_a1("A1", "1");
+    model.set_a1("B1", "2");
+    model.set_a1("C1", "3");
+    model.set_a1("A2", "4");
+    model.set_a1("B2", "5");
+    model.set_a1("C2", "6");
     // SUM of each column: 5, 7, 9
-    model._set("A4", "=BYCOL(A1:C2, LAMBDA(col, SUM(col)))");
+    model.set_a1("A4", "=BYCOL(A1:C2, LAMBDA(col, SUM(col)))");
     model.evaluate();
-    assert_eq!(model._get_text("A4"), "5");
-    assert_eq!(model._get_text("B4"), "7");
-    assert_eq!(model._get_text("C4"), "9");
-    assert_eq!(model._get_text("D4"), "");
+    assert_eq!(model.get_text_a1("A4"), "5");
+    assert_eq!(model.get_text_a1("B4"), "7");
+    assert_eq!(model.get_text_a1("C4"), "9");
+    assert_eq!(model.get_text_a1("D4"), "");
 }
 
 #[test]
 fn bycol_max_each_column() {
     let mut model = new_empty_model();
-    model._set("A1", "3");
-    model._set("B1", "1");
-    model._set("A2", "7");
-    model._set("B2", "4");
-    model._set("A4", "=BYCOL(A1:B2, LAMBDA(col, MAX(col)))");
+    model.set_a1("A1", "3");
+    model.set_a1("B1", "1");
+    model.set_a1("A2", "7");
+    model.set_a1("B2", "4");
+    model.set_a1("A4", "=BYCOL(A1:B2, LAMBDA(col, MAX(col)))");
     model.evaluate();
-    assert_eq!(model._get_text("A4"), "7");
-    assert_eq!(model._get_text("B4"), "4");
-    assert_eq!(model._get_text("C4"), "");
+    assert_eq!(model.get_text_a1("A4"), "7");
+    assert_eq!(model.get_text_a1("B4"), "4");
+    assert_eq!(model.get_text_a1("C4"), "");
 }
 
 #[test]
 fn bycol_single_column() {
     let mut model = new_empty_model();
-    model._set("A1", "10");
-    model._set("A2", "20");
-    model._set("A3", "30");
-    model._set("B1", "=BYCOL(A1:A3, LAMBDA(col, SUM(col)))");
+    model.set_a1("A1", "10");
+    model.set_a1("A2", "20");
+    model.set_a1("A3", "30");
+    model.set_a1("B1", "=BYCOL(A1:A3, LAMBDA(col, SUM(col)))");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "60");
-    assert_eq!(model._get_text("C1"), "");
+    assert_eq!(model.get_text_a1("B1"), "60");
+    assert_eq!(model.get_text_a1("C1"), "");
 }
 
 #[test]
 fn bycol_wrong_arg_count() {
     let mut model = new_empty_model();
-    model._set("A1", "=BYCOL(A2:A3)");
+    model.set_a1("A1", "=BYCOL(A2:A3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
 }
 
 // ── BYROW ─────────────────────────────────────────────────────────────────────
@@ -63,45 +63,45 @@ fn bycol_wrong_arg_count() {
 fn byrow_sum_each_row() {
     let mut model = new_empty_model();
     // 3×2 grid
-    model._set("A1", "1");
-    model._set("B1", "2");
-    model._set("A2", "3");
-    model._set("B2", "4");
-    model._set("A3", "5");
-    model._set("B3", "6");
+    model.set_a1("A1", "1");
+    model.set_a1("B1", "2");
+    model.set_a1("A2", "3");
+    model.set_a1("B2", "4");
+    model.set_a1("A3", "5");
+    model.set_a1("B3", "6");
     // SUM of each row: 3, 7, 11
-    model._set("D1", "=BYROW(A1:B3, LAMBDA(row, SUM(row)))");
+    model.set_a1("D1", "=BYROW(A1:B3, LAMBDA(row, SUM(row)))");
     model.evaluate();
-    assert_eq!(model._get_text("D1"), "3");
-    assert_eq!(model._get_text("D2"), "7");
-    assert_eq!(model._get_text("D3"), "11");
-    assert_eq!(model._get_text("D4"), "");
+    assert_eq!(model.get_text_a1("D1"), "3");
+    assert_eq!(model.get_text_a1("D2"), "7");
+    assert_eq!(model.get_text_a1("D3"), "11");
+    assert_eq!(model.get_text_a1("D4"), "");
 }
 
 #[test]
 fn byrow_min_each_row() {
     let mut model = new_empty_model();
-    model._set("A1", "5");
-    model._set("B1", "2");
-    model._set("A2", "8");
-    model._set("B2", "3");
-    model._set("D1", "=BYROW(A1:B2, LAMBDA(row, MIN(row)))");
+    model.set_a1("A1", "5");
+    model.set_a1("B1", "2");
+    model.set_a1("A2", "8");
+    model.set_a1("B2", "3");
+    model.set_a1("D1", "=BYROW(A1:B2, LAMBDA(row, MIN(row)))");
     model.evaluate();
-    assert_eq!(model._get_text("D1"), "2");
-    assert_eq!(model._get_text("D2"), "3");
-    assert_eq!(model._get_text("D3"), "");
+    assert_eq!(model.get_text_a1("D1"), "2");
+    assert_eq!(model.get_text_a1("D2"), "3");
+    assert_eq!(model.get_text_a1("D3"), "");
 }
 
 #[test]
 fn byrow_single_row() {
     let mut model = new_empty_model();
-    model._set("A1", "10");
-    model._set("B1", "20");
-    model._set("C1", "30");
-    model._set("A3", "=BYROW(A1:C1, LAMBDA(row, SUM(row)))");
+    model.set_a1("A1", "10");
+    model.set_a1("B1", "20");
+    model.set_a1("C1", "30");
+    model.set_a1("A3", "=BYROW(A1:C1, LAMBDA(row, SUM(row)))");
     model.evaluate();
-    assert_eq!(model._get_text("A3"), "60");
-    assert_eq!(model._get_text("A4"), "");
+    assert_eq!(model.get_text_a1("A3"), "60");
+    assert_eq!(model.get_text_a1("A4"), "");
 }
 
 // Regression: a single-character LAMBDA parameter named `c` (or `r`) must survive
@@ -111,16 +111,16 @@ fn byrow_single_row() {
 #[test]
 fn byrow_single_char_param_displays_a1() {
     let mut model = new_empty_model();
-    model._set("A1", "10");
-    model._set("B1", "20");
-    model._set("C1", "30");
+    model.set_a1("A1", "10");
+    model.set_a1("B1", "20");
+    model.set_a1("C1", "30");
     // Placed in B22 so the stored R1C1 form is BYROW(R[-21]C[-1]:R[-21]C[1],...).
-    model._set("B22", "=BYROW(A1:C1, LAMBDA(c, MAX(c)))");
+    model.set_a1("B22", "=BYROW(A1:C1, LAMBDA(c, MAX(c)))");
     model.evaluate();
-    assert_eq!(model._get_text("B22"), "30");
+    assert_eq!(model.get_text_a1("B22"), "30");
     // The displayed formula must remain in A1 notation, not the raw R1C1 string.
     assert_eq!(
-        model._get_formula("B22"),
+        model.get_formula_a1("B22"),
         "=BYROW(A1:C1, LAMBDA(c, MAX(c)))"
     );
 }
@@ -128,9 +128,9 @@ fn byrow_single_char_param_displays_a1() {
 #[test]
 fn byrow_wrong_arg_count() {
     let mut model = new_empty_model();
-    model._set("A1", "=BYROW(A2:A3)");
+    model.set_a1("A1", "=BYROW(A2:A3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
 }
 
 // ── MAKEARRAY ─────────────────────────────────────────────────────────────────
@@ -138,68 +138,68 @@ fn byrow_wrong_arg_count() {
 #[test]
 fn makearray_multiplication_table() {
     let mut model = new_empty_model();
-    model._set("A1", "=MAKEARRAY(3, 3, LAMBDA(x, y, x * y))");
+    model.set_a1("A1", "=MAKEARRAY(3, 3, LAMBDA(x, y, x * y))");
     model.evaluate();
     // Row 1: 1*1, 1*2, 1*3
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("B1"), "2");
-    assert_eq!(model._get_text("C1"), "3");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("B1"), "2");
+    assert_eq!(model.get_text_a1("C1"), "3");
     // Row 2: 2*1, 2*2, 2*3
-    assert_eq!(model._get_text("A2"), "2");
-    assert_eq!(model._get_text("B2"), "4");
-    assert_eq!(model._get_text("C2"), "6");
+    assert_eq!(model.get_text_a1("A2"), "2");
+    assert_eq!(model.get_text_a1("B2"), "4");
+    assert_eq!(model.get_text_a1("C2"), "6");
     // Row 3: 3*1, 3*2, 3*3
-    assert_eq!(model._get_text("A3"), "3");
-    assert_eq!(model._get_text("B3"), "6");
-    assert_eq!(model._get_text("C3"), "9");
-    assert_eq!(model._get_text("D1"), "");
+    assert_eq!(model.get_text_a1("A3"), "3");
+    assert_eq!(model.get_text_a1("B3"), "6");
+    assert_eq!(model.get_text_a1("C3"), "9");
+    assert_eq!(model.get_text_a1("D1"), "");
 }
 
 #[test]
 fn makearray_row_indices() {
     let mut model = new_empty_model();
     // 4×1 column of row indices
-    model._set("A1", "=MAKEARRAY(4, 1, LAMBDA(x, y, x))");
+    model.set_a1("A1", "=MAKEARRAY(4, 1, LAMBDA(x, y, x))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("A2"), "2");
-    assert_eq!(model._get_text("A3"), "3");
-    assert_eq!(model._get_text("A4"), "4");
-    assert_eq!(model._get_text("A5"), "");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "2");
+    assert_eq!(model.get_text_a1("A3"), "3");
+    assert_eq!(model.get_text_a1("A4"), "4");
+    assert_eq!(model.get_text_a1("A5"), "");
 }
 
 #[test]
 fn makearray_single_cell() {
     let mut model = new_empty_model();
-    model._set("A1", "=MAKEARRAY(1, 1, LAMBDA(x, y, 42))");
+    model.set_a1("A1", "=MAKEARRAY(1, 1, LAMBDA(x, y, 42))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "42");
-    assert_eq!(model._get_text("A2"), "");
-    assert_eq!(model._get_text("B1"), "");
+    assert_eq!(model.get_text_a1("A1"), "42");
+    assert_eq!(model.get_text_a1("A2"), "");
+    assert_eq!(model.get_text_a1("B1"), "");
 }
 
 #[test]
 fn makearray_wrong_arg_count() {
     let mut model = new_empty_model();
-    model._set("A1", "=MAKEARRAY(3, 3)");
+    model.set_a1("A1", "=MAKEARRAY(3, 3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
 }
 
 #[test]
 fn makearray_invalid_rows() {
     let mut model = new_empty_model();
-    model._set("A1", "=MAKEARRAY(0, 3, LAMBDA(x, y, x))");
+    model.set_a1("A1", "=MAKEARRAY(0, 3, LAMBDA(x, y, x))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
 }
 
 #[test]
 fn makearray_invalid_cols() {
     let mut model = new_empty_model();
-    model._set("A1", "=MAKEARRAY(3, 0, LAMBDA(x, y, y))");
+    model.set_a1("A1", "=MAKEARRAY(3, 0, LAMBDA(x, y, y))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
 }
 
 #[test]
@@ -211,78 +211,78 @@ fn makearray_past_the_grid() {
     // decision 0113); columns or rows of 2^31 or more are #VALUE! (gen-m7/b2078b5d702c691a A2553,
     // gen-m7/8c4570978f18f4c2 A2736).
     let mut model = new_empty_model();
-    model._set("A1", "=COLUMNS(MAKEARRAY(1,20000,LAMBDA(r,c,c)))");
-    model._set("A2", "=ROWS(MAKEARRAY(1048577,1,LAMBDA(r,c,1)))");
-    model._set("A3", "=ERROR.TYPE(MAKEARRAY(1,16385,LAMBDA(r,c,c)))");
-    model._set("A4", "=COLUMNS(ABS(MAKEARRAY(1,16385,LAMBDA(r,c,c))))");
-    model._set("A5", "=MAKEARRAY(3,1E15,LAMBDA(r,c,1))");
-    model._set("A6", "=MAKEARRAY(2,1048576,LAMBDA(r,c,1))");
-    model._set("A7", "=MAKEARRAY(1E15,4,LAMBDA(r,c,1))");
-    model._set("A8", "=MAKEARRAY(2^31,1,LAMBDA(r,c,1))");
-    model._set("A9", "=MAKEARRAY(2^31-1,1,LAMBDA(r,c,1))");
-    model._set("A10", "=COLUMNS(MAKEARRAY(1,1048577,LAMBDA(r,c,1)))");
-    model._set("A11", "=MAKEARRAY(1,2^31-1,LAMBDA(r,c,1))");
-    model._set("A12", "=MAKEARRAY(1,2^31,LAMBDA(r,c,1))");
+    model.set_a1("A1", "=COLUMNS(MAKEARRAY(1,20000,LAMBDA(r,c,c)))");
+    model.set_a1("A2", "=ROWS(MAKEARRAY(1048577,1,LAMBDA(r,c,1)))");
+    model.set_a1("A3", "=ERROR.TYPE(MAKEARRAY(1,16385,LAMBDA(r,c,c)))");
+    model.set_a1("A4", "=COLUMNS(ABS(MAKEARRAY(1,16385,LAMBDA(r,c,c))))");
+    model.set_a1("A5", "=MAKEARRAY(3,1E15,LAMBDA(r,c,1))");
+    model.set_a1("A6", "=MAKEARRAY(2,1048576,LAMBDA(r,c,1))");
+    model.set_a1("A7", "=MAKEARRAY(1E15,4,LAMBDA(r,c,1))");
+    model.set_a1("A8", "=MAKEARRAY(2^31,1,LAMBDA(r,c,1))");
+    model.set_a1("A9", "=MAKEARRAY(2^31-1,1,LAMBDA(r,c,1))");
+    model.set_a1("A10", "=COLUMNS(MAKEARRAY(1,1048577,LAMBDA(r,c,1)))");
+    model.set_a1("A11", "=MAKEARRAY(1,2^31-1,LAMBDA(r,c,1))");
+    model.set_a1("A12", "=MAKEARRAY(1,2^31,LAMBDA(r,c,1))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "20000");
-    assert_eq!(model._get_text("A2"), "#ERROR!");
-    assert_eq!(model._get_text("A3"), "#SPILL!");
-    assert_eq!(model._get_text("A4"), "16385");
-    assert_eq!(model._get_text("A5"), "#VALUE!");
-    assert_eq!(model._get_text("A6"), "#ERROR!");
-    assert_eq!(model._get_text("A7"), "#VALUE!");
-    assert_eq!(model._get_text("A8"), "#VALUE!");
-    assert_eq!(model._get_text("A9"), "#ERROR!");
-    assert_eq!(model._get_text("A10"), "#ERROR!");
-    assert_eq!(model._get_text("A11"), "#ERROR!");
-    assert_eq!(model._get_text("A12"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "20000");
+    assert_eq!(model.get_text_a1("A2"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A3"), "#SPILL!");
+    assert_eq!(model.get_text_a1("A4"), "16385");
+    assert_eq!(model.get_text_a1("A5"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A6"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A7"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A8"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A9"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A10"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A11"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A12"), "#VALUE!");
 }
 
 #[test]
 fn makearray_fractional_size_is_value_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=MAKEARRAY(2.5, 2, LAMBDA(x, y, x))");
-    model._set("A3", "=MAKEARRAY(2, 1.005, LAMBDA(x, y, x))");
-    model._set("A5", "=MAKEARRAY(2, 1, LAMBDA(x, y, x))");
+    model.set_a1("A1", "=MAKEARRAY(2.5, 2, LAMBDA(x, y, x))");
+    model.set_a1("A3", "=MAKEARRAY(2, 1.005, LAMBDA(x, y, x))");
+    model.set_a1("A5", "=MAKEARRAY(2, 1, LAMBDA(x, y, x))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_text("A3"), "#VALUE!");
-    assert_eq!(model._get_text("A5"), "1");
-    assert_eq!(model._get_text("A6"), "2");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A5"), "1");
+    assert_eq!(model.get_text_a1("A6"), "2");
 }
 
 #[test]
 fn bycol_lambda_counta() {
     let mut model = new_empty_model();
-    model._set("A1", "x");
-    model._set("A2", "y");
-    model._set("A3", "z");
-    model._set("B1", "x");
-    model._set("C1", "y");
-    model._set("C2", "z");
-    model._set("G1", "=BYCOL(A1:C3, LAMBDA(col, COUNTA(col)))");
+    model.set_a1("A1", "x");
+    model.set_a1("A2", "y");
+    model.set_a1("A3", "z");
+    model.set_a1("B1", "x");
+    model.set_a1("C1", "y");
+    model.set_a1("C2", "z");
+    model.set_a1("G1", "=BYCOL(A1:C3, LAMBDA(col, COUNTA(col)))");
     model.evaluate();
-    assert_eq!(model._get_text("G1"), "3");
-    assert_eq!(model._get_text("H1"), "1");
-    assert_eq!(model._get_text("I1"), "2");
+    assert_eq!(model.get_text_a1("G1"), "3");
+    assert_eq!(model.get_text_a1("H1"), "1");
+    assert_eq!(model.get_text_a1("I1"), "2");
 }
 
 #[test]
 fn bycol_range_slices_are_references() {
     // probes/lambda-helper-range-slices (excel-graph): blank cells of a column slice are skipped.
     let mut model = new_empty_model();
-    model._set("A1", "x");
-    model._set("A3", "z");
-    model._set("B3", "y");
-    model._set("E1", "=BYCOL(A1:B3,LAMBDA(c,COUNTA(c)))");
-    model._set("E3", "=BYROW(A1:B3,LAMBDA(r,ROW(r)))");
-    model._set("G1", "=BYCOL(IFERROR(A1:B3,1),LAMBDA(c,COUNTA(c)))");
+    model.set_a1("A1", "x");
+    model.set_a1("A3", "z");
+    model.set_a1("B3", "y");
+    model.set_a1("E1", "=BYCOL(A1:B3,LAMBDA(c,COUNTA(c)))");
+    model.set_a1("E3", "=BYROW(A1:B3,LAMBDA(r,ROW(r)))");
+    model.set_a1("G1", "=BYCOL(IFERROR(A1:B3,1),LAMBDA(c,COUNTA(c)))");
     model.evaluate();
-    assert_eq!(model._get_text("E1"), "2");
-    assert_eq!(model._get_text("F1"), "1");
-    assert_eq!(model._get_text("E5"), "3");
-    assert_eq!(model._get_text("G1"), "3");
-    assert_eq!(model._get_text("H1"), "3");
+    assert_eq!(model.get_text_a1("E1"), "2");
+    assert_eq!(model.get_text_a1("F1"), "1");
+    assert_eq!(model.get_text_a1("E5"), "3");
+    assert_eq!(model.get_text_a1("G1"), "3");
+    assert_eq!(model.get_text_a1("H1"), "3");
 }
 
 #[test]
@@ -290,25 +290,25 @@ fn byrow_bycol_whole_column_keeps_full_size() {
     // A whole column keeps its 1,048,576 rows, not the used area (arrays.md "Array results
     // above 1,048,576 cells").
     let mut model = new_empty_model();
-    model._set("A1", "x");
-    model._set("D1", "=BYCOL(A:A,LAMBDA(c,ROWS(c)))");
-    model._set("D2", "=ROWS(BYROW(C:C,LAMBDA(r,1)))");
+    model.set_a1("A1", "x");
+    model.set_a1("D1", "=BYCOL(A:A,LAMBDA(c,ROWS(c)))");
+    model.set_a1("D2", "=ROWS(BYROW(C:C,LAMBDA(r,1)))");
     // Two whole columns are above the 2^20-cell array bound: the documented DEVIATION.
-    model._set("D3", "=BYCOL(A:B,LAMBDA(c,ROWS(c)))");
+    model.set_a1("D3", "=BYCOL(A:B,LAMBDA(c,ROWS(c)))");
     model.evaluate();
-    assert_eq!(model._get_text("D1"), "1048576");
-    assert_eq!(model._get_text("D2"), "1048576");
-    assert_eq!(model._get_text("D3"), "#ERROR!");
+    assert_eq!(model.get_text_a1("D1"), "1048576");
+    assert_eq!(model.get_text_a1("D2"), "1048576");
+    assert_eq!(model.get_text_a1("D3"), "#ERROR!");
 }
 
 #[test]
 fn byrow_over_a_range_above_the_array_bound_is_an_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=BYROW(B1:XFD1048575,LAMBDA(r,COUNTA(r)))");
-    model._set("A2", "=BYCOL(B1:XFD1048575,LAMBDA(c,COUNTA(c)))");
+    model.set_a1("A1", "=BYROW(B1:XFD1048575,LAMBDA(r,COUNTA(r)))");
+    model.set_a1("A2", "=BYCOL(B1:XFD1048575,LAMBDA(c,COUNTA(c)))");
     model.evaluate();
-    assert!(model._get_text("A1").starts_with('#'));
-    assert!(model._get_text("A2").starts_with('#'));
+    assert!(model.get_text_a1("A1").starts_with('#'));
+    assert!(model.get_text_a1("A2").starts_with('#'));
 }
 
 #[test]
@@ -316,14 +316,14 @@ fn byrow_bycol_need_a_lambda() {
     // Anything but a LAMBDA is `#VALUE!`, an error and an unknown name too
     // (probes/eta-reduced-names E5:E21).
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("D1", "=BYCOL(A1:B3,NA())");
-    model._set("D2", "=BYCOL(A1:B3,1)");
-    model._set("D3", "=BYCOL(A1:B3,COUNTA)");
-    model._set("D4", "=BYROW(A1:B3,_xleta.NONSUCH)");
+    model.set_a1("A1", "1");
+    model.set_a1("D1", "=BYCOL(A1:B3,NA())");
+    model.set_a1("D2", "=BYCOL(A1:B3,1)");
+    model.set_a1("D3", "=BYCOL(A1:B3,COUNTA)");
+    model.set_a1("D4", "=BYROW(A1:B3,_xleta.NONSUCH)");
     model.evaluate();
     for cell in ["D1", "D2", "D3", "D4"] {
-        assert_eq!(model._get_text(cell), "#VALUE!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#VALUE!", "{cell}");
     }
 }
 
@@ -332,37 +332,37 @@ fn functions_passed_by_name() {
     // `_xleta.NAME` takes as many arguments as the helper passes (probes/eta-reduced-names,
     // probes/m7-argument-modes F28:H51).
     let mut model = new_empty_model();
-    model._set("A1", "x");
-    model._set("A3", "z");
-    model._set("B3", "y");
-    model._set("D1", "=BYCOL(A1:B3,_xleta.COUNTA)");
-    model._set("D3", "=BYROW(A1:B3,_xleta.countblank)");
-    model._set("D7", "=MAKEARRAY(2,2,_xleta.POWER)");
-    model._set("D9", "=LET(f,_xleta.SUM,f(1,2))");
-    model._set("D10", "=MAP(A1:A3,_xleta.ISREF)");
-    model._set("D13", "=BYROW({1,2;3,4},_xleta._xlfn.STDEV.S)");
-    model._set("D15", "=SCAN(0,A1:A3,_xleta.COUNTA)");
+    model.set_a1("A1", "x");
+    model.set_a1("A3", "z");
+    model.set_a1("B3", "y");
+    model.set_a1("D1", "=BYCOL(A1:B3,_xleta.COUNTA)");
+    model.set_a1("D3", "=BYROW(A1:B3,_xleta.countblank)");
+    model.set_a1("D7", "=MAKEARRAY(2,2,_xleta.POWER)");
+    model.set_a1("D9", "=LET(f,_xleta.SUM,f(1,2))");
+    model.set_a1("D10", "=MAP(A1:A3,_xleta.ISREF)");
+    model.set_a1("D13", "=BYROW({1,2;3,4},_xleta._xlfn.STDEV.S)");
+    model.set_a1("D15", "=SCAN(0,A1:A3,_xleta.COUNTA)");
     model.evaluate();
-    assert_eq!(model._get_text("D1"), "2");
-    assert_eq!(model._get_text("E1"), "1");
-    assert_eq!(model._get_text("D3"), "1");
-    assert_eq!(model._get_text("D4"), "2");
-    assert_eq!(model._get_text("D5"), "0");
-    assert_eq!(model._get_text("E7"), "1");
-    assert_eq!(model._get_text("E8"), "4");
-    assert_eq!(model._get_text("D9"), "3");
-    assert_eq!(model._get_text("D10"), "TRUE");
-    assert_eq!(model._get_text("D12"), "TRUE");
-    assert_eq!(model._get_text("D13"), "0.707106781");
-    assert_eq!(model._get_text("D15"), "2");
-    assert_eq!(model._get_text("D16"), "1");
+    assert_eq!(model.get_text_a1("D1"), "2");
+    assert_eq!(model.get_text_a1("E1"), "1");
+    assert_eq!(model.get_text_a1("D3"), "1");
+    assert_eq!(model.get_text_a1("D4"), "2");
+    assert_eq!(model.get_text_a1("D5"), "0");
+    assert_eq!(model.get_text_a1("E7"), "1");
+    assert_eq!(model.get_text_a1("E8"), "4");
+    assert_eq!(model.get_text_a1("D9"), "3");
+    assert_eq!(model.get_text_a1("D10"), "TRUE");
+    assert_eq!(model.get_text_a1("D12"), "TRUE");
+    assert_eq!(model.get_text_a1("D13"), "0.707106781");
+    assert_eq!(model.get_text_a1("D15"), "2");
+    assert_eq!(model.get_text_a1("D16"), "1");
 }
 
 #[test]
 fn functions_passed_by_name_with_special_forms_do_not_panic() {
     // Functions the parser or evaluator treats specially still evaluate to some value.
     let mut model = new_empty_model();
-    model._set("A1", "1");
+    model.set_a1("A1", "1");
     let formulas = [
         "=BYROW(A1:B3,_xleta.LET)",
         "=MAKEARRAY(2,2,_xleta.LET)",
@@ -378,15 +378,15 @@ fn functions_passed_by_name_with_special_forms_do_not_panic() {
         "=_xleta.",
     ];
     for (row, formula) in formulas.iter().enumerate() {
-        model._set(&format!("D{}", 4 * row + 1), formula);
+        model.set_a1(&format!("D{}", 4 * row + 1), formula);
     }
     model.evaluate();
     for row in 0..formulas.len() {
-        let _ = model._get_text(&format!("D{}", 4 * row + 1));
+        let _ = model.get_text_a1(&format!("D{}", 4 * row + 1));
     }
     // An uncalled function is one value, like an uncalled LAMBDA (probes/eta-reduced-names E73).
-    assert_eq!(model._get_text("D41"), "#CALC!");
-    assert_eq!(model._get_text("D45"), "#NAME?");
+    assert_eq!(model.get_text_a1("D41"), "#CALC!");
+    assert_eq!(model.get_text_a1("D45"), "#NAME?");
 }
 
 // A LAMBDA that returns several values makes the whole BYROW or BYCOL one `#CALC!` cell with
@@ -395,17 +395,17 @@ fn functions_passed_by_name_with_special_forms_do_not_panic() {
 #[test]
 fn byrow_bycol_array_result_is_one_calc_error() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("B1", "2");
-    model._set("A2", "3");
-    model._set("B2", "4");
-    model._set("D1", "=BYROW(A1:B2, LAMBDA(r, r))");
-    model._set("F1", "=BYCOL(A1:B2, LAMBDA(c, c))");
-    model._set("H1", "=BYROW({1,2;3,4}, LAMBDA(r, r))");
+    model.set_a1("A1", "1");
+    model.set_a1("B1", "2");
+    model.set_a1("A2", "3");
+    model.set_a1("B2", "4");
+    model.set_a1("D1", "=BYROW(A1:B2, LAMBDA(r, r))");
+    model.set_a1("F1", "=BYCOL(A1:B2, LAMBDA(c, c))");
+    model.set_a1("H1", "=BYROW({1,2;3,4}, LAMBDA(r, r))");
     model.evaluate();
     for (at, below) in [("D1", "D2"), ("F1", "G1"), ("H1", "H2")] {
-        assert_eq!(model._get_text(at), "#CALC!");
-        assert_eq!(model._get_text(below), "");
+        assert_eq!(model.get_text_a1(at), "#CALC!");
+        assert_eq!(model.get_text_a1(below), "");
     }
 }
 
@@ -413,12 +413,12 @@ fn byrow_bycol_array_result_is_one_calc_error() {
 #[test]
 fn byrow_one_by_one_array_result_is_its_value() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("C1", "=BYROW(A1:A2, LAMBDA(r, {7}))");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("C1", "=BYROW(A1:A2, LAMBDA(r, {7}))");
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "7");
-    assert_eq!(model._get_text("C2"), "7");
+    assert_eq!(model.get_text_a1("C1"), "7");
+    assert_eq!(model.get_text_a1("C2"), "7");
 }
 
 // ── a single value is a 1x1 array (T-1350) ────────────────────────────────────
@@ -428,51 +428,51 @@ fn byrow_one_by_one_array_result_is_its_value() {
 #[test]
 fn byrow_bycol_of_a_single_value_call_the_lambda_once() {
     let mut model = new_empty_model();
-    model._set("A1", "=BYROW(7,LAMBDA(z,z))");
-    model._set("A2", "=BYCOL(7,LAMBDA(z,z))");
-    model._set("A3", "=BYROW(\"\",LAMBDA(r,PRODUCT(r)))");
-    model._set("A4", "=BYROW({7},LAMBDA(z,z))");
-    model._set("A5", "=BYCOL({7},LAMBDA(z,z))");
-    model._set("A6", "=BYROW(\"x\",LAMBDA(z,z&\"!\"))");
-    model._set("A7", "=\"ü\"&BYROW(COUNT(1,2),LAMBDA(z,z))");
+    model.set_a1("A1", "=BYROW(7,LAMBDA(z,z))");
+    model.set_a1("A2", "=BYCOL(7,LAMBDA(z,z))");
+    model.set_a1("A3", "=BYROW(\"\",LAMBDA(r,PRODUCT(r)))");
+    model.set_a1("A4", "=BYROW({7},LAMBDA(z,z))");
+    model.set_a1("A5", "=BYCOL({7},LAMBDA(z,z))");
+    model.set_a1("A6", "=BYROW(\"x\",LAMBDA(z,z&\"!\"))");
+    model.set_a1("A7", "=\"ü\"&BYROW(COUNT(1,2),LAMBDA(z,z))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "7");
-    assert_eq!(model._get_text("A2"), "7");
-    assert_eq!(model._get_text("A3"), "0");
-    assert_eq!(model._get_text("A4"), "7");
-    assert_eq!(model._get_text("A5"), "7");
-    assert_eq!(model._get_text("A6"), "x!");
-    assert_eq!(model._get_text("A7"), "ü2");
+    assert_eq!(model.get_text_a1("A1"), "7");
+    assert_eq!(model.get_text_a1("A2"), "7");
+    assert_eq!(model.get_text_a1("A3"), "0");
+    assert_eq!(model.get_text_a1("A4"), "7");
+    assert_eq!(model.get_text_a1("A5"), "7");
+    assert_eq!(model.get_text_a1("A6"), "x!");
+    assert_eq!(model.get_text_a1("A7"), "ü2");
 }
 
 #[test]
 fn makearray_array_step_is_one_calc_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=MAKEARRAY(2,2,LAMBDA(r,c,{1,2}))");
-    model._set("A5", "=MAKEARRAY(1,1,LAMBDA(r,c,{1,2}))");
-    model._set("A7", "=MAKEARRAY(1,2,LAMBDA(r,c,r+c))");
-    model._set("A9", "=ROWS(MAKEARRAY(2,2,LAMBDA(r,c,VSTACK(r,c))))");
+    model.set_a1("A1", "=MAKEARRAY(2,2,LAMBDA(r,c,{1,2}))");
+    model.set_a1("A5", "=MAKEARRAY(1,1,LAMBDA(r,c,{1,2}))");
+    model.set_a1("A7", "=MAKEARRAY(1,2,LAMBDA(r,c,r+c))");
+    model.set_a1("A9", "=ROWS(MAKEARRAY(2,2,LAMBDA(r,c,VSTACK(r,c))))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#CALC!");
-    assert_eq!(model._get_text("A2"), "");
-    assert_eq!(model._get_text("B1"), "");
-    assert_eq!(model._get_text("A5"), "#CALC!");
-    assert_eq!(model._get_text("A7"), "2");
-    assert_eq!(model._get_text("B7"), "3");
-    assert_eq!(model._get_text("A9"), "#CALC!");
+    assert_eq!(model.get_text_a1("A1"), "#CALC!");
+    assert_eq!(model.get_text_a1("A2"), "");
+    assert_eq!(model.get_text_a1("B1"), "");
+    assert_eq!(model.get_text_a1("A5"), "#CALC!");
+    assert_eq!(model.get_text_a1("A7"), "2");
+    assert_eq!(model.get_text_a1("B7"), "3");
+    assert_eq!(model.get_text_a1("A9"), "#CALC!");
 }
 
 #[test]
 fn lambda_step_is_calc_per_element_only_where_shown() {
     let mut model = new_empty_model();
-    model._set("A1", "=BYCOL({1,2,3},LAMBDA(x,LAMBDA(v,v)))");
-    model._set("A3", "=BYROW({1;2},LAMBDA(x,LAMBDA(v,v)))");
-    model._set("A6", "=MAP({1,2;3,4},LAMBDA(x,LAMBDA(v,v)))");
+    model.set_a1("A1", "=BYCOL({1,2,3},LAMBDA(x,LAMBDA(v,v)))");
+    model.set_a1("A3", "=BYROW({1;2},LAMBDA(x,LAMBDA(v,v)))");
+    model.set_a1("A6", "=MAP({1,2;3,4},LAMBDA(x,LAMBDA(v,v)))");
     // Consumed, the element is `#VALUE!` (gen-m7 23b5367c18059af2 A2578).
-    model._set("A9", "=\"a\"&MAP({1},LAMBDA(x,LAMBDA(v,v)))");
+    model.set_a1("A9", "=\"a\"&MAP({1},LAMBDA(x,LAMBDA(v,v)))");
     model.evaluate();
     for cell in ["A1", "B1", "C1", "A3", "A4", "A6", "B6", "A7", "B7"] {
-        assert_eq!(model._get_text(cell), "#CALC!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#CALC!", "{cell}");
     }
-    assert_eq!(model._get_text("A9"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A9"), "#VALUE!");
 }

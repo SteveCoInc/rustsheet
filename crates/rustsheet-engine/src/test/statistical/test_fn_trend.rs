@@ -14,25 +14,25 @@ fn trend_model() -> crate::model::Model {
         .enumerate()
     {
         let r = row + 1;
-        model._set(&format!("A{r}"), &y.to_string());
-        model._set(&format!("B{r}"), &x.to_string());
-        model._set(&format!("C{r}"), &y.to_string());
-        model._set(&format!("D{r}"), &y.to_string());
-        model._set(&format!("F{r}"), &y.to_string());
-        model._set(&format!("G{r}"), "3");
+        model.set_a1(&format!("A{r}"), &y.to_string());
+        model.set_a1(&format!("B{r}"), &x.to_string());
+        model.set_a1(&format!("C{r}"), &y.to_string());
+        model.set_a1(&format!("D{r}"), &y.to_string());
+        model.set_a1(&format!("F{r}"), &y.to_string());
+        model.set_a1(&format!("G{r}"), "3");
     }
-    model._set("C2", "t");
-    model._set("D2", "");
-    model._set("F2", "=1/0");
-    model._set("K1", "7");
-    model._set("K2", "8");
+    model.set_a1("C2", "t");
+    model.set_a1("D2", "");
+    model.set_a1("F2", "=1/0");
+    model.set_a1("K1", "7");
+    model.set_a1("K2", "8");
     model
 }
 
 fn eval_in(model: &mut crate::model::Model, formula: &str) -> String {
-    model._set("Z1", formula);
+    model.set_a1("Z1", formula);
     model.evaluate();
-    model._get_text("Z1")
+    model.get_text_a1("Z1")
 }
 
 #[test]
@@ -122,21 +122,21 @@ fn an_array_const_lifts() {
     // That it spills is evidence (gen-m9 80586b85 A61); each element's top-left value is
     // UNVERIFIED, TODO(T-2569).
     let mut model = trend_model();
-    model._set("Z1", "=TREND(A1:A6,B1:B6,K1,{TRUE,FALSE})");
+    model.set_a1("Z1", "=TREND(A1:A6,B1:B6,K1,{TRUE,FALSE})");
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), "7.2");
-    assert_eq!(model._get_text("AA1"), "8.307692308");
+    assert_eq!(model.get_text_a1("Z1"), "7.2");
+    assert_eq!(model.get_text_a1("AA1"), "8.307692308");
 }
 
 #[test]
 fn growth_reads_known_y_in_order() {
     let mut model = new_empty_model();
-    model._set("A1", "1.005");
-    model._set("A2", "0");
-    model._set("B1", "");
-    model._set("B2", "1");
-    model._set("C1", "t");
-    model._set("C2", "-1");
+    model.set_a1("A1", "1.005");
+    model.set_a1("A2", "0");
+    model.set_a1("B1", "");
+    model.set_a1("B2", "1");
+    model.set_a1("C1", "t");
+    model.set_a1("C2", "-1");
     model.evaluate();
     // The first element that is no positive number decides, row-major.
     assert_eq!(eval_in(&mut model, "=GROWTH(A1:A2)"), "#NUM!");
@@ -152,17 +152,17 @@ fn growth_reads_known_y_in_order() {
 #[test]
 fn growth_edges_of_logest_factors() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=GROWTH({1.34083918970474e+154,1,7.45801590286306e-155},{1,2,3},2,TRUE)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=GROWTH({1.70088776356759e+104,9.42397681616358e+138,5.22146968976414e+173},{0.3,0.4,0.5},0.4,FALSE)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#NUM!");
-    assert!(model._get_text("A2").ends_with("E+138"));
+    assert_eq!(model.get_text_a1("A1"), "#NUM!");
+    assert!(model.get_text_a1("A2").ends_with("E+138"));
 }
 
 // GROWTH is 0 once LOGEST's slopes' factor e^(Σ m x) is below DBL_MIN, const TRUE or FALSE, and
@@ -171,22 +171,22 @@ fn growth_edges_of_logest_factors() {
 #[test]
 fn growth_slopes_factor_edges() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=GROWTH({6.71591962806527e+153,1,1.48899935583079e-154},{1,2,3},2,TRUE)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=GROWTH({4.22244206240434e-93,6.82472147873421e-124,1.10307785338272e-154},{0.3,0.4,0.5},1,FALSE)",
     );
-    model._set(
+    model.set_a1(
         "A3",
         "=GROWTH({9.92959039626498e-153,9.96473301010367e-77,1},{1,1.5,2},4,TRUE)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "0");
-    assert_eq!(model._get_text("A2"), "0");
-    assert_eq!(model._get_text("A3"), "#NUM!");
+    assert_eq!(model.get_text_a1("A1"), "0");
+    assert_eq!(model.get_text_a1("A2"), "0");
+    assert_eq!(model.get_text_a1("A3"), "#NUM!");
 }
 
 // GROWTH multiplies each variable's factor e^(m_j x_j) left to right, flushing each partial
@@ -196,15 +196,15 @@ fn growth_slopes_factor_edges() {
 #[test]
 fn growth_per_variable_factors_and_subnormal_result() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=GROWTH({2.71828182845905;1.22540880546404e-156;6.02987024900035e+156;6.02987024900035e+156},{1,1;2,1;1,2;2,3},{2,2},TRUE)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=GROWTH({5.40702666934513e-208,1.52654561001656e-241,4.30983910745731e-275},{0.5,1,1.5},2,TRUE)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#NUM!");
-    assert_eq!(model._get_text("A2"), "0");
+    assert_eq!(model.get_text_a1("A1"), "#NUM!");
+    assert_eq!(model.get_text_a1("A2"), "0");
 }

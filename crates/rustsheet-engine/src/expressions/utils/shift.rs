@@ -37,10 +37,10 @@ pub fn shift_formula_text(formula: &str, d_row: i32, d_col: i32) -> Option<Strin
                 ..
             } => (
                 ParsedReference {
-                    row,
                     column,
-                    absolute_row,
+                    row,
                     absolute_column,
+                    absolute_row,
                 },
                 None,
             ),

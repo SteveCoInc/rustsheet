@@ -117,29 +117,29 @@ fn every_text_function_broadcasts_its_arguments() {
 fn a_lifted_search_over_long_texts_is_refused() {
     let mut model = new_empty_model();
     for (cell, function) in [("B1", "FIND"), ("B2", "SEARCH"), ("B3", "FINDB")] {
-        model._set(
+        model.set_a1(
             cell,
             &format!("={function}(REPT(\"a\",32766)&\"b\",REPT(\"a\",32763)&SEQUENCE(1000))"),
         );
     }
-    model._set(
+    model.set_a1(
         "C1",
         "=SUM(FIND(\"b\",REPT(\"a\",32766)&\"b\"&SEQUENCE(1000)))",
     );
-    model._set(
+    model.set_a1(
         "C2",
         "=SUM(SEARCH(\"B\",REPT(\"a\",32766)&\"b\"&SEQUENCE(1000)))",
     );
-    model._set("C3", "=FIND(REPT(\"a\",32766)&\"b\",REPT(\"a\",32767))");
+    model.set_a1("C3", "=FIND(REPT(\"a\",32766)&\"b\",REPT(\"a\",32767))");
     model.evaluate();
     for cell in ["B1", "B2", "B3"] {
-        assert_eq!(model._get_text(cell), "#ERROR!", "{cell}");
-        assert_eq!(model._get_error_message(cell), "Too many cells to visit");
+        assert_eq!(model.get_text_a1(cell), "#ERROR!", "{cell}");
+        assert_eq!(model.get_error_message_a1(cell), "Too many cells to visit");
     }
-    assert_eq!(model._get_text("C1"), "32767000");
-    assert_eq!(model._get_text("C2"), "32767000");
+    assert_eq!(model.get_text_a1("C1"), "32767000");
+    assert_eq!(model.get_text_a1("C2"), "32767000");
     // One call is not lifted, so not charged: its one scan runs.
-    assert_eq!(model._get_text("C3"), "#VALUE!");
+    assert_eq!(model.get_text_a1("C3"), "#VALUE!");
 }
 
 /// The charge leaves ordinary columns alone: a 100,000-row column of FINDs, one call each, and a
@@ -148,15 +148,15 @@ fn a_lifted_search_over_long_texts_is_refused() {
 fn a_long_column_of_searches_runs() {
     let mut model = new_empty_model();
     for row in 1..=100_000 {
-        model._set(&format!("A{row}"), &format!("xab{row}"));
-        model._set(&format!("B{row}"), &format!("=FIND(\"b\",A{row})"));
+        model.set_a1(&format!("A{row}"), &format!("xab{row}"));
+        model.set_a1(&format!("B{row}"), &format!("=FIND(\"b\",A{row})"));
     }
-    model._set("C1", "=SUM(FIND(\"a\",A1:A100000))");
-    model._set("C2", "=SUM(B1:B100000)");
-    model._set("C3", "=SUM(SEARCH(\"B\",A1:A100000))");
+    model.set_a1("C1", "=SUM(FIND(\"a\",A1:A100000))");
+    model.set_a1("C2", "=SUM(B1:B100000)");
+    model.set_a1("C3", "=SUM(SEARCH(\"B\",A1:A100000))");
     model.evaluate();
-    assert_eq!(model._get_text("B100000"), "3");
-    assert_eq!(model._get_text("C1"), "200000");
-    assert_eq!(model._get_text("C2"), "300000");
-    assert_eq!(model._get_text("C3"), "300000");
+    assert_eq!(model.get_text_a1("B100000"), "3");
+    assert_eq!(model.get_text_a1("C1"), "200000");
+    assert_eq!(model.get_text_a1("C2"), "300000");
+    assert_eq!(model.get_text_a1("C3"), "300000");
 }

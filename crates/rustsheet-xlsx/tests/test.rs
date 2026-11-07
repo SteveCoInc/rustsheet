@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::assigning_clones,
+    clippy::float_cmp,
+    clippy::format_push_string,
+    clippy::needless_pass_by_value
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
@@ -407,7 +415,7 @@ fn test_exporting_merged_cells() {
                 .unwrap()
                 .merged_cells
                 .len();
-            assert!(*got_merged_cells_count == 0);
+            assert_eq!(*got_merged_cells_count, 0);
         }
     }
 

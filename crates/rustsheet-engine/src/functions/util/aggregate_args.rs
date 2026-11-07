@@ -6,6 +6,9 @@
 //! docs/excel-semantics/syntax.md "Aggregate error precedence". A consumer states how it differs
 //! from the others as an [`AggregatePolicy`]. The number layer
 //! ([`Model::for_each_aggregate_number`]) adds the coercion of the consumers that fold numbers.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms)]
+// LINT-DEBT-END
 
 use crate::calc_result::{CalcResult, Range};
 use crate::expressions::parser::{ArrayNode, Node};
@@ -704,9 +707,9 @@ mod tests {
     fn setup(cells: &[(&str, &str)], formula: &str) -> (Model, Vec<Node>) {
         let mut model = new_empty_model();
         for (a1, value) in cells {
-            model._set(a1, value);
+            model.set_a1(a1, value);
         }
-        model._set("Z1", formula);
+        model.set_a1("Z1", formula);
         model.evaluate();
         // Z1's formula is the sheet's last parsed formula.
         let args = match model.parsed_formulas[0]

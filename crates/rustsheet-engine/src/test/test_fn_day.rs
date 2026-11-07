@@ -6,10 +6,10 @@ use crate::test::util::new_empty_model;
 fn test_fn_date_arguments() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=DAY(95051806)");
-    model._set("A2", "=DAY(2958465)");
+    model.set_a1("A1", "=DAY(95051806)");
+    model.set_a1("A2", "=DAY(2958465)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#NUM!");
-    assert_eq!(model._get_text("A2"), *"31");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A2"), *"31");
 }

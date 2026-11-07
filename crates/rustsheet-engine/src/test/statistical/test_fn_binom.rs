@@ -6,52 +6,52 @@ use crate::test::util::{new_empty_model, round_trip_value};
 #[test]
 fn test_fn_binom_dist_smoke() {
     let mut model = new_empty_model();
-    model._set("A1", "=BINOM.DIST(6, 10, 0.5, TRUE)");
-    model._set("A2", "=BINOM.DIST(6, 10, 0.5, FALSE)");
-    model._set("A3", "=BINOM.DIST(6, 10, 0.5)"); // wrong args
-    model._set("A4", "=BINOM.DIST(6, 10, 0.5, TRUE, FALSE)"); // too many args
+    model.set_a1("A1", "=BINOM.DIST(6, 10, 0.5, TRUE)");
+    model.set_a1("A2", "=BINOM.DIST(6, 10, 0.5, FALSE)");
+    model.set_a1("A3", "=BINOM.DIST(6, 10, 0.5)"); // wrong args
+    model.set_a1("A4", "=BINOM.DIST(6, 10, 0.5, TRUE, FALSE)"); // too many args
     model.evaluate();
 
     // P(X <= 6) for X ~ Bin(10, 0.5) = 0.828125
-    assert_eq!(model._get_text("A1"), *"0.828125");
+    assert_eq!(model.get_text_a1("A1"), *"0.828125");
 
     // P(X = 6) for X ~ Bin(10, 0.5) = 0.205078125
-    assert_eq!(model._get_text("A2"), *"0.205078125");
+    assert_eq!(model.get_text_a1("A2"), *"0.205078125");
 
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
 }
 
 #[test]
 fn test_fn_binom_dist_range_smoke() {
     let mut model = new_empty_model();
-    model._set("A1", "=BINOM.DIST.RANGE(60, 0.75, 48)");
-    model._set("A2", "=BINOM.DIST.RANGE(60, 0.75, 45, 50)");
-    model._set("A3", "=BINOM.DIST.RANGE(60, 1.2, 45, 50)"); // p > 1 -> #NUM!
-    model._set("A4", "=BINOM.DIST.RANGE(60, 0.75, 50, 45)"); // lower > upper -> #NUM!");
+    model.set_a1("A1", "=BINOM.DIST.RANGE(60, 0.75, 48)");
+    model.set_a1("A2", "=BINOM.DIST.RANGE(60, 0.75, 45, 50)");
+    model.set_a1("A3", "=BINOM.DIST.RANGE(60, 1.2, 45, 50)"); // p > 1 -> #NUM!
+    model.set_a1("A4", "=BINOM.DIST.RANGE(60, 0.75, 50, 45)"); // lower > upper -> #NUM!");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"0.083974967");
+    assert_eq!(model.get_text_a1("A1"), *"0.083974967");
 
-    assert_eq!(model._get_text("A2"), *"0.523629793");
+    assert_eq!(model.get_text_a1("A2"), *"0.523629793");
 
-    assert_eq!(model._get_text("A3"), *"#NUM!");
-    assert_eq!(model._get_text("A4"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A4"), *"#NUM!");
 }
 
 #[test]
 fn test_fn_binom_inv_smoke() {
     let mut model = new_empty_model();
-    model._set("A1", "=BINOM.INV(6, 0.5, 0.75)");
-    model._set("A2", "=BINOM.INV(6, 0.5, -0.1)"); // alpha < 0 -> #NUM!
-    model._set("A3", "=BINOM.INV(6, 1.2, 0.75)"); // p > 1 -> #NUM!
-    model._set("A4", "=BINOM.INV(6, 0.5)"); // args error
+    model.set_a1("A1", "=BINOM.INV(6, 0.5, 0.75)");
+    model.set_a1("A2", "=BINOM.INV(6, 0.5, -0.1)"); // alpha < 0 -> #NUM!
+    model.set_a1("A3", "=BINOM.INV(6, 1.2, 0.75)"); // p > 1 -> #NUM!
+    model.set_a1("A4", "=BINOM.INV(6, 0.5)"); // args error
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"4");
-    assert_eq!(model._get_text("A2"), *"#NUM!");
-    assert_eq!(model._get_text("A3"), *"#NUM!");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"4");
+    assert_eq!(model.get_text_a1("A2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
 }
 
 #[test]
@@ -72,12 +72,12 @@ fn test_fn_binom_inv_small_trials_and_probabilities() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -94,12 +94,12 @@ fn test_fn_binom_inv_probability_bounds_are_num_errors() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -111,107 +111,107 @@ fn test_fn_negbinom_dist_smoke() {
     let mut model = new_empty_model();
 
     // Valid: PMF (non-cumulative) and CDF (cumulative)
-    model._set("A1", "=NEGBINOM.DIST(10, 5, 0.25, FALSE)");
-    model._set("A2", "=NEGBINOM.DIST(10, 5, 0.25, TRUE)");
+    model.set_a1("A1", "=NEGBINOM.DIST(10, 5, 0.25, FALSE)");
+    model.set_a1("A2", "=NEGBINOM.DIST(10, 5, 0.25, TRUE)");
 
     // Wrong number of arguments -> #ERROR!
-    model._set("A3", "=NEGBINOM.DIST(10, 5, 0.25)");
-    model._set("A4", "=NEGBINOM.DIST(10, 5, 0.25, TRUE, FALSE)");
+    model.set_a1("A3", "=NEGBINOM.DIST(10, 5, 0.25)");
+    model.set_a1("A4", "=NEGBINOM.DIST(10, 5, 0.25, TRUE, FALSE)");
 
     // Domain errors:
     // p < 0 or p > 1 -> #NUM!
-    model._set("A5", "=NEGBINOM.DIST(10, 5, 1.5, TRUE)");
+    model.set_a1("A5", "=NEGBINOM.DIST(10, 5, 1.5, TRUE)");
     // number_f < 0 -> #NUM!
-    model._set("A6", "=NEGBINOM.DIST(-1, 5, 0.25, TRUE)");
+    model.set_a1("A6", "=NEGBINOM.DIST(-1, 5, 0.25, TRUE)");
     // number_s < 1 -> #NUM!
-    model._set("A7", "=NEGBINOM.DIST(10, 0, 0.25, TRUE)");
+    model.set_a1("A7", "=NEGBINOM.DIST(10, 0, 0.25, TRUE)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"0.05504866");
-    assert_eq!(model._get_text("A2"), *"0.313514058");
+    assert_eq!(model.get_text_a1("A1"), *"0.05504866");
+    assert_eq!(model.get_text_a1("A2"), *"0.313514058");
 
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
-    assert_eq!(model._get_text("A5"), *"#NUM!");
-    assert_eq!(model._get_text("A6"), *"#NUM!");
-    assert_eq!(model._get_text("A7"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A5"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A6"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A7"), *"#NUM!");
 }
 
 #[test]
 fn test_arguments() {
     let mut model = new_empty_model();
-    model._set("A1", "=BINOM.DIST()");
-    model._set("A2", "=BINOM.DIST(3)");
-    model._set("A3", "=BINOM.DIST(3, 10)");
-    model._set("A4", "=BINOM.DIST(3, 10, 0.3)");
-    model._set("A5", "=BINOM.DIST(3, 10, 0.3, FALSE)");
-    model._set("A6", "=BINOM.DIST(3, 10, 0.3, FALSE, TRUE)");
+    model.set_a1("A1", "=BINOM.DIST()");
+    model.set_a1("A2", "=BINOM.DIST(3)");
+    model.set_a1("A3", "=BINOM.DIST(3, 10)");
+    model.set_a1("A4", "=BINOM.DIST(3, 10, 0.3)");
+    model.set_a1("A5", "=BINOM.DIST(3, 10, 0.3, FALSE)");
+    model.set_a1("A6", "=BINOM.DIST(3, 10, 0.3, FALSE, TRUE)");
 
-    model._set("B1", "=BINOM.DIST.RANGE()");
-    model._set("B2", "=BINOM.DIST.RANGE(10)");
-    model._set("B3", "=BINOM.DIST.RANGE(10, 0.3)");
-    model._set("B4", "=BINOM.DIST.RANGE(10, 0.3, 3)");
-    model._set("B5", "=BINOM.DIST.RANGE(10, 0.3, 3, 4)");
-    model._set("B6", "=BINOM.DIST.RANGE(10, 0.3, 3, 4, TRUE)");
+    model.set_a1("B1", "=BINOM.DIST.RANGE()");
+    model.set_a1("B2", "=BINOM.DIST.RANGE(10)");
+    model.set_a1("B3", "=BINOM.DIST.RANGE(10, 0.3)");
+    model.set_a1("B4", "=BINOM.DIST.RANGE(10, 0.3, 3)");
+    model.set_a1("B5", "=BINOM.DIST.RANGE(10, 0.3, 3, 4)");
+    model.set_a1("B6", "=BINOM.DIST.RANGE(10, 0.3, 3, 4, TRUE)");
 
-    model._set("C1", "=BINOM.INV()");
-    model._set("C2", "=BINOM.INV(10)");
-    model._set("C3", "=BINOM.INV(10, 0.5)");
-    model._set("C4", "=BINOM.INV(10, 0.5, 0.5)");
-    model._set("C5", "=BINOM.INV(10, 0.5, 0.5, TRUE)");
+    model.set_a1("C1", "=BINOM.INV()");
+    model.set_a1("C2", "=BINOM.INV(10)");
+    model.set_a1("C3", "=BINOM.INV(10, 0.5)");
+    model.set_a1("C4", "=BINOM.INV(10, 0.5, 0.5)");
+    model.set_a1("C5", "=BINOM.INV(10, 0.5, 0.5, TRUE)");
 
-    model._set("D1", "=NEGBINOM.DIST()");
-    model._set("D2", "=NEGBINOM.DIST(5)");
-    model._set("D3", "=NEGBINOM.DIST(5, 10)");
-    model._set("D4", "=NEGBINOM.DIST(5, 10, 0.3)");
-    model._set("D5", "=NEGBINOM.DIST(5, 10, 0.3, TRUE)");
-    model._set("D6", "=NEGBINOM.DIST(5, 10, 0.3, TRUE, FALSE)");
+    model.set_a1("D1", "=NEGBINOM.DIST()");
+    model.set_a1("D2", "=NEGBINOM.DIST(5)");
+    model.set_a1("D3", "=NEGBINOM.DIST(5, 10)");
+    model.set_a1("D4", "=NEGBINOM.DIST(5, 10, 0.3)");
+    model.set_a1("D5", "=NEGBINOM.DIST(5, 10, 0.3, TRUE)");
+    model.set_a1("D6", "=NEGBINOM.DIST(5, 10, 0.3, TRUE, FALSE)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
-    assert_eq!(model._get_text("A5"), *"0.266827932");
-    assert_eq!(model._get_text("A6"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A5"), *"0.266827932");
+    assert_eq!(model.get_text_a1("A6"), *"#ERROR!");
 
-    assert_eq!(model._get_text("B1"), *"#ERROR!");
-    assert_eq!(model._get_text("B2"), *"#ERROR!");
-    assert_eq!(model._get_text("B3"), *"#ERROR!");
-    assert_eq!(model._get_text("B4"), *"0.266827932");
-    assert_eq!(model._get_text("B5"), *"0.466948881");
-    assert_eq!(model._get_text("B6"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B4"), *"0.266827932");
+    assert_eq!(model.get_text_a1("B5"), *"0.466948881");
+    assert_eq!(model.get_text_a1("B6"), *"#ERROR!");
 
-    assert_eq!(model._get_text("C1"), *"#ERROR!");
-    assert_eq!(model._get_text("C2"), *"#ERROR!");
-    assert_eq!(model._get_text("C3"), *"#ERROR!");
-    assert_eq!(model._get_text("C4"), *"5");
-    assert_eq!(model._get_text("C5"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("C1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("C2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("C3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("C4"), *"5");
+    assert_eq!(model.get_text_a1("C5"), *"#ERROR!");
 
-    assert_eq!(model._get_text("D1"), *"#ERROR!");
-    assert_eq!(model._get_text("D2"), *"#ERROR!");
-    assert_eq!(model._get_text("D3"), *"#ERROR!");
-    assert_eq!(model._get_text("D4"), *"#ERROR!");
-    assert_eq!(model._get_text("D5"), *"0.003652521");
-    assert_eq!(model._get_text("D6"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("D1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("D2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("D3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("D4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("D5"), *"0.003652521");
+    assert_eq!(model.get_text_a1("D6"), *"#ERROR!");
 }
 
 #[test]
 fn test_booleans() {
     let mut model = new_empty_model();
-    model._set("A1", "=BINOM.DIST(1,TRUE,0.7,TRUE)");
-    model._set("A2", "=BINOM.DIST.RANGE(TRUE,0.3,0,1)");
-    model._set("A3", "=BINOM.INV(TRUE,0.5,0.8)");
-    model._set("A4", "=NEGBINOM.DIST(0,TRUE,0.7,TRUE)");
+    model.set_a1("A1", "=BINOM.DIST(1,TRUE,0.7,TRUE)");
+    model.set_a1("A2", "=BINOM.DIST.RANGE(TRUE,0.3,0,1)");
+    model.set_a1("A3", "=BINOM.INV(TRUE,0.5,0.8)");
+    model.set_a1("A4", "=NEGBINOM.DIST(0,TRUE,0.7,TRUE)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"1");
-    assert_eq!(model._get_text("A2"), *"1");
-    assert_eq!(model._get_text("A3"), *"1");
-    assert_eq!(model._get_text("A4"), *"0.7");
+    assert_eq!(model.get_text_a1("A1"), *"1");
+    assert_eq!(model.get_text_a1("A2"), *"1");
+    assert_eq!(model.get_text_a1("A3"), *"1");
+    assert_eq!(model.get_text_a1("A4"), *"0.7");
 }
 
 /// No trials and a certain outcome (p = 0 or 1) take the shortcut before the double-double walk
@@ -240,11 +240,15 @@ fn no_trials_and_certain_outcomes() {
         ("=NEGBINOM.DIST(2,3,0,FALSE)", "#NUM!"),
     ];
     for (row, (formula, _)) in (1..).zip(&cells) {
-        model._set(&format!("A{row}"), formula);
+        model.set_a1(&format!("A{row}"), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in (1..).zip(&cells) {
-        assert_eq!(model._get_text(&format!("A{row}")), *expected, "{formula}");
+        assert_eq!(
+            model.get_text_a1(&format!("A{row}")),
+            *expected,
+            "{formula}"
+        );
     }
 }
 
@@ -270,7 +274,7 @@ fn binom_dist_end_closed_forms_are_excel_bits() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, excel)) in cases.iter().enumerate() {
@@ -305,7 +309,7 @@ fn binom_and_negbinom_pmfs_take_loader_s_kernel() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, excel)) in cases.iter().enumerate() {
@@ -324,18 +328,18 @@ fn binom_and_negbinom_pmfs_take_loader_s_kernel() {
 #[test]
 fn binom_dist_trials_limit() {
     let mut model = new_empty_model();
-    model._set("A1", "=BINOM.DIST(0,2^31-1,1E-12,FALSE)");
-    model._set("A2", "=BINOM.DIST(0,2^31-0.5,1E-12,TRUE)");
-    model._set("A3", "=BINOMDIST(0,2^31,1E-12,FALSE)");
-    model._set("A4", "=BINOM.DIST(3,2^31-1,1E-9,TRUE)");
-    model._set("A5", "=BINOM.DIST(0,2^31-1,1,FALSE)");
-    model._set("A6", "=BINOM.DIST.RANGE(2^31-1,1E-12,0)");
-    model._set("A7", "=NEGBINOM.DIST(2^31,1,1-1E-12,FALSE)");
+    model.set_a1("A1", "=BINOM.DIST(0,2^31-1,1E-12,FALSE)");
+    model.set_a1("A2", "=BINOM.DIST(0,2^31-0.5,1E-12,TRUE)");
+    model.set_a1("A3", "=BINOMDIST(0,2^31,1E-12,FALSE)");
+    model.set_a1("A4", "=BINOM.DIST(3,2^31-1,1E-9,TRUE)");
+    model.set_a1("A5", "=BINOM.DIST(0,2^31-1,1,FALSE)");
+    model.set_a1("A6", "=BINOM.DIST.RANGE(2^31-1,1E-12,0)");
+    model.set_a1("A7", "=NEGBINOM.DIST(2^31,1,1-1E-12,FALSE)");
     model.evaluate();
     for cell in ["A1", "A2", "A3", "A4", "A5", "A6"] {
-        assert_eq!(model._get_text(cell), "#NUM!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#NUM!", "{cell}");
     }
-    assert_eq!(model._get_text("A7"), "0");
+    assert_eq!(model.get_text_a1("A7"), "0");
 }
 
 /// BINOM.DIST's cdf at k = n - 1 is the upper tail of `I_p(n, 1)`, Excel's closed form on bratio's
@@ -372,18 +376,18 @@ fn negbinom_dist_at_one_success_or_no_failures_takes_the_closed_form() {
 fn test_negative_fractional_count_is_num_before_truncation() {
     // gen-m9 85f48d5cdfb24555 A35, d208bbafc3bc1997 A231: the sign is checked before truncation (T-2700).
     let mut model = new_empty_model();
-    model._set("A1", "=BINOM.DIST(-0.0125, 10, 1E-16, FALSE)");
-    model._set("A2", "=NEGBINOMDIST(-0.5, 8, 0.5)");
-    model._set("A3", "=BINOM.DIST(2.9, 3.9, 0.5, FALSE)"); // a positive fraction still truncates
-    model._set("A4", "=BINOM.DIST(2, 3, 0.5, FALSE)");
-    model._set("A5", "=BINOM.DIST(-0, 3, 0.5, FALSE)"); // negative zero is no negative count
-    model._set("A6", "=BINOM.DIST(0, 3, 0.5, FALSE)");
+    model.set_a1("A1", "=BINOM.DIST(-0.0125, 10, 1E-16, FALSE)");
+    model.set_a1("A2", "=NEGBINOMDIST(-0.5, 8, 0.5)");
+    model.set_a1("A3", "=BINOM.DIST(2.9, 3.9, 0.5, FALSE)"); // a positive fraction still truncates
+    model.set_a1("A4", "=BINOM.DIST(2, 3, 0.5, FALSE)");
+    model.set_a1("A5", "=BINOM.DIST(-0, 3, 0.5, FALSE)"); // negative zero is no negative count
+    model.set_a1("A6", "=BINOM.DIST(0, 3, 0.5, FALSE)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#NUM!");
-    assert_eq!(model._get_text("A2"), *"#NUM!");
-    assert_eq!(model._get_text("A3"), model._get_text("A4"));
-    assert_eq!(model._get_text("A5"), model._get_text("A6"));
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), model.get_text_a1("A4"));
+    assert_eq!(model.get_text_a1("A5"), model.get_text_a1("A6"));
 }
 
 #[test]
@@ -405,7 +409,7 @@ fn test_binom_inv_and_range_at_a_large_n_take_binom_dist_cdf() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
@@ -429,7 +433,7 @@ fn test_binom_inv_at_the_largest_trial_count_is_excel_s_median() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
@@ -455,7 +459,7 @@ fn test_binom_dist_range_from_0_at_a_large_n_is_a_probability() {
     }
     let mut model = new_empty_model();
     for (row, formula) in formulas.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, formula) in formulas.iter().enumerate() {
@@ -473,11 +477,11 @@ fn test_binom_dist_range_from_0_at_a_large_n_is_a_probability() {
 #[test]
 fn binom_dist_range_past_the_mean_takes_the_upper_tails() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=BINOM.DIST.RANGE(777228,0.567422582556133,451769,452355)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=BINOM.DIST.RANGE(130451,0.400874068766277,55775,58062)",
     );
@@ -498,7 +502,7 @@ fn binom_dist_range_past_the_mean_takes_the_upper_tails() {
 #[test]
 fn negbinom_cdf_at_one_success_keeps_a_tiny_p() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=NEGBINOM.DIST(70991230,1,8.02387331627331E-281,TRUE)",
     );
@@ -517,12 +521,12 @@ fn negbinom_cdf_at_one_success_keeps_a_tiny_p() {
 #[test]
 fn binom_inv_and_critbinom_probability_zero_is_num_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=CRITBINOM(10,0,0.5)");
-    model._set("A2", "=BINOM.INV(10,0,0.5)");
-    model._set("A3", "=CRITBINOM(10,1,0.5)");
-    model._set("A4", "=BINOM.INV(10,1,0.5)");
+    model.set_a1("A1", "=CRITBINOM(10,0,0.5)");
+    model.set_a1("A2", "=BINOM.INV(10,0,0.5)");
+    model.set_a1("A3", "=CRITBINOM(10,1,0.5)");
+    model.set_a1("A4", "=BINOM.INV(10,1,0.5)");
     model.evaluate();
     for cell in ["A1", "A2", "A3", "A4"] {
-        assert_eq!(model._get_text(cell), *"#NUM!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#NUM!", "{cell}");
     }
 }

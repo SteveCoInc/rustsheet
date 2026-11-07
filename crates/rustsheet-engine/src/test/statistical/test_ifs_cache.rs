@@ -54,9 +54,9 @@ fn row_values(row: usize) -> (String, String, String) {
 fn fill(model: &mut Model) {
     for row in 1..=BLOCK * COPIES {
         let (a, b, c) = row_values(row);
-        model._set(&format!("A{row}"), &a);
-        model._set(&format!("B{row}"), &b);
-        model._set(&format!("C{row}"), &c);
+        model.set_a1(&format!("A{row}"), &a);
+        model.set_a1(&format!("B{row}"), &b);
+        model.set_a1(&format!("C{row}"), &c);
     }
 }
 
@@ -136,8 +136,8 @@ fn cached_criteria_aggregates_match_the_walks() {
                 } else {
                     format!("=MAX({})", parts.join(","))
                 };
-                model._set(&format!("E{row}"), &cached);
-                model._set(&format!("F{row}"), &walked);
+                model.set_a1(&format!("E{row}"), &cached);
+                model.set_a1(&format!("F{row}"), &walked);
                 cases.push((row, cached));
                 row += 1;
             }
@@ -146,8 +146,8 @@ fn cached_criteria_aggregates_match_the_walks() {
     model.evaluate();
     for (row, formula) in cases {
         assert_eq!(
-            model._get_text(&format!("E{row}")),
-            model._get_text(&format!("F{row}")),
+            model.get_text_a1(&format!("E{row}")),
+            model.get_text_a1(&format!("F{row}")),
             "{formula}"
         );
     }
@@ -159,23 +159,23 @@ fn cached_criteria_aggregates_match_the_walks() {
 fn the_cache_lives_for_one_pass() {
     let mut model = new_empty_model();
     for row in 1..=100 {
-        model._set(&format!("D{row}"), &(row % 10).to_string());
-        model._set(&format!("A{row}"), &format!("=D{row}*1"));
+        model.set_a1(&format!("D{row}"), &(row % 10).to_string());
+        model.set_a1(&format!("A{row}"), &format!("=D{row}*1"));
     }
     for row in 1..=3 {
-        model._set(&format!("E{row}"), "=COUNTIF($A$1:$A$100,7)");
-        model._set(
+        model.set_a1(&format!("E{row}"), "=COUNTIF($A$1:$A$100,7)");
+        model.set_a1(
             &format!("F{row}"),
             "=SUMIFS($A$1:$A$100,$A$1:$A$100,\">5\")",
         );
     }
     model.evaluate();
-    assert_eq!(model._get_text("E3"), "10");
-    assert_eq!(model._get_text("F3"), "300");
-    model._set("D1", "7");
+    assert_eq!(model.get_text_a1("E3"), "10");
+    assert_eq!(model.get_text_a1("F3"), "300");
+    model.set_a1("D1", "7");
     model.evaluate();
-    assert_eq!(model._get_text("E3"), "11");
-    assert_eq!(model._get_text("F3"), "307");
+    assert_eq!(model.get_text_a1("E3"), "11");
+    assert_eq!(model.get_text_a1("F3"), "307");
 }
 
 /// A cycle through a criteria range: its circular cell keeps the range uncached, so a second call
@@ -184,14 +184,14 @@ fn the_cache_lives_for_one_pass() {
 fn a_cycle_through_a_criteria_range_is_not_cached() {
     let mut model = new_empty_model();
     for row in 1..=100 {
-        model._set(&format!("A{row}"), &(row % 7).to_string());
+        model.set_a1(&format!("A{row}"), &(row % 7).to_string());
     }
-    model._set("A50", "=E1");
-    model._set("E1", "=COUNTIF($A$1:$A$100,3)");
-    model._set("E2", "=COUNTIF($A$1:$A$100,3)");
-    model._set("E3", "=COUNTIF($A$1:$A$50,3)+COUNTIF($A$51:$A$100,3)");
+    model.set_a1("A50", "=E1");
+    model.set_a1("E1", "=COUNTIF($A$1:$A$100,3)");
+    model.set_a1("E2", "=COUNTIF($A$1:$A$100,3)");
+    model.set_a1("E3", "=COUNTIF($A$1:$A$50,3)+COUNTIF($A$51:$A$100,3)");
     model.evaluate();
-    assert_eq!(model._get_text("E2"), model._get_text("E3"));
+    assert_eq!(model.get_text_a1("E2"), model.get_text_a1("E3"));
 }
 
 /// A dynamic array spills into a criteria range that a call read earlier in the same pass: the
@@ -201,19 +201,19 @@ fn a_cycle_through_a_criteria_range_is_not_cached() {
 fn a_spill_into_a_cached_range_restarts_with_an_empty_cache() {
     let mut model = new_empty_model();
     for row in 60..=150 {
-        model._set(&format!("A{row}"), "1");
+        model.set_a1(&format!("A{row}"), "1");
     }
-    model._set("E1", "=COUNTIF($A$51:$A$150,{1000;1})");
+    model.set_a1("E1", "=COUNTIF($A$51:$A$150,{1000;1})");
     for row in 3..=5 {
-        model._set(&format!("E{row}"), "=COUNTIF($A$51:$A$150,\">=1000\")");
+        model.set_a1(&format!("E{row}"), "=COUNTIF($A$51:$A$150,\">=1000\")");
     }
-    model._set("A50", "=SEQUENCE(10,1,1000)");
+    model.set_a1("A50", "=SEQUENCE(10,1,1000)");
     model.evaluate();
     // A50 holds 1000 and lies outside the range; A51:A59 hold 1001..1009.
-    assert_eq!(model._get_text("E1"), "0");
-    assert_eq!(model._get_text("E2"), "91");
+    assert_eq!(model.get_text_a1("E1"), "0");
+    assert_eq!(model.get_text_a1("E2"), "91");
     for row in 3..=5 {
-        assert_eq!(model._get_text(&format!("E{row}")), "9");
+        assert_eq!(model.get_text_a1(&format!("E{row}")), "9");
     }
 }
 
@@ -225,21 +225,21 @@ fn a_spill_into_a_cached_range_restarts_with_an_empty_cache() {
 fn long_criteria_are_charged_to_the_budget() {
     let mut model = new_empty_model();
     for row in 1..=64 {
-        model._set(&format!("A{row}"), "x");
+        model.set_a1(&format!("A{row}"), "x");
     }
     for row in 1..=9000 {
-        model._set(
+        model.set_a1(
             &format!("E{row}"),
             &format!("=COUNTIFS($A$1:$A$64,REPT(\"a\",250)&{row},$A$1:$A$64,\"<>\")"),
         );
     }
-    model._set("F1", "=COUNTIF($A$1:$A$64,\"x\")");
+    model.set_a1("F1", "=COUNTIF($A$1:$A$64,\"x\")");
     model.evaluate();
     let (used, budget) = model.evaluation.ifs_cache.match_bits();
     assert!(used <= budget, "{used} > {budget}");
     assert!(used > budget / 10 * 9, "the budget was not used: {used}");
-    assert_eq!(model._get_text("E9000"), "0");
-    assert_eq!(model._get_text("F1"), "64");
+    assert_eq!(model.get_text_a1("E9000"), "0");
+    assert_eq!(model.get_text_a1("F1"), "64");
 }
 
 /// Blocks inside a cached range with its columns (prefixes such as `$A$1:$A$100` of the cached
@@ -251,15 +251,15 @@ fn blocks_inside_a_cached_range_match_the_walks() {
     fill(&mut model);
     let all = BLOCK * COPIES;
     // Cache and index A1:C240 first: two criteria on each column.
-    model._set(
+    model.set_a1(
         "D1",
         &format!("=COUNTIFS($A$1:$A${all},1,$B$1:$B${all},\"t1\")"),
     );
-    model._set(
+    model.set_a1(
         "D2",
         &format!("=COUNTIFS($A$1:$A${all},2,$B$1:$B${all},\"T\")"),
     );
-    model._set("D3", &format!("=SUMIFS($C$1:$C${all},$A$1:$A${all},3)"));
+    model.set_a1("D3", &format!("=SUMIFS($C$1:$C${all},$A$1:$A${all},3)"));
     let mut cases = Vec::new();
     let mut row = 1;
     let blocks = (64..=all)
@@ -284,8 +284,8 @@ fn blocks_inside_a_cached_range_match_the_walks() {
                     .iter()
                     .map(|&(first, last)| instantiate(template, first, last, x, y))
                     .collect();
-                model._set(&format!("E{row}"), &cached);
-                model._set(&format!("F{row}"), &format!("={}", parts.join("+")));
+                model.set_a1(&format!("E{row}"), &cached);
+                model.set_a1(&format!("F{row}"), &format!("={}", parts.join("+")));
                 cases.push((row, cached));
                 row += 1;
             }
@@ -297,8 +297,8 @@ fn blocks_inside_a_cached_range_match_the_walks() {
     assert!(cache.indexed() >= 2, "the ranges were not indexed");
     for (row, formula) in cases {
         assert_eq!(
-            model._get_text(&format!("E{row}")),
-            model._get_text(&format!("F{row}")),
+            model.get_text_a1(&format!("E{row}")),
+            model.get_text_a1(&format!("F{row}")),
             "{formula}"
         );
     }
@@ -332,7 +332,7 @@ fn indexed_number_criteria_match_the_walk() {
         "3",
     ];
     for row in 1..=190 {
-        model._set(&format!("A{row}"), values[row % values.len()]);
+        model.set_a1(&format!("A{row}"), values[row % values.len()]);
     }
     let criteria = [
         "1",
@@ -363,16 +363,16 @@ fn indexed_number_criteria_match_the_walk() {
             "=COUNTIF($A$1:$A$60,{criterion})+COUNTIF($A$61:$A$120,{criterion})\
              +COUNTIF($A$121:$A$180,{criterion})+COUNTIF($A$181:$A$190,{criterion})"
         );
-        model._set(&format!("E{row}"), &cached);
-        model._set(&format!("F{row}"), &walked);
+        model.set_a1(&format!("E{row}"), &cached);
+        model.set_a1(&format!("F{row}"), &walked);
         row += 1;
     }
     model.evaluate();
     assert_eq!(model.evaluation.ifs_cache.indexed(), 1);
     for row in 1..row {
         assert_eq!(
-            model._get_text(&format!("E{row}")),
-            model._get_text(&format!("F{row}")),
+            model.get_text_a1(&format!("E{row}")),
+            model.get_text_a1(&format!("F{row}")),
             "row {row}"
         );
     }
@@ -405,18 +405,18 @@ fn indexed_equalities_over_blocks_match_the_walk() {
         for row in 1..=rows {
             let value = values[row % values.len()];
             if !value.is_empty() {
-                model._set(&format!("A{row}"), value);
+                model.set_a1(&format!("A{row}"), value);
             }
         }
         // Two criteria on the whole range build its index.
-        model._set("C1", &format!("=COUNTIF($A$1:$A${rows},\">0\")"));
-        model._set("C2", &format!("=COUNTIF($A$1:$A${rows},\"<0\")"));
+        model.set_a1("C1", &format!("=COUNTIF($A$1:$A${rows},\">0\")"));
+        model.set_a1("C2", &format!("=COUNTIF($A$1:$A${rows},\"<0\")"));
         let blocks = (64..=rows).step_by(9).map(|bottom| (1, bottom));
         let mut row = 1;
         for (top, bottom) in blocks.chain([(70, 250), (65, 128), (100, 300)]) {
             for criterion in criteria {
                 let formula = format!("=COUNTIF($A${top}:$A${bottom},{criterion})");
-                model._set(&format!("D{row}"), &formula);
+                model.set_a1(&format!("D{row}"), &formula);
                 row += 1;
             }
         }
@@ -424,7 +424,7 @@ fn indexed_equalities_over_blocks_match_the_walk() {
         let cache = &model.evaluation.ifs_cache;
         let counters = (cache.windows, cache.indexed());
         let texts: Vec<String> = (1..row)
-            .map(|row| model._get_text(&format!("D{row}")))
+            .map(|row| model.get_text_a1(&format!("D{row}")))
             .collect();
         (texts, counters)
     };
@@ -454,7 +454,7 @@ fn cached_and_walked(
         }
         fill(&mut model);
         for (index, formula) in formulas.iter().enumerate() {
-            model._set(&format!("E{}", index + 1), formula);
+            model.set_a1(&format!("E{}", index + 1), formula);
         }
         model.evaluate();
         let texts: Vec<String> = (1..=formulas.len())
@@ -470,7 +470,7 @@ fn cached_and_walked(
                     .contains(&crate::evaluation::key(at));
                 format!(
                     "{} circular={circular}",
-                    model._get_text(&format!("E{row}"))
+                    model.get_text_a1(&format!("E{row}"))
                 )
             })
             .collect();
@@ -487,9 +487,9 @@ fn cached_and_walked(
 fn formula_columns(model: &mut Model) {
     model.new_sheet();
     for row in 1..=300 {
-        model._set(&format!("Sheet2!A{row}"), &format!("k{}", row % 7));
-        model._set(&format!("Sheet2!B{row}"), &(row % 5).to_string());
-        model._set(
+        model.set_a1(&format!("Sheet2!A{row}"), &format!("k{}", row % 7));
+        model.set_a1(&format!("Sheet2!B{row}"), &(row % 5).to_string());
+        model.set_a1(
             &format!("Sheet2!C{row}"),
             &format!("=IF(MOD(B{row},2)=0,\"x\",IF(B{row}>2,\"y\",\"z\"))"),
         );
@@ -498,7 +498,7 @@ fn formula_columns(model: &mut Model) {
             150 => "=NA()".to_string(),
             _ => format!("=B{row}*{row}+0.1"),
         };
-        model._set(&format!("Sheet2!D{row}"), &d);
+        model.set_a1(&format!("Sheet2!D{row}"), &d);
     }
 }
 
@@ -537,7 +537,7 @@ fn uncached_formula_ranges_are_read_at_the_matching_rows() {
 fn a_cycle_through_an_uncached_sum_range() {
     let fill = |model: &mut Model| {
         formula_columns(model);
-        model._set("Sheet2!D21", "=Sheet1!E1+Sheet1!E2");
+        model.set_a1("Sheet2!D21", "=Sheet1!E1+Sheet1!E2");
     };
     let formulas = [
         "=SUMIFS(Sheet2!D1:D300,Sheet2!A1:A300,\"k0\",Sheet2!C1:C300,\"z\")",
@@ -560,11 +560,11 @@ fn a_cycle_through_an_uncached_sum_range() {
 fn chained_formula_columns(model: &mut Model) {
     formula_columns(model);
     for row in 1..=300 {
-        model._set(
+        model.set_a1(
             &format!("Sheet2!F{row}"),
             &format!("=2020+MOD(B{row}+{row},4)"),
         );
-        model._set(
+        model.set_a1(
             &format!("Sheet2!G{row}"),
             &format!("=CHOOSE(MOD({row},3)+1,\"Jan\",\"Feb\",\"Mar\")"),
         );
@@ -609,7 +609,7 @@ fn formula_ranges_are_cached_at_the_cells_their_chain_matches() {
     let mut model = new_empty_model();
     chained_formula_columns(&mut model);
     for (index, formula) in formulas.iter().enumerate() {
-        model._set(&format!("E{}", index + 1), formula);
+        model.set_a1(&format!("E{}", index + 1), formula);
     }
     model.evaluate();
     let counts = model
@@ -630,7 +630,7 @@ fn formula_ranges_are_cached_at_the_cells_their_chain_matches() {
 fn a_cycle_through_a_range_cached_at_its_chain() {
     let fill = |model: &mut Model| {
         chained_formula_columns(model);
-        model._set("Sheet2!F36", "=2021+Sheet1!E1*0");
+        model.set_a1("Sheet2!F36", "=2021+Sheet1!E1*0");
     };
     let formulas = chained_calls();
     let formulas: Vec<&str> = formulas.iter().map(String::as_str).collect();
@@ -650,9 +650,9 @@ fn a_spill_into_a_range_cached_at_its_chain() {
     let fill = |model: &mut Model| {
         chained_formula_columns(model);
         for row in 37..=45 {
-            model._set(&format!("Sheet2!G{row}"), "");
+            model.set_a1(&format!("Sheet2!G{row}"), "");
         }
-        model._set(
+        model.set_a1(
             "Sheet2!G36",
             "={\"Jan\";\"Jan\";\"Feb\";\"Mar\";\"Jan\";\"Feb\";\"Mar\";\"Apr\";\"Jan\";\"Feb\"}",
         );

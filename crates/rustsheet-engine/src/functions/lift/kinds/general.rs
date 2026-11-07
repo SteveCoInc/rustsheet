@@ -1,5 +1,8 @@
 //! The lifting table's date, information, lookup and math entries (SPEC-0011 "The argument-kind
 //! table"): EDATE to YEARFRAC, the IS* tests, ADDRESS and HYPERLINK, and the math functions.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms)]
+// LINT-DEBT-END
 
 use super::ArgKind::{Lift, LiftArrays, Whole, WholeByCaller};
 use super::KernelWork::{Constant, Output, Weighted};

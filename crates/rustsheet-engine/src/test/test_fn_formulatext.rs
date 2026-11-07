@@ -5,22 +5,22 @@ use crate::test::util::new_empty_model;
 #[test]
 fn wrong_number_of_arguments() {
     let mut model = new_empty_model();
-    model._set("A1", "=FORMULATEXT()");
-    model._set("A2", "=FORMULATEXT(\"B\",\"A\")");
+    model.set_a1("A1", "=FORMULATEXT()");
+    model.set_a1("A2", "=FORMULATEXT(\"B\",\"A\")");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
 }
 
 #[test]
 fn multi_sheet_ref() {
     let mut model = new_empty_model();
     model.new_sheet();
-    model._set("A1", "=FORMULATEXT(Sheet1!A1:Sheet2!A1)");
+    model.set_a1("A1", "=FORMULATEXT(Sheet1!A1:Sheet2!A1)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
 }
 
 /// A multi-cell reference gives one result per cell, `#N/A` where a cell has no formula
@@ -28,111 +28,111 @@ fn multi_sheet_ref() {
 #[test]
 fn multi_cell_reference_gives_one_result_per_cell() {
     let mut model = new_empty_model();
-    model._set("C1", "=1+1");
-    model._set("A1", "=FORMULATEXT(C1:C2)");
-    model._set("A4", "=FORMULATEXT(C1:D1)");
+    model.set_a1("C1", "=1+1");
+    model.set_a1("A1", "=FORMULATEXT(C1:C2)");
+    model.set_a1("A4", "=FORMULATEXT(C1:D1)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"=1+1");
-    assert_eq!(model._get_text("A2"), *"#N/A");
-    assert_eq!(model._get_text("A4"), *"=1+1");
-    assert_eq!(model._get_text("B4"), *"#N/A");
+    assert_eq!(model.get_text_a1("A1"), *"=1+1");
+    assert_eq!(model.get_text_a1("A2"), *"#N/A");
+    assert_eq!(model.get_text_a1("A4"), *"=1+1");
+    assert_eq!(model.get_text_a1("B4"), *"#N/A");
 }
 
 #[test]
 fn implicit_intersection_operator() {
     // @A:A in B1 intersects to A1, so FORMULATEXT acts on that single cell.
     let mut model = new_empty_model();
-    model._set("A1", "=1 +  2");
-    model._set("B1", "=FORMULATEXT(@A:A)");
+    model.set_a1("A1", "=1 +  2");
+    model.set_a1("B1", "=FORMULATEXT(@A:A)");
     model.evaluate();
 
-    assert_eq!(model._get_text("B1"), *"=1 +  2");
+    assert_eq!(model.get_text_a1("B1"), *"=1 +  2");
 }
 
 #[test]
 fn non_reference() {
     let mut model = new_empty_model();
-    model._set("A1", "=FORMULATEXT(42)");
+    model.set_a1("A1", "=FORMULATEXT(42)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
 }
 
 #[test]
 fn test_language_independence() {
     let mut model = new_empty_model();
-    model._set("A1", "=SUM(1, 2)");
-    model._set("B1", "=FORMULATEXT(A1)");
+    model.set_a1("A1", "=SUM(1, 2)");
+    model.set_a1("B1", "=FORMULATEXT(A1)");
 
     model.evaluate();
     model.set_language("fr").unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_formula("A1"), *"=SOMME(1, 2)");
-    assert_eq!(model._get_text("B1"), *"=SUM(1, 2)");
+    assert_eq!(model.get_formula_a1("A1"), *"=SOMME(1, 2)");
+    assert_eq!(model.get_text_a1("B1"), *"=SUM(1, 2)");
 }
 
 #[test]
 fn test_locale() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=SUM(1.123, 2)");
-    model._set("B1", "=FORMULATEXT(A1)");
+    model.set_a1("A1", "=SUM(1.123, 2)");
+    model.set_a1("B1", "=FORMULATEXT(A1)");
     model.evaluate();
     model.set_language("fr").unwrap();
     model.set_locale("fr").unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_formula("A1"), *"=SOMME(1,123; 2)");
-    assert_eq!(model._get_text("B1"), *"=SUM(1,123; 2)");
+    assert_eq!(model.get_formula_a1("A1"), *"=SOMME(1,123; 2)");
+    assert_eq!(model.get_text_a1("B1"), *"=SUM(1,123; 2)");
 }
 
 #[test]
 fn test_sign_prefixed() {
     let mut model = new_empty_model();
 
-    model._set("A2", "-B1-B2");
-    assert_eq!(model._get_formula("A2"), *"=-B1-B2");
+    model.set_a1("A2", "-B1-B2");
+    assert_eq!(model.get_formula_a1("A2"), *"=-B1-B2");
 
-    model._set("A4", "-4-2");
-    assert_eq!(model._get_formula("A4"), *"=-4-2");
+    model.set_a1("A4", "-4-2");
+    assert_eq!(model.get_formula_a1("A4"), *"=-4-2");
 
-    model._set("A5", "-42");
-    assert_eq!(model._get_formula("A5"), *"");
+    model.set_a1("A5", "-42");
+    assert_eq!(model.get_formula_a1("A5"), *"");
 
-    model._set("A6", "+42");
-    assert_eq!(model._get_formula("A6"), *"");
+    model.set_a1("A6", "+42");
+    assert_eq!(model.get_formula_a1("A6"), *"");
 
     // Sign-prefixed input is classified with no clock, as before year-less dates (T-0167).
     for (cell, input) in [("A7", "+$5"), ("A8", "- 5"), ("A9", "-Jul-45")] {
-        model._set(cell, input);
-        assert_eq!(model._get_formula(cell), *"", "{input}");
+        model.set_a1(cell, input);
+        assert_eq!(model.get_formula_a1(cell), *"", "{input}");
     }
 
     // Coercion refuses a trailing `$` (T-3742), typed input keeps reading it: `-200$` is no
     // formula (unprobed, T-3835).
     for (cell, input) in [("A10", "-200$"), ("A11", "-200 $")] {
-        model._set(cell, input);
-        assert_eq!(model._get_formula(cell), *"", "{input}");
+        model.set_a1(cell, input);
+        assert_eq!(model.get_formula_a1(cell), *"", "{input}");
     }
     // Typed `-%1.5` shares VALUE's reader: the number -0.015, no formula (T-3742).
-    model._set("A12", "-%1.5");
-    assert_eq!(model._get_formula("A12"), *"");
+    model.set_a1("A12", "-%1.5");
+    assert_eq!(model.get_formula_a1("A12"), *"");
 
-    model._set("A7", "-B");
-    assert_eq!(model._get_formula("A7"), *"=-B");
+    model.set_a1("A7", "-B");
+    assert_eq!(model.get_formula_a1("A7"), *"=-B");
 
-    model._set("A9", "-B1");
-    assert_eq!(model._get_formula("A9"), *"=-B1");
+    model.set_a1("A9", "-B1");
+    assert_eq!(model.get_formula_a1("A9"), *"=-B1");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A4"), *"-6");
-    assert_eq!(model._get_text("A5"), *"-42");
-    assert_eq!(model._get_text("A6"), *"42");
-    assert_eq!(model._get_text("A7"), *"#NAME?");
-    assert_eq!(model._get_text("A12"), *"-1.50%");
+    assert_eq!(model.get_text_a1("A4"), *"-6");
+    assert_eq!(model.get_text_a1("A5"), *"-42");
+    assert_eq!(model.get_text_a1("A6"), *"42");
+    assert_eq!(model.get_text_a1("A7"), *"#NAME?");
+    assert_eq!(model.get_text_a1("A12"), *"-1.50%");
 }
 
 #[test]
@@ -140,80 +140,80 @@ fn an_unknown_call_name_keeps_the_first_spelling_met() {
     // Excel interns the spelling workbook-wide, case-insensitively, first met wins
     // (probes/unknown-function-name-spelling, T-1719).
     let mut model = new_empty_model();
-    model._set("A1", "=my_Fn(1,2)+sum(3)");
-    model._set("A2", "=MY_FN(1)");
-    model._set("A3", "=Xyz2(1)");
-    model._set("A4", "=SUM(A1.INDEX(B2:B2,1))");
+    model.set_a1("A1", "=my_Fn(1,2)+sum(3)");
+    model.set_a1("A2", "=MY_FN(1)");
+    model.set_a1("A3", "=Xyz2(1)");
+    model.set_a1("A4", "=SUM(A1.INDEX(B2:B2,1))");
     model.evaluate();
 
-    assert_eq!(model._get_formula("A1"), "=my_Fn(1,2)+SUM(3)");
-    assert_eq!(model._get_formula("A2"), "=my_Fn(1)");
-    assert_eq!(model._get_formula("A3"), "=Xyz2(1)");
-    assert_eq!(model._get_formula("A4"), "=SUM(A1.INDEX(B2:B2,1))");
+    assert_eq!(model.get_formula_a1("A1"), "=my_Fn(1,2)+SUM(3)");
+    assert_eq!(model.get_formula_a1("A2"), "=my_Fn(1)");
+    assert_eq!(model.get_formula_a1("A3"), "=Xyz2(1)");
+    assert_eq!(model.get_formula_a1("A4"), "=SUM(A1.INDEX(B2:B2,1))");
 }
 
 #[test]
 fn an_unknown_name_used_as_a_value_shares_the_call_name_spelling() {
     // Either order: the first spelling met wins (probes/unknown-function-name-reach B9/B11, T-1760).
     let mut model = new_empty_model();
-    model._set("A1", "=Qux+1");
-    model._set("A2", "=qux(1)");
-    model._set("A3", "=wib(1)");
-    model._set("A4", "=Wib+1");
+    model.set_a1("A1", "=Qux+1");
+    model.set_a1("A2", "=qux(1)");
+    model.set_a1("A3", "=wib(1)");
+    model.set_a1("A4", "=Wib+1");
     model.evaluate();
 
-    assert_eq!(model._get_formula("A1"), "=Qux+1");
-    assert_eq!(model._get_formula("A2"), "=Qux(1)");
-    assert_eq!(model._get_formula("A3"), "=wib(1)");
-    assert_eq!(model._get_formula("A4"), "=wib+1");
+    assert_eq!(model.get_formula_a1("A1"), "=Qux+1");
+    assert_eq!(model.get_formula_a1("A2"), "=Qux(1)");
+    assert_eq!(model.get_formula_a1("A3"), "=wib(1)");
+    assert_eq!(model.get_formula_a1("A4"), "=wib+1");
 }
 
 #[test]
 fn a_reload_keeps_the_spelling_of_an_unknown_call_name() {
     let mut model = new_empty_model();
-    model._set("A1", "=Foo(1)");
-    model._set("A2", "=FOO(2)");
+    model.set_a1("A1", "=Foo(1)");
+    model.set_a1("A2", "=FOO(2)");
     model.evaluate();
 
     let mut reloaded = crate::Model::from_bytes(&model.to_bytes(), "en").unwrap();
-    assert_eq!(reloaded._get_formula("A1"), "=Foo(1)");
-    assert_eq!(reloaded._get_formula("A2"), "=Foo(2)");
+    assert_eq!(reloaded.get_formula_a1("A1"), "=Foo(1)");
+    assert_eq!(reloaded.get_formula_a1("A2"), "=Foo(2)");
     // The reloaded workbook still knows the spelling for a new formula, and the call is still
     // one of an unknown name.
-    reloaded._set("A3", "=foo(3)");
+    reloaded.set_a1("A3", "=foo(3)");
     reloaded.evaluate();
-    assert_eq!(reloaded._get_formula("A3"), "=Foo(3)");
-    assert_eq!(reloaded._get_text("A3"), *"#NAME?");
+    assert_eq!(reloaded.get_formula_a1("A3"), "=Foo(3)");
+    assert_eq!(reloaded.get_text_a1("A3"), *"#NAME?");
 }
 
 #[test]
 fn a_let_bound_callee_takes_no_workbook_spelling() {
     let mut model = new_empty_model();
-    model._set("A1", "=F(1)");
-    model._set("A2", "=LET(f,LAMBDA(x,x*2),F(3))");
+    model.set_a1("A1", "=F(1)");
+    model.set_a1("A2", "=LET(f,LAMBDA(x,x*2),F(3))");
     model.evaluate();
 
-    assert_eq!(model._get_formula("A1"), "=F(1)");
-    assert_eq!(model._get_formula("A2"), "=LET(f,LAMBDA(x,x*2),f(3))");
-    assert_eq!(model._get_text("A2"), *"6");
+    assert_eq!(model.get_formula_a1("A1"), "=F(1)");
+    assert_eq!(model.get_formula_a1("A2"), "=LET(f,LAMBDA(x,x*2),f(3))");
+    assert_eq!(model.get_text_a1("A2"), *"6");
 }
 
 #[test]
 fn a_bound_name_use_prints_in_the_spelling_of_its_declaration() {
     // probes/let-name-use-spelling (T-1720): the innermost declaration decides.
     let mut model = new_empty_model();
-    model._set("A1", "=LET(x,5,X*2)");
-    model._set("A2", "=LAMBDA(Ab,aB*2)(4)");
-    model._set("A3", "=LET(x,1,LET(X,5,x))");
-    model._set("A4", "=LET(Ab,LAMBDA(Q,q+1),aB(2))");
+    model.set_a1("A1", "=LET(x,5,X*2)");
+    model.set_a1("A2", "=LAMBDA(Ab,aB*2)(4)");
+    model.set_a1("A3", "=LET(x,1,LET(X,5,x))");
+    model.set_a1("A4", "=LET(Ab,LAMBDA(Q,q+1),aB(2))");
     model.evaluate();
 
     let reloaded = crate::Model::from_bytes(&model.to_bytes(), "en").unwrap();
     for model in [&model, &reloaded] {
-        assert_eq!(model._get_formula("A1"), "=LET(x,5,x*2)");
-        assert_eq!(model._get_formula("A2"), "=LAMBDA(Ab,Ab*2)(4)");
-        assert_eq!(model._get_formula("A3"), "=LET(x,1,LET(X,5,X))");
-        assert_eq!(model._get_formula("A4"), "=LET(Ab,LAMBDA(Q,Q+1),Ab(2))");
+        assert_eq!(model.get_formula_a1("A1"), "=LET(x,5,x*2)");
+        assert_eq!(model.get_formula_a1("A2"), "=LAMBDA(Ab,Ab*2)(4)");
+        assert_eq!(model.get_formula_a1("A3"), "=LET(x,1,LET(X,5,X))");
+        assert_eq!(model.get_formula_a1("A4"), "=LET(Ab,LAMBDA(Q,Q+1),Ab(2))");
     }
 }
 
@@ -222,14 +222,14 @@ fn a_bound_name_use_prints_in_the_spelling_of_its_declaration() {
 #[test]
 fn index_argument_errors() {
     let mut model = new_empty_model();
-    model._set("A1", "=FORMULATEXT(INDEX(C1:C3,9))");
-    model._set("A2", "=FORMULATEXT(INDEX({1,2,3},2))");
-    model._set("A3", "=FORMULATEXT(1)");
+    model.set_a1("A1", "=FORMULATEXT(INDEX(C1:C3,9))");
+    model.set_a1("A2", "=FORMULATEXT(INDEX({1,2,3},2))");
+    model.set_a1("A3", "=FORMULATEXT(1)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#REF!");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#REF!");
+    assert_eq!(model.get_text_a1("A2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
 }
 
 /// A pick call is read as the cell its taken arm or lookup picks, a value as `#VALUE!` and a
@@ -238,36 +238,36 @@ fn index_argument_errors() {
 #[test]
 fn pick_calls_read_the_cell_they_pick() {
     let mut model = new_empty_model();
-    model._set("H1", "1");
-    model._set("H2", "=H1+1");
-    model._set("H3", "3");
-    model._set("I2", "x");
-    model._set("A1", "=FORMULATEXT(IF(TRUE,H2,5))");
-    model._set("A2", "=FORMULATEXT(IF(TRUE,5,H1))");
-    model._set("A3", "=FORMULATEXT(SWITCH(9,1,5,H2))");
-    model._set("A4", "=FORMULATEXT(SWITCH(9,1,5))");
-    model._set("A5", "=FORMULATEXT(XLOOKUP(\"x\",I1:I3,H1:H3))");
-    model._set("A6", "=FORMULATEXT(XLOOKUP(9,H1:H3,H1:H3,\"nf\"))");
-    model._set("A7", "=FORMULATEXT(LET(x,H2,x+1))");
-    model._set("A8", "=FORMULATEXT(TAKE(H1:H3,2))");
-    model._set("C1", "=FORMULATEXT(IF({TRUE,FALSE},NA(),H2))");
-    model._set("C2", "=FORMULATEXT(INDIRECT({\"H1\",\"H2\",\"zz zz\"}))");
+    model.set_a1("H1", "1");
+    model.set_a1("H2", "=H1+1");
+    model.set_a1("H3", "3");
+    model.set_a1("I2", "x");
+    model.set_a1("A1", "=FORMULATEXT(IF(TRUE,H2,5))");
+    model.set_a1("A2", "=FORMULATEXT(IF(TRUE,5,H1))");
+    model.set_a1("A3", "=FORMULATEXT(SWITCH(9,1,5,H2))");
+    model.set_a1("A4", "=FORMULATEXT(SWITCH(9,1,5))");
+    model.set_a1("A5", "=FORMULATEXT(XLOOKUP(\"x\",I1:I3,H1:H3))");
+    model.set_a1("A6", "=FORMULATEXT(XLOOKUP(9,H1:H3,H1:H3,\"nf\"))");
+    model.set_a1("A7", "=FORMULATEXT(LET(x,H2,x+1))");
+    model.set_a1("A8", "=FORMULATEXT(TAKE(H1:H3,2))");
+    model.set_a1("C1", "=FORMULATEXT(IF({TRUE,FALSE},NA(),H2))");
+    model.set_a1("C2", "=FORMULATEXT(INDIRECT({\"H1\",\"H2\",\"zz zz\"}))");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"=H1+1");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
-    assert_eq!(model._get_text("A3"), *"=H1+1");
-    assert_eq!(model._get_text("A4"), *"#N/A");
-    assert_eq!(model._get_text("A5"), *"=H1+1");
-    assert_eq!(model._get_text("A6"), *"#VALUE!");
-    assert_eq!(model._get_text("A7"), *"#VALUE!");
-    assert_eq!(model._get_text("A8"), *"#N/A");
-    assert_eq!(model._get_text("A9"), *"=H1+1");
-    assert_eq!(model._get_text("C1"), *"#N/A");
-    assert_eq!(model._get_text("D1"), *"#VALUE!");
-    assert_eq!(model._get_text("C2"), *"#N/A");
-    assert_eq!(model._get_text("D2"), *"=H1+1");
-    assert_eq!(model._get_text("E2"), *"#REF!");
+    assert_eq!(model.get_text_a1("A1"), *"=H1+1");
+    assert_eq!(model.get_text_a1("A2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), *"=H1+1");
+    assert_eq!(model.get_text_a1("A4"), *"#N/A");
+    assert_eq!(model.get_text_a1("A5"), *"=H1+1");
+    assert_eq!(model.get_text_a1("A6"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A7"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A8"), *"#N/A");
+    assert_eq!(model.get_text_a1("A9"), *"=H1+1");
+    assert_eq!(model.get_text_a1("C1"), *"#N/A");
+    assert_eq!(model.get_text_a1("D1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("C2"), *"#N/A");
+    assert_eq!(model.get_text_a1("D2"), *"=H1+1");
+    assert_eq!(model.get_text_a1("E2"), *"#REF!");
 }
 
 /// Number-text coercion of a sign before a leading percent and of a trailing `$`

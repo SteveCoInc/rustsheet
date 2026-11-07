@@ -67,6 +67,9 @@
 //! Every line is charged to the work budget as it is made, and a layout past the sheet or past
 //! [`MAX_PIVOT_CELLS`] cells has no result (pivots.md "A pivot result is bounded in work and
 //! nodes", DEVIATION). The walk keeps its own stack, so an untrusted axis depth never recurses.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_field_names)]
+// LINT-DEBT-END
 
 use std::ops::Range;
 
@@ -418,15 +421,14 @@ impl<'a> AxisPlan<'a> {
                     // under a hidden field (t4699 CV, CV2, CV3).
                     let mut inner_level = level;
                     if visit.folded && matches!(inner, Level::Field { .. }) {
-                        match self.values_from(level) {
-                            Some(values) => inner_level = values,
-                            None => {
-                                out.push(ItemType::Data, &visit, visit.data, true)?;
-                                if let Some(own) = level.checked_sub(1) {
-                                    self.blank_line(own, &visit, &mut out)?;
-                                }
-                                continue;
+                        if let Some(values) = self.values_from(level) {
+                            inner_level = values;
+                        } else {
+                            out.push(ItemType::Data, &visit, visit.data, true)?;
+                            if let Some(own) = level.checked_sub(1) {
+                                self.blank_line(own, &visit, &mut out)?;
                             }
+                            continue;
                         }
                     }
                     if let Some(own) = level.checked_sub(1) {

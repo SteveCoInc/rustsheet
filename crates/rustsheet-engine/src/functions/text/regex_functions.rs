@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
+// LINT-DEBT-END
 use std::collections::HashMap;
 
 use regex_automata::Match;
@@ -612,7 +619,7 @@ impl Model {
                         // found: else the text comes back unchanged (regex-pcre2-features E1-E3,
                         // regex-optional-args A133, A134).
                         if occurrence.find(search, &text)?.is_none() {
-                            return Ok(Ok(text.to_string()));
+                            return Ok(Ok(text.clone()));
                         }
                         return Ok(Err(CalcResult::new_error(
                             Error::VALUE,
@@ -620,16 +627,15 @@ impl Model {
                             "Invalid replacement".to_string(),
                         )));
                     };
-                    let one = match occurrence {
-                        Occurrence::All => None,
-                        _ => {
-                            let Some(m) = occurrence.find(search, &text)? else {
-                                return Ok(Ok(text.to_string()));
-                            };
-                            let mut caps = search.create_captures();
-                            search.captures_at(&text, m, &mut caps)?;
-                            Some((m, caps))
-                        }
+                    let one = if let Occurrence::All = occurrence {
+                        None
+                    } else {
+                        let Some(m) = occurrence.find(search, &text)? else {
+                            return Ok(Ok(text.clone()));
+                        };
+                        let mut caps = search.create_captures();
+                        search.captures_at(&text, m, &mut caps)?;
+                        Some((m, caps))
                     };
                     let len = match &one {
                         None => replacement.result_len(search, &text)?,

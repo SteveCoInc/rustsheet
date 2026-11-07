@@ -1,10 +1,13 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_sign_loss, clippy::match_same_arms)]
+// LINT-DEBT-END
 use crate::{
     calc_result::CalcResult,
     expressions::{token::Error, types::CellReferenceIndex},
     language::Language,
     locale::Locale,
     number_format::to_excel_precision_str,
-    types::*,
+    types::{Cell, CellType, FormulaValue, SpillValue},
 };
 
 /// A `CellValue` is the representation of the cell content.
@@ -137,22 +140,22 @@ impl Cell {
         language: &Language,
     ) -> String {
         match self.value(shared_strings, language) {
-            CellValue::None => "".to_string(),
+            CellValue::None => String::new(),
             CellValue::String(v) => v,
             CellValue::Boolean(v) => {
                 if v {
-                    language.booleans.r#true.to_string()
+                    language.booleans.r#true.clone()
                 } else {
-                    language.booleans.r#false.to_string()
+                    language.booleans.r#false.clone()
                 }
             }
             CellValue::Number(v) => {
                 let value = to_excel_precision_str(v);
 
-                if locale.numbers.symbols.decimal != "." {
-                    value.replace(".", &locale.numbers.symbols.decimal)
-                } else {
+                if locale.numbers.symbols.decimal == "." {
                     value
+                } else {
+                    value.replace('.', &locale.numbers.symbols.decimal)
                 }
             }
         }
@@ -193,7 +196,7 @@ impl Cell {
         T: Fn(&str) -> String,
     {
         match self.value(shared_strings, language) {
-            CellValue::None => "".to_string(),
+            CellValue::None => String::new(),
             CellValue::String(value) if self.get_type() == CellType::ErrorValue => value,
             CellValue::String(value) => format_text(&value),
             CellValue::Boolean(value) => format_text(if value {

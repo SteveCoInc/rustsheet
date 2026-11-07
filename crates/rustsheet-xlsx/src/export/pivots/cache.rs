@@ -10,6 +10,9 @@
 //! (`tools/src/rustsheet_tools/pivot_definition.py`). A calculated field is written as the
 //! builder and Excel write it, `<cacheField name numFmtId="0" formula databaseField="0"/>` after
 //! the other fields, its formula as the file had it, with no record values (T-4174).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use std::fmt::Write as _;
 

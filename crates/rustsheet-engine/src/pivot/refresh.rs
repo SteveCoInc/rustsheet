@@ -17,6 +17,9 @@
 //!
 //! A source is a worksheet range; a defined name or a Table source resolves to its range in
 //! T-4506 and refreshes as [`PivotCacheError::Source`] until then.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_excessive_bools)]
+// LINT-DEBT-END
 
 use std::collections::{HashMap, HashSet};
 
@@ -99,7 +102,7 @@ impl SourceCells for Model {
         else {
             return CacheItem::Missing;
         };
-        let reference = CellReferenceIndex { sheet, row, column };
+        let reference = CellReferenceIndex { sheet, column, row };
         match self.get_cell_value(cell, reference) {
             CalcResult::Number(n) if self.is_date_style(cell.get_style()) => CacheItem::Date(n),
             CalcResult::Number(n) => CacheItem::Number(n),

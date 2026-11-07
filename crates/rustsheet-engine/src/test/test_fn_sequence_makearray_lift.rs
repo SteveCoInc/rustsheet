@@ -7,7 +7,7 @@ use crate::test::util::new_empty_model;
 fn model_with_a1_a3() -> crate::model::Model {
     let mut model = new_empty_model();
     for (cell, value) in [("A1", "1"), ("A2", "2"), ("A3", "3")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
 }
@@ -30,11 +30,11 @@ fn sequence_lifts_over_a_range_and_an_array() {
         ("K11", "=ROWS(SEQUENCE({3;4}))", "2"),
     ];
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {
-        assert_eq!(model._get_text(cell), expected, "{cell} {formula}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell} {formula}");
     }
 }
 
@@ -53,39 +53,39 @@ fn makearray_lifts_over_a_range() {
         ),
     ];
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {
-        assert_eq!(model._get_text(cell), expected, "{cell} {formula}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell} {formula}");
     }
 }
 
 #[test]
 fn unlifted_calls_keep_their_values() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(2,2,10,5)");
-    model._set("D1", "=MAKEARRAY(2,2,LAMBDA(r,c,r*10+c))");
-    model._set("G1", "=SEQUENCE(0)");
-    model._set("H1", "=SEQUENCE(-1)");
+    model.set_a1("A1", "=SEQUENCE(2,2,10,5)");
+    model.set_a1("D1", "=MAKEARRAY(2,2,LAMBDA(r,c,r*10+c))");
+    model.set_a1("G1", "=SEQUENCE(0)");
+    model.set_a1("H1", "=SEQUENCE(-1)");
     model.evaluate();
     for (cell, expected) in [("A1", "10"), ("B1", "15"), ("A2", "20"), ("B2", "25")] {
-        assert_eq!(model._get_text(cell), expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell}");
     }
     for (cell, expected) in [("D1", "11"), ("E1", "12"), ("D2", "21"), ("E2", "22")] {
-        assert_eq!(model._get_text(cell), expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell}");
     }
-    assert_eq!(model._get_text("G1"), "#CALC!");
-    assert_eq!(model._get_text("H1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("G1"), "#CALC!");
+    assert_eq!(model.get_text_a1("H1"), "#VALUE!");
 }
 
 #[test]
 fn an_element_error_stays_in_its_position() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE({1;0})");
+    model.set_a1("A1", "=SEQUENCE({1;0})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("A2"), "#CALC!");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "#CALC!");
 }
 
 /// Each lifted element is charged the cells it builds (`KernelWork::Output`), so a lifted call
@@ -94,11 +94,11 @@ fn an_element_error_stays_in_its_position() {
 #[test]
 fn lifted_output_is_charged_against_the_visit_cap() {
     let mut model = new_empty_model();
-    model._set("A1", "=ROWS(SEQUENCE(SEQUENCE(1024),1024))");
-    model._set("B1", "=ROWS(MAKEARRAY(SEQUENCE(2048),1024,LAMBDA(r,c,r)))");
+    model.set_a1("A1", "=ROWS(SEQUENCE(SEQUENCE(1024),1024))");
+    model.set_a1("B1", "=ROWS(MAKEARRAY(SEQUENCE(2048),1024,LAMBDA(r,c,r)))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("B1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), "#ERROR!");
 }
 
 /// A 1x1 array lifts to one element, but a one-cell reference, and arithmetic over one, is its
@@ -111,18 +111,18 @@ fn lifted_output_is_charged_against_the_visit_cap() {
 #[test]
 fn a_one_cell_array_lifts_but_a_one_cell_reference_does_not() {
     let mut model = new_empty_model();
-    model._set("C3", "3");
-    model._set("A1", "=ROWS(SEQUENCE({3}))");
-    model._set("B1", "=ROWS(SEQUENCE(C3+{0}))");
-    model._set("C1", "=COLUMNS(SEQUENCE({3},2))");
-    model._set("D1", "=ROWS(SEQUENCE(INDIRECT(\"C3\")*1))");
-    model._set("E1", "=ROWS(SEQUENCE(C3:C3))");
-    model._set("F1", "=SEQUENCE(C3*1)");
-    model._set("G1", "=SEQUENCE({3})");
-    model._set("H1", "=ROWS(SEQUENCE(--INDIRECT(\"C3\")))");
-    model._set("I1", "=ROWS(SEQUENCE(INDIRECT(\"C3\")&\"\"))");
-    model._set("J1", "=ROWS(SEQUENCE(IF(INDIRECT(\"C3\")=3,3)))");
-    model._set("K1", "=ROWS(SEQUENCE(--{3}))");
+    model.set_a1("C3", "3");
+    model.set_a1("A1", "=ROWS(SEQUENCE({3}))");
+    model.set_a1("B1", "=ROWS(SEQUENCE(C3+{0}))");
+    model.set_a1("C1", "=COLUMNS(SEQUENCE({3},2))");
+    model.set_a1("D1", "=ROWS(SEQUENCE(INDIRECT(\"C3\")*1))");
+    model.set_a1("E1", "=ROWS(SEQUENCE(C3:C3))");
+    model.set_a1("F1", "=SEQUENCE(C3*1)");
+    model.set_a1("G1", "=SEQUENCE({3})");
+    model.set_a1("H1", "=ROWS(SEQUENCE(--INDIRECT(\"C3\")))");
+    model.set_a1("I1", "=ROWS(SEQUENCE(INDIRECT(\"C3\")&\"\"))");
+    model.set_a1("J1", "=ROWS(SEQUENCE(IF(INDIRECT(\"C3\")=3,3)))");
+    model.set_a1("K1", "=ROWS(SEQUENCE(--{3}))");
     model.evaluate();
     for (cell, want) in [
         ("A1", "1"),
@@ -138,6 +138,6 @@ fn a_one_cell_array_lifts_but_a_one_cell_reference_does_not() {
         ("J1", "3"),
         ("K1", "1"),
     ] {
-        assert_eq!(model._get_text(cell), want, "{cell}");
+        assert_eq!(model.get_text_a1(cell), want, "{cell}");
     }
 }

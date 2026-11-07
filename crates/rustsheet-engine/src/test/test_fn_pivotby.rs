@@ -27,7 +27,7 @@ pub(super) fn records() -> Model {
     for (i, row) in rows.iter().enumerate() {
         for (column, value) in ["A", "B", "C", "D", "E"].iter().zip(row) {
             if !value.is_empty() {
-                model._set(&format!("{column}{}", i + 1), value);
+                model.set_a1(&format!("{column}{}", i + 1), value);
             }
         }
     }
@@ -39,7 +39,7 @@ const SUM: &str = "LAMBDA(x,SUM(x))";
 /// The texts of row `row`, columns `first..=last` (letters).
 pub(super) fn row(model: &Model, row: usize, first: char, last: char) -> Vec<String> {
     (first..=last)
-        .map(|column| model._get_text(&format!("{column}{row}")))
+        .map(|column| model.get_text_a1(&format!("{column}{row}")))
         .collect()
 }
 
@@ -47,7 +47,7 @@ pub(super) fn row(model: &Model, row: usize, first: char, last: char) -> Vec<Str
 /// from G.
 fn pivot(formula: &str, height: usize, width: u8) -> Vec<Vec<String>> {
     let mut model = records();
-    model._set("G1", formula);
+    model.set_a1("G1", formula);
     model.evaluate();
     let last = char::from(b'G' + width - 1);
     (1..=height).map(|r| row(&model, r, 'G', last)).collect()
@@ -64,10 +64,10 @@ fn grid_with_empty_text_for_missing_combinations_and_totals() {
     assert_eq!(grid[6], ["Total", "35", "86", "9.5", "130.5", ""]);
     assert_eq!(grid[7], ["", "", "", "", "", ""]);
     let mut model = records();
-    model._set("G1", &format!("=PIVOTBY(A2:A11,C2:C11,D2:D11,{SUM})"));
-    model._set("G20", "=ISTEXT(J2)");
+    model.set_a1("G1", &format!("=PIVOTBY(A2:A11,C2:C11,D2:D11,{SUM})"));
+    model.set_a1("G20", "=ISTEXT(J2)");
     model.evaluate();
-    assert_eq!(model._get_text("G20"), "TRUE");
+    assert_eq!(model.get_text_a1("G20"), "TRUE");
 }
 
 #[test]
@@ -85,11 +85,11 @@ fn shown_and_generated_headers() {
     assert_eq!(grid[3], ["Row Field 1", "Row Field 2", "Value 1"]);
     // P!A421: field_headers 3 over records consumes the first one; its year is a text name.
     let mut model = records();
-    model._set("G1", &format!("=PIVOTBY(A2:A11,C2:C11,D2:D11,{SUM},3)"));
-    model._set("G20", "=ISTEXT(H1)");
+    model.set_a1("G1", &format!("=PIVOTBY(A2:A11,C2:C11,D2:D11,{SUM},3)"));
+    model.set_a1("G20", "=ISTEXT(H1)");
     model.evaluate();
-    assert_eq!(model._get_text("H1"), "2023");
-    assert_eq!(model._get_text("G20"), "TRUE");
+    assert_eq!(model.get_text_a1("H1"), "2023");
+    assert_eq!(model.get_text_a1("G20"), "TRUE");
     assert_eq!(row(&model, 3, 'G', 'K'), ["East", "10", "10", "10", "10"]);
 }
 
@@ -361,11 +361,11 @@ fn filter_and_argument_errors() {
         ),
     ];
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cases {
-        assert_eq!(model._get_text(cell), expected, "{formula}");
+        assert_eq!(model.get_text_a1(cell), expected, "{formula}");
     }
 }
 
@@ -382,24 +382,24 @@ fn cross_product_is_size_checked_before_any_call() {
     // refused while grouping the columns, before the grid or any LAMBDA call is allocated. A
     // smaller cross product is computed.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=PIVOTBY(SEQUENCE(20000),SEQUENCE(20000),SEQUENCE(20000),LAMBDA(x,SUM(x)))",
     );
-    model._set(
+    model.set_a1(
         "B1",
         "=ROWS(PIVOTBY(SEQUENCE(1048575),SEQUENCE(1048575,,0,0),SEQUENCE(1048575),LAMBDA(x,SUM(x))))",
     );
-    model._set(
+    model.set_a1(
         "C1",
         "=LET(p,PIVOTBY(SEQUENCE(60),MOD(SEQUENCE(60),40),SEQUENCE(60),LAMBDA(x,SUM(x))),ROWS(p)&\"x\"&COLUMNS(p)&\" \"&INDEX(p,62,42))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
     // One column group, but 1048575 row groups of three columns exceed the array bound; the row
     // grouping stops at the first group past it.
-    assert_eq!(model._get_text("B1"), "#ERROR!");
-    assert_eq!(model._get_text("C1"), "62x42 1830");
+    assert_eq!(model.get_text_a1("B1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("C1"), "62x42 1830");
 }
 
 #[test]
@@ -599,17 +599,17 @@ fn two_parameter_lambdas_are_charged_against_the_visit_cap() {
     let mut model = new_empty_model();
     model.area_budget.limit = u64::MAX;
     model.evaluation.recalc_limits = (u64::MAX, u64::MAX);
-    model._set(
+    model.set_a1(
         "A1",
         "=PIVOTBY(SEQUENCE(20000),SEQUENCE(20000,,0,0),SEQUENCE(20000),LAMBDA(x,y,ROWS(y)))",
     );
-    model._set(
+    model.set_a1(
         "B1",
         "=INDEX(PIVOTBY(SEQUENCE(20000),SEQUENCE(20000,,0,0),SEQUENCE(20000),_xleta.PERCENTOF),20002,2)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("B1"), "1");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), "1");
 }
 
 #[test]
@@ -620,17 +620,17 @@ fn relative_sets_are_capped_before_they_are_built() {
     // uses 3 x 2 and computes.
     let mut model = new_empty_model();
     let fields = "SEQUENCE(65535,16,1,0)";
-    model._set(
+    model.set_a1(
         "A1",
         &format!("=PIVOTBY({fields},{fields},SEQUENCE(65535),{SET},,16,,16,,,3)"),
     );
-    model._set(
+    model.set_a1(
         "B1",
         &format!("=ISERROR(PIVOTBY({fields},{fields},SEQUENCE(65535),{SET},,2,,2,,,3))"),
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("B1"), "FALSE");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), "FALSE");
 }
 
 #[test]
@@ -639,31 +639,31 @@ fn an_error_column_total_over_several_value_columns_is_value_error() {
     // whose Total column cells (shown as "") hold an error is #VALUE!, the grand total alone too.
     let grand_error = "LAMBDA(x,IF(ROWS(x)=10,NA(),SUM(x)))";
     let mut model = records();
-    model._set(
+    model.set_a1(
         "G1",
         &format!("=PIVOTBY(B2:B11,C2:C11,D2:E11,{grand_error})"),
     );
     // Without the Total column nothing computes it (P!A27).
-    model._set(
+    model.set_a1(
         "G20",
         &format!("=PIVOTBY(B2:B11,C2:C11,D2:E11,{grand_error},0,1,1,0)"),
     );
     // One value column shows the error in its cell (P!A3, P!A4).
-    model._set(
+    model.set_a1(
         "G40",
         &format!("=PIVOTBY(B2:B11,C2:C11,D2:D11,{grand_error})"),
     );
     // An array result is #VALUE! in its cells only (P!A12).
-    model._set("G60", "=PIVOTBY(B2:B11,C2:C11,D2:E11,LAMBDA(x,x))");
+    model.set_a1("G60", "=PIVOTBY(B2:B11,C2:C11,D2:E11,LAMBDA(x,x))");
     model.evaluate();
-    assert_eq!(model._get_text("G1"), "#VALUE!");
-    assert_eq!(model._get_text("H1"), "");
-    assert_eq!(model._get_text("G20"), "");
-    assert_eq!(model._get_text("H20"), "2023");
-    assert_eq!(model._get_text("G40"), "");
-    assert_eq!(model._get_text("K44"), "#N/A");
-    assert_eq!(model._get_text("G60"), "");
-    assert_eq!(model._get_text("H61"), "#VALUE!");
+    assert_eq!(model.get_text_a1("G1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("H1"), "");
+    assert_eq!(model.get_text_a1("G20"), "");
+    assert_eq!(model.get_text_a1("H20"), "2023");
+    assert_eq!(model.get_text_a1("G40"), "");
+    assert_eq!(model.get_text_a1("K44"), "#N/A");
+    assert_eq!(model.get_text_a1("G60"), "");
+    assert_eq!(model.get_text_a1("H61"), "#VALUE!");
 }
 
 #[test]
@@ -697,16 +697,16 @@ fn an_error_cell_field_and_blank_cell_values_are_value_errors() {
     // Z1 is an error, Z2 text, Z3 blank, Z4 a number; A1:A3 row keys, B1:B3 column keys, C1:C3
     // values.
     let mut model = new_empty_model();
-    model._set("Z1", "=1/0");
-    model._set("Z2", "x");
-    model._set("Z4", "7");
+    model.set_a1("Z1", "=1/0");
+    model.set_a1("Z2", "x");
+    model.set_a1("Z4", "7");
     for (row, (key, col, value)) in [("a", "p", "1"), ("b", "q", "2"), ("a", "q", "3")]
         .iter()
         .enumerate()
     {
-        model._set(&format!("A{}", row + 1), key);
-        model._set(&format!("B{}", row + 1), col);
-        model._set(&format!("C{}", row + 1), value);
+        model.set_a1(&format!("A{}", row + 1), key);
+        model.set_a1(&format!("B{}", row + 1), col);
+        model.set_a1(&format!("C{}", row + 1), value);
     }
     let cases = [
         // A one-cell reference to an error as row_fields or col_fields is #VALUE!, with or
@@ -729,12 +729,12 @@ fn an_error_cell_field_and_blank_cell_values_are_value_errors() {
         ("=PIVOTBY(A1:A3,B1:B3,Z2,_xleta.SUM,2,1,Z1)", "#DIV/0!"),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("E{}", 5 * i + 1), formula);
+        model.set_a1(&format!("E{}", 5 * i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("E{}", 5 * i + 1)),
+            model.get_text_a1(&format!("E{}", 5 * i + 1)),
             *expected,
             "{formula}"
         );
@@ -749,7 +749,7 @@ fn an_error_cell_field_and_blank_cell_values_are_value_errors() {
 #[test]
 fn blank_options_are_refused_before_a_later_error() {
     let mut model = records();
-    model._set("K1", "x");
+    model.set_a1("K1", "x");
     let cases = [
         ("G1", "A2:A11,B2:B11", ",,K3,,,,NA()", "#VALUE!"),
         ("G2", "A2:A11,B2:B11", ",,,,K3,,NA()", "#VALUE!"),
@@ -766,11 +766,11 @@ fn blank_options_are_refused_before_a_later_error() {
         ("G13", "2,B2:B11", ",,K3,,,,NA()", "#VALUE!"),
     ];
     for (cell, fields, options, _) in cases {
-        model._set(cell, &format!("=PIVOTBY({fields},D2:D11,{SUM},{options})"));
+        model.set_a1(cell, &format!("=PIVOTBY({fields},D2:D11,{SUM},{options})"));
     }
     model.evaluate();
     for (cell, fields, options, expected) in cases {
-        assert_eq!(model._get_text(cell), expected, "{fields} / {options}");
+        assert_eq!(model.get_text_a1(cell), expected, "{fields} / {options}");
     }
 }
 
@@ -790,24 +790,24 @@ fn a_scalar_filter_needs_one_column_each_and_no_header() {
     ];
     // G1 is the one valid call: it spills, so it goes last, out of the way of the others.
     for (cell, args, _) in cases.iter().skip(1) {
-        model._set(cell, &format!("=PIVOTBY({})", args.replace("{SUM}", SUM)));
+        model.set_a1(cell, &format!("=PIVOTBY({})", args.replace("{SUM}", SUM)));
     }
-    model._set(
+    model.set_a1(
         "K1",
         &format!("=ROWS(PIVOTBY({}))", cases[0].1.replace("{SUM}", SUM)),
     );
     // The refusal fills the shape of an array relative_to (gen-m7 547d6192794dbf57 A10188:B10189).
-    model._set(
+    model.set_a1(
         "M1",
         &format!("=PIVOTBY(A2:B11,C2:C11,D2:D11,{SUM},,,,,,TRUE,A1:B2)"),
     );
     model.evaluate();
-    assert_eq!(model._get_text("K1"), "7");
+    assert_eq!(model.get_text_a1("K1"), "7");
     for filled in ["M1", "N1", "M2", "N2"] {
-        assert_eq!(model._get_text(filled), "#VALUE!", "{filled}");
+        assert_eq!(model.get_text_a1(filled), "#VALUE!", "{filled}");
     }
     for (cell, args, expected) in cases.iter().skip(1) {
-        assert_eq!(model._get_text(cell), *expected, "{args}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{args}");
     }
 }
 
@@ -833,10 +833,10 @@ fn an_early_error_fills_an_array_relative_to() {
         ("G10", "1/0,C2:C11,D2:D11,{SUM},0,,,,,,A1:B2", "#DIV/0!"),
     ];
     for (cell, args, _) in &cases {
-        model._set(cell, &format!("=PIVOTBY({})", args.replace("{SUM}", SUM)));
+        model.set_a1(cell, &format!("=PIVOTBY({})", args.replace("{SUM}", SUM)));
     }
     // Without an array relative_to the error stays in one cell.
-    model._set(
+    model.set_a1(
         "K1",
         &format!("=PIVOTBY(\"abc\",C2:C11,D2:D11,{SUM},0,,,,,,1)"),
     );
@@ -849,11 +849,11 @@ fn an_early_error_fills_an_array_relative_to() {
             format!("G{}", row + 1),
             format!("H{}", row + 1),
         ] {
-            assert_eq!(model._get_text(&filled), *expected, "{filled}: {args}");
+            assert_eq!(model.get_text_a1(&filled), *expected, "{filled}: {args}");
         }
     }
-    assert_eq!(model._get_text("K1"), "#VALUE!");
-    assert_eq!(model._get_text("K2"), "");
+    assert_eq!(model.get_text_a1("K1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("K2"), "");
 }
 
 /// T-4403: over Ay Ay Bx Cx Cy of q p p q q (A = ab, B = ab&U+00AD, C = U+00AD&ab) the column
@@ -879,13 +879,13 @@ fn moved_subtotal_cell_beside_a_leaf_no_record_reaches() {
     ];
     for (i, &(t, xy, pq)) in rows.iter().enumerate() {
         let n = i + 1;
-        model._set(&format!("A{n}"), &format!("={}", texts[t]));
-        model._set(&format!("B{n}"), xy);
-        model._set(&format!("D{n}"), &n.to_string());
-        model._set(&format!("E{n}"), &(10 + n).to_string());
-        model._set(&format!("F{n}"), pq);
+        model.set_a1(&format!("A{n}"), &format!("={}", texts[t]));
+        model.set_a1(&format!("B{n}"), xy);
+        model.set_a1(&format!("D{n}"), &n.to_string());
+        model.set_a1(&format!("E{n}"), &(10 + n).to_string());
+        model.set_a1(&format!("F{n}"), pq);
     }
-    model._set(
+    model.set_a1(
         "H1",
         "=ARRAYTOTEXT(PIVOTBY(F1:F5,A1:B5,D1:E5,LAMBDA(v,ARRAYTOTEXT(v)),0,0,,2),1)",
     );
@@ -898,5 +898,5 @@ fn moved_subtotal_cell_beside_a_leaf_no_record_reaches() {
          \"\",\"\";\"q\",\"1, 5\",\"11, 15\",\"11, 14, 15\",\"\",\"\",\"\",\"1, 4, 5\",\
          \"11, 14, 15\",\"\",\"\",\"\",\"\"}}"
     );
-    assert_eq!(model._get_text("H1"), expected);
+    assert_eq!(model.get_text_a1("H1"), expected);
 }

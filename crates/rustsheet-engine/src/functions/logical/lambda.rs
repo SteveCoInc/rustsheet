@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::needless_pass_by_value,
+    clippy::unused_self
+)]
+// LINT-DEBT-END
 use crate::{
     area_budget::{clone_units, too_much_work},
     calc_result::CalcResult,

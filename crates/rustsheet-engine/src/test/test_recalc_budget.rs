@@ -24,7 +24,7 @@ fn model_with(pass: u64, ceiling: u64, cells: &[(&str, &str)]) -> Model {
     let mut model = new_empty_model();
     model.evaluation.recalc_limits = (pass, ceiling);
     for (cell, value) in cells {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
 }
@@ -36,7 +36,7 @@ fn last(model: &Model) -> &RecalcBudget {
 
 /// Every cell's text, in the order given.
 fn texts(model: &Model, cells: &[&str]) -> Vec<String> {
-    cells.iter().map(|cell| model._get_text(cell)).collect()
+    cells.iter().map(|cell| model.get_text_a1(cell)).collect()
 }
 
 const FOUR_SUMS: [(&str, &str); 5] = [
@@ -74,18 +74,18 @@ fn a_pass_at_its_allowance_computes_and_one_unit_more_shares() {
     assert!(3 * NODE_UNITS <= share && share < sum_units(100));
     assert_eq!(last(&model).mode, RecalcMode::Share(share));
     for cell in ["A1", "A2", "A3", "A4"] {
-        assert_eq!(model._get_text(cell), "#VALUE!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#VALUE!", "{cell}");
         assert_eq!(
-            model._get_error_message(cell),
+            model.get_error_message_a1(cell),
             TOO_MUCH_RECALC_WORK,
             "{cell}"
         );
     }
-    assert_eq!(model._get_text("B1"), "3");
+    assert_eq!(model.get_text_a1("B1"), "3");
     // The next recalculation starts in normal mode again.
     model.evaluation.recalc_limits = (total, MAX_RECALC_WORK);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "5050");
+    assert_eq!(model.get_text_a1("A1"), "5050");
     assert!(model.evaluation.recalc.is_none());
 }
 
@@ -130,7 +130,7 @@ fn evaluate_mixed(columns: &[&str], pass: u64, reverse_anchors: bool) -> (Model,
     let values = columns
         .iter()
         .flat_map(|column| [format!("{column}1"), format!("{column}2")])
-        .map(|cell| model._get_text(&cell))
+        .map(|cell| model.get_text_a1(&cell))
         .collect();
     (model, values)
 }
@@ -176,10 +176,10 @@ fn a_formula_past_its_share_cannot_catch_it_but_its_reader_can() {
     let mut model = model_with(1000, MAX_RECALC_WORK, &cells);
     model.evaluate();
     assert_eq!(last(&model).mode, RecalcMode::Share(25));
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_error_message("A1"), TOO_MUCH_RECALC_WORK);
-    assert_eq!(model._get_text("B1"), "0");
-    assert_eq!(model._get_text("C8"), "3");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_RECALC_WORK);
+    assert_eq!(model.get_text_a1("B1"), "0");
+    assert_eq!(model.get_text_a1("C8"), "3");
 }
 
 #[test]
@@ -192,7 +192,7 @@ fn a_formula_past_its_own_budget_in_normal_mode_keeps_its_message() {
     model.area_budget.limit = sum_units(10) - 1;
     model.evaluate();
     assert_eq!(last(&model).mode, RecalcMode::Normal);
-    assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK);
+    assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK);
 }
 
 #[test]
@@ -210,12 +210,12 @@ fn a_dependency_run_draws_on_the_same_allowance() {
         model.evaluate();
         assert_eq!(last(&model).spent(), total, "{reader} reads {dependency}");
         assert_eq!(last(&model).committed, total);
-        assert_eq!(model._get_text(reader), "5051");
+        assert_eq!(model.get_text_a1(reader), "5051");
 
         let mut model = model_with(total - 1, MAX_RECALC_WORK, &cells);
         model.evaluate();
         assert!(matches!(last(&model).mode, RecalcMode::Share(_)));
-        assert_eq!(model._get_text(dependency), "#VALUE!");
+        assert_eq!(model.get_text_a1(dependency), "#VALUE!");
     }
 }
 
@@ -242,7 +242,7 @@ fn restarted_passes_are_thrown_away_and_past_the_allowance_share() {
         "{thrown_away} thrown away, {committed} committed"
     );
     assert_eq!(last(&model).spent(), committed + thrown_away);
-    assert_eq!(model._get_text("A1"), "5053");
+    assert_eq!(model.get_text_a1("A1"), "5053");
 
     // The same sheet again: the learned order needs no restart, and the pass commits the same.
     model.evaluate();
@@ -254,8 +254,8 @@ fn restarted_passes_are_thrown_away_and_past_the_allowance_share() {
     let mut model = model_with(committed, MAX_RECALC_WORK, &RESTARTING);
     model.evaluate();
     assert!(matches!(last(&model).mode, RecalcMode::Share(_)));
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_text("B3"), "3");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("B3"), "3");
 }
 
 #[test]
@@ -276,7 +276,7 @@ fn runs_cut_short_by_the_depth_limit_are_thrown_away() {
     let mut shallow = model_with(MAX_PASS_WORK, MAX_RECALC_WORK, &cells);
     shallow.set_max_evaluation_depth(3);
     shallow.evaluate();
-    assert_eq!(shallow._get_text("A1"), deep._get_text("A1"));
+    assert_eq!(shallow.get_text_a1("A1"), deep.get_text_a1("A1"));
     // What the unwound runs spent before they were cut short is thrown away; the pass commits
     // what a pass without the limit commits.
     assert!(last(&shallow).thrown_away > 0);
@@ -297,18 +297,18 @@ fn past_the_ceiling_every_formula_is_value_error_and_spills_are_dropped() {
     ];
     let mut model = model_with(MAX_PASS_WORK, MAX_RECALC_WORK, &cells);
     model.evaluate();
-    assert_eq!(model._get_text("B3"), "3");
+    assert_eq!(model.get_text_a1("B3"), "3");
 
     model.evaluation.recalc_limits = (MAX_PASS_WORK, 100);
     model.evaluate();
     assert_eq!(last(&model).mode, RecalcMode::Exhausted);
     assert!(last(&model).spent() <= 100);
     for cell in ["A1", "A2", "B1", "C1"] {
-        assert_eq!(model._get_text(cell), "#VALUE!", "{cell}");
-        assert_eq!(model._get_error_message(cell), RECALC_EXHAUSTED, "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#VALUE!", "{cell}");
+        assert_eq!(model.get_error_message_a1(cell), RECALC_EXHAUSTED, "{cell}");
     }
-    assert_eq!(model._get_text("B2"), "");
-    assert_eq!(model._get_text("B3"), "");
+    assert_eq!(model.get_text_a1("B2"), "");
+    assert_eq!(model.get_text_a1("B3"), "");
 }
 
 #[test]
@@ -320,8 +320,8 @@ fn an_exhausted_recalculation_does_not_iterate() {
     });
     model.evaluate();
     assert_eq!(last(&model).mode, RecalcMode::Exhausted);
-    assert_eq!(model._get_error_message("A1"), RECALC_EXHAUSTED);
-    assert_eq!(model._get_error_message("B1"), RECALC_EXHAUSTED);
+    assert_eq!(model.get_error_message_a1("A1"), RECALC_EXHAUSTED);
+    assert_eq!(model.get_error_message_a1("B1"), RECALC_EXHAUSTED);
 }
 
 /// `A1` iterates on itself, `B1` does not: each run of either is 18 units.
@@ -344,7 +344,7 @@ fn sweeps_draw_on_the_ceiling_and_not_on_the_pass_allowance() {
     assert_eq!(last(&model).mode, RecalcMode::Normal);
     assert_eq!(last(&model).committed, 2 * run);
     assert_eq!(last(&model).spent(), 2 * run + 100 * run);
-    assert_eq!(model._get_text("A1"), "100");
+    assert_eq!(model.get_text_a1("A1"), "100");
 }
 
 #[test]
@@ -356,8 +356,8 @@ fn past_the_ceiling_the_sweeps_stop_where_they_are() {
         let model = sweeping(MAX_PASS_WORK, ceiling);
         assert_eq!(last(&model).mode, RecalcMode::Normal, "{ceiling}");
         assert!(last(&model).spent() <= ceiling, "{ceiling}");
-        assert_eq!(model._get_text("A1"), "10", "{ceiling}");
-        assert_eq!(model._get_text("B1"), "3", "{ceiling}");
+        assert_eq!(model.get_text_a1("A1"), "10", "{ceiling}");
+        assert_eq!(model.get_text_a1("B1"), "3", "{ceiling}");
     }
 }
 
@@ -392,7 +392,7 @@ fn past_the_ceiling_this_and_later_data_table_results_are_num_errors() {
     assert_eq!(last(&model).mode, RecalcMode::Normal);
     let results = ["B2", "B3", "B4", "B5"];
     assert_eq!(texts(&model, &results), ["10", "20", "30", "40"]);
-    assert_eq!(model._get_text("C1"), "100");
+    assert_eq!(model.get_text_a1("C1"), "100");
     // The table's runs are spent but not committed: the second round's pass commits 30.
     assert_eq!(last(&model).committed, 30);
     assert_eq!(last(&model).spent(), 30 + 5 * run + 30);
@@ -402,7 +402,7 @@ fn past_the_ceiling_this_and_later_data_table_results_are_num_errors() {
     let model = tabled(30 + 3 * run + run - 1);
     assert_eq!(texts(&model, &results), ["10", "20", "#NUM!", "#NUM!"]);
     assert_eq!(last(&model).mode, RecalcMode::Exhausted);
-    assert_eq!(model._get_error_message("C1"), RECALC_EXHAUSTED);
+    assert_eq!(model.get_error_message_a1("C1"), RECALC_EXHAUSTED);
 
     // Out of it at the header read: every result is `#NUM!`.
     let model = tabled(30 + run - 1);
@@ -419,7 +419,7 @@ fn a_table_the_memo_skips_charges_the_ceiling_what_its_recomputation_spent() {
     model.evaluate();
     assert_eq!(model.evaluation.data_tables_recomputed, 1);
     assert_eq!(last(&model).spent(), 30 + 5 * run);
-    assert_eq!(model._get_text("C1"), "100");
+    assert_eq!(model.get_text_a1("C1"), "100");
 
     // One unit short of that charge: the table is recomputed instead, and gives what a model
     // evaluated for the first time under that ceiling gives.
@@ -429,7 +429,7 @@ fn a_table_the_memo_skips_charges_the_ceiling_what_its_recomputation_spent() {
     assert_eq!(model.evaluation.data_tables_recomputed, 2);
     let fresh = tabled(ceiling);
     assert_eq!(texts(&model, &results), texts(&fresh, &results));
-    assert_eq!(model._get_text("B5"), "#NUM!");
+    assert_eq!(model.get_text_a1("B5"), "#NUM!");
 }
 
 #[test]
@@ -451,10 +451,10 @@ fn worked_example(heavy: usize, light: usize) -> Model {
     model.area_budget.limit = LIMIT;
     // 3 nodes and 2,536 cells built and read: 15,234 units, 93% of the limit.
     for row in 1..=heavy {
-        model._set(&format!("A{row}"), "=SUM(SEQUENCE(2536))");
+        model.set_a1(&format!("A{row}"), "=SUM(SEQUENCE(2536))");
     }
     for row in 1..=light {
-        model._set(&format!("B{row}"), &format!("=C{row}*2"));
+        model.set_a1(&format!("B{row}"), &format!("=C{row}*2"));
     }
     model.evaluate();
     model
@@ -470,14 +470,14 @@ fn the_worked_example() {
     let model = worked_example(4, 0);
     assert_eq!(last(&model).mode, RecalcMode::Normal);
     assert_eq!(last(&model).spent(), 4 * heavy);
-    assert_eq!(model._get_text("A4"), "3216916");
+    assert_eq!(model.get_text_a1("A4"), "3216916");
 
     // A1:A5: the fifth overruns; every heavy cell gives up at its share.
     let model = worked_example(5, 0);
     let share = 4 * LIMIT / 20;
     assert_eq!(last(&model).mode, RecalcMode::Share(share));
     for row in 1..=5 {
-        assert_eq!(model._get_text(&format!("A{row}")), "#VALUE!");
+        assert_eq!(model.get_text_a1(&format!("A{row}")), "#VALUE!");
     }
     assert!(last(&model).spent() <= 4 * LIMIT + 5 * share);
 
@@ -486,9 +486,9 @@ fn the_worked_example() {
     let model = worked_example(100, 700);
     let share = 4 * LIMIT / 3200;
     assert_eq!(last(&model).mode, RecalcMode::Share(share));
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_text("A100"), "#VALUE!");
-    assert_eq!(model._get_text("B700"), "0");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A100"), "#VALUE!");
+    assert_eq!(model.get_text_a1("B700"), "0");
     assert!(last(&model).committed <= LIMIT);
     assert!(last(&model).spent() <= 4 * LIMIT + LIMIT);
 }
@@ -505,7 +505,7 @@ fn heavy_formula(iterations: u64) -> String {
 fn worked_example_timing() {
     let units = |iterations: u64| {
         let mut model = new_empty_model();
-        model._set("A1", &heavy_formula(iterations));
+        model.set_a1("A1", &heavy_formula(iterations));
         model.evaluate();
         model.area_budget.last_spent
     };
@@ -517,10 +517,10 @@ fn worked_example_timing() {
     for (heavy_cells, light_cells) in [(4, 0), (5, 0), (1000, 0), (1000, 99_000)] {
         let mut model = new_empty_model();
         for row in 1..=heavy_cells {
-            model._set(&format!("A{row}"), &heavy);
+            model.set_a1(&format!("A{row}"), &heavy);
         }
         for row in 1..=light_cells {
-            model._set(&format!("B{row}"), &format!("=C{row}*2"));
+            model.set_a1(&format!("B{row}"), &format!("=C{row}*2"));
         }
         let start = std::time::Instant::now();
         model.evaluate();
@@ -530,7 +530,7 @@ fn worked_example_timing() {
             elapsed,
             last(&model).spent(),
             last(&model).mode,
-            model._get_text("A1"),
+            model.get_text_a1("A1"),
         );
     }
 }

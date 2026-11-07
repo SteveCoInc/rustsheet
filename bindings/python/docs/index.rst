@@ -1,5 +1,5 @@
-IronCalc
-========
+RustSheet
+=========
 
 .. toctree::
    :maxdepth: 2
@@ -13,10 +13,16 @@ IronCalc
    user_api_reference
    objects
 
-IronCalc is a spreadsheet engine that allows you to create, modify and save spreadsheets.
+RustSheet is a headless, Excel-compatible spreadsheet engine: open, edit, evaluate and save
+xlsx workbooks from Python, with Excel's values, errors and number formats.
 
-A simple example that creates a model, sets a formula, evaluates it and gets the result back:
+The API is :class:`rustsheet.Workbook`. Cells are addressed by A1 references, values are
+``None | float | str | bool | XlError``, and edits are atomic transactions:
 
-.. literalinclude:: examples/simple.py
+.. literalinclude:: examples/facade.py
    :language: python
 
+The older index-based classes ``UserModel`` and ``Model`` live in the deprecated
+``rustsheet.legacy`` module until the API v1 freeze; the last three pages document them.
+
+RustSheet's engine started as a fork of IronCalc.

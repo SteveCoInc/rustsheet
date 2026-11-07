@@ -65,7 +65,7 @@ fn insert_rows_fail_inside_array() {
 #[test]
 fn insert_rows_ok_above_dynamic() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:B5");
+    model.set_a1("A1", "=B1:B5");
     model.evaluate();
     // Inserting at row 1 (at anchor) is fine.
     assert!(model.insert_rows(0, 1, 1).is_ok());
@@ -74,7 +74,7 @@ fn insert_rows_ok_above_dynamic() {
 #[test]
 fn insert_rows_ok_below_dynamic() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:B5");
+    model.set_a1("A1", "=B1:B5");
     model.evaluate();
     assert!(model.insert_rows(0, 6, 1).is_ok());
 }
@@ -82,7 +82,7 @@ fn insert_rows_ok_below_dynamic() {
 #[test]
 fn insert_rows_ok_inside_dynamic() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:B5");
+    model.set_a1("A1", "=B1:B5");
     model.evaluate();
     // Dynamic arrays can be broken — inserting inside the spill is allowed.
     assert!(model.insert_rows(0, 3, 1).is_ok());
@@ -132,7 +132,7 @@ fn insert_columns_fail_inside_array() {
 #[test]
 fn insert_columns_ok_inside_dynamic() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:D1");
+    model.set_a1("A1", "=B1:D1");
     model.evaluate();
     // Dynamic arrays can be broken — inserting inside the spill is allowed.
     assert!(model.insert_columns(0, 2, 1).is_ok());
@@ -141,7 +141,7 @@ fn insert_columns_ok_inside_dynamic() {
 #[test]
 fn insert_columns_ok_outside_dynamic() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:D1");
+    model.set_a1("A1", "=B1:D1");
     model.evaluate();
     // Col 4 is after the spill — fine.
     assert!(model.insert_columns(0, 4, 1).is_ok());
@@ -217,7 +217,7 @@ fn delete_rows_fail_partial_overlap_from_below() {
 #[test]
 fn delete_rows_ok_full_dynamic() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:B5");
+    model.set_a1("A1", "=B1:B5");
     model.evaluate();
     // Deleting all 5 rows that the spill occupies should be fine.
     assert!(model.delete_rows(0, 1, 5).is_ok());
@@ -226,7 +226,7 @@ fn delete_rows_ok_full_dynamic() {
 #[test]
 fn delete_rows_ok_partial_dynamic() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:B5");
+    model.set_a1("A1", "=B1:B5");
     model.evaluate();
     // Dynamic arrays can be broken — deleting only part of the spill is allowed.
     assert!(model.delete_rows(0, 1, 3).is_ok());
@@ -292,7 +292,7 @@ fn delete_columns_fail_partial_overlap_from_right() {
 #[test]
 fn delete_columns_ok_full_dynamic() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:D1");
+    model.set_a1("A1", "=B1:D1");
     model.evaluate();
     // A1 anchor is col 1, width 3 (spills cols 1-3). Deleting all 3 is fine.
     assert!(model.delete_columns(0, 1, 3).is_ok());
@@ -301,7 +301,7 @@ fn delete_columns_ok_full_dynamic() {
 #[test]
 fn delete_columns_ok_partial_dynamic() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:D1");
+    model.set_a1("A1", "=B1:D1");
     model.evaluate();
     // Dynamic arrays can be broken — deleting only part of the spill is allowed.
     assert!(model.delete_columns(0, 1, 2).is_ok());
@@ -392,7 +392,7 @@ fn move_row_ok_outside_array() {
 #[test]
 fn move_column_ok_partial_dynamic_overlap() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:D1");
+    model.set_a1("A1", "=B1:D1");
     model.evaluate();
     // Col 2 is inside the spill [1, 3]; partial overlap with affected range [2,3] is fine.
     assert!(model.move_columns_action(0, 2, 1, 1).is_ok());
@@ -404,7 +404,7 @@ fn move_column_ok_partial_dynamic_overlap() {
 #[test]
 fn move_column_ok_full_dynamic_in_range() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:D1");
+    model.set_a1("A1", "=B1:D1");
     model.evaluate();
     assert!(model.move_columns_action(0, 1, 2, 1).is_ok());
 }
@@ -418,7 +418,7 @@ fn move_column_ok_full_dynamic_in_range() {
 #[test]
 fn move_row_ok_partial_dynamic_overlap() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:B5");
+    model.set_a1("A1", "=B1:B5");
     model.evaluate();
     // Row 3 is inside the spill [1, 5]; partial overlap with affected range [3,4] is fine.
     assert!(model.move_rows_action(0, 3, 1, 1).is_ok());
@@ -429,7 +429,7 @@ fn move_row_ok_partial_dynamic_overlap() {
 #[test]
 fn move_row_ok_full_dynamic_in_range() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1:B5");
+    model.set_a1("A1", "=B1:B5");
     model.evaluate();
     assert!(model.move_rows_action(0, 1, 4, 1).is_ok());
 }
@@ -538,19 +538,19 @@ fn move_rows_fail_group_partially_overlaps_cse_array() {
 #[test]
 fn delete_rows_clears_all_deleted_rows() {
     let mut model = new_empty_model();
-    model._set("A2", "foo");
-    model._set("A3", "bar");
-    model._set("A4", "baz");
-    model._set("A5", "keep");
+    model.set_a1("A2", "foo");
+    model.set_a1("A3", "bar");
+    model.set_a1("A4", "baz");
+    model.set_a1("A5", "keep");
     model.evaluate();
 
     assert!(model.delete_rows(0, 2, 3).is_ok());
     model.evaluate();
 
     // The bug cleared only the first deleted row (2); rows 3 and 4 were left with stale data.
-    assert_eq!(model._get_text_at(0, 3, 1), "");
-    assert_eq!(model._get_text_at(0, 4, 1), "");
+    assert_eq!(model.get_text_by_index(0, 3, 1), "");
+    assert_eq!(model.get_text_by_index(0, 4, 1), "");
 
     // The row below the deleted range (originally row 5) shifted up by 3 to row 2.
-    assert_eq!(model._get_text_at(0, 2, 1), "keep");
+    assert_eq!(model.get_text_by_index(0, 2, 1), "keep");
 }

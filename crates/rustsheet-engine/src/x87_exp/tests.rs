@@ -1,6 +1,16 @@
 //! Tests of `x87_exp`: bit identity of the fast paths with the series and with the u128 core
 //! before T-2102, the estimates' error bounds, the extended-argument fixture and the per-call
 //! timing.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(
+    test,
+    expect(
+        clippy::cast_precision_loss,
+        clippy::float_cmp,
+        clippy::many_single_char_names
+    )
+)]
+// LINT-DEBT-END
 
 use super::*;
 

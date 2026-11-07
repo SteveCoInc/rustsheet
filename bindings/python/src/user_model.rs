@@ -240,7 +240,7 @@ impl PyUserModel {
     pub fn get_cell_type(&self, sheet: u32, row: i32, column: i32) -> PyResult<PyCellType> {
         self.model
             .get_cell_type(sheet, row, column)
-            .map(|cell_type| cell_type.into())
+            .map(std::convert::Into::into)
             .map_err(to_py_err)
     }
 

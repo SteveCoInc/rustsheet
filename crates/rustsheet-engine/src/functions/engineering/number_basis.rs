@@ -2,6 +2,9 @@
 //! multi-cell range (`ArgKind::LiftArrays`, SPEC-0011; probes/eng-argument-modes E5:E7, E15:E17,
 //! E24:E26, E52:E54, probes/scalar-lift-shapes H9, probes/eng-later-argument-lift H4:H11): each
 //! kernel is the scalar function of one element, and builds its own errors with empty messages.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+// LINT-DEBT-END
 
 use crate::functions::lift::num_error;
 use crate::{

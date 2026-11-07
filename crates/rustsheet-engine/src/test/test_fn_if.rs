@@ -5,34 +5,34 @@ use crate::test::util::new_empty_model;
 #[test]
 fn fn_if_arguments() {
     let mut model = new_empty_model();
-    model._set("A1", "=IF()");
-    model._set("A2", "=IF(1, 2, 3, 4)");
+    model.set_a1("A1", "=IF()");
+    model.set_a1("A2", "=IF(1, 2, 3, 4)");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
 }
 
 #[test]
 fn fn_if_2_args() {
     let mut model = new_empty_model();
-    model._set("A1", "=IF(2 > 3, TRUE)");
+    model.set_a1("A1", "=IF(2 > 3, TRUE)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"FALSE");
+    assert_eq!(model.get_text_a1("A1"), *"FALSE");
 }
 
 #[test]
 fn fn_if_missing_args() {
     let mut model = new_empty_model();
-    model._set("A1", "=IF(2 > 3, TRUE, )");
-    model._set("A2", "=IF(2 > 3, , 5)");
-    model._set("A3", "=IF(2 < 3, , 5)");
+    model.set_a1("A1", "=IF(2 > 3, TRUE, )");
+    model.set_a1("A2", "=IF(2 > 3, , 5)");
+    model.set_a1("A3", "=IF(2 < 3, , 5)");
 
     model.evaluate();
 
-    // assert_eq!(model._get_text("A1"), *"0");
-    assert_eq!(model._get_text("A2"), *"5");
-    assert_eq!(model._get_text("A3"), *"0");
+    // assert_eq!(model.get_text_a1("A1"), *"0");
+    assert_eq!(model.get_text_a1("A2"), *"5");
+    assert_eq!(model.get_text_a1("A3"), *"0");
 }
 
 // Excel: IF and INDEX hand an aggregate a reference, so its text and booleans
@@ -41,31 +41,31 @@ fn fn_if_missing_args() {
 #[test]
 fn test_if_and_index_pass_references_to_aggregates() {
     let mut model = new_empty_model();
-    model._set("A1", "abc");
-    model._set("A2", "'1");
-    model._set("A3", "TRUE");
-    model._set("A4", "5");
-    model._set("B1", "=SUM(IF(FALSE,-2.5,A1),A4)");
-    model._set("B2", "=COUNT(IF(TRUE,A2),A4)");
-    model._set("B3", "=SUM(A4,INDEX(A1:A2,1))");
-    model._set("B4", "=MAX(IF(TRUE,A1),INDEX(A1:A4,3),A4)");
-    model._set("B5", "=AVERAGE(IF(TRUE,A3),A4)");
-    model._set("B6", "=ISREF(INDEX(A1:A2,2))");
-    model._set("B7", "=IF(TRUE,A1)&\"x\"");
-    model._set("B8", "=SUM(IF(TRUE,\"abc\"))");
-    model._set("B9", "=MIN(IF(TRUE,A1),INDEX(A1:A4,3),A4)");
-    model._set("B10", "=ISREF(INDEX(A1,1,2,2))");
+    model.set_a1("A1", "abc");
+    model.set_a1("A2", "'1");
+    model.set_a1("A3", "TRUE");
+    model.set_a1("A4", "5");
+    model.set_a1("B1", "=SUM(IF(FALSE,-2.5,A1),A4)");
+    model.set_a1("B2", "=COUNT(IF(TRUE,A2),A4)");
+    model.set_a1("B3", "=SUM(A4,INDEX(A1:A2,1))");
+    model.set_a1("B4", "=MAX(IF(TRUE,A1),INDEX(A1:A4,3),A4)");
+    model.set_a1("B5", "=AVERAGE(IF(TRUE,A3),A4)");
+    model.set_a1("B6", "=ISREF(INDEX(A1:A2,2))");
+    model.set_a1("B7", "=IF(TRUE,A1)&\"x\"");
+    model.set_a1("B8", "=SUM(IF(TRUE,\"abc\"))");
+    model.set_a1("B9", "=MIN(IF(TRUE,A1),INDEX(A1:A4,3),A4)");
+    model.set_a1("B10", "=ISREF(INDEX(A1,1,2,2))");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), *"5");
-    assert_eq!(model._get_text("B2"), *"1");
-    assert_eq!(model._get_text("B3"), *"5");
-    assert_eq!(model._get_text("B4"), *"5");
-    assert_eq!(model._get_text("B5"), *"5");
-    assert_eq!(model._get_text("B6"), *"TRUE");
-    assert_eq!(model._get_text("B7"), *"abcx");
-    assert_eq!(model._get_text("B8"), *"#VALUE!");
-    assert_eq!(model._get_text("B9"), *"5");
-    assert_eq!(model._get_text("B10"), *"FALSE");
+    assert_eq!(model.get_text_a1("B1"), *"5");
+    assert_eq!(model.get_text_a1("B2"), *"1");
+    assert_eq!(model.get_text_a1("B3"), *"5");
+    assert_eq!(model.get_text_a1("B4"), *"5");
+    assert_eq!(model.get_text_a1("B5"), *"5");
+    assert_eq!(model.get_text_a1("B6"), *"TRUE");
+    assert_eq!(model.get_text_a1("B7"), *"abcx");
+    assert_eq!(model.get_text_a1("B8"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("B9"), *"5");
+    assert_eq!(model.get_text_a1("B10"), *"FALSE");
 }
 
 // An eta-reduced IF called with one argument is `#VALUE!` per element that is not an error
@@ -73,20 +73,20 @@ fn test_if_and_index_pass_references_to_aggregates() {
 #[test]
 fn eta_if_with_one_argument() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("B1", "0");
-    model._set("C1", "=LET(f,_xleta.IF,f(TRUE))");
-    model._set("C2", "=LET(f,_xleta.IF,f(NA()))");
-    model._set("C3", "=LET(f,_xleta.IF,f({1,#DIV/0!}))");
-    model._set("C5", "=BYROW(A1:B1,_xleta.IF)");
-    model._set("C6", "=LET(f,_xleta.IF,f(FALSE,5))");
+    model.set_a1("A1", "1");
+    model.set_a1("B1", "0");
+    model.set_a1("C1", "=LET(f,_xleta.IF,f(TRUE))");
+    model.set_a1("C2", "=LET(f,_xleta.IF,f(NA()))");
+    model.set_a1("C3", "=LET(f,_xleta.IF,f({1,#DIV/0!}))");
+    model.set_a1("C5", "=BYROW(A1:B1,_xleta.IF)");
+    model.set_a1("C6", "=LET(f,_xleta.IF,f(FALSE,5))");
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "#VALUE!");
-    assert_eq!(model._get_text("C2"), "#N/A");
-    assert_eq!(model._get_text("C3"), "#VALUE!");
-    assert_eq!(model._get_text("D3"), "#DIV/0!");
-    assert_eq!(model._get_text("C5"), "#CALC!");
-    assert_eq!(model._get_text("C6"), "FALSE");
+    assert_eq!(model.get_text_a1("C1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("C2"), "#N/A");
+    assert_eq!(model.get_text_a1("C3"), "#VALUE!");
+    assert_eq!(model.get_text_a1("D3"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("C5"), "#CALC!");
+    assert_eq!(model.get_text_a1("C6"), "FALSE");
 }
 
 #[test]
@@ -124,12 +124,12 @@ fn typed_if_with_one_argument_is_refused() {
         .set_typed_user_input(0, 3, 5, "=IF(FALSE,1)".to_string())
         .unwrap();
     // Stored text is not refused: it takes the one-argument eta path (`#VALUE!`, T-1947).
-    model._set("A9", "=IF(TRUE)");
+    model.set_a1("A9", "=IF(TRUE)");
     model.evaluate();
-    assert_eq!(model._get_text("E1"), "0");
-    assert_eq!(model._get_text("E2"), "1");
-    assert_eq!(model._get_text("E3"), "FALSE");
-    assert_eq!(model._get_text("A9"), "#VALUE!");
+    assert_eq!(model.get_text_a1("E1"), "0");
+    assert_eq!(model.get_text_a1("E2"), "1");
+    assert_eq!(model.get_text_a1("E3"), "FALSE");
+    assert_eq!(model.get_text_a1("A9"), "#VALUE!");
 }
 
 #[test]
@@ -137,14 +137,14 @@ fn test_fn_if_array_branch_no_element_takes_still_sizes_the_result() {
     // A branch no condition element takes is only sized, not copied (T-1564); the result still
     // spans it.
     let mut model = new_empty_model();
-    model._set("C1", "5");
-    model._set("A1", "=ROWS(IF({TRUE},C1,D1:D4))");
-    model._set("A2", "=SUM(IF({TRUE},C1,D1:D4))");
-    model._set("A3", "=ROWS(IF({FALSE},C1:C3,D1))");
-    model._set("A4", "=SUM(IF({TRUE},C:C,D:D))");
+    model.set_a1("C1", "5");
+    model.set_a1("A1", "=ROWS(IF({TRUE},C1,D1:D4))");
+    model.set_a1("A2", "=SUM(IF({TRUE},C1,D1:D4))");
+    model.set_a1("A3", "=ROWS(IF({FALSE},C1:C3,D1))");
+    model.set_a1("A4", "=SUM(IF({TRUE},C:C,D:D))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "4");
-    assert_eq!(model._get_text("A2"), "20");
-    assert_eq!(model._get_text("A3"), "3");
-    assert_eq!(model._get_text("A4"), "5");
+    assert_eq!(model.get_text_a1("A1"), "4");
+    assert_eq!(model.get_text_a1("A2"), "20");
+    assert_eq!(model.get_text_a1("A3"), "3");
+    assert_eq!(model.get_text_a1("A4"), "5");
 }

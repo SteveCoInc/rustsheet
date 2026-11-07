@@ -1,3 +1,13 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_sign_loss,
+    clippy::if_not_else,
+    clippy::manual_let_else,
+    clippy::ref_option,
+    clippy::too_many_lines
+)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
@@ -93,7 +103,7 @@ fn get_range_str(row: i32, column: i32, width: i32, height: i32) -> Option<Strin
 
 fn get_cell_style_attribute(s: i32) -> String {
     if s == 0 {
-        "".to_string()
+        String::new()
     } else {
         format!(" s=\"{s}\"")
     }
@@ -127,7 +137,7 @@ fn split_external_target(target: &str) -> (&str, Option<&str>) {
 fn get_hyperlinks_section(worksheet: &Worksheet) -> String {
     let links = get_sorted_links(worksheet);
     if links.is_empty() {
-        return "".to_string();
+        return String::new();
     }
     let mut hyperlinks_str: Vec<String> = vec![];
     let mut rel_id = 0;
@@ -142,7 +152,7 @@ fn get_hyperlinks_section(worksheet: &Worksheet) -> String {
                 rel_id += 1;
                 let location_attribute = match split_external_target(target).1 {
                     Some(location) => format!(" location=\"{}\"", escape_xml(location)),
-                    None => "".to_string(),
+                    None => String::new(),
                 };
                 let tooltip_attribute = get_tooltip_attribute(tooltip);
                 hyperlinks_str.push(format!(
@@ -164,7 +174,7 @@ fn get_hyperlinks_section(worksheet: &Worksheet) -> String {
 fn get_tooltip_attribute(tooltip: &Option<String>) -> String {
     match tooltip {
         Some(tooltip) => format!(" tooltip=\"{}\"", escape_xml(tooltip)),
-        None => "".to_string(),
+        None => String::new(),
     }
 }
 
@@ -274,7 +284,7 @@ pub(crate) fn get_worksheet_xml(
         let custom_width = i32::from(col.custom_width);
         let column_style = match col.style {
             Some(s) => format!(" style=\"{s}\""),
-            None => "".to_string(),
+            None => String::new(),
         };
         let hidden = if col.hidden { " hidden=\"1\"" } else { "" };
         cols_str.push(format!(
@@ -334,7 +344,7 @@ pub(crate) fn get_worksheet_xml(
                     hidden_str,
                 )
             }
-            None => "".to_string(),
+            None => String::new(),
         };
         sheet_data_str.push(format!(
             "<row r=\"{row_index}\"{row_style_str}>{}</row>",
@@ -356,7 +366,7 @@ pub(crate) fn get_worksheet_xml(
 
     let cols = cols_str.join("");
     let cols = if cols.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!("<cols>{cols}</cols>")
     };
@@ -400,7 +410,7 @@ pub(crate) fn get_worksheet_xml(
             merged_cells_str.join("")
         )
     } else {
-        "".to_string()
+        String::new()
     };
 
     let frozen_rows = worksheet.frozen_rows;

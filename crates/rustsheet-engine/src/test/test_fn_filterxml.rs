@@ -5,11 +5,11 @@ use crate::test::util::new_empty_model;
 #[test]
 fn fn_filterxml_args_number() {
     let mut model = new_empty_model();
-    model._set("A1", "=FILTERXML()");
-    model._set("A2", r#"=FILTERXML("<a>1</a>")"#);
+    model.set_a1("A1", "=FILTERXML()");
+    model.set_a1("A2", r#"=FILTERXML("<a>1</a>")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
 }
 
 // docs/excel-semantics/web.md: `#VALUE!` for a valid call; A2 is backed by
@@ -17,25 +17,25 @@ fn fn_filterxml_args_number() {
 #[test]
 fn fn_filterxml_value_and_error_precedence() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=FILTERXML("<a>1</a>","//a")"#);
-    model._set("A2", r#"=FILTERXML("x"&NA(),"y")"#);
-    model._set("A3", r#"=FILTERXML(1/0,NA())"#);
-    model._set("A4", r#"=FILTERXML("x",NA())"#);
+    model.set_a1("A1", r#"=FILTERXML("<a>1</a>","//a")"#);
+    model.set_a1("A2", r#"=FILTERXML("x"&NA(),"y")"#);
+    model.set_a1("A3", r"=FILTERXML(1/0,NA())");
+    model.set_a1("A4", r#"=FILTERXML("x",NA())"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"#N/A");
-    assert_eq!(model._get_text("A3"), *"#DIV/0!");
-    assert_eq!(model._get_text("A4"), *"#N/A");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"#N/A");
+    assert_eq!(model.get_text_a1("A3"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A4"), *"#N/A");
 }
 
 // probes/filterxml-evidence-floor D28 (T-1704): an array argument gives `#VALUE!` per element.
 #[test]
 fn fn_filterxml_array_xml_lifts() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=FILTERXML({"<a>1</a>";"<a>2</a>"},"//a")"#);
+    model.set_a1("A1", r#"=FILTERXML({"<a>1</a>";"<a>2</a>"},"//a")"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"#VALUE!");
 }
 
 // Errors pass through per element, and a scalar error next to an array broadcasts
@@ -43,11 +43,11 @@ fn fn_filterxml_array_xml_lifts() {
 #[test]
 fn fn_filterxml_array_error_elements() {
     let mut model = new_empty_model();
-    model._set("A1", r#"=FILTERXML({"<a>1</a>";#N/A},"//a")"#);
-    model._set("B1", r#"=FILTERXML(NA(),{"//a";"//b"})"#);
+    model.set_a1("A1", r#"=FILTERXML({"<a>1</a>";#N/A},"//a")"#);
+    model.set_a1("B1", r#"=FILTERXML(NA(),{"//a";"//b"})"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"#N/A");
-    assert_eq!(model._get_text("B1"), *"#N/A");
-    assert_eq!(model._get_text("B2"), *"#N/A");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"#N/A");
+    assert_eq!(model.get_text_a1("B1"), *"#N/A");
+    assert_eq!(model.get_text_a1("B2"), *"#N/A");
 }

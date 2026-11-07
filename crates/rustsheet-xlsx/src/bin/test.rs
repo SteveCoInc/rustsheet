@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::print_stdout)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
@@ -15,9 +18,7 @@ use rustsheet_xlsx::{compare::test_file, export::save_to_xlsx, import::load_from
 
 fn main() {
     let args: Vec<_> = std::env::args().collect();
-    if args.len() != 2 {
-        panic!("Usage: {} <file.xlsx>", args[0]);
-    }
+    assert!(args.len() == 2, "Usage: {} <file.xlsx>", args[0]);
     // first test the file
     let file_name = &args[1];
     println!("Testing file: {file_name}");

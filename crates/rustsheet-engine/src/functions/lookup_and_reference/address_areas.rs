@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::manual_let_else
+)]
+// LINT-DEBT-END
 use crate::external_reference::PickedReference;
 use crate::functions::Function;
 use crate::{

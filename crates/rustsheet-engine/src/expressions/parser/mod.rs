@@ -1,3 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::implicit_hasher,
+    clippy::struct_excessive_bools
+)]
+// LINT-DEBT-END
 /*!
 # GRAMMAR
 
@@ -47,7 +56,7 @@ pub(crate) const XLPM_PREFIX: &str = "_xlpm.";
 use super::lexer;
 use super::token;
 use super::token::TokenType;
-use super::types::*;
+use super::types::CellReferenceRC;
 
 use sheet_span::with_sheet_span;
 pub(crate) use sheet_span::{is_multi_sheet_span, is_span_or_if_of_span};

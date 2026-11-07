@@ -29,10 +29,10 @@ fn empty_arguments_follow_the_toolpak_rule() {
         ("ROWS(COMPLEX({1;2},))", "2"),
     ];
     for (row, (formula, _)) in (1..).zip(cases) {
-        model._set(&format!("A{row}"), &format!("={formula}"));
+        model.set_a1(&format!("A{row}"), &format!("={formula}"));
     }
     model.evaluate();
     for (row, (formula, expected)) in (1..).zip(cases) {
-        assert_eq!(model._get_text(&format!("A{row}")), expected, "{formula}");
+        assert_eq!(model.get_text_a1(&format!("A{row}")), expected, "{formula}");
     }
 }

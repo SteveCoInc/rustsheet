@@ -16,14 +16,14 @@ fn check(cells: &[(&str, &str, &str)]) {
         ("C2", "1"),
         ("C3", "3"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {
-        assert_eq!(model._get_text(cell), *expected, "{cell} {formula}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell} {formula}");
     }
 }
 
@@ -80,12 +80,12 @@ fn sort_orders_lift_by_the_first_element_rule() {
 #[test]
 fn a_lifted_call_over_a_large_array_is_charged_per_element() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ROWS(SORTBY(SEQUENCE(131072),SEQUENCE(131072),SEQUENCE(1100,1,1,0)))",
     );
-    model._set("B1", "=ROWS(SORTBY(SEQUENCE(4),SEQUENCE(4),{1;1}))");
+    model.set_a1("B1", "=ROWS(SORTBY(SEQUENCE(4),SEQUENCE(4),{1;1}))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("B1"), "2");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), "2");
 }

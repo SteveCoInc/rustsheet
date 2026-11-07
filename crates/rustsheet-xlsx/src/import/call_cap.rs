@@ -62,7 +62,7 @@ pub(super) fn check_rule_formulas(
     let validations = ws
         .children()
         .filter(|n| n.has_tag_name("dataValidations"))
-        .flat_map(|dv| dv.children())
+        .flat_map(super::xml::XmlNode::children)
         .filter(|v| v.has_tag_name("dataValidation") && v.attribute("type") == Some("custom"))
         .map(|v| ("data validation", v, v, "formula1"));
     // `sqref` is on the `<conditionalFormatting>` around a rule, and on the `<dataValidation>`.

@@ -9,7 +9,7 @@ use crate::TYPED_FORMULA_DOES_NOT_PARSE;
 #[test]
 fn typed_formulas_that_do_not_parse_are_refused() {
     let mut model = new_empty_model();
-    model._set("A1", "7");
+    model.set_a1("A1", "7");
     for formula in [
         "=1+",
         "=(1",
@@ -27,7 +27,7 @@ fn typed_formulas_that_do_not_parse_are_refused() {
         );
     }
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "7");
+    assert_eq!(model.get_text_a1("A1"), "7");
 }
 
 #[test]
@@ -38,20 +38,20 @@ fn typed_calls_missing_their_parenthesis_are_closed() {
         assert_eq!(result, Ok(()), "{formula}");
     }
     model.evaluate();
-    assert_eq!(model._get_formula("A1"), "=SUM(1)");
-    assert_eq!(model._get_formula("A2"), "=SUM(1,,)");
-    assert_eq!(model._get_text("A2"), "1");
-    assert_eq!(model._get_text("A3"), "2");
+    assert_eq!(model.get_formula_a1("A1"), "=SUM(1)");
+    assert_eq!(model.get_formula_a1("A2"), "=SUM(1,,)");
+    assert_eq!(model.get_text_a1("A2"), "1");
+    assert_eq!(model.get_text_a1("A3"), "2");
 }
 
 #[test]
 fn stored_formulas_that_do_not_parse_keep_their_text() {
     let mut model = new_empty_model();
-    model._set("A1", "=1+");
-    model._set("A2", "=(1");
+    model.set_a1("A1", "=1+");
+    model.set_a1("A2", "=(1");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("A2"), "1");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), "1");
 }
 
 #[test]
@@ -85,7 +85,7 @@ fn only_a_calls_open_parenthesis_is_closed() {
 #[test]
 fn typed_double_star_in_a_number_is_its_exponent() {
     let mut model = new_empty_model();
-    model._set("Z1", "2");
+    model.set_a1("Z1", "2");
     for (row, typed, formula, value) in [
         (1, "=1**2", "=100", "100"),
         (2, "=2**3", "=2000", "2000"),
@@ -128,9 +128,9 @@ fn typed_double_star_in_a_number_is_its_exponent() {
         );
     }
     // Stored, `**` is not read as an exponent: the text stays a parse error (unprobed).
-    model._set("A10", "=1**2");
+    model.set_a1("A10", "=1**2");
     model.evaluate();
-    assert_eq!(model._get_text("A10"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A10"), "#ERROR!");
 }
 
 /// T-3338: a typed formula past Excel's sign cap is refused as one that does not parse, the cell
@@ -149,12 +149,12 @@ fn typed_formulas_past_the_sign_cap_are_refused_as_not_parsing() {
             "{sign}{operand}: {message}"
         );
         assert_eq!(model.set_typed_user_input(0, 2, 1, typed(1022)), Ok(()));
-        model._set("B1", "=ISFORMULA(A1)");
+        model.set_a1("B1", "=ISFORMULA(A1)");
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "");
-        assert_eq!(model._get_text("B1"), "FALSE");
+        assert_eq!(model.get_text_a1("A1"), "");
+        assert_eq!(model.get_text_a1("B1"), "FALSE");
         // An even count of minus signs: 1 either way.
-        assert_eq!(model._get_text("A2"), "1", "{sign}{operand}");
+        assert_eq!(model.get_text_a1("A2"), "1", "{sign}{operand}");
     }
 }
 
@@ -163,18 +163,18 @@ fn typed_formulas_past_the_sign_cap_are_refused_as_not_parsing() {
 #[test]
 fn typed_anchorarray_call_is_refused_but_the_hash_operator_is_not() {
     let mut model = new_empty_model();
-    model._set("A1", "7");
+    model.set_a1("A1", "7");
     for formula in ["=ANCHORARRAY(C1)", "=SUM(ANCHORARRAY(C1))"] {
         let result = model.set_typed_user_input(0, 1, 1, formula.to_string());
         assert!(result.is_err(), "{formula}");
     }
-    assert_eq!(model._get_text("A1"), "7");
+    assert_eq!(model.get_text_a1("A1"), "7");
     assert_eq!(
         model.set_typed_user_input(0, 2, 1, "=SUM(C1#)".to_string()),
         Ok(())
     );
-    model._set("A3", "=ANCHORARRAY(C1)");
-    assert_eq!(model._get_formula("A3"), "=C1#");
+    model.set_a1("A3", "=ANCHORARRAY(C1)");
+    assert_eq!(model.get_formula_a1("A3"), "=C1#");
 }
 
 /// T-3689: typed past Excel's 256-parenthesis cap or its 65-call cap, a formula is refused as one
@@ -188,7 +188,7 @@ fn typed_formulas_past_the_parenthesis_or_call_cap_are_refused_as_not_parsing() 
     };
     for (open, close, cap) in [("(", ")", 256), ("-(", ")", 256), ("ABS(", ")", 65)] {
         let mut model = new_empty_model();
-        model._set("A1", "7");
+        model.set_a1("A1", "7");
         let result = model.set_typed_user_input(0, 1, 1, nested(open, close, cap + 1));
         let message = result.err().unwrap_or_default();
         assert!(
@@ -201,9 +201,9 @@ fn typed_formulas_past_the_parenthesis_or_call_cap_are_refused_as_not_parsing() 
             "{open}"
         );
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "7", "{open}");
+        assert_eq!(model.get_text_a1("A1"), "7", "{open}");
         // An even count of minus signs: 1 either way.
-        assert_eq!(model._get_text("A2"), "1", "{open}");
+        assert_eq!(model.get_text_a1("A2"), "1", "{open}");
     }
 }
 
@@ -213,8 +213,8 @@ fn typed_formulas_past_the_parenthesis_or_call_cap_are_refused_as_not_parsing() 
 #[test]
 fn typed_tab_or_nbsp_between_tokens_is_refused() {
     let mut model = new_empty_model();
-    model._set("A1", "7");
-    model._set("D1", "4");
+    model.set_a1("A1", "7");
+    model.set_a1("D1", "4");
     for formula in ["=1+\t2", "=\t1+2", "=1\t+2", "=1+\u{a0}2", "=Sheet1!\tD1"] {
         let result = model.set_typed_user_input(0, 1, 1, formula.to_string());
         let message = result.err().unwrap_or_default();
@@ -227,12 +227,12 @@ fn typed_tab_or_nbsp_between_tokens_is_refused() {
         let result = model.set_typed_user_input(0, row, 1, formula.to_string());
         assert_eq!(result, Ok(()), "{formula:?}");
     }
-    model._set("A4", "=1+\t2");
+    model.set_a1("A4", "=1+\t2");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "7");
-    assert_eq!(model._get_text("A2"), "3");
-    assert_eq!(model._get_text("A3"), "3");
-    assert_eq!(model._get_text("A4"), "3");
+    assert_eq!(model.get_text_a1("A1"), "7");
+    assert_eq!(model.get_text_a1("A2"), "3");
+    assert_eq!(model.get_text_a1("A3"), "3");
+    assert_eq!(model.get_text_a1("A4"), "3");
     assert_eq!(
         typed_r1c1(&mut model, 0, "=Sheet1! R1C4", 10, 1).as_deref(),
         Some("=Sheet1!$D$1")
@@ -317,10 +317,10 @@ fn typed_xlpm_declarations_are_refused_in_any_case_and_uses_read_back_lowercase(
         let result = model.set_typed_user_input(0, row, 1, formula.to_string());
         assert_eq!(result, Ok(()), "{formula}");
     }
-    model._set("B2", "=FORMULATEXT(A2)");
+    model.set_a1("B2", "=FORMULATEXT(A2)");
     model.evaluate();
-    assert_eq!(model._get_text("A2"), "#NAME?");
-    assert_eq!(model._get_text("B2"), "=LET(x,2,_xlpm.x*3)");
-    assert_eq!(model._get_text("A3"), "#NAME?");
-    assert_eq!(model._get_text("A4"), "6");
+    assert_eq!(model.get_text_a1("A2"), "#NAME?");
+    assert_eq!(model.get_text_a1("B2"), "=LET(x,2,_xlpm.x*3)");
+    assert_eq!(model.get_text_a1("A3"), "#NAME?");
+    assert_eq!(model.get_text_a1("A4"), "6");
 }

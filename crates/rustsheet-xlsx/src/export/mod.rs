@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::too_many_lines)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 mod _rels;
@@ -104,7 +107,7 @@ fn get_content_types_xml(
     content.extend([
         r#"<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>"#.to_string(),
         r#"<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>"#.to_string(),
-        r#"</Types>"#.to_string(),
+        r"</Types>".to_string(),
     ]);
     format!("{XML_DECLARATION}\n{}", content.join(""))
 }

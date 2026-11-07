@@ -1,8 +1,14 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::manual_let_else, clippy::unnecessary_wraps)]
+// LINT-DEBT-END
 use crate::constants::{self, LAST_COLUMN, LAST_ROW};
 use crate::expressions::types::CellReferenceIndex;
 use crate::expressions::utils::{is_valid_column_number, is_valid_row};
 use crate::model::CellStructure;
-use crate::{expressions::token::Error, types::*};
+use crate::{
+    expressions::token::Error,
+    types::{ArrayKind, Cell, Col, FormulaValue, MergedCell, Row, Worksheet},
+};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct WorksheetDimension {
@@ -83,7 +89,7 @@ impl Worksheet {
             }
         }
         let cols = &self.cols;
-        for column in cols.iter() {
+        for column in cols {
             let min = column.min;
             let max = column.max;
             if column_index >= min && column_index <= max {
@@ -127,7 +133,7 @@ impl Worksheet {
         }
         // FIXME: This is a HACK
         let custom_format = style_index != 0;
-        for r in self.rows.iter_mut() {
+        for r in &mut self.rows {
             if r.r == row {
                 r.s = style_index;
                 r.custom_format = custom_format;
@@ -754,8 +760,8 @@ impl Worksheet {
             if let Some((min_column, max_column)) = column_range {
                 Some(WorksheetDimension {
                     min_row,
-                    min_column,
                     max_row,
+                    min_column,
                     max_column,
                 })
             } else {
@@ -958,12 +964,11 @@ where
     let mut previous_cell = start_cell;
     let mut current_cell = step_in_direction(start_cell, direction);
     while let Some(cell) = current_cell {
-        if !predicate((cell.0, cell.1))? {
-            previous_cell = cell;
-            current_cell = step_in_direction(cell, direction);
-        } else {
+        if predicate((cell.0, cell.1))? {
             break;
         }
+        previous_cell = cell;
+        current_cell = step_in_direction(cell, direction);
     }
     Ok(WalkFoundCells {
         found_cell: current_cell,
