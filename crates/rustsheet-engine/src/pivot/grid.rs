@@ -495,9 +495,17 @@ impl Model {
             }
         }
         let spilled = fits.is_none();
-        // Laid out again, the pivot's saved layout lines no longer describe its cells; the
-        // export writes the engine's in their place (T-4176).
-        pivot.opaque.retain(|entry| !entry.is_layout_lines());
+        // Laid out again, the pivot's saved layout lines describe its cells only when nothing
+        // changed: the same cache, the same location and geometry, and the cells the sheet
+        // already shows (checked below, with nothing to clear). A refresh-on-load of an unchanged
+        // pivot then leaves it as read, so the source-preserving export keeps its parts (T-4825,
+        // SPEC-0034). Otherwise the export writes the engine's lines in their place (T-4176).
+        let unchanged = fits.as_ref().is_some_and(|(layout, cells)| {
+            layout.location == pivot.location
+                && layout.geometry == pivot.geometry
+                && self.workbook.pivot_caches.get(pivot.cache as usize) == Some(cache)
+                && self.already_shown(sheet, cells)
+        });
         let cells = match fits {
             Some((layout, cells)) => {
                 pivot.location = layout.location;
@@ -531,6 +539,9 @@ impl Model {
             }
         }
         budget.charge_cells(cleared.len())?;
+        if !(unchanged && cleared.is_empty()) {
+            pivot.opaque.retain(|entry| !entry.is_layout_lines());
+        }
         let taken = owned_areas(pivot.location, &pivot.geometry);
         blockers.placed.push((pivot.sheet_id, taken));
         Ok(PivotPlacement {
@@ -540,6 +551,36 @@ impl Model {
             cleared,
             cells,
             spilled,
+        })
+    }
+
+    /// Whether `sheet` already holds each of `cells`, rendered at their places (0-based): the same
+    /// text, number or error, so writing them changes no value.
+    fn already_shown(&self, sheet: u32, cells: &[RenderedCell]) -> bool {
+        let Ok(worksheet) = self.workbook.worksheet(sheet) else {
+            return false;
+        };
+        let one_based = |n: u32| i32::try_from(n).ok().and_then(|n| n.checked_add(1));
+        cells.iter().all(|rendered| {
+            let (Some(row), Some(column)) = (one_based(rendered.row), one_based(rendered.column))
+            else {
+                return false;
+            };
+            let Some(cell) = worksheet.cell(row, column) else {
+                return false;
+            };
+            match (&rendered.value, cell) {
+                (PivotCell::Error(error), Cell::ErrorCell { ei, .. }) => error == ei,
+                (PivotCell::Error(_), _) | (_, Cell::ErrorCell { .. }) => false,
+                (PivotCell::Number(n), cell) => {
+                    cell.value(&self.workbook.shared_strings, self.language)
+                        == crate::cell::CellValue::Number(*n)
+                }
+                (PivotCell::Text(text), cell) => matches!(
+                    cell.value(&self.workbook.shared_strings, self.language),
+                    crate::cell::CellValue::String(s) if s == *text
+                ),
+            }
         })
     }
 
