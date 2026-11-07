@@ -758,6 +758,7 @@ mod semantic_items {
 #[test]
 fn flags_map_to_modes_and_regressions_are_refused_by_default() {
     let flags = |check, update, allow_regressions| Flags {
+        save_dir: None,
         check,
         update,
         allow_regressions,

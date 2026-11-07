@@ -173,6 +173,8 @@ enum Cmd {
         cached: PathBuf,
         recalculated: PathBuf,
     },
+    /// Score another writer's save of a workbook against ours (T-4890, the Excel re-save probe).
+    PackageDiff(roundtrip::PackageDiff),
     /// Round-trip fidelity (SPEC-0033): load and save each workbook of the suites under
     /// eval/roundtrip, validate the output and score what it kept; writes
     /// eval/runs/latest/roundtrip.{json,md}. `--check` gates the baselines, `--update-baseline`
@@ -684,11 +686,7 @@ fn cmd_check(
             failed = true;
         }
     }
-    Ok(if failed {
-        ExitCode::FAILURE
-    } else {
-        ExitCode::SUCCESS
-    })
+    Ok(ExitCode::from(u8::from(failed)))
 }
 
 fn cmd_lift_kinds(root: &Path, write: bool) -> Result<ExitCode> {
@@ -832,11 +830,7 @@ fn cmd_accuracy(root: &Path, json: Option<PathBuf>, timeout: u64) -> Result<Exit
     let check = accuracy::run(root, &engine, Duration::from_secs(timeout))?;
     print!("{}", check.render());
     check.write_json(&json)?;
-    Ok(if check.passes() {
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::FAILURE
-    })
+    Ok(ExitCode::from(u8::from(!check.passes())))
 }
 
 fn load_snapshot(path: &Path) -> Result<WorkbookSnapshot> {
@@ -857,6 +851,12 @@ fn run() -> Result<ExitCode> {
     {
         let comparison = compare_snapshots(&load_snapshot(cached)?, &load_snapshot(recalculated)?);
         println!("{}", serde_json::to_string(&comparison)?);
+        return Ok(ExitCode::SUCCESS);
+    }
+    if let Cmd::PackageDiff(diff) = &cli.cmd {
+        let (items, summary) = diff.report()?;
+        print!("{items}");
+        eprintln!("{summary}");
         return Ok(ExitCode::SUCCESS);
     }
     let root = find_root(cli.root)?;
@@ -950,8 +950,10 @@ fn run() -> Result<ExitCode> {
         }),
         Cmd::Cases { suite } => cmd_cases(&root, &suite),
         Cmd::Accuracy { json, timeout } => cmd_accuracy(&root, json, timeout),
-        Cmd::Roundtrip { sel, flags } => cmd_roundtrip(&root, &sel, flags),
-        Cmd::Snapshot { .. } | Cmd::Compare { .. } => unreachable!("handled above"),
+        Cmd::Roundtrip { sel, flags } => cmd_roundtrip(&root, &sel, &flags),
+        Cmd::Snapshot { .. } | Cmd::Compare { .. } | Cmd::PackageDiff(_) => {
+            unreachable!("handled above")
+        }
     }
 }
 
@@ -974,19 +976,14 @@ fn cmd_suites(root: &Path) -> Result<ExitCode> {
 }
 
 /// `rustsheet-eval roundtrip` (SPEC-0033): the gate suites with `--check`, else the selection.
-fn cmd_roundtrip(root: &Path, sel: &Selection, flags: roundtrip::Flags) -> Result<ExitCode> {
+fn cmd_roundtrip(root: &Path, sel: &Selection, flags: &roundtrip::Flags) -> Result<ExitCode> {
     let suites = select_from(Suite::load_roundtrip(root)?, sel, flags.check)?;
-    let mode = flags.mode();
     let timeout = Duration::from_secs(sel.timeout);
-    let (ok, lines) = roundtrip::command(root, &suites, sel.filter.as_deref(), timeout, mode)?;
+    let (ok, lines) = roundtrip::command(root, &suites, sel.filter.as_deref(), timeout, flags)?;
     for line in lines {
         println!("{line}");
     }
-    Ok(if ok {
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::FAILURE
-    })
+    Ok(ExitCode::from(u8::from(!ok)))
 }
 
 fn main() -> ExitCode {
