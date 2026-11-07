@@ -56,4 +56,6 @@ T-4146) also hold at non-integer nper, and the T-4146 record made precise.
   - T-4146's Outcome now gives bit-exact and 4-ulp counts for each candidate. It also says the fresh sweep is a
     probes case (there is no FV/PV Gate A table) and that both sweeps used integer nper only.
   - The `annuity_power` doc comment is rewrapped.
+- **R3 points:** Excel is more than 1e-4 from the 80-digit math on 12 of the 80 cells (A18, A42, A58 among them;
+  more than 1e-9 on 50), where the cancelling sum amplifies the rounding. Excel kept as the target (decision 0300).
 - **No engine change.** Eval: one new case, 80/80 passing; no regressions.

@@ -57,8 +57,9 @@ Known failures owned: probes/t3424-rate-noise-trace A132.
 - **Engine:** `compute_future_value` and `fn_pv` use `annuity_factor_rounded` and Excel's `+`, `*`, `/`
   (annuity.rs); the once-rounded `annuity_factor` is gone (no other caller). NPER does not use the factor.
 - **Eval delta:** probes fixed 1 (t3424-rate-noise-trace A132), regressions 0; two new cases, 360 of 360 passing.
-- **Precision of the record (T-4244, from the #3226 fidelity review):** on the hold-out, bit-exact and within 4 ulp
-  are the same for each candidate: twice-rounded 240/240 and 240/240; correctly rounded 0 and 0; plain doubles 0
-  bit-exact, within 4 ulp only for PV (21/87 train, 8/33 test). The fresh sweep is 120/120 inside the envelope as a
+- **Precision of the record (T-4244, from the #3226 fidelity review):** over the whole case (train and test; the
+  hold-out alone is FV 36/36 and PV 33/33 for twice-rounded), bit-exact / within 4 ulp / within 15 digits per
+  candidate: twice-rounded 240 / 240 / 240 of 240; correctly rounded 0 / 0 / 1 of 240 (0 / 0 / 0 of 120 on the fresh
+  sweep); plain doubles 0 bit-exact, within 4 ulp only for PV (21/87 train, 8/33 test). The fresh sweep is 120/120 inside the envelope as a
   probes case (no FV/PV Gate A table exists). Both sweeps hold cancelling integer-nper calls only; T-4244's
   probes/t4244-fv-pv-nonint-nper extends the form to non-integer nper (80/80).

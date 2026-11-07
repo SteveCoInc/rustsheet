@@ -102,6 +102,9 @@ Evidence (excel-graph, 2026-11-04, T-4146; generator, forms and scorer in docs/r
   committed before the fill (excel-graph, 2026-11-07). Twice-rounded bit-exact on all 80 (FV 24/24 train and 16/16
   test, PV 29/29 and 11/11), plain doubles 0 (PV within 4 ulp on 6 of 40), the correctly rounded value 0. So P is
   Excel's `^` of the double `1+r` at a fractional exponent, and the operators are the same as at integer nper.
+  These cancelling calls amplify the rounding: Excel is more than 1e-4 from the 80-digit math on 12 of the 80 (A18
+  `-2.42076...` against -1.64630..., A42, A58), more than 1e-9 on 50. Excel kept as the target (decision 0300): the
+  engine matches Excel there, and no point needs it to leave Excel.
 Ours: `compute_future_value` and `fn_pv` with `annuity_factor_rounded` (functions/financial/annuity.rs), at every nper
 since T-4146.
 Status: VERIFIED (excel-graph; integer and non-integer nper, rate ≠ 0. rate = 0 keeps its own form, `-fv - pmt*nper`,

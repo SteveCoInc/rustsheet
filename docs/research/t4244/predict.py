@@ -34,4 +34,5 @@ def main() -> None:
         print("\t".join([cell, f, engine.get(cell, "?"), *row]))
 
 
-main()
+if __name__ == "__main__":
+    main()
