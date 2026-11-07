@@ -3,7 +3,7 @@ id: T-4882
 title: "F.TEST and FTEST with an omitted sample are #VALUE!, not #DIV/0!"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
