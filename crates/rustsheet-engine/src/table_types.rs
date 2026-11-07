@@ -188,12 +188,13 @@ pub struct CustomFilter {
 }
 
 impl CustomFilter {
-    /// Whether the condition holds for a cell that displays `text`, when that can be told here:
-    /// an `equal` (or absent) operator with a text operand holds when the text is the operand,
-    /// exactly (docs/research/t4895/uploads/custom: equals a, or equals c, keeps rows 2-7's
-    /// a and c; T-4939); a match that differs only in case is `None` (custom-upper, T-4965). `None` for every other operator, an operand that reads as a number
-    /// (a number cell may be compared by value) and one with a wildcard (`*`, `?` or `~`): none
-    /// of them is probed.
+    /// Whether the condition holds for a cell that displays `text`, when that can be told here.
+    /// An `equal` (or absent) operator with a text operand is `Some(true)` when the text is the
+    /// operand exactly (docs/research/t4895/uploads/custom: equals a, or equals c, keeps rows
+    /// 2-7's a and c; T-4939) and `Some(false)` when it differs by more than case. `None` when
+    /// the two differ only in case (custom-upper, T-4965: Excel changed no row), for every other
+    /// operator, for an operand that reads as a number (a number cell may be compared by value)
+    /// and for one with a wildcard (`*`, `?` or `~`): none of them is probed.
     #[must_use]
     pub fn keeps_text(&self, text: &str) -> Option<bool> {
         let equal = self.operator.as_deref().is_none_or(|op| op == "equal");

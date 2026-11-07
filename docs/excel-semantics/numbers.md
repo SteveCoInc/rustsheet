@@ -2409,7 +2409,8 @@ a file and for one given its criteria with `Txn::filter_table_column`. The eval 
 kept rows' General text, as spec2xlsx writes it (`add_table` in crates/rustsheet-eval/src/engine.rs runs before the
 number formats are set). Rule (ours where unprobed): a values filter without date groups is evaluated (blank rows by
 `blank`, other rows by their text among `values`), and a custom filter whose conditions all have the `equal` operator
-(or none) and a text operand without a wildcard (`*`, `?`, `~`) that matches the cell exactly or not at all (a case-only difference is no verdict), combined by `and` or `or` (the evidenced form is `or`). A row whose verdict hangs on any
+(or none) and a text operand without a wildcard (`*`, `?`, `~`) that matches the cell exactly or not at all (a case-only difference
+is no verdict), combined by `and` or `or` (the evidenced form is `or`). A row whose verdict hangs on any
 other kept criterion (a custom filter with another operator or a numeric operand, top 10, dynamic, date groups, color)
 keeps its state, unless an evaluated criterion rejects it. The undo puts back every row the delete showed or hid.
 Kept top10, dynamic, date-group and color criteria are unprobed.

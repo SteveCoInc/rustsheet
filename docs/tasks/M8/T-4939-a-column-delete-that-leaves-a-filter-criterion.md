@@ -59,7 +59,8 @@ ignoring case, and it evaluates a kept custom filter as well as a values filter.
   row with no row record gets a new hidden record (`Row::hidden_default`, now shared with `Worksheet::set_row_hidden`).
   A row whose verdict hangs on a criterion nothing evaluates keeps its state.
 - `FilterCriterion::keeps_text` now also evaluates a custom filter (`CustomFilter::keeps_text`), for the evidenced
-  form only: `equal`, or no operator, with a text operand that has no wildcard, combined by `and` or `or` (the evidenced form is `or`). Every other
+  form only: `equal`, or no operator, with a text operand that has no wildcard, combined by `and` or `or`
+  (the evidenced form is `or`). Every other
   custom filter stays `None`.
 - Undo: `delete_columns_keeping_tables` returns each row whose hidden state the delete changed, with its new state,
   so the undo hides again what it showed and shows again what it hid (`Diff::row_hidden_toggled` replaces
