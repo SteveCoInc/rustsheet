@@ -111,3 +111,41 @@ fn unknown_table_or_column_loads_as_ref() {
         assert_eq!(cell(&bytes, 51).unwrap(), "=SUM(#REF!)", "{formula}");
     }
 }
+
+/// A table named `Ⓐ`, `ⓐ` or a combining mark + `a` loads as Excel loads it while no formula
+/// uses it: the table and the sheet's cells are kept (references.md "Characters of a name",
+/// "Table names", T-4446, T-4753), although `add_table` refuses such a name.
+#[test]
+fn a_table_named_with_a_circled_letter_or_a_mark_loads() {
+    for table_name in ["Ⓐ", "ⓐ", "\u{301}a"] {
+        let attrs = format!(r#"name="{table_name}" displayName="{table_name}""#);
+        let bytes = workbook_with_formula(&attrs, "SUM(B2:B4)");
+        let workbook = load_from_xlsx_bytes(&bytes, "case", "en", "UTC").unwrap();
+        let table = &workbook.tables[table_name];
+        assert_eq!(
+            (table.sheet_name.as_str(), table.reference.as_str()),
+            ("Table", "A1:D4"),
+            "{table_name}"
+        );
+        assert_eq!(cell(&bytes, 50).unwrap(), "5935", "{table_name}");
+    }
+}
+
+/// A loaded structured reference to such a table: `ⓐ[Year]` reads it, as Excel's `SUM(ⓐ[h])`
+/// does; Excel refuses the workbook at load for `Ⓐ[h]` and a first mark, which the engine loads as
+/// a parse error (`#ERROR!`), its stand-in for every refused name (references.md "Characters of a
+/// name", T-4753).
+#[test]
+fn a_structured_reference_to_a_circled_or_marked_table_name() {
+    for (table_name, value) in [("ⓐ", "5935"), ("Ⓐ", "#ERROR!"), ("\u{301}a", "#ERROR!")] {
+        let attrs = format!(r#"name="{table_name}" displayName="{table_name}""#);
+        let formula = format!("SUM({table_name}[Year])");
+        let bytes = workbook_with_formula(&attrs, &formula);
+        assert_eq!(cell(&bytes, 50).unwrap(), value, "{table_name}");
+        assert_eq!(
+            cell(&bytes, 51).unwrap(),
+            format!("={formula}"),
+            "{table_name}"
+        );
+    }
+}

@@ -10,6 +10,7 @@ use crate::expressions::token::Error;
 use crate::expressions::types::CellReferenceIndex;
 use crate::external_reference::PickedReference;
 use crate::functions::lift::{ArgBuf, LiftedArg};
+use crate::functions::Function;
 use crate::model::Model;
 use crate::reference_operators::{RefArg, RefElement, RefGrid};
 
@@ -111,6 +112,19 @@ impl Model {
         node: &Node,
         cell: CellReferenceIndex,
     ) -> Result<Source, CalcResult> {
+        // A lifted XLOOKUP with a range if_not_found is a mixed grid of its hits as values and
+        // its misses as that range, which OFFSET lifts over (`ROWS(OFFSET(XLOOKUP({2;9},A1:A3,
+        // B1:B3,G1:G2),0,0))` is 2, each element `#VALUE!`; probes/t4704-mixed-xlookup-grid-
+        // readers A4:C8). Any other XLOOKUP reads as before: the reference it picks, or its value.
+        if let Node::FunctionKind {
+            kind: Function::Xlookup,
+            args,
+        } = node.ungrouped()
+        {
+            let read = self.xlookup_reference(args, cell, true);
+            self.empty_amor_left_over();
+            return offset_source_read(read, cell);
+        }
         if !may_hand_on_grid(node) {
             return self.get_reference(node, cell).map(Source::One);
         }

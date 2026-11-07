@@ -1,0 +1,3098 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "5",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Price",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "5"
+     }
+    },
+    {
+     "name": "Zero",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "0",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Unit Cost",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Bob's",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "6",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Rev"
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "B"
+    },
+    "A11": {
+     "t": "s",
+     "v": "C"
+    },
+    "A12": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "East"
+    },
+    "A6": {
+     "t": "s",
+     "v": "A"
+    },
+    "A7": {
+     "t": "s",
+     "v": "B"
+    },
+    "A8": {
+     "t": "s",
+     "v": "West"
+    },
+    "A9": {
+     "t": "s",
+     "v": "A"
+    },
+    "B10": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B11": {
+     "t": "n",
+     "v": 0.0
+    },
+    "B12": {
+     "t": "n",
+     "v": 15.0
+    },
+    "B3": {
+     "t": "s",
+     "v": "Values"
+    },
+    "B4": {
+     "t": "s",
+     "v": "Sum of Units"
+    },
+    "B5": {
+     "t": "n",
+     "v": 6.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 9.0
+    },
+    "B9": {
+     "t": "n",
+     "v": 4.0
+    },
+    "C10": {
+     "t": "n",
+     "v": 6.0
+    },
+    "C11": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C12": {
+     "t": "n",
+     "v": 58.0
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Sum of Price"
+    },
+    "C5": {
+     "t": "n",
+     "v": 35.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 30.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 5.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 23.0
+    },
+    "C9": {
+     "t": "n",
+     "v": 10.0
+    },
+    "D10": {
+     "t": "n",
+     "v": 30.0
+    },
+    "D11": {
+     "t": "n",
+     "v": 0.0
+    },
+    "D12": {
+     "t": "n",
+     "v": 870.0
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "s",
+     "v": "Sum of Rev"
+    },
+    "D5": {
+     "t": "n",
+     "v": 210.0
+    },
+    "D6": {
+     "t": "n",
+     "v": 150.0
+    },
+    "D7": {
+     "t": "n",
+     "v": 5.0
+    },
+    "D8": {
+     "t": "n",
+     "v": 207.0
+    },
+    "D9": {
+     "t": "n",
+     "v": 40.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:D12",
+   "name": "P_LV",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "LV",
+   "text": {
+    "A10": "B",
+    "A11": "C",
+    "A12": "Grand Total",
+    "A4": "Row Labels",
+    "A5": "East",
+    "A6": "A",
+    "A7": "B",
+    "A8": "West",
+    "A9": "A",
+    "B10": "5",
+    "B11": "0",
+    "B12": "15",
+    "B3": "Values",
+    "B4": "Sum of Units",
+    "B5": "6",
+    "B6": "5",
+    "B7": "1",
+    "B8": "9",
+    "B9": "4",
+    "C10": "6",
+    "C11": "7",
+    "C12": "58",
+    "C4": "Sum of Price",
+    "C5": "35",
+    "C6": "30",
+    "C7": "5",
+    "C8": "23",
+    "C9": "10",
+    "D10": "30",
+    "D11": "0",
+    "D12": "870",
+    "D4": "Sum of Rev",
+    "D5": "210",
+    "D6": "150",
+    "D7": "5",
+    "D8": "207",
+    "D9": "40"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "5",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Price",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "5"
+     }
+    },
+    {
+     "name": "Zero",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "0",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Unit Cost",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Bob's",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "6",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Rev"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Sum of Rev"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "A"
+    },
+    "A6": {
+     "t": "s",
+     "v": "B"
+    },
+    "A7": {
+     "t": "s",
+     "v": "C"
+    },
+    "A8": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Column Labels"
+    },
+    "B4": {
+     "t": "s",
+     "v": "East"
+    },
+    "B5": {
+     "t": "n",
+     "v": 150.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 210.0
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "West"
+    },
+    "C5": {
+     "t": "n",
+     "v": 40.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 30.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 207.0
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "D5": {
+     "t": "n",
+     "v": 360.0
+    },
+    "D6": {
+     "t": "n",
+     "v": 66.0
+    },
+    "D7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "D8": {
+     "t": "n",
+     "v": 870.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:D8",
+   "name": "P_LC",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "LC",
+   "text": {
+    "A3": "Sum of Rev",
+    "A4": "Row Labels",
+    "A5": "A",
+    "A6": "B",
+    "A7": "C",
+    "A8": "Grand Total",
+    "B3": "Column Labels",
+    "B4": "East",
+    "B5": "150",
+    "B6": "5",
+    "B7": "0",
+    "B8": "210",
+    "C4": "West",
+    "C5": "40",
+    "C6": "30",
+    "C7": "0",
+    "C8": "207",
+    "D4": "Grand Total",
+    "D5": "360",
+    "D6": "66",
+    "D7": "0",
+    "D8": "870"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "5",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Price",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "5"
+     }
+    },
+    {
+     "name": "Zero",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "0",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Unit Cost",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Bob's",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "6",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Rev"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "A"
+    },
+    "A6": {
+     "t": "s",
+     "v": "B"
+    },
+    "A7": {
+     "t": "s",
+     "v": "C"
+    },
+    "A8": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Values"
+    },
+    "B4": {
+     "t": "s",
+     "v": "Count of Rev"
+    },
+    "B5": {
+     "t": "n",
+     "v": 360.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 66.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 870.0
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Average of Rev"
+    },
+    "C5": {
+     "t": "n",
+     "v": 360.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 66.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 870.0
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "s",
+     "v": "Max of Rev"
+    },
+    "D5": {
+     "t": "n",
+     "v": 360.0
+    },
+    "D6": {
+     "t": "n",
+     "v": 66.0
+    },
+    "D7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "D8": {
+     "t": "n",
+     "v": 870.0
+    },
+    "E3": {
+     "t": "empty"
+    },
+    "E4": {
+     "t": "s",
+     "v": "Min of Rev"
+    },
+    "E5": {
+     "t": "n",
+     "v": 360.0
+    },
+    "E6": {
+     "t": "n",
+     "v": 66.0
+    },
+    "E7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "E8": {
+     "t": "n",
+     "v": 870.0
+    },
+    "F3": {
+     "t": "empty"
+    },
+    "F4": {
+     "t": "s",
+     "v": "Count of Units"
+    },
+    "F5": {
+     "t": "n",
+     "v": 3.0
+    },
+    "F6": {
+     "t": "n",
+     "v": 2.0
+    },
+    "F7": {
+     "t": "n",
+     "v": 1.0
+    },
+    "F8": {
+     "t": "n",
+     "v": 6.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 3,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 4,
+     "r": 0,
+     "x": [
+      4
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:F8",
+   "name": "P_CNT",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "CNT",
+   "text": {
+    "A4": "Row Labels",
+    "A5": "A",
+    "A6": "B",
+    "A7": "C",
+    "A8": "Grand Total",
+    "B3": "Values",
+    "B4": "Count of Rev",
+    "B5": "360",
+    "B6": "66",
+    "B7": "0",
+    "B8": "870",
+    "C4": "Average of Rev",
+    "C5": "360",
+    "C6": "66",
+    "C7": "0",
+    "C8": "870",
+    "D4": "Max of Rev",
+    "D5": "360",
+    "D6": "66",
+    "D7": "0",
+    "D8": "870",
+    "E4": "Min of Rev",
+    "E5": "360",
+    "E6": "66",
+    "E7": "0",
+    "E8": "870",
+    "F4": "Count of Units",
+    "F5": "3",
+    "F6": "2",
+    "F7": "1",
+    "F8": "6"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "5",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Price",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "5"
+     }
+    },
+    {
+     "name": "Zero",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "0",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Unit Cost",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Bob's",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "6",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "PerUnit"
+    },
+    {
+     "name": "Ratio"
+    },
+    {
+     "name": "Sq"
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "B"
+    },
+    "A11": {
+     "t": "s",
+     "v": "C"
+    },
+    "A12": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "East"
+    },
+    "A6": {
+     "t": "s",
+     "v": "A"
+    },
+    "A7": {
+     "t": "s",
+     "v": "B"
+    },
+    "A8": {
+     "t": "s",
+     "v": "West"
+    },
+    "A9": {
+     "t": "s",
+     "v": "A"
+    },
+    "B10": {
+     "t": "n",
+     "v": 1.2
+    },
+    "B11": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "B12": {
+     "t": "n",
+     "v": 3.8666666666666667
+    },
+    "B3": {
+     "t": "s",
+     "v": "Values"
+    },
+    "B4": {
+     "t": "s",
+     "v": "Sum of PerUnit"
+    },
+    "B5": {
+     "t": "n",
+     "v": 5.833333333333333
+    },
+    "B6": {
+     "t": "n",
+     "v": 6.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 2.5555555555555554
+    },
+    "B9": {
+     "t": "n",
+     "v": 2.5
+    },
+    "C10": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "C11": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "C12": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Sum of Ratio"
+    },
+    "C5": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "C6": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "C7": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "C8": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "C9": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "D10": {
+     "t": "n",
+     "v": 1.4142135623730951
+    },
+    "D11": {
+     "t": "e",
+     "v": "#NUM!"
+    },
+    "D12": {
+     "t": "n",
+     "v": 3.4641016151377544
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "s",
+     "v": "Sum of Sq"
+    },
+    "D5": {
+     "t": "n",
+     "v": 1.7320508075688772
+    },
+    "D6": {
+     "t": "n",
+     "v": 1.4142135623730951
+    },
+    "D7": {
+     "t": "e",
+     "v": "#NUM!"
+    },
+    "D8": {
+     "t": "n",
+     "v": 2.449489742783178
+    },
+    "D9": {
+     "t": "n",
+     "v": 1.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:D12",
+   "name": "P_DZ",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "DZ",
+   "text": {
+    "A10": "B",
+    "A11": "C",
+    "A12": "Grand Total",
+    "A4": "Row Labels",
+    "A5": "East",
+    "A6": "A",
+    "A7": "B",
+    "A8": "West",
+    "A9": "A",
+    "B10": "1.2",
+    "B11": "#DIV/0!",
+    "B12": "3.866666667",
+    "B3": "Values",
+    "B4": "Sum of PerUnit",
+    "B5": "5.833333333",
+    "B6": "6",
+    "B7": "5",
+    "B8": "2.555555556",
+    "B9": "2.5",
+    "C10": "#DIV/0!",
+    "C11": "#DIV/0!",
+    "C12": "#DIV/0!",
+    "C4": "Sum of Ratio",
+    "C5": "#DIV/0!",
+    "C6": "#DIV/0!",
+    "C7": "#DIV/0!",
+    "C8": "#DIV/0!",
+    "C9": "#DIV/0!",
+    "D10": "1.414213562",
+    "D11": "#NUM!",
+    "D12": "3.464101615",
+    "D4": "Sum of Sq",
+    "D5": "1.732050808",
+    "D6": "1.414213562",
+    "D7": "#NUM!",
+    "D8": "2.449489743",
+    "D9": "1"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "5",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Price",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "5"
+     }
+    },
+    {
+     "name": "Zero",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "0",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Unit Cost",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Bob's",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "6",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Rt"
+    },
+    {
+     "name": "Rs"
+    },
+    {
+     "name": "Ut"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "A"
+    },
+    "A6": {
+     "t": "s",
+     "v": "B"
+    },
+    "A7": {
+     "t": "s",
+     "v": "C"
+    },
+    "A8": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Values"
+    },
+    "B4": {
+     "t": "s",
+     "v": "Sum of Rt"
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 1.0
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Sum of Rs"
+    },
+    "C5": {
+     "t": "n",
+     "v": 9.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 6.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 15.0
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "s",
+     "v": "Sum of Ut"
+    },
+    "D5": {
+     "t": "n",
+     "v": 18.0
+    },
+    "D6": {
+     "t": "n",
+     "v": 12.0
+    },
+    "D7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "D8": {
+     "t": "n",
+     "v": 30.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:D8",
+   "name": "P_NV",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "NV",
+   "text": {
+    "A4": "Row Labels",
+    "A5": "A",
+    "A6": "B",
+    "A7": "C",
+    "A8": "Grand Total",
+    "B3": "Values",
+    "B4": "Sum of Rt",
+    "B5": "1",
+    "B6": "1",
+    "B7": "1",
+    "B8": "1",
+    "C4": "Sum of Rs",
+    "C5": "9",
+    "C6": "6",
+    "C7": "0",
+    "C8": "15",
+    "D4": "Sum of Ut",
+    "D5": "18",
+    "D6": "12",
+    "D7": "0",
+    "D8": "30"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "5",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Price",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "5"
+     }
+    },
+    {
+     "name": "Zero",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "0",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Unit Cost",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Bob's",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "6",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "K5"
+    },
+    {
+     "name": "Kn"
+    },
+    {
+     "name": "Kd"
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "B"
+    },
+    "A11": {
+     "t": "s",
+     "v": "C"
+    },
+    "A12": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "East"
+    },
+    "A6": {
+     "t": "s",
+     "v": "A"
+    },
+    "A7": {
+     "t": "s",
+     "v": "B"
+    },
+    "A8": {
+     "t": "s",
+     "v": "West"
+    },
+    "A9": {
+     "t": "s",
+     "v": "A"
+    },
+    "B10": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B11": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B12": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B3": {
+     "t": "s",
+     "v": "Values"
+    },
+    "B4": {
+     "t": "s",
+     "v": "Sum of K5"
+    },
+    "B5": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B9": {
+     "t": "n",
+     "v": 5.0
+    },
+    "C10": {
+     "t": "n",
+     "v": -2.5
+    },
+    "C11": {
+     "t": "n",
+     "v": -2.5
+    },
+    "C12": {
+     "t": "n",
+     "v": -2.5
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Sum of Kn"
+    },
+    "C5": {
+     "t": "n",
+     "v": -2.5
+    },
+    "C6": {
+     "t": "n",
+     "v": -2.5
+    },
+    "C7": {
+     "t": "n",
+     "v": -2.5
+    },
+    "C8": {
+     "t": "n",
+     "v": -2.5
+    },
+    "C9": {
+     "t": "n",
+     "v": -2.5
+    },
+    "D10": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "D11": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "D12": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "s",
+     "v": "Sum of Kd"
+    },
+    "D5": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "D6": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "D7": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "D8": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "D9": {
+     "t": "e",
+     "v": "#DIV/0!"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:D12",
+   "name": "P_K",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "K",
+   "text": {
+    "A10": "B",
+    "A11": "C",
+    "A12": "Grand Total",
+    "A4": "Row Labels",
+    "A5": "East",
+    "A6": "A",
+    "A7": "B",
+    "A8": "West",
+    "A9": "A",
+    "B10": "5",
+    "B11": "5",
+    "B12": "5",
+    "B3": "Values",
+    "B4": "Sum of K5",
+    "B5": "5",
+    "B6": "5",
+    "B7": "5",
+    "B8": "5",
+    "B9": "5",
+    "C10": "-2.5",
+    "C11": "-2.5",
+    "C12": "-2.5",
+    "C4": "Sum of Kn",
+    "C5": "-2.5",
+    "C6": "-2.5",
+    "C7": "-2.5",
+    "C8": "-2.5",
+    "C9": "-2.5",
+    "D10": "#DIV/0!",
+    "D11": "#DIV/0!",
+    "D12": "#DIV/0!",
+    "D4": "Sum of Kd",
+    "D5": "#DIV/0!",
+    "D6": "#DIV/0!",
+    "D7": "#DIV/0!",
+    "D8": "#DIV/0!",
+    "D9": "#DIV/0!"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "5",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Price",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "5"
+     }
+    },
+    {
+     "name": "Zero",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "0",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Unit Cost",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Bob's",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "6",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Fi"
+    },
+    {
+     "name": "Fa"
+    },
+    {
+     "name": "Fs"
+    },
+    {
+     "name": "Fc"
+    },
+    {
+     "name": "Fr"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "A"
+    },
+    "A6": {
+     "t": "s",
+     "v": "B"
+    },
+    "A7": {
+     "t": "s",
+     "v": "C"
+    },
+    "A8": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Values"
+    },
+    "B4": {
+     "t": "s",
+     "v": "Sum of Fi"
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 1.0
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Sum of Fa"
+    },
+    "C5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 1.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 1.0
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "s",
+     "v": "Sum of Fs"
+    },
+    "D5": {
+     "t": "n",
+     "v": 49.0
+    },
+    "D6": {
+     "t": "n",
+     "v": 17.0
+    },
+    "D7": {
+     "t": "n",
+     "v": 7.0
+    },
+    "D8": {
+     "t": "n",
+     "v": 73.0
+    },
+    "E3": {
+     "t": "empty"
+    },
+    "E4": {
+     "t": "s",
+     "v": "Sum of Fc"
+    },
+    "E5": {
+     "t": "n",
+     "v": 40.0
+    },
+    "E6": {
+     "t": "n",
+     "v": 11.0
+    },
+    "E7": {
+     "t": "n",
+     "v": 7.0
+    },
+    "E8": {
+     "t": "n",
+     "v": 58.0
+    },
+    "F3": {
+     "t": "empty"
+    },
+    "F4": {
+     "t": "s",
+     "v": "Sum of Fr"
+    },
+    "F5": {
+     "t": "n",
+     "v": 4.4
+    },
+    "F6": {
+     "t": "n",
+     "v": 1.8
+    },
+    "F7": {
+     "t": "e",
+     "v": "#DIV/0!"
+    },
+    "F8": {
+     "t": "n",
+     "v": 3.9
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 3,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 4,
+     "r": 0,
+     "x": [
+      4
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:F8",
+   "name": "P_FA",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "FA",
+   "text": {
+    "A4": "Row Labels",
+    "A5": "A",
+    "A6": "B",
+    "A7": "C",
+    "A8": "Grand Total",
+    "B3": "Values",
+    "B4": "Sum of Fi",
+    "B5": "1",
+    "B6": "1",
+    "B7": "0",
+    "B8": "1",
+    "C4": "Sum of Fa",
+    "C5": "1",
+    "C6": "1",
+    "C7": "0",
+    "C8": "1",
+    "D4": "Sum of Fs",
+    "D5": "49",
+    "D6": "17",
+    "D7": "7",
+    "D8": "73",
+    "E4": "Sum of Fc",
+    "E5": "40",
+    "E6": "11",
+    "E7": "7",
+    "E8": "58",
+    "F4": "Sum of Fr",
+    "F5": "4.4",
+    "F6": "1.8",
+    "F7": "#DIV/0!",
+    "F8": "3.9"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "5",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Price",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "5"
+     }
+    },
+    {
+     "name": "Zero",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "0",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Unit Cost",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Bob's",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "6",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Cst"
+    },
+    {
+     "name": "Bb"
+    },
+    {
+     "name": "My Calc"
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "A"
+    },
+    "A6": {
+     "t": "s",
+     "v": "B"
+    },
+    "A7": {
+     "t": "s",
+     "v": "C"
+    },
+    "A8": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Values"
+    },
+    "B4": {
+     "t": "s",
+     "v": "Sum of Cst"
+    },
+    "B5": {
+     "t": "n",
+     "v": 16.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 8.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 2.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 26.0
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Sum of Bb"
+    },
+    "C5": {
+     "t": "n",
+     "v": 8.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 9.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 7.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 22.0
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "s",
+     "v": "Sum of My Calc"
+    },
+    "D5": {
+     "t": "n",
+     "v": 10.0
+    },
+    "D6": {
+     "t": "n",
+     "v": 7.0
+    },
+    "D7": {
+     "t": "n",
+     "v": 1.0
+    },
+    "D8": {
+     "t": "n",
+     "v": 16.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:D8",
+   "name": "P_NM",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "NM",
+   "text": {
+    "A4": "Row Labels",
+    "A5": "A",
+    "A6": "B",
+    "A7": "C",
+    "A8": "Grand Total",
+    "B3": "Values",
+    "B4": "Sum of Cst",
+    "B5": "16",
+    "B6": "8",
+    "B7": "2",
+    "B8": "26",
+    "C4": "Sum of Bb",
+    "C5": "8",
+    "C6": "9",
+    "C7": "7",
+    "C8": "22",
+    "D4": "Sum of My Calc",
+    "D5": "10",
+    "D6": "7",
+    "D7": "1",
+    "D8": "16"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Product",
+     "shared_flags": {
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "A"
+      },
+      {
+       "t": "s",
+       "v": "B"
+      },
+      {
+       "t": "s",
+       "v": "C"
+      }
+     ]
+    },
+    {
+     "name": "Units",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "5",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Price",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "20",
+      "minValue": "5"
+     }
+    },
+    {
+     "name": "Zero",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "0",
+      "minValue": "0"
+     }
+    },
+    {
+     "name": "Unit Cost",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Bob's",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "6",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "Rev"
+    },
+    {
+     "name": "Rev2"
+    },
+    {
+     "name": "Mg"
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "B"
+    },
+    "A11": {
+     "t": "s",
+     "v": "C"
+    },
+    "A12": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "East"
+    },
+    "A6": {
+     "t": "s",
+     "v": "A"
+    },
+    "A7": {
+     "t": "s",
+     "v": "B"
+    },
+    "A8": {
+     "t": "s",
+     "v": "West"
+    },
+    "A9": {
+     "t": "s",
+     "v": "A"
+    },
+    "B10": {
+     "t": "n",
+     "v": 30.0
+    },
+    "B11": {
+     "t": "n",
+     "v": 0.0
+    },
+    "B12": {
+     "t": "n",
+     "v": 870.0
+    },
+    "B3": {
+     "t": "s",
+     "v": "Values"
+    },
+    "B4": {
+     "t": "s",
+     "v": "Sum of Rev"
+    },
+    "B5": {
+     "t": "n",
+     "v": 210.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 150.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 207.0
+    },
+    "B9": {
+     "t": "n",
+     "v": 40.0
+    },
+    "C10": {
+     "t": "n",
+     "v": 60.0
+    },
+    "C11": {
+     "t": "n",
+     "v": 0.0
+    },
+    "C12": {
+     "t": "n",
+     "v": 1740.0
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Sum of Rev2"
+    },
+    "C5": {
+     "t": "n",
+     "v": 420.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 300.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 10.0
+    },
+    "C8": {
+     "t": "n",
+     "v": 414.0
+    },
+    "C9": {
+     "t": "n",
+     "v": 80.0
+    },
+    "D10": {
+     "t": "n",
+     "v": 25.0
+    },
+    "D11": {
+     "t": "n",
+     "v": 0.0
+    },
+    "D12": {
+     "t": "n",
+     "v": 855.0
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "s",
+     "v": "Sum of Mg"
+    },
+    "D5": {
+     "t": "n",
+     "v": 204.0
+    },
+    "D6": {
+     "t": "n",
+     "v": 145.0
+    },
+    "D7": {
+     "t": "n",
+     "v": 4.0
+    },
+    "D8": {
+     "t": "n",
+     "v": 198.0
+    },
+    "D9": {
+     "t": "n",
+     "v": 36.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:D12",
+   "name": "P_CC",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 1,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "CC",
+   "text": {
+    "A10": "B",
+    "A11": "C",
+    "A12": "Grand Total",
+    "A4": "Row Labels",
+    "A5": "East",
+    "A6": "A",
+    "A7": "B",
+    "A8": "West",
+    "A9": "A",
+    "B10": "30",
+    "B11": "0",
+    "B12": "870",
+    "B3": "Values",
+    "B4": "Sum of Rev",
+    "B5": "210",
+    "B6": "150",
+    "B7": "5",
+    "B8": "207",
+    "B9": "40",
+    "C10": "60",
+    "C11": "0",
+    "C12": "1740",
+    "C4": "Sum of Rev2",
+    "C5": "420",
+    "C6": "300",
+    "C7": "10",
+    "C8": "414",
+    "C9": "80",
+    "D10": "25",
+    "D11": "0",
+    "D12": "855",
+    "D4": "Sum of Mg",
+    "D5": "204",
+    "D6": "145",
+    "D7": "4",
+    "D8": "198",
+    "D9": "36"
+   }
+  }
+ ],
+ "sheets": {
+  "CC": {},
+  "CNT": {},
+  "DZ": {},
+  "Data": {},
+  "FA": {},
+  "K": {},
+  "LC": {},
+  "LV": {},
+  "NM": {},
+  "NV": {},
+  "Q": {
+   "A1": {
+    "t": "n",
+    "v": 6.0
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "1ad2d4d1ff61cd2b4b6bd9cde2f091df7dc2e8e26237fb966e22fac1fe326d01",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-07T05:17:05+00:00",
+  "version": null,
+  "workbook_name": "2591de131540f180e0ef41ff5f6714ef5c96293915a9496b280bf514938cbbb1.xlsx"
+ }
+}

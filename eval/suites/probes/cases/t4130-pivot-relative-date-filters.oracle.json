@@ -1,0 +1,4146 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Today"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "D"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_Rtoday",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "Rtoday",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "Today",
+    "A5": "Grand Total",
+    "B1": "D",
+    "B3": "Sum of Sales",
+    "B4": "1",
+    "B5": "1"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Yesterday"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "D"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 2.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 2.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_Ryest",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "Ryest",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "Yesterday",
+    "A5": "Grand Total",
+    "B1": "D",
+    "B3": "Sum of Sales",
+    "B4": "2",
+    "B5": "2"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Tomorrow"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "D"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 3.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_Rtom",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "Rtom",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "Tomorrow",
+    "A5": "Grand Total",
+    "B1": "D",
+    "B3": "Sum of Sales",
+    "B4": "3",
+    "B5": "3"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Today"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "W"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 4.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 4.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RtW",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RtW",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "Today",
+    "A5": "Grand Total",
+    "B1": "W",
+    "B3": "Sum of Sales",
+    "B4": "4",
+    "B5": "4"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Minus7"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "W"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 5.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 5.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RlW",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RlW",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "Minus7",
+    "A5": "Grand Total",
+    "B1": "W",
+    "B3": "Sum of Sales",
+    "B4": "5",
+    "B5": "5"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Plus7"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "W"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 6.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 6.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RnW",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RnW",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "Plus7",
+    "A5": "Grand Total",
+    "B1": "W",
+    "B3": "Sum of Sales",
+    "B4": "6",
+    "B5": "6"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Today"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "M"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 7.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 7.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RtM",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RtM",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "Today",
+    "A5": "Grand Total",
+    "B1": "M",
+    "B3": "Sum of Sales",
+    "B4": "7",
+    "B5": "7"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "MinusMonth"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "M"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 8.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 8.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RlM",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      5
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RlM",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "MinusMonth",
+    "A5": "Grand Total",
+    "B1": "M",
+    "B3": "Sum of Sales",
+    "B4": "8",
+    "B5": "8"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "PlusMonth"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "M"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 9.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 9.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RnM",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      6
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RnM",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "PlusMonth",
+    "A5": "Grand Total",
+    "B1": "M",
+    "B3": "Sum of Sales",
+    "B4": "9",
+    "B5": "9"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Today"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "Qr"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 10.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 10.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RtQ",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RtQ",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "Today",
+    "A5": "Grand Total",
+    "B1": "Qr",
+    "B3": "Sum of Sales",
+    "B4": "10",
+    "B5": "10"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "MinusQuarter"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "Qr"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 11.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 11.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RlQ",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      7
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RlQ",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "MinusQuarter",
+    "A5": "Grand Total",
+    "B1": "Qr",
+    "B3": "Sum of Sales",
+    "B4": "11",
+    "B5": "11"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "PlusQuarter"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "Qr"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 12.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 12.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RnQ",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      8
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RnQ",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "PlusQuarter",
+    "A5": "Grand Total",
+    "B1": "Qr",
+    "B3": "Sum of Sales",
+    "B4": "12",
+    "B5": "12"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Today"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "Y"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 13.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 13.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RtY",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RtY",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "Today",
+    "A5": "Grand Total",
+    "B1": "Y",
+    "B3": "Sum of Sales",
+    "B4": "13",
+    "B5": "13"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "MinusYear"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "Y"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 14.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 14.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RlY",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      9
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RlY",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "MinusYear",
+    "A5": "Grand Total",
+    "B1": "Y",
+    "B3": "Sum of Sales",
+    "B4": "14",
+    "B5": "14"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "PlusYear"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "Y"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 15.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 15.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RnY",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      10
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RnY",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "PlusYear",
+    "A5": "Grand Total",
+    "B1": "Y",
+    "B3": "Sum of Sales",
+    "B4": "15",
+    "B5": "15"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Today"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "Y"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 13.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 13.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_Rytd",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "Rytd",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "Today",
+    "A5": "Grand Total",
+    "B1": "Y",
+    "B3": "Sum of Sales",
+    "B4": "13",
+    "B5": "13"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Set",
+     "shared_flags": {
+      "count": "5"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "D"
+      },
+      {
+       "t": "s",
+       "v": "W"
+      },
+      {
+       "t": "s",
+       "v": "M"
+      },
+      {
+       "t": "s",
+       "v": "Qr"
+      },
+      {
+       "t": "s",
+       "v": "Y"
+      }
+     ]
+    },
+    {
+     "name": "Bucket",
+     "shared_flags": {
+      "count": "11"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Today"
+      },
+      {
+       "t": "s",
+       "v": "Yesterday"
+      },
+      {
+       "t": "s",
+       "v": "Tomorrow"
+      },
+      {
+       "t": "s",
+       "v": "Minus7"
+      },
+      {
+       "t": "s",
+       "v": "Plus7"
+      },
+      {
+       "t": "s",
+       "v": "MinusMonth"
+      },
+      {
+       "t": "s",
+       "v": "PlusMonth"
+      },
+      {
+       "t": "s",
+       "v": "MinusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "PlusQuarter"
+      },
+      {
+       "t": "s",
+       "v": "MinusYear"
+      },
+      {
+       "t": "s",
+       "v": "PlusYear"
+      }
+     ]
+    },
+    {
+     "name": "Date",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "12",
+      "maxDate": "2027-11-07T00:00:00",
+      "minDate": "2025-11-06T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2026-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-05T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-07T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-30T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-11-13T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-10-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-12-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2026-08-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-02-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2025-11-06T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2027-11-06T00:00:00"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "15",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Set"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Today"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "M"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 7.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 7.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "P_RtMv",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "RtMv",
+   "text": {
+    "A1": "Set",
+    "A3": "Row Labels",
+    "A4": "Today",
+    "A5": "Grand Total",
+    "B1": "M",
+    "B3": "Sum of Sales",
+    "B4": "7",
+    "B5": "7"
+   }
+  }
+ ],
+ "sheets": {
+  "Data": {
+   "C10": {
+    "t": "n",
+    "v": 46362.0
+   },
+   "C11": {
+    "t": "n",
+    "v": 46332.0
+   },
+   "C12": {
+    "t": "n",
+    "v": 46240.0
+   },
+   "C13": {
+    "t": "n",
+    "v": 46424.0
+   },
+   "C14": {
+    "t": "n",
+    "v": 46332.0
+   },
+   "C15": {
+    "t": "n",
+    "v": 45967.0
+   },
+   "C16": {
+    "t": "n",
+    "v": 46697.0
+   },
+   "C2": {
+    "t": "n",
+    "v": 46332.0
+   },
+   "C3": {
+    "t": "n",
+    "v": 46331.0
+   },
+   "C4": {
+    "t": "n",
+    "v": 46333.0
+   },
+   "C5": {
+    "t": "n",
+    "v": 46332.0
+   },
+   "C6": {
+    "t": "n",
+    "v": 46325.0
+   },
+   "C7": {
+    "t": "n",
+    "v": 46339.0
+   },
+   "C8": {
+    "t": "n",
+    "v": 46332.0
+   },
+   "C9": {
+    "t": "n",
+    "v": 46301.0
+   }
+  },
+  "Q": {
+   "A1": {
+    "t": "n",
+    "v": 15.0
+   }
+  },
+  "RlM": {},
+  "RlQ": {},
+  "RlW": {},
+  "RlY": {},
+  "RnM": {},
+  "RnQ": {},
+  "RnW": {},
+  "RnY": {},
+  "RtM": {},
+  "RtMv": {},
+  "RtQ": {},
+  "RtW": {},
+  "RtY": {},
+  "Rtoday": {},
+  "Rtom": {},
+  "Ryest": {},
+  "Rytd": {}
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "3511f9e151f2b1dc957178b25e17097084bd507f6645fcfe5cb7385c475c8d22",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-07T03:07:26+00:00",
+  "version": null,
+  "workbook_name": "46b14801224c19a12a0f98f56200548b1933bef71c0015ff3c06661634e9e8a7.xlsx"
+ }
+}

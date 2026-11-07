@@ -1,0 +1,430 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4745: classic layout (gridDropZones) beyond t4129 GZ, and subtotalCaption beyond t4129 SC. Data!A1:D9 has Region, Product, Year and Sales over eight records: East A 2024 10, East A 2025 4, East B 2024 5, East B 2025 8, East C 2024 3, West A 2024 20, West A 2025 6, West B 2025 7. Each sheet is one builder-v2 pivot at A3. Classic layout (gridDropZones 1), tabular: GC rows Region and Product, columns Year, Sum of Sales; GV rows Region, Sum of Sales and Count of Sales (Values on columns); G1 rows Region, Sum of Sales. subtotalCaption Tot on Region, rows Region and Product, Sum of Sales: SO outline form (subtotals at the top); SB outline form with subtotalTop 0; SK compact form with subtotalTop 0; SF tabular with custom subtotals sum and count; SCC tabular with Region and Product on columns; SQ tabular with the caption `? Tot` (does `?` stand for a name?). Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4745",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Year",
+    "D1": "Sales",
+    "A2": "East",
+    "B2": "A",
+    "C2": 2024,
+    "D2": 10,
+    "A3": "East",
+    "B3": "A",
+    "C3": 2025,
+    "D3": 4,
+    "A4": "East",
+    "B4": "B",
+    "C4": 2024,
+    "D4": 5,
+    "A5": "East",
+    "B5": "B",
+    "C5": 2025,
+    "D5": 8,
+    "A6": "East",
+    "B6": "C",
+    "C6": 2024,
+    "D6": 3,
+    "A7": "West",
+    "B7": "A",
+    "C7": 2024,
+    "D7": 20,
+    "A8": "West",
+    "B8": "A",
+    "C8": 2025,
+    "D8": 6,
+    "A9": "West",
+    "B9": "B",
+    "C9": 2025,
+    "D9": 7
+   }
+  },
+  {
+   "name": "GC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_GC",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false,
+       "gridDropZones": true
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Year": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "GV",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_GV",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false,
+       "gridDropZones": true
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Sales",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "G1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_G1",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false,
+       "gridDropZones": true
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "SO",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SO",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "subtotalCaption": "Tot"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "SB",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SB",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "subtotalTop": false,
+         "subtotalCaption": "Tot"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "SK",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SK",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "subtotalTop": false,
+         "subtotalCaption": "Tot"
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "SF",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SF",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false,
+         "subtotalCaption": "Tot"
+        },
+        "subtotals": [
+         "sum",
+         "count"
+        ]
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "SCC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SCC",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [],
+      "columns": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false,
+         "subtotalCaption": "Tot"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "SQ",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SQ",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false,
+         "subtotalCaption": "? Tot"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=SUM(Data!D2:D9)"
+   }
+  }
+ ]
+}

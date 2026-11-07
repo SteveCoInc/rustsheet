@@ -213,7 +213,7 @@ Rule: FIXED prints no minus sign when the number rounds to zero at the requested
 (`EVEN(-0.0001)` is -2).
 Evidence: gen-m6/f94b5b8236742618 Calc!A24 (excel-graph, 2026-10-09, T-1239).
 Implemented in: `fn_fixed` (T-1257): the sign is dropped when the rounded text has no non-zero digit. Further shapes: `FIXED(-0.004,2)` and `FIXED(-0.4,0)` (probes/dollar-fixed-unichar-edges A49, A50).
-Status: VERIFIED (excel-graph: gen-m6 A24, probes/dollar-fixed-unichar-edges A49, A50); desktop confirmation pending (T-1081). `FIXED(-0.005,2)` keeping its sign ("-0.01") is UNVERIFIED
+Status: VERIFIED (excel-graph: gen-m6 A24, probes/dollar-fixed-unichar-edges A49, A50); desktop confirmation pending (T-1081). A negative value that rounds away from zero keeps its sign, ties included: `FIXED(x,2)` of -0.005, -0.015, -0.025, -0.045 and -1.005 is "-0.01", "-0.02", "-0.03", "-0.05" and "-1.01" (the same digits as half away from zero, whichever side of the tie the double lies), -0.0050000001 is "-0.01", -0.0049999999 drops the sign in FIXED ("0.00") while DOLLAR keeps its parentheses ("($0.00)"); `FIXED(-0.5,0)` "-1", `FIXED(-0.05,1)` "-0.1", `FIXED(-5,-1)` "-10"; DOLLAR gives the same digits in parentheses (probes/t4720-fixed-sign-and-exponent-digits A1:A17, excel-graph, 2026-11-06, T-4720; all match ours)
 Tasks: T-1257
 
 ## Count and position bounds of LEFT, RIGHT, MID and REPLACE
@@ -331,7 +331,7 @@ VERIFIED (probes/textsplit-lift-guesses, excel-graph, 2026-10-19, T-1824):
 - REGEXEXTRACT in a lifted call keeps the first value of each element (`REGEXEXTRACT({"a1b2";"c3d4"},"[0-9]",1)` is 2x1 "1","3"; A47-A52).
 - A 1x1 array lifts the call: `COLUMNS(TEXTSPLIT({"a,b"},","))`, `COLUMNS(TEXTSPLIT(FILTER(Data!A1:A2,Data!A1:A2="a,b"),","))` and `COLUMNS(REGEXEXTRACT({"a1b2"},"[0-9]",1))` are 1, as is `ROWS(...)` (every lifted element keeps its first value, so `COLUMNS(TEXTSPLIT({"a,b";"c,d,e"},","))` is 1 and its ROWS 2); `COLUMNS(TEXTSPLIT(Data!A3,","))` over a single cell is 3, a non-lifting call (A56-A70).
 - A 1x1 array as the delimiter does not lift (`COLUMNS(TEXTSPLIT("a,b",{","}))` is 2, A64); as ignore_empty or a REGEX pattern it does (A66, A67). A one-cell range `Data!A3:A3` does not lift (A70). `INDEX(TEXTSPLIT({"a,b"},","),1,2)` is `#REF!` because the lifted call has one column (A68).
-- A scalar boolean delimiter is its spelling in TEXTSPLIT as in TEXTBEFORE (`TEXTSPLIT("a TRUE b",TRUE)` is "a "," b", A71-A73). Of two different errors in one delimiter list the first element wins (whether the scan is row-major or column-major is UNVERIFIED: every 2x2 cell has its winner at (1,1); ours row-major; `{#N/A,#DIV/0!}` is `#N/A`, `{#DIV/0!,#N/A}` is `#DIV/0!`, `{#REF!,#N/A;#VALUE!,#DIV/0!}` is `#REF!`, A74-A81), and an error in the list beats an invalid instance_num (`TEXTBEFORE("abc",{"",#N/A},0)` is `#N/A`; without the error `#VALUE!`, A82-A87).
+- A scalar boolean delimiter is its spelling in TEXTSPLIT as in TEXTBEFORE (`TEXTSPLIT("a TRUE b",TRUE)` is "a "," b", A71-A73). Of two different errors in one delimiter list the first element wins (the scan is row-major, VERIFIED: in a 2x2 array or range holding `#N/A` at (1,2) and `#DIV/0!` at (2,1) TEXTSPLIT and TEXTBEFORE give `#N/A`, with the two swapped `#DIV/0!`, probes/t4719-text-unverified-residue A1:A4, A9:A12; ours row-major; `{#N/A,#DIV/0!}` is `#N/A`, `{#DIV/0!,#N/A}` is `#DIV/0!`, `{#REF!,#N/A;#VALUE!,#DIV/0!}` is `#REF!`, A74-A81), and an error in the list beats an invalid instance_num (`TEXTBEFORE("abc",{"",#N/A},0)` is `#N/A`; without the error `#VALUE!`, A82-A87).
 - REGEXEXTRACT's return_mode 2 keeps the first group of each lifted element (`REGEXEXTRACT({"a1b2";"c3d4"},"([a-z])([0-9])",2)` is "a","c"; A53) and its fourth argument case_sensitivity lifts (`REGEXEXTRACT("a1B2","b",0,{0;1})` is `#N/A`,"B", so its TEXTJOIN is `#N/A`; A55). Ours since T-1360 ("REGEX* optional arguments" below).
 Ours: all of this since T-1272. The work caps are the next entry's. A multi-cell range as the TEXTBEFORE/TEXTAFTER
 delimiter is still read as one text, as before T-1272 (gen-m7/851eb2099ae3f805 Calc!A25 is `#VALUE!`); its list rule is
@@ -450,7 +450,7 @@ A31-A34, probes/textbefore-number-delimiter (excel-graph, 2026-10-18, T-1361); g
 gen-m7/0e40208f51c2454c Calc!A17; gen-m7/4629e931955aa4b8 Calc!A19; gen-m7/851eb2099ae3f805 Calc!A25 (excel-graph,
 2026-10-11, T-1275); gen-m9/0c7fc447bc2eebfd A6, 4df1b22d3ed63f58 A14, A30, 3ec66461400faf2f A3, 696af2c8cee2f57e A23,
 95efb37a9874f82e A25 (excel-graph, 2026-10-12, T-1289).
-Ours: matches (`delimiter_list` in functions/text/lifted.rs). The error of a list with two different errors is the first in row-major order (UNVERIFIED).
+Ours: matches (`delimiter_list` in functions/text/lifted.rs). The error of a list with two different errors is the first in row-major order (VERIFIED, probes/t4719-text-unverified-residue A1:A4, A9:A12: a 2x2 array and a 2x2 range both).
 Status: VERIFIED (web)
 Tasks: T-1361, T-1412
 
@@ -576,7 +576,7 @@ probes/t4473-textsplit-fold-gaps A7:A11, A29, A35, A41, A47, A53, A59, A65, A71,
 the cell three below each) and A105:A117 (excel-graph, 2026-11-06, T-4473), probes/t4499-textsplit-sharp-s A1:A12 (excel-graph, 2026-11-06, T-4499).
 Ours: `fold_for_match` (text/casefold.rs) folds char by char with `fold_match_char`'s İ, Kelvin, Angstrom and `ẞ` exceptions, `fold_sigma_by_position`'s sigma rule (shared with TEXTSPLIT),
 and `match_text` (util.rs) maps the match back to byte offsets of the original with `str::get`. Before T-1796 it searched `to_lowercase()` of the text
-and sliced the original at those offsets, which panicked on `TEXTBEFORE("İİİ,a",",",1,1)`. Ours: the final-sigma rule is `sigma_is_final` (string_format.rs), shared with LOWER. UNVERIFIED: whether a letter must precede the `Σ` (the code ignores what precedes it). The mirror (text `ß`, delimiter `ẞ`) is also `#N/A`
+and sliced the original at those offsets, which panicked on `TEXTBEFORE("İİİ,a",",",1,1)`. Ours: the final-sigma rule is `sigma_is_final` (string_format.rs), shared with LOWER. No letter need precede the `Σ`: `LOWER` of `Σ`, ` Σ`, `1Σ` and `aΣ` is a final `ς` in all four (probes/t4719-text-unverified-residue A13:A16, VERIFIED), and the case-insensitive `ς` delimiter does not match the `Σ` of `Σx`, ` Σx`, `1Σx` or `aΣx` (a non-final `Σ`) in TEXTBEFORE and TEXTSPLIT (A17:A24); the code ignores what precedes the `Σ`. The mirror (text `ß`, delimiter `ẞ`) is also `#N/A`
 (`TEXTBEFORE("aßb","ẞ",1,1)`, probes/t4499-textsplit-sharp-s A12), and TEXTSPLIT shares the `ẞ` rule and the sigma rule (probes/t4473-textsplit-fold-gaps A14:A23).
 Status: VERIFIED (web) for the listed forms
 Tasks: T-1796, T-4473
@@ -1033,7 +1033,7 @@ steps over it (`REGEXREPLACE("😀b","😀|b","-")` is `--`, `.` on `a😀` give
 match (`REGEXREPLACE("a😀","","-",1)` is `-a😀`; with `a*` on `😀a` `-😀a`, `b|` occurrence 2 on `ab😀` `a-😀`, `a|`
 occurrence 1 `-b😀`), while occurrence 3 of `""` on `a😀` and REGEXEXTRACT's all-matches mode over it are `#VALUE!`;
 REGEXEXTRACT's first match is unaffected (`""`). A negative occurrence needs the whole iteration, so it is `#VALUE!`
-in ours whenever the iteration splits a pair: UNVERIFIED (not probed).
+in ours whenever the iteration splits a pair, VERIFIED: REGEXREPLACE occurrence -1 and -2 and REGEXEXTRACT's all-matches mode over `"a"&UNICHAR(128512)&"b"` with the empty pattern or `x*` are `#VALUE!`, and with a pattern that never splits the pair (`b`) occurrence -1 replaces the last `b` and -2 leaves the text (probes/t4719-text-unverified-residue A25:A36).
 Evidence: probes/regex-pcre2-features C1-C19, D1-D14, B27-B29 (excel-graph, 2026-10-18; D11 and D14 undecoded there,
 answered by the next case); probes/regex-iteration-surrogates A1-A11 (excel-graph, 2026-10-22, T-1899).
 Ours: PCRE2's grammar since T-1973 (functions/text/pcre/): comments, `\Q..\E`, `(?x)` and scoped flags match
@@ -1330,8 +1330,8 @@ a written empty value as 0, so match_mode and match_end do too, unprobed: T-3087
 TEXTAFTER's result takes the shape of an array if_not_found even when the text is an error (T-2414, probes/t2414-gen-m7-unexplained, excel-graph, 2026-10-23):
 `ROWS(TEXTAFTER("abc","",1,-2^53,0,{1;2}))` is 2 (invalid match_mode: each cell `#VALUE!`), `TEXTAFTER("abc","b",1,0,0,{1;2})` is "c","c", and
 `ROWS(TEXTAFTER(<#VALUE!>,"",1,-2^53,0,OFFSET(B9:C12,5,1,DROP(A3:A5,-2,0),2)))` is 2. The OFFSET alone is a 2x2 reference
-(`ROWS`, `COLUMNS` 2, 2; `INDEX(..,1,1)` one 0, no spill), although `DROP(A3:A5,-2,0)` is the one cell A3 (1E-15): UNVERIFIED mechanism
-(Excel reads the one-cell DROP result as a height giving 2 rows, ours as a lifted 1x1). The gen-m7 `#SPILL!` (4dac39f89709e2fc A2870) is
+(`ROWS`, `COLUMNS` 2, 2; `INDEX(..,1,1)` one 0, no spill), although `DROP(A3:A5,-2,0)` is the one cell A3 (1E-15): mechanism: `OFFSET`'s height in (0, 1) reaches one cell back, so the OFFSET is 2 rows (references.md "OFFSET negative and fractional height/width", VERIFIED, T-0956; probes/t2414-gen-m7-unexplained A141:A171)
+(Excel reads the one-cell DROP result as a height giving 2 rows; ours matches, all 70 cells of the case pass). The gen-m7 `#SPILL!` (4dac39f89709e2fc A2870) is
 then consistent with a 2x2 TEXTAFTER of `#VALUE!` colliding; only ROWS = 2 of it is probed.
 Status: VERIFIED (excel-graph)
 Tasks: T-2314, T-2412, T-2581

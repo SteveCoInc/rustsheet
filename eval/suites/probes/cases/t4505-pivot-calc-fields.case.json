@@ -1,0 +1,448 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4505: what Excel for the web shows for calculated fields (cacheField@formula, databaseField 0). Data!A1:G7 has Region, Product, Units, Price, Zero, Unit Cost and Bob's: East A 2 10 0 3 1, East A 3 20 0 4 2, East B 1 5 0 2 3, West A 4 10 0 1 4, West B 5 6 0 2 5, West C 0 7 0 1 6 (Units: East A 5, East B 1, West A 4, West B 5, West C 0; Price: East A 30, East B 5, West A 10, West B 6, West C 7). Each sheet is one builder-v2 pivot at A3: LV rows Region, Product; Sum of Units, Sum of Price and Sum of Rev, Rev = Units*Price; LC rows Product, columns Region; Sum of Rev only (its operands are not data fields); CNT rows Product; Rev = Units*Price summarised as count, average, max and min, beside Count of Units; DZ rows Region, Product; PerUnit = Price/Units, Ratio = Price/Zero, Sq = SQRT(Units-3); NV rows Product; Rt = Region*2+1 and Rs = Region+Units over the text field Region, Ut = Units*2 with Units not a data field; K rows Region, Product; constants K5 = 5, Kn = -2.5, Kd = 1/0; FA rows Product; Fi = IF(Units>3,1,0), Fa = AND(Units>0,Price>10), Fs = SUM(Units,Price), Fc = CHOOSE(2,Units,Price), Fr = ROUND(Price/Units,1); NM rows Product; Cst = 'Unit Cost'*2, Bb = 'Bob''s'+1, and a calculated field named My Calc = Units+1; CC rows Region, Product; Rev = Units*Price, Rev2 = Rev*2 and Mg = Rev-Units (calculated fields over a calculated field). Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4505",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0355",
+  "PV-0356"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Units",
+    "D1": "Price",
+    "E1": "Zero",
+    "F1": "Unit Cost",
+    "G1": "Bob's",
+    "A2": "East",
+    "B2": "A",
+    "C2": 2,
+    "D2": 10,
+    "E2": 0,
+    "F2": 3,
+    "G2": 1,
+    "A3": "East",
+    "B3": "A",
+    "C3": 3,
+    "D3": 20,
+    "E3": 0,
+    "F3": 4,
+    "G3": 2,
+    "A4": "East",
+    "B4": "B",
+    "C4": 1,
+    "D4": 5,
+    "E4": 0,
+    "F4": 2,
+    "G4": 3,
+    "A5": "West",
+    "B5": "A",
+    "C5": 4,
+    "D5": 10,
+    "E5": 0,
+    "F5": 1,
+    "G5": 4,
+    "A6": "West",
+    "B6": "B",
+    "C6": 5,
+    "D6": 6,
+    "E6": 0,
+    "F6": 2,
+    "G6": 5,
+    "A7": "West",
+    "B7": "C",
+    "C7": 0,
+    "D7": 7,
+    "E7": 0,
+    "F7": 1,
+    "G7": 6
+   }
+  },
+  {
+   "name": "LV",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_LV",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "Rev",
+        "formula": "Units*Price"
+       }
+      ],
+      "data": [
+       {
+        "field": "Units"
+       },
+       {
+        "field": "Price"
+       },
+       {
+        "field": "Rev"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "LC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_LC",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "columns": [
+       "Region"
+      ],
+      "calculated": [
+       {
+        "name": "Rev",
+        "formula": "Units*Price"
+       }
+      ],
+      "data": [
+       {
+        "field": "Rev"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "CNT",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CNT",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "Rev",
+        "formula": "Units*Price"
+       }
+      ],
+      "data": [
+       {
+        "field": "Rev",
+        "subtotal": "count"
+       },
+       {
+        "field": "Rev",
+        "subtotal": "average"
+       },
+       {
+        "field": "Rev",
+        "subtotal": "max"
+       },
+       {
+        "field": "Rev",
+        "subtotal": "min"
+       },
+       {
+        "field": "Units",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "DZ",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DZ",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "PerUnit",
+        "formula": "Price/Units"
+       },
+       {
+        "name": "Ratio",
+        "formula": "Price/Zero"
+       },
+       {
+        "name": "Sq",
+        "formula": "SQRT(Units-3)"
+       }
+      ],
+      "data": [
+       {
+        "field": "PerUnit"
+       },
+       {
+        "field": "Ratio"
+       },
+       {
+        "field": "Sq"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "NV",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_NV",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "Rt",
+        "formula": "Region*2+1"
+       },
+       {
+        "name": "Rs",
+        "formula": "Region+Units"
+       },
+       {
+        "name": "Ut",
+        "formula": "Units*2"
+       }
+      ],
+      "data": [
+       {
+        "field": "Rt"
+       },
+       {
+        "field": "Rs"
+       },
+       {
+        "field": "Ut"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "K",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_K",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "K5",
+        "formula": "5"
+       },
+       {
+        "name": "Kn",
+        "formula": "-2.5"
+       },
+       {
+        "name": "Kd",
+        "formula": "1/0"
+       }
+      ],
+      "data": [
+       {
+        "field": "K5"
+       },
+       {
+        "field": "Kn"
+       },
+       {
+        "field": "Kd"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "FA",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_FA",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "Fi",
+        "formula": "IF(Units>3,1,0)"
+       },
+       {
+        "name": "Fa",
+        "formula": "AND(Units>0,Price>10)"
+       },
+       {
+        "name": "Fs",
+        "formula": "SUM(Units,Price)"
+       },
+       {
+        "name": "Fc",
+        "formula": "CHOOSE(2,Units,Price)"
+       },
+       {
+        "name": "Fr",
+        "formula": "ROUND(Price/Units,1)"
+       }
+      ],
+      "data": [
+       {
+        "field": "Fi"
+       },
+       {
+        "field": "Fa"
+       },
+       {
+        "field": "Fs"
+       },
+       {
+        "field": "Fc"
+       },
+       {
+        "field": "Fr"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "NM",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_NM",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "Cst",
+        "formula": "'Unit Cost'*2"
+       },
+       {
+        "name": "Bb",
+        "formula": "'Bob''s'+1"
+       },
+       {
+        "name": "My Calc",
+        "formula": "Units+1"
+       }
+      ],
+      "data": [
+       {
+        "field": "Cst"
+       },
+       {
+        "field": "Bb"
+       },
+       {
+        "field": "My Calc"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "CC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_CC",
+     "source": "Data!A1:G7",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "calculated": [
+       {
+        "name": "Rev",
+        "formula": "Units*Price"
+       },
+       {
+        "name": "Rev2",
+        "formula": "Rev*2"
+       },
+       {
+        "name": "Mg",
+        "formula": "Rev-Units"
+       }
+      ],
+      "data": [
+       {
+        "field": "Rev"
+       },
+       {
+        "field": "Rev2"
+       },
+       {
+        "field": "Mg"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A20)"
+   }
+  }
+ ],
+ "expected": {}
+}
