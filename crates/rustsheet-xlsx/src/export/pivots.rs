@@ -23,7 +23,9 @@ mod tests;
 use std::fmt::Write as _;
 use std::io::{Seek, Write};
 
-use rustsheet_engine::pivot::{compute, lay_out, PivotLayout, PivotTable, MAX_PIVOT_WORK};
+use rustsheet_engine::pivot::{
+    compute, lay_out, OpaqueEntry, PivotLayout, PivotTable, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
+};
 use rustsheet_engine::types::Workbook;
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
@@ -74,11 +76,15 @@ impl PivotPlan {
         // Per model cache, its part number once written.
         let mut cache_parts = vec![None; workbook.pivot_caches.len()];
         let mut caches = Vec::new();
+        // The record values the exported caches may still hold, over all of them.
+        let mut values_left = MAX_RECORD_VALUES;
         for (index, pivot_cache) in workbook.pivot_caches.iter().enumerate() {
-            let written = cache::check(pivot_cache, date_system)
-                .and_then(|()| cache::definition_xml(pivot_cache, date_system));
+            let written = cache::check(pivot_cache, date_system, values_left).and_then(|values| {
+                cache::definition_xml(pivot_cache, date_system).map(|xml| (values, xml))
+            });
             match written {
-                Ok(definition) => {
+                Ok((values, definition)) => {
+                    values_left = values_left.saturating_sub(values);
                     caches.push(ExportedCache { index, definition });
                     if let Some(part) = cache_parts.get_mut(index) {
                         *part = Some(caches.len());
@@ -252,14 +258,19 @@ fn relationships(kind: &str, target: &str) -> String {
     )
 }
 
-/// The engine's layout of `pivot`, when it gives the location and geometry the pivot holds, so
-/// its lines describe the cells there; `None` otherwise (a pivot whose saved cells the engine did
-/// not render, or one past the work budget).
+/// The engine's layout of `pivot`, for a pivot that holds no saved layout lines (the engine laid
+/// it out since it was read, or it was made through the API) and whose layout gives the location
+/// and geometry it holds, so its lines describe the cells there; `None` otherwise: a pivot that
+/// keeps the lines it was read with, as its cells keep the saved ones, or one past the work
+/// budget.
 fn layout_lines(
     pivot: &PivotTable,
     pivot_cache: &rustsheet_engine::pivot::PivotCache,
     work: &mut u64,
 ) -> Option<PivotLayout> {
+    if pivot.opaque.iter().any(OpaqueEntry::is_layout_lines) {
+        return None;
+    }
     let result = compute(pivot, pivot_cache, work).ok()?;
     let layout = lay_out(pivot, pivot_cache, &result, work).ok()?;
     (layout.location == pivot.location && layout.geometry == pivot.geometry).then_some(layout)

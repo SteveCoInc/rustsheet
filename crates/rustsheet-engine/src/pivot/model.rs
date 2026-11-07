@@ -39,6 +39,11 @@ pub struct PivotTable {
     /// The pivot-wide layout flags and captions.
     pub options: PivotOptions,
     /// The definition's elements and attributes the model does not read, verbatim.
+    ///
+    /// The export (T-4176) writes each entry back into the part as it is, unescaped and
+    /// unchecked, so an entry must be XML the importer captured from a definition part (or a
+    /// copy of one): well-formed, with its values already escaped. Nothing else may add one; a
+    /// pivot made through the API holds none.
     pub opaque: Vec<OpaqueEntry>,
 }
 
@@ -571,6 +576,17 @@ pub struct OpaqueEntry {
 }
 
 impl OpaqueEntry {
+    /// Whether the entry is the definition's saved `rowItems` or `colItems`: the lines of the
+    /// layout the file's cells show. They describe a pivot only until the engine lays it out
+    /// again, which drops them ([`crate::model::Model::plan_pivot_render`] and the refresh); the
+    /// export (T-4176) writes the engine's lines for a pivot without them.
+    #[must_use]
+    pub fn is_layout_lines(&self) -> bool {
+        self.owner == OpaqueOwner::Definition
+            && matches!(&self.node, OpaqueNode::Element(xml)
+                if matches!(element_name(xml), "rowItems" | "colItems"))
+    }
+
     /// The bytes the entry holds, counted toward the import limits: its text and its own size.
     #[must_use]
     pub fn cost(&self) -> usize {
@@ -630,6 +646,17 @@ impl OpaqueOwner {
             other => other,
         }
     }
+}
+
+/// The local name of verbatim element `xml`'s tag: `rowItems` for `<x:rowItems count="1">`.
+#[must_use]
+pub fn element_name(xml: &str) -> &str {
+    let tag = xml.strip_prefix('<').unwrap_or(xml);
+    let end = tag
+        .find(|c: char| c.is_whitespace() || c == '/' || c == '>')
+        .unwrap_or(tag.len());
+    let name = tag.get(..end).unwrap_or_default();
+    name.rsplit(':').next().unwrap_or(name)
 }
 
 /// Whether verbatim `xml` has an attribute whose local name is `field` or `fld` or ends in one,

@@ -47,25 +47,34 @@ refuses.
 Rule: Excel for the web opens, without repair, a package whose pivot parts the engine's export wrote
 (`crates/rustsheet-xlsx/src/export/pivots.rs`): a cache that lists every value as a shared item, records of `<x v>`
 indices only, `sharedItems` flags derived from the items, the case builder's version attributes and `numFmtId="0"`
-on every cache field; a definition with only the non-default typed attributes, the kept rest, `rowItems`/`colItems`
-from the engine's layout, and for a pivot made through the API, generated `<items>` (`h="1"` on a hidden item) and
-no style or extension. It saves them back keeping the definition: the saved `location` and `rowItems`/`colItems`
-equal the exported ones, and the pivot cells equal the export's.
+on every cache field; a definition with only the non-default typed attributes, the kept rest, and for a pivot made
+through the API, generated `<items>` (`h="1"` on a hidden item) and no style or extension. For a `refreshOnLoad`
+pivot, Excel's re-rendered `location` and `rowItems`/`colItems` equal the engine's lines the export wrote.
 Evidence: T-4176 oracle runs (excel-graph, 2026-11-07, `rustsheet-oracle recalc` of three exported workbooks, not
-committed: T-4177 is the suite that makes them cases):
+committed; recalc input_sha256 3eed9bc4…, 00144ae5… and c81db4c1…, in the order below):
 - crates/rustsheet-xlsx/tests/example.xlsx exported (an Excel-saved pivot over the Table `Table1`, no
   `refreshOnLoad`): opened; Excel's saved `pivotTable1.xml` has our `location`, `rowItems` and `colItems`, and the
-  Sheet4 cells are unchanged;
+  Sheet4 cells are unchanged. Without `refreshOnLoad` Excel saves a definition back as it read it (probes/t4586),
+  so this shows the file opens, not that the engine's lines are Excel's;
 - crates/rustsheet-xlsx/tests/pivot_tables.xlsx exported (two `refreshOnLoad` pivots, PivotSum with a column
-  field): opened and re-rendered; both pivots' `location`, `rowItems` and `colItems` equal ours, and every constant
-  cell of sheet P but L2, M5 and N5 (spill cells of the sheet's GETPIVOTDATA array formulas, which our export writes
-  as part of the formula) is equal;
+  field): opened and re-rendered; both pivots' `location`, `rowItems` and `colItems` equal the engine's, and every
+  constant cell of sheet P but L2, M5 and N5 (spill cells of the sheet's GETPIVOTDATA array formulas, which our
+  export writes as part of the formula) is equal. These two pivots are the only check of the engine's lines;
 - a cache of texts, a blank, a boolean, dates, numbers and `#N/A`, with a pivot holding nothing verbatim
   (`refreshOnLoad` off): opened; Excel added its style info, `baseField="0" baseItem="0"` and an extension, and kept
-  the items as written.
-Status: VERIFIED (excel-graph) for these three files, a scratch observation until T-4177's suite; repair and
-re-render of other shapes are T-4177's.
-Implemented in: crates/rustsheet-xlsx/src/export/pivots.rs, pivots/cache.rs, pivots/table.rs (T-4176)
+  the items as written. It was not re-rendered, so whether Excel lays out the generated `<items>` as the engine
+  does is open (T-4177).
+Not checked, all UNVERIFIED (T-4654): the exported shared-item order is the engine's (a cache's old items first,
+new ones appended), not the order Excel was seen to save (source order first, stale items after; "Item casing when
+cache and source disagree, and date items", t4612); `containsNonDate` and `minDate`/`maxDate` are never written.
+The cache definition's unread attributes and elements are not kept: the export writes `numFmtId="0"`, the builder's
+version attributes and no refresh metadata or `extLst` (T-4735).
+Status: UNVERIFIED (probe pending: T-4177). The three runs above are scratch observations; T-4177's suite commits
+them as cases.
+Implemented in: crates/rustsheet-xlsx/src/export/pivots.rs, pivots/cache.rs, pivots/table.rs (T-4176). The export
+writes a pivot's saved `rowItems`/`colItems` back as read until the engine lays it out again (a render or refresh
+drops them, `OpaqueEntry::is_layout_lines`), then the engine's; and it drops, with a log line, a cache whose field
+holds two texts that differ only in case (next entry).
 
 ## Case-variant text items make Excel for the web call the file corrupt
 Rule: a cache field whose shared items list two texts that differ only in case (`East`, `east`) makes
@@ -76,6 +85,8 @@ Evidence: T-4122 runs (cases a and a2: corrupt with both items, rendered with on
 is VERIFIED by probes/t4134-pivot-items I1 (next entry).
 Status: the refusal is a builder observation (T-4122 runs), not committable as a probe: Excel saves
 nothing for a file it refuses
+Implemented in: crates/rustsheet-xlsx/src/export/pivots/cache.rs (`check`: the export drops such a cache with
+its pivots and a log line, `CacheField::has_case_variant_texts`; T-4176)
 
 ## Which function the countA and count custom subtotals compute
 Rule: a pivot field's `countASubtotal` (subtotal line `item t="countA"`) is COUNTA: it counts every
@@ -348,8 +359,9 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
   `pivotField@dataField` and `@serverField`, two flags. `pivotTableStyleInfo` holds none, nor do
   `rowItems`/`colItems` (`x@v` index the items of the axis's n-th field, which moves with it, and
   `i@i` a data field), though those go stale on any refresh: Excel rewrites them (P_Fold saves
-  `x` 0, 2, 3, 4, 5), the engine renders from its own layout, and export writes them anew
-  (T-4176). A field's own parts (its attributes, its items') follow its new index, and a dropped
+  `x` 0, 2, 3, 4, 5), and the engine renders from its own layout. A render or refresh drops the
+  saved ones, and the export writes the engine's lines in their place. A pivot the engine has
+  not laid out keeps the saved ones, written back as read (T-4176). A field's own parts (its attributes, its items') follow its new index, and a dropped
   field's go with it (T-4694). A data field's base field that left the source falls back to the
   first field.
 - A refresh that cannot be planned (a source that does not resolve, such as a Table or defined

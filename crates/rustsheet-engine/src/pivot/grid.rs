@@ -451,6 +451,9 @@ impl Model {
             }
         }
         let spilled = fits.is_none();
+        // Laid out again, the pivot's saved layout lines no longer describe its cells; the
+        // export writes the engine's in their place (T-4176).
+        pivot.opaque.retain(|entry| !entry.is_layout_lines());
         let cells = match fits {
             Some((layout, cells)) => {
                 pivot.location = layout.location;

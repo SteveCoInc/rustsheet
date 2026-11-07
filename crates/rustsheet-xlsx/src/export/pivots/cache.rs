@@ -12,7 +12,9 @@
 use std::fmt::Write as _;
 
 use chrono::{Duration, NaiveDate};
-use rustsheet_engine::pivot::{CacheItem, PivotCache, SharedItemsFlags};
+use rustsheet_engine::pivot::{
+    CacheItem, PivotCache, SharedItemsFlags, MAX_ITEMS, MAX_RECORDS, MAX_RECORD_VALUES,
+};
 use rustsheet_engine::types::DateSystem;
 
 use super::super::escape::escape_xml;
@@ -29,22 +31,66 @@ pub(super) struct Unwritable(pub(super) String);
 
 /// Checks that `cache` can be written: a worksheet source (a range or a name), no grouped field
 /// (the import turns a group into its items and keeps no base values to write the group back
-/// from: T-4734), and dates inside Excel's calendar.
-pub(super) fn check(cache: &PivotCache, date_system: DateSystem) -> Result<(), Unwritable> {
+/// from: T-4734), no two text items of a field that differ only in case (Excel for the web calls
+/// such a file corrupt: docs/excel-semantics/pivots.md "Case-variant text items make Excel for the
+/// web call the file corrupt"), finite numbers, dates inside Excel's calendar, and every record
+/// an index into its field's items.
+///
+/// A cache's fields are public, so one built through the API or decoded need not respect the
+/// import limits: it is held to them here, before anything is written (directive 5), with
+/// `values_left` the record values the workbook's earlier exported caches left of
+/// [`MAX_RECORD_VALUES`]. On success, returns this cache's record values.
+pub(super) fn check(
+    cache: &PivotCache,
+    date_system: DateSystem,
+    values_left: usize,
+) -> Result<usize, Unwritable> {
     if cache.source.is_none() && cache.source_name.is_none() {
         return Err(Unwritable("a cache without a worksheet source".into()));
     }
     if (cache.fields.iter()).any(|f| f.number_groups.is_some() || f.date_groups.is_some()) {
         return Err(Unwritable("a grouped cache field (T-4734)".into()));
     }
+    let records = cache.record_count as usize;
+    let values = records.saturating_mul(cache.fields.len());
+    if records > MAX_RECORDS || values > values_left.min(MAX_RECORD_VALUES) {
+        return Err(Unwritable(format!(
+            "{records} records of {} fields, past the cache limits",
+            cache.fields.len()
+        )));
+    }
+    let items = (cache.fields.iter()).fold(0usize, |n, f| n.saturating_add(f.items.len()));
+    if items > MAX_ITEMS {
+        return Err(Unwritable(format!("{items} items, past the cache limits")));
+    }
     for field in &cache.fields {
+        if field.has_case_variant_texts() {
+            return Err(Unwritable(format!(
+                "field {:?} holds texts that differ only in case",
+                field.name.chars().take(200).collect::<String>()
+            )));
+        }
         for item in &field.items {
-            if let CacheItem::Date(serial) = item {
-                date_text(*serial, date_system)?;
+            match item {
+                CacheItem::Number(n) if !n.is_finite() => {
+                    return Err(Unwritable("a cache number that is not finite".into()));
+                }
+                CacheItem::Date(serial) => {
+                    date_text(*serial, date_system)?;
+                }
+                _ => {}
             }
         }
+        let bad_record = field.records.len() != records
+            || (field.records.iter()).any(|&index| index as usize >= field.items.len());
+        if bad_record {
+            return Err(Unwritable(format!(
+                "field {:?} has records that are not indices into its items",
+                field.name.chars().take(200).collect::<String>()
+            )));
+        }
     }
-    Ok(())
+    Ok(values)
 }
 
 /// The `pivotCacheDefinition` part of `cache`, whose records part is its relationship `rId1`.
@@ -103,11 +149,11 @@ pub(super) fn definition_xml(
 }
 
 /// The `pivotCacheRecords` part of `cache`: each record's values as shared-item indices.
+/// [`check`] must have passed, which bounds the records; the text grows as written rather than
+/// being reserved up front.
 pub(super) fn records_xml(cache: &PivotCache) -> String {
-    let fields = cache.fields.len();
     let records = cache.record_count as usize;
-    // About 12 bytes a value.
-    let mut xml = String::with_capacity(records.saturating_mul(fields).saturating_mul(12));
+    let mut xml = String::new();
     let _ = write!(
         xml,
         r#"{XML_DECLARATION}
@@ -116,7 +162,7 @@ pub(super) fn records_xml(cache: &PivotCache) -> String {
     for record in 0..records {
         xml.push_str("<r>");
         for field in &cache.fields {
-            // Every field holds `record_count` records (`CacheBuilder`).
+            // Every field holds `record_count` records ([`check`]).
             let index = field.records.get(record).copied().unwrap_or_default();
             let _ = write!(xml, r#"<x v="{index}"/>"#);
         }

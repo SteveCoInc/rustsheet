@@ -9,21 +9,23 @@
 //! relies on (`OpaqueNode::Element`). The collections' `count` attributes are written from the
 //! lists.
 //!
-//! The layout lines (`rowItems`, `colItems`) are the engine's when its layout gives the location
-//! the pivot holds (`lines`), so they always agree with the cells the engine rendered there: they
-//! go stale on any refresh, and Excel rewrites them (docs/excel-semantics/pivots.md "The grid
-//! writer's own readings"). Otherwise, as for a pivot whose saved cells the engine did not
-//! render (pivots.md "Pivots without refreshOnLoad keep their saved cells"), the saved lines are
-//! written back as read.
+//! The layout lines (`rowItems`, `colItems`) are the saved ones, written back as read, while the
+//! pivot still holds them: the engine has not laid it out since it was read, so its cells are the
+//! saved ones too (pivots.md "Pivots without refreshOnLoad keep their saved cells"). A pivot the
+//! engine laid out (rendered or refreshed, which drops the saved lines:
+//! [`rustsheet_engine::pivot::OpaqueEntry::is_layout_lines`]) or one made through the API gets the
+//! engine's (`lines`), when its layout gives the location the pivot holds, so they agree with the
+//! cells the engine rendered there (docs/excel-semantics/pivots.md "The grid writer's own
+//! readings").
 
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
 use rustsheet_engine::expressions::utils::number_to_column;
 use rustsheet_engine::pivot::{
-    Aggregate, AxisField, AxisLine, CellArea, DataField, ItemType, OpaqueNode, OpaqueOwner,
-    PivotCache, PivotField, PivotItem, PivotLayout, PivotOptions, PivotTable, ShowDataAs, SortType,
-    NO_BASE_ITEM,
+    element_name, Aggregate, AxisField, AxisLine, CellArea, DataField, ItemType, OpaqueNode,
+    OpaqueOwner, PivotCache, PivotField, PivotItem, PivotLayout, PivotOptions, PivotTable,
+    ShowDataAs, SortType, NO_BASE_ITEM,
 };
 
 use super::super::escape::escape_xml;
@@ -62,17 +64,6 @@ fn rank(name: &str) -> usize {
         Some(_) => 2 * extension,
         None => 2 * extension - 1,
     }
-}
-
-/// The local name of a kept element (`<x14:pivotTableDefinition ...>` is
-/// `pivotTableDefinition`).
-fn element_name(xml: &str) -> &str {
-    let tag = xml.strip_prefix('<').unwrap_or(xml);
-    let end = tag
-        .find(|c: char| c.is_whitespace() || c == '/' || c == '>')
-        .unwrap_or(tag.len());
-    let name = tag.get(..end).unwrap_or_default();
-    name.rsplit(':').next().unwrap_or(name)
 }
 
 /// The verbatim rest, by owner.

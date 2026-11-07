@@ -7,7 +7,8 @@ use std::io::{Cursor, Read};
 use rustsheet_engine::expressions::token::Error;
 use rustsheet_engine::pivot::{
     Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea, DataField, NumberGroups,
-    OpaqueNode, PivotCache, PivotField, PivotTable, RecordValue, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
+    OpaqueEntry, OpaqueNode, PivotBudget, PivotCache, PivotField, PivotTable, RecordValue,
+    MAX_PIVOT_WORK, MAX_RECORDS, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::DateSystem;
 use rustsheet_engine::Model;
@@ -39,40 +40,46 @@ fn part(bytes: &[u8], name: &str) -> String {
     text
 }
 
-/// `tables` without their kept `rowItems` and `colItems`, which the export writes from the
-/// engine's layout when it fits the location.
+/// `tables` without their kept `rowItems` and `colItems`, as the engine leaves a pivot it lays out
+/// again.
 fn without_lines(tables: &[PivotTable]) -> Vec<PivotTable> {
     let mut tables = tables.to_vec();
     for table in &mut tables {
-        table.opaque.retain(|entry| match &entry.node {
-            OpaqueNode::Element(xml) => {
-                !xml.starts_with("<rowItems") && !xml.starts_with("<colItems")
-            }
-            OpaqueNode::Attributes(_) => true,
-        });
+        table.opaque.retain(|entry| !entry.is_layout_lines());
     }
     tables
 }
 
 /// The Excel-saved pivot of `tests/example.xlsx` comes back equal, its saved `rowItems` and
-/// `colItems` included: the engine's lines for it are Excel's, written as Excel writes them.
+/// `colItems` included, whether they are written back as read (the engine has not laid it out)
+/// or from the engine's layout once it has: the engine's lines for it are Excel's, written as
+/// Excel writes them.
 #[test]
 fn an_excel_saved_pivot_round_trips() {
-    let model = load_from_xlsx("tests/example.xlsx", "en", "UTC", "en").unwrap();
-    let workbook = &model.workbook;
-    assert_eq!(workbook.pivot_tables.len(), 1);
-    let pivot = &workbook.pivot_tables[0];
-    let cache = &workbook.pivot_caches[pivot.cache as usize];
+    let mut model = load_from_xlsx("tests/example.xlsx", "en", "UTC", "en").unwrap();
+    let saved = model.workbook.pivot_tables.clone();
+    assert_eq!(saved.len(), 1);
+    let cache = &model.workbook.pivot_caches[saved[0].cache as usize];
     // Its source is the Table `Table1`.
     assert_eq!(cache.source_name.as_deref(), Some("Table1"));
     let mut work = MAX_PIVOT_WORK;
     assert!(
-        layout_lines(pivot, cache, &mut work).is_some(),
-        "the engine lays out the saved location"
+        layout_lines(&saved[0], cache, &mut work).is_none(),
+        "a pivot the engine has not laid out keeps its saved lines"
     );
     let back = round_trip(&model);
-    assert_eq!(back.workbook.pivot_caches, workbook.pivot_caches);
-    assert_eq!(back.workbook.pivot_tables, workbook.pivot_tables);
+    assert_eq!(back.workbook.pivot_caches, model.workbook.pivot_caches);
+    assert_eq!(back.workbook.pivot_tables, saved);
+
+    // Laid out by the engine, it holds no saved lines and gets the engine's, equal to Excel's.
+    let placed = model
+        .plan_pivot_render(0, &mut PivotBudget::default())
+        .unwrap();
+    let pivot = placed.placements.into_iter().next().unwrap().pivot;
+    assert!(!pivot.opaque.iter().any(OpaqueEntry::is_layout_lines));
+    model.workbook.pivot_tables = vec![pivot];
+    let back = round_trip(&model);
+    assert_eq!(back.workbook.pivot_tables, saved);
     let bytes = export(&model);
     let table = part(&bytes, "xl/pivotTables/pivotTable1.xml");
     assert!(table.contains(r#"<rowItems count="10"><i><x/></i><i r="1"><x/></i>"#));
@@ -249,6 +256,82 @@ fn a_grouped_cache_is_dropped_with_its_pivots() {
     let back = round_trip(&model_with(cache));
     assert!(back.workbook.pivot_caches.is_empty());
     assert!(back.workbook.pivot_tables.is_empty());
+}
+
+/// Saved layout lines are written back as read while the pivot holds them, even when the
+/// engine's would differ: its cells are still the saved ones (the engine has not laid it out).
+#[test]
+fn saved_lines_are_kept_until_the_engine_lays_the_pivot_out() {
+    let mut model = load_from_xlsx("tests/example.xlsx", "en", "UTC", "en").unwrap();
+    let stale = r#"<rowItems count="1"><i t="grand"><x/></i></rowItems>"#;
+    for entry in &mut model.workbook.pivot_tables[0].opaque {
+        if entry.is_layout_lines()
+            && matches!(&entry.node, OpaqueNode::Element(x) if x.starts_with("<rowItems"))
+        {
+            entry.node = OpaqueNode::Element(stale.into());
+        }
+    }
+    let table = part(&export(&model), "xl/pivotTables/pivotTable1.xml");
+    assert!(table.contains(stale), "{table}");
+}
+
+/// The cache limits hold for a cache built through the API or decoded, whose fields are
+/// public: one past them, alone or with the caches before it, is not written (directive 5).
+#[test]
+fn a_cache_past_the_limits_is_not_written() {
+    use super::cache::check;
+    let cache = mixed_cache();
+    assert_eq!(
+        check(&cache, DateSystem::Excel1900, MAX_RECORD_VALUES),
+        Ok(9)
+    );
+    // Nine record values, with eight left by the caches before it.
+    assert!(check(&cache, DateSystem::Excel1900, 8).is_err());
+    let mut huge = mixed_cache();
+    huge.record_count = u32::try_from(MAX_RECORDS).unwrap() + 1;
+    assert!(check(&huge, DateSystem::Excel1900, MAX_RECORD_VALUES).is_err());
+    // Within the record limit, but past the record values one: checked before any record.
+    huge.record_count = u32::try_from(MAX_RECORDS).unwrap();
+    huge.fields = vec![huge.fields[0].clone(); 11];
+    assert!(check(&huge, DateSystem::Excel1900, MAX_RECORD_VALUES).is_err());
+    let back = round_trip(&model_with(huge));
+    assert!(back.workbook.pivot_caches.is_empty());
+    assert!(back.workbook.pivot_tables.is_empty());
+}
+
+/// A number that is not finite, or a record that is not an index into its field's items, has no
+/// faithful part: the cache is not written.
+#[test]
+fn non_finite_numbers_and_bad_records_are_not_written() {
+    use super::cache::check;
+    for n in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        let mut cache = mixed_cache();
+        cache.fields[2].items[0] = CacheItem::Number(n);
+        assert!(check(&cache, DateSystem::Excel1900, MAX_RECORD_VALUES).is_err());
+    }
+    let mut cache = mixed_cache();
+    cache.fields[0].records[1] = 3;
+    assert!(check(&cache, DateSystem::Excel1900, MAX_RECORD_VALUES).is_err());
+    let mut cache = mixed_cache();
+    cache.fields[0].records.pop();
+    assert!(check(&cache, DateSystem::Excel1900, MAX_RECORD_VALUES).is_err());
+}
+
+/// Two text items of a field that differ only in case, which the import's exact interning of
+/// inline values can yield, make Excel for the web call the file corrupt (pivots.md
+/// "Case-variant text items make Excel for the web call the file corrupt"): the cache is dropped
+/// with its pivots. Texts that differ otherwise are written.
+#[test]
+fn case_variant_texts_drop_the_cache() {
+    let mut cache = mixed_cache();
+    cache.fields[0].items[0] = CacheItem::Text("East".into());
+    cache.fields[0].items.push(CacheItem::Text("EAST".into()));
+    let back = round_trip(&model_with(cache.clone()));
+    assert!(back.workbook.pivot_caches.is_empty());
+    assert!(back.workbook.pivot_tables.is_empty());
+    cache.fields[0].items[3] = CacheItem::Text("East ".into());
+    let back = round_trip(&model_with(cache));
+    assert_eq!(back.workbook.pivot_caches.len(), 1);
 }
 
 /// A 1904 workbook's cache dates are days from 1904-01-01.
