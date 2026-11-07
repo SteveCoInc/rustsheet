@@ -3,7 +3,7 @@ id: T-4823
 title: "GETPIVOTDATA returns an error in field as is, and a referenced error as data_field is #REF!"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
