@@ -3,7 +3,7 @@ id: T-1812
 title: "Bench the lifted and scalar LARGE paths in benches/lift.rs"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
