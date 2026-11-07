@@ -28,3 +28,9 @@ Owner of the visibly-off cells Local!H1, H3, H5, H9, H17 of that case.
 
 ## Outcome
 `RefGrid::order_statistic_error` returns the value view (`#VALUE!`) when the first element is a reference on the formula's own sheet; otherwise the old rule (error element, else `#N/A` when any reference is off-sheet) stands, which H14 and H15 (first element a value) still pass. Eval delta: `probes/t4697-large-small-median-mixed-sheet-refs` 12 -> 17 of 17; five known failures (Local H1, H3, H5, H9, H17) removed from the baseline. Unit test added; SPEC-0014 and the doc comment updated.
+
+## Landing notes
+- PR #3847, head `972df1a7c` (after `make catch-up`). CI green, security, design and excel-fidelity approved on the code head `252b7f880`; the catch-up merged `origin/main` only.
+- The merge queue removed it (`MERGE_CONFLICT`) at 05:46Z after it was enqueued at 05:43Z: another PR merged ahead of it and touched `eval/baseline/probes.txt` again.
+- Next step: run `make catch-up PR=3847` again, wait for green CI, then `enable_pr_auto_merge` (SQUASH). No reviewer re-run is needed for a clean merge of `origin/main` or a catch-up.
+- Do not enqueue before CI is green on the new head. The first enqueue silently failed on the same baseline conflict, with no `enqueued` event.
