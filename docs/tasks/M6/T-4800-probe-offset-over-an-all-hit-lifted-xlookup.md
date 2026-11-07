@@ -17,8 +17,9 @@ every lookup hits, e.g. `OFFSET(XLOOKUP({2;3},Data!$A$1:$A$3,Data!$B$1:$B$3,Data
 ## Context
 - T-4739 (#3866) made OFFSET lift over a mixed XLOOKUP grid (a hit and a miss): a 2x1 of `#VALUE!` (probes/t4704 A4:C8).
   With no miss, `xlookup_reference` gives the hits as a value array, and OFFSET of an array is a scalar `#VALUE!` (ours,
-  unprobed; unchanged by T-4739). Excel may still spill a 2x1 here: probes/t4704 A64:C74 shows COUNTIF and SUMIF over an
-  XLOOKUP with a text if_not_found spill a 2x1 of `#VALUE!` with all hits too (reviewer-excel-fidelity on #3866).
+  unprobed; unchanged by T-4739). Excel may still spill a 2x1 here: in probes/t4704, COUNTIF and SUMIF over an
+  XLOOKUP with a text if_not_found spill a 2x1 of `#VALUE!` with all hits too (cells owned by T-4742; reviewer-excel-fidelity
+  on #3866).
 - Probe with the `excel-probe` skill: value, ROWS and COLUMNS for all hits with `,0,0` and `,1,0`, a one-element
   `{2}` lookup, and a scalar lookup as a control; the t4704 Data sheet can be reused.
 - Code: functions/lookup_and_reference/offset.rs `offset_source`; SPEC-0014 amendment "Per-element callers".
