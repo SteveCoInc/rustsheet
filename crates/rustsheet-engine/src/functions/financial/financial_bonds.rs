@@ -141,11 +141,7 @@ impl CouponSchedule {
         // probes/bond-extreme-coupon-yield are bit-exact in the eval (T-2733).
         let accrued = rate / frequency as f64 * (a / e) * 100.0;
 
-        // The redemption is discounted at `(n - 1) + DSC/E`, not `(DSC/E + n) - 1`, which rounds
-        // differently: YIELD's Newton sees the difference as a price ulp, and with this order
-        // probes/yield-start-one-input S!B67 and yield-start-term-basis S!A52 and S!B50 are
-        // bit-exact (8 to 11 ulps off before), the fresh Gate A sweep accuracy/YIELD/r4-T-2788
-        // goes from 284 to 288 of 300 bit-exact, and no cell regresses (T-2788).
+        // `(n - 1) + DSC/E`, not `(DSC/E + n) - 1`: financial.md "YIELD stops short", T-2788.
         let v = 1.0 + yld / frequency as f64;
         let first_term = redemption / growth(v, n - 1.0 + dsc_over_e);
 
