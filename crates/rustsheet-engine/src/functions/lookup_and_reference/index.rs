@@ -767,10 +767,6 @@ fn external_index_area(
     })
 }
 
-/// INDEX's first argument with a scalar value read as a one-element array (T-1645). An empty
-/// value is `#VALUE!`: `INDEX(INDEX(UNIQUE(D1:D3,FALSE,{FALSE;TRUE}),2,1),1,1)`, whose inner
-/// INDEX is UNIQUE's empty element (probes/m7-lift-take-drop-sortby L25; arrays.md "UNIQUE's
-/// and SORTBY's lifted elements"; T-2300).
 /// The reference element that one index picks from a column of elements, as a 1x1 grid:
 /// `INDEX(XLOOKUP({2;9},A1:A3,B1:B3,D1:D2),2)` where a reference is taken is the array holding
 /// D1:D2 (probes/t4563-xlookup-not-found-ref-element V25:V26, T-4701). `None` for any other
@@ -783,10 +779,17 @@ fn column_element(grid: &RefGrid, numbers: IndexNumbers, two_arg: bool) -> Optio
         return None;
     }
     let element = grid.get(row - 1, 0)?;
-    matches!(element, RefElement::Reference(_))
-        .then(|| RefGrid::new(1, 1, vec![element.clone()]))?
+    if let RefElement::Reference(_) = element {
+        RefGrid::new(1, 1, vec![element.clone()])
+    } else {
+        None
+    }
 }
 
+/// INDEX's first argument with a scalar value read as a one-element array (T-1645). An empty
+/// value is `#VALUE!`: `INDEX(INDEX(UNIQUE(D1:D3,FALSE,{FALSE;TRUE}),2,1),1,1)`, whose inner
+/// INDEX is UNIQUE's empty element (probes/m7-lift-take-drop-sortby L25; arrays.md "UNIQUE's
+/// and SORTBY's lifted elements"; T-2300).
 fn scalar_as_one_element_array(arg: RefArg, cell: CellReferenceIndex) -> RefArg {
     match arg {
         RefArg::Value(CalcResult::EmptyCell) => RefArg::Value(CalcResult::new_error(
