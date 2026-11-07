@@ -597,3 +597,75 @@ fn error_arguments_follow_the_t4006_order() {
         (r#"=GETPIVOTDATA(Z5,$A$3,"Region","East")"#, "#REF!"),       // referenced df
     ]);
 }
+
+/// Pivot of the probe's records with two data fields over Sales, Sum of Sales and Count of
+/// Sales, Region on the rows and `Values` on the columns, at A3 (probes/t2085-getpivotdata-data-fields
+/// pivot M, DF A1, A3, A8 to A11). The case shape is DF's; the Values-name and caption rules it
+/// checks beyond DF's cells are UNVERIFIED (T-4911).
+fn two_data_field_model() -> Model {
+    let mut model = new_empty_model();
+    model.new_sheet();
+    model.workbook.pivot_caches = vec![cache()];
+    let mut table = pivot(
+        0,
+        CellArea {
+            top: 2,
+            left: 0,
+            bottom: 6,
+            right: 2,
+        },
+        false,
+        "Sum of Sales",
+        Aggregate::Sum,
+    );
+    table.column_fields = vec![AxisField::Values];
+    table.data_fields.push(DataField {
+        caption: "Count of Sales".to_string(),
+        field: 2,
+        function: Aggregate::Count,
+        ..DataField::default()
+    });
+    model.workbook.pivot_tables = vec![table];
+    model
+}
+
+#[test]
+fn several_data_fields_pick_by_source_name_caption_and_the_values_pair() {
+    let cases = [
+        // A source name two data fields share picks the first (DF A1).
+        (r#"=GETPIVOTDATA("Sales",A3)"#, "49"),
+        // A caption picks its data field, ignoring case (DF A3, A12).
+        (r#"=GETPIVOTDATA("Count of Sales",A3)"#, "6"),
+        (r#"=GETPIVOTDATA("COUNT OF SALES",A3,"Region","East")"#, "4"),
+        // The Values pair names the data field by its caption (DF A8); another data field's
+        // caption is #REF! (DF A9, A11).
+        (r#"=GETPIVOTDATA("Sales",A3,"Values","Sum of Sales")"#, "49"),
+        (r#"=GETPIVOTDATA("Sales",A3,"values","SUM OF SALES")"#, "49"),
+        (
+            r#"=GETPIVOTDATA("Count of Sales",A3,"Values","Count of Sales")"#,
+            "6",
+        ),
+        (
+            r#"=GETPIVOTDATA("Sales",A3,"Values","Count of Sales")"#,
+            "#REF!",
+        ),
+        (
+            r#"=GETPIVOTDATA("Sales",A3,"Region","East","Values","Count of Sales")"#,
+            "#REF!",
+        ),
+        // "Values" is no data field (DF A10).
+        (r#"=GETPIVOTDATA("Values",A3)"#, "#REF!"),
+    ];
+    let mut model = two_data_field_model();
+    for (i, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("H{}", 40 + i), formula);
+    }
+    model.evaluate();
+    for (i, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("H{}", 40 + i)),
+            *expected,
+            "{formula}"
+        );
+    }
+}

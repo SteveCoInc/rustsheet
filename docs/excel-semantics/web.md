@@ -171,6 +171,13 @@ Cell ids are sheet Q of each case. The cases are probes/t2085-getpivotdata-data-
   after `"Sales"` (DF A8, A9, A11).
 - `"Values"` as data_field is `#REF!` (DF A10).
 - A blank cell or `""` as data_field is `#REF!` with several data fields (DF A6, A7, A20).
+- UNVERIFIED (T-4911), engine choices with no cell behind them: the Values pair field matched by a custom
+  `dataCaption` (DF only has the default `Values`) with its item matched ignoring case; a `Values` name that collides
+  with a cache field name; a pivot with several data fields whose Values field shares an axis with another field
+  answers only its grand total (extending the one-data-field grand-total evidence of calipers formula_stress_test);
+  an omitted data_field is `#REF!` (SPEC-0015 unknown 8; DF A7, A14, A16 test `""` only); a blank data_field cell
+  inside another pivot's area or in this pivot's page-field area is `#REF!`; caption-versus-source-name precedence
+  (the caption wins).
 
 **Blank and empty data_field.** On S1, a pivot with one data field:
 - A blank cell inside the pivot's area gives the grand total: `S1!C3`, where ISBLANK is TRUE, gives 46. This matches

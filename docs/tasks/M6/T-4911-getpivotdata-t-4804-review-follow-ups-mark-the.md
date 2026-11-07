@@ -3,7 +3,7 @@ id: T-4911
 title: "GETPIVOTDATA T-4804 review follow-ups: mark the unprobed Values-field, blank-cell and nested-Values inferences, probe them, add a multi-data-field unit test"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -33,13 +33,19 @@ default `"Values"` name and items written in the caption's own case.
 - The caption-versus-source-name precedence (caption wins) is already marked unprobed. It has no task id yet.
 
 ## Acceptance criteria
-- [ ] web.md "GETPIVOTDATA on other pivot shapes (T-2085)" "Ours" and SPEC-0015 mark each inference above
+- [x] web.md "GETPIVOTDATA on other pivot shapes (T-2085)" "Ours" and SPEC-0015 mark each inference above
       UNVERIFIED with this task's id, or a new probe case (excel-probe skill) evidences it and the engine follows it.
-- [ ] The `pivot_data_field` comment cites unknown 8 for an omitted data_field.
-- [ ] A unit test in `test/test_fn_getpivotdata.rs` builds a two-data-field pivot with Values on the columns. It
+- [x] The `pivot_data_field` comment cites unknown 8 for an omitted data_field.
+- [x] A unit test in `test/test_fn_getpivotdata.rs` builds a two-data-field pivot with Values on the columns. It
       checks a source name shared by two data fields, a caption, the Values pair (matching and not) and `"Values"`
       as data_field.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - T-4805 (items and arguments) and T-4806 (pivot shapes and shown values).
+
+## Outcome
+Marked every inference above UNVERIFIED (T-4911) in web.md "GETPIVOTDATA on other pivot shapes (T-2085)", SPEC-0015
+and the `pivot_data_field` comment, which now cites unknown 8 for an omitted data_field. None was probed, so the
+engine is unchanged. Added `several_data_fields_pick_by_source_name_caption_and_the_values_pair` (two data fields,
+Values on the columns). No eval delta.

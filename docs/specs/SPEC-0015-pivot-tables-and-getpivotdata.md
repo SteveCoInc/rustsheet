@@ -186,8 +186,9 @@ refers to the list in "Excel behavior to match".
    (unknown 4).
 2. The data field: an empty-cell `data_field` takes the data field when there is exactly one and
    the cell is inside the pivot's `location` (J7, DF S1!C3); a blank cell outside it, on any sheet,
-   or with several data fields is `#REF!` (DF Q!A6, A15, A17, A20); `""` is `#REF!` (unknown 8, DF
-   Q!A7, A14, A16). Otherwise the first data field whose caption equals `data_field` ignoring case
+   or with several data fields is `#REF!` (DF Q!A6, A15, A17, A20); `""` is `#REF!` (DF Q!A7, A14,
+   A16); an omitted `data_field` is `#REF!` too, UNVERIFIED (unknown 8, T-4911); a blank cell inside
+   another pivot's area or in this pivot's page-field area is `#REF!`, UNVERIFIED (T-4911). Otherwise the first data field whose caption equals `data_field` ignoring case
    and untrimmed, else the first whose source field name does (a source name two data fields share
    picks the first, DF Q!A1; T-4804); none is `#REF!`, `"Values"` included (DF Q!A10). Several
    data fields are answered when the Values field is on the row or column axis (unknown 1).
@@ -197,9 +198,13 @@ refers to the list in "Excel behavior to match".
    pv23_041, T-2662); a number, date or boolean item or field is `#REF!` (unknown 3); the same field
    twice is `#REF!`, with different items (H17) or the same (unknown 5). With several data fields
    the Values field is a pair field by its `dataCaption` (`Values`), ignoring case, whose only
-   item is the chosen data field's caption; any other item is `#REF!` (DF Q!A8, A9, A11). A pivot with two fields on
+   item is the chosen data field's caption; any other item is `#REF!` (DF Q!A8, A9, A11). UNVERIFIED
+   (T-4911): the pair field's name taken from a custom `dataCaption` rather than `Values`, the item
+   matched ignoring case, and a `Values` name that collides with a cache field name. A pivot with two fields on
    an axis answers only with no pairs, its grand total (calipers formula_stress_test, T-2662); any
-   pair there is `#REF!` (unknown 10).
+   pair there is `#REF!` (unknown 10). UNVERIFIED (T-4911): a pivot with several data fields whose
+   Values field shares an axis with another field counts as nested, so only its grand total is
+   answered; the grand-total evidence has one data field.
 4. The value: the data field's aggregate over the records whose fields equal every chosen item. A
    aggregate over no records is 0 (H13, probes/getpivotdata-empty-intersection; unknown 2, DF
    Q!B6:J6); Var and StdDev over one record are `#DIV/0!`, VarP and StdDevP 0 (DF Q!G5:J5). A
