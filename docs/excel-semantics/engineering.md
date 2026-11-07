@@ -771,7 +771,8 @@ angle"); cosh and sinh are libm's, except IMSECH's and IMCSCH's (IMSINH's `1/u` 
   `"1E+10"` are `#NUM!` (probes/t4721-im-overflow-residue B1:D3, excel-graph, 2026-11-07, T-4721). That settles the old
   note that libm's sine and cosine took over from 2^27 on: Excel returns `#NUM!` there, as the entry "IM* trig and
   hyperbolic functions past SIN's argument limit (T-3642)" says for a complex argument (IMCOT's real `"134217728"`
-  stays 0, an entry there).
+  stays 0, an entry there). probes/t2534-im-trig-real-limit shows `#NUM!` for the real 134217728 and 1E+10 too; the new
+  case adds the 134217727.99 point.
 - IMLOG2 (T-2231, superseding the T-2044 time-box; modulus model replaced by T-3643): `ln` of the logs' doubly
   rounded modulus (above) and the argument (`atan2`),
   both times K = 1.4426950408889636, the double one ulp above log2 e (= `1/ln 2` with the double one ulp below ln 2).
@@ -916,9 +917,11 @@ Rule: for IMSUM, IMPRODUCT, IMEXP, IMPOWER and IMDIV (the functions probed), a r
 overflows or is NaN is an error, never text. IMSUM and IMPRODUCT give `#VALUE!`; IMEXP of a pure
 real number, IMPOWER and IMDIV give `#NUM!`. IMSIN, IMCOS, IMSINH, IMCOSH, IMSUB and IMSQRT are probed in the
 entries below. Also probed (probes/t4721-im-overflow-residue, excel-graph, 2026-11-07, T-4721): IMLN, IMLOG10 and
-IMLOG2 of a modulus past DBL_MAX (`"1E307+1E307i"`, `"9.9E307+9.9E307i"`, `"-9E307-9E307i"`) are `#NUM!` (B4:D6), and
-IMCONJUGATE, IMREAL and IMAGINARY of `"9.99999999999999E307-9.99999999999999E307i"` return the parts unchanged
-(`9.99999999999999E+307+9.99999999999999E+307i`, 9.99999999999999E+307, -9.99999999999999E+307; B7:B9).
+IMLOG2 of an argument whose x²+y² overflows (`"1E307+1E307i"`, `"9.9E307+9.9E307i"`, `"-9E307-9E307i"`; the modulus itself,
+1.41E307 to 1.40E308, is finite) are `#NUM!` (B4:D6): the square-overflow rule above, not a modulus overflow.
+IMCONJUGATE, IMREAL and IMAGINARY of `"9.99999999999999E307-9.99999999999999E307i"` return the parts at full size,
+IMCONJUGATE with the imaginary sign flipped (`9.99999999999999E+307+9.99999999999999E+307i`, 9.99999999999999E+307,
+-9.99999999999999E+307; B7:B9).
 Status: VERIFIED (excel-graph); implemented for the five (IMEXP with a nonzero imaginary part: T-2002, T-2060).
 Tasks: T-1827, T-1996, and the follow-ups T-2001 to T-2003.
 Evidence: probes/eng-im-overflow (excel-graph).

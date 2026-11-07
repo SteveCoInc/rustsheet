@@ -66,9 +66,9 @@ settles four other notes of the same file; the two tasks share no note.
   work (T-2538, T-4001, T-4012).
 
 ## Outcome
-New probe probes/t4721-im-overflow-residue (excel-graph, 25 cells, all pass; no engine change, no baseline change, no
+New probe probes/t4721-im-overflow-residue (excel-graph, 25 cells, all pass; no engine change, one generated case-count line in eval/baseline/probes.txt (`make eval-baseline`), no
 math sidecar since it has no Gate A one-call cell). Findings: IMSEC/IMCSC/IMTAN of a real argument are numbers at
-134217727.99 and `#NUM!` at 134217728 and 1E+10; IMLN/IMLOG10/IMLOG2 of a modulus past DBL_MAX are `#NUM!`;
+134217727.99 and `#NUM!` at 134217728 and 1E+10; IMLN/IMLOG10/IMLOG2 of an argument whose x²+y² overflows (the modulus is finite) are `#NUM!`;
 IMCONJUGATE/IMREAL/IMAGINARY return the largest parts unchanged; the IMDIV cut lies between 1E-308 (`#NUM!`) and
 2.3E-308 (a number). engineering.md notes 1-4 now cite these cells or the entries that settled them. Eval delta: one
 new passing case, 0 regressions.

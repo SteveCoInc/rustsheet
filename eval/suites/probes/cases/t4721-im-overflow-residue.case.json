@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-4721: IM* overflow residue. Rows 1-3: IMSEC/IMCSC/IMTAN of a real argument at and past 2^27 (B:D). Rows 4-6: IMLN/IMLOG10/IMLOG2 of a modulus past DBL_MAX (hypot overflows). Rows 7-9: IMCONJUGATE/IMREAL/IMAGINARY of the largest parts. Row 10: IMDIV by tiny divisors to place the cut. A holds the description.",
+ "description": "T-4721: IM* overflow residue. Rows 1-3: IMSEC/IMCSC/IMTAN of a real argument at and past 2^27 (B:D). Rows 4-6: IMLN/IMLOG10/IMLOG2 of a argument whose x²+y² overflows (the modulus is finite). Rows 7-9: IMCONJUGATE/IMREAL/IMAGINARY of the largest parts. Row 10: IMDIV by tiny divisors to place the cut. A holds the description.",
  "tags": [
   "M9",
   "engineering",
