@@ -298,6 +298,8 @@ probes/t4634-pivot-total-order-4.case.json	1376
 probes/t4697-large-small-median-mixed-sheet-refs.case.json	5
 probes/t4704-mixed-xlookup-grid-readers.case.json	29
 probes/t4765-growth-factor-edges.case.json	4
+probes/t4793-growth-one-factor-underflow.case.json	1
+probes/t4793-growth-several-x.case.json	2
 probes/table-edits/t4274-calc-column-delete-row-2.case.json	1
 probes/table-edits/t4274-calc-column-structured-insert-column-a.case.json	1
 probes/yield-below-par-sweep.case.json	3
