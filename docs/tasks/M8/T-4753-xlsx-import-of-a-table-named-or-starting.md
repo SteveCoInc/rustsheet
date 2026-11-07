@@ -3,7 +3,7 @@ id: T-4753
 title: "xlsx import of a table named Ⓐ or starting with a mark, which Excel loads while no formula uses it"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
