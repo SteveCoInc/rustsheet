@@ -7,7 +7,7 @@ status: todo
 priority: P2
 size: S
 tier: sonnet
-depends_on: []
+depends_on: [T-4808]
 ---
 
 ## Goal

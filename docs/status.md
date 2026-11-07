@@ -9,7 +9,7 @@ merged since its last run.
 
 ## Snapshot — 2026-11-07, 19:42 UTC run (M6 is current)
 
-This is the second run of the day. It follows #3872, the 05:53 UTC run, squash-merged as 351f8f78. It covers the 134 commits merged to `main` after 42d9bdaa (#3861, where that run's list stopped) up to c709e9d2 (#4006), the head when this run started. `make eval` ran on c709e9d2 with a clean tree.
+This is the second run of the day. It follows #3872, the 05:53 UTC run, squash-merged as 351f8f78. It covers the 134 commits merged to `main` after 42d9bdaa (#3861, where that run's list stopped) up to c709e9d2 (#4006), the head when this run started. `make eval` ran on 04f97f7d with a clean tree. That commit records #3872's head as a parent and has c709e9d2's tree.
 
 - All 21 suites were scored. `make eval` now fetches missing gate suites itself (T-4726, decision 0344), so calipers, corpus-bench, poi and both pivot corpora were fetched on the first run. Timeouts: 0 in every suite.
 - Eval gate: `make eval-lower-visible-lock` shows 0 regressions and 0 fixed in every gated suite. It lowered the visible-parity lock (decision 0093) from 8,264 allowed in 324 cases to 6,197 in-scope visibly-off cells in 284 cases (0 in new cases). The allowance had grown since the morning run through the new cases that task PRs recorded.
@@ -21,9 +21,9 @@ CI on `main` is green: of the last 40 `ci.yml` push runs on `main`, 39 succeeded
 Milestones: the current milestone stays M6 (decision 0027 order), and its exit fails only on its probes.
 - M6's probes have 82 visibly-off cells. 79 are the GETPIVOTDATA probes t2085-getpivotdata-layouts, -items and -data-fields (from T-2085), owned by T-4804 (#3950, orphaned and conflicting), T-4805 and T-4806. The other 3 are t4742-countif-array-range-arg, owned by T-4826, T-4863 and T-4946. The morning run's 34 cells are closed: #3847 (T-4714) and T-4739 to T-4742 merged.
 - `make exit-owners MILESTONE=M6` reports 0, as do M10 and M11.
-  - M7 listed 33 cells. They are the gen-m7/21b4eef18424ce94 and probe cells that T-4737 superseded under decision 0329 item 3. This PR names them in T-4913 (the owner-tool fix for decision-superseded cells), and M7 now reports 0.
+  - M7 listed 33 cells: 26 gen-m7/21b4eef18424ce94 spill cells and 7 probe cells, that T-4737 superseded under decision 0329 item 3. This PR names them in T-4913 (the owner-tool fix for decision-superseded cells), and M7 now reports 0.
   - M8 still lists t4618-order-after-active-backward Q!A1. T-3610, an M9 harness task, owns it and names it in its acceptance criteria.
-  - M9 listed 2. The COUNTBLANK fixture cell is still owned by T-4722 (M11). New is t3409-r4-gamma-inv-search-sweep Calc!A234, a CHISQ.INV.RT point where ours equals the math sidecar and Excel is about 2.7E-4 off. This PR files T-5015 for it.
+  - M9 listed 2. The COUNTBLANK fixture cell is still owned by T-4722 (M11). New is t3409-r4-gamma-inv-search-sweep Calc!A234, a CHISQ.INV.RT point where ours equals the math sidecar and Excel is about 2.7E-4 off. It is inside decision 0337's R3 region (shape 1E9 or more) and lacks only its math-over-excel.tsv mark, as do Calc!A226 and its neighbours. This PR files T-5015 to mark them.
 - The frozen M1 list has 0 known failures (89/89 cases), and the M0–M2 probes have 0.
 
 Hygiene:
@@ -77,10 +77,11 @@ The steward keeps this line as it is until the owner changes it.
 - First: P0 T-4825 (engine, M16), the round-trip regression on poi/54436.xlsx from #3800 (T-4798 closed as its duplicate).
 - Every exit cell left is owned by open work:
   - M6's 82 probe cells: T-4804 (#3950), T-4805 and T-4806 (GETPIVOTDATA, 79), and T-4826, T-4863 and T-4946 (3);
-  - M7's 20: T-4736 (draft #3859) and T-4913 (decision-superseded cells, decision 0329);
+  - M7's 20 visibly-off probe cells, plus the 26 gen-m7 spill cells that exit-owners also lists: T-4736 (draft #3859)
+    and T-4913 (decision-superseded cells, decision 0329);
   - M10's 28: T-4419 (functions-text), T-4460 and T-4466 (research), and T-4333 (blocked: time-boxed);
-  - M9's 2,123 visibly-off probe cells: the functions-stat and functions-financial fit work, with T-5015 for the new
-    CHISQ.INV.RT point.
+  - M9's 2,123 visibly-off probe cells: the functions-stat and functions-financial fit work, with T-5015 to mark the
+    unmarked R3 points of the t3409 sweeps.
 - A directive-5 crash P0 (a fuzz or panic report) still comes first. The session that files it starts it at once,
   rather than leaving it to wait behind these by milestone.
 - api, harness, quality and research have no M6 exit work on the critical path. perf stays out: it is Phase 2 work.)
