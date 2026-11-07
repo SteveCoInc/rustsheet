@@ -21,6 +21,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 
+from rustsheet_tools.accuracy.defs.gamma_dist import HUGE_RATIO_POWER_SHAPE_MAX, power_overflows
 from rustsheet_tools.fitlab.fit import Fit
 from rustsheet_tools.fitlab.holdout import REFERENCE
 from rustsheet_tools.fitlab.score import Candidate, ExcelError
@@ -38,18 +39,10 @@ _GAMMA_PATTERN = rf"^=(?:GAMMA\.DIST|GAMMADIST)\({_ARG},{_ARG},{_ARG},{_ARG}\)$"
 _CHISQ_PATTERN = rf"^=CHISQ\.DIST\({_ARG},{_ARG},{_ARG}\)$"
 _CHISQ_RT_PATTERN = rf"^=(?:CHISQ\.DIST\.RT|CHIDIST)\({_ARG},{_ARG}\)$"
 _Y_MIN = 1e200  # the smallest y scored: from here the value is 1 or 0 (probes/t4625 at shape 2)
-POWER_SHAPE_MAX = 1.1  # gamma.rs HUGE_RATIO_POWER_SHAPE_MAX
 _K = math.log(2) / 2
 
 # A model: (shape, y) -> whether the cell is `#NUM!`.
 Model = Callable[[float, float], bool]
-
-
-def _power_overflows(a: float, y: float) -> bool:
-    try:
-        return math.isinf(y**a)
-    except OverflowError:  # Python raises where Rust's powf gives infinity
-        return True
 
 
 def _quotient(factor: Callable[[float], float], power: bool) -> Model:
@@ -57,7 +50,7 @@ def _quotient(factor: Callable[[float], float], power: bool) -> Model:
 
     def model(a: float, y: float) -> bool:
         return a > 1.0 and (
-            math.isinf(y * factor(a)) or (power and a <= POWER_SHAPE_MAX and _power_overflows(a, y))
+            math.isinf(y * factor(a)) or (power and a <= HUGE_RATIO_POWER_SHAPE_MAX and power_overflows(y, a))
         )
 
     return model
@@ -65,7 +58,9 @@ def _quotient(factor: Callable[[float], float], power: bool) -> Model:
 
 def rule_r(a: float, y: float) -> bool:
     """Rule R in the engine's operation order: y / a * 4, then the power branch."""
-    return a > 1.0 and (math.isinf(y / a * 4.0) or (a <= POWER_SHAPE_MAX and _power_overflows(a, y)))
+    return a > 1.0 and (
+        math.isinf(y / a * 4.0) or (a <= HUGE_RATIO_POWER_SHAPE_MAX and power_overflows(y, a))
+    )
 
 
 def _models() -> dict[str, Model]:

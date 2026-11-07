@@ -201,7 +201,7 @@ def _gamma_dist_domain(args: Sequence[MathArg]) -> str | None:
     return None if cumulative else _density_domain(fx, fa, ratio)
 
 
-def _power_overflows(y: float, a: float) -> bool:
+def power_overflows(y: float, a: float) -> bool:
     """Whether the double y^a overflows (the engine's `powf`)."""
     try:
         return math.isinf(y**a)
@@ -213,7 +213,7 @@ def _huge_ratio_domain(fa: float, y: float) -> str | None:
     """Excel's #NUM! at a huge finite y = x / beta (T-4635), shared by GAMMA.DIST and the chi-squared functions."""
     if fa <= 1:
         return None
-    power = _power_overflows(y, fa)
+    power = power_overflows(y, fa)
     quotient = math.isinf(y / fa * 4)
     if power and HUGE_RATIO_POWER_SHAPE_MAX < fa < HUGE_RATIO_POWER_NUMBER_SHAPE and not quotient:
         msg = "y^shape overflows between shapes 1.1 (#NUM!) and 1.11 (a number): unprobed (T-4635)"
