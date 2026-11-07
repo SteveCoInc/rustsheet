@@ -3382,7 +3382,7 @@ same amount (up to 4.4E-12 from Excel, T-3447).
   against 0.33110164425313579, and D67 `BINOM.DIST(9999,10000000,0.001,TRUE)` is 0.4986681958001577 against
   0.49866819580081081. Ours is within about 1E-14. At the median count (C31, C49, C67, BINOM.INV's alpha 0.5) Excel
   is within 2E-15, so the error is not uniform in k. These cells have no sidecar math yet (T-4773; the other not-converged skips are
-  T-4782's), and T-4774 owns their last digits.
+  T-4775's), and T-4774 owns their last digits.
 Evidence: probes/t3352-binom-negbinom-large-n (excel-graph), probes-numeric/t3352-binom-negbinom-sweep (excel-graph,
 scored against 50-digit mpmath; T-3352's Outcome), probes-numeric/t3960-binom-negbinom-small-p-cdf and -hold (excel-graph).
 Implemented in: `crates/rustsheet-engine/src/functions/statistical/bratio/basym.rs`, `bratio::ported_tails`, and
@@ -3390,7 +3390,7 @@ Implemented in: `crates/rustsheet-engine/src/functions/statistical/bratio/basym.
 Status: VERIFIED (excel-graph) to 1E-11 of the math for p of 0.001 and above (the t3352 cases; at p below 0.01 with n
 1E5 or more or r 10 or more Excel is up to 1.1E-10 off, T-3960); last digits UNVERIFIED (Excel's arithmetic in basym and in Loader's
 kernel at a large n not identified)
-Tasks: T-3352, T-3447, T-3443, T-3444, T-2586, T-2146, T-3960, T-3961, T-4773, T-4774, T-4782
+Tasks: T-3352, T-3447, T-3443, T-3444, T-2586, T-2146, T-3960, T-3961, T-4773, T-4774, T-4775
 
 ## BINOM.DIST.RANGE and BINOM.INV at a large n sit on BINOM.DIST's own cdf (T-3444)
 Rule: Excel's BINOM.INV (and CRITBINOM, equal on every probe row) is the smallest k whose BINOM.DIST(k, n, p, TRUE) is
