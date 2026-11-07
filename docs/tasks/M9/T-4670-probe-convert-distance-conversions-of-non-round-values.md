@@ -3,7 +3,7 @@ id: T-4670
 title: "Probe CONVERT distance conversions of non-round values near the overflow path (1E298 to 1E308, m to m, m to ft, mi to km)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
