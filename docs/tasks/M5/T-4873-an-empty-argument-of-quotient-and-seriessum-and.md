@@ -74,6 +74,10 @@ the coefficients too), or an empty LET value / omitted LAMBDA parameter handed i
 error or boolean; the five 2010+ roundings read an empty significance or mode as omitted (significance 1), while legacy
 CEILING/FLOOR keep empty = 0. MROUND's `#N/A` test moved into one helper, `Model::atp_number` (functions/lift/mod.rs),
 now shared by MROUND, QUOTIENT and SERIESSUM; `numbers_fn_empty_omitted` (mathematical.rs) carries the rounding rule.
+Emptiness is judged on the written argument (`Model::empty_arguments`/`is_empty_argument`, logical/let.rs, also used by
+IMSUB/IMDIV's `complex_pair_of`), not on a blank value: a first cut on the value turned SERIESSUM's evidenced `#VALUE!`
+at gen-m5/6efa59fc1257c475 Calc!A229 and gen-m5/74b183ca6fc1d190 Calc!A16 (an IFERROR / VLOOKUP of an empty cell as x)
+into `#N/A`.
 numbers.md: "A written-empty argument of a ToolPak function is #N/A" and "An empty significance of the 2010+ roundings
 is omitted". Eval delta: two new probe cases, 66/66 cells pass (45 were off before the fix); no baseline line added or
 removed. Note: Calc!A7:A8 spill into occupied cells (`#SPILL!` both sides), so they say nothing about array lifting.
