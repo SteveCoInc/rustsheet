@@ -510,16 +510,23 @@ nper + 1 is a value, the split of "IPMT and PPMT split Excel's discounted paymen
 60.5849877072275,1)` 5.466510612214358. At nper + 1 it is `#NUM!`: `PPMT(0.0449398904217299,315,314,-3107.59202412783,
 0,1)`, `PPMT(0.0805588428682658,227,226,16.1638393072709,0,0)` and `IPMT(0.0104741966355263,249,248,340880.668375193,0,0)`;
 so is a period of 0.5 (`IPMT(0.00268654404805728,0.5,11,-557.559050130903,0,0)`), 0 or -1.
-Unprobed: IPMT at a period strictly between nper and nper + 1 (the engine takes PPMT's bound for both). The only IPMT
-cells in that band, probes/t4314-ipmt-balance-overflow D1:D2 (`IPMT(1E-300,1,1E-10,1E-300)`, period 1 over nper 1E-10),
-are `#NUM!` for a subnormal `1-Q` ("IPMT is #NUM! where its discounted balance fails"), so they do not settle the band;
-the Gate A definition keeps the closed form there and the cells keep their math value (T-4516).
+IPMT shares PPMT's band (T-4530): at a period strictly between nper and nper + 1 it is a value, the interest half of
+the same discounted split. `IPMT(0.05,12.5,12,-1234.56789,98.7654321,0)` is 8.026614067003484,
+`IPMT(0.05,12.000000001,12,..)` 11.040527695008135 and `IPMT(0.05,(13-2^-49),12,..)`, the double below nper + 1,
+4.938271605000011; rates 0, 1E-10 and -0.5, types 0 and 1 and nper 12.5 alike, with no `#NUM!` anywhere in the band.
+The engine's split was predicted bit for bit on all 160 cells before the fill (H_value, against H_nper: IPMT `#NUM!`
+past nper). probes/t4314-ipmt-balance-overflow D1:D2 (`IPMT(1E-300,1,1E-10,1E-300)`, period 1 over nper 1E-10) are
+`#NUM!` for a subnormal `1-Q` ("IPMT is #NUM! where its discounted balance fails"), not for the band; the Gate A
+definition keeps the closed form there and the cells keep their math value (T-4516).
 Evidence: accuracy/PPMT/s1 A112, A118 (values), A128, A137, A139 (`#NUM!`); accuracy/IPMT/s1 A113, A114, A117, A120,
 A123, A139 (`#NUM!`) (excel-graph, 2026-11-06, T-4109); gen-m9 a91bad4e84f49739 A354 `PPMT(1,0.5,323,401723)` and
 c0681a8b150ce301 A375 `PPMT(0.1,9,1.5,404118,62,1)` (`#NUM!`); "Financial edge-pool smoke check" (IPMT 13 of 12).
-Status: VERIFIED (excel-graph) for PPMT; IPMT's band UNVERIFIED
+probes/t4530-ipmt-band A1:J16 (IPMT and PPMT side by side at periods nper, nper + 1E-9, nper + 0.5, nper + 0.999 and
+the double below nper + 1; excel-graph, 2026-11-07; predictions in `docs/research/t4530/predictions.tsv` committed
+before the fill; math values in its `.math.json`).
+Status: VERIFIED (excel-graph) for PPMT and IPMT
 Implemented in: `period_payments` (`period >= period_count + 1.0`, functions/financial/annuity.rs)
-Tasks: T-4109
+Tasks: T-4109, T-4530
 
 ## PDURATION's domain
 Rule: `PDURATION(rate, pv, fv)` is `(LN(fv) - LN(pv)) / LN(1+rate)`, with `1+rate` a double. A rate, pv or fv of 0 or

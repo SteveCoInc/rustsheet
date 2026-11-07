@@ -2554,6 +2554,7 @@ C	probes/t4518-sheet-sheets-bound-variable.case.json	26
 C	probes/t4519-row-column-randarray-over-arrays.case.json	50
 C	probes/t4526-fixed-denominator-spill.case.json	13
 C	probes/t4529-yearfrac-calendar-vs-coercion.case.json	164
+C	probes/t4530-ipmt-band.case.json	160
 C	probes/t4534-bessel-convert-web-values.case.json	14
 C	probes/t4534-desktop-golden-web-values.case.json	36
 C	probes/t4538-indirect-a1-cells.case.json	50
