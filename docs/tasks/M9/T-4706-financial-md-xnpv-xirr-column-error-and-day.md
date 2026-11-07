@@ -29,11 +29,11 @@ probes/t4607-xnpv-xirr-column-errors-and-day-minus-one isolate.
 ## Acceptance criteria
 - [ ] financial.md says the XNPV part of the day -1..0 rule rests on the first-date cells only, and drops the
       truncation explanation (or marks it UNVERIFIED).
-- [ ] financial.md says only the whole-column cells show cell errors winning over the empty-cell `#NUM!`.
+- [ ] financial.md says only the whole-column XNPV cells show cell errors winning over the empty-cell `#NUM!` (XIRR has none).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - New probe cells (a range holding an empty cell and an error could be a later probe).
 
 ## Outcome
-Wording only in docs/excel-semantics/financial.md (and T-4607's Outcome sentence): the day -1..0 XNPV rule rests on rows 15-16 only, the truncation explanation is marked UNVERIFIED, and only the whole-column cells show cell errors winning over the empty-cell `#NUM!`. No engine, case or eval change (delta 0).
+Wording only in docs/excel-semantics/financial.md (and T-4607's Outcome sentence): the day -1..0 XNPV rule rests on rows 15-16 only, the truncation explanation is marked UNVERIFIED, and only the whole-column XNPV cells show cell errors winning over the empty-cell `#NUM!` (XIRR has none). No engine, case or eval change (delta 0).
