@@ -285,6 +285,14 @@ pub(crate) fn build_spec(spec: &CaseSpec, name: Option<&str>) -> Result<Workbook
             let mut entered = Vec::new();
             for phase in [Phase::Values, Phase::Stored] {
                 if phase == Phase::Stored {
+                    // Tables before the number formats: a criterion's values filter lists the
+                    // General text spec2xlsx writes, not the formatted text (T-4939,
+                    // probes/t4895-two-criteria-number-format-*).
+                    for (sheet, &id) in spec.sheets.iter().zip(&ids) {
+                        for table in &sheet.tables {
+                            add_table(tx, id, table, &sheet.hidden_rows)?;
+                        }
+                    }
                     // Before the pivots too: a date-formatted source cell is a date to a
                     // pivot's refresh (probes/t4287-pivot-group-dates-as-numbers). Set again
                     // below, as a stored formula's own format replaces it.
@@ -295,9 +303,6 @@ pub(crate) fn build_spec(spec: &CaseSpec, name: Option<&str>) -> Result<Workbook
                 for (sheet, &id) in spec.sheets.iter().zip(&ids) {
                     if phase == Phase::Stored {
                         spec_pivots::add_pivots(tx, spec, &ids, sheet, id)?;
-                        for table in &sheet.tables {
-                            add_table(tx, id, table, &sheet.hidden_rows)?;
-                        }
                     }
                     if phase == Phase::Values {
                         spec_pivots::write_rendered(tx, sheet, id, spec_input)?;
@@ -603,8 +608,10 @@ pub(crate) fn range_ref(id: SheetId, a1: &str) -> Result<RangeRef, rustsheet::Ed
 }
 
 /// Adds the spec table `table` on sheet `id`: its range and rows, each of its `criteria` as the
-/// values filter spec2xlsx writes for it (so a column delete that takes one keeps the rows the
-/// others reject, T-4803), and its calculated columns. `hidden_rows` are its sheet's (one-based).
+/// values filter spec2xlsx writes for it, so a column delete that takes one re-applies the
+/// others (T-4803, T-4939), and its calculated columns. It runs before the sheet's number formats
+/// are set, so a filter lists the kept rows' General text, as spec2xlsx writes it. `hidden_rows`
+/// are its sheet's (one-based).
 fn add_table(
     tx: &mut rustsheet::Txn<'_>,
     id: SheetId,
