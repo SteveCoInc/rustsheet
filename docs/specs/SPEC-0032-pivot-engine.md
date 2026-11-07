@@ -383,7 +383,8 @@ introducing it adds:
 - **Probes:** the `pivots` probes (t4123, t4128, t4134, t4137, t4138 and the later probe tasks) score
   every pivot cell and layout through T-4124.
 - **Generated:** `gen-pivot` (T-4132, T-4160) adds covering-array coverage.
-- **Corpora:** fresh pivot-corpus files (T-4131) re-render exactly.
+- **Corpora:** fresh pivot-corpus files (T-4131; fresh when their saved records give their saved values,
+  T-4906) re-render exactly, cell by cell and in their `rowItems`/`colItems`.
 - **Metamorphic** (T-4155):
   - refresh is idempotent;
   - GETPIVOTDATA of each non-empty value cell's tuple equals the cell, when no missing or error caption

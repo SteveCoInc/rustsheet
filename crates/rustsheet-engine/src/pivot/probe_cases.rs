@@ -171,14 +171,7 @@ pub(crate) fn aggregate_named(name: &str) -> Aggregate {
 
 /// A custom subtotal line's function by its `item@t`, as the importer reads it.
 pub(crate) fn subtotal_named(name: &str) -> Aggregate {
-    match name {
-        "countA" => Aggregate::Count,
-        "count" => Aggregate::CountNums,
-        "avg" => Aggregate::Average,
-        "stdDevP" => Aggregate::StdDevP,
-        "varP" => Aggregate::VarP,
-        other => aggregate_named(other),
-    }
+    Aggregate::from_item_type_name(name).unwrap_or_else(|| aggregate_named(name))
 }
 
 /// A field's cache item equal to `value`.

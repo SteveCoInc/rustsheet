@@ -43,6 +43,15 @@ Owner of these visibly-off cells (decision 0245), 72 values and texts on 19 shee
 - gen-pivot/f9e7edbb5b74011a P02!L5
 - gen-pivot/f9e7edbb5b74011a P10!M5
 
+Also owner of these pivot-corpus render cells (T-4906, Excel-saved files: docs/excel-semantics/pivots.md "What the Excel-saved pivot corpus shows (T-4906)"), 16 render cells of 7 fresh pivots: item `n` captions, a renamed manual group (`Other`, which the engine shows as `Group1`) among them:
+- pivot-corpus-lo/xlsx/column-style-autofilter.xlsx AlternateDesktopDistroTable!A2
+- pivot-corpus-lo/xlsx/column-style-autofilter.xlsx AlternateDesktopPlatformsTable!A5:A12
+- pivot-corpus-lo/xlsx/column-style-autofilter.xlsx AlternateServerDistrosTable!A8
+- pivot-corpus-lo/xlsx/column-style-autofilter.xlsx ServerPlatforms!A6:A13
+- pivot-corpus-lo/xlsx/column-style-autofilter.xlsx AlternateServerPlatformsTable!A7:A12
+- pivot-corpus-lo/xlsx/column-style-autofilter.xlsx HatedGUI!A8
+- pivot-corpus-lo/xlsx/column-style-autofilter.xlsx MobileOS!A10
+
 ## Acceptance criteria
 - [ ] The cells above pass (`rustsheet-eval run --suite gen-pivot`), and no other case regresses (`make eval-baseline`).
 - [ ] The pivots.md entry says the engine now matches, with the implementing code path.
