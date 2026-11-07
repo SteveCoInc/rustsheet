@@ -1,5 +1,3 @@
-#![allow(clippy::unwrap_used)]
-
 //! A written-empty argument of the Analysis `ToolPak` engineering functions: a required one (and
 //! ERF's `upper_limit`) is `#N/A`, an empty places, step or suffix is omitted
 //! (probes/t4872-atp-empty-argument, excel-graph), and a call past the maximum argument count is
@@ -23,6 +21,12 @@ fn empty_arguments_follow_the_toolpak_rule() {
         ("CONVERT(1,\"m\",\"ft\",)", "#ERROR!"),
         ("GESTEP(1,,)", "#ERROR!"),
         ("ERF(1,2,)", "#ERROR!"),
+        // The #N/A comes at the empty argument's own turn, and per element
+        // (probes/t4872-r2-order-and-lift).
+        ("COMPLEX(1/0,)", "#DIV/0!"),
+        ("ERF(1/0,)", "#DIV/0!"),
+        ("DEC2BIN(,1/0)", "#DIV/0!"),
+        ("ROWS(COMPLEX({1;2},))", "2"),
     ];
     for (row, (formula, _)) in (1..).zip(cases) {
         model._set(&format!("A{row}"), &format!("={formula}"));

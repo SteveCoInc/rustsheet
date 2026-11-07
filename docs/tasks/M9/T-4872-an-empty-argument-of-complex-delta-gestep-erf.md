@@ -66,8 +66,8 @@ omitted forms A48:A54 keep the values the engine gives today.
   - The other optional arguments (places, step, suffix) read as omitted: `DEC2BIN(5,)` is "101", `GESTEP(1,)` is 1,
     `COMPLEX(1,1,)` is "1+i".
   - LET and LAMBDA names bound to nothing behave the same way.
-- Engine: one helper, `Model::atp_arguments` (functions/engineering/mod.rs). It returns `#N/A` for an empty argument
-  among the first `strict` ones and drops trailing empty optionals. It is applied to DELTA, GESTEP, BESSELI/J/K/Y, ERF,
+- Engine: one helper, `Model::atp_lift_call` (functions/engineering/mod.rs). It drops trailing empty optionals and lifts
+  the call, with `#N/A` standing in for an empty argument among the first `strict` ones inside each element. It is applied to DELTA, GESTEP, BESSELI/J/K/Y, ERF,
   CONVERT, COMPLEX and the nine base conversions with `places`. The omission test is main's `Model::is_empty_argument`
   (util/empty_args.rs; the branch's own copy in let.rs was dropped in the merge). `complex_pair_of` now uses it in place of its inline copy.
 - A call with more arguments than the function's maximum is refused before any trimming, so it stays `#ERROR!`
@@ -77,45 +77,10 @@ omitted forms A48:A54 keep the values the engine gives today.
 - After the fill all 54 cells pass. Docs: engineering.md, "An empty argument of the ToolPak engineering functions".
 - Eval delta: probes +1 case (54 cells, all pass; baseline `C` line). Every other suite: fixed 0 / regressions 0, and
   no new F line.
-
-## Landing notes
-- PR #3929, head 96ec4d6deaaeb63d260b612e4dc20520761f9ac9, not enqueued. All three reviewers (security, design,
-  excel-fidelity) APPROVE on that head (round 2). Round 1's blocking finding, that trimming let over-long calls
-  return values, is fixed.
-- CI is red on one job: eval (Excel-compatibility gate),
-  https://github.com/SteveCoInc/rustsheet/actions/runs/42364985136/job/128381219960. The cause is
-  `math sidecars: probes, probes-numeric: stale` (`make eval-math-check`): the new case
-  probes/t4872-atp-empty-argument has Gate A one-call cells (ERF, BESSEL) with no `*.math.json` sidecar. Every
-  other job is green.
-- Next step: in the worktree, `cd tools && uv run rustsheet-accuracy math --suite probes` (it writes the case's
-  `.math.json`; point `RUSTSHEET_EVAL_BIN` at this branch's release binary). Commit the sidecar alone. It is
-  generated data, so no reviewer needs to re-run unless the code changes. Check that `make eval-math-check` passes,
-  push, wait for green CI, then enqueue.
-- Don't repeat this: the math run took more than 10 minutes here and was cut off by `timeout 600`. Run it in the
-  background, without a short timeout.
-- Adopted (opus worker, orphan rule): merged `origin/main` to resolve the conflicts in complex/mod.rs, let.rs and the
-  probes baseline. Main had landed the same omission helper as `Model::is_empty_argument` (util/empty_args.rs), so the
-  branch's `is_omitted_argument` copy was dropped and its callers use main's. Wrote the case's math sidecar with
-  `rustsheet-accuracy math --suite probes --function ERF --function ERFC`, the only stale entries (a full-suite run
-  times out on an unrelated point). `make eval-math-check` is current, and `make check-fast` and `rustsheet-eval
-  check` pass with 0 regressions.
-
-## Landing notes (2026-11-07, opus worker, adopted PR #3929)
-- PR #3929, not enqueued. The head is the commit that adds these notes; CI on it has not run yet. On 001f759b3 the
-  security and design reviewers APPROVE (MINOR: drop the unneeded `#![allow(clippy::unwrap_used)]` in
-  test/engineering/test_empty_arguments.rs; the 4-line `atp_arguments` preamble repeats in 18 functions).
-  excel-fidelity returned REQUEST_CHANGES (BLOCKING): `atp_arguments` returns `#N/A` before any argument is read and
-  before `lift_call`. So an earlier argument's error loses, and an array in another argument gives one scalar.
-- The round-2 probe settles it: probes/t4872-r2-order-and-lift (14 cells, excel-graph 2026-11-07; predictions in
-  docs/research/t4872/predictions-r2.tsv, pushed before the fill). Excel follows T-4870's date rule. The `#N/A` comes
-  at the empty argument's own turn (`COMPLEX(1/0,)` and `ERF(1/0,)` are `#DIV/0!`), DEC2BIN reads places first
-  (`DEC2BIN(,1/0)` is `#DIV/0!`), and it lifts per element (`ROWS(COMPLEX({1;2},))` is 2). The 9 cells the engine
-  gets wrong are new-coverage known failures owned by this task. engineering.md records the rule.
-- Next step: keep `atp_arguments`' trailing-empty trimming and its over-long refusal. Drop its early `#N/A` and
-  instead build the strict empties into each kernel with main's `empty_arguments` / `written_empty_or` /
-  `written_empty_na` (functions/util/empty_args.rs), the way EDATE and WORKDAY do, so the `#N/A` is met in each
-  function's argument order inside the lift. Then the round-2 cells pass. Re-run the full panel (fidelity found the
-  blocker); `make eval-baseline` should show the 9 lines fixed.
-- Don't repeat: a full `rustsheet-accuracy math --suite probes` times out on an unrelated point (600 s). Run it with
-  `--function <NAME>` for only the stale entries (`math --check` lists them).
-- Resumed 2026-11-07 22:10 UTC by an opus worker run (step 2: idle opus branch), working the next step above.
+- Round 2 (excel-fidelity review): Excel meets the `#N/A` at the empty argument's own turn and per element, as T-4870's
+  date rule does. Probe probes/t4872-r2-order-and-lift (14 cells, excel-graph; predictions in
+  docs/research/t4872/predictions-r2.tsv, committed before the fill). `atp_lift_call` replaced the earlier
+  `atp_arguments`, which returned `#N/A` before the lift, so every kernel now reads `#N/A` in its own argument order
+  (`COMPLEX(1/0,)` and `DEC2BIN(,1/0)` are `#DIV/0!`; `ROWS(COMPLEX({1;2},))` is 2). The 18 call sites lost their
+  repeated 4-line preamble, and the test file dropped its unneeded `#![allow(clippy::unwrap_used)]` (design MINORs).
+- Eval delta for round 2: the 9 round-2 known failures fixed (probes `F` lines 9 -> 0), 0 regressions.

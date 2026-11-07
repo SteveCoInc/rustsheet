@@ -207,36 +207,38 @@ impl Model {
     /// multi-cell range (probes/eng-argument-modes B13:E13, probes/scalar-lift-open-a Y11,
     /// probes/eng-later-argument-lift H16).
     pub(crate) fn fn_complex(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, (2, 3), cell) {
-            Ok(args) => args,
-            Err(error) => return error,
-        };
-        self.lift_call(Function::Complex, args, cell, &mut |model, values| {
-            let (x, y, suffix) = match values {
-                [x, y] => (x, y, None),
-                [x, y, suffix] => (x, y, Some(suffix)),
-                _ => return CalcResult::new_args_number_error(cell),
-            };
-            // Excel reads the suffix before the numbers, so a bad or error suffix wins over an
-            // error in real_num or i_num (T-2532; engineering.md, gen-m9 COMPLEX cells).
-            let suffix = match suffix.map(|suffix| Self::cast_string_ref(suffix, cell)) {
-                None => Suffix::I,
-                Some(Ok(s)) if s == "i" || s.is_empty() => Suffix::I,
-                Some(Ok(s)) if s == "j" => Suffix::J,
-                Some(Ok(_)) => return value_error(cell),
-                Some(Err(s)) => return s,
-            };
-            // A boolean is `#VALUE!`: `COMPLEX(TRUE,1)` (probes/eng-imsum-improduct-whole C12).
-            let x = match model.cast_number_no_bools_ref(x, cell) {
-                Ok(s) => s,
-                Err(s) => return s,
-            };
-            let y = match model.cast_number_no_bools_ref(y, cell) {
-                Ok(s) => s,
-                Err(s) => return s,
-            };
-            complex_result(x, y, suffix)
-        })
+        self.atp_lift_call(
+            Function::Complex,
+            args,
+            (2, 3),
+            cell,
+            &mut |model, values| {
+                let (x, y, suffix) = match values {
+                    [x, y] => (x, y, None),
+                    [x, y, suffix] => (x, y, Some(suffix)),
+                    _ => return CalcResult::new_args_number_error(cell),
+                };
+                // Excel reads the suffix before the numbers, so a bad or error suffix wins over an
+                // error in real_num or i_num (T-2532; engineering.md, gen-m9 COMPLEX cells).
+                let suffix = match suffix.map(|suffix| Self::cast_string_ref(suffix, cell)) {
+                    None => Suffix::I,
+                    Some(Ok(s)) if s == "i" || s.is_empty() => Suffix::I,
+                    Some(Ok(s)) if s == "j" => Suffix::J,
+                    Some(Ok(_)) => return value_error(cell),
+                    Some(Err(s)) => return s,
+                };
+                // A boolean is `#VALUE!`: `COMPLEX(TRUE,1)` (probes/eng-imsum-improduct-whole C12).
+                let x = match model.cast_number_no_bools_ref(x, cell) {
+                    Ok(s) => s,
+                    Err(s) => return s,
+                };
+                let y = match model.cast_number_no_bools_ref(y, cell) {
+                    Ok(s) => s,
+                    Err(s) => return s,
+                };
+                complex_result(x, y, suffix)
+            },
+        )
     }
 
     pub(crate) fn fn_imabs(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {

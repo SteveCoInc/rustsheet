@@ -8,36 +8,59 @@ pub(crate) mod transcendental;
 
 use crate::{
     calc_result::CalcResult,
-    expressions::{parser::Node, token::Error, types::CellReferenceIndex},
+    expressions::{parser::Node, types::CellReferenceIndex},
+    functions::{lift::Kernel, util::empty_args::written_empty_na, Function},
     model::Model,
 };
 
 impl Model {
-    /// The arguments of a fixed-arity Analysis `ToolPak` function whose first `strict` arguments
-    /// may not be written empty: one of them that is (`DEC2BIN(,2)`, `ERF(6,)`, or a LET or
-    /// LAMBDA name bound to nothing) is `#N/A`, and a later one written empty is dropped, read as
-    /// omitted (`DEC2BIN(5,)` is "101", `COMPLEX(1,1,)` "1+i", `LET(e,,GESTEP(1,e))` 1). A call
-    /// with more than `max` arguments is refused first, empty or not: Excel refuses it, so it is
-    /// `#ERROR!` (syntax.md "Minimum argument counts"; `DEC2BIN(5,,)`, `COMPLEX(1,1,,)`)
-    /// (probes/t4872-atp-empty-argument, excel-graph; engineering.md, "An empty argument of the
-    /// `ToolPak` engineering functions"; T-4872).
-    fn atp_arguments<'a>(
-        &self,
-        args: &'a [Node],
+    /// A fixed-arity Analysis `ToolPak` engineering call whose first `strict` arguments may not be
+    /// written empty (`DEC2BIN(,2)`, `ERF(6,)`, or a LET or LAMBDA name bound to nothing): such an
+    /// argument reads as `#N/A` at its own turn, inside the lift, so an earlier argument's error
+    /// wins (`COMPLEX(1/0,)` and `ERF(1/0,)` are `#DIV/0!`, `DEC2BIN(,1/0)` too, as DEC2BIN reads
+    /// places first) and a lifted call gives it per element (`ROWS(COMPLEX({1;2},))` is 2). This is
+    /// T-4870's date-function rule ([`written_empty_or`]). A later argument written empty is
+    /// dropped, read as omitted (`DEC2BIN(5,)` is "101", `COMPLEX(1,1,)` "1+i",
+    /// `LET(e,,GESTEP(1,e))` 1). A call with more than `max` arguments is refused first, empty or
+    /// not: Excel refuses it, so it is `#ERROR!` (syntax.md "Minimum argument counts";
+    /// `DEC2BIN(5,,)`, `COMPLEX(1,1,,)`). Evidence: probes/t4872-atp-empty-argument and
+    /// t4872-r2-order-and-lift (excel-graph); engineering.md "An empty argument of the `ToolPak`
+    /// engineering functions" (T-4872).
+    pub(super) fn atp_lift_call(
+        &mut self,
+        kind: Function,
+        args: &[Node],
         (strict, max): (usize, usize),
         cell: CellReferenceIndex,
-    ) -> Result<&'a [Node], CalcResult> {
+        kernel: &mut Kernel<'_>,
+    ) -> CalcResult {
         if args.len() > max {
-            return Err(CalcResult::new_args_number_error(cell));
-        }
-        if args.iter().take(strict).any(|a| self.is_empty_argument(a)) {
-            return Err(CalcResult::new_error(Error::NA, cell, String::new()));
+            return CalcResult::new_args_number_error(cell);
         }
         let mut end = args.len();
         while end > strict && args.get(end - 1).is_some_and(|a| self.is_empty_argument(a)) {
             end -= 1;
         }
-        Ok(args.get(..end).unwrap_or(args))
+        let args = args.get(..end).unwrap_or(args);
+        let empty: Vec<bool> = (args.iter().take(strict))
+            .map(|a| self.is_empty_argument(a))
+            .collect();
+        if !empty.contains(&true) {
+            return self.lift_call(kind, args, cell, kernel);
+        }
+        let na = written_empty_na(cell);
+        self.lift_call(kind, args, cell, &mut |model, values| {
+            let values: Vec<CalcResult> = (values.iter().enumerate())
+                .map(|(index, value)| {
+                    if empty.get(index).copied().unwrap_or(false) {
+                        na.clone()
+                    } else {
+                        value.clone()
+                    }
+                })
+                .collect();
+            kernel(model, &values)
+        })
     }
 }
 
