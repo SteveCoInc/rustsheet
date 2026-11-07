@@ -3,7 +3,7 @@ id: T-4371
 title: "Probe whether deleting a table's filtered column in Excel unfilters its hidden rows for SUBTOTAL"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
