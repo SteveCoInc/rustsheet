@@ -36,3 +36,20 @@ Hypothesis H2, committed before the second fill (`gen2.py`, probes/t4635-gamma-d
 - High regime: `#NUM!` where y * (4 - a) overflows, for 1 < a < 4 (fits every first-fill cell from 1.25 to 2.51,
   and 2.9 and 3 at 1E308 from T-4625). Shapes 0.5 and 1 do not follow it (numbers at 1E308).
 - The cut is on x / beta, not on x: the Beta sheet repeats the first fill's verdicts.
+
+## Second fill (excel-graph 2026-11-07): H2 half right; rule R frozen before the third probe
+
+The Beta sheet repeats the beta 1E-8 verdicts at beta 1E-100 and 1E-200: the cut is on y = x / beta. The low regime
+fits H2 at every cell (1.01 cut 1E305.2, 1.02 1E302.2, 1.05 1E293.6, 1.1 1E280.2, all bracketed) and stops between
+shape 1.1 and 1.15 (1.15 to 1.3 are numbers up to 1E306). The high regime refutes y * (4 - a) (shape 1.5 fails at
+7E307). Candidates scored on the Hi sheets' brackets of c = DBL_MAX / cut: 4 - a, exp(k (4 - a)) and a / (a - 1) each
+miss a bracket; 4 / a sits in every bracket (1.25 and 1.5: 2.57 to 3.59; 2: 2.0 to 2.57; 2.1 to 2.2: 1.80 to 2.0;
+2.25: 1.63 to 1.80; 2.5, 2.6: 1.50 to 1.63; 2.75: 1.38 to 1.50; 2.9, 3: 1.28 to 1.38; 4 and 10: below 1).
+
+Rule R (frozen; gen3.py is the fresh sweep that tests it, generated after the freeze):
+- Shape at or below 1 (0.5, 0.9, 0.99, 1): no `#NUM!` at a finite y.
+- 1 < shape <= 1.1: `#NUM!` where y^shape overflows a double, or where 4 * y / shape does.
+- shape > 1.1 (from 1.15 evidenced): `#NUM!` where 4 * y / shape overflows, that is y > shape * DBL_MAX / 4; never from
+  shape 4 up. The cut between 1.1 and 1.15 is unknown (Cut sheet narrows it).
+Predicted for gen3: Fresh column A (0.97 of the cut) a number, B (1.03) `#NUM!`, the same in C and D; shapes 0.3 and
+0.7 numbers.
