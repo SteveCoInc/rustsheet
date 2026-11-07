@@ -3,7 +3,7 @@ id: T-4579
 title: "T.TEST paired: Excel's variance of the differences (a negative one-pass variance is #DIV/0!, offset pairs keep their digits)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
