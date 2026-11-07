@@ -1874,14 +1874,17 @@ one past 2958465 is `#NUM!` (A6, A7, A16). A zero first value gives 2.9802322387
 XNPV is `#NUM!` when its ranges contain empty cells, and a whole column counts every cell, not the
 used area: `XNPV(0.1,Data!A:A,Data!B:B)` is #NUM! although Data holds only A1:B2, where
 `XNPV(0.1,Data!A1:A2,Data!B1:B2)` is finite.
-A cell error in the used area of a whole column wins over the empty-cell `#NUM!`, XNPV and XIRR alike, and a whole
-column reads the same as the same cells as a range: `#N/A` or `#DIV/0!` in the last or a middle values or dates
+A cell error in the used area of a whole column wins over XNPV's empty-cell `#NUM!` (only the whole-column XNPV cells,
+column A rows 1-8, show this). XIRR has no empty-cell `#NUM!` (it reads empty cells as 0), and the range forms hold no
+empty cell, so XIRR's whole-column cells and both range forms show only that the error passes through: `#N/A` or `#DIV/0!` in the last or a middle values or dates
 cell is that error (probes/t4607-xnpv-xirr-column-errors-and-day-minus-one rows 1-8, all four forms). A text date
 "1/1/2010" in the dates column is read as its number by XIRR (0.18863303065299983 last, 0.16333606839179998 in the
 middle) and a text number "60" in the values column too, where XNPV is `#NUM!` for them
 (rows 9, 10, 13, 14 in all four forms); non-date text "x" is `#VALUE!` for XIRR and `#NUM!` for XNPV (rows 11, 12).
-Dates strictly between -1 and 0 (-0.5, -1E-9) are `#NUM!` for XNPV and XIRR as the first, a later or a last date, with
-0 first or not, in array constants and cells (rows 15-22), as a date truncated to -1 would be.
+Dates between -1 and 0 (at the probed points -0.5 and -1E-9) are `#NUM!` for XIRR as the first, a later or a last date, with
+0 first or not, in array constants and cells (rows 15-22). For XNPV only rows 15-16 (the bad date is the first)
+isolate the rule: rows 17-22 put it after an earlier first date, and XNPV is `#NUM!` for any date before the first
+anyway. Why these dates fail (e.g. truncation to -1) is UNVERIFIED: the cells show only `#NUM!`.
 Evidence: probes/xirr-xnpv-whole-column-nogaps A1-A8, probes/whole-column-empty-walkers E1, E5, E7,
 F3, F4, F6, F7, F9 (excel-graph, 2026-10-07, T-1114); probes/xirr-mismatched-empties X1-X14,
 probes/xirr-early-dates A1-A16 (excel-graph, 2026-10-08, T-1124),
