@@ -3,7 +3,7 @@ id: T-0452
 title: "Data tables follow structural edits and refuse writes into their result cells"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
