@@ -1,0 +1,41 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3554 follow-up of probes/t3554-tdist-density-huge-x, whose df-1 density is #DIV/0! at x 1E+154 and at 2^512's predecessor but a number at 2E+153: where between them. A: T.DIST(x,1,FALSE) for x from 3.7E+153 to 8E+153, B: the same x negated. The density 1/(pi(1+x*x)) falls below DBL_MIN 2.2E-308 between 3.75E+153 and 3.8E+153, and pi(1+x*x) overflows between 7.55E+153 and 7.6E+153. C1, C2: df 1.5 (truncated to 1); C3, C4: the density times 1E+300.",
+ "tags": [
+  "M9",
+  "statistical",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "P",
+   "cells": {
+    "A1": "=T.DIST(3.7E+153,1,FALSE)",
+    "B1": "=T.DIST(-3.7E+153,1,FALSE)",
+    "A2": "=T.DIST(3.75E+153,1,FALSE)",
+    "B2": "=T.DIST(-3.75E+153,1,FALSE)",
+    "A3": "=T.DIST(3.8E+153,1,FALSE)",
+    "B3": "=T.DIST(-3.8E+153,1,FALSE)",
+    "A4": "=T.DIST(3.9E+153,1,FALSE)",
+    "B4": "=T.DIST(-3.9E+153,1,FALSE)",
+    "A5": "=T.DIST(5E+153,1,FALSE)",
+    "B5": "=T.DIST(-5E+153,1,FALSE)",
+    "A6": "=T.DIST(7E+153,1,FALSE)",
+    "B6": "=T.DIST(-7E+153,1,FALSE)",
+    "A7": "=T.DIST(7.5E+153,1,FALSE)",
+    "B7": "=T.DIST(-7.5E+153,1,FALSE)",
+    "A8": "=T.DIST(7.55E+153,1,FALSE)",
+    "B8": "=T.DIST(-7.55E+153,1,FALSE)",
+    "A9": "=T.DIST(7.6E+153,1,FALSE)",
+    "B9": "=T.DIST(-7.6E+153,1,FALSE)",
+    "A10": "=T.DIST(8E+153,1,FALSE)",
+    "B10": "=T.DIST(-8E+153,1,FALSE)",
+    "C1": "=T.DIST(5E+153,1.5,FALSE)",
+    "C2": "=T.DIST(7.6E+153,1.5,FALSE)",
+    "C3": "=T.DIST(1E+154,1,FALSE)*1E+300",
+    "C4": "=T.DIST(5E+153,1,FALSE)*1E+300"
+   }
+  }
+ ],
+ "expected": {}
+}

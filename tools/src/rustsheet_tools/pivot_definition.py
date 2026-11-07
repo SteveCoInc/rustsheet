@@ -13,11 +13,14 @@ oracle-spike.md runs 1, 4-6). The definition maps one-to-one onto `pivotTableDef
        "pages": [{"field": "Year", "item": 2024}],              # pageFields; "item" omitted is (All)
        "data": [{"field": "Sales"},                             # dataFields
                 {"field": "Sales", "subtotal": "count", "name": "N"},
-                {"field": "Sales", "showDataAs": "percentOfTotal", "numFmtId": 10}],
+                {"field": "Sales", "showDataAs": "percentOfTotal", "numFmtId": 10},
+                {"field": "Sales", "showDataAs": "rankDescending", "baseField": "Region"}],  # x14 pivotShowAs
        "fields": {"Product": {"attrs": {"sortType": "descending"},   # pivotField attributes
                               "hidden": ["C"], "collapsed": ["A"],   # item h="1" / sd="0"
                               "subtotals": ["sum", "count"],         # custom subtotals (none: [])
-                              "group": {"start": 0, "end": 100, "interval": 10}}},  # numeric fieldGroup
+                              "group": {"start": 0, "end": 100, "interval": 10},   # numeric fieldGroup
+                              "item_attrs": {"B": {"d": True}},          # other `<item>` attributes
+                              "xml": {"extLst": "<extLst>...</extLst>"}}},  # the pivotField's raw extLst
        "calculated": [{"name": "Double", "formula": "Sales*2"}],    # calculated cache fields
        "cache": {"missingItemsLimit": 0},                       # pivotCacheDefinition attributes
        "cache_names": ["Region", "Sales", "Sales_b", "Blank"],  # cacheField names in place of the header
@@ -44,6 +47,10 @@ A pivot with `"refresh_on_load": false` (T-4586) is saved without `refreshOnLoad
 saves are. Its area may then hold spec cells: they are the cells the file saved for the pivot. With `area`
 (its `<location>` ref) and the raw `rowItems` and `colItems` slots of `xml`, a case can save a render that
 disagrees with the cache, to ask whether Excel keeps it on open or renders the pivot again.
+
+The eval adapter writes the same parts in Rust (crates/rustsheet-eval/src/pivot_definition.rs, T-4152), so the
+engine loads what Excel opened: keep the two in step. tests/test_pivot_parts_golden.py and the Rust module's
+tests pin both to the golden parts in tests/pivot_parts_golden/.
 """
 
 from __future__ import annotations
@@ -75,7 +82,10 @@ _DEFINITION_KEYS = {
     "refresh_on_load",
     "area",
 }
-_FIELD_KEYS = {"attrs", "hidden", "collapsed", "subtotals", "group", "order"}
+_FIELD_KEYS = {"attrs", "hidden", "collapsed", "subtotals", "group", "order", "item_attrs", "xml"}
+# `<item>` attributes the builder writes itself (`x`, and `h`/`sd` from `hidden`/`collapsed`), which
+# `item_attrs` may not set; `t` marks a subtotal item, not a value item.
+_MANAGED_ITEM = {"x", "h", "sd", "t"}
 _DATA_KEYS = {"field", "name", "subtotal", "showDataAs", "baseField", "baseItem", "numFmtId"}
 # ST_DataConsolidateFunction, with the verb Excel puts in a data field's default name.
 _AGGREGATE_VERBS = [
@@ -107,9 +117,22 @@ AGGREGATES = dict(zip(_AGGREGATE_VERBS[::2], _AGGREGATE_VERBS[1::2], strict=True
 # attributes use, which differ from ST_DataConsolidateFunction (`countA` is not `count`; T-4622).
 # Keep in step with `SUBTOTAL_FUNCTIONS` in crates/rustsheet-xlsx/src/import/pivots/table.rs.
 SUBTOTALS = ("sum", "countA", "avg", "max", "min", "product", "count", "stdDev", "stdDevP", "var", "varP")
-# ST_ShowDataAs (ECMA-376) plus the Excel 2010 modes Excel writes as x14 `pivotShowAs`; the latter are
-# accepted so probes can ask whether Excel for the web honours them (T-4129).
+# ST_ShowDataAs (ECMA-376) plus the Excel 2010 modes (`SHOW_AS_X14`), which Excel writes as x14
+# `pivotShowAs` in the data field's extLst with no `showDataAs` (excel-docs.md §1.4); accepted so probes
+# can ask whether Excel for the web honours them (T-4129).
+SHOW_AS_X14 = (
+    "percentOfParent",
+    "percentOfParentRow",
+    "percentOfParentCol",
+    "percentOfRunningTotal",
+    "rankAscending",
+    "rankDescending",
+)
+X14_NS = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"
+# The x14 dataField extension's uri ([MS-XLSX] 2.2.4.4).
+X14_DATA_FIELD_URI = "{E15A36E0-9728-4e99-A89B-3F7291B0FE68}"
 SHOW_DATA_AS = {
+    *SHOW_AS_X14,
     "normal",
     "difference",
     "percent",
@@ -128,7 +151,7 @@ _TABLE_DEFAULTS = {
     "itemPrintTitles": "1", "indent": "0", "outline": "1", "outlineData": "1",
 }  # fmt: skip
 # Builder-managed attributes an author may not set through `table`, `attrs` or `cache`.
-_MANAGED_TABLE = {"name", "cacheId", "dataOnRows", "dataPosition"}
+_MANAGED_TABLE = {"name", "cacheId", "dataOnRows"}
 _MANAGED_FIELD = {
     "axis",
     "dataField",
@@ -518,7 +541,12 @@ class DefinedPivot:
         if len(f.spec.get("hidden", [])) and f.axis == "axisPage":
             head += ' multipleItemSelectionAllowed="1"'
         if f.axis is None:
-            return f'<pivotField{head} showAll="0"{attrs}/>'
+            ext = self._field_ext(f)
+            return (
+                f'<pivotField{head} showAll="0"{attrs}>{ext}</pivotField>'
+                if ext
+                else f'<pivotField{head} showAll="0"{attrs}/>'
+            )
         values: list[Value] = [*f.group_labels()] if f.group is not None else f.items
         keys = {_key(v): k for k, v in enumerate(values)}
         flags: dict[int, str] = {}
@@ -528,10 +556,29 @@ class DefinedPivot:
                 if k is None:
                     raise ValueError(f"pivot {self.name}: {kind} item {raw!r} is not in field {f.name!r}")
                 flags[k] = f"{flags.get(k, '')} {attr}"
+        item_attrs = spec.get("item_attrs") or {}
+        if not isinstance(item_attrs, dict):
+            raise ValueError(f"pivot {self.name}: item_attrs of {f.name!r} maps item texts to attributes")
+        for raw, extra in item_attrs.items():
+            k = keys.get(_key(cached_value(raw)))
+            if k is None:
+                raise ValueError(f"pivot {self.name}: item_attrs item {raw!r} is not in field {f.name!r}")
+            flags[k] = flags.get(k, "") + _attrs(extra, _MANAGED_ITEM, f"pivot {self.name} item {raw!r}")
         items = "".join(f'<item x="{k}"{flags.get(k, "")}/>' for k in range(len(values)))
         tails = ["default"] if subtotals is None else list(subtotals)
         items += "".join(f'<item t="{t}"/>' for t in tails)
-        return f'<pivotField{head} showAll="0"{attrs}><items count="{len(values) + len(tails)}">{items}</items></pivotField>'
+        ext = self._field_ext(f)
+        return (
+            f'<pivotField{head} showAll="0"{attrs}><items count="{len(values) + len(tails)}">{items}</items>'
+            f"{ext}</pivotField>"
+        )
+
+    def _field_ext(self, f: _Field) -> str:
+        """The field's raw `extLst` (its `xml` slot, the only one a pivotField has after `items`)."""
+        raw = f.spec.get("xml") or {}
+        if not isinstance(raw, dict) or set(raw) - {"extLst"}:
+            raise ValueError(f"pivot {self.name}: the xml slots of field {f.name!r} are ['extLst']")
+        return self._raw(raw, "extLst")
 
     def _page_item(self, i: int, item: Value | None) -> str:
         if item is None:
@@ -599,18 +646,26 @@ class DefinedPivot:
         return area
 
     def _data_field(self, e: dict[str, Any]) -> str:
-        """One `<dataField>` (sum, `showDataAs`, `numFmtId` written only when given)."""
+        """One `<dataField>` (sum, `showDataAs`, `numFmtId` written only when given). An x14 mode is
+        written as the extension's `pivotShowAs` instead of `showDataAs`."""
         attrs = f' name={quoteattr(e["name"])} fld="{e["fld"]}"'
         if e["subtotal"] != "sum":
             attrs += f' subtotal="{e["subtotal"]}"'
-        if "showDataAs" in e:
-            attrs += f' showDataAs="{e["showDataAs"]}"'
+        show = e.get("showDataAs")
+        ext = ""
+        if show in SHOW_AS_X14:
+            ext = (
+                f'<extLst><ext uri="{X14_DATA_FIELD_URI}" xmlns:x14="{X14_NS}">'
+                f'<x14:dataField pivotShowAs="{show}"/></ext></extLst>'
+            )
+        elif show is not None:
+            attrs += f' showDataAs="{show}"'
         base_field = e.get("baseField", 0)
         base = self._index(base_field) if isinstance(base_field, str) else int(base_field)
         attrs += f' baseField="{base}" baseItem="{int(e.get("baseItem", 0))}"'
         if "numFmtId" in e:
             attrs += f' numFmtId="{int(e["numFmtId"])}"'
-        return f"<dataField{attrs}/>"
+        return f"<dataField{attrs}>{ext}</dataField>" if ext else f"<dataField{attrs}/>"
 
     def _raw(self, raw: dict[str, Any], slot: str) -> str:
         """The author's XML for `slot`: one `<slot>` element, no declarations, DTDs or entities. It is not

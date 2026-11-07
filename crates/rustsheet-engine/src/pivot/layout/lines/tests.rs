@@ -7,7 +7,9 @@
 use serde_json::Value as Json;
 
 use super::*;
-use crate::pivot::probe_cases::{address, diagonal, probe_pivot, read, subtotal_named};
+use crate::pivot::probe_cases::{
+    address, diagonal, probe_pivot, read, subtotal_named, T4634_SHEETS,
+};
 use crate::pivot::{
     compute, Aggregate, Axis, CacheBuilder, CacheItem, DataField, PageField, PivotItem,
     RecordValue, MAX_PIVOT_WORK, MAX_RECORD_VALUES,
@@ -150,6 +152,16 @@ fn the_caption_and_row_label_probes_lines_and_locations_are_excels() {
 }
 
 #[test]
+fn the_layout_option_probes_lines_and_locations_are_excels() {
+    // F1 to F3: several custom subtotals per field, tabular and compact; BR, BR2: insertBlankRow;
+    // SD, SD2: a collapsed item.
+    check_all(
+        "t4168-pivot-layout-options",
+        &["F1", "F2", "F3", "BR", "BR2", "SD", "SD2"],
+    );
+}
+
+#[test]
 fn the_item_and_aggregate_probes_lines_and_locations_are_excels() {
     check_all("t4134-pivot-items", &["I1", "I2", "I4", "I5"]);
     check_all(
@@ -181,6 +193,7 @@ fn the_item_and_aggregate_probes_lines_and_locations_are_excels() {
             "I3", "I4", "M1", "M2", "M3",
         ],
     );
+    check_all("t4634-pivot-total-order-4", T4634_SHEETS);
 }
 
 /// Region (a, a, b) by Product (x, y, x) on rows, Sum of V, at A3.

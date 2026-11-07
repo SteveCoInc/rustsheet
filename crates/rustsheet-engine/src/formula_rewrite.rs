@@ -1,16 +1,25 @@
 //! Rewriting the stored text of every formula and defined name for a workbook edit (a table or
-//! sheet delete, a sheet move), keeping what changed so the undo can put it back.
+//! sheet delete, a sheet move), keeping what changed so the undo can put it back; and the formula
+//! cells a row or column delete rewrote past what re-inserting them undoes.
+
+use std::collections::HashMap;
 
 use crate::{
     expressions::{
         lexer::LexerMode,
         parser::{
-            stringify::{to_english_string, to_rc_format},
+            stringify::{
+                to_english_string, to_rc_format, to_string_displaced, to_string_displaced_keeping,
+                DisplaceData, Displacement,
+            },
             Node,
         },
         types::CellReferenceRC,
     },
+    language::get_default_language,
+    locale::get_default_locale,
     model::Model,
+    types::Cell,
 };
 
 impl Model {
@@ -98,21 +107,17 @@ impl Model {
             row: 1,
             column: 1,
         };
-        for (index, defined_name) in self.workbook.defined_names.iter_mut().enumerate() {
-            let stored = defined_name.formula.trim_start();
-            let (eq, body) = stored.strip_prefix('=').map_or(("", stored), |b| ("=", b));
-            let node = self.parser.parse(body, &context);
-            let unchanged = to_english_string(&node, &context);
-            let text = print(node, Some(&context));
-            if text != unchanged {
-                let text = format!("{eq}{text}");
-                rewritten.push(RewrittenFormula {
+        let names =
+            self.rewrite_defined_names(&context, |node, context| print(node, Some(context)));
+        rewritten.extend(
+            names
+                .into_iter()
+                .map(|(index, original, text)| RewrittenFormula {
                     place: FormulaPlace::DefinedName(index),
-                    original: std::mem::replace(&mut defined_name.formula, text.clone()),
+                    original,
                     rewritten: text,
-                });
-            }
-        }
+                }),
+        );
         rewritten
     }
 
@@ -147,6 +152,71 @@ impl Model {
     }
 }
 
+impl Model {
+    /// Whether `displaced`, the text the row or column delete `data` gave a formula that read
+    /// `original` (both in the active locale, on the cell `context`), reads otherwise once the
+    /// rows or columns are inserted again: a reference to a deleted cell made `#REF!` stays so,
+    /// and a range that lost an edge does not get it back (T-4668). Any other edit is never lost.
+    pub(crate) fn lost_on_reinsert(
+        &mut self,
+        data: &DisplaceData,
+        context: &CellReferenceRC,
+        original: &str,
+        displaced: &str,
+    ) -> bool {
+        let reinsert = match *data {
+            DisplaceData::Column {
+                sheet,
+                column,
+                delta,
+            } if delta < 0 => DisplaceData::Column {
+                sheet,
+                column,
+                delta: delta.saturating_neg(),
+            },
+            DisplaceData::Row { sheet, row, delta } if delta < 0 => DisplaceData::Row {
+                sheet,
+                row,
+                delta: delta.saturating_neg(),
+            },
+            _ => return false,
+        };
+        let node = self.parser.parse(displaced, context);
+        to_string_displaced(&node, context, &reinsert, self.locale, self.language) != original
+    }
+}
+
+/// A formula cell that a row or column delete rewrote so that re-inserting the rows or columns
+/// does not give its formula back ([`Model::lost_on_reinsert`]), as it was before the delete and at
+/// its place then, so the undo can put it back (T-4668).
+#[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
+pub(crate) struct RewrittenCell {
+    /// The index of the cell's sheet.
+    pub(crate) sheet: u32,
+    pub(crate) row: i32,
+    pub(crate) column: i32,
+    pub(crate) cell: Cell,
+}
+
+/// The formula cells a delete moved on one sheet, by the place it moved each to: the place it had
+/// before and the cell as it was there (its formula is relative to that place).
+pub(crate) type MovedFormulas = HashMap<(i32, i32), ((i32, i32), Cell)>;
+
+/// `rewritten`, read on the cells after a delete moved them, at the places and with the cells they
+/// had before it: a cell the delete moved on `sheet` is in `moved`.
+pub(crate) fn before_moves(
+    mut rewritten: Vec<RewrittenCell>,
+    sheet: u32,
+    mut moved: MovedFormulas,
+) -> Vec<RewrittenCell> {
+    for entry in rewritten.iter_mut().filter(|entry| entry.sheet == sheet) {
+        if let Some(((row, column), cell)) = moved.remove(&(entry.row, entry.column)) {
+            (entry.row, entry.column, entry.cell) = (row, column, cell);
+        }
+    }
+    rewritten
+}
+
 /// A formula that a workbook edit rewrote, kept so the undo can put it back.
 #[derive(Debug, Clone, bitcode::Encode, bitcode::Decode)]
 pub(crate) struct RewrittenFormula {
@@ -162,4 +232,72 @@ enum FormulaPlace {
     Shared { sheet_id: u32, index: usize },
     /// A defined name, by its index in the workbook's list.
     DefinedName(usize),
+}
+
+impl Model {
+    /// Rewrites every defined name's formula for a row or column insert or delete on `sheet`, as a
+    /// cell formula's references are rewritten: Excel shifts a name over the lines after the edit,
+    /// shrinks a range that loses an edge and makes a name on a deleted cell `#REF!`
+    /// (probes/sheet-ops/t4702-names-*, t4702-name-deleted-cell-*, excel-graph, 2026-11-07).
+    /// Moves are left alone (unprobed). Names are stored in English and have no cell of their
+    /// own: A1 of the edited sheet anchors them, which only a relative reference reads (unprobed).
+    /// A name the edit does not change keeps its text as stored.
+    pub(crate) fn displace_defined_names(&mut self, sheet: u32, displacement: Displacement) {
+        if !matches!(
+            displacement.data,
+            DisplaceData::Row { .. } | DisplaceData::Column { .. }
+        ) {
+            return;
+        }
+        let Some(worksheet) = self.workbook.worksheets.get(sheet as usize) else {
+            return;
+        };
+        let context = CellReferenceRC {
+            sheet: worksheet.get_name(),
+            row: 1,
+            column: 1,
+        };
+        let changed = self.rewrite_defined_names(&context, |node, context| {
+            let (locale, language) = (get_default_locale(), get_default_language());
+            to_string_displaced_keeping(&node, context, displacement, locale, language)
+        });
+        if !changed.is_empty() {
+            // Evaluation reads the parsed names, not the stored text.
+            self.parse_defined_names();
+        }
+    }
+
+    /// Prints each defined name's formula, parsed in English (as names are stored) on
+    /// `context`, with `print`, and stores the text, keeping a leading `=`, where it differs from
+    /// the name as parsed. Returns each changed name's index, formula before and formula after.
+    fn rewrite_defined_names(
+        &mut self,
+        context: &CellReferenceRC,
+        print: impl Fn(Node, &CellReferenceRC) -> String,
+    ) -> Vec<(usize, String, String)> {
+        let mut changed = Vec::new();
+        for index in 0..self.workbook.defined_names.len() {
+            let Some(original) = self
+                .workbook
+                .defined_names
+                .get(index)
+                .map(|n| n.formula.clone())
+            else {
+                continue;
+            };
+            let stored = original.trim_start();
+            let (eq, body) = stored.strip_prefix('=').map_or(("", stored), |b| ("=", b));
+            let node = self.parse_internal_formula(body, context);
+            let unchanged = to_english_string(&node, context);
+            let text = print(node, context);
+            if text != unchanged {
+                let text = format!("{eq}{text}");
+                if let Some(name) = self.workbook.defined_names.get_mut(index) {
+                    name.formula.clone_from(&text);
+                }
+                changed.push((index, original, text));
+            }
+        }
+        changed
+    }
 }

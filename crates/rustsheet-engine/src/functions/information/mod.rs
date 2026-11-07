@@ -334,7 +334,9 @@ impl Model {
             // A LET variable or LAMBDA parameter is a reference if it was bound to one
             // (upstream MIN_MAX_extras.xlsx A14-A16), a union included: REDUCE's `a` bound to
             // `(A1,A3)` is one (`REDUCE((A1,A3),{1},LAMBDA(a,v,ISREF(a)))` is TRUE,
-            // probes/t4478-reduce-scan-reference-accumulator Calc!H17, T-4494).
+            // probes/t4478-reduce-scan-reference-accumulator Calc!H17, T-4494), and so is SCAN's
+            // (probes/t4475-scan-reduce-reference-initial F9, G9; T-4475). One bound to a 3-D
+            // span is not (references.md, T-1158).
             Node::NamedVariableKind { .. } => {
                 self.is_areas_variable(node)
                     || matches!(
@@ -606,6 +608,15 @@ impl Model {
                             "SHEET of an array".to_string(),
                         )
                     }
+                    // A variable bound to a LAMBDA is one #N/A (probes/t4565-sheet-sheets-lambda-omitted-array
+                    // D1, D13, excel-graph; information.md).
+                    RefArg::Value(CalcResult::Lambda(_)) => {
+                        return CalcResult::new_error(
+                            Error::NA,
+                            cell,
+                            "SHEET of a LAMBDA".to_string(),
+                        )
+                    }
                     RefArg::Value(_) => {}
                 }
                 // Now it should be the name of a sheet
@@ -713,18 +724,26 @@ impl Model {
             // A LET variable or LAMBDA parameter bound to a one-sheet reference is that
             // reference, one sheet (`MAP(A1:A3,_xleta.SHEETS)` is 1, 1, 1); bound to an array (a
             // GROUPBY group) it is #N/A (probes/t4518-sheet-sheets-bound-variable D9, D11, D13,
-            // D23, t4450-eta-special-forms J59, excel-graph). Other bound values stay unprobed:
-            // the oracle's canary sheet guard refuses SHEETS of a written parameter.
+            // D23, t4450-eta-special-forms J59, excel-graph); a bound number, text or boolean likewise.
+            // Other bound values stay unprobed: the oracle's canary sheet guard refuses SHEETS of
+            // a written parameter.
             if let Node::NamedVariableKind { id: Some(_), .. } = argument {
                 match self.variable_reference(argument, cell) {
                     RefArg::Ranges(Ranges::One(area)) if area.left.sheet == area.right.sheet => {
                         return CalcResult::Number(1.0);
                     }
-                    RefArg::Value(CalcResult::Array(_)) => {
+                    // A number, text or boolean is #N/A too (probes/t4565-sheet-sheets-lambda-omitted-array
+                    // D4:D6, excel-graph); a LET variable is read the same way (inferred: the canary guard refuses SHEETS of it).
+                    RefArg::Value(
+                        CalcResult::Array(_)
+                        | CalcResult::Number(_)
+                        | CalcResult::String(_)
+                        | CalcResult::Boolean(_),
+                    ) => {
                         return CalcResult::new_error(
                             Error::NA,
                             cell,
-                            "SHEETS of an array".to_string(),
+                            "SHEETS of a value".to_string(),
                         );
                     }
                     _ => {}

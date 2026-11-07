@@ -57,7 +57,7 @@ C	roundtrip-poi/51710.xlsx	122345
 C	roundtrip-poi/51850.xlsx	925
 C	roundtrip-poi/51963.xlsx	611
 C	roundtrip-poi/51998.xlsx	865
-C	roundtrip-poi/52348.xlsx	1827
+C	roundtrip-poi/52348.xlsx	1690
 C	roundtrip-poi/52425.xlsx	630
 C	roundtrip-poi/52575_main.xlsx	475
 C	roundtrip-poi/52716.xlsx	2304
@@ -275,7 +275,7 @@ C	roundtrip-poi/bug64512_embed.xlsx	942
 C	roundtrip-poi/bug65306.xlsx	762
 C	roundtrip-poi/bug65464.xlsx	3563
 C	roundtrip-poi/bug66215.xlsx	1006
-C	roundtrip-poi/bug66675.xlsx	32038
+C	roundtrip-poi/bug66675.xlsx	28434
 C	roundtrip-poi/bug66827.xlsx	742
 C	roundtrip-poi/bug67784.xlsx	603
 C	roundtrip-poi/bug69769.xlsx	1203
@@ -296,7 +296,7 @@ C	roundtrip-poi/dataValidationTableRange.xlsx	47510
 C	roundtrip-poi/decimal-format.xlsx	1984
 C	roundtrip-poi/deep-data.xlsx	0
 C	roundtrip-poi/duplicate-filename-case-insensitive.xlsx	732
-C	roundtrip-poi/duplicate-filename.xlsx	732
+C	roundtrip-poi/duplicate-filename.xlsx	731
 C	roundtrip-poi/evaluate_formula_with_structured_table_references.xlsx	671
 C	roundtrip-poi/formula-eval.xlsx	719
 C	roundtrip-poi/github-321.xlsx	762
@@ -355,7 +355,7 @@ C	roundtrip-poi/xssf-enum.xltx.xlsx	1463
 C	roundtrip-poi/xxe_in_schema.xlsx	776
 F	roundtrip-poi/47504.xlsx	* 1 e52c3b44338ea9a9
 F	roundtrip-poi/47889.xlsx	!EngineError
-F	roundtrip-poi/52575_main.xlsx	* 224 a15c3ccc6b4155de
+F	roundtrip-poi/52575_main.xlsx	* 221 ae22a0d85f904dad
 F	roundtrip-poi/54764-2.xlsx	!EngineError
 F	roundtrip-poi/54764.xlsx	!EngineError
 F	roundtrip-poi/56278.xlsx	!EngineError

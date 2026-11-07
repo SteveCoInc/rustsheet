@@ -15,6 +15,31 @@ import tasks  # noqa: E402 (the sys.path line above must run first)
 from test_tasks import run_next, run_next_line, write_task  # noqa: E402
 
 
+def run_main(
+    root: Path, argv: list[str], claims: tuple[set[str], set[str]], active: frozenset[tuple[str, str, str]]
+) -> tuple[int, list[str]]:
+    """`tasks.main()`'s exit status and printed lines for `argv`, with these branch claims."""
+    with (
+        mock.patch.object(tasks, "ROOT", root),
+        mock.patch.object(tasks, "TASKS", root / "docs/tasks"),
+        mock.patch.object(tasks.sys, "argv", argv),
+        mock.patch.object(tasks, "branch_claims", return_value=(*claims, set(active), {})),
+        mock.patch("builtins.print") as printed,
+    ):
+        status = tasks.main()
+    return status, [str(c[0][0]) for c in printed.call_args_list]
+
+
+def run_ready(root: Path, tier: str, active: frozenset[tuple[str, str, str]]) -> list[str]:
+    """The ids `ready` lists, then its "N ready" line."""
+    _, lines = run_main(root, ["tasks.py", "ready", "--tier", tier], (set(), set()), active)
+    return [line.split()[0] for line in lines[:-1]] + lines[-1:]
+
+
+def run_next_exit(root: Path, tier: str, active: frozenset[tuple[str, str, str]], lane: str) -> int:
+    return run_main(root, ["tasks.py", "next", "--tier", tier, "--lane", lane], (set(), set()), active)[0]
+
+
 class Tiers(unittest.TestCase):
     def test_open_tasks_need_a_valid_tier_done_ones_do_not(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -221,7 +246,7 @@ class Tiers(unittest.TestCase):
             write_task(root, "T-0004", tier="sonnet")
             claims = ({"T-0002"}, set())
             limited = {"T-0002": "agent/engine/T-0002-x"}
-            busy = frozenset({("engine", "T-0009")})
+            busy = frozenset({("engine", "T-0009", "agent/engine/T-0009-x")})
             self.assertEqual(run_next(root, "opus", claims, busy, limited=limited), "T-0003")
             (root / "docs/tasks/M0/T-0003-x.md").unlink()
             line = run_next_line(root, "opus", claims, busy, limited=limited)
@@ -258,7 +283,7 @@ class FunctionLanes(unittest.TestCase):
             write_task(root, "T-0002", tier="sonnet", lane="functions-math")
             write_task(root, "T-0003", tier="sonnet", lane="engine")
             self.assertEqual(run_next(root, "sonnet", lane="functions"), "T-0001")
-            busy_text = frozenset({("functions-text", "T-0009")})  # T-0009: open task on another branch
+            busy_text = frozenset({("functions-text", "T-0009", "agent/functions-text/T-0009-x")})  # T-0009: open task on another branch
             self.assertEqual(run_next(root, "sonnet", lane="functions", active=busy_text), "T-0002")
             self.assertEqual(run_next(root, "sonnet", lane="functions-math"), "T-0002")
 
@@ -272,25 +297,58 @@ class FunctionLanes(unittest.TestCase):
                 )
             write_task(root, "T-0005", tier="opus", lane="functions-text")
             write_task(root, "T-0006", tier="opus", lane="functions-text", status="in-progress")
-            two = frozenset({("engine", "T-0001"), ("engine", "T-0002")})
+            two = frozenset({("engine", "T-0001", "agent/engine/T-0001-x"), ("engine", "T-0002", "agent/engine/T-0002-x")})
             self.assertEqual(run_next(root, "opus", active=two, lane="engine"), "T-0004")
-            three = two | {("engine", "T-0003")}
+            three = two | {("engine", "T-0003", "agent/engine/T-0003-x")}
             self.assertEqual(run_next(root, "opus", active=three, lane="functions"), "T-0005")
-            self.assertEqual(run_next_line(root, "opus", active=three, lane="engine"), "no ready task")
-            # One active branch still fills a one-slot lane.
             self.assertEqual(
-                run_next_line(
-                    root, "opus", active=frozenset({("functions-text", "T-0006")}), lane="functions"
-                ),
-                "no ready task",
+                run_next_line(root, "opus", active=three, lane="engine"),
+                "lane engine busy: T-0001 in flight on agent/engine/T-0001-x",
             )
+            # One active branch still fills a one-slot lane.
+            one = frozenset({("functions-text", "T-0006", "agent/functions-text/T-0006-x")})
+            self.assertEqual(
+                run_next_line(root, "opus", active=one, lane="functions"),
+                "lane functions-text busy: T-0006 in flight on agent/functions-text/T-0006-x",
+            )
+
+    def test_ready_p0_is_offered_in_a_busy_lane_and_a_p1_is_not(self) -> None:
+        # Decision 0330: a P0 never waits for unrelated work in its lane.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_task(root, "T-0001", tier="opus", lane="harness", status="in-progress")
+            write_task(root, "T-0002", tier="opus", lane="harness", priority="P1")
+            write_task(root, "T-0003", tier="opus", lane="harness", priority="P0", milestone="M2")
+            busy = frozenset({("harness", "T-0001", "agent/harness/T-0001-x")})
+            self.assertEqual(run_next(root, "opus", active=busy, lane="harness"), "T-0003")
+            self.assertEqual(run_ready(root, "opus", active=busy), ["T-0003", "1 ready"])
+            # A P0 another worker has claimed is still skipped; the P1 behind the busy lane is reported.
+            claims = ({"T-0003"}, set())
+            self.assertEqual(
+                run_next_line(root, "opus", claims, busy, lane="harness"),
+                "lane harness busy: T-0001 in flight on agent/harness/T-0001-x",
+            )
+
+    def test_busy_lane_exits_3_and_an_empty_queue_exits_1(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_task(root, "T-0001", tier="opus", lane="research", status="in-progress")
+            write_task(root, "T-0002", tier="opus", lane="research")
+            write_task(root, "T-0003", tier="sonnet", lane="engine")
+            busy = frozenset({("research", "T-0001", "agent/research/T-0001-x")})
+            self.assertEqual(run_next_exit(root, "opus", busy, "research"), 3)
+            # No opus task in engine at all: an empty queue, not a busy lane.
+            self.assertEqual(run_next_exit(root, "opus", busy, "engine"), 1)
+            self.assertEqual(run_next_line(root, "opus", active=busy, lane="engine"), "no ready task")
+            # A busy lane whose only ready task is of the other tier is empty for this tier.
+            self.assertEqual(run_next_exit(root, "sonnet", busy, "research"), 1)
 
     def test_handoff_is_resumed_even_in_a_busy_lane(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write_task(root, "T-0001", tier="sonnet", lane="functions-stat", body="\n## Handoff\nstuck\n")
             self.assertEqual(
-                run_next(root, "opus", active=frozenset({("functions-stat", "T-0008")})), "T-0001"
+                run_next(root, "opus", active=frozenset({("functions-stat", "T-0008", "agent/functions-stat/T-0008-x")})), "T-0001"
             )
 
     def test_branch_of_a_done_task_does_not_keep_its_lane_busy(self) -> None:
@@ -300,7 +358,7 @@ class FunctionLanes(unittest.TestCase):
             write_task(root, "T-0002", tier="sonnet", lane="functions-text")
             # T-0001 merged a minute ago and its branch still exists: the lane is free again.
             self.assertEqual(
-                run_next(root, "sonnet", active=frozenset({("functions-text", "T-0001")})), "T-0002"
+                run_next(root, "sonnet", active=frozenset({("functions-text", "T-0001", "agent/functions-text/T-0001-x")})), "T-0002"
             )
 
     def test_busy_lane_comes_from_the_tasks_own_lane_not_the_branch_name(self) -> None:
@@ -310,7 +368,7 @@ class FunctionLanes(unittest.TestCase):
             write_task(root, "T-0002", tier="sonnet", lane="functions-text")
             write_task(root, "T-0003", tier="sonnet", lane="functions-math")
             # A branch pushed as agent/functions/T-0001-... still makes functions-text busy.
-            self.assertEqual(run_next(root, "sonnet", active=frozenset({("functions", "T-0001")})), "T-0003")
+            self.assertEqual(run_next(root, "sonnet", active=frozenset({("functions", "T-0001", "agent/functions/T-0001-x")})), "T-0003")
 
     def test_plain_functions_lane_is_retired_for_open_tasks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

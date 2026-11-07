@@ -15,9 +15,9 @@ use crate::{
         types::{Area, CellReferenceRC},
         utils::{is_valid_identifier, number_to_column},
     },
-    formula_rewrite::RewrittenFormula,
+    formula_rewrite::{RewrittenCell, RewrittenFormula},
     model::Model,
-    table_edits::bounds,
+    table_edits::{bounds, Bounds},
     types::{Cell, Table, TableColumn, TableExtent, TableStyleInfo, Worksheet},
 };
 
@@ -116,6 +116,9 @@ impl Table {
     }
 }
 
+/// Tables by name, as they were before an edit changed them: what its undo puts back.
+pub(crate) type KeptTables = Vec<(String, Table)>;
+
 impl Model {
     /// Adds a table on sheet `sheet` over rows `top..=bottom` and columns `left..=right`
     /// (1-based). The first row is the header row: its cells name the columns, so they must be
@@ -202,11 +205,15 @@ impl Model {
         {
             return Err("A table needs a header row and at least one data row".to_string());
         }
+        let new_bounds = Bounds {
+            left,
+            top,
+            right,
+            bottom,
+            data: (top, bottom),
+        };
         let overlaps = self.workbook.tables.values().any(|t| {
-            t.sheet_name == sheet_name
-                && parse_range(&t.reference).is_ok_and(|(c1, r1, c2, r2)| {
-                    c1 <= right && left <= c2 && r1 <= bottom && top <= r2
-                })
+            t.sheet_name == sheet_name && bounds(t).is_some_and(|b| b.overlaps(&new_bounds))
         });
         if overlaps {
             return Err("A table cannot overlap another table".to_string());
@@ -378,6 +385,27 @@ impl Model {
         sheet: u32,
         extents: &[TableExtent],
     ) -> Result<(), String> {
+        self.check_table_extents(sheet, extents)?;
+        if extents.is_empty() {
+            return Ok(());
+        }
+        for extent in extents {
+            if let Some(table) = self.workbook.tables.get_mut(&extent.name) {
+                table.reference.clone_from(&extent.reference);
+                table.totals_row_count = extent.totals_row_count;
+            }
+        }
+        self.reset_tables();
+        Ok(())
+    }
+
+    /// Checks that [`Model::restore_table_extents`] would accept `extents`, changing nothing, so
+    /// an undo can refuse a bad peer diff before it moves any row (T-4671).
+    pub(crate) fn check_table_extents(
+        &self,
+        sheet: u32,
+        extents: &[TableExtent],
+    ) -> Result<(), String> {
         if extents.is_empty() {
             return Ok(());
         }
@@ -404,33 +432,49 @@ impl Model {
                 return Err(format!("Invalid extent for table '{}'", extent.name));
             }
         }
-        for extent in extents {
-            if let Some(table) = self.workbook.tables.get_mut(&extent.name) {
-                table.reference.clone_from(&extent.reference);
-                table.totals_row_count = extent.totals_row_count;
-            }
-        }
-        self.reset_tables();
         Ok(())
     }
 
     /// Deletes `count` columns of `sheet` from `column` ([`Model::delete_columns`]) and returns
     /// the tables it changed but kept, as they were before: what its undo restores (T-4652). A
     /// column delete can drop table columns, with their names, formulas and filters, so the
-    /// whole table is kept, not only its [`TableExtent`].
+    /// whole table is kept, not only its [`TableExtent`]. Also returns the formula cells it
+    /// rewrote past what re-inserting the columns undoes (T-4668).
     pub(crate) fn delete_columns_keeping_tables(
         &mut self,
         sheet: u32,
         column: i32,
         count: i32,
-    ) -> Result<Vec<(String, Table)>, String> {
+    ) -> Result<(KeptTables, Vec<RewrittenCell>), String> {
         let sheet_name = self.workbook.worksheet(sheet)?.get_name();
         let before = self.tables_on_sheet(&sheet_name);
-        self.delete_columns(sheet, column, count)?;
+        let rewritten = self.delete_columns_rewriting(sheet, column, count)?;
         let tables = &self.workbook.tables;
-        Ok((before.into_iter())
+        let changed = (before.into_iter())
             .filter(|(name, table)| tables.get(name).is_some_and(|now| now != table))
-            .collect())
+            .collect();
+        Ok((changed, rewritten))
+    }
+
+    /// Checks everything about `tables` that [`Model::restore_tables_of_sheet`] needs except the
+    /// overlap test, changing nothing, so a column-delete undo can refuse a bad peer diff before
+    /// it re-inserts any column (T-4671). The overlap test stays after the insert: the other
+    /// tables' extents only take their final place once the columns are back.
+    pub(crate) fn check_tables_of_sheet(
+        &self,
+        sheet: u32,
+        tables: &[(String, Table)],
+    ) -> Result<(), String> {
+        let sheet_name = self.workbook.worksheet(sheet)?.get_name();
+        for (name, then) in tables {
+            let now = (self.workbook.tables.get(name))
+                .filter(|now| now.is_on_sheet(&sheet_name))
+                .ok_or_else(|| format!("No table '{name}' on the sheet"))?;
+            if !table_fits_restore(now, then) {
+                return Err(format!("Invalid table '{name}' to restore"));
+            }
+        }
+        Ok(())
     }
 
     /// Gives the tables of `sheet` named in `tables` those tables back (the undo of a column
@@ -446,35 +490,11 @@ impl Model {
         if tables.is_empty() {
             return Ok(());
         }
+        self.check_tables_of_sheet(sheet, tables)?;
         let sheet_name = self.workbook.worksheet(sheet)?.get_name();
-        let mut placed = Vec::new();
-        for (name, then) in tables {
-            let now = (self.workbook.tables.get(name))
-                .filter(|now| now.is_on_sheet(&sheet_name))
-                .ok_or_else(|| format!("No table '{name}' on the sheet"))?;
-            let fits = bounds(now).zip(bounds(then)).is_some_and(|(now_b, b)| {
-                let width = usize::try_from(i64::from(b.right) - i64::from(b.left) + 1);
-                let mut names: Vec<String> =
-                    then.columns.iter().map(|c| c.name.to_lowercase()).collect();
-                names.sort_unstable();
-                names.dedup();
-                then.name == now.name
-                    && then.display_name == now.display_name
-                    && then.sheet_name == now.sheet_name
-                    && then.header_row_count == now.header_row_count
-                    && then.totals_row_count <= 1
-                    && (b.top, b.bottom) == (now_b.top, now_b.bottom)
-                    && b.data.0 <= b.data.1.saturating_add(1)
-                    && width.is_ok_and(|w| w == then.columns.len() && w == names.len())
-                    && names.iter().all(|n| !n.is_empty())
-                    && (then.filter_columns.iter())
-                        .all(|f| usize::try_from(f.col_id).is_ok_and(|id| id < names.len()))
-            });
-            if !fits {
-                return Err(format!("Invalid table '{name}' to restore"));
-            }
-            placed.extend(bounds(then).map(|b| (name, b)));
-        }
+        let placed: Vec<_> = (tables.iter())
+            .filter_map(|(name, then)| Some((name, bounds(then)?)))
+            .collect();
         let others: Vec<_> = (self.workbook.tables.iter())
             .filter(|(name, table)| {
                 table.is_on_sheet(&sheet_name) && !tables.iter().any(|(n, _)| n == *name)
@@ -592,4 +612,26 @@ enum TableRewrite {
     RefError,
     /// The absolute area it resolved to: the table is converted to a range.
     Lower,
+}
+
+/// Whether `then` can replace `now` in a restore: same names and rows, one column per column of
+/// its reference with distinct non-empty names, and filters only on those columns.
+fn table_fits_restore(now: &Table, then: &Table) -> bool {
+    bounds(now).zip(bounds(then)).is_some_and(|(now_b, b)| {
+        let width = usize::try_from(i64::from(b.right) - i64::from(b.left) + 1);
+        let mut names: Vec<String> = then.columns.iter().map(|c| c.name.to_lowercase()).collect();
+        names.sort_unstable();
+        names.dedup();
+        then.name == now.name
+            && then.display_name == now.display_name
+            && then.sheet_name == now.sheet_name
+            && then.header_row_count == now.header_row_count
+            && then.totals_row_count <= 1
+            && (b.top, b.bottom) == (now_b.top, now_b.bottom)
+            && b.data.0 <= b.data.1.saturating_add(1)
+            && width.is_ok_and(|w| w == then.columns.len() && w == names.len())
+            && names.iter().all(|n| !n.is_empty())
+            && (then.filter_columns.iter())
+                .all(|f| usize::try_from(f.col_id).is_ok_and(|id| id < names.len()))
+    })
 }

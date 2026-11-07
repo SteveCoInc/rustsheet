@@ -255,6 +255,87 @@ fn image_sizing_height_and_width_are_validated() {
             r#"=IMAGE("https://x.invalid/a.png","alt",0,10)"#,
             "#VALUE!",
         ),
+        // probes/t4686-rich-value-option-residue (excel-graph, T-4686) A1:A14.
+        (
+            "0 with width only",
+            r#"=IMAGE("https://x.invalid/a.png","alt",0,,10)"#,
+            "#VALUE!",
+        ),
+        (
+            "3 with width only",
+            r#"=IMAGE("https://x.invalid/a.png","alt",3,,10)"#,
+            "#BLOCKED!",
+        ),
+        (
+            "2 with height",
+            r#"=IMAGE("https://x.invalid/a.png","alt",2,10)"#,
+            "#VALUE!",
+        ),
+        (
+            "3 with height 0 and no width",
+            r#"=IMAGE("https://x.invalid/a.png","alt",3,0)"#,
+            "#VALUE!",
+        ),
+        (
+            "sizing -0.5 truncates to 0",
+            r#"=IMAGE("https://x.invalid/a.png","alt",-0.5)"#,
+            "#BLOCKED!",
+        ),
+        (
+            "sizing 3.5 truncates to 3",
+            r#"=IMAGE("https://x.invalid/a.png","alt",3.5,10,10)"#,
+            "#BLOCKED!",
+        ),
+        (
+            "sizing numeric text",
+            r#"=IMAGE("https://x.invalid/a.png","alt","1")"#,
+            "#BLOCKED!",
+        ),
+        (
+            "height and width numeric text",
+            r#"=IMAGE("https://x.invalid/a.png","alt",3,"10","10")"#,
+            "#BLOCKED!",
+        ),
+        (
+            "1 with width only",
+            r#"=IMAGE("https://x.invalid/a.png","alt",1,,10)"#,
+            "#VALUE!",
+        ),
+        (
+            "2 with width only",
+            r#"=IMAGE("https://x.invalid/a.png","alt",2,,10)"#,
+            "#VALUE!",
+        ),
+        (
+            "2 with width 0",
+            r#"=IMAGE("https://x.invalid/a.png","alt",2,,0)"#,
+            "#VALUE!",
+        ),
+        (
+            "height percent text",
+            r#"=IMAGE("https://x.invalid/a.png","alt",3,"10%")"#,
+            "#BLOCKED!",
+        ),
+        (
+            "height currency text",
+            r#"=IMAGE("https://x.invalid/a.png","alt",3,"$10")"#,
+            "#BLOCKED!",
+        ),
+        (
+            "width percent text",
+            r#"=IMAGE("https://x.invalid/a.png","alt",3,,"10%")"#,
+            "#BLOCKED!",
+        ),
+        (
+            "array option numeric text",
+            r#"=INDEX(IMAGE("https://x.invalid/a.png","alt",{"1","a"}),1,1)"#,
+            "#BLOCKED!",
+        ),
+        (
+            "sizing empty text",
+            r#"=IMAGE("https://x.invalid/a.png","alt","")"#,
+            "#VALUE!",
+        ),
         (
             "tab before scheme",
             r#"=IMAGE(CHAR(9)&"https://x")"#,
@@ -314,4 +395,26 @@ fn image_array_options_lift_with_the_source() {
     assert_eq!(row(["A5", "B5", "C5"]), ["11", "3", "7"]);
     assert_eq!(row(["A9", "A10", "A11"]), ["11", "3", "11"]);
     assert_eq!(row(["A13", "B13", "C13"]), ["11", "3", ""]);
+}
+
+// probes/t4686-rich-value-option-residue C1:C4 (excel-graph, T-4686): an empty-cell `stock` or
+// `start_date` is `#VALUE!`, an error still wins, and a nonempty stock stays `#CONNECT!`.
+#[test]
+fn stockhistory_of_an_empty_cell_stock_or_start_date_is_value_error() {
+    let mut model = new_empty_model();
+    model._set("A1", "=_xlfn.STOCKHISTORY(Z1,DATE(2020,1,2))");
+    model._set("A2", r#"=_xlfn.STOCKHISTORY("QZXQZXQ",Z1)"#);
+    model._set("A3", "=_xlfn.STOCKHISTORY(Z1,1/0)");
+    model._set("A4", "=_xlfn.STOCKHISTORY(Z1,Z1)");
+    model._set("A5", r#"=_xlfn.STOCKHISTORY("QZXQZXQ",DATE(2020,1,2))"#);
+    model.evaluate();
+    for (cell, expected) in [
+        ("A1", "#VALUE!"),
+        ("A2", "#VALUE!"),
+        ("A3", "#DIV/0!"),
+        ("A4", "#VALUE!"),
+        ("A5", "#CONNECT!"),
+    ] {
+        assert_eq!(model._get_text(cell), *expected, "{cell}");
+    }
 }

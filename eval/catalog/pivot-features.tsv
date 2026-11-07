@@ -1,19 +1,19 @@
 id	family	ooxml	default	affects	web	scope	stage	status	evidence
-PV-0001	layout	ST_Axis=axisCol		layout	unknown	in	PV1	todo	
-PV-0002	layout	ST_Axis=axisPage		layout	unknown	in	PV1	todo	
-PV-0003	layout	ST_Axis=axisRow		layout	unknown	in	PV1	todo	
-PV-0004	layout	ST_Axis=axisValues		layout	unknown	in	PV1	todo	
-PV-0005	aggregation	ST_DataConsolidateFunction=average		values	unknown	in	PV1	todo	
-PV-0006	aggregation	ST_DataConsolidateFunction=count		values	unknown	in	PV1	todo	
-PV-0007	aggregation	ST_DataConsolidateFunction=countNums		values	unknown	in	PV1	todo	
-PV-0008	aggregation	ST_DataConsolidateFunction=max		values	unknown	in	PV1	todo	
-PV-0009	aggregation	ST_DataConsolidateFunction=min		values	unknown	in	PV1	todo	
-PV-0010	aggregation	ST_DataConsolidateFunction=product		values	unknown	in	PV1	todo	
-PV-0011	aggregation	ST_DataConsolidateFunction=stdDev		values	unknown	in	PV1	todo	
-PV-0012	aggregation	ST_DataConsolidateFunction=stdDevp		values	unknown	in	PV1	todo	
-PV-0013	aggregation	ST_DataConsolidateFunction=sum		values	unknown	in	PV1	todo	
-PV-0014	aggregation	ST_DataConsolidateFunction=var		values	unknown	in	PV1	todo	
-PV-0015	aggregation	ST_DataConsolidateFunction=varp		values	unknown	in	PV1	todo	
+PV-0001	layout	ST_Axis=axisCol		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-0002	layout	ST_Axis=axisPage		layout	yes	in	PV1	todo	probes/t4137-pivot-captions K4; probes/t4138-pivot-geometry G8
+PV-0003	layout	ST_Axis=axisRow		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-0004	layout	ST_Axis=axisValues		layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags AV
+PV-0005	aggregation	ST_DataConsolidateFunction=average		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_average
+PV-0006	aggregation	ST_DataConsolidateFunction=count		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_count
+PV-0007	aggregation	ST_DataConsolidateFunction=countNums		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_countNums
+PV-0008	aggregation	ST_DataConsolidateFunction=max		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_max
+PV-0009	aggregation	ST_DataConsolidateFunction=min		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_min
+PV-0010	aggregation	ST_DataConsolidateFunction=product		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_product
+PV-0011	aggregation	ST_DataConsolidateFunction=stdDev		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_stdDev
+PV-0012	aggregation	ST_DataConsolidateFunction=stdDevp		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_stdDevp
+PV-0013	aggregation	ST_DataConsolidateFunction=sum		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_sum
+PV-0014	aggregation	ST_DataConsolidateFunction=var		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_var
+PV-0015	aggregation	ST_DataConsolidateFunction=varp		values	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_varp
 PV-0016	sorting	ST_FieldSortType=ascending		layout	unknown	in	PV2	todo	
 PV-0017	sorting	ST_FieldSortType=descending		layout	unknown	in	PV2	todo	
 PV-0018	sorting	ST_FieldSortType=manual		layout	unknown	in	PV2	todo	
@@ -25,21 +25,21 @@ PV-0023	grouping	ST_GroupBy=quarters		values	unknown	in	PV3	todo
 PV-0024	grouping	ST_GroupBy=range		values	unknown	in	PV3	todo	
 PV-0025	grouping	ST_GroupBy=seconds		values	unknown	in	PV3	todo	
 PV-0026	grouping	ST_GroupBy=years		values	unknown	in	PV3	todo	
-PV-0027	totals	ST_ItemType=avg		layout	unknown	in	PV1	todo	
-PV-0028	totals	ST_ItemType=blank		layout	unknown	in	PV1	todo	
-PV-0029	totals	ST_ItemType=count		layout	unknown	in	PV1	todo	
-PV-0030	totals	ST_ItemType=countA		layout	unknown	in	PV1	todo	
-PV-0031	totals	ST_ItemType=data		layout	unknown	in	PV1	todo	
-PV-0032	totals	ST_ItemType=default		layout	unknown	in	PV1	todo	
-PV-0033	totals	ST_ItemType=grand		layout	unknown	in	PV1	todo	
-PV-0034	totals	ST_ItemType=max		layout	unknown	in	PV1	todo	
-PV-0035	totals	ST_ItemType=min		layout	unknown	in	PV1	todo	
-PV-0036	totals	ST_ItemType=product		layout	unknown	in	PV1	todo	
-PV-0037	totals	ST_ItemType=stdDev		layout	unknown	in	PV1	todo	
-PV-0038	totals	ST_ItemType=stdDevP		layout	unknown	in	PV1	todo	
-PV-0039	totals	ST_ItemType=sum		layout	unknown	in	PV1	todo	
-PV-0040	totals	ST_ItemType=var		layout	unknown	in	PV1	todo	
-PV-0041	totals	ST_ItemType=varP		layout	unknown	in	PV1	todo	
+PV-0027	totals	ST_ItemType=avg		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-0028	totals	ST_ItemType=blank		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options BR
+PV-0029	totals	ST_ItemType=count		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1; probes/t4622-pivot-count-subtotals CN
+PV-0030	totals	ST_ItemType=countA		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1; probes/t4622-pivot-count-subtotals CA
+PV-0031	totals	ST_ItemType=data		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-0032	totals	ST_ItemType=default		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-0033	totals	ST_ItemType=grand		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C; probes/t4586-pivot-refresh-on-load A
+PV-0034	totals	ST_ItemType=max		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-0035	totals	ST_ItemType=min		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-0036	totals	ST_ItemType=product		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-0037	totals	ST_ItemType=stdDev		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-0038	totals	ST_ItemType=stdDevP		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-0039	totals	ST_ItemType=sum		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-0040	totals	ST_ItemType=var		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-0041	totals	ST_ItemType=varP		layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-0042	filtering	ST_PivotFilterType=M1		values	unknown	in	PV2	todo	
 PV-0043	filtering	ST_PivotFilterType=M10		values	unknown	in	PV2	todo	
 PV-0044	filtering	ST_PivotFilterType=M11		values	unknown	in	PV2	todo	
@@ -106,15 +106,15 @@ PV-0104	filtering	ST_PivotFilterType=valueNotBetween		values	unknown	in	PV2	todo
 PV-0105	filtering	ST_PivotFilterType=valueNotEqual		values	unknown	in	PV2	todo	
 PV-0106	filtering	ST_PivotFilterType=yearToDate		values	unknown	in	PV2	todo	
 PV-0107	filtering	ST_PivotFilterType=yesterday		values	unknown	in	PV2	todo	
-PV-0108	show-values-as	ST_ShowDataAs=difference		values	unknown	in	PV2	todo	
-PV-0109	show-values-as	ST_ShowDataAs=index		values	unknown	in	PV2	todo	
-PV-0110	show-values-as	ST_ShowDataAs=normal		values	unknown	in	PV2	todo	
-PV-0111	show-values-as	ST_ShowDataAs=percent		values	unknown	in	PV2	todo	
-PV-0112	show-values-as	ST_ShowDataAs=percentDiff		values	unknown	in	PV2	todo	
-PV-0113	show-values-as	ST_ShowDataAs=percentOfCol		values	unknown	in	PV2	todo	
-PV-0114	show-values-as	ST_ShowDataAs=percentOfRow		values	unknown	in	PV2	todo	
-PV-0115	show-values-as	ST_ShowDataAs=percentOfTotal		values	unknown	in	PV2	todo	
-PV-0116	show-values-as	ST_ShowDataAs=runTotal		values	unknown	in	PV2	todo	
+PV-0108	show-values-as	ST_ShowDataAs=difference		values	yes	in	PV2	todo	probes/t4129-pivot-show-as DF DP
+PV-0109	show-values-as	ST_ShowDataAs=index		values	yes	in	PV2	todo	probes/t4129-pivot-show-as IX
+PV-0110	show-values-as	ST_ShowDataAs=normal		values	yes	in	PV2	todo	probes/t4129-pivot-show-as N
+PV-0111	show-values-as	ST_ShowDataAs=percent		values	yes	in	PV2	todo	probes/t4129-pivot-show-as PC
+PV-0112	show-values-as	ST_ShowDataAs=percentDiff		values	yes	in	PV2	todo	probes/t4129-pivot-show-as PD
+PV-0113	show-values-as	ST_ShowDataAs=percentOfCol		values	yes	in	PV2	todo	probes/t4129-pivot-show-as PCo
+PV-0114	show-values-as	ST_ShowDataAs=percentOfRow		values	yes	in	PV2	todo	probes/t4129-pivot-show-as PR
+PV-0115	show-values-as	ST_ShowDataAs=percentOfTotal		values	yes	in	PV2	todo	probes/t4129-pivot-show-as PT; probes/t4123-pivot-capture T
+PV-0116	show-values-as	ST_ShowDataAs=runTotal		values	yes	in	PV2	todo	probes/t4129-pivot-show-as RT
 PV-0117	cache	pivotCacheDefinition		values	unknown	in	PV1	todo	
 PV-0118	cache	pivotCacheDefinition/cacheFields		values	unknown	in	PV1	todo	
 PV-0119	cache	pivotCacheDefinition/cacheFields/cacheField		values	unknown	in	PV1	todo	
@@ -360,7 +360,7 @@ PV-0358	metadata	pivotCacheDefinition/cacheFields/cacheField@level	0	none	unknow
 PV-0359	cache	pivotCacheDefinition/cacheFields/cacheField@mappingCount		values	unknown	in	PV1	todo	
 PV-0360	olap-datamodel	pivotCacheDefinition/cacheFields/cacheField@memberPropertyField	false	none	unknown	out (decision 0274)	out	todo	
 PV-0361	captions	pivotCacheDefinition/cacheFields/cacheField@name		text	unknown	in	PV1	todo	
-PV-0362	aggregation	pivotCacheDefinition/cacheFields/cacheField@numFmtId		values	unknown	in	PV1	todo	
+PV-0362	aggregation	pivotCacheDefinition/cacheFields/cacheField@numFmtId		values	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-0363	cache	pivotCacheDefinition/cacheFields/cacheField@propertyName		values	unknown	in	PV1	todo	
 PV-0364	olap-datamodel	pivotCacheDefinition/cacheFields/cacheField@serverField	false	none	unknown	out (decision 0274)	out	todo	
 PV-0365	cache	pivotCacheDefinition/cacheFields/cacheField@sqlType	0	values	unknown	in	PV1	todo	
@@ -780,7 +780,7 @@ PV-0778	cache	pivotCacheRecords/r/x		values	unknown	in	PV1	todo
 PV-0779	cache	pivotCacheRecords/r/x@v		values	unknown	in	PV1	todo	
 PV-0780	cache	pivotCacheRecords@count		values	unknown	in	PV1	todo	
 PV-0781	metadata	pivotCacheRecords@mc:Ignorable		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0782	layout	pivotTableDefinition		layout	unknown	in	PV1	todo	
+PV-0782	layout	pivotTableDefinition		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-0783	formatting	pivotTableDefinition/chartFormats		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0784	formatting	pivotTableDefinition/chartFormats/chartFormat		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0785	formatting	pivotTableDefinition/chartFormats/chartFormat/pivotArea		none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -824,22 +824,22 @@ PV-0822	formatting	pivotTableDefinition/chartFormats/chartFormat@chart		none	unk
 PV-0823	formatting	pivotTableDefinition/chartFormats/chartFormat@format		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0824	formatting	pivotTableDefinition/chartFormats/chartFormat@series	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0825	formatting	pivotTableDefinition/chartFormats@count	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0826	layout	pivotTableDefinition/colFields		layout	unknown	in	PV1	todo	
-PV-0827	layout	pivotTableDefinition/colFields/field		layout	unknown	in	PV1	todo	
-PV-0828	layout	pivotTableDefinition/colFields/field@x		layout	unknown	in	PV1	todo	
-PV-0829	layout	pivotTableDefinition/colFields@count	0	layout	unknown	in	PV1	todo	
+PV-0826	layout	pivotTableDefinition/colFields		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-0827	layout	pivotTableDefinition/colFields/field		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-0828	layout	pivotTableDefinition/colFields/field@x		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-0829	layout	pivotTableDefinition/colFields@count	0	layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-0830	olap-datamodel	pivotTableDefinition/colHierarchiesUsage		none	unknown	out (decision 0274)	out	todo	
 PV-0831	olap-datamodel	pivotTableDefinition/colHierarchiesUsage/colHierarchyUsage		none	unknown	out (decision 0274)	out	todo	
 PV-0832	olap-datamodel	pivotTableDefinition/colHierarchiesUsage/colHierarchyUsage@hierarchyUsage		none	unknown	out (decision 0274)	out	todo	
 PV-0833	olap-datamodel	pivotTableDefinition/colHierarchiesUsage@count		none	unknown	out (decision 0274)	out	todo	
-PV-0834	layout	pivotTableDefinition/colItems		layout	unknown	in	PV1	todo	
-PV-0835	layout	pivotTableDefinition/colItems/i		layout	unknown	in	PV1	todo	
+PV-0834	layout	pivotTableDefinition/colItems		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C; probes/t4586-pivot-refresh-on-load A
+PV-0835	layout	pivotTableDefinition/colItems/i		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C; probes/t4586-pivot-refresh-on-load A
 PV-0836	cache	pivotTableDefinition/colItems/i/x		values	unknown	in	PV1	todo	
 PV-0837	cache	pivotTableDefinition/colItems/i/x@v	0	values	unknown	in	PV1	todo	
-PV-0838	layout	pivotTableDefinition/colItems/i@i	0	layout	unknown	in	PV1	todo	
-PV-0839	layout	pivotTableDefinition/colItems/i@r	0	layout	unknown	in	PV1	todo	
-PV-0840	totals	pivotTableDefinition/colItems/i@t	data	layout	unknown	in	PV1	todo	
-PV-0841	layout	pivotTableDefinition/colItems@count		layout	unknown	in	PV1	todo	
+PV-0838	layout	pivotTableDefinition/colItems/i@i	0	layout	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_sum
+PV-0839	layout	pivotTableDefinition/colItems/i@r	0	layout	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_sum
+PV-0840	totals	pivotTableDefinition/colItems/i@t	data	layout	yes	in	PV1	todo	probes/t4135-pivot-aggregates A_sum
+PV-0841	layout	pivotTableDefinition/colItems@count		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C; probes/t4586-pivot-refresh-on-load A
 PV-0842	formatting	pivotTableDefinition/conditionalFormats		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0843	formatting	pivotTableDefinition/conditionalFormats/conditionalFormat		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0844	metadata	pivotTableDefinition/conditionalFormats/conditionalFormat/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -886,17 +886,17 @@ PV-0884	formatting	pivotTableDefinition/conditionalFormats/conditionalFormat@pri
 PV-0885	formatting	pivotTableDefinition/conditionalFormats/conditionalFormat@scope	selection	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0886	formatting	pivotTableDefinition/conditionalFormats/conditionalFormat@type	none	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0887	formatting	pivotTableDefinition/conditionalFormats@count	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0888	aggregation	pivotTableDefinition/dataFields		values	unknown	in	PV1	todo	
-PV-0889	aggregation	pivotTableDefinition/dataFields/dataField		values	unknown	in	PV1	todo	
+PV-0888	aggregation	pivotTableDefinition/dataFields		values	yes	in	PV1	todo	probes/t4123-pivot-capture T
+PV-0889	aggregation	pivotTableDefinition/dataFields/dataField		values	yes	in	PV1	todo	probes/t4123-pivot-capture T
 PV-0890	metadata	pivotTableDefinition/dataFields/dataField/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-0891	show-values-as	pivotTableDefinition/dataFields/dataField@baseField	-1	values	unknown	in	PV2	todo	
-PV-0892	show-values-as	pivotTableDefinition/dataFields/dataField@baseItem	1048832	values	unknown	in	PV2	todo	
-PV-0893	aggregation	pivotTableDefinition/dataFields/dataField@fld		values	unknown	in	PV1	todo	
-PV-0894	aggregation	pivotTableDefinition/dataFields/dataField@name		values	unknown	in	PV1	todo	
-PV-0895	aggregation	pivotTableDefinition/dataFields/dataField@numFmtId		values	unknown	in	PV1	todo	
-PV-0896	show-values-as	pivotTableDefinition/dataFields/dataField@showDataAs	normal	values	unknown	in	PV2	todo	
-PV-0897	aggregation	pivotTableDefinition/dataFields/dataField@subtotal	sum	values	unknown	in	PV1	todo	
-PV-0898	aggregation	pivotTableDefinition/dataFields@count		values	unknown	in	PV1	todo	
+PV-0891	show-values-as	pivotTableDefinition/dataFields/dataField@baseField	-1	values	yes	in	PV2	todo	probes/t4129-pivot-show-as DF DP
+PV-0892	show-values-as	pivotTableDefinition/dataFields/dataField@baseItem	1048832	values	yes	in	PV2	todo	probes/t4129-pivot-show-as DF DP
+PV-0893	aggregation	pivotTableDefinition/dataFields/dataField@fld		values	yes	in	PV1	todo	probes/t4123-pivot-capture T
+PV-0894	aggregation	pivotTableDefinition/dataFields/dataField@name		values	yes	in	PV1	todo	probes/t4123-pivot-capture T
+PV-0895	aggregation	pivotTableDefinition/dataFields/dataField@numFmtId		values	yes	in	PV1	todo	probes/t4123-pivot-capture T
+PV-0896	show-values-as	pivotTableDefinition/dataFields/dataField@showDataAs	normal	values	yes	in	PV2	todo	probes/t4129-pivot-show-as; probes/t4123-pivot-capture T
+PV-0897	aggregation	pivotTableDefinition/dataFields/dataField@subtotal	sum	values	yes	in	PV1	todo	probes/t4135-pivot-aggregates
+PV-0898	aggregation	pivotTableDefinition/dataFields@count		values	yes	in	PV1	todo	probes/t4123-pivot-capture T
 PV-0899	metadata	pivotTableDefinition/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-0900	filtering	pivotTableDefinition/filters		values	unknown	in	PV2	todo	
 PV-0901	filtering	pivotTableDefinition/filters/filter		values	unknown	in	PV2	todo	
@@ -1014,13 +1014,13 @@ PV-1012	formatting	pivotTableDefinition/formats/format/pivotArea@type	normal	non
 PV-1013	formatting	pivotTableDefinition/formats/format@action	formatting	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1014	formatting	pivotTableDefinition/formats/format@dxfId		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1015	formatting	pivotTableDefinition/formats@count	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1016	layout	pivotTableDefinition/location		layout	unknown	in	PV1	todo	
-PV-1017	layout	pivotTableDefinition/location@colPageCount	0	layout	unknown	in	PV1	todo	
-PV-1018	layout	pivotTableDefinition/location@firstDataCol		layout	unknown	in	PV1	todo	
-PV-1019	layout	pivotTableDefinition/location@firstDataRow		layout	unknown	in	PV1	todo	
-PV-1020	layout	pivotTableDefinition/location@firstHeaderRow		layout	unknown	in	PV1	todo	
-PV-1021	layout	pivotTableDefinition/location@ref		layout	unknown	in	PV1	todo	
-PV-1022	layout	pivotTableDefinition/location@rowPageCount	0	layout	unknown	in	PV1	todo	
+PV-1016	layout	pivotTableDefinition/location		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1017	layout	pivotTableDefinition/location@colPageCount	0	layout	yes	in	PV1	todo	probes/t4138-pivot-geometry G8
+PV-1018	layout	pivotTableDefinition/location@firstDataCol		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1019	layout	pivotTableDefinition/location@firstDataRow		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1020	layout	pivotTableDefinition/location@firstHeaderRow		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1021	layout	pivotTableDefinition/location@ref		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1022	layout	pivotTableDefinition/location@rowPageCount	0	layout	yes	in	PV1	todo	probes/t4138-pivot-geometry G8
 PV-1023	filtering	pivotTableDefinition/pageFields		values	unknown	in	PV2	todo	
 PV-1024	filtering	pivotTableDefinition/pageFields/pageField		values	unknown	in	PV2	todo	
 PV-1025	metadata	pivotTableDefinition/pageFields/pageField/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1030,8 +1030,8 @@ PV-1028	filtering	pivotTableDefinition/pageFields/pageField@hier		values	unknown
 PV-1029	filtering	pivotTableDefinition/pageFields/pageField@item		values	unknown	in	PV2	todo	
 PV-1030	filtering	pivotTableDefinition/pageFields/pageField@name		values	unknown	in	PV2	todo	
 PV-1031	filtering	pivotTableDefinition/pageFields@count		values	unknown	in	PV2	todo	
-PV-1032	layout	pivotTableDefinition/pivotFields		layout	unknown	in	PV1	todo	
-PV-1033	layout	pivotTableDefinition/pivotFields/pivotField		layout	unknown	in	PV1	todo	
+PV-1032	layout	pivotTableDefinition/pivotFields		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1033	layout	pivotTableDefinition/pivotFields/pivotField		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-1034	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope		layout	unknown	in	PV2	todo	
 PV-1035	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea		layout	unknown	in	PV2	todo	
 PV-1036	metadata	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1071,31 +1071,31 @@ PV-1069	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotA
 PV-1070	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@outline	true	layout	unknown	in	PV2	todo	
 PV-1071	sorting	pivotTableDefinition/pivotFields/pivotField/autoSortScope/pivotArea@type	normal	layout	unknown	in	PV2	todo	
 PV-1072	metadata	pivotTableDefinition/pivotFields/pivotField/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1073	layout	pivotTableDefinition/pivotFields/pivotField/items		layout	unknown	in	PV1	todo	
-PV-1074	layout	pivotTableDefinition/pivotFields/pivotField/items/item		layout	unknown	in	PV1	todo	
-PV-1075	layout	pivotTableDefinition/pivotFields/pivotField/items/item@c	false	layout	unknown	in	PV1	todo	
-PV-1076	layout	pivotTableDefinition/pivotFields/pivotField/items/item@d	false	layout	unknown	in	PV1	todo	
-PV-1077	layout	pivotTableDefinition/pivotFields/pivotField/items/item@e	true	layout	unknown	in	PV1	todo	
-PV-1078	layout	pivotTableDefinition/pivotFields/pivotField/items/item@f	false	layout	unknown	in	PV1	todo	
+PV-1073	layout	pivotTableDefinition/pivotFields/pivotField/items		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1074	layout	pivotTableDefinition/pivotFields/pivotField/items/item		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1075	layout	pivotTableDefinition/pivotFields/pivotField/items/item@c	false	layout	yes	in	PV1	todo	probes/t4129-pivot-item-flags IC
+PV-1076	layout	pivotTableDefinition/pivotFields/pivotField/items/item@d	false	layout	no	in	PV1	todo	T-4129 runs: the web refuses the file (FileCorruptTryRepair); pivots.md; out of scope (decision 0266)
+PV-1077	layout	pivotTableDefinition/pivotFields/pivotField/items/item@e	true	layout	yes	in	PV1	todo	probes/t4129-pivot-item-flags IE
+PV-1078	layout	pivotTableDefinition/pivotFields/pivotField/items/item@f	false	layout	no	in	PV1	todo	T-4129 runs: the web refuses the file (FileCorruptTryRepair); pivots.md; out of scope (decision 0266)
 PV-1079	filtering	pivotTableDefinition/pivotFields/pivotField/items/item@h	false	values	unknown	in	PV2	todo	
-PV-1080	layout	pivotTableDefinition/pivotFields/pivotField/items/item@m	false	layout	unknown	in	PV1	todo	
+PV-1080	layout	pivotTableDefinition/pivotFields/pivotField/items/item@m	false	layout	yes	in	PV1	todo	probes/t4129-pivot-item-flags IM
 PV-1081	captions	pivotTableDefinition/pivotFields/pivotField/items/item@n		text	unknown	in	PV1	todo	
 PV-1082	filtering	pivotTableDefinition/pivotFields/pivotField/items/item@s	false	values	unknown	in	PV2	todo	
-PV-1083	layout	pivotTableDefinition/pivotFields/pivotField/items/item@sd	true	layout	unknown	in	PV1	todo	
-PV-1084	totals	pivotTableDefinition/pivotFields/pivotField/items/item@t	data	layout	unknown	in	PV1	todo	
-PV-1085	layout	pivotTableDefinition/pivotFields/pivotField/items/item@x		layout	unknown	in	PV1	todo	
-PV-1086	layout	pivotTableDefinition/pivotFields/pivotField/items@count		layout	unknown	in	PV1	todo	
-PV-1087	layout	pivotTableDefinition/pivotFields/pivotField@allDrilled	false	layout	unknown	in	PV1	todo	
+PV-1083	layout	pivotTableDefinition/pivotFields/pivotField/items/item@sd	true	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options SD SD2
+PV-1084	totals	pivotTableDefinition/pivotFields/pivotField/items/item@t	data	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-1085	layout	pivotTableDefinition/pivotFields/pivotField/items/item@x		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1086	layout	pivotTableDefinition/pivotFields/pivotField/items@count		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1087	layout	pivotTableDefinition/pivotFields/pivotField@allDrilled	false	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags FA
 PV-1088	filtering	pivotTableDefinition/pivotFields/pivotField@autoShow	false	values	unknown	in	PV2	todo	
-PV-1089	totals	pivotTableDefinition/pivotFields/pivotField@avgSubtotal	false	layout	unknown	in	PV1	todo	
-PV-1090	layout	pivotTableDefinition/pivotFields/pivotField@axis		layout	unknown	in	PV1	todo	
-PV-1091	layout	pivotTableDefinition/pivotFields/pivotField@compact	true	layout	unknown	in	PV1	todo	
-PV-1092	totals	pivotTableDefinition/pivotFields/pivotField@countASubtotal	false	layout	unknown	in	PV1	todo	
-PV-1093	totals	pivotTableDefinition/pivotFields/pivotField@countSubtotal	false	layout	unknown	in	PV1	todo	
-PV-1094	aggregation	pivotTableDefinition/pivotFields/pivotField@dataField	false	values	unknown	in	PV1	todo	
-PV-1095	layout	pivotTableDefinition/pivotFields/pivotField@dataSourceSort		layout	unknown	in	PV1	todo	
-PV-1096	layout	pivotTableDefinition/pivotFields/pivotField@defaultAttributeDrillState	false	layout	unknown	in	PV1	todo	
-PV-1097	totals	pivotTableDefinition/pivotFields/pivotField@defaultSubtotal	true	layout	unknown	in	PV1	todo	
+PV-1089	totals	pivotTableDefinition/pivotFields/pivotField@avgSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-1090	layout	pivotTableDefinition/pivotFields/pivotField@axis		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1091	layout	pivotTableDefinition/pivotFields/pivotField@compact	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
+PV-1092	totals	pivotTableDefinition/pivotFields/pivotField@countASubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-1093	totals	pivotTableDefinition/pivotFields/pivotField@countSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-1094	aggregation	pivotTableDefinition/pivotFields/pivotField@dataField	false	values	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1095	layout	pivotTableDefinition/pivotFields/pivotField@dataSourceSort		layout	no	in	PV1	todo	T-4129 runs: the web refuses the file (FileCorruptTryRepair); pivots.md; out of scope (decision 0266)
+PV-1096	layout	pivotTableDefinition/pivotFields/pivotField@defaultAttributeDrillState	false	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags FA
+PV-1097	totals	pivotTableDefinition/pivotFields/pivotField@defaultSubtotal	true	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1098	ui	pivotTableDefinition/pivotFields/pivotField@dragOff	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1099	ui	pivotTableDefinition/pivotFields/pivotField@dragToCol	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1100	ui	pivotTableDefinition/pivotFields/pivotField@dragToData	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1104,36 +1104,36 @@ PV-1102	ui	pivotTableDefinition/pivotFields/pivotField@dragToRow	true	none	unkno
 PV-1103	filtering	pivotTableDefinition/pivotFields/pivotField@hiddenLevel	false	values	unknown	in	PV2	todo	
 PV-1104	filtering	pivotTableDefinition/pivotFields/pivotField@hideNewItems	false	values	unknown	in	PV2	todo	
 PV-1105	filtering	pivotTableDefinition/pivotFields/pivotField@includeNewItemsInFilter	false	values	unknown	in	PV2	todo	
-PV-1106	layout	pivotTableDefinition/pivotFields/pivotField@insertBlankRow	false	layout	unknown	in	PV1	todo	
+PV-1106	layout	pivotTableDefinition/pivotFields/pivotField@insertBlankRow	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options BR BR2
 PV-1107	ui	pivotTableDefinition/pivotFields/pivotField@insertPageBreak	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1108	filtering	pivotTableDefinition/pivotFields/pivotField@itemPageCount	10	values	unknown	in	PV2	todo	
-PV-1109	totals	pivotTableDefinition/pivotFields/pivotField@maxSubtotal	false	layout	unknown	in	PV1	todo	
+PV-1109	totals	pivotTableDefinition/pivotFields/pivotField@maxSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1110	filtering	pivotTableDefinition/pivotFields/pivotField@measureFilter	false	values	unknown	in	PV2	todo	
-PV-1111	totals	pivotTableDefinition/pivotFields/pivotField@minSubtotal	false	layout	unknown	in	PV1	todo	
+PV-1111	totals	pivotTableDefinition/pivotFields/pivotField@minSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1112	filtering	pivotTableDefinition/pivotFields/pivotField@multipleItemSelectionAllowed	false	values	unknown	in	PV2	todo	
 PV-1113	captions	pivotTableDefinition/pivotFields/pivotField@name		text	unknown	in	PV1	todo	
 PV-1114	sorting	pivotTableDefinition/pivotFields/pivotField@nonAutoSortDefault	false	layout	unknown	in	PV2	todo	
-PV-1115	aggregation	pivotTableDefinition/pivotFields/pivotField@numFmtId		values	unknown	in	PV1	todo	
-PV-1116	layout	pivotTableDefinition/pivotFields/pivotField@outline	true	layout	unknown	in	PV1	todo	
-PV-1117	totals	pivotTableDefinition/pivotFields/pivotField@productSubtotal	false	layout	unknown	in	PV1	todo	
+PV-1115	aggregation	pivotTableDefinition/pivotFields/pivotField@numFmtId		values	yes	in	PV1	todo	probes/t4129-pivot-layout-flags NF
+PV-1116	layout	pivotTableDefinition/pivotFields/pivotField@outline	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
+PV-1117	totals	pivotTableDefinition/pivotFields/pivotField@productSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1118	filtering	pivotTableDefinition/pivotFields/pivotField@rankBy		values	unknown	in	PV2	todo	
 PV-1119	olap-datamodel	pivotTableDefinition/pivotFields/pivotField@serverField	false	none	unknown	out (decision 0274)	out	todo	
-PV-1120	layout	pivotTableDefinition/pivotFields/pivotField@showAll	true	layout	unknown	in	PV1	todo	
+PV-1120	layout	pivotTableDefinition/pivotFields/pivotField@showAll	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture C (showAll 0); probes/t4311-pivot-showall-column-and-groups Calc B (GETPIVOTDATA on P!A13, showAll 1)
 PV-1121	ui	pivotTableDefinition/pivotFields/pivotField@showDropDowns	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1122	ui	pivotTableDefinition/pivotFields/pivotField@showPropAsCaption	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1123	ui	pivotTableDefinition/pivotFields/pivotField@showPropCell	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1124	ui	pivotTableDefinition/pivotFields/pivotField@showPropTip	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1125	sorting	pivotTableDefinition/pivotFields/pivotField@sortType	manual	layout	unknown	in	PV2	todo	
-PV-1126	totals	pivotTableDefinition/pivotFields/pivotField@stdDevPSubtotal	false	layout	unknown	in	PV1	todo	
-PV-1127	totals	pivotTableDefinition/pivotFields/pivotField@stdDevSubtotal	false	layout	unknown	in	PV1	todo	
-PV-1128	totals	pivotTableDefinition/pivotFields/pivotField@subtotalCaption		layout	unknown	in	PV1	todo	
-PV-1129	totals	pivotTableDefinition/pivotFields/pivotField@subtotalTop	true	layout	unknown	in	PV1	todo	
-PV-1130	totals	pivotTableDefinition/pivotFields/pivotField@sumSubtotal	false	layout	unknown	in	PV1	todo	
+PV-1126	totals	pivotTableDefinition/pivotFields/pivotField@stdDevPSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-1127	totals	pivotTableDefinition/pivotFields/pivotField@stdDevSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-1128	totals	pivotTableDefinition/pivotFields/pivotField@subtotalCaption		layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags SC
+PV-1129	totals	pivotTableDefinition/pivotFields/pivotField@subtotalTop	true	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags ST
+PV-1130	totals	pivotTableDefinition/pivotFields/pivotField@sumSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
 PV-1131	filtering	pivotTableDefinition/pivotFields/pivotField@topAutoShow	true	values	unknown	in	PV2	todo	
 PV-1132	olap-datamodel	pivotTableDefinition/pivotFields/pivotField@uniqueMemberProperty		none	unknown	out (decision 0274)	out	todo	
-PV-1133	totals	pivotTableDefinition/pivotFields/pivotField@varPSubtotal	false	layout	unknown	in	PV1	todo	
-PV-1134	totals	pivotTableDefinition/pivotFields/pivotField@varSubtotal	false	layout	unknown	in	PV1	todo	
-PV-1135	layout	pivotTableDefinition/pivotFields@count		layout	unknown	in	PV1	todo	
+PV-1133	totals	pivotTableDefinition/pivotFields/pivotField@varPSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-1134	totals	pivotTableDefinition/pivotFields/pivotField@varSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1
+PV-1135	layout	pivotTableDefinition/pivotFields@count		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-1136	olap-datamodel	pivotTableDefinition/pivotHierarchies		none	unknown	out (decision 0274)	out	todo	
 PV-1137	olap-datamodel	pivotTableDefinition/pivotHierarchies/pivotHierarchy		none	unknown	out (decision 0274)	out	todo	
 PV-1138	olap-datamodel	pivotTableDefinition/pivotHierarchies/pivotHierarchy/extLst		none	unknown	out (decision 0274)	out	todo	
@@ -1173,34 +1173,34 @@ PV-1171	formatting	pivotTableDefinition/pivotTableStyleInfo@showColStripes		none
 PV-1172	formatting	pivotTableDefinition/pivotTableStyleInfo@showLastColumn		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1173	formatting	pivotTableDefinition/pivotTableStyleInfo@showRowHeaders		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1174	formatting	pivotTableDefinition/pivotTableStyleInfo@showRowStripes		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1175	layout	pivotTableDefinition/rowFields		layout	unknown	in	PV1	todo	
-PV-1176	layout	pivotTableDefinition/rowFields/field		layout	unknown	in	PV1	todo	
-PV-1177	layout	pivotTableDefinition/rowFields/field@x		layout	unknown	in	PV1	todo	
-PV-1178	layout	pivotTableDefinition/rowFields@count	0	layout	unknown	in	PV1	todo	
+PV-1175	layout	pivotTableDefinition/rowFields		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1176	layout	pivotTableDefinition/rowFields/field		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1177	layout	pivotTableDefinition/rowFields/field@x		layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
+PV-1178	layout	pivotTableDefinition/rowFields@count	0	layout	yes	in	PV1	todo	probes/t4123-pivot-capture C
 PV-1179	olap-datamodel	pivotTableDefinition/rowHierarchiesUsage		none	unknown	out (decision 0274)	out	todo	
 PV-1180	olap-datamodel	pivotTableDefinition/rowHierarchiesUsage/rowHierarchyUsage		none	unknown	out (decision 0274)	out	todo	
 PV-1181	olap-datamodel	pivotTableDefinition/rowHierarchiesUsage/rowHierarchyUsage@hierarchyUsage		none	unknown	out (decision 0274)	out	todo	
 PV-1182	olap-datamodel	pivotTableDefinition/rowHierarchiesUsage@count		none	unknown	out (decision 0274)	out	todo	
-PV-1183	layout	pivotTableDefinition/rowItems		layout	unknown	in	PV1	todo	
-PV-1184	layout	pivotTableDefinition/rowItems/i		layout	unknown	in	PV1	todo	
+PV-1183	layout	pivotTableDefinition/rowItems		layout	yes	in	PV1	todo	probes/t4123-pivot-capture T; probes/t4586-pivot-refresh-on-load A
+PV-1184	layout	pivotTableDefinition/rowItems/i		layout	yes	in	PV1	todo	probes/t4123-pivot-capture T; probes/t4586-pivot-refresh-on-load A
 PV-1185	cache	pivotTableDefinition/rowItems/i/x		values	unknown	in	PV1	todo	
 PV-1186	cache	pivotTableDefinition/rowItems/i/x@v	0	values	unknown	in	PV1	todo	
-PV-1187	layout	pivotTableDefinition/rowItems/i@i	0	layout	unknown	in	PV1	todo	
-PV-1188	layout	pivotTableDefinition/rowItems/i@r	0	layout	unknown	in	PV1	todo	
-PV-1189	totals	pivotTableDefinition/rowItems/i@t	data	layout	unknown	in	PV1	todo	
-PV-1190	layout	pivotTableDefinition/rowItems@count		layout	unknown	in	PV1	todo	
+PV-1187	layout	pivotTableDefinition/rowItems/i@i	0	layout	yes	in	PV1	todo	probes/t4138-pivot-geometry G6
+PV-1188	layout	pivotTableDefinition/rowItems/i@r	0	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
+PV-1189	totals	pivotTableDefinition/rowItems/i@t	data	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options BR
+PV-1190	layout	pivotTableDefinition/rowItems@count		layout	yes	in	PV1	todo	probes/t4123-pivot-capture T; probes/t4586-pivot-refresh-on-load A
 PV-1191	olap-datamodel	pivotTableDefinition@asteriskTotals	false	none	unknown	out (decision 0274)	out	todo	
 PV-1192	metadata	pivotTableDefinition@cacheId		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1193	formatting	pivotTableDefinition@chartFormat	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1194	totals	pivotTableDefinition@colGrandTotals	true	layout	unknown	in	PV1	todo	
+PV-1194	totals	pivotTableDefinition@colGrandTotals	true	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags NG
 PV-1195	captions	pivotTableDefinition@colHeaderCaption		text	unknown	in	PV1	todo	
-PV-1196	layout	pivotTableDefinition@compact	true	layout	unknown	in	PV1	todo	
-PV-1197	layout	pivotTableDefinition@compactData	true	layout	unknown	in	PV1	todo	
+PV-1196	layout	pivotTableDefinition@compact	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
+PV-1197	layout	pivotTableDefinition@compactData	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
 PV-1198	metadata	pivotTableDefinition@createdVersion	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1199	sorting	pivotTableDefinition@customListSort	true	layout	unknown	in	PV2	todo	
 PV-1200	captions	pivotTableDefinition@dataCaption		text	unknown	in	PV1	todo	
-PV-1201	layout	pivotTableDefinition@dataOnRows	false	layout	unknown	in	PV1	todo	
-PV-1202	layout	pivotTableDefinition@dataPosition		layout	unknown	in	PV1	todo	
+PV-1201	layout	pivotTableDefinition@dataOnRows	false	layout	yes	in	PV1	todo	probes/t4138-pivot-geometry G6
+PV-1202	layout	pivotTableDefinition@dataPosition		layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags DPo
 PV-1203	ui	pivotTableDefinition@disableFieldList	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1204	olap-datamodel	pivotTableDefinition@editData	false	none	unknown	out (decision 0274)	out	todo	
 PV-1205	ui	pivotTableDefinition@enableDrill	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1209,8 +1209,8 @@ PV-1207	ui	pivotTableDefinition@enableWizard	true	none	unknown	round-trip only (
 PV-1208	captions	pivotTableDefinition@errorCaption		text	unknown	in	PV1	todo	
 PV-1209	ui	pivotTableDefinition@fieldListSortAscending	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1210	ui	pivotTableDefinition@fieldPrintTitles	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1211	totals	pivotTableDefinition@grandTotalCaption		layout	unknown	in	PV1	todo	
-PV-1212	layout	pivotTableDefinition@gridDropZones	false	layout	unknown	in	PV1	todo	
+PV-1211	totals	pivotTableDefinition@grandTotalCaption		layout	yes	in	PV1	todo	probes/t4137-pivot-captions K1
+PV-1212	layout	pivotTableDefinition@gridDropZones	false	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags GZ
 PV-1213	ui	pivotTableDefinition@immersive	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1214	formatting	pivotTableDefinition@indent	1	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1215	ui	pivotTableDefinition@itemPrintTitles	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1221,16 +1221,16 @@ PV-1219	metadata	pivotTableDefinition@minRefreshableVersion	0	none	unknown	round
 PV-1220	captions	pivotTableDefinition@missingCaption		text	unknown	in	PV1	todo	
 PV-1221	filtering	pivotTableDefinition@multipleFieldFilters	true	values	unknown	in	PV2	todo	
 PV-1222	captions	pivotTableDefinition@name		text	unknown	in	PV1	todo	
-PV-1223	layout	pivotTableDefinition@outline	false	layout	unknown	in	PV1	todo	
-PV-1224	layout	pivotTableDefinition@outlineData	false	layout	unknown	in	PV1	todo	
-PV-1225	layout	pivotTableDefinition@pageOverThenDown	false	layout	unknown	in	PV1	todo	
+PV-1223	layout	pivotTableDefinition@outline	false	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
+PV-1224	layout	pivotTableDefinition@outlineData	false	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T
+PV-1225	layout	pivotTableDefinition@pageOverThenDown	false	layout	yes	in	PV1	todo	probes/t4138-pivot-geometry G8
 PV-1226	formatting	pivotTableDefinition@pageStyle		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1227	layout	pivotTableDefinition@pageWrap	0	layout	unknown	in	PV1	todo	
+PV-1227	layout	pivotTableDefinition@pageWrap	0	layout	yes	in	PV1	todo	probes/t4138-pivot-geometry G8
 PV-1228	formatting	pivotTableDefinition@pivotTableStyle		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1229	formatting	pivotTableDefinition@preserveFormatting	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1230	ui	pivotTableDefinition@printDrill	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1231	metadata	pivotTableDefinition@published	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1232	totals	pivotTableDefinition@rowGrandTotals	true	layout	unknown	in	PV1	todo	
+PV-1232	totals	pivotTableDefinition@rowGrandTotals	true	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags NG
 PV-1233	captions	pivotTableDefinition@rowHeaderCaption		text	unknown	in	PV1	todo	
 PV-1234	olap-datamodel	pivotTableDefinition@showCalcMbrs	true	none	unknown	out (decision 0274)	out	todo	
 PV-1235	ui	pivotTableDefinition@showDataDropDown	true	none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1241,23 +1241,23 @@ PV-1239	olap-datamodel	pivotTableDefinition@showEmptyCol	false	none	unknown	out 
 PV-1240	olap-datamodel	pivotTableDefinition@showEmptyRow	false	none	unknown	out (decision 0274)	out	todo	
 PV-1241	captions	pivotTableDefinition@showError	false	text	unknown	in	PV1	todo	
 PV-1242	captions	pivotTableDefinition@showHeaders	true	text	unknown	in	PV1	todo	
-PV-1243	layout	pivotTableDefinition@showItems	true	layout	unknown	in	PV1	todo	
+PV-1243	layout	pivotTableDefinition@showItems	true	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags SI
 PV-1244	olap-datamodel	pivotTableDefinition@showMemberPropertyTips	true	none	unknown	out (decision 0274)	out	todo	
 PV-1245	captions	pivotTableDefinition@showMissing	true	text	unknown	in	PV1	todo	
 PV-1246	captions	pivotTableDefinition@showMultipleLabel	true	text	unknown	in	PV1	todo	
-PV-1247	totals	pivotTableDefinition@subtotalHiddenItems	false	layout	unknown	in	PV1	todo	
+PV-1247	totals	pivotTableDefinition@subtotalHiddenItems	false	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags SH
 PV-1248	metadata	pivotTableDefinition@tag		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1249	metadata	pivotTableDefinition@updatedVersion	0	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1250	formatting	pivotTableDefinition@useAutoFormatting	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1251	formatting	pivotTableDefinition@vacatedStyle		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1252	olap-datamodel	pivotTableDefinition@visualTotals	true	none	unknown	out (decision 0274)	out	todo	
 PV-1253	metadata	pivotTableDefinition@xr:uid		none	unknown	round-trip only (decision 0274)	round-trip	todo	
-PV-1254	show-values-as	x14:ST_PivotShowAs=percentOfParent		values	unknown	in	PV2	todo	
-PV-1255	show-values-as	x14:ST_PivotShowAs=percentOfParentCol		values	unknown	in	PV2	todo	
-PV-1256	show-values-as	x14:ST_PivotShowAs=percentOfParentRow		values	unknown	in	PV2	todo	
-PV-1257	show-values-as	x14:ST_PivotShowAs=percentOfRunningTotal		values	unknown	in	PV2	todo	
-PV-1258	show-values-as	x14:ST_PivotShowAs=rankAscending		values	unknown	in	PV2	todo	
-PV-1259	show-values-as	x14:ST_PivotShowAs=rankDescending		values	unknown	in	PV2	todo	
+PV-1254	show-values-as	x14:ST_PivotShowAs=percentOfParent		values	yes	in	PV2	todo	probes/t4129-pivot-show-as-x14 PP
+PV-1255	show-values-as	x14:ST_PivotShowAs=percentOfParentCol		values	yes	in	PV2	todo	probes/t4129-pivot-show-as-x14 PPC
+PV-1256	show-values-as	x14:ST_PivotShowAs=percentOfParentRow		values	yes	in	PV2	todo	probes/t4129-pivot-show-as-x14 PPR
+PV-1257	show-values-as	x14:ST_PivotShowAs=percentOfRunningTotal		values	yes	in	PV2	todo	probes/t4129-pivot-show-as-x14 PRT
+PV-1258	show-values-as	x14:ST_PivotShowAs=rankAscending		values	yes	in	PV2	todo	probes/t4129-pivot-show-as-x14 RA
+PV-1259	show-values-as	x14:ST_PivotShowAs=rankDescending		values	yes	in	PV2	todo	probes/t4129-pivot-show-as-x14 RD
 PV-1260	cache	x14:cacheField		values	unknown	in	PV1	todo	
 PV-1261	metadata	x14:cacheField@ignore	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1262	olap-datamodel	x14:cacheHierarchy		none	unknown	out (decision 0274)	out	todo	
@@ -1269,8 +1269,8 @@ PV-1267	olap-datamodel	x14:cacheHierarchy@flattenHierarchies	true	none	unknown	o
 PV-1268	olap-datamodel	x14:cacheHierarchy@hierarchizeDistinct	true	none	unknown	out (decision 0274)	out	todo	
 PV-1269	olap-datamodel	x14:cacheHierarchy@ignore	false	none	unknown	out (decision 0274)	out	todo	
 PV-1270	olap-datamodel	x14:cacheHierarchy@measuresSet	false	none	unknown	out (decision 0274)	out	todo	
-PV-1271	aggregation	x14:dataField		values	unknown	in	PV1	todo	
-PV-1272	show-values-as	x14:dataField@pivotShowAs		values	unknown	in	PV2	todo	
+PV-1271	aggregation	x14:dataField		values	yes	in	PV1	todo	probes/t4129-pivot-show-as-x14
+PV-1272	show-values-as	x14:dataField@pivotShowAs		values	yes	in	PV2	todo	probes/t4129-pivot-show-as-x14
 PV-1273	olap-datamodel	x14:dataField@sourceField		none	unknown	out (decision 0274)	out	todo	
 PV-1274	olap-datamodel	x14:dataField@uniqueName		none	unknown	out (decision 0274)	out	todo	
 PV-1275	cache	x14:pivotCacheDefinition		values	unknown	in	PV1	todo	
@@ -1279,12 +1279,12 @@ PV-1277	slicers-timelines	x14:pivotCacheDefinition@slicerData	false	values	unkno
 PV-1278	olap-datamodel	x14:pivotCacheDefinition@supportAddCalcMems	false	none	unknown	out (decision 0274)	out	todo	
 PV-1279	olap-datamodel	x14:pivotCacheDefinition@supportSubqueryCalcMem	false	none	unknown	out (decision 0274)	out	todo	
 PV-1280	olap-datamodel	x14:pivotCacheDefinition@supportSubqueryNonVisual	false	none	unknown	out (decision 0274)	out	todo	
-PV-1281	layout	x14:pivotField		layout	unknown	in	PV1	todo	
-PV-1282	layout	x14:pivotField@fillDownLabels	false	layout	unknown	in	PV1	todo	
+PV-1281	layout	x14:pivotField		layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags X14F
+PV-1282	layout	x14:pivotField@fillDownLabels	false	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags X14F
 PV-1283	metadata	x14:pivotField@ignore	false	none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1284	olap-datamodel	x14:pivotHierarchy		none	unknown	out (decision 0274)	out	todo	
 PV-1285	olap-datamodel	x14:pivotHierarchy@ignore	false	none	unknown	out (decision 0274)	out	todo	
-PV-1286	layout	x14:pivotTableDefinition		layout	unknown	in	PV1	todo	
+PV-1286	layout	x14:pivotTableDefinition		layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags X14
 PV-1287	formatting	x14:pivotTableDefinition/conditionalFormats		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1288	formatting	x14:pivotTableDefinition/conditionalFormats/conditionalFormat		none	unknown	round-trip only (decision 0274)	round-trip	todo	
 PV-1289	metadata	x14:pivotTableDefinition/conditionalFormats/conditionalFormat/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo	
@@ -1393,8 +1393,8 @@ PV-1391	metadata	x14:pivotTableDefinition@altTextSummary		none	unknown	round-tri
 PV-1392	olap-datamodel	x14:pivotTableDefinition@autoApply	false	none	unknown	out (decision 0274)	out	todo	
 PV-1393	olap-datamodel	x14:pivotTableDefinition@calculatedMembersInFilters	false	none	unknown	out (decision 0274)	out	todo	
 PV-1394	olap-datamodel	x14:pivotTableDefinition@enableEdit	false	none	unknown	out (decision 0274)	out	todo	
-PV-1395	layout	x14:pivotTableDefinition@fillDownLabelsDefault	false	layout	unknown	in	PV1	todo	
-PV-1396	layout	x14:pivotTableDefinition@hideValuesRow	false	layout	unknown	in	PV1	todo	
+PV-1395	layout	x14:pivotTableDefinition@fillDownLabelsDefault	false	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags X14
+PV-1396	layout	x14:pivotTableDefinition@hideValuesRow	false	layout	yes	in	PV1	todo	probes/t4129-pivot-layout-flags X14
 PV-1397	olap-datamodel	x14:pivotTableDefinition@visualTotalsForSets	false	none	unknown	out (decision 0274)	out	todo	
 PV-1398	olap-datamodel	x14:pivotTableDefinition@weightExpression		none	unknown	out (decision 0274)	out	todo	
 PV-1399	slicers-timelines	x14:slicerCacheDefinition		values	unknown	in	PV5	todo	

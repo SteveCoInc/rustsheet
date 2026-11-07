@@ -5,6 +5,7 @@ use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error, LiftCost};
 use crate::functions::math_and_trigonometry::excel_tan;
 use crate::functions::statistical::inverse_beta::{t_inverse_cdf, t_quantile_beta_root};
+use crate::functions::statistical::loader::excel_t_density_df_one_overflows;
 use crate::functions::statistical::paired::{MarkedSample, PairedSamplesError, PairedValues};
 use crate::functions::statistical::special::{
     bisect_increasing, ln_gamma, nearest_crossing_from, refine_increasing,
@@ -327,10 +328,9 @@ fn df_one_quantile(p: f64, two_tailed: bool) -> f64 {
     }
 }
 
-/// Whether the cumulative Student-t functions refuse `x`: Excel's T.DIST (cumulative), T.DIST.RT,
-/// T.DIST.2T and TDIST of 1E+300 and 1E+307 are `#NUM!`, not 0, while `T.DIST.2T(1E+15,1)` is a number
-/// (gen-m9 T-2256 cells; statistics.md "Scalar distributions at extreme arguments, part 2"). The cut,
-/// where `x²` overflows (|x| about 1.34E+154), is UNVERIFIED (T-2474).
+/// Whether the Student-t functions refuse `x` as `#NUM!`: fl(x x) overflows (|x| >= 2^512). Exact for
+/// T.DIST's density (T-3554); UNVERIFIED (T-2474) for T.DIST (cumulative), T.DIST.RT, T.DIST.2T and TDIST,
+/// `#NUM!` at 1E+300 but a number at `T.DIST.2T(1E+15,1)` (statistics.md "... extreme arguments, part 2").
 fn t_x_overflows(x: f64) -> bool {
     (x * x).is_infinite()
 }
@@ -537,13 +537,13 @@ impl Model {
         let x = self.cast_number_ref(x, cell)?;
         let df = self.cast_number_ref(df, cell)?.trunc();
         let cumulative = Self::cast_bool_ref(cumulative, cell)?;
-        // The density divides by the truncated df: df in (-1, 1) is `#DIV/0!`, not `#NUM!`
-        // (`T.DIST(2,0.5,FALSE)`, `T.DIST(2,-0.5,FALSE)`; probes-numeric m9-t-edges A27-A41,
-        // statistics.md "Student t sweep").
-        if !cumulative && df == 0.0 {
+        // The density divides by the truncated df: df in (-1, 1) is `#DIV/0!` (`T.DIST(2,0.5,FALSE)`;
+        // probes-numeric m9-t-edges A27-A41, "Student t sweep"), as is df 1's where its denominator
+        // overflows (T-3554, statistics.md "T.DIST's density is #NUM! at a huge x").
+        if !cumulative && (df == 0.0 || (df == 1.0 && excel_t_density_df_one_overflows(x))) {
             return Err(div_error(cell));
         }
-        if df < 1.0 || (cumulative && (df > T_DF_MAX || t_x_overflows(x))) {
+        if df < 1.0 || t_x_overflows(x) || (cumulative && df > T_DF_MAX) {
             return Err(num_error(cell));
         }
         let result = if cumulative {

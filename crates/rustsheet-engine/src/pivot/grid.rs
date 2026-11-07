@@ -1,6 +1,7 @@
 //! The grid writer (SPEC-0032 "Rendering and the grid", T-4151): a pivot owns the cells of its
 //! location and of the page area above it, and a refresh clears what it owned and writes its new
-//! cells there as constants, so a formula that reads them needs no new dependency kind.
+//! cells there as constants, so a formula that reads them needs no new dependency kind. A value
+//! cell also gets its data field's number format (T-4169), the rest of its style kept.
 //!
 //! A plan ([`Model::plan_pivot_refresh`], [`Model::plan_pivot_render`]) reads the model and
 //! changes nothing; [`Model::apply_pivot_refresh`] writes it and swaps the refreshed cache and
@@ -34,12 +35,13 @@ use super::layout::{lay_out, render, PivotCell, RenderedCell, MAX_PIVOT_CELLS};
 use super::refresh::{field_map, refresh, SourceCells};
 use super::result::{compute, PivotComputeError, MAX_PIVOT_WORK};
 use super::{
-    AxisField, CellArea, PivotCache, PivotCacheError, PivotField, PivotGeometry, PivotTable,
-    MAX_RECORD_VALUES,
+    AxisField, CellArea, OpaqueEntry, PivotCache, PivotCacheError, PivotField, PivotGeometry,
+    PivotTable, MAX_RECORD_VALUES,
 };
 use crate::expressions::parser::parse_range;
 use crate::expressions::token::Error;
 use crate::model::Model;
+use crate::number_format::get_num_fmt;
 use crate::types::{sheet_names_match, Cell};
 
 /// Why a pivot could not be refreshed or laid out; the grid and the pivot are then as they were.
@@ -56,9 +58,12 @@ pub enum PivotRefreshError {
     /// (probe pending: T-4664).
     #[error("the pivot field {0:?} is no longer in the source")]
     FieldGone(String),
-    /// The refresh would renumber the fields of a pivot that keeps parts of its definition
-    /// verbatim ([`PivotTable::opaque`]), whose field indices nothing can remap.
-    #[error("a refresh would renumber the fields of a pivot with unread parts")]
+    /// The refresh would renumber the fields of a pivot that keeps a part of its definition
+    /// verbatim ([`PivotTable::opaque`]) holding a field index, which nothing can remap
+    /// ([`OpaqueEntry::holds_field_index`]: `formats`, `filters`, ...).
+    #[error(
+        "a refresh would renumber the fields of a pivot whose unread parts hold field indices"
+    )]
     FieldsMoved,
     /// The cache, the pivot or its sheet is not in the workbook.
     #[error("no such pivot, cache or sheet")]
@@ -257,7 +262,9 @@ fn overlaps(a: &CellArea, b: &CellArea) -> bool {
 
 /// `pivot` over `new`, a refresh of its cache `old`: each field index follows its field by name
 /// ([`field_map`]), a field new to the source joins on no axis, and a field gone from it is
-/// dropped unless the pivot shows it ([`PivotRefreshError::FieldGone`]).
+/// dropped unless the pivot shows it ([`PivotRefreshError::FieldGone`]). The verbatim parts a
+/// field owns follow it; a renumbering under one that holds a field index is refused
+/// ([`PivotRefreshError::FieldsMoved`]).
 fn remap(
     pivot: &PivotTable,
     old: &PivotCache,
@@ -272,7 +279,7 @@ fn remap(
         }
         return Ok(pivot);
     }
-    if !pivot.opaque.is_empty() {
+    if pivot.opaque.iter().any(OpaqueEntry::holds_field_index) {
         return Err(PivotRefreshError::FieldsMoved);
     }
     let to = |from: u32| {
@@ -317,6 +324,20 @@ fn remap(
         .map(|(field, from)| {
             from.and_then(|from| pivot.fields.get(from).cloned())
                 .unwrap_or_else(|| PivotField::new(None, field.items.len()))
+        })
+        .collect();
+    // What a field owns follows it; what a dropped field owned goes with it.
+    out.opaque = (pivot.opaque.iter())
+        .filter_map(|entry| match entry.owner.field() {
+            None => Some(entry.clone()),
+            Some(from) => map
+                .get(from as usize)
+                .copied()
+                .flatten()
+                .map(|to| OpaqueEntry {
+                    owner: entry.owner.with_field(to),
+                    node: entry.node.clone(),
+                }),
         })
         .collect();
     Ok(out)
@@ -447,6 +468,7 @@ impl Model {
                     row: pivot.location.top,
                     column: pivot.location.left,
                     value: PivotCell::Error(Error::SPILL),
+                    number_format: None,
                 }]
             }
         };
@@ -623,6 +645,10 @@ impl Model {
                         }
                     })
                     .map_err(PivotRefreshError::Write)?;
+                if let Some(id) = cell.number_format {
+                    self.set_pivot_number_format(sheet, row, column, id)
+                        .map_err(PivotRefreshError::Write)?;
+                }
             }
         }
         let tables = refresh
@@ -635,6 +661,27 @@ impl Model {
             cache: refresh.cache,
             tables,
         }))
+    }
+
+    /// Gives the cell the number format `numFmtId` names in the workbook's styles (a built-in
+    /// one, or one of its `numFmts`; an id it does not hold is General, as `get_num_fmt` reads
+    /// it), keeping the rest of the cell's style: a value cell shows its data field's format
+    /// (pivots.md "Value cells show their data field's number format").
+    fn set_pivot_number_format(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        num_fmt_id: u32,
+    ) -> Result<(), String> {
+        let id = i32::try_from(num_fmt_id).unwrap_or(0);
+        let code = get_num_fmt(id, &self.workbook.styles.num_fmts);
+        let mut style = self.get_style_for_cell(sheet, row, column)?;
+        if style.num_fmt == code {
+            return Ok(());
+        }
+        style.num_fmt = code;
+        self.set_cell_style(sheet, row, column, &style)
     }
 
     /// Puts the cache and pivots of `swap` in place, returning the ones they replace; a swap of

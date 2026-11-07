@@ -17,8 +17,11 @@ their table follows (it moves, shrinks or grows), so the engine's rule for them 
 ## Context
 - T-3037 made a `#This Row` reference to a table that follows a row insert keep its text and read its cell's row
   in the edited table, on another sheet, beside the table and inside it (T-2845 table-insert-row-this-row-*,
-  -calc-column-*). Row deletes and column edits the table follows (a delete above it, or inside its data rows leaving
-  one; a column insert or delete left of or inside it) keep the old rule: a moved cell's `#This Row` is rewritten to
+  -calc-column-*). Since T-4680 a column insert or delete left of the table that moves it whole keeps the text too: evidenced only
+  for cells inside the table after an insert (t4274-calc-column-structured-insert-column-a); the outside-the-table
+  cells (beside it, another sheet) and the column delete are hand extensions this probe settles. Row deletes and
+  column edits inside the table (a delete above it, or inside its data rows leaving one; a column insert or delete
+  inside it) keep the old rule: a moved cell's `#This Row` is rewritten to
   the plain area it read, and an unmoved cell's where its area changes. See references.md "Structured references
   when the table changes", the T-2845 bullet and the "Implemented in" paragraph.
 - Engine: `Model::row_edit` (it gives deletes no kept tables) and `Model::moved_text` (table_edits.rs,

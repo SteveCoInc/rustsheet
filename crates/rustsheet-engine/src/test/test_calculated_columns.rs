@@ -82,9 +82,9 @@ fn a_filled_column_refills_unless_it_holds_an_exception() {
 
 /// The `calculatedColumnFormula` of `T`'s `Calc` column.
 fn column_formula(model: &Model) -> Option<String> {
-    model.workbook.tables["T"].columns[2]
-        .calculated_column_formula
-        .clone()
+    let columns = &model.workbook.tables["T"].columns;
+    let calc = columns.iter().find(|c| c.name == "Calc")?;
+    calc.calculated_column_formula.clone()
 }
 
 /// probes/t2983-identical-stored-refill: identical stored formulas are no calculated column, so a
@@ -716,4 +716,202 @@ fn redo_keeps_where_a_padded_bare_column_came_from() {
     model.undo().unwrap();
     model.redo().unwrap();
     assert_eq!(model.get_formatted_cell_value(0, 13, 5).unwrap(), "#ERROR!");
+}
+
+/// The stored column formula follows a row or column insert or delete as Excel saves it
+/// (probes/table-edits/t4274-calc-column-*), redo makes the same text, and undo of each edit
+/// gives back the text before it (T-4274).
+#[test]
+fn the_column_formula_follows_edits_and_their_undo() {
+    type Edit = fn(&mut crate::UserModel) -> Result<(), String>;
+    let cases: [(&str, Edit, &str, &str); 5] = [
+        ("=A2*2", |u| u.insert_columns(0, 1, 1), "A2*2", "B2*2"),
+        ("=A2*2", |u| u.delete_columns(0, 2, 1), "A2*2", "A2*2"),
+        ("=A2*2", |u| u.insert_rows(0, 1, 1), "A2*2", "A3*2"),
+        ("=A2*2", |u| u.insert_rows(0, 3, 1), "A2*2", "A2*2"),
+        (
+            "=[@Col]*2",
+            |u| u.insert_columns(0, 1, 1),
+            "T[[#This Row],[Col]]*2",
+            "T[[#This Row],[Col]]*2",
+        ),
+    ];
+    for (text, edit, before, after) in cases {
+        let mut model = model(false);
+        typed(&mut model, 2, text);
+        let mut user = crate::UserModel::from_model(model);
+        assert_eq!(column_formula(user.get_model()).as_deref(), Some(before));
+        edit(&mut user).unwrap();
+        assert_eq!(
+            column_formula(user.get_model()).as_deref(),
+            Some(after),
+            "{text}"
+        );
+        user.undo().unwrap();
+        assert_eq!(
+            column_formula(user.get_model()).as_deref(),
+            Some(before),
+            "{text}"
+        );
+        user.redo().unwrap();
+        assert_eq!(
+            column_formula(user.get_model()).as_deref(),
+            Some(after),
+            "{text}"
+        );
+    }
+    // Moving the formula between cells: a column insert at A and its undo, twice, end where
+    // they started.
+    let mut model = model(false);
+    typed(&mut model, 2, "=A2*2");
+    let mut user = crate::UserModel::from_model(model);
+    for _ in 0..2 {
+        user.insert_columns(0, 1, 1).unwrap();
+        user.undo().unwrap();
+    }
+    assert_eq!(column_formula(user.get_model()).as_deref(), Some("A2*2"));
+}
+
+/// A row insert inside the data rows, at the first data row or at the totals row gives the new
+/// rows the column formula, filled down (T-4692: probes/table-edits/t4692-*; Excel's C3 is
+/// `=A3*2` after `insert_row` 3 in t4274-calc-column-insert-row-3); undo removes the filled cells
+/// and redo fills them again.
+#[test]
+fn an_inserted_data_row_gets_the_column_formula() {
+    type Edit = fn(&mut crate::UserModel) -> Result<(), String>;
+    /// The filled (row, formula) cells.
+    type Filled = &'static [(i32, &'static str)];
+    // With a totals row, the typed text, the insert, the filled cells and the stored column
+    // formula after it.
+    let cases: [(bool, &str, Edit, Filled, &str); 5] = [
+        (
+            false,
+            "=A2*2",
+            |u| u.insert_rows(0, 3, 1),
+            &[(3, "=A3*2")],
+            "A2*2",
+        ),
+        (
+            false,
+            "=A2*2",
+            |u| u.insert_rows(0, 3, 2),
+            &[(3, "=A3*2"), (4, "=A4*2")],
+            "A2*2",
+        ),
+        (
+            false,
+            "=A2*2",
+            |u| u.insert_rows(0, 2, 1),
+            &[(2, "=A2*2")],
+            "A2*2",
+        ),
+        (
+            true,
+            "=A2*2",
+            |u| u.insert_rows(0, 5, 1),
+            &[(5, "=A5*2")],
+            "A2*2",
+        ),
+        (
+            false,
+            "=[@Col]*2",
+            |u| u.insert_rows(0, 3, 1),
+            &[(3, "=[@Col]*2")],
+            "T[[#This Row],[Col]]*2",
+        ),
+    ];
+    for (totals, text, edit, filled, stored) in cases {
+        let mut model = model(totals);
+        typed(&mut model, 2, text);
+        let mut user = crate::UserModel::from_model(model);
+        edit(&mut user).unwrap();
+        for &(row, formula) in filled {
+            assert_eq!(
+                user.get_model()
+                    .get_cell_formula(0, row, 3)
+                    .unwrap()
+                    .as_deref(),
+                Some(formula),
+                "{text} row {row}"
+            );
+        }
+        assert_eq!(column_formula(user.get_model()).as_deref(), Some(stored));
+        user.undo().unwrap();
+        let rows = if totals { 5 } else { 4 };
+        let formulas: Vec<Option<String>> = (2..=rows)
+            .map(|row| user.get_model().get_cell_formula(0, row, 3).unwrap())
+            .collect();
+        assert!(
+            formulas[..3].iter().all(Option::is_some),
+            "{text}: {formulas:?}"
+        );
+        if totals {
+            assert_eq!(formulas[3], None, "{text}");
+        }
+        assert_eq!(
+            user.get_model().get_cell_formula(0, rows + 1, 3).unwrap(),
+            None
+        );
+        user.redo().unwrap();
+        for &(row, formula) in filled {
+            assert_eq!(
+                user.get_model()
+                    .get_cell_formula(0, row, 3)
+                    .unwrap()
+                    .as_deref(),
+                Some(formula),
+                "redo {text} row {row}"
+            );
+        }
+    }
+    // An insert below the table, or above it, fills nothing new.
+    for at in [1, 6] {
+        let mut model = model(false);
+        typed(&mut model, 2, "=A2*2");
+        model.insert_rows(0, at, 1).unwrap();
+        let filled = (1..=7)
+            .filter(|&row| model.get_cell_formula(0, row, 3).unwrap().is_some())
+            .count();
+        assert_eq!(filled, 3, "insert at {at}");
+    }
+}
+
+/// A plain (not calculated) column fills nothing on a row insert inside the data rows.
+#[test]
+fn an_inserted_row_fills_no_plain_column() {
+    let mut model = model(false);
+    model.set_user_input(0, 2, 3, "=A2*2".to_string()).unwrap();
+    model.insert_rows(0, 3, 1).unwrap();
+    assert_eq!(model.get_cell_formula(0, 3, 3).unwrap(), None);
+}
+
+/// A row insert that would fill more than `MAX_INSERT_FILL_CELLS` calculated-column cells is
+/// refused before it changes anything (directive 5, a DEVIATION: Excel fills them all; T-4692).
+#[test]
+fn a_huge_insert_into_calculated_columns_is_refused() {
+    let mut model = Model::new_empty("book", "en", "UTC", "en").unwrap();
+    for (column, name) in [(1, "A"), (2, "B"), (3, "C")] {
+        model
+            .set_user_input(0, 1, column, name.to_string())
+            .unwrap();
+    }
+    model
+        .add_table_with_totals(0, "T", (1, 1, 2, 3), false, false)
+        .unwrap();
+    for column in 1..=3 {
+        model
+            .set_typed_user_input(0, 2, column, "=ROW()".to_string())
+            .unwrap();
+    }
+    // Three calculated columns: 400,000 rows would fill 1,200,000 cells, past 2^20.
+    let refused = model.insert_rows(0, 2, 400_000);
+    assert!(refused.is_err());
+    assert_eq!(model.workbook.tables["T"].reference, "A1:C2");
+    assert_eq!(
+        model.get_cell_formula(0, 2, 1).unwrap().as_deref(),
+        Some("=ROW()")
+    );
+    assert_eq!(model.get_cell_formula(0, 3, 1).unwrap(), None);
+    // An insert below the table fills nothing and is not refused.
+    model.insert_rows(0, 4, 400_000).unwrap();
 }

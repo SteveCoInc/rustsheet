@@ -55,6 +55,34 @@ Evidence: none for Excel; input hardening (CLAUDE.md directive 5), ported from i
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-xlsx/src/import/util.rs (`parse_cell_number`)
 
+## A cell that stores no value is blank
+Rule: a constant (formula-less) cell that stores no value reads as blank in Excel whatever its `t`:
+`<c t="str"/>`, `<c t="s"/>`, `<c t="s"><v></v></c>`, `<c t="inlineStr"/>` (no `<is>`), `<c t="n"/>`,
+`<c t="b"/>` and `<c t="e"/>` all give ISBLANK TRUE, ISTEXT FALSE, COUNTA 0 and TYPE 1. A cell that
+stores the empty string is text: `t="s"` to an empty shared string, `<c t="str"><v></v></c>` (an empty
+`<v>`, unlike a missing one) and `<is><t></t></is>` give ISBLANK FALSE, ISTEXT TRUE, COUNTA 1, LEN 0
+and TYPE 2. So a missing `<v>` and an empty `<v>` differ for `t="str"` but not for `t="s"` (an empty
+index names no string; it is not shared string 0).
+Evidence: fixtures/valueless-cell-forms (excel-graph, 2026-11-06, T-4148).
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-xlsx/src/import/worksheets.rs (`is_valueless_constant`). A spill
+member's cached value and `t="d"` keep their own rules.
+
+## A merged range keeps the values of its covered cells
+Rule: Excel keeps a value or formula stored in a covered (non-anchor) cell of a `<mergeCell>`
+range and calculates with it: with A1:D1 merged over A1 "anchor", B1 "x", C1 7 and D1 the empty
+shared string, `=B1` is "x", `=C1` 7, `=ISBLANK(B1)` FALSE, `=ISTEXT(D1)` TRUE, `=COUNTA(A1:D1)` 4,
+`=SUM(A1:D1)` 7, `=COUNTBLANK(A1:D1)` 1, `=LEN(B1)` 1; a covered `<c t="str"/>` (no value) is blank
+(`=ISBLANK(B2)` TRUE, `=COUNTA(A2:B2)` 1). A covered formula `=A1+1` in B1 of A1:B1 is recalculated
+(2), `=B1` is 2, ISFORMULA TRUE and `=COUNT(A1:B1)` 2. This is the file-level form of the
+"merge with Format Painter keeps the hidden values" behaviour.
+Ours: the importer empties every covered cell (`clear_covered_cells`) because covered cells holding
+no content is an engine invariant (merge, autofill and clipboard rely on it), so these cells are
+visibly off and poi/bug66675.xlsx and other census files lose covered values on a round trip.
+Evidence: fixtures/merged-covered-values, fixtures/merged-covered-formula (excel-graph, 2026-11-06, T-4148).
+Status: VERIFIED (excel-graph); not implemented (owner task in the fixtures' baseline entries).
+What Excel's UI merge then does with such a range (unmerge, edit, autofill) is UNVERIFIED.
+
 ## Import resource limits reject a workbook outright
 Rule: the importer rejects a workbook with `XlsxError::Limit` when its zip lists more than 5,000
 entries, when the parts it reads inflate past 256 MiB in total (bytes actually inflated, not the
@@ -499,9 +527,17 @@ columns. A criterion that fails its check (an unknown element such as an `extLst
 outside the schema, a non-finite number) keeps only its column and is written back as a criterion-less
 `<filterColumn colId="N"/>`; a `<filterColumn>` without a valid `colId` is dropped, and the
 `hiddenButton`/`showButton` attributes are not kept. Only a kept criterion inside the table makes SUBTOTAL call the
-sheet's hidden rows filtered (T-4003). A table filtered through the API with no criterion is written as
-`<filterColumn colId="0"/>`. Both criterion-less forms are schema-valid, and since T-4003 our own import reads them
-back as not filtered, as Excel does (T-4363 tracks the API case).
+sheet's hidden rows filtered (T-4003). A table filtered through the API with no criterion (`has_filters`, no kept
+filterColumn) is written, since T-4363, as a values filter on its first column listing the formatted text of each
+visible data row (`blank="1"` when a visible one is blank; `export::tables::api_filter_column`), the form spec2xlsx
+writes; before, it was a criterion-less `<filterColumn colId="0"/>`, which Excel and our import read as not filtered.
+Excel reads our export as filtered (excel-graph upload of our export, 2026-11-07, T-4363: `Sales` A1:B7, `Cat`
+a,b,a,c,a,b and `Val` 1-6, added with `filtered: true` and rows 3 and 5 hidden, exported as
+`<filters><filter val="a"/><filter val="b"/></filters>`, "b" also on hidden row 3): `SUBTOTAL(9,Sales[Val])` and
+`109` both 15, `SUBTOTAL(3,Sales[Cat])` and `103` both 4, the engine's values before the export, and our re-import
+keeps the table filtered (`a_filtered_table_without_a_criterion_exports_its_visible_values`). Excel does not
+re-apply the filter on load, so a text on a visible and a hidden row changes nothing there. A table with every data
+row hidden gets an empty `<filters/>`, which our import reads as a criterion (unprobed in Excel).
 Excel keeps the kept criteria's meaning after our round trip (excel-graph, 2026-11-05, T-4004): on `Sales`-shaped
 tables (A1:B7, `Cat` a,b,a,c,a,b and `Val` 1-6, rows hidden as the filter would, no re-application) an
 openpyxl-written file and our import-then-export of it give the same `SUBTOTAL(3,[Cat])`, `SUBTOTAL(103,[Cat])`,
@@ -566,7 +602,7 @@ Evidence: crates/rustsheet-xlsx/tests/calc_test_tables/tables.xlsx (Excel-author
 Status: VERIFIED (web, T-3081, T-4005): Excel loads every filter form, and a constant totals cell with bare
 `custom` metadata; T-4003 and T-4004 own the filter differences.
 Implemented in: crates/rustsheet-xlsx/src/export/tables.rs
-Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005, T-4404
+Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005, T-4404, T-4363
 
 ## A calculated column is saved as `calculatedColumnFormula` plus one formula per row
 Rule (excel-graph downloads of the T-2957 probes, 2026-10-27): a column Excel filled (references.md, "Calculated
@@ -585,16 +621,36 @@ A stored `calculatedColumnFormula` does not fill blank cells on load (next entry
 Ours (T-3033): import keeps its text on `TableColumn::calculated_column_formula`; a typed fill stores the first data
 row's formula in the same file form, and export writes the stored text, so an exception in a data row does not change
 it. Whether Excel opens our exported column formula without repair is unprobed.
-The stored text is not rewritten when rows or columns are inserted or deleted (an engine gap: Excel's file form
-follows the edit; unprobed here). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
+Through a row or column insert or delete, Excel saves the column formula that the edit made of the first data cell's
+formula (VERIFIED, excel-graph 2026-11-06, the `xl/tables/table1.xml` of the cached workbooks of
+probes/table-edits/t4274-calc-column-*, T on A1:C4 with C2 typed `=A2*2`): `B2*2` after insert_column A (table
+B1:D4), `A2*2` after delete_column B (a column it does not read; table A1:B4), `A3*2` after insert_row 1 (table
+A2:C5), and `A2*2` after insert_row 3 inside the data rows (table A1:C5; the cells below read `=A4*2`, `=A5*2`).
+A structured column formula keeps its text: `T[[#This Row],[Col]]*2` after insert_column A, with FORMULATEXT
+`=[@Col]*2` in the moved cells and their values 2, 4, 8 (t4274-calc-column-structured-insert-column-a). The row that
+insert_row 3 adds inside the data rows gets the column's formula (its Calc cell is 0, the oracle's S!C3).
+A row a row insert adds to the data rows gets the column formula filled down, and the stored text is the formula of
+the first data row (VERIFIED, excel-graph 2026-11-06, probes/table-edits/t4692-*, scored through
+`FORMULATEXT(INDEX(S!C:C,n))` and the cached `table1.xml`): insert_row 3 inside the data rows writes `<f>A3*2</f>`
+into C3 (and twice gives `A3*2`, `A4*2`); insert_row 2 at the first data row writes `A2*2` into the new C2 and saves
+`calculatedColumnFormula` `A2*2` (not the moved cell's `A3*2`); insert_row 5 at the totals row of A1:C5 writes `A5*2`
+into the new data row; a structured column fills `T[[#This Row],[Col]]*2`. Each filled cell is saved with its own
+`s="1"` style (unscored).
+Ours (T-4274, T-4692): the row and column insert and delete rewrite the stored text as the first data cell's formula
+is displaced (`Model::displaced_column_formulas`), read where that cell moved and printed in file form at the new first
+data row (so an insert at the first data row keeps `A2*2`), and a row insert fills the stored formula into the rows it
+adds to a table's data rows (`Model::fill_inserted_data_rows`), each cell keeping its own style (Excel's `s="1"` is
+not matched, unscored); a text with a `[`
+(a structured reference) keeps its text, and so does one whose first data cell the edit deletes (unprobed). Moves and
+cell shifts leave the text as it is (unprobed). Ours read their rows too since T-4680 (before, the moved `[@Col]` cells were `#ERROR!`). An empty `<calculatedColumnFormula/>` reads as no column formula, and an
 `array="1"` attribute is dropped on import (export writes the plain element): engine choices, what Excel does with
 either is unprobed.
 Evidence: the saved `xl/tables/table1.xml` and `xl/worksheets/sheet1.xml` of probes/t2957-fill-one-totals,
 -refill-second, -constant-exception, -constant-then-refill, -existing-constant, -a1-reference and -expand-right-*
 (the eval/.cache/oracle/excel-graph/<input_sha256>.xlsx of each sidecar).
 Status: VERIFIED (excel-graph)
-Implemented in: crates/rustsheet-xlsx/src/import/tables.rs, crates/rustsheet-xlsx/src/export/tables.rs
-Tasks: T-2957, T-2958, T-2969, T-3033
+Implemented in: crates/rustsheet-xlsx/src/import/tables.rs, crates/rustsheet-xlsx/src/export/tables.rs, crates/rustsheet-engine/src/calculated_columns.rs
+Tasks: T-2957, T-2958, T-2969, T-3033, T-4274, T-4680, T-4692
 
 ## Excel does not fill a calculated column on load
 Rule: a table part whose `<tableColumn>` holds `<calculatedColumnFormula>` does not make Excel fill the
@@ -697,4 +753,25 @@ opens the result without a repair:
 There is no oracle evidence yet that Excel opens such packages without a repair prompt. An Excel resave through the
 T-4180 oracle flow is the probe.
 Status: UNVERIFIED (probe pending). Tasks: T-4560, T-4561, T-4180.
+
+## Shared-string index with surrounding whitespace (T-4145)
+A `t="s"` cell whose `<v>` holds its index with surrounding whitespace (`<v>2 </v>`) is read as that
+index. poi/bug69769.xlsx Tabelle1!B2 stores exactly that, with the sst `Konto`, `Name`, `Mustermann`; the
+importer used to read index 0 ("Konto"), the harness snapshot reader read "Mustermann".
+Evidence: the file only (app.xml: Microsoft Excel Online 16.0300); no formula reads B2, so no cached value
+shows how Excel resolves the index. We read it as index 2 on the strength of POI's bug report that Excel opened it.
+Status: UNVERIFIED (probe pending, T-4711). Also unprobed: which characters count as whitespace (the code trims all
+Unicode White_Space, not only XML whitespace) and whether a leading `+` is accepted (the code accepts it).
+Implemented in: `parse_shared_string_index` in crates/rustsheet-xlsx/src/util.rs, shared by the importer
+(`get_cell_from_excel`) and the snapshot reader (`decode_value`). A negative index (`<v>-1</v>`) stays a dangling index in both (empty text); an
+unparseable index still loads as index 0 in the importer and as empty in the snapshot reader (not aligned; predates T-4145).
+
+## `_xHHHH_` escapes in inline strings (T-4150)
+An inline string (`t="inlineStr"`, `<is><t>`) decodes `_xHHHH_` escapes like a shared string does:
+`<is><t>Rich Text_x000d_` + LF is `Rich Text` CR LF (poi/60289.xlsx TABLE!B2). The importer left them undecoded, so a
+reload showed the literal `_x000d_` and the next save wrote `_x005F_x000d_`.
+Evidence: the file and the harness snapshot reader, which has always decoded them; no Excel-computed value for an inline
+string with an escape. Status: UNVERIFIED (Excel's decoding of escapes inside `<is>` is assumed to match `<si>`; a probe would
+open a file with `<is><t>a_x0041_b</t></is>` and read `=A1`).
+Implemented in: `get_cell_from_excel` (import/worksheets.rs), both the constant and the formula-value inline paths.
 

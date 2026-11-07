@@ -13,6 +13,7 @@ Sources:
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
@@ -142,6 +143,8 @@ def _t_dist_domain(args: Sequence[MathArg]) -> str | None:
     if cumulative and is_real(df) and df > DF_CUT:
         return "cumulative df above 1E+10"
     x = _x_of(args)
+    if not cumulative and _df_one_denominator_overflows(x, df):
+        return "a df-1 density whose denominator overflows is #DIV/0!"
     return _t_dist_cut(x, cumulative=bool(cumulative)).domain(x)
 
 
@@ -315,6 +318,11 @@ TDIST_CUT = HugeXCut(  # accuracy/TDIST/s1 A185 (value 0) and A176
 # T.DIST's brackets, keyed by (cumulative, x ≥ 0) (T-4580, decision 0321), from every Excel cell of one T.DIST call
 # with |x| above 1E10: only its three Gate A tables have one (no probe or gen-m9 cell does outside a composite). A
 # cumulative cell whose df is above 1E10 is #NUM! for its df whatever x is, so it brackets nothing.
+# The density's cut is exact (T-3554): #NUM! from 2^512, where fl(x x) overflows, at every df and either sign, while
+# 2^512 - 2^460 (`2^512*(1-2^-52)`, two doubles below 2^512) is a number (probes/t3554-tdist-density-huge-x); 2^512's
+# true predecessor is unprobed. It replaces decision 0321's density brackets
+# (s1 A97 and r4-T-2585 A236 numbers, r4-T-2585 A266 and A267 #NUM!), which it lies inside.
+DENSITY_X_SQUARED_CUT = HugeXCut(last_number=2.0**512 * (1 - 2.0**-52), first_error=2.0**512)
 T_DIST_CUTS = {
     (True, True): HugeXCut(  # accuracy/T.DIST/e-T-3425 A92 (value 1) and r4-T-2585 A217
         last_number=7.33561600112214e146, first_error=1.89648831921934e159
@@ -322,13 +330,19 @@ T_DIST_CUTS = {
     (True, False): HugeXCut(  # accuracy/T.DIST/r4-T-2585 A223 (value 0) and e-T-3425 A88
         last_number=2.01264664929796e153, first_error=5.43165733249003e196
     ),
-    (False, True): HugeXCut(  # accuracy/T.DIST/s1 A97 (value 0) and r4-T-2585 A267
-        last_number=9.93424108915371e137, first_error=3.83716580917453e200
-    ),
-    (False, False): HugeXCut(  # accuracy/T.DIST/r4-T-2585 A236 (value 0) and A266
-        last_number=1.12173766596864e153, first_error=9.72379926420781e176
-    ),
+    (False, True): DENSITY_X_SQUARED_CUT,
+    (False, False): DENSITY_X_SQUARED_CUT,
 }
+
+
+def _df_one_denominator_overflows(x: mpmath.mpf, df: MathArg) -> bool:
+    """Whether Excel's df-1 density 1/fl(pi fl(1 + fl(x x))) is #DIV/0!: fl(x x) is finite but the denominator
+    overflows, |x| from about 7.56E+153 to below 2^512 (probes/t3554-tdist-density-df1-div0 A9, A10; A1:A8 below it
+    are numbers). Python's doubles round each step once, as Excel's stored x87 results do."""
+    if not (is_real(df) and int(df) == 1):
+        return False
+    xx = float(x) * float(x)
+    return math.isfinite(xx) and not math.isfinite(math.pi * (1.0 + xx))
 
 
 def _t_dist_cut(x: mpmath.mpf, *, cumulative: bool) -> HugeXCut:

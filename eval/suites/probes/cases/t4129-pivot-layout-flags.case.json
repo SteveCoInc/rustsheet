@@ -1,0 +1,485 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4129: does Excel for the web open and render layout and totals flags no earlier probe set? Data!A1:D9 has Region, Product, Year and Sales over eight records: East A 2024 10, East A 2025 4, East B 2024 5, East B 2025 8, East C 2024 3, West A 2024 20, West A 2025 6, West B 2025 7 (West/B/2024 and West/C are empty intersections). Each sheet is one builder-v2 pivot at A3, data Sum of Sales: NG: no grand totals (rowGrandTotals and colGrandTotals 0); ST: outline form with Region subtotalTop 0 (subtotals at the bottom); SC: tabular, Region subtotalCaption Tot; SH: subtotalHiddenItems 1 with Product C hidden; SI: showItems 0; GZ: classic layout (gridDropZones 1), tabular; DPo: Values field on columns with dataPosition 0; FA: Region with allDrilled and defaultAttributeDrillState 1 (dataSourceSort 1 makes the web refuse the file: pivots.md); NF: Year row labels with pivotField numFmtId 3 (#,##0); X14: tabular with the x14 pivotTableDefinition extension: fillDownLabelsDefault 1 (repeat item labels) and hideValuesRow 1; AV: two data fields (Values on columns) with a formats entry whose pivotArea has axis axisValues (action blank); X14F: tabular with Region's x14 pivotField extension fillDownLabels 1. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4129",
+  "M16"
+ ],
+ "pivot_features": [
+  "PV-0004",
+  "PV-1194",
+  "PV-1232",
+  "PV-1129",
+  "PV-1128",
+  "PV-1247",
+  "PV-1243",
+  "PV-1212",
+  "PV-1202",
+  "PV-1087",
+  "PV-1096",
+  "PV-1115",
+  "PV-1286",
+  "PV-1395",
+  "PV-1396",
+  "PV-1281",
+  "PV-1282"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Year",
+    "D1": "Sales",
+    "A2": "East",
+    "B2": "A",
+    "C2": 2024,
+    "D2": 10,
+    "A3": "East",
+    "B3": "A",
+    "C3": 2025,
+    "D3": 4,
+    "A4": "East",
+    "B4": "B",
+    "C4": 2024,
+    "D4": 5,
+    "A5": "East",
+    "B5": "B",
+    "C5": 2025,
+    "D5": 8,
+    "A6": "East",
+    "B6": "C",
+    "C6": 2024,
+    "D6": 3,
+    "A7": "West",
+    "B7": "A",
+    "C7": 2024,
+    "D7": 20,
+    "A8": "West",
+    "B8": "A",
+    "C8": 2025,
+    "D8": 6,
+    "A9": "West",
+    "B9": "B",
+    "C9": 2025,
+    "D9": 7
+   }
+  },
+  {
+   "name": "NG",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_NG",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Year"
+      ],
+      "table": {
+       "rowGrandTotals": false,
+       "colGrandTotals": false
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "ST",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_ST",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "subtotalTop": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "SC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SC",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false,
+         "subtotalCaption": "Tot"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "SH",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SH",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "subtotalHiddenItems": true
+      },
+      "fields": {
+       "Product": {
+        "hidden": [
+         "C"
+        ]
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "SI",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_SI",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "table": {
+       "showItems": false
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "GZ",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_GZ",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "gridDropZones": true,
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "DPo",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_DPo",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "columns": [
+       "Values"
+      ],
+      "table": {
+       "dataPosition": 0
+      },
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Sales",
+        "subtotal": "count"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "FA",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_FA",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "allDrilled": true,
+         "defaultAttributeDrillState": true
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "NF",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_NF",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Year"
+      ],
+      "fields": {
+       "Year": {
+        "attrs": {
+         "numFmtId": 3
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "X14",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_X14",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "xml": {
+       "extLst": "<extLst><ext uri=\"{962EF5D1-5CA2-4c93-8EF4-DBF5C05439D2}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotTableDefinition fillDownLabelsDefault=\"1\" hideValuesRow=\"1\"/></ext></extLst>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "AV",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_AV",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Sales",
+        "subtotal": "count"
+       }
+      ],
+      "xml": {
+       "formats": "<formats count=\"1\"><format action=\"blank\"><pivotArea outline=\"0\" fieldPosition=\"0\" axis=\"axisValues\"><references count=\"1\"><reference field=\"4294967294\" count=\"1\"><x v=\"0\"/></reference></references></pivotArea></format></formats>"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "X14F",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "P_X14F",
+     "source": "Data!A1:D9",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "xml": {
+         "extLst": "<extLst><ext uri=\"{2946ED86-A175-432a-8AC1-64E0C546D7DE}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:pivotField fillDownLabels=\"1\"/></ext></extLst>"
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      },
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=COUNTA(Data!A2:A9)"
+   }
+  }
+ ]
+}

@@ -83,8 +83,18 @@ holds 7 (A) and `x`, TRUE, 3 (B).
 
 Status: VERIFIED (excel-graph) for the functions and the labels. The error rule is as observed
 (UNVERIFIED beyond the shape probed: T-4636).
-Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`SUBTOTAL_FUNCTIONS`; the model only,
-nothing computes or labels a custom subtotal yet, T-4168)
+The engine's own readings, not probed (UNVERIFIED, T-4636):
+- with a column field, a subtotal cell adds the cut counts of every inner-item cell (row leaf by
+  column leaf) it covers;
+- with two or more inner row fields, the count is cut per innermost row leaf;
+- under any data field other than Sum the count is not cut (Count probed in B3; CountNums and the
+  rest UNVERIFIED): the custom count keeps the Count total rule ("A Count total over an error
+  field...");
+- under Sum, the other custom functions (sum, avg, max, ...) over an error still return the error.
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/table.rs (`SUBTOTAL_FUNCTIONS`, the model);
+crates/rustsheet-engine/src/pivot/accumulate.rs (`CutCount`, `Accumulator::cut_count`) and
+result.rs (`PivotResult::value_as`) for the values; layout/render.rs (`function_word`) for the labels
+(T-4168)
 
 ## Item identity: exact for numbers and types, case-insensitive for text
 Rule: on refresh, texts that differ only in case are one item, and their records add up. In I1 the item
@@ -253,7 +263,15 @@ group items" (T-4225, T-4228, T-4235, T-4236, T-4249, T-4253, T-4287, T-4311, T-
 record placement, Excel's own labels whatever the file lists, whole-number labels `lo-(lo+interval-1)`,
 relabel order, and groupings dropped over blanks or dates. probes/t4128-pivot-spike G (`45000-45100`,
 `45100-45200`, `45300-45400` for fractional data, empty groups hidden) agrees with it.
-Status: VERIFIED (excel-graph; evidence in web.md)
+
+Excel also tolerates group items it does not rebuild. The case builder's numeric labels (`group_labels`,
+`while lo <= end`) write one bin past `endNum`: t4128 G's `<fieldGroup>` lists 7 `groupItems`
+(`<45000`, five bins up to `45400-45500`, `>45400`) where Excel's own grouping of startNum 45000, endNum
+45400, interval 100 has 6 (`<45000`, four bins, `>45400`), and its pivotField lists 7 `<item x>`. Excel
+opens the file (refreshOnLoad), rebuilds the groups and renders its own items without error. The
+xlsx importer instead refuses the pivot (`item index 6 is past the field's items`,
+crates/rustsheet-xlsx/src/import/pivots/table.rs), so it is not rendered (T-4171).
+Status: VERIFIED (excel-graph; evidence in web.md, the tolerance by t4128 G's sidecar)
 
 ## A pivot that would meet a foreign cell collapses to #SPILL!
 Rule: when a pivot's layout would overwrite cells it does not own, Excel for the web renders nothing
@@ -293,9 +311,23 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
   anchor (the location's top-left cell).
 - A pivot's field indices follow its fields by case-folded name. A field new to the source joins
   on no axis. A field the pivot shows (row, column, page or data) that left the source refuses the
-  refresh, and the pivot keeps its cells. So does any renumbering of a pivot that keeps unread
-  parts verbatim, which may hold field indices (every imported pivot keeps some). A data field's
-  base field that left the source falls back to the first field.
+  refresh, and the pivot keeps its cells. So does a renumbering of a pivot that keeps a verbatim
+  part holding a field index: one with an attribute named `field` or `fld` or ending in either
+  (ECMA-376's `pivotArea@field` and `reference@field` in `formats`, `conditionalFormats`,
+  `chartFormats` and `autoSortScope`, `filter@fld`, `@mpFld` and `@iMeasureFld`, `mp@field`, an
+  extension's `sourceField`), or one the scan cannot read to its end (an open quote or tag, an
+  unterminated comment, CDATA section or processing instruction). How Excel remaps those indices,
+  and the worksheet's `pivotSelection/pivotArea@field`, is T-4712's. The other verbatim parts
+  renumber. The root's and the fields' kept attributes hold no field index: of the attributes the
+  schema gives those elements (eval/catalog/pivot-schema-nodes.txt), the ones so named are
+  `pageField@fld` and `dataField@fld`/`@baseField`, which the importer reads itself, and
+  `pivotField@dataField` and `@serverField`, two flags. `pivotTableStyleInfo` holds none, nor do
+  `rowItems`/`colItems` (`x@v` index the items of the axis's n-th field, which moves with it, and
+  `i@i` a data field), though those go stale on any refresh: Excel rewrites them (P_Fold saves
+  `x` 0, 2, 3, 4, 5), the engine renders from its own layout, and export writes them anew
+  (T-4176). A field's own parts (its attributes, its items') follow its new index, and a dropped
+  field's go with it (T-4694). A data field's base field that left the source falls back to the
+  first field.
 - A refresh that cannot be planned (a source that does not resolve, such as a Table or defined
   name until T-4506; a field gone; past the shared budget) leaves the pivot and its cells as they
   were. On load each cache is planned on its own, so a cache that does not plan keeps only its own
@@ -309,9 +341,10 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
   before it is read) can exhaust it, and the caches after them then keep their saved cells with
   no sign of it.
 Evidence: none beyond probes/t4128-pivot-spike S (a constant in the body, no page field).
-Status: UNVERIFIED (probe pending: T-4664; T-2327 for constants in a refreshOnLoad pivot's area)
+Status: UNVERIFIED (probe pending: T-4664; T-2327 for constants in a refreshOnLoad pivot's area;
+T-4712 for field indices in verbatim parts under a renumbering)
 Implemented in: crates/rustsheet-engine/src/pivot/grid.rs (`owned_areas`, `meets_foreign`,
-`remap`, `PivotBudget`; T-4151)
+`remap`, `PivotBudget`; T-4151) and model.rs (`OpaqueEntry::holds_field_index`; T-4694)
 
 ## A tabular pivot's first row header is the field name only when every pivotField has compact="0"
 Rule: in a tabular pivot, the header cell of the first row field reads the field's own name (`Region`)
@@ -418,8 +451,8 @@ Evidence: probes/t4123-pivot-capture, the `pivots` cells of its sidecar (excel-g
 T-4123); t4138-pivot-geometry G1 to G9 (T-4138); t4135-pivot-aggregates (T-4135). The engine's
 render reproduces every cell of the probe pivots listed in its tests (t4123 C and T to T4 but
 T's show-values-as column D, t4138 G1 to G9, t4137 K1 to K6, t4583 R1 to R6, C1, C2, t4609 L1 to
-L8, t4134 I1, I2, I4, I5, t4135 all twelve, t4589, t4614, t4616, and t4622 but East's custom Count subtotal
-values over an error, a result rule of T-4168's, T-4636). Number formats are PV2's (T-4169).
+L8, t4134 I1, I2, I4, I5, t4135 all twelve, t4589, t4614, t4616, and t4622 CA, CN and B1 to B5 (T-4168).
+Number formats are PV2's (T-4169).
 The engine's own readings, not probed: a number or date item's subtotal label (`number_to_text`
 of the value, then ` Total`); a subtotal label with Values inside its field (`<item> <data
 field>`); the grand-total caption with Values on its axis (always `Total <data field>`, even with
@@ -455,6 +488,14 @@ Rule:
   (K5!A7:A8), with Count counting records (4). `countA` is labelled `Count` too
   (probes/t4622-pivot-count-subtotals CA!A6; see "Which function the countA and count custom
   subtotals compute").
+- All eleven custom subtotals on one field (probes/t4168-pivot-layout-options F1, tabular, Sum of
+  Val), in the schema's attribute order, read `East Sum`, `East Count` (countA), `East Average`,
+  `East Max`, `East Min`, `East Product`, `East Count` (count), `East StdDev`, `East StdDevp`,
+  `East Var`, `East Varp` (F1!A6:A16), each computing its own function over the item's records
+  (East 10, 4, 5, 2: C6:C16 are 21, 4, 5.25, 10, 2, 400, 4, 3.4034296427770228,
+  2.947456530637899, 11.583333333333334, 8.6875). Under Count of Val the custom `sum`, `avg` and
+  `max` lines still sum, average and take the maximum (F3!C6:C8 21, 5.25, 10): the subtotal's
+  function wins over the data field's.
 - With a single data field and no column field (tabular, K5) there is no Values row. `Row Labels` is
   at the location's corner (K5!A3), the inner row field's name beside it (B3 `Product`), and the data
   field's caption above the data column (C3 `Sum of Sales`). With a column field the corner holds the
@@ -548,6 +589,15 @@ or the data field's index at the Values level (`i` repeats it).
 - On columns every item shares its first child's line, and subtotal lines follow the children.
 - A field has subtotal lines only when a field other than Values is inside it. They are one
   `t="default"` line, or one line per custom subtotal in the field's order (`t="sum"`, `t="count"`).
+  Custom subtotal lines follow the item's children in compact form too (in plain outline form,
+  `outline` on and `compact` off, it is the engine's reading: UNVERIFIED, T-4699), and the item's own line
+  holds no values (t4168 F2: `East` B4 blank, `East Sum` B7 after `A` and `B`).
+- A row field with `insertBlankRow` has a `<i t="blank" r="0"><x v="item"/></i>` line after each
+  item, below its subtotal lines, and its cells are all blank: tabular (t4168 BR, A7:C7 and
+  A12:C12, before the grand total) and compact (BR2, after the children, whose subtotal is on top).
+- A collapsed item (`item@sd="0"`) has one line, its own tuple, showing the item's total and no
+  children: in compact form `East` 21 on A4:B4 (t4168 SD), in tabular form `East` with the inner
+  field's cell blank and no `East Total` line (SD2 A4:C4, `rowItems` `<x v="0"/>` alone).
 - The grand total is one `t="grand"` line `<x/>` per data field when Values is on the axis, one
   otherwise, and none on an axis whose only level is Values.
 - An axis with no level at all saves one empty line `<i/>`.
@@ -562,19 +612,24 @@ lines (T-4147):
   R1 to R6, C1, C2, t4609-pivot-row-labels-2 L1 to L8, t4134-pivot-items I1, I2, I4, I5,
   t4135-pivot-aggregates (all twelve), t4589-pivot-total-order, t4614-pivot-total-order-2 and
   t4616-pivot-total-order-3 (every sheet);
+- probes/t4168-pivot-layout-options F1 to F3, BR, BR2, SD, SD2 (T-4168: eleven custom subtotals
+  tabular and compact, blank rows, collapsed items);
 - the lines of probes/t4128-pivot-spike S (its #SPILL! location is the grid's, T-4151);
 - the Excel-saved pivot of crates/rustsheet-xlsx/tests/example.xlsx: three compact row fields whose
   `<items>` list the cache items out of order, so `x` is the position in `<items>`, not the cache index.
 
-Not compared, because the engine-side harness cannot rebuild their cache or tree yet: t4128 R, t4134
-I3, t4582 J1, J2 and t4585 N1 have formulas in their sources, which the case file does not evaluate
-(T-4152 runs them through the engine); t4582 J3 and J4 depend on date items against cached numbers
-(T-4612); t4128 G is grouped (T-4171) and t4128 K has a calculated field, a Top-N filter and a
-descending sort (T-4174, T-4165).
+Not compared in these engine unit tests, because their harness cannot rebuild the cache or tree
+yet: t4128 R, t4134 I3, t4582 J1, J2 and t4585 N1 have formulas in their sources, which the case
+file does not evaluate; t4582 J3 and J4 depend on date items against cached numbers (T-4612);
+t4128 G is grouped (T-4171) and t4128 K has a calculated field, a Top-N filter and a descending
+sort (T-4174, T-4165). The eval scores them all through the engine since T-4152: t4128 R, t4134 I3
+and t4582 J1 to J4 pass there, as do t4585 N1 and the t4627 P_ pivots since T-4694, whose renamed
+fields renumber (the grid writer's unit tests compare them against their sidecars); t4128 G and K
+do not load (T-4171, T-4174).
 
 The engine's own readings, not probed:
 - `subtotalTop="0"` on an outline row field: the item's own line holds no values and a `default` line
-  follows its children; custom subtotals in outline form follow the children too; with
+  follows its children; with
   `defaultSubtotal="0"` and no custom subtotal there is no subtotal line, and `defaultSubtotal="1"` with
   custom subtotals is the default line alone; `rowGrandTotals="0"` drops the grand line of `rowItems`
   and `colGrandTotals="0"` that of `colItems` (an Excel-saved corpus file shows the latter,
@@ -588,8 +643,17 @@ The engine's own readings, not probed:
 Status: VERIFIED (excel-graph) for the probes listed. UNVERIFIED (probe pending: T-4649): subtotal
 placement and grand totals off; (T-4650): the Values field away from the innermost level and
 `outlineData`; the unlisted-item positions are an engine convention for files Excel does not write.
-Blank rows, items with no data and collapsed items are T-4168's.
-Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`lay_out`, `AxisPlan::lines`; T-4147)
+(T-4699): `insertBlankRow` on the innermost row field or a column field (the engine adds no line) and
+after a collapsed item (it adds one); custom subtotals after the children in plain outline form; a
+collapsed item whose field has Values inside it (several data fields: one line, the first data field's
+values); a collapsed item on columns, in a middle field, or in a field with
+`subtotalTop="0"` or custom subtotals (one line, the data field's own aggregate). (T-4698): repeat item
+labels (`fillDownLabels`, saved in `extLst`), which the model keeps opaque and the renderer ignores.
+Items with no data (`showAll`): docs/excel-semantics/web.md "GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)" (t4311 H,
+a grouped row field) and crates/rustsheet-engine/src/pivot/result.rs; an axis of several fields, a
+rendered column field and an item the page filter empties are UNVERIFIED (T-4657).
+Implemented in: crates/rustsheet-engine/src/pivot/layout/lines.rs (`lay_out`, `AxisPlan::lines`; T-4147;
+`blank_line`, `collapsed`, T-4168)
 
 ## Aggregates over text, blanks, booleans and errors
 Rule (each aggregate in a value field that also holds other kinds of value):
@@ -635,32 +699,172 @@ Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotRe
 ## Summation order of Sum, Average and Product totals
 Rule:
 - **Item cells.** A cell accumulates its records in record order.
-- **Sum, when Sum is the only aggregate (2-D).** A row total adds the row's cells in the column
-  field's display (first-seen) item order. A column total adds the column's cells in the row field's
-  display order. The grand-grand total adds the row totals (the Grand Total column) down the rows, in
-  display order. These are sums of the child cells, not of the records.
-- **Sum beside Average (2-D).** The row and column totals accumulate the records item by item, in the
-  display item order of the field being totalled and in record order within each item. Child cells are
-  not used. So the same data can give a different Sum total once an Average field is added.
-- **Average (alone or beside Sum, 2-D).** A row or column total divides the same item-by-item
-  accumulation by the count.
-- **Var and StdDev, alone or together.** Every Var cell and total is the textbook formula
-  (Σx² − (Σx)²/n) / (n − 1). Its two sums accumulate the records item by item in display item order,
-  in record order within each item. StdDev is the square root of that Var.
-- **Product (alone, one axis field).** The total multiplies the records item by item in display
-  item order, in record order within each item.
-- **Totals over one axis field in mixed pivots.** In a pivot that mixes Sum with other aggregates,
-  a total over a pivot's only axis field accumulates the records item by item in display item order
-  (T-4614 S2, T-4589 S1).
+- **Sum, when every data field is a Sum.** A total adds leaf cells, in display (first-seen) item
+  order, and never the subtotals between them:
+  - a cell of a subtotal or grand-total row adds the cells of the leaf rows below it, in its column,
+    down the rows;
+  - a total in a leaf row adds that row's leaf-column cells below its column, across the columns.
 
-What is open (T-4634):
-- which mixes switch Sum from the cells to the records;
-- whether a Sum-only total over one axis field sums the item cells or accumulates the records (no
-  probe separates them);
-- the grand-grand total of a mixed 2-D pivot (one data point);
-- which of several fitting readings gives the 2-D Var grand-grand total.
+  So a column total adds the column's cells, a row total the row's cells, and the grand-grand total
+  the row totals (the Grand Total column) down the rows. With one axis field the Grand Total adds the
+  item cells. These are sums of the child cells, not of the records.
+- **Sum beside any other aggregate.** Count, CountNums, Max, Min, Product, StdDev, Var, Varp, StdDevp
+  and Average each switch Sum to the records. A row or column total then accumulates the records
+  item by item, in the display item order of the field being totalled and in record order within
+  each item. Child cells are not used, so the same data can give a different Sum total once any
+  non-Sum field is added.
+- **Average (alone or beside other fields), Var, StdDev, Varp, StdDevp and Product.** A row or column
+  total, and a total over a pivot's only axis field, uses that same item-by-item accumulation of the
+  records. Average divides its sum by the count.
+- **A cell that is a total on both axes**, outside the Sum-only case. This covers the grand-grand
+  total, a subtotal by a subtotal and a subtotal by a grand total. The cell does not accumulate its
+  records. It adds the partial results of the leaf rows below it, in its column, down the rows in
+  display order. Each leaf-row cell is accumulated item by item. For Sum and Average that means the
+  leaf rows' record sums. For Var, StdDev, Varp and StdDevp the leaf rows' Σx and Σx² are added
+  separately, and the formula is applied to the totals. For Product the leaf rows' products are
+  multiplied. Sum, Average, Var and StdDev are evidenced. For Varp, StdDevp and Product the engine
+  applies this rule by analogy: their cells fit it, but other readings fit them too (UNVERIFIED,
+  T-4678).
+- **Formulas.** Var is the textbook (Σx² − (Σx)²/n) / (n − 1), and StdDev its square root. Varp is
+  (n·Σx² − (Σx)²) / n², and StdDevp its square root. Each total feeds these formulas in the order
+  above.
+
+What is open (T-4678):
+- Var, StdDev, Varp, StdDevp and Product at a subtotal crossing with two fields per axis, where the
+  engine applies the leaf-row rule that T2 and T3 show for Sum and Average;
+- the order of the Varp and StdDevp grand-grand total with one field per axis, which the engine takes
+  from Var by analogy;
+- the order of the Product grand-grand total, where one cell fits several readings;
+- Max and Min beside an error field at such cells;
+- a pivot with column fields only;
+- Values on rows.
 
 Evidence (excel-graph, 2026-11-06):
+- probes/t4634-pivot-total-order-4 (T-4634). Python doubles were used to choose the data so that the
+  candidate readings below give different values. Every claim is among the candidates tried.
+  - Which mixes switch Sum to the records. X1 to X12 have rows R and columns K: Sum of V beside a
+    second field of V. Each sheet uses its own 27-record source, E1 to E12. In each source the cells
+    added in display order differ from the records accumulated item by item in at least five of the
+    six row and column totals. The candidates for each total were:
+    - the cells added in display, reverse or ascending item order;
+    - the records accumulated item by item in each of those orders;
+    - record order, and reverse record order.
+
+    | Sheet | Beside Sum | Totals fitting records, item by item, display order | Totals fitting cells, display order | Example (Excel; cells would give) |
+    |---|---|---|---|---|
+    | X1 | Count | 6 of 6 | 1 of 6 | H6 103461.13000000002 (103461.13) |
+    | X2 | CountNums | 6 of 6 | 0 of 6 | H6 107904.41000000002 (107904.40999999999) |
+    | X3 | Max | 6 of 6 | 0 of 6 | H6 717.1499999999999 (717.15) |
+    | X4 | Min | 6 of 6 | 0 of 6 | H6 71912.50000000001 (71912.5) |
+    | X5 | Product | 6 of 6 | 1 of 6 | H6 92141.79000000001 (92141.79) |
+    | X6 | StdDev | 6 of 6 | 1 of 6 | H6 19260.650000000005 (19260.649999999998) |
+    | X7 | Var | 6 of 6 | 0 of 6 | H6 9706.31 (9706.310000000001) |
+    | X8 | Varp | 6 of 6 | 1 of 6 | H6 114117.63999999998 (114117.64) |
+    | X9 | StdDevp | 6 of 6 | 1 of 6 | H6 105410.12000000001 (105410.12) |
+    | X10 to X12 | Average | 6 of 6 each | 0, 1 and 0 of 6 | X10 H6 70896.70999999999 (70896.71) |
+
+    X10 does not separate display item order from reverse record order: both fit its six totals.
+
+    The six totals of each sheet are H6:H8 and B9, D9 and F9. S1, Sum alone over E1, fits the cells in
+    display order in all six (E5:E7, B8:D8), with E5 103461.13 against X1 H6 103461.13000000002 over
+    the same records.
+  - Mixed grand-grand total, Sum and Average. These are X1 to X12 H9, X10 to X12 I9, and A1 E8
+    (Average alone over E11). The candidates were:
+    - the row totals or the column totals added in display, reverse or ascending order, with each
+      total taken as either cells or records;
+    - the cells added row by row or column by column;
+    - the records row-major or column-major, item by item over R or over K, in record order, or in
+      reverse record order;
+    - each of those in every combination of display, reverse and ascending orders, 56 readings in
+      all.
+
+    Each sheet fits between 2 and 14 of them, for example X2 H9 230121.09000000005 fits 2 and X12 H9
+    102980.28999999998 fits 2. Only one reading fits all sixteen cells: the row totals' record sums,
+    each accumulated item by item, added down the rows in display order. For X2 H9, record order gives
+    230121.08999999997 and the column totals' record sums 230121.09.
+  - Var-family grand-grand total. The sources are G1 and G2 (36 records, R first seen Q X B F N C, K
+    first seen M Z A, values 800 to 1300 so that rounding differences grow). The candidates (Σx, Σx²)
+    were accumulated in many ways:
+    - records row-major or column-major in every combination of display, reverse and ascending
+      orders, by R item, by K item, in record order and in reverse record order;
+    - the cells' sums added row by row or column by column;
+    - each row's sums added down the rows, or each column's sums added across the columns, in every
+      order.
+
+    These were combined with four Var formulas (textbook, n·Σx², two-pass, Welford) and five Varp
+    formulas (n·Σx², textbook /n, Σx²/n − mean², two-pass, Welford):
+
+    | Cell | Aggregate | Excel | row partials, display | row-major records | column partials | record order |
+    |---|---|---|---|---|---|---|
+    | V1 E11 | Var | 22664.877200872772 | 22664.877200872772 | 22664.87720087405 | 22664.877200872772 | 22664.877200872772 |
+    | V2 E11 | Varp | 22035.297278626465 | 22035.297278626465 | 22035.297278627568 | 22035.297278626465 | 22035.297278626465 |
+    | V3 E11 | StdDevp | 148.4429091557642 | 148.4429091557642 | 148.44290915576792 | 148.4429091557642 | 148.4429091557642 |
+    | V6 E11 | Var | 19695.45869357139 | 19695.45869357139 | 19695.45869357224 | 19695.45869357139 | 19695.458693570963 |
+    | V7 E11 | Varp | 19148.362618749892 | 19148.362618749892 | 19148.362618750813 | 19148.362618749892 | 19148.362618749525 |
+    | X7 I9 | Var | 6029222.866869232 | 6029222.866869232 | 6029222.866869232 | 6029222.866869231 | 6029222.866869231 |
+    | X8 I9 | Varp | 112914562.50268146 | 112914562.50268146 | 112914562.50268148 | 112914562.50268146 | 112914562.50268148 |
+
+    X6 I9 (StdDev, 21611.79840781048) and X9 I9 (StdDevp, 12429.806341554762) fit all of these.
+    - **Var and StdDev** (V1, V6 E11; X6, X7 I9). Of the candidates, only textbook Var over the rows'
+      sums fits all four cells. Each row's sums are accumulated item by item and then added down the
+      rows in display order. X7 I9 refutes column partials, and V1 and V6 E11 refute row-major order.
+    - **Varp and StdDevp** (V2, V3, V7 E11; X8, X9 I9). These cells fit the rows' sums with the n·Σx²
+      form. On their own they also fit at least two other readings: column partials in display order,
+      and cell sums added row by row (R ascending, K in display order). The engine takes the Varp and
+      StdDevp order from Var by analogy (UNVERIFIED, T-4678).
+  - Var-family row and column totals. V1, V2, V3, V6 and V7 E5:E10 and B11:D11, and X6 to X9 I6:I8
+    and C9, E9, G9, all fit the item-by-item display-order accumulation. Varp and StdDevp take Var's
+    order. Over one axis field, V4 B10 (Varp, rows R, 22035.2972786272) and V5 B7 (rows K,
+    22035.29727862628) each fit only the item-by-item display order with the n·Σx² form.
+  - Product (X5, beside Sum). The row and column totals I6:I8, C9, E9 and G9 fit the item-by-item
+    product. The cells' product differs in I6, I8 and C9. The grand-grand I9 is 7.444417258525587e+39.
+    That one cell fits about 8 of the 54 product readings tried. Among them are the product of the row
+    totals' products in display order, the shared leaf-row rule, and row-major records with R
+    reversed. Several cell-product orders also fit. It does not exclude those, so it is consistent
+    with the shared rule but does not settle it (UNVERIFIED, T-4678). Among the readings it does
+    refute are row-major order (7.444417258525588e+39), the column totals (7.444417258525589e+39) and
+    record order (7.444417258525589e+39).
+  - Sum alone over one axis field. O1 and O2 are rows R and rows K over F1, and O3 and O4 the same
+    over F2. The candidates were the item cells added in display, reverse or ascending order, the
+    records item by item in each order, record order, and reverse record order. The item cells in
+    display order are the only one that fits all four: O1 B7 154959.82000000004, O2 B7 154959.82,
+    O3 B7 22667.72 and O4 B7 22667.72. Item-by-item display order gives 154959.82000000007,
+    154959.82000000004, 22667.719999999994 and 22667.719999999994.
+  - Average alone over one axis field: A2 B7 5739.252592592595 (rows R) and A3 B7 839.545185185185
+    (rows K). Together they fit only the item-by-item display-order sum divided by 27. A2 alone also
+    fits reverse item order, and A3 alone ascending item order. The item cells would give
+    5739.252592592594 and 839.5451851851852. Among the cells probed, Average never follows the cells:
+    A1 E5:E7 and B8:D8 (2-D) fit item by item too.
+  - Two fields per axis. H1 has 32 records: rows P (H, E), then Q (t, s); columns U (G, D), then W
+    (d, c); compact form, so subtotals sit on the outer item's row. Seventeen readings were tried, and
+    the data was chosen so that every pair differs somewhere:
+    - a total adds its children (the subtotals) or its leaf cells, rows first or columns first;
+    - the leaf cells flat, row-major or column-major;
+    - the records row-major, column-major, by row leaf, by column leaf, or in record order;
+    - the engine's earlier mixed reading.
+
+    In the first table, each total adds leaf cells and each subtotal adds its children. In the
+    second, the leaf-row record sums are added, and the earlier mixed engine is row-major records
+    with the grand-grand cell the sum of the outer subtotals.
+
+    | T1, Sum alone | Excel | adds leaf cells | adds subtotals |
+    |---|---|---|---|
+    | H12, grand by grand | 153907.15 | 153907.15 | 153907.14999999997 |
+    | G12, grand by D | 29529.63 | 29529.63 | 29529.630000000005 |
+    | H6, H by grand | 19409.61 | 19409.61 | 19409.609999999997 |
+
+    | T2 (Sum beside Average) and T3 (Average alone) | Excel | leaf-row record sums | earlier mixed engine |
+    |---|---|---|---|
+    | T2 N13, grand by grand | 153907.15000000002 | 153907.15000000002 | 153907.14999999997 |
+    | T2 F13, grand by G | 124377.52 | 124377.52 | 124377.51999999999 |
+    | T2 N10, E by grand | 134497.54 | 134497.54 | 134497.53999999998 |
+    | T3 H12, grand by grand | 4809.598437500001 | 4809.598437500001 | 4809.598437499999 |
+    | T3 D12, grand by G | 7773.595 | 7773.595 | 7773.594999999999 |
+
+    T1 fits only "rows first, leaf cells" in every cell (B6:H12). Adding subtotals fails seven cells:
+    B12, F12, G12, H12 and H6:H8. In T2 (Sum and Average, B7:O13) and T3 (B6:H12), only the leaf-row
+    rule fits every cell. Row-major records fail four cells in each. Adding the row subtotals fails two,
+    adding the column subtotals three, and adding the leaf columns five.
 - probes/t4616-pivot-total-order-3 (T-4616). D1 has 27 records, three per cell: R items first seen
   Q, X, B, and K items first seen M, Z, A. Python doubles were used to choose values for which the
   candidate totals differ. The candidates are:
@@ -714,7 +918,7 @@ Evidence (excel-graph, 2026-11-06):
     display-order accumulation. About 38 other readings also fit: textbook, n·Σx², two-pass and
     Welford's update over many orders, and textbook over per-row or per-column partial sums.
     Column-major display order gives
-    4337674.5270196805.
+    4337674.5270196805. T-4634 settles it: textbook Var over the rows' partial sums.
   - Var over one axis field: V3 (rows K) B8 is 4337674.52701968 and V4 (rows R) B11 is
     4337674.527019681. Each equals textbook Var accumulated item by item in its own field's display
     order. For V3 that is the only fitting candidate. The item cells V3 B5:B7 and V4 B5:B10 are
@@ -753,30 +957,39 @@ Evidence (excel-graph, 2026-11-06):
   - A_average!S6 is 0.19999999999999998 = 0.6 / 3, the item-by-item accumulation, which fits the
     Average rule.
 
+- Varp's formula: probes/t4135-pivot-aggregates A_stdDevp!N6 and M8 (T-4142). Of the candidates
+  tried, only (n·Σx² − (Σx)²)/n² fits both. On those t4135 cells it gives the same bits as dividing
+  by n twice, but t4634 rules that out: dividing by n twice differs from /(n·n) at V2 E7, E8 and
+  C11, at V7 E8, E9 and E10, and at X8 G9, and Excel shows /(n·n). The others were
+  textbook /n, Σx²/n − mean², two-pass, Welford and (Σx² − Σx·mean)/n. t4589 S1 G5:H7 fits it too.
+
 Correction: T-4135 first recorded Sum as the sum of the children. T-4614 then recorded item-by-item
-accumulation for totals over one axis field. T-4616 shows that both happen, depending on the pivot's
-data fields: Sum alone in 2-D uses the cells, and Sum beside Average uses the records.
+accumulation for totals over one axis field. T-4616 showed that both happen, depending on the pivot's
+data fields. T-4634 shows that any non-Sum field switches Sum to the records. It also shows that a
+Sum-only total adds leaf cells, not subtotals. Finally, a total on both axes adds the leaf rows' partial
+results. The engine's earlier row-major reading for the Var grand-grand total, and its sum of the
+outer subtotals for a mixed grand-grand total, were wrong (t4634 V1 E11, T2 N13).
 
 Status: VERIFIED (excel-graph) for these totals:
-- 2-D Sum totals over one field, Sum alone and beside Average;
-- the Sum-alone grand-grand total;
-- Average, Var and StdDev row and column totals;
-- Var and StdDev over one axis field;
-- Product over one axis field;
-- totals over one axis field in mixed pivots.
+- every Sum total with one field per axis, Sum alone and beside each of the other ten aggregates;
+- Sum alone over one axis field, and Sum alone with two fields per axis;
+- Average, Var, StdDev, Varp, StdDevp and Product row and column totals, and totals over one axis
+  field;
+- grand-grand totals with one field per axis, for Sum, Average, Var and StdDev;
+- every cell of Sum beside Average, and of Average alone, with two fields per axis.
 
-UNVERIFIED (probe pending: T-4634): which data-field mixes switch Sum to the records, a Sum-only total
-over one axis field, and the mixed and Var grand-grand totals.
-Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotResult::value_as`), crates/rustsheet-engine/src/pivot/accumulate.rs (`Accumulator::finish`). The engine reads the open points this way, each UNVERIFIED
-(T-4634): Sum uses the child cells only when every data field is a Sum; a Sum-only total over one axis
-field sums the item cells; the mixed 2-D grand-grand Sum and Average sum the row totals' record sums
-(t4616 S2 H9 and I9, S3 E8 fit it); the Var and StdDev grand-grand total is row-major (t4616 V1 E11
-fits it); and a Sum-only cell that is a total on both axes (a subtotal by a subtotal or by a grand
-total, with several fields on an axis) sums its row children first, which is probed only for the
-grand-grand total. Varp and StdDevp use (n·Σx² − (Σx)²)/n² (bit-identical when divided by n twice).
-Of the candidates tried (textbook /n, Σx²/n − mean², two-pass, Welford, (Σx² − Σx·mean)/n) it is the
-only family that fits probes/t4135-pivot-aggregates A_stdDevp!N6 and M8 (t4589 S1 G5:H7 fits it too);
-the order of their totals is assumed to be Var's.
+UNVERIFIED (probe pending: T-4678). These are the same items as "What is open" above:
+- Var, StdDev, Varp, StdDevp and Product at crossings with two fields per axis;
+- the Varp, StdDevp and Product grand-grand order with one field per axis;
+- Max and Min beside an error field at such cells;
+- a pivot with column fields only;
+- Values on rows.
+
+The engine applies the leaf-row rule to the crossings, and to the Varp, StdDevp and Product
+grand-grand totals.
+Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `merge_crossings`,
+`child_cells`, `PivotResult::value_as`), crates/rustsheet-engine/src/pivot/accumulate.rs
+(`Accumulator::finish`, `Accumulator::add_folds`).
 
 ## errorCaption replaces every error value
 Rule: with `showError` and `errorCaption`, every error value a pivot cell would show becomes the
@@ -789,14 +1002,53 @@ Evidence: probes/t4135-pivot-aggregates EC (excel-graph, 2026-11-06, T-4135):
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`Cells::value`; T-4149)
 
+## Value cells show their data field's number format
+Rule: every value cell of a pivot, on item, subtotal and grand-total lines and in the grand-total
+column, displays its value in its data field's `numFmtId`: a built-in id, or a custom format of the
+workbook's `numFmts` (164 in the probe, as the builder wrote it). Excel stores the unrounded value: only the displayed text
+is rounded. A data field with `numFmtId="0"` and one with no `numFmtId` both show General. Labels,
+captions and the header rows keep their own text. Built-in id 14 shows as `m/d/yyyy` in en-US, not
+as the ECMA table's `mm-dd-yy`.
+Evidence: probes/t4169-pivot-number-formats (excel-graph, 2026-11-06, T-4169), from each pivot's
+displayed text (`Range.text`, the sidecar pivots' `text`) beside its values. The source is unformatted.
+- P1, compact, rows Region and Product, six data fields on columns:
+  - Cur (numFmtId 7): `$1,234.50 ` (B6), `($250.25)` (B7), `$0.13 ` for 0.125 (B9), and the Grand
+    Total `$4,027.13 ` (B11), whose stored value is still 4027.125.
+  - Pct (10): `49212.50%` (C5, an East subtotal), `12.50%` (C9).
+  - Latest (14, max of When): `2/15/2024` (D5), `4/18/2024` (D11).
+  - Kg (164, the workbook's `0.0 "kg"`): `984.3 kg` (E5), `-250.3 kg` (E7), `4027.1 kg` (E11).
+  - N (0): `2` (F5). Plain (none): `3042.875` (G8), `4027.125` (G11).
+- P2, rows Region, columns Product, Total Val (4): `1,234.50` (B5), `-250.25` (C5), and the
+  grand-total column `984.25` (D5) and `4,027.13` (D7).
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/layout/render.rs (`RenderedCell::number_format`),
+crates/rustsheet-engine/src/pivot/grid.rs (`Model::set_pivot_number_format`), and
+crates/rustsheet-engine/src/number_format.rs (id 14, and new custom ids from 164 by convention; T-4169).
+UNVERIFIED (T-4169, owner T-4717): the engine only sets a value cell's format when its data field has a
+`numFmtId`, and leaves other cells' formats alone. Not probed: whether Excel resets a cell's format
+when it stops being a value cell after a refresh, or when the data field has no `numFmtId` (the
+"preserve cell formatting" option), and whether a showDataAs field or a page, row or column field's
+`numFmtId` changes the text.
+UNVERIFIED (eval-harness, T-4169, owner T-4730): the Kg cells (E5:E11) pass only because the case has
+one custom format, which the builder (XlsxWriter) and the spec adapter (`set_number_formats`, by sheet
+then address order) each number 164. With two or more custom formats the two numberings can differ, so
+a definition's `numFmtId` could name another code in the engine than in Excel. The engine's unit test
+hand-sets Q!B1 for the same reason.
+
 ## A Count total over an error field is the error when the pivot mixes aggregates
 Rule: Count and CountNums never show an error in an item's cell. When the pivot's data fields mix
-aggregates (Count or CountNums beside Sum or Average), though, every total of a Count or CountNums
+aggregates (Count or CountNums beside any aggregate other than Count and CountNums: Sum, Average,
+Max, Min, Product, Var, Varp or StdDev among those probed), though, every total of a Count or CountNums
 that covers a record holding an error is that error: `#N/A`, or the errorCaption when one is set.
 This covers subtotals of an outer row field over an inner one, row and column grand totals, and the
 grand total. Totals that cover no such record stay counts. With one data field, with only Count fields,
 or with Count beside CountNums, every total is a count. A column field makes no difference.
 Evidence (excel-graph, 2026-11-06):
+- probes/t4634-pivot-total-order-4 (T-4634), over ER (t4616's D3), rows Region, then Kind. C1 to C5
+  are Count of Err beside only Max, Min, Product, Var or Varp of Num, C6 is CountNums of Err beside
+  Max, and C7 is Count of Err beside StdDev. In all seven, East's subtotal (B5) and the Grand Total
+  (B11) are `#N/A`. The items stay counts: East A 2 (B6), East B 1 (B7; 0 under CountNums in C6), and
+  West 2 (B8).
 - probes/t4616-pivot-total-order-3 (T-4616), over D3: East A (Err 10), East B (Err `#N/A`), East A
   (3), West A (7), West B (5); rows Region, then Kind; no showError:
   - I1, Count of Err beside Sum of Num: East's subtotal is `#N/A` (B5), while its items A and B are 2
@@ -826,7 +1078,7 @@ Evidence (excel-graph, 2026-11-06):
   - EC, eleven mixed aggregates: `ERR`.
 Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`compute`, `PivotResult::value_as`), crates/rustsheet-engine/src/pivot/accumulate.rs (`Accumulator::finish`). The engine treats any aggregate other than Count and CountNums as
-mixing; Count beside only Max, Min, Product or the variances is unprobed (UNVERIFIED, T-4634).
+mixing. StdDevp beside Count alone is not probed, but every other aggregate is.
 
 ## Record filters: page selections and hidden items
 Rule: a page field's selected item keeps only the records holding it, and a hidden item (`item h="1"`)
@@ -843,7 +1095,9 @@ Two readings are the engine's own, not probed:
 
 Status: VERIFIED (excel-graph) for a page field's selection and hidden items (K4) only. UNVERIFIED
 (probe pending: T-4164): hidden items of a row or column field, and the totals over them (SPEC-0032
-stage 5 leaves filters and totals to T-4164). UNVERIFIED (probe pending: T-4633): the two readings
+stage 5 leaves filters and totals to T-4164). Partial evidence for a hidden row item:
+probes/t4129-pivot-layout-flags SH (Product C hidden, with `subtotalHiddenItems="1"`) leaves C's records
+out of East's subtotal (27) and the Grand Total (60); the flag-off control is T-4164's. UNVERIFIED (probe pending: T-4633): the two readings
 above.
 Implemented in: crates/rustsheet-engine/src/pivot/result.rs (`filter`)
 
@@ -940,7 +1194,10 @@ cache_fields of the pivot on sheet P_<source>:
 - Space!A1:E1 Region, Sales, `=" "`, `=" "&""`, X → Region, Sales, `" "`, `" 2"`, X;
 - Fold!A1:G1 Region, Sales, é, `="É"`, ß, `="SS"`, `="s"&"s"` → Region, Sales, é, É2, ß, SS2, ss3.
   Its pivot (rows Region over é, É, ß, SS, ss, Straße, STRASSE with Sales 1, 2, ..., 64) shows
-  P_Fold!A4:B8 é 3, ß 4, Straße 32, SS 24, STRASSE 64;
+  P_Fold!A4:B8 é 3, ß 4, Straße 32, SS 24, STRASSE 64. That order (Straße before SS and STRASSE)
+  comes from the case builder caching formula cells as blank: `="É"`, `="SS"`, `="ss"` and
+  `="STRASSE"` are no items in the saved cache, so the refresh appends SS and STRASSE after the
+  saved é, ß and Straße (the sidecar's row_items `x` 0, 2, 3, 4, 5);
 - Rec!A2:A6 a, `=""`, empty, `=""`, a with Sales 1, 2, 4, 8, 16: the rendered cells P_Rec!A4:B6 are
   a 17, (blank) 4 and an empty label cell 10 (the sidecar holds no shared items, so the rendered
   cells are the evidence).
@@ -968,6 +1225,115 @@ Open (T-4640):
   GETPIVOTDATA's item `"#N/A"` names an error item (functions/lookup_and_reference/pivot_index.rs).
 
 Status: VERIFIED (excel-graph) for the rules above; the open points are UNVERIFIED (probe pending:
-T-4640)
+T-4640). The empty label cell is evidenced for a row item (P_Rec!A6); that a column item's is
+empty too is the engine's assumption, UNVERIFIED (probe pending: T-4640).
 Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141, T-4627) (`field_names`,
-`name_key`)
+`name_key`); the empty label cell in crates/rustsheet-engine/src/pivot/layout/render.rs
+(`Cells::lines`, T-4152)
+
+## Capability matrix 1: what Excel for the web opens and renders
+Rule: Excel for the web opens and renders a pivot carrying any one of the 143 catalog rows of the
+layout, totals, aggregation and show-values-as families except three. It refuses
+`pivotField@dataSourceSort="1"`, `item@d="1"` and `item@f="1"` (next entry). This covers every
+ST_DataConsolidateFunction, ST_ItemType, ST_ShowDataAs and x14 ST_PivotShowAs value, every location,
+axis and totals attribute, and the x14 pivotTableDefinition, pivotField and dataField extensions. The
+catalog's `web` column (eval/catalog/pivot-features.tsv) records the answer per row. Its `evidence`
+column names the probe and sheet.
+Evidence: these cases, all excel-graph, 2026-11-06, T-4129:
+- probes/t4129-pivot-show-as: the nine ECMA modes, below;
+- probes/t4129-pivot-show-as-x14: the six x14 modes;
+- probes/t4129-pivot-layout-flags: grand totals off, subtotalTop, subtotalCaption, subtotalHiddenItems,
+  showItems, gridDropZones, dataPosition, allDrilled and defaultAttributeDrillState, pivotField
+  numFmtId, a pivotArea with `axis="axisValues"`, and both x14 extensions;
+- probes/t4129-pivot-item-flags: items with `c`, `e` or `m`;
+- for the other rows, the earlier probes the catalog cites (t4123, t4135, t4137, t4138, t4168, t4586,
+  t4622, t4311).
+
+Also seen in Excel's saved files (T-4129 runs, from the oracle's cached downloads). No committed file
+evidences these; the sidecars do not record definitions:
+- Excel keeps every probed attribute and both x14 extensions as written, with three exceptions:
+  - it drops an item's `m="1"`;
+  - it drops `e="1"`, which is the default;
+  - it drops `axis="axisValues"` on a pivotField that is on no axis (a scratch file, not a case:
+    the builder sets `axis` itself), and the pivot still renders.
+- `c="1"` is kept.
+
+Status: VERIFIED (excel-graph) for rendering. "What Excel saves" is an observation of the cached
+downloads; the sidecars do not record definitions.
+
+## Pivot flags Excel for the web refuses
+Rule: Excel for the web refuses to open a workbook (createSession 501 `FileCorruptTryRepair`, inner
+`unsupportedWorkbook`) if a pivot has any of the following:
+- a pivotField with `dataSourceSort="1"`;
+- an item with `d="1"`;
+- an item with `f="1"` and no `calculatedItems`.
+
+`allDrilled="1"` and `defaultAttributeDrillState="1"` on the same field open.
+Evidence: T-4129 runs (excel-graph, 2026-11-06), one pivot per flag, bisected from the FA sheet of
+probes/t4129-pivot-layout-flags and the sheets of probes/t4129-pivot-item-flags.
+Status: a builder observation, not committable as a probe: Excel saves nothing for a file it refuses.
+What desktop Excel does is out of scope (decision 0266). The case builder does not refuse these
+flags; a case that sets one cannot be filled.
+
+## Show-values-as modes as Excel for the web renders them
+Rule: every ECMA `showDataAs` mode and every x14 `pivotShowAs` mode renders on open. Observed in the
+oracle's cached downloads, not in a committed file (the sidecars do not record definitions): Excel saves
+an x14 mode as written, as the dataField extension's `pivotShowAs` with no `showDataAs` on the dataField.
+What each mode showed in one pivot is listed below. The pivot has rows Region (outer) and Product,
+columns Year, and Sum of Sales. The data are East A 10/4, B 5/8, C 3/– and West A 20/6, B –/7, for
+2024/2025. West/B/2024 and East/C/2025 are empty intersections.
+- **difference** (base Product A, DF): the base item's rows are empty. So are the Region subtotal rows
+  and the Grand Total row, because the base field is the inner one. An empty intersection counts as 0:
+  East/C/2025 is -4 (0 - 4) and West/B/2024 is -20.
+- **difference from (previous)**, with `baseItem="1048828"` on Year (DP): the first Year column is
+  empty, and so is the Grand Total column. Every other cell is this year minus the previous one,
+  subtotals and the Grand Total row included (East 2025 is -6, Grand Total 2025 is -13).
+- **percent** (% of Product A, PC): the base rows show 1. **An empty intersection shows `#NULL!`**
+  (East/C/2025, West/B/2024), not 0 and not `#N/A`. The row totals divide the totals (East/C 3/14).
+- **percentDiff** (PD): like difference, with `#NULL!` for an empty intersection.
+- **runTotal** in Product (RT): the total runs down the Products within each Region. Subtotal and Grand
+  Total rows are empty.
+- **percentOfRow, percentOfCol, percentOfTotal** (PR, PCo, PT): an empty intersection shows 0 (a
+  number), not an empty cell.
+- **index** (IX): an empty intersection shows 0. The Grand Total row and column are 1.
+- **percentOfParent** in Region (PP): the parent rows (East, West) are 1. The Grand Total row is
+  empty.
+- **percentOfParentRow** (PPR): each value is divided by its parent row item. For East and West the
+  parent is the grand total row: East/2024 is 18/38. The Grand Total row is 1.
+- **percentOfParentCol** (PPC): with one column field it equals percentOfRow.
+- **percentOfRunningTotal** in Product (PRT): this is the running total divided by the Region total.
+  Subtotal and Grand Total rows are empty.
+- **rankAscending and rankDescending** in Product (RA, RD): each column is ranked within its Region,
+  and the Grand Total column too. An empty intersection is an empty cell and is not ranked. Subtotal
+  and Grand Total rows are empty.
+
+Evidence: probes/t4129-pivot-show-as and probes/t4129-pivot-show-as-x14 (excel-graph, 2026-11-06,
+T-4129). The sidecars' `pivots` sections hold every cell.
+Status: VERIFIED (excel-graph) for these shapes. Ties, division by zero, a missing base item, (next),
+and the other base fields are T-4161. The engine is T-4163.
+
+## Layout and totals flags as Excel for the web renders them
+Rule, per flag (each one on its own pivot of rows Region and Product with Sum of Sales):
+- `rowGrandTotals="0"` with `colGrandTotals="0"` (NG): no Grand Total row and no Grand Total column.
+- `subtotalTop="0"` on Region in outline form (ST): the East row is left empty, and an `East Total` row
+  follows its products.
+- `subtotalCaption="Tot"` on Region in tabular form (SC): **the subtotal label is `Tot` alone, with no
+  item name**. Both East's and West's subtotal rows read `Tot`.
+- `subtotalHiddenItems="1"` with Product C hidden (SH): with the flag set, the hidden C is left out of
+  East's subtotal (27, without C's 3) and of the Grand Total (60). The flag-off control is T-4164's,
+  so whether the flag changes anything is not evidenced here.
+- `showItems="0"` (SI), `allDrilled` and `defaultAttributeDrillState` (FA), `dataPosition="0"` with
+  the Values field on columns (DPo), and `hideValuesRow="1"` with one data field (X14): no visible
+  change.
+- `gridDropZones="1"`, tabular (GZ): the data caption `Sum of Sales` is at A3. `Row Labels` and
+  `Product` head the row fields on row 4, and the value column's header reads `Total` (C4).
+  `firstHeaderRow` is 2.
+- `numFmtId="3"` on the Year row field (NF): it renders. The saved labels are numbers; their display
+  format is not captured.
+- x14 pivotTableDefinition `fillDownLabelsDefault="1"` (X14): **existing fields are not filled down**.
+  (Our reading, not evidenced: the setting is a default for fields added later.) A field's own x14 `fillDownLabels="1"` (X14F)
+  repeats its labels: `East` on every East product row.
+- A `formats` entry whose pivotArea has `axis="axisValues"` (AV): it renders.
+
+Evidence: probes/t4129-pivot-layout-flags (excel-graph, 2026-11-06, T-4129).
+Status: VERIFIED (excel-graph) for these shapes.

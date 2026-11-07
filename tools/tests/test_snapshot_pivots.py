@@ -57,6 +57,16 @@ def test_areas_hold_every_cell_with_blanks_marked_empty() -> None:
     assert blank["cells"]["C3"] == {"t": "empty"}
 
 
+def test_areas_take_the_displayed_text_of_their_own_cells() -> None:
+    # T-4169: the backend's sheet texts are cropped to each pivot's area; a pivot with none has no `text`.
+    snap = {"sheets": [{"name": "P", "cells": {}}], "pivots": [_pivot("A3:B4")]}
+    texts = {"P": {"A3": "Row Labels", "B4": "$1.50 ", "C9": "outside"}}
+    (pivot,) = pivot_areas(snap, texts)
+    assert pivot["text"] == {"A3": "Row Labels", "B4": "$1.50 "}
+    assert "text" not in pivot_areas(snap, {"Other": {"A3": "x"}})[0]
+    assert "text" not in pivot_areas(snap)[0]
+
+
 def test_no_pivots_and_oversized_areas_capture_nothing() -> None:
     assert pivot_areas({"sheets": []}) == []
     side = int(MAX_PIVOT_AREA_CELLS**0.5) + 2

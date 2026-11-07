@@ -146,8 +146,6 @@ def test_a_huge_x_at_or_past_the_evidenced_error_is_outside_the_domain(
         ("TDIST", ("1E+160", 5, 2)),
         ("T.DIST", ("1E+150", 5, 1)),
         ("T.DIST", ("-1E+160", 5, 1)),
-        ("T.DIST", ("1E+150", 5, 0)),
-        ("T.DIST", ("-1E+160", 5, 0)),
     ],
 )
 def test_a_huge_x_inside_the_unprobed_bracket_has_no_value(
@@ -155,6 +153,13 @@ def test_a_huge_x_inside_the_unprobed_bracket_has_no_value(
 ) -> None:
     with pytest.raises(NoValueError):
         value(function, *args)
+
+
+def test_the_density_cut_is_exact() -> None:
+    # T-3554 (probes/t3554-tdist-density-huge-x): the density has no unprobed bracket; #NUM! from 2^512.
+    assert value("T.DIST", "1E+150", 5, 0) >= 0
+    with pytest.raises(DomainError):
+        value("T.DIST", "-1E+160", 5, 0)
 
 
 def test_the_largest_evidenced_numbers_keep_their_values() -> None:

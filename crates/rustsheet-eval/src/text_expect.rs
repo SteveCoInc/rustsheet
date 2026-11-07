@@ -3,13 +3,14 @@
 //! the recalculation), and the eval compares that with the engine's formatted text. Text is scored
 //! as a verdict of its own beside the value's, so value scoring does not change; the report shows
 //! a text pass rate per suite, and the baseline gates text cells on `TC`/`TF` lines of their own
-//! (decision 0070).
+//! (decision 0070). A sidecar pivot's `text` (T-4169) adds an expectation for each cell of its
+//! area that shows a text, so a rendered pivot's number formats are scored the same way.
 
 use std::fmt::Write as _;
 
 use serde::{Deserialize, Serialize};
 
-use crate::case::{load_oracle, split_qualified, CaseSpec};
+use crate::case::{load_oracle, split_qualified, CaseSpec, OraclePivot};
 use crate::cellref::Addr;
 use crate::engine::Evaluated;
 use crate::report::SuiteSummary;
@@ -71,6 +72,31 @@ pub(crate) fn expectations(
         }
     }
     Ok(out)
+}
+
+/// `listed` (a case's [`expectations`]) and, after them, one expectation per cell of each sidecar
+/// pivot's `text` that `listed` does not already hold.
+pub(crate) fn with_pivot_text(
+    mut listed: Vec<TextExpectation>,
+    pivots: &[OraclePivot],
+) -> Vec<TextExpectation> {
+    for pivot in pivots {
+        let sheet = &pivot.definition.sheet;
+        for (a1, text) in &pivot.text {
+            // The sidecar reader wrote the key, so it parses; one that does not is left out.
+            let Some(addr) = Addr::parse(a1) else {
+                continue;
+            };
+            if !listed.iter().any(|e| &e.sheet == sheet && e.addr == addr) {
+                listed.push(TextExpectation {
+                    sheet: sheet.clone(),
+                    addr,
+                    expected: text.clone(),
+                });
+            }
+        }
+    }
+    listed
 }
 
 /// Scores each expectation against the engine's formatted text: a pass is the exact string.
@@ -244,6 +270,25 @@ mod tests {
             Ok(vec![expectation("S", "B2", "1.50")])
         );
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_sidecar_pivots_text_adds_its_cells_after_the_listed_ones() {
+        // T-4169: each cell of a pivot's `text` is scored, unless the case lists it already.
+        let pivot: OraclePivot = serde_json::from_str(
+            r#"{"name":"Pv","sheet":"P","location":"A3:B4","first_header_row":1,
+                "first_data_row":1,"first_data_col":1,"row_items":[],"col_items":[],
+                "cells":{},"text":{"A3":"Row Labels","B4":"$1.50 ","nonsense":"x"}}"#,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let listed = vec![expectation("P", "A3", "listed")];
+        assert_eq!(
+            with_pivot_text(listed, &[pivot]),
+            [
+                expectation("P", "A3", "listed"),
+                expectation("P", "B4", "$1.50 ")
+            ]
+        );
     }
 
     #[test]

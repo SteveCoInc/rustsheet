@@ -36,6 +36,9 @@ const BETA_QUANTILE_STATRS_P_MIN: f64 = 1e-15;
 /// as for F.INV (T-0974). At most 512 Newton steps and 129 cdfs, or 65 cdfs without a start. A
 /// shape above 1E5 takes T-1538's crossing instead (above).
 fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
+    if first_shape_square_overflows(alpha, beta, p) {
+        return f64::NAN;
+    }
     if alpha > BETA_QUANTILE_STATRS_SHAPE_MAX || beta > BETA_QUANTILE_STATRS_SHAPE_MAX {
         return beta_quantile_crossing(alpha, beta, p);
     }
@@ -68,6 +71,23 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
         )
     };
     flush_subnormal(t)
+}
+
+/// Whether the square of AS 109's first shape overflows a double: alpha for p up to 1/2, and beta
+/// above it, where AS 109 solves `I_x(beta, alpha) = 1 - p` instead (the flip of
+/// docs/excel-semantics/statistics.md "BETA.INV at a huge shape is AS 109's Newton search
+/// (T-1538)"). Excel's BETA.INV and BETAINV are `#NUM!` exactly from there, whatever p and the
+/// other shape: `BETA.INV(1E-10,a,1E-100)` is 0.999999 at a = 1.34078079299425E+154 (a*a finite)
+/// and `#NUM!` at 1.34078079299426E+154 (a*a = inf), as are `BETA.INV(0.4,a,0.5)`,
+/// `BETA.INV(1E-100,a,1E-100)` and the flipped `BETA.INV(0.6,0.5,a)`, while
+/// `BETA.INV(0.1,0.5,a)`, where a is the second shape, stays a number
+/// (probes/t3862-beta-inv-sqrt-dbl-max; statistics.md "BETA.INV is #NUM! once the square of AS
+/// 109's first shape overflows (T-3862)"). AS 109 as revised (Cran, Martin and Thomas 1977, AS R19,
+/// and the statrs port's `5/a/a`) has `pp^2` in its accuracy exponent; which of Excel's
+/// expressions squares it is not established, only that the cut is the double's own overflow.
+fn first_shape_square_overflows(alpha: f64, beta: f64, p: f64) -> bool {
+    let first = if p > 0.5 { beta } else { alpha };
+    (first * first).is_infinite()
 }
 
 /// Whether the x with `I_x(alpha, beta) = p` lies below the smallest normal double, where the
@@ -380,6 +400,30 @@ mod tests {
             (a108 / 2.055_080_046_088_23e-202 - 1.0).abs() < 1e-12,
             "{a108}"
         );
+    }
+
+    #[test]
+    fn quantile_is_nan_once_the_square_of_as109_first_shape_overflows() {
+        // probes/t3862-beta-inv-sqrt-dbl-max (excel-graph): the 15-digit literals around
+        // sqrt(DBL_MAX) = 1.3407807929942596E+154. Row 3, a*a finite: a number; row 4, a*a = inf:
+        // #NUM! (NaN here, which BETA.INV reports as #NUM!).
+        let below: f64 = 1.340_780_792_994_25e154;
+        let above: f64 = 1.340_780_792_994_26e154;
+        assert!((below * below).is_finite() && (above * above).is_infinite());
+        // A3/A4 `BETA.INV(1E-10,a,1E-100)`, B3/B4 `BETA.INV(0.4,a,0.5)`.
+        for (p, beta) in [(1e-10, 1e-100), (0.4, 0.5)] {
+            let t = beta_quantile(below, beta, p);
+            assert!(t > 0.0 && t < 1.0, "BETA.INV({p},{below},{beta}) = {t}");
+            assert!(beta_quantile(above, beta, p).is_nan());
+        }
+        // D3/D4 `BETA.INV(0.6,0.5,a)`: above p = 1/2, AS 109's first shape is beta.
+        let t = beta_quantile(0.5, below, 0.6);
+        assert!(t > 0.0 && t < 1.0, "{t}");
+        assert!(beta_quantile(0.5, above, 0.6).is_nan());
+        // E4 `BETA.INV(0.1,0.5,a)` = 5.85776711227727E-157: a huge second shape is not squared.
+        // (Ours is the math there; Excel is 0.5% below it: TODO(T-4700).)
+        let e4 = beta_quantile(0.5, above, 0.1);
+        assert!(e4 > 0.0 && e4 < 1e-150, "{e4}");
     }
 
     #[test]

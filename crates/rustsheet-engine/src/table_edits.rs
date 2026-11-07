@@ -12,6 +12,7 @@ use crate::expressions::parser::parse_range;
 use crate::expressions::parser::stringify::{DataBlock, DisplaceData, Displacement};
 use crate::expressions::types::Area;
 use crate::expressions::utils::number_to_column;
+use crate::formula_rewrite::RewrittenCell;
 use crate::model::Model;
 use crate::types::{FilterColumn, Table, TableColumn};
 
@@ -28,6 +29,8 @@ struct TableEdits {
     deleted_columns: Vec<(String, String)>,
     /// The lowercase names of the tables a column delete removes whole (T-3733).
     deleted_tables: Vec<String>,
+    /// The lowercase names of the tables a column edit left of them moves whole (T-4680).
+    moved_tables: Vec<String>,
     /// The data blocks of the tables that grow with a row insert at their first data row or at
     /// their totals row, onto which plain ranges grow too (T-2321).
     grown_edges: Vec<DataBlock>,
@@ -417,12 +420,13 @@ fn inserted_headers(table: &Table, edit: ColumnEdit) -> Vec<(i32, i32, String)> 
 impl Model {
     /// Rewrites every formula (cells on every sheet, and the conditional formats of `sheet`) for
     /// the structural edit `displace_data` on `sheet`, then moves, grows or shrinks the tables
-    /// that follow it.
+    /// that follow it. Returns the cells a row or column delete rewrote past what re-inserting
+    /// them undoes ([`Model::displace_cells`]).
     pub(crate) fn displace_formulas(
         &mut self,
         sheet: u32,
         displace_data: &DisplaceData,
-    ) -> Result<(), String> {
+    ) -> Result<Vec<RewrittenCell>, String> {
         let edits = self.table_edits(displace_data);
         let displacement = Displacement {
             data: displace_data,
@@ -430,10 +434,22 @@ impl Model {
             grown_edges: &edits.grown_edges,
             deleted_columns: &edits.deleted_columns,
             deleted_tables: &edits.deleted_tables,
+            moved_tables: &edits.moved_tables,
         };
-        self.displace_cells(displacement)?;
+        let column_formulas = self.displaced_column_formulas(displacement);
+        let rewritten = self.displace_cells(displacement)?;
         self.displace_cf_ranges(sheet, displacement);
-        self.resize_tables(sheet, edits.resized)
+        self.displace_defined_names(sheet, displacement);
+        let resized: Vec<String> = edits.resized.iter().map(|(name, _)| name.clone()).collect();
+        self.resize_tables(sheet, edits.resized)?;
+        self.set_displaced_column_formulas(column_formulas);
+        if let DisplaceData::Row { row, delta, .. } = *displace_data {
+            if delta > 0 {
+                let last = row.saturating_add(delta - 1);
+                self.fill_inserted_data_rows(sheet, (row, last), &resized)?;
+            }
+        }
+        Ok(rewritten)
     }
 
     /// The first data row of the table on `sheet`, under a header row, whose data rows the row
@@ -481,6 +497,22 @@ impl Model {
             Vec::new()
         };
         (displace_data, kept)
+    }
+
+    /// The lowercase names of the tables on `sheet` that follow the column insert (`delta > 0`
+    /// columns left of `column`) or delete (columns `column..column - delta`). A formula such an
+    /// edit moves out of one of them is parsed in that table ([`Model::kept_table_holding`]), so
+    /// an unqualified `[@Col]` in the table's own cells names it at its new place (T-4680:
+    /// probes/table-edits/t4274-calc-column-structured-insert-column-a, `=[@Col]*2` reads 2, 4,
+    /// 8 after `insert_column` A). The text is kept either way: a column edit moves no cell to
+    /// another row.
+    pub(crate) fn column_edit_kept(&self, sheet: u32, column: i32, delta: i32) -> Vec<String> {
+        self.table_edits(&DisplaceData::Column {
+            sheet,
+            column,
+            delta,
+        })
+        .kept
     }
 
     /// The table in `kept` (lowercase names) on `sheet` whose range holds (`row`, `column`): a
@@ -535,6 +567,11 @@ impl Model {
                     edits
                         .grown_edges
                         .extend(grown_edge(table, sheet, displace_data));
+                    if resized.columns.is_none()
+                        && matches!(displace_data, DisplaceData::Column { .. })
+                    {
+                        edits.moved_tables.push(name.to_lowercase());
+                    }
                     if let Some(edit) = resized.columns {
                         let deleted = table.columns.iter().skip(edit.index).take(edit.deleted());
                         edits
@@ -581,6 +618,19 @@ impl Model {
         }
         self.reset_tables();
         Ok(())
+    }
+
+    /// Refuses the insert of `count` rows at `row` on `sheet` that would push a table off the sheet
+    /// ([`Model::refuse_table_off_sheet`]) or fill too many calculated-column cells
+    /// ([`Model::refuse_oversized_column_fill`]), before it changes anything.
+    pub(crate) fn refuse_table_row_insert(
+        &self,
+        sheet: u32,
+        row: i32,
+        count: i32,
+    ) -> Result<(), String> {
+        self.refuse_table_off_sheet(sheet, row, count, true)?;
+        self.refuse_oversized_column_fill(sheet, row, count)
     }
 
     /// Refuses an insert of `count` rows (`rows`) or columns at `at` that would push a cell of a

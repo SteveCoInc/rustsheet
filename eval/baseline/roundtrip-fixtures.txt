@@ -12,6 +12,8 @@ C	roundtrip-fixtures/external-link-cached-text.xlsx	991
 C	roundtrip-fixtures/external-link-uncached-lookups.xlsx	1409
 C	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	1051
 C	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	802
+C	roundtrip-fixtures/merged-covered-formula.xlsx	117
+C	roundtrip-fixtures/merged-covered-values.xlsx	210
 C	roundtrip-fixtures/rich-error-export-formulas.xlsx	976
 C	roundtrip-fixtures/rich-error-export.xlsx	989
 C	roundtrip-fixtures/shared-string-phonetic-runs.xlsx	659
@@ -27,6 +29,7 @@ C	roundtrip-fixtures/t-d-iso-date-cells.xlsx	700
 C	roundtrip-fixtures/t-d-pre-1900.xlsx	643
 C	roundtrip-fixtures/t-d-time-only.xlsx	643
 C	roundtrip-fixtures/t-d-z-suffix.xlsx	643
+C	roundtrip-fixtures/valueless-cell-forms.xlsx	625
 C	roundtrip-fixtures/workday-intl-legacy-holidays.xlsx	658
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 part /officeDocument[0]/rdRichValueStructure[0] added
 F	roundtrip-fixtures/external-link-cached-lookups.xlsx	R0 part /officeDocument[0]/rdRichValueTypes[0] added

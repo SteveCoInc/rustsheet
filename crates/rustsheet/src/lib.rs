@@ -15,7 +15,9 @@ mod workbook;
 
 pub use edit::{ChangeSet, Input, InputChange, SheetChange, Txn, ValueChange};
 #[doc(hidden)]
-pub use edit::{PivotDateGroupBy, PivotError, PivotFunction, PivotRangeGroup, PivotTableInput};
+pub use edit::{
+    PivotDateGroupBy, PivotError, PivotFunction, PivotParts, PivotRangeGroup, PivotTableInput,
+};
 pub use error::{EditError, LoadError, RefError, SaveError, UnsupportedKind};
 #[doc(hidden)]
 pub use pivot_read::PivotPlace;

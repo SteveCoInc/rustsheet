@@ -3,7 +3,7 @@ id: T-4618
 title: "A use of a sheet-scoped name loaded before its API add resolves in probes/t4554-api-name-local-name-body Last!D3"
 milestone: M8
 lane: api
-status: todo
+status: done
 priority: P3
 size: M
 tier: opus
@@ -30,10 +30,43 @@ added through the API scoped to Last) to the new name (90), where the rule "A sh
   `[0]!LD`, so Last!D3 is `#NAME?`.
 
 ## Acceptance criteria
-- [ ] probes/t4554-api-name-local-name-body Last!D3 passes, or a probe shows the cell depends on something the harness
+- [x] probes/t4554-api-name-local-name-body Last!D3 passes, or a probe shows the cell depends on something the harness
       cannot reproduce (record it in syntax.md and leave it in the baseline).
-- [ ] The new probes' finding is in docs/excel-semantics/syntax.md "A sheet-scoped name added after load".
-- [ ] `make check` green; reviewers approve.
+- [x] The new probes' finding is in docs/excel-semantics/syntax.md "A sheet-scoped name added after load".
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Bare-name binding inside API-added bodies (T-4587).
+
+## Outcome
+- Probed (excel-graph 2026-11-06): 23 new probes/t4618-* cases in four rounds, one variable per case.
+  - Workbook adds earlier in the session, the body and the sheet's own names change nothing.
+  - The tab layout and the active sheet do. They show a load-order model, recorded in docs/excel-semantics/syntax.md
+    "Which place a loaded use took": Excel loads the defined names, then the active sheet, then the other tabs in
+    order; qualified and bare uses make own and provisional places; the add fills S's own place, or S's unfixed
+    provisional place.
+  - The model fits every bare-use cell of the 30 related probes. That includes t4394's `=SUM(Span)` and `=Rate2`,
+    which T-4391 left open.
+  - One qualified cell is unexplained: t4618-order-after-active-backward Q!A1, to T-4642.
+- Engine changes:
+  - `Model::loaded_uses_take_sheet_place` (new name_load_order.rs) replays the model over the stored formulas.
+  - `Model::bind_added_sheet_name` skips pinning when the add fills the place.
+  - `name_load_events` (name_binding.rs) reads a formula's uses in written order, through `walk_names_in_order` and
+    `chain_operands_in_order_mut`, without recursion over chains.
+  - `walk_names` now also visits defined-name nodes as `NameSite::DefinedName`.
+- Tests: three unit tests in test_sheet_name_added_binding.rs.
+- Eval delta: 68 cells newly pass, among them t4554-api-name-local-name-body Last!D3. They include all 60 cells T-4391's
+  ten t4391-api-rebind-* probes left to T-4617, which this PR marks done. The rest: t4394-api-name-active-last S2!A1,
+  S2!A3, Last!A1; t4394-api-name-active-s2 S2!A3, Last!A1; t4353-api-name-unqualified-ref S2!A3, Last!A1. 23 cases
+  were added (138 cells). All pass but t4618-order-after-active-backward Q!A1 (T-4642). No regressions.
+
+## Landing notes
+- PR #3687, ready for review and not enqueued. Head: the commit that adds these notes, on top of 8cfdeb296 (`make
+  catch-up PR=3687`: merged main 78b6cd844 and re-recorded the baseline lists). CI was pending on 8cfdeb296 when the
+  session window closed (17:30 UTC); this push restarts it.
+- Reviewers: security and design APPROVE on 071e9fe; excel-fidelity APPROVE on 28720d3, re-run after the T-4391
+  merge. Every later commit is a merge of main or a baseline catch-up, plus these notes, so no reviewer needs to run
+  again. MINORs are in the PR's review table, noted there rather than pushed.
+- Next step: once CI is green on the head, `enable_pr_auto_merge` (SQUASH). If main has moved and the baseline lists
+  conflict again (they have three times today), run `make catch-up PR=3687` first, then wait for green and enqueue.
+- Do not "fix" t4618-order-after-active-backward Q!A1 here; it is a known failure owned by T-4642.

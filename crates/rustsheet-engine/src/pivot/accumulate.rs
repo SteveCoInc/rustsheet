@@ -24,6 +24,14 @@ pub(crate) fn sum_in_order(
         .try_fold(0.0, |acc, cell| cell.map(|n| acc + n))
 }
 
+/// The order-dependent folds of an [`Accumulator`]: what a partial cell adds to a total.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct Folds {
+    sum: f64,
+    squares: f64,
+    product: f64,
+}
+
 /// What the records of one (row node, column node, data field) hold so far.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Accumulator {
@@ -42,6 +50,46 @@ pub(crate) struct Accumulator {
     /// The sum of the child cells' Sums, for a total of a pivot whose data fields are all Sum
     /// ([`Accumulator::set_children_sum`]).
     children: Result<f64, Error>,
+    /// The [`CutCount`] values of the inner-item cells this cell covers, added up: what a custom
+    /// Count subtotal shows under a Sum data field ([`Accumulator::cut_count`]).
+    cut_values: u32,
+    /// The same for the numbers: a custom `CountNums` subtotal.
+    cut_numbers: u32,
+}
+
+/// The counts of one inner-item cell (a row leaf by a column leaf) that stop at its first error
+/// in record order: `values` counts the error and nothing after it, `numbers` the numbers before
+/// it. Under a Sum data field a custom `countA` or `count` subtotal adds these up over the
+/// inner-item cells it covers (pivots.md "Which function the countA and count custom subtotals
+/// compute": probes/t4622-pivot-count-subtotals CA, CN, B1, B4, B5 C6:C7).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) struct CutCount {
+    values: u32,
+    numbers: u32,
+    stopped: bool,
+}
+
+impl CutCount {
+    /// Feeds one record's value, in record order; nothing counts after the first error.
+    pub(crate) fn push(&mut self, item: &CacheItem) {
+        if self.stopped {
+            return;
+        }
+        match item {
+            CacheItem::Missing => {}
+            CacheItem::Number(_) | CacheItem::Date(_) => {
+                self.values = self.values.saturating_add(1);
+                self.numbers = self.numbers.saturating_add(1);
+            }
+            CacheItem::Text(_) | CacheItem::Boolean(_) => {
+                self.values = self.values.saturating_add(1);
+            }
+            CacheItem::Error(_) => {
+                self.values = self.values.saturating_add(1);
+                self.stopped = true;
+            }
+        }
+    }
 }
 
 impl Accumulator {
@@ -57,6 +105,26 @@ impl Accumulator {
             min: f64::INFINITY,
             error: None,
             children: Ok(0.0),
+            cut_values: 0,
+            cut_numbers: 0,
+        }
+    }
+
+    /// Adds the counts of one inner-item cell this cell covers.
+    pub(crate) fn add_cut(&mut self, part: CutCount) {
+        self.cut_values = self.cut_values.saturating_add(part.values);
+        self.cut_numbers = self.cut_numbers.saturating_add(part.numbers);
+    }
+
+    /// The cell's custom Count (`countA`) or `CountNums` (`count`) subtotal under a Sum data
+    /// field: the inner-item cells' counts, each ending at its first error, added up; never an
+    /// error (t4622 CA, CN, B1, B4, B5; with no error it is the plain count, B2). Any other
+    /// `function` is its [`Accumulator::finish`] as a total.
+    pub(crate) fn cut_count(&self, function: Aggregate, counts_mixed: bool) -> Result<f64, Error> {
+        match function {
+            Aggregate::Count => Ok(f64::from(self.cut_values)),
+            Aggregate::CountNums => Ok(f64::from(self.cut_numbers)),
+            _ => self.finish(function, true, counts_mixed, None),
         }
     }
 
@@ -88,6 +156,34 @@ impl Accumulator {
         }
     }
 
+    /// The order-dependent folds (sum, sum of squares, product) of this cell.
+    pub(crate) fn folds(&self) -> Folds {
+        Folds {
+            sum: self.sum,
+            squares: self.squares,
+            product: self.product,
+        }
+    }
+
+    /// Empties the order-dependent folds, so that [`Accumulator::add_folds`] can rebuild them from
+    /// partial cells; the counts, the extremes and the first error do not depend on order and
+    /// stay.
+    pub(crate) fn clear_folds(&mut self) {
+        self.sum = 0.0;
+        self.squares = 0.0;
+        self.product = 1.0;
+    }
+
+    /// Folds one partial cell's sums and product into this cell's: how a cell that is a total on
+    /// both axes combines the cells of the leaf rows below it (pivots.md "Summation order of Sum,
+    /// Average and Product totals": t4634 T2, T3, V1, V6, X6, X7; Varp, `StdDevp` and Product
+    /// by analogy, UNVERIFIED, T-4678).
+    pub(crate) fn add_folds(&mut self, part: Folds) {
+        self.sum += part.sum;
+        self.squares += part.squares;
+        self.product *= part.product;
+    }
+
     /// The record sum, or the first error: the value of a cell under Sum when its records are
     /// accumulated.
     pub(crate) fn record_sum(&self) -> Result<f64, Error> {
@@ -111,12 +207,11 @@ impl Accumulator {
 
     /// The cell's value under `function`.
     /// - `total`: the cell is a subtotal or a grand total on either axis.
-    /// - `counts_mixed`: the pivot has a data field that is neither Count nor `CountNums`. The
-    ///   evidence is Count beside Sum or Average, and beside all eleven (t4135 EC); Count beside
-    ///   only Max, Min, Product or the variances is UNVERIFIED (T-4634).
+    /// - `counts_mixed`: the pivot has a data field that is neither Count nor `CountNums`: Count
+    ///   beside Sum or Average, beside all eleven (t4135 EC), and beside only Max, Min, Product,
+    ///   Var, Varp or `StdDev` (t4634 C1 to C7).
     /// - `sum`: for a total, the Sum it shows when it is not the record sum: the sum of its
-    ///   children in a pivot whose data fields are all Sum, or the 2-D grand-grand total's sum of
-    ///   row totals ([`super::result`]); also the numerator of that total's Average.
+    ///   child cells in a pivot whose data fields are all Sum ([`super::result`]).
     pub(crate) fn finish(
         &self,
         function: Aggregate,
@@ -127,7 +222,7 @@ impl Accumulator {
         // Count and CountNums never show an error in an item's cell; a total (a subtotal of an
         // outer field too) that covers an error is the error only when the pivot has another
         // aggregate beside them; Count beside CountNums is not mixed (t4616 I1, I2, M1 to M3;
-        // t4614 C1 to C4; t4589 E1 to E4; t4135 A_count R8, EC).
+        // t4634 C1 to C7; t4614 C1 to C4; t4589 E1 to E4; t4135 A_count R8, EC).
         if let Aggregate::Count | Aggregate::CountNums = function {
             if let (true, true, Some(error)) = (total, counts_mixed, &self.error) {
                 return Err(error.clone());
@@ -162,10 +257,12 @@ impl Accumulator {
             // Var is the textbook one-pass formula over the accumulated sums, never the
             // worksheet functions' two-pass switch (`excel_variance`): t4616 V1 to V4 refute it,
             // and the n·Σx² form, for Var and StdDev. Varp is that n·Σx² form,
-            // (n·Σx² − (Σx)²)/n² (bit-identical divided by n twice): of the candidates tried
+            // (n·Σx² − (Σx)²)/(n·n), not divided by n twice (t4634 V2 E7, E8, C11; V7 E8:E10;
+            // X8 G9 refute that; on t4135 the two agree): of the candidates tried
             // (textbook /n, Σx²/n − mean², two-pass, Welford, (Σx² − Σx·mean)/n) it is the only
-            // family that fits t4135 A_stdDevp!N6 and M8 (and t4589 S1 G5:H7). The order of its
-            // totals is assumed to be Var's (UNVERIFIED, T-4634).
+            // family that fits t4135 A_stdDevp!N6 and M8 (and t4589 S1 G5:H7). Its row and
+            // column totals take Var's order (t4634 V2, V4, V5, V7, X8); its grand-grand order is
+            // Var's by analogy (UNVERIFIED, T-4678).
             Aggregate::Var => self.sample_variance(),
             Aggregate::VarP => self.population_variance(),
             Aggregate::StdDev => self.sample_variance().sqrt(),
@@ -219,6 +316,31 @@ mod tests {
             acc.finish(Aggregate::Count, true, true, None),
             Err(Error::NA)
         );
+    }
+
+    #[test]
+    fn a_cut_count_ends_at_the_first_error_of_each_inner_cell() {
+        // t4622 B1 East: A holds 10, `abc`; B a blank, `#N/A`, 5.
+        let cells: [&[CacheItem]; 2] = [
+            &[CacheItem::Number(10.0), CacheItem::Text("abc".to_string())],
+            &[
+                CacheItem::Missing,
+                CacheItem::Error(Error::NA),
+                CacheItem::Number(5.0),
+            ],
+        ];
+        let mut total = Accumulator::new();
+        for cell in cells {
+            let mut cut = CutCount::default();
+            for item in cell {
+                cut.push(item);
+                total.push(item);
+            }
+            total.add_cut(cut);
+        }
+        assert_eq!(total.cut_count(Aggregate::Count, true), Ok(3.0));
+        assert_eq!(total.cut_count(Aggregate::CountNums, true), Ok(1.0));
+        assert_eq!(total.cut_count(Aggregate::Sum, true), Err(Error::NA));
     }
 
     #[test]

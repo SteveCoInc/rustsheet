@@ -15,6 +15,16 @@ use crate::pivot::{
     SourceCells, MAX_RECORD_VALUES,
 };
 
+/// The pivot sheets of probes/t4634-pivot-total-order-4 that the result, line and render tests
+/// check: Sum beside each other aggregate (X1 to X12) and alone (S1, O1 to O4), Average alone (A1
+/// to A3), Var, Varp and `StdDevp` totals (V1 to V7), two fields per axis (T1 to T3), and Count or
+/// `CountNums` beside only Max, Min, Product or a variance (C1 to C7).
+pub(crate) const T4634_SHEETS: &[&str] = &[
+    "S1", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12", "A1", "A2",
+    "A3", "O1", "O2", "O3", "O4", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "T1", "T2", "T3", "C1",
+    "C2", "C3", "C4", "C5", "C6", "C7",
+];
+
 pub(crate) fn read(stem: &str, kind: &str) -> Json {
     let path = format!(
         "{}/../../eval/suites/probes/cases/{stem}.{kind}.json",
@@ -70,6 +80,8 @@ pub(crate) fn cache_item(value: Option<&Json>) -> CacheItem {
 struct CaseCells<'a> {
     cells: &'a Json,
     area: SourceArea,
+    /// Whether a formula cell reads as empty, as the case builder caches it, rather than panics.
+    formulas_blank: bool,
 }
 
 impl SourceCells for CaseCells<'_> {
@@ -78,7 +90,14 @@ impl SourceCells for CaseCells<'_> {
     }
 
     fn value(&self, _: u32, row: u32, column: u32) -> CacheItem {
-        cache_item(self.cells.get(address(column, row)))
+        let cell = self.cells.get(address(column, row));
+        let formula = cell
+            .and_then(Json::as_str)
+            .is_some_and(|t| t.starts_with('='));
+        if self.formulas_blank && formula {
+            return CacheItem::Missing;
+        }
+        cache_item(cell)
     }
 }
 
@@ -87,6 +106,28 @@ impl SourceCells for CaseCells<'_> {
 /// builder lists them (`pivot_definition.py` `_Field.items`). A formula in the source panics:
 /// the case file holds no evaluated value for it.
 pub(crate) fn source_cache(case: &Json, source: &str) -> PivotCache {
+    case_cache(case, source, false)
+}
+
+/// The cache the case builder saves for `source` (`pivot_definition.py`): [`source_cache`] with
+/// each formula cell, header or record, read as empty, and each field named after its header
+/// cell's text, a formula header under its formula, or `names` when the spec gives them
+/// (`cache_names`). Excel's refresh on open renames such fields and appends the formula cells'
+/// items.
+pub(crate) fn builder_cache(case: &Json, source: &str, names: Option<&Json>) -> PivotCache {
+    let mut cache = case_cache(case, source, true);
+    let (sheet_name, range) = source.split_once('!').unwrap();
+    let (left, top) = position(range.split_once(':').unwrap().0);
+    let cells = &sheet(case, sheet_name)["cells"];
+    for (column, field) in (left..).zip(&mut cache.fields) {
+        let given = names.map(|n| &n[(column - left) as usize]);
+        let header = given.unwrap_or(&cells[address(column, top)]);
+        field.name = header.as_str().unwrap().to_string();
+    }
+    cache
+}
+
+fn case_cache(case: &Json, source: &str, formulas_blank: bool) -> PivotCache {
     let (name, range) = source.split_once('!').unwrap();
     let (from, to) = range.split_once(':').unwrap();
     let ((left, top), (right, bottom)) = (position(from), position(to));
@@ -101,6 +142,7 @@ pub(crate) fn source_cache(case: &Json, source: &str) -> PivotCache {
                 right,
             },
         },
+        formulas_blank,
     };
     let prior = PivotCache {
         source: Some(CacheSource {
@@ -115,38 +157,7 @@ pub(crate) fn source_cache(case: &Json, source: &str) -> PivotCache {
 }
 
 pub(crate) fn aggregate_named(name: &str) -> Aggregate {
-    match name {
-        "sum" => Aggregate::Sum,
-        "count" => Aggregate::Count,
-        "average" => Aggregate::Average,
-        "max" => Aggregate::Max,
-        "min" => Aggregate::Min,
-        "product" => Aggregate::Product,
-        "countNums" => Aggregate::CountNums,
-        "stdDev" => Aggregate::StdDev,
-        "stdDevp" => Aggregate::StdDevP,
-        "var" => Aggregate::Var,
-        "varp" => Aggregate::VarP,
-        _ => panic!("unknown aggregate {name}"),
-    }
-}
-
-/// The verb the builder puts in a data field's default name, `<verb> of <field>`
-/// (`pivot_definition.py` `_AGGREGATE_VERBS`).
-fn default_verb(subtotal: &str) -> &'static str {
-    match subtotal {
-        "sum" => "Sum",
-        "count" | "countNums" => "Count",
-        "average" => "Average",
-        "max" => "Max",
-        "min" => "Min",
-        "product" => "Product",
-        "stdDev" => "StdDev",
-        "stdDevp" => "StdDevp",
-        "var" => "Var",
-        "varp" => "Varp",
-        _ => panic!("unknown aggregate {subtotal}"),
-    }
+    Aggregate::from_consolidate_name(name).unwrap_or_else(|| panic!("unknown aggregate {name}"))
 }
 
 /// A custom subtotal line's function by its `item@t`, as the importer reads it.
@@ -266,6 +277,15 @@ pub(crate) fn probe_pivot_over(
         for hidden in spec["hidden"].as_array().into_iter().flatten() {
             pivot_field.hide(item_of(&cache, index, hidden));
         }
+        // `collapsed` items are written `sd="0"`.
+        for collapsed in spec["collapsed"].as_array().into_iter().flatten() {
+            let item = item_of(&cache, index, collapsed);
+            for listed in &mut pivot_field.items {
+                if listed.index == Some(item) {
+                    listed.expanded = false;
+                }
+            }
+        }
         if let Some(subtotals) = spec["subtotals"].as_array() {
             pivot_field.default_subtotal = false;
             pivot_field.custom_subtotals = subtotals
@@ -290,11 +310,12 @@ pub(crate) fn probe_pivot_over(
             let subtotal = subtotal.unwrap_or("sum");
             DataField {
                 caption: d["name"].as_str().map_or_else(
-                    || format!("{} of {name}", default_verb(subtotal)),
+                    || format!("{} of {name}", aggregate_named(subtotal).word()),
                     str::to_string,
                 ),
                 field: field(name),
                 function: aggregate_named(subtotal),
+                number_format: d["numFmtId"].as_u64().map(|id| u32::try_from(id).unwrap()),
                 ..DataField::default()
             }
         })
@@ -329,6 +350,7 @@ pub(crate) fn probe_pivot_over(
         pivot_field.compact = flag(&attrs["compact"], pivot_field.compact);
         pivot_field.outline = flag(&attrs["outline"], pivot_field.outline);
         pivot_field.subtotal_top = flag(&attrs["subtotalTop"], pivot_field.subtotal_top);
+        pivot_field.insert_blank_row = flag(&attrs["insertBlankRow"], pivot_field.insert_blank_row);
     }
     (cache, table)
 }

@@ -745,3 +745,26 @@ mod semantic_items {
         }
     }
 }
+
+#[test]
+fn flags_map_to_modes_and_regressions_are_refused_by_default() {
+    let flags = |check, update, allow_regressions| Flags {
+        check,
+        update,
+        allow_regressions,
+    };
+    assert_eq!(flags(false, false, false).mode(), Mode::Report);
+    assert_eq!(flags(true, false, false).mode(), Mode::Check);
+    assert_eq!(
+        flags(false, true, false).mode(),
+        Mode::Update {
+            allow_regressions: false
+        }
+    );
+    assert_eq!(
+        flags(false, true, true).mode(),
+        Mode::Update {
+            allow_regressions: true
+        }
+    );
+}

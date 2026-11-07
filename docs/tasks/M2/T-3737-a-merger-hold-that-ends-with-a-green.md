@@ -3,7 +3,7 @@ id: T-3737
 title: "A merger hold that ends with a green train unmerged leaves a record of why"
 milestone: M2
 lane: harness
-status: todo
+status: dropped
 priority: P1
 size: S
 tier: opus
@@ -36,3 +36,7 @@ the next session and the steward can read it (not only in the routine's session 
 
 ## Out of scope
 - Changing why holds stop; this task makes the reason visible.
+
+## Outcome
+Dropped 2026-11-07: the merge train it changes no longer exists. Decision 0247 moved merges to GitHub's merge queue, and
+decision 0252 deleted `scripts/merge_train.py` and its tooling, so there is nothing left to fix or measure.

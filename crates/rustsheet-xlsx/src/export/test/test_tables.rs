@@ -181,28 +181,48 @@ fn totals_row_constants_get_custom_metadata() {
     }
 }
 
-/// An API-filtered table with no kept criterion is written as a criterion-less filterColumn,
-/// which Excel reads as not filtered (T-4003), and so does our import: the round trip loses the
-/// filter. TODO(T-4363): write a criterion Excel reads as filtered.
+/// An API-filtered table with no kept criterion is written with a values filter on its first
+/// column keeping its visible data rows' text, which Excel reads as filtered (T-4003), and so
+/// does our import: the round trip keeps SUBTOTAL 9 equal to 109 (T-4363).
 #[test]
-fn a_filtered_table_without_a_criterion_exports_unfiltered() {
+fn a_filtered_table_without_a_criterion_exports_its_visible_values() {
     let mut model = new_empty_model();
-    for (row, input) in [(1, "Qty"), (2, "1"), (3, "2")] {
-        model.set_user_input(0, row, 1, input.to_string()).unwrap();
+    for (row, input) in [(1, "Qty"), (2, "1"), (3, "2"), (4, ""), (5, "4"), (6, "1")] {
+        if !input.is_empty() {
+            model.set_user_input(0, row, 1, input.to_string()).unwrap();
+        }
     }
-    model.add_table(0, "Sales", (1, 1, 3, 1), true).unwrap();
+    model.add_table(0, "Sales", (1, 1, 6, 1), true).unwrap();
+    // Row 3 (2) hidden; rows 2 and 6 hold the same 1; row 4 is blank.
+    model.set_row_hidden(0, 3, true).unwrap();
+    for (row, function) in [(8, 9), (9, 109)] {
+        model
+            .set_user_input(0, row, 3, format!("=SUBTOTAL({function},Sales[Qty])"))
+            .unwrap();
+    }
+    model.evaluate();
     let temp_file_name = "temp_file_test_filtered_table.xlsx";
     save_to_xlsx(&model, temp_file_name).unwrap();
     let table_xml = part_text(temp_file_name, "xl/tables/table1.xml");
-    let reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    let mut reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
     fs::remove_file(temp_file_name).unwrap();
 
     assert!(
-        table_xml.contains(r#"<autoFilter ref="A1:A3"><filterColumn colId="0"/></autoFilter>"#),
+        table_xml.contains(
+            r#"<autoFilter ref="A1:A6"><filterColumn colId="0"><filters blank="1"><filter val="1"/><filter val="4"/></filters></filterColumn></autoFilter>"#
+        ),
         "{table_xml}"
     );
-    assert!(model.workbook.tables["Sales"].has_filters);
-    assert!(!reloaded.workbook.tables["Sales"].has_filters);
+    assert!(reloaded.workbook.tables["Sales"].has_filters);
+    reloaded.evaluate();
+    for row in [8, 9] {
+        assert_eq!(
+            reloaded.get_formatted_cell_value(0, row, 3).unwrap(),
+            "6",
+            "row {row}"
+        );
+        assert_eq!(model.get_formatted_cell_value(0, row, 3).unwrap(), "6");
+    }
 }
 
 #[test]
@@ -287,6 +307,53 @@ fn excel_authored_tables_keep_their_formula_text() {
         }
     }
     assert!(formulas > 100, "{formulas}");
+}
+
+/// T-4157: the Excel-authored tables.xlsx carries `dataDxfId` on table columns and `headerRowDxfId`
+/// alone on Table7; import reads each from its own attribute and the export writes every one back.
+#[test]
+fn excel_authored_table_dxf_ids_round_trip() {
+    let model = load_from_xlsx("tests/calc_test_tables/tables.xlsx", "en", "UTC", "en").unwrap();
+    let table7 = &model.workbook.tables["Table7"];
+    assert_eq!(
+        (table7.header_row_dxf_id, table7.data_dxf_id),
+        (Some(17), None),
+        "the header style is not copied into the data style"
+    );
+    let data_ids: Vec<_> = table7.columns.iter().map(|c| c.data_dxf_id).collect();
+    assert_eq!(
+        data_ids,
+        [13, 11, 9, 7, 5, 3].map(Some),
+        "Table7 column dataDxfId"
+    );
+
+    let temp_file_name = "temp_file_test_excel_table_dxf_ids.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    fs::remove_file(temp_file_name).unwrap();
+    for (name, table) in &model.workbook.tables {
+        let back = &reloaded.workbook.tables[name];
+        assert_eq!(
+            (
+                table.header_row_dxf_id,
+                table.data_dxf_id,
+                table.totals_row_dxf_id
+            ),
+            (
+                back.header_row_dxf_id,
+                back.data_dxf_id,
+                back.totals_row_dxf_id
+            ),
+            "{name}"
+        );
+        let ids = |t: &rustsheet_engine::types::Table| {
+            t.columns
+                .iter()
+                .map(|c| (c.header_row_dxf_id, c.data_dxf_id, c.totals_row_dxf_id))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(ids(back), ids(table), "{name} columns");
+    }
 }
 
 /// The filters of the Excel-authored tables.xlsx (a custom filter on Table4, a values filter on
@@ -624,4 +691,54 @@ fn a_calculated_column_keeps_its_column_formula() {
         columns[1].calculated_column_formula.as_deref(),
         Some("T[[#This Row],[Qty]]*2")
     );
+}
+
+/// After a row or column insert or delete, the exported `calculatedColumnFormula` is the text
+/// Excel saves for the same edit: the first data cell's formula as the edit displaced it
+/// (T-4274 probes/table-edits/t4274-calc-column-*, the tables of their cached excel-graph
+/// workbooks). The table is t2957-a1-reference's: T on A1:C4, C2 typed so the column fills.
+#[test]
+fn a_calculated_column_formula_follows_row_and_column_edits() {
+    type Edit = fn(&mut rustsheet_engine::UserModel) -> Result<(), String>;
+    let cases: [(&str, Edit, &str); 5] = [
+        ("=A2*2", |u| u.insert_columns(0, 1, 1), "B2*2"),
+        ("=A2*2", |u| u.delete_columns(0, 2, 1), "A2*2"),
+        ("=A2*2", |u| u.insert_rows(0, 1, 1), "A3*2"),
+        ("=A2*2", |u| u.insert_rows(0, 3, 1), "A2*2"),
+        (
+            "=[@Col]*2",
+            |u| u.insert_columns(0, 1, 1),
+            "T[[#This Row],[Col]]*2",
+        ),
+    ];
+    for (index, (typed, edit, saved)) in cases.into_iter().enumerate() {
+        let mut model = new_empty_model();
+        let cells = [
+            (1, 1, "Col"),
+            (1, 2, "Other"),
+            (1, 3, "Calc"),
+            (2, 1, "1"),
+            (3, 1, "2"),
+        ];
+        for (row, column, input) in cells.into_iter().chain([(4, 1, "4")]) {
+            model
+                .set_user_input(0, row, column, input.to_string())
+                .unwrap();
+        }
+        model.add_table(0, "T", (1, 1, 4, 3), false).unwrap();
+        model
+            .set_typed_user_input(0, 2, 3, typed.to_string())
+            .unwrap();
+        let mut user = rustsheet_engine::UserModel::from_model(model);
+        edit(&mut user).unwrap();
+        let temp_file_name = format!("temp_file_test_calculated_column_edit_{index}.xlsx");
+        save_to_xlsx(user.get_model(), &temp_file_name).unwrap();
+        let table_xml = part_text(&temp_file_name, "xl/tables/table1.xml");
+        fs::remove_file(&temp_file_name).unwrap();
+        let element = format!("<calculatedColumnFormula>{saved}</calculatedColumnFormula>");
+        assert!(
+            table_xml.contains(&element),
+            "{typed} case {index}: {table_xml}"
+        );
+    }
 }

@@ -13,6 +13,8 @@ mod test_conditional_formatting;
 mod test_cut_n_paste;
 mod test_defined_names;
 mod test_delete_row_column_formatting;
+mod test_delete_undo_formulas;
+mod test_delete_undo_rewrites;
 mod test_diff_queue;
 mod test_duplicate_sheet;
 mod test_dynamic_arrays;

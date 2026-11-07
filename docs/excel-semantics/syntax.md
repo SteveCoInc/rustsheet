@@ -284,7 +284,8 @@ a body past the cap can exist, and the undo does not refuse it (`Model::restore_
 2026-11-05). Excel binds a cell's names when its formula is loaded or entered, and a sheet-scoped add of N on sheet S
 (Graph `worksheets('S')/names/add`, then a FullRebuild) re-binds only uses of a *defined* workbook N, and only on S:
 - No workbook N (plain, body `=1`): on S, `=N`, `=N+1` and `=ISERROR(N)` loaded from the file, and `=N` typed through
-  the API before the add, stay `#NAME?` (TRUE), FORMULATEXT still `=N`; `=S!N` on S and on T read the new name (1;
+  the API before the add, stay `#NAME?` (TRUE; in this book, where S!A4 `=S!N` follows S!A1 `=N`: "Which place a
+  loaded use took" below says when such a use reads the new name instead), FORMULATEXT still `=N`; `=S!N` on S and on T read the new name (1;
   FORMULATEXT `=S!N`); `=N` on T is `#NAME?`. The same body nested 65 calls deep (probes/t4014-sheet-api-name-65)
   behaves alike, so the cap plays no part. A workbook-scoped add instead fills the unresolved `=N`
   (probes/t3264-api-name-65: 1).
@@ -305,7 +306,8 @@ an unresolved `=N`; it then shows as `'<file>.xlsx'!N`); how a pinned use is sav
 Excel saves it; a typed `=[0]!Missing` (ours now shows `=Missing`); uses inside other names' bodies, conditional-format
 and data-validation formulas on S, and names called as functions (`N(2)`), which the add leaves alone; and desktop
 Excel's Name Manager.
-- **Most books re-bind instead; no rule found** (T-4391; probes/t4391-api-rebind-*, excel-graph 2026-11-06).
+- **Most books re-bind instead** (T-4391; probes/t4391-api-rebind-*, excel-graph 2026-11-06; the rule is T-4618's "Which
+  place a loaded use took" below).
   T-4049's "stays `#NAME?`" holds only in some books. In T-4353's book (First, S2, Last) with sheet-scoped adds and
   every use loaded, Excel re-binds every unresolved use in the following cases:
   - each of -first, -s2 and -last: ten adds on all three sheets, with First, S2 or Last active;
@@ -324,9 +326,9 @@ Excel's Name Manager.
 
   -s2-qualified-first-add has every feature of the last one tried alone (`Rate` first, a qualified `=S2!Rate`, S2
   active) and re-binds. The answer also failed to repeat once: -first's first fill (commit 681082d1a) was `#NAME?` in
-  all 13 cells, and three later sessions of the same input re-bound all 13. Ours keeps T-4049's rule, since
-  re-binding everywhere would break the T-4049/T-4014 cells, so the re-bound cells are known failures (T-4617 owns
-  them and the bisection between -s2-qualified-first-add and t4394-api-name-active-s2).
+  all 13 cells, and three later sessions of the same input re-bound all 13. T-4391 found no rule; T-4618's load-order
+  places explain every cell of these books and of those that keep `#NAME?`, and the engine matches all 60 (T-4617).
+  The non-repeating first fill stays unexplained.
 **An unqualified reference in an API-defined name binds to the active sheet** (T-4353, T-4394;
 probes/t4353-api-name-unqualified-ref, excel-graph 2026-11-05). In a book of First, S2 and Last (B1 = 1, 7, 9; B2 =
 10, 70, 90), Graph `worksheets('S2')/names/add` of `Rate` = `=$B$1` and `Span` = `=$B$1:$B$2`, of `Rate2` = `=$B$1`
@@ -343,8 +345,8 @@ API-added body on the active sheet and stores it qualified (`Model::formula_to_i
 `an_unqualified_name_reference_binds_to_the_active_sheet`, crates/rustsheet/src/edit/tests/name_binding.rs), and the eval
 adapter sets a case's `active_sheet` before its `api_names`. The same probe shows
 an exception to the rule above: of the uses typed before the adds, S2's `=Rate` stays `#NAME?` but S2's `=SUM(Span)`
-and Last's `=Rate2` resolve; T-4391's probes found no rule that separates them (above, "Most books re-bind
-instead"; T-4617 owns S2!A3 and Last!A1, which the engine leaves `#NAME?`).
+and Last's `=Rate2` resolve. The load-order places of "Which place a loaded use took" below explain all three (T-4618;
+the engine matches them).
 A bare *name* in such a body does not follow the active sheet. A sheet-scoped definition beats the
 workbook-scoped one, and among sheet-scoped definitions Excel takes the one on the alphabetically first sheet
 name. The result is the same on every sheet and with First, S2 or Last active. With `W_x` = `=Dupx`:
@@ -359,19 +361,50 @@ S2's only, is 7 and `=Dup` is Last's 90; excel-graph 2026-11-06, T-4554). The na
 `_` before the letters (probes/t4587-api-name-sheet-order-case, excel-graph 2026-11-06: tabs Z, B, a, _u, Z active,
 no workbook names; B + a reads a's, so not ordinal, where `B` < `a`; a + _u and B + _u read _u's, so `_` sorts as
 below the lower-case letters, not after `Z`; Z + a reads a's). Digits, other punctuation, spaces and non-ASCII names
-are unprobed (ours compares lower-cased names by code point). A sheet-scoped name's body follows the same rule:
-Last's `LD` = `=Dup` reads Last's 90 (t4554-api-name-local-name-body; Last is also the first by name there, so a
-sheet-scoped body's own sheet winning is not ruled out, UNVERIFIED). Ours since T-4587: the parser reads a bare
+are unprobed (ours compares lower-cased names by code point). A sheet-scoped name's body follows the same rule, not
+its own sheet first: Last's `LD` = `=Dup` reads Last's 90 (t4554-api-name-local-name-body, where Last is also the first by
+name), and with tabs First, S2, Last, S2's `SD` = `=Dup` (Dup on First and S2) reads First's 1, Last's `LD` = `=DupB` (on
+First and Last) First's 2, S2's `SW` = `=DupC` (workbook and Last; S2 none) Last's 93, not the workbook's, and S2's
+`TW` = `=DupD` (workbook, S2 and Last) Last's 94, not S2's own 74; the same on every sheet and with First, S2 or Last
+active (probes/t4621-api-sheet-name-body, -first, -last D1:D5, excel-graph 2026-11-06, VERIFIED, T-4621). In the same
+books `=INDIRECT("SD")` on the name's own sheet is `#REF!`, for every one of the four sheet-scoped adds and every active
+sheet (ours too). The bare own-sheet uses there, typed before the add (column E), resolve or stay `#NAME?` by the active
+sheet: S2's with First or Last active, Last's with First or S2 active (T-4674 owns the cells; the engine leaves all of
+them `#NAME?`). Ours since T-4587: the parser reads a bare
 defined name of an API-added body (`Parser::set_api_name_body`) as `Sheet!Name` on the first defining sheet by
 lower-cased name (`Parser::api_body_sheet_name`), so the body is stored qualified and a sheet rename rewrites it; a
 name only the workbook defines stays bare; a LET name or LAMBDA parameter of the body is no defined name.
-One cell of t4554-api-name-local-name-body stays off: Last!D3, `=LD` on Last loaded before the add of the Last-scoped
-`LD`, is 90 in Excel, where "A sheet-scoped name added after load" above leaves such a use `#NAME?` (ours). Four
-probes keep that rule against the obvious differences (excel-graph 2026-11-06, T-4587, all `#NAME?` on the scoped
-sheet, as t4049-sheet-api-name-plain): the other sheet active (t4587-sheet-api-name-inactive-sheet), the sheet
-already holding a file sheet-scoped name (t4587-sheet-api-name-sheet-has-names), a bare-name body `=Src`
-(t4587-sheet-api-name-name-body), and an earlier tab holding the qualified `=S!N` (t4587-sheet-api-name-qualified-use-first).
-What makes Last!D3 resolve is open (T-4618 owns the cell).
+**Which place a loaded use took** (T-4618; excel-graph 2026-11-06, 30 probes: the t4049-sheet-api-name-*, t4014-sheet-api-name-65,
+t4587-sheet-api-name-*, t4394-api-name-active-*, t4554-api-name-local-name-body and the 23 probes/t4618-*). Whether an
+unqualified `=N` on S, loaded before a sheet-scoped N is added on S with no workbook N, reads the new name depends on
+the order Excel loads the workbook and on what each use of N met first. Every bare-use cell of those probes fits this model:
+- Load order: the file's defined names, then the **active sheet**, then the other sheets in tab order (each sheet's
+  cells by row, then column), and in a formula its names as written. Evidence: t4618-earlier-qualified-only
+  (tabs T, S; T's `=S!N` loads first, S's `=N` reads 1) against -earlier-qualified-only-active (S active: `#NAME?`);
+  t4618-order-after-active-forward (P, Q, R; R active; P's `=Q!N` before Q's uses: 1); t4618-name-body-qualified (a
+  file name `Q` = `=S!N`: 1); t4618-same-formula-qualified-first (`=S!N+N*10` is 11, a later `=N` 1).
+- Places: a qualified `S!N` makes S's own place, unless one stands. An unqualified `N` binds to the *provisional* place
+  if one stands, else to its sheet's own place, else it makes the provisional place, which belongs to its sheet. A
+  qualified `S!N` met while S holds the provisional place *fixes* it to the workbook.
+- The add on S fills S's own place, and the provisional place if S holds it unfixed. So S's unqualified uses read the
+  new name when they took S's own place (t4554 Last!D3: S2 active loads `=Last!LD` first; t4618-last-of-three-tabs;
+  t4618-same-tab-qualified-first, `=S!N` in S!A1 before `=N`), or the provisional place nobody fixed
+  (t4394-api-name-active-s2 and -last `=SUM(Span)` on S2 and `=Rate2` on Last, names no cell qualifies). They stay
+  `#NAME?` when a bare use elsewhere made the provisional place first (t4587-sheet-api-name-qualified-use-first and
+  -inactive-sheet, whose T!A2 `=N`; t4618-last-of-three-first-active), or when a qualified use fixed S's provisional
+  place (t4049-sheet-api-name-plain, its S!A4 `=S!N` after S!A1 `=N`; t4618-same-tab-bare-first;
+  t4618-order-after-active-backward and -wraps-after-active). Workbook adds earlier in the session, a constant body
+  and a body naming a name the sheet defines change nothing (t4618-workbook-add-before, -sheet-add-constant-body,
+  -body-names-own-sheet-name, -body-names-dup-name, -only-sheet-add).
+- A qualified use reads the new name in every probe but one: t4618-order-after-active-backward Q!A1 (tabs P, Q, R, R
+  active, P's `=N` then Q's `=P!N`) is `#NAME?`, where -wraps-after-active R!A1 (Q active, P's `=N` then R's `=P!N`) is
+  1. Unexplained; T-4642 owns the cell.
+Ours since T-4618: `Model::loaded_uses_take_sheet_place` (name_load_order.rs) replays the model over the formulas as
+they stand when the add comes, with the active sheet then (`Model::active_sheet`), and `Model::bind_added_sheet_name`
+pins S's uses only when the add does not fill their place. UNVERIFIED: a use typed after the load is replayed where
+its cell stands (the probes type only on S, where it agrees); the active sheet is taken at the add, not at the load;
+a pinned `[0]!N` binds as a fixed provisional place; a sheet-scoped name's body is read as a cell of its sheet; what a
+qualified use met while another sheet holds the provisional place makes (ours: its own place).
 Our choices that no probe covers yet, all UNVERIFIED:
 - (a) the body is stored qualified, so making another sheet active later does not move an existing name;
 - (b) renaming the bound sheet rewrites the body, and deleting it makes the body `#REF!`. A case cannot yet edit a

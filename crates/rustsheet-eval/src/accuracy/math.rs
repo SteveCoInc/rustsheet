@@ -34,6 +34,8 @@ pub enum Stratum {
     Edge,
     Extreme,
     LogUniform,
+    /// A definition's own region draw, only in batches generated with `--stratum aimed` (T-4059).
+    Aimed,
 }
 
 impl Stratum {
@@ -46,6 +48,7 @@ impl Stratum {
             Self::Edge => "edge",
             Self::Extreme => "extreme",
             Self::LogUniform => "log-uniform",
+            Self::Aimed => "aimed",
         }
     }
 }

@@ -3,7 +3,7 @@ id: T-2990
 title: "Measure the merge train for a week and decide whether to retire the per-PR merge path"
 milestone: M2
 lane: harness
-status: todo
+status: dropped
 priority: P2
 size: S
 tier: opus
@@ -39,3 +39,7 @@ record whether to retire the per-PR merge path.
 
 ## Out of scope
 - Tuning the batch size or the cadence, beyond filing tasks for them.
+
+## Outcome
+Dropped 2026-11-07: the merge train it changes no longer exists. Decision 0247 moved merges to GitHub's merge queue, and
+decision 0252 deleted `scripts/merge_train.py` and its tooling, so there is nothing left to fix or measure.
