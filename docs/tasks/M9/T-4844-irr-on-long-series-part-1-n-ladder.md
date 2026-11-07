@@ -3,7 +3,7 @@ id: T-4844
 title: "IRR on long series, part 1: n-ladder and fixed-point probes where Excel returns and the secant stalls"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
