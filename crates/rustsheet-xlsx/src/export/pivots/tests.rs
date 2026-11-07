@@ -6,9 +6,9 @@ use std::io::{Cursor, Read};
 
 use rustsheet_engine::expressions::token::Error;
 use rustsheet_engine::pivot::{
-    Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea, DataField, NumberGroups,
-    OpaqueEntry, OpaqueNode, PivotBudget, PivotCache, PivotField, PivotTable, RecordValue,
-    MAX_PIVOT_WORK, MAX_RECORDS, MAX_RECORD_VALUES,
+    Axis, AxisField, CacheBuilder, CacheField, CacheItem, CacheSource, CellArea, DataField,
+    NumberGroups, OpaqueEntry, OpaqueNode, PivotBudget, PivotCache, PivotField, PivotTable,
+    RecordValue, MAX_PIVOT_WORK, MAX_RECORDS, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::DateSystem;
 use rustsheet_engine::Model;
@@ -239,6 +239,55 @@ fn an_api_pivot_round_trips_and_reaches_a_fixed_point() {
     let again = round_trip(&back);
     assert_eq!(again.workbook.pivot_tables, back.workbook.pivot_tables);
     assert_eq!(again.workbook.pivot_caches, back.workbook.pivot_caches);
+}
+
+/// A calculated field is written as the builder and Excel write it, with its formula as read and
+/// no record values, and reads back equal (T-4174); one after it, or one whose formula the import
+/// refuses, drops the cache.
+#[test]
+fn a_calculated_field_round_trips() {
+    let mut cache = mixed_cache();
+    cache.fields.push(CacheField {
+        name: "Dbl \"x\"".into(),
+        formula: Some("V*2+'K'+LEN(\"a\")".into()),
+        ..CacheField::default()
+    });
+    let mut model = model_with(cache);
+    let pivot = &mut model.workbook.pivot_tables[0];
+    pivot.fields.push(PivotField::new(None, 0));
+    pivot.data_fields.push(DataField {
+        caption: "Sum of Dbl".into(),
+        field: 3,
+        ..DataField::default()
+    });
+    let bytes = export(&model);
+    let definition = part(&bytes, "xl/pivotCache/pivotCacheDefinition1.xml");
+    assert!(
+        definition.contains(
+            r#"<cacheFields count="4">"#
+        ) && definition.contains(
+            r#"<cacheField name="Dbl &quot;x&quot;" numFmtId="0" formula="V*2+&apos;K&apos;+LEN(&quot;a&quot;)" databaseField="0"/></cacheFields>"#
+        ),
+        "{definition}"
+    );
+    let records = part(&bytes, "xl/pivotCache/pivotCacheRecords1.xml");
+    assert!(
+        records.contains(r#"<r><x v="0"/><x v="0"/><x v="0"/></r>"#),
+        "{records}"
+    );
+    let back = round_trip(&model);
+    assert_eq!(back.workbook.pivot_caches, model.workbook.pivot_caches);
+    assert_eq!(
+        back.workbook.pivot_tables[0].data_fields,
+        model.workbook.pivot_tables[0].data_fields
+    );
+
+    let formula = model.workbook.pivot_caches[0].fields[3].formula.take();
+    model.workbook.pivot_caches[0].fields[3].formula = Some("NOW()".into());
+    assert!(round_trip(&model).workbook.pivot_caches.is_empty());
+    model.workbook.pivot_caches[0].fields[3].formula = formula;
+    model.workbook.pivot_caches[0].fields.swap(2, 3);
+    assert!(round_trip(&model).workbook.pivot_caches.is_empty());
 }
 
 /// Classic layout and a field's subtotal caption are written and read back (pivots.md "Classic

@@ -198,6 +198,14 @@ impl ValueStep<'_> {
         if kept.records.is_empty() {
             return Ok(());
         }
+        // A value filter or Top-N by a calculated data field leaves the pivot without a result:
+        // what Excel shows is unprobed (UNVERIFIED, T-4897), and ranking by the formula's values
+        // per item is not implemented (`pivot::calculated`).
+        let calculated =
+            (self.cache.fields.get(data.field as usize)).is_some_and(|f| f.formula.is_some());
+        if calculated {
+            return Err(PivotComputeError::Malformed);
+        }
         let values = column(self.cache, data.field)?;
         let value_items = &self
             .cache
