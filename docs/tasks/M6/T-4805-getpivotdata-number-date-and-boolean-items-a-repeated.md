@@ -34,3 +34,15 @@ passes: T-4823 implemented web.md "GETPIVOTDATA error arguments (T-4006)", which
 
 ## Out of scope
 - The shown text of date items in the pivot itself (T-4807).
+
+## Landing notes
+- 2026-11-07 opus run: claimed at minute ~65, no code written; the session's landing window closed first. No PR.
+- Start after PR #3950 (T-4804) merges: it rewrites `getpivotdata_on` (data fields, the Values pair) in
+  functions/lookup_and_reference/getpivotdata.rs, which this task's item matching changes too. Branch from the
+  `origin/main` that has it.
+- Findings so far (probes/t2085-getpivotdata-items.case.json, 103/130): number, date and boolean items fall to
+  `_ => None` or `pivot_number_item` misses (Q!A1:A9, B3, C1:C5); a repeated field returns `None` at
+  `positions.contains` (E1, E2); the Odd pivot (text, blank and error records in the data field) is `#REF!`
+  throughout (E12:E17), likely `record_numbers` refusing a non-number record; a single error cell as pivot_table is
+  passed through at the `left == right` check in `fn_getpivotdata` (E20, E23); array data_field / field name (E9:F10)
+  are not lifted.
