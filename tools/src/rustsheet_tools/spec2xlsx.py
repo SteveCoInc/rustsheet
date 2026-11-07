@@ -111,6 +111,7 @@ from rustsheet_tools.custom_properties import json_properties, set_json_property
 from rustsheet_tools.oracle.package import patch_parts, read_parts
 from rustsheet_tools.pivot import PivotParts, pivot_tables, relationships_xml
 from rustsheet_tools.sheetop import column_number, sheet_op
+from rustsheet_tools.spec_names import define_name
 from rustsheet_tools.spec_sheet_extras import activate_sheet, add_range_formulas, set_column_widths
 from rustsheet_tools.spec_tables import auto_filter, has_header_row
 
@@ -426,7 +427,7 @@ def build_xlsx(spec: dict[str, Any]) -> bytes:
     activate_sheet(spec, worksheets)
     patches.pivots = pivot_tables(spec, _pivot_cell_writer(worksheets, patches, tables))
     for name, formula in spec.get("names", {}).items():
-        wb.define_name(name, _formula_text(formula, tables))
+        define_name(wb, name, _formula_text(formula, tables))
     _record_backend_steps(wb, spec, entered)
     wb.close()
     return _patch_package(buf.getvalue(), spec, patches)

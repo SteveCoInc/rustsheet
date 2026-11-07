@@ -1389,7 +1389,7 @@
    },
    "B278": {
     "f": "=BESSELJ(1E5,100001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "B280": {
     "f": "=BESSELK(2.5,100001)",
