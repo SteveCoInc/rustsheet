@@ -3,7 +3,7 @@ id: T-4036
 title: "Tidy the T-3680 accuracy budget code: split beta._betainc into a dispatcher, rename tables.time_limit to hang_guard, trim the budget comments"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
