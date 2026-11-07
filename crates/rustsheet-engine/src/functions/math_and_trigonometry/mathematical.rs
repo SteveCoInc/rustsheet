@@ -292,7 +292,7 @@ impl Model {
     /// [`Model::numbers_fn`] where a written-empty argument takes its default, as an omitted one
     /// does: Excel's CEILING.MATH, FLOOR.MATH, CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING
     /// (`CEILING.MATH(2.675,)` is 3; probes/t4873-empty-arg-toolpak-roundings A24:A53;
-    /// docs/excel-semantics/numbers.md "An empty significance of the newer roundings is 1").
+    /// docs/excel-semantics/numbers.md "An empty argument of a `ToolPak` function is #N/A").
     pub(crate) fn numbers_fn_empty_as_omitted<const N: usize>(
         &mut self,
         kind: Function,
@@ -320,6 +320,14 @@ impl Model {
             }
             op(numbers)
         };
+        // Which arguments take their default when written empty (`CEILING.MATH(2.675,)`): decided
+        // on the nodes, so a blank a formula returns still reads as 0.
+        let mut omitted = [false; N];
+        if empty == EmptyArgReads::Default {
+            for (flag, arg) in omitted.iter_mut().zip(args) {
+                *flag = self.is_empty_argument(arg);
+            }
+        }
         self.lift_call_numbers(kind, args, cell, &shortcut, &mut |model, values| {
             let mut numbers = defaults;
             for (index, slot) in numbers.iter_mut().enumerate() {
@@ -328,9 +336,7 @@ impl Model {
                     *slot = *number;
                     continue;
                 }
-                let value = values.get(index).filter(|value| {
-                    empty == EmptyArgReads::Zero || !matches!(value, CalcResult::EmptyArg)
-                });
+                let value = values.get(index).filter(|_| !omitted[index]);
                 match model.kernel_number_or(value, *slot, cell) {
                     Ok(number) => *slot = number,
                     Err(error) => return error,
@@ -399,7 +405,7 @@ impl Model {
             // Excel: a written-empty argument is #N/A, as in MROUND, judged left to right
             // (`QUOTIENT(,5)` and `QUOTIENT(7,)` #N/A, `QUOTIENT(1/0,)` #DIV/0!:
             // probes/t4873-empty-arg-toolpak-roundings A1:A13).
-            let [value, divisor] = match model.atp_numbers(values, cell) {
+            let [value, divisor] = match model.atp_numbers(args, values, cell) {
                 Ok(numbers) => numbers,
                 Err(error) => return error,
             };
@@ -423,7 +429,7 @@ impl Model {
             // `MROUND(TRUE,)` #VALUE! but `MROUND(,TRUE)` #N/A: probes/ceiling-floor-mround-array-
             // lift A19:A20, A23, A27:A42, date-math-lift-driver-edges G44-G47, G51-G52;
             // docs/excel-semantics/arrays.md).
-            let [value, multiple] = match model.atp_numbers(values, cell) {
+            let [value, multiple] = match model.atp_numbers(args, values, cell) {
                 Ok(numbers) => numbers,
                 Err(error) => return error,
             };

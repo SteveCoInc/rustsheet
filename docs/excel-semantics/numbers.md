@@ -2833,6 +2833,39 @@ as written) and is `#VALUE!` (probes/quotient-factdouble-seriessum-3d-legacy C1-
 Status: VERIFIED (excel-graph)
 Tasks: T-1777, T-1802, T-1832
 
+## An empty argument of a ToolPak function is #N/A; an empty significance of the newer roundings is 1 (T-4873)
+Rule: a written-empty argument of QUOTIENT (either one) or of SERIESSUM (`x`, `n`, `m` or the coefficients) is `#N/A`,
+as MROUND's is ("MROUND keeps its scalar rules", arrays.md). The arguments are judged left to right, so an error or a
+boolean before the empty one wins and an empty one before an error is `#N/A`. A written-empty `significance` or `mode`
+of CEILING.MATH, FLOOR.MATH, CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING is read as omitted (significance 1, mode 0),
+while the legacy CEILING and FLOOR still read an empty significance as 0.
+- QUOTIENT: `QUOTIENT(,5)`, `(7,)`, `(,)`, `(-7,)`, `(2.5,)`, `(,-2.5)` are `#N/A` (A1:A6). `QUOTIENT(1/0,)` is
+  `#DIV/0!` but `QUOTIENT(,1/0)` `#N/A` (A7:A8); `QUOTIENT(TRUE,)` and `QUOTIENT("x",)` are `#VALUE!`, `QUOTIENT(,TRUE)`
+  `#N/A` (A9:A11). An omitted LET variable is empty too: `LET(e,,QUOTIENT(7,e))` is `#N/A` (A12). Over an array each
+  element is `#N/A` (`QUOTIENT({7,8},)`, A13:B13).
+- SERIESSUM: an empty `x`, `n`, `m` or coefficients, or all four, is `#N/A` (A14:A20). `SERIESSUM(1/0,,1,{1,2})` is
+  `#DIV/0!`, `SERIESSUM(2,1,1/0,)` `#DIV/0!` (the `m` error before the empty coefficients) and `SERIESSUM(TRUE,,1,{1,2})`
+  `#VALUE!` (A21:A23).
+- CEILING.MATH: `(2.675,)` 3, `(-2.675,)` -2, `(5,)` 5, `(-5,)` -5, `(0.3,)` 1, `(2.5,,)` 3, `(-2.5,,)` -2, `(-2.5,2,)` -2,
+  `(-2.5,,1)` -3, `(2.675,,0.1)` 3, `(,2)` 0 (A24:A34). FLOOR.MATH: `(2.675,)` 2, `(-2.675,)` -3, `(5,)` 5, `(-5,)` -5,
+  `(0.3,)` 0, `(2.5,,)` 2, `(-2.5,,)` -3, `(-2.5,2,)` -4, `(-2.5,,1)` -2, `(-5,,{0,1})` -5, -5 (A35:B44).
+- CEILING.PRECISE `(2,)` 2, `(-2.5,)` -2, `(0.3,)` 1; FLOOR.PRECISE `(2.5,)` 2, `(-2.5,)` -3, `(0.3,)` 0; ISO.CEILING
+  `(1.005,)` 2, `(-2.5,)` -2, `(0.3,)` 1 (A45:A53). Controls: `CEILING(2.5,)` 0 and `FLOOR(2.5,)` `#DIV/0!` (A54:A55).
+Evidence: probes/t4873-empty-arg-toolpak-roundings Calc!A1:A55, B13, B44 (excel-graph, 2026-11-07, T-4873; the engine's
+predictions were committed before the fill and all 57 cells matched).
+- Written-empty only: a blank that a formula returns is not an empty argument and reads as 0. `SERIESSUM(VLOOKUP(..),3,0,
+  B2:C10)` with the VLOOKUP landing on an empty cell is the coefficients' `#VALUE!`, not `#N/A` (gen-m5/74b183ca6fc1d190
+  Calc!A16, gen-m5/6efa59fc1257c475 Calc!A229). So the test is on the argument's node (`Model::is_empty_argument`: an
+  empty node, or a LET or LAMBDA variable bound to an omission), not on the value the kernel receives.
+Ours: implemented (T-4873). `Model::atp_numbers` (cast.rs) reads a ToolPak kernel's numbers (written-empty `#N/A`,
+boolean `#VALUE!`), shared by MROUND, QUOTIENT and SERIESSUM's `x`, `n`, `m`; `series_coefficients` makes empty
+coefficients `#N/A`. The five roundings use `numbers_fn_empty_as_omitted`. Before T-4873 an empty argument read as 0 in
+all of them except MROUND (`QUOTIENT(,5)` 0, `CEILING.MATH(2.675,)` 0, `SERIESSUM(2,1,1,)` 0), and MROUND read a blank a
+formula returns as `#N/A` (UNVERIFIED for MROUND itself: no cell probes `MROUND(<formula blank>,1)`; it now reads 0, as
+SERIESSUM's evidenced `x` does).
+Status: VERIFIED (excel-graph)
+Tasks: T-4873
+
 ## ECMA.CEILING
 Rule: `ECMA.CEILING(number, significance)` is a real Excel function with exactly the two-argument `CEILING` semantics (rounds away from zero for negative `number` with negative `significance`; `#NUM!` when `number` is positive and `significance` negative; zero significance gives 0; number text `"2.5"` and `TRUE` are read as numbers; text significance is `#VALUE!`). It is stored in a file as `_xlfn.ECMA.CEILING`, and `FORMULATEXT` prints it as `=ECMA.CEILING(2.5,2)` (no prefix). Written bare (`ECMA.CEILING(...)`) in a file, Graph rejects the whole workbook (`createSession` 501 `unsupportedWorkbook`); the one-argument form `_xlfn.ECMA.CEILING(2.5)` is rejected the same way (arity is exactly 2, like CEILING).
 Evidence: probes/ecma-ceiling A1:A6, A8:A11, A13:A14; probes/ecma-ceiling-formulatext A12 (excel-graph, 2026-10-12, T-1301).

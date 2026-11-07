@@ -45,7 +45,7 @@ impl Model {
             args,
             LiftCost::Cells(cells),
             cell,
-            &mut |model, values| model.seriessum_of(values, &coefficients, cell),
+            &mut |model, values| model.seriessum_of(args, values, &coefficients, cell),
         )
     }
 
@@ -62,7 +62,7 @@ impl Model {
         }
         // Excel: written-empty coefficients are #N/A, as the ToolPak's other empty arguments are,
         // reported after x, n and m (probes/t4873-empty-arg-toolpak-roundings A17, A22).
-        if matches!(node, Node::EmptyArgKind) {
+        if self.is_empty_argument(node) {
             return Err(CalcResult::new_error(Error::NA, cell, String::new()));
         }
         let result = self.evaluate_node_in_context(node, cell);
@@ -87,17 +87,18 @@ impl Model {
     /// One SERIESSUM element: x, n and m are checked in order, then the coefficients.
     fn seriessum_of(
         &self,
+        args: &[Node],
         values: &[CalcResult],
         coefficients: &Coefficients,
         cell: CellReferenceIndex,
     ) -> CalcResult {
         // The fourth slot is the coefficients' `EmptyArg` (`WholeByCaller`). Excel: x, n and m
-        // are ToolPak arguments, so a written-empty one is #N/A (`atp_number`;
+        // are ToolPak arguments, so a written-empty one is #N/A (`atp_numbers`;
         // probes/t4873-empty-arg-toolpak-roundings A14:A23).
         if values.len() != 4 {
             return CalcResult::new_args_number_error(cell);
         }
-        let [x, n, m] = match self.atp_numbers(values, cell) {
+        let [x, n, m] = match self.atp_numbers(args, values, cell) {
             Ok(numbers) => numbers,
             Err(error) => return error,
         };

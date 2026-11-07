@@ -3,7 +3,7 @@ id: T-4873
 title: "An empty argument of QUOTIENT and SERIESSUM, and an empty significance of CEILING.MATH, FLOOR.MATH and the PRECISE roundings, follow Excel"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -43,15 +43,31 @@ a small probe whose predictions are committed before the fill.
   nothing numeric is tuned.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph) writes each argument of QUOTIENT and SERIESSUM empty (one at a
+- [x] A probes case (excel-probe skill, excel-graph) writes each argument of QUOTIENT and SERIESSUM empty (one at a
       time and all), and the significance and mode of CEILING.MATH and FLOOR.MATH and the significance of
       CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING empty, on a positive, a negative and a fractional number, plus a
       `LET(e,,QUOTIENT(7,e))` row and CEILING(2.5,) / FLOOR(2.5,) as legacy controls.
-- [ ] The engine's predictions (`#N/A` for the ToolPak pair, empty = omitted for the five rounding functions) are
+- [x] The engine's predictions (`#N/A` for the ToolPak pair, empty = omitted for the five rounding functions) are
       committed in a commit before the oracle fill.
-- [ ] After the fill every probe cell passes; numbers.md states the rule with its cells.
-- [ ] No new F line in any eval/baseline file; `make check` green; reviewers approve.
+- [x] After the fill every probe cell passes; numbers.md states the rule with its cells.
+- [x] No new F line in any eval/baseline file; `make check` green; reviewers approve.
 
 ## Out of scope
 - MROUND, GCD, LCM, MULTINOMIAL, RANDBETWEEN (already evidenced and implemented).
 - AGGREGATE and SUBTOTAL (their empty-argument cells are already in probes and pass).
+
+## Outcome
+- Probe probes/t4873-empty-arg-toolpak-roundings (55 formulas, 57 checked cells, excel-graph 2026-11-07). The engine's
+  predictions and unit tests were committed (0fbd24317 on the branch) before the fill; all 57 cells matched.
+- Rules (numbers.md "An empty argument of a ToolPak function is #N/A; an empty significance of the newer roundings is 1"):
+  a written-empty argument of QUOTIENT or SERIESSUM (x, n, m, coefficients) is `#N/A`, judged left to right; a
+  written-empty significance or mode of CEILING.MATH, FLOOR.MATH, CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING is
+  read as omitted; CEILING and FLOOR keep 0.
+- Code: one helper, `Model::atp_numbers` (cast.rs), now reads MROUND's, QUOTIENT's and SERIESSUM's numbers; it decides
+  "empty" on the argument node through the new `Model::is_empty_argument` (let.rs), which the complex functions' check
+  now reuses. `numbers_fn_empty_as_omitted` (mathematical.rs) serves the five roundings. The node test matters: a blank a
+  formula returns (VLOOKUP of an empty cell) reaches the kernel as the same value, and Excel reads it as 0 (gen-m5
+  74b183ca6fc1d190 A16, 6efa59fc1257c475 A229 regressed under a value-based first version). MROUND now reads such a
+  blank as 0, not `#N/A` (unprobed for MROUND; noted UNVERIFIED in numbers.md).
+- Eval delta: fixed 0 / regressions 0 / new case 1 (57 of 57 pass, no F lines). No math sidecar: the Gate A generator
+  skips formulas with an empty argument.

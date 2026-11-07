@@ -392,6 +392,13 @@ impl Model {
         matches!(self.variable_binding(node), Some(Binding::Omitted))
     }
 
+    /// Whether `node` is a written-empty argument (`QUOTIENT(7,)`) or a variable that hands one
+    /// on ([`Model::is_omitted_variable`]: `LET(e,,QUOTIENT(7,e))`), as opposed to a blank a
+    /// formula returns.
+    pub(crate) fn is_empty_argument(&self, node: &Node) -> bool {
+        matches!(node, Node::EmptyArgKind) || self.is_omitted_variable(node)
+    }
+
     /// Whether `node` is a variable bound to an array of references ([`Binding::Grid`]), which
     /// [`Model::variable_reference`] hands on.
     pub(crate) fn is_grid_variable(&self, node: &Node) -> bool {
