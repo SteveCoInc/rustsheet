@@ -443,8 +443,20 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
     let mut d1 = d0 - if f0 > 0.0 { 1e-3 } else { -1e-3 };
     let mut f1 = npv(d1)?;
     let mut largest_npv = f0.abs().max(f1.abs());
+    // The smallest |NPV| at an iterate reached by two steps under 1e-7 in a row ([`SecantStop::Settled`]).
+    let mut settled_npv: Option<f64> = None;
     for step in 0..irr_secant_steps(values, guess) {
         if f1 == f0 {
+            // Flat after a nonzero step, in NPV's rounding noise: the run settled when one of its
+            // converged iterates got |NPV| under [`IRR_ROOT_RESIDUAL`] (T-4232).
+            if d1 != d0
+                && irr_root_residual_applies(values)
+                && settled_npv.is_some_and(|f| f < IRR_ROOT_RESIDUAL)
+            {
+                return Err(
+                    irr_from_discount(1.0 - d1).map_or(SecantStop::Failed, SecantStop::Settled)
+                );
+            }
             // After a zero step (d1 = d0) the next step is 0/0: `#DIV/0!` where the run went far
             // (probes-numeric/t3347-irr-conventional-holdout A131 and A138; T-3347).
             return Err(
@@ -468,6 +480,9 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
         }
         let f2 = npv(d2)?;
         largest_npv = largest_npv.max(f2.abs());
+        if (d2 - d1).abs() < 1e-7 && (d1 - d0).abs() < 1e-7 {
+            settled_npv = Some(settled_npv.map_or(f2.abs(), |f| f.min(f2.abs())));
+        }
         // A zero step also stops when NPV is within 1e-7 of the largest flow: on the 2^-53 grid
         // `IRR({-2500000,-1000000,123456789123000})` cannot get NPV under 1e-7 (1.2E-6 at
         // Excel's 7026.083663633989), yet Excel returns it (probes/t2565-irr-guess-sweeps
@@ -486,12 +501,17 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
 }
 
 /// Why a run of [`irr_secant`] stopped without a root.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 enum SecantStop {
     /// No root: the call retries from 0.1, then falls back ([`compute_irr`]).
     Failed,
     /// An iterate reached v = 0, or NPV could not be evaluated: the call is `#DIV/0!`.
     DivZero,
+    /// The run went flat after a nonzero step, settled in NPV's rounding noise: two steps in a row
+    /// under 1e-7 reached an iterate with |NPV| under [`IRR_ROOT_RESIDUAL`], though never under the
+    /// 1e-7 stop. Carries the rate at the run's last iterate, which the call returns when
+    /// [`irr_fallback`] finds no root ([`compute_irr`], T-4232).
+    Settled(f64),
 }
 
 /// The smallest guess IRR refuses as too large: 2^53.
@@ -535,16 +555,26 @@ pub(crate) fn compute_irr(values: &[f64], guess: f64) -> Result<f64, (Error, Str
         .map_or(values, |first| &values[first..]);
     let div_zero = || (Error::DIV, "Division by zero".to_string());
     let mut result = irr_secant(values, guess);
+    let mut settled = None;
+    if let Err(SecantStop::Settled(r)) = result {
+        settled = Some(r);
+        result = Err(SecantStop::Failed);
+    }
     // A failed run is retried once from the default guess 0.1, unless that was the guess
     if result == Err(SecantStop::Failed) && guess != 0.1 {
         result = irr_secant(values, 0.1);
+        if let Err(SecantStop::Settled(r)) = result {
+            settled = settled.or(Some(r));
+            result = Err(SecantStop::Failed);
+        }
     }
     match result {
         Ok(root) => Some(root),
         Err(SecantStop::DivZero) => return Err(div_zero()),
-        Err(SecantStop::Failed) => None,
+        Err(_) => None,
     }
     .or_else(|| irr_fallback(values))
+    .or(settled)
     .filter(|r| r.is_finite())
     .ok_or_else(|| (Error::NUM, "Failed to converge".to_string()))
 }
