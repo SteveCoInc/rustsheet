@@ -27,7 +27,7 @@ the engine follows it.
 
 ## Acceptance criteria
 - [x] The probe is filled and recorded in statistics.md, and the engine follows it.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The least-squares digits (T-4763, T-2006).
