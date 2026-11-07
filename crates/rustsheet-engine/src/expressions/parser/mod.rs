@@ -361,7 +361,7 @@ impl Parser {
 
     /// Runs `run` with the parser switched to the default locale and language, then puts
     /// `locale` and `language` (the active ones) back. For callers that also borrow other fields
-    /// of the model ([`Model::with_default_parser`](crate::model::Model) is this on the model's
+    /// of the model ([`Model::with_default_parser`](crate::model::Model::with_default_parser) is this on the model's
     /// own parser); the one place that switch is made (T-4693).
     pub(crate) fn with_default_locale<R>(
         &mut self,

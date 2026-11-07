@@ -30,4 +30,3 @@ like a plain one (its A1 part displaced, its structured part kept).
 
 ## Out of scope
 - `#This Row` cell evaluation after a column insert (T-4680).
-- `#This Row` cell evaluation after a column insert (T-4680).

@@ -36,7 +36,7 @@ one helper.
 - `#This Row` cell evaluation after a column insert (T-4680).
 
 ## Outcome
-- One helper, `with_default_locale` (model.rs; `Model::with_default_parser` is it on the model's own parser), now does
+- One helper, `Parser::with_default_locale` (expressions/parser/mod.rs; `Model::with_default_parser` in model.rs is it on the model's own parser), now does
   the save / switch to the default locale and language / restore at every site: `parse_internal_formula`,
   `displace_cf_ranges`, `parse_formulas`, `displaced_column_formulas`, `set_displaced_column_formulas` and the
   calculated-column fill. No behavior change; no eval delta.
