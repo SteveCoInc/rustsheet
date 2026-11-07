@@ -61,7 +61,7 @@ const HUGE_RATIO_POWER_SHAPE_MAX: f64 = 1.1;
 /// GAMMA.DIST's cdf and density alike and in CHISQ.DIST, CHISQ.DIST.RT and CHIDIST at y = x / 2:
 /// above shape 1 where `y / alpha * 4` overflows a double (a cut at y = alpha * `f64::MAX` / 4, so
 /// never from shape 4 up), and up to shape [`HUGE_RATIO_POWER_SHAPE_MAX`] also where y^alpha
-/// overflows. Every cell of probes/t4635-gamma-dist-huge-ratio, -cut and -fresh (88 points drawn
+/// overflows. Every cell of probes/t4635-gamma-dist-huge-ratio, -cut and -fresh (84 points drawn
 /// after the rule froze, at 0.97 and 1.03 times the cut) and t4635-chisq-huge-x fits it; at shape
 /// 1 and below a finite y is never `#NUM!` (shapes 0.3 to 1 at 1.79E308).
 pub(super) fn huge_ratio_num_error(alpha: f64, y: f64) -> bool {
@@ -337,5 +337,26 @@ impl Model {
                 Ok(result)
             }))
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::huge_ratio_num_error;
+
+    /// Rule R's cuts at evidenced cells (probes/t4635-gamma-dist-huge-ratio-cut, -fresh; T-4635).
+    #[test]
+    fn huge_ratio_cuts() {
+        // y / a * 4: shape 1.5 is a number at 5E307 and #NUM! at 7E307.
+        assert!(!huge_ratio_num_error(1.5, 5E307));
+        assert!(huge_ratio_num_error(1.5, 7E307));
+        // y^a up to shape 1.1: #NUM! from 1E282, a number at 1E280; shape 1.11 a number at 1E306.
+        assert!(!huge_ratio_num_error(1.1, 1E280));
+        assert!(huge_ratio_num_error(1.1, 1E282));
+        assert!(!huge_ratio_num_error(1.11, 1E306));
+        // Shape 1 and below, and shape 4 up, never at a finite y.
+        assert!(!huge_ratio_num_error(1.0, 1.79E308));
+        assert!(!huge_ratio_num_error(0.5, 1.79E308));
+        assert!(!huge_ratio_num_error(4.0, 1.79E308));
     }
 }

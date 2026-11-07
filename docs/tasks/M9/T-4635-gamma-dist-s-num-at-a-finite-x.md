@@ -83,4 +83,26 @@ oracle evidence brackets, and the Gate A definition gives those points a value o
   96 -> 97 by `check_fitted.py --update`): its hold-out is the first fill (1.1 at 1E298 and 1.25 to 2.51 below 1E308,
   fixed before the cut was placed, all as the cut predicts) and its fresh check the Cut sheet of gen3 (shapes 1.11 to
   1.14, 16 of 16 numbers where y^a overflows).
+- Follow-up: T-4877 (a probe below shape 1.01, wording of the sweep counts; filed in #3912).
 - Eval delta: +1,230 passing probe cells in the four new cases; probes/t4625-gamma-dist-ratio-overflow 58 -> 62 of 62.
+
+## Landing notes
+- PR #3896. The head after this push is this commit; the previous head 861e7c290 was red on the eval gate's
+  `make eval-math-check` (probes/subexpr-05d44f6dd6cfc567-calc-a178 CHISQ.DIST.RT sidecar, stale after the catch-up
+  merge of main). This push regenerates it (`eval-math-check` current locally), adds the Rust unit test
+  `huge_ratio_cuts` in gamma.rs, fixes the fresh-sweep count in its doc comment, and cites T-4877 in the Outcome.
+- Reviews. Round 1 (27f18d65c): security, design and excel-fidelity APPROVE. Round 2 (861e7c290, after decision 0339
+  was added for the governance gate on quality/fitted.json): design REQUEST_CHANGES (T-4877 missing on the branch and
+  no Rust unit test; this push fixes both, since T-4877 merged to main in #3912). Excel-fidelity REQUEST_CHANGES on
+  the R4 paperwork, still open:
+  1. R4.1 hold-out: use the fit lab's hash split (tools fitlab/holdout.py, T-3360; default 5-point margin) over the
+     t4635 and t4625-gamma-dist-ratio-overflow cells. Score 4/a, 4-a, a/(a-1), exp(k(4-a)) and "no #NUM! at a finite
+     y", and the power-shape cut 1.1 against "no power branch". Paste the train/test table and margin into the Outcome,
+     and correct decision 0339's context, which wrongly says a hold-out split is "not meaningful".
+  2. R4.2: add an `r4-T-4635` batch to the Gate A tables of GAMMA.DIST (and CHISQ.DIST / CHISQ.DIST.RT) per SPEC-0029
+     "The R4 guards". Fill it, and record the `rustsheet-eval accuracy` envelope count. Keep the probe ladder.
+  3. MINOR: README line 13-14 has a garbled sentence. T-4877 should also note the overflowing-y quotient at shapes
+     above 1E300.
+- Next step: do 1 and 2, push once, re-run design and excel-fidelity on that head (round 3, the last before the
+  review-round limit), then enqueue when CI is green.
+- Do not repeat: decision 0339 cannot waive an R4 guard; argue from the fit-lab result instead.
