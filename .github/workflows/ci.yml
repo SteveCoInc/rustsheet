@@ -118,11 +118,18 @@ jobs:
           if [ "$RESULT" = "skipped" ] && { [ "$RUN_HEAVY" = "false" ] || [ "$GATES" = "false" ]; }; then exit 0; fi
           exit 1
 
+  # Decision 0344 (amending SPEC-0035 D1): the eval gate runs as two parallel jobs, the vendored
+  # suites and the fetched gate suites (poi, corpus-bench), each about as long as the one job was,
+  # and `eval-all` reports them under the required check name, as rust-all does for the shards.
   eval:
-    name: eval (Excel-compatibility gate)
+    name: eval (vendored suites)
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.run_heavy != 'false' }}
     runs-on: ubuntu-24.04
+    # No make target fetches here (decision 0344): the fetched gate suites are eval-fetched's, and
+    # skip in this job as they always did.
+    env:
+      EVAL_FETCH: ""
     steps:
       - uses: actions/checkout@v4
         with:
@@ -130,34 +137,10 @@ jobs:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@1.97
       - uses: Swatinem/rust-cache@v2
-      # Decision 0344 (SPEC-0035 D2): the fetched gate suites, poi and corpus-bench, gate here, read
-      # from a cache keyed on their pins. No restore-keys: a partial match would restore another pin.
-      - id: fetched-suites
-        if: needs.changes.outputs.gates != 'false'
-        uses: actions/cache@v4
-        with:
-          path: |
-            eval/.cache/suites/poi
-            eval/.cache/suites/corpus-bench
-          key: fetched-suites-v1-${{ hashFiles('eval/suites/poi/suite.toml', 'eval/suites/corpus-bench/suite.toml') }}
-      # On a miss, fetch them; three failures fail the job, never skip a gate (as nightly.yml's fetch).
-      - if: needs.changes.outputs.gates != 'false' && steps.fetched-suites.outputs.cache-hit != 'true'
-        run: |
-          make build
-          for attempt in 1 2 3; do
-            scripts/eval_guard.sh target/release/rustsheet-eval fetch --suite poi --suite corpus-bench && exit 0
-            sleep 30
-          done
-          exit 1
       # Decision 0125: one run of the suites judges both the baseline gate (eval-check) and the
       # evidence floor; running them as two steps rebuilt the release binary and reran the suites.
       # Decision 0249: not on a push to main, whose merge group already ran it.
-      # Decision 0344: no make target fetches here (EVAL_FETCH empty), and a gate suite left unfetched
-      # fails the run (--require-fetched, T-4725) instead of printing `skipping`.
       - if: needs.changes.outputs.gates != 'false'
-        env:
-          EVAL_FETCH: ""
-          EVAL_GATE_FLAGS: --require-fetched
         run: make eval-gates
       # Decision 0243: the math sidecar check needs the release binary eval-gates built and tools/.
       - if: needs.changes.outputs.gates != 'false'
@@ -169,9 +152,6 @@ jobs:
       # keeps one per merge.
       - name: Full report (informational)
         if: ${{ failure() || github.ref == 'refs/heads/main' }}
-        # It fetches nothing (decision 0344): it scores poi and corpus-bench from the job's cache.
-        env:
-          EVAL_FETCH: ""
         run: make eval
       - uses: actions/upload-artifact@v4
         if: ${{ failure() || github.ref == 'refs/heads/main' }}
@@ -179,6 +159,60 @@ jobs:
           name: eval-report
           path: eval/runs/latest/
           if-no-files-found: ignore
+
+  # Decision 0344 (SPEC-0035 D2): the fetched gate suites, cells and round trips, from a cache keyed
+  # on their pins, fetched on a miss. A fetch that fails three times fails the job, and a gate suite
+  # left unfetched fails the run (--require-fetched, T-4725): never a skip.
+  eval-fetched:
+    name: eval (fetched gate suites)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.run_heavy != 'false' && needs.changes.outputs.gates != 'false' }}
+    runs-on: ubuntu-24.04
+    env:
+      EVAL_FETCH: ""
+      EVAL_GATE_FLAGS: --require-fetched
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97
+      - uses: Swatinem/rust-cache@v2
+      # No restore-keys: a partial match would restore another pin.
+      - id: fetched-suites
+        uses: actions/cache@v4
+        with:
+          path: |
+            eval/.cache/suites/poi
+            eval/.cache/suites/corpus-bench
+          key: fetched-suites-v1-${{ hashFiles('eval/suites/poi/suite.toml', 'eval/suites/corpus-bench/suite.toml') }}
+      - if: steps.fetched-suites.outputs.cache-hit != 'true'
+        run: |
+          make build
+          for attempt in 1 2 3; do
+            scripts/eval_guard.sh target/release/rustsheet-eval fetch --suite poi --suite corpus-bench && exit 0
+            sleep 30
+          done
+          exit 1
+      - run: make eval-fetched-gates
+
+  # Decision 0344: one stable check name for both eval jobs (decision 0053's required list), as
+  # rust-all is for the shards. always(): a cancelled run must report a failure here.
+  eval-all:
+    name: eval (Excel-compatibility gate)
+    needs: [changes, eval, eval-fetched]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          VENDORED: ${{ needs.eval.result }}
+          FETCHED: ${{ needs.eval-fetched.result }}
+          RUN_HEAVY: ${{ needs.changes.outputs.run_heavy }}
+          GATES: ${{ needs.changes.outputs.gates }}
+        run: |
+          echo "eval: vendored $VENDORED, fetched $FETCHED, run_heavy=$RUN_HEAVY, gates=$GATES"
+          # A docs-only PR (decision 0049) skips both; a push to main (decision 0249) runs only the
+          # vendored job's report.
+          skipped_on_purpose() { [ "$1" = "skipped" ] && { [ "$RUN_HEAVY" = "false" ] || [ "$GATES" = "false" ]; }; }
+          { [ "$VENDORED" = "success" ] || skipped_on_purpose "$VENDORED"; } &&
+            { [ "$FETCHED" = "success" ] || skipped_on_purpose "$FETCHED"; }
 
   python:
     name: python (tools + bindings)

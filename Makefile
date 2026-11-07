@@ -65,7 +65,7 @@ target-dir-guard: ## Refuse a Cargo target directory outside this worktree (make
 	@$(PY) scripts/target_dir_guard.py $(CURDIR)
 
 # ---------------------------------------------------------------- Eval (Excel compatibility)
-.PHONY: eval eval-check eval-gates eval-baseline eval-lower-visible-lock eval-show evidence-floor
+.PHONY: eval eval-check eval-gates eval-fetched-gates eval-baseline eval-lower-visible-lock eval-show evidence-floor
 eval: build ## Run all suites; writes eval/runs/latest/report.{md,json}, then Gate A's eval/runs/accuracy.json (decision 0268)
 	$(PY) scripts/desktop_owned.py --out eval/runs/desktop-owned.tsv
 	$(EVAL_GUARDED) run --desktop-owned $(if $(EVAL_FETCH),--fetch-missing)
@@ -88,6 +88,11 @@ eval-gates: build ## eval-check and evidence-floor from one run of the suites, t
 	$(EVAL_GUARDED) roundtrip --check $(EVAL_GATE_FLAGS)
 	@# Cases the branch adds or refills: every visibly-off cell needs an open owner (T-3793, decision 0245).
 	$(PY) scripts/new_case_owners.py --eval $(EVAL)
+
+eval-fetched-gates: build ## The fetched gate suites' cells and round trips: CI's eval (fetched gate suites) job (decision 0344; locally `make eval-gates` covers them)
+	$(EVAL_PREFETCH)
+	$(EVAL_GUARDED) check --suite poi --suite corpus-bench $(EVAL_GATE_FLAGS)
+	$(EVAL_GUARDED) roundtrip --check --suite roundtrip-poi --suite roundtrip-corpus-bench $(EVAL_GATE_FLAGS)
 
 eval-baseline: build ## Ratchet eval/baseline and quality/evidence-floor.json after fixes (refuses regressions); NEW_CASES=<file> lists the only cases new to the visible-parity lock (make catch-up, decision 0217)
 	$(EVAL_PREFETCH)
