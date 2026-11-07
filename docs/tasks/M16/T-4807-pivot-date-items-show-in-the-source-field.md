@@ -3,7 +3,7 @@ id: T-4807
 title: "Pivot date items show in the source field's date number format"
 milestone: M16
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -30,7 +30,7 @@ Owner of these visibly-off cells (decision 0245):
 ## Out of scope
 - GETPIVOTDATA with date items (T-4805).
 
-## Handoff
+## Handoff (resumed)
 Tried (sonnet run): read the render path. Date labels render in `item_cell` (crates/rustsheet-engine/src/pivot/layout/render.rs:125) as
 `PivotCell::Number`; `RenderedCell.number_format` is a `numFmtId` applied by `set_pivot_number_format` (pivot/grid.rs ~700), so
 label cells could already carry a format. The blocker: `CacheField` (pivot.rs:104) keeps no source number format, and
