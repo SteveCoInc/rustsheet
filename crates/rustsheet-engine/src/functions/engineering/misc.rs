@@ -13,7 +13,7 @@ use crate::{
 impl Model {
     /// `DELTA(number1, [number2])`.
     pub(crate) fn fn_delta(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 1, cell) {
+        let args = match self.atp_arguments(args, (1, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -27,7 +27,7 @@ impl Model {
 
     /// `GESTEP(number, [step])`.
     pub(crate) fn fn_gestep(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 1, cell) {
+        let args = match self.atp_arguments(args, (1, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };

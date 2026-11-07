@@ -207,7 +207,7 @@ impl Model {
     /// multi-cell range (probes/eng-argument-modes B13:E13, probes/scalar-lift-open-a Y11,
     /// probes/eng-later-argument-lift H16).
     pub(crate) fn fn_complex(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 2, cell) {
+        let args = match self.atp_arguments(args, (2, 3), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };

@@ -26,7 +26,7 @@ type BesselFn = fn(i32, f64) -> f64;
 impl Model {
     /// `BESSELI(x, n)`.
     pub(crate) fn fn_besseli(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 2, cell) {
+        let args = match self.atp_arguments(args, (2, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -39,7 +39,7 @@ impl Model {
 
     /// `BESSELJ(x, n)`.
     pub(crate) fn fn_besselj(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 2, cell) {
+        let args = match self.atp_arguments(args, (2, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -51,7 +51,7 @@ impl Model {
 
     /// `BESSELK(x, n)`.
     pub(crate) fn fn_besselk(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 2, cell) {
+        let args = match self.atp_arguments(args, (2, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -64,7 +64,7 @@ impl Model {
 
     /// `BESSELY(x, n)`.
     pub(crate) fn fn_bessely(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 2, cell) {
+        let args = match self.atp_arguments(args, (2, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -108,7 +108,7 @@ impl Model {
 
     /// `ERF(lower_limit, [upper_limit])`.
     pub(crate) fn fn_erf(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 2, cell) {
+        let args = match self.atp_arguments(args, (2, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };

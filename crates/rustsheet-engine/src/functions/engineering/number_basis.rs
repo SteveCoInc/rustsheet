@@ -217,7 +217,7 @@ impl Model {
 
     // BIN2HEX(number, [places])
     pub(crate) fn fn_bin2hex(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 1, cell) {
+        let args = match self.atp_arguments(args, (1, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -228,7 +228,7 @@ impl Model {
 
     // BIN2OCT(number, [places])
     pub(crate) fn fn_bin2oct(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 1, cell) {
+        let args = match self.atp_arguments(args, (1, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -239,7 +239,7 @@ impl Model {
 
     // DEC2BIN(number, [places])
     pub(crate) fn fn_dec2bin(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 1, cell) {
+        let args = match self.atp_arguments(args, (1, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -250,7 +250,7 @@ impl Model {
 
     // DEC2HEX(number, [places])
     pub(crate) fn fn_dec2hex(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 1, cell) {
+        let args = match self.atp_arguments(args, (1, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -261,7 +261,7 @@ impl Model {
 
     // DEC2OCT(number, [places])
     pub(crate) fn fn_dec2oct(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 1, cell) {
+        let args = match self.atp_arguments(args, (1, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -272,7 +272,7 @@ impl Model {
 
     // HEX2BIN(number, [places])
     pub(crate) fn fn_hex2bin(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 1, cell) {
+        let args = match self.atp_arguments(args, (1, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -290,7 +290,7 @@ impl Model {
 
     // HEX2OCT(number, [places])
     pub(crate) fn fn_hex2oct(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 1, cell) {
+        let args = match self.atp_arguments(args, (1, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -301,7 +301,7 @@ impl Model {
 
     // OCT2BIN(number, [places])
     pub(crate) fn fn_oct2bin(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 1, cell) {
+        let args = match self.atp_arguments(args, (1, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };
@@ -319,7 +319,7 @@ impl Model {
 
     // OCT2HEX(number, [places])
     pub(crate) fn fn_oct2hex(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let args = match self.atp_arguments(args, 1, cell) {
+        let args = match self.atp_arguments(args, (1, 2), cell) {
             Ok(args) => args,
             Err(error) => return error,
         };

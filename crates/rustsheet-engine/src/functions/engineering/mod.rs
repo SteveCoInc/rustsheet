@@ -16,15 +16,20 @@ impl Model {
     /// The arguments of a fixed-arity Analysis `ToolPak` function whose first `strict` arguments
     /// may not be written empty: one of them that is (`DEC2BIN(,2)`, `ERF(6,)`, or a LET or
     /// LAMBDA name bound to nothing) is `#N/A`, and a later one written empty is dropped, read as
-    /// omitted (`DEC2BIN(5,)` is "101", `COMPLEX(1,1,)` "1+i", `LET(e,,GESTEP(1,e))` 1)
+    /// omitted (`DEC2BIN(5,)` is "101", `COMPLEX(1,1,)` "1+i", `LET(e,,GESTEP(1,e))` 1). A call
+    /// with more than `max` arguments is refused first, empty or not: Excel refuses it, so it is
+    /// `#ERROR!` (syntax.md "Minimum argument counts"; `DEC2BIN(5,,)`, `COMPLEX(1,1,,)`)
     /// (probes/t4872-atp-empty-argument, excel-graph; engineering.md, "An empty argument of the
     /// `ToolPak` engineering functions"; T-4872).
     fn atp_arguments<'a>(
         &self,
         args: &'a [Node],
-        strict: usize,
+        (strict, max): (usize, usize),
         cell: CellReferenceIndex,
     ) -> Result<&'a [Node], CalcResult> {
+        if args.len() > max {
+            return Err(CalcResult::new_args_number_error(cell));
+        }
         if args
             .iter()
             .take(strict)
