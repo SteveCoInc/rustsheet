@@ -718,7 +718,6 @@ F	roundtrip-poi/53568.xlsx#R1/all	* 4486 b69ed89e54506236
 F	roundtrip-poi/53798.xlsx#R1/all	* 346 f1ebf5f859a4b530
 F	roundtrip-poi/53798_shiftNegative_TMPL.xlsx#R1/all	* 346 f1ebf5f859a4b530
 F	roundtrip-poi/54288.xlsx#R1/all	* 562 ecc9078c69cd298e
-F	roundtrip-poi/54436.xlsx#R0	* 296 2cd19df138a87ec5
 F	roundtrip-poi/54607.xlsx#R1/all	* 263 8b7f30dd185acb68
 F	roundtrip-poi/54764-2.xlsx#R0	!EngineError
 F	roundtrip-poi/54764.xlsx#R0	!EngineError
