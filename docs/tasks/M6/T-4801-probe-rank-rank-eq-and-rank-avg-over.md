@@ -23,10 +23,16 @@ Excel's values for RANK, RANK.EQ and RANK.AVG whose `ref` is an array of referen
   and multi-cell references, one with an error element (INDIRECT of a bad address), a lifted `number` beside the grid,
   and ROWS/COLUMNS of each. Use different values in each referenced range, so per-element ranking can be told apart
   from the value view.
+- Probe both sheet axes: grids (XLOOKUP, OFFSET, INDIRECT) whose references are on the formula's own sheet and on
+  another. LARGE, SMALL and MEDIAN split on that axis (`#N/A` or the value view; probes/t4569 Local!F1:F9, SPEC-0014
+  rule 5), and RANK may too; t4704's evidence is cross-sheet only. Add an error `order` beside a reference element
+  (reviewer-excel-fidelity on #3874).
 - SPEC-0014 amendment "As implemented (T-4570)", RANK family bullet.
 
 ## Acceptance criteria
-- [ ] A probe case filled on excel-graph covers the shapes above; the finding is in docs/excel-semantics/lookup.md.
+- [ ] A probe case filled on excel-graph covers the shapes above; the finding is in docs/excel-semantics/lookup.md and
+      statistics.md ("RANK of a non-reference array"), which until then mark the per-element reading of these grids
+      UNVERIFIED.
 - [ ] Ours matches every cell, or each mismatch has a fix task naming its cells.
 - [ ] `make check` green; reviewers approve.
 
