@@ -21,6 +21,7 @@ pub(crate) fn case(id: &str, millis: u64) -> CaseResult {
         arguments: Vec::new(),
         reference_forms: crate::poi_m8_subset::ReferenceFormCells::default(),
         pivot_layout: Vec::new(),
+        layout_checked: None,
         pivot_freshness: Vec::new(),
         pivot_features: Vec::new(),
         pivot_cells: crate::pivot_features::PivotCellTally::default(),

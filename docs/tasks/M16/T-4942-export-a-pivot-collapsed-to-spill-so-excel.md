@@ -22,6 +22,11 @@ Writing the lines needs the layout the collapse dropped, or Excel's own reading 
 Owner of these visibly-off cells (decision 0245; T-4177, Excel opened the exported collapsed pivot as a header-only pivot):
 - pivot-export/t4177-api-spill.export.json P!A3:B3, Calc!B1:B2
 
+Owner of these pivot layouts (the `LF` baseline items of eval/baseline/pivot-export.txt, decision 0245; T-4944), each at its anchor:
+- pivot-export/t4177-api-spill.export.json P!Blocked (P!A3, LocationDiffers)
+- pivot-export/t4177-api-spill-refresh.export.json P!Blocked (P!A3, LinesDiffer)
+- pivot-export/t4177-spike.export.json S!Blocked (S!A3, LinesDiffer)
+
 ## Acceptance criteria
 - [ ] pivots.md "Excel for the web opens engine-exported pivot parts" records what Excel opens for a collapsed definition with lines.
 - [ ] pivot-export/t4177-api-spill.export.json passes, and the collapsed pivots of t4177-api-spill-refresh and t4177-spike have Excel's rowItems/colItems.
