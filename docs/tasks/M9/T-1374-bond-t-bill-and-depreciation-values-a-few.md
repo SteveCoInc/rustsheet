@@ -41,6 +41,10 @@ probes/fin-argument-modes (excel-graph, 2026-10-11, T-1084). Base rows that miss
 The same DURATION, MDURATION and PRICE base values recur as the intersected controls of
 probes/fin-remaining-later-argument-ranges I85-I103 and I165-I171 (T-1822), and so do the CUMIPMT, CUMPRINC, ODDFPRICE,
 ODDFYIELD and YIELD ones there (I65-I84, I105-I136, I173-I184).
+Gap triage 2026-11-07: a hyphen span names only its ends (decision 0136), so the five CUMPRINC controls inside I65-I84
+had no owner. They are H80's point, `CUMPRINC(0.01,360,100000,1,12,0)` with one argument `@`-intersected (Excel
+-362.8793467231, ours -362.8793467230999), and this task owns them:
+- probes/fin-remaining-later-argument-ranges.case.json (5): Sheet1!I75, I77, I79, I81, I83
 The annuity family (FV, PMT, PPMT, NPV) and the solvers (IRR, RATE, XIRR) are T-0901's and T-0916's, not this task's.
 ODDFYIELD's solver (H200, fin-yield-odd-lift A5/I9, the ODDFYIELD controls of fin-remaining-later-argument-ranges and the
 PRICE_YIELD.xlsx K column) moved to T-2007 (gap triage 2026-10-19); this task keeps ODDFPRICE.
