@@ -3,7 +3,7 @@ id: T-1871
 title: "F.INV and BETA.INV give Excel's values where statrs' inversion saturates, panics or never finishes"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -142,3 +142,37 @@ text, or a number further than half a unit in the 15th significant digit from Ex
 target is that every visibly-off cell it owns has Excel's type, error and text, or is within half a unit of the 15th
 significant digit of Excel's value (an expected 0 exactly 0); the visible-parity criterion under Acceptance criteria states
 it. Bit-level criteria still unmet then move to a follow-up task without the key.
+
+## Outcome
+Root cause (two engine faults; neither is an Excel quirk):
+1. `incomplete_beta.rs` `large_prefactor` (the Cephes tail's prefactor at a + b of MAXGAM or more, both shapes 8 or
+   more) took rlog1(-lambda/a) everywhere; far below the mean 1 - lambda/a = x/x0 keeps only 2^-53/(x/x0) of its
+   digits, so the crossing F.INV searches landed 8.4E-5 off at accuracy/F.INV/s1 A154 and 1.8% off at
+   F.INV.RT/s1 A155. Fixed with TOMS 708 `brcomp`'s far branch, e - ln(x/x0) once |e| > 0.6 (`brcomp_log_term`).
+   This touches the shared incomplete-beta file but not T-4435's `reg_tails` / `large_shape_beta` dispatch.
+2. Below p = 1E-15 statrs' AS 109 estimate is kept unrefined (`F_QUANTILE_REFINE_P_MIN`), but its search stops on an
+   absolute step test and can return a point that is no root (F.INV/s1 A168: 1.87E-14 against 1.7E-40). `fisher.rs`
+   `estimate_solves` now keeps the estimate only where its lower-tail cdf hits p to 1E-12 relative (converged estimates
+   miss by at most 2E-13, the saturated ones by 5E-12 to 1E13; any value in 2E-13..5E-12 makes the same choice, so it is
+   a guard, not a fit) and otherwise takes the crossing without a start (one extra cdf; caps and `QUANTILE_WEIGHT`
+   unchanged).
+
+Results:
+- Gate A: accuracy/F.INV/s1 A154 (-50 ulp of Excel), A168 (+59 ulp) and F.INV.RT/s1 A155 (-12 ulp) are inside the
+  envelope; their three known-failures.tsv lines are removed. 0 failing; known failures 188 -> 185 (origin/main at the merge).
+- `make eval`: no baseline line changed in any gated suite (0 fixed, 0 regressions); visible parity unchanged. Of every
+  literal-argument F quantile cell in eval/ (1,523), only these moved: the three Gate A points, F.INV.RT/s1 A168 (+7 ->
+  -1 ulp), F.INV/s1 A141 (+33 -> +31), F.INV/s1 A151 (0 -> -2 ulp, inside the envelope), FINV/s1 A168 and F.INV/s1 A171
+  (T-4103 points, Excel far from the math, a few ulp), gen-m9/3a25a03eb94fcfbd A44 (`F.INV(1E-20,4,6)`, 2.5E-12
+  relative -> 9 ulp) and gen-m9/c6cfda6bd10cae93 A114 (`F.INV(1E-16,1,2)`, 1E16 relative -> 53 ulp).
+- Not met, moved to T-4894 with every listed gen-m9 cell: the 118 + 2 cells stay known failures. Excel is 1E-16 to
+  3E-14 from the 50-digit math there and the engine is the math on the other side; Excel's value lies within a few ulp
+  of the leading-term inverse exp((ln q + ln a + ln B)/a), but none of 72 ranked arithmetic variants reproduces its bits
+  (best 5 of 36 fit cells exact, 15 within 4 ulp; hold-out 5 and 17 of 32), so it is not adopted (statistics.md "F
+  quantile at a tiny p is near the leading-term closed form (T-1871)", UNVERIFIED).
+- probes/stat-quantile-lift: E1-E5 unchanged (69 to 169 ulp; Excel is 4E-15 to 2E-14 from the math, the lead above),
+  E6 and E7 unchanged (the math; Excel 97% and 46% below it, its own search, decisions 0300/0301), E8, E10-E12
+  unchanged (E8 2 ulp, E10 357, E11 12, E12 4); E9 recorded as UNVERIFIED in statistics.md. probes-numeric and
+  ironcalc-calc F.INV/BETA.INV values unchanged. The DEVIATION entry is unchanged (caps kept).
+- No fitted constant added (check_fitted lock 96 unchanged); no R3 marks.
+Follow-up: T-4894 (Excel's deep-tail arithmetic for the remaining gen-m9 cells, E1-E7, E9).
