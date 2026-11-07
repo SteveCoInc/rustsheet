@@ -356,7 +356,7 @@ fn irr_flat_is_div_zero(values: &[f64], guess: f64, largest_npv: f64) -> bool {
 /// the train-score plateau of 200..216 steps (64 of the 87 train cells whose result depends on the
 /// cap; 291 scores 61, 50 scores 12). `docs/research/t3408/bounds.py` prints the table from the
 /// replay's cell lists (financial.md "IRR's secant runs longer than 50 steps"; T-3408, decision 0320).
-/// FITTED(T-3408, 80 cells, IRR secant runs of 51..200 steps: 2..54 flows (2..5 since T-4888), largest |c| 5.6E-9..2.2E+8, guess -0.99934..9.81E+7; cap 200 = train-score plateau 200..216, no Excel cap)
+/// FITTED(T-3408, 92 cells, IRR secant runs of 51..200 steps: 4..54 flows (4..5 the 12 T-4888 cells), largest |c| 5.6E-9..2.2E+8, guess -0.99934..9.81E+7; cap 200 = train-score plateau 200..216, no Excel cap)
 const IRR_LONG_RUN_STEPS: usize = 200;
 
 /// The steps of an IRR secant run outside [`IRR_LONG_RUN_RANGE`], and the steps within which a
@@ -377,14 +377,16 @@ struct IrrRunRange {
 
 /// The calls [`IRR_LONG_RUN_STEPS`] applies to (decision 0188 R4.3): the range of the 53 train runs
 /// of 51..200 steps that return their own value and whose run and retry give different bits (a cell
-/// where both give the same bits cannot tell the cap apart), widened down to 2 flows by T-4888: on
-/// 4- and 5-flow series whose run goes on past the pole, Excel's value is the run's own at its 52nd
-/// to 197th step (probes/t4838-irr-pole-runon A11, A25, A51, A67, A80, A87, A88, A90, A96, A97,
-/// A105, A113), and no eval cell moves away. Up to 54 flows (t3411-irr-r4-fresh-4 A148); largest |flow| 5.6E-9 (t3478-irr-r4-wide A270) to 2.15E+8
-/// (t2927-irr-fallback-sweep A95); guess -0.99933 (t3478-irr-r4-wide A230) to 9.81E+7 (A234). The
-/// bounds are rounded outward (2.2E+8, -0.99934), the rounding chosen before scoring held-out cells.
+/// where both give the same bits cannot tell the cap apart): 6 flows (t2927-irr-fallback-sweep A93) to
+/// 54 (t3411-irr-r4-fresh-4 A148), widened down to 4 by T-4888: on 4- and 5-flow series whose run
+/// goes on past the pole, Excel's value is the run's own at its 52nd to 197th step
+/// (probes/t4838-irr-pole-runon A11, A25, A51, A67, A80, A87, A88, A90, A96, A97, A105, A113,
+/// predicted with a 200-step cap before the fill). No cell evidences 2 or 3 flows. Largest |flow|
+/// 5.6E-9 (t3478-irr-r4-wide A270) to 2.15E+8 (t2927-irr-fallback-sweep A95); guess -0.99933
+/// (t3478-irr-r4-wide A230) to 9.81E+7 (A234). The other bounds are rounded outward (2.2E+8,
+/// -0.99934), the rounding chosen before scoring held-out cells.
 const IRR_LONG_RUN_RANGE: IrrRunRange = IrrRunRange {
-    flows: (2, 54),
+    flows: (4, 54),
     largest_flow: (5.6e-9, 2.2e8),
     guess: (-0.99934, 9.81e7),
 };
@@ -430,7 +432,7 @@ fn irr_from_discount(v: f64) -> Option<f64> {
 /// yet explained (T-3548).
 /// FITTED(T-1533, 263 cells, IRR of 2..41 flows, |c| 1E-6..1E+9, guess -0.99..100, roots -0.99..99; T-3478 sweep, 231 Excel roots: 2..148 flows, |c| 2.3E-15..4.0E+12, guess -0.9997..9.8E+7, roots -0.9997..9.0E+5)
 /// The zero-step stop's bound ([`IRR_STALL_RESIDUAL`]):
-/// FITTED(T-3120, 36 cells, IRR of {-2.5,-1,123456789.123} over a guess sweep; absolute bracket 1E-5..0.1, RATE's 1e-4 taken, T-4840)
+/// FITTED(T-3120, 36 cells, IRR of {-2.5,-1,123456789.123} over a guess sweep; absolute bracket 1E-5..0.1, RATE's 1e-4 taken, T-4888; held out: Gate A's 16 extreme-flow IRR points)
 fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
     // An NPV the run cannot evaluate (a discount power out of the double range, or a sum that is
     // not finite) ends the call with `#DIV/0!`, worksheet NPV's error for the same sum, and without
@@ -470,7 +472,7 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
         // the negative v and the secant carries on, as RATE's does below -1. Excel's value is the
         // run-on secant's, bit for bit, on all 130 cells of a fresh sweep where it converges
         // (probes/t4838-irr-pole-runon, predictions committed before the fill) and on 65 of
-        // t2927-irr-fallback-sweep; financial.md "IRR's secant runs on past the pole" (T-4840).
+        // t2927-irr-fallback-sweep; financial.md "IRR's secant runs on past the pole" (T-4888).
         let f2 = npv(d2)?;
         largest_npv = largest_npv.max(f2.abs());
         // A zero step also stops when |NPV| is under 1e-4: on the 2^-53 grid
@@ -479,7 +481,7 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
         // A107-C141). T-3120 found any bound from 1E-20 to 1E-7 of the largest flow, or an absolute
         // one from 1E-5 to 0.1, scores the same there. The bound is absolute, RATE's 1e-4 for a
         // held flat secant ("RATE holds on a flat secant"): a relative one returns
-        // gen-m9/fec39efaba9284c3 Calc!A283, whose run on past the pole (T-4840) stalls at
+        // gen-m9/fec39efaba9284c3 Calc!A283, whose run on past the pole (T-4888) stalls at
         // |NPV| = 0.2 (1.6E-9 of its largest flow) where no root exists and Excel is `#NUM!`.
         // Excel's other stops are absolute too (financial.md "IRR's second stage ignores the guess").
         // Past [`IRR_SHORT_RUN_STEPS`] a stalled zero step is no stop: the run goes flat on its
@@ -512,6 +514,9 @@ enum SecantStop {
 /// The |NPV| under which a zero step (d2 = d1) stops an IRR secant run that has not reached the
 /// 1e-7 residual stop: RATE's 1e-4 bound for a held flat secant (financial.md "RATE holds on a
 /// flat secant"), inside the absolute 1E-5..0.1 bracket T-3120 found on t2565-irr-guess-sweeps.
+/// Measured on held-out data (T-4888): Gate A's reference tables, which no fit reads, put 16 IRR
+/// points of flows near 1E+11 to 1E+14 (accuracy/IRR/s1, r4-T-3411, r4-T-3407) in the envelope with
+/// this bound and outside it with the relative one, where Excel is `#NUM!` and the run stalls.
 const IRR_STALL_RESIDUAL: f64 = 1e-4;
 
 /// The smallest guess IRR refuses as too large: 2^53.
@@ -803,13 +808,14 @@ mod tests {
 
     #[test]
     fn the_long_secant_cap_applies_only_inside_its_evidence() {
-        // T-3408: 200 steps on 2..54 flows (2..5 since T-4888) of largest |c| 5.6E-9..2.2E+8 and a
+        // T-3408: 200 steps on 4..54 flows (4 and 5 since T-4888) of largest |c| 5.6E-9..2.2E+8 and a
         // guess -0.99934..9.81E+7.
         let flows = [-5170.93, 288.87, 570.22, 565.46, 610.52, 231.19];
         assert_eq!(irr_secant_steps(&flows, -0.99), 200);
         assert_eq!(irr_secant_steps(&flows, -0.9995), 50);
         assert_eq!(irr_secant_steps(&flows[..5], -0.99), 200);
-        assert_eq!(irr_secant_steps(&flows[..1], -0.99), 50);
+        assert_eq!(irr_secant_steps(&flows[..4], -0.99), 200);
+        assert_eq!(irr_secant_steps(&flows[..3], -0.99), 50);
         assert_eq!(
             irr_secant_steps(&[-3e8, 1e8, 2.5e8, 1.0, 1.0, 1.0], 0.1),
             50
@@ -825,7 +831,7 @@ mod tests {
         assert_eq!(compute_irr(&a1, 0.1), Ok(166.14691657983454));
         let a71 = [176.028, -5.65972, 40.0811, -0.336625];
         assert_eq!(compute_irr(&a71, 0.1), Ok(-0.9915940340372632));
-        // A113 needs 197 steps on 4 flows: the long-run cap covers 2..5 flows too.
+        // A113 needs 197 steps on 4 flows: the long-run cap covers 4 and 5 flows too.
         let a113 = [254.447, 36.7029, 36.6416, -1.26381];
         assert_eq!(compute_irr(&a113, 0.1), Ok(-0.9668615752328438));
     }

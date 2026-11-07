@@ -943,9 +943,9 @@ the run does not fail. NPV is evaluated at the negative v by the same running pr
 RATE's does below -1 ("RATE holds on a flat secant and runs on below -1"). An iterate of exactly d = 1 is still
 `#DIV/0!` ("IRR's far-root bound"). A run that converges past the pole (v <= 0) gives no result: it fails like any other,
 so the call goes on to the retry from 0.1 and then the fallback.
-- Fresh sweep, drawn with the predictions committed before the fill (probes/t4838-irr-pole-runon, excel-graph,
-  2026-11-07; 160 series of 3 to 6 flows, seed "T-4838/pole", docs/research/irr-2026-11-07/replay.py, predictions in
-  its `.predictions.tsv`). Every series' secant from 0.1 crosses the pole. On all 130 cells where the run-on secant
+- Fresh sweep, its predictions generated deterministically from the seed before the fill (probes/t4838-irr-pole-runon,
+  excel-graph, 2026-11-07; 160 series of 3 to 6 flows, seed "T-4838/pole", docs/research/irr-2026-11-07/replay.py,
+  predictions in its `.predictions.tsv`). Every series' secant from 0.1 crosses the pole. On all 130 cells where the run-on secant
   converges (in 200 steps), Excel's value is the run-on secant's, bit for bit:
   - A1:A70: the engine's Newton fallback returns different digits;
   - A71:A115: the fallback is `#NUM!`;
@@ -957,17 +957,23 @@ so the call goes on to the retry from 0.1 and then the fallback.
   usually swings across the pole every third step until its cap. Excel returns on A117, A119, A128 and A134, which
   oscillate, and on A127, which converges at a higher cap.
 - Converging past the pole: A118, A131 and A144 converge to v < 0 (r = -5.38, -1.78, -1.81), and Excel returns a root
-  above -1 (-0.246, -0.293, -0.412) that no stage of the engine finds yet. A124 converges past the pole too
+  above -1 (-0.246, -0.293, -0.412) that no stage of the engine finds yet. The engine gives 9.77, `#NUM!` and 5.86 there.
+  The old fallback found A131's root to 2 ulp (-0.29311038982819526). A124 converges past the pole too
   (r = -1.63), and A129 only after about 1,000 steps (to -0.458); Excel is `#NUM!` on both.
 - Long runs on short series: twelve of the cells (A11, A25, A51, A67, A80, A87, A88, A90, A96, A97, A105 and A113;
-  4 and 5 flows) need 52 to 197 steps. Excel's values are the run's own, so the engine's 200-step cap now covers 2 to
-  5 flows too ("IRR's secant runs longer than 50 steps").
+  4 and 5 flows) need 52 to 197 steps. Excel's values are the run's own, so the engine's 200-step cap now covers 4 and
+  5 flows too ("IRR's secant runs longer than 50 steps"). No cell evidences 2 or 3 flows.
 - The zero-step stall now stops a run at an absolute |NPV| < 1e-4 (RATE's bound for a held flat secant), not at 1e-7 of
   the largest flow. Run on past the pole, gen-m9/fec39efaba9284c3 Calc!A283
   (`IRR({0.2,-0.0001,1e-15,-1,0.1,0.5,0.2,1.005,2.5,123456789.123,-2.5,2.5,0.2})`, no root) creeps to d = 1, where NPV
   levels off at the first flow, 0.2, and stalls there. That is 1.6E-9 of its largest flow, and Excel is `#NUM!`.
-  T-3120's cells allowed any absolute bound from 1E-5 to 0.1.
-Evidence: the cases above; Gate A: 16 points of accuracy/IRR/r4-T-3411 and r4-T-3407 move into the envelope, none out.
+  T-3120's cells allowed any absolute bound from 1E-5 to 0.1. The held-out check is Gate A's reference tables, which no
+  fit reads:
+  - with the absolute bound, 16 IRR points of flows near 1E+11 to 1E+14 (accuracy/IRR/s1, r4-T-3411, r4-T-3407) are in
+    the envelope, with or without the run-on;
+  - with the relative bound and the run-on, those 16 fail: Excel is `#NUM!` where the run stalls.
+Evidence: the cases above. Gate A: the 16 points move into the envelope through the absolute stall bound, and their
+known-failure lines go; none moves out.
 Status: VERIFIED (excel-graph) for the run-on; the outcome where the run-on fails is UNVERIFIED
 Implemented in: `irr_secant` (functions/financial/financial_util.rs), `IRR_STALL_RESIDUAL`, `IRR_LONG_RUN_RANGE`
 Tasks: T-4888, T-4838, T-4840
@@ -4924,7 +4930,7 @@ Evidence: probes-numeric/t3411-irr-r4-fresh and t3411-irr-r4-fresh-2 (excel-grap
 50-digit roots in their `.math.tsv`, docs/research/t3411/gen_sweep.py), plus the cells named above. The replica behind
 the step counts was scratch code and is not committed.
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
-Ours: `irr_secant` takes up to 200 steps (`IRR_LONG_RUN_STEPS`, FITTED, decision 0320) on 2..54 flows (2..5 since T-4888) with the largest
+Ours: `irr_secant` takes up to 200 steps (`IRR_LONG_RUN_STEPS`, FITTED, decision 0320) on 4..54 flows (4 and 5 since T-4888) with the largest
 |c| in 5.6E-9..2.2E+8 and a guess in -0.99934..9.81E+7 (`IRR_LONG_RUN_RANGE`, the range of the returning train runs
 whose run and retry differ; the cap is a train-score plateau point, not Excel's), 50
 elsewhere; a stalled zero step stops a run only within its first 50 steps (the old cap, inside the 41..69 bracket, not

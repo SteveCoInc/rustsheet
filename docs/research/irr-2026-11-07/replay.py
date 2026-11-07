@@ -14,7 +14,8 @@ tools' `fitlab` exact arithmetic) without its 50-step cap, over the three t4844 
 `pole` draws short series (3 to 6 flows, 6 significant digits, seed "T-4838/pole") whose secant from 0.1 crosses the
 pole (an iterate at d >= 1), and keeps them by how two models answer: the secant run on past the pole (`secant(...,
 run_on=True)`) and the engine's fallback before T-4888, Newton on P(v) = sum c_i v^i from v = 0 (plain doubles,
-50 steps). It writes probes/t4838-irr-pole-runon and its predictions file, which were committed before the fill.
+50 steps). It writes probes/t4838-irr-pole-runon (when missing) and its predictions file. Both depend only on the seed,
+not on Excel's values, so they were fixed before the fill.
 
 The secant here is exact (Excel's twice-rounded operators); docs/research/irr-2026-11-07/feasibility.py's is in plain
 doubles for speed, so the two are kept apart.
@@ -152,9 +153,13 @@ def pole_case() -> int:
         }
     ]
     path = CASES / f"{POLE_CASE}.case.json"
+    with (CASES / f"{POLE_CASE}.predictions.tsv").open("w") as out:
+        out.write("cell\tclass\trun-on secant\tnewton from v=0 (engine fallback model)\n")
+        for i, (_, a, b, kind) in enumerate(rows, 1):
+            out.write(f"A{i}\t{kind}\t{a!r}\t{b!r}\n")
     if path.exists():
         same = json.loads(path.read_text())["sheets"] == sheets
-        print(f"{POLE_CASE}: {'up to date' if same else 'differs from the generator'}")
+        print(f"{POLE_CASE}: {'up to date' if same else 'differs from the generator'}; predictions rewritten")
         return 0 if same else 1
     case = {
         "format": "rustsheet-case/v1",
@@ -170,10 +175,6 @@ def pole_case() -> int:
         "expected": {},
     }
     path.write_text(json.dumps(case, indent=2) + "\n")
-    with (CASES / f"{POLE_CASE}.predictions.tsv").open("w") as out:
-        out.write("cell\tclass\trun-on secant\tnewton from v=0 (engine fallback model)\n")
-        for i, (_, a, b, kind) in enumerate(rows, 1):
-            out.write(f"A{i}\t{kind}\t{a!r}\t{b!r}\n")
     print(f"wrote {path.name} and its predictions")
     return 0
 
