@@ -1,0 +1,14 @@
+cell	formula	kind	H_na	H_zero(engine before T-4923)
+A1	=LET(e,,SQRTPI(e))	rule	#N/A	0.0
+A2	=LAMBDA(a,b,SQRTPI(b))(1,)	rule	#N/A	0.0
+A3	=LET(e,,FACTDOUBLE(e))	rule	#N/A	1.0
+A4	=LAMBDA(a,b,FACTDOUBLE(b))(1,)	rule	#N/A	1.0
+A5	=ROWS(LET(e,,SQRTPI(IF({1;1},e))))	lift	2.0	2.0
+A6	=LET(e,,SQRTPI(e+0))	lift	0.0	0.0
+A7	=LET(e,,FACTDOUBLE(e+0))	lift	1.0	1.0
+A8	=LET(e,,GCD(e,4))	ctl	#N/A	#N/A
+A9	=LET(e,,GCD(4,e))	ctl	4.0	4.0
+A10	=LAMBDA(a,b,LCM(a,b))(4,)	ctl	4.0	4.0
+A11	=LET(e,,MULTINOMIAL(e,4))	ctl	#N/A	#N/A
+A12	=SQRTPI(Z1)	ctl	0.0	0.0
+A13	=FACTDOUBLE(Z1)	ctl	1.0	1.0
