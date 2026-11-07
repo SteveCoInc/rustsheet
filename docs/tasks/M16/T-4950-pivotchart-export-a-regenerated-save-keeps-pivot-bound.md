@@ -30,8 +30,8 @@ is pivot charts only (chart, chartStyle, chartColorStyle), copy the drawing and 
 under export-owned names, add the sheet's `<drawing r:id>` in schema order, its relationship and the content-type
 overrides, and pass each chart through `rewrite_pivot_chart` with the pivot its `c:pivotSource` names (`[file]Sheet!Name`)
 and the grid's collapsed flag (`#SPILL!`). A drawing with anything else stays dropped, with a log line, until M15's
-replay layer (T-4567's spec) owns it. Map sheets by the pristine model; drop a drawing whose sheet was renamed, moved
-or structurally edited (harness-only today, decision 0098) unless T-4567 has settled it. Use the package validator.
+replay layer (SPEC-0034 D5, T-4567; implemented by T-5002) owns it. Map sheets by the pristine model; drop a drawing whose sheet was renamed, moved
+or structurally edited (harness-only today, decision 0098) unless SPEC-0034 D5.5 (T-5004) has settled it. Use the package validator.
 
 ## Acceptance criteria
 - [ ] roundtrip-excel-saved's R0 keeps the drawing and chart parts and relationships (baseline lines removed by
