@@ -188,6 +188,12 @@ pub struct PivotField {
     pub insert_blank_row: bool,
     /// `numFmtId` of the item labels; MS-OI29500 §18.10.1.69 reads absent as 0.
     pub number_format: Option<u32>,
+    /// The x14 extension's `fillDownLabels` (default off; "Repeat Item Labels"): the field's
+    /// item label shows on every line of its children, not on its first line only. It is read
+    /// from the field's kept `extLst`, which stays in [`PivotTable::opaque`] and is what the
+    /// export writes (docs/excel-semantics/pivots.md "Repeat item labels",
+    /// probes/t4698-pivot-repeat-labels).
+    pub fill_down_labels: bool,
     /// `<items>`, in file order: the order the field shows its items in.
     pub items: Vec<PivotItem>,
 }
@@ -215,6 +221,7 @@ impl PivotField {
             sort_type: SortType::Manual,
             insert_blank_row: false,
             number_format: None,
+            fill_down_labels: false,
             items: Vec::new(),
         }
     }
