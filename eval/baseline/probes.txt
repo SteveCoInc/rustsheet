@@ -2644,6 +2644,7 @@ C	probes/t4697-large-small-median-mixed-sheet-refs.case.json	17
 C	probes/t4698-pivot-repeat-labels.case.json	651
 C	probes/t4701-index-one-index-ref-grid.case.json	16
 C	probes/t4762-index-one-index-readers.case.json	27
+C	probes/t4765-growth-factor-edges.case.json	24
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -9285,12 +9286,6 @@ F	probes/t4579-ttest-paired.case.json	Off!A7
 F	probes/t4579-ttest-paired.case.json	Off!A8
 F	probes/t4579-ttest-paired.case.json	Off!A9
 F	probes/t4590-growth-overflow.case.json	Int!A1
-F	probes/t4590-growth-overflow.case.json	Int!A2
-F	probes/t4590-growth-overflow.case.json	Int!A3
-F	probes/t4590-growth-overflow.case.json	Int!A4
-F	probes/t4590-growth-overflow.case.json	Int!A5
-F	probes/t4590-growth-overflow.case.json	Int!A6
-F	probes/t4590-growth-overflow.case.json	Int!A7
 F	probes/t4590-growth-overflow.case.json	Int!B1
 F	probes/t4590-growth-overflow.case.json	Int!B2
 F	probes/t4590-growth-overflow.case.json	Int!B4
@@ -9314,6 +9309,10 @@ F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H17
 F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H3
 F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H5
 F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H9
+F	probes/t4765-growth-factor-edges.case.json	Cut!A1
+F	probes/t4765-growth-factor-edges.case.json	Cut!A5
+F	probes/t4765-growth-factor-edges.case.json	SmallB!A1
+F	probes/t4765-growth-factor-edges.case.json	SmallB!A3
 F	probes/table-edits/t4274-calc-column-delete-row-2.case.json	F!A1
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9

@@ -164,3 +164,27 @@ fn growth_edges_of_logest_factors() {
     assert_eq!(model._get_text("A1"), "#NUM!");
     assert!(model._get_text("A2").ends_with("E+138"));
 }
+
+// GROWTH is 0 once LOGEST's slopes' factor e^(Σ m x) is below DBL_MIN, const TRUE or FALSE, and
+// #NUM! once it overflows (probes/t4765-growth-factor-edges Cut A7, NoConst A2, Over A1; statistics.md
+// "GROWTH is #NUM! once LOGEST's b or slopes' factor overflows", T-4765).
+#[test]
+fn growth_slopes_factor_edges() {
+    let mut model = new_empty_model();
+    model._set(
+        "A1",
+        "=GROWTH({6.71591962806527e+153,1,1.48899935583079e-154},{1,2,3},2,TRUE)",
+    );
+    model._set(
+        "A2",
+        "=GROWTH({4.22244206240434e-93,6.82472147873421e-124,1.10307785338272e-154},{0.3,0.4,0.5},1,FALSE)",
+    );
+    model._set(
+        "A3",
+        "=GROWTH({9.92959039626498e-153,9.96473301010367e-77,1},{1,1.5,2},4,TRUE)",
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "0");
+    assert_eq!(model._get_text("A2"), "0");
+    assert_eq!(model._get_text("A3"), "#NUM!");
+}

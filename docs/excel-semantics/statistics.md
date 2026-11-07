@@ -7270,33 +7270,29 @@ Ours: as described; T-2006 (the solve). A104 passes since T-4590.
 Status: VERIFIED (excel-graph) for the table points and A104's cause (T-4590)
 Tasks: T-4096, T-2006, T-4590, T-2569
 
-## GROWTH is #NUM! once LOGEST's b overflows; it can be 0 where the slopes' factor is subnormal (T-4590)
-Rule: GROWTH with const TRUE is `#NUM!` exactly when LOGEST's b = e^intercept overflows, that is when the intercept is
-past ln(DBL_MAX) = 709.7827, even where the prediction itself is finite.
-- For y = e^(c - c/2·x) at x = 1, 2, 3 (prediction about 1 at x = 2), GROWTH is a number for c up to 709.7827 and
-  `#NUM!` from 709.7828 to 1290. LOGEST's own b, `INDEX(LOGEST(..),1,2)`, is `#NUM!` from the same cut.
-- LOGEST's m = e^slope past the double range is not an error in GROWTH. With const FALSE and y = e^(m·x) at x = 0.3,
-  0.4, 0.5, GROWTH at 0.4 is a number for every m up to 1400, while LOGEST's m is `#NUM!` from 709.79. In those rows
-  the slopes' factor at the new x, e^(0.4·m), never overflows. What GROWTH does when that factor itself overflows is
-  unprobed.
-- The Gate A point GROWTH s1 A104 (intercept 1289.95) is `#NUM!` by this rule.
-- Observed, not implemented: GROWTH is 0 where the slopes' factor e^(Σ m_j x_j) at the new x is subnormal, though the
-  prediction is about 1. In the Int rows above, c = 709 to 709.7827 gives 0 (factor e^(-709) or below), and c = 700
-  gives 1 (factor e^(-700), a normal double). That fits Excel forming the two factors as doubles and flushing a
-  subnormal one, but the evidence covers only const TRUE, one x and a slope sum in [-709.78, -709].
-  - The cut between -700 and -709 is not pinned.
-  - Several x (one summed factor or one factor per variable), a subnormal b with a normal slopes' factor, const FALSE,
-    and a slopes' factor that overflows are all unprobed (T-4765).
-  - The product of the two factors is one ulp off Excel on ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where the
-    single exponential is exact, so how Excel combines them between the edges is not identified.
-Evidence: probes/t4590-growth-overflow (excel-graph, 2026-11-07; Int 15 rows, Slope 8 rows). The predictions in
-docs/research/t4590 were committed before the fill. H1 (`#NUM!` only when b overflows) holds on 23 of 23 GROWTH
-cells. H2 (`#NUM!` when b or LOGEST's m overflows) fails on the 5 Slope rows past 709.79. The zeros at c = 709 to
-709.7827 were not predicted.
-Status: VERIFIED (excel-graph) for the `#NUM!` rule. The zero is an observation (UNVERIFIED as a rule, T-4765). The
-probe's least-squares digits (14 cells, 5E-14 to 3E-13 off) are T-4763's.
-Ours (T-4590): `growth_prediction` in functions/statistical/trend.rs applies the `#NUM!` rule. Int A2:A7 stay
-known failures (ours about 1, Excel 0), owned by T-4765.
+## GROWTH is #NUM! once LOGEST's b or slopes' factor overflows, and 0 once the slopes' factor is subnormal (T-4590, T-4765)
+Rule: GROWTH's prediction is e^(intercept + Σ m_j x_j), except at the edges of LOGEST's two factors, b = e^intercept and
+the slopes' factor F = e^(Σ m_j x_j) at the new x:
+- `#NUM!` where b overflows. The intercept is then past ln(DBL_MAX) = 709.7827: 709.7828 to 1290 are `#NUM!` and 709.7827
+  is a number. LOGEST's own b, `INDEX(LOGEST(..),1,2)`, is `#NUM!` from the same cut. The Gate A point GROWTH s1 A104
+  (intercept 1289.95) is `#NUM!` by this rule.
+- `#NUM!` where F overflows, though b keeps the prediction finite (probes/t4765-growth-factor-edges Over A1: b =
+  e^-700, F = e^1400, prediction e^700).
+- 0 where F is below DBL_MIN, with const TRUE or FALSE. With const TRUE the prediction is about 1: a slope sum of
+  -708.39 gives 1 and -708.4 gives 0 (Cut), at the DBL_MIN cut ln(DBL_MIN) = -708.396 (numbers.md "Subnormal results
+  become 0"). With const FALSE a subnormal factor gives 0 (NoConst A2, A3).
+- A subnormal b is not an error and not a zero: c = -709 with an offsetting slope gives 0.9999999999999999 (SmallB A3).
+- LOGEST's m = e^slope past the double range is not an error in GROWTH (t4590 Slope).
+Away from these edges the value is the single exponential. The product of the two factors is one ulp off Excel on
+ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where the single exponential is exact, so how Excel combines the
+factors between the edges is not identified. Several x are unprobed: the Multi rows of the t4765 probe were
+`#REF!` (the shapes of known_y and known_x disagreed). Whether F is one summed factor or one factor per variable
+is therefore open.
+Evidence: probes/t4590-growth-overflow (Int 15 rows, Slope 8) and probes/t4765-growth-factor-edges (Cut 10, SmallB 4,
+NoConst 4, Over 3; excel-graph, 2026-11-07). The predictions in docs/research/t4590 and docs/research/t4765 were
+committed before each fill.
+Status: VERIFIED (excel-graph). The probes' least-squares digits (5E-14 to 3E-13 off) are T-4763's.
+Ours (T-4590, T-4765): `growth_prediction` in functions/statistical/trend.rs.
 Tasks: T-4590, T-4763, T-4765
 
 ## TRIMMEAN: an error percent before data with no number (T-1742)
