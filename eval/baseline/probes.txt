@@ -2702,6 +2702,7 @@ C	probes/t4793-growth-several-x.case.json	10
 C	probes/t4844-irr-guess-ladder.case.json	468
 C	probes/t4844-irr-pad-ladder.case.json	48
 C	probes/t4844-irr-stage-invariance.case.json	60
+C	probes/t4861-indirect-r1c1-shaped-sheet-prefix.case.json	42
 C	probes/t4871-empty-mode-args.case.json	31
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
@@ -10080,7 +10081,6 @@ F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!C64
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!C67
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!C70
 F	probes/t4704-mixed-xlookup-grid-readers.case.json	Calc!C73
-F	probes/t4757-later-mark-sheet-names.case.json	Sheet1!A19
 F	probes/t4765-growth-factor-edges.case.json	Cut!A1
 F	probes/t4765-growth-factor-edges.case.json	Cut!A5
 F	probes/t4765-growth-factor-edges.case.json	SmallB!A1
