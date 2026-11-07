@@ -3,7 +3,7 @@ id: T-4542
 title: "Review MINORs of #3538: numeral_suffix doc, French regional names claim, a tie on a plain engineering format"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
