@@ -644,7 +644,8 @@ def _bond_price(
     settle, maturity, rate, pr, red, freq, basis = _bond(args)
     a, e, _, dsc, n = day_counts(settle, maturity, freq, basis, period_e=False)
     bond: Bond = (rate, red, freq, a, e, dsc, n)
-    return partial(kernel or price, bond=bond), bond, pr
+    fn = kernel or price
+    return (lambda y: fn(y, bond)), bond, pr
 
 
 def _newton_yield(start: float, tol: float) -> Callable[..., float]:
