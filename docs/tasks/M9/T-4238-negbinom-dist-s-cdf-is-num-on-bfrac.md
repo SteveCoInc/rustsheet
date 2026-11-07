@@ -3,7 +3,7 @@ id: T-4238
 title: "NEGBINOM.DIST's cdf is #NUM! on bfrac at number_s 1E+20"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
