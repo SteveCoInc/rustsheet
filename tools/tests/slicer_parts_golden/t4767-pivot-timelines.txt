@@ -1,0 +1,41 @@
+== cache
+timelineCacheDefinition Ignorable=x name=NativeTimeline_Date sourceName=Date
+  pivotTables
+    pivotTable name=P_TL tabId=2
+  state filterType=dateBetween lastRefreshVersion=6 minimalRefreshVersion=6 pivotCacheId=1
+    selection endDate=2019-03-31T00:00:00 startDate=2019-01-01T00:00:00
+    bounds endDate=2021-01-01T00:00:00 startDate=2019-01-01T00:00:00
+== cache
+timelineCacheDefinition Ignorable=x name=NativeTimeline_Date1 sourceName=Date
+  pivotTables
+    pivotTable name=P_TN tabId=3
+  state filterType=unknown lastRefreshVersion=6 minimalRefreshVersion=6 pivotCacheId=2
+    bounds endDate=2021-01-01T00:00:00 startDate=2019-01-01T00:00:00
+== cache
+timelineCacheDefinition Ignorable=x name=NativeTimeline_Date2 sourceName=Date
+  pivotTables
+    pivotTable name=P_TA tabId=4
+  state filterType=dateBetween lastRefreshVersion=6 minimalRefreshVersion=6 pivotCacheId=3 singleRangeFilterState=0
+    selection endDate=2019-03-31T00:00:00 startDate=2019-01-01T00:00:00
+    bounds endDate=2021-01-01T00:00:00 startDate=2019-01-01T00:00:00
+== cache
+timelineCacheDefinition Ignorable=x name=NativeTimeline_Date3 sourceName=Date
+  pivotTables
+    pivotTable name=P_TD0 tabId=5
+  state filterType=dateBetween lastRefreshVersion=6 minimalRefreshVersion=6 pivotCacheId=4
+    selection endDate=2019-03-31T00:00:00 startDate=2019-01-01T00:00:00
+    bounds endDate=2021-01-01T00:00:00 startDate=2019-01-01T00:00:00
+== cache
+timelineCacheDefinition Ignorable=x name=NativeTimeline_Date4 sourceName=Date
+  pivotTables
+    pivotTable name=P_TD1 tabId=6
+  state filterType=dateBetween lastRefreshVersion=6 minimalRefreshVersion=6 pivotCacheId=5
+    selection endDate=2019-03-31T00:00:00 startDate=2019-01-01T00:00:00
+    bounds endDate=2021-01-01T00:00:00 startDate=2019-01-01T00:00:00
+== cache
+timelineCacheDefinition Ignorable=x name=NativeTimeline_Date5 sourceName=Date
+  pivotTables
+    pivotTable name=P_TX tabId=7
+  state filterType=dateBetween lastRefreshVersion=6 minimalRefreshVersion=6 pivotCacheId=6
+    selection endDate=2019-03-31T00:00:00 startDate=2019-01-01T00:00:00
+    bounds endDate=2021-01-01T00:00:00 startDate=2019-01-01T00:00:00
