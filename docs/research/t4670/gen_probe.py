@@ -27,7 +27,7 @@ def main() -> None:
         "description": (
             "T-4670: CONVERT of seeded non-round values (E297 to E307) for m to m, m to ft, "
             "mi to km, in to cm, m2 to m2 and m2 to ft2, where value*F_from (angstrom factors, "
-            "T-4630) overflows or nearly does. Results that overflow are #NUM!."
+            "T-4630) overflows or nearly does. The pre-prefix conversion overflowing gives #NUM!."
         ),
         "tags": ["M9", "probe", "engineering", "T-4670"],
         "sheets": [{"name": "Sheet1", "cells": cells}],

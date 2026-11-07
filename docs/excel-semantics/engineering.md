@@ -224,15 +224,19 @@ A conversion between metre units goes through the factor too, so it is not an id
 (`x*1E10/1E10`, then the prefix; probes-numeric/t4630-convert-metre-identity, excel-graph, 2026-11-07, chosen after the
 freeze: 14 values where the two bases differ for m to m, km to m, m to cm and mm to km all give the angstrom-base value,
 and 4 controls where they agree, A15:A18).
-Overflow: `value * F_from` is not allowed to overflow when the answer is representable:
+Overflow: `value * F_from` is not allowed to overflow when the answer and the pre-prefix conversion are representable:
 `CONVERT(1E290,"m2","m2")` is 1E+290, `CONVERT(1E300,"ha","m2")` 1.0000000000000001E+304,
 `CONVERT(1E302,"J","J")` 1E+302. The engine divides first (`value / F_to * F_from`) when the
 product is infinite; every probed value fits, but whether Excel does this or uses extended
 precision is not distinguishable from the probes.
 Non-round values (T-4670): 48 seeded 15-digit values from 1E297 to 1.7E307 for m to m, m to ft, mi to km, in to cm, m2 to m2
-and m2 to ft2 (probes-numeric/t4670-convert-distance-overflow A1:A48, excel-graph, 2026-11-07) all match the divide-first path
-exactly, last digit included (`CONVERT(1.30209135723375E297,"m","m")` is 1.3020913572337498E+297, not the input), and
-A23:A24 (mi to km at E306 and E307) are `#NUM!`. No rule change.
+and m2 to ft2 (probes-numeric/t4670-convert-distance-overflow A1:A48, excel-graph, 2026-11-07) all match ours exactly, last digit included.
+A1 is a product-path cell: `value * 1E10` is 1.3E307 and fits, so `CONVERT(1.30209135723375E297,"m","m")` is
+`x*1E10/1E10` = 1.3020913572337498E+297, not the input (the divide-first form would give the input). The cells whose product
+passes 1.8E308 (from about 1.8E298 for a metre unit) are the overflow-path evidence. A23:A24 (`CONVERT(1.33429819197683E306,"mi","km")`
+and the E307 value) are `#NUM!` although the answers (about 2.1E306 and 1.9E307 km) are representable: the conversion before the
+prefixes (`value / F_to * F_from`, about 2.1E309) overflows, and the "k" prefix is applied only afterwards. So the rule above
+holds only while that pre-prefix quotient fits a double; otherwise the result is `#NUM!`.
 Backend: excel-desktop cached values + excel-graph (probes/convert-targets).
 Status: VERIFIED (for the evidenced conversions)
 Implemented in: `fn_convert` in functions/engineering/convert.rs (T-0922, T-1297, T-3861, T-4630)

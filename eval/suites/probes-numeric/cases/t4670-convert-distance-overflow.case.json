@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-4670: CONVERT of seeded non-round values (E297 to E307) for m to m, m to ft, mi to km, in to cm, m2 to m2 and m2 to ft2, where value*F_from (angstrom factors, T-4630) overflows or nearly does. Results that overflow are #NUM!.",
+ "description": "T-4670: CONVERT of seeded non-round values (E297 to E307) for m to m, m to ft, mi to km, in to cm, m2 to m2 and m2 to ft2, where value*F_from (angstrom factors, T-4630) overflows or nearly does. The pre-prefix conversion overflowing gives #NUM!.",
  "tags": [
   "M9",
   "probe",
