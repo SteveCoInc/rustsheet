@@ -15,7 +15,7 @@ use crate::functions::{
 
 /// A `match_mode` or `search_mode` of XMATCH or XLOOKUP, or `default` where the argument is
 /// written empty or is a LET variable bound to nothing: Excel reads it as omitted, not as 0
-/// (`XMATCH(2,A1:A3,0,)` is 2 and `XLOOKUP(2,A1:A3,B1:B3,,,)` 20, where a search_mode of 0 is
+/// (`XMATCH(2,A1:A3,0,)` is 2 and `XLOOKUP(2,A1:A3,B1:B3,,,)` 20, where a `search_mode` of 0 is
 /// `#VALUE!`; probes/t4871-empty-mode-args E5:E20, T-4871).
 pub(crate) fn mode_or_default(value: CalcResult, default: f64) -> CalcResult {
     match value {
