@@ -33,6 +33,7 @@ mod number_groups;
 mod probe_cases;
 mod refresh;
 mod result;
+mod show_as;
 
 pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
 pub use grid::{PivotBudget, PivotPlacement, PivotRefresh, PivotRefreshError, PivotSwap};

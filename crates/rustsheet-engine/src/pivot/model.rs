@@ -353,7 +353,7 @@ pub struct DataField {
     pub field: u32,
     /// `subtotal`: how it summarizes.
     pub function: Aggregate,
-    /// `showDataAs`.
+    /// `showDataAs`, or the x14 extension's `pivotShowAs` ([`ShowDataAs`]).
     pub show_data_as: ShowDataAs,
     /// `baseField`: the field a show-values-as calculation compares against; -1 for none.
     pub base_field: i32,
@@ -459,7 +459,12 @@ impl Aggregate {
     }
 }
 
-/// `ST_ShowDataAs`: the calculation a data field shows instead of its plain values.
+/// `ST_ShowDataAs`, and the six Excel 2010 modes of the x14 dataField extension's `pivotShowAs`:
+/// the calculation a data field shows instead of its plain values. Excel writes an x14 mode as
+/// `pivotShowAs` alone, with no `showDataAs` (docs/excel-semantics/pivots.md "Show-values-as
+/// modes as Excel for the web renders them"). The importer reads it from the extension, which it
+/// keeps verbatim, so a writer gives `showDataAs` only the ECMA modes ([`ShowDataAs::is_x14`]).
+/// The engine is `pivot::show_as` (T-4163).
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ShowDataAs {
     /// `normal`: the plain values.
@@ -480,10 +485,23 @@ pub enum ShowDataAs {
     PercentOfTotal,
     /// `index`.
     Index,
+    // The x14 modes, appended so the encoded indices of the ECMA ones stay valid.
+    /// x14 `percentOfParentRow`.
+    PercentOfParentRow,
+    /// x14 `percentOfParentCol`.
+    PercentOfParentColumn,
+    /// x14 `percentOfParent`.
+    PercentOfParent,
+    /// x14 `percentOfRunningTotal`.
+    PercentOfRunningTotal,
+    /// x14 `rankAscending`.
+    RankAscending,
+    /// x14 `rankDescending`.
+    RankDescending,
 }
 
-/// `ST_ShowDataAs`'s names, in the schema's order.
-const SHOW_DATA_AS_NAMES: [(&str, ShowDataAs); 9] = [
+/// The modes' names, the ECMA nine in `ST_ShowDataAs`'s order, then the six x14 ones.
+const SHOW_DATA_AS_NAMES: [(&str, ShowDataAs); 15] = [
     ("normal", ShowDataAs::Normal),
     ("difference", ShowDataAs::Difference),
     ("percent", ShowDataAs::Percent),
@@ -493,23 +511,44 @@ const SHOW_DATA_AS_NAMES: [(&str, ShowDataAs); 9] = [
     ("percentOfCol", ShowDataAs::PercentOfColumn),
     ("percentOfTotal", ShowDataAs::PercentOfTotal),
     ("index", ShowDataAs::Index),
+    ("percentOfParentRow", ShowDataAs::PercentOfParentRow),
+    ("percentOfParentCol", ShowDataAs::PercentOfParentColumn),
+    ("percentOfParent", ShowDataAs::PercentOfParent),
+    ("percentOfRunningTotal", ShowDataAs::PercentOfRunningTotal),
+    ("rankAscending", ShowDataAs::RankAscending),
+    ("rankDescending", ShowDataAs::RankDescending),
 ];
 
 impl ShowDataAs {
-    /// The calculation a `dataField@showDataAs` names.
+    /// The mode a `dataField@showDataAs` or x14 `pivotShowAs` names (an x14 one only in
+    /// `pivotShowAs`: the importer checks [`ShowDataAs::is_x14`]).
     #[must_use]
     pub fn from_name(name: &str) -> Option<Self> {
         let mut names = SHOW_DATA_AS_NAMES.iter();
         names.find(|(n, _)| *n == name).map(|(_, s)| *s)
     }
 
-    /// The `dataField@showDataAs` name, what [`ShowDataAs::from_name`] reads.
+    /// The mode's name, what [`ShowDataAs::from_name`] reads.
     #[must_use]
     pub fn name(self) -> &'static str {
         let mut names = SHOW_DATA_AS_NAMES.iter();
         names
             .find(|(_, s)| *s == self)
             .map_or("normal", |(n, _)| *n)
+    }
+
+    /// Whether the mode is one of the six only the x14 extension's `pivotShowAs` can name.
+    #[must_use]
+    pub fn is_x14(self) -> bool {
+        matches!(
+            self,
+            Self::PercentOfParentRow
+                | Self::PercentOfParentColumn
+                | Self::PercentOfParent
+                | Self::PercentOfRunningTotal
+                | Self::RankAscending
+                | Self::RankDescending
+        )
     }
 }
 

@@ -65,7 +65,7 @@ pub fn add_pivots(
 /// built file, then recalculates when one loaded: its `refreshOnLoad` cache is due, so the
 /// recalculation refreshes and renders it after calculating, the order Excel opens the file in.
 /// A pivot the importer drops is dropped here too, its cells left empty, as a load drops it: a
-/// calculated field (t4128 K), a `showDataAs` data field (t4123), or the builder's numeric group
+/// calculated field (t4128 K), or the builder's numeric group
 /// labels past the rebuilt groups (t4128 G; pivots.md "Numeric and date group labels are
 /// rewritten by Excel").
 ///

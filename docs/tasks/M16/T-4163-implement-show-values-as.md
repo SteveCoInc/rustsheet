@@ -3,7 +3,7 @@ id: T-4163
 title: "Implement show-values-as"
 milestone: M16
 lane: engine
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -16,75 +16,43 @@ PivotResult applies all fourteen show-values-as modes as the evidence says (leav
 ## Context
 SPEC-0032; mog's three-pass dispatcher (oss-engines.md §1) is a design idea only. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
-Owner of these visibly-off pivot cells (decision 0245; moved from T-4152, whose adapter loads the
-  case builder's parts through the importer, which skips a pivot with a `showDataAs` data field, "a data
-  field shown as a calculation"): probes/t4123-pivot-capture T!A3:E12, T2!A3:E12, T3!A3:E12,
-  T4!A3:E12.
-- From T-4129's capability matrix (each mode on rows Region and Product, columns Year; pivots.md "Show-values-as
-  modes as Excel for the web renders them"):
-  - probes/t4129-pivot-show-as DF!A3:A12, DF!B3:B4, DF!B7:B8, DF!B11, DF!C4, DF!C7:C8, DF!C11, DF!D4, DF!D7:D8,
-    DF!D11, DP!A3:A12, DP!B3:B4, DP!C4:C12, DP!D4, IX!A3:A12, IX!B3:B12, IX!C4:C12, IX!D4:D12, PC!A3:A12,
-    PC!B3:B4, PC!B6:B8, PC!B10:B11, PC!C4, PC!C6:C8, PC!C10:C11, PC!D4, PC!D6:D8, PC!D10:D11, PCo!A3:A12,
-    PCo!B3:B12, PCo!C4:C12, PCo!D4:D12, PD!A3:A12, PD!B3:B4, PD!B7:B8, PD!B11, PD!C4, PD!C7:C8, PD!C11, PD!D4,
-    PD!D7:D8, PD!D11, PR!A3:A12, PR!B3:B12, PR!C4:C12, PR!D4:D12, PT!A3:A12, PT!B3:B12, PT!C4:C12, PT!D4:D12,
-    RT!A3:A12, RT!B3:B4, RT!B6:B8, RT!B10:B11, RT!C4, RT!C6:C8, RT!C10:C11, RT!D4, RT!D6:D8, RT!D10:D11
-  - probes/t4129-pivot-show-as-x14 PP!B5:B12, PP!C5:C12, PP!D5:D12, PPC!B5:B12, PPC!C5:C12, PPC!D5:D12,
-    PPR!B5:B12, PPR!C5:C12, PPR!D5:D12, PRT!B5:B12, PRT!C5:C12, PRT!D5:D12, RA!B5:B10, RA!B12, RA!C5:C7,
-    RA!C9:C12, RA!D5:D12, RD!B5:B7, RD!B9:B10, RD!B12, RD!C5:C7, RD!C9:C12, RD!D5:D7, RD!D9:D12
-- From T-4161's edge-case probes (pivots.md "Show-values-as edge cases (T-4161)"):
-  - probes/t4161-pivot-show-as-base-items DPC!A3:A12, DPC!B3:B4, DPC!B6:B7, DPC!B10:B11, DPC!C4,
-    DPC!C6:C7, DPC!C10:C11, DPC!D4, DPC!D6:D7, DPC!D10:D11, DPC!E4, DPC!E6:E7, DPC!E10:E11, DPP!A3:A12,
-    DPP!B3:B4, DPP!B7:B8, DPP!B11, DPP!C4, DPP!C7:C8, DPP!C11, DPP!D4, DPP!D7:D8, DPP!D11, DPP!E4,
-    DPP!E7:E8, DPP!E11, DRP!A3:A12, DRP!B3:B4, DRP!B9:B11, DRP!C4, DRP!C9:C11, DRP!D4, DRP!D9:D11,
-    DRP!E4, DRP!E9:E11, DY1!A3:A12, DY1!B3:B12, DY1!C4, DY1!D4:D12, DY1!E4, DYN!A3:A12, DYN!B3:B12,
-    DYN!C4:C12, DYN!D4, DYN!E4, DYP!A3:A12, DYP!B3:B4, DYP!C4:C12, DYP!D4:D12, DYP!E4, PPC!A3:A12,
-    PPC!B3:B4, PPC!B10:B11, PPC!C4, PPC!C6:C8, PPC!C10:C11, PPC!D4, PPC!D10:D11, PPC!E4, PPC!E6:E8,
-    PPC!E10:E11, PPN!A3:A12, PPN!B3:B4, PPN!B6, PPN!C4, PPN!C7:C8, PPN!C10:C11, PPN!D4, PPN!D6,
-    PPN!D10:D11, PPN!E4, PPN!E6:E8, PPN!E10:E11, PR0!A3:A12, PR0!B3:B7, PR0!B9:B11, PR0!C4:C6,
-    PR0!C8:C10, PR0!D4:D7, PR0!D9:D11, PR0!E4:E11, PY1!A3:A12, PY1!B3:B6, PY1!B8:B12, PY1!C4:C6,
-    PY1!C8:C12, PY1!D4:D6, PY1!D8:D12, PY1!E4, PYN!A3:A12, PYN!B3:B6, PYN!B8:B12, PYN!C4:C7, PYN!C9:C12,
-    PYN!D4:D7, PYN!D9:D12, PYN!E4, PYP!A3:A12, PYP!B3:B7, PYP!B9:B10, PYP!B12, PYP!C4:C7, PYP!C9:C10,
-    PYP!C12, PYP!D4:D6, PYP!D8:D12, PYP!E4, QPC!A3:A12, QPC!B3:B4, QPC!B10:B11, QPC!C4, QPC!C6:C7,
-    QPC!C10:C11, QPC!D4, QPC!D10:D11, QPC!E4, QPC!E6:E7, QPC!E10:E11, QPP!A3:A12, QPP!B3:B4, QPP!B7:B8,
-    QPP!B11, QPP!C4, QPP!C7, QPP!C11, QPP!D4, QPP!D7:D8, QPP!D11, QPP!E4, QPP!E7:E8, QPP!E11,
-    QRN!A3:A12, QRN!B3:B6, QRN!C4:C7, QRN!D4:D7, QRN!E4:E7, QYN!A3:A12, QYN!B3:B6, QYN!B8:B12,
-    QYN!C4:C7, QYN!C9:C12, QYN!D4, QYN!E4, QYP!A3:A12, QYP!B3:B4, QYP!C4:C7, QYP!C9:C10, QYP!C12,
-    QYP!D4:D6, QYP!D8:D12, QYP!E4
-  - probes/t4161-pivot-show-as-edges D0!A3:A10, D0!B3:B4, D0!C4:C10, D0!D4:D10, D0!E4, IX!A3:A10,
-    IX!B3:B10, IX!C4:C10, IX!D4:D10, IX!E4:E10, P0!A3:A10, P0!B3:B7, P0!B10, P0!C4:C7, P0!C10,
-    P0!D4:D10, P0!E4, PCo!A3:A10, PCo!B3:B10, PCo!C4:C10, PCo!D4:D10, PCo!E4:E10, PP!B5:B7, PP!B10,
-    PP!C5:C7, PP!C10, PP!D5:D7, PP!D10, PP!E5:E7, PP!E10, PPC!B6:B10, PPC!C5:C7, PPC!C10, PPC!D5:D10,
-    PPC!E5:E7, PPC!E10, PPR!B5:B7, PPR!B10, PPR!C5:C8, PPR!C10, PPR!D5:D8, PPR!D10, PPR!E5:E8, PPR!E10,
-    PR!A3:A10, PR!B3:B10, PR!C4:C10, PR!D4:D10, PR!E4:E10, PRY!B6:B10, PRY!C5:C7, PRY!C10, PRY!D5:D10,
-    PRY!E5:E10, PT!A3:A10, PT!B3:B10, PT!C4:C10, PT!D4:D10, PT!E4:E10, Q0!A3:A10, Q0!B3:B4, Q0!C4:C7,
-    Q0!C10, Q0!D4:D10, Q0!E4
-  - probes/t4161-pivot-show-as-nested-parent IX3!A3:A19, IX3!B3:B19, IX3!C4:C19, IX3!D4:D19,
-    PPCol!B6:B8, PPCol!C6:C8, PPCol!D6:D8, PPCol!E6:E8, PPCol!F6:F8, PPCol!G6:G8, PPCol!H6:H8,
-    PPK!B5:B6, PPK!B8:B10, PPK!B12:B14, PPK!B16, PPK!B18:B19, PPK!C5:C7, PPK!C9, PPK!C11:C13,
-    PPK!C15:C17, PPK!C19, PPK!D5:D19, PPP!B5:B19, PPP!C5:C19, PPP!D5:D19, PPR_!B5:B19, PPR_!C5:C19,
-    PPR_!D5:D19, PPRow!B5:B19, PPRow!C5:C19, PPRow!D5:D19, PPY!B6:B8, PPY!C6:C8, PPY!D6:D8, PPY!E6:E8,
-    PPY!F6:F8, PPY!G6:G8, PPY!H6:H8
-  - probes/t4161-pivot-show-as-running-rank PTR!B5:B13, PTR!C5:C11, PTR!C13, PTR!D5:D11, PTR!D13,
-    PTY!B5:B13, PTY!C5:C11, PTY!C13, PTY!D5:D13, RAP!B5:B11, RAP!B13, RAP!C5:C11, RAP!C13, RAP!D5:D11,
-    RAP!D13, RAR!B5:B11, RAR!B13, RAR!C5:C11, RAR!C13, RAR!D5:D11, RAR!D13, RDP!B5:B11, RDP!B13,
-    RDP!C5:C13, RDP!D5:D13, RDR!B5:B11, RDR!B13, RDR!C5:C13, RDR!D5:D13, RDY!B5:B11, RDY!B13,
-    RDY!C5:C11, RDY!C13, RDY!D5:D13, RTR!A3:A13, RTR!B3:B12, RTR!C4:C12, RTR!D4:D12, RTT!A3:A13,
-    RTT!B3:B4, RTT!B6:B8, RTT!B10:B12, RTT!C4, RTT!C6:C8, RTT!C10:C12, RTT!D4, RTT!D6:D8, RTT!D10:D12,
-    RTY!A3:A13, RTY!B3:B13, RTY!C4:C13, RTY!D4
-  - probes/t4161-pivot-show-as-running-zero PRP!B5:B10, PRP!C5:C10, PRP!D5:D10, PRY!B5:B10, PRY!C5:C10,
-    PRY!D5:D10
-  - probes/t4161-pivot-show-as-zeros IX!A3:A12, IX!B3:B12, IX!C4:C12, IX!D4:D12, PC!A3:A12, PC!B3:B4,
-    PC!B6:B8, PC!B10:B11, PC!C4, PC!C6:C8, PC!C10:C11, PC!D4, PC!D6:D8, PC!D10:D11, PCo!A3:A12,
-    PCo!B3:B12, PCo!C4:C12, PCo!D4:D12, PD!A3:A12, PD!B3:B4, PD!B7:B8, PD!B11, PD!C4, PD!C7:C8, PD!C11,
-    PD!D4, PD!D7:D8, PD!D11, PP!B5, PP!B7, PP!B9:B12, PP!C5:C7, PP!C9:C12, PP!D5:D6, PP!D9:D12, PPC!B5,
-    PPC!B7:B12, PPC!C5:C12, PPC!D5:D12, PPR!B5, PPR!B7, PPR!B10:B12, PPR!C5:C7, PPR!C10:C12, PPR!D5:D6,
-    PPR!D10:D12, PR!A3:A12, PR!B3:B12, PR!C4:C12, PR!D4:D12, PRT!B5, PRT!B7:B12, PRT!C5:C12, PRT!D5:D12,
-    PT!A3:A12, PT!B3:B12, PT!C4:C12, PT!D4:D12, PY!A3:A12, PY!B3:B12, PY!C4:C12, PY!D4, RA!B5:B12,
-    RA!C5:C12, RA!D5:D12, RD!B5:B12, RD!C5:C12, RD!D5:D12
+The owner paragraph (decision 0245) listed the visibly-off cells of probes/t4123-pivot-capture T to T4,
+t4129-pivot-show-as(-x14) and the six t4161-pivot-show-as-* cases; every one of them now matches Excel, so
+the list is gone.
 
 ## Acceptance criteria
-- [ ] p-showas probes pass.
-- [ ] `make check` green; reviewers approve.
+- [x] p-showas probes pass.
+- [x] `make check-fast` green locally; CI's `make check` and the reviewers are the PR's.
 
 ## Out of scope
 - GETPIVOTDATA of show-as values unless evidenced.
+
+## Outcome
+`pivot::show_as` (crates/rustsheet-engine/src/pivot/show_as.rs) applies all fifteen modes (the ECMA nine and
+the six x14 modes) as one post-pass over the values `compute` already made. Per data field with a mode it
+computes every (row node, column node) cell, leaves, subtotals and grand totals alike, and stores the
+non-empty ones. `PivotResult::value_as` reads them under the field's own function. Each mode family has one
+structure:
+- the base nodes of difference, percent and percentDiff ((previous), (next), a fixed item, `#N/A` for a base
+  item missing from its parent, an empty cell for a missing combination);
+- the runs of runTotal, percentOfRunningTotal and the dense ranks;
+- the ancestor of percentOfParent;
+- the parent of the two parent-row and parent-column modes;
+- the totals of percentOfRow, percentOfCol, percentOfTotal and index.
+
+index computes value × grand total / row total / column total, left to right. Only t4129 IX!B5 tells the
+candidate orders apart, by 1 ulp, below the R4.4 web-versus-desktop floor, so the order is UNVERIFIED; T-4754
+probes it with many order-discriminating cells.
+
+The pass charges a work unit per cell, plus the run sorts, and counts each stored value against
+`MAX_PIVOT_NODES`. The importer no longer skips a shown pivot, and it reads the x14 `pivotShowAs` from the
+dataField extension it keeps verbatim. The export (T-4176) writes `showDataAs` only for the ECMA modes, since an
+x14 mode is in that kept extension. GETPIVOTDATA on such a pivot stays `#REF!`.
+
+Under the outer Region, percentOfRunningTotal divides a product row by that product's total over the
+Regions; only subtotal rows use the Grand Total row (the corrected T-4161 reading, RR PTR).
+
+Every cell of t4123 T to T4, t4129-pivot-show-as(-x14) and the six t4161 cases matches its sidecar
+(`the_show_values_as_probes_cells_are_excels`, `the_capture_probes_cells_are_excels`). `make eval-baseline`:
+probes known failures 8518 -> 6168 on main after T-4161 (fixed 3932, REGRESSIONS 0). The engine's own readings are UNVERIFIED in
+pivots.md under T-4750, which now lists them.

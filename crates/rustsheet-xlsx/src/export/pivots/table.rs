@@ -544,7 +544,9 @@ fn data_fields_xml(table: &PivotTable, opaque: &Opaque<'_>) -> String {
                 data.function.consolidate_name()
             );
         }
-        if data.show_data_as != ShowDataAs::Normal {
+        // An x14 mode is the kept dataField extension's `pivotShowAs`, written back verbatim
+        // (`ShowDataAs::is_x14`): `showDataAs` cannot name it.
+        if data.show_data_as != ShowDataAs::Normal && !data.show_data_as.is_x14() {
             let _ = write!(children, r#" showDataAs="{}""#, data.show_data_as.name());
         }
         if data.base_field != defaults.base_field {

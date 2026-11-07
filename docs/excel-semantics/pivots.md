@@ -1451,6 +1451,11 @@ is 0 (Z PD A). The other cells follow percent's rules (`#NULL!`, empty, `#DIV/0!
   Totals).
 - A grand total of 0 over nonzero row and column totals gives 0 (E IX 2024, 2025).
 - With three row fields, the Grand Total column is 1 at every level (NP IX3).
+- The order of the operations is UNVERIFIED (probe pending: T-4754). The engine computes value × grand
+  total / row total / column total, left to right. Of the probed cells only T-4129 IX!B5 tells the
+  orders apart (value 18, grand total 63, row total 30, column total 38: Excel 0.994736842105263, which
+  this order gives; (value × grand total)/(row total × column total) and the other orders are 1 ulp
+  off). That one cell is below the R4.4 web-versus-desktop floor, so it does not settle the order.
 
 **percentOfParent (% of parent total).**
 - Each row is divided by its ancestor on the base field, in the same column, however deep it is. With
@@ -1485,7 +1490,28 @@ visible, and items in cache order. These are UNVERIFIED (probe pending: T-4750):
 - whether every `baseItem` past the field's last item is refused, beyond the one probed;
 - two data fields, or Values on rows.
 
-The engine is T-4163.
+The engine is `pivot::show_as` (T-4163), a post-pass over the computed values that computes every
+(row node, column node) cell. It matches every cell of the probes above and of T-4129's. Its own
+readings, where no probe shows Excel's, are UNVERIFIED (probe pending: T-4750):
+- a base field on no axis makes every cell `#N/A`;
+- a `baseItem` that names no item of its field makes every cell below the base field's parents
+  `#N/A` (Excel for the web refused the one probed file, `baseItem="9"`: "Pivot flags Excel for the
+  web refuses");
+- an empty value over a percentOfRunningTotal total of 0 is empty;
+- a data field with both `showDataAs` and an x14 `pivotShowAs` shows the x14 mode;
+- -0 is shown as 0;
+- a base item that exists over a missing combination leaves a difference cell empty, as BI QRN shows
+  for percentDiff;
+- an error value, base or denominator is the cell's error, the value's first; a running total stays
+  an error from the first error on; a rank leaves errors out of its run;
+- a cell whose denominator line has no record at all (a `showAll` item) is empty;
+- a result that is not finite is `#NUM!`;
+- `baseItem` indexes the base field's `<items>`, as ECMA-376 reads it (in the probes the fields list
+  their items in cache order, so it is also the cache item);
+- a custom subtotal line of another function than the data field's shows its plain value;
+- GETPIVOTDATA on a pivot whose data field is shown as a calculation is `#REF!`, as it was while the
+  importer dropped such a pivot;
+- with several data fields, each is shown on its own (the probes have one).
 
 ## Layout and totals flags as Excel for the web renders them
 Rule, per flag (each one on its own pivot of rows Region and Product with Sum of Sales):
