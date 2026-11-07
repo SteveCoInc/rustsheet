@@ -2584,12 +2584,23 @@ the double t and at the exact t, so the gap is not in the statistic (probes-nume
   orders and seven ways to form t² all give one y each, yet Excel is 1 to 8 ulp from the exact tail there and on the
   other side of it from ours at A42 (Excel 0.3571628041352982, exact at fl(y) 0.3571628041352981, true
   0.35716280413529768), where one ulp of y moves p by about 27 ulp. That is the tail's noise, not the statistic.
+- The tail at that y is the ported TOMS 708 kernel K(df/2, 1/2, y, fl(1 - y)), the call T.DIST makes, in two regions
+  (T-3730, T-4975): inside t = 1 at df 13 to 16, where the series scaled the tail by Excel's GAMMALN normalization (which
+  belongs to the central probability before it is taken from one), and at Welch's fractional df at every t. The
+  statistic in plain doubles (sequential sums, sum of squared deviations over n - 1, pooled or Welch) is unchanged.
+  Of the nine cells T-3730 lists, gen-m9 928d08e3e1eecb5f A393 (`T.TEST(Data!B3:C11,Data!B4:E6,2,2)` =
+  0.7772031601919551, 18 ulp before), ce312817dc9c7f0b A228, 9bc247733a1ca9fa A254, f82473275380882e A308 and
+  c7664e494e418395 A219 are now Excel's bits; 9bc247733a1ca9fa A139 and afc00c8b70e78baf A238 are 1 ulp off,
+  09b47629f54b9817 A144 and d5fd9e05e9e6f466 A246 within 4 ulp (all within 15 digits). Over gen-m9, probes,
+  probes-numeric and ironcalc-calc 56 T.TEST/TTEST cells move closer to Excel and none moves away (ironcalc-calc
+  `T_TEST.xlsx` F4, F7, F8; probes/stat-argument-modes H535-H542; t1048-ttest A15-B36). Integer df beyond t = 1 and
+  integer df outside 13 to 16 keep the elementary series, which those cells already fit.
 Evidence: probes-numeric `t1048-ttest`, `t1049-ttest`; ironcalc-calc `STATISTICAL/T_TEST.xlsx`. Exact values: mpmath
 `betainc` at 50 digits (T-0969 attempt 5, 2026-10-20; T-2993, 2026-11-05).
 Ours: `student_t.rs` `student_t_tail_at` since T-0969 attempt 5. T.TEST/TTEST visibly-off cells went from 19 to 3:
 t1048-ttest A3/B3 (6 ulp) and t1049-ttest A48 (5 ulp), all Welch.
 Status: VERIFIED (excel-graph)
-Tasks: T-0969, T-2993
+Tasks: T-0969, T-2993, T-3730
 
 ## T.TEST, TTEST, F.TEST and FTEST: Gate A tables (T-4097)
 Rule: on the Gate A tables `accuracy/{T.TEST,TTEST}/s1` (200 points each) and `accuracy/{F.TEST,FTEST}/s1` (120 each),
@@ -4353,6 +4364,27 @@ double-double series, a Cephes deep tail, incbcf/incbd from z, and df 2's closed
 Status: VERIFIED (excel-graph) for the call form and bgrat at b = 1/2; the bup arithmetic and the T density UNVERIFIED
 Tasks: T-2509, T-2513, T-0969
 
+## Student t tails at df 1 inside t = 1 and past the series bound inside t = 1 (T-2930)
+Rule: two regions of T.DIST, T.DIST.RT, T.DIST.2T and TDIST outside "Student t tails are one kernel call":
+- df 1 and t <= 1: L is `I_y(1/2, 1/2)`/2 at the worksheet's rounded y = fl(1/fl(1 + fl(t·t))), with complement
+  fl(1 - y), as T.TEST's tail ("T.TEST rounds y = df/(df+t^2) to a double before the tail"), not the exact Cauchy tail
+  at t. `T.DIST.2T(1.005-1,1)` (t = 0.004999999999999893) is 0.9968169276635932 in Excel (gen-m9/928d08e3e1eecb5f
+  A231); the exact tail gives 0.9968169276635881 (23 ulp). The controls `T.DIST.2T(0.1,1)` = 0.9365489651388929,
+  `T.DIST.2T(0.5,1)` = 0.7048327646991335, `T.DIST.2T(1,1)` = 0.5000000000000001, `T.DIST.RT(0.5,1)` and
+  `T.DIST(0.5,1,TRUE)` (probes-numeric m9-t-dist-2t A2-A4, m9-t-dist-rt A3, A4, m9-t-dist-cdf A3) are the same bits
+  either way.
+- an integer df n above 1000 (the integer-df series bound) and t < 1: L is the Student-t central fraction on z,
+  t²/n and n/t², never the rounded y. The kernel's bpser prefactor cancels in its logarithm there:
+  `T.DIST.2T(0.5,1E+8)` = 0.6170750785521777 (gen-m9/787ba8d801105a60 A91) is 6 ulp off through the kernel and 2
+  through the fraction. The bound is exclusive: at df 1000 the kernel is Excel's bits (`T.DIST.RT(.5,1000)` =
+  0.30859254041693746, probes-numeric m9-t-dist-rt A123; t0969-t-tail-grid B1553) and the fraction is not, so
+  `n >= 1000` regresses those cells. df 999 keeps the kernel; df 1001 has no probed cell (a probe of df 999/1000/1001
+  is pending).
+Evidence: the cells above (excel-graph); docs/research/excel-parity-findings-2026-11-07.md item 9.
+Implemented in: functions/statistical/student_t.rs `unflushed_upper_tail` (df 1), `large_df_centre_tail`.
+Status: VERIFIED (excel-graph) at the cited cells; df 1001 to 1E6 inferred from the 1E6 and 1E8 cells
+Tasks: T-2930, T-4975
+
 ## F's incomplete-beta arguments keep r >= 1 (T-3567)
 Rule: F.DIST(x,m,n,TRUE), F.DIST.RT and FDIST (m, n truncated) form mx = fl(m·x) and r = fl(n/mx) when mx <= n, else
 r = fl(mx/n), so r >= 1. The smaller incomplete-beta argument is fl(1/fl(1 + r)) and the larger fl(r/fl(1 + r)):
@@ -5581,6 +5613,46 @@ Implemented in: functions/statistical/t_dist.rs `t_rounded_y_quantile` (every df
 `t_tail_closed_form` (the deep tail), `t_centre_quantile` (the centre, T-2724).
 Ours: this form from df 2 (T-2511); 10 of T-3061's cells and the bit-level remainder are T-3061 and T-3399.
 Tasks: T-3061, T-2511, T-3399
+
+## Student-t quantile in the small-beta tail is a Newton iterate from the power-law seed (T-3363)
+Rule: from df 2, where the beta argument y = df/(df + t^2) of T.INV, T.INV.2T, TINV and CONFIDENCE.T is in the
+power-law tail of `I_y(a, 1/2)` = p (a = df/2, p = 2q, q the one-sided tail), Excel's y is a finite-precision Newton
+iterate, not the correctly rounded root, and t = fl(sqrt(fl(df * fl(fl(1/y) - 1)))) as away from the centre:
+```
+lnB  = ln Γ(a) + ln Γ(1/2) - ln Γ(a + 1/2)
+ln y = (LN(p) + (LN(a) + lnB)) / a          (this grouping; another moves the bits)
+domain: |a(1-b)(2-b)(3-b)/(6(a+3)) · y^3| <= 2^-52 at the seed y = EXP(ln y), b = 1/2  (the omitted third series term)
+if fl(y·y) = 0: y = EXP(ln y), no correction (df 2 at 1E-200)
+y -= (1-b)/(a+1) · y^2                       (first series correction)
+Newton on I_y(a, b) - p with density y^(a-1)(1-y)^(b-1)/B, keeping the iterate of least |residual|;
+the first step is always taken; from the second residual r on, stop when fl(LN(p) + r/p) = LN(p) or r/p changes
+sign; also stop at |r| < 2^-1022 or when the squared step underflows.
+```
+- On gen-m9's cells (excel-graph) this is Excel's value bit for bit at every probed (df, p): `TINV(1E-100,5)` =
+  1.801609952626993E+20 (1db18890916ee643 A144), `TINV(1E-200,8)` = 2.405205857517846E+25 (0620505280d2ea6e A152),
+  `TINV(1E-100,9)` = 333415394242.96606 (139684e68fb2fc3b A90), `TINV(1E-100,10)` = 27485906095.604824
+  (a5342a7e24fd803e A118), `TINV(1E-300,4)` = 1.565084580073275E+75 (41248d1cb153c66e A331),
+  `CONFIDENCE.T(1E-200,0.01,15)` = 1668175619766.5225 (8f2ac25945af87da A289, df 14), `T.INV(1E-20,2)` =
+  -7071067811.865476 (0bbab6206b5c9a07 A315), `TINV(1E-100,2)` = 1E+50 (44a8841352dc48e9 A74), `TINV(1E-200,2)` =
+  1.0000000000000101E+100 (7980ffb6095a340d A312, the logarithmic seed), and the controls `TINV(1E-100,3)`,
+  `TINV(1E-300,9)`, `TINV(1E-200,9)`, `T.INV.2T(1E-200,7)`. The previous closed form (leading term and first correction
+  in log space, "Student-t quantile is SQRT(df*(1/y-1))..." above) was 22 to 221 ulp off on most of these.
+- The first step is observable at df 2: the seed's relative residual there (3E-15 at `T.INV(1E-20,2)`, 9E-15 at
+  `TINV(1E-100,2)`) is below half an ulp of LN(p), and stopping at the seed is 11 and 22 ulp off. At df 3 and above
+  the step lands within the cdf's noise and the least-residual rule keeps the right iterate.
+- EXP is Excel's own (`x87_exp::excel_exp`): libm's exp puts `T.INV.2T(4.46E-308,2)` (probes/t4541-t-inv-2t-tiny-p
+  B8, Excel 4.735137238103876E+153) an ulp low. Open: `T.INV(4.4501477170144E-308,2)` and
+  `T.INV(4.45014771701441E-308,2)` (t4541 K4, K5; Excel -3.3519519824856895E+153) come out an ulp low in the
+  logarithmic-seed region, where the old closed form had them. Rounding sqrt(df·(1/y - 1)) once there fixes K4 and K5
+  but puts ten other t4541 cells (B5, B6, B10, E5, E6, E10, H5, H10, K1, K9) an ulp off, so the chain of doubles stays.
+- The domain comes from the series, not from probed points. The engine takes this form ahead of the old closed form
+  and the rounded-y crossing wherever its domain holds.
+Evidence: the gen-m9 cells above (excel-graph). The rule is the one an independent prototype found
+(docs/research/excel-parity-findings-2026-11-07.md item 8), re-measured on this main.
+Implemented in: functions/statistical/inverse_beta.rs `beta_small_quantile`, `newton_least_residual`;
+t_dist.rs `t_small_beta_quantile`.
+Status: VERIFIED (excel-graph)
+Tasks: T-3363, T-4975
 
 ## Two-tailed Student-t quantile with p near 1 is accurate in Excel (T-3349)
 Rule: for df from 2 up, `T.INV.2T(p,df)` with p just below or above 1 returns the small quantile to the 15th digit of

@@ -226,3 +226,70 @@ fn df_one_quantile_is_one_over_excel_tan() {
         8.984643532093761
     );
 }
+
+#[test]
+fn small_beta_tail_is_excels_newton_iterate() {
+    // Excel's bits (excel-graph) in the small-beta tail, where y = df/(df+t^2) follows the
+    // power-law seed and Newton steps (`inverse_beta::beta_small_quantile`, T-3363). Two-tailed
+    // (TINV, T.INV.2T) at p is the upper quantile at p/2.
+    let two_tailed = |p: f64, df: f64| t_upper_quantile(&dist(df), df, p / 2.0).abs();
+    // gen-m9/1db18890916ee643 A144 `TINV(1E-100,5)`: the old log-tail form was 39 ulp high.
+    assert_eq!(two_tailed(1e-100, 5.0), 1.801_609_952_626_993e20);
+    // gen-m9/0620505280d2ea6e A152 `TINV(1E-200,8)`.
+    assert_eq!(two_tailed(1e-200, 8.0), 2.405_205_857_517_846e25);
+    // gen-m9/139684e68fb2fc3b A90 `TINV(1E-100,9)`.
+    assert_eq!(two_tailed(1e-100, 9.0), 333_415_394_242.966_06);
+    // gen-m9/a5342a7e24fd803e A118 `TINV(1E-100,10)`.
+    assert_eq!(two_tailed(1e-100, 10.0), 27_485_906_095.604_824);
+    // gen-m9/41248d1cb153c66e A331 `TINV(1E-300,4)`.
+    assert_eq!(two_tailed(1e-300, 4.0), 1.565_084_580_073_275e75);
+    // gen-m9/8f2ac25945af87da A289 `CONFIDENCE.T(1E-200,0.01,15)`: df 14.
+    assert_eq!(
+        two_tailed(1e-200, 14.0) * 0.01 / 15.0_f64.sqrt(),
+        1_668_175_619_766.522_5
+    );
+    // gen-m9/0bbab6206b5c9a07 A315 `T.INV(1E-20,2)` (p = 2E-20 for the beta): one Newton step
+    // past the seed, 11 ulp off at the seed.
+    assert_eq!(t_quantile(&dist(2.0), 2.0, 1e-20), -7_071_067_811.865_476);
+    // gen-m9/44a8841352dc48e9 A74 `TINV(1E-100,2)`.
+    assert_eq!(two_tailed(1e-100, 2.0), 1e50);
+    // gen-m9/7980ffb6095a340d A312 `TINV(1E-200,2)`: y·y underflows, the logarithmic seed.
+    assert_eq!(two_tailed(1e-200, 2.0), 1.000_000_000_000_010_1e100);
+    // probes/t4541-t-inv-2t-tiny-p B8 `T.INV.2T(4.46E-308,2)` and K10 `T.INV(1E-307,2)`: the
+    // seed's EXP is Excel's own (libm's exp puts B8 1 ulp low).
+    assert_eq!(two_tailed(4.46e-308, 2.0), 4.735_137_238_103_876e153);
+    assert_eq!(
+        t_quantile(&dist(2.0), 2.0, 1e-307),
+        -2.236_067_977_499_811_3e153
+    );
+    // Controls that already matched: gen-m9/6e18550e9fc9c1b9 A313 `TINV(1E-100,3)` and
+    // d208bbafc3bc1997 A249 `TINV(1E-300,9)`.
+    assert_eq!(two_tailed(1e-100, 3.0), 2.804_294_253_254_7e33);
+    assert_eq!(two_tailed(1e-300, 9.0), 5.561_703_982_474_574e33);
+}
+
+/// T.TEST type 2's p-value of literal samples, as `t_test_p` forms it: the pooled statistic, then
+/// the tail at y = fl(df/fl(df + t^2)).
+fn pooled_t_test(first: &[f64], second: &[f64], tails: f64) -> f64 {
+    use crate::functions::statistical::student_t::student_t_tail_at;
+    let (n1, n2) = (first.len() as f64, second.len() as f64);
+    let df = n1 + n2 - 2.0;
+    let pooled =
+        ((n1 - 1.0) * super::sample_var(first) + (n2 - 1.0) * super::sample_var(second)) / df;
+    let t = (super::mean(first) - super::mean(second)) / (pooled * (1.0 / n1 + 1.0 / n2)).sqrt();
+    tails * student_t_tail_at(df / (df + t * t), df)
+}
+
+#[test]
+fn t_test_inside_one_at_df_13_to_16_is_the_kernel_call() {
+    // probes/stat-argument-modes H536 `T.TEST({1,2,4,3,7,5,8,6},{2,3,5,4,9,6,9,8},1,2)`
+    // (excel-graph): df 14, t inside 1. The series scaled by Excel's GAMMALN normalization
+    // gave 0.17488420899295326 (5 ulp); the ported kernel K(7, 1/2, y, 1 - y) is Excel's bits
+    // (T-3730).
+    let first = [1.0, 2.0, 4.0, 3.0, 7.0, 5.0, 8.0, 6.0];
+    let second = [2.0, 3.0, 5.0, 4.0, 9.0, 6.0, 9.0, 8.0];
+    assert_eq!(
+        pooled_t_test(&first, &second, 1.0),
+        0.174_884_208_992_953_04
+    );
+}
