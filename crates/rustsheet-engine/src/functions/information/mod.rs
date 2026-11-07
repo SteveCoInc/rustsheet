@@ -336,7 +336,8 @@ impl Model {
             // `(A1,A3)` is one (`REDUCE((A1,A3),{1},LAMBDA(a,v,ISREF(a)))` is TRUE,
             // probes/t4478-reduce-scan-reference-accumulator Calc!H17, T-4494), and so are SCAN's
             // and REDUCE's accumulator bound to `(A2,A3)` (probes/t4475-scan-reduce-reference-initial
-            // F9, G9; T-4475). One bound to a 3-D span is not (references.md, T-1158).
+            // F9, G9; T-4475). One bound to a 3-D span is not (references.md, T-1158; same probe
+            // D10:I10).
             Node::NamedVariableKind { .. } => {
                 self.is_areas_variable(node)
                     || matches!(

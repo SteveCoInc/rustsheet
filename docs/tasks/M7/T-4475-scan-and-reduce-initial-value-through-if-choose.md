@@ -77,9 +77,10 @@ Done 2026-11-06 (resumed from the landing notes below).
   step's accumulator, and SCAN does not (row 11, handed to T-4478).
 - **Engine:** `lambda_initial_value` (map_reduce.rs) now returns `Model::bind_argument`'s `Binding`. It reuses
   bind_argument's OFFSET/INDIRECT/grid-variable/picked-reference producers with no second copy. It reads a 3-D span as
-  its `#VALUE!` and keeps an empty slot as before (T-2670). A new `call_lambda_caller_bound` (lambda.rs), which
-  `call_lambda_caller` now wraps, hands that binding to REDUCE's and SCAN's first call. ISREF of a variable bound to a
-  union is TRUE (`Model::is_union_variable`, let.rs; information/mod.rs).
+  its `#VALUE!` and keeps an empty slot as before (T-2670). `call_lambda_caller_binding` (lambda.rs, T-4494's,
+  now taking each binding with its ERROR.TYPE mark), which `call_lambda_caller` wraps, hands that binding to REDUCE's
+  and SCAN's first call. ISREF of a variable bound to a union is TRUE (`Model::is_areas_variable`, let.rs;
+  information/mod.rs).
 - **Eval delta:** the new case passes 64/64 (main before this change: 33). D11 and F11, REDUCE keeping a returned
   reference, pass through T-4478, which merged while this PR was in review; the merge of `origin/main` combines the two
   (REDUCE's reference-keeping caller with the bound first call, and T-2766's ERROR.TYPE mark carried with the binding).
