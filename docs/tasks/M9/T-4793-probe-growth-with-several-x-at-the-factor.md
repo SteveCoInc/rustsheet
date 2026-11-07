@@ -3,7 +3,7 @@ id: T-4793
 title: "Probe GROWTH with several x at the factor edges, and a subnormal product of normal factors"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
