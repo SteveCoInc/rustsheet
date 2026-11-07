@@ -3,7 +3,7 @@ id: T-4623
 title: "Source-preserving export 3b: append new styles to a patched package's styles.xml (SPEC-0034 D3.3)"
 milestone: M15
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -25,14 +25,34 @@ Split out of T-4561 (which covers metadata and calcChain).
   must be checked first.
 
 ## Acceptance criteria
-- [ ] Check that the importer keeps `cellXfs`, fonts, fills, borders and `numFmts` in source order. Cite the code,
+- [x] Check that the importer keeps `cellXfs`, fonts, fills, borders and `numFmts` in source order. Cite the code,
       and add a unit test if no test covers it.
-- [ ] A cell given a new number format patches. Its `xf` and `numFmt` are appended, with their `count`s
+- [x] A cell given a new number format patches. Its `xf` and `numFmt` are appended, with their `count`s
       updated, and every other style record is unchanged (unit test).
-- [ ] A style table that is not a prefix-stable extension of the pristine one falls back to regeneration (unit
+- [x] A style table that is not a prefix-stable extension of the pristine one falls back to regeneration (unit
       test).
-- [ ] The round-trip baselines are rerecorded.
-- [ ] `make check` green; reviewers approve.
+- [x] The round-trip baselines are rerecorded.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Cell styles (`cellStyleXfs`, named styles) and dxfs added by conditional-formatting edits.
+
+## Outcome
+- **Importer order.** `load_styles` (`crates/rustsheet-xlsx/src/import/styles.rs`) pushes `numFmts`, fonts,
+  fills, borders and `cellXfs` in document order, one record per child. A fill it cannot read still pushes a
+  default, so indexes hold. The patch does not rely on this alone: `export/patch/styles.rs` re-counts each
+  section's records in the source and refuses (regenerates) when the count differs from what the importer read,
+  then re-scans what it wrote.
+- **Patch.** `export/patch/styles.rs`:
+  - `appended` returns the tails of a prefix-stable table. Any changed record, cell style, named style or dxf
+    means `None`, which falls back.
+  - `patch` appends the new records before each section's close tag, sets `count`, expands an empty `<x/>`, and
+    creates `numFmts` as the root's first child when the source has none.
+  - The record writers (`font_xml`, `num_fmt_xml`, `cell_xf_xml`) are shared with the regenerating exporter.
+- **Tests.**
+  - Unit: `patch/tests.rs::styles` covers prefix-stable versus changed tables, the appended counts, a created
+    `numFmts`, and a section count mismatch that is refused.
+  - Integration: `tests/patched_save.rs::a_new_number_format_and_a_new_font_are_appended_to_the_source_styles`.
+- **Baselines.** Rerecorded; every changed entry shrank and none grew. R1 kept rates:
+  calipers 87.88% → 98.81%, poi 92.79% → 98.89%, corpus-bench 84.72% → 99.05%, fixtures 89.92% → 93.65%.
+  R0 is unchanged.
