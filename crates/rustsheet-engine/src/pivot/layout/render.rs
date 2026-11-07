@@ -1,7 +1,7 @@
 //! A pivot's cells: the captions, item labels, values and page area its layout lines give
 //! (SPEC-0032 "Rendering and the grid", T-4149). [`render`] is a pure function of the
 //! definition, the cache, the [`PivotResult`] and the [`PivotLayout`]; writing the cells into the
-//! grid and owning the area are T-4151's, and number formats T-4169's.
+//! grid and owning the area are T-4151's.
 //!
 //! Evidence: the `pivots` cells of every probe sidecar in scope (docs/excel-semantics/pivots.md
 //! "Rendered pivot cells", "Caption attributes, empty and error captions...", "Page fields render
@@ -30,6 +30,10 @@
 //!   field's caption.
 //! - **Values.** An intersection no record reaches is blank, or `missingCaption` with
 //!   `showMissing` (t4137 K2); an error is `errorCaption` with `showError` (K3, t4135 EC).
+//!   Every value cell, subtotals' and grand totals' too, carries its data field's `numFmtId`
+//!   ([`RenderedCell::number_format`]), which the grid writer gives the cell, so its displayed
+//!   text is Excel's (pivots.md "Value cells show their data field's number format",
+//!   probes/t4169-pivot-number-formats).
 //! - **Page fields** take two cells, the field's name and `(All)`, the selected item or
 //!   `(Multiple Items)` when it hides items (t4137 K4), in the `rowPageCount` rows ending one row
 //!   above the location, three columns per page column (t4138 G8).
@@ -80,7 +84,7 @@ pub enum PivotCell {
     Error(Error),
 }
 
-/// One rendered cell: its sheet row and column (0-based) and its value.
+/// One rendered cell: its sheet row and column (0-based), its value and its number format.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RenderedCell {
     /// The cell's row.
@@ -89,6 +93,11 @@ pub struct RenderedCell {
     pub column: u32,
     /// The cell's value.
     pub value: PivotCell,
+    /// The `numFmtId` the cell shows its value in: a value cell's data field's
+    /// ([`DataField::number_format`](super::super::DataField::number_format)); `None` for a
+    /// label, a caption, and a value cell whose data field has none, whose cell format is left
+    /// as it is.
+    pub number_format: Option<u32>,
 }
 
 /// How an item renders as a label (pivots.md "Items show in the order the pivot field lists
@@ -163,6 +172,16 @@ struct Cells<'a> {
 
 impl Cells<'_> {
     fn put(&mut self, row: u32, column: u32, value: PivotCell) {
+        self.put_formatted(row, column, value, None);
+    }
+
+    fn put_formatted(
+        &mut self,
+        row: u32,
+        column: u32,
+        value: PivotCell,
+        number_format: Option<u32>,
+    ) {
         if let PivotCell::Text(text) = &value {
             match self.text_left.checked_sub(text.len()) {
                 Some(left) if !self.over => self.text_left = left,
@@ -170,7 +189,12 @@ impl Cells<'_> {
             }
         }
         if !self.over {
-            self.out.push(RenderedCell { row, column, value });
+            self.out.push(RenderedCell {
+                row,
+                column,
+                value,
+                number_format,
+            });
         }
     }
 
@@ -287,14 +311,15 @@ impl Cells<'_> {
         }
     }
 
-    /// The value cell of `row` by `column`, or `None` for a blank.
+    /// The value cell of `row` by `column` and its data field's `numFmtId`, or `None` for a
+    /// blank.
     fn value(
         &self,
         result: &PivotResult,
         [rows, columns]: [&Axis<'_>; 2],
         row: &AxisLine,
         column: &AxisLine,
-    ) -> Option<PivotCell> {
+    ) -> Option<(PivotCell, Option<u32>)> {
         let options = &self.table.options;
         let data = if rows.has_values() {
             row.data_field
@@ -308,7 +333,7 @@ impl Cells<'_> {
             (ItemType::Function(f), _) | (_, ItemType::Function(f)) => f,
             _ => field.function,
         };
-        match result.value_as(row.node, column.node, data as usize, function) {
+        let cell = match result.value_as(row.node, column.node, data as usize, function) {
             None => options
                 .missing_caption
                 .clone()
@@ -319,7 +344,8 @@ impl Cells<'_> {
                 Some(caption) if options.show_error => PivotCell::Text(caption.clone()),
                 _ => PivotCell::Error(error),
             }),
-        }
+        };
+        cell.map(|cell| (cell, field.number_format))
     }
 }
 
@@ -457,8 +483,8 @@ fn render_within(
             .zip(&layout.columns)
             .filter(|(_, l)| l.values)
         {
-            if let Some(value) = cells.value(result, [&rows, &columns], row, column) {
-                cells.put(r, c, value);
+            if let Some((value, format)) = cells.value(result, [&rows, &columns], row, column) {
+                cells.put_formatted(r, c, value, format);
             }
         }
     }

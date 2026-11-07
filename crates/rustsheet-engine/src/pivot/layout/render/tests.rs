@@ -199,7 +199,8 @@ fn the_cells_text_is_bounded() {
     assert!(cells.contains(&RenderedCell {
         row: 2,
         column: 0,
-        value: PivotCell::Text(long)
+        value: PivotCell::Text(long),
+        number_format: None,
     }));
     assert_eq!(
         render_within(&table, &cache, &result, &layout, bytes),

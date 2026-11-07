@@ -1066,7 +1066,10 @@ Rule: how Excel parses and evaluates unions beyond the forms gen-m1 measured.
   `=(-A1,B1)`. The engine reads it as a union of `-A1` and `B1` and prints that (T-0193).
 - An error operand's own error comes before the `#VALUE!`: `=(A1,#REF!)` and `=(#REF!,A1) A1` are
   `#REF!`, and `ISREF((A1,#REF!))` is FALSE (probes/union-accepted H9; implemented in `Model::union_is_reference`, T-0194). `ISREF((A1,B2))` is
-  TRUE, and `=(A1,B2) A1` is 1. ISREF is also FALSE for a union with a negated operand (`(-A1,B1)`), with an
+  TRUE, and `=(A1,B2) A1` is 1. A LAMBDA parameter bound to a union is a reference too: SCAN's and REDUCE's accumulator
+  bound to `(A2,A3)` gives `ISREF(a)` TRUE (probes/t4475-scan-reduce-reference-initial F9, G9, T-4475). The engine
+  extends this to every LET variable and LAMBDA parameter bound to a union (`Model::is_union_variable`); a direct
+  `LET(x,(A1,B2),ISREF(x))` or `LAMBDA(x,ISREF(x))((A1,B2))` is an inference, not yet probed. ISREF is also FALSE for a union with a negated operand (`(-A1,B1)`), with an
   empty-intersection operand (`(A1 B2,C1)`) and with a 3D operand (`(Sheet1:Sheet2!A1,B1)`), and for an intersection
   that is empty: `ISREF(A1 B2)` is FALSE (`#NULL!`), while `ISREF(A1 A1)`, `ISREF((A1 A1,C1))` and a multi-area cut `ISREF((A1:B2,A1:C1) A1:B1)` are TRUE, and a cross-sheet intersection
   `ISREF(Sheet1!A1 Sheet2!A1)` is FALSE (probes/isref-union-operands H1:H9, oracle: excel-graph, 2026-10-07, T-1039). The engine matches since T-1039
@@ -3117,9 +3120,29 @@ table already has a column of that name, the engine falls back to `ColumnN` (an 
 and the cell is typed as before, in these cases: an empty value, a new
 column whose other cells are not all blank (Excel also stays put for an occupied neighbour, rule 7d) and a new column that another table overlaps (unprobed). The engine deviates from Excel on rules 7e and 7f (known deviations, not accepted behavior; T-3273, T-3274); it matches 7a-7d. Nor does it grow for a formula that does not parse there as typed (a parse error, or typed text decision 0103 refuses), since Excel refuses that entry and changes nothing. That includes an unqualified `=[@Col]*2` typed beside the table, which is a parse error outside every table (T-2979) but which Excel accepts and fills (rule 7f). The facade's edit holds
 the growth, the header cell and the filled rows, and its rollback puts the table back.
+Rows inserted into a calculated column's table (T-4692, VERIFIED excel-graph 2026-11-06, probes/table-edits/t4692-*):
+a whole-row insert inside the data rows, at the first data row or at the totals row gives each new data row the column
+formula, filled down (`=A3*2` in a new C3 of T on A1:C4 with C2 typed `=A2*2`; `=[@Col]*2` for a structured column).
+Ours: the same, from the stored column formula (`Model::fill_inserted_data_rows`, after the tables follow the insert);
+undo of the insert deletes the rows and with them the filled cells. A plain column (no column formula) fills nothing,
+and so does an insert above the header row or below the table (unprobed for a plain column). The saved form is in
+xlsx-storage.md, "A calculated column is saved as `calculatedColumnFormula` plus one formula per row". An insert that would fill more than 2^20
+cells is refused (next entry).
 Status: VERIFIED (excel-graph; desktop unprobed; rule 3's no-re-fill half on 3 of 4 runs; rule 7a-7f by probes/t3003-*)
 Implemented in: rules 1-5 and 8, crates/rustsheet-engine/src/calculated_columns.rs (T-2958, T-3024); rule 7 (7a-7d), the same file (T-2968, T-3218)
-Tasks: T-2957, T-2958, T-2968, T-2969, T-2983, T-3023, T-3024, T-3025, T-3033, T-3003, T-3218
+Tasks: T-2957, T-2958, T-2968, T-2969, T-2983, T-3023, T-3024, T-3025, T-3033, T-3003, T-3218, T-4692
+
+## A row insert that would fill more than 2^20 calculated-column cells is refused
+Rule: Excel fills the column formula into every data row a row insert adds (previous entry), however many rows and
+calculated columns; ours refuses the whole insert, before it changes anything, when the rows inserted times the
+calculated columns of the tables whose data rows it grows exceed 2^20 (`MAX_INSERT_FILL_CELLS`,
+`Model::refuse_oversized_column_fill`), so one call cannot write an unbounded number of cells (CLAUDE.md directive 5).
+The bound is one whole column, as many cells as an array may hold (`limits::check_array_cells`). It counts every
+table whose first data row to last row holds the insert row, so it may refuse a little early.
+Evidence: none needed for the limit (decision 0014); Excel's fill is probes/table-edits/t4692-*.
+Status: DEVIATION (decision 0014)
+Implemented in: crates/rustsheet-engine/src/calculated_columns.rs, crates/rustsheet-engine/src/table_edits.rs
+Tasks: T-4692
 
 ## Unknown function call names: spelling in FORMULATEXT
 Rule (excel-graph, 2026-10-16, T-1719): a call to a name that is no function (`=foo(1)`) is `#NAME?`

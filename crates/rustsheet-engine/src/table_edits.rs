@@ -440,8 +440,15 @@ impl Model {
         let rewritten = self.displace_cells(displacement)?;
         self.displace_cf_ranges(sheet, displacement);
         self.displace_defined_names(sheet, displacement);
+        let resized: Vec<String> = edits.resized.iter().map(|(name, _)| name.clone()).collect();
         self.resize_tables(sheet, edits.resized)?;
         self.set_displaced_column_formulas(column_formulas);
+        if let DisplaceData::Row { row, delta, .. } = *displace_data {
+            if delta > 0 {
+                let last = row.saturating_add(delta - 1);
+                self.fill_inserted_data_rows(sheet, (row, last), &resized)?;
+            }
+        }
         Ok(rewritten)
     }
 
@@ -611,6 +618,19 @@ impl Model {
         }
         self.reset_tables();
         Ok(())
+    }
+
+    /// Refuses the insert of `count` rows at `row` on `sheet` that would push a table off the sheet
+    /// ([`Model::refuse_table_off_sheet`]) or fill too many calculated-column cells
+    /// ([`Model::refuse_oversized_column_fill`]), before it changes anything.
+    pub(crate) fn refuse_table_row_insert(
+        &self,
+        sheet: u32,
+        row: i32,
+        count: i32,
+    ) -> Result<(), String> {
+        self.refuse_table_off_sheet(sheet, row, count, true)?;
+        self.refuse_oversized_column_fill(sheet, row, count)
     }
 
     /// Refuses an insert of `count` rows (`rows`) or columns at `at` that would push a cell of a

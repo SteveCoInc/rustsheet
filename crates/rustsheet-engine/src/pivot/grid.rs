@@ -1,6 +1,7 @@
 //! The grid writer (SPEC-0032 "Rendering and the grid", T-4151): a pivot owns the cells of its
 //! location and of the page area above it, and a refresh clears what it owned and writes its new
-//! cells there as constants, so a formula that reads them needs no new dependency kind.
+//! cells there as constants, so a formula that reads them needs no new dependency kind. A value
+//! cell also gets its data field's number format (T-4169), the rest of its style kept.
 //!
 //! A plan ([`Model::plan_pivot_refresh`], [`Model::plan_pivot_render`]) reads the model and
 //! changes nothing; [`Model::apply_pivot_refresh`] writes it and swaps the refreshed cache and
@@ -40,6 +41,7 @@ use super::{
 use crate::expressions::parser::parse_range;
 use crate::expressions::token::Error;
 use crate::model::Model;
+use crate::number_format::get_num_fmt;
 use crate::types::{sheet_names_match, Cell};
 
 /// Why a pivot could not be refreshed or laid out; the grid and the pivot are then as they were.
@@ -466,6 +468,7 @@ impl Model {
                     row: pivot.location.top,
                     column: pivot.location.left,
                     value: PivotCell::Error(Error::SPILL),
+                    number_format: None,
                 }]
             }
         };
@@ -642,6 +645,10 @@ impl Model {
                         }
                     })
                     .map_err(PivotRefreshError::Write)?;
+                if let Some(id) = cell.number_format {
+                    self.set_pivot_number_format(sheet, row, column, id)
+                        .map_err(PivotRefreshError::Write)?;
+                }
             }
         }
         let tables = refresh
@@ -654,6 +661,27 @@ impl Model {
             cache: refresh.cache,
             tables,
         }))
+    }
+
+    /// Gives the cell the number format `numFmtId` names in the workbook's styles (a built-in
+    /// one, or one of its `numFmts`; an id it does not hold is General, as `get_num_fmt` reads
+    /// it), keeping the rest of the cell's style: a value cell shows its data field's format
+    /// (pivots.md "Value cells show their data field's number format").
+    fn set_pivot_number_format(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        num_fmt_id: u32,
+    ) -> Result<(), String> {
+        let id = i32::try_from(num_fmt_id).unwrap_or(0);
+        let code = get_num_fmt(id, &self.workbook.styles.num_fmts);
+        let mut style = self.get_style_for_cell(sheet, row, column)?;
+        if style.num_fmt == code {
+            return Ok(());
+        }
+        style.num_fmt = code;
+        self.set_cell_style(sheet, row, column, &style)
     }
 
     /// Puts the cache and pivots of `swap` in place, returning the ones they replace; a swap of

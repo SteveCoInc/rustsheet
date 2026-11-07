@@ -2980,6 +2980,24 @@ Status: VERIFIED (excel-graph) for the dispatch, computed tail, complement and a
 arithmetic is in the entries below
 Tasks: T-2464, T-2504, T-2505, T-3665
 
+## Incomplete beta at two vanishing shapes: bratio's w = b/(a + b) (T-3577)
+Rule: where both shapes are below eps/1000 (eps = 1e-15), Excel's incomplete beta is bratio's first branch, `w = b/(a + b)`
+and `w1 = a/(a + b)` in doubles, before bratio looks at x. Every evidence point has x at or below 8.1E-43; that the
+same holds at moderate x follows from TOMS's structure and is not oracle-confirmed yet. So BETA.DIST's cdf is about b/a,
+not 0:
+`BETA.DIST(2.65510449055274E-229,1.22900757873089E-163,2.29413050210964E-185,TRUE)` is 1.8666528521155483E-22, and
+`BETADIST(4.03359750605285E-148,4.41754879662325E-300,5.09204162393239E-226)` is 1. This matches the true value at these
+shapes too (50-digit mpmath).
+Evidence: accuracy/BETA.DIST/s1 A184, A187, A193; BETADIST/s1 A183, A187, A193, A198; BETA.DIST/r4-T-4437 A185, A189,
+A192, A194 (excel-graph). All eleven are to the bit, from three batches. Seven are nontrivial; four are 1. BETADIST/s1
+A191, a twelfth such point, already passed and still does. BETA.INV/s1 A189, A195, A199 (both shapes tiny) are `#NUM!` in
+Excel, as they are in the engine, which fits a cdf that does not move with x. Before T-3577 the engine had no Tiny branch and
+gave 0 through its fallback kernel. These points were first read as fpser/apser shapes, but both shapes are tiny, so
+bratio stops before those tests. Where only one shape is tiny, Excel has no fpser, and no apser (or a narrower one) ("Incomplete beta bpser").
+Status: VERIFIED (excel-graph)
+Implemented (T-3577): `bratio::ported_tails_with`'s `Branch::Tiny`.
+Tasks: T-3577
+
 ## Incomplete beta closed forms act on the oriented arguments (T-2464)
 Rule: after bratio's swap, on (a0, b0, x0, y0), with Excel's EXP and LN: b0 = 1 gives w = EXP(a0·LN(x0)); a0 = 1 with
 y0 <= 0.9 gives w1 = EXP(b0·LN(fl(1 - x0))), 1 - x0 recomputed in the kernel (not the caller's y); a0 = 1 with y0 > 0.9

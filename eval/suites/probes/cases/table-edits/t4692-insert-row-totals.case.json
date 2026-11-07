@@ -1,0 +1,75 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T on S!A1:C4 (Col 1,2,4; Other 10,20,40; Calc), C2 typed =A2*2 so the Calc column is filled (t4274-calc-column-insert-row-3's layout; with a totals row A5 'Total', T on A1:C5), then insert_row 5 (at the totals row, which grows the table). F reads S!C2:C7 after the op through INDEX(S!C:C,n), which the insert does not displace: FORMULATEXT in column A, the value in column B. The question: does the inserted row's Calc cell get the column formula (T-4692)?",
+  "tags": [
+    "M8",
+    "tables",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "tables": [
+        {
+          "name": "T",
+          "ref": "A1:C5",
+          "totals_row": true
+        }
+      ],
+      "cells": {
+        "A1": "Col",
+        "B1": "Other",
+        "C1": "Calc",
+        "A2": 1,
+        "B2": 10,
+        "A3": 2,
+        "B3": 20,
+        "A4": 4,
+        "B4": 40,
+        "C2": {
+          "entered": "=A2*2"
+        },
+        "A5": "Total"
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=FORMULATEXT(INDEX(S!C:C,2))",
+        "B1": "=INDEX(S!C:C,2)",
+        "A2": "=FORMULATEXT(INDEX(S!C:C,3))",
+        "B2": "=INDEX(S!C:C,3)",
+        "A3": "=FORMULATEXT(INDEX(S!C:C,4))",
+        "B3": "=INDEX(S!C:C,4)",
+        "A4": "=FORMULATEXT(INDEX(S!C:C,5))",
+        "B4": "=INDEX(S!C:C,5)",
+        "A5": "=FORMULATEXT(INDEX(S!C:C,6))",
+        "B5": "=INDEX(S!C:C,6)",
+        "A6": "=FORMULATEXT(INDEX(S!C:C,7))",
+        "B6": "=INDEX(S!C:C,7)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "insert_row",
+      "sheet": "S",
+      "row": 5
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!B1",
+    "F!A2",
+    "F!B2",
+    "F!A3",
+    "F!B3",
+    "F!A4",
+    "F!B4",
+    "F!A5",
+    "F!B5",
+    "F!A6",
+    "F!B6"
+  ]
+}

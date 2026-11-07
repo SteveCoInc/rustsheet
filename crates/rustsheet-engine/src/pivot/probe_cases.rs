@@ -315,6 +315,7 @@ pub(crate) fn probe_pivot_over(
                 ),
                 field: field(name),
                 function: aggregate_named(subtotal),
+                number_format: d["numFmtId"].as_u64().map(|id| u32::try_from(id).unwrap()),
                 ..DataField::default()
             }
         })

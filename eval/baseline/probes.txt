@@ -2315,6 +2315,7 @@ C	probes/t4146-annuity-twice-fresh.case.json	120
 C	probes/t4146-annuity-twice-rounded.case.json	240
 C	probes/t4153-narrow-nbsp-accent.case.json	106
 C	probes/t4168-pivot-layout-options.case.json	279
+C	probes/t4169-pivot-number-formats.case.json	84
 C	probes/t4192-xlookup-error-return-wildcard-binary.case.json	54
 C	probes/t4193-aggregate-scalar-data-error-order.case.json	94
 C	probes/t4194-subtotal-nested-skip.case.json	90
@@ -2493,6 +2494,7 @@ C	probes/t4469-take-drop-if-one-cell-reference.case.json	52
 C	probes/t4470-weeknum-return-type-edges.case.json	24
 C	probes/t4473-textsplit-fold-gaps.case.json	117
 C	probes/t4474-textbefore-utf16-bounds.case.json	135
+C	probes/t4475-scan-reduce-reference-initial.case.json	64
 C	probes/t4477-filter-include-error-shapes.case.json	49
 C	probes/t4478-reduce-reference-in-callers.case.json	13
 C	probes/t4478-reduce-scan-reference-accumulator.case.json	117
@@ -2600,6 +2602,7 @@ C	probes/t4625-gamma-dist-ratio-overflow.case.json	62
 C	probes/t4626-matrix-text-elements.case.json	28
 C	probes/t4627-pivot-field-name-collisions.case.json	105
 C	probes/t4634-pivot-total-order-4.case.json	1643
+C	probes/t4697-large-small-median-mixed-sheet-refs.case.json	17
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -2615,6 +2618,11 @@ C	probes/table-edits/t4274-calc-column-insert-column-a.case.json	4
 C	probes/table-edits/t4274-calc-column-insert-row-1.case.json	4
 C	probes/table-edits/t4274-calc-column-insert-row-3.case.json	5
 C	probes/table-edits/t4274-calc-column-structured-insert-column-a.case.json	4
+C	probes/table-edits/t4692-insert-row-first-data.case.json	12
+C	probes/table-edits/t4692-insert-row-inside.case.json	12
+C	probes/table-edits/t4692-insert-row-totals.case.json	12
+C	probes/table-edits/t4692-insert-rows-inside.case.json	12
+C	probes/table-edits/t4692-structured-insert-row-inside.case.json	12
 C	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	8
 C	probes/table-edits/table-column-range-delete-both-ends.case.json	8
 C	probes/table-edits/table-column-range-delete-end.case.json	8
@@ -9253,6 +9261,11 @@ F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B10
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B11
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!B9
 F	probes/t4625-gamma-dist-ratio-overflow.case.json	Sheet1!F9
+F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H1
+F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H17
+F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H3
+F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H5
+F	probes/t4697-large-small-median-mixed-sheet-refs.case.json	Local!H9
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
@@ -9310,4 +9323,5 @@ TC	probes/t2729-hijri-locale-tag.case.json	5
 TC	probes/t2932-b2-calendar-twice.case.json	5
 TC	probes/t3029-b2-calendar-weekday.case.json	3
 TC	probes/t3101-b2-calendar-names.case.json	3
+TC	probes/t4169-pivot-number-formats.case.json	76
 TC	probes/typed-mixed-fraction-number-format.case.json	31
