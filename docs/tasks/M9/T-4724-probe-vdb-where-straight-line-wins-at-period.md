@@ -39,14 +39,22 @@ engine matching it.
 ## Outcome
 - Probe: probes/t4724-vdb-straight-from-zero (excel-graph, 2026-11-07). The predictions, with the engine's value
   before the change, were committed before the fill (0f2bf002d, docs/research/t4724).
-  - **W** (30 rows, a whole start with a fractional end, straight line winning at period 0): Excel is the single
-    product `(end - start)·sl` on all 30. The schedule order `share·sl + n·sl` misses all 30, by up to 432 ulp. The
-    engine matched 27 (W A7, A15 and A20 were off).
+  - **W** (30 rows, a whole start with a fractional end, straight line winning at period 0): 3 cells (A7, A15, A20)
+    tell the engine's schedule (`share = end - start - n`, `share·sl + n·sl`) from the single product
+    `(end - start)·sl`, by 1 ulp each. Excel gives the product on all 3, where the engine was 1 ulp off. The other 27
+    agree under both orders. The predictions file's H1 column was built from the generator's fraction before the
+    15-digit rounding of `end`, a value no formula carries, so its "misses all 30" is not evidence. The real schedule
+    is the `engine_before` column.
   - **F** (20 rows, factor 0 from a fractional start): Excel is T-4111's `(end - start)·(c - s)/life` on all 20,
     which the engine already gave. The fractional grid's `/(life - f)` misses all 20.
+- R4 (kind (c), an operation order and no constant): the predictions were committed before the fill (0f2bf002d,
+  oracle produced afterwards), so every probe cell is held out. The chosen order matches Excel bit for bit on 50 of
+  50 cells; the correctly rounded `(end - start)(c - s)/life` matches 32 of 50 (W 22 of 30, F 10 of 20). Gate A:
+  all 200 accuracy/VDB/s1 points are inside the envelope before and after.
 - Code: `vdb_switching_between` (functions/financial/financial_depreciation.rs) now takes the early return
   `(end - start)·sl` for every start, not only a fractional one. This is the form T-4510 first proposed. No constant.
 - financial.md "VDB charge order" records both answers. The unit test `fn_vdb_straight_line_from_period_zero_bits`
   gains W A7.
-- Eval delta: the new probe passes all 50 cells, and eval-gates shows 0 regressions (VDB/s1 A119 and gen-m9 A334 stay
-  exact).
+- Eval delta: the new probe passes all 50 cells; a per-cell diff against main over the 100 cases with `VDB(` moves
+  exactly W A7, A15 and A20 (to Pass). eval-gates shows 0 regressions. Factor 0 with a whole start and a fractional
+  end is inferred, not probed.

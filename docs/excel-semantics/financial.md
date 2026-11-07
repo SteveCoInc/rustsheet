@@ -4511,11 +4511,13 @@ build the per-period charges differently, so the same inputs give different last
   A187, A188, A189, A200, factors 0.10 to 0.60 and starts 0.5 to 53.25; excel-graph, 2026-11-06), and it changes no
   probe or gen-m9 VDB cell (T-4111 ran it over the 257 literal one-call VDB eval cells with a math value). `(end - start)·(cost - salvage)/life`, rounding
   the product first, is one ulp off at A187 and at gen-m9/67a4c03afd63f988 A334 (`VDB(86661,45,37,0,6,0.2)`,
-  14045.837837837837), a whole start. The same single product holds for a whole start with a fractional end, not the
-  schedule's `share·sl + n·sl`, which is up to 432 ulp away (30 of 30 cells), and for factor 0 from a fractional start,
-  where it is T-4111's `(end - start)·(c - s)/life` and not the fractional grid's `/(life - f)` (20 of 20 cells;
-  probes/t4724-vdb-straight-from-zero, excel-graph, 2026-11-07, predictions in docs/research/t4724). Implemented
-  (T-4510, T-4724) for every start.
+  14045.837837837837), a whole start. The same single product holds for a whole start with a fractional end: 3 of the 30
+  cells of probes/t4724-vdb-straight-from-zero sheet W (A7, A15, A20) tell the schedule (`share = end - start - n`,
+  `share·sl + n·sl`) from the product, by 1 ulp each, and Excel gives the product on all 3; the other 27 agree under
+  both. Factor 0 from a fractional start is T-4111's `(end - start)·(c - s)/life`, not the fractional grid's
+  `/(life - f)` (sheet F, 20 of 20). Both excel-graph, 2026-11-07, predictions in docs/research/t4724. Factor 0 with a
+  whole start and a fractional end is inferred from the two, not probed. Implemented (T-4510, T-4724) for every
+  start.
 Evidence: probes/fin-vdb-schedule (78 cells), fin-vdb-modes, fin-rri-vdb-edges (excel-graph, 2026-10-20, T-1975);
 fin-vdb-fractional-start (45 cells), fin-vdb-fractional-start-edges (14 cells) (excel-graph, 2026-10-28, T-2185);
 fin-vdb-amordegrc-edges A1-A59 (excel-graph, 2026-10-30, T-1978): salvage at or above cost in both modes (switching

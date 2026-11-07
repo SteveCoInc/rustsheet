@@ -8,6 +8,9 @@ before the excel-graph fill. Each row gives H1, H2 and the engine's value before
   - H1: `share·sl + n·sl`.
   - H2: `(end - start)·sl`, with `sl = (c - s)/life`.
   - The engine matches H2 on 27 rows and neither on 3 (W A7, A15, A20).
+  - Caveat (found in review): H1 was built from the generator's fraction before `end` was rounded to 15 digits, a
+    value no formula carries. The schedule the engine computes is the `engine_before` column. Only W A7, A15 and A20
+    separate it from H2, by 1 ulp each.
 - **F** (20 rows): factor 0 from a fractional start.
   - H1: T-4111's rule, `(end - start)·(c - s)/life`, which the engine follows.
   - H2: the fractional grid, `(end - start)·(c - s)/(life - f)`, where f is the start's fraction.
