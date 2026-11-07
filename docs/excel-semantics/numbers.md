@@ -2839,6 +2839,41 @@ as written) and is `#VALUE!` (probes/quotient-factdouble-seriessum-3d-legacy C1-
 Status: VERIFIED (excel-graph)
 Tasks: T-1777, T-1802, T-1832
 
+## A written-empty argument of a ToolPak function is #N/A (T-4873)
+Rule: QUOTIENT's two arguments and SERIESSUM's `x`, `n`, `m` and coefficients are `#N/A` when written empty, as MROUND's,
+RANDBETWEEN's and IMSUB's are: `QUOTIENT(,5)`, `QUOTIENT(7,)`, `QUOTIENT(,)`, `QUOTIENT(-7.5,)`, `QUOTIENT(,-2)`,
+`SERIESSUM(,1,1,{1,2})`, `SERIESSUM(2,,1,{1,2})`, `SERIESSUM(2,1,,{1,2})`, `SERIESSUM(2,1,1,)` and `SERIESSUM(,,,)` are all
+`#N/A` (A1:A6, B1:B7), where most numeric functions read an empty argument as 0. An error or a boolean in an earlier
+argument wins: `QUOTIENT(1/0,)` is `#DIV/0!`, `QUOTIENT(TRUE,)` `#VALUE!` (A9:A10). A LET value or LAMBDA parameter left
+empty hands the emptiness on: `LET(e,,QUOTIENT(7,e))`, `LET(e,,QUOTIENT(e,2))`, `LAMBDA(a,b,QUOTIENT(a,b))(7,)` and
+`LET(e,,SERIESSUM(2,e,1,{1,2}))` are `#N/A` (-let-lambda A1:A4). Only the argument as written counts: a formula that
+gives a blank (an IFERROR or VLOOKUP of an empty cell) is read as 0, not `#N/A` (gen-m5/6efa59fc1257c475 Calc!A229,
+gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). UNVERIFIED: where empty coefficients rank against an `x`,
+`n` or `m` error (ours checks them after, as every coefficient error).
+Evidence: probes/t4873-empty-arg-quotient-ceiling Calc!A1:B8, probes/t4873-empty-arg-let-lambda Calc!A1:A4 (excel-graph,
+2026-11-07, T-4873; predictions committed before the fill).
+Ours: `Model::atp_number` (functions/lift/mod.rs) reads MROUND's, QUOTIENT's and SERIESSUM's numbers, told which
+arguments are empty by `Model::empty_arguments` (logical/let.rs); `series_coefficients`
+refuses empty coefficients. Before T-4873 QUOTIENT and SERIESSUM read an empty argument as 0.
+Status: VERIFIED (excel-graph)
+Tasks: T-4873
+
+## An empty significance of the 2010+ roundings is omitted (T-4873)
+Rule: CEILING.MATH, FLOOR.MATH (Excel 2013), CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING (Excel 2010) read a written-empty
+`significance` or `mode` as omitted, so the significance is 1: `CEILING.MATH(2.675,)` 3, `CEILING.MATH(-2.5,)` -2,
+`CEILING.MATH(-2.5,,1)` -3, `FLOOR.MATH(-2.5,)` -3, `FLOOR.MATH(-2.5,,1)` -2, `CEILING.PRECISE(2.675,)` 3,
+`FLOOR.PRECISE(-2.5,)` -3, `ISO.CEILING(2.675,)` 3 (C1:G3). An empty number is still 0 (`CEILING.MATH(,1)`, `FLOOR.PRECISE(,)`:
+0; C8, D8, E4:G4). The legacy CEILING and FLOOR keep empty = 0: `CEILING(2.5,)` and `CEILING(-2.5,)` are 0, `FLOOR(2.5,)`
+and `FLOOR(-2.5,)` `#DIV/0!`, `FLOOR(,)` 0 (H1:H5). A LET value or LAMBDA parameter left empty reads the same way
+(`LET(e,,CEILING.MATH(2.675,e))` 3, `LAMBDA(a,b,FLOOR.PRECISE(a,b))(-2.5,)` -3, `LET(e,,CEILING(2.5,e))` 0; -let-lambda
+A5:A11). The same split as SORT's and TAKE's empty optionals (arrays.md) against the older functions' empty = 0.
+Evidence: probes/t4873-empty-arg-quotient-ceiling Calc!C1:H5, probes/t4873-empty-arg-let-lambda Calc!A5:A11 (excel-graph,
+2026-11-07, T-4873; predictions committed before the fill).
+Ours: the five go through `numbers_fn_empty_omitted` (mathematical.rs), which keeps an empty argument's default. Before
+T-4873 they read it as 0 (`CEILING.MATH(2.675,)` was 0).
+Status: VERIFIED (excel-graph)
+Tasks: T-4873
+
 ## ECMA.CEILING
 Rule: `ECMA.CEILING(number, significance)` is a real Excel function with exactly the two-argument `CEILING` semantics (rounds away from zero for negative `number` with negative `significance`; `#NUM!` when `number` is positive and `significance` negative; zero significance gives 0; number text `"2.5"` and `TRUE` are read as numbers; text significance is `#VALUE!`). It is stored in a file as `_xlfn.ECMA.CEILING`, and `FORMULATEXT` prints it as `=ECMA.CEILING(2.5,2)` (no prefix). Written bare (`ECMA.CEILING(...)`) in a file, Graph rejects the whole workbook (`createSession` 501 `unsupportedWorkbook`); the one-argument form `_xlfn.ECMA.CEILING(2.5)` is rejected the same way (arity is exactly 2, like CEILING).
 Evidence: probes/ecma-ceiling A1:A6, A8:A11, A13:A14; probes/ecma-ceiling-formulatext A12 (excel-graph, 2026-10-12, T-1301).
