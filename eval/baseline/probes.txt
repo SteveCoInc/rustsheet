@@ -2532,6 +2532,7 @@ C	probes/t4515-fresh-sweep.case.json	96
 C	probes/t4517-filter-transposed-include.case.json	23
 C	probes/t4518-sheet-sheets-bound-variable.case.json	26
 C	probes/t4519-row-column-randarray-over-arrays.case.json	50
+C	probes/t4526-fixed-denominator-spill.case.json	13
 C	probes/t4529-yearfrac-calendar-vs-coercion.case.json	164
 C	probes/t4534-bessel-convert-web-values.case.json	14
 C	probes/t4534-desktop-golden-web-values.case.json	36
@@ -2539,6 +2540,8 @@ C	probes/t4538-indirect-a1-cells.case.json	50
 C	probes/t4539-rows-columns-scalar-kinds.case.json	58
 C	probes/t4540-averageif-criteria-average-range.case.json	42
 C	probes/t4541-t-inv-2t-tiny-p.case.json	185
+C	probes/t4542-engineering-ties.case.json	20
+C	probes/t4542-french-regional-names-rest.case.json	132
 C	probes/t4543-xlookup-not-found-address-sheet-lift.case.json	252
 C	probes/t4544-xmatch-error-modes-holdout.case.json	86
 C	probes/t4544-xmatch-error-modes.case.json	175
