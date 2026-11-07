@@ -171,13 +171,12 @@ impl Model {
         if let Some(prob) = binomial_range(n, odds(p), lower, upper) {
             return Ok(prob);
         }
-        // Past the walk's budget Excel's range is its own BINOM.DIST cdf difference, to the bit
-        // on 105 of the 126 probes/t3444-binom-range-inv-large-n Range rows (column A = column B);
-        // the other 21, ranges from mean + 3 sd to mean + 5 sd, take a form not identified (T-3740).
-        // A range whose lower end is past the mean is the difference of the two upper tails,
-        // P(X > s1 - 1) - P(X > s2), each the w of the same bratio call the cdf takes: the cdf
-        // difference cancels there (to 0 on accuracy/BINOM.DIST.RANGE/s1 A85, A94, A101, A107,
-        // where Excel is within 1E-12 of the math; T-3740).
+        // Past the walk's budget, a range whose lower end is past the mean is the difference of
+        // the two upper tails, P(X > s1 - 1) - P(X > s2): the cdf difference cancels there (to 0
+        // on accuracy/BINOM.DIST.RANGE/s1 A85, A94, A101, A107), and Excel is within 1E-12 of
+        // this form on every probed range past the mean, though not to the bit (T-3740; Excel's
+        // exact form, T-4746). Elsewhere Excel's range is its own BINOM.DIST cdf difference, to
+        // the bit on 105 of the 126 probes/t3444-binom-range-inv-large-n Range rows.
         if lower >= 1 && (lower - 1) as f64 > n as f64 * p {
             if let (Some(from), Some(past)) = (
                 excel_binom_upper_tail(n, p, lower - 1),
@@ -473,13 +472,18 @@ fn excel_binom_cdf(n: u64, p: f64, k: u64) -> Option<f64> {
     if k >= n {
         return Some(1.0);
     }
-    if k >= 1 {
-        let (x, y, a, b) = (p, 1.0 - p, k as f64 + 1.0, (n - k) as f64);
-        if let Some((_, upper)) = closed_or_ported_tails(x, y, a, b) {
-            return Some(flush_subnormal(upper));
-        }
+    if let Some((_, cdf)) = excel_binom_tails(n, p, k) {
+        return Some(cdf);
     }
     binomial_cdf(n, odds(p), k).map(flush_subnormal)
+}
+
+/// (P(X > k), P(X <= k)) for 0 < k < n and 0 < p < 1: the (w, w1) of the incomplete beta
+/// `I_p(k+1, n-k)` at x = p, y = fl(1 - p), from Excel's closed forms and the bratio port, each
+/// subnormal tail flushed to 0. `None` where neither applies.
+fn excel_binom_tails(n: u64, p: f64, k: u64) -> Option<(f64, f64)> {
+    let (x, y, a, b) = (p, 1.0 - p, k as f64 + 1.0, (n - k) as f64);
+    closed_or_ported_tails(x, y, a, b).map(|(w, w1)| (flush_subnormal(w), flush_subnormal(w1)))
 }
 
 /// The pmf, and so the cdf, at k = 0: EXP(fl(n·l)) with l Excel's ln(1 - p), BINOM.DIST's closed
@@ -488,15 +492,13 @@ fn excel_binom_at_zero(n: u64, p: f64) -> f64 {
     excel_exp(n as f64 * excel_ln_one_minus(p))
 }
 
-/// Excel's binomial upper tail `P(X > k)` for `0 < p < 1`: the w of the bratio call
-/// [`excel_binom_cdf`] takes the w1 of (`I_p(k+1, n-k)`), a subnormal tail flushed to 0 as there,
-/// and 0 from k = n. `None` where neither a closed form nor the port applies (T-3740).
+/// Excel's binomial upper tail `P(X > k)` for `0 < p < 1` and k >= 1: the other half of the call
+/// [`excel_binom_cdf`] takes ([`excel_binom_tails`]), and 0 from k = n (T-3740).
 fn excel_binom_upper_tail(n: u64, p: f64, k: u64) -> Option<f64> {
     if k >= n {
         return Some(0.0);
     }
-    let (x, y, a, b) = (p, 1.0 - p, k as f64 + 1.0, (n - k) as f64);
-    closed_or_ported_tails(x, y, a, b).map(|(upper, _)| flush_subnormal(upper))
+    excel_binom_tails(n, p, k).map(|(upper, _)| upper)
 }
 
 /// [`excel_binom_cdf`], else statrs' cdf of `dist` (`Binomial::new(p, n)`), the last resort of

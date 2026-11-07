@@ -57,8 +57,35 @@ BINOM.DIST.RANGE ranges whose lower end is past the mean are bit-exact with Exce
   - P2 failed on 9 of 60 rows near the mean, where the cdf difference sits nearer Excel's bits.
   - Overall the form is visibly off on 19 rows against the cdf difference's 38, and bit-exact on 7 against 9.
   - The form was not changed after the fill.
-- The 21 t3444 rows are characterized in statistics.md: none is bit-exact, and Excel's exact form is unknown. They are
-  handed to T-4746 with the sweep's visibly-off cells. No t3444 cell changed (eval-check: 0 regressions, 0 fixed).
+- The 21 t3444 rows are characterized in statistics.md: none is bit-exact, and Excel's exact form is unknown. Of
+  probes/t3444-binom-range-inv-large-n's Range cells, 19 change value; the earlier "no cell changed" read only
+  eval-check's pass counts.
+  - 17 of the 21 rows past mean + 3 sd move from visibly off to within 15 digits, for example A60 405 to 2 ulp and A48
+    215 to 5 ulp. A12 (318 to 156 ulp) and A54 (471 to 66) stay visibly off.
+  - A6 (`BINOM.DIST.RANGE(10000,0.3,3137,3229)`) gets worse, from 2 ulp to 113 ulp, and is now visibly off. It was
+    already a bit-level known failure, so no gate moves.
+  - The case's visibly-off Range cells drop from 67 to 52.
+  - The form is not given a special case for A6 (decisions 0056, 0082). T-4746 owns A6 with the other rows.
+- R4 guards (check 7, kind (c): an operation order with no constants, so no `FITTED` tag).
+  - R4.1 hold-out. Train is the 21 t3444 rows the form was first scored on (T-3444). Hold-out is sweep rows 1-60,
+    drawn after the freeze, as in T-4322 where the fresh sweep is the hold-out. No margin was set in advance.
+    Counts are bit-exact / within 4 ulp / within 15 digits:
+
+    | form | train (21) | hold-out (60) |
+    |---|---|---|
+    | upper-tail difference (chosen) | 0 / 8 / 17 | 7 / 33 / 41 |
+    | cdf difference (before) | 0 / 2 / 2 | 9 / 20 / 22 |
+    | correctly rounded math | 0 / 6 / 8 | 0 / 0 / 0 |
+
+    The chosen form leads both alternatives at 4 ulp and at 15 digits on both sets. Its exact rate rises from train
+    to hold-out (0/21 to 7/60).
+  - R4.2 sweep. Batch accuracy/BINOM.DIST.RANGE/r4-T-3740 has 200 points, 100% log-uniform, generated after the
+    freeze and filled from excel-graph. `rustsheet-eval accuracy` reports 0 failing: every point is inside the
+    envelope.
+  - The guard `s1 - 1 > n·p` was fixed before the sweep. The evidence places Excel's own switch somewhere between
+    mean - 0.05 sd (the controls are Excel's cdf difference to the bit) and mean + 0.1 sd. 23 of the 60 rows past the
+    mean still have Excel's range equal to its cdf difference, so the mean is the cancellation boundary, not Excel's
+    proven switch (T-4746).
 - Unit test `binom_dist_range_past_the_mean_takes_the_upper_tails` (Gate A A107, A85).
 - Eval delta: Gate A loses 9 known failures (accuracy/BINOM.DIST.RANGE/s1 A85, A91, A94, A101, A107, A146, A172,
-  A177, A180) and `eval-gates` has 0 failing. The new probe case adds 85 known failures, all owned by T-4746.
+  A177, A180) and gains the 200-point r4-T-3740 batch, all inside the envelope; `eval-gates` has 0 failing. The new probe case adds 85 known failures, all owned by T-4746.

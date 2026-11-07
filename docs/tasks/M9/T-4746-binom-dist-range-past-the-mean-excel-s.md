@@ -21,7 +21,9 @@ the forms tried and shows why none reproduces Excel's bits.
   all 60 rows past the mean. The form is visibly off on 19 rows, where the cdf difference it replaced was off on 38.
   It is bit-exact on 7 rows, and the cdf difference on 9. See docs/research/t3740 and statistics.md "BINOM.DIST.RANGE
   and BINOM.INV at a large n sit on BINOM.DIST's own cdf".
-- Owns the visibly-off cells of probes/t3740-binom-range-past-mean-sweep Range!: A4, A16, A19, A31, A33, A34, A35, A38, A45, A46, A48, A50, A51, A52, A54, A57, A58, A59, A60, A61, A64, A70, B9, B31, B33, B35, B38, B51, B61, B64, B70. Column B, and A61-A70 (the
+- Owns the cells of probes/t3740-binom-range-past-mean-sweep that differ from Excel at 15 digits (the harness's in-scope
+  visible-parity count for the case is 18), Range!: A4, A16, A19, A31, A33, A34, A35, A38, A45, A46, A48, A50, A51, A52,
+  A54, A57, A58, A59, A60, A61, A64, A70, B9, B31, B33, B35, B38, B51, B61, B64, B70. Column B, and A61-A70 (the
   controls below the mean, which equal Excel's own cdf difference), carry BINOM.DIST's own last digits, which T-3447
   also works on.
 - Owns the 21 rows T-3740 inherited from T-3444: probes/t3444-binom-range-inv-large-n Range! A6, A12, A18, A24, A30,

@@ -3335,6 +3335,11 @@ plus 10 controls below the mean:
   rows, where the cdf difference is bit-exact on 9: on 9 rows near the mean the cdf difference lands nearer Excel's
   bits.
 - The controls below the mean are Excel's cdf difference to the bit, unchanged.
+- So Excel's own switch lies between mean - 0.05 sd and mean + 0.1 sd. The engine's mean is the cancellation boundary
+  inside that bracket, not a proven switch.
+- On t3444, 17 of the 21 rows move to within 15 digits. A6 (`BINOM.DIST.RANGE(10000,0.3,3137,3229)`) moves from 2 ulp to
+  113 ulp and becomes visibly off. The case's visibly-off Range cells drop from 67 to 52.
+- The Gate A batch r4-T-3740 (200 log-uniform points, drawn after the freeze) is entirely inside the envelope.
 Excel's exact form there is still unknown (T-4746).
 Status: VERIFIED (excel-graph, 2026-11-01) for BINOM.INV and the cdf-difference rows. The upper-tail form is VERIFIED
 to 1E-12 past the mean (excel-graph, 2026-11-07), but it is not Excel's algorithm.
@@ -3342,8 +3347,9 @@ to 1E-12 past the mean (excel-graph, 2026-11-07), but it is not Excel's algorith
   (`BINOM.INV(1000000000,0.3,0.5)` 299998246 against a median of 300000000).
 - Ours now (T-3444): `binom.rs` `excel_binom_cdf` and `excel_binom_pmf` are BINOM.DIST's own paths. BINOM.INV's
   bisection uses the cdf, and all 126 BINOM.INV and 126 CRITBINOM probe cells pass. BINOM.DIST.RANGE takes the pmf
-  for one point and the cdf from 0, then the double-double walk, then the upper-tail difference past the mean (T-3740) or the cdf difference. Its probe misses are those
-  of BINOM.DIST's own last digits (T-3447) plus the 21 upper-tail rows (T-3740).
+  for one point and the cdf from 0, then the double-double walk, then the upper-tail difference past the mean
+  (T-3740) or the cdf difference. Its probe misses are those of BINOM.DIST's own last digits (T-3447) plus the 21
+  upper-tail rows (T-4746).
 - Gate A fresh sweep (T-3741; accuracy/BINOM.DIST.RANGE, BINOM.INV and CRITBINOM s1, 200 points each, trials to
   2^31 - 2, excel-graph, 2026-11-04), scored against 50-digit math:
   - Ranges above the mean: on the 9 points where ours is off (owner T-3740: A85, A91, A94, A101, A107, A146, A172,
