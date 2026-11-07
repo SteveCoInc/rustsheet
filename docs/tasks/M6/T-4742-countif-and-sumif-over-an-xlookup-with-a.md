@@ -38,3 +38,6 @@ Eval delta: probes known failures 7603 -> 7594 (fixed 12: probes/t4704 Calc B64:
   3. Once both approve, call `enable_pr_auto_merge` (SQUASH).
 - Do not restore the old assertion: Excel's evidence (t4742 A10:C22) contradicts it.
 - One more fix in the task file: its Outcome says "38 of 41 cells"; the right count is 38 passing of 40 checked cells.
+- Update, 09:2xZ: design and excel-fidelity re-approved 1cfcbd459 and the PR was enqueued. The queue then removed it with `MERGE_CONFLICT`: T-4741 (#3882) merged first and added a test at the same place in `test_xlookup_ref_element.rs`. `make catch-up` refused because the conflict is outside the baselines.
+- The manual merge 2d16caf49 keeps both tests (T-4741's first) and takes main's baseline lists, then re-records them with `make eval-baseline NEW_CASES=<t4742 case>`. `make eval-check` showed 0 regressions and the xlookup_ref_element tests pass (9).
+- Next step: wait for CI to go green on the head after this commit. Have reviewer-design confirm the merge resolution: its only non-baseline change is concatenating the two tests. Then enqueue (SQUASH).
