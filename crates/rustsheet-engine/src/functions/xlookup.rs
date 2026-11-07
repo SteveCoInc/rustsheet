@@ -13,7 +13,8 @@ use super::{
     lift::{LiftCost, LiftOptions, LiftedArg},
     lookup_and_reference::lookup_table::{cmp_searched, Indexed, SearchVector},
     lookup_and_reference::xmatch::{
-        exact_through_index, linear_scan, regex_pattern, regex_scan, MatchMode as XmatchMode,
+        exact_through_index, linear_scan, mode_or_default, regex_pattern, regex_scan,
+        MatchMode as XmatchMode,
     },
     text::{LookupPattern, LookupRegexes},
     util::near_integer::near_integer_whole,
@@ -534,11 +535,11 @@ impl Model {
         }
         let lookup_value = self.evaluate_node_in_context(&args[0], cell);
         let match_mode = match args.get(4) {
-            Some(node) => self.evaluate_node_in_context(node, cell),
+            Some(node) => mode_or_default(self.evaluate_node_in_context(node, cell), 0.0),
             None => CalcResult::Number(0.0),
         };
         let search_mode = match args.get(5) {
-            Some(node) => self.evaluate_node_in_context(node, cell),
+            Some(node) => mode_or_default(self.evaluate_node_in_context(node, cell), 1.0),
             None => CalcResult::Number(1.0),
         };
         let mut criteria = vec![lookup_value, match_mode, search_mode];

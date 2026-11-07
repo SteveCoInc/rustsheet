@@ -51,6 +51,7 @@ mod test_fn_depreciation;
 mod test_fn_dollar_fixed_numbervalue_lift;
 mod test_fn_encodeurl;
 mod test_fn_exact;
+mod test_empty_mode_args;
 mod test_fn_expand_wrap_lift;
 mod test_fn_filterxml;
 mod test_fn_financial;
