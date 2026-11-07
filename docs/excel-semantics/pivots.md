@@ -1228,3 +1228,108 @@ empty too is the engine's assumption, UNVERIFIED (probe pending: T-4640).
 Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141, T-4627) (`field_names`,
 `name_key`); the empty label cell in crates/rustsheet-engine/src/pivot/layout/render.rs
 (`Cells::lines`, T-4152)
+
+## Capability matrix 1: what Excel for the web opens and renders
+Rule: Excel for the web opens and renders a pivot carrying any one of the 143 catalog rows of the
+layout, totals, aggregation and show-values-as families except three. It refuses
+`pivotField@dataSourceSort="1"`, `item@d="1"` and `item@f="1"` (next entry). This covers every
+ST_DataConsolidateFunction, ST_ItemType, ST_ShowDataAs and x14 ST_PivotShowAs value, every location,
+axis and totals attribute, and the x14 pivotTableDefinition, pivotField and dataField extensions. The
+catalog's `web` column (eval/catalog/pivot-features.tsv) records the answer per row. Its `evidence`
+column names the probe and sheet.
+Evidence: these cases, all excel-graph, 2026-11-06, T-4129:
+- probes/t4129-pivot-show-as: the nine ECMA modes, below;
+- probes/t4129-pivot-show-as-x14: the six x14 modes;
+- probes/t4129-pivot-layout-flags: grand totals off, subtotalTop, subtotalCaption, subtotalHiddenItems,
+  showItems, gridDropZones, dataPosition, allDrilled and defaultAttributeDrillState, pivotField
+  numFmtId, a pivotArea with `axis="axisValues"`, and both x14 extensions;
+- probes/t4129-pivot-item-flags: items with `c`, `e` or `m`;
+- for the other rows, the earlier probes the catalog cites (t4123, t4135, t4137, t4138, t4168, t4586,
+  t4622, t4311).
+
+Also seen in Excel's saved files (T-4129 runs, from the oracle's cached downloads):
+- Excel keeps every probed attribute and both x14 extensions as written, with three exceptions:
+  - it drops an item's `m="1"`;
+  - it drops `e="1"`, which is the default;
+  - it drops `axis="axisValues"` on a pivotField that is on no axis (a scratch file, not a case:
+    the builder sets `axis` itself), and the pivot still renders.
+- `c="1"` is kept.
+
+Status: VERIFIED (excel-graph) for rendering. "What Excel saves" is an observation of the cached
+downloads; the sidecars do not record definitions.
+
+## Pivot flags Excel for the web refuses
+Rule: Excel for the web refuses to open a workbook (createSession 501 `FileCorruptTryRepair`, inner
+`unsupportedWorkbook`) if a pivot has any of the following:
+- a pivotField with `dataSourceSort="1"`;
+- an item with `d="1"`;
+- an item with `f="1"` and no `calculatedItems`.
+
+`allDrilled="1"` and `defaultAttributeDrillState="1"` on the same field open.
+Evidence: T-4129 runs (excel-graph, 2026-11-06), one pivot per flag, bisected from the FA sheet of
+probes/t4129-pivot-layout-flags and the sheets of probes/t4129-pivot-item-flags.
+Status: a builder observation, not committable as a probe: Excel saves nothing for a file it refuses.
+What desktop Excel does is M14 T-4730 (dropped, decision 0266). The case builder does not refuse these
+flags; a case that sets one cannot be filled.
+
+## Show-values-as modes as Excel for the web renders them
+Rule: every ECMA `showDataAs` mode and every x14 `pivotShowAs` mode renders on open. Excel saves an
+x14 mode as written: the dataField extension's `pivotShowAs`, with no `showDataAs` on the dataField.
+What each mode showed in one pivot is listed below. The pivot has rows Region (outer) and Product,
+columns Year, and Sum of Sales. The data are East A 10/4, B 5/8, C 3/– and West A 20/6, B –/7, for
+2024/2025. West/B/2024 and East/C/2025 are empty intersections.
+- **difference** (base Product A, DF): the base item's rows are empty. So are the Region subtotal rows
+  and the Grand Total row, because the base field is the inner one. An empty intersection counts as 0:
+  East/C/2025 is -4 (0 - 4) and West/B/2024 is -20.
+- **difference from (previous)**, with `baseItem="1048828"` on Year (DP): the first Year column is
+  empty, and so is the Grand Total column. Every other cell is this year minus the previous one,
+  subtotals and the Grand Total row included (East 2025 is -6, Grand Total 2025 is -13).
+- **percent** (% of Product A, PC): the base rows show 1. **An empty intersection shows `#NULL!`**
+  (East/C/2025, West/B/2024), not 0 and not `#N/A`. The row totals divide the totals (East/C 3/14).
+- **percentDiff** (PD): like difference, with `#NULL!` for an empty intersection.
+- **runTotal** in Product (RT): the total runs down the Products within each Region. Subtotal and Grand
+  Total rows are empty.
+- **percentOfRow, percentOfCol, percentOfTotal** (PR, PCo, PT): an empty intersection shows 0 (a
+  number), not an empty cell.
+- **index** (IX): an empty intersection shows 0. The Grand Total row and column are 1.
+- **percentOfParent** in Region (PP): the parent rows (East, West) are 1. The Grand Total row is
+  empty.
+- **percentOfParentRow** (PPR): each value is divided by its parent row item. For East and West the
+  parent is the grand total row: East/2024 is 18/38. The Grand Total row is 1.
+- **percentOfParentCol** (PPC): with one column field it equals percentOfRow.
+- **percentOfRunningTotal** in Product (PRT): this is the running total divided by the Region total.
+  Subtotal and Grand Total rows are empty.
+- **rankAscending and rankDescending** in Product (RA, RD): each column is ranked within its Region,
+  and the Grand Total column too. An empty intersection is an empty cell and is not ranked. Subtotal
+  and Grand Total rows are empty.
+
+Evidence: probes/t4129-pivot-show-as and probes/t4129-pivot-show-as-x14 (excel-graph, 2026-11-06,
+T-4129). The sidecars' `pivots` sections hold every cell.
+Status: VERIFIED (excel-graph) for these shapes. Ties, division by zero, a missing base item, (next),
+and the other base fields are T-4161. The engine is T-4163.
+
+## Layout and totals flags as Excel for the web renders them
+Rule, per flag (each one on its own pivot of rows Region and Product with Sum of Sales):
+- `rowGrandTotals="0"` with `colGrandTotals="0"` (NG): no Grand Total row and no Grand Total column.
+- `subtotalTop="0"` on Region in outline form (ST): the East row is left empty, and an `East Total` row
+  follows its products.
+- `subtotalCaption="Tot"` on Region in tabular form (SC): **the subtotal label is `Tot` alone, with no
+  item name**. Both East's and West's subtotal rows read `Tot`.
+- `subtotalHiddenItems="1"` with Product C hidden (SH): **no effect**. East's subtotal is still 27,
+  without C's 3, and the Grand Total is 60. (Excel's UI offers "include filtered items in totals" for
+  OLAP sources only.)
+- `showItems="0"` (SI), `allDrilled` and `defaultAttributeDrillState` (FA), `dataPosition="0"` with
+  the Values field on columns (DPo), and `hideValuesRow="1"` with one data field (X14): no visible
+  change.
+- `gridDropZones="1"`, tabular (GZ): the data caption `Sum of Sales` is at A3. `Row Labels` and
+  `Product` head the row fields on row 4, and the value column's header reads `Total` (C4).
+  `firstHeaderRow` is 2.
+- `numFmtId="3"` on the Year row field (NF): it renders. The saved labels are numbers; their display
+  format is not captured.
+- x14 pivotTableDefinition `fillDownLabelsDefault="1"` (X14): **existing fields are not filled down**.
+  The setting is a default for fields added later. A field's own x14 `fillDownLabels="1"` (X14F)
+  repeats its labels: `East` on every East product row.
+- A `formats` entry whose pivotArea has `axis="axisValues"` (AV): it renders.
+
+Evidence: probes/t4129-pivot-layout-flags (excel-graph, 2026-11-06, T-4129).
+Status: VERIFIED (excel-graph) for these shapes.

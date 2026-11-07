@@ -229,6 +229,9 @@ probes/t4027-irr-annuity-scale-guess.case.json	33
 probes/t4045-f-dist-rt-zero-cut-fresh.case.json	24
 probes/t4123-pivot-capture.case.json	181
 probes/t4128-pivot-spike.case.json	60
+probes/t4129-pivot-layout-flags.case.json	32
+probes/t4129-pivot-show-as-x14.case.json	138
+probes/t4129-pivot-show-as.case.json	278
 probes/t4134-pivot-items.case.json	54
 probes/t4135-pivot-aggregates.case.json	852
 probes/t4137-pivot-captions.case.json	120
