@@ -3,7 +3,7 @@ id: T-4624
 title: "DATEDIF calendar units when the floored and second-rounded date orders differ: probe and match"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
