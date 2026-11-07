@@ -104,6 +104,17 @@ fn standard_normal_quantile(p: f64, cell: CellReferenceIndex) -> Result<f64, Cal
     normal_quantile(p, 0.0, 1.0, cell)
 }
 
+/// NORM.S.INV's accurate quantile of `p` in (0, 1) as a plain double, NaN outside: the shared
+/// normal start of the quantile searches (`inverse_beta::as109`, which takes it where AS 109 has
+/// Hastings' approximation; docs/excel-semantics/statistics.md "BETA.INV returns bounded AS 109
+/// Newton stopping points (T-4975)").
+pub(crate) fn standard_normal_quantile_value(p: f64) -> f64 {
+    if !(p > 0.0 && p < 1.0) {
+        return f64::NAN;
+    }
+    ppnd16_tail(p).unwrap_or_else(|| Normal::standard().inverse_cdf(p))
+}
+
 impl Model {
     /// `NORM.DIST(x, mean, standard_dev, cumulative)`, and NORMDIST.
     pub(crate) fn fn_norm_dist(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {

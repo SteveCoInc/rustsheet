@@ -2,25 +2,15 @@
 # task lands, one per line, tab-separated:
 #   <point id accuracy/<FUNCTION>/<batch>!Calc!A<n>>	<owner task T-NNNN>	<note>
 # A listed point that passes, or that no table holds, is a stale line and fails the check.
-accuracy/F.INV/s1!Calc!A154	T-1871	deep-tail F quantile: the engine is far off; Excel matches the math
 accuracy/F.INV/s1!Calc!A168	T-1871	F quantile at d1 1 (p 1.04E-20): the engine gives 1.87E-14 against 1.71E-40; Excel matches the math
 accuracy/T.INV/s1!Calc!A75	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
 accuracy/T.INV/s1!Calc!A102	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
 accuracy/T.INV.2T/s1!Calc!A75	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
 accuracy/T.INV.2T/s1!Calc!A91	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
 accuracy/BETA.DIST/s1!Calc!A186	T-4733	cdf at a huge beta: Excel #NUM!, the engine and the math 0
-accuracy/BETA.INV/s1!Calc!A83	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
-accuracy/BETA.INV/s1!Calc!A86	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
-accuracy/BETA.INV/s1!Calc!A88	T-3351	p above 1/2 at a tiny alpha: Excel 2^-53 (1 minus the flipped search's 1-2^-53), the engine #NUM!
-accuracy/BETA.INV/s1!Calc!A97	T-3351	p above 1/2 at a tiny alpha: Excel 2^-53 (1 minus the flipped search's 1-2^-53), the engine #NUM!
-accuracy/BETA.INV/s1!Calc!A98	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
-accuracy/BETA.INV/s1!Calc!A100	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
-accuracy/BETA.INV/s1!Calc!A103	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
-accuracy/BETA.INV/s1!Calc!A106	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
 accuracy/BETA.INV/s1!Calc!A108	T-3351	p above 1/2 at a tiny alpha: Excel 2^-53 (1 minus the flipped search's 1-2^-53), the engine #NUM!
 accuracy/BETA.INV/s1!Calc!A115	T-4663	a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/BETA.INV/s1!Calc!A118	T-4663	a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
-accuracy/BETA.INV/s1!Calc!A123	T-3351	p = 0.999999999999999: the math 0.99999999999999989 rounds to 1-2^-53, so Excel's 1-2^-53 is correct; only the engine's #NUM! fails
 accuracy/BETA.INV/s1!Calc!A125	T-4663	a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/BETA.INV/s1!Calc!A128	T-4663	a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/BETA.INV/s1!Calc!A138	T-4663	a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
@@ -143,7 +133,6 @@ accuracy/YIELD/r4-T-2788!Calc!A239	T-4523	Excel #NUM! (its Newton leaves PRICE's
 accuracy/YIELD/r4-T-2788!Calc!A252	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
 accuracy/YIELD/r4-T-2788!Calc!A267	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
 accuracy/F.INV.RT/s1!Calc!A155	T-1871	deep-tail F quantile (p 4.7E-162, df 3216, 23): the engine is 1.8% off; Excel matches the math
-accuracy/F.INV.RT/s1!Calc!A112	T-4568	Excel 0.9% below the math at p = DBL_MIN (df 29, 57); the engine returns the math
 accuracy/F.INV.RT/s1!Calc!A142	T-4568	Excel #NUM! at p 1.5E-247 (df 9, 51); the engine returns the math
 accuracy/ODDFYIELD/s1!Calc!A272	T-4551	ODDFYIELD at a root near 0 (8.3E-6): engine 1.1E-11 relative off Excel, both stop short of the math (1.8E-6)
 accuracy/ODDFYIELD/s1!Calc!A289	T-4551	ODDFYIELD with ODDFPRICE's extra quasi period (month-end first coupon 2005-05-31, coup_number nq 1, true 0): engine 2E-13 relative off Excel, both 2E-7 off the math
@@ -151,23 +140,11 @@ accuracy/TTEST/s1!Calc!A136	T-4579	Excel #DIV/0! for a paired test whose one-pas
 accuracy/TTEST/s1!Calc!A101	T-4579	Excel keeps the exact differences of offset pairs; the engine's double differences put the deep tail 1.6e-9 off
 accuracy/CONFIDENCE.T/s1!Calc!A155	T-3363	quantile at df 2.3E9: the engine and Excel are both off the math, differently
 accuracy/CONFIDENCE.T/s1!Calc!A163	T-3363	quantile at df 6.2E6: the engine and Excel are both off the math, differently
-accuracy/BETAINV/s1!Calc!A100	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
-accuracy/BETAINV/s1!Calc!A103	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
-accuracy/BETAINV/s1!Calc!A105	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
-accuracy/BETAINV/s1!Calc!A106	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
-accuracy/BETAINV/s1!Calc!A108	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
-accuracy/BETAINV/s1!Calc!A109	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
 accuracy/BETAINV/s1!Calc!A115	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/BETAINV/s1!Calc!A118	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/BETAINV/s1!Calc!A128	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/BETAINV/s1!Calc!A135	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/BETAINV/s1!Calc!A138	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
-accuracy/BETAINV/s1!Calc!A85	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
-accuracy/BETAINV/s1!Calc!A88	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
-accuracy/BETAINV/s1!Calc!A89	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
-accuracy/BETAINV/s1!Calc!A94	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
-accuracy/BETAINV/s1!Calc!A97	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
-accuracy/BETAINV/s1!Calc!A99	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
 accuracy/LINEST/s1!Calc!A85	T-2006	the engine's normal-equations solve on an ill-conditioned design is 2e-05 relative off the math; Excel is 3e-15 off it
 accuracy/LINEST/s1!Calc!A87	T-2006	the engine's normal-equations solve on an ill-conditioned design is 0.06 relative off the math; Excel is 1e-13 off it
 accuracy/LINEST/s1!Calc!A93	T-2006	the engine's normal-equations solve on an ill-conditioned design is 1e-05 relative off the math; Excel is 1e-13 off it

@@ -46,6 +46,9 @@ use super::incomplete_beta::ln_near_one;
 use super::incomplete_gamma::gamma_ur;
 use super::special::nearest_crossing;
 
+mod as109;
+pub(crate) use as109::{as109_search, As109Problem, As109Profile};
+
 /// The most Newton steps one inversion for BETA.INV or F.INV takes. The steps grow with -log10 of
 /// the probability, about 2.3 a decade, and stop at 377 where `x * x` underflows (p near 1E-162,
 /// below which the first estimate is NaN), so 512 keeps every result statrs reaches.

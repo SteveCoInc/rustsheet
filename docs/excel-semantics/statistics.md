@@ -4775,6 +4775,54 @@ at all 40 points ((3, 600) and (2, 2.5) on four ranges, five p each).
 Status: VERIFIED (crossing at 155/188); the 11 misses and the solver's start, step and stop are UNVERIFIED
 Tasks: T-1745, T-0974, T-3387
 
+## BETA.INV returns bounded AS 109 Newton stopping points (T-4975)
+Rule: Excel's BETA.INV and BETAINV return the point where AS 109's modified Newton search (with Remarks AS R19 and
+AS R83) *stops*, not the refined crossing of the CDF. The profile that fits:
+- the start's normal deviate is the accurate normal quantile (NORM.S.INV's), where AS 109 has Hastings'
+  approximation;
+- a first estimate at an end of [0, 1] is replaced by 1E-6 or 1 - 1E-6; it is not clamped to [1E-4, 0.9999];
+- the probability residual is divided by Excel's beta density (BETA.DIST's), not flushed;
+- the stop is an absolute correction accuracy `10^(-5/min(a,b)^2 - p^(-0.2) - 13)` (the smaller shape, no integer
+  truncation of the exponent), compared with the step and with the previous step at a sign change, with a 1E-300
+  floor on the squared-step comparison;
+- on an early stop the iterate *before* the step is returned (AS 109 as published, not the later "value = tx"
+  change); where the step no longer moves the iterate, the first iterate with the least residual;
+- the CDF is BETA.DIST's own lower tail; for p above 1/2 the search solves `I_x(beta, alpha) = 1 - p` and returns
+  1 - x.
+Exceptions kept on the converged crossing (contracts of the addendum):
+- an *exhausted* search (no bracket when the cumulative one-third step contractions reach 645, where 3^-n falls
+  below the smallest normal double, or a non-finite step away from an end seed) is not a root: the crossing
+  fallback decides, which is Excel's `#NUM!` at accuracy/BETA.INV/s1 A89, A94, A184 and `BETA.INV(.1,5,1E-14)`.
+  Excel's numeric endpoint results need 11 to 597 contractions and its errors 672 to 1,667 (a hypothesis, probe
+  group G21);
+- an end seed whose first step is not finite is Excel's value at p of 1E-10 and more
+  (`BETA.INV(1E-10,1E+110,1E-100)` = 0.999999, `BETA.INV(0.6,0.5,1.3E+154)` = 1.0000000000287557E-06, probes/t3862)
+  and not at the Gate A points with p of 1E-58 and below (accuracy/BETA.INV/s1 A182, A185, BETAINV/s1 A191, A192:
+  Excel 0.5), which keep the crossing; the cut at p = 1E-15 is fitted;
+- below p = 1E-15 a stop more than 1E-4 relative off the converged crossing returns the crossing (decision 0188 R3):
+  `BETAINV(1.9007381444303E-262,1.55556651729756,4.38688149845313)` would stop at 1.3E-162, where x·x underflows,
+  against the root 1.4958216352616E-169 (accuracy/BETAINV/s1 A166);
+- where bratio takes basym at the result (both shapes large, near the mean) the crossing stays: Excel's round trip
+  `BETA.INV(BETA.DIST(0.576485254488674,59467.806,44281.473,TRUE),59467.806,44281.473)` returns x exactly
+  (probes-numeric/t3443-basym-sweep A101), which an early stop misses (probe group G23 maps the region).
+Evidence:
+- ironcalc-calc BETADIST_BETAINV.xlsx H5 `BETA.INV(0.6734553797493481,3,600,2000,5489582)` = 33587.000000000226,
+  where the crossing gives 33586.99999999992: reproduced bit for bit.
+- gen-m9/4e55500bb8ad3cd8 A360 `BETAINV(1E-200,3.14159,TIME(4,2,1))` = 5.115610690476489E-64, AS 109's first
+  power-law estimate `EXP((LN(p·a) + lnB)/a)` kept on the CDF's log-quantized plateau: reproduced.
+- accuracy/BETA.INV/s1 A111 `BETA.INV(2.22507385850721E-308,16.0270968311551,5.57477023741975)`: a subnormal
+  residual still implies a large correction, so the seed is not a false root (the engine returns the math
+  3.5583236841039E-20; Excel 3.6855664841262965E-20).
+- On the 2,384 literal-argument BETA.INV/BETAINV cells of eval/ (gen-m9, probes, probes-numeric, accuracy tables):
+  bit-exact 1,265 to 1,705, visibly off 481 to 228; Gate A has 0 failing points and 21 stale exemptions removed.
+Not reproduced: H16 (-2.220446049250313E-16, the engine -1.44E-15), H26 (0.2339999999999406, the engine
+0.2339999999992134) and BETA_GAMMA.xlsx BETA_DIST!J3 (1.9999999999999998, the engine 1.9999999999999993): Excel's
+last iterates there are an ulp or a few from the engine's, and finalizing in the original coordinate (iterating
+1 - x itself) scored worse overall (1,500 bit-exact against 1,609 on the same cells).
+Status: UNVERIFIED (a scored fit to the addendum's mechanism; probe groups G21 and G23)
+Implemented in: functions/statistical/inverse_beta/as109.rs `as109_search`, functions/statistical/beta.rs
+`beta_quantile_as109`.
+
 ## BETA.INV at a shape of 1 is the closed form to 15 digits for p of 1E-15 or more (T-3664)
 Rule: with alpha = 1 or beta = 1 and 1E-15 <= p < 1, Excel's BETA.INV(p,alpha,beta) (and BETAINV) is within half a
 unit of the 15th significant digit of the closed form p (both 1), -expm1(log1p(-p)/beta) (alpha = 1) or
