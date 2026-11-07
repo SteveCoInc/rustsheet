@@ -3,7 +3,7 @@ id: T-4909
 title: "Export writes neither an empty core-properties created date nor an empty cellStyles (Excel refuses both)"
 milestone: M15
 lane: engine
-status: blocked
+status: in-progress
 priority: P1
 size: S
 tier: opus
@@ -39,7 +39,3 @@ docs/excel-semantics/xlsx-storage.md "An empty `dcterms:created` makes Excel ref
 
 ## Out of scope
 - Writing a real creation date when the source has none.
-
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275): M15 waits until Phase 1 parity exits. Unblock when
-docs/status.md has the line `**Phase 1:** exited <date>`.
