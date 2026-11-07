@@ -7255,8 +7255,8 @@ accuracy/defs/array_regression.py) solves the normal equations in rational arith
   FALSE, match the exact value, so Excel does not multiply by an underflowed multiplier.
 - GROWTH s1 A104 is `#NUM!` where the prediction is 8.13890815167933E-18: two variables (x1 near 7.3E+7, x2 near
   77.9407 with a spread of 2E-4), whose ln fit's intercept is 1289.95, so b = e^1289.95 is past the double range. It
-  is the only table point with an intercept past ln(max double); unexplained, the intercept's overflow is the lead
-  (T-4590). Ours is 8.138904702791959E-18.
+  is the only table point with an intercept past ln(max double). The cause is that overflow: see "GROWTH is #NUM! once
+  LOGEST's b overflows" below (T-4590).
 - Excel off the exact value: LINEST s1 A197 (`INDEX(LINEST(<4 points from 1E-48 to 6E+20>,<2 variables>,FALSE,TRUE),5,1)`,
   ss_reg) is 0 where the exact value is 1.19E-52, the cancellation of ss_tot (3.9E+41) and ss_resid: more than 1E-4
   off, kept as the target under decision 0300; ours is 0 too. LINEST A184 (an intercept over data from 1E-44 to
@@ -7266,9 +7266,38 @@ accuracy/defs/array_regression.py) solves the normal equations in rational arith
   spread, mixed magnitudes) it is from 2E-9 to 20 relative off where Excel is within 2E-8, and TREND A193 (data from
   1E-45 to 1E+49) is `#NUM!` where Excel and the math are -1.3025416638036628E+49 (T-2006, known failures).
 Evidence: eval/accuracy/tables/{LINEST,LOGEST,TREND,GROWTH}/s1 (excel-graph, 2026-11-06, T-4096).
-Ours: as described; T-2006 (the solve), T-4590 (A104).
-Status: VERIFIED (excel-graph) for the table points; A104's cause UNVERIFIED
+Ours: as described; T-2006 (the solve). A104 passes since T-4590.
+Status: VERIFIED (excel-graph) for the table points and A104's cause (T-4590)
 Tasks: T-4096, T-2006, T-4590, T-2569
+
+## GROWTH is #NUM! once LOGEST's b overflows; it can be 0 where the slopes' factor is subnormal (T-4590)
+Rule: GROWTH with const TRUE is `#NUM!` exactly when LOGEST's b = e^intercept overflows, that is when the intercept is
+past ln(DBL_MAX) = 709.7827, even where the prediction itself is finite.
+- For y = e^(c - c/2·x) at x = 1, 2, 3 (prediction about 1 at x = 2), GROWTH is a number for c up to 709.7827 and
+  `#NUM!` from 709.7828 to 1290. LOGEST's own b, `INDEX(LOGEST(..),1,2)`, is `#NUM!` from the same cut.
+- LOGEST's m = e^slope past the double range is not an error in GROWTH. With const FALSE and y = e^(m·x) at x = 0.3,
+  0.4, 0.5, GROWTH at 0.4 is a number for every m up to 1400, while LOGEST's m is `#NUM!` from 709.79. In those rows
+  the slopes' factor at the new x, e^(0.4·m), never overflows. What GROWTH does when that factor itself overflows is
+  unprobed.
+- The Gate A point GROWTH s1 A104 (intercept 1289.95) is `#NUM!` by this rule.
+- Observed, not implemented: GROWTH is 0 where the slopes' factor e^(Σ m_j x_j) at the new x is subnormal, though the
+  prediction is about 1. In the Int rows above, c = 709 to 709.7827 gives 0 (factor e^(-709) or below), and c = 700
+  gives 1 (factor e^(-700), a normal double). That fits Excel forming the two factors as doubles and flushing a
+  subnormal one, but the evidence covers only const TRUE, one x and a slope sum in [-709.78, -709].
+  - The cut between -700 and -709 is not pinned.
+  - Several x (one summed factor or one factor per variable), a subnormal b with a normal slopes' factor, const FALSE,
+    and a slopes' factor that overflows are all unprobed (T-4765).
+  - The product of the two factors is one ulp off Excel on ironcalc-calc `TREND_GROWTH.xlsx` K2, K3 and K5, where the
+    single exponential is exact, so how Excel combines them between the edges is not identified.
+Evidence: probes/t4590-growth-overflow (excel-graph, 2026-11-07; Int 15 rows, Slope 8 rows). The predictions in
+docs/research/t4590 were committed before the fill. H1 (`#NUM!` only when b overflows) holds on 23 of 23 GROWTH
+cells. H2 (`#NUM!` when b or LOGEST's m overflows) fails on the 5 Slope rows past 709.79. The zeros at c = 709 to
+709.7827 were not predicted.
+Status: VERIFIED (excel-graph) for the `#NUM!` rule. The zero is an observation (UNVERIFIED as a rule, T-4765). The
+probe's least-squares digits (14 cells, 5E-14 to 3E-13 off) are T-4763's.
+Ours (T-4590): `growth_prediction` in functions/statistical/trend.rs applies the `#NUM!` rule. Int A2:A7 stay
+known failures (ours about 1, Excel 0), owned by T-4765.
+Tasks: T-4590, T-4763, T-4765
 
 ## TRIMMEAN: an error percent before data with no number (T-1742)
 Rule: TRIMMEAN returns an error-valued percent before it reports data with no number: `TRIMMEAN(Data!E11:E11,<#N/A>)`
