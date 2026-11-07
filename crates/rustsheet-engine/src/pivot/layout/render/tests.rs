@@ -18,7 +18,7 @@ use serde_json::Value as Json;
 
 use super::*;
 use crate::expressions::token::get_error_by_english_name;
-use crate::pivot::probe_cases::{address, probe_pivot, read, T4634_SHEETS};
+use crate::pivot::probe_cases::{address, probe_pivot, read, T4634_SHEETS, T4745_SHEETS};
 use crate::pivot::{compute, lay_out, MAX_PIVOT_WORK};
 
 fn rendered(table: &PivotTable, cache: &PivotCache) -> HashMap<String, PivotCell> {
@@ -203,6 +203,11 @@ fn the_layout_option_probes_cells_are_excels() {
     // (CF, MX) form and on columns (CC); the table-wide default alone fills nothing (X14, TW,
     // TWE, OW).
     check_all("t4129-pivot-layout-flags", &["X14", "X14F"]);
+    // Classic layout (gridDropZones, GZ, GC, GV, G1) and subtotalCaption (SC, SO, SB, SK, SF,
+    // SCC): pivots.md "Classic layout (gridDropZones)", "subtotalCaption labels a field's
+    // subtotal lines".
+    check_all("t4129-pivot-layout-flags", &["GZ", "SC"]);
+    check_all("t4745-pivot-classic-subtotal-caption", T4745_SHEETS);
     check_all(
         "t4698-pivot-repeat-labels",
         &[
@@ -277,6 +282,33 @@ fn the_cells_text_is_bounded() {
     );
     assert_eq!(
         render_within(&table, &cache, &result, &layout, bytes - 1),
+        Err(PivotComputeError::Limit)
+    );
+}
+
+#[test]
+fn a_subtotal_captions_item_copies_are_bounded_before_they_are_made() {
+    // Rows R (tabular, so its subtotals have lines of their own) and C, with `subtotalCaption`
+    // on R: each `?` copies the item (t4745 SQ).
+    let (cache, mut table) = crate::pivot::probe_cases::diagonal(3, true);
+    table.row_fields.push(crate::pivot::AxisField::Field(1));
+    table.column_fields.clear();
+    table.fields[1].axis = Some(crate::pivot::Axis::Row);
+    table.fields[0].outline = false;
+    table.fields[0].subtotal_caption = Some("?-?".into());
+    let mut work = MAX_PIVOT_WORK;
+    let result = compute(&table, &cache, &mut work).unwrap();
+    let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
+    let cells = render(&table, &cache, &result, &layout).unwrap();
+    let label = |text: &str| {
+        cells
+            .iter()
+            .any(|c| c.value == PivotCell::Text(text.to_string()))
+    };
+    assert!(label("0-0") && label("2-2"));
+    table.fields[0].subtotal_caption = Some("?".repeat(1_000));
+    assert_eq!(
+        render_within(&table, &cache, &result, &layout, 999),
         Err(PivotComputeError::Limit)
     );
 }

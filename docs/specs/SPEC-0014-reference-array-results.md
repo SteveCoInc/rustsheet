@@ -325,8 +325,9 @@ Where the implementation departs from the text above, or settles what it left op
   INDIRECT as the argument read ahead; one that gives no grid is put back as its reference form's result. The
   static analysis gives such a call the lookup_value's shape, so `COUNTIF(X(r),">0")` spills (t4569 A26). VSTACK's
   reference form keeps OFFSET and INDIRECT only.
-- **Order statistics.** `RefGrid::order_statistic_error` is the one scan: the first error element, else `#N/A`, when
-  any reference element is on another sheet (T-4714: the first one). LARGE and SMALL read it in their data reader (`numbers_from_ranked_arg`;
+- **Order statistics.** `RefGrid::order_statistic_error` is the one scan: `None` (the value view, `#VALUE!`) when
+  the first element is a reference on the formula's own sheet, else the first error element, else `#N/A`, when any
+  reference element is on another sheet (T-4714). LARGE and SMALL read it in their data reader (`numbers_from_ranked_arg`;
   the RANK family keeps the value view), MEDIAN through `GridReading::OrderStatistic`.
 
 ### Test plan and rollout
