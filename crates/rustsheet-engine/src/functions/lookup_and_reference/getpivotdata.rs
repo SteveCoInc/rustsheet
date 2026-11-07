@@ -123,24 +123,24 @@ impl Model {
                 };
                 (left == right && self.pivot_at(left, right) == Some(pivot)).then_some(0)
             }
-            // A caption, then a source field name, ignoring case, untrimmed (H1, H2, H10, H19). A
+            // A caption or a source field name, ignoring case, untrimmed (H1, H2, H10, H19). A
             // source name two data fields share picks the first (DF A1); `"Values"` names no data
-            // field (DF A10). Which wins when one field's caption is another's source name is
-            // unprobed: the caption does here.
+            // field (DF A10). When one field's caption is another's source name, which Excel picks
+            // is unprobed (TODO(T-4911)), so that is `#REF!`, never a guess (SPEC-0015).
             CalcResult::String(name) => {
                 let name = name.to_lowercase();
                 let fields = &table.data_fields;
-                fields
-                    .iter()
-                    .position(|d| d.caption.to_lowercase() == name)
-                    .or_else(|| {
-                        fields.iter().position(|d| {
-                            cache
-                                .fields
-                                .get(d.field as usize)
-                                .is_some_and(|f| f.name.to_lowercase() == name)
-                        })
-                    })
+                let by_caption = fields.iter().position(|d| d.caption.to_lowercase() == name);
+                let by_source = fields.iter().position(|d| {
+                    cache
+                        .fields
+                        .get(d.field as usize)
+                        .is_some_and(|f| f.name.to_lowercase() == name)
+                });
+                match (by_caption, by_source) {
+                    (Some(caption), Some(source)) if caption != source => None,
+                    (caption, source) => caption.or(source),
+                }
             }
             _ => None,
         }

@@ -189,7 +189,8 @@ refers to the list in "Excel behavior to match".
    or with several data fields is `#REF!` (DF Q!A6, A15, A17, A20); `""` is `#REF!` (unknown 8, DF
    Q!A7, A14, A16). Otherwise the first data field whose caption equals `data_field` ignoring case
    and untrimmed, else the first whose source field name does (a source name two data fields share
-   picks the first, DF Q!A1; T-4804); none is `#REF!`, `"Values"` included (DF Q!A10). Several
+   picks the first, DF Q!A1; T-4804); a caption naming one data field and a source name naming
+   another is `#REF!`, unprobed (T-4911); none is `#REF!`, `"Values"` included (DF Q!A10). Several
    data fields are answered when the Values field is on the row or column axis (unknown 1).
 3. The pairs: an odd count is `#REF!` (H15); each field name must match (ignoring case) a cache field
    on the row or column axis (H8, J3); each item must match a text item of that field ignoring case
