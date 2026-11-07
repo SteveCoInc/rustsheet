@@ -141,8 +141,9 @@ impl CouponSchedule {
         // probes/bond-extreme-coupon-yield are bit-exact in the eval (T-2733).
         let accrued = rate / frequency as f64 * (a / e) * 100.0;
 
+        // `(n - 1) + DSC/E`, not `(DSC/E + n) - 1`: financial.md "YIELD stops short", T-2788.
         let v = 1.0 + yld / frequency as f64;
-        let first_term = redemption / growth(v, dsc_over_e + n - 1.0);
+        let first_term = redemption / growth(v, n - 1.0 + dsc_over_e);
 
         let mut second_term = 0.0;
         for k in 0..(n as u32) {
