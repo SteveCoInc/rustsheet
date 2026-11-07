@@ -8046,9 +8046,12 @@ Rule (probes/t2475-stat-subexpressions, excel-graph, 2026-10-24; each from the p
   `COMBINA(-0.5,-0.0001)` is 1 (P!A35, 11eb3ab4f4f8104c A90), so number truncates toward zero, but with a number of 1 or
   more a number_chosen in (-1, 0) is `#NUM!` (`COMBINA(7,1-1.005)`, gen-m5 c688ca172fe533dc A118; `COMBINA(24,-0.0001)`,
   gen-m6 44194b2fefa30de2 A222; `COMBINA(16,SIN(..))`, `COMBINA(10,TAN(..))`, gen-m5 989a3d6036b5fef3 A210, gen-m6
-  9e6a1b733ee1e1e0 A124). Ours truncates number_chosen only when number truncates to 0 and floors it otherwise; why
-  Excel lets the n = 0 case through is UNVERIFIED (no cell has a number in (0, 1) or a number_chosen of -1 or less with
-  n = 0).
+  9e6a1b733ee1e1e0 A124). VERIFIED by probes/t2789-combina-number-chosen (excel-graph, T-2789): when number truncates
+  to 0 (any number in (-1, 1)), number_chosen truncates toward zero too, so `COMBINA(0,-0.0001)`, `COMBINA(0.5,-0.5)`,
+  `COMBINA(-0.5,-0.5)` and `COMBINA(0,-0.5)` are 1 while `COMBINA(0,-1)`, `COMBINA(0,-1.5)`, `COMBINA(0.5,-1)` and
+  `COMBINA(-0.5,-1.5)` are `#NUM!`; with number 1 or more number_chosen floors, so `COMBINA(1,-0.5)`,
+  `COMBINA(1,-0.0001)` and `COMBINA(2,-0.5)` are `#NUM!`. COMBIN has no such leniency: every negative number_chosen,
+  even -0.0001 with number 0, is `#NUM!`. `fn_combina` matches all 48 probe cells.
 - T.TEST and TTEST: a first sample that is itself an error value comes before a bad tails or type, and before the
   other arguments' errors: `T.TEST(<#VALUE!>,42,1,-1)` is `#VALUE!` (P!A58, 11eb3ab4f4f8104c A169) and
   `TTEST(<#VALUE!>,<#REF!>,2,<#REF!>)` is `#VALUE!` (P!A222, 5cebac1f02bf30f2 A311). A blank one-cell first sample does
