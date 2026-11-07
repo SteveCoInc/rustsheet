@@ -3,10 +3,10 @@ id: T-4797
 title: "IRR P!C157 of t2565-irr-guess-sweeps has no math sidecar entry though its guess is a constant cell (T-4778 follow-up)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: todo
 priority: P3
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -22,3 +22,23 @@ T-4778 gave IRR's definition an optional guess. After regeneration the sidecar `
 
 ## Out of scope
 -
+
+## Handoff
+Findings (sonnet run, no code changed):
+- The task's premise is wrong. `B157` in `t2565-irr-guess-sweeps.case.json` is the JSON *string*
+  `"2697.5242098806502"`, i.e. a **text cell** (`spec2xlsx._write` uses `write_string`;
+  `strings_to_numbers` is False). All 175 `B` guess cells are text. So `eval_math.candidates` does list
+  C157 (and every other `C` cell), each refused by `fit_arg` as "non-numeric argument"
+  (`_fit_number`); `case_math` only counts such refusals (`out.skip`), it never writes them to the sidecar,
+  and `check_case` ignores `str`-args candidates, so `math --check` passes as is.
+- The numbers quoted in the task are not the current ones. `rustsheet-eval show
+  probes/t2565-irr-guess-sweeps.case.json`: C157 expected (Excel) 7026.083663321499, engine
+  7026.0836627623075 (NumericClose); 180 of 181 cells pass.
+- Evidence of a quirk: Excel reads the *text* guess cell as a number (C157 = 7026.0836633 differs from
+  C156/A142 = 7026.0836628, which the default guess gives), while the engine ignores the text guess
+  (its C157 equals A142). This contradicts the "A text guess is #VALUE!" lines in
+  `docs/excel-semantics/financial.md` (~1839, 1869) unless those are for a literal `""` only; a
+  reference to a numeric-text cell seems to be coerced.
+Next (opus): decide whether the real defect is the engine (IRR guess from a numeric-text reference
+should coerce like Excel; probe a few text refs: "0.5", " 1", "abc", "1e-3"), record it in
+`financial.md`, and rewrite this task's goal/AC accordingly; the math sidecar needs no entry for a text guess.
