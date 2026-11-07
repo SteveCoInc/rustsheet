@@ -3,7 +3,7 @@ id: T-4928
 title: "A LET or LAMBDA omission in ISEVEN and ISODD follows Excel (probe the ToolPak #N/A rule)"
 milestone: M5
 lane: functions-logic
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -33,16 +33,28 @@ its predictions committed before the fill.
   tuned.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph) has these rows. Rule rows: `LET(e,,ISEVEN(e))`, `LET(e,,ISODD(e))`,
+- [x] A probes case (excel-probe skill, excel-graph) has these rows. Rule rows: `LET(e,,ISEVEN(e))`, `LET(e,,ISODD(e))`,
       `LAMBDA(a,b,ISEVEN(b))(1,)`, `LAMBDA(a,b,ISODD(b))(1,)`. Lift and operator rows: `LET(e,,ISEVEN(e+0))` and
       `ROWS(LET(e,,ISEVEN(IF({1;1},e))))`. Non-ToolPak controls: `LET(e,,ISNUMBER(e))`, `LET(e,,ISBLANK(e))` and
       `LET(e,,TYPE(e))`.
-- [ ] The predictions are committed in a commit before the oracle fill: `#N/A` for the four rule rows, and today's
+- [x] The predictions are committed in a commit before the oracle fill: `#N/A` for the four rule rows, and today's
       answers for the rest.
-- [ ] After the fill every probe cell passes. information.md gets an entry stating the rule with its cells, or, if
+- [x] After the fill every probe cell passes. information.md gets an entry stating the rule with its cells, or, if
       Excel reads the omission as 0, saying so (then no engine change is made).
-- [ ] No new F line in any eval/baseline file; `make check` green; reviewers approve.
+- [x] No new F line in any eval/baseline file; `make check` green; reviewers approve.
 
 ## Out of scope
 - SQRTPI and FACTDOUBLE (functions-math, T-4923).
 - Empty text as an ISEVEN/ISODD argument (T-2872).
+
+## Outcome
+- **Finding:** ISEVEN and ISODD follow the ToolPak rule. A LET value or LAMBDA parameter bound to nothing gives
+  `#N/A`. An operator over it, or a blank cell, reads as 0. The non-ToolPak controls ISNUMBER, ISBLANK and TYPE read
+  the omission as a blank.
+- **Evidence:** probes/t4928-iseven-isodd-omitted, 12 cells, filled on excel-graph on 2026-11-07. The predictions were
+  committed in f5cb4ce33, before the fill: H_na matched 12/12 and H_zero (the engine before this change) 8/12. Nothing
+  is fitted.
+- **Code:** `lifted_parity` now swaps an empty argument through `written_empty_or`, using the flag from
+  `Model::empty_arguments::<1>`. Unit test: test/test_iseven_isodd_omitted.rs.
+- **Docs:** new information.md entry "ISEVEN and ISODD of a LET or LAMBDA omission are #N/A (T-4928)".
+- **Eval:** one new case, 12/12.
