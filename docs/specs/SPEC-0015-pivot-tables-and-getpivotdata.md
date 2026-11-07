@@ -199,7 +199,7 @@ refers to the list in "Excel behavior to match".
    twice is `#REF!`, with different items (H17) or the same (unknown 5). With several data fields
    the Values field is a pair field by its `dataCaption` (`Values`), ignoring case, whose only
    item is the chosen data field's caption; any other item is `#REF!` (DF Q!A8, A9, A11). UNVERIFIED
-   (T-4911): the pair field's name taken from a custom `dataCaption` rather than `Values`, the item
+   (T-4911): the pair field's name taken from a custom `dataCaption` rather than `Values`, the name and the item
    matched ignoring case, and a `Values` name that collides with a cache field name. A pivot with two fields on
    an axis answers only with no pairs, its grand total (calipers formula_stress_test, T-2662); any
    pair there is `#REF!` (unknown 10). UNVERIFIED (T-4911): a pivot with several data fields whose
