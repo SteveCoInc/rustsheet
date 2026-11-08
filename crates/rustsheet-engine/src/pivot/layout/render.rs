@@ -205,9 +205,18 @@ fn item_format(
 /// `numFmtId` labels its subtotals (`7.00 Total`, probes/t4717-pivot-cell-formats L1!A5) and its
 /// `PivotChart` categories ([`chart`](super::chart)).
 pub(crate) fn item_text_in(item: &CacheItem, id: u32, num_fmts: &[NumFmt]) -> String {
+    item_text_as(item, CellFormat::Id(id), num_fmts)
+}
+
+/// An item's label as text in `format` (en-US): a number or date item formatted, any other item
+/// as [`item_text`].
+fn item_text_as(item: &CacheItem, format: CellFormat, num_fmts: &[NumFmt]) -> String {
     match item {
         CacheItem::Number(value) | CacheItem::Date(value) => {
-            let code = get_num_fmt(i32::try_from(id).unwrap_or(0), num_fmts);
+            let code = match format {
+                CellFormat::Id(id) => get_num_fmt(i32::try_from(id).unwrap_or(0), num_fmts),
+                CellFormat::Code(code) => code.to_string(),
+            };
             format_number(*value, &code, LABEL_LOCALE).text
         }
         other => item_text(other),
@@ -313,10 +322,6 @@ impl Cells<'_> {
             .map(|f| f.name.as_str())
     }
 
-    fn cache_item(&self, field: u32, item: u32) -> Option<&CacheItem> {
-        self.cache_field_item(field, item).map(|(_, item)| item)
-    }
-
     /// Cache field `field` and its item `item`.
     fn cache_field_item(&self, field: u32, item: u32) -> Option<(&CacheField, &CacheItem)> {
         let field = self.cache.fields.get(field as usize)?;
@@ -351,14 +356,22 @@ impl Cells<'_> {
     }
 
     /// The item a subtotal `line` of `axis` totals, as text: in its pivot field's `numFmtId` when
-    /// it has one (probes/t4717-pivot-cell-formats L1!A5 `7.00 Total`), else as [`item_text`].
+    /// it has one (probes/t4717-pivot-cell-formats L1!A5 `7.00 Total`); a date item in the format
+    /// its label cell shows ([`item_format`]: `3/31/2024 Total`, `12/30/1900 18:00 Total`,
+    /// `2/29/1900 Sum`, gen-pivot 462f10551d480f9d, 36996978427905b2, ec473260bb2065b3; T-5059);
+    /// else as [`item_text`].
     fn line_item(&self, axis: &Axis<'_>, line: &AxisLine) -> Option<String> {
         match axis.levels.get(line_depth(line)?)? {
             Level::Field { depth: d, field } => {
                 let (field_index, item) = axis.item(line.node, *d)?;
-                let item = self.cache_item(field_index, item)?;
-                Some(match field.and_then(|f| f.number_format) {
-                    Some(id) => item_text_in(item, id, self.num_fmts),
+                let (cache_field, item) = self.cache_field_item(field_index, item)?;
+                let format = match (field.and_then(|f| f.number_format), item) {
+                    (Some(id), _) => Some(CellFormat::Id(id)),
+                    (None, CacheItem::Date(_)) => item_format(*field, cache_field, item),
+                    (None, _) => None,
+                };
+                Some(match format {
+                    Some(format) => item_text_as(item, format, self.num_fmts),
                     None => item_text(item),
                 })
             }

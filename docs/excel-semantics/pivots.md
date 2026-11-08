@@ -280,9 +280,17 @@ Rule:
   (pivot-export/t4177-cache-dates-1904-refresh P!A4, excel-graph, 2026-11-07; serials 1 to 1462 of the same pivot show
   `1/2/1904` ... `1/2/1908`). VERIFIED for that cell only; the engine still shows `1/1/1904` there (T-4943). Without
   `refreshOnLoad` (t4177-cache-dates-1904 P!A4) Excel keeps the label cell's exported format and shows `1/1/1904`.
-  UNVERIFIED (owner T-5049): a 1900-system item below 1, a time part with seconds (taken as `h:mm`), and a date
-  item's subtotal label (`<item> Total`), which keeps its earlier rendering; a selected date page item, which the
-  engine shows as an axis date item since T-4717.
+  UNVERIFIED (owner T-5049): a 1900-system item below 1 and a time part with seconds (taken as `h:mm`); a selected
+  date page item, which the engine shows as an axis date item since T-4717.
+- **Date subtotal labels.** A date item's subtotal label shows the item as its label cell does, not its serial:
+  `3/31/2024 Total`, `12/30/1900 18:00 Total`, `12/31/2099 23:59 Total` (a ` h:mm` for a time part), the 1900 leap
+  day `2/29/1900 Sum`, serial 1462 as `1/1/1904 Total` (the 1900 system), and the same for a custom subtotal's
+  `<item> <Function>` (`12/31/2022 Count`, `12/31/2099 Average`). Evidence: gen-pivot
+  462f10551d480f9d P04!M38:M79, 36996978427905b2 P02!L35, L40, L45, ec473260bb2065b3 P09 row 7, a6d74990f3ae755e
+  P04 row 7, ca5c8fa99c13d747 P05!Q6, S6, 2251b0f5e5a256e1 P04!Q6, T6, W6 (excel-graph; 40 cells). A pivot field
+  `numFmtId` still wins (`7.00 Total`, "A refresh gives pivot cells their fields' number formats"). A time part
+  that rounds to the next day at the second shows without its time (36996978427905b2 P02!L29 `4/1/2024 Total`
+  over 45382.99999999; T-4917 owns the rounding). Ours since T-5059 (`Cells::line_item`, reusing `item_format`).
   The saved cache field (`containsMixedTypes="1"`, count 6) carries `minDate="2024-01-01T00:00:00"` but
   `maxDate="1900-01-01T12:51:04"`, below its own minDate; nothing reads these attributes, so the quirk is recorded only.
 - **Saved order.** In the saved cache Excel lists the shared items in source order first and the
