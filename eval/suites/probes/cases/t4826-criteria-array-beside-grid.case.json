@@ -1,0 +1,39 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4826: the element values of a criteria call over a per-element XLOOKUP grid beside a criteria array, with room to spill (probes/t4742 A40 is blocked). Data as t4742: A1:A3=1,2,3; B1:B3=10,20,30. A1 COUNTIF 2x1 grid x 1x2 criteria; A5 SUMIF; A9 a 2x1 criteria array beside the 2x1 grid; A13 COUNTIFS; E1:E3 INDEX, ROWS and COLUMNS.",
+ "tags": [
+  "probe",
+  "countif",
+  "xlookup",
+  "T-4826",
+  "M6"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": 1,
+    "A2": 2,
+    "A3": 3,
+    "B1": 10,
+    "B2": 20,
+    "B3": 30,
+    "G1": 50,
+    "G2": 60
+   }
+  },
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=COUNTIF(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"),{\">0\",\">5\"})",
+    "A5": "=SUMIF(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"),{\">0\",\">25\"})",
+    "A9": "=COUNTIF(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"),{\">0\";\">5\"})",
+    "A13": "=COUNTIFS(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"),{\">0\",\">25\"})",
+    "E1": "=INDEX(COUNTIF(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"),{\">0\",\">5\"}),2,2)",
+    "E2": "=ROWS(COUNTIF(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"),{\">0\",\">5\"}))&\"x\"&COLUMNS(COUNTIF(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"),{\">0\",\">5\"}))",
+    "E3": "=ROWS(COUNTIF(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"),{\">0\";\">5\"}))&\"x\"&COLUMNS(COUNTIF(XLOOKUP({2;9},Data!$A$1:$A$3,Data!$B$1:$B$3,\"x\"),{\">0\";\">5\"}))"
+   }
+  }
+ ],
+ "expected": {}
+}

@@ -43,3 +43,5 @@ GETPIVOTDATA answers a calculated data field by its name or its caption, as Exce
   10,262); 0 regressions in the cell suites. Locally the roundtrip-calipers check reported
   pivot_named_range (two files) and two pv26 timeouts; neither workbook has a calculated field or
   a GETPIVOTDATA, so CI's run decides them.
+- Later (T-4154, the M6 probe-cell PR): GETPIVOTDATA reads the pivot's `PivotResult`, whose calculated values are the
+  render's own, so `calculated_answer` was removed; LY Q!G1:G3 still pass.

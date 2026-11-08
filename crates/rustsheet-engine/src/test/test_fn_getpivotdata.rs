@@ -234,10 +234,11 @@ fn unknown_items_fields_repeats_and_odd_pairs_are_ref() {
         ), // H17
         (
             r#"=GETPIVOTDATA("Sales",$A$3,"Region","East","Region","East")"#,
-            "#REF!",
-        ), // SPEC-0015 unknown 5
+            "22",
+        ), // the same field twice with the same item: probes/t2085-getpivotdata-items Q!E1
         (r#"=GETPIVOTDATA("Sales",$A$3,"Region")"#, "#REF!"), // H15
-        // Numbers and booleans as items, and errors in a pair: SPEC-0015 unknown 3, unprobed.
+        // A number or boolean names no text item (t2085-getpivotdata-items Q!A7, C4); an error
+        // item is `#REF!` (Q!E4, E5).
         (r#"=GETPIVOTDATA("Sales",$A$3,"Region",1)"#, "#REF!"),
         (r#"=GETPIVOTDATA("Sales",$A$3,"Region",TRUE)"#, "#REF!"),
         (r#"=GETPIVOTDATA("Sales",$A$3,"Region",NA())"#, "#REF!"),
@@ -284,13 +285,25 @@ fn an_array_of_items_lifts_and_spills() {
         r#"=GETPIVOTDATA("Sales",$A$3,"Product",{"A","B","C"})"#,
     );
     model.set_a1("L8", r#"=GETPIVOTDATA("Sales",$A$3,{"Region"},"East")"#);
+    // An array data_field or field name lifts too, a 1x1 one included (probes/
+    // t2085-getpivotdata-items Q!E9:F10; before T-2085 an array field name was SPEC-0015
+    // unknown 7, `#REF!`).
+    model.set_a1("L10", r#"=GETPIVOTDATA({"Sales","Units"},$A$3)"#);
+    model.set_a1(
+        "L12",
+        r#"=GETPIVOTDATA("Sales",$A$3,{"Region","Product"},"A")"#,
+    );
     model.evaluate();
-    let texts: Vec<String> = ["L1", "L2", "L5", "M5", "N5", "L8"]
-        .iter()
-        .map(|cell| model.get_text_a1(cell))
-        .collect();
-    // An array field name is one `#REF!` (SPEC-0015 unknown 7).
-    assert_eq!(texts, ["22", "27", "34", "12", "3", "#REF!"]);
+    let texts: Vec<String> = [
+        "L1", "L2", "L5", "M5", "N5", "L8", "L10", "M10", "L12", "M12",
+    ]
+    .iter()
+    .map(|cell| model.get_text_a1(cell))
+    .collect();
+    assert_eq!(
+        texts,
+        ["22", "27", "34", "12", "3", "22", "49", "#REF!", "#REF!", "34"]
+    );
 }
 
 /// The aggregate over the East records (10, 5, 3, 4) of a Region-rows pivot.
@@ -345,8 +358,10 @@ fn every_aggregate_with_no_records_is_zero() {
 }
 
 #[test]
-fn a_record_without_a_number_in_the_data_field_is_ref() {
-    // SPEC-0015 unknown 6: only the call whose records hold the text is `#REF!`.
+fn a_text_or_blank_record_is_skipped_by_sum() {
+    // probes/t2085-getpivotdata-items Q!E13, E15: a Sum ignores a text and a blank record; over
+    // only such records it shows blank, which GETPIVOTDATA answers as 0 (as an empty
+    // intersection, DF B6:J6).
     let mut model = model();
     model.workbook.pivot_caches = vec![cache_of(&[
         ("East", "A", CacheItem::Number(1.0)),
@@ -361,7 +376,7 @@ fn a_record_without_a_number_in_the_data_field_is_ref() {
         .iter()
         .map(|c| model.get_text_a1(c))
         .collect();
-    assert_eq!(texts, ["1", "#REF!", "#REF!"]);
+    assert_eq!(texts, ["1", "0", "0"]);
 }
 
 #[test]
@@ -377,29 +392,31 @@ fn a_non_finite_result_is_num() {
 }
 
 #[test]
-fn unprobed_pivot_shapes_are_ref() {
-    // SPEC-0015 unknowns 1 (several data fields) and 4 (page fields, hidden items), and a
-    // malformed cache index.
+fn pivot_shapes_answer_what_the_pivot_shows() {
+    // Several data fields with no Values field on an axis, and a malformed cache index, are
+    // `#REF!`; a page field at (All) is the whole grand total, and a hidden item leaves the
+    // totals (probes/t2085-getpivotdata-layouts Q!A7, A9: the West records hidden leave East).
     type Change = fn(&mut PivotTable);
-    let changes: [Change; 4] = [
-        |p| p.data_fields.push(p.data_fields[0].clone()),
-        |p| p.fields[2].axis = Some(Axis::Page),
-        |p| p.fields[0].hide(1),
-        |p| p.cache = 7,
+    let changes: [(Change, &str); 4] = [
+        (|p| p.data_fields.push(p.data_fields[0].clone()), "#REF!"),
+        (|p| p.fields[2].axis = Some(Axis::Page), "49"),
+        (|p| p.fields[0].hide(1), "22"),
+        (|p| p.cache = 7, "#REF!"),
     ];
-    for change in changes {
+    for (change, expected) in changes {
         let mut model = model();
         change(&mut model.workbook.pivot_tables[0]);
         model.set_a1("H1", r#"=GETPIVOTDATA("Sales",$A$3)"#);
         model.evaluate();
-        assert_eq!(model.get_text_a1("H1"), "#REF!");
+        assert_eq!(model.get_text_a1("H1"), expected);
     }
 }
 
 #[test]
-fn two_fields_on_an_axis_answer_only_the_grand_total() {
+fn two_fields_on_an_axis_answer_their_lines() {
     // calipers formula_stress_test Database!B16 (two row and two column fields) is the grand
-    // total; a pair is SPEC-0015 unknown 10.
+    // total; an outer item is its subtotal and both pairs the inner line
+    // (probes/t2085-getpivotdata-layouts Q!B1:D5).
     let mut model = model();
     let table = &mut model.workbook.pivot_tables[0];
     table.fields[1].axis = Some(Axis::Row);
@@ -413,8 +430,8 @@ fn two_fields_on_an_axis_answer_only_the_grand_total() {
     );
     model.evaluate();
     assert_eq!(model.get_text_a1("H1"), "49");
-    assert_eq!(model.get_text_a1("H2"), "#REF!");
-    assert_eq!(model.get_text_a1("H3"), "#REF!");
+    assert_eq!(model.get_text_a1("H2"), "22");
+    assert_eq!(model.get_text_a1("H3"), "14");
 }
 
 #[test]

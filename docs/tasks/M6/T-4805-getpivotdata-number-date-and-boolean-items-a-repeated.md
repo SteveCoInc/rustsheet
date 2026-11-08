@@ -3,7 +3,7 @@ id: T-4805
 title: "GETPIVOTDATA: number, date and boolean items, a repeated field, text, blank and error records, error arguments, array data_field and field name (T-2085 evidence)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P3
 size: M
 tier: opus
@@ -28,9 +28,12 @@ the pivot's grand total is the same `#N/A` that the engine passes through. An er
 passes: T-4823 implemented web.md "GETPIVOTDATA error arguments (T-4006)", which agrees with this probe.
 
 ## Acceptance criteria
-- [ ] The cells above pass, and no other case regresses (`make eval-baseline`).
-- [ ] SPEC-0015's resolution rules and web.md's "Ours" line say what the engine now does.
-- [ ] `make check` green; reviewers approve.
+- [x] The cells above pass, and no other case regresses (`make eval-baseline`).
+- [x] SPEC-0015's resolution rules and web.md's "Ours" line say what the engine now does.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The shown text of date items in the pivot itself (T-4807).
+
+## Outcome
+Done in the M6 probe-cell PR with T-4154 (owner's one-PR-per-milestone request): GETPIVOTDATA reads the pivot's `PivotResult` (`pivot_index.rs`, `getpivotdata.rs`). Number, date and boolean items match by value or by their shown label (`pivot::item_label`), a repeated field with one item answers, text and blank records are skipped by Sum and an error record is the error, an error cell of a pivot picks it, and an array data_field or field name lifts (static analysis lifts every argument but pivot_table). Every owned cell passes; probes/t2085-getpivotdata-items passes whole.

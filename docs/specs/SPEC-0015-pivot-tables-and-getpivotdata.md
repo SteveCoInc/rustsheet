@@ -54,8 +54,9 @@ t2085-getpivotdata-data-fields, -items and -layouts). Not probed are an array `p
 items (in 14: Excel for the web refuses the file), calculated items (refused too) and a cache saved without records
 (in 12: the case builder cannot write one). Which pivot a reference overlapping two pivots picks (in 9) is not established: one committed fill
 answered from the top-left pivot and an uncommitted later one from the other, so the engine keeps `#REF!`. T-4804
-implements unknowns 1, 2, 8, 15 and 16 (the resolution rules below). Until T-4805 and T-4806 implement the rest, T-2083 answers `#REF!` for each (or keeps today's T-1703 behavior where one exists), never a
-guessed value:
+implements unknowns 1, 2, 8, 15 and 16 (the resolution rules below); T-4154 implements the rest that T-2085 probed by
+reading the pivot's `PivotResult` (web.md "GETPIVOTDATA against a pivot table"). What stays unprobed answers `#REF!`
+(or keeps T-1703's behavior where one exists), never a guessed value:
 1. several data fields: the `"Values"` field, what a blank `data_field` picks, and a source name
    shared by two data fields (Sum and Count of Sales);
 2. an empty intersection of CountNums, Product, Var, VarP, StdDev and StdDevP (Sum, Count, Average, Max and Min are 0, T-2404);

@@ -36,6 +36,10 @@ pub(crate) enum ElementCost {
     Cells(u64),
 }
 
+/// A criteria array that broadcasts with the grids of a per-element call: its argument position
+/// and its values ([`PerElement::broadcasts_criteria`]).
+type CriteriaGrid = (usize, Vec<Vec<ArrayNode>>);
+
 /// A consumer that calls itself once per element of an array of references (SPEC-0014 rule 6):
 /// which of its arguments take a reference, and what an element costs.
 #[derive(Clone, Copy)]
@@ -43,6 +47,10 @@ pub(crate) struct PerElement {
     /// Whether the argument at this position takes a reference.
     pub(crate) takes_reference: fn(usize) -> bool,
     cost: ElementCost,
+    /// Whether an array of values in a criteria position broadcasts with the grids instead of
+    /// being handed to every element whole: the criteria functions
+    /// (probes/t4742-countif-array-range-arg A40:C40, T-4826).
+    pub(crate) broadcasts_criteria: bool,
 }
 
 impl Function {
@@ -79,9 +87,21 @@ impl Function {
             }
             _ => return None,
         };
+        let broadcasts_criteria = matches!(
+            self,
+            Function::Countif
+                | Function::Countifs
+                | Function::Sumif
+                | Function::Sumifs
+                | Function::Averageif
+                | Function::Averageifs
+                | Function::Maxifs
+                | Function::Minifs
+        );
         Some(PerElement {
             takes_reference,
             cost,
+            broadcasts_criteria,
         })
     }
 }
@@ -334,13 +354,6 @@ impl Model {
         if grids.is_empty() {
             return implementation(self, &resolved, cell);
         }
-        let (rows, columns) = grids.iter().fold((1, 1), |(rows, columns), (_, grid)| {
-            let (r, c) = grid.dims();
-            (rows.max(r), columns.max(c))
-        });
-        if let Some((error, message)) = check_array_size(rows, columns) {
-            return CalcResult::new_error(error, cell, message);
-        }
         let walks = match per_element.cost {
             ElementCost::Unit => 0,
             ElementCost::Cells(walks) => walks,
@@ -366,6 +379,41 @@ impl Model {
                 cells
             };
             shared = shared.saturating_add(reads);
+        }
+        // A criteria array beside the grids broadcasts with them, each element taking its own
+        // criterion: `COUNTIF(XLOOKUP({2;9},..,"x"),{">0",">5"})` is 2x2 (probes/
+        // t4742-countif-array-range-arg A40:C40, T-4826; the element values are unprobed, as the
+        // probe's spill is blocked).
+        let values: Vec<CriteriaGrid> = if per_element.broadcasts_criteria {
+            element_args
+                .iter()
+                .enumerate()
+                .filter(|(index, _)| !(per_element.takes_reference)(*index))
+                .filter_map(|(index, arg)| match arg {
+                    Node::ArrayKind(rows)
+                        if rows.len() > 1 || rows.first().is_some_and(|r| r.len() > 1) =>
+                    {
+                        Some((index, rows.clone()))
+                    }
+                    _ => None,
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let (rows, columns) = grids
+            .iter()
+            .map(|(_, grid)| grid.dims())
+            .chain(
+                values
+                    .iter()
+                    .map(|(_, rows)| (rows.len(), rows.first().map_or(0, Vec::len))),
+            )
+            .fold((1, 1), |(rows, columns), (r, c)| {
+                (rows.max(r), columns.max(c))
+            });
+        if let Some((error, message)) = check_array_size(rows, columns) {
+            return CalcResult::new_error(error, cell, message);
         }
         let mut visits: u64 = 0;
         for row in 0..rows {
@@ -395,7 +443,7 @@ impl Model {
             for column in 0..columns {
                 output_row.push(self.call_on_element(
                     &mut element_args,
-                    &grids,
+                    (&grids, &values),
                     (row, column),
                     cell,
                     implementation,
@@ -410,11 +458,22 @@ impl Model {
     fn call_on_element(
         &mut self,
         element_args: &mut [Node],
-        grids: &[(usize, RefGrid)],
+        (grids, values): (&[(usize, RefGrid)], &[CriteriaGrid]),
         (row, column): (usize, usize),
         cell: CellReferenceIndex,
         implementation: Implementation,
     ) -> ArrayNode {
+        for (index, array) in values {
+            let at = |i: usize, n: usize| if n == 1 { 0 } else { i };
+            let element = array
+                .get(at(row, array.len()))
+                .and_then(|r| r.get(at(column, r.len())));
+            let (Some(element), Some(slot)) = (element, element_args.get_mut(*index)) else {
+                return ArrayNode::Error(Error::NA);
+            };
+            *slot = value_node(&array_node_to_calc_result(element, cell))
+                .unwrap_or(Node::ErrorKind(Error::VALUE));
+        }
         for (index, grid) in grids {
             let (Some(element), Some(slot)) = (
                 broadcast_element(grid, row, column),

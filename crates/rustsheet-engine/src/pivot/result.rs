@@ -456,7 +456,7 @@ fn filter(
 
 /// The cache item page field `page` selects, if any. An item index past the field's items, or
 /// naming a line that is no data item, selects none, as `(All)` does (UNVERIFIED, T-4633).
-pub(super) fn page_selection(table: &PivotTable, page: &PageField) -> Option<u32> {
+pub(crate) fn page_selection(table: &PivotTable, page: &PageField) -> Option<u32> {
     table
         .fields
         .get(page.field as usize)

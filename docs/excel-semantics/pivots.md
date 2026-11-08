@@ -2690,8 +2690,7 @@ anchor (S!$A$1:$D$10), gives `#REF!` too. The control pivot N, unblocked, gives 
 Evidence: probes/t4130-pivot-spill-getpivotdata Q!A1:B8 (excel-graph, 2026-11-07, T-4130): S holds the constant
 `blocker` at B5 inside its pivot's layout.
 Status: VERIFIED (excel-graph). When the pivot recovers (the blocker removed and a refresh) is not probed. The engine
-is T-4154: it gives `#SPILL!` for the grand total (by either name) and for the unknown item, and 27 for the range
-reference; the named item (`#SPILL!`) and the non-anchor cell (`#REF!`) already agree.
+matches every cell (T-4154: `getpivotdata.rs` `pivot_collapsed`).
 
 ## Classic layout (gridDropZones)
 Rule: `gridDropZones="1"` (classic layout), on a tabular pivot with row fields and one data field

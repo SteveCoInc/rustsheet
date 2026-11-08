@@ -214,6 +214,27 @@ pub(crate) fn item_text_in(item: &CacheItem, id: u32, num_fmts: &[NumFmt]) -> St
     }
 }
 
+/// The text an item's label cell shows: the item in [`item_format`] (en-US), so a date item reads
+/// `1/1/2024`, a number `2.5` and a boolean `TRUE`. GETPIVOTDATA matches a text item argument
+/// against it (docs/excel-semantics/web.md "GETPIVOTDATA on other pivot shapes (T-2085)", "Number,
+/// date and boolean items": IT Q!A2, A4, A9, B3, C2, C5 match; `"2024-01-01"` and `"45292"`
+/// do not, B4, B6).
+pub(crate) fn item_label(
+    pivot: Option<&PivotField>,
+    field: &CacheField,
+    item: &CacheItem,
+    num_fmts: &[NumFmt],
+) -> String {
+    let (CacheItem::Number(value) | CacheItem::Date(value)) = item else {
+        return item_text(item);
+    };
+    match item_format(pivot, field, item) {
+        Some(CellFormat::Id(id)) => item_text_in(item, id, num_fmts),
+        Some(CellFormat::Code(code)) => format_number(*value, code, LABEL_LOCALE).text,
+        None => item_text(item),
+    }
+}
+
 /// An item's label as text, for a subtotal's `<item> Total` and a caption filter
 /// (`pivot::filter`).
 pub(crate) fn item_text(item: &CacheItem) -> String {
