@@ -166,6 +166,7 @@ probes/t4323-fraction-sweep-3.case.json	1
 probes/t4323-fraction-ties.case.json	1
 probes/t4333-count-ulp-scan.case.json	6
 probes/t4389-confirm.case.json	11
+probes/t4419-band-flip.case.json	10
 probes/t4579-ttest-paired.case.json	45
 probes/t4618-order-after-active-backward.case.json	1
 probes/t4625-gamma-dist-ratio-overflow.case.json	4

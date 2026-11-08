@@ -21,7 +21,8 @@ that band the 2^-72-day offset of T-4389 is exactly half an ulp of the serial.
 - In [2^-19, 2^-18) the addition is half an ulp, and the double addition rounds it to even, so only serials with an
   odd last mantissa bit move up. probes/t4389-confirm A1:A40 holds 40 band cells where that rule and "no offset"
   disagree. Excel follows the round-to-even addition in 29 of them and not in 11.
-- Visibly-off cells this task owns: probes/t4389-confirm A4, A6, A9, A14:A19, A31, A36.
+- Visibly-off cells this task owns: probes/t4389-confirm A4, A6, A9, A14:A19, A31, A36; probes/t4419-band-flip F5,
+  F11, G12, H1, H7, H9, H10, H12, H13, I12.
 - The misses all sit at k >= 0.2575 s, but several k in the same range match, so the band edge alone does not
   explain them. Possible lines of attack: the half step's own rounding, an x87 intermediate, or a constant slightly
   different from 2^-72 (T-4389's window is 1.74E-17 to 1.86E-17 s). Probe the band more densely before fitting
@@ -34,3 +35,19 @@ that band the 2^-72-day offset of T-4389 is exactly half an ulp of the serial.
 
 ## Out of scope
 - Serials below 2^-19 days (T-4389).
+
+## Progress (2026-11-08, second pass)
+- New evidence: probes/t4419-band-flip (excel-graph, 169 cells). It covers 13 ties t/86400000 + n*2^-71, with t from 179.5
+  to 327.5 ms and n from -20 to -8, under `s.000`. For every tie Excel's answer switches once, at n = -11 to -15, so
+  the decision is a threshold. The engine gets 159 of 169.
+- docs/research/t4419/chains.py: the best chains of doubles, each with 15-digit rounding of the milliseconds and then
+  half up, score 166 of 169: `(x*86400)*1000` and `((x*24)*60)*60*1000`. They miss disjoint ties (255.5, 316.5 and
+  320.5 against 258.5, 266.5 and 291.5). Not every grouping of 24, 60, 60 and 1000 was tried. Those that were, with
+  15-digit rounding after any subset of steps, did no better. Neither did a half step in days, with or without 2^-72,
+  followed by a cut; their best was 161.
+- `windows()` prints the error each tie needs in its computed seconds, in units of 5e-16 s, for the 15-digit
+  half-unit threshold to hold. Below 0.25 s the needed error is near 0. Just above 0.25 s it turns positive (253.5 and
+  255.5: up to +0.15), then negative (258.5 to 266.5, and 320.5 at -0.17). That is about one ulp of the seconds,
+  2^-54 s or 2^-53 s, either side. So the pattern follows the binade of the seconds at 0.25 s. Next: arithmetic whose
+  rounding changes at that binade, such as seconds formed as hours*3600 or from a split at 0.25, or a 2-step product
+  with an intermediate in [0.125, 0.5).
