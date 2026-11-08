@@ -17,7 +17,9 @@
   - Pivot tables are a Phase 2 milestone since decision 0354, so these cells count toward no Phase 1 exit row.
 - **Decision:**
   1. The implementing PR runs `rustsheet-eval update-baseline --allow-regressions` once, and the baseline diff may add
-     F lines for exactly the eight cells above and no other cell; reviewers check the diff line by line.
+     F lines for exactly the eight cells above and no other cell; reviewers check the diff line by line. The same run raises
+     t4177-date-flags-needed's line in eval/baseline/visible-parity.txt by exactly eight (125 to 133), and this record
+     allows that rise.
   2. T-4941 owns the eight cells: when its fix drops the grouping as Excel does, they pass again.
   3. No special case keeps the old `#REF!` for these pivots: GETPIVOTDATA follows the render everywhere.
 - **Consequences:**
