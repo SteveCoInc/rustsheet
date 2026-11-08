@@ -320,10 +320,17 @@ impl Model {
             .chunks_exact(2)
             .map(|pair| matches!(pair[1], Node::EmptyArgKind))
             .collect();
+        // An array data_field or field name lifts; a range there does not, and names nothing
+        // (`#REF!`, gen-m6 16b67941f34e0346 A40, A43). A range of items lifts (L1, L5).
+        let unlifted = |value: CalcResult| match value {
+            CalcResult::Range { .. } => no_answer(cell),
+            value => value,
+        };
         let mut args = Vec::with_capacity(pairs.len() + 1);
-        args.push(data_field);
+        args.push(unlifted(data_field));
         for pair in pairs.chunks_exact(2) {
-            args.push(self.evaluate_node_in_context(&pair[0], cell));
+            let field = self.evaluate_node_in_context(&pair[0], cell);
+            args.push(unlifted(field));
             args.push(self.evaluate_node_in_context(&pair[1], cell));
         }
         Some(self.lift_values(
