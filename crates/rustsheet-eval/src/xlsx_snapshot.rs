@@ -14,8 +14,10 @@ use serde::{Deserialize, Serialize};
 
 mod pivots;
 mod tables;
-use pivots::read_sheet_pivots;
-pub use pivots::{PivotCacheField, PivotDef, PivotLine};
+use pivots::{read_sheet_pivots, read_slicer_caches};
+pub use pivots::{
+    PivotCacheField, PivotDef, PivotLine, PivotSharedItem, PivotSlicer, SlicerShape, XmlElement,
+};
 use tables::read_sheet_tables;
 pub use tables::TableDef;
 
@@ -303,6 +305,11 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
     let mut sheets = Vec::new();
     let mut tables = Vec::new();
     let mut pivot_reader = pivots::PivotReader::new();
+    // Each sheet's `sheetId`, which a slicer or timeline cache names its pivots' sheets by.
+    let sheet_ids: Vec<(String, Option<String>)> = sheet_list
+        .iter()
+        .map(|s| (s.name.clone(), s.sheet_id.clone()))
+        .collect();
     for SheetRef { name, rid, .. } in sheet_list {
         let Some(target) = rels.get(&rid) else {
             continue;
@@ -321,6 +328,7 @@ pub fn read_snapshot(bytes: &[u8]) -> Result<WorkbookSnapshot, SnapshotError> {
         read_sheet_pivots(&mut zip, &path, &name, &mut pivot_reader)?;
         sheets.push(SheetSnapshot { name, cells });
     }
+    read_slicer_caches(&mut zip, &sheet_ids, &mut pivot_reader)?;
     Ok(WorkbookSnapshot {
         application,
         app_version,

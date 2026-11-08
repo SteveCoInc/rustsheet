@@ -29,9 +29,7 @@ fn def(location: &str, pages: u32) -> PivotDef {
         first_data_col: 1,
         row_page_count: pages,
         col_page_count: u32::from(pages > 0),
-        row_items: Vec::new(),
-        col_items: Vec::new(),
-        cache_fields: Vec::new(),
+        ..PivotDef::default()
     }
 }
 

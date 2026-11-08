@@ -3,7 +3,7 @@ id: T-4956
 title: "Record pivotField items, pivot filters and slicer and timeline caches in the oracle sidecar snapshot"
 milestone: M16
 lane: harness
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -28,10 +28,24 @@ downloads.
   re-reads cached downloads) and move the claims in pivots.md to VERIFIED or correct them.
 
 ## Acceptance criteria
-- [ ] The sidecar `pivots` section records each pivotField's items (with `h`, `m`, `s`, `x`), each pivot filter
+- [x] The sidecar `pivots` section records each pivotField's items (with `h`, `m`, `s`, `x`), each pivot filter
   (type, field, values, extensions), each group item's type, and the slicer and timeline caches and parts.
-- [ ] The four t4767 probes are refilled and the pivots.md "Capability matrix 3" save claims cite them.
-- [ ] `make check` green; reviewers approve.
+- [x] The four t4767 probes are refilled and the pivots.md "Capability matrix 3" save claims cite them.
+- [ ] `make check` green; reviewers approve. (`make check-fast` green locally.)
 
 ## Out of scope
 - Writing slicers or timelines on export (T-4188).
+
+## Outcome
+The snapshot (crates/rustsheet-eval/src/xlsx_snapshot/pivots.rs, pivots/xml_tree.rs, pivots/slicers.rs) now keeps,
+per pivot: `pivot_fields` and `filters` (each element as written, a bounded `XmlElement` tree), `cache_extensions`
+(the cache definition's `<ext>`s), `slicers` and `timelines` (each cache that names the pivot, with the
+`<slicer>`/`<timeline>` shapes naming it), and per cache field `group_items_written` (element, `v`, other
+attributes); shared items keep their other attributes too. All additive: old sidecars still read. Bounds: the
+workbook budget pays for every kept element and copy, trees stop at depth 32, cache and shape relationships at
+`MAX_PIVOTS`. The four t4767 probes were refilled live (excel-graph, 2026-11-08: the cached downloads were not in
+this checkout; the inputs' sha256 and every value are unchanged). Every save claim of pivots.md "Capability matrix 3"
+is VERIFIED from the sidecars, with corrections: slicer items follow the `tabular` sort order (SM descending: West,
+North, East), `xr10:uid` is on the shapes too, and the save also drops `slicerData="0"`, clears the pivot's own
+`h="1"` on a selected item, and adds `<items>` on the timeline's date field and an `xlpdsc:dataSourceClean`
+extension. The `tableSlicerCache` claim stays UNVERIFIED: T-5071.

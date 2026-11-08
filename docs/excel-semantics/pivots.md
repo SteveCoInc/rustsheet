@@ -2065,8 +2065,8 @@ What the web renders (sidecar `pivots` sections):
   replaced by the timeline's Q1 selection (A 3).
 - **A group item renders as its type.** `<b v="1">` shows the text TRUE; `<d v="2020-01-01T00:00:00">` the number
   43831, displayed 1/1/2020; `<e v="#N/A">` the error #N/A; `<m/>` the text (blank); `<n v="7">` the number 7. The
-  saved cache keeps the item's type for `b`, `e`, `m` and `n` (the sidecar's `group_items`); it cannot tell a saved
-  `d` from an `s`, as the snapshot reads both as text. The `d` item's format comes from its type alone, not from the
+  saved cache keeps the item's type, `d` included (the sidecar's `group_items_written`; `group_items` reads `d` and `s`
+  both as text). The `d` item's format comes from its type alone, not from the
   source field (Product is text): its cell is the serial shown m/d/yyyy (the engine writes built-in `numFmtId` 14, its choice for that
   text: the sidecar records the text, not the id; T-5013 confirms the id), which the engine now matches (GD!A6, GDA!A6). Only that is evidenced: one midnight date as a row label of a manual group. The engine's
   own readings are UNVERIFIED (probe pending: T-5013): a time part (still m/d/yyyy, the time not shown), the item as
@@ -2077,16 +2077,37 @@ What the web renders (sidecar `pivots` sections):
 - **A tuple under a record value changes nothing**: the cache is refreshed on load, and the pivot renders the source
   (East 37, Grand Total 63) for an `n`, `m`, `e` or `s` record value carrying `<tpls>`.
 
-Also seen in Excel's saved files, from the oracle's cached downloads only. The sidecars record none of it, so all of
-it is UNVERIFIED (probe pending: T-4956, which makes the snapshot record it); T-4963 owns writing slicer state on a
-regenerated save (T-4188 keeps the parts only where the save keeps the package). Excel saves a slicer's unselected items as the pivotField's `h="1"`, and a timeline's selection as
-a `dateBetween` pivot filter named after the field, with x15 `pivotFilter useWholeDay="1"`. It drops every
-group-item attribute (GBA ... GSA save as GB ... GN, and GSA as `<s v="North"/>`), the slicer item `nd`, the
-`slicerCacheHideItemsWithNoData@count`, `singleRangeFilterState="0"` and the whole
-`x15:timelinePivotCacheDefinition`; it keeps every `tabular` and `tableSlicerCache` attribute and every `slicer`
-attribute; it lists the slicer items in sorted order (East, North, West); and it adds `xr10:uid` to slicer and timeline
-caches and `scrollPosition` to the timeline.
-Evidence: these cases, all excel-graph, 2026-11-07, T-4767:
+What Excel for the web saves (sidecar `pivots` sections: `pivot_fields`, `filters`, `cache_extensions`, `slicers`,
+`timelines` and each cache field's `group_items_written`, recorded by T-4956; refilled 2026-11-08, values unchanged).
+T-4963 owns writing slicer state on a regenerated save (T-4188 keeps the parts only where the save keeps the package).
+- **A slicer's unselected items are saved as the pivotField's `h="1"`** (SL, SH, SD: West and North; SM: North), and
+  an item the slicer selects loses the pivot's own `h="1"` (SX: West, hidden in the input, is saved without it).
+- **A timeline's selection is saved as a `dateBetween` pivot filter** on its field, named after the field
+  (`name="Date"`, `evalOrder="-1"`), its `autoFilter ref="A1"` holding `customFilters and="1"` with
+  `greaterThanOrEqual` the start serial and `lessThanOrEqual` the end serial (43466, 43555), and the extension
+  `x15:pivotFilter useWholeDay="1"` (TL, TA, TD0, TD1, TX). TX's own Q2 filter is replaced by that one (its `id`
+  becomes 3); TN, with no selection, saves no filter.
+- **Group-item attributes are dropped**: GBA, GDA, GEA, GMA, GNA and GSA save their item with no attribute but `v`,
+  as GB ... GN do (GSA as `<s v="North"/>`); the item's element is kept (`b`, `d`, `e`, `m`, `n`, `s`; GD and GDA
+  save `<d v="2020-01-01T00:00:00"/>`).
+- **Dropped too**: the slicer item `nd` (SM's North), `slicerCacheHideItemsWithNoData@count` (SH keeps the element
+  with no attribute), the timeline state's `singleRangeFilterState="0"` (TA), the whole
+  `x15:timelinePivotCacheDefinition` extension (TD0, TD1), and `x14:pivotCacheDefinition@slicerData="0"` (SD keeps
+  the element with its `pivotCacheId` only).
+- **Kept**: every `tabular` attribute (SM: `sortOrder`, `customListSort`, `showMissing`, `crossFilter`) and every
+  `slicer` attribute (SM: `columnCount`, `showCaption`, `style`; `rowHeight` everywhere); the timeline's `level` and
+  `selectionLevel` (TA 1) and its `state`'s `filterType`, `selection` and `bounds`.
+- **Slicer items are listed in the `tabular` sort order**: ascending East, North, West by default (`x` 0, 2, 1),
+  descending West, North, East for SM.
+- **Added**: `xr10:uid` on every slicer and timeline cache and on every `slicer` and `timeline` shape (`mc:Ignorable`
+  gains `xr10`), the timeline's `scrollPosition` (`2021-01-02T00:00:00`, a day past the bounds' end), an `<items>`
+  list on a date field the pivot has on no axis (TL ... TX: six items and a default), the cache's
+  `xlpdsc:dataSourceClean` extension (every pivot of the four probes), and an empty `x14:pivotCacheDefinition` on
+  each group-items cache.
+- Whether Excel keeps every `tableSlicerCache` attribute (TS) is UNVERIFIED (probe pending: T-5071): a table
+  slicer's cache drives no pivot, so no sidecar section records it.
+Evidence: these cases, all excel-graph, 2026-11-07 (T-4767; refilled 2026-11-08 by T-4956, whose sidecars record
+the saves):
 - probes/t4767-pivot-group-items (GB, GBA, GD, GDA, GE, GEA, GM, GMA, GN, GNA, GSA; LS, LM, LH, LD);
 - probes/t4767-pivot-slicers (SL, SA, SM, SH, SD, SX, TS);
 - probes/t4767-pivot-timelines (TL, TN, TA, TD0, TD1, TX);
@@ -2109,7 +2130,8 @@ pivot (bcc19446…), with no `mc:Ignorable` (ddaac467…), with no `id` (7c7d3b5
 fld="2"><x:autoFilter ref="A1"/></timelinePivotFilter>` (4a33fad9…), the autoFilter in the main namespace by default
 (5beb6318…) and with no `pivotTables` (ffb788ac…). The same file without the element opens (TL). Slicers: SD with
 `slicerData="1"` (8ae20179…).
-Status: VERIFIED (excel-graph) for opening and for what the pivot renders. Whether an Excel-saved timeline cache with
+Status: VERIFIED (excel-graph) for opening, for what the pivot renders and for what the web saves (but the
+tableSlicerCache claim, above). Whether an Excel-saved timeline cache with
 a `timelinePivotFilter` opens on the web is UNVERIFIED (probe pending: T-4955): the web never saved one in these
 runs, and no Excel-saved file with one is in the surveyed corpora. Out of scope: desktop Excel (decision 0266).
 Implemented in: grouping is T-4171's; a date group item's m/d/yyyy is crates/rustsheet-engine/src/pivot/layout/render.rs
@@ -2166,8 +2188,8 @@ Not modelled: an OLAP slicer (`data/olap`; the importer skips OLAP caches), a ta
 which filters a table: probes/t4767-pivot-slicers TS opens, and its table has no pivot), and a timeline cache with a
 `timelinePivotFilter`, which Excel for the web refuses ("Capability matrix 3"). Each such cache is skipped and logged.
 The save keeps every slicer and timeline part only where the source-preserving export keeps the package (SPEC-0034's
-verbatim and patched tiers); a regenerated save writes none, because how Excel saves a slicer's state is unprobed
-(T-4956; T-4963 owns the save).
+verbatim and patched tiers); a regenerated save writes none (T-4963 owns the save; what Excel saves is in "Capability
+matrix 3").
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/slicers.rs (read and linked to the pivots),
 crates/rustsheet-engine/src/pivot/slicer.rs and `result::filter` (applied; `PivotField::excludes`), `pivot::filter`
 (a timeline's field drops its `<filters>`), crates/rustsheet-eval/src/pivot_definition/slicers.rs (the case builder's

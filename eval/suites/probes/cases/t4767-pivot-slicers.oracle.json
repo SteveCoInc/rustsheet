@@ -2,6 +2,33 @@
  "format": "rustsheet-oracle/v1",
  "pivots": [
   {
+   "cache_extensions": [
+    {
+     "attrs": {
+      "uri": "{725AE2AE-9491-48be-B2B4-4EB974FC3084}"
+     },
+     "children": [
+      {
+       "attrs": {
+        "pivotCacheId": "1"
+       },
+       "name": "x14:pivotCacheDefinition"
+      }
+     ],
+     "name": "ext"
+    },
+    {
+     "attrs": {
+      "uri": "{F4336242-56EE-4DD3-A5F7-E900642BF6E9}"
+     },
+     "children": [
+      {
+       "name": "xlpdsc:dataSourceClean"
+      }
+     ],
+     "name": "ext"
+    }
+   ],
    "cache_fields": [
     {
      "name": "Region",
@@ -88,6 +115,70 @@
    "first_header_row": 1,
    "location": "A3:B5",
    "name": "P_SL",
+   "pivot_fields": [
+    {
+     "attrs": {
+      "axis": "axisRow",
+      "showAll": "0"
+     },
+     "children": [
+      {
+       "attrs": {
+        "count": "4"
+       },
+       "children": [
+        {
+         "attrs": {
+          "x": "0"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "h": "1",
+          "x": "1"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "h": "1",
+          "x": "2"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "t": "default"
+         },
+         "name": "item"
+        }
+       ],
+       "name": "items"
+      }
+     ],
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "dataField": "1",
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    }
+   ],
    "row_items": [
     {
      "i": 0,
@@ -107,6 +198,88 @@
    ],
    "row_page_count": 0,
    "sheet": "SL",
+   "slicers": [
+    {
+     "cache": {
+      "attrs": {
+       "mc:Ignorable": "x xr10",
+       "name": "Slicer_Region",
+       "sourceName": "Region",
+       "xr10:uid": "{00000000-0013-0000-FFFF-FFFF01000000}"
+      },
+      "children": [
+       {
+        "children": [
+         {
+          "attrs": {
+           "name": "P_SL",
+           "tabId": "2"
+          },
+          "name": "pivotTable"
+         }
+        ],
+        "name": "pivotTables"
+       },
+       {
+        "children": [
+         {
+          "attrs": {
+           "pivotCacheId": "1"
+          },
+          "children": [
+           {
+            "attrs": {
+             "count": "3"
+            },
+            "children": [
+             {
+              "attrs": {
+               "s": "1",
+               "x": "0"
+              },
+              "name": "i"
+             },
+             {
+              "attrs": {
+               "x": "2"
+              },
+              "name": "i"
+             },
+             {
+              "attrs": {
+               "x": "1"
+              },
+              "name": "i"
+             }
+            ],
+            "name": "items"
+           }
+          ],
+          "name": "tabular"
+         }
+        ],
+        "name": "data"
+       }
+      ],
+      "name": "slicerCacheDefinition"
+     },
+     "shapes": [
+      {
+       "element": {
+        "attrs": {
+         "cache": "Slicer_Region",
+         "caption": "Region",
+         "name": "Region",
+         "rowHeight": "241300",
+         "xr10:uid": "{00000000-0014-0000-FFFF-FFFF01000000}"
+        },
+        "name": "slicer"
+       },
+       "sheet": "SL"
+      }
+     ]
+    }
+   ],
    "text": {
     "A3": "Row Labels",
     "A4": "East",
@@ -117,6 +290,33 @@
    }
   },
   {
+   "cache_extensions": [
+    {
+     "attrs": {
+      "uri": "{725AE2AE-9491-48be-B2B4-4EB974FC3084}"
+     },
+     "children": [
+      {
+       "attrs": {
+        "pivotCacheId": "2"
+       },
+       "name": "x14:pivotCacheDefinition"
+      }
+     ],
+     "name": "ext"
+    },
+    {
+     "attrs": {
+      "uri": "{F4336242-56EE-4DD3-A5F7-E900642BF6E9}"
+     },
+     "children": [
+      {
+       "name": "xlpdsc:dataSourceClean"
+      }
+     ],
+     "name": "ext"
+    }
+   ],
    "cache_fields": [
     {
      "name": "Region",
@@ -219,6 +419,68 @@
    "first_header_row": 1,
    "location": "A3:B7",
    "name": "P_SA",
+   "pivot_fields": [
+    {
+     "attrs": {
+      "axis": "axisRow",
+      "showAll": "0"
+     },
+     "children": [
+      {
+       "attrs": {
+        "count": "4"
+       },
+       "children": [
+        {
+         "attrs": {
+          "x": "0"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "1"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "2"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "t": "default"
+         },
+         "name": "item"
+        }
+       ],
+       "name": "items"
+      }
+     ],
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "dataField": "1",
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    }
+   ],
    "row_items": [
     {
      "i": 0,
@@ -252,6 +514,90 @@
    ],
    "row_page_count": 0,
    "sheet": "SA",
+   "slicers": [
+    {
+     "cache": {
+      "attrs": {
+       "mc:Ignorable": "x xr10",
+       "name": "Slicer_Region1",
+       "sourceName": "Region",
+       "xr10:uid": "{00000000-0013-0000-FFFF-FFFF02000000}"
+      },
+      "children": [
+       {
+        "children": [
+         {
+          "attrs": {
+           "name": "P_SA",
+           "tabId": "3"
+          },
+          "name": "pivotTable"
+         }
+        ],
+        "name": "pivotTables"
+       },
+       {
+        "children": [
+         {
+          "attrs": {
+           "pivotCacheId": "2"
+          },
+          "children": [
+           {
+            "attrs": {
+             "count": "3"
+            },
+            "children": [
+             {
+              "attrs": {
+               "s": "1",
+               "x": "0"
+              },
+              "name": "i"
+             },
+             {
+              "attrs": {
+               "s": "1",
+               "x": "2"
+              },
+              "name": "i"
+             },
+             {
+              "attrs": {
+               "s": "1",
+               "x": "1"
+              },
+              "name": "i"
+             }
+            ],
+            "name": "items"
+           }
+          ],
+          "name": "tabular"
+         }
+        ],
+        "name": "data"
+       }
+      ],
+      "name": "slicerCacheDefinition"
+     },
+     "shapes": [
+      {
+       "element": {
+        "attrs": {
+         "cache": "Slicer_Region1",
+         "caption": "Region",
+         "name": "Region 1",
+         "rowHeight": "241300",
+         "xr10:uid": "{00000000-0014-0000-FFFF-FFFF02000000}"
+        },
+        "name": "slicer"
+       },
+       "sheet": "SA"
+      }
+     ]
+    }
+   ],
    "text": {
     "A3": "Row Labels",
     "A4": "East",
@@ -266,6 +612,33 @@
    }
   },
   {
+   "cache_extensions": [
+    {
+     "attrs": {
+      "uri": "{725AE2AE-9491-48be-B2B4-4EB974FC3084}"
+     },
+     "children": [
+      {
+       "attrs": {
+        "pivotCacheId": "3"
+       },
+       "name": "x14:pivotCacheDefinition"
+      }
+     ],
+     "name": "ext"
+    },
+    {
+     "attrs": {
+      "uri": "{F4336242-56EE-4DD3-A5F7-E900642BF6E9}"
+     },
+     "children": [
+      {
+       "name": "xlpdsc:dataSourceClean"
+      }
+     ],
+     "name": "ext"
+    }
+   ],
    "cache_fields": [
     {
      "name": "Region",
@@ -360,6 +733,69 @@
    "first_header_row": 1,
    "location": "A3:B6",
    "name": "P_SM",
+   "pivot_fields": [
+    {
+     "attrs": {
+      "axis": "axisRow",
+      "showAll": "0"
+     },
+     "children": [
+      {
+       "attrs": {
+        "count": "4"
+       },
+       "children": [
+        {
+         "attrs": {
+          "x": "0"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "1"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "h": "1",
+          "x": "2"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "t": "default"
+         },
+         "name": "item"
+        }
+       ],
+       "name": "items"
+      }
+     ],
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "dataField": "1",
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    }
+   ],
    "row_items": [
     {
      "i": 0,
@@ -386,6 +822,96 @@
    ],
    "row_page_count": 0,
    "sheet": "SM",
+   "slicers": [
+    {
+     "cache": {
+      "attrs": {
+       "mc:Ignorable": "x xr10",
+       "name": "Slicer_Region2",
+       "sourceName": "Region",
+       "xr10:uid": "{00000000-0013-0000-FFFF-FFFF03000000}"
+      },
+      "children": [
+       {
+        "children": [
+         {
+          "attrs": {
+           "name": "P_SM",
+           "tabId": "4"
+          },
+          "name": "pivotTable"
+         }
+        ],
+        "name": "pivotTables"
+       },
+       {
+        "children": [
+         {
+          "attrs": {
+           "crossFilter": "none",
+           "customListSort": "0",
+           "pivotCacheId": "3",
+           "showMissing": "0",
+           "sortOrder": "descending"
+          },
+          "children": [
+           {
+            "attrs": {
+             "count": "3"
+            },
+            "children": [
+             {
+              "attrs": {
+               "s": "1",
+               "x": "1"
+              },
+              "name": "i"
+             },
+             {
+              "attrs": {
+               "x": "2"
+              },
+              "name": "i"
+             },
+             {
+              "attrs": {
+               "s": "1",
+               "x": "0"
+              },
+              "name": "i"
+             }
+            ],
+            "name": "items"
+           }
+          ],
+          "name": "tabular"
+         }
+        ],
+        "name": "data"
+       }
+      ],
+      "name": "slicerCacheDefinition"
+     },
+     "shapes": [
+      {
+       "element": {
+        "attrs": {
+         "cache": "Slicer_Region2",
+         "caption": "Region",
+         "columnCount": "2",
+         "name": "Region 2",
+         "rowHeight": "241300",
+         "showCaption": "0",
+         "style": "SlicerStyleLight2",
+         "xr10:uid": "{00000000-0014-0000-FFFF-FFFF03000000}"
+        },
+        "name": "slicer"
+       },
+       "sheet": "SM"
+      }
+     ]
+    }
+   ],
    "text": {
     "A3": "Row Labels",
     "A4": "East",
@@ -398,6 +924,33 @@
    }
   },
   {
+   "cache_extensions": [
+    {
+     "attrs": {
+      "uri": "{725AE2AE-9491-48be-B2B4-4EB974FC3084}"
+     },
+     "children": [
+      {
+       "attrs": {
+        "pivotCacheId": "4"
+       },
+       "name": "x14:pivotCacheDefinition"
+      }
+     ],
+     "name": "ext"
+    },
+    {
+     "attrs": {
+      "uri": "{F4336242-56EE-4DD3-A5F7-E900642BF6E9}"
+     },
+     "children": [
+      {
+       "name": "xlpdsc:dataSourceClean"
+      }
+     ],
+     "name": "ext"
+    }
+   ],
    "cache_fields": [
     {
      "name": "Region",
@@ -484,6 +1037,70 @@
    "first_header_row": 1,
    "location": "A3:B5",
    "name": "P_SH",
+   "pivot_fields": [
+    {
+     "attrs": {
+      "axis": "axisRow",
+      "showAll": "0"
+     },
+     "children": [
+      {
+       "attrs": {
+        "count": "4"
+       },
+       "children": [
+        {
+         "attrs": {
+          "x": "0"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "h": "1",
+          "x": "1"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "h": "1",
+          "x": "2"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "t": "default"
+         },
+         "name": "item"
+        }
+       ],
+       "name": "items"
+      }
+     ],
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "dataField": "1",
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    }
+   ],
    "row_items": [
     {
      "i": 0,
@@ -503,6 +1120,104 @@
    ],
    "row_page_count": 0,
    "sheet": "SH",
+   "slicers": [
+    {
+     "cache": {
+      "attrs": {
+       "mc:Ignorable": "x xr10",
+       "name": "Slicer_Region3",
+       "sourceName": "Region",
+       "xr10:uid": "{00000000-0013-0000-FFFF-FFFF04000000}"
+      },
+      "children": [
+       {
+        "children": [
+         {
+          "attrs": {
+           "name": "P_SH",
+           "tabId": "5"
+          },
+          "name": "pivotTable"
+         }
+        ],
+        "name": "pivotTables"
+       },
+       {
+        "children": [
+         {
+          "attrs": {
+           "pivotCacheId": "4"
+          },
+          "children": [
+           {
+            "attrs": {
+             "count": "3"
+            },
+            "children": [
+             {
+              "attrs": {
+               "s": "1",
+               "x": "0"
+              },
+              "name": "i"
+             },
+             {
+              "attrs": {
+               "x": "2"
+              },
+              "name": "i"
+             },
+             {
+              "attrs": {
+               "x": "1"
+              },
+              "name": "i"
+             }
+            ],
+            "name": "items"
+           }
+          ],
+          "name": "tabular"
+         }
+        ],
+        "name": "data"
+       },
+       {
+        "children": [
+         {
+          "attrs": {
+           "uri": "{470722E0-AACD-4C17-9CDC-17EF765DBC7E}"
+          },
+          "children": [
+           {
+            "name": "x15:slicerCacheHideItemsWithNoData"
+           }
+          ],
+          "name": "x:ext"
+         }
+        ],
+        "name": "extLst"
+       }
+      ],
+      "name": "slicerCacheDefinition"
+     },
+     "shapes": [
+      {
+       "element": {
+        "attrs": {
+         "cache": "Slicer_Region3",
+         "caption": "Region",
+         "name": "Region 3",
+         "rowHeight": "241300",
+         "xr10:uid": "{00000000-0014-0000-FFFF-FFFF04000000}"
+        },
+        "name": "slicer"
+       },
+       "sheet": "SH"
+      }
+     ]
+    }
+   ],
    "text": {
     "A3": "Row Labels",
     "A4": "East",
@@ -513,6 +1228,33 @@
    }
   },
   {
+   "cache_extensions": [
+    {
+     "attrs": {
+      "uri": "{725AE2AE-9491-48be-B2B4-4EB974FC3084}"
+     },
+     "children": [
+      {
+       "attrs": {
+        "pivotCacheId": "5"
+       },
+       "name": "x14:pivotCacheDefinition"
+      }
+     ],
+     "name": "ext"
+    },
+    {
+     "attrs": {
+      "uri": "{F4336242-56EE-4DD3-A5F7-E900642BF6E9}"
+     },
+     "children": [
+      {
+       "name": "xlpdsc:dataSourceClean"
+      }
+     ],
+     "name": "ext"
+    }
+   ],
    "cache_fields": [
     {
      "name": "Region",
@@ -599,6 +1341,70 @@
    "first_header_row": 1,
    "location": "A3:B5",
    "name": "P_SD",
+   "pivot_fields": [
+    {
+     "attrs": {
+      "axis": "axisRow",
+      "showAll": "0"
+     },
+     "children": [
+      {
+       "attrs": {
+        "count": "4"
+       },
+       "children": [
+        {
+         "attrs": {
+          "x": "0"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "h": "1",
+          "x": "1"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "h": "1",
+          "x": "2"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "t": "default"
+         },
+         "name": "item"
+        }
+       ],
+       "name": "items"
+      }
+     ],
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "dataField": "1",
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    }
+   ],
    "row_items": [
     {
      "i": 0,
@@ -618,6 +1424,88 @@
    ],
    "row_page_count": 0,
    "sheet": "SD",
+   "slicers": [
+    {
+     "cache": {
+      "attrs": {
+       "mc:Ignorable": "x xr10",
+       "name": "Slicer_Region4",
+       "sourceName": "Region",
+       "xr10:uid": "{00000000-0013-0000-FFFF-FFFF05000000}"
+      },
+      "children": [
+       {
+        "children": [
+         {
+          "attrs": {
+           "name": "P_SD",
+           "tabId": "6"
+          },
+          "name": "pivotTable"
+         }
+        ],
+        "name": "pivotTables"
+       },
+       {
+        "children": [
+         {
+          "attrs": {
+           "pivotCacheId": "5"
+          },
+          "children": [
+           {
+            "attrs": {
+             "count": "3"
+            },
+            "children": [
+             {
+              "attrs": {
+               "s": "1",
+               "x": "0"
+              },
+              "name": "i"
+             },
+             {
+              "attrs": {
+               "x": "2"
+              },
+              "name": "i"
+             },
+             {
+              "attrs": {
+               "x": "1"
+              },
+              "name": "i"
+             }
+            ],
+            "name": "items"
+           }
+          ],
+          "name": "tabular"
+         }
+        ],
+        "name": "data"
+       }
+      ],
+      "name": "slicerCacheDefinition"
+     },
+     "shapes": [
+      {
+       "element": {
+        "attrs": {
+         "cache": "Slicer_Region4",
+         "caption": "Region",
+         "name": "Region 4",
+         "rowHeight": "241300",
+         "xr10:uid": "{00000000-0014-0000-FFFF-FFFF05000000}"
+        },
+        "name": "slicer"
+       },
+       "sheet": "SD"
+      }
+     ]
+    }
+   ],
    "text": {
     "A3": "Row Labels",
     "A4": "East",
@@ -628,6 +1516,33 @@
    }
   },
   {
+   "cache_extensions": [
+    {
+     "attrs": {
+      "uri": "{725AE2AE-9491-48be-B2B4-4EB974FC3084}"
+     },
+     "children": [
+      {
+       "attrs": {
+        "pivotCacheId": "6"
+       },
+       "name": "x14:pivotCacheDefinition"
+      }
+     ],
+     "name": "ext"
+    },
+    {
+     "attrs": {
+      "uri": "{F4336242-56EE-4DD3-A5F7-E900642BF6E9}"
+     },
+     "children": [
+      {
+       "name": "xlpdsc:dataSourceClean"
+      }
+     ],
+     "name": "ext"
+    }
+   ],
    "cache_fields": [
     {
      "name": "Region",
@@ -730,6 +1645,68 @@
    "first_header_row": 1,
    "location": "A3:B7",
    "name": "P_SX",
+   "pivot_fields": [
+    {
+     "attrs": {
+      "axis": "axisRow",
+      "showAll": "0"
+     },
+     "children": [
+      {
+       "attrs": {
+        "count": "4"
+       },
+       "children": [
+        {
+         "attrs": {
+          "x": "0"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "1"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "2"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "t": "default"
+         },
+         "name": "item"
+        }
+       ],
+       "name": "items"
+      }
+     ],
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "dataField": "1",
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    }
+   ],
    "row_items": [
     {
      "i": 0,
@@ -763,6 +1740,90 @@
    ],
    "row_page_count": 0,
    "sheet": "SX",
+   "slicers": [
+    {
+     "cache": {
+      "attrs": {
+       "mc:Ignorable": "x xr10",
+       "name": "Slicer_Region5",
+       "sourceName": "Region",
+       "xr10:uid": "{00000000-0013-0000-FFFF-FFFF06000000}"
+      },
+      "children": [
+       {
+        "children": [
+         {
+          "attrs": {
+           "name": "P_SX",
+           "tabId": "7"
+          },
+          "name": "pivotTable"
+         }
+        ],
+        "name": "pivotTables"
+       },
+       {
+        "children": [
+         {
+          "attrs": {
+           "pivotCacheId": "6"
+          },
+          "children": [
+           {
+            "attrs": {
+             "count": "3"
+            },
+            "children": [
+             {
+              "attrs": {
+               "s": "1",
+               "x": "0"
+              },
+              "name": "i"
+             },
+             {
+              "attrs": {
+               "s": "1",
+               "x": "2"
+              },
+              "name": "i"
+             },
+             {
+              "attrs": {
+               "s": "1",
+               "x": "1"
+              },
+              "name": "i"
+             }
+            ],
+            "name": "items"
+           }
+          ],
+          "name": "tabular"
+         }
+        ],
+        "name": "data"
+       }
+      ],
+      "name": "slicerCacheDefinition"
+     },
+     "shapes": [
+      {
+       "element": {
+        "attrs": {
+         "cache": "Slicer_Region5",
+         "caption": "Region",
+         "name": "Region 5",
+         "rowHeight": "241300",
+         "xr10:uid": "{00000000-0014-0000-FFFF-FFFF06000000}"
+        },
+        "name": "slicer"
+       },
+       "sheet": "SX"
+      }
+     ]
+    }
+   ],
    "text": {
     "A3": "Row Labels",
     "A4": "East",
@@ -797,8 +1858,8 @@
   "application": "Excel for the web (Graph)",
   "input_sha256": "ff5dfb4dae53bee4c75df7b1e100839b966a52786b6ee9d836f6868654de99e6",
   "kind": "excel-graph",
-  "produced_at": "2026-11-07T15:17:57+00:00",
+  "produced_at": "2026-11-08T00:38:57+00:00",
   "version": null,
-  "workbook_name": "b73a3f38a9953b9e604fb137625e7f83efc8ba754b1fad7b45832129f52c729e.xlsx"
+  "workbook_name": "d2fc9d8eec9f2270ff870ea12d248ba123bc27388b36adedf2692568d5ae0d3b.xlsx"
  }
 }

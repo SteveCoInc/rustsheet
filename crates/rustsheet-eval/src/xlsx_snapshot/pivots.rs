@@ -12,13 +12,21 @@
 //! engine's `MAX_RECORD_VALUES`. A pivot whose parts are missing, malformed or past the budget is
 //! skipped, never an error for the workbook.
 
+mod slicers;
+mod xml_tree;
+
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use quick_xml::events::Event;
-use quick_xml::{Reader, XmlVersion};
+use quick_xml::Reader;
 use rustsheet_engine::pivot::{MAX_FIELDS, MAX_RECORD_VALUES};
 use rustsheet_xlsx::import::MAX_PIVOTS;
 use serde::{Deserialize, Serialize};
+
+pub(super) use slicers::read_slicer_caches;
+pub use slicers::{PivotSlicer, SlicerShape};
+pub use xml_tree::XmlElement;
+use xml_tree::{attr_map, read_element};
 
 use super::{attr, read_part, relationships, resolve_target, SnapshotError, Zip};
 use crate::value::Value;
@@ -40,7 +48,7 @@ pub struct PivotLine {
 }
 
 /// A cache field of the pivot's cache, with Excel's group labels when it is grouped.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct PivotCacheField {
     /// The cache field's `name` (the source column's header).
     pub name: String,
@@ -49,6 +57,10 @@ pub struct PivotCacheField {
     /// groups (T-4124) converts it.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub group_items: Vec<Value>,
+    /// The same group items as written (T-4956): each one's element, so a `<d>` is told from an
+    /// `<s>`, its `v`, and its other attributes (`u`, `f`, `c`, `cp`, ...).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub group_items_written: Vec<PivotSharedItem>,
     /// `<sharedItems>`'s items in cache order, each with its type tag, as Excel wrote them
     /// (T-4612): whether an item Excel appended on refresh is a `<d>` or an `<n>` is part of what
     /// a refresh must reproduce.
@@ -60,19 +72,23 @@ pub struct PivotCacheField {
     pub shared_flags: BTreeMap<String, String>,
 }
 
-/// One item of a cache field's `<sharedItems>`: its element and its `v`, both as written, so the
-/// sidecar keeps a `<d>` apart from an `<n>` of the same serial.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// One item of a cache field's `<sharedItems>` or `<groupItems>`: its element, its `v` and its
+/// other attributes, as written, so the sidecar keeps a `<d>` apart from an `<n>` of the same
+/// serial or an `<s>` of the same text.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct PivotSharedItem {
     /// The element: `s`, `n`, `d`, `b`, `e` or `m`.
     pub t: String,
     /// The `v` attribute, as written; absent for `<m/>`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub v: Option<String>,
+    /// Every other attribute by name, as written (T-4956).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub attrs: BTreeMap<String, String>,
 }
 
 /// A pivot table as Excel saved it.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct PivotDef {
     /// The pivot's `name`.
     pub name: String,
@@ -98,17 +114,48 @@ pub struct PivotDef {
     /// The cache's fields, in cache order; empty when the cache part is missing.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub cache_fields: Vec<PivotCacheField>,
+    /// `<pivotFields>`' `<pivotField>` elements as written (T-4956): each field's attributes and
+    /// its `<items>`, each `<item>` with its `x`, `h`, `s`, `m`, `t`, ... as saved.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pivot_fields: Vec<XmlElement>,
+    /// `<filters>`' `<filter>` elements as written (T-4956): type, field, values, the
+    /// `autoFilter` and the extensions (`x15:pivotFilter`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub filters: Vec<XmlElement>,
+    /// The `<ext>` elements of the cache definition's `<extLst>` (`x14:pivotCacheDefinition`,
+    /// `x15:timelinePivotCacheDefinition`, ...), as written (T-4956).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cache_extensions: Vec<XmlElement>,
+    /// The slicer caches that drive the pivot, with their slicer shapes (T-4956).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub slicers: Vec<PivotSlicer>,
+    /// The timeline caches that drive the pivot, with their timeline shapes (T-4956).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub timelines: Vec<PivotSlicer>,
+}
+
+/// What the snapshot keeps of a pivot cache definition part.
+#[derive(Clone, Default)]
+struct CachePart {
+    fields: Vec<PivotCacheField>,
+    /// See [`PivotDef::cache_extensions`].
+    extensions: Vec<XmlElement>,
 }
 
 /// What reading a workbook's pivots has used so far: one budget for the whole workbook, so a
 /// crafted file cannot multiply the work by repeating parts or pivots (directive 5).
 pub(super) struct PivotReader {
-    /// Pivot parts already read, by the package's own entry name (`canonical`).
+    /// Pivot, slicers, timelines and slicer-cache parts already read, by the package's own
+    /// entry name (`canonical`).
     seen: HashSet<String>,
     /// Cache parts already parsed, by entry name (`None`: missing, malformed or over budget).
-    caches: HashMap<String, Option<Vec<PivotCacheField>>>,
+    caches: HashMap<String, Option<CachePart>>,
     /// Pivot relationships looked at, read or not: at most `MAX_PIVOTS`, so malformed parts count.
     attempts: usize,
+    /// Slicers and timelines part relationships looked at, the same way (T-4956).
+    shape_attempts: usize,
+    /// The `<slicer>` and `<timeline>` shapes read so far, for `read_slicer_caches`.
+    shapes: Vec<SlicerShape>,
     /// What the snapshot may still hold over every pivot and every copy of a shared cache: one
     /// unit per layout line, item index, field and group item, plus one per byte of every string
     /// kept (names, locations, labels).
@@ -123,10 +170,18 @@ impl PivotReader {
             seen: HashSet::new(),
             caches: HashMap::new(),
             attempts: 0,
+            shape_attempts: 0,
+            shapes: Vec::new(),
             values_left: MAX_RECORD_VALUES,
             pivots: Vec::new(),
         }
     }
+}
+
+/// The budget cost of keeping a copy of `cache`: one per field and item, plus their text bytes,
+/// and the extensions' cost.
+fn cache_cost(cache: &CachePart) -> usize {
+    fields_cost(&cache.fields) + cache.extensions.iter().map(XmlElement::cost).sum::<usize>()
 }
 
 /// The budget cost of keeping a copy of `fields`: one per field and item, plus their text bytes.
@@ -136,16 +191,20 @@ fn fields_cost(fields: &[PivotCacheField]) -> usize {
         .map(|f| {
             1 + f.name.len()
                 + f.group_items.iter().map(value_cost).sum::<usize>()
-                + f.shared_items
-                    .iter()
-                    .map(|i| 1 + i.t.len() + i.v.as_ref().map_or(0, String::len))
-                    .sum::<usize>()
-                + f.shared_flags
-                    .iter()
-                    .map(|(k, v)| k.len() + v.len())
-                    .sum::<usize>()
+                + f.shared_items.iter().map(item_cost).sum::<usize>()
+                + f.group_items_written.iter().map(item_cost).sum::<usize>()
+                + map_cost(&f.shared_flags)
         })
         .sum()
+}
+
+/// What `written_item` charges for `i`: one, its element, and its attributes' bytes.
+fn item_cost(i: &PivotSharedItem) -> usize {
+    1 + i.t.len() + i.v.as_ref().map_or(0, |v| 1 + v.len()) + map_cost(&i.attrs)
+}
+
+fn map_cost(map: &BTreeMap<String, String>) -> usize {
+    map.iter().map(|(k, v)| k.len() + v.len()).sum()
 }
 
 fn value_cost(v: &Value) -> usize {
@@ -202,6 +261,7 @@ pub(super) fn read_sheet_pivots(
     let Ok(rels) = relationships(&rels, file) else {
         return Ok(());
     };
+    slicers::read_sheet_shapes(zip, dir, &rels, sheet, reader);
     for rel in rels.iter().filter(|r| r.kind.ends_with("/pivotTable")) {
         if reader.attempts >= MAX_PIVOTS {
             break;
@@ -219,26 +279,28 @@ pub(super) fn read_sheet_pivots(
         let Some(mut pivot) = parse_pivot(&xml, sheet, &mut reader.values_left) else {
             continue;
         };
-        let fields = cache_fields(zip, &path, reader);
-        if spend(&mut reader.values_left, fields_cost(&fields)).is_none() {
+        let cache = cache_part(zip, &path, reader);
+        if spend(&mut reader.values_left, cache_cost(&cache)).is_none() {
             continue;
         }
-        pivot.cache_fields = fields;
+        pivot.cache_fields = cache.fields;
+        pivot.cache_extensions = cache.extensions;
         reader.pivots.push(pivot);
     }
     Ok(())
 }
 
-/// The fields of the cache the pivot part at `pivot_path` uses, parsed once per cache part.
-fn cache_fields(zip: &mut Zip, pivot_path: &str, reader: &mut PivotReader) -> Vec<PivotCacheField> {
+/// What the snapshot keeps of the cache the pivot part at `pivot_path` uses, parsed once per
+/// cache part.
+fn cache_part(zip: &mut Zip, pivot_path: &str, reader: &mut PivotReader) -> CachePart {
     let Some(path) = cache_path(zip, pivot_path) else {
-        return Vec::new();
+        return CachePart::default();
     };
     if !reader.caches.contains_key(&path) {
         let parsed = read_part(zip, &path)
             .ok()
             .flatten()
-            .and_then(|xml| parse_cache_fields(&xml, &mut reader.values_left));
+            .and_then(|xml| parse_cache(&xml, &mut reader.values_left));
         reader.caches.insert(path.clone(), parsed);
     }
     reader
@@ -271,6 +333,7 @@ enum In {
     Other,
     Rows,
     Cols,
+    Filters,
 }
 
 /// The `<rowItems>` or `<colItems>` list `within` names.
@@ -300,16 +363,19 @@ fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
                         pivot = Some(PivotDef {
                             name: kept_attr(e, "name", budget).ok()?.unwrap_or_default(),
                             sheet: sheet.to_string(),
-                            location: String::new(),
-                            first_header_row: 0,
-                            first_data_row: 0,
-                            first_data_col: 0,
-                            row_page_count: 0,
-                            col_page_count: 0,
-                            row_items: Vec::new(),
-                            col_items: Vec::new(),
-                            cache_fields: Vec::new(),
+                            ..PivotDef::default()
                         });
+                    }
+                    // Read whole, so a `<pivotField>` or `<filter>` nested in one (an x14
+                    // extension's, an autoFilter's) is part of its tree, not another entry.
+                    "pivotField" => {
+                        let field = read_element(&mut reader, e, empty, budget)?;
+                        pivot.as_mut()?.pivot_fields.push(field);
+                    }
+                    "filters" if !empty => within = In::Filters,
+                    "filter" if within == In::Filters => {
+                        let filter = read_element(&mut reader, e, empty, budget)?;
+                        pivot.as_mut()?.filters.push(filter);
                     }
                     "location" => {
                         let p = pivot.as_mut()?;
@@ -322,7 +388,7 @@ fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
                     }
                     "rowItems" if !empty => within = In::Rows,
                     "colItems" if !empty => within = In::Cols,
-                    "i" if within != In::Other => {
+                    "i" if matches!(within, In::Rows | In::Cols) => {
                         let lines = lines_mut(pivot.as_mut()?, within);
                         spend(budget, 1)?;
                         lines.push(PivotLine {
@@ -332,7 +398,7 @@ fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
                             x: Vec::new(),
                         });
                     }
-                    "x" if within != In::Other => {
+                    "x" if matches!(within, In::Rows | In::Cols) => {
                         let lines = lines_mut(pivot.as_mut()?, within);
                         spend(budget, 1)?;
                         lines.last_mut()?.x.push(number(e, "v"));
@@ -340,7 +406,9 @@ fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
                     _ => {}
                 }
             }
-            Event::End(e) if matches!(e.local_name().as_ref(), "rowItems" | "colItems") => {
+            Event::End(e)
+                if matches!(e.local_name().as_ref(), "rowItems" | "colItems" | "filters") =>
+            {
                 within = In::Other;
             }
             Event::Eof => break,
@@ -350,34 +418,44 @@ fn parse_pivot(xml: &str, sheet: &str, budget: &mut usize) -> Option<PivotDef> {
     pivot.filter(|p| !p.location.is_empty())
 }
 
-/// `<sharedItems>`'s attributes into `flags`, each charged its bytes before it is copied; `None`
-/// on a malformed attribute or when the budget runs out.
-fn shared_flags(
+/// A `<sharedItems>` or `<groupItems>` item `<tag>`: its element and attributes, charged as
+/// `item_cost`; `None` on a malformed attribute or when the budget runs out.
+fn written_item(
     e: &quick_xml::events::BytesStart<'_>,
-    flags: &mut BTreeMap<String, String>,
+    tag: &str,
     budget: &mut usize,
-) -> Option<()> {
-    for a in e.attributes() {
-        let a = a.ok()?;
-        let value = a.normalized_value(XmlVersion::Implicit1_0).ok()?;
-        let key = a.key.local_name();
-        spend(budget, key.as_ref().len() + value.len())?;
-        flags.insert(key.as_ref().to_owned(), value.into_owned());
-    }
-    Some(())
+) -> Option<PivotSharedItem> {
+    spend(budget, 1 + tag.len())?;
+    let mut attrs = attr_map(e, budget)?;
+    let v = attrs.remove("v");
+    Some(PivotSharedItem {
+        t: tag.to_string(),
+        v,
+        attrs,
+    })
 }
 
-fn parse_cache_fields(xml: &str, budget: &mut usize) -> Option<Vec<PivotCacheField>> {
+/// The cache definition's fields and extensions, or `None` when the part is malformed, has more
+/// fields than the engine's limit, a non-finite number group item, or runs past the budget.
+fn parse_cache(xml: &str, budget: &mut usize) -> Option<CachePart> {
     let mut reader = Reader::from_str(xml);
-    let mut fields: Vec<PivotCacheField> = Vec::new();
+    let mut cache = CachePart::default();
+    let fields = &mut cache.fields;
     let mut in_group = false;
     let mut in_shared = false;
+    // Elements open around the reader: the root's own `<extLst>` is at depth 1.
+    let mut depth = 0usize;
     loop {
         let event = reader.read_event().ok()?;
         match &event {
             Event::Start(e) | Event::Empty(e) => {
                 let empty = matches!(event, Event::Empty(_));
                 match e.local_name().as_ref() {
+                    "extLst" if depth == 1 => {
+                        let ext = read_element(&mut reader, e, empty, budget)?;
+                        cache.extensions.extend(ext.children);
+                        continue;
+                    }
                     "cacheField" => {
                         if fields.len() >= MAX_FIELDS {
                             return None;
@@ -385,27 +463,22 @@ fn parse_cache_fields(xml: &str, budget: &mut usize) -> Option<Vec<PivotCacheFie
                         spend(budget, 1)?;
                         fields.push(PivotCacheField {
                             name: kept_attr(e, "name", budget).ok()?.unwrap_or_default(),
-                            group_items: Vec::new(),
-                            shared_items: Vec::new(),
-                            shared_flags: BTreeMap::new(),
+                            ..PivotCacheField::default()
                         });
                     }
                     "sharedItems" => {
                         in_shared = !empty;
-                        shared_flags(e, &mut fields.last_mut()?.shared_flags, budget)?;
+                        fields.last_mut()?.shared_flags = attr_map(e, budget)?;
                     }
                     "groupItems" if !empty => in_group = true,
                     tag @ ("s" | "n" | "d" | "b" | "e" | "m") if in_shared => {
-                        spend(budget, 1 + tag.len())?;
-                        let v = kept_attr(e, "v", budget).ok()?;
-                        fields.last_mut()?.shared_items.push(PivotSharedItem {
-                            t: tag.to_string(),
-                            v,
-                        });
+                        let item = written_item(e, tag, budget)?;
+                        fields.last_mut()?.shared_items.push(item);
                     }
-                    tag if in_group => {
-                        spend(budget, 1)?;
-                        let v = kept_attr(e, "v", budget).ok()?;
+                    tag @ ("s" | "n" | "d" | "b" | "e" | "m") if in_group => {
+                        let item = written_item(e, tag, budget)?;
+                        spend(budget, 1 + item.v.as_ref().map_or(0, String::len))?;
+                        let v = item.v.clone();
                         let value = match tag {
                             "s" | "d" => Value::Text(v.unwrap_or_default()),
                             "n" => Value::Number(
@@ -414,26 +487,41 @@ fn parse_cache_fields(xml: &str, budget: &mut usize) -> Option<Vec<PivotCacheFie
                             ),
                             "b" => Value::Bool(matches!(v.as_deref(), Some("1" | "true"))),
                             "e" => Value::Error(v.unwrap_or_default()),
-                            "m" => Value::Empty,
-                            _ => continue,
+                            _ => Value::Empty,
                         };
-                        fields.last_mut()?.group_items.push(value);
+                        let field = fields.last_mut()?;
+                        field.group_items.push(value);
+                        field.group_items_written.push(item);
                     }
                     _ => {}
                 }
+                if !empty {
+                    depth += 1;
+                }
             }
-            Event::End(e) if e.local_name().as_ref() == "groupItems" => in_group = false,
-            Event::End(e) if e.local_name().as_ref() == "sharedItems" => in_shared = false,
+            Event::End(e) => {
+                depth = depth.saturating_sub(1);
+                match e.local_name().as_ref() {
+                    "groupItems" => in_group = false,
+                    "sharedItems" => in_shared = false,
+                    _ => {}
+                }
+            }
             Event::Eof => break,
             _ => {}
         }
     }
-    Some(fields)
+    Some(cache)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The fields `parse_cache` keeps.
+    fn parse_cache_fields_of(xml: &str, budget: &mut usize) -> Option<Vec<PivotCacheField>> {
+        parse_cache(xml, budget).map(|c| c.fields)
+    }
 
     #[test]
     fn parses_excel_layout_lines_and_location() {
@@ -490,9 +578,9 @@ mod tests {
               <groupItems count="1"><n v="inf"/></groupItems>
             </fieldGroup></cacheField></cacheFields></pivotCacheDefinition>"#;
         // A non-finite number item makes the cache unreadable (the snapshot is JSON).
-        assert!(parse_cache_fields(xml, &mut usize::MAX.clone()).is_none());
+        assert!(parse_cache_fields_of(xml, &mut usize::MAX.clone()).is_none());
         let finite = xml.replace(r#"<n v="inf"/>"#, r#"<n v="1"/>"#);
-        let fields = parse_cache_fields(&finite, &mut usize::MAX.clone()).expect("parses");
+        let fields = parse_cache_fields_of(&finite, &mut usize::MAX.clone()).expect("parses");
         assert_eq!(fields.len(), 3);
         assert!(fields[0].group_items.is_empty());
         assert_eq!(
@@ -514,10 +602,11 @@ mod tests {
               <n v="45000"/><m/><d v="2023-03-15T00:00:00"/><s v="a&amp;b"/></sharedItems></cacheField>
             <cacheField name="V"><sharedItems containsInteger="1"/></cacheField>
             </cacheFields></pivotCacheDefinition>"#;
-        let fields = parse_cache_fields(xml, &mut usize::MAX.clone()).expect("parses");
+        let fields = parse_cache_fields_of(xml, &mut usize::MAX.clone()).expect("parses");
         let item = |t: &str, v: Option<&str>| PivotSharedItem {
             t: t.into(),
             v: v.map(Into::into),
+            attrs: BTreeMap::new(),
         };
         assert_eq!(
             fields[0].shared_items,
@@ -534,7 +623,60 @@ mod tests {
         assert_eq!(fields[1].shared_flags["containsInteger"], "1");
         // Items and flags are charged against the budget too.
         let cost = fields_cost(&fields);
-        assert!(parse_cache_fields(xml, &mut (cost / 2)).is_none());
+        assert!(parse_cache_fields_of(xml, &mut (cost / 2)).is_none());
+    }
+
+    #[test]
+    fn keeps_pivot_fields_filters_group_item_types_and_cache_extensions() {
+        // The shapes T-4767's probes save (T-4956): hidden items, a timeline's date filter, a
+        // date group item, and the cache's x15 extension.
+        let xml = r#"<pivotTableDefinition xmlns="m" name="P"><location ref="A3:B5"/>
+            <pivotFields count="2"><pivotField axis="axisRow" showAll="0"><items count="3">
+              <item x="0"/><item h="1" x="1"/><item t="default"/></items>
+              <extLst><ext><x14:pivotField fillDownLabels="1"/></ext></extLst></pivotField>
+            <pivotField showAll="0"/></pivotFields>
+            <filters count="1"><filter fld="1" type="dateBetween" evalOrder="-1" id="1" name="Date">
+              <autoFilter ref="A1"><filterColumn colId="0"><customFilters and="1">
+              <customFilter operator="greaterThanOrEqual" val="43466"/></customFilters></filterColumn>
+              </autoFilter><extLst><ext><x15:pivotFilter useWholeDay="1"/></ext></extLst></filter>
+            </filters></pivotTableDefinition>"#;
+        let p = parse_pivot(xml, "S", &mut usize::MAX.clone()).expect("parses");
+        assert_eq!(p.pivot_fields.len(), 2);
+        let items = &p.pivot_fields[0].children[0].children;
+        assert_eq!(items[1].attr("h"), Some("1"));
+        assert_eq!(items[2].attr("t"), Some("default"));
+        assert_eq!(p.filters.len(), 1);
+        assert_eq!(p.filters[0].attr("type"), Some("dateBetween"));
+        let ext = &p.filters[0].children[1].children[0].children[0];
+        assert_eq!(
+            (ext.name.as_str(), ext.attr("useWholeDay")),
+            ("x15:pivotFilter", Some("1"))
+        );
+        let cache = r#"<pivotCacheDefinition><cacheFields><cacheField name="Product">
+            <sharedItems/><fieldGroup base="0"><groupItems count="2"><s v="A" u="1"/>
+            <d v="2020-01-01T00:00:00"/></groupItems></fieldGroup>
+            <extLst><ext><x14:cacheField/></ext></extLst></cacheField></cacheFields>
+            <extLst><ext uri="{U}"><x15:timelinePivotCacheDefinition timelineData="1"/></ext>
+            </extLst></pivotCacheDefinition>"#;
+        let mut budget = usize::MAX;
+        let c = parse_cache(cache, &mut budget).expect("parses");
+        let written = &c.fields[0].group_items_written;
+        assert_eq!(
+            (written[0].t.as_str(), written[0].attrs["u"].as_str()),
+            ("s", "1")
+        );
+        assert_eq!(
+            (written[1].t.as_str(), written[1].v.as_deref()),
+            ("d", Some("2020-01-01T00:00:00"))
+        );
+        // Only the definition's own extLst: the cache field's is not one of its extensions.
+        assert_eq!(c.extensions.len(), 1);
+        assert_eq!(
+            c.extensions[0].children[0].name,
+            "x15:timelinePivotCacheDefinition"
+        );
+        // Charged what a copy costs, and the `<extLst>` wrapper the parse read but does not keep.
+        assert_eq!(usize::MAX - budget, cache_cost(&c) + 1 + "extLst".len());
     }
 
     #[test]
@@ -550,9 +692,11 @@ mod tests {
         assert_eq!(short, 0);
         let cache = r#"<pivotCacheDefinition><cacheField name="n"><fieldGroup><groupItems>
             <s v="a"/><s v="b"/></groupItems></fieldGroup></cacheField></pivotCacheDefinition>"#;
-        // One field (1) named `n` (1), two items (2) of one byte each (2).
-        assert!(parse_cache_fields(cache, &mut 5).is_none());
-        assert!(parse_cache_fields(cache, &mut 6).is_some());
+        // One field (1) named `n` (1); two items of one byte each, as values (2 each) and as
+        // written (4 each: the item, its element `s`, the attribute `v` and its value).
+        assert!(parse_cache_fields_of(cache, &mut 13).is_none());
+        let fields = parse_cache_fields_of(cache, &mut 14).expect("parses");
+        assert_eq!(fields_cost(&fields), 14);
     }
 
     #[test]
@@ -649,8 +793,7 @@ mod tests {
         let fields = vec![PivotCacheField {
             name: long,
             group_items: vec![Value::Text("abc".into())],
-            shared_items: Vec::new(),
-            shared_flags: BTreeMap::new(),
+            ..PivotCacheField::default()
         }];
         assert_eq!(fields_cost(&fields), 1 + 100_000 + 1 + 3);
         // A budget the size of the engine's runs out after about a hundred copies, not thousands.

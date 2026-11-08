@@ -2,6 +2,30 @@
  "format": "rustsheet-oracle/v1",
  "pivots": [
   {
+   "cache_extensions": [
+    {
+     "attrs": {
+      "uri": "{725AE2AE-9491-48be-B2B4-4EB974FC3084}"
+     },
+     "children": [
+      {
+       "name": "x14:pivotCacheDefinition"
+      }
+     ],
+     "name": "ext"
+    },
+    {
+     "attrs": {
+      "uri": "{F4336242-56EE-4DD3-A5F7-E900642BF6E9}"
+     },
+     "children": [
+      {
+       "name": "xlpdsc:dataSourceClean"
+      }
+     ],
+     "name": "ext"
+    }
+   ],
    "cache_fields": [
     {
      "name": "Region",
@@ -104,6 +128,68 @@
    "first_header_row": 1,
    "location": "A3:B7",
    "name": "P_RN",
+   "pivot_fields": [
+    {
+     "attrs": {
+      "axis": "axisRow",
+      "showAll": "0"
+     },
+     "children": [
+      {
+       "attrs": {
+        "count": "4"
+       },
+       "children": [
+        {
+         "attrs": {
+          "x": "0"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "1"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "2"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "t": "default"
+         },
+         "name": "item"
+        }
+       ],
+       "name": "items"
+      }
+     ],
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "dataField": "1",
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    }
+   ],
    "row_items": [
     {
      "i": 0,
@@ -151,6 +237,30 @@
    }
   },
   {
+   "cache_extensions": [
+    {
+     "attrs": {
+      "uri": "{725AE2AE-9491-48be-B2B4-4EB974FC3084}"
+     },
+     "children": [
+      {
+       "name": "x14:pivotCacheDefinition"
+      }
+     ],
+     "name": "ext"
+    },
+    {
+     "attrs": {
+      "uri": "{F4336242-56EE-4DD3-A5F7-E900642BF6E9}"
+     },
+     "children": [
+      {
+       "name": "xlpdsc:dataSourceClean"
+      }
+     ],
+     "name": "ext"
+    }
+   ],
    "cache_fields": [
     {
      "name": "Region",
@@ -253,6 +363,68 @@
    "first_header_row": 1,
    "location": "A3:B7",
    "name": "P_RM",
+   "pivot_fields": [
+    {
+     "attrs": {
+      "axis": "axisRow",
+      "showAll": "0"
+     },
+     "children": [
+      {
+       "attrs": {
+        "count": "4"
+       },
+       "children": [
+        {
+         "attrs": {
+          "x": "0"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "1"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "2"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "t": "default"
+         },
+         "name": "item"
+        }
+       ],
+       "name": "items"
+      }
+     ],
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "dataField": "1",
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    }
+   ],
    "row_items": [
     {
      "i": 0,
@@ -300,6 +472,30 @@
    }
   },
   {
+   "cache_extensions": [
+    {
+     "attrs": {
+      "uri": "{725AE2AE-9491-48be-B2B4-4EB974FC3084}"
+     },
+     "children": [
+      {
+       "name": "x14:pivotCacheDefinition"
+      }
+     ],
+     "name": "ext"
+    },
+    {
+     "attrs": {
+      "uri": "{F4336242-56EE-4DD3-A5F7-E900642BF6E9}"
+     },
+     "children": [
+      {
+       "name": "xlpdsc:dataSourceClean"
+      }
+     ],
+     "name": "ext"
+    }
+   ],
    "cache_fields": [
     {
      "name": "Region",
@@ -402,6 +598,68 @@
    "first_header_row": 1,
    "location": "A3:B7",
    "name": "P_RE",
+   "pivot_fields": [
+    {
+     "attrs": {
+      "axis": "axisRow",
+      "showAll": "0"
+     },
+     "children": [
+      {
+       "attrs": {
+        "count": "4"
+       },
+       "children": [
+        {
+         "attrs": {
+          "x": "0"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "1"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "2"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "t": "default"
+         },
+         "name": "item"
+        }
+       ],
+       "name": "items"
+      }
+     ],
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "dataField": "1",
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    }
+   ],
    "row_items": [
     {
      "i": 0,
@@ -449,6 +707,30 @@
    }
   },
   {
+   "cache_extensions": [
+    {
+     "attrs": {
+      "uri": "{725AE2AE-9491-48be-B2B4-4EB974FC3084}"
+     },
+     "children": [
+      {
+       "name": "x14:pivotCacheDefinition"
+      }
+     ],
+     "name": "ext"
+    },
+    {
+     "attrs": {
+      "uri": "{F4336242-56EE-4DD3-A5F7-E900642BF6E9}"
+     },
+     "children": [
+      {
+       "name": "xlpdsc:dataSourceClean"
+      }
+     ],
+     "name": "ext"
+    }
+   ],
    "cache_fields": [
     {
      "name": "Region",
@@ -551,6 +833,68 @@
    "first_header_row": 1,
    "location": "A3:B7",
    "name": "P_RS",
+   "pivot_fields": [
+    {
+     "attrs": {
+      "axis": "axisRow",
+      "showAll": "0"
+     },
+     "children": [
+      {
+       "attrs": {
+        "count": "4"
+       },
+       "children": [
+        {
+         "attrs": {
+          "x": "0"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "1"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "x": "2"
+         },
+         "name": "item"
+        },
+        {
+         "attrs": {
+          "t": "default"
+         },
+         "name": "item"
+        }
+       ],
+       "name": "items"
+      }
+     ],
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    },
+    {
+     "attrs": {
+      "dataField": "1",
+      "showAll": "0"
+     },
+     "name": "pivotField"
+    }
+   ],
    "row_items": [
     {
      "i": 0,
@@ -615,8 +959,8 @@
   "application": "Excel for the web (Graph)",
   "input_sha256": "d22b48dac8c56decf8fdee6e284c3a313612e10b5a3944b5db49f6e33b12633e",
   "kind": "excel-graph",
-  "produced_at": "2026-11-07T15:17:57+00:00",
+  "produced_at": "2026-11-08T00:38:41+00:00",
   "version": null,
-  "workbook_name": "c3f60c72c6e858ed32f16302a3721da3b94de97e2dcb040e3af4d6abd3b8750f.xlsx"
+  "workbook_name": "d85acf866276bfc209decbb36717893e80fe53b8a9b79b5c94107266e9fdb20a.xlsx"
  }
 }
