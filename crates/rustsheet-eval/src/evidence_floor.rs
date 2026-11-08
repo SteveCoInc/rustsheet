@@ -223,6 +223,7 @@ mod tests {
         oracle: Option<OracleSupport>,
     ) -> CatalogFunction {
         CatalogFunction {
+            usage: crate::catalog::Usage::default(),
             name: name.into(),
             category: category.into(),
             milestone: "M5".into(),

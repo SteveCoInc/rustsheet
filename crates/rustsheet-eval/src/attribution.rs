@@ -471,6 +471,7 @@ mod tests {
         assert!(md.contains("| total | 4 | 4 |"), "{md}");
         // With a catalog, only its in-scope functions count, and an uncalled one is unscored.
         let entry = |name: &str, scope: Scope| CatalogFunction {
+            usage: crate::catalog::Usage::default(),
             name: name.into(),
             category: "math".into(),
             milestone: "M5".into(),

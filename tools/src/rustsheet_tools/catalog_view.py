@@ -16,14 +16,15 @@ from rustsheet_tools.gen.generator import Catalog
 REPO = Path(__file__).resolve().parents[3]
 CATALOG = REPO / "eval" / "catalog" / "functions.yaml"
 VIEW = CATALOG.with_name("scope.json")
-FIELDS = ("category", "milestone", "scope", "reason", "oracle", "v15", "v15_reason", "returns")
+FIELDS = ("category", "milestone", "scope", "reason", "oracle", "v15", "v15_reason", "returns", "usage")
 
 
 def render(catalog: Path = CATALOG) -> str:
     """The view of `catalog` as JSON text: one entry per function, sorted by name.
 
-    `scope` is always present (an entry without it is in scope); `reason`, `oracle`, `v15` and
-    `v15_reason` only when the catalog sets them. `category` groups the evidence-floor report (T-0056);
+    `scope` is always present (an entry without it is in scope); `usage` is always present too (an entry
+    without it is `expert`, decision 0355); `reason`, `oracle`, `v15` and `v15_reason` only when the catalog
+    sets them. `category` groups the evidence-floor report (T-0056);
     `params` feeds the argument-coverage census (T-0077); `returns` (when set) Gate A's
     missing-table count (SPEC-0029)."""
     rows: list[str] = []
@@ -31,6 +32,7 @@ def render(catalog: Path = CATALOG) -> str:
         row: dict[str, Any] = {"name": entry["name"]}
         row.update({k: entry[k] for k in FIELDS if k in entry})
         row.setdefault("scope", "in")
+        row.setdefault("usage", "expert")
         row["params"] = [_param(p) for p in entry.get("params", [])]
         rows.append(json.dumps(row, ensure_ascii=False))
     # One function per line keeps diffs of the committed view readable.

@@ -20,7 +20,7 @@ This is the evidence for the usage tiers in decision 0355 (foundational and expe
 
 ## Files
 
-- `usage.tsv`: one row for each of the 506 in-scope functions (Gate B's list at main b84a7256), with these columns:
+- `eval/catalog/usage.tsv` (kept beside the catalog, which tools/tests/test_catalog.py holds to it): one row for each of the 506 in-scope functions (Gate B's list at main b84a7256), with these columns:
   - the catalog prior;
   - the number of SpreadsheetBench workbooks that call the function;
   - the number of formula cells that call it (a shared formula counts once per row of its range);

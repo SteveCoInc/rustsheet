@@ -684,6 +684,7 @@ mod tests {
             cell("GAMMA(2)", Verdict::Pass),
         ];
         let catalog = Catalog::from_functions([crate::catalog::CatalogFunction {
+            usage: crate::catalog::Usage::default(),
             name: "WEBSERVICE".into(),
             category: "web".into(),
             milestone: "M5".into(),

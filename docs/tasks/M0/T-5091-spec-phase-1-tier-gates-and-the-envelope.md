@@ -1,9 +1,9 @@
 ---
 id: T-5091
-title: "SPEC: Phase 1 tier gates and the envelope ratchet (decision 0355)"
+title: "SPEC-0037 and the catalog usage tier: Phase 1 tier gates and the envelope ratchet (decision 0355)"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P1
 size: M
 tier: opus
@@ -46,3 +46,17 @@ into S/M implementation tasks, each one mergeable on its own.
 ## Out of scope
 - Moving functions between tiers (that needs a decision record).
 - Fixing any cell.
+
+## Outcome
+- Decision 0355 is accepted with the owner's rulings of 2026-11-08: the expert tier needs 99.9% pooled and 99% per
+  function, on both type and envelope; the foundational/expert cut is prior ≥ 0.5 or ≥ 6 SpreadsheetBench
+  workbooks; foundational tasks come first at equal priority (item 7); every report leads with the tiers (item 8).
+- docs/specs/SPEC-0037-usage-tier-gates.md designs it; the rollout tasks are T-5092 to T-5095.
+- SPEC-0037 design 1 is done here:
+  - `usage: foundational` on 122 catalog entries (the header documents the field);
+  - `rustsheet-catalog-view` writes `usage` on every scope.json row, `expert` by default;
+  - `catalog::Usage` reads it in the harness;
+  - tools/tests/test_catalog.py holds the catalog to usage.tsv, and test_catalog_view.py and catalog.rs test the
+    view.
+- docs/milestones.md states the Phase 1 exit by tier, and says the old rules hold until each rollout task lands.
+- Eval delta: none (no gate reads `usage` yet).

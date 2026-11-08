@@ -1,4 +1,4 @@
-# Per in-scope catalog function (Gate B's 506): catalog prior, SpreadsheetBench workbooks and formula cells that call it
+# Per in-scope catalog function (Gate B's 506; decision 0355, docs/research/function-usage-2026-11-08): catalog prior, SpreadsheetBench workbooks and formula cells
 # (1,136 input workbooks with formulas, of 2,726 *_input.xlsx), and the usage tier of the decision's rule.
 function	prior	workbooks	cells	tier
 IF	20	383	235917	foundational
