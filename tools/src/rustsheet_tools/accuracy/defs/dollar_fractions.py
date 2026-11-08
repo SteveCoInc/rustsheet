@@ -14,8 +14,7 @@ T-4880): exact at 10^k + 1 up to k = 12, but 10^15 at `1E15+1` (the double log10
 where the next power of ten above the double would be 10^301. A fraction below 0 is `#NUM!` and one from 0 up to but
 not including 1 is `#DIV/0!` (the checks run on the untruncated fraction; the probe's A1:B6), both drawn by the edges;
 fractions past 1E9 are drawn too, up to 1E300.
-Negative
-dollars are drawn with the integer part toward 0, which the table confirms: financial.md "DOLLARDE and DOLLARFR scale
+Negative dollars are drawn with the integer part toward 0, which the table confirms: financial.md "DOLLARDE and DOLLARFR scale
 the fraction by the next power of ten (T-4110)" records it with the table's points.
 """
 
@@ -53,7 +52,7 @@ def next_power_of_ten(n: int) -> int:
 
 def _split(args: Sequence[MathArg]) -> tuple[int, mpmath.mpf, int, int]:
     """(i, f, F, D) of a call: the dollar's integer part toward 0 and its fraction, the fraction F and the power of ten
-    D at or above it."""
+    D from the double log10 of it."""
     x, fraction = real_args(args)
     if fraction < 0:
         msg = "a fraction below 0: #NUM!"

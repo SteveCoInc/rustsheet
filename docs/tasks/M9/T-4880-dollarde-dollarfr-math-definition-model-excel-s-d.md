@@ -32,5 +32,6 @@ The Gate A math definition for DOLLARDE and DOLLARFR (tools/src/rustsheet_tools/
 ## Outcome
 `next_power_of_ten` in defs/dollar_fractions.py now uses `10^ceil(log10(float F))`, Excel's D (10^15 at `1E15+1`, 10^300 at
 1E300). Fractions below 0 (`#NUM!`) and from 0 to 1 (`#DIV/0!`) raise `DomainError` instead of `NoValueError`; the edge
-draws now include them and fractions past 1E9 (10^10+1 ... 1E300). The t4608 math sidecar was regenerated: all 138
-numeric cells agree with the oracle (error cells carry no sidecar value). Eval delta: none (no engine change).
+draws now include them and fractions past 1E9 (10^10+1 ... 1E300). The t4608 math sidecar was regenerated: its 126
+numeric and 12 error cells agree with the oracle. Non-integer fractions (the probe's A3:A6, A8:A12) and 10^15+1 stay probe-only: the
+fraction parameter is an integer, so the draws write -1, 0, 10^10+1, 10^12+1, 10^15-1, 10^15, 10^16 and 1E300. Eval delta: none (no engine change).
