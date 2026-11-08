@@ -78,7 +78,7 @@ fn the_row_tiers_count_r1c_misses_and_leave_m14_owned_cells_out() {
     // and is within 15 digits of Excel (1 against 1), so no miss.
     assert_eq!(
         m9.tiers.expert,
-        crate::usage_gates::Tally {
+        crate::gate_tiers::Cells {
             cells: 4,
             wrong_type: 1,
             outside: 1

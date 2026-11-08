@@ -281,11 +281,11 @@ fn rules_4_and_5_the_highest_tag_else_m2() {
 /// A row's tier counts: `foundational` and `expert` cells, `wrong_type` of the expert ones.
 fn tiers(foundational: usize, expert: usize, wrong_type: usize) -> TierTallies {
     TierTallies {
-        foundational: crate::usage_gates::Tally {
+        foundational: crate::gate_tiers::Cells {
             cells: foundational,
             ..Default::default()
         },
-        expert: crate::usage_gates::Tally {
+        expert: crate::gate_tiers::Cells {
             cells: expert,
             wrong_type,
             outside: 0,

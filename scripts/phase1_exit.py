@@ -230,11 +230,12 @@ def point_class(point: object) -> str | None:
 
 
 def share_meets(cells: int, misses: int, bar: object) -> bool:
-    """Whether `cells - misses` of `cells` reach `bar` (a share, compared exactly); no cell and no
-    miss meets, a miss without cells never does. The same rule as usage_gates.rs `Tally`."""
+    """Whether `cells - misses` of `cells` reach `bar` (a share, compared exactly; 0 is no bar);
+    no cell meets. The rule of gate_tiers.rs `Cells::meets`, applied again here because the
+    accuracy points join the counts after the report."""
     if cells == 0:
-        return misses == 0
-    return Fraction(cells - misses) >= Fraction(str(bar)) * cells
+        return True
+    return Fraction(max(cells - misses, 0)) >= Fraction(str(bar)) * cells
 
 
 def tier_lines(report: dict[str, Any], accuracy: dict[str, Any] | None, why: str) -> list[Line]:
@@ -286,15 +287,14 @@ def tier_lines(report: dict[str, Any], accuracy: dict[str, Any] | None, why: str
         def meets(c: list[int]) -> bool:
             return share_meets(c[0], c[1], per.get("type", 0)) and share_meets(c[0], c[2], per.get("envelope", 0))
 
-        failing = sorted(
-            (
-                (n, c)
-                for n, c in mine.items()
-                if not meets(c) or (not type_ok and c[1]) or (not envelope_ok and c[2])
-            ),
-            key=lambda item: (-(item[1][1] + item[1][2]), item[0]),
-        )
-        met = cells > 0 and type_ok and envelope_ok and all(meets(c) for c in mine.values())
+        # As gate_tiers.rs: the failing functions are those below a per-function bar; the
+        # contributors are every function with a miss, which a pooled bar alone may fail on.
+        def worst(names: list[tuple[str, list[int]]]) -> list[tuple[str, list[int]]]:
+            return sorted(names, key=lambda item: (-(item[1][1] + item[1][2]), item[0]))
+
+        failing = worst([(n, c) for n, c in mine.items() if not meets(c)])
+        contributors = worst([(n, c) for n, c in mine.items() if c[1] or c[2]])
+        met = type_ok and envelope_ok and not failing
 
         def pct(misses: int) -> str:
             return f"{100 * (cells - misses) / cells:.4f}%" if cells else "n/a"
@@ -311,10 +311,11 @@ def tier_lines(report: dict[str, Any], accuracy: dict[str, Any] | None, why: str
             f"type {pct(wrong)} ({wrong} wrong, bar ≥ {bar(pooled.get('type', 1))}), "
             f"envelope {pct(outside)} ({outside} outside, bar ≥ {bar(pooled.get('envelope', 1))}){per_function}"
         )
-        if failing:
-            shown = ", ".join(f"{n} {c[1]}/{c[2]}" for n, c in failing[:TIER_SHOWN])
-            more = f" and {len(failing) - TIER_SHOWN} more" if len(failing) > TIER_SHOWN else ""
-            detail += f"; failing (wrong type/outside): {shown}{more}"
+        for label, names in (("failing", failing), ("pooled misses from", contributors)):
+            if names and (label == "failing" or not met):
+                shown = ", ".join(f"{n} {c[1]}/{c[2]}" for n, c in names[:TIER_SHOWN])
+                more = f" and {len(names) - TIER_SHOWN} more" if len(names) > TIER_SHOWN else ""
+                detail += f"; {label} (wrong type/outside): {shown}{more}"
         lines.append(Line(name, MET if met else NOT_MET, detail))
     return lines
 

@@ -1,7 +1,8 @@
 use super::*;
+use crate::accuracy::envelope::CellEnvelope;
 use crate::catalog::{CatalogFunction, Scope};
 use crate::runner::CellResult;
-use crate::value::Value;
+use crate::value::{Value, Verdict};
 
 /// A catalog of in-scope functions with their tiers.
 fn catalog(functions: &[(&str, Usage)]) -> Catalog {
@@ -80,109 +81,9 @@ fn tier(gates: &UsageGates, usage: Usage) -> &TierGate {
         .unwrap_or_else(|| panic!("{usage:?}"))
 }
 
-#[test]
-fn the_counted_suites() {
-    for suite in [
-        "probes",
-        "probes-numeric",
-        "gen-m1",
-        "ironcalc-calc",
-        "corpus-bench",
-        "calipers",
-        "poi",
-        "smoke",
-        "fixtures",
-    ] {
-        assert!(counts(suite), "{suite}");
-    }
-    for suite in [
-        "gen-pivot",
-        "pivot-corpus-lo",
-        "pivot-corpus-closedxml",
-        "pivot-export",
-        "accuracy",
-        "other",
-    ] {
-        assert!(!counts(suite), "{suite}");
-    }
-}
-
-#[test]
-fn an_expert_function_at_exactly_99_percent_meets_its_bar() {
-    let bars = Bars::per_function(Usage::Expert);
-    let at = Tally {
-        cells: 100,
-        wrong_type: 1,
-        outside: 1,
-    };
-    assert!(at.meets(bars));
-    assert!(!Tally {
-        wrong_type: 2,
-        ..at
-    }
-    .meets(bars));
-    assert!(!Tally { outside: 2, ..at }.meets(bars));
-    assert!(Tally::default().meets(bars), "no cell meets");
-}
-
-#[test]
-fn the_expert_tier_at_exactly_99_9_percent_meets_its_pooled_bar() {
-    let bars = Bars::pooled(Usage::Expert);
-    let at = Tally {
-        cells: 1000,
-        wrong_type: 1,
-        outside: 1,
-    };
-    assert!(at.meets(bars));
-    assert!(!Tally {
-        wrong_type: 2,
-        ..at
-    }
-    .meets(bars));
-    assert!(!Tally { outside: 2, ..at }.meets(bars));
-}
-
-#[test]
-fn the_foundational_bars_are_every_type_and_99_99_percent_pooled() {
-    let pooled = Bars::pooled(Usage::Foundational);
-    let at = Tally {
-        cells: 10_000,
-        wrong_type: 0,
-        outside: 1,
-    };
-    assert!(at.meets(pooled));
-    assert!(!Tally { outside: 2, ..at }.meets(pooled));
-    assert!(!Tally {
-        wrong_type: 1,
-        ..at
-    }
-    .meets(pooled));
-    // Per function, no envelope bar: a function of 10 cells, 9 outside, meets it.
-    let per = Bars::per_function(Usage::Foundational);
-    assert!(Tally {
-        cells: 10,
-        wrong_type: 0,
-        outside: 9
-    }
-    .meets(per));
-    assert!(!Tally {
-        cells: 10,
-        wrong_type: 1,
-        outside: 0
-    }
-    .meets(per));
-    assert_eq!(
-        Bar::from(pooled),
-        Bar {
-            type_share: 1.0,
-            envelope: 0.9999
-        }
-    );
-    assert!(Bar::from(per).envelope.abs() < f64::EPSILON);
-}
-
-#[test]
-fn tiers_functions_and_bars_from_a_run() {
+/// The run of [`tiers_functions_and_bars_from_a_run`]: per function, the cells `gate_tiers`
+/// counts and the ones it leaves out.
+fn a_run() -> (Catalog, Vec<CaseResult>, Phase1Exceptions) {
     let catalog = catalog(&[
         ("SUM", Usage::Foundational),
         ("ABS", Usage::Foundational),
@@ -192,11 +93,12 @@ fn tiers_functions_and_bars_from_a_run() {
         ("BESSELJ", Usage::Expert),
     ]);
     let mut probes = cells("ABS(1)", 1, 30, 0, 1);
-    // IRR: 100 cells at exactly 99%; RATE: 98 of 100 right.
+    probes.extend(cells("SUM(1)", 40, 9, 1, 0));
+    // IRR: 100 cells at exactly 99%; RATE: 98 of 100 inside the envelope.
     probes.extend(cells("IRR(A1:A3)", 100, 99, 1, 0));
     probes.extend(cells("RATE(1,2,3)", 300, 98, 0, 2));
-    let mut left_out = cells("GETPIVOTDATA(\"x\",A1)+ABS(1)", 500, 0, 5, 0);
-    // A deviation, a hand-written expectation and a listed exception count nowhere.
+    // GETPIVOTDATA, a deviation, a hand-written expectation and a listed exception count nowhere.
+    probes.extend(cells("GETPIVOTDATA(\"x\",A1)+ABS(1)", 500, 0, 5, 0));
     let mut deviation = cell(600, "ABS(2)", Value::Number(1.0), Value::Number(2.0));
     deviation.verdict = Verdict::Deviation;
     let mut hand = cell(
@@ -212,7 +114,7 @@ fn tiers_functions_and_bars_from_a_run() {
         Value::Number(1.0),
         Value::Error("#NUM!".into()),
     );
-    left_out.extend([deviation, hand, listed]);
+    probes.extend([deviation, hand, listed]);
     let mut exceptions = Phase1Exceptions::default();
     exceptions.cells.insert(
         ("probes/p.case.json".into(), "S!A602".into()),
@@ -222,8 +124,7 @@ fn tiers_functions_and_bars_from_a_run() {
             task: "T-1".into(),
         },
     );
-    probes.extend(left_out);
-    let results = [
+    let results = vec![
         case("probes/p.case.json", "probes", probes),
         // A pivot suite is left out whatever its cells say.
         case(
@@ -231,23 +132,28 @@ fn tiers_functions_and_bars_from_a_run() {
             "gen-pivot",
             cells("SUM(1)", 1, 0, 3, 0),
         ),
-        // SUM below the evidence floor of attributed cells: counted by every cell calling it.
+        // No sole non-glue call (ABS and IRR): the cells count toward no function, and there is
+        // no evidence-floor fallback that would count them toward both.
         case(
             "gen-m5/g.case.json",
             "gen-m5",
             cells("SUM(ABS(1),IRR(A1:A2))", 1, 9, 1, 0),
         ),
     ];
+    (catalog, results, exceptions)
+}
+
+#[test]
+fn tiers_functions_and_bars_from_a_run() {
+    let (catalog, results, exceptions) = a_run();
     let gates = summarize(&catalog, &results, &exceptions);
     assert_eq!(gates.suites, ["gen-m5", "probes"]);
     let irr = function(&gates, "IRR");
     assert_eq!((irr.cells, irr.wrong_type, irr.outside), (100, 1, 0));
-    assert!(irr.meets);
+    assert!(irr.meets, "exactly 99%");
     assert!((irr.type_rate - 0.99).abs() < 1e-12);
     let rate = function(&gates, "RATE");
-    assert_eq!((rate.cells, rate.outside), (100, 2));
-    assert!(!rate.meets);
-    // ABS: 31 attributed probe cells (the gen-m5 ones call IRR too); one outside.
+    assert_eq!((rate.cells, rate.outside, rate.meets), (100, 2, false));
     let abs = function(&gates, "ABS");
     assert_eq!((abs.cells, abs.wrong_type, abs.outside), (31, 0, 1));
     assert!(
@@ -255,11 +161,11 @@ fn tiers_functions_and_bars_from_a_run() {
         "no per-function envelope bar for a foundational function"
     );
     let sum = function(&gates, "SUM");
-    assert_eq!((sum.cells, sum.wrong_type), (10, 1));
-    assert!(!sum.meets);
+    assert_eq!((sum.cells, sum.wrong_type, sum.meets), (10, 1, false));
     let none = function(&gates, "BESSELJ");
-    assert_eq!((none.cells, none.type_rate, none.meets), (0, 1.0, true));
-    assert_eq!(function(&gates, "GETPIVOTDATA").cells, 0);
+    assert_eq!((none.cells, none.meets), (0, true));
+    assert!((none.type_rate - 1.0).abs() < f64::EPSILON);
+    assert!(gates.functions.iter().all(|f| f.name != "GETPIVOTDATA"));
     let foundational = tier(&gates, Usage::Foundational);
     assert_eq!(
         (
@@ -270,16 +176,20 @@ fn tiers_functions_and_bars_from_a_run() {
         ),
         (2, 41, 1, 1)
     );
-    // SUM's wrong type fails both its bar and the pooled 100%; ABS's outside cell is 1 of 41,
-    // below the pooled 99.99%, so it is listed too.
-    assert_eq!(foundational.failing_functions, ["ABS", "SUM"]);
+    // SUM's wrong type fails its 100% bar; ABS's outside cell fails only the pooled 99.99%, so
+    // ABS is a contributor, not a failing function.
+    assert_eq!(foundational.failing_functions, ["SUM"]);
+    assert_eq!(foundational.contributors, ["ABS", "SUM"]);
     assert!(!foundational.met);
     let expert = tier(&gates, Usage::Expert);
-    assert_eq!(expert.functions, 4);
-    assert_eq!(expert.failing_functions, ["RATE", "IRR"]);
-    assert!(!expert.met);
+    // GETPIVOTDATA is left to Phase 2 (decision 0354).
+    assert_eq!(expert.functions, 3);
+    assert_eq!(expert.failing_functions, ["RATE"]);
+    assert_eq!(expert.contributors, ["RATE", "IRR"]);
     assert!((expert.function_bar.type_share - 0.99).abs() < 1e-12);
-    assert!(!gates.met);
+    assert!((expert.pooled_bar.envelope - 0.999).abs() < 1e-12);
+    assert!(foundational.function_bar.envelope.abs() < f64::EPSILON);
+    assert!(!expert.met && !gates.met);
     // Failing functions first, most misses first.
     assert_eq!(gates.functions[0].name, "RATE");
     let mut md = String::new();
@@ -287,33 +197,42 @@ fn tiers_functions_and_bars_from_a_run() {
     assert!(md.contains("## Usage tiers (decision 0355)"), "{md}");
     assert!(md.contains("**Usage tiers: not met.**"), "{md}");
     assert!(
-        md.contains("| foundational | 2 | 41 | 1 | 97.5610% | 1 | 97.5610% | 100.0000%, 99.9900%; 100.0000%, pooled only | not met |"),
+        md.contains("| foundational | 2 | 41 | 1 | 97.5610% | 1 | 97.5610% | 100.0000%, 99.9900%; 100.0000%, envelope pooled only | not met |"),
         "{md}"
     );
     assert!(
-        md.contains("- RATE: 100 cells, 0 wrong type (100.0000%), 2 outside (98.0000%)"),
+        md.contains("expert functions below their bars (1), worst first:\n\n- RATE: 100 cells, 0 wrong type (100.0000%), 2 outside (98.0000%)"),
+        "{md}"
+    );
+    assert!(
+        md.contains("Other foundational functions with a miss in the pooled counts, most first:\n\n- ABS: 31 cells"),
         "{md}"
     );
 }
 
 #[test]
-fn a_clean_run_meets_both_tiers() {
+fn a_wrong_type_is_a_type_miss_only() {
+    // Decision 0355's two measures are separate (owner ruling): 1 wrong and 1 outside of 1,000
+    // expert cells meet both 99.9% bars.
     let catalog = catalog(&[("ABS", Usage::Foundational), ("IRR", Usage::Expert)]);
     let mut probes = cells("ABS(1)", 1, 30, 0, 0);
-    probes.extend(cells("IRR(A1:A3)", 100, 2000, 1, 1));
+    probes.extend(cells("IRR(A1:A3)", 100, 998, 1, 1));
     let gates = summarize(
         &catalog,
         &[case("probes/p.case.json", "probes", probes)],
         &Phase1Exceptions::default(),
     );
+    let expert = tier(&gates, Usage::Expert);
+    assert_eq!(
+        (expert.cells, expert.wrong_type, expert.outside),
+        (1000, 1, 1)
+    );
+    assert!((expert.envelope_rate - 0.999).abs() < 1e-12);
     assert!(gates
         .tiers
         .iter()
         .all(|t| t.met && t.failing_functions.is_empty()));
     assert!(gates.met);
-    // No counted cell: nothing measured, never met.
-    let empty = summarize(&catalog, &[], &Phase1Exceptions::default());
-    assert!(!empty.met && empty.tiers.iter().all(|t| !t.met));
 }
 
 #[test]
@@ -338,12 +257,21 @@ fn a_cell_takes_its_sole_calls_tier_else_the_strictest() {
     // No catalog function (an operator, a spill extent, a user name): foundational.
     assert_eq!(cell_usage(&calls(&[]), of), Usage::Foundational);
     assert_eq!(cell_usage(&calls(&["MYNAME"]), of), Usage::Foundational);
+}
+
+#[test]
+fn a_row_meets_the_pooled_bars_of_each_tier() {
     let mut row = TierTallies::default();
     row.tally_mut(Usage::Expert).cells = 1000;
     row.tally_mut(Usage::Expert).miss(CellEnvelope::WrongType);
     assert!(row.meets_bars(), "1 of 1000 expert cells");
+    row.tally_mut(Usage::Expert).miss(CellEnvelope::Outside);
+    assert!(
+        row.meets_bars(),
+        "a wrong type and an outside number are separate measures"
+    );
     row.tally_mut(Usage::Foundational)
         .add(CellEnvelope::Outside);
     assert!(!row.meets_bars(), "1 of 1 foundational cell outside");
-    assert_eq!(row.text(), "F 0/1 of 1, E 1/0 of 1000");
+    assert_eq!(row.text(), "F 0/1 of 1, E 1/1 of 1000");
 }

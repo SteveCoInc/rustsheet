@@ -35,7 +35,7 @@ fn m10_report(
         visibly_off: probe_off,
         r1c_off: probe_off,
         tiers: crate::usage_gates::TierTallies {
-            foundational: crate::usage_gates::Tally {
+            foundational: crate::gate_tiers::Cells {
                 cells: 415,
                 wrong_type: probe_off,
                 outside: 0,

@@ -178,14 +178,14 @@ class Phase1Exit(unittest.TestCase):
         self.assertEqual(code, 1)
         line = next(ln for ln in text.splitlines() if ln.startswith("foundational\t"))
         self.assertIn("foundational\tnot met\t2 functions, 151 cells (1 accuracy points)", line)
-        # SUM: 1 wrong (the point) and 1 outside; ABS 1 wrong. The pooled envelope (1 of 151) is
-        # under 99.99% too, so SUM's outside cell counts against it.
-        self.assertIn("failing (wrong type/outside): SUM 1/1, ABS 1/0", line)
+        # SUM: 1 wrong (the point) and 1 outside; ABS 1 wrong: both below the per-function 100%.
+        self.assertIn("failing (wrong type/outside): SUM 1/1, ABS 1/0;", line)
+        self.assertIn("pooled misses from (wrong type/outside): SUM 1/1, ABS 1/0", line)
         self.assertEqual(self.failing(text), "Phase 1 exit: not met: foundational")
 
     def test_the_expert_bars_pooled_and_per_function(self) -> None:
-        # 2 outside of 1,101 pooled is under 99.9%, so IRR fails though it meets its own 99%; RATE
-        # at 98% fails its own bar.
+        # 2 outside of 1,101 pooled is under 99.9%, though IRR meets its own 99%; RATE at 98% fails
+        # its own bar. The failing functions are those below their own bar (gate_tiers.rs).
         functions = [
             gate_function("SUM", "foundational", 100),
             gate_function("IRR", "expert", 1000, outside=1),
@@ -196,14 +196,15 @@ class Phase1Exit(unittest.TestCase):
         self.assertEqual(code, 1)
         line = next(ln for ln in text.splitlines() if ln.startswith("expert\t"))
         self.assertIn("expert\tnot met\t2 functions, 1101 cells (1 accuracy points)", line)
-        self.assertIn("failing (wrong type/outside): IRR 0/2, RATE 2/0", line)
+        self.assertIn("failing (wrong type/outside): RATE 2/0;", line)
+        self.assertIn("pooled misses from (wrong type/outside): IRR 0/2, RATE 2/0", line)
         self.assertTrue(phase1_exit.share_meets(100, 1, 0.99))
         self.assertFalse(phase1_exit.share_meets(100, 2, 0.99))
         self.assertTrue(phase1_exit.share_meets(1000, 1, 0.999))
         self.assertFalse(phase1_exit.share_meets(1000, 2, 0.999))
         self.assertTrue(phase1_exit.share_meets(10_000, 1, 0.9999))
         self.assertTrue(phase1_exit.share_meets(0, 0, 1.0))
-        self.assertFalse(phase1_exit.share_meets(0, 1, 0.5))
+        self.assertTrue(phase1_exit.share_meets(10, 9, 0.0), "0 is no bar")
 
     def test_an_accuracy_point_outside_with_an_error_is_a_wrong_type(self) -> None:
         self.assertEqual(phase1_exit.point_class(point("X", "outside", {"t": "e", "v": "#NUM!"})), "wrong_type")

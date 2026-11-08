@@ -192,20 +192,6 @@ pub enum Attribution {
     All,
 }
 
-impl Attribution {
-    /// Decision 0118 item 2's choice for a function with `attributed` scored attributed cells:
-    /// those cells from [`EVIDENCE_FLOOR`] on, else every Excel cell that calls it. The one
-    /// floor rule of [`FunctionStat::counted`] and the usage-tier gates (`usage_gates`).
-    #[must_use]
-    pub fn for_attributed(attributed: usize) -> Attribution {
-        if attributed < EVIDENCE_FLOOR {
-            Attribution::All
-        } else {
-            Attribution::Sole
-        }
-    }
-}
-
 impl FunctionStat {
     /// Counts a non-deviation cell that calls this function toward [`FunctionStat::excel`] when
     /// its expectation comes from Excel, and toward [`FunctionStat::attributed`] too when `sole`
@@ -225,9 +211,10 @@ impl FunctionStat {
     /// rate (`v15_checkpoint`) both read them.
     #[must_use]
     pub fn counted(&self) -> (Attribution, &Closeness) {
-        match Attribution::for_attributed(self.attributed.scored()) {
-            Attribution::All => (Attribution::All, &self.excel),
-            Attribution::Sole => (Attribution::Sole, &self.attributed),
+        if self.attributed.scored() < EVIDENCE_FLOOR {
+            (Attribution::All, &self.excel)
+        } else {
+            (Attribution::Sole, &self.attributed)
         }
     }
 
