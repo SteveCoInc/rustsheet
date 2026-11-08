@@ -186,7 +186,7 @@ probes/linest-modes.case.json	42
 probes/logest-modes.case.json	51
 probes/sheet-ops/t4747-name-relative-delete-row.case.json	2
 probes/sheet-ops/t4747-name-relative-insert-row.case.json	2
-probes/stat-argument-modes.case.json	9
+probes/stat-argument-modes.case.json	12
 probes/stat-quantile-lift.case.json	9
 probes/subexpr-05d44f6dd6cfc567-calc-a178.case.json	1
 probes/subnormal-saved-negative-and-array.case.json	1
@@ -219,6 +219,7 @@ probes/t2982-gamma-inv-huge-shape.case.json	2
 probes/t3007-beta-dist-ln-x-overflow.case.json	4
 probes/t3012-gamma-dist-at-quantile.case.json	3
 probes/t3012-gamma-inv-small-shape.case.json	4
+probes/t3185-m9-statistical-argument-kinds-c.case.json	1
 probes/t3252-gamma-prefactor-holdout-2.case.json	5
 probes/t3252-gamma-prefactor-holdout.case.json	6
 probes/t3252-gamma-prefactor-sweep.case.json	3
@@ -278,7 +279,7 @@ probes/t4437-beta-zero-fresh2.case.json	66
 probes/t4456-beta-t-zero-cut.case.json	25
 probes/t4456-beta-t-zero-reach.case.json	27
 probes/t4579-ttest-paired.case.json	48
-probes/t4590-growth-overflow.case.json	14
+probes/t4590-growth-overflow.case.json	18
 probes/t4618-order-after-active-backward.case.json	1
 probes/t4625-gamma-dist-ratio-overflow.case.json	4
 probes/t4699-pivot-blank-collapsed.case.json	1
@@ -295,7 +296,7 @@ probes/t4863-xlookup-mode-lift-criteria.case.json	12
 probes/t4872-r2-order-and-lift.case.json	9
 probes/t4901-mround-blank-let-lambda-roundings.case.json	7
 probes/t4974-beta-f-inv-endpoint-saturation.case.json	191
-probes/t4974-beta-inv-as109-accuracy-exponent.case.json	8
+probes/t4974-beta-inv-as109-accuracy-exponent.case.json	13
 probes/t4974-beta-inv-dbl-min-residual.case.json	120
 probes/t4974-beta-inv-large-shape-round-trip.case.json	38
 probes/t4974-beta-inv-tiny-shape-num-boundary.case.json	67
@@ -310,6 +311,7 @@ probes/t4974-gamma-small-x-prefactor-boundary.case.json	135
 probes/t4974-irr-negative-discount-and-caps.case.json	17
 probes/t4974-lognorm-density-holdout.case.json	17
 probes/t4974-t-dist-df1-and-large-df-centre.case.json	9
+probes/t4974-t-dist-df1000-central-endpoint.case.json	1
 probes/t4974-t-inv-joint-abs-rel-stop.case.json	28
 probes/t4974-t-inv-quarter-stop.case.json	22
 probes/t4974-t-inv-small-beta-tails.case.json	16
