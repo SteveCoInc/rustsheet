@@ -382,6 +382,9 @@ fn score_milestones(
         &generated_names,
         &milestones.phase1_exceptions,
     );
+    // Before the milestone rows, which apply the same tier bars (decision 0355 item 4).
+    report.usage_gates =
+        rustsheet_eval::usage_gates::summarize(catalog, results, &milestones.phase1_exceptions);
     report.milestone_exit = milestone_exit::summarize(report);
 }
 

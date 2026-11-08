@@ -11,7 +11,9 @@
 //! 5. a case with no milestone tag is M2.
 //!
 //! The report scores each milestone the way the baseline does, so its known failures equal the
-//! F lines of `eval/baseline/probes.txt` that the rules assign to it.
+//! F lines of `eval/baseline/probes.txt` that the rules assign to it. Each row also counts its
+//! cells by usage tier ([`MilestoneRow::tiers`], decision 0355 item 4): the misses are the cells
+//! R1(c) counts, a wrong type or a number outside the envelope ([`R1cCells::miss`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -21,7 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::baseline::Baseline;
 use crate::case::split_qualified;
-use crate::catalog::Catalog;
+use crate::catalog::{Catalog, Usage};
 use crate::cellref::Addr;
 use crate::closeness::Visible;
 use crate::formula_calls::functions_in;
@@ -29,6 +31,7 @@ use crate::milestone_lists::MilestoneList;
 use crate::r1c::{R1c, R1cCells};
 use crate::runner::{CaseResult, CellKind, CellResult};
 use crate::suite::BaselineMode;
+use crate::usage_gates::{cell_usage, TierTallies};
 use crate::value::Verdict;
 
 /// The mapping file, relative to the repository root.
@@ -247,6 +250,8 @@ pub struct Rules {
     mapping: Mapping,
     /// Catalog function name → milestone number.
     catalog: BTreeMap<String, u32>,
+    /// Catalog function name → usage tier (decision 0355).
+    usage: BTreeMap<String, Usage>,
 }
 
 impl Rules {
@@ -265,7 +270,17 @@ impl Rules {
                 .functions()
                 .filter_map(|f| Some((f.name.clone(), parse_milestone(&f.milestone)?)))
                 .collect(),
+            usage: catalog
+                .functions()
+                .map(|f| (f.name.clone(), f.usage))
+                .collect(),
         }
+    }
+
+    /// The usage tier of cell `c` of `r` ([`cell_usage`] of the functions it calls).
+    fn cell_usage(&self, r: &CaseResult, c: &CellResult) -> Usage {
+        let calls = crate::function_scope::cell_calls(r, c).unwrap_or_default();
+        cell_usage(&calls, |f| self.usage.get(f).copied())
     }
 
     /// The milestone of the whole case: rules 1, 2 (case lines), 4 and 5. A catalog case's own
@@ -354,6 +369,11 @@ pub struct MilestoneRow {
     /// Of `visibly_off`, the cells only open M14 tasks own (decision 0188 R7).
     #[serde(default)]
     pub m14_owned: usize,
+    /// The row's non-deviation cells by usage tier, with the misses R1(c) counts (a wrong type
+    /// or a number outside the envelope); the M14-owned cells leave it. The row's probe exit
+    /// applies the tier bars to it, pooled within the row (decision 0355 item 4).
+    #[serde(default)]
+    pub tiers: TierTallies,
     /// Cells the spill-extent check failed (filled by the engine, left empty by Excel; decision
     /// 0063): the M7 exit requires none (decision 0140).
     #[serde(default)]
@@ -414,8 +434,10 @@ pub fn summarize(
             if c.kind == CellKind::SpillExtent {
                 s.spill_extent_failures += 1;
             }
+            let usage = rules.cell_usage(r, c);
             if c.verdict.is_pass() {
                 s.bit_exact += 1;
+                s.tiers.tally_mut(usage).cells += 1;
             } else if c.verdict == Verdict::Deviation {
                 s.deviations += 1;
             } else if let Some(name) = visibly_off_name(r, c) {
@@ -429,10 +451,22 @@ pub fn summarize(
                     R1c::R3Pass => s.r3_pass += 1,
                     R1c::M14Owned => s.m14_owned += 1,
                 }
+                if r1c.class(&name) != R1c::M14Owned {
+                    let tally = s.tiers.tally_mut(usage);
+                    tally.cells += 1;
+                    if let Some(miss) = r1c.miss(&name) {
+                        tally.miss(miss);
+                    }
+                }
                 s.visibly_off_cells.push(name);
-            } else if c.verdict.is_failure() && Visible::is_r3_math(c) {
-                // Math over Excel by design (decision 0310): not visibly off, and R1(c)'s R3 pass.
-                s.r3_pass += 1;
+            } else {
+                // A failure that is not visibly off: within 15 digits (13 for decision 0267's
+                // family), an unsupported result, or math over Excel by design (decision 0310,
+                // R1(c)'s R3 pass). R1(c) counts none of them.
+                if Visible::is_r3_math(c) {
+                    s.r3_pass += 1;
+                }
+                s.tiers.tally_mut(usage).cells += 1;
             }
             rows_of_case.insert(row);
         }
@@ -866,12 +900,31 @@ mod tests {
                 ..MilestoneRow::default()
             }
         };
+        // The test catalog's functions are all expert: SUM(1) is an expert cell, `1` (no call)
+        // a foundational one, and the deviation counts in neither tier.
+        let tiers = |foundational: usize, expert: usize, wrong_type: usize| TierTallies {
+            foundational: crate::usage_gates::Tally {
+                cells: foundational,
+                ..Default::default()
+            },
+            expert: crate::usage_gates::Tally {
+                cells: expert,
+                wrong_type,
+                outside: 0,
+            },
+        };
         assert_eq!(
             rows,
             [
-                row("M0-M2", 2, 3, 1, 1, &[("probes/d.case.json", 1)]),
+                MilestoneRow {
+                    tiers: tiers(1, 1, 0),
+                    ..row("M0-M2", 2, 3, 1, 1, &[("probes/d.case.json", 1)])
+                },
                 row("M5", 0, 0, 0, 0, &[]),
-                row("M6", 1, 1, 1, 0, &[]),
+                MilestoneRow {
+                    tiers: tiers(0, 1, 0),
+                    ..row("M6", 1, 1, 1, 0, &[])
+                },
                 // A panicked case did not run (decision 0174); the pending M12 case did.
                 MilestoneRow {
                     blocked_cases: vec!["probes/p.case.json!*".into()],
@@ -884,6 +937,9 @@ mod tests {
                     // An unclassified visibly-off cell counts in R1(c) (decision 0188).
                     r1c_off: 1,
                     r1c_off_cells: vec!["probes/catalog/c.case.json!S!A2".into()],
+                    // GEOMEAN's type mismatch is the R1(c) miss; the other GEOMEAN cell is within
+                    // 15 digits.
+                    tiers: tiers(0, 2, 1),
                     ..row(
                         "M9",
                         2,

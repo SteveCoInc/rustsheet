@@ -54,6 +54,7 @@ mod spill_extent;
 pub mod subexpr_case;
 pub mod suite;
 pub mod text_expect;
+pub mod usage_gates;
 pub mod v15_checkpoint;
 pub mod value;
 pub mod visible_parity;

@@ -9,19 +9,23 @@ line. The criteria and their measures are decision 0187's:
 - `run`: the run skipped no suite and was not dirty (otherwise nothing below can be trusted);
 - `catalog`: eval/catalog/excel-functions.tsv and functions.yaml name the same functions, each
   with a parity scope (T-0040);
-- `gate A`: Gate A holds (decision 0188 R1(a), SPEC-0029 "Gate A holds"), from the accuracy check's
-  JSON (`holds`), which `make eval` writes (decision 0268); `n/a` when the JSON is absent or older than
-  the report;
-- `function rate`: Gate B (decision 0188 R1(b), `v15_checkpoint.gate_b`): `met` or `not met`, or `n/a` with
-  the suites the run did not score when it was not measured; with no stale or unchecked exception line;
+- `foundational` and `expert`: decision 0355's usage-tier gates (SPEC-0037 design 5), from the
+  report's `usage_gates` plus every point of the accuracy check's JSON, which `make eval` writes
+  (decision 0268), each point counted under its table's function: the tier's rates against its
+  bars, met or not, and its failing functions, worst first; `n/a` when the report has no
+  `usage_gates` or the JSON is absent, unreadable or older than the report;
+- `gate A` and `function rate`, marked `info` and gating nothing (decision 0355 item 5): the
+  accuracy check's `holds` (decision 0188 R1(a), now at decision 0355's 12-digit envelope) and Gate B
+  (decision 0188 R1(b), `v15_checkpoint.gate_b`), each with the verdict it would have had;
 - `owners`: `exit_owners.unowned_off` and `exit_owners.unowned` for every Phase 1 milestone list
   no cell (a cell owned only by a `defer:` task is unowned);
 - `milestone M<k>`: the report's `milestone_exit` row (an owner count rides beside a met row);
   a row with pivot measures also names its suite, probe and catalog verdicts (decision 0274);
 - `manual`: the prose items decision 0146 checks outside the rows.
-Verdicts come from report.json and exit_owners.py; nothing is recomputed here. Exit 1 when any
-line is `not met` or `n/a` (an unmeasured criterion is never met), 2 when the report cannot be
-read, else 0.
+Verdicts come from report.json and exit_owners.py; nothing is recomputed here but the tier
+gates, which add the accuracy points to `usage_gates`'s counts. Exit 1 when any line is `not met`
+or `n/a` (an unmeasured criterion is never met; an `info` line never counts), 2 when the report
+cannot be read, else 0.
 """
 
 from __future__ import annotations
@@ -31,6 +35,7 @@ import json
 import re
 import sys
 from dataclasses import asdict, dataclass
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -42,7 +47,11 @@ ROOT = Path(__file__).resolve().parent.parent
 CATALOG = ROOT / "eval" / "catalog"
 # Written by `rustsheet-eval accuracy` (accuracy::JSON_PATH), which `make eval` runs (decision 0268).
 ACCURACY = ROOT / "eval" / "runs" / "accuracy.json"
-MET, NOT_MET, MANUAL, NOT_MEASURED = "met", "not met", "manual", "n/a"
+MET, NOT_MET, MANUAL, NOT_MEASURED, INFO = "met", "not met", "manual", "n/a", "info"
+# Decision 0355's usage tiers, in the order the lines print (report.json `usage_gates.tiers`).
+TIERS = ("foundational", "expert")
+# Failing functions a tier line names; the report lists every one.
+TIER_SHOWN = 10
 # The Phase 1 milestones whose exit criteria the Phase 1 exit requires (docs/milestones.md). A
 # milestone joins once the report has its `milestone_exit` row (a missing row reads `not met`).
 # M16, pivot tables, joined by decision 0274 and moved to Phase 2 by decision 0354; the report
@@ -154,21 +163,35 @@ def rate_line(report: dict[str, Any]) -> Line:
     return Line("function rate", MET if met else NOT_MET, detail)
 
 
+def load_accuracy(accuracy: Path, report: Path) -> tuple[dict[str, Any] | None, str]:
+    """The accuracy check's JSON, or `None` and why it measures nothing: absent, or older than the
+    report (it would then describe another tree). Its shape is the caller's to check."""
+    if not accuracy.exists():
+        return None, f"no {accuracy.name}: run `make eval` (or `rustsheet-eval accuracy`)"
+    if report.exists() and accuracy.stat().st_mtime < report.stat().st_mtime:
+        return None, f"{accuracy.name} is older than the report: run `make eval`"
+    try:
+        top = json.loads(accuracy.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        return None, f"{accuracy.name} unreadable: {e}"
+    if not isinstance(top, dict):
+        return None, f"{accuracy.name} unreadable: not an object"
+    return top, ""
+
+
 def gate_a_line(accuracy: Path, report: Path) -> Line:
     """Gate A (decision 0188 R1(a)): the accuracy check's `holds`, with its counts. `n/a` when the
     JSON is absent, unreadable or older than the report, since it would then describe another tree."""
-    if not accuracy.exists():
-        return Line("gate A", NOT_MEASURED, f"no {accuracy.name}: run `make eval` (or `rustsheet-eval accuracy`)")
-    if report.exists() and accuracy.stat().st_mtime < report.stat().st_mtime:
-        return Line("gate A", NOT_MEASURED, f"{accuracy.name} is older than the report: run `make eval`")
+    top, why = load_accuracy(accuracy, report)
+    if top is None:
+        return Line("gate A", NOT_MEASURED, why)
     try:
-        top = json.loads(accuracy.read_text(encoding="utf-8"))
         check = top["check"]
         points = list(check["points"])
         missing = len(check["missing_tables"])
         problems = sum(len(check[k]) for k in ("stale_known_failures", "bad_marks", "bad_exemptions"))
         holds = top["holds"]
-    except (OSError, ValueError, KeyError, TypeError) as e:
+    except (KeyError, TypeError) as e:
         return Line("gate A", NOT_MEASURED, f"{accuracy.name} unreadable: {e}")
     standing: dict[str, int] = {}
     for pt in points:
@@ -181,6 +204,119 @@ def gate_a_line(accuracy: Path, report: Path) -> Line:
         f"{problems} list problems; missing tables {missing}"
     )
     return Line("gate A", MET if holds is True else NOT_MET, detail)
+
+
+def as_info(line: Line) -> Line:
+    """`line` marked `info`, its own verdict kept in the detail (decision 0355 item 5)."""
+    return Line(line.criterion, INFO, f"{line.verdict} (information, gates nothing): {line.detail}")
+
+
+def point_class(point: object) -> str | None:
+    """How an accuracy point counts for its tier: `inside`, `wrong_type` (an error or type against
+    Excel's, decision 0355 item 2) or `outside`; `None` for a table defect, which is the table's,
+    not the engine's. The classes are the check's own (`accuracy::envelope::Envelope`)."""
+    if not isinstance(point, dict):
+        return None
+    cls = point.get("class")
+    if cls in ("excel", "math", "both"):
+        return "inside"
+    if cls == "error_mismatch":
+        return "wrong_type"
+    if cls == "outside":
+        engine = point.get("engine")
+        number = isinstance(engine, dict) and engine.get("t") == "n"
+        return "outside" if number else "wrong_type"
+    return None
+
+
+def share_meets(cells: int, misses: int, bar: object) -> bool:
+    """Whether `cells - misses` of `cells` reach `bar` (a share, compared exactly); no cell and no
+    miss meets, a miss without cells never does. The same rule as usage_gates.rs `Tally`."""
+    if cells == 0:
+        return misses == 0
+    return Fraction(cells - misses) >= Fraction(str(bar)) * cells
+
+
+def tier_lines(report: dict[str, Any], accuracy: dict[str, Any] | None, why: str) -> list[Line]:
+    """Decision 0355's `foundational` and `expert` lines: `usage_gates` plus the accuracy points,
+    each counted under its table's function, against the tier's bars (SPEC-0037 design 5)."""
+    gates = report.get("usage_gates")
+    tiers = gates.get("tiers") if isinstance(gates, dict) else None
+    if not isinstance(gates, dict) or not isinstance(tiers, list) or not tiers:
+        return [Line(t, NOT_MEASURED, "no usage_gates in the report: run `make eval`") for t in TIERS]
+    if accuracy is None:
+        return [Line(t, NOT_MEASURED, f"{why}; the accuracy points count in the tier gates") for t in TIERS]
+    try:
+        points = list(accuracy["check"]["points"])
+    except (KeyError, TypeError) as e:
+        return [Line(t, NOT_MEASURED, f"accuracy JSON unreadable: {e}") for t in TIERS]
+    functions = [f for f in gates.get("functions") or [] if isinstance(f, dict)]
+    usage = {str(f.get("name")): str(f.get("usage")) for f in functions}
+    # name -> [cells, wrong type, outside], the eval's counts plus the points.
+    counts = {
+        str(f.get("name")): [int(f.get("cells") or 0), int(f.get("wrong_type") or 0), int(f.get("outside") or 0)]
+        for f in functions
+    }
+    added = {t: 0 for t in TIERS}
+    for pt in points:
+        cls = point_class(pt)
+        table = str(pt.get("table")) if isinstance(pt, dict) else ""
+        if cls is None or table not in counts:
+            continue
+        c = counts[table]
+        c[0] += 1
+        c[1] += cls == "wrong_type"
+        c[2] += cls == "outside"
+        added[usage[table]] = added.get(usage[table], 0) + 1
+    lines = []
+    by_usage = {str(t.get("usage")): t for t in tiers if isinstance(t, dict)}
+    for name in TIERS:
+        tier = by_usage.get(name)
+        if tier is None:
+            lines.append(Line(name, NOT_MEASURED, f"no {name} tier in usage_gates"))
+            continue
+        pooled, per = tier.get("pooled_bar") or {}, tier.get("function_bar") or {}
+        mine = {n: c for n, c in counts.items() if usage[n] == name}
+        cells = sum(c[0] for c in mine.values())
+        wrong = sum(c[1] for c in mine.values())
+        outside = sum(c[2] for c in mine.values())
+        type_ok = share_meets(cells, wrong, pooled.get("type", 1))
+        envelope_ok = share_meets(cells, outside, pooled.get("envelope", 1))
+
+        def meets(c: list[int]) -> bool:
+            return share_meets(c[0], c[1], per.get("type", 0)) and share_meets(c[0], c[2], per.get("envelope", 0))
+
+        failing = sorted(
+            (
+                (n, c)
+                for n, c in mine.items()
+                if not meets(c) or (not type_ok and c[1]) or (not envelope_ok and c[2])
+            ),
+            key=lambda item: (-(item[1][1] + item[1][2]), item[0]),
+        )
+        met = cells > 0 and type_ok and envelope_ok and all(meets(c) for c in mine.values())
+
+        def pct(misses: int) -> str:
+            return f"{100 * (cells - misses) / cells:.4f}%" if cells else "n/a"
+
+        def bar(b: object) -> str:
+            return f"{100 * float(str(b)):g}%"
+
+        per_function = (
+            f"; per function type ≥ {bar(per.get('type', 0))}"
+            + (f", envelope ≥ {bar(per.get('envelope'))}" if float(str(per.get("envelope", 0))) else "")
+        )
+        detail = (
+            f"{len(mine)} functions, {cells} cells ({added.get(name, 0)} accuracy points): "
+            f"type {pct(wrong)} ({wrong} wrong, bar ≥ {bar(pooled.get('type', 1))}), "
+            f"envelope {pct(outside)} ({outside} outside, bar ≥ {bar(pooled.get('envelope', 1))}){per_function}"
+        )
+        if failing:
+            shown = ", ".join(f"{n} {c[1]}/{c[2]}" for n, c in failing[:TIER_SHOWN])
+            more = f" and {len(failing) - TIER_SHOWN} more" if len(failing) > TIER_SHOWN else ""
+            detail += f"; failing (wrong type/outside): {shown}{more}"
+        lines.append(Line(name, MET if met else NOT_MET, detail))
+    return lines
 
 
 def owner_counts(
@@ -250,16 +386,23 @@ def milestone_lines(report: dict[str, Any], per: dict[str, int]) -> list[Line]:
 
 
 def verdicts(
-    report: dict[str, Any], tasks_dir: Path, catalog_dir: Path, gate_a: Line | None = None
+    report: dict[str, Any],
+    tasks_dir: Path,
+    catalog_dir: Path,
+    gate_a: Line | None = None,
+    accuracy: tuple[dict[str, Any] | None, str] | None = None,
 ) -> list[Line]:
     rows = [str(r.get("milestone")) for r in report.get("milestone_exit") or []]
     milestones = [m for m in PHASE1_MILESTONES if m in rows]
     off, deferred, per = owner_counts(report, tasks_dir, milestones)
+    acc, why = accuracy if accuracy is not None else (None, "no accuracy JSON given")
     return [
         run_line(report),
         catalog_line(catalog_dir, report),
-        *([gate_a] if gate_a is not None else []),
-        rate_line(report),
+        *tier_lines(report, acc, why),
+        # Decision 0355 item 5: the old gates stay as information beside the tier gates.
+        *([as_info(gate_a)] if gate_a is not None else []),
+        as_info(rate_line(report)),
         owners_line(off, deferred, per),
         *milestone_lines(report, per),
         *(Line(f"manual: {item}", MANUAL, where) for item, where in MANUAL_ITEMS),
@@ -271,11 +414,16 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--report", type=Path, default=exit_owners.REPORT)
     ap.add_argument("--tasks", type=Path, default=tasks.TASKS)
     ap.add_argument("--catalog", type=Path, default=CATALOG)
-    ap.add_argument("--accuracy", type=Path, default=ACCURACY, help="the accuracy check's JSON (Gate A)")
+    ap.add_argument(
+        "--accuracy", type=Path, default=ACCURACY, help="the accuracy check's JSON (its points join the tier gates)"
+    )
     ap.add_argument("--json", action="store_true", help="print the lines and the overall verdict as JSON")
     args = ap.parse_args(argv)
     gate_a = gate_a_line(args.accuracy, args.report)
-    lines = exit_owners.with_report(args.report, lambda r: verdicts(r, args.tasks, args.catalog, gate_a))
+    accuracy = load_accuracy(args.accuracy, args.report)
+    lines = exit_owners.with_report(
+        args.report, lambda r: verdicts(r, args.tasks, args.catalog, gate_a, accuracy)
+    )
     if lines is None:
         return 2
     failing = [ln.criterion for ln in lines if ln.verdict in (NOT_MET, NOT_MEASURED)]

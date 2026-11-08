@@ -503,12 +503,12 @@ impl Check {
         let owners: Vec<String> = owners.iter().map(|(o, n)| format!("{o} {n}")).collect();
         let known = self.count(|p| p.standing == Standing::KnownFailure);
         let mut out = format!(
-            "accuracy: {} points in {} tables (pending {}): {} in envelope (Excel 15 digits only {}, math only {}), {} known failures{}, {} failing, {} table defects; missing tables {}; {:.2} s\n",
+            "accuracy: {} points in {} tables (pending {}): {} in envelope (Excel 12 digits only {}, math only {}), {} known failures{}, {} failing, {} table defects; missing tables {}; {:.2} s\n",
             self.points.len(),
             tables.len(),
             self.count(|p| p.excel.is_none()),
             self.count(|p| p.standing == Standing::Inside),
-            self.count(|p| p.class == Envelope::Excel15),
+            self.count(|p| p.class == Envelope::Excel),
             self.count(|p| p.class == Envelope::Math),
             known,
             if owners.is_empty() {

@@ -1,17 +1,17 @@
-//! Gate A's envelope (SPEC-0029 "The check" step 3, decision 0188 R2): the one definition of
-//! whether an engine value is accurate enough, shared by the accuracy check, Gate B's R3 cells
-//! and R1(c)'s probe rows (T-3359, T-3380).
+//! The envelope of decision 0355 item 2 (SPEC-0037 design 2; first Gate A's, decision 0188 R2):
+//! the one definition of whether an engine value is accurate enough, shared by the accuracy
+//! check, the R3 test, R1(c)'s milestone rows and the usage-tier gates.
 //!
-//! A value is inside when it is within 15 significant digits of Excel's value (the eval's own
-//! closeness buckets at the 15-digit bar, [`Visible::is_off_at_fifteen_digits`], never a second
-//! 15-digit rule; decision 0267's 13-digit bar for the incomplete-beta family does not reach
-//! Gate A) or within ε = 1e-9
-//! relative of the 50-digit math, with an absolute floor of 1e-300. An error against a number,
-//! either way, is never inside.
+//! A value is inside when it is within [`ENVELOPE_DIGITS`] (12) significant digits of Excel's
+//! value ([`within_significant_digits`], the eval's one digit rule) or within ε = 1e-9 relative
+//! of the 50-digit math, with an absolute floor of 1e-300. An error against a number, either way,
+//! two different errors, or a wrong text, boolean or type is never inside. [`envelope`] classifies
+//! an accuracy-table point, which always has a math value; [`cell_envelope`] an eval cell, which
+//! may have none. Both read Excel's side through one test ([`within_excel`]).
 
 use serde::{Deserialize, Serialize};
 
-use crate::closeness::{within_significant_digits, Visible};
+use crate::closeness::within_significant_digits;
 use crate::runner::{CellResult, Target};
 use crate::value::{Value, Verdict};
 
@@ -79,10 +79,12 @@ impl<'de> Deserialize<'de> for MathValue {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Envelope {
-    /// Within 15 significant digits of Excel, not within ε of the math.
-    Excel15,
-    /// Within ε of the math (or the math's domain error matched), not within 15 digits of Excel
-    /// (or Excel's value is pending, or the point is an R3 point).
+    /// Within [`ENVELOPE_DIGITS`] significant digits of Excel (or Excel's error matched), not
+    /// within ε of the math.
+    Excel,
+    /// Within ε of the math (or the math's domain error matched), not within
+    /// [`ENVELOPE_DIGITS`] digits of Excel (or Excel's value is pending, or the point is an R3
+    /// point).
     Math,
     /// Inside on both sides.
     Both,
@@ -100,7 +102,7 @@ impl Envelope {
     /// Whether the point is inside the envelope.
     #[must_use]
     pub fn is_inside(self) -> bool {
-        matches!(self, Self::Excel15 | Self::Math | Self::Both)
+        matches!(self, Self::Excel | Self::Math | Self::Both)
     }
 }
 
@@ -139,13 +141,9 @@ pub fn envelope(
         _ => {}
     }
     // R3 drops Excel's side only where Excel gives a number: its errors are still matched
-    // (decision 0188 R3). An unsupported engine result (`#NAME?`, `#N/IMPL`) is never inside,
-    // though the closeness buckets leave it out of the visibly-off count.
+    // (decision 0188 R3).
     let r3_drops_excel = r3 && matches!(excel_value, Some(Value::Number(_)));
-    let excel_side = !r3_drops_excel
-        && excel.is_some_and(|c| {
-            c.verdict != Verdict::Unsupported && !Visible::is_off_at_fifteen_digits(c)
-        });
+    let excel_side = !r3_drops_excel && excel.is_some_and(within_excel);
     let math_side = match (math, engine) {
         (MathValue::Number(m), Value::Number(e)) => within_math(*e, *m),
         (MathValue::DomainError(_), Value::Error(code)) => match excel_value {
@@ -157,7 +155,7 @@ pub fn envelope(
     };
     match (excel_side, math_side) {
         (true, true) => Envelope::Both,
-        (true, false) => Envelope::Excel15,
+        (true, false) => Envelope::Excel,
         (false, true) => Envelope::Math,
         (false, false) => Envelope::Outside,
     }
@@ -197,16 +195,35 @@ pub fn cell_envelope(c: &CellResult) -> CellEnvelope {
         | Verdict::Unsupported => return CellEnvelope::WrongType,
         Verdict::NumericUlp | Verdict::NumericClose | Verdict::NumericMismatch => {}
     }
-    let (Value::Number(excel), Value::Number(engine)) = (&c.expected, &c.actual) else {
+    let (Value::Number(_), Value::Number(engine)) = (&c.expected, &c.actual) else {
         return CellEnvelope::WrongType;
     };
     let on_math = matches!(&c.math, Some(MathValue::Number(m)) if within_math(*engine, *m));
-    let on_excel =
-        c.target != Target::Math && within_significant_digits(*excel, *engine, ENVELOPE_DIGITS);
+    let on_excel = c.target != Target::Math && within_excel(c);
     if on_math || on_excel {
         CellEnvelope::Inside
     } else {
         CellEnvelope::Outside
+    }
+}
+
+/// Excel's side of the envelope for scored cell `c` (its `expected` Excel's value, its `actual`
+/// the engine's): a bit-exact match (an error or text matched included), a pinned deviation, two
+/// numbers within 4 ulp, or two numbers within [`ENVELOPE_DIGITS`] significant digits. Never a
+/// wrong type, error, text or boolean, nor an unsupported engine result (`#NAME?`, `#N/IMPL`).
+/// The one Excel-side test of both [`envelope`] and [`cell_envelope`].
+///
+/// Why 4 ulp: decision 0088 never counts a number within 4 ulp as off, even where 4 ulp exceed
+/// half a unit in the 15th digit (an Excel 0 against the engine's smallest subnormal), so no cell
+/// the 15-digit buckets hold close can fall outside the 12-digit envelope.
+#[must_use]
+pub fn within_excel(c: &CellResult) -> bool {
+    match (c.verdict, &c.expected, &c.actual) {
+        (Verdict::Pass | Verdict::Deviation | Verdict::NumericUlp, _, _) => true,
+        (Verdict::NumericClose | Verdict::NumericMismatch, Value::Number(excel), Value::Number(engine)) => {
+            within_significant_digits(*excel, *engine, ENVELOPE_DIGITS)
+        }
+        _ => false,
     }
 }
 
@@ -335,13 +352,52 @@ mod tests {
     }
 
     #[test]
-    fn within_fifteen_digits_of_excel_only() {
+    fn excel_side_is_twelve_digits_both_ways() {
+        // The math is far (1e-6) from both, so only Excel's side can hold the point. Half a unit
+        // in the 12th digit of 1.0 is 5e-12: just inside, then just outside, on either side.
+        let math = || Some(MathValue::Number(1.0 + 1e-6));
+        for gap in [4.9e-12, -4.9e-12] {
+            assert_eq!(
+                class(Some(n(1.0)), &n(1.0 + gap), math(), false),
+                Envelope::Excel,
+                "{gap}"
+            );
+        }
+        for gap in [5.1e-12, -5.1e-12] {
+            assert_eq!(
+                class(Some(n(1.0)), &n(1.0 + gap), math(), false),
+                Envelope::Outside,
+                "{gap}"
+            );
+        }
+        // 13 to 15 digits, off at the old 15-digit bar: inside now (decision 0355 item 2).
+        assert_eq!(
+            class(Some(n(1.0)), &n(1.0 + 1e-13), math(), false),
+            Envelope::Excel
+        );
+    }
+
+    #[test]
+    fn four_ulp_from_an_excel_zero_is_inside() {
+        // Excel 0 against the engine's smallest subnormal: no significant digit of 0 to hold it
+        // to, but decision 0088's 4 ulp never counts as off.
+        let tiny = f64::from_bits(1);
+        let math = || Some(MathValue::Number(1.0));
+        assert_eq!(class(Some(n(0.0)), &n(tiny), math(), false), Envelope::Excel);
+        let cell = eval_cell(n(0.0), &n(tiny), None);
+        assert_eq!(cell_envelope(&cell), CellEnvelope::Inside);
+        let far = eval_cell(n(0.0), &n(1e-300), None);
+        assert_eq!(cell_envelope(&far), CellEnvelope::Outside);
+    }
+
+    #[test]
+    fn within_twelve_digits_of_excel_only() {
         // Excel and the engine agree; both are 1e-6 off the math (Excel's imprecision is a target).
         let both = n(MATH * (1.0 + 1e-6));
         let math = Some(MathValue::Number(MATH));
         assert_eq!(
             class(Some(both.clone()), &both, math, false),
-            Envelope::Excel15
+            Envelope::Excel
         );
     }
 
@@ -437,7 +493,7 @@ mod tests {
                 Some(MathValue::Number(MATH)),
                 false
             ),
-            Envelope::Excel15
+            Envelope::Excel
         );
     }
 
@@ -449,12 +505,12 @@ mod tests {
         assert_eq!(
             class(excel(), &n(-156.96), math(), true),
             Envelope::Outside,
-            "within 15 digits of Excel but not ε of the math"
+            "within 12 digits of Excel but not ε of the math"
         );
         assert_eq!(class(excel(), &n(-40.26), math(), true), Envelope::Math);
         assert_eq!(
             class(excel(), &n(-156.96), math(), false),
-            Envelope::Excel15
+            Envelope::Excel
         );
         // R3 never excuses an error against a number.
         assert_eq!(
@@ -472,7 +528,9 @@ mod tests {
             let engine = err(code);
             let cell = filled(Value::Text("x".into()), &engine);
             assert_eq!(cell.verdict, Verdict::Unsupported);
-            assert!(!Visible::is_off(&cell));
+            assert!(!crate::closeness::Visible::is_off(&cell));
+            assert!(!within_excel(&cell));
+            assert_eq!(cell_envelope(&cell), CellEnvelope::WrongType);
             assert_eq!(
                 envelope(Some(&cell), &engine, math().as_ref(), false),
                 Envelope::Outside,
@@ -486,7 +544,7 @@ mod tests {
         let math = || Some(MathValue::Number(-40.26));
         assert_eq!(
             class(Some(err("#NUM!")), &err("#NUM!"), math(), true),
-            Envelope::Excel15
+            Envelope::Excel
         );
         assert_eq!(
             class(Some(err("#NUM!")), &err("#VALUE!"), math(), true),

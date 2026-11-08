@@ -74,7 +74,7 @@ mod tests {
         let summary = stdout.lines().next().unwrap_or_default();
         assert!(
             summary.starts_with(
-                "accuracy: 9 points in 3 tables (pending 2): 6 in envelope (Excel 15 digits only 1, math only 3), 1 known failures (T-3356 1), 1 failing, 1 table defects; missing tables 1; "
+                "accuracy: 9 points in 3 tables (pending 2): 6 in envelope (Excel 12 digits only 1, math only 3), 1 known failures (T-3356 1), 1 failing, 1 table defects; missing tables 1; "
             ),
             "{stdout}"
         );
@@ -144,7 +144,7 @@ mod tests {
         std::fs::remove_dir_all(&tmp).expect("cleanup");
         assert_eq!(code, Some(0), "{stdout}");
         assert!(
-            stdout.starts_with("accuracy: 5 points in 2 tables (pending 2): 5 in envelope (Excel 15 digits only 0, math only 3), 0 known failures, 0 failing, 0 table defects; missing tables 2;"),
+            stdout.starts_with("accuracy: 5 points in 2 tables (pending 2): 5 in envelope (Excel 12 digits only 0, math only 3), 0 known failures, 0 failing, 0 table defects; missing tables 2;"),
             "{stdout}"
         );
         assert_eq!(stdout.lines().count(), 1, "{stdout}");

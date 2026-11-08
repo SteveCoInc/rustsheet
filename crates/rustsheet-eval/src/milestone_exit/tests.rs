@@ -81,7 +81,7 @@ fn all_met() {
     write_markdown(&rows, &mut md);
     assert!(
         md.contains(
-            "| M5 | 10/10 met | 22400, 0.99911, 20/22 [20] met | 0 [0] met | 0 [0] met | n/a n/a | n/a | met |"
+            "| M5 | 10/10 met | 22400, 0.99911, 20/22 [20] met | 0 [0], tiers F 0/0 of 0, E 0/0 of 0 met | 0 [0], tiers F 0/0 of 0, E 0/0 of 0 met | n/a n/a | n/a | met |"
         ),
         "{md}"
     );
@@ -137,6 +137,7 @@ fn probe_failure_fails_alone() {
     );
     r.probe_milestones[0].visibly_off = 1;
     r.probe_milestones[0].r1c_off = 1; // unclassified: R1(c) counts it
+    r.probe_milestones[0].tiers.foundational.wrong_type = 1;
     let row = m5(&r);
     assert_eq!(row.probes_met, Some(false));
     assert!(!row.exit);
@@ -263,7 +264,7 @@ fn m2_needs_ten_thousand_gen_cells_none_visibly_off_and_no_coverage() {
     write_markdown(&summarize(&r), &mut md);
     assert!(
         md.contains(
-            "| M2 | 30/37 n/a | 10000, 1.00000, 0/0 [0] met | 0 [0] met | 0 [3] met | n/a n/a | n/a | met |"
+            "| M2 | 30/37 n/a | 10000, 1.00000, 0/0 [0] met | 0 [0], tiers F 0/0 of 0, E 0/0 of 0 met | 0 [3], tiers F 0/0 of 0, E 0/0 of 0 met | n/a n/a | n/a | met |"
         ),
         "{md}"
     );
@@ -278,6 +279,7 @@ fn m2_needs_ten_thousand_gen_cells_none_visibly_off_and_no_coverage() {
     let mut r = m2_report((M2_MIN_SCORED, 0));
     r.probe_milestones[1].visibly_off = 1;
     r.probe_milestones[1].r1c_off = 1; // unclassified: R1(c) counts it
+    r.probe_milestones[1].tiers.foundational.wrong_type = 1;
     assert_eq!(row(&r, "M2").probes_met, Some(false));
 }
 
@@ -322,7 +324,7 @@ fn a_probe_case_that_did_not_run_fails_the_probe_row() {
     write_markdown(&summarize(&r), &mut md);
     assert!(
         md.contains(
-            "| M2 | 30/37 n/a | 10000, 1.00000, 0/0 [0] met | 0 [0] met | 0 [3], 1 cases did not run not met | n/a n/a | n/a | not met |"
+            "| M2 | 30/37 n/a | 10000, 1.00000, 0/0 [0] met | 0 [0], tiers F 0/0 of 0, E 0/0 of 0 met | 0 [3], 1 cases did not run, tiers F 0/0 of 0, E 0/0 of 0 not met | n/a n/a | n/a | not met |"
         ),
         "{md}"
     );
@@ -372,7 +374,7 @@ fn an_ironcalc_calc_case_that_did_not_run_fails_every_calc_row() {
     let mut md = String::new();
     write_markdown(&summarize(&r), &mut md);
     assert!(
-        md.contains("| 0, 1 cases did not run [0] not met |"),
+        md.contains("| 0, 1 cases did not run [0], tiers F 0/0 of 0, E 0/0 of 0 not met |"),
         "{md}"
     );
 }
@@ -429,7 +431,7 @@ fn m7_needs_ten_thousand_gen_cells_at_the_rate_and_no_extent_failure() {
     write_markdown(&summarize(&r), &mut md);
     assert!(
         md.contains(
-            "| M7 | 39/40 n/a | 10000, 0.99900, 10/10 [10] met | 1 [1] n/a | 0 [2] met | 0 met | n/a | met |"
+            "| M7 | 39/40 n/a | 10000, 0.99900, 10/10 [10] met | 1 [1], tiers F 1/0 of 0, E 0/0 of 0 n/a | 0 [2], tiers F 0/0 of 0, E 0/0 of 0 met | 0 met | n/a | met |"
         ),
         "{md}"
     );
@@ -447,6 +449,7 @@ fn m7_needs_ten_thousand_gen_cells_at_the_rate_and_no_extent_failure() {
     let mut r = m7_report((M7_MIN_SCORED, 0));
     r.probe_milestones[1].visibly_off = 1;
     r.probe_milestones[1].r1c_off = 1; // unclassified: R1(c) counts it
+    r.probe_milestones[1].tiers.foundational.wrong_type = 1;
     assert!(!row(&r, "M7").exit);
 }
 
@@ -600,7 +603,7 @@ fn m11_needs_corpus_bench_at_the_leaderboard_rate_and_is_na_without_it() {
     write_markdown(&summarize(&r), &mut md);
     assert!(
         md.contains(
-            "| M11 | n/a/n/a n/a | corpus-bench: 205366, 0.99834, 340/410 [340] met | n/a [n/a] n/a | 0 [0] met | n/a n/a | n/a | met |"
+            "| M11 | n/a/n/a n/a | corpus-bench: 205366, 0.99834, 340/410 [340] met | n/a [n/a] n/a | 0 [0], tiers F 0/0 of 0, E 0/0 of 0 met | n/a n/a | n/a | met |"
         ),
         "{md}"
     );
@@ -620,7 +623,7 @@ fn m11_needs_corpus_bench_at_the_leaderboard_rate_and_is_na_without_it() {
     write_markdown(&summarize(&r), &mut md);
     assert!(
         md.contains(
-            "| M11 | n/a/n/a n/a | n/a | n/a [n/a] n/a | 0 [0] met | n/a n/a | n/a | not met |"
+            "| M11 | n/a/n/a n/a | n/a | n/a [n/a] n/a | 0 [0], tiers F 0/0 of 0, E 0/0 of 0 met | n/a n/a | n/a | not met |"
         ),
         "{md}"
     );
@@ -628,19 +631,25 @@ fn m11_needs_corpus_bench_at_the_leaderboard_rate_and_is_na_without_it() {
 
 /// A run with an M9 function-scope row of `cells` with `off` visibly-off cells (one of them,
 /// `x!S!A1`, under an exit exception when `excepted`), two M9 functions of the checkpoint at the
-/// rate and one of M8 below it, and a clean M9 probe row.
+/// rate and one of M8 below it, and a clean M9 probe row. Every scored ironcalc-calc cell is an
+/// expert cell (decision 0355 item 4), the excepted one left out.
 fn m9_report(cells: usize, off: usize, excepted: bool) -> RunReport {
     use crate::v15_checkpoint::V15Function;
     let mut r = report(None);
     let visibly_off: Vec<String> = (0..off).map(|i| format!("x!S!A{}", i + 1)).collect();
-    r.function_scope
-        .as_mut()
-        .unwrap()
-        .rows
-        .push(MilestoneScope {
+    let scope = r.function_scope.as_mut().unwrap();
+    for id in visibly_off.iter().chain(&["x!S!B1".to_string()]) {
+        scope
+            .failing_usage
+            .insert(id.clone(), crate::catalog::Usage::Expert);
+    }
+    let mut tiers = crate::usage_gates::TierTallies::default();
+    tiers.expert.cells = cells - 5 - usize::from(excepted);
+    scope.rows.push(MilestoneScope {
             milestone: "M9".into(),
             cells,
             deviations: 5,
+            tiers,
             failing: visibly_off
                 .iter()
                 .cloned()
@@ -684,8 +693,9 @@ fn m9(r: &RunReport) -> ExitRow {
 }
 
 #[test]
-fn m9_needs_ironcalc_calc_at_99_95_every_m9_function_at_the_rate_and_clean_probes() {
-    // 73,160 cells less 5 deviations: 73,155 scored, the allowance is floor(0.0005 * 73,155) = 36.
+fn m9_needs_ironcalc_calc_at_the_tier_bars_every_m9_function_at_the_rate_and_clean_probes() {
+    // 73,160 cells less 5 deviations: 73,155 scored. The old allowance, floor(0.0005 * 73,155) =
+    // 36, is shown as information; the expert bar, 99.9%, allows 73.
     let r = m9_report(73_160, 36, false);
     let row = m9(&r);
     assert_eq!(
@@ -708,18 +718,35 @@ fn m9_needs_ironcalc_calc_at_99_95_every_m9_function_at_the_rate_and_clean_probe
     write_markdown(&summarize(&r), &mut md);
     assert!(
         md.contains(
-            "| M9 | 1/2 n/a | none required | 36/36 of 73155 [37] met | 0 [0] met | n/a n/a | 0/2 met | met |"
+            "| M9 | 1/2 n/a | none required | 36/36 of 73155 [37], tiers F 0/0 of 0, E 36/0 of 73155 met | 0 [0], tiers F 0/0 of 0, E 0/0 of 0 met | n/a n/a | 0/2 met | met |"
         ),
         "{md}"
     );
 }
 
 #[test]
-fn m9_calc_past_the_allowance_fails_alone() {
-    let row = m9(&m9_report(73_160, 37, false));
+fn m9_calc_past_the_expert_bar_fails_alone() {
+    // 73 wrong of 73,155 expert cells is 99.9002%: met; 74 is 99.8988%: not.
+    let row = m9(&m9_report(73_160, 73, false));
+    assert_eq!(row.calc_met, Some(true));
+    let row = m9(&m9_report(73_160, 74, false));
     assert_eq!(row.calc_met, Some(false));
     assert_eq!((row.rate_met, row.probes_met), (Some(true), Some(true)));
     assert!(!row.exit);
+}
+
+#[test]
+fn m9_one_foundational_wrong_type_fails_the_calc_row() {
+    let mut r = m9_report(73_160, 1, false);
+    assert_eq!(m9(&r).calc_met, Some(true));
+    let scope = r.function_scope.as_mut().unwrap();
+    scope
+        .failing_usage
+        .insert("x!S!A1".into(), crate::catalog::Usage::Foundational);
+    let row = m9(&r);
+    assert_eq!(row.calc_met, Some(false));
+    let tiers = row.calc_tiers.unwrap_or_default();
+    assert_eq!((tiers.foundational.wrong_type, tiers.expert.wrong_type), (1, 0));
 }
 
 #[test]
@@ -750,6 +777,7 @@ fn m9_a_visibly_off_probe_fails_alone() {
     let mut r = m9_report(73_160, 0, false);
     r.probe_milestones.last_mut().unwrap().visibly_off = 1;
     r.probe_milestones.last_mut().unwrap().r1c_off = 1; // unclassified: R1(c) counts it
+    r.probe_milestones.last_mut().unwrap().tiers.foundational.wrong_type = 1;
     let row = m9(&r);
     assert_eq!(row.probes_met, Some(false));
     assert_eq!((row.calc_met, row.rate_met), (Some(true), Some(true)));
@@ -809,7 +837,7 @@ fn m8_needs_both_gen_suites_the_poi_subset_at_99_5_and_clean_probes() {
     write_markdown(&summarize(&r), &mut md);
     assert!(
         md.contains(
-            "| M8 | n/a/n/a n/a | gen-m8a: 3577, 1.00000, 0/0 [0] met; gen-m8b: 3368, 1.00000, 0/0 [0] met; poi M8 subset: 2000, 0.99500, 10/10 [n/a] met | n/a [n/a] n/a | 0 [0] met | n/a n/a | n/a | met |"
+            "| M8 | n/a/n/a n/a | gen-m8a: 3577, 1.00000, 0/0 [0] met; gen-m8b: 3368, 1.00000, 0/0 [0] met; poi M8 subset: 2000, 0.99500, 10/10 [n/a] met | n/a [n/a] n/a | 0 [0], tiers F 0/0 of 0, E 0/0 of 0 met | n/a n/a | n/a | met |"
         ),
         "{md}"
     );
@@ -856,6 +884,7 @@ fn m8_a_visibly_off_probe_fails_alone() {
     let mut r = m8_report(0, Some((2_000, 0)));
     r.probe_milestones.last_mut().unwrap().visibly_off = 1;
     r.probe_milestones.last_mut().unwrap().r1c_off = 1; // unclassified: R1(c) counts it
+    r.probe_milestones.last_mut().unwrap().tiers.foundational.wrong_type = 1;
     let row = m8(&r);
     assert_eq!(row.probes_met, Some(false));
     assert!(row.more_suites.iter().all(|s| s.met == Some(true)));
@@ -901,6 +930,14 @@ fn m10_report(
         milestone: "M10".into(),
         visibly_off: probe_off,
         r1c_off: probe_off,
+        tiers: crate::usage_gates::TierTallies {
+            foundational: crate::usage_gates::Tally {
+                cells: 415,
+                wrong_type: probe_off,
+                outside: 0,
+            },
+            ..Default::default()
+        },
         text_items: 415,
         text_failing: probe_text_failing,
         ..MilestoneRow::default()
@@ -931,7 +968,7 @@ fn m10_needs_ten_thousand_gen_m10_text_items_none_failing_and_clean_probes() {
     write_markdown(&summarize(&r), &mut md);
     assert!(
         md.contains(
-            "| M10 | n/a/n/a n/a | 1690, 1.00000, 0/0 [0], text 0 failing of 10400 met | n/a [n/a] n/a | 0 [0], text 0 failing of 415 met | n/a n/a | n/a | met |"
+            "| M10 | n/a/n/a n/a | 1690, 1.00000, 0/0 [0], text 0 failing of 10400 met | n/a [n/a] n/a | 0 [0], text 0 failing of 415, tiers F 0/0 of 415, E 0/0 of 0 met | n/a n/a | n/a | met |"
         ),
         "{md}"
     );
