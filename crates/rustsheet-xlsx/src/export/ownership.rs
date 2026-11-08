@@ -176,6 +176,8 @@ pub(super) struct Graph {
     edges: BTreeMap<String, Vec<Edge>>,
     /// Each part key reached by a relationship: the first owner and kind that reach it.
     reached: HashMap<String, (String, String)>,
+    /// Each part key reached by a relationship: every owner that reaches it.
+    owners: HashMap<String, Vec<String>>,
     /// Each part key's override content type.
     content_types: HashMap<String, String>,
     /// The workbook part's key.
@@ -216,6 +218,11 @@ impl Graph {
                     .reached
                     .entry(target.clone())
                     .or_insert_with(|| (owner.clone(), kind.clone()));
+                graph
+                    .owners
+                    .entry(target.clone())
+                    .or_default()
+                    .push(owner.clone());
                 out.push(Edge { id, kind, target });
             }
             // Two spellings of one `.rels` (a package OPC calls invalid): the first read wins.

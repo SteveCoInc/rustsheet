@@ -15,7 +15,7 @@
 //!   which every remaining unit is `LimitExceeded`. A part the probe cannot read makes its unit
 //!   `LimitExceeded`, never silently "not coupled".
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::io::{Cursor, Read as _};
 
 use super::{Graph, Policy, Reach, MAX_CLOSURE_SIZE};
@@ -61,14 +61,16 @@ impl<'a> Probe<'a> {
 
     fn text(&mut self, key: &str) -> Option<&str> {
         if !self.texts.contains_key(key) {
+            // One byte past the cap tells a part that fits from one that was cut: a cut part may
+            // hold what was searched for past the cut, so it counts as unreadable.
             let read = self.package.as_mut().and_then(|p| {
                 let mut text = String::new();
                 p.open(key)
                     .ok()?
-                    .take(MAX_PROBE_BYTES)
+                    .take(MAX_PROBE_BYTES + 1)
                     .read_to_string(&mut text)
                     .ok()?;
-                Some(text)
+                (text.len() as u64 <= MAX_PROBE_BYTES).then_some(text)
             });
             self.texts.insert(key.to_string(), read);
         }
@@ -125,23 +127,31 @@ impl<'a> Probe<'a> {
 /// last are the ones reported, which can name the wrong sibling. The round-trip suite scores such a
 /// misnamed part `changed` (SPEC-0033 D7.3), so it cannot pass silently.
 fn identities(graph: &Graph, probe: &mut Probe<'_>) -> HashMap<String, String> {
+    // Each sheet part's `sheetId`: a pivot table's name is unique within its sheet only.
+    let workbook = graph.workbook.clone().unwrap_or_default();
+    let sheet_of: HashMap<&str, &str> = (graph.edges.get(&workbook).into_iter().flatten())
+        .filter_map(|e| Some((e.target.as_str(), graph.sheet_ids.get(&e.id)?.as_str())))
+        .collect();
     let mut tables_of_cache: HashMap<String, Vec<String>> = HashMap::new();
-    for (key, (_, kind)) in &graph.reached {
+    for (key, (owner, kind)) in &graph.reached {
         if kind == "pivotTable" {
             if let (Some(cache), Some(name)) = (
                 probe.root_attr(key, "cacheId"),
                 probe.root_attr(key, "name"),
             ) {
-                tables_of_cache.entry(cache).or_default().push(name);
+                let sheet = sheet_of.get(owner.as_str()).copied().unwrap_or("?");
+                tables_of_cache
+                    .entry(cache)
+                    .or_default()
+                    .push(format!("{sheet}/{name}"));
             }
         }
     }
     for names in tables_of_cache.values_mut() {
         names.sort();
     }
-    let workbook = graph.workbook.clone().unwrap_or_default();
     let mut ids = HashMap::new();
-    let mut queue = std::collections::VecDeque::from([(String::new(), String::new())]);
+    let mut queue = VecDeque::from([(String::new(), String::new())]);
     let mut seen = BTreeSet::new();
     while let Some((part, id)) = queue.pop_front() {
         let mut ordinal: HashMap<&str, usize> = HashMap::new();
@@ -273,13 +283,14 @@ fn units(source: &Graph, probe: &mut Probe<'_>) -> Vec<(BTreeSet<String>, bool)>
     units
 }
 
-/// Whether a part is a root: reached from the package, the workbook or a sheet, or reached by no
-/// relationship.
+/// Whether a part is a root: reached by any relationship from the package, the workbook or a
+/// sheet, or reached by none.
 fn is_root(source: &Graph, key: &str) -> bool {
-    source
-        .reached
-        .get(key)
-        .is_none_or(|(owner, _)| source.reach_of(owner) != Reach::Other)
+    source.owners.get(key).is_none_or(|owners| {
+        owners
+            .iter()
+            .any(|owner| source.reach_of(owner) != Reach::Other)
+    })
 }
 
 /// Whether a policy is one a regenerated save would copy (D5.1).

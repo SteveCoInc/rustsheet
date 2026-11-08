@@ -458,7 +458,6 @@ fn relationship_ids(
     Ok(ids)
 }
 
-/// The last segment of a relationship type, for a log line.
 /// The relationships part of the kept part `name`: (id, type, target) each, the ids the source's
 /// so the copied part's references hold.
 fn relationships_part(name: &str, relationships: &[(&str, &str, String)]) -> KeptPart {

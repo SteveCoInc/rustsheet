@@ -616,3 +616,31 @@ fn the_work_limit_carries_to_every_remaining_unit_and_an_unreadable_drawing_drop
         );
     }
 }
+
+#[test]
+fn a_drawing_past_the_probe_cap_is_unreadable_not_uncoupled() {
+    // A compatExt shape past the first MiB: the probe cannot see it, so the group drops on a
+    // limit rather than the drawing being decided alone.
+    let big = format!(
+        "<wsDr>{}<a14:compatExt spid=\"_x0000_s1\"/></wsDr>",
+        " ".repeat(1 << 20)
+    );
+    let src = package(
+        &[],
+        &[
+            ("rId1", "drawing", "../drawings/drawing1.xml", false),
+            ("rId2", "comments", "../comments1.xml", false),
+        ],
+        &[
+            ("xl/drawings/drawing1.xml", big),
+            ("xl/comments1.xml", "<comments/>".into()),
+        ],
+    );
+    let got = named(&src, usize::MAX);
+    for part in ["xl/drawings/drawing1.xml", "xl/comments1.xml"] {
+        assert!(
+            got.contains(&pair(part, "LimitExceeded part read")),
+            "{part}: {got:?}"
+        );
+    }
+}
