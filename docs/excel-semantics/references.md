@@ -695,6 +695,10 @@ Still unprobed (T-4761, the harness cannot express them yet):
 - how Excel spells a rewritten name in Name Manager (the engine stores `#REF!` and `S!$C$1:$C$1`);
 - row and column moves, which leave names alone in the engine;
 - a sheet-scoped name, and an unqualified reference in a name.
+- (T-4760's inferences) a relative row of a name on a deleted row (the engine leaves it alone, not `#REF!`: e.g.
+  `Rel` = `=Data!A5` and `delete_row 5`); a range with one corner the edit keeps and one it moves (`$A$3:A6`, the
+  engine moves corner by corner); and a mixed reference under a column edit (`$A5`, `A$5` with `insert_column`;
+  only the row-edit mixed case is probed, t4760-name-mixed-insert-row).
 
 ## Characters of a name
 Rule: a name in a formula (a LET or LAMBDA name, or an unbound use) may not start with a mark (`\p{M}`) or an
