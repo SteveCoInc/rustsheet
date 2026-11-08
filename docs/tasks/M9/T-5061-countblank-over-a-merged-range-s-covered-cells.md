@@ -3,7 +3,7 @@ id: T-5061
 title: "COUNTBLANK over a merged range's covered cells (fixtures merged-covered-values I4): Excel 1, ours 3"
 milestone: M9
 lane: functions-math
-status: in-progress
+status: done
 priority: P1
 size: S
 tier: sonnet
@@ -27,3 +27,9 @@ COUNTBLANK over a range that holds a merged area counts its covered cells as Exc
 
 ## Out of scope
 - The import change itself (T-5044).
+
+## Outcome
+Nothing to fix in COUNTBLANK: with T-5044 merged (covered cells keep their content on import),
+`rustsheet-eval show fixtures/merged-covered-values.xlsx` is 14/14 and Sheet1!I4 (`COUNTBLANK(A1:D1)`) is Excel's 1.
+`eval/baseline/fixtures.txt` holds no F line for the file, so no baseline change. The `rate:COUNTBLANK` M9 row has this
+cell as its evidence. Eval delta: none.
