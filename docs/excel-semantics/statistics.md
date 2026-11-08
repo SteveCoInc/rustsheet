@@ -8864,9 +8864,10 @@ settle these points; each compares Excel with that PR's prototype prediction.
 - LOGNORM.DIST's density holdout (t4974-lognorm-density-holdout, 148 cells): Excel equals the prototype's four-term chain in
   every cell; ours misses 17 cells visibly until that fix lands.
 - CHISQ.INV.RT above .9999 (t4974-chisq-inv-rt-q-to-p-switch): at df 3, Excel's `CHISQ.INV.RT(p,3)` equals
-  `CHISQ.INV(1-p,3)` bit for bit for every p from .9999 + 2E-6 to .99999 (A2:A33 = G2:G33), and differs from it at
-  .9999 and just below (A1, A34:A37). Within 4 ulps above .9999 (A38:A41) it equals neither `CHISQ.INV(1-p,3)` nor the
-  prototype. Which solver Excel runs on each side is a hypothesis for T-4996, not settled by these cells.
+  `CHISQ.INV(1-p,3)` bit for bit for every p from .9999 + 2E-6 to .99999 (A2:A33 = G2:G33) and differs from it at .9999
+  itself (A1 vs G1). The case has no `CHISQ.INV(1-p,3)` cell for the rows within 4 ulps of .9999 (A34:A41), so how
+  Excel's RT relates to it there is not measured; the prototype matches A34:A37 (below .9999) and misses A38:A41
+  (above). Whether the cut is `<=` or `<`, and which solver runs on each side, is for T-4996 to probe.
 - BETA.INV at p near DBL_MIN (t4974-beta-inv-dbl-min-residual): Excel does not flush the first residual. The quantile is
   smooth through DBL_MIN (A6 `BETA.INV(2.22507385850721E-308,16.0270968311551,..)` 3.6855664841262965E-20, A7 at
   2^-1022 3.685566484126281E-20) and its forward CDF (K6, K9) is 3.9074971845766525E-308, not 0. This falsifies the
@@ -8879,7 +8880,10 @@ settle these points; each compares Excel with that PR's prototype prediction.
 - The other groups disagree with the prototype only in some cells and settle no rule here: the gamma small-x prefactor
   (55 cells visibly off) and far upper tail (17), Loader's store chain (3), BETA.INV's tiny-shape `#NUM!` boundary (80) and
   endpoint saturation (29), and F.INV's tiny tail (9; `F.INV(1E-300,11,3)` and `F.INV(1E-250,11,3)` are `#NUM!` in Excel).
-  What Excel does there is for the owner tasks below to record when they fit it; the cells are the evidence.
+  What Excel does there is for the owner tasks below to record when they fit it; the cells are the evidence. Where
+  ours is visibly off in these groups (LOGNORM.DIST 17 cells, the gamma, Loader and Student-t groups), R1(c) leaves the
+  cells out as Phase 1b evidence (ours and Excel both within 1E-9 of the 50-digit math, decision 0227), so they need no
+  owner task and stay known failures; only the 325 cells listed in T-4994 to T-4998 are counted.
 Evidence: probes/t4974-* (excel-graph, 2026-11-07). The visibly-off cells against ours are owned by T-4994 (BETA.INV),
 T-4995 (F.INV), T-4996 (CHISQ.INV), T-4997 (IRR) and T-4998 (T.INV.2T).
 Ours: matches every SKEW/SKEW.P/KURT cell; the other groups are known failures (eval/baseline/probes.txt).

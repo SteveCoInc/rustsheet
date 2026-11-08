@@ -97,13 +97,14 @@ Cells:
   default 5 points of train-to-test exact rate, and the cases (every spec case whose text calls SKEW, SKEW.P or KURT; the
   t4974 adversarial probe left out as R4.2 evidence) were stated in the module before scoring. Candidates: the engine
   (this form), main's build `--build main=` (e74590224), the once-rounded binary64 form with chained powers (the engine
-  before T-4328, in Python) and the correctly rounded moment (60-digit mpmath, rounded once). Bit-exact train / test:
+  before T-4328, in Python) and the correctly rounded moment (60-digit mpmath, rounded once).
+  Each cell: bit-exact / within 4 ulp / within 15 digits, train then test (verdict per R4.1):
 
-  | fit | n (test) | engine (this form) | main build | once-rounded, chained | correctly rounded |
-  |---|---:|---|---|---|---|
-  | moments-skew | 200 (63) | 137/137, 63/63 accept | 135/137, 63/63 accept | 131/137, 54/63 refuse (9.9 pts) | 22/137, 12/63 |
-  | moments-skew-p | 178 (54) | 124/124, 54/54 accept | 124/124, 54/54 accept | 116/124, 49/54 accept | 22/124, 8/54 |
-  | moments-kurt | 134 (36) | 98/98, 36/36 accept | 71/98, 23/36 refuse (8.6 pts) | 69/98, 21/36 refuse (12.1 pts) | 14/98, 7/36 |
+  | fit | engine (this form) | main build | once-rounded, chained | correctly rounded |
+  |---|---|---|---|---|
+  | moments-skew | 137/137/137 of 137; 63/63/63 of 63 accept | 135/136/136 of 137; 63/63/63 of 63 accept | 131/132/135 of 137; 54/58/59 of 63 refuse | 22/101/114 of 137; 12/49/54 of 63 |
+  | moments-skew-p | 124/124/124 of 124; 54/54/54 of 54 accept | 124/124/124 of 124; 54/54/54 of 54 accept | 116/117/118 of 124; 49/52/53 of 54 accept | 22/90/109 of 124; 8/32/41 of 54 |
+  | moments-kurt | 98/98/98 of 98; 36/36/36 of 36 accept | 71/91/95 of 98; 23/35/36 of 36 refuse | 69/88/93 of 98; 21/33/34 of 36 refuse | 14/58/75 of 98; 7/19/29 of 36 |
 
   Development cells: the KURT cells the form was worked out on (gen-m9/27601819397dd56e A200, 7bd219ec0c0c5e22 A279,
   c2974c061384fdd9 A55) are on the train side; SKEW's d208bbafc3bc1997 A262 is on train as well. The cells the fit

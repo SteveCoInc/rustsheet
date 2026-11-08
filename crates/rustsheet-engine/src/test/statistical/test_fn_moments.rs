@@ -7,9 +7,14 @@
 use crate::cell::CellValue;
 use crate::test::util::new_empty_model;
 
+/// The value of `formula` as bits: the tests compare Excel's double exactly.
+fn bits(formula: &str) -> u64 {
+    number(formula).to_bits()
+}
+
 fn number(formula: &str) -> f64 {
     let mut model = new_empty_model();
-    model._set("A1", formula);
+    model.set_a1("A1", formula);
     model.evaluate();
     match model.get_cell_value_by_ref("Sheet1!A1").unwrap() {
         CellValue::Number(n) => n,
@@ -20,15 +25,18 @@ fn number(formula: &str) -> f64 {
 #[test]
 fn skew_takes_the_twice_rounded_root() {
     // gen-m9/d208bbafc3bc1997 A262, probes/t2475-stat-subexpressions P!A520 (excel-graph).
-    assert_eq!(number("=SKEW({1E-15,1,2})"), 2.498_001_805_406_602_2E-15);
+    assert_eq!(
+        bits("=SKEW({1E-15,1,2})"),
+        f64::to_bits(2.498_001_805_406_602_2E-15)
+    );
 }
 
 #[test]
 fn kurt_squares_the_square() {
     // gen-m9/27601819397dd56e A200 (excel-graph).
     assert_eq!(
-        number("=KURT({0.1,42,123456789.123,0.1})"),
-        3.999_999_999_997_953_6
+        bits("=KURT({0.1,42,123456789.123,0.1})"),
+        f64::to_bits(3.999_999_999_997_953_6)
     );
 }
 
@@ -36,8 +44,8 @@ fn kurt_squares_the_square() {
 fn kurt_of_four_mixed_values() {
     // gen-m9/7bd219ec0c0c5e22 A279 `=KURT(Data!A1:A12)`, whose numbers these are (excel-graph).
     assert_eq!(
-        number("=KURT({0.2,7,3.14159,-2.5})"),
-        -0.762_827_238_580_870_3
+        bits("=KURT({0.2,7,3.14159,-2.5})"),
+        f64::to_bits(-0.762_827_238_580_870_3)
     );
 }
 
@@ -45,8 +53,8 @@ fn kurt_of_four_mixed_values() {
 fn kurt_of_nine_values() {
     // gen-m9/c2974c061384fdd9 A55 `=KURT(Data!A6:A6,Data!D1:D11)`, whose numbers these are (excel-graph).
     assert_eq!(
-        number("=KURT(1,0.1,100,100,0.5,0.3,0.3,1E-15,0.5)"),
-        0.734_384_233_823_282
+        bits("=KURT(1,0.1,100,100,0.5,0.3,0.3,1E-15,0.5)"),
+        f64::to_bits(0.734_384_233_823_282)
     );
 }
 
@@ -54,20 +62,20 @@ fn kurt_of_nine_values() {
 fn kurt_of_one_to_ten() {
     // gen-m9/a013a45a8fbcab4f A2, a54c738c697617c3 A41 (excel-graph; T-4328 context).
     assert_eq!(
-        number("=KURT({1,2,3,4,5,6,7,8,9,10})"),
-        -1.200_000_000_000_000_2
+        bits("=KURT({1,2,3,4,5,6,7,8,9,10})"),
+        f64::to_bits(-1.200_000_000_000_000_2)
     );
 }
 
 #[test]
 fn zero_and_overflowing_variance_stay_div_zero() {
     let mut model = new_empty_model();
-    model._set("A1", "=KURT({1,1,1,1})");
-    model._set("A2", "=SKEW({1E+200,1E+200,-1E+200})");
-    model._set("A3", "=SKEW.P({1E+200,1E+200,-1E+200})");
-    model._set("A4", "=SKEW(1,2)");
+    model.set_a1("A1", "=KURT({1,1,1,1})");
+    model.set_a1("A2", "=SKEW({1E+200,1E+200,-1E+200})");
+    model.set_a1("A3", "=SKEW.P({1E+200,1E+200,-1E+200})");
+    model.set_a1("A4", "=SKEW(1,2)");
     model.evaluate();
     for cell in ["A1", "A2", "A3", "A4"] {
-        assert_eq!(model._get_text(cell), *"#DIV/0!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), *"#DIV/0!", "{cell}");
     }
 }
