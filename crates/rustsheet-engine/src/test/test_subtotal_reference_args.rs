@@ -511,3 +511,23 @@ fn subtotal_and_areas_over_if_choose_let_of_xlookup_read_cells() {
     assert_eq!(model.get_text_a1("K2"), "#VALUE!");
     assert_eq!(model.get_text_a1("L1"), "");
 }
+
+// SUBTOTAL 6 and 106 multiply with PRODUCT's own step (`product_step`): a subnormal running
+// product is 0, as `PRODUCT` and Excel's `*` give (numbers.md "Subnormal results become 0"),
+// where a plain `*` loop kept 1E-320.
+#[test]
+fn subtotal_product_is_products_accumulator() {
+    let mut model = new_empty_model();
+    model.set_a1("A1", "1E-200");
+    model.set_a1("A2", "1E-120");
+    model.set_a1("A3", "3");
+    model.set_a1("B1", "=SUBTOTAL(6,A1:A2)");
+    model.set_a1("B2", "=SUBTOTAL(106,A1:A2)");
+    model.set_a1("B3", "=PRODUCT(A1:A2)");
+    model.set_a1("B4", "=SUBTOTAL(6,A2:A3)=PRODUCT(A2:A3)");
+    model.evaluate();
+    assert_eq!(model.get_text_a1("B1"), "0");
+    assert_eq!(model.get_text_a1("B2"), "0");
+    assert_eq!(model.get_text_a1("B3"), "0");
+    assert_eq!(model.get_text_a1("B4"), "TRUE");
+}

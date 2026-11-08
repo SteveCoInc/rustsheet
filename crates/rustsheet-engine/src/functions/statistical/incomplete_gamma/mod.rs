@@ -696,6 +696,21 @@ fn pair_with(a: f64, x: f64, terms: &mut Terms, exponent: Exponent) -> (f64, f64
     if exponent == Exponent::Accurate && near_mode::in_band(a, x) {
         return near_mode::near_mode_pair(a, x, terms).unwrap_or((f64::NAN, f64::NAN));
     }
+    // Excel's three rounded factors at a shape above 1 and x up to 1 (T-3219), for GAMMA.DIST and
+    // CHISQ.DIST only; where the result is not normal the stable prefactor below takes over.
+    if let Some(factors) = (exponent == Exponent::Excel)
+        .then(|| small_x_factors(a, x))
+        .flatten()
+    {
+        let sum = lower_series(a, x, terms);
+        if sum.is_nan() {
+            return (f64::NAN, f64::NAN);
+        }
+        let lower = factors.lower(excel_exp(-x), sum);
+        if lower.is_normal() {
+            return (lower, 1.0 - lower);
+        }
+    }
     let prefactor = gamma_prefactor(a, x, exponent);
     if prefactor == 0.0 {
         // x^a e^-x / Gamma(a) underflows: the tail that has it as a factor is 0, as statrs'
@@ -828,14 +843,18 @@ fn gamma_quantile_within(shape: f64, scale: f64, p: f64, tail: Tail, budget: u32
     // Only a lower-tail p of at most 1/2: the lower tail is both the tail given and the smaller one.
     // Then Newton steps from the root where it is close, the lower tail being the smaller one
     // in either function: `CHISQ.INV.RT(1-1E-16,3)` is Excel's first step (T-3311).
-    let tiny = (small == Tail::Lower)
-        .then(|| {
-            (tail == Tail::Lower)
-                .then(|| excel_tiny_quantile(shape, target))
-                .flatten()
-                .or_else(|| excel_newton_quantile(shape, target))
-        })
+    // Below a unit quantile of 1/2 at shapes 1 to 20, Excel's Halley steps on its own cdf come
+    // next, in either tail (T-3146).
+    let lower_root = (small == Tail::Lower && tail == Tail::Lower)
+        .then(|| excel_tiny_quantile(shape, target))
         .flatten();
+    let tiny = lower_root
+        .or_else(|| excel_halley_quantile(shape, p, tail))
+        .or_else(|| {
+            (small == Tail::Lower)
+                .then(|| excel_newton_quantile(shape, target))
+                .flatten()
+        });
     let x = if shape == 1.0 {
         exponential_quantile(small, target) * scale
     } else if let Some(unit) = tiny {
@@ -959,11 +978,13 @@ mod fraction;
 mod half_integer;
 mod huge_shape;
 mod near_mode;
+mod small_x;
 
 pub(crate) use closed_form::excel_small_shape_quantile;
-use closed_form::{excel_newton_quantile, excel_tiny_quantile};
+use closed_form::{excel_halley_quantile, excel_newton_quantile, excel_tiny_quantile};
 pub(crate) use density::{accurate_gamma_density, gamma_density};
 pub(crate) use huge_shape::{huge_shape_quantile, HUGE_SHAPE_MIN};
+use small_x::small_x_factors;
 
 #[cfg(test)]
 mod tests;

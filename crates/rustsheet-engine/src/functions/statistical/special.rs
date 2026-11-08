@@ -11,8 +11,11 @@ use super::incomplete_beta::FRAC_1_SQRT_2PI;
 use crate::arithmetic::{extended_product, extended_quotient, extended_sum};
 use crate::x87_exp::excel_exp;
 
-/// sqrt(2*pi), the normal density's normalising constant.
-pub(crate) const SQRT_2PI: f64 = 2.506_628_274_631_000_7;
+/// ln sqrt(2 pi) = 0.918938533204672741780..., the correctly rounded double
+/// (`0x3FED_67F1_C864_BEB5`), what Loader's kernels and LOGNORM.DIST's density add. Deliberately
+/// not `gammaln.rs`'s `LN_SQRT_2PI`, which is one ulp lower because it reproduces the constant
+/// Excel's GAMMALN Stirling sum adds.
+pub(crate) const LN_SQRT_2PI_CORRECTLY_ROUNDED: f64 = 0.918_938_533_204_672_8;
 
 /// Normal cumulative distribution function with the given mean and standard deviation, through
 /// the identities Excel's own functions obey (docs/excel-semantics/statistics.md, T-1778):

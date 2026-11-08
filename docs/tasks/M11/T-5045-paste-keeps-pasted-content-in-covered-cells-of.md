@@ -3,7 +3,7 @@ id: T-5045
 title: "Paste keeps pasted content in covered cells of a recreated merge (SPEC-0036 S2)"
 milestone: M11
 lane: engine
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -22,11 +22,14 @@ swallows outside the pasted block are cleared. Factor the two copies of the merg
 covered content is UNVERIFIED and not probeable on excel-graph (SPEC-0036 X9).
 
 ## Acceptance criteria
-- [ ] Copy-paste and cut-paste of a merged range with covered content reproduce the content at the target; undo and redo restore
+- [x] Copy-paste and cut-paste of a merged range with covered content reproduce the content at the target; undo and redo restore
       both ends exactly (tests in crates/rustsheet-engine/src/test/user_model/test_paste_merged_cells.rs).
-- [ ] One merge-recreation helper serves both paste paths.
-- [ ] docs/excel-semantics/xlsx-storage.md's covered-content entry records the paste rule as UNVERIFIED (design choice, SPEC-0036).
-- [ ] `make check` green; reviewers approve.
+- [x] One merge-recreation helper serves both paste paths.
+- [x] docs/excel-semantics/xlsx-storage.md's covered-content entry records the paste rule as UNVERIFIED (design choice, SPEC-0036).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Merge (U2) and autofill (T-5047).
+
+## Outcome
+Landed by T-4975 (PR #4073, findings item 1): `recreate_pasted_merge` keeps covered content inside the pasted block (S2) and `fill_covered_cell` copies a covered source through `Model::fill_cell` (S3), with engine tests including undo/redo.

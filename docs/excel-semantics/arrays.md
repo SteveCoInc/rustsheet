@@ -1659,6 +1659,26 @@ Implemented in: crates/rustsheet-engine/src/functions/logical/lambda.rs (`LAMBDA
 crates/rustsheet-engine/src/model.rs (`evaluate_node_in_context`), crates/rustsheet-engine/src/node_frames.rs.
 Tasks: T-0439, T-0444
 
+## Wildcard matching and D-function scans are charged their real work (T-4975)
+Rule: Excel has no known limit here; these are resource limits under the work budget below.
+- A wildcard match (MATCH, XMATCH and XLOOKUP's mode 2, VLOOKUP/HLOOKUP, the criteria) is the greedy-star
+  matcher, O(n*m) steps for an n-unit text and an m-token pattern. It is charged one comparison tick a step
+  past the text's length, as the steps are taken. Inside XMATCH's and XLOOKUP's wildcard scan it stops once
+  the run's allowance is spent, and the formula is the work budget's `#VALUE!`, never `#N/A`:
+  `XMATCH("*"&REPT("a",16000)&"b",IF(SEQUENCE(16),REPT("a",32767)),2)` takes about 2.7E8 steps a text and
+  was charged 32,767 ticks a text.
+- A D-function call that cannot lift (every `field` and `criteria` a literal or reference) is charged its
+  scan up front, records x (criteria columns x database columns + criteria cells + 1), one unit a visit, to
+  the formula's budget. It is not capped as a lifted call is, so a whole-column database with a small
+  criteria range still computes. Before, the call was one unit and DCOUNT over n records and n criteria
+  rows grew as n^2 with no bound.
+Evidence: none for Excel; directive 5 (audit 2 items 2 and 3 of the 2026-11-07 parity findings).
+Status: DEVIATION (decision 0014)
+Implemented in: functions/criteria.rs `WildcardPattern::matches_units`, lookup_and_reference/xmatch.rs `linear_scan`,
+functions/database.rs `db_call`
+Tests: test_formula_work.rs `a_wildcard_match_is_charged_its_backtracking_steps_and_stops`,
+`a_database_call_is_charged_records_times_criteria_cells`
+
 ## One formula evaluation does at most 268,435,456 work units
 Rule: Excel has no known per-formula work limit; a formula whose LAMBDA helpers multiply work
 (`REDUCE(0,SEQUENCE(1E5),LAMBDA(a,b,a+SUM(SEQUENCE(1E5))))`) runs until done, and Excel's result for it cannot be probed
@@ -1747,6 +1767,11 @@ comparator that is not an order (T-4279 speeds the collation up). `rustsheet-eva
 `a_formula_past_the_limit_leaves_no_stand_in_in_a_shared_index`. The criteria functions (COUNTIF,
 SUMIFS, ...) take ranges, not bound arrays, and their comparisons go through the same count. The calibration figures above were measured before T-2804 charged the aggregates'
 reads, so an aggregate-heavy eval formula now spends more (`rustsheet-eval check` still has no formula past the limit).
+Dense matrix kernels charge their multiply-adds before they run (T-4975, findings 2026-11-07 audit item 6), one unit
+each (`MULTIPLY_ADD_UNITS`): MMULT m·k·n, MDETERM n³, MINVERSE 2n³, and LINEST, LOGEST, TREND and GROWTH about
+n·(p+1)² + (p+1)³ for n points of p variables. Inputs within every size limit whose cubic work passes the budget are
+refused at once (`MMULT(SEQUENCE(1000,1000),SEQUENCE(1000,1000))`, `MDETERM(SEQUENCE(700,700))`; the test
+`matrix_kernels_charge_their_cubic_work_up_front`), where before they ran unbounded.
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/area_budget.rs (`MAX_FORMULA_WORK`, `Model::spend_work`, `Model::with_area_budget`),
 crates/rustsheet-engine/src/model.rs (`evaluate_node_in_context`), crates/rustsheet-engine/src/functions/logical/lambda.rs

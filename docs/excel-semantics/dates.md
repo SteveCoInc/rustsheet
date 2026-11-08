@@ -923,6 +923,12 @@ Rule: in a 1904 workbook `TIMEVALUE("7/7/2026 4:35 PM")` and `TIMEVALUE("2024-03
 Evidence: probes/date-system-1904-timevalue-chrono A1-A4 (excel-graph 2026-10-12); see also the
 T-1444 entry on 1904 TIMEVALUE below.
 Status: VERIFIED. The engine already matches.
+Since T-4975 (audit 2 item 4) TIMEVALUE no longer keeps a chrono-pattern reader of its own: "date clock" text goes
+through the date-clock reader VALUE and DATEVALUE use (`parse_date_clock_serial_in`), then its fraction is taken,
+so both cells above come from that one path. The old patterns also took day-first dates (`"22/8/2011 6:35"`,
+which VALUE refuses) and the ISO `T` (`"2023-01-01T14:30:00"`, #VALUE! in VALUE and DATEVALUE, "Date text"
+above); TIMEVALUE now gives #VALUE! for both, as VALUE does. TIMEVALUE of those two shapes is UNVERIFIED
+(not probed for TIMEVALUE itself; TODO(T-5086) probe it).
 
 ## The 1904 date system: negative serials keep a minus; epoch at 1904-01-01
 Rule: in a 1904 workbook (`<workbookPr date1904="1"/>`), serial 0 is 1904-01-01 (`TEXT(0,"yyyy-mm-dd")` =
