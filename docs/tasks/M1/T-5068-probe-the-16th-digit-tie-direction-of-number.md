@@ -3,7 +3,7 @@ id: T-5068
 title: "Probe the 16th-digit tie direction of number-cell text, the scientific mantissa, comma-scaled fractions and pivot number groups (T-4848 follow-up)"
 milestone: M1
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
