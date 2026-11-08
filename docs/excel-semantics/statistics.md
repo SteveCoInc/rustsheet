@@ -9361,7 +9361,17 @@ Ours: `LoaderExponent::{Probability, ScaledProbability}` and `Bd0Branch::store` 
 selected in binom.rs, since T-4975.
 Status: VERIFIED (excel-graph) for the cells cited; the rule is a structural fit (bit-exact on about 38% of the pmf
 cells)
-Tasks: T-2146, T-4352, T-4975
+Open (T-5089 measurement, 2026-11-08): against main's extended chain this store loses 392 probes-numeric BINOM.DIST
+cells while gaining 1,116. The lost cells are dense p-sweeps of a few (k, n) clusters of t2513-r3-binom-pmf-a/-hold/-n
+(`BINOM.DIST(3,10,p≈0.6248)` loses 83 of 96), while other clusters on the same branch pair go the other way ((5,16) gains
+71 of 96). Of about 60 store and rounding variants scored on the 12,745 interior oracle pmfs (572 (case, k, n)
+clusters), none separates the two sets by the x87 or binary64 cut, n, |exponent| or p; by cluster the store beats
+the extended chain 225 to 14. Storing lf as well where k's own bd0 is on its log form nets +871/−465 probes-numeric
+but +8/−5 gated cells, almost all from one sweep, so it is not shipped. The ten t4974-binom-loader-store-chain cells
+#4087 lists (B54, B57, B62, B63, B65–B70) are one-point ranges whose bd0 sits exactly on the cut |k−np| = 0.2(k+np);
+they stay 3–20 ulp off under every store variant, so the gap is bd0's series arithmetic at v = 0.2 (T-2586), which is
+also where the mirrored-range asymmetry comes from, not the range summation.
+Tasks: T-2146, T-4352, T-4975, T-5089
 
 ## LOGNORM.DIST's density is a TwoSum chain of its negative log (T-4321)
 Rule: LOGNORM.DIST(x, mean, sigma, FALSE) accumulates the negative log density in a fixed order as a compensated
