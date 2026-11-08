@@ -9,11 +9,15 @@ Run: cd tools && uv run python ../docs/research/t4865/iteration_counts.py
 import json
 import math
 import pathlib
+import sys
 
 import mpmath
 
 mpmath.mp.dps = 60
 ROOT = pathlib.Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "docs/research/t2555"))
+import as109_replay  # noqa: E402
+
 END_HI = 1 - 2**-53
 END_LO = 2**-53
 
@@ -32,30 +36,10 @@ def as109(alpha, p, q, clamp=True, fpu=1e-300, iters=100000, trace=None, cdf=cdf
     a, pp, qq, swap = alpha, p, q, False
     if alpha > 0.5:
         a, pp, qq, swap = 1 - alpha, q, p, True
-    r = math.sqrt(-math.log(a * a))
-    y = r - (2.30753 + 0.27061 * r) / (1 + (0.99229 + 0.04481 * r) * r)
-    if pp > 1 and qq > 1:
-        r = (y * y - 3) / 6
-        s = 1 / (pp + pp - 1)
-        t = 1 / (qq + qq - 1)
-        h = 2 / (s + t)
-        w = y * math.sqrt(h + r) / h - (t - s) * (r + 5 / 6 - 2 / (3 * h))
-        try:
-            x = pp / (pp + qq * math.exp(w + w))
-        except OverflowError:
-            x = 0.0
-    else:
-        r = qq + qq
-        t = 1 / (9 * qq)
-        t = r * (1 - t + y * math.sqrt(t)) ** 3
-        if t <= 0:
-            x = 1 - math.exp((math.log1p(-a) + math.log(qq) + beta) / qq)
-        else:
-            t = (4 * pp + r - 2) / t
-            if t <= 1:
-                x = math.exp((math.log(a * pp) + beta) / pp)
-            else:
-                x = 1 - 2 / (t + 1)
+    try:
+        x = as109_replay.start(a, pp, qq, beta)
+    except OverflowError:
+        x = 0.0
     if clamp:
         x = min(max(x, 1e-4), 0.9999)
     if not 0 < x < 1:
