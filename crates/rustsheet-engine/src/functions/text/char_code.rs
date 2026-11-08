@@ -2,8 +2,7 @@
 #![expect(
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
-    clippy::match_same_arms,
-    clippy::unused_self
+    clippy::match_same_arms
 )]
 // LINT-DEBT-END
 // CHAR, CODE, UNICHAR, CLEAN, ASC
@@ -183,6 +182,10 @@ impl Model {
     /// PHONETIC(reference) — `#N/A` for a text cell, a number cell and a range alike, as
     /// excel-graph evaluates it (probes/text-modes-phonetic, -range, -number; T-1213). A
     /// literal argument is refused by the oracle, so it is unobservable.
+    #[expect(
+        clippy::unused_self,
+        reason = "every fn_* builtin shares the dispatch table's method signature"
+    )]
     pub(crate) fn fn_phonetic(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         if args.len() != 1 {
             return CalcResult::new_args_number_error(cell);

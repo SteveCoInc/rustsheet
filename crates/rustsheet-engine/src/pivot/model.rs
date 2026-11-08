@@ -7,9 +7,6 @@
 //! .69, .73; docs/research/pivot-tables-2026-11-04/excel-docs.md §7). Everything else in the part
 //! is kept verbatim in [`PivotTable::opaque`] for export (T-4176); the importer counts it toward
 //! its limits.
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::struct_excessive_bools)]
-// LINT-DEBT-END
 
 use bitcode::{Decode, Encode};
 
@@ -104,6 +101,10 @@ pub struct PivotGeometry {
 /// The pivot-wide attributes of `pivotTableDefinition` that change its layout or its text.
 /// `Default` is the schema's.
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "one field per boolean attribute of pivotTableDefinition"
+)]
 pub struct PivotOptions {
     /// `compact` (default on): row fields share one column.
     pub compact: bool,
@@ -186,6 +187,10 @@ impl Default for PivotOptions {
 
 /// How a pivot shows one cache field.
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "one field per boolean attribute of the OOXML pivotField record"
+)]
 pub struct PivotField {
     /// The axis the field is on, if any.
     pub axis: Option<Axis>,

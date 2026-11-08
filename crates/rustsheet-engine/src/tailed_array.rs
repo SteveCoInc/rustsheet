@@ -28,9 +28,6 @@
 //! evaluated and records nothing new. Should the used area grow while the head is evaluated (a
 //! spill evaluated on the way), the head is too short: the argument is then evaluated the
 //! ordinary way, its cells already evaluated.
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::unused_self)]
-// LINT-DEBT-END
 
 use crate::calc_result::CalcResult;
 use crate::expressions::parser::{ArrayNode, Node};
@@ -347,7 +344,7 @@ impl Model {
     /// are literals, one-cell references, single-column ranges all of one span of rows, or `ROW()`
     /// of such a range. Read from the formula alone; an explicit stack walks operator chains of any
     /// length, and never enters a keyed lookup's fixed arguments.
-    fn tailed_leaves(&self, arg: &Node, cell: CellReferenceIndex) -> Option<Leaves> {
+    fn tailed_leaves(arg: &Node, cell: CellReferenceIndex) -> Option<Leaves> {
         let top = ungroup(arg);
         let mut pending = Vec::new();
         if !push_operands(top, &mut pending) {
@@ -435,7 +432,7 @@ impl Model {
         if TAILED_OFF.with(std::cell::Cell::get) {
             return None;
         }
-        let leaves = self.tailed_leaves(arg, cell)?;
+        let leaves = Self::tailed_leaves(arg, cell)?;
         let mut used_end = 1;
         for sheet in &leaves.sheets {
             used_end = used_end.max(self.used_area_end_of(*sheet).ok()?.0);

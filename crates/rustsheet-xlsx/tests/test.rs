@@ -2,8 +2,7 @@
 #![expect(
     clippy::assigning_clones,
     clippy::float_cmp,
-    clippy::format_push_string,
-    clippy::needless_pass_by_value
+    clippy::format_push_string
 )]
 // LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
@@ -504,13 +503,13 @@ fn test_pyopenxl_example() {
 }
 
 fn assert_eq_ignoring_metadata_and_name(
-    workbook1: rustsheet_engine::types::Workbook,
-    workbook2: rustsheet_engine::types::Workbook,
+    workbook1: &rustsheet_engine::types::Workbook,
+    workbook2: &rustsheet_engine::types::Workbook,
 ) {
     let mut w2 = workbook2.clone();
     w2.metadata = workbook1.metadata.clone();
     w2.name = workbook1.name.clone();
-    assert_eq!(workbook1, w2);
+    assert_eq!(*workbook1, w2);
 }
 
 #[test]
@@ -520,7 +519,7 @@ fn test_dynamic_arrays() {
     save_to_xlsx(&model, temp_file_name).unwrap();
     let model2 = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
     fs::remove_file(temp_file_name).unwrap();
-    assert_eq_ignoring_metadata_and_name(model.workbook, model2.workbook);
+    assert_eq_ignoring_metadata_and_name(&model.workbook, &model2.workbook);
 }
 
 #[test]

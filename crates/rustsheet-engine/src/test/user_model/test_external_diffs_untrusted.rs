@@ -1,7 +1,6 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
 #![expect(
     clippy::items_after_statements,
-    clippy::needless_pass_by_value,
     clippy::too_many_lines,
     clippy::unreadable_literal
 )]
@@ -30,6 +29,10 @@ fn model() -> UserModel {
     model
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "the tests pass the queue they build inline"
+)]
 fn encode(entries: Vec<QueueDiffs>) -> Vec<u8> {
     bitcode::encode(&entries)
 }

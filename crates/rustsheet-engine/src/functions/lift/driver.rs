@@ -2,7 +2,7 @@
 //! `statistical/if_ifs.rs` by T-1784 with no result change; T-1770 adds the spec's cost model,
 //! the in-place single-grid path and the text budget.
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::match_same_arms, clippy::needless_pass_by_value)]
+#![expect(clippy::match_same_arms)]
 // LINT-DEBT-END
 
 use super::arg_buf::ArgBuf;
@@ -136,6 +136,7 @@ pub(crate) fn broadcast_shape(
 /// is checked before the first element runs, with saturating arithmetic. "Elements" are the
 /// elements computed: all of them, or those [`LiftOptions::reuse`] does not reuse. The table's
 /// [`KernelWork::Weighted`] weight multiplies the per-element term.
+#[derive(Clone, Copy)]
 pub(crate) enum LiftCost {
     /// `KernelWork::Constant` and no whole data: elements × 1.
     Unit,
@@ -711,7 +712,7 @@ impl Model {
     /// (probes/m7-lift-take-drop-sortby Sheet1 F13, I13:K13; T-2298).
     pub(crate) fn lift_references(
         &mut self,
-        lifted: Vec<LiftedArg>,
+        lifted: &[LiftedArg],
         cell: CellReferenceIndex,
         kernel: &mut Kernel<'_>,
     ) -> RefArg {
@@ -722,12 +723,12 @@ impl Model {
     /// [`LiftCost::Cells`] charges a value lift: XLOOKUP's search of its lookup vector.
     pub(crate) fn lift_references_costed(
         &mut self,
-        lifted: Vec<LiftedArg>,
+        lifted: &[LiftedArg],
         cells: u64,
         cell: CellReferenceIndex,
         kernel: &mut Kernel<'_>,
     ) -> RefArg {
-        let (rows, columns) = match broadcast_shape(&lifted, cell) {
+        let (rows, columns) = match broadcast_shape(lifted, cell) {
             Ok(shape) => shape,
             Err(error) => return RefArg::Value(error),
         };
@@ -748,7 +749,7 @@ impl Model {
         let mut output = Vec::with_capacity(elements);
         for row in 0..rows {
             for column in 0..columns {
-                for (slot, arg) in values.iter_mut().zip(&lifted) {
+                for (slot, arg) in values.iter_mut().zip(lifted) {
                     if let Some(node) = arg.element(row, column) {
                         *slot = array_element_value(node, cell);
                     }

@@ -1,5 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::if_not_else, clippy::ref_option)]
+#![expect(clippy::if_not_else)]
 // LINT-DEBT-END
 use rustsheet_engine::types::{
     Alignment, Border, BorderItem, Color, Fill, HorizontalAlignment, VerticalAlignment,
@@ -43,7 +43,7 @@ pub(crate) fn get_alignment(alignment: &Alignment) -> String {
     format!("<alignment{wrap_text}{horizontal}{vertical}/>")
 }
 
-fn get_border_xml_inner(border: &Option<BorderItem>, name: &str) -> String {
+fn get_border_xml_inner(border: Option<&BorderItem>, name: &str) -> String {
     if let Some(border_item) = border {
         let color = get_color_xml(&border_item.color, "color");
         return format!("<{name} style=\"{}\">{color}</{name}>", border_item.style);
@@ -52,11 +52,11 @@ fn get_border_xml_inner(border: &Option<BorderItem>, name: &str) -> String {
 }
 
 pub(crate) fn get_border_xml(border: &Border) -> String {
-    let left = get_border_xml_inner(&border.left, "left");
-    let right = get_border_xml_inner(&border.right, "right");
-    let top = get_border_xml_inner(&border.top, "top");
-    let bottom = get_border_xml_inner(&border.bottom, "bottom");
-    let diagonal = get_border_xml_inner(&border.diagonal, "diagonal");
+    let left = get_border_xml_inner(border.left.as_ref(), "left");
+    let right = get_border_xml_inner(border.right.as_ref(), "right");
+    let top = get_border_xml_inner(border.top.as_ref(), "top");
+    let bottom = get_border_xml_inner(border.bottom.as_ref(), "bottom");
+    let diagonal = get_border_xml_inner(border.diagonal.as_ref(), "diagonal");
     format!("<border>{left}{right}{top}{bottom}{diagonal}</border>")
 }
 

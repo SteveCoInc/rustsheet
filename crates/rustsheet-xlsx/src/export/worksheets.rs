@@ -3,7 +3,6 @@
     clippy::cast_sign_loss,
     clippy::if_not_else,
     clippy::manual_let_else,
-    clippy::ref_option,
     clippy::too_many_lines
 )]
 #![cfg_attr(test, expect(clippy::float_cmp))]
@@ -154,14 +153,14 @@ fn get_hyperlinks_section(worksheet: &Worksheet) -> String {
                     Some(location) => format!(" location=\"{}\"", escape_xml(location)),
                     None => String::new(),
                 };
-                let tooltip_attribute = get_tooltip_attribute(tooltip);
+                let tooltip_attribute = get_tooltip_attribute(tooltip.as_deref());
                 hyperlinks_str.push(format!(
                     "<hyperlink ref=\"{cell_name}\" r:id=\"rId{rel_id}\"{location_attribute}{tooltip_attribute}/>"
                 ));
             }
             Link::Internal { location, tooltip } => {
                 let location = escape_xml(location);
-                let tooltip_attribute = get_tooltip_attribute(tooltip);
+                let tooltip_attribute = get_tooltip_attribute(tooltip.as_deref());
                 hyperlinks_str.push(format!(
                     "<hyperlink ref=\"{cell_name}\" location=\"{location}\"{tooltip_attribute}/>"
                 ));
@@ -171,7 +170,7 @@ fn get_hyperlinks_section(worksheet: &Worksheet) -> String {
     format!("<hyperlinks>{}</hyperlinks>", hyperlinks_str.join(""))
 }
 
-fn get_tooltip_attribute(tooltip: &Option<String>) -> String {
+fn get_tooltip_attribute(tooltip: Option<&str>) -> String {
     match tooltip {
         Some(tooltip) => format!(" tooltip=\"{}\"", escape_xml(tooltip)),
         None => String::new(),

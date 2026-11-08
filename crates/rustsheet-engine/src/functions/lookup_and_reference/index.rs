@@ -6,8 +6,7 @@
     clippy::cast_possible_wrap,
     clippy::cast_precision_loss,
     clippy::cast_sign_loss,
-    clippy::float_cmp,
-    clippy::needless_pass_by_value
+    clippy::float_cmp
 )]
 // LINT-DEBT-END
 
@@ -306,7 +305,7 @@ impl Model {
                     col,
                     area,
                     cell,
-                    arg_error,
+                    arg_error.as_ref(),
                     |model, numbers| {
                         model.index_select(&arg, numbers, two_arg, cell, IndexForm::TopLeft)
                     },
@@ -505,7 +504,7 @@ impl Model {
         col: Option<CalcResult>,
         area: Option<CalcResult>,
         cell: CellReferenceIndex,
-        arg_error: Option<Error>,
+        arg_error: Option<&Error>,
         mut select: impl FnMut(&mut Self, IndexNumbers) -> CalcResult,
     ) -> CalcResult {
         let mut operand = |value: Option<CalcResult>, default: f64| match value {
@@ -546,7 +545,7 @@ impl Model {
                     number_at(self, col, i, j),
                     || Error::VALUE,
                 );
-                data_row.push(match (numbers, &arg_error) {
+                data_row.push(match (numbers, arg_error) {
                     (Err(e), _) => ArrayNode::Error(e),
                     (Ok(_), Some(error)) => ArrayNode::Error(error.clone()),
                     (Ok(numbers), None) => calc_result_to_array_node(select(self, numbers)),

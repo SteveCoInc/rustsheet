@@ -596,7 +596,7 @@ impl UserModel {
                         self.model.set_user_input(*sheet, *row, *column, value)?;
                     } else {
                         self.model
-                            .reenter_user_input(*sheet, *row, *column, value, *legacy)?;
+                            .reenter_user_input(*sheet, *row, *column, &value, *legacy)?;
                     }
                 }
                 Diff::SetArrayValue {

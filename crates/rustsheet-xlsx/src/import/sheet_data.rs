@@ -12,7 +12,6 @@
     clippy::cast_sign_loss,
     clippy::manual_let_else,
     clippy::too_many_lines,
-    clippy::unnecessary_wraps,
     elided_lifetimes_in_paths
 )]
 // LINT-DEBT-END
@@ -281,7 +280,10 @@ impl SheetDataReader<'_> {
 
     fn close(&mut self, tag: Tag) -> Result<(), XlsxError> {
         match tag {
-            Tag::Row => self.end_row(),
+            Tag::Row => {
+                self.end_row();
+                Ok(())
+            }
             Tag::Cell => self.end_cell(),
             _ => Ok(()),
         }
@@ -380,12 +382,10 @@ impl SheetDataReader<'_> {
         Ok(())
     }
 
-    fn end_row(&mut self) -> Result<(), XlsxError> {
-        let Some(row) = self.row.take() else {
-            return Ok(());
-        };
-        self.sheet_data.set_row(row.index, row.cells);
-        Ok(())
+    fn end_row(&mut self) {
+        if let Some(row) = self.row.take() {
+            self.sheet_data.set_row(row.index, row.cells);
+        }
     }
 
     fn start_cell(&mut self, element: &BytesStart) -> Result<(), XlsxError> {
@@ -550,10 +550,10 @@ impl SheetDataReader<'_> {
                         Some(_) => {
                             // It's the anchor cell. We do not use the ref attribute in IronCalc
                             let formula = from_a1_to_rc(
-                                formula_text,
+                                &formula_text,
                                 self.parser,
                                 &mut self.rc_text,
-                                context,
+                                &context,
                                 false,
                             )?;
                             if let Some(index) = self.index_map.get(&si) {
@@ -643,8 +643,13 @@ impl SheetDataReader<'_> {
                         array_kind =
                             CellArrayKind::ArrayFormula(column2 - column1 + 1, row2 - row1 + 1);
                     }
-                    let formula =
-                        from_a1_to_rc(formula_text, self.parser, &mut self.rc_text, context, true)?;
+                    let formula = from_a1_to_rc(
+                        &formula_text,
+                        self.parser,
+                        &mut self.rc_text,
+                        &context,
+                        true,
+                    )?;
                     formula_index = find_or_add_formula(
                         formula,
                         &mut self.shared_formulas,
@@ -654,10 +659,10 @@ impl SheetDataReader<'_> {
                 "normal" => {
                     // Its a cell with a simple formula
                     let formula = from_a1_to_rc(
-                        formula_text,
+                        &formula_text,
                         self.parser,
                         &mut self.rc_text,
-                        context,
+                        &context,
                         false,
                     )?;
                     formula_index = find_or_add_formula(
@@ -689,7 +694,7 @@ impl SheetDataReader<'_> {
             self.sheet_name,
             &cell.reference,
             self.shared_strings,
-            cell.rich_text,
+            cell.rich_text.as_deref(),
             anchor_cell,
             array_kind,
             self.date_system,

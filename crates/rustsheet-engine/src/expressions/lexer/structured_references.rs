@@ -203,7 +203,7 @@ impl Lexer {
                 } else {
                     TableReference::ColumnReference(left)
                 };
-                self.expect(TokenType::RightBracket)?;
+                self.expect(&TokenType::RightBracket)?;
                 Some(reference)
             }
             _ => {
@@ -285,7 +285,7 @@ impl Lexer {
     //     MyTable[[#This Row], [Jan]:[Dec]] => MyTable[@[Jan]:[Dec]]
     //   But this is only a UI thing that we will ignore for now.
     pub(crate) fn consume_structured_reference(&mut self, table_name: &str) -> Result<TokenType> {
-        self.expect(TokenType::LeftBracket)?;
+        self.expect(&TokenType::LeftBracket)?;
         // A run after the outer `[` is kept before nested brackets (`T[ [Col] ]`) and, in text
         // the engine printed itself, around a bare column padded on both sides (`T[ Col ]`, the
         // form Excel prints for `T[ [Col] ]`). Typed or in a file, Excel refuses or loads as
@@ -311,7 +311,7 @@ impl Lexer {
         let peek_char = self.peek_char();
         if peek_char == Some(']') {
             // This is just a reference to the full table
-            self.expect(TokenType::RightBracket)?;
+            self.expect(&TokenType::RightBracket)?;
             return Ok(TokenType::Ident(table_name.to_string()));
         }
         if peek_char == Some('@') {
@@ -342,13 +342,13 @@ impl Lexer {
                 spacing,
             });
         }
-        self.expect(TokenType::LeftBracket)?;
+        self.expect(&TokenType::LeftBracket)?;
         let mut specifier = self.consume_table_specifier()?;
         if specifier.is_some() {
             if *self.peek() == TokenType::Comma {
                 self.advance_token();
                 spacing.comma_space = !self.whitespace_run().is_empty();
-                self.expect(TokenType::LeftBracket)?;
+                self.expect(&TokenType::LeftBracket)?;
                 // A second item specifier: [[#Headers],[#Data],...] or [[#Data],[#Totals],...]
                 if self.peek_char() == Some('#') {
                     let position = self.position;
@@ -360,14 +360,14 @@ impl Lexer {
                     if *self.peek() == TokenType::Comma {
                         self.advance_token();
                         spacing.comma_space = !self.whitespace_run().is_empty();
-                        self.expect(TokenType::LeftBracket)?;
+                        self.expect(&TokenType::LeftBracket)?;
                     }
                 }
             }
             let before_close = self.position;
             spacing.close = self.whitespace_run();
             if *self.peek() == TokenType::RightBracket {
-                self.expect(TokenType::RightBracket)?;
+                self.expect(&TokenType::RightBracket)?;
                 return Ok(TokenType::StructuredReference {
                     table_name: table_name.to_string(),
                     specifier,
@@ -392,7 +392,7 @@ impl Lexer {
             TableReference::ColumnReference(column_reference)
         };
         spacing.close = self.whitespace_run();
-        self.expect(TokenType::RightBracket)?;
+        self.expect(&TokenType::RightBracket)?;
         Ok(TokenType::StructuredReference {
             table_name: table_name.to_string(),
             specifier,

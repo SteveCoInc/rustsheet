@@ -656,7 +656,7 @@ impl Lexer {
                         return Err(self.set_error("Expected row number", position));
                     }
                 }
-                self.expect(TokenType::RightBracket)?;
+                self.expect(&TokenType::RightBracket)?;
             }
             Some(c) => {
                 absolute_row = true;
@@ -689,7 +689,7 @@ impl Lexer {
                         return Err(self.set_error("Expected column number", position));
                     }
                 }
-                self.expect(TokenType::RightBracket)?;
+                self.expect(&TokenType::RightBracket)?;
             }
             Some(c) => {
                 absolute_column = true;

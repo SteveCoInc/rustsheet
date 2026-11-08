@@ -1,9 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::match_same_arms,
-    clippy::unnecessary_wraps,
-    clippy::unused_self
-)]
+#![expect(clippy::match_same_arms)]
 // LINT-DEBT-END
 use crate::{
     expressions::{
@@ -263,6 +259,10 @@ impl Model {
         None
     }
 
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "every units_fn_* arm of the dispatch match shares one signature"
+    )]
     fn units_fn_currency(&self, _args: &[Node], _cell: &CellReferenceIndex) -> Option<Units> {
         let currency_symbol = &self.locale.currency.symbol;
         let standard_format = &self.locale.numbers.currency_formats.standard;
@@ -277,6 +277,11 @@ impl Model {
         })
     }
 
+    #[expect(
+        clippy::unnecessary_wraps,
+        clippy::unused_self,
+        reason = "every units_fn_* arm of the dispatch match shares one signature"
+    )]
     fn units_fn_percentage(&self, _args: &[Node], _cell: &CellReferenceIndex) -> Option<Units> {
         Some(Units::Percentage {
             group_separator: false,
@@ -285,6 +290,11 @@ impl Model {
         })
     }
 
+    #[expect(
+        clippy::unnecessary_wraps,
+        clippy::unused_self,
+        reason = "every units_fn_* arm of the dispatch match shares one signature"
+    )]
     fn units_fn_percentage_2(&self, _args: &[Node], _cell: &CellReferenceIndex) -> Option<Units> {
         Some(Units::Percentage {
             group_separator: false,
@@ -293,6 +303,10 @@ impl Model {
         })
     }
 
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "every units_fn_* arm of the dispatch match shares one signature"
+    )]
     fn units_fn_dates(&self, _args: &[Node], _cell: &CellReferenceIndex) -> Option<Units> {
         let mut date_short = self.locale.dates.date_formats.short.clone();
         // FIXME: We want always 4 digit year. So if it is not already the case, we replace yy by yyyy
@@ -302,6 +316,10 @@ impl Model {
         Some(Units::Date(date_short.replace(' ', " ")))
     }
 
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "every units_fn_* arm of the dispatch match shares one signature"
+    )]
     fn units_fn_date_times(&self, _args: &[Node], _cell: &CellReferenceIndex) -> Option<Units> {
         let mut date_short = self.locale.dates.date_formats.short.clone();
         // We want always 4 digit year. So if it is not already the case, we replace yy by yyyy

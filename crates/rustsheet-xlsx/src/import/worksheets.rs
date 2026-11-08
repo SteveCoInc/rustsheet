@@ -2,7 +2,6 @@
 #![expect(
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
-    clippy::needless_pass_by_value,
     clippy::print_stdout,
     clippy::too_many_lines
 )]
@@ -259,24 +258,24 @@ fn parse_reference(s: &str) -> Result<CellReferenceRC, ParseReferenceError> {
 }
 
 pub(super) fn from_a1_to_rc(
-    formula: String,
+    formula: &str,
     parser: &mut Parser,
     cache: &mut RcTextCache,
-    context: String,
+    context: &str,
     is_array_formula: bool,
 ) -> Result<String, XlsxError> {
     let cell_reference =
-        parse_reference(&context).map_err(|error| XlsxError::Xml(error.to_string()))?;
+        parse_reference(context).map_err(|error| XlsxError::Xml(error.to_string()))?;
     // A copy of a formula read before (same key) has its tree, so its text: no parse. The copy
     // read first passed the nesting check below, and the copy's tree nests the same.
-    let key = cache.lexer.key(&formula, &cell_reference);
+    let key = cache.lexer.key(formula, &cell_reference);
     if let Some(text) = key
         .as_deref()
         .and_then(|k| cache.get_keyed(k, is_array_formula))
     {
         return Ok(text.to_string());
     }
-    let t = parser.parse(&formula, &cell_reference);
+    let t = parser.parse(formula, &cell_reference);
     if t.has_parse_error() {
         // A formula that does not parse is no template for its copies (relocation_key.rs).
         cache.lexer.forget_template();
@@ -349,6 +348,7 @@ fn is_valueless_constant(
     }
 }
 
+#[derive(Clone, Copy)]
 pub(super) enum CellArrayKind {
     None,
     DynamicArray(i32, i32),
@@ -366,7 +366,7 @@ pub(super) fn get_cell_from_excel(
     sheet_name: &str,
     cell_ref: &str,
     shared_strings: &mut SharedStringTable,
-    rich_text_inline: Option<String>,
+    rich_text_inline: Option<&str>,
     anchor_cell: Option<(i32, i32)>,
     array_kind: CellArrayKind,
     date_system: DateSystem,
@@ -383,7 +383,7 @@ pub(super) fn get_cell_from_excel(
 
     if formula_index == -1
         && anchor_cell.is_none()
-        && is_valueless_constant(cell_type, cell_value, rich_text_inline.as_deref())
+        && is_valueless_constant(cell_type, cell_value, rich_text_inline)
     {
         // Excel reads a constant cell that stores no value as blank whatever its `t`: ISBLANK is
         // TRUE, COUNTA skips it and TYPE is 1 (fixtures/valueless-cell-forms; T-4148,
@@ -471,7 +471,7 @@ pub(super) fn get_cell_from_excel(
             "inlineStr" => {
                 // An inline string's `_xHHHH_` escapes decode like a shared string's (poi/60289.xlsx
                 // TABLE!B2 stores `Rich Text_x000d_` inline; T-4150).
-                let s = decode_xlsx_escapes(&rich_text_inline.unwrap_or_default());
+                let s = decode_xlsx_escapes(rich_text_inline.unwrap_or_default());
                 let si = shared_strings.intern(&s) as i32;
 
                 Cell::SharedString { si, s: cell_style }
@@ -541,7 +541,7 @@ pub(super) fn get_cell_from_excel(
             "inlineStr" => {
                 // NB: This is untested, I don't know of any engine that uses inline strings in formulas
                 make_cell(FormulaValue::Text(
-                    decode_xlsx_escapes(&rich_text_inline.unwrap_or_default()).into(),
+                    decode_xlsx_escapes(rich_text_inline.unwrap_or_default()).into(),
                 ))
             }
             _ => {

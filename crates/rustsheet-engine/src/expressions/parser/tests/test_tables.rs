@@ -401,7 +401,7 @@ fn every_form_round_trips_through_the_printer() {
         if specifier.is_some() {
             references.push(StructuredReference {
                 table_name: "T".to_string(),
-                specifier: specifier.clone(),
+                specifier: *specifier,
                 table_reference: None,
                 spacing: TableSpacing::default(),
                 bare: false,
@@ -418,7 +418,7 @@ fn every_form_round_trips_through_the_printer() {
             ] {
                 references.push(StructuredReference {
                     table_name: "T".to_string(),
-                    specifier: specifier.clone(),
+                    specifier: *specifier,
                     table_reference: Some(table_reference),
                     spacing: TableSpacing::default(),
                     bare: false,

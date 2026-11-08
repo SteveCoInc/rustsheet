@@ -4,7 +4,7 @@
 //! family task that enters a value-dependent function adds it here. The check does not see a
 //! `Weighted` kernel's own per-call cap; its table entry's doc comment cites it.
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::cast_precision_loss, clippy::needless_pass_by_value)]
+#![expect(clippy::cast_precision_loss)]
 // LINT-DEBT-END
 
 use super::super::kinds::{KernelWork, ValueWork};
@@ -701,6 +701,10 @@ fn hypgeom_dist_elements_are_charged_by_their_counts() {
 
 /// The units `function(cost, date, 39813, salvage, period, rate, basis)` is charged over 513
 /// purchase dates `date`, `values` being cost, salvage, period and rate (T-2840).
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "Function is not Copy yet: T-5080 derives it and drops this"
+)]
 fn amortization_units(
     function: Function,
     date: crate::expressions::parser::ArrayNode,

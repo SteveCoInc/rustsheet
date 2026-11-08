@@ -71,9 +71,6 @@
 //!   corner left empty), with no data field, beside page fields, and beside
 //!   `grandTotalCaption` (always `Total`); a subtotalCaption with Values inside its field (kept
 //!   `<item> <data field>`), empty, or with several `?` (each replaced) (T-4785).
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::unused_self)]
-// LINT-DEBT-END
 
 use crate::expressions::token::Error;
 use crate::number_format::{format_number, get_num_fmt, number_to_text};
@@ -407,7 +404,7 @@ impl Cells<'_> {
             // `subtotalCaption` is the whole label (t4129 SC, t4745 SB, SK, SCC), a `?` in it
             // standing for the item (t4745 SQ); custom subtotal lines keep `<item> <Function>`
             // (t4745 SF).
-            ItemType::Default => match self.subtotal_caption(axis, depth) {
+            ItemType::Default => match Self::subtotal_caption(axis, depth) {
                 Some(caption) if caption.contains('?') => match item() {
                     Some(item) => Some(expand_caption(caption, &item, self.text_left)?),
                     None => None,
@@ -423,7 +420,7 @@ impl Cells<'_> {
     }
 
     /// The `subtotalCaption` of the field at `axis`'s level `depth`, if it sets one.
-    fn subtotal_caption<'f>(&self, axis: &Axis<'f>, depth: Option<usize>) -> Option<&'f str> {
+    fn subtotal_caption<'f>(axis: &Axis<'f>, depth: Option<usize>) -> Option<&'f str> {
         match axis.levels.get(depth?)? {
             Level::Field {
                 field: Some(field), ..

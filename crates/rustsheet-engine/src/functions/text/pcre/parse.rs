@@ -1,9 +1,6 @@
 //! The PCRE2 pattern grammar (SPEC-0013 section 1): hand-written, iterative over groups (an
 //! explicit frame stack), and failing closed: every construct it does not know is
 //! [`Invalid`]. Brackets nest and recurse, but under the same [`NEST_LIMIT`] as groups.
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::needless_pass_by_value, clippy::struct_excessive_bools)]
-// LINT-DEBT-END
 
 use regex_syntax::hir::{ClassUnicode, ClassUnicodeRange};
 
@@ -43,6 +40,10 @@ pub(super) struct Parsed {
 
 /// The options in force at one point of the pattern.
 #[derive(Debug, Clone, Copy, Default)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "one field per independent PCRE option bit"
+)]
 struct Flags {
     /// `i`
     caseless: bool,
@@ -829,7 +830,7 @@ impl Parser {
                 // meaning is unprobed: invalid until T-1972 answers.
                 '-' | '~' | '|' if self.peek() == Some(c) => return Err(Invalid),
                 '&' if self.eat('&') => {
-                    let mut set = self.close_set(plain, fixed);
+                    let mut set = self.close_set(plain, &fixed);
                     if let Some(before) = intersection {
                         set.intersect(&before);
                     }
@@ -852,7 +853,7 @@ impl Parser {
             }
             first = false;
         }
-        let mut set = self.close_set(plain, fixed);
+        let mut set = self.close_set(plain, &fixed);
         if let Some(before) = intersection {
             set.intersect(&before);
         }
@@ -863,11 +864,11 @@ impl Parser {
     }
 
     /// The union of a bracket's items, `plain` folded under `(?i)`.
-    fn close_set(&mut self, mut plain: ClassUnicode, fixed: ClassUnicode) -> ClassUnicode {
+    fn close_set(&mut self, mut plain: ClassUnicode, fixed: &ClassUnicode) -> ClassUnicode {
         if self.flags.caseless && self.charge_fold(&plain) {
             plain.case_fold_simple();
         }
-        plain.union(&fixed);
+        plain.union(fixed);
         plain
     }
 

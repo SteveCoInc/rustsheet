@@ -67,9 +67,6 @@
 //! Every line is charged to the work budget as it is made, and a layout past the sheet or past
 //! [`MAX_PIVOT_CELLS`] cells has no result (pivots.md "A pivot result is bounded in work and
 //! nodes", DEVIATION). The walk keeps its own stack, so an untrusted axis depth never recurses.
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::struct_field_names)]
-// LINT-DEBT-END
 
 use std::ops::Range;
 
@@ -220,7 +217,7 @@ struct Visit {
 
 /// One axis's lines, as the walk makes them.
 struct Lines<'w> {
-    lines: Vec<AxisLine>,
+    made: Vec<AxisLine>,
     previous: Vec<u32>,
     /// Most lines the axis may have before the layout passes [`MAX_PIVOT_CELLS`].
     cap: usize,
@@ -236,7 +233,7 @@ impl Lines<'_> {
         values: bool,
     ) -> Result<(), PivotComputeError> {
         charge(self.work, units(visit.tuple.len()).saturating_add(1))?;
-        if self.lines.len() >= self.cap {
+        if self.made.len() >= self.cap {
             return Err(PivotComputeError::Limit);
         }
         let (tuple, grand) = (&visit.tuple, kind == ItemType::Grand);
@@ -252,7 +249,7 @@ impl Lines<'_> {
         } else {
             shared.min(tuple.len().saturating_sub(1))
         };
-        self.lines.push(AxisLine {
+        self.made.push(AxisLine {
             kind,
             repeat: u32::try_from(repeat).map_err(|_| PivotComputeError::Limit)?,
             data_field: data.unwrap_or(0),
@@ -392,7 +389,7 @@ impl<'a> AxisPlan<'a> {
         work: &mut u64,
     ) -> Result<Vec<AxisLine>, PivotComputeError> {
         let mut out = Lines {
-            lines: Vec::new(),
+            made: Vec::new(),
             previous: Vec::new(),
             cap,
             work,
@@ -444,7 +441,7 @@ impl<'a> AxisPlan<'a> {
                 Step::Close(visit) => self.close(&visit, options, &mut out)?,
             }
         }
-        Ok(out.lines)
+        Ok(out.made)
     }
 
     /// The Values field's level when it is `level` or inside it.

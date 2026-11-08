@@ -2,8 +2,7 @@
 #![expect(
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
-    clippy::float_cmp,
-    clippy::unused_self
+    clippy::float_cmp
 )]
 // LINT-DEBT-END
 use super::util::collation::cmp_text_pairwise;
@@ -406,7 +405,7 @@ impl Model {
             args,
             LiftCost::Cells(cells),
             cell,
-            &mut |model, values| {
+            &mut |_, values| {
                 let by_col = match values.get(3) {
                     None | Some(CalcResult::EmptyArg) => Ok(false),
                     Some(value) => Self::cast_bool_ref(value, cell),
@@ -417,7 +416,7 @@ impl Model {
                     }
                     (.., Err(error)) => (error, false),
                     (Ok(data), Ok(raw_index), Ok(raw_order), Ok(by_col)) => (
-                        model.sort_by_keys(data, raw_index, raw_order, by_col, cell),
+                        Self::sort_by_keys(data, raw_index, raw_order, by_col, cell),
                         true,
                     ),
                 };
@@ -444,7 +443,6 @@ impl Model {
     /// One SORT call over the read `data`: the `sort_index` and `sort_order` lists validated against
     /// `data` (rows, or columns when `by_col`), then the sort.
     fn sort_by_keys(
-        &self,
         data: &[Vec<ArrayNode>],
         raw_index: &[f64],
         raw_order: &[f64],

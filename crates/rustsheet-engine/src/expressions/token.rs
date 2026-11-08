@@ -335,7 +335,7 @@ pub fn is_english_error_string(name: &str) -> bool {
     names.contains(&name)
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum TableSpecifier {
     All,
     Data,

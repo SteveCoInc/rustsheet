@@ -2,8 +2,7 @@
 #![expect(
     clippy::cast_possible_truncation,
     clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::needless_pass_by_value
+    clippy::cast_sign_loss
 )]
 // LINT-DEBT-END
 use super::aggregate::is_multi_cell;
@@ -36,7 +35,7 @@ use crate::{
 /// If you try to hide rows in a table with filtered rows they will behave as if filtered
 /// // Also subtotals ignore subtotals
 ///
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 enum SubTotalMode {
     Full,
     SkipHidden,
@@ -129,7 +128,7 @@ impl Model {
         &mut self,
         arg: &SubtotalArg,
         cell: CellReferenceIndex,
-        mode: &SubTotalMode,
+        mode: SubTotalMode,
         mut f: F,
     ) -> Result<(), CalcResult>
     where
@@ -178,7 +177,7 @@ impl Model {
                                     CalcResult::new_error(Error::ERROR, cell, message)
                                 })?;
                             let skip = status == CellTableStatus::Filtered
-                                || (*mode == SubTotalMode::SkipHidden
+                                || (mode == SubTotalMode::SkipHidden
                                     && status == CellTableStatus::Hidden);
                             last_row = Some((position.sheet, position.row, skip));
                             skip
@@ -201,7 +200,7 @@ impl Model {
         &mut self,
         areas: &SubtotalArg,
         cell: CellReferenceIndex,
-        mode: &SubTotalMode,
+        mode: SubTotalMode,
         result: &mut Vec<f64>,
     ) -> Result<(), CalcResult> {
         self.subtotal_walk_areas(areas, cell, mode, |value| match value {
@@ -225,7 +224,7 @@ impl Model {
     ) -> Result<Vec<f64>, CalcResult> {
         let mut result: Vec<f64> = Vec::new();
         for areas in args {
-            self.subtotal_walk_range(areas, cell, &mode, &mut result)?;
+            self.subtotal_walk_range(areas, cell, mode, &mut result)?;
         }
         Ok(result)
     }
@@ -463,7 +462,7 @@ impl Model {
         mode: SubTotalMode,
     ) -> CalcResult {
         let mut counta = 0;
-        self.subtotal_count_with(args, cell, &mode, &mut counta, |value| {
+        self.subtotal_count_with(args, cell, mode, &mut counta, |value| {
             !matches!(value, CalcResult::EmptyCell | CalcResult::EmptyArg)
         })
     }
@@ -475,7 +474,7 @@ impl Model {
         mode: SubTotalMode,
     ) -> CalcResult {
         let mut count = 0;
-        self.subtotal_count_with(args, cell, &mode, &mut count, |value| {
+        self.subtotal_count_with(args, cell, mode, &mut count, |value| {
             matches!(value, CalcResult::Number(_))
         })
     }
@@ -486,7 +485,7 @@ impl Model {
         &mut self,
         args: &[SubtotalArg],
         cell: CellReferenceIndex,
-        mode: &SubTotalMode,
+        mode: SubTotalMode,
         count: &mut u32,
         counted: fn(&CalcResult) -> bool,
     ) -> CalcResult {

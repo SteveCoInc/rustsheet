@@ -5,8 +5,7 @@
     clippy::cast_precision_loss,
     clippy::cast_sign_loss,
     clippy::float_cmp,
-    clippy::many_single_char_names,
-    clippy::needless_pass_by_value
+    clippy::many_single_char_names
 )]
 // LINT-DEBT-END
 use chrono::{Datelike, NaiveDate};
@@ -1004,8 +1003,5 @@ impl Model {
 /// A day count or coupon count of the coupon schedule as a cell value: `#NUM!` for a date off
 /// the calendar.
 fn date_number(days: Result<f64, String>, cell: CellReferenceIndex) -> CalcResult {
-    match days {
-        Ok(days) => CalcResult::Number(days),
-        Err(_) => num_error(cell),
-    }
+    days.map_or_else(|_| num_error(cell), CalcResult::Number)
 }

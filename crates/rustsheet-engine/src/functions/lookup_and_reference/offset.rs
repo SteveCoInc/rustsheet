@@ -101,7 +101,7 @@ impl Model {
             Ok(lifted) => lifted,
             Err(error) => return RefArg::Value(error),
         };
-        self.lift_references(lifted, cell, &mut |model, values| {
+        self.lift_references(&lifted, cell, &mut |model, values| {
             model.offset_of(&reference, values, cell)
         })
     }
@@ -150,7 +150,7 @@ impl Model {
             Err(error) => return RefArg::Value(error),
         };
         lifted.insert(0, LiftedArg::Grid(grid.index_array()));
-        self.lift_references(lifted, cell, &mut |model, values| {
+        self.lift_references(&lifted, cell, &mut |model, values| {
             let Some((index, values)) = values.split_first() else {
                 return CalcResult::new_error(Error::VALUE, cell, "Not an element".to_string());
             };

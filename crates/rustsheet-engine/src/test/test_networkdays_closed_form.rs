@@ -6,8 +6,7 @@
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
     clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::trivially_copy_pass_by_ref
+    clippy::cast_sign_loss
 )]
 // LINT-DEBT-END
 
@@ -49,7 +48,7 @@ fn date_range(system: DateSystem) -> (i64, i64) {
     }
 }
 
-fn is_weekend(date: chrono::NaiveDate, mask: &[bool; 7]) -> bool {
+fn is_weekend(date: chrono::NaiveDate, mask: [bool; 7]) -> bool {
     mask[date.weekday().num_days_from_monday() as usize]
 }
 
@@ -68,7 +67,7 @@ fn old_networkdays(
     let mut count = 0i64;
     for serial in from..=to {
         let date = system.date_of_serial_from_zero(serial)?;
-        if !is_weekend(date, &SAT_SUN) && !holidays.contains(&serial) {
+        if !is_weekend(date, SAT_SUN) && !holidays.contains(&serial) {
             count += 1;
         }
     }
@@ -81,7 +80,7 @@ fn old_networkdays_intl(
     system: DateSystem,
     start: i64,
     end: i64,
-    mask: &[bool; 7],
+    mask: [bool; 7],
     holidays: &HashSet<i64>,
 ) -> Option<f64> {
     let (from, to, sign) = if start <= end {
@@ -213,7 +212,7 @@ fn closed_forms_match_the_per_day_loops() {
                     system,
                     start,
                     end,
-                    &intl_mask,
+                    intl_mask,
                     &holiday_set,
                 )),
             ));

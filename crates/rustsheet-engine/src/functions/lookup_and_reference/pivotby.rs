@@ -3,9 +3,6 @@
 //! each axis with its own subtotals. Excel:
 //! docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY", evidence probes/groupby-pivotby sheet P,
 //! its follow-ups (T-1328) and probes/pivotby-followup (excel-graph, 2026-10-16, T-1326).
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::needless_pass_by_value)]
-// LINT-DEBT-END
 
 use super::group_functions::{Aggregate, Functions, Shape};
 use super::groupby::{
@@ -247,7 +244,7 @@ impl Model {
         let mut total = (pivot.row_depth != 0).then(|| {
             let label = total_label_cells(row_fields, levels);
             let reuse = |slot| totals.total_row_cell(slot);
-            self.grid_row(functions, &mut grid, label, &pivot.records, reuse, cell)
+            self.grid_row(functions, &mut grid, &label, &pivot.records, reuse, cell)
         });
         if pivot.row_depth < 0 {
             output.extend(total.take().into_iter().flatten());
@@ -259,7 +256,7 @@ impl Model {
             };
             grid.row = Some(line);
             let reuse = |slot| totals.line_total_cell(line, slot);
-            output.extend(self.grid_row(functions, &mut grid, label, &records, reuse, cell));
+            output.extend(self.grid_row(functions, &mut grid, &label, &records, reuse, cell));
         }
         output.extend(total.into_iter().flatten());
         (output, grid.total_error)
@@ -273,7 +270,7 @@ impl Model {
         &mut self,
         functions: &mut Functions,
         grid: &mut Grid<'_>,
-        label: Vec<ArrayNode>,
+        label: &[ArrayNode],
         records: &[usize],
         reuse: impl Fn(Slot) -> Option<ArrayNode>,
         cell: CellReferenceIndex,
@@ -301,7 +298,7 @@ impl Model {
         let shape = functions.shape();
         let mut output = Vec::with_capacity(shape.rows_per_group);
         for sub_row in 0..shape.rows_per_group {
-            let mut row = label.clone();
+            let mut row = label.to_vec();
             if shape.label_column {
                 row.push(functions.label(functions.pair_at(sub_row, 0)));
             }

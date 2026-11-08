@@ -1,6 +1,3 @@
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::needless_pass_by_value, clippy::unnecessary_wraps)]
-// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::calc_result::CalcResult;
@@ -16,6 +13,10 @@ fn en_locale() -> &'static Locale {
 }
 
 /// The clock year-less date criteria ("7/1") are read with.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "builds the Option the value under test holds"
+)]
 fn year_2026() -> Option<i32> {
     Some(2026)
 }
@@ -637,6 +638,10 @@ fn ordering_criteria_compare_the_cell_at_15_digits() {
 // (docs/excel-semantics/criteria.md, probes/t3136-criteria-formatted-number-operands).
 #[test]
 fn criteria_read_numbers_with_value_grammar() {
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "the tests pass the CalcResult they build inline"
+    )]
     fn matches(criterion: &str, cell: CalcResult) -> bool {
         let criterion = CalcResult::String(criterion.into());
         let matcher = build_criteria(&criterion, en_locale(), &year_2026, DateSystem::default());

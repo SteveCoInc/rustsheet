@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // $A$34
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 pub struct ParsedReference {
     pub column: i32,
     pub row: i32,

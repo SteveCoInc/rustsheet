@@ -442,7 +442,7 @@ impl Model {
         cell: CellReferenceIndex,
     ) -> Result<Vec<Vec<ArrayNode>>, CalcResult> {
         match read {
-            RefArg::Grid(grid) => Ok(grid.to_array(ArrayNode::Empty)),
+            RefArg::Grid(grid) => Ok(grid.to_array(&ArrayNode::Empty)),
             read => {
                 // A blank cell given as a cell or one-cell range reference is `#VALUE!`, alone or
                 // beside other arguments, while a one-cell text or boolean is a 0 factor

@@ -19,11 +19,7 @@
 //! rounding test, [`rounds_safely`]), that double is the rounding of the full sum too, so the full
 //! sum runs only for a remainder close to a rounding boundary (about 1 call in 500; T-1637).
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::cast_possible_truncation,
-    clippy::float_cmp,
-    clippy::inline_always
-)]
+#![expect(clippy::cast_possible_truncation, clippy::float_cmp)]
 #![cfg_attr(test, expect(clippy::cast_precision_loss))]
 // LINT-DEBT-END
 
@@ -234,6 +230,10 @@ impl Series {
     ///
     /// A sweep measures 2^-65.8 and 2^-69.1 (`fast_sums_stay_well_inside_their_error_bounds`).
     // Inlined into TAN, which runs both series, so their steps interleave (148 → 127 ns there).
+    #[expect(
+        clippy::inline_always,
+        reason = "measured: TAN interleaves the two series only when both are inlined"
+    )]
     #[inline(always)]
     fn fast(&self, square: DoubleDouble) -> DoubleDouble {
         let steps = self.fast_double_double_steps;

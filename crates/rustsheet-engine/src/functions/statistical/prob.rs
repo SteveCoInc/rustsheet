@@ -158,7 +158,7 @@ impl Model {
                 Ok(v) => Ok(v.into_iter().flatten().collect()),
                 Err(e) => Err(e),
             },
-            CalcResult::Array(arr) => match self.values_from_array(arr) {
+            CalcResult::Array(arr) => match Self::values_from_array(arr) {
                 Ok(v) => Ok(v.into_iter().flatten().collect()),
                 Err(error) if element_errors => Err(array_element_error(error, cell)),
                 Err(e) => Err(CalcResult::new_error(Error::VALUE, cell, format!("{e:?}"))),

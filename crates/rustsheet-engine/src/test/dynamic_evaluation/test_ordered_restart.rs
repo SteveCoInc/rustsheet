@@ -2,8 +2,7 @@
 #![expect(
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
-    clippy::many_single_char_names,
-    clippy::unused_self
+    clippy::many_single_char_names
 )]
 // LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
@@ -23,7 +22,7 @@ fn anchor_order(model: &Model) -> Vec<String> {
         .evaluation
         .anchor_order
         .iter()
-        .map(|a| model.reference_name(*a))
+        .map(|a| reference_name(*a))
         .collect()
 }
 
@@ -31,11 +30,9 @@ fn restarts(model: &Model) -> u32 {
     model.evaluation.restarts_in_last_evaluation
 }
 
-impl Model {
-    fn reference_name(&self, cell: CellReferenceIndex) -> String {
-        let column = (b'A' + (cell.column - 1) as u8) as char;
-        format!("{column}{}", cell.row)
-    }
+fn reference_name(cell: CellReferenceIndex) -> String {
+    let column = (b'A' + (cell.column - 1) as u8) as char;
+    format!("{column}{}", cell.row)
 }
 
 // ── Restarts and the anchor order ───────────────────────────────────────────

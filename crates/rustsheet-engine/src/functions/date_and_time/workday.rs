@@ -5,8 +5,7 @@
 #![expect(
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
-    clippy::cast_precision_loss,
-    clippy::trivially_copy_pass_by_ref
+    clippy::cast_precision_loss
 )]
 // LINT-DEBT-END
 
@@ -198,7 +197,7 @@ impl Model {
             ));
         }
         let holidays = holidays.as_ref().map_err(|error| error.error.clone())?;
-        self.step_workdays(date, days, &weekend, holidays, cell)
+        self.step_workdays(date, days, weekend, holidays, cell)
     }
 
     /// Steps `date` over `days` working days (forward when positive), skipping the weekend days
@@ -212,7 +211,7 @@ impl Model {
         &self,
         date: chrono::NaiveDate,
         days: i32,
-        weekend_mask: &[bool; 7],
+        weekend_mask: [bool; 7],
         holidays: &Holidays,
         cell: CellReferenceIndex,
     ) -> Result<f64, CalcResult> {

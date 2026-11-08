@@ -23,8 +23,7 @@
     clippy::cast_possible_truncation,
     clippy::cast_precision_loss,
     clippy::cast_sign_loss,
-    clippy::float_cmp,
-    clippy::unnecessary_wraps
+    clippy::float_cmp
 )]
 // LINT-DEBT-END
 
@@ -225,7 +224,7 @@ impl Model {
         }
         match kind {
             Amortization::Linear => asset.linear(period),
-            Amortization::Degressive => asset.degressive(period, DEGRESSIVE_LOOP_PERIODS),
+            Amortization::Degressive => Ok(asset.degressive(period, DEGRESSIVE_LOOP_PERIODS)),
         }
         .map_err(|_| num_error(cell))
     }
@@ -320,7 +319,7 @@ impl Asset {
         if !within_life {
             return Ok(Amortized::new(0.0, LeftOver::Keep));
         }
-        let (first_depr, _) = self.first_depreciation(self.rate, asset_life)?;
+        let (first_depr, _) = self.first_depreciation(self.rate, asset_life);
         let left_over = LeftOver::Set(amor_round(first_depr));
         if period == 0.0 {
             return Ok(Amortized::new(first_depr, left_over));
@@ -341,20 +340,20 @@ impl Asset {
     /// From period 1 on it leaves its own charge, at period 0 it leaves the value as it was
     /// (`AMORDEGRC(46557,0,39881,440,0,0.1)` is 46117 and passes a 485 through), and strictly
     /// between 0 and 1 it reads what was left (probes/amordegrc-fraction-state-l to -z).
-    fn degressive(&self, period: f64, loop_periods: u64) -> Result<Amortized, String> {
+    fn degressive(&self, period: f64, loop_periods: u64) -> Amortized {
         let ass_life = (1.0 / self.rate).ceil();
         let within_life = period <= ass_life;
         if !within_life {
-            return Ok(Amortized::new(0.0, LeftOver::Keep));
+            return Amortized::new(0.0, LeftOver::Keep);
         }
         let depr_rate = self.rate * amor_depr_coeff(ass_life);
-        let (first_depr_linc, asset_life) = self.first_depreciation(depr_rate, ass_life)?;
+        let (first_depr_linc, asset_life) = self.first_depreciation(depr_rate, ass_life);
         let first_depr = amor_round(first_depr_linc);
         if period == 0.0 {
-            return Ok(Amortized::new(first_depr, LeftOver::Keep));
+            return Amortized::new(first_depr, LeftOver::Keep);
         }
         if period < 1.0 {
-            return Ok(Amortized::new(0.0, LeftOver::Read));
+            return Amortized::new(0.0, LeftOver::Read);
         }
         let walk = DegressiveWalk {
             // Rounded twice like every later charge (`DegressiveWalk::charge`): probes/
@@ -365,12 +364,12 @@ impl Asset {
             half_period: half_period(asset_life),
         };
         let charge = amor_round(walk.charge(whole_periods(period), loop_periods));
-        Ok(Amortized::new(charge, LeftOver::Set(charge)))
+        Amortized::new(charge, LeftOver::Set(charge))
     }
 
     /// `firstDeprLinc`: the depreciation of the (possibly partial) first period and the
     /// resulting asset life, `(first_depreciation, asset_life)`.
-    fn first_depreciation(&self, rate: f64, ass_life: f64) -> Result<(f64, f64), String> {
+    fn first_depreciation(&self, rate: f64, ass_life: f64) -> (f64, f64) {
         let days_in_yr = amor_days_in_year(self.purchased, self.basis);
         let purchased = amor_fix_29_february(self.purchased, self.basis);
         let first_period = amor_fix_29_february(self.first_period, self.basis);
@@ -388,9 +387,9 @@ impl Asset {
         };
         let avail_depr = self.cost - self.salvage;
         if first_depr > avail_depr {
-            Ok((avail_depr, asset_life))
+            (avail_depr, asset_life)
         } else {
-            Ok((first_depr, asset_life))
+            (first_depr, asset_life)
         }
     }
 }

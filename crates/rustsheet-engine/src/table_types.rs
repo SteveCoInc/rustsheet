@@ -1,8 +1,5 @@
 //! A worksheet table's metadata (`Workbook::tables`) and the autoFilter criteria it keeps from its
 //! file (`Table::filter_columns`), which the export writes back and nothing re-applies.
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::struct_excessive_bools)]
-// LINT-DEBT-END
 
 use std::collections::HashMap;
 
@@ -100,6 +97,10 @@ impl Default for TableColumn {
 
 /// A table's style name and banding flags (ECMA-376-1:2016 section 18.5.1.5).
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Default)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "one field per banding attribute of tableStyleInfo"
+)]
 pub struct TableStyleInfo {
     pub name: Option<String>,
     pub show_first_column: bool,

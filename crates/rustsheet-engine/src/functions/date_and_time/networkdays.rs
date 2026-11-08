@@ -114,11 +114,11 @@ impl Model {
         // probes/networkdays-intl-holiday-forms, dates.md "NETWORKDAYS.INTL: a scalar holiday
         // ignores the weekend argument").
         let holiday_weekend = if holidays.scalar {
-            &DEFAULT_WEEKEND
+            DEFAULT_WEEKEND
         } else {
-            &weekend
+            weekend
         };
-        let days = working_days(&days_per_weekday(from, to, first_weekday), &weekend)
+        let days = working_days(&days_per_weekday(from, to, first_weekday), weekend)
             - working_days(
                 &holidays.per_weekday(from, to, first_weekday),
                 holiday_weekend,

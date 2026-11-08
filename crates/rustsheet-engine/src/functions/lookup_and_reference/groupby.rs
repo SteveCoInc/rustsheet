@@ -7,8 +7,7 @@
 #![expect(
     clippy::cast_possible_truncation,
     clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::needless_pass_by_value
+    clippy::cast_sign_loss
 )]
 // LINT-DEBT-END
 
@@ -724,7 +723,7 @@ impl Model {
         }
         let mut total = (args.depth != 0).then(|| {
             let label = total_label_cells(key_columns, levels);
-            self.line_row(functions, values, label, (&args.rows, all), None, cell)
+            self.line_row(functions, values, &label, (&args.rows, all), None, cell)
         });
         if before {
             output.extend(total.take().into_iter().flatten());
@@ -737,7 +736,7 @@ impl Model {
             let known = sorted
                 .as_ref()
                 .and_then(|(column, by)| Some((*column, by.of_line(line)?)));
-            let row = self.line_row(functions, values, label, (&rows, all), known, cell);
+            let row = self.line_row(functions, values, &label, (&rows, all), known, cell);
             output.extend(row);
         }
         output.extend(total.into_iter().flatten());
@@ -800,7 +799,7 @@ impl Model {
         &mut self,
         functions: &mut Functions,
         values: &[Vec<ArrayNode>],
-        label: Vec<ArrayNode>,
+        label: &[ArrayNode],
         (rows, relative): (&[usize], Relative<'_>),
         known: Option<(usize, &ArrayNode)>,
         cell: CellReferenceIndex,
@@ -810,7 +809,7 @@ impl Model {
         self.value_rows(functions, values, at, reuse, cell)
             .into_iter()
             .map(|cells| {
-                let mut row = label.clone();
+                let mut row = label.to_vec();
                 row.extend(cells);
                 row
             })

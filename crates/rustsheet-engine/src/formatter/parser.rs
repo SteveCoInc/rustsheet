@@ -1,9 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::match_same_arms,
-    clippy::struct_excessive_bools,
-    clippy::too_many_lines
-)]
+#![expect(clippy::match_same_arms, clippy::too_many_lines)]
 // LINT-DEBT-END
 use super::elapsed::takes_second_fraction;
 pub use super::fraction::{Denominator, Fraction};
@@ -100,6 +96,10 @@ pub struct NumberPart {
 /// The most digits a fixed fraction denominator may have; more is `#VALUE!`.
 const MAX_FIXED_DENOMINATOR_DIGITS: usize = 5;
 
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "independent properties of a date section, each set by its own token"
+)]
 pub struct DatePart {
     pub color: Option<i32>,
     pub condition: Option<(Compare, f64)>,

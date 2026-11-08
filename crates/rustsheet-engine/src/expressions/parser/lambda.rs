@@ -118,7 +118,7 @@ impl Parser {
             Ok(args) => args,
             Err(e) => return e,
         };
-        if let Err(err) = self.lexer.expect(TokenType::RightParenthesis) {
+        if let Err(err) = self.lexer.expect(&TokenType::RightParenthesis) {
             return Node::ParseErrorKind {
                 formula: self.lexer.get_formula(),
                 expecting: vec![ExpectedTokens::Other],
@@ -165,7 +165,7 @@ impl Parser {
             }
 
             if bracket_optional {
-                if let Err(err) = self.lexer.expect(TokenType::RightBracket) {
+                if let Err(err) = self.lexer.expect(&TokenType::RightBracket) {
                     return Err(Node::ParseErrorKind {
                         formula: self.lexer.get_formula(),
                         expecting: vec![ExpectedTokens::Other],

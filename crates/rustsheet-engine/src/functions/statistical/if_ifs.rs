@@ -1,5 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::cast_precision_loss, clippy::inline_always)]
+#![expect(clippy::cast_precision_loss)]
 // LINT-DEBT-END
 use crate::arithmetic::{extended_quotient, extended_sum, flush_subnormal};
 use crate::cast::number_text_too_long;
@@ -628,7 +628,7 @@ impl Model {
 
     /// One position of [`Model::run_ifs`]: `apply` gets the sum cell's number when every
     /// criteria cell aligned with it meets its criterion, and its error is the walk's result.
-    #[inline(always)]
+    #[inline]
     fn apply_ifs_at<F>(
         &mut self,
         sum_range: &Range,

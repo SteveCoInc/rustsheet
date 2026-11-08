@@ -808,7 +808,7 @@ impl Model {
             return RefArg::from(self.indirect_of(values.as_slice(), cell));
         }
         match self.reference_lift_args(values, lifts_one_by_one, cell) {
-            Ok(lifted) => self.lift_references(lifted, cell, &mut |model, values| {
+            Ok(lifted) => self.lift_references(&lifted, cell, &mut |model, values| {
                 model.indirect_of(values, cell)
             }),
             Err(error) => RefArg::Value(error),

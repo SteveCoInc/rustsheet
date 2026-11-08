@@ -90,7 +90,7 @@ impl Model {
         formula: &str,
     ) -> Result<(), String> {
         let Some(body) = formula.strip_prefix('=').filter(|b| !b.is_empty()) else {
-            return self.reenter_printed_input(sheet, row, column, formula.to_string());
+            return self.reenter_printed_input(sheet, row, column, formula);
         };
         self.prepare_cell_for_user_input(sheet, row, column)?;
         let node = self.legacy_formula_node(sheet, row, column, body)?;
@@ -158,11 +158,11 @@ impl Model {
         sheet: u32,
         row: i32,
         column: i32,
-        input: String,
+        input: &str,
         legacy: bool,
     ) -> Result<(), String> {
         if legacy {
-            self.reenter_legacy_formula(sheet, row, column, &input)
+            self.reenter_legacy_formula(sheet, row, column, input)
         } else {
             self.reenter_printed_input(sheet, row, column, input)
         }
@@ -182,7 +182,7 @@ impl Model {
     ) -> Result<String, String> {
         let text = self.extend_to(sheet, source_row, source_column, row, column)?;
         let legacy = self.cell_has_legacy_marker(sheet, source_row, source_column)?;
-        self.reenter_user_input(sheet, row, column, text.clone(), legacy)?;
+        self.reenter_user_input(sheet, row, column, &text, legacy)?;
         Ok(text)
     }
 

@@ -1,9 +1,6 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
 #![expect(clippy::cast_precision_loss)]
-#![cfg_attr(
-    test,
-    expect(clippy::cast_possible_truncation, clippy::unnecessary_wraps)
-)]
+#![cfg_attr(test, expect(clippy::cast_possible_truncation))]
 // LINT-DEBT-END
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::expressions::token::get_error_by_name;
@@ -564,6 +561,10 @@ mod tests {
         })
     }
 
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "builds the Result the reader under test returns"
+    )]
     fn cell(sheet: u32, row: i32, column: i32) -> Result<ParsedReference, String> {
         Ok(ParsedReference::CellReference(CellReferenceIndex {
             sheet,
@@ -572,6 +573,10 @@ mod tests {
         }))
     }
 
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "builds the Result the reader under test returns"
+    )]
     fn range(
         sheet: u32,
         (row1, column1): (i32, i32),

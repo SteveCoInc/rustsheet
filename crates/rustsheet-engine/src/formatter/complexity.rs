@@ -43,7 +43,7 @@
 //!   `"x@%"`, `"x@[>5]"`, `"x@y;0;0;@"`. `AM/PM` and `A/P` do not conflict (`"x@AM/PM"` is "xabcAM").
 //!
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::struct_excessive_bools, clippy::too_many_lines)]
+#![expect(clippy::too_many_lines)]
 // LINT-DEBT-END
 
 use super::lexer::{Lexer, Token};
@@ -251,6 +251,10 @@ fn is_free_before_closing_quoted(token: &Token) -> bool {
 
 /// The context-dependent costs of one section, settled when the section ends.
 #[derive(Default)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "independent facts about one section, each set by its own token"
+)]
 struct Section {
     /// Whether a section comes before this one.
     later: bool,

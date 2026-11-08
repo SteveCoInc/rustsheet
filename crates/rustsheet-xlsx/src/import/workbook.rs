@@ -1,6 +1,3 @@
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::struct_field_names)]
-// LINT-DEBT-END
 use std::io::Read;
 
 use super::package::Package;
@@ -16,6 +13,10 @@ use crate::util::name_from_xlsx;
 use super::shared_strings::decode_xlsx_escapes;
 use super::util::{get_attribute, parse_bool_with_default};
 
+#[expect(
+    clippy::struct_field_names,
+    reason = "`sheet_id` is the sheetId attribute of the sheet element"
+)]
 pub(crate) struct Sheet {
     pub(crate) name: String,
     pub(crate) sheet_id: u32,

@@ -1,6 +1,3 @@
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::needless_pass_by_value)]
-// LINT-DEBT-END
 use std::collections::HashMap;
 use std::io::Read;
 
@@ -58,7 +55,7 @@ pub(crate) fn read_shared_strings<R: Read + std::io::Seek>(
 ) -> Result<SharedStringTable, XlsxError> {
     let limits = *archive.limits();
     let strings = match archive.open_optional(SHARED_STRINGS_PART)? {
-        Some(file) => read_shared_strings_from_xml(XmlNode::parse(file)?, &limits)?,
+        Some(file) => read_shared_strings_from_xml(&XmlNode::parse(file)?, &limits)?,
         None => Vec::new(),
     };
     Ok(SharedStringTable::from_strings(strings))
@@ -66,11 +63,11 @@ pub(crate) fn read_shared_strings<R: Read + std::io::Seek>(
 
 #[cfg(test)]
 fn read_shared_strings_from_string(text: &str) -> Result<Vec<String>, XlsxError> {
-    read_shared_strings_from_xml(XmlNode::parse(text.as_bytes())?, &ImportLimits::default())
+    read_shared_strings_from_xml(&XmlNode::parse(text.as_bytes())?, &ImportLimits::default())
 }
 
 fn read_shared_strings_from_xml(
-    doc: XmlNode,
+    doc: &XmlNode,
     limits: &ImportLimits,
 ) -> Result<Vec<String>, XlsxError> {
     let mut shared_strings = Vec::new();

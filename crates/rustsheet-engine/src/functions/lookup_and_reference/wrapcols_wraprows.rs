@@ -1,9 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss,
-    clippy::needless_pass_by_value
-)]
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 // LINT-DEBT-END
 use crate::{
     calc_result::CalcResult,
@@ -104,7 +100,7 @@ impl Model {
         kind: Function,
         args: &[Node],
         cell: CellReferenceIndex,
-        wrap: fn(Vec<ArrayNode>, usize, ArrayNode, CellReferenceIndex) -> CalcResult,
+        wrap: fn(Vec<ArrayNode>, usize, &ArrayNode, CellReferenceIndex) -> CalcResult,
     ) -> CalcResult {
         if !kind
             .arg_kinds()
@@ -151,7 +147,7 @@ impl Model {
                     Some(Node::EmptyArgKind) => None,
                     _ => values.get(2),
                 };
-                wrap(flat.clone(), wrap_count, pad_with_of(pad), cell)
+                wrap(flat.clone(), wrap_count, &pad_with_of(pad), cell)
             },
         )
     }
@@ -215,7 +211,7 @@ pub(super) fn pad_with_of(value: Option<&CalcResult>) -> ArrayNode {
 fn wrapcols_kernel(
     flat: Vec<ArrayNode>,
     wrap_count: usize,
-    pad: ArrayNode,
+    pad: &ArrayNode,
     cell: CellReferenceIndex,
 ) -> CalcResult {
     let n = flat.len();
@@ -245,7 +241,7 @@ fn wrapcols_kernel(
 fn wraprows_kernel(
     flat: Vec<ArrayNode>,
     wrap_count: usize,
-    pad: ArrayNode,
+    pad: &ArrayNode,
     cell: CellReferenceIndex,
 ) -> CalcResult {
     // The padded shape is wrap_count columns: refuse one above the cell bound before

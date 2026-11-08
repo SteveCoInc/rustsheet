@@ -1,8 +1,6 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
 #![expect(
     clippy::default_trait_access,
-    clippy::struct_excessive_bools,
-    clippy::trivially_copy_pass_by_ref,
     clippy::unreadable_literal,
     elided_lifetimes_in_paths
 )]
@@ -25,6 +23,10 @@ fn default_as_false() -> bool {
     false
 }
 
+#[expect(
+    clippy::trivially_copy_pass_by_ref,
+    reason = "serde's skip_serializing_if passes the field by reference"
+)]
 fn is_false(b: &bool) -> bool {
     !*b
 }
@@ -627,6 +629,10 @@ impl Display for FontScheme {
 }
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Clone)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "one field per independent font toggle of the OOXML font record"
+)]
 pub struct Font {
     #[serde(default = "default_as_false")]
     #[serde(skip_serializing_if = "is_false")]
@@ -761,6 +767,10 @@ pub struct Alignment {
 }
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "one field per boolean attribute of the OOXML xf record"
+)]
 pub struct CellStyleXfs {
     pub num_fmt_id: i32,
     pub font_id: i32,
@@ -798,6 +808,10 @@ impl Default for CellStyleXfs {
 /// for example, includes only the number format.
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(default)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "one field per independent formatting category a style includes"
+)]
 pub struct StyleIncludes {
     pub number_format: bool,
     pub font: bool,
@@ -821,6 +835,10 @@ impl Default for StyleIncludes {
 }
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Default)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "one field per boolean attribute of the OOXML xf record"
+)]
 pub struct CellXfs {
     pub xf_id: i32,
     pub num_fmt_id: i32,

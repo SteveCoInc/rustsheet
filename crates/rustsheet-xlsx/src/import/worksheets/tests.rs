@@ -152,14 +152,7 @@ fn rc_text_cache_prints_what_a_fresh_parse_prints() {
         parser.set_loaded(true);
         let mut shared = RcTextCache::default();
         let mut convert = |formula: &str, context: &str, array: bool, cache: &mut RcTextCache| {
-            from_a1_to_rc(
-                formula.to_string(),
-                &mut parser,
-                cache,
-                context.to_string(),
-                array,
-            )
-            .map_err(|e| e.to_string())
+            from_a1_to_rc(formula, &mut parser, cache, context, array).map_err(|e| e.to_string())
         };
         for (cell, formula) in &formulas {
             let context = format!("{sheet}!{cell}");
@@ -213,7 +206,7 @@ fn rc_text_cache_keeps_the_sign_of_zero() {
         let mut cache = RcTextCache::default();
         for (row, formula) in order.iter().enumerate() {
             let context = format!("Sheet1!A{}", row + 1);
-            let text = from_a1_to_rc(formula.to_string(), &mut parser, &mut cache, context, false);
+            let text = from_a1_to_rc(formula, &mut parser, &mut cache, &context, false);
             let expected = if formula.contains('-') { "{-0}" } else { "{0}" };
             assert!(text.unwrap().contains(expected), "{formula}");
         }
@@ -278,21 +271,15 @@ fn relocation_key_gives_equal_trees_for_equal_keys() {
             let context = format!("Sheet1!{name}{row}");
             for array in [false, true] {
                 let fresh = from_a1_to_rc(
-                    copy.clone(),
+                    &copy,
                     &mut parser,
                     &mut RcTextCache::default(),
-                    context.clone(),
+                    &context,
                     array,
                 )
                 .map_err(|e| e.to_string());
-                let cached = from_a1_to_rc(
-                    copy.clone(),
-                    &mut parser,
-                    &mut shared,
-                    context.clone(),
-                    array,
-                )
-                .map_err(|e| e.to_string());
+                let cached = from_a1_to_rc(&copy, &mut parser, &mut shared, &context, array)
+                    .map_err(|e| e.to_string());
                 assert_eq!(cached, fresh, "{context}: {copy}");
             }
         }
