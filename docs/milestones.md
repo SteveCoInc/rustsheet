@@ -13,9 +13,9 @@ whose exit criteria are not met.
 
 | Phase | Milestones, in order | Status |
 |---|---|---|
-| 1. Parity (fifteen digits) | M0, M1, M2, M5, M6, M7, M8, M9, M10, M11, M16 | active |
+| 1. Parity (fifteen digits) | M0, M1, M2, M5, M6, M7, M8, M9, M10, M11 | active |
 | 1b. Bit parity | the `defer: phase-1b` tasks of every milestone | after Phase 1 exits (decision 0114) |
-| 2. Architecture and performance | M3, M4, M13, M15 | deferred until Phase 1 exits |
+| 2. Architecture and performance | M3, M4, M13, M15, M16 (decision 0354) | deferred until Phase 1 exits |
 | 3. Release | M12 | after Phase 2 |
 | 4. Desktop oracle | M14 | out of scope; tasks dropped (decision 0266) |
 
@@ -356,9 +356,10 @@ docs/research/xlsx-round-trip-2026-11-04.md.
 7. The hostile set never panics and stays within bounded memory.
 8. Untouched parts are byte-identical under R1 on index-stable files.
 
-## M16 — Pivot tables (Phase 1)
+## M16 — Pivot tables (Phase 2)
 
-Added by decision 0274 (owner request, 2026-11-04). Research and plan:
+Added to Phase 1 by decision 0274 (owner request, 2026-11-04); moved to Phase 2 by decision 0354 (owner request,
+2026-11-08). Its exit row is still measured every run, and its tasks keep their M16 milestone. Research and plan:
 docs/research/pivot-tables-2026-11-04/plan.md. Design: SPEC-0032 (a task of PV0). Today the engine only imports
 pivots read-only and answers GETPIVOTDATA (SPEC-0015).
 
@@ -397,7 +398,7 @@ styles and conditional formats beyond preservation, UI-only commands.
   pivots (check (b)) is `corpus_render_met`, read from report.json's `fresh_pivot_render` (freshness
   decided without the renderer, T-4906; wired by T-4971): met when both corpus suites have render cells
   and none visibly off, not measured when either suite is absent.
-  `scripts/phase1_exit.py` lists M16 among the Phase 1 milestones.
+  Since decision 0354, `scripts/phase1_exit.py` no longer lists M16 among the Phase 1 milestones.
 
 ## M14 — Desktop-oracle parity (Phase 4)
 
