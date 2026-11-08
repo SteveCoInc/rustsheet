@@ -314,7 +314,11 @@ impl Model {
         if number_text_too_long(s) {
             return None;
         }
-        if let Some(f) = parse_excel_number(s.trim()) {
+        // Only the space is trimmed, as VALUE and a criterion trim: a tab, line feed, carriage
+        // return, CHAR(11), CHAR(12), CHAR(160), U+2003, U+202F or U+3000 around the digits makes
+        // `+0` #VALUE! (probes/t4851-number-text-whitespace B2:D10; coercion.md "Number text trims
+        // only the space (T-4851)").
+        if let Some(f) = parse_excel_number(s.trim_matches(' ')) {
             Some(f)
         } else {
             let currencies = self.coercion_currencies();
