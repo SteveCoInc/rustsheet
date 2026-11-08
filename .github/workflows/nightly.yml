@@ -36,8 +36,9 @@ jobs:
       - run: >-
           scripts/eval_guard.sh target/release/rustsheet-eval run --out eval/runs/latest/pivot-corpus
           --suite pivot-corpus-lo --suite pivot-corpus-closedxml
+      # Decision 0352: R2's rename and delete double a case's runs; calipers pv26_002 takes 287 s with them.
       - run: >-
-          scripts/eval_guard.sh target/release/rustsheet-eval roundtrip --check --timeout 300
+          scripts/eval_guard.sh target/release/rustsheet-eval roundtrip --check --timeout 600
           --suite roundtrip-calipers --suite roundtrip-poi --suite roundtrip-corpus-bench
       # Their cell baselines (`gate = false`, so no PR gate checks them); run whatever the round trips gave.
       - if: ${{ !cancelled() }}

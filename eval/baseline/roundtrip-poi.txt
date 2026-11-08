@@ -5,846 +5,1907 @@
 # `TC` and `TF` lines do the same for displayed text (decision 0070).
 C	roundtrip-poi/0-www-crossref-org.lib.rivier.edu_education-files_suffix-generator.xlsm#R0	2906
 C	roundtrip-poi/0-www-crossref-org.lib.rivier.edu_education-files_suffix-generator.xlsm#R1/all	2906
+C	roundtrip-poi/0-www-crossref-org.lib.rivier.edu_education-files_suffix-generator.xlsm#R2/delete	2906
+C	roundtrip-poi/0-www-crossref-org.lib.rivier.edu_education-files_suffix-generator.xlsm#R2/rename	2906
 C	roundtrip-poi/123233_charts.xlsx#R0	2004
 C	roundtrip-poi/123233_charts.xlsx#R1/all	2004
+C	roundtrip-poi/123233_charts.xlsx#R2/delete	2004
+C	roundtrip-poi/123233_charts.xlsx#R2/rename	2004
 C	roundtrip-poi/1_NoIden.xlsx#R0	1273
 C	roundtrip-poi/1_NoIden.xlsx#R1/all	1273
+C	roundtrip-poi/1_NoIden.xlsx#R2/rename	1273
 C	roundtrip-poi/45430.xlsx#R0	662
 C	roundtrip-poi/45430.xlsx#R1/all	662
+C	roundtrip-poi/45430.xlsx#R2/delete	662
+C	roundtrip-poi/45430.xlsx#R2/rename	662
 C	roundtrip-poi/45431.xlsm#R0	690
 C	roundtrip-poi/45431.xlsm#R1/all	690
+C	roundtrip-poi/45431.xlsm#R2/delete	690
+C	roundtrip-poi/45431.xlsm#R2/rename	690
 C	roundtrip-poi/45540_classic_Footer.xlsx#R0	9305
 C	roundtrip-poi/45540_classic_Footer.xlsx#R1/all	9305
+C	roundtrip-poi/45540_classic_Footer.xlsx#R2/delete	9296
+C	roundtrip-poi/45540_classic_Footer.xlsx#R2/rename	9305
 C	roundtrip-poi/45540_classic_Header.xlsx#R0	9305
 C	roundtrip-poi/45540_classic_Header.xlsx#R1/all	9305
+C	roundtrip-poi/45540_classic_Header.xlsx#R2/delete	9296
+C	roundtrip-poi/45540_classic_Header.xlsx#R2/rename	9305
 C	roundtrip-poi/45540_form_Footer.xlsx#R0	5586
 C	roundtrip-poi/45540_form_Footer.xlsx#R1/all	5586
+C	roundtrip-poi/45540_form_Footer.xlsx#R2/rename	5586
 C	roundtrip-poi/45540_form_Header.xlsx#R0	5586
 C	roundtrip-poi/45540_form_Header.xlsx#R1/all	5586
+C	roundtrip-poi/45540_form_Header.xlsx#R2/rename	5586
 C	roundtrip-poi/45544.xlsx#R0	9373
 C	roundtrip-poi/45544.xlsx#R1/all	9373
+C	roundtrip-poi/45544.xlsx#R2/delete	9364
+C	roundtrip-poi/45544.xlsx#R2/rename	9373
 C	roundtrip-poi/46535.xlsx#R0	187513
 C	roundtrip-poi/46535.xlsx#R1/all	187513
+C	roundtrip-poi/46535.xlsx#R2/delete	187511
+C	roundtrip-poi/46535.xlsx#R2/rename	187513
 C	roundtrip-poi/46536.xlsx#R0	745
 C	roundtrip-poi/46536.xlsx#R1/all	745
+C	roundtrip-poi/46536.xlsx#R2/delete	742
+C	roundtrip-poi/46536.xlsx#R2/rename	745
 C	roundtrip-poi/47026.xlsm#R0	662
 C	roundtrip-poi/47026.xlsm#R1/all	662
+C	roundtrip-poi/47026.xlsm#R2/delete	661
+C	roundtrip-poi/47026.xlsm#R2/rename	662
 C	roundtrip-poi/47089.xlsm#R0	1157
 C	roundtrip-poi/47089.xlsm#R1/all	1157
+C	roundtrip-poi/47089.xlsm#R2/delete	1157
+C	roundtrip-poi/47089.xlsm#R2/rename	1157
 C	roundtrip-poi/47090.xlsx#R0	654
 C	roundtrip-poi/47090.xlsx#R1/all	654
+C	roundtrip-poi/47090.xlsx#R2/delete	654
+C	roundtrip-poi/47090.xlsx#R2/rename	654
 C	roundtrip-poi/47504.xlsx#R0	714
 C	roundtrip-poi/47504.xlsx#R1/all	714
+C	roundtrip-poi/47504.xlsx#R2/rename	714
 C	roundtrip-poi/47668.xlsx#R0	754
 C	roundtrip-poi/47668.xlsx#R1/all	754
+C	roundtrip-poi/47668.xlsx#R2/delete	754
+C	roundtrip-poi/47668.xlsx#R2/rename	754
 C	roundtrip-poi/47737.xlsx#R0	1725
 C	roundtrip-poi/47737.xlsx#R1/all	1725
+C	roundtrip-poi/47737.xlsx#R2/delete	0
+C	roundtrip-poi/47737.xlsx#R2/rename	1725
 C	roundtrip-poi/47804.xlsx#R0	795
 C	roundtrip-poi/47804.xlsx#R1/all	795
+C	roundtrip-poi/47804.xlsx#R2/rename	795
 C	roundtrip-poi/47813.xlsx#R0	21842
 C	roundtrip-poi/47813.xlsx#R1/all	21842
+C	roundtrip-poi/47813.xlsx#R2/delete	20402
+C	roundtrip-poi/47813.xlsx#R2/rename	21842
 C	roundtrip-poi/47862.xlsx#R0	697
 C	roundtrip-poi/47862.xlsx#R1/all	697
+C	roundtrip-poi/47862.xlsx#R2/delete	697
+C	roundtrip-poi/47862.xlsx#R2/rename	697
 C	roundtrip-poi/47889.xlsx#R0	0
 C	roundtrip-poi/48495.xlsx#R0	807
 C	roundtrip-poi/48495.xlsx#R1/all	807
+C	roundtrip-poi/48495.xlsx#R2/rename	807
 C	roundtrip-poi/48539.xlsx#R0	1818
 C	roundtrip-poi/48539.xlsx#R1/all	1818
+C	roundtrip-poi/48539.xlsx#R2/delete	1791
+C	roundtrip-poi/48539.xlsx#R2/rename	1818
 C	roundtrip-poi/48703.xlsx#R0	754
 C	roundtrip-poi/48703.xlsx#R1/all	754
+C	roundtrip-poi/48703.xlsx#R2/delete	752
+C	roundtrip-poi/48703.xlsx#R2/rename	754
 C	roundtrip-poi/48779.xlsx#R0	660
 C	roundtrip-poi/48779.xlsx#R1/all	660
+C	roundtrip-poi/48779.xlsx#R2/delete	660
+C	roundtrip-poi/48779.xlsx#R2/rename	660
 C	roundtrip-poi/48923.xlsx#R0	770
 C	roundtrip-poi/48923.xlsx#R1/all	770
+C	roundtrip-poi/48923.xlsx#R2/delete	770
+C	roundtrip-poi/48923.xlsx#R2/rename	770
 C	roundtrip-poi/48962.xlsx#R0	1841
 C	roundtrip-poi/48962.xlsx#R1/all	1841
+C	roundtrip-poi/48962.xlsx#R2/rename	1841
 C	roundtrip-poi/49156.xlsx#R0	5492
 C	roundtrip-poi/49156.xlsx#R1/all	5492
+C	roundtrip-poi/49156.xlsx#R2/rename	5492
 C	roundtrip-poi/49273.xlsx#R0	5903
 C	roundtrip-poi/49273.xlsx#R1/all	5903
+C	roundtrip-poi/49273.xlsx#R2/delete	5903
+C	roundtrip-poi/49273.xlsx#R2/rename	5903
 C	roundtrip-poi/49325.xlsx#R0	631
 C	roundtrip-poi/49325.xlsx#R1/all	631
+C	roundtrip-poi/49325.xlsx#R2/rename	631
 C	roundtrip-poi/49609.xlsx#R0	30962
 C	roundtrip-poi/49609.xlsx#R1/all	30962
+C	roundtrip-poi/49609.xlsx#R2/delete	30962
+C	roundtrip-poi/49609.xlsx#R2/rename	30962
 C	roundtrip-poi/49783.xlsx#R0	720
 C	roundtrip-poi/49783.xlsx#R1/all	720
+C	roundtrip-poi/49783.xlsx#R2/delete	717
+C	roundtrip-poi/49783.xlsx#R2/rename	720
 C	roundtrip-poi/49872.xlsx#R0	720
 C	roundtrip-poi/49872.xlsx#R1/all	720
+C	roundtrip-poi/49872.xlsx#R2/delete	716
+C	roundtrip-poi/49872.xlsx#R2/rename	720
 C	roundtrip-poi/49928.xlsx#R0	663
 C	roundtrip-poi/49928.xlsx#R1/all	663
+C	roundtrip-poi/49928.xlsx#R2/delete	663
+C	roundtrip-poi/49928.xlsx#R2/rename	663
 C	roundtrip-poi/49966.xlsx#R0	684
 C	roundtrip-poi/49966.xlsx#R1/all	684
+C	roundtrip-poi/49966.xlsx#R2/delete	681
+C	roundtrip-poi/49966.xlsx#R2/rename	684
 C	roundtrip-poi/50096.xlsx#R0	4575
 C	roundtrip-poi/50096.xlsx#R1/all	4575
+C	roundtrip-poi/50096.xlsx#R2/delete	4275
+C	roundtrip-poi/50096.xlsx#R2/rename	4575
 C	roundtrip-poi/50299.xlsx#R0	3755
 C	roundtrip-poi/50299.xlsx#R1/all	3755
+C	roundtrip-poi/50299.xlsx#R2/delete	3755
+C	roundtrip-poi/50299.xlsx#R2/rename	3755
 C	roundtrip-poi/50755_workday_formula_example.xlsx#R0	688
 C	roundtrip-poi/50755_workday_formula_example.xlsx#R1/all	688
+C	roundtrip-poi/50755_workday_formula_example.xlsx#R2/rename	688
 C	roundtrip-poi/50784-font_theme_colours.xlsx#R0	739
 C	roundtrip-poi/50784-font_theme_colours.xlsx#R1/all	739
+C	roundtrip-poi/50784-font_theme_colours.xlsx#R2/delete	739
+C	roundtrip-poi/50784-font_theme_colours.xlsx#R2/rename	739
 C	roundtrip-poi/50786-indexed_colours.xlsx#R0	631
 C	roundtrip-poi/50786-indexed_colours.xlsx#R1/all	631
+C	roundtrip-poi/50786-indexed_colours.xlsx#R2/rename	631
 C	roundtrip-poi/50795.xlsx#R0	753
 C	roundtrip-poi/50795.xlsx#R1/all	753
+C	roundtrip-poi/50795.xlsx#R2/delete	753
+C	roundtrip-poi/50795.xlsx#R2/rename	753
 C	roundtrip-poi/50846-border_colours.xlsx#R0	744
 C	roundtrip-poi/50846-border_colours.xlsx#R1/all	744
+C	roundtrip-poi/50846-border_colours.xlsx#R2/delete	744
+C	roundtrip-poi/50846-border_colours.xlsx#R2/rename	744
 C	roundtrip-poi/50867_with_table.xlsx#R0	731
 C	roundtrip-poi/50867_with_table.xlsx#R1/all	731
+C	roundtrip-poi/50867_with_table.xlsx#R2/delete	731
+C	roundtrip-poi/50867_with_table.xlsx#R2/rename	731
 C	roundtrip-poi/51222.xlsx#R0	801
 C	roundtrip-poi/51222.xlsx#R1/all	801
+C	roundtrip-poi/51222.xlsx#R2/delete	801
+C	roundtrip-poi/51222.xlsx#R2/rename	801
 C	roundtrip-poi/51470.xlsx#R0	592
 C	roundtrip-poi/51470.xlsx#R1/all	592
+C	roundtrip-poi/51470.xlsx#R2/rename	592
 C	roundtrip-poi/51519.xlsx#R0	1214
 C	roundtrip-poi/51519.xlsx#R1/all	1214
+C	roundtrip-poi/51519.xlsx#R2/delete	1214
+C	roundtrip-poi/51519.xlsx#R2/rename	1214
 C	roundtrip-poi/51585.xlsx#R0	185763
 C	roundtrip-poi/51585.xlsx#R1/all	185763
+C	roundtrip-poi/51585.xlsx#R2/delete	185763
+C	roundtrip-poi/51585.xlsx#R2/rename	185763
 C	roundtrip-poi/51626.xlsx#R0	1248
 C	roundtrip-poi/51626.xlsx#R1/all	1248
+C	roundtrip-poi/51626.xlsx#R2/delete	1248
+C	roundtrip-poi/51626.xlsx#R2/rename	1248
 C	roundtrip-poi/51626_contact.xlsx#R0	1121
 C	roundtrip-poi/51626_contact.xlsx#R1/all	1121
+C	roundtrip-poi/51626_contact.xlsx#R2/delete	1121
+C	roundtrip-poi/51626_contact.xlsx#R2/rename	1121
 C	roundtrip-poi/51710.xlsx#R0	122345
 C	roundtrip-poi/51710.xlsx#R1/all	122345
+C	roundtrip-poi/51710.xlsx#R2/rename	122345
 C	roundtrip-poi/51850.xlsx#R0	925
 C	roundtrip-poi/51850.xlsx#R1/all	925
+C	roundtrip-poi/51850.xlsx#R2/delete	925
+C	roundtrip-poi/51850.xlsx#R2/rename	925
 C	roundtrip-poi/51963.xlsx#R0	611
 C	roundtrip-poi/51963.xlsx#R1/all	611
+C	roundtrip-poi/51963.xlsx#R2/rename	611
 C	roundtrip-poi/51998.xlsx#R0	865
 C	roundtrip-poi/51998.xlsx#R1/all	865
+C	roundtrip-poi/51998.xlsx#R2/delete	865
+C	roundtrip-poi/51998.xlsx#R2/rename	865
 C	roundtrip-poi/52348.xlsx#R0	1690
 C	roundtrip-poi/52348.xlsx#R1/all	1690
+C	roundtrip-poi/52348.xlsx#R2/rename	1690
 C	roundtrip-poi/52425.xlsx#R0	630
 C	roundtrip-poi/52425.xlsx#R1/all	630
+C	roundtrip-poi/52425.xlsx#R2/rename	630
 C	roundtrip-poi/52575_main.xlsx#R0	475
 C	roundtrip-poi/52575_main.xlsx#R1/all	475
+C	roundtrip-poi/52575_main.xlsx#R2/rename	475
 C	roundtrip-poi/52716.xlsx#R0	2304
 C	roundtrip-poi/52716.xlsx#R1/all	2304
+C	roundtrip-poi/52716.xlsx#R2/delete	2304
+C	roundtrip-poi/52716.xlsx#R2/rename	2304
 C	roundtrip-poi/53101.xlsx#R0	1730
 C	roundtrip-poi/53101.xlsx#R1/all	1730
+C	roundtrip-poi/53101.xlsx#R2/delete	1728
+C	roundtrip-poi/53101.xlsx#R2/rename	1730
 C	roundtrip-poi/53105.xlsx#R0	66216
 C	roundtrip-poi/53105.xlsx#R1/all	66216
+C	roundtrip-poi/53105.xlsx#R2/delete	66215
+C	roundtrip-poi/53105.xlsx#R2/rename	66216
 C	roundtrip-poi/53282.xlsx#R0	1150
 C	roundtrip-poi/53282.xlsx#R1/all	1150
+C	roundtrip-poi/53282.xlsx#R2/delete	1150
+C	roundtrip-poi/53282.xlsx#R2/rename	1150
 C	roundtrip-poi/53282b.xlsx#R0	545
 C	roundtrip-poi/53282b.xlsx#R1/all	545
+C	roundtrip-poi/53282b.xlsx#R2/delete	545
+C	roundtrip-poi/53282b.xlsx#R2/rename	545
 C	roundtrip-poi/53568.xlsx#R0	40165
 C	roundtrip-poi/53568.xlsx#R1/all	40165
+C	roundtrip-poi/53568.xlsx#R2/delete	40165
+C	roundtrip-poi/53568.xlsx#R2/rename	40165
 C	roundtrip-poi/53734.xlsx#R0	742
 C	roundtrip-poi/53734.xlsx#R1/all	742
+C	roundtrip-poi/53734.xlsx#R2/delete	742
+C	roundtrip-poi/53734.xlsx#R2/rename	742
 C	roundtrip-poi/53798.xlsx#R0	1750
 C	roundtrip-poi/53798.xlsx#R1/all	1750
+C	roundtrip-poi/53798.xlsx#R2/rename	1750
 C	roundtrip-poi/53798_shiftNegative_TMPL.xlsx#R0	1750
 C	roundtrip-poi/53798_shiftNegative_TMPL.xlsx#R1/all	1750
+C	roundtrip-poi/53798_shiftNegative_TMPL.xlsx#R2/rename	1750
 C	roundtrip-poi/54034.xlsx#R0	695
 C	roundtrip-poi/54034.xlsx#R1/all	695
+C	roundtrip-poi/54034.xlsx#R2/rename	695
 C	roundtrip-poi/54071.xlsx#R0	773
 C	roundtrip-poi/54071.xlsx#R1/all	773
+C	roundtrip-poi/54071.xlsx#R2/rename	773
 C	roundtrip-poi/54084 - Greek - beyond BMP.xlsx#R0	663
 C	roundtrip-poi/54084 - Greek - beyond BMP.xlsx#R1/all	663
+C	roundtrip-poi/54084 - Greek - beyond BMP.xlsx#R2/delete	663
+C	roundtrip-poi/54084 - Greek - beyond BMP.xlsx#R2/rename	663
 C	roundtrip-poi/54206.xlsx#R0	6249
 C	roundtrip-poi/54206.xlsx#R1/all	6249
+C	roundtrip-poi/54206.xlsx#R2/rename	6249
 C	roundtrip-poi/54288-ref.xlsx#R0	19963
 C	roundtrip-poi/54288-ref.xlsx#R1/all	19963
+C	roundtrip-poi/54288-ref.xlsx#R2/delete	19963
+C	roundtrip-poi/54288-ref.xlsx#R2/rename	19963
 C	roundtrip-poi/54288.xlsx#R0	20061
 C	roundtrip-poi/54288.xlsx#R1/all	20061
+C	roundtrip-poi/54288.xlsx#R2/delete	20061
+C	roundtrip-poi/54288.xlsx#R2/rename	20061
 C	roundtrip-poi/54399.xlsx#R0	1466
 C	roundtrip-poi/54399.xlsx#R1/all	1466
+C	roundtrip-poi/54399.xlsx#R2/rename	1466
 C	roundtrip-poi/54436.xlsx#R0	995
 C	roundtrip-poi/54436.xlsx#R1/all	995
+C	roundtrip-poi/54436.xlsx#R2/rename	995
 C	roundtrip-poi/54524.xlsx#R0	827
 C	roundtrip-poi/54524.xlsx#R1/all	827
+C	roundtrip-poi/54524.xlsx#R2/rename	827
 C	roundtrip-poi/54607.xlsx#R0	683
 C	roundtrip-poi/54607.xlsx#R1/all	683
+C	roundtrip-poi/54607.xlsx#R2/delete	683
+C	roundtrip-poi/54607.xlsx#R2/rename	683
 C	roundtrip-poi/54764-2.xlsx#R0	0
 C	roundtrip-poi/54764.xlsx#R0	0
 C	roundtrip-poi/55406_Conditional_formatting_sample.xlsx#R0	10639
 C	roundtrip-poi/55406_Conditional_formatting_sample.xlsx#R1/all	10639
+C	roundtrip-poi/55406_Conditional_formatting_sample.xlsx#R2/rename	10639
 C	roundtrip-poi/55640.xlsx#R0	603
 C	roundtrip-poi/55640.xlsx#R1/all	603
+C	roundtrip-poi/55640.xlsx#R2/delete	603
+C	roundtrip-poi/55640.xlsx#R2/rename	603
 C	roundtrip-poi/55745.xlsx#R0	1077
 C	roundtrip-poi/55745.xlsx#R1/all	1077
+C	roundtrip-poi/55745.xlsx#R2/delete	1077
+C	roundtrip-poi/55745.xlsx#R2/rename	1077
 C	roundtrip-poi/55814.xlsx#R0	650
 C	roundtrip-poi/55814.xlsx#R1/all	650
+C	roundtrip-poi/55814.xlsx#R2/rename	650
 C	roundtrip-poi/55850.xlsx#R0	873
 C	roundtrip-poi/55850.xlsx#R1/all	873
+C	roundtrip-poi/55850.xlsx#R2/delete	873
+C	roundtrip-poi/55850.xlsx#R2/rename	873
 C	roundtrip-poi/55864.xlsx#R0	833
 C	roundtrip-poi/55864.xlsx#R1/all	833
+C	roundtrip-poi/55864.xlsx#R2/delete	833
+C	roundtrip-poi/55864.xlsx#R2/rename	833
 C	roundtrip-poi/55906-MultiSheetRefs.xlsx#R0	868
 C	roundtrip-poi/55906-MultiSheetRefs.xlsx#R1/all	868
+C	roundtrip-poi/55906-MultiSheetRefs.xlsx#R2/delete	855
+C	roundtrip-poi/55906-MultiSheetRefs.xlsx#R2/rename	868
 C	roundtrip-poi/55923.xlsx#R0	839
 C	roundtrip-poi/55923.xlsx#R1/all	839
+C	roundtrip-poi/55923.xlsx#R2/delete	839
+C	roundtrip-poi/55923.xlsx#R2/rename	839
 C	roundtrip-poi/55924.xlsx#R0	732
 C	roundtrip-poi/55924.xlsx#R1/all	732
+C	roundtrip-poi/55924.xlsx#R2/delete	732
+C	roundtrip-poi/55924.xlsx#R2/rename	732
 C	roundtrip-poi/55926.xlsx#R0	810
 C	roundtrip-poi/55926.xlsx#R1/all	810
+C	roundtrip-poi/55926.xlsx#R2/delete	808
+C	roundtrip-poi/55926.xlsx#R2/rename	810
 C	roundtrip-poi/55927.xlsx#R0	756
 C	roundtrip-poi/55927.xlsx#R1/all	756
+C	roundtrip-poi/55927.xlsx#R2/delete	755
+C	roundtrip-poi/55927.xlsx#R2/rename	756
 C	roundtrip-poi/56011.xlsx#R0	662
 C	roundtrip-poi/56011.xlsx#R1/all	662
+C	roundtrip-poi/56011.xlsx#R2/rename	662
 C	roundtrip-poi/56017.xlsx#R0	719
 C	roundtrip-poi/56017.xlsx#R1/all	719
+C	roundtrip-poi/56017.xlsx#R2/delete	719
+C	roundtrip-poi/56017.xlsx#R2/rename	719
 C	roundtrip-poi/56169.xlsx#R0	840
 C	roundtrip-poi/56169.xlsx#R1/all	840
+C	roundtrip-poi/56169.xlsx#R2/delete	840
+C	roundtrip-poi/56169.xlsx#R2/rename	840
 C	roundtrip-poi/56170.xlsx#R0	671
 C	roundtrip-poi/56170.xlsx#R1/all	671
+C	roundtrip-poi/56170.xlsx#R2/rename	671
 C	roundtrip-poi/56274.xlsx#R0	1715
 C	roundtrip-poi/56274.xlsx#R1/all	1715
+C	roundtrip-poi/56274.xlsx#R2/rename	1715
 C	roundtrip-poi/56278.xlsx#R0	0
 C	roundtrip-poi/56295.xlsx#R0	765
 C	roundtrip-poi/56295.xlsx#R1/all	765
+C	roundtrip-poi/56295.xlsx#R2/rename	765
 C	roundtrip-poi/56315.xlsx#R0	633
 C	roundtrip-poi/56315.xlsx#R1/all	633
+C	roundtrip-poi/56315.xlsx#R2/rename	633
 C	roundtrip-poi/56420.xlsx#R0	723
 C	roundtrip-poi/56420.xlsx#R1/all	723
+C	roundtrip-poi/56420.xlsx#R2/delete	722
+C	roundtrip-poi/56420.xlsx#R2/rename	723
 C	roundtrip-poi/56502.xlsx#R0	786
 C	roundtrip-poi/56502.xlsx#R1/all	786
+C	roundtrip-poi/56502.xlsx#R2/delete	785
+C	roundtrip-poi/56502.xlsx#R2/rename	786
 C	roundtrip-poi/56511.xlsx#R0	745
 C	roundtrip-poi/56511.xlsx#R1/all	745
+C	roundtrip-poi/56511.xlsx#R2/delete	745
+C	roundtrip-poi/56511.xlsx#R2/rename	745
 C	roundtrip-poi/56514.xlsx#R0	941
 C	roundtrip-poi/56514.xlsx#R1/all	941
+C	roundtrip-poi/56514.xlsx#R2/delete	941
+C	roundtrip-poi/56514.xlsx#R2/rename	941
 C	roundtrip-poi/56557.xlsx#R0	1597
 C	roundtrip-poi/56557.xlsx#R1/all	1597
+C	roundtrip-poi/56557.xlsx#R2/rename	1597
 C	roundtrip-poi/56574.xlsx#R0	1304
 C	roundtrip-poi/56574.xlsx#R1/all	1304
+C	roundtrip-poi/56574.xlsx#R2/delete	1304
+C	roundtrip-poi/56574.xlsx#R2/rename	1304
 C	roundtrip-poi/56644.xlsx#R0	11102
 C	roundtrip-poi/56644.xlsx#R1/all	11102
+C	roundtrip-poi/56644.xlsx#R2/delete	0
+C	roundtrip-poi/56644.xlsx#R2/rename	11102
 C	roundtrip-poi/56688_1.xlsx#R0	695
 C	roundtrip-poi/56688_1.xlsx#R1/all	695
+C	roundtrip-poi/56688_1.xlsx#R2/delete	694
+C	roundtrip-poi/56688_1.xlsx#R2/rename	695
 C	roundtrip-poi/56688_2.xlsx#R0	705
 C	roundtrip-poi/56688_2.xlsx#R1/all	705
+C	roundtrip-poi/56688_2.xlsx#R2/delete	704
+C	roundtrip-poi/56688_2.xlsx#R2/rename	705
 C	roundtrip-poi/56688_3.xlsx#R0	706
 C	roundtrip-poi/56688_3.xlsx#R1/all	706
+C	roundtrip-poi/56688_3.xlsx#R2/delete	705
+C	roundtrip-poi/56688_3.xlsx#R2/rename	706
 C	roundtrip-poi/56688_4.xlsx#R0	718
 C	roundtrip-poi/56688_4.xlsx#R1/all	718
+C	roundtrip-poi/56688_4.xlsx#R2/delete	716
+C	roundtrip-poi/56688_4.xlsx#R2/rename	718
 C	roundtrip-poi/56702.xlsx#R0	19620
 C	roundtrip-poi/56702.xlsx#R1/all	19620
+C	roundtrip-poi/56702.xlsx#R2/rename	19620
 C	roundtrip-poi/56730.xlsx#R0	748
 C	roundtrip-poi/56730.xlsx#R1/all	748
+C	roundtrip-poi/56730.xlsx#R2/delete	748
+C	roundtrip-poi/56730.xlsx#R2/rename	748
 C	roundtrip-poi/56737.xlsx#R0	772
 C	roundtrip-poi/56737.xlsx#R1/all	772
+C	roundtrip-poi/56737.xlsx#R2/delete	764
+C	roundtrip-poi/56737.xlsx#R2/rename	772
 C	roundtrip-poi/56822-Countifs.xlsx#R0	715
 C	roundtrip-poi/56822-Countifs.xlsx#R1/all	715
+C	roundtrip-poi/56822-Countifs.xlsx#R2/rename	715
 C	roundtrip-poi/56957.xlsx#R0	662
 C	roundtrip-poi/56957.xlsx#R1/all	662
+C	roundtrip-poi/56957.xlsx#R2/delete	662
+C	roundtrip-poi/56957.xlsx#R2/rename	662
 C	roundtrip-poi/57171_57163_57165.xlsx#R0	1775
 C	roundtrip-poi/57171_57163_57165.xlsx#R1/all	1775
+C	roundtrip-poi/57171_57163_57165.xlsx#R2/delete	1775
+C	roundtrip-poi/57171_57163_57165.xlsx#R2/rename	1775
 C	roundtrip-poi/57176.xlsx#R0	682
 C	roundtrip-poi/57176.xlsx#R1/all	682
+C	roundtrip-poi/57176.xlsx#R2/rename	682
 C	roundtrip-poi/57181.xlsm#R0	168909
 C	roundtrip-poi/57181.xlsm#R1/all	168909
+C	roundtrip-poi/57181.xlsm#R2/delete	168909
+C	roundtrip-poi/57181.xlsm#R2/rename	168909
 C	roundtrip-poi/57196.xlsx#R0	1320
 C	roundtrip-poi/57196.xlsx#R1/all	1320
+C	roundtrip-poi/57196.xlsx#R2/delete	1258
+C	roundtrip-poi/57196.xlsx#R2/rename	1320
 C	roundtrip-poi/57236.xlsx#R0	727
 C	roundtrip-poi/57236.xlsx#R1/all	727
+C	roundtrip-poi/57236.xlsx#R2/delete	727
+C	roundtrip-poi/57236.xlsx#R2/rename	727
 C	roundtrip-poi/57362.xlsx#R0	2032
 C	roundtrip-poi/57362.xlsx#R1/all	2032
+C	roundtrip-poi/57362.xlsx#R2/rename	2032
 C	roundtrip-poi/57423.xlsx#R0	1486
 C	roundtrip-poi/57423.xlsx#R1/all	1486
+C	roundtrip-poi/57423.xlsx#R2/rename	1486
 C	roundtrip-poi/57482-OnlyNumeric.xlsx#R0	753
 C	roundtrip-poi/57482-OnlyNumeric.xlsx#R1/all	753
+C	roundtrip-poi/57482-OnlyNumeric.xlsx#R2/delete	753
+C	roundtrip-poi/57482-OnlyNumeric.xlsx#R2/rename	753
 C	roundtrip-poi/57523.xlsx#R0	24298
 C	roundtrip-poi/57523.xlsx#R1/all	24298
+C	roundtrip-poi/57523.xlsx#R2/delete	0
+C	roundtrip-poi/57523.xlsx#R2/rename	24298
 C	roundtrip-poi/57535.xlsx#R0	861
 C	roundtrip-poi/57535.xlsx#R1/all	861
+C	roundtrip-poi/57535.xlsx#R2/delete	856
+C	roundtrip-poi/57535.xlsx#R2/rename	861
 C	roundtrip-poi/57798.xlsx#R0	734
 C	roundtrip-poi/57798.xlsx#R1/all	734
+C	roundtrip-poi/57798.xlsx#R2/delete	732
+C	roundtrip-poi/57798.xlsx#R2/rename	734
 C	roundtrip-poi/57826.xlsx#R0	990
 C	roundtrip-poi/57826.xlsx#R1/all	990
+C	roundtrip-poi/57826.xlsx#R2/rename	990
 C	roundtrip-poi/57828.xlsx#R0	790
 C	roundtrip-poi/57828.xlsx#R1/all	790
+C	roundtrip-poi/57828.xlsx#R2/rename	790
 C	roundtrip-poi/57838.xlsx#R0	809
 C	roundtrip-poi/57838.xlsx#R1/all	809
+C	roundtrip-poi/57838.xlsx#R2/rename	809
 C	roundtrip-poi/57890.xlsx#R0	852
 C	roundtrip-poi/57890.xlsx#R1/all	852
+C	roundtrip-poi/57890.xlsx#R2/delete	852
+C	roundtrip-poi/57890.xlsx#R2/rename	852
 C	roundtrip-poi/57893-many-merges.xlsx#R0	480615
 C	roundtrip-poi/57893-many-merges.xlsx#R1/all	480615
+C	roundtrip-poi/57893-many-merges.xlsx#R2/rename	480615
 C	roundtrip-poi/57914.xlsx#R0	1726
 C	roundtrip-poi/57914.xlsx#R1/all	1726
+C	roundtrip-poi/57914.xlsx#R2/rename	1726
 C	roundtrip-poi/58106.xlsx#R0	1089
 C	roundtrip-poi/58106.xlsx#R1/all	1089
+C	roundtrip-poi/58106.xlsx#R2/delete	1082
+C	roundtrip-poi/58106.xlsx#R2/rename	1089
 C	roundtrip-poi/58315.xlsx#R0	693
 C	roundtrip-poi/58315.xlsx#R1/all	693
+C	roundtrip-poi/58315.xlsx#R2/rename	693
 C	roundtrip-poi/58325_db.xlsx#R0	991
 C	roundtrip-poi/58325_db.xlsx#R1/all	991
+C	roundtrip-poi/58325_db.xlsx#R2/delete	991
+C	roundtrip-poi/58325_db.xlsx#R2/rename	991
 C	roundtrip-poi/58325_lt.xlsx#R0	200
 C	roundtrip-poi/58325_lt.xlsx#R1/all	200
+C	roundtrip-poi/58325_lt.xlsx#R2/rename	200
 C	roundtrip-poi/58616.xlsx#R0	0
 C	roundtrip-poi/58648.xlsx#R0	746
 C	roundtrip-poi/58648.xlsx#R1/all	746
+C	roundtrip-poi/58648.xlsx#R2/rename	746
 C	roundtrip-poi/58731.xlsx#R0	789
 C	roundtrip-poi/58731.xlsx#R1/all	789
+C	roundtrip-poi/58731.xlsx#R2/delete	789
+C	roundtrip-poi/58731.xlsx#R2/rename	789
 C	roundtrip-poi/58747.xlsx#R0	933
 C	roundtrip-poi/58747.xlsx#R1/all	933
+C	roundtrip-poi/58747.xlsx#R2/rename	933
 C	roundtrip-poi/58760.xlsx#R0	1273
 C	roundtrip-poi/58760.xlsx#R1/all	1273
+C	roundtrip-poi/58760.xlsx#R2/rename	1273
 C	roundtrip-poi/58896.xlsx#R0	55504
 C	roundtrip-poi/58896.xlsx#R1/all	55504
+C	roundtrip-poi/58896.xlsx#R2/rename	55504
 C	roundtrip-poi/59021.xlsx#R0	0
 C	roundtrip-poi/59026.xlsx#R0	875
 C	roundtrip-poi/59026.xlsx#R1/all	875
+C	roundtrip-poi/59026.xlsx#R2/rename	875
 C	roundtrip-poi/59106.xlsx#R0	832
 C	roundtrip-poi/59106.xlsx#R1/all	832
+C	roundtrip-poi/59106.xlsx#R2/delete	830
+C	roundtrip-poi/59106.xlsx#R2/rename	832
 C	roundtrip-poi/59132.xlsx#R0	724
 C	roundtrip-poi/59132.xlsx#R1/all	724
+C	roundtrip-poi/59132.xlsx#R2/rename	724
 C	roundtrip-poi/59264.xlsx#R0	1025
 C	roundtrip-poi/59264.xlsx#R1/all	1025
+C	roundtrip-poi/59264.xlsx#R2/rename	1025
 C	roundtrip-poi/59388.xlsx#R0	849
 C	roundtrip-poi/59388.xlsx#R1/all	849
+C	roundtrip-poi/59388.xlsx#R2/delete	849
+C	roundtrip-poi/59388.xlsx#R2/rename	849
 C	roundtrip-poi/59687.xlsx#R0	638
 C	roundtrip-poi/59687.xlsx#R1/all	638
+C	roundtrip-poi/59687.xlsx#R2/rename	638
 C	roundtrip-poi/59736.xlsx#R0	694
 C	roundtrip-poi/59736.xlsx#R1/all	694
+C	roundtrip-poi/59736.xlsx#R2/delete	692
+C	roundtrip-poi/59736.xlsx#R2/rename	694
 C	roundtrip-poi/59746_NoRowNums.xlsx#R0	3289
 C	roundtrip-poi/59746_NoRowNums.xlsx#R1/all	3289
+C	roundtrip-poi/59746_NoRowNums.xlsx#R2/rename	3289
 C	roundtrip-poi/59775.xlsx#R0	606
 C	roundtrip-poi/59775.xlsx#R1/all	606
+C	roundtrip-poi/59775.xlsx#R2/rename	606
 C	roundtrip-poi/60255_extra_drawingparts.xlsx#R0	884
 C	roundtrip-poi/60255_extra_drawingparts.xlsx#R1/all	884
+C	roundtrip-poi/60255_extra_drawingparts.xlsx#R2/delete	884
+C	roundtrip-poi/60255_extra_drawingparts.xlsx#R2/rename	884
 C	roundtrip-poi/60289.xlsx#R0	620
 C	roundtrip-poi/60289.xlsx#R1/all	620
+C	roundtrip-poi/60289.xlsx#R2/rename	620
 C	roundtrip-poi/60384.xlsx#R0	1395
 C	roundtrip-poi/60384.xlsx#R1/all	1395
+C	roundtrip-poi/60384.xlsx#R2/rename	1395
 C	roundtrip-poi/60509.xlsx#R0	1063
 C	roundtrip-poi/60509.xlsx#R1/all	1063
+C	roundtrip-poi/60509.xlsx#R2/delete	1056
+C	roundtrip-poi/60509.xlsx#R2/rename	1063
 C	roundtrip-poi/60512.xlsm#R0	29098
 C	roundtrip-poi/60512.xlsm#R1/all	29098
+C	roundtrip-poi/60512.xlsm#R2/rename	29098
 C	roundtrip-poi/60709.xlsx#R0	684
 C	roundtrip-poi/60709.xlsx#R1/all	684
+C	roundtrip-poi/60709.xlsx#R2/rename	684
 C	roundtrip-poi/60825.xlsx#R0	0
 C	roundtrip-poi/61034.xlsx#R0	6001
 C	roundtrip-poi/61034.xlsx#R1/all	6001
+C	roundtrip-poi/61034.xlsx#R2/delete	6001
+C	roundtrip-poi/61034.xlsx#R2/rename	6001
 C	roundtrip-poi/61060-conditional-number-formatting.xlsx#R0	819
 C	roundtrip-poi/61060-conditional-number-formatting.xlsx#R1/all	819
+C	roundtrip-poi/61060-conditional-number-formatting.xlsx#R2/rename	819
 C	roundtrip-poi/61063.xlsx#R0	703
 C	roundtrip-poi/61063.xlsx#R1/all	703
+C	roundtrip-poi/61063.xlsx#R2/delete	702
+C	roundtrip-poi/61063.xlsx#R2/rename	703
 C	roundtrip-poi/61281.xlsx#R0	774
 C	roundtrip-poi/61281.xlsx#R1/all	774
+C	roundtrip-poi/61281.xlsx#R2/rename	774
 C	roundtrip-poi/61495-test.xlsm#R0	5644
 C	roundtrip-poi/61495-test.xlsm#R1/all	5644
+C	roundtrip-poi/61495-test.xlsm#R2/rename	5644
 C	roundtrip-poi/61605.xlsx#R0	1277
 C	roundtrip-poi/61605.xlsx#R1/all	1277
+C	roundtrip-poi/61605.xlsx#R2/rename	1277
 C	roundtrip-poi/61652.xlsx#R0	2546
 C	roundtrip-poi/61652.xlsx#R1/all	2546
+C	roundtrip-poi/61652.xlsx#R2/delete	2542
+C	roundtrip-poi/61652.xlsx#R2/rename	2546
 C	roundtrip-poi/61869.xlsx#R0	726
 C	roundtrip-poi/61869.xlsx#R1/all	726
+C	roundtrip-poi/61869.xlsx#R2/delete	723
+C	roundtrip-poi/61869.xlsx#R2/rename	726
 C	roundtrip-poi/62272.xlsx#R0	575
 C	roundtrip-poi/62272.xlsx#R1/all	575
+C	roundtrip-poi/62272.xlsx#R2/rename	575
 C	roundtrip-poi/62629_target.xlsm#R0	2101
 C	roundtrip-poi/62629_target.xlsm#R1/all	2101
+C	roundtrip-poi/62629_target.xlsm#R2/delete	2101
+C	roundtrip-poi/62629_target.xlsm#R2/rename	2101
 C	roundtrip-poi/62629_toMerge.xlsx#R0	2017
 C	roundtrip-poi/62629_toMerge.xlsx#R1/all	2017
+C	roundtrip-poi/62629_toMerge.xlsx#R2/rename	2017
 C	roundtrip-poi/62834.xlsx#R0	714
 C	roundtrip-poi/62834.xlsx#R1/all	714
+C	roundtrip-poi/62834.xlsx#R2/rename	714
 C	roundtrip-poi/63934.xlsx#R0	1222
 C	roundtrip-poi/63934.xlsx#R1/all	1222
+C	roundtrip-poi/63934.xlsx#R2/delete	1221
+C	roundtrip-poi/63934.xlsx#R2/rename	1222
 C	roundtrip-poi/64420.xlsm#R0	807
 C	roundtrip-poi/64420.xlsm#R1/all	807
+C	roundtrip-poi/64420.xlsm#R2/delete	807
+C	roundtrip-poi/64420.xlsm#R2/rename	807
 C	roundtrip-poi/64450.xlsx#R0	1007
 C	roundtrip-poi/64450.xlsx#R1/all	1007
+C	roundtrip-poi/64450.xlsx#R2/delete	1007
+C	roundtrip-poi/64450.xlsx#R2/rename	1007
 C	roundtrip-poi/64508.xlsx#R0	402
 C	roundtrip-poi/64508.xlsx#R1/all	402
+C	roundtrip-poi/64508.xlsx#R2/rename	402
 C	roundtrip-poi/64667.xlsx#R0	3234
 C	roundtrip-poi/64667.xlsx#R1/all	3234
+C	roundtrip-poi/64667.xlsx#R2/rename	3234
 C	roundtrip-poi/64750.xlsx#R0	2451
 C	roundtrip-poi/64750.xlsx#R1/all	2451
+C	roundtrip-poi/64750.xlsx#R2/delete	2451
+C	roundtrip-poi/64750.xlsx#R2/rename	2451
 C	roundtrip-poi/64759.xlsx#R0	883
 C	roundtrip-poi/64759.xlsx#R1/all	883
+C	roundtrip-poi/64759.xlsx#R2/rename	883
 C	roundtrip-poi/65016.xlsx#R0	288053
 C	roundtrip-poi/65016.xlsx#R1/all	288053
+C	roundtrip-poi/65016.xlsx#R2/delete	288053
+C	roundtrip-poi/65016.xlsx#R2/rename	288053
 C	roundtrip-poi/66365.xlsx#R0	381
 C	roundtrip-poi/66365.xlsx#R1/all	381
+C	roundtrip-poi/66365.xlsx#R2/rename	381
 C	roundtrip-poi/70005-countifs.xlsx#R0	662
 C	roundtrip-poi/70005-countifs.xlsx#R1/all	662
+C	roundtrip-poi/70005-countifs.xlsx#R2/rename	662
 C	roundtrip-poi/AmpersandHeader.xlsx#R0	675
 C	roundtrip-poi/AmpersandHeader.xlsx#R1/all	675
+C	roundtrip-poi/AmpersandHeader.xlsx#R2/delete	675
+C	roundtrip-poi/AmpersandHeader.xlsx#R2/rename	675
 C	roundtrip-poi/AverageTaxRates.xlsx#R0	6719
 C	roundtrip-poi/AverageTaxRates.xlsx#R1/all	6719
+C	roundtrip-poi/AverageTaxRates.xlsx#R2/delete	6719
+C	roundtrip-poi/AverageTaxRates.xlsx#R2/rename	6719
 C	roundtrip-poi/Booleans.xlsx#R0	707
 C	roundtrip-poi/Booleans.xlsx#R1/all	707
+C	roundtrip-poi/Booleans.xlsx#R2/delete	705
+C	roundtrip-poi/Booleans.xlsx#R2/rename	707
 C	roundtrip-poi/BrNotClosed.xlsx#R0	664
 C	roundtrip-poi/BrNotClosed.xlsx#R1/all	664
+C	roundtrip-poi/BrNotClosed.xlsx#R2/delete	664
+C	roundtrip-poi/BrNotClosed.xlsx#R2/rename	664
 C	roundtrip-poi/CVLKRA-KYC_Download_File_Structure_V3.1.xlsx#R0	119854
 C	roundtrip-poi/CVLKRA-KYC_Download_File_Structure_V3.1.xlsx#R1/all	119854
+C	roundtrip-poi/CVLKRA-KYC_Download_File_Structure_V3.1.xlsx#R2/delete	119853
+C	roundtrip-poi/CVLKRA-KYC_Download_File_Structure_V3.1.xlsx#R2/rename	119854
 C	roundtrip-poi/ConditionalFormattingSamples.xlsx#R0	34967
 C	roundtrip-poi/ConditionalFormattingSamples.xlsx#R1/all	34967
+C	roundtrip-poi/ConditionalFormattingSamples.xlsx#R2/delete	34967
+C	roundtrip-poi/ConditionalFormattingSamples.xlsx#R2/rename	34967
 C	roundtrip-poi/CustomXMLMapping-singleattributenamespace.xlsx#R0	9942
 C	roundtrip-poi/CustomXMLMapping-singleattributenamespace.xlsx#R1/all	9942
+C	roundtrip-poi/CustomXMLMapping-singleattributenamespace.xlsx#R2/delete	9942
+C	roundtrip-poi/CustomXMLMapping-singleattributenamespace.xlsx#R2/rename	9942
 C	roundtrip-poi/CustomXMLMappings-complex-type.xlsx#R0	1624
 C	roundtrip-poi/CustomXMLMappings-complex-type.xlsx#R1/all	1624
+C	roundtrip-poi/CustomXMLMappings-complex-type.xlsx#R2/delete	1624
+C	roundtrip-poi/CustomXMLMappings-complex-type.xlsx#R2/rename	1624
 C	roundtrip-poi/CustomXMLMappings.xlsx#R0	924
 C	roundtrip-poi/CustomXMLMappings.xlsx#R1/all	924
+C	roundtrip-poi/CustomXMLMappings.xlsx#R2/delete	924
+C	roundtrip-poi/CustomXMLMappings.xlsx#R2/rename	924
 C	roundtrip-poi/CustomXmlMappings-inverse-order.xlsx#R0	924
 C	roundtrip-poi/CustomXmlMappings-inverse-order.xlsx#R1/all	924
+C	roundtrip-poi/CustomXmlMappings-inverse-order.xlsx#R2/delete	924
+C	roundtrip-poi/CustomXmlMappings-inverse-order.xlsx#R2/rename	924
 C	roundtrip-poi/DataTableCities.xlsx#R0	3983
 C	roundtrip-poi/DataTableCities.xlsx#R1/all	3983
+C	roundtrip-poi/DataTableCities.xlsx#R2/delete	3975
+C	roundtrip-poi/DataTableCities.xlsx#R2/rename	3983
 C	roundtrip-poi/DataValidationEvaluations.xlsx#R0	1826
 C	roundtrip-poi/DataValidationEvaluations.xlsx#R1/all	1826
+C	roundtrip-poi/DataValidationEvaluations.xlsx#R2/rename	1826
 C	roundtrip-poi/DataValidationListTooLong.xlsx#R0	113
 C	roundtrip-poi/DataValidationListTooLong.xlsx#R1/all	113
+C	roundtrip-poi/DataValidationListTooLong.xlsx#R2/rename	113
 C	roundtrip-poi/DataValidations-49244.xlsx#R0	1774
 C	roundtrip-poi/DataValidations-49244.xlsx#R1/all	1774
+C	roundtrip-poi/DataValidations-49244.xlsx#R2/rename	1774
 C	roundtrip-poi/DateFormatNumberTests.xlsx#R0	1294
 C	roundtrip-poi/DateFormatNumberTests.xlsx#R1/all	1294
+C	roundtrip-poi/DateFormatNumberTests.xlsx#R2/delete	1294
+C	roundtrip-poi/DateFormatNumberTests.xlsx#R2/rename	1294
 C	roundtrip-poi/DateFormatTests.xlsx#R0	2210
 C	roundtrip-poi/DateFormatTests.xlsx#R1/all	2210
+C	roundtrip-poi/DateFormatTests.xlsx#R2/delete	2210
+C	roundtrip-poi/DateFormatTests.xlsx#R2/rename	2210
 C	roundtrip-poi/ElapsedFormatTests.xlsx#R0	4262
 C	roundtrip-poi/ElapsedFormatTests.xlsx#R1/all	4262
+C	roundtrip-poi/ElapsedFormatTests.xlsx#R2/delete	4262
+C	roundtrip-poi/ElapsedFormatTests.xlsx#R2/rename	4262
 C	roundtrip-poi/ExcelPivotTableSample.xlsx#R0	1454
 C	roundtrip-poi/ExcelPivotTableSample.xlsx#R1/all	1454
+C	roundtrip-poi/ExcelPivotTableSample.xlsx#R2/delete	1454
+C	roundtrip-poi/ExcelPivotTableSample.xlsx#R2/rename	1454
 C	roundtrip-poi/ExcelTables.xlsx#R0	822
 C	roundtrip-poi/ExcelTables.xlsx#R1/all	822
+C	roundtrip-poi/ExcelTables.xlsx#R2/rename	822
 C	roundtrip-poi/ExcelWithAttachments.xlsm#R0	1698
 C	roundtrip-poi/ExcelWithAttachments.xlsm#R1/all	1698
+C	roundtrip-poi/ExcelWithAttachments.xlsm#R2/delete	0
+C	roundtrip-poi/ExcelWithAttachments.xlsm#R2/rename	1698
 C	roundtrip-poi/Excel_file_with_trash_item.xlsx#R0	24197
 C	roundtrip-poi/Excel_file_with_trash_item.xlsx#R1/all	24197
+C	roundtrip-poi/Excel_file_with_trash_item.xlsx#R2/rename	24197
 C	roundtrip-poi/FillWithoutColor.xlsx#R0	7311
 C	roundtrip-poi/FillWithoutColor.xlsx#R1/all	7311
+C	roundtrip-poi/FillWithoutColor.xlsx#R2/delete	7311
+C	roundtrip-poi/FillWithoutColor.xlsx#R2/rename	7311
 C	roundtrip-poi/ForShifting.xlsx#R0	1128
 C	roundtrip-poi/ForShifting.xlsx#R1/all	1128
+C	roundtrip-poi/ForShifting.xlsx#R2/delete	1101
+C	roundtrip-poi/ForShifting.xlsx#R2/rename	1128
 C	roundtrip-poi/FormatChoiceTests.xlsx#R0	2802
 C	roundtrip-poi/FormatChoiceTests.xlsx#R1/all	2802
+C	roundtrip-poi/FormatChoiceTests.xlsx#R2/delete	2802
+C	roundtrip-poi/FormatChoiceTests.xlsx#R2/rename	2802
 C	roundtrip-poi/FormatConditionTests.xlsx#R0	3064
 C	roundtrip-poi/FormatConditionTests.xlsx#R1/all	3064
+C	roundtrip-poi/FormatConditionTests.xlsx#R2/delete	3064
+C	roundtrip-poi/FormatConditionTests.xlsx#R2/rename	3064
 C	roundtrip-poi/FormatKM.xlsx#R0	1157
 C	roundtrip-poi/FormatKM.xlsx#R1/all	1157
+C	roundtrip-poi/FormatKM.xlsx#R2/delete	1135
+C	roundtrip-poi/FormatKM.xlsx#R2/rename	1157
 C	roundtrip-poi/Formatting.xlsx#R0	902
 C	roundtrip-poi/Formatting.xlsx#R1/all	902
+C	roundtrip-poi/Formatting.xlsx#R2/delete	902
+C	roundtrip-poi/Formatting.xlsx#R2/rename	902
 C	roundtrip-poi/FormulaEvalTestData_Copy.xlsx#R0	30662
 C	roundtrip-poi/FormulaEvalTestData_Copy.xlsx#R1/all	30662
+C	roundtrip-poi/FormulaEvalTestData_Copy.xlsx#R2/delete	29473
+C	roundtrip-poi/FormulaEvalTestData_Copy.xlsx#R2/rename	30662
 C	roundtrip-poi/FormulaSheetRange.xlsx#R0	985
 C	roundtrip-poi/FormulaSheetRange.xlsx#R1/all	985
+C	roundtrip-poi/FormulaSheetRange.xlsx#R2/delete	983
+C	roundtrip-poi/FormulaSheetRange.xlsx#R2/rename	985
 C	roundtrip-poi/GeneralFormatTests.xlsx#R0	3499
 C	roundtrip-poi/GeneralFormatTests.xlsx#R1/all	3499
+C	roundtrip-poi/GeneralFormatTests.xlsx#R2/delete	3499
+C	roundtrip-poi/GeneralFormatTests.xlsx#R2/rename	3499
 C	roundtrip-poi/GroupTest.xlsx#R0	751
 C	roundtrip-poi/GroupTest.xlsx#R1/all	751
+C	roundtrip-poi/GroupTest.xlsx#R2/rename	751
 C	roundtrip-poi/HeaderFooterComplexFormats.xlsx#R0	672
 C	roundtrip-poi/HeaderFooterComplexFormats.xlsx#R1/all	672
+C	roundtrip-poi/HeaderFooterComplexFormats.xlsx#R2/delete	672
+C	roundtrip-poi/HeaderFooterComplexFormats.xlsx#R2/rename	672
 C	roundtrip-poi/HsGetVal.xlsx#R0	895
 C	roundtrip-poi/HsGetVal.xlsx#R1/all	895
+C	roundtrip-poi/HsGetVal.xlsx#R2/delete	893
+C	roundtrip-poi/HsGetVal.xlsx#R2/rename	895
 C	roundtrip-poi/InlineString.xlsx#R0	711
 C	roundtrip-poi/InlineString.xlsx#R1/all	711
+C	roundtrip-poi/InlineString.xlsx#R2/rename	711
 C	roundtrip-poi/InlineStrings.xlsx#R0	758
 C	roundtrip-poi/InlineStrings.xlsx#R1/all	758
+C	roundtrip-poi/InlineStrings.xlsx#R2/delete	752
+C	roundtrip-poi/InlineStrings.xlsx#R2/rename	758
 C	roundtrip-poi/Intersection-52111-xssf.xlsx#R0	799
 C	roundtrip-poi/Intersection-52111-xssf.xlsx#R1/all	799
+C	roundtrip-poi/Intersection-52111-xssf.xlsx#R2/delete	796
+C	roundtrip-poi/Intersection-52111-xssf.xlsx#R2/rename	799
 C	roundtrip-poi/LIBRE_OFFICE-116306-0.xlsx#R0	2711822
 C	roundtrip-poi/LIBRE_OFFICE-116306-0.xlsx#R1/all	2711822
+C	roundtrip-poi/LIBRE_OFFICE-116306-0.xlsx#R2/delete	0
+C	roundtrip-poi/LIBRE_OFFICE-116306-0.xlsx#R2/rename	2711822
 C	roundtrip-poi/LIBRE_OFFICE-128382-0.xlsx#R0	5331
 C	roundtrip-poi/LIBRE_OFFICE-128382-0.xlsx#R1/all	5331
+C	roundtrip-poi/LIBRE_OFFICE-128382-0.xlsx#R2/delete	5325
+C	roundtrip-poi/LIBRE_OFFICE-128382-0.xlsx#R2/rename	5331
 C	roundtrip-poi/MalformedSSTCount.xlsx#R0	497
 C	roundtrip-poi/MalformedSSTCount.xlsx#R1/all	497
+C	roundtrip-poi/MalformedSSTCount.xlsx#R2/rename	497
 C	roundtrip-poi/MatrixFormulaEvalTestData.xlsx#R0	5260
 C	roundtrip-poi/MatrixFormulaEvalTestData.xlsx#R1/all	5260
+C	roundtrip-poi/MatrixFormulaEvalTestData.xlsx#R2/rename	5260
 C	roundtrip-poi/NewStyleConditionalFormattings.xlsx#R0	4310
 C	roundtrip-poi/NewStyleConditionalFormattings.xlsx#R1/all	4310
+C	roundtrip-poi/NewStyleConditionalFormattings.xlsx#R2/rename	4310
 C	roundtrip-poi/NewlineInFormulas.xlsx#R0	777
 C	roundtrip-poi/NewlineInFormulas.xlsx#R1/all	777
+C	roundtrip-poi/NewlineInFormulas.xlsx#R2/delete	768
+C	roundtrip-poi/NewlineInFormulas.xlsx#R2/rename	777
 C	roundtrip-poi/NumberFormatApproxTests.xlsx#R0	6641
 C	roundtrip-poi/NumberFormatApproxTests.xlsx#R1/all	6641
+C	roundtrip-poi/NumberFormatApproxTests.xlsx#R2/delete	6641
+C	roundtrip-poi/NumberFormatApproxTests.xlsx#R2/rename	6641
 C	roundtrip-poi/NumberFormatTests.xlsx#R0	8855
 C	roundtrip-poi/NumberFormatTests.xlsx#R1/all	8855
+C	roundtrip-poi/NumberFormatTests.xlsx#R2/delete	8855
+C	roundtrip-poi/NumberFormatTests.xlsx#R2/rename	8855
 C	roundtrip-poi/RepeatingRowsCols.xlsx#R0	923
 C	roundtrip-poi/RepeatingRowsCols.xlsx#R1/all	923
+C	roundtrip-poi/RepeatingRowsCols.xlsx#R2/delete	923
+C	roundtrip-poi/RepeatingRowsCols.xlsx#R2/rename	923
 C	roundtrip-poi/SampleSS.strict.xlsx#R0	844
 C	roundtrip-poi/SampleSS.strict.xlsx#R1/all	844
+C	roundtrip-poi/SampleSS.strict.xlsx#R2/delete	844
+C	roundtrip-poi/SampleSS.strict.xlsx#R2/rename	844
 C	roundtrip-poi/SampleSS.xlsx#R0	807
 C	roundtrip-poi/SampleSS.xlsx#R1/all	807
+C	roundtrip-poi/SampleSS.xlsx#R2/delete	807
+C	roundtrip-poi/SampleSS.xlsx#R2/rename	807
 C	roundtrip-poi/SheetTabColors.xlsx#R0	651
 C	roundtrip-poi/SheetTabColors.xlsx#R1/all	651
+C	roundtrip-poi/SheetTabColors.xlsx#R2/delete	651
+C	roundtrip-poi/SheetTabColors.xlsx#R2/rename	651
 C	roundtrip-poi/ShrinkToFit.xlsx#R0	588
 C	roundtrip-poi/ShrinkToFit.xlsx#R1/all	588
+C	roundtrip-poi/ShrinkToFit.xlsx#R2/delete	588
+C	roundtrip-poi/ShrinkToFit.xlsx#R2/rename	588
 C	roundtrip-poi/SimpleMacro.xlsm#R0	684
 C	roundtrip-poi/SimpleMacro.xlsm#R1/all	684
+C	roundtrip-poi/SimpleMacro.xlsm#R2/delete	684
+C	roundtrip-poi/SimpleMacro.xlsm#R2/rename	684
 C	roundtrip-poi/SimpleMultiCell.xlsx#R0	720
 C	roundtrip-poi/SimpleMultiCell.xlsx#R1/all	720
+C	roundtrip-poi/SimpleMultiCell.xlsx#R2/delete	720
+C	roundtrip-poi/SimpleMultiCell.xlsx#R2/rename	720
 C	roundtrip-poi/SimpleNormal.xlsx#R0	767
 C	roundtrip-poi/SimpleNormal.xlsx#R1/all	767
+C	roundtrip-poi/SimpleNormal.xlsx#R2/delete	767
+C	roundtrip-poi/SimpleNormal.xlsx#R2/rename	767
 C	roundtrip-poi/SimpleScatterChart.xlsx#R0	3046
 C	roundtrip-poi/SimpleScatterChart.xlsx#R1/all	3046
+C	roundtrip-poi/SimpleScatterChart.xlsx#R2/rename	3046
 C	roundtrip-poi/SimpleStrict.xlsx#R0	785
 C	roundtrip-poi/SimpleStrict.xlsx#R1/all	785
+C	roundtrip-poi/SimpleStrict.xlsx#R2/delete	785
+C	roundtrip-poi/SimpleStrict.xlsx#R2/rename	785
 C	roundtrip-poi/SimpleWithComments.xlsx#R0	787
 C	roundtrip-poi/SimpleWithComments.xlsx#R1/all	787
+C	roundtrip-poi/SimpleWithComments.xlsx#R2/delete	787
+C	roundtrip-poi/SimpleWithComments.xlsx#R2/rename	787
 C	roundtrip-poi/SingleCellTable.xlsx#R0	750
 C	roundtrip-poi/SingleCellTable.xlsx#R1/all	750
+C	roundtrip-poi/SingleCellTable.xlsx#R2/rename	750
 C	roundtrip-poi/StructuredReferences.xlsx#R0	971
 C	roundtrip-poi/StructuredReferences.xlsx#R1/all	971
+C	roundtrip-poi/StructuredReferences.xlsx#R2/delete	968
+C	roundtrip-poi/StructuredReferences.xlsx#R2/rename	971
 C	roundtrip-poi/StructuredRefs-lots-with-lookups.xlsx#R0	218168
 C	roundtrip-poi/StructuredRefs-lots-with-lookups.xlsx#R1/all	218168
+C	roundtrip-poi/StructuredRefs-lots-with-lookups.xlsx#R2/delete	0
+C	roundtrip-poi/StructuredRefs-lots-with-lookups.xlsx#R2/rename	218168
 C	roundtrip-poi/Tables.xlsx#R0	16820
 C	roundtrip-poi/Tables.xlsx#R1/all	16820
+C	roundtrip-poi/Tables.xlsx#R2/delete	0
+C	roundtrip-poi/Tables.xlsx#R2/rename	16820
 C	roundtrip-poi/TablesWithDifferentHeaders.xlsx#R0	842
 C	roundtrip-poi/TablesWithDifferentHeaders.xlsx#R1/all	842
+C	roundtrip-poi/TablesWithDifferentHeaders.xlsx#R2/delete	842
+C	roundtrip-poi/TablesWithDifferentHeaders.xlsx#R2/rename	842
 C	roundtrip-poi/TestShiftRowSharedFormula.xlsx#R0	708
 C	roundtrip-poi/TestShiftRowSharedFormula.xlsx#R1/all	708
+C	roundtrip-poi/TestShiftRowSharedFormula.xlsx#R2/rename	708
 C	roundtrip-poi/TextFormatTests.xlsx#R0	1635
 C	roundtrip-poi/TextFormatTests.xlsx#R1/all	1635
+C	roundtrip-poi/TextFormatTests.xlsx#R2/delete	1635
+C	roundtrip-poi/TextFormatTests.xlsx#R2/rename	1635
 C	roundtrip-poi/Themes.xlsx#R0	916
 C	roundtrip-poi/Themes.xlsx#R1/all	916
+C	roundtrip-poi/Themes.xlsx#R2/rename	916
 C	roundtrip-poi/Themes2.xlsx#R0	1455
 C	roundtrip-poi/Themes2.xlsx#R1/all	1455
+C	roundtrip-poi/Themes2.xlsx#R2/rename	1455
 C	roundtrip-poi/TwoSheetsNoneHidden.xlsx#R0	649
 C	roundtrip-poi/TwoSheetsNoneHidden.xlsx#R1/all	649
+C	roundtrip-poi/TwoSheetsNoneHidden.xlsx#R2/delete	649
+C	roundtrip-poi/TwoSheetsNoneHidden.xlsx#R2/rename	649
 C	roundtrip-poi/TwoSheetsOneHidden.xlsx#R0	652
 C	roundtrip-poi/TwoSheetsOneHidden.xlsx#R1/all	652
+C	roundtrip-poi/TwoSheetsOneHidden.xlsx#R2/delete	652
+C	roundtrip-poi/TwoSheetsOneHidden.xlsx#R2/rename	652
 C	roundtrip-poi/VLookupFullColumn.xlsx#R0	5452
 C	roundtrip-poi/VLookupFullColumn.xlsx#R1/all	5452
+C	roundtrip-poi/VLookupFullColumn.xlsx#R2/delete	5144
+C	roundtrip-poi/VLookupFullColumn.xlsx#R2/rename	5452
 C	roundtrip-poi/ValueFunctionOfBlank.xlsx#R0	791
 C	roundtrip-poi/ValueFunctionOfBlank.xlsx#R1/all	791
+C	roundtrip-poi/ValueFunctionOfBlank.xlsx#R2/rename	791
 C	roundtrip-poi/WidthsAndHeights.xlsx#R0	743
 C	roundtrip-poi/WidthsAndHeights.xlsx#R1/all	743
+C	roundtrip-poi/WidthsAndHeights.xlsx#R2/rename	743
 C	roundtrip-poi/WithChart.xlsx#R0	872
 C	roundtrip-poi/WithChart.xlsx#R1/all	872
+C	roundtrip-poi/WithChart.xlsx#R2/delete	872
+C	roundtrip-poi/WithChart.xlsx#R2/rename	872
 C	roundtrip-poi/WithChartSheet.xlsx#R0	4366
 C	roundtrip-poi/WithChartSheet.xlsx#R1/all	4366
+C	roundtrip-poi/WithChartSheet.xlsx#R2/delete	4366
+C	roundtrip-poi/WithChartSheet.xlsx#R2/rename	4366
 C	roundtrip-poi/WithConditionalFormatting.xlsx#R0	870
 C	roundtrip-poi/WithConditionalFormatting.xlsx#R1/all	870
+C	roundtrip-poi/WithConditionalFormatting.xlsx#R2/delete	869
+C	roundtrip-poi/WithConditionalFormatting.xlsx#R2/rename	870
 C	roundtrip-poi/WithDrawing.xlsx#R0	941
 C	roundtrip-poi/WithDrawing.xlsx#R1/all	941
+C	roundtrip-poi/WithDrawing.xlsx#R2/delete	941
+C	roundtrip-poi/WithDrawing.xlsx#R2/rename	941
 C	roundtrip-poi/WithEmbeded.xlsx#R0	691
 C	roundtrip-poi/WithEmbeded.xlsx#R1/all	691
+C	roundtrip-poi/WithEmbeded.xlsx#R2/delete	691
+C	roundtrip-poi/WithEmbeded.xlsx#R2/rename	691
 C	roundtrip-poi/WithMoreVariousData.xlsx#R0	1009
 C	roundtrip-poi/WithMoreVariousData.xlsx#R1/all	1009
+C	roundtrip-poi/WithMoreVariousData.xlsx#R2/delete	1009
+C	roundtrip-poi/WithMoreVariousData.xlsx#R2/rename	1009
 C	roundtrip-poi/WithTable.xlsx#R0	704
 C	roundtrip-poi/WithTable.xlsx#R1/all	704
+C	roundtrip-poi/WithTable.xlsx#R2/delete	704
+C	roundtrip-poi/WithTable.xlsx#R2/rename	704
 C	roundtrip-poi/WithTextBox.xlsx#R0	799
 C	roundtrip-poi/WithTextBox.xlsx#R1/all	799
+C	roundtrip-poi/WithTextBox.xlsx#R2/delete	799
+C	roundtrip-poi/WithTextBox.xlsx#R2/rename	799
 C	roundtrip-poi/WithTextBox2.xlsx#R0	907
 C	roundtrip-poi/WithTextBox2.xlsx#R1/all	907
+C	roundtrip-poi/WithTextBox2.xlsx#R2/delete	907
+C	roundtrip-poi/WithTextBox2.xlsx#R2/rename	907
 C	roundtrip-poi/WithThreeCharts.xlsx#R0	1284
 C	roundtrip-poi/WithThreeCharts.xlsx#R1/all	1284
+C	roundtrip-poi/WithThreeCharts.xlsx#R2/delete	1278
+C	roundtrip-poi/WithThreeCharts.xlsx#R2/rename	1284
 C	roundtrip-poi/WithTwoCharts.xlsx#R0	1133
 C	roundtrip-poi/WithTwoCharts.xlsx#R1/all	1133
+C	roundtrip-poi/WithTwoCharts.xlsx#R2/delete	1127
+C	roundtrip-poi/WithTwoCharts.xlsx#R2/rename	1133
 C	roundtrip-poi/WithVariousData.xlsx#R0	923
 C	roundtrip-poi/WithVariousData.xlsx#R1/all	923
+C	roundtrip-poi/WithVariousData.xlsx#R2/delete	923
+C	roundtrip-poi/WithVariousData.xlsx#R2/rename	923
 C	roundtrip-poi/XSSFSheet.copyRows.xlsx#R0	1288
 C	roundtrip-poi/XSSFSheet.copyRows.xlsx#R1/all	1288
+C	roundtrip-poi/XSSFSheet.copyRows.xlsx#R2/rename	1288
 C	roundtrip-poi/absolute-anchor-over-empty-sheet.xlsx#R0	2429
 C	roundtrip-poi/absolute-anchor-over-empty-sheet.xlsx#R1/all	2429
+C	roundtrip-poi/absolute-anchor-over-empty-sheet.xlsx#R2/rename	2429
 C	roundtrip-poi/atp.xlsx#R0	907
 C	roundtrip-poi/atp.xlsx#R1/all	907
+C	roundtrip-poi/atp.xlsx#R2/rename	907
 C	roundtrip-poi/bug54803.xlsx#R0	589
 C	roundtrip-poi/bug54803.xlsx#R1/all	589
+C	roundtrip-poi/bug54803.xlsx#R2/delete	589
+C	roundtrip-poi/bug54803.xlsx#R2/rename	589
 C	roundtrip-poi/bug60848_sumproduct_unary_minus.xlsx#R0	6804
 C	roundtrip-poi/bug60848_sumproduct_unary_minus.xlsx#R1/all	6804
+C	roundtrip-poi/bug60848_sumproduct_unary_minus.xlsx#R2/rename	6804
 C	roundtrip-poi/bug60858.xlsx#R0	1693
 C	roundtrip-poi/bug60858.xlsx#R1/all	1693
+C	roundtrip-poi/bug60858.xlsx#R2/rename	1693
 C	roundtrip-poi/bug62181.xlsx#R0	720102
 C	roundtrip-poi/bug62181.xlsx#R1/all	720102
+C	roundtrip-poi/bug62181.xlsx#R2/rename	720102
 C	roundtrip-poi/bug63189.xlsx#R0	742
 C	roundtrip-poi/bug63189.xlsx#R1/all	742
+C	roundtrip-poi/bug63189.xlsx#R2/delete	742
+C	roundtrip-poi/bug63189.xlsx#R2/rename	742
 C	roundtrip-poi/bug64512_embed.xlsx#R0	942
 C	roundtrip-poi/bug64512_embed.xlsx#R1/all	942
+C	roundtrip-poi/bug64512_embed.xlsx#R2/rename	942
 C	roundtrip-poi/bug65306.xlsx#R0	762
 C	roundtrip-poi/bug65306.xlsx#R1/all	762
+C	roundtrip-poi/bug65306.xlsx#R2/rename	762
 C	roundtrip-poi/bug65464.xlsx#R0	3563
 C	roundtrip-poi/bug65464.xlsx#R1/all	3563
+C	roundtrip-poi/bug65464.xlsx#R2/rename	3563
 C	roundtrip-poi/bug66215.xlsx#R0	1006
 C	roundtrip-poi/bug66215.xlsx#R1/all	1006
+C	roundtrip-poi/bug66215.xlsx#R2/rename	1006
 C	roundtrip-poi/bug66675.xlsx#R0	28434
 C	roundtrip-poi/bug66675.xlsx#R1/all	28434
+C	roundtrip-poi/bug66675.xlsx#R2/delete	0
+C	roundtrip-poi/bug66675.xlsx#R2/rename	28434
 C	roundtrip-poi/bug66827.xlsx#R0	742
 C	roundtrip-poi/bug66827.xlsx#R1/all	742
+C	roundtrip-poi/bug66827.xlsx#R2/rename	742
 C	roundtrip-poi/bug67784.xlsx#R0	603
 C	roundtrip-poi/bug67784.xlsx#R1/all	603
+C	roundtrip-poi/bug67784.xlsx#R2/rename	603
 C	roundtrip-poi/bug69769.xlsx#R0	1203
 C	roundtrip-poi/bug69769.xlsx#R1/all	1203
+C	roundtrip-poi/bug69769.xlsx#R2/rename	1203
 C	roundtrip-poi/bug69812.xlsx#R0	763
 C	roundtrip-poi/bug69812.xlsx#R1/all	763
+C	roundtrip-poi/bug69812.xlsx#R2/rename	763
 C	roundtrip-poi/chartTitle_noTitle.xlsx#R0	1745
 C	roundtrip-poi/chartTitle_noTitle.xlsx#R1/all	1745
+C	roundtrip-poi/chartTitle_noTitle.xlsx#R2/rename	1745
 C	roundtrip-poi/chartTitle_withTitle.xlsx#R0	1829
 C	roundtrip-poi/chartTitle_withTitle.xlsx#R1/all	1829
+C	roundtrip-poi/chartTitle_withTitle.xlsx#R2/rename	1829
 C	roundtrip-poi/chartTitle_withTitleFormula.xlsx#R0	1918
 C	roundtrip-poi/chartTitle_withTitleFormula.xlsx#R1/all	1918
+C	roundtrip-poi/chartTitle_withTitleFormula.xlsx#R2/rename	1918
 C	roundtrip-poi/chart_sheet.xlsx#R0	881
 C	roundtrip-poi/chart_sheet.xlsx#R1/all	881
+C	roundtrip-poi/chart_sheet.xlsx#R2/delete	881
+C	roundtrip-poi/chart_sheet.xlsx#R2/rename	881
 C	roundtrip-poi/clone_sheet.xlsx#R0	2824
 C	roundtrip-poi/clone_sheet.xlsx#R1/all	2824
+C	roundtrip-poi/clone_sheet.xlsx#R2/delete	2739
+C	roundtrip-poi/clone_sheet.xlsx#R2/rename	2824
 C	roundtrip-poi/commentTest.xlsx#R0	1365
 C	roundtrip-poi/commentTest.xlsx#R1/all	1365
+C	roundtrip-poi/commentTest.xlsx#R2/rename	1365
 C	roundtrip-poi/comments.xlsx#R0	779
 C	roundtrip-poi/comments.xlsx#R1/all	779
+C	roundtrip-poi/comments.xlsx#R2/delete	779
+C	roundtrip-poi/comments.xlsx#R2/rename	779
 C	roundtrip-poi/conditional_formatting_cell_is.xlsx#R0	38490
 C	roundtrip-poi/conditional_formatting_cell_is.xlsx#R1/all	38490
+C	roundtrip-poi/conditional_formatting_cell_is.xlsx#R2/delete	38489
+C	roundtrip-poi/conditional_formatting_cell_is.xlsx#R2/rename	38490
 C	roundtrip-poi/conditional_formatting_multiple_ranges.xlsx#R0	761
 C	roundtrip-poi/conditional_formatting_multiple_ranges.xlsx#R1/all	761
+C	roundtrip-poi/conditional_formatting_multiple_ranges.xlsx#R2/rename	761
 C	roundtrip-poi/conditional_formatting_with_formula_on_second_sheet.xlsx#R0	38629
 C	roundtrip-poi/conditional_formatting_with_formula_on_second_sheet.xlsx#R1/all	38629
+C	roundtrip-poi/conditional_formatting_with_formula_on_second_sheet.xlsx#R2/delete	38629
+C	roundtrip-poi/conditional_formatting_with_formula_on_second_sheet.xlsx#R2/rename	38629
 C	roundtrip-poi/craftonhills.edu_programreview_report.aspx_goalpriorityreport_0011d159-1eeb-4b63-8833-867b0926e5f3.xlsx#R0	1250
 C	roundtrip-poi/craftonhills.edu_programreview_report.aspx_goalpriorityreport_0011d159-1eeb-4b63-8833-867b0926e5f3.xlsx#R1/all	1250
+C	roundtrip-poi/craftonhills.edu_programreview_report.aspx_goalpriorityreport_0011d159-1eeb-4b63-8833-867b0926e5f3.xlsx#R2/rename	1250
 C	roundtrip-poi/customIndexedColors.xlsx#R0	4832
 C	roundtrip-poi/customIndexedColors.xlsx#R1/all	4832
+C	roundtrip-poi/customIndexedColors.xlsx#R2/delete	4831
+C	roundtrip-poi/customIndexedColors.xlsx#R2/rename	4832
 C	roundtrip-poi/dataValidationTableRange.xlsx#R0	47510
 C	roundtrip-poi/dataValidationTableRange.xlsx#R1/all	47510
+C	roundtrip-poi/dataValidationTableRange.xlsx#R2/delete	0
+C	roundtrip-poi/dataValidationTableRange.xlsx#R2/rename	47510
 C	roundtrip-poi/decimal-format.xlsx#R0	1984
 C	roundtrip-poi/decimal-format.xlsx#R1/all	1984
+C	roundtrip-poi/decimal-format.xlsx#R2/delete	1984
+C	roundtrip-poi/decimal-format.xlsx#R2/rename	1984
 C	roundtrip-poi/deep-data.xlsx#R0	0
 C	roundtrip-poi/duplicate-filename-case-insensitive.xlsx#R0	732
 C	roundtrip-poi/duplicate-filename-case-insensitive.xlsx#R1/all	732
+C	roundtrip-poi/duplicate-filename-case-insensitive.xlsx#R2/rename	732
 C	roundtrip-poi/duplicate-filename.xlsx#R0	731
 C	roundtrip-poi/duplicate-filename.xlsx#R1/all	731
+C	roundtrip-poi/duplicate-filename.xlsx#R2/rename	731
 C	roundtrip-poi/evaluate_formula_with_structured_table_references.xlsx#R0	671
 C	roundtrip-poi/evaluate_formula_with_structured_table_references.xlsx#R1/all	671
+C	roundtrip-poi/evaluate_formula_with_structured_table_references.xlsx#R2/rename	671
 C	roundtrip-poi/formula-eval.xlsx#R0	719
 C	roundtrip-poi/formula-eval.xlsx#R1/all	719
+C	roundtrip-poi/formula-eval.xlsx#R2/rename	719
 C	roundtrip-poi/github-321.xlsx#R0	762
 C	roundtrip-poi/github-321.xlsx#R1/all	762
+C	roundtrip-poi/github-321.xlsx#R2/rename	762
 C	roundtrip-poi/headerFooterTest.xlsx#R0	691
 C	roundtrip-poi/headerFooterTest.xlsx#R1/all	691
+C	roundtrip-poi/headerFooterTest.xlsx#R2/rename	691
 C	roundtrip-poi/invalid_cell_reference.xlsx#R0	0
 C	roundtrip-poi/link-external-workbook-a.xlsx#R0	104
 C	roundtrip-poi/link-external-workbook-a.xlsx#R1/all	104
+C	roundtrip-poi/link-external-workbook-a.xlsx#R2/rename	104
 C	roundtrip-poi/link-external-workbook-b.xlsx#R0	110
 C	roundtrip-poi/link-external-workbook-b.xlsx#R1/all	110
+C	roundtrip-poi/link-external-workbook-b.xlsx#R2/rename	110
 C	roundtrip-poi/mv-calculator-final-2-20-2013.xlsm#R0	133640
 C	roundtrip-poi/mv-calculator-final-2-20-2013.xlsm#R1/all	133640
+C	roundtrip-poi/mv-calculator-final-2-20-2013.xlsm#R2/delete	133640
+C	roundtrip-poi/mv-calculator-final-2-20-2013.xlsm#R2/rename	133640
 C	roundtrip-poi/noSharedStringTable.xlsx#R0	623
 C	roundtrip-poi/noSharedStringTable.xlsx#R1/all	623
+C	roundtrip-poi/noSharedStringTable.xlsx#R2/rename	623
 C	roundtrip-poi/no_drawing_patriarch.xlsx#R0	428429
 C	roundtrip-poi/no_drawing_patriarch.xlsx#R1/all	428429
+C	roundtrip-poi/no_drawing_patriarch.xlsx#R2/rename	428429
 C	roundtrip-poi/npe.xlsx#R0	2198
 C	roundtrip-poi/npe.xlsx#R1/all	2198
+C	roundtrip-poi/npe.xlsx#R2/delete	2198
+C	roundtrip-poi/npe.xlsx#R2/rename	2198
 C	roundtrip-poi/picture-and-shape-same-size.xlsx#R0	694
 C	roundtrip-poi/picture-and-shape-same-size.xlsx#R1/all	694
+C	roundtrip-poi/picture-and-shape-same-size.xlsx#R2/rename	694
 C	roundtrip-poi/picture.xlsx#R0	717
 C	roundtrip-poi/picture.xlsx#R1/all	717
+C	roundtrip-poi/picture.xlsx#R2/delete	717
+C	roundtrip-poi/picture.xlsx#R2/rename	717
 C	roundtrip-poi/poc-shared-strings.xlsx#R0	0
 C	roundtrip-poi/poc-xmlbomb-empty.xlsx#R0	0
 C	roundtrip-poi/poc-xmlbomb.xlsx#R0	0
 C	roundtrip-poi/protected_passtika.xlsx#R0	0
 C	roundtrip-poi/ref-56737.xlsx#R0	835
 C	roundtrip-poi/ref-56737.xlsx#R1/all	835
+C	roundtrip-poi/ref-56737.xlsx#R2/delete	828
+C	roundtrip-poi/ref-56737.xlsx#R2/rename	835
 C	roundtrip-poi/ref2-56737.xlsx#R0	919
 C	roundtrip-poi/ref2-56737.xlsx#R1/all	919
+C	roundtrip-poi/ref2-56737.xlsx#R2/delete	909
+C	roundtrip-poi/ref2-56737.xlsx#R2/rename	919
 C	roundtrip-poi/reordered_sheets.xlsx#R0	697
 C	roundtrip-poi/reordered_sheets.xlsx#R1/all	697
+C	roundtrip-poi/reordered_sheets.xlsx#R2/delete	697
+C	roundtrip-poi/reordered_sheets.xlsx#R2/rename	697
 C	roundtrip-poi/resize_compare.xlsx#R0	584
 C	roundtrip-poi/resize_compare.xlsx#R1/all	584
+C	roundtrip-poi/resize_compare.xlsx#R2/rename	584
 C	roundtrip-poi/right-to-left.xlsx#R0	878
 C	roundtrip-poi/right-to-left.xlsx#R1/all	878
+C	roundtrip-poi/right-to-left.xlsx#R2/delete	878
+C	roundtrip-poi/right-to-left.xlsx#R2/rename	878
 C	roundtrip-poi/sample-beta.xlsx#R0	697
 C	roundtrip-poi/sample-beta.xlsx#R1/all	697
+C	roundtrip-poi/sample-beta.xlsx#R2/delete	696
+C	roundtrip-poi/sample-beta.xlsx#R2/rename	697
 C	roundtrip-poi/sample.strict.xlsx#R0	1152
 C	roundtrip-poi/sample.strict.xlsx#R1/all	1152
+C	roundtrip-poi/sample.strict.xlsx#R2/delete	1151
+C	roundtrip-poi/sample.strict.xlsx#R2/rename	1152
 C	roundtrip-poi/sample.xlsx#R0	1123
 C	roundtrip-poi/sample.xlsx#R1/all	1123
+C	roundtrip-poi/sample.xlsx#R2/delete	1122
+C	roundtrip-poi/sample.xlsx#R2/rename	1123
 C	roundtrip-poi/shared_formulas.xlsx#R0	1450
 C	roundtrip-poi/shared_formulas.xlsx#R1/all	1450
+C	roundtrip-poi/shared_formulas.xlsx#R2/rename	1450
 C	roundtrip-poi/sharedhyperlink.xlsx#R0	689
 C	roundtrip-poi/sharedhyperlink.xlsx#R1/all	689
+C	roundtrip-poi/sharedhyperlink.xlsx#R2/rename	689
 C	roundtrip-poi/sheetProtection_allLocked.xlsx#R0	648
 C	roundtrip-poi/sheetProtection_allLocked.xlsx#R1/all	648
+C	roundtrip-poi/sheetProtection_allLocked.xlsx#R2/delete	648
+C	roundtrip-poi/sheetProtection_allLocked.xlsx#R2/rename	648
 C	roundtrip-poi/sheetProtection_not_protected.xlsx#R0	687
 C	roundtrip-poi/sheetProtection_not_protected.xlsx#R1/all	687
+C	roundtrip-poi/sheetProtection_not_protected.xlsx#R2/rename	687
 C	roundtrip-poi/simple-monthly-budget.xlsx#R0	2028
 C	roundtrip-poi/simple-monthly-budget.xlsx#R1/all	2028
+C	roundtrip-poi/simple-monthly-budget.xlsx#R2/rename	2028
 C	roundtrip-poi/simple-table-named-range.xlsx#R0	801
 C	roundtrip-poi/simple-table-named-range.xlsx#R1/all	801
+C	roundtrip-poi/simple-table-named-range.xlsx#R2/rename	801
 C	roundtrip-poi/style-alternate-content.xlsx#R0	0
 C	roundtrip-poi/styles.xlsx#R0	1031
 C	roundtrip-poi/styles.xlsx#R1/all	1031
+C	roundtrip-poi/styles.xlsx#R2/delete	1031
+C	roundtrip-poi/styles.xlsx#R2/rename	1031
 C	roundtrip-poi/table-sample.xlsx#R0	950
 C	roundtrip-poi/table-sample.xlsx#R1/all	950
+C	roundtrip-poi/table-sample.xlsx#R2/rename	950
 C	roundtrip-poi/tableStyle.xlsx#R0	1215
 C	roundtrip-poi/tableStyle.xlsx#R1/all	1215
+C	roundtrip-poi/tableStyle.xlsx#R2/rename	1215
 C	roundtrip-poi/template.xlsx#R0	615
 C	roundtrip-poi/template.xlsx#R1/all	615
+C	roundtrip-poi/template.xlsx#R2/rename	615
 C	roundtrip-poi/testNames.xlsm#R0	767
 C	roundtrip-poi/testNames.xlsm#R1/all	767
+C	roundtrip-poi/testNames.xlsm#R2/rename	767
 C	roundtrip-poi/testSharedFormulasRangeSetBlankBug.xlsx#R0	2624
 C	roundtrip-poi/testSharedFormulasRangeSetBlankBug.xlsx#R1/all	2624
+C	roundtrip-poi/testSharedFormulasRangeSetBlankBug.xlsx#R2/rename	2624
 C	roundtrip-poi/testSharedFormulasSetBlank.xlsx#R0	778
 C	roundtrip-poi/testSharedFormulasSetBlank.xlsx#R1/all	778
+C	roundtrip-poi/testSharedFormulasSetBlank.xlsx#R2/delete	768
+C	roundtrip-poi/testSharedFormulasSetBlank.xlsx#R2/rename	778
 C	roundtrip-poi/test_conditional_formatting.xlsx#R0	964
 C	roundtrip-poi/test_conditional_formatting.xlsx#R1/all	964
+C	roundtrip-poi/test_conditional_formatting.xlsx#R2/rename	964
 C	roundtrip-poi/tile-range-test.xlsx#R0	730
 C	roundtrip-poi/tile-range-test.xlsx#R1/all	730
+C	roundtrip-poi/tile-range-test.xlsx#R2/delete	725
+C	roundtrip-poi/tile-range-test.xlsx#R2/rename	730
 C	roundtrip-poi/unicodeSheetName.xlsx#R0	753
 C	roundtrip-poi/unicodeSheetName.xlsx#R1/all	753
+C	roundtrip-poi/unicodeSheetName.xlsx#R2/rename	753
 C	roundtrip-poi/workbookProtection-sheet_password-2013.xlsx#R0	650
 C	roundtrip-poi/workbookProtection-sheet_password-2013.xlsx#R1/all	650
+C	roundtrip-poi/workbookProtection-sheet_password-2013.xlsx#R2/rename	650
 C	roundtrip-poi/workbookProtection-workbook_password-2013.xlsx#R0	611
 C	roundtrip-poi/workbookProtection-workbook_password-2013.xlsx#R1/all	611
+C	roundtrip-poi/workbookProtection-workbook_password-2013.xlsx#R2/rename	611
 C	roundtrip-poi/workbookProtection-workbook_password_user_range-2010.xlsx#R0	817
 C	roundtrip-poi/workbookProtection-workbook_password_user_range-2010.xlsx#R1/all	817
+C	roundtrip-poi/workbookProtection-workbook_password_user_range-2010.xlsx#R2/delete	817
+C	roundtrip-poi/workbookProtection-workbook_password_user_range-2010.xlsx#R2/rename	817
 C	roundtrip-poi/workbookProtection_not_protected.xlsx#R0	687
 C	roundtrip-poi/workbookProtection_not_protected.xlsx#R1/all	687
+C	roundtrip-poi/workbookProtection_not_protected.xlsx#R2/rename	687
 C	roundtrip-poi/workbookProtection_workbook_revision_protected.xlsx#R0	765
 C	roundtrip-poi/workbookProtection_workbook_revision_protected.xlsx#R1/all	765
+C	roundtrip-poi/workbookProtection_workbook_revision_protected.xlsx#R2/delete	765
+C	roundtrip-poi/workbookProtection_workbook_revision_protected.xlsx#R2/rename	765
 C	roundtrip-poi/workbookProtection_workbook_structure_protected.xlsx#R0	687
 C	roundtrip-poi/workbookProtection_workbook_structure_protected.xlsx#R1/all	687
+C	roundtrip-poi/workbookProtection_workbook_structure_protected.xlsx#R2/rename	687
 C	roundtrip-poi/workbookProtection_workbook_windows_protected.xlsx#R0	688
 C	roundtrip-poi/workbookProtection_workbook_windows_protected.xlsx#R1/all	688
+C	roundtrip-poi/workbookProtection_workbook_windows_protected.xlsx#R2/rename	688
 C	roundtrip-poi/workbookProtection_worksheet_protected.xlsx#R0	691
 C	roundtrip-poi/workbookProtection_worksheet_protected.xlsx#R1/all	691
+C	roundtrip-poi/workbookProtection_worksheet_protected.xlsx#R2/rename	691
 C	roundtrip-poi/xlmmacro.xlsm#R0	648
 C	roundtrip-poi/xlmmacro.xlsm#R1/all	648
+C	roundtrip-poi/xlmmacro.xlsm#R2/delete	648
+C	roundtrip-poi/xlmmacro.xlsm#R2/rename	648
 C	roundtrip-poi/xlookup.xlsx#R0	1355
 C	roundtrip-poi/xlookup.xlsx#R1/all	1355
+C	roundtrip-poi/xlookup.xlsx#R2/delete	1353
+C	roundtrip-poi/xlookup.xlsx#R2/rename	1355
 C	roundtrip-poi/xlsx-corrupted.xlsx#R0	634
 C	roundtrip-poi/xlsx-corrupted.xlsx#R1/all	634
+C	roundtrip-poi/xlsx-corrupted.xlsx#R2/delete	634
+C	roundtrip-poi/xlsx-corrupted.xlsx#R2/rename	634
 C	roundtrip-poi/xlsx-jdbc.xlsx#R0	129
 C	roundtrip-poi/xlsx-jdbc.xlsx#R1/all	129
+C	roundtrip-poi/xlsx-jdbc.xlsx#R2/rename	129
 C	roundtrip-poi/xssf-enum.xltx.xlsx#R0	1463
 C	roundtrip-poi/xssf-enum.xltx.xlsx#R1/all	1463
+C	roundtrip-poi/xssf-enum.xltx.xlsx#R2/rename	1463
 C	roundtrip-poi/xxe_in_schema.xlsx#R0	776
 C	roundtrip-poi/xxe_in_schema.xlsx#R1/all	776
+C	roundtrip-poi/xxe_in_schema.xlsx#R2/rename	776
+F	roundtrip-poi/0-www-crossref-org.lib.rivier.edu_education-files_suffix-generator.xlsm#R2/delete	* 500 96223126e4dd942c
+F	roundtrip-poi/0-www-crossref-org.lib.rivier.edu_education-files_suffix-generator.xlsm#R2/rename	* 438 f0984713b2134584
+F	roundtrip-poi/123233_charts.xlsx#R2/delete	* 1507 1777dba0efe9126c
+F	roundtrip-poi/123233_charts.xlsx#R2/rename	* 1396 3acf9eb3aeb1aa4e
+F	roundtrip-poi/1_NoIden.xlsx#R2/rename	* 353 53dab08b384da7d0
 F	roundtrip-poi/45430.xlsx#R1/all	* 258 7a7657b1a295a753
+F	roundtrip-poi/45430.xlsx#R2/delete	* 262 f40b8213bb02beb0
+F	roundtrip-poi/45430.xlsx#R2/rename	* 255 ba1bfece4de9833d
 F	roundtrip-poi/45431.xlsm#R1/all	* 296 7c1d1ba643c12e6a
+F	roundtrip-poi/45431.xlsm#R2/delete	* 308 d793176acf07fc5c
+F	roundtrip-poi/45431.xlsm#R2/rename	* 297 b99bfa24cf2385cc
+F	roundtrip-poi/45540_classic_Footer.xlsx#R2/delete	* 2012 e64752089287de11
+F	roundtrip-poi/45540_classic_Footer.xlsx#R2/rename	* 1738 e7337a96469bd36b
+F	roundtrip-poi/45540_classic_Header.xlsx#R2/delete	* 2012 e64752089287de11
+F	roundtrip-poi/45540_classic_Header.xlsx#R2/rename	* 1738 e7337a96469bd36b
+F	roundtrip-poi/45540_form_Footer.xlsx#R2/rename	* 1996 6118b8db952ee3fe
+F	roundtrip-poi/45540_form_Header.xlsx#R2/rename	* 1996 9055342397add9db
+F	roundtrip-poi/45544.xlsx#R2/delete	* 2097 b55306c021fc801e
+F	roundtrip-poi/45544.xlsx#R2/rename	* 1828 cbc550f77dedddd8
+F	roundtrip-poi/46535.xlsx#R2/delete	* 645 76eb36867dbefc0d
+F	roundtrip-poi/46535.xlsx#R2/rename	* 530 22333f91031295fb
+F	roundtrip-poi/46536.xlsx#R2/delete	* 300 15e04a6b0348c958
+F	roundtrip-poi/46536.xlsx#R2/rename	* 246 6c2a3f2e678e4710
 F	roundtrip-poi/47026.xlsm#R1/all	* 269 1a859af80d4e5018
+F	roundtrip-poi/47026.xlsm#R2/delete	* 283 36064d25b570ee6c
+F	roundtrip-poi/47026.xlsm#R2/rename	* 269 5fe039a082fcb558
 F	roundtrip-poi/47089.xlsm#R1/all	* 471 26a3d6411384ac76
+F	roundtrip-poi/47089.xlsm#R2/delete	* 504 f662302e6cac53b8
+F	roundtrip-poi/47089.xlsm#R2/rename	* 472 893c52f1342f051d
 F	roundtrip-poi/47090.xlsx#R1/all	* 256 3bfe07a7167a6384
+F	roundtrip-poi/47090.xlsx#R2/delete	* 261 92e550c9c2150dee
+F	roundtrip-poi/47090.xlsx#R2/rename	* 253 91be5dfbd99a5729
 F	roundtrip-poi/47504.xlsx#R0	* 1 e52c3b44338ea9a9
 F	roundtrip-poi/47504.xlsx#R1/all	* 335 a4c3bfca9a7136ee
+F	roundtrip-poi/47504.xlsx#R2/rename	* 331 66fb72f7e1aef83c
 F	roundtrip-poi/47668.xlsx#R1/all	* 365 e8be5d8eb929500c
+F	roundtrip-poi/47668.xlsx#R2/delete	* 368 acc90917e9d9db18
+F	roundtrip-poi/47668.xlsx#R2/rename	* 362 defccdb396fefc9f
+F	roundtrip-poi/47737.xlsx#R2/delete	* 1 0930ef42e4f8950e
+F	roundtrip-poi/47737.xlsx#R2/rename	* 340 f17e70eaf1586367
 F	roundtrip-poi/47804.xlsx#R1/all	* 269 ddcfbac6b90429d2
+F	roundtrip-poi/47804.xlsx#R2/rename	* 264 33b3116b8c44a3e8
+F	roundtrip-poi/47813.xlsx#R2/delete	* 11293 aab46e8314f673f2
+F	roundtrip-poi/47813.xlsx#R2/rename	* 4769 747db0983c621052
+F	roundtrip-poi/47862.xlsx#R2/delete	* 291 3f62db05758dbb70
+F	roundtrip-poi/47862.xlsx#R2/rename	* 262 92c509446a885ecd
 F	roundtrip-poi/47889.xlsx#R0	!EngineError
+F	roundtrip-poi/48495.xlsx#R2/rename	* 251 3f6664ad5fba3c0a
+F	roundtrip-poi/48539.xlsx#R2/delete	* 752 a6529e91c69548f6
+F	roundtrip-poi/48539.xlsx#R2/rename	* 312 59b69064b200de6f
+F	roundtrip-poi/48703.xlsx#R2/delete	* 289 c3c8a6a61054d898
+F	roundtrip-poi/48703.xlsx#R2/rename	* 254 51eb677a2c9c9ad7
 F	roundtrip-poi/48779.xlsx#R1/all	* 252 20123f760bc0e85f
+F	roundtrip-poi/48779.xlsx#R2/delete	* 258 5c918e2e0c2cea0d
+F	roundtrip-poi/48779.xlsx#R2/rename	* 249 5a5eab160866bab6
+F	roundtrip-poi/48923.xlsx#R2/delete	* 338 2c09038dae80e3fa
+F	roundtrip-poi/48923.xlsx#R2/rename	* 308 0197f910ec2f237c
+F	roundtrip-poi/48962.xlsx#R2/rename	* 451 b398350f67453e5f
+F	roundtrip-poi/49156.xlsx#R2/rename	* 575 d9b0a390d15a0824
+F	roundtrip-poi/49273.xlsx#R2/delete	* 1044 01e5dae865c09080
+F	roundtrip-poi/49273.xlsx#R2/rename	* 864 c4e7e2274fa734c6
+F	roundtrip-poi/49325.xlsx#R2/rename	* 228 16951be03082471e
+F	roundtrip-poi/49609.xlsx#R2/delete	* 7841 47cab6f3cc1a2530
+F	roundtrip-poi/49609.xlsx#R2/rename	* 199 01b85c17add08b27
 F	roundtrip-poi/49783.xlsx#R1/all	* 272 9314363ffc93c18f
+F	roundtrip-poi/49783.xlsx#R2/delete	* 291 22e5632f4d9950d2
+F	roundtrip-poi/49783.xlsx#R2/rename	* 268 be8ab94fa33438de
 F	roundtrip-poi/49872.xlsx#R1/all	* 249 3d45605e97ba2358
+F	roundtrip-poi/49872.xlsx#R2/delete	* 288 255552e21ac94471
+F	roundtrip-poi/49872.xlsx#R2/rename	* 245 961d5826b593c4fd
 F	roundtrip-poi/49928.xlsx#R1/all	* 249 3d45605e97ba2358
+F	roundtrip-poi/49928.xlsx#R2/delete	* 260 255552e21ac94471
+F	roundtrip-poi/49928.xlsx#R2/rename	* 246 1918945167cacb2d
 F	roundtrip-poi/49966.xlsx#R1/all	* 248 8fad2fd2a846b1eb
+F	roundtrip-poi/49966.xlsx#R2/delete	* 270 35cfd710adf760f2
+F	roundtrip-poi/49966.xlsx#R2/rename	* 244 7d226df463e3e488
 F	roundtrip-poi/50096.xlsx#R1/all	* 259 c44445c9d9290d2f
+F	roundtrip-poi/50096.xlsx#R2/delete	* 1765 954b332de03d8a0c
+F	roundtrip-poi/50096.xlsx#R2/rename	* 255 ff0fdec8e8fe03dd
+F	roundtrip-poi/50299.xlsx#R2/delete	* 1102 2934c8570476baa5
+F	roundtrip-poi/50299.xlsx#R2/rename	* 1032 2545e4a05adff8c7
+F	roundtrip-poi/50755_workday_formula_example.xlsx#R2/rename	* 223 b0f0eaca56131c81
+F	roundtrip-poi/50784-font_theme_colours.xlsx#R2/delete	* 305 150b78dcf123567d
+F	roundtrip-poi/50784-font_theme_colours.xlsx#R2/rename	* 277 edb6a1993bcef721
+F	roundtrip-poi/50786-indexed_colours.xlsx#R2/rename	* 231 1560d6608ed13f02
+F	roundtrip-poi/50795.xlsx#R2/delete	* 349 81d10fcfe460ba76
+F	roundtrip-poi/50795.xlsx#R2/rename	* 321 06c1190fe579d142
+F	roundtrip-poi/50846-border_colours.xlsx#R2/delete	* 304 476a4a4127fedc42
+F	roundtrip-poi/50846-border_colours.xlsx#R2/rename	* 276 90a9fa5bb80aa38a
+F	roundtrip-poi/50867_with_table.xlsx#R2/delete	* 317 6a781dcebc49899a
+F	roundtrip-poi/50867_with_table.xlsx#R2/rename	* 256 90fa686259aef2a7
+F	roundtrip-poi/51222.xlsx#R2/delete	* 295 aab10bf12d1fcdb2
+F	roundtrip-poi/51222.xlsx#R2/rename	* 262 fca0ea45b3a3db9b
 F	roundtrip-poi/51470.xlsx#R1/all	* 229 25d4c634e83e5e06
+F	roundtrip-poi/51470.xlsx#R2/rename	* 226 3791e0f955933154
+F	roundtrip-poi/51519.xlsx#R2/delete	* 447 6654df2f345920eb
+F	roundtrip-poi/51519.xlsx#R2/rename	* 257 c8d2ee4e723d1746
 F	roundtrip-poi/51585.xlsx#R1/all	* 10029 4a6a92815a1993e5
+F	roundtrip-poi/51585.xlsx#R2/delete	* 129562 77103b7180935338
+F	roundtrip-poi/51585.xlsx#R2/rename	* 10025 56dea76613291669
+F	roundtrip-poi/51626.xlsx#R2/delete	* 571 a67a214bc44d89de
+F	roundtrip-poi/51626.xlsx#R2/rename	* 300 3e323670bdef2fb3
+F	roundtrip-poi/51626_contact.xlsx#R2/delete	* 496 6daf0ccc6b569123
+F	roundtrip-poi/51626_contact.xlsx#R2/rename	* 276 d4ab6915917280ca
 F	roundtrip-poi/51710.xlsx#R1/all	* 228 1ebf79701277ebff
+F	roundtrip-poi/51710.xlsx#R2/rename	* 224 8523a82572b09457
+F	roundtrip-poi/51850.xlsx#R2/delete	* 439 8d070d7c992aeeee
+F	roundtrip-poi/51850.xlsx#R2/rename	* 393 356f85dcba08747f
 F	roundtrip-poi/51963.xlsx#R1/all	* 229 783d881e59445c1c
+F	roundtrip-poi/51963.xlsx#R2/rename	* 225 66db9ee77ec5d1e6
+F	roundtrip-poi/51998.xlsx#R2/delete	* 325 434df7302fefadc2
+F	roundtrip-poi/51998.xlsx#R2/rename	* 312 f08d5a0c8bdf953e
 F	roundtrip-poi/52348.xlsx#R1/all	* 331 cb6b2ec73c4008a8
+F	roundtrip-poi/52348.xlsx#R2/rename	* 336 4b901b4fb8aa086f
 F	roundtrip-poi/52425.xlsx#R1/all	* 163 055d2c301b145c52
+F	roundtrip-poi/52425.xlsx#R2/rename	* 160 e697ebc20ade8c8b
 F	roundtrip-poi/52575_main.xlsx#R0	* 221 ae22a0d85f904dad
+F	roundtrip-poi/52716.xlsx#R2/delete	* 998 f0157227ed21f088
+F	roundtrip-poi/52716.xlsx#R2/rename	* 329 0d510336d2bf5dea
 F	roundtrip-poi/53101.xlsx#R1/all	* 261 b89837c3efe1dbd5
+F	roundtrip-poi/53101.xlsx#R2/delete	* 796 5672d68e00e2c12c
+F	roundtrip-poi/53101.xlsx#R2/rename	* 257 f10e30a7643f84fc
 F	roundtrip-poi/53105.xlsx#R1/all	* 260 d310c413619bf955
+F	roundtrip-poi/53105.xlsx#R2/delete	* 33041 5672d68e00e2c12c
+F	roundtrip-poi/53105.xlsx#R2/rename	* 256 4be9e837edfe2e65
+F	roundtrip-poi/53282.xlsx#R2/delete	* 535 5678ec0c464d632a
+F	roundtrip-poi/53282.xlsx#R2/rename	* 299 ad23ece95693c939
+F	roundtrip-poi/53282b.xlsx#R2/delete	* 350 f3878eefd8d84137
+F	roundtrip-poi/53282b.xlsx#R2/rename	* 329 0cc2222f88618b95
 F	roundtrip-poi/53568.xlsx#R1/all	* 4486 b69ed89e54506236
+F	roundtrip-poi/53568.xlsx#R2/delete	* 4491 f4ce328b3984f7f6
+F	roundtrip-poi/53568.xlsx#R2/rename	* 4481 8bb99bb5d13669cc
+F	roundtrip-poi/53734.xlsx#R2/delete	* 294 97e7948710423f7b
+F	roundtrip-poi/53734.xlsx#R2/rename	* 270 ccb7ecfd0482040a
 F	roundtrip-poi/53798.xlsx#R1/all	* 346 f1ebf5f859a4b530
+F	roundtrip-poi/53798.xlsx#R2/rename	* 342 25a4bd3a6f327454
 F	roundtrip-poi/53798_shiftNegative_TMPL.xlsx#R1/all	* 346 f1ebf5f859a4b530
+F	roundtrip-poi/53798_shiftNegative_TMPL.xlsx#R2/rename	* 342 25a4bd3a6f327454
+F	roundtrip-poi/54034.xlsx#R2/rename	* 233 6453a5fab978fe2b
+F	roundtrip-poi/54071.xlsx#R2/rename	* 252 43175c06e1c78ca5
+F	roundtrip-poi/54084 - Greek - beyond BMP.xlsx#R2/delete	* 265 47833825c566582b
+F	roundtrip-poi/54084 - Greek - beyond BMP.xlsx#R2/rename	* 245 c520486adce7291c
+F	roundtrip-poi/54206.xlsx#R2/rename	* 981 8430b5df0aebf473
+F	roundtrip-poi/54288-ref.xlsx#R2/delete	* 3603 89ede9c561a2e22b
+F	roundtrip-poi/54288-ref.xlsx#R2/rename	* 428 566172bebe6f44bb
 F	roundtrip-poi/54288.xlsx#R1/all	* 562 ecc9078c69cd298e
+F	roundtrip-poi/54288.xlsx#R2/delete	* 3730 645703b7f0e34ef7
+F	roundtrip-poi/54288.xlsx#R2/rename	* 559 faf266b3a779394a
+F	roundtrip-poi/54399.xlsx#R2/rename	* 690 f0f805a984401831
+F	roundtrip-poi/54436.xlsx#R2/rename	* 287 2cb351e70ed8d7b4
+F	roundtrip-poi/54524.xlsx#R2/rename	* 251 301b530682c3e820
 F	roundtrip-poi/54607.xlsx#R1/all	* 263 8b7f30dd185acb68
+F	roundtrip-poi/54607.xlsx#R2/delete	* 274 1c0127bfbe7bb59d
+F	roundtrip-poi/54607.xlsx#R2/rename	* 260 bf3af5880acb2aa3
 F	roundtrip-poi/54764-2.xlsx#R0	!EngineError
 F	roundtrip-poi/54764.xlsx#R0	!EngineError
 F	roundtrip-poi/55406_Conditional_formatting_sample.xlsx#R1/all	* 1566 37edae07a3c0c4ba
+F	roundtrip-poi/55406_Conditional_formatting_sample.xlsx#R2/rename	* 1561 ef16151ef3df00e0
 F	roundtrip-poi/55640.xlsx#R1/all	* 297 1777e709545f53da
+F	roundtrip-poi/55640.xlsx#R2/delete	* 323 0239d038d90b5530
+F	roundtrip-poi/55640.xlsx#R2/rename	* 287 328798b797cccd35
+F	roundtrip-poi/55745.xlsx#R2/delete	* 657 0d371fa153822d90
+F	roundtrip-poi/55745.xlsx#R2/rename	* 485 052834b47e30bfcc
+F	roundtrip-poi/55814.xlsx#R2/rename	* 259 17f2208199c75ce5
+F	roundtrip-poi/55850.xlsx#R2/delete	* 451 09a5bbda17bf086b
+F	roundtrip-poi/55850.xlsx#R2/rename	* 412 4876e4ef418e38b1
+F	roundtrip-poi/55864.xlsx#R2/delete	* 381 7816d47908cf3167
+F	roundtrip-poi/55864.xlsx#R2/rename	* 350 da87d907d0aae3d0
+F	roundtrip-poi/55906-MultiSheetRefs.xlsx#R2/delete	* 313 ae9ea20222931183
+F	roundtrip-poi/55906-MultiSheetRefs.xlsx#R2/rename	* 251 8222b6139c527cb8
 F	roundtrip-poi/55923.xlsx#R1/all	* 410 b3a5c7f6bb701ac3
+F	roundtrip-poi/55923.xlsx#R2/delete	* 429 b75cdb8d5c8d7584
+F	roundtrip-poi/55923.xlsx#R2/rename	* 406 f030e3df18fed573
 F	roundtrip-poi/55924.xlsx#R1/all	* 325 b07042f9463a9bc0
+F	roundtrip-poi/55924.xlsx#R2/delete	* 336 7ae2fe56e37cdcd3
+F	roundtrip-poi/55924.xlsx#R2/rename	* 322 d952ee5c80a623cb
+F	roundtrip-poi/55926.xlsx#R2/delete	* 361 0f954e16f21cd1ee
+F	roundtrip-poi/55926.xlsx#R2/rename	* 325 f62f9ce991e85120
 F	roundtrip-poi/55927.xlsx#R1/all	* 322 63788043b80dfd69
+F	roundtrip-poi/55927.xlsx#R2/delete	* 343 7ae2fe56e37cdcd3
+F	roundtrip-poi/55927.xlsx#R2/rename	* 318 8850c5cb5a0067cc
 F	roundtrip-poi/56011.xlsx#R1/all	* 263 8830547d4b9f4ba4
+F	roundtrip-poi/56011.xlsx#R2/rename	* 259 cfe8ccd1705af836
 F	roundtrip-poi/56017.xlsx#R1/all	* 306 1ba1e2c5d043d12d
+F	roundtrip-poi/56017.xlsx#R2/delete	* 315 b381c83df9078572
+F	roundtrip-poi/56017.xlsx#R2/rename	* 303 94c56be8a78c4901
 F	roundtrip-poi/56169.xlsx#R1/all	* 411 b3a5c7f6bb701ac3
+F	roundtrip-poi/56169.xlsx#R2/delete	* 430 b75cdb8d5c8d7584
+F	roundtrip-poi/56169.xlsx#R2/rename	* 407 f030e3df18fed573
+F	roundtrip-poi/56170.xlsx#R2/rename	* 235 d7599b77e37dc98b
+F	roundtrip-poi/56274.xlsx#R2/rename	* 640 5ae729a1164ea465
 F	roundtrip-poi/56278.xlsx#R0	!EngineError
+F	roundtrip-poi/56295.xlsx#R2/rename	* 334 cf0684ad80483021
 F	roundtrip-poi/56315.xlsx#R1/all	* 232 9584bf1d48e705da
+F	roundtrip-poi/56315.xlsx#R2/rename	* 228 7a9b9e3478b5f18e
+F	roundtrip-poi/56420.xlsx#R2/delete	* 298 99c042b59d403baa
+F	roundtrip-poi/56420.xlsx#R2/rename	* 267 3ac1fd4f096fb8a3
+F	roundtrip-poi/56502.xlsx#R2/delete	* 325 5c61fd7f28f863f4
+F	roundtrip-poi/56502.xlsx#R2/rename	* 277 a6e333232768eedc
+F	roundtrip-poi/56511.xlsx#R2/delete	* 281 057084f10e172e0e
+F	roundtrip-poi/56511.xlsx#R2/rename	* 260 6445eea88c19829b
 F	roundtrip-poi/56514.xlsx#R1/all	* 531 17b963474f9138d9
+F	roundtrip-poi/56514.xlsx#R2/delete	* 541 40375bb9bac56d8c
+F	roundtrip-poi/56514.xlsx#R2/rename	* 528 110cdff1c536dbb7
 F	roundtrip-poi/56557.xlsx#R1/all	* 1126 deea62759cb99693
+F	roundtrip-poi/56557.xlsx#R2/rename	* 1120 67e76a256c1c43ce
+F	roundtrip-poi/56574.xlsx#R2/delete	* 266 044102a1e4aabb9e
+F	roundtrip-poi/56574.xlsx#R2/rename	* 260 aa7011b2a3564dda
+F	roundtrip-poi/56644.xlsx#R2/delete	* 1 0930ef42e4f8950e
+F	roundtrip-poi/56644.xlsx#R2/rename	* 753 f0c467ba599d3573
 F	roundtrip-poi/56688_1.xlsx#R1/all	* 265 a2913036f1cef99a
+F	roundtrip-poi/56688_1.xlsx#R2/delete	* 277 10d48ad17f496b2e
+F	roundtrip-poi/56688_1.xlsx#R2/rename	* 262 89c43594ce510667
+F	roundtrip-poi/56688_2.xlsx#R2/delete	* 278 03b2868f1e294049
+F	roundtrip-poi/56688_2.xlsx#R2/rename	* 260 ad47d1a66593fe0d
+F	roundtrip-poi/56688_3.xlsx#R2/delete	* 279 03b2868f1e294049
+F	roundtrip-poi/56688_3.xlsx#R2/rename	* 260 ad47d1a66593fe0d
 F	roundtrip-poi/56688_4.xlsx#R1/all	* 265 a2913036f1cef99a
+F	roundtrip-poi/56688_4.xlsx#R2/delete	* 283 10d48ad17f496b2e
+F	roundtrip-poi/56688_4.xlsx#R2/rename	* 261 5148c58dc6b76672
 F	roundtrip-poi/56702.xlsx#R1/all	* 257 81195768a83f6454
+F	roundtrip-poi/56702.xlsx#R2/rename	* 252 ebb70c2c78ebfb37
 F	roundtrip-poi/56730.xlsx#R1/all	* 327 7478b6741a4cde51
+F	roundtrip-poi/56730.xlsx#R2/delete	* 343 7ae2fe56e37cdcd3
+F	roundtrip-poi/56730.xlsx#R2/rename	* 323 a6f6db71719f432e
+F	roundtrip-poi/56737.xlsx#R2/delete	* 286 ef936845908826e2
+F	roundtrip-poi/56737.xlsx#R2/rename	* 244 7287a7c15614478a
+F	roundtrip-poi/56822-Countifs.xlsx#R2/rename	* 128 825785057f95bf22
 F	roundtrip-poi/56957.xlsx#R1/all	* 251 5b79e58dc4324663
+F	roundtrip-poi/56957.xlsx#R2/delete	* 264 255552e21ac94471
+F	roundtrip-poi/56957.xlsx#R2/rename	* 248 9658ae82aace6bf6
+F	roundtrip-poi/57171_57163_57165.xlsx#R2/delete	* 484 723fe8ada47732e7
+F	roundtrip-poi/57171_57163_57165.xlsx#R2/rename	* 437 119c4e32e6b1bb46
+F	roundtrip-poi/57176.xlsx#R2/rename	* 243 b89a90c94d9b7983
+F	roundtrip-poi/57181.xlsm#R2/delete	* 8408 b2b4b8174ef25edd
+F	roundtrip-poi/57181.xlsm#R2/rename	* 7948 71ec50644de2b4f5
 F	roundtrip-poi/57196.xlsx#R1/all	* 269 ff3c4134e6feb09a
+F	roundtrip-poi/57196.xlsx#R2/delete	* 490 de3703d0aef7d9a2
+F	roundtrip-poi/57196.xlsx#R2/rename	* 265 f5fbe7b939ee0a21
 F	roundtrip-poi/57236.xlsx#R1/all	* 260 784b3926de917df8
+F	roundtrip-poi/57236.xlsx#R2/delete	* 283 612d648dce6c68e7
+F	roundtrip-poi/57236.xlsx#R2/rename	* 258 3f35c7cdfd1d0930
+F	roundtrip-poi/57362.xlsx#R2/rename	* 1515 e66cfb11e301c51a
 F	roundtrip-poi/57423.xlsx#R1/all	* 317 497fd1e1e539217f
+F	roundtrip-poi/57423.xlsx#R2/rename	* 313 77472e37f1039bb6
 F	roundtrip-poi/57482-OnlyNumeric.xlsx#R1/all	* 292 f425f4be3163b413
+F	roundtrip-poi/57482-OnlyNumeric.xlsx#R2/delete	* 328 30e2b1a2d8977441
+F	roundtrip-poi/57482-OnlyNumeric.xlsx#R2/rename	* 288 46ba8cd6057a8ed5
+F	roundtrip-poi/57523.xlsx#R2/delete	* 1 0930ef42e4f8950e
+F	roundtrip-poi/57523.xlsx#R2/rename	* 1056 fd438407a029bde8
+F	roundtrip-poi/57535.xlsx#R2/delete	* 360 7f3dee2ad68b1e97
+F	roundtrip-poi/57535.xlsx#R2/rename	* 285 7f2040c845c6d377
+F	roundtrip-poi/57798.xlsx#R2/delete	* 294 176292dcb20c6892
+F	roundtrip-poi/57798.xlsx#R2/rename	* 262 902ef2518032f8bc
 F	roundtrip-poi/57826.xlsx#R1/all	* 612 98ceec296d90ac74
+F	roundtrip-poi/57826.xlsx#R2/rename	* 609 87b8bf8e6460615f
+F	roundtrip-poi/57828.xlsx#R2/rename	* 315 7660c4c9af2a3e91
+F	roundtrip-poi/57838.xlsx#R2/rename	* 313 732bf1be300d104d
+F	roundtrip-poi/57890.xlsx#R2/delete	* 392 7816d47908cf3167
+F	roundtrip-poi/57890.xlsx#R2/rename	* 350 0119b7df54c7135e
 F	roundtrip-poi/57893-many-merges.xlsx#R1/all	* 128 473b31cb2d2a2e84
+F	roundtrip-poi/57893-many-merges.xlsx#R2/rename	* 124 d72d83a57dc87395
 F	roundtrip-poi/57914.xlsx#R1/all	* 4 05ecfb0acb27db3b
+F	roundtrip-poi/57914.xlsx#R2/rename	* 1707 2b8fd874f2ee2257
 F	roundtrip-poi/58106.xlsx#R1/all	* 263 4e8f7e8d0820b661
+F	roundtrip-poi/58106.xlsx#R2/delete	* 473 652c6e5b6081ec20
+F	roundtrip-poi/58106.xlsx#R2/rename	* 259 fdf426b1e746a67f
+F	roundtrip-poi/58315.xlsx#R2/rename	* 242 f8ca411dfaad26e8
 F	roundtrip-poi/58325_db.xlsx#R1/all	* 556 25730b28397f1c22
+F	roundtrip-poi/58325_db.xlsx#R2/delete	* 586 210c1f9dd31ed150
+F	roundtrip-poi/58325_db.xlsx#R2/rename	* 553 42b2c81b23e8fd5d
 F	roundtrip-poi/58325_lt.xlsx#R1/all	* 100 99fb15fee1c1ff6d
+F	roundtrip-poi/58325_lt.xlsx#R2/rename	* 107 7a2e07e1068b0aba
 F	roundtrip-poi/58616.xlsx#R0	!InvalidCase
+F	roundtrip-poi/58648.xlsx#R2/rename	* 121 34e05bf66305c320
+F	roundtrip-poi/58731.xlsx#R2/delete	* 313 dc868c24798d3ab1
+F	roundtrip-poi/58731.xlsx#R2/rename	* 258 ecb89815481cf9db
+F	roundtrip-poi/58747.xlsx#R2/rename	* 228 0996534a40618ed8
+F	roundtrip-poi/58760.xlsx#R2/rename	* 218 22132051e9a3a0fa
+F	roundtrip-poi/58896.xlsx#R2/rename	* 372 ce91ddd5129f0df0
 F	roundtrip-poi/59021.xlsx#R0	!EngineError
+F	roundtrip-poi/59026.xlsx#R2/rename	* 242 484f580c14fbf57a
+F	roundtrip-poi/59106.xlsx#R2/delete	* 334 50f651018b0883a1
+F	roundtrip-poi/59106.xlsx#R2/rename	* 261 0410f565cda08ea4
+F	roundtrip-poi/59132.xlsx#R2/rename	* 248 bddc115647e26f9d
+F	roundtrip-poi/59264.xlsx#R2/rename	* 267 4cf27eb96ffe2ee4
+F	roundtrip-poi/59388.xlsx#R2/delete	* 407 9f64766f69ca0519
+F	roundtrip-poi/59388.xlsx#R2/rename	* 390 0cbe193d7d90bf86
+F	roundtrip-poi/59687.xlsx#R2/rename	* 150 a3a79cba85aea6e9
 F	roundtrip-poi/59736.xlsx#R1/all	* 259 95149cded459f3d2
+F	roundtrip-poi/59736.xlsx#R2/delete	* 278 52b689365e02402d
+F	roundtrip-poi/59736.xlsx#R2/rename	* 255 50276646378cce1c
 F	roundtrip-poi/59746_NoRowNums.xlsx#R1/all	* 51 dff451b67d8f8205
+F	roundtrip-poi/59746_NoRowNums.xlsx#R2/rename	* 61 e05bdc49d3597ff3
+F	roundtrip-poi/59775.xlsx#R2/rename	* 272 635e22973b8b8a6a
 F	roundtrip-poi/60255_extra_drawingparts.xlsx#R1/all	* 442 c118546acca8c15b
+F	roundtrip-poi/60255_extra_drawingparts.xlsx#R2/delete	* 461 dcf03308be2fc723
+F	roundtrip-poi/60255_extra_drawingparts.xlsx#R2/rename	* 431 3a19e286c15773a9
 F	roundtrip-poi/60289.xlsx#R1/all	* 227 98304e18181bc639
+F	roundtrip-poi/60289.xlsx#R2/rename	* 222 fff3f35e2b1eeb17
+F	roundtrip-poi/60384.xlsx#R2/rename	* 581 4cdb496fa309c0c5
+F	roundtrip-poi/60509.xlsx#R2/delete	* 574 5c292129beb79603
+F	roundtrip-poi/60509.xlsx#R2/rename	* 518 6ceb3c9e9c78330c
 F	roundtrip-poi/60512.xlsm#R1/all	* 2 35d06821a1b264ca
+F	roundtrip-poi/60512.xlsm#R2/rename	* 20123 bcf1e45aac9791c5
+F	roundtrip-poi/60709.xlsx#R2/rename	* 261 bb6e832453f7af0a
 F	roundtrip-poi/60825.xlsx#R0	!EngineError
 F	roundtrip-poi/61034.xlsx#R1/all	* 478 d58fae66101206a9
+F	roundtrip-poi/61034.xlsx#R2/delete	* 506 3f29088726167bbb
+F	roundtrip-poi/61034.xlsx#R2/rename	* 476 6746ccc65d05d142
 F	roundtrip-poi/61060-conditional-number-formatting.xlsx#R1/all	* 101 7723d158edeb106b
+F	roundtrip-poi/61060-conditional-number-formatting.xlsx#R2/rename	* 97 e844504aff12cd2f
 F	roundtrip-poi/61063.xlsx#R1/all	* 263 32b396150b3736f4
+F	roundtrip-poi/61063.xlsx#R2/delete	* 288 e9fce8ddf1b15ab8
+F	roundtrip-poi/61063.xlsx#R2/rename	* 261 81ad4192412fd074
+F	roundtrip-poi/61281.xlsx#R2/rename	* 176 c98336ad338fb690
 F	roundtrip-poi/61495-test.xlsm#R1/all	* 970 b7a7135efc7b82b1
+F	roundtrip-poi/61495-test.xlsm#R2/rename	* 968 779cb0372e389a58
+F	roundtrip-poi/61605.xlsx#R2/rename	* 229 ccebbc2ceafa93a1
 F	roundtrip-poi/61652.xlsx#R0	* 1 0b1437bdac66f2b1
 F	roundtrip-poi/61652.xlsx#R1/all	* 479 15020a1378d53986
+F	roundtrip-poi/61652.xlsx#R2/delete	* 695 2af46e742707245a
+F	roundtrip-poi/61652.xlsx#R2/rename	* 475 780a52fada94de2e
 F	roundtrip-poi/61869.xlsx#R1/all	* 266 4cc6f0afd3460ae8
+F	roundtrip-poi/61869.xlsx#R2/delete	* 298 197fd11efa7f6858
+F	roundtrip-poi/61869.xlsx#R2/rename	* 262 3fad84e89505e65d
+F	roundtrip-poi/62272.xlsx#R2/rename	* 327 50bfbef62b38c61b
 F	roundtrip-poi/62629_target.xlsm#R1/all	* 1320 707f439d9b703b4a
+F	roundtrip-poi/62629_target.xlsm#R2/delete	* 1330 eca22acaf3255105
+F	roundtrip-poi/62629_target.xlsm#R2/rename	* 1321 a0b27703cdce5f22
+F	roundtrip-poi/62629_toMerge.xlsx#R2/rename	* 320 16f0656302772bfa
+F	roundtrip-poi/62834.xlsx#R2/rename	* 157 01a10b218a16fdef
 F	roundtrip-poi/63934.xlsx#R1/all	* 245 73a3170ccfa72cdc
+F	roundtrip-poi/63934.xlsx#R2/delete	* 302 ccb52671b54f8521
+F	roundtrip-poi/63934.xlsx#R2/rename	* 240 367f0ea3480644bf
+F	roundtrip-poi/64420.xlsm#R2/delete	* 189 8c2bafb23c124b9c
+F	roundtrip-poi/64420.xlsm#R2/rename	* 181 55d8dd59fe12e35b
+F	roundtrip-poi/64450.xlsx#R2/delete	* 733 7e368cafb1e8062c
+F	roundtrip-poi/64450.xlsx#R2/rename	* 696 3376e843335c9c78
 F	roundtrip-poi/64508.xlsx#R0	* 1 4104e5ce01c743e5
+F	roundtrip-poi/64508.xlsx#R2/rename	* 63 ace9397b2f15d578
 F	roundtrip-poi/64667.xlsx#R0	* 1 4104e5ce01c743e5
 F	roundtrip-poi/64667.xlsx#R1/all	* 485 6b2c8c89e9f4abce
+F	roundtrip-poi/64667.xlsx#R2/rename	* 482 5696939b749ae63f
+F	roundtrip-poi/64750.xlsx#R2/delete	* 1201 22b9d00f25476018
+F	roundtrip-poi/64750.xlsx#R2/rename	* 203 8ff3f35d1f325524
+F	roundtrip-poi/64759.xlsx#R2/rename	* 172 152991f44507a0c8
 F	roundtrip-poi/65016.xlsx#R0	* 1 4104e5ce01c743e5
 F	roundtrip-poi/65016.xlsx#R1/all	* 210 1d48844c15187c5b
+F	roundtrip-poi/65016.xlsx#R2/delete	* 99976 7251f7b3a94cda41
+F	roundtrip-poi/65016.xlsx#R2/rename	* 211 6694dfc6e25980ff
 F	roundtrip-poi/66365.xlsx#R0	* 2 eb8ba75aa320657f
+F	roundtrip-poi/66365.xlsx#R2/rename	* 153 96a332e5d79ddbfd
+F	roundtrip-poi/70005-countifs.xlsx#R2/rename	* 386 54b3889f0762992a
 F	roundtrip-poi/AmpersandHeader.xlsx#R1/all	* 270 5ed04e490cca7793
+F	roundtrip-poi/AmpersandHeader.xlsx#R2/delete	* 278 a5664ef96ec43141
+F	roundtrip-poi/AmpersandHeader.xlsx#R2/rename	* 267 e8e93f1b771a6a00
+F	roundtrip-poi/AverageTaxRates.xlsx#R2/delete	* 1362 c55ae995658e95bd
+F	roundtrip-poi/AverageTaxRates.xlsx#R2/rename	* 368 21cf55e9053ea1df
+F	roundtrip-poi/Booleans.xlsx#R2/delete	* 278 47833825c566582b
+F	roundtrip-poi/Booleans.xlsx#R2/rename	* 244 a19c857c9e724f47
 F	roundtrip-poi/BrNotClosed.xlsx#R1/all	* 255 0ed7c687492bfcf3
+F	roundtrip-poi/BrNotClosed.xlsx#R2/delete	* 263 d10dcab986e682bc
+F	roundtrip-poi/BrNotClosed.xlsx#R2/rename	* 252 4fdee47cae0c6b38
+F	roundtrip-poi/CVLKRA-KYC_Download_File_Structure_V3.1.xlsx#R2/delete	* 1418 86c0767bc9ad099c
+F	roundtrip-poi/CVLKRA-KYC_Download_File_Structure_V3.1.xlsx#R2/rename	* 1275 9c5c1209d41281bb
 F	roundtrip-poi/ConditionalFormattingSamples.xlsx#R0	* 32 bcbb9de713fbbe9d
+F	roundtrip-poi/ConditionalFormattingSamples.xlsx#R2/delete	* 10610 94d17db48e4674f0
+F	roundtrip-poi/ConditionalFormattingSamples.xlsx#R2/rename	* 10455 c57c72d969582ec4
+F	roundtrip-poi/CustomXMLMapping-singleattributenamespace.xlsx#R2/delete	* 9523 2f7d4ceb38702821
+F	roundtrip-poi/CustomXMLMapping-singleattributenamespace.xlsx#R2/rename	* 9476 dbd814f8169f58cf
+F	roundtrip-poi/CustomXMLMappings-complex-type.xlsx#R2/delete	* 741 73e27bae0239bab6
+F	roundtrip-poi/CustomXMLMappings-complex-type.xlsx#R2/rename	* 508 2e8e504a114f10a3
+F	roundtrip-poi/CustomXMLMappings.xlsx#R2/delete	* 466 4a5a66e520d5a771
+F	roundtrip-poi/CustomXMLMappings.xlsx#R2/rename	* 384 6f81f97de93ea424
+F	roundtrip-poi/CustomXmlMappings-inverse-order.xlsx#R2/delete	* 466 4a5a66e520d5a771
+F	roundtrip-poi/CustomXmlMappings-inverse-order.xlsx#R2/rename	* 384 6f81f97de93ea424
+F	roundtrip-poi/DataTableCities.xlsx#R2/delete	* 1916 d42480a362f65687
+F	roundtrip-poi/DataTableCities.xlsx#R2/rename	* 1853 1620b1e440c9d100
+F	roundtrip-poi/DataValidationEvaluations.xlsx#R2/rename	* 281 905b149f7eb6a3e0
+F	roundtrip-poi/DataValidationListTooLong.xlsx#R2/rename	* 44 9201efde7c3e4660
+F	roundtrip-poi/DataValidations-49244.xlsx#R2/rename	* 689 16c42c18c8c1b2ea
+F	roundtrip-poi/DateFormatNumberTests.xlsx#R2/delete	* 398 d45e7ed1498398e6
+F	roundtrip-poi/DateFormatNumberTests.xlsx#R2/rename	* 333 7f737d1fdfd00085
+F	roundtrip-poi/DateFormatTests.xlsx#R2/delete	* 400 c5c54547aa7ded92
+F	roundtrip-poi/DateFormatTests.xlsx#R2/rename	* 335 56853074b1710ca4
+F	roundtrip-poi/ElapsedFormatTests.xlsx#R2/delete	* 382 d9fa5006d5596dfe
+F	roundtrip-poi/ElapsedFormatTests.xlsx#R2/rename	* 316 da707b0d8107b556
+F	roundtrip-poi/ExcelPivotTableSample.xlsx#R2/delete	* 345 ae112bd23c6c3a25
+F	roundtrip-poi/ExcelPivotTableSample.xlsx#R2/rename	* 251 c812c47451261b04
+F	roundtrip-poi/ExcelTables.xlsx#R2/rename	* 246 b8b77f0c9f60544a
+F	roundtrip-poi/ExcelWithAttachments.xlsm#R2/delete	* 1 0930ef42e4f8950e
+F	roundtrip-poi/ExcelWithAttachments.xlsm#R2/rename	* 1021 b635a3333b9d1b38
 F	roundtrip-poi/Excel_file_with_trash_item.xlsx#R0	* 1 4104e5ce01c743e5
+F	roundtrip-poi/Excel_file_with_trash_item.xlsx#R2/rename	* 641 522a69bc68dc2220
+F	roundtrip-poi/FillWithoutColor.xlsx#R2/delete	* 1672 640b093de10e6717
+F	roundtrip-poi/FillWithoutColor.xlsx#R2/rename	* 947 c174ae7fd3e1d062
+F	roundtrip-poi/ForShifting.xlsx#R2/delete	* 430 da73cdeee6c39b62
+F	roundtrip-poi/ForShifting.xlsx#R2/rename	* 258 cc01047afab144aa
+F	roundtrip-poi/FormatChoiceTests.xlsx#R2/delete	* 383 40b2bcb48ce85cda
+F	roundtrip-poi/FormatChoiceTests.xlsx#R2/rename	* 318 60e5fc986d8fbf9c
+F	roundtrip-poi/FormatConditionTests.xlsx#R2/delete	* 403 b1d6eee0d24e9350
+F	roundtrip-poi/FormatConditionTests.xlsx#R2/rename	* 338 3678064651445fb2
+F	roundtrip-poi/FormatKM.xlsx#R2/delete	* 445 810534ffccf88d6c
+F	roundtrip-poi/FormatKM.xlsx#R2/rename	* 264 ce3f5aaed68ace13
+F	roundtrip-poi/Formatting.xlsx#R2/delete	* 331 47833825c566582b
+F	roundtrip-poi/Formatting.xlsx#R2/rename	* 250 8cf9254f169a71ea
 F	roundtrip-poi/FormulaEvalTestData_Copy.xlsx#R0	* 3 b6eb38c5633c5d01
+F	roundtrip-poi/FormulaEvalTestData_Copy.xlsx#R2/delete	* 10833 94187962b6ced8d3
+F	roundtrip-poi/FormulaEvalTestData_Copy.xlsx#R2/rename	* 648 35defdbb347bf6ae
+F	roundtrip-poi/FormulaSheetRange.xlsx#R2/delete	* 375 00ecec8a62e47107
+F	roundtrip-poi/FormulaSheetRange.xlsx#R2/rename	* 296 b22bda10ecb0270b
+F	roundtrip-poi/GeneralFormatTests.xlsx#R2/delete	* 391 0e1b5d68923f89fb
+F	roundtrip-poi/GeneralFormatTests.xlsx#R2/rename	* 325 3d7dec4a05efd5c7
+F	roundtrip-poi/GroupTest.xlsx#R2/rename	* 231 b95a0dce7c4c8e9a
 F	roundtrip-poi/HeaderFooterComplexFormats.xlsx#R1/all	* 273 285617a571806c49
+F	roundtrip-poi/HeaderFooterComplexFormats.xlsx#R2/delete	* 277 bbb42dbfa0e547c9
+F	roundtrip-poi/HeaderFooterComplexFormats.xlsx#R2/rename	* 270 c8b1d62b873f0d16
+F	roundtrip-poi/HsGetVal.xlsx#R2/delete	* 383 945cc84ff6d57630
+F	roundtrip-poi/HsGetVal.xlsx#R2/rename	* 335 daa8ed45e5a76655
 F	roundtrip-poi/InlineString.xlsx#R1/all	* 102 342c37b0c237729d
+F	roundtrip-poi/InlineString.xlsx#R2/rename	* 97 e8999448ed353f03
 F	roundtrip-poi/InlineStrings.xlsx#R1/all	* 297 1a3990008847f6e7
+F	roundtrip-poi/InlineStrings.xlsx#R2/delete	* 387 875aef1c9b28ecc6
+F	roundtrip-poi/InlineStrings.xlsx#R2/rename	* 288 cc8e761be46f6a23
+F	roundtrip-poi/Intersection-52111-xssf.xlsx#R2/delete	* 212 87a2f8da730a1a84
+F	roundtrip-poi/Intersection-52111-xssf.xlsx#R2/rename	* 162 047b4712ae0a7507
 F	roundtrip-poi/LIBRE_OFFICE-116306-0.xlsx#R0	* 1 ac3bcbe7501ca811
+F	roundtrip-poi/LIBRE_OFFICE-116306-0.xlsx#R2/delete	* 1 0930ef42e4f8950e
+F	roundtrip-poi/LIBRE_OFFICE-116306-0.xlsx#R2/rename	* 6993 9495b79fbc2dce3f
+F	roundtrip-poi/LIBRE_OFFICE-128382-0.xlsx#R2/delete	* 3797 11ce20f64301ab5d
+F	roundtrip-poi/LIBRE_OFFICE-128382-0.xlsx#R2/rename	* 3483 fef08ea7679ee7e2
 F	roundtrip-poi/MalformedSSTCount.xlsx#R1/all	* 203 c5836959365554f4
+F	roundtrip-poi/MalformedSSTCount.xlsx#R2/rename	* 195 997fea16acbc54e4
+F	roundtrip-poi/MatrixFormulaEvalTestData.xlsx#R2/rename	* 91 ec1cb2d9147dc7de
+F	roundtrip-poi/NewStyleConditionalFormattings.xlsx#R2/rename	* 296 6ff02aecbcd262c5
 F	roundtrip-poi/NewlineInFormulas.xlsx#R1/all	* 260 94adcb0aa0fe1c74
+F	roundtrip-poi/NewlineInFormulas.xlsx#R2/delete	* 309 f69ed37e57eb42e6
+F	roundtrip-poi/NewlineInFormulas.xlsx#R2/rename	* 256 fad09c7c26994f76
+F	roundtrip-poi/NumberFormatApproxTests.xlsx#R2/delete	* 378 e2559e24fad1adc6
+F	roundtrip-poi/NumberFormatApproxTests.xlsx#R2/rename	* 313 10034f9e1e7c61f5
+F	roundtrip-poi/NumberFormatTests.xlsx#R2/delete	* 413 0bd06f1355ddfc44
+F	roundtrip-poi/NumberFormatTests.xlsx#R2/rename	* 348 64947fb2e49f0403
+F	roundtrip-poi/RepeatingRowsCols.xlsx#R2/delete	* 330 2c8e217d263899be
+F	roundtrip-poi/RepeatingRowsCols.xlsx#R2/rename	* 298 df755c5fd9105d24
 F	roundtrip-poi/SampleSS.strict.xlsx#R1/all	* 4 37f564f63460dbd0
+F	roundtrip-poi/SampleSS.strict.xlsx#R2/delete	* 784 b448fd5fbe319244
+F	roundtrip-poi/SampleSS.strict.xlsx#R2/rename	* 783 0f2d7e251fb03e2d
+F	roundtrip-poi/SampleSS.xlsx#R2/delete	* 270 59c1cd21ccbc67e1
+F	roundtrip-poi/SampleSS.xlsx#R2/rename	* 248 a9fe1f2a6b905efb
 F	roundtrip-poi/SheetTabColors.xlsx#R1/all	* 256 7fa8da7bd7a67679
+F	roundtrip-poi/SheetTabColors.xlsx#R2/delete	* 260 de4395d4869df2a1
+F	roundtrip-poi/SheetTabColors.xlsx#R2/rename	* 253 34ab2dfde4c904a2
+F	roundtrip-poi/ShrinkToFit.xlsx#R2/delete	* 313 14a02319d03fdd8b
+F	roundtrip-poi/ShrinkToFit.xlsx#R2/rename	* 294 818ddd291a507b45
+F	roundtrip-poi/SimpleMacro.xlsm#R2/delete	* 299 854c44925e21603f
+F	roundtrip-poi/SimpleMacro.xlsm#R2/rename	* 285 01e1fd5315cc172b
 F	roundtrip-poi/SimpleMultiCell.xlsx#R1/all	* 266 92f8882b5fe7c5e1
+F	roundtrip-poi/SimpleMultiCell.xlsx#R2/delete	* 309 e5e94f8c8ac438bc
+F	roundtrip-poi/SimpleMultiCell.xlsx#R2/rename	* 262 9d500349dd27301c
+F	roundtrip-poi/SimpleNormal.xlsx#R2/delete	* 272 39d07a5b1a2de577
+F	roundtrip-poi/SimpleNormal.xlsx#R2/rename	* 239 734fc03e793b6846
+F	roundtrip-poi/SimpleScatterChart.xlsx#R2/rename	* 2536 6a01952068154525
 F	roundtrip-poi/SimpleStrict.xlsx#R1/all	* 4 c33eb377e0db9863
+F	roundtrip-poi/SimpleStrict.xlsx#R2/delete	* 722 0c06102f7f6f5027
+F	roundtrip-poi/SimpleStrict.xlsx#R2/rename	* 721 0778a516fe0590cb
+F	roundtrip-poi/SimpleWithComments.xlsx#R2/delete	* 377 088fbef20df45ce7
+F	roundtrip-poi/SimpleWithComments.xlsx#R2/rename	* 350 b5a1eca1cd0c9e7e
 F	roundtrip-poi/SingleCellTable.xlsx#R1/all	* 130 c63a1af8260d7188
+F	roundtrip-poi/SingleCellTable.xlsx#R2/rename	* 128 a8360cbf1078e59c
+F	roundtrip-poi/StructuredReferences.xlsx#R2/delete	* 122 77f8987e83729eff
+F	roundtrip-poi/StructuredReferences.xlsx#R2/rename	* 98 95073002bf6da78c
+F	roundtrip-poi/StructuredRefs-lots-with-lookups.xlsx#R2/delete	* 1 0930ef42e4f8950e
+F	roundtrip-poi/StructuredRefs-lots-with-lookups.xlsx#R2/rename	* 2394 6b6e12620577789f
+F	roundtrip-poi/Tables.xlsx#R2/delete	* 1 0930ef42e4f8950e
+F	roundtrip-poi/Tables.xlsx#R2/rename	* 634 be5a127fc856fc14
+F	roundtrip-poi/TablesWithDifferentHeaders.xlsx#R2/delete	* 306 05b896899a0a4fb5
+F	roundtrip-poi/TablesWithDifferentHeaders.xlsx#R2/rename	* 259 acf8d07038612e93
+F	roundtrip-poi/TestShiftRowSharedFormula.xlsx#R2/rename	* 122 197d558ab01f4eeb
+F	roundtrip-poi/TextFormatTests.xlsx#R2/delete	* 379 5ebeb65fa991d1a1
+F	roundtrip-poi/TextFormatTests.xlsx#R2/rename	* 315 11fa10026b32eaa6
+F	roundtrip-poi/Themes.xlsx#R2/rename	* 240 30adc3a556554f73
+F	roundtrip-poi/Themes2.xlsx#R2/rename	* 266 973593dd64712dce
+F	roundtrip-poi/TwoSheetsNoneHidden.xlsx#R2/delete	* 260 909553238dbe54d5
+F	roundtrip-poi/TwoSheetsNoneHidden.xlsx#R2/rename	* 246 4636ba2471a87fdb
+F	roundtrip-poi/TwoSheetsOneHidden.xlsx#R2/delete	* 259 909553238dbe54d5
+F	roundtrip-poi/TwoSheetsOneHidden.xlsx#R2/rename	* 246 4636ba2471a87fdb
+F	roundtrip-poi/VLookupFullColumn.xlsx#R2/delete	* 2107 0384d8179dde38c8
+F	roundtrip-poi/VLookupFullColumn.xlsx#R2/rename	* 230 19b77312bfdb11bf
 F	roundtrip-poi/ValueFunctionOfBlank.xlsx#R1/all	* 227 ae571fb34bd8184a
+F	roundtrip-poi/ValueFunctionOfBlank.xlsx#R2/rename	* 224 c3a7fd8897bc3381
+F	roundtrip-poi/WidthsAndHeights.xlsx#R2/rename	* 72 15cbd0dac2a3b413
 F	roundtrip-poi/WithChart.xlsx#R1/all	* 420 e77a7cc2b1679d46
+F	roundtrip-poi/WithChart.xlsx#R2/delete	* 457 105385642c106312
+F	roundtrip-poi/WithChart.xlsx#R2/rename	* 416 0f85dd290ea9cb8f
+F	roundtrip-poi/WithChartSheet.xlsx#R2/delete	* 1058 16f17cf88733382a
+F	roundtrip-poi/WithChartSheet.xlsx#R2/rename	* 912 06736b1c8ba238ed
+F	roundtrip-poi/WithConditionalFormatting.xlsx#R2/delete	* 373 13c2f65bb55ca1c7
+F	roundtrip-poi/WithConditionalFormatting.xlsx#R2/rename	* 287 0f9ea75f9328ecdd
 F	roundtrip-poi/WithDrawing.xlsx#R1/all	* 546 025aa2e3d9b094b0
+F	roundtrip-poi/WithDrawing.xlsx#R2/delete	* 554 491179b8cf5c7529
+F	roundtrip-poi/WithDrawing.xlsx#R2/rename	* 543 820a6564f631dfd1
+F	roundtrip-poi/WithEmbeded.xlsx#R2/delete	* 285 6204d0e5c61af820
+F	roundtrip-poi/WithEmbeded.xlsx#R2/rename	* 264 2b9b05fc7373cab0
+F	roundtrip-poi/WithMoreVariousData.xlsx#R2/delete	* 470 0146900515f2ab88
+F	roundtrip-poi/WithMoreVariousData.xlsx#R2/rename	* 382 c2ffe15ee2ba92e0
+F	roundtrip-poi/WithTable.xlsx#R2/delete	* 302 6a781dcebc49899a
+F	roundtrip-poi/WithTable.xlsx#R2/rename	* 257 f351982648cabf78
 F	roundtrip-poi/WithTextBox.xlsx#R1/all	* 394 f62cfae822c3717e
+F	roundtrip-poi/WithTextBox.xlsx#R2/delete	* 402 e619e459752acedd
+F	roundtrip-poi/WithTextBox.xlsx#R2/rename	* 391 aaf219e0a8b1193c
 F	roundtrip-poi/WithTextBox2.xlsx#R1/all	* 518 f63bae77a36e1370
+F	roundtrip-poi/WithTextBox2.xlsx#R2/delete	* 526 8ba8da4fc49dec73
+F	roundtrip-poi/WithTextBox2.xlsx#R2/rename	* 515 10946ed74e87a9dc
 F	roundtrip-poi/WithThreeCharts.xlsx#R1/all	* 739 577fff85fa19246b
+F	roundtrip-poi/WithThreeCharts.xlsx#R2/delete	* 807 b09b019d787f2602
+F	roundtrip-poi/WithThreeCharts.xlsx#R2/rename	* 735 e7d2c1ab7427abbc
 F	roundtrip-poi/WithTwoCharts.xlsx#R1/all	* 595 3658819c1f3ae725
+F	roundtrip-poi/WithTwoCharts.xlsx#R2/delete	* 662 928530433537c35c
+F	roundtrip-poi/WithTwoCharts.xlsx#R2/rename	* 591 63a3e9c1c52d1eea
+F	roundtrip-poi/WithVariousData.xlsx#R2/delete	* 410 bbfb11448c39f211
+F	roundtrip-poi/WithVariousData.xlsx#R2/rename	* 343 187eb607e303259f
+F	roundtrip-poi/XSSFSheet.copyRows.xlsx#R2/rename	* 137 0518c5bef020f1ed
 F	roundtrip-poi/absolute-anchor-over-empty-sheet.xlsx#R1/all	* 379 e6e91d6cfc9e5814
+F	roundtrip-poi/absolute-anchor-over-empty-sheet.xlsx#R2/rename	* 375 bf6b338b834d2fbe
+F	roundtrip-poi/atp.xlsx#R2/rename	* 392 bc8bd73f20ca7fda
+F	roundtrip-poi/bug54803.xlsx#R2/delete	* 311 e288b95e373c9f5f
+F	roundtrip-poi/bug54803.xlsx#R2/rename	* 284 754eaef4adb0ba3b
 F	roundtrip-poi/bug60848_sumproduct_unary_minus.xlsx#R1/all	* 1075 e6477e500d8468d2
+F	roundtrip-poi/bug60848_sumproduct_unary_minus.xlsx#R2/rename	* 1070 4c54c7569ce6cf85
+F	roundtrip-poi/bug60858.xlsx#R2/rename	* 212 1348e23eba086d1e
 F	roundtrip-poi/bug62181.xlsx#R0	* 1 4104e5ce01c743e5
 F	roundtrip-poi/bug62181.xlsx#R1/all	* 2 710b6b9999ad9401
+F	roundtrip-poi/bug62181.xlsx#R2/rename	* 84 efb648d31780287f
 F	roundtrip-poi/bug63189.xlsx#R0	* 2 dcd9dabd025cf0a6
+F	roundtrip-poi/bug63189.xlsx#R2/delete	* 223 656800fc4d67820e
+F	roundtrip-poi/bug63189.xlsx#R2/rename	* 212 0fcdedce5b08b407
 F	roundtrip-poi/bug64512_embed.xlsx#R1/all	* 336 79b0e237b6588876
+F	roundtrip-poi/bug64512_embed.xlsx#R2/rename	* 332 c1238ee172999978
 F	roundtrip-poi/bug65306.xlsx#R1/all	* 117 debdd53195391521
+F	roundtrip-poi/bug65306.xlsx#R2/rename	* 112 2a568d405b6512f2
 F	roundtrip-poi/bug65464.xlsx#R1/all	* 395 e49cbda65c21b688
+F	roundtrip-poi/bug65464.xlsx#R2/rename	* 392 8502fd6b853d024f
 F	roundtrip-poi/bug66215.xlsx#R1/all	* 201 8676322dc32fad23
+F	roundtrip-poi/bug66215.xlsx#R2/rename	* 195 86a3d3edb166c84f
 F	roundtrip-poi/bug66675.xlsx#R1/all	* 338 68c1feb8454ebe29
+F	roundtrip-poi/bug66675.xlsx#R2/delete	* 1 0930ef42e4f8950e
+F	roundtrip-poi/bug66675.xlsx#R2/rename	* 361 6aa024ae32e6902e
+F	roundtrip-poi/bug66827.xlsx#R2/rename	* 268 1dba7332dc71c43b
 F	roundtrip-poi/bug67784.xlsx#R0	* 6 a2dd96991e9b9e0e
+F	roundtrip-poi/bug67784.xlsx#R2/rename	* 239 4e45c2f9ab471894
+F	roundtrip-poi/bug69769.xlsx#R2/rename	* 687 c6827bf98ca544ac
 F	roundtrip-poi/bug69812.xlsx#R1/all	* 113 3e7afa3434e22aa2
+F	roundtrip-poi/bug69812.xlsx#R2/rename	* 109 a326c1ba1ac7cf40
 F	roundtrip-poi/chartTitle_noTitle.xlsx#R1/all	* 1245 275b98c6b3573423
+F	roundtrip-poi/chartTitle_noTitle.xlsx#R2/rename	* 1241 cbc864bebbc82b3a
 F	roundtrip-poi/chartTitle_withTitle.xlsx#R1/all	* 1329 275b98c6b3573423
+F	roundtrip-poi/chartTitle_withTitle.xlsx#R2/rename	* 1325 cbc864bebbc82b3a
+F	roundtrip-poi/chartTitle_withTitleFormula.xlsx#R2/rename	* 1269 cee4c2e2c21f7a69
+F	roundtrip-poi/chart_sheet.xlsx#R2/delete	* 458 a598e6adccf66c82
+F	roundtrip-poi/chart_sheet.xlsx#R2/rename	* 428 581b69406dcac0c8
 F	roundtrip-poi/clone_sheet.xlsx#R0	* 16 30ceb0c4fc44e4a6
+F	roundtrip-poi/clone_sheet.xlsx#R2/delete	* 1795 639dd72934b660fc
+F	roundtrip-poi/clone_sheet.xlsx#R2/rename	* 1156 c81f5bdde4772df0
+F	roundtrip-poi/commentTest.xlsx#R2/rename	* 700 6bbc1490cee8f162
+F	roundtrip-poi/comments.xlsx#R2/delete	* 374 a7342bd54f961ca0
+F	roundtrip-poi/comments.xlsx#R2/rename	* 351 b3aab3c3a877243f
+F	roundtrip-poi/conditional_formatting_cell_is.xlsx#R2/delete	* 37096 bf55bab130e69940
+F	roundtrip-poi/conditional_formatting_cell_is.xlsx#R2/rename	* 37073 17e97bf8af3f533a
+F	roundtrip-poi/conditional_formatting_multiple_ranges.xlsx#R2/rename	* 137 89ee74609cb15f85
+F	roundtrip-poi/conditional_formatting_with_formula_on_second_sheet.xlsx#R2/delete	* 37103 764e639a9ca71e0a
+F	roundtrip-poi/conditional_formatting_with_formula_on_second_sheet.xlsx#R2/rename	* 37097 7f378266e271f4c2
 F	roundtrip-poi/craftonhills.edu_programreview_report.aspx_goalpriorityreport_0011d159-1eeb-4b63-8833-867b0926e5f3.xlsx#R1/all	* 439 b86cd2d3096fccc6
+F	roundtrip-poi/craftonhills.edu_programreview_report.aspx_goalpriorityreport_0011d159-1eeb-4b63-8833-867b0926e5f3.xlsx#R2/rename	* 436 61fd8bae08ffccf7
+F	roundtrip-poi/customIndexedColors.xlsx#R2/delete	* 4261 068fdffdc2149a52
+F	roundtrip-poi/customIndexedColors.xlsx#R2/rename	* 4248 69d35c22a600cd5f
+F	roundtrip-poi/dataValidationTableRange.xlsx#R2/delete	* 1 0930ef42e4f8950e
+F	roundtrip-poi/dataValidationTableRange.xlsx#R2/rename	* 2640 2ef826505c4d4467
 F	roundtrip-poi/decimal-format.xlsx#R1/all	* 441 1dca162f93f36450
+F	roundtrip-poi/decimal-format.xlsx#R2/delete	* 457 72691cede7ced98b
+F	roundtrip-poi/decimal-format.xlsx#R2/rename	* 439 a7ee835e77e64e0d
 F	roundtrip-poi/deep-data.xlsx#R0	!InvalidCase
 F	roundtrip-poi/duplicate-filename-case-insensitive.xlsx#R0	* 1 301f948117dcc5f9
 F	roundtrip-poi/duplicate-filename-case-insensitive.xlsx#R1/all	* 77 c72fb6d66caa0276
+F	roundtrip-poi/duplicate-filename-case-insensitive.xlsx#R2/rename	* 73 c832eef37bfddc1c
 F	roundtrip-poi/duplicate-filename.xlsx#R1/all	* 77 c72fb6d66caa0276
+F	roundtrip-poi/duplicate-filename.xlsx#R2/rename	* 73 c832eef37bfddc1c
 F	roundtrip-poi/evaluate_formula_with_structured_table_references.xlsx#R1/all	* 135 7e3729210d097334
+F	roundtrip-poi/evaluate_formula_with_structured_table_references.xlsx#R2/rename	* 126 4b292e2155bd893e
 F	roundtrip-poi/formula-eval.xlsx#R1/all	* 78 ea5ce11fefe3ab75
+F	roundtrip-poi/formula-eval.xlsx#R2/rename	* 73 97827c86f902391d
 F	roundtrip-poi/github-321.xlsx#R1/all	* 114 037180ff63ca519e
+F	roundtrip-poi/github-321.xlsx#R2/rename	* 109 ddf47234f637fd12
+F	roundtrip-poi/headerFooterTest.xlsx#R2/rename	* 267 d424e4cb6c59dd9b
 F	roundtrip-poi/invalid_cell_reference.xlsx#R0	!EngineError
 F	roundtrip-poi/link-external-workbook-a.xlsx#R1/all	* 33 1b16383e8b613853
+F	roundtrip-poi/link-external-workbook-a.xlsx#R2/rename	* 34 efe7202441ecbd40
 F	roundtrip-poi/link-external-workbook-b.xlsx#R0	* 4 ae8bef3e867ec041
 F	roundtrip-poi/link-external-workbook-b.xlsx#R1/all	* 33 020d54b21e7cd90e
+F	roundtrip-poi/link-external-workbook-b.xlsx#R2/rename	* 35 9a659b2ad8fdd6d8
+F	roundtrip-poi/mv-calculator-final-2-20-2013.xlsm#R2/delete	* 13470 b6b83a9099dfad01
+F	roundtrip-poi/mv-calculator-final-2-20-2013.xlsm#R2/rename	* 13428 9cba247709b231bf
 F	roundtrip-poi/noSharedStringTable.xlsx#R1/all	* 132 8ba4793fe7ad8d5f
+F	roundtrip-poi/noSharedStringTable.xlsx#R2/rename	* 128 c44348d2a9662313
+F	roundtrip-poi/no_drawing_patriarch.xlsx#R2/rename	* 388 f9f00e454d431a36
 F	roundtrip-poi/npe.xlsx#R1/all	* 1397 b4b58e4504fdc780
+F	roundtrip-poi/npe.xlsx#R2/delete	* 1398 177bd69035c81d3a
+F	roundtrip-poi/npe.xlsx#R2/rename	* 1387 1fe3986fd9a8b2ab
+F	roundtrip-poi/picture-and-shape-same-size.xlsx#R2/rename	* 462 c0256ed101813d3a
 F	roundtrip-poi/picture.xlsx#R0	* 4 56d2f7965d1ba28b
 F	roundtrip-poi/picture.xlsx#R1/all	* 229 e87d071f3c119f1b
+F	roundtrip-poi/picture.xlsx#R2/delete	* 297 7bd4006ba8c0d06b
+F	roundtrip-poi/picture.xlsx#R2/rename	* 228 4457a729a515c895
 F	roundtrip-poi/poc-shared-strings.xlsx#R0	!EngineError
 F	roundtrip-poi/poc-xmlbomb-empty.xlsx#R0	!EngineError
 F	roundtrip-poi/poc-xmlbomb.xlsx#R0	!EngineError
 F	roundtrip-poi/protected_passtika.xlsx#R0	!InvalidCase
+F	roundtrip-poi/ref-56737.xlsx#R2/delete	* 292 5c9066ba350ebd5d
+F	roundtrip-poi/ref-56737.xlsx#R2/rename	* 252 09af74068d5fa55e
+F	roundtrip-poi/ref2-56737.xlsx#R2/delete	* 306 0af32ea0b7f7b2b7
+F	roundtrip-poi/ref2-56737.xlsx#R2/rename	* 253 bc091c8b0f10630c
+F	roundtrip-poi/reordered_sheets.xlsx#R2/delete	* 268 151a3f6ed2253e2b
+F	roundtrip-poi/reordered_sheets.xlsx#R2/rename	* 257 b4811a69744c7bc1
+F	roundtrip-poi/resize_compare.xlsx#R2/rename	* 278 5bef0a90e494eec9
+F	roundtrip-poi/right-to-left.xlsx#R2/delete	* 170 ccef2afe1ed1a48f
+F	roundtrip-poi/right-to-left.xlsx#R2/rename	* 140 a8cda2ee4589b8c2
 F	roundtrip-poi/sample-beta.xlsx#R0	* 10 92bed7d3384ba1ca
 F	roundtrip-poi/sample-beta.xlsx#R1/all	* 14 57a5379816478a87
+F	roundtrip-poi/sample-beta.xlsx#R2/delete	* 638 90b4b1f6c6133727
+F	roundtrip-poi/sample-beta.xlsx#R2/rename	* 647 599258c22c215c84
 F	roundtrip-poi/sample.strict.xlsx#R1/all	* 4 9e33ea88d31fc7e5
+F	roundtrip-poi/sample.strict.xlsx#R2/delete	* 1069 040aeda956713108
+F	roundtrip-poi/sample.strict.xlsx#R2/rename	* 1068 87bb8360222af9d9
+F	roundtrip-poi/sample.xlsx#R2/delete	* 337 53c3c66bee8baa52
+F	roundtrip-poi/sample.xlsx#R2/rename	* 278 c7083f39afaf10ab
 F	roundtrip-poi/shared_formulas.xlsx#R1/all	* 248 83e6acb1fb1b14d9
+F	roundtrip-poi/shared_formulas.xlsx#R2/rename	* 245 c9ae2e35fcf8bbdf
+F	roundtrip-poi/sharedhyperlink.xlsx#R2/rename	* 139 f8aa159aa65cab4b
 F	roundtrip-poi/sheetProtection_allLocked.xlsx#R1/all	* 259 b1f838ef1d888534
+F	roundtrip-poi/sheetProtection_allLocked.xlsx#R2/delete	* 263 5d7409170a06afe4
+F	roundtrip-poi/sheetProtection_allLocked.xlsx#R2/rename	* 256 8f55adfca8485e12
+F	roundtrip-poi/sheetProtection_not_protected.xlsx#R2/rename	* 273 31dfae168c03dab3
+F	roundtrip-poi/simple-monthly-budget.xlsx#R2/rename	* 911 54a00eadd111131e
+F	roundtrip-poi/simple-table-named-range.xlsx#R2/rename	* 92 5ad42cb45ac4eb75
 F	roundtrip-poi/style-alternate-content.xlsx#R0	!EngineError
+F	roundtrip-poi/styles.xlsx#R2/delete	* 374 d061ed2c4f172782
+F	roundtrip-poi/styles.xlsx#R2/rename	* 301 b1c18f93e42eeb1a
 F	roundtrip-poi/table-sample.xlsx#R1/all	* 172 bcc68eee60652b98
+F	roundtrip-poi/table-sample.xlsx#R2/rename	* 166 fa41f23a324abab9
+F	roundtrip-poi/tableStyle.xlsx#R2/rename	* 271 ad15b88b73e7e3ac
 F	roundtrip-poi/template.xlsx#R1/all	* 134 4722ae4a8ec33c5f
+F	roundtrip-poi/template.xlsx#R2/rename	* 131 806e58f05cc001fa
+F	roundtrip-poi/testNames.xlsm#R2/rename	* 269 8c3c37565a644290
+F	roundtrip-poi/testSharedFormulasRangeSetBlankBug.xlsx#R2/rename	* 127 02acdca67c9fda14
 F	roundtrip-poi/testSharedFormulasSetBlank.xlsx#R1/all	* 260 94adcb0aa0fe1c74
+F	roundtrip-poi/testSharedFormulasSetBlank.xlsx#R2/delete	* 308 f69ed37e57eb42e6
+F	roundtrip-poi/testSharedFormulasSetBlank.xlsx#R2/rename	* 256 fad09c7c26994f76
+F	roundtrip-poi/test_conditional_formatting.xlsx#R2/rename	* 118 c9d3945e57057af2
+F	roundtrip-poi/tile-range-test.xlsx#R2/delete	* 362 0bcbccc4657cda87
+F	roundtrip-poi/tile-range-test.xlsx#R2/rename	* 290 68b9e802d3eda0db
 F	roundtrip-poi/unicodeSheetName.xlsx#R1/all	* 100 9fb7e0b8fdf3e510
+F	roundtrip-poi/unicodeSheetName.xlsx#R2/rename	* 96 da8a1cacd149d14e
+F	roundtrip-poi/workbookProtection-sheet_password-2013.xlsx#R2/rename	* 137 c0bd7f40950d5928
+F	roundtrip-poi/workbookProtection-workbook_password-2013.xlsx#R2/rename	* 130 93e1d241022207f2
+F	roundtrip-poi/workbookProtection-workbook_password_user_range-2010.xlsx#R2/delete	* 659 5c154e6ca4c98a1c
+F	roundtrip-poi/workbookProtection-workbook_password_user_range-2010.xlsx#R2/rename	* 645 34cfb27865384f73
+F	roundtrip-poi/workbookProtection_not_protected.xlsx#R2/rename	* 273 31dfae168c03dab3
 F	roundtrip-poi/workbookProtection_workbook_revision_protected.xlsx#R1/all	* 293 fe58bb42a142a212
+F	roundtrip-poi/workbookProtection_workbook_revision_protected.xlsx#R2/delete	* 298 06f6528afb487707
+F	roundtrip-poi/workbookProtection_workbook_revision_protected.xlsx#R2/rename	* 290 04c1e424b0d14b4e
+F	roundtrip-poi/workbookProtection_workbook_structure_protected.xlsx#R2/rename	* 273 a520b6907d76e972
+F	roundtrip-poi/workbookProtection_workbook_windows_protected.xlsx#R2/rename	* 274 3b4300cd39dda098
+F	roundtrip-poi/workbookProtection_worksheet_protected.xlsx#R2/rename	* 277 03f0e1a7a8aa4887
 F	roundtrip-poi/xlmmacro.xlsm#R1/all	* 182 93ad0bebadb6c235
+F	roundtrip-poi/xlmmacro.xlsm#R2/delete	* 188 72c6f3027f85615a
+F	roundtrip-poi/xlmmacro.xlsm#R2/rename	* 183 7e9bd53e4e36f0ab
 F	roundtrip-poi/xlookup.xlsx#R1/all	* 1 50a248930821e1ec
+F	roundtrip-poi/xlookup.xlsx#R2/delete	* 212 b56fd9b3201706e0
+F	roundtrip-poi/xlookup.xlsx#R2/rename	* 97 1072f675a621acb6
 F	roundtrip-poi/xlsx-corrupted.xlsx#R0	* 1 cf0fb6f1a83dde39
 F	roundtrip-poi/xlsx-corrupted.xlsx#R1/all	* 597 3ccf4167609c94b8
+F	roundtrip-poi/xlsx-corrupted.xlsx#R2/delete	* 596 7cb8d26ae4546528
+F	roundtrip-poi/xlsx-corrupted.xlsx#R2/rename	* 597 54572dedafb0362e
 F	roundtrip-poi/xlsx-jdbc.xlsx#R1/all	* 30 021dfe4c83d2d1be
+F	roundtrip-poi/xlsx-jdbc.xlsx#R2/rename	* 33 da079a32469ce34d
 F	roundtrip-poi/xssf-enum.xltx.xlsx#R0	* 1 cf0fb6f1a83dde39
+F	roundtrip-poi/xssf-enum.xltx.xlsx#R2/rename	* 445 af52a4cbe6108768
 F	roundtrip-poi/xxe_in_schema.xlsx#R1/all	* 182 f51717a2e3d2940d
+F	roundtrip-poi/xxe_in_schema.xlsx#R2/rename	* 178 c98336ad338fb690

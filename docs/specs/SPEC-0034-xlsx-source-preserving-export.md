@@ -448,7 +448,7 @@ Implementation notes (T-4999):
 - **Report.** Every drop is a SaveReport entry (SPEC-0033 D7, T-4562), so stage 5 needs T-4562 first. Entries are
   keyed as SPEC-0033 D2 keys items: a part by its part key, a fragment by its element key.
 - **R2 scenarios.** These are what measure the stage. The sheet-level ones (rename, add, delete, move) need no M4 and
-  are filed with this spec (T-5005). Rows and columns follow M4.
+  are scored from T-5005 (SPEC-0033 D5, "R2's sheet edits"). Rows and columns follow M4.
 - **Probes.** Each implementation task carries an Excel for the web re-save probe (T-4890's tooling). It shows the
   regenerated-and-kept saves open and keep their parts and fragments.
 - **Desktop Excel.** Excel for the web cannot vouch for VBA, ActiveX or printer-settings retention (SPEC-0033 RQ1).

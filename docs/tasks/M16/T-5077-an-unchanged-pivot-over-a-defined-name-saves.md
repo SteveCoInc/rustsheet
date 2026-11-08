@@ -29,8 +29,11 @@ Found while re-recording T-4999's baselines after merging main.
 
 ## Acceptance criteria
 - [ ] The root cause is found and named in the Outcome.
-- [ ] Both cases are Verbatim again at R0, and `rustsheet-eval roundtrip --check` passes on calipers with the baseline
-      as it is (no rerecord).
+- [ ] Both cases are Verbatim again at R0, and their R0 and R1 lines in `eval/baseline/roundtrip-calipers.txt` hold
+      unchanged.
+- [ ] Calipers is re-recorded (`roundtrip --update-baseline --suite roundtrip-calipers --timeout 600`, no
+      `--allow-regressions`). That adds the `#R2/rename` and `#R2/delete` keys T-5005 could not record while this
+      regression stood (decision 0352), and changes no R0 or R1 line.
 - [ ] A regression test: a fixture with a pivot over a defined name saves verbatim when nothing changed.
 - [ ] `make check` green; reviewers approve.
 

@@ -10,6 +10,8 @@ C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R1/E4	3696
 C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R1/E5	3696
 C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R1/E6	3696
 C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R1/all	3696
+C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	3696
+C	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/rename	3696
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 attribute /officeDocument[0]/pivotCacheDefinition[0]/pivotCacheRecords[0]:/pivotCacheRecords@mc:Ignorable lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 attribute /officeDocument[0]/pivotCacheDefinition[0]:/pivotCacheDefinition/cacheFields[0]/cacheField[2]/sharedItems[0]@count added candidate-N10
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 attribute /officeDocument[0]/pivotCacheDefinition[0]:/pivotCacheDefinition@mc:Ignorable lost
@@ -358,3 +360,24 @@ F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/customXml[1]/customXmlProps[0] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/customXml[2] lost
 F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R0	R0 part /officeDocument[0]/customXml[2]/customXmlProps[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete attribute /officeDocument[0]:/workbook/pivotCaches[0]/pivotCache[0]@r:id changed
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete attribute /officeDocument[0]:/workbook/pivotCaches[0]/pivotCache[1]@r:id changed
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete attribute /officeDocument[0]:/workbook/pivotCaches[0]/pivotCache[2]@r:id changed
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete attribute /officeDocument[0]:/workbook/pivotCaches[0]/pivotCache[3]@r:id changed
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete element /officeDocument[0]/worksheet[CS]:/worksheet/drawing[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete element /officeDocument[0]/worksheet[C]:/worksheet/drawing[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete element /officeDocument[0]/worksheet[F]:/worksheet/drawing[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete element /officeDocument[0]/worksheet[M]:/worksheet/drawing[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete part /officeDocument[0]/worksheet[CS]/drawing[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete part /officeDocument[0]/worksheet[CS]/drawing[0]/chart[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete part /officeDocument[0]/worksheet[C]/drawing[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete part /officeDocument[0]/worksheet[C]/drawing[0]/chart[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete part /officeDocument[0]/worksheet[Data] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete part /officeDocument[0]/worksheet[F]/drawing[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete part /officeDocument[0]/worksheet[F]/drawing[0]/chart[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete part /officeDocument[0]/worksheet[M]/drawing[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/delete	R2/delete part /officeDocument[0]/worksheet[M]/drawing[0]/chart[0] lost
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/rename	R2/rename attribute /officeDocument[0]/pivotCacheDefinition[0]:/pivotCacheDefinition/cacheSource[0]/worksheetSource[0]@sheet changed
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/rename	R2/rename attribute /officeDocument[0]/pivotCacheDefinition[1]:/pivotCacheDefinition/cacheSource[0]/worksheetSource[0]@sheet changed
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/rename	R2/rename attribute /officeDocument[0]/pivotCacheDefinition[2]:/pivotCacheDefinition/cacheSource[0]/worksheetSource[0]@sheet changed
+F	roundtrip-excel-saved/t4187-pivot-chart-caches.xlsx#R2/rename	R2/rename attribute /officeDocument[0]/pivotCacheDefinition[3]:/pivotCacheDefinition/cacheSource[0]/worksheetSource[0]@sheet changed
