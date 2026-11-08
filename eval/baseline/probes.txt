@@ -2701,6 +2701,7 @@ C	probes/t4703-fraction-tail-no-pre-point-and-two-points.case.json	66
 C	probes/t4704-mixed-xlookup-grid-readers.case.json	109
 C	probes/t4713-beta-inv-beta-above-1-cut.case.json	222
 C	probes/t4713-beta-inv-cut-pieces.case.json	369
+C	probes/t4717-pivot-cell-formats.case.json	177
 C	probes/t4718-choose-index-error-order.case.json	116
 C	probes/t4719-text-unverified-residue.case.json	44
 C	probes/t4720-fixed-sign-and-exponent-digits.case.json	37
@@ -10255,6 +10256,7 @@ TC	probes/t4506-pivot-shared-cache.case.json	24
 TC	probes/t4584-pivot-page-window.case.json	80
 TC	probes/t4698-pivot-repeat-labels.case.json	510
 TC	probes/t4699-pivot-blank-collapsed.case.json	449
+TC	probes/t4717-pivot-cell-formats.case.json	159
 TC	probes/t4745-pivot-classic-subtotal-caption.case.json	187
 TC	probes/t4767-pivot-group-items.case.json	170
 TC	probes/t4767-pivot-record-tuples.case.json	40

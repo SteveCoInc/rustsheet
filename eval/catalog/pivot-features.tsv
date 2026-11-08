@@ -360,7 +360,7 @@ PV-0358	metadata	pivotCacheDefinition/cacheFields/cacheField@level	0	none	unknow
 PV-0359	cache	pivotCacheDefinition/cacheFields/cacheField@mappingCount		values	unknown	in	PV1	todo		T-5033
 PV-0360	olap-datamodel	pivotCacheDefinition/cacheFields/cacheField@memberPropertyField	false	none	unknown	out (decision 0274)	out	todo		
 PV-0361	captions	pivotCacheDefinition/cacheFields/cacheField@name		text	unknown	in	PV1	todo		T-4640
-PV-0362	aggregation	pivotCacheDefinition/cacheFields/cacheField@numFmtId		values	yes	in	PV1	todo	probes/t4123-pivot-capture C	T-4717
+PV-0362	aggregation	pivotCacheDefinition/cacheFields/cacheField@numFmtId		values	yes	in	PV1	todo	probes/t4123-pivot-capture C; probes/t4717-pivot-cell-formats S2	T-5058
 PV-0363	cache	pivotCacheDefinition/cacheFields/cacheField@propertyName		values	unknown	in	PV1	todo		T-5033
 PV-0364	olap-datamodel	pivotCacheDefinition/cacheFields/cacheField@serverField	false	none	unknown	out (decision 0274)	out	todo		
 PV-0365	cache	pivotCacheDefinition/cacheFields/cacheField@sqlType	0	values	unknown	in	PV1	todo		T-5033
@@ -893,7 +893,7 @@ PV-0891	show-values-as	pivotTableDefinition/dataFields/dataField@baseField	-1	va
 PV-0892	show-values-as	pivotTableDefinition/dataFields/dataField@baseItem	1048832	values	yes	in	PV2	todo	probes/t4129-pivot-show-as DF DP	
 PV-0893	aggregation	pivotTableDefinition/dataFields/dataField@fld		values	yes	in	PV1	todo	probes/t4123-pivot-capture T	T-5020
 PV-0894	aggregation	pivotTableDefinition/dataFields/dataField@name		values	yes	in	PV1	todo	probes/t4123-pivot-capture T	T-4968
-PV-0895	aggregation	pivotTableDefinition/dataFields/dataField@numFmtId		values	yes	in	PV1	todo	probes/t4123-pivot-capture T	T-4717
+PV-0895	aggregation	pivotTableDefinition/dataFields/dataField@numFmtId		values	yes	in	PV1	todo	probes/t4123-pivot-capture T; probes/t4717-pivot-cell-formats R2	T-5058
 PV-0896	show-values-as	pivotTableDefinition/dataFields/dataField@showDataAs	normal	values	yes	in	PV2	todo	probes/t4129-pivot-show-as; probes/t4123-pivot-capture T	
 PV-0897	aggregation	pivotTableDefinition/dataFields/dataField@subtotal	sum	values	yes	in	PV1	todo	probes/t4135-pivot-aggregates	T-5020
 PV-0898	aggregation	pivotTableDefinition/dataFields@count		values	yes	in	PV1	todo	probes/t4123-pivot-capture T	T-5020
@@ -1113,7 +1113,7 @@ PV-1111	totals	pivotTableDefinition/pivotFields/pivotField@minSubtotal	false	lay
 PV-1112	filtering	pivotTableDefinition/pivotFields/pivotField@multipleItemSelectionAllowed	false	values	yes	in	PV2	todo	probes/t4130-pivot-field-filters PM	T-4969
 PV-1113	captions	pivotTableDefinition/pivotFields/pivotField@name		text	unknown	in	PV1	todo		T-4915
 PV-1114	sorting	pivotTableDefinition/pivotFields/pivotField@nonAutoSortDefault	false	layout	yes	in	PV2	todo	probes/t4130-pivot-sort NA	
-PV-1115	aggregation	pivotTableDefinition/pivotFields/pivotField@numFmtId		values	yes	in	PV1	todo	probes/t4129-pivot-layout-flags NF	
+PV-1115	aggregation	pivotTableDefinition/pivotFields/pivotField@numFmtId		values	yes	in	PV1	todo	probes/t4129-pivot-layout-flags NF; probes/t4717-pivot-cell-formats L1	
 PV-1116	layout	pivotTableDefinition/pivotFields/pivotField@outline	true	layout	yes	in	PV1	todo	probes/t4123-pivot-capture T	T-4660
 PV-1117	totals	pivotTableDefinition/pivotFields/pivotField@productSubtotal	false	layout	yes	in	PV1	todo	probes/t4168-pivot-layout-options F1	T-5021
 PV-1118	filtering	pivotTableDefinition/pivotFields/pivotField@rankBy		values	yes	in	PV2	todo	probes/t4130-pivot-field-filters AS ASb	

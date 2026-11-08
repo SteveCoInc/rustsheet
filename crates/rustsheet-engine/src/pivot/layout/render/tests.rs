@@ -213,7 +213,7 @@ fn the_cells_text_is_bounded() {
     let mut work = MAX_PIVOT_WORK;
     let result = compute(&table, &cache, &mut work).unwrap();
     let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
-    let cells = render(&table, &cache, &result, &layout).unwrap();
+    let cells = render(&table, &cache, &result, &layout, &[]).unwrap();
     let bytes: usize = cells
         .iter()
         .map(|c| match &c.value {
@@ -228,11 +228,11 @@ fn the_cells_text_is_bounded() {
         number_format: None,
     }));
     assert_eq!(
-        render_within(&table, &cache, &result, &layout, bytes),
+        render_within(&table, &cache, &result, &layout, &[], bytes),
         Ok(cells)
     );
     assert_eq!(
-        render_within(&table, &cache, &result, &layout, bytes - 1),
+        render_within(&table, &cache, &result, &layout, &[], bytes - 1),
         Err(PivotComputeError::Limit)
     );
 }
@@ -250,7 +250,7 @@ fn a_subtotal_captions_item_copies_are_bounded_before_they_are_made() {
     let mut work = MAX_PIVOT_WORK;
     let result = compute(&table, &cache, &mut work).unwrap();
     let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
-    let cells = render(&table, &cache, &result, &layout).unwrap();
+    let cells = render(&table, &cache, &result, &layout, &[]).unwrap();
     let label = |text: &str| {
         cells
             .iter()
@@ -259,7 +259,7 @@ fn a_subtotal_captions_item_copies_are_bounded_before_they_are_made() {
     assert!(label("0-0") && label("2-2"));
     table.fields[0].subtotal_caption = Some("?".repeat(1_000));
     assert_eq!(
-        render_within(&table, &cache, &result, &layout, 999),
+        render_within(&table, &cache, &result, &layout, &[], 999),
         Err(PivotComputeError::Limit)
     );
 }
@@ -306,7 +306,7 @@ fn a_date_group_item_shows_as_a_date() {
         let mut work = MAX_PIVOT_WORK;
         let result = compute(&table, &cache, &mut work).unwrap();
         let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
-        let cells = render(&table, &cache, &result, &layout).unwrap();
+        let cells = render(&table, &cache, &result, &layout, &[]).unwrap();
         let label = (cells.iter())
             .find(|c| c.column == 0 && c.value == PivotCell::Number(serial))
             .unwrap();
@@ -332,7 +332,7 @@ fn an_ungrouped_date_item_takes_no_group_item_format() {
     let mut work = MAX_PIVOT_WORK;
     let result = compute(&table, &cache, &mut work).unwrap();
     let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
-    let cells = render(&table, &cache, &result, &layout).unwrap();
+    let cells = render(&table, &cache, &result, &layout, &[]).unwrap();
     let label = (cells.iter())
         .find(|c| c.value == PivotCell::Number(43831.0))
         .unwrap();
