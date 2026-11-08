@@ -26,8 +26,12 @@
      decision 0032). The eval scores the cell against that later value (`runner/prepare.rs` `apply_superseded`).
   2. A line is valid only when the later sidecar is golden (excel-graph or excel-desktop), cites the same cell, and its
      case is a copy of the cell's case: every key but description, tags, check, expected and expected_source equal
-     (`overrides::same_inputs`, decision 0329 item 1's copy rule). The eval refuses any other line, and a line for a
-     cell that is not scored, so a stale or mistaken line fails the run.
+     (`overrides::same_inputs`, decision 0329 item 1's copy rule). check, expected and expected_source only choose
+     which cells a case scores and where a hand value comes from; the superseded value always comes from the golden
+     sidecar, so a copy may differ there (the AMORDEGRC bisect copy checks fewer cells). The eval refuses any other
+     line, and a line for a cell that is not scored, so a stale or mistaken line fails the run. A `superseded.tsv` is a
+     protected path (`scripts/check_governance.py`, as a `deviations` file is): a PR that changes it needs a decision
+     record, so no line lands without one.
   3. A line is added only for a cell a decision record names as superseded or as not reproduced: decision 0329's
      cells (the t2592, t2594, t2625, t2360, t2311 and t2475 probes, gen-m9 17c110a53924beb8 Calc!A300,
      gen-m9 e85daedce5c2675e Calc!A35, probes/t2436/e85daedce5c2675e Calc!A31 and A46, gen-m7 21b4eef18424ce94
