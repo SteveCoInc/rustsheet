@@ -45,5 +45,5 @@ Decision 0335 moved the fork's crate-wide lint allows into per-file `#![expect]`
   `Option`/`Result` or take what the test builds inline, and four `kind: Function` parameters: `Function` is
   not `Copy`, and deriving it makes about 75 `&Function` parameters fail `trivially_copy_pass_by_ref`, so that
   is follow-up T-5080 (filed here); `token::Error` has the same cascade (noted in T-5080's out of scope).
-- No public API of crates/rustsheet changes. Eval delta: none (`make check-fast`: 0 regressions, 0 fixed in
+- Decision 0353 records the paydown (the lock is a protected path). No public API of crates/rustsheet changes. Eval delta: none (`make check-fast`: 0 regressions, 0 fixed in
   every suite). `cargo test -p rustsheet_engine -p rustsheet_xlsx`: 6540 passed.
