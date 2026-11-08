@@ -42,4 +42,6 @@ Found by the T-4856 duplicate-concept audit (one definition per concept, CLAUDE.
 - Eval: `UNSUPPORTED_ERRORS` named `#N/IMPL`, which the facade never produced (it reports
   `#N/IMPL!`), so engine `#N/IMPL!` cells were scored as type or error mismatches rather than
   `Unsupported`; it now names `#N/IMPL!`.
-- Eval delta: see the PR.
+- Eval delta: one new probe case, 72/72 bit-exact (new coverage); no fixed or regressed cells in
+  any suite; Gate A 45,083 points, 0 failing.
+- Follow-up: T-5081 (lower-case `=#spill!`, `=#calc!` and engine-only formula literals, unprobed).
