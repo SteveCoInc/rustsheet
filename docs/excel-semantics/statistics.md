@@ -1691,6 +1691,16 @@ density) build the prefactor from three separately rounded doubles: `power = EXP
 - cdf: `P = (power*decay/norm)*series`, the series 1 + y/(a+1) + y^2/((a+1)(a+2)) + ...; CHISQ.DIST.RT and CHIDIST
   take 1 - P there.
 - density: `(power/norm)*a/x*EXP(-y)`.
+- Region, a finding the engine does not implement (T-4975): the y <= 1 cut is wrong (T-4974 probe
+  t4974-gamma-small-x-prefactor-boundary: every y up to 1.001 at shapes 8 to 170 is within 5 ulp of the factors, e.g.
+  `GAMMA.DIST(1.001,30,1,TRUE)` = 1.4752762130359831E-33, and visibly off the stable prefactor). Excel keeps the
+  factors past y = 1, but the edge is not a bound on y: it fits a cap on the exponent a*LN(y), bracketed in
+  (2.97, 4.38) for the cdf (`CHISQ.DIST.RT(3.87,9)` and `CHIDIST(5,6)` are on the factors; `CHIDIST(7,7)` and
+  `GAMMA.DIST(1.5,50,1,TRUE)`, 231 ulp off them, are not) and in (0.30, 2.29) for the density
+  (`GAMMA.DIST(1.08895,3.5,1,FALSE)` on them; `CHISQ.DIST(5,5,FALSE)`, `GAMMA.DIST(2.33347,3,1,FALSE)` and
+  `CHISQ.DIST(3,20,FALSE)` off them). The mechanism behind the cap is unknown. Taking caps of 3.5 and 1 moved about
+  180 gated cells to Excel's bits and 49 off them, all last-digit and within 12 digits either way; it is not shipped
+  because the cuts are fitted with no hold-out (decision 0188 R4).
 - The order is observable at 1 ulp: `CHISQ.DIST(1.5,6,TRUE)` = 0.04050543974481387 (gen-m9/35e8168aae2b00f8 A119)
   needs the decay before the normalization, and `CHISQ.DIST(1.5,5,TRUE)` = 0.08693018545560456 (probes/
   stat-argument-modes H152) and `GAMMA.DIST(200000,2,1000000,TRUE)` = 0.017523096306421772 (probes-numeric/
@@ -1734,13 +1744,15 @@ Evidence (excel-graph), all bit-exact on the rule:
 - `CHISQ.INV.RT(((-0.0001)+1),3)` = 0.005214832329030269, 3,084 ulp from the true quantile
   (gen-m9/4250f880ab640c49 A371).
 - `CHISQ.INV(1E-20,10)` = 0.0005210568413974334 (gen-m9/c2974c061384fdd9 A355).
-The switch between searching Q and searching P at 1 - p for a right-tail p is bracketed, not measured: somewhere in
-(0.9999, 0.9999462]; 0.9999 is taken (UNVERIFIED inside the bracket). Above it, the engine keeps T-3311's Newton
-steps (or the crossing) for the P search instead of Halley's. The findings' rule applies Halley there too. Against
+The switch between searching Q and searching P at 1 - p for a right-tail p is bracketed: somewhere in
+(0.9999, 0.9999 + 2E-6] (probes/t4974-chisq-inv-rt-q-to-p-switch). A Q search at 0.9999 + 2^-53 (A38) is 473 to 3,140
+ulp off Excel at all five shapes there and the P search 0 to 7, so the switch is at 0.9999 itself unless Excel's own
+search differs there (UNVERIFIED; T-4996). Above it, the engine now takes the same Halley steps for the P search
+(T-4975, T-5089), as the findings' rule does; before, it kept T-3311's Newton steps. Against
 the rule as implemented, that variant moved 43 cells closer and 9 farther (13 gen-m9 cells such as
 `CHIINV(1-1E-16,8)`, 6 to 0 ulp), but it regresses one gated cell: `CHIINV(1-1E-10,7)` = 0.005605668625082421
-(gen-m9/eced4bb6a0234c9e A265) is bit-exact on Newton and 1 ulp off on Halley. Both are within 15 digits there; the
-P-search method above the switch is open.
+(gen-m9/eced4bb6a0234c9e A265) is bit-exact on Newton and 1 ulp off on Halley. Both are within 15 digits there;
+T-4974's probe outweighs it: on Halley its A38:A41 come within 1 ulp of Excel, and A265 is the one gated cell given up.
 GAMMA.INV takes the rule too: Excel's `CHISQ.INV(p,2a)` is twice `GAMMA.INV(p,a,1)` (T-3311 sheet W).
 Engine eval against item 5's head (every suite, per cell, ulps of Excel): 431 closer, 55 farther; 136 cells newly
 within 15 digits, 7 newly visibly off. Those 7 are all GAMMA.INV-derived cells of the ungated

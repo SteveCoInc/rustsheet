@@ -233,9 +233,12 @@ const HALLEY_UNIT_X_MAX: f64 = 0.5;
 
 /// The largest right-tail p at which Excel's right-tail quantile searches the upper tail Q; above
 /// it, it searches the lower tail at 1 - p. Bracketed, not measured: Excel switches somewhere in
-/// (0.9999, 0.9999462] (`CHISQ.INV.RT(((-0.0001)+1),3)`, gen-m9/4250f880ab640c49 A371, is a
-/// Q search; `CHISQ.INV.RT(1-1E-16,3)`, ecc87f80077959e0 A301, is a P search), and 0.9999 is the
-/// lower end (UNVERIFIED inside the bracket; the findings' probe G01 pins it).
+/// (0.9999, 0.9999 + 2E-6] (`CHISQ.INV.RT(((-0.0001)+1),3)`, gen-m9/4250f880ab640c49 A371, is a
+/// Q search; probes/t4974-chisq-inv-rt-q-to-p-switch rows 2 to 33, from 0.9999 + 2E-6, are
+/// P searches), and 0.9999 is the lower end. A Q search at the next double up,
+/// 0.9999 + 2^-53 (A38), is 473 to 3,140 ulp off Excel at all five shapes there and the P search
+/// 0 to 7, which puts the switch at 0.9999 itself unless Excel's own search differs there
+/// (UNVERIFIED: T-4996 probes the 4-ulp rows with comparators).
 const Q_SEARCH_P_MAX: f64 = 0.9999;
 
 /// Excel's quantile of the gamma distribution at scale 1 where it is small (T-3146;
@@ -257,15 +260,18 @@ pub(super) fn excel_halley_quantile(a: f64, p: f64, tail: Tail) -> Option<f64> {
     if !(HALLEY_SHAPES.contains(&a) && p > 0.0 && p < 1.0) {
         return None;
     }
-    // Above the switch Excel searches P at 1 - p, and there T-3311's Newton steps
-    // ([`excel_newton_quantile`]) are its value: `CHIINV(1-1E-10,7)` = 0.005605668625082421
-    // (gen-m9/eced4bb6a0234c9e A265) is bit-exact on them and 1 ulp off on Halley steps, and
-    // `CHISQ.INV.RT(1-1E-16,3)` is their first iterate. So the right tail takes Halley's only
-    // up to the switch.
-    if tail == Tail::Upper && p > Q_SEARCH_P_MAX {
-        return None;
-    }
-    let (search, target) = (tail, p);
+    // Above the switch Excel searches P at 1 - p, with the same Halley steps (T-4975): on them
+    // probes/t4974-chisq-inv-rt-q-to-p-switch A38:A41 (p from 0.9999 + 2^-53) are within 1 ulp of
+    // Excel, where T-3311's Newton steps ([`excel_newton_quantile`]) were up to 7 ulp off, and the
+    // probe goes from 186 failing cells to 137. Against Newton steps above the switch, every suite
+    // has 115 cells newly bit-exact and 25 no longer (gated 90 to 23); one of the 23 is
+    // `CHIINV(1-1E-10,7)` = 0.005605668625082421 (gen-m9/eced4bb6a0234c9e A265), Newton's bits
+    // and 1 ulp from Halley's.
+    let (search, target) = if tail == Tail::Upper && p > Q_SEARCH_P_MAX {
+        (Tail::Lower, 1.0 - p)
+    } else {
+        (tail, p)
+    };
     let lower = match search {
         Tail::Lower => target,
         Tail::Upper => 1.0 - target,
