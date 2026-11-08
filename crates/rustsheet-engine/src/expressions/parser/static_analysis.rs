@@ -818,15 +818,17 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         // name lifts too, but a range there is one `#REF!` argument (gen-m6 16b67941f34e0346
         // A40, A43). `pivot_table` never lifts (SPEC-0015, T-2083; probes/
         // t2085-getpivotdata-items Q!E9:F10, T-4154).
-        Function::Getpivotdata => broadcast_shapes(args.iter().enumerate().filter_map(
-            |(i, arg)| match (i, run_static_analysis_on_node(arg)) {
-                (1, _) => None,
-                (i, shape) if i >= 3 && i % 2 == 1 => Some(shape),
-                (_, shape @ StaticResult::Array(..)) => Some(shape),
-                (_, StaticResult::Unknown) => Some(StaticResult::Unknown),
-                _ => None,
-            },
-        )),
+        Function::Getpivotdata => {
+            broadcast_shapes(args.iter().enumerate().filter_map(|(i, arg)| {
+                match (i, run_static_analysis_on_node(arg)) {
+                    (1, _) => None,
+                    (i, shape) if i >= 3 && i % 2 == 1 => Some(shape),
+                    (_, shape @ StaticResult::Array(..)) => Some(shape),
+                    (_, StaticResult::Unknown) => Some(StaticResult::Unknown),
+                    _ => None,
+                }
+            }))
+        }
         Function::Map | Function::Reduce => StaticResult::Unknown,
         Function::Scan => StaticResult::Unknown,
         Function::Textsplit => StaticResult::Unknown,
