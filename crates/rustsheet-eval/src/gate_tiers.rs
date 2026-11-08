@@ -95,8 +95,9 @@ impl Cells {
         let at = |misses: usize, num: usize| {
             num == 0 || self.cells == 0 || meets_rate(self.cells - misses, self.cells, num)
         };
-        // Envelope misses are every cell not inside: a wrong type is never inside either.
-        at(self.wrong_type, type_num) && at(self.wrong_type + self.outside, envelope_num)
+        // Decision 0355 item 3's two measures are separate: a wrong type counts against the type
+        // bars only, and the envelope bars count `Outside` cells only.
+        at(self.wrong_type, type_num) && at(self.outside, envelope_num)
     }
 }
 
@@ -595,9 +596,47 @@ mod tests {
         let t = tier(&one_function);
         assert!(!t.met);
         assert_eq!(t.failing_functions, ["IRR"]);
-        // Wrong types are envelope misses too.
-        assert!(!tier(&[("IRR", counts(1_000, 1, 1)), ("RATE", counts(1_000, 1, 0))]).met);
-        assert!(tier(&[("IRR", counts(1_000, 1, 0)), ("RATE", counts(1_000, 1, 0))]).met);
+        // A wrong type counts against the type bars only: IRR at exactly 99% type and 99%
+        // envelope, with its wrong types not added to its outside cells.
+        assert!(
+            tier(&[
+                ("IRR", counts(1_000, 10, 10)),
+                ("RATE", counts(19_000, 0, 0))
+            ])
+            .met
+        );
+        assert!(
+            !tier(&[
+                ("IRR", counts(1_000, 11, 0)),
+                ("RATE", counts(100_000, 0, 0))
+            ])
+            .met
+        );
+    }
+
+    /// The type and envelope measures are separate (decision 0355 item 3): wrong types fail
+    /// only the type bars, and outside cells only the envelope bars, at exactly the bars.
+    #[test]
+    fn wrong_types_count_against_the_type_bars_only() {
+        let many_wrong = counts(100, 50, 0);
+        assert!(many_wrong.meets(0, RATE_DEN));
+        assert!(many_wrong.meets(0, 9_900));
+        assert!(!many_wrong.meets(9_900, 0));
+        assert!(!many_wrong.meets(9_900, 9_900));
+        // Exactly at the expert per-function bars on both measures, wrong types not summed in.
+        assert!(counts(100, 1, 1).meets(9_900, 9_900));
+        assert!(!counts(100, 1, 2).meets(9_900, 9_900));
+        assert!(!counts(100, 2, 1).meets(9_900, 9_900));
+        // Exactly at the foundational pooled envelope bar, with no wrong type.
+        assert!(counts(10_000, 0, 1).meets(RATE_DEN, 9_999));
+        assert!(!counts(10_000, 1, 0).meets(RATE_DEN, 9_999));
+        let tiers = tiers(
+            &catalog(),
+            &[("IRR".to_string(), counts(1_000, 500, 0))].into(),
+        );
+        let expert = tier_of(&tiers, Usage::Expert);
+        assert!(!expert.met);
+        assert_eq!(expert.failing_functions, ["IRR"]);
     }
 
     fn run(foundational: bool, expert: bool) -> Vec<Tier> {
