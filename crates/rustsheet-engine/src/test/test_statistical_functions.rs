@@ -676,6 +676,23 @@ fn test_f_test_scalar_argument_is_div0() {
     assert_eq!(model.get_text_a1("A3"), "#DIV/0!");
 }
 
+// An omitted sample of F.TEST/FTEST is #VALUE! in either position, not the one-value #DIV/0!
+// (probes/t4857-f-kinds A605, A606, A659, A660; T-4882).
+#[test]
+fn test_f_test_omitted_sample_is_value_error() {
+    let mut model = new_empty_model();
+    model.set_a1("A1", "=F.TEST(,{2;3;3;9})");
+    model.set_a1("A2", "=F.TEST({2;3;3;9},)");
+    model.set_a1("A3", "=FTEST(,{2;3;3;9})");
+    model.set_a1("A4", "=FTEST({2;3;3;9},)");
+    model.set_a1("A5", "=F.TEST({2;3;3;9},{1;2;4;8})");
+    model.evaluate();
+    for cell in ["A1", "A2", "A3", "A4"] {
+        assert_eq!(model.get_text_a1(cell), "#VALUE!", "{cell}");
+    }
+    assert_ne!(model.get_text_a1("A5"), "#VALUE!");
+}
+
 // ── LINEST / LOGEST / QUARTILE argument order (T-2455) ─────────────────────
 
 // Error values first, in argument order, then the data checks; a computed blank y is `#VALUE!` at

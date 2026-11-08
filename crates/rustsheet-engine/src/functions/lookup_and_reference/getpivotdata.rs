@@ -110,8 +110,10 @@ impl Model {
         match value {
             // A blank cell inside the pivot's area is its only data field (J7; DF S1!C3, A18);
             // a blank cell outside it is `#REF!`, on the pivot's sheet or another (DF A15, A17),
-            // as is a blank cell with several data fields (DF A6, A20). `""` and an omitted
-            // argument are `#REF!` (DF A7, A14, A16).
+            // as is a blank cell with several data fields (DF A6, A20). `""` is `#REF!` (DF A7,
+            // A14, A16); an omitted argument is `#REF!` too, UNVERIFIED (SPEC-0015 unknown 8,
+            // T-4911). A blank cell inside another pivot's area, or in this pivot's page-field
+            // area, is `#REF!` as well, UNVERIFIED (T-4911).
             CalcResult::EmptyCell => {
                 if table.data_fields.len() != 1 {
                     return None;

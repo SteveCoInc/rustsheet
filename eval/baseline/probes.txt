@@ -2748,6 +2748,7 @@ C	probes/t4895-two-criteria-hand-hidden-control.case.json	18
 C	probes/t4895-two-criteria-hand-hidden-delete-one.case.json	18
 C	probes/t4895-two-criteria-number-format-control.case.json	18
 C	probes/t4895-two-criteria-number-format-delete-one.case.json	18
+C	probes/t4901-mround-blank-let-lambda-roundings.case.json	16
 C	probes/t4903-empty-arg-quotient-seriessum-lift.case.json	8
 C	probes/t4923-sqrtpi-factdouble-omitted.case.json	13
 C	probes/t4928-iseven-isodd-omitted.case.json	12
@@ -4644,7 +4645,6 @@ F	probes/stat-test-lift.case.json	Sheet1!P65
 F	probes/stat-test-lift.case.json	Sheet1!P66
 F	probes/stat-test-lift.case.json	Sheet1!P67
 F	probes/subexpr-05d44f6dd6cfc567-calc-a178.case.json	Subexpr!A6
-F	probes/subnormal-saved-negative-and-array.case.json	S!A3
 F	probes/t1689-chisq-test-blanks-text-booleans.case.json	F!A1
 F	probes/t2085-getpivotdata-items.case.json	Q!A1
 F	probes/t2085-getpivotdata-items.case.json	Q!A2
@@ -9630,7 +9630,6 @@ F	probes/t4765-growth-factor-edges.case.json	Cut!A1
 F	probes/t4765-growth-factor-edges.case.json	Cut!A5
 F	probes/t4765-growth-factor-edges.case.json	SmallB!A1
 F	probes/t4765-growth-factor-edges.case.json	SmallB!A3
-F	probes/t4766-array-subnormal-compare.case.json	S!A30
 F	probes/t4793-growth-one-factor-underflow.case.json	One!A2
 F	probes/t4793-growth-several-x.case.json	Multi!A4
 F	probes/t4793-growth-several-x.case.json	SubProd!A5
@@ -10137,12 +10136,8 @@ F	probes/t4857-f-kinds.case.json	Calc!A549
 F	probes/t4857-f-kinds.case.json	Calc!A552
 F	probes/t4857-f-kinds.case.json	Calc!A557
 F	probes/t4857-f-kinds.case.json	Calc!A558
-F	probes/t4857-f-kinds.case.json	Calc!A605
-F	probes/t4857-f-kinds.case.json	Calc!A606
 F	probes/t4857-f-kinds.case.json	Calc!A607
 F	probes/t4857-f-kinds.case.json	Calc!A608
-F	probes/t4857-f-kinds.case.json	Calc!A659
-F	probes/t4857-f-kinds.case.json	Calc!A660
 F	probes/t4857-f-kinds.case.json	Calc!A661
 F	probes/t4857-f-kinds.case.json	Calc!A662
 F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!A11
@@ -10157,6 +10152,13 @@ F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!A51
 F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!B90
 F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!B94
 F	probes/t4863-xlookup-mode-lift-criteria.case.json	Calc!B98
+F	probes/t4901-mround-blank-let-lambda-roundings.case.json	Calc!A10
+F	probes/t4901-mround-blank-let-lambda-roundings.case.json	Calc!A12
+F	probes/t4901-mround-blank-let-lambda-roundings.case.json	Calc!A13
+F	probes/t4901-mround-blank-let-lambda-roundings.case.json	Calc!A14
+F	probes/t4901-mround-blank-let-lambda-roundings.case.json	Calc!A15
+F	probes/t4901-mround-blank-let-lambda-roundings.case.json	Calc!A16
+F	probes/t4901-mround-blank-let-lambda-roundings.case.json	Calc!A3
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!A1
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!A2
 F	probes/t4974-beta-f-inv-endpoint-saturation.case.json	P!A3
