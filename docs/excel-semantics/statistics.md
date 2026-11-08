@@ -7195,14 +7195,15 @@ in Excel, and the 50-digit root agrees.
   A99:A100, A103:A104:
   - Excel's root is 1.1102230246251565E-16 (2^-53) at A83, A84, A87, A88, A92 and A96 (the 50-digit math has no converged
     value there, so their R3 status is unknown). Ours is 5.84E-6 or 2.925E-5 (a search stopped at a band edge) at the
-    beta-171 ones, and 1E-50 or less at beta 1000. Whether 2^-53 is a floor of Excel's search or a clamp is UNVERIFIED.
+    beta-171 ones, and far below 2^-53 (6.3E-29 to 6.5E-129) at beta 1000. Whether 2^-53 is a floor of Excel's search or a clamp is UNVERIFIED.
   - The other six are not 2^-53 and Excel is off the math: A91 2.400191156937126E-12 (relative error against the math 2.0E-5),
     A95 4.098943406916078E-13 (1.19E-4, above decision 0188 R3's 1e-4: a possible MATH-OVER-EXCEL point that needs an owner
     ruling, so T-5078 matches Excel until then), A99 1.7281613391206818E-5, A100 1.8935242263040664E-9 (4.9E-9),
-    A103 2.9511159923556463E-6 and A104 3.233475709407685E-10 (3.3E-7). At A95 and A104 ours is the correctly rounded math.
+    A103 2.9511159923556463E-6 (5.7E-12, Excel 39857 ulp from the math) and A104 3.233475709407685E-10 (3.3E-7); A99 is 8.8E-12
+    from the math (44933 ulp). Ours is 188 ulp from the math at A95, 201 at A104 and 53 at A103 (Excel about 1E12, 2E9 and 4E4 ulp).
   - The 12 cells at p = 1-1.10491974750915E-14 and 1-1E-10 are within 2 to 4 ulp of Excel at beta 171.171095424379 (A81, A82,
-    A89, A90, A97, A98) and 6 to 20 ulp at beta 1000 (A85, A86, A93, A94, A101, A102), where ours is the correctly rounded math and
-    Excel's root is the one off it. So T-4866's band is confirmed at beta 171 only.
+    A89, A90, A97, A98) and 6 to 20 ulp at beta 1000 (A85, A86, A93, A94, A101, A102), where ours is within 2 ulp of the math except A94 (8 ulp)
+    and Excel is 5 to 18 ulp off it (A94: both 8 ulp, on opposite sides). So T-4866's band is confirmed at beta 171 only.
 Evidence: probes-numeric/t3351-beta-inv-sweep A200 (excel-graph; T-3351's fresh sweep); probes/t5066-beta-dist-direct-bgrat (116 cells, excel-graph, 2026-11-08)
 Ours: `bratio::search_direct_bgrat` inside `beta_search_tails` (functions/statistical/bratio/mod.rs)
 Status: VERIFIED (excel-graph) for BETA.INV and BETA.DIST's cdf values; the 2^-53 root floor UNVERIFIED
