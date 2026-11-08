@@ -3,7 +3,7 @@ id: T-5005
 title: "Round-trip R2 sheet-level scenarios: rename, add, delete and move a sheet (SPEC-0033 R2, SPEC-0034 D5.7)"
 milestone: M15
 lane: harness
-status: blocked
+status: in-progress
 priority: P2
 size: M
 tier: opus
@@ -32,8 +32,3 @@ expected-delta rule is R1's, `roundtrip/r1.rs`.
 
 ## Out of scope
 - Row and column R2 (after M4).
-
-## Blocked because
-Deferred to Phase 2 (decisions 0027, 0275): M15 waits until Phase 1 parity exits. Unblock when
-docs/status.md has the line `**Phase 1:** exited <date>`. An owner-directed session may claim it earlier
-(decision 0306).
