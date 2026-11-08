@@ -37,9 +37,12 @@ math). Against T-4975's head, per family:
   the crossing where AS 109's first estimate overflows. Gated: 19 wrong-type cells fixed, 28 moved inside the
   envelope, 10 to bit-exact; nothing worse in any class. Main's crossing by default (#4087's advice) was
   measured and loses 540 gated cells for 84, so it is not adopted.
-- **LINEST/LOGEST/GROWTH/TREND (`linest.rs`):** R's diagonal is alpha and data-column reflectors divide the
-  scale (`2·dot/|v|²`), except an identity fit keeps the reflected head so it stays exact. +165/−5 bit-exact
-  (the 5 are 1-ulp TREND/GROWTH cells), 1 wrong type and 8 outside cells fixed; two Gate A lines stale.
+- **LINEST/LOGEST/GROWTH/TREND (`linest.rs`):** R's diagonal is alpha and every reflector divides the scale
+  (`2·dot/|v|²`; after review, one rule for the constant's reflector too), except an identity fit keeps the
+  reflected head so it stays exact. About +209/−20 bit-exact, all losses last-digit drift inside the envelope;
+  1 wrong type and 8 outside cells fixed; three Gate A lines stale (LOGEST A98/A110, LINEST A102). Open lead: the
+  identity-fit exception rests on linest-modes K85:N85 alone; a probe of a scaled copy of y and of y as a later
+  pivot would show whether Excel's exactness is general.
   Excel's no-constant slope is not Σxy/Σx² (t4222 A51).
 - **CHISQ.INV / CHIINV (`incomplete_gamma/closed_form.rs`):** Halley steps above the Q-to-P switch too, removing
   the Newton branch kept for one cell (`CHIINV(1-1E-10,7)`, now 1 ulp off). +90/−23 gated, last digits only.
@@ -53,5 +56,8 @@ math). Against T-4975's head, per family:
   F1/F6/F12/F38, `E-A` against Excel's exact 0; f-inv-back-transform C6/D6, x/(1-x) of a 1-ulp
   `BETA.INV(0.999,1/2,1/2)`) stay known failures under decision 0351 (owner T-4994); F.INV at 1E-300 with
   df1 6–9 is 11–12 digits off (long floor walk) and huge-df1 F.INV stays far off (T-4994).
-- Gate A: 0 failing; three stale lines removed (F.INV.RT A142, LOGEST A98/A110).
+- Gate A: 0 failing; four stale lines removed (F.INV.RT A142, LOGEST A98/A110, LINEST A102).
+- Owner rulings (2026-11-08, decision 0351 addendum): the R4 waiver extends to the selectors above (T-5090 owes
+  their guards), and BETA.INV/F.INV at p < 1E-15 in either tail are an R3 region (MATH-OVER-EXCEL entry).
+- The cherry-picked kernel commits are titled `T-4975:` (they were written as T-4975 follow-ups); they are T-5089's.
 

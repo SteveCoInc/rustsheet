@@ -8749,6 +8749,15 @@ Region (T-3386, decision 0311: the R3-marked eval cells, each with its committed
 - gen-m9/7980ffb6095a340d: `TINV(1E-200,1E+10)` at A160 (Excel 58.193, math 30.2285087720; the engine is 3.7E-10
   relative off, inside ε).
 
+Region (T-5089, owner ruling of 2026-11-08 recorded in decision 0351's addendum): BETA.INV(p, alpha, beta) and
+F.INV(p, d1, d2) at p < 1E-15 in either tail, not only below 1e-150 in the left tail. Where the engine's
+reproduction of Excel's AS 109 stop is more than G = 1e-4 relative off the converged crossing, the engine returns the
+crossing, the 50-digit math within ε (beta.rs `BETA_QUANTILE_STATRS_P_MIN`, fisher.rs `F_QUANTILE_REFINE_P_MIN`).
+This holds even where that stop is Excel's value bit for bit: `BETA.INV` at accuracy/BETA.INV/s1 A169 stops at
+Excel's 2.657957500039701E-25 and the engine returns the math 6.89E-21; probes/t4974-beta-inv-dbl-min-residual
+H7 and C7 are the same. Excel's errors are still matched (an unconverged deep-tail search is `#NUM!`), and the
+floor stop that is Excel's value is kept below the root (statistics.md "BETA.INV and F.INV in the deep tail").
+
 Not marked, and why (T-3386):
 - t1531 A84 and A108, `CONFIDENCE.T(1E-300,1,100000)` and `CONFIDENCE.T(1E-300,1,100001)` (Excel 0.2502, engine
   0.11762, which is T.INV.2T's math divided by √n): CONFIDENCE.T had no Gate A definition then, so the cells had no
@@ -8829,7 +8838,7 @@ Status: MATH-OVER-EXCEL (decision 0188)
 Ours: the engine returns the math within ε at every marked point (Gate A's R3 check). Such cells stay F
 lines of eval/baseline and count as passing in Gate B and the R1(c) rows (T-3359, T-3427). The math path
 keeps directive 5's caps.
-Tasks: T-3358, T-3359, T-3363, T-3386, T-3337
+Tasks: T-3358, T-3359, T-3363, T-3386, T-3337, T-5089
 
 ## GAMMA.INV at a huge shape, closed-form branch: Excel is about 2.7e-4 off, RustSheet returns the math (MATH-OVER-EXCEL)
 Rule: on the Wilson-Hilferty closed-form branch of "GAMMA.INV and CHISQ.INV at a huge shape" above (the gamma density
