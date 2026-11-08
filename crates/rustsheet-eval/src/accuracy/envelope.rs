@@ -139,7 +139,7 @@ pub fn envelope(
         _ => {}
     }
     // R3 drops Excel's side only where Excel gives a number: its errors are still matched
-    // (decision 0188 R3). An unsupported engine result (`#NAME?`, `#N/IMPL`) is never inside,
+    // (decision 0188 R3). An unsupported engine result (`#NAME?`, `#N/IMPL!`) is never inside,
     // though the closeness buckets leave it out of the visibly-off count.
     let r3_drops_excel = r3 && matches!(excel_value, Some(Value::Number(_)));
     let excel_side = !r3_drops_excel
@@ -373,7 +373,7 @@ mod tests {
         // Excel text against the engine's #NAME?: compare() gives `Unsupported`, which the
         // closeness buckets do not count as visibly off.
         let math = || Some(MathValue::Number(MATH));
-        for code in ["#NAME?", "#N/IMPL"] {
+        for code in ["#NAME?", "#N/IMPL!"] {
             let engine = err(code);
             let cell = filled(Value::Text("x".into()), &engine);
             assert_eq!(cell.verdict, Verdict::Unsupported);

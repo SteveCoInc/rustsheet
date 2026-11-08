@@ -371,7 +371,7 @@ pub fn test_file(file_path: &str, skip: &[&str]) -> Result<(), String> {
 
 /// Gives the error constants of `model` the kind the exporter saves them as, then recalculates,
 /// so a saved-and-reloaded copy compares equal: the engine-only `#CIRC!`, `#ERROR!` and
-/// `#N/IMPL` are written as `#VALUE!` (`exported_error_literal`), and cells that read them
+/// `#N/IMPL!` are written as `#VALUE!` (`exported_error_literal`), and cells that read them
 /// (ERROR.TYPE) follow. The rich kinds (`#CALC!`, `#SPILL!`, ...) keep theirs through `vm`
 /// (T-1014).
 fn save_error_constants_as_exported(model: &mut Model) {
