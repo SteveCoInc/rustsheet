@@ -20,7 +20,8 @@ From PR #4100's round-2 review (all APPROVE, MINOR only):
 - **Excel fidelity:**
   - accuracy/BETA.INV/s1 Calc!A169 and probes/t4974-beta-inv-dbl-min-residual P!H7 and P!C7 have no line in
     eval/accuracy/math-over-excel.tsv. They pass only through the envelope's math side, so Gate A's R3 check
-    (T-5097) never holds them to the math alone.
+    (T-5097) never holds them to the math alone. Split with T-4994, which owns those dbl-min-residual cells' Excel
+    values; this task only adds their R3 marks.
   - The region has no F.INV evidence point between 1E-150 and 1E-15, or in the right tail.
   - The MATH-OVER-EXCEL entry's `Rule:` line in docs/excel-semantics/statistics.md still says "p < 1e-150 … left
     tail", while its new T-5089 Region paragraph widens it.
