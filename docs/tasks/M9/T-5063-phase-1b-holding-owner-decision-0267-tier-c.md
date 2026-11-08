@@ -27,6 +27,9 @@ Phase 1 owners criterion (decision 0187) reads them as owned, without reopening 
   - gen-m9/0a614cfe974b59c3.case.json (1): Calc!A327 (GAMMAINV)
   - gen-m9/a013a45a8fbcab4f.case.json (1): Calc!A338 (CHIINV)
 
+- Also held here for the M9 exit row: probes/t2436/e85daedce5c2675e.case.json (2): Calc!A31, Calc!A46. These are
+  decision 0329 superseded October cells (accepted known failures, T-4736), counted by M9's probe row.
+
 ## Acceptance criteria
 - [ ] Each cell above is fixed by the deferred task that owns it, or stays listed here until Phase 1b reopens it.
 
