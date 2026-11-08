@@ -12,7 +12,7 @@ import json
 import re
 from pathlib import Path
 
-USAGES = ("foundational", "expert")  # the `usage:` values, in the order inference tries them
+USAGES = ("foundational", "expert")  # the `usage:` values
 SCOPE = Path("eval") / "catalog" / "scope.json"
 # A run of name characters that is not the tail of a longer name, a hyphenated word, a sheet or
 # absolute reference (`P!SUM`, `$SUM`) or an error literal (`#N/A`), and the character after it.
@@ -37,11 +37,12 @@ def catalog_tiers(root: Path) -> dict[str, str]:
 
 
 def title_usage(title: str, root: Path) -> str | None:
-    """`foundational` when a foundational catalog name is a whole word of `title`, else `expert`
-    when an expert one is, else None."""
+    """The tier of the first catalog name that is a whole word of `title`, left to right; None
+    when there is none. A title names its subject function first: a later name is usually one its
+    formula quotes (T-3061's `T.INV is SQRT(...)` is a T.INV task)."""
     tiers = catalog_tiers(root)
-    found = {tiers.get(name) for name, after in NAME.findall(title) if name not in CALL_ONLY or after == "("}
-    return next((usage for usage in USAGES if usage in found), None)
+    found = (tiers.get(name) for name, after in NAME.findall(title) if name not in CALL_ONLY or after == "(")
+    return next((usage for usage in found if usage is not None), None)
 
 
 def effective_usage(t: dict[str, object], root: Path) -> str | None:

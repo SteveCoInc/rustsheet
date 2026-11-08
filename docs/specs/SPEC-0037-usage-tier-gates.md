@@ -225,8 +225,8 @@ The JSON schema:
     touches no particular function has no `usage`.
 - **Effective tier**, `effective_usage(task)`, in order:
   1. the `usage:` key;
-  2. else, from the title: `foundational` if any foundational catalog name appears in it as a whole word (an
-     upper-case name followed by `(`, `,`, space, or the end), else `expert` if any expert name does;
+  2. else, from the title: the tier of the first catalog function name in the title that appears in it as a
+     whole word (an upper-case name followed by `(`, `,`, space, or the end);
   3. else none.
 
   The names come from eval/catalog/scope.json, read once.

@@ -45,16 +45,20 @@ functions (decision 0355 item 7), and new tasks record their function's tier.
   a foundational task's line (after the path on `next`, before any `resume` note). `new --usage
   foundational|expert` writes the key, and without the flag the tier the title names, if any;
   `make new-task USAGE=...` passes it through.
-- Title inference reads eval/catalog/scope.json once per tree (`functools.cache`). A name counts when it is
+- Title inference reads eval/catalog/scope.json once per tree (`functools.cache`) and takes the tier of the
+  first catalog name in the title, left to right (coordinator follow-up; SPEC-0037 design 8 item 2 now says
+  so): a title names its subject first. A name counts when it is
   upper case, not the tail of a longer name, a hyphenated word, a sheet or absolute reference (`P!SUM`,
   `$SUM`) or an error literal (`#N/A`), and followed by `(`, `,`, a space or the end. Short-name rule: `N`,
   `T`, `NA`, `TRUE` and `FALSE` count only before `(` (titles use them as a letter, `Top-N`, a population
   size `N 6`, a value `a TRUE cell`, or "not available"). Other short names such as IF, AND, OR, NOT and DAY
   count as words: matching is case-sensitive, and in every current title their all-caps form is the function.
-- Open tasks (850) at this commit infer foundational 104, expert 335, none 411 (ready: 85 / 169 / 309 of
+- Open tasks (850) at this commit infer foundational 78, expert 361, none 411 (ready: 65 / 189 / 309 of
   563). No task carries the key yet.
-- Known limit, per the spec's "any name" rule: a title that quotes another function in a formula is inferred by
-  it, e.g. T-3061 (T.INV, an expert task) reads foundational from `SQRT(...)`, T-3242 (GAMMA.DIST) from
-  `EXP(...)`. The `usage:` key overrides; task-format.md says to set it then. Bulk re-tagging is out of scope.
-- Tests: scripts/test_task_usage.py (17 tests: inference, the short-name rule, the cache, the real catalog,
+- First-name inference fixes the wrong tiers "any foundational name" gave titles that quote a formula: T-3061 (`T.INV is
+  SQRT(...)`) and T-3242 (`GAMMA.DIST ... EXP(...)`) now read expert, from their subject function. Where a
+  title's first function is not the task's, the `usage:` key overrides (task-format.md). Bulk re-tagging is
+  out of scope.
+- Tests: scripts/test_task_usage.py (19 tests: first-name inference, a formula quoting a foundational
+  function after the subject, the short-name rule, the cache, the real catalog,
   `effective_usage`, validation, ordering at equal and unequal priority, `next`/`ready` lines, `new --usage`).

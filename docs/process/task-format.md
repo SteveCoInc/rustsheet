@@ -68,12 +68,13 @@ when Phase 1 exits.
 
 `usage:` (SPEC-0037 design 8, decision 0355 item 7) is the tier, in eval/catalog/scope.json, of the
 function the task's cells belong to: `foundational` or `expert`. A task that touches no particular
-function has no `usage:`. Without the key, `tasks.py` infers the tier from the title: `foundational`
-when a foundational catalog name is a whole word of it (upper case, followed by `(`, `,`, a space or
-the end, and not part of a longer name: `IF` does not match in `IFERROR` or `SUMIF`, nor `T` in
-`T.INV.2T`), else `expert` when an expert name is, else none. `N`, `T`, `NA`, `TRUE` and `FALSE` count
+function has no `usage:`. Without the key, `tasks.py` infers the tier from the title: the tier of the
+first catalog function name, left to right, that is a whole word of it (upper case, followed by `(`,
+`,`, a space or the end, and not part of a longer name: `IF` does not match in `IFERROR` or `SUMIF`,
+nor `T` in `T.INV.2T`), else none. A title names its subject first, so a function its formula quotes
+later does not decide (`T.INV is SQRT(...)` is expert, from T.INV). `N`, `T`, `NA`, `TRUE` and `FALSE` count
 only as a call, before `(`, because titles also use them as a letter, a value or "not available".
-Set the key when the title names another function than the task's (`SQRT(...)` in a T.INV task).
+Set the key when the title's first function is not the task's.
 Among ready tasks of the same milestone and priority, `make next-task` picks a foundational one
 first, and `next` and `ready` print `usage: foundational` on its line; P0, handoffs, re-reviews and
 campaign stages still come first. `make new-task USAGE=foundational|expert` writes the key, and

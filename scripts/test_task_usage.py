@@ -42,9 +42,10 @@ class Fixture(unittest.TestCase):
 
 
 class TitleInference(Fixture):
-    def test_a_foundational_name_wins_over_an_expert_one(self) -> None:
-        self.assertEqual(self.usage("XIRR and VLOOKUP of a blank"), "foundational")
-        self.assertEqual(self.usage("XIRR of a blank"), "expert")
+    def test_the_first_catalog_name_decides(self) -> None:
+        self.assertEqual(self.usage("XIRR and VLOOKUP of a blank"), "expert")
+        self.assertEqual(self.usage("VLOOKUP and XIRR of a blank"), "foundational")
+        self.assertEqual(self.usage("Probe CHOOSE then XIRR, then SUM"), "expert")  # CHOOSE is not in the catalog
         self.assertIsNone(self.usage("Nightly fuzz failures open an issue"))
 
     def test_a_name_counts_before_a_paren_a_comma_a_space_or_the_end(self) -> None:
@@ -64,6 +65,13 @@ class TitleInference(Fixture):
     def test_names_match_upper_case_only(self) -> None:
         self.assertIsNone(self.usage("Sum and if over a log"))
         self.assertEqual(self.usage("If SUM is empty"), "foundational")
+
+    def test_a_formula_quoting_a_foundational_function_after_the_subject(self) -> None:
+        # T-3061 and T-3242 shapes: the subject comes first, the formula quotes SUM or IF after it.
+        self.assertEqual(self.usage("Student-t quantile: Excel's XIRR is SUM(x*(1/y-1)) of y"), "expert")
+        self.assertEqual(self.usage("XIRR small-shape cdf: the IF(a,SUM(x)) residue"), "expert")
+        # A name skipped by the short-name rule does not decide: the next one does.
+        self.assertEqual(self.usage("Legacy N over XIRR"), "expert")
 
     def test_short_names_that_read_as_words_count_only_before_a_paren(self) -> None:
         # N, T, NA, TRUE and FALSE: a letter, a value or "not available" in a title.
@@ -92,6 +100,7 @@ class TitleInference(Fixture):
         self.assertEqual(real("VLOOKUP approximate match over text"), "foundational")
         self.assertEqual(real("XIRR with a single cash flow"), "expert")
         self.assertEqual(real("T.INV.2T tails"), "expert")
+        self.assertEqual(real("Student-t quantile: Excel's T.INV is SQRT(df*(1/y-1)) of y"), "expert")
         self.assertIsNone(real("Python facade: Transaction.move_sheet reorders a sheet by name"))
 
 
