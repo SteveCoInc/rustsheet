@@ -16,6 +16,9 @@ The R3 region the owner ruled in T-5089 (BETA.INV/F.INV at p < 1E-15 in either t
 held to the math by Gate A at committed points, and T-5089's round-2 review MINOR findings are closed.
 
 ## Context
+Filed on branch `agent/tasks/T-5103-file` (task-only PR); the work itself is not started, so pick it up from
+`main` on a new branch per the work loop.
+
 From PR #4100's round-2 review (all APPROVE, MINOR only):
 - **Excel fidelity:**
   - accuracy/BETA.INV/s1 Calc!A169 and probes/t4974-beta-inv-dbl-min-residual P!H7 and P!C7 have no line in
