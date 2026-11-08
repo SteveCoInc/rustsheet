@@ -26,15 +26,15 @@ fn constants_are_typed_as_in_a1_mode_and_unparsable_formulas_are_refused() {
     model
         .set_typed_r1c1_user_input(0, 1, 1, "abc".to_string())
         .unwrap();
-    assert_eq!(model._get_text("A1"), "abc");
+    assert_eq!(model.get_text_a1("A1"), "abc");
     assert_eq!(typed_r1c1(&mut model, 0, "=$A$1", 2, 1), None);
     assert_eq!(typed_r1c1(&mut model, 0, "=1+", 3, 1), None);
     // A refused formula leaves the cell as it was.
-    assert_eq!(model._get_text("A1"), "abc");
+    assert_eq!(model.get_text_a1("A1"), "abc");
     assert!(model
         .set_typed_r1c1_user_input(0, 1, 1, "=1+".to_string())
         .is_err());
-    assert_eq!(model._get_text("A1"), "abc");
+    assert_eq!(model.get_text_a1("A1"), "abc");
 }
 
 /// A LET name or LAMBDA parameter spelled like an A1 cell is no reference typed in R1C1 mode,
@@ -56,7 +56,7 @@ fn let_and_lambda_names_spelled_like_a1_cells_bind() {
         ("=LET(x,5,x+1)", "6"),
     ];
     let mut model = new_empty_model();
-    model._set("F1", "7");
+    model.set_a1("F1", "7");
     for (row, (typed, _)) in (1..).zip(cases) {
         assert_eq!(
             typed_r1c1(&mut model, 0, typed, row, 8).as_deref(),
@@ -70,8 +70,8 @@ fn let_and_lambda_names_spelled_like_a1_cells_bind() {
     for m in [&model, &reloaded] {
         for (row, (typed, value)) in (1..).zip(cases) {
             let cell = format!("H{row}");
-            assert_eq!(m._get_text(&cell), value, "{typed}");
-            assert_eq!(m._get_formula(&cell), typed);
+            assert_eq!(m.get_text_a1(&cell), value, "{typed}");
+            assert_eq!(m.get_formula_a1(&cell), typed);
         }
     }
     // Typed in A1 mode, the A1 text of these formulas is refused, and `_xlpm.` is part of the
@@ -104,7 +104,7 @@ fn unbound_names_spelled_like_a1_cells_are_quoted_undefined_names() {
         ("=ISREF(f1)", "=ISREF('f1')", "FALSE"),
     ];
     let mut model = crate::test::util::new_empty_model();
-    model._set("F1", "7");
+    model.set_a1("F1", "7");
     for (row, (typed, ..)) in (1..).zip(cases) {
         model
             .set_typed_r1c1_user_input(0, row, 1, typed.to_string())
@@ -113,8 +113,8 @@ fn unbound_names_spelled_like_a1_cells_are_quoted_undefined_names() {
     model.evaluate();
     for (row, (typed, formula, value)) in (1..).zip(cases) {
         let cell = format!("A{row}");
-        assert_eq!(model._get_formula(&cell), formula, "{typed}");
-        assert_eq!(model._get_text(&cell), value, "{typed}");
+        assert_eq!(model.get_formula_a1(&cell), formula, "{typed}");
+        assert_eq!(model.get_text_a1(&cell), value, "{typed}");
     }
     // The quoted spelling is refused typed, in either mode.
     assert_eq!(typed_r1c1(&mut model, 0, "='f1'", 21, 1), None);
@@ -141,9 +141,9 @@ fn an_unbound_prefixed_name_keeps_its_prefix() {
         ("=R1C1", "=R1C1", "#NAME?"),
     ];
     let mut model = crate::test::util::new_empty_model();
-    model._set("F1", "7");
+    model.set_a1("F1", "7");
     for (row, (stored, ..)) in (1..).zip(cases) {
-        model._set(&format!("A{row}"), stored);
+        model.set_a1(&format!("A{row}"), stored);
     }
     // Typed, the prefix stays as well (A10).
     model
@@ -155,10 +155,10 @@ fn an_unbound_prefixed_name_keeps_its_prefix() {
     for m in [&model, &reloaded] {
         for (row, (stored, formula, value)) in (1..).zip(cases) {
             let cell = format!("A{row}");
-            assert_eq!(m._get_formula(&cell), formula, "{stored}");
-            assert_eq!(m._get_text(&cell), value, "{stored}");
+            assert_eq!(m.get_formula_a1(&cell), formula, "{stored}");
+            assert_eq!(m.get_text_a1(&cell), value, "{stored}");
         }
-        assert_eq!(m._get_formula("A20"), "=_xlpm.abc");
+        assert_eq!(m.get_formula_a1("A20"), "=_xlpm.abc");
     }
 }
 
@@ -184,9 +184,9 @@ fn a_files_doubled_prefix_is_one_mark_and_the_name() {
         ),
     ];
     let mut model = crate::test::util::new_empty_model();
-    model._set("F1", "7");
+    model.set_a1("F1", "7");
     for (row, (stored, ..)) in (1..).zip(cases) {
-        model._set(&format!("A{row}"), stored);
+        model.set_a1(&format!("A{row}"), stored);
     }
     model.evaluate();
     let mut reloaded = crate::Model::from_bytes(&model.to_bytes(), "en").unwrap();
@@ -194,8 +194,8 @@ fn a_files_doubled_prefix_is_one_mark_and_the_name() {
     for m in [&model, &reloaded] {
         for (row, (stored, formula, value)) in (1..).zip(cases) {
             let cell = format!("A{row}");
-            assert_eq!(m._get_formula(&cell), formula, "{stored}");
-            assert_eq!(m._get_text(&cell), value, "{stored}");
+            assert_eq!(m.get_formula_a1(&cell), formula, "{stored}");
+            assert_eq!(m.get_text_a1(&cell), value, "{stored}");
         }
     }
     // The export writes the file's text back.
@@ -231,7 +231,7 @@ fn typed_xlpm_is_part_of_the_name() {
         ("=_xlpm.abc", "#NAME?"),
     ];
     let mut model = new_empty_model();
-    model._set("F1", "7");
+    model.set_a1("F1", "7");
     for (row, (typed, _)) in (1..).zip(cases) {
         model
             .set_typed_user_input(0, row, 1, typed.to_string())
@@ -248,8 +248,8 @@ fn typed_xlpm_is_part_of_the_name() {
     for m in [&model, &reloaded] {
         for (row, (typed, value)) in (1..).zip(cases) {
             for cell in [format!("A{row}"), format!("B{row}")] {
-                assert_eq!(m._get_formula(&cell), typed, "{cell}");
-                assert_eq!(m._get_text(&cell), value, "{cell}");
+                assert_eq!(m.get_formula_a1(&cell), typed, "{cell}");
+                assert_eq!(m.get_text_a1(&cell), value, "{cell}");
             }
         }
     }
@@ -259,5 +259,5 @@ fn typed_xlpm_is_part_of_the_name() {
         .set_typed_user_input(0, 20, 1, declared.to_string())
         .is_err());
     assert_eq!(typed_r1c1(&mut model, 0, declared, 20, 2), None);
-    assert_eq!(model._get_formula("A20"), "");
+    assert_eq!(model.get_formula_a1("A20"), "");
 }

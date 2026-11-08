@@ -38,16 +38,16 @@ fn grouped_reference_name_joins_with_a_cell_in_the_range_operator() {
     model
         .define_name("ig", Some(0), "=(INDEX(Sheet1!$B$1:$B$2,2))")
         .unwrap();
-    model._set("B1", "1");
-    model._set("B2", "2");
-    model._set("B3", "3");
-    model._set("A1", "=SUM(ig:B3)");
-    model._set("A2", "=ROWS(rg:B3)");
-    model._set("A3", "=SUM(B3:ig)");
+    model.set_a1("B1", "1");
+    model.set_a1("B2", "2");
+    model.set_a1("B3", "3");
+    model.set_a1("A1", "=SUM(ig:B3)");
+    model.set_a1("A2", "=ROWS(rg:B3)");
+    model.set_a1("A3", "=SUM(B3:ig)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "5");
-    assert_eq!(model._get_text("A2"), "3");
-    assert_eq!(model._get_text("A3"), "5");
+    assert_eq!(model.get_text_a1("A1"), "5");
+    assert_eq!(model.get_text_a1("A2"), "3");
+    assert_eq!(model.get_text_a1("A3"), "5");
 }
 
 // A call of a cell-shaped name is stored in R1C1 as `R[-7]C[27](1)`, which must parse back after
@@ -55,13 +55,13 @@ fn grouped_reference_name_joins_with_a_cell_in_the_range_operator() {
 #[test]
 fn cell_shaped_call_survives_a_sheet_rename() {
     let mut model = new_empty_model();
-    model._set("A8", "=Ab1(1)");
+    model.set_a1("A8", "=Ab1(1)");
     model.evaluate();
-    assert_eq!(model._get_formula("A8"), "=AB1(1)");
+    assert_eq!(model.get_formula_a1("A8"), "=AB1(1)");
     model.rename_sheet("Sheet1", "Other").unwrap();
     model.evaluate();
-    assert_eq!(model._get_formula("A8"), "=AB1(1)");
-    assert_eq!(model._get_text("A8"), "#REF!");
+    assert_eq!(model.get_formula_a1("A8"), "=AB1(1)");
+    assert_eq!(model.get_text_a1("A8"), "#REF!");
 }
 
 // A formula that does not parse is stored as its A1 text; a structural edit must not read `Ab1`
@@ -69,12 +69,12 @@ fn cell_shaped_call_survives_a_sheet_rename() {
 #[test]
 fn unparsed_cell_shaped_call_keeps_its_text_after_a_sheet_rename() {
     let mut model = new_empty_model();
-    model._set("A8", "=Ab1 (1)");
+    model.set_a1("A8", "=Ab1 (1)");
     model.evaluate();
-    assert_eq!(model._get_formula("A8"), "=Ab1 (1)");
+    assert_eq!(model.get_formula_a1("A8"), "=Ab1 (1)");
     model.rename_sheet("Sheet1", "Other").unwrap();
     model.evaluate();
     // Not `=AC9(1)`, nor `=Ab1(1)`: the stored parse error is not re-parsed (T-1805).
-    assert_eq!(model._get_formula("A8"), "=Ab1 (1)");
-    assert_eq!(model._get_text("A8"), "#ERROR!");
+    assert_eq!(model.get_formula_a1("A8"), "=Ab1 (1)");
+    assert_eq!(model.get_text_a1("A8"), "#ERROR!");
 }

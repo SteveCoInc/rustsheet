@@ -1,10 +1,19 @@
 //! Lowering of a parsed structured reference to the area it resolves to against the parser's
 //! table list. Moved out of operands.rs unchanged (T-3466).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_sign_loss,
+    clippy::manual_let_else,
+    clippy::match_same_arms,
+    clippy::needless_pass_by_value,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 
 use super::super::token::{self, TableReference};
 use super::super::utils::number_to_column;
 use super::structured_reference::{COLUMN_NOT_FOUND, TABLE_NOT_FOUND, TABLE_SHEET_NOT_FOUND};
-use super::*;
+use super::{get_table_column_by_name, parse_range, ExpectedTokens, Node, Parser};
 
 impl Parser {
     /// The area a structured reference resolves to against the parser's table list: a
@@ -31,22 +40,21 @@ impl Parser {
             }
         };
         // table-name => table
-        let table = match self.table_named(&table_name) {
-            Some(t) => t,
-            None => {
-                let message = format!(
-                    "{TABLE_NOT_FOUND}'{table_name}' at '{}!{}{}'",
-                    context.sheet,
-                    number_to_column(context.column).unwrap_or(format!("{}", context.column)),
-                    context.row
-                );
-                return Node::ParseErrorKind {
-                    formula: self.lexer.get_formula(),
-                    expecting: vec![ExpectedTokens::Other],
-                    position: 0,
-                    message,
-                };
-            }
+        let table = if let Some(t) = self.table_named(&table_name) {
+            t
+        } else {
+            let message = format!(
+                "{TABLE_NOT_FOUND}'{table_name}' at '{}!{}{}'",
+                context.sheet,
+                number_to_column(context.column).unwrap_or(format!("{}", context.column)),
+                context.row
+            );
+            return Node::ParseErrorKind {
+                formula: self.lexer.get_formula(),
+                expecting: vec![ExpectedTokens::Other],
+                position: 0,
+                message,
+            };
         };
         let table_sheet_index = match self.get_sheet_index_by_name(&table.sheet_name) {
             Some(i) => i,

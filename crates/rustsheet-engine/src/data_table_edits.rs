@@ -269,7 +269,7 @@ impl Model {
         row: i32,
         column: i32,
     ) -> Result<(), String> {
-        let at = crate::expressions::types::CellReferenceIndex { sheet, row, column };
+        let at = crate::expressions::types::CellReferenceIndex { sheet, column, row };
         if self.data_table_at(at).is_some() {
             return Err(DATA_TABLE_PART.to_string());
         }

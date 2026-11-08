@@ -17,6 +17,7 @@
 //! it could make the part malformed.
 
 use std::borrow::Cow;
+use std::fmt::Write as _;
 
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
@@ -93,7 +94,7 @@ fn with_show_as(list: &str, wanted: Option<ShowDataAs>) -> Option<String> {
                         closed = true;
                         if let Some(extension) = extension(wanted, placed, &name) {
                             let open = source.strip_suffix("/>")?.trim_end();
-                            out.push_str(&format!("{open}>{extension}</{name}>"));
+                            let _ = write!(out, "{open}>{extension}</{name}>");
                             placed = true;
                             root = Some(name);
                             continue;

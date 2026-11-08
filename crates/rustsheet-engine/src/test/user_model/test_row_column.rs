@@ -64,7 +64,7 @@ fn simple_delete_column() {
 
     model.delete_columns(0, 5, 1).unwrap();
 
-    assert_eq!(model.get_formatted_cell_value(0, 2, 5), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 2, 5), Ok(String::new()));
     assert_eq!(model.get_column_width(0, 5), Ok(DEFAULT_COLUMN_WIDTH));
 
     model.undo().unwrap();
@@ -121,7 +121,7 @@ fn simple_delete_row() {
 
     model.delete_rows(0, 15, 1).unwrap();
 
-    assert_eq!(model.get_formatted_cell_value(0, 15, 6), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 15, 6), Ok(String::new()));
     assert_eq!(model.get_row_height(0, 15), Ok(DEFAULT_ROW_HEIGHT));
 
     model.undo().unwrap();
@@ -152,7 +152,7 @@ fn simple_delete_row_no_style() {
     model.set_user_input(0, 15, 6, "=D15*2").unwrap();
     model.delete_rows(0, 15, 1).unwrap();
 
-    assert_eq!(model.get_formatted_cell_value(0, 15, 6), Ok("".to_string()));
+    assert_eq!(model.get_formatted_cell_value(0, 15, 6), Ok(String::new()));
 }
 
 #[test]

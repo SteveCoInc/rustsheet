@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 //! The minus in front of a value turns it into a number, and two of them do
@@ -25,7 +28,7 @@ fn model_with_data() -> Model {
         ("C2", "TRUE"),
         ("C4", "abc"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
 }
@@ -40,19 +43,19 @@ fn evaluate(formulas: &[&str]) -> Vec<String> {
     }
     model.evaluate();
     (1..=formulas.len() as i32)
-        .map(|r| model._get_text_at(0, r, 5))
+        .map(|r| model.get_text_by_index(0, r, 5))
         .collect()
 }
 
 /// What a formula set in E10 spills, as rows of `columns` cells
 fn spill(formula: &str, rows: i32, columns: i32) -> Vec<Vec<String>> {
     let mut model = model_with_data();
-    model._set("E10", formula);
+    model.set_a1("E10", formula);
     model.evaluate();
     (0..rows)
         .map(|r| {
             (0..columns)
-                .map(|c| model._get_text_at(0, 10 + r, 5 + c))
+                .map(|c| model.get_text_by_index(0, 10 + r, 5 + c))
                 .collect()
         })
         .collect()

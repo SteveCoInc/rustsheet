@@ -7,6 +7,13 @@
 //! geometric or per-period sum, anything else a closed form, and the interest is PMT times the
 //! period count less that principal, as Excel builds it (docs/excel-semantics/financial.md
 //! "CUMIPMT and CUMPRINC over many periods"). Moved out of `financial/mod.rs` (T-1845).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
+// LINT-DEBT-END
 
 use super::annuity::{compute_payment, discounted_fails, growth_log};
 use super::number_or_error;

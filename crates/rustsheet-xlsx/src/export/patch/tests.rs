@@ -159,7 +159,7 @@ fn counts_are_set_in_the_sst_tag_only() {
         r#"<sst uniqueCount="2"><si><t>x count="7"</t></si>"#
     );
     assert_eq!(
-        count_si(r#"<sst><si><t>a</t></si><si/><si><r><t>b</t></r></si></sst>"#),
+        count_si(r"<sst><si><t>a</t></si><si/><si><r><t>b</t></r></si></sst>"),
         Ok(3)
     );
 }

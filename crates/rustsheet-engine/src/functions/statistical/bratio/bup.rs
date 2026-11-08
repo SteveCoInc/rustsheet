@@ -1,5 +1,8 @@
 //! TOMS 708 `bup` and bratio's L140 for x0 <= 0.7 (SPEC-0025's `bup.rs`): w = bup(b0', a0, y0, x0, n) +
 //! bpser(a0, b0', x0).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 use super::super::beta_density::beta_density_small_shape;
 use super::bgrat::{bgrat_increment, Dd, MAX_Z};

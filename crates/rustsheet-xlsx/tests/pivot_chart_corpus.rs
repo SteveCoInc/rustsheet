@@ -119,12 +119,11 @@ fn corpus(suite: &str, relative: &str) -> Option<Vec<u8>> {
     ]
     .iter()
     .collect();
-    match std::fs::read(&path) {
-        Ok(bytes) => Some(bytes),
-        Err(_) => {
-            eprintln!("skipped: {} is not fetched", path.display());
-            None
-        }
+    if let Ok(bytes) = std::fs::read(&path) {
+        Some(bytes)
+    } else {
+        eprintln!("skipped: {} is not fetched", path.display());
+        None
     }
 }
 

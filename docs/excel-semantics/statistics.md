@@ -4369,9 +4369,9 @@ Rule: every argument of F.DIST, F.DIST.RT, FDIST, F.INV, F.INV.RT and FINV reads
   so is the text element `"2.5"` of a lifted array; an empty cell and an omitted flag are FALSE.
 - F.TEST and FTEST: every sample kind of "F.TEST of a single value (T-2455)" and its neighbours holds in both
   positions; an omitted sample is `#VALUE!` (see that entry).
-Ours: every kind cell has Excel's type and error, except the omitted F.TEST sample (T-4882). The values are a
+Ours: every kind cell has Excel's type and error (the omitted F.TEST sample since T-4882). The values are a
 separate matter: `rustsheet-eval show` passes 514 of the 669 scored cells bit for bit; 125 are within 4 ulp, 26 are
-further off, and 4 are the F.TEST error mismatch. The 26 are quantile values (F.INV, F.INV.RT and FINV at the
+further off, and the 4 F.TEST omitted-sample cells matched after T-4882. The 26 are quantile values (F.INV, F.INV.RT and FINV at the
 probe's p and df, among them `F.INV(0.3,TRUE,10)` and its reference and `(1=1)` forms, A302, A308, A319, and the
 F.INV.RT and FINV rows from A389), the engine's quantile digits rather than the argument reading (T-4883).
 Status: VERIFIED (excel-graph)
@@ -6658,7 +6658,7 @@ F.TEST checks its samples in order, each one's error or blank one-cell reference
 `#DIV/0!` and `FTEST(NA(),B10:B10)` `#N/A` (A77, A78), so for F.TEST the blank does not beat an earlier sample's error; a
 computed blank (`FTEST(IF(TRUE,B10),{1;2;3})`) is `#VALUE!` too (A79). An omitted sample is `#VALUE!` in either
 position, for both names: `F.TEST(,{2;3;3;9})`, `F.TEST({2;3;3;9},)`, `FTEST(,{2;3;3;9})` and `FTEST({2;3;3;9},)`
-(probes/t4857-f-kinds A605, A606, A659, A660, excel-graph 2026-11-07); ours is the one-value `#DIV/0!` (T-4882).
+(probes/t4857-f-kinds A605, A606, A659, A660, excel-graph 2026-11-07); ours matches since T-4882.
 Ours: since T-2455 (`fn_f_test`, `f_test_sample`, `is_blank_one_cell` in functions/statistical/fisher.rs). The paired
 functions' blank-cell `#VALUE!` followed in T-2426.
 Status: VERIFIED (excel-graph)
@@ -7167,6 +7167,28 @@ Ours: `#NUM!` from the cut since T-3862 (functions/statistical/beta.rs `first_sh
 (T-4700); `#NUM!` where beta is above 1 and Loader's n - k vanishes since T-4713.
 Status: VERIFIED (excel-graph) for the cut; the expression that squares pp UNVERIFIED
 Tasks: T-3862, T-4713, T-4700
+
+## BETA.INV's search at a tiny alpha and a large beta: Cephes' exact 0 and 1 (T-4866)
+Rule: Excel's BETA.INV is the root at a tiny alpha and a large beta too, where the upper tail it crosses is
+far below 1/2. `BETA.INV(1-1.10491974750915E-14,0.0050070029475036,171.171095424379)` is 0.12939405629301814
+in Excel, and the 50-digit root agrees.
+- This is our own failure, not an Excel quirk. The point is on bratio's direct bgrat branch (a0 = 0.005 < 1,
+  b0 = 171 > 15, x0 < 0.1), which `bratio::ported_tails_with` ports only at a0 = 1/2. The search then fell back to the
+  Cephes kernel (`incomplete_beta::search_tails`), whose tails are exactly 1 and 0 from x = 1E-4 to 0.2 there.
+  The true upper tail is 3.7E-4 at x = 0.01 and 1.1E-14 at the root. So the crossing stopped at
+  2.925059559426143E-5, the edge of that band.
+- Ours since T-4866: where Cephes' tails are an exact 0 and 1 on that branch, the search takes bratio's direct
+  bgrat, `bgrat_increment` (the double-double increment L140 bup + bgrat already takes). That gives
+  0.1293940562930182, 2 ulp from Excel. Elsewhere Cephes stays. Taking bgrat at every point of the branch moves 6
+  other cells of the same sweep further from Excel (A143 from Excel's bits to 16 ulp; A157, A164, A168, A176, A178)
+  and 3 nearer, so it was not taken. Over the 182 BETA.INV/BETAINV cases in eval/ only A200 moves.
+- BETA.DIST's cdf at these points still takes the Cephes kernel: ours is exactly 1 at x = 0.129 and 0 at x = 1E-5
+  (the math is 1 - 1.1E-14 and about 0.97). Excel's value there is UNVERIFIED (T-5066). Moving BETA.DIST onto direct
+  bgrat in general is T-3933 (deferred by decision 0267).
+Evidence: probes-numeric/t3351-beta-inv-sweep A200 (excel-graph; T-3351's fresh sweep)
+Ours: `bratio::search_direct_bgrat` inside `beta_search_tails` (functions/statistical/bratio/mod.rs)
+Status: VERIFIED (excel-graph) for BETA.INV; BETA.DIST UNVERIFIED
+Tasks: T-4866, T-3351, T-3933, T-5066
 
 ## BETA.INV at beta 1 caps at 0.999999 where its quantile rounds to 1 (T-4958)
 Rule: at beta = 1 and p up to 1/2, BETA.INV(p, alpha, 1) (and BETAINV) is the closed form p^(1/alpha) while that is

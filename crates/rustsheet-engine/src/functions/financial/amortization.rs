@@ -18,6 +18,15 @@
 //!
 //! Port of the depreciation calculations as implemented in the `ExcelFinancialFunctions` library
 //! (depreciation.fs), see <https://github.com/fsprojects/ExcelFinancialFunctions>.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::unnecessary_wraps
+)]
+// LINT-DEBT-END
 
 use chrono::{Datelike, NaiveDate};
 

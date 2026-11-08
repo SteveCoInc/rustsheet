@@ -35,6 +35,8 @@ oracle-spike.md runs 1, 4-6). The definition maps one-to-one onto `pivotTableDef
                         "xml": "<n v=\\"1\\"><tpls c=\\"1\\">...</tpls></n>"}],
        "xml": {"filters": "<filters count=\\"1\\">...</filters>"},    # raw children, by slot
        "refresh_on_load": false,                                # the cache's refreshOnLoad (default true)
+       "source_name": "SalesData",                              # worksheetSource@name (T-4506)
+       "shared_cache": "Pv0",                                   # an earlier pivot's cache (T-4506)
        "area": "A3:B6"}}                                        # the <location> ref (default A3:B4)
 
 Field indices (`fld` in raw XML, `baseField`) count the source columns left to right, then the calculated
@@ -57,6 +59,12 @@ A pivot with `"refresh_on_load": false` (T-4586) is saved without `refreshOnLoad
 saves are. Its area may then hold spec cells: they are the cells the file saved for the pivot. With `area`
 (its `<location>` ref) and the raw `rowItems` and `colItems` slots of `xml`, a case can save a render that
 disagrees with the cache, to ask whether Excel keeps it on open or renders the pivot again.
+
+A pivot with `source_name` saves its cache's source as Excel saves one read from a defined name or a Table:
+`<worksheetSource name="SalesData"/>`, with no `ref` or `sheet` (T-4506). The cache is still built from the
+`source` range, which may differ from the range the name stands for: a refresh that reads the name shows it.
+A pivot with `shared_cache` names an earlier pivot of the spec whose cache it shares: the builder writes its
+table only, with that pivot's `cacheId`, and refuses it unless the cache it would write is the same.
 
 The eval adapter writes the same parts in Rust (crates/rustsheet-eval/src/pivot_definition.rs, T-4152), so the
 engine loads what Excel opened: keep the two in step. tests/test_pivot_parts_golden.py and the Rust module's
@@ -94,6 +102,8 @@ _DEFINITION_KEYS = {
     "area",
     "calculated_items",
     "records_xml",
+    "source_name",
+    "shared_cache",
 }
 _FIELD_KEYS = {
     "attrs",
@@ -428,6 +438,14 @@ class DefinedPivot:
         if not isinstance(refresh, bool):
             raise ValueError(f"pivot {self.name}: refresh_on_load is true or false")
         self.refresh_on_load = refresh
+        source_name = definition.get("source_name")
+        if source_name is not None and (not isinstance(source_name, str) or not source_name):
+            raise ValueError(f"pivot {self.name}: source_name is a non-empty text")
+        self.source_name: str | None = source_name
+        shared = definition.get("shared_cache")
+        if shared is not None and (not isinstance(shared, str) or not shared):
+            raise ValueError(f"pivot {self.name}: shared_cache is a pivot name")
+        self.shared_cache: str | None = shared
         for f in self.fields:
             if f.formula is not None and (f.axis is not None or f.spec):
                 raise ValueError(f"pivot {self.name}: calculated field {f.name!r} can only be a data field")
@@ -691,10 +709,17 @@ class DefinedPivot:
             f'<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1"'
             + (' refreshOnLoad="1"' if self.refresh_on_load else "")
             + f' createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{self.records}"{extra}>'
-            f'<cacheSource type="worksheet"><worksheetSource ref="{source_ref}" sheet={quoteattr(source_sheet)}/>'
+            f'<cacheSource type="worksheet"><worksheetSource {self._source_attrs(source_sheet, source_ref)}/>'
             f'</cacheSource><cacheFields count="{len(fields)}">{"".join(fields)}</cacheFields>{calculated}'
             "</pivotCacheDefinition>"
         )
+
+    def _source_attrs(self, source_sheet: str, source_ref: str) -> str:
+        """`worksheetSource`'s attributes: `name` alone for a named source, as Excel saves a defined name's or a
+        Table's (T-4506), else `ref` and `sheet`."""
+        if self.source_name is not None:
+            return f"name={quoteattr(self.source_name)}"
+        return f'ref="{source_ref}" sheet={quoteattr(source_sheet)}'
 
     def _calculated_item(self, e: dict[str, Any]) -> str:
         """One `<calculatedItem>`: its `pivot_area` as written, or the one Excel saves, which names the item."""

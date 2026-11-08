@@ -139,10 +139,13 @@ success (see the limits). Its rules:
   level, a manual group) keeps its base (`CacheField::added_group`) and is derived again from the base's
   new values before the base is grouped in place (`pivot/added_groups.rs`, T-4171).
 
-A Table or a defined name resolves to its range at refresh (T-4506). `SourceCells` is a trait in
-`pivot/refresh.rs`, implemented by `Model` over the evaluated cell values. It reads values only, so a
-refresh does no I/O and never evaluates a formula. Because it reads what the recalculation produced, a
-refresh is ordered after that calculation.
+A Table or a defined name resolves to its range at refresh (T-4506): `Model::pivot_source_area` reads a
+Table's header row and body, and evaluates a defined name's body in reference context, as a formula outside a
+cell is evaluated (a dynamic `OFFSET` or `INDEX` name included; pivots.md "A pivot over a defined name or a
+Table reads it again at the refresh"). `SourceCells` is a trait in `pivot/refresh.rs`, implemented by `Model`
+over the evaluated cell values. It reads values only, so a refresh does no I/O and evaluates no formula but a
+source name's body. Because it reads what the recalculation produced, a refresh is ordered after that
+calculation.
 
 **Who refreshes, and when (T-4151).**
 - The importer only records `refreshOnLoad` on the cache, since import cannot calculate.

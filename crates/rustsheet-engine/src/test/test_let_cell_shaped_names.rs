@@ -11,7 +11,7 @@ use crate::Model;
 #[test]
 fn let_and_lambda_names_spelled_like_cells_are_variables_in_scope() {
     let mut model = new_empty_model();
-    model._set("F1", "7");
+    model.set_a1("F1", "7");
     // The formulas are written as Excel prints them (FORMULATEXT, probes/let-cell-shaped-name-stored).
     let cases = [
         ("=LET(f1,1,f1+1)", "2"),
@@ -32,7 +32,7 @@ fn let_and_lambda_names_spelled_like_cells_are_variables_in_scope() {
         ("=LET(x,F1,F1,2,x+F1)", "9"),
     ];
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("H{}", row + 1), formula);
+        model.set_a1(&format!("H{}", row + 1), formula);
     }
     model.evaluate();
     let mut reloaded = Model::from_bytes(&model.to_bytes(), "en").unwrap();
@@ -40,8 +40,8 @@ fn let_and_lambda_names_spelled_like_cells_are_variables_in_scope() {
     for (row, (formula, value)) in cases.iter().enumerate() {
         let cell = format!("H{}", row + 1);
         for m in [&model, &reloaded] {
-            assert_eq!(m._get_text(&cell), *value, "{formula}");
-            assert_eq!(m._get_formula(&cell), *formula);
+            assert_eq!(m.get_text_a1(&cell), *value, "{formula}");
+            assert_eq!(m.get_formula_a1(&cell), *formula);
         }
     }
 }
@@ -51,10 +51,10 @@ fn let_and_lambda_names_spelled_like_cells_are_variables_in_scope() {
 #[test]
 fn cell_shaped_names_print_in_their_declaration_spelling() {
     let mut model = new_empty_model();
-    model._set("A1", "=LET(f1,1,F1+1)");
-    model._set("A2", "=LET($F$1,1,F1+1)");
+    model.set_a1("A1", "=LET(f1,1,F1+1)");
+    model.set_a1("A2", "=LET($F$1,1,F1+1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "2");
-    assert_eq!(model._get_formula("A1"), "=LET(f1,1,f1+1)");
-    assert_eq!(model._get_text("A2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "2");
+    assert_eq!(model.get_formula_a1("A1"), "=LET(f1,1,f1+1)");
+    assert_eq!(model.get_text_a1("A2"), "#VALUE!");
 }

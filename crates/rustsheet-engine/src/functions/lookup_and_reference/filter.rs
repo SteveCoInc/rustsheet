@@ -165,7 +165,8 @@ impl Model {
                 .collect()
         };
 
-        let is_empty_result = filtered.is_empty() || filtered.first().is_none_or(|r| r.is_empty());
+        let is_empty_result =
+            filtered.is_empty() || filtered.first().is_none_or(std::vec::Vec::is_empty);
 
         if is_empty_result {
             if args.len() >= 3 {

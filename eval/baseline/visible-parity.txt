@@ -289,5 +289,6 @@ probes/t4844-irr-stage-invariance.case.json	56
 probes/t4857-f-kinds.case.json	10
 probes/t4863-xlookup-mode-lift-criteria.case.json	12
 probes/t4872-r2-order-and-lift.case.json	9
+probes/t4901-mround-blank-let-lambda-roundings.case.json	7
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1

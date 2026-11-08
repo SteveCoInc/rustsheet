@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::too_many_lines)]
+// LINT-DEBT-END
 use std::borrow::Cow;
 
 use memchr::memmem::Finder;
@@ -253,7 +256,7 @@ impl Model {
 
         // ignore_empty dropped every piece: #CALC!, the empty-array error (probes/
         // textsplit-error-order A11, A12; gen-m7 07d27aa0add0247f A768).
-        if rows_of_cols.is_empty() || rows_of_cols.iter().all(|r| r.is_empty()) {
+        if rows_of_cols.is_empty() || rows_of_cols.iter().all(std::vec::Vec::is_empty) {
             return CalcResult::new_error(
                 Error::CALC,
                 cell,
@@ -261,7 +264,11 @@ impl Model {
             );
         }
 
-        let max_cols = rows_of_cols.iter().map(|r| r.len()).max().unwrap_or(0);
+        let max_cols = rows_of_cols
+            .iter()
+            .map(std::vec::Vec::len)
+            .max()
+            .unwrap_or(0);
 
         // The padded shape is rows x widest row: a 32,767-char text with the column delimiters
         // first and the row delimiters after pads ~2^28 cells. Refuse one above the array limit

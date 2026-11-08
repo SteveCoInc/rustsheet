@@ -26,6 +26,9 @@
 //!
 //! Every loop is bounded: at most [`MAX_FRACTION_TERMS`] continued-fraction steps (Cephes' own
 //! cap) and [`RLOG1_TERMS`] series terms, so one call costs a fixed amount of work.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 use super::half_integer_beta::{half_integer_remainder, is_half_integer_shape};
 use super::large_shape_beta::large_shape_lower;

@@ -1,9 +1,28 @@
 //! A worksheet table's metadata (`Workbook::tables`) and the autoFilter criteria it keeps from its
 //! file (`Table::filter_columns`), which the export writes back and nothing re-applies.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_excessive_bools)]
+// LINT-DEBT-END
+
+use std::collections::HashMap;
 
 use bitcode::{Decode, Encode};
 
 use crate::types::sheet_names_match;
+
+/// The table `name` names among `tables`, keyed by name. Table names match ignoring case
+/// (gen-m8b names-case 5b5c0e20e82153bb): an exact hit is deterministic; the case-folded scan
+/// covers the rest. The one lookup the parser's structured references and a pivot's Table
+/// source use (T-4506).
+pub(crate) fn table_named<'t>(tables: &'t HashMap<String, Table>, name: &str) -> Option<&'t Table> {
+    tables.get(name).or_else(|| {
+        let lower = name.to_lowercase();
+        tables
+            .iter()
+            .find(|(table_name, _)| table_name.to_lowercase() == lower)
+            .map(|(_, table)| table)
+    })
+}
 
 /// A table on a worksheet (ECMA-376-1:2016 section 18.5.1.2).
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]

@@ -6,9 +6,9 @@ use crate::test::util::new_empty_model;
 #[test]
 fn dollar_fixed_numbervalue_lift_over_arrays_and_ranges() {
     let mut model = new_empty_model();
-    model._set("D1", "1.234");
-    model._set("D2", "2.345");
-    model._set("D3", "3.456");
+    model.set_a1("D1", "1.234");
+    model.set_a1("D2", "2.345");
+    model.set_a1("D3", "3.456");
     let cases = [
         ("=INDEX(DOLLAR({1.234;2.345;3.456},2),2)", "$2.35"),
         ("=INDEX(DOLLAR(1.234,{0;1;2}),2)", "$1.2"),
@@ -38,12 +38,12 @@ fn dollar_fixed_numbervalue_lift_over_arrays_and_ranges() {
         ),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", i + 1)),
+            model.get_text_a1(&format!("A{}", i + 1)),
             *expected,
             "{formula}"
         );
@@ -53,13 +53,13 @@ fn dollar_fixed_numbervalue_lift_over_arrays_and_ranges() {
 #[test]
 fn a_lifted_dollar_spills_or_is_spill_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=DOLLAR({1;2})");
-    model._set("B1", "=FIXED({1;2})");
-    model._set("B2", "x");
+    model.set_a1("A1", "=DOLLAR({1;2})");
+    model.set_a1("B1", "=FIXED({1;2})");
+    model.set_a1("B2", "x");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"$1.00");
-    assert_eq!(model._get_text("A2"), *"$2.00");
-    assert_eq!(model._get_text("B1"), *"#SPILL!");
+    assert_eq!(model.get_text_a1("A1"), *"$1.00");
+    assert_eq!(model.get_text_a1("A2"), *"$2.00");
+    assert_eq!(model.get_text_a1("B1"), *"#SPILL!");
 }
 
 /// The scalar rules the functions had before they moved onto the driver.
@@ -78,12 +78,12 @@ fn dollar_fixed_numbervalue_keep_their_scalar_rules() {
         ("=NUMBERVALUE(\"50%%\")", "0.005"),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", i + 1)),
+            model.get_text_a1(&format!("A{}", i + 1)),
             *expected,
             "{formula}"
         );
@@ -110,12 +110,12 @@ fn numbervalue_reads_currency_parentheses_dates_and_times() {
         ("=NUMBERVALUE(\"1,000\",FALSE,2.5)", "1000"),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", i + 1)),
+            model.get_text_a1(&format!("A{}", i + 1)),
             *expected,
             "{formula}"
         );
@@ -139,12 +139,12 @@ fn value_reads_an_hour_with_a_trailing_colon() {
         ("=VALUE(\"12::\")", "#VALUE!"),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", i + 1)),
+            model.get_text_a1(&format!("A{}", i + 1)),
             *expected,
             "{formula}"
         );

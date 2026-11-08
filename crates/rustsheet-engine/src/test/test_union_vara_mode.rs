@@ -8,7 +8,7 @@ use crate::test::util::new_empty_model;
 fn union_argument_to_the_a_variance_family_and_mode() {
     let mut model = new_empty_model();
     for (cell, value) in [("A1", "1"), ("B2", "5"), ("C3", "7"), ("D4", "9")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     let cases = [
         ("H1", "=VARA((A1,B2,C3,D4))", "11.66666667"),
@@ -19,11 +19,11 @@ fn union_argument_to_the_a_variance_family_and_mode() {
         ("H6", "=MODE.SNGL((A1,B2,C3,D4))", "#VALUE!"),
     ];
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cases {
-        assert_eq!(model._get_text(cell), expected, "{cell}: {formula}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell}: {formula}");
     }
 }
 
@@ -32,15 +32,15 @@ fn union_argument_to_the_a_variance_family_and_mode() {
 #[test]
 fn mode_one_cell_range_to_an_empty_cell_is_value() {
     let mut model = new_empty_model();
-    model._set("A1", "2");
-    model._set("A2", "2");
+    model.set_a1("A1", "2");
+    model.set_a1("A2", "2");
     for (cell, formula) in [
         ("C1", "=MODE(Z1:Z1)"),
         ("C2", "=MODE.SNGL(1,1,Z1:Z1)"),
         ("C3", "=MODE.MULT(Z1:Z1,{5})"),
         ("C4", "=MODE(A1:A1,A1:A2)"),
     ] {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, want) in [
@@ -49,6 +49,6 @@ fn mode_one_cell_range_to_an_empty_cell_is_value() {
         ("C3", "#VALUE!"),
         ("C4", "2"),
     ] {
-        assert_eq!(model._get_text(cell), *want, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *want, "{cell}");
     }
 }

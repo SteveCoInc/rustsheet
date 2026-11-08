@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 use statrs::distribution::{Beta, Continuous};
 
 use crate::arithmetic::flush_subnormal;
@@ -449,6 +452,20 @@ mod tests {
     // (probes/t4713-beta-inv-beta-above-1-cut A40, A41, E41; t4713-beta-inv-cut-pieces A1, K37;
     // T-4713): 9.44E+15 and 1.82E+16 keep a number, 1E+16 is #NUM!, and p above 1/2 takes
     // (beta, alpha), whose count is positive.
+    // probes-numeric/t3351-beta-inv-sweep A200 (excel-graph, T-4866): on bratio's direct bgrat
+    // branch the search crosses `bgrat_increment`, not the Cephes kernel, whose upper tail is
+    // exactly 0 from x = 1E-4 to 0.2 here (it stopped at 2.925059559426143E-5).
+    #[test]
+    fn upper_tail_search_crosses_direct_bgrat_at_a_tiny_alpha() {
+        let excel = 0.129_394_056_293_018_14;
+        let x = beta_quantile(
+            0.005_007_002_947_503_6,
+            171.171_095_424_379,
+            1.0 - 1.104_919_747_509_15e-14,
+        );
+        assert!((x - excel).abs() <= 1e-15 * excel, "{x}");
+    }
+
     #[test]
     fn quantile_is_nan_where_loader_count_vanishes() {
         assert!(beta_quantile(1e16, 2.0, 0.1).is_nan());

@@ -5,6 +5,7 @@
 //! probes/catalog/function-name-forms A1-A2, excel-graph, T-0040; T-1089). Typed text keeps
 //! reading the bare name as the function.
 
+use std::fmt::Write as _;
 use std::io::{Cursor, Read, Write};
 
 use rustsheet_engine::Model;
@@ -32,9 +33,7 @@ fn workbook() -> Vec<u8> {
         .into_inner();
     let mut rows = String::new();
     for (f, row) in FORMULAS.iter().zip(2..) {
-        rows.push_str(&format!(
-            r#"<row r="{row}"><c r="A{row}"><f>{f}</f></c></row>"#
-        ));
+        let _ = write!(rows, r#"<row r="{row}"><c r="A{row}"><f>{f}</f></c></row>"#);
     }
     let mut src = zip::ZipArchive::new(Cursor::new(saved)).unwrap();
     let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));

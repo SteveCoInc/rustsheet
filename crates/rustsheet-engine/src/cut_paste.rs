@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::manual_let_else)]
+// LINT-DEBT-END
 use crate::{
     cf_types::CfRule,
     expressions::{

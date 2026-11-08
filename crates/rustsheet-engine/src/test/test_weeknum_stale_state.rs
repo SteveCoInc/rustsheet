@@ -14,9 +14,9 @@ const EMPTY: &str = "#NUM!";
 /// What a formula gives on a sheet of its own.
 fn alone(formula: &str) -> String {
     let mut model = new_empty_model();
-    model._set("A1", formula);
+    model.set_a1("A1", formula);
     model.evaluate();
-    model._get_text("A1")
+    model.get_text_a1("A1")
 }
 
 fn sunday() -> String {
@@ -26,7 +26,7 @@ fn sunday() -> String {
 fn evaluated(cells: &[(&str, &str)]) -> Model {
     let mut model = new_empty_model();
     for (cell, formula) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     model
@@ -42,7 +42,7 @@ fn an_empty_state_reads_num() {
             ("A1", "=WEEKNUM(100,99)&WEEKNUM(100,-5)"),
             ("A2", "=WEEKNUM(1,2)")
         ])
-        ._get_text("A1"),
+        .get_text_a1("A1"),
         "1616"
     );
 }
@@ -51,19 +51,19 @@ fn an_empty_state_reads_num() {
 fn the_bottom_row_and_the_rightmost_column_run_first() {
     // The setter below runs first, the one above runs after the reader.
     assert_eq!(
-        evaluated(&[("A1", READER), ("A2", "=WEEKNUM(1,2)")])._get_text("A1"),
+        evaluated(&[("A1", READER), ("A2", "=WEEKNUM(1,2)")]).get_text_a1("A1"),
         MONDAY
     );
     assert_eq!(
-        evaluated(&[("A1", "=WEEKNUM(1,2)"), ("A2", READER)])._get_text("A2"),
+        evaluated(&[("A1", "=WEEKNUM(1,2)"), ("A2", READER)]).get_text_a1("A2"),
         EMPTY
     );
     assert_eq!(
-        evaluated(&[("A1", READER), ("B1", "=WEEKNUM(1,2)")])._get_text("A1"),
+        evaluated(&[("A1", READER), ("B1", "=WEEKNUM(1,2)")]).get_text_a1("A1"),
         MONDAY
     );
     assert_eq!(
-        evaluated(&[("A1", "=WEEKNUM(1,2)"), ("B1", READER)])._get_text("B1"),
+        evaluated(&[("A1", "=WEEKNUM(1,2)"), ("B1", READER)]).get_text_a1("B1"),
         EMPTY
     );
 }
@@ -72,12 +72,12 @@ fn the_bottom_row_and_the_rightmost_column_run_first() {
 fn the_last_sheet_runs_first() {
     let mut model = new_empty_model();
     model.add_sheet("Second").unwrap();
-    model._set("A1", READER);
-    model._set("Second!A1", "=ISOWEEKNUM(1)");
-    model._set("Second!A2", READER);
+    model.set_a1("A1", READER);
+    model.set_a1("Second!A1", "=ISOWEEKNUM(1)");
+    model.set_a1("Second!A2", READER);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), MONDAY);
-    assert_eq!(model._get_text("Second!A2"), EMPTY);
+    assert_eq!(model.get_text_a1("A1"), MONDAY);
+    assert_eq!(model.get_text_a1("Second!A2"), EMPTY);
 }
 
 #[test]
@@ -86,20 +86,20 @@ fn a_moved_sheet_keeps_its_load_position() {
     // (probes/weeknum-stale-sheet-moved): Second, loaded last, still runs first after a move.
     let mut model = new_empty_model();
     model.add_sheet("Second").unwrap();
-    model._set("A1", READER);
-    model._set("Second!A1", "=ISOWEEKNUM(1)");
+    model.set_a1("A1", READER);
+    model.set_a1("Second!A1", "=ISOWEEKNUM(1)");
     model.move_sheet(1, 0).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("Sheet1!A1"), MONDAY);
+    assert_eq!(model.get_text_a1("Sheet1!A1"), MONDAY);
     // A sheet added after the move takes the next rank, so it runs before both.
     model.add_sheet("Third").unwrap();
-    model._set("Third!A1", "=WEEKNUM(1,1)");
+    model.set_a1("Third!A1", "=WEEKNUM(1,1)");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet1!A1"), MONDAY);
-    model._set("Third!A1", "=WEEKNUM(1,12)");
-    model._set("Second!A1", "=1");
+    assert_eq!(model.get_text_a1("Sheet1!A1"), MONDAY);
+    model.set_a1("Third!A1", "=WEEKNUM(1,12)");
+    model.set_a1("Second!A1", "=1");
     model.evaluate();
-    assert_eq!(model._get_text("Sheet1!A1"), EMPTY);
+    assert_eq!(model.get_text_a1("Sheet1!A1"), EMPTY);
 }
 
 #[test]
@@ -134,7 +134,7 @@ fn which_calls_set_empty_or_leave_the_state() {
     ];
     for (call, marker, expected) in cases {
         let model = evaluated(&[("A1", READER), ("A2", call), ("A3", marker)]);
-        assert_eq!(model._get_text("A1"), expected, "{call} after {marker}");
+        assert_eq!(model.get_text_a1("A1"), expected, "{call} after {marker}");
     }
 }
 
@@ -144,11 +144,11 @@ fn a_run_stopped_at_an_uncalculated_read_has_no_effect() {
     // reads nothing (probes/weeknum-stale-precedent-abort-keeps).
     let cells = [("A1", "=ROW()"), ("A2", READER), ("A3", "=WEEKNUM(1,2)&A1")];
     let model = evaluated(&cells);
-    assert_eq!(model._get_text("A2"), EMPTY);
-    assert_eq!(model._get_text("A3"), "11");
+    assert_eq!(model.get_text_a1("A2"), EMPTY);
+    assert_eq!(model.get_text_a1("A3"), "11");
     // With a constant in A1 nothing stops.
     let cells = [("A1", "1"), ("A2", READER), ("A3", "=WEEKNUM(1,2)&A1")];
-    assert_eq!(evaluated(&cells)._get_text("A2"), MONDAY);
+    assert_eq!(evaluated(&cells).get_text_a1("A2"), MONDAY);
 }
 
 #[test]
@@ -161,14 +161,14 @@ fn a_stopped_cell_runs_again_just_after_its_precedent() {
         ("A3", "=A1&IFERROR(WEEKNUM(100,99),\"none\")&WEEKNUM(1,1)"),
     ];
     let model = evaluated(&cells);
-    assert_eq!(model._get_text("A2"), "none1");
-    assert_eq!(model._get_text("A3"), format!("1{MONDAY}1"));
+    assert_eq!(model.get_text_a1("A2"), "none1");
+    assert_eq!(model.get_text_a1("A3"), format!("1{MONDAY}1"));
     // The re-run starts with its own calls: type 12 empties before the read.
     let cells = [
         ("A1", "=WEEKNUM(1,1)"),
         ("A2", "=WEEKNUM(1,12)&A1&WEEKNUM(100,99)"),
     ];
-    assert_eq!(evaluated(&cells)._get_text("A2"), EMPTY);
+    assert_eq!(evaluated(&cells).get_text_a1("A2"), EMPTY);
     assert_ne!(sunday, EMPTY);
 }
 
@@ -183,7 +183,7 @@ fn between(call: &str) -> String {
         ("C2", "3"),
         ("D2", "4"),
     ];
-    evaluated(&cells)._get_text("A1")
+    evaluated(&cells).get_text_a1("A1")
 }
 
 #[test]
@@ -243,8 +243,8 @@ fn a_reader_after_a_restart() {
         ("C10", "=WEEKNUM(1,2)"),
     ];
     let model = evaluated(&cells);
-    assert_eq!(model._get_text("A1"), "3");
-    assert_eq!(model._get_text("C9"), MONDAY);
+    assert_eq!(model.get_text_a1("A1"), "3");
+    assert_eq!(model.get_text_a1("C9"), MONDAY);
     assert!(model.evaluation.restarts_in_last_evaluation >= 1);
 }
 
@@ -255,15 +255,15 @@ fn excel_order_runs_only_where_a_reader_ran() {
     assert_eq!(model.evaluation.passes_in_last_evaluation, 1);
     assert!(!model.evaluation.excel_order);
     // A reader: the default pass, then one in Excel order; from then on Excel order only.
-    model._set("A3", READER);
+    model.set_a1("A3", READER);
     model.evaluate();
     assert_eq!(model.evaluation.passes_in_last_evaluation, 2);
     assert!(model.evaluation.excel_order);
     model.evaluate();
     assert_eq!(model.evaluation.passes_in_last_evaluation, 1);
-    assert_eq!(model._get_text("A3"), EMPTY);
+    assert_eq!(model.get_text_a1("A3"), EMPTY);
     // The reader gone, the next pass in Excel order clears the flag.
-    model._set("A3", "1");
+    model.set_a1("A3", "1");
     model.evaluate();
     assert_eq!(model.evaluation.passes_in_last_evaluation, 1);
     assert!(!model.evaluation.excel_order);
@@ -274,15 +274,15 @@ fn a_long_running_total_with_a_reader() {
     // Each cell reads the one above: in reverse order every cell stops once, and the reader at
     // the top runs after all of them, after the setter at the bottom.
     let mut model = new_empty_model();
-    model._set("A1", "1");
+    model.set_a1("A1", "1");
     for row in 2..=300 {
-        model._set(&format!("A{row}"), &format!("=A{}+1", row - 1));
+        model.set_a1(&format!("A{row}"), &format!("=A{}+1", row - 1));
     }
-    model._set("B1", READER);
-    model._set("B300", "=WEEKNUM(1,2)");
+    model.set_a1("B1", READER);
+    model.set_a1("B300", "=WEEKNUM(1,2)");
     model.evaluate();
-    assert_eq!(model._get_text("A300"), "300");
-    assert_eq!(model._get_text("B1"), MONDAY);
+    assert_eq!(model.get_text_a1("A300"), "300");
+    assert_eq!(model.get_text_a1("B1"), MONDAY);
 }
 
 #[test]
@@ -293,8 +293,8 @@ fn a_cycle_with_a_reader_ends() {
         ("C1", READER),
         ("C2", "=WEEKNUM(1,2)"),
     ]);
-    assert_eq!(model._get_text("C1"), MONDAY);
-    assert!(model._is_circular("A1"));
+    assert_eq!(model.get_text_a1("C1"), MONDAY);
+    assert!(model.is_circular_a1("A1"));
 }
 
 #[test]

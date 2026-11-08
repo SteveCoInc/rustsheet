@@ -28,5 +28,5 @@ fn test_model_set_cells_with_values_styles() {
     model.delete_column_style(0, 10).unwrap();
 
     // There are no styles in the column
-    assert!(model.workbook.worksheets[0].cols.len() == 1);
+    assert_eq!(model.workbook.worksheets[0].cols.len(), 1);
 }

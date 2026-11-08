@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::default_trait_access)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, reason = "tests")]
 
 //! A data table is recomputed only when something it read changed (`data_table_memo.rs`, T-0453),
@@ -11,12 +14,12 @@ use crate::types::{DataTable, DataTableInput};
 /// workbook evaluated once.
 fn column_table(cells: &[(&str, &str)]) -> Model {
     let mut model = new_empty_model();
-    model._set("A1", "1");
+    model.set_a1("A1", "1");
     for (cell, value) in [("A2", "1"), ("A3", "2"), ("A4", "3"), ("H1", "=SUM(B2:B4)")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (cell, value) in cells {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     let table = DataTable {
         range: (2, 2, 4, 2),
@@ -31,7 +34,7 @@ fn column_table(cells: &[(&str, &str)]) -> Model {
 /// Sets `cell` to `value`, evaluates, and returns whether the table was recomputed.
 fn edit(model: &mut Model, cell: &str, value: &str) -> bool {
     let before = model.evaluation.data_tables_recomputed;
-    model._set(cell, value);
+    model.set_a1(cell, value);
     model.evaluate();
     model.evaluation.data_tables_recomputed != before
 }
@@ -39,7 +42,7 @@ fn edit(model: &mut Model, cell: &str, value: &str) -> bool {
 fn results(model: &Model) -> Vec<String> {
     ["B2", "B3", "B4", "H1"]
         .iter()
-        .map(|c| model._get_text(c))
+        .map(|c| model.get_text_a1(c))
         .collect()
 }
 
@@ -53,7 +56,7 @@ fn an_edit_the_table_does_not_read_keeps_its_results() {
         "H2 only reads the results"
     );
     assert_eq!(results(&model), ["5", "10", "15", "30"]);
-    assert_eq!(model._get_text("H2"), "31");
+    assert_eq!(model.get_text_a1("H2"), "31");
 }
 
 #[test]
@@ -102,11 +105,11 @@ fn a_changed_name_recomputes() {
     let mut model = new_empty_model();
     model.new_defined_name("k", None, "Sheet1!$C$1").unwrap();
     let mut model = {
-        model._set("C1", "2");
-        model._set("B1", "=A1*k");
-        model._set("A1", "1");
+        model.set_a1("C1", "2");
+        model.set_a1("B1", "=A1*k");
+        model.set_a1("A1", "1");
         for (cell, value) in [("A2", "1"), ("A3", "2"), ("A4", "3"), ("H1", "=SUM(B2:B4)")] {
-            model._set(cell, value);
+            model.set_a1(cell, value);
         }
         let table = DataTable {
             range: (2, 2, 4, 2),
@@ -118,7 +121,7 @@ fn a_changed_name_recomputes() {
         model
     };
     assert_eq!(results(&model), ["2", "4", "6", "12"]);
-    model._set("D1", "3");
+    model.set_a1("D1", "3");
     model
         .update_defined_name("k", None, "k", None, "Sheet1!$D$1")
         .unwrap();
@@ -166,7 +169,7 @@ fn an_overwritten_result_is_recomputed() {
 fn sheet_texts(model: &Model) -> Vec<String> {
     (1..=10)
         .flat_map(|row| ('A'..='H').map(move |column| format!("{column}{row}")))
-        .map(|cell| model._get_text(&cell))
+        .map(|cell| model.get_text_a1(&cell))
         .collect()
 }
 

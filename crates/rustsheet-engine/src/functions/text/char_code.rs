@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::match_same_arms,
+    clippy::unused_self
+)]
+// LINT-DEBT-END
 // CHAR, CODE, UNICHAR, CLEAN, ASC
 
 use crate::{

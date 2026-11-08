@@ -13,18 +13,18 @@ use crate::test::util::new_empty_model;
 fn assert_cells(cases: &[(&str, &str)]) {
     let mut model = new_empty_model();
     for (row, value) in [1, 2, 4, 3, 7, 5, 8, 6].iter().enumerate() {
-        model._set(&format!("A{}", row + 1), &value.to_string());
+        model.set_a1(&format!("A{}", row + 1), &value.to_string());
     }
     for (cell, value) in [("D1", "1"), ("D2", "=NA()"), ("D3", "3")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("W{}", row + 1), formula);
+        model.set_a1(&format!("W{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("W{}", row + 1)),
+            model.get_text_a1(&format!("W{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -95,7 +95,7 @@ fn sorted_elements_equal_the_scalar_walk() {
         .iter()
         .enumerate()
     {
-        model._set(&format!("A{}", row + 1), value);
+        model.set_a1(&format!("A{}", row + 1), value);
     }
     let mut cells = Vec::new();
     for function in ["RANK", "RANK.AVG"] {
@@ -112,8 +112,8 @@ fn sorted_elements_equal_the_scalar_walk() {
                     format!("C{}", cells.len() + 1),
                     format!("D{}", cells.len() + 1),
                 );
-                model._set(&l, &lifted);
-                model._set(&r, &scalar);
+                model.set_a1(&l, &lifted);
+                model.set_a1(&r, &scalar);
                 cells.push((l, r));
             }
         }
@@ -121,12 +121,12 @@ fn sorted_elements_equal_the_scalar_walk() {
     model.evaluate();
     for (lifted, scalar) in &cells {
         assert_eq!(
-            model._get_text(lifted),
-            model._get_text(scalar),
+            model.get_text_a1(lifted),
+            model.get_text_a1(scalar),
             "{lifted} vs {scalar}"
         );
     }
-    assert_eq!(model._get_text("C1"), "2");
+    assert_eq!(model.get_text_a1("C1"), "2");
 }
 
 /// `fn_rank_eq` and `fn_rank_avg` read RANK.EQ's table entry for all three functions.

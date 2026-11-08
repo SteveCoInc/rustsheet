@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::needless_pass_by_value, clippy::unnecessary_wraps)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::calc_result::CalcResult;
@@ -525,27 +528,27 @@ fn text_order_puts_nbsp_right_after_space() {
     // probes/text-order-nbsp-space (excel-graph, T-0244): CHAR(160) sorts after the space and
     // before digits and letters, in `>` and in COUNTIF's `">"` alike.
     let mut model = crate::test::util::new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "=\"1 \"");
-    model._set("A3", "=\" 1\"");
-    model._set("A4", "=CHAR(160)&\"1\"");
-    model._set("A5", "=\"1\"&CHAR(160)");
-    model._set("A6", "=\"1\"");
-    model._set("C1", "=COUNTIF(A1:A6,\">\"&CHAR(160)&\"0\")");
-    model._set("C2", "=CHAR(160)&\"1\"<\"1\"");
-    model._set("C3", "=\" 1\"<CHAR(160)&\"1\"");
-    model._set("C4", "=CHAR(160)&\"1\"<\"0\"");
-    model._set("C5", "=\"a b\"<\"a\"&CHAR(160)&\"b\"");
-    model._set("C6", "=CHAR(160)&\"1\"=\"1\"");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "=\"1 \"");
+    model.set_a1("A3", "=\" 1\"");
+    model.set_a1("A4", "=CHAR(160)&\"1\"");
+    model.set_a1("A5", "=\"1\"&CHAR(160)");
+    model.set_a1("A6", "=\"1\"");
+    model.set_a1("C1", "=COUNTIF(A1:A6,\">\"&CHAR(160)&\"0\")");
+    model.set_a1("C2", "=CHAR(160)&\"1\"<\"1\"");
+    model.set_a1("C3", "=\" 1\"<CHAR(160)&\"1\"");
+    model.set_a1("C4", "=CHAR(160)&\"1\"<\"0\"");
+    model.set_a1("C5", "=\"a b\"<\"a\"&CHAR(160)&\"b\"");
+    model.set_a1("C6", "=CHAR(160)&\"1\"=\"1\"");
     model.evaluate();
 
     // probes/criteria-padded-text C13: every text cell but " 1".
-    assert_eq!(model._get_text("C1"), *"4");
-    assert_eq!(model._get_text("C2"), *"TRUE");
-    assert_eq!(model._get_text("C3"), *"TRUE");
-    assert_eq!(model._get_text("C4"), *"TRUE");
-    assert_eq!(model._get_text("C5"), *"TRUE");
-    assert_eq!(model._get_text("C6"), *"FALSE");
+    assert_eq!(model.get_text_a1("C1"), *"4");
+    assert_eq!(model.get_text_a1("C2"), *"TRUE");
+    assert_eq!(model.get_text_a1("C3"), *"TRUE");
+    assert_eq!(model.get_text_a1("C4"), *"TRUE");
+    assert_eq!(model.get_text_a1("C5"), *"TRUE");
+    assert_eq!(model.get_text_a1("C6"), *"FALSE");
 }
 
 /// T-1594: text `=` and `<>` criteria use the collation of `=` (probes/text-collation-lookups K1-K12):
@@ -607,23 +610,23 @@ fn ordering_criteria_compare_the_cell_at_15_digits() {
     // probes/t3072-criteria-near-equal-order (excel-graph, T-3084): 1+22*2^-52 and 1-4*2^-53 print as 1
     // and meet "<=1" and ">=1" but neither "<1" nor ">1"; 1+23*2^-52 and 1-5*2^-53 do not round to 1.
     let mut model = crate::test::util::new_empty_model();
-    model._set("A1", "=1+22*2^-52");
-    model._set("A2", "=1-4*2^-53");
-    model._set("A3", "=1+23*2^-52");
-    model._set("A4", "=1-5*2^-53");
+    model.set_a1("A1", "=1+22*2^-52");
+    model.set_a1("A2", "=1-4*2^-53");
+    model.set_a1("A3", "=1+23*2^-52");
+    model.set_a1("A4", "=1-5*2^-53");
     for (row, cell) in ["A1", "A2", "A3", "A4"].iter().enumerate() {
         let r = row + 1;
-        model._set(&format!("B{r}"), &format!("=COUNTIF({cell},\"<1\")"));
-        model._set(&format!("C{r}"), &format!("=COUNTIF({cell},\"<=1\")"));
-        model._set(&format!("D{r}"), &format!("=COUNTIFS({cell},\">1\")"));
-        model._set(
+        model.set_a1(&format!("B{r}"), &format!("=COUNTIF({cell},\"<1\")"));
+        model.set_a1(&format!("C{r}"), &format!("=COUNTIF({cell},\"<=1\")"));
+        model.set_a1(&format!("D{r}"), &format!("=COUNTIFS({cell},\">1\")"));
+        model.set_a1(
             &format!("E{r}"),
             &format!("=SUMIF({cell},\">=1\",{cell})>0"),
         );
     }
     model.evaluate();
 
-    let row = |r: u32| ["B", "C", "D", "E"].map(|c| model._get_text(&format!("{c}{r}")));
+    let row = |r: u32| ["B", "C", "D", "E"].map(|c| model.get_text_a1(&format!("{c}{r}")));
     assert_eq!(row(1), ["0", "1", "0", "TRUE"]);
     assert_eq!(row(2), ["0", "1", "0", "TRUE"]);
     assert_eq!(row(3), ["0", "0", "1", "TRUE"]);

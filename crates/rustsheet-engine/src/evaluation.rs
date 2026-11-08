@@ -39,6 +39,14 @@
 //! amount of work does, but for the state Excel's calls leave in its calculation order
 //! (`OrderState`): a pass in which a call read it is followed by one in Excel's order
 //! (`excel_order.rs`).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_sign_loss,
+    clippy::default_trait_access,
+    clippy::struct_excessive_bools,
+    clippy::struct_field_names
+)]
+// LINT-DEBT-END
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -79,12 +87,12 @@ pub struct KeyHasher(u64);
 impl std::hash::Hasher for KeyHasher {
     fn write(&mut self, bytes: &[u8]) {
         for byte in bytes {
-            self.write_u32(*byte as u32);
+            self.write_u32(u32::from(*byte));
         }
     }
 
     fn write_u32(&mut self, i: u32) {
-        self.0 = (self.0.rotate_left(5) ^ i as u64).wrapping_mul(0x517c_c1b7_2722_0a95);
+        self.0 = (self.0.rotate_left(5) ^ u64::from(i)).wrapping_mul(0x517c_c1b7_2722_0a95);
     }
 
     fn write_i32(&mut self, i: i32) {
@@ -625,13 +633,13 @@ impl Model {
             row: anchor.0,
             column: anchor.1,
         };
-        let kind = match self.fetch_cell(anchor_reference) {
-            Some(Cell::ArrayFormula { kind, .. }) => kind.clone(),
-            _ => {
-                // An orphan: its anchor is gone. Nothing will ever write it again.
-                self.record_seen(cell_reference, Seen::Empty);
-                return CalcResult::EmptyCell;
-            }
+        let kind = if let Some(Cell::ArrayFormula { kind, .. }) = self.fetch_cell(anchor_reference)
+        {
+            kind.clone()
+        } else {
+            // An orphan: its anchor is gone. Nothing will ever write it again.
+            self.record_seen(cell_reference, Seen::Empty);
+            return CalcResult::EmptyCell;
         };
         let anchor_state = self.evaluation.cells.get(&key(anchor_reference)).copied();
         match (kind, anchor_state) {
@@ -772,16 +780,13 @@ impl Model {
                 let Some(&top) = self.evaluation.stack.last() else {
                     break;
                 };
-                match self.fetch_cell(top).and_then(FormulaCell::of) {
-                    Some(cell) => {
-                        self.run_top(top, cell);
-                    }
-                    None => {
-                        // Not expected: nothing replaces a formula during a
-                        // pass. Let go of it rather than loop on it.
-                        self.pop_stack();
-                        self.evaluation.cells.insert(key(top), CellState::Evaluated);
-                    }
+                if let Some(cell) = self.fetch_cell(top).and_then(FormulaCell::of) {
+                    self.run_top(top, cell);
+                } else {
+                    // Not expected: nothing replaces a formula during a
+                    // pass. Let go of it rather than loop on it.
+                    self.pop_stack();
+                    self.evaluation.cells.insert(key(top), CellState::Evaluated);
                 }
             }
         }

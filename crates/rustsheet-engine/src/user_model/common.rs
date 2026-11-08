@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 #![deny(missing_docs)]
 
 use std::{collections::HashMap, fmt::Debug};
@@ -147,36 +155,39 @@ fn update_style(old_value: &Style, style_path: &str, value: &str) -> Result<Styl
             }
             style.alignment = None;
         }
-        "alignment.horizontal" => match style.alignment {
-            Some(ref mut s) => s.horizontal = horizontal(value)?,
-            None => {
+        "alignment.horizontal" => {
+            if let Some(ref mut s) = style.alignment {
+                s.horizontal = horizontal(value)?;
+            } else {
                 let alignment = Alignment {
                     horizontal: horizontal(value)?,
                     ..Default::default()
                 };
                 style.alignment = Some(alignment);
             }
-        },
-        "alignment.vertical" => match style.alignment {
-            Some(ref mut s) => s.vertical = vertical(value)?,
-            None => {
+        }
+        "alignment.vertical" => {
+            if let Some(ref mut s) = style.alignment {
+                s.vertical = vertical(value)?;
+            } else {
                 let alignment = Alignment {
                     vertical: vertical(value)?,
                     ..Default::default()
                 };
                 style.alignment = Some(alignment);
             }
-        },
-        "alignment.wrap_text" => match style.alignment {
-            Some(ref mut s) => s.wrap_text = boolean(value)?,
-            None => {
+        }
+        "alignment.wrap_text" => {
+            if let Some(ref mut s) = style.alignment {
+                s.wrap_text = boolean(value)?;
+            } else {
                 let alignment = Alignment {
                     wrap_text: boolean(value)?,
                     ..Default::default()
                 };
                 style.alignment = Some(alignment);
             }
-        },
+        }
         _ => {
             return Err(format!("Invalid style path: '{style_path}'."));
         }
@@ -336,7 +347,7 @@ impl UserModel {
                 r#type: DiffType::Undo,
                 list: diff_list.clone(),
             });
-        };
+        }
         Ok(())
     }
 
@@ -352,7 +363,7 @@ impl UserModel {
                 r#type: DiffType::Redo,
                 list: diff_list.clone(),
             });
-        };
+        }
         Ok(())
     }
 
@@ -432,7 +443,7 @@ impl UserModel {
         let line_count = value.split('\n').count() as f64;
         let row_height = self.model.get_row_height(sheet, row)?;
         // This is in sync with the front-end auto fit row
-        let font_size = style.font.sz as f64;
+        let font_size = f64::from(style.font.sz);
         let line_height = font_size * 1.5;
         let cell_height = (line_count - 1.0) * line_height + 8.0 + font_size;
         if cell_height > row_height {
@@ -598,7 +609,7 @@ impl UserModel {
         if sheet == sheet_count - 1 && sheet_count > 1 {
             if let Some(view) = self.model.workbook.views.get_mut(&self.model.view_id) {
                 view.sheet = sheet_count - 2;
-            };
+            }
         }
 
         self.push_diff_list(vec![Diff::DeleteSheet {
@@ -673,7 +684,7 @@ impl UserModel {
             if self.model.workbook.worksheet(sheet_index)?.state == SheetState::Visible {
                 if let Some(view) = self.model.workbook.views.get_mut(&self.model.view_id) {
                     view.sheet = sheet_index;
-                };
+                }
                 break;
             }
         }
@@ -1436,7 +1447,7 @@ impl UserModel {
                     self.set_selected_cell(1, column)?;
                     self.set_selected_range(1, column, LAST_ROW, column)?;
                 }
-            };
+            }
         }
         self.push_diff_list(diff_list);
         Ok(())
@@ -1490,7 +1501,7 @@ impl UserModel {
                     self.set_selected_cell(row, 1)?;
                     self.set_selected_range(row, 1, row, LAST_COLUMN)?;
                 }
-            };
+            }
         }
         self.push_diff_list(diff_list);
         Ok(())
@@ -1706,7 +1717,7 @@ impl UserModel {
                 });
 
                 // We need to update the styles in all cells that have a row style
-                for row_s in styled_rows.iter() {
+                for row_s in styled_rows {
                     let row = row_s.r;
                     self.update_single_cell_style(
                         sheet,
@@ -1763,8 +1774,8 @@ impl UserModel {
                 }
 
                 // We need to go through all the cells that have a column style and merge the styles
-                for col in styled_columns.iter() {
-                    for column in col.min..col.max + 1 {
+                for col in styled_columns {
+                    for column in col.min..=col.max {
                         self.update_single_cell_style(
                             sheet,
                             row,

@@ -1,6 +1,6 @@
-//! Formulas evaluated outside a cell: the rules and thresholds of conditional formats. Each one
-//! is a formula evaluation of its own, with its own area budget (`area_budget.rs`), as a cell's
-//! formula is (`run_cell_formula`).
+//! Formulas evaluated outside a cell: the rules and thresholds of conditional formats, and a
+//! pivot cache's defined-name source (T-4506). Each one is a formula evaluation of its own, with
+//! its own area budget (`area_budget.rs`), as a cell's formula is (`run_cell_formula`).
 
 use crate::{
     calc_result::CalcResult,
@@ -21,10 +21,33 @@ impl Model {
         node: &Node,
         cell: CellReferenceIndex,
     ) -> CalcResult {
+        self.outside_cell(cell, |model| model.evaluate_node_in_context(node, cell))
+    }
+
+    /// [`Model::evaluate_outside_cell`] in reference context: the one area `node` stands for, as
+    /// a `CalcResult::Range`, or the error a function taking one area gives (several areas are
+    /// `#VALUE!`). A pivot cache's defined-name source is read so (`pivot_source_area`, T-4506).
+    pub(crate) fn evaluate_reference_outside_cell(
+        &mut self,
+        node: &Node,
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
+        self.outside_cell(cell, |model| {
+            model
+                .evaluate_reference_arg(node, cell)
+                .into_single_area(cell)
+        })
+    }
+
+    /// Runs `f`, one formula's evaluation in `cell`, with an area budget of its own.
+    fn outside_cell(
+        &mut self,
+        cell: CellReferenceIndex,
+        f: impl FnOnce(&mut Self) -> CalcResult,
+    ) -> CalcResult {
         // The calculation-order state lives for one formula here (SPEC-0017 "State").
         self.evaluation.order_state = OrderState::default();
-        let result =
-            self.with_area_budget(cell, |model| model.evaluate_node_in_context(node, cell));
+        let result = self.with_area_budget(cell, f);
         self.evaluation.order_state = OrderState::default();
         result
     }

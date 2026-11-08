@@ -11,7 +11,7 @@ use crate::test::util::new_empty_model;
 fn eval(cells: &[(&str, &str)]) -> Model {
     let mut model = new_empty_model();
     for (cell, formula) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     model
@@ -40,19 +40,19 @@ fn snapping_arguments() {
         ("F2", "=DOLLAR(1234.5678,-1+2^-22+9*2^-36)"),
         ("F3", "=FIXED(1234.5678,-1E-6)"),
     ]);
-    assert_eq!(model._get_text("A1"), *"1");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
-    assert_eq!(model._get_text("B1"), *"3");
-    assert_eq!(model._get_text("B2"), *"2");
-    assert_eq!(model._get_text("C1"), *"66");
-    assert_eq!(model._get_text("C2"), *"65");
-    assert_eq!(model._get_text("D1"), *"2");
-    assert_eq!(model._get_text("D2"), *"1");
-    assert_eq!(model._get_text("E1"), *"0.33");
-    assert_eq!(model._get_text("E2"), *"0.3");
-    assert_eq!(model._get_text("F1"), *"$1,230");
-    assert_eq!(model._get_text("F2"), *"$1,235");
-    assert_eq!(model._get_text("F3"), *"1,235");
+    assert_eq!(model.get_text_a1("A1"), *"1");
+    assert_eq!(model.get_text_a1("A2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("B1"), *"3");
+    assert_eq!(model.get_text_a1("B2"), *"2");
+    assert_eq!(model.get_text_a1("C1"), *"66");
+    assert_eq!(model.get_text_a1("C2"), *"65");
+    assert_eq!(model.get_text_a1("D1"), *"2");
+    assert_eq!(model.get_text_a1("D2"), *"1");
+    assert_eq!(model.get_text_a1("E1"), *"0.33");
+    assert_eq!(model.get_text_a1("E2"), *"0.3");
+    assert_eq!(model.get_text_a1("F1"), *"$1,230");
+    assert_eq!(model.get_text_a1("F2"), *"$1,235");
+    assert_eq!(model.get_text_a1("F3"), *"1,235");
 }
 
 #[test]
@@ -63,8 +63,8 @@ fn exactly_truncating_arguments() {
         ("B1", "=UNICODE(UNICHAR(66-2^-23))"),
         ("B2", "=UNICODE(UNICHAR(1000-1E-10))"),
     ]);
-    assert_eq!(model._get_text("A1"), *"0");
-    assert_eq!(model._get_text("A2"), *"999");
-    assert_eq!(model._get_text("B1"), *"65");
-    assert_eq!(model._get_text("B2"), *"999");
+    assert_eq!(model.get_text_a1("A1"), *"0");
+    assert_eq!(model.get_text_a1("A2"), *"999");
+    assert_eq!(model.get_text_a1("B1"), *"65");
+    assert_eq!(model.get_text_a1("B2"), *"999");
 }

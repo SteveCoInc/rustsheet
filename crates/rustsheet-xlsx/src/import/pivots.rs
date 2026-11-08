@@ -11,6 +11,15 @@
 //! T-4174) imports as a field with its formula and no records, after the other fields; a cache
 //! whose formula Excel for the web refuses, or the engine cannot compute
 //! (`check_calculated_fields`), is skipped.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::float_cmp,
+    clippy::print_stderr,
+    clippy::too_many_lines,
+    elided_lifetimes_in_paths
+)]
+// LINT-DEBT-END
 
 mod filters;
 mod groups;
@@ -718,8 +727,9 @@ fn read_definition<B: BufRead>(
                 _ => {}
             }
         } else if at(path, &[DEFINITION, "cacheSource"]) && name == "worksheetSource" {
-            // A named source (`name`: a defined name or a table) is kept as no source, its name
-            // for export.
+            // A named source (`name`: a defined name or a table) is kept as no source and its
+            // name, which a refresh resolves (`Model::pivot_source_area`, T-4506) and the export
+            // writes back.
             if let Some(name) = attribute(element, "name")? {
                 limits.check_text(&name)?;
                 source_name = Some(name);

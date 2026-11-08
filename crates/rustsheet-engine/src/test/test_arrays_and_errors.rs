@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 //! An operator with an array on one side and an error on the other gives an
@@ -18,25 +21,25 @@ fn model_with_numbers() -> Model {
         ("B2", "5"),
         ("C2", "6"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
 }
 
 fn row(model: &Model, row: i32, columns: i32) -> Vec<String> {
     (1..=columns)
-        .map(|column| model._get_text_at(0, row, column))
+        .map(|column| model.get_text_by_index(0, row, column))
         .collect()
 }
 
 #[test]
 fn array_and_error() {
     let mut model = model_with_numbers();
-    model._set("A5", "=A1:C1-1/0");
-    model._set("A6", "=A1:C1+NA()");
-    model._set("A7", "=A1:C1*(1/0)");
-    model._set("A8", "=A1:C1/NA()");
-    model._set("A9", "=A1:C1^(1/0)");
+    model.set_a1("A5", "=A1:C1-1/0");
+    model.set_a1("A6", "=A1:C1+NA()");
+    model.set_a1("A7", "=A1:C1*(1/0)");
+    model.set_a1("A8", "=A1:C1/NA()");
+    model.set_a1("A9", "=A1:C1^(1/0)");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#DIV/0!", "#DIV/0!", "#DIV/0!", ""]);
@@ -49,9 +52,9 @@ fn array_and_error() {
 #[test]
 fn error_and_array() {
     let mut model = model_with_numbers();
-    model._set("A5", "=1/0-A1:C1");
-    model._set("A6", "=NA()+A1:C1");
-    model._set("A7", "=NA()^{1,2}");
+    model.set_a1("A5", "=1/0-A1:C1");
+    model.set_a1("A6", "=NA()+A1:C1");
+    model.set_a1("A7", "=NA()^{1,2}");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#DIV/0!", "#DIV/0!", "#DIV/0!", ""]);
@@ -62,24 +65,24 @@ fn error_and_array() {
 #[test]
 fn the_array_keeps_its_size() {
     let mut model = model_with_numbers();
-    model._set("A5", "=A1:C2-1/0");
-    model._set("E1", "=A1:A2*NA()");
+    model.set_a1("A5", "=A1:C2-1/0");
+    model.set_a1("E1", "=A1:A2*NA()");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#DIV/0!", "#DIV/0!", "#DIV/0!", ""]);
     assert_eq!(row(&model, 6, 4), ["#DIV/0!", "#DIV/0!", "#DIV/0!", ""]);
     assert_eq!(row(&model, 7, 4), ["", "", "", ""]);
-    assert_eq!(model._get_text("E1"), *"#N/A");
-    assert_eq!(model._get_text("E2"), *"#N/A");
-    assert_eq!(model._get_text("E3"), *"");
-    assert_eq!(model._get_text("F1"), *"");
+    assert_eq!(model.get_text_a1("E1"), *"#N/A");
+    assert_eq!(model.get_text_a1("E2"), *"#N/A");
+    assert_eq!(model.get_text_a1("E3"), *"");
+    assert_eq!(model.get_text_a1("F1"), *"");
 }
 
 #[test]
 fn text_that_is_not_a_number_is_an_error() {
     let mut model = model_with_numbers();
-    model._set("A5", "=A1:C1+\"a\"");
-    model._set("A6", "=\"a\"*A1:C1");
+    model.set_a1("A5", "=A1:C1+\"a\"");
+    model.set_a1("A6", "=\"a\"*A1:C1");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#VALUE!", "#VALUE!", "#VALUE!", ""]);
@@ -89,12 +92,12 @@ fn text_that_is_not_a_number_is_an_error() {
 #[test]
 fn the_error_on_the_left_comes_first() {
     let mut model = model_with_numbers();
-    model._set("B1", "=NA()");
-    model._set("C1", "text");
+    model.set_a1("B1", "=NA()");
+    model.set_a1("C1", "text");
     // The elements of the array are on the left
-    model._set("A5", "=A1:C1+1/0");
+    model.set_a1("A5", "=A1:C1+1/0");
     // The single error is on the left
-    model._set("A6", "=1/0+A1:C1");
+    model.set_a1("A6", "=1/0+A1:C1");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#DIV/0!", "#N/A", "#VALUE!", ""]);
@@ -104,10 +107,10 @@ fn the_error_on_the_left_comes_first() {
 #[test]
 fn without_an_array_it_is_a_single_error() {
     let mut model = model_with_numbers();
-    model._set("A5", "=A1-1/0");
-    model._set("A6", "=1/0+NA()");
-    model._set("A7", "=NA()&A1");
-    model._set("A8", "=A1=NA()");
+    model.set_a1("A5", "=A1-1/0");
+    model.set_a1("A6", "=1/0+NA()");
+    model.set_a1("A7", "=NA()&A1");
+    model.set_a1("A8", "=A1=NA()");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 2), ["#DIV/0!", ""]);
@@ -119,9 +122,9 @@ fn without_an_array_it_is_a_single_error() {
 #[test]
 fn concatenation() {
     let mut model = model_with_numbers();
-    model._set("B1", "=NA()");
-    model._set("A5", "=A1:C1&1/0");
-    model._set("A6", "=1/0&A1:C1");
+    model.set_a1("B1", "=NA()");
+    model.set_a1("A5", "=A1:C1&1/0");
+    model.set_a1("A6", "=1/0&A1:C1");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#DIV/0!", "#N/A", "#DIV/0!", ""]);
@@ -131,10 +134,10 @@ fn concatenation() {
 #[test]
 fn comparison() {
     let mut model = model_with_numbers();
-    model._set("B1", "=NA()");
-    model._set("A5", "=A1:C1=1/0");
-    model._set("A6", "=1/0<A1:C1");
-    model._set("A7", "=A1:C1<>1/0");
+    model.set_a1("B1", "=NA()");
+    model.set_a1("A5", "=A1:C1=1/0");
+    model.set_a1("A6", "=1/0<A1:C1");
+    model.set_a1("A7", "=A1:C1<>1/0");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#DIV/0!", "#N/A", "#DIV/0!", ""]);
@@ -145,9 +148,9 @@ fn comparison() {
 #[test]
 fn power() {
     let mut model = model_with_numbers();
-    model._set("A5", "=POWER(A1:C1, 1/0)");
-    model._set("A6", "=POWER(NA(), A1:C1)");
-    model._set("A7", "=POWER(A1, 1/0)");
+    model.set_a1("A5", "=POWER(A1:C1, 1/0)");
+    model.set_a1("A6", "=POWER(NA(), A1:C1)");
+    model.set_a1("A7", "=POWER(A1, 1/0)");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#DIV/0!", "#DIV/0!", "#DIV/0!", ""]);
@@ -159,12 +162,12 @@ fn power() {
 fn iferror_replaces_every_element() {
     let mut model = model_with_numbers();
     // The average of empty cells is an error
-    model._set("A5", "=IFERROR(A1:C1-AVERAGE(K1:K3), 0)");
-    model._set("A6", "=SUM(IFERROR(A1:C1/NA(), 2))");
+    model.set_a1("A5", "=IFERROR(A1:C1-AVERAGE(K1:K3), 0)");
+    model.set_a1("A6", "=SUM(IFERROR(A1:C1/NA(), 2))");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["0", "0", "0", ""]);
-    assert_eq!(model._get_text("A6"), *"6");
+    assert_eq!(model.get_text_a1("A6"), *"6");
 }
 
 #[test]
@@ -178,9 +181,9 @@ fn inside_a_lambda() {
         )
         .unwrap();
     // A row with numbers and an empty one
-    model._set("A5", "=IFERROR(layer_norm(A1:C1), 0)");
-    model._set("A6", "=IFERROR(layer_norm(K1:M1), 0)");
-    model._set("A7", "=layer_norm(K1:M1)");
+    model.set_a1("A5", "=IFERROR(layer_norm(A1:C1), 0)");
+    model.set_a1("A6", "=IFERROR(layer_norm(K1:M1), 0)");
+    model.set_a1("A7", "=layer_norm(K1:M1)");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["-1.224735686", "0", "1.224735686", ""]);
@@ -193,11 +196,11 @@ fn inside_a_lambda() {
 #[test]
 fn left_and_right() {
     let mut model = model_with_numbers();
-    model._set("A5", "=LEFT(A1:C1, NA())");
-    model._set("A6", "=RIGHT(A1:C1, 1/0)");
-    model._set("A7", "=LEFT(NA(), {1,2})");
-    model._set("A8", "=RIGHT(1/0, A1:C1)");
-    model._set("A9", "=IFERROR(LEFT(A1:C1, NA()), \"x\")");
+    model.set_a1("A5", "=LEFT(A1:C1, NA())");
+    model.set_a1("A6", "=RIGHT(A1:C1, 1/0)");
+    model.set_a1("A7", "=LEFT(NA(), {1,2})");
+    model.set_a1("A8", "=RIGHT(1/0, A1:C1)");
+    model.set_a1("A9", "=IFERROR(LEFT(A1:C1, NA()), \"x\")");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#N/A", "#N/A", "#N/A", ""]);
@@ -210,10 +213,10 @@ fn left_and_right() {
 #[test]
 fn mid() {
     let mut model = model_with_numbers();
-    model._set("A5", "=MID(A1:C1, NA(), 1)");
-    model._set("A6", "=MID(A1:C1, 1, 1/0)");
-    model._set("A7", "=MID(NA(), {1,2}, 1)");
-    model._set("A8", "=MID(\"abc\", A1:C1, NA())");
+    model.set_a1("A5", "=MID(A1:C1, NA(), 1)");
+    model.set_a1("A6", "=MID(A1:C1, 1, 1/0)");
+    model.set_a1("A7", "=MID(NA(), {1,2}, 1)");
+    model.set_a1("A8", "=MID(\"abc\", A1:C1, NA())");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#N/A", "#N/A", "#N/A", ""]);
@@ -225,9 +228,9 @@ fn mid() {
 #[test]
 fn exact() {
     let mut model = model_with_numbers();
-    model._set("A5", "=EXACT(A1:C1, NA())");
-    model._set("A6", "=EXACT(1/0, A1:C1)");
-    model._set("A7", "=EXACT(A1:C2, NA())");
+    model.set_a1("A5", "=EXACT(A1:C1, NA())");
+    model.set_a1("A6", "=EXACT(1/0, A1:C1)");
+    model.set_a1("A7", "=EXACT(A1:C2, NA())");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#N/A", "#N/A", "#N/A", ""]);
@@ -240,9 +243,9 @@ fn exact() {
 #[test]
 fn text() {
     let mut model = model_with_numbers();
-    model._set("B1", "=1/0");
-    model._set("A5", "=TEXT(A1:C1, NA())");
-    model._set("A6", "=TEXT(A2:C2, NA())");
+    model.set_a1("B1", "=1/0");
+    model.set_a1("A5", "=TEXT(A1:C1, NA())");
+    model.set_a1("A6", "=TEXT(A2:C2, NA())");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#N/A", "#DIV/0!", "#N/A", ""]);
@@ -254,35 +257,35 @@ fn text_with_an_error_format() {
     // Whatever the value, text and boolean included, an error in the format
     // is the result; an error in the value comes first
     let mut model = model_with_numbers();
-    model._set("A5", "=TEXT(\"x\", NA())");
-    model._set("A6", "=TEXT(TRUE, 1/0)");
-    model._set("A7", "=TEXT(5, NA())");
-    model._set("A8", "=TEXT(K1, NA())");
-    model._set("A9", "=TEXT(NA(), 1/0)");
-    model._set("A10", "=TEXT({\"x\",TRUE,1}, NA())");
+    model.set_a1("A5", "=TEXT(\"x\", NA())");
+    model.set_a1("A6", "=TEXT(TRUE, 1/0)");
+    model.set_a1("A7", "=TEXT(5, NA())");
+    model.set_a1("A8", "=TEXT(K1, NA())");
+    model.set_a1("A9", "=TEXT(NA(), 1/0)");
+    model.set_a1("A10", "=TEXT({\"x\",TRUE,1}, NA())");
     // Without an error the value is formatted, or kept as it is
-    model._set("A11", "=TEXT(\"x\", \"0\")");
-    model._set("A12", "=TEXT(5, \"0.0\")");
+    model.set_a1("A11", "=TEXT(\"x\", \"0\")");
+    model.set_a1("A12", "=TEXT(5, \"0.0\")");
     model.evaluate();
 
-    assert_eq!(model._get_text("A5"), *"#N/A");
-    assert_eq!(model._get_text("A6"), *"#DIV/0!");
-    assert_eq!(model._get_text("A7"), *"#N/A");
-    assert_eq!(model._get_text("A8"), *"#N/A");
-    assert_eq!(model._get_text("A9"), *"#N/A");
+    assert_eq!(model.get_text_a1("A5"), *"#N/A");
+    assert_eq!(model.get_text_a1("A6"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A7"), *"#N/A");
+    assert_eq!(model.get_text_a1("A8"), *"#N/A");
+    assert_eq!(model.get_text_a1("A9"), *"#N/A");
     assert_eq!(row(&model, 10, 4), ["#N/A", "#N/A", "#N/A", ""]);
-    assert_eq!(model._get_text("A11"), *"x");
-    assert_eq!(model._get_text("A12"), *"5.0");
+    assert_eq!(model.get_text_a1("A11"), *"x");
+    assert_eq!(model.get_text_a1("A12"), *"5.0");
 }
 
 #[test]
 fn date() {
     let mut model = model_with_numbers();
-    model._set("A5", "=DATE({2020,2021}, NA(), 1)");
-    model._set("A6", "=DATE(NA(), A1:C1, 1)");
-    model._set("A7", "=DATE(2020, A1:C1, 1/0)");
+    model.set_a1("A5", "=DATE({2020,2021}, NA(), 1)");
+    model.set_a1("A6", "=DATE(NA(), A1:C1, 1)");
+    model.set_a1("A7", "=DATE(2020, A1:C1, 1/0)");
     // The first argument that is an error
-    model._set("A8", "=DATE(1/0, A1:C1, NA())");
+    model.set_a1("A8", "=DATE(1/0, A1:C1, NA())");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 3), ["#N/A", "#N/A", ""]);
@@ -294,8 +297,8 @@ fn date() {
 #[test]
 fn weekday() {
     let mut model = model_with_numbers();
-    model._set("A5", "=WEEKDAY(A1:C1, NA())");
-    model._set("A6", "=WEEKDAY(A1:C2, 1/0)");
+    model.set_a1("A5", "=WEEKDAY(A1:C1, NA())");
+    model.set_a1("A6", "=WEEKDAY(A1:C2, 1/0)");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["#N/A", "#N/A", "#N/A", ""]);
@@ -307,15 +310,15 @@ fn weekday() {
 #[test]
 fn in_functions_the_first_error_comes_first() {
     let mut model = model_with_numbers();
-    model._set("B1", "=1/0");
-    model._set("A5", "=LEFT(A1:C1, NA())");
-    model._set("A6", "=MID(A1:C1, 1, NA())");
-    model._set("A7", "=EXACT(A1:C1, NA())");
-    model._set("A8", "=WEEKDAY(A1:C1, NA())");
-    model._set("A9", "=DATE(2020, A1:C1, NA())");
+    model.set_a1("B1", "=1/0");
+    model.set_a1("A5", "=LEFT(A1:C1, NA())");
+    model.set_a1("A6", "=MID(A1:C1, 1, NA())");
+    model.set_a1("A7", "=EXACT(A1:C1, NA())");
+    model.set_a1("A8", "=WEEKDAY(A1:C1, NA())");
+    model.set_a1("A9", "=DATE(2020, A1:C1, NA())");
     // The single error is in an earlier argument
-    model._set("A10", "=EXACT(NA(), A1:C1)");
-    model._set("A11", "=DATE(NA(), A1:C1, 1)");
+    model.set_a1("A10", "=EXACT(NA(), A1:C1)");
+    model.set_a1("A11", "=DATE(NA(), A1:C1, 1)");
     model.evaluate();
 
     for r in 5..=9 {
@@ -332,13 +335,13 @@ fn in_functions_the_first_error_comes_first() {
 #[test]
 fn in_functions_without_an_array_it_is_a_single_error() {
     let mut model = model_with_numbers();
-    model._set("A5", "=LEFT(A1, NA())");
-    model._set("A6", "=MID(1/0, 1, NA())");
-    model._set("A7", "=EXACT(1/0, NA())");
-    model._set("A8", "=TEXT(A1, NA())");
-    model._set("A9", "=DATE(2020, NA(), 1/0)");
-    model._set("A10", "=WEEKDAY(A1, NA())");
-    model._set("A11", "=WEEKDAY(1/0, NA())");
+    model.set_a1("A5", "=LEFT(A1, NA())");
+    model.set_a1("A6", "=MID(1/0, 1, NA())");
+    model.set_a1("A7", "=EXACT(1/0, NA())");
+    model.set_a1("A8", "=TEXT(A1, NA())");
+    model.set_a1("A9", "=DATE(2020, NA(), 1/0)");
+    model.set_a1("A10", "=WEEKDAY(A1, NA())");
+    model.set_a1("A11", "=WEEKDAY(1/0, NA())");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 2), ["#N/A", ""]);
@@ -355,11 +358,11 @@ fn in_functions_without_an_array_it_is_a_single_error() {
 #[test]
 fn comparison_with_an_error_inside_the_array() {
     let mut model = model_with_numbers();
-    model._set("B1", "=NA()");
-    model._set("A5", "=A1:C1=1");
-    model._set("A6", "=2<A1:C1");
-    model._set("A7", "=A1:C1<>\"a\"");
-    model._set("A8", "={1,#DIV/0!,3}>=3");
+    model.set_a1("B1", "=NA()");
+    model.set_a1("A5", "=A1:C1=1");
+    model.set_a1("A6", "=2<A1:C1");
+    model.set_a1("A7", "=A1:C1<>\"a\"");
+    model.set_a1("A8", "={1,#DIV/0!,3}>=3");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["TRUE", "#N/A", "FALSE", ""]);
@@ -371,13 +374,13 @@ fn comparison_with_an_error_inside_the_array() {
 #[test]
 fn comparison_of_two_arrays_with_errors() {
     let mut model = model_with_numbers();
-    model._set("B1", "=NA()");
-    model._set("B2", "=1/0");
-    model._set("C2", "=1/0");
+    model.set_a1("B1", "=NA()");
+    model.set_a1("B2", "=1/0");
+    model.set_a1("C2", "=1/0");
     // 1, #N/A, 3 against 4, #DIV/0!, #DIV/0!: the error on the left comes first
-    model._set("A5", "=A1:C1=A2:C2");
-    model._set("A6", "=A2:C2=A1:C1");
-    model._set("A7", "=A1:C1<{1;2}");
+    model.set_a1("A5", "=A1:C1=A2:C2");
+    model.set_a1("A6", "=A2:C2=A1:C1");
+    model.set_a1("A7", "=A1:C1<{1;2}");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["FALSE", "#N/A", "#DIV/0!", ""]);
@@ -390,7 +393,7 @@ fn comparison_of_two_arrays_with_errors() {
 #[test]
 fn every_comparison_operator_keeps_the_error() {
     let mut model = model_with_numbers();
-    model._set("B1", "=NA()");
+    model.set_a1("B1", "=NA()");
     for (r, operator) in ["=", "<>", "<", ">", "<=", ">="].iter().enumerate() {
         let r = r as i32;
         model
@@ -403,9 +406,9 @@ fn every_comparison_operator_keeps_the_error() {
     model.evaluate();
 
     for r in (5..=10).chain(12..=17) {
-        assert_eq!(model._get_text_at(0, r, 2), "#N/A", "row {r}");
+        assert_eq!(model.get_text_by_index(0, r, 2), "#N/A", "row {r}");
         assert!(
-            ["TRUE", "FALSE"].contains(&model._get_text_at(0, r, 1).as_str()),
+            ["TRUE", "FALSE"].contains(&model.get_text_by_index(0, r, 1).as_str()),
             "row {r}"
         );
     }
@@ -414,12 +417,12 @@ fn every_comparison_operator_keeps_the_error() {
 #[test]
 fn the_error_reaches_the_function_that_uses_the_comparison() {
     let mut model = model_with_numbers();
-    model._set("B1", "=NA()");
-    model._set("A5", "=SUM((A1:C1=1)*1)");
-    model._set("A6", "=IFERROR(A1:C1=1, \"e\")");
+    model.set_a1("B1", "=NA()");
+    model.set_a1("A5", "=SUM((A1:C1=1)*1)");
+    model.set_a1("A6", "=IFERROR(A1:C1=1, \"e\")");
     model.evaluate();
 
-    assert_eq!(model._get_text("A5"), *"#N/A");
+    assert_eq!(model.get_text_a1("A5"), *"#N/A");
     assert_eq!(row(&model, 6, 4), ["TRUE", "e", "FALSE", ""]);
 }
 
@@ -430,14 +433,14 @@ fn the_error_reaches_the_function_that_uses_the_comparison() {
 #[test]
 fn operators_on_arrays_of_different_sizes() {
     let mut model = model_with_numbers();
-    model._set("A5", "=A1:C1+A1:B1");
-    model._set("A6", "=A1:B1*A1:C1");
-    model._set("A7", "=A1:C1&A1:B1");
-    model._set("A8", "=A1:C1=A1:B1");
-    model._set("A9", "=A1:B1<A1:C1");
-    model._set("A10", "=A1:C1^{1,2}");
+    model.set_a1("A5", "=A1:C1+A1:B1");
+    model.set_a1("A6", "=A1:B1*A1:C1");
+    model.set_a1("A7", "=A1:C1&A1:B1");
+    model.set_a1("A8", "=A1:C1=A1:B1");
+    model.set_a1("A9", "=A1:B1<A1:C1");
+    model.set_a1("A10", "=A1:C1^{1,2}");
     // A row and a column make a table: nothing is missing
-    model._set("A12", "=A1:C1+A1:A2");
+    model.set_a1("A12", "=A1:C1+A1:A2");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["2", "4", "#N/A", ""]);
@@ -453,15 +456,15 @@ fn operators_on_arrays_of_different_sizes() {
 #[test]
 fn missing_elements_and_errors_in_operators() {
     let mut model = model_with_numbers();
-    model._set("B1", "=1/0");
+    model.set_a1("B1", "=1/0");
     // 1, #DIV/0!, 3 against 1, 2: the third is missing on the right
-    model._set("A5", "=A1:C1+{1,2}");
-    model._set("A6", "={1,2}+A1:C1");
-    model._set("A7", "=A1:C1&{1,2}");
-    model._set("A8", "=A1:C1={1,2}");
+    model.set_a1("A5", "=A1:C1+{1,2}");
+    model.set_a1("A6", "={1,2}+A1:C1");
+    model.set_a1("A7", "=A1:C1&{1,2}");
+    model.set_a1("A8", "=A1:C1={1,2}");
     // Missing on the left, an error on the right: the left comes first
-    model._set("A9", "={1,2}+{1,#NUM!,3}");
-    model._set("A10", "={1,2}={1,#NUM!,3}");
+    model.set_a1("A9", "={1,2}+{1,#NUM!,3}");
+    model.set_a1("A10", "={1,2}={1,#NUM!,3}");
     model.evaluate();
 
     assert_eq!(row(&model, 5, 4), ["2", "#DIV/0!", "#N/A", ""]);

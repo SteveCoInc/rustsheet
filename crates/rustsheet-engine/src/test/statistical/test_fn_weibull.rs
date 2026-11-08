@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::test::util::new_empty_model;
@@ -7,52 +10,52 @@ fn test_fn_weibull_dist_smoke() {
     let mut model = new_empty_model();
 
     // Valid: CDF and PDF for x = 1, alpha = 2, beta = 1
-    model._set("A1", "=WEIBULL.DIST(1, 2, 1, TRUE)");
-    model._set("A2", "=WEIBULL.DIST(1, 2, 1, FALSE)");
+    model.set_a1("A1", "=WEIBULL.DIST(1, 2, 1, TRUE)");
+    model.set_a1("A2", "=WEIBULL.DIST(1, 2, 1, FALSE)");
 
     // Wrong number of arguments -> #ERROR!
-    model._set("A3", "=WEIBULL.DIST(1, 2, 1)");
-    model._set("A4", "=WEIBULL.DIST(1, 2, 1, TRUE, FALSE)");
+    model.set_a1("A3", "=WEIBULL.DIST(1, 2, 1)");
+    model.set_a1("A4", "=WEIBULL.DIST(1, 2, 1, TRUE, FALSE)");
 
     // Domain errors:
     // x < 0  -> #NUM!
-    model._set("A5", "=WEIBULL.DIST(-1, 2, 1, TRUE)");
+    model.set_a1("A5", "=WEIBULL.DIST(-1, 2, 1, TRUE)");
     // alpha <= 0 -> #NUM!
-    model._set("A6", "=WEIBULL.DIST(1, 0, 1, TRUE)");
-    model._set("A7", "=WEIBULL.DIST(1, -1, 1, TRUE)");
+    model.set_a1("A6", "=WEIBULL.DIST(1, 0, 1, TRUE)");
+    model.set_a1("A7", "=WEIBULL.DIST(1, -1, 1, TRUE)");
     // beta <= 0 -> #NUM!
-    model._set("A8", "=WEIBULL.DIST(1, 2, 0, TRUE)");
-    model._set("A9", "=WEIBULL.DIST(1, 2, -1, TRUE)");
+    model.set_a1("A8", "=WEIBULL.DIST(1, 2, 0, TRUE)");
+    model.set_a1("A9", "=WEIBULL.DIST(1, 2, -1, TRUE)");
 
     model.evaluate();
 
     // 1 - e^-1
-    assert_eq!(model._get_text("A1"), *"0.632120559");
+    assert_eq!(model.get_text_a1("A1"), *"0.632120559");
     // 2 * e^-1
-    assert_eq!(model._get_text("A2"), *"0.735758882");
+    assert_eq!(model.get_text_a1("A2"), *"0.735758882");
 
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
-    assert_eq!(model._get_text("A5"), *"#NUM!");
-    assert_eq!(model._get_text("A6"), *"#NUM!");
-    assert_eq!(model._get_text("A7"), *"#NUM!");
-    assert_eq!(model._get_text("A8"), *"#NUM!");
-    assert_eq!(model._get_text("A9"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A5"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A6"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A7"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A8"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A9"), *"#NUM!");
 }
 
 #[test]
 fn weibull_density_at_zero_and_boolean_x() {
     let mut model = new_empty_model();
     // probes-numeric/t1048-weibull A16, A17, A25 and t1049-weibulldist A27, A33.
-    model._set("A1", "=WEIBULL.DIST(0,1,1,FALSE)");
-    model._set("A2", "=WEIBULL.DIST(0,0.5,1,FALSE)");
-    model._set("A3", "=WEIBULL.DIST(0,1,3,FALSE)");
-    model._set("A4", "=WEIBULL(TRUE,1,1,TRUE)");
+    model.set_a1("A1", "=WEIBULL.DIST(0,1,1,FALSE)");
+    model.set_a1("A2", "=WEIBULL.DIST(0,0.5,1,FALSE)");
+    model.set_a1("A3", "=WEIBULL.DIST(0,1,3,FALSE)");
+    model.set_a1("A4", "=WEIBULL(TRUE,1,1,TRUE)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"0");
-    assert_eq!(model._get_text("A2"), *"0");
-    assert_eq!(model._get_text("A3"), *"0");
-    assert_eq!(model._get_text("A4"), *"0.632120559");
+    assert_eq!(model.get_text_a1("A1"), *"0");
+    assert_eq!(model.get_text_a1("A2"), *"0");
+    assert_eq!(model.get_text_a1("A3"), *"0");
+    assert_eq!(model.get_text_a1("A4"), *"0.632120559");
 }
 
 /// Reads `cell` of Sheet1 as a number, panicking on anything else.
@@ -94,7 +97,7 @@ fn weibull_matches_excel_digits_through_exp_and_ln() {
     ];
     let mut model = new_empty_model();
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, excel)) in cases.iter().enumerate() {
@@ -111,9 +114,9 @@ fn weibull_cdf_switches_from_expm1_at_t_one() {
     // probes-numeric/t2239-weibull-cdf-switch (excel-graph): A1 (t = 0.1) and A113 (t = 0.9917)
     // take Excel's expm1, A114 (t = 1.3506) is 1-EXP(-t); the two forms differ in the last bit there.
     let mut model = new_empty_model();
-    model._set("A1", "=WEIBULL.DIST(0.1,1,1,TRUE)");
-    model._set("A2", "=WEIBULL.DIST(0.9917,1,1,TRUE)");
-    model._set("A3", "=WEIBULL.DIST(1.3506,1,1,TRUE)");
+    model.set_a1("A1", "=WEIBULL.DIST(0.1,1,1,TRUE)");
+    model.set_a1("A2", "=WEIBULL.DIST(0.9917,1,1,TRUE)");
+    model.set_a1("A3", "=WEIBULL.DIST(1.3506,1,1,TRUE)");
     model.evaluate();
     assert_eq!(number(&model, "A1"), 0.095_162_581_964_040_45);
     assert_eq!(number(&model, "A2"), 0.629_054_452_728_503_2);
@@ -124,30 +127,30 @@ fn weibull_cdf_switches_from_expm1_at_t_one() {
 fn weibull_overflow_and_underflow_edges() {
     let mut model = new_empty_model();
     // (x/beta)^alpha overflows: #NUM! (gen-m9/0bbab6206b5c9a07 A340, 329b177b5d5165ad A101).
-    model._set("A1", "=WEIBULL.DIST(100,1E+10,0.01,1)");
-    model._set("A2", "=WEIBULL(1E+300,2.5,100,0.5)");
-    model._set("A3", "=WEIBULL(2,1E+5,0.5,TRUE)");
+    model.set_a1("A1", "=WEIBULL.DIST(100,1E+10,0.01,1)");
+    model.set_a1("A2", "=WEIBULL(1E+300,2.5,100,0.5)");
+    model.set_a1("A3", "=WEIBULL(2,1E+5,0.5,TRUE)");
     // x = 0 is 0 before any power (gen-m9 T-2256 sweep).
-    model._set("A4", "=WEIBULL(0,1.5E+10,0.01,1)");
+    model.set_a1("A4", "=WEIBULL(0,1.5E+10,0.01,1)");
     // The density's beta^alpha underflows to 0: #DIV/0! (gen-m9/941c409532603d32 A142,
     // 0620505280d2ea6e A61).
-    model._set("A5", "=WEIBULL.DIST(0.1,10000000000.5,0.2,FALSE)");
+    model.set_a1("A5", "=WEIBULL.DIST(0.1,10000000000.5,0.2,FALSE)");
     // The density's beta^alpha overflows: #NUM!, though the density's limit is 0
     // (gen-m9/a63d1c7d6f96c56d A352, 7fd0a98183c6babf A390, f82473275380882e A356).
-    model._set("A6", "=WEIBULL.DIST(0.3,99999,99999,\"FALSE\")");
-    model._set("A7", "=WEIBULL(1,1E+8,1E+10,FALSE)");
-    model._set("A8", "=WEIBULL.DIST(1E-10,29178,1.5E+10,\"FALSE\")");
+    model.set_a1("A6", "=WEIBULL.DIST(0.3,99999,99999,\"FALSE\")");
+    model.set_a1("A7", "=WEIBULL(1,1E+8,1E+10,FALSE)");
+    model.set_a1("A8", "=WEIBULL.DIST(1E-10,29178,1.5E+10,\"FALSE\")");
     // The cdf takes x/beta and stays a number where beta^alpha overflows
     // (gen-m9/7f7ca726c3f68554 A308).
-    model._set("A9", "=WEIBULL(1E+15,42,10000000001,TRUE)");
+    model.set_a1("A9", "=WEIBULL(1E+15,42,10000000001,TRUE)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
-    assert_eq!(model._get_text("A2"), *"#NUM!");
-    assert_eq!(model._get_text("A3"), *"#NUM!");
-    assert_eq!(model._get_text("A4"), *"0");
-    assert_eq!(model._get_text("A5"), *"#DIV/0!");
-    assert_eq!(model._get_text("A6"), *"#NUM!");
-    assert_eq!(model._get_text("A7"), *"#NUM!");
-    assert_eq!(model._get_text("A8"), *"#NUM!");
-    assert_eq!(model._get_text("A9"), *"1");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A4"), *"0");
+    assert_eq!(model.get_text_a1("A5"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("A6"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A7"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A8"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A9"), *"1");
 }

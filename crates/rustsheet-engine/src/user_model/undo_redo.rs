@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::assigning_clones,
+    clippy::match_same_arms,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 #![deny(missing_docs)]
 
 use crate::{
@@ -132,8 +139,7 @@ impl UserModel {
                             .worksheet(*sheet)
                             .ok()
                             .and_then(|ws| ws.cell(*row, *column))
-                            .map(|c| !matches!(c, Cell::EmptyCell { .. }))
-                            .unwrap_or(false);
+                            .is_some_and(|c| !matches!(c, Cell::EmptyCell { .. }));
                         if has_content {
                             self.model
                                 .set_cell_style(*sheet, *row, *column, &Style::default())?;
@@ -585,7 +591,7 @@ impl UserModel {
                     old_value: _,
                 } => {
                     needs_evaluation = true;
-                    let value = new_value.to_string();
+                    let value = new_value.clone();
                     if *external {
                         self.model.set_user_input(*sheet, *row, *column, value)?;
                     } else {

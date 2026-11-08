@@ -342,15 +342,12 @@ impl PivotResult {
 
 /// Takes `units` from `work`, or empties it and fails.
 pub(super) fn charge(work: &mut u64, units: u64) -> Result<(), PivotComputeError> {
-    match work.checked_sub(units) {
-        Some(left) => {
-            *work = left;
-            Ok(())
-        }
-        None => {
-            *work = 0;
-            Err(PivotComputeError::Limit)
-        }
+    if let Some(left) = work.checked_sub(units) {
+        *work = left;
+        Ok(())
+    } else {
+        *work = 0;
+        Err(PivotComputeError::Limit)
     }
 }
 
@@ -607,17 +604,16 @@ fn accumulate(
         bases.clear();
         for row in rows.ancestors(row_leaf) {
             for column in columns.ancestors(column_leaf) {
-                let base = match cells.get(&(row, column)) {
-                    Some(&base) => base,
-                    None => {
-                        // A cell counts as one node even with no data field.
-                        count_nodes(nodes, data.len().max(1))?;
-                        charge(work, units(data.len()).saturating_add(1))?;
-                        let base = node_index(accumulators.len())?;
-                        accumulators.extend((0..data.len()).map(|_| Accumulator::new()));
-                        cells.insert((row, column), base);
-                        base
-                    }
+                let base = if let Some(&base) = cells.get(&(row, column)) {
+                    base
+                } else {
+                    // A cell counts as one node even with no data field.
+                    count_nodes(nodes, data.len().max(1))?;
+                    charge(work, units(data.len()).saturating_add(1))?;
+                    let base = node_index(accumulators.len())?;
+                    accumulators.extend((0..data.len()).map(|_| Accumulator::new()));
+                    cells.insert((row, column), base);
+                    base
                 };
                 bases.push(base as usize);
             }

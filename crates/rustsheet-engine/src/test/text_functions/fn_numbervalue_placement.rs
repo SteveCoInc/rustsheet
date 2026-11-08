@@ -9,11 +9,11 @@ use crate::test::util::new_empty_model;
 fn eval(cells: &[(&str, &str, &str)]) {
     let mut model = new_empty_model();
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {
-        assert_eq!(model._get_text(cell), *expected, "{formula}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{formula}");
     }
 }
 
@@ -49,7 +49,7 @@ fn tab_line_feed_and_carriage_return_are_removed_other_controls_are_not() {
             "#VALUE!",
         ),
         ("A7", r#"=NUMBERVALUE("12:30"&CHAR(10)&"PM")"#, "#VALUE!"),
-        ("A8", r#"=NUMBERVALUE(CHAR(9)&CHAR(13))"#, "0"),
+        ("A8", r"=NUMBERVALUE(CHAR(9)&CHAR(13))", "0"),
     ]);
 }
 

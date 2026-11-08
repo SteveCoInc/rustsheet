@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_precision_loss,
+    clippy::float_cmp,
+    clippy::many_single_char_names
+)]
+#![cfg_attr(test, expect(clippy::unreadable_literal))]
+// LINT-DEBT-END
 use statrs::distribution::FisherSnedecor;
 
 use crate::arithmetic::{extended_quotient, flush_subnormal};
@@ -610,6 +618,15 @@ impl Model {
         // either sample (T-2576, T-2577).
         if marked {
             return Err(marked_number_error(cell));
+        }
+        // An omitted sample is `#VALUE!` in either position, for both names (probes/t4857-f-kinds
+        // A605, A606, A659, A660; statistics.md "F.TEST of a single value (T-2455)"; T-4882).
+        if matches!(sample, CalcResult::EmptyArg) {
+            return Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                format!("F.TEST: the {which} sample is omitted"),
+            ));
         }
         if self.is_blank_one_cell(&sample) {
             return Err(CalcResult::new_error(

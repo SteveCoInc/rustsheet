@@ -194,9 +194,9 @@ fn defined_name_lambda_entered_in_english_survives_switch_to_spanish() {
     model
         .new_defined_name("MyIf", None, "=LAMBDA(x, IF(x>0, 1, 2))")
         .unwrap();
-    model._set("A1", "=MyIf(5)");
+    model.set_a1("A1", "=MyIf(5)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"1");
+    assert_eq!(model.get_text_a1("A1"), *"1");
 
     // Stored internally in English.
     assert_eq!(
@@ -220,7 +220,7 @@ fn defined_name_lambda_entered_in_english_survives_switch_to_spanish() {
         .unwrap();
     model.evaluate();
     assert_eq!(
-        model._get_text("A1"),
+        model.get_text_a1("A1"),
         *"1",
         "MyIf should still evaluate after the language switch and reparse"
     );
@@ -234,9 +234,9 @@ fn defined_name_lambda_entered_in_spanish_is_stored_in_english() {
     model
         .new_defined_name("MiSi", None, "=LAMBDA(x, SI(x>0, 1, 2))")
         .unwrap();
-    model._set("A1", "=MiSi(5)");
+    model.set_a1("A1", "=MiSi(5)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"1");
+    assert_eq!(model.get_text_a1("A1"), *"1");
 
     // Stored in English even though it was entered in Spanish.
     assert_eq!(

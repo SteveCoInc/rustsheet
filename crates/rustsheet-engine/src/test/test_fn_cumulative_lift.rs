@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 //! CUMIPMT and CUMPRINC on the SPEC-0011 driver (T-1845): their period sums take constant time
@@ -42,10 +45,10 @@ fn check(cells: &[(&str, &str, &str)]) {
 fn check_within_two_ulps(cells: &[(&str, &str, f64)]) {
     let mut model = new_empty_model();
     for (cell, input) in INPUTS {
-        model._set(cell, input);
+        model.set_a1(cell, input);
     }
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, excel) in cells {
@@ -160,8 +163,8 @@ fn up_to_32_periods_are_close_to_the_per_period_sum() {
         ),
     ];
     for (row, (cumulative, sum)) in pairs.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), cumulative);
-        model._set(&format!("B{}", row + 1), sum);
+        model.set_a1(&format!("A{}", row + 1), cumulative);
+        model.set_a1(&format!("B{}", row + 1), sum);
     }
     model.evaluate();
     let number = |cell: &str| round_trip_value(&model, cell).parse::<f64>().unwrap();
@@ -236,7 +239,7 @@ fn a_subnormal_or_underflowed_leading_power_keeps_its_digits() {
     ];
     let mut model = new_empty_model();
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, excel) in cells {
@@ -547,21 +550,21 @@ fn periods_past_two_to_the_53_take_the_closed_form_and_end() {
     // T-1845): a few periods at 1E17, rate 1E-15 so `(1+r)^nper` stays finite, now take the closed
     // form; NaN arguments fail the checks. Each finishes; its value is not asserted (unprobed).
     let mut model = crate::test::util::new_empty_model();
-    model._set("A1", "=CUMIPMT(1E-15,2E17,1000,1E17,1E17,0)");
-    model._set("A2", "=CUMPRINC(1E-15,2E17,1000,1E17,1E17+8,1)");
-    model._set("A3", "=CUMIPMT(1E-15,2E16,1,1E16,1E16,0)");
-    model._set("A4", "=CUMIPMT(1E-15,1E16,1,1E16,1E16,0)");
-    model._set("A5", "=CUMPRINC(1E-15,1E16,1,1E16-3,1E16,0)");
-    model._set("A6", "=CUMIPMT(1E-15,2E16,1,1E16,1E16+8,0)");
+    model.set_a1("A1", "=CUMIPMT(1E-15,2E17,1000,1E17,1E17,0)");
+    model.set_a1("A2", "=CUMPRINC(1E-15,2E17,1000,1E17,1E17+8,1)");
+    model.set_a1("A3", "=CUMIPMT(1E-15,2E16,1,1E16,1E16,0)");
+    model.set_a1("A4", "=CUMIPMT(1E-15,1E16,1,1E16,1E16,0)");
+    model.set_a1("A5", "=CUMPRINC(1E-15,1E16,1,1E16-3,1E16,0)");
+    model.set_a1("A6", "=CUMIPMT(1E-15,2E16,1,1E16,1E16+8,0)");
     model.evaluate();
     for cell in ["A4", "A5", "A6"] {
-        let text = model._get_text(cell);
+        let text = model.get_text_a1(cell);
         assert!(!text.is_empty(), "{cell} {text}");
     }
-    let a1 = model._get_text("A1");
+    let a1 = model.get_text_a1("A1");
     assert!(!a1.is_empty(), "A1 {a1}");
-    let a2 = model._get_text("A2");
+    let a2 = model.get_text_a1("A2");
     assert!(!a2.is_empty(), "A2 {a2}");
-    let a3 = model._get_text("A3");
+    let a3 = model.get_text_a1("A3");
     assert!(!a3.is_empty(), "A3 {a3}");
 }
