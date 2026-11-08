@@ -245,7 +245,7 @@ pub(super) fn apply_cached_overrides(
 /// The earlier sidecar stays committed and unchanged. A line must cite the same cell in a golden
 /// sidecar whose case is a copy of this one ([`overrides::same_inputs`]), and must name a scored
 /// cell, so a stale or mistaken line is an error, as for overrides.
-fn apply_superseded(
+pub(super) fn apply_superseded(
     suite: &Suite,
     case: &CaseFile,
     expectations: &mut [Expectation],

@@ -1,4 +1,4 @@
-use super::prepare::{apply_cached_overrides, prepare_spec};
+use super::prepare::{apply_cached_overrides, apply_superseded, prepare_spec};
 use super::scoring::graph_hides_subnormal;
 use super::*;
 use crate::case::{CASE_FORMAT, ORACLE_FORMAT};
@@ -138,6 +138,73 @@ fn cached_override_replaces_the_named_expectation() {
     let unscored = apply_cached_overrides(&suite, &case, vec![cached("C70")]);
     let _ = std::fs::remove_dir_all(&dir);
     assert!(unscored.is_err_and(|e| e.contains("unscored cell S!Z9")));
+}
+
+/// A `superseded` line scores the named cell against the same cell of a later golden fill of a
+/// copy of its case (decision 0358); a line citing another cell, naming an unscored cell, or
+/// pointing at a fill of other inputs fails the case.
+#[test]
+fn superseded_line_scores_the_cell_against_the_later_fill() {
+    let dir = std::env::temp_dir().join(format!("rs-runner-{}-superseded", std::process::id()));
+    let suite_dir = dir.join("probes");
+    std::fs::create_dir_all(suite_dir.join("cases")).expect("mkdir");
+    let case_json = |formula: &str, description: &str| {
+        format!(
+            r#"{{"format":"rustsheet-case/v1","description":"{description}",
+            "sheets":[{{"name":"P","cells":{{"A1":"{formula}"}}}}],"expected":{{}}}}"#
+        )
+    };
+    let write = |name: &str, text: String| {
+        std::fs::write(suite_dir.join("cases").join(name), text).expect("write");
+    };
+    write("a.case.json", case_json("=1+1", "October"));
+    write("b.case.json", case_json("=1+1", "refill of a"));
+    write("c.case.json", case_json("=1+2", "not a copy"));
+    let sidecar = format!(
+        r#"{{"format":"{ORACLE_FORMAT}","source":{{"kind":"excel-graph"}},
+        "sheets":{{"P":{{"A1":{{"t":"n","v":3.0}},"A2":{{"t":"n","v":4.0}}}}}}}}"#
+    );
+    write("b.oracle.json", sidecar.clone());
+    write("c.oracle.json", sidecar);
+    let manifest: SuiteManifest = toml::from_str(
+        "name = \"probes\"\nkind = \"spec\"\nlicense = \"MIT\"\n\
+         superseded = \"superseded.tsv\"\n",
+    )
+    .expect("manifest");
+    let suite = Suite {
+        manifest,
+        dir: suite_dir.clone(),
+        cache_dir: PathBuf::new(),
+    };
+    let case = CaseFile {
+        id: "probes/a.case.json".into(),
+        path: suite_dir.join("cases/a.case.json"),
+        sidecar: PathBuf::new(),
+    };
+    let october = || Expectation {
+        sheet: "P".into(),
+        addr: Addr::parse("A1").expect("addr"),
+        formula: Some("1+1".into()),
+        anchor_formula: None,
+        expected: Value::Number(2.0),
+        from_excel: true,
+        pinned: None,
+        from_graph: false,
+    };
+    let apply = |line: &str| {
+        std::fs::write(suite_dir.join("superseded.tsv"), format!("# why\n{line}\n")).expect("tsv");
+        let mut expectations = vec![october()];
+        apply_superseded(&suite, &case, &mut expectations).map(|()| expectations)
+    };
+    let got = apply("a.case.json\tP!A1\tprobes/cases/b.oracle.json\tP!A1").expect("apply");
+    assert_eq!(got[0].expected, Value::Number(3.0));
+    let other_cell = apply("a.case.json\tP!A1\tprobes/cases/b.oracle.json\tP!A2");
+    let unscored = apply("a.case.json\tP!A2\tprobes/cases/b.oracle.json\tP!A2");
+    let not_a_copy = apply("a.case.json\tP!A1\tprobes/cases/c.oracle.json\tP!A1");
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(other_cell.is_err_and(|e| e.contains("cites another cell")));
+    assert!(unscored.is_err_and(|e| e.contains("unscored cell P!A2")));
+    assert!(not_a_copy.is_err_and(|e| e.contains("is no copy of")));
 }
 
 /// An excel-graph 0 hides a kept subnormal (decision 0042); other sources and values do not.

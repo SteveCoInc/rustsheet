@@ -24,7 +24,8 @@ depends_on: []
   (docs/excel-semantics names entries).
 
 ## Acceptance criteria
-- [x] t4618-order-after-active-backward Q!A1 is `#NAME?`; no M8 cell regresses.
+- [x] ~~t4618-order-after-active-backward Q!A1 is `#NAME?`~~ (the premise does not reproduce): Q!A1 is scored per
+      decision 0358 against probes/t4642-backward-refill (1) and passes; no M8 cell regresses.
 - [x] `make check` green; reviewers approve.
 
 ## Out of scope

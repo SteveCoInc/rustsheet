@@ -8,7 +8,8 @@
     - a behavior change (decision 0329): the October nested-cell reads of GROUPBY and PIVOTBY, refilled on 2026-11-06
       and 2026-11-07, where one rule explains every changed cell and fresh probes confirm it;
     - an earlier fill that later fills of the same bytes do not reproduce (T-3610): probes/t4618-order-after-active-
-      backward Q!A1 (`#NAME?` on 2026-11-06, 1 in the refills of 2026-11-07 and in five one-variable variants),
+      backward Q!A1 (`#NAME?` on 2026-11-06; 1 in one 2026-11-07 fill, committed as two copies of one upload, and in five
+      one-variable variants filled the same day),
       gen-m9 d912671baa1364aa Calc!A76 (1 on 2026-10-28, 0 on 2026-11-01) and probes/amordegrc-fraction-state-ai
       Sheet1!A1 (0 on 2026-10-30, 485 in both 2026-11-05 fills).
   - Decision 0329 made the later fill the target but kept the earlier sidecar committed *and scored*, so each
@@ -31,7 +32,21 @@
      sidecar, so a copy may differ there (the AMORDEGRC bisect copy checks fewer cells). The eval refuses any other
      line, and a line for a cell that is not scored, so a stale or mistaken line fails the run. A `superseded.tsv` is a
      protected path (`scripts/check_governance.py`, as a `deviations` file is): a PR that changes it needs a decision
-     record, so no line lands without one.
+     record, so no line lands without one. A line whose case path names no case of the suite is not detected (the
+     same gap as `cached_overrides` and `deviations`); a line for an unscored cell of a named case is.
+  3a. **When a cell is superseded.** A *copy* is a case whose JSON equals the cell's case once the keys of item 2 are
+     removed, whatever its bytes hash to (the workbook built from it may differ in metadata). A cell qualifies only by
+     one of these, stated in the record that adds its line:
+     - a behavior change under decision 0329 item 1 (two agreeing later fills of a copy, or one rule in
+       docs/excel-semantics/ confirmed by a newly written probe cell filled on the later date); or
+     - an earlier fill that does not reproduce: at least two later fills of a copy agree with each other and differ
+       from it, or one later fill of a copy agrees with fresh one-variable variant probes filled the same day.
+     Every fill of a copy that is made is committed, whatever it shows: a fill may not be dropped, and if any committed
+     later fill disagrees with the target the cell is variance under item 5, not superseded. So re-filling until a run
+     matches the engine is ruled out: the run that does not match is committed too and blocks the line. A fill's target
+     is never the engine's value: the later fills decide it whatever the engine gives. Fills made before this record count as the
+     record that reports them states them (decision 0284 reports the uncommitted 2026-11-05 refill of -ai beside its
+     committed copy -av); from this record on, the commit rule above applies.
   3. A line is added only for a cell a decision record names as superseded or as not reproduced: decision 0329's
      cells (the t2592, t2594, t2625, t2360, t2311 and t2475 probes, gen-m9 17c110a53924beb8 Calc!A300,
      gen-m9 e85daedce5c2675e Calc!A35, probes/t2436/e85daedce5c2675e Calc!A31 and A46, gen-m7 21b4eef18424ce94
@@ -41,7 +56,9 @@
      change of the same kind adds lines through a decision record that names the cells, as decision 0329's
      consequences already require.
   5. For a cell that varies between fills with no later fill reproducing either value, T-3610's question stays open:
-     it is not superseded, and it stays a named known failure.
+     it is not superseded, and it stays a named known failure. Decision 0112's LN FYL2X near-ties
+     (probes-numeric/t2143-ln-near-ties-fill1..3, three fills that disagree with each other) are such cells and stay
+     named known failures.
 - **Consequences:**
   - The 55 cells score against current Excel. The engine gives each later value, so they leave the baseline's F lines
     (a fix, recorded by `make eval-baseline`), and the M7 and M8 probe rows drop by 19 and 1.
