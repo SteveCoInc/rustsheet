@@ -3,7 +3,7 @@ id: T-4880
 title: "DOLLARDE/DOLLARFR math definition: model Excel's D at 10^15+1 (lower cut) and 1E300 (10^300), then draw fractions below 1 and past 1E9"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
