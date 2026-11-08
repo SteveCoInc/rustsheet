@@ -2334,6 +2334,11 @@ position past a shorter array is `#N/A`). Examples:
 - Each element keeps its own form: `AGGREGATE({9,14},0,E1:E6,2)` is `#VALUE!` (2 is not a reference), then 5.
 - Invalid elements fail alone: `{1,"x",TRUE}` gives 3.83, `#VALUE!`, 3.83, and `{9,99}` gives 23, `#VALUE!`.
 - A range fourth argument is a reference, not lifted: `AGGREGATE({9,4},0,E1:E6,E1:E2)` spills 27, 9.
+- A fourth argument computed from a range is an array and lifts like one (probes/aggregate-computed-range-fourth,
+  excel-graph, 2026-11-08, T-5106, 21 cells): with A1:B2 = 1, 3; 2, 4, `AGGREGATE(9,0,E1:E6,-A1:B2)` and
+  `AGGREGATE(9,0,E1:E6,(A1:B2)%)` spill a 2x2 of `#VALUE!` (reference form), `AGGREGATE(14,0,E1:E6,C1:D1%)` with
+  C1:D1 = 1, 300 spills `#NUM!` (k 0.01), 4 (k 3), and `AGGREGATE(15,6,E1:E6,--C1:C3)` spills 1, 1, 3 down; the bare
+  ranges are read (33 and 9). Static analysis keeps a range-shaped fourth argument unlifted only when it yields cells.
 - An `options` below 0 is `#VALUE!` before it is truncated: `AGGREGATE(15,-0.0001,E1:E6,1)`, `AGGREGATE(9,-0.5,E1:E6)` and
   `AGGREGATE(15,-1,..)` are `#VALUE!`, while `AGGREGATE(15,7.9,..)` is option 7 and `AGGREGATE(14.5,0,..)` is function 14. A
   multi-cell range k for functions 14-19 reads its first cell wherever the formula sits (`AGGREGATE(15,0,E1:E6,G1:G2)` is the

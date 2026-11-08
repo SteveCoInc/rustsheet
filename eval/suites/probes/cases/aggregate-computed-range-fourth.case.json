@@ -1,0 +1,45 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "AGGREGATE with a fourth argument computed from a range (unary minus, percent): it lifts like an array, not read like a reference (T-5106, issue #4105).",
+ "tags": [
+  "M2",
+  "probe",
+  "aggregate",
+  "T-5106"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=AGGREGATE(9,0,Data!E1:E6,-Data!A1:B2)",
+    "A4": "=AGGREGATE(9,0,Data!E1:E6,(Data!A1:B2)%)",
+    "A7": "=AGGREGATE(14,0,Data!E1:E6,-Data!C1:C2)",
+    "A10": "=AGGREGATE(14,0,Data!E1:E6,Data!C1:D1%)",
+    "A13": "=AGGREGATE(7,2,Data!E1:E6,Data!A1:B2%)",
+    "A16": "=AGGREGATE(15,6,Data!E1:E6,--Data!C1:C3)",
+    "A20": "=AGGREGATE(9,0,Data!E1:E6,Data!A1:B2)",
+    "A21": "=AGGREGATE(14,0,Data!E1:E6,Data!C1:C2)"
+   }
+  },
+  {
+   "name": "Data",
+   "cells": {
+    "A1": 1,
+    "A2": 2,
+    "B1": 3,
+    "B2": 4,
+    "C1": 1,
+    "C2": 2,
+    "C3": 3,
+    "D1": 300,
+    "E1": 3,
+    "E2": 1,
+    "E3": 4,
+    "E4": 1,
+    "E5": 5,
+    "E6": 9
+   }
+  }
+ ],
+ "expected": {}
+}

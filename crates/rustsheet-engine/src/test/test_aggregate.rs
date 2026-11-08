@@ -156,3 +156,27 @@ fn parsed_formula_flags_nested_subtotal_calls() {
         .collect();
     assert_eq!(flags, [true, true, false]);
 }
+
+#[test]
+fn computed_range_fourth_argument_spills() {
+    // The formula_eval fuzz reproducer (T-5106, issue #4105): static analysis read a fourth
+    // argument with a range shape as a reference, but `-range` and `range%` evaluate to arrays
+    // that lift, so a 3x6 result reached a scalar cell (a debug assertion). Excel:
+    // probes/aggregate-computed-range-fourth.
+    let mut model = new_empty_model();
+    model.add_sheet("Data").unwrap();
+    for (cell, value) in [("C1", "1"), ("D1", "200"), ("E1", "3"), ("E2", "9")] {
+        model.set_a1(&format!("Data!{cell}"), value);
+    }
+    model.set_a1("C3", "=AGGREGATE(7,2,Data!B3:B9,Data!C6:E11%");
+    model.set_a1("A1", "=AGGREGATE(14,0,Data!E1:E2,Data!C1:D1%)");
+    model.set_a1("A20", "=AGGREGATE(9,0,Data!E1:E2,-Data!C1:D1)");
+    model.evaluate();
+
+    assert_eq!(model.get_text_a1("C3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("E8"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B1"), *"3");
+    assert_eq!(model.get_text_a1("A20"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("B20"), *"#VALUE!");
+}
