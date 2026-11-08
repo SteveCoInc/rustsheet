@@ -163,6 +163,7 @@ use crate::cast::{calc_result_to_string, number_text_too_long};
 use crate::constants::MAXIMUM_DATE_SERIAL_NUMBER;
 use crate::constants::MINIMUM_DATE_SERIAL_NUMBER;
 use crate::expressions::types::CellReferenceIndex;
+use crate::expressions::utils::boolean_text;
 use crate::formatter::date_text::parse_date;
 use crate::formatter::dates::date_month_and_day;
 use crate::formatter::dates::permissive_date_to_serial_number;
@@ -756,9 +757,9 @@ impl Model {
                     let method = match values.get(2) {
                         // Text is TRUE or FALSE in any case, else #VALUE! with no message (SPEC-0011
                         // kernels); read borrowed, so a lifted text method allocates nothing.
-                        Some(CalcResult::String(s)) if s.eq_ignore_ascii_case("true") => Ok(true),
-                        Some(CalcResult::String(s)) if s.eq_ignore_ascii_case("false") => Ok(false),
-                        Some(CalcResult::String(_)) => Err(value_error(cell)),
+                        Some(CalcResult::String(s)) => {
+                            boolean_text(s).ok_or_else(|| value_error(cell))
+                        }
                         Some(m) => Self::cast_bool_ref(m, cell),
                         None => Ok(false),
                     };
