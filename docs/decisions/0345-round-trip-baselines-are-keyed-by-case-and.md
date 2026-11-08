@@ -20,7 +20,8 @@
     a `cases` line whose n held or rose) apply per key. A new scenario is a new key, so its failures are new
     coverage. A failing item in a scenario whose own count held is a regression.
   - **Migration:**
-    - A committed baseline without `#` in its keys is judged with the old per-case rule (`roundtrip::baseline`).
+    - Until T-5046 (see Consequences), a committed baseline without `#` in its keys was judged with the old per-case
+      rule (`roundtrip::baseline`).
       The re-record that writes the new form therefore refuses anything the old rule refused.
     - T-4961 migrated all five round-trip baselines that way. Summed over its scenarios, each case's count equals
       its old count, and its failing items or failing cases are unchanged.
