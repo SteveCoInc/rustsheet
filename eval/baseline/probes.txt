@@ -2735,6 +2735,7 @@ C	probes/t4801-rank-lifted-offset-indirect.case.json	217
 C	probes/t4844-irr-guess-ladder.case.json	468
 C	probes/t4844-irr-pad-ladder.case.json	48
 C	probes/t4844-irr-stage-invariance.case.json	60
+C	probes/t4847-xmatch-binary-text-collation.case.json	192
 C	probes/t4848-sixteenth-digit-ties.case.json	98
 C	probes/t4848-tie-complex-part.case.json	15
 C	probes/t4848-tie-fraction-format.case.json	15

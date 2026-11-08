@@ -677,6 +677,22 @@ Implemented in: `binary_search` (functions/binary_search.rs), shared by XMATCH a
 XLOOKUP over a range searches the full vector, so cells past the used area are probed as blanks.
 Runs of equal values: see "binary search over runs of equal values" below (T-1135).
 
+Text under search_mode 2/-2 compares as every other lookup compares it: through Excel's collation,
+the pairwise form of `<` and `=` (docs/excel-semantics/coercion.md), not by upper-cased code points.
+Over Data sorted by SORT (`_x`, `1a`, `ab`, `a-b`, `Äb`, `ac`, `coop`, `co-op`, `cop`, `rest`,
+`resume`, `résumé`, `ß`, `ss`, `st`, `zebra`), every exact binary XMATCH finds its text: ascending at
+the same position as the linear search (B1:B16 = C1:C16), and over the descending SORT as well. `ß`
+and `ss` are equal, so an equal run decides: ascending both find the first of the pair (13, B5:B6),
+descending both find the last (4, E5:E6, the pair being D3:D4), as "binary search over runs of equal
+values" below says. Match modes -1 and 1 return the neighbours the
+collation gives (`XMATCH("SS",A1#,-1,2)` is 13, `XMATCH("su",A1#,-1,2)` is 15), the same as the
+linear `XMATCH(..,-1,1)`; XLOOKUP agrees.
+Evidence: probes/t4847-xmatch-binary-text-collation Calc!B1:B16, C1:C16, E1:E16, F1:F16, G1:L16
+(excel-graph, 2026-11-07, T-4847).
+Status: VERIFIED
+Implemented in: `cmp_searched` (functions/lookup_and_reference/lookup_table.rs), which calls
+`cmp_text_pairwise`; `Ord for CalcResult` orders text by the total `cmp_text`.
+
 Performance invariant (T-0119, T-0127, not an Excel rule): MATCH, LOOKUP, HLOOKUP, VLOOKUP and XMATCH evaluate a
 search vector only up to the sheet's last used row (column, for ranges running to XFD); the rest
 is a virtual run of blanks of the full length (`SearchVector`,
