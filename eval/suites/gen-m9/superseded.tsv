@@ -1,0 +1,8 @@
+# Cells a later Excel fill of the same inputs superseded (decision 0358). Each is scored against
+# that later fill, not the earlier sidecar, which stays committed and unchanged. Tab-separated:
+# <case path relative to the suite root> <Sheet!A1> <later sidecar, relative to eval/suites> <Sheet!A1>
+# The later case must be a copy of the case (same inputs, overrides::same_inputs) and cite the same
+# cell. A line is added only by a decision record that names the cell (decisions 0329 and 0284 / T-3610).
+17c110a53924beb8.case.json	Calc!A300	probes/cases/gen-m9-17c110a53924beb8-refill-1106.oracle.json	Calc!A300
+e85daedce5c2675e.case.json	Calc!A35	probes/cases/gen-m9-e85daedce5c2675e-refill-1107.oracle.json	Calc!A35
+d912671baa1364aa.case.json	Calc!A76	probes/cases/amordegrc-a76-bisect-a.oracle.json	Calc!A76

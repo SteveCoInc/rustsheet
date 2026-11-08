@@ -45,3 +45,4 @@ This task holds the cells that no open task owned at main b84a7256 (2026-11-08).
 
 ## Out of scope
 - New work on the superseded decision 0329 cells (Excel's later fill is the target, decision 0329).
+- Decision 0358: the decision 0329 superseded cells this task held (gen-m9/e85d A35, t2436/e85d A31, A46, t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26) are scored against their refills and pass.

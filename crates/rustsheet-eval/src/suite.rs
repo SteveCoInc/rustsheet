@@ -81,6 +81,10 @@ pub struct SuiteManifest {
     /// that are not en-US evidence (`overrides.rs`, decision 0032).
     #[serde(default)]
     pub cached_overrides: Option<String>,
+    /// Spec suites: file (relative to the manifest) of cells a later Excel fill of the same inputs
+    /// superseded, each scored against that fill (`cached_overrides` lines; decision 0358).
+    #[serde(default)]
+    pub superseded: Option<String>,
     /// File (relative to the manifest) of cells that differ from Excel by design, scored apart
     /// from bit-exact (`deviations.rs`, decision 0036).
     #[serde(default)]

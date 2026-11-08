@@ -8,3 +8,4 @@ origin = "generated"
 gate = true
 baseline = "cells"
 milestone = ["M9"]
+superseded = "superseded.tsv"

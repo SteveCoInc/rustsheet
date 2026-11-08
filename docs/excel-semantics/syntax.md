@@ -409,8 +409,8 @@ the order Excel loads the workbook and on what each use of N met first. Every ba
   - no bare use on P (t4642-no-bare-use).
 
   So the cell is variation between fills of the same bytes, not a rule: one rule would also have to explain why identical bytes now read 1, and the variants found none. Ours reads 1, the
-  reproduced value. The 2026-11-06 sidecar stays committed until T-3610 decides how such cells are scored, and its Q!A1 stays a known failure. T-3610 owns it, as a
-  cell whose Excel value varies between fills. P's bare uses stay `#NAME?` in every variant that has them, as the model
+  reproduced value. The 2026-11-06 sidecar stays committed, and since decision 0358 (T-3610) Q!A1 is scored against the
+  reproduced 2026-11-07 refill (probes/t4642-backward-refill), so it passes. P's bare uses stay `#NAME?` in every variant that has them, as the model
   predicts: the later qualified use fixes P's provisional place. The qualified use itself reads the new name.
 Ours since T-4618: `Model::loaded_uses_take_sheet_place` (name_load_order.rs) replays the model over the formulas as
 they stand when the add comes, with the active sheet then (`Model::active_sheet`), and `Model::bind_added_sheet_name`

@@ -3057,7 +3057,8 @@ workbook-wide state written in Excel's calculation order:
 - -ai (`=SEQUENCE(1,2)*0+AMORDEGRC(..485..)` below the fraction) was 0 on 2026-10-30. On 2026-11-05 the same input
   bytes (sha256 3f8ec3b8…) give 485, both in the copy -av and in a refill of -ai that is not committed. The 10-30
   value does not reproduce, like gen-m9 A76's 1 below. Excel's values on 2026-11-05 fit the rule above. -ai A1
-  stays a known failure against its committed 10-30 value (decision 0284, T-3610).
+  is scored against the reproduced 11-05 copy -av since decision 0358 (T-3610), and passes; the 10-30 sidecar stays
+  committed.
 - The order is Excel's fresh-load order (recalc.md "The order Excel calculates a freshly loaded workbook in"): the
   value comes from the cell below (-p: A1 is 776 from A2, not A3's 485), the cell to the right (-q: A1 is B1's 485)
   or a later sheet (-n: Sheet1!A1 is Sheet2!A1's 485); a precedent is evaluated first wherever it sits (-o: A2's
@@ -3088,7 +3089,7 @@ Ours: since T-2825 (decision 0131), `OrderState::amor_left_over` in evaluation.r
 after the calls of `Function::empties_amor_left_over` and a called LAMBDA (since T-3393), with each anchor's value put
 back at its place by `run_excel_order` (`Evaluation::anchor_amor`); a read runs the pass in Excel's order
 (`excel_order.rs`, SPEC-0017), whose move budget and its DEVIATION (dates.md) apply here too. gen-m9 d912671baa1364aa
-Calc!A76 stays a known failure against its 10-28 oracle value; ours (0) is Excel's value on every 2026-11-01 run.
+Calc!A76 is scored against the reproduced 2026-11-01 fill (probes/amordegrc-a76-bisect-a) since decision 0358 (T-3610); ours (0) is Excel's value on every 2026-11-01 run, so it passes. The 10-28 sidecar stays committed.
 Status: VERIFIED (excel-graph) on freshly loaded workbooks; after an edit in a live session the order is not
 reproducible from the file (recalc.md); as for what a lifted call and a dynamic-array formula's place in the order do to the
 value: a lifted call and the emptying calls are VERIFIED (ours matches every 2026-11-05 cell; functions not listed
