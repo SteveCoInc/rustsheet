@@ -16,7 +16,7 @@
 use rustsheet_xlsx::import::MAX_PIVOTS;
 use serde::{Deserialize, Serialize};
 
-use super::xml_tree::{parse_root, XmlElement};
+use super::xml_tree::{parse_root, XmlElement, ELEMENT_COST};
 use super::{canonical, spend, PivotReader};
 use crate::xlsx_snapshot::{read_part, relationships, resolve_target, SnapshotError, Zip};
 
@@ -76,7 +76,8 @@ pub(super) fn read_sheet_shapes(
         let Some(root) = parse_root(&xml, &mut reader.values_left) else {
             continue;
         };
-        let charge = sheet.len() * root.children.len();
+        // The parse paid for each element; each shape's record and sheet name are paid here.
+        let charge = (ELEMENT_COST + sheet.len()) * root.children.len();
         if spend(&mut reader.values_left, charge).is_none() {
             continue;
         }
@@ -124,51 +125,56 @@ pub(crate) fn read_slicer_caches(
     Ok(())
 }
 
-/// Keeps `cache` on each pivot its `pivotTables` names, with the shapes naming it; each copy past
-/// the first is charged its cost, and a copy the budget cannot pay for is not kept.
+/// What keeping `shape` costs: the overhead of its record, its sheet's bytes and its element.
+fn shape_cost(shape: &SlicerShape) -> usize {
+    ELEMENT_COST + shape.sheet.len() + shape.element.cost()
+}
+
+/// Keeps `cache` on each pivot its `pivotTables` names, with the shapes naming it. Every copy is
+/// paid for before it is made: the first copy's shapes (the parse paid for its cache), then each
+/// further copy whole; a copy the budget cannot pay for is not made, and a cache naming no pivot
+/// read copies nothing.
 fn attach(cache: XmlElement, sheets: &[(String, Option<String>)], reader: &mut PivotReader) {
     let timeline = cache.local() == "timelineCacheDefinition";
     if !timeline && cache.local() != "slicerCacheDefinition" {
         return;
     }
-    let name = cache.attr("name").unwrap_or_default();
-    let shapes: Vec<SlicerShape> = reader
-        .shapes
-        .iter()
-        .filter(|s| s.element.attr("cache") == Some(name))
-        .cloned()
-        .collect();
-    let targets: Vec<(String, String)> = cache
+    let targets: Vec<(&str, &str)> = cache
         .children_named("pivotTables")
         .flat_map(|p| p.children_named("pivotTable"))
         .filter_map(|p| {
             let tab = p.attr("tabId")?;
             let (sheet, _) = sheets.iter().find(|(_, id)| id.as_deref() == Some(tab))?;
-            Some((sheet.clone(), p.attr("name")?.to_string()))
+            Some((sheet.as_str(), p.attr("name")?))
         })
         .collect();
-    let cost = cache.cost()
-        + shapes
-            .iter()
-            .map(|s| s.sheet.len() + s.element.cost())
-            .sum::<usize>();
+    let pivots: Vec<usize> = (reader.pivots.iter().enumerate())
+        .filter(|(_, p)| targets.iter().any(|(s, n)| *s == p.sheet && *n == p.name))
+        .map(|(i, _)| i)
+        .collect();
+    let Some((&first, rest)) = pivots.split_first() else {
+        return;
+    };
+    let name = cache.attr("name").unwrap_or_default();
+    let named = |s: &&SlicerShape| s.element.attr("cache") == Some(name);
+    let shapes_cost: usize = reader.shapes.iter().filter(named).map(shape_cost).sum();
+    if spend(&mut reader.values_left, shapes_cost).is_none() {
+        return;
+    }
+    let shapes: Vec<SlicerShape> = reader.shapes.iter().filter(named).cloned().collect();
+    let copy_cost = cache.cost() + shapes_cost;
     let record = PivotSlicer { cache, shapes };
-    let mut first = true;
-    for pivot in reader
-        .pivots
-        .iter_mut()
-        .filter(|p| targets.iter().any(|(s, n)| *s == p.sheet && *n == p.name))
-    {
-        // The parse paid for the cache once; the shapes and every further copy are paid here.
-        let charge = if first {
-            cost - record.cache.cost()
-        } else {
-            cost
-        };
-        if spend(&mut reader.values_left, charge).is_none() {
-            return;
+    let mut copies = vec![first];
+    for &i in rest {
+        if spend(&mut reader.values_left, copy_cost).is_none() {
+            break;
         }
-        first = false;
+        copies.push(i);
+    }
+    for i in copies {
+        let Some(pivot) = reader.pivots.get_mut(i) else {
+            continue;
+        };
         let list = if timeline {
             &mut pivot.timelines
         } else {
@@ -267,27 +273,75 @@ mod tests {
         );
     }
 
-    #[test]
-    fn copies_past_the_budget_are_not_kept() {
+    fn reader_with(pivots: &[&str], shapes: usize) -> PivotReader {
         let mut reader = PivotReader::new();
-        for name in ["P", "Q"] {
+        for name in pivots {
             reader.pivots.push(super::super::PivotDef {
-                name: name.into(),
+                name: (*name).into(),
                 sheet: "S".into(),
                 ..Default::default()
             });
         }
-        let cache = parse_root(
-            r#"<slicerCacheDefinition name="c"><pivotTables><pivotTable tabId="1" name="P"/><pivotTable tabId="1" name="Q"/></pivotTables></slicerCacheDefinition>"#,
-            &mut usize::MAX.clone(),
-        )
-        .expect("parses");
+        for k in 0..shapes {
+            let xml = format!(r#"<slicer name="s{k}" cache="c" caption="Region"/>"#);
+            let element = parse_root(&xml, &mut usize::MAX.clone()).expect("parses");
+            reader.shapes.push(SlicerShape {
+                sheet: "S".into(),
+                element,
+            });
+        }
+        reader
+    }
+
+    fn cache(targets: &str) -> XmlElement {
+        let xml = format!(
+            r#"<slicerCacheDefinition name="c"><pivotTables>{targets}</pivotTables></slicerCacheDefinition>"#
+        );
+        parse_root(&xml, &mut usize::MAX.clone()).expect("parses")
+    }
+
+    #[test]
+    fn copies_past_the_budget_are_not_kept() {
+        let mut reader = reader_with(&["P", "Q"], 0);
+        let cache = cache(r#"<pivotTable tabId="1" name="P"/><pivotTable tabId="1" name="Q"/>"#);
         // Enough for nothing past the first copy, which the parse already paid for.
         reader.values_left = cache.cost() - 1;
         let sheets = [("S".to_string(), Some("1".to_string()))];
         attach(cache, &sheets, &mut reader);
         assert_eq!(reader.pivots[0].slicers.len(), 1);
         assert!(reader.pivots[1].slicers.is_empty());
+        // The refused copy leaves the budget spent, as `spend` does.
+        assert_eq!(reader.values_left, 0);
+    }
+
+    #[test]
+    fn caches_sharing_a_name_pay_for_every_copy_of_the_shapes() {
+        let sheets = [("S".to_string(), Some("1".to_string()))];
+        let shape_costs: usize = reader_with(&[], 3).shapes.iter().map(shape_cost).sum();
+        // Caches naming no pivot read copy nothing and are charged nothing.
+        let mut reader = reader_with(&["P"], 3);
+        reader.values_left = 0;
+        for _ in 0..MAX_PIVOTS {
+            attach(
+                cache(r#"<pivotTable tabId="1" name="Nope"/>"#),
+                &sheets,
+                &mut reader,
+            );
+            attach(cache(""), &sheets, &mut reader);
+        }
+        assert!(reader.pivots[0].slicers.is_empty());
+        // Each cache naming the pivot pays for its copy of the three shapes before it is made.
+        let mut reader = reader_with(&["P"], 3);
+        reader.values_left = 2 * shape_costs + 1;
+        for _ in 0..MAX_PIVOTS {
+            attach(
+                cache(r#"<pivotTable tabId="1" name="P"/>"#),
+                &sheets,
+                &mut reader,
+            );
+        }
+        assert_eq!(reader.pivots[0].slicers.len(), 2);
+        assert!(reader.pivots[0].slicers.iter().all(|s| s.shapes.len() == 3));
         assert_eq!(reader.values_left, 0);
     }
 }

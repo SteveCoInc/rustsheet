@@ -4,7 +4,12 @@
 //! Excel saves (an attribute it adds, keeps or drops) can be read off a committed sidecar.
 //!
 //! Untrusted input (directive 5): the tree is read with an explicit stack, at most `MAX_DEPTH`
-//! deep, and every element and attribute is charged against the snapshot's workbook budget.
+//! deep, and every element and attribute is charged against the snapshot's workbook budget: a
+//! fixed overhead ([`ELEMENT_COST`], [`ATTR_COST`]) plus its bytes.
+//!
+//! Not reused: rustsheet-xlsx's `import/xml.rs` `XmlNode` is crate-private there and resolves
+//! namespaces, losing the `x15:`/`xr10:` prefixes the claims are about; roundtrip/xmldiff.rs's
+//! `Node` is private, has its own limits and cannot charge this budget.
 
 use std::collections::BTreeMap;
 
@@ -17,6 +22,14 @@ use super::spend;
 /// How deep a kept tree may nest; deeper is malformed for the snapshot (the parts it reads nest
 /// about eight deep: a filter's `extLst/ext/x15:pivotFilter`, an `autoFilter`'s criteria).
 pub(super) const MAX_DEPTH: usize = 32;
+
+/// What keeping one element costs beyond its name's bytes: about the memory an `XmlElement`, its
+/// empty map and vector and its name's heap header take, so the budget bounds memory, not text.
+pub(super) const ELEMENT_COST: usize = 64;
+
+/// What keeping one attribute costs beyond its key's and value's bytes: its `BTreeMap` entry and
+/// two `String`s.
+pub(super) const ATTR_COST: usize = 64;
 
 /// One element as written: its qualified name, its attributes (namespace declarations left out)
 /// and its child elements. Text content is not kept: none of the parts read here carries any.
@@ -44,26 +57,28 @@ impl XmlElement {
         self.children.iter().filter(move |c| c.local() == local)
     }
 
-    /// The attribute whose local name is `local` (an unprefixed one first).
+    /// The attribute whose qualified name is exactly `key` (`name`, `xr10:uid`).
     #[must_use]
-    pub fn attr(&self, local: &str) -> Option<&str> {
-        self.attrs.get(local).map(String::as_str)
+    pub fn attr(&self, key: &str) -> Option<&str> {
+        self.attrs.get(key).map(String::as_str)
     }
 
     /// The budget cost of keeping another copy of this tree, as [`read_element`] charges it.
     pub(super) fn cost(&self) -> usize {
-        1 + self.name.len()
-            + self
-                .attrs
-                .iter()
-                .map(|(k, v)| k.len() + v.len())
-                .sum::<usize>()
+        ELEMENT_COST
+            + self.name.len()
+            + attrs_cost(&self.attrs)
             + self.children.iter().map(XmlElement::cost).sum::<usize>()
     }
 }
 
-/// `e`'s attributes by qualified name (namespace declarations left out), each charged its bytes;
-/// `None` on a malformed attribute or when the budget runs out.
+/// What [`attr_map`] charges for keeping `map`: [`ATTR_COST`] and the bytes of each entry.
+pub(super) fn attrs_cost(map: &BTreeMap<String, String>) -> usize {
+    map.iter().map(|(k, v)| ATTR_COST + k.len() + v.len()).sum()
+}
+
+/// `e`'s attributes by qualified name (namespace declarations left out), each charged
+/// [`ATTR_COST`] and its bytes; `None` on a malformed attribute or when the budget runs out.
 pub(super) fn attr_map(e: &BytesStart<'_>, budget: &mut usize) -> Option<BTreeMap<String, String>> {
     let mut map = BTreeMap::new();
     for a in e.attributes() {
@@ -73,16 +88,16 @@ pub(super) fn attr_map(e: &BytesStart<'_>, budget: &mut usize) -> Option<BTreeMa
             continue;
         }
         let value = a.normalized_value(XmlVersion::Implicit1_0).ok()?;
-        spend(budget, key.len() + value.len())?;
+        spend(budget, ATTR_COST + key.len() + value.len())?;
         map.insert(key.to_owned(), value.into_owned());
     }
     Some(map)
 }
 
-/// The element `e` opens, without children, charged one unit plus its name's bytes.
+/// The element `e` opens, without children, charged [`ELEMENT_COST`] plus its name's bytes.
 fn element(e: &BytesStart<'_>, budget: &mut usize) -> Option<XmlElement> {
     let name = e.name().as_ref().to_owned();
-    spend(budget, 1 + name.len())?;
+    spend(budget, ELEMENT_COST + name.len())?;
     Some(XmlElement {
         name,
         attrs: attr_map(e, budget)?,

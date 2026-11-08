@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 pub(super) use slicers::read_slicer_caches;
 pub use slicers::{PivotSlicer, SlicerShape};
 pub use xml_tree::XmlElement;
-use xml_tree::{attr_map, read_element};
+use xml_tree::{attr_map, attrs_cost, read_element};
 
 use super::{attr, read_part, relationships, resolve_target, SnapshotError, Zip};
 use crate::value::Value;
@@ -193,18 +193,19 @@ fn fields_cost(fields: &[PivotCacheField]) -> usize {
                 + f.group_items.iter().map(value_cost).sum::<usize>()
                 + f.shared_items.iter().map(item_cost).sum::<usize>()
                 + f.group_items_written.iter().map(item_cost).sum::<usize>()
-                + map_cost(&f.shared_flags)
+                + attrs_cost(&f.shared_flags)
         })
         .sum()
 }
 
-/// What `written_item` charges for `i`: one, its element, and its attributes' bytes.
+/// What `written_item` charges for `i`: one, its element, and its attributes as `attr_map`
+/// charges them (`v` included).
 fn item_cost(i: &PivotSharedItem) -> usize {
-    1 + i.t.len() + i.v.as_ref().map_or(0, |v| 1 + v.len()) + map_cost(&i.attrs)
-}
-
-fn map_cost(map: &BTreeMap<String, String>) -> usize {
-    map.iter().map(|(k, v)| k.len() + v.len()).sum()
+    1 + i.t.len()
+        + i.v
+            .as_ref()
+            .map_or(0, |v| xml_tree::ATTR_COST + 1 + v.len())
+        + attrs_cost(&i.attrs)
 }
 
 fn value_cost(v: &Value) -> usize {
@@ -676,7 +677,10 @@ mod tests {
             "x15:timelinePivotCacheDefinition"
         );
         // Charged what a copy costs, and the `<extLst>` wrapper the parse read but does not keep.
-        assert_eq!(usize::MAX - budget, cache_cost(&c) + 1 + "extLst".len());
+        assert_eq!(
+            usize::MAX - budget,
+            cache_cost(&c) + xml_tree::ELEMENT_COST + "extLst".len()
+        );
     }
 
     #[test]
@@ -693,10 +697,12 @@ mod tests {
         let cache = r#"<pivotCacheDefinition><cacheField name="n"><fieldGroup><groupItems>
             <s v="a"/><s v="b"/></groupItems></fieldGroup></cacheField></pivotCacheDefinition>"#;
         // One field (1) named `n` (1); two items of one byte each, as values (2 each) and as
-        // written (4 each: the item, its element `s`, the attribute `v` and its value).
-        assert!(parse_cache_fields_of(cache, &mut 13).is_none());
-        let fields = parse_cache_fields_of(cache, &mut 14).expect("parses");
-        assert_eq!(fields_cost(&fields), 14);
+        // written (68 each: the item, its element `s`, and the attribute `v`, its overhead
+        // included, and its value).
+        let cost = 2 + 2 * (2 + 2 + xml_tree::ATTR_COST + 2);
+        assert!(parse_cache_fields_of(cache, &mut (cost - 1)).is_none());
+        let fields = parse_cache_fields_of(cache, &mut cost.clone()).expect("parses");
+        assert_eq!(fields_cost(&fields), cost);
     }
 
     #[test]

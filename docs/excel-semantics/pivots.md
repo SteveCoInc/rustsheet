@@ -2099,8 +2099,8 @@ T-4963 owns writing slicer state on a regenerated save (T-4188 keeps the parts o
   `selectionLevel` (TA 1) and its `state`'s `filterType`, `selection` and `bounds`.
 - **Slicer items are listed in the `tabular` sort order**: ascending East, North, West by default (`x` 0, 2, 1),
   descending West, North, East for SM.
-- **Added**: `xr10:uid` on every slicer and timeline cache and on every `slicer` and `timeline` shape (`mc:Ignorable`
-  gains `xr10`), the timeline's `scrollPosition` (`2021-01-02T00:00:00`, a day past the bounds' end), an `<items>`
+- **Added**: `xr10:uid` on every slicer and timeline cache and on every `slicer` and `timeline` shape (a slicer cache's
+  `mc:Ignorable` keeps `x` and adds `xr10`, saving `x xr10`; a timeline cache's, written `x`, saves `xr10` only), the timeline's `scrollPosition` (`2021-01-02T00:00:00`, a day past the bounds' end), an `<items>`
   list on a date field the pivot has on no axis (TL ... TX: six items and a default), the cache's
   `xlpdsc:dataSourceClean` extension (every pivot of the four probes), and an empty `x14:pivotCacheDefinition` on
   each group-items cache.
