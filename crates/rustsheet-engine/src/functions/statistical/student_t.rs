@@ -810,6 +810,36 @@ mod tests {
     }
 
     #[test]
+    fn large_df_centre_fraction_bounds() {
+        // probes/t4974-t-dist-df1000-central-endpoint (excel-graph): df 999 and 1000 take the series
+        // and the kernel, df 1001 the central fraction (the series bound is exclusive, findings
+        // item 9). Near t = 1 at df 1001 Excel is back on the kernel (G21:I21), which the engine is
+        // not yet (the switch is bracketed, not fitted: T-5089), so those cells are not pinned here.
+        let cases = [
+            ((0.1, 999.0), 0.460_182_194_542_355_65, false), // A2
+            ((0.1, 1000.0), 0.460_182_184_511_802_04, false), // D2
+            ((0.5, 1000.0), 0.308_592_540_416_937_46, false), // D10
+            ((0.1, 1001.0), 0.460_182_174_501_287, false),   // G2
+            ((0.1, 1001.0), 0.920_364_349_002_574, true),    // C5 (df1-and-large-df-centre)
+            (
+                (1.0 - f64::EPSILON / 2.0, 999.0),
+                0.317_552_660_176_412_3,
+                true,
+            ), // B21
+            (
+                (1.0 - f64::EPSILON / 2.0, 1000.0),
+                0.317_552_418_084_672_4,
+                true,
+            ), // E21
+        ];
+        for ((t, n), excel, two_tailed) in cases {
+            let upper = student_t_tails(t, n).1;
+            let value = if two_tailed { 2.0 * upper } else { upper };
+            assert_eq!(value.to_bits(), f64::to_bits(excel), "t {t}, df {n}");
+        }
+    }
+
+    #[test]
     fn excel_cells() {
         // T_DIST.xlsx `T.DIST T.INV T.DIST.RT`: D15 and D16 are bit-exact.
         assert_eq!(student_t_tails(1.0, 1.0).0, 0.75);
