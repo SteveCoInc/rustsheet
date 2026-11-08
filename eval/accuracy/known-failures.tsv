@@ -28,7 +28,6 @@ accuracy/YIELD/s1!Calc!A252	T-4758	YIELD's last digits short of PRICE's root: en
 accuracy/YIELD/r4-T-2788!Calc!A194	T-4523	Excel #NUM! (its Newton leaves PRICE's domain at a price near 0.035, redemption 100); the engine converges to the root
 accuracy/YIELD/r4-T-2788!Calc!A239	T-4523	Excel #NUM! (its Newton leaves PRICE's domain at a price and redemption near 0.014); the engine converges to the root
 accuracy/YIELD/r4-T-2788!Calc!A267	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
-accuracy/F.INV.RT/s1!Calc!A142	T-4568	Excel #NUM! at p 1.5E-247 (df 9, 51); the engine returns the math
 accuracy/ODDFYIELD/s1!Calc!A272	T-4551	ODDFYIELD at a root near 0 (8.3E-6): engine 1.1E-11 relative off Excel, both stop short of the math (1.8E-6)
 accuracy/TTEST/s1!Calc!A136	T-4579	Excel #DIV/0! for a paired test whose one-pass variance of the differences is negative; the engine gives a number
 accuracy/TTEST/s1!Calc!A101	T-4579	Excel keeps the exact differences of offset pairs; the engine's double differences put the deep tail 1.6e-9 off
@@ -39,5 +38,3 @@ accuracy/BETAINV/s1!Calc!A128	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-30
 accuracy/BETAINV/s1!Calc!A135	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/BETAINV/s1!Calc!A138	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/LINEST/s1!Calc!A102	T-2006	the engine's normal-equations solve on an ill-conditioned design is 7e-09 relative off the math; Excel is 1e-08 off it
-accuracy/LOGEST/s1!Calc!A98	T-2006	the engine's normal-equations solve on an ill-conditioned design is 2e+01 relative off the math; Excel is 3e-06 off it
-accuracy/LOGEST/s1!Calc!A110	T-2006	the engine's normal-equations solve on an ill-conditioned design is 2e-09 relative off the math; Excel is 1e-08 off it
