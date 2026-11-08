@@ -40,14 +40,13 @@ that band the 2^-72-day offset of T-4389 is exactly half an ulp of the serial.
 - New evidence: probes/t4419-band-flip (excel-graph, 169 cells). It covers 13 ties t/86400000 + n*2^-71, with t from 179.5
   to 327.5 ms and n from -20 to -8, under `s.000`. For every tie Excel's answer switches once, at n = -11 to -15, so
   the decision is a threshold. The engine gets 159 of 169.
-- docs/research/t4419/chains.py: the best chains of doubles, each with 15-digit rounding of the milliseconds and then
-  half up, score 166 of 169: `(x*86400)*1000` and `((x*24)*60)*60*1000`. They miss disjoint ties (255.5, 316.5 and
-  320.5 against 258.5, 266.5 and 291.5). Not every grouping of 24, 60, 60 and 1000 was tried. Those that were, with
-  15-digit rounding after any subset of steps, did no better. Neither did a half step in days, with or without 2^-72,
-  followed by a cut; their best was 161.
+- docs/research/t4419/chains.py: the best chains of doubles (every left-chain grouping of 24, 60, 60 and 1000, all
+  products exact, then the milliseconds' 15-digit rounding and half up) score 166 of 169. Its docstring lists the
+  chains and their misses. Ad-hoc runs that were not committed scored no better: 15-digit rounding after any subset
+  of the steps, and a half step in days (with or without 2^-72) followed by a cut, whose best was 161.
 - `windows()` prints the error each tie needs in its computed seconds, in units of 5e-16 s, for the 15-digit
   half-unit threshold to hold. Below 0.25 s the needed error is near 0. Just above 0.25 s it turns positive (253.5 and
-  255.5: up to +0.15), then negative (258.5 to 266.5, and 320.5 at -0.17). That is about one ulp of the seconds,
+  255.5: up to +0.15), then negative (258.5 to 266.5, 320.5 at -0.17 and 327.5). That is about one ulp of the seconds,
   2^-54 s or 2^-53 s, either side. So the pattern follows the binade of the seconds at 0.25 s. Next: arithmetic whose
   rounding changes at that binade, such as seconds formed as hours*3600 or from a split at 0.25, or a 2-step product
   with an intermediate in [0.125, 0.5).
