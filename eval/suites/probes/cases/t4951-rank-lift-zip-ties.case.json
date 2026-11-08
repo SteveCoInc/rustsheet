@@ -2,7 +2,7 @@
  "format": "rustsheet-case/v1",
  "description": "T-4951 probe: RANK/RANK.EQ/RANK.AVG with a lifted number/order beside a lifted OFFSET/INDIRECT ref (zip vs broadcast), and ties inside one element's range, same sheet and off-sheet (Data). A1:A3=5,8,2; D1:D5=5,8,5,2,5. Formulas in H every third row.",
  "tags": [
-  "M2",
+  "M9",
   "statistics",
   "rank",
   "probe"

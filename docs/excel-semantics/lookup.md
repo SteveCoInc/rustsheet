@@ -1835,7 +1835,7 @@ probes/t4951-rank-lift-zip-ties, excel-graph 2026-11-08, RANK, RANK.EQ and RANK.
 `{1;2}` (broadcast-0 would give `{1;1}`); an error `number` or `order` gives that error in every element. ROWS is 2 and COLUMNS 1 for each.
 Matches ours in all 217 cells, no fix needed.
 Ties inside one element's range (T-4951; D1:D5 = 5,8,5,2,5): `RANK.AVG(5,OFFSET(D1,{0;2},0,3))` is `{2.5;1.5}` (D1:D3 = 5,8,5 and D3:D5 = 5,2,5;
-RANK/RANK.EQ give `{2;1}`), `OFFSET(D1,{0;1},0,4)` `{2.5;2.5}`, with order 1 and `OFFSET(D1,{0;1},0,5)` `{3;2.5}`;
+RANK/RANK.EQ give `{2;1}`), `OFFSET(D1,{0;1},0,4)` `{2.5;2.5}`, with order 1 and `OFFSET(D1,{0;1},0,5)` `{3;2.5}` (the second range D2:D6 ends in a blank D6, which is skipped);
 `INDIRECT({"D1:D3";"D3:D5"})` as the OFFSET case. Same sheet and off-sheet are identical. Matches ours in all 84 cells, no fix needed.
 Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742, T-4801, T-4826, T-4951
 
