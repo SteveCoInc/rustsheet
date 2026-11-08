@@ -1,6 +1,8 @@
 # 0284 — Allow the one AMORDEGRC regression where -ai's 2026-10-30 value does not reproduce
 
 - **Status:** accepted (2026-11-05, T-3393)
+- **Amended by:** decision 0358 (amordegrc-fraction-state-ai Sheet1!A1 and gen-m9 d912671baa1364aa Calc!A76 are
+  scored against their reproduced later fills).
 - **Context:**
   - T-3393 explains AMORDEGRC's left-over value around dynamic-array formulas (financial.md "AMORDEGRC below
     period 1"). Particular function calls empty the value at the point Excel evaluates them, left to right

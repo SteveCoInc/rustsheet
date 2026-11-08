@@ -16,6 +16,10 @@
     gives the later value in every one of them, yet they count as visibly off: 19 of M7's 43 visibly-off probe cells and
     M8's t4618 cell, all of which no engine change can pass, so the M7 and M8 exit rows could never be met.
   - The owner asked (2026-11-08) for these cells to be scored against the Excel answer that reproduces.
+  - Decision 0329 weighed excluding such cells from scoring (its option (d)) and rejected it, because they would
+    vanish from the gap list. This record does not exclude them: each is still scored, against a golden fill of the
+    same inputs, so a cell the engine gets wrong against the later fill still shows. That keeps 0329's reason and
+    drops only its cost, a cell no engine change can pass.
 - **Decision:**
   1. A spec suite may name a `superseded` file in its manifest (`suite.toml`). Each line names a scored cell and the
      same cell in a later golden sidecar (`case<TAB>Sheet!A1<TAB>sidecar<TAB>Sheet!A1`, the `cached_overrides` format,
