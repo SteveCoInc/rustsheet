@@ -7,7 +7,7 @@
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
-    functions::Function,
+    functions::{math_and_trigonometry::RANDOM_DRAWS, Function},
     model::Model,
     reference_operators::Picked,
 };
@@ -60,6 +60,14 @@ impl Model {
             return true;
         }
         if self.omission_probes >= MAX_OMISSION_PROBES || !may_hand_omission(node) {
+            return false;
+        }
+        // The probe evaluates what the wrapper picks by, and the call evaluates it again: a random
+        // draw there, or a LAMBDA call whose body may make one, could pick differently the second
+        // time and give a value Excel, which evaluates the wrapper once, cannot (`IF(RAND()<0.5,,1)`
+        // read as 0). Such a wrapper is not probed: its written-empty branch reads as a value, as
+        // before T-4912 (numbers.md "Which wrappers hand a written-empty branch on as an omission").
+        if node.contains_function(&RANDOM_DRAWS) || node.contains_lambda_call() {
             return false;
         }
         self.variable_stack.copy_read_once();

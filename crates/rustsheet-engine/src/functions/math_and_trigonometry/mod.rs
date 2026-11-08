@@ -10,6 +10,7 @@ mod mmult;
 mod multinomial;
 mod product;
 mod random;
+pub(crate) use random::RANDOM_DRAWS;
 mod sequence;
 mod seriessum;
 mod sum;

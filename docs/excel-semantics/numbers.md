@@ -3002,7 +3002,13 @@ written-empty argument and LET's and LAMBDA's binding go through, looks through 
 whose branches is written empty: it reads the wrapper's condition, index or value by the wrapper's own pick step
 (`Model::pick_step`, and IFERROR's and IFNA's `replaces_error`) and tests the branch picked. That read comes before the
 call reads the argument, so the condition is evaluated twice; a LAMBDA parameter read once is copied first. A
-volatile condition (`MROUND(IF(RAND()<0.5,,1),1)`) may pick differently in the two reads (unprobed). Before
+wrapper that draws a random value (RAND, RANDBETWEEN, RANDARRAY) or calls a LAMBDA, whose body may draw one, is not
+probed, since the two reads could pick differently: its written-empty branch reads as a value, 0, where Excel
+would give `#N/A` whenever its one evaluation picks that branch (`MROUND(IF(RAND()<0.5,,1),1)` is `#N/A` or 1 in
+Excel, 0 or 1 ours). A defined name whose formula draws a random value is not seen and is still probed. Engine
+readings with no cell behind them (UNVERIFIED): an omitted LET or LAMBDA variable in parentheses or under a unary
+plus (`LET(e,,MROUND((e),1))`, `#N/A` ours) and the same variable as a wrapper's branch (`LET(e,,MROUND(IF(TRUE,e),1))`,
+0 ours); an IFERROR or IFNA whose value is a reference to one error cell (`MROUND(IFERROR(Z1,),1)`, 0 ours). Before
 T-4912 we read every handed-on form as 0. How deeply such probes may nest is limited: "A written-empty branch
 probed inside another one's condition" below.
 Status: VERIFIED (excel-graph)

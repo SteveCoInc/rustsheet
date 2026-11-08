@@ -77,3 +77,16 @@ fn a_parameter_read_once_survives_the_probe() {
         ("A3", "=LAMBDA(c,LET(x,IF(c,1,),MROUND(x,1)))(TRUE)", "1"),
     ]);
 }
+
+#[test]
+fn a_wrapper_that_draws_a_random_value_is_not_probed() {
+    // The probe would evaluate the draw a second time, so a wrapper holding one reads its
+    // written-empty branch as a value (numbers.md "Which wrappers hand a written-empty branch on
+    // as an omission", Ours). RANDBETWEEN(1,1) always picks the empty branch, which Excel's one
+    // evaluation would hand on as `#N/A`; without a draw the same form is `#N/A` here too.
+    check(&[
+        ("A1", "=MROUND(CHOOSE(RANDBETWEEN(1,1),,5),1)", "0"),
+        ("A2", "=MROUND(CHOOSE(1,,5),1)", "#N/A"),
+        ("A3", "=MROUND(IF(LAMBDA(x,x)(TRUE),,1),1)", "0"),
+    ]);
+}
