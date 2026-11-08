@@ -132,8 +132,9 @@ escaping or External targets), twice, or through a duplicate `cacheId`: GETPIVOT
 whose data field is shown as a calculation loads and renders since T-4163; GETPIVOTDATA against it stays `#REF!`
 (UNVERIFIED, T-4750: pivots.md "Show-values-as edge cases (T-4161)"). A cache with a calculated field loads and its pivots render
 since T-4174 (pivots.md "Calculated fields as Excel for the web renders them"); GETPIVOTDATA naming a calculated data
-field still answers `#REF!` in the engine, where Excel answers by the field's name or caption ("Calculated fields" in
-the T-2085 section below); implementing it is T-4804.
+field answers by the field's name or caption, as Excel does ("Calculated fields" in the T-2085 section below): its
+formula over the Sums of the fields it names, over the records the pairs pick, whatever its function
+(`calculated_answer`, pivot/calculated.rs; T-5039).
 The fuzz target `pivot_import` feeds hostile pivot parts to this importer and GETPIVOTDATA (T-4133, decision 0312).
 UNVERIFIED: what Excel answers for each of these (presumably it computes them, refreshing a cache saved without
 records); a known gap, not a deviation. A cache `<d>` date is converted to the workbook's date system (T-2393); one before

@@ -8,7 +8,10 @@
 use crate::{
     calc_result::CalcResult,
     cast::value_number_text_with,
-    expressions::token::{english_criterion_error, Error},
+    expressions::{
+        token::{english_criterion_error, Error},
+        utils::boolean_text,
+    },
     formatter::date_text::{parse_date, CurrentYear},
     functions::util::collation::{cmp_text_pairwise, fold_lookup, note_compared, BYTE_TICKS},
     locale::Locale,
@@ -341,7 +344,7 @@ type CriteriaMatcher<'a> = Box<dyn Fn(&CalcResult) -> bool + 'a>;
 /// equality (`COUNTIF` over 10, "abc", TRUE, #N/A, "abd", 5 gives 0 for `>TRUE`/`<TRUE`/`>#N/A`/
 /// `<#N/A` and 1 for `>=TRUE`/`<=TRUE`/`>=#N/A`/`<=#N/A`; probes/criteria-operands C1-C8).
 fn bool_or_error_operand_matcher(operand: &str, inclusive: bool) -> Option<CriteriaMatcher<'_>> {
-    if let Ok(b) = operand.to_lowercase().parse::<bool>() {
+    if let Some(b) = boolean_text(operand) {
         Some(if inclusive {
             Box::new(move |x| result_is_equal_to_bool(x, b))
         } else {
@@ -457,10 +460,7 @@ pub(crate) fn indexed_criterion(
     if let Some(f) = parse_criterion_number(v) {
         return Some(IndexedCriterion::Number(op, f));
     }
-    if v.is_empty()
-        || v.to_lowercase().parse::<bool>().is_ok()
-        || english_criterion_error(v).is_some()
-    {
+    if v.is_empty() || boolean_text(v).is_some() || english_criterion_error(v).is_some() {
         return None;
     }
     let wildcard = v.contains('*') || v.contains('?');
@@ -516,7 +516,7 @@ pub(crate) fn build_criteria_with<'a>(
                 }
                 // Same for both flavors: `<>ab` is an exact not-equal, never a prefix test.
                 CriterionOp::Ne => {
-                    if let Ok(b) = v.to_lowercase().parse::<bool>() {
+                    if let Some(b) = boolean_text(v) {
                         Box::new(move |x| result_is_not_equal_to_bool(x, b))
                     } else if let Some(target) = english_criterion_error(v) {
                         Box::new(move |x| result_is_not_equal_to_error(x, &target))
@@ -532,7 +532,7 @@ pub(crate) fn build_criteria_with<'a>(
                 }
                 CriterionOp::Eq => {
                     let explicit_equals = !prefix.is_empty();
-                    if let Ok(b) = v.to_lowercase().parse::<bool>() {
+                    if let Some(b) = boolean_text(v) {
                         Box::new(move |x| result_is_equal_to_bool(x, b))
                     } else if let Some(target) = english_criterion_error(v) {
                         Box::new(move |x| result_is_equal_to_error(x, &target))
