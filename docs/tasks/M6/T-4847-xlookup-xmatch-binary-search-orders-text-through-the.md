@@ -30,7 +30,9 @@ Found by the T-4856 duplicate-concept audit (one definition per concept, CLAUDE.
 - `cmp_searched` (lookup_table.rs), the comparison of XMATCH's and XLOOKUP's binary modes, orders two
   texts with `cmp_text_pairwise`, as `compare_searched` and the other lookups do. `Ord for
   CalcResult` no longer upper-cases code points: its text arm calls the total `cmp_text`, so a sort
-  with it stays consistent.
+  with it stays consistent. `PartialEq for CalcResult` is `cmp == Equal`, so two texts are now `==`
+  when the total collation finds them equal, not when their upper-cased code points are; no eval cell
+  moved.
 - Probe probes/t4847-xmatch-binary-text-collation (excel-graph, 192 cells): exact, -1 and 1 binary
   XMATCH ascending and descending, and XLOOKUP, over SORTed text with hyphens, accents, ß/ss, `_` and
   digits. Excel's binary search agrees with its linear search under the collation everywhere; ß
