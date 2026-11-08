@@ -3053,25 +3053,6 @@ impl Model {
         self.clock = clock;
     }
 
-    /// The source RAND, RANDBETWEEN and RANDARRAY take their draws from (T-5100).
-    #[must_use]
-    pub fn random_source(&self) -> RandomSource {
-        self.random
-    }
-
-    /// Sets the random source, starting a seeded one at the beginning of its sequence. Like
-    /// [`Model::set_clock`] it does not evaluate: the next recalculation draws from it.
-    pub fn set_random_source(&mut self, random: RandomSource) {
-        self.random = random;
-        self.random_state = random.initial_state();
-    }
-
-    /// The next draw in `[0, 1)` from the model's random source. Every random function draws
-    /// through here.
-    pub(crate) fn draw(&mut self) -> f64 {
-        self.random.draw(&mut self.random_state)
-    }
-
     /// The current instant in ms since the Unix epoch, read from the model's clock. Every
     /// in-engine reader of the time goes through here.
     pub(crate) fn now_unix_millis(&self) -> i64 {

@@ -72,8 +72,7 @@ changes with the draws stays skipped as volatile. NOW and TODAY keep today's rul
   tests for scored, skipped and precedent cells on the real engine, plus the engine without sources.
 - Eval delta (full `make eval`, 38 min): probes +6 scored cells in 4 cases, no regressions, no fixes.
   Five pass: `RANDARRAY(1,2)*0` (amordegrc-fraction-state-bf), `SUM(RANDBETWEEN(1,1))` (-cm), the
-  three `ERROR.TYPE(RAND…)` cells of catalog/availability-31, and Vol!A2 of
-  weeknum-stale-volatile-reader. One fails and is baselined as new coverage:
+  three `ERROR.TYPE(RAND…)` cells of catalog/availability-31. One fails and is baselined as new coverage:
   weeknum-stale-volatile-reader Vol!A1, `#NUM!` in Excel and `222222` here. That cell uses
   `0*RAND()` only to be volatile, so Excel's last volatile-only recalc runs it alone with an empty
   WEEKNUM state (dates.md "Recalcs and edits"); it is no draw dependence. Follow-up: T-5102.
