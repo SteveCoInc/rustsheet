@@ -6,10 +6,7 @@
 )]
 // LINT-DEBT-END
 use crate::constants::{LAST_COLUMN, LAST_ROW};
-use crate::expressions::token::get_error_by_name;
 use crate::expressions::types::CellReferenceIndex;
-use crate::language::Language;
-use crate::number_format::parse_excel_number;
 
 use crate::{
     expressions::{
@@ -327,18 +324,6 @@ fn parse_r1c1_number(
     Ok((current - 1 + offset).rem_euclid(last) + 1)
 }
 
-/// Returns true if the string value could be interpreted as:
-///  * a formula
-///  * a number
-///  * a boolean
-///  * an error (i.e "#VALUE!")
-pub(crate) fn value_needs_quoting(value: &str, language: &Language) -> bool {
-    value.starts_with(['=', '+', '-'])
-        || parse_excel_number(value).is_some()
-        || value.to_lowercase().parse::<bool>().is_ok()
-        || get_error_by_name(&value.to_uppercase(), language).is_some()
-}
-
 /// Gets all timezones
 pub fn get_all_timezones() -> Vec<String> {
     crate::tz::get_all_timezone_names()
@@ -369,7 +354,6 @@ mod tests {
     #![allow(clippy::expect_used)]
 
     use super::*;
-    use crate::language::get_language;
     use crate::locale::{get_locale, Locale};
 
     fn get_test_locale() -> &'static Locale {
@@ -748,33 +732,5 @@ mod tests {
         ] {
             assert!(r1c1(reference).is_err(), "{reference}");
         }
-    }
-
-    #[test]
-    fn test_value_needs_quoting() {
-        let en_language = get_language("en").expect("en language expected");
-
-        assert!(!value_needs_quoting("", en_language));
-        assert!(!value_needs_quoting("hello", en_language));
-
-        assert!(value_needs_quoting("12", en_language));
-        assert!(value_needs_quoting("true", en_language));
-        assert!(value_needs_quoting("False", en_language));
-
-        assert!(value_needs_quoting("=A1", en_language));
-
-        // Typed tiny text: 1e-309 up to the smallest normal double is stored as the number 0
-        // (needs quoting), below that it stays text (probes/typed-number-tiny, T-1100).
-        assert!(value_needs_quoting("1e-309", en_language));
-        assert!(value_needs_quoting("2e-308", en_language));
-        assert!(!value_needs_quoting("1e-310", en_language));
-        assert!(!value_needs_quoting("1e-400", en_language));
-        assert!(!value_needs_quoting("0e309", en_language));
-
-        assert!(value_needs_quoting("#REF!", en_language));
-        assert!(value_needs_quoting("#NAME?", en_language));
-        // SPEC-0003: typed #GETTING_DATA is an error, typed #BLOCKED! stays text (UNVERIFIED, T-1016).
-        assert!(value_needs_quoting("#GETTING_DATA", en_language));
-        assert!(!value_needs_quoting("#BLOCKED!", en_language));
     }
 }

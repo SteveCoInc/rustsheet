@@ -254,7 +254,11 @@ fn a_kept_custom_equal_filter_is_re_applied() {
         assert_eq!(hidden_rows(&m), hidden, "{operator:?}");
     }
     let condition = |op: Option<&str>, val: &str, text: &str| equal(op, val).keeps_text(text);
-    assert_eq!(condition(None, "A", "a"), Some(true));
+    // Excel (T-4965 probe, custom-upper): operands "A"/"C" over cells a/c change no row, so a
+    // match that differs in case is no verdict.
+    assert_eq!(condition(None, "A", "a"), None);
+    assert_eq!(condition(None, "a", "a"), Some(true));
+    assert_eq!(condition(None, "A", "b"), Some(false));
     assert_eq!(condition(None, "a", ""), Some(false));
     assert_eq!(condition(None, "a*", "ab"), None);
     assert_eq!(condition(None, "10", "10"), None);

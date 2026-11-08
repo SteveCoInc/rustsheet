@@ -93,7 +93,9 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
 /// y is the crossing of the search's own lower tail (`bratio::beta_search_tails`) over [0, 1], at
 /// most 65 cdfs and no statrs start (lift/kinds/statistical.rs `QUANTILE_WEIGHT` charges it); at a
 /// shape above 1E5 it is T-1538's crossing (`inverse_beta::beta_lower_crossing`), as
-/// [`beta_quantile`] takes there (no evidenced cell reaches that branch yet: TODO(T-4865)).
+/// [`beta_quantile`] takes there (probes/t4865-beta-inv-huge-alpha-near-one:
+/// `BETA.INV(1-1E-12,2E5,0.1)` = 1, and `#NUM!` at `BETA.INV(1-1E-12,2E5,1E-3)` and
+/// `BETA.INV(1-1E-8,1E6,0.01)`, where y underflows).
 /// `lower_quantile_underflows` finds a y below the normal doubles without a search.
 fn upper_quantile_near_one(alpha: f64, beta: f64, p: f64) -> Option<f64> {
     // 1 - p is exact for p in (1/2, 1).

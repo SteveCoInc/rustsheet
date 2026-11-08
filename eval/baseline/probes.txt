@@ -2741,11 +2741,13 @@ C	probes/t4847-xmatch-binary-text-collation.case.json	192
 C	probes/t4848-sixteenth-digit-ties.case.json	98
 C	probes/t4848-tie-complex-part.case.json	15
 C	probes/t4848-tie-fraction-format.case.json	15
+C	probes/t4851-number-text-whitespace.case.json	100
 C	probes/t4852-error-name-case.case.json	72
 C	probes/t4857-f-kinds.case.json	669
 C	probes/t4860-fraction-tail-no-pre-point-lacking.case.json	24
 C	probes/t4861-indirect-r1c1-shaped-sheet-prefix.case.json	42
 C	probes/t4863-xlookup-mode-lift-criteria.case.json	129
+C	probes/t4865-beta-inv-huge-alpha-near-one.case.json	8
 C	probes/t4870-empty-date-args.case.json	31
 C	probes/t4870-r2-empty-optional.case.json	14
 C	probes/t4870-r3-order-and-lift.case.json	24
@@ -2788,6 +2790,7 @@ C	probes/t4974-t-inv-quarter-stop.case.json	112
 C	probes/t4974-t-inv-small-beta-tails.case.json	60
 C	probes/t4974-t-inv-tiny-centre-region.case.json	147
 C	probes/t5067-written-empty-branch-wrappers.case.json	32
+C	probes/t5068-tie-number-text-mantissa.case.json	25
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -13507,5 +13510,6 @@ TC	probes/t4767-pivot-record-tuples.case.json	40
 TC	probes/t4767-pivot-slicers.case.json	46
 TC	probes/t4767-pivot-timelines.case.json	40
 TC	probes/t4848-sixteenth-digit-ties.case.json	7
+TC	probes/t5068-tie-number-text-mantissa.case.json	5
 TC	probes/typed-mixed-fraction-number-format.case.json	31
 TF	probes/t4699-pivot-blank-collapsed.case.json	CV4!C3

@@ -3,7 +3,7 @@ id: T-4965
 title: "T-4939 review follow-ups: probe custom equal case folding, fix the and/or wording, reuse Row::hidden_default, eval cases for the patched uploads"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -42,3 +42,15 @@ These are the MINOR findings of PR #3991's review (T-4939):
 
 ## Out of scope
 - Other custom operators, wildcards and numeric operands (unprobed; they stay `None`).
+
+## Outcome
+- Probe `custom-upper` (docs/research/t4895/uploads.py; the prediction was written before the fill but landed in the
+  same commit as the result, in predictions-uploads.tsv:
+  rows 2,4,5,6; Excel gave 2,4,6): a custom `equal` whose operand differs from the cell only in case changes no row.
+  `CustomFilter::keeps_text` now returns `None` for a case-only difference and decides only exact matches or clear
+  misses; numbers.md records it.
+- numbers.md and T-4939's Outcome now say `and` or `or`; `set_row_style` uses `Row::hidden_default`; the engine.rs doc
+  is re-wrapped; the `inf`/`nan` operand comment is added.
+- Spec form: not extended. A custom filter or display-text values list needs a new spec2xlsx table schema plus adapter
+  change (size M by itself); the uploads stay probe sidecars gated by their committed oracle JSON. Follow-up: T-4973.
+- Eval delta: none (no eval cases changed).
