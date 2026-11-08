@@ -7183,12 +7183,24 @@ in Excel, and the 50-digit root agrees.
   other cells of the same sweep further from Excel (A143 from Excel's bits to 16 ulp; A157, A164, A168, A176, A178)
   and 3 nearer, so it was not taken. Over the 182 BETA.INV/BETAINV cases in eval/ only A200 moves.
 - BETA.DIST's cdf at these points still takes the Cephes kernel: ours is exactly 1 at x = 0.129 and 0 at x = 1E-5
-  (the math is 1 - 1.1E-14 and about 0.97). Excel's value there is UNVERIFIED (T-5066). Moving BETA.DIST onto direct
-  bgrat in general is T-3933 (deferred by decision 0267).
-Evidence: probes-numeric/t3351-beta-inv-sweep A200 (excel-graph; T-3351's fresh sweep)
+  (the math is 1 - 1.1E-14 and about 0.97). Excel's cdf there is the math (T-5066): `BETA.DIST(1E-5,0.0050070029475036,
+  171.171095424379,TRUE)` is 0.971368468450648, `BETA.DIST(0.001,…)` 0.9932267174876608, `BETA.DIST(0.01,…)`
+  0.999631717777667 and `BETA.DIST(0.129,…)` 0.999999999999988 (1 - 1.2E-14), where ours is 0 and three exact 1s. Across
+  alpha 0.001 to 0.05 at beta 171.171095424379, all 28 cells with x from 1E-5 to 0.129 that ours returns as an exact 0 or
+  1 are non-trivial in Excel (A5:A8, A21:A24, A37:A40, A53:A56, A105:A116 of probes/t5066-beta-dist-direct-bgrat). At
+  beta 500 and 2000 and x = 1E-5 ours is also off at the 4th digit (0.9952832570098795 against 0.995294905367465 at
+  alpha 0.001, beta 500). The task is T-5078; moving BETA.DIST onto direct bgrat in general is T-3933 (deferred by
+  decision 0267).
+- BETA.INV below p = 1/2's flip, at p of 0.9 and 0.75 with a tiny alpha and a large beta, Excel's root is often
+  1.1102230246251565E-16 (2^-53): alpha 0.001 with beta 171.171095424379 or 1000 at both p, alpha 0.0050070029475036 at
+  p = 0.75 (beta 171 and 1000), alpha 0.02 with beta 171 gives 1.7281613391206818E-5 (p = 0.9) and 1.8935242263040664E-9
+  (p = 0.75). Ours gives other values (5.84E-6, 2.925E-5, 1.17E-4: a search stopped at a band edge) or, at beta 1000,
+  roots far below 2^-53. Whether 2^-53 is Excel's floor for the search or a clamp is UNVERIFIED. The 12 cells at
+  p = 1-1.10491974750915E-14 and 1-1E-10 are within a few ulp of Excel (A81:A82, A85:A86, A89:A90, A93:A94, A97:A98, A101:A102).
+Evidence: probes-numeric/t3351-beta-inv-sweep A200 (excel-graph; T-3351's fresh sweep); probes/t5066-beta-dist-direct-bgrat (116 cells, excel-graph, 2026-11-08)
 Ours: `bratio::search_direct_bgrat` inside `beta_search_tails` (functions/statistical/bratio/mod.rs)
-Status: VERIFIED (excel-graph) for BETA.INV; BETA.DIST UNVERIFIED
-Tasks: T-4866, T-3351, T-3933, T-5066
+Status: VERIFIED (excel-graph) for BETA.INV and BETA.DIST's cdf values; the 2^-53 root floor UNVERIFIED
+Tasks: T-4866, T-3351, T-3933, T-5066, T-5078
 
 ## BETA.INV at beta 1 caps at 0.999999 where its quantile rounds to 1 (T-4958)
 Rule: at beta = 1 and p up to 1/2, BETA.INV(p, alpha, 1) (and BETAINV) is the closed form p^(1/alpha) while that is
