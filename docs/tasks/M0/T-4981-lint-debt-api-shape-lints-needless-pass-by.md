@@ -3,7 +3,7 @@ id: T-4981
 title: "Lint debt: API-shape lints (needless_pass_by_value, unused_self, unnecessary_wraps, excessive bools) fixed or given a reasoned expect"
 milestone: M0
 lane: quality
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
