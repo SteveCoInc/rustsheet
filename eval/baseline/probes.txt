@@ -90,7 +90,7 @@ C	probes/amordegrc-fraction-state-bb.case.json	4
 C	probes/amordegrc-fraction-state-bc.case.json	4
 C	probes/amordegrc-fraction-state-bd.case.json	3
 C	probes/amordegrc-fraction-state-be.case.json	3
-C	probes/amordegrc-fraction-state-bf.case.json	3
+C	probes/amordegrc-fraction-state-bf.case.json	4
 C	probes/amordegrc-fraction-state-bg.case.json	4
 C	probes/amordegrc-fraction-state-bh.case.json	3
 C	probes/amordegrc-fraction-state-bi.case.json	3
@@ -123,7 +123,7 @@ C	probes/amordegrc-fraction-state-ci.case.json	3
 C	probes/amordegrc-fraction-state-cj.case.json	3
 C	probes/amordegrc-fraction-state-ck.case.json	3
 C	probes/amordegrc-fraction-state-cl.case.json	2
-C	probes/amordegrc-fraction-state-cm.case.json	2
+C	probes/amordegrc-fraction-state-cm.case.json	3
 C	probes/amordegrc-fraction-state-cn.case.json	3
 C	probes/amordegrc-fraction-state-co.case.json	3
 C	probes/amordegrc-fraction-state-cp.case.json	3
@@ -250,7 +250,7 @@ C	probes/catalog/availability-27.case.json	11
 C	probes/catalog/availability-28.case.json	12
 C	probes/catalog/availability-29.case.json	12
 C	probes/catalog/availability-30.case.json	12
-C	probes/catalog/availability-31.case.json	9
+C	probes/catalog/availability-31.case.json	12
 C	probes/catalog/availability-32.case.json	12
 C	probes/catalog/availability-33.case.json	12
 C	probes/catalog/availability-34.case.json	12
@@ -3142,7 +3142,7 @@ C	probes/weeknum-stale-return-type.case.json	13
 C	probes/weeknum-stale-setters.case.json	84
 C	probes/weeknum-stale-sheet-moved.case.json	3
 C	probes/weeknum-stale-sheet-order.case.json	4
-C	probes/weeknum-stale-volatile-reader.case.json	1
+C	probes/weeknum-stale-volatile-reader.case.json	2
 C	probes/weeknum-sumproduct-blank-type.case.json	12
 C	probes/whole-column-empty-walkers.case.json	16
 C	probes/workbook-name-own-book-prefix.case.json	13
@@ -13415,6 +13415,7 @@ F	probes/t5067-written-empty-branch-wrappers.case.json	Calc!A26
 F	probes/t5067-written-empty-branch-wrappers.case.json	Calc!A28
 F	probes/t5067-written-empty-branch-wrappers.case.json	Calc!A29
 F	probes/t5067-written-empty-branch-wrappers.case.json	Calc!A3
+F	probes/weeknum-stale-volatile-reader.case.json	Vol!A1
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
@@ -14651,6 +14652,7 @@ E	probes/t5067-written-empty-branch-wrappers.case.json	Calc!A26
 E	probes/t5067-written-empty-branch-wrappers.case.json	Calc!A28
 E	probes/t5067-written-empty-branch-wrappers.case.json	Calc!A29
 E	probes/t5067-written-empty-branch-wrappers.case.json	Calc!A3
+E	probes/weeknum-stale-volatile-reader.case.json	Vol!A1
 W	probes/accrint-zero-results.case.json	Sheet1!A1
 W	probes/accrint-zero-results.case.json	Sheet1!A12
 W	probes/accrint-zero-results.case.json	Sheet1!A14
@@ -15683,6 +15685,7 @@ W	probes/t5067-written-empty-branch-wrappers.case.json	Calc!A26
 W	probes/t5067-written-empty-branch-wrappers.case.json	Calc!A28
 W	probes/t5067-written-empty-branch-wrappers.case.json	Calc!A29
 W	probes/t5067-written-empty-branch-wrappers.case.json	Calc!A3
+W	probes/weeknum-stale-volatile-reader.case.json	Vol!A1
 TC	probes/displayed-text-formats.case.json	28
 TC	probes/displayed-text-long-text-b.case.json	11
 TC	probes/displayed-text-long-text.case.json	24
