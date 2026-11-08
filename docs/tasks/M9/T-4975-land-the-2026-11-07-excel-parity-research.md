@@ -72,10 +72,10 @@ this PR closes):
 One PR lands findings items 1–13, addendum A–D, addendum-2 F/G, addendum-3 H and both audit sections
 (owner rulings above; decision 0351). After merging main (which added T-4974's validation probes and
 overlapping T-4328/T-5044/T-4866 work, kept as one definition each): probes 3,163 and gen-m9 428 cells
-fixed against main, 199 regressions recorded (decision 0351, including 131 T-4974 probe cells), Gate A
-0 failing with 43 known failures. Before that merge, against the older main:
+fixed against main, 203 regressions recorded (decision 0351: 72 plus 131 T-4974 probe cells; five
+visible-parity lock lines raised), Gate A 0 failing with main's 183 known failures down to 43. Before that merge, against the older main:
 - **Eval:** 2,324 known-failing cells fixed (probes 1,742, gen-m9 479, ironcalc-calc 88, fixtures 15);
-  72 gated cells regress (58 by 1–6 ulp, growth-modes K73 by 11, 13 GROWTH-overflow cells in t4590/t4765 by 260–1022) and are recorded under decision 0351 (`update-baseline
+  72 gated cells regress (57 by 1–6 ulp, growth-modes K73 by 11, 14 GROWTH/LOGEST overflow and edge cells in t4590/t4765 by 260–1022) and are recorded under decision 0351 (`update-baseline
   --allow-regressions`): item 12's LINEST/LOGEST/GROWTH/TREND fits (49), item 8's t4541 K4/K5, and
   ~21 BETA.INV/F.INV/T.INV cells from addendum A–C/G (e.g. `T.INV(0.2,5)`, `F.INV(0.975,3,10)`);
   visible-parity lock raised for probes/stat-argument-modes and t3185-…-kinds-c. Visibly off in scope

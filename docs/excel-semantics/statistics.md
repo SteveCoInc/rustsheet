@@ -5028,6 +5028,11 @@ Not reproduced: H16 (-2.220446049250313E-16, the engine -1.44E-15), H26 (0.23399
 0.2339999999992134) and BETA_GAMMA.xlsx BETA_DIST!J3 (1.9999999999999998, the engine 1.9999999999999993): Excel's
 last iterates there are an ulp or a few from the engine's, and finalizing in the original coordinate (iterating
 1 - x itself) scored worse overall (1,500 bit-exact against 1,609 on the same cells).
+Not reproduced either (T-4974's probes, found after merging main; T-5089): probes/t4974-beta-inv-large-shape-round-trip,
+where Excel's `BETA.INV(BETA.DIST(x,a,b,TRUE),a,b)` returns x exactly in 113 of 123 rows, misses 28 cells (P!E6, E12,
+G6, G12 `BETA.INV` 0.7000000000000038 for 0.7, 68 ulp; two more at 35 ulp; the rest a few ulp), which contradicts
+the loop's early stop at large shapes; and t4974-beta-inv-as109-accuracy-exponent misses 42 cells of the accuracy
+exponent `10^(-5/min(a,b)^2 - p^(-0.2) - 13)`.
 Status: UNVERIFIED (a scored fit to the addendum's mechanism; probe groups G21 and G23)
 Implemented in: functions/statistical/inverse_beta/as109.rs `as109_search`, functions/statistical/beta.rs
 `beta_quantile_as109`.
@@ -5057,6 +5062,8 @@ Not reproduced (the addendum's inverse-specific pieces):
 - the half-half seed (`F.INV(1E-200,1,1)` = 2.705579217114786E-151, the engine 0) and accuracy/F.INV/s1 A167
   (`F.INV(4.36982683607437E-189,1,1698856)` = 3.8539086753642276E-145, the engine 0, inside Gate A through the
   math's 1E-300 floor).
+Also not reproduced (T-4974, T-5089): t4974-f-inv-back-transform misses 17 cells, two at 44 ulp and two at about
+3.1E5 ulp, where the y/(1-y) back-transform amplifies a 1-ulp BETA.INV near 1; t4974-f-inv-as109-tolerance-cap 8.
 Status: UNVERIFIED (a scored fit to the addendum's mechanism)
 Implemented in: functions/statistical/fisher.rs `f_quantile`, `f_quantile_as109`.
 
@@ -9247,7 +9254,10 @@ settle these points; each compares Excel with that PR's prototype prediction.
   owner task and stay known failures; only the 325 cells listed in T-4994 to T-4998 are counted.
 Evidence: probes/t4974-* (excel-graph, 2026-11-07). The visibly-off cells against ours are owned by T-4994 (BETA.INV),
 T-4995 (F.INV), T-4996 (CHISQ.INV), T-4997 (IRR) and T-4998 (T.INV.2T).
-Ours: matches every SKEW/SKEW.P/KURT cell; the other groups are known failures (eval/baseline/probes.txt).
+Ours: matches every SKEW/SKEW.P/KURT cell; the other groups are known failures (eval/baseline/probes.txt). Since
+T-4975 its models miss 131 cells that main's kernels passed (decision 0351 lists them by group with their ulp; T-5089
+owns them): the AS 109 groups (as109-accuracy-exponent 42, large-shape-round-trip 28, f-inv-back-transform 17,
+tolerance-cap 8, t-inv-* 7) and 29 cells in the CHISQ, gamma, LOGNORM and T.DIST groups.
 Status: VERIFIED (excel-graph)
 Tasks: T-4974
 

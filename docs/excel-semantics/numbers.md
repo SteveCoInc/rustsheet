@@ -3109,8 +3109,10 @@ function_num 6 control C5 still multiplies the hidden 3 and 5 to 15) or in rows 
 product is 0 whenever no number is included, never 1.
 Ours: implemented (T-2269); 106 and the AGGREGATE cells share the code path and match. Since T-4975 SUBTOTAL 6 and
 106 multiply with PRODUCT's own step (`product_step`: a stored x87 product, a subnormal running product flushed to
-0), not a second plain-`*` loop; no evidence asked for two accumulators (findings 2026-11-07 audit item 6).
-Status: VERIFIED
+0), not a second plain-`*` loop; no evidence asked for two accumulators (findings 2026-11-07 audit item 6). That
+flush is UNVERIFIED for SUBTOTAL itself: `SUBTOTAL(6,1E-200,1E-120)` went from 1E-320 to 0 with no SUBTOTAL oracle
+cell (probe: T-5087).
+Status: VERIFIED (the T-4975 flush sentence UNVERIFIED)
 Tasks: T-2269, T-2302
 
 ## TEXT of DBL_MAX with a scientific format prints the full 3-digit exponent (T-2106)
