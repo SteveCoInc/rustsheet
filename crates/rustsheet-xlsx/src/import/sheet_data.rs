@@ -259,14 +259,14 @@ impl SheetDataReader<'_> {
                             "ca" => formula.calculate_always = xsd_boolean(&value) == Some(true),
                             "dt2D" => {
                                 formula.data_table.two_dimensional =
-                                    xsd_boolean(&value) == Some(true)
+                                    xsd_boolean(&value) == Some(true);
                             }
                             "dtr" => formula.data_table.row = xsd_boolean(&value) == Some(true),
                             "del1" => {
-                                formula.data_table.deleted[0] = xsd_boolean(&value) == Some(true)
+                                formula.data_table.deleted[0] = xsd_boolean(&value) == Some(true);
                             }
                             "del2" => {
-                                formula.data_table.deleted[1] = xsd_boolean(&value) == Some(true)
+                                formula.data_table.deleted[1] = xsd_boolean(&value) == Some(true);
                             }
                             "r1" => formula.data_table.inputs[0] = Some(value.into_owned()),
                             "r2" => formula.data_table.inputs[1] = Some(value.into_owned()),
