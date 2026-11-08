@@ -86,6 +86,14 @@ const KERNEL_MIN_DF: f64 = 2.0;
 /// ([`unflushed_upper_tail`]).
 /// FITTED(T-0969, 3232 cells, df 2..1000, t 0.0013..8)
 const ROUNDED_Y_MAX: f64 = 0.99;
+/// Below this t the central fraction ([`large_df_centre_tail`]) takes an integer df past
+/// [`SERIES_MAX_DF`]; from it on the kernel does, as inside the series bound. The fraction is Excel's
+/// bits at t up to 0.85 (`T.DIST.2T(0.1,1001)`, t4974-t-dist-df1000-central-endpoint H2) and
+/// neither form is from 0.8513 to 0.95, while the kernel is Excel's bits at t = 0.999999 for df 1001
+/// to 1E10 (`T.DIST.2T(0.999999,1001)` = 0.3175526601765737, t4974-t-dist-df1-and-large-df-centre
+/// F5:F9) and at 1-2^-53 (t4974-t-dist-df1000-central-endpoint G21:I21), which the fraction is not.
+/// FITTED(T-4975, 8 cells, df 1001..1E10, t bracketed in (0.95, 0.999999])
+const CENTRE_TAIL_MAX_T: f64 = 0.99;
 /// 1/pi as a double-double.
 const FRAC_1_PI_DD: Dd = (
     f64::from_bits(0x3FD4_5F30_6DC9_C883),
@@ -201,15 +209,16 @@ fn kernel_tail(t: f64, n: f64) -> Option<f64> {
     Some(0.5 * w)
 }
 
-/// L for t < 1 at an integer df past the series bound, n > [`SERIES_MAX_DF`]: the central
-/// fraction ([`centre_tail`] on z, t^2/n and n/t^2, never on the rounded y), not the kernel, whose
+/// L for t < [`CENTRE_TAIL_MAX_T`] at an integer df past the series bound, n >
+/// [`SERIES_MAX_DF`]: the central fraction ([`centre_tail`] on z, t^2/n and n/t^2, never on the
+/// rounded y), not the kernel, whose
 /// bpser prefactor loses digits to cancellation in its logarithm there: `T.DIST.2T(0.5,1E+8)` =
 /// 0.6170750785521777 (gen-m9/787ba8d801105a60 A91) is 6 ulp off through the kernel and 2 through
 /// this fraction. The bound is exclusive: the kernel is Excel's bits at df 1000
 /// (`T.DIST.RT(.5,1000)` = 0.30859254041693746, probes-numeric m9-t-dist-rt A123, and
 /// probes-numeric t0969-t-tail-grid B1553), which the fraction is not. `None` elsewhere.
 fn large_df_centre_tail(t: f64, n: f64) -> Option<f64> {
-    if !(n > SERIES_MAX_DF && t < 1.0) {
+    if !(n > SERIES_MAX_DF && t < CENTRE_TAIL_MAX_T) {
         return None;
     }
     let ratio = gamma_ratio(n)?;
@@ -807,6 +816,43 @@ mod tests {
         // off on t1048-ttest cells).
         let welch = 2.0 * student_t_tail_at(0.946_466_489_851_057_3, 18.405_961_938_104_15);
         assert!(ulps(welch, 0.320_798_002_405_401_24) <= 1);
+    }
+
+    #[test]
+    fn large_df_centre_fraction_bounds() {
+        // probes/t4974-t-dist-df1000-central-endpoint (excel-graph): df 999 and 1000 take the series
+        // and the kernel, df 1001 the central fraction (the series bound is exclusive), and from
+        // t = CENTRE_TAIL_MAX_T on the kernel again (G21:I21; t4974-t-dist-df1-and-large-df-centre
+        // F5:F9).
+        let cases = [
+            ((0.1, 999.0), 0.460_182_194_542_355_65, false), // A2
+            ((0.1, 1000.0), 0.460_182_184_511_802_04, false), // D2
+            ((0.5, 1000.0), 0.308_592_540_416_937_46, false), // D10
+            ((0.1, 1001.0), 0.460_182_174_501_287, false),   // G2
+            ((0.1, 1001.0), 0.920_364_349_002_574, true),    // C5 (df1-and-large-df-centre)
+            (
+                (1.0 - f64::EPSILON / 2.0, 999.0),
+                0.317_552_660_176_412_3,
+                true,
+            ), // B21
+            (
+                (1.0 - f64::EPSILON / 2.0, 1000.0),
+                0.317_552_418_084_672_4,
+                true,
+            ), // E21
+            (
+                (1.0 - f64::EPSILON / 2.0, 1001.0),
+                0.317_552_176_476_511_3,
+                true,
+            ), // H21
+            ((0.999_999, 1001.0), 0.317_552_660_176_573_7, true), // F5
+            ((0.999_999, 1e10), 0.317_310_991_828_802_1, true), // F9
+        ];
+        for ((t, n), excel, two_tailed) in cases {
+            let upper = student_t_tails(t, n).1;
+            let value = if two_tailed { 2.0 * upper } else { upper };
+            assert_eq!(value.to_bits(), f64::to_bits(excel), "t {t}, df {n}");
+        }
     }
 
     #[test]
