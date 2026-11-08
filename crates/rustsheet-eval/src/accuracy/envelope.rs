@@ -210,7 +210,7 @@ pub fn cell_envelope(c: &CellResult) -> CellEnvelope {
 /// Excel's side of the envelope for scored cell `c` (its `expected` Excel's value, its `actual`
 /// the engine's): a bit-exact match (an error or text matched included), a pinned deviation, two
 /// numbers within 4 ulp, or two numbers within [`ENVELOPE_DIGITS`] significant digits. Never a
-/// wrong type, error, text or boolean, nor an unsupported engine result (`#NAME?`, `#N/IMPL`).
+/// wrong type, error, text or boolean, nor an unsupported engine result (`#NAME?`, `#N/IMPL!`).
 /// The one Excel-side test of both [`envelope`] and [`cell_envelope`].
 ///
 /// Why 4 ulp: decision 0088 never counts a number within 4 ulp as off, even where 4 ulp exceed
@@ -524,7 +524,7 @@ mod tests {
         // Excel text against the engine's #NAME?: compare() gives `Unsupported`, which the
         // closeness buckets do not count as visibly off.
         let math = || Some(MathValue::Number(MATH));
-        for code in ["#NAME?", "#N/IMPL"] {
+        for code in ["#NAME?", "#N/IMPL!"] {
             let engine = err(code);
             let cell = filled(Value::Text("x".into()), &engine);
             assert_eq!(cell.verdict, Verdict::Unsupported);
