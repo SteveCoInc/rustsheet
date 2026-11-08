@@ -28,6 +28,10 @@ ours returns an exact 0 or 1 that the math does not have, and record it.
 ## Acceptance criteria
 - [ ] A probe case of at least 20 BETA.DIST cells at alpha from 1E-3 to 0.1 and beta from 20 to 2000, x where ours
       is an exact 0 or 1 and the math is not, filled from an Excel oracle.
+- [ ] The same case has at least 10 BETA.INV cells whose search crosses the band where T-4866's
+      `bratio::search_direct_bgrat` takes over (a tiny alpha, a large beta, p above 1/2). This oracle-confirms the
+      band beyond its single evidenced point, probes-numeric/t3351-beta-inv-sweep A200 (a MINOR from #4058's
+      fidelity review).
 - [ ] statistics.md's T-4866 entry states Excel's values there (replacing its UNVERIFIED), and an engine task is filed
       for the cells ours misses (with `make new-task`), or the cells already match.
 - [ ] `make check` green; reviewers approve.
