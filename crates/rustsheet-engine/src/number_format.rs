@@ -8,6 +8,7 @@
 )]
 #![cfg_attr(test, expect(clippy::unreadable_literal))]
 // LINT-DEBT-END
+use crate::decimal_round::cut_to_15_digits;
 use crate::{
     arithmetic::flush_subnormal,
     decimal_round::x87_text_to_f64,
@@ -298,7 +299,10 @@ pub fn to_excel_precision_str(value: f64) -> String {
     if value.fract() == 0.0 && value.abs() < 1e15 && !(value == 0.0 && value.is_sign_negative()) {
         return (value as i64).to_string();
     }
-    to_precision_str(value, 15)
+    // An exact tie at the 16th digit goes toward zero, as a typed 16-digit literal is cut on entry
+    // (`=12345678901234.75` stores 12345678901234.7, probes/t4848-sixteenth-digit-ties B6) and as
+    // number-to-text cuts.
+    shortest_text(cut_to_15_digits(value, false))
 }
 
 /// Orders two numbers on their 15-digit values, Excel's comparison rule. There is no absolute
@@ -327,21 +331,16 @@ fn cmp_rounded(a: f64, b: f64) -> std::cmp::Ordering {
 
 /// The 15-digit value [`cmp_excel_precision`] orders by. `total_cmp` orders -0.0 below 0.0 and
 /// negative-sign NaN below every number, so both are canonicalised (`+ 0.0` turns -0.0 into 0.0).
+/// An exact tie at the 16th digit goes away from zero: `(1E+15+25)=(1E+15+30)` and
+/// `COUNTIF(1E+15+25,1E+15+30)` hold, `(1E+14+2.5)=(1E+14+3)` too, and `<` agrees
+/// (probes/t4848-sixteenth-digit-ties C1:G5, excel-graph, 2026-11-07; numbers.md "A 16th-digit tie
+/// splits by use").
 fn excel_precision_canon(x: f64) -> f64 {
     if x.is_nan() {
         f64::NAN
     } else {
-        to_excel_precision(x, 15) + 0.0
+        cut_to_15_digits(x, true) + 0.0
     }
-}
-
-pub fn to_excel_precision(value: f64, precision: usize) -> f64 {
-    if !value.is_finite() {
-        return value;
-    }
-
-    let s = format!("{:.*e}", precision.saturating_sub(1), value);
-    s.parse::<f64>().unwrap_or(value)
 }
 
 /// More significant digits than any double's exact decimal expansion (at most 767).
@@ -565,8 +564,11 @@ pub fn to_precision_str(value: f64, precision: usize) -> String {
     }
 
     let s = format!("{:.*e}", precision.saturating_sub(1), value);
-    let parsed = s.parse::<f64>().unwrap_or(value);
+    shortest_text(s.parse::<f64>().unwrap_or(value))
+}
 
+/// The shortest text that reads back as finite `value` (`2`, not `2.0`).
+fn shortest_text(parsed: f64) -> String {
     // I would love to use the std library. There is not a speed concern here
     // problem is it doesn't do the right thing
     // Also ryu is my favorite _modern_ algorithm

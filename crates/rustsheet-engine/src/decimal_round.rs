@@ -285,8 +285,10 @@ pub(crate) fn decimal_to_f64(digits: u64, place: i64) -> Option<f64> {
 
 /// `value` cut to 15 significant digits, as the double nearest that decimal: an exact tie at the
 /// 16th digit goes away from zero when `tie_away`, otherwise toward zero. A zero or non-finite
-/// `value` is itself. FLOOR's ratio snap and PERCENTRANK's truncation use it, so that a double
-/// just below a digit boundary counts as on it.
+/// `value` is itself. The engine's one 15-digit cut (T-4848): each caller names the tie rule
+/// Excel evidences for its use (numbers.md "A 16th-digit tie splits by use"), away from zero for
+/// comparisons, the ROUND-family ratio snaps, IM* parts and fraction digits, toward zero for EXACT
+/// and number text.
 pub(crate) fn cut_to_15_digits(value: f64, tie_away: bool) -> f64 {
     if !value.is_finite() || value == 0.0 {
         return value;

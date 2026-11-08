@@ -13,6 +13,7 @@ use crate::cast::value_number_text;
 use crate::{
     calc_result::CalcResult,
     cast::{calc_result_to_string, calc_result_to_text, MAX_SHORT_TEXT_UNITS, MAX_TEXT_UNITS},
+    decimal_round::cut_to_15_digits,
     expressions::{
         parser::{ArrayNode, Node},
         token::Error,
@@ -24,7 +25,6 @@ use crate::{
     },
     functions::{text::position::find_element, util::near_integer::near_integer_count, Function},
     model::Model,
-    number_format::to_precision,
     text::{Char, Text},
 };
 
@@ -136,9 +136,11 @@ fn rept_element(text: &CalcResult, number_times: Result<f64, Error>) -> Result<A
 /// Computes a single EXACT result from one element of each argument.
 fn exact_element(text1: &CalcResult, text2: &CalcResult) -> Result<ArrayNode, Error> {
     if let (CalcResult::Number(number1), CalcResult::Number(number2)) = (text1, text2) {
-        // In Excel two numbers are the same if they are the same up to 15 digits.
+        // Two numbers are the same when their 15-digit cuts are, an exact 16th-digit tie going
+        // toward zero as their text does: `EXACT(1E+15+15,1E+15+10)` is TRUE and
+        // `EXACT(1E+15+15,1E+15+20)` FALSE, unlike `=` (probes/t4848-sixteenth-digit-ties H1:I5).
         return Ok(ArrayNode::Boolean(
-            to_precision(*number1, 15) == to_precision(*number2, 15),
+            cut_to_15_digits(*number1, false) == cut_to_15_digits(*number2, false),
         ));
     }
     let string1 = calc_result_to_text(text1)?;

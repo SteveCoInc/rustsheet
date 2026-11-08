@@ -17,9 +17,9 @@ use super::fraction::{comma_exponent, format_fraction};
 use super::general::{format_general, lead_abs};
 use crate::{
     constants::MAXIMUM_DATE_SERIAL_NUMBER,
-    decimal_round::{round_engineering, round_scientific, round_shown_place},
+    decimal_round::{cut_to_15_digits, round_engineering, round_scientific, round_shown_place},
     locale::Locale,
-    number_format::{cut_15_digits, to_precision},
+    number_format::cut_15_digits,
     types::DateSystem,
 };
 
@@ -665,7 +665,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     if !shifted {
                         value /= 10.0_f64.powf(exponent);
                     }
-                    value = to_precision(value, 15);
+                    value = cut_to_15_digits(value, false);
                     value_abs = value.abs();
                 }
             }

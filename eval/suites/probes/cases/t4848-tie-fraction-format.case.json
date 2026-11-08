@@ -1,0 +1,49 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Exact 16th-digit ties in a fraction format's integer digits, a whole-number format and a scientific mantissa: TEXT on 1E+15+15.5, 1E+15+25.5, -(1E+15+15.5), 1E+14+1.5, 1E+14+2.5 (T-4848; numbers.md \"A 16th-digit tie splits by use\")",
+  "tags": [
+    "M10",
+    "probe",
+    "precision"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=TEXT(1E+15+15.5,\"# ?/?\")",
+        "B1": "=TEXT(1E+15+15.5,\"0\")",
+        "C1": "=TEXT(1E+15+15.5,\"0.00E+00\")",
+        "A2": "=TEXT(1E+15+25.5,\"# ?/?\")",
+        "B2": "=TEXT(1E+15+25.5,\"0\")",
+        "C2": "=TEXT(1E+15+25.5,\"0.00E+00\")",
+        "A3": "=TEXT(-(1E+15+15.5),\"# ?/?\")",
+        "B3": "=TEXT(-(1E+15+15.5),\"0\")",
+        "C3": "=TEXT(-(1E+15+15.5),\"0.00E+00\")",
+        "A4": "=TEXT(1E+14+1.5,\"# ?/?\")",
+        "B4": "=TEXT(1E+14+1.5,\"0\")",
+        "C4": "=TEXT(1E+14+1.5,\"0.00E+00\")",
+        "A5": "=TEXT(1E+14+2.5,\"# ?/?\")",
+        "B5": "=TEXT(1E+14+2.5,\"0\")",
+        "C5": "=TEXT(1E+14+2.5,\"0.00E+00\")"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Sheet1!A1",
+    "Sheet1!B1",
+    "Sheet1!C1",
+    "Sheet1!A2",
+    "Sheet1!B2",
+    "Sheet1!C2",
+    "Sheet1!A3",
+    "Sheet1!B3",
+    "Sheet1!C3",
+    "Sheet1!A4",
+    "Sheet1!B4",
+    "Sheet1!C4",
+    "Sheet1!A5",
+    "Sheet1!B5",
+    "Sheet1!C5"
+  ]
+}

@@ -122,3 +122,8 @@ Plan: add `number_format: Option<u32>` to `CacheField` (OOXML `cacheField numFmt
 source cell's xf `num_fmt_id` (extend `SourceCells`), render date-item labels with it via `put_formatted`, and read it on
 xlsx import. About 25 `CacheField { .. }` construction sites need the new field (`..Default` where possible). Persisted model plus
 trait change, so judged beyond sonnet. Nothing implemented; `make eval-show` was not completed.
+
+Coordination (T-4717): the date-label cells T-4717 owned on probes/t4164-pivot-date-times and
+probes/t4130-pivot-date-filters pass since this change, so T-4717 dropped them. probes/t4717-pivot-cell-formats L5
+confirms the rule over a `yyyy-mm-dd` source (`1/15/2024`), and L6 shows a pivot field `numFmtId` winning over it
+(`15-Jan-24`, implemented by T-4717).

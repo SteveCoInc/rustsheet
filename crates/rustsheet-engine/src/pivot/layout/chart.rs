@@ -15,7 +15,7 @@
 //!   its children (with or without `subtotalTop`) and `insertBlankRow` lines.
 //! - **Values** are [`PivotResult::value`]: `None` where no record reaches.
 //! - **Labels** are an item's text; a number or date item is its value in its pivot field's
-//!   `numFmtId`, formatted here (`number_format::format_number`, en-US).
+//!   `numFmtId`, formatted as a subtotal label is (`render::item_text_in`, en-US).
 //!
 //! The evidence and what is UNVERIFIED are in docs/excel-semantics/pivots.md "A `PivotChart` plots
 //! the pivot's item lines". In short, two Excel-saved corpus charts show leaf categories, Values
@@ -30,20 +30,16 @@
 //! the layout it reads (CLAUDE.md directive 5).
 
 use crate::expressions::token::Error;
-use crate::number_format::{format_number, get_num_fmt};
 use crate::types::NumFmt;
 
 use super::super::result::{charge, units, AxisTree, PivotComputeError, PivotResult};
-use super::super::{CacheItem, ItemType, PivotCache, PivotTable};
+use super::super::{ItemType, PivotCache, PivotTable};
 use super::lines::{levels, AxisLine, Level, PivotLayout, HIDDEN};
-use super::render::{item_text, MAX_PIVOT_TEXT_BYTES};
+use super::render::{item_text_in, MAX_PIVOT_TEXT_BYTES};
 
 /// The name Excel's chart cache gives the one series of a pivot with no column field and no
 /// Values on columns (pivots.md "A `PivotChart` plots the pivot's item lines").
 pub const TOTAL_SERIES: &str = "Total";
-
-/// The locale number labels are formatted in: en-US, the parity target.
-const LABEL_LOCALE: &str = "en";
 
 /// What a pivot chart plots: its categories and its series ([`chart_data`]).
 #[derive(Debug, Clone, PartialEq)]
@@ -174,14 +170,12 @@ impl Plotted<'_> {
                     .cache
                     .fields
                     .get(*self.tree.fields().get(*depth)? as usize)?;
-                Some(match cache_field.items.get(item as usize)? {
-                    CacheItem::Number(value) | CacheItem::Date(value) => {
-                        let id = field.and_then(|f| f.number_format).unwrap_or(0);
-                        let code = get_num_fmt(i32::try_from(id).unwrap_or(0), self.num_fmts);
-                        format_number(*value, &code, LABEL_LOCALE).text
-                    }
-                    other => item_text(other),
-                })
+                let id = field.and_then(|f| f.number_format).unwrap_or(0);
+                Some(item_text_in(
+                    cache_field.items.get(item as usize)?,
+                    id,
+                    self.num_fmts,
+                ))
             }
         }
     }
