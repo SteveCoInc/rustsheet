@@ -220,9 +220,11 @@ pub fn cell_envelope(c: &CellResult) -> CellEnvelope {
 pub fn within_excel(c: &CellResult) -> bool {
     match (c.verdict, &c.expected, &c.actual) {
         (Verdict::Pass | Verdict::Deviation | Verdict::NumericUlp, _, _) => true,
-        (Verdict::NumericClose | Verdict::NumericMismatch, Value::Number(excel), Value::Number(engine)) => {
-            within_significant_digits(*excel, *engine, ENVELOPE_DIGITS)
-        }
+        (
+            Verdict::NumericClose | Verdict::NumericMismatch,
+            Value::Number(excel),
+            Value::Number(engine),
+        ) => within_significant_digits(*excel, *engine, ENVELOPE_DIGITS),
         _ => false,
     }
 }
@@ -383,7 +385,10 @@ mod tests {
         // to, but decision 0088's 4 ulp never counts as off.
         let tiny = f64::from_bits(1);
         let math = || Some(MathValue::Number(1.0));
-        assert_eq!(class(Some(n(0.0)), &n(tiny), math(), false), Envelope::Excel);
+        assert_eq!(
+            class(Some(n(0.0)), &n(tiny), math(), false),
+            Envelope::Excel
+        );
         let cell = eval_cell(n(0.0), &n(tiny), None);
         assert_eq!(cell_envelope(&cell), CellEnvelope::Inside);
         let far = eval_cell(n(0.0), &n(1e-300), None);
@@ -508,10 +513,7 @@ mod tests {
             "within 12 digits of Excel but not ε of the math"
         );
         assert_eq!(class(excel(), &n(-40.26), math(), true), Envelope::Math);
-        assert_eq!(
-            class(excel(), &n(-156.96), math(), false),
-            Envelope::Excel
-        );
+        assert_eq!(class(excel(), &n(-156.96), math(), false), Envelope::Excel);
         // R3 never excuses an error against a number.
         assert_eq!(
             class(excel(), &err("#NUM!"), math(), true),

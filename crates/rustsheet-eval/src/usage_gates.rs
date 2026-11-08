@@ -424,9 +424,7 @@ fn tier_gate(usage: Usage, functions: &[FunctionGate]) -> TierGate {
     let mut failing: Vec<&FunctionGate> = mine
         .iter()
         .copied()
-        .filter(|f| {
-            !f.meets || (!type_met && f.wrong_type > 0) || (!envelope_met && f.outside > 0)
-        })
+        .filter(|f| !f.meets || (!type_met && f.wrong_type > 0) || (!envelope_met && f.outside > 0))
         .collect();
     failing.sort_by(|a, b| {
         b.tally()
@@ -509,7 +507,11 @@ pub fn write_markdown(gates: &UsageGates, md: &mut String) {
         .iter()
         .map(|f| (f.name.as_str(), f))
         .collect();
-    for t in gates.tiers.iter().filter(|t| !t.failing_functions.is_empty()) {
+    for t in gates
+        .tiers
+        .iter()
+        .filter(|t| !t.failing_functions.is_empty())
+    {
         let _ = writeln!(
             md,
             "\nFailing {} functions ({}), worst first:\n",
