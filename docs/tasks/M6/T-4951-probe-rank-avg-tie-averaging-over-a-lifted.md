@@ -3,7 +3,7 @@ id: T-4951
 title: "Probe RANK.AVG tie averaging over a lifted OFFSET or INDIRECT ref (T-4801 follow-up)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
