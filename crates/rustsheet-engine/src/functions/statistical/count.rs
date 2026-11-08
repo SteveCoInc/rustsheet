@@ -36,7 +36,7 @@ const COUNT_ARGS: AggregatePolicy = AggregatePolicy {
     errors: ErrorRule::Items,
     skip_empty_args: false,
     grids: GridReading::Values,
-    nested: NestedReading::Flatten,
+    nested: NestedReading::NotAvailable,
 };
 
 /// COUNTA counts errors; it reads a picked reference keeping the cached blanks of a linked
@@ -46,7 +46,7 @@ const COUNTA_ARGS: AggregatePolicy = AggregatePolicy {
     errors: ErrorRule::Items,
     skip_empty_args: false,
     grids: GridReading::Values,
-    nested: NestedReading::Flatten,
+    nested: NestedReading::NotAvailable,
 };
 
 impl Model {

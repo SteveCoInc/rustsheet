@@ -396,6 +396,21 @@ Implemented in: engine import (expressions/parser/lambda.rs) and export (stringi
 `_xlop.`; the case builder writes it since T-1274 (spec2xlsx.py `prefix_bound_names`).
 Tasks: T-1083, T-1274
 
+## Boolean attributes and boolean cells (T-4853)
+Rule (schema, ECMA-376 and W3C XML Schema Part 2): an `xsd:boolean` attribute is `true`, `false`, `1` or `0`, and a `t="b"`
+cell's value is `0` or `1`. Excel writes `1` and `0` in both. The importer reads every `xsd:boolean` attribute
+through one reader, `util::xsd_boolean`: exactly the four literals, anything else the attribute's default (SPEC-0005
+keeps `date1904="TRUE"` 1900). The style and sheet-view attributes read through `parse_bool_with_default` trim and
+lower-case the value first, a lenient read kept from before T-4853. That covers `calcPr@iterate`, `workbookPr@date1904`, `sheetView@tabSelected` and `@showGridLines`,
+the `<f>` flags `ca`, `dt2D`, `dtr`, `del1` and `del2`, `<c cm>`, externalLink `sheetData@refreshError`, the pivot
+table flags and a pivot cache's boolean item. Before T-4853 several of these read only `"1"`, so a `showGridLines="true"`
+from another writer hid the gridlines. A `t="b"` value goes through `util::cell_boolean`: `1` is TRUE, anything else
+FALSE.
+Evidence: the schemas; Excel's own reading of `true` in these attributes is unprobed (UNVERIFIED for Excel)
+Status: UNVERIFIED (schema-backed)
+Implemented in: crates/rustsheet-xlsx/src/import/util.rs `xsd_boolean`, `cell_boolean`
+Tasks: T-4853
+
 ## Cells and rows without r are positional
 Rule: `r` is optional on `<row>` and `<c>`. A row without `r` is the row after the previous one (row
 1 if first); a cell without `r` is the column after the previous cell in its row (column A if first).

@@ -22,6 +22,7 @@ from rustsheet_tools.fitlab.kernels import (
     irr_fallback,
     irr_secant_d,
     mirr,
+    moments,
     norm_inv,
     power,
     solvers,
@@ -53,6 +54,7 @@ MODULES = [
     im_hyperbolic,
     cumulative,
     devsq,
+    moments,
 ]
 
 

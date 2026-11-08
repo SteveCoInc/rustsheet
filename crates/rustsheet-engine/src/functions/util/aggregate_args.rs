@@ -96,15 +96,21 @@ pub(crate) enum GridReading {
 }
 
 /// How the walker reads a nested cell of a GROUPBY or PIVOTBY result in an array argument
-/// (SPEC-0018 rule 4; probes/t2592-nested-groupby-cells A6:A12, probes/t2594-nested-aggregates).
+/// (SPEC-0018 rules 4 and 7; probes/t2592-nested-groupby-cells-refill-1106 A6:A8,
+/// probes/t2594-nested-aggregates).
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NestedReading {
-    /// Its array's elements are walked as array elements, nested cells in them too: SUM 220,
-    /// COUNT 16 and COUNTA 19 over a 3x3 GROUPBY whose six value cells hold 16 numbers (A6:A8).
-    Flatten,
-    /// The cell is an array error `#N/A` (AVERAGE, MIN, MAX, PRODUCT, SUMSQ, MEDIAN, the A-variants,
-    /// the variance and deviation family: t2594-nested-aggregates A1:A21, A25; VARA, STDEVA,
-    /// VARPA, STDEVPA, AND, OR and XOR: t2625-nested-consumers A1:A7).
+    /// An array cell is an array error `#N/A`, a reference-body cell its referenced value: SUM
+    /// (Excel's reads of 2026-11-06, decision 0329): `SUM(GROUPBY(..))` and `SUM(1,GROUPBY(..),2)`
+    /// are `#N/A` (t2592-nested-groupby-cells-refill-1106 A6, t2594-nested-aggregates-refill-1106
+    /// A26, A27), and over `GROUPBY(..,LAMBDA(x,D!D2))` SUM is 60 (t2609-nested-operators-and-lifts
+    /// A50).
+    NotAvailableReferenceValue,
+    /// The cell is an array error `#N/A`, so COUNT skips it and COUNTA counts it as one value
+    /// (COUNT 0 and COUNTA 9 over a 3x3 GROUPBY: t2592-nested-groupby-cells-refill-1106 A7, A8;
+    /// t2625-nested-consumers-refill-1106 A13 90). AVERAGE, MIN, MAX, PRODUCT, SUMSQ, MEDIAN, the
+    /// A-variants and the variance and deviation family are `#N/A` (t2594-nested-aggregates A1:A21,
+    /// A25; VARA, STDEVA, VARPA, STDEVPA, AND, OR and XOR: t2625-nested-consumers A1:A7).
     NotAvailable,
     /// `#VALUE!`, as a LAMBDA element: IMSUM and IMPRODUCT (t2625-nested-consumers A8, A9).
     Value,
@@ -420,9 +426,7 @@ impl Model {
 
     /// The elements of an array argument as [`ItemSource::ArrayElement`] items: an error is held
     /// (`Ranked`) or handed on (`Items`), and a nested GROUPBY or PIVOTBY cell is read as the
-    /// policy's [`NestedReading`] says. A flattened nested cell's cells are charged to the walk
-    /// budget first (`#ERROR!` past it; SPEC-0018 "Bound"); its own nested cells recurse, at most
-    /// `MAX_NESTED_DEPTH` deep (`NestedArray::new`).
+    /// policy's [`NestedReading`] says, without reading its contents.
     fn walk_array_items<F>(
         &mut self,
         array: Vec<Vec<ArrayNode>>,
@@ -453,23 +457,23 @@ impl Model {
         let items = walk.policy.errors == ErrorRule::Items;
         for node in nodes {
             let item = match node {
-                // A `Reference` cell is `#VALUE!` to every policy: `PRODUCT(..,PIVOTBY(..,
-                // LAMBDA(v,Data!E6)))` and `MIN(GROUPBY(..,LAMBDA(v,Data!A12),..),..)` are `#VALUE!`
-                // (gen-m7/bcad709c30cfdf64 A13, gen-m9/2a18b2f5a4dc43ac A371); SUM and COUNT are
-                // unprobed (T-2609).
+                // A `Reference` cell is its referenced value to SUM (t2609-nested-operators-and-lifts
+                // A50, 60) and `#VALUE!` to every other policy: COUNT 0 and COUNTA 9 over it
+                // (A51, A52); `PRODUCT(..,PIVOTBY(..,LAMBDA(v,Data!E6)))` and
+                // `MIN(GROUPBY(..,LAMBDA(v,Data!A12),..),..)` are `#VALUE!` (gen-m7/bcad709c30cfdf64
+                // A13, gen-m9/2a18b2f5a4dc43ac A371).
                 ArrayNode::Nested(nested) if nested.kind() == NestedKind::Reference => {
+                    if walk.policy.nested == NestedReading::NotAvailableReferenceValue {
+                        let value = nested.value(&mut self.nested_budget, cell);
+                        visit(self, ItemSource::ArrayElement, value)?;
+                        continue;
+                    }
                     Err(Error::VALUE)
                 }
-                ArrayNode::Nested(nested) => match walk.policy.nested {
-                    NestedReading::Flatten => match nested.value(&mut self.nested_budget, cell) {
-                        CalcResult::Array(inner) => {
-                            self.walk_array_items(inner, cell, walk, visit)?;
-                            continue;
-                        }
-                        // Past the walk budget.
-                        error => return Err(error),
-                    },
-                    NestedReading::NotAvailable => Err(Error::NA),
+                ArrayNode::Nested(_) => match walk.policy.nested {
+                    NestedReading::NotAvailableReferenceValue | NestedReading::NotAvailable => {
+                        Err(Error::NA)
+                    }
                     NestedReading::Value => Err(Error::VALUE),
                 },
                 node => array_item(node),

@@ -71,8 +71,10 @@ guessed value:
 11. whether the answer follows the cache when the records disagree with the rendered cells (a file
     saved without refreshing), and the summation order (cache order or display order) on
     non-representable decimals (one data point: web.md "GETPIVOTDATA on real-model pivots", T-2662);
-12. calculated fields and a cache saved without records (`saveData="0"`): skipped at import
-    (`#REF!`), a non-parity gap T-2085 records. Grouped fields (`<fieldGroup>`) import as their group
+12. a cache saved without records (`saveData="0"`): skipped at import (`#REF!`), a non-parity gap
+    T-2085 records. A calculated field imports (T-4174), and GETPIVOTDATA naming it by its name or
+    caption answers its formula over the Sums of the fields it names at the pairs' cell, whatever
+    its function (T-5039; web.md "Calculated fields", LY G1:G3). Grouped fields (`<fieldGroup>`) import as their group
     items (T-4225); which group Excel puts each value in, and GETPIVOTDATA on them, are unprobed.
 13. an error in a field or item argument (ours `#REF!`), an error held by a single-cell
     `pivot_table` inside a pivot (ours: the error, as T-1703 does with no pivot), and an error
@@ -158,9 +160,9 @@ edits".
   that cache or pivot, never a panic or a read outside the package.
 - `pivotCacheDefinition`: `<cacheSource type="worksheet"><worksheetSource ref sheet|name>`,
   `<cacheField name>` with `<sharedItems>` (`s`, `n`, `b`, `e`, `d`, `m`); other source types and
-  `<cacheHierarchies>` (OLAP) give no pivot. Calculated fields (`formula` attribute) make the
-  cache unusable: the pivot is skipped, so GETPIVOTDATA on it is `#REF!` (UNVERIFIED, logged by the
-  importer as a skipped feature). A grouped field (`<fieldGroup>` with `<rangePr>` or
+  `<cacheHierarchies>` (OLAP) give no pivot. Calculated fields (`formula` attribute) import
+  since T-4174 (pivots.md "Calculated fields as Excel for the web renders them"); a cache whose
+  formula `check_calculated_fields` refuses is skipped, so GETPIVOTDATA on it is `#REF!`. A grouped field (`<fieldGroup>` with `<rangePr>` or
   `<discretePr>` and `<groupItems>`; T-4225) becomes an ordinary `CacheField` at import: its items
   are the group labels and its records each record's group, derived from the `base` field's values;
   a grouping field (`databaseField="0"`, written after the database fields and absent from the

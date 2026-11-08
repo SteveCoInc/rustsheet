@@ -13,10 +13,11 @@ use crate::{
     calc_result::{CalcResult, Range},
     expressions::{
         parser::{ArrayNode, Node},
-        token::Error,
+        token::{get_error_by_name, Error},
         types::CellReferenceIndex,
+        utils::boolean_text,
     },
-    formatter::format::{ascii_script_digits, parse_formatted_number},
+    formatter::format::{ascii_script_digits, parse_formatted_number, parse_typed_number},
     limits::check_range_size,
     model::Model,
     text::Text,
@@ -305,6 +306,38 @@ impl Model {
         currencies
     }
 
+    /// The currency symbols typed input reads: `$` and the locale's own. A euro sign is not one in
+    /// en-US: typed `1€` stays text (probes/typed-currency-percent-input B23:C26, T-1335), while
+    /// VALUE still reads it (cast.rs `coercion_currencies`).
+    pub(crate) fn typed_currencies(&self) -> Vec<&str> {
+        let currency = self.locale.currency.symbol.as_str();
+        let mut currencies = vec!["$"];
+        if !currencies.contains(&currency) {
+            currencies.push(currency);
+        }
+        currencies
+    }
+
+    /// Whether text stored as a string needs the quote prefix to stay text when it is typed back
+    /// in: [`Model::set_user_input`] would read it as a formula (a leading `=`, `+` or `-`), a
+    /// number (its typed-input reader, `parse_typed_number`: percentages, currencies, dates and
+    /// times as well as plain numbers), a boolean or an error. One reader for both, so
+    /// `update_cell_with_text("50%")` or `("1/2/2020")` keeps its text (T-4851).
+    pub(crate) fn text_needs_quote_prefix(&self, value: &str) -> bool {
+        let year = || self.current_year();
+        value.starts_with(['=', '+', '-'])
+            || parse_typed_number(
+                value,
+                &self.typed_currencies(),
+                self.locale,
+                &year,
+                self.workbook.settings.date_system,
+            )
+            .is_ok()
+            || boolean_text(value).is_some()
+            || get_error_by_name(&value.to_uppercase(), self.language).is_some()
+    }
+
     pub(crate) fn cast_number(&self, s: &str) -> Option<f64> {
         self.cast_number_in(s, &|| self.current_year())
     }
@@ -314,7 +347,11 @@ impl Model {
         if number_text_too_long(s) {
             return None;
         }
-        if let Some(f) = parse_excel_number(s.trim()) {
+        // Only the space is trimmed, as VALUE and a criterion trim: a tab, line feed, carriage
+        // return, CHAR(11), CHAR(12), CHAR(160), U+2003, U+202F or U+3000 around the digits makes
+        // `+0` #VALUE! (probes/t4851-number-text-whitespace B2:D10; coercion.md "Number text trims
+        // only the space (T-4851)").
+        if let Some(f) = parse_excel_number(s.trim_matches(' ')) {
             Some(f)
         } else {
             let currencies = self.coercion_currencies();
@@ -824,20 +861,9 @@ impl Model {
     ) -> Result<bool, CalcResult> {
         match value {
             CalcResult::Number(f) => Ok(*f != 0.0),
-            CalcResult::String(s) => {
-                let lower = s.to_lowercase();
-                if lower == *"true" {
-                    Ok(true)
-                } else if lower == *"false" {
-                    Ok(false)
-                } else {
-                    Err(CalcResult::new_error(
-                        Error::VALUE,
-                        cell,
-                        "Expected boolean".to_string(),
-                    ))
-                }
-            }
+            CalcResult::String(s) => boolean_text(s).ok_or_else(|| {
+                CalcResult::new_error(Error::VALUE, cell, "Expected boolean".to_string())
+            }),
             CalcResult::Boolean(b) => Ok(*b),
             CalcResult::EmptyCell | CalcResult::EmptyArg => Ok(false),
             error @ CalcResult::Error { .. } => Err(error.clone()),

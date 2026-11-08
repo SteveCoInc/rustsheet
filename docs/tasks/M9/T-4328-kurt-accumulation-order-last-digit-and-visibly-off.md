@@ -3,7 +3,7 @@ id: T-4328
 title: "KURT accumulation order: last-digit and visibly-off cells split from T-1749"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P1
 size: S
 tier: opus
@@ -74,12 +74,45 @@ Cells:
 - gen-m9/fec39efaba9284c3.case.json (2): Calc!A38, A222
 
 ## Acceptance criteria
-- [ ] Visible parity: the 3 visibly-off cells above are within half a unit of the 15th significant digit of Excel's
+- [x] Visible parity: the 3 visibly-off cells above are within half a unit of the 15th significant digit of Excel's
       value and their lines leave eval/baseline/gen-m9.txt (`make eval-baseline`), with no new known-failure lines.
-- [ ] The other owned cells pass bit for bit, or the ones left are listed in a bit-level follow-up; a structural model
+- [x] The other owned cells pass bit for bit, or the ones left are listed in a bit-level follow-up; a structural model
       chosen from ranked candidates carries the decision 0188 R4 guards in the Outcome.
-- [ ] docs/excel-semantics/statistics.md records KURT's order.
-- [ ] `make check` green; reviewers approve.
+- [x] docs/excel-semantics/statistics.md records KURT's order.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
-- DEVSQ (T-1749), SKEW.
+- DEVSQ (T-1749). SKEW and SKEW.P were in scope only as callers of the shared standardized moment (Outcome).
+
+## Outcome
+- SKEW, SKEW.P and KURT share one `standardized_moment(values, divisor, fourth)` (count_and_average.rs), built from the
+  `extended_sum` / `extended_product` / `extended_quotient` / `extended_sqrt` kernels: two-pass mean and m2, z =
+  (x - mean)/sqrt(m2/divisor), cubes (z·z)·z, fourth powers (z·z)·(z·z), summed in input order (divisor n - 1 for SKEW
+  and KURT, n for SKEW.P). KURT's bias factor n(n+1)/((n-1)(n-2)(n-3)) is formed before it scales Σz⁴. The three copied
+  loops are gone; the zero or overflowing m2 stays `#DIV/0!` (T-2432).
+- Two visible effects: the twice-rounded FSQRT (`SKEW({1E-15,1,2})`, d208bbafc3bc1997 A262 and T-2791's P!A520) and the
+  square-and-square fourth power (`KURT({0.1,42,123456789.123,0.1})`, 27601819397dd56e A200).
+- R4.1 hold-out (review rounds 1-2): fit lab fits `moments-skew`, `moments-skew-p` and `moments-kurt`
+  (tools/src/rustsheet_tools/fitlab/kernels/moments.py), the `rustsheet-fitlab-holdout/v1` split (30%). The margin, the
+  default 5 points of train-to-test exact rate, and the cases (every spec case whose text calls SKEW, SKEW.P or KURT; the
+  t4974 adversarial probe left out as R4.2 evidence) were stated in the module before scoring. Candidates: the engine
+  (this form), main's build `--build main=` (e74590224), the once-rounded binary64 form with chained powers (the engine
+  before T-4328, in Python) and the correctly rounded moment (60-digit mpmath, rounded once).
+  Each cell: bit-exact / within 4 ulp / within 15 digits, train then test (verdict per R4.1):
+
+  | fit | engine (this form) | main build | once-rounded, chained | correctly rounded |
+  |---|---|---|---|---|
+  | moments-skew | 137/137/137 of 137; 63/63/63 of 63 accept | 135/136/136 of 137; 63/63/63 of 63 accept | 131/132/135 of 137; 54/58/59 of 63 refuse | 22/101/114 of 137; 12/49/54 of 63 |
+  | moments-skew-p | 124/124/124 of 124; 54/54/54 of 54 accept | 124/124/124 of 124; 54/54/54 of 54 accept | 116/117/118 of 124; 49/52/53 of 54 accept | 22/90/109 of 124; 8/32/41 of 54 |
+  | moments-kurt | 98/98/98 of 98; 36/36/36 of 36 accept | 71/91/95 of 98; 23/35/36 of 36 refuse | 69/88/93 of 98; 21/33/34 of 36 refuse | 14/58/75 of 98; 7/19/29 of 36 |
+
+  Development cells: the KURT cells the form was worked out on (gen-m9/27601819397dd56e A200, 7bd219ec0c0c5e22 A279,
+  c2974c061384fdd9 A55) are on the train side; SKEW's d208bbafc3bc1997 A262 is on train as well. The cells the fit
+  lab cannot parse (nested calls it does not evaluate: 55, 65 and 41) and the ironcalc xlsx cells are outside the sweep.
+- R4.2 fresh sweep: Gate A batches eval/accuracy/tables/{SKEW,SKEW.P,KURT}/r4-T-4328 (`rustsheet-accuracy generate
+  --stratum log-uniform`, 120 points each, generated and filled by excel-graph after the form was frozen):
+  `rustsheet-eval accuracy` puts all 360 points inside the envelope, 360 of 360 bit-exact against Excel, none outside.
+  The adversarial probe probes/t4974-moments-x87-adversarial (PR #4002, 204 cells) is extra evidence: 204 of 204.
+- Eval: 57 known-failure lines leave the baseline (52 gen-m9, including all 48 owned cells and the 3 visibly off;
+  4 probes, T-1754's deferred Q36 and H13 among them; ironcalc MEADIAN_KURT_SKEW_HARMEAN F2), none added. KURT 295/295,
+  SKEW 335/335; Gate B 462 → 464 of 506. Unit tests: test_fn_moments.rs (bit-exact Excel values and the `#DIV/0!` edges).

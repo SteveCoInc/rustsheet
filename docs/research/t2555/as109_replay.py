@@ -27,19 +27,8 @@ def lbeta_mp(a, b):
     return float(mpmath.log(mpmath.beta(a, b)))
 
 
-def as109(
-    alpha, p, q, acu_mode, ret_old=True, lb=lbeta_mp, fpu=1e-300, iters=1000, l1p=False
-):
-    beta = lb(p, q)
-    a = alpha
-    pp = p
-    qq = q
-    swap = False
-    if alpha > 0.5:
-        a = 1 - alpha
-        pp = q
-        qq = p
-        swap = True
+def start(a, pp, qq, beta):
+    """AS 109's starting value for I_x(pp, qq) = a, a <= 1/2 (shared with docs/research/t4865)."""
     r = math.sqrt(-math.log(a * a))
     y = r - (2.30753 + 0.27061 * r) / (1 + (0.99229 + 0.04481 * r) * r)
     if pp > 1 and qq > 1:
@@ -61,6 +50,23 @@ def as109(
                 x = math.exp((math.log(a * pp) + beta) / pp)
             else:
                 x = 1 - 2 / (t + 1)
+    return x
+
+
+def as109(
+    alpha, p, q, acu_mode, ret_old=True, lb=lbeta_mp, fpu=1e-300, iters=1000, l1p=False
+):
+    beta = lb(p, q)
+    a = alpha
+    pp = p
+    qq = q
+    swap = False
+    if alpha > 0.5:
+        a = 1 - alpha
+        pp = q
+        qq = p
+        swap = True
+    x = start(a, pp, qq, beta)
     r = 1 - pp
     t = 1 - qq
     yprev = 0

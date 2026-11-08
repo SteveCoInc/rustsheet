@@ -3,7 +3,7 @@ id: T-4847
 title: "XLOOKUP/XMATCH binary search orders text through the shared collation, not upper-cased code points"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -19,9 +19,23 @@ Binary-mode XLOOKUP and XMATCH (search_mode ±2) order text the way Excel's coll
 Found by the T-4856 duplicate-concept audit (one definition per concept, CLAUDE.md directive 3). Excel decides each rule (directive 1): where the existing variants disagree and no probe in `eval/` or `docs/excel-semantics/` settles which one Excel follows, probe it first (`excel-probe` skill) and record the finding.
 
 ## Acceptance criteria
-- [ ] Binary XMATCH/XLOOKUP text comparison calls the collation helper; `Ord for CalcResult` no longer has its own text rule (or is removed).
-- [ ] Probe cases (accented, hyphenated, ß) for search_mode 2/-2 pass against oracle values.
-- [ ] `make check` green; reviewers approve.
+- [x] Binary XMATCH/XLOOKUP text comparison calls the collation helper; `Ord for CalcResult` no longer has its own text rule (or is removed).
+- [x] Probe cases (accented, hyphenated, ß) for search_mode 2/-2 pass against oracle values.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other duplicate concepts of the audit (T-4847 to T-4855 each own one).
+
+## Outcome
+- `cmp_searched` (lookup_table.rs), the comparison of XMATCH's and XLOOKUP's binary modes, orders two
+  texts with `cmp_text_pairwise`, as `compare_searched` and the other lookups do. `Ord for
+  CalcResult` no longer upper-cases code points: its text arm calls the total `cmp_text`, so a sort
+  with it stays consistent. `PartialEq for CalcResult` is `cmp == Equal`, so two texts are now `==`
+  when the total collation finds them equal, not when their upper-cased code points are; no eval cell
+  moved.
+- Probe probes/t4847-xmatch-binary-text-collation (excel-graph, 192 cells): exact, -1 and 1 binary
+  XMATCH ascending and descending, and XLOOKUP, over SORTed text with hyphens, accents, ß/ss, `_` and
+  digits. Excel's binary search agrees with its linear search under the collation everywhere; ß
+  equals ss. Recorded in docs/excel-semantics/lookup.md.
+- Eval delta: the new case passes 192/192 (64 of its cells failed before the fix); no other cell of
+  any suite moved (`make eval-check`: 0 regressions, 0 fixed elsewhere).
