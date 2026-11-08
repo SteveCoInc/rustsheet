@@ -3,7 +3,7 @@ id: T-4912
 title: "Read a written-empty branch of IF, CHOOSE and IFERROR as an omission in ToolPak functions and the newer roundings (T-4901 follow-up)"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
