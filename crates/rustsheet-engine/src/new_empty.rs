@@ -856,6 +856,8 @@ impl Model {
             language,
             tz,
             clock,
+            random: crate::random_source::RandomSource::system(),
+            random_state: 0,
             view_id: 0,
             variable_stack: VariableStack::default(),
             number_mark: crate::number_mark::NumberMark::default(),

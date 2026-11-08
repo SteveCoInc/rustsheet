@@ -51,7 +51,7 @@ use crate::evaluation::{CellKey, Evaluation, FormulaCell, Seen};
 use crate::limits::{spill_past_grid_error, spills_past_grid};
 use crate::number_mark::MarkCarrier;
 use crate::tailed_array::range_corners;
-use crate::{clock::Clock, tz::Tz, variable_stack::VariableStack};
+use crate::{clock::Clock, random_source::RandomSource, tz::Tz, variable_stack::VariableStack};
 
 // The structure of a cell. It can be:
 // * A single cell
@@ -171,6 +171,10 @@ pub struct Model {
     pub(crate) tz: Tz,
     /// Where NOW, TODAY and the other readers of the time get it from (SPEC-0008).
     pub(crate) clock: Clock,
+    /// Where RAND, RANDBETWEEN and RANDARRAY take their draws from (T-5100).
+    pub(crate) random: RandomSource,
+    /// The seeded source's position in its sequence; reset when the source is set.
+    pub(crate) random_state: u64,
     /// The view id. A view consists of a selected sheet and ranges.
     pub(crate) view_id: u32,
     /// A stack of variables used for LET function evaluation. The key is the variable id, and the value is the variable value.
@@ -3047,6 +3051,25 @@ impl Model {
     /// when to recalculate.
     pub fn set_clock(&mut self, clock: Clock) {
         self.clock = clock;
+    }
+
+    /// The source RAND, RANDBETWEEN and RANDARRAY take their draws from (T-5100).
+    #[must_use]
+    pub fn random_source(&self) -> RandomSource {
+        self.random
+    }
+
+    /// Sets the random source, starting a seeded one at the beginning of its sequence. Like
+    /// [`Model::set_clock`] it does not evaluate: the next recalculation draws from it.
+    pub fn set_random_source(&mut self, random: RandomSource) {
+        self.random = random;
+        self.random_state = random.initial_state();
+    }
+
+    /// The next draw in `[0, 1)` from the model's random source. Every random function draws
+    /// through here.
+    pub(crate) fn draw(&mut self) -> f64 {
+        self.random.draw(&mut self.random_state)
     }
 
     /// The current instant in ms since the Unix epoch, read from the model's clock. Every

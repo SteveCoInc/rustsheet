@@ -252,6 +252,7 @@ impl Default for RunOptions {
 }
 
 /// One expectation: a cell to score.
+#[derive(Clone)]
 struct Expectation {
     sheet: String,
     addr: Addr,
@@ -266,6 +267,10 @@ struct Expectation {
     /// (`graph_hides_subnormal`). A cached override sets it from its evidence probe's companion
     /// (decision 0090).
     from_graph: bool,
+    /// Whether the cell reads a random draw (RAND, RANDBETWEEN, RANDARRAY), directly or through
+    /// a precedent: it is scored only if the engine gives it the same value under every random
+    /// source the runner tries, and skipped as volatile otherwise (T-5100, decision 0357).
+    reads_draws: bool,
 }
 
 enum Prepared {
@@ -518,8 +523,9 @@ fn run_isolated(
                 result.message = Some(e);
             }
         },
-        Ok(Ok((cells, scored, text, arguments, got, (layout, freshness)))) => {
+        Ok(Ok((cells, scored, text, arguments, got, (layout, freshness), draw_dependent))) => {
             check_values = got;
+            result.skipped_volatile += draw_dependent;
             result.pivot_layout = layout;
             result.layout_checked = layout_checked;
             result.pivot_freshness = freshness;
@@ -613,8 +619,8 @@ pub(crate) fn run_in_worker<T: Send + 'static>(
 const MISSING_SHEET: &str = "<missing sheet>";
 
 /// What a case's worker hands back: its scored cells, how many are expectations, the text
-/// verdicts, the calls seen, the check cells' values, and its pivots' layout verdicts and
-/// freshness.
+/// verdicts, the calls seen, the check cells' values, its pivots' layout verdicts and
+/// freshness, and how many expectations were dropped as draw-dependent (T-5100).
 type Evaluation = (
     Vec<CellResult>,
     usize,
@@ -622,6 +628,7 @@ type Evaluation = (
     Vec<CallSeen>,
     Vec<Value>,
     (Vec<PivotLayout>, Vec<PivotFreshness>),
+    usize,
 );
 
 /// Evaluates a prepared case and scores it (on the worker thread, inside the panic isolation);
@@ -636,7 +643,9 @@ fn evaluate_prepared(
         Prepared::Xlsx { bytes } => engine.evaluate_xlsx(bytes, prepared.workbook_name.as_deref()),
         Prepared::Spec { spec } => engine.evaluate_spec(spec, prepared.workbook_name.as_deref()),
     }?;
-    let mut cells = score(evaluated.as_ref(), &prepared.expectations, listed);
+    let (expectations, draw_dependent) =
+        draws::draw_independent(engine, prepared, evaluated.as_ref());
+    let mut cells = score(evaluated.as_ref(), &expectations, listed);
     // The fresh pivots' render cells are scored beside the expectations (T-4906); a cell an
     // expectation already scores keeps that one.
     let (freshness, render) = match &prepared.input {
@@ -678,6 +687,7 @@ fn evaluate_prepared(
         arguments,
         check_values,
         (layout, freshness),
+        draw_dependent,
     ))
 }
 
@@ -711,6 +721,7 @@ fn refused(expectations: &[Expectation]) -> Vec<CellResult> {
         .collect()
 }
 
+mod draws;
 mod prepare;
 mod scoring;
 use prepare::prepare;

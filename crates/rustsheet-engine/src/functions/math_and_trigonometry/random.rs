@@ -1,9 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss,
-    clippy::unused_self
-)]
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 // LINT-DEBT-END
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
@@ -15,21 +11,10 @@ use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
-fn random() -> f64 {
-    rand::random()
-}
-
-#[cfg(target_arch = "wasm32")]
-fn random() -> f64 {
-    use js_sys::Math;
-    Math::random()
-}
-
 /// One RANDBETWEEN draw: the raw bounds are compared, a span that overflows a double is `#NUM!`
 /// (probes/randbetween-huge-span A1:A2) and an empty `CEILING(bottom)..FLOOR(top)` gives
-/// `CEILING(bottom)`.
-fn randbetween_draw(bottom: f64, top: f64) -> Result<f64, Error> {
+/// `CEILING(bottom)`. `draw` is the model's next draw in `[0, 1)`, taken only when one is needed.
+fn randbetween_draw(bottom: f64, top: f64, draw: impl FnOnce() -> f64) -> Result<f64, Error> {
     if bottom > top || !(top - bottom).is_finite() {
         return Err(Error::NUM);
     }
@@ -38,7 +23,7 @@ fn randbetween_draw(bottom: f64, top: f64) -> Result<f64, Error> {
     if high < low {
         return Ok(low);
     }
-    Ok((low + random() * (high - low + 1.0)).floor().min(high))
+    Ok((low + draw() * (high - low + 1.0)).floor().min(high))
 }
 
 impl Model {
@@ -46,7 +31,7 @@ impl Model {
         if !args.is_empty() {
             return CalcResult::new_args_number_error(cell);
         }
-        CalcResult::Number(random())
+        CalcResult::Number(self.draw())
     }
 
     /// `=RANDBETWEEN(bottom, top)`. Excel compares the raw bounds, draws a whole number from
@@ -110,7 +95,7 @@ impl Model {
                         }
                     }
                     let [top, bottom] = bounds;
-                    number_result(randbetween_draw(bottom, top), cell)
+                    number_result(randbetween_draw(bottom, top, || model.draw()), cell)
                 },
             );
         }
@@ -122,7 +107,7 @@ impl Model {
             Ok(f) => f,
             Err(e) => return e,
         };
-        match randbetween_draw(bottom, top) {
+        match randbetween_draw(bottom, top, || self.draw()) {
             Ok(n) => CalcResult::Number(n),
             Err(e) => CalcResult::new_error(e, cell, format!("RANDBETWEEN({bottom},{top})")),
         }
@@ -179,7 +164,7 @@ impl Model {
     }
 
     /// One RANDARRAY call over argument values. A missing or empty argument takes its default.
-    fn randarray_kernel(&self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
+    fn randarray_kernel(&mut self, values: &[CalcResult], cell: CellReferenceIndex) -> CalcResult {
         let rows = match self.randarray_extent(values.first(), "rows", cell) {
             Ok(n) => n,
             Err(e) => return e,
@@ -232,7 +217,7 @@ impl Model {
         for _ in 0..rows {
             let mut row = Vec::with_capacity(columns);
             for _ in 0..columns {
-                let r = random();
+                let r = self.draw();
                 let span = max - min + 1.0;
                 // Excel: a span that overflows a double still draws a finite value in range
                 // (probes/randbetween-huge-span B2:B3, B14:B15), so interpolate instead. Whether such a

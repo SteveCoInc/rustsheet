@@ -46,11 +46,13 @@ pub struct Comparison {
 /// Cells only present in `recalculated` (e.g. an embedded canary sheet) are ignored.
 #[must_use]
 pub fn compare_snapshots(cached: &WorkbookSnapshot, recalculated: &WorkbookSnapshot) -> Comparison {
-    let (scorable, volatile_skipped) = scorable_cells(cached, false);
+    // Excel against Excel: no engine runs to tell draw-independent cells apart, so every
+    // volatile cell is skipped.
+    let (scorable, volatile_skipped) = scorable_cells(cached, false, false);
     let others = recalculated.values();
     let cells = scorable
         .into_iter()
-        .map(|(sheet, addr, cell)| {
+        .map(|(sheet, addr, cell, _)| {
             let formula = cell.formula.clone().unwrap_or_default();
             let other = others.get(&(sheet.to_string(), addr)).cloned();
             CellComparison {

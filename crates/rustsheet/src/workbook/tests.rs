@@ -106,6 +106,25 @@ fn options_clock_applies_at_new_and_at_the_load_time_recalc() {
     assert_eq!(loaded.value("A2").unwrap(), Value::Number(25570.0));
 }
 
+#[test]
+fn a_random_source_set_before_the_recalc_decides_the_draws() {
+    let mut wb = Workbook::new(&WorkbookOptions::default()).expect("new");
+    assert_eq!(wb.random_source(), crate::RandomSource::system());
+    wb.set("A1", Input::Formula("=RANDBETWEEN(1,6)".into()))
+        .expect("a1");
+    wb.set("A2", Input::Formula("=RAND()".into())).expect("a2");
+    wb.set_random_source(crate::RandomSource::fixed(crate::LARGEST_DRAW).expect("draw"));
+    wb.recalculate();
+    assert_eq!(wb.value("A1").unwrap(), Value::Number(6.0));
+    assert_eq!(wb.value("A2").unwrap(), Value::Number(crate::LARGEST_DRAW));
+    wb.set_random_source(crate::RandomSource::seeded(9));
+    wb.recalculate();
+    let first = (wb.value("A1").unwrap(), wb.value("A2").unwrap());
+    wb.set_random_source(crate::RandomSource::seeded(9));
+    wb.recalculate();
+    assert_eq!((wb.value("A1").unwrap(), wb.value("A2").unwrap()), first);
+}
+
 /// A workbook built through the engine and round-tripped through xlsx.
 fn sample() -> Workbook {
     let mut model = Model::new_empty("w", "en", "UTC", "en").expect("model");

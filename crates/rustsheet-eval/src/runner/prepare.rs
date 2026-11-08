@@ -156,10 +156,13 @@ fn prepare_xlsx_bytes(
             export: None,
         });
     };
-    let (scorable, skipped_volatile) =
-        scorable_cells(&snapshot, pinned_clock_serial(&snapshot.sheets).is_some());
+    let (scorable, skipped_volatile) = scorable_cells(
+        &snapshot,
+        pinned_clock_serial(&snapshot.sheets).is_some(),
+        true,
+    );
     let (add_in, scorable): (Vec<_>, Vec<_>) =
-        scorable.into_iter().partition(|(sheet, _, cell)| {
+        scorable.into_iter().partition(|(sheet, _, cell, _)| {
             cell.formula.as_deref().is_some_and(calls_add_in)
                 || cell
                     .anchor_formula(&snapshot.sheets, sheet)
@@ -168,7 +171,7 @@ fn prepare_xlsx_bytes(
     let skipped_add_in = add_in.len();
     let expectations = scorable
         .into_iter()
-        .filter_map(|(sheet, addr, cell)| {
+        .filter_map(|(sheet, addr, cell, reads_draws)| {
             Some(Expectation {
                 sheet: sheet.to_string(),
                 addr,
@@ -178,6 +181,7 @@ fn prepare_xlsx_bytes(
                 from_excel,
                 pinned: None,
                 from_graph: false,
+                reads_draws,
             })
         })
         .collect();
@@ -305,8 +309,9 @@ pub(super) fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase
     };
     let formulas = spec_formulas(&spec);
     // Spec workbooks have no METADATA sheet, so the clock is never pinned: NOW/TODAY stay skipped
-    // unless the case lists the cell as run-invariant.
-    let volatile = spec_volatile_cells(&spec.invariant, &formulas)?;
+    // unless the case lists the cell as run-invariant. A cell only random draws taint is checked
+    // under several random sources instead (T-5100).
+    let (volatile, clock) = spec_volatile_cells(&spec.invariant, &formulas)?;
     let wanted: Vec<String> = if spec.check.is_empty() {
         expected.keys().cloned().collect()
     } else {
@@ -334,10 +339,12 @@ pub(super) fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase
             continue; // pending oracle for this cell (or an undecoded rich error)
         };
         let from_graph = formula.as_deref().is_some_and(|f| kept_nonzero.contains(f));
-        if volatile.contains(&(sheet.clone(), addr)) {
+        let at = (sheet.clone(), addr);
+        if clock.contains(&at) {
             skipped_volatile += 1;
             continue;
         }
+        let reads_draws = volatile.contains(&at);
         if formula.as_deref().is_some_and(calls_add_in) {
             skipped_add_in += 1;
             continue;
@@ -352,6 +359,7 @@ pub(super) fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase
                 && (oracle_cells.contains(&key) || pivot_keys.contains(&key)),
             pinned: None,
             from_graph,
+            reads_draws,
         });
     }
     Ok(PreparedCase {
@@ -426,6 +434,7 @@ fn prepare_export(suite: &Suite, case: &CaseFile) -> Result<PreparedCase, String
                 from_excel,
                 pinned: None,
                 from_graph: false,
+                reads_draws: false,
             });
         }
         prepared.text = text_expect::with_pivot_text(prepared.text, &pivots);

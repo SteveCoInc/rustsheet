@@ -5,8 +5,8 @@
 use std::collections::BTreeMap;
 
 use rustsheet::{
-    CellRef, Clock, DateSystem, ErrorKind, Input, LoadOptions, RangeRef, SaveOptions, SheetId,
-    Value as ApiValue, Workbook, WorkbookOptions, XlError,
+    CellRef, Clock, DateSystem, ErrorKind, Input, LoadOptions, RandomSource, RangeRef, SaveOptions,
+    SheetId, Value as ApiValue, Workbook, WorkbookOptions, XlError,
 };
 
 use rustsheet_engine::text::{lone_escape, Segment};
@@ -70,7 +70,43 @@ pub trait Engine: Sync {
     ) -> Result<Box<dyn Evaluated>, String>;
     /// Worksheet functions the engine implements, by en-US name (for the evidence report).
     fn implemented_functions(&self) -> Vec<String>;
+    /// [`Engine::evaluate_xlsx`] with the random functions drawing from `random` instead of
+    /// [`HARNESS_RANDOM`] (T-5100). By default the engine cannot set a source, and the runner
+    /// then skips every cell that reads a draw.
+    ///
+    /// # Errors
+    /// As [`Engine::evaluate_xlsx`]; by default, that the engine cannot set a random source.
+    fn evaluate_xlsx_drawing(
+        &self,
+        bytes: &[u8],
+        name: Option<&str>,
+        random: RandomSource,
+    ) -> Result<Box<dyn Evaluated>, String> {
+        let _ = (bytes, name, random);
+        Err(NO_RANDOM_SOURCE.into())
+    }
+    /// [`Engine::evaluate_spec`] with the random functions drawing from `random`, as for
+    /// [`Engine::evaluate_xlsx_drawing`].
+    ///
+    /// # Errors
+    /// As [`Engine::evaluate_spec`]; by default, as for [`Engine::evaluate_xlsx_drawing`].
+    fn evaluate_spec_drawing(
+        &self,
+        spec: &CaseSpec,
+        name: Option<&str>,
+        random: RandomSource,
+    ) -> Result<Box<dyn Evaluated>, String> {
+        let _ = (spec, name, random);
+        Err(NO_RANDOM_SOURCE.into())
+    }
 }
+
+/// Why an engine's `evaluate_*_drawing` refused by default.
+const NO_RANDOM_SOURCE: &str = "this engine cannot set a random source";
+
+/// The random source every harness evaluation draws from, so a run's values are the same each
+/// time (T-5100). The seed is arbitrary; a draw-dependent cell is never scored, whatever it is.
+pub const HARNESS_RANDOM: RandomSource = RandomSource::seeded(0x5EED_5100);
 
 /// The instant every evaluation reads as "now" unless a METADATA `NOW` row pins another one:
 /// 2022-11-08T11:13:28.578Z, the instant the engine's former thread-local mock clock defaulted to,
@@ -188,6 +224,23 @@ impl Engine for RustSheetEngine {
         bytes: &[u8],
         name: Option<&str>,
     ) -> Result<Box<dyn Evaluated>, String> {
+        self.evaluate_xlsx_drawing(bytes, name, HARNESS_RANDOM)
+    }
+
+    fn evaluate_spec(
+        &self,
+        spec: &CaseSpec,
+        name: Option<&str>,
+    ) -> Result<Box<dyn Evaluated>, String> {
+        self.evaluate_spec_drawing(spec, name, HARNESS_RANDOM)
+    }
+
+    fn evaluate_xlsx_drawing(
+        &self,
+        bytes: &[u8],
+        name: Option<&str>,
+        random: RandomSource,
+    ) -> Result<Box<dyn Evaluated>, String> {
         let opts = LoadOptions {
             recalc: false,
             workbook: harness_options(name)?,
@@ -198,17 +251,19 @@ impl Engine for RustSheetEngine {
         // A METADATA `NOW` row (IronCalc convention, mirrored by `volatile::pinned_clock_serial`)
         // overrides the harness clock.
         workbook.pin_clock_from_metadata();
+        workbook.set_random_source(random);
         workbook.recalculate();
         Ok(Box::new(RustSheetEvaluated { workbook }))
     }
 
-    fn evaluate_spec(
+    fn evaluate_spec_drawing(
         &self,
         spec: &CaseSpec,
         name: Option<&str>,
+        random: RandomSource,
     ) -> Result<Box<dyn Evaluated>, String> {
         Ok(Box::new(RustSheetEvaluated {
-            workbook: build_spec(spec, name)?,
+            workbook: build_spec_drawing(spec, name, random)?,
         }))
     }
 }
@@ -219,6 +274,15 @@ impl Engine for RustSheetEngine {
 /// # Errors
 /// A human-readable message when the spec cannot be materialized.
 pub(crate) fn build_spec(spec: &CaseSpec, name: Option<&str>) -> Result<Workbook, String> {
+    build_spec_drawing(spec, name, HARNESS_RANDOM)
+}
+
+/// [`build_spec`] with the random functions drawing from `random` from the first edit on.
+fn build_spec_drawing(
+    spec: &CaseSpec,
+    name: Option<&str>,
+    random: RandomSource,
+) -> Result<Workbook, String> {
     let date_system = match spec.date_system {
         None | Some(1900) => DateSystem::Excel1900,
         Some(1904) => DateSystem::Excel1904,
@@ -229,6 +293,7 @@ pub(crate) fn build_spec(spec: &CaseSpec, name: Option<&str>) -> Result<Workbook
         ..harness_options(name)?
     })
     .map_err(|e| e.to_string())?;
+    workbook.set_random_source(random);
     // The harness only reads final values: skip the per-edit value diff.
     workbook.set_track_changes(false);
     if let Some(c) = spec.calculation.as_ref().filter(|c| c.iterate) {

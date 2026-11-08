@@ -47,6 +47,9 @@ static TABLE_REF: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"([A-Za-z_\\][A-Za-z0-9_.\\]*)\[").unwrap_or_else(|e| unreachable!("{e}"))
 });
 
+/// Formula cells as `(sheet name, address)`.
+type CellSet = HashSet<(String, Addr)>;
+
 /// A formula cell: (sheet name, address, formula text without `=`).
 pub type FormulaCell = (String, Addr, String);
 
@@ -67,21 +70,31 @@ pub fn formula_cells(sheets: &[SheetSnapshot]) -> Vec<FormulaCell> {
         .collect()
 }
 
-/// The formula cells that can be scored: every formula cell not tainted by a volatile function
-/// (directly or through precedents), with the number of formula cells skipped as volatile.
+/// A formula cell that can be scored, and whether its value reads a random draw.
+pub type ScorableCell<'a> = (&'a str, Addr, &'a CellSnapshot, bool);
+
+/// The formula cells that can be scored, with the number of formula cells skipped as volatile.
+///
+/// A cell tainted by NOW or TODAY (unpinned) is skipped. A cell tainted only by a random
+/// function, directly or through precedents, is skipped too unless `draw_checked`: then it is
+/// returned with its flag set, for the runner to score only if its engine value is the same
+/// under every random source it tries (T-5100, decision 0357).
 #[must_use]
 pub fn scorable_cells(
     snapshot: &WorkbookSnapshot,
     clock_pinned: bool,
-) -> (Vec<(&str, Addr, &CellSnapshot)>, usize) {
+    draw_checked: bool,
+) -> (Vec<ScorableCell<'_>>, usize) {
     let sheets = &snapshot.sheets;
-    let volatile = volatile_cells(
-        &formula_cells(sheets),
-        &snapshot.defined_names,
-        &snapshot.tables,
-        clock_pinned,
-        &HashSet::new(),
-    );
+    let formulas = formula_cells(sheets);
+    let (names, tables) = (&snapshot.defined_names, &snapshot.tables);
+    let none = HashSet::new();
+    let volatile = volatile_cells(&formulas, names, tables, clock_pinned, &none);
+    let clock = if draw_checked {
+        clock_cells(&formulas, names, tables, clock_pinned, &none)
+    } else {
+        volatile.clone()
+    };
     let mut cells = Vec::new();
     let mut skipped = 0;
     for sheet in sheets {
@@ -94,11 +107,14 @@ pub fn scorable_cells(
                 Some(FormulaKind::ArrayMember { anchor }) => Addr::parse(anchor),
                 _ => None,
             };
-            let tainted = |at: Addr| volatile.contains(&(sheet.name.clone(), at));
-            if tainted(*addr) || anchor.is_some_and(tainted) {
+            let in_set = |set: &HashSet<(String, Addr)>| {
+                let has = |at: Addr| set.contains(&(sheet.name.clone(), at));
+                has(*addr) || anchor.is_some_and(has)
+            };
+            if in_set(&clock) {
                 skipped += 1;
             } else {
-                cells.push((sheet.name.as_str(), *addr, cell));
+                cells.push((sheet.name.as_str(), *addr, cell, in_set(&volatile)));
             }
         }
     }
@@ -108,7 +124,12 @@ pub fn scorable_cells(
 /// Whether the formula itself calls a volatile function.
 #[must_use]
 pub fn is_volatile(formula: &str, clock_pinned: bool) -> bool {
-    RANDOM.is_match(formula) || (!clock_pinned && CLOCK.is_match(formula))
+    RANDOM.is_match(formula) || reads_clock(formula, clock_pinned)
+}
+
+/// Whether the formula itself reads the clock (NOW, TODAY) and the clock is not pinned.
+fn reads_clock(formula: &str, clock_pinned: bool) -> bool {
+    !clock_pinned && CLOCK.is_match(formula)
 }
 
 /// Whether the function named `name` is volatile (its call, with the clock unpinned).
@@ -322,6 +343,35 @@ pub fn volatile_cells<S: std::hash::BuildHasher>(
     clock_pinned: bool,
     invariant: &HashSet<(String, Addr), S>,
 ) -> HashSet<(String, Addr)> {
+    tainted_cells(cells, names, tables, invariant, |f| {
+        is_volatile(f, clock_pinned)
+    })
+}
+
+/// [`volatile_cells`] counting only the clock (NOW, TODAY) as volatile: the cells a random
+/// source cannot tell apart, since their value moves with the time (T-5100).
+#[must_use]
+pub fn clock_cells<S: std::hash::BuildHasher>(
+    cells: &[FormulaCell],
+    names: &[DefinedName],
+    tables: &[TableDef],
+    clock_pinned: bool,
+    invariant: &HashSet<(String, Addr), S>,
+) -> HashSet<(String, Addr)> {
+    tainted_cells(cells, names, tables, invariant, |f| {
+        reads_clock(f, clock_pinned)
+    })
+}
+
+/// The formula cells whose (name-expanded) formula is a `source`, or that read one through
+/// static references; `invariant` cells are neither tainted nor pass the taint on.
+fn tainted_cells<S: std::hash::BuildHasher>(
+    cells: &[FormulaCell],
+    names: &[DefinedName],
+    tables: &[TableDef],
+    invariant: &HashSet<(String, Addr), S>,
+    source: impl Fn(&str) -> bool,
+) -> HashSet<(String, Addr)> {
     let expanded: Vec<Cow<'_, str>> = cells
         .iter()
         .map(|(sheet, _, formula)| with_names(sheet, formula, names))
@@ -345,7 +395,7 @@ pub fn volatile_cells<S: std::hash::BuildHasher>(
     let mut tainted = vec![false; cells.len()];
     let mut queue: Vec<usize> = Vec::new();
     for (idx, formula) in expanded.iter().enumerate() {
-        if !listed[idx] && is_volatile(formula, clock_pinned) {
+        if !listed[idx] && source(formula) {
             tainted[idx] = true;
             queue.push(idx);
         }
@@ -377,16 +427,14 @@ pub fn volatile_cells<S: std::hash::BuildHasher>(
         .collect()
 }
 
-/// The volatile cells of a spec case once its `invariant` cells are taken out. A listed cell that
-/// is not a volatile formula cell is an error, so a stale listing cannot linger unnoticed.
+/// The volatile cells of a spec case once its `invariant` cells are taken out, and those of them
+/// the clock taints (the rest read only random draws; T-5100). A listed cell that is not a
+/// volatile formula cell is an error, so a stale listing cannot linger unnoticed.
 pub(crate) fn spec_volatile_cells(
     listed: &[String],
     formulas: &[FormulaCell],
-) -> Result<HashSet<(String, Addr)>, String> {
+) -> Result<(CellSet, CellSet), String> {
     let volatile = volatile_cells(formulas, &[], &[], false, &HashSet::new());
-    if listed.is_empty() {
-        return Ok(volatile);
-    }
     let mut invariant = HashSet::new();
     for q in listed {
         let (sheet, a1) = split_qualified(q).ok_or_else(|| format!("bad cell key {q}"))?;
@@ -396,7 +444,10 @@ pub(crate) fn spec_volatile_cells(
         }
         invariant.insert((sheet.to_lowercase(), addr));
     }
-    Ok(volatile_cells(formulas, &[], &[], false, &invariant))
+    Ok((
+        volatile_cells(formulas, &[], &[], false, &invariant),
+        clock_cells(formulas, &[], &[], false, &invariant),
+    ))
 }
 
 #[cfg(test)]
@@ -445,6 +496,26 @@ mod tests {
             ["S!A1", "S!A2", "S!A3", "T!B1"],
             "LOG10( and the string \"A1\" are not references"
         );
+    }
+
+    #[test]
+    fn clock_cells_are_the_volatile_cells_the_clock_taints() {
+        let cells = vec![
+            cell("S", "A1", "RAND()"),
+            cell("S", "A2", "A1+NOW()"),
+            cell("S", "A3", "A1+1"),
+            cell("S", "B1", "TODAY()"),
+            cell("S", "B2", "B1+A1"),
+        ];
+        let clock = |pinned| {
+            let set = clock_cells(&cells, &[], &[], pinned, &HashSet::new());
+            let mut keys: Vec<String> = set.iter().map(|(s, a)| format!("{s}!{a}")).collect();
+            keys.sort();
+            keys
+        };
+        assert_eq!(clock(false), ["S!A2", "S!B1", "S!B2"]);
+        assert!(clock(true).is_empty());
+        assert_eq!(tainted(&cells, false).len(), 5);
     }
 
     #[test]
@@ -630,9 +701,16 @@ mod tests {
             tables: Vec::new(),
             pivots: Vec::new(),
         };
-        let (scored, skipped) = scorable_cells(&snapshot, false);
-        let scored: Vec<String> = scored.iter().map(|(_, a, _)| a.to_string()).collect();
+        let (scored, skipped) = scorable_cells(&snapshot, false, false);
+        let scored: Vec<String> = scored.iter().map(|(_, a, ..)| a.to_string()).collect();
         assert_eq!(scored, ["B1", "B2"]);
         assert_eq!(skipped, 2);
+        // Draw-checked, the RANDARRAY spill is handed to the runner flagged, members included.
+        let (checked, skipped) = scorable_cells(&snapshot, false, true);
+        let checked: Vec<String> = (checked.iter())
+            .map(|(_, a, _, draws)| format!("{a}{}", if *draws { "*" } else { "" }))
+            .collect();
+        assert_eq!(checked, ["A1*", "B1", "A2*", "B2"]);
+        assert_eq!(skipped, 0);
     }
 }

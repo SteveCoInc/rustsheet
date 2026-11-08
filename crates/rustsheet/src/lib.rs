@@ -29,6 +29,7 @@ pub use refs::{
     parse_cell, parse_range, resolve_sheet_by_name, CellRef, RangeRef, SheetId, Target,
 };
 pub use rustsheet_engine::clock::{Clock, ClockError};
+pub use rustsheet_engine::random_source::{RandomSource, RandomSourceError, LARGEST_DRAW};
 pub use rustsheet_engine::types::{DateSystem, Iteration};
 pub use rustsheet_xlsx::export::{DropReason, Dropped, SaveReport, SaveTier};
 pub use value::{Array, ArrayShapeError, ErrorKind, ParseErrorKindError, Value, XlError};

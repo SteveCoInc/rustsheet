@@ -119,6 +119,7 @@ mod test_networkdays_networkdaysintl;
 mod test_newer_error_kinds;
 mod test_operator_broadcast_bound;
 mod test_quote_prefix;
+mod test_random_source;
 mod test_range_operand_cache;
 mod test_recalc_budget;
 mod test_row_column_styles;

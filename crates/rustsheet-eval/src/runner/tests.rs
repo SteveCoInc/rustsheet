@@ -124,6 +124,7 @@ fn cached_override_replaces_the_named_expectation() {
         from_excel: true,
         pinned: None,
         from_graph: false,
+        reads_draws: false,
     };
     let write_overrides = |cell: &str| {
         let line = format!("D/x.xlsx\tS!{cell}\tprobes/p.oracle.json\tSheet1!B1\n");
@@ -152,6 +153,7 @@ fn graph_zero_hides_only_a_subnormal() {
         from_excel: true,
         pinned: None,
         from_graph,
+        reads_draws: false,
     };
     let subnormal = Value::Number(5e-309);
     assert!(graph_hides_subnormal(&e(0.0, true), &subnormal));
@@ -431,9 +433,116 @@ fn invariant_volatile_cells_are_scored() {
         .map(|e| e.addr.to_string())
         .collect();
     cells.sort();
-    assert_eq!(cells, ["A1", "A3", "A4"], "A3 reads only the listed A1");
-    assert_eq!(listed.skipped_volatile, 1);
+    assert_eq!(
+        cells,
+        ["A1", "A2", "A3", "A4"],
+        "A3 reads only the listed A1"
+    );
+    // A2 is left to the run's draw check (T-5100), not skipped here.
+    let draws: Vec<String> = (listed.expectations.iter())
+        .filter(|e| e.reads_draws)
+        .map(|e| e.addr.to_string())
+        .collect();
+    assert_eq!(draws, ["A2"]);
+    assert_eq!(listed.skipped_volatile, 0);
     assert!(stale.is_some_and(|e| e.contains("not a volatile formula cell")));
+}
+
+/// Runs a spec case of `cells` (A1 to formula) with `expected` (A1 to JSON value) on the real
+/// engine, as the `probes` suite would.
+fn run_spec_on_engine(tag: &str, cells: &str, expected: &str) -> CaseResult {
+    let dir = std::env::temp_dir().join(format!("rs-runner-{}-{tag}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("mkdir");
+    let path = dir.join("a.case.json");
+    let json = format!(
+        r#"{{"format":"{CASE_FORMAT}","sheets":[{{"name":"S","cells":{{{cells}}}}}],"expected":{{{expected}}}}}"#
+    );
+    std::fs::write(&path, json).expect("write case");
+    let manifest: SuiteManifest =
+        toml::from_str("name = \"t\"\nkind = \"spec\"\nlicense = \"MIT\"\n").expect("manifest");
+    let suite = Suite {
+        manifest,
+        dir: dir.clone(),
+        cache_dir: PathBuf::new(),
+    };
+    let case = CaseFile {
+        id: "t/a".into(),
+        sidecar: oracle_sidecar(&path),
+        path,
+    };
+    let engine: Arc<dyn Engine + Send> = Arc::new(crate::engine::RustSheetEngine);
+    let r = run_case(&engine, &suite, &case, Duration::from_secs(60));
+    let _ = std::fs::remove_dir_all(dir);
+    r
+}
+
+/// A cell that reads a random draw is scored when its value is the same under every random
+/// source, directly or through a precedent, and skipped as volatile when it moves; a cell the
+/// clock taints stays skipped (T-5100, decision 0357).
+#[test]
+fn draw_independent_cells_are_scored_and_draw_dependent_ones_skipped() {
+    let r = run_spec_on_engine(
+        "draws",
+        r#""A1":"=RAND()","A2":"=ISNUMBER(RAND())","A3":"=IF(A1>2,1,NA())","A4":"=A1>0.5",
+           "A5":"=NOW()+RAND()*0","A6":"=ROWS(RANDARRAY(3))","A7":"=RANDBETWEEN(1,2)","A8":"=A6+1""#,
+        r##""S!A1":{"t":"n","v":0.5},"S!A2":{"t":"b","v":true},"S!A3":{"t":"e","v":"#N/A"},
+           "S!A4":{"t":"b","v":true},"S!A5":{"t":"n","v":1},"S!A6":{"t":"n","v":3},
+           "S!A7":{"t":"n","v":1},"S!A8":{"t":"n","v":4}"##,
+    );
+    let mut scored: Vec<String> = r.cells.iter().map(|c| c.cell.clone()).collect();
+    scored.sort();
+    assert_eq!(scored, ["A2", "A3", "A6", "A8"], "{r:?}");
+    assert_eq!(
+        r.skipped_volatile, 4,
+        "A1, A4 and A7 move with the draws; A5 reads the clock"
+    );
+    assert_eq!(r.status, CaseStatus::Pass, "{r:?}");
+}
+
+/// An engine that cannot set a random source has every cell that reads a draw skipped.
+#[test]
+fn an_engine_without_random_sources_skips_every_draw_reading_cell() {
+    let prepared = PreparedCase {
+        input: Prepared::Spec {
+            spec: Box::new(
+                serde_json::from_str(&format!(r#"{{"format":"{CASE_FORMAT}","sheets":[]}}"#))
+                    .expect("spec"),
+            ),
+        },
+        check: Vec::new(),
+        workbook_name: None,
+        expectations: ["A1", "A2"]
+            .iter()
+            .enumerate()
+            .map(|(i, a1)| Expectation {
+                sheet: "S".into(),
+                addr: Addr::parse(a1).expect("addr"),
+                formula: None,
+                anchor_formula: None,
+                expected: Value::Number(1.0),
+                from_excel: true,
+                pinned: None,
+                from_graph: false,
+                reads_draws: i == 1,
+            })
+            .collect(),
+        extent: None,
+        expected_source: "inline".into(),
+        skipped_volatile: 0,
+        skipped_add_in: 0,
+        tags: Vec::new(),
+        text: Vec::new(),
+        defined_names: BTreeMap::new(),
+        reference_forms: ReferenceFormCells::default(),
+        pivots: Vec::new(),
+        saved_pivots: Vec::new(),
+        pivot_features: Vec::new(),
+        pivot_keys: BTreeSet::new(),
+        export: None,
+    };
+    let (kept, dropped) = super::draws::draw_independent(&Scripted, &prepared, &NoValues);
+    let kept: Vec<String> = kept.iter().map(|e| e.addr.to_string()).collect();
+    assert_eq!((kept, dropped), (vec!["A1".to_string()], 1));
 }
 
 /// A cell calling an add-in function (`_xll.`) is not scored and is counted; a cell reading it,
