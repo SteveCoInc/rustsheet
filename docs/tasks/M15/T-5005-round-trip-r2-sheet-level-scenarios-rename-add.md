@@ -3,7 +3,7 @@ id: T-5005
 title: "Round-trip R2 sheet-level scenarios: rename, add, delete and move a sheet (SPEC-0033 R2, SPEC-0034 D5.7)"
 milestone: M15
 lane: harness
-status: done
+status: blocked
 priority: P2
 size: M
 tier: opus
@@ -28,12 +28,30 @@ expected-delta rule is R1's, `roundtrip/r1.rs`.
       a decision record if they add failing items.
 - [x] SPEC-0033 is edited to say sheet-level R2 is scored now: the Non-goals bullet "R2 implementation", the D1
       table's R2 row (the milestone column), and Rollout item 5's "R2 scoring follows M4".
-- [x] `make check` green; reviewers approve.
+- [ ] `make check` green; reviewers approve. (`make check-fast` is green on 568d1e0b6; the review panel was started and stopped, so no verdict exists.)
 
 ## Out of scope
 - Row and column R2 (after M4).
 
-## Outcome
+## Blocked because
+Deferred to Phase 2 (decisions 0027, 0275): M15 waits until Phase 1 parity exits. Unblock when
+docs/status.md has the line `**Phase 1:** exited <date>`. An owner-directed session may claim it earlier
+(decision 0306).
+
+## Handoff (work in progress, 2026-11-08)
+The session working this task stopped on the owner's request before review. The work is on branch
+`agent/harness/T-5005-r2-sheet-scenarios` (implementation, tests, SPEC-0033 and SPEC-0034 edits, decision 0352,
+baselines recorded for fixtures, excel-saved, poi and corpus-bench, nightly timeout 600 s, follow-up T-5079, T-5077's
+criteria updated). No PR is open. To finish it:
+1. Claim it again (decision 0306), check out the branch, and merge origin/main. On a baseline conflict take main's
+   version and re-record with `target/release/rustsheet-eval roundtrip --update-baseline --suite <suite> --timeout 300`,
+   one suite at a time with `RAYON_NUM_THREADS=3`: all suites at once ran out of memory, and the pipe hid the kill.
+   Do not record calipers: main's T-5077 regression makes the ratchet refuse it (decision 0352).
+2. `make check-fast`, then the review panel (design, security, Excel fidelity: the diff touches eval/baseline).
+3. Open the PR (repo template), enable auto-merge, watch CI. The gated poi and corpus-bench round trips take at most
+   32 s a case locally, against CI's 60 s default timeout; watch that on CI's slower runners.
+
+## Progress so far
 - `crates/rustsheet-eval/src/roundtrip/r2.rs` holds the four sheet edits (`SheetEdit`) and their expected delta.
   Each acts on the first sheet in tab order. Rename and add use the name `rustsheet-roundtrip-R2`. Delete and move
   are `n/a` for a one-sheet workbook. `scenarios.rs` runs them as `Run::Sheet`, the rates line reports `R2`, and
