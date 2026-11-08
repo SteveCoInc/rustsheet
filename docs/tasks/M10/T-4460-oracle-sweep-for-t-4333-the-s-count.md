@@ -4,7 +4,7 @@ title: "Oracle sweep for T-4333: the [s] count at the t4333 tie serials beside n
 milestone: M10
 lane: research
 status: todo
-priority: P2
+priority: P1
 size: M
 tier: opus
 depends_on: []
@@ -16,6 +16,7 @@ hypothesis explains how Excel computes the elapsed `[h]`/`[m]`/`[s]` count befor
 decimal tie. Then T-4333 either reopens with a named model or stays blocked with both recorded as tested.
 
 ## Context
+- Decision 0355: this task owns foundational-tier cells, which the tier gate needs 100% right on type, error and text, so it is P1.
 - Gap triage 2026-11-06 (`make eval` on origin/main 16a00ebc7). The M10 probe row is "not met" with 79 visibly-off
   cells. Every one is a TEXT cell. 17 belong to T-4333, which is `blocked` (time-boxed, decision 0056) after two
   attempts:

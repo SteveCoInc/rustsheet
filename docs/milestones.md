@@ -19,30 +19,33 @@ whose exit criteria are not met.
 | 3. Release | M12 | after Phase 2 |
 | 4. Desktop oracle | M14 | out of scope; tasks dropped (decision 0266) |
 
-**Phase 1 exit (decisions 0114, 0188):** every Excel function is in the catalog with its parity scope
+**Phase 1 exit (decisions 0114, 0188, 0355):** every Excel function is in the catalog with its parity scope
 (T-0040). Every in-scope function has oracle-backed cases covering each parameter mode and edge
 pool (decision 0094's coverage: 400 Excel cells, 200 of them generated). Each remaining failure, attributed to a
 function or not, has a filed task or a `DEVIATION` entry. Percentages here and in every milestone count only scored
 cells not listed as accepted deviations, which are scored in their own column (decision 0036). Accepted deviations
 are directive-5 limits only (decision 0052); cells where the engine follows the math under decision 0188 R3
-(`MATH-OVER-EXCEL`) count as passing where it returns the math. In addition, two gates hold (decision 0188 R1):
-- **Gate A (accuracy, priority 1):** every numeric function in scope has a committed, stratified reference table
-  (about 40% typical inputs, 30% tails and domain edges, 20% extreme-but-valid, 10% log-uniform), each point with a
-  50-digit mpmath value and, where filled, Excel's value. `make check` fails on a point that is neither within
-  1e-9 relative of the math (absolute 1e-300 near 0) nor within 15 significant digits of Excel, and on an error
-  where the other side is a number. Points where decision 0188 R3 follows the math are checked against the math only.
-- **Gate B (user-representative parity):** every in-scope function has **≥ 99.9% of its attributed Excel cells within
-  15 significant digits** of Excel's value with the right type, error and text (decision 0083's rule: not visibly
-  off), counted only on the gen-* suites, ironcalc-calc, corpus-bench, calipers, poi, smoke and fixtures. A
-  function's cells are counted as decision 0118 says: its attributed Excel cells, those whose formula calls it as the
-  only function outside the harness glue list, or every Excel cell that calls it when it has fewer than 20 attributed
-  cells. The stricter count over every cell that calls it, and the count over every suite, are reported beside it as
-  information and gate nothing.
+(`MATH-OVER-EXCEL`) count as passing where it returns the math.
 
-The exit criteria of M1, M2, M5–M10 and M11 are met, read this way (decision 0188 R1(c)): each milestone's probe row
-and ironcalc-calc row counts only visibly-off type, error or text cells, cells whose wrong number comes from a semantic
-rule, and numeric cells outside Gate A's envelope (neither within 15 digits of Excel nor within 1e-9 of the math; a
-cell with no math reference yet counts as outside). The other visibly-off numeric cells of probes and probes-numeric,
+Two gates by usage tier hold (decision 0355, which replaces decision 0188's Gate A and Gate B as SPEC-0037's
+tasks land; until each lands, the rule it replaces holds). A function's tier is its catalog `usage:`: foundational
+(122 common functions: catalog prior at least 0.5, or called in at least 6 of the 1,136 SpreadsheetBench workbooks
+with formulas), otherwise expert. A value is inside the **envelope** when it is within 12 significant digits of
+Excel's value or within 1e-9 relative of the 50-digit math (absolute 1e-300); a wrong type, error or text is never
+inside, and decision 0188 R3 cells are checked against the math only.
+- **Foundational gate:** 100% of the tier's cells right on type, error and text, and ≥ 99.99% of them inside the
+  envelope.
+- **Expert gate:** ≥ 99.9% of the tier's cells right on type, error and text and ≥ 99.9% inside the envelope, and
+  each expert function ≥ 99% on both.
+
+Both count the probes, probes-numeric, the eval/accuracy tables and the gen-* suites, ironcalc-calc, corpus-bench,
+calipers, poi, smoke and fixtures, with cells attributed as decision 0118 says, leaving out decision 0134
+exceptions, deviations, and the pivot suites and GETPIVOTDATA (Phase 2, decision 0354). The old Gate A (15 digits
+or 1e-9) and Gate B (99.9% of each function within 15 digits) are reported beside them as information.
+
+The exit criteria of M1, M2, M5–M10 and M11 are met, read this way (decisions 0188 R1(c), 0355 item 4): each
+milestone's probe row and ironcalc-calc row counts only cells outside the envelope or with a wrong type, error or
+text, and is met when those cells, by tier, meet the tier gates' bars. The other visibly-off numeric cells of probes and probes-numeric,
 the fit-lab research sweeps included, are measured and reported on every run as **Phase 1b evidence**. The semantic
 probe-row criteria and the ironcalc-calc allowance are unchanged.
 
@@ -52,7 +55,9 @@ rates), Phase 1 reads it as "not visibly off"; the eval report's milestone exit 
 **Phase 1b**: ≥ 99.9% bit-exact and 100% within 4 ulp per function, worked after Phase 1 exits and
 before Phase 3. Tasks that only move cells already within 15 digits, and last-digit work on the BETA.DIST and F.DIST
 densities and on other dense-sweep cells already within Gate A (decision 0188 R5), carry `defer: phase-1b` and are
-not picked before then. The CI gate is unchanged: no cell may regress, bit for bit.
+not picked before then. The CI gate (decision 0355 item 6, once T-5093 lands) blocks a cell leaving the envelope,
+a wrong type, error or text, and a tier gate going from met to unmet; bit drift inside the envelope is recorded in
+the baseline, not blocked. Until T-5093 lands, no cell may regress, bit for bit.
 
 Phase 1 works visibly-off cells in campaign stages (decision 0114): semantic fixes first (wrong
 type, error or text), then accurate kernels where Excel is close to correctly rounded, then

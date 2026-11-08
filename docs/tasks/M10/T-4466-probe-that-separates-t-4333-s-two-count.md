@@ -4,7 +4,7 @@ title: "Probe that separates T-4333's two count hypotheses: [s] alone and beside
 milestone: M10
 lane: research
 status: todo
-priority: P2
+priority: P1
 size: S
 tier: opus
 depends_on: []
@@ -16,6 +16,7 @@ fraction at a tie, scored by docs/research/t4333/count_models.py, so T-4333 (blo
 on a named model or closed with both refuted.
 
 ## Context
+- Decision 0355: this task owns foundational-tier cells, which the tier gate needs 100% right on type, error and text, so it is P1.
 - Gap triage 2026-11-06 (`make eval` on origin/main 07a6b88a, all suites fetched). M10's exit row has 79 visibly-off
   probe cells (decision 0188 R1(c)). 62 are T-4389's `.000` cells, and 16 are T-4333's count cells: probes/t4323-fraction-ties
   A90; t4323-fraction-sweep-2 A1, A24, A41, A84; t4323-fraction-sweep-3 A7; t4323-carry-ties A27, A31;

@@ -277,6 +277,7 @@ mod tests {
 
     fn function(name: &str, milestone: &str) -> CatalogFunction {
         CatalogFunction {
+            usage: crate::catalog::Usage::default(),
             name: name.to_string(),
             category: "math".to_string(),
             milestone: milestone.to_string(),
