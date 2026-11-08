@@ -3,7 +3,7 @@ id: T-5046
 title: "Drop the round-trip ratchet's legacy per-case baseline path now every baseline is keyed by scenario"
 milestone: M16
 lane: harness
-status: done
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -28,7 +28,7 @@ less", which decision 0345 made per case and scenario. #4007 promised this follo
       and a baseline without `#` keys is refused with a clear error rather than judged per case.
 - [x] `docs/process/quality-gates.md`'s round-trip row says a case's scenario may not compare less or stop running.
 - [x] `rustsheet-eval roundtrip --check` passes unchanged on every committed baseline.
-- [x] `make check` green; reviewers approve.
+- [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Changing the cells-mode suites' per-case rule (decision 0345 keeps it).
@@ -43,3 +43,9 @@ less", which decision 0345 made per case and scenario. #4007 promised this follo
 - `docs/process/quality-gates.md`'s round-trip row says a case's scenario may not compare less or stop running.
   Decision 0345 gains a Consequences bullet (the governance record for that protected file).
 - `rustsheet-eval roundtrip --check` passes unchanged on every committed round-trip baseline.
+
+## Handoff (2026-11-08)
+Work stopped before the PR. The branch `ccr-56acd608-c5kt9z-t5046` holds the finished change, based on main at 6f0c3d8e5; rebase it before opening the PR.
+- Reviews: reviewer-design APPROVE (its minor on decision 0345's migration bullet is fixed), reviewer-security APPROVE (minor: `per_case_key` checks only the `C`/`F` maps; the round-trip ratchet never reads `TC`/`TF`/`LC`/`LF` lines, so it stays as is).
+- Verified: `cargo test -p rustsheet_eval` and clippy `-D warnings` pass, as do fmt, governance (1 protected file, recorded in decision 0345), tasks validate, duplication and file size. `rustsheet-eval roundtrip --check` passes unchanged on roundtrip-fixtures, -excel-saved, -poi and -corpus-bench. roundtrip-calipers reported only "baseline is out of date", with 0 regressions: that run scored the two pv26 cases that usually time out. Calipers is nightly-only.
+- Left to do: rebase onto main, run `make check-fast`, open the PR (review table above), and enable auto-merge.
