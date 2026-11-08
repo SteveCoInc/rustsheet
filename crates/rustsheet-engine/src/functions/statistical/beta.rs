@@ -5,11 +5,14 @@ use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error, value_error};
 use crate::functions::statistical::beta_density::beta_density_small_shape;
 use crate::functions::statistical::bratio::{
-    beta_dist_cdf, beta_search_tails, bfrac_shapes_absorbed, dispatch, first_shape_absorbs,
-    l140_overflows, Branch,
+    beta_dist_cdf, beta_dist_lower_tail, beta_search_tails, bfrac_shapes_absorbed, dispatch,
+    first_shape_absorbs, l140_overflows, Branch,
 };
 use crate::functions::statistical::incomplete_beta::beta_density;
-use crate::functions::statistical::inverse_beta::{beta_inverse_cdf, beta_quantile_crossing};
+use crate::functions::statistical::inverse_beta::{
+    as109_search, beta_inverse_cdf, beta_quantile_crossing, inverse_ln_beta, As109Problem,
+    As109Profile,
+};
 use crate::functions::statistical::loader::{beta_density_counts_vanish, excel_beta_density};
 use crate::functions::statistical::special::{ln_gamma, nearest_crossing_from, refine_increasing};
 use crate::functions::Function;
@@ -40,15 +43,48 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
     if first_shape_square_overflows(alpha, beta, p) || newton_density_vanishes(alpha, beta, p) {
         return f64::NAN;
     }
-    if alpha > BETA_QUANTILE_STATRS_SHAPE_MAX || beta > BETA_QUANTILE_STATRS_SHAPE_MAX {
-        return beta_quantile_crossing(alpha, beta, p);
-    }
-    if p <= 0.5 && lower_quantile_underflows(alpha, beta, p) {
+    let huge_shape =
+        alpha > BETA_QUANTILE_STATRS_SHAPE_MAX || beta > BETA_QUANTILE_STATRS_SHAPE_MAX;
+    if !huge_shape && p <= 0.5 && lower_quantile_underflows(alpha, beta, p) {
         return 0.0;
     }
-    if let Some(x) = beta_quantile_shape_one(alpha, beta, p) {
-        return x;
+    if !huge_shape {
+        if let Some(x) = beta_quantile_shape_one(alpha, beta, p) {
+            return x;
+        }
     }
+    let converged = || {
+        if huge_shape {
+            beta_quantile_crossing(alpha, beta, p)
+        } else {
+            beta_quantile_converged(alpha, beta, p)
+        }
+    };
+    let Some(x) = beta_quantile_as109(alpha, beta, p) else {
+        return converged();
+    };
+    // Decision 0188 R3 in the tiny tail (contract 3 of the addendum): where the stopping point is
+    // more than 1E-4 relative off the converged crossing, the crossing (the math) is returned.
+    // `BETAINV(1.9007381444303E-262,1.55556651729756,4.38688149845313)` stops at 1.3E-162,
+    // where x*x underflows, against the root 1.5E-169 (accuracy/BETAINV/s1 A166).
+    if p.min(1.0 - p) < BETA_QUANTILE_STATRS_P_MIN {
+        let c = converged();
+        return if (x - c).abs() <= MATH_OVER_EXCEL_RELATIVE * c.abs() {
+            x
+        } else {
+            c
+        };
+    }
+    x
+}
+
+/// Decision 0188 R3's limit G: where Excel's quantile is more than this relative distance from
+/// the math, the math is returned.
+const MATH_OVER_EXCEL_RELATIVE: f64 = 1e-4;
+
+/// The converged crossing behind [`beta_quantile`] for shapes up to 1E5: statrs' search as a
+/// start where it is reliable, refined to the crossing of BETA.DIST's search tails.
+fn beta_quantile_converged(alpha: f64, beta: f64, p: f64) -> f64 {
     let estimate = if p >= BETA_QUANTILE_STATRS_P_MIN {
         beta_inverse_cdf(alpha, beta, p)
     } else {
@@ -72,6 +108,46 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
         )
     };
     flush_subnormal(t)
+}
+
+/// BETA.INV's quantile as Excel's AS 109 search stops (`inverse_beta::as109`, T-4975): the search
+/// on `I_x(alpha, beta) = p`, or for p above 1/2 on `I_x(beta, alpha) = 1 - p` mapped back as 1 - x,
+/// crossing BETA.DIST's own tails ([`beta_search_tails`]) with its density as the slope. `None`
+/// where the search is exhausted (the crossing then decides, `#NUM!` where Excel's is).
+fn beta_quantile_as109(alpha: f64, beta: f64, p: f64) -> Option<f64> {
+    let flip = p > 0.5;
+    let (pp, qq, target) = if flip {
+        (beta, alpha, 1.0 - p)
+    } else {
+        (alpha, beta, p)
+    };
+    let dist = Beta::new(pp, qq).ok()?;
+    let problem = As109Problem {
+        profile: As109Profile::BetaInv,
+        pp,
+        qq,
+        target,
+        ln_beta: inverse_ln_beta(pp, qq),
+        cdf: |x: f64, y: f64| beta_dist_lower_tail(x, y, pp, qq),
+        density: |x: f64, _: f64| beta_dist_density(x, pp, qq, &dist),
+    };
+    // Excel keeps an end seed whose step is not finite at the t3862 and t4713 probes (p of 1E-10
+    // and more: `BETA.INV(1E-10,1E+110,1E-100)` = 0.999999, `BETA.INV(0.6,0.5,1.3E+154)` =
+    // 1.0000000000287557E-06) and not at the Gate A points of p 1E-58 and below
+    // (accuracy/BETA.INV/s1 A182, A185, BETAINV/s1 A191, A192: Excel 0.5), which take the
+    // crossing. FITTED(T-4975, 40 cells, p 1E-10..0.6 kept and 1E-297..1.9E-58 not; the cut
+    // reuses the statrs range's 1E-15)
+    let keep_end_seed = target >= BETA_QUANTILE_STATRS_P_MIN;
+    let x = as109_search(&problem).value(keep_end_seed)?;
+    let t = if flip { 1.0 - x } else { x };
+    // Large shapes near the mean, where bratio takes basym, keep the converged crossing: there
+    // Excel's round trip returns x exactly (probes-numeric/t3443-basym-sweep A101,
+    // `BETA.INV(BETA.DIST(0.576485254488674,59467.806,44281.473,TRUE),...)` = 0.576485254488674),
+    // which an early stop misses (contract 4 of the addendum; region UNVERIFIED, probe group G23).
+    if dispatch(alpha, beta, t, 1.0 - t).is_some_and(|d| d.branch == Branch::Basym) {
+        return None;
+    }
+    Some(t)
 }
 
 /// Whether the square of AS 109's first shape overflows a double: alpha for p up to 1/2, and beta
@@ -165,6 +241,21 @@ fn beta_quantile_shape_one(alpha: f64, beta: f64, p: f64) -> Option<f64> {
         (false, true) => Some((p.ln() / alpha).exp()),
         (false, false) => None,
     }
+}
+
+/// BETA.DIST's density at `t` on [0, 1] before its flush and its division by B - A: the small-shape
+/// form for min(alpha, beta) <= 1 (T-2503), Loader's saddle point for both shapes above 1
+/// (T-2507), then `incomplete_beta::beta_density` and statrs' pdf. BETA.INV's AS 109 search
+/// divides its residual by it unflushed (`inverse_beta::as109`, T-4975).
+pub(crate) fn beta_dist_density(t: f64, alpha: f64, beta: f64, dist: &Beta) -> f64 {
+    beta_density_small_shape(t, alpha, beta)
+        .or_else(|| {
+            (alpha > 1.0 && beta > 1.0)
+                .then(|| excel_beta_density(t, alpha, beta))
+                .flatten()
+        })
+        .or_else(|| beta_density(t, alpha, beta))
+        .unwrap_or_else(|| dist.pdf(t))
 }
 
 /// BETA.DIST's `cumulative`: a boolean, a number (TRUE unless 0), "TRUE" or "FALSE" in any case,
@@ -299,17 +390,7 @@ impl Model {
             // E875, E957; docs/excel-semantics/numbers.md "Distribution densities"). Both shapes
             // above 1: Excel's Loader saddle point (T-2507; decision 0181 accepts the cells it
             // leaves visibly off, which T-3220 owns).
-            flush_subnormal(
-                beta_density_small_shape(t, alpha, beta_param)
-                    .or_else(|| {
-                        (alpha > 1.0 && beta_param > 1.0)
-                            .then(|| excel_beta_density(t, alpha, beta_param))
-                            .flatten()
-                    })
-                    .or_else(|| beta_density(t, alpha, beta_param))
-                    .unwrap_or_else(|| dist.pdf(t))
-                    / width,
-            )
+            flush_subnormal(beta_dist_density(t, alpha, beta_param, &dist) / width)
         };
         if result.is_nan() || result.is_infinite() {
             return Err(num_error(cell));
@@ -470,6 +551,84 @@ mod tests {
         // (Ours is the math there; Excel is 0.5% below it: TODO(T-4700).)
         let e4 = beta_quantile(0.5, above, 0.1);
         assert!(e4 > 0.0 && e4 < 1e-150, "{e4}");
+    }
+
+    // Excel's BETA.INV is AS 109's Newton stopping point (T-4975, addendum section A).
+    #[test]
+    fn quantile_is_the_as109_stopping_point() {
+        // ironcalc-calc BETADIST_BETAINV.xlsx H5: 33587.000000000226, where the crossing is
+        // 33586.99999999992.
+        let t = beta_quantile(3.0, 600.0, 0.673_455_379_749_348_1);
+        assert_eq!(2000.0 + t * (5_489_582.0 - 2000.0), 33_587.000_000_000_226);
+        // gen-m9/4e55500bb8ad3cd8 A360 `BETAINV(1E-200,3.14159,TIME(4,2,1))`: AS 109's first
+        // power-law estimate, kept on the cdf's plateau.
+        let time = (4.0 * 3600.0 + 2.0 * 60.0 + 1.0) / 86_400.0;
+        assert_eq!(
+            beta_quantile(314_159.0 / 1e5, time, 1e-200),
+            5.115_610_690_476_489e-64
+        );
+    }
+
+    // Contract 2: an exhausted search is not a root; Excel's #NUM! (accuracy/BETA.INV/s1 A89,
+    // A94, A184, and `BETA.INV(.1,5,1E-14)`) is the crossing's NaN or end.
+    #[test]
+    fn an_exhausted_search_is_not_a_root() {
+        for (p, a, b) in [
+            (
+                0.120_463_618_823_915,
+                4.851_162_189_818_46,
+                3.815_069_615_619_41e-15,
+            ),
+            (
+                0.540_825_862_774_324,
+                2.118_406_212_759_37e-15,
+                0.719_272_803_854_574,
+            ),
+            (
+                2.279_664_763_008_84e-261,
+                0.000_693_561_996_566_429,
+                2.691_668_949_762_64e-279,
+            ),
+            (0.1, 5.0, 1e-14),
+        ] {
+            let t = beta_quantile(a, b, p);
+            assert!(!(t > 0.0 && t < 1.0), "BETA.INV({p},{a},{b}) = {t}");
+        }
+    }
+
+    // Contract 1: a subnormal residual is not flushed into a false root at the seed
+    // (accuracy/BETA.INV/s1 A111: the math 3.5583236841039E-20, not 1E-6); contract 3: a stop
+    // more than 1E-4 off the crossing in the tiny tail returns the crossing (BETAINV/s1 A166, where
+    // the stop is 1.3E-162 and the root 1.4958216352616E-169).
+    #[test]
+    fn tiny_tail_stops_keep_the_math() {
+        let a111 = beta_quantile(
+            16.027_096_831_155_1,
+            5.574_770_237_419_75,
+            2.225_073_858_507_21e-308,
+        );
+        assert!(
+            (a111 / 3.558_323_684_103_9e-20 - 1.0).abs() < 1e-9,
+            "{a111}"
+        );
+        let a166 = beta_quantile(
+            1.555_566_517_297_56,
+            4.386_881_498_453_13,
+            1.900_738_144_430_3e-262,
+        );
+        assert!(
+            (a166 / 1.495_821_635_261_607_3e-169 - 1.0).abs() < 1e-9,
+            "{a166}"
+        );
+    }
+
+    // Contract 4: at basym points the converged crossing stays: the round trip is exact
+    // (probes-numeric/t3443-basym-sweep A101).
+    #[test]
+    fn basym_round_trip_keeps_the_crossing() {
+        let (a, b, x) = (59_467.806, 44_281.473, 0.576_485_254_488_674);
+        let p = beta_dist_lower_tail(x, 1.0 - x, a, b);
+        assert_eq!(beta_quantile(a, b, p), x);
     }
 
     #[test]

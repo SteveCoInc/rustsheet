@@ -248,7 +248,9 @@ fn t_inv_2t_above_one_is_the_negative_quantile_of_the_mirror() {
         (1.5, 10.0),
         (1.9, 5.0),
         (1.0001, 5.0),
-        (1.999, 5.0),
+        // Not 1.999: its mirror 2 - p = 0.0010000000000001119 is read back from the formula text
+        // at 15 digits, a different double, which the AS 109 stopping point resolves (T-4975).
+        (1.75, 5.0),
     ];
     for (row, (p, df)) in pairs.iter().enumerate() {
         let row = row + 1;

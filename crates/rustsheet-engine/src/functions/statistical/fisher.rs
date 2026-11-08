@@ -1,8 +1,10 @@
-use statrs::distribution::FisherSnedecor;
+use statrs::distribution::{Beta, FisherSnedecor};
 
 use crate::arithmetic::{extended_quotient, flush_subnormal};
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error};
+use crate::functions::statistical::beta::beta_dist_density;
+use crate::functions::statistical::bratio::beta_dist_lower_tail;
 use crate::functions::statistical::bratio::{
     f_closed_or_ported_tails, kernel_tails, l140_overflows,
 };
@@ -12,13 +14,17 @@ use crate::functions::statistical::half_integer_beta::half_integer_remainder;
 use crate::functions::statistical::incomplete_beta::{
     beta_reg_tails, search_tails, A1_EXPM1_MAX_X,
 };
-use crate::functions::statistical::inverse_beta::{beta_lower_crossing, f_inverse_cdf};
+use crate::functions::statistical::inverse_beta::{
+    as109_search, beta_lower_crossing, f_inverse_cdf, inverse_ln_beta, As109Problem, As109Profile,
+};
 use crate::functions::statistical::paired::marked_number_error;
 use crate::functions::statistical::special::refine_increasing;
 use crate::functions::statistical::t_dist::sample_var;
 use crate::functions::Function;
 use crate::x87_exp::excel_exp;
+use crate::x87_exp::{dd_add, dd_neg, two_sum};
 use crate::x87_log10::excel_ln;
+use crate::x87_log1p::excel_ln_one_minus;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
@@ -257,6 +263,84 @@ fn f_quantile(df1: f64, df2: f64, p: f64, right_tail: bool) -> f64 {
     if lower >= 1.0 && !right_tail {
         return f64::INFINITY;
     }
+    let Some(x) = f_quantile_as109(df1, df2, p, right_tail) else {
+        return f_quantile_converged(df1, df2, p, right_tail);
+    };
+    let huge_df = df1 >= F_QUANTILE_STATRS_DF_MAX || df2 >= F_QUANTILE_STATRS_DF_MAX;
+    // Decision 0188 R3 in the tiny tails (contract 3 of the addendum): a stop more than 1E-4
+    // relative off the converged crossing returns the crossing, the math the five R3-marked points
+    // require (accuracy/F.INV/s1 A112, A126, A146, A160, A171).
+    if !huge_df && lower.min(1.0 - lower) >= F_QUANTILE_REFINE_P_MIN {
+        return x;
+    }
+    // From a df of 1E5 the stop stays only within SPEC-0029's 1E-9 of T-1538's mapped crossing:
+    // there the beta iterate near 1 keeps too few digits to stop where Excel does, and is up to
+    // 1.5E-6 off both (`FINV(2.19035396820536E-152,1266816833,2)`, accuracy/FINV/s1 A143;
+    // F.INV/s1 A133, A148, FINV/s1 A150, A160), while within it the stop is Excel's at 108 more
+    // literal cells than the crossing.
+    let limit = if huge_df {
+        HUGE_DF_STOP_RELATIVE
+    } else {
+        MATH_OVER_EXCEL_RELATIVE
+    };
+    let c = f_quantile_converged(df1, df2, p, right_tail);
+    if (x - c).abs() <= limit * c.abs() {
+        x
+    } else {
+        c
+    }
+}
+
+/// How far (relative) F's stopping point may be from the converged crossing at a df of 1E5 or
+/// more: SPEC-0029's envelope ε.
+const HUGE_DF_STOP_RELATIVE: f64 = 1e-9;
+
+/// Decision 0188 R3's limit G: where Excel's quantile is more than this relative distance from
+/// the math, the math is returned.
+const MATH_OVER_EXCEL_RELATIVE: f64 = 1e-4;
+
+/// F.INV as Excel forms it from its inverse beta (T-4975, addendum section C): AS 109's
+/// stopping point x of `I_x(df1/2, df2/2) = p` (`inverse_beta::as109`; for a lower-tail p above
+/// 1/2 the flipped root s of `I_s(df2/2, df1/2) = 1 - p`, which keeps the small tail), mapped back
+/// by the compensated four-log ratio `EXP(LN(x) - LN(1-x) + LN(df2) - LN(df1))` with the shared
+/// log1p for `LN(1-x)`. `None` where the search is exhausted.
+fn f_quantile_as109(df1: f64, df2: f64, p: f64, right_tail: bool) -> Option<f64> {
+    let lower = if right_tail { 1.0 - p } else { p };
+    let flip = lower > 0.5;
+    let (pp, qq, target) = if flip {
+        (df2 / 2.0, df1 / 2.0, if right_tail { p } else { 1.0 - p })
+    } else {
+        (df1 / 2.0, df2 / 2.0, lower)
+    };
+    let dist = Beta::new(pp, qq).ok()?;
+    let problem = As109Problem {
+        profile: As109Profile::BetaInv,
+        pp,
+        qq,
+        target,
+        ln_beta: inverse_ln_beta(pp, qq),
+        cdf: |x: f64, y: f64| beta_dist_lower_tail(x, y, pp, qq),
+        density: |x: f64, _: f64| beta_dist_density(x, pp, qq, &dist),
+    };
+    let x = as109_search(&problem).value(false)?;
+    // ln F = (ln x + ln df2) - (ln(1 - x) + ln df1), numerator first, in double-double, then
+    // EXP of the head times 1 + the tail; flipped, x and 1 - x trade places.
+    let (top, bottom) = if flip {
+        (excel_ln_one_minus(x), excel_ln(x))
+    } else {
+        (excel_ln(x), excel_ln_one_minus(x))
+    };
+    let numerator = two_sum(top, excel_ln(df2));
+    let denominator = two_sum(bottom, excel_ln(df1));
+    let (hi, lo) = dd_add(numerator, dd_neg(denominator));
+    Some(excel_exp(hi) * (1.0 + lo))
+}
+
+/// The converged F quantile behind [`f_quantile`]: statrs' search as a start, refined to the
+/// crossing of F's tails, and from a df of [`F_QUANTILE_STATRS_DF_MAX`] Excel's BETA.INV mapped
+/// to F (T-1538).
+fn f_quantile_converged(df1: f64, df2: f64, p: f64, right_tail: bool) -> f64 {
+    let lower = if right_tail { 1.0 - p } else { p };
     if df1 >= F_QUANTILE_STATRS_DF_MAX || df2 >= F_QUANTILE_STATRS_DF_MAX {
         return if right_tail {
             1.0 / f_quantile_through_beta(df2, df1, p)
@@ -717,6 +801,24 @@ mod tests {
         f_beta_arguments, f_bup_sum_overflows, f_cdf, f_quantile, f_tail, fisher, fisher_inv,
     };
     use crate::test::util::{ulps, within_fifteen_digits};
+
+    // F.INV maps Excel's AS 109 stopping point back by the four-log ratio (T-4975, addendum C):
+    // probes-numeric/t1538-f-quantile-switchover A1, A8 and A14, each off before, bit for bit.
+    #[test]
+    fn f_quantile_is_the_mapped_beta_stopping_point() {
+        for (df1, df2, p, right_tail, excel) in [
+            (99_999.0, 5.0, 1e-12, false, 0.076_617_852_264_873_51_f64),
+            (5.0, 99_999.0, 1.0 - 1e-12, false, 13.051_797_727_478_313),
+            (5.0, 99_999.0, 1e-12, true, 13.051_788_459_730_34),
+        ] {
+            let ours = f_quantile(df1, df2, p, right_tail);
+            assert_eq!(
+                ours.to_bits(),
+                excel.to_bits(),
+                "F({df1},{df2}) at {p}: {ours}"
+            );
+        }
+    }
 
     // FISHER and FISHERINV round their quotient twice, like Excel's `/` (excel-graph; T-2437).
     #[test]

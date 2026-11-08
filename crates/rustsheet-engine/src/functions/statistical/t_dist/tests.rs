@@ -110,8 +110,11 @@ fn centre_quantiles_keep_their_digits() {
         (2.0, 1.0 - 1e-10, 1.414_213_679_385_65e-10),
         (2.0, 1.0 - 1e-16, 1.570_092_458_683_775_2e-16),
         (5.0, 0.999_999, 1.317_152_762_108_468_7e-6),
-        (5.0, 1.0 - 1e-10, 1.317_152_871_051_844_3e-10),
-        (5.0, 1.0 - 1e-16, 1.462_333_323_398_885_8e-16),
+        // df 5: Excel's values, the small-beta iterate, 1 and 2 ulp from the true quantile
+        // (gen-m9 b9a32ce9a1fd0d71 A58, probes-numeric/m9-t-inv-2t A65; gen-m9 afc00c8b70e78baf
+        // A64; T-4975 addendum section B).
+        (5.0, 1.0 - 1e-10, 1.317_152_871_051_845_8e-10),
+        (5.0, 1.0 - 1e-16, 1.462_333_323_398_883_8e-16),
         (1000.0, 0.999_999, 1.253_627_505_003_303e-6),
         (1000.0, 1.0 - 1e-10, 1.253_627_608_692_530_5e-10),
         (1000.0, 1.0 - 1e-16, 1.391_806_120_317_668_7e-16),
@@ -292,4 +295,34 @@ fn t_test_inside_one_at_df_13_to_16_is_the_kernel_call() {
         pooled_t_test(&first, &second, 1.0),
         0.174_884_208_992_953_04
     );
+}
+// T.INV.2T away from the centre is Excel's AS 109 stopping point under the Student-t profile
+// (T-4975, addendum section B): the controls at two-tailed p = 1/2, bit for bit.
+#[test]
+fn two_tailed_quantile_is_the_student_t_stopping_point() {
+    for (df, excel) in [
+        (5.0, 0.726_686_843_800_421_6_f64),
+        (7.0, 0.711_141_778_081_785_9),
+        (8.0, 0.706_386_612_644_837_5),
+        (9.0, 0.702_722_146_751_324_9),
+        (28.0, 0.683_352_842_988_503_9),
+        (123_456_789.0, 0.674_489_743_150_849_8),
+    ] {
+        let t = t_upper_quantile(&dist(df), df, 0.25).abs();
+        assert_eq!(t.to_bits(), excel.to_bits(), "T.INV.2T(0.5,{df}) = {t}");
+    }
+}
+
+// The tiny centre is the small-beta iterate with the finite-gamma ln B and bpser's split EXP
+// (T-4975, addendum section B and addendum 2 section G): `T.INV.2T(1-1E-10,5)` and
+// `T.INV.2T(1-1E-16,5)` (gen-m9 b9a32ce9a1fd0d71 A58, afc00c8b70e78baf A64) bit for bit.
+#[test]
+fn tiny_centre_is_the_finite_gamma_small_beta_iterate() {
+    for (p, excel) in [
+        (1.0 - 1e-10, 1.317_152_871_051_845_8e-10_f64),
+        (1.0 - 1e-16, 1.462_333_323_398_883_8e-16),
+    ] {
+        let t = t_upper_quantile(&dist(5.0), 5.0, p / 2.0).abs();
+        assert_eq!(t.to_bits(), excel.to_bits(), "T.INV.2T({p},5) = {t}");
+    }
 }

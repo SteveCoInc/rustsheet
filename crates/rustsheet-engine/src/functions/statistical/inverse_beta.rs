@@ -47,6 +47,9 @@ use super::incomplete_gamma::gamma_ur;
 use super::special::{ln_gamma, nearest_crossing};
 use crate::x87_exp::excel_exp;
 
+mod as109;
+pub(crate) use as109::{as109_search, inverse_ln_beta, As109Problem, As109Profile};
+
 /// The most Newton steps one inversion for BETA.INV or F.INV takes. The steps grow with -log10 of
 /// the probability, about 2.3 a decade, and stop at 377 where `x * x` underflows (p near 1E-162,
 /// below which the first estimate is NaN), so 512 keeps every result statrs reaches.
@@ -325,10 +328,41 @@ pub(crate) fn beta_small_quantile(
     p: f64,
     cdf: impl Fn(f64) -> f64,
 ) -> Option<SmallBetaQuantile> {
+    let ln_beta = ln_gamma(a) + ln_gamma(b) - ln_gamma(a + b);
+    beta_small_quantile_with(a, b, p, SmallBetaNorm::lgamma(ln_beta), cdf)
+}
+
+/// The normalization [`beta_small_quantile_with`] takes: ln B for the seed and the density, and
+/// whether a first series correction that moves the seed sends the caller back to its own path.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct SmallBetaNorm {
+    pub ln_beta: f64,
+    pub fallback_if_corrected: bool,
+}
+
+impl SmallBetaNorm {
+    /// The Student-t tail's: the correctly rounded GAMMALN sum, the solver always taken.
+    fn lgamma(ln_beta: f64) -> Self {
+        Self {
+            ln_beta,
+            fallback_if_corrected: false,
+        }
+    }
+}
+
+/// [`beta_small_quantile`] with the caller's normalization (the tiny-centre Student-t inverse's
+/// finite-gamma ln B, `bratio::ln_beta::ln_beta_finite_gamma`, T-4975 addendum 2 section G).
+pub(crate) fn beta_small_quantile_with(
+    a: f64,
+    b: f64,
+    p: f64,
+    norm: SmallBetaNorm,
+    cdf: impl Fn(f64) -> f64,
+) -> Option<SmallBetaQuantile> {
     if !(a > 0.0 && b > 0.0 && p > 0.0 && p < 1.0) {
         return None;
     }
-    let ln_beta = ln_gamma(a) + ln_gamma(b) - ln_gamma(a + b);
+    let ln_beta = norm.ln_beta;
     let ln_p = p.ln();
     let ln_x = (ln_p + (a.ln() + ln_beta)) / a;
     if !ln_x.is_finite() || ln_x >= 0.0 {
@@ -344,6 +378,9 @@ pub(crate) fn beta_small_quantile(
         return Some(SmallBetaQuantile::LogSeed(ln_x));
     }
     let first = seed - (1.0 - b) / (a + 1.0) * square;
+    if norm.fallback_if_corrected && first != seed {
+        return None;
+    }
     let density = |x: f64| ((a - 1.0) * x.ln() + (b - 1.0) * (-x).ln_1p() - ln_beta).exp();
     Some(SmallBetaQuantile::Root(newton_least_residual(
         first,
@@ -369,34 +406,19 @@ pub(crate) fn newton_least_residual(
     density: impl Fn(f64) -> f64,
     max_steps: u32,
 ) -> f64 {
-    let ln_p = p.ln();
-    let mut x = start;
-    let mut best = (x, f64::INFINITY);
-    let mut previous: Option<f64> = None;
-    for _ in 0..max_steps {
-        let residual = cdf(x) - p;
-        if !residual.is_finite() {
-            break;
-        }
-        if residual.abs() < best.1 {
-            best = (x, residual.abs());
-        }
-        let relative = residual / p;
-        let settled = previous.is_some_and(|r| ln_p + relative == ln_p || r * relative < 0.0);
-        if settled || residual.abs() < f64::MIN_POSITIVE {
-            break;
-        }
-        previous = Some(relative);
-        let step = residual / density(x);
-        if !step.is_finite() || step * step == 0.0 {
-            break;
-        }
-        x -= step;
-        if !(x > 0.0 && x < 1.0) {
-            break;
-        }
-    }
-    best.0
+    as109::newton_search(
+        As109Profile::SmallBetaTail,
+        as109::NewtonStart {
+            seed: start,
+            target: p,
+            accuracy: 0.0,
+            max_steps,
+        },
+        &|x: f64, _: f64| cdf(x),
+        &|x: f64, _: f64| density(x),
+    )
+    .value(true)
+    .unwrap_or(start)
 }
 
 /// statrs' `StudentsT::inverse_cdf` (location 0, scale 1) with [`inv_beta_reg`]'s caps, at most
