@@ -49,35 +49,63 @@ The package plumbing already exists: `PartNames`, `parse_relationships` and `res
 - Fragments (T-5001, T-5003).
 
 ## Outcome
-- **`export/ownership.rs`** (new) holds:
-  - D5.1's table, `policy_of(rel_type, content_type, reached_from)` with its unknown defaults, and `Graph`, the
-    package's parts and internal relationships read within the load's limits;
-  - `closure` (D5.2) within D5.6's depth (16) and size (1,000) limits;
-  - the coupling groups: per sheet, the legacy drawing group (VML, comments, threaded comments, controls, OLE, and a
-    drawing holding `a14:compatExt`), and the workbook's slicer and timeline group;
-  - `regenerated`, which decides every source part. Units are decided in part-name order: a group's closure as one
-    unit, and a chart holding `c:pivotSource` counts as regenerated.
+- **`export/ownership.rs`** (new):
+  - D5.1's table, one list of relationship types per policy, with digital-signature certificates under `Drop`;
+  - `policy_of(rel_type, content_type, reached_from)` with its unknown defaults. A part no relationship reaches is known
+    by its content type alone;
+  - `Graph`, the parts and internal relationships of a package read within the load's limits, with the workbook's
+    `sheetId`s and `cacheId`s;
+  - `closure` within D5.6's depth (16) and size (1,000) limits.
+- **`export/ownership/decide.rs`** (new):
+  - **Roots** are the parts reached from the package, the workbook or a sheet (chartsheets, dialogsheets and
+    macrosheets included), and orphans. Any other part takes the verdict of the units whose closures hold it.
+  - **Coupling groups** are per sheet:
+    - the legacy drawing group: VML, comments, threaded comments, ctrlProps, ActiveX, OLE, and a drawing holding
+      `a14:compatExt`;
+    - the slicer and timeline group, joined to the caches its parts name (`cache` against the cache definition's
+      `name`).
+  - Groups that share a part are merged.
+  - **The shared-part rule:** a part a keepable unit holds is keepable; otherwise a limit wins over a closure reaching
+    regenerated content.
+  - **Bounds:** one cached probe per part, at most 1 MiB of it. One closure per root. A total work cap of 10^6 closure
+    parts, which carries to every remaining unit. An unreadable part makes its unit `LimitExceeded`.
 - **Reasons:**
   - a modelled part the output lacks: `NotPreserved`;
   - the `Drop` policy: `Policy`;
-  - a closure reaching what the export regenerates: `ClosureReachesRegenerated`;
+  - a closure reaching what the export regenerates (a modelled or dropped part, or a chart holding `c:pivotSource`):
+    `ClosureReachesRegenerated`;
   - a limit: `LimitExceeded`;
   - VBA: `NotPreserved` until T-5010, since nothing writes macro-enabled packages yet;
-  - a part the matrix would keep: `NotPreserved` until its writer lands (T-5000 onward).
-- **Written, or not.** A part counts as written when the output has a part with the same identity: its owner's
-  identity, the relationship kind and its ordinal among the owner's relationships of that kind. A worksheet is
-  identified by its `sheetId`, which renames, moves and dropped macro or chart sheets all keep. Positions were tried
-  first and misnamed written parts: poi xlmmacro.xlsm's macrosheet sits before Sheet2, and a source's `.rels` can list
-  sheets in any order (excel-saved t4187).
-- **`report.rs`** uses the matrix for the regenerated tier and for the patched tier's calcChain. The zip and `.rels`
-  helpers (`zip_entry_names`, `rels_owner_folder`, `rels_owner_part`, `is_rels`) moved to `import/package.rs`. The
-  regenerated tier is now written to memory first, so its own inventory can be read.
-- **Tests:**
+  - a keepable part: `NotPreserved` until its writer lands (T-5000 onward).
+- **Written or not.** The output is checked for a part with the same identity. A part's identity is its owner's identity
+  plus the relationship kind, with a label the export keeps:
+  - a worksheet's `sheetId`, which renames, moves and dropped macro or chart sheets keep. Positions were tried first and
+    misnamed written parts: poi xlmmacro.xlsm, and excel-saved t4187's `.rels` order;
+  - a table's or pivot table's `name`;
+  - a pivot cache's set of pivot-table names, since the export renumbers `cacheId`;
+  - otherwise an ordinal among siblings of that kind. When a save writes fewer siblings, the last ones are reported,
+    which can name the wrong one. SPEC-0033 D7.3 scores that `changed`, so the baseline ratchet catches it.
+- **Deviations, recorded in SPEC-0034:**
+  - the legacy group takes every `vmlDrawing` of a sheet, the header and footer one included;
+  - each package read has its own budget;
+  - the regenerated tier is buffered.
+- **Plumbing.** `preserving.rs` calls the decisions directly. `report.rs` keeps the patched tier and `unreadable`. The zip
+  and `.rels` helpers live in `import/package.rs`, and `rel_kind` is shared with `pivot_drawings.rs`. `XmlNode`'s
+  `relationship_id` and the patcher's `attr_span` are reused.
+- **Tests** (`ownership/tests.rs`):
   - every policy and the unknown defaults;
-  - a closure through a chart reaching a table, an external target, and the depth and size limits;
-  - a modelled part the output lacks;
+  - closures with an external target, and the depth and size limits;
+  - a modelled part the output lacks, including the middle of three tables, named by name;
   - a part reached twice;
-  - the legacy group with a pivot chart, and the slicer group;
+  - a non-root chart that sorts before its drawing, and an image shared with a clean root;
+  - the legacy group with a pivot chart;
+  - per-sheet slicer and timeline groups joined by cache, with overlapping groups merged;
+  - the work limit, and an unreadable drawing;
   - a sheet matched by `sheetId` after a move.
-- **Baselines.** Rerecorded with no regression; one poi entry shrank. No item anywhere scores "the save report names
-  it dropped, but it was written". Scores change only where an accepted reason applies, which stays `Policy` for now.
+- **Baselines** are rerecorded with no regression, and no item scores "the save report names it dropped, but it was
+  written".
+- **Review round 1:**
+  - security: quadratic work, uncached probes, failed reads treated as "no";
+  - design and Excel fidelity: roots, the shared-part rule, per-sheet and merged groups, identities, duplicated helpers.
+
+  All are addressed above.

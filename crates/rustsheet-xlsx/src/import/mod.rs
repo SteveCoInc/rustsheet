@@ -80,6 +80,12 @@ pub(crate) struct Relationship {
     pub(crate) external: bool,
 }
 
+/// The last segment of a relationship type (`…/relationships/drawing` → `drawing`), which names
+/// the kind whatever namespace defines it.
+pub(crate) fn rel_kind(rel_type: &str) -> &str {
+    rel_type.rsplit('/').next().unwrap_or(rel_type)
+}
+
 fn load_relationships<R: Read + Seek>(
     archive: &mut Package<R>,
 ) -> Result<HashMap<String, Relationship>, XlsxError> {

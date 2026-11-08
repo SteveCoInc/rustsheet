@@ -10,14 +10,14 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::io::Cursor;
 
-use super::report::{DropReason, Dropped};
 use crate::import::{
-    is_rels, part_key, part_relationships, rels_owner_part, resolve_target, zip_entry_names,
-    ImportLimits, Package,
+    is_rels, part_key, part_relationships, rel_kind, rels_owner_part, resolve_target,
+    zip_entry_names, ImportLimits, Package, XmlNode,
 };
 
-/// The namespace of `r:id`.
-const R_NS: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+mod decide;
+
+pub(super) use decide::{calc_chains, regenerated};
 
 /// What a regenerated save does with a part, by the relationship type that reaches it (D5.1).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -114,6 +114,7 @@ const TABLE: &[(Policy, &[&str])] = &[
         &[
             "calcChain",
             "origin",
+            "certificate",
             "signature",
             "revisionHeaders",
             "revisionLog",
@@ -145,6 +146,10 @@ pub(super) fn policy_of(rel_type: &str, content_type: Option<&str>, reached_from
         },
     }
 }
+
+/// The relationship kinds of the workbook's sheets (D5.1: chartsheets, dialogsheets and
+/// macrosheets are sheets too).
+const SHEET_KINDS: &[&str] = &["worksheet", "chartsheet", "dialogsheet", "xlMacrosheet"];
 
 /// D5.6: the most relationship hops a closure follows.
 pub(super) const MAX_CLOSURE_DEPTH: usize = 16;
@@ -179,6 +184,9 @@ pub(super) struct Graph {
     /// renaming, moving and dropping other sheets all keep (the export writes the model's
     /// `sheetId`, which the importer reads from the source).
     sheet_ids: HashMap<String, String>,
+    /// Each workbook `<pivotCache>`'s relationship id mapped to its `cacheId`, which the cache's
+    /// pivot tables name.
+    cache_ids: HashMap<String, String>,
 }
 
 impl Graph {
@@ -199,12 +207,7 @@ impl Graph {
             let owner = part_key(&owner);
             let mut out = Vec::new();
             for (id, rel) in relationships.into_iter().filter(|(_, r)| !r.external) {
-                let kind = rel
-                    .rel_type
-                    .rsplit('/')
-                    .next()
-                    .unwrap_or_default()
-                    .to_string();
+                let kind = rel_kind(&rel.rel_type).to_string();
                 let target = part_key(&resolve_target(base, &rel.target));
                 if owner.is_empty() && kind == "officeDocument" {
                     graph.workbook.get_or_insert_with(|| target.clone());
@@ -215,24 +218,28 @@ impl Graph {
                     .or_insert_with(|| (owner.clone(), kind.clone()));
                 out.push(Edge { id, kind, target });
             }
-            graph.edges.insert(owner, out);
+            // Two spellings of one `.rels` (a package OPC calls invalid): the first read wins.
+            graph.edges.entry(owner).or_insert(out);
         }
         if let Some(workbook) = graph.workbook.clone() {
-            if let Ok(doc) = package
-                .open(&workbook)
-                .and_then(crate::import::XmlNode::parse)
-            {
-                graph.sheet_ids = (doc.descendants())
-                    .filter(|n| n.has_tag_name("sheet"))
-                    .filter_map(|n| {
-                        let id = n.attribute_ns(R_NS, "id")?;
-                        Some((id.to_string(), n.attribute("sheetId")?.to_string()))
-                    })
-                    .collect();
+            if let Ok(doc) = package.open(&workbook).and_then(XmlNode::parse) {
+                let ids = |tag: &str, attr: &str| -> HashMap<String, String> {
+                    (doc.descendants())
+                        .filter(|n| n.has_tag_name(tag))
+                        .filter_map(|n| {
+                            Some((
+                                n.relationship_id()?.to_string(),
+                                n.attribute(attr)?.to_string(),
+                            ))
+                        })
+                        .collect()
+                };
+                graph.sheet_ids = ids("sheet", "sheetId");
+                graph.cache_ids = ids("pivotCache", "cacheId");
             }
         }
         if let Ok(types) = package.open("[Content_Types].xml") {
-            if let Ok(doc) = crate::import::XmlNode::parse(types) {
+            if let Ok(doc) = XmlNode::parse(types) {
                 for o in doc.descendants().filter(|n| n.has_tag_name("Override")) {
                     if let (Some(part), Some(ct)) =
                         (o.attribute("PartName"), o.attribute("ContentType"))
@@ -259,20 +266,19 @@ impl Graph {
             return Reach::Workbook;
         }
         match self.reached.get(owner) {
-            Some((_, kind)) if kind == "worksheet" => Reach::Sheet,
+            Some((_, kind)) if SHEET_KINDS.contains(&kind.as_str()) => Reach::Sheet,
             _ => Reach::Other,
         }
     }
 
-    /// The policy of the part `key`, by what reaches it; `None` for a part no relationship
-    /// reaches.
-    fn policy(&self, key: &str) -> Option<Policy> {
-        let (owner, kind) = self.reached.get(key)?;
-        Some(policy_of(
-            kind,
-            self.content_types.get(key).map(String::as_str),
-            self.reach_of(owner),
-        ))
+    /// The policy of the part `key`, by what reaches it. A part no relationship reaches is
+    /// known by its content type alone (D5.1), and is otherwise `Replay`: it is its own root.
+    fn policy(&self, key: &str) -> Policy {
+        let content_type = self.content_types.get(key).map(String::as_str);
+        match self.reached.get(key) {
+            Some((owner, kind)) => policy_of(kind, content_type, self.reach_of(owner)),
+            None => policy_of("", content_type, Reach::Package),
+        }
     }
 
     /// The parts reachable from `root` by internal relationships, `root` included (D5.2), within
@@ -297,612 +303,7 @@ impl Graph {
         }
         Ok(seen)
     }
-
-    /// Each reached part's identity, the same in a source and in a save of it: its owner's
-    /// identity, the relationship kind and its ordinal among the owner's relationships of that kind.
-    /// A save that writes fewer parts of a kind under one owner lacks the last identities.
-    fn identities(&self) -> HashMap<String, String> {
-        let mut ids = HashMap::new();
-        let mut queue = VecDeque::from([(String::new(), String::new())]);
-        let mut seen = BTreeSet::new();
-        while let Some((part, id)) = queue.pop_front() {
-            let mut ordinal: HashMap<&str, usize> = HashMap::new();
-            let workbook = self.workbook.as_deref() == Some(part.as_str());
-            for edge in self.edges.get(&part).into_iter().flatten() {
-                let n = ordinal.entry(edge.kind.as_str()).or_default();
-                // A sheet is labelled by its `sheetId`, not by where its relationship sits in a
-                // `.rels` or where it sits in `<sheets>`: either moves when sheets are reordered,
-                // or when a chartsheet or macrosheet the export drops sat before it.
-                let label = match self.sheet_ids.get(&edge.id) {
-                    Some(sheet_id) if workbook && edge.kind == "worksheet" => {
-                        format!("sheetId {sheet_id}")
-                    }
-                    _ => n.to_string(),
-                };
-                let child = format!("{id}/{}[{label}]", edge.kind);
-                *n += 1;
-                if seen.insert(edge.target.clone()) {
-                    ids.insert(edge.target.clone(), child.clone());
-                    queue.push_back((edge.target.clone(), child));
-                }
-            }
-        }
-        ids
-    }
-}
-
-/// The coupling groups of `source` (D5.2), each a set of part keys kept or dropped as one unit:
-/// per sheet, the legacy drawing group, and for the workbook, the slicer and timeline group. A
-/// drawing joins a group when its bytes hold the shapes the group shares (`a14:compatExt`, a
-/// slicer or timeline frame).
-fn coupling_groups(source: &Graph, bytes: &[u8], limits: &ImportLimits) -> Vec<BTreeSet<String>> {
-    const LEGACY: &[&str] = &[
-        "vmlDrawing",
-        "comments",
-        "threadedComment",
-        "ctrlProp",
-        "control",
-        "oleObject",
-        "package",
-    ];
-    const SLICERS: &[&str] = &["slicer", "timeline", "slicerCache", "timelineCache"];
-    let mut package = Package::new(Cursor::new(bytes), *limits).ok();
-    let mut holds = |key: &str, needles: &[&str]| -> bool {
-        let Some(package) = package.as_mut() else {
-            return false;
-        };
-        let Ok(mut part) = package.open(key) else {
-            return false;
-        };
-        let mut text = String::new();
-        std::io::Read::read_to_string(&mut part, &mut text).is_ok()
-            && needles.iter().any(|n| text.contains(n))
-    };
-    let mut groups = Vec::new();
-    let mut slicers = BTreeSet::new();
-    for (owner, edges) in &source.edges {
-        let sheet = source.reach_of(owner) == Reach::Sheet;
-        let workbook = source.reach_of(owner) == Reach::Workbook;
-        let mut legacy = BTreeSet::new();
-        for edge in edges {
-            if sheet && LEGACY.contains(&edge.kind.as_str()) {
-                legacy.insert(edge.target.clone());
-            }
-            if (sheet || workbook) && SLICERS.contains(&edge.kind.as_str()) {
-                slicers.insert(edge.target.clone());
-            }
-            if sheet && edge.kind == "drawing" {
-                if holds(&edge.target, &["a14:compatExt", ":compatExt"]) {
-                    legacy.insert(edge.target.clone());
-                }
-                if holds(
-                    &edge.target,
-                    &["/drawing/2010/slicer", "/drawing/2012/timeslicer"],
-                ) {
-                    slicers.insert(edge.target.clone());
-                }
-            }
-        }
-        if !legacy.is_empty() {
-            groups.push(legacy);
-        }
-    }
-    if !slicers.is_empty() {
-        groups.push(slicers);
-    }
-    groups
-}
-
-/// Whether `key`, a chart part, is bound to a pivot by its `c:pivotSource` text (D5.2): such a
-/// chart's drawing is T-4950's to write from the model.
-fn is_pivot_chart(package: &mut Option<Package<Cursor<&[u8]>>>, key: &str) -> bool {
-    let Some(package) = package.as_mut() else {
-        return false;
-    };
-    let Ok(mut part) = package.open(key) else {
-        return false;
-    };
-    let mut text = String::new();
-    std::io::Read::read_to_string(&mut part, &mut text).is_ok() && text.contains("pivotSource")
-}
-
-/// Every source part a regenerated save left out, each with its reason (D5.1, D5.2, D5.6), in
-/// the source's entry order. `output` is the saved package, `kept` the source part keys the save
-/// wrote anyway (T-4950's pivot drawings). Roots and groups are decided in source part-name order.
-pub(super) fn regenerated(
-    bytes: &[u8],
-    output: &[u8],
-    kept: &BTreeSet<String>,
-    limits: &ImportLimits,
-) -> Result<Vec<Dropped>, String> {
-    let source = Graph::read(bytes, limits)?;
-    let written = Graph::read(output, limits)?;
-    let written_ids: BTreeSet<String> = written.identities().into_values().collect();
-    let source_ids = source.identities();
-    let mut package = Package::new(Cursor::new(bytes), *limits).ok();
-    // The reason of each part by key; parts not in it are written or kept.
-    let mut reasons: BTreeMap<String, DropReason> = BTreeMap::new();
-    let mut decide_unit = |unit: &BTreeSet<String>, reasons: &mut BTreeMap<String, DropReason>| {
-        let mut closure = BTreeSet::new();
-        let mut limit = None;
-        for root in unit {
-            match source.closure(root) {
-                Ok(parts) => closure.extend(parts),
-                Err(l) => limit = Some(l),
-            }
-        }
-        if closure.len() > MAX_CLOSURE_SIZE {
-            limit = Some("closure size");
-        }
-        let regenerated = closure.iter().any(|p| {
-            matches!(source.policy(p), Some(Policy::Modelled | Policy::Drop))
-                || (source.reached.get(p).is_some_and(|(_, k)| k == "chart")
-                    && is_pivot_chart(&mut package, p))
-        });
-        let reason = match (limit, regenerated) {
-            (Some(l), _) => DropReason::LimitExceeded {
-                limit: l.to_string(),
-            },
-            (None, true) => DropReason::ClosureReachesRegenerated,
-            // Keepable: no writer yet (T-5000 onward).
-            (None, false) => DropReason::NotPreserved,
-        };
-        for part in closure.iter().chain(unit) {
-            let replayed = matches!(
-                source.policy(part),
-                Some(Policy::Replay | Policy::ReplayIfClean) | None
-            );
-            if replayed && !kept.contains(part) {
-                reasons
-                    .entry(part.clone())
-                    .or_insert_with(|| reason.clone());
-            }
-        }
-    };
-    let groups = coupling_groups(&source, bytes, limits);
-    let grouped: BTreeSet<String> = groups.iter().flatten().cloned().collect();
-    for group in &groups {
-        decide_unit(group, &mut reasons);
-    }
-    let mut keys: Vec<String> = source.entries.iter().map(|e| part_key(e)).collect();
-    keys.sort();
-    for key in &keys {
-        if grouped.contains(key) || kept.contains(key) || reasons.contains_key(key) {
-            continue;
-        }
-        match source.policy(key) {
-            Some(Policy::Modelled) => {
-                if !source_ids
-                    .get(key)
-                    .is_some_and(|id| written_ids.contains(id))
-                {
-                    reasons.insert(key.clone(), DropReason::NotPreserved);
-                }
-            }
-            Some(Policy::Drop) => {
-                reasons.insert(key.clone(), DropReason::Policy);
-            }
-            // The export writes no macro-enabled package yet (T-5010): the macros are lost
-            // because nothing writes them, not because the caller asked for a plain file.
-            Some(Policy::Active) => {
-                reasons.insert(key.clone(), DropReason::NotPreserved);
-            }
-            Some(Policy::Replay | Policy::ReplayIfClean) | None => {
-                decide_unit(&BTreeSet::from([key.clone()]), &mut reasons);
-            }
-        }
-    }
-    Ok(source
-        .entries
-        .iter()
-        .filter_map(|e| {
-            reasons
-                .get(&part_key(e))
-                .map(|r| Dropped::new(e.clone(), r.clone()))
-        })
-        .collect())
-}
-
-/// The calcChain parts of `bytes` (by the relationship that reaches them), within `limits`.
-pub(super) fn calc_chains(bytes: &[u8], limits: &ImportLimits) -> Result<Vec<String>, String> {
-    let graph = Graph::read(bytes, limits)?;
-    Ok(graph
-        .entries
-        .iter()
-        .filter(|e| graph.policy(&part_key(e)) == Some(Policy::Drop))
-        .filter(|e| {
-            graph
-                .reached
-                .get(&part_key(e))
-                .is_some_and(|(_, k)| k == "calcChain")
-        })
-        .cloned()
-        .collect())
 }
 
 #[cfg(test)]
-mod tests {
-    use std::collections::BTreeSet;
-    use std::io::{Cursor, Write as _};
-
-    use super::{
-        policy_of, regenerated, Graph, Policy, Reach, MAX_CLOSURE_DEPTH, MAX_CLOSURE_SIZE,
-    };
-    use crate::export::report::DropReason;
-    use crate::import::ImportLimits;
-
-    const R: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
-
-    /// A zip of `files`.
-    fn zip(files: &[(&str, String)]) -> Vec<u8> {
-        let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
-        for (name, text) in files {
-            zip.start_file(*name, zip::write::SimpleFileOptions::default())
-                .expect("start");
-            zip.write_all(text.as_bytes()).expect("write");
-        }
-        zip.finish().expect("finish").into_inner()
-    }
-
-    /// A `.rels` part with these (id, kind, target, external) relationships.
-    fn rels(list: &[(&str, &str, &str, bool)]) -> String {
-        let mut out = String::from(
-            r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">"#,
-        );
-        for (id, kind, target, external) in list {
-            let mode = if *external {
-                r#" TargetMode="External""#
-            } else {
-                ""
-            };
-            out.push_str(&format!(
-                r#"<Relationship Id="{id}" Type="{R}{kind}" Target="{target}"{mode}/>"#
-            ));
-        }
-        out + "</Relationships>"
-    }
-
-    /// A workbook with one sheet; `wb` and `sheet` are extra workbook and sheet relationships,
-    /// `parts` extra parts.
-    fn package(
-        wb: &[(&str, &str, &str, bool)],
-        sheet: &[(&str, &str, &str, bool)],
-        parts: &[(&str, String)],
-    ) -> Vec<u8> {
-        let mut wb_rels = vec![("rId1", "worksheet", "worksheets/sheet1.xml", false)];
-        wb_rels.extend_from_slice(wb);
-        let mut files = vec![
-            (
-                "_rels/.rels",
-                rels(&[("rId1", "officeDocument", "xl/workbook.xml", false)]),
-            ),
-            ("xl/workbook.xml", "<workbook/>".to_string()),
-            ("xl/_rels/workbook.xml.rels", rels(&wb_rels)),
-            ("xl/worksheets/sheet1.xml", "<worksheet/>".to_string()),
-            ("xl/worksheets/_rels/sheet1.xml.rels", rels(sheet)),
-        ];
-        files.extend(parts.iter().cloned());
-        zip(&files)
-    }
-
-    fn limits() -> ImportLimits {
-        ImportLimits::default()
-    }
-
-    /// The drops of a regenerated save of `source` whose output is `output`, as (item, reason).
-    fn drops(source: &[u8], output: &[u8]) -> Vec<(String, DropReason)> {
-        regenerated(source, output, &BTreeSet::new(), &limits())
-            .expect("decides")
-            .into_iter()
-            .map(|d| (d.item, d.reason))
-            .collect()
-    }
-
-    #[test]
-    fn each_policy_and_the_unknown_defaults() {
-        assert_eq!(
-            policy_of("worksheet", None, Reach::Workbook),
-            Policy::Modelled
-        );
-        assert_eq!(
-            policy_of("customXml", None, Reach::Workbook),
-            Policy::Replay
-        );
-        assert_eq!(
-            policy_of("drawing", None, Reach::Sheet),
-            Policy::ReplayIfClean
-        );
-        assert_eq!(
-            policy_of("vbaProject", None, Reach::Workbook),
-            Policy::Active
-        );
-        assert_eq!(policy_of("calcChain", None, Reach::Workbook), Policy::Drop);
-        assert_eq!(policy_of("rdArray", None, Reach::Workbook), Policy::Drop);
-        // Unknown types: by where they hang, or by a content type naming VBA.
-        assert_eq!(
-            policy_of("futureThing", None, Reach::Package),
-            Policy::Replay
-        );
-        assert_eq!(
-            policy_of("futureThing", None, Reach::Workbook),
-            Policy::Replay
-        );
-        assert_eq!(
-            policy_of("namedSheetView", None, Reach::Sheet),
-            Policy::ReplayIfClean
-        );
-        assert_eq!(
-            policy_of(
-                "x",
-                Some("application/vnd.ms-office.vbaProject"),
-                Reach::Workbook
-            ),
-            Policy::Active
-        );
-    }
-
-    #[test]
-    fn a_closure_follows_internal_relationships_within_its_limits() {
-        // A drawing whose chart points back at a modelled table; an external target is not
-        // followed.
-        let src = package(
-            &[],
-            &[
-                ("rId1", "drawing", "../drawings/drawing1.xml", false),
-                ("rId2", "table", "../tables/table1.xml", false),
-            ],
-            &[
-                ("xl/drawings/drawing1.xml", "<wsDr/>".into()),
-                (
-                    "xl/drawings/_rels/drawing1.xml.rels",
-                    rels(&[
-                        ("rId1", "chart", "../charts/chart1.xml", false),
-                        ("rId2", "image", "https://example.com/x.png", true),
-                    ]),
-                ),
-                ("xl/charts/chart1.xml", "<chartSpace/>".into()),
-                (
-                    "xl/charts/_rels/chart1.xml.rels",
-                    rels(&[("rId1", "table", "../tables/table1.xml", false)]),
-                ),
-                ("xl/tables/table1.xml", "<table/>".into()),
-            ],
-        );
-        let graph = Graph::read(&src, &limits()).expect("reads");
-        let closure = graph
-            .closure("xl/drawings/drawing1.xml")
-            .expect("within limits");
-        assert_eq!(
-            closure,
-            BTreeSet::from([
-                "xl/drawings/drawing1.xml".into(),
-                "xl/charts/chart1.xml".into(),
-                "xl/tables/table1.xml".into()
-            ])
-        );
-        // The output has the table but no drawing: the drawing and its chart reach a modelled
-        // part.
-        let out = package(
-            &[],
-            &[("rId2", "table", "../tables/table1.xml", false)],
-            &[("xl/tables/table1.xml", "<table/>".into())],
-        );
-        assert_eq!(
-            drops(&src, &out),
-            [
-                (
-                    "xl/drawings/drawing1.xml".to_string(),
-                    DropReason::ClosureReachesRegenerated
-                ),
-                (
-                    "xl/charts/chart1.xml".to_string(),
-                    DropReason::ClosureReachesRegenerated
-                ),
-            ]
-        );
-        // A chain deeper than the limit.
-        let mut parts = Vec::new();
-        for n in 0..=MAX_CLOSURE_DEPTH {
-            parts.push((format!("x/p{n}.xml"), "<p/>".to_string()));
-            parts.push((
-                format!("x/_rels/p{n}.xml.rels"),
-                rels(&[("rId1", "next", &format!("p{}.xml", n + 1), false)]),
-            ));
-        }
-        parts.push((
-            format!("x/p{}.xml", MAX_CLOSURE_DEPTH + 1),
-            "<p/>".to_string(),
-        ));
-        let parts: Vec<(&str, String)> =
-            parts.iter().map(|(n, t)| (n.as_str(), t.clone())).collect();
-        let deep = package(&[("rId9", "next", "../x/p0.xml", false)], &[], &parts);
-        let graph = Graph::read(&deep, &limits()).expect("reads");
-        assert_eq!(graph.closure("x/p0.xml"), Err("closure depth"));
-        // A root fanning out to more parts than the size limit.
-        let fan: Vec<(String, String)> = (0..=MAX_CLOSURE_SIZE)
-            .map(|n| (format!("x/q{n}.xml"), "<q/>".to_string()))
-            .collect();
-        let edges: Vec<(String, String)> = (0..=MAX_CLOSURE_SIZE)
-            .map(|n| (format!("rId{n}"), format!("q{n}.xml")))
-            .collect();
-        let edge_refs: Vec<(&str, &str, &str, bool)> = (edges.iter())
-            .map(|(id, t)| (id.as_str(), "next", t.as_str(), false))
-            .collect();
-        let mut parts: Vec<(&str, String)> =
-            fan.iter().map(|(n, t)| (n.as_str(), t.clone())).collect();
-        parts.push(("x/root.xml", "<r/>".into()));
-        let edge_xml = rels(&edge_refs);
-        parts.push(("x/_rels/root.xml.rels", edge_xml));
-        let wide = package(&[("rId9", "next", "../x/root.xml", false)], &[], &parts);
-        let graph = Graph::read(&wide, &limits()).expect("reads");
-        assert_eq!(graph.closure("x/root.xml"), Err("closure size"));
-        let got = drops(&wide, &package(&[], &[], &[]));
-        assert!(
-            got.contains(&(
-                "x/root.xml".to_string(),
-                DropReason::LimitExceeded {
-                    limit: "closure size".into()
-                }
-            )),
-            "{:?}",
-            &got[..3.min(got.len())]
-        );
-    }
-
-    #[test]
-    fn a_modelled_part_the_output_lacks_is_not_preserved_and_shared_parts_are_decided_once() {
-        // Two tables in the source, one written; a custom XML part reached twice.
-        let src = package(
-            &[
-                ("rId7", "customXml", "../customXml/item1.xml", false),
-                ("rId8", "customXml", "../customXml/item1.xml", false),
-            ],
-            &[
-                ("rId1", "table", "../tables/table1.xml", false),
-                ("rId2", "table", "../tables/table2.xml", false),
-            ],
-            &[
-                ("xl/tables/table1.xml", "<table/>".into()),
-                ("xl/tables/table2.xml", "<table/>".into()),
-                ("customXml/item1.xml", "<x/>".into()),
-                ("xl/calcChain.xml", "<calcChain/>".into()),
-            ],
-        );
-        let out = package(
-            &[],
-            &[("rId1", "table", "../tables/table1.xml", false)],
-            &[("xl/tables/table1.xml", "<table/>".into())],
-        );
-        let got = drops(&src, &out);
-        assert!(
-            got.contains(&("xl/tables/table2.xml".to_string(), DropReason::NotPreserved)),
-            "{got:?}"
-        );
-        assert_eq!(
-            got.iter()
-                .filter(|(i, _)| i == "customXml/item1.xml")
-                .count(),
-            1,
-            "{got:?}"
-        );
-        // calcChain reached by no relationship here is an orphan, not preserved.
-        assert!(
-            got.contains(&("xl/calcChain.xml".to_string(), DropReason::NotPreserved)),
-            "{got:?}"
-        );
-    }
-
-    #[test]
-    fn coupling_groups_and_pivot_charts_are_decided_as_a_unit() {
-        // Notes and a control share the VML; the control's ctrlProp reaches a modelled table, so
-        // the whole legacy group goes with it. A chart holding `c:pivotSource` is T-4950's.
-        let src = package(
-            &[(
-                "rId5",
-                "slicerCache",
-                "slicerCaches/slicerCache1.xml",
-                false,
-            )],
-            &[
-                ("rId1", "vmlDrawing", "../drawings/vmlDrawing1.vml", false),
-                ("rId2", "comments", "../comments1.xml", false),
-                ("rId3", "ctrlProp", "../ctrlProps/ctrlProp1.xml", false),
-                ("rId4", "drawing", "../drawings/drawing1.xml", false),
-                ("rId6", "slicer", "../slicers/slicer1.xml", false),
-            ],
-            &[
-                ("xl/drawings/vmlDrawing1.vml", "<xml/>".into()),
-                ("xl/comments1.xml", "<comments/>".into()),
-                ("xl/ctrlProps/ctrlProp1.xml", "<formControlPr/>".into()),
-                (
-                    "xl/ctrlProps/_rels/ctrlProp1.xml.rels",
-                    rels(&[("rId1", "table", "../tables/table1.xml", false)]),
-                ),
-                ("xl/tables/table1.xml", "<table/>".into()),
-                (
-                    "xl/drawings/drawing1.xml",
-                    "<wsDr><a14:compatExt spid=\"_x0000_s1025\"/></wsDr>".into(),
-                ),
-                (
-                    "xl/drawings/_rels/drawing1.xml.rels",
-                    rels(&[("rId1", "chart", "../charts/chart1.xml", false)]),
-                ),
-                (
-                    "xl/charts/chart1.xml",
-                    "<chartSpace><c:pivotSource/></chartSpace>".into(),
-                ),
-                ("xl/slicers/slicer1.xml", "<slicers/>".into()),
-                (
-                    "xl/slicerCaches/slicerCache1.xml",
-                    "<slicerCacheDefinition/>".into(),
-                ),
-            ],
-        );
-        let out = package(&[], &[], &[]);
-        let got = drops(&src, &out);
-        for part in [
-            "xl/drawings/vmlDrawing1.vml",
-            "xl/comments1.xml",
-            "xl/ctrlProps/ctrlProp1.xml",
-            "xl/drawings/drawing1.xml",
-            "xl/charts/chart1.xml",
-        ] {
-            assert!(
-                got.contains(&(part.to_string(), DropReason::ClosureReachesRegenerated)),
-                "{part}: {got:?}"
-            );
-        }
-        // The slicer and its cache form the workbook's slicer group; nothing writes them yet.
-        for part in ["xl/slicers/slicer1.xml", "xl/slicerCaches/slicerCache1.xml"] {
-            assert!(
-                got.contains(&(part.to_string(), DropReason::NotPreserved)),
-                "{part}: {got:?}"
-            );
-        }
-    }
-
-    /// A two-sheet book whose second sheet (`sheetId` 2) holds a table; `swapped` lists the sheets
-    /// in the other order, in `<sheets>` and in the `.rels`, as a save after moving them would.
-    fn two_sheets(swapped: bool) -> Vec<u8> {
-        let r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-        let (first, second) = if swapped {
-            ("rId2", "rId1")
-        } else {
-            ("rId1", "rId2")
-        };
-        let sheets = if swapped {
-            format!(
-                r#"<sheet name="B" sheetId="2" r:id="{second}"/><sheet name="A" sheetId="1" r:id="{first}"/>"#
-            )
-        } else {
-            format!(
-                r#"<sheet name="A" sheetId="1" r:id="{first}"/><sheet name="B" sheetId="2" r:id="{second}"/>"#
-            )
-        };
-        let workbook = format!(r#"<workbook xmlns:r="{r}"><sheets>{sheets}</sheets></workbook>"#);
-        let wb_rels = rels(&[
-            (first, "worksheet", "worksheets/sheet1.xml", false),
-            (second, "worksheet", "worksheets/sheet2.xml", false),
-        ]);
-        zip(&[
-            (
-                "_rels/.rels",
-                rels(&[("rId1", "officeDocument", "xl/workbook.xml", false)]),
-            ),
-            ("xl/workbook.xml", workbook),
-            ("xl/_rels/workbook.xml.rels", wb_rels),
-            ("xl/worksheets/sheet1.xml", "<worksheet/>".into()),
-            ("xl/worksheets/sheet2.xml", "<worksheet/>".into()),
-            (
-                "xl/worksheets/_rels/sheet2.xml.rels",
-                rels(&[("rId1", "table", "../tables/table1.xml", false)]),
-            ),
-            ("xl/tables/table1.xml", "<table/>".into()),
-        ])
-    }
-
-    #[test]
-    fn a_sheet_is_matched_by_its_sheet_id_wherever_it_moved() {
-        assert!(drops(&two_sheets(false), &two_sheets(true)).is_empty());
-    }
-}
+mod tests;

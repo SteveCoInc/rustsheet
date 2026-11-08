@@ -70,7 +70,8 @@ pub fn save_preserving<W: Write + Seek>(
     let (buffer, kept) = save_regenerated(model, pristine, source, Cursor::new(Vec::new()))?;
     let bytes = buffer.into_inner();
     writer.write_all(&bytes)?;
-    let dropped = report::regenerated(source, &bytes, &kept, limits);
+    let dropped = super::ownership::regenerated(source, &bytes, &kept, limits)
+        .unwrap_or_else(|which| vec![report::unreadable(which)]);
     Ok((
         writer,
         SaveReport::new(SaveTier::Regenerated { reason }, dropped),

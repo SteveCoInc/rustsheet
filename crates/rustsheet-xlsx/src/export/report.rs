@@ -8,8 +8,6 @@
 //! - a source the report cannot inventory within the load's limits gives one `LimitExceeded`
 //!   entry with an empty item, never an empty list that would claim nothing was dropped.
 
-use std::collections::BTreeSet;
-
 use super::SaveTier;
 use crate::import::{zip_entry_names, ImportLimits, PartNames};
 
@@ -117,24 +115,11 @@ impl DropReason {
     }
 }
 
-/// The source parts a regenerated save left out, each with its reason: the ownership matrix's
-/// decisions (SPEC-0034 D5.1, D5.2, D5.6; [`super::ownership`]). `output` is the saved package,
-/// `kept` the source part keys it wrote anyway, `limits` the ones the workbook was loaded with.
-pub(super) fn regenerated(
-    source: &[u8],
-    output: &[u8],
-    kept: &BTreeSet<String>,
-    limits: &ImportLimits,
-) -> Vec<Dropped> {
-    super::ownership::regenerated(source, output, kept, limits)
-        .unwrap_or_else(|_| vec![unreadable("the source package")])
-}
-
 /// The calcChain a patched save dropped: the source's, when `output` no longer holds it.
 pub(super) fn patched(source: &[u8], output: &[u8], limits: &ImportLimits) -> Vec<Dropped> {
     let chains = match super::ownership::calc_chains(source, limits) {
         Ok(chains) => chains,
-        Err(_) => return vec![unreadable("the source package")],
+        Err(which) => return vec![unreadable(which)],
     };
     let Some(out) = zip_entry_names(output) else {
         return vec![unreadable("the saved package")];
@@ -149,7 +134,7 @@ pub(super) fn patched(source: &[u8], output: &[u8], limits: &ImportLimits) -> Ve
 
 /// The entry for a package the report could not inventory within the load's limits: an empty
 /// item, so it names no part, and the reason.
-fn unreadable(what: &str) -> Dropped {
+pub(super) fn unreadable(what: &str) -> Dropped {
     Dropped::new(
         "",
         DropReason::LimitExceeded {
