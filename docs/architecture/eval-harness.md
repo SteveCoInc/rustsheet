@@ -421,7 +421,8 @@ Only `pass` counts as passing. Case statuses:
   Each `argument_coverage[]` row's `unseen_pairs` (T-3277) lists the expected argument-class pairs
   (parameter names and `ArgClass` of each) that its `pairwise` share counts but no Excel-evidence call has passed.
 - `eval/baseline/<suite>.txt`: known failures, `F` bit-level and `E` outside decision 0355's
-  envelope, ratcheted on the `E` lines (see `docs/process/quality-gates.md`).
+  envelope, `W` those that are a wrong type, error or text, ratcheted on the `E` and `W` lines
+  (see `docs/process/quality-gates.md`).
 - `eval/baseline/visible-parity.txt`: the visible-parity lock (decisions 0088, 0219, 0355), one
   sorted `case<TAB>count` line per case with in-scope cells outside the envelope; `check` fails a
   case above its line, and a case with no line allows none. `update-baseline` writes new cases'

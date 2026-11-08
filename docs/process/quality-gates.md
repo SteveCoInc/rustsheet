@@ -46,21 +46,27 @@ On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygien
     type, error, text or boolean). Every `E` item is also an `F` item. A whole-case item (`*`,
     `!status`) is always `E`: a crashed or missing case is never drift. In a `cases`-mode suite
     (corpus-bench) a case fails `*` only when one of its cells is outside the envelope.
+    `W<TAB>case<TAB>item` lists the `E` items that are `WrongType`, and every whole-case item:
+    every `W` item is also an `E` and an `F` item.
   - In a case whose checked-cell count is unchanged:
     - a **regression** is a new `E` item, including an item that drifted before and now leaves
-      the envelope;
+      the envelope, or a new `W` item, including an `E` item that was a number off Excel and is
+      now a wrong type, error or text;
     - **drift** is a new `F` item without an `E` item: allowed, printed as `drift case Sheet!A1`;
-    - an item that leaves `E` but stays in `F` moved **into the envelope**, recorded like a fix.
+    - an item that leaves `E` but stays in `F` moved **into the envelope**, and one that leaves
+      `W` but stays in `E` is now the **right type**; both are recorded like a fix.
 
     Failing items in new or changed cases are new coverage, as before.
   - `make eval-check` fails on any regression, and while the file is out of date (a fix, a move
     into the envelope, drift, new coverage or a new case), so a PR's diff shows every drift line.
-    Each suite's summary line counts `drift N` and `into envelope N`.
-  - `make eval-baseline` rewrites it, recording fixes, moves into the envelope and drift, and
+    Each suite's summary line counts `drift N`, `into envelope N` and `right type N`.
+  - `make eval-baseline` rewrites it, recording fixes, moves into the envelope or to the right
+    type, and drift, and
     refuses regressions unless `--allow-regressions` is passed. That flag is only legitimate with
     a decision record, for example when an oracle re-run shows the old expectation was wrong.
   - A baseline without the `E` kind in its header (written before decision 0355, and every
-    round-trip baseline) is judged as if every `F` item were an `E` item.
+    round-trip baseline) is judged as if every `F` item were an `E` and a `W` item, and one
+    without the `W` kind as if every `E` item were a `W` item.
   - Displayed text (a sidecar's `text` map, decision 0068) is gated the same way on its own lines,
     `TC` (a case's scored text cells) and `TF` (a known text failure), in every gated suite
     (decision 0070). So is the layout of a pivot a case compares in full (an engine-export
