@@ -76,11 +76,14 @@ envelope is a gate tolerance, not a behaviour target.
   - **Inside:**
     - a bit-exact pass, or a pinned deviation;
     - two numbers within `ENVELOPE_DIGITS` of each other, or within 4 ulp of each other (decision 0088's
-      `NumericUlp`). 4 ulp is inside 12 digits everywhere except for an Excel 0 against a subnormal, where
-      digit-counting has nothing to hold the value to and the two are equal in effect (T-5092, owner ruling
-      2026-11-08);
+      `NumericUlp`). 4 ulp is inside 12 digits everywhere except at an Excel 0 or a deep subnormal (below
+      about 1e-311, where half a unit in the 12th digit underflows below 4 ulp): there digit-counting has
+      nothing to hold the value to and the two are equal in effect (T-5092, owner ruling 2026-11-08). Only
+      for a cell held to Excel (`Target::Excel`);
     - a number within ε (or the absolute floor) of `c.math`;
-    - an R3 cell (`Target::Math`) within ε of the math.
+    - an R3 cell within ε of the math. Every cell R3 marks with its evidence (Excel more than G off the math)
+      is held to the math only: `Target::Math` where the engine is within ε of it, `Target::MathMissed`
+      where it is not (T-5097), so an R3 cell that moves to Excel's value is outside.
   - **WrongType:**
     - a number against an error, either way;
     - two different error codes;

@@ -258,6 +258,43 @@ fn cells_are_e_items_only_outside_the_envelope() {
     assert_eq!(base.wrong_type_items(), &base.wrong_type);
 }
 
+/// T-5097: an R3 cell (`Target::MathMissed`) whose engine value is Excel's exact value scores a
+/// pass against Excel, yet R3 holds it to the math, which it misses: the baseline lists it as an
+/// `E` item even in a case whose every cell passes, so its arrival is a regression.
+#[test]
+fn an_r3_cell_at_excels_exact_value_off_the_math_is_an_e_item() {
+    use crate::accuracy::envelope::MathValue;
+    let mut back = scored("A1", n(1.0));
+    back.math = Some(MathValue::Number(1.5));
+    back.target = crate::runner::Target::MathMissed;
+    assert_eq!(back.verdict, Verdict::Pass);
+    assert_eq!(cell_envelope(&back), CellEnvelope::Outside);
+    let passing = CaseResult {
+        status: CaseStatus::Pass,
+        checked: 1,
+        cells: vec![back.clone()],
+        ..CaseResult::for_test("s/r3", "s")
+    };
+    let base = Baseline::from_results(BaselineMode::Cells, &[&passing]);
+    assert_eq!(base.failing, items(&[("s/r3", "S!A1")]));
+    assert_eq!(base.outside, items(&[("s/r3", "S!A1")]));
+    assert!(base.wrong_type.is_empty());
+    // Against a baseline where the case passed, the item is a regression.
+    let before = Baseline::from_results(
+        BaselineMode::Cells,
+        &[&CaseResult {
+            cells: vec![scored("A1", n(1.0))],
+            ..passing.clone()
+        }],
+    );
+    assert_eq!(diff(&before, &base).regressions, vec!["s/r3\tS!A1"]);
+    // The same bit-exact cell held to Excel is no failure at all.
+    let mut plain = back;
+    plain.target = crate::runner::Target::Excel;
+    assert_eq!(cell_envelope(&plain), CellEnvelope::Inside);
+    assert!(!known_failure(&plain));
+}
+
 /// A case that did not run is never drift, in either mode.
 #[test]
 fn whole_case_items_are_always_outside() {

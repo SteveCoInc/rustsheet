@@ -3,7 +3,7 @@ id: T-5059
 title: "Pivot date item subtotal labels show the date, not its serial (40 gen-pivot cells)"
 milestone: M16
 lane: engine
-status: todo
+status: done
 priority: P1
 size: S
 tier: opus
@@ -31,9 +31,29 @@ A pivot's subtotal label for a date item shows the item as Excel does (`3/31/202
 - Code: the subtotal-label builder of the pivot renderer; reuse the date-item formatting T-4807 added (one definition).
 
 ## Acceptance criteria
-- [ ] The 40 cells above match Excel's text; no other gen-pivot or pivot-corpus cell regresses.
-- [ ] docs/excel-semantics records the subtotal-label rule (the T-4807 UNVERIFIED edge).
-- [ ] `make check` green; reviewers approve.
+- [x] The 40 cells above match Excel's text; no other gen-pivot or pivot-corpus cell regresses.
+- [x] docs/excel-semantics records the subtotal-label rule (the T-4807 UNVERIFIED edge).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Date page-item selections and seconds (T-4807's other UNVERIFIED edges).
+
+## Outcome
+`Cells::line_item` (crates/rustsheet-engine/src/pivot/layout/render.rs) now writes a date item of a subtotal label in the
+format its label cell shows, reusing `item_format` (so `date_item_format`'s `m/d/yyyy`, ` h:mm` for a time part, and a
+date group item's m/d/yyyy), through the new `item_text_as`, which `item_text_in` now delegates to. A pivot field
+`numFmtId` still wins; numbers and texts keep `item_text`. The caption filter's `item_text` is unchanged (its date item
+reads as the serial, pivot/filter/tests.rs). This covers `<item> Total`, `subtotalCaption` with `?`, values-inside
+`<item> <Data caption>` and custom subtotals' `<item> <Function>`. Test: `a_date_items_subtotal_label_shows_the_date`
+(pivot/layout/render/tests.rs). pivots.md "Item casing when cache and source disagree, and date items" gains the
+"Date subtotal labels" rule and drops it from the UNVERIFIED list (T-5049 keeps seconds, page items and items below 1).
+
+Eval delta: gen-pivot known failures 65 cells fewer (130 baseline lines, F + TF): the 40 cells above plus 25 more date
+subtotal labels in 01865529b5a09c0b, 36996978427905b2, 462f10551d480f9d, ca5c8fa99c13d747, ec473260bb2065b3 and
+f9e7edbb5b74011a; no regression in any compatibility suite. Not fixed: 36996978427905b2 P02!L29 `4/1/2024 Total` over
+45382.99999999 (now `4/1/2024 0:00 Total`, the time-part test on the unrounded serial; T-4917 owns rounding to the
+second), and labels whose data-caption part differs (`Sum` for `Sum of Units`), other owners'.
+
+Locally `make eval-baseline` reported roundtrip-calipers R0 regressions on roundtrip/pivot_named_range (T-5077, on
+main before this change) and timeouts on pv_goldens/pv26_002 and pv26_2_002: the same case built from main without this
+change takes 156 s against the 60 s per-case timeout on this 4-core container, so they are the machine, not the change.

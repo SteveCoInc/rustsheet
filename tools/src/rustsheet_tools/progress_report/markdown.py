@@ -41,12 +41,18 @@ def table(header: list[str], rows: list[list[str]], right_from: int = 1) -> str:
 MD_INLINE = "\\*_[]()!#~"
 
 
-def md_text(text: str) -> str:
-    """`text` made safe to put in running Markdown: `&` written as an entity first (so a literal
-    `&lt;` in `text` stays text, and md_cell's own entities are not escaped twice), inline
-    punctuation and `\\` escaped, then md_cell (whose entities hold a `#` that must stay unescaped)."""
+def md_inline(text: str) -> str:
+    """`text` with `&` written as an entity first (so a literal `&lt;` in `text` stays text, and
+    md_cell's own entities are not escaped twice), then inline punctuation and `\\` escaped: the
+    part of md_text a `table` cell needs, since `table` applies md_cell itself (T-5098)."""
     amp = text.replace("&", "&amp;")
-    return md_cell("".join(f"\\{c}" if c in MD_INLINE else c for c in amp))
+    return "".join(f"\\{c}" if c in MD_INLINE else c for c in amp)
+
+
+def md_text(text: str) -> str:
+    """`text` made safe to put in running Markdown: md_inline, then md_cell (whose entities hold a
+    `#` that must stay unescaped)."""
+    return md_cell(md_inline(text))
 
 
 def signed(delta: int) -> str:

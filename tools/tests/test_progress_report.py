@@ -853,6 +853,20 @@ def test_failing_functions_are_worst_first_and_at_most_ten_per_tier() -> None:
     assert "| Foundational | none |  |  |  |  |  |" in text
 
 
+def test_failing_function_names_are_escaped_in_the_table() -> None:
+    # T-5098: a name from the report is report text; a `|`, `_` or `*` in it must not break the
+    # table or start emphasis, and `table`'s own md_cell must not escape it twice.
+    gates = usage_gates()
+    odd = ufn("A|B_C*", "expert", 100, wrong=3, meets=False)
+    gates["functions"].append(odd)
+    gates["tiers"][1]["failing_functions"] = ["A|B_C*"]
+    u = load_usage_gates({"usage_gates": gates})
+    assert u is not None
+    row = next(line for line in usage.failing_table(u).splitlines() if "A\\|B" in line)
+    assert "| A\\|B\\_C\\* |" in row
+    assert row.replace("\\|", "").count("|") == 8  # 7 cells, so 8 unescaped pipes
+
+
 @pytest.mark.parametrize(
     ("mutate", "error"),
     [

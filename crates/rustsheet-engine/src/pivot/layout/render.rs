@@ -139,6 +139,17 @@ pub enum CellFormat {
     Code(&'static str),
 }
 
+impl CellFormat {
+    /// The format code: an id's as the workbook's `num_fmts` resolve it (an id they do not hold
+    /// is General, as `get_num_fmt` reads it), or the code itself.
+    pub(crate) fn code(self, num_fmts: &[NumFmt]) -> String {
+        match self {
+            CellFormat::Id(id) => get_num_fmt(i32::try_from(id).unwrap_or(0), num_fmts),
+            CellFormat::Code(code) => code.to_string(),
+        }
+    }
+}
+
 /// The format of a date item's label (pivots.md "Item casing when cache and source disagree, and
 /// date items"): Excel shows it as `m/d/yyyy`, with ` h:mm` when it has a time part, whatever the
 /// source cells' format. probes/t2085-getpivotdata-items D!A4:A6 and t4130-pivot-date-filters
@@ -205,12 +216,38 @@ fn item_format(
 /// `numFmtId` labels its subtotals (`7.00 Total`, probes/t4717-pivot-cell-formats L1!A5) and its
 /// `PivotChart` categories ([`chart`](super::chart)).
 pub(crate) fn item_text_in(item: &CacheItem, id: u32, num_fmts: &[NumFmt]) -> String {
+    item_text_as(item, CellFormat::Id(id), num_fmts)
+}
+
+/// An item's label as text in `format` (en-US): a number or date item formatted, any other item
+/// as [`item_text`].
+fn item_text_as(item: &CacheItem, format: CellFormat, num_fmts: &[NumFmt]) -> String {
     match item {
         CacheItem::Number(value) | CacheItem::Date(value) => {
-            let code = get_num_fmt(i32::try_from(id).unwrap_or(0), num_fmts);
-            format_number(*value, &code, LABEL_LOCALE).text
+            format_number(*value, &format.code(num_fmts), LABEL_LOCALE).text
         }
         other => item_text(other),
+    }
+}
+
+/// The text an item's label cell shows: the item in [`item_format`] (en-US), so a date item reads
+/// `1/1/2024`, a number `2.5` and a boolean `TRUE`. GETPIVOTDATA matches a text item argument
+/// against it (docs/excel-semantics/web.md "GETPIVOTDATA on other pivot shapes (T-2085)", "Number,
+/// date and boolean items": IT Q!A2, A4, A9, B3, C2, C5 match; `"2024-01-01"` and `"45292"`
+/// do not, B4, B6).
+pub(crate) fn item_label(
+    pivot: Option<&PivotField>,
+    field: &CacheField,
+    item: &CacheItem,
+    num_fmts: &[NumFmt],
+) -> String {
+    let (CacheItem::Number(value) | CacheItem::Date(value)) = item else {
+        return item_text(item);
+    };
+    match item_format(pivot, field, item) {
+        Some(CellFormat::Id(id)) => item_text_in(item, id, num_fmts),
+        Some(CellFormat::Code(code)) => format_number(*value, code, LABEL_LOCALE).text,
+        None => item_text(item),
     }
 }
 
@@ -313,10 +350,6 @@ impl Cells<'_> {
             .map(|f| f.name.as_str())
     }
 
-    fn cache_item(&self, field: u32, item: u32) -> Option<&CacheItem> {
-        self.cache_field_item(field, item).map(|(_, item)| item)
-    }
-
     /// Cache field `field` and its item `item`.
     fn cache_field_item(&self, field: u32, item: u32) -> Option<(&CacheField, &CacheItem)> {
         let field = self.cache.fields.get(field as usize)?;
@@ -351,14 +384,22 @@ impl Cells<'_> {
     }
 
     /// The item a subtotal `line` of `axis` totals, as text: in its pivot field's `numFmtId` when
-    /// it has one (probes/t4717-pivot-cell-formats L1!A5 `7.00 Total`), else as [`item_text`].
+    /// it has one (probes/t4717-pivot-cell-formats L1!A5 `7.00 Total`); a date item in the format
+    /// its label cell shows ([`item_format`]: `3/31/2024 Total`, `12/30/1900 18:00 Total`,
+    /// `2/29/1900 Sum`, gen-pivot 462f10551d480f9d, 36996978427905b2, ec473260bb2065b3; T-5059);
+    /// else as [`item_text`].
     fn line_item(&self, axis: &Axis<'_>, line: &AxisLine) -> Option<String> {
         match axis.levels.get(line_depth(line)?)? {
             Level::Field { depth: d, field } => {
                 let (field_index, item) = axis.item(line.node, *d)?;
-                let item = self.cache_item(field_index, item)?;
-                Some(match field.and_then(|f| f.number_format) {
-                    Some(id) => item_text_in(item, id, self.num_fmts),
+                let (cache_field, item) = self.cache_field_item(field_index, item)?;
+                let format = match (field.and_then(|f| f.number_format), item) {
+                    (Some(id), _) => Some(CellFormat::Id(id)),
+                    (None, CacheItem::Date(_)) => item_format(*field, cache_field, item),
+                    (None, _) => None,
+                };
+                Some(match format {
+                    Some(format) => item_text_as(item, format, self.num_fmts),
                     None => item_text(item),
                 })
             }

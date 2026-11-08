@@ -3,7 +3,7 @@ id: T-5097
 title: "cell_envelope holds every R3-marked cell to the math, not only those the engine already passes (mark_r3_math sets Target::Math only within ε)"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -30,13 +30,13 @@ blocks it.
   out to be outside (a regression needing a decision record if one appears in an unchanged case).
 
 ## Acceptance criteria
-- [ ] Every R3-marked cell with a math value is classed against the math only by `cell_envelope`, inside or not;
+- [x] Every R3-marked cell with a math value is classed against the math only by `cell_envelope`, inside or not;
   the closeness buckets' `r3_math` count (decision 0310) keeps counting only the ones the engine passes.
-- [ ] Unit tests: an R3 cell at Excel's value but off the math is `Outside`; one within ε of the math is
+- [x] Unit tests: an R3 cell at Excel's value but off the math is `Outside`; one within ε of the math is
   `Inside`; an unmarked cell is unchanged.
-- [ ] The `make eval-baseline` run after the change is committed (tool output only), with any newly outside
+- [x] The `make eval-baseline` run after the change is committed (tool output only), with any newly outside
   R3 cell listed in the Outcome.
-- [ ] Decision 0355 item 2 records the owner's 4-ulp ruling (2026-11-08, PR #4093): a value within 4 ulp of Excel's
+- [x] Decision 0355 item 2 records the owner's 4-ulp ruling (2026-11-08, PR #4093): a value within 4 ulp of Excel's
   is inside on Excel's side, which keeps Gate A's earlier `NumericUlp` handling. SPEC-0037 design 2 says the 4-ulp
   band is wider than 12 digits only at an Excel 0 or a deep subnormal (below about 1e-311), not at an Excel 0 only.
   (PR #4093 review, Excel-fidelity MINOR.)
@@ -44,3 +44,28 @@ blocks it.
 
 ## Out of scope
 - Which cells R3 marks (decision 0188, the R3 list).
+
+## Outcome
+- `runner::Target` gains `MathMissed`: a cell decision 0188 R3 marks with its evidence (Excel more than G = 1e-4 off
+  the math) where the engine is not within ε of the math. `r1c::r3_marked` is the new test (marked, two numbers, a
+  math value, Excel more than G off it); `r3_math` is `r3_marked` plus the engine inside on the math, as before.
+  `mark_r3_math` sets `Math`, then `MathMissed`, else `Excel`.
+- `cell_envelope` takes Excel's side only for `Target::Excel` cells, and returns early for a bit-exact pass only
+  on those, so every R3-marked cell is held to the math alone, passing or not: an R3 cell that moves to Excel's
+  value, exactly or within 12 digits, is now `Outside`. The `E`/`W` ratchet (`baseline::known_failure` also lists
+  a `MathMissed` cell that passes against Excel but is outside, in passing cases too), the visible lock and the
+  tier gates all see it. R1(c) classifies only failing, visibly-off cells, so it sees such a cell only when it is
+  more than 15 digits off Excel (review round 1, Excel-fidelity BLOCKING). The closeness buckets read `Target::Math` only, so the
+  `r3_math` count (decision 0310) is unchanged: a `MathMissed` cell stays visibly off.
+- Tests: envelope.rs `cell_envelope_holds_an_r3_cell_the_engine_misses_to_the_math_only` (also bit-exact with
+  Excel); baseline `an_r3_cell_at_excels_exact_value_off_the_math_is_an_e_item` (an `E` item in a passing case,
+  and a regression against a baseline where it passed); r1c
+  `a_marked_cell_at_excels_value_off_the_math_counts` (Phase 1b before, Counts now) and the updated
+  `a_marked_cell_off_the_math_stays_visibly_off` (`MathMissed`, r3_math 0, visibly off 1). `cargo test -p
+  rustsheet_eval`: 505 unit + 4 integration pass.
+- `make eval-baseline`: no line changed, no regression. On the full report of main e53d43fa (vendored suites,
+  2026-11-08), all 457 R3-marked cells it lists are on the math (`Math`); none would be `MathMissed`, so no cell
+  moves today. The change guards against a future one.
+- Decision 0355 item 2 now records the 4-ulp ruling and the R3 rule; SPEC-0037 design 2 says the 4-ulp band is
+  wider than 12 digits only at an Excel 0 or a deep subnormal, and names `MathMissed`.
+- Eval delta: none.

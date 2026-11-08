@@ -44,7 +44,6 @@ mod slicer;
 mod sort;
 
 pub use added_groups::{group_by_discrete, AddedGroup};
-pub(crate) use calculated::calculated_answer;
 pub use calculated::{
     check_calculated_fields, CalculatedFieldError, MAX_CALCULATED_FIELDS,
     MAX_CALCULATED_FORMULA_CHARS,
@@ -55,6 +54,7 @@ pub use filter::{
     PivotFilter, PivotFilterKind, RelativeUnit,
 };
 pub use grid::{PivotBudget, PivotPlacement, PivotRefresh, PivotRefreshError, PivotSwap};
+pub(crate) use layout::item_label;
 pub use layout::{
     chart_data, lay_out, records_behind, render, AxisLine, CellFormat, ChartCategory, ChartSeries,
     PivotCell, PivotChartData, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM, COLUMN_LABELS,
@@ -71,6 +71,7 @@ pub use refresh::{
     read_source, refresh, regroup, RangeGrouping, RegroupError, SharedItemsFlags, SourceArea,
     SourceCells,
 };
+pub(crate) use result::page_selection;
 pub use result::{
     compute, compute_on, AxisNode, AxisTree, PivotComputeError, PivotResult, MAX_PIVOT_NODES,
     MAX_PIVOT_WORK,

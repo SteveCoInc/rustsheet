@@ -183,14 +183,24 @@ pub enum CellEnvelope {
 /// Classifies scored eval cell `c` against decision 0355's envelope.
 ///
 /// Unlike [`envelope`], a cell needs no math value: without one only the Excel side decides. A
-/// cell the run marked [`Target::Math`] (decision 0188 R3) is held to the math only. Excel's side
+/// cell the run marked [`Target::Math`] or [`Target::MathMissed`] (decision 0188 R3, T-5097) is
+/// held to the math only, whether the engine passes it or not, and even when it returns Excel's
+/// exact value (a pass against Excel). Excel's side
 /// is [`within_excel`]: 12 significant digits, or 4 ulp (an Excel 0 against a subnormal the engine
 /// keeps is inside; against 1e-200 it is not), the same test [`envelope`] reads, so the accuracy
 /// check, R1(c), the tier gates, the ratchet and the locks agree.
 #[must_use]
 pub fn cell_envelope(c: &CellResult) -> CellEnvelope {
     match c.verdict {
-        Verdict::Pass | Verdict::Deviation => return CellEnvelope::Inside,
+        // A bit-exact match is with Excel's value, so it is inside only for a cell held to Excel:
+        // an R3 cell (`Math`, `MathMissed`) that returns exactly Excel's value is judged on the math
+        // below (T-5097). A pinned deviation (directive 5) stays inside.
+        Verdict::Deviation => return CellEnvelope::Inside,
+        Verdict::Pass => {
+            if c.target == Target::Excel {
+                return CellEnvelope::Inside;
+            }
+        }
         Verdict::TextMismatch
         | Verdict::BoolMismatch
         | Verdict::ErrorMismatch
@@ -202,7 +212,9 @@ pub fn cell_envelope(c: &CellResult) -> CellEnvelope {
         return CellEnvelope::WrongType;
     };
     let on_math = matches!(&c.math, Some(MathValue::Number(m)) if within_math(*engine, *m));
-    let on_excel = c.target != Target::Math && within_excel(c);
+    // Decision 0188 R3 holds a marked cell to the math alone, whether the engine passes it
+    // (`Math`) or not (`MathMissed`, T-5097): Excel's value counts for nothing there.
+    let on_excel = c.target == Target::Excel && within_excel(c);
     if on_math || on_excel {
         CellEnvelope::Inside
     } else {
@@ -327,6 +339,30 @@ mod tests {
         assert_eq!(cell_envelope(&cell), CellEnvelope::Outside);
         cell.math = Some(MathValue::Number(MATH * (1.0 + 1e-13)));
         assert_eq!(cell_envelope(&cell), CellEnvelope::Inside);
+    }
+
+    #[test]
+    fn cell_envelope_holds_an_r3_cell_the_engine_misses_to_the_math_only() {
+        // T-5097: R3 marks the cell (Excel 1e-6 off the math) but the engine sits at Excel's value,
+        // so it is `MathMissed`: outside, though within 12 digits of Excel.
+        let mut cell = eval_cell(n(MATH * (1.0 + 1e-6)), &n(MATH * (1.0 + 1e-6)), Some(MATH));
+        cell.verdict = Verdict::NumericClose;
+        cell.target = Target::MathMissed;
+        assert_eq!(cell_envelope(&cell), CellEnvelope::Outside);
+        // The same values on an unmarked cell are judged on Excel's side as before.
+        cell.target = Target::Excel;
+        assert_eq!(cell_envelope(&cell), CellEnvelope::Inside);
+        // Back within ε of the math: inside, held to the math alone.
+        cell.target = Target::MathMissed;
+        cell.actual = n(MATH * (1.0 + 1e-12));
+        assert_eq!(cell_envelope(&cell), CellEnvelope::Inside);
+        // Exactly Excel's value: a pass against Excel, still outside on the math.
+        let mut exact = eval_cell(n(MATH * (1.0 + 1e-6)), &n(MATH * (1.0 + 1e-6)), Some(MATH));
+        assert_eq!(exact.verdict, Verdict::Pass);
+        exact.target = Target::MathMissed;
+        assert_eq!(cell_envelope(&exact), CellEnvelope::Outside);
+        exact.target = Target::Excel;
+        assert_eq!(cell_envelope(&exact), CellEnvelope::Inside);
     }
 
     #[test]

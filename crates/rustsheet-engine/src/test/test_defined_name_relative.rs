@@ -118,3 +118,98 @@ fn relative_name_corners_stay_in_order() {
     assert_eq!(model.get_text_a1("C1"), "15");
     assert_eq!(model.get_text_a1("D1"), "1");
 }
+
+/// The stored formula of each of `names` after `edit` on sheet `Data` (index 1).
+fn names_after(names: &[(&str, &str)], edit: impl FnOnce(&mut crate::Model)) -> Vec<String> {
+    let mut model = new_empty_model();
+    model.new_sheet();
+    model.rename_sheet("Sheet2", "Data").unwrap();
+    for (name, formula) in names {
+        model.define_name(name, None, formula).unwrap();
+    }
+    edit(&mut model);
+    let list = model.get_defined_name_list();
+    names
+        .iter()
+        .map(|(name, _)| {
+            list.iter()
+                .find(|(n, _, _)| n == name)
+                .map(|(_, _, formula)| formula.clone())
+                .unwrap()
+        })
+        .collect()
+}
+
+// A row or column insert or delete leaves a name's relative rows and columns as they are and
+// moves only its absolute ones (references.md "Relative references in a name";
+// probes/sheet-ops/t4747-name-relative-*, t4760-name-*, excel-graph, T-4760). A name all
+// absolute moves with its cells (T-4702).
+#[test]
+fn row_and_column_edits_move_only_absolute_parts_of_a_name() {
+    let names = [
+        ("Rel", "Data!A5"),
+        ("RowRel", "Data!$A5"),
+        ("RowAbs", "Data!A$5"),
+        ("Abs", "Data!$E$5"),
+        ("Box", "Data!$A$3:A6"),
+    ];
+    let insert_row = names_after(&names, |m| m.insert_rows(1, 4, 1).unwrap());
+    assert_eq!(
+        insert_row,
+        [
+            "Data!A5",
+            "Data!$A5",
+            "Data!A$6",
+            "Data!$E$6",
+            "Data!$A$3:A6"
+        ]
+    );
+    // A relative row on the deleted line is left alone, not `#REF!`.
+    let delete_row = names_after(&names, |m| m.delete_rows(1, 5, 1).unwrap());
+    assert_eq!(
+        delete_row,
+        ["Data!A5", "Data!$A5", "#REF!", "#REF!", "Data!$A$3:A6"]
+    );
+    // `Box` becomes `$B$3:A6`, whose corners print in order (the same cells, B3:A6 is A3:B6).
+    let insert_column = names_after(&names, |m| m.insert_columns(1, 1, 1).unwrap());
+    assert_eq!(
+        insert_column,
+        [
+            "Data!A5",
+            "Data!$B5",
+            "Data!A$5",
+            "Data!$F$5",
+            "Data!A$3:$B6"
+        ]
+    );
+    let delete_column = names_after(&names, |m| m.delete_columns(1, 2, 1).unwrap());
+    assert_eq!(
+        delete_column,
+        [
+            "Data!A5",
+            "Data!$A5",
+            "Data!A$5",
+            "Data!$D$5",
+            "Data!$A$3:A6"
+        ]
+    );
+}
+
+// Used from the edited sheet itself, the name still reads its literal address after the edit
+// (probes/sheet-ops/t4760-name-relative-own-sheet-insert-row, excel-graph: C2 50, C21 240).
+#[test]
+fn relative_name_used_from_the_edited_sheet_stays() {
+    let mut model = new_empty_model();
+    model.rename_sheet("Sheet1", "Data").unwrap();
+    model.define_name("Rel", None, "Data!A5").unwrap();
+    for row in (1..=40).filter(|row| *row != 2 && *row != 20) {
+        model.set_a1(&format!("C{row}"), &(row * 10).to_string());
+    }
+    model.set_a1("C2", "=Rel");
+    model.set_a1("C20", "=Rel");
+    model.evaluate();
+    model.insert_rows(0, 4, 1).unwrap();
+    model.evaluate();
+    assert_eq!(model.get_text_a1("C2"), "50");
+    assert_eq!(model.get_text_a1("C21"), "240");
+}
