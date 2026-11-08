@@ -5,6 +5,7 @@ use statrs::distribution::{Beta, Continuous};
 
 use crate::arithmetic::flush_subnormal;
 use crate::expressions::types::CellReferenceIndex;
+use crate::expressions::utils::boolean_text;
 use crate::functions::lift::{div_error, num_error, number_or_error, value_error};
 use crate::functions::statistical::beta_density::beta_density_small_shape;
 use crate::functions::statistical::bratio::{
@@ -224,7 +225,8 @@ fn beta_quantile_shape_one(alpha: f64, beta: f64, p: f64) -> Option<f64> {
     }
 }
 
-/// BETA.DIST's `cumulative`: a boolean, a number (TRUE unless 0), "TRUE" or "FALSE" in any case,
+/// BETA.DIST's `cumulative`: a boolean, a number (TRUE unless 0), "TRUE" or "FALSE" in any ASCII
+/// case (`boolean_text`: `"falſe"` is `#VALUE!`, probes/t4853-boolean-text C6, C7),
 /// empty as FALSE, an error as itself; anything else is `#VALUE!`. A one-cell range is its value
 /// (probes/stat-later-argument-lift L11, L12). This is `Model::cast_bool_ref` but for a LAMBDA
 /// value, which is `#VALUE!` here as in BETA.DIST's scalar code before the lift, where
@@ -234,11 +236,7 @@ fn beta_cumulative(value: &CalcResult, cell: CellReferenceIndex) -> Result<bool,
         CalcResult::Boolean(b) => Ok(*b),
         CalcResult::Number(n) => Ok(*n != 0.0),
         CalcResult::EmptyArg | CalcResult::EmptyCell => Ok(false),
-        CalcResult::String(s) => match s.to_uppercase().as_str() {
-            "TRUE" => Ok(true),
-            "FALSE" => Ok(false),
-            _ => Err(value_error(cell)),
-        },
+        CalcResult::String(s) => boolean_text(s).ok_or_else(|| value_error(cell)),
         error @ CalcResult::Error { .. } => Err(error.clone()),
         _ => Err(value_error(cell)),
     }

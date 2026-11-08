@@ -456,7 +456,32 @@ pub(crate) fn is_cell_spelled_name(name: &str) -> bool {
     name.chars().all(|c| c.is_ascii_alphanumeric()) && parse_reference_a1(name).is_some()
 }
 
+/// The boolean a text reads as where Excel takes TRUE or FALSE text: "TRUE" or "FALSE" in any
+/// ASCII case, nothing else. Excel folds ASCII letters only: `"falſe"` (U+017F, which upper-cases
+/// to S) and `"FALſE"` are `#VALUE!` in NORM.DIST's and BETA.DIST's cumulative, DAYS360's method
+/// and TEXTJOIN's ignore_empty, and match no boolean as a COUNTIF criterion, and a padded
+/// `" TRUE"` or `"1"` is no boolean either (probes/t4853-boolean-text, t4853-boolean-text-criteria;
+/// docs/excel-semantics/coercion.md "TRUE and FALSE text fold ASCII case only (T-4853)").
+pub(crate) fn boolean_text(text: &str) -> Option<bool> {
+    if text.eq_ignore_ascii_case("true") {
+        Some(true)
+    } else if text.eq_ignore_ascii_case("false") {
+        Some(false)
+    } else {
+        None
+    }
+}
+
+/// Whether a sheet name must be quoted in a reference: [`name_shape_needs_quoting`], or a name
+/// that reads as TRUE or FALSE ([`boolean_text`]): FORMULATEXT shows `='TRUE'!A1` and
+/// `='false'!A1`, and ADDRESS quotes a sheet_text of "true" or "tRuE" but not "falſe"
+/// (probes/t4853-boolean-text H1:H7, J2, J5).
 pub(crate) fn name_needs_quoting(name: &str) -> bool {
+    boolean_text(name).is_some() || name_shape_needs_quoting(name)
+}
+
+/// [`name_needs_quoting`] by the characters and shape of the name alone.
+fn name_shape_needs_quoting(name: &str) -> bool {
     // Excel only leaves a sheet name unquoted when it is made of letters, digits,
     // '_' and '.', and does not start with a digit or a '.'. Anything else
     // (space, '&', '=', '-', '+', '(', ')', '$', ',', ';', '{', '}', '\'', '!', ...)
@@ -652,8 +677,12 @@ pub(crate) fn defined_name_text(
 pub fn quote_name(name: &str) -> String {
     if let Some((book, sheet)) = name.strip_prefix('[').and_then(|rest| rest.split_once(']')) {
         let bare = match sheet.split_once(':') {
-            Some((first, last)) => !name_needs_quoting(first) && !name_needs_quoting(last),
-            None => !name_needs_quoting(sheet),
+            // By shape only: CELL("address") shows another workbook's sheet TRUE bare,
+            // `[Book]TRUE!$A$1` (probes/t4853-boolean-text J3).
+            Some((first, last)) => {
+                !name_shape_needs_quoting(first) && !name_shape_needs_quoting(last)
+            }
+            None => !name_shape_needs_quoting(sheet),
         };
         if !book.contains('[') && bare {
             return name.to_string();
@@ -668,6 +697,27 @@ pub fn quote_name(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // probes/t4853-boolean-text: ASCII case only, no padding, no "1"; a sheet named so is quoted
+    // except after another workbook's `[Book]` prefix.
+    #[test]
+    fn boolean_text_folds_ascii_case_only() {
+        for (text, value) in [
+            ("TRUE", true),
+            ("tRuE", true),
+            ("false", false),
+            ("FALSE", false),
+        ] {
+            assert_eq!(boolean_text(text), Some(value), "{text}");
+            assert!(name_needs_quoting(text), "{text}");
+        }
+        for text in ["falſe", "FALſE", " TRUE", "TRUE ", "1", "0", ""] {
+            assert_eq!(boolean_text(text), None, "{text:?}");
+        }
+        assert!(!name_needs_quoting("falſe"));
+        assert_eq!(quote_name("true"), "'true'");
+        assert_eq!(quote_name("[Book]TRUE"), "[Book]TRUE");
+    }
 
     #[test]
     fn unquote_sheet_prefix_undoubles_quotes() {

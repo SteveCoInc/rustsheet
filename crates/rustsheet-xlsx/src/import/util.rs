@@ -134,21 +134,31 @@ fn get_bool_with_default(node: &XmlNode, s: &str, default: bool) -> bool {
 /// The value of an `xsd:boolean` attribute, or `default` if it is absent or
 /// not a valid literal.
 pub(super) fn parse_bool_with_default(value: Option<&str>, default: bool) -> bool {
-    match value {
-        Some(value) => {
-            let value = value.trim();
-            if value == "1" || value.eq_ignore_ascii_case("true") {
-                true
-            } else if value == "0" || value.eq_ignore_ascii_case("false") {
-                false
-            } else {
-                // Not a valid xsd:boolean literal — fall back to the schema default rather than
-                // guessing (do NOT treat arbitrary non-empty strings as true).
-                default
-            }
-        }
-        None => default,
+    // Not a valid xsd:boolean literal: the schema default rather than a guess (do NOT treat
+    // arbitrary non-empty strings as true).
+    value.and_then(xsd_boolean).unwrap_or(default)
+}
+
+/// An `xsd:boolean` literal: `1` or `true` is true, `0` or `false` false, after trimming and in
+/// any ASCII case (the lenient read above); anything else is `None`. Every `xsd:boolean`
+/// attribute the importer reads goes through it (T-4853); a `t="b"` cell's value is
+/// [`cell_boolean`]'s, not this.
+pub(super) fn xsd_boolean(value: &str) -> Option<bool> {
+    let value = value.trim();
+    if value == "1" || value.eq_ignore_ascii_case("true") {
+        Some(true)
+    } else if value == "0" || value.eq_ignore_ascii_case("false") {
+        Some(false)
+    } else {
+        None
     }
+}
+
+/// The value of a `t="b"` cell (`<v>`, or a cached external-link value): ECMA-376 types it
+/// `0` or `1` (not `xsd:boolean`), so only `1` is TRUE and anything else, absent included, is
+/// FALSE, as the importer has always read it (T-4853).
+pub(super) fn cell_boolean(value: Option<&str>) -> bool {
+    value == Some("1")
 }
 
 pub(super) fn get_bool(node: &XmlNode, s: &str) -> bool {
@@ -193,6 +203,27 @@ mod tests {
     // tokens outside the xsd:boolean lexical space (`"yes"`, `"on"`, garbage, empty) are not valid
     // and must fall back to the attribute's schema default, never be read as true.
     const XML: &str = r#"<a one="1" zero="0" t="true" f="false" tu="TRUE" fc="False" ws=" true " empty="" yes="yes" on="on" other="x"/>"#;
+
+    #[test]
+    fn xsd_boolean_and_cell_boolean() {
+        for (text, value) in [
+            ("1", true),
+            ("true", true),
+            (" TRUE ", true),
+            ("0", false),
+            ("false", false),
+        ] {
+            assert_eq!(xsd_boolean(text), Some(value), "{text:?}");
+        }
+        for text in ["", "yes", "on", "2", "x"] {
+            assert_eq!(xsd_boolean(text), None, "{text:?}");
+        }
+        // A `t="b"` value is 0 or 1 only.
+        assert!(cell_boolean(Some("1")));
+        for value in [Some("0"), Some("true"), Some(""), None] {
+            assert!(!cell_boolean(value), "{value:?}");
+        }
+    }
 
     #[test]
     fn get_bool_false_accepts_all_xsd_boolean_forms() {

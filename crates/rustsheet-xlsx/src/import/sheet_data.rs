@@ -33,7 +33,7 @@ use crate::error::XlsxError;
 use super::array_refs::ArrayClaims;
 use super::package::ImportLimits;
 use super::shared_strings::SharedStringTable;
-use super::util::parse_bool_with_default;
+use super::util::{parse_bool_with_default, xsd_boolean};
 use super::worksheets::{
     find_or_add_formula, from_a1_to_rc, get_cell_from_excel, parse_cell_reference, parse_range,
     CellArrayKind, RcTextCache,
@@ -256,11 +256,18 @@ impl SheetDataReader<'_> {
                             "t" => formula.kind = Some(value.into_owned()),
                             "ref" => formula.reference = Some(value.into_owned()),
                             "si" => formula.shared_index = Some(value.into_owned()),
-                            "ca" => formula.calculate_always = &*value == "1",
-                            "dt2D" => formula.data_table.two_dimensional = &*value == "1",
-                            "dtr" => formula.data_table.row = &*value == "1",
-                            "del1" => formula.data_table.deleted[0] = &*value == "1",
-                            "del2" => formula.data_table.deleted[1] = &*value == "1",
+                            "ca" => formula.calculate_always = xsd_boolean(&value) == Some(true),
+                            "dt2D" => {
+                                formula.data_table.two_dimensional =
+                                    xsd_boolean(&value) == Some(true)
+                            }
+                            "dtr" => formula.data_table.row = xsd_boolean(&value) == Some(true),
+                            "del1" => {
+                                formula.data_table.deleted[0] = xsd_boolean(&value) == Some(true)
+                            }
+                            "del2" => {
+                                formula.data_table.deleted[1] = xsd_boolean(&value) == Some(true)
+                            }
                             "r1" => formula.data_table.inputs[0] = Some(value.into_owned()),
                             "r2" => formula.data_table.inputs[1] = Some(value.into_owned()),
                             _ => {}
@@ -414,7 +421,7 @@ impl SheetDataReader<'_> {
                 }
                 "s" => cell.style = value.parse::<i32>().unwrap_or(0),
                 "t" => cell.cell_type = Some(value.into_owned()),
-                "cm" => cell.is_dynamic_array = &*value == "1",
+                "cm" => cell.is_dynamic_array = xsd_boolean(&value) == Some(true),
                 "vm" => cell.value_metadata = Some(value.into_owned()),
                 _ => {}
             }

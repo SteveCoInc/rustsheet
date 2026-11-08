@@ -1419,6 +1419,25 @@ Evidence: probe `probes/percent-text-paths` (VALUE, `0+`, typed input; excel-gra
 Status: VERIFIED
 Tasks: T-0929, T-2136
 
+## TRUE and FALSE text fold ASCII case only (T-4853)
+Rule: where Excel reads TRUE or FALSE from text it takes "TRUE" or "FALSE" in any ASCII case and nothing else. NORM.DIST's
+and BETA.DIST's cumulative, DAYS360's method and TEXTJOIN's ignore_empty read "TRUE", "true", "tRuE", "FALSE" and "false",
+and are `#VALUE!` for `"falſe"` and `"FALſE"` (U+017F long s, whose upper case is S), `" TRUE"`, `"TRUE "` and `"1"`.
+A COUNTIF criterion of those texts (alone or after `=`) matches the boolean for the ASCII spellings and nothing for the
+others. A sheet name that reads as TRUE or FALSE is quoted wherever Excel writes a reference: FORMULATEXT shows
+`='TRUE'!A1` and `='false'!A1`, and ADDRESS quotes a sheet_text of "true" or "tRuE" (`'true'!$A$1`) but not "falſe".
+CELL("address") of another workbook's sheet TRUE is bare, `[Book]TRUE!$A$1`.
+Evidence: probes/t4853-boolean-text (56 cells) and t4853-boolean-text-criteria (22 cells), excel-graph, 2026-11-08: rows
+1-10 the ten texts, B NORM.DIST, C BETA.DIST, D DAYS360 (31 for TRUE, 30 for FALSE from 2020-02-29 to 2020-03-31), G
+TEXTJOIN, H ADDRESS, E:F COUNTIF over TRUE and FALSE cells; J1:J6 sheets named TRUE and false.
+Ours: before T-4853 BETA.DIST upper-cased the text, so `"falſe"` read as FALSE (C6, C7). Sheet quoting knew only an
+exact "TRUE" or "FALSE" in ADDRESS and no boolean name at all in printed formulas (H2, H3, H5, J2, J5). All 78 cells
+match since T-4853.
+Status: VERIFIED
+Implemented in: expressions/utils `boolean_text` (cast.rs `cast_bool_ref`, beta.rs `beta_cumulative`, DAYS360, criteria.rs,
+database.rs computed criteria) and `name_needs_quoting` (`quote_name`'s `[Book]` form checks the shape only)
+Tasks: T-4853
+
 ## AND/OR/XOR text arguments
 Rule: in Microsoft 365, AND, OR and XOR skip every text argument that is not "TRUE" or "FALSE",
 whether it is literal or computed, empty or not: `AND("1",TRUE)`, `AND("abc",TRUE)`, `AND(" ",TRUE)`,

@@ -5,6 +5,7 @@ use std::io::Read;
 
 use super::package::Package;
 use super::pivots::MAX_SLICER_CACHES;
+use super::util::xsd_boolean;
 
 use super::sheet_data::{check_stored_length, check_string_literals, MAX_NAME_BODY_UNITS};
 use super::xml::XmlNode;
@@ -59,7 +60,7 @@ fn slicer_cache_ids(doc: &XmlNode) -> Vec<String> {
 /// untrusted).
 fn iteration_from(calc_pr: Option<&XmlNode>) -> Option<Iteration> {
     let node = calc_pr?;
-    if !matches!(node.attribute("iterate"), Some("1" | "true")) {
+    if node.attribute("iterate").and_then(xsd_boolean) != Some(true) {
         return None;
     }
     let default = Iteration::default();
@@ -82,7 +83,7 @@ fn iteration_from(calc_pr: Option<&XmlNode>) -> Option<Iteration> {
 /// `0`, `false` and anything else are 1900, never an error (workbooks are untrusted).
 #[must_use]
 pub fn date_system_from_attribute(value: Option<&str>) -> DateSystem {
-    if matches!(value, Some("1" | "true")) {
+    if value.and_then(xsd_boolean) == Some(true) {
         DateSystem::Excel1904
     } else {
         DateSystem::Excel1900

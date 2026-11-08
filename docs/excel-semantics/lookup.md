@@ -1638,8 +1638,9 @@ Rule (excel-graph, gen-m6, 2026-10-21):
   `ADDRESS(9,3,4,FALSE,"1E3")` = `'1E3'!R[9]C[3]`, and quotes "1A", "A1" and "R1C1" sheet_text alike.
 Status: VERIFIED (web).
 Implemented in: `address_index` and `r1c1_part` (crates/rustsheet-engine/src/functions/lookup_and_reference/address_areas.rs,
-T-2275, T-2274); every argument is cast before abs_num and the bounds are checked, and `address_sheet_text`
-quotes a `sheet_text` of "TRUE" or "FALSE" (T-2274; other spellings are unprobed).
+T-2275, T-2274); every argument is cast before abs_num and the bounds are checked, and `quote_name` quotes a
+`sheet_text` that reads as TRUE or FALSE in any ASCII case (`ADDRESS(1,1,1,TRUE,"tRuE")` = `'tRuE'!$A$1`, but
+`"falſe"` stays bare: probes/t4853-boolean-text H1:H7; coercion.md "TRUE and FALSE text fold ASCII case only (T-4853)").
 Ours: implemented (T-2274, T-2275).
 Tasks: T-2274, T-2275
 

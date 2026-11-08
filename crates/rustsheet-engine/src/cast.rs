@@ -15,6 +15,7 @@ use crate::{
         parser::{ArrayNode, Node},
         token::Error,
         types::CellReferenceIndex,
+        utils::boolean_text,
     },
     formatter::format::{ascii_script_digits, parse_formatted_number},
     limits::check_range_size,
@@ -824,20 +825,9 @@ impl Model {
     ) -> Result<bool, CalcResult> {
         match value {
             CalcResult::Number(f) => Ok(*f != 0.0),
-            CalcResult::String(s) => {
-                let lower = s.to_lowercase();
-                if lower == *"true" {
-                    Ok(true)
-                } else if lower == *"false" {
-                    Ok(false)
-                } else {
-                    Err(CalcResult::new_error(
-                        Error::VALUE,
-                        cell,
-                        "Expected boolean".to_string(),
-                    ))
-                }
-            }
+            CalcResult::String(s) => boolean_text(s).ok_or_else(|| {
+                CalcResult::new_error(Error::VALUE, cell, "Expected boolean".to_string())
+            }),
             CalcResult::Boolean(b) => Ok(*b),
             CalcResult::EmptyCell | CalcResult::EmptyArg => Ok(false),
             error @ CalcResult::Error { .. } => Err(error.clone()),
