@@ -80,10 +80,19 @@
      - **Attribution:** as decision 0118 says.
      - **Left out:** the decision 0134 exceptions, the decision 0036 deviations, and the pivot suites and
        GETPIVOTDATA (Phase 2, decision 0354).
+     - **Where it is computed** (T-5092): crates/rustsheet-eval/src/usage_gates.rs counts the eval cells with
+       `cell_envelope` and writes report.json `usage_gates` and report.md's "Usage tiers" section;
+       `scripts/phase1_exit.py` adds the accuracy tables' points (eval/runs/accuracy.json) per tier and prints
+       the `foundational` and `expert` lines, with the old Gate A and Gate B lines marked `info`. The accuracy
+       check itself (`rustsheet-eval accuracy`) now holds Excel's side at the envelope's 12 digits.
   4. **Milestone rows.** A milestone's probe and ironcalc-calc rows (R1(c)) count only the cells outside the
      envelope or with a wrong type, error or text. A row is met when its counted cells, by tier, meet item 3's
      bars. Unchanged: coverage, the evidence floor, the owners criterion (every failure has an open task or a
      `DEVIATION` entry), and the semantic probe-row criteria.
+     - Built in T-5092: `r1c::classify` counts a cell only when `cell_envelope` says `Outside` or `WrongType`,
+       and the probe rows (`probe_milestones`) and ironcalc-calc rows (`function_scope`, `milestone_exit`)
+       carry `tiers` counts, each cell placed by its sole non-glue call's tier (foundational when it has none
+       and calls a foundational function or no catalog function), pooled within the row.
   5. **What stays as information.**
      - The report shows the old Gate A (15 digits or 1e-9) and Gate B (99.9% within 15 digits) numbers on every
        run, beside the tier gates.
