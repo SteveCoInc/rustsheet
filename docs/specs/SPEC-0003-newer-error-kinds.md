@@ -120,7 +120,7 @@ The functions that produce them, as Excel evaluates them (oracle: excel-graph):
      typed `#BLOCKED!` stays text, and a typed `#GETTING_DATA` becomes the error because it is in
      the formula table. That choice **needs evidence** from desktop Excel (T-1016) and is recorded as UNVERIFIED in
      syntax.md.
-   - **Criteria** (`is_english_error_string`, used by the COUNTIF/SUMIF family in
+   - **Criteria** (`english_criterion_error`, formerly `is_english_error_string` (T-4852), used by the COUNTIF/SUMIF family in
      `functions/criteria.rs`) keep **today's twelve names, unchanged**. Adding a name there would
      turn a criterion such as `"#BLOCKED!"` or `"<>#CONNECT!"` from text into an error match, and
      T-1012 probed it: COUNTIF with `"#BLOCKED!"`, `"#CONNECT!"` and `"#FIELD!"` counts 0 even
@@ -208,7 +208,7 @@ The answers T-1222 implements. Each cites evidence or is marked UNVERIFIED.
      Excel reject the workbook (syntax.md), so `#BUSY!` stays a parse error in formulas. Typed
      `#BUSY!` cell input stays the text "#BUSY!". **UNVERIFIED**: typed input needs desktop Excel,
      and T-1016 now covers `#BUSY!` too.
-   - **Criteria** (`is_english_error_string`): unchanged, so `"#BUSY!"` stays a text criterion.
+   - **Criteria** (`english_criterion_error`): unchanged, so `"#BUSY!"` stays a text criterion.
      **UNVERIFIED**: this assumes the T-1012 result for the rich kinds (COUNTIF `"#BLOCKED!"`
      counts 0) holds for `#BUSY!` too (T-1228).
    - **Rich values**: no `errorType` is known for `#BUSY!`, so `rich_error_name` is unchanged.
@@ -270,7 +270,7 @@ array first argument to FIELDVALUE gives an array result (information.md, T-1012
   a parity engine should give Excel's offline answer. Rejected.
 
 ## Test plan
-- Unit tests in token.rs for every new variant (and that `is_english_error_string` is unchanged):
+- Unit tests in token.rs for every new variant (and that `english_criterion_error` is unchanged):
   - its Display text and code;
   - the stored-name round trip;
   - that `#GETTING_DATA` (any case) lexes and that `#BLOCKED!` does not;
@@ -288,7 +288,7 @@ array first argument to FIELDVALUE gives an array result (information.md, T-1012
   probes/rich-errors-args. F1 implements the functions from it.
 - Stored `#BUSY!` (B2):
   - Unit tests in token.rs: code 0, the stored-name round trip, `stored_literal`, `#BUSY!` not
-    lexing, and `is_english_error_string("#BUSY!")` FALSE.
+    lexing, and `english_criterion_error("#BUSY!")` None.
   - The facade sync tests, plus a Python `XlError("#BUSY!")` test.
   - An xlsx import test of a stored `<c t="e"><v>#BUSY!</v></c>` (ERROR.TYPE 0), and an export
     round trip that writes `#BUSY!`.

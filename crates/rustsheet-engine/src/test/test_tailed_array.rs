@@ -361,7 +361,7 @@ fn bounded_spans_and_row_positions_are_tailed() {
         "=MIN(IF(C1:C9000=3,ROW(C1:C9000)*10))",
         "=SUMPRODUCT(IF(A2:A70000=1,ROW(A2:A70000)))",
         "=SUM(IF(A2:A70000=1,ROW(A2:A70000),A2:A70000))",
-        // A real #N/IMPL tail with no ROW() is an ordinary tail error.
+        // A real #N/IMPL! tail with no ROW() is an ordinary tail error.
         "=COUNTA(IF(A2:A70000=1,A2:A70000,$H$4))",
     ]
     .iter()
@@ -376,7 +376,7 @@ fn bounded_spans_and_row_positions_are_tailed() {
 
 /// What bounded spans and `ROW()` leave to the ordinary reading: ranges of two spans, a tail row
 /// that reaches `ROW()` (its value differs by row: the sentinel), `ROW()` in an IF's condition, a
-/// real `#N/IMPL` tail beside `ROW()` (taken for the sentinel), `ROW()` with no range operand
+/// real `#N/IMPL!` tail beside `ROW()` (taken for the sentinel), `ROW()` with no range operand
 /// beside it, and a span whose rows past the used area are too few.
 #[test]
 fn ragged_spans_and_row_dependent_tails_are_not_tailed() {
