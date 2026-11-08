@@ -62,11 +62,14 @@
      - The tier is the `usage:` field of eval/catalog/functions.yaml: `usage: foundational`, and absent means
        expert. It changes only by a decision record, and never so that a gate passes.
   2. **The envelope.** A value is inside it if it is either:
-     - within 12 significant digits of Excel's value (`closeness::within_significant_digits` with 12); or
+     - within 12 significant digits of Excel's value (`closeness::within_significant_digits` with 12), or within
+       4 ulp of it (owner ruling 2026-11-08, PR #4093: this keeps Gate A's earlier handling of decision 0088's
+       `NumericUlp`, and only differs from 12 digits at an Excel 0 or a deep subnormal); or
      - within 1e-9 relative of the 50-digit math value (absolute floor 1e-300).
 
-     A wrong type, a wrong error, wrong text, or an error against a number is never inside it. Cells where decision
-     0188 R3 follows the math are checked against the math only.
+     A wrong type, a wrong error, wrong text, or an error against a number is never inside it. Cells decision 0188
+     R3 marks, with Excel more than G = 1e-4 off the math, are checked against the math only, whether the engine
+     is on the math or not (`Target::Math` and `Target::MathMissed`, T-5097).
   3. **The tier gates.** These replace Gate A and Gate B:
 
      | | Type, error and text right | Numbers inside the envelope |

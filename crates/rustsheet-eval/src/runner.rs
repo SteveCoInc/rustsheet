@@ -89,10 +89,11 @@ pub struct CellResult {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub math: Option<MathValue>,
     /// The value the engine deliberately returns here: Excel's, or the 50-digit math where
-    /// decision 0188 R3 has it follow the math. Set once per run by
+    /// decision 0188 R3 has it follow the math ([`Target::Math`] where the engine is on it,
+    /// [`Target::MathMissed`] where it is not, T-5097). Set once per run by
     /// [`crate::r1c::mark_r3_math`], the test behind R1(c)'s [`crate::r1c::R1c::R3Pass`]. The
     /// closeness buckets read it: a [`Target::Math`] cell is `r3_math`, not visibly off
-    /// (decision 0310).
+    /// (decision 0310); `cell_envelope` holds both math targets to the math alone.
     #[serde(default, skip_serializing_if = "Target::is_excel")]
     pub target: Target,
 }
@@ -107,6 +108,11 @@ pub enum Target {
     /// The 50-digit math, which the engine returns where decision 0188 R3 marks the cell and Excel
     /// is more than G = 1e-4 off it ([`crate::r1c::r3_math`]).
     Math,
+    /// A cell decision 0188 R3 marks, with Excel more than G off the math, where the engine is not
+    /// within ε of the math ([`crate::r1c::r3_marked`] without [`crate::r1c::r3_math`]). It is
+    /// still held to the math only (decision 0355 item 2, T-5097), but it is no `r3_math` pass: the
+    /// closeness buckets read it like an Excel cell.
+    MathMissed,
 }
 
 impl Target {
