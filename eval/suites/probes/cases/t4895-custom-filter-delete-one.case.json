@@ -53,11 +53,9 @@
                 "and": false,
                 "conditions": [
                   {
-                    "operator": "equal",
                     "val": "a"
                   },
                   {
-                    "operator": "equal",
                     "val": "c"
                   }
                 ]

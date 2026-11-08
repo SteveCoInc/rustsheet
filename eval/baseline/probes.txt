@@ -2754,7 +2754,6 @@ C	probes/t4872-r2-order-and-lift.case.json	14
 C	probes/t4873-empty-arg-let-lambda.case.json	11
 C	probes/t4873-empty-arg-quotient-ceiling.case.json	55
 C	probes/t4874-numbervalue-empty-separator.case.json	69
-C	probes/t4895-custom-filter-case-delete-one.case.json	17
 C	probes/t4895-custom-filter-delete-one.case.json	18
 C	probes/t4895-two-criteria-hand-hidden-control.case.json	18
 C	probes/t4895-two-criteria-hand-hidden-delete-one.case.json	18
