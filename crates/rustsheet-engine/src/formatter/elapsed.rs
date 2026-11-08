@@ -28,9 +28,9 @@ pub(super) enum ElapsedUnit {
 /// t4370-fraction-fresh, number-formats.md "Fraction digits of a second at a tie"). Whole seconds
 /// round the value.
 pub(super) struct FractionalSeconds {
-    /// The seconds the elapsed counts truncate: the value rounded to whole seconds, or with
-    /// fraction digits the half-step register's seconds, unfloored.
-    elapsed_seconds: f64,
+    /// What the elapsed counts truncate: the value rounded to whole seconds, or with fraction
+    /// digits the half-step serial `y` itself ([`ElapsedBase`]).
+    elapsed_base: ElapsedBase,
     /// The whole days the clock and date read.
     days: f64,
     /// The units within that day the clock reads, whole.
@@ -46,29 +46,31 @@ impl FractionalSeconds {
     /// 9999-12-31, so the units stay far below 2^53 and count exactly.
     pub(super) fn new(value: f64, digits: usize) -> Option<Self> {
         let scale = [1.0, 10.0, 100.0, 1000.0].get(digits).copied()?;
-        let (elapsed_seconds, days, day_units, fraction) = if digits == 0 {
+        let (elapsed_base, days, day_units, fraction) = if digits == 0 {
             // Whole seconds keep the rounded value: only fraction digits have the tie evidence.
             let units = (value * SECONDS_PER_DAY_F64).round();
             (
-                units,
+                ElapsedBase::Seconds(units),
                 (units / SECONDS_PER_DAY_F64).floor(),
                 units % SECONDS_PER_DAY_F64,
                 0.0,
             )
         } else {
-            // The counts read the same register as the clock, so a tie just short of a whole
-            // minute or hour carries in neither: `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is
-            // "24:59:59.9", `TEXT(2+3599.95/86400,...)` "49:59:59.9" (probes/t4323-carry-ties).
+            // The counts read the half-step serial on their own chain of products, apart from
+            // the clock and the fraction digits ([`ElapsedBase::count`]), so each unit carries or
+            // not on its own: `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is "24:59:59.9" and
+            // `TEXT(45000+59.95/86400,"[s].0")` "3888000060.9" (probes/t4323-carry-ties,
+            // t4466-count-hypotheses B18).
             let (days, day_units, second_rest) = field_split(value, scale);
             (
-                half_step(value, scale) * SECONDS_PER_DAY_F64,
+                ElapsedBase::HalfStep(half_step(value, scale)),
                 days,
                 day_units,
                 fraction_digits(second_rest, digits),
             )
         };
         Some(Self {
-            elapsed_seconds,
+            elapsed_base,
             days,
             day_units,
             fraction,
@@ -94,17 +96,49 @@ impl FractionalSeconds {
 
     /// The whole elapsed count of `unit` after rounding.
     fn elapsed(&self, unit: ElapsedUnit) -> f64 {
-        let seconds = self.elapsed_seconds;
-        match unit {
-            ElapsedUnit::Hour => (seconds / 3600.0).floor(),
-            ElapsedUnit::Minute => (seconds / 60.0).floor(),
-            ElapsedUnit::Second => seconds.floor(),
-        }
+        self.elapsed_base.count(unit)
     }
 
     /// The fraction digits, zero-padded (`376`, `4`, `00`).
     pub(super) fn digits_text(&self) -> String {
         format!("{:0>width$.0}", self.fraction, width = self.digits)
+    }
+}
+
+/// What an elapsed `[h]`/`[m]`/`[s]` count is read from.
+#[derive(Clone, Copy)]
+enum ElapsedBase {
+    /// The value rounded to whole seconds (no fraction digits shown).
+    Seconds(f64),
+    /// The half-step serial `y = value + 0.5/(86400*scale)` ([`half_step`]), with fraction digits.
+    HalfStep(f64),
+}
+
+impl ElapsedBase {
+    /// The whole count of `unit`. With fraction digits Excel multiplies the half-step serial by
+    /// 60, 60 and 24 in that order, each product rounded to a double, keeping as many factors as
+    /// the unit needs, and truncates: `[h]` is `floor(y*24)`, `[m]` `floor((y*60)*24)` and `[s]`
+    /// `floor(((y*60)*60)*24)`. That order's rounding decides a tie, so a count is not a function
+    /// of `y*86400`, and the count and the shown fraction (cut apart, [`field_split`]) carry on
+    /// their own: `TEXT(3733.95/86400+1*2^-57,"[s].0")` is "3733.0" while `+2*2^-57` is "3734.0",
+    /// and `TEXT(60000+82799.95/86400,"[h]:mm:ss.0")` carries the hour alone (probes/
+    /// t4466-count-hypotheses B29, B30, F33). It matches all 2,617 elapsed-count cells with fraction
+    /// digits of the t4323, t4332, t4333, t4370, t4389 and t4466 probes, the hold-out and the fresh
+    /// sweep probes/t4466-count-fresh drawn before it was found included; no constant is fitted.
+    /// docs/excel-semantics/number-formats.md "Elapsed counts beside fraction digits".
+    fn count(self, unit: ElapsedUnit) -> f64 {
+        match self {
+            Self::Seconds(seconds) => match unit {
+                ElapsedUnit::Hour => (seconds / 3600.0).floor(),
+                ElapsedUnit::Minute => (seconds / 60.0).floor(),
+                ElapsedUnit::Second => seconds.floor(),
+            },
+            Self::HalfStep(y) => match unit {
+                ElapsedUnit::Hour => (y * 24.0).floor(),
+                ElapsedUnit::Minute => (y * 60.0 * 24.0).floor(),
+                ElapsedUnit::Second => (y * 60.0 * 60.0 * 24.0).floor(),
+            },
+        }
     }
 }
 
@@ -302,13 +336,17 @@ pub(super) fn date_section_register(
         return value;
     }
     let scale = 10f64.powi(i32::try_from(fraction_digits.unwrap_or(0)).unwrap_or(0));
-    // The parser only makes `.0`, `.00` and `.000`, so with fraction digits `scale` is 10 or more.
-    let modulus = if fraction_digits.is_some() {
-        scale
-    } else {
-        60.0
-    };
-    half_step_split(value, scale).1 % modulus
+    if fraction_digits.is_some() {
+        // With fraction digits the register is the remainder of a second that the clock's field
+        // cut leaves, in units of the shown digit: `TEXT(3733.95/86400+1*2^-57,"[s].0 General")`
+        // and `+2*2^-57` both end in "1.63425E-12" (23*2^-47 s times 10), which the serial cut
+        // at once (`frac(y)*86400*scale`) cannot give. probes/t4466-count-hypotheses G1:G40,
+        // B121:B152 (72 of 72 cells; the cut at once 53) and the fresh sweep
+        // probes/t4466-register-fresh (120 of 120, drawn and predicted before its fill),
+        // excel-graph 2026-11-08, T-4466.
+        return field_split(value, scale).2 * scale;
+    }
+    half_step_split(value, scale).1 % 60.0
 }
 
 /// The serial moved up half a unit of `1/scale` second: `value + 0.5/(86400*scale)`.
@@ -489,7 +527,37 @@ mod tests {
     use super::{
         elapsed_text,
         ElapsedUnit::{Hour, Minute, Second},
+        FractionalSeconds,
     };
+
+    fn count(value: f64, digits: usize, unit: super::ElapsedUnit) -> String {
+        let fraction = FractionalSeconds::new(value, digits);
+        elapsed_text(value, false, unit, fraction.as_ref())
+    }
+
+    /// Beside fraction digits a count is the half-step serial times 60, 60 and 24 in that order,
+    /// truncated (probes/t4323-fraction-ties A90, t4323-carry-ties A27, A31, t4466-count-hypotheses
+    /// B29, B30, F33; T-4333).
+    #[test]
+    fn a_count_beside_a_fraction_multiplies_by_60_60_and_24() {
+        let x = 45000.0 + 0.95 / 86400.0;
+        assert_eq!(count(x, 1, Second), "3888000001");
+        let x = 45000.0 + 59.95 / 86400.0;
+        assert_eq!(count(x, 1, Second), "3888000060");
+        assert_eq!(count(x, 1, Minute), "64800001");
+        assert_eq!(count(x, 1, Hour), "1080000");
+        // One ulp decides: 3733.95 s plus 1 or 2 times 2^-57 days.
+        let tie = 3733.95 / 86400.0;
+        assert_eq!(count(tie + 2f64.powi(-57), 1, Second), "3733");
+        assert_eq!(count(tie + 2.0 * 2f64.powi(-57), 1, Second), "3734");
+        // The hour carries alone (F33).
+        assert_eq!(count(60000.0 + 82799.95 / 86400.0, 1, Hour), "1440023");
+        // Ties Excel truncates stay truncated (t4323-carry-ties A9, t4323-fraction-sweep-2 A27).
+        assert_eq!(count(1.0 + 3599.95 / 86400.0, 1, Hour), "24");
+        assert_eq!(count(3497.95 / 86400.0, 1, Second), "3497");
+        // Whole seconds round the value (no fraction digits).
+        assert_eq!(count(3497.95 / 86400.0, 0, Second), "3498");
+    }
 
     #[test]
     fn huge_counts_keep_fifteen_significant_digits() {

@@ -3,7 +3,7 @@ id: T-4460
 title: "Oracle sweep for T-4333: the [s] count at the t4333 tie serials beside no fraction, .0, .00 and .000, scored against its two reopen hypotheses"
 milestone: M10
 lane: research
-status: todo
+status: dropped
 priority: P1
 size: M
 tier: opus
@@ -67,3 +67,6 @@ decimal tie. Then T-4333 either reopens with a named model or stays blocked with
 
 ## Out of scope
 - Implementing the count model (T-4333). The fraction digits below 0.06 s (T-4389).
+
+## Outcome
+Superseded by the t4466 sweeps (probes/t4466-count-hypotheses, t4466-count-fresh), which separate the count models; the adopted rule is T-4333's Outcome.
