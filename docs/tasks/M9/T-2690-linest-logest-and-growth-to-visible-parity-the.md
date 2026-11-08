@@ -95,3 +95,30 @@ Visibly-off cells on the 2026-10-25 eval run (agent/engine/T-2632-typed-arg-coun
 - GROWTH: probes/growth-modes 15.
 
 Stage `visible`: Excel's solve is the less exact one here, so the target is its algorithm (time-boxed, decision 0056).
+
+## Landing notes
+Session 2026-11-08 (opus run), about 15 minutes of exploration. No PR yet: the branch holds the claim and this note.
+No engine code has changed. Scratch scorer: docs/research/t2690/score_candidates.py (plain Python, no numpy;
+`python3 docs/research/t2690/score_candidates.py linest-modes [H1|H2|H3]` prints exact-match counts, and with a
+name the mismatched cells). It parses only `LINEST(range,range[,TRUE][,..])` coefficient rows with more points than
+parameters and ignores the const flag, so K43 (`const` FALSE) is a harness gap, not a candidate failure.
+- **Lead (exact on every one-x cell tried):** Excel's intercept is `mean(y) - b * mean(x)`, computed from Excel's own
+  slope `b`. That holds for K1 (0.0357142857142847), and for K190/K197 (`-8.881784197001252e-16` = 4.5 - b*4.5 with
+  b = 1.0000000000000002). So the intercept is not a back-substituted QR component.
+- **Not found: the slope.** Exact candidates per cell (linest-modes, y/x columns of rows 2-9):
+  - B on A, K1, Excel 1.9976190476190474: only the LAPACK dlarfg-style Householder QR on columns [1, x] matches.
+    These miss: sxy/sxx, raw sums, Householder on [x, 1], Householder on centered x, and MGS and Givens in both
+    column orders.
+  - D on A, K183, Excel 19.58928571428571: no candidate matches. Householder [1, x] gives ...708, sxy/sxx ...715.
+  - A on A, K190, Excel 1.0000000000000002 (it overshoots): every candidate gives 1.0 or 0.9999999999999999.
+  - A on E, K197, Excel 0.5000000000000001: candidates give 0.5 or 0.49999999999999994.
+  
+  An overshoot at y = x rules out every exact-arithmetic-friendly form tried. Next ideas, untested: a different
+  dot-product accumulation order (reverse, or pairwise), extended-precision accumulation, Householder with an
+  unnormalised `v` and `2/(v'v)`, a scaled or equilibrated design matrix, or a slope solved from normal
+  equations by Cholesky. Score each candidate on all four cells above before widening.
+- Overall, the H2 candidate (Householder [1, x] slopes, then the mean-based intercept) is 19/34 exact on
+  linest-modes coefficient cells, against 11/34 for plain Householder with a back-substituted intercept.
+- Not repeated here: T-2006's Context lists its own earlier tries. Read it first.
+- Next step: extend the scorer to the T-2006 cell census and the ironcalc LINEST_LOGEST cells, find the slope
+  form, then port it into `regress` (linest.rs) with the fit-lab kernel the acceptance criteria ask for.
