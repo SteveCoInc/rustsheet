@@ -76,15 +76,14 @@ fn largest_remaining(columns: &[Vec<f64>], remaining: &[usize], step: usize) -> 
 /// `|v|² = new_head² + tail` with the unchanged tail summed on its own (not `|x|²` less the head's
 /// square, which loses an exact fit's exact cancellation: logest-modes K170:K172, residual 0 and
 /// F `#NUM!`), and reflects each target as `t -= s·v` with the dot product `v·t` summed in row
-/// order from the head and R's diagonal `alpha` itself. A data column's reflector divides the
-/// doubled product, `s = (2·(v·t))/|v|²`; the constant's (the column of ones) multiplies by a
-/// stored `2/|v|²`. These knobs are the structural fit of T-4975 (statistics.md "LINEST and
+/// order from the head and R's diagonal `alpha` itself. Every reflector divides the doubled
+/// product, `s = (2·(v·t))/|v|²`. These knobs are the structural fit of T-4975 (statistics.md "LINEST and
 /// LOGEST solve by a centered, pivoted Householder QR (T-2690)"). The divided scale and the
 /// `alpha` diagonal make a no-constant fit's slope Excel's bits where the stored reciprocal and
 /// the reflected diagonal were 1 to 1022 ulp off (`GROWTH(D2:D9,A2:A9,,FALSE)` =
 /// 1.9295282207785776, growth-modes K97; t4590-growth-overflow Slope!A1:A8, B1:B3;
-/// t4765-growth-factor-edges NoConst!A1, A4; ironcalc `TREND_GROWTH.xlsx` E2:E4). Dividing in the
-/// constant's reflector too moves ironcalc `LINEST_LOGEST.xlsx` D2:E2 and G2:H2 off Excel's bits.
+/// t4765-growth-factor-edges NoConst!A1, A4; ironcalc `TREND_GROWTH.xlsx` E2:E4). It moves ironcalc
+/// `LINEST_LOGEST.xlsx` D2:E2 and G2:H2 a few ulp off Excel's bits, inside the envelope.
 fn householder_qr(mut columns: Vec<Vec<f64>>, mut y: Vec<f64>, first: Option<usize>) -> Factored {
     let n = y.len();
     let norms: Vec<f64> = columns.iter().map(|c| sum_of_squares(c).sqrt()).collect();
@@ -114,18 +113,12 @@ fn householder_qr(mut columns: Vec<Vec<f64>>, mut y: Vec<f64>, first: Option<usi
             break;
         }
         let v_tail = columns[pivot][step + 1..].to_vec();
-        // The constant's reflector scales by a stored 2/|v|², every other by 2(v·t)/|v|².
-        let ones_step = first.is_some() && step == 0;
         let reflect = |target: &mut [f64]| {
             let dot = v_tail
                 .iter()
                 .zip(&target[1..])
                 .fold(new_head * target[0], |sum, (a, b)| sum + a * b);
-            let scale = if ones_step {
-                dot * (2.0 / v_norm)
-            } else {
-                2.0 * dot / v_norm
-            };
+            let scale = 2.0 * dot / v_norm;
             target[0] -= scale * new_head;
             for (value, vi) in target[1..].iter_mut().zip(&v_tail) {
                 *value -= scale * vi;
@@ -634,15 +627,22 @@ mod tests {
             .collect();
         let reg = linear_regression(&b, &x, 3, true, false);
         assert_eq!(reg.map(|r| r.coeffs), Some(vec![0.0, 1.0, 0.0, 0.0]));
-        // ironcalc-calc LINEST_LOGEST.xlsx D2:E2 (Excel-cached), `LINEST(A2:A6,B2:B6)`.
+        // ironcalc-calc LINEST_LOGEST.xlsx D2:E2 (Excel-cached), `LINEST(A2:A6,B2:B6)`. The uniform
+        // divided scale lands a few ulp from Excel's bits here (recorded drift inside decision
+        // 0355's 12-digit envelope; a constant-reflector exception kept them, T-5089 review).
         let x: Vec<Vec<f64>> = [1.1, 1.9, 3.1, 4.05, 5.0]
             .iter()
             .map(|&v| vec![v])
             .collect();
         let reg = linear_regression(&[0.2, 0.41, 0.62, 0.8, 1.1], &x, 1, true, false);
-        assert_eq!(
-            reg.map(|r| r.coeffs),
-            Some(vec![0.219_288_879_935_535_92, -0.038_445_306_204_673_68])
-        );
+        let coeffs = reg.map(|r| r.coeffs).unwrap_or_default();
+        let excel = [0.219_288_879_935_535_92, -0.038_445_306_204_673_68];
+        assert_eq!(coeffs.len(), excel.len());
+        for (value, excel) in coeffs.iter().zip(excel) {
+            assert!(
+                (value - excel).abs() <= excel.abs() * 1e-12,
+                "{value} vs {excel}"
+            );
+        }
     }
 }

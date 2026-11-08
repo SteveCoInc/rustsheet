@@ -334,13 +334,23 @@ F	ironcalc-calc/STATISTICAL/GAMMA.xlsx	GAMMA.DIST GAMMA.INV!F77
 F	ironcalc-calc/STATISTICAL/GAMMA.xlsx	GAMMA.DIST GAMMA.INV!F9
 F	ironcalc-calc/STATISTICAL/HYPERGEOM_DIST.xlsx	Sheet1!F2
 F	ironcalc-calc/STATISTICAL/HYPERGEOM_DIST.xlsx	Sheet1!F3
+F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!D2
+F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!D5
 F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!D6
 F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!D8
-F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!E6
+F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!D9
+F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!E2
+F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!E5
 F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!E7
 F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!E9
+F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!G2
+F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!G5
 F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!G6
+F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!G7
 F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!G8
+F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!H2
+F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!H5
+F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!H6
 F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!H7
 F	ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	Sheet1!H9
 F	ironcalc-calc/STATISTICAL/LOGNORM.xlsx	LOGNORM.DIST LOGNORM.INV!F26
@@ -387,9 +397,6 @@ F	ironcalc-calc/STATISTICAL/POISSON.xlsx	POISSON.DIST!D10
 F	ironcalc-calc/STATISTICAL/POISSON.xlsx	POISSON.DIST!D16
 F	ironcalc-calc/STATISTICAL/POISSON.xlsx	POISSON.DIST!D61
 F	ironcalc-calc/STATISTICAL/POISSON.xlsx	POISSON.DIST!D8
-F	ironcalc-calc/STATISTICAL/TREND_GROWTH.xlsx	Sheet1!F2
-F	ironcalc-calc/STATISTICAL/TREND_GROWTH.xlsx	Sheet1!F3
-F	ironcalc-calc/STATISTICAL/TREND_GROWTH.xlsx	Sheet1!F6
 F	ironcalc-calc/STATISTICAL/TREND_GROWTH.xlsx	Sheet1!K5
 F	ironcalc-calc/STATISTICAL/TREND_GROWTH.xlsx	Sheet1!L5
 F	ironcalc-calc/STATISTICAL/TREND_GROWTH.xlsx	Sheet1!L6

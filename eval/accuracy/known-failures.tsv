@@ -37,4 +37,3 @@ accuracy/BETAINV/s1!Calc!A118	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-30
 accuracy/BETAINV/s1!Calc!A128	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/BETAINV/s1!Calc!A135	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
 accuracy/BETAINV/s1!Calc!A138	T-4663	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
-accuracy/LINEST/s1!Calc!A102	T-2006	the engine's normal-equations solve on an ill-conditioned design is 7e-09 relative off the math; Excel is 1e-08 off it

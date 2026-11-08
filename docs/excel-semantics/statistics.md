@@ -9415,9 +9415,9 @@ equations; Microsoft documents LINEST as a QR since Excel 2003. The structural m
   ones, then the x columns are pivoted, the remaining column of largest norm first (the later on a tie). The intercept
   is `ȳ - Σ βj x̄j`: `LINEST(B2:B9,A2:A9)`'s intercept 0.0357142857142847 is that cancellation at 9.025 (linest-modes L1).
 - Each reflector is `v = x - alpha e1`, `alpha = -sign(head)·|x|`, `|v|² = new_head² + tail` with the unchanged tail
-  summed on its own, and each target reflects as `t -= s·v`, the dot `v·t` summed in row order from the head. A data
-  column's reflector divides the doubled dot, `s = (2·(v·t))/|v|²`, and R's diagonal is alpha; the constant's
-  reflector (the column of ones) multiplies by a stored `2/|v|²` (its diagonal is not used). The two-point
+  summed on its own, and each target reflects as `t -= s·v`, the dot `v·t` summed in row order from the head. Every
+  reflector, the constant's column of ones included, divides the doubled dot, `s = (2·(v·t))/|v|²`, and R's
+  diagonal is alpha. The two-point
   `LINEST(A12:A13,B12:B13)` is still exactly 0.5 and -1.5 (linest-modes K134:L134). In an identity fit, where y as
   reflected so far is the pivot column itself, the diagonal is the reflected head instead of alpha: Excel's
   `LINEST(B2:B9,A2:C9,TRUE,TRUE)` with B among the x columns is exactly 0, 1, 0, 0 (linest-modes K85:N85); the alpha
@@ -9430,8 +9430,10 @@ equations; Microsoft documents LINEST as a QR since Excel 2003. The structural m
   fits), and keep t4222-regression-flag-ranges A51 (`LINEST` slope 1.2000000000000002 where `Σxy/Σx²` = 66/55 rounds
   to 1.2), so Excel's no-constant slope is not `Σxy/Σx²`, correctly rounded or not. Measured on the full eval (T-4975
   follow-up): +157 / -5 cells against the first model with the identity-fit exception (+162 / -7 without it, which
-  moves K85:N85 off); the same form in the constant's reflector too is +208 / -17
-  but moves LINEST_LOGEST.xlsx D2:E2 and G2:H2 off Excel's bits; the alpha diagonal alone +90 / -31; the plain
+  moves K85:N85 off); the same form in the constant's reflector too (shipped
+  after review, T-5089: one rule for every reflector rather than an exception kept for matching cells) adds 44
+  probes cells and Gate A LINEST/s1 A102, with 15 last-digit drifts inside the envelope, among them ironcalc
+  LINEST_LOGEST.xlsx D2:E2 and G2:H2; the alpha diagonal alone +90 / -31; the plain
   `Σxy/Σx²` slope special case +39 / -10. Still off: ironcalc TREND_GROWTH.xlsx F2, F3, F6 (`TREND(A2:A6)`, 1 ulp,
   Excel's bits under the first model), growth-modes K169 and t4222 B32.
 - Collinear columns (rest at most 1E-10 of the column's norm, carried over, unprobed: T-2569) are dropped with
