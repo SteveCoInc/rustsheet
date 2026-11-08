@@ -136,3 +136,21 @@ pub(super) fn lead_abs(value: f64, digit_count: i32) -> f64 {
         value
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::format_general;
+
+    /// Each form is credited with the digits it has room for, capped by the value's own digits
+    /// (probes/t4466-count-hypotheses G24; number-formats.md "`TEXT(x,"General")` uses an
+    /// 11-character fixed-notation limit").
+    #[test]
+    fn fixed_or_e_compares_the_digits_each_form_has_room_for() {
+        assert_eq!(format_general(1.545_995_473_861_694_3e-6), "1.546E-06");
+        assert_eq!(format_general(1.2345e-5), "0.000012345");
+        assert_eq!(format_general(1e-9), "0.000000001");
+        assert_eq!(format_general(1.4e-9), "1.4E-09");
+        assert_eq!(format_general(1.234_567_890_123_45e-5), "1.23457E-05");
+        assert_eq!(format_general(0.000_123_456_789), "0.000123457");
+    }
+}
