@@ -3,7 +3,7 @@ id: T-4865
 title: "BETA.INV at a tiny shape: when Excel's AS 109 search returns 1 - 2^-53, 2^-53, 1 or a subnormal instead of #NUM!"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
