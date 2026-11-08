@@ -262,7 +262,7 @@ const SUM_ARGS: AggregatePolicy = AggregatePolicy {
     errors: ErrorRule::Ranked,
     skip_empty_args: false,
     grids: GridReading::TopLeft,
-    nested: NestedReading::Flatten,
+    nested: NestedReading::NotAvailableReferenceValue,
 };
 
 impl Model {

@@ -126,6 +126,7 @@ gen-m9/d8f44d556674c2fd.case.json	1
 gen-m9/d910f000b60e2eac.case.json	1
 gen-m9/d912671baa1364aa.case.json	1
 gen-m9/e6cf3b20a014e6a3.case.json	8
+gen-m9/e85daedce5c2675e.case.json	1
 gen-m9/e8d55ec393460bb7.case.json	1
 gen-m9/ec2a1d9194a84396.case.json	66
 gen-m9/ecc87f80077959e0.case.json	1
@@ -198,15 +199,18 @@ probes/t2429-hypgeom-huge-count.case.json	2
 probes/t2429-hypgeom-threshold.case.json	2
 probes/t2435-dist-extremes.case.json	19
 probes/t2436/abc2939ebd1e2365.case.json	6
+probes/t2436/e85daedce5c2675e.case.json	2
 probes/t2475-stat-subexpressions-refill-1106.case.json	2
 probes/t2475-stat-subexpressions.case.json	5
 probes/t2496-fin-subexpressions.case.json	2
 probes/t2565-irr-guess-sweeps.case.json	1
 probes/t2592-nested-groupby-cells-refill-1106.case.json	3
+probes/t2592-nested-groupby-cells.case.json	3
 probes/t2594-nested-aggregates-refill-1106.case.json	4
+probes/t2594-nested-aggregates.case.json	4
 probes/t2609-nested-operators-and-lifts.case.json	1
 probes/t2625-nested-consumers-refill-1106.case.json	5
-probes/t2625-nested-consumers.case.json	1
+probes/t2625-nested-consumers.case.json	6
 probes/t2657-pv-irr-div0.case.json	22
 probes/t2753-gamma-density-ratio-sweep.case.json	6
 probes/t2829-ftest-a306-shapes.case.json	8
