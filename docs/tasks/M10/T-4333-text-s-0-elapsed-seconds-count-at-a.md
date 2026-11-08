@@ -60,3 +60,18 @@ Gap triage 2026-11-06: T-4460 (research) is the oracle sweep that tests both hyp
 
 ## Outcome
 An elapsed count beside fraction digits is the half-step serial `y` times 60, 60 and 24 in that order, each product a double, as many factors as the unit needs, truncated: `[h]` `floor(y*24)`, `[m]` `floor((y*60)*24)`, `[s]` `floor(((y*60)*60)*24)` (`ElapsedBase::count`, formatter/elapsed.rs). It scores all 2,617 count cells of the t4323, t4332, t4333, t4370, t4389 and t4466 probes, the fresh sweep t4466-count-fresh (600, drawn and predicted before its fill for another model) included, with no fitted constant (docs/research/t4466/count_chain.py; number-formats.md "Elapsed counts beside fraction digits"). The 17 count cells this task owned pass (t4323-carry-sweep A37, A49, A83; -carry-ties A27, A31; -fraction-sweep-2 A1, A24, A41, A84; -fraction-sweep-3 A7; -fraction-ties A90; t4333-count-ulp-scan D1:D4, D7, E6). The `General` register beside fraction digits reads the field cut's remainder (t4466-register-fresh 120 of 120), and General's fixed-or-E choice credits each form with the digits it has room for (t4466-count-hypotheses G24).
+
+R4 guards for the chain rule (decision 0188), margin stated: the rule must beat the correctly rounded value on the
+hold-out and match every cell of a sweep drawn after it was frozen.
+
+| model | train (1,407) | sha256 hold-out (610) | t4466-chain-fresh (600, after the freeze) |
+|---|---|---|---|
+| chain `((y*60)*60)*24` (adopted) | 1,407 | 610 | 600 |
+| correctly rounded | 1,343 | 584 | 490 |
+| register `floor(y*86400/u)` (before) | 1,352 | 598 | 556 |
+
+t4466-count-fresh was in the search that found the chain, so it is not counted as fresh; t4466-chain-fresh
+(random.Random(44663), docs/research/t4466/gen_chain_fresh.py, predictions committed before the fill) is. The General
+change has its own sweep, t4466-general-fixed-or-e (gen_general_fresh.py, random.Random(44664)): 120 of 120 after the
+carry and mantissa fixes found by it.
+

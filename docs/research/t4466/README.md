@@ -43,7 +43,7 @@ hold-out to adopt it.
 | correctly rounded: the exact value rounded half up to the shown digit | 1343 | 584 | 1927 |
 | register `floor(y*86400/u)` (engine before this change) | 1352 | 598 | 1950 |
 | chain60 `floor(((y*60)*1440)/u)` | 1384 | 603 | 1987 |
-| max of the two (frozen, now the engine) | 1376 | 605 | 1981 |
+| max of the two (frozen before t4466-count-fresh; superseded) | 1376 | 605 | 1981 |
 
 The hold-out is sha256("case!cell") mod 10 below 3, fixed before scoring; no margin was stated in advance, and
 `max`'s hold-out rate (99.2%) is above its train rate (97.8%). The fresh sweep is kept out of this split.
@@ -71,3 +71,18 @@ The two differ on 20 cells; `max` is right on 16. Excel's count still differs fr
 and digit count, for example `TEXT(366+68399.95/86400,"[h]:mm:ss.0")` "8803:59:59.9" (A12) and
 `TEXT(45001+11950.95/86400,"[s].0")` "3888098350.0" (A136). The operation behind the count is still unknown; T-4333
 keeps those cells.
+
+## The chain rule (adopted, T-4333)
+`count_chain.py` searches every chain of products whose product is the unit's count per day, crossed with the forms of
+the half step: `((y*60)*60)*24` for `[s]`, `(y*60)*24` for `[m]` and `y*24` for `[h]` score 2,617 of 2,617 count cells,
+t4466-count-fresh included (which the search therefore used, so it is not the fresh sweep for this rule). Hold-out:
+1,407 / 1,407 train and 610 / 610 on the split above. Fresh: `gen_chain_fresh.py` drew probes/t4466-chain-fresh with a
+new seed after the rule was frozen and wrote chain_fresh_predictions.json before the fill: chain 600, register 556,
+rounded 490 of 600. The "operation still unknown" note above is superseded.
+
+## General's fixed-or-E choice
+`gen_general_fresh.py` drew probes/t4466-general-fixed-or-e (values in [1E-09, 1E-04) where the trimmed-digit rule and
+the room rule disagree, plus controls) and wrote general_predictions.json before the fill: room rule 78 / 80, trimmed
+rule 2 / 80, controls 38 / 40 each. The 4 misses showed the two refinements the engine then took: fixed's room runs
+from the value's leading digit (a carry gains none), and the E mantissa rounds the 15-digit decimal half away.
+

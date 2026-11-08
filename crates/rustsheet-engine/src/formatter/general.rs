@@ -60,7 +60,13 @@ pub(crate) fn format_general(value: f64) -> String {
         // 2026-11-08; number-formats.md "`TEXT(x,"General")` uses an 11-character fixed-notation
         // limit").
         let digits = value_digits(value);
-        let shown_fixed = significant_digits(&untrimmed).min(digits);
+        // The fixed form's room runs from the value's own leading digit to the last decimal, so a
+        // rounding that carries into a new digit gains none: `9.7E-09` has room for 1 digit and is
+        // "9.7E-09", not "0.00000001" (probes/t4466-general-fixed-or-e A18, A47).
+        let leading = value.abs().log10().floor() as i64;
+        let room_fixed =
+            usize::try_from(i64::try_from(decimals).unwrap_or(0) + leading + 1).unwrap_or(0);
+        let shown_fixed = room_fixed.min(digits);
         let shown_scientific = scientific_room(value).min(digits);
         // A value that rounds up to 1E+11 needs 12 characters (`99999999999.6` → "1E+11").
         if rounded.abs() < 1e11 && shown_fixed >= shown_scientific {
@@ -71,28 +77,35 @@ pub(crate) fn format_general(value: f64) -> String {
 }
 
 /// `value` (non-zero) in General's E notation: "1.23457E-05", "1.2346E+100".
-fn format_general_scientific(mut value: f64) -> String {
-    let mut exponent = value.abs().log10().floor();
-    value /= 10.0_f64.powf(exponent);
+fn format_general_scientific(value: f64) -> String {
+    // The mantissa rounds the 15-significant-digit decimal half away from zero, as the fixed form
+    // does, not the binary value: `1.133925E-06`, stored just below the tie, is "1.13393E-06" and
+    // `2.059915E-08` "2.05992E-08" (probes/t4466-general-fixed-or-e A82, A96, excel-graph 2026-11-08).
+    let (mantissa15, mut exponent) = crate::number_format::significant_15(value.abs(), true);
     // One digit fewer from a decimal exponent magnitude of 99 on: "1.2346E+100" against
     // "1.23457E-05" (probes/number-text-exponent-digits D1:D15, numbers.md "Exponent width").
-    let decimals_for = |exponent: f64| if exponent.abs() >= 99.0 { 4 } else { 5 };
-    let mut decimals = decimals_for(exponent);
-    let mut s = format!("{value:.decimals$}");
-    // The mantissa is in [1, 10), so only rounding can print "10.". Such a mantissa carries into
-    // the exponent: 9.9999996E+98 prints "1E+99", not "10E+98"
-    // (probes/text-general-exponent-boundary A5-A8, A10).
-    if s.trim_start_matches('-').starts_with("10.") {
-        exponent += 1.0;
-        value = value.signum();
-        decimals = decimals_for(exponent);
-        s = format!("{value:.decimals$}");
+    let digits_for = |exponent: i64| if exponent.abs() >= 99 { 5_u32 } else { 6 };
+    let round_to = |digits: u32| {
+        let unit = 10_u64.pow(15 - digits);
+        (mantissa15 + unit / 2) / unit
+    };
+    let mut digits = digits_for(exponent);
+    let mut mantissa = round_to(digits);
+    // Only rounding can reach 10^digits ("10."): it carries into the exponent, so 9.9999996E+98
+    // prints "1E+99", not "10E+98" (probes/text-general-exponent-boundary A5-A8, A10).
+    if mantissa >= 10_u64.pow(digits) {
+        exponent += 1;
+        digits = digits_for(exponent);
+        mantissa = 10_u64.pow(digits - 1);
     }
-    let sign = if exponent < 0.0 { '-' } else { '+' };
+    let text = mantissa.to_string();
+    let (lead, rest) = text.split_at(1);
+    let rest = rest.trim_end_matches('0');
+    let sign = if value < 0.0 { "-" } else { "" };
+    let point = if rest.is_empty() { "" } else { "." };
+    let exponent_sign = if exponent < 0 { '-' } else { '+' };
     format!(
-        "{}E{}{:02}",
-        s.trim_end_matches('0').trim_end_matches('.'),
-        sign,
+        "{sign}{lead}{point}{rest}E{exponent_sign}{:02}",
         exponent.abs()
     )
 }
@@ -117,14 +130,6 @@ fn scientific_room(value: f64) -> usize {
     } else {
         6
     }
-}
-
-/// The number of significant digits in a plain decimal string: "-0.000012346" → 5, "1200" → 4.
-fn significant_digits(text: &str) -> usize {
-    text.chars()
-        .filter(char::is_ascii_digit)
-        .skip_while(|c| *c == '0')
-        .count()
 }
 
 /// The value a `General` token shows among literals. With no digit placeholder the minus leads the
@@ -152,5 +157,11 @@ mod tests {
         assert_eq!(format_general(1.4e-9), "1.4E-09");
         assert_eq!(format_general(1.234_567_890_123_45e-5), "1.23457E-05");
         assert_eq!(format_general(0.000_123_456_789), "0.000123457");
+        // A fixed rounding that carries into a new digit gains no room (t4466-general-fixed-or-e
+        // A18, A47), and the E mantissa rounds the 15-digit decimal half away (A82, A96).
+        assert_eq!(format_general(9.7e-9), "9.7E-09");
+        assert_eq!(format_general(9.5e-9), "9.5E-09");
+        assert_eq!(format_general(1.133_925e-6), "1.13393E-06");
+        assert_eq!(format_general(2.059_915e-8), "2.05992E-08");
     }
 }

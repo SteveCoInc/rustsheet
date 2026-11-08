@@ -466,8 +466,10 @@ Below serial 1, and the counts:
     same serial do not (t4466-count-hypotheses F33, B33, E33);
   - `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` stays "24:59:59.9" (t4323-carry-ties).
   The rule matches all 2,617 count cells with fraction digits of the t4323, t4332, t4333, t4370, t4389 and t4466
-  probes, including probes/t4466-count-fresh (600 cells drawn and predicted before its fill, for a different model);
-  no constant is fitted. Every other order of the same factors scores lower (86400 at once 2,495, `(y*60)*1440`
+  probes; no constant is fitted. Guards (decision 0188 R4): on the t4466 sha256 hold-out split it gets 1,407 of 1,407
+  train and 610 of 610 hold-out cells (the correctly rounded value 1,343 and 584); probes/t4466-count-fresh was in the
+  search, so the fresh sweep is probes/t4466-chain-fresh, drawn with a new seed after the rule was frozen and predicted
+  before its fill: 600 of 600 (the old register 556, the correctly rounded value 490). Every other order of the same factors scores lower (86400 at once 2,495, `(y*60)*1440`
   2,543), and so do day-first splits (about 2,355). Search: docs/research/t4466/count_chain.py.
 - With fraction digits the `General` register is the remainder of a second the field cut leaves, times the scale
   (`TEXT(3733.95/86400+1*2^-57,"[s].0 General")` ends in "1.63425E-12"): t4466-count-hypotheses G1:G40, B121:B152 (72
@@ -478,7 +480,7 @@ Evidence: probes/t4323-fraction-ties (150 cells), probes/t4323-fraction-sweep (9
 t4323-fraction-sweep-3 (120), t4323-fraction-holdout (100), t4323-carry-ties (32), t4323-carry-sweep (120),
 t4332-fraction-fresh (120), t4333-count-ulp-scan (56), t4370-ulp-map (340), t4370-ulp-map-2 (462),
 t4370-fraction-fresh (120), excel-graph 2026-11-05; t4466-count-hypotheses (536), t4466-count-fresh (600),
-t4466-register-fresh (120), excel-graph 2026-11-08; scoring scripts in docs/research/t4323, docs/research/t4332,
+t4466-register-fresh (120), t4466-chain-fresh (600), excel-graph 2026-11-08; scoring scripts in docs/research/t4323, docs/research/t4332,
 docs/research/t4333, docs/research/t4370 and docs/research/t4466.
 Status: VERIFIED for the clock, the fraction digits and the elapsed counts; PARTIAL for `.000` between 0.165 and 0.33 s
 (T-4419: 11 of the 40 probed ties there round down where the 2^-72-day offset rounds up)
@@ -696,9 +698,15 @@ fixed when the digit counts are equal: `0.000123456789` → "0.000123457", `1.23
 "0.000000002", 1 digit), `2.5E-09` → "2.5E-09", `1.4E-09` → "1.4E-09", `1.23456789E-06` →
 "1.23457E-06".
 The digits compared are the ones each form has room for, capped by the value's own digits at 15, not the digits left
-after rounding trims zeros: `1.5459954738616943E-06` is "1.546E-06" (E has room for 6, the fixed "0.000001546" for 4;
-the value has 14), although both print 4 digits (probes/t4466-count-hypotheses G24, excel-graph 2026-11-08). The ties
-above keep fixed under this reading: `1.2345E-05` has 5 digits, which both forms hold.
+after rounding trims zeros. Fixed's room runs from the value's own leading digit to the last decimal (9 decimals below
+1), so a rounding that carries into a new digit gains none; E's room is 6 digits (5 from exponent 99). So
+`1.5459954738616943E-06` is "1.546E-06" (room 6 against 4; the value has 14 digits), `6.2183E-05` "6.2183E-05" (6
+against 5), `9.7E-09` "9.7E-09" (fixed "0.00000001" has room for 1), while `1.2345E-05`, whose 5 digits both forms
+hold, stays "0.000012345". The E mantissa rounds the 15-digit decimal half away from zero, not the binary value:
+`1.133925E-06` (stored just below the tie) is "1.13393E-06", `2.059915E-08` "2.05992E-08". Evidence:
+probes/t4466-general-fixed-or-e (120 cells, excel-graph 2026-11-08, values drawn and both rules' predictions committed
+before the fill: the room rule 78 of the 80 cells where the rules disagree, the trimmed-digit rule 2; the 2 misses
+were the carry, fixed before merging) and t4466-count-hypotheses G24.
 The 11-character limit also applies from 1 on: the sign does not count, the decimal point does,
 and the value is rounded to fit, so decimals are cut to `11 - integer digits - 1`:
 `123456.123456789` → "123456.1235", `-123456.123456789` → "-123456.1235", `22.712470704` →

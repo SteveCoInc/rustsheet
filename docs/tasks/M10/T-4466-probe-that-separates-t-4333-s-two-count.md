@@ -56,3 +56,5 @@ on a named model or closed with both refuted.
 
 ## Outcome
 probes/t4466-count-hypotheses refuted both of T-4333's hypotheses; the count rule that scores every cell is T-4333's Outcome. All 536 cells pass.
+- Note on the criteria: the case used 40 serials (the 8 t4333 seeds at -2..+2 ulp) with `[h]:mm:ss.0` and `[s].0 General` in place of `[m]:ss.000` and `[h]:mm:ss.00` on all 56; the substitution kept the tie density and added the register column.
+
