@@ -1,10 +1,14 @@
 """The count rule T-4333 adopted: for each elapsed unit, every chain of products by 24, 60, 1440, 3600 and 86400
 whose product is the unit count per day, crossed with the forms of the half step. ((y*60)*60)*24 for [s], (y*60)*24 for
-[m] and y*24 for [h] score every count cell (2,617 of 2,617, t4466-count-fresh included). Run from this directory."""
+[m] and y*24 for [h] score every count cell (2,617 of 2,617, t4466-count-fresh included). Run from this directory;
+`--train` scores the train split only (count_models.split), which picks the same chains, so the hold-out took no part
+in the selection."""
 import sys, math, itertools
 import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import count_models as cm
 R = cm.rows([]) + cm.rows(['t4466-count-fresh'])
+if '--train' in sys.argv:
+    R = [r for r in R if cm.split(r[0], r[1]) == 'train']
 fl=math.floor
 def chains(target):
     # all orderings of factor multisets whose product is target, from primes-ish set {24,60,1440,3600,86400}

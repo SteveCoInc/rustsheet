@@ -705,8 +705,13 @@ against 5), `9.7E-09` "9.7E-09" (fixed "0.00000001" has room for 1), while `1.23
 hold, stays "0.000012345". The E mantissa rounds the 15-digit decimal half away from zero, not the binary value:
 `1.133925E-06` (stored just below the tie) is "1.13393E-06", `2.059915E-08` "2.05992E-08". Evidence:
 probes/t4466-general-fixed-or-e (120 cells, excel-graph 2026-11-08, values drawn and both rules' predictions committed
-before the fill: the room rule 78 of the 80 cells where the rules disagree, the trimmed-digit rule 2; the 2 misses
-were the carry, fixed before merging) and t4466-count-hypotheses G24.
+before the fill: the room rule 78 of the 80 cells where the rules disagree, the trimmed-digit rule 2, and 38 of the 40
+controls; the 4 misses were 2 carries, A18 and A47, and 2 mantissas, A82 and A96, which the two refinements above
+fixed, so that sweep is training data for them), t4466-count-hypotheses G24, and the fresh sweep drawn after both
+refinements were frozen, probes/t4466-general-full (240 cells over the whole magnitude range: both E-only regions, the
+1E-09 and 1E+11 boundaries, ties at the 6th digit and at the 5th from exponent 99, the [1E-09, 1E-04) band and the
+fixed range; the frozen engine's answers committed before the excel-graph fill, 240 of 240; in the band the trimmed-digit
+rule gets 39 of 51 and 0 of the 12 cells where the rules differ).
 The 11-character limit also applies from 1 on: the sign does not count, the decimal point does,
 and the value is rounded to fit, so decimals are cut to `11 - integer digits - 1`:
 `123456.123456789` → "123456.1235", `-123456.123456789` → "-123456.1235", `22.712470704` →

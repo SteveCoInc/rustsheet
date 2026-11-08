@@ -7,7 +7,7 @@ status: done
 priority: P1
 size: M
 tier: opus
-depends_on: [T-4460]
+depends_on: []
 ---
 
 ## Goal
@@ -31,7 +31,7 @@ Found by T-4323, which counts with fraction digits from the half-step register, 
 ## Out of scope
 - The clock and fraction digits (T-4332's field-by-field cut, T-4370 below serial 1).
 
-## Blocked because: time-boxed (decision 0056)
+## Blocked because (historical, resolved by the Outcome): time-boxed (decision 0056)
 Second attempt without a gain (the first was T-4323's count search; see Context). This one (2026-11-05, opus run)
 scored the count candidates in docs/research/t4333 (`count_models.py`, table in its README) on every elapsed-count cell
 with fraction digits: the seven t4323 cases, probes/t4332-fraction-fresh and a new ulp scan, 590 cells. The engine's
@@ -56,13 +56,17 @@ Reopen on a new hypothesis recorded here. Two would be worth testing:
 - Excel may compute the count from the `[s]` token's own whole-second rounding with a carry test against the
   fraction it formats. A probe of `[s]` beside `.0`, `.00` and `.000` on the same serials would separate the two.
 
-Gap triage 2026-11-06: T-4460 (research) is the oracle sweep that tests both hypotheses. This task waits on it.
+Gap triage 2026-11-06: T-4460 (research) was to be the oracle sweep that tests both hypotheses; it was dropped when this task's
+chain rule (Outcome) superseded it.
 
 ## Outcome
 An elapsed count beside fraction digits is the half-step serial `y` times 60, 60 and 24 in that order, each product a double, as many factors as the unit needs, truncated: `[h]` `floor(y*24)`, `[m]` `floor((y*60)*24)`, `[s]` `floor(((y*60)*60)*24)` (`ElapsedBase::count`, formatter/elapsed.rs). It scores all 2,617 count cells of the t4323, t4332, t4333, t4370, t4389 and t4466 probes, the fresh sweep t4466-count-fresh (600, drawn and predicted before its fill for another model) included, with no fitted constant (docs/research/t4466/count_chain.py; number-formats.md "Elapsed counts beside fraction digits"). The 17 count cells this task owned pass (t4323-carry-sweep A37, A49, A83; -carry-ties A27, A31; -fraction-sweep-2 A1, A24, A41, A84; -fraction-sweep-3 A7; -fraction-ties A90; t4333-count-ulp-scan D1:D4, D7, E6). The `General` register beside fraction digits reads the field cut's remainder (t4466-register-fresh 120 of 120), and General's fixed-or-E choice credits each form with the digits it has room for (t4466-count-hypotheses G24).
 
-R4 guards for the chain rule (decision 0188), margin stated: the rule must beat the correctly rounded value on the
-hold-out and match every cell of a sweep drawn after it was frozen.
+R4 guards for the chain rule (decision 0188). The margin was stated after scoring, not in advance: the rule must beat
+the correctly rounded value on the hold-out and match every cell of a sweep drawn after it was frozen (with 100% on
+train and hold-out, any margin holds). The selection did not use the hold-out: `count_chain.py --train` scores the
+train split alone (the 1,407 below plus t4466-count-fresh's 414 train cells) and picks the same chain for each unit,
+1,821 of 1,821.
 
 | model | train (1,407) | sha256 hold-out (610) | t4466-chain-fresh (600, after the freeze) |
 |---|---|---|---|
@@ -72,6 +76,15 @@ hold-out and match every cell of a sweep drawn after it was frozen.
 
 t4466-count-fresh was in the search that found the chain, so it is not counted as fresh; t4466-chain-fresh
 (random.Random(44663), docs/research/t4466/gen_chain_fresh.py, predictions committed before the fill) is. The General
-change has its own sweep, t4466-general-fixed-or-e (gen_general_fresh.py, random.Random(44664)): 120 of 120 after the
-carry and mantissa fixes found by it.
+change was refined on its first sweep, so that sweep is training data, and a second one is the fresh check:
+
+| General rule | t4466-general-fixed-or-e (120, before the refinements) | t4466-general-full (240, after the freeze) | of which [1E-09, 1E-04) (51) | where the rules differ (12) |
+|---|---|---|---|---|
+| room from the leading digit, 15-digit E mantissa (adopted) | 120 (trained on its 4 misses) | 240 | 51 | 12 |
+| room rule as first predicted | 116 | — | — | — |
+| trimmed digits (before) | 40 | — | 39 | 0 |
+
+t4466-general-full (random.Random(44665), gen_general_full.py) covers both E-only regions, the 1E-09 and 1E+11
+boundaries, ties at the 6th significant digit (the 5th from exponent 99) and the fixed range; the frozen engine's answers
+(predict_general_full.py) were committed in 626e5cdca at 10:49:32 and the excel-graph fill is 10:49:52.
 

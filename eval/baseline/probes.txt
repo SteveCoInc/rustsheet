@@ -2561,6 +2561,7 @@ C	probes/t4466-chain-fresh.case.json	600
 C	probes/t4466-count-fresh.case.json	600
 C	probes/t4466-count-hypotheses.case.json	536
 C	probes/t4466-general-fixed-or-e.case.json	120
+C	probes/t4466-general-full.case.json	240
 C	probes/t4466-register-fresh.case.json	120
 C	probes/t4467-bessely-d32-refill.case.json	16
 C	probes/t4467-literal-large-exponent-fresh.case.json	170

@@ -78,13 +78,22 @@ the half step: `((y*60)*60)*24` for `[s]`, `(y*60)*24` for `[m]` and `y*24` for 
 t4466-count-fresh included (which the search therefore used, so it is not the fresh sweep for this rule). Hold-out:
 1,407 / 1,407 train and 610 / 610 on the split above. Fresh: `gen_chain_fresh.py` drew probes/t4466-chain-fresh with a
 new seed after the rule was frozen and wrote chain_fresh_predictions.json before the fill: chain 600, register 556,
-rounded 490 of 600. The "operation still unknown" note above is superseded.
+rounded 490 of 600. The "operation still unknown" note above is superseded. `count_chain.py --train` repeats the search on
+the train split alone (1,821 cells: the 1,407 of T-4333's table plus t4466-count-fresh's train rows) and picks the same
+chains, so the hold-out took no part in the selection.
 
 ## General's fixed-or-E choice
 `gen_general_fresh.py` drew probes/t4466-general-fixed-or-e (values in [1E-09, 1E-04) where the trimmed-digit rule and
 the room rule disagree, plus controls) and wrote general_predictions.json before the fill: room rule 78 / 80, trimmed
 rule 2 / 80, controls 38 / 40 each. The 4 misses showed the two refinements the engine then took: fixed's room runs
-from the value's leading digit (a carry gains none), and the E mantissa rounds the 15-digit decimal half away.
+from the value's leading digit (a carry gains none), and the E mantissa rounds the 15-digit decimal half away. That
+makes this sweep training data for the refined rule. The fresh check is `gen_general_full.py` (random.Random(44665)):
+probes/t4466-general-full, 240 cells over the whole magnitude range, drawn after the refined rule was frozen;
+`predict_general_full.py` wrote the frozen engine's answers (from `rustsheet-eval show` against a placeholder sidecar,
+deleted before the fill) to general_full_predictions.json, committed before the fill: 240 of 240.
+
+The `*_predictions.json` files are kept because they are the evidence that each sweep's predictions came before its
+fill (decision 0188 R4.2): their commit time precedes the sidecar's `produced_at`.
 
 
 `caseio.py` holds what the three fresh generators share (the tie draw, the tie expression and the case writer); it was
