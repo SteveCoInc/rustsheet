@@ -13,10 +13,10 @@ use crate::{
     calc_result::{CalcResult, Range},
     expressions::{
         parser::{ArrayNode, Node},
-        token::Error,
+        token::{get_error_by_name, Error},
         types::CellReferenceIndex,
     },
-    formatter::format::{ascii_script_digits, parse_formatted_number},
+    formatter::format::{ascii_script_digits, parse_formatted_number, parse_typed_number},
     limits::check_range_size,
     model::Model,
     text::Text,
@@ -303,6 +303,38 @@ impl Model {
             currencies.push(currency);
         }
         currencies
+    }
+
+    /// The currency symbols typed input reads: `$` and the locale's own. A euro sign is not one in
+    /// en-US: typed `1€` stays text (probes/typed-currency-percent-input B23:C26, T-1335), while
+    /// VALUE still reads it (cast.rs `coercion_currencies`).
+    pub(crate) fn typed_currencies(&self) -> Vec<&str> {
+        let currency = self.locale.currency.symbol.as_str();
+        let mut currencies = vec!["$"];
+        if !currencies.contains(&currency) {
+            currencies.push(currency);
+        }
+        currencies
+    }
+
+    /// Whether text stored as a string needs the quote prefix to stay text when it is typed back
+    /// in: [`Model::set_user_input`] would read it as a formula (a leading `=`, `+` or `-`), a
+    /// number (its typed-input reader, `parse_typed_number`: percentages, currencies, dates and
+    /// times as well as plain numbers), a boolean or an error. One reader for both, so
+    /// `update_cell_with_text("50%")` or `("1/2/2020")` keeps its text (T-4851).
+    pub(crate) fn text_needs_quote_prefix(&self, value: &str) -> bool {
+        let year = || self.current_year();
+        value.starts_with(['=', '+', '-'])
+            || parse_typed_number(
+                value,
+                &self.typed_currencies(),
+                self.locale,
+                &year,
+                self.workbook.settings.date_system,
+            )
+            .is_ok()
+            || value.to_lowercase().parse::<bool>().is_ok()
+            || get_error_by_name(&value.to_uppercase(), self.language).is_some()
     }
 
     pub(crate) fn cast_number(&self, s: &str) -> Option<f64> {

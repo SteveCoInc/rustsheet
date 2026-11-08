@@ -1943,38 +1943,6 @@ impl Model {
         Ok(())
     }
 
-    /// The currency symbols typed input reads: `$` and the locale's own. A euro sign is not one in
-    /// en-US: typed `1€` stays text (probes/typed-currency-percent-input B23:C26, T-1335), while
-    /// VALUE still reads it (cast.rs `coercion_currencies`).
-    fn typed_currencies(&self) -> Vec<&str> {
-        let currency = self.locale.currency.symbol.as_str();
-        let mut currencies = vec!["$"];
-        if !currencies.contains(&currency) {
-            currencies.push(currency);
-        }
-        currencies
-    }
-
-    /// Whether text stored as a string needs the quote prefix to stay text when it is typed back
-    /// in: [`Model::set_user_input`] would read it as a formula (a leading `=`, `+` or `-`), a
-    /// number (its typed-input reader, `parse_typed_number`: percentages, currencies, dates and
-    /// times as well as plain numbers), a boolean or an error. One reader for both, so
-    /// `update_cell_with_text("50%")` or `("1/2/2020")` keeps its text (T-4851).
-    pub(crate) fn text_needs_quote_prefix(&self, value: &str) -> bool {
-        let year = || self.current_year();
-        value.starts_with(['=', '+', '-'])
-            || parse_typed_number(
-                value,
-                &self.typed_currencies(),
-                self.locale,
-                &year,
-                self.workbook.settings.date_system,
-            )
-            .is_ok()
-            || value.to_lowercase().parse::<bool>().is_ok()
-            || get_error_by_name(&value.to_uppercase(), self.language).is_some()
-    }
-
     /// [`Model::set_user_input`] for text the engine printed itself (a copied, filled, moved or
     /// merged cell's formula), which reads a padded bare column `T[ Col ]`, the engine's print
     /// of `T[ [Col] ]`, as the column (T-3069, T-3258).
