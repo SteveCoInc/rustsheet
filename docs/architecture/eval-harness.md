@@ -420,11 +420,16 @@ Only `pass` counts as passing. Case statuses:
   test or golden file compares a whole report.json.
   Each `argument_coverage[]` row's `unseen_pairs` (T-3277) lists the expected argument-class pairs
   (parameter names and `ArgClass` of each) that its `pairwise` share counts but no Excel-evidence call has passed.
-- `eval/baseline/<suite>.txt`: known failures (see `docs/process/quality-gates.md`).
-- `eval/baseline/visible-parity.txt`: the visible-parity lock (decisions 0088, 0219), one sorted
-  `case<TAB>count` line per case with in-scope visibly-off cells; `check` fails a case above its
-  line, and a case with no line allows none. `update-baseline` writes new cases' lines; task PRs
-  never lower a line; the steward does, daily, with `make eval-lower-visible-lock` (decision 0093).
+- `eval/baseline/<suite>.txt`: known failures, `F` bit-level and `E` outside decision 0355's
+  envelope, `W` those that are a wrong type, error or text, ratcheted on the `E` and `W` lines
+  (see `docs/process/quality-gates.md`).
+- `eval/baseline/visible-parity.txt`: the visible-parity lock (decisions 0088, 0219, 0355), one
+  sorted `case<TAB>count` line per case with in-scope cells outside the envelope; `check` fails a
+  case above its line, and a case with no line allows none. `update-baseline` writes new cases'
+  lines; task PRs never lower a line; the steward does, daily, with `make
+  eval-lower-visible-lock` (decision 0093).
+- `eval/baseline/usage-gates.txt`: each usage tier's met state on the vendored gated suites
+  (`gate_tiers`, decision 0355 item 6); `check` fails a tier written `met` that is unmet.
 
 ## Gate A: the accuracy check
 Normative design: [SPEC-0029](../specs/SPEC-0029-gate-a-accuracy-gate.md) (decision 0188 R2; the

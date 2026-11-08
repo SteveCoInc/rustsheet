@@ -35,6 +35,16 @@ pub enum LockError {
         /// The 1-based line number.
         line: usize,
     },
+    /// A line of the usage-tier lock (decision 0355 item 6) is malformed or repeats a tier.
+    #[error(
+        "{path}:{line}: malformed line (expected `foundational|expert<TAB>met|unmet`, each tier once)"
+    )]
+    TierLine {
+        /// The lock's path relative to the repository root.
+        path: &'static str,
+        /// The 1-based line number.
+        line: usize,
+    },
 }
 
 /// Reads the lock at `rel` under `root`, or `missing` when there is no such file.
