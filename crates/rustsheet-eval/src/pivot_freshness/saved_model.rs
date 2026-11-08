@@ -150,14 +150,13 @@ impl SavedModel {
     /// For a pivot over a `refreshOnLoad` cache, its refresh from the cache's source
     /// (`Model::plan_pivot_refresh`, what the facade's load runs; changing nothing); `None` for
     /// any other pivot.
-    pub(super) fn refresh(&self, table: usize) -> Option<Result<Refreshed, String>> {
+    pub(super) fn refresh(&mut self, table: usize) -> Option<Result<Refreshed, String>> {
         let workbook = &self.model.workbook;
-        let pivot = workbook.pivot_tables.get(table)?;
-        let old =
-            (workbook.pivot_caches.get(pivot.cache as usize)).filter(|c| c.refresh_on_load)?;
-        let plan = self
-            .model
-            .plan_pivot_refresh(pivot.cache, &mut PivotBudget::default());
+        let cache = workbook.pivot_tables.get(table)?.cache;
+        (workbook.pivot_caches.get(cache as usize)).filter(|c| c.refresh_on_load)?;
+        // A defined-name source is evaluated as the plan resolves it (T-4506); nothing is written.
+        let plan = (self.model).plan_pivot_refresh(cache, &mut PivotBudget::default());
+        let old = self.model.workbook.pivot_caches.get(cache as usize)?;
         Some(plan.map_err(|e| e.to_string()).map(|plan| {
             Refreshed {
                 same_records: plan

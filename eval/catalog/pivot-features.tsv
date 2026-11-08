@@ -439,7 +439,7 @@ PV-0437	olap-datamodel	pivotCacheDefinition/cacheSource/consolidation/rangeSets@
 PV-0438	olap-datamodel	pivotCacheDefinition/cacheSource/consolidation@autoPage	true	none	unknown	out (decision 0274)	out	todo		
 PV-0439	metadata	pivotCacheDefinition/cacheSource/extLst		none	unknown	round-trip only (decision 0274)	round-trip	todo		
 PV-0440	source-refresh	pivotCacheDefinition/cacheSource/worksheetSource		values	unknown	in	PV1	todo		T-5023
-PV-0441	source-refresh	pivotCacheDefinition/cacheSource/worksheetSource@name		values	unknown	in	PV1	todo		T-4506
+PV-0441	source-refresh	pivotCacheDefinition/cacheSource/worksheetSource@name		values	unknown	in	PV1	todo	probes/t4506-pivot-named-sources N, O, I, T	T-5034
 PV-0442	metadata	pivotCacheDefinition/cacheSource/worksheetSource@r:id		none	unknown	round-trip only (decision 0274)	round-trip	todo		
 PV-0443	source-refresh	pivotCacheDefinition/cacheSource/worksheetSource@ref		values	unknown	in	PV1	todo		T-5023
 PV-0444	source-refresh	pivotCacheDefinition/cacheSource/worksheetSource@sheet		values	unknown	in	PV1	todo		T-5023

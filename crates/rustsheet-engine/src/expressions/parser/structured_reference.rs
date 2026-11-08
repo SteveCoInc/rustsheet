@@ -7,7 +7,7 @@ use super::{get_table_column_by_name, Node, Parser};
 use crate::expressions::types::CellReferenceRC;
 use crate::language::get_default_language;
 use crate::locale::get_default_locale;
-use crate::table_types::Table;
+use crate::table_types::{table_named, Table};
 use crate::types::sheet_names_match;
 
 /// The source of a structured reference: what [`super::Node::StructuredReferenceKind`] prints
@@ -442,17 +442,9 @@ impl Parser {
         self.moved_table = table;
     }
 
-    /// The table `name` names in the parser's table list. Table names match ignoring case
-    /// (gen-m8b names-case 5b5c0e20e82153bb): an exact hit is deterministic; the case-folded scan
-    /// covers the rest.
+    /// The table `name` names in the parser's table list, ignoring case ([`table_named`]).
     pub(super) fn table_named(&self, name: &str) -> Option<&Table> {
-        self.tables.get(name).or_else(|| {
-            let lower = name.to_lowercase();
-            self.tables
-                .iter()
-                .find(|(table_name, _)| table_name.to_lowercase() == lower)
-                .map(|(_, table)| table)
-        })
+        table_named(&self.tables, name)
     }
 
     /// Puts `table` in place of the table of its name (or adds it), and returns the one it

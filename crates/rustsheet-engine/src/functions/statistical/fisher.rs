@@ -619,6 +619,15 @@ impl Model {
         if marked {
             return Err(marked_number_error(cell));
         }
+        // An omitted sample is `#VALUE!` in either position, for both names (probes/t4857-f-kinds
+        // A605, A606, A659, A660; statistics.md "F.TEST of a single value (T-2455)"; T-4882).
+        if matches!(sample, CalcResult::EmptyArg) {
+            return Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                format!("F.TEST: the {which} sample is omitted"),
+            ));
+        }
         if self.is_blank_one_cell(&sample) {
             return Err(CalcResult::new_error(
                 Error::VALUE,

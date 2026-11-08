@@ -20,8 +20,9 @@ use bitcode::{Decode, Encode};
 use thiserror::Error as ThisError;
 
 use super::{CacheField, CacheItem, MAX_ITEMS};
+use crate::decimal_round::cut_to_15_digits;
 use crate::functions::util::collation::fold_case;
-use crate::number_format::{number_to_text, to_excel_precision};
+use crate::number_format::number_to_text;
 
 /// A field grouped by numbers from `start` to `end` in steps of `interval`. Its layout is the
 /// `<start` group, the inner groups `[start + k * interval, start + (k + 1) * interval)` and the
@@ -139,7 +140,9 @@ impl NumberGroups {
         if !(self.interval.is_finite() && self.interval > 0.0 && span.is_finite() && span >= 0.0) {
             return None;
         }
-        let steps = to_excel_precision(span / self.interval, 15).ceil().max(1.0);
+        let steps = cut_to_15_digits(span / self.interval, false)
+            .ceil()
+            .max(1.0);
         // Two more items for the end groups; MAX_ITEMS bounds the labels a grouping allocates.
         (steps <= (MAX_ITEMS - 2) as f64).then_some(steps as usize)
     }
@@ -244,9 +247,10 @@ impl NumberGroups {
     /// (value - start) / interval, rounded to 15 significant digits. The probe fixes the rounding
     /// as relative, not an absolute tolerance on q (by 0.001, 4e-13 below 123 is 123 and 8e-13
     /// below is not); that it rounds q rather than the value is a structural model the probe's
-    /// points also allow (T-4235).
+    /// points also allow (T-4235). UNVERIFIED: the direction of an exact 16th-digit tie (toward
+    /// zero here, as ROUND's first stage and number-to-text cut; T-4848).
     fn quotient(&self, value: f64) -> f64 {
-        to_excel_precision((value - self.start) / self.interval, 15)
+        cut_to_15_digits((value - self.start) / self.interval, false)
     }
 }
 

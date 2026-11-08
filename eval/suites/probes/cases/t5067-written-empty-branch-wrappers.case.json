@@ -1,0 +1,51 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-5067 (for T-4912): which wrappers hand a written-empty branch on to a ToolPak function or a newer rounding as an omission, and whether a blank-valued branch beside a written-empty one does.",
+ "tags": [
+  "M7",
+  "probe",
+  "math",
+  "T-5067"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "C1": "x",
+    "A1": "=MROUND(IFNA(,1),1)",
+    "A2": "=MROUND(IFNA(NA(),),1)",
+    "A3": "=MROUND(IFERROR(1/0,),1)",
+    "A4": "=MROUND(IFERROR(Z1,),1)",
+    "A5": "=MROUND(IFERROR(Z1,1),1)",
+    "A6": "=MROUND(IF(TRUE,Z1),1)",
+    "A7": "=MROUND(IF(TRUE,Z1,),1)",
+    "A8": "=MROUND(IFS(TRUE,),1)",
+    "A9": "=MROUND(SWITCH(1,1,),1)",
+    "A10": "=MROUND(SWITCH(2,1,1,),1)",
+    "A11": "=MROUND(IF(TRUE,IF(TRUE,)),1)",
+    "A12": "=MROUND((IF(TRUE,)),1)",
+    "A13": "=MROUND(IF(TRUE,)+0,1)",
+    "A14": "=LET(x,IF(TRUE,),MROUND(x,1))",
+    "A15": "=MROUND(CHOOSE(2,1,),1)",
+    "A16": "=MROUND(IF(1=1,),1)",
+    "A17": "=ROWS(MROUND(IF({TRUE;FALSE},,1),1))",
+    "A18": "=INDEX(MROUND(IF({TRUE;FALSE},,1),1),1)",
+    "A19": "=INDEX(MROUND(IF({TRUE;FALSE},,1),1),2)",
+    "A20": "=FLOOR.PRECISE(-2.5,IF(TRUE,))",
+    "A21": "=CEILING.MATH(2.675,CHOOSE(1,,2))",
+    "A22": "=SQRTPI(IF(TRUE,))",
+    "A23": "=FACTDOUBLE(IF(TRUE,))",
+    "A24": "=EDATE(IF(TRUE,),1)",
+    "A25": "=SERIESSUM(2,1,1,IF(TRUE,))",
+    "A26": "=QUOTIENT(7,IF(TRUE,))",
+    "A27": "=MROUND(IF(TRUE,VLOOKUP(\"x\",C1:D1,2,FALSE)),1)",
+    "A28": "=MROUND(IF(FALSE,1,IF(TRUE,)),1)",
+    "A29": "=MROUND(IFERROR(IF(TRUE,),1),1)",
+    "A30": "=ISBLANK(IF(TRUE,))",
+    "A31": "=MROUND(INDEX(IF(TRUE,),1),1)",
+    "A32": "=MROUND(XLOOKUP(1,{1},{0},),1)"
+   }
+  }
+ ],
+ "expected": {}
+}
