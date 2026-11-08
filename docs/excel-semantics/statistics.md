@@ -8849,3 +8849,65 @@ probes/t1942-ztest-numeric-edges (excel-graph, 2026-11-07): `Z.TEST({1,2},1,2^-1
 doubles (n = 4, 5, 9; A8:A10), as is the 2024*2^-1074 control at n = 4: Excel has no `#DIV/0!` for an underflowing
 sigma/sqrt(n), and the engine's fork guard for it was removed. 36 held-out cells (random data, n not a perfect square, sigma
 given and omitted, x zero and not) match the z formula of "Engine (T-1929)" at the p level; in plain doubles `fl(mean-x)*sqrt(n)/sigma` and `(mean-x)/(sigma/sqrt(n))` differ in z on 15 of the 36.
+
+## Standardized moments use stored x87 operations (T-4328)
+Rule: SKEW, SKEW.P and KURT behave as if every operation were an x87 operation in extended precision stored to a
+double: each sum, difference, product, quotient and square root rounds first to a 64-bit significand and then to a
+double (numbers.md "Division rounds twice"). The order is a two-pass mean and m2 = Σ(x - mean)² in input order,
+s = sqrt(m2/d) (d = n - 1 for SKEW and KURT, n for SKEW.P), z = (x - mean)/s, the cube (z·z)·z and the fourth power
+(z·z)·(z·z) (square and square, not ((z·z)·z)·z), summed in input order. SKEW is (n/((n-1)(n-2)))·Σz³, SKEW.P Σz³/n and
+KURT (n(n+1)/((n-1)(n-2)(n-3)))·Σz⁴ - 3(n-1)²/((n-2)(n-3)), the bias factor formed before it scales the sum. Two effects
+are visible, not only last-digit:
+- The twice-rounded root: `SKEW({1E-15,1,2})` (variance 0.999999999999999, whose twice-rounded root is
+  0.9999999999999996 against 0.9999999999999994 once rounded) is 2.4980018054066022E-15 (gen-m9/d208bbafc3bc1997 A262,
+  probes/t2475-stat-subexpressions P!A520); the nearly symmetric data amplifies the one-ulp root.
+- The power order: in `KURT({0.1,42,123456789.123,0.1})` z = 1.4999999999999234 and z² rounds twice to one ulp below the
+  once-rounded square; the bias subtraction magnifies it and KURT is 3.9999999999979536 (gen-m9/27601819397dd56e A200).
+  `KURT({0.2,7,3.14159,-2.5})` is -0.7628272385808703 (the numbers of gen-m9/7bd219ec0c0c5e22 A279) and a 9-value KURT
+  0.734384233823282 (gen-m9/c2974c061384fdd9 A55); both separate (z²)² from the chained product.
+Hold-out and fresh sweep (T-4328, decision 0188 R4): the fit lab's `moments-skew`, `moments-skew-p` and `moments-kurt`
+fits (rustsheet-fitlab, `rustsheet-fitlab-holdout/v1` split) accept the rule at 100% bit-exact on train and test for all
+three, against 19.0%, 14.8% and 19.4% test bit-exact for the correctly rounded moment; Gate A's fresh log-uniform batches
+eval/accuracy/tables/{SKEW,SKEW.P,KURT}/r4-T-4328 (360 points, filled after the freeze) are 360 of 360 bit-exact. An
+external replay (reported with the fix, not re-run here) also ruled out compensated summation, a reciprocal
+normalization, VAR/STDEV's one-pass variance, raw moments and an unstored extended accumulator.
+Evidence: gen-m9 and probes/t2475-stat-subexpressions (excel-graph); the eval cells of KURT (295 of 295) and SKEW
+(335 of 335).
+Ours: as Excel since T-4328 (`standardized_moment` in count_and_average.rs, shared by `fn_skew`, `fn_skew_p` and
+`fn_kurt`; tests in test_fn_moments.rs). The zero or overflowing m2 stays `#DIV/0!` ("Overflowing squares (T-2432)").
+Status: VERIFIED (excel-graph)
+Tasks: T-4328
+
+## The PR 4002 validation probes (T-4974)
+Rule: the 24 probe groups PR #4002 proposed for the 2026-11-07 Excel-parity fixes (probes/t4974-*, excel-graph, 2026-11-07)
+settle these points; each compares Excel with that PR's prototype prediction.
+- SKEW, SKEW.P and KURT on adversarial data (t4974-moments-x87-adversarial, 204 cells): Excel equals the stored-x87 rule bit
+  for bit in every cell ("Standardized moments use stored x87 operations (T-4328)"), and so does ours.
+- LOGNORM.DIST's density holdout (t4974-lognorm-density-holdout, 148 cells): Excel equals the prototype's four-term chain in
+  every cell; ours misses 17 cells visibly until that fix lands.
+- CHISQ.INV.RT above .9999 (t4974-chisq-inv-rt-q-to-p-switch): at df 3, Excel's `CHISQ.INV.RT(p,3)` equals
+  `CHISQ.INV(1-p,3)` bit for bit for every p from .9999 + 2E-6 to .99999 (A2:A33 = G2:G33) and differs from it at .9999
+  itself (A1 vs G1). The case has no `CHISQ.INV(1-p,3)` cell for the rows within 4 ulps of .9999 (A34:A41), so how
+  Excel's RT relates to it there is not measured; the prototype matches A34:A37 (below .9999) and misses A38:A41
+  (above). Whether the cut is `<=` or `<`, and which solver runs on each side, is for T-4996 to probe.
+- BETA.INV at p near DBL_MIN (t4974-beta-inv-dbl-min-residual): Excel does not flush the first residual. The quantile is
+  smooth through DBL_MIN (A6 `BETA.INV(2.22507385850721E-308,16.0270968311551,..)` 3.6855664841262965E-20, A7 at
+  2^-1022 3.685566484126281E-20) and its forward CDF (K6, K9) is 3.9074971845766525E-308, not 0. This falsifies the
+  prototype's collapse to the start value.
+- BETA.INV round trips at large shapes (t4974-beta-inv-large-shape-round-trip, column F = BETA.INV(BETA.DIST(x)) - x):
+  F is nonzero in 10 of 123 rows (33, 34, 52, 70, 71, 73, 86, 88, 105, 106) and 0 in the others, including both t3443
+  audit rows (F122, F123). That the nonzero rows are early AS 109 iterates is a hypothesis for T-4994.
+- T.DIST.RT at df 1000 (t4974-t-dist-df1000-central-endpoint): `T.DIST.RT(0.5,1000)` is 0.30859254041693746 and
+  `T.DIST.RT(0.8513,1000)` 0.19740326475142156, as the earlier probes gave.
+- The other groups disagree with the prototype only in some cells and settle no rule here: the gamma small-x prefactor
+  (55 cells visibly off) and far upper tail (17), Loader's store chain (3), BETA.INV's tiny-shape `#NUM!` boundary (80) and
+  endpoint saturation (29), and F.INV's tiny tail (9; `F.INV(1E-300,11,3)` and `F.INV(1E-250,11,3)` are `#NUM!` in Excel).
+  What Excel does there is for the owner tasks below to record when they fit it; the cells are the evidence. Where
+  ours is visibly off in these groups (LOGNORM.DIST 17 cells, the gamma, Loader and Student-t groups), R1(c) leaves the
+  cells out as Phase 1b evidence (ours and Excel both within 1E-9 of the 50-digit math, decision 0227), so they need no
+  owner task and stay known failures; only the 325 cells listed in T-4994 to T-4998 are counted.
+Evidence: probes/t4974-* (excel-graph, 2026-11-07). The visibly-off cells against ours are owned by T-4994 (BETA.INV),
+T-4995 (F.INV), T-4996 (CHISQ.INV), T-4997 (IRR) and T-4998 (T.INV.2T).
+Ours: matches every SKEW/SKEW.P/KURT cell; the other groups are known failures (eval/baseline/probes.txt).
+Status: VERIFIED (excel-graph)
+Tasks: T-4974
