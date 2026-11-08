@@ -338,3 +338,34 @@ fn an_ungrouped_date_item_takes_no_group_item_format() {
         .unwrap();
     assert_eq!(label.number_format, Some(CellFormat::Code("m/d/yyyy")));
 }
+
+/// A date item's subtotal label shows the item as its label cell does, not its serial (T-5059;
+/// gen-pivot 36996978427905b2 P02!L35 `12/30/1900 18:00 Total`, 462f10551d480f9d P04!M38
+/// `3/31/2024 Total`).
+#[test]
+fn a_date_items_subtotal_label_shows_the_date() {
+    let (mut cache, mut table) = crate::pivot::probe_cases::diagonal(2, true);
+    cache.fields[0].items[0] = CacheItem::Date(365.75);
+    cache.fields[0].items[1] = CacheItem::Date(45382.0);
+    table.fields[1].axis = Some(crate::pivot::Axis::Row);
+    // Subtotals below their items, so each is a line of its own.
+    table.fields[0].subtotal_top = false;
+    table.row_fields = vec![
+        crate::pivot::AxisField::Field(0),
+        crate::pivot::AxisField::Field(1),
+    ];
+    table.column_fields = vec![];
+    let mut work = MAX_PIVOT_WORK;
+    let result = compute(&table, &cache, &mut work).unwrap();
+    let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
+    let cells = render(&table, &cache, &result, &layout, &[]).unwrap();
+    let texts: Vec<_> = (cells.iter())
+        .filter_map(|c| match &c.value {
+            PivotCell::Text(text) => Some(text.as_str()),
+            _ => None,
+        })
+        .collect();
+    for label in ["12/30/1900 18:00 Total", "3/31/2024 Total"] {
+        assert!(texts.contains(&label), "{label} not in {texts:?}");
+    }
+}
