@@ -89,7 +89,7 @@ impl Verdict {
 }
 
 /// Errors the engine uses to signal "I don't implement this".
-const UNSUPPORTED_ERRORS: &[&str] = &["#N/IMPL", "#NAME?"];
+const UNSUPPORTED_ERRORS: &[&str] = &["#N/IMPL!", "#NAME?"];
 
 /// Distance between two finite doubles in units in the last place.
 ///

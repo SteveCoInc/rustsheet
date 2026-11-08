@@ -15,20 +15,29 @@ they mean. Decision 0123 records this skill.
    incomplete run the generator rewrites only `status` with a **Stale** banner, keeps the last
    good numbers everywhere else, and exits 0. A non-zero exit (malformed history.json, malformed
    markers, a catalog mismatch) is not a stale run: fix the cause, never the generated output.
-2. **Read** the generated `status`, `since-last-run`, `goals`, `campaign` and `parity` blocks,
+2. **Read** the generated `status`, `usage-tiers`, `since-last-run`, `goals`, `campaign` and `parity` blocks,
    then `top-functions` and `evidence` as needed, and your own docs/status.md snapshot (CI,
    fuzz, timeouts, blocked tasks). To find a risk's owner, read the task files in docs/tasks/
    and confirm the task is open (todo, in progress or blocked). Nothing else is input: numbers
    in report.json or a task file that the page does not print are not citable (see the rules).
 3. **Rewrite the three blocks**, within these limits:
    - `bottom-line`: one headline sentence, then at most 5 bullets. The headline says where the
-     project stands against the Phase 1 exit (the `goals` block); the bullets give the exit line,
-     the change since the last run, the biggest gap and what is being done about it.
+     project stands against the Phase 1 exit, and the Phase 1 gates are decision 0355's two tier
+     gates (the `usage-tiers` block). The first bullet is the tier gate line: each tier's
+     wrong-type and outside counts and met or not, as the block's bold line prints them
+     ("foundational 31 wrong type, 1 outside, ...: not met; expert ..."), with the worst failing
+     functions from its table. The other bullets give the exit line (`goals`), the change since
+     the last run (the block's change table and `since-last-run`), the biggest gap and what is
+     being done about it. Gate A and Gate B are information once the block measures the tiers:
+     never call either one the exit gate then. When the block says "not measured", say so and
+     cite Gate A and Gate B from `parity`, which still gate the exit.
    - `readiness`: exactly four uses, in this order: **read and compute**, **edit and recalc**,
      **large ranges**, **save and round-trip**. Rate each **likely**, **partly** or **not yet**,
      with one sentence that cites a number (for example the real-world suites' workbook counts
-     for read and compute, timeouts for large ranges). Open the block by saying the ratings are
-     judgment, grounded in the numbers they cite.
+     for read and compute, timeouts for large ranges). **Read and compute** cites the
+     foundational tier first (its type and envelope rates against the bars, in `usage-tiers`),
+     since those are the functions real workbooks call, and then the expert tier or a real-world
+     suite. Open the block by saying the ratings are judgment, grounded in the numbers they cite.
    - `risks`: at most 7, ranked, most severe first. Each names its number and its owning task
      id (`T-XXXX`). A risk with no owning task gets one: file it with `make new-task` in the same
      PR and write "no task, filed T-XXXX". Filing moves the task counts the page prints, so run

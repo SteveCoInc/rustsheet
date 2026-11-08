@@ -219,6 +219,7 @@ mod tests {
 
     fn func(name: &str, scope: Scope, oracle: Option<OracleSupport>) -> CatalogFunction {
         CatalogFunction {
+            usage: crate::catalog::Usage::default(),
             name: name.into(),
             category: "math".into(),
             milestone: "M5".into(),

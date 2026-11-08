@@ -720,6 +720,7 @@ mod tests {
                 ("OR", "M2"),
             ]
             .map(|(name, milestone)| CatalogFunction {
+                usage: crate::catalog::Usage::default(),
                 name: name.into(),
                 category: "math".into(),
                 milestone: milestone.into(),

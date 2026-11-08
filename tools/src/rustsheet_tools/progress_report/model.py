@@ -30,6 +30,8 @@ VISIBLE = ("visible_numeric", "visible_other")
 # The parity tiers, best first: the report's `Tier` names (crates/rustsheet-eval/src/
 # attribution.rs, `Tier::ALL`). The report places every function; this list only orders them.
 TIERS = ("exact", "ulp4", "digits15", "rate999", "rate99", "below99", "unscored")
+# The usage tiers of decision 0355 (catalog `usage`), in the order the page shows them.
+USAGES = ("foundational", "expert")
 # Which cells placed a function's tier (`Attribution`): its attributed cells, or every Excel cell.
 ATTRIBUTIONS = ("sole", "all")
 # The workbook counts of a suite (`Workbooks` in attribution.rs).
@@ -92,6 +94,15 @@ def mapping(obj: Any, key: str, where: str, task: str | None = None) -> dict[str
     value = field(obj, key, where, task)
     if not isinstance(value, dict):
         msg = f"{where}.{key} is not a JSON object"
+        raise ProgressReportError(msg)
+    return value
+
+
+def string(obj: Any, key: str, where: str, task: str | None = None) -> str:
+    """`field(...)` checked to be a non-empty string."""
+    value = field(obj, key, where, task)
+    if not isinstance(value, str) or not value:
+        msg = f"{where}.{key} is not a non-empty string: {value!r}"
         raise ProgressReportError(msg)
     return value
 
@@ -231,6 +242,61 @@ class Phase1:
 
 
 @dataclass(frozen=True)
+class TierBar:
+    """A tier gate's bar on each measure, as a share (`pooled_bar`, `function_bar`); 0 is no bar."""
+
+    type: float
+    envelope: float
+
+
+@dataclass(frozen=True)
+class UsageFunction:
+    """One function's counted cells under the tier gates (`usage_gates.functions[]`)."""
+
+    name: str
+    usage: str
+    cells: int
+    wrong_type: int
+    """Cells with a wrong type, error or text."""
+    outside: int
+    """Numbers outside the decision 0355 envelope."""
+    meets: bool
+    """Whether it meets its tier's per-function bars (the report's verdict)."""
+
+    @property
+    def misses(self) -> int:
+        """Its cells that are wrong on either measure."""
+        return self.wrong_type + self.outside
+
+
+@dataclass(frozen=True)
+class UsageTier:
+    """One tier gate (`usage_gates.tiers[]`): its pooled counts, its bars and its verdict."""
+
+    usage: str
+    functions: int
+    cells: int
+    wrong_type: int
+    outside: int
+    pooled_bar: TierBar
+    function_bar: TierBar
+    failing: tuple[str, ...]
+    """The functions that fail the tier, as the report lists them (`failing_functions`)."""
+    met: bool
+
+
+@dataclass(frozen=True)
+class UsageGates:
+    """report.json `usage_gates` (decision 0355 item 3, SPEC-0037 design 3, T-5092)."""
+
+    suites: tuple[str, ...]
+    tiers: tuple[UsageTier, ...]
+    """One per tier, in USAGES order."""
+    functions: dict[str, UsageFunction]
+    met: bool
+
+
+@dataclass(frozen=True)
 class Suite:
     """One eval suite's counts (report.json `suites[]`) and its known failures."""
 
@@ -270,6 +336,8 @@ class Parity:
     """The suites whose formula cells `real_world_calls` counts (report.json `real_world_suites`)."""
     gate_a: GateA | None = None
     """Gate A from `eval/runs/accuracy.json`; `None` when the file is absent."""
+    usage: UsageGates | None = None
+    """The tier gates (report.json `usage_gates`); `None` for a report that predates them."""
 
     def tier_functions(self, tier: str) -> int:
         """In-scope functions in `tier` (report.json `tiers`)."""
@@ -340,6 +408,75 @@ def load_gate_a(path: Path) -> GateA | None:
     bad = len(points) - standing["inside"] - standing["known_failure"]
     holds = flag(top, "holds", where)
     return GateA(len(points), standing["inside"], standing["known_failure"], bad + problems, missing, holds)
+
+
+def share(obj: Any, key: str, where: str) -> float:
+    """`field(...)` checked to be a number from 0 to 1 (a bar; JSON booleans are not numbers)."""
+    value = field(obj, key, where)
+    if isinstance(value, bool) or not isinstance(value, int | float) or not 0 <= value <= 1:
+        msg = f"{where}.{key} is not a share from 0 to 1: {value!r}"
+        raise ProgressReportError(msg)
+    return float(value)
+
+
+def _tier_bar(raw: Any, key: str, where: str) -> TierBar:
+    bar = mapping(raw, key, where)
+    return TierBar(share(bar, "type", f"{where}.{key}"), share(bar, "envelope", f"{where}.{key}"))
+
+
+def load_usage_gates(report: dict[str, Any]) -> UsageGates | None:
+    """report.json `usage_gates`, checked; `None` for a report from before T-5092 (the page says
+    "not measured"). Every verdict and every failing-function list is the report's."""
+    raw = report.get("usage_gates")
+    if raw is None:
+        return None
+    where = "report.json usage_gates"
+    functions: dict[str, UsageFunction] = {}
+    for i, f in enumerate(items(raw, "functions", where)):
+        fwhere = f"{where}.functions[{i}]"
+        name = str(field(f, "name", fwhere))
+        if name in functions:
+            msg = f"{where}.functions lists {name} twice"
+            raise ProgressReportError(msg)
+        functions[name] = UsageFunction(
+            name,
+            one_of(f, "usage", fwhere, USAGES),
+            count(f, "cells", fwhere),
+            count(f, "wrong_type", fwhere),
+            count(f, "outside", fwhere),
+            flag(f, "meets", fwhere),
+        )
+    tiers: dict[str, UsageTier] = {}
+    for i, t in enumerate(items(raw, "tiers", where)):
+        twhere = f"{where}.tiers[{i}]"
+        usage = one_of(t, "usage", twhere, USAGES)
+        failing = tuple(str(n) for n in items(t, "failing_functions", twhere))
+        if unknown := sorted(set(failing) - set(functions)):
+            msg = f"{twhere}.failing_functions names {', '.join(unknown)}, which {where}.functions lacks"
+            raise ProgressReportError(msg)
+        if usage in tiers:
+            msg = f"{where}.tiers lists {usage} twice"
+            raise ProgressReportError(msg)
+        tiers[usage] = UsageTier(
+            usage,
+            count(t, "functions", twhere),
+            count(t, "cells", twhere),
+            count(t, "wrong_type", twhere),
+            count(t, "outside", twhere),
+            _tier_bar(t, "pooled_bar", twhere),
+            _tier_bar(t, "function_bar", twhere),
+            failing,
+            flag(t, "met", twhere),
+        )
+    if missing := [u for u in USAGES if u not in tiers]:
+        msg = f"{where}.tiers has no {', '.join(missing)} tier"
+        raise ProgressReportError(msg)
+    return UsageGates(
+        tuple(str(s) for s in items(raw, "suites", where)),
+        tuple(tiers[u] for u in USAGES),
+        functions,
+        flag(raw, "met", where),
+    )
 
 
 def _phase1(v15: Any) -> Phase1:
@@ -490,7 +627,9 @@ def compute(
     )
     corpora = tuple(str(s) for s in items(report, "real_world_suites", "report.json", "T-0079"))
     gate_a = load_gate_a(accuracy) if accuracy is not None else None
-    return Parity(rows, tiers, _phase1(v15), suites, exited, corpora, gate_a=gate_a)
+    return Parity(
+        rows, tiers, _phase1(v15), suites, exited, corpora, gate_a=gate_a, usage=load_usage_gates(report)
+    )
 
 
 def load_object(path: Path) -> dict[str, Any]:

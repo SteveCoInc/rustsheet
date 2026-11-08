@@ -11,8 +11,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::closeness::Visible;
-use crate::runner::CellResult;
+use crate::closeness::{within_significant_digits, Visible};
+use crate::runner::{CellResult, Target};
 use crate::value::{Value, Verdict};
 
 /// ε of decision 0188 R2: the relative distance from the math that is always accurate enough.
@@ -139,7 +139,7 @@ pub fn envelope(
         _ => {}
     }
     // R3 drops Excel's side only where Excel gives a number: its errors are still matched
-    // (decision 0188 R3). An unsupported engine result (`#NAME?`, `#N/IMPL`) is never inside,
+    // (decision 0188 R3). An unsupported engine result (`#NAME?`, `#N/IMPL!`) is never inside,
     // though the closeness buckets leave it out of the visibly-off count.
     let r3_drops_excel = r3 && matches!(excel_value, Some(Value::Number(_)));
     let excel_side = !r3_drops_excel
@@ -160,6 +160,53 @@ pub fn envelope(
         (true, false) => Envelope::Excel15,
         (false, true) => Envelope::Math,
         (false, false) => Envelope::Outside,
+    }
+}
+
+/// The Excel side of decision 0355's envelope: 12 significant digits (item 2, SPEC-0037 design 2).
+pub const ENVELOPE_DIGITS: i32 = 12;
+
+/// Where one scored eval cell falls against decision 0355's envelope (SPEC-0037 design 2): the
+/// one per-cell envelope test, which the tier gates, R1(c), the CI ratchet and the visible lock
+/// all call.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CellEnvelope {
+    /// Bit-exact, a pinned deviation, within [`ENVELOPE_DIGITS`] of Excel, or within ε of the
+    /// cell's math value.
+    Inside,
+    /// Two numbers inside on neither side (an R3 cell: not within ε of the math).
+    Outside,
+    /// A number against an error either way, two different errors, a text, boolean or type
+    /// mismatch, or an unsupported engine result: never inside, at any number of digits.
+    WrongType,
+}
+
+/// Classifies scored eval cell `c` against decision 0355's envelope.
+///
+/// Unlike [`envelope`], a cell needs no math value: without one only the Excel side decides. A
+/// cell the run marked [`Target::Math`] (decision 0188 R3) is held to the math only.
+#[must_use]
+pub fn cell_envelope(c: &CellResult) -> CellEnvelope {
+    match c.verdict {
+        Verdict::Pass | Verdict::Deviation => return CellEnvelope::Inside,
+        Verdict::TextMismatch
+        | Verdict::BoolMismatch
+        | Verdict::ErrorMismatch
+        | Verdict::TypeMismatch
+        | Verdict::Unsupported => return CellEnvelope::WrongType,
+        Verdict::NumericUlp | Verdict::NumericClose | Verdict::NumericMismatch => {}
+    }
+    let (Value::Number(excel), Value::Number(engine)) = (&c.expected, &c.actual) else {
+        return CellEnvelope::WrongType;
+    };
+    let on_math = matches!(&c.math, Some(MathValue::Number(m)) if within_math(*engine, *m));
+    let on_excel =
+        c.target != Target::Math && within_significant_digits(*excel, *engine, ENVELOPE_DIGITS);
+    if on_math || on_excel {
+        CellEnvelope::Inside
+    } else {
+        CellEnvelope::Outside
     }
 }
 
@@ -223,6 +270,54 @@ mod tests {
     }
 
     const MATH: f64 = 1.234_567_890_123_456;
+
+    /// An eval cell scoring `engine` against `excel`, with an optional math value.
+    fn eval_cell(excel: Value, engine: &Value, math: Option<f64>) -> CellResult {
+        let mut cell = filled(excel, engine);
+        cell.math = math.map(MathValue::Number);
+        cell
+    }
+
+    #[test]
+    fn cell_envelope_takes_twelve_digits_of_excel_without_a_math_value() {
+        // Half a unit in the 12th digit of 1.0 is 5e-12: just inside, then just outside.
+        let inside = eval_cell(n(1.0), &n(1.0 + 4.9e-12), None);
+        assert_eq!(cell_envelope(&inside), CellEnvelope::Inside);
+        let outside = eval_cell(n(1.0), &n(1.0 + 5.1e-12), None);
+        assert_eq!(cell_envelope(&outside), CellEnvelope::Outside);
+        let exact = eval_cell(n(1.0), &n(1.0), None);
+        assert_eq!(cell_envelope(&exact), CellEnvelope::Inside);
+    }
+
+    #[test]
+    fn cell_envelope_takes_the_math_when_excel_is_far() {
+        // 1e-6 off Excel, but within ε of the math.
+        let cell = eval_cell(n(MATH * (1.0 + 1e-6)), &n(MATH * (1.0 + 1e-12)), Some(MATH));
+        assert_eq!(cell_envelope(&cell), CellEnvelope::Inside);
+        let off_both = eval_cell(n(MATH), &n(MATH * (1.0 + 1e-6)), Some(MATH));
+        assert_eq!(cell_envelope(&off_both), CellEnvelope::Outside);
+    }
+
+    #[test]
+    fn cell_envelope_holds_an_r3_cell_to_the_math_only() {
+        let mut cell = eval_cell(n(MATH), &n(MATH * (1.0 + 1e-13)), Some(MATH * (1.0 + 1e-6)));
+        cell.target = Target::Math;
+        assert_eq!(cell_envelope(&cell), CellEnvelope::Outside);
+        cell.math = Some(MathValue::Number(MATH * (1.0 + 1e-13)));
+        assert_eq!(cell_envelope(&cell), CellEnvelope::Inside);
+    }
+
+    #[test]
+    fn cell_envelope_never_lets_a_wrong_type_in() {
+        let number_vs_error = eval_cell(n(1.0), &err("#NUM!"), None);
+        assert_eq!(cell_envelope(&number_vs_error), CellEnvelope::WrongType);
+        let error_vs_number = eval_cell(err("#NUM!"), &n(1.0), Some(1.0));
+        assert_eq!(cell_envelope(&error_vs_number), CellEnvelope::WrongType);
+        let two_errors = eval_cell(err("#NUM!"), &err("#DIV/0!"), None);
+        assert_eq!(cell_envelope(&two_errors), CellEnvelope::WrongType);
+        let text = eval_cell(Value::Text("a".into()), &Value::Text("b".into()), None);
+        assert_eq!(cell_envelope(&text), CellEnvelope::WrongType);
+    }
 
     #[test]
     fn a_point_in_both() {
@@ -373,7 +468,7 @@ mod tests {
         // Excel text against the engine's #NAME?: compare() gives `Unsupported`, which the
         // closeness buckets do not count as visibly off.
         let math = || Some(MathValue::Number(MATH));
-        for code in ["#NAME?", "#N/IMPL"] {
+        for code in ["#NAME?", "#N/IMPL!"] {
             let engine = err(code);
             let cell = filled(Value::Text("x".into()), &engine);
             assert_eq!(cell.verdict, Verdict::Unsupported);

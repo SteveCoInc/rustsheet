@@ -6,6 +6,7 @@ use crate::value::Value;
 
 fn func(name: &str, v15_reason: Option<&str>) -> CatalogFunction {
     CatalogFunction {
+        usage: crate::catalog::Usage::default(),
         name: name.into(),
         category: "math".into(),
         milestone: "M5".into(),

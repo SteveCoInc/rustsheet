@@ -252,6 +252,7 @@ fn evidence_counts_only_excel_sourced_cells_and_lists_unevidenced_functions() {
 fn out_of_scope_functions_leave_parity_counts_and_list_with_their_reason() {
     use crate::catalog::{CatalogFunction, OracleSupport, Scope};
     let entry = |name: &str, scope, reason: Option<&str>, oracle| CatalogFunction {
+        usage: crate::catalog::Usage::default(),
         name: name.into(),
         category: "math".into(),
         milestone: "M5".into(),

@@ -66,6 +66,10 @@
 # prior: relative real-world frequency (Enron/EUSES/FUSE-derived, see research report). Most
 #   functions have no published corpus share; theirs is hand-set relative to the M2 priors
 #   (docs/architecture/synthetic-generator.md 1.1: SUBTOTAL is in Enron's top 15).
+# usage: foundational marks a common function that decision 0355's foundational tier gates: catalog prior at
+#   least 0.5, or called in at least 6 of the 1,136 SpreadsheetBench workbooks with formulas
+#   (eval/catalog/usage.tsv). Every other function is expert. Only a decision
+#   record changes a function's tier.
 # volatile: true marks a function whose value changes on every recalculation (RAND, RANDBETWEEN).
 #   It keeps its signature, but the generator never calls it: no oracle value could match.
 # v15: exempt (with a `v15_reason`) exempts a function from the 400-cell rule of the fifteen-digit parity
@@ -123,42 +127,49 @@ functions:
     category: math
     milestone: M2
     prior: 72
+    usage: foundational
     returns: number
     params: [{ name: number, mode: aggregate, type: number, repeat: true, min: 1, max: 255 }]
   - name: AVERAGE
     category: statistical
     milestone: M2
     prior: 10
+    usage: foundational
     returns: number
     params: [{ name: number, mode: aggregate, type: number, repeat: true, min: 1, max: 255 }]
   - name: MIN
     category: statistical
     milestone: M2
     prior: 6
+    usage: foundational
     returns: number
     params: [{ name: number, mode: aggregate, type: number, repeat: true, min: 1, max: 255 }]
   - name: MAX
     category: statistical
     milestone: M2
     prior: 7
+    usage: foundational
     returns: number
     params: [{ name: number, mode: aggregate, type: number, repeat: true, min: 1, max: 255 }]
   - name: COUNT
     category: statistical
     milestone: M2
     prior: 6
+    usage: foundational
     returns: number
     params: [{ name: value, mode: aggregate, type: any, repeat: true, min: 1, max: 255 }]
   - name: COUNTA
     category: statistical
     milestone: M2
     prior: 3
+    usage: foundational
     returns: number
     params: [{ name: value, mode: aggregate_a, type: any, repeat: true, min: 1, max: 255 }]
   - name: IF
     category: logical
     milestone: M2
     prior: 20
+    usage: foundational
     returns: any
     params:
       - { name: logical_test, mode: value, type: bool }
@@ -168,18 +179,21 @@ functions:
     category: logical
     milestone: M2
     prior: 3
+    usage: foundational
     returns: bool
     params: [{ name: logical, mode: aggregate, type: bool, repeat: true, min: 1, max: 255 }]
   - name: OR
     category: logical
     milestone: M2
     prior: 3
+    usage: foundational
     returns: bool
     params: [{ name: logical, mode: aggregate, type: bool, repeat: true, min: 1, max: 255 }]
   - name: IFERROR
     category: logical
     milestone: M2
     prior: 4
+    usage: foundational
     returns: any
     params:
       - { name: value, mode: value, type: any, pool: errors }
@@ -188,6 +202,7 @@ functions:
     category: math
     milestone: M2
     prior: 8
+    usage: foundational
     returns: number
     params:
       - { name: number, mode: value, type: number, pool: number_edges }
@@ -196,12 +211,14 @@ functions:
     category: math
     milestone: M2
     prior: 2
+    usage: foundational
     returns: number
     params: [{ name: number, mode: value, type: number }]
   - name: SUMIF
     category: math
     milestone: M2
     prior: 4
+    usage: foundational
     returns: number
     params:
       - { name: range, mode: range, type: any }
@@ -211,6 +228,7 @@ functions:
     category: statistical
     milestone: M2
     prior: 4
+    usage: foundational
     returns: number
     params:
       - { name: range, mode: range, type: any }
@@ -219,6 +237,7 @@ functions:
     category: lookup
     milestone: M2
     prior: 8.5
+    usage: foundational
     returns: any
     params:
       - { name: lookup_value, mode: value, type: any, probe: table_array, probe_edge: first_column }
@@ -229,18 +248,21 @@ functions:
     category: text
     milestone: M2
     prior: 2
+    usage: foundational
     returns: text
     params: [{ name: text, mode: value, type: text, repeat: true, min: 1, max: 255 }]
   - name: LEN
     category: text
     milestone: M2
     prior: 2
+    usage: foundational
     returns: number
     params: [{ name: text, mode: value, type: text, pool: text_edges }]
   - name: HLOOKUP
     category: lookup
     milestone: M2
     prior: 1.5
+    usage: foundational
     returns: any
     params:
       - { name: lookup_value, mode: value, type: any, probe: table_array, probe_edge: first_row }
@@ -251,6 +273,7 @@ functions:
     category: lookup
     milestone: M2
     prior: 6
+    usage: foundational
     returns: any
     dynamic_array: true
     params:
@@ -261,6 +284,7 @@ functions:
     category: lookup
     milestone: M2
     prior: 5
+    usage: foundational
     returns: number
     params:
       - { name: lookup_value, mode: value, type: any, probe: lookup_array }
@@ -270,6 +294,7 @@ functions:
     category: math
     milestone: M2
     prior: 3
+    usage: foundational
     returns: number
     params:
       - { name: sum_range, mode: range, type: number, same_shape: true }
@@ -279,6 +304,7 @@ functions:
     category: statistical
     milestone: M2
     prior: 2
+    usage: foundational
     returns: number
     params:
       - { name: criteria_range, mode: range, type: any, same_shape: true, repeat: { group: [criteria_range, criteria], min: 1, max: 127 } }
@@ -287,6 +313,7 @@ functions:
     category: math
     milestone: M2
     prior: 2
+    usage: foundational
     returns: number
     params:
       - { name: number, mode: value, type: number, pool: number_edges }
@@ -295,6 +322,7 @@ functions:
     category: math
     milestone: M2
     prior: 2
+    usage: foundational
     returns: number
     params:
       - { name: number, mode: value, type: number, pool: number_edges }
@@ -303,12 +331,14 @@ functions:
     category: logical
     milestone: M2
     prior: 2
+    usage: foundational
     returns: bool
     params: [{ name: logical, mode: value, type: bool }]
   - name: LEFT
     category: text
     milestone: M2
     prior: 3
+    usage: foundational
     returns: text
     params:
       - { name: text, mode: value, type: text }
@@ -317,6 +347,7 @@ functions:
     category: text
     milestone: M2
     prior: 3
+    usage: foundational
     returns: text
     params:
       - { name: text, mode: value, type: text }
@@ -325,6 +356,7 @@ functions:
     category: text
     milestone: M2
     prior: 2
+    usage: foundational
     returns: text
     params:
       - { name: text, mode: value, type: text }
@@ -334,42 +366,49 @@ functions:
     category: text
     milestone: M2
     prior: 2
+    usage: foundational
     returns: text
     params: [{ name: text, mode: value, type: text, pool: text_edges }]
   - name: UPPER
     category: text
     milestone: M2
     prior: 1
+    usage: foundational
     returns: text
     params: [{ name: text, mode: value, type: text, pool: text_edges }]
   - name: LOWER
     category: text
     milestone: M2
     prior: 1
+    usage: foundational
     returns: text
     params: [{ name: text, mode: value, type: text, pool: text_edges }]
   - name: CONCAT
     category: text
     milestone: M2
     prior: 1
+    usage: foundational
     returns: text
     params: [{ name: text, mode: aggregate, type: text, repeat: true, min: 1, max: 255 }]
   - name: YEAR
     category: date
     milestone: M2
     prior: 2
+    usage: foundational
     returns: number
     params: [{ name: serial_number, mode: value, type: number, domain: { int: true, min: 1, max: 60000 } }]
   - name: MONTH
     category: date
     milestone: M2
     prior: 2
+    usage: foundational
     returns: number
     params: [{ name: serial_number, mode: value, type: number, domain: { int: true, min: 1, max: 60000 } }]
   - name: DAY
     category: date
     milestone: M2
     prior: 2
+    usage: foundational
     returns: number
     params: [{ name: serial_number, mode: value, type: number, domain: { int: true, min: 1, max: 60000 } }]
   - name: ACCRINT
@@ -430,6 +469,7 @@ functions:
   - name: ADDRESS
     category: lookup
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.5
     returns: text
@@ -442,6 +482,7 @@ functions:
   - name: AGGREGATE
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -563,6 +604,7 @@ functions:
   - name: AVERAGEIF
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -573,6 +615,7 @@ functions:
   - name: AVERAGEIFS
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -821,6 +864,7 @@ functions:
   - name: CEILING
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -850,6 +894,7 @@ functions:
   - name: CELL
     category: information
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.3
     returns: any
@@ -859,6 +904,7 @@ functions:
   - name: CHAR
     category: text
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: text
@@ -940,6 +986,7 @@ functions:
   - name: CHOOSE
     category: lookup
     milestone: M6
+    usage: foundational
     scope: in
     prior: 1.5
     returns: any
@@ -985,6 +1032,7 @@ functions:
   - name: COLUMN
     category: lookup
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.8
     returns: number
@@ -994,6 +1042,7 @@ functions:
   - name: COLUMNS
     category: lookup
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -1080,6 +1129,7 @@ functions:
   - name: COS
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -1108,6 +1158,7 @@ functions:
   - name: COUNTBLANK
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -1265,6 +1316,7 @@ functions:
   - name: DATE
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 3
     returns: number
@@ -1275,6 +1327,7 @@ functions:
   - name: DATEDIF
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -1285,6 +1338,7 @@ functions:
   - name: DATEVALUE
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -1303,6 +1357,7 @@ functions:
   - name: DAYS
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.3
     returns: number
@@ -1597,6 +1652,7 @@ functions:
   - name: EDATE
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.8
     returns: number
@@ -1624,6 +1680,7 @@ functions:
   - name: EOMONTH
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.8
     returns: number
@@ -1682,6 +1739,7 @@ functions:
   - name: EXACT
     category: text
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: bool
@@ -1691,6 +1749,7 @@ functions:
   - name: EXP
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -1814,6 +1873,7 @@ functions:
   - name: FILTER
     category: lookup
     milestone: M7
+    usage: foundational
     scope: in
     prior: 2
     returns: any
@@ -1836,6 +1896,7 @@ functions:
   - name: FIND
     category: text
     milestone: M5
+    usage: foundational
     scope: in
     prior: 1
     returns: number
@@ -1890,6 +1951,7 @@ functions:
   - name: FLOOR
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -1997,6 +2059,7 @@ functions:
   - name: FREQUENCY
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.1
     returns: number
@@ -2206,6 +2269,7 @@ functions:
   - name: HOUR
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -2214,6 +2278,7 @@ functions:
   - name: HSTACK
     category: lookup
     milestone: M7
+    usage: foundational
     scope: in
     prior: 0.5
     returns: any
@@ -2256,6 +2321,7 @@ functions:
   - name: IFNA
     category: logical
     milestone: M5
+    usage: foundational
     scope: in
     prior: 1
     returns: any
@@ -2266,6 +2332,7 @@ functions:
   - name: IFS
     category: logical
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: any
@@ -2482,6 +2549,7 @@ functions:
   - name: INDIRECT
     category: lookup
     milestone: M6
+    usage: foundational
     scope: in
     prior: 1.5
     returns: any
@@ -2502,6 +2570,7 @@ functions:
   - name: INT
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 2
     returns: number
@@ -2553,6 +2622,7 @@ functions:
   - name: ISBLANK
     category: information
     milestone: M5
+    usage: foundational
     scope: in
     prior: 1.5
     returns: bool
@@ -2567,6 +2637,7 @@ functions:
   - name: ISERROR
     category: information
     milestone: M5
+    usage: foundational
     scope: in
     prior: 2
     returns: bool
@@ -2575,6 +2646,7 @@ functions:
   - name: ISEVEN
     category: information
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.1
     returns: bool
@@ -2597,6 +2669,7 @@ functions:
   - name: ISNA
     category: information
     milestone: M5
+    usage: foundational
     scope: in
     prior: 1
     returns: bool
@@ -2611,6 +2684,7 @@ functions:
   - name: ISNUMBER
     category: information
     milestone: M5
+    usage: foundational
     scope: in
     prior: 1
     returns: bool
@@ -2627,6 +2701,7 @@ functions:
   - name: ISODD
     category: information
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.1
     returns: bool
@@ -2669,6 +2744,7 @@ functions:
   - name: ISTEXT
     category: information
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: bool
@@ -2702,6 +2778,7 @@ functions:
   - name: LARGE
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -2735,6 +2812,7 @@ functions:
   - name: LET
     category: logical
     milestone: M7
+    usage: foundational
     scope: in
     prior: 1.5
     returns: any
@@ -2757,6 +2835,7 @@ functions:
   - name: LN
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -2833,6 +2912,7 @@ functions:
   - name: LOOKUP
     category: lookup
     milestone: M6
+    usage: foundational
     scope: in
     prior: 1
     returns: any
@@ -2901,6 +2981,7 @@ functions:
   - name: MEDIAN
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -2935,6 +3016,7 @@ functions:
   - name: MINUTE
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -2971,6 +3053,7 @@ functions:
   - name: MOD
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 1.5
     returns: number
@@ -3034,6 +3117,7 @@ functions:
   - name: NA
     category: information
     milestone: M5
+    usage: foundational
     scope: in
     v15: exempt
     v15_reason: "no arguments: one value"
@@ -3065,6 +3149,7 @@ functions:
   - name: NETWORKDAYS
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -3181,6 +3266,7 @@ functions:
   - name: NPV
     category: financial
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -3295,6 +3381,7 @@ functions:
   - name: OFFSET
     category: lookup
     milestone: M6
+    usage: foundational
     scope: in
     prior: 2
     returns: any
@@ -3455,6 +3542,7 @@ functions:
   - name: PMT
     category: financial
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.6
     returns: number
@@ -3487,6 +3575,7 @@ functions:
   - name: POWER
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -3559,6 +3648,7 @@ functions:
   - name: PRODUCT
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 1.5
     returns: number
@@ -3630,6 +3720,7 @@ functions:
   - name: RAND
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     v15: exempt
     v15_reason: "volatile: no Excel value can match"
@@ -3656,6 +3747,7 @@ functions:
   - name: RANDBETWEEN
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     v15: exempt
     v15_reason: "volatile: no Excel value can match"
@@ -3668,6 +3760,7 @@ functions:
   - name: RANK
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -3678,6 +3771,7 @@ functions:
   - name: RANK.AVG
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -3688,6 +3782,7 @@ functions:
   - name: RANK.EQ
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -3768,6 +3863,7 @@ functions:
   - name: REPLACE
     category: text
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: text
@@ -3790,6 +3886,7 @@ functions:
   - name: REPT
     category: text
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.3
     returns: text
@@ -3817,6 +3914,7 @@ functions:
   - name: ROW
     category: lookup
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.8
     returns: number
@@ -3826,6 +3924,7 @@ functions:
   - name: ROWS
     category: lookup
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -3865,6 +3964,7 @@ functions:
   - name: SEARCH
     category: text
     milestone: M5
+    usage: foundational
     scope: in
     prior: 1
     returns: number
@@ -3907,6 +4007,7 @@ functions:
   - name: SEQUENCE
     category: math
     milestone: M7
+    usage: foundational
     scope: in
     prior: 1
     returns: number
@@ -3953,6 +4054,7 @@ functions:
   - name: SIN
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -4000,6 +4102,7 @@ functions:
   - name: SMALL
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -4009,6 +4112,7 @@ functions:
   - name: SORT
     category: lookup
     milestone: M7
+    usage: foundational
     scope: in
     prior: 1.5
     returns: any
@@ -4021,6 +4125,7 @@ functions:
   - name: SORTBY
     category: lookup
     milestone: M7
+    usage: foundational
     scope: in
     prior: 0.5
     returns: any
@@ -4032,6 +4137,7 @@ functions:
   - name: SQRT
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 1
     returns: number
@@ -4056,6 +4162,7 @@ functions:
   - name: STDEV
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -4070,6 +4177,7 @@ functions:
   - name: STDEV.S
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -4108,6 +4216,7 @@ functions:
   - name: SUBSTITUTE
     category: text
     milestone: M5
+    usage: foundational
     scope: in
     prior: 1
     returns: text
@@ -4119,6 +4228,7 @@ functions:
   - name: SUBTOTAL
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 4
     returns: number
@@ -4128,6 +4238,7 @@ functions:
   - name: SUMPRODUCT
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 2
     returns: number
@@ -4322,6 +4433,7 @@ functions:
   - name: TEXT
     category: text
     milestone: M5
+    usage: foundational
     scope: in
     prior: 2
     returns: text
@@ -4357,6 +4469,7 @@ functions:
   - name: TEXTJOIN
     category: text
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: text
@@ -4367,6 +4480,7 @@ functions:
   - name: TEXTSPLIT
     category: text
     milestone: M7
+    usage: foundational
     scope: in
     prior: 0.5
     returns: any
@@ -4381,6 +4495,7 @@ functions:
   - name: TIME
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.8
     returns: number
@@ -4416,7 +4531,7 @@ functions:
       - { name: array, mode: array, type: any, pool: array_holes }
       - { name: ignore, mode: value, type: number, optional: true, domain: { int: true, min: 0, max: 3 } }
       - { name: scan_by_column, mode: value, type: bool, optional: true }
-  - { name: TODAY, category: date, milestone: M2, scope: in, v15: exempt, v15_reason: "volatile: no Excel value can match" }
+  - { name: TODAY, category: date, milestone: M2, usage: foundational, scope: in, v15: exempt, v15_reason: "volatile: no Excel value can match" }
   - name: TOROW
     category: lookup
     milestone: M7
@@ -4453,6 +4568,7 @@ functions:
   - name: TRIMMEAN
     category: statistical
     milestone: M9
+    usage: foundational
     scope: in
     prior: 0.05
     returns: number
@@ -4482,6 +4598,7 @@ functions:
   - name: TRUNC
     category: math
     milestone: M5
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -4526,6 +4643,7 @@ functions:
   - name: UNIQUE
     category: lookup
     milestone: M7
+    usage: foundational
     scope: in
     prior: 1.5
     returns: any
@@ -4537,6 +4655,7 @@ functions:
   - name: VALUE
     category: text
     milestone: M5
+    usage: foundational
     scope: in
     prior: 1
     returns: number
@@ -4610,6 +4729,7 @@ functions:
   - name: VSTACK
     category: lookup
     milestone: M7
+    usage: foundational
     scope: in
     prior: 0.5
     returns: any
@@ -4620,6 +4740,7 @@ functions:
   - name: WEEKDAY
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 1
     returns: number
@@ -4630,6 +4751,7 @@ functions:
   - name: WEEKNUM
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -4662,6 +4784,7 @@ functions:
   - name: WORKDAY
     category: date
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number
@@ -4716,6 +4839,7 @@ functions:
   - name: XLOOKUP
     category: lookup
     milestone: M6
+    usage: foundational
     scope: in
     prior: 1.5
     returns: any
@@ -4730,6 +4854,7 @@ functions:
   - name: XMATCH
     category: lookup
     milestone: M6
+    usage: foundational
     scope: in
     prior: 0.5
     returns: number

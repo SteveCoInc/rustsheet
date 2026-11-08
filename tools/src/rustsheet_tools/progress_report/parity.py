@@ -17,7 +17,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from rustsheet_tools.progress_report.markdown import REGENERATE, pct, table
+from rustsheet_tools.progress_report import usage
+from rustsheet_tools.progress_report.markdown import REGENERATE, md_text, pct, table
 from rustsheet_tools.progress_report.model import BUCKETS, EN, GE, LE, TIERS, VISIBLE, Parity, Run, Suite
 from rustsheet_tools.progress_report.svg import TIER_PALETTE, Bar, bar_chart
 
@@ -72,7 +73,9 @@ def phase1_lines(p: Parity) -> str:
 
 
 def gate_lines(p: Parity) -> str:
-    """Gate B (beside the every-suite rate above), Gate A and the Phase 1b evidence count.
+    """The Phase 1 gates: the tier gates (decision 0355, T-5094), then Gate B (beside the
+    every-suite rate above) and Gate A, which are information once the tiers are measured, and the
+    Phase 1b evidence count.
 
     Each reads `n/a` when the run's files predate it (T-3359, T-3427) or the accuracy check was
     not run."""
@@ -94,10 +97,23 @@ def gate_lines(p: Parity) -> str:
             f"stale, {ga.missing_tables:,} functions without a table"
         )
     n = "n/a" if ph.phase1b is None else f"{ph.phase1b:,} visibly-off cells"
+    if p.usage is None:
+        tiers = (
+            f"- **Tier gates (decision 0355): {md_text(usage.NOT_MEASURED)}.** Until they are, Gate B and "
+            "Gate A below still gate the Phase 1 exit.\n"
+        )
+        info = ""
+    else:
+        tiers = (
+            f"- **Tier gates (decision 0355): {usage.headline(p.usage)}.** They replace Gate B and Gate A "
+            "as the Phase 1 gates; the Usage tiers block has their rates, bars and failing functions.\n"
+        )
+        info = " _Information, gates nothing (decision 0355 item 5)._"
     return (
-        f"- **Gate B (decision 0188 R1(b)): {b}.** The every-suite count above "
+        f"{tiers}"
+        f"- **Gate B (decision 0188 R1(b)): {b}.**{info} The every-suite count above "
         f"({ph.at_rate:,} of {ph.in_scope:,}) is information.\n"
-        f"- **Gate A (decision 0188 R2): {a}.**\n"
+        f"- **Gate A (decision 0188 R2): {a}.**{info}\n"
         f"- **Phase 1b evidence** left out of the every-suite rate: {n}."
     )
 

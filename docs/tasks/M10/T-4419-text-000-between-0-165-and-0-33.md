@@ -4,7 +4,7 @@ title: "TEXT .000 between 0.165 and 0.33 s: which half-ulp ties of the 2^-72-day
 milestone: M10
 lane: functions-text
 status: todo
-priority: P3
+priority: P1
 size: M
 tier: opus
 depends_on: []
@@ -15,6 +15,7 @@ TEXT under `.000` matches Excel where the half-stepped serial is between 2^-19 a
 that band the 2^-72-day offset of T-4389 is exactly half an ulp of the serial.
 
 ## Context
+- Decision 0355: this task owns foundational-tier cells, which the tier gate needs 100% right on type, error and text, so it is P1.
 - T-4389 (`millisecond_offset`, formatter/elapsed.rs; number-formats.md "Fraction digits of a second at a tie")
   adds 2^-72 days to the half-stepped serial under `.000`. Below 2^-19 days that model matches every probed cell.
 - In [2^-19, 2^-18) the addition is half an ulp, and the double addition rounds it to even, so only serials with an

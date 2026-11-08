@@ -2,7 +2,7 @@
 the stale page of an incomplete run (T-0071).
 
 The `parity` block is parity.py's (T-0081); `since-last-run` and `trends` are history.py's
-(T-0071); `goals` and `campaign` are goals.py's (T-0072); `top-functions` and `evidence` are
+(T-0071); `usage-tiers` is usage.py's (T-5094); `goals` and `campaign` are goals.py's (T-0072); `top-functions` and `evidence` are
 evidence.py's (T-0073); `arguments` is arguments.py's (T-0077); `codebase` is codebase.py's (T-0078). Later sections are
 added by their own tasks as generated blocks in `LAYOUT`, without changing the block protocol in blocks.py.
 """
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rustsheet_tools.progress_report import blocks, evidence, goals, history, parity
+from rustsheet_tools.progress_report import blocks, evidence, goals, history, parity, usage
 from rustsheet_tools.progress_report.markdown import REGENERATE, md_text
 from rustsheet_tools.progress_report.model import Parity, ProgressReportError, Run
 
@@ -21,6 +21,7 @@ PAGE = "progress.md"
 LAYOUT = (
     (blocks.GENERATED, "status", None),
     (blocks.JUDGMENT, "bottom-line", "Bottom line"),
+    (blocks.GENERATED, "usage-tiers", None),
     (blocks.GENERATED, "goals", None),
     (blocks.GENERATED, "campaign", None),
     (blocks.GENERATED, "since-last-run", None),
@@ -124,6 +125,7 @@ METHOD = f"""## Method
   heading says so, and the text is still shown.
 - **One definition per measure.** Every verdict, bucket and tier is computed once, in the Rust eval
   report (crates/rustsheet-eval). This page only adds up the report's counts.
+{usage.METHOD}
 {goals.METHOD}
 {parity.METHOD}
 {history.METHOD}
@@ -150,8 +152,8 @@ def parse(text: str) -> dict[str, blocks.Block]:
 
 def render(run: Run, data: Parity, previous: str | None, sections: dict[str, str]) -> str:
     """The whole page for a complete `run`, keeping the judgment text of `previous` (the existing
-    page). `sections` holds the goals, history, arguments and codebase blocks (`goals`,
-    `campaign`, `since-last-run`, `trends`, `arguments`, `codebase`)."""
+    page). `sections` holds the usage-tier, goals, history, arguments and codebase blocks
+    (`usage-tiers`, `goals`, `campaign`, `since-last-run`, `trends`, `arguments`, `codebase`)."""
     old = parse(previous) if previous is not None else {}
     body = {
         **sections,

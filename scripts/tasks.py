@@ -10,7 +10,8 @@
                                          # comes next for opus, with its branch (decision 0095);
                                          # a P0 is offered in a busy lane too, and when only the
                                          # busy rule hides ready tasks it prints "lane L busy: T
-                                         # in flight on B" and exits 3, not 1 (decision 0330)
+                                         # in flight on B" and exits 3, not 1 (decision 0330);
+                                         # foundational first at equal priority (decision 0355)
   scripts/tasks.py ready [--lane L] [--tier T] [--no-fetch]  # every task `next` could pick, in its
                                          # order, then "N ready" (queue health, decision 0021)
   scripts/tasks.py validate              # schema + dependency checks, every TODO(T-XXXX) in
@@ -23,7 +24,7 @@
                                          # (SPEC-0022); fails like `validate`; no fetch, no
                                          # network: one local, read-only `git ls-files`
   scripts/tasks.py new --milestone M1 --lane engine --title "..." [--priority P1] [--size S]
-                       [--tier sonnet|opus] [--no-fetch]
+                       [--tier sonnet|opus] [--usage foundational|expert] [--no-fetch]
                                          # write a task file with the next free id (decision 0016)
   scripts/tasks.py issue <N> [--no-fetch]  # tasks with `issue: <N>` on the working tree and every
                                          # origin/* branch; exit 1 when none (issue-intake
@@ -32,8 +33,8 @@
                                          # filed today (UTC), and the limits (decision 0158)
 
 Front matter keys: id, title, milestone, lane, status, priority, size, tier, depends_on, spec,
-campaign, defer, issue, issue_author and issue_origin (optional; decisions 0083, 0114, 0158).
-See docs/process/task-format.md.
+campaign, defer, issue, issue_author, issue_origin and usage (optional; decisions 0083, 0114, 0158,
+0355). See docs/process/task-format.md.
 """
 
 from __future__ import annotations
@@ -49,6 +50,7 @@ from pathlib import Path
 
 import milestone_order
 import pivot_owners
+import task_usage
 
 ROOT = Path(__file__).resolve().parent.parent
 TASKS = ROOT / "docs" / "tasks"
@@ -162,10 +164,9 @@ def validate(tasks: list[dict[str, object]]) -> list[str]:
         for key, allowed in (("status", STATUSES), ("lane", LANES), ("priority", PRIORITIES), ("size", SIZES)):
             if t.get(key) not in allowed:
                 errors.append(f"{where}: {key}={t.get(key)!r} not in {allowed}")
-        if "campaign" in t and t.get("campaign") not in CAMPAIGNS:
-            errors.append(f"{where}: campaign={t.get('campaign')!r} not in {CAMPAIGNS}")
-        if "defer" in t and t.get("defer") not in DEFERRALS:
-            errors.append(f"{where}: defer={t.get('defer')!r} not in {DEFERRALS}")
+        for key, allowed in (("campaign", CAMPAIGNS), ("defer", DEFERRALS), ("usage", list(task_usage.USAGES))):
+            if key in t and t.get(key) not in allowed:
+                errors.append(f"{where}: {key}={t.get(key)!r} not in {allowed}")
         if "issue" in t and not ISSUE.fullmatch(str(t.get("issue"))):
             errors.append(f"{where}: issue={t.get('issue')!r} is not a positive issue number (decision 0158)")
         if "issue" in t and not LOGIN.fullmatch(str(t.get("issue_author", ""))):
@@ -604,7 +605,7 @@ lane: {lane}
 status: todo
 priority: {priority}
 size: {size}
-tier: {tier}
+tier: {tier}{usage}
 depends_on: []
 ---
 
@@ -643,19 +644,22 @@ def new_task(tasks: list[dict[str, object]], fetch: bool = True) -> int:
     """Writes a task file with the next free id (`--no-fetch` skips `git fetch`, e.g. offline)."""
     milestone, lane, title = arg("--milestone"), arg("--lane"), arg("--title")
     priority, size, tier = arg("--priority") or "P2", arg("--size") or "S", arg("--tier") or "opus"
+    usage = arg("--usage") or task_usage.title_usage(title or "", ROOT)  # SPEC-0037 design 8
     if not (milestone and MILESTONE.fullmatch(milestone) and lane in LANES and lane != "functions" and title) or "\n" in title:
         print("usage: tasks.py new --milestone M<n> --lane <lane> --title <one-line title> "
-              "[--priority P2] [--size S] [--tier opus] [--no-fetch]")
+              "[--priority P2] [--size S] [--tier opus] [--usage foundational|expert] [--no-fetch]")
         return 2
-    if priority not in PRIORITIES or size not in SIZES or size == "L" or tier not in TIERS:
-        print(f"priority must be one of {PRIORITIES}; size one of S, M (split L tasks); tier one of {TIERS}")
+    if priority not in PRIORITIES or size not in SIZES or size == "L" or tier not in TIERS or usage not in (*task_usage.USAGES, None):
+        print(f"priority must be one of {PRIORITIES}; size one of S, M (split L tasks); tier one of {TIERS}; "
+              f"usage one of {list(task_usage.USAGES)}")
         return 2
     taken = {str(t["id"]) for t in tasks} | git_task_ids(fetch)
     tid, note = reserve_id(lambda claimed: next_id(milestone, tasks, taken | claimed), fetch)
     path = TASKS / milestone / f"{tid}-{slug(title)}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(TEMPLATE.format(id=tid, title=quote(title), milestone=milestone,
-                                    lane=lane, priority=priority, size=size, tier=tier))
+                                    lane=lane, priority=priority, size=size, tier=tier,
+                                    usage=f"\nusage: {usage}" if usage else ""))
     print(f"wrote {path.relative_to(ROOT)}: {tid} is {note}; fill in the TODO(fill) lines")
     return 0
 
@@ -693,11 +697,9 @@ def branch_claims(
     the review-round-limit marker and no commit for 2 h: the opus worker re-reviews them
     (decision 0095). Best effort, like `git_task_ids`.
     """
-
-    git = _git
     try:
         if fetch:
-            git("fetch", "-q", "--prune", "origin")
+            _git("fetch", "-q", "--prune", "origin")
         claimed: set[str] = set()
         handed: set[str] = set()
         blocked: set[str] = set()
@@ -705,7 +707,7 @@ def branch_claims(
         tiers: dict[str, str] = {}  # task id -> tier of the task file on its branch
         limited: dict[str, str] = {}
         now = time.time()
-        refs = git("for-each-ref", "--format=%(refname) %(committerdate:unix)", "refs/remotes/origin/agent")
+        refs = _git("for-each-ref", "--format=%(refname) %(committerdate:unix)", "refs/remotes/origin/agent")
         for line in refs.splitlines():
             ref, _, stamp = line.partition(" ")
             m = AGENT_BRANCH.match(ref)
@@ -719,10 +721,10 @@ def branch_claims(
                 claimed.add(tid)
             if age < BUSY_SECONDS:
                 recent[tid] = (lane, ref.removeprefix("refs/remotes/origin/"))
-            for name in git("ls-tree", "-r", "--name-only", ref, "--", "docs/tasks").splitlines():
+            for name in _git("ls-tree", "-r", "--name-only", ref, "--", "docs/tasks").splitlines():
                 if f"/{tid}-" not in name:
                     continue
-                text = git("show", f"{ref}:{name}")
+                text = _git("show", f"{ref}:{name}")
                 if HANDOFF.search(text):
                     handed.add(tid)
                 try:
@@ -862,6 +864,7 @@ def available(
             campaign.get(str(t["id"]), len(CAMPAIGNS)),
             str(t.get("milestone"))[1:].zfill(3),
             str(t.get("priority")),
+            task_usage.effective_usage(t, ROOT) != "foundational",  # decision 0355 item 7
             str(t["id"]),
         )
     )
@@ -923,10 +926,7 @@ def main() -> int:
         for e in errors:
             print(f"FAIL {e}", file=sys.stderr)
         if errors:
-            print(
-                f"{len(tasks)} tasks, {len(errors)} errors; see `scripts/tasks.py validate`",
-                file=sys.stderr,
-            )
+            print(f"{len(tasks)} tasks, {len(errors)} errors; see `scripts/tasks.py validate`", file=sys.stderr)
             return 1
         print(json.dumps(stats(tasks, by_id), indent=2, sort_keys=True))
         return 0
@@ -952,7 +952,7 @@ def main() -> int:
         )
         if cmd == "ready":
             for t in cands:
-                print(f"{t['id']}  {t.get('lane')!s:<9} {t['title']}{resume_note(t, limited)}")
+                print(f"{t['id']}  {t.get('lane')!s:<9} {t['title']}{task_usage.usage_note(t, ROOT)}{resume_note(t, limited)}")
             print(f"{len(cands)} ready")
             return 0
         if not cands and busy_lanes:
@@ -964,7 +964,8 @@ def main() -> int:
             print("no ready task")
             return 1
         t = cands[0]
-        print(f"{t['id']}  {t['title']}  ({t['path'].relative_to(ROOT)}){resume_note(t, limited)}")  # type: ignore[union-attr]
+        note = task_usage.usage_note(t, ROOT) + resume_note(t, limited)
+        print(f"{t['id']}  {t['title']}  ({t['path'].relative_to(ROOT)}){note}")  # type: ignore[union-attr]
         return 0
     if cmd == "board":
         lines = ["# Task board", "", "Generated by `make board` (git-ignored; decision 0017). Do not edit or commit it.", ""]
