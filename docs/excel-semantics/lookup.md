@@ -1829,10 +1829,15 @@ identical results, so RANK does not split on that axis as LARGE/SMALL do): each 
 `RANK(5,OFFSET(A1,{0;1},0,2))` is `{2;#N/A}` (A1:A2 = 5,8; A2:A3 = 8,2 lacks 5); the 2-D shift `OFFSET(A1,{0;1},{0;1},2)`
 `{2;1}`; `INDIRECT({"A1:A2";"B1:B2"})` `{2;2}`; one-cell references `INDIRECT({"A1";"B1"})` `{1;#N/A}`; a bad address element
 is `#REF!` for that element only (`{2;#REF!}`). A lifted `number` ({5;9}) or `order` ({0;1}) beside the grid gives a
-two-row result (`{2;#N/A}`), but these probes do not show how its elements pair with the grid's: the second element is
-`#N/A` whether it is zipped or the first is broadcast, as A2:A3 holds neither 5 nor 9 (UNVERIFIED, T-4951); an error `number` or `order` gives that error in every element. ROWS is 2 and COLUMNS 1 for each.
+two-row result (`{2;#N/A}`), but its elements pair with the grid's elements by zipping, not broadcasting (T-4951,
+probes/t4951-rank-lift-zip-ties, excel-graph 2026-11-08, RANK, RANK.EQ and RANK.AVG, same sheet and off-sheet):
+`RANK({5;8},OFFSET(A1,{0;1},0,2))` is `{2;1}` (broadcast would give `{2;#N/A}`) and `RANK(8,OFFSET(A1,{0;1},0,2),{0;1})`
+`{1;2}` (broadcast-0 would give `{1;1}`); an error `number` or `order` gives that error in every element. ROWS is 2 and COLUMNS 1 for each.
 Matches ours in all 217 cells, no fix needed.
-Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742, T-4801, T-4826
+Ties inside one element's range (T-4951; D1:D5 = 5,8,5,2,5): `RANK.AVG(5,OFFSET(D1,{0;2},0,3))` is `{2.5;1.5}` (D1:D3 = 5,8,5 and D3:D5 = 5,2,5;
+RANK/RANK.EQ give `{2;1}`), `OFFSET(D1,{0;1},0,4)` `{2.5;2.5}`, with order 1 and `OFFSET(D1,{0;1},0,5)` `{3;2.5}`;
+`INDIRECT({"D1:D3";"D3:D5"})` as the OFFSET case. Same sheet and off-sheet are identical. Matches ours in all 84 cells, no fix needed.
+Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742, T-4801, T-4826, T-4951
 
 ## MATCH match_type that is a reference to an error cell is #REF! (excel-graph)
 Rule: `MATCH(30,A1:A5,M2)` with M2 `=NA()` gives `#REF!` (ERROR.TYPE 4) in Excel for the web, not the #N/A the
