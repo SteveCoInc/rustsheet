@@ -3,7 +3,7 @@ id: T-5060
 title: "t4618 Q!A1: a sheet-qualified use of an undefined name, P!N, is #NAME? in Excel and 1 ours"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
