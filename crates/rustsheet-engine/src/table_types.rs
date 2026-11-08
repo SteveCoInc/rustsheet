@@ -207,17 +207,26 @@ pub struct CustomFilter {
 }
 
 impl CustomFilter {
-    /// Whether the condition holds for a cell that displays `text`, when that can be told here:
-    /// an `equal` (or absent) operator with a text operand holds when the text is the operand,
-    /// ignoring case (docs/research/t4895/uploads/custom: equals a, or equals c, keeps rows 2-7's
-    /// a and c; T-4939). `None` for every other operator, an operand that reads as a number
-    /// (a number cell may be compared by value) and one with a wildcard (`*`, `?` or `~`): none
-    /// of them is probed.
+    /// Whether the condition holds for a cell that displays `text`, when that can be told here.
+    /// An `equal` (or absent) operator with a text operand is `Some(true)` when the text is the
+    /// operand exactly (docs/research/t4895/uploads/custom: equals a, or equals c, keeps rows
+    /// 2-7's a and c; T-4939) and `Some(false)` when it differs by more than case. `None` when
+    /// the two differ only in case (custom-upper, T-4965: Excel changed no row), for every other
+    /// operator, for an operand that reads as a number (a number cell may be compared by value)
+    /// and for one with a wildcard (`*`, `?` or `~`): none of them is probed.
     #[must_use]
     pub fn keeps_text(&self, text: &str) -> Option<bool> {
         let equal = self.operator.as_deref().is_none_or(|op| op == "equal");
+        // `parse::<f64>` also reads "inf" and "nan" as numbers: conservative, it only makes more
+        // operands count as numeric and so return `None` (unprobed) rather than a verdict.
         let plain = !self.val.contains(['*', '?', '~']) && self.val.trim().parse::<f64>().is_err();
-        (equal && plain).then(|| text.to_lowercase() == self.val.to_lowercase())
+        if !(equal && plain) {
+            return None;
+        }
+        // A match that differs only in case is no verdict: Excel left every row as it was for
+        // operands "A" and "C" over cells a and c (T-4965, custom-upper upload).
+        let held = text == self.val;
+        (held || text.to_lowercase() != self.val.to_lowercase()).then_some(held)
     }
 }
 

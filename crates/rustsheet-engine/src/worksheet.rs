@@ -141,12 +141,10 @@ impl Worksheet {
             }
         }
         self.rows.push(Row {
-            height: constants::DEFAULT_ROW_HEIGHT / constants::ROW_HEIGHT_FACTOR,
-            r: row,
             custom_format,
-            custom_height: false,
             s: style_index,
             hidden: false,
+            ..Row::hidden_default(row)
         });
         Ok(())
     }

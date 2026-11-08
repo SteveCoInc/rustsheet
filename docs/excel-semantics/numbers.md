@@ -2453,7 +2453,9 @@ text the row's cell displays in that criterion's column, ignoring case:
   docs/research/t4895/predictions-uploads.tsv, the recalculated values in docs/research/t4895/uploads/): kept values
   "A" and "C" over cells a and c keep them (case is ignored); a visible row whose kept cell is blank stays visible
   under `blank="1"` and is hidden without it; a kept custom filter (equals a, or equals c) shows row 5, which only the
-  deleted criterion hid.
+  deleted criterion hid; the same custom filter with operands "A" and "C" (custom-upper, T-4965) shows rows
+  2, 4, 6 only: row 5 (c, hidden by the deleted criterion) stays hidden and the visible a rows stay, so a custom
+  `equal` whose operand differs from the cell only in case changes no row (unlike a values filter, which ignores case).
 
 The engine follows this (T-4803, T-4939): after a column delete that takes a criterion and leaves another inside the
 table, `rows_decided_by_criteria` (crates/rustsheet-engine/src/table_edits.rs) re-applies the kept criteria to each
@@ -2462,7 +2464,8 @@ a file and for one given its criteria with `Txn::filter_table_column`. The eval 
 kept rows' General text, as spec2xlsx writes it (`add_table` in crates/rustsheet-eval/src/engine.rs runs before the
 number formats are set). Rule (ours where unprobed): a values filter without date groups is evaluated (blank rows by
 `blank`, other rows by their text among `values`), and a custom filter whose conditions all have the `equal` operator
-(or none) and a text operand without a wildcard (`*`, `?`, `~`), combined by `and`. A row whose verdict hangs on any
+(or none) and a text operand without a wildcard (`*`, `?`, `~`) that matches the cell exactly or not at all (a case-only difference
+is no verdict), combined by `and` or `or` (the evidenced form is `or`). A row whose verdict hangs on any
 other kept criterion (a custom filter with another operator or a numeric operand, top 10, dynamic, date groups, color)
 keeps its state, unless an evaluated criterion rejects it. The undo puts back every row the delete showed or hid.
 Kept top10, dynamic, date-group and color criteria are unprobed.
