@@ -5071,7 +5071,10 @@ Rule (T-4975 follow-up, measured on main's T-4974 probes as #4087 asked; inverse
   column J of probes/t4974-beta-inv-dbl-min-residual (`BETA.INV(1E-300,1.5,300)` = 4.0806016627138796E-225),
   `BETA.INV(1E-300,2,5E9)` (endpoint-saturation K5), `FINV(1E-300,30,3)` and its neighbours (probes-numeric
   t4857-f-classes A2221:A2251), `F.INV.RT(1E-300,3,3)` (gen-m9/0a9226016e8f5f33 A321) and Gate A's
-  BETAINV/s1 A166. Such a stop is Excel's value and the tiny-tail R3 check does not replace it. Where the root
+  BETAINV/s1 A166. Each of those stops lies below the root (negative residual); such a stop is Excel's value and
+  the tiny-tail R3 check does not replace it. A floor stop above the root is not Excel's (`BETA.INV(1E-300,2,2)`
+  stops at 2.0E-150 where Excel is 7.725445078779648E-164 and the math 5.7735026918962415E-151; dbl-min-residual
+  column C), so it is judged by the R3 check like any other stop and returns the math there. Where the root
   underflows (T-2435's `#NUM!` precheck) the floor stop is returned when it is a normal double.
 - **Slope stop at the first estimate.** Where the density at AS 109's first estimate is below the normal doubles (its
   reciprocal overflows) Excel returns the first estimate: `BETA.INV(2^-1022,30,3)` = 1.5861167524067332E-17 and

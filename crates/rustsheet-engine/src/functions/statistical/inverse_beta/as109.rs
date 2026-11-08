@@ -379,7 +379,12 @@ where
                         _ => absolute,
                     };
                     if stop {
-                        return if floored {
+                        // A floor stop is Excel's value where measured only below the root
+                        // (residual < 0: dbl-min-residual J1, BETAINV/s1 A166, FINV(1E-300,30,3));
+                        // above it Excel stops elsewhere (`BETA.INV(1E-300,2,2)` is
+                        // 7.725445078779648E-164 against the stop 2.0E-150, dbl-min-residual C1),
+                        // so it stays a plain stop that the callers' R3 check judges.
+                        return if floored && residual < 0.0 {
                             As109Outcome::FloorStopped(value)
                         } else {
                             As109Outcome::Stopped(value)
