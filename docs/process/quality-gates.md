@@ -120,7 +120,9 @@ On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygien
   the same for expert. `check` fails when a tier written `met` is unmet, and while the lock is out
   of date; `make eval-baseline` writes `met` when a tier becomes met, and `unmet` over `met` only
   with `--allow-regressions`. The full report's tiers (`make eval`) are the Phase 1 exit measure;
-  this lock is the CI ratchet on the cells CI runs.
+  this lock is the CI ratchet on the cells CI runs. `make catch-up` (and `make renumber`) resolve a
+  conflict on the lock to `main`'s side and re-record it, and refuse a merge that leaves a tier unmet
+  that `main` has met (T-5096).
 - **Lint debt / duplication / oversized files / fitted constants:** the scripts fail on increases. When you reduce
   them, run the script with `--update` and commit the JSON in the same PR.
 

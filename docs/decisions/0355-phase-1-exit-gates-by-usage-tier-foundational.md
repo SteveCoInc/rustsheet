@@ -115,6 +115,8 @@
      into the envelope; and one leaving `W` but staying in `E` as right type. The
      visible-parity lock counts `cell_envelope`'s `Outside` and `WrongType` cells, and eval/baseline/usage-gates.txt
      records each tier's met state on the vendored gated suites.
+     `make catch-up` and `make renumber` resolve a conflict on that lock to `main`'s side, re-record it, and
+     refuse a merge that leaves a tier unmet that `main` has met (T-5096).
   7. **Task order.** Among ready tasks of the same milestone and priority, a task about a foundational function
      comes before any other.
      - P0, handoffs, re-reviews and campaign stages still come first, as decisions 0023, 0094 and 0095 say.
