@@ -41,5 +41,7 @@ Found by the T-4856 duplicate-concept audit (one definition per concept, CLAUDE.
 - Typed input's boolean (`to_lowercase().parse::<bool>()` in model.rs `reenter_printed_input`) is left alone: it
   accepts the same set, and T-4851's PR #4075 is moving the code next to it.
 - Eval delta: two new cases, 78/78 (main: 71/78, BETA.DIST C6:C7 and quoting H2, H3, H5, J2, J5 off), regressions 0.
+  roundtrip-poi loses 9 failing items over 4 cases (52575_main R0 221 -> 220, 55640 and InlineStrings R1 297 -> 294,
+  MalformedSSTCount R1 203 -> 202), from the xsd:boolean attribute reads; the baseline records them.
 - Follow-up: T-5082 (T-4851's deferred design minors).
 

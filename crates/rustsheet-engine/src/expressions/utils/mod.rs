@@ -459,7 +459,7 @@ pub(crate) fn is_cell_spelled_name(name: &str) -> bool {
 /// The boolean a text reads as where Excel takes TRUE or FALSE text: "TRUE" or "FALSE" in any
 /// ASCII case, nothing else. Excel folds ASCII letters only: `"falſe"` (U+017F, which upper-cases
 /// to S) and `"FALſE"` are `#VALUE!` in NORM.DIST's and BETA.DIST's cumulative, DAYS360's method
-/// and TEXTJOIN's ignore_empty, and match no boolean as a COUNTIF criterion, and a padded
+/// and TEXTJOIN's `ignore_empty`, and match no boolean as a COUNTIF criterion, and a padded
 /// `" TRUE"` or `"1"` is no boolean either (probes/t4853-boolean-text, t4853-boolean-text-criteria;
 /// docs/excel-semantics/coercion.md "TRUE and FALSE text fold ASCII case only (T-4853)").
 pub(crate) fn boolean_text(text: &str) -> Option<bool> {
@@ -474,7 +474,7 @@ pub(crate) fn boolean_text(text: &str) -> Option<bool> {
 
 /// Whether a sheet name must be quoted in a reference: [`name_shape_needs_quoting`], or a name
 /// that reads as TRUE or FALSE ([`boolean_text`]): FORMULATEXT shows `='TRUE'!A1` and
-/// `='false'!A1`, and ADDRESS quotes a sheet_text of "true" or "tRuE" but not "falſe"
+/// `='false'!A1`, and ADDRESS quotes a `sheet_text` of "true" or "tRuE" but not "falſe"
 /// (probes/t4853-boolean-text H1:H7, J2, J5).
 pub(crate) fn name_needs_quoting(name: &str) -> bool {
     boolean_text(name).is_some() || name_shape_needs_quoting(name)
