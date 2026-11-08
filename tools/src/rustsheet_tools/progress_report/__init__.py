@@ -25,7 +25,17 @@ from pathlib import Path
 from typing import Any
 
 from rustsheet_tools import repo_root
-from rustsheet_tools.progress_report import arguments, check, codebase, evidence, goals, history, page, parity
+from rustsheet_tools.progress_report import (
+    arguments,
+    check,
+    codebase,
+    evidence,
+    goals,
+    history,
+    page,
+    parity,
+    usage,
+)
 from rustsheet_tools.progress_report.model import (
     Parity,
     ProgressReportError,
@@ -194,6 +204,7 @@ def _complete_outcome(
         else None
     )
     sections = {
+        "usage-tiers": usage.block(data.usage, exit_verdict, last),
         "goals": goals.goals_block(goal, milestones, data, counts, last, exit_verdict=exit_verdict),
         "campaign": goals.campaign_block(goal, data, counts),
         "since-last-run": history.since_block(row, last, commits),
@@ -204,6 +215,7 @@ def _complete_outcome(
     summary = [
         f"{len(data.functions)} functions: " + ", ".join(f"{t.tier} {t.functions}" for t in data.tiers),
         parity.phase1_lines(data).splitlines()[0],
+        f"usage tiers: {usage.headline(data.usage)}",
     ]
     files = {**parity.files(data, run), **evidence.files(data), **history.charts(rows)}
     return Result(page.render(run, data, previous, sections), files, rows, summary)

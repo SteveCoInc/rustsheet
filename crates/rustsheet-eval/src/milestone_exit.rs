@@ -33,7 +33,7 @@ use crate::runner::{CaseResult, CellKind};
 use crate::usage_gates::TierTallies;
 
 mod pivot;
-pub use pivot::{PivotExit, PivotStageExit};
+pub use pivot::{is_pivot_suite, PivotExit, PivotStageExit};
 
 /// The milestones this section covers.
 pub const MILESTONES: [&str; 10] = [

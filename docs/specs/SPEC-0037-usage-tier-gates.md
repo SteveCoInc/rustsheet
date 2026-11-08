@@ -186,6 +186,9 @@ The JSON schema:
   - A case in a `cases`-mode suite (corpus-bench) fails `*` only when one of its cells is `Outside` or
     `WrongType`. A case with only drift is not a failure there.
   - Text (`TF`) and layout (`LF`) lines are unchanged: they are type and text, so exact.
+  - A third kind, `W<TAB>case<TAB>Sheet!A1`, lists the `E` items that are `WrongType` (and every whole-case
+    item), so an `E` item outside as a number that becomes a wrong type, error or text is a regression too;
+    a `W` item that stays outside as a number is **right type**, recorded like a fix (T-5093).
 - **`baseline::diff`.** In an unchanged case:
   - a **regression** is an item that is new in `E`;
   - **drift** is an item new in `F` but not in `E`. Drift is allowed, recorded by `update-baseline` without
@@ -239,8 +242,8 @@ The JSON schema:
     touches no particular function has no `usage`.
 - **Effective tier**, `effective_usage(task)`, in order:
   1. the `usage:` key;
-  2. else, from the title: `foundational` if any foundational catalog name appears in it as a whole word (an
-     upper-case name followed by `(`, `,`, space, or the end), else `expert` if any expert name does;
+  2. else, from the title: the tier of the first catalog function name in the title that appears in it as a
+     whole word (an upper-case name followed by `(`, `,`, space, or the end);
   3. else none.
 
   The names come from eval/catalog/scope.json, read once.

@@ -109,19 +109,24 @@
      limits it.
 
      T-5093 builds it: the cell baselines carry `E` lines (the known failures `cell_envelope` puts outside, and
-     every whole-case item) beside the bit-level `F` lines, and `baseline::diff` reports a new `E` item as a
-     regression, a new `F` item without one as drift, and an item leaving `E` as into the envelope. The
+     every whole-case item) and `W` lines (those of them `cell_envelope` calls `WrongType`) beside the bit-level
+     `F` lines. `baseline::diff` reports a new `E` or `W` item as a regression, so an item outside as a number
+     that becomes a wrong type is caught; a new `F` item without an `E` item as drift; an item leaving `E` as
+     into the envelope; and one leaving `W` but staying in `E` as right type. The
      visible-parity lock counts `cell_envelope`'s `Outside` and `WrongType` cells, and eval/baseline/usage-gates.txt
      records each tier's met state on the vendored gated suites.
   7. **Task order.** Among ready tasks of the same milestone and priority, a task about a foundational function
      comes before any other.
      - P0, handoffs, re-reviews and campaign stages still come first, as decisions 0023, 0094 and 0095 say.
-     - A task's tier is its `usage:` front-matter key. Without one, it is inferred from the catalog function names
-       in its title.
+     - A task's tier is its `usage:` front-matter key. Without one, it is the tier of the first catalog function
+       its title names, since titles name their subject first (`scripts/task_usage.py`, T-5095). A title that
+       quotes another function first sets the key.
      - `tasks.py new` and the planning agents set the key on function tasks.
   8. **Reporting.** The eval report (report.json `usage_gates` and report.md), `make phase1-exit`, the daily
      progress dashboard and the steward's daily status all lead with the two tier gates: rates against the bars,
-     met or not, and the failing functions.
+     met or not, and the failing functions. On the dashboard this is the "Usage tiers" block right after the bottom line
+     (`tools/src/rustsheet_tools/progress_report/usage.py`, T-5094), and in docs/status.md the `**Tier gates:**`
+     line that leads the daily snapshot.
 - **Consequences:**
   - **What Phase 1 needs, measured at b84a7256:**
     - the 32 foundational cells. Their owner tasks are P1 (T-2131, T-4333, T-4419, T-4460, T-4466, T-4826 and
