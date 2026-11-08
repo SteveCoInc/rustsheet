@@ -86,3 +86,6 @@ the room rule disagree, plus controls) and wrote general_predictions.json before
 rule 2 / 80, controls 38 / 40 each. The 4 misses showed the two refinements the engine then took: fixed's room runs
 from the value's leading digit (a carry gains none), and the E mantissa rounds the 15-digit decimal half away.
 
+
+`caseio.py` holds what the three fresh generators share (the tie draw, the tie expression and the case writer); it was
+factored out after the fills and regenerates every committed case and prediction file byte for byte.

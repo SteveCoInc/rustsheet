@@ -4,14 +4,12 @@ room for, capped by the value's 15 digits) disagree, plus controls where they ag
 CASE_PATH. Writes general_predictions.json (old, new) before the fill. random.Random(44664).
 """
 
-import json
 import math
-import os
 import random
 import sys
 from decimal import ROUND_HALF_UP, Decimal
+from caseio import write_case
 
-HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def sig15(v):
@@ -69,17 +67,13 @@ cells, preds = {}, {}
 for i, (v, old, new) in enumerate(picked, 1):
     cells[f"A{i}"] = f'=TEXT({v!r},"General")'
     preds[f"A{i}"] = {"old": old, "new": new}
-case = {
-    "format": "rustsheet-case/v1",
-    "description": "T-4333: TEXT(v,\"General\") in [1E-09, 1E-04): A1:A80 where General's old fixed-or-E rule and the "
+write_case(
+    sys.argv[1],
+    "T-4333: TEXT(v,\"General\") in [1E-09, 1E-04): A1:A80 where General's old fixed-or-E rule and the "
     "room-based rule disagree, A81:A120 controls where they agree (docs/research/t4466/gen_general_fresh.py; "
     "predictions in general_predictions.json, committed before the fill).",
-    "tags": ["M10", "text", "probe"],
-    "sheets": [{"name": "Sheet1", "cells": cells}],
-    "expected": {},
-}
-with open(sys.argv[1], "w") as fh:
-    fh.write(json.dumps(case, indent=2) + "\n")
-with open(os.path.join(HERE, "general_predictions.json"), "w") as fh:
-    json.dump(preds, fh, indent=0, sort_keys=True)
+    cells,
+    preds,
+    "general_predictions.json",
+)
 print(len(cells), "cells")
