@@ -3,7 +3,7 @@ id: T-4852
 title: "One error-literal table: engine #N/IMPL spelling and error-name case rules agree with the parser"
 milestone: M1
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
