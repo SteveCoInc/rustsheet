@@ -155,6 +155,23 @@ Group the variants of one idea (depths, tolerances, operation orders) under one 
 family table shows how far the whole idea gets. `candidates` is a function, so a large family is
 only built when the fit runs. `--only REGEX` narrows a run to some candidates.
 
+## Design a discriminating probe (`fitlab/irr_discriminate.py`)
+
+A fit scores candidates on cells Excel already answered. To choose new cells, pick inputs where two
+candidates disagree (T-3698's method), so each oracle cell separates them. For IRR (T-4837), the
+designer takes two `irr_driver.CANDIDATES` and does three things. It draws flows and guesses over the
+axes of docs/research/irr-2026-11-07/plan.md section 3. It walks the neighbourhood of every
+disagreeing input, and hill-climbs on the flows from the closest of the rest. Then it writes a pending
+spec case plus a `.predictions.json` that holds each candidate's value and terminal event per cell,
+before the fill. Two outcomes disagree when their types differ, or when their 15-digit
+literals (`accuracy.literal.round15`) do. Every input is a 15-digit literal written with
+`accuracy.literal.text`, so it reads back as the same double (numbers.md, "15-digit literal parsing").
+
+```
+cd tools && uv run python -m rustsheet_tools.fitlab.irr_discriminate \
+    --a "base, cap 200" --b "rate: hold on flat + run on past d = 1, cap 200" --count 40 --seed 1 --out <stem>
+```
+
 ## Exact arithmetic (`fitlab/exact.py`)
 
 Candidates that model Excel's rounding use `Fraction`s:
