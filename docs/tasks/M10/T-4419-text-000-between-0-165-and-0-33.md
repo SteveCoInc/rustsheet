@@ -61,3 +61,20 @@ that band the 2^-72-day offset of T-4389 is exactly half an ulp of the serial.
   2^-54 s or 2^-53 s, either side. So the pattern follows the binade of the seconds at 0.25 s. Next: arithmetic whose
   rounding changes at that binade, such as seconds formed as hours*3600 or from a split at 0.25, or a 2-step product
   with an intermediate in [0.125, 0.5).
+
+## Progress (2026-11-08, third pass; research paused by the owner)
+- This task owns every visibly-off cell of probes/t4419-band-formats and probes/t4419-band-dense (the evidence below).
+- probes/t4419-band-formats (excel-graph, 455 cells): the 13 band-flip ties at n = -16..-10 under s.000, ss.000,
+  [s].000, mm:ss.000 and h:mm:ss.000. Every tie switches at the same n under all five formats, so the decision depends
+  only on the value, not on the field path.
+- probes/t4419-band-dense (excel-graph, 1,148 cells): every tie k+0.5 ms, k = 165..328, at n = -16..-10 under s.000.
+  All 164 ties switch exactly once (docs/research/t4419/dense.py). The engine gets 1,035. As a fresh test, the chains
+  found on band-flip score no better: x/(1/24)*60*60*1000 (168 of band-flip's 169) gets 1,085. The best of the families
+  searched in uncommitted runs gets 1,094. Those families were products of 24, 60, 60 and 1000 in any order, with *f or
+  /(1/f), half steps in days and cuts, and directed rounding per step at 53 or 64 bits.
+- struct.py: the threshold sits in the exact-tie frame (slope -1.23 on the tie double's offset), 13.84 x-ulps below the
+  tie on average (sd 0.69). Within runs of k it drifts linearly, then resets.
+- features.py: a constant threshold fits 100 of the 164 tie windows. Rounding errors of doubles built from k, or of the
+  products at the tie, add at most 1, so the scatter is per-value arithmetic not yet identified.
+- The owner paused the research on 2026-11-08. These cells stay known failures owned here, and the foundational gate
+  stays unmet until the rule is found.

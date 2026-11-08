@@ -453,6 +453,10 @@ Below serial 1, and the counts:
   159 of 169 (unexplained: F5, F11, G12, H1, H7, H9, H10, H12, H13, I12). Plain double chains with no 2^-72 offset,
   `(x*86400)*1000` or `((x*24)*60)*60*1000` then the milliseconds' 15-digit rounding and half up, get 166, missing
   disjoint ties, so in this band the offset is not what decides (docs/research/t4419/chains.py).
+  The decision depends only on the value: probes/t4419-band-formats shows the same switch under s.000, ss.000,
+  [s].000, mm:ss.000 and h:mm:ss.000. probes/t4419-band-dense (every tie k+0.5 ms, k = 165..328) has one switch per
+  tie, about 13.8 ulps below the exact tie, scattered by about 0.7 ulp. The engine gets 1,035 of 1,148, and no chain of
+  doubles searched beats 1,094 (T-4419).
   `.0` and `.00` show no offset (`TEXT(0.005/86400-8*2^-77,"s.00")` ".01", -12 ulp ".00", 0.45 and 0.68 units of the
   15th digit below). The constant is FITTED: every offset from 1.74E-17 to 1.86E-17 s scores all 538 `.000` cells of
   the t4323, t4332 and t4370 fraction cases, and 2^-72 days is the power of two inside that window; no operation that
