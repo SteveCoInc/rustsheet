@@ -99,7 +99,8 @@ fn compute_and_lay_out(bytes: &[u8]) {
             continue;
         };
         if let Ok(layout) = lay_out(table, cache, &result, &mut work) {
-            let _ = render(table, cache, &result, &layout);
+            // The workbook's custom formats, as the engine's own caller passes them (T-5105).
+            let _ = render(table, cache, &result, &layout, &workbook.styles.num_fmts);
         }
     }
 }
