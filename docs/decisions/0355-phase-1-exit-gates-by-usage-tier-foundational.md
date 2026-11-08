@@ -98,6 +98,12 @@
      Bit drift inside the envelope is allowed. It is recorded in the baseline by `make eval-baseline` without
      `--allow-regressions`, so each drift shows in the PR's diff. `--allow-regressions` stays as decision 0329
      limits it.
+
+     T-5093 builds it: the cell baselines carry `E` lines (the known failures `cell_envelope` puts outside, and
+     every whole-case item) beside the bit-level `F` lines, and `baseline::diff` reports a new `E` item as a
+     regression, a new `F` item without one as drift, and an item leaving `E` as into the envelope. The
+     visible-parity lock counts `cell_envelope`'s `Outside` and `WrongType` cells, and eval/baseline/usage-gates.txt
+     records each tier's met state on the vendored gated suites.
   7. **Task order.** Among ready tasks of the same milestone and priority, a task about a foundational function
      comes before any other.
      - P0, handoffs, re-reviews and campaign stages still come first, as decisions 0023, 0094 and 0095 say.
