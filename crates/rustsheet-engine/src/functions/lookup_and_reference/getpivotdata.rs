@@ -375,6 +375,48 @@ impl Model {
         }
     }
 
+    /// Where the scalar field name `name` sits on the pivot: the Values field by its caption, else
+    /// a row, column or page field by its cache field name, ignoring case. A field name is text
+    /// naming a field of the pivot (H8, J3); anything else is `None`, `#REF!`.
+    fn pivot_place(shape: &Shape, name: &CalcResult) -> Option<Place> {
+        let CalcResult::String(name) = name else {
+            return None;
+        };
+        let name = name.to_lowercase();
+        if shape.values.as_deref() == Some(name.as_str()) {
+            return Some(Place::Values);
+        }
+        let field = u32::try_from(shape.names.iter().position(|n| *n == name)?).ok()?;
+        if let Some(depth) = shape.rows.iter().position(|&f| f == field) {
+            Some(Place::Row(depth))
+        } else if let Some(depth) = shape.columns.iter().position(|&f| f == field) {
+            Some(Place::Column(depth))
+        } else {
+            let &(_, selected) = shape.pages.iter().find(|(f, _)| *f == field)?;
+            Some(Place::Page(field, selected))
+        }
+    }
+
+    /// The cache item of field `field` that the scalar `item` names. An item is text, a label
+    /// cell's value included (J6), matched by its label; an omitted argument or `"(blank)"` for
+    /// the blank item (`pv23_041` G5:G7, probes/t4236-pivot-date-groups); a number or a boolean by
+    /// value (IT A1:C5). An error is `#REF!` (IT E4, E5); `""` or a blank cell unprobed.
+    fn pivot_pair_item(
+        &mut self,
+        pivot: usize,
+        field: u32,
+        item: &CalcResult,
+        omitted: bool,
+    ) -> Option<u32> {
+        match item {
+            _ if omitted => self.pivot_blank_item(pivot, field),
+            CalcResult::String(text) => self.pivot_item(pivot, field, text),
+            CalcResult::Number(value) => self.pivot_number_item(pivot, field, *value),
+            CalcResult::Boolean(value) => self.pivot_boolean_item(pivot, field, *value),
+            _ => None,
+        }
+    }
+
     /// One element's answer: `args` is the data field then each pair's field and item, all
     /// scalars. `None` is `#REF!`; `Err` an error the shown cell holds.
     fn pivot_answer(
@@ -390,24 +432,7 @@ impl Model {
         let mut rows: Vec<Option<u32>> = vec![None; shape.rows.len()];
         let mut columns: Vec<Option<u32>> = vec![None; shape.columns.len()];
         for (pair, &omitted) in pairs.chunks_exact(2).zip(omitted) {
-            // A field name is text naming a field of the pivot (H8, J3).
-            let CalcResult::String(name) = &pair[0] else {
-                return None;
-            };
-            let name = name.to_lowercase();
-            let place = if shape.values.as_deref() == Some(name.as_str()) {
-                Place::Values
-            } else {
-                let field = u32::try_from(shape.names.iter().position(|n| *n == name)?).ok()?;
-                if let Some(depth) = shape.rows.iter().position(|&f| f == field) {
-                    Place::Row(depth)
-                } else if let Some(depth) = shape.columns.iter().position(|&f| f == field) {
-                    Place::Column(depth)
-                } else {
-                    let &(_, selected) = shape.pages.iter().find(|(f, _)| *f == field)?;
-                    Place::Page(field, selected)
-                }
-            };
+            let place = Self::pivot_place(shape, &pair[0])?;
             let item = &pair[1];
             // The Values field's one item is the chosen data field's caption (DF A8; another data
             // field's is `#REF!`, A9, A11).
@@ -425,17 +450,7 @@ impl Model {
                 Place::Page(field, _) => field,
                 Place::Values => return None,
             };
-            // An item is text, a label cell's value included (J6), matched by its label; an
-            // omitted argument or `"(blank)"` for the blank item (pv23_041 G5:G7,
-            // probes/t4236-pivot-date-groups); a number or a boolean by value (IT A1:C5). An error
-            // is `#REF!` (IT E4, E5); `""` or a blank cell unprobed.
-            let found = match item {
-                _ if omitted => self.pivot_blank_item(pivot, field),
-                CalcResult::String(text) => self.pivot_item(pivot, field, text),
-                CalcResult::Number(value) => self.pivot_number_item(pivot, field, *value),
-                CalcResult::Boolean(value) => self.pivot_boolean_item(pivot, field, *value),
-                _ => None,
-            }?;
+            let found = self.pivot_pair_item(pivot, field, item, omitted)?;
             let slot = match place {
                 Place::Row(depth) => rows.get_mut(depth)?,
                 Place::Column(depth) => columns.get_mut(depth)?,
