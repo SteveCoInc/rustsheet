@@ -3,7 +3,7 @@ id: T-5039
 title: "GETPIVOTDATA names a calculated data field by its name or caption (T-2085 LY G1:G3, moved from T-4804)"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -24,9 +24,22 @@ GETPIVOTDATA answers a calculated data field by its name or its caption, as Exce
   - probes/t2085-getpivotdata-layouts Q!G1:G3
 
 ## Acceptance criteria
-- [ ] The cells above pass, and no other case regresses (`make eval-baseline`).
-- [ ] SPEC-0015's GETPIVOTDATA rules and web.md's "Ours" line say what the engine does.
+- [x] The cells above pass, and no other case regresses (`make eval-baseline`).
+- [x] SPEC-0015's GETPIVOTDATA rules and web.md's "Ours" line say what the engine does.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Calculated items (Excel for the web refuses them).
+
+## Outcome
+- `pivot_answer` (pivot_index.rs) answers a calculated data field with `calculated_answer`
+  (pivot/calculated.rs): the field's `Plan` (the render's own compiler and sandbox, T-4174) is
+  evaluated over the Sums of the fields its formula names, accumulated with the render's
+  `Accumulator` over the records the pairs pick, whatever the data field's function. A refused
+  formula or a call past `MAX_PIVOT_WORK` is `#REF!`. A unit test covers the sums, text skipped,
+  no record, a refused formula and a field that is not calculated.
+- SPEC-0015 (unknown 12, the import list) and web.md's "Ours" line describe it.
+- Eval delta: probes/t2085-getpivotdata-layouts Q!G1:G3 fixed (probes known failures 10,265 to
+  10,262); 0 regressions in the cell suites. Locally the roundtrip-calipers check reported
+  pivot_named_range (two files) and two pv26 timeouts; neither workbook has a calculated field or
+  a GETPIVOTDATA, so CI's run decides them.
