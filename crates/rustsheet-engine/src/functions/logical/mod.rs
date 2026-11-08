@@ -17,6 +17,7 @@ pub(crate) use lambda_scope::ScopeResult;
 pub(crate) use r#let::{has_duplicate_parameter, same_variable};
 
 use crate::cast::calc_result_to_array_node;
+use crate::functions::util::empty_args::replaces_error;
 use crate::{
     arithmetic::bcast_idx,
     calc_result::CalcResult,
@@ -323,12 +324,14 @@ impl Model {
 
     pub(crate) fn fn_iferror(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         // IFERROR replaces every kind of error with the fallback.
-        self.if_error_like(args, cell, |_| true)
+        self.if_error_like(args, cell, |error| {
+            replaces_error(&Function::Iferror, error)
+        })
     }
 
     pub(crate) fn fn_ifna(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         // IFNA replaces only #N/A; every other error passes through.
-        self.if_error_like(args, cell, |error| error == &Error::NA)
+        self.if_error_like(args, cell, |error| replaces_error(&Function::Ifna, error))
     }
 
     /// Shared implementation for IFERROR and IFNA.

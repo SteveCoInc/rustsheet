@@ -162,6 +162,7 @@ mod test_workbook_check;
 mod test_workbook_name_file_prefix;
 mod test_workday_workdayintl;
 mod test_worksheet;
+mod test_written_empty_branch;
 mod test_yearfrac_basis;
 mod test_yearfrac_datedif;
 pub(crate) mod util;

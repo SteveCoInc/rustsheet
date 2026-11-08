@@ -3,7 +3,7 @@ id: T-4912
 title: "Read a written-empty branch of IF, CHOOSE and IFERROR as an omission in ToolPak functions and the newer roundings (T-4901 follow-up)"
 milestone: M5
 lane: functions-math
-status: todo
+status: done
 priority: P1
 size: M
 tier: opus
@@ -41,11 +41,32 @@ chosen branch is written empty as an omission, as Excel does, while a formula th
   Size that change before starting (it touches every exhaustive match on `CalcResult`). Split it if it is past M.
 
 ## Acceptance criteria
-- [ ] A3, A10, A12:A16 of the probe and the t5067 cells above pass; the cells owned by this task leave
+- [x] A3, A10, A12:A16 of the probe and the t5067 cells above pass; the cells owned by this task leave
       eval/baseline/probes.txt.
 - [x] Other IF/CHOOSE/IFERROR/IFNA/IFS-style wrappers probed (excel-probe) and the rule recorded in numbers.md
       (T-5067).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - LET/LAMBDA omissions (already evidenced).
+
+## Outcome
+- **Design:** no new `CalcResult` variant. `Model::is_empty_argument` (functions/util/empty_args.rs), the one test
+  every reader of a written-empty argument and LET's and LAMBDA's binding use, now looks through an IF, CHOOSE,
+  IFERROR or IFNA (in parentheses or under a unary plus) one of whose branches is written empty, as found from the
+  node alone (`may_hand_omission`). Only then it reads the wrapper's condition, index or value, through the wrapper's
+  own pick step (`Model::pick_step`; IFERROR's and IFNA's error test is now one function, `replaces_error`), and
+  tests the branch picked. Every other argument costs a node match, as before.
+- That read comes before the call's own, so the condition is evaluated twice for these forms. A LAMBDA parameter
+  read once is copied first (`copy_read_once`, as IF over an array condition does; unit test
+  `a_parameter_read_once_survives_the_probe` fails without it). Probes inside probes nest at most 2 deep
+  (`MAX_OMISSION_PROBES`) so nested readers cannot double the work per level: a DEVIATION entry in numbers.md.
+- IMSUB and IMDIV read their empty flags before the call lifts, not per element in the kernel.
+- **Evidence added:** probes/t4912-written-empty-branch-readers (28 cells, excel-graph, 2026-11-08). The other
+  readers (DEC2BIN, IMSUB, COMPLEX, ISEVEN, WEEKNUM, WORKDAY, NETWORKDAYS, YEARFRAC) take the omission too, a LET
+  name or LAMBDA parameter bound to one is ISOMITTED TRUE, and a unary plus keeps it. 28/28 pass.
+- **Cells fixed:** probes/t4901-mround-blank-let-lambda-roundings Calc!A3, A10, A12:A16 and
+  probes/t5067-written-empty-branch-wrappers Calc!A1:A3, A11, A12, A14:A16, A20:A26, A28, A29 (24 cells), which
+  were held by T-5084 for M7. Unit tests: test/test_written_empty_branch.rs.
+- **Docs:** numbers.md "Which wrappers hand a written-empty branch on as an omission (T-5067)" gains the t4912 rows
+  and the new "Ours"; new DEVIATION entry "A written-empty branch probed inside another one's condition".
