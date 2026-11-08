@@ -95,6 +95,12 @@ pub(crate) enum As109Outcome {
     /// (see [`STEP_FLOOR`]). Callers that return the math where Excel is grossly wrong
     /// (decision 0188 R3) keep this stop: it is Excel's value, bit for bit where measured.
     FloorStopped(f64),
+    /// As [`FloorStopped`](Self::FloorStopped), but the stop lies above the root (a positive
+    /// residual). Excel's value only where the root itself underflows (the endpoint saturation
+    /// of `F.INV(1E-200,1,1)` = 2.705579217114786E-151, gen-m9/35e8168aae2b00f8 A64); where the
+    /// root is a normal double Excel stops elsewhere (`BETA.INV(1E-300,2,2)`, dbl-min-residual
+    /// C1), so callers judge it like a plain stop there.
+    FloorStoppedAboveRoot(f64),
     /// BETA.INV's search (not Student's t's, which keeps [`Exhausted`](Self::Exhausted)) could
     /// not take its first step: the density at the first estimate is below the normal doubles (its
     /// reciprocal, AS 109's slope factor, overflows) or the step is not finite. Excel returns the
@@ -133,9 +139,11 @@ impl As109Outcome {
     /// The iterate, `None` for an exhausted search; an end seed only when `keep_end_seed`.
     pub(crate) fn value(self, keep_end_seed: bool) -> Option<f64> {
         match self {
-            Self::Stopped(x) | Self::FloorStopped(x) | Self::SlopeStopped(x) | Self::Settled(x) => {
-                Some(x)
-            }
+            Self::Stopped(x)
+            | Self::FloorStopped(x)
+            | Self::FloorStoppedAboveRoot(x)
+            | Self::SlopeStopped(x)
+            | Self::Settled(x) => Some(x),
             Self::EndSeed(x) => keep_end_seed.then_some(x),
             Self::Exhausted | Self::Unconverged => None,
         }
@@ -386,6 +394,8 @@ where
                         // so it stays a plain stop that the callers' R3 check judges.
                         return if floored && residual < 0.0 {
                             As109Outcome::FloorStopped(value)
+                        } else if floored {
+                            As109Outcome::FloorStoppedAboveRoot(value)
                         } else {
                             As109Outcome::Stopped(value)
                         };

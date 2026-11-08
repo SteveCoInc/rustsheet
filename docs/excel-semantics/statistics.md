@@ -5074,7 +5074,9 @@ Rule (T-4975 follow-up, measured on main's T-4974 probes as #4087 asked; inverse
   BETAINV/s1 A166. Each of those stops lies below the root (negative residual); such a stop is Excel's value and
   the tiny-tail R3 check does not replace it. A floor stop above the root is not Excel's (`BETA.INV(1E-300,2,2)`
   stops at 2.0E-150 where Excel is 7.725445078779648E-164 and the math 5.7735026918962415E-151; dbl-min-residual
-  column C), so it is judged by the R3 check like any other stop and returns the math there. Where the root
+  column C), so it is judged by the R3 check like any other stop and returns the math there, except where the
+  root itself underflows: there Excel keeps the stop above it, as in the saturation above and F.INV at df1 = 1
+  (`F.INV(1E-300,1,9)` = 2.4350018152839236E-150, gen-m9/58e3253bbd3a7a82 A247; endpoint-saturation N4:V5). Where the root
   underflows (T-2435's `#NUM!` precheck) the floor stop is returned when it is a normal double.
 - **Slope stop at the first estimate.** Where the density at AS 109's first estimate is below the normal doubles (its
   reciprocal overflows) Excel returns the first estimate: `BETA.INV(2^-1022,30,3)` = 1.5861167524067332E-17 and

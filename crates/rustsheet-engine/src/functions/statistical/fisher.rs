@@ -296,7 +296,7 @@ fn f_quantile(df1: f64, df2: f64, p: f64, right_tail: bool) -> f64 {
     if lower >= 1.0 && !right_tail {
         return f64::INFINITY;
     }
-    let Some((x, excels)) = f_quantile_as109(df1, df2, p, right_tail) else {
+    let Some((x, excels, above_root)) = f_quantile_as109(df1, df2, p, right_tail) else {
         return f_quantile_converged(df1, df2, p, right_tail);
     };
     let huge_df = df1 >= F_QUANTILE_STATRS_DF_MAX || df2 >= F_QUANTILE_STATRS_DF_MAX;
@@ -320,6 +320,12 @@ fn f_quantile(df1: f64, df2: f64, p: f64, right_tail: bool) -> f64 {
         MATH_OVER_EXCEL_RELATIVE
     };
     let c = f_quantile_converged(df1, df2, p, right_tail);
+    // A floor stop above the root is Excel's where the root underflows: `F.INV(1E-200,1,1)` =
+    // 2.705579217114786E-151, `F.INV(1E-300,1,9)` = 2.4350018152839236E-150 (gen-m9/35e8168aae2b00f8
+    // A64, 58e3253bbd3a7a82 A247), BETA.INV(·,1/2,·)'s saturation mapped to F.
+    if above_root && !huge_df && c.abs() < f64::MIN_POSITIVE && x.is_finite() {
+        return x;
+    }
     if (x - c).abs() <= limit * c.abs() {
         x
     } else {
@@ -341,8 +347,8 @@ const MATH_OVER_EXCEL_RELATIVE: f64 = 1e-4;
 /// by the compensated four-log ratio `EXP(LN(x) - LN(1-x) + LN(df2) - LN(df1))` with the shared
 /// log1p for `LN(1-x)`. `None` where the search is exhausted; with it whether the stop is Excel's
 /// even far from the math (a stop at the 1E-300 accuracy floor, or NaN for a search that never
-/// reached the root; `inverse_beta::As109Outcome`).
-fn f_quantile_as109(df1: f64, df2: f64, p: f64, right_tail: bool) -> Option<(f64, bool)> {
+/// reached the root; `inverse_beta::As109Outcome`), and whether it is a floor stop above the root.
+fn f_quantile_as109(df1: f64, df2: f64, p: f64, right_tail: bool) -> Option<(f64, bool, bool)> {
     let lower = if right_tail { 1.0 - p } else { p };
     let flip = lower > 0.5;
     let (pp, qq, target) = if flip {
@@ -362,7 +368,7 @@ fn f_quantile_as109(df1: f64, df2: f64, p: f64, right_tail: bool) -> Option<(f64
     };
     let outcome = as109_search(&problem);
     if outcome == As109Outcome::Unconverged {
-        return Some((f64::NAN, true));
+        return Some((f64::NAN, true, false));
     }
     // As for BETA.INV, a first estimate without a slope is a stop only in the tiny tails, where
     // the R3 check decides (the R3-marked `F.INV(2.22507385850721E-308,39,3)`, accuracy/F.INV/s1
@@ -371,6 +377,7 @@ fn f_quantile_as109(df1: f64, df2: f64, p: f64, right_tail: bool) -> Option<(f64
         return None;
     }
     let excels = matches!(outcome, As109Outcome::FloorStopped(_));
+    let above_root = matches!(outcome, As109Outcome::FloorStoppedAboveRoot(_));
     let x = outcome.value(false)?;
     // ln F = (ln x + ln df2) - (ln(1 - x) + ln df1), numerator first, in double-double, then
     // EXP of the head times 1 + the tail; flipped, x and 1 - x trade places.
@@ -382,7 +389,7 @@ fn f_quantile_as109(df1: f64, df2: f64, p: f64, right_tail: bool) -> Option<(f64
     let numerator = two_sum(top, excel_ln(df2));
     let denominator = two_sum(bottom, excel_ln(df1));
     let (hi, lo) = dd_add(numerator, dd_neg(denominator));
-    Some((excel_exp(hi) * (1.0 + lo), excels))
+    Some((excel_exp(hi) * (1.0 + lo), excels, above_root))
 }
 
 /// The converged F quantile behind [`f_quantile`]: statrs' search as a start, refined to the

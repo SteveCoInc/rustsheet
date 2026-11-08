@@ -31,6 +31,18 @@ fn deep_tail_f_quantile_keeps_floor_stops_and_unconverged_num() {
     );
     assert!(f_quantile(11.0, 3.0, 1e-300, false).is_nan());
     assert!(f_quantile(11.0, 3.0, 1e-250, false).is_nan());
+    // Where the root underflows, the floor stop above it is Excel's (gen-m9 A64, A247, A175).
+    for (df2, p, excel) in [
+        (1.0, 1e-200, 2.705_579_217_114_786e-151),
+        (9.0, 1e-300, 2.435_001_815_283_923_6e-150),
+        (10.0, 1e-300, 2.705_554_866_974_867e-150),
+    ] {
+        let ours = f_quantile(1.0, df2, p, false);
+        assert!(
+            (ours / excel - 1.0).abs() < 1e-12,
+            "F.INV({p},1,{df2}): {ours}"
+        );
+    }
     let e6 = f_quantile(11.0, 2.0, 1e-300, false);
     assert!((e6 / 5.178_247_033_519_641e-56 - 1.0).abs() < 1e-14, "{e6}");
 }
