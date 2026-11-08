@@ -36,6 +36,17 @@ that band the 2^-72-day offset of T-4389 is exactly half an ulp of the serial.
 ## Out of scope
 - Serials below 2^-19 days (T-4389).
 
+## Progress (2026-11-08)
+- The 11 cells are decimal millisecond ties t/86400 + n*2^-71 (n = -13..-15) under `s.000`. Excel rounds up for
+  k = 178..254 and 273..290 ms and down for 257..265 and 315..326, with the same ulp distances in both groups, so the
+  decision follows the tie's position, not the distance below it.
+- Ruled out (docs/research/t4466 scratch work, T-4333's count search): any order of x24, x60, x60, x1000 as a chain or a
+  field cut on y or frac(y); the half step's constant forms; 80-bit (x87) arithmetic for the step and the cut; 15-digit
+  rounding of the seconds then half-up to the millisecond without a half step; the binary side of k/1000. None
+  separates the two groups while keeping the other 1,069 `.000` cells.
+- The `.0` and `.00` cells need no offset at all (the field cut with 15-digit rounding scores 768 of 768 and 465 of
+  465), so the millisecond path is the only one with the 2^-72 fit.
+
 ## Progress (2026-11-08, second pass)
 - New evidence: probes/t4419-band-flip (excel-graph, 169 cells). It covers 13 ties t/86400000 + n*2^-71, with t from 179.5
   to 327.5 ms and n from -20 to -8, under `s.000`. For every tie Excel's answer switches once, at n = -11 to -15, so

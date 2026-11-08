@@ -177,6 +177,8 @@ pub struct Model {
     pub(crate) variable_stack: VariableStack,
     /// Which evaluated value carries the ERROR.TYPE/CELL mark (`number_mark.rs`, T-2766).
     pub(crate) number_mark: crate::number_mark::NumberMark,
+    /// How many probes for a handed-on omission run now (`functions/util/empty_args.rs`).
+    pub(crate) omission_probes: u8,
     /// Last variable id used. It is incremented every time a new variable is created (for example, when evaluating a LET function).
     pub(crate) last_variable_id: usize,
     /// Lambdas

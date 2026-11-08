@@ -25,7 +25,7 @@ use crate::{
 impl Model {
     /// `EDATE(start_date, months)`.
     pub(crate) fn fn_edate(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let empty = self.empty_arguments::<2>(args);
+        let empty = self.empty_arguments::<2>(args, cell);
         self.lift_call(Function::Edate, args, cell, &mut |model, values| {
             model.edate_of(values, empty, cell)
         })
@@ -33,7 +33,7 @@ impl Model {
 
     /// `EOMONTH(start_date, months)`.
     pub(crate) fn fn_eomonth(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let empty = self.empty_arguments::<2>(args);
+        let empty = self.empty_arguments::<2>(args, cell);
         self.lift_call(Function::Eomonth, args, cell, &mut |model, values| {
             model.eomonth_of(values, empty, cell)
         })

@@ -1,0 +1,3002 @@
+{
+"A1": {
+"chain": 31589422,
+"register": 31589422,
+"rounded": 31589422
+},
+"A10": {
+"chain": 126236023,
+"register": 126236023,
+"rounded": 126236023
+},
+"A100": {
+"chain": 432069494,
+"register": 432069495,
+"rounded": 432069494
+},
+"A101": {
+"chain": 1104003,
+"register": 1104003,
+"rounded": 1104003
+},
+"A102": {
+"chain": 8771,
+"register": 8771,
+"rounded": 8771
+},
+"A103": {
+"chain": 671363,
+"register": 671363,
+"rounded": 671363
+},
+"A104": {
+"chain": 3924216,
+"register": 3924216,
+"rounded": 3924216
+},
+"A105": {
+"chain": 3974453285,
+"register": 3974453285,
+"rounded": 3974453285
+},
+"A106": {
+"chain": 3888069220,
+"register": 3888069220,
+"rounded": 3888069220
+},
+"A107": {
+"chain": 64800749,
+"register": 64800749,
+"rounded": 64800749
+},
+"A108": {
+"chain": 319200,
+"register": 319200,
+"rounded": 319200
+},
+"A109": {
+"chain": 432069663,
+"register": 432069663,
+"rounded": 432069663
+},
+"A11": {
+"chain": 126279077,
+"register": 126279077,
+"rounded": 126279077
+},
+"A110": {
+"chain": 21,
+"register": 21,
+"rounded": 21
+},
+"A111": {
+"chain": 126236342,
+"register": 126236341,
+"rounded": 126236341
+},
+"A112": {
+"chain": 3974422520,
+"register": 3974422520,
+"rounded": 3974422520
+},
+"A113": {
+"chain": 64800258,
+"register": 64800258,
+"rounded": 64800258
+},
+"A114": {
+"chain": 170,
+"register": 170,
+"rounded": 170
+},
+"A115": {
+"chain": 12000014,
+"register": 12000014,
+"rounded": 12000013
+},
+"A116": {
+"chain": 6912082357,
+"register": 6912082357,
+"rounded": 6912082357
+},
+"A117": {
+"chain": 6912018946,
+"register": 6912018946,
+"rounded": 6912018946
+},
+"A118": {
+"chain": 306327,
+"register": 306327,
+"rounded": 306327
+},
+"A119": {
+"chain": 11503,
+"register": 11503,
+"rounded": 11503
+},
+"A12": {
+"chain": 228959,
+"register": 228959,
+"rounded": 228959
+},
+"A120": {
+"chain": 60884,
+"register": 60884,
+"rounded": 60884
+},
+"A121": {
+"chain": 11,
+"register": 11,
+"rounded": 11
+},
+"A122": {
+"chain": 1728050517,
+"register": 1728050517,
+"rounded": 1728050517
+},
+"A123": {
+"chain": 3974430244,
+"register": 3974430245,
+"rounded": 3974430245
+},
+"A124": {
+"chain": 43200082264,
+"register": 43200082264,
+"rounded": 43200082264
+},
+"A125": {
+"chain": 3888003132,
+"register": 3888003132,
+"rounded": 3888003131
+},
+"A126": {
+"chain": 509,
+"register": 509,
+"rounded": 509
+},
+"A127": {
+"chain": 64801318,
+"register": 64801318,
+"rounded": 64801317
+},
+"A128": {
+"chain": 1432,
+"register": 1432,
+"rounded": 1432
+},
+"A129": {
+"chain": 7200303,
+"register": 7200303,
+"rounded": 7200303
+},
+"A13": {
+"chain": 7201341,
+"register": 7201341,
+"rounded": 7201341
+},
+"A130": {
+"chain": 3801683099,
+"register": 3801683099,
+"rounded": 3801683099
+},
+"A131": {
+"chain": 2105198,
+"register": 2105198,
+"rounded": 2105198
+},
+"A132": {
+"chain": 6912018710,
+"register": 6912018710,
+"rounded": 6912018710
+},
+"A133": {
+"chain": 3927885,
+"register": 3927885,
+"rounded": 3927885
+},
+"A134": {
+"chain": 25758,
+"register": 25758,
+"rounded": 25758
+},
+"A135": {
+"chain": 43200007431,
+"register": 43200007431,
+"rounded": 43200007431
+},
+"A136": {
+"chain": 31557116,
+"register": 31557116,
+"rounded": 31557116
+},
+"A137": {
+"chain": 3974449908,
+"register": 3974449907,
+"rounded": 3974449907
+},
+"A138": {
+"chain": 3642,
+"register": 3642,
+"rounded": 3642
+},
+"A139": {
+"chain": 35075,
+"register": 35075,
+"rounded": 35075
+},
+"A14": {
+"chain": 79212,
+"register": 79212,
+"rounded": 79212
+},
+"A140": {
+"chain": 12000003,
+"register": 12000003,
+"rounded": 12000003
+},
+"A141": {
+"chain": 11356,
+"register": 11356,
+"rounded": 11356
+},
+"A142": {
+"chain": 3967545,
+"register": 3967545,
+"rounded": 3967545
+},
+"A143": {
+"chain": 31576854,
+"register": 31576854,
+"rounded": 31576854
+},
+"A144": {
+"chain": 10451,
+"register": 10451,
+"rounded": 10451
+},
+"A145": {
+"chain": 83,
+"register": 83,
+"rounded": 83
+},
+"A146": {
+"chain": 432075579,
+"register": 432075578,
+"rounded": 432075578
+},
+"A147": {
+"chain": 480001,
+"register": 480001,
+"rounded": 480001
+},
+"A148": {
+"chain": 3888081630,
+"register": 3888081630,
+"rounded": 3888081629
+},
+"A149": {
+"chain": 68035,
+"register": 68035,
+"rounded": 68035
+},
+"A15": {
+"chain": 43200056970,
+"register": 43200056970,
+"rounded": 43200056970
+},
+"A150": {
+"chain": 337354,
+"register": 337354,
+"rounded": 337353
+},
+"A151": {
+"chain": 3801667866,
+"register": 3801667865,
+"rounded": 3801667865
+},
+"A152": {
+"chain": 279608,
+"register": 279608,
+"rounded": 279608
+},
+"A153": {
+"chain": 720001219,
+"register": 720001218,
+"rounded": 720001218
+},
+"A154": {
+"chain": 257,
+"register": 257,
+"rounded": 257
+},
+"A155": {
+"chain": 1413,
+"register": 1413,
+"rounded": 1413
+},
+"A156": {
+"chain": 3888075540,
+"register": 3888075540,
+"rounded": 3888075540
+},
+"A157": {
+"chain": 1104014,
+"register": 1104014,
+"rounded": 1104014
+},
+"A158": {
+"chain": 48,
+"register": 48,
+"rounded": 48
+},
+"A159": {
+"chain": 85044,
+"register": 85044,
+"rounded": 85044
+},
+"A16": {
+"chain": 17349655,
+"register": 17349655,
+"rounded": 17349655
+},
+"A160": {
+"chain": 2387,
+"register": 2387,
+"rounded": 2387
+},
+"A161": {
+"chain": 662521,
+"register": 662521,
+"rounded": 662521
+},
+"A162": {
+"chain": 46393,
+"register": 46393,
+"rounded": 46392
+},
+"A163": {
+"chain": 185,
+"register": 185,
+"rounded": 185
+},
+"A164": {
+"chain": 6912036596,
+"register": 6912036595,
+"rounded": 6912036595
+},
+"A165": {
+"chain": 206621,
+"register": 206621,
+"rounded": 206621
+},
+"A166": {
+"chain": 3801676735,
+"register": 3801676735,
+"rounded": 3801676735
+},
+"A167": {
+"chain": 69600020,
+"register": 69600020,
+"rounded": 69600020
+},
+"A168": {
+"chain": 1920009,
+"register": 1920009,
+"rounded": 1920009
+},
+"A169": {
+"chain": 3959454,
+"register": 3959454,
+"rounded": 3959454
+},
+"A17": {
+"chain": 27,
+"register": 27,
+"rounded": 27
+},
+"A170": {
+"chain": 43200068822,
+"register": 43200068822,
+"rounded": 43200068822
+},
+"A171": {
+"chain": 558,
+"register": 558,
+"rounded": 558
+},
+"A172": {
+"chain": 635750,
+"register": 635750,
+"rounded": 635750
+},
+"A173": {
+"chain": 6912084385,
+"register": 6912084385,
+"rounded": 6912084385
+},
+"A174": {
+"chain": 3888028782,
+"register": 3888028782,
+"rounded": 3888028782
+},
+"A175": {
+"chain": 0,
+"register": 0,
+"rounded": 0
+},
+"A176": {
+"chain": 3597,
+"register": 3597,
+"rounded": 3597
+},
+"A177": {
+"chain": 6912082714,
+"register": 6912082714,
+"rounded": 6912082714
+},
+"A178": {
+"chain": 64800354,
+"register": 64800354,
+"rounded": 64800354
+},
+"A179": {
+"chain": 12000014,
+"register": 12000014,
+"rounded": 12000014
+},
+"A18": {
+"chain": 90752,
+"register": 90752,
+"rounded": 90752
+},
+"A180": {
+"chain": 35085,
+"register": 35085,
+"rounded": 35085
+},
+"A181": {
+"chain": 250560057219,
+"register": 250560057219,
+"rounded": 250560057219
+},
+"A182": {
+"chain": 3801636742,
+"register": 3801636741,
+"rounded": 3801636742
+},
+"A183": {
+"chain": 337960,
+"register": 337960,
+"rounded": 337959
+},
+"A184": {
+"chain": 11329,
+"register": 11328,
+"rounded": 11328
+},
+"A185": {
+"chain": 120004,
+"register": 120004,
+"rounded": 120004
+},
+"A186": {
+"chain": 17325164,
+"register": 17325164,
+"rounded": 17325164
+},
+"A187": {
+"chain": 3974449027,
+"register": 3974449027,
+"rounded": 3974449027
+},
+"A188": {
+"chain": 6912035994,
+"register": 6912035994,
+"rounded": 6912035994
+},
+"A189": {
+"chain": 300928,
+"register": 300928,
+"rounded": 300927
+},
+"A19": {
+"chain": 6912077311,
+"register": 6912077310,
+"rounded": 6912077310
+},
+"A190": {
+"chain": 17361198,
+"register": 17361198,
+"rounded": 17361198
+},
+"A191": {
+"chain": 432062124,
+"register": 432062124,
+"rounded": 432062124
+},
+"A192": {
+"chain": 432022388,
+"register": 432022388,
+"rounded": 432022388
+},
+"A193": {
+"chain": 343573,
+"register": 343573,
+"rounded": 343573
+},
+"A194": {
+"chain": 115200614,
+"register": 115200613,
+"rounded": 115200613
+},
+"A195": {
+"chain": 69600003,
+"register": 69600003,
+"rounded": 69600003
+},
+"A196": {
+"chain": 69600021,
+"register": 69600021,
+"rounded": 69600021
+},
+"A197": {
+"chain": 316386,
+"register": 316386,
+"rounded": 316386
+},
+"A198": {
+"chain": 6912043196,
+"register": 6912043196,
+"rounded": 6912043196
+},
+"A199": {
+"chain": 28800583,
+"register": 28800583,
+"rounded": 28800583
+},
+"A2": {
+"chain": 3801653897,
+"register": 3801653897,
+"rounded": 3801653897
+},
+"A20": {
+"chain": 1728071278,
+"register": 1728071278,
+"rounded": 1728071278
+},
+"A200": {
+"chain": 631920,
+"register": 631920,
+"rounded": 631919
+},
+"A201": {
+"chain": 6912051553,
+"register": 6912051553,
+"rounded": 6912051553
+},
+"A202": {
+"chain": 8777,
+"register": 8777,
+"rounded": 8777
+},
+"A203": {
+"chain": 475,
+"register": 475,
+"rounded": 475
+},
+"A204": {
+"chain": 17362562,
+"register": 17362562,
+"rounded": 17362562
+},
+"A205": {
+"chain": 43200030322,
+"register": 43200030322,
+"rounded": 43200030322
+},
+"A206": {
+"chain": 3888069738,
+"register": 3888069738,
+"rounded": 3888069738
+},
+"A207": {
+"chain": 164156,
+"register": 164156,
+"rounded": 164156
+},
+"A208": {
+"chain": 43200001529,
+"register": 43200001529,
+"rounded": 43200001529
+},
+"A209": {
+"chain": 432055681,
+"register": 432055681,
+"rounded": 432055681
+},
+"A21": {
+"chain": 17296177,
+"register": 17296177,
+"rounded": 17296177
+},
+"A210": {
+"chain": 40375,
+"register": 40375,
+"rounded": 40375
+},
+"A211": {
+"chain": 4835,
+"register": 4835,
+"rounded": 4835
+},
+"A212": {
+"chain": 3888002493,
+"register": 3888002493,
+"rounded": 3888002493
+},
+"A213": {
+"chain": 3888055738,
+"register": 3888055738,
+"rounded": 3888055738
+},
+"A214": {
+"chain": 54,
+"register": 54,
+"rounded": 54
+},
+"A215": {
+"chain": 3888018122,
+"register": 3888018122,
+"rounded": 3888018122
+},
+"A216": {
+"chain": 134862,
+"register": 134862,
+"rounded": 134862
+},
+"A217": {
+"chain": 684820,
+"register": 684820,
+"rounded": 684820
+},
+"A218": {
+"chain": 1095,
+"register": 1095,
+"rounded": 1094
+},
+"A219": {
+"chain": 4816,
+"register": 4816,
+"rounded": 4816
+},
+"A22": {
+"chain": 6912059426,
+"register": 6912059426,
+"rounded": 6912059426
+},
+"A220": {
+"chain": 11148,
+"register": 11148,
+"rounded": 11148
+},
+"A221": {
+"chain": 28800157,
+"register": 28800157,
+"rounded": 28800157
+},
+"A222": {
+"chain": 6912085204,
+"register": 6912085204,
+"rounded": 6912085204
+},
+"A223": {
+"chain": 435,
+"register": 436,
+"rounded": 436
+},
+"A224": {
+"chain": 147431,
+"register": 147431,
+"rounded": 147430
+},
+"A225": {
+"chain": 120016,
+"register": 120016,
+"rounded": 120016
+},
+"A226": {
+"chain": 43200035897,
+"register": 43200035897,
+"rounded": 43200035896
+},
+"A227": {
+"chain": 12000003,
+"register": 12000003,
+"rounded": 12000003
+},
+"A228": {
+"chain": 120021,
+"register": 120021,
+"rounded": 120021
+},
+"A229": {
+"chain": 480015,
+"register": 480015,
+"rounded": 480015
+},
+"A23": {
+"chain": 3897868,
+"register": 3897868,
+"rounded": 3897868
+},
+"A230": {
+"chain": 15,
+"register": 15,
+"rounded": 14
+},
+"A231": {
+"chain": 12000012,
+"register": 12000012,
+"rounded": 12000012
+},
+"A232": {
+"chain": 720000012,
+"register": 720000012,
+"rounded": 720000012
+},
+"A233": {
+"chain": 3243,
+"register": 3243,
+"rounded": 3243
+},
+"A234": {
+"chain": 87,
+"register": 87,
+"rounded": 86
+},
+"A235": {
+"chain": 3801605529,
+"register": 3801605529,
+"rounded": 3801605529
+},
+"A236": {
+"chain": 39,
+"register": 39,
+"rounded": 38
+},
+"A237": {
+"chain": 3962986,
+"register": 3962986,
+"rounded": 3962986
+},
+"A238": {
+"chain": 1728021651,
+"register": 1728021651,
+"rounded": 1728021650
+},
+"A239": {
+"chain": 17287621,
+"register": 17287621,
+"rounded": 17287621
+},
+"A24": {
+"chain": 688865,
+"register": 688865,
+"rounded": 688865
+},
+"A240": {
+"chain": 35067,
+"register": 35067,
+"rounded": 35067
+},
+"A241": {
+"chain": 75790,
+"register": 75790,
+"rounded": 75790
+},
+"A242": {
+"chain": 609459,
+"register": 609459,
+"rounded": 609459
+},
+"A243": {
+"chain": 63360958,
+"register": 63360958,
+"rounded": 63360957
+},
+"A244": {
+"chain": 1104010,
+"register": 1104010,
+"rounded": 1104010
+},
+"A245": {
+"chain": 28800893,
+"register": 28800893,
+"rounded": 28800893
+},
+"A246": {
+"chain": 6912020511,
+"register": 6912020511,
+"rounded": 6912020511
+},
+"A247": {
+"chain": 1199,
+"register": 1199,
+"rounded": 1199
+},
+"A248": {
+"chain": 17302729,
+"register": 17302729,
+"rounded": 17302728
+},
+"A249": {
+"chain": 126235596,
+"register": 126235596,
+"rounded": 126235596
+},
+"A25": {
+"chain": 643768,
+"register": 643768,
+"rounded": 643768
+},
+"A250": {
+"chain": 2105226,
+"register": 2105226,
+"rounded": 2105226
+},
+"A251": {
+"chain": 3888006259,
+"register": 3888006259,
+"rounded": 3888006259
+},
+"A252": {
+"chain": 65668,
+"register": 65668,
+"rounded": 65668
+},
+"A253": {
+"chain": 8771,
+"register": 8771,
+"rounded": 8771
+},
+"A254": {
+"chain": 12000012,
+"register": 12000012,
+"rounded": 12000012
+},
+"A255": {
+"chain": 655423,
+"register": 655423,
+"rounded": 655423
+},
+"A256": {
+"chain": 7201106,
+"register": 7201106,
+"rounded": 7201105
+},
+"A257": {
+"chain": 3974439804,
+"register": 3974439804,
+"rounded": 3974439804
+},
+"A258": {
+"chain": 211627,
+"register": 211627,
+"rounded": 211627
+},
+"A259": {
+"chain": 21014,
+"register": 21014,
+"rounded": 21014
+},
+"A26": {
+"chain": 120024,
+"register": 120024,
+"rounded": 120024
+},
+"A260": {
+"chain": 28800184,
+"register": 28800184,
+"rounded": 28800184
+},
+"A261": {
+"chain": 6912039372,
+"register": 6912039372,
+"rounded": 6912039372
+},
+"A262": {
+"chain": 6912071941,
+"register": 6912071941,
+"rounded": 6912071941
+},
+"A263": {
+"chain": 3958,
+"register": 3958,
+"rounded": 3958
+},
+"A264": {
+"chain": 288130,
+"register": 288130,
+"rounded": 288130
+},
+"A265": {
+"chain": 3801624384,
+"register": 3801624384,
+"rounded": 3801624384
+},
+"A266": {
+"chain": 174,
+"register": 174,
+"rounded": 174
+},
+"A267": {
+"chain": 12000007,
+"register": 12000007,
+"rounded": 12000006
+},
+"A268": {
+"chain": 29463,
+"register": 29463,
+"rounded": 29463
+},
+"A269": {
+"chain": 3801655827,
+"register": 3801655827,
+"rounded": 3801655827
+},
+"A27": {
+"chain": 43200028618,
+"register": 43200028618,
+"rounded": 43200028618
+},
+"A270": {
+"chain": 63360224,
+"register": 63360224,
+"rounded": 63360224
+},
+"A271": {
+"chain": 3801621617,
+"register": 3801621618,
+"rounded": 3801621618
+},
+"A272": {
+"chain": 1728062010,
+"register": 1728062010,
+"rounded": 1728062009
+},
+"A273": {
+"chain": 2415,
+"register": 2415,
+"rounded": 2415
+},
+"A274": {
+"chain": 1104014,
+"register": 1104014,
+"rounded": 1104014
+},
+"A275": {
+"chain": 1825,
+"register": 1825,
+"rounded": 1825
+},
+"A276": {
+"chain": 4176000491,
+"register": 4176000491,
+"rounded": 4176000491
+},
+"A277": {
+"chain": 64801337,
+"register": 64801337,
+"rounded": 64801337
+},
+"A278": {
+"chain": 3888046327,
+"register": 3888046327,
+"rounded": 3888046327
+},
+"A279": {
+"chain": 8841,
+"register": 8841,
+"rounded": 8841
+},
+"A28": {
+"chain": 248379,
+"register": 248379,
+"rounded": 248379
+},
+"A280": {
+"chain": 29426,
+"register": 29426,
+"rounded": 29426
+},
+"A281": {
+"chain": 22,
+"register": 22,
+"rounded": 22
+},
+"A282": {
+"chain": 43200010252,
+"register": 43200010251,
+"rounded": 43200010251
+},
+"A283": {
+"chain": 8763,
+"register": 8763,
+"rounded": 8763
+},
+"A284": {
+"chain": 2,
+"register": 2,
+"rounded": 1
+},
+"A285": {
+"chain": 266853,
+"register": 266853,
+"rounded": 266853
+},
+"A286": {
+"chain": 3974417987,
+"register": 3974417987,
+"rounded": 3974417987
+},
+"A287": {
+"chain": 6912057327,
+"register": 6912057327,
+"rounded": 6912057327
+},
+"A288": {
+"chain": 251519,
+"register": 251519,
+"rounded": 251519
+},
+"A289": {
+"chain": 1728047638,
+"register": 1728047638,
+"rounded": 1728047638
+},
+"A29": {
+"chain": 115200602,
+"register": 115200602,
+"rounded": 115200601
+},
+"A290": {
+"chain": 43200006539,
+"register": 43200006539,
+"rounded": 43200006538
+},
+"A291": {
+"chain": 12000004,
+"register": 12000004,
+"rounded": 12000003
+},
+"A292": {
+"chain": 17307916,
+"register": 17307916,
+"rounded": 17307916
+},
+"A293": {
+"chain": 3801621037,
+"register": 3801621037,
+"rounded": 3801621037
+},
+"A294": {
+"chain": 480014,
+"register": 480014,
+"rounded": 480013
+},
+"A295": {
+"chain": 66106,
+"register": 66106,
+"rounded": 66106
+},
+"A296": {
+"chain": 17314341,
+"register": 17314341,
+"rounded": 17314341
+},
+"A297": {
+"chain": 31541959,
+"register": 31541959,
+"rounded": 31541959
+},
+"A298": {
+"chain": 1728050227,
+"register": 1728050227,
+"rounded": 1728050227
+},
+"A299": {
+"chain": 179,
+"register": 179,
+"rounded": 179
+},
+"A3": {
+"chain": 126266305,
+"register": 126266305,
+"rounded": 126266305
+},
+"A30": {
+"chain": 59443,
+"register": 59443,
+"rounded": 59443
+},
+"A300": {
+"chain": 126262665,
+"register": 126262665,
+"rounded": 126262665
+},
+"A301": {
+"chain": 2104412,
+"register": 2104412,
+"rounded": 2104412
+},
+"A302": {
+"chain": 648470,
+"register": 648470,
+"rounded": 648470
+},
+"A303": {
+"chain": 480001,
+"register": 480001,
+"rounded": 480001
+},
+"A304": {
+"chain": 100181,
+"register": 100181,
+"rounded": 100181
+},
+"A305": {
+"chain": 250560063154,
+"register": 250560063154,
+"rounded": 250560063153
+},
+"A306": {
+"chain": 2804,
+"register": 2804,
+"rounded": 2804
+},
+"A307": {
+"chain": 1080008,
+"register": 1080008,
+"rounded": 1080008
+},
+"A308": {
+"chain": 4928,
+"register": 4928,
+"rounded": 4927
+},
+"A309": {
+"chain": 64513,
+"register": 64514,
+"rounded": 64513
+},
+"A31": {
+"chain": 720000562,
+"register": 720000562,
+"rounded": 720000562
+},
+"A310": {
+"chain": 37,
+"register": 37,
+"rounded": 37
+},
+"A311": {
+"chain": 4,
+"register": 4,
+"rounded": 4
+},
+"A312": {
+"chain": 69,
+"register": 69,
+"rounded": 69
+},
+"A313": {
+"chain": 3974463730,
+"register": 3974463730,
+"rounded": 3974463730
+},
+"A314": {
+"chain": 1056003,
+"register": 1056003,
+"rounded": 1056003
+},
+"A315": {
+"chain": 31598703,
+"register": 31598703,
+"rounded": 31598703
+},
+"A316": {
+"chain": 525695,
+"register": 525695,
+"rounded": 525695
+},
+"A317": {
+"chain": 66241039,
+"register": 66241039,
+"rounded": 66241039
+},
+"A318": {
+"chain": 250560002029,
+"register": 250560002029,
+"rounded": 250560002029
+},
+"A319": {
+"chain": 69,
+"register": 69,
+"rounded": 69
+},
+"A32": {
+"chain": 63360473,
+"register": 63360473,
+"rounded": 63360472
+},
+"A320": {
+"chain": 17323050,
+"register": 17323050,
+"rounded": 17323050
+},
+"A321": {
+"chain": 4176000032,
+"register": 4176000032,
+"rounded": 4176000031
+},
+"A322": {
+"chain": 31538239,
+"register": 31538239,
+"rounded": 31538239
+},
+"A323": {
+"chain": 480013,
+"register": 480013,
+"rounded": 480013
+},
+"A324": {
+"chain": 35067,
+"register": 35067,
+"rounded": 35067
+},
+"A325": {
+"chain": 120015,
+"register": 120015,
+"rounded": 120015
+},
+"A326": {
+"chain": 4803,
+"register": 4803,
+"rounded": 4802
+},
+"A327": {
+"chain": 43200005902,
+"register": 43200005902,
+"rounded": 43200005902
+},
+"A328": {
+"chain": 60157,
+"register": 60157,
+"rounded": 60156
+},
+"A329": {
+"chain": 1920018,
+"register": 1920018,
+"rounded": 1920018
+},
+"A33": {
+"chain": 23,
+"register": 23,
+"rounded": 23
+},
+"A330": {
+"chain": 7200625,
+"register": 7200625,
+"rounded": 7200625
+},
+"A331": {
+"chain": 82,
+"register": 82,
+"rounded": 81
+},
+"A332": {
+"chain": 31580756,
+"register": 31580756,
+"rounded": 31580756
+},
+"A333": {
+"chain": 115200732,
+"register": 115200732,
+"rounded": 115200732
+},
+"A334": {
+"chain": 6912004809,
+"register": 6912004809,
+"rounded": 6912004809
+},
+"A335": {
+"chain": 288131,
+"register": 288131,
+"rounded": 288131
+},
+"A336": {
+"chain": 432064326,
+"register": 432064326,
+"rounded": 432064326
+},
+"A337": {
+"chain": 31620048,
+"register": 31620048,
+"rounded": 31620048
+},
+"A338": {
+"chain": 189770,
+"register": 189770,
+"rounded": 189770
+},
+"A339": {
+"chain": 3888080840,
+"register": 3888080840,
+"rounded": 3888080840
+},
+"A34": {
+"chain": 1087,
+"register": 1087,
+"rounded": 1087
+},
+"A340": {
+"chain": 43200044462,
+"register": 43200044462,
+"rounded": 43200044462
+},
+"A341": {
+"chain": 3801633042,
+"register": 3801633042,
+"rounded": 3801633042
+},
+"A342": {
+"chain": 29,
+"register": 29,
+"rounded": 29
+},
+"A343": {
+"chain": 68,
+"register": 68,
+"rounded": 68
+},
+"A344": {
+"chain": 274702,
+"register": 274702,
+"rounded": 274701
+},
+"A345": {
+"chain": 71,
+"register": 71,
+"rounded": 71
+},
+"A346": {
+"chain": 3962699,
+"register": 3962699,
+"rounded": 3962699
+},
+"A347": {
+"chain": 108356,
+"register": 108356,
+"rounded": 108356
+},
+"A348": {
+"chain": 6912078895,
+"register": 6912078895,
+"rounded": 6912078895
+},
+"A349": {
+"chain": 43200075997,
+"register": 43200075997,
+"rounded": 43200075996
+},
+"A35": {
+"chain": 432085361,
+"register": 432085361,
+"rounded": 432085361
+},
+"A350": {
+"chain": 269857,
+"register": 269857,
+"rounded": 269857
+},
+"A351": {
+"chain": 31600301,
+"register": 31600301,
+"rounded": 31600301
+},
+"A352": {
+"chain": 250560084782,
+"register": 250560084782,
+"rounded": 250560084782
+},
+"A353": {
+"chain": 3974436085,
+"register": 3974436086,
+"rounded": 3974436086
+},
+"A354": {
+"chain": 31585824,
+"register": 31585824,
+"rounded": 31585824
+},
+"A355": {
+"chain": 66240116,
+"register": 66240116,
+"rounded": 66240116
+},
+"A356": {
+"chain": 3888060658,
+"register": 3888060657,
+"rounded": 3888060657
+},
+"A357": {
+"chain": 432056469,
+"register": 432056469,
+"rounded": 432056469
+},
+"A358": {
+"chain": 525928,
+"register": 525928,
+"rounded": 525928
+},
+"A359": {
+"chain": 4811,
+"register": 4811,
+"rounded": 4811
+},
+"A36": {
+"chain": 3801663975,
+"register": 3801663975,
+"rounded": 3801663975
+},
+"A360": {
+"chain": 4343,
+"register": 4343,
+"rounded": 4343
+},
+"A361": {
+"chain": 50113,
+"register": 50113,
+"rounded": 50113
+},
+"A362": {
+"chain": 79287,
+"register": 79287,
+"rounded": 79286
+},
+"A363": {
+"chain": 126303054,
+"register": 126303054,
+"rounded": 126303054
+},
+"A364": {
+"chain": 289277,
+"register": 289277,
+"rounded": 289277
+},
+"A365": {
+"chain": 1104019,
+"register": 1104019,
+"rounded": 1104019
+},
+"A366": {
+"chain": 28800817,
+"register": 28800817,
+"rounded": 28800817
+},
+"A367": {
+"chain": 307452,
+"register": 307452,
+"rounded": 307452
+},
+"A368": {
+"chain": 31617762,
+"register": 31617762,
+"rounded": 31617762
+},
+"A369": {
+"chain": 659696,
+"register": 659696,
+"rounded": 659695
+},
+"A37": {
+"chain": 130562,
+"register": 130562,
+"rounded": 130562
+},
+"A370": {
+"chain": 32,
+"register": 32,
+"rounded": 32
+},
+"A371": {
+"chain": 64800749,
+"register": 64800749,
+"rounded": 64800749
+},
+"A372": {
+"chain": 640943,
+"register": 640943,
+"rounded": 640943
+},
+"A373": {
+"chain": 10224,
+"register": 10224,
+"rounded": 10224
+},
+"A374": {
+"chain": 3974463209,
+"register": 3974463209,
+"rounded": 3974463209
+},
+"A375": {
+"chain": 3974410480,
+"register": 3974410480,
+"rounded": 3974410480
+},
+"A376": {
+"chain": 8768,
+"register": 8768,
+"rounded": 8768
+},
+"A377": {
+"chain": 126236865,
+"register": 126236865,
+"rounded": 126236865
+},
+"A378": {
+"chain": 4176001423,
+"register": 4176001423,
+"rounded": 4176001423
+},
+"A379": {
+"chain": 3974436212,
+"register": 3974436212,
+"rounded": 3974436212
+},
+"A38": {
+"chain": 112710,
+"register": 112710,
+"rounded": 112710
+},
+"A380": {
+"chain": 262093,
+"register": 262093,
+"rounded": 262093
+},
+"A381": {
+"chain": 250560014707,
+"register": 250560014707,
+"rounded": 250560014707
+},
+"A382": {
+"chain": 175343,
+"register": 175343,
+"rounded": 175343
+},
+"A383": {
+"chain": 2104428,
+"register": 2104428,
+"rounded": 2104428
+},
+"A384": {
+"chain": 1407,
+"register": 1407,
+"rounded": 1407
+},
+"A385": {
+"chain": 432025958,
+"register": 432025958,
+"rounded": 432025958
+},
+"A386": {
+"chain": 17297831,
+"register": 17297831,
+"rounded": 17297831
+},
+"A387": {
+"chain": 250560021198,
+"register": 250560021198,
+"rounded": 250560021198
+},
+"A388": {
+"chain": 432015753,
+"register": 432015753,
+"rounded": 432015753
+},
+"A389": {
+"chain": 31610317,
+"register": 31610317,
+"rounded": 31610317
+},
+"A39": {
+"chain": 3801628612,
+"register": 3801628612,
+"rounded": 3801628612
+},
+"A390": {
+"chain": 12000004,
+"register": 12000004,
+"rounded": 12000003
+},
+"A391": {
+"chain": 6912060046,
+"register": 6912060046,
+"rounded": 6912060046
+},
+"A392": {
+"chain": 63361178,
+"register": 63361178,
+"rounded": 63361178
+},
+"A393": {
+"chain": 17308041,
+"register": 17308041,
+"rounded": 17308041
+},
+"A394": {
+"chain": 4811,
+"register": 4811,
+"rounded": 4810
+},
+"A395": {
+"chain": 3973603,
+"register": 3973604,
+"rounded": 3973604
+},
+"A396": {
+"chain": 3921806,
+"register": 3921806,
+"rounded": 3921806
+},
+"A397": {
+"chain": 691035,
+"register": 691035,
+"rounded": 691035
+},
+"A398": {
+"chain": 525816,
+"register": 525816,
+"rounded": 525816
+},
+"A399": {
+"chain": 43200060050,
+"register": 43200060050,
+"rounded": 43200060050
+},
+"A4": {
+"chain": 172,
+"register": 172,
+"rounded": 171
+},
+"A40": {
+"chain": 6912043002,
+"register": 6912043003,
+"rounded": 6912043002
+},
+"A400": {
+"chain": 332,
+"register": 332,
+"rounded": 332
+},
+"A401": {
+"chain": 186137,
+"register": 186137,
+"rounded": 186137
+},
+"A402": {
+"chain": 133061,
+"register": 133061,
+"rounded": 133060
+},
+"A403": {
+"chain": 3927172,
+"register": 3927172,
+"rounded": 3927172
+},
+"A404": {
+"chain": 1056014,
+"register": 1056014,
+"rounded": 1056014
+},
+"A405": {
+"chain": 17287648,
+"register": 17287648,
+"rounded": 17287647
+},
+"A406": {
+"chain": 3974459632,
+"register": 3974459631,
+"rounded": 3974459631
+},
+"A407": {
+"chain": 1083,
+"register": 1083,
+"rounded": 1083
+},
+"A408": {
+"chain": 10954,
+"register": 10954,
+"rounded": 10954
+},
+"A409": {
+"chain": 6912019277,
+"register": 6912019277,
+"rounded": 6912019277
+},
+"A41": {
+"chain": 115200279,
+"register": 115200279,
+"rounded": 115200279
+},
+"A410": {
+"chain": 480007,
+"register": 480007,
+"rounded": 480007
+},
+"A411": {
+"chain": 126254991,
+"register": 126254991,
+"rounded": 126254991
+},
+"A412": {
+"chain": 31569633,
+"register": 31569633,
+"rounded": 31569633
+},
+"A413": {
+"chain": 126293835,
+"register": 126293835,
+"rounded": 126293835
+},
+"A414": {
+"chain": 250560069091,
+"register": 250560069090,
+"rounded": 250560069090
+},
+"A415": {
+"chain": 3888079630,
+"register": 3888079630,
+"rounded": 3888079630
+},
+"A416": {
+"chain": 126309525,
+"register": 126309525,
+"rounded": 126309525
+},
+"A417": {
+"chain": 63361101,
+"register": 63361101,
+"rounded": 63361101
+},
+"A418": {
+"chain": 167325,
+"register": 167325,
+"rounded": 167325
+},
+"A419": {
+"chain": 126272423,
+"register": 126272423,
+"rounded": 126272423
+},
+"A42": {
+"chain": 184,
+"register": 184,
+"rounded": 184
+},
+"A420": {
+"chain": 63361027,
+"register": 63361028,
+"rounded": 63361028
+},
+"A421": {
+"chain": 66240004,
+"register": 66240004,
+"rounded": 66240004
+},
+"A422": {
+"chain": 42738,
+"register": 42738,
+"rounded": 42738
+},
+"A423": {
+"chain": 6912013066,
+"register": 6912013066,
+"rounded": 6912013066
+},
+"A424": {
+"chain": 35072,
+"register": 35072,
+"rounded": 35072
+},
+"A425": {
+"chain": 43200050647,
+"register": 43200050647,
+"rounded": 43200050647
+},
+"A426": {
+"chain": 31608100,
+"register": 31608100,
+"rounded": 31608100
+},
+"A427": {
+"chain": 3974476272,
+"register": 3974476272,
+"rounded": 3974476272
+},
+"A428": {
+"chain": 1920017,
+"register": 1920017,
+"rounded": 1920017
+},
+"A429": {
+"chain": 35084,
+"register": 35084,
+"rounded": 35084
+},
+"A43": {
+"chain": 5349,
+"register": 5349,
+"rounded": 5348
+},
+"A430": {
+"chain": 6912077569,
+"register": 6912077569,
+"rounded": 6912077569
+},
+"A431": {
+"chain": 76,
+"register": 76,
+"rounded": 76
+},
+"A432": {
+"chain": 43200048615,
+"register": 43200048615,
+"rounded": 43200048615
+},
+"A433": {
+"chain": 115200374,
+"register": 115200373,
+"rounded": 115200373
+},
+"A434": {
+"chain": 12000003,
+"register": 12000003,
+"rounded": 12000003
+},
+"A435": {
+"chain": 12000012,
+"register": 12000012,
+"rounded": 12000012
+},
+"A436": {
+"chain": 47874,
+"register": 47874,
+"rounded": 47874
+},
+"A437": {
+"chain": 65301,
+"register": 65301,
+"rounded": 65301
+},
+"A438": {
+"chain": 1728051571,
+"register": 1728051571,
+"rounded": 1728051571
+},
+"A439": {
+"chain": 43200072946,
+"register": 43200072947,
+"rounded": 43200072946
+},
+"A44": {
+"chain": 28801128,
+"register": 28801128,
+"rounded": 28801128
+},
+"A440": {
+"chain": 3924067,
+"register": 3924067,
+"rounded": 3924067
+},
+"A441": {
+"chain": 76,
+"register": 76,
+"rounded": 76
+},
+"A442": {
+"chain": 655953,
+"register": 655953,
+"rounded": 655953
+},
+"A443": {
+"chain": 250560040696,
+"register": 250560040696,
+"rounded": 250560040696
+},
+"A444": {
+"chain": 1728062073,
+"register": 1728062074,
+"rounded": 1728062073
+},
+"A445": {
+"chain": 3888023386,
+"register": 3888023386,
+"rounded": 3888023385
+},
+"A446": {
+"chain": 3974460425,
+"register": 3974460425,
+"rounded": 3974460425
+},
+"A447": {
+"chain": 2104954,
+"register": 2104954,
+"rounded": 2104954
+},
+"A448": {
+"chain": 3966297,
+"register": 3966297,
+"rounded": 3966296
+},
+"A449": {
+"chain": 126241821,
+"register": 126241820,
+"rounded": 126241820
+},
+"A45": {
+"chain": 66240963,
+"register": 66240963,
+"rounded": 66240963
+},
+"A450": {
+"chain": 1728037511,
+"register": 1728037510,
+"rounded": 1728037510
+},
+"A451": {
+"chain": 3974480225,
+"register": 3974480225,
+"rounded": 3974480225
+},
+"A452": {
+"chain": 3924315,
+"register": 3924315,
+"rounded": 3924315
+},
+"A453": {
+"chain": 2104343,
+"register": 2104343,
+"rounded": 2104343
+},
+"A454": {
+"chain": 3801633084,
+"register": 3801633084,
+"rounded": 3801633084
+},
+"A455": {
+"chain": 3888039247,
+"register": 3888039247,
+"rounded": 3888039247
+},
+"A456": {
+"chain": 432007392,
+"register": 432007392,
+"rounded": 432007391
+},
+"A457": {
+"chain": 156087,
+"register": 156087,
+"rounded": 156087
+},
+"A458": {
+"chain": 3974441317,
+"register": 3974441317,
+"rounded": 3974441317
+},
+"A459": {
+"chain": 126290378,
+"register": 126290378,
+"rounded": 126290378
+},
+"A46": {
+"chain": 3974474880,
+"register": 3974474880,
+"rounded": 3974474880
+},
+"A460": {
+"chain": 126312502,
+"register": 126312502,
+"rounded": 126312501
+},
+"A461": {
+"chain": 7200111,
+"register": 7200112,
+"rounded": 7200111
+},
+"A462": {
+"chain": 720000211,
+"register": 720000211,
+"rounded": 720000211
+},
+"A463": {
+"chain": 3888032458,
+"register": 3888032458,
+"rounded": 3888032458
+},
+"A464": {
+"chain": 205810,
+"register": 205811,
+"rounded": 205811
+},
+"A465": {
+"chain": 247923,
+"register": 247923,
+"rounded": 247923
+},
+"A466": {
+"chain": 61831,
+"register": 61830,
+"rounded": 61830
+},
+"A467": {
+"chain": 632809,
+"register": 632809,
+"rounded": 632809
+},
+"A468": {
+"chain": 70,
+"register": 70,
+"rounded": 69
+},
+"A469": {
+"chain": 1728021424,
+"register": 1728021424,
+"rounded": 1728021423
+},
+"A47": {
+"chain": 157918,
+"register": 157917,
+"rounded": 157917
+},
+"A470": {
+"chain": 4176000726,
+"register": 4176000726,
+"rounded": 4176000726
+},
+"A471": {
+"chain": 3888027187,
+"register": 3888027187,
+"rounded": 3888027187
+},
+"A472": {
+"chain": 10,
+"register": 10,
+"rounded": 9
+},
+"A473": {
+"chain": 480006,
+"register": 480006,
+"rounded": 480006
+},
+"A474": {
+"chain": 6912002321,
+"register": 6912002321,
+"rounded": 6912002321
+},
+"A475": {
+"chain": 250560059011,
+"register": 250560059011,
+"rounded": 250560059011
+},
+"A476": {
+"chain": 288822,
+"register": 288822,
+"rounded": 288822
+},
+"A477": {
+"chain": 6912032524,
+"register": 6912032524,
+"rounded": 6912032524
+},
+"A478": {
+"chain": 202874,
+"register": 202874,
+"rounded": 202874
+},
+"A479": {
+"chain": 3888052684,
+"register": 3888052684,
+"rounded": 3888052684
+},
+"A48": {
+"chain": 3973524,
+"register": 3973524,
+"rounded": 3973524
+},
+"A480": {
+"chain": 126232893,
+"register": 126232893,
+"rounded": 126232892
+},
+"A481": {
+"chain": 50725,
+"register": 50724,
+"rounded": 50724
+},
+"A482": {
+"chain": 1030,
+"register": 1030,
+"rounded": 1029
+},
+"A483": {
+"chain": 432071233,
+"register": 432071233,
+"rounded": 432071233
+},
+"A484": {
+"chain": 229760,
+"register": 229760,
+"rounded": 229760
+},
+"A485": {
+"chain": 4808,
+"register": 4808,
+"rounded": 4807
+},
+"A486": {
+"chain": 3801626688,
+"register": 3801626688,
+"rounded": 3801626688
+},
+"A487": {
+"chain": 27368,
+"register": 27368,
+"rounded": 27367
+},
+"A488": {
+"chain": 31554695,
+"register": 31554694,
+"rounded": 31554694
+},
+"A489": {
+"chain": 4809,
+"register": 4809,
+"rounded": 4809
+},
+"A49": {
+"chain": 3888054211,
+"register": 3888054210,
+"rounded": 3888054210
+},
+"A490": {
+"chain": 4176000190,
+"register": 4176000190,
+"rounded": 4176000190
+},
+"A491": {
+"chain": 23,
+"register": 23,
+"rounded": 22
+},
+"A492": {
+"chain": 58060,
+"register": 58060,
+"rounded": 58060
+},
+"A493": {
+"chain": 4176001267,
+"register": 4176001267,
+"rounded": 4176001267
+},
+"A494": {
+"chain": 64801129,
+"register": 64801129,
+"rounded": 64801129
+},
+"A495": {
+"chain": 43200019271,
+"register": 43200019271,
+"rounded": 43200019270
+},
+"A496": {
+"chain": 635905,
+"register": 635905,
+"rounded": 635905
+},
+"A497": {
+"chain": 480017,
+"register": 480017,
+"rounded": 480016
+},
+"A498": {
+"chain": 3974428766,
+"register": 3974428766,
+"rounded": 3974428766
+},
+"A499": {
+"chain": 220811,
+"register": 220811,
+"rounded": 220811
+},
+"A5": {
+"chain": 69600002,
+"register": 69600002,
+"rounded": 69600002
+},
+"A50": {
+"chain": 432001020,
+"register": 432001020,
+"rounded": 432001020
+},
+"A500": {
+"chain": 3888038017,
+"register": 3888038017,
+"rounded": 3888038017
+},
+"A501": {
+"chain": 17318592,
+"register": 17318592,
+"rounded": 17318592
+},
+"A502": {
+"chain": 6912019349,
+"register": 6912019349,
+"rounded": 6912019349
+},
+"A503": {
+"chain": 126246618,
+"register": 126246618,
+"rounded": 126246618
+},
+"A504": {
+"chain": 250560018994,
+"register": 250560018994,
+"rounded": 250560018994
+},
+"A505": {
+"chain": 3974402075,
+"register": 3974402075,
+"rounded": 3974402075
+},
+"A506": {
+"chain": 43200079760,
+"register": 43200079760,
+"rounded": 43200079760
+},
+"A507": {
+"chain": 64800920,
+"register": 64800920,
+"rounded": 64800920
+},
+"A508": {
+"chain": 432082399,
+"register": 432082399,
+"rounded": 432082399
+},
+"A509": {
+"chain": 1920010,
+"register": 1920010,
+"rounded": 1920010
+},
+"A51": {
+"chain": 1056007,
+"register": 1056007,
+"rounded": 1056007
+},
+"A510": {
+"chain": 17287004,
+"register": 17287005,
+"rounded": 17287004
+},
+"A511": {
+"chain": 31595932,
+"register": 31595932,
+"rounded": 31595931
+},
+"A512": {
+"chain": 432043573,
+"register": 432043573,
+"rounded": 432043573
+},
+"A513": {
+"chain": 318815,
+"register": 318815,
+"rounded": 318815
+},
+"A514": {
+"chain": 17321688,
+"register": 17321688,
+"rounded": 17321688
+},
+"A515": {
+"chain": 17312089,
+"register": 17312089,
+"rounded": 17312089
+},
+"A516": {
+"chain": 2105251,
+"register": 2105251,
+"rounded": 2105251
+},
+"A517": {
+"chain": 7200911,
+"register": 7200911,
+"rounded": 7200911
+},
+"A518": {
+"chain": 3974425180,
+"register": 3974425180,
+"rounded": 3974425180
+},
+"A519": {
+"chain": 66240724,
+"register": 66240723,
+"rounded": 66240723
+},
+"A52": {
+"chain": 17360044,
+"register": 17360044,
+"rounded": 17360044
+},
+"A520": {
+"chain": 185,
+"register": 185,
+"rounded": 185
+},
+"A521": {
+"chain": 6912035309,
+"register": 6912035309,
+"rounded": 6912035309
+},
+"A522": {
+"chain": 1728085504,
+"register": 1728085504,
+"rounded": 1728085504
+},
+"A523": {
+"chain": 126300366,
+"register": 126300366,
+"rounded": 126300366
+},
+"A524": {
+"chain": 66240957,
+"register": 66240957,
+"rounded": 66240957
+},
+"A525": {
+"chain": 4703,
+"register": 4703,
+"rounded": 4703
+},
+"A526": {
+"chain": 480008,
+"register": 480008,
+"rounded": 480007
+},
+"A527": {
+"chain": 120001,
+"register": 120001,
+"rounded": 120001
+},
+"A528": {
+"chain": 525974,
+"register": 525974,
+"rounded": 525974
+},
+"A529": {
+"chain": 245793,
+"register": 245793,
+"rounded": 245793
+},
+"A53": {
+"chain": 2993,
+"register": 2993,
+"rounded": 2993
+},
+"A530": {
+"chain": 250560069992,
+"register": 250560069992,
+"rounded": 250560069992
+},
+"A531": {
+"chain": 3974451408,
+"register": 3974451408,
+"rounded": 3974451408
+},
+"A532": {
+"chain": 31,
+"register": 31,
+"rounded": 30
+},
+"A533": {
+"chain": 91,
+"register": 91,
+"rounded": 91
+},
+"A534": {
+"chain": 289424,
+"register": 289424,
+"rounded": 289424
+},
+"A535": {
+"chain": 52495,
+"register": 52495,
+"rounded": 52495
+},
+"A536": {
+"chain": 554,
+"register": 554,
+"rounded": 554
+},
+"A537": {
+"chain": 621861,
+"register": 621861,
+"rounded": 621860
+},
+"A538": {
+"chain": 6,
+"register": 6,
+"rounded": 5
+},
+"A539": {
+"chain": 5334,
+"register": 5334,
+"rounded": 5334
+},
+"A54": {
+"chain": 17328640,
+"register": 17328640,
+"rounded": 17328640
+},
+"A540": {
+"chain": 1094,
+"register": 1094,
+"rounded": 1094
+},
+"A541": {
+"chain": 6912076761,
+"register": 6912076761,
+"rounded": 6912076761
+},
+"A542": {
+"chain": 69600010,
+"register": 69600010,
+"rounded": 69600009
+},
+"A543": {
+"chain": 7,
+"register": 7,
+"rounded": 7
+},
+"A544": {
+"chain": 32,
+"register": 32,
+"rounded": 32
+},
+"A545": {
+"chain": 1777,
+"register": 1777,
+"rounded": 1777
+},
+"A546": {
+"chain": 120020,
+"register": 120020,
+"rounded": 120020
+},
+"A547": {
+"chain": 126292478,
+"register": 126292478,
+"rounded": 126292478
+},
+"A548": {
+"chain": 83889,
+"register": 83889,
+"rounded": 83888
+},
+"A549": {
+"chain": 432004868,
+"register": 432004867,
+"rounded": 432004867
+},
+"A55": {
+"chain": 1099,
+"register": 1099,
+"rounded": 1098
+},
+"A550": {
+"chain": 10102,
+"register": 10102,
+"rounded": 10102
+},
+"A551": {
+"chain": 53412,
+"register": 53412,
+"rounded": 53412
+},
+"A552": {
+"chain": 3974457735,
+"register": 3974457735,
+"rounded": 3974457735
+},
+"A553": {
+"chain": 1728053373,
+"register": 1728053373,
+"rounded": 1728053373
+},
+"A554": {
+"chain": 1104020,
+"register": 1104020,
+"rounded": 1104020
+},
+"A555": {
+"chain": 170645,
+"register": 170645,
+"rounded": 170644
+},
+"A556": {
+"chain": 66209,
+"register": 66209,
+"rounded": 66209
+},
+"A557": {
+"chain": 1090,
+"register": 1090,
+"rounded": 1090
+},
+"A558": {
+"chain": 3888059965,
+"register": 3888059965,
+"rounded": 3888059965
+},
+"A559": {
+"chain": 54,
+"register": 54,
+"rounded": 54
+},
+"A56": {
+"chain": 250560003831,
+"register": 250560003831,
+"rounded": 250560003831
+},
+"A560": {
+"chain": 21818,
+"register": 21818,
+"rounded": 21817
+},
+"A561": {
+"chain": 236981,
+"register": 236981,
+"rounded": 236981
+},
+"A562": {
+"chain": 13,
+"register": 13,
+"rounded": 13
+},
+"A563": {
+"chain": 120007,
+"register": 120007,
+"rounded": 120007
+},
+"A564": {
+"chain": 22,
+"register": 22,
+"rounded": 22
+},
+"A565": {
+"chain": 43200074515,
+"register": 43200074514,
+"rounded": 43200074514
+},
+"A566": {
+"chain": 4550,
+"register": 4550,
+"rounded": 4550
+},
+"A567": {
+"chain": 432075015,
+"register": 432075015,
+"rounded": 432075015
+},
+"A568": {
+"chain": 239818,
+"register": 239818,
+"rounded": 239818
+},
+"A569": {
+"chain": 3888042362,
+"register": 3888042362,
+"rounded": 3888042362
+},
+"A57": {
+"chain": 22045,
+"register": 22045,
+"rounded": 22045
+},
+"A570": {
+"chain": 17320411,
+"register": 17320411,
+"rounded": 17320411
+},
+"A571": {
+"chain": 250560085599,
+"register": 250560085599,
+"rounded": 250560085599
+},
+"A572": {
+"chain": 65535,
+"register": 65535,
+"rounded": 65534
+},
+"A573": {
+"chain": 3888053594,
+"register": 3888053594,
+"rounded": 3888053594
+},
+"A574": {
+"chain": 6912056344,
+"register": 6912056344,
+"rounded": 6912056344
+},
+"A575": {
+"chain": 43200064297,
+"register": 43200064297,
+"rounded": 43200064296
+},
+"A576": {
+"chain": 8771,
+"register": 8771,
+"rounded": 8771
+},
+"A577": {
+"chain": 160999,
+"register": 160999,
+"rounded": 160999
+},
+"A578": {
+"chain": 3801630943,
+"register": 3801630943,
+"rounded": 3801630943
+},
+"A579": {
+"chain": 688262,
+"register": 688262,
+"rounded": 688262
+},
+"A58": {
+"chain": 432042932,
+"register": 432042932,
+"rounded": 432042932
+},
+"A580": {
+"chain": 61,
+"register": 61,
+"rounded": 61
+},
+"A581": {
+"chain": 2130,
+"register": 2130,
+"rounded": 2130
+},
+"A582": {
+"chain": 3974400250,
+"register": 3974400250,
+"rounded": 3974400250
+},
+"A583": {
+"chain": 3974413546,
+"register": 3974413546,
+"rounded": 3974413546
+},
+"A584": {
+"chain": 307034,
+"register": 307034,
+"rounded": 307034
+},
+"A585": {
+"chain": 1091,
+"register": 1090,
+"rounded": 1090
+},
+"A586": {
+"chain": 3424,
+"register": 3424,
+"rounded": 3424
+},
+"A587": {
+"chain": 4890,
+"register": 4890,
+"rounded": 4890
+},
+"A588": {
+"chain": 64801124,
+"register": 64801124,
+"rounded": 64801124
+},
+"A589": {
+"chain": 214378,
+"register": 214378,
+"rounded": 214378
+},
+"A59": {
+"chain": 17320424,
+"register": 17320424,
+"rounded": 17320423
+},
+"A590": {
+"chain": 31567970,
+"register": 31567970,
+"rounded": 31567970
+},
+"A591": {
+"chain": 250560016462,
+"register": 250560016462,
+"rounded": 250560016462
+},
+"A592": {
+"chain": 43200085030,
+"register": 43200085030,
+"rounded": 43200085029
+},
+"A593": {
+"chain": 31616198,
+"register": 31616198,
+"rounded": 31616198
+},
+"A594": {
+"chain": 1092,
+"register": 1092,
+"rounded": 1092
+},
+"A595": {
+"chain": 138514,
+"register": 138514,
+"rounded": 138514
+},
+"A596": {
+"chain": 3888079703,
+"register": 3888079703,
+"rounded": 3888079703
+},
+"A597": {
+"chain": 131076,
+"register": 131076,
+"rounded": 131076
+},
+"A598": {
+"chain": 289435,
+"register": 289435,
+"rounded": 289435
+},
+"A599": {
+"chain": 7200671,
+"register": 7200671,
+"rounded": 7200671
+},
+"A6": {
+"chain": 1728070159,
+"register": 1728070159,
+"rounded": 1728070159
+},
+"A60": {
+"chain": 126280255,
+"register": 126280255,
+"rounded": 126280255
+},
+"A600": {
+"chain": 250560015489,
+"register": 250560015489,
+"rounded": 250560015489
+},
+"A61": {
+"chain": 12000008,
+"register": 12000008,
+"rounded": 12000008
+},
+"A62": {
+"chain": 43200026032,
+"register": 43200026031,
+"rounded": 43200026031
+},
+"A63": {
+"chain": 1920000,
+"register": 1920000,
+"rounded": 1920000
+},
+"A64": {
+"chain": 82,
+"register": 82,
+"rounded": 81
+},
+"A65": {
+"chain": 126312378,
+"register": 126312378,
+"rounded": 126312378
+},
+"A66": {
+"chain": 126299229,
+"register": 126299229,
+"rounded": 126299229
+},
+"A67": {
+"chain": 3891515,
+"register": 3891515,
+"rounded": 3891514
+},
+"A68": {
+"chain": 128322,
+"register": 128322,
+"rounded": 128322
+},
+"A69": {
+"chain": 250560013205,
+"register": 250560013205,
+"rounded": 250560013205
+},
+"A7": {
+"chain": 353,
+"register": 353,
+"rounded": 353
+},
+"A70": {
+"chain": 201531,
+"register": 201531,
+"rounded": 201531
+},
+"A71": {
+"chain": 12000014,
+"register": 12000014,
+"rounded": 12000014
+},
+"A72": {
+"chain": 201181,
+"register": 201181,
+"rounded": 201181
+},
+"A73": {
+"chain": 3974455325,
+"register": 3974455325,
+"rounded": 3974455325
+},
+"A74": {
+"chain": 17290940,
+"register": 17290940,
+"rounded": 17290940
+},
+"A75": {
+"chain": 432079202,
+"register": 432079202,
+"rounded": 432079202
+},
+"A76": {
+"chain": 43200007893,
+"register": 43200007893,
+"rounded": 43200007893
+},
+"A77": {
+"chain": 17311702,
+"register": 17311702,
+"rounded": 17311702
+},
+"A78": {
+"chain": 250560030209,
+"register": 250560030209,
+"rounded": 250560030209
+},
+"A79": {
+"chain": 28800529,
+"register": 28800529,
+"rounded": 28800529
+},
+"A8": {
+"chain": 69600023,
+"register": 69600023,
+"rounded": 69600023
+},
+"A80": {
+"chain": 31617305,
+"register": 31617306,
+"rounded": 31617306
+},
+"A81": {
+"chain": 12187,
+"register": 12187,
+"rounded": 12187
+},
+"A82": {
+"chain": 526363,
+"register": 526363,
+"rounded": 526363
+},
+"A83": {
+"chain": 65682,
+"register": 65682,
+"rounded": 65682
+},
+"A84": {
+"chain": 46,
+"register": 46,
+"rounded": 46
+},
+"A85": {
+"chain": 43200018130,
+"register": 43200018131,
+"rounded": 43200018130
+},
+"A86": {
+"chain": 1728032340,
+"register": 1728032339,
+"rounded": 1728032339
+},
+"A87": {
+"chain": 432021729,
+"register": 432021729,
+"rounded": 432021729
+},
+"A88": {
+"chain": 35145,
+"register": 35145,
+"rounded": 35145
+},
+"A89": {
+"chain": 8773,
+"register": 8773,
+"rounded": 8773
+},
+"A9": {
+"chain": 168850,
+"register": 168850,
+"rounded": 168850
+},
+"A90": {
+"chain": 4176001388,
+"register": 4176001388,
+"rounded": 4176001388
+},
+"A91": {
+"chain": 86,
+"register": 86,
+"rounded": 86
+},
+"A92": {
+"chain": 126273211,
+"register": 126273211,
+"rounded": 126273210
+},
+"A93": {
+"chain": 31541429,
+"register": 31541429,
+"rounded": 31541429
+},
+"A94": {
+"chain": 43200022686,
+"register": 43200022686,
+"rounded": 43200022685
+},
+"A95": {
+"chain": 14578,
+"register": 14578,
+"rounded": 14578
+},
+"A96": {
+"chain": 63,
+"register": 63,
+"rounded": 63
+},
+"A97": {
+"chain": 12000018,
+"register": 12000018,
+"rounded": 12000018
+},
+"A98": {
+"chain": 96506,
+"register": 96506,
+"rounded": 96506
+},
+"A99": {
+"chain": 6912055643,
+"register": 6912055643,
+"rounded": 6912055643
+}
+}

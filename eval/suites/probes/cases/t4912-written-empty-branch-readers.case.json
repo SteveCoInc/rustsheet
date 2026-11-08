@@ -1,0 +1,46 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4912: does a written-empty IF/CHOOSE/IFERROR branch reach the other readers of a written-empty argument (the ToolPak engineering, complex, parity and date functions), a LET or LAMBDA binding (ISOMITTED), a unary plus, and a reader nested inside IFERROR's value.",
+ "tags": [
+  "M7",
+  "probe",
+  "math",
+  "T-4912"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=DEC2BIN(5,IF(TRUE,))",
+    "A2": "=DEC2BIN(IF(TRUE,),4)",
+    "A3": "=IMSUB(\"3+4i\",IF(TRUE,))",
+    "A4": "=COMPLEX(1,IF(TRUE,))",
+    "A5": "=ISEVEN(IF(TRUE,))",
+    "A6": "=WEEKNUM(45000,IF(TRUE,))",
+    "A7": "=WORKDAY(45000,5,IF(TRUE,))",
+    "A8": "=NETWORKDAYS(45000,IF(TRUE,))",
+    "A9": "=YEARFRAC(45000,IF(TRUE,))",
+    "A10": "=WORKDAY(IF(TRUE,),5)",
+    "A11": "=LET(x,IF(TRUE,),ISOMITTED(x))",
+    "A12": "=LAMBDA(a,MROUND(a,1))(IF(TRUE,))",
+    "A13": "=LAMBDA(a,ISOMITTED(a))(IF(TRUE,))",
+    "A14": "=LET(x,IF(FALSE,,1),MROUND(x,1))",
+    "A15": "=LET(x,IF(TRUE,),y,x,MROUND(y,1))",
+    "A16": "=MROUND(+IF(TRUE,),1)",
+    "A17": "=MROUND(IF(TRUE,IFERROR(1/0,)),1)",
+    "A18": "=MROUND(IFNA(1/0,),1)",
+    "A19": "=MROUND(IF(\"x\",,1),1)",
+    "A20": "=MROUND(CHOOSE(3,1,),1)",
+    "A21": "=IFERROR(MROUND(IF(TRUE,),1),\"e\")",
+    "A22": "=MROUND(IFERROR(MROUND(IF(TRUE,),1),),1)",
+    "A23": "=CEILING.MATH(IF(TRUE,),1)",
+    "A24": "=INDEX(QUOTIENT(IF(TRUE,),{2;4}),2)",
+    "A25": "=ROWS(QUOTIENT(IF(TRUE,),{2;4}))",
+    "A26": "=MROUND(IF(Z1,,1),1)",
+    "A27": "=MROUND(IF(TRUE,,1)*1,1)",
+    "A28": "=LET(x,IF(TRUE,),x)"
+   }
+  }
+ ],
+ "expected": {}
+}
