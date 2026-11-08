@@ -19,8 +19,8 @@ going wrong, and a tier gate going from met to unmet.
 - SPEC-0037, design section 6.
 - Code: crates/rustsheet-eval/src/baseline.rs (`Baseline`, `diff`, `Delta`), visible_parity.rs, main.rs
   (`cmd_check`), and the accuracy check; CLAUDE.md prime directive 2; docs/process/quality-gates.md.
-- `cell_envelope` comes from T-5092 (accuracy/envelope.rs). If this task lands first, it adds that function in the
-  spec's exact form, and T-5092 reuses it. There is never a second definition.
+- `cell_envelope` (accuracy/envelope.rs, landed with T-5091) is the only per-cell envelope test: call it, never
+  write a second one.
 
 ## Acceptance criteria
 - [ ] Baselines carry `E` lines. `diff` reports regressions (new `E`), drift (new `F` without `E`) and moves into

@@ -14,7 +14,7 @@ depends_on: [T-4742]
 A per-element criteria call (COUNTIF, SUMIF and the like) whose range argument is a grid and whose criteria is an array spills the broadcast of the grid's shape and the criteria's: `COUNTIF(XLOOKUP({2;9},Data!A1:A3,Data!B1:B3,"x"),{">0",">5"})` is 2x2 (`#SPILL!` where blocked), not a 2x1 cut to each call's top-left value.
 
 ## Context
-- Decision 0355 (proposed): this task owns foundational-tier cells, which the tier gate needs 100% right on type, error and text, so it is P1.
+- Decision 0355: this task owns foundational-tier cells, which the tier gate needs 100% right on type, error and text, so it is P1.
 - Evidence: probes/t4742-countif-array-range-arg (excel-graph, 2026-11-07, T-4742) probe 14: A40 `#SPILL!`, B40 2, C40 2 (A41 is blocked, so empty). Ours gives a 2x1 (`#VALUE!` in A40, COLUMNS 1, A41 spilled).
 - Code: `Model::call_per_reference_element` (lookup_and_reference/ref_lift.rs) cuts each element's array result to its top-left value; `criteria_and_grid_static_result` (static_analysis.rs) takes the grids' shape alone. The same holds for OFFSET and INDIRECT grids (unprobed, T-2292 lists it).
 - The element values of the 2x2 are not visible in this probe (blocked spill): probe them unblocked (e.g. INDEX of each, or room to spill) before implementing.

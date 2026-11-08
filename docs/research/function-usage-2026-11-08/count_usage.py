@@ -21,6 +21,9 @@ FORMULA = re.compile(rb"<(?:\w+:)?f\b([^>]*)>(.*?)</(?:\w+:)?f>", re.S)
 CALL = re.compile(r"(?<![A-Za-z0-9_.])((?:_xlfn\.|_xlws\.|_xleta\.)*[A-Z][A-Z0-9.]*)\(")
 SHARED_RANGE = re.compile(rb'ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"')
 SHEET = re.compile(r"xl/worksheets/sheet\d+\.xml$")
+# A sheet larger than this uncompressed is skipped: the corpus is pinned, but the cap keeps a
+# hostile archive from exhausting memory if the script is ever pointed elsewhere.
+MAX_SHEET_BYTES = 256 * 1024 * 1024
 
 
 def bare(name: str) -> str:
@@ -40,7 +43,7 @@ def main(root: str) -> None:
         seen: set[str] = set()
         any_formula = False
         for member in archive.namelist():
-            if not SHEET.match(member):
+            if not SHEET.match(member) or archive.getinfo(member).file_size > MAX_SHEET_BYTES:
                 continue
             try:
                 data = archive.read(member)

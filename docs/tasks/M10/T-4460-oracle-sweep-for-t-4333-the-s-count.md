@@ -16,7 +16,7 @@ hypothesis explains how Excel computes the elapsed `[h]`/`[m]`/`[s]` count befor
 decimal tie. Then T-4333 either reopens with a named model or stays blocked with both recorded as tested.
 
 ## Context
-- Decision 0355 (proposed): this task owns foundational-tier cells, which the tier gate needs 100% right on type, error and text, so it is P1.
+- Decision 0355: this task owns foundational-tier cells, which the tier gate needs 100% right on type, error and text, so it is P1.
 - Gap triage 2026-11-06 (`make eval` on origin/main 16a00ebc7). The M10 probe row is "not met" with 79 visibly-off
   cells. Every one is a TEXT cell. 17 belong to T-4333, which is `blocked` (time-boxed, decision 0056) after two
   attempts:

@@ -15,7 +15,7 @@ MROUND, QUOTIENT, SERIESSUM and the newer roundings (CEILING.MATH, FLOOR.PRECISE
 chosen branch is written empty as an omission, as Excel does, while a formula that merely returns a blank stays 0.
 
 ## Context
-- Decision 0355 (proposed): this task owns foundational-tier cells, which the tier gate needs 100% right on type, error and text, so it is P1.
+- Decision 0355: this task owns foundational-tier cells, which the tier gate needs 100% right on type, error and text, so it is P1.
 - probes/t4901-mround-blank-let-lambda-roundings (excel-graph, 2026-11-07, T-4901): `MROUND(IF(TRUE,),1)`,
   `MROUND(IF(FALSE,1,),1)`, `MROUND(CHOOSE(1,,2),1)`, `MROUND(IFERROR(,1),1)`, `MROUND(5,IF(TRUE,))` and
   `QUOTIENT(IF(TRUE,),1)` are `#N/A` (A3, A10, A12, A13, A14, A16), and `CEILING.MATH(2.675,IF(TRUE,))` is 3, the

@@ -30,7 +30,7 @@ into S/M implementation tasks, each one mergeable on its own.
   - eval/catalog/functions.yaml and `rustsheet-catalog-view`.
 
 ## Acceptance criteria
-- [ ] The spec covers each of these:
+- [x] The spec covers each of these:
   - the `usage:` catalog field and how scope.json carries it;
   - the envelope check: one helper, reused, never a copy;
   - the report rows for each tier's gate, beside the old Gate A and Gate B numbers, which stay as information;
@@ -39,9 +39,9 @@ into S/M implementation tasks, each one mergeable on its own.
   - the envelope ratchet in the eval gate and its "bit drift" line;
   - what eval/baseline keeps (exact values) and how `--allow-regressions` and decision 0329 fit;
   - the CLAUDE.md directive 2 wording.
-- [ ] The spec lists the implementation tasks it cuts: S/M, one lane each, in the order they land. Until the last
+- [x] The spec lists the implementation tasks it cuts: S/M, one lane each, in the order they land. Until the last
   one lands, the old gates stay in force.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Moving functions between tiers (that needs a decision record).
@@ -58,5 +58,7 @@ into S/M implementation tasks, each one mergeable on its own.
   - `catalog::Usage` reads it in the harness;
   - tools/tests/test_catalog.py holds the catalog to usage.tsv, and test_catalog_view.py and catalog.rs test the
     view.
+- `ENVELOPE_DIGITS` and `cell_envelope` are in accuracy/envelope.rs, with unit tests, so that T-5092 and T-5093 share one
+  per-cell envelope test. Nothing calls it yet.
 - docs/milestones.md states the Phase 1 exit by tier, and says the old rules hold until each rollout task lands.
 - Eval delta: none (no gate reads `usage` yet).

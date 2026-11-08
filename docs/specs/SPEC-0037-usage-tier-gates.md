@@ -130,6 +130,8 @@ The JSON schema:
 - **The bars** (decision 0355 item 3):
   - foundational: 100% type pooled and ≥ 99.99% envelope pooled, with no per-function envelope bar;
   - expert: ≥ 99.9% pooled on both measures, and ≥ 99% per function on both.
+- In `function_bar`, `0.0` means no per-function bar: the foundational envelope bar is pooled only. Its
+  per-function type bar of 1.0 follows from the pooled 100%.
 - A function with no counted cell is listed with `cells: 0` and `meets: true`. Coverage and the evidence floor
   gate it elsewhere.
 - Rates are `(cells − misses) / cells`.
@@ -266,12 +268,11 @@ Each task below is S or M, one lane. The old gates stay in force until each piec
 
 | # | Task | Lane | Depends on | What |
 |---|---|---|---|---|
-| 1 | T-5091 | harness | none | this spec; `usage:` in the catalog, scope.json and `catalog::Usage` (design 1) |
+| 1 | T-5091 | harness | none | this spec; `usage:` in the catalog, scope.json and `catalog::Usage` (design 1); `ENVELOPE_DIGITS` and `cell_envelope` in accuracy/envelope.rs, not yet called (design 2) |
 | 2 | T-5092 | harness | 1 | the envelope at 12 digits and `cell_envelope` (2); R1(c) and the milestone rows (4); accuracy stale lines; `usage_gates` (3); phase1_exit lines (5) |
 | 3 | T-5093 | harness | 1, uses 2's `cell_envelope` | the envelope ratchet: `E` lines, drift, the visible lock, the tier lock, CLAUDE.md directive 2, quality-gates.md (6) |
 | 4 | T-5094 | quality | 2's schema | dashboard "Usage tiers" block; progress-report and steward skills (7) |
 | 5 | T-5095 | quality | 1 | task `usage:`, `effective_usage`, ordering, `new --usage`, agent and skill text (8) |
 
-Tasks 3, 4 and 5 can be built in parallel with task 2: the schema and signatures above are fixed. Task 3 merges
-after task 2, since it calls `cell_envelope`. If it is built first, it adds the function in task 2's form and
-task 2 reuses it.
+Tasks 2 to 5 can be built in parallel: `cell_envelope` lands with task 1, and the schema above is fixed. Task 2
+switches `envelope()` and R1(c) to 12 digits; task 3 calls `cell_envelope` for the ratchet and the lock.

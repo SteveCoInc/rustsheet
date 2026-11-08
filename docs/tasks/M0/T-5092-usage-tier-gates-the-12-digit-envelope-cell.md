@@ -23,8 +23,8 @@ section, R1(c) and the milestone rows, and the `foundational` and `expert` lines
 - Worked example: report.json of main b84a7256, with the tier counts in decision 0355's Context.
 
 ## Acceptance criteria
-- [ ] `ENVELOPE_DIGITS = 12` and `cell_envelope` are in accuracy/envelope.rs, and `envelope()` uses the same
-  Excel side. `Envelope::Excel15` is renamed, with every reader of accuracy.json updated.
+- [ ] `envelope()` takes its Excel side at `ENVELOPE_DIGITS` (12), the same test `cell_envelope` uses; both are in
+  accuracy/envelope.rs since T-5091. `Envelope::Excel15` is renamed, with every reader of accuracy.json updated.
 - [ ] R1(c) counts `Outside` and `WrongType` cells only (SPEC-0037 design 2). The milestone rows apply the tier
   bars (design 4).
 - [ ] The accuracy check runs at 12 digits. Its stale known-failure lines are removed from the check's own output.
