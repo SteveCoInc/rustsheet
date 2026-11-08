@@ -8,7 +8,7 @@
 use crate::{
     calc_result::CalcResult,
     cast::value_number_text_with,
-    expressions::token::{is_english_error_string, Error},
+    expressions::token::{english_criterion_error, Error},
     formatter::date_text::{parse_date, CurrentYear},
     functions::util::collation::{cmp_text_pairwise, fold_lookup, note_compared, BYTE_TICKS},
     locale::Locale,
@@ -275,16 +275,16 @@ fn result_is_greater_or_equal_than_string(calc_result: &CalcResult, target: &Tex
 // ERRORS ///
 //********///
 
-fn result_is_equal_to_error(calc_result: &CalcResult, target: &str) -> bool {
+fn result_is_equal_to_error(calc_result: &CalcResult, target: &Error) -> bool {
     match calc_result {
-        CalcResult::Error { error, .. } => target == error.to_string(),
+        CalcResult::Error { error, .. } => error == target,
         _ => false,
     }
 }
 
-fn result_is_not_equal_to_error(calc_result: &CalcResult, target: &str) -> bool {
+fn result_is_not_equal_to_error(calc_result: &CalcResult, target: &Error) -> bool {
     match calc_result {
-        CalcResult::Error { error, .. } => target != error.to_string(),
+        CalcResult::Error { error, .. } => error != target,
         _ => true,
     }
 }
@@ -347,9 +347,9 @@ fn bool_or_error_operand_matcher(operand: &str, inclusive: bool) -> Option<Crite
         } else {
             Box::new(|_| false)
         })
-    } else if is_english_error_string(operand) {
+    } else if let Some(target) = english_criterion_error(operand) {
         Some(if inclusive {
-            Box::new(move |x| result_is_equal_to_error(x, operand))
+            Box::new(move |x| result_is_equal_to_error(x, &target))
         } else {
             Box::new(|_| false)
         })
@@ -457,7 +457,10 @@ pub(crate) fn indexed_criterion(
     if let Some(f) = parse_criterion_number(v) {
         return Some(IndexedCriterion::Number(op, f));
     }
-    if v.is_empty() || v.to_lowercase().parse::<bool>().is_ok() || is_english_error_string(v) {
+    if v.is_empty()
+        || v.to_lowercase().parse::<bool>().is_ok()
+        || english_criterion_error(v).is_some()
+    {
         return None;
     }
     let wildcard = v.contains('*') || v.contains('?');
@@ -515,8 +518,8 @@ pub(crate) fn build_criteria_with<'a>(
                 CriterionOp::Ne => {
                     if let Ok(b) = v.to_lowercase().parse::<bool>() {
                         Box::new(move |x| result_is_not_equal_to_bool(x, b))
-                    } else if is_english_error_string(v) {
-                        Box::new(move |x| result_is_not_equal_to_error(x, v))
+                    } else if let Some(target) = english_criterion_error(v) {
+                        Box::new(move |x| result_is_not_equal_to_error(x, &target))
                     } else if v.contains('*') || v.contains('?') {
                         let pattern = WildcardPattern::new(&operand_text(s, prefix));
                         Box::new(move |x| !pattern.matches_result(x))
@@ -531,8 +534,8 @@ pub(crate) fn build_criteria_with<'a>(
                     let explicit_equals = !prefix.is_empty();
                     if let Ok(b) = v.to_lowercase().parse::<bool>() {
                         Box::new(move |x| result_is_equal_to_bool(x, b))
-                    } else if is_english_error_string(v) {
-                        Box::new(move |x| result_is_equal_to_error(x, v))
+                    } else if let Some(target) = english_criterion_error(v) {
+                        Box::new(move |x| result_is_equal_to_error(x, &target))
                     } else if v.contains('*') || v.contains('?') {
                         let mut pattern = WildcardPattern::new(&operand_text(s, prefix));
                         if flavor == CriteriaFlavor::Database && !explicit_equals {
@@ -567,7 +570,7 @@ pub(crate) fn build_criteria_with<'a>(
             if *error == Error::BUSY {
                 return Box::new(|_| false);
             }
-            Box::new(move |x| result_is_equal_to_error(x, &error.to_string()))
+            Box::new(move |x| result_is_equal_to_error(x, error))
         }
         // `indexed_criterion` takes every number and every empty criterion above.
         CalcResult::Number(target) => {

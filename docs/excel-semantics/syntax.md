@@ -555,7 +555,7 @@ passes it through, `A1&""` is `#BUSY!`, and `ERROR.TYPE` is 0 (not 7; confirmed 
 100, since XlsxWriter caches 0 for every formula and a stale cell would be indistinguishable from the bare
 0). `#GETTING_DATA` stored: `ERROR.TYPE` 8, `ISERR` TRUE, `ISNA` FALSE, `TYPE` 16, `IFNA` passes through
 (reported `#N/A`), `&""` is reported `#N/A`; stored `#N/A`: 7, `ISNA` TRUE, `IFNA` gives the fallback.
-The engine-only kinds `#CIRC!`, `#ERROR!` and `#N/IMPL` stored as constants are rejected on load the same way (createSession 501 `unsupportedWorkbook`, excel-graph, 2026-10-08, T-1133; throw-away one-cell cases, no sidecar), so the exporter writes them as `#VALUE!` (`exported_error_literal`, `crates/rustsheet-xlsx/src/export/worksheets.rs`).
+The engine-only kinds `#CIRC!`, `#ERROR!` and `#N/IMPL!` stored as constants are rejected on load the same way (createSession 501 `unsupportedWorkbook`, excel-graph, 2026-10-08, T-1133; throw-away one-cell cases, no sidecar), so the exporter writes them as `#VALUE!` (`exported_error_literal`, `crates/rustsheet-xlsx/src/export/worksheets.rs`).
 Unprobed: `#PYTHON!`, `#EXTERNAL!` stored. The rejected names were re-run as throw-away one-cell cases
 (`A1` = `{"t":"e","v":"<name>","stored":true}`, nothing else), so to reproduce one, write that case.
 Also unprobed: what typing `#BLOCKED!` or `#GETTING_DATA` as cell input gives. SPEC-0003 keeps
@@ -604,6 +604,24 @@ An error inside an array ranks with the referenced errors in MIN, MAX, AVERAGE a
 Status: VERIFIED
 Tasks: T-0175, T-0177, T-0195, T-0999, T-1010, T-1012, T-1016, T-1020, T-1133, T-1014, T-1222, T-1228, T-1314, T-1315, T-1334, T-1379, T-1439, T-1604, T-1615, T-1629, T-1696
 Implemented in: statistical/variance.rs (`VARA_ARGS`), math_and_trigonometry/sum.rs (`sum_with_last_addition`, reference and array errors held back), product.rs, mathematical.rs (`fold_min_max`) and statistical/count_and_average.rs (`for_each_value`, AVERAGE; reference errors held back, T-1379), functions/criteria.rs (`build_criteria_with`, `#BUSY!` criterion matches nothing); expressions/token.rs (`Error::GETTINGDATA`/`CONNECT`/`BLOCKED`/`FIELD`/`BUSY`, `Error::error_type_code`, `Error::stored_literal`, `get_error_by_english_name`, `get_error_by_name`); rustsheet value.rs (`ErrorKind`); rustsheet-xlsx export/worksheets.rs (`exported_error_literal`)
+
+## Error names are read in any case
+Rule: Excel reads an error name in any letter case wherever it takes one, and keeps the upper-case
+form. Typed as a constant, `#n/a`, `#N/a`, `#ref!`, `#value!`, `#div/0!`, `#name?`, `#num!`, `#null!`,
+`#spill!`, `#calc!`, `#getting_data`, `#Getting_Data` and `#Ref!` are each that error (`ISERROR` TRUE,
+`ISTEXT` FALSE, `ERROR.TYPE` its code; A1:D14). Typed as a formula, `=#n/a`, `=#ref!`, `=#value!`,
+`=#div/0!`, `=#name?`, `=#num!`, `=#null!` and `=#Div/0!` evaluate to the error and `FORMULATEXT` shows
+the upper-case literal (`=#N/A`, `=#DIV/0!`; E1:G8). As a COUNTIF criterion over `#N/A`, `#DIV/0!` and
+`"x"`, `"#n/a"`, `"#N/a"`, `"#N/A"`, `"=#n/a"` and `"#div/0!"` each count 1 and `"<>#n/a"` counts 2
+(I1:I6), so a criterion error name is case-insensitive too.
+Evidence: probes/t4852-error-name-case (excel-graph, 2026-11-08, T-4852).
+Implemented in: expressions/token.rs, one en-US table (`Error::english_literal`, which also spells
+the engine-only `#N/IMPL!`) and one localized table (`localized_names`), read in any case by
+`get_error_by_name` (typed constants), `formula_error_prefix` (the lexer) and
+`english_criterion_error` (criteria.rs). `get_error_by_english_name` reads the stored upper-case
+literal exactly; the `rustsheet` facade's `ErrorKind::from_literal` upper-cases first.
+Unprobed: a lower-case `=#spill!`, `=#calc!` formula literal, and non-ASCII case folding of a
+localized error name (the engine folds with Unicode upper-casing).
 
 ## A typed unary plus stays in the formula text, except on a number literal
 Rule: typed (Graph PATCH), Excel keeps a unary plus in the formula text everywhere except when it is directly followed by
