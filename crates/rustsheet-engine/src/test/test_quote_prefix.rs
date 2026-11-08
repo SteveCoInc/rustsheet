@@ -187,7 +187,16 @@ fn test_update_cell_with_text_quotes_typed_number_text() {
     }
     // Typed `1e-310` stays text (probes/typed-number-tiny, T-1100), as `1€` does in en-US
     // (probes/typed-currency-percent-input B23:C26) and #BLOCKED! (SPEC-0003).
-    for text in ["", "hello", "1e-310", "1e-400", "0e309", "1€", "#BLOCKED!", "1.5$"] {
+    for text in [
+        "",
+        "hello",
+        "1e-310",
+        "1e-400",
+        "0e309",
+        "1€",
+        "#BLOCKED!",
+        "1.5$",
+    ] {
         assert!(!model.text_needs_quote_prefix(text), "{text}");
     }
     for (column, text) in ["50%", "1/2/2020", "hello"].into_iter().enumerate() {
