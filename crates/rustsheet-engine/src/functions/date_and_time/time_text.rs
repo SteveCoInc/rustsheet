@@ -5,13 +5,10 @@
 #![expect(clippy::cast_possible_truncation, elided_lifetimes_in_paths)]
 // LINT-DEBT-END
 
-use chrono::{DateTime, NaiveDateTime, Timelike};
-
 use crate::{
     cast::number_text_too_long,
     formatter::date_clock::{
         parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm, trim_spaces,
-        SECONDS_PER_DAY_F64,
     },
     formatter::date_text::{parse_date, CurrentYear},
     locale::Locale,
@@ -54,7 +51,7 @@ pub(super) fn parse_time_string(
     let text = trim_spaces(text);
     // Whitespace other than the space character is #VALUE! anywhere in time text, also between
     // a date and its clock (`"7/1/2025\u{a0}10:00"`; probes/value-clock-text rows 38, 42-45,
-    // date-text-shape-survey-2 E31-E32). The chrono patterns below would match it as a space.
+    // date-text-shape-survey-2 E31-E32).
     if text.contains(|c: char| c.is_whitespace() && c != ' ') {
         return None;
     }
@@ -67,41 +64,12 @@ pub(super) fn parse_time_string(
         return Some(serial);
     }
 
-    let patterns_dt = [
-        // ISO formats
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d %H:%M",
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%dT%H:%M",
-        // Excel-style date formats with AM/PM
-        "%d-%b-%Y %I:%M:%S %p", // "22-Aug-2011 6:35:00 AM"
-        "%d-%b-%Y %I:%M %p",    // "22-Aug-2011 6:35 AM"
-        "%d-%b-%Y %H:%M:%S",    // "22-Aug-2011 06:35:00"
-        "%d-%b-%Y %H:%M",       // "22-Aug-2011 06:35"
-        // US date formats with AM/PM
-        "%m/%d/%Y %I:%M:%S %p", // "8/22/2011 6:35:00 AM"
-        "%m/%d/%Y %I:%M %p",    // "8/22/2011 6:35 AM"
-        "%m/%d/%Y %H:%M:%S",    // "8/22/2011 06:35:00"
-        "%m/%d/%Y %H:%M",       // "8/22/2011 06:35"
-        // European date formats with AM/PM
-        "%d/%m/%Y %I:%M:%S %p", // "22/8/2011 6:35:00 AM"
-        "%d/%m/%Y %I:%M %p",    // "22/8/2011 6:35 AM"
-        "%d/%m/%Y %H:%M:%S",    // "22/8/2011 06:35:00"
-        "%d/%m/%Y %H:%M",       // "22/8/2011 06:35"
-    ];
-    for p in patterns_dt {
-        if let Ok(dt) = NaiveDateTime::parse_from_str(text, p) {
-            return crate::utils::time_of_day_from_datetime(dt, date_system);
-        }
-    }
-    // "date clock" text the patterns above do not cover (fractional seconds, hours past 23,
-    // M:S.f): date serial plus clock serial, then the fractional part (probe
+    // "date clock" text, read by the one date-clock parser VALUE and DATEVALUE share (audit 2 item 4:
+    // a second chrono-pattern reader here took day-first dates and gave exact clocks): date serial
+    // plus clock serial, then the fractional part (probe
     // timevalue-ampm-limits: TIMEVALUE("1/2/2020 25:00") is 0.04166666666424135).
     if let Some(serial) = parse_date_clock_serial_in(text, locale, current_year, date_system) {
         return Some(serial - serial.floor());
-    }
-    if let Ok(dt) = DateTime::parse_from_rfc3339(text) {
-        return Some(f64::from(dt.time().num_seconds_from_midnight()) / SECONDS_PER_DAY_F64);
     }
     // Date-only text has no clock, so TIMEVALUE is 0, not #VALUE! (probes/date-text-glued-month-2
     // column C rows 6-8, 10-11, 13-15: `"Jul1 , 2026"`, `"Jun31"`). The date must be in range for

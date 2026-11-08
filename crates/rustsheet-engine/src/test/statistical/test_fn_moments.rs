@@ -68,6 +68,20 @@ fn kurt_of_one_to_ten() {
 }
 
 #[test]
+fn kurt_of_five_values_and_of_a_boolean_argument() {
+    // gen-m9/27601819397dd56e A108 `=KURT(Data!A11:A12,Data!E2:E5)`, whose numbers these are, and
+    // probes/stats-evidence-floor-t1623 (excel-graph).
+    assert_eq!(
+        bits("=KURT(-0.0001,100,2,0.1,42)"),
+        f64::to_bits(1.514_976_771_454_35)
+    );
+    assert_eq!(
+        bits("=KURT(3,5,2,8,9,4,7,1,TRUE)"),
+        f64::to_bits(-1.433_183_431_952_663_5)
+    );
+}
+
+#[test]
 fn zero_and_overflowing_variance_stay_div_zero() {
     let mut model = new_empty_model();
     model.set_a1("A1", "=KURT({1,1,1,1})");

@@ -79,13 +79,19 @@ shared string, `=B1` is "x", `=C1` 7, `=ISBLANK(B1)` FALSE, `=ISTEXT(D1)` TRUE, 
 (`=ISBLANK(B2)` TRUE, `=COUNTA(A2:B2)` 1). A covered formula `=A1+1` in B1 of A1:B1 is recalculated
 (2), `=B1` is 2, ISFORMULA TRUE and `=COUNT(A1:B1)` 2. This is the file-level form of the
 "merge with Format Painter keeps the hidden values" behaviour.
-Ours: the importer keeps covered cells as stored (T-5044; before it emptied them, `clear_covered_cells`), so
-references, ranges and recalculation see them and a round trip keeps them.
+Ours: the importer keeps covered cells as stored (T-5044, T-4975 item 1; before it emptied them,
+`clear_covered_cells`, to keep an engine invariant "covered cells hold no content", so these cells were
+visibly off and poi/bug66675.xlsx and other census files lost covered values on a round trip), so
+references, ranges and recalculation see them and a round trip keeps them. Copy- and cut-paste carry
+covered content and the recreated merge keeps it inside the pasted block, autofill copies it (never as a
+progression term), unmerge shows it and clear over the range clears it (T-4975 item 1).
 Evidence: fixtures/merged-covered-values, fixtures/merged-covered-formula (excel-graph, 2026-11-06, T-4148).
-Status: VERIFIED (excel-graph); implemented (T-5044).
-What Excel's UI merge then does with such a range (unmerge, edit, paste, autofill, a delete of the anchor's row) is
-UNVERIFIED; docs/specs/SPEC-0036-merged-covered-content.md states our rule for each operation and which probe (T-5048)
-settles it.
+Status: VERIFIED (excel-graph); implemented in crates/rustsheet-xlsx/src/import/worksheets.rs
+(`load_sheet` no longer clears; T-5044), user_model/clipboard.rs (`recreate_pasted_merge`) and
+user_model/autofill.rs (`fill_covered_cell`; T-4975).
+What Excel's UI merge then does with such a range (unmerge, edit, clear, paste, autofill, Ctrl+arrow, a delete of
+the anchor's row) is UNVERIFIED; docs/specs/SPEC-0036-merged-covered-content.md states our rule for each operation
+and which probe (T-5048) settles it.
 
 ## Import resource limits reject a workbook outright
 Rule: the importer rejects a workbook with `XlsxError::Limit` when its zip lists more than 5,000

@@ -73,7 +73,7 @@ pub(crate) fn set_compared_allowance(ticks: u64) -> u64 {
 /// the run cut short ([`take_cut_short`]), so its value is that error even if the charge that
 /// would fail never comes.
 #[inline]
-pub(super) fn out_of_ticks() -> bool {
+pub(crate) fn out_of_ticks() -> bool {
     let out = STOPPABLE.with(Cell::get)
         && COMPARED_TICKS.with(Cell::get) > COMPARED_ALLOWANCE.with(Cell::get);
     if out {

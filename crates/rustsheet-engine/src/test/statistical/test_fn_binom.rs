@@ -3,6 +3,28 @@
 use crate::cell::CellValue;
 use crate::test::util::{new_empty_model, round_trip_value};
 
+// BINOM.DIST's pmf stores its two deviance subtractions where a bd0 takes its log form (T-4975;
+// statistics.md "BINOM.DIST's pmf stores its deviance subtractions on bd0's log form"): Excel's
+// values (excel-graph).
+#[test]
+fn binom_pmf_stores_log_form_deviances() {
+    let cases = [
+        // gen-m9/9cca17438a7e6f8a A360: both bd0 on the log form.
+        ("=BINOM.DIST.RANGE(7,1E-20,6)", 6.999_999_999_999_857e-120),
+        // Both bd0 on the series side of the x87 cut: the extended chain.
+        ("=BINOM.DIST(2,10,0.3,FALSE)", 0.233_474_440_500_000_05),
+    ];
+    let mut model = new_empty_model();
+    for (row, (formula, _)) in cases.iter().enumerate() {
+        model.set_a1(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, (formula, excel)) in cases.iter().enumerate() {
+        let value = model.get_cell_value_by_ref(&format!("Sheet1!A{}", row + 1));
+        assert_eq!(value, Ok(CellValue::Number(*excel)), "{formula}");
+    }
+}
+
 #[test]
 fn test_fn_binom_dist_smoke() {
     let mut model = new_empty_model();

@@ -15,7 +15,7 @@ use crate::area_budget::{text_units, visit_units};
 use crate::arithmetic::{bcast_get, MISSING};
 use crate::cast::{calc_result_to_array_node, MAX_NUMBER_TEXT_LEN};
 use crate::expressions::types::CellReferenceIndex;
-use crate::functions::text::util::within_text_budget;
+use crate::functions::text::util::{text_budget_error, within_text_budget};
 use crate::functions::util::{array_element_value, top_left_of_array};
 use crate::limits::{check_array_cells, too_many_visits};
 use crate::reference_operators::{RefArg, RefElement, RefGrid};
@@ -484,11 +484,7 @@ fn over_text_budget(
 ) -> Option<CalcResult> {
     match value {
         ArrayNode::String(text) if !within_text_budget(total, text.len()) => {
-            Some(CalcResult::new_error(
-                Error::VALUE,
-                cell,
-                "Total text result is too large".to_string(),
-            ))
+            Some(text_budget_error(cell))
         }
         _ => None,
     }

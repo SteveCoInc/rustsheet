@@ -182,6 +182,7 @@ probes/t4974-beta-inv-dbl-min-residual.case.json	13
 probes/t4974-beta-inv-large-shape-round-trip.case.json	14
 probes/t4974-beta-inv-tiny-shape-num-boundary.case.json	64
 probes/t4974-chisq-inv-unit-half-boundary.case.json	8
+probes/t4974-f-inv-back-transform.case.json	2
 probes/t4974-f-inv-tiny-tail-neighbourhood.case.json	2
 probes/t4974-irr-negative-discount-and-caps.case.json	3
 probes/t4974-t-inv-joint-abs-rel-stop.case.json	3

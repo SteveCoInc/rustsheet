@@ -4,6 +4,27 @@ use crate::test::util::new_empty_model;
 use crate::Model;
 
 #[test]
+fn a_volatile_field_selector_is_evaluated_once() {
+    // Audit 2 item 4: the error-cell check evaluated the field's selector, and the driver then
+    // evaluated it again, so `INDEX(D1:E1,RANDBETWEEN(1,2))` could be checked on D1 (#N/A) and
+    // read from E1, or checked on E1 and read as D1's #N/A, which no single pick gives. Now the
+    // pick is made once: D1 is the error-cell `#VALUE!`, E1 the Qty sum.
+    let mut model = new_empty_model();
+    model.set_a1("A1", "Qty");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("C1", "Qty");
+    model.set_a1("D1", "=NA()");
+    model.set_a1("E1", "Qty");
+    model.set_a1("G1", "=DSUM(A1:A3,INDEX(D1:E1,RANDBETWEEN(1,2)),C1:C2)");
+    for _ in 0..64 {
+        model.evaluate();
+        let text = model.get_text_a1("G1");
+        assert!(matches!(text.as_str(), "#VALUE!" | "5"), "{text}");
+    }
+}
+
+#[test]
 fn arguments() {
     let mut model = new_empty_model();
     model.set_a1("A1", "=DMIN()");
