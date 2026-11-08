@@ -544,6 +544,12 @@ fn stringify(
         }
     };
     let sub = |n: &Node| stringify(n, context, rewrite, export_to_excel, locale, language);
+    // A defined name's relative rows and columns keep their text under a row or column edit
+    // (T-4760); every other reference displaces as `displace_data` says.
+    let corner = |absolute_row: bool, absolute_column: bool| match rewrite {
+        Rewrite::Displace(displacement) => displacement.of_corner(absolute_row, absolute_column),
+        _ => displace_data,
+    };
     match node {
         BooleanKind(value) => {
             if *value {
@@ -566,7 +572,7 @@ fn stringify(
             absolute_column,
         } => stringify_reference(
             context,
-            displace_data,
+            corner(*absolute_row, *absolute_column),
             &Reference {
                 sheet_name,
                 sheet_index: *sheet_index,
@@ -595,7 +601,12 @@ fn stringify(
                 (*absolute_column1, *column1, *absolute_column2, *column2),
             );
             let grown = match (rewrite, context) {
-                (Rewrite::Displace(displacement), Some(context)) if !full_row && !full_column => {
+                (Rewrite::Displace(displacement), Some(context))
+                    if !full_row
+                        && !full_column
+                        && !displacement.keeps(*absolute_row1, *absolute_column1)
+                        && !displacement.keeps(*absolute_row2, *absolute_column2) =>
+                {
                     let at =
                         |absolute, value, origin| if absolute { value } else { value + origin };
                     displacement.range_corners(
@@ -614,7 +625,10 @@ fn stringify(
             };
             let (displace1, displace2) = match &grown {
                 Some((first, last)) => (first, last),
-                None => (displace_data, displace_data),
+                None => (
+                    corner(*absolute_row1, *absolute_column1),
+                    corner(*absolute_row2, *absolute_column2),
+                ),
             };
             let s1 = stringify_reference(
                 context,

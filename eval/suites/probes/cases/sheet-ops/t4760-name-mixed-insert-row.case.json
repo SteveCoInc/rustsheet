@@ -1,0 +1,68 @@
+{
+  "format": "rustsheet-case/v1",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe"
+  ],
+  "description": "T-4760: mixed references in workbook names used from Calc column A, after insert_row 4 on Data (Data!<col k><row r> = k*100 + r): RowRel = =Data!$A5 (row relative, column absolute), RowAbs = =Data!A$5 (row absolute, column relative). Prediction if only an absolute row moves: A1 104 (Data!$A5 = old A4), A3 106 ($A7 = old A6), A5 105 (A$6 = old A5), A7 105.",
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=RowRel",
+        "A3": "=RowRel",
+        "A5": "=RowAbs",
+        "A7": "=RowAbs"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A1": 101,
+        "A2": 102,
+        "A3": 103,
+        "A4": 104,
+        "A5": 105,
+        "A6": 106,
+        "A7": 107,
+        "A8": 108,
+        "A9": 109,
+        "A10": 110,
+        "A11": 111,
+        "A12": 112,
+        "B1": 201,
+        "B2": 202,
+        "B3": 203,
+        "B4": 204,
+        "B5": 205,
+        "B6": 206,
+        "B7": 207,
+        "B8": 208,
+        "B9": 209,
+        "B10": 210,
+        "B11": 211,
+        "B12": 212
+      }
+    }
+  ],
+  "names": {
+    "RowRel": "=Data!$A5",
+    "RowAbs": "=Data!A$5"
+  },
+  "sheet_ops": [
+    {
+      "op": "insert_row",
+      "sheet": "Data",
+      "row": 4
+    }
+  ],
+  "check": [
+    "Calc!A1",
+    "Calc!A3",
+    "Calc!A5",
+    "Calc!A7"
+  ],
+  "expected": {}
+}

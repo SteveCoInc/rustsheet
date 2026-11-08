@@ -23,6 +23,10 @@ pub(crate) struct Displacement<'a> {
     /// The tables (lowercase) a column insert or delete left of them moves whole, with no
     /// change to their column list: a `#This Row` reference to one keeps its text (T-4680).
     pub(crate) moved_tables: &'a [String],
+    /// Whether a relative row (for a row edit) or column (for a column edit) keeps its text:
+    /// a defined name's, which Excel leaves where it is while it shifts an absolute one
+    /// (references.md "Relative references in a name", T-4760).
+    pub(crate) relative_stays: bool,
 }
 
 /// The data rows `rows` and columns `columns` of a table on `sheet`, before the edit.
@@ -33,7 +37,7 @@ pub(crate) struct DataBlock {
     pub(crate) columns: (i32, i32),
 }
 
-impl Displacement<'_> {
+impl<'a> Displacement<'a> {
     /// A displacement that no table follows.
     pub(super) const fn plain(data: &DisplaceData) -> Displacement<'_> {
         Displacement {
@@ -43,6 +47,32 @@ impl Displacement<'_> {
             deleted_columns: &[],
             deleted_tables: &[],
             moved_tables: &[],
+            relative_stays: false,
+        }
+    }
+
+    /// Whether a reference (or range corner) with these absolute flags keeps its text: the edit
+    /// would move its relative row or column, which [`Displacement::relative_stays`] keeps.
+    pub(super) const fn keeps(&self, absolute_row: bool, absolute_column: bool) -> bool {
+        self.relative_stays
+            && match self.data {
+                DisplaceData::Row { .. } => !absolute_row,
+                DisplaceData::Column { .. } => !absolute_column,
+                _ => false,
+            }
+    }
+
+    /// The displacement of a reference (or range corner) with these absolute flags: none where
+    /// it [keeps](Displacement::keeps) its text.
+    pub(super) const fn of_corner(
+        &self,
+        absolute_row: bool,
+        absolute_column: bool,
+    ) -> &'a DisplaceData {
+        if self.keeps(absolute_row, absolute_column) {
+            &DisplaceData::None
+        } else {
+            self.data
         }
     }
 
