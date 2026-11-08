@@ -40,6 +40,7 @@ from rustsheet_tools.progress_report.model import (
     flag,
     items,
     mapping,
+    string,
 )
 from rustsheet_tools.progress_report.parity import TIER_LABELS
 
@@ -192,14 +193,6 @@ class Goals:
         return cells > 0 and within * self.rate_den >= cells * self.rate_num
 
 
-def _text(obj: Any, key: str, where: str, task: str | None = None) -> str:
-    value = field(obj, key, where, task)
-    if not isinstance(value, str) or not value:
-        msg = f"{where}.{key} is not a non-empty string: {value!r}"
-        raise ProgressReportError(msg)
-    return value
-
-
 def _probe_milestones(row: str) -> list[str]:
     """The milestones a probe-milestone row covers: `M0-M2` is M0, M1 and M2."""
     m = PROBE_ROW.fullmatch(row)
@@ -214,7 +207,7 @@ def _probes(report: dict[str, Any]) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
     for i, row in enumerate(items(report, "milestone_lists", "report.json")):
         where = f"report.json milestone_lists[{i}]"
-        name = _text(row, "name", where)
+        name = string(row, "name", where)
         m = FROZEN_LIST.fullmatch(name)
         if m is None:
             msg = f"{where}.name is {name!r}, not a frozen list m<n>-<name>"
@@ -226,7 +219,7 @@ def _probes(report: dict[str, Any]) -> dict[str, list[str]]:
         )
     for i, row in enumerate(items(report, "probe_milestones", "report.json")):
         where = f"report.json probe_milestones[{i}]"
-        name = _text(row, "milestone", where)
+        name = string(row, "milestone", where)
         line = (
             f"probes {name}: {count(row, 'visibly_off', where):,} visibly off, "
             f"{count(row, 'known_failures', where):,} known failures"
@@ -247,18 +240,18 @@ def load(report: dict[str, Any]) -> Goals:
         raise ProgressReportError(msg)
     exit_rows = {}
     for i, row in enumerate(items(report, "milestone_exit", "report.json")):
-        name = _text(row, "milestone", f"report.json milestone_exit[{i}]")
+        name = string(row, "milestone", f"report.json milestone_exit[{i}]")
         exit_rows[name] = row
     coverage = {}
     for i, row in enumerate(items(report, "catalog_coverage", "report.json")):
         cwhere = f"report.json catalog_coverage[{i}]"
-        coverage[_text(row, "milestone", cwhere)] = (
+        coverage[string(row, "milestone", cwhere)] = (
             count(row, "covered", cwhere),
             count(row, "functions", cwhere),
         )
     return Goals(
-        _text(v15, "phase1_line", where, "T-0072"),
-        _text(v15, "verdict_line", where, "T-0072"),
+        string(v15, "phase1_line", where, "T-0072"),
+        string(v15, "verdict_line", where, "T-0072"),
         rate_num,
         rate_den,
         exit_rows,
@@ -326,7 +319,7 @@ def exit_measures(milestone: str, row: dict[str, Any]) -> str:
         mwhere = f"{where} more_suites[{i}]"
         blocked = len(more.get("blocked_cases") or [])
         measures.append(
-            f"{_text(more, 'name', mwhere)} {_num(_optional(more, 'visibly_off', mwhere))} visibly off of "
+            f"{string(more, 'name', mwhere)} {_num(_optional(more, 'visibly_off', mwhere))} visibly off of "
             f"{_num(_optional(more, 'scored', mwhere))}, allowance {_num(_optional(more, 'allowance', mwhere))}"
             f"{f', {blocked:,} cases blocked' if blocked else ''} "
             f"({_verdict(_optional(more, 'met', mwhere, boolean=True))})"
@@ -426,7 +419,7 @@ def phase1_exit_line(verdict: dict[str, Any] | None) -> str:
     if verdict is None:
         return "Phase 1 exit (decision 0187): not measured (no phase1-exit.json beside the report)"
     where = "phase1-exit.json"
-    overall = _text(verdict, "overall", where)
+    overall = string(verdict, "overall", where)
     failing = [str(c) for c in items(verdict, "failing", where)]
     tail = f"; failing: {', '.join(failing)}" if failing else ""
     return f"Phase 1 exit (decision 0187): {overall}{tail}"
