@@ -3,7 +3,7 @@ id: T-4797
 title: "IRR P!C157 of t2565-irr-guess-sweeps has no math sidecar entry though its guess is a constant cell (T-4778 follow-up)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -23,7 +23,7 @@ T-4778 gave IRR's definition an optional guess. After regeneration the sidecar `
 ## Out of scope
 -
 
-## Handoff
+## Handoff (resumed)
 Findings (sonnet run, no code changed):
 - The task's premise is wrong. `B157` in `t2565-irr-guess-sweeps.case.json` is the JSON *string*
   `"2697.5242098806502"`, i.e. a **text cell** (`spec2xlsx._write` uses `write_string`;
