@@ -70,7 +70,9 @@ def _criteria_columns(
 ) -> list[str]:
     """The `<filterColumn>`s of `"criteria": [{"column": 0, "hides": [3, 5]}, {"column": 2, "hides": [7]}]`:
     a values filter on each listed table column (0-based) that rejects exactly the 1-based sheet rows in
-    its `hides`. Every such row must be hidden; a hidden data row no criterion hides is a row hidden by
+    its `hides`, or with `"values": ["10.00"]` one listing exactly that text (what number-formatted cells
+    display, T-4973), or with `"custom": {"and": false, "conditions": [{"operator": "equal", "val": "a"}]}`
+    a custom filter. Every `hides` row must be hidden; a hidden data row no criterion hides is a row hidden by
     hand, which the filters keep (T-4755)."""
     name = table["name"]
     r1, c1, last_data, c2 = bounds
@@ -82,8 +84,16 @@ def _criteria_columns(
     columns: list[str] = []
     seen: set[int] = set()
     for criterion in criteria:
-        if not isinstance(criterion, dict) or set(criterion) != {"column", "hides"}:
-            msg = f"table {name}: each criterion takes exactly column and hides, not {criterion!r}"
+        if (
+            not isinstance(criterion, dict)
+            or not {"column", "hides"} <= set(criterion)
+            or set(criterion) - {"column", "hides", "values", "custom"}
+            or ("values" in criterion and "custom" in criterion)
+        ):
+            msg = (
+                f"table {name}: each criterion takes column and hides and at most one of values and "
+                f"custom, not {criterion!r}"
+            )
             raise ValueError(msg)
         offset, hides = criterion["column"], criterion["hides"]
         if (
@@ -100,9 +110,14 @@ def _criteria_columns(
         if not isinstance(hides, list) or not set(hides) <= data_rows & hidden:
             msg = f"table {name}: criterion hides {hides!r} must list hidden data rows of the table"
             raise ValueError(msg)
-        columns.append(
-            _values_column(name, cells, (c1 + offset, offset), range(r1 + 1, last_data + 1), set(hides))
-        )
+        if "custom" in criterion:
+            columns.append(_custom_column(name, offset, criterion["custom"]))
+        elif "values" in criterion:
+            columns.append(_listed_column(name, offset, criterion["values"]))
+        else:
+            columns.append(
+                _values_column(name, cells, (c1 + offset, offset), range(r1 + 1, last_data + 1), set(hides))
+            )
     return columns
 
 
@@ -122,3 +137,41 @@ def _values_column(
         raise ValueError(msg)
     values = "".join(f'<filter val="{escape(v, {chr(34): "&quot;"})}"/>' for v in sorted(kept))
     return f'<filterColumn colId="{col_id}"><filters>{values}</filters></filterColumn>'
+
+
+def _quote(text: str) -> str:
+    return escape(text, {chr(34): "&quot;"})
+
+
+def _listed_column(name: str, col_id: int, values: Any) -> str:
+    """A `<filterColumn>` whose values filter lists exactly the text `values` (T-4973)."""
+    if not isinstance(values, list) or not all(isinstance(v, str) for v in values):
+        msg = f"table {name}: criterion values must be a list of text, not {values!r}"
+        raise ValueError(msg)
+    items = "".join(f'<filter val="{_quote(v)}"/>' for v in values)
+    return f'<filterColumn colId="{col_id}"><filters>{items}</filters></filterColumn>'
+
+
+def _custom_column(name: str, col_id: int, custom: Any) -> str:
+    """A `<filterColumn>` holding `<customFilters>` of one or two conditions (T-4973)."""
+    conditions = custom.get("conditions") if isinstance(custom, dict) else None
+    if (
+        not isinstance(custom, dict)
+        or set(custom) - {"and", "conditions"}
+        or not isinstance(conditions, list)
+        or not 1 <= len(conditions) <= 2
+        or not all(
+            isinstance(c, dict) and set(c) <= {"operator", "val"} and isinstance(c.get("val"), str)
+            for c in conditions
+        )
+    ):
+        msg = f"table {name}: criterion custom takes and and one or two conditions of operator and val"
+        raise ValueError(msg)
+    items = "".join(
+        "<customFilter"
+        + (f' operator="{_quote(c["operator"])}"' if "operator" in c else "")
+        + f' val="{_quote(c["val"])}"/>'
+        for c in conditions
+    )
+    flag = ' and="1"' if custom.get("and", False) else ""
+    return f'<filterColumn colId="{col_id}"><customFilters{flag}>{items}</customFilters></filterColumn>'

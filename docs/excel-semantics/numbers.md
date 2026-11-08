@@ -2461,7 +2461,7 @@ The engine follows this (T-4803, T-4939): after a column delete that takes a cri
 table, `rows_decided_by_criteria` (crates/rustsheet-engine/src/table_edits.rs) re-applies the kept criteria to each
 data row, rows without a row record included, by `FilterCriterion::keeps_text` (table_types.rs), for a table read from
 a file and for one given its criteria with `Txn::filter_table_column`. The eval adapter's spec `"criteria"` lists the
-kept rows' General text, as spec2xlsx writes it (`add_table` in crates/rustsheet-eval/src/engine.rs runs before the
+kept rows' General text, as spec2xlsx writes it unless a criterion says `"values"` (displayed text) or `"custom"` (a custom filter; T-4973: probes/t4895-custom-filter-*, probes/t4939-display-text-filter-*; the custom-upper case leaves F!A6 COLUMNS unchecked, since Excel read 3 columns there, i.e. did not apply the delete) (`add_table` in crates/rustsheet-eval/src/engine.rs runs before the
 number formats are set). Rule (ours where unprobed): a values filter without date groups is evaluated (blank rows by
 `blank`, other rows by their text among `values`), and a custom filter whose conditions all have the `equal` operator
 (or none) and a text operand without a wildcard (`*`, `?`, `~`) that matches the cell exactly or not at all (a case-only difference

@@ -104,7 +104,7 @@ def test_criteria_filter_several_columns_and_keep_rows_hidden_by_hand() -> None:
         table([3], [{"column": 0, "hides": [3]}, {"column": 0, "hides": []}])
     with pytest.raises(ValueError, match="must be a distinct column"):
         table([3], [{"column": 2, "hides": [3]}])
-    with pytest.raises(ValueError, match="exactly column and hides"):
+    with pytest.raises(ValueError, match="column and hides and at most one"):
         table([3], [{"column": 0}])
     with pytest.raises(ValueError, match="non-empty list"):
         table([3], [])
@@ -278,3 +278,32 @@ def test_table_without_a_header_row_needs_one_data_row_and_no_filter() -> None:
     assert 'ref="A2:B2"' in one_row["xl/tables/table1.xml"]
     with pytest.raises(ValueError, match="no filter or calculated column"):
         _table_parts({"tables": [{"name": "Data", "ref": "A2:B4", "header_row": False, "filter": True}]})
+
+
+def test_criteria_write_a_custom_filter_or_a_listed_values_filter() -> None:
+    """T-4973: `custom` writes customFilters, `values` lists the given display text."""
+    xml = _table_parts(
+        {
+            "hidden_rows": [3, 4],
+            "tables": [
+                {
+                    "name": "Data",
+                    "ref": "A1:B4",
+                    "filter": True,
+                    "criteria": [
+                        {
+                            "column": 0,
+                            "hides": [3],
+                            "custom": {"conditions": [{"operator": "equal", "val": "a"}, {"val": "c"}]},
+                        },
+                        {"column": 1, "hides": [4], "values": ["1.00"]},
+                    ],
+                }
+            ],
+        }
+    )["xl/tables/table1.xml"]
+    assert (
+        '<filterColumn colId="0"><customFilters><customFilter operator="equal" val="a"/>'
+        '<customFilter val="c"/></customFilters></filterColumn>'
+    ) in xml
+    assert '<filterColumn colId="1"><filters><filter val="1.00"/></filters></filterColumn>' in xml

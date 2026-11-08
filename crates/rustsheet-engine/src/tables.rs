@@ -323,12 +323,40 @@ impl Model {
             date_groups: Vec::new(),
         };
         if let Some(table) = self.workbook.tables.get_mut(name) {
-            table.filter_columns.retain(|f| f.col_id != column);
-            table.filter_columns.push(FilterColumn {
-                col_id: column,
-                criterion,
-            });
-            table.filter_columns.sort_by_key(|f| f.col_id);
+            install_criterion(table, column, criterion);
+        }
+        Ok(before)
+    }
+
+    /// Gives the filtered table `name` the given `criterion` on its column `column` (0-based),
+    /// replacing one already there, as an imported criterion is kept (a custom filter or a values
+    /// list of the text the cells display, which [`Model::filter_table_column`] cannot derive;
+    /// T-4973). No row is hidden here. Returns the table as it was before, which
+    /// [`Model::restore_table`] puts back.
+    ///
+    /// # Errors
+    /// There is no table with that exact name, it is not filtered, or `column` is outside it.
+    pub fn set_table_filter_criterion(
+        &mut self,
+        name: &str,
+        column: u32,
+        criterion: FilterCriterion,
+    ) -> Result<Table, String> {
+        let table = (self.workbook.tables.get(name)).ok_or_else(|| format!("No table '{name}'"))?;
+        let before = table.clone();
+        if !table.has_filters {
+            return Err(format!("Table '{name}' is not filtered"));
+        }
+        let b = bounds(table).ok_or_else(|| format!("Table '{name}' has no range"))?;
+        let outside = || format!("Column {column} is outside table '{name}'");
+        let at = i32::try_from(column)
+            .ok()
+            .and_then(|c| b.left.checked_add(c));
+        if at.is_none_or(|c| c > b.right) {
+            return Err(outside());
+        }
+        if let Some(table) = self.workbook.tables.get_mut(name) {
+            install_criterion(table, column, criterion);
         }
         Ok(before)
     }
@@ -733,4 +761,14 @@ fn table_fits_restore(now: &Table, then: &Table) -> bool {
             && (then.filter_columns.iter())
                 .all(|f| usize::try_from(f.col_id).is_ok_and(|id| id < names.len()))
     })
+}
+
+/// Puts `criterion` on filter column `column` of `table`, replacing the one there.
+fn install_criterion(table: &mut Table, column: u32, criterion: FilterCriterion) {
+    table.filter_columns.retain(|f| f.col_id != column);
+    table.filter_columns.push(FilterColumn {
+        col_id: column,
+        criterion,
+    });
+    table.filter_columns.sort_by_key(|f| f.col_id);
 }
