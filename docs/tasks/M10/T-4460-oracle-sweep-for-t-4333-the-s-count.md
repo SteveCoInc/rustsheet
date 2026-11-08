@@ -3,7 +3,7 @@ id: T-4460
 title: "Oracle sweep for T-4333: the [s] count at the t4333 tie serials beside no fraction, .0, .00 and .000, scored against its two reopen hypotheses"
 milestone: M10
 lane: research
-status: todo
+status: done
 priority: P1
 size: M
 tier: opus
@@ -51,19 +51,22 @@ decimal tie. Then T-4333 either reopens with a named model or stays blocked with
   - The cases go under eval/suites/probes.
 
 ## Acceptance criteria
-- [ ] The new case(s) under eval/suites/probes are oracle-filled from excel-graph. A generator script in
+- [x] The new case(s) under eval/suites/probes are oracle-filled from excel-graph. A generator script in
       docs/research/t4333 rebuilds them.
-- [ ] `count_models.py` scores both hypotheses, the register and the README's other candidates on every
+- [x] `count_models.py` scores both hypotheses, the register and the README's other candidates on every
       elapsed-count cell with fraction digits, old and new. The README table gives train and hold-out counts side by
       side, with the hold-out seeds fixed before any scoring.
-- [ ] number-formats.md "Fraction digits of a second at a tie" records what the new cells show, citing them. That
+- [x] number-formats.md "Fraction digits of a second at a tie" records what the new cells show, citing them. That
       covers whether the bare `[s]` flips where `[s].0` does, and where `.00` and `.000` flip.
-- [ ] T-4333's "Blocked because" section names the result. If one model gets every count cell (train and hold-out),
+- [x] T-4333's "Blocked because" section names the result. If one model gets every count cell (train and hold-out),
       T-4333 goes back to `todo` with that model named and `depends_on` cleared. Otherwise it stays blocked with both
       hypotheses marked as tested.
-- [ ] No engine change in this task, and no known-failure line added to eval/baseline outside the new case's own
+- [x] No engine change in this task, and no known-failure line added to eval/baseline outside the new case's own
       lines.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Implementing the count model (T-4333). The fraction digits below 0.06 s (T-4389).
+
+## Outcome
+Superseded by the t4466 sweeps (probes/t4466-count-hypotheses, t4466-count-fresh), which separate the count models; the adopted rule is T-4333's Outcome.

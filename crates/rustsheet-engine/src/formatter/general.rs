@@ -46,16 +46,24 @@ pub(crate) fn format_general(value: f64) -> String {
         // A18-A24: `12345678902.5` → "12345678903", `123456.12345` → "123456.1235"), as ROUND does.
         let rounded =
             round_decimal(value, decimals as f64, RoundMode::HalfAwayFromZero).unwrap_or(value);
-        let fixed = format!("{rounded:.decimals$}");
+        let untrimmed = format!("{rounded:.decimals$}");
         // Integer-only text ("10000000000") has no decimal point, so its zeros are not trailing.
-        let fixed = if fixed.contains('.') {
-            fixed.trim_end_matches('0').trim_end_matches('.')
+        let fixed = if untrimmed.contains('.') {
+            untrimmed.trim_end_matches('0').trim_end_matches('.')
         } else {
-            &fixed
+            &untrimmed
         };
-        let mantissa = scientific.split('E').next().unwrap_or_default();
+        // Each form is credited with the digits of the value it has room for, not the digits left
+        // after rounding trims its zeros: `1.5459954738616943E-06` is "1.546E-06" (the E form's
+        // room is 6 digits, the fixed "0.000001546" has 4), while `1.2345E-05`, whose 5 digits
+        // both forms hold, is "0.000012345" (probes/t4466-count-hypotheses G24, excel-graph
+        // 2026-11-08; number-formats.md "`TEXT(x,"General")` uses an 11-character fixed-notation
+        // limit").
+        let digits = value_digits(value);
+        let shown_fixed = significant_digits(&untrimmed).min(digits);
+        let shown_scientific = scientific_room(value).min(digits);
         // A value that rounds up to 1E+11 needs 12 characters (`99999999999.6` → "1E+11").
-        if rounded.abs() < 1e11 && significant_digits(fixed) >= significant_digits(mantissa) {
+        if rounded.abs() < 1e11 && shown_fixed >= shown_scientific {
             return fixed.to_string();
         }
     }
@@ -87,6 +95,28 @@ fn format_general_scientific(mut value: f64) -> String {
         sign,
         exponent.abs()
     )
+}
+
+/// The significant digits of `value` (non-zero) at Excel's 15: `1.2345E-05` has 5,
+/// `1.5459954738616943E-06` 14 ("1.54599547386169").
+fn value_digits(value: f64) -> usize {
+    let (mut mantissa, _) = crate::number_format::significant_15(value.abs(), true);
+    let mut digits = 15;
+    while digits > 1 && mantissa % 10 == 0 {
+        mantissa /= 10;
+        digits -= 1;
+    }
+    digits
+}
+
+/// The significant digits General's E form has room for: 6, or 5 from a decimal exponent
+/// magnitude of 99 on ([`format_general_scientific`]).
+fn scientific_room(value: f64) -> usize {
+    if value.abs().log10().floor().abs() >= 99.0 {
+        5
+    } else {
+        6
+    }
 }
 
 /// The number of significant digits in a plain decimal string: "-0.000012346" → 5, "1200" → 4.
