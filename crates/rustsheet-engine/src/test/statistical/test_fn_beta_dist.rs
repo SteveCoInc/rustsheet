@@ -166,8 +166,7 @@ fn test_fn_beta_inv_upper_quantile_rounding_to_one() {
         ("=BETA.INV(1-1E-16,2,1)", "1"),     // A126, y = 5E-17
         ("=BETAINV(1-1E-12,2,0.1)", "1"),    // A195
         ("=BETA.INV(1-7E-10,10,0.03)", "1"), // C198, y = 4.1E-307
-        // Hand-derived from A157 (Excel 1) mapped onto [3, 5]; no oracle cell yet, needs oracle
-        // confirmation (T-4865).
+        // probes/t4865-beta-inv-huge-alpha-near-one A5: A157 (Excel 1) mapped onto [3, 5].
         ("=BETA.INV(1-1E-9,10,0.03,3,5)", "5"),
         ("=BETA.INV(1-1E-15,10,1)", "0.9999999999999999"), // A188, y = 1E-16
         (
