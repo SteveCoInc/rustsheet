@@ -38,12 +38,16 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         }
         let mut end = args.len();
-        while end > strict && args.get(end - 1).is_some_and(|a| self.is_empty_argument(a)) {
+        while end > strict
+            && args
+                .get(end - 1)
+                .is_some_and(|a| self.is_empty_argument(a, cell))
+        {
             end -= 1;
         }
         let args = args.get(..end).unwrap_or(args);
         let empty: Vec<bool> = (args.iter().take(strict))
-            .map(|a| self.is_empty_argument(a))
+            .map(|a| self.is_empty_argument(a, cell))
             .collect();
         if !empty.contains(&true) {
             return self.lift_call(kind, args, cell, kernel);

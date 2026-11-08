@@ -56,7 +56,7 @@ impl Model {
             None => Ok(Holidays::none()),
         };
         let read = holidays.as_ref().map_or(0, |holidays| holidays.read);
-        let empty = self.empty_arguments::<2>(args);
+        let empty = self.empty_arguments::<2>(args, cell);
         self.lift_call_costed(
             kind,
             args,

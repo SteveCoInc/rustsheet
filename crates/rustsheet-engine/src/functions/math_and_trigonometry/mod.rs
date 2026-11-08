@@ -11,6 +11,7 @@ mod multinomial;
 mod product;
 pub(crate) use product::product_step;
 mod random;
+pub(crate) use random::RANDOM_DRAWS;
 mod sequence;
 mod seriessum;
 mod sum;

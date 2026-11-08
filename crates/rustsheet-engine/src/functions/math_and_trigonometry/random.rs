@@ -15,6 +15,12 @@ use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
 
+/// The functions that draw a new random value at each evaluation, so two evaluations of the same
+/// node in one recalculation may differ: a caller that evaluates a node twice must not trust the
+/// first read to predict the second (`Model::is_empty_argument`, T-4912).
+pub(crate) const RANDOM_DRAWS: [Function; 3] =
+    [Function::Rand, Function::Randbetween, Function::Randarray];
+
 #[cfg(not(target_arch = "wasm32"))]
 fn random() -> f64 {
     rand::random()

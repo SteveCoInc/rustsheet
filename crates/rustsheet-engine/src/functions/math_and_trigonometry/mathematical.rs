@@ -324,7 +324,7 @@ impl Model {
     ) -> CalcResult {
         let omitted = match empty {
             EmptyOptional::Zero => [false; N],
-            EmptyOptional::Default => self.empty_arguments::<N>(args),
+            EmptyOptional::Default => self.empty_arguments::<N>(args, cell),
         };
         // The driver's shortcut (T-1932): the arguments written, all numbers, then the defaults.
         let shortcut = |present: &[f64]| {
@@ -413,7 +413,7 @@ impl Model {
     /// (probes/t4873-empty-arg-quotient-ceiling Calc!A1:A6, A9:A10, t4873-empty-arg-let-lambda
     /// Calc!A1:A3).
     pub(crate) fn fn_quotient(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let [value_empty, divisor_empty] = self.empty_arguments(args);
+        let [value_empty, divisor_empty] = self.empty_arguments(args, cell);
         self.lift_call(Function::Quotient, args, cell, &mut |model, values| {
             let [value, divisor] = values else {
                 return CalcResult::new_args_number_error(cell);
@@ -438,7 +438,7 @@ impl Model {
     /// it lifts over an array and refuses a multi-cell range (probes/ceiling-floor-mround-array-lift
     /// A21, A43:A49, A55, date-math-lift-driver-edges G19-G20).
     pub(crate) fn fn_mround(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let empty: [bool; 2] = self.empty_arguments(args);
+        let empty: [bool; 2] = self.empty_arguments(args, cell);
         self.lift_call(Function::Mround, args, cell, &mut |model, values| {
             // Excel: the arguments are judged left to right. A missing one is #N/A and a boolean
             // #VALUE!, unlike most numeric functions (an array element and a referenced cell too);
@@ -596,7 +596,7 @@ impl Model {
     pub(crate) fn fn_sqrtpi(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         // A LET or LAMBDA omission is the `ToolPak` `#N/A` (`LET(e,,SQRTPI(e))`;
         // probes/t4923-sqrtpi-factdouble-omitted A1, A2; T-4923).
-        let [empty] = self.empty_arguments::<1>(args);
+        let [empty] = self.empty_arguments::<1>(args, cell);
         self.lift_call(Function::Sqrtpi, args, cell, &mut |model, values| {
             let number = match values {
                 [value] => model.atp_number(value, empty, cell),
