@@ -3,9 +3,9 @@
 //! ```text
 //! rustsheet-eval suites                         # list suites
 //! rustsheet-eval run [--suite S] [--filter X]   # run + write eval/runs/latest/{report.json,report.md}
-//! rustsheet-eval check                          # gate: fail on any baseline or visible-parity regression
+//! rustsheet-eval check                          # gate: fail on any baseline, visible-parity or tier regression
 //! rustsheet-eval check --evidence-floor         # the gate and the evidence floor from one run
-//! rustsheet-eval update-baseline                # ratchet baselines and visible parity (refuses regressions)
+//! rustsheet-eval update-baseline                # ratchet baselines, visible parity and tiers (refuses regressions)
 //! rustsheet-eval evidence-floor [--update]      # ratchet functions below the evidence floor
 //! rustsheet-eval show <case-id> [--all]         # per-cell detail for one case
 //! rustsheet-eval snapshot <file.xlsx>           # dump stored formulas/values as JSON
@@ -35,6 +35,7 @@ use rustsheet_eval::engine::{Engine, RustSheetEngine};
 use rustsheet_eval::evidence_floor::{self, Lock, EVIDENCE_FLOOR, LOCK_PATH};
 use rustsheet_eval::exit_exceptions::ExitExceptions;
 use rustsheet_eval::fetch::fetch_suite;
+use rustsheet_eval::gate_tiers;
 use rustsheet_eval::lift_kinds;
 use rustsheet_eval::milestone_exit;
 use rustsheet_eval::milestone_lists::{self, MilestoneList};
@@ -476,7 +477,7 @@ fn visible_parity_gate(
     use visible_parity::{Lock, LOCK_PATH};
     let lock = Lock::read(root)?;
     println!(
-        "visible parity: {} in-scope cells visibly off ({} in new cases), {LOCK_PATH} allows {} in {} cases",
+        "visible parity: {} in-scope cells outside the envelope ({} in new cases), {LOCK_PATH} allows {} in {} cases",
         count.cells(),
         count.new_coverage(),
         lock.total(),
@@ -486,15 +487,20 @@ fn visible_parity_gate(
     let judgement = visible_parity::judge(&lock, count, update);
     for o in &judgement.over {
         println!(
-            "  REGRESSION visible parity {}: {} cells visibly off, the lock allows {}",
+            "  REGRESSION visible parity {}: {} cells outside the envelope, the lock allows {}",
             o.case, o.off, o.allowed
         );
     }
-    if !judgement.holds() {
+    if !judgement.over.is_empty() {
         let over: usize = judgement.over.iter().map(|o| o.off - o.allowed).sum();
         println!(
-            "  {} cases have {over} more visibly-off cells than {LOCK_PATH} allows. A new case needs its line: run `make eval-baseline` and commit eval/baseline/. The report's \"Visibly off\" section names the functions",
+            "  {} cases have {over} more cells outside the envelope than {LOCK_PATH} allows. A new case needs its line: run `make eval-baseline` and commit eval/baseline/",
             judgement.over.len()
+        );
+    }
+    if judgement.stale_measure {
+        println!(
+            "  {LOCK_PATH} still counts visibly-off cells (before decision 0355): run `make eval-baseline` and commit eval/baseline/"
         );
     }
     if let Some(next) = &judgement.record {
@@ -588,22 +594,8 @@ fn cmd_check(
             }
         }
         let delta = baseline::diff(&old, &current);
-        println!(
-            "[{name}] known failures {} -> {}, text {} -> {}, layout {} -> {}  (fixed {}, new-coverage failures {}, REGRESSIONS {}, new cases {}, removed cases {})",
-            old.failing.len(),
-            current.failing.len(),
-            old.text_failing.len(),
-            current.text_failing.len(),
-            old.layout_failing.len(),
-            current.layout_failing.len(),
-            delta.fixed.len(),
-            delta.new_failures.len(),
-            delta.regressions.len(),
-            delta.new_cases.len(),
-            delta.removed_cases.len()
-        );
-        for r in delta.regressions.iter().take(25) {
-            println!("  REGRESSION {r}");
+        for line in baseline::summary(name, &old, &current, &delta) {
+            println!("{line}");
         }
         match update {
             None => {
@@ -624,9 +616,23 @@ fn cmd_check(
             }
         }
     }
-    // A partial run (`--suite`) would undercount, so only a full gated run is held to the lock.
+    // A partial run (`--suite`) would undercount, so only a full gated run is held to the locks.
     if sel.suites.is_empty() && !visible_parity_gate(root, &visible, update)? {
         failed = true;
+    }
+    if sel.suites.is_empty() {
+        let vendored = results.iter().filter(|r| {
+            suites
+                .iter()
+                .any(|s| s.manifest.name == r.suite && s.manifest.fetch.is_none())
+        });
+        let cells = gate_tiers::function_cells(&catalog, vendored, &milestones.phase1_exceptions);
+        let tiers = gate_tiers::tiers(&catalog, &cells);
+        let (holds, lines) = gate_tiers::gate(root, &tiers, update.map(|u| u.allow_regressions))?;
+        for line in &lines {
+            println!("{line}");
+        }
+        failed |= !holds;
     }
     if let Some(floor_results) = floor_results {
         if !evidence_floor_gate(root, &catalog, &floor_results, false, false)? {
