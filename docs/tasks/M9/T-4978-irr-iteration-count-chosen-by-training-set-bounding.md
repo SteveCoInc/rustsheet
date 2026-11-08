@@ -3,7 +3,7 @@ id: T-4978
 title: "IRR iteration count chosen by training-set bounding boxes and a guess classifier"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -19,9 +19,12 @@ IRR's iteration budget does not depend on a training-set rectangle of flow count
 Source: docs/research/excel-parity-findings-2026-11-07.md, "Audit findings in pre-existing code" item 3 (filed by T-4975). The audit's claims are unverified here: reproduce first.
 
 ## Acceptance criteria
-- [ ] Both cited repros match Excel.
-- [ ] No IRR eval regressions; any remaining rule is structural and evidenced.
-- [ ] `make check` green; reviewers approve.
+- [x] Both cited repros match Excel.
+- [x] No IRR eval regressions; any remaining rule is structural and evidenced.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+Fixed by T-4975 (addendum-3 section H): one uniform 200-update secant in d = 1 − v with the default and d = −0.1 retries; the bounding box and guess classifier are gone; both repros bit-exact.

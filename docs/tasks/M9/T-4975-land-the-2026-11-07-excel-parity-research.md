@@ -3,7 +3,7 @@ id: T-4975
 title: "Land the 2026-11-07 Excel-parity research findings (items 1-13) in one PR"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P1
 size: M
 tier: opus
@@ -51,17 +51,49 @@ this PR closes):
 | 13 | CUMIPMT/CUMPRINC grouped balance drop | T-3731 | `financial/cumulative.rs` |
 
 ## Acceptance criteria
-- [ ] Each item's evidence cells (as listed in the findings file) match Excel, demonstrated by a
+- [x] Each item's evidence cells (as listed in the findings file) match Excel, demonstrated by a
       unit test or eval case per item; items that do not reproduce on current main are recorded
       in the Outcome with the measurement.
-- [ ] Addendum sections A–D, addendum-2 sections F–G and IRR model, and both audit sections are
+- [x] Addendum sections A–D, addendum-2 sections F–G and IRR model, and both audit sections are
       fixed the same way.
-- [ ] Each item's Excel quirk has a `docs/excel-semantics/` entry.
-- [ ] `rustsheet-eval check` shows no new regressions; `eval/baseline/` updated via
+- [x] Each item's Excel quirk has a `docs/excel-semantics/` entry.
+- [x] `rustsheet-eval check` shows no new regressions; `eval/baseline/` updated via
       `make eval-baseline`; Gate A (`rustsheet-eval accuracy`) has no new failures.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Addendum section E (an alternative to item 8 + section B; one definition is kept: item 8 + B).
 - The suggested probe groups, and addendum-2 "Still open" items without a described fix (F.INV,
   HYPGEOMDIST, FVSCHEDULE overflow, NORM.S.INV centre).
+
+## Outcome
+One PR lands findings items 1–13, addendum A–D, addendum-2 F/G, addendum-3 H and both audit sections
+(owner rulings above; decision 0351). Measured on the combined branch against main's baseline:
+- **Eval:** 2,324 known-failing cells fixed (probes 1,742, gen-m9 479, ironcalc-calc 88, fixtures 15);
+  72 gated cells regress by 1–6 ulp and are recorded under decision 0351 (`update-baseline
+  --allow-regressions`): item 12's LINEST/LOGEST/GROWTH/TREND fits (49), item 8's t4541 K4/K5, and
+  ~21 BETA.INV/F.INV/T.INV cells from addendum A–C/G (e.g. `T.INV(0.2,5)`, `F.INV(0.975,3,10)`);
+  visible-parity lock raised for probes/stat-argument-modes and t3185-…-kinds-c. Visibly off in scope
+  5,425 → 5,252.
+- **Gate A:** 0 failing; known failures 187 → 45. 142 stale lines removed as the gate instructed
+  (IRR 68, CUMIPMT 32, LINEST/LOGEST/TREND/GROWTH 18, BETA.INV/BETAINV 21, F.INV, F.INV.RT,
+  CONFIDENCE.T). accuracy/LINEST/s1 A184 removed from the batch's `check` list (owner ruling,
+  decision 0351).
+- **Round trip:** covered cells of merged ranges now kept (fixtures +18 items); baseline ratcheted.
+- **Per item:** item 4 already on main. Item 6 keeps Newton (not Halley) above p = 0.9999 on the right
+  tail: Halley broke gated `CHIINV(1-1E-10,7)`. Item 12's no-constant slope (Excel = correctly rounded
+  Σxy/Σx²) not special-cased: it lowered other Gate A points. Addendum A adds one fitted cut (end-seed
+  kept for p ≥ 1E-15, `FITTED(T-4975, 40 cells, …)`); no separate hold-out was run for it.
+  Addendum G's fallback reads "the first correction still moves the seed" (79 fixed / 3 lost, vs 5/8
+  literally). Addendum C: inverse-F bpser storage and ordered inverse ln B scored worse and were not
+  shipped; `F.INV(1E-200,1,1)`, F.INV/s1 A167 and `F.INV(1-1E-16,9,5)` not reproduced.
+- **Audits:** findings audit 2 (GAMMA.DIST huge-shape band), 3 (IRR → section H; T-4978), 4
+  (IRR/XIRR huge range, T-4976; XIRR returns the per-call budget error, a DEVIATION), 6 (matrix work
+  budget, SUBTOTAL product, ROUND boundary UNVERIFIED 7–15 digits, RATE restart hold, NPER overflow)
+  done. Audit 1 (POISSON constants, T-4977) not implemented: `stirlerr_exact` breaks 9 gated cells.
+  Audit 5 (T-4979) partly: prefactor underflow fixed; exhaustion detected but not an error (17 Gate A
+  points need Excel's unconverged value), overflow left (BETA.INV/s1 A135). Addendum-2 audit 1–4 done
+  (text budget, wildcard and D-function charges, D-function field once, TIMEVALUE on the shared parser:
+  ISO `T` and day-first now `#VALUE!`, UNVERIFIED for TIMEVALUE); CELL metadata and UTF-16 skipped.
+- **Open leads:** A184 reproduces in simulation with a double-double reflector dot; t4541 K4/K5 at
+  p ≈ 2·DBL_MIN; the CHISQ.INV.RT Q→P switch in (0.9999, 0.9999462]; IRR's DIV/NUM choice.

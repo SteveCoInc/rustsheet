@@ -135,8 +135,8 @@ fn beta_quantile_as109(alpha: f64, beta: f64, p: f64) -> Option<f64> {
     // and more: `BETA.INV(1E-10,1E+110,1E-100)` = 0.999999, `BETA.INV(0.6,0.5,1.3E+154)` =
     // 1.0000000000287557E-06) and not at the Gate A points of p 1E-58 and below
     // (accuracy/BETA.INV/s1 A182, A185, BETAINV/s1 A191, A192: Excel 0.5), which take the
-    // crossing. FITTED(T-4975, 40 cells, p 1E-10..0.6 kept and 1E-297..1.9E-58 not; the cut
-    // reuses the statrs range's 1E-15)
+    // crossing; the cut reuses the statrs range's 1E-15.
+    // FITTED(T-4975, 40 cells, p 1E-10..0.6 kept and 1E-297..1.9E-58 not)
     let keep_end_seed = target >= BETA_QUANTILE_STATRS_P_MIN;
     let x = as109_search(&problem).value(keep_end_seed)?;
     let t = if flip { 1.0 - x } else { x };

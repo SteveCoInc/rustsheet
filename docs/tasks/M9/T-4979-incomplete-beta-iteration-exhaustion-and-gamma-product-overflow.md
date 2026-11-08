@@ -25,3 +25,6 @@ Source: docs/research/excel-parity-findings-2026-11-07.md, "Audit findings in pr
 
 ## Out of scope
 -
+
+## Notes
+Partly done in T-4975: prefactor underflow now goes to log space (I_1E-4(85,85) = 4.5346145057366762E-291). Exhaustion is detected but returning #NUM! breaks 17 Gate A points (Excel returns the unconverged value); the gamma-product overflow fix breaks BETA.INV/s1 A135.

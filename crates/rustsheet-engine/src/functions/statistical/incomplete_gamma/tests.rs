@@ -791,7 +791,7 @@ fn a_tiny_quantile_above_shape_one_is_the_leading_factor_root() {
 }
 
 /// Within half a unit of the 15th significant digit of `expected` (decision 0083).
-fn within_15_digits(actual: f64, expected: f64) -> bool {
+pub(super) fn within_15_digits(actual: f64, expected: f64) -> bool {
     let unit = 10f64.powf(expected.abs().log10().floor() - 14.0);
     (actual - expected).abs() <= unit / 2.0
 }
@@ -840,7 +840,7 @@ fn newton_steps_from_the_leading_factor_root_reach_excel_deep_lower_tail() {
 }
 
 /// Units in the last place between two positive doubles.
-fn ulp_distance(a: f64, b: f64) -> u64 {
+pub(super) fn ulp_distance(a: f64, b: f64) -> u64 {
     a.to_bits().abs_diff(b.to_bits())
 }
 
@@ -997,56 +997,4 @@ fn near_mode_pair_is_within_an_ulp_from_shape_1e3() {
     assert_eq!(pair(1e308, 1e308), (0.5, 0.5));
     assert_eq!(pair(1.5e308, 1e308), (0.0, 1.0));
     assert_eq!(pair(1e308, 1e300), (0.0, 1.0));
-}
-
-/// T-3219: from a shape above 1 at x / beta up to 1, Excel's cdf and density are built from three
-/// separately rounded factors, EXP(a·LN(y)), EXP(GAMMALN(a+1)) and EXP(-y). Excel's own values,
-/// each 6 to 118 ulp from the prefactor's before: ironcalc-calc `BETA_GAMMA.xlsx` `BETA_DIST!L3`
-/// `GAMMA.DIST(2,8,10,TRUE)` (17 ulp before), GAMMA.xlsx E16 `GAMMA.DIST(1E-5,9,2,TRUE)` (6),
-/// gen-m9/68d8ffb69ff739d8 A341 P(30, 0.3) (118) and gen-m9/984cba67bbe6972b A49
-/// `CHISQ.DIST(1E-10,8,FALSE)` (37). The engine's EXP, LN and GAMMALN leave up to 5 ulp of residue
-/// (the exponent a·LN(y) is near -95 at A49 and -36 at A341). The order of the operations shows
-/// at 1 ulp, so cells that already passed are kept bit for bit: gen-m9/35e8168aae2b00f8 A119
-/// `CHISQ.DIST(1.5,6,TRUE)`, probes/stat-argument-modes H152 `CHISQ.DIST(1.5,5,TRUE)` and
-/// probes-numeric/m9-gamma-dist-a2 A21 `GAMMA.DIST(200000,2,1000000,TRUE)`.
-#[test]
-fn the_small_x_prefactor_is_excels_three_rounded_factors() {
-    for (a, y, excel, ulps) in [
-        (8.0, 0.2, 5.316_161_131_057_619e-11_f64, 1),
-        (9.0, 5e-6, 5.382_264_690_689_69e-54, 0),
-        (30.0, 0.3, 5.806_457_425_277_688e-49, 5),
-        (3.0, 0.75, 0.040_505_439_744_813_87, 0),
-        (2.5, 0.75, 0.086_930_185_455_604_56, 0),
-        (2.0, 0.2, 0.017_523_096_306_421_772, 0),
-    ] {
-        let ours = gamma_cdf(&Gamma::new(a, 1.0).unwrap(), y);
-        assert!(ulp_distance(ours, excel) <= ulps, "P({a},{y}): {ours:e}");
-        assert!(within_15_digits(ours, excel), "P({a},{y}): {ours:e}");
-    }
-    let ours = gamma_density(4.0, 1e-10, 2.0).unwrap();
-    let excel = 1.041_666_666_614_588_4e-32;
-    assert!(ulp_distance(ours, excel) <= 2, "{ours:e}");
-    assert!(within_15_digits(ours, excel), "{ours:e}");
-    // The quantiles keep the accurate exponent, which the factors leave alone.
-    assert_ne!(
-        pair_with(8.0, 0.2, &mut Terms(MAX_TERMS), Exponent::Accurate).0,
-        gamma_cdf(&Gamma::new(8.0, 1.0).unwrap(), 0.2)
-    );
-}
-
-/// T-3146: below a unit quantile of 1/2 at shapes 1 to 20 Excel's chi-squared quantile is Halley
-/// steps from the leading-factor root on its own cdf, the upper tail as (0.5 - P) + 0.5:
-/// gen-m9/285d87cea1aaa73c A261 and 4ab2ba98d26c8a5e A85 `CHIINV(0.975,5)`, 10 ulp above the true
-/// quantile; gen-m9/4250f880ab640c49 A371 `CHISQ.INV.RT(((-0.0001)+1),3)`, 3,084 ulp from it; and
-/// gen-m9/c2974c061384fdd9 `CHISQ.INV(1E-20,10)`.
-#[test]
-fn small_chi_squared_quantiles_are_excels_halley_landing() {
-    for (shape, p, tail, excel) in [
-        (2.5, 0.975, Tail::Upper, 0.831_211_613_486_663_8_f64),
-        (1.5, -0.0001 + 1.0, Tail::Upper, 0.005_214_832_329_030_269),
-        (5.0, 1e-20, Tail::Lower, 0.000_521_056_841_397_433_4),
-    ] {
-        let ours = gamma_quantile(shape, 2.0, p, tail);
-        assert_eq!(ours.to_bits(), excel.to_bits(), "({shape}, {p}): {ours}");
-    }
 }

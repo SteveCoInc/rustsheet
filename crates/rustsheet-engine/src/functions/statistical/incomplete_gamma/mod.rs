@@ -438,46 +438,6 @@ pub(crate) fn excel_small_shape_lower(a: f64, x: f64) -> Option<f64> {
     excel_form_lower(a, x, exponent)
 }
 
-/// Excel's prefactor at a shape above 1 and x / beta at most 1 (T-3219; docs/excel-semantics/
-/// statistics.md "Incomplete gamma at a small x: three rounded factors"): `power` = EXP(a·LN(y))
-/// and `gamma` = EXP(GAMMALN(a+1)), each a double, with EXP(-y) a third. Excel is the less
-/// accurate one here, 5 to 36 ulp from the true value: `GAMMA.DIST(2,8,10,TRUE)` is Excel's
-/// 5.316161131057619E-11 (ironcalc-calc `BETA_GAMMA.xlsx` `BETA_DIST!L3`), `GAMMA.DIST(1E-5,9,2,TRUE)`
-/// 5.38226469068969E-54 (GAMMA.xlsx E16), `CHISQ.DIST(1E-10,8,FALSE)` 1.0416666666145884E-32
-/// (gen-m9/984cba67bbe6972b A49).
-#[derive(Clone, Copy)]
-pub(super) struct LogSeriesFactors {
-    power: f64,
-    gamma: f64,
-}
-
-impl LogSeriesFactors {
-    /// y^a / Gamma(a + 1), the density's leading factor: the power normalized first.
-    pub(super) fn leading(self) -> f64 {
-        self.power / self.gamma
-    }
-
-    /// P(a, y) from the series: the decay before the normalization and the series last. The order
-    /// shows at 1 ulp: `CHISQ.DIST(1.5,6,TRUE)` (gen-m9/35e8168aae2b00f8 A119) needs the decay
-    /// before the normalization, and probes/stat-argument-modes H152 `CHISQ.DIST(1.5,5,TRUE)` and
-    /// probes-numeric/m9-gamma-dist-a2 A21 rule out the series before it.
-    fn lower(self, decay: f64, series: f64) -> f64 {
-        self.power * decay / self.gamma * series
-    }
-}
-
-/// [`LogSeriesFactors`] at a shape above 1 and a y in (0, 1], or `None` where a factor is not a
-/// normal double (y^a underflows from a shape of a few hundred, Gamma(a + 1) overflows past 170):
-/// the stable prefactor keeps its digits there.
-pub(super) fn small_x_factors(a: f64, y: f64) -> Option<LogSeriesFactors> {
-    if !(a > 1.0 && y > 0.0 && y <= 1.0) {
-        return None;
-    }
-    let power = excel_exp(a * excel_ln(y));
-    let gamma = excel_exp(excel_gammaln(a + 1.0));
-    (power.is_normal() && gamma.is_normal()).then_some(LogSeriesFactors { power, gamma })
-}
-
 /// The leading-factor series form of P(a, x) for x below 1 at any shape below 1, ungated (T-3060):
 /// `EXP(exponent)/EXP(GAMMALN(a+1))` times e^-x and the series, where `exponent` is the double
 /// a·LN(x). GAMMA.DIST takes it only where a·LN(x) is at most [`EXCEL_EXPONENT_MAX`]; above that
@@ -1010,11 +970,13 @@ mod fraction;
 mod half_integer;
 mod huge_shape;
 mod near_mode;
+mod small_x;
 
 pub(crate) use closed_form::excel_small_shape_quantile;
 use closed_form::{excel_halley_quantile, excel_newton_quantile, excel_tiny_quantile};
 pub(crate) use density::{accurate_gamma_density, gamma_density};
 pub(crate) use huge_shape::{huge_shape_quantile, HUGE_SHAPE_MIN};
+use small_x::small_x_factors;
 
 #[cfg(test)]
 mod tests;

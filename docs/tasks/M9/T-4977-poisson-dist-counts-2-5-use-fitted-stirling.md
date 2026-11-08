@@ -25,3 +25,6 @@ Source: docs/research/excel-parity-findings-2026-11-07.md, "Audit findings in pr
 
 ## Out of scope
 -
+
+## Notes
+Measured in T-4975: `stirlerr_exact` makes A48 exact but moves 48 other pmf cells, 9 gated (8 gen-m9 and ironcalc POISSON.xlsx D9); seven GAMMALN-based forms were tried and none fit. Needs a different cause (T-3247).
