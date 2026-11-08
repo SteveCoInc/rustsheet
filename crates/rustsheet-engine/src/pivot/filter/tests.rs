@@ -289,15 +289,9 @@ fn auto_show_is_a_count_top_n() {
 }
 
 /// Sheet `name` of probe `stem` over the cache the engine's refresh reads from the case's cells
-/// once they are calculated (its sources hold DATE formulas), with `filters`, but the cells
-/// `skip`. The probe model has no date formats, so the dates are number items, which the filters
+/// once they are calculated (its sources hold DATE formulas), with `filters`. The probe model has no date formats, so the dates are number items, which the filters
 /// read alike.
-fn calculated_differences(
-    stem: &str,
-    name: &str,
-    filters: Vec<PivotFilter>,
-    skip: &[&str],
-) -> Vec<String> {
+fn calculated_differences(stem: &str, name: &str, filters: Vec<PivotFilter>) -> Vec<String> {
     let case = read(stem, "case");
     let mut model = probe_model(&case);
     model.evaluate();
@@ -313,7 +307,7 @@ fn calculated_differences(
     let cache = refresh(&empty, &model, MAX_RECORD_VALUES).unwrap();
     let (cache, mut table) = probe_pivot_over(&case, name, cache);
     table.filters = filters;
-    sidecar_differences(stem, name, &cache, &table, None, skip)
+    sidecar_differences(stem, name, &cache, &table, None, &[])
 }
 
 fn date(conditions: &[(FilterOperator, &str)], and: bool, whole_day: bool) -> PivotFilter {
@@ -322,19 +316,13 @@ fn date(conditions: &[(FilterOperator, &str)], and: bool, whole_day: bool) -> Pi
     filter
 }
 
-/// The label cells A4 to A`last`. Excel shows a date item's label in its source cell's format,
-/// the engine its serial (T-4717), so the label cells of a date field are left out; the values
-/// name each kept set.
-fn labels(last: u32) -> Vec<String> {
-    (4..=last).map(|row| format!("A{row}")).collect()
-}
-
-fn check_calculated(stem: &str, sheets: &[(String, PivotFilter)], last_row: u32) {
-    let skip = labels(last_row);
-    let skip: Vec<&str> = skip.iter().map(String::as_str).collect();
+/// Every cell of each of `sheets`, date item labels included: the check reads values, and a
+/// date item's label is its serial in Excel's cells too (its text, `m/d/yyyy`, is T-4807's,
+/// probes/t4717-pivot-cell-formats L5).
+fn check_calculated(stem: &str, sheets: &[(String, PivotFilter)]) {
     let wrong: Vec<String> = sheets
         .iter()
-        .flat_map(|(name, filter)| calculated_differences(stem, name, vec![filter.clone()], &skip))
+        .flat_map(|(name, filter)| calculated_differences(stem, name, vec![filter.clone()]))
         .collect();
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
 }
@@ -359,7 +347,7 @@ fn date_filters_compare_date_times_unless_use_whole_day() {
         ("WBt1", date(&between, true, true)),
     ]
     .map(|(name, filter)| (name.to_string(), filter));
-    check_calculated("t4164-pivot-date-times", &sheets, 9);
+    check_calculated("t4164-pivot-date-times", &sheets);
 }
 
 #[test]
@@ -395,7 +383,7 @@ fn month_quarter_and_fixed_date_filters_keep_their_dates() {
         let filter = dynamic(&period);
         sheets.push((period, filter));
     }
-    check_calculated("t4130-pivot-date-filters", &sheets, 17);
+    check_calculated("t4130-pivot-date-filters", &sheets);
 }
 
 #[test]

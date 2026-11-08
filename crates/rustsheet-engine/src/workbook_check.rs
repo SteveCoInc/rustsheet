@@ -5,6 +5,9 @@
 //! panic long after loading (T-2882: a cell style of 9999 panics at the next edit, a formula
 //! index with no shared formula at the next evaluation). `Model::from_workbook` runs this check
 //! first and refuses such a workbook instead.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms)]
+// LINT-DEBT-END
 
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::expressions::utils::{is_valid_block, is_valid_column_number, is_valid_row};

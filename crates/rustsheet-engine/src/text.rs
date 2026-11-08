@@ -99,12 +99,11 @@ impl Text {
         let mut lossy = String::with_capacity(units.len());
         let mut lone_count = 0;
         for decoded in char::decode_utf16(units.iter().copied()) {
-            match decoded {
-                Ok(ch) => lossy.push(ch),
-                Err(_) => {
-                    lossy.push(char::REPLACEMENT_CHARACTER);
-                    lone_count += 1;
-                }
+            if let Ok(ch) = decoded {
+                lossy.push(ch);
+            } else {
+                lossy.push(char::REPLACEMENT_CHARACTER);
+                lone_count += 1;
             }
         }
         if lone_count == 0 {

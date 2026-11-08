@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_precision_loss,
+    clippy::float_cmp,
+    clippy::many_single_char_names
+)]
+#![cfg_attr(test, expect(clippy::unreadable_literal))]
+// LINT-DEBT-END
 use statrs::distribution::{Beta, FisherSnedecor};
 
 use crate::arithmetic::{extended_quotient, flush_subnormal};
@@ -250,11 +258,35 @@ const F_QUANTILE_STATRS_P_MIN: f64 = 1e-20;
 /// FITTED(T-0974, 61 cells, p 1E-20..1E-10, df 1..99999; nearest cells either side p 1.1E-16 and 1E-15)
 const F_QUANTILE_REFINE_P_MIN: f64 = 1e-15;
 
+/// The largest relative miss `|F(x)/p - 1|` of the lower tail ([`f_quantile_tail`]) at statrs'
+/// estimate x for which [`f_quantile`] keeps that estimate unrefined below
+/// [`F_QUANTILE_REFINE_P_MIN`]. statrs' AS 109 search stops on an absolute step test, so in the
+/// deep tail it can stop where its x is no root at all: `F.INV(1.04122706037508E-20,1,161)` was
+/// 1.87E-14 against Excel's and the math's 1.7082817524148195E-40 (cdf 1E13 times the target;
+/// accuracy/F.INV/s1 A168), `F.INV(1E-16,1,2)` 2.4E-16 against 2E-32 (gen-m9/c6cfda6bd10cae93
+/// A114) and `F.INV(1E-20,4,6)` 2.5E-12 relative off (cdf 5E-12 off; gen-m9/3a25a03eb94fcfbd A44).
+/// Where the search converged its cdf misses by its rounding noise: at most 2E-13 on every such
+/// estimate of the eval suites' literal-argument calls (23 distinct, p 1E-20 to 1.1E-15; T-1871).
+/// A guard between the two, not a fit: every value from 2E-13 to 5E-12 keeps and drops the same
+/// estimates. It only shrinks the keep region of T-0974's fitted cut [`F_QUANTILE_REFINE_P_MIN`]:
+/// a dropped estimate takes the accurate crossing, so a converged estimate that misses by more
+/// (possible at a large df1, where the cdf's own rounding grows) loses nothing but the start.
+const F_QUANTILE_ESTIMATE_RESIDUAL_MAX: f64 = 1e-12;
+
+/// Whether statrs' estimate `x` solves the lower-tail target `lower` to
+/// [`F_QUANTILE_ESTIMATE_RESIDUAL_MAX`] (one cdf).
+fn estimate_solves(df1: f64, df2: f64, x: f64, lower: f64) -> bool {
+    (f_quantile_tail(df1, df2, x, false) / lower - 1.0).abs() <= F_QUANTILE_ESTIMATE_RESIDUAL_MAX
+}
+
 /// Quantile of the F distribution for `p` (the right tail's when `right_tail`) in [0, 1]: statrs'
-/// search (the capped port of `inverse_beta.rs`, T-1848) as a start where it is reliable, refined to
-/// the crossing of [`f_cdf`] or [`f_sf`] (`special::refine_increasing`) in the upper tail and from a
-/// lower-tail probability of [`F_QUANTILE_REFINE_P_MIN`] up. At most 512 Newton steps and 129 cdfs, or 65 cdfs without a
-/// start. From a df of [`F_QUANTILE_STATRS_DF_MAX`], Excel's BETA.INV mapped to F (T-1538).
+/// search (the capped port of `inverse_beta.rs`, T-1848) as a start where it is reliable, refined
+/// to the crossing of [`f_cdf`] or [`f_sf`] (`special::refine_increasing`) in the upper tail and
+/// from a lower-tail probability of [`F_QUANTILE_REFINE_P_MIN`] up. Below that the estimate is
+/// kept where it solves the target ([`estimate_solves`]: one cdf) and otherwise dropped for the
+/// crossing without a start (1 + 65 cdfs). At most 512 Newton steps and 129 cdfs on any path; 65
+/// cdfs where statrs gives no estimate. From a df of [`F_QUANTILE_STATRS_DF_MAX`], Excel's
+/// BETA.INV mapped to F (T-1538).
 fn f_quantile(df1: f64, df2: f64, p: f64, right_tail: bool) -> f64 {
     let lower = if right_tail { 1.0 - p } else { p };
     if lower <= 0.0 {
@@ -360,9 +392,15 @@ fn f_quantile_converged(df1: f64, df2: f64, p: f64, right_tail: bool) -> f64 {
     // keeps the digits 1 - p loses. statrs' estimate is kept unrefined only for a deep lower tail,
     // the tail it was given: for a deep upper tail it solved the rounded 1 - p, which
     // `F.INV.RT(1E-16,9,3)` misses by 7% (Excel 60647458731.09812, gen-m9/0a9226016e8f5f33 A45).
-    if estimate.is_finite() && lower < F_QUANTILE_REFINE_P_MIN {
-        return estimate;
-    }
+    let estimate = if estimate.is_finite() && lower < F_QUANTILE_REFINE_P_MIN {
+        if estimate_solves(df1, df2, estimate, lower) {
+            return estimate;
+        }
+        // statrs stopped short of a root (see `F_QUANTILE_ESTIMATE_RESIDUAL_MAX`): no start.
+        f64::NAN
+    } else {
+        estimate
+    };
     if lower > 0.5 {
         let upper = if right_tail { p } else { 1.0 - p };
         refine_increasing(
@@ -665,6 +703,15 @@ impl Model {
         if marked {
             return Err(marked_number_error(cell));
         }
+        // An omitted sample is `#VALUE!` in either position, for both names (probes/t4857-f-kinds
+        // A605, A606, A659, A660; statistics.md "F.TEST of a single value (T-2455)"; T-4882).
+        if matches!(sample, CalcResult::EmptyArg) {
+            return Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                format!("F.TEST: the {which} sample is omitted"),
+            ));
+        }
         if self.is_blank_one_cell(&sample) {
             return Err(CalcResult::new_error(
                 Error::VALUE,
@@ -796,192 +843,4 @@ impl Model {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        f_beta_arguments, f_bup_sum_overflows, f_cdf, f_quantile, f_tail, fisher, fisher_inv,
-    };
-    use crate::test::util::{ulps, within_fifteen_digits};
-
-    // F.INV maps Excel's AS 109 stopping point back by the four-log ratio (T-4975, addendum C):
-    // probes-numeric/t1538-f-quantile-switchover A1, A8 and A14, each off before, bit for bit.
-    #[test]
-    fn f_quantile_is_the_mapped_beta_stopping_point() {
-        for (df1, df2, p, right_tail, excel) in [
-            (99_999.0, 5.0, 1e-12, false, 0.076_617_852_264_873_51_f64),
-            (5.0, 99_999.0, 1.0 - 1e-12, false, 13.051_797_727_478_313),
-            (5.0, 99_999.0, 1e-12, true, 13.051_788_459_730_34),
-        ] {
-            let ours = f_quantile(df1, df2, p, right_tail);
-            assert_eq!(
-                ours.to_bits(),
-                excel.to_bits(),
-                "F({df1},{df2}) at {p}: {ours}"
-            );
-        }
-    }
-
-    // FISHER and FISHERINV round their quotient twice, like Excel's `/` (excel-graph; T-2437).
-    #[test]
-    fn fisher_rounds_its_quotient_twice() {
-        // gen-m9/4ab2ba98d26c8a5e Calc!A395 `FISHER(Data!E4/Data!$D2)`, x = 1E-15/3.14159.
-        assert_eq!(
-            fisher(3.183_101_550_488_765_5e-16),
-            2.220_446_049_250_312_6e-16
-        );
-        // probes/t2437-fit-separators A1, A4, A8: Excel's cancellation, not atanh.
-        assert_eq!(
-            fisher(1.491_723_674_723_48e-11),
-            1.491_717_860_324_600_7e-11
-        );
-        assert_eq!(fisher(1.027_594_709_980_55e-16), 0.0);
-        assert_eq!(
-            fisher(-6.605_891_778_770_15e-16),
-            -6.661_338_147_750_943e-16
-        );
-    }
-
-    // A shape of 1 outside the closed forms forms w1 as (0.5 - w) + 0.5 (T-3007): y0^b0 is 3 ulp
-    // low at probes-numeric/t2220-f-dist-sweep-cdf A718 and 1 ulp low at A318.
-    #[test]
-    fn shape_one_other_tail_is_the_complement() {
-        assert_eq!(f_cdf(20.0, 2.0, 5.0), 0.820_348_299_875_155_2);
-        assert_eq!(f_cdf(4.0, 2.0, 5.0), 0.826_446_280_991_735_6);
-    }
-
-    // There w is -expm1(b0 ln1p(-x0)) with Excel's own expm1 and log1p (T-3170): libm's put
-    // gen-m9/146b46e74f2dac3b A329 `F.DIST.RT(10,6,2)` and abc2939ebd1e2365 A318 `FDIST(40,8,2)`
-    // 1 ulp low.
-    #[test]
-    fn shape_one_tail_takes_excels_expm1_and_log1p() {
-        assert_eq!(f_tail(6.0, 2.0, 10.0, true), 0.093_686_012_554_127_09);
-        assert_eq!(f_tail(8.0, 2.0, 40.0, true), 0.024_614_204_935_833_432);
-    }
-
-    // Excel's r >= 1 arguments (T-3567): the larger is fl(r/fl(1 + r)), not 1/(1 + 1/r).
-    #[test]
-    fn f_beta_arguments_keep_r_at_least_one() {
-        let r = 298.0 / 15.586;
-        assert_eq!(
-            f_beta_arguments(1.0, 298.0, 15.586),
-            (1.0 / (1.0 + r), r / (1.0 + r))
-        );
-        let r = 15.586 * 298.0 / 3.0;
-        assert_eq!(
-            f_beta_arguments(298.0, 3.0, 15.586),
-            (r / (1.0 + r), 1.0 / (1.0 + r))
-        );
-        assert_eq!(f_beta_arguments(4.0, 7.0, 0.0), (0.0, 1.0));
-    }
-
-    // A small df1 with a huge df2 takes L140 bup+bgrat up to a0 = df2/2 = 1E7 (T-3754): the fallback
-    // kernel was 1.4E-10 off at probes-numeric t3354-f-dist-sweep S!C168 and 8.3E-11 at S!A168.
-    // Excel is correctly rounded there; ours is 1 ulp from it on each tail.
-    #[test]
-    fn huge_df2_small_df1_takes_l140_bup_bgrat() {
-        let x = 1.090_808_853_953_79;
-        let rt = f_tail(8.0, 5_567_623.0, x, true);
-        let cdf = f_tail(8.0, 5_567_623.0, x, false);
-        assert!(within_fifteen_digits(0.365_893_631_290_974_9, rt), "{rt}");
-        assert!(within_fifteen_digits(0.634_106_368_709_025_1, cdf), "{cdf}");
-        assert!(ulps(0.365_893_631_290_974_9, rt) <= 1, "{rt}");
-        assert!(ulps(0.634_106_368_709_025_1, cdf) <= 1, "{cdf}");
-    }
-
-    // bratio's L140 bup sum overflows from df1 77 to 79 at df2 1E+10 (T-4044): Excel is `#NUM!` at
-    // probes-numeric t4017-f-huge-df2-above-mean-1e10 A209 `F.DIST.RT(1.5,79,1E+10)` and A223
-    // `F.DIST.RT(50,79,1E+10)`, and a number at df1 76 and 80 (t4030-f-dist-rt-df1-boundary).
-    #[test]
-    fn bup_sum_overflows_in_excels_df1_band() {
-        assert!(f_bup_sum_overflows(79.0, 1E10, 1.5));
-        assert!(f_bup_sum_overflows(79.0, 1E10, 50.0));
-        assert!(!f_bup_sum_overflows(76.0, 1E10, 1.5));
-        assert!(!f_bup_sum_overflows(80.0, 1E10, 1.5));
-        assert!(!f_bup_sum_overflows(79.0, 1E9, 1.5));
-    }
-
-    // Excel's upper tail is exactly 0 once bup's prefactor in L140 leaves the normal range (T-4045):
-    // probes-numeric t4045-f-dist-rt-zero-cut B18 `F.DIST.RT(71.5,20,1E7)` is 4.320911961488639E-291
-    // and B19 `F.DIST.RT(71.6,20,1E7)` is 0; A17 `F.DIST.RT(47.6,30,1E8)` is a number, A18 0.
-    #[test]
-    fn upper_tail_is_zero_where_bups_prefactor_underflows() {
-        assert!(f_tail(20.0, 1E7, 71.5, true) > 0.0);
-        assert_eq!(f_tail(20.0, 1E7, 71.6, true), 0.0);
-        assert!(f_tail(30.0, 1E8, 47.6, true) > 0.0);
-        assert_eq!(f_tail(30.0, 1E8, 47.666_666_666_7, true), 0.0);
-    }
-
-    // A df of 1 takes bgrat at b = 1/2 on those arguments (T-3580): probes-numeric
-    // t3567-r5-fdf1-hold A1/B1 `F.DIST.RT(15.586,1,298)` and `F.DIST(15.586,1,298,TRUE)`.
-    #[test]
-    fn df_of_one_takes_bgrat_at_one_half() {
-        assert_eq!(f_tail(1.0, 298.0, 15.586, true), 9.842_252_247_713_118e-5);
-        assert_eq!(f_tail(1.0, 298.0, 15.586, false), 0.999_901_577_477_522_8);
-    }
-
-    #[test]
-    fn fisher_inv_rounds_its_quotient_twice() {
-        // gen-m9/ee2497a5e683c5d9 Calc!A30 `FISHERINV(TAN(PI()))`, TAN(PI()) = -1.22514845490862E-16.
-        assert_eq!(
-            fisher_inv(-1.225_148_454_908_62e-16),
-            -1.110_223_024_625_156_5e-16
-        );
-        // probes/t2437-fit-separators A23, A26.
-        assert_eq!(
-            fisher_inv(-8.011_504_958_898_52e-15),
-            -7.993_605_777_301_19e-15
-        );
-        assert_eq!(
-            fisher_inv(-6.552_011_261_371_12e-16),
-            -6.661_338_147_750_943e-16
-        );
-        // FISHER_FISHERINV.xlsx C38: EXP(2y) overflows to 1.
-        assert_eq!(fisher_inv(1000.0), 1.0);
-    }
-
-    /// F tails at a huge df2 that T-3754's L140 bup+bgrat port leaves to the fallback kernel: df1 of
-    /// 20 and more (past `MAX_BUP_TERMS`) and df2 above 2E7 (a0 above its 1E7 cap). The expansion's
-    /// b/a cut used to send these to Cephes' fraction, 1E-11 to 7E-10 off; T-4119 removed it. The
-    /// df1 = 3 rows were already accurate and guard that path.
-    /// References: docs/research/t4017/references.json, at the double arguments Excel sees. The
-    /// bound is T-4119's target, 2.5E-14 relative; the grid's worst point is 2.1E-14.
-    #[test]
-    fn f_tails_past_the_bup_cap_take_the_large_shape_expansion() {
-        for (df1, df2, x, reference) in [
-            (3.0, 1e7, 2.0, 0.11161029807296603),
-            (3.0, 1e7, 5.0, 0.001816657939558678),
-            (3.0, 3e7, 3.0, 0.029290902489543566),
-            (40.0, 3e7, 2.0, 0.0001763055857205162),
-            (60.0, 3e7, 10.0, 4.432803223201799e-90),
-            (79.0, 3e7, 1.5, 0.002685050433156616),
-        ] {
-            let got = f_tail(df1, df2, x, true);
-            assert!(
-                (got / reference - 1.0).abs() < 2.5e-14,
-                "F.DIST.RT({x},{df1},{df2}) = {got} against {reference}"
-            );
-        }
-    }
-
-    // Excel's F quantile at a huge df is its BETA.INV mapped to F (probes-numeric, excel-graph).
-    #[test]
-    fn huge_df_quantiles_go_through_excels_beta_inv() {
-        // t1538-f-inv-huge-df A3: y = BETA.INV(0.5,5E9,2.5) near 1, bit for bit.
-        assert_eq!(
-            f_quantile(1e10, 5.0, 0.5, false).to_bits(),
-            1.149_039_552_113_033_7_f64.to_bits()
-        );
-        // A48: F.INV.RT(0.975,1E10,5) = 1/F.INV(0.975,5,1E10), through the flipped root.
-        let rt = f_quantile(1e10, 5.0, 0.975, true);
-        assert!(
-            (rt - 0.389_635_637_664_716_87).abs() <= 4.0 * f64::EPSILON * rt,
-            "{rt}"
-        );
-        // t1538-f-quantile-switchover A9: the flipped root mapped as it is (2E-15 relative of Excel's;
-        // through 1 - (1 - s) it would be 9E-8 off).
-        let upper = f_quantile(100_000.0, 5.0, 1.0 - 1e-12, false);
-        assert!(
-            (upper - 97_570.089_441_084_84).abs() <= 2e-15 * upper,
-            "{upper}"
-        );
-    }
-}
+mod tests;

@@ -170,8 +170,8 @@ mod tests {
         ];
         for ((x, mean, sigma), excel) in cases {
             assert_eq!(
-                lognormal_density(x, mean, sigma),
-                excel,
+                lognormal_density(x, mean, sigma).to_bits(),
+                f64::to_bits(excel),
                 "LOGNORM.DIST({x},{mean},{sigma},FALSE)"
             );
         }

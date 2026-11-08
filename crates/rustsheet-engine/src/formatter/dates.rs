@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+// LINT-DEBT-END
 use chrono::Datelike;
 use chrono::Duration;
 use chrono::Months;
@@ -287,14 +290,14 @@ fn is_date_within_range(date: NaiveDate) -> bool {
 
 pub fn from_excel_date(days: i64) -> Result<NaiveDate, String> {
     let last = i64::from(MAXIMUM_DATE_SERIAL_NUMBER);
-    if days < MINIMUM_DATE_SERIAL_NUMBER as i64 {
+    if days < i64::from(MINIMUM_DATE_SERIAL_NUMBER) {
         return Err(format!(
             "Excel date must be greater than {MINIMUM_DATE_SERIAL_NUMBER}"
         ));
-    };
+    }
     if days > last {
         return Err(format!("Excel date must be less than {last}"));
-    };
+    }
     #[allow(clippy::expect_used)]
     let dt = NaiveDate::from_ymd_opt(1900, 1, 1).expect("problem with chrono::NaiveDate");
     // NOTE: this is the weekday-faithful stand-in calendar, not Excel's DAY/MONTH/YEAR view: Excel

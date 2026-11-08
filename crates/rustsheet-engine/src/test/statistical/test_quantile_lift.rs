@@ -32,12 +32,12 @@ const ARRAY_CALLS: &[&str] = &[
 fn every_entered_function_lifts_over_an_array() {
     let mut model = new_empty_model();
     for (row, formula) in ARRAY_CALLS.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), &format!("=ROWS({formula})"));
+        model.set_a1(&format!("A{}", row + 1), &format!("=ROWS({formula})"));
     }
     model.evaluate();
     for (row, formula) in ARRAY_CALLS.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *"2",
             "ROWS({formula})"
         );
@@ -55,23 +55,23 @@ fn later_arguments_lift_over_a_range_on_their_own_rows() {
         ("G4", "2"),
         ("G5", "5"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("G6", "10");
-    model._set("G7", "15");
-    model._set("G8", "20");
-    model._set("A1", "=ROWS(BETA.INV(0.4,2,G1:G2))");
-    model._set("A2", "=ROUND(INDEX(BETA.INV(0.4,2,G1:G2),2),12)");
-    model._set("A3", "=ROUND(INDEX(BETA.INV(0.4,2,3,0,G3:G4),2),12)");
-    model._set("A4", "=ROUND(INDEX(F.INV(0.4,5,G5:G6),2),12)");
-    model._set("A5", "=ROUND(INDEX(FINV(0.4,5,G5:G6),2),12)");
-    model._set("A6", "=ROUND(INDEX(T.INV(0.4,G5:G6),2),12)");
-    model._set("A7", "=ROUND(INDEX(TINV(0.4,G5:G6),2),12)");
-    model._set("A8", "=ROUND(INDEX(CONFIDENCE.T(0.4,2,G7:G8),2),12)");
+    model.set_a1("G6", "10");
+    model.set_a1("G7", "15");
+    model.set_a1("G8", "20");
+    model.set_a1("A1", "=ROWS(BETA.INV(0.4,2,G1:G2))");
+    model.set_a1("A2", "=ROUND(INDEX(BETA.INV(0.4,2,G1:G2),2),12)");
+    model.set_a1("A3", "=ROUND(INDEX(BETA.INV(0.4,2,3,0,G3:G4),2),12)");
+    model.set_a1("A4", "=ROUND(INDEX(F.INV(0.4,5,G5:G6),2),12)");
+    model.set_a1("A5", "=ROUND(INDEX(FINV(0.4,5,G5:G6),2),12)");
+    model.set_a1("A6", "=ROUND(INDEX(T.INV(0.4,G5:G6),2),12)");
+    model.set_a1("A7", "=ROUND(INDEX(TINV(0.4,G5:G6),2),12)");
+    model.set_a1("A8", "=ROUND(INDEX(CONFIDENCE.T(0.4,2,G7:G8),2),12)");
     // Off the range's rows too: a lift, not an intersection.
-    model._set("A20", "=ROWS(T.INV.2T(0.4,G5:G6))");
+    model.set_a1("A20", "=ROWS(T.INV.2T(0.4,G5:G6))");
     // A one-cell range is its value (L11).
-    model._set("A21", "=ROUND(T.INV(0.4,G5:G5),12)");
+    model.set_a1("A21", "=ROUND(T.INV(0.4,G5:G5),12)");
     model.evaluate();
     let expected = [
         ("A1", "2"),
@@ -86,7 +86,7 @@ fn later_arguments_lift_over_a_range_on_their_own_rows() {
         ("A21", "-0.267180866"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }
 
@@ -94,22 +94,22 @@ fn later_arguments_lift_over_a_range_on_their_own_rows() {
 fn each_element_is_the_scalar_call_with_its_own_error() {
     // probes/stat-quantile-lift L4-L10, L12-L18, L20.
     let mut model = new_empty_model();
-    model._set("A1", "=ROUND(INDEX(T.INV({0.4;\"0.4\"},5),2),12)");
-    model._set("A2", "=INDEX(T.INV({0.4;\"x\"},5),2)");
-    model._set("A3", "=INDEX(CONFIDENCE.T(0.4,2,{15;1}),2)");
-    model._set("A4", "=INDEX(F.INV({0.4;1.5},5,5),2)");
-    model._set("A5", "=INDEX(T.INV.2T({0.4;#N/A},5),2)");
-    model._set("A6", "=ROWS(T.INV({0.1;0.2;0.3},{5,10}))");
-    model._set("A7", "=COLUMNS(T.INV({0.1;0.2;0.3},{5,10}))");
-    model._set("A8", "=INDEX(T.INV.2T({0.4;1},5),2)");
-    model._set("A9", "=INDEX(CONFIDENCE.T({0.4;TRUE},2,15),2)");
+    model.set_a1("A1", "=ROUND(INDEX(T.INV({0.4;\"0.4\"},5),2),12)");
+    model.set_a1("A2", "=INDEX(T.INV({0.4;\"x\"},5),2)");
+    model.set_a1("A3", "=INDEX(CONFIDENCE.T(0.4,2,{15;1}),2)");
+    model.set_a1("A4", "=INDEX(F.INV({0.4;1.5},5,5),2)");
+    model.set_a1("A5", "=INDEX(T.INV.2T({0.4;#N/A},5),2)");
+    model.set_a1("A6", "=ROWS(T.INV({0.1;0.2;0.3},{5,10}))");
+    model.set_a1("A7", "=COLUMNS(T.INV({0.1;0.2;0.3},{5,10}))");
+    model.set_a1("A8", "=INDEX(T.INV.2T({0.4;1},5),2)");
+    model.set_a1("A9", "=INDEX(CONFIDENCE.T({0.4;TRUE},2,15),2)");
     // Every argument is read before any is checked: an error wins over a bad alpha or p.
-    model._set("A10", "=INDEX(BETA.INV(0.4,{2;-1},NA()),2)");
-    model._set("A11", "=BETA.INV(0.4,-1,NA())");
-    model._set("A12", "=CONFIDENCE.T(0.4,-2,NA())");
-    model._set("A13", "=T.INV(2,NA())");
-    model._set("A14", "=F.INV(2,NA(),5)");
-    model._set("A15", "=CONFIDENCE.T(0.4,2,1.5)");
+    model.set_a1("A10", "=INDEX(BETA.INV(0.4,{2;-1},NA()),2)");
+    model.set_a1("A11", "=BETA.INV(0.4,-1,NA())");
+    model.set_a1("A12", "=CONFIDENCE.T(0.4,-2,NA())");
+    model.set_a1("A13", "=T.INV(2,NA())");
+    model.set_a1("A14", "=F.INV(2,NA(),5)");
+    model.set_a1("A15", "=CONFIDENCE.T(0.4,2,1.5)");
     model.evaluate();
     let expected = [
         ("A1", "-0.267180866"),
@@ -129,7 +129,7 @@ fn each_element_is_the_scalar_call_with_its_own_error() {
         ("A15", "#DIV/0!"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }
 
@@ -142,16 +142,16 @@ fn quantile_searches_that_hung_or_panicked_are_bounded() {
     // 5.081599884913239E-69 to 13 digits (probes/stat-quantile-lift E1, E3), while F.INV(1E-50,6000,4)
     // is not Excel's 0.0004924127886173762 (E6). BETA.INV refines to the crossing of BETA.DIST's
     // cdf from no start (T-2119): 0.003013141, a known mismatch (Excel 0.0692..., E9;
-    // TODO(T-1871)) kept here as a guard that the search ends. The longest search seen, 377 Newton steps, still finishes (E8).
+    // TODO(T-4894)) kept here as a guard that the search ends. The longest search seen, 377 Newton steps, still finishes (E8).
     let mut model = new_empty_model();
-    model._set("C1", "=1-2^-53");
-    model._set("A1", "=F.INV(1E-300,5,5)");
-    model._set("A2", "=F.INV(1E-170,5,5)");
-    model._set("A3", "=F.INV(1E-50,6000,4)");
-    model._set("A4", "=BETA.INV(C1,1.0024017013258346,12177.162026553196)");
-    model._set("A5", "=F.INV(3.718810279553989E-162,4532,43)");
-    model._set("A6", "=F.INV(1E-20,5,5)");
-    model._set("A7", "=INDEX(F.INV({0.4;1E-300},5,5),2)");
+    model.set_a1("C1", "=1-2^-53");
+    model.set_a1("A1", "=F.INV(1E-300,5,5)");
+    model.set_a1("A2", "=F.INV(1E-170,5,5)");
+    model.set_a1("A3", "=F.INV(1E-50,6000,4)");
+    model.set_a1("A4", "=BETA.INV(C1,1.0024017013258346,12177.162026553196)");
+    model.set_a1("A5", "=F.INV(3.718810279553989E-162,4532,43)");
+    model.set_a1("A6", "=F.INV(1E-20,5,5)");
+    model.set_a1("A7", "=INDEX(F.INV({0.4;1E-300},5,5),2)");
     model.evaluate();
     let expected = [
         ("A1", "5.0816E-121"),
@@ -163,7 +163,7 @@ fn quantile_searches_that_hung_or_panicked_are_bounded() {
         ("A7", "5.0816E-121"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }
 
@@ -173,36 +173,36 @@ fn quantile_kernels_are_charged_their_weight() {
     // about 4 ms): 2^27 / 2^18 = 512 elements, so a lifted call of 513 is refused before it runs;
     // T.INV and CONFIDENCE.T are charged 2^17 (about 1.5 ms at df 999, T-2511): 1,024 elements.
     let mut model = new_empty_model();
-    model._set("A1", "=ROWS(BETA.INV(SEQUENCE(513)/514,2,3))");
-    model._set("A2", "=ROWS(BETA.INV(SEQUENCE(512)/513,2,3))");
-    model._set("A3", "=ROWS(F.INV.RT(0.4,5,SEQUENCE(513)))");
-    model._set("A4", "=ROWS(T.INV(0.4,SEQUENCE(1025)))");
-    model._set("A5", "=ROWS(CONFIDENCE.T(0.4,2,SEQUENCE(1025)+1))");
-    model._set("A6", "=ROWS(T.INV(0.4,SEQUENCE(1024)))");
-    model._set("A7", "=ROWS(F.INV(0.4,5,SEQUENCE(512)))");
+    model.set_a1("A1", "=ROWS(BETA.INV(SEQUENCE(513)/514,2,3))");
+    model.set_a1("A2", "=ROWS(BETA.INV(SEQUENCE(512)/513,2,3))");
+    model.set_a1("A3", "=ROWS(F.INV.RT(0.4,5,SEQUENCE(513)))");
+    model.set_a1("A4", "=ROWS(T.INV(0.4,SEQUENCE(1025)))");
+    model.set_a1("A5", "=ROWS(CONFIDENCE.T(0.4,2,SEQUENCE(1025)+1))");
+    model.set_a1("A6", "=ROWS(T.INV(0.4,SEQUENCE(1024)))");
+    model.set_a1("A7", "=ROWS(F.INV(0.4,5,SEQUENCE(512)))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"512");
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
-    assert_eq!(model._get_text("A5"), *"#ERROR!");
-    assert_eq!(model._get_text("A6"), *"1024");
-    assert_eq!(model._get_text("A7"), *"512");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"512");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A5"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A6"), *"1024");
+    assert_eq!(model.get_text_a1("A7"), *"512");
 }
 
 #[test]
 fn unlifted_calls_are_the_scalar_calls() {
     let mut model = new_empty_model();
-    model._set("A1", "=BETA.INV(0.4,2,3)");
-    model._set("A2", "=BETAINV(0.4,2,3,1,3)");
-    model._set("A3", "=F.INV(0.4,5,5)");
-    model._set("A4", "=F.INV.RT(0.4,5,5)");
-    model._set("A5", "=T.INV(0.4,5)");
-    model._set("A6", "=T.INV.2T(0.4,5)");
-    model._set("A7", "=CONFIDENCE.T(0.4,2,15)");
-    model._set("A8", "=T.INV(0.4)");
-    model._set("A9", "=BETA.INV(0.4,2,3,1,1)");
-    model._set("A10", "=F.INV(TRUE,5,5)");
+    model.set_a1("A1", "=BETA.INV(0.4,2,3)");
+    model.set_a1("A2", "=BETAINV(0.4,2,3,1,3)");
+    model.set_a1("A3", "=F.INV(0.4,5,5)");
+    model.set_a1("A4", "=F.INV.RT(0.4,5,5)");
+    model.set_a1("A5", "=T.INV(0.4,5)");
+    model.set_a1("A6", "=T.INV.2T(0.4,5)");
+    model.set_a1("A7", "=CONFIDENCE.T(0.4,2,15)");
+    model.set_a1("A8", "=T.INV(0.4)");
+    model.set_a1("A9", "=BETA.INV(0.4,2,3,1,1)");
+    model.set_a1("A10", "=F.INV(TRUE,5,5)");
     model.evaluate();
     let expected = [
         ("A1", "0.329166503"),
@@ -218,6 +218,6 @@ fn unlifted_calls_are_the_scalar_calls() {
         ("A10", "#NUM!"),
     ];
     for (cell, value) in expected {
-        assert_eq!(model._get_text(cell), *value, "{cell}");
+        assert_eq!(model.get_text_a1(cell), *value, "{cell}");
     }
 }

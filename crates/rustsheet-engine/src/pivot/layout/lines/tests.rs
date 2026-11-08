@@ -8,7 +8,7 @@ use serde_json::Value as Json;
 
 use super::*;
 use crate::pivot::probe_cases::{
-    address, diagonal, probe_pivot, read, subtotal_named, T4634_SHEETS, T4745_SHEETS,
+    address, diagonal, probe_pivot, read, subtotal_named, T4634_SHEETS, T4699_SHEETS, T4745_SHEETS,
 };
 use crate::pivot::{
     compute, Aggregate, Axis, CacheBuilder, CacheItem, DataField, PageField, PivotItem,
@@ -159,6 +159,8 @@ fn the_layout_option_probes_lines_and_locations_are_excels() {
         "t4168-pivot-layout-options",
         &["F1", "F2", "F3", "BR", "BR2", "SD", "SD2"],
     );
+    // Blank rows and collapsed items beyond an outer row field (pivots.md "Layout lines").
+    check_all("t4699-pivot-blank-collapsed", T4699_SHEETS);
     // Classic layout and subtotalCaption: the lines are the plain ones; classic layout moves
     // the header and data rows down (pivots.md "Classic layout (gridDropZones)").
     check_all("t4129-pivot-layout-flags", &["GZ", "SC"]);
@@ -457,4 +459,18 @@ fn the_column_walk_stops_at_the_cap_the_rows_leave() {
         lay_out(&table, &cache, &result, &mut work),
         Err(PivotComputeError::Limit)
     );
+}
+
+#[test]
+fn custom_subtotals_sort_in_the_functions_fixed_order() {
+    // Excel's order of custom subtotal lines in `ST_ItemType` names (t4168 F1; t4699 CR, which
+    // lists them reversed) is `Aggregate`'s `Ord`, which `AxisPlan::subtotals` sorts by.
+    let names = [
+        "sum", "countA", "avg", "max", "min", "product", "count", "stdDev", "stdDevP", "var",
+        "varP",
+    ];
+    let order: Vec<Aggregate> = names.iter().map(|n| subtotal_named(n)).collect();
+    let mut sorted: Vec<Aggregate> = order.iter().rev().copied().collect();
+    sorted.sort();
+    assert_eq!(sorted, order);
 }

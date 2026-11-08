@@ -117,7 +117,7 @@ impl Model {
                 .cell(source_row, source_column)
                 .cloned();
             match source_cell {
-                Some(Cell::CellFormula { .. }) | Some(Cell::ArrayFormula { .. }) => {
+                Some(Cell::CellFormula { .. } | Cell::ArrayFormula { .. }) => {
                     // Formulas are stored relative to their cell: re-enter the
                     // text at the anchor so the formula stays as written.
                     let content =
@@ -224,7 +224,7 @@ impl Model {
             for c in column..column + width {
                 if matches!(
                     worksheet.cell(r, c),
-                    None | Some(Cell::EmptyCell { .. }) | Some(Cell::SpillCell { .. })
+                    None | Some(Cell::EmptyCell { .. } | Cell::SpillCell { .. })
                 ) {
                     continue;
                 }

@@ -11,6 +11,9 @@
 //! them back. A row or column move shifts a pivot with its cells, or is refused when it would
 //! split one ([`Model::move_pivots`]; T-2401; docs/excel-semantics/web.md "Pivot tables and
 //! structural edits").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use std::collections::{HashMap, HashSet};
 
@@ -52,9 +55,10 @@ pub use filter::{
 };
 pub use grid::{PivotBudget, PivotPlacement, PivotRefresh, PivotRefreshError, PivotSwap};
 pub use layout::{
-    chart_data, lay_out, records_behind, render, AxisLine, ChartCategory, ChartSeries, PivotCell,
-    PivotChartData, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM, COLUMN_LABELS, GRAND_TOTAL,
-    MAX_PIVOT_CELLS, MAX_PIVOT_TEXT_BYTES, MULTIPLE_ITEMS, ROW_LABELS, TOTAL_SERIES, VALUES,
+    chart_data, lay_out, records_behind, render, AxisLine, CellFormat, ChartCategory, ChartSeries,
+    PivotCell, PivotChartData, PivotLayout, RenderedCell, ALL_ITEMS, BLANK_ITEM, COLUMN_LABELS,
+    GRAND_TOTAL, MAX_PIVOT_CELLS, MAX_PIVOT_TEXT_BYTES, MULTIPLE_ITEMS, ROW_LABELS, TOTAL_SERIES,
+    VALUES,
 };
 pub use model::{
     element_name, Aggregate, Axis, AxisField, CellArea, DataField, ItemType, OpaqueEntry,
@@ -92,7 +96,8 @@ pub struct PivotCache {
     /// The `worksheetSource`, kept for a later refresh; `None` for other sources.
     pub source: Option<CacheSource>,
     /// `worksheetSource@name`: the defined name or Table the cache was read from, kept so the
-    /// export writes the source back (T-4176). A refresh does not resolve it yet (T-4506).
+    /// export writes the source back (T-4176). A refresh reads it again
+    /// (`Model::pivot_source_area`, T-4506).
     pub source_name: Option<String>,
     /// The cache's fields, in cache order.
     pub fields: Vec<CacheField>,
@@ -194,8 +199,9 @@ pub enum PivotCacheError {
     /// A field index, a shared-item index or a record's length does not match the cache.
     #[error("a pivot cache record does not match its fields")]
     BadRecord,
-    /// A refresh found no source: the cache has none, or it names a sheet or range the workbook
-    /// does not hold (`refresh`; a defined name or a Table is T-4506's).
+    /// A refresh found no source: the cache has none, or it names a sheet, range, Table or
+    /// defined name that is no worksheet range of the workbook (`refresh`,
+    /// `Model::pivot_source_area`).
     #[error("a pivot cache's source is not a worksheet range of this workbook")]
     Source,
     /// A refresh found a source header (0-based `column` within the source) that is a number, a

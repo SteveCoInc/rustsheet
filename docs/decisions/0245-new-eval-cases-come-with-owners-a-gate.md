@@ -40,3 +40,10 @@
   - Engine-export cases (`<name>.export.json`, the `export` suite kind of T-4177) are eval cases too: the gate counts
     the `.export.json` suffix with `.case.json` and `.xlsx`, so a new pivot-export case cannot reach the baseline with
     an unowned visibly-off cell. Without it the gate would skip them silently (T-4177).
+  - A pivot whose layout is a baseline item (T-4944: an engine-export case's `pivot_layout`, beside its
+    `layout_checked`, is its `LF<TAB>case<TAB>Sheet!Pivot` lines) needs an owner too:
+    `new_case_owners.layout_items` lists each as `case!Sheet!Pivot` and `exit_owners`' rule owns it with the
+    pivot's name in place of the A1 name (`Sheet!Pivot` beside the case, as a cell list names a cell). Such
+    an item is no cell, so `exit_owners.all_off_cells` and the exit criteria leave it out. A line naming the
+    case and only pivots has no A1 name and so owns the whole case, so a layout owner line should also name
+    an A1 cell (the pivot's anchor serves).

@@ -1,3 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::items_after_statements
+)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 use crate::functions::util::aggregate_args::{
     AggregatePolicy, AggregateWalk, ArgReading, ArrayNumbers, CellNumbers, DirectNumbers,
     ErrorRule, GridReading, ItemSource, NestedReading, NumberRules,
@@ -27,91 +36,24 @@ fn harmonic_mean(sum_recip: f64, count: f64) -> f64 {
     extended_quotient(1.0, extended_quotient(sum_recip, count))
 }
 
-/// The standardized moments SKEW, SKEW.P and KURT (statistics.md "SKEW, SKEW.P and KURT are
-/// stored x87 operations (T-4328)").
-#[derive(Clone, Copy)]
-enum Moment {
-    /// SKEW: `n/((n-1)(n-2)) · Σz³` with z standardized by the sample deviation.
-    SampleSkewness,
-    /// SKEW.P: `Σz³/n` with z standardized by the population deviation.
-    PopulationSkewness,
-    /// KURT: `n(n+1)/((n-1)(n-2)(n-3)) · Σz⁴ - 3(n-1)²/((n-2)(n-3))`, z by the sample deviation.
-    Kurtosis,
-}
-
-impl Moment {
-    fn name(self) -> &'static str {
-        match self {
-            Moment::SampleSkewness => "SKEW",
-            Moment::PopulationSkewness => "SKEW.P",
-            Moment::Kurtosis => "KURT",
-        }
-    }
-
-    /// The fewest numbers with a value: three for the skewnesses, four for KURT (statistics.md
-    /// "KURT, SKEW, SKEW.P, GEOMEAN, HARMEAN and TRIMMEAN domain cells of the Gate A tables
-    /// (T-4091)").
-    fn min_count(self) -> usize {
-        match self {
-            Moment::SampleSkewness | Moment::PopulationSkewness => 3,
-            Moment::Kurtosis => 4,
-        }
-    }
-
-    /// The statistic of `values`, `None` (`#DIV/0!`) for too few numbers, a zero variance or an
-    /// overflowing sum of squares.
-    fn of(self, values: &[f64]) -> Option<f64> {
-        if values.len() < self.min_count() {
-            return None;
-        }
-        // Counts are exact doubles (a Vec holds far fewer than 2^53 values).
-        let n = values.len() as f64;
-        let (n1, n2, n3) = (n - 1.0, n - 2.0, n - 3.0);
-        Some(match self {
-            Moment::SampleSkewness => extended_product(
-                extended_quotient(n, extended_product(n1, n2)),
-                standardized_moment(values, n1, false)?,
-            ),
-            Moment::PopulationSkewness => {
-                extended_quotient(standardized_moment(values, n, false)?, n)
-            }
-            Moment::Kurtosis => {
-                let sum = standardized_moment(values, n1, true)?;
-                let scale = extended_quotient(
-                    extended_product(n, n + 1.0),
-                    extended_product(extended_product(n1, n2), n3),
-                );
-                let bias = extended_quotient(
-                    extended_product(extended_product(3.0, n1), n1),
-                    extended_product(n2, n3),
-                );
-                extended_sum(extended_product(scale, sum), -bias)
-            }
-        })
-    }
-}
-
-/// `Σz³` (or `Σz⁴` when `fourth`) of `values` standardized as `z = (x - mean)/sqrt(m2/divisor)`,
-/// each operation an x87 one stored to a double (rounded twice: [`extended_sum`] and its
-/// siblings), the sums in input order. The mean and `m2 = Σ(x - mean)²` are two-pass; the cube is
-/// `(z·z)·z` and the fourth power `(z·z)·(z·z)`. Both roundings are visible: SKEW's variance
-/// 0.999999999999999 has the twice-rounded root 0.9999999999999996, not the 0.9999999999999994
-/// of a single rounding (`SKEW({1E-15,1,2})` 2.4980018054066022E-15, gen-m9/d208bbafc3bc1997
-/// A262), and at z = 1.4999999999999234 z² rounds twice to one ulp below the once-rounded square,
-/// which KURT's bias term magnifies (`KURT({0.2,7,3.14159,-2.5})` -0.7628272385808703,
-/// gen-m9/7bd219ec0c0c5e22 A279). `None` for a zero or overflowing `m2` (statistics.md
-/// "Overflowing squares (T-2432)").
+/// Σz³ (or Σz⁴ when `fourth`) over `values`, z = (x - mean)/sqrt(m2/divisor), every operation an
+/// Excel operator rounded twice (to a 64-bit significand, then to a double): the mean and m2 are
+/// two-pass sums in input order, the cube is (z·z)·z and the fourth power (z·z)·(z·z), not
+/// ((z·z)·z)·z. `SKEW({1E-15,1,2})` is 2.4980018054066022E-15 only with the twice-rounded root
+/// and `KURT({0.1,42,123456789.123,0.1})` 3.9999999999979536 only with the squared square
+/// (gen-m9/d208bbafc3bc1997 A262, gen-m9/27601819397dd56e A200, excel-graph; statistics.md
+/// "Standardized moments use stored x87 operations (T-4328)"). `None` when m2 is zero or
+/// overflows: Excel's zero-variance `#DIV/0!`, also for squares beyond the double range
+/// (`SKEW({1E+200,1E+200,-1E+200},2.5)`, probes/t2475-stat-subexpressions P!A245;
+/// statistics.md "Overflowing squares (T-2432)").
 fn standardized_moment(values: &[f64], divisor: f64, fourth: bool) -> Option<f64> {
-    let count = values.len() as f64;
-    let mean = extended_quotient(
-        values.iter().fold(0.0, |sum, &x| extended_sum(sum, x)),
-        count,
-    );
+    let n = values.len() as f64;
+    let mean = extended_quotient(values.iter().fold(0.0, |sum, &x| extended_sum(sum, x)), n);
     let m2 = values.iter().fold(0.0, |sum, &x| {
         let d = extended_sum(x, -mean);
         extended_sum(sum, extended_product(d, d))
     });
-    if m2 == 0.0 || !m2.is_finite() {
+    if m2 == 0.0 || m2.is_infinite() {
         return None;
     }
     let deviation = extended_sqrt(extended_quotient(m2, divisor));
@@ -125,6 +67,15 @@ fn standardized_moment(values: &[f64], divisor: f64, fourth: bool) -> Option<f64
         };
         extended_sum(sum, power)
     }))
+}
+
+/// The zero-variance `#DIV/0!` of SKEW, SKEW.P and KURT.
+fn zero_variance(cell: CellReferenceIndex, name: &str) -> CalcResult {
+    CalcResult::Error {
+        error: Error::DIV,
+        origin: cell,
+        message: format!("Zero variance in {name}"),
+    }
 }
 
 /// The sum of `1/x` in argument order, HARMEAN's accumulator (see [`harmonic_mean`]).
@@ -529,46 +480,82 @@ impl Model {
         CalcResult::Number(best.unwrap_or(0.0))
     }
 
-    /// SKEW: the sample skewness ([`Moment::SampleSkewness`]).
-    pub(crate) fn fn_skew(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.moment_of(args, cell, Moment::SampleSkewness)
-    }
-
-    /// SKEW.P: the population skewness ([`Moment::PopulationSkewness`]).
-    pub(crate) fn fn_skew_p(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.moment_of(args, cell, Moment::PopulationSkewness)
-    }
-
-    /// KURT: the sample excess kurtosis ([`Moment::Kurtosis`]).
-    pub(crate) fn fn_kurt(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.moment_of(args, cell, Moment::Kurtosis)
-    }
-
-    /// SKEW, SKEW.P or KURT of the numbers of `args` (AVERAGE's reading). Too few numbers, zero
-    /// variance and overflowing squares are `#DIV/0!`: SKEW.P of two numbers too
-    /// (docs/excel-semantics/statistics.md "SKEW.P of two numbers is #DIV/0!"; probes/skew-p-bound),
-    /// and `SKEW({1E+200,1E+200,-1E+200},2.5)` (probes/t2475-stat-subexpressions P!A245;
-    /// statistics.md "Overflowing squares (T-2432)").
-    fn moment_of(&mut self, args: &[Node], cell: CellReferenceIndex, moment: Moment) -> CalcResult {
+    /// The numbers of a moment function's arguments (SKEW, SKEW.P, KURT), or `#DIV/0!` when
+    /// there are fewer than `min_count` of them or their variance is zero or overflows.
+    fn moment_values(
+        &mut self,
+        args: &[Node],
+        cell: CellReferenceIndex,
+        min_count: usize,
+        name: &str,
+    ) -> Result<Vec<f64>, CalcResult> {
         if args.is_empty() {
-            return CalcResult::new_args_number_error(cell);
+            return Err(CalcResult::new_args_number_error(cell));
         }
         let mut values: Vec<f64> = Vec::new();
-        if let Err(e) = self.for_each_value(args, cell, |f| values.push(f)) {
-            return e;
-        }
-        match moment.of(&values) {
-            Some(value) => CalcResult::Number(value),
-            None => CalcResult::Error {
+        self.for_each_value(args, cell, |f| values.push(f))?;
+        // Excel: SKEW and SKEW.P need three numbers, KURT four; fewer are #DIV/0!
+        // (docs/excel-semantics/statistics.md "SKEW.P of two numbers is #DIV/0!"; probes/skew-p-bound).
+        if values.len() < min_count {
+            return Err(CalcResult::Error {
                 error: Error::DIV,
                 origin: cell,
-                message: format!(
-                    "{} requires at least {} data points and a finite, nonzero variance",
-                    moment.name(),
-                    moment.min_count()
-                ),
-            },
+                message: format!("{name} requires at least {min_count} data points"),
+            });
         }
+        Ok(values)
+    }
+
+    /// SKEW: n/((n-1)(n-2)) · Σz³ with z standardized by the sample deviation
+    /// ([`standardized_moment`]).
+    pub(crate) fn fn_skew(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let values = match self.moment_values(args, cell, 3, "SKEW") {
+            Ok(values) => values,
+            Err(e) => return e,
+        };
+        let n = values.len() as f64;
+        let Some(sum_cubed) = standardized_moment(&values, n - 1.0, false) else {
+            return zero_variance(cell, "SKEW");
+        };
+        let factor = extended_quotient(n, extended_product(n - 1.0, n - 2.0));
+        CalcResult::Number(extended_product(factor, sum_cubed))
+    }
+
+    /// SKEW.P: Σz³ / n with z standardized by the population deviation ([`standardized_moment`]).
+    pub(crate) fn fn_skew_p(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let values = match self.moment_values(args, cell, 3, "SKEW.P") {
+            Ok(values) => values,
+            Err(e) => return e,
+        };
+        let n = values.len() as f64;
+        let Some(sum_cubed) = standardized_moment(&values, n, false) else {
+            return zero_variance(cell, "SKEW.P");
+        };
+        CalcResult::Number(extended_quotient(sum_cubed, n))
+    }
+
+    /// KURT: (n(n+1)/((n-1)(n-2)(n-3))) · Σz⁴ - 3(n-1)²/((n-2)(n-3)) with z standardized by the
+    /// sample deviation ([`standardized_moment`]); the first factor is formed before it scales
+    /// the sum (statistics.md "Standardized moments use stored x87 operations (T-4328)").
+    pub(crate) fn fn_kurt(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let values = match self.moment_values(args, cell, 4, "KURT") {
+            Ok(values) => values,
+            Err(e) => return e,
+        };
+        let n = values.len() as f64;
+        let Some(sum_fourth) = standardized_moment(&values, n - 1.0, true) else {
+            return zero_variance(cell, "KURT");
+        };
+        let factor = extended_quotient(
+            extended_product(n, n + 1.0),
+            extended_product(extended_product(n - 1.0, n - 2.0), n - 3.0),
+        );
+        let term1 = extended_product(factor, sum_fourth);
+        let term2 = extended_quotient(
+            extended_product(extended_product(3.0, n - 1.0), n - 1.0),
+            extended_product(n - 2.0, n - 3.0),
+        );
+        CalcResult::Number(extended_sum(term1, -term2))
     }
 
     /// The `k` of LARGE/SMALL: booleans and numeric text coerce (TRUE is 1) and anything below 1
@@ -692,65 +679,7 @@ const RANKED_ASCENDING: DataArg = DataArg {
 
 #[cfg(test)]
 mod tests {
-    use super::{harmonic_mean, reciprocal_sum, Moment};
-
-    /// The data's 3.14159, as a quotient (the same double) for clippy's PI lint.
-    const PI_ISH: f64 = 314_159.0 / 100_000.0;
-
-    // Excel's values (excel-graph), the numbers each cell's ranges hold in argument order.
-    #[test]
-    fn moments_are_stored_x87_operations() {
-        // gen-m9/27601819397dd56e A200: KURT(Data!E4:E11).
-        assert_eq!(
-            Moment::Kurtosis.of(&[0.1, 42.0, 123_456_789.123, 0.1]),
-            Some(3.999_999_999_997_953_6)
-        );
-        // gen-m9/7bd219ec0c0c5e22 A279: KURT(Data!A1:A12).
-        assert_eq!(
-            Moment::Kurtosis.of(&[0.2, 7.0, PI_ISH, -2.5]),
-            Some(-0.762_827_238_580_870_3)
-        );
-        // gen-m9/c2974c061384fdd9 A55: KURT(Data!A6:A6,Data!D1:D11).
-        assert_eq!(
-            Moment::Kurtosis.of(&[1.0, 0.1, 100.0, 100.0, 0.5, 0.3, 0.3, 1e-15, 0.5]),
-            Some(0.734_384_233_823_282)
-        );
-        // gen-m9/27601819397dd56e A108: KURT(Data!A11:A12,Data!E2:E5).
-        assert_eq!(
-            Moment::Kurtosis.of(&[-0.0001, 100.0, 2.0, 0.1, 42.0]),
-            Some(1.514_976_771_454_35)
-        );
-        // KURT({1,..,10}): gen-m9/a013a45a8fbcab4f A2, a54c738c697617c3 A41.
-        let one_to_ten: Vec<f64> = (1..=10).map(f64::from).collect();
-        assert_eq!(
-            Moment::Kurtosis.of(&one_to_ten),
-            Some(-1.200_000_000_000_000_2)
-        );
-        // KURT(3,5,2,8,9,4,7,1,TRUE): probes/stats-evidence-floor-t1623.
-        assert_eq!(
-            Moment::Kurtosis.of(&[3.0, 5.0, 2.0, 8.0, 9.0, 4.0, 7.0, 1.0, 1.0]),
-            Some(-1.433_183_431_952_663_5)
-        );
-        // gen-m9/d208bbafc3bc1997 A262: SKEW(Data!D11:D12,Data!D10).
-        assert_eq!(
-            Moment::SampleSkewness.of(&[1e-15, 1.0, 2.0]),
-            Some(2.498_001_805_406_602_2e-15)
-        );
-    }
-
-    // Overflowing squares and zero variance have no value (#DIV/0!; statistics.md "Overflowing
-    // squares (T-2432)").
-    #[test]
-    fn moments_of_overflowing_or_equal_data_have_no_value() {
-        for moment in [
-            Moment::Kurtosis,
-            Moment::SampleSkewness,
-            Moment::PopulationSkewness,
-        ] {
-            assert_eq!(moment.of(&[1e200, 1e200, -1e200, 1.0]), None);
-            assert_eq!(moment.of(&[0.0; 4]), None);
-        }
-    }
+    use super::{harmonic_mean, reciprocal_sum};
 
     fn harmean(values: &[f64]) -> f64 {
         harmonic_mean(reciprocal_sum(values), values.len() as f64)

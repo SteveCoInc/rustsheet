@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, clippy::panic, reason = "tests")]
 
 //! Metamorphic and property tests over generated pivots (T-4155; plan §6 layer 5 of
@@ -80,9 +83,9 @@ fn value_cells(model: &Model) -> Vec<ValueCell> {
             cells.push(ValueCell {
                 row,
                 column,
-                region: model._get_text_at(0, row, left),
-                product: model._get_text_at(0, labels_row, column),
-                text: model._get_text_at(0, row, column),
+                region: model.get_text_by_index(0, row, left),
+                product: model.get_text_by_index(0, labels_row, column),
+                text: model.get_text_by_index(0, row, column),
             });
         }
     }
@@ -168,13 +171,13 @@ fn getpivotdata_of_each_value_cell_returns_the_cell() {
                 }
             }
             formula.push(')');
-            model._set(&format!("AB{}", i + 1), &formula);
+            model.set_a1(&format!("AB{}", i + 1), &formula);
         }
         model.evaluate();
         for (i, cell) in cells.iter().enumerate() {
             let row = i32::try_from(i + 1).unwrap();
             assert_eq!(
-                model._get_text_at(0, row, 28),
+                model.get_text_by_index(0, row, 28),
                 cell.text,
                 "seed {seed}: {} / {} at R{}C{}",
                 cell.region,

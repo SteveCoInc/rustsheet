@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 // Ranges read as a whole. A function that walks a whole column or row visits
@@ -37,12 +40,12 @@ fn anchor_order(model: &Model) -> Vec<String> {
 #[test]
 fn a_spill_beyond_the_used_area_restarts_the_anchor_that_summed_the_column() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(1,1,SUM(D:D))");
-    model._set("C1", "=SEQUENCE(3,1,10)");
-    model._set("D1", "=SEQUENCE(5)");
+    model.set_a1("A1", "=SEQUENCE(1,1,SUM(D:D))");
+    model.set_a1("C1", "=SEQUENCE(3,1,10)");
+    model.set_a1("D1", "=SEQUENCE(5)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "15");
-    assert_eq!(model._get_text("D5"), "5");
+    assert_eq!(model.get_text_a1("A1"), "15");
+    assert_eq!(model.get_text_a1("D5"), "5");
     assert_eq!(restarts(&model), 1);
     assert_eq!(super::oracle::violations(&mut model), Vec::<String>::new());
     let order = anchor_order(&model);
@@ -50,7 +53,7 @@ fn a_spill_beyond_the_used_area_restarts_the_anchor_that_summed_the_column() {
     assert!(position("D1") < position("A1"));
 
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "15");
+    assert_eq!(model.get_text_a1("A1"), "15");
     assert_eq!(restarts(&model), 0);
 }
 
@@ -59,11 +62,11 @@ fn a_spill_beyond_the_used_area_restarts_the_anchor_that_summed_the_column() {
 #[test]
 fn a_spill_entirely_beyond_the_used_area_is_seen() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(1,1,SUM(D:D))");
-    model._set("B7", "=SEQUENCE(4)");
-    model._set("D12", "=SEQUENCE(2)");
+    model.set_a1("A1", "=SEQUENCE(1,1,SUM(D:D))");
+    model.set_a1("B7", "=SEQUENCE(4)");
+    model.set_a1("D12", "=SEQUENCE(2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "3");
+    assert_eq!(model.get_text_a1("A1"), "3");
     assert_eq!(restarts(&model), 1);
     assert_eq!(super::oracle::violations(&mut model), Vec::<String>::new());
 }
@@ -73,11 +76,11 @@ fn a_spill_entirely_beyond_the_used_area_is_seen() {
 #[test]
 fn a_countif_over_a_whole_column_sees_a_spill_beyond_the_used_area() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(1,1,COUNTIF(D:D,\">0\"))");
-    model._set("C1", "=SEQUENCE(3,1,10)");
-    model._set("D1", "=SEQUENCE(5)");
+    model.set_a1("A1", "=SEQUENCE(1,1,COUNTIF(D:D,\">0\"))");
+    model.set_a1("C1", "=SEQUENCE(3,1,10)");
+    model.set_a1("D1", "=SEQUENCE(5)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "5");
+    assert_eq!(model.get_text_a1("A1"), "5");
     assert_eq!(restarts(&model), 1);
     assert_eq!(super::oracle::violations(&mut model), Vec::<String>::new());
 }
@@ -86,10 +89,10 @@ fn a_countif_over_a_whole_column_sees_a_spill_beyond_the_used_area() {
 #[test]
 fn a_spill_beyond_the_used_area_of_a_whole_row_is_seen() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(1,1,SUM(3:3))");
-    model._set("A3", "=SEQUENCE(1,5)");
+    model.set_a1("A1", "=SEQUENCE(1,1,SUM(3:3))");
+    model.set_a1("A3", "=SEQUENCE(1,5)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "15");
+    assert_eq!(model.get_text_a1("A1"), "15");
     assert_eq!(super::oracle::violations(&mut model), Vec::<String>::new());
 }
 
@@ -98,10 +101,10 @@ fn a_spill_beyond_the_used_area_of_a_whole_row_is_seen() {
 #[test]
 fn an_ordinary_formula_summing_a_whole_column_needs_no_restart() {
     let mut model = new_empty_model();
-    model._set("A1", "=SUM(D:D)");
-    model._set("D1", "=SEQUENCE(3)");
+    model.set_a1("A1", "=SUM(D:D)");
+    model.set_a1("D1", "=SEQUENCE(3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "6");
+    assert_eq!(model.get_text_a1("A1"), "6");
     assert_eq!(restarts(&model), 0);
 }
 
@@ -111,12 +114,12 @@ fn an_ordinary_formula_summing_a_whole_column_needs_no_restart() {
 #[test]
 fn a_whole_column_read_records_one_rectangle() {
     let mut model = new_empty_model();
-    model._set("A1", "=SUM(D:D)");
-    model._set("D1", "1");
-    model._set("D2", "2");
-    model._set("D3", "");
+    model.set_a1("A1", "=SUM(D:D)");
+    model.set_a1("D1", "1");
+    model.set_a1("D2", "2");
+    model.set_a1("D3", "");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "3");
+    assert_eq!(model.get_text_a1("A1"), "3");
     assert!(
         model.evaluation.seen.len() <= 4,
         "{:?}",
@@ -135,11 +138,11 @@ fn a_whole_column_read_records_one_rectangle() {
 #[test]
 fn a_repeated_union_walk_records_its_rectangles_once() {
     let mut model = new_empty_model();
-    model._set("A1", "=SUM(MAP(F1:F1000,LAMBDA(r,SUM((D:D,E1:E10)))))");
-    model._set("D1", "1");
-    model._set("E2", "2");
+    model.set_a1("A1", "=SUM(MAP(F1:F1000,LAMBDA(r,SUM((D:D,E1:E10)))))");
+    model.set_a1("D1", "1");
+    model.set_a1("E2", "2");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "3000");
+    assert_eq!(model.get_text_a1("A1"), "3000");
     let union_reads: Vec<_> = model
         .evaluation
         .seen_ranges
@@ -155,16 +158,16 @@ fn a_repeated_union_walk_records_its_rectangles_once() {
 #[test]
 fn an_xlookup_over_a_whole_column_sees_a_spill_beyond_the_used_area() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(1,1,XLOOKUP(5,D:D,D:D))");
-    model._set("C1", "=SEQUENCE(3,1,10)");
-    model._set("D1", "=SEQUENCE(5)");
+    model.set_a1("A1", "=SEQUENCE(1,1,XLOOKUP(5,D:D,D:D))");
+    model.set_a1("C1", "=SEQUENCE(3,1,10)");
+    model.set_a1("D1", "=SEQUENCE(5)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "5");
+    assert_eq!(model.get_text_a1("A1"), "5");
     assert_eq!(restarts(&model), 1);
     assert_eq!(super::oracle::violations(&mut model), Vec::<String>::new());
 
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "5");
+    assert_eq!(model.get_text_a1("A1"), "5");
     assert_eq!(restarts(&model), 0);
 }
 
@@ -175,12 +178,12 @@ fn an_xlookup_over_a_whole_column_sees_a_spill_beyond_the_used_area() {
 fn many_copies_of_a_whole_column_in_a_map_record_one_rectangle() {
     let mut model = new_empty_model();
     let union = balanced_union("A:A", crate::reference_operators::MAX_AREAS);
-    model._set(
+    model.set_a1(
         "Z1",
         &format!("=LET(u,{union},SUM(MAP(SEQUENCE(16),LAMBDA(r,SUM(u)))))"),
     );
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("Z1"), "#VALUE!");
     assert_eq!(model.evaluation.seen_ranges.len(), 1);
 }
 
@@ -193,17 +196,17 @@ fn a_formula_records_at_most_max_seen_ranges_rectangles() {
     use crate::area_budget::{MAX_SEEN_RANGES, TOO_MANY_SEEN_RANGES};
     let rows = |n: usize| format!("MAP(SEQUENCE({n}),LAMBDA(r,SUM(OFFSET(1:1,r,0))))");
     let mut model = new_empty_model();
-    model._set("A1", &format!("=SUM({})", rows(MAX_SEEN_RANGES)));
-    model._set("B1", &format!("=SUM({})", rows(MAX_SEEN_RANGES + 1)));
-    model._set(
+    model.set_a1("A1", &format!("=SUM({})", rows(MAX_SEEN_RANGES)));
+    model.set_a1("B1", &format!("=SUM({})", rows(MAX_SEEN_RANGES + 1)));
+    model.set_a1(
         "C1",
         &format!("=IFERROR(SUM({}),1)", rows(MAX_SEEN_RANGES + 1)),
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "0");
-    assert_eq!(model._get_text("B1"), "#VALUE!");
-    assert_eq!(model._get_error_message("B1"), TOO_MANY_SEEN_RANGES);
-    assert_eq!(model._get_text("C1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "0");
+    assert_eq!(model.get_text_a1("B1"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("B1"), TOO_MANY_SEEN_RANGES);
+    assert_eq!(model.get_text_a1("C1"), "#VALUE!");
     assert!(model.evaluation.seen_ranges.len() <= 3 * MAX_SEEN_RANGES);
 }
 
@@ -217,17 +220,17 @@ fn a_sparse_single_range_past_the_seen_range_cap_is_value_error() {
     let rows = |n: usize| format!("MAP(SEQUENCE({n}),LAMBDA(r,SUM(OFFSET(Sheet2!1:1,r,0))))");
     let mut model = new_empty_model();
     model.new_sheet();
-    model._set(&format!("J{LAST_ROW}"), "1");
-    model._set(
+    model.set_a1(&format!("J{LAST_ROW}"), "1");
+    model.set_a1(
         "Z1",
         &format!("=SUM({})+SUM(A:J)", rows(MAX_SEEN_RANGES - 1)),
     );
-    model._set("Z2", &format!("=SUM({})+SUM(A:J)", rows(MAX_SEEN_RANGES)));
+    model.set_a1("Z2", &format!("=SUM({})+SUM(A:J)", rows(MAX_SEEN_RANGES)));
     let before = model.evaluation.cell_reads;
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), "1");
-    assert_eq!(model._get_text("Z2"), "#VALUE!");
-    assert_eq!(model._get_error_message("Z2"), TOO_MANY_SEEN_RANGES);
+    assert_eq!(model.get_text_a1("Z1"), "1");
+    assert_eq!(model.get_text_a1("Z2"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("Z2"), TOO_MANY_SEEN_RANGES);
     // Two MAPs of 65,536 SUMs of an empty row, not 10 million reads of A:J.
     assert!(model.evaluation.cell_reads - before < 1_000_000);
 }
@@ -241,9 +244,9 @@ fn a_large_spill_is_checked_against_many_rectangles_in_near_linear_time() {
     let rows =
         |from: usize| format!("=MAP(SEQUENCE(50000,1,{from}),LAMBDA(r,SUM(OFFSET(1:1,r,0))))");
     let mut model = new_empty_model();
-    model._set("A1", &rows(200_000));
-    model._set("B1", &rows(250_000));
-    model._set("C2", "=SEQUENCE(100000)");
+    model.set_a1("A1", &rows(200_000));
+    model.set_a1("B1", &rows(250_000));
+    model.set_a1("C2", "=SEQUENCE(100000)");
     model.evaluate();
     model.evaluate();
     // Count the work, not the clock (T-2282): each of the three spills commits once per pass and
@@ -257,8 +260,8 @@ fn a_large_spill_is_checked_against_many_rectangles_in_near_linear_time() {
         tested <= bound,
         "{tested} rectangle tests against a bound of {bound}"
     );
-    assert_eq!(model._get_text("A50000"), "0");
-    assert_eq!(model._get_text("C100001"), "100000");
+    assert_eq!(model.get_text_a1("A50000"), "0");
+    assert_eq!(model.get_text_a1("C100001"), "100000");
     assert_eq!(model.evaluation.seen_ranges.len(), 100_000);
     assert_eq!(restarts(&model), 0);
 }
@@ -316,16 +319,16 @@ fn many_small_spills_skip_the_rectangles_far_from_them() {
     let rows =
         |from: usize| format!("=MAP(SEQUENCE(50000,1,{from}),LAMBDA(r,SUM(OFFSET(1:1,r,0))))");
     let mut model = new_empty_model();
-    model._set("A1", &rows(200_000));
-    model._set("B1", &rows(250_000));
+    model.set_a1("A1", &rows(200_000));
+    model.set_a1("B1", &rows(250_000));
     for anchor in 0..1000 {
-        model._set(&format!("D{}", 2 * anchor + 1), "=SEQUENCE(2)");
+        model.set_a1(&format!("D{}", 2 * anchor + 1), "=SEQUENCE(2)");
     }
     let start = Instant::now();
     model.evaluate();
     let elapsed = start.elapsed();
     assert!(elapsed < Duration::from_secs(20), "{elapsed:?}");
-    assert_eq!(model._get_text("D2000"), "2");
+    assert_eq!(model.get_text_a1("D2000"), "2");
     assert_eq!(model.evaluation.seen_ranges.len(), 100_000);
     assert_eq!(restarts(&model), 0);
 }
@@ -340,7 +343,7 @@ fn many_small_spills_skip_the_whole_column_rectangles_in_other_columns() {
     use std::time::{Duration, Instant};
     let mut model = new_empty_model();
     for anchor in ["A1", "C1", "E1", "G1"] {
-        model._set(
+        model.set_a1(
             anchor,
             "=SUM(MAP(SEQUENCE(12500,1,3000),LAMBDA(c,SUM(OFFSET($A:$A,0,c)))))+{0,1}",
         );
@@ -354,8 +357,8 @@ fn many_small_spills_skip_the_whole_column_rectangles_in_other_columns() {
     model.evaluate();
     let elapsed = start.elapsed();
     assert!(elapsed < Duration::from_secs(20), "{elapsed:?}");
-    assert_eq!(model._get_text("H1"), "1");
-    assert_eq!(model._get_text("BYG1"), "2");
+    assert_eq!(model.get_text_a1("H1"), "1");
+    assert_eq!(model.get_text_a1("BYG1"), "2");
     assert_eq!(model.evaluation.seen_ranges.len(), 50_000);
     assert_eq!(restarts(&model), 0);
     // The setup's premise: the four readers commit first, so all their rectangles are on record

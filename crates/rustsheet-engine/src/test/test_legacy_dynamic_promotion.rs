@@ -11,9 +11,9 @@ use crate::Model;
 /// workbook or an xlsx `<f>` without `cm` can hold it.
 fn loaded_with_plain(formula: &str) -> Model {
     let mut model = Model::new_empty("m", "en", "UTC", "en").unwrap();
-    model._set("A1", "=SEQUENCE(3)");
-    model._set("D1", formula);
-    model._set("D5", formula);
+    model.set_a1("A1", "=SEQUENCE(3)");
+    model.set_a1("D1", formula);
+    model.set_a1("D5", formula);
     let mut workbook = model.workbook;
     for row in [1, 5] {
         let f = workbook.worksheets[0]
@@ -50,17 +50,17 @@ fn a_plain_formula_cell_with_a_spill_reference_spills() {
             })
         ));
     }
-    assert_eq!(model._get_text("D1"), "0.841470985");
-    assert_eq!(model._get_text("D3"), "0.141120008");
-    assert_eq!(model._get_text("D7"), "0.141120008");
+    assert_eq!(model.get_text_a1("D1"), "0.841470985");
+    assert_eq!(model.get_text_a1("D3"), "0.141120008");
+    assert_eq!(model.get_text_a1("D7"), "0.141120008");
 }
 
 /// A dynamic-array function a legacy formula leaves without `@` spills too.
 #[test]
 fn a_plain_formula_cell_with_a_dynamic_array_function_spills() {
     let model = loaded_with_plain("=SEQUENCE(2)*10");
-    assert_eq!(model._get_text("D2"), "20");
-    assert_eq!(model._get_text("D6"), "20");
+    assert_eq!(model.get_text_a1("D2"), "20");
+    assert_eq!(model.get_text_a1("D6"), "20");
 }
 
 /// A plain cell whose formula is a scalar, or that a legacy reading intersects, stays as it is.
@@ -71,5 +71,5 @@ fn other_plain_formula_cells_stay_plain() {
         model.workbook.worksheets[0].cell(1, 4),
         Some(Cell::CellFormula { .. })
     ));
-    assert_eq!(model._get_text("D1"), "6");
+    assert_eq!(model.get_text_a1("D1"), "6");
 }

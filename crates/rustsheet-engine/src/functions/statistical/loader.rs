@@ -12,6 +12,10 @@
 //! `poisson.rs` is a second consumer: Excel's POISSON.DIST pmf is this saddle point too, on
 //! [`excel_bd0`] and [`stirlerr_exact`] (T-2055), so retuning either moves POISSON cells as well.
 //! The Student t density is a third ([`excel_t_density`], T-2585).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::many_single_char_names)]
+#![cfg_attr(test, expect(clippy::unreadable_literal))]
+// LINT-DEBT-END
 
 use crate::arithmetic::{
     extended_product, extended_quotient, extended_sqrt, extended_sum, flush_subnormal,

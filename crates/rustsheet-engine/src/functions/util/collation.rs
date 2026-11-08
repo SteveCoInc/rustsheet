@@ -52,6 +52,9 @@
 //! ([`script_order`]) and an astral character weighs its two UTF-16 units, so lone units sort above
 //! U+FFFD and a lone high half sorts before a pair it starts, a lone low half after it
 //! (docs/excel-semantics/text.md "Lone surrogates through CODE, comparisons, ...").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use std::cell::Cell;
 use std::cmp::{Ordering, Reverse};

@@ -1,6 +1,7 @@
 # 0325 — A visibly-off probe cell counted only for want of a math value is owned by the task that attaches its math
 
-- **Status:** accepted (2026-11-06, T-3994).
+- **Status:** accepted (2026-11-06, T-3994). Amended by decision 0347: item 3 restates R1(c)'s left-out rule exactly
+  (the engine within ε of the math or within 15 digits of Excel), not "Excel and the engine both within ε".
 - **Context:**
   - Gap triage 2026-11-03 (origin/main eda15c023, excel-graph): `make phase1-exit`'s `owners` line was not met on
     61 visibly-off cells owned only by a `defer: phase-1b` task (decision 0187 item 4 counts such a cell as unowned).
@@ -42,7 +43,8 @@
      cell's formula shape gets no math yet (a composite with an undefined call, an argument the reader leaves unparsed,
      a skipped candidate). Gap triage names the cells in that task (decision 0136's naming rule), filing it when none
      exists; it files no `visible` or `accuracy` fit task for them before the math is attached.
-  3. Once the math is attached, the cell is Phase 1b evidence when Excel and the engine are both within ε of it
+  3. (Restated exactly by decision 0347: left out when the engine is within ε of the math or within 15 digits of
+     Excel.) Once the math is attached, the cell is Phase 1b evidence when Excel and the engine are both within ε of it
      (R1(c) leaves it out, so it needs no exit owner and its deferred task keeps it); otherwise it is an ordinary
      visibly-off cell and triage files its `campaign:` task as decision 0114 says (`accuracy` when Excel is the closer).
   4. Gate B suites (gen-*, ironcalc-calc, corpus-bench, calipers, poi, smoke, fixtures) are untouched: every

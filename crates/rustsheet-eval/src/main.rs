@@ -586,11 +586,13 @@ fn cmd_check(
         }
         let delta = baseline::diff(&old, &current);
         println!(
-            "[{name}] known failures {} -> {}, text {} -> {}  (fixed {}, new-coverage failures {}, REGRESSIONS {}, new cases {}, removed cases {})",
+            "[{name}] known failures {} -> {}, text {} -> {}, layout {} -> {}  (fixed {}, new-coverage failures {}, REGRESSIONS {}, new cases {}, removed cases {})",
             old.failing.len(),
             current.failing.len(),
             old.text_failing.len(),
             current.text_failing.len(),
+            old.layout_failing.len(),
+            current.layout_failing.len(),
             delta.fixed.len(),
             delta.new_failures.len(),
             delta.regressions.len(),

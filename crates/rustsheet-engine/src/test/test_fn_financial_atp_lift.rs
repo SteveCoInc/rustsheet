@@ -22,14 +22,14 @@ fn check(cells: &[(&str, &str, &str)]) {
         ("G5", "0.065"),
         ("G6", "0.065"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {
-        assert_eq!(model._get_text(cell), *expected, "{cell}: {formula}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell}: {formula}");
     }
 }
 
@@ -274,8 +274,8 @@ fn oddl_settlement_must_follow_the_last_coupon() {
         ),
     ]);
     let mut model = new_empty_model();
-    model._set("A1", "=ODDLPRICE(42918,43200,42917,0.0575,0.065,100,2,0)");
-    model._set("A2", "=ODDLYIELD(42918,43200,42917,0.0575,99,100,2,0)");
+    model.set_a1("A1", "=ODDLPRICE(42918,43200,42917,0.0575,0.065,100,2,0)");
+    model.set_a1("A2", "=ODDLYIELD(42918,43200,42917,0.0575,99,100,2,0)");
     model.evaluate();
     // Excel's values, to the bit (A912, A919).
     assert_eq!(

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 use statrs::distribution::{Beta, Continuous};
 
 use crate::arithmetic::flush_subnormal;
@@ -10,8 +13,8 @@ use crate::functions::statistical::bratio::{
 };
 use crate::functions::statistical::incomplete_beta::beta_density;
 use crate::functions::statistical::inverse_beta::{
-    as109_search, beta_inverse_cdf, beta_quantile_crossing, inverse_ln_beta, As109Problem,
-    As109Profile,
+    as109_search, beta_inverse_cdf, beta_lower_crossing, beta_quantile_crossing, inverse_ln_beta,
+    As109Problem, As109Profile,
 };
 use crate::functions::statistical::loader::{beta_density_counts_vanish, excel_beta_density};
 use crate::functions::statistical::special::{ln_gamma, nearest_crossing_from, refine_increasing};
@@ -42,6 +45,9 @@ const BETA_QUANTILE_STATRS_P_MIN: f64 = 1e-15;
 fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
     if first_shape_square_overflows(alpha, beta, p) || newton_density_vanishes(alpha, beta, p) {
         return f64::NAN;
+    }
+    if let Some(capped) = shape_one_quantile_cap(alpha, beta, p) {
+        return capped;
     }
     let huge_shape =
         alpha > BETA_QUANTILE_STATRS_SHAPE_MAX || beta > BETA_QUANTILE_STATRS_SHAPE_MAX;
@@ -148,6 +154,55 @@ fn beta_quantile_as109(alpha: f64, beta: f64, p: f64) -> Option<f64> {
         return None;
     }
     Some(t)
+}
+
+/// BETA.INV's quantile for p above 1/2 where the upper-tail search of [`beta_quantile`] rounds to
+/// 1: Excel's AS 109 flip, `1 - y` with y the lower quantile of Beta(beta, alpha) at the exact
+/// `1 - p` (statistics.md "BETA.INV at a huge shape is AS 109's Newton search (T-1538)"), so 1
+/// wherever y is a normal double below half an ulp of 1 (`BETA.INV(1-1E-8,2,0.1)`, y = 3.9E-81).
+/// A y of 0 or a subnormal one stays `None` (`#NUM!`), as before T-3351: Excel is `#NUM!` at most
+/// such points and 1 at a few that no cut found so far separates, so no threshold is chosen. The
+/// evidence and its counts are in statistics.md "BETA.INV where the quantile rounds to 1 (T-3351)".
+///
+/// y is the crossing of the search's own lower tail (`bratio::beta_search_tails`) over [0, 1], at
+/// most 65 cdfs and no statrs start (lift/kinds/statistical.rs `QUANTILE_WEIGHT` charges it); at a
+/// shape above 1E5 it is T-1538's crossing (`inverse_beta::beta_lower_crossing`), as
+/// [`beta_quantile`] takes there (no evidenced cell reaches that branch yet: TODO(T-4865)).
+/// `lower_quantile_underflows` finds a y below the normal doubles without a search.
+fn upper_quantile_near_one(alpha: f64, beta: f64, p: f64) -> Option<f64> {
+    // 1 - p is exact for p in (1/2, 1).
+    let q = 1.0 - p;
+    let y = if alpha > BETA_QUANTILE_STATRS_SHAPE_MAX || beta > BETA_QUANTILE_STATRS_SHAPE_MAX {
+        beta_lower_crossing(beta, alpha, q)
+    } else if lower_quantile_underflows(beta, alpha, q) {
+        0.0
+    } else {
+        refine_increasing(
+            |x| beta_search_tails(x, 1.0 - x, beta, alpha).0,
+            q,
+            f64::NAN,
+            0.0,
+            1.0,
+        )
+    };
+    (f64::MIN_POSITIVE..0.5).contains(&y).then_some(1.0 - y)
+}
+
+/// Excel's BETA.INV at beta 1 where the quantile p^(1/alpha) rounds to 1 (p up to 1/2, so no
+/// flip): 0.999999 = 1 - 1E-6, not the largest double below 1. probes/t4713-beta-inv-beta-above-1-cut
+/// F12:F17, `BETA.INV(0.1,a,1)` for a = 5.62E+16 to 1E+18, are 0.999999, while F1:F11 (a = 1E+14 to
+/// 3.16E+16), where the closed form is still below 1, are that closed form (0.9999999999999999 at
+/// F10 and F11). 1 - 1E-6 is the cap T-4700 sees at a tiny beta (docs/excel-semantics/statistics.md
+/// "BETA.INV at beta 1 caps at 0.999999 where its quantile rounds to 1 (T-4958)"); AS 109's start
+/// for a second shape of at most 1 is that close to 1 here, so this looks like a clamped start the
+/// search cannot move. Only beta = 1 is evidenced; other shapes keep their search.
+const SHAPE_ONE_QUANTILE_CAP: f64 = 0.999_999;
+
+/// [`SHAPE_ONE_QUANTILE_CAP`] where it applies: beta 1, p at most 1/2 and `p^(1/alpha)` (as
+/// [`beta_quantile_shape_one`] computes it) rounding to 1, which needs alpha above about 1E+16.
+fn shape_one_quantile_cap(alpha: f64, beta: f64, p: f64) -> Option<f64> {
+    (beta == 1.0 && alpha > 1.0 && p <= 0.5 && (p.ln() / alpha).exp() >= 1.0)
+        .then_some(SHAPE_ONE_QUANTILE_CAP)
 }
 
 /// Whether the square of AS 109's first shape overflows a double: alpha for p up to 1/2, and beta
@@ -427,13 +482,21 @@ impl Model {
         if alpha <= 0.0 || beta_param <= 0.0 || p <= 0.0 || p >= 1.0 || b <= a {
             return Err(num_error(cell));
         }
-        // A quantile that underflows to 0 or rounds to 1 is #NUM! (`BETAINV(0.025,1E-15,2.5)`,
-        // `BETAINV(0.05,0.002,1)`, `BETAINV(1-1E-16,2,0.01)`; statistics.md "Scalar distributions
-        // at extreme arguments (T-2255)", probes/t2475-stat-subexpressions P!A127).
+        // A quantile that rounds to 1 at p above 1/2 is `upper_quantile_near_one`'s: 1, or #NUM!
+        // where the flipped tail's y underflows (`BETAINV(1-1E-16,2,0.01)`, T-3351). Otherwise a
+        // quantile that underflows to 0 or rounds to 1 is #NUM! (`BETAINV(0.025,1E-15,2.5)`,
+        // `BETAINV(0.05,0.002,1)`; statistics.md "Scalar distributions at extreme arguments
+        // (T-2255)", probes/t2475-stat-subexpressions P!A127). Excel is #NUM! at some of those and
+        // 1 - 2^-53 or 2^-53 at others with no rule found yet (statistics.md "BETA.INV where the
+        // quantile rounds to 1 (T-3351)"), so they keep the #NUM!.
         let t = beta_quantile(alpha, beta_param, p);
-        if !(t > 0.0 && t < 1.0) {
+        let t = if p > 0.5 && t >= 1.0 {
+            upper_quantile_near_one(alpha, beta_param, p).ok_or_else(|| num_error(cell))?
+        } else if t > 0.0 && t < 1.0 {
+            t
+        } else {
             return Err(num_error(cell));
-        }
+        };
         // Map back from [0,1] to [A,B]
         Ok(a + t * (b - a))
     }
@@ -468,12 +531,51 @@ mod tests {
     // (probes/t4713-beta-inv-beta-above-1-cut A40, A41, E41; t4713-beta-inv-cut-pieces A1, K37;
     // T-4713): 9.44E+15 and 1.82E+16 keep a number, 1E+16 is #NUM!, and p above 1/2 takes
     // (beta, alpha), whose count is positive.
+    // probes-numeric/t3351-beta-inv-sweep A200 (excel-graph, T-4866): on bratio's direct bgrat
+    // branch the search crosses `bgrat_increment`, not the Cephes kernel, whose upper tail is
+    // exactly 0 from x = 1E-4 to 0.2 here (it stopped at 2.925059559426143E-5).
+    #[test]
+    fn upper_tail_search_crosses_direct_bgrat_at_a_tiny_alpha() {
+        let excel = 0.129_394_056_293_018_14;
+        let x = beta_quantile(
+            0.005_007_002_947_503_6,
+            171.171_095_424_379,
+            1.0 - 1.104_919_747_509_15e-14,
+        );
+        assert!((x - excel).abs() <= 1e-15 * excel, "{x}");
+    }
+
     #[test]
     fn quantile_is_nan_where_loader_count_vanishes() {
         assert!(beta_quantile(1e16, 2.0, 0.1).is_nan());
         assert!(beta_quantile(9.440_608_762_859_23e15, 2.0, 0.1) < 1.0);
         assert!(beta_quantile(1.819_700_858_609_99e16, 2.0, 0.1) < 1.0);
         assert!(!beta_quantile(1.5e15, 2.0, 0.9).is_nan());
+    }
+
+    // probes/t4713-beta-inv-beta-above-1-cut F1:F17, `BETA.INV(0.1,a,1)` (excel-graph, T-4958):
+    // the closed form while it is below 1, 0.999999 once it rounds to 1.
+    #[test]
+    fn beta_one_quantile_caps_at_0_999999_where_it_rounds_to_1() {
+        for (alpha, excel) in [
+            (1e14, 0.999_999_999_999_977),
+            (1e16, 0.999_999_999_999_999_8),
+            (1.778_279_410_038_92e16, 0.999_999_999_999_999_9),
+            (3.162_277_660_168_38e16, 0.999_999_999_999_999_9),
+            (5.623_413_251_903_49e16, 0.999_999),
+            (1e17, 0.999_999),
+            (1e18, 0.999_999),
+        ] {
+            assert_eq!(
+                beta_quantile(alpha, 1.0, 0.1),
+                excel,
+                "BETA.INV(0.1,{alpha},1)"
+            );
+        }
+        // Above p = 1/2 the flip keeps 1 (statistics.md "BETA.INV where the quantile rounds to
+        // 1 (T-3351)"); a beta other than 1 keeps its search.
+        assert_eq!(super::shape_one_quantile_cap(1e18, 1.0, 0.9), None);
+        assert_eq!(super::shape_one_quantile_cap(1e18, 0.5, 0.1), None);
     }
 
     #[test]

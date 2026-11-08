@@ -1,36 +1,17 @@
-# IronCalc Base
+# rustsheet-engine
 
-[![Crates.io][crates-badge]][crates-url]
-[![MIT licensed][mit-badge]][mit-url]
+RustSheet's calculation engine core: the formula parser, evaluator, Excel functions and cell
+storage. It started as a fork of IronCalc's `ironcalc_base` (MIT, see `LICENSE` at the repository
+root).
 
-[crates-badge]: https://img.shields.io/crates/v/ironcalc_base.svg
-[crates-url]: https://crates.io/crates/ironcalc_base
-[mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
-[mit-url]: https://github.com/ironcalc/ironcalc/blob/master/LICENSE
-
-
-## About
-
-IronCalc Base is the engine of the IronCalc ecosystem
-
-
-## Build
-To build the library
-
-```bash
-$ cargo build --release
-```
+This crate is internal to the workspace. Its `Model` API is inherited from the fork and has no
+stability promise, load limits or typed errors. Use the [`rustsheet`](../rustsheet) crate
+(`rustsheet::Workbook`) instead.
 
 ## Tests
 
-To run the tests:
-
 ```bash
-$ cargo tests
+cargo test -p rustsheet_engine
 ```
 
-
-
-
-
-
+Excel compatibility is measured by the eval harness (`make eval`), not by this crate's tests.

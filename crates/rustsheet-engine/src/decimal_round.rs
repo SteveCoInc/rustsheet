@@ -14,6 +14,15 @@
 //!
 //! So `ROUND(1.005,2)` is 1.01 (1.00499999999999989… becomes 1.00500000000000 first) and
 //! `ROUNDDOWN(123456789.123,-5)` is exactly 123400000.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
+#![cfg_attr(test, expect(clippy::manual_midpoint))]
+// LINT-DEBT-END
 
 use crate::arithmetic::{flush_subnormal, TINY_SUBNORMAL_BELOW};
 use crate::constants::EXCEL_PRECISION;
@@ -278,8 +287,10 @@ pub(crate) fn decimal_to_f64(digits: u64, place: i64) -> Option<f64> {
 
 /// `value` cut to 15 significant digits, as the double nearest that decimal: an exact tie at the
 /// 16th digit goes away from zero when `tie_away`, otherwise toward zero. A zero or non-finite
-/// `value` is itself. FLOOR's ratio snap and PERCENTRANK's truncation use it, so that a double
-/// just below a digit boundary counts as on it.
+/// `value` is itself. The engine's one 15-digit cut (T-4848): each caller names the tie rule
+/// Excel evidences for its use (numbers.md "A 16th-digit tie splits by use"), away from zero for
+/// comparisons, the ROUND-family ratio snaps, IM* parts and fraction digits, toward zero for EXACT
+/// and number text.
 pub(crate) fn cut_to_15_digits(value: f64, tie_away: bool) -> f64 {
     if !value.is_finite() || value == 0.0 {
         return value;

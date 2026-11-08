@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::items_after_statements
+)]
+// LINT-DEBT-END
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{num_error, value_error};
 use crate::functions::Function;

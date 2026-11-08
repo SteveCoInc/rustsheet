@@ -1,9 +1,28 @@
 //! A worksheet table's metadata (`Workbook::tables`) and the autoFilter criteria it keeps from its
 //! file (`Table::filter_columns`), which the export writes back and nothing re-applies.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_excessive_bools)]
+// LINT-DEBT-END
+
+use std::collections::HashMap;
 
 use bitcode::{Decode, Encode};
 
 use crate::types::sheet_names_match;
+
+/// The table `name` names among `tables`, keyed by name. Table names match ignoring case
+/// (gen-m8b names-case 5b5c0e20e82153bb): an exact hit is deterministic; the case-folded scan
+/// covers the rest. The one lookup the parser's structured references and a pivot's Table
+/// source use (T-4506).
+pub(crate) fn table_named<'t>(tables: &'t HashMap<String, Table>, name: &str) -> Option<&'t Table> {
+    tables.get(name).or_else(|| {
+        let lower = name.to_lowercase();
+        tables
+            .iter()
+            .find(|(table_name, _)| table_name.to_lowercase() == lower)
+            .map(|(_, table)| table)
+    })
+}
 
 /// A table on a worksheet (ECMA-376-1:2016 section 18.5.1.2).
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
@@ -188,17 +207,26 @@ pub struct CustomFilter {
 }
 
 impl CustomFilter {
-    /// Whether the condition holds for a cell that displays `text`, when that can be told here:
-    /// an `equal` (or absent) operator with a text operand holds when the text is the operand,
-    /// ignoring case (docs/research/t4895/uploads/custom: equals a, or equals c, keeps rows 2-7's
-    /// a and c; T-4939). `None` for every other operator, an operand that reads as a number
-    /// (a number cell may be compared by value) and one with a wildcard (`*`, `?` or `~`): none
-    /// of them is probed.
+    /// Whether the condition holds for a cell that displays `text`, when that can be told here.
+    /// An `equal` (or absent) operator with a text operand is `Some(true)` when the text is the
+    /// operand exactly (docs/research/t4895/uploads/custom: equals a, or equals c, keeps rows
+    /// 2-7's a and c; T-4939) and `Some(false)` when it differs by more than case. `None` when
+    /// the two differ only in case (custom-upper, T-4965: Excel changed no row), for every other
+    /// operator, for an operand that reads as a number (a number cell may be compared by value)
+    /// and for one with a wildcard (`*`, `?` or `~`): none of them is probed.
     #[must_use]
     pub fn keeps_text(&self, text: &str) -> Option<bool> {
         let equal = self.operator.as_deref().is_none_or(|op| op == "equal");
+        // `parse::<f64>` also reads "inf" and "nan" as numbers: conservative, it only makes more
+        // operands count as numeric and so return `None` (unprobed) rather than a verdict.
         let plain = !self.val.contains(['*', '?', '~']) && self.val.trim().parse::<f64>().is_err();
-        (equal && plain).then(|| text.to_lowercase() == self.val.to_lowercase())
+        if !(equal && plain) {
+            return None;
+        }
+        // A match that differs only in case is no verdict: Excel left every row as it was for
+        // operands "A" and "C" over cells a and c (T-4965, custom-upper upload).
+        let held = text == self.val;
+        (held || text.to_lowercase() != self.val.to_lowercase()).then_some(held)
     }
 }
 

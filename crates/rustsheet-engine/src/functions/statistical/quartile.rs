@@ -1,6 +1,9 @@
 //! QUARTILE.INC/.EXC (and QUARTILE). The data argument is read and sorted once per call
 //! (`sorted_data.rs`); `quart` lifts over arrays and ranges, floored per element
 //! (probes/stat-argument-modes H437-H448, probes/stat-whole-lift W24-W26, W46).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+// LINT-DEBT-END
 
 use super::percentile::{
     num_error, percentile_exc_impl, percentile_inc_impl, value_at, PERCENTILE_DATA,

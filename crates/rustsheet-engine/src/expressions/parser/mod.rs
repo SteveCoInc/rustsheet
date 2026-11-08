@@ -1,3 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::implicit_hasher,
+    clippy::struct_excessive_bools
+)]
+// LINT-DEBT-END
 /*!
 # GRAMMAR
 
@@ -47,7 +56,7 @@ pub(crate) const XLPM_PREFIX: &str = "_xlpm.";
 use super::lexer;
 use super::token;
 use super::token::TokenType;
-use super::types::*;
+use super::types::CellReferenceRC;
 
 use sheet_span::with_sheet_span;
 pub(crate) use sheet_span::{is_multi_sheet_span, is_span_or_if_of_span};
@@ -182,6 +191,10 @@ pub struct Parser {
     /// The formula is read from a file (xlsx import, `Input::StoredFormula`): a structured
     /// reference to an unknown table or column is `#REF!` (see [`Parser::set_loaded`]).
     loaded: bool,
+    /// The formula is an xlsx file's `<f>` text exactly as the file holds it (see
+    /// [`Parser::set_file_names`]): a newer function stored without its `_xlfn.` prefix is then no
+    /// function. Not set for the harness's case formulas, whose builder adds the prefixes.
+    file_names: bool,
     /// The formula is untyped text from outside the engine (`Model::set_user_input` called by an
     /// embedder or the bindings), not text the engine printed and re-enters itself: a padded bare
     /// column then reads as no column, as typed or loaded text does (see [`Parser::set_external`]).
@@ -265,6 +278,7 @@ impl Parser {
             bound_names: Vec::new(),
             typed: false,
             loaded: false,
+            file_names: false,
             external: false,
             api_name_body: false,
             r1c1_entry: false,
@@ -284,6 +298,17 @@ impl Parser {
     /// anywhere else (typed text, a re-parse after `remove_table`) it stays a parse error.
     pub fn set_loaded(&mut self, loaded: bool) {
         self.loaded = loaded;
+    }
+
+    /// Reads the next formulas' function names as an xlsx file stores them (`true`), or as typed
+    /// (`false`, the default). Excel recognises a function added after Excel 2007 in a file only
+    /// under its `_xlfn.` prefix: `PERCENTOF(1,2)` stored bare is `#NAME?`, `_xlfn.PERCENTOF(1,2)`
+    /// is 0.5 (docs/excel-semantics/xlsx-storage.md "Newer functions need `_xlfn.` in the file",
+    /// probes/catalog/function-name-forms A1-A2, T-0040). The xlsx cell importer sets it; the
+    /// harness's case formulas (`Input::StoredFormula`) do not, since their builder adds the
+    /// prefixes.
+    pub fn set_file_names(&mut self, file_names: bool) {
+        self.file_names = file_names;
     }
 
     /// Reads the next formulas as untyped text from outside the engine (`true`), or as the
@@ -341,6 +366,24 @@ impl Parser {
     pub fn set_language(&mut self, language: &'static Language) {
         self.language = language;
         self.lexer.set_language(language);
+    }
+
+    /// Runs `run` with the parser switched to the default locale and language, then puts
+    /// `locale` and `language` (the active ones) back. For callers that also borrow other fields
+    /// of the model ([`Model::with_default_parser`](crate::model::Model::with_default_parser) is this on the model's
+    /// own parser); the one place that switch is made (T-4693).
+    pub(crate) fn with_default_locale<R>(
+        &mut self,
+        locale: &'static Locale,
+        language: &'static Language,
+        run: impl FnOnce(&mut Parser) -> R,
+    ) -> R {
+        self.set_locale(get_default_locale());
+        self.set_language(get_default_language());
+        let result = run(self);
+        self.set_locale(locale);
+        self.set_language(language);
+        result
     }
 
     pub fn set_worksheets_and_names(

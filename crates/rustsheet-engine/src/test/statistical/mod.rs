@@ -21,6 +21,7 @@ mod test_fn_gamma;
 mod test_fn_gauss;
 mod test_fn_hyp_geom_dist;
 mod test_fn_log_norm;
+mod test_fn_moments;
 mod test_fn_norm_dist;
 mod test_fn_overflowing_squares;
 mod test_fn_pearson;

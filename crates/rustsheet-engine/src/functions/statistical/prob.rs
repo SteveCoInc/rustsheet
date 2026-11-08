@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 use super::element_errors::array_element_error;
 use super::paired::PairedArg;
 use crate::decimal_round::cut_to_15_digits;

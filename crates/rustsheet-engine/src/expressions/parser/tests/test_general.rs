@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::unreadable_literal)]
+// LINT-DEBT-END
 #![allow(clippy::panic)]
 
 use std::collections::HashMap;

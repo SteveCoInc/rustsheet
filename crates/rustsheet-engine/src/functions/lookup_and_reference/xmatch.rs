@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+// LINT-DEBT-END
 use crate::cast::calc_scalar_to_string;
 use crate::expressions::types::CellReferenceIndex;
 use crate::{
@@ -431,7 +434,7 @@ impl Model {
             CalcResult::Array(rows) => {
                 // An array constant must be a single row or single column.
                 let n_rows = rows.len();
-                let n_cols = rows.first().map(|r| r.len()).unwrap_or(0);
+                let n_cols = rows.first().map_or(0, std::vec::Vec::len);
                 let is_row_vec = n_rows == 1;
                 let is_col_vec = n_cols == 1;
                 if n_rows == 0 || n_cols == 0 || (!is_row_vec && !is_col_vec) {

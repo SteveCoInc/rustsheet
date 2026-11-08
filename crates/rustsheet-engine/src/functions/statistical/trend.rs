@@ -57,12 +57,11 @@ impl TrendData {
         };
         let y = &grids.y;
         let counting;
-        let x = match &grids.x {
-            Some(x) => x,
-            None => {
-                counting = Grid::counting(y.rows, y.cols);
-                &counting
-            }
+        let x = if let Some(x) = &grids.x {
+            x
+        } else {
+            counting = Grid::counting(y.rows, y.cols);
+            &counting
         };
         let layout = match layout(y, x, cell) {
             Ok(layout) => layout,
@@ -186,12 +185,11 @@ impl Model {
         };
         if let Ok(grids) = &data.grids {
             let counting;
-            let x = match &grids.x {
-                Some(x) => x,
-                None => {
-                    counting = Grid::counting(grids.y.rows, grids.y.cols);
-                    &counting
-                }
+            let x = if let Some(x) = &grids.x {
+                x
+            } else {
+                counting = Grid::counting(grids.y.rows, grids.y.cols);
+                &counting
             };
             if let Err(error) = self.spend_work(solve_units(&grids.y, x), cell) {
                 return error;

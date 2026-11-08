@@ -140,17 +140,16 @@ records); a known gap, not a deviation. A cache `<d>` date is converted to the w
 the 1904 epoch in a `date1904` workbook has no serial there and skips the cache like a pre-1900 date (UNVERIFIED: Excel's answer). The 1904 serial is the 1900 sum minus 1462, so a timestamp's fraction can differ by one ulp from the 1904 sum's; compute the date part in the target system before pivot date items are matched (T-2085). The 1904 values are derived from the 1462-day epoch offset, not from a 1904 pivot workbook.
 GETPIVOTDATA (T-2083, `functions/lookup_and_reference/getpivotdata.rs`, `pivot_index.rs`) aggregates the cache records the
 pairs pick, in cache order, rather than reading the rendered cell, and passes every cell of probes/getpivotdata-real-pivot.
-It answers `#REF!` for SPEC-0015's unknowns, never a guess; T-2085 has probed them ("GETPIVOTDATA on other pivot shapes (T-2085)", owners T-4804, T-4805, T-4806): several data fields, page fields or
+It answers `#REF!` for SPEC-0015's unknowns, never a guess; T-2085 has probed them ("GETPIVOTDATA on other pivot shapes (T-2085)", owners T-4805, T-4806; T-4804 implemented several data fields, a blank or `""` data_field, the one- and no-record aggregates and overflow): page fields or
 hidden items, a filter or AutoShow (`pivot_index.rs` `supported`, T-4165; UNVERIFIED, T-4799: before T-4165 it answered
-from the unfiltered records, so a pair naming an item the filter shows was a number and is now `#REF!`), a pair on a pivot with two fields on one axis, a reference meeting two pivots, `""` or an omitted
+from the unfiltered records, so a pair naming an item the filter shows was a number and is now `#REF!`), a pair on a pivot with two fields on one axis, a reference meeting two pivots, an omitted
 data_field, a number, date or
 boolean as an item (or an item that matches two cache items differing only in case), the same field twice with the same
-item, an error as an item (an error as a field passes through, T-4006 section, T-4823), an empty intersection of any aggregate but Sum, a picked record whose data-field value
+item, an error as an item (an error as a field passes through, T-4006 section, T-4823), a picked record whose data-field value
 is not a number, a number or boolean data_field, and an array data_field, pivot_table or field name (an array of items
 lifts). It propagates an error in a single-cell pivot_table even inside a pivot, where Excel picks the pivot like
 any of its cells (probes/t2085-getpivotdata-items Q!E20:E23; T-4805), and answers `#NUM!` for an overflowing aggregate,
-as Excel does, with one data field (the T-2085 section's "Overflow" paragraph; its two-data-field probe cells DF Q!K1:L3
-are `#REF!` until T-4804). Count pivots of an all-numeric field match
+as Excel does (the T-2085 section's "Overflow" paragraph, DF Q!K1:L3). Count pivots of an all-numeric field match
 Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674; they cannot tell COUNT from COUNTA).
 Max, Min, Product, Var and StdDev pivots: see the T-2085 section's "Aggregates over one record or none" paragraph.
 Structural edits: see "Pivot tables and structural edits" below. xlsx export writes pivots (T-4176; pivots.md "Excel for the web opens engine-exported pivot parts"), grouped caches included (T-4734; pivots.md "Excel for the web opens engine-exported grouped pivot caches").
@@ -172,6 +171,13 @@ Cell ids are sheet Q of each case. The cases are probes/t2085-getpivotdata-data-
   after `"Sales"` (DF A8, A9, A11).
 - `"Values"` as data_field is `#REF!` (DF A10).
 - A blank cell or `""` as data_field is `#REF!` with several data fields (DF A6, A7, A20).
+- UNVERIFIED (T-4911), engine choices with no cell behind them: the Values pair field matched by a custom
+  `dataCaption` (DF only has the default `Values`), its name and its item matched ignoring case; a `Values` name that collides
+  with a cache field name; a pivot with several data fields whose Values field shares an axis with another field
+  answers only its grand total (extending the one-data-field grand-total evidence of calipers formula_stress_test);
+  an omitted data_field is `#REF!` (SPEC-0015 unknown 8; DF A7, A14, A16 test `""` only); a blank data_field cell
+  inside another pivot's area or in this pivot's page-field area is `#REF!`; caption-versus-source-name precedence
+  (the caption wins).
 
 **Blank and empty data_field.** On S1, a pivot with one data field:
 - A blank cell inside the pivot's area gives the grand total: `S1!C3`, where ISBLANK is TRUE, gives 46. This matches
@@ -273,9 +279,11 @@ Not probed:
 
 Evidence: probes/t2085-getpivotdata-data-fields, -items and -layouts (excel-graph, 2026-11-07, T-2085).
 Status: VERIFIED (excel-graph).
-Ours: the T-2083 engine answers `#REF!` for most of these, or a value where Excel has `#REF!` (a blank cell outside
-the pivot). Implementing them is T-4804 (data fields and aggregates), T-4805 (items, records, arguments and arrays)
-and T-4806 (shown values and shapes). The calculated-field cells (LY G1:G3, Q!G1:G3) are T-4804's, and the date items' shown text is
+Ours: the "Several data fields", "Blank and empty data_field", "Aggregates over one record or none" and "Overflow"
+paragraphs are implemented (T-4804; `getpivotdata.rs` `pivot_data_field`, `pivot_index.rs` `supported`,
+`pivot/layout.rs` `aggregate`): DF passes every cell. Which data field wins when one's caption is another's source
+name is unprobed; the engine takes the caption. The rest answers `#REF!` for most of these until T-4805 (items,
+records, arguments and arrays) and T-4806 (shown values and shapes). The calculated-field cells (LY G1:G3) are T-5039's, and the date items' shown text is
 T-4807's.
 
 ## GETPIVOTDATA error arguments (T-4006)

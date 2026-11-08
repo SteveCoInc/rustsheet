@@ -2,6 +2,9 @@
 //! multi-cell range (`ArgKind::LiftArrays`, SPEC-0011; probes/eng-argument-modes E5:E7, E15:E17,
 //! E24:E26, E52:E54, probes/scalar-lift-shapes H9, probes/eng-later-argument-lift H4:H11): each
 //! kernel is the scalar function of one element, and builds its own errors with empty messages.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+// LINT-DEBT-END
 
 use crate::functions::lift::num_error;
 use crate::{
@@ -217,44 +220,68 @@ impl Model {
 
     // BIN2HEX(number, [places])
     pub(crate) fn fn_bin2hex(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Bin2hex, args, cell, &mut |model, values| {
-            model.convert_base(values, Radix::Bin, Radix::Hex, cell)
-        })
+        self.atp_lift_call(
+            Function::Bin2hex,
+            args,
+            (1, 2),
+            cell,
+            &mut |model, values| model.convert_base(values, Radix::Bin, Radix::Hex, cell),
+        )
     }
 
     // BIN2OCT(number, [places])
     pub(crate) fn fn_bin2oct(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Bin2oct, args, cell, &mut |model, values| {
-            model.convert_base(values, Radix::Bin, Radix::Oct, cell)
-        })
+        self.atp_lift_call(
+            Function::Bin2oct,
+            args,
+            (1, 2),
+            cell,
+            &mut |model, values| model.convert_base(values, Radix::Bin, Radix::Oct, cell),
+        )
     }
 
     // DEC2BIN(number, [places])
     pub(crate) fn fn_dec2bin(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Dec2Bin, args, cell, &mut |model, values| {
-            model.decimal_to_base(values, Radix::Bin, cell)
-        })
+        self.atp_lift_call(
+            Function::Dec2Bin,
+            args,
+            (1, 2),
+            cell,
+            &mut |model, values| model.decimal_to_base(values, Radix::Bin, cell),
+        )
     }
 
     // DEC2HEX(number, [places])
     pub(crate) fn fn_dec2hex(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Dec2hex, args, cell, &mut |model, values| {
-            model.decimal_to_base(values, Radix::Hex, cell)
-        })
+        self.atp_lift_call(
+            Function::Dec2hex,
+            args,
+            (1, 2),
+            cell,
+            &mut |model, values| model.decimal_to_base(values, Radix::Hex, cell),
+        )
     }
 
     // DEC2OCT(number, [places])
     pub(crate) fn fn_dec2oct(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Dec2oct, args, cell, &mut |model, values| {
-            model.decimal_to_base(values, Radix::Oct, cell)
-        })
+        self.atp_lift_call(
+            Function::Dec2oct,
+            args,
+            (1, 2),
+            cell,
+            &mut |model, values| model.decimal_to_base(values, Radix::Oct, cell),
+        )
     }
 
     // HEX2BIN(number, [places])
     pub(crate) fn fn_hex2bin(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Hex2bin, args, cell, &mut |model, values| {
-            model.convert_base(values, Radix::Hex, Radix::Bin, cell)
-        })
+        self.atp_lift_call(
+            Function::Hex2bin,
+            args,
+            (1, 2),
+            cell,
+            &mut |model, values| model.convert_base(values, Radix::Hex, Radix::Bin, cell),
+        )
     }
 
     // HEX2DEC(number)
@@ -266,16 +293,24 @@ impl Model {
 
     // HEX2OCT(number, [places])
     pub(crate) fn fn_hex2oct(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Hex2oct, args, cell, &mut |model, values| {
-            model.convert_base(values, Radix::Hex, Radix::Oct, cell)
-        })
+        self.atp_lift_call(
+            Function::Hex2oct,
+            args,
+            (1, 2),
+            cell,
+            &mut |model, values| model.convert_base(values, Radix::Hex, Radix::Oct, cell),
+        )
     }
 
     // OCT2BIN(number, [places])
     pub(crate) fn fn_oct2bin(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Oct2bin, args, cell, &mut |model, values| {
-            model.convert_base(values, Radix::Oct, Radix::Bin, cell)
-        })
+        self.atp_lift_call(
+            Function::Oct2bin,
+            args,
+            (1, 2),
+            cell,
+            &mut |model, values| model.convert_base(values, Radix::Oct, Radix::Bin, cell),
+        )
     }
 
     // OCT2DEC(number)
@@ -287,8 +322,12 @@ impl Model {
 
     // OCT2HEX(number, [places])
     pub(crate) fn fn_oct2hex(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Oct2hex, args, cell, &mut |model, values| {
-            model.convert_base(values, Radix::Oct, Radix::Hex, cell)
-        })
+        self.atp_lift_call(
+            Function::Oct2hex,
+            args,
+            (1, 2),
+            cell,
+            &mut |model, values| model.convert_base(values, Radix::Oct, Radix::Hex, cell),
+        )
     }
 }

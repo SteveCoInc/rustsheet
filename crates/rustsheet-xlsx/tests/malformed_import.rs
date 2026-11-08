@@ -1,4 +1,7 @@
 //! Malformed workbooks are untrusted input: import must return an error, never panic (T-0118).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string)]
+// LINT-DEBT-END
 
 use std::error::Error;
 use std::io::{Cursor, Read, Write};
@@ -843,11 +846,10 @@ fn many_merged_ranges_import_quickly_and_keep_the_first_of_intersecting_ones() -
     Ok(())
 }
 
-/// Whole-column merged ranges, a thousand of them: the import never walks the 2^30 cells the ranges
-/// name (T-3442; a walk of their area, about 10^9 lookups, took minutes) and keeps what their
-/// covered cells hold, as Excel does (T-4722; docs/excel-semantics/xlsx-storage.md "A merged range
-/// keeps the values of its covered cells"). It takes about 0.1 s; the bound of 10 s leaves room for
-/// a slow runner.
+/// Whole-column merged ranges, a thousand of them: importing them walks the ranges, not the 2^30 cells they name, and keeps the stored content of
+/// the covered cells (T-3442, SPEC-0036 I1). It
+/// takes about 0.1 s; the bound of 10 s leaves room for a slow runner, while the old walk, about
+/// 10^9 lookups, took minutes.
 #[test]
 fn many_whole_column_merges_import_quickly_and_keep_covered_cells() -> TestResult {
     let refs: Vec<String> = (1..=1000)
@@ -919,16 +921,16 @@ fn covered_cells_keep_their_values_and_styles_on_import() -> TestResult {
 }
 
 /// fixtures/merged-covered-formula's shape: a formula `=A1+1` in the covered B1 of A1:B1 is
-/// recalculated (2), `=B1` reads it, ISFORMULA is TRUE and `=COUNT(A1:B1)` is 2 (excel-graph,
-/// T-4148). Saving writes the covered formula and the covered text back, and the reloaded
-/// workbook calculates the same.
+/// recalculated (2), `=B1` reads it, ISFORMULA (stored `_xlfn.ISFORMULA`) is TRUE and
+/// `=COUNT(A1:B1)` is 2 (excel-graph, T-4148). Saving writes the covered formula and the covered
+/// text back, and the reloaded workbook calculates the same.
 #[test]
 fn covered_cells_calculate_and_survive_a_round_trip() -> TestResult {
     let rows = concat!(
         r#"<row r="1"><c r="A1"><v>1</v></c><c r="B1"><f>A1+1</f><v>0</v></c></row>"#,
         r#"<row r="2"><c r="A2" t="inlineStr"><is><t>a</t></is></c>"#,
         r#"<c r="B2" t="inlineStr"><is><t>kept</t></is></c></row>"#,
-        r#"<row r="3"><c r="A3"><f>B1</f></c><c r="B3"><f>ISFORMULA(B1)</f></c>"#,
+        r#"<row r="3"><c r="A3"><f>B1</f></c><c r="B3"><f>_xlfn.ISFORMULA(B1)</f></c>"#,
         r#"<c r="C3"><f>COUNT(A1:B1)</f></c><c r="D3"><f>B2</f></c></row>"#,
     );
     let refs = ["A1:B1", "A2:B2"].map(String::from);

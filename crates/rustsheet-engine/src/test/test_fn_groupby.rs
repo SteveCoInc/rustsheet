@@ -25,9 +25,9 @@ fn region_sales() -> Model {
     ];
     for (i, (region, sales)) in rows.iter().enumerate() {
         if !region.is_empty() {
-            model._set(&format!("A{}", i + 1), region);
+            model.set_a1(&format!("A{}", i + 1), region);
         }
-        model._set(&format!("B{}", i + 1), sales);
+        model.set_a1(&format!("B{}", i + 1), sales);
     }
     model
 }
@@ -35,7 +35,7 @@ fn region_sales() -> Model {
 /// The texts of column `column`, rows `first..=last`.
 fn column(model: &Model, column: &str, first: usize, last: usize) -> Vec<String> {
     (first..=last)
-        .map(|row| model._get_text(&format!("{column}{row}")))
+        .map(|row| model.get_text_a1(&format!("{column}{row}")))
         .collect()
 }
 
@@ -44,7 +44,7 @@ fn groups_sorted_case_folded_with_blank_last_and_total() {
     // G!A1: East and east are one group shown with the first spelling; the blank key is its own
     // group, shown as 0 and sorted last; the total covers every value.
     let mut model = region_sales();
-    model._set("D1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)))");
+    model.set_a1("D1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)))");
     model.evaluate();
     assert_eq!(
         column(&model, "D", 1, 7),
@@ -54,7 +54,7 @@ fn groups_sorted_case_folded_with_blank_last_and_total() {
         column(&model, "E", 1, 7),
         ["45", "7", "-3", "72.5", "9", "130.5", ""]
     );
-    assert_eq!(model._get_text("F1"), "");
+    assert_eq!(model.get_text_a1("F1"), "");
 }
 
 #[test]
@@ -62,16 +62,16 @@ fn function_inputs_keep_source_order_and_total_uses_all_values() {
     // G!S73 (AVERAGE total 13.05 = 130.5/10, not the mean of the group means), G!A121 (ROWS),
     // G!AB97 (ARRAYTOTEXT keeps source order).
     let mut model = region_sales();
-    model._set("D1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,AVERAGE(x)))");
-    model._set("G1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,ROWS(x)))");
-    model._set("J1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,ARRAYTOTEXT(x)))");
+    model.set_a1("D1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,AVERAGE(x)))");
+    model.set_a1("G1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,ROWS(x)))");
+    model.set_a1("J1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,ARRAYTOTEXT(x)))");
     model.evaluate();
     assert_eq!(
         column(&model, "E", 1, 6),
         ["15", "7", "-3", "18.125", "9", "13.05"]
     );
     assert_eq!(column(&model, "H", 1, 6), ["3", "1", "1", "4", "1", "10"]);
-    assert_eq!(model._get_text("K1"), "10, 30, 5");
+    assert_eq!(model.get_text_a1("K1"), "10, 30, 5");
 }
 
 #[test]
@@ -82,11 +82,11 @@ fn mixed_key_types_sort_numbers_text_booleans_blank() {
     let values = ["10", "20", "30", "40", "5", "7", "0", "9", "-3", "12.5"];
     for (i, (key, value)) in keys.iter().zip(values).enumerate() {
         if !key.is_empty() {
-            model._set(&format!("A{}", i + 1), key);
+            model.set_a1(&format!("A{}", i + 1), key);
         }
-        model._set(&format!("B{}", i + 1), value);
+        model.set_a1(&format!("B{}", i + 1), value);
     }
-    model._set("D1", "=GROUPBY(A1:A10,B1:B10,LAMBDA(x,SUM(x)))");
+    model.set_a1("D1", "=GROUPBY(A1:A10,B1:B10,LAMBDA(x,SUM(x)))");
     model.evaluate();
     assert_eq!(
         column(&model, "D", 1, 9),
@@ -105,18 +105,18 @@ fn number_keys_compare_exactly() {
     let mut model = new_empty_model();
     let keys = ["=0.1+0.2", "0.3", "0", "=-0", "=1E-17", "1", "=1+1E-15"];
     for (i, key) in keys.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), key);
-        model._set(&format!("B{}", i + 1), &(i + 1).to_string());
+        model.set_a1(&format!("A{}", i + 1), key);
+        model.set_a1(&format!("B{}", i + 1), &(i + 1).to_string());
     }
-    model._set("D1", "=GROUPBY(A1:A7,B1:B7,LAMBDA(x,SUM(x)))");
-    model._set("G1", "=INDEX(D1#,4,1)=0.1+0.2");
+    model.set_a1("D1", "=GROUPBY(A1:A7,B1:B7,LAMBDA(x,SUM(x)))");
+    model.set_a1("G1", "=INDEX(D1#,4,1)=0.1+0.2");
     model.evaluate();
     assert_eq!(
         column(&model, "E", 1, 7),
         ["7", "5", "2", "1", "6", "7", "28"]
     );
-    assert_eq!(model._get_text("D7"), "Total");
-    assert_eq!(model._get_text("G1"), "TRUE");
+    assert_eq!(model.get_text_a1("D7"), "Total");
+    assert_eq!(model.get_text_a1("G1"), "TRUE");
 }
 
 /// Inside the array the blank key is a true blank: INDEX gives TYPE 1 and `&""` "" (probes/
@@ -125,21 +125,21 @@ fn number_keys_compare_exactly() {
 #[test]
 fn blank_key_is_a_true_blank_inside_the_array() {
     let mut model = region_sales();
-    model._set(
+    model.set_a1(
         "J1",
         "=TYPE(INDEX(GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x))),5,1))&INDEX(GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x))),5,1)",
     );
-    model._set("J2", "=COUNT(GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x))))");
-    model._set(
+    model.set_a1("J2", "=COUNT(GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x))))");
+    model.set_a1(
         "J3",
         "=TEXTJOIN(\"|\",FALSE,IFERROR(GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),,0),\"#\"))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("J1"), "1");
+    assert_eq!(model.get_text_a1("J1"), "1");
     // The six sums; the blank key is not a number (it was 0, giving 7).
-    assert_eq!(model._get_text("J2"), "6");
+    assert_eq!(model.get_text_a1("J2"), "6");
     assert_eq!(
-        model._get_text("J3"),
+        model.get_text_a1("J3"),
         "East|45|North|7|South|-3|West|72.5|0|9"
     );
 }
@@ -150,22 +150,22 @@ fn total_row_fillers_are_empty_text_and_blank_key_spills_as_zero() {
     // displays 0 when spilled (a true blank inside the array).
     let mut model = region_sales();
     for row in 2..=11 {
-        model._set(&format!("C{row}"), "k");
+        model.set_a1(&format!("C{row}"), "k");
     }
-    model._set(
+    model.set_a1(
         "E20",
         "=GROUPBY(HSTACK(A2:A11,C2:C11),B2:B11,LAMBDA(x,SUM(x)))",
     );
-    model._set("J1", "=ISTEXT(INDEX(E20#,6,2))");
-    model._set("J2", "=INDEX(E20#,6,2)");
-    model._set("J3", "=ISNUMBER(INDEX(E20#,5,1))");
-    model._set("J4", "=INDEX(E20#,5,1)");
+    model.set_a1("J1", "=ISTEXT(INDEX(E20#,6,2))");
+    model.set_a1("J2", "=INDEX(E20#,6,2)");
+    model.set_a1("J3", "=ISNUMBER(INDEX(E20#,5,1))");
+    model.set_a1("J4", "=INDEX(E20#,5,1)");
     model.evaluate();
     assert_eq!(
         column(&model, "E", 20, 25),
         ["East", "North", "South", "West", "0", "Total"]
     );
-    assert_eq!(model._get_text("F25"), "");
+    assert_eq!(model.get_text_a1("F25"), "");
     assert_eq!(column(&model, "J", 1, 4), ["TRUE", "", "TRUE", "0"]);
 }
 
@@ -174,9 +174,9 @@ fn several_key_and_value_columns() {
     // G!J73: value columns aggregate side by side.
     let mut model = region_sales();
     for row in 2..=11 {
-        model._set(&format!("C{row}"), "1");
+        model.set_a1(&format!("C{row}"), "1");
     }
-    model._set("E1", "=GROUPBY(A2:A11,B2:C11,LAMBDA(x,SUM(x)))");
+    model.set_a1("E1", "=GROUPBY(A2:A11,B2:C11,LAMBDA(x,SUM(x)))");
     model.evaluate();
     assert_eq!(column(&model, "G", 1, 6), ["3", "1", "1", "4", "1", "10"]);
 }
@@ -185,38 +185,38 @@ fn several_key_and_value_columns() {
 fn field_headers() {
     let mut model = region_sales();
     // Omitted: row 1 is detected as headers and hidden (G!J1).
-    model._set("D1", "=GROUPBY(A1:A11,B1:B11,LAMBDA(x,SUM(x)))");
+    model.set_a1("D1", "=GROUPBY(A1:A11,B1:B11,LAMBDA(x,SUM(x)))");
     // 0: no headers, "Region" is a group summing the text "Sales" to 0 (G!S1).
-    model._set("G1", "=GROUPBY(A1:A11,B1:B11,LAMBDA(x,SUM(x)),0)");
+    model.set_a1("G1", "=GROUPBY(A1:A11,B1:B11,LAMBDA(x,SUM(x)),0)");
     // 1: headers, not shown (G!AB1).
-    model._set("J1", "=GROUPBY(A1:A11,B1:B11,LAMBDA(x,SUM(x)),1)");
+    model.set_a1("J1", "=GROUPBY(A1:A11,B1:B11,LAMBDA(x,SUM(x)),1)");
     // 2: no headers, generated ones shown (G!A25).
-    model._set("M1", "=GROUPBY(A1:A11,B1:B11,LAMBDA(x,SUM(x)),2)");
+    model.set_a1("M1", "=GROUPBY(A1:A11,B1:B11,LAMBDA(x,SUM(x)),2)");
     // 3: headers shown (G!J25); over data without headers it consumes the first record (G!S25).
-    model._set("P1", "=GROUPBY(A1:A11,B1:B11,LAMBDA(x,SUM(x)),3)");
-    model._set("S1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),3)");
+    model.set_a1("P1", "=GROUPBY(A1:A11,B1:B11,LAMBDA(x,SUM(x)),3)");
+    model.set_a1("S1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),3)");
     // 4 is #VALUE! (G!A217).
-    model._set("V1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),4)");
+    model.set_a1("V1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),4)");
     model.evaluate();
-    assert_eq!(model._get_text("D1"), "East");
-    assert_eq!(model._get_text("E6"), "130.5");
+    assert_eq!(model.get_text_a1("D1"), "East");
+    assert_eq!(model.get_text_a1("E6"), "130.5");
     assert_eq!(
         column(&model, "G", 1, 7),
         ["East", "North", "Region", "South", "West", "0", "Total"]
     );
-    assert_eq!(model._get_text("H3"), "0");
-    assert_eq!(model._get_text("J1"), "East");
-    assert_eq!(model._get_text("M1"), "Row Field 1");
-    assert_eq!(model._get_text("N1"), "Value 1");
-    assert_eq!(model._get_text("M4"), "Region");
+    assert_eq!(model.get_text_a1("H3"), "0");
+    assert_eq!(model.get_text_a1("J1"), "East");
+    assert_eq!(model.get_text_a1("M1"), "Row Field 1");
+    assert_eq!(model.get_text_a1("N1"), "Value 1");
+    assert_eq!(model.get_text_a1("M4"), "Region");
     assert_eq!(column(&model, "P", 1, 2), ["Region", "East"]);
-    assert_eq!(model._get_text("Q1"), "Sales");
+    assert_eq!(model.get_text_a1("Q1"), "Sales");
     assert_eq!(column(&model, "S", 1, 2), ["East", "East"]);
     assert_eq!(
         column(&model, "T", 1, 7),
         ["10", "35", "7", "-3", "72.5", "9", "120.5"]
     );
-    assert_eq!(model._get_text("V1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("V1"), "#VALUE!");
 }
 
 #[test]
@@ -224,19 +224,19 @@ fn header_auto_detect_looks_at_the_first_values_only() {
     // probes/groupby-pivotby-followup3 G!A145-A421: text over non-text is a header, all text is
     // data, text over mixed rows is #VALUE!.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         r#"=GROUPBY({"k";"a";"b";"a"},{"v";1;2;3},LAMBDA(x,SUM(x)))"#,
     );
-    model._set(
+    model.set_a1(
         "D1",
         r#"=GROUPBY({"k";"a";"b";"a"},{5;1;2;3},LAMBDA(x,SUM(x)))"#,
     );
-    model._set(
+    model.set_a1(
         "G1",
         r#"=GROUPBY({"k";"a";"b";"a"},{"v";"1";"2";"3"},LAMBDA(x,SUM(x)))"#,
     );
-    model._set(
+    model.set_a1(
         "J1",
         r#"=GROUPBY({"k";"a";"b";"a"},{"v";1;2;"3"},LAMBDA(x,SUM(x)))"#,
     );
@@ -247,7 +247,7 @@ fn header_auto_detect_looks_at_the_first_values_only() {
     assert_eq!(column(&model, "E", 1, 4), ["4", "2", "5", "11"]);
     assert_eq!(column(&model, "G", 1, 4), ["a", "b", "k", "Total"]);
     assert_eq!(column(&model, "H", 1, 4), ["0", "0", "0", "0"]);
-    assert_eq!(model._get_text("J1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("J1"), "#VALUE!");
 }
 
 #[test]
@@ -255,34 +255,34 @@ fn total_depth() {
     let mut model = region_sales();
     // 0: no totals (G!A49); -1: the total on top (G!AB49); 3 is #VALUE!, so is 2 with a single key
     // field (probes/groupby-pivotby-followup G!A101, G!A161).
-    model._set("D1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),,0)");
-    model._set("G1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),,-1)");
-    model._set("J1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),,3)");
-    model._set("J2", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),,2)");
+    model.set_a1("D1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),,0)");
+    model.set_a1("G1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),,-1)");
+    model.set_a1("J1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),,3)");
+    model.set_a1("J2", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),,2)");
     model.evaluate();
     assert_eq!(column(&model, "D", 5, 6), ["0", ""]);
     assert_eq!(column(&model, "G", 1, 2), ["Total", "East"]);
-    assert_eq!(model._get_text("H1"), "130.5");
+    assert_eq!(model.get_text_a1("H1"), "130.5");
     assert_eq!(column(&model, "J", 1, 2), ["#VALUE!", "#VALUE!"]);
 }
 
 #[test]
 fn array_results_errors_and_mismatched_heights() {
     let mut model = region_sales();
-    model._set("B3", "=1/0");
+    model.set_a1("B3", "=1/0");
     // A LAMBDA returning an array is #VALUE! in every cell, one-record groups too (G!J121).
-    model._set("D1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,x))");
+    model.set_a1("D1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,x))");
     // An error value is its group's result and the total's (G!J193).
-    model._set("G1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)))");
+    model.set_a1("G1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)))");
     // Values one row shorter than the keys (G!AB193, followup G!A1).
-    model._set("J1", "=GROUPBY(A2:A11,B2:B10,LAMBDA(x,SUM(x)))");
+    model.set_a1("J1", "=GROUPBY(A2:A11,B2:B10,LAMBDA(x,SUM(x)))");
     model.evaluate();
     assert_eq!(column(&model, "E", 1, 6), vec!["#VALUE!"; 6]);
     assert_eq!(
         column(&model, "H", 1, 6),
         ["45", "7", "-3", "#DIV/0!", "9", "#DIV/0!"]
     );
-    assert_eq!(model._get_text("J1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("J1"), "#VALUE!");
 }
 
 #[test]
@@ -291,22 +291,22 @@ fn many_distinct_keys_are_grouped_or_refused_by_the_array_size_check() {
     // 1e6 + 1 rows by 2 columns, over the array size limit, so GROUPBY is refused before any
     // LAMBDA call or output allocation. 20,000 distinct keys are grouped (no quadratic search).
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=GROUPBY(SEQUENCE(1000000),SEQUENCE(1000000),LAMBDA(x,SUM(x)))",
     );
-    model._set(
+    model.set_a1(
         "B1",
         "=ROWS(GROUPBY(SEQUENCE(20000),SEQUENCE(20000),LAMBDA(x,SUM(x))))",
     );
-    model._set(
+    model.set_a1(
         "C1",
         "=INDEX(GROUPBY(-SEQUENCE(20000),SEQUENCE(20000),LAMBDA(x,SUM(x))),1,2)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("B1"), "20001");
-    assert_eq!(model._get_text("C1"), "20000");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), "20001");
+    assert_eq!(model.get_text_a1("C1"), "20000");
 }
 
 #[test]
@@ -315,16 +315,16 @@ fn lambda_gets_values_with_blanks_and_another_arity_is_value_error() {
     // G!J217 (a LAMBDA of another arity is #VALUE! in each cell),
     // probes/groupby-blank-values G!S25 (ISBLANK is TRUE).
     let mut model = region_sales();
-    model._set("B9", "");
-    model._set("D1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,ISREF(x)))");
-    model._set("G1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,COUNTA(x)))");
-    model._set(
+    model.set_a1("B9", "");
+    model.set_a1("D1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,ISREF(x)))");
+    model.set_a1("G1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,COUNTA(x)))");
+    model.set_a1(
         "J1",
         "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,ISBLANK(INDEX(x,1,1))))",
     );
-    model._set("P1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,y,x))");
+    model.set_a1("P1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,y,x))");
     model.evaluate();
-    assert_eq!(model._get_text("E1"), "FALSE");
+    assert_eq!(model.get_text_a1("E1"), "FALSE");
     assert_eq!(column(&model, "H", 1, 6), ["3", "1", "1", "4", "1", "10"]);
     assert_eq!(column(&model, "K", 4, 5), ["FALSE", "TRUE"]);
     assert_eq!(column(&model, "Q", 1, 6), vec!["#VALUE!"; 6]);
@@ -335,14 +335,14 @@ fn argument_corners_are_value_errors() {
     // probes/groupby-lambda-forms: a header row without records (G!S193), a non-function
     // (G!A217), fractional total_depth and field_headers (G!J241, G!S241).
     let mut model = region_sales();
-    model._set("D1", "=GROUPBY(A1,B1,LAMBDA(x,SUM(x)),1)");
-    model._set("D2", "=GROUPBY(A2:A11,B2:B11,5)");
-    model._set("D3", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),,0.5)");
-    model._set("D4", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),2.5)");
-    model._set("D7", "=GROUPBY(A2:A11,B2:B11,_xleta.SUM)");
+    model.set_a1("D1", "=GROUPBY(A1,B1,LAMBDA(x,SUM(x)),1)");
+    model.set_a1("D2", "=GROUPBY(A2:A11,B2:B11,5)");
+    model.set_a1("D3", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),,0.5)");
+    model.set_a1("D4", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),2.5)");
+    model.set_a1("D7", "=GROUPBY(A2:A11,B2:B11,_xleta.SUM)");
     model.evaluate();
     assert_eq!(column(&model, "D", 1, 4), vec!["#VALUE!"; 4]);
-    assert_eq!(model._get_text("E7"), "45");
+    assert_eq!(model.get_text_a1("E7"), "45");
 }
 
 #[test]
@@ -350,17 +350,17 @@ fn generated_headers_over_two_keys_and_shown_headers_above_a_top_total() {
     // probes/groupby-lambda-forms G!J169 and G!S169.
     let mut model = region_sales();
     for row in 1..=11 {
-        model._set(&format!("C{row}"), if row == 1 { "Units" } else { "1" });
+        model.set_a1(&format!("C{row}"), if row == 1 { "Units" } else { "1" });
     }
-    model._set(
+    model.set_a1(
         "E1",
         "=GROUPBY(HSTACK(A1:A11,A1:A11),B1:C11,LAMBDA(x,SUM(x)),2)",
     );
-    model._set("E20", "=GROUPBY(A1:A11,B1:B11,LAMBDA(x,SUM(x)),3,-1)");
+    model.set_a1("E20", "=GROUPBY(A1:A11,B1:B11,LAMBDA(x,SUM(x)),3,-1)");
     model.evaluate();
     let header: Vec<String> = ["E1", "F1", "G1", "H1"]
         .iter()
-        .map(|c| model._get_text(c))
+        .map(|c| model.get_text_a1(c))
         .collect();
     assert_eq!(header, ["Row Field 1", "Row Field 2", "Value 1", "Value 2"]);
     assert_eq!(column(&model, "E", 20, 22), ["Region", "Total", "East"]);
@@ -386,7 +386,7 @@ fn records() -> Model {
     for (i, row) in rows.iter().enumerate() {
         for (cell, column) in row.iter().zip(["A", "B", "C", "D", "E"]) {
             if !cell.is_empty() {
-                model._set(&format!("{column}{}", i + 1), cell);
+                model.set_a1(&format!("{column}{}", i + 1), cell);
             }
         }
     }
@@ -396,7 +396,7 @@ fn records() -> Model {
 /// The texts of row `row`, columns `first..=last` (letters).
 fn row(model: &Model, row: usize, first: char, last: char) -> Vec<String> {
     (first..=last)
-        .map(|column| model._get_text(&format!("{column}{row}")))
+        .map(|column| model.get_text_a1(&format!("{column}{row}")))
         .collect()
 }
 
@@ -405,13 +405,13 @@ fn sort_order_by_keys_and_by_value_columns() {
     let mut model = records();
     // -1: keys descending, blank and Total last (G!A145); 2 / -2: by the value, the blank key not
     // pinned (G!J145, G!S145).
-    model._set("H1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,-1)");
-    model._set("J1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,2)");
-    model._set("L1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,-2)");
+    model.set_a1("H1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,-1)");
+    model.set_a1("J1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,2)");
+    model.set_a1("L1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,-2)");
     // {2,-1}: Region descending, then Product ascending, whatever the array order (G!AB145,
     // probes/groupby-pivotby-followup G!A341-A501); a vertical array too (groupby-sort-filter-args B15).
-    model._set("N1", "=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,,{2,-1})");
-    model._set("R1", "=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,0,{2;-1})");
+    model.set_a1("N1", "=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,,{2,-1})");
+    model.set_a1("R1", "=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,0,{2;-1})");
     model.evaluate();
     assert_eq!(
         column(&model, "H", 1, 6),
@@ -446,8 +446,8 @@ fn sort_order_by_keys_and_by_value_columns() {
 fn value_sort_over_two_keys_orders_parents_by_their_aggregate() {
     // probes/groupby-pivotby-followup2 G!A261 (3), groupby-sort-filter-args B21-B22 ({-3}, -3).
     let mut model = records();
-    model._set("H1", "=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,0,3)");
-    model._set("L1", "=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,0,{-3})");
+    model.set_a1("H1", "=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,0,3)");
+    model.set_a1("L1", "=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,0,{-3})");
     model.evaluate();
     assert_eq!(
         column(&model, "H", 1, 8),
@@ -473,19 +473,19 @@ fn value_sort_ties_keep_key_order_and_mixed_values_sort_like_sort() {
     // stay in ascending key order both ways), B35 (numbers before text), B36-B37 (an error last
     // ascending, first descending), B38-B39 (headers and a top total stay in place).
     let mut model = records();
-    model._set("H1", "=GROUPBY(A2:A11,D2:E11,_xleta.SUM,,0,3)");
-    model._set("K1", "=GROUPBY(A2:A11,D2:D11,_xleta.COUNT,,0,2)");
-    model._set("M1", "=GROUPBY(A2:A11,D2:D11,_xleta.COUNT,,0,-2)");
-    model._set(
+    model.set_a1("H1", "=GROUPBY(A2:A11,D2:E11,_xleta.SUM,,0,3)");
+    model.set_a1("K1", "=GROUPBY(A2:A11,D2:D11,_xleta.COUNT,,0,2)");
+    model.set_a1("M1", "=GROUPBY(A2:A11,D2:D11,_xleta.COUNT,,0,-2)");
+    model.set_a1(
         "O1",
         r#"=GROUPBY(A2:A11,D2:D11,LAMBDA(x,IF(SUM(x)>20,"t",SUM(x))),,0,2)"#,
     );
-    model._set(
+    model.set_a1(
         "Q1",
         "=GROUPBY(A2:A11,IF(A2:A11=\"West\",NA(),E2:E11),_xleta.SUM,,0,-2)",
     );
-    model._set("S1", "=GROUPBY(A1:A11,D1:D11,_xleta.SUM,3,,-2)");
-    model._set("U1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,-1,2)");
+    model.set_a1("S1", "=GROUPBY(A1:A11,D1:D11,_xleta.SUM,3,,-2)");
+    model.set_a1("U1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,-1,2)");
     model.evaluate();
     assert_eq!(
         column(&model, "H", 1, 5),
@@ -504,9 +504,9 @@ fn value_sort_ties_keep_key_order_and_mixed_values_sort_like_sort() {
         ["South", "North", "0", "East", "West"]
     );
     assert_eq!(column(&model, "Q", 1, 2), ["West", "East"]);
-    assert_eq!(model._get_text("R1"), "#N/A");
+    assert_eq!(model.get_text_a1("R1"), "#N/A");
     assert_eq!(column(&model, "S", 1, 3), ["Region", "West", "East"]);
-    assert_eq!(model._get_text("S7"), "Total");
+    assert_eq!(model.get_text_a1("S7"), "Total");
     assert_eq!(column(&model, "U", 1, 3), ["Total", "South", "North"]);
 }
 
@@ -520,7 +520,7 @@ fn invalid_sort_orders_are_value_errors() {
         "3", "0", "-3", "1.5", "-0.5", "\"2\"", "TRUE", "Z1", "\"\"", "{1,-1}", "{0,1}",
     ];
     for (i, order) in orders.iter().enumerate() {
-        model._set(
+        model.set_a1(
             &format!("H{}", i + 1),
             &format!("=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,{order})"),
         );
@@ -535,14 +535,14 @@ fn invalid_sort_orders_are_value_errors() {
         "{1,2,3}",
     ];
     for (i, order) in two_keys.iter().enumerate() {
-        model._set(
+        model.set_a1(
             &format!("I{}", i + 1),
             &format!("=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,,{order})"),
         );
     }
-    model._set("J1", "=GROUPBY(A2:A11,D2:E11,_xleta.SUM,,,{2,3})");
-    model._set("J2", "=GROUPBY(A2:A11,D2:E11,_xleta.SUM,,,4)");
-    model._set("J3", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,NA())");
+    model.set_a1("J1", "=GROUPBY(A2:A11,D2:E11,_xleta.SUM,,,{2,3})");
+    model.set_a1("J2", "=GROUPBY(A2:A11,D2:E11,_xleta.SUM,,,4)");
+    model.set_a1("J3", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,NA())");
     model.evaluate();
     assert_eq!(
         column(&model, "H", 1, orders.len()),
@@ -559,25 +559,25 @@ fn invalid_sort_orders_are_value_errors() {
 fn filter_array_drops_rows_before_grouping() {
     let mut model = records();
     // G!A169: groups without kept rows vanish and the total covers the kept rows.
-    model._set("H1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,C2:C11=2023)");
+    model.set_a1("H1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,C2:C11=2023)");
     // groupby-sort-filter-args B42 (numbers: 0 drops), B44 ("TRUE"/"FALSE" text), B52 (blank drops),
     // B55 and followup3 G!A85 (a scalar keeps or drops every row).
-    model._set("J1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,C2:C11-2023)");
-    model._set(
+    model.set_a1("J1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,C2:C11-2023)");
+    model.set_a1(
         "L1",
         r#"=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,IF(C2:C11=2023,"TRUE","FALSE"))"#,
     );
-    model._set(
+    model.set_a1(
         "N1",
         "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,IF(C2:C11=2023,TRUE,Z2:Z11))",
     );
-    model._set("P1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,2)");
+    model.set_a1("P1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,2)");
     // With headers the filter may cover the header row or only the records (B56-B59).
-    model._set("R1", "=GROUPBY(A1:A11,D1:D11,_xleta.SUM,1,,,C1:C11=2023)");
-    model._set("T1", "=GROUPBY(A1:A11,D1:D11,_xleta.SUM,1,,,C2:C11=2023)");
-    model._set("V1", "=GROUPBY(A1:A11,D1:D11,_xleta.SUM,3,,,C1:C11<>2024)");
+    model.set_a1("R1", "=GROUPBY(A1:A11,D1:D11,_xleta.SUM,1,,,C1:C11=2023)");
+    model.set_a1("T1", "=GROUPBY(A1:A11,D1:D11,_xleta.SUM,1,,,C2:C11=2023)");
+    model.set_a1("V1", "=GROUPBY(A1:A11,D1:D11,_xleta.SUM,3,,,C1:C11<>2024)");
     // B60: filtered, then sorted by value.
-    model._set("X1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,-2,C2:C11<>2023)");
+    model.set_a1("X1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,-2,C2:C11<>2023)");
     model.evaluate();
     assert_eq!(column(&model, "H", 1, 3), ["East", "West", "Total"]);
     assert_eq!(column(&model, "I", 1, 3), ["15", "20", "35"]);
@@ -587,7 +587,7 @@ fn filter_array_drops_rows_before_grouping() {
     );
     assert_eq!(column(&model, "M", 1, 3), ["15", "20", "35"]);
     assert_eq!(column(&model, "O", 1, 3), ["15", "20", "35"]);
-    assert_eq!(model._get_text("Q6"), "130.5");
+    assert_eq!(model.get_text_a1("Q6"), "130.5");
     assert_eq!(column(&model, "S", 1, 3), ["15", "20", "35"]);
     assert_eq!(column(&model, "U", 1, 3), ["15", "20", "35"]);
     assert_eq!(
@@ -625,14 +625,14 @@ fn invalid_filters_are_value_errors() {
         "\"x\"",
     ];
     for (i, filter) in filters.iter().enumerate() {
-        model._set(
+        model.set_a1(
             &format!("H{}", i + 1),
             &format!("=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,{filter})"),
         );
     }
-    model._set("I1", "=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,,,C2:C11=1999)");
-    model._set("I2", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,NA())");
-    model._set("I3", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,,,C1:C11=2023)");
+    model.set_a1("I1", "=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,,,C2:C11=1999)");
+    model.set_a1("I2", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,NA())");
+    model.set_a1("I3", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,,,C1:C11=2023)");
     model.evaluate();
     assert_eq!(
         column(&model, "H", 1, filters.len()),
@@ -667,14 +667,14 @@ fn one_filter_value_keeps_all_rows_only_beside_one_key_one_value_and_no_header()
             .to_owned()
     };
     for (i, args) in kept.iter().enumerate() {
-        model._set(&format!("Z{}", i + 1), &format!("=ROWS(GROUPBY({args}))"));
+        model.set_a1(&format!("Z{}", i + 1), &format!("=ROWS(GROUPBY({args}))"));
         let all = unfiltered(args);
-        model._set(&format!("Y{}", i + 1), &format!("=ROWS(GROUPBY({all}))"));
+        model.set_a1(&format!("Y{}", i + 1), &format!("=ROWS(GROUPBY({all}))"));
     }
     for (i, args) in refused.iter().enumerate() {
-        model._set(&format!("AA{}", i + 1), &format!("=GROUPBY({args})"));
+        model.set_a1(&format!("AA{}", i + 1), &format!("=GROUPBY({args})"));
         let all = unfiltered(args);
-        model._set(&format!("AB{}", i + 1), &format!("=ROWS(GROUPBY({all}))"));
+        model.set_a1(&format!("AB{}", i + 1), &format!("=ROWS(GROUPBY({all}))"));
     }
     model.evaluate();
     let kept_rows = column(&model, "Z", 1, kept.len());
@@ -685,7 +685,10 @@ fn one_filter_value_keeps_all_rows_only_beside_one_key_one_value_and_no_header()
         vec!["#VALUE!"; refused.len()]
     );
     for row in 1..=refused.len() {
-        assert!(model._get_text(&format!("AB{row}")).parse::<u32>().is_ok());
+        assert!(model
+            .get_text_a1(&format!("AB{row}"))
+            .parse::<u32>()
+            .is_ok());
     }
 }
 
@@ -705,13 +708,13 @@ fn a_lifted_groupby_filter_serves_one_element() {
         ("H16", "0,1,,,{0,1;0,1}"),
     ];
     for (anchor, options) in calls {
-        model._set(
+        model.set_a1(
             anchor,
             &format!("=GROUPBY(A2:A11,D2:D11,_xleta.SUM,{options})"),
         );
     }
     model.evaluate();
-    let first = model._get_text("H16");
+    let first = model.get_text_a1("H16");
     assert_ne!(first, "#VALUE!");
     let grid =
         |model: &Model, top: usize| [row(model, top, 'H', 'I'), row(model, top + 1, 'H', 'I')];
@@ -723,8 +726,8 @@ fn a_lifted_groupby_filter_serves_one_element() {
             [value.clone(), value.clone()]
         ]
     );
-    assert_eq!(model._get_text("H4"), first);
-    assert_eq!(model._get_text("I5"), first);
+    assert_eq!(model.get_text_a1("H4"), first);
+    assert_eq!(model.get_text_a1("I5"), first);
     assert_eq!(
         grid(&model, 7),
         [
@@ -734,7 +737,7 @@ fn a_lifted_groupby_filter_serves_one_element() {
     );
     assert_eq!(row(&model, 10, 'H', 'I'), [first.clone(), value.clone()]);
     assert_eq!(row(&model, 13, 'H', 'I'), [value.clone(), value.clone()]);
-    assert_eq!(model._get_text("I17"), first);
+    assert_eq!(model.get_text_a1("I17"), first);
 }
 
 #[test]
@@ -753,7 +756,7 @@ fn one_filter_value_beside_a_header_row_and_one_record_is_that_records_element()
         ("A3", "y"),
         ("B3", "7"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     let calls = [
         ("E1", "A1:A2,B1:B2,_xleta.SUM,1,,,{TRUE}"),
@@ -765,17 +768,17 @@ fn one_filter_value_beside_a_header_row_and_one_record_is_that_records_element()
         ("E19", "A1:A3,B1:B3,_xleta.SUM,,,,TRUE"),
     ];
     for (anchor, args) in calls {
-        model._set(anchor, &format!("=GROUPBY({args})"));
+        model.set_a1(anchor, &format!("=GROUPBY({args})"));
     }
-    model._set("I1", "=GROUPBY(A1:B2,B1:B2,_xleta.SUM,1,,,{TRUE})");
+    model.set_a1("I1", "=GROUPBY(A1:B2,B1:B2,_xleta.SUM,1,,,{TRUE})");
     model.evaluate();
     for top in [1, 4, 7, 10] {
         assert_eq!(row(&model, top, 'E', 'F'), ["x", "5"]);
         assert_eq!(row(&model, top + 1, 'E', 'F'), ["Total", "5"]);
     }
-    assert_eq!(model._get_text("K1"), "5");
+    assert_eq!(model.get_text_a1("K1"), "5");
     for anchor in ["E13", "E16", "E19"] {
-        assert_eq!(model._get_text(anchor), "#VALUE!");
+        assert_eq!(model.get_text_a1(anchor), "#VALUE!");
     }
 }
 
@@ -785,24 +788,24 @@ fn an_error_relationship_element_is_its_own_error_after_the_filter_is_spent() {
     // field_relationship is that error before and after another element spends the filter, and
     // spends nothing itself.
     let mut model = records();
-    model._set("Z1", "0");
-    model._set("Z2", "=NA()");
-    model._set("AA1", "1");
-    model._set("AA2", "1");
-    model._set("Z4", "=NA()");
-    model._set("AA4", "0");
-    model._set("Z5", "0");
-    model._set("AA5", "1");
-    model._set(
+    model.set_a1("Z1", "0");
+    model.set_a1("Z2", "=NA()");
+    model.set_a1("AA1", "1");
+    model.set_a1("AA2", "1");
+    model.set_a1("Z4", "=NA()");
+    model.set_a1("AA4", "0");
+    model.set_a1("Z5", "0");
+    model.set_a1("AA5", "1");
+    model.set_a1(
         "H1",
         "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,1,,C2:C11=2023,Z1:AA2)",
     );
-    model._set(
+    model.set_a1(
         "H4",
         "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,1,,C2:C11=2023,Z4:AA5)",
     );
     model.evaluate();
-    let first = model._get_text("H1");
+    let first = model.get_text_a1("H1");
     assert_ne!(first, "#VALUE!");
     let value = "#VALUE!".to_owned();
     let na = "#N/A".to_owned();
@@ -818,32 +821,32 @@ fn an_error_option_element_is_its_own_error_after_the_filter_is_spent() {
     // field_headers or total depth is that error after another element spends the filter, and
     // spends nothing itself.
     let mut model = records();
-    model._set("Z1", "0");
-    model._set("AA1", "=NA()");
-    model._set("Z2", "0");
-    model._set("AA2", "0");
-    model._set("Z4", "1");
-    model._set("AA4", "1");
-    model._set("Z5", "=1/0");
-    model._set("AA5", "1");
-    model._set("Z7", "=1/0");
-    model._set("AA7", "1");
-    model._set("Z8", "1");
-    model._set("AA8", "1");
-    model._set(
+    model.set_a1("Z1", "0");
+    model.set_a1("AA1", "=NA()");
+    model.set_a1("Z2", "0");
+    model.set_a1("AA2", "0");
+    model.set_a1("Z4", "1");
+    model.set_a1("AA4", "1");
+    model.set_a1("Z5", "=1/0");
+    model.set_a1("AA5", "1");
+    model.set_a1("Z7", "=1/0");
+    model.set_a1("AA7", "1");
+    model.set_a1("Z8", "1");
+    model.set_a1("AA8", "1");
+    model.set_a1(
         "H1",
         "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,Z1:AA2,1,,C2:C11=2023)",
     );
-    model._set(
+    model.set_a1(
         "H4",
         "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,Z4:AA5,,C2:C11=2023)",
     );
-    model._set(
+    model.set_a1(
         "H7",
         "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,Z7:AA8,,C2:C11=2023)",
     );
     model.evaluate();
-    let first = model._get_text("H1");
+    let first = model.get_text_a1("H1");
     assert_ne!(first, "#VALUE!");
     let value = "#VALUE!".to_owned();
     let div0 = "#DIV/0!".to_owned();
@@ -860,19 +863,19 @@ fn a_cell_read_on_demand_spends_no_filter_of_a_lift() {
     // Z2 holds a filtering GROUPBY that runs when the lift first reads Z2:Z11; the lifted call
     // itself has no filter, so every element keeps its value (T-3840 review).
     let mut model = records();
-    model._set(
+    model.set_a1(
         "Z2",
         "=D2+IFERROR(INDEX(GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,1,,C2:C11=2023),1,1)*0,0)",
     );
     for row in 3..=11 {
-        model._set(&format!("Z{row}"), &format!("=D{row}"));
+        model.set_a1(&format!("Z{row}"), &format!("=D{row}"));
     }
-    model._set("H1", "=GROUPBY(A2:A11,Z2:Z11,_xleta.SUM,{0,1;0,1},1)");
-    model._set("K1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,{0,1;0,1},1)");
+    model.set_a1("H1", "=GROUPBY(A2:A11,Z2:Z11,_xleta.SUM,{0,1;0,1},1)");
+    model.set_a1("K1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,{0,1;0,1},1)");
     model.evaluate();
     assert_eq!(row(&model, 1, 'H', 'I'), row(&model, 1, 'K', 'L'));
     assert_eq!(row(&model, 2, 'H', 'I'), row(&model, 2, 'K', 'L'));
-    assert_ne!(model._get_text("I2"), "#VALUE!");
+    assert_ne!(model.get_text_a1("I2"), "#VALUE!");
 }
 
 #[test]
@@ -896,13 +899,13 @@ fn error_values_of_arguments_come_first_in_argument_order() {
         ("_xleta.SUM,,,9,C2:C10=2023", "#VALUE!"),
     ];
     for (i, (args, _)) in cases.iter().enumerate() {
-        model._set(
+        model.set_a1(
             &format!("H{}", i + 1),
             &format!("=GROUPBY(A2:A11,D2:D11,{args})"),
         );
     }
-    model._set("I1", "=GROUPBY(A2:A11,D2:D10,_xleta.SUM,,,NA())");
-    model._set("I2", "=GROUPBY(A2:A11,D2:D10,_xleta.SUM,,,,NA())");
+    model.set_a1("I1", "=GROUPBY(A2:A11,D2:D10,_xleta.SUM,,,NA())");
+    model.set_a1("I2", "=GROUPBY(A2:A11,D2:D10,_xleta.SUM,,,,NA())");
     model.evaluate();
     let expected: Vec<&str> = cases.iter().map(|(_, error)| *error).collect();
     assert_eq!(column(&model, "H", 1, cases.len()), expected);
@@ -916,15 +919,15 @@ fn field_relationship_scalars() {
     let mut model = records();
     let invalid = ["2", "3", "-1", "0.5"];
     for (i, relationship) in invalid.iter().enumerate() {
-        model._set(
+        model.set_a1(
             &format!("H{}", i + 1),
             &format!("=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,,{relationship})"),
         );
     }
-    model._set("H5", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,,NA())");
-    model._set("J1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,,\"1\")");
-    model._set("L1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,,FALSE)");
-    model._set("N1", "=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,,,,0)");
+    model.set_a1("H5", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,,NA())");
+    model.set_a1("J1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,,\"1\")");
+    model.set_a1("L1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,,,,,FALSE)");
+    model.set_a1("N1", "=GROUPBY(A2:B11,D2:D11,_xleta.SUM,,,,,0)");
     model.evaluate();
     assert_eq!(
         column(&model, "H", 1, 5),
@@ -946,18 +949,18 @@ fn value_sort_over_many_groups_and_two_keys_is_bounded() {
     // CLAUDE.md directive 5: a value sort over 20,000 two-key groups makes one call per group and
     // parent (no quadratic search) and keeps the output size check.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=INDEX(GROUPBY(HSTACK(MOD(SEQUENCE(20000),100),SEQUENCE(20000)),SEQUENCE(20000),LAMBDA(x,SUM(x)),,0,-3),1,2)",
     );
-    model._set(
+    model.set_a1(
         "B1",
         "=GROUPBY(SEQUENCE(1000000),SEQUENCE(1000000),LAMBDA(x,SUM(x)),,,-2)",
     );
     model.evaluate();
     // Parent 0 (100, 200, ..., 20000) has the largest sum; its largest child is 20000.
-    assert_eq!(model._get_text("A1"), "20000");
-    assert_eq!(model._get_text("B1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "20000");
+    assert_eq!(model.get_text_a1("B1"), "#ERROR!");
 }
 
 #[test]
@@ -967,7 +970,7 @@ fn filter_elements_beside_headers_are_ignored_and_text_must_be_true_or_false() {
     // not (B8-B9); {#N/A} is #VALUE! as a filter and a sort_order (B11-B12); a one-cell
     // reference to an error is that error, before total_depth 3 (B16-B18).
     let mut model = records();
-    model._set("Z5", "=1/0");
+    model.set_a1("Z5", "=1/0");
     let cases = [
         ("1,,,IF(ROW(C1:C11)=1,NA(),C1:C11=2023)", "35"),
         ("1,,,IF(ROW(C1:C11)=1,\"x\",C1:C11=2023)", "35"),
@@ -986,7 +989,7 @@ fn filter_elements_beside_headers_are_ignored_and_text_must_be_true_or_false() {
         (",3,Z5", "#DIV/0!"),
     ];
     for (i, (args, _)) in cases.iter().enumerate() {
-        model._set(
+        model.set_a1(
             &format!("H{}", i + 1),
             &format!("=INDEX(GROUPBY(A1:A11,D1:D11,_xleta.SUM,{args}),ROWS(GROUPBY(A1:A11,D1:D11,_xleta.SUM,{args})),2)"),
         );
@@ -1001,8 +1004,8 @@ fn value_sort_parents_use_the_function_of_all_their_rows() {
     // probes/groupby-sort-filter-args2 B22 (AVERAGE: East 15 < West 18.125) and B24
     // (100-SUM: West 27.5 < East 55, where the sum of the children would put East first).
     let mut model = records();
-    model._set("H1", "=GROUPBY(A2:B11,D2:D11,_xleta.AVERAGE,,0,3)");
-    model._set("L1", "=GROUPBY(A2:B11,D2:D11,LAMBDA(x,100-SUM(x)),,0,3)");
+    model.set_a1("H1", "=GROUPBY(A2:B11,D2:D11,_xleta.AVERAGE,,0,3)");
+    model.set_a1("L1", "=GROUPBY(A2:B11,D2:D11,LAMBDA(x,100-SUM(x)),,0,3)");
     model.evaluate();
     assert_eq!(
         column(&model, "H", 1, 8),
@@ -1020,11 +1023,11 @@ fn value_sort_parents_use_the_function_of_all_their_rows() {
 /// columns, with Units in C (1 to 10).
 fn grouped(formula: &str, height: usize, width: u8) -> Vec<Vec<String>> {
     let mut model = region_sales();
-    model._set("C1", "Units");
+    model.set_a1("C1", "Units");
     for row in 2..=11 {
-        model._set(&format!("C{row}"), &(row - 1).to_string());
+        model.set_a1(&format!("C{row}"), &(row - 1).to_string());
     }
-    model._set("D1", formula);
+    model.set_a1("D1", formula);
     model.evaluate();
     let last = char::from(b'D' + width - 1);
     (1..=height).map(|r| row(&model, r, 'D', last)).collect()
@@ -1144,11 +1147,11 @@ fn invalid_function_arrays() {
         ("D7", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,y,z,1))", "#VALUE!"),
     ];
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cases {
-        assert_eq!(model._get_text(cell), expected, "{formula}");
+        assert_eq!(model.get_text_a1(cell), expected, "{formula}");
     }
 }
 
@@ -1207,17 +1210,17 @@ fn a_function_array_is_size_checked_before_it_is_stacked() {
     // Directive 5: VSTACK pads a row of 16384 under a column of 1048575 to 2^34 cells, HSTACK a
     // column of 1048576 beside a row of 16383; the stacked size is refused before any padding.
     let mut model = region_sales();
-    model._set(
+    model.set_a1(
         "D1",
         "=GROUPBY(A2:A11,B2:B11,VSTACK(SEQUENCE(1048575),SEQUENCE(1,16384)))",
     );
-    model._set(
+    model.set_a1(
         "E1",
         "=GROUPBY(A2:A11,B2:B11,HSTACK(SEQUENCE(1048576),SEQUENCE(1,16383)))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("D1"), "#ERROR!");
-    assert_eq!(model._get_text("E1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("D1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("E1"), "#ERROR!");
 }
 
 #[test]
@@ -1229,17 +1232,17 @@ fn one_parameter_calls_are_charged_against_the_visit_cap_too() {
     // now also charge (T-2804, and T-2805's charge on each copy of a bound array).
     model.area_budget.limit = u64::MAX;
     model.evaluation.recalc_limits = (u64::MAX, u64::MAX);
-    model._set(
+    model.set_a1(
         "A1",
         "=549755289600=INDEX(GROUPBY(SEQUENCE(1048575,,1,0),SEQUENCE(1048575),HSTACK(_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM)),3,11)",
     );
-    model._set(
+    model.set_a1(
         "B1",
         "=GROUPBY(SEQUENCE(1048575,,1,0),SEQUENCE(1048575),HSTACK(_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "TRUE");
-    assert_eq!(model._get_text("B1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "TRUE");
+    assert_eq!(model.get_text_a1("B1"), "#ERROR!");
 }
 
 #[test]
@@ -1252,27 +1255,27 @@ fn two_parameter_lambdas_are_charged_against_the_visit_cap() {
     let mut model = new_empty_model();
     model.area_budget.limit = u64::MAX;
     model.evaluation.recalc_limits = (u64::MAX, u64::MAX);
-    model._set(
+    model.set_a1(
         "A1",
         "=GROUPBY(SEQUENCE(20000),SEQUENCE(20000),LAMBDA(x,y,ROWS(y)))",
     );
-    model._set(
+    model.set_a1(
         "B1",
         "=INDEX(GROUPBY(SEQUENCE(20000),SEQUENCE(20000),_xleta.PERCENTOF),20001,2)",
     );
-    model._set(
+    model.set_a1(
         "C1",
         "=INDEX(GROUPBY(SEQUENCE(20000),SEQUENCE(20000),LAMBDA(x,ROWS(x))),20001,2)",
     );
-    model._set(
+    model.set_a1(
         "D1",
         "=INDEX(GROUPBY(SEQUENCE(2000),SEQUENCE(2000),LAMBDA(x,y,ROWS(y))),2001,2)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
-    assert_eq!(model._get_text("B1"), "1");
-    assert_eq!(model._get_text("C1"), "20000");
-    assert_eq!(model._get_text("D1"), "2000");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), "1");
+    assert_eq!(model.get_text_a1("C1"), "20000");
+    assert_eq!(model.get_text_a1("D1"), "2000");
 }
 
 #[test]
@@ -1281,45 +1284,45 @@ fn array_field_headers_and_total_depth_lift_to_top_left_cells() {
     // or total_depth lifts the call; each element is the top-left cell of its call or its error,
     // in its argument's place (text before a later error value, an error element itself).
     let mut model = region_sales();
-    model._set("D1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),{0,1})");
-    model._set("D3", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),0,{1;5})");
-    model._set("D6", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),{\"x\",3})");
-    model._set(
+    model.set_a1("D1", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),{0,1})");
+    model.set_a1("D3", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),0,{1;5})");
+    model.set_a1("D6", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),{\"x\",3})");
+    model.set_a1(
         "D8",
         "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),0,{1,\"x\",#N/A},,,1/0)",
     );
-    model._set("D10", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),{3})");
+    model.set_a1("D10", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),{3})");
     model.evaluate();
     assert_eq!(
         [
-            model._get_text("D1"),
-            model._get_text("E1"),
-            model._get_text("F1")
+            model.get_text_a1("D1"),
+            model.get_text_a1("E1"),
+            model.get_text_a1("F1")
         ],
         ["East", "East", ""]
     );
     assert_eq!(
         [
-            model._get_text("D3"),
-            model._get_text("D4"),
-            model._get_text("E3")
+            model.get_text_a1("D3"),
+            model.get_text_a1("D4"),
+            model.get_text_a1("E3")
         ],
         ["East", "#VALUE!", ""]
     );
     assert_eq!(
-        [model._get_text("D6"), model._get_text("E6")],
+        [model.get_text_a1("D6"), model.get_text_a1("E6")],
         ["#VALUE!", "East"]
     );
     assert_eq!(
         [
-            model._get_text("D8"),
-            model._get_text("E8"),
-            model._get_text("F8")
+            model.get_text_a1("D8"),
+            model.get_text_a1("E8"),
+            model.get_text_a1("F8")
         ],
         ["#DIV/0!", "#VALUE!", "#N/A"]
     );
     assert_eq!(
-        [model._get_text("D10"), model._get_text("D11")],
+        [model.get_text_a1("D10"), model.get_text_a1("D11")],
         ["East", ""]
     );
 }
@@ -1334,11 +1337,11 @@ fn nested_groupby_evaluates_each_level_once() {
     for _ in 0..24 {
         formula = format!("TAKE(GROUPBY({formula},B2:B11,LAMBDA(x,SUM(x)),{{0,1}}),,1)");
     }
-    model._set("D1", &format!("=ROWS({formula})"));
+    model.set_a1("D1", &format!("=ROWS({formula})"));
     let start = std::time::Instant::now();
     model.evaluate();
     assert!(start.elapsed().as_secs() < 5, "{:?}", start.elapsed());
-    assert!(!model._get_text("D1").is_empty());
+    assert!(!model.get_text_a1("D1").is_empty());
 }
 
 #[test]
@@ -1346,24 +1349,24 @@ fn multi_cell_reference_from_a_function_lifts_like_a_written_range() {
     // probes/t2707-prob-orders A50, A63:A65 (T-3088): `INDEX(range,0)` returns a reference, and a
     // multi-cell one lifts the call as the written range does, not one #VALUE!.
     let mut model = region_sales();
-    model._set("H1", "0");
-    model._set("I1", "1");
-    model._set(
+    model.set_a1("H1", "0");
+    model.set_a1("I1", "1");
+    model.set_a1(
         "D1",
         "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),INDEX(H1:I1,0))",
     );
-    model._set("D3", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),H1:I1)");
+    model.set_a1("D3", "=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),H1:I1)");
     model.evaluate();
     assert_eq!(
         [
-            model._get_text("D1"),
-            model._get_text("E1"),
-            model._get_text("F1")
+            model.get_text_a1("D1"),
+            model.get_text_a1("E1"),
+            model.get_text_a1("F1")
         ],
         ["East", "East", ""]
     );
     assert_eq!(
-        [model._get_text("D3"), model._get_text("E3")],
+        [model.get_text_a1("D3"), model.get_text_a1("E3")],
         ["East", "East"]
     );
 }
@@ -1376,8 +1379,8 @@ fn multi_cell_reference_from_a_function_lifts_like_a_written_range() {
 #[test]
 fn options_are_refused_in_argument_order() {
     let mut model = region_sales();
-    model._set("K1", "x");
-    model._set("K2", "=\"\"");
+    model.set_a1("K1", "x");
+    model.set_a1("K2", "=\"\"");
     let cases = [
         ("D1", "K1,,,,NA()", "#VALUE!"),
         ("D2", "K2,,,,NA()", "#VALUE!"),
@@ -1394,14 +1397,14 @@ fn options_are_refused_in_argument_order() {
         ("D13", "NA(),,K3", "#N/A"),
     ];
     for (cell, options, _) in cases {
-        model._set(
+        model.set_a1(
             cell,
             &format!("=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),{options})"),
         );
     }
     model.evaluate();
     for (cell, options, expected) in cases {
-        assert_eq!(model._get_text(cell), expected, "{options}");
+        assert_eq!(model.get_text_a1(cell), expected, "{options}");
     }
 }
 
@@ -1422,15 +1425,15 @@ fn a_table_sorts_by_the_named_keys_first() {
     ];
     for (i, (region, product, sales)) in rows.iter().enumerate() {
         if !region.is_empty() {
-            model._set(&format!("A{}", i + 1), region);
+            model.set_a1(&format!("A{}", i + 1), region);
         }
-        model._set(&format!("B{}", i + 1), product);
-        model._set(&format!("C{}", i + 1), sales);
+        model.set_a1(&format!("B{}", i + 1), product);
+        model.set_a1(&format!("C{}", i + 1), sales);
     }
-    model._set("E1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,-2,,1)");
-    model._set("H1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,-2,,0)");
-    model._set("K1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,{-1,2},,1)");
-    model._set("N1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,{-1,2},,0)");
+    model.set_a1("E1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,-2,,1)");
+    model.set_a1("H1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,-2,,0)");
+    model.set_a1("K1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,{-1,2},,1)");
+    model.set_a1("N1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,{-1,2},,0)");
     model.evaluate();
     let keys = |model: &Model, a: &str, b: &str| {
         column(model, a, 1, 6)
@@ -1464,12 +1467,12 @@ fn scalar_inputs_and_the_order_of_their_errors() {
     // scalar inputs, option order and scalar filters in the gen-m7 arg-pairs batch", T-3837).
     // Z1 is an error, Z2 text, Z3 blank, Z4 a number; A1:A3 keys, B1:B3 values.
     let mut model = new_empty_model();
-    model._set("Z1", "=1/0");
-    model._set("Z2", "x");
-    model._set("Z4", "7");
+    model.set_a1("Z1", "=1/0");
+    model.set_a1("Z2", "x");
+    model.set_a1("Z4", "7");
     for (row, (key, value)) in [("a", "1"), ("b", "2"), ("a", "3")].iter().enumerate() {
-        model._set(&format!("A{}", row + 1), key);
-        model._set(&format!("B{}", row + 1), value);
+        model.set_a1(&format!("A{}", row + 1), key);
+        model.set_a1(&format!("B{}", row + 1), value);
     }
     let cases = [
         // Text values, literal or referenced, are #VALUE!; numbers and booleans work.
@@ -1505,12 +1508,12 @@ fn scalar_inputs_and_the_order_of_their_errors() {
         ("=GROUPBY(Z4,Z3:Z3,_xleta.SUM)", "#VALUE!"),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("D{}", 3 * i + 1), formula);
+        model.set_a1(&format!("D{}", 3 * i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("D{}", 3 * i + 1)),
+            model.get_text_a1(&format!("D{}", 3 * i + 1)),
             *expected,
             "{formula}"
         );
@@ -1522,23 +1525,23 @@ fn an_early_input_error_fills_an_array_field_relationship() {
     // gen-m7 45c197dc0b22cf2b A7565:B7566 and 35679b4facc62956-style inputs under a lifted
     // field_relationship: the error fills the lifted shape (T-3837).
     let mut model = new_empty_model();
-    model._set("Z1", "=1/0");
-    model._set("A1", "a");
-    model._set("B1", "1");
-    model._set("D1", "=GROUPBY(#NULL!,B1,_xleta.SUM,,,,,{0,1;1,0})");
-    model._set("D4", "=GROUPBY(Z1,B1,_xleta.SUM,,,,,{0,1;1,0})");
+    model.set_a1("Z1", "=1/0");
+    model.set_a1("A1", "a");
+    model.set_a1("B1", "1");
+    model.set_a1("D1", "=GROUPBY(#NULL!,B1,_xleta.SUM,,,,,{0,1;1,0})");
+    model.set_a1("D4", "=GROUPBY(Z1,B1,_xleta.SUM,,,,,{0,1;1,0})");
     model.evaluate();
     assert_eq!(
         [
-            model._get_text("D1"),
-            model._get_text("E1"),
-            model._get_text("D2"),
-            model._get_text("E2")
+            model.get_text_a1("D1"),
+            model.get_text_a1("E1"),
+            model.get_text_a1("D2"),
+            model.get_text_a1("E2")
         ],
         ["#NULL!", "#NULL!", "#NULL!", "#NULL!"]
     );
     assert_eq!(
-        [model._get_text("D4"), model._get_text("E5")],
+        [model.get_text_a1("D4"), model.get_text_a1("E5")],
         ["#VALUE!", "#VALUE!"]
     );
 }
@@ -1549,20 +1552,20 @@ fn an_early_input_error_fills_an_array_field_relationship() {
 fn groupby_passes_row_one_argument() {
     let mut model = new_empty_model();
     for (cell, value) in [("A1", "1"), ("A2", "3"), ("A3", "5")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (cell, value) in [("B1", "2"), ("B2", "4"), ("B3", "6")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("D1", "=ROWS(GROUPBY(A1:A3,B1:B3,_xleta.ROW))");
-    model._set(
+    model.set_a1("D1", "=ROWS(GROUPBY(A1:A3,B1:B3,_xleta.ROW))");
+    model.set_a1(
         "D2",
         "=ERROR.TYPE(INDEX(GROUPBY(A1:A3,B1:B3,_xleta.COLUMN),1,2))",
     );
-    model._set("D3", "=ROWS(GROUPBY(A1:A3,B1:B3,_xleta.PI))");
+    model.set_a1("D3", "=ROWS(GROUPBY(A1:A3,B1:B3,_xleta.PI))");
     model.evaluate();
 
-    assert_eq!(model._get_text("D1"), *"4");
-    assert_eq!(model._get_text("D2"), *"3");
-    assert_eq!(model._get_text("D3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("D1"), *"4");
+    assert_eq!(model.get_text_a1("D2"), *"3");
+    assert_eq!(model.get_text_a1("D3"), *"#VALUE!");
 }

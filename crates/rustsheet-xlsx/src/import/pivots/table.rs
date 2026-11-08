@@ -6,6 +6,9 @@
 //! the lists. What is kept is charged, entry by entry ([`OpaqueEntry::cost`]), to the workbook's
 //! opaque budget (`MAX_OPAQUE_BYTES`), so the store never grows past it (web.md "Pivot caches past the import limits
 //! are dropped").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use std::cell::Cell;
 use std::collections::HashMap;

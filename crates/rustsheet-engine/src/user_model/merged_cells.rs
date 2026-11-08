@@ -274,7 +274,7 @@ impl UserModel {
                     sheet,
                     row,
                     column,
-                    new_value: "".to_string(),
+                    new_value: String::new(),
                     legacy: false,
                     external: false,
                     old_value: Box::new(old_value),

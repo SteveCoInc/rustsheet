@@ -2,6 +2,9 @@
 //! through, the call of a name and the operator chain. Kept apart so that its frame, on the stack
 //! at every nesting level of a formula or a LAMBDA call, holds none of their locals (T-0444,
 //! decision 0100).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(not(test), expect(clippy::enum_glob_use))]
+// LINT-DEBT-END
 
 use std::sync::Arc;
 
@@ -41,9 +44,9 @@ impl Model {
             DefinedNameKind((name, scope, _)) => self.evaluate_defined_name(name, *scope, cell),
             // Their operand is turned into a number, element by element on a range or an array.
             UnaryKind { .. } => self.apply_unary_chain(node, cell),
-            ErrorKind(kind) => CalcResult::new_error(kind.clone(), cell, "".to_string()),
+            ErrorKind(kind) => CalcResult::new_error(kind.clone(), cell, String::new()),
             // Stripped before evaluation (`Node::strip_spaces`); the bare `#REF!` it stands for.
-            SheetRefErrorKind { .. } => CalcResult::new_error(Error::REF, cell, "".to_string()),
+            SheetRefErrorKind { .. } => CalcResult::new_error(Error::REF, cell, String::new()),
             ParseErrorKind {
                 formula, message, ..
             } => CalcResult::new_error(
@@ -223,7 +226,7 @@ impl Model {
                 };
                 match worksheet.get_cell_spill(row, column) {
                     Ok((width, height)) => CalcResult::Range {
-                        left: CellReferenceIndex { sheet, row, column },
+                        left: CellReferenceIndex { sheet, column, row },
                         right: CellReferenceIndex {
                             sheet,
                             row: row + height - 1,

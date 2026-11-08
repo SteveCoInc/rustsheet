@@ -1,6 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 use std::vec::Vec;
 
-use crate::{expressions::parser::DefinedNameS, types::*};
+use crate::{
+    expressions::parser::DefinedNameS,
+    types::{Workbook, Worksheet},
+};
 
 impl Workbook {
     /// Recomputes per-sheet state that is derived from the cells and so is not
@@ -20,13 +26,13 @@ impl Workbook {
     pub fn get_worksheet_names(&self) -> Vec<String> {
         self.worksheets
             .iter()
-            .map(|worksheet| worksheet.get_name())
+            .map(super::types::Worksheet::get_name)
             .collect()
     }
     pub fn get_worksheet_ids(&self) -> Vec<u32> {
         self.worksheets
             .iter()
-            .map(|worksheet| worksheet.get_sheet_id())
+            .map(super::types::Worksheet::get_sheet_id)
             .collect()
     }
 

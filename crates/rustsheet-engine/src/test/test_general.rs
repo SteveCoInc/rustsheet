@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::ignore_without_reason)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 use crate::types::Color;
 
@@ -24,25 +27,25 @@ fn test_model_simple_evaluation() {
         .set_user_input(0, 1, 1, "= 1 + 3".to_string())
         .unwrap();
     model.evaluate();
-    let result = model._get_text_at(0, 1, 1);
+    let result = model.get_text_by_index(0, 1, 1);
     assert_eq!(result, *"4");
-    let result = model._get_formula("A1");
+    let result = model.get_formula_a1("A1");
     assert_eq!(result, *"= 1 + 3");
 }
 
 #[test]
 fn test_model_simple_evaluation_order() {
     let mut model = new_empty_model();
-    model._set("A1", "=1/2/3");
-    model._set("A2", "=(1/2)/3");
-    model._set("A3", "=1/(2/3)");
+    model.set_a1("A1", "=1/2/3");
+    model.set_a1("A2", "=(1/2)/3");
+    model.set_a1("A3", "=1/(2/3)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"0.166666667");
-    assert_eq!(model._get_text("A2"), *"0.166666667");
-    assert_eq!(model._get_text("A3"), *"1.5");
+    assert_eq!(model.get_text_a1("A1"), *"0.166666667");
+    assert_eq!(model.get_text_a1("A2"), *"0.166666667");
+    assert_eq!(model.get_text_a1("A3"), *"1.5");
     // Redundant parentheses are kept, as Excel does (SPEC-0007)
-    assert_eq!(model._get_formula("A2"), *"=(1/2)/3");
-    assert_eq!(model._get_formula("A3"), *"=1/(2/3)");
+    assert_eq!(model.get_formula_a1("A2"), *"=(1/2)/3");
+    assert_eq!(model.get_formula_a1("A3"), *"=1/(2/3)");
 }
 
 #[test]
@@ -50,9 +53,9 @@ fn test_model_invalid_formula() {
     let mut model = new_empty_model();
     model.set_user_input(0, 1, 1, "= 1 +".to_string()).unwrap();
     model.evaluate();
-    let result = model._get_text_at(0, 1, 1);
+    let result = model.get_text_by_index(0, 1, 1);
     assert_eq!(result, *"#ERROR!");
-    let result = model._get_formula("A1");
+    let result = model.get_formula_a1("A1");
     assert_eq!(result, *"= 1 +");
 }
 
@@ -64,19 +67,19 @@ fn test_model_dependencies() {
         .set_user_input(0, 1, 2, "= A1* 2-4".to_string())
         .unwrap(); // B1
     model.evaluate();
-    let result = model._get_text_at(0, 1, 1);
+    let result = model.get_text_by_index(0, 1, 1);
     assert_eq!(result, *"23");
-    assert!(!model._has_formula("A1"));
-    let result = model._get_text_at(0, 1, 2);
+    assert!(!model.has_formula_a1("A1"));
+    let result = model.get_text_by_index(0, 1, 2);
     assert_eq!(result, *"42");
-    let result = model._get_formula("B1");
+    let result = model.get_formula_a1("B1");
     assert_eq!(result, *"= A1* 2-4");
 
     model
         .set_user_input(0, 2, 1, "=SUM(A1, B1)".to_string())
         .unwrap(); // A2
     model.evaluate();
-    let result = model._get_text_at(0, 2, 1);
+    let result = model.get_text_by_index(0, 2, 1);
     assert_eq!(result, *"65");
 }
 
@@ -88,9 +91,9 @@ fn test_model_strings() {
         .unwrap();
     model.set_user_input(0, 1, 2, "=A1".to_string()).unwrap();
     model.evaluate();
-    let result = model._get_text_at(0, 1, 1);
+    let result = model.get_text_by_index(0, 1, 1);
     assert_eq!(result, *"Hello World");
-    let result = model._get_text_at(0, 1, 2);
+    let result = model.get_text_by_index(0, 1, 2);
     assert_eq!(result, *"Hello World");
 }
 
@@ -239,22 +242,22 @@ fn test_booleans() {
 
     model.evaluate();
 
-    assert_eq!(model._get_text_at(0, 1, 1), *"TRUE");
-    assert_eq!(model._get_text_at(0, 2, 1), *"TRUE");
-    assert_eq!(model._get_text_at(0, 3, 1), *"TRUE");
+    assert_eq!(model.get_text_by_index(0, 1, 1), *"TRUE");
+    assert_eq!(model.get_text_by_index(0, 2, 1), *"TRUE");
+    assert_eq!(model.get_text_by_index(0, 3, 1), *"TRUE");
 
-    assert_eq!(model._get_text_at(0, 4, 1), *"FALSE");
-    assert_eq!(model._get_text_at(0, 5, 1), *"FALSE");
-    assert_eq!(model._get_text_at(0, 6, 1), *"FALSE");
+    assert_eq!(model.get_text_by_index(0, 4, 1), *"FALSE");
+    assert_eq!(model.get_text_by_index(0, 5, 1), *"FALSE");
+    assert_eq!(model.get_text_by_index(0, 6, 1), *"FALSE");
 
-    assert_eq!(model._get_text_at(0, 1, 2), *"TRUE");
-    assert_eq!(model._get_text_at(0, 2, 2), *"TRUE");
-    assert_eq!(model._get_text_at(0, 3, 2), *"TRUE");
-    assert_eq!(model._get_text_at(0, 4, 2), *"TRUE");
-    assert_eq!(model._get_text_at(0, 5, 2), *"TRUE");
-    assert_eq!(model._get_text_at(0, 6, 2), *"TRUE");
+    assert_eq!(model.get_text_by_index(0, 1, 2), *"TRUE");
+    assert_eq!(model.get_text_by_index(0, 2, 2), *"TRUE");
+    assert_eq!(model.get_text_by_index(0, 3, 2), *"TRUE");
+    assert_eq!(model.get_text_by_index(0, 4, 2), *"TRUE");
+    assert_eq!(model.get_text_by_index(0, 5, 2), *"TRUE");
+    assert_eq!(model.get_text_by_index(0, 6, 2), *"TRUE");
 
-    assert_eq!(model._get_formula("E1"), *"=IF(FALSE, TRUE, FALSE)");
+    assert_eq!(model.get_formula_a1("E1"), *"=IF(FALSE, TRUE, FALSE)");
 }
 
 #[test]
@@ -409,8 +412,8 @@ fn test_set_sheet_color_invalid() {
 #[test]
 fn set_input_autocomplete() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
     model
         .set_user_input(0, 3, 1, "=SUM(A1:A2".to_string())
         .unwrap();
@@ -420,18 +423,18 @@ fn set_input_autocomplete() {
         .unwrap();
     model.evaluate();
 
-    assert_eq!(model._get_formula("A3"), "=SUM(A1:A2)");
-    assert_eq!(model._get_text("A3"), "3");
+    assert_eq!(model.get_formula_a1("A3"), "=SUM(A1:A2)");
+    assert_eq!(model.get_text_a1("A3"), "3");
 
-    assert_eq!(model._get_formula("A4"), "=SUM(A1*");
-    assert_eq!(model._get_text("A4"), "#ERROR!");
+    assert_eq!(model.get_formula_a1("A4"), "=SUM(A1*");
+    assert_eq!(model.get_text_a1("A4"), "#ERROR!");
 }
 
 #[test]
 fn test_get_cell_value_by_ref() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
     model.evaluate();
 
     // Correct
@@ -456,11 +459,11 @@ fn test_get_cell_value_by_ref() {
 #[test]
 fn test_get_formatted_cell_value() {
     let mut model = new_empty_model();
-    model._set("A1", "foobar");
-    model._set("A2", "true");
-    model._set("A3", "");
-    model._set("A4", "123.456");
-    model._set("A5", "123.456");
+    model.set_a1("A1", "foobar");
+    model.set_a1("A2", "true");
+    model.set_a1("A3", "");
+    model.set_a1("A4", "123.456");
+    model.set_a1("A5", "123.456");
 
     // change A5 format
     let mut style = model.get_style_for_cell(0, 5, 1).unwrap();
@@ -479,8 +482,8 @@ fn test_get_formatted_cell_value() {
 #[test]
 fn test_cell_formula() {
     let mut model = new_empty_model();
-    model._set("A1", "=1+2+3");
-    model._set("A2", "foobar");
+    model.set_a1("A1", "=1+2+3");
+    model.set_a1("A2", "foobar");
     model.evaluate();
 
     assert_eq!(
@@ -524,9 +527,9 @@ fn newer_functions_export_with_xlfn_prefix() {
 #[ignore]
 fn test_xlfn() {
     let mut model = new_empty_model();
-    model._set("A1", "=_xlfn.SIN(1)");
-    model._set("A2", "=_xlfn.SINY(1)");
-    model._set("A3", "=_xlfn.CONCAT(3, 4.0)");
+    model.set_a1("A1", "=_xlfn.SIN(1)");
+    model.set_a1("A2", "=_xlfn.SINY(1)");
+    model.set_a1("A3", "=_xlfn.CONCAT(3, 4.0)");
     model.evaluate();
     // Only modern formulas strip the '_xlfn.'
     assert_eq!(
@@ -554,33 +557,33 @@ fn test_compare_empty_cell_and_boolean() {
     // A1 is intentionally left empty.
 
     // empty == FALSE  → TRUE  (empty coerces to FALSE)
-    model._set("B1", "=A1=FALSE");
+    model.set_a1("B1", "=A1=FALSE");
     // empty == TRUE   → FALSE
-    model._set("B2", "=A1=TRUE");
+    model.set_a1("B2", "=A1=TRUE");
     // empty < TRUE    → TRUE  (FALSE < TRUE)
-    model._set("B3", "=A1<TRUE");
+    model.set_a1("B3", "=A1<TRUE");
     // empty > FALSE   → FALSE (FALSE is not greater than FALSE)
-    model._set("B4", "=A1>FALSE");
+    model.set_a1("B4", "=A1>FALSE");
     // FALSE > empty   → FALSE (symmetric: empty == FALSE)
-    model._set("B5", "=FALSE>A1");
+    model.set_a1("B5", "=FALSE>A1");
     // TRUE > empty    → TRUE  (TRUE > FALSE)
-    model._set("B6", "=TRUE>A1");
+    model.set_a1("B6", "=TRUE>A1");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("B1"), "TRUE");
-    assert_eq!(model._get_text("B2"), "FALSE");
-    assert_eq!(model._get_text("B3"), "TRUE");
-    assert_eq!(model._get_text("B4"), "FALSE");
-    assert_eq!(model._get_text("B5"), "FALSE");
-    assert_eq!(model._get_text("B6"), "TRUE");
+    assert_eq!(model.get_text_a1("B1"), "TRUE");
+    assert_eq!(model.get_text_a1("B2"), "FALSE");
+    assert_eq!(model.get_text_a1("B3"), "TRUE");
+    assert_eq!(model.get_text_a1("B4"), "FALSE");
+    assert_eq!(model.get_text_a1("B5"), "FALSE");
+    assert_eq!(model.get_text_a1("B6"), "TRUE");
 }
 
 #[test]
 fn test_letter_case() {
     let mut model = new_empty_model();
-    model._set("A1", "=sin(1)");
-    model._set("A2", "=sIn(2)");
+    model.set_a1("A1", "=sin(1)");
+    model.set_a1("A2", "=sIn(2)");
     model.evaluate();
     assert_eq!(
         model.get_cell_formula(0, 1, 1).unwrap(),

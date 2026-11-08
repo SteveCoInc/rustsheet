@@ -804,6 +804,17 @@ class AllOff(TaskDir):
         )
         self.assertIn(("BETA.DIST", "P!B2", True), self.listed())
 
+    def test_a_pivot_layout_item_is_no_cell(self) -> None:
+        # T-4944: an export case's layout items are baseline items, not visibly-off cells; only
+        # new_case_owners reads them.
+        r = self.report()
+        r["cases"][0]["layout_checked"] = 1  # type: ignore[index]
+        r["cases"][0]["pivot_layout"] = [  # type: ignore[index]
+            {"sheet": "K", "name": "Top", "excel_location": "A3:D11", "verdict": "lines_differ"}
+        ]
+        self.assertEqual(exit_owners.all_off_cells(r), exit_owners.all_off_cells(self.report()))
+        self.assertEqual(exit_owners.unowned_off(r, self.tasks), exit_owners.unowned_off(self.report(), self.tasks))
+
     def test_output_function_filter_and_strict(self) -> None:
         path = self.tasks / "report.json"
         path.write_text(json.dumps(self.report()))

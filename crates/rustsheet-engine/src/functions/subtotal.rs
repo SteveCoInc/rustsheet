@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::needless_pass_by_value
+)]
+// LINT-DEBT-END
 use super::aggregate::is_multi_cell;
 use super::math_and_trigonometry::product_step;
 use crate::arithmetic::{extended_quotient, flush_subnormal};

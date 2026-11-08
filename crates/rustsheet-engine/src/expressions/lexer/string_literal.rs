@@ -39,7 +39,7 @@ impl Lexer {
     pub(super) fn consume_string(&mut self) -> Result<String> {
         let mut position = self.position;
         let len = self.len;
-        let mut chars = "".to_string();
+        let mut chars = String::new();
         let mut terminated = false;
         let mut units = 0;
         while position < len {

@@ -6,20 +6,20 @@ use crate::test::util::new_empty_model;
 fn fn_average_accrint_simple_cases() {
     let mut model = new_empty_model();
     // ACCRINT(issue, first_interest, settlement, rate, par, frequency, [basis], [calc_method])
-    model._set("A1", "=ACCRINT(39508, 39691, 39569, 0.1, 1000, 2, 0)");
-    model._set(
+    model.set_a1("A1", "=ACCRINT(39508, 39691, 39569, 0.1, 1000, 2, 0)");
+    model.set_a1(
         "A2",
         "=ACCRINT(DATE(2008, 3, 5), 39691, 39569, 0.1, 1000, 2, 0, FALSE)",
     );
-    model._set(
+    model.set_a1(
         "A3",
         "=ACCRINT(DATE(2008, 4, 5), 39691, 39569, 0.1, 1000, 2, 0, TRUE)",
     );
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"16.66666667");
-    assert_eq!(model._get_text("A2"), *"15.55555556");
-    assert_eq!(model._get_text("A3"), *"7.222222222");
+    assert_eq!(model.get_text_a1("A1"), *"16.66666667");
+    assert_eq!(model.get_text_a1("A2"), *"15.55555556");
+    assert_eq!(model.get_text_a1("A3"), *"7.222222222");
 }
 
 // DAX canonical worked example
@@ -36,18 +36,18 @@ fn fn_average_accrint_simple_cases() {
 #[test]
 fn fn_accrint_dax_canonical() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2007,3,1), DATE(2008,8,31), DATE(2008,5,1), 0.1, 1000, 2, 0)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=ACCRINT(DATE(2007,3,1), DATE(2008,8,31), DATE(2008,5,1), 0.1, 1000, 2, 0, FALSE)",
     );
     model.evaluate();
 
-    let a1 = model._get_text("A1");
-    let a2 = model._get_text("A2");
+    let a1 = model.get_text_a1("A1");
+    let a2 = model.get_text_a1("A2");
 
     // Verify within standard floating-point tolerance: parse and compare.
     let a1_val: f64 = a1.parse().unwrap();
@@ -69,12 +69,12 @@ fn fn_accrint_settlement_equals_coupon() {
     // Issue 2008-3-1, first_interest 2008-9-1, settlement 2008-9-1
     // (= first_interest, the next coupon date). Excel and LibreOffice
     // misbehave on this case; IronCalc returns 0.
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,9,1), 0.1, 1000, 2, 0)",
     );
     model.evaluate();
-    let a1 = model._get_text("A1");
+    let a1 = model.get_text_a1("A1");
     let a1_val: f64 = a1.parse().unwrap();
     // Issue→settlement is exactly one full period, sum = 1.0,
     // AI = 1000 * 0.05 * 1.0 = 50. The "settlement = next coupon"
@@ -101,120 +101,120 @@ fn fn_accrint_settlement_equals_coupon() {
 fn fn_accrint_error_rate_zero() {
     let mut model = new_empty_model();
     // rate = 0 → #NUM!
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), 0, 1000, 2, 0)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 #[test]
 fn fn_accrint_error_rate_negative() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), -0.05, 1000, 2, 0)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 #[test]
 fn fn_accrint_error_par_zero() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), 0.1, 0, 2, 0)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 #[test]
 fn fn_accrint_error_par_negative() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), 0.1, -100, 2, 0)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
 }
 
 #[test]
 fn fn_accrint_error_frequency_invalid() {
     let mut model = new_empty_model();
     // frequency must be 1, 2, or 4. Test 3 and 5.
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), 0.1, 1000, 3, 0)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), 0.1, 1000, 5, 0)",
     );
-    model._set(
+    model.set_a1(
         "A3",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), 0.1, 1000, 0, 0)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
-    assert_eq!(model._get_text("A2"), *"#NUM!");
-    assert_eq!(model._get_text("A3"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A3"), *"#NUM!");
 }
 
 #[test]
 fn fn_accrint_error_basis_out_of_range() {
     let mut model = new_empty_model();
     // basis must be 0..=4.
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), 0.1, 1000, 2, -1)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), 0.1, 1000, 2, 5)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
-    assert_eq!(model._get_text("A2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A2"), *"#NUM!");
 }
 
 #[test]
 fn fn_accrint_error_issue_after_settlement() {
     let mut model = new_empty_model();
     // issue > settlement
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2008,9,1), DATE(2009,3,1), DATE(2008,5,1), 0.1, 1000, 2, 0)",
     );
     // issue = settlement
-    model._set(
+    model.set_a1(
         "A2",
         "=ACCRINT(DATE(2008,5,1), DATE(2008,9,1), DATE(2008,5,1), 0.1, 1000, 2, 0)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#NUM!");
-    assert_eq!(model._get_text("A2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A2"), *"#NUM!");
 }
 
 #[test]
 fn fn_accrint_error_args_count() {
     let mut model = new_empty_model();
     // Too few (5 args)
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), 0.1, 1000)",
     );
     // Too many (9 args)
-    model._set(
+    model.set_a1(
         "A2",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), 0.1, 1000, 2, 0, TRUE, 99)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
 }
 
 // ---------------------------------------------------------------------
@@ -246,12 +246,12 @@ fn fn_accrint_error_args_count() {
 #[test]
 fn fn_accrint_basis_0_us_30_360() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2020,1,1), DATE(2020,7,1), DATE(2020,3,1), 0.1, 1000, 2, 0)",
     );
     model.evaluate();
-    let v: f64 = model._get_text("A1").parse().unwrap();
+    let v: f64 = model.get_text_a1("A1").parse().unwrap();
     // 60 / 180 * 50 = 16.6666...
     assert!(
         (v - 16.666_666_666_667).abs() < 1e-6,
@@ -262,12 +262,12 @@ fn fn_accrint_basis_0_us_30_360() {
 #[test]
 fn fn_accrint_basis_4_european_30_360() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2020,1,1), DATE(2020,7,1), DATE(2020,3,1), 0.1, 1000, 2, 4)",
     );
     model.evaluate();
-    let v: f64 = model._get_text("A1").parse().unwrap();
+    let v: f64 = model.get_text_a1("A1").parse().unwrap();
     // European 30/360 also gives 60 / 180 * 50 = 16.6667 for these inputs
     // (no day-31 boundaries in 2020-1-1 → 2020-7-1 to differ from US).
     assert!(
@@ -283,12 +283,12 @@ fn fn_accrint_mayle_v2_benchmark_13() {
     //   rate 5.875%, par 100, basis 0 (US 30/360).
     //   A = 70 days, NL = 180 days, accrued = 70/180 * 5.875/2 = 1.142361.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2020,12,15), DATE(2021,6,15), DATE(2021,2,25), 0.05875, 100, 2, 0)",
     );
     model.evaluate();
-    let v: f64 = model._get_text("A1").parse().unwrap();
+    let v: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (v - 1.142_361_111).abs() < 1e-6,
         "Mayle V2 Benchmark #13 = {v}, expected 1.142361"
@@ -303,12 +303,12 @@ fn fn_accrint_frequency_annual() {
     // Period length: 360.
     // AI = par * rate * (180/360) = 1000 * 0.1 * 0.5 = 50.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2020,1,1), DATE(2021,1,1), DATE(2020,7,1), 0.1, 1000, 1, 0)",
     );
     model.evaluate();
-    let v: f64 = model._get_text("A1").parse().unwrap();
+    let v: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (v - 50.0).abs() < 1e-6,
         "annual frequency = {v}, expected 50.0"
@@ -322,12 +322,12 @@ fn fn_accrint_frequency_quarterly() {
     // 30/360 days: issue→settlement = 60, period = 90.
     // AI = par * (rate/4) * (60/90) = 1000 * 0.025 * 0.6666 = 16.6666.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2020,1,1), DATE(2020,4,1), DATE(2020,3,1), 0.1, 1000, 4, 0)",
     );
     model.evaluate();
-    let v: f64 = model._get_text("A1").parse().unwrap();
+    let v: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (v - 16.666_666_666_667).abs() < 1e-6,
         "quarterly frequency = {v}, expected ~16.6667"
@@ -338,17 +338,17 @@ fn fn_accrint_frequency_quarterly() {
 fn fn_accrint_calc_method_omitted_defaults_true() {
     // Verify that omitting calc_method gives the same result as TRUE.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2007,3,1), DATE(2008,8,31), DATE(2008,5,1), 0.1, 1000, 2, 0)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=ACCRINT(DATE(2007,3,1), DATE(2008,8,31), DATE(2008,5,1), 0.1, 1000, 2, 0, TRUE)",
     );
     model.evaluate();
-    let a1: f64 = model._get_text("A1").parse().unwrap();
-    let a2: f64 = model._get_text("A2").parse().unwrap();
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap();
+    let a2: f64 = model.get_text_a1("A2").parse().unwrap();
     assert!(
         (a1 - a2).abs() < 1e-9,
         "calc_method default ({a1}) should equal TRUE explicit ({a2})"
@@ -367,12 +367,12 @@ fn fn_accrint_basis_1_actual_actual_probe() {
     //   Period 2020-1-1 to 2020-7-1 actual = 182
     //   AI = 1000 * 0.05 * (60/182) = 16.483516...
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2020,1,1), DATE(2020,7,1), DATE(2020,3,1), 0.1, 1000, 2, 1)",
     );
     model.evaluate();
-    let v: f64 = model._get_text("A1").parse().unwrap();
+    let v: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (v - 16.483_516_483_5).abs() < 1e-6,
         "basis 1 = {v}, expected ~16.4835 (60/182 * 50)"
@@ -386,12 +386,12 @@ fn fn_accrint_basis_2_actual_360() {
     // Single period (NC = 1), so no odd-long-coupon offset.
     // AI = 1000 * (0.1/2) * (60 / 180) = 16.666666... (Excel-verified).
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2020,1,1), DATE(2020,7,1), DATE(2020,3,1), 0.1, 1000, 2, 2)",
     );
     model.evaluate();
-    let v: f64 = model._get_text("A1").parse().unwrap();
+    let v: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (v - 16.666_666_667).abs() < 1e-6,
         "basis 2 = {v}, expected ~16.6667 (60/180 * 50, NLᵢ = 360/freq)"
@@ -405,12 +405,12 @@ fn fn_accrint_basis_3_actual_365() {
     // Single period (NC = 1), so no odd-long-coupon offset.
     // AI = 1000 * (0.1/2) * (60 / 182.5) = 16.438356... (Excel-verified).
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2020,1,1), DATE(2020,7,1), DATE(2020,3,1), 0.1, 1000, 2, 3)",
     );
     model.evaluate();
-    let v: f64 = model._get_text("A1").parse().unwrap();
+    let v: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (v - 16.438_356_164).abs() < 1e-6,
         "basis 3 = {v}, expected ~16.4384 (60/182.5 * 50, NLᵢ = 365/freq)"
@@ -426,12 +426,12 @@ fn fn_accrint_leap_year_february() {
     //   period 2020-1-1 to 2020-7-1 actual = 182
     //   AI = 1000 * 0.05 * 59/182 = 16.208791...
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2020,1,1), DATE(2020,7,1), DATE(2020,2,29), 0.1, 1000, 2, 1)",
     );
     model.evaluate();
-    let v: f64 = model._get_text("A1").parse().unwrap();
+    let v: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (v - 16.208_791_208_8).abs() < 1e-6,
         "leap year Feb 29 settlement = {v}, expected ~16.2088 (59/182 * 50)"
@@ -451,12 +451,12 @@ fn fn_accrint_month_end_first_interest() {
     //   sum = 61 / 180
     //   AI = 1000 * 0.05 * 61/180 = 16.944444...
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2008,2,29), DATE(2008,8,31), DATE(2008,5,1), 0.1, 1000, 2, 0)",
     );
     model.evaluate();
-    let v: f64 = model._get_text("A1").parse().unwrap();
+    let v: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (v - 16.944_444_444_4).abs() < 1e-6,
         "month-end first_interest = {v}, expected ~16.9444 (61/180 * 50)"
@@ -468,12 +468,12 @@ fn fn_accrint_calc_method_false_on_dax_canonical() {
     // Standalone test for the DAX FALSE case to make the calc_method
     // divergence explicit (also covered in fn_accrint_dax_canonical).
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2007,3,1), DATE(2008,8,31), DATE(2008,5,1), 0.1, 1000, 2, 0, FALSE)",
     );
     model.evaluate();
-    let v: f64 = model._get_text("A1").parse().unwrap();
+    let v: f64 = model.get_text_a1("A1").parse().unwrap();
     // 66.9444... = AI_TRUE - 50 (one full period dropped from sum)
     assert!(
         (v - 66.944_444_444_4).abs() < 1e-6,
@@ -485,17 +485,17 @@ fn fn_accrint_calc_method_false_on_dax_canonical() {
 fn fn_accrint_basis_omitted_defaults_zero() {
     // Verify that omitting basis gives the same result as basis 0.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), 0.1, 1000, 2)",
     );
-    model._set(
+    model.set_a1(
         "A2",
         "=ACCRINT(DATE(2008,3,1), DATE(2008,9,1), DATE(2008,5,1), 0.1, 1000, 2, 0)",
     );
     model.evaluate();
-    let a1: f64 = model._get_text("A1").parse().unwrap();
-    let a2: f64 = model._get_text("A2").parse().unwrap();
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap();
+    let a2: f64 = model.get_text_a1("A2").parse().unwrap();
     assert!(
         (a1 - a2).abs() < 1e-9,
         "basis default ({a1}) should equal basis 0 explicit ({a2})"
@@ -516,9 +516,9 @@ fn fn_accrint_basis_omitted_defaults_zero() {
 #[test]
 fn fn_accrint_xlsx_oracle_i5_freq4_default_basis() {
     let mut model = new_empty_model();
-    model._set("A1", "=ACCRINT(39508, 39691, 39569, 0.1, 1000, 4)");
+    model.set_a1("A1", "=ACCRINT(39508, 39691, 39569, 0.1, 1000, 4)");
     model.evaluate();
-    let a1: f64 = model._get_text("A1").parse().unwrap();
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (a1 - 16.944_444_444_444).abs() < 1e-6,
         "I5 freq=4 default basis = {a1}, expected 16.944444444444"
@@ -533,12 +533,12 @@ fn fn_accrint_xlsx_oracle_i5_freq4_default_basis() {
 #[test]
 fn fn_accrint_xlsx_oracle_k7_calc_false_freq2_short_span() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2017,1,1), DATE(2017,12,1), DATE(2017,4,1), 0.33, 3000, 2, 0, FALSE)",
     );
     model.evaluate();
-    let a1: f64 = model._get_text("A1").parse().unwrap();
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (a1 - 247.5).abs() < 1e-6,
         "K7 freq=2 basis=0 calc_method=FALSE = {a1}, expected 247.5"
@@ -551,12 +551,12 @@ fn fn_accrint_xlsx_oracle_k7_calc_false_freq2_short_span() {
 #[test]
 fn fn_accrint_xlsx_oracle_j8_freq4_basis1() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2017,1,1), DATE(2017,12,1), DATE(2017,4,1), 0.33, 3000, 4, 1)",
     );
     model.evaluate();
-    let a1: f64 = model._get_text("A1").parse().unwrap();
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (a1 - 241.123_626_4).abs() < 1e-6,
         "J8 freq=4 basis=1 = {a1}, expected 241.1236264"
@@ -566,12 +566,12 @@ fn fn_accrint_xlsx_oracle_j8_freq4_basis1() {
 #[test]
 fn fn_accrint_xlsx_oracle_j9_freq4_basis2() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2017,1,1), DATE(2017,12,1), DATE(2017,4,1), 0.33, 3000, 4, 2)",
     );
     model.evaluate();
-    let a1: f64 = model._get_text("A1").parse().unwrap();
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (a1 - 236.5).abs() < 1e-6,
         "J9 freq=4 basis=2 = {a1}, expected 236.5"
@@ -581,12 +581,12 @@ fn fn_accrint_xlsx_oracle_j9_freq4_basis2() {
 #[test]
 fn fn_accrint_xlsx_oracle_j10_freq4_basis3() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2017,1,1), DATE(2017,12,1), DATE(2017,4,1), 0.33, 3000, 4, 3)",
     );
     model.evaluate();
-    let a1: f64 = model._get_text("A1").parse().unwrap();
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (a1 - 240.041_095_9).abs() < 1e-6,
         "J10 freq=4 basis=3 = {a1}, expected 240.0410959"
@@ -596,12 +596,12 @@ fn fn_accrint_xlsx_oracle_j10_freq4_basis3() {
 #[test]
 fn fn_accrint_xlsx_oracle_j11_freq4_basis4() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2017,1,1), DATE(2017,12,1), DATE(2017,4,1), 0.33, 3000, 4, 4)",
     );
     model.evaluate();
-    let a1: f64 = model._get_text("A1").parse().unwrap();
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (a1 - 247.5).abs() < 1e-6,
         "J11 freq=4 basis=4 = {a1}, expected 247.5"
@@ -624,12 +624,12 @@ fn fn_accrint_freq2_oddlong_basis2() {
     // vs NLᵢ = 360/2 = 180: offset = 3 + 2 = 5. Settlement slice = 92 actual days
     // -> 87/180. AI = 3000 * 0.165 * 87/180 = 239.25.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2016,6,1), DATE(2017,12,1), DATE(2016,9,1), 0.33, 3000, 2, 2)",
     );
     model.evaluate();
-    let a1: f64 = model._get_text("A1").parse().unwrap();
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (a1 - 239.25).abs() < 1e-6,
         "freq=2 odd-long basis=2 = {a1}, expected 239.25"
@@ -641,12 +641,12 @@ fn fn_accrint_freq2_oddlong_basis3() {
     // Same dates, basis 3 (Actual/365). NLᵢ = 365/2 = 182.5; interior drift
     // = 0.5 - 0.5 = 0, so settlement numerator = 92 actual days -> 92/182.5.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2016,6,1), DATE(2017,12,1), DATE(2016,9,1), 0.33, 3000, 2, 3)",
     );
     model.evaluate();
-    let a1: f64 = model._get_text("A1").parse().unwrap();
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (a1 - 249.534_247).abs() < 1e-4,
         "freq=2 odd-long basis=3 = {a1}, expected ~249.5342"
@@ -660,12 +660,12 @@ fn fn_accrint_freq2_oddlong_basis1_last_period_normalization() {
     // NOT the settlement period's own length. Offset = (183-183) + (182-183)
     // = -1, so settlement numerator = 92 - (-1) = 93 -> 93/183. Excel = 251.5574.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2016,6,1), DATE(2017,12,1), DATE(2016,9,1), 0.33, 3000, 2, 1)",
     );
     model.evaluate();
-    let a1: f64 = model._get_text("A1").parse().unwrap();
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (a1 - 251.557_377).abs() < 1e-4,
         "freq=2 odd-long basis=1 = {a1}, expected ~251.5574"
@@ -679,12 +679,12 @@ fn fn_accrint_freq4_nc2_basis1() {
     // period (Jun1->Sep1 = 92) -> offset = 1. Settlement slice = 30 actual
     // days -> 29/91. Excel = 78.87363.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=ACCRINT(DATE(2017,6,1), DATE(2017,12,1), DATE(2017,7,1), 0.33, 3000, 4, 1)",
     );
     model.evaluate();
-    let a1: f64 = model._get_text("A1").parse().unwrap();
+    let a1: f64 = model.get_text_a1("A1").parse().unwrap();
     assert!(
         (a1 - 78.873_626).abs() < 1e-4,
         "freq=4 NC=2 basis=1 = {a1}, expected ~78.87363"
@@ -696,15 +696,15 @@ fn fn_accrint_freq4_nc2_basis1() {
 #[test]
 fn accrint_text_calc_method_is_value_error() {
     let mut model = new_empty_model();
-    model._set("A1", "=ACCRINT(39508,39691,39569,0.1,1000,2,0,\"FALSE\")");
-    model._set("A2", "=ACCRINT(39508,39691,39569,0.1,1000,2,0,\"TRUE\")");
-    model._set("A3", "=ACCRINT(39508,39691,39569,-1,1000,2,0,\"FALSE\")");
-    model._set("A4", "=ACCRINT(39508,39691,39569,0.1,1000,2,0,FALSE)");
+    model.set_a1("A1", "=ACCRINT(39508,39691,39569,0.1,1000,2,0,\"FALSE\")");
+    model.set_a1("A2", "=ACCRINT(39508,39691,39569,0.1,1000,2,0,\"TRUE\")");
+    model.set_a1("A3", "=ACCRINT(39508,39691,39569,-1,1000,2,0,\"FALSE\")");
+    model.set_a1("A4", "=ACCRINT(39508,39691,39569,0.1,1000,2,0,FALSE)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
-    assert_eq!(model._get_text("A3"), *"#VALUE!");
-    assert_eq!(model._get_text("A4"), *"16.66666667");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), *"16.66666667");
 }
 
 /// `calc_method`'s own error comes before every other argument, an off-calendar date is `#NUM!` as
@@ -713,22 +713,22 @@ fn accrint_text_calc_method_is_value_error() {
 #[test]
 fn accrint_check_order() {
     let mut model = new_empty_model();
-    model._set("B1", "a");
-    model._set("B2", "=FALSE");
+    model.set_a1("B1", "a");
+    model.set_a1("B2", "=FALSE");
     // calc_method's text before a #DIV/0! rate and calc_method's error before an off-calendar date.
-    model._set("A1", "=ACCRINT(33996,35923,39160,1/0,2872,2,0,\"1\")");
-    model._set("A2", "=ACCRINT(34182,2958466,37446,0.1,4792,2,4,NA())");
+    model.set_a1("A1", "=ACCRINT(33996,35923,39160,1/0,2872,2,0,\"1\")");
+    model.set_a1("A2", "=ACCRINT(34182,2958466,37446,0.1,4792,2,4,NA())");
     // A date off the calendar before a later text rate or #DIV/0! par.
-    model._set("A3", "=ACCRINT(34205,2958466,43831,B1,1719,1,3)");
-    model._set("A4", "=ACCRINT(1.005,-3.05,37242,0.1,1/0,2)");
+    model.set_a1("A3", "=ACCRINT(34205,2958466,43831,B1,1719,1,3)");
+    model.set_a1("A4", "=ACCRINT(1.005,-3.05,37242,0.1,1/0,2)");
     // A boolean par cell before frequency 100.
-    model._set("A5", "=ACCRINT(32965,35462,36817,10,B2,100,0,FALSE)");
+    model.set_a1("A5", "=ACCRINT(32965,35462,36817,10,B2,100,0,FALSE)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"#N/A");
-    assert_eq!(model._get_text("A3"), *"#NUM!");
-    assert_eq!(model._get_text("A4"), *"#NUM!");
-    assert_eq!(model._get_text("A5"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), *"#N/A");
+    assert_eq!(model.get_text_a1("A3"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A4"), *"#NUM!");
+    assert_eq!(model.get_text_a1("A5"), *"#VALUE!");
 }
 
 /// On basis 2 the issue's period is as long as US 30/360 moving both dates counts it, as on basis
@@ -739,10 +739,10 @@ fn accrint_check_order() {
 #[test]
 fn accrint_basis_2_issue_period_moves_both_dates() {
     let mut model = new_empty_model();
-    model._set("A1", "=ACCRINT(49107,49552,49782,0.1,1000,2,2,FALSE)");
-    model._set("A2", "=ACCRINT(49107,49552,49782,0.1,1000,2,2,TRUE)");
-    model._set("A3", "=ACCRINT(49107,49549,49782,0.1,1000,2,2,FALSE)");
-    model._set("A4", "=ACCRINT(49107,49551,49782,0.1,1000,2,2,FALSE)");
+    model.set_a1("A1", "=ACCRINT(49107,49552,49782,0.1,1000,2,2,FALSE)");
+    model.set_a1("A2", "=ACCRINT(49107,49552,49782,0.1,1000,2,2,TRUE)");
+    model.set_a1("A3", "=ACCRINT(49107,49549,49782,0.1,1000,2,2,FALSE)");
+    model.set_a1("A4", "=ACCRINT(49107,49551,49782,0.1,1000,2,2,FALSE)");
     model.evaluate();
     for (cell, expected) in [
         ("A1", 137.222_222_222_222_23),
@@ -750,7 +750,7 @@ fn accrint_basis_2_issue_period_moves_both_dates() {
         ("A3", 136.629_213_483_146_06),
         ("A4", 136.629_213_483_146_06),
     ] {
-        let value: f64 = model._get_text(cell).parse().unwrap();
+        let value: f64 = model.get_text_a1(cell).parse().unwrap();
         assert!((value - expected).abs() < 1e-6, "{cell}: {value}");
     }
 }

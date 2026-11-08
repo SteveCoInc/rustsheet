@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::default_trait_access
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 // The formulas of a sheet are kept once each, in `Worksheet::shared_formulas`,
@@ -30,21 +38,21 @@ fn assert_in_step(model: &Model, sheet: usize) {
 fn the_same_formula_is_kept_once() {
     let mut model = new_empty_model();
     // the same in R1C1: each reads the cell on its left
-    model._set("B1", "=A1+1");
-    model._set("B2", "=A2+1");
-    model._set("B3", "=A3+1");
+    model.set_a1("B1", "=A1+1");
+    model.set_a1("B2", "=A2+1");
+    model.set_a1("B3", "=A3+1");
     // different ones
-    model._set("C1", "=$A$1+1");
-    model._set("C2", "=$A$2+1");
-    model._set("A1", "10");
-    model._set("A2", "20");
+    model.set_a1("C1", "=$A$1+1");
+    model.set_a1("C2", "=$A$2+1");
+    model.set_a1("A1", "10");
+    model.set_a1("A2", "20");
     model.evaluate();
 
     assert_eq!(model.workbook.worksheets[0].shared_formulas.len(), 3);
     assert_in_step(&model, 0);
-    assert_eq!(model._get_text("B2"), "21");
-    assert_eq!(model._get_text("C1"), "11");
-    assert_eq!(model._get_text("C2"), "21");
+    assert_eq!(model.get_text_a1("B2"), "21");
+    assert_eq!(model.get_text_a1("C1"), "11");
+    assert_eq!(model.get_text_a1("C2"), "21");
 }
 
 // Every formula is different from the others. With the list searched from the
@@ -59,15 +67,15 @@ fn many_different_formulas() {
             .set_user_input(0, row, 1, format!("=$B${row}*2"))
             .unwrap();
     }
-    model._set("B7", "21");
+    model.set_a1("B7", "21");
     model.evaluate();
     assert_eq!(
         model.workbook.worksheets[0].shared_formulas.len(),
         n as usize
     );
     assert_eq!(model.shared_formula_lookup[0].index.len(), n as usize);
-    assert_eq!(model._get_text("A7"), "42");
-    assert_eq!(model._get_text("A8"), "0");
+    assert_eq!(model.get_text_a1("A7"), "42");
+    assert_eq!(model.get_text_a1("A8"), "0");
 }
 
 // Deleting two sheets can leave the same formula twice in the list: each
@@ -80,8 +88,8 @@ fn a_formula_twice_in_the_list_does_not_slow_down_adding_formulas() {
     let mut model = new_empty_model();
     model.new_sheet();
     model.new_sheet();
-    model._set("A1", "=Sheet2!A1");
-    model._set("B2", "=Sheet3!B2");
+    model.set_a1("A1", "=Sheet2!A1");
+    model.set_a1("B2", "=Sheet3!B2");
     model.delete_sheet(1).unwrap();
     model.delete_sheet(1).unwrap();
     let shared_formulas = &model.workbook.worksheets[0].shared_formulas;
@@ -95,7 +103,7 @@ fn a_formula_twice_in_the_list_does_not_slow_down_adding_formulas() {
             .set_user_input(0, row, 3, format!("=$B${row}*2"))
             .unwrap();
     }
-    model._set("B7", "21");
+    model.set_a1("B7", "21");
     model.evaluate();
     assert_eq!(
         model.workbook.worksheets[0].shared_formulas.len(),
@@ -103,7 +111,7 @@ fn a_formula_twice_in_the_list_does_not_slow_down_adding_formulas() {
     );
     assert_eq!(model.shared_formula_lookup[0].index.len(), n as usize + 1);
     assert_in_step(&model, 0);
-    assert_eq!(model._get_text("C7"), "42");
+    assert_eq!(model.get_text_a1("C7"), "42");
 }
 
 // Renaming a sheet rewrites the text of every formula that mentions it, in
@@ -112,23 +120,23 @@ fn a_formula_twice_in_the_list_does_not_slow_down_adding_formulas() {
 fn renaming_a_sheet_keeps_the_lookup_in_step() {
     let mut model = new_empty_model();
     model.new_sheet();
-    model._set("Sheet2!A1", "5");
-    model._set("Sheet2!A2", "6");
-    model._set("B1", "=Sheet2!A1+1");
+    model.set_a1("Sheet2!A1", "5");
+    model.set_a1("Sheet2!A2", "6");
+    model.set_a1("B1", "=Sheet2!A1+1");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "6");
+    assert_eq!(model.get_text_a1("B1"), "6");
 
     model.rename_sheet("Sheet2", "Data").unwrap();
     assert_in_step(&model, 0);
 
     // The same formula again, under the new name: it is found, not added.
     let before = model.workbook.worksheets[0].shared_formulas.len();
-    model._set("B2", "=Data!A2+1");
+    model.set_a1("B2", "=Data!A2+1");
     model.evaluate();
     assert_eq!(model.workbook.worksheets[0].shared_formulas.len(), before);
     assert_in_step(&model, 0);
-    assert_eq!(model._get_text("B1"), "6");
-    assert_eq!(model._get_text("B2"), "7");
+    assert_eq!(model.get_text_a1("B1"), "6");
+    assert_eq!(model.get_text_a1("B2"), "7");
 }
 
 // Adding and deleting sheets moves the sheets that follow: the lookup of a
@@ -138,10 +146,10 @@ fn adding_and_deleting_sheets_keeps_the_lookups_in_step() {
     let mut model = new_empty_model();
     model.new_sheet();
     model.new_sheet();
-    model._set("Sheet1!B1", "=A1+1");
-    model._set("Sheet2!B1", "=A1*2");
-    model._set("Sheet3!B1", "=A1*3");
-    model._set("Sheet3!B2", "=$A$1*3");
+    model.set_a1("Sheet1!B1", "=A1+1");
+    model.set_a1("Sheet2!B1", "=A1*2");
+    model.set_a1("Sheet3!B1", "=A1*3");
+    model.set_a1("Sheet3!B2", "=$A$1*3");
     model.evaluate();
 
     model.delete_sheet(1).unwrap();
@@ -151,11 +159,11 @@ fn adding_and_deleting_sheets_keeps_the_lookups_in_step() {
     // what was the third sheet is now the second
     let before = model.workbook.worksheets[1].shared_formulas.len();
     assert_eq!(before, 2);
-    model._set("Sheet3!B5", "=A5*3");
-    model._set("Sheet3!A5", "4");
+    model.set_a1("Sheet3!B5", "=A5*3");
+    model.set_a1("Sheet3!A5", "4");
     model.evaluate();
     assert_eq!(model.workbook.worksheets[1].shared_formulas.len(), before);
-    assert_eq!(model._get_text("Sheet3!B5"), "12");
+    assert_eq!(model.get_text_a1("Sheet3!B5"), "12");
 
     model.duplicate_sheet(1).unwrap();
     for sheet in 0..3 {
@@ -169,26 +177,26 @@ fn adding_and_deleting_sheets_keeps_the_lookups_in_step() {
 #[test]
 fn a_lookup_out_of_step_is_not_believed() {
     let mut model = new_empty_model();
-    model._set("B1", "=A1+1");
-    model._set("C1", "=$A$1*2");
-    model._set("A1", "3");
+    model.set_a1("B1", "=A1+1");
+    model.set_a1("C1", "=$A$1*2");
+    model.set_a1("A1", "3");
     let formula = model.workbook.worksheets[0].shared_formulas[0].clone();
 
     // it names the wrong place for a formula that is in the list
     model.shared_formula_lookup[0].index.insert(formula, 1);
-    model._set("B2", "=A2+1");
+    model.set_a1("B2", "=A2+1");
     // it was built from nothing
     model.shared_formula_lookup[0] = Default::default();
-    model._set("B3", "=A3+1");
+    model.set_a1("B3", "=A3+1");
     // it has never heard of the sheet
     model.shared_formula_lookup.clear();
-    model._set("B4", "=A4+1");
+    model.set_a1("B4", "=A4+1");
 
-    model._set("A2", "4");
+    model.set_a1("A2", "4");
     model.evaluate();
     assert_eq!(model.workbook.worksheets[0].shared_formulas.len(), 2);
     assert_in_step(&model, 0);
-    assert_eq!(model._get_text("B1"), "4");
-    assert_eq!(model._get_text("B2"), "5");
-    assert_eq!(model._get_text("C1"), "6");
+    assert_eq!(model.get_text_a1("B1"), "4");
+    assert_eq!(model.get_text_a1("B2"), "5");
+    assert_eq!(model.get_text_a1("C1"), "6");
 }

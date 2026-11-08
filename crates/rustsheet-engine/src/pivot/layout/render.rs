@@ -38,13 +38,18 @@
 //!   (probes/t4698-pivot-repeat-labels; pivots.md "Repeat item labels").
 //! - **Items** render as in pivots.md: a number as a number, a boolean as `TRUE`/`FALSE`, an
 //!   error as its text and a blank as `(blank)` (t4134 I2); a Values level item is the data
-//!   field's caption.
+//!   field's caption. A date item is its serial, in `m/d/yyyy` (with ` h:mm` for a time part)
+//!   whatever the source's format (`item_format`; t2085 D, t4164; a date group item too,
+//!   probes/t4767-pivot-group-items GD!A6, GDA!A6).
 //! - **Values.** An intersection no record reaches is blank, or `missingCaption` with
 //!   `showMissing` (t4137 K2); an error is `errorCaption` with `showError` (K3, t4135 EC).
-//!   Every value cell, subtotals' and grand totals' too, carries its data field's `numFmtId`
-//!   ([`RenderedCell::number_format`]), which the grid writer gives the cell, so its displayed
-//!   text is Excel's (pivots.md "Value cells show their data field's number format",
-//!   probes/t4169-pivot-number-formats).
+//!   Every value cell, subtotals' and grand totals' too, carries its data field's `numFmtId`,
+//!   or General when it has none ([`RenderedCell::number_format`]), which the grid writer gives
+//!   the cell whatever format it had, so its displayed text is Excel's (pivots.md "Value cells
+//!   show their data field's number format", probes/t4169-pivot-number-formats; "A refresh gives
+//!   pivot cells their fields' number formats", probes/t4717-pivot-cell-formats). A number or
+//!   date item's label, on an axis or a page field, and a subtotal label's item take the pivot
+//!   field's `numFmtId`, a number item with none General (`item_format`).
 //! - **Page fields** take two cells, the field's name and `(All)`, the selected item or
 //!   `(Multiple Items)` when it hides items (t4137 K4), in the `rowPageCount` rows ending one row
 //!   above the location, three columns per page column (t4138 G8).
@@ -66,12 +71,18 @@
 //!   corner left empty), with no data field, beside page fields, and beside
 //!   `grandTotalCaption` (always `Total`); a subtotalCaption with Values inside its field (kept
 //!   `<item> <data field>`), empty, or with several `?` (each replaced) (T-4785).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::unused_self)]
+// LINT-DEBT-END
 
 use crate::expressions::token::Error;
-use crate::number_format::number_to_text;
+use crate::number_format::{format_number, get_num_fmt, number_to_text};
+use crate::types::NumFmt;
 
 use super::super::result::{page_selection, AxisTree, PivotComputeError, PivotResult};
-use super::super::{Aggregate, CacheItem, ItemType, PivotCache, PivotField, PivotTable};
+use super::super::{
+    Aggregate, CacheField, CacheItem, ItemType, PivotCache, PivotField, PivotTable,
+};
 use super::lines::{label_columns, levels, AxisLine, Level, PivotLayout};
 
 /// The caption above a pivot's row labels (`rowHeaderCaption` replaces it).
@@ -112,11 +123,35 @@ pub struct RenderedCell {
     pub column: u32,
     /// The cell's value.
     pub value: PivotCell,
-    /// The `numFmtId` the cell shows its value in: a value cell's data field's
-    /// ([`DataField::number_format`](super::super::DataField::number_format)); `None` for a
-    /// label, a caption, and a value cell whose data field has none, whose cell format is left
-    /// as it is.
-    pub number_format: Option<u32>,
+    /// The number format the cell shows its value in: a value cell's data field's
+    /// ([`DataField::number_format`](super::super::DataField::number_format)), General (0) when
+    /// it has none, or a number or date item's label's ([`item_format`]); `None` for a caption
+    /// and a text, boolean, error or blank item's label, whose cell format is left as it is.
+    pub number_format: Option<CellFormat>,
+}
+
+/// The number format a rendered cell is given.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CellFormat {
+    /// A `numFmtId`, as the workbook's styles resolve it: a data field's format.
+    Id(u32),
+    /// A format code: a date item's label.
+    Code(&'static str),
+}
+
+/// The format of a date item's label (pivots.md "Item casing when cache and source disagree, and
+/// date items"): Excel shows it as `m/d/yyyy`, with ` h:mm` when it has a time part, whatever the
+/// source cells' format. probes/t2085-getpivotdata-items D!A4:A6 and t4130-pivot-date-filters
+/// (source `m/d/yyyy`) read `1/1/2024`; t4164-pivot-date-times (source `m/d/yyyy h:mm`) reads
+/// `4/17/2024` for midnight and `4/17/2024 8:00` for 8 a.m. Not covered yet: an item below 1, which
+/// Excel shows as a time (a 1904 workbook's serial 0 is `12:00:00 AM`, t4177-cache-dates-1904-refresh
+/// P!A4; T-4943).
+fn date_item_format(serial: f64) -> CellFormat {
+    CellFormat::Code(if serial.fract() == 0.0 {
+        "m/d/yyyy"
+    } else {
+        "m/d/yyyy h:mm"
+    })
 }
 
 /// How an item renders as a label (pivots.md "Items show in the order the pivot field lists
@@ -129,6 +164,53 @@ fn item_cell(item: &CacheItem) -> PivotCell {
         CacheItem::Boolean(b) => PivotCell::Text(if *b { "TRUE" } else { "FALSE" }.to_string()),
         CacheItem::Error(error) => PivotCell::Text(error.to_string()),
         CacheItem::Missing => PivotCell::Text(BLANK_ITEM.to_string()),
+    }
+}
+
+/// The built-in `numFmtId` of m/d/yyyy, the format a date group item's label shows in.
+const DATE_GROUP_ITEM_FORMAT: u32 = 14;
+
+/// The locale pivot labels are formatted in: en-US, the parity target.
+const LABEL_LOCALE: &str = "en";
+
+/// The number format an item's label cell shows it in (pivots.md "A refresh gives pivot cells
+/// their fields' number formats", probes/t4717-pivot-cell-formats):
+/// - a number or date item of a pivot field with a `numFmtId` shows in it, on rows, columns and
+///   page fields, whatever the source cells' format (L1, L2, L3, L6, L7);
+/// - a date group item (`<groupItems><d>` of a grouped field, [`CacheField::is_grouped`]) shows
+///   as m/d/yyyy whatever its source field holds (pivots.md "Capability matrix 3",
+///   probes/t4767-pivot-group-items GD!A6, GDA!A6 `1/1/2020` over 43831); any other date item as
+///   [`date_item_format`];
+/// - any other number item shows in General, whatever format its cell or the source cells had
+///   (R1!A4:A5, L4).
+///
+/// A text, boolean, error or blank item's label keeps its cell's format.
+fn item_format(
+    pivot: Option<&PivotField>,
+    field: &CacheField,
+    item: &CacheItem,
+) -> Option<CellFormat> {
+    let own = pivot.and_then(|p| p.number_format);
+    match item {
+        CacheItem::Number(_) | CacheItem::Date(_) if own.is_some() => own.map(CellFormat::Id),
+        CacheItem::Date(_) if field.is_grouped() => Some(CellFormat::Id(DATE_GROUP_ITEM_FORMAT)),
+        CacheItem::Date(serial) => Some(date_item_format(*serial)),
+        CacheItem::Number(_) => Some(CellFormat::Id(0)),
+        _ => None,
+    }
+}
+
+/// An item's label as text in the format `numFmtId` `id` names in the workbook's `num_fmts`
+/// (en-US): a number or date item formatted, any other item as [`item_text`]. A pivot field's
+/// `numFmtId` labels its subtotals (`7.00 Total`, probes/t4717-pivot-cell-formats L1!A5) and its
+/// `PivotChart` categories ([`chart`](super::chart)).
+pub(crate) fn item_text_in(item: &CacheItem, id: u32, num_fmts: &[NumFmt]) -> String {
+    match item {
+        CacheItem::Number(value) | CacheItem::Date(value) => {
+            let code = get_num_fmt(i32::try_from(id).unwrap_or(0), num_fmts);
+            format_number(*value, &code, LABEL_LOCALE).text
+        }
+        other => item_text(other),
     }
 }
 
@@ -183,6 +265,8 @@ impl Axis<'_> {
 struct Cells<'a> {
     table: &'a PivotTable,
     cache: &'a PivotCache,
+    /// The workbook's custom number formats, which a field's `numFmtId` may name.
+    num_fmts: &'a [NumFmt],
     out: Vec<RenderedCell>,
     /// The text bytes the cells may still take ([`MAX_PIVOT_TEXT_BYTES`]).
     text_left: usize,
@@ -200,7 +284,7 @@ impl Cells<'_> {
         row: u32,
         column: u32,
         value: PivotCell,
-        number_format: Option<u32>,
+        number_format: Option<CellFormat>,
     ) {
         if let PivotCell::Text(text) = &value {
             match self.text_left.checked_sub(text.len()) {
@@ -230,11 +314,13 @@ impl Cells<'_> {
     }
 
     fn cache_item(&self, field: u32, item: u32) -> Option<&CacheItem> {
-        self.cache
-            .fields
-            .get(field as usize)?
-            .items
-            .get(item as usize)
+        self.cache_field_item(field, item).map(|(_, item)| item)
+    }
+
+    /// Cache field `field` and its item `item`.
+    fn cache_field_item(&self, field: u32, item: u32) -> Option<(&CacheField, &CacheItem)> {
+        let field = self.cache.fields.get(field as usize)?;
+        Some((field, field.items.get(item as usize)?))
     }
 
     fn data_caption(&self, data_field: u32) -> Option<&str> {
@@ -242,23 +328,39 @@ impl Cells<'_> {
         Some(field.caption.as_str())
     }
 
-    /// The label of `line`'s level `level` (its `x` is `x`) on `axis`.
-    fn label(&self, axis: &Axis<'_>, line: &AxisLine, level: usize, x: u32) -> Option<PivotCell> {
+    /// The label of `line`'s level `level` (its `x` is `x`) on `axis`, and the number format its
+    /// cell shows it in ([`item_format`]).
+    fn label(
+        &self,
+        axis: &Axis<'_>,
+        line: &AxisLine,
+        level: usize,
+        x: u32,
+    ) -> Option<(PivotCell, Option<CellFormat>)> {
         match axis.levels.get(level)? {
-            Level::Values => Some(PivotCell::Text(self.data_caption(x)?.to_string())),
-            Level::Field { depth, .. } => {
+            Level::Values => Some((PivotCell::Text(self.data_caption(x)?.to_string()), None)),
+            Level::Field {
+                depth,
+                field: pivot,
+            } => {
                 let (field, item) = axis.item(line.node, *depth)?;
-                Some(item_cell(self.cache_item(field, item)?))
+                let (cache_field, item) = self.cache_field_item(field, item)?;
+                Some((item_cell(item), item_format(*pivot, cache_field, item)))
             }
         }
     }
 
-    /// The item a subtotal `line` of `axis` totals, as text.
+    /// The item a subtotal `line` of `axis` totals, as text: in its pivot field's `numFmtId` when
+    /// it has one (probes/t4717-pivot-cell-formats L1!A5 `7.00 Total`), else as [`item_text`].
     fn line_item(&self, axis: &Axis<'_>, line: &AxisLine) -> Option<String> {
         match axis.levels.get(line_depth(line)?)? {
-            Level::Field { depth: d, .. } => {
-                let (field, item) = axis.item(line.node, *d)?;
-                Some(item_text(self.cache_item(field, item)?))
+            Level::Field { depth: d, field } => {
+                let (field_index, item) = axis.item(line.node, *d)?;
+                let item = self.cache_item(field_index, item)?;
+                Some(match field.and_then(|f| f.number_format) {
+                    Some(id) => item_text_in(item, id, self.num_fmts),
+                    None => item_text(item),
+                })
             }
             Level::Values => None,
         }
@@ -367,9 +469,9 @@ impl Cells<'_> {
                 // An empty-text item's label cell is left empty (pivots.md "Pivot field names
                 // for duplicate and blank source headers", probes/t4627-pivot-field-name-collisions
                 // P_Rec!A6, a row item; a column item's is taken to match, UNVERIFIED).
-                let cell = cell.filter(|c| !matches!(c, PivotCell::Text(t) if t.is_empty()));
-                if let (Some(cell), Some((row, column))) = (cell, place(i, level)) {
-                    self.put(row, column, cell);
+                let cell = cell.filter(|(c, _)| !matches!(c, PivotCell::Text(t) if t.is_empty()));
+                if let (Some((cell, format)), Some((row, column))) = (cell, place(i, level)) {
+                    self.put_formatted(row, column, cell, format);
                 }
             }
         }
@@ -410,9 +512,9 @@ impl Cells<'_> {
             }
             let cell = self.label(axis, line, level, 0);
             // An empty-text item's label stays empty here too, as on its own line.
-            let cell = cell.filter(|c| !matches!(c, PivotCell::Text(t) if t.is_empty()));
-            if let (Some(cell), Some((row, column))) = (cell, at) {
-                self.put(row, column, cell);
+            let cell = cell.filter(|(c, _)| !matches!(c, PivotCell::Text(t) if t.is_empty()));
+            if let (Some((cell, format)), Some((row, column))) = (cell, at) {
+                self.put_formatted(row, column, cell, format);
             }
         }
     }
@@ -425,7 +527,7 @@ impl Cells<'_> {
         [rows, columns]: [&Axis<'_>; 2],
         row: &AxisLine,
         column: &AxisLine,
-    ) -> Option<(PivotCell, Option<u32>)> {
+    ) -> Option<(PivotCell, Option<CellFormat>)> {
         let options = &self.table.options;
         let data = if rows.has_values() {
             row.data_field
@@ -451,7 +553,10 @@ impl Cells<'_> {
                 _ => PivotCell::Error(error),
             }),
         };
-        cell.map(|cell| (cell, field.number_format))
+        // General when the data field has no `numFmtId`: a refresh gives the cell that format
+        // whatever it had, under `preserveFormatting` on and off and for a showDataAs field
+        // (probes/t4717-pivot-cell-formats R2, R3, S1).
+        cell.map(|cell| (cell, Some(CellFormat::Id(field.number_format.unwrap_or(0)))))
     }
 }
 
@@ -465,6 +570,9 @@ pub const MAX_PIVOT_TEXT_BYTES: usize = 1 << 27;
 /// and `layout` ([`lay_out`](super::lay_out)), in no particular order: every non-empty cell of
 /// the location and of the page area above it (see the module documentation).
 ///
+/// `num_fmts` are the workbook's custom number formats, which a field's `numFmtId` may name in
+/// a subtotal label's text.
+///
 /// # Errors
 /// [`PivotComputeError::Malformed`] when `result` or `layout` is not over `table` and `cache`
 /// (a line's node or item is not in the result's tree or the cache), and
@@ -474,8 +582,9 @@ pub fn render(
     cache: &PivotCache,
     result: &PivotResult,
     layout: &PivotLayout,
+    num_fmts: &[NumFmt],
 ) -> Result<Vec<RenderedCell>, PivotComputeError> {
-    render_within(table, cache, result, layout, MAX_PIVOT_TEXT_BYTES)
+    render_within(table, cache, result, layout, num_fmts, MAX_PIVOT_TEXT_BYTES)
 }
 
 /// [`render`] with at most `text_bytes` bytes of text.
@@ -484,6 +593,7 @@ fn render_within(
     cache: &PivotCache,
     result: &PivotResult,
     layout: &PivotLayout,
+    num_fmts: &[NumFmt],
     text_bytes: usize,
 ) -> Result<Vec<RenderedCell>, PivotComputeError> {
     let options = &table.options;
@@ -505,6 +615,7 @@ fn render_within(
     let mut cells = Cells {
         table,
         cache,
+        num_fmts,
         out: Vec::with_capacity(
             layout
                 .rows
@@ -673,14 +784,21 @@ fn page_area(cells: &mut Cells<'_>, layout: &PivotLayout) {
             .fields
             .get(page.field as usize)
             .is_some_and(PivotField::excludes_any);
+        // A selected item shows as its label does on an axis, in its field's `numFmtId`
+        // (probes/t4717-pivot-cell-formats L3!B1 `12.00`).
         let selection = match page_selection(table, page) {
-            Some(item) => cells.cache_item(page.field, item).map(item_cell),
-            None if hides => Some(PivotCell::Text(MULTIPLE_ITEMS.to_string())),
-            None => Some(PivotCell::Text(ALL_ITEMS.to_string())),
+            Some(item) => cells
+                .cache_field_item(page.field, item)
+                .map(|(field, item)| {
+                    let pivot = table.fields.get(page.field as usize);
+                    (item_cell(item), item_format(pivot, field, item))
+                }),
+            None if hides => Some((PivotCell::Text(MULTIPLE_ITEMS.to_string()), None)),
+            None => Some((PivotCell::Text(ALL_ITEMS.to_string()), None)),
         };
         cells.text(row, column, &name);
-        if let Some(selection) = selection {
-            cells.put(row, column.saturating_add(1), selection);
+        if let Some((selection, format)) = selection {
+            cells.put_formatted(row, column.saturating_add(1), selection, format);
         }
     }
 }

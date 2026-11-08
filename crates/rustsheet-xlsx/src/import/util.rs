@@ -182,6 +182,7 @@ pub(super) fn parse_constant_number(cell_value: Option<&str>) -> f64 {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
+    #![expect(clippy::float_cmp, reason = "the parsed numbers are exact literals")]
     use super::*;
 
     // The attributes these helpers read are typed `xsd:boolean` in ECMA-376 SpreadsheetML, whose

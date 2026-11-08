@@ -3,6 +3,9 @@
 //! array and a range through `lift_call` (SPEC-0011; probes/stat-argument-modes,
 //! probes/stat-later-argument-lift, probes/stat-quantile-lift, docs/excel-semantics/statistics.md
 //! "Statistical function argument modes").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 

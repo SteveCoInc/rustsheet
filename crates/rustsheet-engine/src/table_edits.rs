@@ -549,7 +549,11 @@ impl Model {
             DisplaceData::Row { sheet, .. } | DisplaceData::Column { sheet, .. } => *sheet,
             _ => return TableEdits::default(),
         };
-        let Ok(sheet_name) = self.workbook.worksheet(sheet).map(|w| w.get_name()) else {
+        let Ok(sheet_name) = self
+            .workbook
+            .worksheet(sheet)
+            .map(super::types::Worksheet::get_name)
+        else {
             return TableEdits::default();
         };
         let mut edits = TableEdits::default();

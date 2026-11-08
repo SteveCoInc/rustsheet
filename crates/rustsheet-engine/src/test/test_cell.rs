@@ -7,48 +7,48 @@ use crate::types::{ArrayKind, Cell, CellType, FormulaValue};
 #[test]
 fn test_cell_get_type() {
     let mut model = new_empty_model();
-    model._set("A1", "");
-    model._set("A2", "42");
-    model._set("A3", "12.34");
-    model._set("A4", "foobar");
-    model._set("A5", "1+2");
-    model._set("A6", "TRUE");
-    model._set("A7", "#VALUE!");
-    model._set("A8", "=Z100"); // an empty cell, considered to be a CellType::Number
-    model._set("A9", "=2*3*7");
-    model._set("A10", "=\"foo\"");
-    model._set("A11", "=1/0");
-    model._set("A12", "=1>0");
-    model._set("A13", "=42"); // an Cell::EmptyCell, considered to be a CellType::Number
-    model._set("A15", "'"); // an empty string
+    model.set_a1("A1", "");
+    model.set_a1("A2", "42");
+    model.set_a1("A3", "12.34");
+    model.set_a1("A4", "foobar");
+    model.set_a1("A5", "1+2");
+    model.set_a1("A6", "TRUE");
+    model.set_a1("A7", "#VALUE!");
+    model.set_a1("A8", "=Z100"); // an empty cell, considered to be a CellType::Number
+    model.set_a1("A9", "=2*3*7");
+    model.set_a1("A10", "=\"foo\"");
+    model.set_a1("A11", "=1/0");
+    model.set_a1("A12", "=1>0");
+    model.set_a1("A13", "=42"); // an Cell::EmptyCell, considered to be a CellType::Number
+    model.set_a1("A15", "'"); // an empty string
     model.evaluate();
 
-    model._cell_clear_contents(0, 13, 1).unwrap(); // A13
-    model._set("A14", "=42"); // a CellFormula
+    model.clear_contents_at(0, 13, 1).unwrap(); // A13
+    model.set_a1("A14", "=42"); // a CellFormula
 
-    assert_eq!(model._get_cell("A1").get_type(), CellType::Number);
-    assert_eq!(model._get_cell("A2").get_type(), CellType::Number);
-    assert_eq!(model._get_cell("A3").get_type(), CellType::Number);
-    assert_eq!(model._get_cell("A4").get_type(), CellType::Text);
-    assert_eq!(model._get_cell("A5").get_type(), CellType::Text);
-    assert_eq!(model._get_cell("A6").get_type(), CellType::LogicalValue);
-    assert_eq!(model._get_cell("A7").get_type(), CellType::ErrorValue);
-    assert_eq!(model._get_cell("A8").get_type(), CellType::Number);
-    assert_eq!(model._get_cell("A9").get_type(), CellType::Number);
-    assert_eq!(model._get_cell("A10").get_type(), CellType::Text);
-    assert_eq!(model._get_cell("A11").get_type(), CellType::ErrorValue);
-    assert_eq!(model._get_cell("A12").get_type(), CellType::LogicalValue);
-    assert_eq!(model._get_cell("A13").get_type(), CellType::Number);
-    assert_eq!(model._get_cell("A14").get_type(), CellType::Number);
-    assert_eq!(model._get_cell("A15").get_type(), CellType::Text);
+    assert_eq!(model.get_cell_a1("A1").get_type(), CellType::Number);
+    assert_eq!(model.get_cell_a1("A2").get_type(), CellType::Number);
+    assert_eq!(model.get_cell_a1("A3").get_type(), CellType::Number);
+    assert_eq!(model.get_cell_a1("A4").get_type(), CellType::Text);
+    assert_eq!(model.get_cell_a1("A5").get_type(), CellType::Text);
+    assert_eq!(model.get_cell_a1("A6").get_type(), CellType::LogicalValue);
+    assert_eq!(model.get_cell_a1("A7").get_type(), CellType::ErrorValue);
+    assert_eq!(model.get_cell_a1("A8").get_type(), CellType::Number);
+    assert_eq!(model.get_cell_a1("A9").get_type(), CellType::Number);
+    assert_eq!(model.get_cell_a1("A10").get_type(), CellType::Text);
+    assert_eq!(model.get_cell_a1("A11").get_type(), CellType::ErrorValue);
+    assert_eq!(model.get_cell_a1("A12").get_type(), CellType::LogicalValue);
+    assert_eq!(model.get_cell_a1("A13").get_type(), CellType::Number);
+    assert_eq!(model.get_cell_a1("A14").get_type(), CellType::Number);
+    assert_eq!(model.get_cell_a1("A15").get_type(), CellType::Text);
 }
 
 #[test]
 fn cell_is_always_dynamic() {
     let mut model = new_empty_model();
-    model._set("A1", "42");
-    model._set("B1", "=CELL(\"address\", A1)");
-    model._set("B2", "=CELL(\"contents\", A2)");
+    model.set_a1("A1", "42");
+    model.set_a1("B1", "=CELL(\"address\", A1)");
+    model.set_a1("B2", "=CELL(\"contents\", A2)");
     model.evaluate();
 
     let b1_cell = model.workbook.worksheets[0].cell(1, 2).unwrap().clone();
@@ -142,23 +142,23 @@ fn test_cell_has_formula() {
 #[test]
 fn cell_contents_of_a_blank_is_the_empty_value() {
     let mut model = new_empty_model();
-    model._set("A1", "=COUNTA(CELL(\"contents\",Z1))");
-    model._set("A2", "=VSTACK(LET(x,CELL(\"contents\",Z1),x),1)");
-    model._set("A4", "=TOCOL(IF(TRUE,CELL(\"contents\",Z1)))");
-    model._set("A5", "=VSTACK(IFERROR(Z1,5),1)");
-    model._set("A6", "=TAKE(CELL(\"contents\",Z1),1)");
-    model._set("B1", "=VSTACK(IF(TRUE,Z1),1)");
-    model._set("C1", "=SORT(CELL(\"contents\",Z1))");
-    model._set("D1", "=MAP(CELL(\"contents\",Z1),LAMBDA(v,v))");
+    model.set_a1("A1", "=COUNTA(CELL(\"contents\",Z1))");
+    model.set_a1("A2", "=VSTACK(LET(x,CELL(\"contents\",Z1),x),1)");
+    model.set_a1("A4", "=TOCOL(IF(TRUE,CELL(\"contents\",Z1)))");
+    model.set_a1("A5", "=VSTACK(IFERROR(Z1,5),1)");
+    model.set_a1("A6", "=TAKE(CELL(\"contents\",Z1),1)");
+    model.set_a1("B1", "=VSTACK(IF(TRUE,Z1),1)");
+    model.set_a1("C1", "=SORT(CELL(\"contents\",Z1))");
+    model.set_a1("D1", "=MAP(CELL(\"contents\",Z1),LAMBDA(v,v))");
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("A2"), "#VALUE!");
-    assert_eq!(model._get_text("A4"), "#VALUE!");
-    assert_eq!(model._get_text("A5"), "#VALUE!");
-    assert_eq!(model._get_text("A6"), "#VALUE!");
-    assert_eq!(model._get_text("B1"), "0");
-    assert_eq!(model._get_text("B2"), "1");
-    assert_eq!(model._get_text("C1"), "0");
-    assert_eq!(model._get_text("D1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A5"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A6"), "#VALUE!");
+    assert_eq!(model.get_text_a1("B1"), "0");
+    assert_eq!(model.get_text_a1("B2"), "1");
+    assert_eq!(model.get_text_a1("C1"), "0");
+    assert_eq!(model.get_text_a1("D1"), "#VALUE!");
 }

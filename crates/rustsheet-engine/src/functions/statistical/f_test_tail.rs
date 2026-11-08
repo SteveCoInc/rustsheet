@@ -15,6 +15,10 @@
 //! docs/research/t2681/README.md, docs/excel-semantics/statistics.md "F.TEST / FTEST").
 //!
 //! Every loop is bounded (bratio's series bound, and `bup`'s n below 40).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::many_single_char_names)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use super::beta_density::beta_density_small_shape;
 use super::bratio::bpser::{bpser_with_ln_beta, ExpFinish};

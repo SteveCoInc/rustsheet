@@ -1,6 +1,14 @@
 //! The data arguments of LINEST, LOGEST, TREND and GROWTH: how they are read, how `known_x` lines up
 //! with `known_y`, and which x columns a singular fit drops (statistics.md "TREND: defaults,
 //! shapes, single points and error inputs", "LINEST, LOGEST, GROWTH: probe findings").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 
 use crate::area_budget::multiply_add_units;
 use crate::expressions::parser::ArrayNode;

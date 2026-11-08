@@ -1,6 +1,9 @@
 //! Parsing of en-US time text for TIMEVALUE (clock text, "date clock" text).
 //!
 //! Excel: see docs/excel-semantics/dates.md#time-text.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use crate::{
     cast::number_text_too_long,

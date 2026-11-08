@@ -13,7 +13,7 @@ use crate::test::util::new_empty_model;
 fn results(formulas: &[&str]) -> Vec<u64> {
     let mut model = new_empty_model();
     for (i, formula) in formulas.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     (1..=formulas.len())

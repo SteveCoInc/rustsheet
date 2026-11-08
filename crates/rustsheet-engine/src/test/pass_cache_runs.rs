@@ -42,11 +42,11 @@ pub(crate) fn cached_and_walked(
         }
         model.evaluation.no_pass_caches = no_pass_caches;
         for (cell, value) in cells {
-            model._set(cell, value);
+            model.set_a1(cell, value);
         }
         model.evaluate();
         for (cell, value) in edits {
-            model._set(cell, value);
+            model.set_a1(cell, value);
         }
         if !edits.is_empty() {
             model.evaluate();
@@ -56,7 +56,7 @@ pub(crate) fn cached_and_walked(
             .evaluation
             .last_recalc
             .as_ref()
-            .map(|last| last.spent());
+            .map(super::super::recalc_budget::RecalcBudget::spent);
         values.push(format!("spent {spent:?}"));
         (values, probe(&model))
     };
@@ -104,7 +104,7 @@ fn state(model: &Model, cell: &str) -> String {
         .contains(&crate::evaluation::key(at));
     format!(
         "{:?} {} circular={circular}",
-        model._get_cell(cell),
-        model._get_text(cell)
+        model.get_cell_a1(cell),
+        model.get_text_a1(cell)
     )
 }

@@ -20,7 +20,8 @@ RustSheet started as a fork of [IronCalc](https://github.com/ironcalc/IronCalc)
 | `webapp/`, `bindings/wasm/`, `bindings/nodejs/`, `docs/` | dropped | out of scope for a headless engine |
 
 Modifications at import: crate/package renames, workspace-level lint policy,
-lint-debt allow-lists in each forked crate's `Cargo.toml`, `cargo fmt`.
+lint-debt allow-lists in each forked crate's `Cargo.toml` (since decision 0335, per-file
+`#![expect]` blocks instead), `cargo fmt`.
 
 ## RustSheet-only engine additions
 

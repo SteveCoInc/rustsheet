@@ -13,7 +13,7 @@ use crate::test::util::new_empty_model;
 fn assert_bits(cases: &[(&str, f64)]) {
     let mut model = new_empty_model();
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), formula);
+        model.set_a1(&format!("A{}", i + 1), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {

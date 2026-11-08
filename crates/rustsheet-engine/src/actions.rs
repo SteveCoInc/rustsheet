@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_sign_loss,
+    clippy::mut_mut,
+    clippy::too_many_lines,
+    elided_lifetimes_in_paths
+)]
+// LINT-DEBT-END
 use crate::cf_types::{CfRule, Cfvo};
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::cut_paste::cf_sqref_anchor;
@@ -370,7 +378,7 @@ impl Model {
             .workbook
             .worksheet(sheet)?
             .cell(row, column)
-            .and_then(|c| c.get_formula())
+            .and_then(super::types::Cell::get_formula)
         {
             let node = &Node::clone(self.parsed_formulas[sheet as usize][f as usize].written());
             let cell_reference = CellReferenceRC {
@@ -409,7 +417,7 @@ impl Model {
                     self.update_cell_with_formula(sheet, row, column, text)?;
                 }
                 return Ok(before);
-            };
+            }
         }
         Ok(None)
     }
@@ -463,23 +471,24 @@ impl Model {
         // Phase 2: displace formula fields (requires &mut self.parser) then write back.
         // CF formulas are stored in English, so parse them with the default
         // locale/language regardless of the active ones.
-        let locale = self.locale;
-        let language = self.language;
-        self.parser.set_locale(get_default_locale());
-        self.parser.set_language(get_default_language());
-        for (idx, new_range, rule, anchor_row, anchor_col) in phase1 {
-            let context = CellReferenceRC {
-                sheet: sheet_name.clone(),
-                row: anchor_row,
-                column: anchor_col,
-            };
-            let new_rule =
-                displace_cf_rule_formulas(&mut self.parser, rule, &context, displacement);
+        let displaced: Vec<_> = self.with_default_parser(|parser| {
+            phase1
+                .into_iter()
+                .map(|(idx, new_range, rule, anchor_row, anchor_col)| {
+                    let context = CellReferenceRC {
+                        sheet: sheet_name.clone(),
+                        row: anchor_row,
+                        column: anchor_col,
+                    };
+                    let new_rule = displace_cf_rule_formulas(parser, rule, &context, displacement);
+                    (idx, new_range, new_rule)
+                })
+                .collect()
+        });
+        for (idx, new_range, new_rule) in displaced {
             self.workbook.worksheets[sheet as usize].conditional_formatting[idx].range = new_range;
             self.workbook.worksheets[sheet as usize].conditional_formatting[idx].cf_rule = new_rule;
         }
-        self.parser.set_locale(locale);
-        self.parser.set_language(language);
     }
 
     /// The columns of the cells in `row` of `sheet`, ascending (descending if `descending`); an
@@ -719,7 +728,7 @@ impl Model {
         let worksheet = &mut self.workbook.worksheet_mut(sheet)?;
 
         let mut new_columns = Vec::new();
-        for col in worksheet.cols.iter_mut() {
+        for col in &mut worksheet.cols {
             // range under study
             let min = col.min;
             let max = col.max;
@@ -863,7 +872,7 @@ impl Model {
 
         // deletes all the column styles
         let mut new_columns = Vec::new();
-        for col in worksheet.cols.iter_mut() {
+        for col in &mut worksheet.cols {
             // range under study
             let min = col.min;
             let max = col.max;
@@ -1319,7 +1328,7 @@ impl Model {
                     .set_column_width_and_style(c - 1, w, h, s)?;
             }
         } else {
-            for c in (target_column..=column - 1).rev() {
+            for c in (target_column..column).rev() {
                 let refs = self.workbook.worksheet(sheet)?.column_cell_references(c)?;
                 for r in refs {
                     self.move_cell(sheet, (r.row, c), (r.row, c + 1), &[])?;
@@ -1452,7 +1461,7 @@ impl Model {
                 }
             }
         } else {
-            for r in (target_row..=row - 1).rev() {
+            for r in (target_row..row).rev() {
                 let cols = self.get_columns_for_row(sheet, r, false)?;
                 for c in cols {
                     self.move_cell(sheet, (r, c), (r + 1, c), &[])?;
@@ -1471,7 +1480,7 @@ impl Model {
         }
         let worksheet = &mut self.workbook.worksheet_mut(sheet)?;
         let mut new_rows = Vec::new();
-        for r in worksheet.rows.iter() {
+        for r in &worksheet.rows {
             if r.r == row {
                 let mut nr = r.clone();
                 nr.r = target_row;

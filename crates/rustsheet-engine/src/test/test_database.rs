@@ -10,16 +10,16 @@ fn a_volatile_field_selector_is_evaluated_once() {
     // read from E1, or checked on E1 and read as D1's #N/A, which no single pick gives. Now the
     // pick is made once: D1 is the error-cell `#VALUE!`, E1 the Qty sum.
     let mut model = new_empty_model();
-    model._set("A1", "Qty");
-    model._set("A2", "2");
-    model._set("A3", "3");
-    model._set("C1", "Qty");
-    model._set("D1", "=NA()");
-    model._set("E1", "Qty");
-    model._set("G1", "=DSUM(A1:A3,INDEX(D1:E1,RANDBETWEEN(1,2)),C1:C2)");
+    model.set_a1("A1", "Qty");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("C1", "Qty");
+    model.set_a1("D1", "=NA()");
+    model.set_a1("E1", "Qty");
+    model.set_a1("G1", "=DSUM(A1:A3,INDEX(D1:E1,RANDBETWEEN(1,2)),C1:C2)");
     for _ in 0..64 {
         model.evaluate();
-        let text = model._get_text("G1");
+        let text = model.get_text_a1("G1");
         assert!(matches!(text.as_str(), "#VALUE!" | "5"), "{text}");
     }
 }
@@ -27,127 +27,127 @@ fn a_volatile_field_selector_is_evaluated_once() {
 #[test]
 fn arguments() {
     let mut model = new_empty_model();
-    model._set("A1", "=DMIN()");
-    model._set("A2", "=DMIN(2)");
-    model._set("A3", "=DMIN(1, 2)");
-    model._set("A4", "=DMIN(1, 2, 3, 4)");
+    model.set_a1("A1", "=DMIN()");
+    model.set_a1("A2", "=DMIN(2)");
+    model.set_a1("A3", "=DMIN(1, 2)");
+    model.set_a1("A4", "=DMIN(1, 2, 3, 4)");
 
-    model._set("A5", "=DMAX()");
-    model._set("A6", "=DMAX(2)");
-    model._set("A7", "=DMAX(1, 2)");
-    model._set("A8", "=DMAX(1, 2, 3, 4)");
+    model.set_a1("A5", "=DMAX()");
+    model.set_a1("A6", "=DMAX(2)");
+    model.set_a1("A7", "=DMAX(1, 2)");
+    model.set_a1("A8", "=DMAX(1, 2, 3, 4)");
 
-    model._set("A9", "=DAVERAGE()");
-    model._set("A10", "=DAVERAGE(2)");
-    model._set("A11", "=DAVERAGE(1, 2)");
-    model._set("A12", "=DAVERAGE(1, 2, 3, 4)");
+    model.set_a1("A9", "=DAVERAGE()");
+    model.set_a1("A10", "=DAVERAGE(2)");
+    model.set_a1("A11", "=DAVERAGE(1, 2)");
+    model.set_a1("A12", "=DAVERAGE(1, 2, 3, 4)");
 
-    model._set("A13", "=DSUM()");
-    model._set("A14", "=DSUM(2)");
-    model._set("A15", "=DSUM(1, 2)");
-    model._set("A16", "=DSUM(1, 2, 3, 4)");
+    model.set_a1("A13", "=DSUM()");
+    model.set_a1("A14", "=DSUM(2)");
+    model.set_a1("A15", "=DSUM(1, 2)");
+    model.set_a1("A16", "=DSUM(1, 2, 3, 4)");
 
-    model._set("A17", "=DCOUNT()");
-    model._set("A18", "=DCOUNT(2)");
-    model._set("A19", "=DCOUNT(1, 2)");
-    model._set("A20", "=DCOUNT(1, 2, 3, 4)");
+    model.set_a1("A17", "=DCOUNT()");
+    model.set_a1("A18", "=DCOUNT(2)");
+    model.set_a1("A19", "=DCOUNT(1, 2)");
+    model.set_a1("A20", "=DCOUNT(1, 2, 3, 4)");
 
-    model._set("A21", "=DCOUNTA()");
-    model._set("A22", "=DCOUNTA(2)");
-    model._set("A23", "=DCOUNTA(1, 2)");
-    model._set("A24", "=DCOUNTA(1, 2, 3, 4)");
+    model.set_a1("A21", "=DCOUNTA()");
+    model.set_a1("A22", "=DCOUNTA(2)");
+    model.set_a1("A23", "=DCOUNTA(1, 2)");
+    model.set_a1("A24", "=DCOUNTA(1, 2, 3, 4)");
 
-    model._set("B1", "=DGET()");
-    model._set("B2", "=DGET(2)");
-    model._set("B3", "=DGET(1, 2)");
-    model._set("B4", "=DGET(1, 2, 3, 4)");
+    model.set_a1("B1", "=DGET()");
+    model.set_a1("B2", "=DGET(2)");
+    model.set_a1("B3", "=DGET(1, 2)");
+    model.set_a1("B4", "=DGET(1, 2, 3, 4)");
 
-    model._set("B5", "=DPRODUCT()");
-    model._set("B6", "=DPRODUCT(2)");
-    model._set("B7", "=DPRODUCT(1, 2)");
-    model._set("B8", "=DPRODUCT(1, 2, 3, 4)");
+    model.set_a1("B5", "=DPRODUCT()");
+    model.set_a1("B6", "=DPRODUCT(2)");
+    model.set_a1("B7", "=DPRODUCT(1, 2)");
+    model.set_a1("B8", "=DPRODUCT(1, 2, 3, 4)");
 
-    model._set("B9", "=DVAR()");
-    model._set("B10", "=DVAR(2)");
-    model._set("B11", "=DVAR(1, 2)");
-    model._set("B12", "=DVAR(1, 2, 3, 4)");
+    model.set_a1("B9", "=DVAR()");
+    model.set_a1("B10", "=DVAR(2)");
+    model.set_a1("B11", "=DVAR(1, 2)");
+    model.set_a1("B12", "=DVAR(1, 2, 3, 4)");
 
-    model._set("B13", "=DVARP()");
-    model._set("B14", "=DVARP(2)");
-    model._set("B15", "=DVARP(1, 2)");
-    model._set("B16", "=DVARP(1, 2, 3, 4)");
+    model.set_a1("B13", "=DVARP()");
+    model.set_a1("B14", "=DVARP(2)");
+    model.set_a1("B15", "=DVARP(1, 2)");
+    model.set_a1("B16", "=DVARP(1, 2, 3, 4)");
 
-    model._set("B17", "=DSTDEV()");
-    model._set("B18", "=DSTDEV(2)");
-    model._set("B19", "=DSTDEV(1, 2)");
-    model._set("B20", "=DSTDEV(1, 2, 3, 4)");
+    model.set_a1("B17", "=DSTDEV()");
+    model.set_a1("B18", "=DSTDEV(2)");
+    model.set_a1("B19", "=DSTDEV(1, 2)");
+    model.set_a1("B20", "=DSTDEV(1, 2, 3, 4)");
 
-    model._set("B21", "=DSTDEVP()");
-    model._set("B22", "=DSTDEVP(2)");
-    model._set("B23", "=DSTDEVP(1, 2)");
-    model._set("B24", "=DSTDEVP(1, 2, 3, 4)");
+    model.set_a1("B21", "=DSTDEVP()");
+    model.set_a1("B22", "=DSTDEVP(2)");
+    model.set_a1("B23", "=DSTDEVP(1, 2)");
+    model.set_a1("B24", "=DSTDEVP(1, 2, 3, 4)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
 
-    assert_eq!(model._get_text("A5"), *"#ERROR!");
-    assert_eq!(model._get_text("A6"), *"#ERROR!");
-    assert_eq!(model._get_text("A7"), *"#ERROR!");
-    assert_eq!(model._get_text("A8"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A5"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A6"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A7"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A8"), *"#ERROR!");
 
-    assert_eq!(model._get_text("A9"), *"#ERROR!");
-    assert_eq!(model._get_text("A10"), *"#ERROR!");
-    assert_eq!(model._get_text("A11"), *"#ERROR!");
-    assert_eq!(model._get_text("A12"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A9"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A10"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A11"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A12"), *"#ERROR!");
 
-    assert_eq!(model._get_text("A13"), *"#ERROR!");
-    assert_eq!(model._get_text("A14"), *"#ERROR!");
-    assert_eq!(model._get_text("A15"), *"#ERROR!");
-    assert_eq!(model._get_text("A16"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A13"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A14"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A15"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A16"), *"#ERROR!");
 
-    assert_eq!(model._get_text("A17"), *"#ERROR!");
-    assert_eq!(model._get_text("A18"), *"#ERROR!");
-    assert_eq!(model._get_text("A19"), *"#ERROR!");
-    assert_eq!(model._get_text("A20"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A17"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A18"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A19"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A20"), *"#ERROR!");
 
-    assert_eq!(model._get_text("A21"), *"#ERROR!");
-    assert_eq!(model._get_text("A22"), *"#ERROR!");
-    assert_eq!(model._get_text("A23"), *"#ERROR!");
-    assert_eq!(model._get_text("A24"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A21"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A22"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A23"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A24"), *"#ERROR!");
 
-    assert_eq!(model._get_text("B1"), *"#ERROR!");
-    assert_eq!(model._get_text("B2"), *"#ERROR!");
-    assert_eq!(model._get_text("B3"), *"#ERROR!");
-    assert_eq!(model._get_text("B4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B4"), *"#ERROR!");
 
-    assert_eq!(model._get_text("B5"), *"#ERROR!");
-    assert_eq!(model._get_text("B6"), *"#ERROR!");
-    assert_eq!(model._get_text("B7"), *"#ERROR!");
-    assert_eq!(model._get_text("B8"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B5"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B6"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B7"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B8"), *"#ERROR!");
 
-    assert_eq!(model._get_text("B9"), *"#ERROR!");
-    assert_eq!(model._get_text("B10"), *"#ERROR!");
-    assert_eq!(model._get_text("B11"), *"#ERROR!");
-    assert_eq!(model._get_text("B12"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B9"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B10"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B11"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B12"), *"#ERROR!");
 
-    assert_eq!(model._get_text("B13"), *"#ERROR!");
-    assert_eq!(model._get_text("B14"), *"#ERROR!");
-    assert_eq!(model._get_text("B15"), *"#ERROR!");
-    assert_eq!(model._get_text("B16"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B13"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B14"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B15"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B16"), *"#ERROR!");
 
-    assert_eq!(model._get_text("B17"), *"#ERROR!");
-    assert_eq!(model._get_text("B18"), *"#ERROR!");
-    assert_eq!(model._get_text("B19"), *"#ERROR!");
-    assert_eq!(model._get_text("B20"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B17"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B18"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B19"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B20"), *"#ERROR!");
 
-    assert_eq!(model._get_text("B21"), *"#ERROR!");
-    assert_eq!(model._get_text("B22"), *"#ERROR!");
-    assert_eq!(model._get_text("B23"), *"#ERROR!");
-    assert_eq!(model._get_text("B24"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B21"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B22"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B23"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("B24"), *"#ERROR!");
 }
 
 #[test]
@@ -156,53 +156,53 @@ fn locale_iso_format() {
     let mut model = Model::new_empty("model", "en", "UTC", "en").unwrap();
 
     // Create database
-    model._set("A1", "ID");
-    model._set("B1", "Date");
-    model._set("C1", "Amount");
-    model._set("A2", "1");
-    model._set("B2", "2026-01-15");
-    model._set("C2", "1200");
-    model._set("A3", "2");
-    model._set("B3", "2026-03-15");
-    model._set("C3", "900");
-    model._set("A4", "3");
-    model._set("B4", "2026-06-15");
-    model._set("C4", "2100");
+    model.set_a1("A1", "ID");
+    model.set_a1("B1", "Date");
+    model.set_a1("C1", "Amount");
+    model.set_a1("A2", "1");
+    model.set_a1("B2", "2026-01-15");
+    model.set_a1("C2", "1200");
+    model.set_a1("A3", "2");
+    model.set_a1("B3", "2026-03-15");
+    model.set_a1("C3", "900");
+    model.set_a1("A4", "3");
+    model.set_a1("B4", "2026-06-15");
+    model.set_a1("C4", "2100");
 
     // Define criteria
-    model._set("A6", "Date");
-    model._set("A7", ">=2026-03-01");
-    model._set("B6", "Date");
-    model._set("B7", "2026-01-15"); // DGET needs an exact match
+    model.set_a1("A6", "Date");
+    model.set_a1("A7", ">=2026-03-01");
+    model.set_a1("B6", "Date");
+    model.set_a1("B7", "2026-01-15"); // DGET needs an exact match
 
     // Test functions
-    model._set("A9", "=DMIN(A1:C4, C1, A6:A7)");
-    model._set("A10", "=DMAX(A1:C4, C1, A6:A7)");
-    model._set("A11", "=DAVERAGE(A1:C4, C1, A6:A7)");
-    model._set("A12", "=DSUM(A1:C4, C1, A6:A7)");
-    model._set("A13", "=DPRODUCT(A1:C4, C1, A6:A7)");
-    model._set("A14", "=DGET(A1:C4, C1, B6:B7)");
-    model._set("A15", "=DCOUNT(A1:C4, C1, A6:A7)");
-    model._set("A16", "=DCOUNTA(A1:C4, C1, A6:A7)");
-    model._set("A17", "=DVAR(A1:C4, C1, A6:A7)");
-    model._set("A18", "=DVARP(A1:C4, C1, A6:A7)");
-    model._set("A19", "=DSTDEV(A1:C4, C1, A6:A7)");
-    model._set("A20", "=DSTDEVP(A1:C4, C1, A6:A7)");
+    model.set_a1("A9", "=DMIN(A1:C4, C1, A6:A7)");
+    model.set_a1("A10", "=DMAX(A1:C4, C1, A6:A7)");
+    model.set_a1("A11", "=DAVERAGE(A1:C4, C1, A6:A7)");
+    model.set_a1("A12", "=DSUM(A1:C4, C1, A6:A7)");
+    model.set_a1("A13", "=DPRODUCT(A1:C4, C1, A6:A7)");
+    model.set_a1("A14", "=DGET(A1:C4, C1, B6:B7)");
+    model.set_a1("A15", "=DCOUNT(A1:C4, C1, A6:A7)");
+    model.set_a1("A16", "=DCOUNTA(A1:C4, C1, A6:A7)");
+    model.set_a1("A17", "=DVAR(A1:C4, C1, A6:A7)");
+    model.set_a1("A18", "=DVARP(A1:C4, C1, A6:A7)");
+    model.set_a1("A19", "=DSTDEV(A1:C4, C1, A6:A7)");
+    model.set_a1("A20", "=DSTDEVP(A1:C4, C1, A6:A7)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A9"), *"900");
-    assert_eq!(model._get_text("A10"), *"2100");
-    assert_eq!(model._get_text("A11"), *"1500");
-    assert_eq!(model._get_text("A12"), *"3000");
-    assert_eq!(model._get_text("A13"), *"1890000");
-    assert_eq!(model._get_text("A14"), *"1200");
-    assert_eq!(model._get_text("A15"), *"2");
-    assert_eq!(model._get_text("A16"), *"2");
-    assert_eq!(model._get_text("A17"), *"720000");
-    assert_eq!(model._get_text("A18"), *"360000");
-    assert_eq!(model._get_text("A19"), *"848.5281374");
-    assert_eq!(model._get_text("A20"), *"600");
+    assert_eq!(model.get_text_a1("A9"), *"900");
+    assert_eq!(model.get_text_a1("A10"), *"2100");
+    assert_eq!(model.get_text_a1("A11"), *"1500");
+    assert_eq!(model.get_text_a1("A12"), *"3000");
+    assert_eq!(model.get_text_a1("A13"), *"1890000");
+    assert_eq!(model.get_text_a1("A14"), *"1200");
+    assert_eq!(model.get_text_a1("A15"), *"2");
+    assert_eq!(model.get_text_a1("A16"), *"2");
+    assert_eq!(model.get_text_a1("A17"), *"720000");
+    assert_eq!(model.get_text_a1("A18"), *"360000");
+    assert_eq!(model.get_text_a1("A19"), *"848.5281374");
+    assert_eq!(model.get_text_a1("A20"), *"600");
 }
 
 #[test]
@@ -211,53 +211,53 @@ fn locale_uk() {
     let mut model = Model::new_empty("model", "en-GB", "UTC", "en").unwrap();
 
     // Create database
-    model._set("A1", "ID");
-    model._set("B1", "Date");
-    model._set("C1", "Amount");
-    model._set("A2", "1");
-    model._set("B2", "15/01/2026");
-    model._set("C2", "1200");
-    model._set("A3", "2");
-    model._set("B3", "15/03/2026");
-    model._set("C3", "900");
-    model._set("A4", "3");
-    model._set("B4", "15/06/2026");
-    model._set("C4", "2100");
+    model.set_a1("A1", "ID");
+    model.set_a1("B1", "Date");
+    model.set_a1("C1", "Amount");
+    model.set_a1("A2", "1");
+    model.set_a1("B2", "15/01/2026");
+    model.set_a1("C2", "1200");
+    model.set_a1("A3", "2");
+    model.set_a1("B3", "15/03/2026");
+    model.set_a1("C3", "900");
+    model.set_a1("A4", "3");
+    model.set_a1("B4", "15/06/2026");
+    model.set_a1("C4", "2100");
 
     // Define criteria
-    model._set("A6", "Date");
-    model._set("A7", ">=01/03/2026");
-    model._set("B6", "Date");
-    model._set("B7", "15/01/2026"); // DGET needs an exact match
+    model.set_a1("A6", "Date");
+    model.set_a1("A7", ">=01/03/2026");
+    model.set_a1("B6", "Date");
+    model.set_a1("B7", "15/01/2026"); // DGET needs an exact match
 
     // Test functions
-    model._set("A9", "=DMIN(A1:C4, C1, A6:A7)");
-    model._set("A10", "=DMAX(A1:C4, C1, A6:A7)");
-    model._set("A11", "=DAVERAGE(A1:C4, C1, A6:A7)");
-    model._set("A12", "=DSUM(A1:C4, C1, A6:A7)");
-    model._set("A13", "=DPRODUCT(A1:C4, C1, A6:A7)");
-    model._set("A14", "=DGET(A1:C4, C1, B6:B7)");
-    model._set("A15", "=DCOUNT(A1:C4, C1, A6:A7)");
-    model._set("A16", "=DCOUNTA(A1:C4, C1, A6:A7)");
-    model._set("A17", "=DVAR(A1:C4, C1, A6:A7)");
-    model._set("A18", "=DVARP(A1:C4, C1, A6:A7)");
-    model._set("A19", "=DSTDEV(A1:C4, C1, A6:A7)");
-    model._set("A20", "=DSTDEVP(A1:C4, C1, A6:A7)");
+    model.set_a1("A9", "=DMIN(A1:C4, C1, A6:A7)");
+    model.set_a1("A10", "=DMAX(A1:C4, C1, A6:A7)");
+    model.set_a1("A11", "=DAVERAGE(A1:C4, C1, A6:A7)");
+    model.set_a1("A12", "=DSUM(A1:C4, C1, A6:A7)");
+    model.set_a1("A13", "=DPRODUCT(A1:C4, C1, A6:A7)");
+    model.set_a1("A14", "=DGET(A1:C4, C1, B6:B7)");
+    model.set_a1("A15", "=DCOUNT(A1:C4, C1, A6:A7)");
+    model.set_a1("A16", "=DCOUNTA(A1:C4, C1, A6:A7)");
+    model.set_a1("A17", "=DVAR(A1:C4, C1, A6:A7)");
+    model.set_a1("A18", "=DVARP(A1:C4, C1, A6:A7)");
+    model.set_a1("A19", "=DSTDEV(A1:C4, C1, A6:A7)");
+    model.set_a1("A20", "=DSTDEVP(A1:C4, C1, A6:A7)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A9"), *"900");
-    assert_eq!(model._get_text("A10"), *"2100");
-    assert_eq!(model._get_text("A11"), *"1500");
-    assert_eq!(model._get_text("A12"), *"3000");
-    assert_eq!(model._get_text("A13"), *"1890000");
-    assert_eq!(model._get_text("A14"), *"1200");
-    assert_eq!(model._get_text("A15"), *"2");
-    assert_eq!(model._get_text("A16"), *"2");
-    assert_eq!(model._get_text("A17"), *"720000");
-    assert_eq!(model._get_text("A18"), *"360000");
-    assert_eq!(model._get_text("A19"), *"848.5281374");
-    assert_eq!(model._get_text("A20"), *"600");
+    assert_eq!(model.get_text_a1("A9"), *"900");
+    assert_eq!(model.get_text_a1("A10"), *"2100");
+    assert_eq!(model.get_text_a1("A11"), *"1500");
+    assert_eq!(model.get_text_a1("A12"), *"3000");
+    assert_eq!(model.get_text_a1("A13"), *"1890000");
+    assert_eq!(model.get_text_a1("A14"), *"1200");
+    assert_eq!(model.get_text_a1("A15"), *"2");
+    assert_eq!(model.get_text_a1("A16"), *"2");
+    assert_eq!(model.get_text_a1("A17"), *"720000");
+    assert_eq!(model.get_text_a1("A18"), *"360000");
+    assert_eq!(model.get_text_a1("A19"), *"848.5281374");
+    assert_eq!(model.get_text_a1("A20"), *"600");
 }
 
 #[test]
@@ -266,53 +266,53 @@ fn locale_us() {
     let mut model = Model::new_empty("model", "en", "UTC", "en").unwrap();
 
     // Create database
-    model._set("A1", "ID");
-    model._set("B1", "Date");
-    model._set("C1", "Amount");
-    model._set("A2", "1");
-    model._set("B2", "1/15/26");
-    model._set("C2", "1200");
-    model._set("A3", "2");
-    model._set("B3", "3/15/26");
-    model._set("C3", "900");
-    model._set("A4", "3");
-    model._set("B4", "6/15/26");
-    model._set("C4", "2100");
+    model.set_a1("A1", "ID");
+    model.set_a1("B1", "Date");
+    model.set_a1("C1", "Amount");
+    model.set_a1("A2", "1");
+    model.set_a1("B2", "1/15/26");
+    model.set_a1("C2", "1200");
+    model.set_a1("A3", "2");
+    model.set_a1("B3", "3/15/26");
+    model.set_a1("C3", "900");
+    model.set_a1("A4", "3");
+    model.set_a1("B4", "6/15/26");
+    model.set_a1("C4", "2100");
 
     // Define criteria
-    model._set("A6", "Date");
-    model._set("A7", ">=3/1/26");
-    model._set("B6", "Date");
-    model._set("B7", "1/15/26"); // DGET needs an exact match
+    model.set_a1("A6", "Date");
+    model.set_a1("A7", ">=3/1/26");
+    model.set_a1("B6", "Date");
+    model.set_a1("B7", "1/15/26"); // DGET needs an exact match
 
     // Test functions
-    model._set("A9", "=DMIN(A1:C4, C1, A6:A7)");
-    model._set("A10", "=DMAX(A1:C4, C1, A6:A7)");
-    model._set("A11", "=DAVERAGE(A1:C4, C1, A6:A7)");
-    model._set("A12", "=DSUM(A1:C4, C1, A6:A7)");
-    model._set("A13", "=DPRODUCT(A1:C4, C1, A6:A7)");
-    model._set("A14", "=DGET(A1:C4, C1, B6:B7)");
-    model._set("A15", "=DCOUNT(A1:C4, C1, A6:A7)");
-    model._set("A16", "=DCOUNTA(A1:C4, C1, A6:A7)");
-    model._set("A17", "=DVAR(A1:C4, C1, A6:A7)");
-    model._set("A18", "=DVARP(A1:C4, C1, A6:A7)");
-    model._set("A19", "=DSTDEV(A1:C4, C1, A6:A7)");
-    model._set("A20", "=DSTDEVP(A1:C4, C1, A6:A7)");
+    model.set_a1("A9", "=DMIN(A1:C4, C1, A6:A7)");
+    model.set_a1("A10", "=DMAX(A1:C4, C1, A6:A7)");
+    model.set_a1("A11", "=DAVERAGE(A1:C4, C1, A6:A7)");
+    model.set_a1("A12", "=DSUM(A1:C4, C1, A6:A7)");
+    model.set_a1("A13", "=DPRODUCT(A1:C4, C1, A6:A7)");
+    model.set_a1("A14", "=DGET(A1:C4, C1, B6:B7)");
+    model.set_a1("A15", "=DCOUNT(A1:C4, C1, A6:A7)");
+    model.set_a1("A16", "=DCOUNTA(A1:C4, C1, A6:A7)");
+    model.set_a1("A17", "=DVAR(A1:C4, C1, A6:A7)");
+    model.set_a1("A18", "=DVARP(A1:C4, C1, A6:A7)");
+    model.set_a1("A19", "=DSTDEV(A1:C4, C1, A6:A7)");
+    model.set_a1("A20", "=DSTDEVP(A1:C4, C1, A6:A7)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A9"), *"900");
-    assert_eq!(model._get_text("A10"), *"2100");
-    assert_eq!(model._get_text("A11"), *"1500");
-    assert_eq!(model._get_text("A12"), *"3000");
-    assert_eq!(model._get_text("A13"), *"1890000");
-    assert_eq!(model._get_text("A14"), *"1200");
-    assert_eq!(model._get_text("A15"), *"2");
-    assert_eq!(model._get_text("A16"), *"2");
-    assert_eq!(model._get_text("A17"), *"720000");
-    assert_eq!(model._get_text("A18"), *"360000");
-    assert_eq!(model._get_text("A19"), *"848.5281374");
-    assert_eq!(model._get_text("A20"), *"600");
+    assert_eq!(model.get_text_a1("A9"), *"900");
+    assert_eq!(model.get_text_a1("A10"), *"2100");
+    assert_eq!(model.get_text_a1("A11"), *"1500");
+    assert_eq!(model.get_text_a1("A12"), *"3000");
+    assert_eq!(model.get_text_a1("A13"), *"1890000");
+    assert_eq!(model.get_text_a1("A14"), *"1200");
+    assert_eq!(model.get_text_a1("A15"), *"2");
+    assert_eq!(model.get_text_a1("A16"), *"2");
+    assert_eq!(model.get_text_a1("A17"), *"720000");
+    assert_eq!(model.get_text_a1("A18"), *"360000");
+    assert_eq!(model.get_text_a1("A19"), *"848.5281374");
+    assert_eq!(model.get_text_a1("A20"), *"600");
 }
 
 #[test]
@@ -321,53 +321,53 @@ fn locale_de() {
     let mut model = Model::new_empty("model", "de", "UTC", "en").unwrap();
 
     // Create database
-    model._set("A1", "ID");
-    model._set("B1", "Date");
-    model._set("C1", "Amount");
-    model._set("A2", "1");
-    model._set("B2", "15.1.2026");
-    model._set("C2", "1200");
-    model._set("A3", "2");
-    model._set("B3", "15.3.2026");
-    model._set("C3", "900");
-    model._set("A4", "3");
-    model._set("B4", "15.6.2026");
-    model._set("C4", "2100");
+    model.set_a1("A1", "ID");
+    model.set_a1("B1", "Date");
+    model.set_a1("C1", "Amount");
+    model.set_a1("A2", "1");
+    model.set_a1("B2", "15.1.2026");
+    model.set_a1("C2", "1200");
+    model.set_a1("A3", "2");
+    model.set_a1("B3", "15.3.2026");
+    model.set_a1("C3", "900");
+    model.set_a1("A4", "3");
+    model.set_a1("B4", "15.6.2026");
+    model.set_a1("C4", "2100");
 
     // Define criteria
-    model._set("A6", "Date");
-    model._set("A7", ">=1.3.2026");
-    model._set("B6", "Date");
-    model._set("B7", "15.1.2026"); // DGET needs an exact match
+    model.set_a1("A6", "Date");
+    model.set_a1("A7", ">=1.3.2026");
+    model.set_a1("B6", "Date");
+    model.set_a1("B7", "15.1.2026"); // DGET needs an exact match
 
     // Test functions
-    model._set("A9", "=DMIN(A1:C4; C1; A6:A7)");
-    model._set("A10", "=DMAX(A1:C4; C1; A6:A7)");
-    model._set("A11", "=DAVERAGE(A1:C4; C1; A6:A7)");
-    model._set("A12", "=DSUM(A1:C4; C1; A6:A7)");
-    model._set("A13", "=DPRODUCT(A1:C4; C1; A6:A7)");
-    model._set("A14", "=DGET(A1:C4; C1; B6:B7)");
-    model._set("A15", "=DCOUNT(A1:C4; C1; A6:A7)");
-    model._set("A16", "=DCOUNTA(A1:C4; C1; A6:A7)");
-    model._set("A17", "=DVAR(A1:C4; C1; A6:A7)");
-    model._set("A18", "=DVARP(A1:C4; C1; A6:A7)");
-    model._set("A19", "=DSTDEV(A1:C4; C1; A6:A7)");
-    model._set("A20", "=DSTDEVP(A1:C4; C1; A6:A7)");
+    model.set_a1("A9", "=DMIN(A1:C4; C1; A6:A7)");
+    model.set_a1("A10", "=DMAX(A1:C4; C1; A6:A7)");
+    model.set_a1("A11", "=DAVERAGE(A1:C4; C1; A6:A7)");
+    model.set_a1("A12", "=DSUM(A1:C4; C1; A6:A7)");
+    model.set_a1("A13", "=DPRODUCT(A1:C4; C1; A6:A7)");
+    model.set_a1("A14", "=DGET(A1:C4; C1; B6:B7)");
+    model.set_a1("A15", "=DCOUNT(A1:C4; C1; A6:A7)");
+    model.set_a1("A16", "=DCOUNTA(A1:C4; C1; A6:A7)");
+    model.set_a1("A17", "=DVAR(A1:C4; C1; A6:A7)");
+    model.set_a1("A18", "=DVARP(A1:C4; C1; A6:A7)");
+    model.set_a1("A19", "=DSTDEV(A1:C4; C1; A6:A7)");
+    model.set_a1("A20", "=DSTDEVP(A1:C4; C1; A6:A7)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A9"), *"900");
-    assert_eq!(model._get_text("A10"), *"2100");
-    assert_eq!(model._get_text("A11"), *"1500");
-    assert_eq!(model._get_text("A12"), *"3000");
-    assert_eq!(model._get_text("A13"), *"1890000");
-    assert_eq!(model._get_text("A14"), *"1200");
-    assert_eq!(model._get_text("A15"), *"2");
-    assert_eq!(model._get_text("A16"), *"2");
-    assert_eq!(model._get_text("A17"), *"720000");
-    assert_eq!(model._get_text("A18"), *"360000");
-    assert_eq!(model._get_text("A19"), *"848,5281374");
-    assert_eq!(model._get_text("A20"), *"600");
+    assert_eq!(model.get_text_a1("A9"), *"900");
+    assert_eq!(model.get_text_a1("A10"), *"2100");
+    assert_eq!(model.get_text_a1("A11"), *"1500");
+    assert_eq!(model.get_text_a1("A12"), *"3000");
+    assert_eq!(model.get_text_a1("A13"), *"1890000");
+    assert_eq!(model.get_text_a1("A14"), *"1200");
+    assert_eq!(model.get_text_a1("A15"), *"2");
+    assert_eq!(model.get_text_a1("A16"), *"2");
+    assert_eq!(model.get_text_a1("A17"), *"720000");
+    assert_eq!(model.get_text_a1("A18"), *"360000");
+    assert_eq!(model.get_text_a1("A19"), *"848,5281374");
+    assert_eq!(model.get_text_a1("A20"), *"600");
 }
 
 #[test]
@@ -376,80 +376,80 @@ fn locale_wrong_format() {
     let mut model = Model::new_empty("model", "en", "UTC", "en").unwrap();
 
     // Create database
-    model._set("A1", "ID");
-    model._set("B1", "Date");
-    model._set("C1", "Amount");
-    model._set("A2", "1");
-    model._set("B2", "10.1.2026");
-    model._set("C2", "1200");
-    model._set("A3", "2");
-    model._set("B3", "10.3.2026");
-    model._set("C3", "900");
-    model._set("A4", "3");
-    model._set("B4", "10.6.2026");
-    model._set("C4", "2100");
+    model.set_a1("A1", "ID");
+    model.set_a1("B1", "Date");
+    model.set_a1("C1", "Amount");
+    model.set_a1("A2", "1");
+    model.set_a1("B2", "10.1.2026");
+    model.set_a1("C2", "1200");
+    model.set_a1("A3", "2");
+    model.set_a1("B3", "10.3.2026");
+    model.set_a1("C3", "900");
+    model.set_a1("A4", "3");
+    model.set_a1("B4", "10.6.2026");
+    model.set_a1("C4", "2100");
 
     // Define criteria
-    model._set("A6", "Date");
-    model._set("A7", ">=1.3.2026");
-    model._set("B6", "Date");
-    model._set("B7", "10.1.2026"); // DGET needs an exact match
+    model.set_a1("A6", "Date");
+    model.set_a1("A7", ">=1.3.2026");
+    model.set_a1("B6", "Date");
+    model.set_a1("B7", "10.1.2026"); // DGET needs an exact match
 
     // Test functions - results should be the same as using empty criteria
-    model._set("A9", "=DMIN(A1:C4, C1, A6:A7)");
-    model._set("A10", "=DMAX(A1:C4, C1, A6:A7)");
-    model._set("A11", "=DAVERAGE(A1:C4, C1, A6:A7)");
-    model._set("A12", "=DSUM(A1:C4, C1, A6:A7)");
-    model._set("A13", "=DPRODUCT(A1:C4, C1, A6:A7)");
-    model._set("A14", "=DGET(A1:C4, C1, B6:B7)");
-    model._set("A15", "=DCOUNT(A1:C4, C1, A6:A7)");
-    model._set("A16", "=DCOUNTA(A1:C4, C1, A6:A7)");
-    model._set("A17", "=DVAR(A1:C4, C1, A6:A7)");
-    model._set("A18", "=DVARP(A1:C4, C1, A6:A7)");
-    model._set("A19", "=DSTDEV(A1:C4, C1, A6:A7)");
-    model._set("A20", "=DSTDEVP(A1:C4, C1, A6:A7)");
+    model.set_a1("A9", "=DMIN(A1:C4, C1, A6:A7)");
+    model.set_a1("A10", "=DMAX(A1:C4, C1, A6:A7)");
+    model.set_a1("A11", "=DAVERAGE(A1:C4, C1, A6:A7)");
+    model.set_a1("A12", "=DSUM(A1:C4, C1, A6:A7)");
+    model.set_a1("A13", "=DPRODUCT(A1:C4, C1, A6:A7)");
+    model.set_a1("A14", "=DGET(A1:C4, C1, B6:B7)");
+    model.set_a1("A15", "=DCOUNT(A1:C4, C1, A6:A7)");
+    model.set_a1("A16", "=DCOUNTA(A1:C4, C1, A6:A7)");
+    model.set_a1("A17", "=DVAR(A1:C4, C1, A6:A7)");
+    model.set_a1("A18", "=DVARP(A1:C4, C1, A6:A7)");
+    model.set_a1("A19", "=DSTDEV(A1:C4, C1, A6:A7)");
+    model.set_a1("A20", "=DSTDEVP(A1:C4, C1, A6:A7)");
 
     // Test functions with empty criteria - range C6:C7 is empty
-    model._set("B9", "=DMIN(A1:C4, C1, C6:C7)");
-    model._set("B10", "=DMAX(A1:C4, C1, C6:C7)");
-    model._set("B11", "=DAVERAGE(A1:C4, C1, C6:C7)");
-    model._set("B12", "=DSUM(A1:C4, C1, C6:C7)");
-    model._set("B13", "=DPRODUCT(A1:C4, C1, C6:C7)");
-    model._set("B14", "=DGET(A1:C4, C1, B6:B7)");
-    model._set("B15", "=DCOUNT(A1:C4, C1, C6:C7)");
-    model._set("B16", "=DCOUNTA(A1:C4, C1, C6:C7)");
-    model._set("B17", "=DVAR(A1:C4, C1, C6:C7)");
-    model._set("B18", "=DVARP(A1:C4, C1, C6:C7)");
-    model._set("B19", "=DSTDEV(A1:C4, C1, C6:C7)");
-    model._set("B20", "=DSTDEVP(A1:C4, C1, C6:C7)");
+    model.set_a1("B9", "=DMIN(A1:C4, C1, C6:C7)");
+    model.set_a1("B10", "=DMAX(A1:C4, C1, C6:C7)");
+    model.set_a1("B11", "=DAVERAGE(A1:C4, C1, C6:C7)");
+    model.set_a1("B12", "=DSUM(A1:C4, C1, C6:C7)");
+    model.set_a1("B13", "=DPRODUCT(A1:C4, C1, C6:C7)");
+    model.set_a1("B14", "=DGET(A1:C4, C1, B6:B7)");
+    model.set_a1("B15", "=DCOUNT(A1:C4, C1, C6:C7)");
+    model.set_a1("B16", "=DCOUNTA(A1:C4, C1, C6:C7)");
+    model.set_a1("B17", "=DVAR(A1:C4, C1, C6:C7)");
+    model.set_a1("B18", "=DVARP(A1:C4, C1, C6:C7)");
+    model.set_a1("B19", "=DSTDEV(A1:C4, C1, C6:C7)");
+    model.set_a1("B20", "=DSTDEVP(A1:C4, C1, C6:C7)");
 
     model.evaluate();
 
-    assert_eq!(model._get_text("A9"), *"900");
-    assert_eq!(model._get_text("A10"), *"2100");
-    assert_eq!(model._get_text("A11"), *"1400");
-    assert_eq!(model._get_text("A12"), *"4200");
-    assert_eq!(model._get_text("A13"), *"2268000000");
-    assert_eq!(model._get_text("A14"), *"1200");
-    assert_eq!(model._get_text("A15"), *"3");
-    assert_eq!(model._get_text("A16"), *"3");
-    assert_eq!(model._get_text("A17"), *"390000");
-    assert_eq!(model._get_text("A18"), *"260000");
-    assert_eq!(model._get_text("A19"), *"624.4997998");
-    assert_eq!(model._get_text("A20"), *"509.9019514");
+    assert_eq!(model.get_text_a1("A9"), *"900");
+    assert_eq!(model.get_text_a1("A10"), *"2100");
+    assert_eq!(model.get_text_a1("A11"), *"1400");
+    assert_eq!(model.get_text_a1("A12"), *"4200");
+    assert_eq!(model.get_text_a1("A13"), *"2268000000");
+    assert_eq!(model.get_text_a1("A14"), *"1200");
+    assert_eq!(model.get_text_a1("A15"), *"3");
+    assert_eq!(model.get_text_a1("A16"), *"3");
+    assert_eq!(model.get_text_a1("A17"), *"390000");
+    assert_eq!(model.get_text_a1("A18"), *"260000");
+    assert_eq!(model.get_text_a1("A19"), *"624.4997998");
+    assert_eq!(model.get_text_a1("A20"), *"509.9019514");
 
-    assert_eq!(model._get_text("B9"), *"900");
-    assert_eq!(model._get_text("B10"), *"2100");
-    assert_eq!(model._get_text("B11"), *"1400");
-    assert_eq!(model._get_text("B12"), *"4200");
-    assert_eq!(model._get_text("B13"), *"2268000000");
-    assert_eq!(model._get_text("B14"), *"1200");
-    assert_eq!(model._get_text("B15"), *"3");
-    assert_eq!(model._get_text("B16"), *"3");
-    assert_eq!(model._get_text("B17"), *"390000");
-    assert_eq!(model._get_text("B18"), *"260000");
-    assert_eq!(model._get_text("B19"), *"624.4997998");
-    assert_eq!(model._get_text("B20"), *"509.9019514");
+    assert_eq!(model.get_text_a1("B9"), *"900");
+    assert_eq!(model.get_text_a1("B10"), *"2100");
+    assert_eq!(model.get_text_a1("B11"), *"1400");
+    assert_eq!(model.get_text_a1("B12"), *"4200");
+    assert_eq!(model.get_text_a1("B13"), *"2268000000");
+    assert_eq!(model.get_text_a1("B14"), *"1200");
+    assert_eq!(model.get_text_a1("B15"), *"3");
+    assert_eq!(model.get_text_a1("B16"), *"3");
+    assert_eq!(model.get_text_a1("B17"), *"390000");
+    assert_eq!(model.get_text_a1("B18"), *"260000");
+    assert_eq!(model.get_text_a1("B19"), *"624.4997998");
+    assert_eq!(model.get_text_a1("B20"), *"509.9019514");
 }
 
 // The database and criteria arguments go through `get_reference`, whose
@@ -458,30 +458,30 @@ fn locale_wrong_format() {
 #[test]
 fn computed_database_and_criteria_references() {
     let mut model = new_empty_model();
-    model._set("A1", "ID");
-    model._set("B1", "Amount");
-    model._set("A2", "1");
-    model._set("B2", "1200");
-    model._set("A3", "2");
-    model._set("B3", "900");
-    model._set("A4", "3");
-    model._set("B4", "2100");
+    model.set_a1("A1", "ID");
+    model.set_a1("B1", "Amount");
+    model.set_a1("A2", "1");
+    model.set_a1("B2", "1200");
+    model.set_a1("A3", "2");
+    model.set_a1("B3", "900");
+    model.set_a1("A4", "3");
+    model.set_a1("B4", "2100");
 
-    model._set("A6", "Amount");
-    model._set("A7", ">1000");
+    model.set_a1("A6", "Amount");
+    model.set_a1("A7", ">1000");
 
     // OFFSET(A1,0,0,4,2) -> A1:B4; INDIRECT("A6:A7") -> the criteria range.
-    model._set(
+    model.set_a1(
         "D1",
         "=DSUM(OFFSET(A1, 0, 0, 4, 2), B1, INDIRECT(\"A6:A7\"))",
     );
-    model._set("D2", "=DCOUNT(OFFSET(A1, 0, 0, 4, 2), B1, A6:A7)");
-    model._set("D3", "=DMAX(OFFSET(A1, 0, 0, 4, 2), B1, A6:A7)");
+    model.set_a1("D2", "=DCOUNT(OFFSET(A1, 0, 0, 4, 2), B1, A6:A7)");
+    model.set_a1("D3", "=DMAX(OFFSET(A1, 0, 0, 4, 2), B1, A6:A7)");
     model.evaluate();
 
-    assert_eq!(model._get_text("D1"), *"3300");
-    assert_eq!(model._get_text("D2"), *"2");
-    assert_eq!(model._get_text("D3"), *"2100");
+    assert_eq!(model.get_text_a1("D1"), *"3300");
+    assert_eq!(model.get_text_a1("D2"), *"2");
+    assert_eq!(model.get_text_a1("D3"), *"2100");
 }
 
 // Criteria text is not trimmed ("  > 1 " matches nothing: smoke/d-function-criteria J2, excel-graph),
@@ -489,30 +489,30 @@ fn computed_database_and_criteria_references() {
 #[test]
 fn criteria_grammar_shared_with_countif() {
     let mut model = new_empty_model();
-    model._set("A1", "Name");
-    model._set("B1", "Qty");
-    model._set("A2", "ab");
-    model._set("B2", "1");
-    model._set("A3", "abc");
-    model._set("B3", "2");
-    model._set("A4", "xab");
-    model._set("B4", "4");
+    model.set_a1("A1", "Name");
+    model.set_a1("B1", "Qty");
+    model.set_a1("A2", "ab");
+    model.set_a1("B2", "1");
+    model.set_a1("A3", "abc");
+    model.set_a1("B3", "2");
+    model.set_a1("A4", "xab");
+    model.set_a1("B4", "4");
     // Criteria blocks (header + one criterion each)
-    model._set("D1", "Name");
-    model._set("D2", "ab");
-    model._set("F1", "Qty");
-    model._set("F2", "  > 1 ");
-    model._set("H1", "Name");
-    model._set("H2", "<>ab");
+    model.set_a1("D1", "Name");
+    model.set_a1("D2", "ab");
+    model.set_a1("F1", "Qty");
+    model.set_a1("F2", "  > 1 ");
+    model.set_a1("H1", "Name");
+    model.set_a1("H2", "<>ab");
 
-    model._set("J1", "=DSUM(A1:B4, \"Qty\", D1:D2)");
-    model._set("J2", "=DSUM(A1:B4, \"Qty\", F1:F2)");
-    model._set("J3", "=DSUM(A1:B4, \"Qty\", H1:H2)");
+    model.set_a1("J1", "=DSUM(A1:B4, \"Qty\", D1:D2)");
+    model.set_a1("J2", "=DSUM(A1:B4, \"Qty\", F1:F2)");
+    model.set_a1("J3", "=DSUM(A1:B4, \"Qty\", H1:H2)");
     model.evaluate();
 
-    assert_eq!(model._get_text("J1"), *"3");
-    assert_eq!(model._get_text("J2"), *"0");
-    assert_eq!(model._get_text("J3"), *"6");
+    assert_eq!(model.get_text_a1("J1"), *"3");
+    assert_eq!(model.get_text_a1("J2"), *"0");
+    assert_eq!(model.get_text_a1("J3"), *"6");
 }
 
 /// A huge or fractional `field` is out of range, never an overflow (T-1389 security review), and a
@@ -531,25 +531,25 @@ fn field_edge_cases() {
         ("D1", "Qty"),
         ("D2", ">2"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("F1", "=DSUM(A1:B3,1E10,D1:D2)");
-    model._set("F2", "=DSUM(A1:B3,2147483647,D1:D2)");
-    model._set("F3", "=DSUM(A1:B3,0/0,D1:D2)");
-    model._set("F4", "=DCOUNT(A1:B3,,D1:D2)");
-    model._set("F5", "=DCOUNTA(A1:B3,,D1:D2)");
-    model._set("F6", "=DSUM(A1:B3,,D1:D2)");
-    model._set("F7", "=DSUM({1,2;3,4},2,D1:D2)");
-    model._set("F8", "=ROWS(DSUM(A1:B3,{1;2},D1:D2))");
+    model.set_a1("F1", "=DSUM(A1:B3,1E10,D1:D2)");
+    model.set_a1("F2", "=DSUM(A1:B3,2147483647,D1:D2)");
+    model.set_a1("F3", "=DSUM(A1:B3,0/0,D1:D2)");
+    model.set_a1("F4", "=DCOUNT(A1:B3,,D1:D2)");
+    model.set_a1("F5", "=DCOUNTA(A1:B3,,D1:D2)");
+    model.set_a1("F6", "=DSUM(A1:B3,,D1:D2)");
+    model.set_a1("F7", "=DSUM({1,2;3,4},2,D1:D2)");
+    model.set_a1("F8", "=ROWS(DSUM(A1:B3,{1;2},D1:D2))");
     model.evaluate();
-    assert_eq!(model._get_text("F1"), *"#VALUE!");
-    assert_eq!(model._get_text("F2"), *"#VALUE!");
-    assert_eq!(model._get_text("F3"), *"#DIV/0!");
-    assert_eq!(model._get_text("F4"), *"2");
-    assert_eq!(model._get_text("F5"), *"2");
-    assert_eq!(model._get_text("F6"), *"#VALUE!");
-    assert_eq!(model._get_text("F7"), *"#VALUE!");
-    assert_eq!(model._get_text("F8"), *"2");
+    assert_eq!(model.get_text_a1("F1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("F2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("F3"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("F4"), *"2");
+    assert_eq!(model.get_text_a1("F5"), *"2");
+    assert_eq!(model.get_text_a1("F6"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("F7"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("F8"), *"2");
 }
 
 /// A lifted `field` is charged the criteria table per element, so a large one is refused before
@@ -557,15 +557,15 @@ fn field_edge_cases() {
 #[test]
 fn lifted_field_is_charged_the_criteria_table() {
     let mut model = new_empty_model();
-    model._set("A1", "Name");
-    model._set("A2", "a");
-    model._set("H1", "Name");
-    model._set("H2", "a");
-    model._set("F1", "=DCOUNTA(A1:C1000,1,H1:Z1000)");
-    model._set("F2", "=ROWS(DCOUNTA(A1:C1000,SEQUENCE(10),H1:Z1000))");
+    model.set_a1("A1", "Name");
+    model.set_a1("A2", "a");
+    model.set_a1("H1", "Name");
+    model.set_a1("H2", "a");
+    model.set_a1("F1", "=DCOUNTA(A1:C1000,1,H1:Z1000)");
+    model.set_a1("F2", "=ROWS(DCOUNTA(A1:C1000,SEQUENCE(10),H1:Z1000))");
     model.evaluate();
-    assert_eq!(model._get_text("F1"), *"1");
-    assert_eq!(model._get_text("F2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("F1"), *"1");
+    assert_eq!(model.get_text_a1("F2"), *"#ERROR!");
 }
 
 /// A criteria reference of one row (headers only) is `#VALUE!`, as is a database of one row
@@ -574,18 +574,18 @@ fn lifted_field_is_charged_the_criteria_table() {
 fn one_row_criteria_or_database_is_value_error() {
     let mut model = new_empty_model();
     for (cell, value) in [("A1", "Price"), ("A2", "2.5"), ("A3", "4"), ("E1", "Price")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("E2", ">3");
-    model._set("F1", "=DSUM(A1:A3,\"Price\",E1)");
-    model._set("F2", "=DCOUNTA(A1:A3,\"Price\",$E$1)");
-    model._set("F3", "=DSUM(A1:A1,\"Price\",E1:E2)");
-    model._set("F4", "=DSUM(A1:A3,\"Price\",E1:E2)");
+    model.set_a1("E2", ">3");
+    model.set_a1("F1", "=DSUM(A1:A3,\"Price\",E1)");
+    model.set_a1("F2", "=DCOUNTA(A1:A3,\"Price\",$E$1)");
+    model.set_a1("F3", "=DSUM(A1:A1,\"Price\",E1:E2)");
+    model.set_a1("F4", "=DSUM(A1:A3,\"Price\",E1:E2)");
     model.evaluate();
-    assert_eq!(model._get_text("F1"), *"#VALUE!");
-    assert_eq!(model._get_text("F2"), *"#VALUE!");
-    assert_eq!(model._get_text("F3"), *"#VALUE!");
-    assert_eq!(model._get_text("F4"), *"4");
+    assert_eq!(model.get_text_a1("F1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("F2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("F3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("F4"), *"4");
 }
 
 /// Criteria headers name database columns by their text (a number by its coerced text), each
@@ -594,63 +594,63 @@ fn one_row_criteria_or_database_is_value_error() {
 #[test]
 fn criteria_headers_and_computed_criteria() {
     let mut model = new_empty_model();
-    model._set("A1", "Name");
-    model._set("B1", "Qty");
-    model._set("C1", "0.5");
+    model.set_a1("A1", "Name");
+    model.set_a1("B1", "Qty");
+    model.set_a1("C1", "0.5");
     for row in 2..=6 {
-        model._set(&format!("A{row}"), &format!("n{row}"));
-        model._set(&format!("B{row}"), &(row - 1).to_string());
-        model._set(&format!("C{row}"), &(10 * (row - 1)).to_string());
+        model.set_a1(&format!("A{row}"), &format!("n{row}"));
+        model.set_a1(&format!("B{row}"), &(row - 1).to_string());
+        model.set_a1(&format!("C{row}"), &(10 * (row - 1)).to_string());
     }
     // An unknown header over a blank cell is ignored; the second column still tests Qty.
-    model._set("H1", "Zzz");
-    model._set("I1", "Qty");
-    model._set("I2", ">3");
+    model.set_a1("H1", "Zzz");
+    model.set_a1("I1", "Qty");
+    model.set_a1("I2", ">3");
     // The text "0.5" names the number header 0.5.
-    model._set("J1", "'0.5");
-    model._set("J2", ">20");
+    model.set_a1("J1", "'0.5");
+    model.set_a1("J2", ">20");
     // Computed criteria under a blank or unknown header: TRUE, "TRUE" and 1 hold, ">2" does not.
-    model._set("K2", "TRUE");
-    model._set("L1", "Zzz");
-    model._set("L2", ">2");
-    model._set("M1", "Zzz");
-    model._set("M2", "'TRUE");
+    model.set_a1("K2", "TRUE");
+    model.set_a1("L1", "Zzz");
+    model.set_a1("L2", ">2");
+    model.set_a1("M1", "Zzz");
+    model.set_a1("M2", "'TRUE");
     // A formula condition is evaluated again for each record.
-    model._set("N2", "=B2>2");
+    model.set_a1("N2", "=B2>2");
     // A blank criteria row matches every record.
-    model._set("O1", "Qty");
-    model._set("O2", ">4");
-    model._set("F1", "=DSUM(A1:C6,2,H1:I2)");
-    model._set("F2", "=DSUM(A1:C6,2,J1:J2)");
-    model._set("F3", "=DSUM(A1:C6,2,K1:K2)");
-    model._set("F4", "=DSUM(A1:C6,2,L1:L2)");
-    model._set("F5", "=DSUM(A1:C6,2,M1:M2)");
-    model._set("F6", "=DSUM(A1:C6,2,N1:N2)");
-    model._set("F7", "=DSUM(A1:C6,2,O1:O3)");
+    model.set_a1("O1", "Qty");
+    model.set_a1("O2", ">4");
+    model.set_a1("F1", "=DSUM(A1:C6,2,H1:I2)");
+    model.set_a1("F2", "=DSUM(A1:C6,2,J1:J2)");
+    model.set_a1("F3", "=DSUM(A1:C6,2,K1:K2)");
+    model.set_a1("F4", "=DSUM(A1:C6,2,L1:L2)");
+    model.set_a1("F5", "=DSUM(A1:C6,2,M1:M2)");
+    model.set_a1("F6", "=DSUM(A1:C6,2,N1:N2)");
+    model.set_a1("F7", "=DSUM(A1:C6,2,O1:O3)");
     model.evaluate();
-    assert_eq!(model._get_text("F1"), *"9");
-    assert_eq!(model._get_text("F2"), *"12");
-    assert_eq!(model._get_text("F3"), *"15");
-    assert_eq!(model._get_text("F4"), *"0");
-    assert_eq!(model._get_text("F5"), *"15");
-    assert_eq!(model._get_text("F6"), *"12");
-    assert_eq!(model._get_text("F7"), *"15");
+    assert_eq!(model.get_text_a1("F1"), *"9");
+    assert_eq!(model.get_text_a1("F2"), *"12");
+    assert_eq!(model.get_text_a1("F3"), *"15");
+    assert_eq!(model.get_text_a1("F4"), *"0");
+    assert_eq!(model.get_text_a1("F5"), *"15");
+    assert_eq!(model.get_text_a1("F6"), *"12");
+    assert_eq!(model.get_text_a1("F7"), *"15");
 }
 
 /// A formula condition that runs a D-function over its own criteria is bounded (directive 5).
 #[test]
 fn self_referencing_formula_condition_is_bounded() {
     let mut model = new_empty_model();
-    model._set("A1", "Qty");
+    model.set_a1("A1", "Qty");
     for row in 2..=6 {
-        model._set(&format!("A{row}"), &row.to_string());
+        model.set_a1(&format!("A{row}"), &row.to_string());
     }
-    model._set("E2", "=DSUM($A$1:$A$6,1,$E$1:$E$2)>0");
-    model._set("F1", "=DSUM(A1:A6,1,E1:E2)");
+    model.set_a1("E2", "=DSUM($A$1:$A$6,1,$E$1:$E$2)>0");
+    model.set_a1("F1", "=DSUM(A1:A6,1,E1:E2)");
     model.evaluate();
     // The nested condition in E2 is not re-evaluated (one level only, a DEVIATION in
     // docs/excel-semantics/statistics.md), so it fails for every record and nothing is summed.
-    assert_eq!(model._get_text("F1"), *"0");
+    assert_eq!(model.get_text_a1("F1"), *"0");
 }
 
 /// A cell first computed while a formula condition is re-evaluated runs its own D-functions in
@@ -658,23 +658,23 @@ fn self_referencing_formula_condition_is_bounded() {
 #[test]
 fn cells_reached_from_a_formula_condition_evaluate_in_full() {
     let mut model = new_empty_model();
-    model._set("A1", "Qty");
+    model.set_a1("A1", "Qty");
     for row in 2..=6 {
-        model._set(&format!("A{row}"), &(row - 1).to_string());
-        model._set(&format!("K{row}"), "=DCOUNT($A$1:$A$6,1,$G$1:$G$2)");
+        model.set_a1(&format!("A{row}"), &(row - 1).to_string());
+        model.set_a1(&format!("K{row}"), "=DCOUNT($A$1:$A$6,1,$G$1:$G$2)");
     }
-    model._set("G2", "=A2>2");
-    model._set("H2", "=K2>0");
+    model.set_a1("G2", "=A2>2");
+    model.set_a1("H2", "=K2>0");
     // The database spans column K so that `=K2>0` reads its record area
     // (probes/db-computed-criteria-cross-sheet: a reference outside the columns matches nothing).
-    model._set("M1", "=DCOUNT(A1:K6,1,H1:H2)");
-    model._set("N1", "=DCOUNT(A1:A6,1,G1:G2)");
+    model.set_a1("M1", "=DCOUNT(A1:K6,1,H1:H2)");
+    model.set_a1("N1", "=DCOUNT(A1:A6,1,G1:G2)");
     model.evaluate();
     for row in 2..=6 {
-        assert_eq!(model._get_text(&format!("K{row}")), *"3");
+        assert_eq!(model.get_text_a1(&format!("K{row}")), *"3");
     }
-    assert_eq!(model._get_text("M1"), *"5");
-    assert_eq!(model._get_text("N1"), *"3");
+    assert_eq!(model.get_text_a1("M1"), *"5");
+    assert_eq!(model.get_text_a1("N1"), *"3");
 }
 
 /// A record whose moved formula reference lands on the database's header row does not match:
@@ -697,27 +697,27 @@ fn formula_condition_on_the_header_row_fails() {
     .into_iter()
     .enumerate()
     {
-        model._set(&format!("B{}", row + 1), qty);
-        model._set(&format!("C{}", row + 1), price);
+        model.set_a1(&format!("B{}", row + 1), qty);
+        model.set_a1(&format!("C{}", row + 1), price);
     }
-    model._set("O1", "Calc");
-    model._set("O2", "=B2>3");
-    model._set("F1", "=DPRODUCT(B2:C9,2,O1:O2)");
-    model._set("F2", "=DMAX(B2:C9,2,O1:O2)");
-    model._set("F3", "=DCOUNTA(B2:C9,2,O1:O2)");
+    model.set_a1("O1", "Calc");
+    model.set_a1("O2", "=B2>3");
+    model.set_a1("F1", "=DPRODUCT(B2:C9,2,O1:O2)");
+    model.set_a1("F2", "=DMAX(B2:C9,2,O1:O2)");
+    model.set_a1("F3", "=DCOUNTA(B2:C9,2,O1:O2)");
     // The same condition over B1:C9 starts at its first record: rows 2, 3, 8 and 9 match.
-    model._set("F4", "=DCOUNTA(B1:C9,2,O1:O2)");
+    model.set_a1("F4", "=DCOUNTA(B1:C9,2,O1:O2)");
     // An absolute row stays put and is not checked: every record reads B2 = 4 and matches.
-    model._set("P1", "Calc");
-    model._set("P2", "=B$2>3");
-    model._set("F5", "=DCOUNTA(B2:C9,2,P1:P2)");
+    model.set_a1("P1", "Calc");
+    model.set_a1("P2", "=B$2>3");
+    model.set_a1("F5", "=DCOUNTA(B2:C9,2,P1:P2)");
     model.evaluate();
     // Rows 4 (B3 = 10) and 9 (B8 = 7) match; row 3 (B2 = 4, the header row) does not.
-    assert_eq!(model._get_text("F1"), *"-4");
-    assert_eq!(model._get_text("F2"), *"4");
-    assert_eq!(model._get_text("F3"), *"2");
-    assert_eq!(model._get_text("F4"), *"4");
-    assert_eq!(model._get_text("F5"), *"7");
+    assert_eq!(model.get_text_a1("F1"), *"-4");
+    assert_eq!(model.get_text_a1("F2"), *"4");
+    assert_eq!(model.get_text_a1("F3"), *"2");
+    assert_eq!(model.get_text_a1("F4"), *"4");
+    assert_eq!(model.get_text_a1("F5"), *"7");
 }
 
 // Excel: a D-function criterion without `=` matches by prefix, wildcard or not, and folds like
@@ -726,11 +726,11 @@ fn formula_condition_on_the_header_row_fails() {
 #[test]
 fn criteria_prefix_wildcards_and_lookup_fold() {
     let mut model = new_empty_model();
-    model._set("A1", "k");
-    model._set("A2", "abcd");
-    model._set("A3", "=UNICHAR(886)&\"x\"");
-    model._set("A4", "=UNICHAR(952)&\"x\"");
-    model._set("A5", "=UNICHAR(66600)");
+    model.set_a1("A1", "k");
+    model.set_a1("A2", "abcd");
+    model.set_a1("A3", "=UNICHAR(886)&\"x\"");
+    model.set_a1("A4", "=UNICHAR(952)&\"x\"");
+    model.set_a1("A5", "=UNICHAR(66600)");
     // (criteria column, criterion, expected DCOUNTA over A1:A5)
     let cases = [
         ("C", "a?c", "1"),
@@ -743,9 +743,9 @@ fn criteria_prefix_wildcards_and_lookup_fold() {
         ("J", "=UNICHAR(66600)", "1"),
     ];
     for (column, criterion, _) in cases {
-        model._set(&format!("{column}1"), "k");
-        model._set(&format!("{column}2"), criterion);
-        model._set(
+        model.set_a1(&format!("{column}1"), "k");
+        model.set_a1(&format!("{column}2"), criterion);
+        model.set_a1(
             &format!("{column}3"),
             &format!("=DCOUNTA(A1:A5,1,{column}1:{column}2)"),
         );
@@ -753,7 +753,7 @@ fn criteria_prefix_wildcards_and_lookup_fold() {
     model.evaluate();
     for (column, criterion, expected) in cases {
         assert_eq!(
-            model._get_text(&format!("{column}3")),
+            model.get_text_a1(&format!("{column}3")),
             *expected,
             "{criterion}"
         );

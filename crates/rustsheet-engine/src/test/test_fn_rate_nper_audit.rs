@@ -11,7 +11,7 @@ use crate::test::util::new_empty_model;
 
 fn number(formula: &str) -> f64 {
     let mut model = new_empty_model();
-    model._set("A1", formula);
+    model.set_a1("A1", formula);
     model.evaluate();
     match model.get_cell_value_by_ref("Sheet1!A1") {
         Ok(CellValue::Number(n)) => n,
@@ -45,10 +45,10 @@ fn a_restart_far_from_its_hold_stays_an_error() {
     // probes/t3906-rate-restart-oos Sheet1!A26: the flat secant comes at step 3 on iterates 0.078
     // apart, and Excel is #NUM!: there the hold is no converged point to fall back to.
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=RATE(1,65619121.9595683,-65619121.9595674,0,1,0.0414411258870795)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#NUM!");
+    assert_eq!(model.get_text_a1("A1"), "#NUM!");
 }

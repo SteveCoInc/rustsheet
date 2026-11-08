@@ -6,9 +6,12 @@
 //!   count them (every scored sidecar pivot-area cell of each case naming the id, its edge pools'
 //!   cases included). A row Excel for the web cannot render (`web` = `no`) is M14's and never
 //!   blocks (decision 0274 item 5); it is counted apart.
-//! - **owners**: every remaining row (below the floor, or with a failing cell) has a filed task or
-//!   an `out` scope. The catalog names no task and no task names a catalog row, so this is not
-//!   measured (`None`) while any row remains; with none remaining it holds.
+//! - **owners** (T-4952): every remaining row (below the floor, or with a failing cell) is owned.
+//!   A row is owned when the catalog's hand-filled `owner` column names a task;
+//!   `scripts/tasks.py validate` (`make hygiene`) fails while one names a task that is not an
+//!   open M16 task, so a done or missing task never owns a row on main. A row with an `out`
+//!   scope is owned by the decision its scope cites (`out (decision 0274)`): it is not in
+//!   scope, so it is never remaining. The remaining rows no task owns are listed by id.
 //!
 //! Milestone-wide, since a case's cells are not split by stage:
 //!
@@ -18,9 +21,10 @@
 //! - **freshness**: the pivot-corpus pivots fresh and stale (`pivot_freshness`), shown only: a stale
 //!   pivot is reported, never scored (plan §6 check (b)).
 //! - **corpus render** (plan §6 check (b)): every fresh corpus pivot re-rendered from its saved cache
-//!   reproduces Excel's saved cells. `pivot_freshness` decides "fresh" by the engine's own render, so
-//!   a fresh file the engine renders wrongly is called stale and nothing is scored: the check is not
-//!   measured (`None`) until freshness is decided without the renderer (T-4906), and M16 waits on it.
+//!   reproduces Excel's saved cells. Freshness is decided without the renderer (T-4906) and the
+//!   render scores are report.json's `fresh_pivot_render` ([`corpus_render`], T-4971): met when both
+//!   pivot-corpus suites have render cells and none visibly off; `None` (not measured, never met)
+//!   when either suite has no row, as when it was not fetched or classified no pivot.
 //!
 //! The probe measure leaves out the visibly-off cells decision 0188 calls passing or never blocking:
 //! R3 cells where the engine returns the math and desktop-owned (M14) cells ([`probe_off`]).
@@ -70,8 +74,10 @@ pub struct PivotStageExit {
     pub evidence_met: Option<bool>,
     /// Blocking rows below the floor or with a failing oracle cell: those the owner criterion reads.
     pub remaining: usize,
-    /// Every remaining row has a task or an `out` scope; `None` (not measured) while any remains,
-    /// since no row-to-task mapping exists yet.
+    /// The remaining rows with no `owner`, by id.
+    #[serde(default)]
+    pub unowned: Vec<String>,
+    /// Every remaining row is owned (`unowned` is empty).
     pub owners_met: Option<bool>,
 }
 
@@ -82,7 +88,7 @@ pub struct PivotExit {
     pub stages: Vec<PivotStageExit>,
     /// Every stage's evidence is met; `None` without a catalog.
     pub evidence_met: Option<bool>,
-    /// Every stage's owners are met; `None` while one is not measured.
+    /// Every stage's owners are met; `None` without a catalog.
     pub owners_met: Option<bool>,
     /// Sidecar pivots the engine does not have.
     pub layout_missing: usize,
@@ -103,8 +109,9 @@ pub struct PivotExit {
     pub corpus_fresh: Option<usize>,
     /// Stale pivots of the pivot-corpus suites.
     pub corpus_stale: Option<usize>,
-    /// Plan check (b): the fresh corpus pivots' re-render reproduces Excel's saved cells. Always
-    /// `None` (not measured) until freshness is decided without the engine's renderer (T-4906).
+    /// Plan check (b): the fresh corpus pivots' re-render reproduces Excel's saved cells, read
+    /// from report.json's `fresh_pivot_render` ([`corpus_render`], T-4971); `None` (not measured)
+    /// unless both pivot-corpus suites ran.
     pub corpus_render_met: Option<bool>,
     /// Of the M16 probe row's visibly-off cells, those the measure counts: all but R3 passes and
     /// M14-owned cells ([`probe_off`]); `None` without a probe row.
@@ -161,13 +168,18 @@ fn stages(rows: &[FeatureRow]) -> Vec<PivotStageExit> {
         } else {
             s.below_floor.push(r.id.clone());
         }
-        s.remaining += usize::from(r.cells < MIN_ORACLE_CELLS || r.passed < r.cells);
+        if r.cells < MIN_ORACLE_CELLS || r.passed < r.cells {
+            s.remaining += 1;
+            if r.owner.is_empty() {
+                s.unowned.push(r.id.clone());
+            }
+        }
     }
     by_stage
         .into_values()
         .map(|mut s| {
             s.evidence_met = Some(s.below_floor.is_empty());
-            s.owners_met = (s.remaining == 0).then_some(true);
+            s.owners_met = Some(s.unowned.is_empty());
             s
         })
         .collect()
@@ -236,10 +248,24 @@ pub(super) fn measure(report: &RunReport) -> PivotExit {
         out.corpus_fresh = Some(fresh);
         out.corpus_stale = Some(pivots.len() - fresh);
     }
-    // Plan check (b) is not scored until T-4906 decides freshness without the renderer.
-    out.corpus_render_met = None;
+    out.corpus_render_met = corpus_render(report);
     out.met = all_met(&out);
     out
+}
+
+/// Plan check (b) from the fresh-render scores T-4906 reports (T-4971): met when each pivot-corpus
+/// suite has scored render cells and none of them is visibly off; `None` while either suite has
+/// no row: it was not fetched (decision 0146 item 2(b)) or classified no pivot. Never met either way.
+fn corpus_render(report: &RunReport) -> Option<bool> {
+    let mut met = true;
+    for suite in CORPUS_SUITES {
+        let row = report
+            .fresh_pivot_render
+            .iter()
+            .find(|r| r.suite == suite)?;
+        met &= row.render_cells > 0 && row.render_visibly_off == 0;
+    }
+    Some(met)
 }
 
 fn verdict(met: Option<bool>) -> &'static str {
@@ -260,8 +286,9 @@ pub(super) fn write_markdown(p: &PivotExit, md: &mut String) {
         md,
         "\nM16 catalog measures (decision 0274): each in-scope row of the pivot catalog needs at least \
          {MIN_ORACLE_CELLS} oracle cells (a row Excel for the web cannot render is M14's and does not \
-         block), and each remaining row (below the floor or with a failing cell) a task or an `out` \
-         scope, not measured while the catalog names no task. Layouts: no sidecar pivot missing or \
+         block), and each remaining row (below the floor or with a failing cell) an owner: its \
+         catalog `owner` an open M16 task (an `out` row is its scope decision's and never remains). \
+         Layouts: no sidecar pivot missing or \
          misplaced, not measured while the engine emits no `rowItems`/`colItems`. Corpus render \
          (plan check (b), fresh pivots re-rendered against Excel's saved cells): not measured until \
          freshness is decided without the engine's renderer (T-4906).\n"
@@ -283,6 +310,16 @@ pub(super) fn write_markdown(p: &PivotExit, md: &mut String) {
             verdict(s.evidence_met),
             s.remaining,
             verdict(s.owners_met)
+        );
+    }
+    for s in p.stages.iter().filter(|s| !s.unowned.is_empty()) {
+        let _ = writeln!(
+            md,
+            "\n{} remaining rows with no open M16 owner ({} of {}): {}.",
+            s.stage,
+            s.unowned.len(),
+            s.remaining,
+            s.unowned.join(", ")
         );
     }
     let _ = writeln!(

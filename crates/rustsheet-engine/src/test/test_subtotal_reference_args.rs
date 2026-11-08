@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, reason = "tests")]
 
 //! SUBTOTAL and AREAS take references only (T-1163). Excel for the web refuses a workbook
@@ -11,15 +14,15 @@ use crate::test::util::new_empty_model;
 
 fn check(cases: &[(&str, &str, &str)]) -> Model {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("C1", "=1/0");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("C1", "=1/0");
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cases {
-        assert_eq!(model._get_text(cell), *expected, "{cell}: {formula}");
+        assert_eq!(model.get_text_a1(cell), *expected, "{cell}: {formula}");
     }
     model
 }
@@ -106,9 +109,9 @@ fn arrays_from_reference_operands_spill_value_errors() {
     // The `I` cells (and H14) are the second element of each spill. Each element is `#VALUE!`
     // unless it is an error, which stays itself.
     for cell in ["I1", "I3", "I5", "I7", "I11", "H14"] {
-        assert_eq!(model._get_text(cell), "#VALUE!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#VALUE!", "{cell}");
     }
-    assert_eq!(model._get_text("I9"), "#N/A");
+    assert_eq!(model.get_text_a1("I9"), "#N/A");
 }
 
 #[test]
@@ -121,13 +124,13 @@ fn take_of_let_chain_and_malformed_let_is_linear_and_total() {
         formula.push_str(&format!(",v{i},IF(TRUE,v{},v{})", i - 1, i - 1));
     }
     formula.push_str(",v59),2))");
-    model._set("B1", &formula);
-    model._set("B2", "=SUBTOTAL(9,TAKE(LET(),1))");
-    model._set("B3", "=SUBTOTAL(9,TAKE(LET(x,A1:A4),1))");
+    model.set_a1("B1", &formula);
+    model.set_a1("B2", "=SUBTOTAL(9,TAKE(LET(),1))");
+    model.set_a1("B3", "=SUBTOTAL(9,TAKE(LET(x,A1:A4),1))");
     model.evaluate();
     // Only termination without a panic is asserted for the chain; the cells are errors here.
-    assert_eq!(model._get_text("B2"), model._get_text("B3"));
-    assert!(model._get_text("B1").starts_with('#') || model._get_text("B1") == "0");
+    assert_eq!(model.get_text_a1("B2"), model.get_text_a1("B3"));
+    assert!(model.get_text_a1("B1").starts_with('#') || model.get_text_a1("B1") == "0");
 }
 
 // A CHOOSE with an array index lifts to values even over range arms, so TAKE picks values and
@@ -137,16 +140,16 @@ fn take_of_let_chain_and_malformed_let_is_linear_and_total() {
 fn subtotal_of_take_of_choose_with_array_index_spills() {
     let mut model = new_empty_model();
     for (cell, value) in [("H1", "3"), ("H2", "4"), ("I1", "6"), ("I2", "8")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("A1", "=SUBTOTAL(9,TAKE(CHOOSE({1,2},H1:H2,I1:I2),2))");
-    model._set("D1", "=SUBTOTAL(9,TAKE(CHOOSE(2,H1:H2,I1:I2),2))");
+    model.set_a1("A1", "=SUBTOTAL(9,TAKE(CHOOSE({1,2},H1:H2,I1:I2),2))");
+    model.set_a1("D1", "=SUBTOTAL(9,TAKE(CHOOSE(2,H1:H2,I1:I2),2))");
     model.evaluate();
     for cell in ["A1", "B1", "A2", "B2"] {
-        assert_eq!(model._get_text(cell), "#VALUE!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#VALUE!", "{cell}");
     }
-    assert_eq!(model._get_text("D1"), "14");
-    assert_eq!(model._get_text("D2"), "");
+    assert_eq!(model.get_text_a1("D1"), "14");
+    assert_eq!(model.get_text_a1("D2"), "");
 }
 
 // The CHOOSE index is analysed once per level, so deep nesting stays linear (T-1882; T-1874's
@@ -159,10 +162,10 @@ fn subtotal_of_take_of_nested_choose_is_linear() {
         formula = format!("SUBTOTAL(9,TAKE(CHOOSE({formula},H1:H2,I1:I2),1))");
     }
     let mut model = new_empty_model();
-    model._set("H1", "1");
-    model._set("A5", &format!("={formula}"));
+    model.set_a1("H1", "1");
+    model.set_a1("A5", &format!("={formula}"));
     model.evaluate();
-    assert_eq!(model._get_text("A5"), "1");
+    assert_eq!(model.get_text_a1("A5"), "1");
 }
 
 // SWITCH and IFS with an array selector lift to values even over range arms, as CHOOSE does, so
@@ -173,15 +176,15 @@ fn subtotal_of_take_of_nested_choose_is_linear() {
 fn subtotal_of_take_of_switch_and_ifs_with_array_selector_spills() {
     let mut model = new_empty_model();
     for (cell, value) in [("H1", "3"), ("H2", "4"), ("I1", "6"), ("I2", "8")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("A1", "=SUBTOTAL(9,TAKE(SWITCH({1,2},1,H1:H2,2,I1:I2),2))");
-    model._set(
+    model.set_a1("A1", "=SUBTOTAL(9,TAKE(SWITCH({1,2},1,H1:H2,2,I1:I2),2))");
+    model.set_a1(
         "A4",
         "=SUBTOTAL(9,TAKE(IFS({TRUE,FALSE},H1:H2,TRUE,I1:I2),2))",
     );
-    model._set("D1", "=SUBTOTAL(9,TAKE(SWITCH(2,1,H1:H2,2,I1:I2),2))");
-    model._set("D4", "=SUBTOTAL(9,TAKE(IFS(FALSE,H1:H2,TRUE,I1:I2),2))");
+    model.set_a1("D1", "=SUBTOTAL(9,TAKE(SWITCH(2,1,H1:H2,2,I1:I2),2))");
+    model.set_a1("D4", "=SUBTOTAL(9,TAKE(IFS(FALSE,H1:H2,TRUE,I1:I2),2))");
     model.evaluate();
     for top in [1, 4] {
         for cell in [
@@ -190,13 +193,13 @@ fn subtotal_of_take_of_switch_and_ifs_with_array_selector_spills() {
             format!("A{}", top + 1),
             format!("B{}", top + 1),
         ] {
-            assert_eq!(model._get_text(&cell), "#VALUE!", "{cell}");
+            assert_eq!(model.get_text_a1(&cell), "#VALUE!", "{cell}");
         }
     }
-    assert_eq!(model._get_text("D1"), "14");
-    assert_eq!(model._get_text("D2"), "");
-    assert_eq!(model._get_text("D4"), "14");
-    assert_eq!(model._get_text("D5"), "");
+    assert_eq!(model.get_text_a1("D1"), "14");
+    assert_eq!(model.get_text_a1("D2"), "");
+    assert_eq!(model.get_text_a1("D4"), "14");
+    assert_eq!(model.get_text_a1("D5"), "");
 }
 
 // Each SWITCH selector is analysed once per level, so deep nesting stays linear (T-1914).
@@ -207,10 +210,10 @@ fn subtotal_of_take_of_nested_switch_is_linear() {
         formula = format!("SUBTOTAL(9,TAKE(SWITCH({formula},1,H1:H2,I1:I2),1))");
     }
     let mut model = new_empty_model();
-    model._set("H1", "1");
-    model._set("A5", &format!("={formula}"));
+    model.set_a1("H1", "1");
+    model.set_a1("A5", &format!("={formula}"));
     model.evaluate();
-    assert_eq!(model._get_text("A5"), "1");
+    assert_eq!(model.get_text_a1("A5"), "1");
 }
 
 // An IF, CHOOSE or LET that passes on a lifting SWITCH, IFS or CHOOSE lifts too, as does one whose
@@ -232,11 +235,11 @@ fn subtotal_of_take_of_wrapped_array_selector_spills_like_the_bare_call() {
     ];
     let mut model = new_empty_model();
     for (cell, value) in [("H1", "3"), ("H2", "4"), ("I1", "6"), ("I2", "8")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("A1", &format!("=SUBTOTAL(9,TAKE({bare},2))"));
+    model.set_a1("A1", &format!("=SUBTOTAL(9,TAKE({bare},2))"));
     for (index, arg) in wrapped.iter().enumerate() {
-        model._set(
+        model.set_a1(
             &format!("A{}", 4 + 3 * index),
             &format!("=SUBTOTAL(9,TAKE({arg},2))"),
         );
@@ -251,13 +254,13 @@ fn subtotal_of_take_of_wrapped_array_selector_spills_like_the_bare_call() {
             ("B2".to_string(), format!("B{}", top + 1)),
         ] {
             assert_eq!(
-                model._get_text(&cell),
-                model._get_text(&bare_cell),
+                model.get_text_a1(&cell),
+                model.get_text_a1(&bare_cell),
                 "{cell}"
             );
         }
     }
-    assert_eq!(model._get_text("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
 }
 
 // Each IFS condition is analysed once per level, so deep nesting stays linear (T-1914).
@@ -268,10 +271,10 @@ fn subtotal_of_take_of_nested_ifs_is_linear() {
         formula = format!("SUBTOTAL(9,TAKE(IFS({formula}=1,H1:H2,TRUE,I1:I2),1))");
     }
     let mut model = new_empty_model();
-    model._set("H1", "1");
-    model._set("A5", &format!("={formula}"));
+    model.set_a1("H1", "1");
+    model.set_a1("A5", &format!("={formula}"));
     model.evaluate();
-    assert_eq!(model._get_text("A5"), "1");
+    assert_eq!(model.get_text_a1("A5"), "1");
 }
 
 // A LAMBDA call (written or LET-bound) and an XLOOKUP whose return array or lookup value lifts
@@ -321,12 +324,12 @@ fn subtotal_of_take_of_lambda_call_or_lifting_xlookup_spills() {
     ];
     let mut model = new_empty_model();
     for (cell, value) in [("H1", "3"), ("H2", "4"), ("I1", "6"), ("I2", "8")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (index, (formula, _, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", 1 + 3 * index), &format!("={formula}"));
+        model.set_a1(&format!("A{}", 1 + 3 * index), &format!("={formula}"));
     }
-    model._set("K1", "=SUBTOTAL(9,TAKE(LAMBDA(x,x)(H1:H2),2))");
+    model.set_a1("K1", "=SUBTOTAL(9,TAKE(LAMBDA(x,x)(H1:H2),2))");
     model.evaluate();
     for (index, (formula, rows, columns)) in cases.iter().enumerate() {
         let top = 1 + 3 * index;
@@ -338,12 +341,12 @@ fn subtotal_of_take_of_lambda_call_or_lifting_xlookup_spills() {
                 } else {
                     ""
                 };
-                assert_eq!(model._get_text(&cell), expected, "{cell}: {formula}");
+                assert_eq!(model.get_text_a1(&cell), expected, "{cell}: {formula}");
             }
         }
     }
-    assert_eq!(model._get_text("K1"), "7");
-    assert_eq!(model._get_text("K2"), "");
+    assert_eq!(model.get_text_a1("K1"), "7");
+    assert_eq!(model.get_text_a1("K2"), "");
 }
 
 // A LAMBDA call and a nested XLOOKUP are not looked into, so nesting stays linear (T-1987).
@@ -358,15 +361,15 @@ fn subtotal_of_nested_lambda_call_and_xlookup_is_linear() {
         lookup_value = format!("XLOOKUP({lookup_value},H1:H2,H1:H2)");
     }
     let mut model = new_empty_model();
-    model._set("H1", "1");
-    model._set("A5", &format!("={lambda}"));
-    model._set("A6", &format!("=SUBTOTAL(9,XLOOKUP(1,H1:H2,{array}))"));
-    model._set("A7", &format!("=SUBTOTAL(9,{lookup_value})"));
+    model.set_a1("H1", "1");
+    model.set_a1("A5", &format!("={lambda}"));
+    model.set_a1("A6", &format!("=SUBTOTAL(9,XLOOKUP(1,H1:H2,{array}))"));
+    model.set_a1("A7", &format!("=SUBTOTAL(9,{lookup_value})"));
     model.evaluate();
-    assert_eq!(model._get_text("A5"), "1");
+    assert_eq!(model.get_text_a1("A5"), "1");
     // The inner XLOOKUP gives one value, which does not match the two-cell lookup array.
-    assert_eq!(model._get_text("A6"), "#VALUE!");
-    assert_eq!(model._get_text("A7"), "1");
+    assert_eq!(model.get_text_a1("A6"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A7"), "1");
 }
 
 // TAKE, DROP and TRIMRANGE over an XLOOKUP that picks cells of a range read those cells, also when
@@ -416,17 +419,21 @@ fn take_drop_trimrange_over_xlookup_pick_cells() {
         ("J1", "1"),
         ("J2", "2"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (index, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", 1 + 3 * index), &format!("={formula}"));
+        model.set_a1(&format!("A{}", 1 + 3 * index), &format!("={formula}"));
     }
     model.evaluate();
     for (index, (formula, expected)) in cases.iter().enumerate() {
         let top = 1 + 3 * index;
-        assert_eq!(model._get_text(&format!("A{top}")), *expected, "{formula}");
-        assert_eq!(model._get_text(&format!("B{top}")), "", "{formula}");
-        assert_eq!(model._get_text(&format!("A{}", top + 1)), "", "{formula}");
+        assert_eq!(
+            model.get_text_a1(&format!("A{top}")),
+            *expected,
+            "{formula}"
+        );
+        assert_eq!(model.get_text_a1(&format!("B{top}")), "", "{formula}");
+        assert_eq!(model.get_text_a1(&format!("A{}", top + 1)), "", "{formula}");
     }
 }
 
@@ -451,12 +458,12 @@ fn take_over_nested_if_choose_let_xlookup_is_linear() {
         ("J1", "1"),
         ("J2", "2"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("A1", &format!("=SUBTOTAL(9,TAKE({formula},1,-1))"));
+    model.set_a1("A1", &format!("=SUBTOTAL(9,TAKE({formula},1,-1))"));
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "6");
-    assert_eq!(model._get_text("B1"), "");
+    assert_eq!(model.get_text_a1("A1"), "6");
+    assert_eq!(model.get_text_a1("B1"), "");
 }
 
 // SUBTOTAL and AREAS read the cells of an XLOOKUP (or TAKE) that a scalar IF or CHOOSE picks or a
@@ -485,24 +492,24 @@ fn subtotal_and_areas_over_if_choose_let_of_xlookup_read_cells() {
         ("J1", "1"),
         ("J2", "2"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (index, (formula, _, _)) in cases.iter().enumerate() {
-        model._set(&format!("A{}", 1 + 3 * index), &format!("={formula}"));
+        model.set_a1(&format!("A{}", 1 + 3 * index), &format!("={formula}"));
     }
     model.evaluate();
     for (index, (formula, a, b)) in cases.iter().enumerate() {
         let top = 1 + 3 * index;
-        assert_eq!(model._get_text(&format!("A{top}")), *a, "{formula}");
-        assert_eq!(model._get_text(&format!("B{top}")), *b, "{formula}");
-        assert_eq!(model._get_text(&format!("A{}", top + 1)), "", "{formula}");
+        assert_eq!(model.get_text_a1(&format!("A{top}")), *a, "{formula}");
+        assert_eq!(model.get_text_a1(&format!("B{top}")), *b, "{formula}");
+        assert_eq!(model.get_text_a1(&format!("A{}", top + 1)), "", "{formula}");
     }
     // A lifting lookup value under the IF still spills its values (A46:A47).
-    model._set("K1", "=SUBTOTAL(9,IF(TRUE,XLOOKUP({1;2},J1:J2,H1:H2)))");
+    model.set_a1("K1", "=SUBTOTAL(9,IF(TRUE,XLOOKUP({1;2},J1:J2,H1:H2)))");
     model.evaluate();
-    assert_eq!(model._get_text("K1"), "#VALUE!");
-    assert_eq!(model._get_text("K2"), "#VALUE!");
-    assert_eq!(model._get_text("L1"), "");
+    assert_eq!(model.get_text_a1("K1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("K2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("L1"), "");
 }
 
 // SUBTOTAL 6 and 106 multiply with PRODUCT's own step (`product_step`): a subnormal running
@@ -511,16 +518,16 @@ fn subtotal_and_areas_over_if_choose_let_of_xlookup_read_cells() {
 #[test]
 fn subtotal_product_is_products_accumulator() {
     let mut model = new_empty_model();
-    model._set("A1", "1E-200");
-    model._set("A2", "1E-120");
-    model._set("A3", "3");
-    model._set("B1", "=SUBTOTAL(6,A1:A2)");
-    model._set("B2", "=SUBTOTAL(106,A1:A2)");
-    model._set("B3", "=PRODUCT(A1:A2)");
-    model._set("B4", "=SUBTOTAL(6,A2:A3)=PRODUCT(A2:A3)");
+    model.set_a1("A1", "1E-200");
+    model.set_a1("A2", "1E-120");
+    model.set_a1("A3", "3");
+    model.set_a1("B1", "=SUBTOTAL(6,A1:A2)");
+    model.set_a1("B2", "=SUBTOTAL(106,A1:A2)");
+    model.set_a1("B3", "=PRODUCT(A1:A2)");
+    model.set_a1("B4", "=SUBTOTAL(6,A2:A3)=PRODUCT(A2:A3)");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "0");
-    assert_eq!(model._get_text("B2"), "0");
-    assert_eq!(model._get_text("B3"), "0");
-    assert_eq!(model._get_text("B4"), "TRUE");
+    assert_eq!(model.get_text_a1("B1"), "0");
+    assert_eq!(model.get_text_a1("B2"), "0");
+    assert_eq!(model.get_text_a1("B3"), "0");
+    assert_eq!(model.get_text_a1("B4"), "TRUE");
 }

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, clippy::float_cmp)]
+// LINT-DEBT-END
 use crate::{
     area_budget::{text_units, NODE_UNITS},
     calc_result::CalcResult,
@@ -842,10 +845,13 @@ impl Model {
             (Err(error), _) | (_, Err(error)) => return error,
         };
 
-        let apply = |lv: &CalcResult, rv: &CalcResult| -> bool {
+        let apply = |lv: &CalcResult, rv: &CalcResult, over_array: bool| -> bool {
             // Two texts compare by Excel's pairwise rule, which no sort can use
             // (probes/t3181-collation-prefix-callers Calc!A1:A9).
-            let cmp = compare_values_pairwise(lv, rv);
+            let mut cmp = compare_values_pairwise(lv, rv);
+            if over_array && cmp == 1 && within_array_compare_gap(lv, rv) {
+                cmp = 0;
+            }
             match kind {
                 OpCompare::Equal => cmp == 0,
                 OpCompare::LessThan => cmp == -1,
@@ -863,7 +869,7 @@ impl Model {
                 (CalcResult::Error { error, .. }, _) | (_, CalcResult::Error { error, .. }) => {
                     ArrayNode::Error(error.clone())
                 }
-                _ => ArrayNode::Boolean(apply(lv, rv)),
+                _ => ArrayNode::Boolean(apply(lv, rv, true)),
             }
         };
 
@@ -889,7 +895,7 @@ impl Model {
 
         match (l, r) {
             (ValueOrArray::Value(lv), ValueOrArray::Value(rv)) => {
-                CalcResult::Boolean(apply(&lv, &rv))
+                CalcResult::Boolean(apply(&lv, &rv, false))
             }
             (ValueOrArray::Array(la), ValueOrArray::Value(rv)) => CalcResult::Array(
                 la.iter()
@@ -915,6 +921,25 @@ impl Model {
                 })
             }
         }
+    }
+}
+
+/// Below this gap a comparison over an array or a range reads a left number as equal to a
+/// smaller right one: 2^-1026, the bit pattern of 2^48 ulps of the smallest subnormal.
+const ARRAY_COMPARE_EQUAL_GAP: f64 = f64::from_bits(1 << 48);
+
+/// Whether `left` exceeds `right` by less than [`ARRAY_COMPARE_EQUAL_GAP`], both numbers. In a
+/// comparison with an array or range operand Excel reads such a pair as equal, so a kept
+/// subnormal below 2^-1026 is `=0` and not `>0`, while a scalar comparison stays exact
+/// (`(EXP({-745,-708}))=0` is {TRUE,FALSE}, `(EXP(-745))=0` FALSE; the switch lies between
+/// EXP(-711.17) and EXP(-711.16), and a left number below the right one keeps its order:
+/// `0=EXP({-745})` is FALSE and `EXP({-745})<EXP({-744})` TRUE). Evidence:
+/// probes/t4766-array-subnormal-*; docs/excel-semantics/numbers.md "Worksheet EXP (T-1931)".
+fn within_array_compare_gap(left: &CalcResult, right: &CalcResult) -> bool {
+    match (left, right) {
+        // Subtraction of two doubles this close is exact, so the gap is the true one.
+        (CalcResult::Number(l), CalcResult::Number(r)) => l - r < ARRAY_COMPARE_EQUAL_GAP,
+        _ => false,
     }
 }
 

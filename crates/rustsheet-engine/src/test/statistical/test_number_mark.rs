@@ -9,15 +9,15 @@ use crate::test::util::new_empty_model;
 /// Sets each formula in column A (from A1), evaluates, and checks each cell's text.
 fn assert_texts(cases: &[(&str, &str)]) {
     let mut model = new_empty_model();
-    model._set("B1", "5");
-    model._set("Z1", "=ERROR.TYPE(#REF!)");
+    model.set_a1("B1", "5");
+    model.set_a1("Z1", "=ERROR.TYPE(#REF!)");
     for (row, (formula, _)) in (1..).zip(cases) {
-        model._set(&format!("A{row}"), formula);
+        model.set_a1(&format!("A{row}"), formula);
     }
     model.evaluate();
     for (row, (formula, want)) in (1..).zip(cases) {
         assert_eq!(
-            model._get_text(&format!("A{row}")),
+            model.get_text_a1(&format!("A{row}")),
             *want,
             "A{row}: {formula}"
         );

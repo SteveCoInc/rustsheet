@@ -38,6 +38,14 @@
 //! > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //!
 //! statrs itself is Copyright (c) 2016 Michael Ma, under the MIT License (the same terms).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::float_cmp,
+    clippy::many_single_char_names
+)]
+#![cfg_attr(test, expect(clippy::cast_precision_loss))]
+// LINT-DEBT-END
 
 use statrs::function::beta::{checked_beta_reg, checked_ln_beta};
 

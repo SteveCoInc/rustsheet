@@ -29,14 +29,14 @@ use std::{
     io::{BufReader, Cursor, Read, Seek},
 };
 
-use xml::XmlNode;
+pub(crate) use xml::{reference_of, XmlNode};
 
 use rustsheet_engine::{
     expressions::{
         parser::{new_parser_english, stringify::to_english_string},
         types::CellReferenceRC,
     },
-    types::{Metadata, Table, Workbook, WorkbookSettings, WorkbookView},
+    types::{Table, Workbook, WorkbookSettings, WorkbookView},
     Model,
 };
 
@@ -57,7 +57,10 @@ pub use workbook::date_system_from_attribute;
 use call_cap::refuse_too_many_calls;
 use external_links::load_external_books;
 use metadata::load_metadata;
-use package::{resolve_target, Package};
+pub(crate) use package::{
+    is_rels, part_folder_and_rels, rels_owner_part, resolve_relative_target, resolve_target,
+    zip_entry_names, Package,
+};
 use pivots::{load_pivots, PivotSheet};
 use styles::load_styles;
 use util::get_attribute;
@@ -77,6 +80,12 @@ pub(crate) struct Relationship {
     pub(crate) external: bool,
 }
 
+/// The last segment of a relationship type (`…/relationships/drawing` → `drawing`), which names
+/// the kind whatever namespace defines it.
+pub(crate) fn rel_kind(rel_type: &str) -> &str {
+    rel_type.rsplit('/').next().unwrap_or(rel_type)
+}
+
 fn load_relationships<R: Read + Seek>(
     archive: &mut Package<R>,
 ) -> Result<HashMap<String, Relationship>, XlsxError> {
@@ -87,7 +96,7 @@ fn load_relationships<R: Read + Seek>(
 }
 
 /// The relationships of a part in document order; none when the part has no relationships part.
-pub(super) fn part_relationships<R: Read + Seek>(
+pub(crate) fn part_relationships<R: Read + Seek>(
     archive: &mut Package<R>,
     rels_path: &str,
 ) -> Result<Vec<(String, Relationship)>, XlsxError> {
@@ -252,20 +261,7 @@ fn load_package<R: Read + Seek>(
         dn.formula = reparse_formula_hack(&dn.name, &dn.formula, &worksheet_names, &tables)?;
     }
     let external_books = load_external_books(archive, &rels, &workbook.external_references);
-    let metadata = match load_metadata(archive) {
-        Ok(metadata) => metadata,
-        Err(_) => {
-            // In case there is no metadata, add some
-            Metadata {
-                application: "Unknown application".to_string(),
-                app_version: "".to_string(),
-                creator: "".to_string(),
-                last_modified_by: "".to_string(),
-                created: "".to_string(),
-                last_modified: "".to_string(),
-            }
-        }
-    };
+    let metadata = load_metadata(archive);
     let mut views = HashMap::new();
     views.insert(
         0,

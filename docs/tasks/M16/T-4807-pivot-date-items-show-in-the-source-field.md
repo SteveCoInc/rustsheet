@@ -3,10 +3,10 @@ id: T-4807
 title: "Pivot date items show in the source field's date number format"
 milestone: M16
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -79,9 +79,51 @@ texts on 50 sheets; a sheet's span is the bounding box of its date cells):
 - gen-pivot/f9e7edbb5b74011a P12!L8:L23
 
 ## Acceptance criteria
-- [ ] The cells above pass, and no other case regresses (`make eval-baseline`).
-- [ ] pivots.md "Item casing when cache and source disagree, and date items" says the engine now matches.
-- [ ] `make check` green; reviewers approve.
+- [x] The cells above pass, and no other case regresses (`make eval-baseline`).
+- [x] pivots.md "Item casing when cache and source disagree, and date items" says the engine now matches.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - GETPIVOTDATA with date items (T-4805).
+
+## Outcome
+The Goal's premise was not quite Excel's: a date item does not take the source cells' format but a fixed
+short date, `m/d/yyyy`, with ` h:mm` when the item has a time part. probes/t4164-pivot-date-times (source
+`m/d/yyyy h:mm`) shows midnight as `4/17/2024`, not `4/17/2024 0:00`; t2085 D and t4130-pivot-date-filters
+(source `m/d/yyyy`) show `1/1/2024`. So no source format is carried in the cache (the handoff's plan is not
+needed): `RenderedCell::number_format` is now a `CellFormat` (a data field's `numFmtId`, or a code), and a
+`CacheItem::Date` label cell gets `date_item_format` (pivot/layout/render.rs); the grid writer applies a code
+as it applied an id. The probe-case test model now applies each sheet's `number_formats` and typed error
+cells, so `date_item_labels_show_as_short_dates` (pivot/grid/tests.rs) refreshes date-formatted sources as
+Excel does. pivots.md "Item casing when cache and source disagree, and date items" records the rule and its
+UNVERIFIED edges (seconds, time-only items, date subtotal labels, a selected date page item).
+
+Eval delta: probes text failures 754 -> 640 (114 fixed: t2085-getpivotdata-items D!A4:A6, 86 in
+t4130-pivot-date-filters, 25 in t4164-pivot-date-times), 0 regressions; value known failures unchanged.
+
+Adopted as an orphan (work-loop step 0.3): merging `origin/main` met T-4957's date group item format
+(`numFmtId` 14). `item_format` now gives a grouped field's date item `CellFormat::Id(14)` and any other
+date item `date_item_format`; T-4957's ungrouped-date test now expects `m/d/yyyy`. The applied
+`number_formats` make a refresh of t4170's date column read date items, so the added-groups test's
+expected cache holds `CacheItem::Date` (the CI failure on the pre-merge head). The export now writes a
+date format on label cells, so the 7 pivot-export sidecars whose export changed were refilled
+(`rustsheet-oracle fill -b excel-graph --force`): Excel shows the exported labels as `1/1/1900` ...
+`3/2/1900`. Post-merge eval delta: probes text 115 -> 1 (114 fixed), pivot-export text 139 -> 125 (14
+fixed), gen-pivot 258 cells fixed, 0 regressions.
+Review round 1 (adoption): pivots.md now records the 1904 serial 0 `12:00:00 AM` exception (VERIFIED for that
+cell; T-4943 narrowed to it); xlsx-storage.md updated; the remaining UNVERIFIED edges are T-5049.
+
+## Handoff (resumed; superseded by the Outcome above)
+Tried (sonnet run): read the render path. Date labels render in `item_cell` (crates/rustsheet-engine/src/pivot/layout/render.rs:125) as
+`PivotCell::Number`; `RenderedCell.number_format` is a `numFmtId` applied by `set_pivot_number_format` (pivot/grid.rs ~700), so
+label cells could already carry a format. The blocker: `CacheField` (pivot.rs:104) keeps no source number format, and
+`refresh.rs::read_source` / `is_date_style` (~line 105-130) only tests date-ness through `SourceCells::value`.
+Plan: add `number_format: Option<u32>` to `CacheField` (OOXML `cacheField numFmtId`), fill it in `read_source` from the first date
+source cell's xf `num_fmt_id` (extend `SourceCells`), render date-item labels with it via `put_formatted`, and read it on
+xlsx import. About 25 `CacheField { .. }` construction sites need the new field (`..Default` where possible). Persisted model plus
+trait change, so judged beyond sonnet. Nothing implemented; `make eval-show` was not completed.
+
+Coordination (T-4717): the date-label cells T-4717 owned on probes/t4164-pivot-date-times and
+probes/t4130-pivot-date-filters pass since this change, so T-4717 dropped them. probes/t4717-pivot-cell-formats L5
+confirms the rule over a `yyyy-mm-dd` source (`1/15/2024`), and L6 shows a pivot field `numFmtId` winning over it
+(`15-Jan-24`, implemented by T-4717).

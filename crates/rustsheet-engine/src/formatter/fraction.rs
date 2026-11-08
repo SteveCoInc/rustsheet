@@ -19,10 +19,13 @@
 //!   returns `None`);
 //! - a `,` right after the denominator scales the value up ([`fraction_scale`]), and a fixed
 //!   denominator past 32768 is replaced by a picked one ([`LARGE_FIXED_MAX_DENOMINATOR`]).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms, clippy::too_many_lines)]
+// LINT-DEBT-END
 
 use super::parser::{NumberPart, TextToken};
-use crate::decimal_round::{round_decimal, RoundMode};
-use crate::number_format::{group_thousands, to_precision};
+use crate::decimal_round::{cut_to_15_digits, round_decimal, RoundMode};
+use crate::number_format::group_thousands;
 
 /// Where a fraction sits among a number section's `tokens`: the digit placeholders before
 /// `numerator_start` are the integer part, those from it up to `numerator_end` the numerator.
@@ -64,7 +67,9 @@ pub(super) fn format_fraction(
     if part.comma > 0 {
         // The scaled value is cut to 15 significant digits: `?/?,,` on 1E-251 is "0/1", where the
         // double product (0.10000000000000002) would pick 1/9 (probes/fraction-overflow-scaled A65).
-        value = to_precision(value * fraction_scale(part.comma), 15);
+        // A 16th-digit tie goes toward zero here, unlike the integer digits below:
+        // `TEXT(1E+14+1.5,"# ?/?"&REPT(",",85))` is "1000000000000010" (probes/t5068-tie-number-text-mantissa D4, T-5068).
+        value = cut_to_15_digits(value * fraction_scale(part.comma), false);
     }
     // A scaled value past f64's range would print past 255 characters, which Excel cannot show.
     if !value.is_finite() {
@@ -109,22 +114,21 @@ pub(super) fn format_fraction(
         }
         Denominator::Placeholders(kinds) => kinds.clone(),
     };
-    let (mut numerator, denominator) = match fixed {
-        Some(denominator) => (
+    let (mut numerator, denominator) = if let Some(denominator) = fixed {
+        (
             round_numerator((value - integer) * denominator),
             denominator,
-        ),
-        None => {
-            let max_denominator = match &fraction.denominator {
-                Denominator::Fixed(_) => LARGE_FIXED_MAX_DENOMINATOR,
-                // Past 15 digits 10^n - 1 is no longer exact in a double; no such bound can bind.
-                Denominator::Placeholders(kinds) => {
-                    let digits = i32::try_from(kinds.len()).unwrap_or(i32::MAX).min(15);
-                    10.0_f64.powi(digits) - 1.0
-                }
-            };
-            last_convergent(value - integer, max_denominator)
-        }
+        )
+    } else {
+        let max_denominator = match &fraction.denominator {
+            Denominator::Fixed(_) => LARGE_FIXED_MAX_DENOMINATOR,
+            // Past 15 digits 10^n - 1 is no longer exact in a double; no such bound can bind.
+            Denominator::Placeholders(kinds) => {
+                let digits = i32::try_from(kinds.len()).unwrap_or(i32::MAX).min(15);
+                10.0_f64.powi(digits) - 1.0
+            }
+        };
+        last_convergent(value - integer, max_denominator)
     };
     let overflows = match fixed {
         Some(_) => numerator > MAX_FIXED_NUMERATOR,
@@ -157,7 +161,9 @@ pub(super) fn format_fraction(
         (true, _) => String::new(),
         // Past 15 significant digits Excel prints zeros, as for any number format.
         (false, _) => {
-            let digits = format!("{}", to_precision(integer, 15));
+            // A 16th-digit tie goes away from zero: `TEXT(1E+15+25.5,"# ?/?")` is
+            // "1000000000000030 1/2" (probes/t4848-tie-fraction-format A1:A3, T-4848).
+            let digits = format!("{}", cut_to_15_digits(integer, true));
             if part.use_thousands {
                 group_thousands(&digits, group_separator)
             } else {

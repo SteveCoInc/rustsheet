@@ -1,6 +1,14 @@
 //! WORKDAY and WORKDAY.INTL: step a date over working days, skipping weekends and holidays.
 //! The dates lift over arrays and refuse a range, the weekend lifts over both, and the holidays
 //! are read once per call (`Function::arg_kinds`, SPEC-0011; T-1236).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::trivially_copy_pass_by_ref
+)]
+// LINT-DEBT-END
 
 use std::cmp::Ordering;
 

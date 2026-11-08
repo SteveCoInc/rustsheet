@@ -6,6 +6,9 @@
 //! ([`toms_betaln`]; `docs/research/t2464/r2-bratio/toms_special.py` `betaln`, `bcorr`): TOMS at
 //! every shape gains more bit-exact cells but moves a gated BINOM.DIST cell at B(2, 9) off
 //! (statistics.md "Incomplete beta bpser", T-3007).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 use super::super::beta_density::{algdiv, alnrel, stirling_del, ALGDIV_C};
 use super::super::gamma_x87::excel_gamma;

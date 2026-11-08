@@ -1,3 +1,9 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(
+    test,
+    expect(clippy::cast_possible_truncation, clippy::unnecessary_wraps)
+)]
+// LINT-DEBT-END
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::expressions::token::get_error_by_name;
 use crate::expressions::types::CellReferenceIndex;
@@ -111,7 +117,7 @@ impl ParsedReference {
             );
         };
         let index =
-            |(row, column, ..): (i32, i32, bool, bool)| CellReferenceIndex { sheet, row, column };
+            |(row, column, ..): (i32, i32, bool, bool)| CellReferenceIndex { sheet, column, row };
         let absolute = [(left.2, left.3), (right.2, right.3)];
         let parsed = if is_range {
             ParsedReference::Range(index(left), index(right))
@@ -167,8 +173,8 @@ impl ParsedReference {
             (R1C1Part::Cell(row, column), None) => {
                 return Ok(ParsedReference::CellReference(CellReferenceIndex {
                     sheet,
-                    row,
                     column,
+                    row,
                 }));
             }
             (R1C1Part::Cell(row1, column1), Some(R1C1Part::Cell(row2, column2))) => {
@@ -540,8 +546,8 @@ mod tests {
     fn cell(sheet: u32, row: i32, column: i32) -> Result<ParsedReference, String> {
         Ok(ParsedReference::CellReference(CellReferenceIndex {
             sheet,
-            row,
             column,
+            row,
         }))
     }
 

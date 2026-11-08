@@ -18,11 +18,11 @@ fn f_family_df_above_1e10_is_num() {
         "=FDIST(2,10000000001,5)",
     ];
     for (i, f) in formulas.iter().enumerate() {
-        model._set(&format!("A{}", i + 1), f);
+        model.set_a1(&format!("A{}", i + 1), f);
     }
     model.evaluate();
     for i in 1..=formulas.len() {
-        assert_eq!(model._get_text(&format!("A{i}")), *"#NUM!", "A{i}");
+        assert_eq!(model.get_text_a1(&format!("A{i}")), *"#NUM!", "A{i}");
     }
 }
 
@@ -30,12 +30,12 @@ fn f_family_df_above_1e10_is_num() {
 #[test]
 fn f_inv_at_df_limit_is_bounded() {
     let mut model = new_empty_model();
-    model._set("A1", "=F.INV(0.5,10000000000.5,5)");
-    model._set("A2", "=F.INV.RT(0.5,5,10000000000)");
-    model._set("A3", "=F.INV(0.5,1E10,1E10)");
+    model.set_a1("A1", "=F.INV(0.5,10000000000.5,5)");
+    model.set_a1("A2", "=F.INV.RT(0.5,5,10000000000)");
+    model.set_a1("A3", "=F.INV(0.5,1E10,1E10)");
     model.evaluate();
-    assert_ne!(model._get_text("A1"), *"#NUM!");
-    assert_ne!(model._get_text("A2"), *"#NUM!");
+    assert_ne!(model.get_text_a1("A1"), *"#NUM!");
+    assert_ne!(model.get_text_a1("A2"), *"#NUM!");
     // Excel's exact 1: the search refines to the crossing of the engine's incomplete beta (T-0974).
-    assert_eq!(model._get_text("A3"), *"1");
+    assert_eq!(model.get_text_a1("A3"), *"1");
 }

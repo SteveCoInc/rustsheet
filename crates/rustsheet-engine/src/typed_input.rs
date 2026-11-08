@@ -1,4 +1,7 @@
 //! Text a user types, which Excel refuses in places where it reads the same text stored.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms)]
+// LINT-DEBT-END
 
 use crate::calculated_columns::TableGrowth;
 use crate::expressions::{
@@ -60,7 +63,7 @@ impl Model {
         formula: &str,
     ) -> Result<Node, String> {
         let sheet = self.workbook.worksheet(sheet)?.get_name();
-        let cell_reference = &CellReferenceRC { sheet, row, column };
+        let cell_reference = &CellReferenceRC { sheet, column, row };
         if self.parser.is_r1c1_entry() {
             // Typed in R1C1 mode ([`Model::set_typed_r1c1_user_input`]): the short forms are
             // written out in the R1C1 grammar the parser reads (T-3212), and the parser reads

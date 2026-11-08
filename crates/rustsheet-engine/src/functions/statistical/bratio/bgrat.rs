@@ -11,6 +11,9 @@
 //! The rest (the prefactor's algdiv, ν^(1/2), z^(1/2) e^-z and the asymptotic sum) is evaluated here
 //! in double-double, which is closer to r2-tdist's exact identity than the x87-extended form
 //! (1,560 against 1,545 of 1,564 bit-exact on its T cells), and the result is rounded once.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 use super::super::beta_density::ALGDIV_C;
 use super::super::erf::{erf, erfc};

@@ -14,7 +14,7 @@ fn model_with(max_iterations: u32, max_change: f64, cells: &[(&str, &str)]) -> M
         max_change,
     });
     for (cell, value) in cells {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
 }
@@ -43,7 +43,7 @@ fn cycles_sweep_in_sheet_order_and_resume() {
     for _ in 0..3 {
         model.evaluate();
     }
-    let t = |c: &str| model._get_text(c);
+    let t = |c: &str| model.get_text_a1(c);
     assert_eq!([t("B1"), t("C1")], ["599", "600"]);
     assert_eq!([t("C2"), t("D2"), t("E2")], ["449", "450", "450"]);
     assert_eq!([t("A1"), t("A3")], ["300", "310"]);
@@ -61,8 +61,8 @@ fn iterate_count_bounds_each_calculation() {
     for _ in 0..3 {
         model.evaluate();
     }
-    assert_eq!(model._get_text("A1"), "15");
-    assert_eq!(model._get_text("D1"), "1.5");
+    assert_eq!(model.get_text_a1("A1"), "15");
+    assert_eq!(model.get_text_a1("D1"), "1.5");
 }
 
 /// probes/circular-iteration-delta-boundary: a calculation stops at the first sweep whose largest
@@ -73,7 +73,7 @@ fn the_delta_stops_strictly_below() {
     for _ in 0..3 {
         model.evaluate();
     }
-    assert_eq!(model._get_text("A1"), "1.96875");
+    assert_eq!(model.get_text_a1("A1"), "1.96875");
 }
 
 /// Without iteration a cycle is 0, not iterated (recalc.md "A circular reference without
@@ -81,9 +81,9 @@ fn the_delta_stops_strictly_below() {
 #[test]
 fn without_iteration_a_cycle_is_zero() {
     let mut model = new_empty_model();
-    model._set("A1", "=A1+1");
+    model.set_a1("A1", "=A1+1");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "0");
+    assert_eq!(model.get_text_a1("A1"), "0");
 }
 
 /// Evaluates `cells` (and the data tables) three times with the pass caches and three times
@@ -97,7 +97,7 @@ fn cached_reads_match_the_walk(
         let mut model = model_with(100, 0.001, &[]);
         model.evaluation.no_pass_caches = no_pass_caches;
         for (cell, value) in cells {
-            model._set(cell, value);
+            model.set_a1(cell, value);
         }
         for table in tables {
             model.add_data_table(0, table.clone()).unwrap();
@@ -113,8 +113,8 @@ fn cached_reads_match_the_walk(
             for column in 'A'..='N' {
                 let cell = format!("{column}{row}");
                 assert_eq!(
-                    cached._get_text(&cell),
-                    walked._get_text(&cell),
+                    cached.get_text_a1(&cell),
+                    walked.get_text_a1(&cell),
                     "{cell} after evaluation {round}"
                 );
             }
@@ -269,12 +269,12 @@ fn k1_after_an_edit(cells: &[(String, String)]) -> (String, String) {
         let mut model = model_with(100, 1.5, &[("K1", "=K1+1"), ("D1", "1")]);
         model.evaluation.no_pass_caches = no_pass_caches;
         for (cell, value) in cells {
-            model._set(cell, value);
+            model.set_a1(cell, value);
         }
         model.evaluate();
-        model._set("D1", "100");
+        model.set_a1("D1", "100");
         model.evaluate();
-        model._get_text("K1")
+        model.get_text_a1("K1")
     };
     (run(false), run(true))
 }
@@ -329,12 +329,16 @@ fn a_lookup_vector_whose_build_joined_is_not_cached() {
 /// from 0, and both stop within `max_change` of 2 at different values. With a delta of 0 both
 /// run to the fixed point and agree.
 #[test]
+#[expect(
+    clippy::float_cmp,
+    reason = "the two runs must differ, or agree, to the bit"
+)]
 fn a_converged_cycle_depends_on_the_previous_values() {
     let run = |max_change: f64| {
         let cells = [("A1", "=A1/2+B1/2"), ("B1", "1")];
         let mut edited = model_with(32767, max_change, &cells);
         edited.evaluate();
-        edited._set("B1", "2");
+        edited.set_a1("B1", "2");
         edited.evaluate();
         let mut fresh = model_with(32767, max_change, &[("A1", "=A1/2+B1/2"), ("B1", "2")]);
         fresh.evaluate();

@@ -285,7 +285,9 @@ pub struct SaveReport {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Dropped {
-    /// The fidelity-item key (D2), printed as the suite prints it.
+    /// The source part's name as its zip entry spells it (`xl/calcChain.xml`); the suite resolves
+    /// it to the part's fidelity-item key (D2), so a writer's renaming never changes a report.
+    /// Element-level entries come with SPEC-0034 stage 5's fragments.
     pub item: String,
     /// Why it was not written.
     pub reason: DropReason,
@@ -301,6 +303,9 @@ pub enum DropReason {
     Policy,
     /// A structural edit on this sheet made range-bound content stale (decision 0275 D4).
     StaleAfterStructuralEdit { sheet: String },
+    /// A content edit (a modelled feature, the notes, a pivot or table, the style table) made kept content
+    /// stale, on this sheet or workbook-wide (`None`) (SPEC-0034 D5.5).
+    StaleAfterEdit { sheet: Option<String> },
     /// Its owner (a sheet, a table) was deleted.
     OwnerDeleted,
     /// Its relationship closure reaches a part the export regenerates (the closure rule of T-4567, SPEC-0034 stage 5).
@@ -320,12 +325,14 @@ pub enum DropReason {
    - `save_xlsx` and `to_xlsx_bytes` keep their signatures and discard the report.
    - The Python binding returns the report as a list of `(item, reason)` tuples from
      `save_xlsx(..., report=True)`.
-   - Until T-4562 lands, the report is filled coarsely: one `NotPreserved` entry per source part the
-     export does not write, which needs the part inventory the importer already builds (`PartNames`). Element-level
-     entries come with fragments.
+   - Until stage 5, the report is filled coarsely (T-4562): one `NotPreserved` entry per source part of a
+     relationship type the export does not model, and calcChain as `Policy`. A part of a modelled type the export
+     fails to write (a dropped pivot cache) is not reported until T-4999 compares the output's inventory.
+     Element-level entries come with fragments.
 2. **What a `dropped` verdict accepts.** An item in the report is `dropped` (pass) only for these reasons:
    - `Policy` or `ActiveContentInPlainFormat`, in any scenario;
-   - `StaleAfterStructuralEdit` or `OwnerDeleted`, in an R2 run whose edit explains it.
+   - `StaleAfterStructuralEdit` or `OwnerDeleted`, in an R2 run whose edit explains it;
+   - `StaleAfterEdit`, in an R1 or R2 run whose edits explain it (R1's `Δ(E)`, D5).
 
    `NotPreserved`, `ClosureReachesRegenerated`, `LimitExceeded` and `UnmappableRelationship` remain `lost`. The
    report says why, but that is not a reason to pass. A `LimitExceeded` drop of a hostile-set case passes.
@@ -351,9 +358,11 @@ milestone = ["M15"]
 
 - **Discovery and fetch.** These reuse the `xlsx` kind's machinery (`include`, `exclude`, `[fetch]`, licence and
   origin keys). There is one case discoverer, not two (directive 3).
-- **Baseline.** `eval/baseline/<suite>.txt` is the ordinary cells-mode file: `C` gives a case's item count, and each
-  `F` line holds a failing item, `<scenario> <kind> <item key> <verdict>`. The ratchet is the usual one. A line may disappear (fixed). A new
-  failing item is a regression unless the case is new (new coverage). `update-baseline` refuses regressions.
+- **Baseline.** `eval/baseline/<suite>.txt` is the ordinary cells-mode file, keyed by case and scenario,
+  `<case>#<scenario>` (decision 0345, T-4961): `C` gives the item count of a case's scenario, and each
+  `F` line holds a failing item of it, `<scenario> <kind> <item key> <verdict>`. The ratchet is the usual one, per key, so a new scenario
+  is a new key and cannot turn an existing scenario's loss into new coverage. A line may disappear (fixed). A new
+  failing item is a regression unless the key is new (new coverage). `update-baseline` refuses regressions.
   `--allow-regressions` needs a decision record, as everywhere.
   A corpus suite (Calipers, POI, corpus-bench) uses `baseline = "cases"` instead. Its item lines would run to
   tens of megabytes (about 550,000 on the first run, T-4173). Each failing case is one `F` line,

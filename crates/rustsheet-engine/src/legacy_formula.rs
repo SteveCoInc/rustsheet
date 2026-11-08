@@ -1,4 +1,7 @@
 //! Formulas as a pre-dynamic-array workbook stores them (a plain `<f>` with no array metadata).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_sign_loss)]
+// LINT-DEBT-END
 
 use crate::expressions::parser::static_analysis::add_implicit_intersection;
 use crate::expressions::parser::stringify::to_localized_string;
@@ -130,7 +133,7 @@ impl Model {
             .workbook
             .worksheet(sheet)?
             .cell(row, column)
-            .and_then(|c| c.get_formula())
+            .and_then(super::types::Cell::get_formula)
         else {
             return Ok(false);
         };

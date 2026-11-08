@@ -30,7 +30,7 @@ fn model() -> Model {
         ("Data!E6", "TRUE"),
         ("Data!E8", "=1/0"),
     ] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
 }
@@ -50,11 +50,11 @@ fn union_in_a_value_context_is_value_error() {
         ("A8", "=(Data!A7,Data!D10)"),
         ("A9", "=-(Data!E4,Data!B1)"),
     ] {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for cell in ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9"] {
-        assert_eq!(model._get_text(cell), "#VALUE!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#VALUE!", "{cell}");
     }
 }
 
@@ -77,7 +77,7 @@ fn union_cut_by_a_cell_gives_that_cell() {
         ("A12", "=(Data!D1:D12,Data!A1:A12) Data!D4+1"),
         ("A13", "=(Data!C1:C12,Data!E1:E12) Data!C9&\"\""),
     ] {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, expected) in [
@@ -95,7 +95,7 @@ fn union_cut_by_a_cell_gives_that_cell() {
         ("A12", "4.25"),
         ("A13", ""),
     ] {
-        assert_eq!(model._get_text(cell), expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell}");
     }
 }
 
@@ -103,77 +103,80 @@ fn union_cut_by_a_cell_gives_that_cell() {
 fn intersection_leaving_several_areas_or_none() {
     let mut model = model();
     // Two areas left, even of the same cell: `#VALUE!` (probes/intersection-function-operands H5).
-    model._set("A1", "=Data!A1:A3 (Data!A2:B2,Data!A2)");
+    model.set_a1("A1", "=Data!A1:A3 (Data!A2:B2,Data!A2)");
     // No area left: `#NULL!`, as for two plain areas (UNVERIFIED for a union).
-    model._set("A2", "=(Data!A1,Data!B2) Data!C3");
+    model.set_a1("A2", "=(Data!A1,Data!B2) Data!C3");
     // Several areas, cut again down to one (UNVERIFIED).
-    model._set("A3", "=(Data!A1:A12,Data!D1:D12) Data!A4:D4 Data!D4");
+    model.set_a1("A3", "=(Data!A1:A12,Data!D1:D12) Data!A4:D4 Data!D4");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_text("A2"), "#NULL!");
-    assert_eq!(model._get_text("A3"), "3.25");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), "#NULL!");
+    assert_eq!(model.get_text_a1("A3"), "3.25");
 }
 
 #[test]
 fn union_errors() {
     let mut model = model();
     // An operand's own error comes first (UNVERIFIED).
-    model._set("A1", "=(Data!A1,#REF!)");
-    model._set("A2", "=(Data!A1,#REF!) Data!A1");
+    model.set_a1("A1", "=(Data!A1,#REF!)");
+    model.set_a1("A2", "=(Data!A1,#REF!) Data!A1");
     // Areas on different sheets cut by a cell: `#VALUE!`, as for two plain areas (UNVERIFIED).
-    model._set("A3", "=(Data!A1:A3,Other!A1:A3) Data!A2");
+    model.set_a1("A3", "=(Data!A1:A3,Other!A1:A3) Data!A2");
     // A value that is not a reference cannot be in a union: Excel-style refusal.
-    model._set("A4", "=(1,Data!A1)");
+    model.set_a1("A4", "=(1,Data!A1)");
     // A bare union loads and is `#VALUE!` as a value (probes/multiarea-bare, T-1073).
-    model._set("A5", "=Data!A1,Data!B1");
+    model.set_a1("A5", "=Data!A1,Data!B1");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#REF!");
-    assert_eq!(model._get_text("A2"), "#REF!");
-    assert_eq!(model._get_text("A3"), "#VALUE!");
-    assert_eq!(model._get_text("A4"), "#ERROR!");
-    assert_eq!(model._get_text("A5"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A1"), "#REF!");
+    assert_eq!(model.get_text_a1("A2"), "#REF!");
+    assert_eq!(model.get_text_a1("A3"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A4"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A5"), "#VALUE!");
 }
 
 #[test]
 fn union_is_a_reference() {
     let mut model = model();
     // UNVERIFIED: Excel's ISREF of a union is not probed (references.md).
-    model._set("A1", "=ISREF((Data!A1,Data!B1))");
+    model.set_a1("A1", "=ISREF((Data!A1,Data!B1))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "TRUE");
+    assert_eq!(model.get_text_a1("A1"), "TRUE");
 }
 
 #[test]
 fn union_formula_text_round_trips() {
     let mut model = model();
-    model._set("A1", "=(Data!E4,Data!E4)");
-    model._set("A2", "=((Data!A2,Data!E8),Data!B6)");
-    model._set("A3", "=(Data!C1:C12,Data!E1:E12) Data!C9");
-    model._set("A4", "=SUM((Data!A1,Data!B2),1)");
-    model._set("A5", "=FORMULATEXT(A3)");
+    model.set_a1("A1", "=(Data!E4,Data!E4)");
+    model.set_a1("A2", "=((Data!A2,Data!E8),Data!B6)");
+    model.set_a1("A3", "=(Data!C1:C12,Data!E1:E12) Data!C9");
+    model.set_a1("A4", "=SUM((Data!A1,Data!B2),1)");
+    model.set_a1("A5", "=FORMULATEXT(A3)");
     model.evaluate();
-    assert_eq!(model._get_formula("A1"), "=(Data!E4,Data!E4)");
-    assert_eq!(model._get_formula("A2"), "=((Data!A2,Data!E8),Data!B6)");
+    assert_eq!(model.get_formula_a1("A1"), "=(Data!E4,Data!E4)");
+    assert_eq!(model.get_formula_a1("A2"), "=((Data!A2,Data!E8),Data!B6)");
     assert_eq!(
-        model._get_formula("A3"),
+        model.get_formula_a1("A3"),
         "=(Data!C1:C12,Data!E1:E12) Data!C9"
     );
-    assert_eq!(model._get_formula("A4"), "=SUM((Data!A1,Data!B2),1)");
-    assert_eq!(model._get_text("A5"), "=(Data!C1:C12,Data!E1:E12) Data!C9");
+    assert_eq!(model.get_formula_a1("A4"), "=SUM((Data!A1,Data!B2),1)");
+    assert_eq!(
+        model.get_text_a1("A5"),
+        "=(Data!C1:C12,Data!E1:E12) Data!C9"
+    );
 }
 
 #[test]
 fn union_survives_row_insertion() {
     let mut model = model();
-    model._set("A1", "=(Data!D1:D12,Data!A1:A12) Data!D11");
+    model.set_a1("A1", "=(Data!D1:D12,Data!A1:A12) Data!D11");
     model.evaluate();
     model.insert_rows(1, 1, 1).unwrap();
     model.evaluate();
     assert_eq!(
-        model._get_formula("A1"),
+        model.get_formula_a1("A1"),
         "=(Data!D2:D13,Data!A2:A13) Data!D12"
     );
-    assert_eq!(model._get_text("A1"), "a");
+    assert_eq!(model.get_text_a1("A1"), "a");
 }
 
 /// An intersection of exactly [`MAX_AREAS`] areas: two unions of 256 copies of `A1:A2`.
@@ -189,10 +192,13 @@ fn intersection_of_unions_at_the_area_cap() {
     // DEVIATION (references.md "Union area cap"): exactly MAX_AREAS areas is still allowed.
     let mut model = new_empty_model();
     let intersection = maximal_intersection();
-    model._set("Z1", &format!("={intersection} A1"));
+    model.set_a1("Z1", &format!("={intersection} A1"));
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), "#VALUE!");
-    assert_eq!(model._get_error_message("Z1"), "Reference of several areas");
+    assert_eq!(model.get_text_a1("Z1"), "#VALUE!");
+    assert_eq!(
+        model.get_error_message_a1("Z1"),
+        "Reference of several areas"
+    );
 }
 
 #[test]
@@ -200,12 +206,12 @@ fn union_of_two_maximal_intersections_is_over_the_area_cap() {
     // DEVIATION (references.md "Union area cap"), in a value context and cut by a cell.
     let mut model = new_empty_model();
     let intersection = maximal_intersection();
-    model._set("Z1", &format!("=({intersection},{intersection})"));
-    model._set("Z2", &format!("=({intersection},{intersection}) A1"));
+    model.set_a1("Z1", &format!("=({intersection},{intersection})"));
+    model.set_a1("Z2", &format!("=({intersection},{intersection}) A1"));
     model.evaluate();
     for cell in ["Z1", "Z2"] {
-        assert_eq!(model._get_text(cell), "#VALUE!", "{cell}");
-        assert_eq!(model._get_error_message(cell), TOO_MANY_AREAS, "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#VALUE!", "{cell}");
+        assert_eq!(model.get_error_message_a1(cell), TOO_MANY_AREAS, "{cell}");
     }
 }
 
@@ -215,15 +221,15 @@ fn union_chain_over_the_area_cap() {
     // the cap, before the later ones are evaluated.
     let mut model = new_empty_model();
     let intersection = maximal_intersection();
-    model._set("Z1", &format!("=({intersection},A1,A2)"));
-    model._set("Z2", &format!("=({intersection},A1,A2) A1"));
-    model._set("Z3", &format!("=SUM(({intersection},A1,A2))"));
+    model.set_a1("Z1", &format!("=({intersection},A1,A2)"));
+    model.set_a1("Z2", &format!("=({intersection},A1,A2) A1"));
+    model.set_a1("Z3", &format!("=SUM(({intersection},A1,A2))"));
     // The cap comes before a later operand's own error.
-    model._set("Z4", &format!("=({intersection},A1,#REF!)"));
+    model.set_a1("Z4", &format!("=({intersection},A1,#REF!)"));
     model.evaluate();
     for cell in ["Z1", "Z2", "Z3", "Z4"] {
-        assert_eq!(model._get_text(cell), "#VALUE!", "{cell}");
-        assert_eq!(model._get_error_message(cell), TOO_MANY_AREAS, "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#VALUE!", "{cell}");
+        assert_eq!(model.get_error_message_a1(cell), TOO_MANY_AREAS, "{cell}");
     }
 }
 
@@ -232,12 +238,12 @@ fn balanced_union_over_the_area_cap() {
     // Balanced nesting keeps the depth logarithmic, so only the area cap bounds the leaves.
     let mut model = new_empty_model();
     let union = balanced_union("A1", MAX_AREAS + 1);
-    model._set("Z1", &format!("={union}"));
-    model._set("Z2", &format!("={union} A1"));
+    model.set_a1("Z1", &format!("={union}"));
+    model.set_a1("Z2", &format!("={union} A1"));
     model.evaluate();
     for cell in ["Z1", "Z2"] {
-        assert_eq!(model._get_text(cell), "#VALUE!", "{cell}");
-        assert_eq!(model._get_error_message(cell), TOO_MANY_AREAS, "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#VALUE!", "{cell}");
+        assert_eq!(model.get_error_message_a1(cell), TOO_MANY_AREAS, "{cell}");
     }
 }
 
@@ -249,12 +255,15 @@ fn chain_of_cuts_over_the_pair_budget() {
     let mut model = new_empty_model();
     let intersection = maximal_intersection();
     // The intersection and `cuts - 1` cuts by A1 use the whole budget: several areas remain.
-    model._set("Z1", &format!("={intersection}{}", " A1".repeat(cuts - 1)));
-    model._set("Z2", &format!("={intersection}{}", " A1".repeat(cuts)));
+    model.set_a1("Z1", &format!("={intersection}{}", " A1".repeat(cuts - 1)));
+    model.set_a1("Z2", &format!("={intersection}{}", " A1".repeat(cuts)));
     model.evaluate();
-    assert_eq!(model._get_error_message("Z1"), "Reference of several areas");
-    assert_eq!(model._get_text("Z2"), "#VALUE!");
-    assert_eq!(model._get_error_message("Z2"), TOO_MANY_AREA_PAIRS);
+    assert_eq!(
+        model.get_error_message_a1("Z1"),
+        "Reference of several areas"
+    );
+    assert_eq!(model.get_text_a1("Z2"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("Z2"), TOO_MANY_AREA_PAIRS);
 }
 
 #[test]
@@ -266,16 +275,16 @@ fn a_let_bound_union_shares_the_pair_budget_across_arguments() {
     let union = balanced_union("A1", 1 << 8);
     let argument = |cuts: usize| format!("IF(1,u u{})", " A1".repeat(cuts));
     let mut model = new_empty_model();
-    model._set("A1", "1");
+    model.set_a1("A1", "1");
     let within = argument(units / 2 - 1);
-    model._set("Z1", &format!("=LET(u,{union},SUM({within},{within}))"));
+    model.set_a1("Z1", &format!("=LET(u,{union},SUM({within},{within}))"));
     let past = argument(units / 2);
-    model._set("Z2", &format!("=LET(u,{union},SUM({past},{past}))"));
+    model.set_a1("Z2", &format!("=LET(u,{union},SUM({past},{past}))"));
     // Each argument alone is within the budget.
-    model._set("Z3", &format!("=LET(u,{union},SUM({past}))"));
+    model.set_a1("Z3", &format!("=LET(u,{union},SUM({past}))"));
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), (2 * MAX_AREAS).to_string());
-    assert_eq!(model._get_text("Z2"), "#VALUE!");
-    assert_eq!(model._get_error_message("Z2"), TOO_MANY_AREA_PAIRS);
-    assert_eq!(model._get_text("Z3"), MAX_AREAS.to_string());
+    assert_eq!(model.get_text_a1("Z1"), (2 * MAX_AREAS).to_string());
+    assert_eq!(model.get_text_a1("Z2"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("Z2"), TOO_MANY_AREA_PAIRS);
+    assert_eq!(model.get_text_a1("Z3"), MAX_AREAS.to_string());
 }

@@ -139,10 +139,13 @@ success (see the limits). Its rules:
   level, a manual group) keeps its base (`CacheField::added_group`) and is derived again from the base's
   new values before the base is grouped in place (`pivot/added_groups.rs`, T-4171).
 
-A Table or a defined name resolves to its range at refresh (T-4506). `SourceCells` is a trait in
-`pivot/refresh.rs`, implemented by `Model` over the evaluated cell values. It reads values only, so a
-refresh does no I/O and never evaluates a formula. Because it reads what the recalculation produced, a
-refresh is ordered after that calculation.
+A Table or a defined name resolves to its range at refresh (T-4506): `Model::pivot_source_area` reads a
+Table's header row and body, and evaluates a defined name's body in reference context, as a formula outside a
+cell is evaluated (a dynamic `OFFSET` or `INDEX` name included; pivots.md "A pivot over a defined name or a
+Table reads it again at the refresh"). `SourceCells` is a trait in `pivot/refresh.rs`, implemented by `Model`
+over the evaluated cell values. It reads values only, so a refresh does no I/O and evaluates no formula but a
+source name's body. Because it reads what the recalculation produced, a refresh is ordered after that
+calculation.
 
 **Who refreshes, and when (T-4151).**
 - The importer only records `refreshOnLoad` on the cache, since import cannot calculate.
@@ -237,13 +240,16 @@ As built (T-4176, `crates/rustsheet-xlsx/src/export/pivots.rs`): the regeneratin
 `worksheetSource@name`, now kept as `PivotCache::source_name`) with a `pivotCacheRecords` part of `<x v>` indices, and
 every pivot as a `pivotTableDefinition`: typed attributes where they differ from the schema's defaults, the verbatim
 rest on its owner, root children in schema order, and `rowItems`/`colItems`: the saved ones as read until the engine
-lays the pivot out (a render or refresh drops them), then the engine's when its layout gives the location and
-geometry the pivot holds. A cache is held to the import limits, and one with case-variant texts in a field is
-dropped (Excel for the web calls it corrupt). An axis field with no `<items>` gets one per cache
-item plus its subtotal lines (ClosedXML's invariant), a data field's pivot field `dataField="1"`. A grouped cache is
-written with its `<fieldGroup>`s in the shapes Excel saves, from each range-grouped field's kept own values
-(`CacheField::ungrouped`), and dropped with its pivots for any other shape (T-4734); a cache definition's unread rest is T-4735's. The source-preserving tiers
-(SPEC-0034) still keep an unchanged pivot's own parts byte for byte.
+lays the pivot out (a render or refresh drops them), then the engine's when its layout gives the location and geometry
+the pivot holds. A layout that changes nothing keeps the saved ones (T-4825): the same cache, location and geometry,
+and the cells the sheet already shows, with none to clear. So a `refreshOnLoad` pivot that nothing edited leaves the
+pivot model as read, and the source-preserving tiers keep its parts. A cache is held to the import limits, and one
+with case-variant texts in a field is dropped (Excel for the web calls it corrupt). An axis field with no `<items>`
+gets one per cache item plus its subtotal lines (ClosedXML's invariant), a data field's pivot field `dataField="1"`. A
+grouped cache is written with its `<fieldGroup>`s in the shapes Excel saves, from each range-grouped field's kept own
+values (`CacheField::ungrouped`), and dropped with its pivots for any other shape (T-4734); a cache definition's
+unread rest is T-4735's. The source-preserving tiers (SPEC-0034) still keep an unchanged pivot's own parts byte for
+byte.
 
 ### PivotChart data (T-4186)
 `PivotChartData { categories: Vec<Vec<CellValue>>, series: Vec<Series> }` is derived from the

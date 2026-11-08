@@ -1,3 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::float_cmp,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 use statrs::distribution::{Continuous, ContinuousCDF, StudentsT};
 
 use crate::arithmetic::{extended_quotient, flush_subnormal};
@@ -226,7 +235,7 @@ fn t_test_p(
             if df_i <= 0 {
                 return error(Error::DIV);
             }
-            let df = df_i as f64;
+            let df = f64::from(df_i);
 
             let sp2 = (((n1 - 1) as f64) * v1 + ((n2 - 1) as f64) * v2) / df; // pooled variance
 

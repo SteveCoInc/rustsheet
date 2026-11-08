@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::too_many_lines))]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, clippy::panic, reason = "tests")]
 //! The probe harness the pivot stage tests share: a probe's case file (its source cells and the
 //! case builder's pivot definition) read back into the cache and definition Excel refreshed, and its
@@ -33,6 +36,17 @@ pub(crate) const T4634_SHEETS: &[&str] = &[
 /// form at the top (SO) and at the bottom (SB), compact form (SK), over custom subtotals (SF), on
 /// columns (SCC) and with a `?` for the item (SQ).
 pub(crate) const T4745_SHEETS: &[&str] = &["GC", "GV", "G1", "SO", "SB", "SK", "SF", "SCC", "SQ"];
+
+/// The pivot sheets of probes/t4699-pivot-blank-collapsed: `insertBlankRow` on the innermost row
+/// field (BI compact, BI2 tabular), on a column field (BC) and after a collapsed item (BS, BS2);
+/// a collapsed item on columns (CC), under `subtotalTop="0"` (CB), with custom subtotals (CU,
+/// CU2; CR lists all eleven in reverse), in a middle field (CM, CM2) and with Values inside its field (CV, CV2, and past a hidden field
+/// CV3 compact, CV4 tabular); custom subtotals
+/// in plain outline form (OC).
+pub(crate) const T4699_SHEETS: &[&str] = &[
+    "BI", "BI2", "BC", "BS", "BS2", "CC", "CB", "CU", "CU2", "CR", "CM", "CM2", "CV", "CV2", "CV3",
+    "CV4", "OC",
+];
 
 pub(crate) fn read(stem: &str, kind: &str) -> Json {
     let path = format!(
@@ -198,7 +212,17 @@ pub(crate) fn probe_pivot_over(
     name: &str,
     cache: PivotCache,
 ) -> (PivotCache, PivotTable) {
-    let spec = &sheet(case, name)["pivot_tables"][0];
+    probe_pivot_nth(case, name, 0, cache)
+}
+
+/// [`probe_pivot_over`] for the `nth` pivot of sheet `name` (0 for the first).
+pub(crate) fn probe_pivot_nth(
+    case: &Json,
+    name: &str,
+    nth: usize,
+    cache: PivotCache,
+) -> (PivotCache, PivotTable) {
+    let spec = &sheet(case, name)["pivot_tables"][nth];
     let definition = &spec["definition"];
     // The builder writes each calculated field after the source fields, with its formula and
     // `databaseField="0"` (`pivot_definition.py` `cache_definition`).
@@ -378,6 +402,9 @@ pub(crate) fn probe_pivot_over(
         pivot_field.subtotal_top = flag(&attrs["subtotalTop"], pivot_field.subtotal_top);
         pivot_field.insert_blank_row = flag(&attrs["insertBlankRow"], pivot_field.insert_blank_row);
         pivot_field.subtotal_caption = attrs["subtotalCaption"].as_str().map(str::to_string);
+        pivot_field.number_format = attrs["numFmtId"]
+            .as_u64()
+            .map(|id| u32::try_from(id).unwrap());
         // The field's raw `extLst` (`xml.extLst`), whose x14 `fillDownLabels` the importer types.
         // The match is deliberately narrow: the probes write the flag as `fillDownLabels="1"`
         // only (t4129 X14F, t4698); the importer's own reading is tested in
@@ -388,8 +415,8 @@ pub(crate) fn probe_pivot_over(
     (cache, table)
 }
 
-/// A model holding the case's sheets, in order, and their cells: a text starting with `=` is a
-/// formula, evaluated by [`Model::evaluate`] like any other.
+/// A model holding the case's sheets, in order, their cells and their number formats: a text
+/// starting with `=` is a formula, evaluated by [`Model::evaluate`] like any other.
 pub(crate) fn probe_model(case: &Json) -> Model {
     let mut model = Model::new_empty("probe", "en", "UTC", "en").unwrap();
     for (index, spec) in (0u32..).zip(case["sheets"].as_array().unwrap()) {
@@ -411,9 +438,24 @@ pub(crate) fn probe_model(case: &Json) -> Model {
                     model.update_cell_with_number(index, row, column, n.as_f64().unwrap())
                 }
                 Json::Bool(b) => model.update_cell_with_bool(index, row, column, *b),
+                // A typed error cell, `{"t": "e", "v": "#N/A"}`, as its literal.
+                Json::Object(typed) if typed["t"] == "e" => {
+                    model.set_user_input(index, row, column, typed["v"].as_str().unwrap().into())
+                }
                 other => panic!("case cell {at}: {other}"),
             }
             .unwrap();
+        }
+        // The sheet's `number_formats`, so a refresh reads a date-formatted source as dates.
+        for (at, code) in spec["number_formats"].as_object().into_iter().flatten() {
+            let (column, row) = position(at);
+            let (row, column) = (
+                i32::try_from(row + 1).unwrap(),
+                i32::try_from(column + 1).unwrap(),
+            );
+            let mut style = model.get_style_for_cell(index, row, column).unwrap();
+            style.num_fmt = code.as_str().unwrap().to_string();
+            model.set_cell_style(index, row, column, &style).unwrap();
         }
     }
     model
@@ -469,7 +511,7 @@ fn rendered(
     let result = compute_on(table, cache, today, &mut work).unwrap();
     let layout = lay_out(table, cache, &result, &mut work).unwrap();
     let mut cells = HashMap::new();
-    for cell in render(table, cache, &result, &layout).unwrap() {
+    for cell in render(table, cache, &result, &layout, &[]).unwrap() {
         let at = address(cell.column, cell.row);
         assert!(
             cells.insert(at.clone(), cell.value).is_none(),

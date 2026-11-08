@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_sign_loss)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::test::util::new_empty_model;
@@ -6,22 +9,22 @@ use crate::test::util::new_empty_model;
 fn test_forecast_basic() {
     let mut model = new_empty_model();
     // known_y: 2, 3, 9, 1, 8  known_x: 6, 5, 11, 7, 5  predict at x=8
-    model._set("A1", "2");
-    model._set("A2", "3");
-    model._set("A3", "9");
-    model._set("A4", "1");
-    model._set("A5", "8");
-    model._set("B1", "6");
-    model._set("B2", "5");
-    model._set("B3", "11");
-    model._set("B4", "7");
-    model._set("B5", "5");
-    model._set("C1", "=FORECAST(8, A1:A5, B1:B5)");
+    model.set_a1("A1", "2");
+    model.set_a1("A2", "3");
+    model.set_a1("A3", "9");
+    model.set_a1("A4", "1");
+    model.set_a1("A5", "8");
+    model.set_a1("B1", "6");
+    model.set_a1("B2", "5");
+    model.set_a1("B3", "11");
+    model.set_a1("B4", "7");
+    model.set_a1("B5", "5");
+    model.set_a1("C1", "=FORECAST(8, A1:A5, B1:B5)");
     model.evaluate();
     // slope = (5*173 - 34*23) / (5*256 - 34^2) = 83/124
     // intercept = (23 - (83/124)*34) / 5 ≈ 0.04839
     // FORECAST(8) ≈ 0.04839 + (83/124)*8 ≈ 5.40323
-    let result = model._get_text("C1");
+    let result = model.get_text_a1("C1");
     let v: f64 = result.parse().unwrap();
     assert!(
         (v - 5.40323).abs() < 0.001,
@@ -33,15 +36,15 @@ fn test_forecast_basic() {
 fn test_forecast_perfect_line() {
     let mut model = new_empty_model();
     // y = 2x + 1
-    model._set("A1", "3");
-    model._set("A2", "5");
-    model._set("A3", "7");
-    model._set("B1", "1");
-    model._set("B2", "2");
-    model._set("B3", "3");
-    model._set("C1", "=FORECAST(4, A1:A3, B1:B3)");
+    model.set_a1("A1", "3");
+    model.set_a1("A2", "5");
+    model.set_a1("A3", "7");
+    model.set_a1("B1", "1");
+    model.set_a1("B2", "2");
+    model.set_a1("B3", "3");
+    model.set_a1("C1", "=FORECAST(4, A1:A3, B1:B3)");
     model.evaluate();
-    let result = model._get_text("C1");
+    let result = model.get_text_a1("C1");
     let v: f64 = result.parse().unwrap();
     assert!(
         (v - 9.0).abs() < 1e-10,
@@ -52,39 +55,39 @@ fn test_forecast_perfect_line() {
 #[test]
 fn test_forecast_linear_identical_to_forecast() {
     let mut model = new_empty_model();
-    model._set("A1", "3");
-    model._set("A2", "5");
-    model._set("A3", "7");
-    model._set("B1", "1");
-    model._set("B2", "2");
-    model._set("B3", "3");
-    model._set("C1", "=FORECAST(4, A1:A3, B1:B3)");
-    model._set("C2", "=FORECAST.LINEAR(4, A1:A3, B1:B3)");
+    model.set_a1("A1", "3");
+    model.set_a1("A2", "5");
+    model.set_a1("A3", "7");
+    model.set_a1("B1", "1");
+    model.set_a1("B2", "2");
+    model.set_a1("B3", "3");
+    model.set_a1("C1", "=FORECAST(4, A1:A3, B1:B3)");
+    model.set_a1("C2", "=FORECAST.LINEAR(4, A1:A3, B1:B3)");
     model.evaluate();
-    assert_eq!(model._get_text("C1"), model._get_text("C2"));
+    assert_eq!(model.get_text_a1("C1"), model.get_text_a1("C2"));
 }
 
 #[test]
 fn test_forecast_constant_x_returns_div_error() {
     let mut model = new_empty_model();
     // All x values the same -> division by zero
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
-    model._set("B1", "5");
-    model._set("B2", "5");
-    model._set("B3", "5");
-    model._set("C1", "=FORECAST(5, A1:A3, B1:B3)");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("B1", "5");
+    model.set_a1("B2", "5");
+    model.set_a1("B3", "5");
+    model.set_a1("C1", "=FORECAST(5, A1:A3, B1:B3)");
     model.evaluate();
-    assert_eq!(model._get_text("C1"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("C1"), "#DIV/0!");
 }
 
 #[test]
 fn test_forecast_wrong_arg_count() {
     let mut model = new_empty_model();
-    model._set("A1", "=FORECAST(1, 2)");
+    model.set_a1("A1", "=FORECAST(1, 2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
 }
 
 /// T-2028: `target_date` and `statistic_type` read as numbers first (text is `#VALUE!`) and lift
@@ -94,19 +97,21 @@ fn test_forecast_wrong_arg_count() {
 fn forecast_ets_family_reads_lifted_argument_first() {
     let mut model = new_empty_model();
     for row in 1..=8 {
-        model._set(&format!("A{row}"), &format!("{}", row * 2));
-        model._set(&format!("B{row}"), &format!("{row}"));
+        model.set_a1(&format!("A{row}"), &format!("{}", row * 2));
+        model.set_a1(&format!("B{row}"), &format!("{row}"));
     }
-    model._set("D1", "=FORECAST.ETS(9,A1:A8,B1:B8)");
-    model._set("D2", "=FORECAST.ETS(\"x\",A1:A8,B1:B8)");
-    model._set("D3", "=FORECAST.ETS.CONFINT(9,A1:A8,B1:B8)");
-    model._set("D4", "=FORECAST.ETS.CONFINT(\"x\",A1:A8,B1:B8)");
-    model._set("D5", "=FORECAST.ETS.STAT(A1:A8,B1:B8,1)");
-    model._set("D6", "=FORECAST.ETS.STAT(A1:A8,B1:B8,\"x\")");
-    model._set("D7", "=ROWS(FORECAST.ETS({9;9},A1:A8,B1:B8))");
-    model._set("D8", "=ROWS(FORECAST.ETS.STAT(A1:A8,B1:B8,B1:B2))");
+    model.set_a1("D1", "=FORECAST.ETS(9,A1:A8,B1:B8)");
+    model.set_a1("D2", "=FORECAST.ETS(\"x\",A1:A8,B1:B8)");
+    model.set_a1("D3", "=FORECAST.ETS.CONFINT(9,A1:A8,B1:B8)");
+    model.set_a1("D4", "=FORECAST.ETS.CONFINT(\"x\",A1:A8,B1:B8)");
+    model.set_a1("D5", "=FORECAST.ETS.STAT(A1:A8,B1:B8,1)");
+    model.set_a1("D6", "=FORECAST.ETS.STAT(A1:A8,B1:B8,\"x\")");
+    model.set_a1("D7", "=ROWS(FORECAST.ETS({9;9},A1:A8,B1:B8))");
+    model.set_a1("D8", "=ROWS(FORECAST.ETS.STAT(A1:A8,B1:B8,B1:B2))");
     model.evaluate();
-    let got: Vec<String> = (1..=8).map(|r| model._get_text(&format!("D{r}"))).collect();
+    let got: Vec<String> = (1..=8)
+        .map(|r| model.get_text_a1(&format!("D{r}")))
+        .collect();
     assert_eq!(
         got,
         ["18", "#VALUE!", "0", "#VALUE!", "0.05", "#VALUE!", "2", "2"]
@@ -121,10 +126,10 @@ fn forecast_ets_family_reads_lifted_argument_first() {
 fn forecast_ets_family_first_failing_argument_decides() {
     let mut model = new_empty_model();
     for row in 1..=8 {
-        model._set(&format!("A{row}"), &format!("{}", row * 2));
-        model._set(&format!("B{row}"), &format!("{row}"));
+        model.set_a1(&format!("A{row}"), &format!("{}", row * 2));
+        model.set_a1(&format!("B{row}"), &format!("{row}"));
     }
-    model._set("C1", "ABC");
+    model.set_a1("C1", "ABC");
     let cells = [
         // An error in each position: target_date, values, timeline, then the optional ones.
         ("=FORECAST.ETS(NA(),1/0,B1:B8)", "#N/A"),
@@ -152,12 +157,12 @@ fn forecast_ets_family_first_failing_argument_decides() {
         ("=ROWS(FORECAST.ETS.SEASONALITY(A1:A8,B1:B8,B1:B2))", "2"),
     ];
     for (row, (formula, _)) in cells.iter().enumerate() {
-        model._set(&format!("E{}", row + 1), formula);
+        model.set_a1(&format!("E{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cells.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("E{}", row + 1)),
+            model.get_text_a1(&format!("E{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -171,10 +176,10 @@ fn forecast_ets_exact_data() {
     let mut model = new_empty_model();
     let season = [3.0, -1.0, -4.0, 2.0];
     for t in 1..=24 {
-        model._set(&format!("A{t}"), &format!("{t}"));
-        model._set(&format!("B{t}"), &format!("{}", 3 + 2 * t));
+        model.set_a1(&format!("A{t}"), &format!("{t}"));
+        model.set_a1(&format!("B{t}"), &format!("{}", 3 + 2 * t));
         let value = 10.0 + f64::from(t) + season[(t % 4) as usize];
-        model._set(&format!("C{t}"), &format!("{value}"));
+        model.set_a1(&format!("C{t}"), &format!("{value}"));
     }
     let cells = [
         // A straight line continues, between steps too.
@@ -192,11 +197,11 @@ fn forecast_ets_exact_data() {
         ("=FORECAST.ETS(30,B1:B24,A1:A23)", "#N/A"),
     ];
     for (row, (formula, _)) in cells.iter().enumerate() {
-        model._set(&format!("E{}", row + 1), formula);
+        model.set_a1(&format!("E{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cells.iter().enumerate() {
-        let text = model._get_text(&format!("E{}", row + 1));
+        let text = model.get_text_a1(&format!("E{}", row + 1));
         match expected.parse::<f64>() {
             Ok(number) => {
                 let actual: f64 = text.parse().unwrap_or(f64::NAN);
@@ -220,12 +225,12 @@ fn forecast_ets_seasonality_error_order() {
         ("=FORECAST.ETS.SEASONALITY({1,\"a\",3},{1,2,3})", "#VALUE!"),
     ];
     for (row, (formula, _)) in cells.iter().enumerate() {
-        model._set(&format!("A{}", row + 1), formula);
+        model.set_a1(&format!("A{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cells.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("A{}", row + 1)),
+            model.get_text_a1(&format!("A{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -240,14 +245,14 @@ fn forecast_ets_confint_and_stat() {
         0.3, -0.2, 0.1, -0.4, 0.2, 0.0, -0.1, 0.4, -0.3, 0.1, 0.2, -0.2,
     ];
     for t in 1..=12 {
-        model._set(&format!("A{t}"), &format!("{t}"));
-        model._set(&format!("B{t}"), &format!("{}", 3 + 2 * t));
-        model._set(
+        model.set_a1(&format!("A{t}"), &format!("{t}"));
+        model.set_a1(&format!("B{t}"), &format!("{}", 3 + 2 * t));
+        model.set_a1(
             &format!("C{t}"),
             &format!("{}", 3.0 + 2.0 * f64::from(t) + noise[(t - 1) as usize]),
         );
         // Month starts from 2024-01-01: the step is the average month length, 335 days / 11.
-        model._set(&format!("D{t}"), &format!("=DATE(2024,{t},1)"));
+        model.set_a1(&format!("D{t}"), &format!("=DATE(2024,{t},1)"));
     }
     let cells = [
         // An exact line has no forecast error.
@@ -265,22 +270,22 @@ fn forecast_ets_confint_and_stat() {
         ("=FORECAST.ETS.STAT({5,5,5,5},{1,2,3,4},4)", "#DIV/0!"),
     ];
     for (row, (formula, _)) in cells.iter().enumerate() {
-        model._set(&format!("F{}", row + 1), formula);
+        model.set_a1(&format!("F{}", row + 1), formula);
     }
     // Noisy data: a positive interval that widens with the horizon and with the level.
-    model._set("G1", "=FORECAST.ETS.CONFINT(13,C1:C12,A1:A12)");
-    model._set("G2", "=FORECAST.ETS.CONFINT(20,C1:C12,A1:A12)");
-    model._set("G3", "=FORECAST.ETS.CONFINT(13,C1:C12,A1:A12,0.99)");
-    model._set("G4", "=FORECAST.ETS.STAT(C1:C12,A1:A12,6)");
-    model._set("G5", "=FORECAST.ETS.STAT(C1:C12,A1:A12,7)");
-    model._set("G6", "=NORM.S.INV(0.975)");
-    model._set("G7", "=NORM.S.INV(0.995)");
+    model.set_a1("G1", "=FORECAST.ETS.CONFINT(13,C1:C12,A1:A12)");
+    model.set_a1("G2", "=FORECAST.ETS.CONFINT(20,C1:C12,A1:A12)");
+    model.set_a1("G3", "=FORECAST.ETS.CONFINT(13,C1:C12,A1:A12,0.99)");
+    model.set_a1("G4", "=FORECAST.ETS.STAT(C1:C12,A1:A12,6)");
+    model.set_a1("G5", "=FORECAST.ETS.STAT(C1:C12,A1:A12,7)");
+    model.set_a1("G6", "=NORM.S.INV(0.975)");
+    model.set_a1("G7", "=NORM.S.INV(0.995)");
     // Compared in the sheet, at full precision.
-    model._set("G8", "=ROUND(G1/(G6*G5),12)");
-    model._set("G9", "=ROUND(G3/(G7*G5),12)");
+    model.set_a1("G8", "=ROUND(G1/(G6*G5),12)");
+    model.set_a1("G9", "=ROUND(G3/(G7*G5),12)");
     model.evaluate();
     for (row, (formula, expected)) in cells.iter().enumerate() {
-        let text = model._get_text(&format!("F{}", row + 1));
+        let text = model.get_text_a1(&format!("F{}", row + 1));
         match expected.parse::<f64>() {
             Ok(number) => {
                 let actual: f64 = text.parse().unwrap_or(f64::NAN);
@@ -289,12 +294,12 @@ fn forecast_ets_confint_and_stat() {
             Err(_) => assert_eq!(text, *expected, "{formula}"),
         }
     }
-    let number = |cell: &str| -> f64 { model._get_text(cell).parse().unwrap_or(f64::NAN) };
+    let number = |cell: &str| -> f64 { model.get_text_a1(cell).parse().unwrap_or(f64::NAN) };
     // One step ahead the forecast error's standard deviation is σ = RMSE (statistic 7), so the
     // interval is exactly NORM.S.INV((1 + level) / 2) times it; farther ahead it widens.
     assert!(number("G1") > 0.0);
-    assert_eq!(model._get_text("G8"), "1");
-    assert_eq!(model._get_text("G9"), "1");
+    assert_eq!(model.get_text_a1("G8"), "1");
+    assert_eq!(model.get_text_a1("G9"), "1");
     assert!(number("G2") >= number("G1"));
     // RMSE is at least MAE.
     assert!(number("G5") >= number("G4") && number("G4") > 0.0);

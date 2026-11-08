@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+// LINT-DEBT-END
 use std::borrow::Cow;
 
 use super::casefold::{char_offsets, fold_for_match};
@@ -5,9 +8,9 @@ use super::casefold::{char_offsets, fold_for_match};
 use crate::{
     calc_result::CalcResult,
     cast::{calc_result_to_text, MAX_TEXT_UNITS},
+    decimal_round::cut_to_15_digits,
     expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
     functions::util::near_integer::near_integer_count,
-    number_format::to_excel_precision,
     text::Text,
 };
 
@@ -214,7 +217,7 @@ pub(crate) fn substitute(text: &str, old_text: &str, new_text: &str, instance_nu
         if let (Some(head), Some(tail)) = (text.get(..left), text.get(right..)) {
             return format!("{head}{new_text}{tail}");
         }
-    };
+    }
     text.to_string()
 }
 
@@ -405,9 +408,9 @@ pub(super) fn substitute_element(
             // #VALUE!, `2147483647-5E-6` reads 2147483646 (probes/t4468-substitute-cap-window,
             // t4468-substitute-cap-sweep; T-4468). Only the cap shows the cut: at ten integer
             // digits it reaches 5E-6, far past the 2^-22 snap, and no instance up there exists.
-            // `to_excel_precision` breaks an exact tie to even, but below 2^31 a double has at
-            // least 22 fraction bits and no tie at the 15th digit can cross an integer.
-            let n = near_integer_count(to_excel_precision(n?, 15));
+            // Below 2^31 a double has at least 22 fraction bits and no tie at the 16th digit can
+            // cross an integer, so the tie rule is moot.
+            let n = near_integer_count(cut_to_15_digits(n?, false));
             if !(1.0..=MAX_SUBSTITUTE_INSTANCE).contains(&n) {
                 return Err(Error::VALUE);
             }
@@ -424,12 +427,11 @@ pub(super) fn substitute_element(
     if substitute_exceeds_limit(&text, &old_text, &new_text, instance_num) {
         return Err(Error::VALUE);
     }
-    Ok(ArrayNode::String(match instance_num {
-        Some(n) => substitute(&text, &old_text, &new_text, n).into(),
-        None => {
-            let (text, old_text, new_text): (&str, &str, &str) = (&text, &old_text, &new_text);
-            text.replace(old_text, new_text).into()
-        }
+    Ok(ArrayNode::String(if let Some(n) = instance_num {
+        substitute(&text, &old_text, &new_text, n).into()
+    } else {
+        let (text, old_text, new_text): (&str, &str, &str) = (&text, &old_text, &new_text);
+        text.replace(old_text, new_text).into()
     }))
 }
 
@@ -636,7 +638,7 @@ mod tests {
         );
         assert_eq!(
             text_before("xAbC", &["B", "x"], 1, Case::Insensitive),
-            Some("".to_string())
+            Some(String::new())
         );
         assert_eq!(text_before("abc", &[], 1, Case::Sensitive), None);
     }

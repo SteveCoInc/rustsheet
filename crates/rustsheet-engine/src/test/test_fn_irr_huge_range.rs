@@ -9,35 +9,35 @@ use crate::test::util::new_empty_model;
 #[test]
 fn irr_and_npv_over_a_huge_blank_range_read_only_the_stored_cells() {
     let mut model = new_empty_model();
-    model._set("B1", "-100");
-    model._set("C1", "110");
+    model.set_a1("B1", "-100");
+    model.set_a1("C1", "110");
     // B1:XFC1000000 is 1.6E+10 cells, not a whole column or row, so no used-area trim applies.
-    model._set("A2", "=IRR(B1:XFC1000000)");
-    model._set("A3", "=NPV(0.1,B1:XFC1000000)");
-    model._set("A4", "=IRR(B5:XFC1000000)");
-    model._set("A5", "=NPV(0.1,B1:C1)-NPV(0.1,B1:XFC1000000)");
+    model.set_a1("A2", "=IRR(B1:XFC1000000)");
+    model.set_a1("A3", "=NPV(0.1,B1:XFC1000000)");
+    model.set_a1("A4", "=IRR(B5:XFC1000000)");
+    model.set_a1("A5", "=NPV(0.1,B1:C1)-NPV(0.1,B1:XFC1000000)");
     model.evaluate();
-    assert_eq!(model._get_text("A2"), "10%");
+    assert_eq!(model.get_text_a1("A2"), "10%");
     assert!(
-        !model._get_text("A3").starts_with('#'),
+        !model.get_text_a1("A3").starts_with('#'),
         "{}",
-        model._get_text("A3")
+        model.get_text_a1("A3")
     );
-    assert_eq!(model._get_text("A5"), "$0.00");
+    assert_eq!(model.get_text_a1("A5"), "$0.00");
     // No flows at all: no sign change.
-    assert_eq!(model._get_text("A4"), "#NUM!");
+    assert_eq!(model.get_text_a1("A4"), "#NUM!");
 }
 
 #[test]
 fn xirr_over_a_huge_blank_range_is_refused_before_reading_it() {
     let mut model = new_empty_model();
-    model._set("B1", "-100");
-    model._set("C1", "110");
-    model._set("B2", "45000");
-    model._set("C2", "45365");
+    model.set_a1("B1", "-100");
+    model.set_a1("C1", "110");
+    model.set_a1("B2", "45000");
+    model.set_a1("C2", "45365");
     // XIRR reads a blank value as a 0 flow, so the whole area would be read: the call is charged
     // the area before the walk and refused (a DEVIATION: Excel's result here is unprobed).
-    model._set("A3", "=XIRR(B1:XFC1000000,B2:XFC1000001)");
+    model.set_a1("A3", "=XIRR(B1:XFC1000000,B2:XFC1000001)");
     model.evaluate();
-    assert_eq!(model._get_text("A3"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A3"), "#ERROR!");
 }

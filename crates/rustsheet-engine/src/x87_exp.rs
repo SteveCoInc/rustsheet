@@ -12,6 +12,15 @@
 //! are points where 2^|f| - 1 lies within 0.09 ulp of a 64-bit rounding midpoint, where Excel's
 //! F2XM1 is faithful but not correctly rounded (T-1940). The worksheet EXP (T-1931) and the ERFC
 //! kernel use it.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::many_single_char_names
+)]
+// LINT-DEBT-END
 
 use crate::arithmetic::{
     round_extended_to_double, round_extended_to_subnormal, round_to_bits, significand_and_exponent,

@@ -98,3 +98,15 @@ Not exercised, so still unverified:
 - a dropped calcChain (no standard edit adds or removes a formula cell);
 - rows emptied by clearing;
 - desktop Excel (M14).
+
+## 5. T-4909 re-probe
+After T-4909 the regenerating export writes neither an empty `created` nor an empty `cellStyles`. The three saves §3
+found refused were written again and re-saved through excel-graph (2026-11-07). All three opened:
+
+| save | sha256 |
+|---|---|
+| fixtures valueless-cell-forms R1/E5 | 863551c9e9271ac5da13b1e95dbe6d3b2f6fd0ec22a01703b6b6ccb6aec98610 |
+| fixtures valueless-cell-forms R1/all | a76a541e9fdb3004127fdaa24f09dfda74468c75fbe4406a50d9832f9592f109 |
+| poi link-external-workbook-a R1/all | 5ee42e7bacd5654f47bcd8c88bb7861b55a8644ab8aac81c61e1a3001d70037a |
+
+Excel's saves of them fill a missing `created` with the save time, and add the Normal cell style to the poi workbook.

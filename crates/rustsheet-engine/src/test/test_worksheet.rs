@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::{
@@ -24,7 +27,7 @@ fn test_worksheet_dimension_empty_sheet() {
 #[test]
 fn test_worksheet_dimension_single_cell() {
     let mut model = new_empty_model();
-    model._set("W11", "1");
+    model.set_a1("W11", "1");
     assert_eq!(
         model.workbook.worksheet(0).unwrap().dimension(),
         WorksheetDimension {
@@ -39,8 +42,8 @@ fn test_worksheet_dimension_single_cell() {
 #[test]
 fn test_worksheet_dimension_single_cell_set_empty() {
     let mut model = new_empty_model();
-    model._set("W11", "1");
-    model._cell_clear_contents(0, 11, 23).unwrap();
+    model.set_a1("W11", "1");
+    model.clear_contents_at(0, 11, 23).unwrap();
     assert_eq!(
         model.workbook.worksheet(0).unwrap().dimension(),
         WorksheetDimension {
@@ -55,7 +58,7 @@ fn test_worksheet_dimension_single_cell_set_empty() {
 #[test]
 fn test_worksheet_dimension_single_cell_deleted() {
     let mut model = new_empty_model();
-    model._set("W11", "1");
+    model.set_a1("W11", "1");
     let area = Area {
         sheet: 0,
         row: 11,
@@ -78,11 +81,11 @@ fn test_worksheet_dimension_single_cell_deleted() {
 #[test]
 fn test_worksheet_dimension_multiple_cells() {
     let mut model = new_empty_model();
-    model._set("W11", "1");
-    model._set("E11", "1");
-    model._set("AA17", "1");
-    model._set("G17", "1");
-    model._set("B19", "1");
+    model.set_a1("W11", "1");
+    model.set_a1("E11", "1");
+    model.set_a1("AA17", "1");
+    model.set_a1("G17", "1");
+    model.set_a1("B19", "1");
     let area = Area {
         sheet: 0,
         row: 11,

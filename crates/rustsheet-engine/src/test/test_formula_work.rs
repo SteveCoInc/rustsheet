@@ -21,7 +21,7 @@ fn model_with_limit(limit: u64) -> Model {
 /// The units `formula`, alone in A1, spends.
 fn units(formula: &str) -> u64 {
     let mut model = new_empty_model();
-    model._set("A1", formula);
+    model.set_a1("A1", formula);
     model.evaluate();
     model.area_budget.last_spent
 }
@@ -60,27 +60,27 @@ fn a_formula_at_its_limit_computes_and_one_unit_over_is_value_error() {
     let formula = "=SUM(SEQUENCE(10))";
     let limit = units(formula);
     let mut model = model_with_limit(limit);
-    model._set("A1", formula);
+    model.set_a1("A1", formula);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "55");
+    assert_eq!(model.get_text_a1("A1"), "55");
     let mut model = model_with_limit(limit - 1);
-    model._set("A1", formula);
+    model.set_a1("A1", formula);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK);
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK);
 }
 
 #[test]
 fn the_budget_error_cannot_be_caught() {
     let mut model = model_with_limit(100);
-    model._set("A1", "=IFERROR(SUM(SEQUENCE(1000)),0)");
-    model._set("A2", "=IF(ISERROR(SUM(SEQUENCE(1000))),0,1)");
-    model._set("A3", "=IFERROR(SUM(SEQUENCE(10)),0)");
+    model.set_a1("A1", "=IFERROR(SUM(SEQUENCE(1000)),0)");
+    model.set_a1("A2", "=IF(ISERROR(SUM(SEQUENCE(1000))),0,1)");
+    model.set_a1("A3", "=IFERROR(SUM(SEQUENCE(10)),0)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK);
-    assert_eq!(model._get_text("A2"), "#VALUE!");
-    assert_eq!(model._get_text("A3"), "55");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK);
+    assert_eq!(model.get_text_a1("A2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), "55");
 }
 
 #[test]
@@ -88,13 +88,13 @@ fn a_dependency_has_its_own_budget_and_its_error_is_a_value() {
     let mut model = model_with_limit(1_000);
     // A1 runs out of its own budget, so its value is `#VALUE!`, which B1 may catch; C1, after
     // both, has a full budget.
-    model._set("A1", "=SUM(SEQUENCE(1000))");
-    model._set("B1", "=IFERROR(A1,0)");
-    model._set("C1", "=SUM(SEQUENCE(50))");
+    model.set_a1("A1", "=SUM(SEQUENCE(1000))");
+    model.set_a1("B1", "=IFERROR(A1,0)");
+    model.set_a1("C1", "=SUM(SEQUENCE(50))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_text("B1"), "0");
-    assert_eq!(model._get_text("C1"), "1275");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("B1"), "0");
+    assert_eq!(model.get_text_a1("C1"), "1275");
 }
 
 #[test]
@@ -102,13 +102,13 @@ fn past_the_limit_a_lambda_helper_makes_no_more_calls() {
     // Each call reads Z1 once and spends a few units, so with 1,000 units MAKEARRAY stops after
     // a few hundred of its million calls: the rest are refused without running.
     let mut model = model_with_limit(1_000);
-    model._set("Z1", "1");
-    model._set("A1", "=SUM(MAKEARRAY(1000,1000,LAMBDA(r,c,$Z$1+r)))");
+    model.set_a1("Z1", "1");
+    model.set_a1("A1", "=SUM(MAKEARRAY(1000,1000,LAMBDA(r,c,$Z$1+r)))");
     let before = model.evaluation.cell_reads;
     model.evaluate();
     let reads = model.evaluation.cell_reads - before;
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK);
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK);
     assert!(reads < 1_000, "{reads} cell reads");
 }
 
@@ -124,10 +124,10 @@ fn the_problem_formulas_stop_at_the_limit() {
         "=SUM(MAP(SEQUENCE(1000),LAMBDA(x,SUM(MAKEARRAY(1024,1024,LAMBDA(r,c,MAP(SEQUENCE(1),LAMBDA(z,r+c+z))))))))",
     ] {
         let mut model = model_with_limit(LIMIT);
-        model._set("A1", formula);
+        model.set_a1("A1", formula);
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "#VALUE!", "{formula}");
-        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{formula}");
+        assert_eq!(model.get_text_a1("A1"), "#VALUE!", "{formula}");
+        assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK, "{formula}");
         // Spent most of the limit: the last charge, at most one loop step's, did not fit.
         assert!(model.area_budget.last_spent > LIMIT / 2, "{formula}");
     }
@@ -141,22 +141,22 @@ fn a_regex_call_that_runs_out_of_its_budget_is_charged_the_whole_budget() {
     // of running each one (SPEC-0024).
     let call = r#"REGEXTEST("a"&CHAR(10)&REPT("a",32764)&CHAR(10),"(?:b[a-z]{20000}|a)*b$")"#;
     let mut model = new_empty_model();
-    model._set("A1", &format!("={call}"));
-    model._set(
+    model.set_a1("A1", &format!("={call}"));
+    model.set_a1(
         "A2",
         &format!("=SUM(MAP(SEQUENCE(1000),LAMBDA(x,IFERROR(--{call},0))))"),
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), "#ERROR!");
     assert!(units(&format!("={call}")) > (1 << 25));
-    assert_eq!(model._get_text("A2"), "#VALUE!");
-    assert_eq!(model._get_error_message("A2"), TOO_MUCH_WORK);
+    assert_eq!(model.get_text_a1("A2"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("A2"), TOO_MUCH_WORK);
 }
 
 #[test]
 fn an_oversized_charge_fails_without_wrapping() {
     let mut model = new_empty_model();
-    let cell = model._parse_reference("A1");
+    let cell = model.parse_a1("A1");
     assert!(model.spend_work(u64::MAX, cell).is_err());
     assert!(model.work_exceeded());
     // Once exceeded, every charge fails, even an empty one.
@@ -173,13 +173,13 @@ fn the_default_limit_is_two_to_the_28() {
 #[test]
 fn a_lambda_reading_a_bound_array_again_and_again_is_bounded() {
     let mut model = new_empty_model();
-    model._set(
+    model.set_a1(
         "A1",
         "=LET(s,SEQUENCE(100000),REDUCE(0,SEQUENCE(100000),LAMBDA(a,b,a+SUM(s))))",
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK);
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK);
 }
 
 /// The whole-array readers a LAMBDA can repeat over a LET-bound array (SPEC-0024 step 3, T-2805),
@@ -240,13 +240,13 @@ fn a_lambda_repeating_any_whole_array_reader_is_bounded() {
     // calls: at the default limit the same charge stops it after about 900.
     for reader in ARRAY_READERS {
         let mut model = model_with_limit(1 << 24);
-        model._set(
+        model.set_a1(
             "A1",
             &format!("=LET(s,SEQUENCE(100000),REDUCE(0,SEQUENCE(100000),LAMBDA(a,b,a+{reader})))"),
         );
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "#VALUE!", "{reader}");
-        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{reader}");
+        assert_eq!(model.get_text_a1("A1"), "#VALUE!", "{reader}");
+        assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK, "{reader}");
     }
 }
 
@@ -319,25 +319,25 @@ fn a_lambda_repeating_a_text_comparing_reader_is_bounded() {
         "XMATCH(REPT(\"a\",32766)&\"b\",s)",
     ] {
         let mut model = model_with_limit(1 << 24);
-        model._set(
+        model.set_a1(
             "A1",
             &format!(
                 r#"=LET(s,IF(SEQUENCE(100),REPT("a",32767)),SUM(MAP(SEQUENCE(900),LAMBDA(i,IFNA({reader},1)))))"#
             ),
         );
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "#VALUE!", "{reader}");
-        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{reader}");
+        assert_eq!(model.get_text_a1("A1"), "#VALUE!", "{reader}");
+        assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK, "{reader}");
     }
     // The same calls over 8-byte texts, with an 8-byte target, compute: the bytes compared are
     // what ran out.
     let mut model = model_with_limit(1 << 24);
-    model._set(
+    model.set_a1(
         "A1",
         r#"=LET(s,IF(SEQUENCE(100),REPT("a",8)),SUM(MAP(SEQUENCE(900),LAMBDA(i,IFNA(MATCH(REPT("a",7)&"b",s,0),1)))))"#,
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "900");
+    assert_eq!(model.get_text_a1("A1"), "900");
 }
 
 #[test]
@@ -381,23 +381,23 @@ fn a_reader_stops_reading_once_its_ticks_pass_what_the_run_has_left() {
         (r#"=ROWS(SORT(REPT("a",100)&SEQUENCE(65536)))"#, 2 * 105),
     ] {
         let mut model = model_with_limit(LIMIT);
-        model._set("A1", formula);
+        model.set_a1("A1", formula);
         let _ = take_read_ticks();
         model.evaluate();
         let read = take_read_ticks();
-        assert_eq!(model._get_text("A1"), "#VALUE!", "{formula}");
-        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{formula}");
+        assert_eq!(model.get_text_a1("A1"), "#VALUE!", "{formula}");
+        assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK, "{formula}");
         // What earlier nodes were charged, then what the node read past its allowance: at most one
         // more key or comparison.
         assert!(read <= 2 * allowance + longest_read, "{formula}: {read}");
     }
     // Under the limit the same readers compute.
     let mut model = model_with_limit(LIMIT);
-    model._set("A1", r#"=ROWS(UNIQUE(REPT("a",100)&SEQUENCE(512)))"#);
-    model._set("A2", r#"=ROWS(SORT(REPT("a",100)&SEQUENCE(512)))"#);
+    model.set_a1("A1", r#"=ROWS(UNIQUE(REPT("a",100)&SEQUENCE(512)))"#);
+    model.set_a1("A2", r#"=ROWS(SORT(REPT("a",100)&SEQUENCE(512)))"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "512");
-    assert_eq!(model._get_text("A2"), "512");
+    assert_eq!(model.get_text_a1("A1"), "512");
+    assert_eq!(model.get_text_a1("A2"), "512");
 }
 
 #[test]
@@ -414,19 +414,19 @@ fn a_wildcard_match_is_charged_its_backtracking_steps_and_stops() {
         r#"=XLOOKUP("*"&REPT("a",16000)&"b",IF(SEQUENCE(16),REPT("a",32767)),SEQUENCE(16),,2)"#,
     ] {
         let mut model = model_with_limit(LIMIT);
-        model._set("A1", formula);
+        model.set_a1("A1", formula);
         let _ = take_read_ticks();
         model.evaluate();
         let read = take_read_ticks();
-        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{formula}");
+        assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK, "{formula}");
         // Stopped within one charge interval of the allowance, plus the earlier nodes' texts.
         assert!(read <= 4 * allowance, "{formula}: {read}");
     }
     // A cheap wildcard match under the same limit is unchanged.
     let mut model = model_with_limit(LIMIT);
-    model._set("A2", r#"=XMATCH("*b?",{"xx";"abc";"b"},2)"#);
+    model.set_a1("A2", r#"=XMATCH("*b?",{"xx";"abc";"b"},2)"#);
     model.evaluate();
-    assert_eq!(model._get_text("A2"), "2");
+    assert_eq!(model.get_text_a1("A2"), "2");
 }
 
 #[test]
@@ -436,30 +436,30 @@ fn a_database_call_is_charged_records_times_criteria_cells() {
     // charged up front: 2,000 records x (2,000 criteria rows + the header match + 1) is about
     // 4E6 units, past a limit of 2^20, where 20 records and 20 criteria rows are not.
     let mut model = model_with_limit(1 << 20);
-    model._set("A1", "n");
-    model._set("C1", "n");
+    model.set_a1("A1", "n");
+    model.set_a1("C1", "n");
     for row in 2..=2001 {
-        model._set(&format!("A{row}"), &row.to_string());
-        model._set(&format!("C{row}"), &format!(">{row}"));
+        model.set_a1(&format!("A{row}"), &row.to_string());
+        model.set_a1(&format!("C{row}"), &format!(">{row}"));
     }
-    model._set("E1", "=DCOUNT(A1:A2001,\"n\",C1:C2001)");
-    model._set("E2", "=DCOUNT(A1:A21,\"n\",C1:C21)");
+    model.set_a1("E1", "=DCOUNT(A1:A2001,\"n\",C1:C2001)");
+    model.set_a1("E2", "=DCOUNT(A1:A21,\"n\",C1:C21)");
     model.evaluate();
-    assert_eq!(model._get_error_message("E1"), TOO_MUCH_WORK);
+    assert_eq!(model.get_error_message_a1("E1"), TOO_MUCH_WORK);
     // Rows 2..21 hold 2..21; each but 21 exceeds some criterion below it (`>2` .. `>20`).
-    assert_eq!(model._get_text("E2"), "19");
+    assert_eq!(model.get_text_a1("E2"), "19");
     // A whole-column database with a small criteria range still computes at the default limit:
     // the call is charged, not capped as a lifted one is.
     let mut model = new_empty_model();
-    model._set("A1", "n");
+    model.set_a1("A1", "n");
     for row in 2..=2001 {
-        model._set(&format!("A{row}"), &row.to_string());
+        model.set_a1(&format!("A{row}"), &row.to_string());
     }
-    model._set("G1", "n");
-    model._set("G2", ">1000");
-    model._set("E3", "=DCOUNT(A:A,\"n\",G1:G2)");
+    model.set_a1("G1", "n");
+    model.set_a1("G2", ">1000");
+    model.set_a1("E3", "=DCOUNT(A:A,\"n\",G1:G2)");
     model.evaluate();
-    assert_eq!(model._get_text("E3"), "1001");
+    assert_eq!(model.get_text_a1("E3"), "1001");
 }
 
 #[test]
@@ -470,17 +470,17 @@ fn a_formula_past_the_limit_leaves_no_stand_in_in_a_shared_index() {
     // `collation::stoppable`). Each formula below fits the limit unless it builds the index.
     let mut model = model_with_limit(10_000);
     for row in 1..=200 {
-        model._set(&format!("A{row}"), &format!(r#"=REPT("a",100)&{row}"#));
+        model.set_a1(&format!("A{row}"), &format!(r#"=REPT("a",100)&{row}"#));
     }
     for row in 1..=4 {
-        model._set(&format!("B{row}"), "=XMATCH(A200,A1:A200)");
-        model._set(&format!("C{row}"), "=COUNTIFS(A1:A200,A200)");
+        model.set_a1(&format!("B{row}"), "=XMATCH(A200,A1:A200)");
+        model.set_a1(&format!("C{row}"), "=COUNTIFS(A1:A200,A200)");
     }
     model.evaluate();
     for row in 1..=4 {
         for column in ["B", "C"] {
-            let text = model._get_text(&format!("{column}{row}"));
-            let message = model._get_error_message(&format!("{column}{row}"));
+            let text = model.get_text_a1(&format!("{column}{row}"));
+            let message = model.get_error_message_a1(&format!("{column}{row}"));
             assert!(
                 matches!(text.as_str(), "200" | "1") || message == TOO_MUCH_WORK,
                 "{column}{row}: {text} {message}"
@@ -506,15 +506,15 @@ fn matrix_kernels_charge_their_cubic_work_up_front() {
     ];
     for formula in refused {
         let mut model = new_empty_model();
-        model._set("A1", formula);
+        model.set_a1("A1", formula);
         model.evaluate();
-        assert_eq!(model._get_text("A1"), "#VALUE!", "{formula}");
-        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{formula}");
+        assert_eq!(model.get_text_a1("A1"), "#VALUE!", "{formula}");
+        assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK, "{formula}");
     }
     let mut model = new_empty_model();
-    model._set("A1", "=MDETERM({2,1;1,3})");
-    model._set("A2", "=INDEX(MMULT({1,2;3,4},{1;1}),2)");
+    model.set_a1("A1", "=MDETERM({2,1;1,3})");
+    model.set_a1("A2", "=INDEX(MMULT({1,2;3,4},{1;1}),2)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "5");
-    assert_eq!(model._get_text("A2"), "7");
+    assert_eq!(model.get_text_a1("A1"), "5");
+    assert_eq!(model.get_text_a1("A2"), "7");
 }

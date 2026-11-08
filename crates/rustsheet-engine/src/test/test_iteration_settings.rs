@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, reason = "tests")]
 
 //! Iteration settings from untrusted input are brought into Excel's range (T-4048): a count
@@ -77,8 +80,8 @@ fn fuzz_reproducers_sweep_excel_default_count() {
         })
     );
     model.evaluate();
-    assert_eq!(model._get_text("A2"), "2.5353E+30");
-    assert_eq!(model._get_text("A4"), "1.01412E+31");
+    assert_eq!(model.get_text_a1("A2"), "2.5353E+30");
+    assert_eq!(model.get_text_a1("A4"), "1.01412E+31");
 
     let mut model = Model::from_bytes(&NIGHT_TWO, "en").unwrap();
     assert_eq!(
@@ -89,8 +92,8 @@ fn fuzz_reproducers_sweep_excel_default_count() {
         })
     );
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("A2"), "102");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "102");
 }
 
 /// The count and the delta each fall back on their own; values in Excel's range are kept,

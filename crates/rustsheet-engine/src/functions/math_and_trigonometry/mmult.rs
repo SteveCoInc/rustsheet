@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::many_single_char_names)]
+// LINT-DEBT-END
 use super::matrix::coerce_to_f64;
 use crate::area_budget::multiply_add_units;
 use crate::{

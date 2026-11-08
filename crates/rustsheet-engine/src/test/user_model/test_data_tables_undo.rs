@@ -150,7 +150,7 @@ fn a_diff_with_tables_that_break_the_rules_is_refused() {
                 list: vec![diff],
             }]);
             assert!(model.apply_external_diffs(&bytes).is_err());
-            assert!(model.model.workbook == before);
+            assert_eq!(model.model.workbook, before);
         }
     }
 }

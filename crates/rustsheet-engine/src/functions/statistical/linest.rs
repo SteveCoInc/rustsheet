@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_precision_loss,
+    clippy::many_single_char_names,
+    clippy::match_same_arms,
+    clippy::needless_pass_by_value
+)]
+// LINT-DEBT-END
 use super::regression::{known_points, layout, solve_units, Grid};
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
@@ -554,7 +562,7 @@ fn flag_value(
 /// Reconstruct internal beta vector [`β_0`, `β_1`, ..., `β_p`] from Excel-order coefficients.
 pub(super) fn reconstruct_beta(coeffs: &[f64], const_term: bool, p: usize) -> Vec<f64> {
     // coeffs is: [β_p, β_{p-1}, ..., β_1, β_0] (if const) or [β_p, ..., β_1]
-    let mut beta = vec![0.0_f64; p + const_term as usize];
+    let mut beta = vec![0.0_f64; p + usize::from(const_term)];
     if const_term {
         // intercept is the last element of coeffs
         beta[0] = *coeffs.last().unwrap_or(&0.0);
@@ -573,7 +581,7 @@ pub(super) fn reconstruct_beta(coeffs: &[f64], const_term: bool, p: usize) -> Ve
 /// Predict y for a single x row given beta in internal order.
 pub(super) fn predict(beta: &[f64], x_row: &[f64], const_term: bool) -> f64 {
     let mut pred = if const_term { beta[0] } else { 0.0 };
-    let x_start = const_term as usize;
+    let x_start = usize::from(const_term);
     for (j, &xj) in x_row.iter().enumerate() {
         if x_start + j < beta.len() {
             pred += beta[x_start + j] * xj;

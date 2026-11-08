@@ -25,6 +25,13 @@
 //! Evaluation reads every cell several times, and with a hash map per row each
 //! read was two hashes and two jumps to unrelated places in memory, which on a
 //! large sheet cost more than running the formulas.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 
 use std::collections::{BTreeMap, BTreeSet};
 

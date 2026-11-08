@@ -18,10 +18,10 @@ fn an_omission_is_na_but_an_operator_or_a_blank_reads_zero() {
         ("A13", "=FACTDOUBLE(Z1)", "1"),
     ];
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {
-        assert_eq!(model._get_text(cell), expected, "{cell} {formula}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell} {formula}");
     }
 }

@@ -7,6 +7,9 @@
 //! .69, .73; docs/research/pivot-tables-2026-11-04/excel-docs.md §7). Everything else in the part
 //! is kept verbatim in [`PivotTable::opaque`] for export (T-4176); the importer counts it toward
 //! its limits.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_excessive_bools)]
+// LINT-DEBT-END
 
 use bitcode::{Decode, Encode};
 
@@ -463,8 +466,9 @@ impl Default for DataField {
     }
 }
 
-/// A data field's summary function.
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
+/// A data field's summary function, in `ST_DataConsolidateFunction`'s order: the order Excel
+/// shows custom subtotal lines in (`Ord`; layout/lines.rs `AxisPlan::subtotals`, t4699 CU, CR).
+#[derive(Encode, Decode, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Aggregate {
     /// `sum`.
     Sum,

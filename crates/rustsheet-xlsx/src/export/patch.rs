@@ -21,6 +21,13 @@
 //! What the patch leaves as the source had it is listed in docs/excel-semantics/xlsx-storage.md
 //! ("A patched package keeps the source's hints"): row `spans`, a `<dimension>` that only grows,
 //! and a `<row>` emptied by clearing its cells.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::format_push_string,
+    clippy::too_many_lines,
+    clippy::unnecessary_wraps
+)]
+// LINT-DEBT-END
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Cursor;
@@ -43,7 +50,7 @@ use strings::{append_strings, count_si, shared_refs};
 mod package;
 mod strings;
 mod styles;
-mod tag;
+pub(super) mod tag;
 #[cfg(test)]
 mod tests;
 
@@ -253,8 +260,8 @@ fn cells_carry(xml: &str, keys: &[&str]) -> bool {
 }
 
 /// Why the workbook's structure differs between `model` and `pristine`, if it does: everything
-/// the patcher does not rewrite must be equal (SPEC-0034 D2.1). Each [`Worksheet`] field is named,
-/// with no `..`, so a field added to the model is a compile error here until it is classified.
+/// the patcher does not rewrite must be equal (SPEC-0034 D2.1), each sheet's by
+/// [`sheet_structure_same`].
 fn structure_differs(model: &Model, pristine: &Model) -> Option<String> {
     let (a, b) = (&model.workbook, &pristine.workbook);
     let workbook_fields = [
@@ -276,48 +283,55 @@ fn structure_differs(model: &Model, pristine: &Model) -> Option<String> {
         return Some(format!("the workbook's {what} changed"));
     }
     for (x, y) in a.worksheets.iter().zip(&b.worksheets) {
-        let Worksheet {
-            dimension: _,
-            cols,
-            rows,
-            name,
-            sheet_data: _,
-            shared_formulas: _,
-            sheet_id,
-            load_rank,
-            state,
-            color,
-            merged_cells,
-            comments,
-            frozen_rows,
-            frozen_columns,
-            views,
-            show_grid_lines,
-            conditional_formatting,
-            links,
-            data_tables,
-        } = x;
-        let same = *cols == y.cols
-            && *rows == y.rows
-            && *name == y.name
-            && *sheet_id == y.sheet_id
-            && *load_rank == y.load_rank
-            && *state == y.state
-            && *color == y.color
-            && *merged_cells == y.merged_cells
-            && *comments == y.comments
-            && *frozen_rows == y.frozen_rows
-            && *frozen_columns == y.frozen_columns
-            && *views == y.views
-            && *show_grid_lines == y.show_grid_lines
-            && *conditional_formatting == y.conditional_formatting
-            && *links == y.links
-            && *data_tables == y.data_tables;
-        if !same {
-            return Some(format!("sheet {name}'s structure changed"));
+        if !sheet_structure_same(x, y) {
+            return Some(format!("sheet {}'s structure changed", x.name));
         }
     }
     None
+}
+
+/// Whether the worksheets `x` and `y` are the same but for their cells: everything the patcher
+/// does not rewrite, which is also what a structural edit moves (the kept `PivotChart` drawings,
+/// `pivot_drawings`, T-4950). Each [`Worksheet`] field is named, with no `..`, so a field added
+/// to the model is a compile error here until it is classified.
+pub(super) fn sheet_structure_same(x: &Worksheet, y: &Worksheet) -> bool {
+    let Worksheet {
+        dimension: _,
+        cols,
+        rows,
+        name,
+        sheet_data: _,
+        shared_formulas: _,
+        sheet_id,
+        load_rank,
+        state,
+        color,
+        merged_cells,
+        comments,
+        frozen_rows,
+        frozen_columns,
+        views,
+        show_grid_lines,
+        conditional_formatting,
+        links,
+        data_tables,
+    } = x;
+    *cols == y.cols
+        && *rows == y.rows
+        && *name == y.name
+        && *sheet_id == y.sheet_id
+        && *load_rank == y.load_rank
+        && *state == y.state
+        && *color == y.color
+        && *merged_cells == y.merged_cells
+        && *comments == y.comments
+        && *frozen_rows == y.frozen_rows
+        && *frozen_columns == y.frozen_columns
+        && *views == y.views
+        && *show_grid_lines == y.show_grid_lines
+        && *conditional_formatting == y.conditional_formatting
+        && *links == y.links
+        && *data_tables == y.data_tables
 }
 
 /// The cells of `sheet` that differ from `before`, as (row, column).
@@ -849,51 +863,47 @@ fn insert_cells(
     let mut tail_rows = String::new();
     for (row, cells) in inserts {
         let at_row = (row, 0);
-        match find_row(&index.rows, row) {
-            Some(r) => match r.insert_at {
-                Some(close) => {
-                    for (column, text) in cells {
-                        let next = r.cells.partition_point(|c| c.column < column);
-                        let at = r.cells.get(next).map_or(close, |c| c.start);
-                        edits.push(Edit {
-                            at,
-                            remove: 0,
-                            key: (row, column),
-                            text,
-                        });
-                    }
-                }
-                None => {
-                    // `<row .../>`: written out once as a full row.
-                    let open = xml[r.start..r.end].trim_end_matches("/>");
-                    let body: String = cells.into_iter().map(|(_, t)| t).collect();
+        if let Some(r) = find_row(&index.rows, row) {
+            if let Some(close) = r.insert_at {
+                for (column, text) in cells {
+                    let next = r.cells.partition_point(|c| c.column < column);
+                    let at = r.cells.get(next).map_or(close, |c| c.start);
                     edits.push(Edit {
-                        at: r.start,
-                        remove: r.end - r.start,
-                        key: at_row,
-                        text: format!("{open}>{body}</row>"),
+                        at,
+                        remove: 0,
+                        key: (row, column),
+                        text,
                     });
                 }
-            },
-            None => {
+            } else {
+                // `<row .../>`: written out once as a full row.
+                let open = xml[r.start..r.end].trim_end_matches("/>");
                 let body: String = cells.into_iter().map(|(_, t)| t).collect();
-                let text = format!(r#"<row r="{row}">{body}</row>"#);
-                let next = index.rows.partition_point(|r| r.r < row);
-                match (index.rows.get(next), &index.tail) {
-                    (Some(next), _) => edits.push(Edit {
-                        at: next.start,
-                        remove: 0,
-                        key: at_row,
-                        text,
-                    }),
-                    (None, Tail::Before(at)) => edits.push(Edit {
-                        at: *at,
-                        remove: 0,
-                        key: at_row,
-                        text,
-                    }),
-                    (None, Tail::Empty(..)) => tail_rows.push_str(&text),
-                }
+                edits.push(Edit {
+                    at: r.start,
+                    remove: r.end - r.start,
+                    key: at_row,
+                    text: format!("{open}>{body}</row>"),
+                });
+            }
+        } else {
+            let body: String = cells.into_iter().map(|(_, t)| t).collect();
+            let text = format!(r#"<row r="{row}">{body}</row>"#);
+            let next = index.rows.partition_point(|r| r.r < row);
+            match (index.rows.get(next), &index.tail) {
+                (Some(next), _) => edits.push(Edit {
+                    at: next.start,
+                    remove: 0,
+                    key: at_row,
+                    text,
+                }),
+                (None, Tail::Before(at)) => edits.push(Edit {
+                    at: *at,
+                    remove: 0,
+                    key: at_row,
+                    text,
+                }),
+                (None, Tail::Empty(..)) => tail_rows.push_str(&text),
             }
         }
     }

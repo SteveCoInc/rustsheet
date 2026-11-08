@@ -79,18 +79,19 @@ shared string, `=B1` is "x", `=C1` 7, `=ISBLANK(B1)` FALSE, `=ISTEXT(D1)` TRUE, 
 (`=ISBLANK(B2)` TRUE, `=COUNTA(A2:B2)` 1). A covered formula `=A1+1` in B1 of A1:B1 is recalculated
 (2), `=B1` is 2, ISFORMULA TRUE and `=COUNT(A1:B1)` 2. This is the file-level form of the
 "merge with Format Painter keeps the hidden values" behaviour.
-Ours: the importer keeps covered content (T-4975 item 1, docs/specs/SPEC-0036); until then it emptied
-every covered cell (`clear_covered_cells`) to keep an engine invariant "covered cells hold no
-content", so these cells were visibly off and poi/bug66675.xlsx and other census files lost covered
-values on a round trip. Copy- and cut-paste carry covered content and the recreated merge keeps it
-inside the pasted block, autofill copies it (never as a progression term), unmerge shows it and
-clear over the range clears it: SPEC-0036's rows, each UNVERIFIED against Excel's UI.
+Ours: the importer keeps covered cells as stored (T-5044, T-4975 item 1; before it emptied them,
+`clear_covered_cells`, to keep an engine invariant "covered cells hold no content", so these cells were
+visibly off and poi/bug66675.xlsx and other census files lost covered values on a round trip), so
+references, ranges and recalculation see them and a round trip keeps them. Copy- and cut-paste carry
+covered content and the recreated merge keeps it inside the pasted block, autofill copies it (never as a
+progression term), unmerge shows it and clear over the range clears it (T-4975 item 1).
 Evidence: fixtures/merged-covered-values, fixtures/merged-covered-formula (excel-graph, 2026-11-06, T-4148).
 Status: VERIFIED (excel-graph); implemented in crates/rustsheet-xlsx/src/import/worksheets.rs
-(`load_sheet` no longer clears), user_model/clipboard.rs (`recreate_pasted_merge`) and
-user_model/autofill.rs (`fill_covered_cell`).
-What Excel's UI does with such a range (unmerge, clear, paste, autofill, Ctrl+arrow) is UNVERIFIED
-(SPEC-0036 lists them as probe candidates).
+(`load_sheet` no longer clears; T-5044), user_model/clipboard.rs (`recreate_pasted_merge`) and
+user_model/autofill.rs (`fill_covered_cell`; T-4975).
+What Excel's UI merge then does with such a range (unmerge, edit, clear, paste, autofill, Ctrl+arrow, a delete of
+the anchor's row) is UNVERIFIED; docs/specs/SPEC-0036-merged-covered-content.md states our rule for each operation
+and which probe (T-5048) settles it.
 
 ## Import resource limits reject a workbook outright
 Rule: the importer rejects a workbook with `XlsxError::Limit` when its zip lists more than 5,000
@@ -253,8 +254,18 @@ formula; GROUPBY and PIVOTBY are not on it, so specs spell them `_xlfn.`
 prefixed: normsdist-stored-form A1-A2 and availability-27 A8-A9 (refilled bare) and A4
 `_xlfn.NORMSDIST(0)` = 0.5 (excel-graph, 2026-10-07, T-0052).
 Status: VERIFIED
-Implemented in: `Function::to_xlsx_string` (functions/xlsx_names.rs; test `newer_functions_export_with_xlfn_prefix`, T-0411). The engine parser resolves a bare newer name read from a file, and the
-exporter never writes `_xleta.` (T-1089).
+Implemented in: `Function::to_xlsx_string` (functions/xlsx_names.rs; test `newer_functions_export_with_xlfn_prefix`, T-0411).
+Import (T-1089): the xlsx cell importer reads `<f>` text with `Parser::set_file_names`, under which a call of a function
+whose `to_xlsx_string` starts `_xlfn.`, written without a prefix and in any case, is an unknown name, `#NAME?`
+(`needs_stored_prefix`, expressions/parser/operands.rs; tests rustsheet-xlsx/tests/bare_newer_function_names.rs). The
+call keeps its name, so it is saved bare again and a reload reads it the same. Typed and API text, and the harness's case
+formulas (whose builder writes the prefixes), still read the bare name as the function. Consequence: openpyxl writes
+`CONCAT(...)` bare (rustsheet-xlsx/tests/openpyxl_example.xlsx), and openpyxl's own docs say such formulas "must be
+prefixed with _xlfn. to work", so B1 is `#NAME?`.
+Known gaps: a bare newer name in a defined name's body is still the function (the importer's name parser does not set
+the mode; unprobed); whether Excel shows such a legacy cell as `=@PERCENTOF(1,2)` (ours) or without the `@` is
+unprobed; a bare `SINGLE(`/`ANCHORARRAY(` in a file still reads as `@`/`#` (unprobed, "Typed `SINGLE(x)`" below); the
+exporter never writes `_xleta.`, since a typed bare function name is not read as a function passed by name (T-5011).
 Comparison (T-0412): the exporter's arms were checked against XlsxWriter 3.2.9's future-function list; every
 name there that has an engine function already has an arm. XlsxWriter also prefixes ANCHORARRAY (the `#`
 operator), SINGLE (the `@` operator, handled by the parser), FILTERXML, QUERYSTRING and WEBSERVICE; the engine
@@ -271,7 +282,7 @@ the case builder: Excel accepts the prefixed forms, since none of the 16,517 GAM
 eval suites' excel-graph oracle files built that way (for example probes-numeric/t1042-gamma-int-1-90 A91 `GAMMALN(1)` =
 0, probes/t2715-ceiling-floor-subnormal-ratio G1) is `#NAME?`. The arms are gone, so the exporter and the case builder
 write them bare (test `test_export_gammaln_and_iso_ceiling_have_no_xlfn_prefix`).
-Tasks: T-0040, T-0412, T-0416, T-0417, T-1089
+Tasks: T-0040, T-0412, T-0416, T-0417, T-1089, T-5011
 
 ## Written parentheses are stored as written; `@(x)` is `_xlfn.SINGLE((x))`
 Rule: the stored `<f>` text keeps every redundant parenthesis as written. A group directly after `@`
@@ -319,7 +330,7 @@ Calc!D27, written bare and built as `_xlfn.SINGLE(` by the case builder, agrees.
 Ours: the parser reads a bare `SINGLE(` with one argument as `@`, typed, through the API and in stored text alike; a
 typed call with other than one argument is refused (`set_typed_user_input`), and stored text keeps it as a parse error.
 Known gaps: a bare `SINGLE(` read from a file is likely `#NAME?` in Excel, as other bare newer names are ("Newer functions
-need `_xlfn.`"; unprobed for SINGLE); ours reads it as `@`, the gap T-1089 owns. A LET or LAMBDA name spelled `single`
+need `_xlfn.`"; unprobed for SINGLE); ours reads it as `@` (left by T-1089, which made the other bare newer names `#NAME?`). A LET or LAMBDA name spelled `single`
 and called (`LET(single,LAMBDA(x,x*2),single(3))`) is `@3` in ours, as `anchorarray` is; Excel's reading is unprobed.
 Status: VERIFIED (web)
 Implemented in: crates/rustsheet-engine/src/expressions/parser/operands.rs (`parse_named_call`).
@@ -496,7 +507,8 @@ patched on (the `-refresh` cases) Excel rebuilds the cache from the cells and wr
 `containsNonDate="0"`, `minDate` the first date and `maxDate` a day past the last (`1900-03-03T00:00:00`,
 `1908-01-03T00:00:00`). So serial 60 is `1900-02-28T00:00:00` in a cache, and serial 59 is `1900-02-27T00:00:00`, not
 the cell calendar's 1900-02-28. Excel shows the refreshed items as dates (`2/29/1900` for 60; serial 0 of the 1904
-workbook as `12:00:00 AM`), the engine as serials (T-4943).
+workbook as `12:00:00 AM`); the engine shows them as `m/d/yyyy` dates (T-4807), and serial 0 of the 1904 workbook as
+`1/1/1904` (T-4943).
 Tasks: T-3182, T-4176, T-4177
 
 ## Structured references in the file
@@ -850,10 +862,16 @@ Evidence: oracle excel-graph, 2026-11-07, T-4890 (docs/research/xlsx-round-trip/
   - the source's styles.xml;
   - `<t></t>` written as `<t/>`.
 
-An empty `modified`, or another malformed W3CDTF value, is not probed.
-Ours: the regenerating export writes the empty element whenever the source records no creation date
-(`export/doc_props.rs` `get_core_xml`).
-Status: VERIFIED (excel-graph; desktop not observed); not implemented (T-4909).
+An empty `modified`, or another malformed W3CDTF value, is not probed. Given a package with no `created`, Excel's own save
+writes one set to the save time; a `created` that is present is kept (T-4909 re-probe: valueless-cell-forms R1/E5 came
+back with `2026-11-07T18:28:37Z`, equal to `modified`; poi link-external-workbook-a kept 2021-09-28T20:02:21Z).
+Ours: a source that records no creation date gets no `created` element. Since T-4909 the fixtures
+valueless-cell-forms R1/E5 and R1/all saves open in Excel for the web (excel-graph, 2026-11-07; sha256
+863551c9e9271ac5da13b1e95dbe6d3b2f6fd0ec22a01703b6b6ccb6aec98610 and
+a76a541e9fdb3004127fdaa24f09dfda74468c75fbe4406a50d9832f9592f109).
+Implemented in: `get_core_xml` (crates/rustsheet-xlsx/src/export/doc_props.rs), which also escapes the creator and the
+date.
+Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-4890, T-4909.
 
 ## An empty `cellStyles` makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose `xl/styles.xml` holds `<cellStyles count="0"></cellStyles>`,
@@ -865,9 +883,11 @@ Evidence: oracle excel-graph, 2026-11-07, T-4890.
 - With the element removed (5d941486ce51b2b3b71561c55f7615141666e81748e116d8885e1f7c41ab1310), it opens.
 - With the Normal style added (73e6065fe084b0a5d3b3e189dcfb2bf4de950cf2509a5edc10af9ce3a61fdb0a), it opens.
 
-Ours: the regenerating export writes the element with the table's count, even when the count is 0
-(`export/styles.rs`, the `cellStyles` section).
-Status: VERIFIED (excel-graph; desktop not observed); not implemented (T-4909).
+Ours: an empty cell-style table writes no `cellStyles` element. That keeps what such a source had; Excel's own save adds
+the Normal style. Since T-4909 the poi link-external-workbook-a R1/all save opens in Excel for the web (excel-graph,
+2026-11-07; sha256 5ee42e7bacd5654f47bcd8c88bb7861b55a8644ab8aac81c61e1a3001d70037a).
+Implemented in: `get_cell_styles_xml` (crates/rustsheet-xlsx/src/export/styles.rs).
+Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-4890, T-4909.
 
 ## A [n] reference without its externalLink part makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose formulas use `[1]Sheet!A1` while the package has no

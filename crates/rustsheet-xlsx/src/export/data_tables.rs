@@ -1,6 +1,9 @@
 //! What-if data tables on export: the anchor (top-left result cell) of each table carries
 //! `<f t="dataTable" ref=… dt2D=… dtr=… r1=… r2=…/>` before its value; the other result cells
 //! are plain values, as Excel saves them (docs/excel-semantics/recalc.md, T-0441).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::format_push_string)]
+// LINT-DEBT-END
 
 use std::collections::HashMap;
 

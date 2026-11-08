@@ -35,10 +35,10 @@ fn empty_required_is_na_and_empty_optional_is_omitted() {
         ("D6", "=EDATE(1/0,IFNA(Z1,1))", "#DIV/0!"),
     ];
     for (cell, formula, _) in cells {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cells {
-        assert_eq!(model._get_text(cell), expected, "{cell} {formula}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell} {formula}");
     }
 }

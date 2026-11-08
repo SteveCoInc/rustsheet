@@ -869,7 +869,23 @@ FALSE, `*2^1000` recovers -2^-74), and so is a spilled array element (`=EXP({-74
 companion FALSE, the -708 element a normal 3.3075530036384078E-308); probes/subnormal-saved-negative-and-array, excel-graph
 2026-11-07 (T-4355). RustSheet's export flushes a kept subnormal of either sign in every number `<v>` (T-2211, T-4355,
 `saved_number` in export/worksheets.rs). Desktop Excel's save is unprobed (M14, decision 0039).
-In an array expression the kept subnormal compares equal to 0: `(EXP({-745,-708}))=0` is TRUE in excel-graph (same probe, D1) though a spilled cell's `=0` companion is FALSE (T-4766).
+Comparison over an array or range (T-4766): when either operand of `=`, `<>`, `<`, `>`, `<=`, `>=` is an array or a range,
+Excel reads a left number that exceeds the right one by less than 2^-1026 as equal to it; a left number below the right one
+keeps its order, and a scalar comparison stays exact. So `(EXP({-745,-708}))=0` is {TRUE,FALSE} (probes/subnormal-saved-negative-and-array
+D1) while `(EXP(-745))=0`, `INDEX(EXP({-745,-708}),1)=0` and `=A30=0` of a spilled cell are FALSE; `(EXP(-745)+{0,0})=0`,
+`(A30:B30)=0` and `(A30#)=0` are TRUE; `EXP({-745,-708})>0` and `<>0` are FALSE at the kept element; `0=EXP({-745})` is FALSE and
+`0<EXP({-745})` TRUE; `EXP({-744})=EXP({-745})` is TRUE, `EXP({-744})>EXP({-745})` FALSE and `EXP({-745})<EXP({-744})` TRUE; the
+same holds with the array on the left, the right or both sides (probes/t4766-array-subnormal-compare,
+probes/t4766-array-subnormal-order, 144-cell operand matrix). The switch for `(EXP({a}))=0` lies between a = -711.17 (TRUE) and
+-711.16 (FALSE), around 2^-1026 (-1026 ln 2 = -711.1648; probes/t4766-array-subnormal-exp-boundary, -order A1:A21). The
+constant 2^-1026 was chosen from those cells, then checked on a fresh sweep made after the rule was frozen
+(probes/t4766-array-subnormal-fresh, 94 cells: exact m*2^-1074 built by subtraction, m log-uniform in [2^44, 2^52) and
+2^48 +-1, pairs, and negative operands): the engine matches all 94. The value exactly at 2^-1026 and the gap between two normal
+numbers are not separately probed. POWER flushes a subnormal result (`(2^-1023)=0` TRUE, `POWER(2,-1022)=0` FALSE;
+probes/t4766-array-subnormal-boundary), as this file already says, so 2^-k cannot build test values. The saved 0 of a spilled
+kept subnormal (A3 of the first probe) cannot use decision 0042's companion, which is TRUE in array context (T-5051).
+Implemented in `arithmetic::within_array_compare_gap` (`handle_comparison`).
+Status: VERIFIED (excel-graph) for the probed cells; the mechanism is UNVERIFIED.
 Range edges (T-2203, probes-numeric/t2203-exp-range-edges, excel-graph 2026-10-22, 527 rows): the last finite
 argument is 709.782712893384 (ln DBL_MAX; EXP = 1.7976931348622732E308, not quite DBL_MAX), and the first
 `#NUM!` is its successor double 709.7827128933841; every argument above it, up to 710.5, is `#NUM!`. At the other
@@ -938,6 +954,45 @@ reproduces all 648 cells (T-0989; it also fixed the 2^-10 base, where an absolut
 Evidence: probes-numeric/99bc3137b5869417 `compare-tolerance/*` (648 cells). Oracle: excel-graph, 2026-10-04.
 Status: VERIFIED
 Implemented in: `cmp_excel_precision` (number_format.rs), used by `compare_values` (functions/util.rs) and `Ord for CalcResult` (calc_result.rs). Tasks: T-0989, T-0180
+
+## A 16th-digit tie splits by use (T-4848)
+Rule: an exact tie at the 16th significant digit (the double's exact decimal is 15 digits, then 5, then zeros) is cut
+**away from zero** by the comparisons and **toward zero** by text. Comparisons: `=`, `<` and COUNTIF on
+`1E+15+25` equal `1E+15+30`, not `1E+15+20` (ties to even would give 20); `-(1E+15+15)` equals `-(1E+15+20)`;
+`1E+14+1.5` equals `1E+14+2` and `1E+14+2.5` equals `1E+14+3`, and `1E+15+15<1E+15+20` is FALSE. Text: `&`, `TEXT(x,"0.0")`
+and EXACT cut the same values toward zero: `EXACT(1E+15+15,1E+15+10)` is TRUE and `EXACT(1E+15+15,1E+15+20)`
+FALSE, so EXACT and `=` disagree on such a pair; `TEXT(1E+15+25,"0.0")` is "1000000000000020.0" and
+`TEXT(1E+14+2.5,"0.0")` "100000000000002.0". `MATCH(lo,B,0)` and `MATCH(hi,B,0)` over a one-cell range holding the tie
+are both `#N/A` for every tie probed, so MATCH's exact mode does not use the comparison cut there (it matches the
+non-tie rows 6 and 7). A typed 16-digit literal is truncated on entry ("15-digit literal parsing"), so
+`=12345678901234.75` already stores 12345678901234.7 and is no tie (rows 6, 7).
+Evidence: probes/t4848-sixteenth-digit-ties (98 cells over 7 values; B = value, C:D `=` against the lower and upper
+neighbour, E `<` upper, F:G COUNTIF, H:I EXACT, J:K MATCH, M `TEXT(,"0.0")`, N `&""`, O `EXACT(B,B&"")`; excel-graph,
+2026-11-07).
+IM* parts and fraction digits cut **away from zero**, unlike number text: `COMPLEX(1E+15+15,0)` is "1000000000000020",
+`COMPLEX(1E+15+25,0)` "1000000000000030" (ties to even would give ...20), `COMPLEX(1,1E+14+2.5)` "1+100000000000003i",
+`IMREAL(COMPLEX(1E+14+1.5,1))` 100000000000002 (probes/t4848-tie-complex-part, 15 cells). `TEXT(1E+15+25.5,"# ?/?")` is
+"1000000000000030 1/2" and `TEXT(-(1E+15+15.5),"# ?/?")` "-1000000000000020 1/2", while `TEXT(1E+15+25.5,"0")` is
+"1000000000000030" by the shown-place rounding (probes/t4848-tie-fraction-format, 15 cells; excel-graph, 2026-11-08). These
+fraction cells do not tell a cut of the integer part from a cut of the whole value; both give away from zero.
+The scientific-format mantissa cuts **toward zero**: `TEXT(1E+15+15,"0.00000000000000E+00")` is "1.00000000000001E+15",
+`1E+15+25` "1.00000000000002E+15", `-(1E+15+15)` "-1.00000000000001E+15", `1E+14+1.5` "1.00000000000001E+14", `1E+14+2.5`
+"1.00000000000002E+14" (away from zero would give ...02, ...03, ...02, ...02, ...03; probes/t5068-tie-number-text-mantissa,
+10 cells, excel-graph, 2026-11-08, T-5068; the engine already matched). The comma-scaled fraction value cuts **toward
+zero** too, unlike the fraction's integer digits: with 85 commas (scale 10) `TEXT(1E+14+1.5,"# ?/?"&…)` is "1000000000000010",
+`1E+14+2.5` "1000000000000020", `1E+15+15` "10000000000000100", `1E+15+25` "10000000000000200" and `-(1E+15+15)`
+"-10000000000000100" (away from zero gives ...20, ...30, ...200, ...300, -...200; the whole-number format `"0"&commas`
+agrees; probes/t5068-tie-number-text-mantissa D1:E5, excel-graph, 2026-11-08; the engine cut away before T-5068).
+Not reachable on excel-graph (T-5068): number-cell text (General `text` of `1E+15+15` is "1E+15", width-independent; desktop
+`.Text` with a wide column might show digits: M14), printed formula literals (Excel reads a literal from its first 15 digits,
+so none holds a tie, see "15-digit literal parsing"), pivot number-group quotients (the group label passes through 15-digit
+display, so the quotient's 16th digit is not shown) and conditional-format Equal (CF outcomes are unobservable on graph,
+T-1171). These keep their current directions (toward zero, toward zero, away) without evidence.
+Status: VERIFIED (the probed operations)
+Implemented in: `cut_to_15_digits` (decimal_round.rs), the one 15-digit cut. It cuts away from zero in `cmp_excel_precision`
+(number_format.rs), the IM* part pre-cut (complex/parse.rs) and fraction integer digits (formatter/fraction.rs). It cuts toward zero
+in EXACT (`exact_element`, functions/text/common.rs), `to_excel_precision_str` and every other caller. `number_to_text` keeps
+`significant_15` directly. Tasks: T-4848
 
 ## 15-digit literal parsing
 Rule: numeric literals, `"text"+0` and `VALUE("text")` keep only 15 significant digits;
@@ -2403,7 +2458,9 @@ text the row's cell displays in that criterion's column, ignoring case:
   docs/research/t4895/predictions-uploads.tsv, the recalculated values in docs/research/t4895/uploads/): kept values
   "A" and "C" over cells a and c keep them (case is ignored); a visible row whose kept cell is blank stays visible
   under `blank="1"` and is hidden without it; a kept custom filter (equals a, or equals c) shows row 5, which only the
-  deleted criterion hid.
+  deleted criterion hid; the same custom filter with operands "A" and "C" (custom-upper, T-4965) shows rows
+  2, 4, 6 only: row 5 (c, hidden by the deleted criterion) stays hidden and the visible a rows stay, so a custom
+  `equal` whose operand differs from the cell only in case changes no row (unlike a values filter, which ignores case).
 
 The engine follows this (T-4803, T-4939): after a column delete that takes a criterion and leaves another inside the
 table, `rows_decided_by_criteria` (crates/rustsheet-engine/src/table_edits.rs) re-applies the kept criteria to each
@@ -2412,7 +2469,8 @@ a file and for one given its criteria with `Txn::filter_table_column`. The eval 
 kept rows' General text, as spec2xlsx writes it (`add_table` in crates/rustsheet-eval/src/engine.rs runs before the
 number formats are set). Rule (ours where unprobed): a values filter without date groups is evaluated (blank rows by
 `blank`, other rows by their text among `values`), and a custom filter whose conditions all have the `equal` operator
-(or none) and a text operand without a wildcard (`*`, `?`, `~`), combined by `and`. A row whose verdict hangs on any
+(or none) and a text operand without a wildcard (`*`, `?`, `~`) that matches the cell exactly or not at all (a case-only difference
+is no verdict), combined by `and` or `or` (the evidenced form is `or`). A row whose verdict hangs on any
 other kept criterion (a custom filter with another operator or a numeric operand, top 10, dynamic, date groups, color)
 keeps its state, unless an evaluated criterion rejects it. The undo puts back every row the delete showed or hid.
 Kept top10, dynamic, date-group and color criteria are unprobed.
@@ -2880,7 +2938,7 @@ argument wins: `QUOTIENT(1/0,)` is `#DIV/0!`, `QUOTIENT(TRUE,)` `#VALUE!` (A9:A1
 empty hands the emptiness on: `LET(e,,QUOTIENT(7,e))`, `LET(e,,QUOTIENT(e,2))`, `LAMBDA(a,b,QUOTIENT(a,b))(7,)` and
 `LET(e,,SERIESSUM(2,e,1,{1,2}))` are `#N/A` (-let-lambda A1:A4). Only the argument as written counts: a formula that
 gives a blank (an IFERROR or VLOOKUP of an empty cell) is read as 0, not `#N/A` (gen-m5/6efa59fc1257c475 Calc!A229,
-gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). Empty coefficients rank after `x`, `n` and `m`: with the
+gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). MROUND itself reads it so too (`MROUND(VLOOKUP("x",C1:D1,2,FALSE),1)` and `MROUND(5,INDEX(D1:D2,1))` are 0, `CEILING.MATH(2.675,INDEX(D1:D2,1))` 0, `FLOOR.PRECISE(-2.5,INDEX(D1:D2,1))` 0: probes/t4901-mround-blank-let-lambda-roundings A1, A2, A8, A9, excel-graph, 2026-11-07, T-4901). A LET value or LAMBDA parameter left empty is an omission in CEILING.MATH (3, A4:A5) and FLOOR.PRECISE (-3, A6:A7). But a call that returns its own *written-empty* branch hands the omission on: `MROUND(IF(TRUE,),1)`, `MROUND(IF(FALSE,1,),1)`, `MROUND(CHOOSE(1,,2),1)`, `MROUND(IFERROR(,1),1)`, `MROUND(5,IF(TRUE,))` and `QUOTIENT(IF(TRUE,),1)` are `#N/A` and `CEILING.MATH(2.675,IF(TRUE,))` is 3 (A3, A10, A12:A16); `MROUND(IF(FALSE,1),1)` is `#VALUE!` (A11, FALSE). Ours reads the IF/CHOOSE/IFERROR forms as 0 (T-4912). Empty coefficients rank after `x`, `n` and `m`: with the
 coefficients empty, `SERIESSUM(1/0,1,1,)` is `#DIV/0!`, `SERIESSUM(2,"x",1,)` `#VALUE!` and `SERIESSUM(2,1,NA(),)` `#N/A`
 (t4903 B1:B3), and an `m` error that is not `#N/A` also beats them: `SERIESSUM(2,1,1/0,)` is `#DIV/0!`,
 `SERIESSUM(2,1,"x",)` `#VALUE!` (B4:B5; B3 alone could not tell, as empty coefficients are `#N/A` themselves). Ours checks
@@ -2901,7 +2959,36 @@ which arguments are empty by `Model::empty_arguments` (functions/util/empty_args
 through `written_empty_or`, and `series_coefficients` refuses empty coefficients. Before T-4873 QUOTIENT and SERIESSUM
 read an empty argument as 0, and before T-4923 SQRTPI and FACTDOUBLE read the omission as 0.
 Status: VERIFIED (excel-graph)
-Tasks: T-4873, T-4903, T-4923
+Tasks: T-4873, T-4901, T-4903, T-4912, T-4923
+
+## Which wrappers hand a written-empty branch on as an omission (T-5067)
+Rule: IF, CHOOSE, IFERROR and IFNA give their chosen branch's written emptiness to the function that reads them.
+The ToolPak functions then return `#N/A` and the newer roundings take their default, whatever the wrapper's
+nesting. IFS and SWITCH do not hand it on: they read it as 0. The branch that is actually chosen decides. A blank
+reference or a lookup's blank on the chosen branch stays 0, even when a written-empty branch sits beside it.
+- Handed on: `MROUND(IFNA(,1),1)`, `MROUND(IFNA(NA(),),1)`, `MROUND(IFERROR(1/0,),1)`, `MROUND(CHOOSE(2,1,),1)`,
+  `MROUND(IF(1=1,),1)` (A1:A3, A15, A16). Nesting and parentheses keep it: `MROUND(IF(TRUE,IF(TRUE,)),1)`,
+  `MROUND(IF(FALSE,1,IF(TRUE,)),1)`, `MROUND(IFERROR(IF(TRUE,),1),1)` and `MROUND((IF(TRUE,)),1)` (A11, A28, A29,
+  A12). A LET name bound to one keeps it too: `LET(x,IF(TRUE,),MROUND(x,1))` (A14). Every one of these is `#N/A`.
+- It reaches every reader of a written-empty argument: `SQRTPI(IF(TRUE,))`, `FACTDOUBLE(IF(TRUE,))`,
+  `EDATE(IF(TRUE,),1)`, `SERIESSUM(2,1,1,IF(TRUE,))` and `QUOTIENT(7,IF(TRUE,))` are `#N/A` (A22:A26; QUOTIENT's
+  divisor is `#N/A`, not `#DIV/0!`). `FLOOR.PRECISE(-2.5,IF(TRUE,))` is -3 and `CEILING.MATH(2.675,CHOOSE(1,,2))`
+  is 3, the omitted significance (A20, A21).
+- Not handed on: `MROUND(IFS(TRUE,),1)`, `MROUND(SWITCH(1,1,),1)` and `MROUND(SWITCH(2,1,1,),1)` are 0 (A8:A10),
+  as is an operator over it, `MROUND(IF(TRUE,)+0,1)` (A13).
+- The chosen branch decides. `MROUND(IFERROR(Z1,),1)` and `MROUND(IF(TRUE,Z1,),1)` (Z1 blank),
+  `MROUND(IFERROR(Z1,1),1)`, `MROUND(IF(TRUE,Z1),1)`, `MROUND(IF(TRUE,VLOOKUP("x",C1:D1,2,FALSE)),1)` and
+  `MROUND(XLOOKUP(1,{1},{0},),1)` are all 0 (A4:A7, A27, A32). So the omission is a value of its own in Excel, not
+  our `CalcResult::EmptyArg`, which IFERROR and VLOOKUP also return for a blank.
+- An array condition reads it as 0 per element: `ROWS(MROUND(IF({TRUE;FALSE},,1),1))` is 2, and its elements are
+  0 and 1 (A17:A19). `ISBLANK(IF(TRUE,))` is TRUE (A30), and `MROUND(INDEX(IF(TRUE,),1),1)` is `#VALUE!` (A31).
+Evidence: probes/t5067-written-empty-branch-wrappers Calc!A1:A32 (excel-graph, 2026-11-08). Predictions were not
+committed before the fill.
+Ours: we read every handed-on form as 0, because `Model::is_empty_argument` looks only at the argument node and a LET
+or LAMBDA variable bound to nothing. A17:A19 and A30:A31 already match. T-4912 owns the 17 cells that are off:
+A1:A3, A11, A12, A14:A16, A20:A26, A28 and A29.
+Status: VERIFIED (excel-graph)
+Tasks: T-5067, T-4912
 
 ## An empty significance of the 2010+ roundings is omitted (T-4873)
 Rule: CEILING.MATH, FLOOR.MATH (Excel 2013), CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING (Excel 2010) read a written-empty
@@ -2914,6 +3001,7 @@ and `FLOOR(-2.5,)` `#DIV/0!`, `FLOOR(,)` 0 (H1:H5). A LET value or LAMBDA parame
 A5:A11). The same split as SORT's and TAKE's empty optionals (arrays.md) against the older functions' empty = 0.
 Evidence: probes/t4873-empty-arg-quotient-ceiling Calc!C1:H5, probes/t4873-empty-arg-let-lambda Calc!A5:A11 (excel-graph,
 2026-11-07, T-4873; predictions committed before the fill).
+A written-empty IF/CHOOSE/IFERROR branch as the significance is also omitted (`CEILING.MATH(2.675,IF(TRUE,))` is 3; T-4901, T-4912, see "A written-empty argument of a ToolPak function is #N/A" and "Which wrappers hand a written-empty branch on as an omission (T-5067)" above).
 Ours: the five go through `numbers_fn_empty_omitted` (mathematical.rs), which keeps an empty argument's default. Before
 T-4873 they read it as 0 (`CEILING.MATH(2.675,)` was 0).
 Status: VERIFIED (excel-graph)

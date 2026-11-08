@@ -15,6 +15,9 @@
 //! - Beyond, and wherever E*R is below `DBL_MIN`, ERFC is 0.
 //!
 //! Negative x: ERF(-x) = -ERF(x) and ERFC(-x) = fl(2 - ERFC(x)).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use crate::arithmetic::{
     extended_product, extended_quotient, extended_sqrt, extended_sum, flush_subnormal,

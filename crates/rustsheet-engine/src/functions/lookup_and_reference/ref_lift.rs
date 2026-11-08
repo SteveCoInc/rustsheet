@@ -1,6 +1,9 @@
 //! What OFFSET, INDIRECT and TRIMRANGE share when they lift into an array of references
 //! (SPEC-0014 "Producers"): which argument values lift the call, and their conversion to the
 //! driver's arguments; and where IF, CHOOSE, LET and variables hand such an array on (rule 7).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms)]
+// LINT-DEBT-END
 
 use std::borrow::Cow;
 

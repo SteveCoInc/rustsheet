@@ -11,19 +11,22 @@ use crate::test::util::new_empty_model;
 /// whole-column range is the whole sheet height.
 fn model_beside_last_row(cells: &[(&str, &str)]) -> crate::Model {
     let mut model = new_empty_model();
-    model._set(&format!("J{LAST_ROW}"), "1");
+    model.set_a1(&format!("J{LAST_ROW}"), "1");
     for (cell, value) in cells {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     model
 }
 
 /// Evaluates `formula` in Z1 and returns its text and the cells the evaluation read.
 fn evaluate_counting_reads(model: &mut crate::Model, formula: &str) -> (String, u64) {
-    model._set("Z1", formula);
+    model.set_a1("Z1", formula);
     let before = model.evaluation.cell_reads;
     model.evaluate();
-    (model._get_text("Z1"), model.evaluation.cell_reads - before)
+    (
+        model.get_text_a1("Z1"),
+        model.evaluation.cell_reads - before,
+    )
 }
 
 #[test]
@@ -61,35 +64,35 @@ fn criteria_ranges_line_up_position_by_position() {
     // position, whatever each sheet's used area: Sheet2!A100 lies past Sheet1's used area.
     let mut model = new_empty_model();
     model.new_sheet();
-    model._set("A1", "1");
-    model._set("B2", "1");
-    model._set("Sheet2!A100", "x");
-    model._set("Z1", "=COUNTIFS(A:A,\"\",Sheet2!A:A,\"x\")");
-    model._set("Z2", "=COUNTIFS(A1:A3,1,B2:B4,\"\")");
-    model._set("Z3", "=COUNTIFS(A1:A3,\"\",B2:B4,\"\")");
-    model._set("Z4", "=COUNTIFS(A1:A3,\"\",B1:B3,\"\")");
+    model.set_a1("A1", "1");
+    model.set_a1("B2", "1");
+    model.set_a1("Sheet2!A100", "x");
+    model.set_a1("Z1", "=COUNTIFS(A:A,\"\",Sheet2!A:A,\"x\")");
+    model.set_a1("Z2", "=COUNTIFS(A1:A3,1,B2:B4,\"\")");
+    model.set_a1("Z3", "=COUNTIFS(A1:A3,\"\",B2:B4,\"\")");
+    model.set_a1("Z4", "=COUNTIFS(A1:A3,\"\",B1:B3,\"\")");
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), "1");
-    assert_eq!(model._get_text("Z2"), "0");
-    assert_eq!(model._get_text("Z3"), "2");
-    assert_eq!(model._get_text("Z4"), "1");
+    assert_eq!(model.get_text_a1("Z1"), "1");
+    assert_eq!(model.get_text_a1("Z2"), "0");
+    assert_eq!(model.get_text_a1("Z3"), "2");
+    assert_eq!(model.get_text_a1("Z4"), "1");
 }
 
 #[test]
 fn the_first_matched_error_in_row_major_order_is_the_result() {
     let mut model = new_empty_model();
-    model._set("B1", "=1/0");
-    model._set("A2", "=NA()");
-    model._set("C1", "y");
-    model._set("C2", "x");
-    model._set("D1", "x");
-    model._set("D2", "x");
+    model.set_a1("B1", "=1/0");
+    model.set_a1("A2", "=NA()");
+    model.set_a1("C1", "y");
+    model.set_a1("C2", "x");
+    model.set_a1("D1", "x");
+    model.set_a1("D2", "x");
     // Row-major: B1 (#DIV/0!) comes before A2 (#N/A), but only where the criterion matches.
-    model._set("Z1", "=SUMIFS(A1:B2,C1:D2,\"x\")");
-    model._set("Z2", "=SUMIFS(A1:B2,C1:D2,\"y\")");
+    model.set_a1("Z1", "=SUMIFS(A1:B2,C1:D2,\"x\")");
+    model.set_a1("Z2", "=SUMIFS(A1:B2,C1:D2,\"y\")");
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), "#DIV/0!");
-    assert_eq!(model._get_text("Z2"), "0");
+    assert_eq!(model.get_text_a1("Z1"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("Z2"), "0");
 }
 
 #[test]
@@ -106,10 +109,10 @@ fn a_spill_into_a_walked_range_is_counted_whatever_the_order() {
             [spill, count]
         };
         for (cell, formula) in order {
-            model._set(cell, formula);
+            model.set_a1(cell, formula);
         }
         model.evaluate();
-        assert_eq!(model._get_text("C1"), "8", "count first: {count_first}");
+        assert_eq!(model.get_text_a1("C1"), "8", "count first: {count_first}");
     }
 }
 
@@ -119,15 +122,15 @@ fn a_lifted_countifs_is_priced_by_every_criteria_range_it_walks() {
     // stored cells of every criteria range, so the lift cap prices them all. A:A holds one cell
     // and B:B 100,000: 1,000 elements x 2 criteria x 100,001 positions is past 2^27, 10 are not.
     let mut model = new_empty_model();
-    model._set("A1", "1");
+    model.set_a1("A1", "1");
     for row in 1..=100_000 {
-        model._set(&format!("B{row}"), "1");
+        model.set_a1(&format!("B{row}"), "1");
     }
-    model._set("Z1", "=SUM(COUNTIFS(A:A,SEQUENCE(1000),B:B,\">0\"))");
-    model._set("Z2", "=SUM(COUNTIFS(A:A,SEQUENCE(10),B:B,\">0\"))");
-    model._set("Z3", "=SUM(SUMIFS(A:A,B:B,SEQUENCE(1000),A:A,1))");
+    model.set_a1("Z1", "=SUM(COUNTIFS(A:A,SEQUENCE(1000),B:B,\">0\"))");
+    model.set_a1("Z2", "=SUM(COUNTIFS(A:A,SEQUENCE(10),B:B,\">0\"))");
+    model.set_a1("Z3", "=SUM(SUMIFS(A:A,B:B,SEQUENCE(1000),A:A,1))");
     model.evaluate();
-    assert_eq!(model._get_text("Z1"), "#ERROR!");
-    assert_eq!(model._get_text("Z2"), "1");
-    assert_eq!(model._get_text("Z3"), "1");
+    assert_eq!(model.get_text_a1("Z1"), "#ERROR!");
+    assert_eq!(model.get_text_a1("Z2"), "1");
+    assert_eq!(model.get_text_a1("Z3"), "1");
 }

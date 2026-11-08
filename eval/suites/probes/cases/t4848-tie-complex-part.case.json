@@ -1,0 +1,49 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Exact 16th-digit ties in an IM* part's text: COMPLEX and IMREAL on 1E+15+15, 1E+15+25, -(1E+15+15), 1E+14+1.5, 1E+14+2.5 (T-4848; numbers.md \"A 16th-digit tie splits by use\")",
+  "tags": [
+    "M9",
+    "probe",
+    "precision"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=COMPLEX(1E+15+15,0)",
+        "B1": "=COMPLEX(1,1E+15+15)",
+        "C1": "=IMREAL(COMPLEX(1E+15+15,1))",
+        "A2": "=COMPLEX(1E+15+25,0)",
+        "B2": "=COMPLEX(1,1E+15+25)",
+        "C2": "=IMREAL(COMPLEX(1E+15+25,1))",
+        "A3": "=COMPLEX(-(1E+15+15),0)",
+        "B3": "=COMPLEX(1,-(1E+15+15))",
+        "C3": "=IMREAL(COMPLEX(-(1E+15+15),1))",
+        "A4": "=COMPLEX(1E+14+1.5,0)",
+        "B4": "=COMPLEX(1,1E+14+1.5)",
+        "C4": "=IMREAL(COMPLEX(1E+14+1.5,1))",
+        "A5": "=COMPLEX(1E+14+2.5,0)",
+        "B5": "=COMPLEX(1,1E+14+2.5)",
+        "C5": "=IMREAL(COMPLEX(1E+14+2.5,1))"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Sheet1!A1",
+    "Sheet1!B1",
+    "Sheet1!C1",
+    "Sheet1!A2",
+    "Sheet1!B2",
+    "Sheet1!C2",
+    "Sheet1!A3",
+    "Sheet1!B3",
+    "Sheet1!C3",
+    "Sheet1!A4",
+    "Sheet1!B4",
+    "Sheet1!C4",
+    "Sheet1!A5",
+    "Sheet1!B5",
+    "Sheet1!C5"
+  ]
+}

@@ -2,6 +2,9 @@
 //! (docs/excel-semantics/references.md, "Calculated columns: a formula typed into a table
 //! column"; T-2957, T-2958), and one typed just right of a table grows it by a column (T-2968),
 //! as a constant does (T-3218); either typed just below it grows it by a row (T-3273).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use crate::actions::displace_cf_formula_str;
 use crate::constants::{LAST_COLUMN, LAST_ROW};
@@ -9,8 +12,6 @@ use crate::expressions::parser::stringify::{DisplaceData, Displacement};
 use crate::expressions::parser::{stringify::to_excel_string, Node};
 use crate::expressions::types::CellReferenceRC;
 use crate::expressions::utils::number_to_column;
-use crate::language::get_default_language;
-use crate::locale::get_default_locale;
 use crate::model::Model;
 use crate::table_edits::{append_column, bounds, Bounds};
 use crate::types::{Cell, Table};
@@ -505,55 +506,58 @@ impl Model {
             _ => return Vec::new(),
         };
         let deleted = |index: i32| delta < 0 && (at..at.saturating_sub(delta)).contains(&index);
-        let edited_sheet = self.workbook.worksheet(sheet).map(|w| w.get_name()).ok();
-        let (locale, language) = (self.locale, self.language);
-        self.parser.set_locale(get_default_locale());
-        self.parser.set_language(get_default_language());
-        let mut displaced = Vec::new();
-        for (name, table) in &self.workbook.tables {
-            let Some(b) = bounds(table) else {
-                continue;
-            };
-            let on_edited = edited_sheet
-                .as_deref()
-                .is_some_and(|s| table.is_on_sheet(s));
-            for (column, table_column) in (b.left..).zip(&table.columns) {
-                let Some(formula) = &table_column.calculated_column_formula else {
+        let edited_sheet = self
+            .workbook
+            .worksheet(sheet)
+            .map(super::types::Worksheet::get_name)
+            .ok();
+        let Model {
+            parser,
+            workbook,
+            locale,
+            language,
+            ..
+        } = self;
+        parser.with_default_locale(locale, language, |parser| {
+            let mut displaced = Vec::new();
+            for (name, table) in &workbook.tables {
+                let Some(b) = bounds(table) else {
                     continue;
                 };
-                if formula.contains('[')
-                    || on_edited && deleted(if row_edit { b.data.0 } else { column })
-                {
-                    continue;
+                let on_edited = edited_sheet
+                    .as_deref()
+                    .is_some_and(|s| table.is_on_sheet(s));
+                for (column, table_column) in (b.left..).zip(&table.columns) {
+                    let Some(formula) = &table_column.calculated_column_formula else {
+                        continue;
+                    };
+                    if formula.contains('[')
+                        || on_edited && deleted(if row_edit { b.data.0 } else { column })
+                    {
+                        continue;
+                    }
+                    let context = CellReferenceRC {
+                        sheet: table.sheet_name.clone(),
+                        row: b.data.0,
+                        column,
+                    };
+                    // A row edit above or at the first data cell moves it by `delta` (a delete of the
+                    // cell itself is skipped above).
+                    let moves = on_edited && row_edit && b.data.0 >= at;
+                    displaced.push(DisplacedColumnFormula {
+                        table: name.clone(),
+                        id: table_column.id,
+                        row: if moves {
+                            b.data.0.saturating_add(delta)
+                        } else {
+                            b.data.0
+                        },
+                        text: displace_cf_formula_str(parser, formula, &context, displacement),
+                    });
                 }
-                let context = CellReferenceRC {
-                    sheet: table.sheet_name.clone(),
-                    row: b.data.0,
-                    column,
-                };
-                // A row edit above or at the first data cell moves it by `delta` (a delete of the
-                // cell itself is skipped above).
-                let moves = on_edited && row_edit && b.data.0 >= at;
-                displaced.push(DisplacedColumnFormula {
-                    table: name.clone(),
-                    id: table_column.id,
-                    row: if moves {
-                        b.data.0.saturating_add(delta)
-                    } else {
-                        b.data.0
-                    },
-                    text: displace_cf_formula_str(
-                        &mut self.parser,
-                        formula,
-                        &context,
-                        displacement,
-                    ),
-                });
             }
-        }
-        self.parser.set_locale(locale);
-        self.parser.set_language(language);
-        displaced
+            displaced
+        })
     }
 
     /// Stores `displaced` ([`Model::displaced_column_formulas`]) in file form, read where the
@@ -563,42 +567,46 @@ impl Model {
     /// formula Excel fills into the inserted row and saves as `calculatedColumnFormula` (T-4692: the
     /// cached `table1.xml` of probes/table-edits/t4692-insert-row-first-data).
     pub(crate) fn set_displaced_column_formulas(&mut self, displaced: Vec<DisplacedColumnFormula>) {
-        let (locale, language) = (self.locale, self.language);
-        self.parser.set_locale(get_default_locale());
-        self.parser.set_language(get_default_language());
-        for DisplacedColumnFormula {
-            table,
-            id,
-            row,
-            text,
-        } in displaced
-        {
-            let Some(table) = self.workbook.tables.get_mut(&table) else {
-                continue;
-            };
-            let Some(b) = bounds(table) else {
-                continue;
-            };
-            let Some((column, table_column)) = (b.left..)
-                .zip(table.columns.iter_mut())
-                .find(|(_, c)| c.id == id)
-            else {
-                continue;
-            };
-            let moved = CellReferenceRC {
-                sheet: table.sheet_name.clone(),
+        let Model {
+            parser,
+            workbook,
+            locale,
+            language,
+            ..
+        } = self;
+        parser.with_default_locale(locale, language, |parser| {
+            for DisplacedColumnFormula {
+                table,
+                id,
                 row,
-                column,
-            };
-            let node = self.parser.parse(&text, &moved);
-            let first = CellReferenceRC {
-                row: b.data.0,
-                ..moved
-            };
-            table_column.calculated_column_formula = Some(to_excel_string(&node, &first));
-        }
-        self.parser.set_locale(locale);
-        self.parser.set_language(language);
+                text,
+            } in displaced
+            {
+                let Some(table) = workbook.tables.get_mut(&table) else {
+                    continue;
+                };
+                let Some(b) = bounds(table) else {
+                    continue;
+                };
+                let Some((column, table_column)) = (b.left..)
+                    .zip(table.columns.iter_mut())
+                    .find(|(_, c)| c.id == id)
+                else {
+                    continue;
+                };
+                let moved = CellReferenceRC {
+                    sheet: table.sheet_name.clone(),
+                    row,
+                    column,
+                };
+                let node = parser.parse(&text, &moved);
+                let first = CellReferenceRC {
+                    row: b.data.0,
+                    ..moved
+                };
+                table_column.calculated_column_formula = Some(to_excel_string(&node, &first));
+            }
+        });
     }
 
     /// Refuses a row insert of `count` rows at `row` on `sheet` that would fill more than
@@ -670,23 +678,20 @@ impl Model {
         if columns.is_empty() {
             return Ok(());
         }
-        let (locale, language) = (self.locale, self.language);
-        self.parser.set_locale(get_default_locale());
-        self.parser.set_language(get_default_language());
-        let nodes: Vec<(i32, Node)> = columns
-            .into_iter()
-            .map(|(row, column, text)| {
-                let context = CellReferenceRC {
-                    sheet: sheet_name.clone(),
-                    row,
-                    column,
-                };
-                (column, self.parser.parse(&text, &context))
-            })
-            .filter(|(_, node)| !matches!(node, Node::ParseErrorKind { .. }))
-            .collect();
-        self.parser.set_locale(locale);
-        self.parser.set_language(language);
+        let nodes: Vec<(i32, Node)> = self.with_default_parser(|parser| {
+            columns
+                .into_iter()
+                .map(|(row, column, text)| {
+                    let context = CellReferenceRC {
+                        sheet: sheet_name.clone(),
+                        row,
+                        column,
+                    };
+                    (column, parser.parse(&text, &context))
+                })
+                .filter(|(_, node)| !matches!(node, Node::ParseErrorKind { .. }))
+                .collect()
+        });
         for (column, node) in nodes {
             // The parsed formula is relative to its cell, so one shared formula fills every row.
             let formula_index = self.shared_formula_index(sheet, node)?;

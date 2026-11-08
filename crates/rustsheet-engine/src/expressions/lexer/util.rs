@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 use serde::{Deserialize, Serialize};
 
 use crate::expressions::token;
@@ -63,21 +70,17 @@ pub fn get_tokens_with_locale(
     let mut next_token = lexer.next_token();
     let mut end = lexer.get_position();
     loop {
-        match next_token {
-            token::TokenType::EOF => {
-                break;
-            }
-            _ => {
-                tokens.push(MarkedToken {
-                    start,
-                    end,
-                    token: next_token,
-                });
-                start = lexer.get_position();
-                next_token = lexer.next_token();
-                end = lexer.get_position();
-            }
+        if next_token == token::TokenType::EOF {
+            break;
         }
+        tokens.push(MarkedToken {
+            start,
+            end,
+            token: next_token,
+        });
+        start = lexer.get_position();
+        next_token = lexer.next_token();
+        end = lexer.get_position();
     }
     tokens
 }
@@ -136,7 +139,7 @@ fn cycle_endpoint(part: &[char]) -> Vec<char> {
         result.push('$');
     }
     // cycling also normalizes the reference to uppercase, "a1" -> "$A$1"
-    result.extend(column.iter().map(|c| c.to_ascii_uppercase()));
+    result.extend(column.iter().map(char::to_ascii_uppercase));
     if new_row {
         result.push('$');
     }

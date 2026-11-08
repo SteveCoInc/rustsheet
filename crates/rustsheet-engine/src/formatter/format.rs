@@ -1,3 +1,14 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::doc_link_with_quotes,
+    clippy::match_same_arms,
+    clippy::too_many_lines,
+    elided_lifetimes_in_paths
+)]
+// LINT-DEBT-END
 use super::elapsed::{
     date_section_register, elapsed_text, elapsed_token, is_date_or_clock, DisplayClock,
     FractionalSeconds,
@@ -6,9 +17,9 @@ use super::fraction::{comma_exponent, format_fraction};
 use super::general::{format_general, lead_abs};
 use crate::{
     constants::MAXIMUM_DATE_SERIAL_NUMBER,
-    decimal_round::{round_engineering, round_scientific, round_shown_place},
+    decimal_round::{cut_to_15_digits, round_engineering, round_scientific, round_shown_place},
     locale::Locale,
-    number_format::{cut_15_digits, to_precision},
+    number_format::cut_15_digits,
     types::DateSystem,
 };
 
@@ -598,7 +609,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     None => Formatted::unshowable(format!("Fraction overflows: '{value}'")),
                 };
             }
-            let mut text = "".to_string();
+            let mut text = String::new();
             if let Some(c) = p.currency {
                 text = format!("{c}");
             }
@@ -654,7 +665,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     if !shifted {
                         value /= 10.0_f64.powf(exponent);
                     }
-                    value = to_precision(value, 15);
+                    value = cut_to_15_digits(value, false);
                     value_abs = value.abs();
                 }
             }
@@ -677,13 +688,13 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             let mut digit_index = 0;
 
             let symbols = &locale.numbers.symbols;
-            let group_sizes = locale.numbers.decimal_formats.standard.to_owned();
-            let group_separator = symbols.group.to_owned();
-            let decimal_separator = symbols.decimal.to_owned();
+            let group_sizes = locale.numbers.decimal_formats.standard.clone();
+            let group_separator = symbols.group.clone();
+            let decimal_separator = symbols.decimal.clone();
             // There probably are better ways to check if a number at a given precision is negative :/
             // `<=`: a value exactly one unit at the last shown place (-1 for `0`, -1 after a `#,,`
             // scaling) keeps its sign (poi/NumberFormatTests.xlsx Tests!A95).
-            let is_negative = value <= -(10.0_f64.powf(-(p.precision as f64)));
+            let is_negative = value <= -(10.0_f64.powf(-f64::from(p.precision)));
             // With no integer placeholder no digit carries the minus, so it leads the literals
             // (`TEXT(-PI(),"x")` = "-x", `TEXT(-5,"2")` = "-2"; probes/text-format-bare-literals A3, A7;
             // `"x"General` on -1.5 is "-x1.5", General then shows |value|: gen-m10 F!D19).
@@ -783,7 +794,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                             } else {
                                 // The number is larger than the formatting code 12345 and 0##
                                 // We just hit the first formatting digit (0 in the example above) so we write as many digits as we can (123 in the example)
-                                for i in digit_index..number_index + 1 {
+                                for i in digit_index..=number_index {
                                     let sep = if use_group_separator(
                                         p.use_thousands,
                                         ln - i,
@@ -842,7 +853,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                                 // placeholders take one digit each (`0.00E+00` on DBL_MAX is
                                 // "1.80E+308", probes/dbl-max-text-b, T-2106).
                                 let first = if index == 0 { 0 } else { number_index };
-                                for i in first..number_index + 1 {
+                                for i in first..=number_index {
                                     text.push(p.numerals.digit(exponent_part[i as usize]));
                                 }
                                 digit_index += number_index + 1;

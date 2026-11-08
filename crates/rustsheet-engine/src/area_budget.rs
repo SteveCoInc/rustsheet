@@ -163,15 +163,12 @@ impl AreaBudget {
     /// marks the formula's run as exceeded ([`Model::with_area_budget`]) and returns `false`: the
     /// rectangle must not be recorded.
     pub(crate) fn spend_seen_range(&mut self) -> bool {
-        match self.seen_ranges.checked_sub(1) {
-            Some(left) => {
-                self.seen_ranges = left;
-                true
-            }
-            None => {
-                self.seen_ranges_exceeded = true;
-                false
-            }
+        if let Some(left) = self.seen_ranges.checked_sub(1) {
+            self.seen_ranges = left;
+            true
+        } else {
+            self.seen_ranges_exceeded = true;
+            false
         }
     }
 }

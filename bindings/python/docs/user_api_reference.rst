@@ -1,9 +1,10 @@
 User API Reference
 ------------------
 
-The user API (:class:`UserModel`) is the high level API used by the IronCalc
-web application. Every action evaluates the workbook and keeps undo/redo
-history.
+The user API (:class:`UserModel`) is part of the deprecated ``rustsheet.legacy``
+module (``from rustsheet import legacy``), which is removed at the API v1 freeze; use
+:class:`rustsheet.Workbook` for new code. Every action evaluates the workbook and keeps
+undo/redo history.
 
 Conventions:
 

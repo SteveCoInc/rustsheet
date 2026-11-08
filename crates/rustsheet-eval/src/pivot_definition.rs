@@ -608,10 +608,21 @@ impl<'a> DefinedPivot<'a> {
         } else {
             ""
         };
+        // A named source is saved as Excel saves a defined name's or a Table's: `name` alone
+        // (`_source_attrs`, T-4506).
+        let source = match self.d.get("source_name") {
+            None => format!(r#"ref="{source_ref}" sheet="{}""#, escape(source_sheet)),
+            Some(Json::String(name)) if !name.is_empty() => format!(r#"name="{}""#, escape(name)),
+            Some(_) => {
+                return Err(format!(
+                    "pivot {}: source_name is a non-empty text",
+                    self.name
+                ))
+            }
+        };
         Ok(format!(
-            r#"<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1"{refresh} createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{}"{extra}><cacheSource type="worksheet"><worksheetSource ref="{source_ref}" sheet="{}"/></cacheSource><cacheFields count="{}">{fields}</cacheFields>{calculated}</pivotCacheDefinition>"#,
+            r#"<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1"{refresh} createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{}"{extra}><cacheSource type="worksheet"><worksheetSource {source}/></cacheSource><cacheFields count="{}">{fields}</cacheFields>{calculated}</pivotCacheDefinition>"#,
             self.records,
-            escape(source_sheet),
             self.fields.len()
         ))
     }

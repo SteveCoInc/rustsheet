@@ -1,6 +1,9 @@
 //! Day and month name tokens of a date section (`ddd`, `dddd`, `mmm`, `mmmm`, `mmmmm`), and the
 //! Hijri calendar of the `B2` prefix. Evidence for Hijri: probes/t1613-hijri-b2 and
 //! t1613-hijri-b2-weekday (excel-graph, 2026-10-25); number-formats.md "The `B2` (Hijri) calendar".
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_excessive_bools)]
+// LINT-DEBT-END
 
 use super::{
     calendar_dates::real_day,

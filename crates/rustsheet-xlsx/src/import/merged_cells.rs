@@ -1,9 +1,8 @@
 //! A sheet's merged ranges on import: keeping the first of any that intersect, in time close to
-//! linear in their number (T-3454), directive 5: a few MB of `<mergeCell>`s are about 10^5
-//! ranges, each able to name the whole sheet. Their covered cells keep what they hold, as Excel's
-//! do (docs/excel-semantics/xlsx-storage.md "A merged range keeps the values of its covered
-//! cells", fixtures/merged-covered-values; docs/specs/SPEC-0036, T-4722), so nothing walks the
-//! area a range names (the old clearing sweep was T-3442's).
+//! linear in their number (T-3454; directive 5: a few MB of `<mergeCell>`s are about 10^5 ranges,
+//! each able to name the whole sheet). Covered cells keep their stored content, as in Excel
+//! (SPEC-0036 I1; docs/excel-semantics/xlsx-storage.md "A merged range keeps the values of its
+//! covered cells").
 
 use std::collections::BTreeMap;
 

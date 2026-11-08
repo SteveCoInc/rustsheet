@@ -234,16 +234,11 @@ fn item_filter(
     let records = &cache_field.records;
     let mut malformed = false;
     kept.records.retain(|&record| {
-        match records
+        let keep = records
             .get(record as usize)
-            .and_then(|&item| keeps.get(item as usize))
-        {
-            Some(&keep) => keep,
-            None => {
-                malformed = true;
-                false
-            }
-        }
+            .and_then(|&item| keeps.get(item as usize));
+        malformed |= keep.is_none();
+        keep.copied().unwrap_or(false)
     });
     if malformed {
         return Err(PivotComputeError::Malformed);
@@ -287,9 +282,8 @@ impl<'a> ItemTest<'a> {
     /// `filter`'s test, its texts folded and its numbers parsed once, the folding charged first.
     fn compile(filter: &'a PivotFilter, work: &mut u64) -> Result<Self, PivotComputeError> {
         Ok(match &filter.criteria {
-            FilterCriteria::Everything => Self::Every,
             // A Top-N criterion under a caption or date type is unprobed (UNVERIFIED, T-4799).
-            FilterCriteria::Top10 { .. } => Self::Every,
+            FilterCriteria::Everything | FilterCriteria::Top10 { .. } => Self::Every,
             FilterCriteria::Nothing => Self::Nothing,
             FilterCriteria::Dynamic(dynamic) => Self::Dynamic(*dynamic),
             FilterCriteria::Values {
@@ -520,13 +514,16 @@ impl DynamicDate {
                 let Some((this_year, this_month, _)) = ymd(today) else {
                     return false;
                 };
+                let offset_days = f64::from(offset);
                 let offset = i64::from(offset);
                 let day = serial.floor();
                 match unit {
-                    RelativeUnit::Day => day == today + offset as f64,
+                    // Whole serial days, so exact equality is the day test.
+                    #[expect(clippy::float_cmp, reason = "both sides are whole serial days")]
+                    RelativeUnit::Day => day == today + offset_days,
                     RelativeUnit::Week => {
                         // Serial 1 (1900-01-01) is a Sunday in Excel's calendar.
-                        let start = today - (today - 1.0).rem_euclid(7.0) + 7.0 * offset as f64;
+                        let start = today - (today - 1.0).rem_euclid(7.0) + 7.0 * offset_days;
                         (start..start + 7.0).contains(&day)
                     }
                     RelativeUnit::Month => {
@@ -555,6 +552,11 @@ impl DateGroupItem {
         };
         let seconds = ((serial - serial.floor()) * 86_400.0).round();
         // Within a day, so it fits.
+        #[expect(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            reason = "seconds is a whole number in 0..=86400"
+        )]
         let seconds = seconds as u32;
         let parts = [
             u32::try_from(year).ok() == u32::try_from(self.year).ok(),
