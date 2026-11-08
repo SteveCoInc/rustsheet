@@ -92,7 +92,8 @@ Research only; no engine behavior changes. Eval delta: +8 passing cells (new cas
 probes/t4865-beta-inv-huge-alpha-near-one, 8/8), no regressions.
 - New probe probes/t4865-beta-inv-huge-alpha-near-one (8 cells, excel-graph): the shape-above-1E5 branch of
   `upper_quantile_near_one` (`BETA.INV(1-1E-12,2E5,0.1)` = 1; `#NUM!` where y underflows, both forms) and the
-  hand-derived bounds row `BETA.INV(1-1E-9,10,0.03,3,5)` = 5 (A5), all matching. beta.rs's TODO(T-4865) and the
+  hand-derived bounds row `BETA.INV(1-1E-9,10,0.03,3,5)` = 5 (A5), all matching. Both points this task listed
+  underflow (`#NUM!`, A1, A2), so A7 `BETA.INV(1-1E-12,2E5,0.1)` (y about 3E-126) was added to reach the branch's 1. beta.rs's TODO(T-4865) and the
   unit test's "needs oracle confirmation" note now cite it.
 - docs/research/t4865: the replay (iteration_counts.py, replay_all.py and its output), the kernel probe generator, case
   and Excel fill (gen_kernel_probe.py, kernel_probe.*), and the replay on Excel's values (replay_excel_kernel.py).
