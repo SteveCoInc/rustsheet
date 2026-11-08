@@ -2739,6 +2739,7 @@ C	probes/t4847-xmatch-binary-text-collation.case.json	192
 C	probes/t4848-sixteenth-digit-ties.case.json	98
 C	probes/t4848-tie-complex-part.case.json	15
 C	probes/t4848-tie-fraction-format.case.json	15
+C	probes/t4851-number-text-whitespace.case.json	100
 C	probes/t4857-f-kinds.case.json	669
 C	probes/t4860-fraction-tail-no-pre-point-lacking.case.json	24
 C	probes/t4861-indirect-r1c1-shaped-sheet-prefix.case.json	42
