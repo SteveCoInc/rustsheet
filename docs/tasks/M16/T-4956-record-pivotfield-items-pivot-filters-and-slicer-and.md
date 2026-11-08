@@ -3,7 +3,7 @@ id: T-4956
 title: "Record pivotField items, pivot filters and slicer and timeline caches in the oracle sidecar snapshot"
 milestone: M16
 lane: harness
-status: done
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -49,3 +49,15 @@ is VERIFIED from the sidecars, with corrections: slicer items follow the `tabula
 North, East), `xr10:uid` is on the shapes too, and the save also drops `slicerData="0"`, clears the pivot's own
 `h="1"` on a selected item, and adds `<items>` on the timeline's date field and an `xlpdsc:dataSourceClean`
 extension. The `tableSlicerCache` claim stays UNVERIFIED: T-5071.
+
+## Handoff (2026-11-08)
+Work stopped before the PR. The branch `ccr-56acd608-c5kt9z-t4956` holds the change, based on main at 6f0c3d8e5; rebase it before opening the PR. Commits: a22769698 (the snapshot and the refill) and 792d7c3d7 (the review fixes).
+- Reviews of a22769698:
+  - reviewer-design APPROVE; its two minors are fixed in 792d7c3d7.
+  - reviewer-excel-fidelity APPROVE; its one minor (timeline `mc:Ignorable`) is fixed in 792d7c3d7.
+  - reviewer-security REQUEST_CHANGES:
+    - [BLOCKING] slicers.rs `attach` cloned shapes before charging the budget.
+    - [MAJOR] xml_tree.rs charged bytes, not per-node memory.
+  - 792d7c3d7 fixes both (pay-before-clone with an early return; `ELEMENT_COST`/`ATTR_COST` = 64), with a new test. **Security has not re-reviewed 792d7c3d7.** Get its APPROVE first.
+- The implementer reports that `make check-fast` passes on 792d7c3d7 and that `new_case_owners` passes. The refilled sidecars equal main's in every value and text.
+- Left to do: security re-review, rebase onto main, `make check-fast`, then the PR (verdict table) and auto-merge.
