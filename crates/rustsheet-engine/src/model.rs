@@ -44,7 +44,6 @@ use crate::{
         ArrayKind, Cell, CellType, Color, FormulaValue, Link, SheetProperties, SheetState,
         SpillValue, Style, Theme, Workbook,
     },
-    utils as common,
 };
 
 use crate::arithmetic::bcast_get;
@@ -1729,7 +1728,7 @@ impl Model {
     ) -> Result<(), String> {
         let style_index = self.get_cell_style_index(sheet, row, column)?;
 
-        let new_style_index = if common::value_needs_quoting(value, self.language) {
+        let new_style_index = if self.text_needs_quote_prefix(value) {
             self.workbook
                 .styles
                 .get_style_with_quote_prefix(style_index)?
@@ -1979,15 +1978,7 @@ impl Model {
                 let node = self.parse_cell_formula(sheet, row, column, formula)?;
                 self.set_formula_node_with_units(sheet, row, column, node, new_style_index)?;
             } else {
-                // The list of currencies is '$' and the local currency. A euro sign is not
-                // one in en-US: typed `1€` stays text (probes/typed-currency-percent-input
-                // B23:C26, T-1335); VALUE() still reads it (cast.rs).
-                let mut currencies = vec!["$"];
-                let currency = &self.locale.currency.symbol;
-                if !currencies.iter().any(|e| e == currency) {
-                    currencies.push(currency);
-                }
-
+                let currencies = self.typed_currencies();
                 //  We try to parse as number
                 let (year, ds) = (|| self.current_year(), self.workbook.settings.date_system);
                 if let Ok((v, number_format)) =
