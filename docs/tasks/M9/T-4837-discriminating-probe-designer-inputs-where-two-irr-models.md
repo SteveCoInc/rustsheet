@@ -3,7 +3,7 @@ id: T-4837
 title: "Discriminating-probe designer: inputs where two IRR models disagree"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
