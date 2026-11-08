@@ -7,12 +7,13 @@ conflict), when the conflict is only in the eval-gated known-failure lists (deci
 In this checkout, which must have no local changes, it does the following:
 - merges `main` into the PR's branch without committing;
 - refuses any conflict outside the lists CI's eval gate checks (`checked_baselines`: the
-  gated suites the eval job runs without a fetch, and the visible-parity lock);
+  gated suites the eval job runs without a fetch, the visible-parity lock and the usage-tier lock);
 - takes `main`'s side of each conflicted known-failure list, resolves a conflicted visible-parity
   lock three-way per case from the merge base (`visible_lock.merge_visible`, decision 0219), and
   runs `make eval-baseline NEW_CASES=<the case files the PR adds>`, which re-records the lists,
   refuses regressions (decision 0093) and records visible-parity lines only for those cases
-  (0219);
+  (0219), and the usage-tier lock (decision 0355 item 6): main's side, re-recorded;
+- refuses if the merged usage-tier lock has a tier unmet that main has met (T-5096);
 - refuses if the re-record changed any other file, such as quality/evidence-floor.json;
 - commits everything as one merge commit and pushes it to the PR branch (never forced);
 - returns to the checkout's original branch or commit.
@@ -42,6 +43,9 @@ BASELINE_DIR = "eval/baseline/"
 # `main` is fetched here, for the same reason as the PR head below.
 BASE_REF = f"refs/merge-catchup/{BASE_BRANCH}"
 RERECORD = ("make", "-s", "eval-baseline")
+# The usage-tier lock (decision 0355 item 6, `gate_tiers::Lock`): one `<tier>\t<met|unmet>` line per
+# tier, written only by `rustsheet-eval update-baseline`.
+USAGE_GATES = f"{BASELINE_DIR}usage-gates.txt"
 # The PR head is fetched here, not into a remote-tracking ref a single-branch clone may lack.
 HEAD_REF = "refs/merge-catchup/head"
 
@@ -66,11 +70,30 @@ def fetch_base(root: Path) -> None:
 def checked_baselines(root: Path) -> set[str]:
     """The lists CI's eval gate checks against the engine, on the `main` that `fetch_base`
     fetched: `eval/baseline/<suite>.txt` of every suite with `gate = true` and no `[fetch]` (the
-    eval job fetches nothing), and the visible-parity lock (decision 0219). Fetched suites (poi,
-    corpus-bench) and ungated ones are out."""
+    eval job fetches nothing), the visible-parity lock (decision 0219) and the usage-tier lock
+    (decision 0355 item 6, T-5096). Fetched suites (poi, corpus-bench) and ungated ones are out."""
     suites = suites_on(root, BASE_REF)
     # CI names each list after the suite's `name`.
-    return {visible_lock.VISIBLE_PARITY} | {f"{BASELINE_DIR}{s.name}.txt" for s in suites if s.gated and not s.fetched}
+    locks = {visible_lock.VISIBLE_PARITY, USAGE_GATES}
+    return locks | {f"{BASELINE_DIR}{s.name}.txt" for s in suites if s.gated and not s.fetched}
+
+
+def tier_states(text: str) -> dict[str, str]:
+    """The usage-tier lock's `tier -> met|unmet`; comments, blank and malformed lines are skipped."""
+    states: dict[str, str] = {}
+    for line in text.splitlines():
+        parts = line.split("\t")
+        if line.startswith("#") or len(parts) != 2:
+            continue
+        states[parts[0]] = parts[1]
+    return states
+
+
+def tier_flips(head: str, main: str) -> list[str]:
+    """The tiers `main`'s usage-tier lock has met that `head`'s lock has unmet (or lacks): a catch-up
+    never records that, since only `update-baseline --allow-regressions` may (decision 0355 item 6)."""
+    merged = tier_states(head)
+    return sorted(t for t, state in tier_states(main).items() if state == "met" and merged.get(t) != "met")
 
 
 def conflicts_outside(root: Path, head: str, main: str) -> list[str] | None:
@@ -171,6 +194,13 @@ def catch_up(
         raised = visible_lock.visible_rises(lock, main_lock, visible_lock.case_on(root, main))
         if raised:
             raise Refused(f"{visible_lock.VISIBLE_PARITY} has a line above main's ({raised[0]}): merge by hand")
+        # The usage-tier check: the re-record refuses met -> unmet already; this holds the pushed tree
+        # to it whatever the re-record did (decision 0355 item 6).
+        tiers_path = root / USAGE_GATES
+        tiers = tiers_path.read_text(encoding="utf-8") if tiers_path.exists() else ""
+        flipped = tier_flips(tiers, git("show", f"{main}:{USAGE_GATES}", root=root, check=False).stdout)
+        if flipped:
+            raise Refused(f"{USAGE_GATES} has {', '.join(flipped)} unmet where {BASE_BRANCH} has it met")
         recorded = git("diff", "--name-only", root=root).stdout.split()
         others = sorted(p for p in recorded if p not in lists)
         if others:
