@@ -6,14 +6,16 @@ from __future__ import annotations
 REGENERATE = "make eval && make progress-report"
 
 
-def pct(part: int, whole: int) -> str:
-    """`part/whole` as a percentage with two decimals that never rounds up to 100 or down to 0."""
+def pct(part: int, whole: int, decimals: int = 2) -> str:
+    """`part/whole` as a percentage with `decimals` decimals that never rounds up to 100 or down
+    to 0 (the tier gates' bars need four: 99.99%)."""
     if whole == 0:
         return "\N{EN DASH}"
     value = 100 * part / whole
     if 0 < part < whole:
-        value = min(max(value, 0.01), 99.99)
-    return f"{value:.2f}%"
+        step = 10.0**-decimals
+        value = min(max(value, step), 100 - step)
+    return f"{value:.{decimals}f}%"
 
 
 # Markdown table cell text: a pipe would split the cell, `<`/`>` could open raw HTML, a backtick a
