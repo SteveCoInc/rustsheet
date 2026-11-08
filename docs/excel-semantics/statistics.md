@@ -4392,16 +4392,22 @@ Rule: two regions of T.DIST, T.DIST.RT, T.DIST.2T and TDIST outside "Student t t
   `T.DIST.2T(0.5,1)` = 0.7048327646991335, `T.DIST.2T(1,1)` = 0.5000000000000001, `T.DIST.RT(0.5,1)` and
   `T.DIST(0.5,1,TRUE)` (probes-numeric m9-t-dist-2t A2-A4, m9-t-dist-rt A3, A4, m9-t-dist-cdf A3) are the same bits
   either way.
-- an integer df n above 1000 (the integer-df series bound) and t < 1: L is the Student-t central fraction on z,
+- an integer df n above 1000 (the integer-df series bound) and t < 0.99: L is the Student-t central fraction on z,
   t²/n and n/t², never the rounded y. The kernel's bpser prefactor cancels in its logarithm there:
   `T.DIST.2T(0.5,1E+8)` = 0.6170750785521777 (gen-m9/787ba8d801105a60 A91) is 6 ulp off through the kernel and 2
   through the fraction. The bound is exclusive: at df 1000 the kernel is Excel's bits (`T.DIST.RT(.5,1000)` =
   0.30859254041693746, probes-numeric m9-t-dist-rt A123; t0969-t-tail-grid B1553) and the fraction is not, so
-  `n >= 1000` regresses those cells. df 999 keeps the kernel; df 1001 has no probed cell (a probe of df 999/1000/1001
-  is pending).
+  `n >= 1000` regresses those cells. df 999 keeps the kernel. The probe of df 999/1000/1001
+  (probes/t4974-t-dist-df1000-central-endpoint) confirms the exclusive bound, and shows the region ends short of
+  t = 1: the fraction is Excel's bits at df 1001 for t up to 0.85 (G2, H2, I8 and others), neither form is from
+  t = 0.8513 to 0.95, and from t = 0.999999 the kernel is again Excel's bits at every df from 1001 to 1E10
+  (`T.DIST.2T(0.999999,1001)` = 0.3175526601765737 and F6:F9 of t4974-t-dist-df1-and-large-df-centre;
+  `T.DIST.RT(1-2^-53,1001)` = 0.15877608823825565, G21:I21), where the fraction is 1 to 3 ulp off. The cut is
+  bracketed in (0.95, 0.999999] and set at 0.99 (FITTED).
 Evidence: the cells above (excel-graph); docs/research/excel-parity-findings-2026-11-07.md item 9.
-Implemented in: functions/statistical/student_t.rs `unflushed_upper_tail` (df 1), `large_df_centre_tail`.
-Status: VERIFIED (excel-graph) at the cited cells; df 1001 to 1E6 inferred from the 1E6 and 1E8 cells
+Implemented in: functions/statistical/student_t.rs `unflushed_upper_tail` (df 1), `large_df_centre_tail`,
+`CENTRE_TAIL_MAX_T`.
+Status: VERIFIED (excel-graph) at the cited cells; the t cut inside (0.95, 0.999999] is not located
 Tasks: T-2930, T-4975
 
 ## F's incomplete-beta arguments keep r >= 1 (T-3567)
@@ -6420,7 +6426,10 @@ LOGNORM.INV does scale the stored z (next entry). Between |q| = 0.5 and PPND16's
   where the earlier closed form gave 6.661338147750939E-16.
 - `NORM.INV(0.500001994711402,0,1E6)` = 5.0000000001370815.
 This explains NORMINV's cancellation cell, not the remaining central NORM.S.INV / NORM.INV misses (up to about
-22 ulp; the entry above).
+22 ulp; the entry above). Against statrs' closed form (main before T-4975) the rational is Excel's bits on 23 more
+literal central cells of probes-numeric t1746/m9/t1048 and statrs on 14 more, interleaved over the whole region
+(|q| from 0.005 to 0.455; T-4975 follow-up); no region separates them. The best single cut,
+statrs for |q| <= 0.115, nets +12 probes-numeric cells and is a fit to interleaved points, so it is not taken.
 Evidence: calipers roundtrip/formula_stress_test golden.xlsx Statistical!B42, B46 (Excel-saved); ironcalc-calc
 STATISTICAL/NORM_DIST.xlsx 'NORM.DIST NORM.INV'!F28 (Excel-authored cached value); addendum 2 of the 2026-11-07
 parity findings, section F.
@@ -9308,6 +9317,15 @@ So `LOGNORM.DIST(1,0,1,FALSE)` is EXP(-0.9189385332046728) = 0.39894228040143265
 and `LOGNORM.DIST(10,0.2,3.14159,FALSE)` 0.010150659136505528 (caa1eed48b1883fe A250).
 Evidence: the cells cited (excel-graph); the research prototype (findings item 10) matched all 120 density-sweep cells of
 m9-normpdf-lognorm-dist and 200 Gate A points.
+Holdout (probes/t4974-lognorm-density-holdout, T-4975 follow-up): the rule as written is 140/148, not the prototype's
+reported 148/148. Seven of the misses are row 4, x = EXP(mean) as a 15-digit literal (d about 1E-15, half about
+1E-30), 1 ulp off (`LOGNORM.DIST(2.71828182845905,1,0.1,FALSE)` Excel 1.4676266317373963, ours ...965; C4, D4, E4, K4,
+L4, Q4, S4); the eighth is U8, `LOGNORM.DIST(2.718281828459045,1,0.5,FALSE)` (d = 0). There the result rests on the
+rounding of LN(sigma) + ln √(2π) + LN(x) alone, and no form tried fits that row and the rest: LN(2.5066282746310007)
+through Excel's LN is the same double as the constant; the one-ulp-lower 0.9189385332046727 fits the seven and loses
+166 others; summing half last, or `EXP(-((LN(sigma) + c) + LN(x)))` for a negligible half, fits the seven and loses
+A4, H4, I4, M4:P4 and T4; regrouping the residuals (`e1 + (e2 + e3)`, `e3 + e2 + e1`, `p + p·e`) changes nothing or
+loses. Main's closed form `EXP(-z²/2)/(x·√(2π)·sigma)` is right on C4, D4, K4 and L4 only.
 Ours: `lognormal_density` (functions/statistical/log_normal.rs) since T-4975.
 Status: VERIFIED (excel-graph)
 Tasks: T-4321, T-4975
@@ -9319,10 +9337,21 @@ equations; Microsoft documents LINEST as a QR since Excel 2003. The structural m
   ones, then the x columns are pivoted, the remaining column of largest norm first (the later on a tie). The intercept
   is `ȳ - Σ βj x̄j`: `LINEST(B2:B9,A2:A9)`'s intercept 0.0357142857142847 is that cancellation at 9.025 (linest-modes L1).
 - Each reflector is `v = x - alpha e1`, `alpha = -sign(head)·|x|`, `|v|² = new_head² + tail` with the unchanged tail
-  summed on its own, and each target reflects as `t -= (v·t)·(2/|v|²)·v`, the dot summed in row order from the head.
-  The pivot column is reflected too, and its new head (not alpha) is R's diagonal, so a y proportional to it gives the
-  exact ratio: the two-point `LINEST(A12:A13,B12:B13)` is exactly 0.5 and -1.5 (linest-modes K134:L134), where an
-  alpha diagonal gives 0.49999999999999994.
+  summed on its own, and each target reflects as `t -= s·v`, the dot `v·t` summed in row order from the head. A data
+  column's reflector divides the doubled dot, `s = (2·(v·t))/|v|²`, and R's diagonal is alpha; the constant's
+  reflector (the column of ones) multiplies by a stored `2/|v|²` (its diagonal is not used). The two-point
+  `LINEST(A12:A13,B12:B13)` is still exactly 0.5 and -1.5 (linest-modes K134:L134).
+  T-4975's first model (every reflector `(v·t)·(2/|v|²)`, the reflected pivot head as diagonal) missed one-variable fits
+  without a constant by 1 to 1022 ulp: `LOGEST(D2:D9,A2:A9,FALSE)` 1.9295282207785776 (ours ...778), the
+  t4590-growth-overflow Slope rows (`GROWTH({1.59162664037792E+91,...},{0.3,0.4,0.5},0.4,FALSE)`
+  4.0036392008717847E+121, ours ...2012E+121) and t4765-growth-factor-edges NoConst!A1, A4. The divided scale with the
+  alpha diagonal gives Excel's bits on all of them, on ironcalc TREND_GROWTH.xlsx E2:E4 (which no other form tried
+  fits), and keep t4222-regression-flag-ranges A51 (`LINEST` slope 1.2000000000000002 where `Σxy/Σx²` = 66/55 rounds
+  to 1.2), so Excel's no-constant slope is not `Σxy/Σx²`, correctly rounded or not. Measured on the full eval (T-4975
+  follow-up): +162 / -7 cells against the first model; the same form in the constant's reflector too is +208 / -17
+  but moves LINEST_LOGEST.xlsx D2:E2 and G2:H2 off Excel's bits; the alpha diagonal alone +90 / -31; the plain
+  `Σxy/Σx²` slope special case +39 / -10. Still off: ironcalc TREND_GROWTH.xlsx F2, F3, F6 (`TREND(A2:A6)`, 1 ulp,
+  Excel's bits under the first model), linest-modes K85/L85/N85, growth-modes K169 and t4222 B32.
 - Collinear columns (rest at most 1E-10 of the column's norm, carried over, unprobed: T-2569) are dropped with
   coefficient 0, standard error 0, and the degrees of freedom count only the kept ones.
 - Statistics: ss_resid is the sum of squares of `Qᵀy` past the rank, ss_reg is ss_tot less it (linest-modes K12
@@ -9335,11 +9364,11 @@ x reflectors' alpha always positive 350; with the sign flipped only without a co
 (205 points): normal equations 100, the kept model 120. One-variable evidence cells (python replay): the kept model fits
 linest-modes K134 and K183, LINEST_LOGEST.xlsx D2, G2 and G4 and growth-modes K6/K8 (the GROWTH fit); it misses
 linest-modes K1 (1.9976190476190474; every variant tried gives ...472, ...476 or ...478) and Gate A LINEST A184.
+(These counts predate the follow-up's divided scale; Gate A stays inside the envelope with it, and the known failures
+accuracy/LOGEST/s1 A98 and A110 come inside it.)
 Left open (the model's misses, Excel's arithmetic not identified): the noise coefficients of linest-modes K106:P107 (y in x,
-Excel 1.4E-16 where ours is 0 and F 3.1E+34 where ours is `#NUM!`); one-variable fits without a constant on
-linest-modes/logest-modes/growth-modes D2:D9 against A2:A9 (`LOGEST(D2:D9,A2:A9,FALSE)` 1.9295282207785776, ours ...778;
-the normal equations' `Σxy/Σx²` gives Excel's value there, and on LINEST_LOGEST.xlsx G4, but loses 20 const=FALSE Gate A
-points); Gate A LINEST/s1 A184 (an intercept over x from 1E-44 to 8.8E+33: Excel 5206016, one ulp of slope off the
+Excel 1.4E-16 where ours is 0 and F 3.1E+34 where ours is `#NUM!`); Gate A LINEST/s1 A184 (an intercept over x from
+1E-44 to 8.8E+33: Excel 5206016, one ulp of slope off the
 exact fit; ours 5201920, six ulp of slope off; outside the envelope).
 Evidence: probes/linest-modes, logest-modes, growth-modes, regression-trend (excel-graph); ironcalc-calc
 LINEST_LOGEST.xlsx and TREND_GROWTH.xlsx (Excel-cached); eval/accuracy/tables/{LINEST,LOGEST,TREND,GROWTH}/s1.
