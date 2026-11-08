@@ -60,7 +60,7 @@ use crate::expressions::token::{OpCompare, OpProduct, OpSum};
 use crate::language::Language;
 use crate::locale::Locale;
 
-use super::token::{starts_with_getting_data, Error, TokenType};
+use super::token::{formula_error_prefix, Error, TokenType};
 use super::types::{ParsedRange, ParsedReference};
 use super::utils;
 use peek::Peeked;
@@ -800,49 +800,10 @@ impl Lexer {
 
     // Reads an error from the input stream
     fn consume_error(&mut self) -> TokenType {
-        let errors = &self.language.errors;
         let rest_of_formula: String = self.chars[self.position - 1..self.len].iter().collect();
-        if rest_of_formula.starts_with(&errors.r#ref) {
-            self.position += errors.r#ref.chars().count() - 1;
-            return TokenType::Error(Error::REF);
-        } else if rest_of_formula.starts_with(&errors.name) {
-            self.position += errors.name.chars().count() - 1;
-            return TokenType::Error(Error::NAME);
-        } else if rest_of_formula.starts_with(&errors.value) {
-            self.position += errors.value.chars().count() - 1;
-            return TokenType::Error(Error::VALUE);
-        } else if rest_of_formula.starts_with(&errors.div) {
-            self.position += errors.div.chars().count() - 1;
-            return TokenType::Error(Error::DIV);
-        } else if rest_of_formula.starts_with(&errors.na) {
-            self.position += errors.na.chars().count() - 1;
-            return TokenType::Error(Error::NA);
-        } else if rest_of_formula.starts_with(&errors.num) {
-            self.position += errors.num.chars().count() - 1;
-            return TokenType::Error(Error::NUM);
-        } else if rest_of_formula.starts_with(&errors.error) {
-            self.position += errors.error.chars().count() - 1;
-            return TokenType::Error(Error::ERROR);
-        } else if rest_of_formula.starts_with(&errors.nimpl) {
-            self.position += errors.nimpl.chars().count() - 1;
-            return TokenType::Error(Error::NIMPL);
-        } else if rest_of_formula.starts_with(&errors.spill) {
-            self.position += errors.spill.chars().count() - 1;
-            return TokenType::Error(Error::SPILL);
-        } else if rest_of_formula.starts_with(&errors.calc) {
-            self.position += errors.calc.chars().count() - 1;
-            return TokenType::Error(Error::CALC);
-        } else if rest_of_formula.starts_with(&errors.null) {
-            self.position += errors.null.chars().count() - 1;
-            return TokenType::Error(Error::NULL);
-        } else if rest_of_formula.starts_with(&errors.circ) {
-            self.position += errors.circ.chars().count() - 1;
-            return TokenType::Error(Error::CIRC);
-        } else if starts_with_getting_data(&rest_of_formula) {
-            // An en-US constant, matched in any case (SPEC-0003). `#BLOCKED!`, `#CONNECT!` and
-            // `#FIELD!` stay unparseable, as Excel refuses them (T-0175).
-            self.position += "#GETTING_DATA".len() - 1;
-            return TokenType::Error(Error::GETTINGDATA);
+        if let Some((error, len)) = formula_error_prefix(&rest_of_formula, self.language) {
+            self.position += len - 1;
+            return TokenType::Error(error);
         }
         // If it is not an error it _might_ be a spill operator.
         TokenType::Spill

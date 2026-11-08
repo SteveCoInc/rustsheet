@@ -77,7 +77,7 @@ pub(super) fn saved_number(v: f64) -> f64 {
 /// except the kinds Excel rejects as stored literals, which are saved as `#VALUE!`:
 /// - `#SPILL!`, `#CALC!`, `#CONNECT!`, `#BLOCKED!` and `#FIELD!` (T-0999). Excel keeps the kind in
 ///   `vm` rich-value metadata, which the cell also gets ([`vm_attribute`], T-1014).
-/// - The engine-only `#CIRC!`, `#ERROR!` and `#N/IMPL` (T-1133, docs/excel-semantics/syntax.md).
+/// - The engine-only `#CIRC!`, `#ERROR!` and `#N/IMPL!` (T-1133, docs/excel-semantics/syntax.md).
 ///
 /// The eval harness must not use this fallback: it scores through `Error::stored_literal`.
 pub(crate) fn exported_error_literal(error: &Error) -> &'static str {

@@ -44,7 +44,7 @@ fn upper_lower_broadcast_over_range() {
 }
 
 // Regression for Crossword.xlsx: SUMPRODUCT over array text operations
-// (`(range<>"#") * (UPPER(range&"") = UPPER(range&""))`) used to return #N/IMPL
+// (`(range<>"#") * (UPPER(range&"") = UPPER(range&""))`) used to return #N/IMPL!
 // because `&` and UPPER did not broadcast over arrays.
 #[test]
 fn sumproduct_with_array_text_ops() {
