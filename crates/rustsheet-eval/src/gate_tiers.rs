@@ -26,7 +26,7 @@ use crate::catalog::{Catalog, Usage};
 use crate::closeness::sole_call;
 use crate::formula_calls::{calls_only_in_scope, functions_in};
 pub use crate::lock_file::LockError;
-use crate::milestone_exit::{meets_rate, RATE_DEN};
+use crate::milestone_exit::{is_pivot_suite, meets_rate, RATE_DEN};
 use crate::phase1_exceptions::Phase1Exceptions;
 use crate::runner::CaseResult;
 use crate::value::Verdict;
@@ -45,12 +45,6 @@ const PROBE_SUITES: [&str; 2] = ["probes", "probes-numeric"];
 
 /// The function decision 0354 leaves to Phase 2 with the pivot suites.
 const PIVOT_FUNCTION: &str = "GETPIVOTDATA";
-
-/// Whether `suite` is a pivot suite (decision 0354): gen-pivot, pivot-export, pivot-corpus-*.
-#[must_use]
-pub fn is_pivot_suite(suite: &str) -> bool {
-    suite == "gen-pivot" || suite == "pivot-export" || suite.starts_with("pivot-corpus-")
-}
 
 /// Whether the tiers count the cells of `suite`: the probe suites and Gate B's, less the pivot
 /// suites.
@@ -538,6 +532,7 @@ mod tests {
         assert_eq!(cells.len(), 2, "{cells:?}");
         assert!(counts_suite("probes-numeric") && counts_suite("calipers"));
         assert!(!counts_suite("pivot-export") && !counts_suite("pivot-corpus-lo"));
+        assert!(!counts_suite("pivot-corpus-closedxml") && !counts_suite("gen-pivot"));
     }
 
     fn tier_of(tiers: &[Tier], usage: Usage) -> &Tier {

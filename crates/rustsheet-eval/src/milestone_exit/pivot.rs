@@ -51,6 +51,15 @@ pub(super) const MILESTONE: &str = "M16";
 pub const GEN_SUITE: &str = "gen-pivot";
 /// The fetched pivot-corpus suites (T-4131); `gate = false`, so a run may lack them.
 pub const CORPUS_SUITES: [&str; 2] = ["pivot-corpus-lo", "pivot-corpus-closedxml"];
+/// The pivot export suite (T-4177), Excel's own pivot output.
+pub const EXPORT_SUITE: &str = "pivot-export";
+
+/// Whether `suite` is one of the pivot suites decision 0354 leaves to Phase 2: [`GEN_SUITE`],
+/// [`EXPORT_SUITE`] and [`CORPUS_SUITES`].
+#[must_use]
+pub fn is_pivot_suite(suite: &str) -> bool {
+    suite == GEN_SUITE || suite == EXPORT_SUITE || CORPUS_SUITES.contains(&suite)
+}
 /// Fewest oracle cells an in-scope catalog row needs (decision 0274 item 6).
 pub const MIN_ORACLE_CELLS: usize = 30;
 /// The `web` value of a row Excel for the web cannot render (decision 0274 item 5).
