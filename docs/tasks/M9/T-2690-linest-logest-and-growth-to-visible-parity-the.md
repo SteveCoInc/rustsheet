@@ -3,7 +3,7 @@ id: T-2690
 title: "LINEST, LOGEST and GROWTH to visible parity: the 113 visibly-off cells of the least-squares solve (visible stage of T-2006)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
