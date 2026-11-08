@@ -970,12 +970,22 @@ IM* parts and fraction digits cut **away from zero**, unlike number text: `COMPL
 "1000000000000030 1/2" and `TEXT(-(1E+15+15.5),"# ?/?")` "-1000000000000020 1/2", while `TEXT(1E+15+25.5,"0")` is
 "1000000000000030" by the shown-place rounding (probes/t4848-tie-fraction-format, 15 cells; excel-graph, 2026-11-08). These
 fraction cells do not tell a cut of the integer part from a cut of the whole value; both give away from zero.
-UNVERIFIED (T-5068): the tie direction of number-cell text and printed literals (`to_excel_precision_str`, toward zero),
-the scientific-format mantissa (toward zero; the probes reach no tie there), comma-scaled fraction values (away, by analogy),
-pivot number-group quotients (toward zero) and conditional-format Equal (it shares `cmp_excel_precision`, away).
+The scientific-format mantissa cuts **toward zero**: `TEXT(1E+15+15,"0.00000000000000E+00")` is "1.00000000000001E+15",
+`1E+15+25` "1.00000000000002E+15", `-(1E+15+15)` "-1.00000000000001E+15", `1E+14+1.5` "1.00000000000001E+14", `1E+14+2.5`
+"1.00000000000002E+14" (away from zero would give ...02, ...03, ...02, ...02, ...03; probes/t5068-tie-number-text-mantissa,
+10 cells, excel-graph, 2026-11-08, T-5068; the engine already matched). The comma-scaled fraction value cuts **toward
+zero** too, unlike the fraction's integer digits: with 85 commas (scale 10) `TEXT(1E+14+1.5,"# ?/?"&…)` is "1000000000000010",
+`1E+14+2.5` "1000000000000020", `1E+15+15` "10000000000000100", `1E+15+25` "10000000000000200" and `-(1E+15+15)`
+"-10000000000000100" (away from zero gives ...20, ...30, ...200, ...300, -...200; the whole-number format `"0"&commas`
+agrees; probes/t5068-tie-number-text-mantissa D1:E5, excel-graph, 2026-11-08; the engine cut away before T-5068).
+Not reachable on excel-graph (T-5068): number-cell text (General `text` of `1E+15+15` is "1E+15", width-independent; desktop
+`.Text` with a wide column might show digits: M14), printed formula literals (Excel reads a literal from its first 15 digits,
+so none holds a tie, see "15-digit literal parsing"), pivot number-group quotients (the group label passes through 15-digit
+display, so the quotient's 16th digit is not shown) and conditional-format Equal (CF outcomes are unobservable on graph,
+T-1171). These keep their current directions (toward zero, toward zero, away) without evidence.
 Status: VERIFIED (the probed operations)
 Implemented in: `cut_to_15_digits` (decimal_round.rs), the one 15-digit cut. It cuts away from zero in `cmp_excel_precision`
-(number_format.rs), the IM* part pre-cut (complex/parse.rs) and fraction digits (formatter/fraction.rs). It cuts toward zero
+(number_format.rs), the IM* part pre-cut (complex/parse.rs) and fraction integer digits (formatter/fraction.rs). It cuts toward zero
 in EXACT (`exact_element`, functions/text/common.rs), `to_excel_precision_str` and every other caller. `number_to_text` keeps
 `significant_15` directly. Tasks: T-4848
 

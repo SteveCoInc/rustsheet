@@ -3,7 +3,7 @@ id: T-5068
 title: "Probe the 16th-digit tie direction of number-cell text, the scientific mantissa, comma-scaled fractions and pivot number groups (T-4848 follow-up)"
 milestone: M1
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,3 +31,9 @@ t4848-tie-fraction-format). numbers.md "A 16th-digit tie splits by use" still li
 
 ## Out of scope
 -
+
+## Outcome
+Probed probes/t5068-tie-number-text-mantissa (25 cells, excel-graph). The scientific mantissa cuts a 16th-digit tie toward
+zero (engine already matched). The comma-scaled fraction value also cuts toward zero, so `fraction.rs` now passes
+`tie_away = false` there (was away). Number-cell text, literals, pivot groups and CF Equal are unreachable on excel-graph
+(reasons in numbers.md "A 16th-digit tie splits by use") and keep their current direction. Eval delta: 0 fixed, 0 regressions.
