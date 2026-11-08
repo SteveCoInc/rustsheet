@@ -245,8 +245,6 @@ fn a_subtotal_captions_item_copies_are_bounded_before_they_are_made() {
     table.row_fields.push(crate::pivot::AxisField::Field(1));
     table.column_fields.clear();
     table.fields[1].axis = Some(crate::pivot::Axis::Row);
-    // Subtotals below their items, so each is a line of its own.
-    table.fields[0].subtotal_top = false;
     table.fields[0].outline = false;
     table.fields[0].subtotal_caption = Some("?-?".into());
     let mut work = MAX_PIVOT_WORK;

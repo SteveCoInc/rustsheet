@@ -139,6 +139,17 @@ pub enum CellFormat {
     Code(&'static str),
 }
 
+impl CellFormat {
+    /// The format code: an id's as the workbook's `num_fmts` resolve it (an id they do not hold
+    /// is General, as `get_num_fmt` reads it), or the code itself.
+    pub(crate) fn code(self, num_fmts: &[NumFmt]) -> String {
+        match self {
+            CellFormat::Id(id) => get_num_fmt(i32::try_from(id).unwrap_or(0), num_fmts),
+            CellFormat::Code(code) => code.to_string(),
+        }
+    }
+}
+
 /// The format of a date item's label (pivots.md "Item casing when cache and source disagree, and
 /// date items"): Excel shows it as `m/d/yyyy`, with ` h:mm` when it has a time part, whatever the
 /// source cells' format. probes/t2085-getpivotdata-items D!A4:A6 and t4130-pivot-date-filters
@@ -213,11 +224,7 @@ pub(crate) fn item_text_in(item: &CacheItem, id: u32, num_fmts: &[NumFmt]) -> St
 fn item_text_as(item: &CacheItem, format: CellFormat, num_fmts: &[NumFmt]) -> String {
     match item {
         CacheItem::Number(value) | CacheItem::Date(value) => {
-            let code = match format {
-                CellFormat::Id(id) => get_num_fmt(i32::try_from(id).unwrap_or(0), num_fmts),
-                CellFormat::Code(code) => code.to_string(),
-            };
-            format_number(*value, &code, LABEL_LOCALE).text
+            format_number(*value, &format.code(num_fmts), LABEL_LOCALE).text
         }
         other => item_text(other),
     }

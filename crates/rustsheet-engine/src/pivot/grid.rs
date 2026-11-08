@@ -43,7 +43,6 @@ use super::{
 use crate::expressions::parser::parse_range;
 use crate::expressions::token::Error;
 use crate::model::Model;
-use crate::number_format::get_num_fmt;
 use crate::types::{sheet_names_match, Cell};
 
 /// Why a pivot could not be refreshed or laid out; the grid and the pivot are then as they were.
@@ -782,13 +781,7 @@ impl Model {
         column: i32,
         format: CellFormat,
     ) -> Result<(), String> {
-        let code = match format {
-            CellFormat::Id(num_fmt_id) => {
-                let id = i32::try_from(num_fmt_id).unwrap_or(0);
-                get_num_fmt(id, &self.workbook.styles.num_fmts)
-            }
-            CellFormat::Code(code) => code.to_string(),
-        };
+        let code = format.code(&self.workbook.styles.num_fmts);
         let mut style = self.get_style_for_cell(sheet, row, column)?;
         if style.num_fmt == code {
             return Ok(());
