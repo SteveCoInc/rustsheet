@@ -92,46 +92,22 @@ impl ErrorKind {
         }
     }
 
-    /// The en-US literal as stored in xlsx files and accepted in formulas.
-    ///
-    /// A static mirror of the engine's literal table; `tests::literals_match_engine` keeps the
-    /// two in sync.
+    /// The en-US literal as stored in xlsx files and accepted in formulas: the engine's
+    /// literal table (`Error::english_literal`).
     #[must_use]
     pub fn literal(self) -> &'static str {
-        match self {
-            Self::Null => "#NULL!",
-            Self::Div0 => "#DIV/0!",
-            Self::Value => "#VALUE!",
-            Self::Ref => "#REF!",
-            Self::Name => "#NAME?",
-            Self::Num => "#NUM!",
-            Self::NA => "#N/A",
-            Self::Spill => "#SPILL!",
-            Self::Calc => "#CALC!",
-            Self::Circ => "#CIRC!",
-            Self::NotImplemented => "#N/IMPL!",
-            Self::Unknown => "#ERROR!",
-            Self::GettingData => "#GETTING_DATA",
-            Self::Connect => "#CONNECT!",
-            Self::Blocked => "#BLOCKED!",
-            Self::Field => "#FIELD!",
-            Self::Busy => "#BUSY!",
-        }
+        self.to_engine().english_literal()
     }
 
     /// The literal Excel stores for this error in a workbook cell: `#N/A` for
     /// [`ErrorKind::GettingData`], [`ErrorKind::literal`] otherwise (SPEC-0003, "Stored form").
-    /// `tests::stored_literals_match_engine` keeps this in step with the engine's
-    /// `Error::stored_literal`.
     #[must_use]
     pub fn stored_literal(self) -> &'static str {
-        match self {
-            Self::GettingData => Self::NA.literal(),
-            _ => self.literal(),
-        }
+        self.to_engine().stored_literal()
     }
 
-    /// Parses an en-US error literal, case-insensitively (not oracle-verified for Excel).
+    /// Parses an en-US error literal in any case, as Excel reads a typed error name
+    /// (probes/t4852-error-name-case A1:A14).
     ///
     /// Uses the engine's stored-name table, so it accepts every kind, including `#BLOCKED!`,
     /// `#CONNECT!`, `#FIELD!` and `#BUSY!`, which are not formula literals (SPEC-0003).
@@ -480,14 +456,7 @@ mod tests {
     #[test]
     fn stored_literals_match_engine() {
         assert_eq!(ErrorKind::GettingData.stored_literal(), "#N/A");
-        for kind in ALL {
-            // The engine prints `#N/IMPL` without the `!` its parser requires.
-            assert_eq!(
-                kind.stored_literal().trim_end_matches('!'),
-                kind.to_engine().stored_literal().trim_end_matches('!'),
-                "{kind:?}"
-            );
-        }
+        assert_eq!(ErrorKind::NotImplemented.stored_literal(), "#N/IMPL!");
     }
 
     #[test]
@@ -503,13 +472,8 @@ mod tests {
     #[test]
     fn literals_match_engine() {
         for kind in ALL {
-            let engine = kind.to_engine().to_string();
-            // The engine prints `#N/IMPL` without the `!` its parser requires.
-            assert_eq!(
-                kind.literal().trim_end_matches('!'),
-                engine.trim_end_matches('!'),
-                "{kind:?}"
-            );
+            assert_eq!(kind.literal(), kind.to_engine().to_string(), "{kind:?}");
+            assert_eq!(kind.literal(), kind.literal().to_uppercase(), "{kind:?}");
             assert_eq!(
                 ErrorKind::from_literal(kind.literal()),
                 Some(kind),
