@@ -4414,11 +4414,12 @@ Rule: two regions of T.DIST, T.DIST.RT, T.DIST.2T and TDIST outside "Student t t
   t = 1: the fraction is Excel's bits at df 1001 for t up to 0.85 (G2, H2, I8 and others), neither form is from
   t = 0.8513 to 0.95, and from t = 0.999999 the kernel is again Excel's bits at every df from 1001 to 1E10
   (`T.DIST.2T(0.999999,1001)` = 0.3175526601765737 and F6:F9 of t4974-t-dist-df1-and-large-df-centre;
-  `T.DIST.RT(1-2^-53,1001)` = 0.15877608823825565, G21:I21), where the fraction is 1 to 3 ulp off. The cut is
-  bracketed in (0.95, 0.999999] and set at 0.99 (FITTED).
+  `T.DIST.RT(1-2^-53,1001)` = 0.15877608823825565, G21:I21), where the fraction is 1 to 3 ulp off. So Excel's switch back to the
+  kernel is bracketed in (0.95, 0.999999]. The engine still runs the fraction for every t < 1 (8 last-digit cells
+  of those probes); a cut inside the bracket would be a new fit with no hold-out set (decision 0188 R4), so
+  it is not shipped (T-5089).
 Evidence: the cells above (excel-graph); docs/research/excel-parity-findings-2026-11-07.md item 9.
-Implemented in: functions/statistical/student_t.rs `unflushed_upper_tail` (df 1), `large_df_centre_tail`,
-`CENTRE_TAIL_MAX_T`.
+Implemented in: functions/statistical/student_t.rs `unflushed_upper_tail` (df 1), `large_df_centre_tail`.
 Status: VERIFIED (excel-graph) at the cited cells; the t cut inside (0.95, 0.999999] is not located
 Tasks: T-2930, T-4975
 
