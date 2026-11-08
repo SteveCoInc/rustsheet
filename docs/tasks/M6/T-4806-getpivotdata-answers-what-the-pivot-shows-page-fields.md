@@ -21,8 +21,7 @@ a total or item without a shown cell is `#REF!`, a saved render wins over the ca
 these at once, in place of aggregating the cache.
 
 Owner of these visibly-off cells (decision 0245):
-- probes/t2085-getpivotdata-layouts Q!A1:A3, Q!A5:A7, Q!A9, Q!A11, Q!A12, Q!B2, Q!B3, Q!B5, Q!C2, Q!C3, Q!C5, Q!D2,
-  Q!D3, Q!D5, Q!E3, Q!E5, Q!F1:F3, Q!H1:H3
+- probes/t2085-getpivotdata-layouts Q!H1:H3 (a saved render; the other cells were fixed by the M6 probe-cell PR, below)
 
 ## Acceptance criteria
 - [ ] The cells above pass, and no other case regresses (`make eval-baseline`).
@@ -31,3 +30,10 @@ Owner of these visibly-off cells (decision 0245):
 
 ## Out of scope
 - Calculated fields (T-4174 owns the CF cells of this case).
+
+## Progress
+The M6 probe-cell PR (with T-4154) moved GETPIVOTDATA onto the pivot's `PivotResult`: page fields, hidden items,
+two row fields with their subtotals and summation order now answer what the pivot shows, and every cell above but
+Q!H1:H3 passes. Left: a pivot whose cache does not refresh on load is still answered from its cache, where Excel reads
+its saved cells (East 99, no West row). Reading the saved `rowItems`/`colItems` lines and the cells under them is the
+remaining work; it must leave the calipers and corpus pivots whose saved render agrees with their cache unchanged.

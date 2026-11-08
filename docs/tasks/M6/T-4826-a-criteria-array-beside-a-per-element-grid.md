@@ -3,7 +3,7 @@ id: T-4826
 title: "A criteria array beside a per-element grid broadcasts: COUNTIF(XLOOKUP({2;9},..,\"x\"),{\">0\",\">5\"}) is a 2x2 result (probes/t4742 A40, C40, A41)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P1
 size: S
 tier: opus
@@ -20,8 +20,11 @@ A per-element criteria call (COUNTIF, SUMIF and the like) whose range argument i
 - The element values of the 2x2 are not visible in this probe (blocked spill): probe them unblocked (e.g. INDEX of each, or room to spill) before implementing.
 
 ## Acceptance criteria
-- [ ] probes/t4742 Calc A40, C40, A41 pass, with the element values probed and matched.
-- [ ] `make check` green; reviewers approve.
+- [x] probes/t4742 Calc A40, C40, A41 pass, with the element values probed and matched.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Grids beside several criteria arrays of different shapes.
+
+## Outcome
+Done in the M6 probe-cell PR: a criteria array of a criteria function (COUNTIF(S), SUMIF(S), AVERAGEIF(S), MAXIFS, MINIFS) broadcasts with the per-element grids (`PerElement::broadcasts_criteria`, runtime and static shape). The element values were probed unblocked in probes/t4826-criteria-array-beside-grid (excel-graph, 2026-11-08): every element is `#VALUE!` (the XLOOKUP grid's elements are values, not references), shapes 2x2 and 2x1; all 17 cells pass. probes/t4742 A40, C40, A41 pass.

@@ -590,9 +590,6 @@
   "crates/rustsheet-engine/src/functions/lookup_and_reference/offset.rs": [
     "clippy::cast_possible_truncation"
   ],
-  "crates/rustsheet-engine/src/functions/lookup_and_reference/pivot_index.rs": [
-    "clippy::float_cmp"
-  ],
   "crates/rustsheet-engine/src/functions/lookup_and_reference/pivotby.rs": [
     "clippy::needless_pass_by_value"
   ],
@@ -1103,9 +1100,6 @@
     "clippy::cast_possible_truncation",
     "clippy::cast_precision_loss",
     "clippy::cast_sign_loss"
-  ],
-  "crates/rustsheet-engine/src/pivot/layout.rs": [
-    "clippy::cast_precision_loss"
   ],
   "crates/rustsheet-engine/src/pivot/layout/lines.rs": [
     "clippy::struct_field_names"

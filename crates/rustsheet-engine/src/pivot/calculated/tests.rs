@@ -7,7 +7,7 @@
 
 use super::*;
 use crate::pivot::probe_cases::{probe_pivot, read, sidecar_differences};
-use crate::pivot::{compute, CacheItem, MAX_PIVOT_WORK};
+use crate::pivot::{compute, MAX_PIVOT_WORK};
 
 fn check(stem: &str, sheets: &[&str]) {
     let case = read(stem, "case");
@@ -254,25 +254,4 @@ fn quoted_names_are_sheet_prefixes_unless_switched_on() {
         Node::NamedVariableKind { name, .. } if name == "Bob's"
     ));
     assert!(!parser.parse("'Sheet1'!A1*2", &context).has_parse_error());
-}
-
-#[test]
-fn getpivotdata_answers_a_calculated_field_over_the_records_sums() {
-    // Units over records 0..3 is 2, 3, text, 5; Double = Units*2. The pairs' records 0, 1 and 2
-    // sum to 5 (text skipped), so Double is 10; no record gives the formula over 0.
-    let mut units = field("Units", None);
-    units.items = vec![
-        CacheItem::Number(2.0),
-        CacheItem::Number(3.0),
-        CacheItem::Text("x".to_string()),
-        CacheItem::Number(5.0),
-    ];
-    units.records = vec![0, 1, 2, 3];
-    let fields = [units, field("Double", Some("Units*2"))];
-    assert_eq!(calculated_answer(1, &fields, &[0, 1, 2]), Ok(10.0));
-    assert_eq!(calculated_answer(1, &fields, &[]), Ok(0.0));
-    // A formula the plan refuses, or a field that is not calculated, has no answer.
-    let refused = [field("Units", None), field("Bad", Some("A1*2"))];
-    assert_eq!(calculated_answer(1, &refused, &[]), Err(Error::REF));
-    assert_eq!(calculated_answer(0, &fields, &[0]), Err(Error::REF));
 }

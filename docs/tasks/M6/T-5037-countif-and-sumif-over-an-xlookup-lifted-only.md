@@ -3,7 +3,7 @@ id: T-5037
 title: "COUNTIF and SUMIF over an XLOOKUP lifted only by match_mode or search_mode (or a 1x2 mode array) are an array of #VALUE!, not a scalar (probes/t4863)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -18,8 +18,11 @@ A criteria call (COUNTIF, SUMIF) over an XLOOKUP whose only per-element lift is 
 - Code: `criteria_and_grid_static_result` (static_analysis.rs) takes the spill shape from `lookup_value` alone; `lifts` in `xlookup_read` (xlookup.rs) builds the grid whenever any criterion lifts. Make the static shape follow match_mode and search_mode too.
 
 ## Acceptance criteria
-- [ ] probes/t4863-xlookup-mode-lift-criteria Calc A11, A15, A19, A27, A31, A35, A43, A47, A51, B90, B94, B98 pass.
-- [ ] `make check` green; reviewers approve.
+- [x] probes/t4863-xlookup-mode-lift-criteria Calc A11, A15, A19, A27, A31, A35, A43, A47, A51, B90, B94, B98 pass.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+Done in the M6 probe-cell PR: `criteria_and_grid_static_result` takes an XLOOKUP grid's shape from the broadcast of lookup_value, match_mode and search_mode. Every owned cell passes; probes/t4863-xlookup-mode-lift-criteria passes whole.

@@ -51,8 +51,7 @@ use crate::functions::Function;
 use crate::model::Model;
 use crate::recalc_budget::RecalcBudget;
 
-use super::accumulate::Accumulator;
-use super::result::{charge, units, MAX_PIVOT_WORK};
+use super::result::{charge, units};
 use super::{CacheField, PivotComputeError};
 
 /// Most characters in a calculated field's formula: Excel's cell formula limit. What Excel does
@@ -423,46 +422,6 @@ impl Plan {
         }
         Ok(inputs.split_off(first))
     }
-}
-
-/// GETPIVOTDATA's answer for the calculated field `field` over the cell whose cache records are
-/// `records` (in cache order): the field's formula over those records' Sums of the fields it
-/// names, as the pivot shows that cell (the module rules; web.md "GETPIVOTDATA on other pivot
-/// shapes (T-2085)", "Calculated fields", LY G1:G3). The cell's work is bounded by
-/// [`MAX_PIVOT_WORK`]; a formula the plan refuses or a call past that budget is `#REF!`, the
-/// answer GETPIVOTDATA gives where it has none.
-///
-/// # Errors
-/// The formula's error at that cell, or `#REF!` as above.
-pub(crate) fn calculated_answer(
-    field: u32,
-    fields: &[CacheField],
-    records: &[u32],
-) -> Result<f64, Error> {
-    let mut work = MAX_PIVOT_WORK;
-    let mut plan = Plan::new(&[field], fields, &mut work)
-        .ok()
-        .flatten()
-        .ok_or(Error::REF)?;
-    let mut operands = Vec::with_capacity(plan.operands.len());
-    for &operand in &plan.operands {
-        let source = fields.get(operand as usize).ok_or(Error::REF)?;
-        charge(&mut work, units(records.len())).map_err(|_| Error::REF)?;
-        let mut sum = Accumulator::new();
-        for &record in records {
-            if let Some(item) = source
-                .records
-                .get(record as usize)
-                .and_then(|&i| source.items.get(i as usize))
-            {
-                sum.push(item);
-            }
-        }
-        operands.push(sum.record_sum());
-    }
-    let values = plan.values(operands, &mut work).map_err(|_| Error::REF)?;
-    let shown = plan.shows.first().copied().flatten().ok_or(Error::REF)?;
-    values.into_iter().nth(shown).ok_or(Error::REF)?
 }
 
 /// The formula of field `field`, if it is a calculated field.
