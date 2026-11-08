@@ -27,7 +27,7 @@ Found by the T-4856 duplicate-concept audit (one definition per concept, CLAUDE.
 - The other duplicate concepts of the audit (T-4847 to T-4855 each own one).
 
 ## Outcome
-- `update_cell_with_text` quotes through `Model::text_needs_quote_prefix` (model.rs). It reads number text with typed
+- `update_cell_with_text` quotes through `Model::text_needs_quote_prefix` (cast.rs). It reads number text with typed
   input's own reader, `parse_typed_number`, and the same currencies (`typed_currencies`, now shared with
   `reenter_printed_input`), so `50%`, `$5`, `1/2/2020` and `10:30` keep the quote prefix and stay text when typed
   back in. utils.rs `value_needs_quoting` and its test moved there (test_quote_prefix.rs).
