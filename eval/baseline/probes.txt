@@ -2575,6 +2575,9 @@ C	probes/t4499-textsplit-sharp-s.case.json	12
 C	probes/t4501-permutationa-chosen-cut.case.json	36
 C	probes/t4505-pivot-calc-field-functions.case.json	206
 C	probes/t4505-pivot-calc-fields.case.json	305
+C	probes/t4506-pivot-index-name-corner.case.json	0
+C	probes/t4506-pivot-named-sources.case.json	103
+C	probes/t4506-pivot-shared-cache.case.json	43
 C	probes/t4508-ms-lcid-tags-after-b2.case.json	27
 C	probes/t4515-fraction-tail-holdout.case.json	147
 C	probes/t4515-fresh-sweep.case.json	96
@@ -9380,6 +9383,7 @@ F	probes/t4456-beta-t-zero-reach.case.json	Calc!F6
 F	probes/t4456-beta-t-zero-reach.case.json	Calc!F7
 F	probes/t4456-beta-t-zero-reach.case.json	Calc!F8
 F	probes/t4456-beta-t-zero-reach.case.json	Calc!F9
+F	probes/t4506-pivot-index-name-corner.case.json	!EngineError
 F	probes/t4541-t-inv-2t-tiny-p.case.json	Calc!C5
 F	probes/t4541-t-inv-2t-tiny-p.case.json	Calc!C9
 F	probes/t4541-t-inv-2t-tiny-p.case.json	Calc!D5
@@ -10225,6 +10229,8 @@ TC	probes/t4170-pivot-manual-groups.case.json	167
 TC	probes/t4187-pivot-chart-caches.case.json	38
 TC	probes/t4505-pivot-calc-field-functions.case.json	176
 TC	probes/t4505-pivot-calc-fields.case.json	274
+TC	probes/t4506-pivot-named-sources.case.json	48
+TC	probes/t4506-pivot-shared-cache.case.json	24
 TC	probes/t4584-pivot-page-window.case.json	80
 TC	probes/t4698-pivot-repeat-labels.case.json	510
 TC	probes/t4699-pivot-blank-collapsed.case.json	449

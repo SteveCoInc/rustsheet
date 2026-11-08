@@ -281,11 +281,11 @@ pub(crate) fn classify(
     if saved.is_empty() {
         return (Vec::new(), Vec::new());
     }
-    let model = SavedModel::load(bytes);
+    let mut model = SavedModel::load(bytes);
     let mut cells = Vec::new();
     let pivots = (saved.iter())
         .map(|p| {
-            let (freshness, render) = match &model {
+            let (freshness, render) = match &mut model {
                 Ok(model) => classify_one(p, model),
                 Err(e) => (stale(p, format!("import: {e}")), None),
             };
@@ -315,7 +315,10 @@ fn stale(p: &SavedPivot, reason: String) -> PivotFreshness {
 }
 
 /// `p`'s classification and scores, and its render's cells.
-fn classify_one(p: &SavedPivot, model: &SavedModel) -> (PivotFreshness, Option<Vec<CellResult>>) {
+fn classify_one(
+    p: &SavedPivot,
+    model: &mut SavedModel,
+) -> (PivotFreshness, Option<Vec<CellResult>>) {
     let Some(table) = model.table(&p.sheet, &p.name) else {
         return (stale(p, "the importer did not load the pivot".into()), None);
     };

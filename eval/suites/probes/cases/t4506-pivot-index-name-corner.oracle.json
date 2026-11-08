@@ -1,0 +1,232 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "4"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      },
+      {
+       "t": "s",
+       "v": "North"
+      },
+      {
+       "t": "s",
+       "v": "South"
+      }
+     ]
+    },
+    {
+     "name": "Sales",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "1000",
+      "minValue": "3"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "North"
+    },
+    "A7": {
+     "t": "s",
+     "v": "South"
+    },
+    "A8": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Sales"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1005.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 20.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 7.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 3.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 1035.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B8",
+   "name": "PvIndex",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "I",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "East",
+    "A5": "West",
+    "A6": "North",
+    "A7": "South",
+    "A8": "Grand Total",
+    "B3": "Sum of Sales",
+    "B4": "1005",
+    "B5": "20",
+    "B6": "7",
+    "B7": "3",
+    "B8": "1035"
+   }
+  }
+ ],
+ "sheets": {
+  "Data": {
+   "B2": {
+    "t": "n",
+    "v": 1000.0
+   }
+  },
+  "I": {},
+  "Q": {
+   "A1": {
+    "t": "s",
+    "v": "East"
+   },
+   "A2": {
+    "t": "n",
+    "v": 6.0
+   },
+   "B1": {
+    "t": "n",
+    "v": 1005.0
+   },
+   "C1": {
+    "t": "s",
+    "v": "West"
+   },
+   "D1": {
+    "t": "n",
+    "v": 20.0
+   },
+   "E1": {
+    "t": "s",
+    "v": "North"
+   },
+   "F1": {
+    "t": "n",
+    "v": 7.0
+   },
+   "G1": {
+    "t": "s",
+    "v": "South"
+   },
+   "H1": {
+    "t": "n",
+    "v": 3.0
+   },
+   "I1": {
+    "t": "s",
+    "v": "Grand Total"
+   },
+   "J1": {
+    "t": "n",
+    "v": 1035.0
+   },
+   "K1": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L1": {
+    "t": "n",
+    "v": 0.0
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "65a738e94a0a825daa63a4bea6d2a5b881af633888cefe9f76295df342d0d346",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-07T21:39:09+00:00",
+  "version": null,
+  "workbook_name": "a89262e58b775d3744c4d648b0d829ea22a09e0a0c9f69f94e816b8429b89e0f.xlsx"
+ }
+}

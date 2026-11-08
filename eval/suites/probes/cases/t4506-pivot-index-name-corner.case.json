@@ -1,0 +1,76 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4506: a refreshOnLoad pivot whose cache source is the defined name IndexSrc = Data!$A$1:INDEX(Data!$B:$B,COUNTA(Data!$A:$A)), a sheet-qualified corner joined to INDEX by `:`, the common dynamic-range idiom. Data!A1:B6 is Region/Sales with East =1000 (cached as missing by the case builder), West 20, East 5, North 7, South 3; the saved cache is built from Data!A1:B4 only, so a render from the cache shows East 5, West 20, total 25 and a refresh through the name East 1005, West 20, North 7, South 3, total 1035. Q reads the pivot's A3:B9 and ROWS(IndexSrc). Kept apart from t4506-pivot-named-sources because the engine does not parse the body yet.",
+  "tags": [
+    "probe",
+    "pivot",
+    "T-4506",
+    "M16"
+  ],
+  "pivot_features": [
+    "PV-0441"
+  ],
+  "names": {
+    "IndexSrc": "=Data!$A$1:INDEX(Data!$B:$B,COUNTA(Data!$A:$A))"
+  },
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "Region",
+        "B1": "Sales",
+        "A2": "East",
+        "B2": "=1000",
+        "A3": "West",
+        "B3": 20,
+        "A4": "East",
+        "B4": 5,
+        "A5": "North",
+        "B5": 7,
+        "A6": "South",
+        "B6": 3
+      }
+    },
+    {
+      "name": "I",
+      "cells": {},
+      "pivot_tables": [
+        {
+          "name": "PvIndex",
+          "source": "Data!A1:B4",
+          "location": "A3",
+          "definition": {
+            "rows": [
+              "Region"
+            ],
+            "data": [
+              {
+                "field": "Sales"
+              }
+            ],
+            "source_name": "IndexSrc"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Q",
+      "cells": {
+        "A1": "=I!A4",
+        "B1": "=I!B4",
+        "C1": "=I!A5",
+        "D1": "=I!B5",
+        "E1": "=I!A6",
+        "F1": "=I!B6",
+        "G1": "=I!A7",
+        "H1": "=I!B7",
+        "I1": "=I!A8",
+        "J1": "=I!B8",
+        "K1": "=I!A9",
+        "L1": "=I!B9",
+        "A2": "=ROWS(IndexSrc)"
+      }
+    }
+  ],
+  "expected": {}
+}
