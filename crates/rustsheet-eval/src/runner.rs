@@ -107,6 +107,11 @@ pub enum Target {
     /// The 50-digit math, which the engine returns where decision 0188 R3 marks the cell and Excel
     /// is more than G = 1e-4 off it ([`crate::r1c::r3_math`]).
     Math,
+    /// A cell decision 0188 R3 marks, with Excel more than G off the math, where the engine is not
+    /// within ε of the math ([`crate::r1c::r3_marked`] without [`crate::r1c::r3_math`]). It is
+    /// still held to the math only (decision 0355 item 2, T-5097), but it is no `r3_math` pass: the
+    /// closeness buckets read it like an Excel cell.
+    MathMissed,
 }
 
 impl Target {

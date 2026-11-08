@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from rustsheet_tools.progress_report.markdown import md_text, pct, signed, table
+from rustsheet_tools.progress_report.markdown import md_inline, md_text, pct, signed, table
 from rustsheet_tools.progress_report.model import (
     EN,
     GE,
@@ -118,7 +118,7 @@ def failing_table(u: UsageGates) -> str:
             rows.append(
                 [
                     LABELS[t.usage],
-                    f.name,
+                    md_inline(f.name),
                     f"{f.cells:,}",
                     f"{f.wrong_type:,}",
                     f"{f.outside:,}",

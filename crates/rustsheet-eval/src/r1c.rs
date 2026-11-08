@@ -60,21 +60,35 @@ pub enum R1c {
 /// never applies to an error, a text or a wrong type.
 #[must_use]
 pub fn r3_math(case: &str, c: &CellResult, r3: &R3Marks) -> bool {
+    r3_marked(case, c, r3)
+        && c.math
+            .as_ref()
+            .is_some_and(|math| envelope(Some(c), &c.actual, Some(math), true).is_inside())
+}
+
+/// Whether cell `c` of case `case` is one decision 0188 R3 holds to the math, passing or not: two
+/// numbers with a math value, `math-over-excel.tsv` marks the cell, and Excel is more than G =
+/// 1e-4 off the math (R3's evidence, checked per cell). [`r3_math`] adds that the engine is
+/// within ε of the math.
+#[must_use]
+pub fn r3_marked(case: &str, c: &CellResult, r3: &R3Marks) -> bool {
     let (Value::Number(_), Value::Number(_), Some(math)) = (&c.expected, &c.actual, &c.math) else {
         return false;
     };
-    r3.contains_key(&cell_id(case, &c.key()))
-        && excel_off_math(&c.expected, math)
-        && envelope(Some(c), &c.actual, Some(math), true).is_inside()
+    r3.contains_key(&cell_id(case, &c.key())) && excel_off_math(&c.expected, math)
 }
 
-/// Sets [`CellResult::target`] on every cell of `results` by [`r3_math`]: once per run, before
-/// the report counts the closeness buckets (decision 0310).
+/// Sets [`CellResult::target`] on every cell of `results`: [`Target::Math`] by [`r3_math`],
+/// [`Target::MathMissed`] for the other cells [`r3_marked`] holds to the math (T-5097), else
+/// [`Target::Excel`]. Once per run, before the report counts the closeness buckets (decision 0310)
+/// and before anything calls `cell_envelope`.
 pub fn mark_r3_math(results: &mut [CaseResult], r3: &R3Marks) {
     for r in results {
         for c in &mut r.cells {
             c.target = if r3_math(&r.id, c, r3) {
                 Target::Math
+            } else if r3_marked(&r.id, c, r3) {
+                Target::MathMissed
             } else {
                 Target::Excel
             };

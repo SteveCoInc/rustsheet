@@ -2,9 +2,10 @@
 the stale page of an incomplete run (T-0071).
 
 The `parity` block is parity.py's (T-0081); `since-last-run` and `trends` are history.py's
-(T-0071); `usage-tiers` is usage.py's (T-5094); `goals` and `campaign` are goals.py's (T-0072); `top-functions` and `evidence` are
-evidence.py's (T-0073); `arguments` is arguments.py's (T-0077); `codebase` is codebase.py's (T-0078). Later sections are
-added by their own tasks as generated blocks in `LAYOUT`, without changing the block protocol in blocks.py.
+(T-0071); `usage-tiers` is usage.py's (T-5094); `goals` and `campaign` are goals.py's (T-0072);
+`top-functions` and `evidence` are evidence.py's (T-0073); `arguments` is arguments.py's (T-0077);
+`codebase` is codebase.py's (T-0078). Later sections are added by their own tasks as generated
+blocks in `LAYOUT`, without changing the block protocol in blocks.py.
 """
 
 from __future__ import annotations

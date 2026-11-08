@@ -240,13 +240,42 @@ fn a_marked_cell_off_the_math_stays_visibly_off() {
         cell(n(MATH * 1.001), n(MATH * (1.0 + 1e-6)), Some(MATH)),
         &marked,
     );
-    assert_eq!(miss.target, Target::Excel);
+    // T-5097: held to the math (`MathMissed`), but no r3_math pass, so its bucket is unchanged.
+    assert_eq!(miss.target, Target::MathMissed);
     assert_eq!((counts.r3_math, counts.visible_numeric), (0, 1));
+    assert_eq!(cell_envelope(&miss), CellEnvelope::Outside);
     assert_eq!(classify(CASE, &miss, &marked, &none), Some(R1c::Counts));
     // Marked, but Excel only 1e-6 off the math (below G): the mark is ignored.
     let (below_g, counts) = bucketed(cell(n(MATH * (1.0 + 1e-6)), n(MATH), Some(MATH)), &marked);
     assert_eq!(below_g.target, Target::Excel);
     assert_eq!((counts.r3_math, counts.visible_numeric), (0, 1));
+}
+
+/// T-5097: an R3 cell where the engine moved to Excel's value (within 12 digits of it, off the math)
+/// is outside the envelope and counts; before, Excel's side let it in as Phase 1b.
+#[test]
+fn a_marked_cell_at_excels_value_off_the_math_counts() {
+    let marked = marks(&cell_id(CASE, "S!A1"));
+    let none = Phase1Exceptions::default();
+    let excel = MATH * 1.001;
+    let (back, counts) = bucketed(
+        cell(n(excel), n(excel * (1.0 + 1e-13)), Some(MATH)),
+        &marked,
+    );
+    assert_eq!(back.target, Target::MathMissed);
+    assert_eq!(counts.r3_math, 0);
+    assert_eq!(cell_envelope(&back), CellEnvelope::Outside);
+    assert_eq!(classify(CASE, &back, &marked, &none), Some(R1c::Counts));
+    // Unmarked, the same cell is inside on Excel's side: Phase 1b evidence.
+    let (plain, _) = bucketed(
+        cell(n(excel), n(excel * (1.0 + 1e-13)), Some(MATH)),
+        &R3Marks::new(),
+    );
+    assert_eq!(plain.target, Target::Excel);
+    assert_eq!(
+        classify(CASE, &plain, &R3Marks::new(), &none),
+        Some(R1c::Phase1b)
+    );
 }
 
 #[test]
