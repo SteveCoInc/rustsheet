@@ -77,6 +77,7 @@ pub fn package_diff(ours: &[u8], theirs: &[u8], name: &str) -> anyhow::Result<(V
         source_bytes: ours,
         saved: &saved,
         name,
+        rename: None,
     };
     Ok(score(scenarios::R0, &sides, theirs))
 }

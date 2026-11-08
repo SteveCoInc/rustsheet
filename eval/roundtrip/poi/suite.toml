@@ -8,9 +8,10 @@ include = ["**/*.xlsx", "**/*.xlsm"]
 exclude = ["**/clusterfuzz-*", "**/crash-*"]
 license = "Apache-2.0"
 origin = "https://github.com/apache/poi/tree/trunk/test-data/spreadsheet"
-# R0 and the standard edits together (SPEC-0033 D1, T-4514). Every scenario reruns every case, so the
-# per-edit scenarios run on the fixtures; `R1/all` measures the corpus with all six edits at once.
-scenarios = ["R0", "R1/all"]
+# R0, the standard edits together (SPEC-0033 D1, T-4514), and R2's sheet rename and delete (T-5005). Every
+# scenario reruns every case, so the per-edit scenarios and R2's add and move run on the fixtures; `R1/all`
+# measures the corpus with all six edits at once.
+scenarios = ["R0", "R1/all", "R2/rename", "R2/delete"]
 # Gated like the cell suite: `make check` holds it wherever its cache is fetched (T-4629).
 gate = true
 baseline = "cases"

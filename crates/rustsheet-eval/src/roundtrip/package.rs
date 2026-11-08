@@ -22,7 +22,7 @@ const REL_NS: &str = "http://schemas.openxmlformats.org/officeDocument/2006/rela
 
 /// Relationship types (last path segment) whose targets are sheets of the workbook: their key
 /// is the sheet's name, not an ordinal.
-const SHEET_KINDS: &[&str] = &[
+pub(super) const SHEET_KINDS: &[&str] = &[
     "worksheet",
     "chartsheet",
     "dialogsheet",

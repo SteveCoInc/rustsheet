@@ -1,19 +1,42 @@
 //! The `dropped` verdict (SPEC-0033 D7.2, T-4562): a part the save did not write passes when the
-//! save report names it for a reason every scenario accepts. A reported part that is still in the
-//! output is a report bug, scored `changed` (D7.3).
+//! save report names it for a reason the scenario accepts: one every scenario accepts, or, in an
+//! R2 run, one its edit explains (T-5005). A reported part that is still in the output is a
+//! report bug, scored `changed` (D7.3).
 
 use std::collections::HashSet;
 
 use rustsheet::{DropReason, SaveReport};
 
 use super::package::Package;
+use super::r2::sheet_of_part;
 use super::{Item, Verdict};
 
+/// The sheet an R2 edit acted on (T-5005), whose parts its drops may name.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct Edited<'a> {
+    /// The sheet as the source names it, which the part keys use.
+    pub(super) sheet: &'a str,
+    /// The sheet as the output names it (a rename's new name), which a report's `sheet` may use.
+    pub(super) now: &'a str,
+    /// Whether the edit deleted it.
+    pub(super) deleted: bool,
+}
+
 /// Rescores the part items of one save by its report: an accepted drop of a lost part becomes
-/// `dropped`, with no weight; a reported part that was kept becomes `changed`.
-pub(super) fn apply(items: &mut [Item], source: &Package, report: &SaveReport) {
+/// `dropped`, with no weight; a reported part that was kept becomes `changed`. `edited` is the
+/// sheet of an R2 run's edit, `None` in any other run.
+pub(super) fn apply(
+    items: &mut [Item],
+    source: &Package,
+    report: &SaveReport,
+    edited: Option<Edited<'_>>,
+) {
     let reported: HashSet<(String, bool)> = (report.dropped.iter())
-        .map(|d| (source.key_of(&d.item), accepted(&d.reason)))
+        .map(|d| {
+            let key = source.key_of(&d.item);
+            let ok = accepted(&d.reason, &key, edited);
+            (key, ok)
+        })
         .collect();
     for item in items.iter_mut().filter(|i| i.kind == "part") {
         let key = item.key.clone();
@@ -34,14 +57,21 @@ pub(super) fn apply(items: &mut [Item], source: &Package, report: &SaveReport) {
     }
 }
 
-/// The reasons that pass in any scenario (D7.2). `StaleAfterStructuralEdit`, `StaleAfterEdit`
-/// and `OwnerDeleted` pass only where the scenario's edit explains them, which stage 5 adds with
-/// its R2 scenarios (SPEC-0034 D5.7).
-fn accepted(reason: &DropReason) -> bool {
-    matches!(
-        reason,
-        DropReason::Policy | DropReason::ActiveContentInPlainFormat
-    )
+/// Whether a drop of the part keyed `key` passes (D7.2): `Policy` and
+/// `ActiveContentInPlainFormat` in any scenario; in an R2 run, `OwnerDeleted` for a part of the
+/// sheet the run deleted, and `StaleAfterStructuralEdit` naming the edited sheet for a part of it.
+/// `StaleAfterEdit` passes only where R1's `Δ(E)` explains it, which T-5004 adds with its
+/// triggers, so it stays `lost` until then.
+fn accepted(reason: &DropReason, key: &str, edited: Option<Edited<'_>>) -> bool {
+    let of_edited = |e: &Edited<'_>| sheet_of_part(key) == Some(e.sheet);
+    match reason {
+        DropReason::Policy | DropReason::ActiveContentInPlainFormat => true,
+        DropReason::OwnerDeleted => edited.is_some_and(|e| e.deleted && of_edited(&e)),
+        DropReason::StaleAfterStructuralEdit { sheet } => {
+            edited.is_some_and(|e| (sheet == e.sheet || sheet == e.now) && of_edited(&e))
+        }
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -103,7 +133,7 @@ mod tests {
                 Dropped::new("customXml/item1.xml", DropReason::NotPreserved),
             ],
         );
-        apply(&mut items, &pkg, &report);
+        apply(&mut items, &pkg, &report, None);
         // calcChain by policy passes; a part not preserved stays lost.
         assert_eq!(
             (items[0].verdict, items[0].weight, items[1].verdict),
@@ -111,7 +141,7 @@ mod tests {
         );
         // A part the report names but the save wrote is a report bug (D7.3).
         let mut kept = vec![part(&custom, Verdict::Kept)];
-        apply(&mut kept, &pkg, &report);
+        apply(&mut kept, &pkg, &report, None);
         assert_eq!(kept[0].verdict, Verdict::Changed);
     }
 }

@@ -131,7 +131,12 @@ pub(super) fn apply(
 
 /// Adds a change set's written, created and value-changed cells to `delta`, and with `restyle`
 /// (E6) its written cells to the restyled ones.
-fn record(changes: &ChangeSet, names: &HashMap<SheetId, String>, restyle: bool, delta: &mut Delta) {
+pub(super) fn record(
+    changes: &ChangeSet,
+    names: &HashMap<SheetId, String>,
+    restyle: bool,
+    delta: &mut Delta,
+) {
     let at = |cell: &CellRef| names.get(&cell.sheet).map(|name| format!("{name}!{cell}"));
     for input in &changes.inputs {
         let Some(cell) = at(&input.cell) else {
@@ -254,8 +259,9 @@ fn identity(item: &Item) -> Identity<'_> {
     (item.kind, item.key.as_str(), item.verdict, detail)
 }
 
-/// The delta violations of an R1 run (D5): the failing items of `edited` that the plain save's
-/// failing items (`plain`) do not hold and `delta` does not explain, relabelled `scenario`.
+/// The delta violations of an R1 or R2 run (D5): the failing items of `edited` that the plain
+/// save's failing items (`plain`) do not hold and the run's delta does not explain (`explained`),
+/// relabelled `scenario`.
 ///
 /// An item R0 also has is excused only up to R0's weight. A `<truncated>` item that hides more
 /// differences than R0's stays a violation weighing the excess, so a worse loss behind the item
@@ -264,7 +270,7 @@ pub(super) fn violations(
     scenario: &'static str,
     plain: &[Item],
     edited: Vec<Item>,
-    delta: &Delta,
+    explained: impl Fn(&Item) -> bool,
 ) -> Vec<Item> {
     let mut known: BTreeMap<Identity<'_>, usize> = BTreeMap::new();
     for i in plain.iter().filter(|i| !i.verdict.passes()) {
@@ -272,7 +278,7 @@ pub(super) fn violations(
     }
     let mut out = Vec::new();
     for item in edited.into_iter().filter(|i| !i.verdict.passes()) {
-        if explained(&item, delta) {
+        if explained(&item) {
             continue;
         }
         match known.get(&identity(&item)).copied() {
@@ -298,7 +304,7 @@ pub(super) fn violations(
 /// - a number format or cell format appended under E6, with the style counts (N10);
 /// - the shared-string counts under E5 (N10);
 /// - the edited sheet's `dimension@ref` (N9).
-fn explained(item: &Item, delta: &Delta) -> bool {
+pub(super) fn explained(item: &Item, delta: &Delta) -> bool {
     match item.kind {
         "semantic" => fact_explained(&item.key, item.verdict, delta),
         "element" | "attribute" => {

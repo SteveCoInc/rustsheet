@@ -12,6 +12,7 @@ mod exceptions;
 mod package;
 mod package_diff;
 mod r1;
+mod r2;
 pub(crate) mod scenarios;
 pub(crate) mod semantic;
 #[cfg(test)]
@@ -258,12 +259,14 @@ fn run_case(
 }
 
 /// What a scenario's output is compared with: the source package and bytes, and the workbook
-/// that was saved (its recalculated values, D3.1).
+/// that was saved (its recalculated values, D3.1). `rename` is an R2 rename's sheet, whose output
+/// items are keyed under the source's name so they match the source's (T-5005).
 pub(super) struct Sides<'a> {
     source: &'a Package,
     source_bytes: &'a [u8],
     saved: &'a Workbook,
     name: &'a str,
+    rename: Option<&'a r2::Rename>,
 }
 
 /// The items of one scenario and the number of source items compared: validator problems of
@@ -290,7 +293,7 @@ pub(super) fn score(scenario: &'static str, sides: &Sides<'_>, out: &[u8]) -> (V
         }
     };
     items.extend(validate(&output).into_iter().map(problem));
-    let (parts, mut checked) = part_items(scenario, sides.source, &output);
+    let (parts, mut checked) = part_items(scenario, sides.source, &output, sides.rename);
     items.extend(parts);
     // V8: our own importer opens what we wrote, as stored (no recalculation).
     let as_loaded = LoadOptions {
@@ -320,8 +323,19 @@ pub(super) fn score(scenario: &'static str, sides: &Sides<'_>, out: &[u8]) -> (V
             src_facts.extend(semantic::stored_facts(&a));
             dst_facts.extend(semantic::stored_facts(&b));
         }
-        let saved = semantic::value_facts(sides.saved, &src_facts);
-        let back = semantic::value_facts(&reloaded, &dst_facts);
+        let (saved, back) = match sides.rename {
+            None => (
+                semantic::value_facts(sides.saved, &src_facts),
+                semantic::value_facts(&reloaded, &dst_facts),
+            ),
+            // The saved and reloaded workbooks name the sheet as the output does.
+            Some(r) => {
+                let saved = semantic::value_facts(sides.saved, &r.forward_facts(&src_facts));
+                let back = semantic::value_facts(&reloaded, &dst_facts);
+                dst_facts = r.back_facts(dst_facts);
+                (r.back_facts(saved), r.back_facts(back))
+            }
+        };
         for (facts_a, facts_b) in [(&src_facts, &dst_facts), (&saved, &back)] {
             let (diffs, n) = semantic::compare(facts_a, facts_b);
             checked += n;
@@ -341,11 +355,20 @@ pub(super) fn score(scenario: &'static str, sides: &Sides<'_>, out: &[u8]) -> (V
 
 /// One `part` item per content part of `source`, then one `added` item per part only `output`
 /// has (D2): parts match by key, never by name. A kept XML part is diffed for `element` and
-/// `attribute` items (D4.1–D4.4), another part compared by bytes (D4.5). Returns the items and
-/// the number of source items compared.
-fn part_items(scenario: &'static str, source: &Package, output: &Package) -> (Vec<Item>, usize) {
+/// `attribute` items (D4.1–D4.4), another part compared by bytes (D4.5). The output's keys name a
+/// renamed sheet as the source does (`rename`). Returns the items and the number of source items
+/// compared.
+fn part_items(
+    scenario: &'static str,
+    source: &Package,
+    output: &Package,
+    rename: Option<&r2::Rename>,
+) -> (Vec<Item>, usize) {
     let src = source.keyed_parts();
-    let out = output.keyed_parts();
+    let mut out = output.keyed_parts();
+    if let Some(r) = rename {
+        out = out.into_iter().map(|(k, p)| (r.back_part(&k), p)).collect();
+    }
     let mut items = Vec::new();
     let mut checked = 0;
     let item = |kind, key: String, verdict, detail| Item {
@@ -498,7 +521,8 @@ impl KeptRate {
 }
 
 /// Each scenario family's kept rate, in run order: R0, the R1 edits together (their delta
-/// violations over the items they compared), and `R0/again` (idempotence), when the cases ran it.
+/// violations over the items they compared), the R2 sheet edits likewise, and `R0/again`
+/// (idempotence), when the cases ran them.
 /// R1 also says how many writes the engine refused and how many edits had no target.
 fn rates_line(results: &[&CaseResult]) -> String {
     use scenarios::Family;
@@ -506,6 +530,7 @@ fn rates_line(results: &[&CaseResult]) -> String {
     for (label, family) in [
         ("R0", Family::R0),
         ("R1", Family::R1),
+        ("R2", Family::R2),
         ("R0/again", Family::Again),
     ] {
         let which = |s: &str| scenarios::family(s) == Some(family);

@@ -9,6 +9,7 @@ use rustsheet::{LoadOptions, SaveOptions, SaveReport, Workbook};
 use super::dropped;
 use super::package::Package;
 use super::r1::{self, Edit};
+use super::r2::{self, SheetEdit};
 use super::{score, Item, Sides, Verdict};
 use crate::engine::harness_options;
 
@@ -24,6 +25,8 @@ pub(crate) enum Run {
     Again,
     /// Apply these standard edits before saving (R1, D1).
     Edits(&'static [Edit]),
+    /// Apply this sheet-level edit before saving (R2, D1; T-5005).
+    Sheet(SheetEdit),
 }
 
 /// A scenario family, as the rates line reports them.
@@ -31,10 +34,11 @@ pub(crate) enum Run {
 pub(crate) enum Family {
     R0,
     R1,
+    R2,
     Again,
 }
 
-/// Every scenario the harness implements, by name. R2 (structural edits) is M4.
+/// Every scenario the harness implements, by name. R2's row and column edits follow M4.
 pub(crate) const SCENARIOS: &[(&str, Run)] = &[
     (R0, Run::Plain),
     ("R0/again", Run::Again),
@@ -48,6 +52,10 @@ pub(crate) const SCENARIOS: &[(&str, Run)] = &[
         "R1/all",
         Run::Edits(&[Edit::E1, Edit::E2, Edit::E3, Edit::E4, Edit::E5, Edit::E6]),
     ),
+    ("R2/rename", Run::Sheet(SheetEdit::Rename)),
+    ("R2/add", Run::Sheet(SheetEdit::Add)),
+    ("R2/delete", Run::Sheet(SheetEdit::Delete)),
+    ("R2/move", Run::Sheet(SheetEdit::Move)),
 ];
 
 /// The scenario called `name`, with its name as the table holds it.
@@ -61,6 +69,7 @@ pub(crate) fn family(name: &str) -> Option<Family> {
         Run::Plain => Family::R0,
         Run::Again => Family::Again,
         Run::Edits(_) => Family::R1,
+        Run::Sheet(_) => Family::R2,
     })
 }
 
@@ -117,6 +126,14 @@ pub(super) fn run_scenarios(
                 run_r1(&source, bytes, name, label, edits, &plain).map(|(found, outcome, saved)| {
                     run.skipped
                         .insert(label, (outcome.refused, outcome.missing));
+                    if let (true, Some(saved)) = (keep, saved) {
+                        run.outputs.push((label, saved));
+                    }
+                    found
+                })
+            }
+            Run::Sheet(edit) => {
+                run_r2(&source, bytes, name, label, edit, &plain).map(|(found, saved)| {
                     if let (true, Some(saved)) = (keep, saved) {
                         run.outputs.push((label, saved));
                     }
@@ -204,9 +221,10 @@ pub(super) fn r0(
         source_bytes: bytes,
         saved: &workbook,
         name: name.unwrap_or("workbook"),
+        rename: None,
     };
     let (mut items, checked) = score(R0, &sides, &out);
-    dropped::apply(&mut items, source, &report);
+    dropped::apply(&mut items, source, &report, None);
     Ok((items, checked, out))
 }
 
@@ -232,11 +250,41 @@ fn run_r1(
         source_bytes: bytes,
         saved: &workbook,
         name: name.unwrap_or("workbook"),
+        rename: None,
     };
     let (mut items, checked) = score(label, &sides, &out);
-    dropped::apply(&mut items, source, &report);
-    let found = r1::violations(label, plain, items, &delta);
+    dropped::apply(&mut items, source, &report, None);
+    let found = r1::violations(label, plain, items, |i| r1::explained(i, &delta));
     Ok((Some((found, checked)), outcome, Some(out)))
+}
+
+/// One R2 scenario (D1, T-5005): load, recalculate, apply the sheet edit, save, score with a
+/// renamed sheet keyed back under its source name, accept the drops the edit explains, and keep
+/// the delta violations against the plain save's items. `None` when the edit does not apply.
+fn run_r2(
+    source: &Package,
+    bytes: &[u8],
+    name: Option<&str>,
+    label: &'static str,
+    edit: SheetEdit,
+    plain: &[Item],
+) -> Result<(Scored, Option<Vec<u8>>), R0Error> {
+    let mut workbook = load(bytes, name)?;
+    let Some(structural) = r2::apply(&mut workbook, edit).map_err(R0Error::Engine)? else {
+        return Ok((None, None));
+    };
+    let (out, report) = save(&workbook)?;
+    let sides = Sides {
+        source,
+        source_bytes: bytes,
+        saved: &workbook,
+        name: name.unwrap_or("workbook"),
+        rename: structural.renamed.as_ref(),
+    };
+    let (mut items, checked) = score(label, &sides, &out);
+    dropped::apply(&mut items, source, &report, structural.edited());
+    let found = r1::violations(label, plain, items, |i| r2::explained(i, &structural));
+    Ok((Some((found, checked)), Some(out)))
 }
 
 /// The file name `--save-dir` gives a case's output of scenario `label`: `<case id>.<label>.xlsx`,

@@ -36,8 +36,8 @@ Non-goals:
 - How preservation works (ownership matrix, closure rule, fragments, patching). That is SPEC-0034 (T-4183), with stage 5 in T-4567. This spec only
   says how to tell whether preservation worked.
 - XSD validation rules (T-4179) and the oracle round-trip flow (T-4180). They plug into the verdicts defined here.
-- R2 implementation. R2 is defined here so its items have keys, but no R2 run is scored until M4 provides
-  structural edits.
+- R2's row and column edits. R2 is defined here so its items have keys. Its sheet-level edits (rename, add, delete,
+  move) are scored from T-5005; row and column edits wait for M4's structural-edit API.
 - `.xlsb`, `.xls` and Strict OOXML packages. Strict is listed as a known gap; a Strict input is scored only for
   crashes.
 
@@ -76,7 +76,8 @@ first implementation task creates.
 | R0 | load, recalculate, save | T-4172 |
 | R1/En | load, recalculate, apply edit En of the standard set, recalculate, save | T-4172 |
 | R1/all | load, recalculate, apply E1–E6 together, recalculate, save | T-4172 |
-| R2/… | structural edits (insert or delete rows and columns, rename, add, delete or move a sheet) | M4 |
+| R2/rename, R2/add, R2/delete, R2/move | load, recalculate, rename, add, delete or move a sheet, save (D5, "R2's sheet edits") | T-5005 |
+| R2/… (rows, columns) | load, recalculate, insert or delete rows or columns, save | M4 |
 
 R0 recalculates as R1 does, so cached values that differ only because of engine parity cancel out in the
 expected-delta rule (D5). They are scored by the function suites, not here. A run uses the harness's fixed clock, so
@@ -223,7 +224,7 @@ P equality is a structural diff of every part pair matched by the `part` key of 
 7. **Whitespace.** Inner whitespace of text content is significant. Whitespace-only text between elements of
    element-only content is not.
 
-### D5. The expected-delta rule (R1)
+### D5. The expected-delta rule (R1, R2)
 Let `P(a, b)` be the multiset of non-`kept`, non-`normalized` items of D4 between packages `a` and `b`, and let
 `src` be the source. For an R1 run with edits E:
 
@@ -246,6 +247,30 @@ As implemented (T-4514, decision 0336): violations take the case's baseline like
 `R1/all`, so a new violation is a regression and a fixed one is a fix. They cannot fail outright while E6 makes every
 save regenerate (T-4623). Once the patch tier writes new styles, the remaining known violations can be burnt down,
 and the rule can become absolute.
+
+**R2's sheet edits** (T-5005, SPEC-0034 D5.7). R2 holds the same rule, `P(src, out_R2) − P(src, out_R0) ⊆ Δ(E)`,
+with each edit's own `Δ(E)`. Each edit acts on the first sheet in tab order, as R1's do:
+- **The edits.**
+  - `R2/rename` renames it `rustsheet-roundtrip-R2`, and `R2/add` adds a sheet of that name at the end. A case
+    whose workbook already has a sheet of that name is `n/a`.
+  - `R2/delete` deletes the first sheet, and `R2/move` moves it to the end. Both are `n/a` for a workbook of one
+    sheet.
+- **A renamed sheet** keeps its identity. The output's part keys and semantic facts are keyed back under the
+  source's name before they are matched, so only what the rename itself rewrote can differ.
+- **`Δ(E)`** holds:
+  - the cells whose input the edit rewrote (a formula naming a renamed or deleted sheet; the engine does not report
+    these, so the harness compares every formula before and after) and the cells whose cached value it changed;
+  - the workbook part's sheet list and book views, and each sheet view's `tabSelected` after a delete or move;
+  - a defined name rewritten to name the renamed sheet, or to `#REF!` by a delete, and, under a delete or move, a
+    sheet-scoped name, whose `localSheetId` key counts tab positions;
+  - what the extended properties list inside `TitlesOfParts` and `HeadingPairs`;
+  - an added sheet's facts and parts, a deleted sheet's facts, and the `order` facts a delete or move shifts.
+- **A deleted sheet's parts** are not in `Δ(E)`. They pass only as `dropped`, when the report names them
+  `OwnerDeleted` (D7.2), which SPEC-0034 stage 5 adds (T-5004). `StaleAfterStructuralEdit` passes for a part of the
+  edited sheet when it names that sheet, by its source or its new name.
+- **Measurement.** A sheet edit leaves the verbatim and patch tiers, so each R2 save is regenerated. Its violations
+  are therefore mostly what a regenerated save loses: they are the measure of SPEC-0034 stage 5, and shrink as it
+  lands. They take the baseline as new coverage, as R1's did (decisions 0336, 0345).
 
 **Byte stability**, which is M15 exit criterion 8, is the stronger form scored with R1. A part that `Δ(E)` does not
 touch must be byte-identical to the source part. It is measured from T-4172 and gated only once SPEC-0034's verbatim
@@ -458,4 +483,4 @@ The differ is tested before it is trusted:
    - The coarse `NotPreserved` report is part of T-4562 (SPEC-0034 D4), which also adds the save tier. Until then the suite treats
      every missing item as `lost`, which is the same score.
    - Element-level entries follow fragments.
-   - R2 scoring follows M4.
+   - R2's sheet edits are scored from T-5005. Its row and column scoring follows M4.

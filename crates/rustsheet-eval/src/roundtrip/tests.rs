@@ -88,7 +88,7 @@ fn part_keys_do_not_depend_on_part_names() {
     let keys = |p: &Package| p.keyed_parts().keys().cloned().collect::<Vec<_>>();
     assert_eq!(keys(&a), keys(&b));
     assert!(keys(&a).contains(&"/officeDocument[0]/worksheet[Two]".to_string()));
-    assert!(part_items("R0", &a, &b)
+    assert!(part_items("R0", &a, &b, None)
         .0
         .iter()
         .all(|i| i.verdict == Verdict::Kept));
@@ -115,7 +115,7 @@ fn a_lost_part_and_an_added_part_are_found() {
         ("xl/theme/theme1.xml", "<theme/>"),
     ]))
     .expect("out");
-    let (items, _) = part_items("R0", &src, &out);
+    let (items, _) = part_items("R0", &src, &out, None);
     let verdict = |key: &str| items.iter().find(|i| i.key == key).map(|i| i.verdict);
     assert_eq!(verdict("/officeDocument[0]/styles[0]"), Some(Verdict::Lost));
     assert_eq!(verdict("/officeDocument[0]/theme[0]"), Some(Verdict::Added));
@@ -782,7 +782,7 @@ fn flags_map_to_modes_and_regressions_are_refused_by_default() {
 mod r1_rule {
     use rustsheet::{Value, Workbook, WorkbookOptions};
 
-    use super::super::r1::{apply, violations, Delta, Edit};
+    use super::super::r1::{apply, explained, violations, Delta, Edit};
     use super::super::{Item, Verdict};
 
     fn item(kind: &'static str, key: &str, verdict: Verdict) -> Item {
@@ -858,7 +858,9 @@ mod r1_rule {
                 Verdict::Changed,
             ),
         ];
-        let found = violations("R1/E1", &plain, edited.clone(), &delta(false));
+        let found = violations("R1/E1", &plain, edited.clone(), |i| {
+            explained(i, &delta(false))
+        });
         let keys: Vec<&str> = found.iter().map(|i| i.key.as_str()).collect();
         assert_eq!(
             keys,
@@ -874,7 +876,7 @@ mod r1_rule {
         );
         assert!(found.iter().all(|i| i.scenario == "R1/E1"));
         // Under E6 the restyled cell's style and the appended cell format are explained.
-        let with_e6 = violations("R1/E6", &plain, edited, &delta(true));
+        let with_e6 = violations("R1/E6", &plain, edited, |i| explained(i, &delta(true)));
         assert_eq!(with_e6.len(), 5, "{with_e6:?}");
     }
 
@@ -888,20 +890,16 @@ mod r1_rule {
                 Verdict::Changed,
             )
         };
-        let found = violations(
-            "R1/E1",
-            &[truncated(10)],
-            vec![truncated(10_000)],
-            &delta(false),
-        );
+        let found = violations("R1/E1", &[truncated(10)], vec![truncated(10_000)], |i| {
+            explained(i, &delta(false))
+        });
         assert_eq!(found.iter().map(|i| i.weight).collect::<Vec<_>>(), [9_990]);
-        assert!(violations(
-            "R1/E1",
-            &[truncated(10)],
-            vec![truncated(10)],
-            &delta(false)
-        )
-        .is_empty());
+        assert!(
+            violations("R1/E1", &[truncated(10)], vec![truncated(10)], |i| {
+                explained(i, &delta(false))
+            })
+            .is_empty()
+        );
     }
 
     #[test]
