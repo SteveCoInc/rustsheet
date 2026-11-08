@@ -50,14 +50,19 @@ blocks it.
   the math) where the engine is not within ε of the math. `r1c::r3_marked` is the new test (marked, two numbers, a
   math value, Excel more than G off it); `r3_math` is `r3_marked` plus the engine inside on the math, as before.
   `mark_r3_math` sets `Math`, then `MathMissed`, else `Excel`.
-- `cell_envelope` takes Excel's side only for `Target::Excel` cells, so every R3-marked cell is held to the math
-  alone, passing or not: an R3 cell that moves to Excel's value is now `Outside`, and R1(c), the `E`/`W` ratchet,
-  the visible lock and the tier gates all see it. The closeness buckets read `Target::Math` only, so the
+- `cell_envelope` takes Excel's side only for `Target::Excel` cells, and returns early for a bit-exact pass only
+  on those, so every R3-marked cell is held to the math alone, passing or not: an R3 cell that moves to Excel's
+  value, exactly or within 12 digits, is now `Outside`. The `E`/`W` ratchet (`baseline::known_failure` also lists
+  a `MathMissed` cell that passes against Excel but is outside, in passing cases too), the visible lock and the
+  tier gates all see it. R1(c) classifies only failing, visibly-off cells, so it sees such a cell only when it is
+  more than 15 digits off Excel (review round 1, Excel-fidelity BLOCKING). The closeness buckets read `Target::Math` only, so the
   `r3_math` count (decision 0310) is unchanged: a `MathMissed` cell stays visibly off.
-- Tests: envelope.rs `cell_envelope_holds_an_r3_cell_the_engine_misses_to_the_math_only`; r1c
+- Tests: envelope.rs `cell_envelope_holds_an_r3_cell_the_engine_misses_to_the_math_only` (also bit-exact with
+  Excel); baseline `an_r3_cell_at_excels_exact_value_off_the_math_is_an_e_item` (an `E` item in a passing case,
+  and a regression against a baseline where it passed); r1c
   `a_marked_cell_at_excels_value_off_the_math_counts` (Phase 1b before, Counts now) and the updated
   `a_marked_cell_off_the_math_stays_visibly_off` (`MathMissed`, r3_math 0, visibly off 1). `cargo test -p
-  rustsheet_eval`: 504 unit + 4 integration pass.
+  rustsheet_eval`: 505 unit + 4 integration pass.
 - `make eval-baseline`: no line changed, no regression. On the full report of main e53d43fa (vendored suites,
   2026-11-08), all 457 R3-marked cells it lists are on the math (`Math`); none would be `MathMissed`, so no cell
   moves today. The change guards against a future one.

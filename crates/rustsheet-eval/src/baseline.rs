@@ -48,7 +48,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 use crate::accuracy::envelope::{cell_envelope, CellEnvelope};
-use crate::runner::{CaseResult, CaseStatus, CellResult};
+use crate::runner::{CaseResult, CaseStatus, CellResult, Target};
 use crate::suite::BaselineMode;
 
 /// The header of a baseline without `E` lines: a round-trip baseline, or a cell baseline written
@@ -137,14 +137,16 @@ impl Baseline {
                 }
             }
             match r.status {
-                CaseStatus::Pass | CaseStatus::Pending => {}
-                CaseStatus::Fail if mode == BaselineMode::Cells => {
-                    for c in r.cells.iter().filter(|c| c.verdict.is_failure()) {
+                CaseStatus::Pending => {}
+                // A passing case can still hold an R3 cell that returns Excel's exact value off the
+                // math (`Target::MathMissed`, T-5097): a failure under decision 0188 R3.
+                CaseStatus::Pass | CaseStatus::Fail if mode == BaselineMode::Cells => {
+                    for c in r.cells.iter().filter(|c| known_failure(c)) {
                         b.add_failing(&r.id, c.key(), cell_envelope(c));
                     }
                 }
                 // A corpus case with only drift is no failure (SPEC-0037 design 6).
-                CaseStatus::Fail => {
+                CaseStatus::Pass | CaseStatus::Fail => {
                     if r.cells.iter().any(outside_envelope) {
                         b.add_failing(&r.id, "*".into(), CellEnvelope::WrongType);
                     }
@@ -300,6 +302,14 @@ impl Baseline {
 #[must_use]
 pub fn outside_envelope(c: &CellResult) -> bool {
     cell_envelope(c) != CellEnvelope::Inside
+}
+
+/// Whether `c` is a known failure the baseline lists: neither bit-exact nor a pinned deviation, or
+/// an R3 cell bit-exact with Excel's value but off the math (`Target::MathMissed`, decision 0188 R3,
+/// T-5097), which scores a pass against Excel and is still outside the envelope.
+#[must_use]
+pub fn known_failure(c: &CellResult) -> bool {
+    c.verdict.is_failure() || c.target == Target::MathMissed && outside_envelope(c)
 }
 
 #[derive(Debug, Default)]
