@@ -39,8 +39,11 @@ These are the reviewers' MINOR findings on PR #4080 (T-4853), deferred because e
 - [ ] An Excel-opened fixture settles the lenient attribute read, or the UNVERIFIED stays with a reason.
 - [ ] The listed conditional_formatting.rs and styles.rs flags read through the shared helper; behavior is shown unchanged
       or improved by the roundtrip and corpus gates.
-- [ ] xlsx-storage.md and T-4853's Outcome are corrected.
+- [ ] xlsx-storage.md and T-4853's Outcome are corrected; typed input reads its boolean through `boolean_text`.
 - [ ] `make check` green; reviewers approve.
 
+- **Typed input (design).** model.rs `reenter_printed_input` still reads a typed boolean with
+  `to_lowercase().parse::<bool>()`. It accepts the same set as `boolean_text`; switch it so one helper remains.
+
 ## Out of scope
-- Typed input's boolean (model.rs `reenter_printed_input`), which T-5082 owns.
+- The currency-list builder and the stale `value_needs_quoting` references (T-5082).
