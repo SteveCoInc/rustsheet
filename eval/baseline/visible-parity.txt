@@ -314,6 +314,7 @@ probes/t4974-t-inv-joint-abs-rel-stop.case.json	28
 probes/t4974-t-inv-quarter-stop.case.json	22
 probes/t4974-t-inv-small-beta-tails.case.json	16
 probes/t4974-t-inv-tiny-centre-region.case.json	8
+probes/t5066-beta-dist-direct-bgrat.case.json	41
 probes/t5067-written-empty-branch-wrappers.case.json	17
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
