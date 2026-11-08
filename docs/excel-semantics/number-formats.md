@@ -447,6 +447,12 @@ Below serial 1, and the counts:
   probes/t4389-holdout A272; t4389-confirm A41:A80). It moves the serial only below 2^-18 days (about 0.33 s). From
   2^-19 days it is exactly half an ulp, which the double addition rounds to even, and Excel follows that in 29 of 40
   probed cells (t4389-confirm A1:A40); the other 11 (A4, A6, A9, A14:A19, A31, A36) are not explained (T-4419).
+  In that band Excel decides by one threshold per tie: probes/t4419-band-flip (excel-graph 2026-11-08) steps 13 ties
+  t/86400000 + n*2^-71 days (t 179.5 to 327.5 ms) through n = -20..-8 under `s.000`, and each tie's answer changes
+  exactly once, from down to up, at n between -15 and -11, a point that varies by tie. The engine's offset model gets
+  159 of 169 (unexplained: F5, F11, G12, H1, H7, H9, H10, H12, H13, I12). Plain double chains with no 2^-72 offset,
+  `(x*86400)*1000` or `((x*24)*60)*60*1000` then the milliseconds' 15-digit rounding and half up, get 166, missing
+  disjoint ties, so in this band the offset is not what decides (docs/research/t4419/chains.py).
   `.0` and `.00` show no offset (`TEXT(0.005/86400-8*2^-77,"s.00")` ".01", -12 ulp ".00", 0.45 and 0.68 units of the
   15th digit below). The constant is FITTED: every offset from 1.74E-17 to 1.86E-17 s scores all 538 `.000` cells of
   the t4323, t4332 and t4370 fraction cases, and 2^-72 days is the power of two inside that window; no operation that
