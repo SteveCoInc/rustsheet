@@ -333,8 +333,16 @@ sidecar path, formula-cell count and whether the suite trusts its cached values.
 
 ## Scoring
 Every formula cell (including array-formula members) that has an expectation is checked.
-Formulas calling NOW/TODAY/RAND/RANDBETWEEN/RANDARRAY are skipped (counted as `skipped_volatile`),
-and so is every formula that reads one through a static reference or a defined name. A spec case
+Formulas calling NOW/TODAY are skipped (counted as `skipped_volatile`), and so is every formula
+that reads one through a static reference or a defined name (unless a METADATA `NOW` row pins the
+clock). A formula that calls RAND/RANDBETWEEN/RANDARRAY, or reads one the same way, is scored only
+when the engine shows its value does not depend on the draws (T-5100, decision 0357): every case is
+evaluated with the random functions drawing from a fixed seed (`engine::HARNESS_RANDOM`), and a case
+holding such cells is evaluated again under four alternate sources (two other seeds, and fixed draws
+at 0 and at the largest double below 1; `runner/draws.rs`). A cell whose value is the same in every
+run is scored against Excel; any other is skipped as volatile. Excel's own draws cannot be
+reproduced, so a value that moves with the draws is never compared. The alternate runs count toward
+the case's timeout. A spec case
 opts cells back in with `"invariant": ["Sheet!A1", ...]` (T-1283): cells whose formula calls a
 volatile function, or reads a volatile cell, but whose value cannot change between runs
 (`RANDBETWEEN(5,5)`, `ROWS(RANDARRAY(3,2))`, `ISNUMBER(NOW())`). A listed cell is scored, and taint

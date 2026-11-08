@@ -657,8 +657,7 @@
   ],
   "crates/rustsheet-engine/src/functions/math_and_trigonometry/random.rs": [
     "clippy::cast_possible_truncation",
-    "clippy::cast_sign_loss",
-    "clippy::unused_self"
+    "clippy::cast_sign_loss"
   ],
   "crates/rustsheet-engine/src/functions/math_and_trigonometry/sequence.rs": [
     "clippy::cast_possible_truncation"
