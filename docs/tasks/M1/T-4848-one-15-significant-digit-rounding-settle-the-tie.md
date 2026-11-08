@@ -27,22 +27,25 @@ Found by the T-4856 duplicate-concept audit (one definition per concept, CLAUDE.
 - The other duplicate concepts of the audit (T-4847 to T-4855 each own one).
 
 ## Outcome
-- Probe `probes/t4848-sixteenth-digit-ties` (98 cells, excel-graph, 2026-11-07) shows Excel splitting the
-  rule. Comparisons (`=`, `<`, COUNTIF) cut an exact 16th-digit tie away from zero: `1E+15+25` equals `1E+15+30`, and
-  `1E+14+2.5` equals `1E+14+3`. Text (`&`, `TEXT(,"0.0")`, EXACT) cuts toward zero. MATCH's exact mode matches neither
-  neighbour. The finding is in numbers.md, "A 16th-digit tie splits by use".
-- `decimal_round::cut_to_15_digits(value, tie_away)` is now the one 15-digit cut:
-  - `cmp_excel_precision` calls it with ties away (it used `format!("{:.14e}")` ties to even, which got 10 of the
-    probe's comparison cells wrong);
-  - EXACT calls it with ties toward zero (6 cells were wrong);
-  - so do `to_excel_precision_str` (cell text, printed literals), the formatter's scientific mantissa and fraction
-    cuts, the IM* part pre-cut, POWER's odd-root test, SUBSTITUTE's instance cut, pivot number groups and the
-    sequence detector's `round_sig` (its `log10`/`powf` arithmetic is gone).
+- Three probes (excel-graph, 2026-11-07/08) show Excel splitting the exact 16th-digit tie by use.
+  - `probes/t4848-sixteenth-digit-ties` (98 cells): comparisons (`=`, `<`, COUNTIF) cut away from zero (`1E+15+25` equals
+    `1E+15+30`, and `1E+14+2.5` equals `1E+14+3`); text (`&`, `TEXT(,"0.0")`, EXACT) cuts toward zero; MATCH's exact mode
+    matches neither neighbour.
+  - `probes/t4848-tie-complex-part` (15 cells): IM* parts cut away from zero (`COMPLEX(1E+15+25,0)` is "1000000000000030").
+  - `probes/t4848-tie-fraction-format` (15 cells): fraction integer digits cut away from zero
+    (`TEXT(1E+15+25.5,"# ?/?")` is "1000000000000030 1/2").
+  - The findings are in numbers.md, "A 16th-digit tie splits by use".
+- `decimal_round::cut_to_15_digits(value, tie_away)` is now the one 15-digit cut, and each caller names its tie rule:
+  - away from zero in `cmp_excel_precision` (it used `format!("{:.14e}")` ties to even, which got 10 comparison cells wrong);
+  - away from zero in the IM* part pre-cut (15 cells were wrong) and in the fraction cuts (3 cells were wrong);
+  - toward zero in EXACT (6 cells were wrong);
+  - toward zero in `to_excel_precision_str`, the scientific mantissa, POWER's odd-root test, SUBSTITUTE's instance count,
+    pivot number groups and the sequence detector's `round_sig` (its `log10`/`powf` arithmetic is gone).
 - `to_excel_precision` is deleted. `to_precision(x, n)` stays only for its variable-precision callers (n = 16 in
-  engineering misc, a computed n in `round_shown_place`). `number_to_text` keeps `significant_15`, the digit cut
-  under `cut_to_15_digits`.
-- UNVERIFIED tie directions (unreachable or unprobed), listed in the entry: CF Equal, the scientific mantissa,
-  fractions, IM* parts and pivot group quotients.
+  engineering misc, a computed n in `round_shown_place`). `number_to_text` keeps `significant_15`, the digit cut under
+  `cut_to_15_digits`.
+- Follow-up T-5068 probes the tie points that are still UNVERIFIED: cell text, the scientific mantissa, comma-scaled
+  fractions, pivot group quotients and CF Equal.
 - Unit tests: `test_sixteenth_digit_ties` (3 tests).
-- Eval: probes gain 1 case, which passes 98/98 values and 7/7 texts. Every suite has 0 regressions; known failures
-  are unchanged.
+- Eval: probes gain 3 cases. They pass 128/128 cells (98 + 15 + 15) and 7/7 texts, 34 of which failed before the
+  change. Every suite has 0 regressions; known failures are unchanged.
