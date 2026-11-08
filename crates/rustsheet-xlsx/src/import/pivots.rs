@@ -727,8 +727,9 @@ fn read_definition<B: BufRead>(
                 _ => {}
             }
         } else if at(path, &[DEFINITION, "cacheSource"]) && name == "worksheetSource" {
-            // A named source (`name`: a defined name or a table) is kept as no source, its name
-            // for export.
+            // A named source (`name`: a defined name or a table) is kept as no source and its
+            // name, which a refresh resolves (`Model::pivot_source_area`, T-4506) and the export
+            // writes back.
             if let Some(name) = attribute(element, "name")? {
                 limits.check_text(&name)?;
                 source_name = Some(name);

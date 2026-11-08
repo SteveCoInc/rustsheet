@@ -79,15 +79,43 @@ pub fn load_defined(workbook: &mut Workbook, spec: &CaseSpec) -> Result<(), Stri
     let defined = (spec.sheets.iter())
         .flat_map(|sheet| sheet.pivot_tables.iter().map(move |pivot| (sheet, pivot)))
         .filter_map(|(sheet, pivot)| Some((sheet, pivot, pivot.definition.as_ref()?)));
-    let mut parts = Vec::new();
+    let mut parts: Vec<PivotParts> = Vec::new();
     let mut names = Vec::new();
-    for (sheet, pivot, definition) in defined {
-        if parts.len() == MAX_PIVOTS {
+    // Each defined pivot's cache, by pivot name, for a later pivot's `shared_cache` (T-4506).
+    let mut caches: HashMap<&str, usize> = HashMap::new();
+    for (tables, (sheet, pivot, definition)) in defined.enumerate() {
+        if tables == MAX_PIVOTS {
             return Err(format!("more than {MAX_PIVOTS} defined pivots"));
+        }
+        let id = workbook.sheet_id(&sheet.name).map_err(|e| e.to_string())?;
+        if let Some(shared) = definition.get("shared_cache") {
+            // The builder writes the table only, over the named pivot's cache, which must be
+            // the cache this pivot would write (`pivot.py` `_defined`).
+            let shared = shared.as_str().unwrap_or_default();
+            let owner = (caches.get(shared).copied()).ok_or_else(|| {
+                format!(
+                    "pivot {}: shared_cache {shared} is no earlier defined pivot",
+                    pivot.name
+                )
+            })?;
+            let part = parts.get_mut(owner).ok_or("a shared cache out of range")?;
+            let built =
+                crate::pivot_definition::parts(spec, sheet, pivot, definition, part.cache_id)?;
+            if built.cache_definition != part.cache_definition
+                || built.cache_records != part.cache_records
+            {
+                return Err(format!(
+                    "pivot {}: its cache differs from {shared}'s, which it shares",
+                    pivot.name
+                ));
+            }
+            part.tables.push((id, built.table));
+            caches.insert(pivot.name.as_str(), owner);
+            continue;
         }
         let cache_id = u32::try_from(parts.len() + 1).map_err(|e| e.to_string())?;
         let built = crate::pivot_definition::parts(spec, sheet, pivot, definition, cache_id)?;
-        let id = workbook.sheet_id(&sheet.name).map_err(|e| e.to_string())?;
+        caches.insert(pivot.name.as_str(), parts.len());
         names.push(pivot.name.as_str());
         parts.push(PivotParts {
             cache_definition: built.cache_definition,
