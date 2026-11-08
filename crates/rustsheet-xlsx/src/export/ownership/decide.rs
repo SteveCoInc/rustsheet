@@ -399,11 +399,11 @@ pub(super) fn regenerated_within(
             {
                 continue;
             }
-            Policy::Modelled => DropReason::NotPreserved,
+            // A modelled part the output lacks. And VBA: the export writes no macro-enabled package
+            // yet (T-5010), so the macros are lost because nothing writes them, not because the
+            // caller asked for a plain file.
+            Policy::Modelled | Policy::Active => DropReason::NotPreserved,
             Policy::Drop => DropReason::Policy,
-            // The export writes no macro-enabled package yet (T-5010): the macros are lost because
-            // nothing writes them, not because the caller asked for a plain file.
-            Policy::Active => DropReason::NotPreserved,
             Policy::Replay | Policy::ReplayIfClean => match verdicts.get(&key) {
                 Some(Verdict::Regenerated) => DropReason::ClosureReachesRegenerated,
                 Some(Verdict::Limit(limit)) => DropReason::LimitExceeded {

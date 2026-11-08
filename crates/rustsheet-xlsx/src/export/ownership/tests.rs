@@ -1,6 +1,7 @@
 //! Tests of the ownership matrix and the decisions of a regenerated save (T-4999).
 
 use std::collections::BTreeSet;
+use std::fmt::Write as _;
 use std::io::{Cursor, Write as _};
 
 use super::decide::regenerated_within;
@@ -32,9 +33,10 @@ fn rels(list: &[(&str, &str, &str, bool)]) -> String {
         } else {
             ""
         };
-        out.push_str(&format!(
+        let _ = write!(
+            out,
             r#"<Relationship Id="{id}" Type="{R}{kind}" Target="{target}"{mode}/>"#
-        ));
+        );
     }
     out + "</Relationships>"
 }
