@@ -3,7 +3,7 @@ id: T-5039
 title: "GETPIVOTDATA names a calculated data field by its name or caption (T-2085 LY G1:G3, moved from T-4804)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
