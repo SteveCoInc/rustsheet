@@ -3,7 +3,7 @@ id: T-4973
 title: "Spec form for a custom filter and a display-text values list (T-4965 follow-up)"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: sonnet
