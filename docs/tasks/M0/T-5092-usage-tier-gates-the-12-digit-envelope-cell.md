@@ -3,7 +3,7 @@ id: T-5092
 title: "Usage-tier gates: the 12-digit envelope, cell_envelope, R1(c), usage_gates and the Phase 1 exit lines (SPEC-0037 step 2)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
