@@ -17,7 +17,7 @@ line. The criteria and their measures are decision 0187's:
 - `owners`: `exit_owners.unowned_off` and `exit_owners.unowned` for every Phase 1 milestone list
   no cell (a cell owned only by a `defer:` task is unowned);
 - `milestone M<k>`: the report's `milestone_exit` row (an owner count rides beside a met row);
-  M16's line also names its suite, probe and catalog verdicts (decision 0274);
+  a row with pivot measures also names its suite, probe and catalog verdicts (decision 0274);
 - `manual`: the prose items decision 0146 checks outside the rows.
 Verdicts come from report.json and exit_owners.py; nothing is recomputed here. Exit 1 when any
 line is `not met` or `n/a` (an unmeasured criterion is never met), 2 when the report cannot be
@@ -44,9 +44,10 @@ CATALOG = ROOT / "eval" / "catalog"
 ACCURACY = ROOT / "eval" / "runs" / "accuracy.json"
 MET, NOT_MET, MANUAL, NOT_MEASURED = "met", "not met", "manual", "n/a"
 # The Phase 1 milestones whose exit criteria the Phase 1 exit requires (docs/milestones.md). A
-# milestone joins once the report has its `milestone_exit` row (a missing row reads `not met`):
-# M16, pivot tables, by decision 0274 with its row from T-4127.
-PHASE1_MILESTONES = ("M1", "M2", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M16")
+# milestone joins once the report has its `milestone_exit` row (a missing row reads `not met`).
+# M16, pivot tables, joined by decision 0274 and moved to Phase 2 by decision 0354; the report
+# still computes its row.
+PHASE1_MILESTONES = ("M1", "M2", "M5", "M6", "M7", "M8", "M9", "M10", "M11")
 # Decision 0146: exit criteria measured outside the report's rows, with where they are written.
 MANUAL_ITEMS = (
     ("M1 parity bugs and API v0", "docs/milestones.md, M1 exit criteria (decision 0146 item 1)"),
