@@ -2758,6 +2758,7 @@ C	probes/t4901-mround-blank-let-lambda-roundings.case.json	16
 C	probes/t4903-empty-arg-quotient-seriessum-lift.case.json	8
 C	probes/t4923-sqrtpi-factdouble-omitted.case.json	13
 C	probes/t4928-iseven-isodd-omitted.case.json	12
+C	probes/t4951-rank-lift-zip-ties.case.json	84
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
