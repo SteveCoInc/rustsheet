@@ -924,7 +924,10 @@ two other kinds:
   spacing is 2^-65 or 2^-67), and the model's v rounded to the nearest multiple of 2^-53, returned as 1/v - 1,
   equals Excel's bits in 173 of the 175 cells; P!C95 is 1 grid step off after rounding (0.84 before) and P!C157 (flow 67a4c03a x-1, guess
   = an iterate) is an unexplained outlier, about 100 grid steps and 7.9E-11 relative off, perhaps another step
-  count or path. So the "0.1 to 0.4 %" error
+  count or path. Column B's guesses are numeric-text cells (the case writes them as JSON strings), which IRR reads
+  as their numbers in Excel and in the engine alike: `IRR(flows,B154)` with B154 text is Excel's 7026.083663189925,
+  not the no-guess 7026.0836627623075 (P!A142), and 180 of the 181 cells match. A text argument is outside the math
+  generator's reader, so no column C cell has a math value (T-4797). So the "0.1 to 0.4 %" error
   of the large-root cells is the secant's final v held with 53 fractional bits (the iterate is stored as an offset
   from 1 or in a 2^-53-granular fixed form), not a different early step.
 - T-3120 (fit lab `uv run rustsheet-fitlab irr`, `irr_secant_d`; engine eval): the rounding is the state. Excel's
