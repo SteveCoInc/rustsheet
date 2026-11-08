@@ -61,6 +61,9 @@ pub(crate) enum As109Profile {
     /// residual changes sign, where the squared step underflows, where the residual is below the
     /// smallest normal double or where an iterate leaves (0, 1); always settled, never exhausted.
     SmallBetaTail,
+    /// T.INV.2T, TINV and CONFIDENCE.T away from the centre (T-4975 section B): AS 109's steps,
+    /// stopping only when both the absolute (AS R19) and the relative accuracy tests hold.
+    StudentT,
 }
 
 /// How [`as109_search`] ended.
@@ -144,6 +147,10 @@ fn first_estimate(pp: f64, qq: f64, target: f64, ln_beta: f64) -> f64 {
 fn accuracy(profile: As109Profile, pp: f64, qq: f64, target: f64) -> f64 {
     match profile {
         As109Profile::SmallBetaTail => 0.0,
+        // AS R19's accuracy on the first shape, df/2: with the smaller shape (1/2) the exponent
+        // is below -33 and the search never stops early, which takes 6 of T.INV.2T's 6 controls
+        // at p = 1/2 off Excel (addendum section B: df 5, 7, 8, 9, 28, 123456789).
+        As109Profile::StudentT => 10f64.powf(-5.0 / pp / pp - 1.0 / target.powf(0.2) - 13.0),
         As109Profile::BetaInv => {
             let m = pp.min(qq);
             10f64.powf(-5.0 / m / m - 1.0 / target.powf(0.2) - 13.0)
@@ -289,7 +296,14 @@ where
             if sq < prev {
                 let tx = value - adj;
                 if (0.0..=1.0).contains(&tx) {
-                    if prev <= acu_sq || y * y <= acu_sq {
+                    let absolute = prev <= acu_sq || y * y <= acu_sq;
+                    // Student's t stops only when the relative test holds too: the step is within
+                    // an epsilon of the iterate (addendum section B).
+                    let stop = match profile {
+                        As109Profile::StudentT => absolute && y.abs() <= f64::EPSILON * value,
+                        _ => absolute,
+                    };
+                    if stop {
                         return As109Outcome::Stopped(value);
                     }
                     if tx != 0.0 && tx != 1.0 {

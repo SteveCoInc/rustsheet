@@ -8,6 +8,7 @@
 //! (statistics.md "Incomplete beta bpser", T-3007).
 
 use super::super::beta_density::{algdiv, alnrel, stirling_del, ALGDIV_C};
+use super::super::gamma_x87::excel_gamma;
 use super::super::gammaln::excel_gammaln;
 use super::super::half_integer_beta::{half_integer_beta, is_half_integer_shape};
 use crate::arithmetic::{extended_product, extended_sum};
@@ -96,6 +97,19 @@ pub(in super::super) fn neg_ln_beta_balanced(a: f64, b: f64) -> Register {
         .add(Register::load(excel_gammaln(a)))
         .store();
     Register::load(-l)
+}
+
+/// ln B(a, b) from finite gamma values as Excel's tiny-centre Student-t inverse forms it (T-4975,
+/// addendum 2 section G): B = fl(fl(GAMMA(a)·GAMMA(b))/GAMMA(a+b)) with Excel's GAMMA, its
+/// reciprocal stored, and ln B = -LN(1/B). `None` where a gamma or the reciprocal is not finite,
+/// where the caller keeps its established path.
+pub(in super::super) fn ln_beta_finite_gamma(a: f64, b: f64) -> Option<f64> {
+    let (ga, gb, gab) = (excel_gamma(a), excel_gamma(b), excel_gamma(a + b));
+    if !(ga.is_finite() && gb.is_finite() && gab.is_finite()) {
+        return None;
+    }
+    let reciprocal = 1.0 / (ga * gb / gab);
+    (reciprocal.is_finite() && reciprocal > 0.0).then(|| -excel_ln(reciprocal))
 }
 
 /// The largest a + b for which [`neg_ln_beta_half_integer`] builds B(a, b) by its recurrence (one

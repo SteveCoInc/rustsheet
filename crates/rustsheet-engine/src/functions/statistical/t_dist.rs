@@ -4,9 +4,14 @@ use crate::arithmetic::{extended_quotient, flush_subnormal};
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error, LiftCost};
 use crate::functions::math_and_trigonometry::excel_tan;
+use crate::functions::statistical::beta::beta_dist_density;
+use crate::functions::statistical::bratio::beta_dist_lower_tail;
+use crate::functions::statistical::bratio::bpser::{bpser_with_ln_beta, ExpFinish};
 use crate::functions::statistical::bratio::kernel_tails;
+use crate::functions::statistical::bratio::ln_beta::ln_beta_finite_gamma;
 use crate::functions::statistical::inverse_beta::{
-    beta_small_quantile, t_inverse_cdf, t_quantile_beta_root, SmallBetaQuantile,
+    as109_search, beta_small_quantile, beta_small_quantile_with, inverse_ln_beta, t_inverse_cdf,
+    t_quantile_beta_root, As109Problem, As109Profile, SmallBetaNorm, SmallBetaQuantile,
 };
 use crate::functions::statistical::loader::excel_t_density_df_one_overflows;
 use crate::functions::statistical::paired::{MarkedSample, PairedSamplesError, PairedValues};
@@ -18,6 +23,7 @@ use crate::functions::statistical::student_t::{
 };
 use crate::functions::Function;
 use crate::x87_exp::excel_exp;
+use crate::x87_register::Register;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
@@ -446,8 +452,45 @@ const T_NEGATIVE_CENTRE_C: f64 = 0.1;
 /// `df` is a truncated integer from 1 to [`T_DF_MAX`] here, every one of which `student_t_centre`
 /// takes (it is NaN only for a df its Gamma ratio refuses).
 fn t_centre_quantile(df: f64, c: f64) -> f64 {
+    if let Some(t) = t_tiny_centre_quantile(df, c) {
+        return t;
+    }
+    t_centre_crossing(df, c)
+}
+
+/// The crossing of the centre probability behind [`t_centre_quantile`].
+fn t_centre_crossing(df: f64, c: f64) -> f64 {
     let estimate = student_t_density(0.0, df).map_or(f64::NAN, |density| 0.5 * c / density);
     refine_increasing(|t| student_t_centre(t, df), c, estimate, 0.0, 1.0)
+}
+
+/// Magnitude `t` with `P(|T| < t) = c` for a tiny centre `c`, as Excel reaches it (T-4975: addendum
+/// section B's tiny centre and addendum 2 section G): the small-beta seed and Newton iterate
+/// (`inverse_beta::beta_small_quantile_with`, its omitted-term applicability rule) on
+/// `I_z(1/2, df/2) = c`, z = t^2/(df + t^2), normalized by the finite-gamma ln B
+/// (`bratio::ln_beta::ln_beta_finite_gamma`) and crossing bpser with that ln B and the split EXP
+/// finish; back-transformed as t = SQRT(df·z/(1 - z)). `None` (the crossing of the centre then
+/// decides) where a gamma overflows, where the first series correction moves the seed (it is not
+/// yet resolved below an ulp: the centre is not tiny enough) or outside the small-beta tail. The
+/// opposite reading, falling back where the correction does not move the seed, loses 8 cells of
+/// the 2,243 literal T.INV-family cells and fixes 5; this one fixes 79 and loses 3. `CONFIDENCE.T(ERFC(3.14159/Data!C$10),1.999,21)` is Excel's
+/// 1.9667525376639697E-15 so (gen-m9/984cba67bbe6972b A128).
+fn t_tiny_centre_quantile(df: f64, c: f64) -> Option<f64> {
+    let b = 0.5 * df;
+    let ln_beta = ln_beta_finite_gamma(0.5, b)?;
+    let neg_ln_beta = Register::load(-ln_beta);
+    let norm = SmallBetaNorm {
+        ln_beta,
+        fallback_if_corrected: true,
+    };
+    let cdf =
+        |z: f64| bpser_with_ln_beta(0.5, b, z, neg_ln_beta, ExpFinish::Split).unwrap_or(f64::NAN);
+    let z = match beta_small_quantile_with(0.5, b, c, norm, cdf)? {
+        SmallBetaQuantile::Root(z) => z,
+        SmallBetaQuantile::LogSeed(ln_z) => excel_exp(ln_z),
+    };
+    let t = (df * (z / (1.0 - z))).sqrt();
+    t.is_finite().then_some(t)
 }
 
 /// Below this df statrs' search is bounded and accurate enough to seed [`t_rounded_y_quantile`]'s
@@ -478,6 +521,9 @@ fn t_rounded_y_quantile(df: f64, q: f64) -> f64 {
             return t;
         }
     }
+    if let Some(t) = t_as109_quantile(df, q) {
+        return t;
+    }
     // AS 109's root (statrs' search, a few microseconds where it is reliable) seeds the bracket:
     // about 25 tails instead of 64, which matters where one tail sums the integer-df series
     // (about 30 us at df 1000; T-2511's performance review).
@@ -490,6 +536,29 @@ fn t_rounded_y_quantile(df: f64, q: f64) -> f64 {
     // A y of 0 gives an infinite t, which the callers turn into #NUM! (`is_finite` checks in
     // `t_inv_of` and CONFIDENCE.T).
     (df * (1.0 / y - 1.0)).sqrt()
+}
+
+/// Excel's Student-t quantile away from the centre as its AS 109 search stops (T-4975 section B):
+/// the beta root y of `I_y(df/2, 1/2) = 2q` (`inverse_beta::as109`, Student-t profile),
+/// back-transformed as t = fl(sqrt(fl(df * fl(fl(1/y) - 1)))). `None` where the search is
+/// exhausted.
+fn t_as109_quantile(df: f64, q: f64) -> Option<f64> {
+    let a = 0.5 * df;
+    let target = 2.0 * q;
+    let dist = statrs::distribution::Beta::new(a, 0.5).ok()?;
+    let problem = As109Problem {
+        profile: As109Profile::StudentT,
+        pp: a,
+        qq: 0.5,
+        target,
+        ln_beta: inverse_ln_beta(a, 0.5),
+        // BETA.DIST's own lower tail: T.TEST's tail at the rounded y scores worse (1,591
+        // bit-exact of the 2,243 literal T.INV-family cells against 1,721).
+        cdf: |y: f64, z: f64| beta_dist_lower_tail(y, z, a, 0.5),
+        density: |y: f64, _: f64| beta_dist_density(y, a, 0.5, &dist),
+    };
+    let y = as109_search(&problem).value(false)?;
+    Some((df * (1.0 / y - 1.0)).sqrt())
 }
 
 /// The signed quantile with `P(T > t) = q` from [`t_rounded_y_quantile`], for q outside the centre.

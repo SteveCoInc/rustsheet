@@ -328,10 +328,41 @@ pub(crate) fn beta_small_quantile(
     p: f64,
     cdf: impl Fn(f64) -> f64,
 ) -> Option<SmallBetaQuantile> {
+    let ln_beta = ln_gamma(a) + ln_gamma(b) - ln_gamma(a + b);
+    beta_small_quantile_with(a, b, p, SmallBetaNorm::lgamma(ln_beta), cdf)
+}
+
+/// The normalization [`beta_small_quantile_with`] takes: ln B for the seed and the density, and
+/// whether a first series correction that moves the seed sends the caller back to its own path.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct SmallBetaNorm {
+    pub ln_beta: f64,
+    pub fallback_if_corrected: bool,
+}
+
+impl SmallBetaNorm {
+    /// The Student-t tail's: the correctly rounded GAMMALN sum, the solver always taken.
+    fn lgamma(ln_beta: f64) -> Self {
+        Self {
+            ln_beta,
+            fallback_if_corrected: false,
+        }
+    }
+}
+
+/// [`beta_small_quantile`] with the caller's normalization (the tiny-centre Student-t inverse's
+/// finite-gamma ln B, `bratio::ln_beta::ln_beta_finite_gamma`, T-4975 addendum 2 section G).
+pub(crate) fn beta_small_quantile_with(
+    a: f64,
+    b: f64,
+    p: f64,
+    norm: SmallBetaNorm,
+    cdf: impl Fn(f64) -> f64,
+) -> Option<SmallBetaQuantile> {
     if !(a > 0.0 && b > 0.0 && p > 0.0 && p < 1.0) {
         return None;
     }
-    let ln_beta = ln_gamma(a) + ln_gamma(b) - ln_gamma(a + b);
+    let ln_beta = norm.ln_beta;
     let ln_p = p.ln();
     let ln_x = (ln_p + (a.ln() + ln_beta)) / a;
     if !ln_x.is_finite() || ln_x >= 0.0 {
@@ -347,6 +378,9 @@ pub(crate) fn beta_small_quantile(
         return Some(SmallBetaQuantile::LogSeed(ln_x));
     }
     let first = seed - (1.0 - b) / (a + 1.0) * square;
+    if norm.fallback_if_corrected && first != seed {
+        return None;
+    }
     let density = |x: f64| ((a - 1.0) * x.ln() + (b - 1.0) * (-x).ln_1p() - ln_beta).exp();
     Some(SmallBetaQuantile::Root(newton_least_residual(
         first,

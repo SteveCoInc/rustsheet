@@ -5745,6 +5745,39 @@ t_dist.rs `t_small_beta_quantile`.
 Status: VERIFIED (excel-graph)
 Tasks: T-3363, T-4975
 
+## T.INV.2T, TINV and CONFIDENCE.T: AS 109's Student-t stopping point, and the tiny centre's finite-gamma iterate (T-4975)
+Rule: away from the centre (and from df 2), the Student-t quantile is the AS 109 search's stopping point on
+`I_y(df/2, 1/2) = 2q` (the shared loop of "BETA.INV returns bounded AS 109 Newton stopping points (T-4975)",
+Student-t profile), back-transformed as t = SQRT(df·(1/y - 1)). The profile differs from BETA.INV's in its stop:
+- the absolute (AS R19) accuracy is `10^(-5/pp^2 - p^(-0.2) - 13)` on the first shape pp = df/2, not the smaller
+  shape (1/2, with which the search never stops early);
+- the search stops only when that absolute test *and* a relative test (the step within one epsilon of the iterate)
+  hold; then the iterate before the step is returned.
+The CDF is BETA.DIST's lower tail; T.TEST's tail at the rounded y scores worse. The deep tail keeps T-3363's small-beta
+iterate, the df 1 forms and the centre stay.
+Controls, bit for bit: `T.INV.2T(0.5,df)` at df 5, 7, 8, 9, 28 and 123456789 (0.7266868438004216, 0.7111417780817859,
+0.7063866126448375, 0.7027221467513249, 0.6833528429885039, 0.6744897431508498).
+Tiny centre (addendum B and addendum 2 section G): for a central probability c below the centre cut, the quantile is
+T-3363's small-beta seed and Newton iterate on `I_z(1/2, df/2) = c`, z = t^2/(df + t^2), t = SQRT(df·z/(1 - z)), under
+the same omitted-term applicability rule, with the beta normalization formed from finite gamma values
+(B = GAMMA(1/2)·GAMMA(df/2)/GAMMA((df+1)/2) with Excel's GAMMA, its reciprocal stored before LN) and the CDF bpser with
+that ln B and the split EXP finish. It falls back to the crossing of the centre where a gamma overflows and where the
+first series correction still moves the seed (the centre is not yet tiny enough); the opposite reading of the
+fallback loses 8 cells and fixes 5.
+Evidence: gen-m9/984cba67bbe6972b A128 `CONFIDENCE.T(ERFC(3.14159/Data!C$10),1.999,21)` = 1.9667525376639697E-15
+(Data!C10 = 1E+15), `T.INV.2T(1-1E-10,5)` = 1.3171528710518458E-10 (gen-m9 b9a32ce9a1fd0d71 A58,
+probes-numeric/m9-t-inv-2t A65) and `T.INV.2T(1-1E-16,5)` = 1.4623333233988838E-16 (gen-m9 afc00c8b70e78baf A64), all
+bit for bit. On the 2,243 literal-argument T.INV/T.INV.2T/TINV/CONFIDENCE.T cells of eval/: bit-exact 1,529 to 1,798,
+visibly off 225 to 162.
+Not reproduced: `T.INV(0.2,5)` (gen-m9/0bbab6206b5c9a07 A67) and `T.INV.2T(0.4,5)`/`TINV(0.4,5)`
+(probes/stat-argument-modes H522, H526), Excel 0.9195437802408258, are 6 ulp off (0.9195437802408252): the search stops
+one step before Excel there (residual 2.2E-16, step 1.26E-16 against an iterate of 0.855); stricter stops (half an
+epsilon, a relative residual test, a sign-crossing rule) each score worse overall.
+Status: UNVERIFIED (a scored fit to the addenda's mechanism)
+Implemented in: functions/statistical/inverse_beta/as109.rs `As109Profile::StudentT`, functions/statistical/t_dist.rs
+`t_as109_quantile`, `t_tiny_centre_quantile`, functions/statistical/inverse_beta.rs `beta_small_quantile_with`,
+functions/statistical/bratio/ln_beta.rs `ln_beta_finite_gamma`.
+
 ## Two-tailed Student-t quantile with p near 1 is accurate in Excel (T-3349)
 Rule: for df from 2 up, `T.INV.2T(p,df)` with p just below or above 1 returns the small quantile to the 15th digit of
 the exact value: Excel's result shows no 1 - p/2 cancellation. TINV and CONFIDENCE.T were probed at df 2 (n = 3) only:
