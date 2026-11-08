@@ -15,7 +15,7 @@ use crate::functions::statistical::bratio::{
 use crate::functions::statistical::incomplete_beta::beta_density;
 use crate::functions::statistical::inverse_beta::{
     as109_search, beta_inverse_cdf, beta_lower_crossing, beta_quantile_crossing, inverse_ln_beta,
-    As109Problem, As109Profile,
+    As109Outcome, As109Problem, As109Profile,
 };
 use crate::functions::statistical::loader::{beta_density_counts_vanish, excel_beta_density};
 use crate::functions::statistical::special::{ln_gamma, nearest_crossing_from, refine_increasing};
@@ -53,7 +53,15 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
     let huge_shape =
         alpha > BETA_QUANTILE_STATRS_SHAPE_MAX || beta > BETA_QUANTILE_STATRS_SHAPE_MAX;
     if !huge_shape && p <= 0.5 && lower_quantile_underflows(alpha, beta, p) {
-        return 0.0;
+        // Where the root underflows, Excel's search can still stop at a normal double far above
+        // it (the 1E-300 floor of `inverse_beta::as109`): `BETA.INV(1E-200,0.5,0.5)` is
+        // 2.7055792171147168E-151 (probes/t4974-beta-f-inv-endpoint-saturation A4), and
+        // `BETA.INV(2^-1022,1,1)` 2.2250738585072626E-308 (t4974-beta-inv-dbl-min-residual E7).
+        // A search that is exhausted or ends below the normal doubles keeps T-2435's #NUM!.
+        return match beta_quantile_as109(alpha, beta, p) {
+            Some(stop) if (f64::MIN_POSITIVE..1.0).contains(&stop.x) => stop.x,
+            _ => 0.0,
+        };
     }
     if !huge_shape {
         if let Some(x) = beta_quantile_shape_one(alpha, beta, p) {
@@ -67,14 +75,17 @@ fn beta_quantile(alpha: f64, beta: f64, p: f64) -> f64 {
             beta_quantile_converged(alpha, beta, p)
         }
     };
-    let Some(x) = beta_quantile_as109(alpha, beta, p) else {
+    let Some(As109Stop { x, excels }) = beta_quantile_as109(alpha, beta, p) else {
         return converged();
     };
     // Decision 0188 R3 in the tiny tail (contract 3 of the addendum): where the stopping point is
     // more than 1E-4 relative off the converged crossing, the crossing (the math) is returned.
-    // `BETAINV(1.9007381444303E-262,1.55556651729756,4.38688149845313)` stops at 1.3E-162,
-    // where x*x underflows, against the root 1.5E-169 (accuracy/BETAINV/s1 A166).
-    if p.min(1.0 - p) < BETA_QUANTILE_STATRS_P_MIN {
+    // `BETA.INV(6.07658893047835E-282,14.043817035397,2.81602340373877)` stops at its first
+    // estimate 2.657957500039701E-25, Excel's value, against the root 6.9E-21 (accuracy/BETA.INV/s1
+    // A169; R3 there is not marked, and the math passes Gate A). A stop at the 1E-300 floor is
+    // Excel's own value, not an error to correct (`As109Stop::excels`): `BETAINV(1.9007381444303E-262,
+    // 1.55556651729756,4.38688149845313)` = 1.241262249100565E-189 (BETAINV/s1 A166).
+    if !excels && p.min(1.0 - p) < BETA_QUANTILE_STATRS_P_MIN {
         let c = converged();
         return if (x - c).abs() <= MATH_OVER_EXCEL_RELATIVE * c.abs() {
             x
@@ -117,11 +128,23 @@ fn beta_quantile_converged(alpha: f64, beta: f64, p: f64) -> f64 {
     flush_subnormal(t)
 }
 
+/// Where [`beta_quantile_as109`] stopped.
+#[derive(Clone, Copy, Debug)]
+struct As109Stop {
+    /// The quantile on [0, 1]; NaN (`#NUM!`) for a search that never reached the root
+    /// (`As109Outcome::Unconverged`).
+    x: f64,
+    /// Whether the stop is Excel's value even where it is far from the math: a stop at the
+    /// 1E-300 accuracy floor (`As109Outcome::FloorStopped`) or an unconverged search, which no
+    /// tiny-tail R3 check replaces by the crossing.
+    excels: bool,
+}
+
 /// BETA.INV's quantile as Excel's AS 109 search stops (`inverse_beta::as109`, T-4975): the search
 /// on `I_x(alpha, beta) = p`, or for p above 1/2 on `I_x(beta, alpha) = 1 - p` mapped back as 1 - x,
 /// crossing BETA.DIST's own tails ([`beta_search_tails`]) with its density as the slope. `None`
 /// where the search is exhausted (the crossing then decides, `#NUM!` where Excel's is).
-fn beta_quantile_as109(alpha: f64, beta: f64, p: f64) -> Option<f64> {
+fn beta_quantile_as109(alpha: f64, beta: f64, p: f64) -> Option<As109Stop> {
     let flip = p > 0.5;
     let (pp, qq, target) = if flip {
         (beta, alpha, 1.0 - p)
@@ -145,7 +168,22 @@ fn beta_quantile_as109(alpha: f64, beta: f64, p: f64) -> Option<f64> {
     // crossing; the cut reuses the statrs range's 1E-15.
     // FITTED(T-4975, 40 cells, p 1E-10..0.6 kept and 1E-297..1.9E-58 not)
     let keep_end_seed = target >= BETA_QUANTILE_STATRS_P_MIN;
-    let x = as109_search(&problem).value(keep_end_seed)?;
+    let outcome = as109_search(&problem);
+    if outcome == As109Outcome::Unconverged {
+        return Some(As109Stop {
+            x: f64::NAN,
+            excels: true,
+        });
+    }
+    // A first estimate without a slope is Excel's stop only as far as measured, in the tiny tail
+    // (where the R3 check below decides); above it the crossing stays: `BETA.INV(0.1,0.5,a)` at
+    // a = 1.34078079299426E+154, whose density underflows at the estimate, is
+    // 5.85776711227727E-157 in Excel (probes/t3862-beta-inv-sqrt-dbl-max E4), near the crossing.
+    if matches!(outcome, As109Outcome::SlopeStopped(_)) && target >= BETA_QUANTILE_STATRS_P_MIN {
+        return None;
+    }
+    let excels = matches!(outcome, As109Outcome::FloorStopped(_));
+    let x = outcome.value(keep_end_seed)?;
     let t = if flip { 1.0 - x } else { x };
     // Large shapes near the mean, where bratio takes basym, keep the converged crossing: there
     // Excel's round trip returns x exactly (probes-numeric/t3443-basym-sweep A101,
@@ -154,7 +192,7 @@ fn beta_quantile_as109(alpha: f64, beta: f64, p: f64) -> Option<f64> {
     if dispatch(alpha, beta, t, 1.0 - t).is_some_and(|d| d.branch == Branch::Basym) {
         return None;
     }
-    Some(t)
+    Some(As109Stop { x: t, excels })
 }
 
 /// BETA.INV's quantile for p above 1/2 where the upper-tail search of [`beta_quantile`] rounds to
@@ -699,9 +737,7 @@ mod tests {
     }
 
     // Contract 1: a subnormal residual is not flushed into a false root at the seed
-    // (accuracy/BETA.INV/s1 A111: the math 3.5583236841039E-20, not 1E-6); contract 3: a stop
-    // more than 1E-4 off the crossing in the tiny tail returns the crossing (BETAINV/s1 A166, where
-    // the stop is 1.3E-162 and the root 1.4958216352616E-169).
+    // (accuracy/BETA.INV/s1 A111: the math 3.5583236841039E-20, not 1E-6).
     #[test]
     fn tiny_tail_stops_keep_the_math() {
         let a111 = beta_quantile(
@@ -713,15 +749,48 @@ mod tests {
             (a111 / 3.558_323_684_103_9e-20 - 1.0).abs() < 1e-9,
             "{a111}"
         );
+        // A166 now stops at AS 109's 1E-300 accuracy floor, which is Excel's own value bit for
+        // bit (accuracy/BETAINV/s1 A166: 1.241262249100565E-189), not a stop to correct.
         let a166 = beta_quantile(
             1.555_566_517_297_56,
             4.386_881_498_453_13,
             1.900_738_144_430_3e-262,
         );
-        assert!(
-            (a166 / 1.495_821_635_261_607_3e-169 - 1.0).abs() < 1e-9,
-            "{a166}"
+        assert_eq!(a166, 1.241_262_249_100_565e-189);
+    }
+
+    // AS 109's accuracy floor (inverse_beta/as109.rs `STEP_FLOOR`): where the accuracy underflows
+    // the search stops at the first squared step of 1E-300 or less, far above the root, and that
+    // stop is Excel's (probes/t4974-beta-inv-dbl-min-residual J1, excel-graph).
+    #[test]
+    fn a_stop_at_the_accuracy_floor_is_kept() {
+        assert_eq!(
+            beta_quantile(1.5, 300.0, 1e-300),
+            4.080_601_662_713_879_6e-225
         );
+        // Where the root underflows the stop is still a number: `BETA.INV(1E-300,0.5,0.5)` is
+        // 2.7055792171147168E-151 in Excel (t4974-beta-f-inv-endpoint-saturation A5), not #NUM!.
+        let a5 = beta_quantile(0.5, 0.5, 1e-300);
+        assert!(
+            (a5 / 2.705_579_217_114_716_8e-151 - 1.0).abs() < 1e-12,
+            "{a5}"
+        );
+    }
+
+    // A first estimate whose density underflows is Excel's stop (`As109Outcome::SlopeStopped`;
+    // `BETA.INV(2^-1022,30,3)` is 1.5861167524067332E-17 in Excel, dbl-min-residual H7), but in
+    // the tiny tail the R3 check keeps the math where that stop is far off it, as the R3-marked
+    // probes-numeric/t1543 A86 needs (`BETA.INV(1E-200,1000,1)`: Excel 0.2064, the math
+    // (1E-200)^(1/1000)).
+    #[test]
+    fn tiny_tail_slope_stops_keep_the_math() {
+        let h7 = beta_quantile(30.0, 3.0, f64::MIN_POSITIVE);
+        assert!(
+            (h7 / 4.519_205_516_178_960_5e-11 - 1.0).abs() < 1e-9,
+            "{h7}"
+        );
+        let a86 = beta_quantile(1000.0, 1.0, 1e-200);
+        assert!((a86 / 0.630_957_344_480_193 - 1.0).abs() < 1e-12, "{a86}");
     }
 
     // Contract 4: at basym points the converged crossing stays: the round trip is exact

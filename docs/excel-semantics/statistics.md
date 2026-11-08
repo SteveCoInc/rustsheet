@@ -5011,7 +5011,9 @@ AS R83) *stops*, not the refined crossing of the CDF. The profile that fits:
 - the probability residual is divided by Excel's beta density (BETA.DIST's), not flushed;
 - the stop is an absolute correction accuracy `10^(-5/min(a,b)^2 - p^(-0.2) - 13)` (the smaller shape, no integer
   truncation of the exponent), compared with the step and with the previous step at a sign change, with a 1E-300
-  floor on the squared-step comparison;
+  floor on the squared-step comparison, and the *same* 1E-300 floor on the squared accuracy (AS 109's one `SAE`
+  exponent floors both its FPU and its ACU; T-4975 follow-up, see "BETA.INV and F.INV in the deep tail: the 1E-300
+  accuracy floor, the slope stop and the unconverged #NUM!" below);
 - on an early stop the iterate *before* the step is returned (AS 109 as published, not the later "value = tx"
   change); where the step no longer moves the iterate, the first iterate with the least residual;
 - the CDF is BETA.DIST's own lower tail; for p above 1/2 the search solves `I_x(beta, alpha) = 1 - p` and returns
@@ -5026,9 +5028,10 @@ Exceptions kept on the converged crossing (contracts of the addendum):
   (`BETA.INV(1E-10,1E+110,1E-100)` = 0.999999, `BETA.INV(0.6,0.5,1.3E+154)` = 1.0000000000287557E-06, probes/t3862)
   and not at the Gate A points with p of 1E-58 and below (accuracy/BETA.INV/s1 A182, A185, BETAINV/s1 A191, A192:
   Excel 0.5), which keep the crossing; the cut at p = 1E-15 is fitted;
-- below p = 1E-15 a stop more than 1E-4 relative off the converged crossing returns the crossing (decision 0188 R3):
-  `BETAINV(1.9007381444303E-262,1.55556651729756,4.38688149845313)` would stop at 1.3E-162, where x·x underflows,
-  against the root 1.4958216352616E-169 (accuracy/BETAINV/s1 A166);
+- below p = 1E-15 a stop more than 1E-4 relative off the converged crossing returns the crossing (decision 0188 R3),
+  except a stop at the 1E-300 accuracy floor, which is Excel's own value
+  (`BETAINV(1.9007381444303E-262,1.55556651729756,4.38688149845313)` = 1.241262249100565E-189 in Excel and the
+  engine, accuracy/BETAINV/s1 A166, where the math is 1.4958216352616E-169);
 - where bratio takes basym at the result (both shapes large, near the mean) the crossing stays: Excel's round trip
   `BETA.INV(BETA.DIST(0.576485254488674,59467.806,44281.473,TRUE),59467.806,44281.473)` returns x exactly
   (probes-numeric/t3443-basym-sweep A101), which an early stop misses (probe group G23 maps the region).
@@ -5054,6 +5057,53 @@ exponent `10^(-5/min(a,b)^2 - p^(-0.2) - 13)`.
 Status: UNVERIFIED (a scored fit to the addendum's mechanism; probe groups G21 and G23)
 Implemented in: functions/statistical/inverse_beta/as109.rs `as109_search`, functions/statistical/beta.rs
 `beta_quantile_as109`.
+
+## BETA.INV and F.INV in the deep tail: the 1E-300 accuracy floor, the slope stop and the unconverged #NUM!
+Rule (T-4975 follow-up, measured on main's T-4974 probes as #4087 asked; inverse_beta/as109.rs):
+- **Accuracy floor.** Where `10^(-5/min(a,b)^2 - p^(-0.2) - 13)` squared is below 1E-300, Excel's search stops at
+  the first squared Newton step at or below 1E-300 and returns the iterate before it, however far that is above the
+  root. This is #4087 point 4's endpoint saturation: `BETA.INV(1E-200,0.5,0.5)` = `BETA.INV(1E-300,0.5,0.5)` =
+  2.7055792171147168E-151 is the 1E-6 end seed divided by 3 at each of 303 steps (the step 2x is cut to a third to
+  stay in [0, 1]) until (2x/3)^2 <= 1E-300; it does not depend on p, and at beta 50 it is 2.7053113740149512E-151
+  (probes/t4974-beta-f-inv-endpoint-saturation A4, A5, I4, I5; `F.INV(1E-200,1,1)` = 2.705579217114786E-151 is its
+  back-transform, L4). The engine is within 2E-13 of those (303 slopes' rounding) instead of `#NUM!`. Bit for bit:
+  column J of probes/t4974-beta-inv-dbl-min-residual (`BETA.INV(1E-300,1.5,300)` = 4.0806016627138796E-225),
+  `BETA.INV(1E-300,2,5E9)` (endpoint-saturation K5), `FINV(1E-300,30,3)` and its neighbours (probes-numeric
+  t4857-f-classes A2221:A2251), `F.INV.RT(1E-300,3,3)` (gen-m9/0a9226016e8f5f33 A321) and Gate A's
+  BETAINV/s1 A166. Such a stop is Excel's value and the tiny-tail R3 check does not replace it. Where the root
+  underflows (T-2435's `#NUM!` precheck) the floor stop is returned when it is a normal double.
+- **Slope stop at the first estimate.** Where the density at AS 109's first estimate is below the normal doubles (its
+  reciprocal overflows) Excel returns the first estimate: `BETA.INV(2^-1022,30,3)` = 1.5861167524067332E-17 and
+  `BETA.INV(2^-1022,2,2)` = 5.312217141104403E-168 (dbl-min-residual H7, C7; the cdf underflows there),
+  `BETA.INV(1E-200,1000,1)` = 0.2064 (the estimate 1 - 2/(t+1); R3-marked probes-numeric/t1543 A86), Gate A's
+  BETA.INV/s1 A169, the R3-marked F.INV/s1 A126 and A171 and Student t's R3-marked tiny-p cells (t3349, t1531, gen-m9
+  7980ffb6095a340d A160) are each that estimate bit for bit (measured by letting the engine return it). This explains
+  the "grossly wrong" tiny-p quantiles of "Tiny-p quantiles: Excel is grossly wrong" as a mechanism, but since most
+  such points are R3-marked and the rule cannot tell them from unmarked ones (dbl-min-residual columns C and H), the
+  engine applies the R3 check to this stop (the math where it is more than 1E-4 off), and above p = 1E-15 keeps the
+  crossing (`BETA.INV(0.1,0.5,1.34078079299426E+154)`, probes/t3862 E4, is near the crossing in Excel).
+- **Unconverged search.** Where the steps run out with the last residual larger than the target, the quantile is
+  `#NUM!`: `F.INV(1E-300,11,3)` and `F.INV(1E-250,11,3)` (probes/t4974-f-inv-tiny-tail-neighbourhood E7, E11; #4087
+  point 7): the first estimate lies below the root where the cdf underflows, its tiny density sends the first step to
+  0.32, and the iterate then shrinks by 1 - 1/5.5 a step, short of the root 3E-56 after 512 steps, while df2 2 and 4
+  converge (E6, E8, E10, E12). Excel's step cap is between 304 (the 303-step saturation above) and about 620.
+- **Overflowing normal estimate.** Where AS 109's `exp(2w)` overflows (both shapes above 1, p near DBL_MIN) Excel does
+  not start from the 1E-6 end seed: `BETA.INV(2.22507385850721E-308,1.12049449852741,2.10175380918621)` =
+  9.192367895421942E-151 (accuracy/BETA.INV/s1 A131, a floor stop) is 9.192367895408647E-151 from a seed of 0.5 and
+  5.04E-151 from 1E-6, so Excel seems to start at 0.5. That iterate is not Excel's to 15 digits, so the engine keeps
+  the converged crossing (the math) there.
+Not explained: the rest of dbl-min-residual (columns A, B, D, G: Excel stops early, e.g. `BETA.INV(2^-1022,
+16.0270968311551,5.57477023741975)` = 3.685566484126281E-20, forward cdf 1.76 p) and `BETA.INV(1E-300,3,1)`.
+Measured against #4087's other BETA.INV recommendation (crossing by default, AS 109 only where evidenced): returning
+the crossing everywhere fixes 158 cells and loses 933 on the T-4975 tree (gated suites: 84 fixed, 540 lost); no per-point rule found
+(steps, stop kind, the ulp distance, acu/ulp, a flipped p) separates the two, and AS 109's classic slope
+`EXP(lnB + (1-a) LN x + (1-b) LN(1-x))` instead of BETA.DIST's density scores worse (-121, +34). The crossing for p
+above 1/2 alone would put t4974-f-inv-back-transform C6/D6 (`BETA.INV(0.999,1/2,1/2)` 1 ulp off, amplified by
+x/(1-x)) back on Excel, but loses 271 cells and fixes 104.
+Status: UNVERIFIED (each rule is reproduced on the cells named; no probe was run for this entry)
+Implemented in: functions/statistical/inverse_beta/as109.rs (`STEP_FLOOR`, `As109Outcome::FloorStopped`,
+`SlopeStopped`, `Unconverged`, `first_estimate`), functions/statistical/beta.rs `beta_quantile`,
+functions/statistical/fisher.rs `f_quantile`.
 
 ## F.INV, F.INV.RT and FINV map BETA.INV's AS 109 stopping point back (T-4975)
 Rule: Excel's F quantiles are its inverse beta's stopping point (see "BETA.INV returns bounded AS 109 Newton stopping

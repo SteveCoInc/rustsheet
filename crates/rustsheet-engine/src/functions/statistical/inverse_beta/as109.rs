@@ -19,6 +19,11 @@
 //! squared-step comparison; on an early stop the iterate before the step (AS 109 as published,
 //! without the later "value = tx" change); on a plateau the first iterate with the least residual.
 //!
+//! The absolute accuracy is floored at [`STEP_FLOOR`], the same 1E-300 as the squared-step floor
+//! (AS 109's one `SAE` exponent behind both its FPU and its ACU): where the accuracy underflows,
+//! the search stops once the squared step is below 1E-300, not only at a zero step
+//! ([`FloorStopped`](As109Outcome::FloorStopped)).
+//!
 //! The loop is bounded (directive 5): at most [`super::MAX_NEWTON_STEPS`] Newton steps, and a
 //! search whose cumulative one-third step contractions reach [`MAX_CONTRACTIONS`] (where the
 //! cumulative scale 3^-n falls below the smallest normal double) is [`As109Outcome::Exhausted`]:
@@ -34,6 +39,20 @@ use super::MAX_NEWTON_STEPS;
 /// The floor of the squared step AS 109 compares new steps with (its FPU), 1E-300 in Excel's
 /// search rather than AS 109's 1E-30: at the AS 109 floor `BETA.INV(1E-200,3.14159,0.168...)`
 /// stops before the plateau's first estimate is kept (gen-m9/4e55500bb8ad3cd8 A360).
+///
+/// It floors the squared absolute accuracy too, as AS 109's `IEX = MAX(..., SAE)` floors its ACU
+/// with the same exponent (T-4975 follow-up). Where the accuracy itself underflows (a tiny p or
+/// shape), Excel's search stops at the first squared Newton step at or below 1E-300 and returns
+/// the iterate before it, far above the root:
+/// - `BETA.INV(1E-200,0.5,0.5)` = `BETA.INV(1E-300,0.5,0.5)` = 2.7055792171147168E-151, whatever
+///   p (probes/t4974-beta-f-inv-endpoint-saturation A4, A5; F.INV(1E-200,1,1) is its
+///   back-transform, L4): the 1E-6 end seed divided by 3 at each of 303 steps (the slope's step
+///   2x is cut to a third to stay in [0, 1]) until the step 2x/3 squared is below 1E-300;
+///   2.7053113740149512E-151 at beta 50 (I4, I5). Ours is within 2E-13 there (the 303 steps
+///   carry the rounding of each slope).
+/// - `BETA.INV(1E-300,1.5,300)` and the rest of column J of probes/t4974-beta-inv-dbl-min-residual,
+///   `BETA.INV(1E-300,2,5E9)` (endpoint-saturation K5) and `FINV(1E-300,30,3)` (probes-numeric
+///   t4857-f-classes A2242 and its neighbours), bit for bit.
 const STEP_FLOOR: f64 = 1e-300;
 
 /// The first estimate that replaces one at an end of [0, 1]: 1E-6 from 0 and 1 - 1E-6 from 1.
@@ -71,23 +90,54 @@ pub(crate) enum As109Profile {
 pub(crate) enum As109Outcome {
     /// The accuracy test held: the iterate before the step.
     Stopped(f64),
+    /// The accuracy test held only through [`STEP_FLOOR`] (the profile's own accuracy squared is
+    /// below it): the iterate before the step, which can be far above the root in a tiny tail
+    /// (see [`STEP_FLOOR`]). Callers that return the math where Excel is grossly wrong
+    /// (decision 0188 R3) keep this stop: it is Excel's value, bit for bit where measured.
+    FloorStopped(f64),
+    /// BETA.INV's search (not Student's t's, which keeps [`Exhausted`](Self::Exhausted)) could
+    /// not take its first step: the density at the first estimate is below the normal doubles (its
+    /// reciprocal, AS 109's slope factor, overflows) or the step is not finite. Excel returns the
+    /// first estimate there, bit for bit wherever measured: `BETA.INV(2^-1022,30,3)` =
+    /// 1.5861167524067332E-17 and `BETA.INV(2^-1022,2,2)` = 5.312217141104403E-168
+    /// (probes/t4974-beta-inv-dbl-min-residual H7, C7), `BETA.INV(1E-200,1000,1)` = 0.2064 (the
+    /// estimate 1 - 2/(t + 1); probes-numeric/t1543 A86),
+    /// `BETA.INV(6.07658893047835E-282,14.043817035397,2.81602340373877)` =
+    /// 2.657957500039701E-25 (accuracy/BETA.INV/s1 A169), and the R3-marked
+    /// `F.INV(2.22507385850721E-308,39,3)` = 2.0587119279917463E-36 (accuracy/F.INV/s1 A126),
+    /// as are Student's t's R3-marked tiny-p cells (t3349, t1531) with this outcome. In the tiny
+    /// tails the callers' R3 check still returns the math wherever this stop is more than 1E-4
+    /// off it: most such points are R3-marked (decision 0188), and the same rule cannot tell the
+    /// unmarked ones (column H and C of dbl-min-residual) from the marked ones (A86).
+    SlopeStopped(f64),
     /// The step no longer moved the iterate, or the steps ran out on a bracketed plateau: the
     /// first iterate with the least residual.
     Settled(f64),
     /// The first estimate was replaced at an end of [0, 1] and its step is not finite.
     EndSeed(f64),
-    /// The search ran out without a bracket, or its step was not finite away from an end seed:
-    /// not a root (contract 2 of the addendum).
+    /// The search ran out without a bracket, or its step was not finite away from an end seed,
+    /// or AS 109's normal approximation overflowed (see [`first_estimate`]): not a root
+    /// (contract 2 of the addendum).
     Exhausted,
+    /// The steps ran out with the last residual still larger than the target itself: the search
+    /// was still walking towards a root it never reached. Excel's quantile is `#NUM!` there:
+    /// `F.INV(1E-300,11,3)` and `F.INV(1E-250,11,3)` (probes/t4974-f-inv-tiny-tail-neighbourhood
+    /// E7, E11), whose first estimate lands below the root where the cdf underflows, so the
+    /// first step jumps to 0.32 and the iterate then shrinks by (1 - 1/5.5) a step, short of the
+    /// root 3E-56 after [`super::MAX_NEWTON_STEPS`] steps, while df2 2 and 4 around it converge
+    /// (E6, E8, E10, E12).
+    Unconverged,
 }
 
 impl As109Outcome {
     /// The iterate, `None` for an exhausted search; an end seed only when `keep_end_seed`.
     pub(crate) fn value(self, keep_end_seed: bool) -> Option<f64> {
         match self {
-            Self::Stopped(x) | Self::Settled(x) => Some(x),
+            Self::Stopped(x) | Self::FloorStopped(x) | Self::SlopeStopped(x) | Self::Settled(x) => {
+                Some(x)
+            }
             Self::EndSeed(x) => keep_end_seed.then_some(x),
-            Self::Exhausted => None,
+            Self::Exhausted | Self::Unconverged => None,
         }
     }
 }
@@ -108,7 +158,15 @@ pub(crate) struct As109Problem<C, D> {
 
 /// AS 109's first estimate of the root of `I_x(pp, qq) = target` from the normal deviate of the
 /// upper tail `target`, with an estimate at an end of [0, 1] replaced by [`ENDPOINT_SEED`].
-fn first_estimate(pp: f64, qq: f64, target: f64, ln_beta: f64) -> f64 {
+///
+/// `None` where the normal approximation's `exp(2w)` overflows (both shapes above 1 and a target
+/// near the smallest normal double): Excel's search does not start from the 1E-6 end seed there.
+/// `BETA.INV(2.22507385850721E-308,1.12049449852741,2.10175380918621)` is 9.192367895421942E-151
+/// in Excel (accuracy/BETA.INV/s1 A131, a stop at the 1E-300 floor); from the 1E-6 seed the same
+/// stop is 5.04E-151, from a seed of 0.5 it is 9.192367895408647E-151 (1.4E-12 off), so Excel
+/// seems to start at 0.5, but that iterate is not Excel's to 15 digits, and the caller's converged
+/// crossing (the math, as before) is kept.
+fn first_estimate(pp: f64, qq: f64, target: f64, ln_beta: f64) -> Option<f64> {
     let y = -standard_normal_quantile_value(target);
     let estimate = if pp > 1.0 && qq > 1.0 {
         let r = (y * y - 3.0) / 6.0;
@@ -116,7 +174,11 @@ fn first_estimate(pp: f64, qq: f64, target: f64, ln_beta: f64) -> f64 {
         let t = 1.0 / (qq + qq - 1.0);
         let h = 2.0 / (s + t);
         let w = y * (h + r).sqrt() / h - (t - s) * (r + 5.0 / 6.0 - 2.0 / (3.0 * h));
-        pp / (pp + qq * (w + w).exp())
+        let growth = (w + w).exp();
+        if growth.is_infinite() {
+            return None;
+        }
+        pp / (pp + qq * growth)
     } else {
         let r = qq + qq;
         let mut t = 1.0 / (9.0 * qq);
@@ -132,13 +194,13 @@ fn first_estimate(pp: f64, qq: f64, target: f64, ln_beta: f64) -> f64 {
             }
         }
     };
-    if estimate <= 0.0 {
+    Some(if estimate <= 0.0 {
         ENDPOINT_SEED
     } else if estimate >= 1.0 {
         1.0 - ENDPOINT_SEED
     } else {
         estimate
-    }
+    })
 }
 
 /// The absolute accuracy of the profile's stop: `10^(-5/m^2 - target^(-0.2) - 13)` with m the
@@ -177,7 +239,9 @@ where
     if !(target > 0.0 && target <= 0.5) {
         return As109Outcome::Exhausted;
     }
-    let seed = first_estimate(pp, qq, target, ln_beta);
+    let Some(seed) = first_estimate(pp, qq, target, ln_beta) else {
+        return As109Outcome::Exhausted;
+    };
     if !(seed > 0.0 && seed < 1.0) {
         return As109Outcome::Exhausted;
     }
@@ -228,7 +292,11 @@ where
         max_steps,
     } = start;
     let end_seed = seed == ENDPOINT_SEED || seed == 1.0 - ENDPOINT_SEED;
-    let acu_sq = accuracy * accuracy;
+    // The accuracy is floored with the squared step (see `STEP_FLOOR`); the power-law tail's
+    // search has no accuracy test.
+    let profile_sq = accuracy * accuracy;
+    let floored = profile != As109Profile::SmallBetaTail && profile_sq < STEP_FLOOR;
+    let acu_sq = if floored { STEP_FLOOR } else { profile_sq };
     let ln_target = target.ln();
     let mut value = seed;
     let mut yprev = 0.0;
@@ -238,9 +306,11 @@ where
     let mut best = (f64::INFINITY, value);
     let (mut below, mut above) = (false, false);
     let mut previous_relative: Option<f64> = None;
+    let mut last_residual = 0.0;
     for step in 0..max_steps {
         let (x, y_complement) = (value, 1.0 - value);
         let residual = cdf(x, y_complement) - target;
+        last_residual = residual;
         if profile == As109Profile::SmallBetaTail {
             if !residual.is_finite() {
                 break;
@@ -276,12 +346,17 @@ where
         if residual == 0.0 {
             return As109Outcome::Stopped(value);
         }
-        let y = residual / density(x, y_complement);
-        if !y.is_finite() {
-            // No step to take: an end seed is the caller's to keep or not (Excel keeps it at
-            // t3862 A1, 0.999999, and not at accuracy/BETA.INV/s1 A182, 0.5).
+        let slope = density(x, y_complement);
+        let y = residual / slope;
+        // AS 109 divides by the density as EXP of its logarithm's negation, which overflows below
+        // the normal doubles: there, as where the step is not finite, there is no step to take.
+        if !y.is_finite() || !slope.recip().is_finite() {
+            // An end seed is the caller's to keep or not (Excel keeps it at t3862 A1, 0.999999,
+            // and not at accuracy/BETA.INV/s1 A182, 0.5); any other iterate is Excel's stop.
             return if step == 0 && end_seed {
                 As109Outcome::EndSeed(value)
+            } else if profile == As109Profile::BetaInv && step == 0 {
+                As109Outcome::SlopeStopped(value)
             } else {
                 As109Outcome::Exhausted
             };
@@ -304,7 +379,11 @@ where
                         _ => absolute,
                     };
                     if stop {
-                        return As109Outcome::Stopped(value);
+                        return if floored {
+                            As109Outcome::FloorStopped(value)
+                        } else {
+                            As109Outcome::Stopped(value)
+                        };
                     }
                     if tx != 0.0 && tx != 1.0 {
                         break tx;
@@ -327,7 +406,11 @@ where
         value = tx;
         yprev = y;
     }
-    if profile == As109Profile::SmallBetaTail || (below && above) {
+    if profile == As109Profile::SmallBetaTail {
+        As109Outcome::Settled(best.1)
+    } else if last_residual.abs() > target {
+        As109Outcome::Unconverged
+    } else if below && above {
         As109Outcome::Settled(best.1)
     } else {
         As109Outcome::Exhausted

@@ -23,7 +23,8 @@ use crate::functions::statistical::incomplete_beta::{
     beta_reg_tails, search_tails, A1_EXPM1_MAX_X,
 };
 use crate::functions::statistical::inverse_beta::{
-    as109_search, beta_lower_crossing, f_inverse_cdf, inverse_ln_beta, As109Problem, As109Profile,
+    as109_search, beta_lower_crossing, f_inverse_cdf, inverse_ln_beta, As109Outcome, As109Problem,
+    As109Profile,
 };
 use crate::functions::statistical::paired::marked_number_error;
 use crate::functions::statistical::special::refine_increasing;
@@ -295,14 +296,17 @@ fn f_quantile(df1: f64, df2: f64, p: f64, right_tail: bool) -> f64 {
     if lower >= 1.0 && !right_tail {
         return f64::INFINITY;
     }
-    let Some(x) = f_quantile_as109(df1, df2, p, right_tail) else {
+    let Some((x, excels)) = f_quantile_as109(df1, df2, p, right_tail) else {
         return f_quantile_converged(df1, df2, p, right_tail);
     };
     let huge_df = df1 >= F_QUANTILE_STATRS_DF_MAX || df2 >= F_QUANTILE_STATRS_DF_MAX;
     // Decision 0188 R3 in the tiny tails (contract 3 of the addendum): a stop more than 1E-4
     // relative off the converged crossing returns the crossing, the math the five R3-marked points
-    // require (accuracy/F.INV/s1 A112, A126, A146, A160, A171).
-    if !huge_df && lower.min(1.0 - lower) >= F_QUANTILE_REFINE_P_MIN {
+    // require (accuracy/F.INV/s1 A112, A126, A146, A160, A171). A stop at AS 109's 1E-300
+    // accuracy floor is Excel's own value and stays (`FINV(1E-300,30,3)`, probes-numeric
+    // t4857-f-classes A2242; `F.INV.RT(1E-300,3,3)`, gen-m9/0a9226016e8f5f33 A321), as does the
+    // `#NUM!` of a search that never reached the root (`F.INV(1E-300,11,3)`).
+    if !huge_df && (excels || lower.min(1.0 - lower) >= F_QUANTILE_REFINE_P_MIN) {
         return x;
     }
     // From a df of 1E5 the stop stays only within SPEC-0029's 1E-9 of T-1538's mapped crossing:
@@ -335,8 +339,10 @@ const MATH_OVER_EXCEL_RELATIVE: f64 = 1e-4;
 /// stopping point x of `I_x(df1/2, df2/2) = p` (`inverse_beta::as109`; for a lower-tail p above
 /// 1/2 the flipped root s of `I_s(df2/2, df1/2) = 1 - p`, which keeps the small tail), mapped back
 /// by the compensated four-log ratio `EXP(LN(x) - LN(1-x) + LN(df2) - LN(df1))` with the shared
-/// log1p for `LN(1-x)`. `None` where the search is exhausted.
-fn f_quantile_as109(df1: f64, df2: f64, p: f64, right_tail: bool) -> Option<f64> {
+/// log1p for `LN(1-x)`. `None` where the search is exhausted; with it whether the stop is Excel's
+/// even far from the math (a stop at the 1E-300 accuracy floor, or NaN for a search that never
+/// reached the root; `inverse_beta::As109Outcome`).
+fn f_quantile_as109(df1: f64, df2: f64, p: f64, right_tail: bool) -> Option<(f64, bool)> {
     let lower = if right_tail { 1.0 - p } else { p };
     let flip = lower > 0.5;
     let (pp, qq, target) = if flip {
@@ -354,7 +360,18 @@ fn f_quantile_as109(df1: f64, df2: f64, p: f64, right_tail: bool) -> Option<f64>
         cdf: |x: f64, y: f64| beta_dist_lower_tail(x, y, pp, qq),
         density: |x: f64, _: f64| beta_dist_density(x, pp, qq, &dist),
     };
-    let x = as109_search(&problem).value(false)?;
+    let outcome = as109_search(&problem);
+    if outcome == As109Outcome::Unconverged {
+        return Some((f64::NAN, true));
+    }
+    // As for BETA.INV, a first estimate without a slope is a stop only in the tiny tails, where
+    // the R3 check decides (the R3-marked `F.INV(2.22507385850721E-308,39,3)`, accuracy/F.INV/s1
+    // A126, is Excel's value through it, and the check returns the math).
+    if matches!(outcome, As109Outcome::SlopeStopped(_)) && target >= F_QUANTILE_REFINE_P_MIN {
+        return None;
+    }
+    let excels = matches!(outcome, As109Outcome::FloorStopped(_));
+    let x = outcome.value(false)?;
     // ln F = (ln x + ln df2) - (ln(1 - x) + ln df1), numerator first, in double-double, then
     // EXP of the head times 1 + the tail; flipped, x and 1 - x trade places.
     let (top, bottom) = if flip {
@@ -365,7 +382,7 @@ fn f_quantile_as109(df1: f64, df2: f64, p: f64, right_tail: bool) -> Option<f64>
     let numerator = two_sum(top, excel_ln(df2));
     let denominator = two_sum(bottom, excel_ln(df1));
     let (hi, lo) = dd_add(numerator, dd_neg(denominator));
-    Some(excel_exp(hi) * (1.0 + lo))
+    Some((excel_exp(hi) * (1.0 + lo), excels))
 }
 
 /// The converged F quantile behind [`f_quantile`]: statrs' search as a start, refined to the

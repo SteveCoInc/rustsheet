@@ -19,6 +19,22 @@ fn f_quantile_is_the_mapped_beta_stopping_point() {
     }
 }
 
+// Deep-tail F.INV (excel-graph): a stop at AS 109's 1E-300 accuracy floor is Excel's value
+// (`FINV(1E-300,30,3)`, probes-numeric/t4857-f-classes A2242), and a search that runs out of
+// steps short of the root is #NUM! (NaN here) while its neighbours converge
+// (`F.INV(1E-300,11,3)`, probes/t4974-f-inv-tiny-tail-neighbourhood E7; E6 at df2 2).
+#[test]
+fn deep_tail_f_quantile_keeps_floor_stops_and_unconverged_num() {
+    assert_eq!(
+        f_quantile(30.0, 3.0, 1e-300, true),
+        3.434_681_060_930_738e223
+    );
+    assert!(f_quantile(11.0, 3.0, 1e-300, false).is_nan());
+    assert!(f_quantile(11.0, 3.0, 1e-250, false).is_nan());
+    let e6 = f_quantile(11.0, 2.0, 1e-300, false);
+    assert!((e6 / 5.178_247_033_519_641e-56 - 1.0).abs() < 1e-14, "{e6}");
+}
+
 // FISHER and FISHERINV round their quotient twice, like Excel's `/` (excel-graph; T-2437).
 #[test]
 fn fisher_rounds_its_quotient_twice() {
