@@ -7,15 +7,11 @@
 //! .69, .73; docs/research/pivot-tables-2026-11-04/excel-docs.md §7). Everything else in the part
 //! is kept verbatim in [`PivotTable::opaque`] for export (T-4176); the importer counts it toward
 //! its limits.
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::struct_excessive_bools)]
-// LINT-DEBT-END
 
 use bitcode::{Decode, Encode};
 
 use super::filter::{AutoShow, PivotFilter};
-use super::slicer::DateSpan;
-use super::sort::AutoSortScope;
+use super::{slicer::DateSpan, sort::AutoSortScope};
 
 /// `dataField@baseItem` when absent: no base item (MS-OI29500 §18.10.1.22, §18.10.1.44).
 pub const NO_BASE_ITEM: u32 = 1_048_832;
@@ -101,9 +97,9 @@ pub struct PivotGeometry {
     pub column_page_count: u32,
 }
 
-/// The pivot-wide attributes of `pivotTableDefinition` that change its layout or its text.
-/// `Default` is the schema's.
+/// The `pivotTableDefinition` attributes that change its layout or text; `Default` is the schema's.
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[expect(clippy::struct_excessive_bools, reason = "OOXML attributes")]
 pub struct PivotOptions {
     /// `compact` (default on): row fields share one column.
     pub compact: bool,
@@ -186,6 +182,7 @@ impl Default for PivotOptions {
 
 /// How a pivot shows one cache field.
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[expect(clippy::struct_excessive_bools, reason = "OOXML attributes")]
 pub struct PivotField {
     /// The axis the field is on, if any.
     pub axis: Option<Axis>,

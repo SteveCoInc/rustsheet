@@ -3,12 +3,9 @@
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
     clippy::cast_sign_loss,
-    clippy::inline_always,
     clippy::manual_let_else,
     clippy::match_same_arms,
-    clippy::needless_pass_by_value,
-    clippy::too_many_lines,
-    clippy::unused_self
+    clippy::too_many_lines
 )]
 #![cfg_attr(not(test), expect(clippy::enum_glob_use))]
 // LINT-DEBT-END
@@ -658,12 +655,7 @@ impl Model {
         Ok(format!("{}!{}{}", sheet.name, column, cell_reference.row))
     }
 
-    fn get_value_from_array(
-        &self,
-        array: &[Vec<ArrayNode>],
-        row: i32,
-        column: i32,
-    ) -> Option<ArrayNode> {
+    fn get_value_from_array(array: &[Vec<ArrayNode>], row: i32, column: i32) -> Option<ArrayNode> {
         let width = array[0].len() as i32;
         let height = array.len() as i32;
         if row < 1 || row > height || column < 1 || column > width {
@@ -780,7 +772,7 @@ impl Model {
                     // available here; picking [0][0] could silently produce wrong results.
                     // Emit #VALUE! instead so the divergence is visible.
                     let coerced = if array_width == 1 && array_height == 1 {
-                        match self.get_value_from_array(array, 1, 1) {
+                        match Self::get_value_from_array(array, 1, 1) {
                             Some(node) => array_node_to_formula_value(node),
                             None => FormulaValue::Error {
                                 ei: Error::VALUE,
@@ -1256,7 +1248,7 @@ impl Model {
         self.workbook.worksheet(sheet)?.is_empty_cell(row, column)
     }
 
-    #[inline(always)]
+    #[inline]
     pub(crate) fn fetch_cell(&self, cell_reference: CellReferenceIndex) -> Option<&Cell> {
         self.workbook.worksheets[cell_reference.sheet as usize]
             .sheet_data
@@ -1841,6 +1833,10 @@ impl Model {
     /// * [`Model::update_cell_with_number()`]
     /// * [`Model::update_cell_with_bool()`]
     /// * [`Model::update_cell_with_text()`]
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "public Model API that the bindings and the facade call with owned text"
+    )]
     pub fn update_cell_with_formula(
         &mut self,
         sheet: u32,
@@ -1952,7 +1948,7 @@ impl Model {
         sheet: u32,
         row: i32,
         column: i32,
-        value: String,
+        value: &str,
     ) -> Result<(), String> {
         // first we make sure we can write in the cell and clear the spills.
         self.prepare_cell_for_user_input(sheet, row, column)?;
@@ -1975,7 +1971,7 @@ impl Model {
             self.set_cell_with_string(sheet, row, column, new_value, new_style)?;
         } else {
             let mut new_style_index = self.formula_style_index(sheet, row, column)?;
-            if let Some(formula) = self.formula_without_prefix(&value) {
+            if let Some(formula) = self.formula_without_prefix(value) {
                 let node = self.parse_cell_formula(sheet, row, column, formula)?;
                 self.set_formula_node_with_units(sheet, row, column, node, new_style_index)?;
             } else {
@@ -1991,7 +1987,7 @@ impl Model {
                 //  We try to parse as number
                 let (year, ds) = (|| self.current_year(), self.workbook.settings.date_system);
                 if let Ok((v, number_format)) =
-                    parse_typed_number(&value, &currencies, self.locale, &year, ds)
+                    parse_typed_number(value, &currencies, self.locale, &year, ds)
                 {
                     if let Some(num_fmt) = number_format {
                         new_style_index =
@@ -2009,7 +2005,7 @@ impl Model {
                 }
                 // Check is it is error value
                 let rejected_format =
-                    rejected_clock_text_format(&value, &currencies, self.locale, &year, ds);
+                    rejected_clock_text_format(value, &currencies, self.locale, &year, ds);
                 let upper = value.to_uppercase();
                 let worksheet = self.workbook.worksheet_mut(sheet)?;
                 if let Some(error) = get_error_by_name(&upper, self.language) {
@@ -2019,11 +2015,11 @@ impl Model {
                         new_style_index =
                             self.style_with_typed_format(new_style_index, &num_fmt)?;
                     }
-                    self.set_cell_with_string(sheet, row, column, &value, new_style_index)?;
+                    self.set_cell_with_string(sheet, row, column, value, new_style_index)?;
                     // If the input looks like an URL or an email address a link is
                     // attached to the cell, the same way other inputs change the
                     // number format. Note that a quote prefix prevents this.
-                    self.auto_link_cell(sheet, row, column, &value)?;
+                    self.auto_link_cell(sheet, row, column, value)?;
                 }
             }
         }

@@ -4,8 +4,7 @@
     clippy::cast_precision_loss,
     clippy::cast_sign_loss,
     clippy::float_cmp,
-    clippy::manual_let_else,
-    clippy::unused_self
+    clippy::manual_let_else
 )]
 // LINT-DEBT-END
 use crate::calc_result::Range;
@@ -410,7 +409,7 @@ impl Model {
         if let Some(error) = nested_array_error(&column, cell) {
             return Some(Err(error));
         }
-        let mut numbers = match self.values_from_array(column) {
+        let mut numbers = match Self::values_from_array(column) {
             Ok(numbers) => numbers,
             Err(error) => return Some(Err(array_element_error(error, cell))),
         };
@@ -528,8 +527,7 @@ impl Model {
                 if let Some(error) = nested_array_error(&array, cell) {
                     return Err(error);
                 }
-                self.values_from_array(array)
-                    .map_err(|error| array_element_error(error, cell))
+                Self::values_from_array(array).map_err(|error| array_element_error(error, cell))
             }
             CalcResult::Range { left, right } => self.values_from_range(left, right),
             CalcResult::Boolean(_)
@@ -555,10 +553,7 @@ impl Model {
         }
     }
 
-    pub(crate) fn values_from_array(
-        &mut self,
-        array: Vec<Vec<ArrayNode>>,
-    ) -> Result<Vec<Option<f64>>, Error> {
+    pub(crate) fn values_from_array(array: Vec<Vec<ArrayNode>>) -> Result<Vec<Option<f64>>, Error> {
         let mut values = Vec::new();
         for row in array {
             for item in row {

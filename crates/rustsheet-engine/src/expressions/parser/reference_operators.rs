@@ -37,7 +37,7 @@ impl Parser {
             Err(error) => return error,
         };
         self.inner_depth = self.inner_depth.max(union_depth);
-        if let Err(err) = self.lexer.expect(TokenType::RightParenthesis) {
+        if let Err(err) = self.lexer.expect(&TokenType::RightParenthesis) {
             return Node::ParseErrorKind {
                 formula: self.lexer.get_formula(),
                 expecting: vec![ExpectedTokens::Other],

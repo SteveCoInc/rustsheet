@@ -1,5 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::needless_pass_by_value, clippy::too_many_lines)]
+#![expect(clippy::too_many_lines)]
 // LINT-DEBT-END
 use crate::arithmetic::{extended_sqrt, power};
 use crate::cast::number_text_too_long;
@@ -464,6 +464,10 @@ impl Model {
     /// clipped to the used area) and the elements of an array add up, and the call is `#ERROR!`
     /// once they pass `MAX_LIFTED_CELL_VISITS`, before the range is walked. Excel has no such
     /// limit: DEVIATION (engineering.md).
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "Function is not Copy yet: T-5080 derives it and drops this"
+    )]
     fn fold_complex(
         &mut self,
         kind: Function,

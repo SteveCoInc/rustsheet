@@ -3,8 +3,7 @@
 #![expect(
     clippy::cast_possible_truncation,
     clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::needless_pass_by_value
+    clippy::cast_sign_loss
 )]
 // LINT-DEBT-END
 
@@ -437,17 +436,17 @@ impl RefGrid {
     /// `=XLOOKUP({2;9},A1:A3,B1:B3,F1:F2)` 20 and `#VALUE!` (probes/t4563-xlookup-not-found-ref-
     /// element A57).
     pub(crate) fn to_values(&self) -> CalcResult {
-        CalcResult::Array(self.to_array(ArrayNode::Error(Error::VALUE)))
+        CalcResult::Array(self.to_array(&ArrayNode::Error(Error::VALUE)))
     }
 
     /// The grid as array rows: every reference element is `reference`, an error or value element
     /// is itself.
-    pub(crate) fn to_array(&self, reference: ArrayNode) -> Vec<Vec<ArrayNode>> {
+    pub(crate) fn to_array(&self, reference: &ArrayNode) -> Vec<Vec<ArrayNode>> {
         self.elements
             .chunks(self.columns)
             .map(|row| {
                 row.iter()
-                    .map(|element| element.as_node(&reference))
+                    .map(|element| element.as_node(reference))
                     .collect()
             })
             .collect()

@@ -1,9 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::cast_possible_truncation,
-    clippy::needless_pass_by_value,
-    clippy::unused_self
-)]
+#![expect(clippy::cast_possible_truncation)]
 // LINT-DEBT-END
 use crate::{
     area_budget::{clone_units, too_much_work},
@@ -183,7 +179,7 @@ impl Model {
     /// else is called as a LAMBDA.
     pub(crate) fn call_callee(
         &mut self,
-        callee: CalcResult,
+        callee: &CalcResult,
         call_args: &[Node],
         cell: CellReferenceIndex,
     ) -> CalcResult {
@@ -225,8 +221,7 @@ impl Model {
         if !matches!(callee, CalcResult::Lambda(_)) {
             return RefArg::Value(self.call_variable(callee, call_args, cell));
         }
-        let mut caller = self
-            .lambda_caller(&callee, call_args.len())
+        let mut caller = Self::lambda_caller(&callee, call_args.len())
             .keeping_references()
             .snapping_root();
         self.call_lambda_caller_with_nodes_arg(&mut caller, call_args, cell)
@@ -265,7 +260,7 @@ impl Model {
     ) -> CalcResult {
         match callee {
             CalcResult::Lambda(_) | CalcResult::Range { .. } => {
-                self.call_callee(callee, call_args, cell)
+                self.call_callee(&callee, call_args, cell)
             }
             CalcResult::Array(array) => CalcResult::Array(
                 array
@@ -293,7 +288,7 @@ impl Model {
     /// Optional parameters not covered by `call_args` are [`Binding::Omitted`].
     pub(crate) fn call_lambda(
         &mut self,
-        lambda_result: CalcResult,
+        lambda_result: &CalcResult,
         call_args: &[Node],
         cell: CellReferenceIndex,
     ) -> CalcResult {
@@ -306,14 +301,14 @@ impl Model {
         // B17, C17). A defined-name LAMBDA snaps alike, also when another named LAMBDA calls it
         // (probes/t3094-snap-lambda-call-forms C2-F5, J2-J5). The helpers' calls (MAP, REDUCE,
         // ...) snap alike (`LambdaCaller::snapping_root`).
-        let mut caller = self.lambda_caller(&lambda_result, provided).snapping_root();
+        let mut caller = Self::lambda_caller(lambda_result, provided).snapping_root();
         // A defined-name LAMBDA starts from the body its last call patched (`NamedLambdas`). It
         // is taken out while this call runs, so a call inside it (recursion, `MyFn(MyFn(x))`)
         // patches its own. No LAMBDA created since it was put back reads its ids: only an
         // evaluation of the body binds them, and `call_prepared` dropped it if one did.
         let named = match lambda_result {
-            CalcResult::Lambda(id) if self.named_lambdas.named.contains(&id) => {
-                Some((id, provided))
+            CalcResult::Lambda(id) if self.named_lambdas.named.contains(id) => {
+                Some((*id, provided))
             }
             _ => None,
         };
@@ -340,11 +335,7 @@ impl Model {
     /// (MAP, REDUCE, SCAN, BYROW, BYCOL, MAKEARRAY) that call one LAMBDA once per element: the
     /// definition is looked up and its body cloned and patched with variable ids on the first
     /// call, then reused (T-1560).
-    pub(crate) fn lambda_caller(
-        &self,
-        lambda_result: &CalcResult,
-        provided: usize,
-    ) -> LambdaCaller {
+    pub(crate) fn lambda_caller(lambda_result: &CalcResult, provided: usize) -> LambdaCaller {
         LambdaCaller {
             lambda: lambda_result.clone(),
             provided,
@@ -385,7 +376,7 @@ impl Model {
                 format!("Expected a LAMBDA taking {provided} argument(s)"),
             ));
         }
-        Ok(self.lambda_caller(function, provided).snapping_root())
+        Ok(Self::lambda_caller(function, provided).snapping_root())
     }
 
     /// Whether `lambda_result` is IF or CHOOSE passed by name, which read a reference given as a

@@ -143,6 +143,10 @@ impl Model {
     /// * [`Model::update_cell_with_number()`]
     /// * [`Model::update_cell_with_bool()`]
     /// * [`Model::update_cell_with_text()`]
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "public Model API that the bindings and the facade call with owned text"
+    )]
     pub fn set_user_input(
         &mut self,
         sheet: u32,
@@ -153,7 +157,7 @@ impl Model {
         // Text from outside the engine: a padded bare column `T[ Col ]` is no column here, as
         // Excel reads it typed or loaded (T-3258); the engine's own re-entries of its printed
         // text go through `reenter_printed_input`.
-        self.as_external(|model| model.reenter_printed_input(sheet, row, column, value))
+        self.as_external(|model| model.reenter_printed_input(sheet, row, column, &value))
     }
 
     /// Runs `entry` with the parser reading formulas as untyped text from outside the engine

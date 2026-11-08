@@ -1,10 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::cast_precision_loss,
-    clippy::needless_pass_by_value,
-    clippy::unnecessary_wraps,
-    clippy::unused_self
-)]
+#![expect(clippy::cast_precision_loss)]
 // LINT-DEBT-END
 use crate::arithmetic::{extended_product, extended_quotient, extended_sqrt, extended_sum};
 use crate::functions::statistical::special::normal_cdf;
@@ -60,14 +55,13 @@ impl Model {
         let data = match data {
             Ok(areas) => {
                 let values = self.values_from_areas(&areas, cell)?;
-                return self.z_test_stats(values);
+                return Ok(z_test_stats(&values));
             }
             Err(value) => value,
         };
         let values = match data {
             CalcResult::Range { left, right } => self.values_from_range(left, right)?,
-            CalcResult::Array(array) => self
-                .values_from_array(array)
+            CalcResult::Array(array) => Self::values_from_array(array)
                 .map_err(|error| CalcResult::new_error(error, cell, String::new()))?,
             CalcResult::Number(v) => vec![Some(v)],
             // A direct boolean is one value like a number (probes-numeric/t1049-ztest A51).
@@ -81,30 +75,7 @@ impl Model {
             error @ CalcResult::Error { .. } => return Err(error),
             _ => return Err(CalcResult::new_error(Error::VALUE, cell, String::new())),
         };
-        self.z_test_stats(values)
-    }
-
-    /// The count, mean and sample standard deviation of `values`' numbers.
-    fn z_test_stats(&self, values: Vec<Option<f64>>) -> Result<ZTestData, CalcResult> {
-        let mut sum = 0.0;
-        let mut count: u64 = 0;
-        for x in values.iter().flatten() {
-            sum += x;
-            count += 1;
-        }
-        let n = count as f64;
-        let mean = sum / n;
-        let mut sumsq_dev = 0.0;
-        for x in values.iter().flatten() {
-            let d = x - mean;
-            sumsq_dev += d * d;
-        }
-        let var = sumsq_dev / (n - 1.0);
-        Ok(ZTestData {
-            count,
-            mean,
-            stdev: (var > 0.0).then(|| var.sqrt()),
-        })
+        Ok(z_test_stats(&values))
     }
 
     /// `Z.TEST(array, x, [sigma])` and ZTEST: `x` and `sigma` lift over an array and a multi-cell
@@ -209,5 +180,28 @@ fn z_test_element(
     match z_test_p(data.mean, x, n, sigma, sigma_given) {
         Some(p) if p.is_finite() => CalcResult::Number(p),
         _ => error(Error::NUM),
+    }
+}
+
+/// The count, mean and sample standard deviation of `values`' numbers.
+fn z_test_stats(values: &[Option<f64>]) -> ZTestData {
+    let mut sum = 0.0;
+    let mut count: u64 = 0;
+    for x in values.iter().flatten() {
+        sum += x;
+        count += 1;
+    }
+    let n = count as f64;
+    let mean = sum / n;
+    let mut sumsq_dev = 0.0;
+    for x in values.iter().flatten() {
+        let d = x - mean;
+        sumsq_dev += d * d;
+    }
+    let var = sumsq_dev / (n - 1.0);
+    ZTestData {
+        count,
+        mean,
+        stdev: (var > 0.0).then(|| var.sqrt()),
     }
 }

@@ -1,11 +1,7 @@
 //! The holidays of WORKDAY, WORKDAY.INTL, NETWORKDAYS and NETWORKDAYS.INTL, read once per call
 //! and prepared so that each lifted element counts them in O(log holidays) (T-1236).
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap,
-    clippy::trivially_copy_pass_by_ref
-)]
+#![expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 // LINT-DEBT-END
 
 use super::out_of_range_date;
@@ -242,11 +238,11 @@ pub(super) fn days_per_weekday(from: i64, to: i64, first_weekday: usize) -> [i64
 }
 
 /// The days of `per_weekday` (Monday first) that are not weekend days of `weekend_mask`.
-pub(super) fn working_days(per_weekday: &[i64; 7], weekend_mask: &[bool; 7]) -> i64 {
+pub(super) fn working_days(per_weekday: &[i64; 7], weekend_mask: [bool; 7]) -> i64 {
     per_weekday
         .iter()
         .zip(weekend_mask)
-        .filter(|(_, &weekend)| !weekend)
+        .filter(|(_, weekend)| !weekend)
         .map(|(days, _)| days)
         .sum()
 }
@@ -265,7 +261,7 @@ mod tests {
                 let first_weekday = from.rem_euclid(7) as usize;
                 let days = days_per_weekday(from, to, first_weekday);
                 let off = holidays.per_weekday(from, to, first_weekday);
-                let counted = working_days(&days, &mask) - working_days(&off, &mask);
+                let counted = working_days(&days, mask) - working_days(&off, mask);
                 let walked = (from..=to)
                     .filter(|day| !mask[day.rem_euclid(7) as usize])
                     .filter(|day| ![3, 10, 11, -4, 40].contains(day))

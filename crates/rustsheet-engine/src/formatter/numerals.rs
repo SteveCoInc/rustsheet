@@ -4,11 +4,7 @@
 //! t3532-numeral-digit-general (excel-graph); docs/excel-semantics/number-formats.md
 //! "Numeral-system digits".
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::cast_possible_truncation,
-    clippy::match_same_arms,
-    clippy::struct_excessive_bools
-)]
+#![expect(clippy::cast_possible_truncation, clippy::match_same_arms)]
 // LINT-DEBT-END
 
 /// The digits a section prints under its locale tag's numeral byte.
@@ -33,6 +29,10 @@ pub enum Numerals {
 /// 12345 is "一万二千三百四十五", `[h]` of 1.25 "三十") and the rest digit by digit ("〇.五",
 /// "一E+一一"; probes/t3532-numeral-digit-fields, t3532-numeral-digit-general).
 #[derive(PartialEq, Eq, Debug)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "independent spelling rules of one CJK numeral style"
+)]
 pub struct CjkStyle {
     /// The digits 0-9.
     digits: [char; 10],

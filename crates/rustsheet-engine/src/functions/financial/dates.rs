@@ -8,8 +8,7 @@
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
     clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::unused_self
+    clippy::cast_sign_loss
 )]
 // LINT-DEBT-END
 
@@ -145,7 +144,6 @@ impl Model {
     /// (directive 5, T-1822; docs/excel-semantics/financial.md "Coupon settlement before the
     /// calendar").
     pub(super) fn check_settlement(
-        &self,
         settlement: i64,
         maturity: i64,
         cell: CellReferenceIndex,
@@ -233,7 +231,7 @@ impl Model {
         maturity: i64,
         cell: CellReferenceIndex,
     ) -> Result<(), CalcResult> {
-        self.check_settlement(settlement, maturity, cell)?;
+        Self::check_settlement(settlement, maturity, cell)?;
         if self.coupon_schedule_breaks(maturity) {
             return Err(broken_schedule_error(cell));
         }

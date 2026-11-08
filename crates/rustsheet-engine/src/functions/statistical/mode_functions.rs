@@ -42,7 +42,7 @@ impl Model {
                     if let Some(error) = nested_array_error(&arr, cell) {
                         return Err(error);
                     }
-                    match self.values_from_array(arr) {
+                    match Self::values_from_array(arr) {
                         Ok(v) => values.extend(v.into_iter().flatten()),
                         Err(error) => return Err(array_element_error(error, cell)),
                     }

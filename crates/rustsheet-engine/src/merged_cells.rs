@@ -122,7 +122,7 @@ impl Model {
                     // text at the anchor so the formula stays as written.
                     let content =
                         self.get_localized_cell_content(sheet, source_row, source_column)?;
-                    self.reenter_printed_input(sheet, row, column, content)?;
+                    self.reenter_printed_input(sheet, row, column, &content)?;
                 }
                 Some(cell) => {
                     self.workbook

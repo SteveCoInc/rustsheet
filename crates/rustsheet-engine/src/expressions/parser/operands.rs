@@ -6,8 +6,7 @@
 #![expect(
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
-    clippy::manual_let_else,
-    clippy::needless_pass_by_value
+    clippy::manual_let_else
 )]
 // LINT-DEBT-END
 
@@ -80,7 +79,7 @@ impl Parser {
             matrix.push(row);
         }
 
-        if let Err(err) = self.lexer.expect(TokenType::RightBrace) {
+        if let Err(err) = self.lexer.expect(&TokenType::RightBrace) {
             return Node::ParseErrorKind {
                 formula: self.lexer.get_formula(),
                 expecting: vec![ExpectedTokens::Other],
@@ -284,7 +283,7 @@ impl Parser {
         }
         if call {
             self.lexer.advance_token();
-            return self.parse_named_call(name);
+            return self.parse_named_call(&name);
         }
         self.name_operand(name)
     }
@@ -701,10 +700,10 @@ impl Parser {
     }
 
     /// A call by name, `SUM(...)` or `_xlfn.LAMBDA(...)(...)`, after its `(`.
-    fn parse_named_call(&mut self, name: String) -> Node {
+    fn parse_named_call(&mut self, name: &str) -> Node {
         // It's a function call "SUM(.."
         // _xlfn.LAMBDA(_xlpm.a,_xlpm.b, SQRT(_xlpm.a*_xlpm.a+_xlpm.b*_xlpm.b))(3,4)
-        if &name == "_xlfn.LAMBDA" || &name.to_uppercase() == "LAMBDA" {
+        if name == "_xlfn.LAMBDA" || name.to_uppercase() == "LAMBDA" {
             return self.parse_lambda();
         }
         // The user-facing name, without the xlsx import prefixes.
@@ -716,14 +715,14 @@ impl Parser {
                 .trim_start_matches(XLPM_PREFIX)
                 .to_string()
         } else {
-            name.clone()
+            name.to_string()
         };
         let empty_call_run = self.empty_call_run();
         let mut args = match self.parse_function_args(&display_name) {
             Ok(s) => s,
             Err(e) => return e,
         };
-        if let Err(err) = self.lexer.expect(TokenType::RightParenthesis) {
+        if let Err(err) = self.lexer.expect(&TokenType::RightParenthesis) {
             // `SUM(A1` parses a complete argument and then fails to
             // find the `)`. If we ran out of input we are still
             // inside the call, sitting right after a complete
@@ -784,7 +783,7 @@ impl Parser {
         // The stored spelling of a legacy N or T (SPEC-0012), in R1C1 (stored) text only: in A1
         // text it is a cell, so `NLG1(1)` is a call of that cell, `#REF!` (below, T-1936).
         if let Some(kind) =
-            Function::from_legacy_spelling(&name).filter(|_| !self.lexer.is_a1_mode())
+            Function::from_legacy_spelling(name).filter(|_| !self.lexer.is_a1_mode())
         {
             return self.function_call(kind, args);
         }
@@ -792,9 +791,9 @@ impl Parser {
         if let Some(function_kind) = self
             .language
             .functions
-            .lookup_stored(&name)
-            .filter(|_| !self.calls_bound_name(&name))
-            .filter(|kind| !self.needs_stored_prefix(&name, kind))
+            .lookup_stored(name)
+            .filter(|_| !self.calls_bound_name(name))
+            .filter(|kind| !self.needs_stored_prefix(name, kind))
         {
             self.note_argument_count(&function_kind, &display_name, args.len());
             if self.loaded && function_kind == Function::Let {
@@ -819,10 +818,10 @@ impl Parser {
         // (`LET(mk,..,add5,mk(5),add5(1))`, T-2040). A1 grammar only: in R1C1 mode (stored
         // forms, and the raw A1 text of a formula that did not parse) `AB1` is no cell, and reading
         // it as one would turn A1 coordinates into R1C1 offsets.
-        if let Some(cell) = parse_spelled_a1_cell(&name).filter(|_| {
+        if let Some(cell) = parse_spelled_a1_cell(name).filter(|_| {
             self.lexer.is_a1_mode()
                 && !name.contains('$')
-                && !self.binds_reference_shaped_name(&name)
+                && !self.binds_reference_shaped_name(name)
         }) {
             let callee = self.reference_operand(None, cell.row, cell.column, false, false);
             return self.chain_calls(Node::LambdaCallKind {
@@ -831,7 +830,7 @@ impl Parser {
             });
         }
         self.chain_calls(Node::NamedFunctionKind {
-            name: self.written_lambda_name(&name),
+            name: self.written_lambda_name(name),
             args,
             id: None,
         })
@@ -856,7 +855,7 @@ impl Parser {
                 Ok(s) => s,
                 Err(e) => return e,
             };
-            if let Err(err) = self.lexer.expect(TokenType::RightParenthesis) {
+            if let Err(err) = self.lexer.expect(&TokenType::RightParenthesis) {
                 return Node::ParseErrorKind {
                     formula: self.lexer.get_formula(),
                     expecting: vec![ExpectedTokens::Other],
@@ -888,8 +887,8 @@ impl Parser {
         bare: bool,
     ) -> Node {
         let mut reference = StructuredReference {
-            table_name: table_name.clone(),
-            specifier: specifier.clone(),
+            table_name,
+            specifier,
             table_reference: table_reference.clone(),
             spacing,
             bare,
@@ -897,7 +896,8 @@ impl Parser {
             detached: false,
             extent: None,
         };
-        let lowered = self.lower_structured_reference(table_name, specifier, table_reference);
+        let lowered =
+            self.lower_structured_reference(&reference.table_name, specifier, table_reference);
         if let Some(table) = self.table_named(&reference.table_name) {
             reference.use_table_spelling(table);
         }

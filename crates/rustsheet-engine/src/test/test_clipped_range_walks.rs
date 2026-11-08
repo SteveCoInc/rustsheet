@@ -124,12 +124,7 @@ fn used_area_end_over_approximates_and_follows_writes() {
     assert_eq!(end(&model), (7, 5));
     let dimension = model.workbook.worksheet(0).unwrap().dimension();
     assert_eq!(end(&model), (dimension.max_row, dimension.max_column));
-    model
-        .workbook
-        .worksheet_mut(0)
-        .unwrap()
-        .remove_cell(7, 3)
-        .unwrap();
+    model.workbook.worksheet_mut(0).unwrap().remove_cell(7, 3);
     assert_eq!(end(&model), (2, 5));
 }
 

@@ -452,7 +452,7 @@ impl Model {
             let call = if percentof {
                 let sum = self.eta_lambda(Function::Sum);
                 Call::PercentOf {
-                    sum: Box::new(self.lambda_caller(&sum, 1)),
+                    sum: Box::new(Self::lambda_caller(&sum, 1)),
                     totals: HashMap::new(),
                 }
             } else if arity == 2 {
@@ -471,8 +471,7 @@ impl Model {
                 default_label
             };
             list.push(Aggregator {
-                caller: self
-                    .lambda_caller(lambda, arity)
+                caller: Self::lambda_caller(lambda, arity)
                     .keeping_references()
                     .snapping_root(),
                 call,

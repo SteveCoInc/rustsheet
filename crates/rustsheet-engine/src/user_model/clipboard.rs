@@ -348,13 +348,8 @@ impl UserModel {
         // set the new values and styles
         for (target_row, target_column, old_value, old_style, new_value, style) in changes {
             if let Some((ref v, legacy)) = new_value {
-                self.model.reenter_user_input(
-                    sheet,
-                    target_row,
-                    target_column,
-                    v.clone(),
-                    legacy,
-                )?;
+                self.model
+                    .reenter_user_input(sheet, target_row, target_column, v, legacy)?;
                 diff_list.push(Diff::SetCellValue {
                     sheet,
                     row: target_row,
@@ -566,13 +561,8 @@ impl UserModel {
                 let legacy = self
                     .model
                     .cell_has_legacy_marker(ext_sheet, ext_row, ext_col)?;
-                self.model.reenter_user_input(
-                    ext_sheet,
-                    ext_row,
-                    ext_col,
-                    new_formula.clone(),
-                    legacy,
-                )?;
+                self.model
+                    .reenter_user_input(ext_sheet, ext_row, ext_col, &new_formula, legacy)?;
                 diff_list.push(Diff::SetCellValue {
                     sheet: ext_sheet,
                     row: ext_row,

@@ -607,9 +607,10 @@ impl Model {
                     Ok(lifted) => lifted,
                     Err(error) => return RefArg::Value(error),
                 };
-                let read = self.lift_references_costed(lifted, cost, cell, &mut |model, values| {
-                    model.xlookup_one(values, &table, &range, pick, &mut regexes, cell)
-                });
+                let read =
+                    self.lift_references_costed(&lifted, cost, cell, &mut |model, values| {
+                        model.xlookup_one(values, &table, &range, pick, &mut regexes, cell)
+                    });
                 let finished = regexes.finish(self, CalcResult::EmptyArg, cell);
                 return match (finished, read) {
                     (error @ CalcResult::Error { .. }, _) => RefArg::Value(error),

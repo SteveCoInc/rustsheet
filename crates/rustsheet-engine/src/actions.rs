@@ -1,7 +1,6 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
 #![expect(
     clippy::cast_sign_loss,
-    clippy::mut_mut,
     clippy::too_many_lines,
     elided_lifetimes_in_paths
 )]
@@ -557,7 +556,7 @@ impl Model {
                             && source_column < a.1 + width
                 );
                 if !live_cse {
-                    worksheet.remove_cell(source_row, source_column)?;
+                    worksheet.remove_cell(source_row, source_column);
                 }
                 return Ok(());
             }
@@ -583,7 +582,7 @@ impl Model {
         let legacy = self.cell_has_legacy_marker(sheet, source_row, source_column)?;
         let delta = target_row - source_row;
         let moved = self.moved_text(sheet, (source_row, source_column), delta, kept)?;
-        let formula_or_value = moved.unwrap_or_else(|| {
+        let text = moved.unwrap_or_else(|| {
             source_cell.get_localized_text(
                 &self.workbook.shared_strings,
                 self.locale,
@@ -599,21 +598,15 @@ impl Model {
             for r in source_row..source_row + height {
                 for c in source_column..source_column + width {
                     if worksheet.cell(r, c).is_some() {
-                        worksheet.remove_cell(r, c)?;
+                        worksheet.remove_cell(r, c);
                     }
                 }
             }
-            self.reenter_array_formula(
-                sheet,
-                (target_row, target_column),
-                (width, height),
-                &formula_or_value,
-            )?;
+            self.reenter_array_formula(sheet, (target_row, target_column), (width, height), &text)?;
         } else {
             let table = self.kept_table_holding(sheet, (source_row, source_column), kept);
             self.parser.set_moved_table(table);
-            let entered =
-                self.reenter_user_input(sheet, target_row, target_column, formula_or_value, legacy);
+            let entered = self.reenter_user_input(sheet, target_row, target_column, &text, legacy);
             self.parser.set_moved_table(None);
             entered?;
         }
@@ -626,7 +619,7 @@ impl Model {
         // already, and the source position may now hold a cell of the array
         // at its new place)
         if array.is_none() {
-            worksheet.remove_cell(source_row, source_column)?;
+            worksheet.remove_cell(source_row, source_column);
         }
         Ok(())
     }
@@ -725,7 +718,7 @@ impl Model {
         // * Keep all the columns to the left
         // * Displace all the columns to the right
 
-        let worksheet = &mut self.workbook.worksheet_mut(sheet)?;
+        let worksheet = self.workbook.worksheet_mut(sheet)?;
 
         let mut new_columns = Vec::new();
         for col in &mut worksheet.cols {
@@ -818,7 +811,7 @@ impl Model {
                         )?;
                         self.move_cell(sheet, (r, col), (r, col - column_count), &kept)?;
                     } else {
-                        self.workbook.worksheet_mut(sheet)?.remove_cell(r, col)?;
+                        self.workbook.worksheet_mut(sheet)?.remove_cell(r, col);
                     }
                 }
             }
@@ -868,7 +861,7 @@ impl Model {
         };
         let rewritten = self.displace_formulas(sheet, &disp)?;
         let rewritten = before_moves(rewritten, sheet, moved);
-        let worksheet = &mut self.workbook.worksheet_mut(sheet)?;
+        let worksheet = self.workbook.worksheet_mut(sheet)?;
 
         // deletes all the column styles
         let mut new_columns = Vec::new();
@@ -1280,7 +1273,7 @@ impl Model {
                     // This the spill of an array formula. Because dynamic arrays spills have been deleted
                     // We delete the spill
                     let worksheet = self.workbook.worksheet_mut(sheet)?;
-                    worksheet.remove_cell(r.row, column)?;
+                    worksheet.remove_cell(r.row, column);
                     continue;
                 }
                 Cell::ArrayFormula {
@@ -1306,7 +1299,7 @@ impl Model {
             let legacy = self.cell_has_legacy_marker(sheet, r.row, column)?;
             original_cells.push((r.row, formula_or_value, style_idx, array, legacy));
             let ws = self.workbook.worksheet_mut(sheet)?;
-            ws.remove_cell(r.row, column)?;
+            ws.remove_cell(r.row, column);
         }
         let width = self
             .workbook
@@ -1345,7 +1338,7 @@ impl Model {
             if let Some(a) = array {
                 self.reenter_array_formula(sheet, (r, target_column), a, &value)?;
             } else {
-                self.reenter_user_input(sheet, r, target_column, value, legacy)?;
+                self.reenter_user_input(sheet, r, target_column, &value, legacy)?;
             }
             self.workbook
                 .worksheet_mut(sheet)?
@@ -1426,7 +1419,7 @@ impl Model {
                     // This the spill of an array formula. Because dynamic arrays spills have been deleted
                     // We delete the spill
                     let worksheet = self.workbook.worksheet_mut(sheet)?;
-                    worksheet.remove_cell(row, *c)?;
+                    worksheet.remove_cell(row, *c);
                     continue;
                 }
                 Cell::ArrayFormula {
@@ -1451,7 +1444,7 @@ impl Model {
             let legacy = self.cell_has_legacy_marker(sheet, row, *c)?;
             original_cells.push((*c, formula_or_value, style_idx, array, legacy));
             let ws = self.workbook.worksheet_mut(sheet)?;
-            ws.remove_cell(row, *c)?;
+            ws.remove_cell(row, *c);
         }
         if delta > 0 {
             for r in row + 1..=target_row {
@@ -1472,13 +1465,13 @@ impl Model {
             if let Some(array_range) = array {
                 self.reenter_array_formula(sheet, (target_row, c), array_range, &value)?;
             } else {
-                self.reenter_user_input(sheet, target_row, c, value, legacy)?;
+                self.reenter_user_input(sheet, target_row, c, &value, legacy)?;
             }
             self.workbook
                 .worksheet_mut(sheet)?
                 .set_cell_style(target_row, c, style_idx)?;
         }
-        let worksheet = &mut self.workbook.worksheet_mut(sheet)?;
+        let worksheet = self.workbook.worksheet_mut(sheet)?;
         let mut new_rows = Vec::new();
         for r in &worksheet.rows {
             if r.r == row {

@@ -1,9 +1,6 @@
 //! Which reference forms a formula holds (defined name, structured, 3-D, external workbook), for
 //! the harness's M8 subset of the poi suite (decision 0146 item 2(b), T-0094). The harness reuses
 //! the engine's parser instead of matching formula text.
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::struct_excessive_bools)]
-// LINT-DEBT-END
 
 use std::collections::HashMap;
 
@@ -15,6 +12,10 @@ use crate::types::Table;
 /// The reference forms one formula holds, as the parser reads it.
 #[doc(hidden)]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "one independent flag per reference form a formula may hold"
+)]
 pub struct ReferenceForms {
     /// A defined name of this workbook (a LET or LAMBDA name is not one).
     pub defined_name: bool,

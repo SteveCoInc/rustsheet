@@ -40,12 +40,7 @@
 //! (`OrderState`): a pass in which a call read it is followed by one in Excel's order
 //! (`excel_order.rs`).
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::cast_sign_loss,
-    clippy::default_trait_access,
-    clippy::struct_excessive_bools,
-    clippy::struct_field_names
-)]
+#![expect(clippy::cast_sign_loss, clippy::default_trait_access)]
 // LINT-DEBT-END
 
 use std::collections::{HashMap, HashSet};
@@ -231,6 +226,8 @@ impl Restart {
 }
 
 /// Everything the evaluation needs besides the workbook itself.
+#[expect(clippy::struct_excessive_bools, reason = "independent pass flags")]
+#[expect(clippy::struct_field_names, reason = "counters named by evaluation")]
 pub(crate) struct Evaluation {
     /// The dynamic anchors, in the order in which they are evaluated. Kept
     /// across evaluations: the order the restarts arrived at stays, so the

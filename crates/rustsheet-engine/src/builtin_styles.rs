@@ -1,9 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::fn_params_excessive_bools,
-    clippy::needless_pass_by_value,
-    clippy::too_many_lines
-)]
+#![expect(clippy::too_many_lines)]
 // LINT-DEBT-END
 use crate::types::{
     Border, BorderItem, BorderStyle, Color, Fill, Font, FontScheme, Style, StyleIncludes,
@@ -12,6 +8,10 @@ use crate::types::{
 // Which formatting categories each built-in style includes (the `apply*`
 // flags of its cellStyleXfs record), as written by Excel. Alignment and
 // protection are only included by "Normal".
+#[expect(
+    clippy::fn_params_excessive_bools,
+    reason = "one positional flag per apply* attribute keeps the style table below readable as Excel's record"
+)]
 const fn includes(number_format: bool, font: bool, fill: bool, border: bool) -> StyleIncludes {
     StyleIncludes {
         number_format,
@@ -37,7 +37,7 @@ fn solid_fill(color: Color) -> Fill {
 fn thin_box_border(color: Color) -> Border {
     let item = Some(BorderItem {
         style: BorderStyle::Thin,
-        color: color.clone(),
+        color,
     });
     Border {
         left: item.clone(),
@@ -51,7 +51,7 @@ fn thin_box_border(color: Color) -> Border {
 fn double_box_border(color: Color) -> Border {
     let item = Some(BorderItem {
         style: BorderStyle::Double,
-        color: color.clone(),
+        color,
     });
     Border {
         left: item.clone(),

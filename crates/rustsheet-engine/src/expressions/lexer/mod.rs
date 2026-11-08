@@ -45,7 +45,6 @@
 #![expect(
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
-    clippy::needless_pass_by_value,
     clippy::redundant_else,
     clippy::too_many_lines
 )]
@@ -279,9 +278,9 @@ impl Lexer {
     }
 
     /// Returns an error if the token is not the expected one.
-    pub fn expect(&mut self, tk: TokenType) -> Result<()> {
+    pub fn expect(&mut self, tk: &TokenType) -> Result<()> {
         let nt = self.next_token();
-        if mem::discriminant(&nt) != mem::discriminant(&tk) {
+        if mem::discriminant(&nt) != mem::discriminant(tk) {
             return Err(self.set_error(&format!("Error, expected {tk:?}"), self.position));
         }
         Ok(())

@@ -103,7 +103,7 @@ pub(crate) fn is_external_table_name(table_name: &str) -> bool {
 }
 
 /// Excel's name of an item specifier, in its own case.
-fn specifier_text(specifier: &TableSpecifier) -> &'static str {
+fn specifier_text(specifier: TableSpecifier) -> &'static str {
     match specifier {
         TableSpecifier::All => "[#All]",
         TableSpecifier::Data => "[#Data]",
@@ -316,9 +316,9 @@ impl StructuredReference {
                         TableSpecifier::HeadersData | TableSpecifier::DataTotals
                     ) =>
             {
-                format!("{name}[{open}{}{close}]", specifier_text(specifier))
+                format!("{name}[{open}{}{close}]", specifier_text(*specifier))
             }
-            (Some(specifier), None) => format!("{name}{}", specifier_text(specifier)),
+            (Some(specifier), None) => format!("{name}{}", specifier_text(*specifier)),
             (None, Some(TableReference::ColumnReference(column))) if prints_bare(column) => {
                 format!("{name}[{open}{}{close}]", escaped_column(column))
             }
@@ -327,7 +327,7 @@ impl StructuredReference {
             }
             (Some(specifier), Some(reference)) => format!(
                 "{name}[{open}{}{comma}{}{close}]",
-                specifier_text(specifier),
+                specifier_text(*specifier),
                 table_reference_text(reference)
             ),
         }

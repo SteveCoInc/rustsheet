@@ -1,9 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss,
-    clippy::unused_self
-)]
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 // LINT-DEBT-END
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
@@ -42,6 +38,10 @@ fn randbetween_draw(bottom: f64, top: f64) -> Result<f64, Error> {
 }
 
 impl Model {
+    #[expect(
+        clippy::unused_self,
+        reason = "every fn_* builtin shares the dispatch table's method signature"
+    )]
     pub(crate) fn fn_rand(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         if !args.is_empty() {
             return CalcResult::new_args_number_error(cell);

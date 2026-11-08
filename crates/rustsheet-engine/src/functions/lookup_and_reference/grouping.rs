@@ -2,9 +2,6 @@
 //! records grouped by a key tuple, sorted by key or by an aggregate, and laid out with the
 //! subtotals of a total depth beyond 1 (T-1324). Excel: docs/excel-semantics/arrays.md "GROUPBY
 //! and PIVOTBY".
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::struct_field_names)]
-// LINT-DEBT-END
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -217,7 +214,7 @@ impl Grouping {
             .and_then(|&row| keys.get(row))
             .map_or(0, Vec::len);
         let lines = Keys {
-            keys,
+            tuples: keys,
             rows: &rows,
             ascending,
             cell,
@@ -628,7 +625,7 @@ fn parent_set(axis: Axis, level: usize, rows: &[Vec<usize>], group: usize) -> Op
 /// The key tuples of a grouping's rows as lines (a line is an index into `rows`), and how two
 /// lines' keys compare in one field ([`Grouping::new`]).
 struct Keys<'a> {
-    keys: &'a [Vec<ArrayNode>],
+    tuples: &'a [Vec<ArrayNode>],
     rows: &'a [usize],
     /// Per field, whether it sorts ascending (ascending past the end).
     ascending: &'a [bool],
@@ -640,7 +637,7 @@ impl<'a> Keys<'a> {
     fn at(&self, line: usize, field: usize) -> Option<&'a ArrayNode> {
         self.rows
             .get(line)
-            .and_then(|&row| self.keys.get(row))
+            .and_then(|&row| self.tuples.get(row))
             .and_then(|tuple| tuple.get(field))
     }
 

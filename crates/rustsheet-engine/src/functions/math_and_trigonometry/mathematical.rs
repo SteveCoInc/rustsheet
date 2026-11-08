@@ -1,9 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss,
-    clippy::unused_self
-)]
+#![expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 // LINT-DEBT-END
 use super::trig::{excel_cos, excel_sin, excel_tan, EXCEL_TRIG_LIMIT};
 use crate::arithmetic::{divide, extended_quotient, extended_sqrt, flush_subnormal, power};
@@ -754,6 +750,10 @@ impl Model {
         })
     }
 
+    #[expect(
+        clippy::unused_self,
+        reason = "every fn_* builtin shares the dispatch table's method signature"
+    )]
     pub(crate) fn fn_pi(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         if !args.is_empty() {
             return CalcResult::new_args_number_error(cell);

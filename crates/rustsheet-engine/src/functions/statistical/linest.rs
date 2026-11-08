@@ -2,8 +2,7 @@
 #![expect(
     clippy::cast_precision_loss,
     clippy::many_single_char_names,
-    clippy::match_same_arms,
-    clippy::needless_pass_by_value
+    clippy::match_same_arms
 )]
 // LINT-DEBT-END
 use super::regression::{independent_columns, known_points, layout, Grid};
@@ -316,7 +315,7 @@ fn regress(
 
 /// Build LINEST/LOGEST output array from a `RegResult`.
 /// ncols = `coeffs.len()` (one column per coefficient)
-fn build_output_array(reg: RegResult, stats: bool) -> CalcResult {
+fn build_output_array(reg: &RegResult, stats: bool) -> CalcResult {
     let ncols = reg.coeffs.len();
 
     let row0: Vec<ArrayNode> = reg.coeffs.iter().map(|&v| ArrayNode::Number(v)).collect();
@@ -514,7 +513,7 @@ fn regression_output(
                 *c = c.exp();
             }
         }
-        Ok(build_output_array(reg, stats))
+        Ok(build_output_array(&reg, stats))
     };
     run().unwrap_or_else(|error| error)
 }

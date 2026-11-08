@@ -22,11 +22,7 @@
 //! ("A patched package keeps the source's hints"): row `spans`, a `<dimension>` that only grows,
 //! and a `<row>` emptied by clearing its cells.
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::format_push_string,
-    clippy::too_many_lines,
-    clippy::unnecessary_wraps
-)]
+#![expect(clippy::format_push_string, clippy::too_many_lines)]
 // LINT-DEBT-END
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -72,6 +68,10 @@ pub(super) type Patch = Result<(Vec<u8>, Vec<String>), String>;
 ///
 /// # Errors
 /// None today; the outer `Result` keeps room for a failure that must not fall back.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the outer Result keeps room for a failure that must not fall back"
+)]
 pub(super) fn patch(model: &Model, pristine: &Model, source: &[u8]) -> Result<Patch, XlsxError> {
     Ok(try_patch(model, pristine, source))
 }

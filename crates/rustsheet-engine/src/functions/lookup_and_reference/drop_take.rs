@@ -242,7 +242,7 @@ impl Model {
                     Ok(lifted) => lifted,
                     Err(error) => return RefArg::Value(error),
                 };
-                return self.lift_references(lifted, cell, &mut |model, values| match model
+                return self.lift_references(&lifted, cell, &mut |model, values| match model
                     .edge_spans(values, cell, edge, num_rows, num_cols)
                 {
                     Ok((rows, columns)) => sub_range(left, &rows, &columns),

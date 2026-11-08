@@ -19,9 +19,6 @@
 //! resolves the last two to their range as they stand at the refresh, a dynamic name's OFFSET or
 //! INDEX body included (pivots.md "A pivot over a defined name or a Table reads it again at the
 //! refresh", probes/t4506-pivot-named-sources; T-4506).
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::struct_excessive_bools)]
-// LINT-DEBT-END
 
 use std::collections::{HashMap, HashSet};
 
@@ -650,6 +647,10 @@ pub fn regroup(
 /// (not derived: how Excel counts the stale items left from the old cache in them) are UNVERIFIED
 /// (probe pending: T-4654).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "one field per boolean attribute of the OOXML sharedItems record"
+)]
 pub struct SharedItemsFlags {
     /// `containsSemiMixedTypes`: false only when the field has no string and no blank.
     pub contains_semi_mixed_types: bool,

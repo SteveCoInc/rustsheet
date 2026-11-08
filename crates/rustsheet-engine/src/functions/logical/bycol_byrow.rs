@@ -1,9 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(
-    clippy::cast_possible_truncation,
-    clippy::cast_precision_loss,
-    clippy::needless_pass_by_value
-)]
+#![expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 #![cfg_attr(test, expect(clippy::float_cmp))]
 // LINT-DEBT-END
 use super::lambda::LambdaCaller;
@@ -125,7 +121,7 @@ impl Model {
                     let mut slice = range.clone();
                     slice.left.column = column;
                     slice.right.column = column;
-                    self.call_lambda_on_slice(&mut caller, slice, cell)
+                    self.call_lambda_on_slice(&mut caller, &slice, cell)
                 })
                 .collect::<Option<Vec<_>>>(),
             Source::Values(data) => (0..data[0].len())
@@ -162,7 +158,7 @@ impl Model {
                     let mut slice = range.clone();
                     slice.left.row = row;
                     slice.right.row = row;
-                    self.call_lambda_on_slice(&mut caller, slice, cell)
+                    self.call_lambda_on_slice(&mut caller, &slice, cell)
                         .map(|node| vec![node])
                 })
                 .collect::<Option<Vec<_>>>(),
@@ -212,7 +208,7 @@ impl Model {
     fn call_lambda_on_slice(
         &mut self,
         caller: &mut LambdaCaller,
-        slice: Range,
+        slice: &Range,
         cell: CellReferenceIndex,
     ) -> Option<ArrayNode> {
         let reference = CalcResult::Range {

@@ -395,7 +395,7 @@ impl Model {
                 Ok(dense(self.values_from_range(left, right)?))
             }
             PairedArg::Array(array) => {
-                Ok(dense(self.values_from_array(array).map_err(array_error)?))
+                Ok(dense(Self::values_from_array(array).map_err(array_error)?))
             }
             PairedArg::Values(values) => Ok(dense(values)),
             PairedArg::Error(error) => Err(error),

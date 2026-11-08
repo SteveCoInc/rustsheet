@@ -146,7 +146,7 @@ pub(super) fn put_back(read: &RefArg) -> Option<Node> {
         RefArg::Ranges(Ranges::One(_)) => None,
         RefArg::Ranges(areas) => union_node(areas),
         RefArg::Grid(grid) => Some(Node::ArrayKind(
-            grid.to_array(ArrayNode::Error(Error::VALUE)),
+            grid.to_array(&ArrayNode::Error(Error::VALUE)),
         )),
         RefArg::Value(CalcResult::Array(rows)) => Some(Node::ArrayKind(rows.clone())),
         RefArg::Value(CalcResult::EmptyCell | CalcResult::EmptyArg) => None,

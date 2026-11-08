@@ -1,6 +1,3 @@
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::unnecessary_wraps)]
-// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::expressions::types::Area;
@@ -99,6 +96,10 @@ fn merge_moves_a_formula_to_the_anchor_unchanged() {
     assert_eq!(model.get_text_a1("C3"), "");
 }
 
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "builds the Option the value under test holds"
+)]
 fn thin(color: &str) -> Option<BorderItem> {
     Some(BorderItem {
         style: BorderStyle::Thin,

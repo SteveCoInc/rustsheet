@@ -1,6 +1,3 @@
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::needless_pass_by_value, clippy::unused_self)]
-// LINT-DEBT-END
 mod and_or_xor_not;
 mod bycol_byrow;
 mod lambda;
@@ -82,6 +79,10 @@ fn array_node_to_bool(node: &ArrayNode) -> Result<bool, ArrayNode> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 impl Model {
+    #[expect(
+        clippy::unused_self,
+        reason = "every fn_* builtin shares the dispatch table's method signature"
+    )]
     pub(crate) fn fn_true(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         if args.is_empty() {
             CalcResult::Boolean(true)
@@ -90,6 +91,10 @@ impl Model {
         }
     }
 
+    #[expect(
+        clippy::unused_self,
+        reason = "every fn_* builtin shares the dispatch table's method signature"
+    )]
     pub(crate) fn fn_false(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         if args.is_empty() {
             CalcResult::Boolean(false)
@@ -236,14 +241,14 @@ impl Model {
                 .collect();
             return Picked::Value(CalcResult::Array(values));
         }
-        Picked::Value(self.if_array(args, cond_array, cell))
+        Picked::Value(self.if_array(args, &cond_array, cell))
     }
 
     /// IF over an array condition: one result per position, the branches broadcast.
     fn if_array(
         &mut self,
         args: &[Node],
-        cond_array: Vec<Vec<ArrayNode>>,
+        cond_array: &[Vec<ArrayNode>],
         cell: CellReferenceIndex,
     ) -> CalcResult {
         let has_else = args.len() == 3;
@@ -543,7 +548,7 @@ impl Model {
                 Err(error) if is_text => {
                     return Picked::Value(self.ifs_text_condition_error(
                         &args[2 * case_index + 1..],
-                        error,
+                        &error,
                         cell,
                     ))
                 }
@@ -561,7 +566,7 @@ impl Model {
     fn ifs_text_condition_error(
         &mut self,
         rest: &[Node],
-        error: CalcResult,
+        error: &CalcResult,
         cell: CellReferenceIndex,
     ) -> CalcResult {
         let lifted: Vec<CalcResult> = rest

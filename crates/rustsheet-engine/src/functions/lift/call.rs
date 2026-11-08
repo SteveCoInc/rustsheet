@@ -1,8 +1,5 @@
 //! `lift_call` and its read phase (SPEC-0011 "The driver"): each argument is read once, by its
 //! kind in the table, and the kernel runs once (nothing lifted) or once per element.
-// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::needless_pass_by_value)]
-// LINT-DEBT-END
 
 use std::mem::ManuallyDrop;
 
@@ -148,6 +145,10 @@ impl Model {
     /// [`Model::lift_call`] for a kernel whose elements cost `cost` rather than one unit each:
     /// `LiftCost::Prepared` for one that prepares a whole argument once (LARGE sorts its data,
     /// T-1772), `LiftCost::Cells` for one whose every element walks it.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "Function is not Copy yet: T-5080 derives it and drops this"
+    )]
     pub(crate) fn lift_call_costed(
         &mut self,
         kind: Function,
@@ -351,6 +352,10 @@ impl Model {
     /// [`Model::lift_call_costed`] for a call whose `ReferenceByCaller` argument at `index` was
     /// not a reference: its caller read it into `grid` (one error per element), which broadcasts
     /// with the lifted arguments as a grid in that position. `grid` counts toward the read cap.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "Function is not Copy yet: T-5080 derives it and drops this"
+    )]
     pub(crate) fn lift_call_beside(
         &mut self,
         kind: Function,

@@ -5,7 +5,6 @@
     clippy::cast_sign_loss,
     clippy::manual_let_else,
     clippy::match_same_arms,
-    clippy::needless_pass_by_value,
     clippy::too_many_lines
 )]
 // LINT-DEBT-END
@@ -20,7 +19,7 @@ impl Parser {
     /// `ReferenceKind`, a `RangeKind`, a `ThisRowKind`, an `ErrorKind` or a `ParseErrorKind`.
     pub(super) fn lower_structured_reference(
         &mut self,
-        table_name: String,
+        table_name: &str,
         specifier: Option<token::TableSpecifier>,
         table_reference: Option<TableReference>,
     ) -> Node {
@@ -40,7 +39,7 @@ impl Parser {
             }
         };
         // table-name => table
-        let table = if let Some(t) = self.table_named(&table_name) {
+        let table = if let Some(t) = self.table_named(table_name) {
             t
         } else {
             let message = format!(

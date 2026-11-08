@@ -441,12 +441,7 @@ mod tests {
         let mut model = new_empty_model();
         model.set_a1("A1", "=SEQUENCE(3)");
         model.evaluate();
-        model
-            .workbook
-            .worksheet_mut(0)
-            .unwrap()
-            .remove_cell(3, 1)
-            .unwrap();
+        model.workbook.worksheet_mut(0).unwrap().remove_cell(3, 1);
         let found = violations(&mut model);
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(

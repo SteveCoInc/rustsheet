@@ -2,9 +2,7 @@
 #![expect(
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
-    clippy::cast_sign_loss,
-    clippy::implicit_hasher,
-    clippy::struct_excessive_bools
+    clippy::cast_sign_loss
 )]
 // LINT-DEBT-END
 /*!
@@ -125,6 +123,10 @@ pub(crate) struct Reference<'a> {
 }
 
 #[derive(Clone)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "independent parse modes, each set by its own caller"
+)]
 pub struct Parser {
     lexer: lexer::Lexer,
     worksheets: Vec<String>,
@@ -227,6 +229,10 @@ pub struct Parser {
     workbook_file: Option<String>,
 }
 
+#[expect(
+    clippy::implicit_hasher,
+    reason = "the parser keeps the map, so its field fixes the hasher"
+)]
 pub fn new_parser_english(
     worksheets: Vec<String>,
     defined_names: Vec<DefinedNameS>,

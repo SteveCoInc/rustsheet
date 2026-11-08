@@ -212,7 +212,7 @@ impl Model {
             Ok(lifted) => lifted,
             Err(error) => return RefArg::Value(error),
         };
-        self.lift_references(lifted, cell, &mut |model, values| match model.trim_of(
+        self.lift_references(&lifted, cell, &mut |model, values| match model.trim_of(
             &data,
             non_blank.as_ref(),
             values,

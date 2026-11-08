@@ -1,5 +1,5 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
-#![expect(clippy::manual_let_else, clippy::unnecessary_wraps)]
+#![expect(clippy::manual_let_else)]
 // LINT-DEBT-END
 use crate::constants::{self, LAST_COLUMN, LAST_ROW};
 use crate::expressions::types::CellReferenceIndex;
@@ -678,9 +678,8 @@ impl Worksheet {
         Ok(column_cell_references)
     }
 
-    pub(crate) fn remove_cell(&mut self, row: i32, column: i32) -> Result<(), String> {
+    pub(crate) fn remove_cell(&mut self, row: i32, column: i32) {
         self.sheet_data.remove_cell(row, column);
-        Ok(())
     }
 
     /// Returns the height of a row in pixels
