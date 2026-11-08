@@ -2731,6 +2731,7 @@ C	probes/t4801-rank-lifted-offset-indirect.case.json	217
 C	probes/t4844-irr-guess-ladder.case.json	468
 C	probes/t4844-irr-pad-ladder.case.json	48
 C	probes/t4844-irr-stage-invariance.case.json	60
+C	probes/t4847-xmatch-binary-text-collation.case.json	192
 C	probes/t4857-f-kinds.case.json	669
 C	probes/t4860-fraction-tail-no-pre-point-lacking.case.json	24
 C	probes/t4861-indirect-r1c1-shaped-sheet-prefix.case.json	42
