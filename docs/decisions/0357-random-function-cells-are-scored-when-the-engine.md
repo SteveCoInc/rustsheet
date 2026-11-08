@@ -42,5 +42,11 @@
     failure is real (the engine's value should depend on the draw), but Excel's value is one draw.
     The oracle fill does not yet fill such cells twice (it does so only for `invariant` cells), so
     a failure of that kind is triaged by hand.
+  - Visible-parity lock (decision 0219): a newly scored cell outside the envelope raises an existing
+    case's line, which needs `--allow-regressions`. The repository owner approved exactly one such
+    rise in chat (2026-11-08), recorded in T-5100's PR: `probes/weeknum-stale-volatile-reader.case.json`
+    0 → 1 (Vol!A1, never scored before; Excel's `#NUM!` comes from its volatile-only last recalc,
+    not from a draw; owner T-5102). Any later rise from this rule needs its own record, as decision
+    0219 requires.
   - A case with random-reading cells is evaluated five times, inside the same timeout.
   - The same check is open for NOW/TODAY, by varying the clock; that is not done here.
