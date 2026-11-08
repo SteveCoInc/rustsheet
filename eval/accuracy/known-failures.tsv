@@ -24,16 +24,12 @@ accuracy/IRR/r4-T-3411!Calc!A233	T-3900	Excel #DIV/0! on a long conventional ser
 accuracy/IRR/r4-T-3407!Calc!A237	T-3900	long conventional series: Excel #DIV/0!, the engine #NUM!, the math a root
 accuracy/T.INV/e-T-3425!Calc!A74	T-3363	quantile at df 1E10: the engine is 2.5E-6 off the math; Excel matches it
 accuracy/YIELD/s1!Calc!A225	T-4523	Excel #NUM! (its Newton leaves PRICE's domain at a price and redemption near 0.01); the engine converges to the root
-accuracy/YIELD/s1!Calc!A230	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
 accuracy/YIELD/s1!Calc!A252	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
-accuracy/YIELD/s1!Calc!A261	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
 accuracy/YIELD/r4-T-2788!Calc!A194	T-4523	Excel #NUM! (its Newton leaves PRICE's domain at a price near 0.035, redemption 100); the engine converges to the root
 accuracy/YIELD/r4-T-2788!Calc!A239	T-4523	Excel #NUM! (its Newton leaves PRICE's domain at a price and redemption near 0.014); the engine converges to the root
-accuracy/YIELD/r4-T-2788!Calc!A252	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
 accuracy/YIELD/r4-T-2788!Calc!A267	T-4758	YIELD's last digits short of PRICE's root: engine 15 digits off Excel's stop, both short of the math
 accuracy/F.INV.RT/s1!Calc!A142	T-4568	Excel #NUM! at p 1.5E-247 (df 9, 51); the engine returns the math
 accuracy/ODDFYIELD/s1!Calc!A272	T-4551	ODDFYIELD at a root near 0 (8.3E-6): engine 1.1E-11 relative off Excel, both stop short of the math (1.8E-6)
-accuracy/ODDFYIELD/s1!Calc!A289	T-4551	ODDFYIELD with ODDFPRICE's extra quasi period (month-end first coupon 2005-05-31, coup_number nq 1, true 0): engine 2E-13 relative off Excel, both 2E-7 off the math
 accuracy/TTEST/s1!Calc!A136	T-4579	Excel #DIV/0! for a paired test whose one-pass variance of the differences is negative; the engine gives a number
 accuracy/TTEST/s1!Calc!A101	T-4579	Excel keeps the exact differences of offset pairs; the engine's double differences put the deep tail 1.6e-9 off
 accuracy/CONFIDENCE.T/s1!Calc!A163	T-3363	quantile at df 6.2E6: the engine and Excel are both off the math, differently

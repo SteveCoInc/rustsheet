@@ -36,6 +36,10 @@ blocks it.
   `Inside`; an unmarked cell is unchanged.
 - [ ] The `make eval-baseline` run after the change is committed (tool output only), with any newly outside
   R3 cell listed in the Outcome.
+- [ ] Decision 0355 item 2 records the owner's 4-ulp ruling (2026-11-08, PR #4093): a value within 4 ulp of Excel's
+  is inside on Excel's side, which keeps Gate A's earlier `NumericUlp` handling. SPEC-0037 design 2 says the 4-ulp
+  band is wider than 12 digits only at an Excel 0 or a deep subnormal (below about 1e-311), not at an Excel 0 only.
+  (PR #4093 review, Excel-fidelity MINOR.)
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

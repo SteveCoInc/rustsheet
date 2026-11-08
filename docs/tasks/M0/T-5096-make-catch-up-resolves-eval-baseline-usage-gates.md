@@ -3,7 +3,7 @@ id: T-5096
 title: "make catch-up resolves eval/baseline/usage-gates.txt conflicts (T-5093 follow-up)"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -25,11 +25,25 @@ eval-gated lists, instead of refusing the merge.
   `update-baseline` write the branch's state, which refuses met → unmet without `--allow-regressions`.
 
 ## Acceptance criteria
-- [ ] `resolvable_lists` includes eval/baseline/usage-gates.txt, and a conflict there is resolved to main's side
+- [x] `resolvable_lists` includes eval/baseline/usage-gates.txt, and a conflict there is resolved to main's side
   before the re-record.
-- [ ] A test in scripts/ shows a conflicted tier lock is resolved, and a branch that turns a tier unmet still
+- [x] A test in scripts/ shows a conflicted tier lock is resolved, and a branch that turns a tier unmet still
   fails the catch-up's gate.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The tier computation and the lock format (T-5093, T-5092).
+
+## Outcome
+- `scripts/merge_catchup.py`:
+  - `USAGE_GATES` (eval/baseline/usage-gates.txt) is in `checked_baselines`, so `resolvable_lists` (shared by
+    `make catch-up` and `make renumber`) resolves a conflict there to `main`'s side before the re-record, like the
+    cell baselines;
+  - after the re-record, `tier_flips` refuses a merged lock that has a tier unmet (or missing) that `main` has met.
+    `update-baseline` already refuses met → unmet without `--allow-regressions`, which a catch-up never passes;
+    this holds the pushed tree to it whatever the re-record did (decision 0355 item 6).
+- Tests (scripts/test_merge_catchup.py): a conflicted lock takes `main`'s side and is re-recorded; a branch that
+  leaves a tier unmet where `main` has it met is refused and nothing is pushed; `tier_flips` on its own. 34
+  catch-up and renumber tests pass.
+- docs/process/quality-gates.md: the usage-tier paragraph says how a catch-up treats the lock.
+- Eval delta: none.

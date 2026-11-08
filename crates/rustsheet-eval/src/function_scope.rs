@@ -15,18 +15,23 @@
 //! as decision 0051 item 2 reads name bodies); names calling names are followed up to
 //! [`MAX_NAME_DEPTH`] levels, each name once. Precedents are not followed: only the cell's
 //! own formula and the names it calls decide.
+//!
+//! Each row also counts its cells by usage tier ([`MilestoneScope::tiers`], decision 0355 item 4):
+//! every non-deviation cell, placed by [`cell_usage`], less the exit exceptions. The milestone
+//! exit adds the misses R1(c) counts and applies the tier bars.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
 use serde::{Deserialize, Serialize};
 
-use crate::catalog::Catalog;
+use crate::catalog::{Catalog, Usage};
 use crate::closeness::Visible;
 use crate::exit_exceptions::{ExitExceptions, EXCEPTIONS_PATH};
 use crate::formula_calls::functions_in;
 use crate::probe_milestones::{parse_milestone, row_of, REPORT_ROWS};
-use crate::runner::CaseResult;
+use crate::runner::{CaseResult, CellResult};
+use crate::usage_gates::{cell_usage, TierTallies};
 
 /// The suite scored.
 pub const SUITE: &str = "ironcalc-calc";
@@ -54,6 +59,10 @@ pub struct MilestoneScope {
     /// these, the bit-level `failing` is Phase 1b's (decision 0114).
     #[serde(default)]
     pub visibly_off: Vec<String>,
+    /// The row's non-deviation cells by usage tier, less its exit exceptions, without misses:
+    /// the milestone exit adds the cells R1(c) counts (decision 0355 item 4).
+    #[serde(default)]
+    pub tiers: TierTallies,
 }
 
 /// How the [`SUITE`] cells scored, one cumulative row per function milestone.
@@ -73,12 +82,24 @@ pub struct FunctionScope {
     /// exit measure (decision 0174).
     #[serde(default)]
     pub blocked_cases: Vec<String>,
+    /// The usage tier of each failing cell, by `case!Sheet!A1` ([`cell_usage`]); kept in memory
+    /// for the milestone exit, not written to the JSON.
+    #[serde(skip)]
+    pub failing_usage: BTreeMap<String, Usage>,
 }
 
 impl FunctionScope {
+    /// The usage tier of failing cell `id`; foundational, the stricter bar, for a cell the run
+    /// did not place.
+    #[must_use]
+    pub fn usage_of(&self, id: &str) -> Usage {
+        usage_in(&self.failing_usage, id)
+    }
+
     /// Fills each row's `excepted` cells and the stale exceptions from `exceptions`; `failing`
     /// is unchanged.
     pub fn apply_exceptions(&mut self, exceptions: &ExitExceptions) {
+        let failing_usage = &self.failing_usage;
         for row in &mut self.rows {
             let Some(milestone) = parse_milestone(&row.milestone) else {
                 continue;
@@ -89,6 +110,11 @@ impl FunctionScope {
                 .filter(|cell| exceptions.applies(cell, milestone))
                 .cloned()
                 .collect();
+            // An excepted cell leaves the row's tier counts too (decision 0087).
+            for cell in &row.excepted {
+                let tally = row.tiers.tally_mut(usage_in(failing_usage, cell));
+                tally.cells = tally.cells.saturating_sub(1);
+            }
         }
         self.stale_exceptions = exceptions
             .cells
@@ -97,6 +123,14 @@ impl FunctionScope {
             .cloned()
             .collect();
     }
+}
+
+/// [`FunctionScope::usage_of`] over `failing_usage`.
+fn usage_in(failing_usage: &BTreeMap<String, Usage>, id: &str) -> Usage {
+    failing_usage
+        .get(id)
+        .copied()
+        .unwrap_or(Usage::Foundational)
 }
 
 /// Scores the [`SUITE`] cells of `results`; `None` when the run executed no such case.
@@ -131,31 +165,37 @@ pub fn summarize(catalog: &Catalog, results: &[CaseResult]) -> Option<FunctionSc
     for r in cases {
         scope.blocked_cases.extend(r.blocked_key());
         for c in &r.cells {
-            let Some(formula) = c.formula.as_deref().or(c.anchor_formula.as_deref()) else {
+            let Some(calls) = cell_calls(r, c) else {
                 scope.no_formula += 1;
                 scope.no_formula_failing += usize::from(c.verdict.is_failure());
                 continue;
             };
             // The latest milestone among the functions called; the cell is in every row from there on.
-            let needed = calls_through_names(formula, &r.defined_names)
+            let needed = calls
                 .iter()
                 .filter_map(|f| milestones.get(f.as_str()).copied())
                 .max()
                 .unwrap_or(0);
+            let usage = cell_usage(&calls, |f| catalog.function(f).map(|c| c.usage));
+            let key = crate::runner::cell_id(&r.id, &c.key());
+            if c.verdict.is_failure() {
+                scope.failing_usage.insert(key.clone(), usage);
+            }
             let first = limits.partition_point(|&limit| limit < needed);
             for row in &mut scope.rows[first..] {
                 row.cells += 1;
                 if c.verdict.is_pass() {
                     row.bit_exact += 1;
                 } else if c.verdict.is_failure() {
-                    let key = crate::runner::cell_id(&r.id, &c.key());
                     if Visible::is_off(c) {
                         row.visibly_off.push(key.clone());
                     }
-                    row.failing.push(key);
+                    row.failing.push(key.clone());
                 } else {
                     row.deviations += 1;
+                    continue;
                 }
+                row.tiers.tally_mut(usage).cells += 1;
             }
         }
     }
@@ -165,6 +205,14 @@ pub fn summarize(catalog: &Catalog, results: &[CaseResult]) -> Option<FunctionSc
     }
     scope.blocked_cases.sort();
     Some(scope)
+}
+
+/// The functions cell `c` of case `r` calls: its formula's (an array member's anchor formula's)
+/// with those of the defined names it calls ([`calls_through_names`]); `None` for a cell with
+/// neither formula (a spill child). The milestone rows place a cell in a usage tier by them.
+pub(crate) fn cell_calls(r: &CaseResult, c: &CellResult) -> Option<BTreeSet<String>> {
+    let formula = c.formula.as_deref().or(c.anchor_formula.as_deref())?;
+    Some(calls_through_names(formula, &r.defined_names))
 }
 
 /// The functions `formula` calls, with those of every defined name it calls, transitively
@@ -356,6 +404,49 @@ mod tests {
             ]
         );
         assert_eq!((s.no_formula, s.no_formula_failing), (1, 1));
+    }
+
+    #[test]
+    fn rows_count_their_cells_by_usage_tier_less_deviations_and_exceptions() {
+        let catalog = Catalog::from_functions([
+            CatalogFunction {
+                usage: Usage::Foundational,
+                ..function("SUM", "M1")
+            },
+            CatalogFunction {
+                usage: Usage::Foundational,
+                ..function("ABS", "M2")
+            },
+            function("IRR", "M5"),
+        ]);
+        let results = [case(
+            SUITE,
+            vec![
+                cell("A1", Some("SUM(1)"), Verdict::Pass),
+                cell("A2", Some("IRR(A1:A3)"), Verdict::NumericMismatch),
+                cell("A3", Some("IF(TRUE,IRR(A1:A3))"), Verdict::Pass),
+                cell("A4", Some("IRR(A1:A2)"), Verdict::Deviation),
+                cell("A5", Some("ABS(1)+IRR(A1:A2)"), Verdict::TypeMismatch),
+            ],
+        )];
+        let mut s = summarize(&catalog, &results).expect("suite ran");
+        let tiers = |s: &FunctionScope, m: &str| {
+            let t = row(s, m).tiers;
+            (t.foundational.cells, t.expert.cells)
+        };
+        assert_eq!(tiers(&s, "M2"), (1, 0));
+        // IRR alone and inside IF (glue) are expert; ABS with IRR has no sole call, and ABS is
+        // foundational.
+        assert_eq!(tiers(&s, "M5"), (2, 2));
+        assert_eq!(s.usage_of("ironcalc-calc/a!S!A2"), Usage::Expert);
+        assert_eq!(s.usage_of("ironcalc-calc/a!S!A5"), Usage::Foundational);
+        assert_eq!(s.usage_of("ironcalc-calc/never!S!A1"), Usage::Foundational);
+        // An exit exception leaves the tier counts of the rows it applies to.
+        let exceptions =
+            ExitExceptions::parse("ironcalc-calc/a!S!A2\tM5\t0087\tT-1\n").expect("parses");
+        s.apply_exceptions(&exceptions);
+        assert_eq!(tiers(&s, "M5"), (2, 1));
+        assert_eq!(tiers(&s, "M2"), (1, 0), "the exception's milestone is M5");
     }
 
     #[test]

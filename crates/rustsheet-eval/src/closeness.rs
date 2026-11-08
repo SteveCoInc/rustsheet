@@ -211,20 +211,6 @@ impl Visible {
         Visible::of(cell).total() > 0
     }
 
-    /// Whether `cell` is off at the 15-digit bar for every function, `residue13` and `r3_math`
-    /// included: Gate A's envelope (decision 0188 R2), which decision 0267 leaves at 15 digits and
-    /// which drops Excel's side of an R3 point its own way, so decision 0310 does not reach it.
-    /// The same buckets as [`Visible::is_off`], so there is still one 15-digit rule.
-    #[must_use]
-    pub fn is_off_at_fifteen_digits(cell: &CellResult) -> bool {
-        matches!(
-            bucket(cell),
-            Some(
-                Bucket::Residue13 | Bucket::R3Math | Bucket::VisibleNumeric | Bucket::VisibleOther
-            )
-        )
-    }
-
     /// Whether `cell` is in the `r3_math` bucket: a number the run marked
     /// [`Target::Math`], past half a unit in the 15th digit of Excel's value (decision
     /// 0310). R1(c) still classifies it, as [`crate::r1c::R1c::R3Pass`].
@@ -465,18 +451,6 @@ mod tests {
             )
         };
         assert!(Visible::is_off(&typed));
-        // Gate A's envelope keeps the 15-digit bar for the family too.
-        assert!(Visible::is_off_at_fifteen_digits(&with_formula(
-            "=BETA.DIST(1,2,3,TRUE)",
-            e,
-            off15
-        )));
-        assert!(!Visible::is_off_at_fifteen_digits(&with_formula(
-            "=BETA.DIST(1,2,3,TRUE)",
-            e,
-            e + 4.0
-        )));
-        assert!(Visible::is_off_at_fifteen_digits(&typed));
         let mut c = Closeness::default();
         c.add(&with_formula("=BETA.DIST(1,2,3,TRUE)", e, off15));
         assert_eq!((c.residue13, c.visible(), c.scored()), (1, 0, 1));
@@ -498,7 +472,6 @@ mod tests {
         assert_eq!(bucket(&off), Some(Bucket::R3Math));
         assert!(!Visible::is_off(&off));
         assert_eq!(Visible::of(&off), Visible::default());
-        assert!(Visible::is_off_at_fifteen_digits(&off));
         let close = marked(cell(
             Value::Number(1.0),
             Value::Number(1.0 + 1e-15),
