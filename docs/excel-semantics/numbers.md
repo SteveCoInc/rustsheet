@@ -370,6 +370,11 @@ stripped first, misses at G9, G12:G13, G20:G21, G27:G28 and G42:G44; see "Stored
 to the nearest double", still OPEN). ROUNDUP's own conversion is not probed here (A1928 only checks
 `ROUNDUP(4.90499999999999E-06,8)` = 4.91E-06, the nearest double, as "ROUNDUP adds the unit in binary" gives).
 Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values for ROUND and ROUNDDOWN.
+Since T-4975 (findings 2026-11-07 audit item 6) ROUND and ROUNDDOWN take the model up to its semantic edge, every
+m of at most 15 significant digits (`X87_DECIMAL_DIGITS` = 10^15 in decimal_round.rs), the bound the literals below
+are evidenced at, instead of stopping at the sampled 1,000,000. ROUND's kept digits for 7 to 15 digits are
+UNVERIFIED (inferred from the literal parse, which is the same multiply); a probe of ROUND at 7 to 15 kept digits
+would settle it.
 **Literals and VALUE text of 7 to 18 digits (T-4077).** The model holds for every digit count up to 15 and for a
 positive exponent, with m the digits as written and n the fraction digits less the exponent (`=7.5487209E+1` is
 75487209 × 10^-6 = 75.487209000000007, Lit!A82). Past 15 significant digits the text is cut first, the later digits
@@ -3102,8 +3107,12 @@ function_num 6 control C5 still multiplies the hidden 3 and 5 to 15) or in rows 
 (Filter!C2, C3; function_num 6 skips filtered rows too, so Filter!C1 is 0). AGGREGATE's PRODUCT
 (function 6) gives 0 the same way under options 1, 4, 5 and 6 (Hide!C10-C12, Filter!C4): an empty
 product is 0 whenever no number is included, never 1.
-Ours: implemented (T-2269); 106 and the AGGREGATE cells share the code path and match.
-Status: VERIFIED
+Ours: implemented (T-2269); 106 and the AGGREGATE cells share the code path and match. Since T-4975 SUBTOTAL 6 and
+106 multiply with PRODUCT's own step (`product_step`: a stored x87 product, a subnormal running product flushed to
+0), not a second plain-`*` loop; no evidence asked for two accumulators (findings 2026-11-07 audit item 6). That
+flush is UNVERIFIED for SUBTOTAL itself: `SUBTOTAL(6,1E-200,1E-120)` went from 1E-320 to 0 with no SUBTOTAL oracle
+cell (probe: T-5087).
+Status: VERIFIED (the T-4975 flush sentence UNVERIFIED)
 Tasks: T-2269, T-2302
 
 ## TEXT of DBL_MAX with a scientific format prints the full 3-digit exponent (T-2106)

@@ -9,6 +9,7 @@ mod matrix;
 mod mmult;
 mod multinomial;
 mod product;
+pub(crate) use product::product_step;
 mod random;
 mod sequence;
 mod seriessum;

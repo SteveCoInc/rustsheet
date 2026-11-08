@@ -20,10 +20,14 @@ use crate::{
     Model,
 };
 
+use super::aggregate::value_node;
 use super::criteria::{build_criteria_with, CriteriaFlavor};
 use super::lift::LiftCost;
+use super::lookup_and_reference::range_node;
 use super::statistical::variance::{variance_result, VarianceKind};
 use super::Function;
+use crate::area_budget::visit_units;
+use crate::calc_result::Range;
 
 /// The resolved `database`, `field` and `criteria` of one D-function element.
 struct DbQuery {
@@ -133,6 +137,22 @@ fn reference_corners(
     }
 }
 
+/// The count of rows (or columns) `first..=last`, 0 for an inverted span.
+fn span(first: i32, last: i32) -> u64 {
+    u64::try_from(i64::from(last) - i64::from(first) + 1).unwrap_or(0)
+}
+
+/// The cells one D-function scan visits: every database row reads the criteria headers against
+/// the database's columns and each criteria row's cells (`db_row_matches_criteria`), plus the
+/// field read.
+fn db_scan_visits(rows: u64, columns: u64, criteria_rows: u64, criteria_columns: u64) -> u64 {
+    let per_row = criteria_columns
+        .saturating_mul(columns)
+        .saturating_add(criteria_rows.saturating_mul(criteria_columns))
+        .saturating_add(1);
+    rows.saturating_mul(per_row)
+}
+
 impl Model {
     /// Runs a D-function through the SPEC-0011 driver: `field` and `criteria` lift over array
     /// literals, `database` and a criteria range are read whole (probes/db-argument-modes).
@@ -145,6 +165,29 @@ impl Model {
         empty_field_counts: bool,
         compute: fn(&mut Model, &DbQuery, CellReferenceIndex) -> CalcResult,
     ) -> CalcResult {
+        // A `field` that is a reference to an error cell is `#VALUE!` in Excel, while an error
+        // literal propagates (probes/m9-database-argument-kinds, excel-graph 2026-11-04). The
+        // driver hands over the dereferenced value, so the reference is recognised here, and the
+        // driver reads the field as resolved here (`db_field_resolved`).
+        let (field_is_error_cell, resolved) = self.db_field_resolved(args.get(1), cell);
+        let resolved_args: Vec<Node>;
+        let args = match resolved {
+            Some(field) => {
+                resolved_args = args
+                    .iter()
+                    .enumerate()
+                    .map(|(index, arg)| {
+                        if index == 1 {
+                            field.clone()
+                        } else {
+                            arg.clone()
+                        }
+                    })
+                    .collect();
+                &resolved_args[..]
+            }
+            None => args,
+        };
         // Only an argument that is not a plain literal or reference can lift, and only then is the
         // call priced (the database and criteria are read again by the driver; cheap).
         let may_lift = args.iter().skip(1).any(|arg| {
@@ -164,10 +207,6 @@ impl Model {
         } else {
             LiftCost::Unit
         };
-        // A `field` that is a reference to an error cell is `#VALUE!` in Excel, while an error
-        // literal propagates (probes/m9-database-argument-kinds, excel-graph 2026-11-04). The
-        // driver hands over the dereferenced value, so the reference is recognised here.
-        let field_is_error_cell = self.db_field_is_error_cell(args.get(1), cell);
         self.lift_call_costed(
             kind,
             args,
@@ -179,7 +218,27 @@ impl Model {
                 field_is_error_cell,
                 cell,
             ) {
-                Ok(query) => compute(model, &query, cell),
+                Ok(query) => {
+                    // A call that cannot lift is still charged its scan, records x criteria cells
+                    // (`db_scan_visits`), to the formula's work budget, without the per-call cap
+                    // of a lifted call (so a whole-column database still computes). Before audit 2
+                    // item 3 it was priced as one unit, and a DCOUNT over n records and n criteria
+                    // rows grew as n^2 unbounded (directive 5; DEVIATION, arrays.md "Wildcard
+                    // matching and D-function scans are charged their real work"). Charged from the
+                    // resolved query, so no argument is evaluated again for it.
+                    if !may_lift {
+                        let visits = db_scan_visits(
+                            span(query.left.row, query.right.row),
+                            span(query.left.column, query.right.column),
+                            span(query.criteria.0.row, query.criteria.1.row),
+                            span(query.criteria.0.column, query.criteria.1.column),
+                        );
+                        if let Err(error) = model.spend_work(visit_units(visits), cell) {
+                            return error;
+                        }
+                    }
+                    compute(model, &query, cell)
+                }
                 Err(error) => error,
             },
         )
@@ -191,9 +250,10 @@ impl Model {
     /// lifted (limits.rs `MAX_LIFTED_CELL_VISITS`; a DEVIATION, statistics.md).
     fn db_element_cost(&mut self, args: &[Node], cell: CellReferenceIndex) -> LiftCost {
         let size = |range: &crate::calc_result::Range| {
-            let rows = u64::try_from(range.right.row - range.left.row + 1).unwrap_or(0);
-            let columns = u64::try_from(range.right.column - range.left.column + 1).unwrap_or(0);
-            (rows, columns)
+            (
+                span(range.left.row, range.right.row),
+                span(range.left.column, range.right.column),
+            )
         };
         let Some(Ok(database)) = args.first().map(|node| self.get_reference(node, cell)) else {
             return LiftCost::Unit;
@@ -204,19 +264,30 @@ impl Model {
                 Some(Ok(criteria)) => size(&criteria),
                 _ => (0, 0),
             };
-        let per_row = criteria_columns
-            .saturating_mul(columns)
-            .saturating_add(criteria_rows.saturating_mul(criteria_columns))
-            .saturating_add(1);
-        LiftCost::Cells(rows.saturating_mul(per_row))
+        LiftCost::Cells(db_scan_visits(
+            rows,
+            columns,
+            criteria_rows,
+            criteria_columns,
+        ))
     }
 
     /// Whether `field` is a single-cell reference whose cell holds an error, written directly or
     /// reached through a defined name, `INDEX(…)`, `@` or `IF(TRUE,…)`: all give `#VALUE!` in
     /// Excel (probes/m9-database-field-error-forms, excel-graph 2026-11-04). Other
     /// reference-returning functions (OFFSET, CHOOSE, LET variables) are unprobed and keep the
-    /// cell's own error. The IF condition is read once more here than in the main path.
-    fn db_field_is_error_cell(&mut self, field: Option<&Node>, cell: CellReferenceIndex) -> bool {
+    /// cell's own error.
+    ///
+    /// The field is evaluated here once, and the node the driver then reads in its place is
+    /// returned: an absolute reference to the cells it named, or its value as a literal. So a
+    /// volatile selector (`INDEX(..,RANDBETWEEN(1,2))`, an IF condition on `RAND()`) is evaluated
+    /// once, not once here and again by the driver (audit 2 item 4). `None` keeps the written
+    /// node: a form not listed, or a value no literal holds (an array, a blank).
+    fn db_field_resolved(
+        &mut self,
+        field: Option<&Node>,
+        cell: CellReferenceIndex,
+    ) -> (bool, Option<Node>) {
         let Some(
             node @ (Node::ReferenceKind { .. }
             | Node::DefinedNameKind(_)
@@ -227,7 +298,11 @@ impl Model {
             | Node::ImplicitIntersection { .. }),
         ) = field.map(Node::ungrouped)
         else {
-            return false;
+            return (false, None);
+        };
+        let literal = |value: &CalcResult| match value {
+            CalcResult::EmptyCell | CalcResult::EmptyArg => None,
+            value => value_node(value),
         };
         // IF(TRUE,ref) hands on the picked branch's reference.
         let node = match node {
@@ -236,13 +311,16 @@ impl Model {
                 args,
             } => match self.if_pick(args, cell) {
                 Picked::Node(picked) => picked.ungrouped(),
-                Picked::Value(_) => return false,
+                Picked::Value(value) => return (false, literal(&value)),
             },
             other => other,
         };
-        match self.get_reference(node, cell) {
-            Ok(range) if range.left == range.right => self.evaluate_cell(range.left).is_error(),
-            _ => false,
+        match self.evaluate_node_with_reference(node, cell) {
+            CalcResult::Range { left, right } => {
+                let error_cell = left == right && self.evaluate_cell(left).is_error();
+                (error_cell, Some(range_node(&Range { left, right })))
+            }
+            value => (false, literal(&value)),
         }
     }
 

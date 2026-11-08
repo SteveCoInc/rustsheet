@@ -2,7 +2,9 @@
 
 - **Status:** accepted (2026-11-07, T-4722)
 - **Milestone / lane:** M11 / engine
-- **Tasks:** T-4722 (this spec); rollout T-5044 (S1), T-5045 (S2), T-5047 (S3), T-5048 (S4)
+- **Tasks:** T-4722 (this spec); rollout T-5044 (S1), T-5045 (S2), T-5047 (S3), T-5048 (S4). S2 and S3 landed
+  with T-4975 item 1 (docs/research/excel-parity-findings-2026-11-07.md item 1), which implemented this spec in
+  parallel; its design notes are folded in below ("As landed").
 
 ## Problem
 Excel keeps a value or formula stored in a covered (non-anchor) cell of a `<mergeCell>` range, reads it in formulas
@@ -66,9 +68,27 @@ allocated. The importer's cap on covered positions it maps to anchors (xlsx-stor
 is unchanged. The clipboard's clamp of a copy to the sheet dimension (`clipboard.rs:145`) stays sound: covered
 content is stored, so it is inside the dimension.
 
+### As landed (S2, S3; T-4975 item 1)
+- **Paste** (`user_model/clipboard.rs`): copy- and cut-paste share `recreate_pasted_merge(merge, pasted, source_range,
+  diffs)`. It calls `covered_cells_clear_diffs(range, Some(pasted))` and `Model::merge_cells_keep_styles(range,
+  Some(pasted))`: covered cells inside the pasted block keep what the paste wrote (a formula's references shifted as
+  for any pasted cell, or moved for a cut) and get no clear diff; only cells the recreated merge swallows outside the
+  pasted block are cleared. Before this, both paths cleared them, so a cut-paste dropped covered content silently.
+- **Autofill** (`user_model/autofill.rs` `fill_covered_cell`): a non-empty covered source goes through
+  `Model::fill_cell` with a `SetCellValue` diff; an empty one still clears the target. Covered cells stay out of the
+  progression's terms.
+- **Undo/redo:** the existing diff order holds. A paste or fill pushes its merge-removal diff first, then the cell
+  diffs, then the merge-creation diff, so a forward replay writes on unmerged cells and an undo unmerges first.
+- `MergedCell`'s doc comment (engine `types.rs`) no longer states the invariant.
+- Engine tests: `test/user_model/test_merged_covered_content.rs` (reads and refused edits, unmerge, clear, copy-paste,
+  cut-paste, a pasted merge clearing outside its block, autofill with and without covered content; each with undo
+  and redo).
+
 ## Alternatives considered
 - **Keep the invariant, load covered content into a side table** for export only. Rejected: X1 and X2 need formulas
   to read and recalculate it, which a side table would have to special-case in every reference path.
+- **Clear covered content on paste and autofill (only import keeps it).** Rejected: the pasted block would lose
+  what the copy carried, which no evidence supports either way, and the simpler rule is one invariant fewer.
 - **Redirect a covered-cell edit to the anchor.** Rejected: nothing evidences it, and the UI never selects a covered
   cell; the refusal is the conservative behaviour.
 
@@ -91,5 +111,4 @@ content is stored, so it is inside the dimension.
 3. **S3 (T-5047, opus, S):** U6, after S1.
 4. **S4 (T-5048, opus, M):** probe X3, X4, X6 and, if the oracle can replay `unmerge`, X8 on excel-graph; record the
    findings and amend U3/U7 if Excel differs.
-Until S2 and S3 land, a paste or autofill over imported covered content drops it, as all covered content is dropped
-on import today, so S1 alone is no regression.
+S2 and S3 landed with T-4975 item 1 (see "As landed").

@@ -28,25 +28,35 @@ const HALF_SHAPE: f64 = 0.5;
 /// FITTED(T-2753, 84 cells, x/beta 1E-19..1E-11, shape 0.5..2)
 const LOG_FORM_RATIO: f64 = 1E-15;
 
-/// The smallest shape at which Excel's GAMMA.DIST cdf of a positive x has been seen to be `#NUM!`
-/// where it would be 0: `GAMMA.DIST(2,1.85E+76,1E+10,TRUE)` (probes/t2435-dist-extremes A101).
-/// Excel's own pattern is not a cut: from a shape between 1E+55 and 1E+56 (x/beta = 2E-10) its 0
-/// becomes `#NUM!` at about a third of the probed x/beta, in no order the probes have explained,
-/// and the density at x/beta below 1 is `#NUM!` at exactly the same points (probes-numeric/
-/// fit-audit-t3271-cdf-cut, t3316-gamma-cdf-huge-shape, t3316-gamma-cdf-y-sweep;
-/// docs/excel-semantics/statistics.md "GAMMA.DIST at a huge shape"; the mechanism is T-3855's).
-/// Until that is found the rule stays where T-3271 put it.
+/// The shapes over which Excel's GAMMA.DIST turns a computed 0 at an x / beta below 1 into
+/// `#NUM!` (T-3316, audit 2 of docs/research/excel-parity-findings-2026-11-07.md). Inside the band
+/// Excel's pattern is not a cut: it is `#NUM!` at 47 of the 89 probed points with an x / beta below
+/// 1, in no order the probes have explained (T-3855's two attempts), and the density there is
+/// `#NUM!` at exactly the cdf's points. The band's edges are what the probes do show:
+/// - below: 0 at every probed point at shapes 1E+45, 1E+50 and 1E+55, `#NUM!` from 1E+56 (x/beta
+///   = 2E-10; probes-numeric/t3316-gamma-cdf-huge-shape A1, fit-audit-t3271-cdf-cut);
+/// - above: `#NUM!` at 1.85E+76 (x/beta 2E-10 and 1E-100: probes/t2435-dist-extremes A101,
+///   fit-audit-t3271-cdf-cut A30, A41) and at 1.853468349736796E+76 (x/beta 2E-10: gen-m9/
+///   40425341c5034eed A265, a shape of 123456789.123 * 42^42), and 0 at x/beta 1E-100 at 1E+100
+///   and 1E+200 (A36, A39). The edge lies in that bracket; 1E+77 is a choice inside it, not a
+///   measured constant;
+/// - and at an x / beta of 1 or more Excel is 0 at all 16 probed points, shapes 1E+56 to 1E+200
+///   (fit-audit-t3271-cdf-cut A28, A29, A32, A34, A35, A37, A38 among them).
+///
+/// T-3271's cut (`#NUM!` for every cdf of a positive x from 1.85E+76 up) was right at 2 of the 11
+/// points from there up and gave 0 at the 87 below it in the band; the band is right at 72 of the 114
+/// points at a shape from 1E+40 (the 113 probed and gen-m9 A265), against 60.
+/// FITTED(T-4975, 114 cells, shape 1E40..1E200, x/beta 1E-100..1E50; band edges 1E+56 and 1E+77)
+const HUGE_SHAPE_NUM_BAND: std::ops::RangeInclusive<f64> = 1E+56..=1E+77;
+
+/// Whether GAMMA.DIST's computed 0 is Excel's `#NUM!` at a huge shape: a cdf or a density of a
+/// positive x at an x / beta below 1, at a shape in [`HUGE_SHAPE_NUM_BAND`]. The density shares
+/// the cdf's rule because Excel's density and cdf are `#NUM!` at the same points
+/// (probes-numeric/t3316-gamma-cdf-y-sweep A1:A12 and A36:A47).
 /// A cdf that is not 0 keeps its value: `GAMMA.DIST(1E300,1E300,1,TRUE)` is 0.5
 /// (probes/incomplete-gamma-cap E3).
-/// FITTED(T-3271, 2 cells, shape 1E40..1.85E76, x 2)
-const HUGE_SHAPE_CDF_CUT: f64 = 1.85E+76;
-
-/// Whether GAMMA.DIST's computed 0 is Excel's `#NUM!` at a huge shape: a cdf of a positive x, or
-/// a density at an x / beta below 1, at a shape of at least [`HUGE_SHAPE_CDF_CUT`]. The density
-/// shares the cdf's rule because Excel's density and cdf are `#NUM!` at the same points
-/// (probes-numeric/t3316-gamma-cdf-y-sweep A1:A12 and A36:A47).
-fn huge_shape_num_error(alpha: f64, x: f64, beta: f64, cumulative: bool) -> bool {
-    x > 0.0 && alpha >= HUGE_SHAPE_CDF_CUT && (cumulative || x / beta < 1.0)
+fn huge_shape_num_error(alpha: f64, x: f64, beta: f64) -> bool {
+    x > 0.0 && HUGE_SHAPE_NUM_BAND.contains(&alpha) && x / beta < 1.0
 }
 
 /// The shape below which GAMMA.DIST's density below the mode (y < a) is EXP(a LN(y)) / GAMMA(a) /
@@ -235,9 +245,7 @@ impl Model {
                     .unwrap_or_else(|| dist.pdf(x)),
             )
         };
-        if !result.is_finite()
-            || (result == 0.0 && huge_shape_num_error(alpha, x, beta_scale, cumulative))
-        {
+        if !result.is_finite() || (result == 0.0 && huge_shape_num_error(alpha, x, beta_scale)) {
             return Err(num_error(cell));
         }
         Ok(result)

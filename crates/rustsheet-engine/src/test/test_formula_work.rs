@@ -401,6 +401,68 @@ fn a_reader_stops_reading_once_its_ticks_pass_what_the_run_has_left() {
 }
 
 #[test]
+fn a_wildcard_match_is_charged_its_backtracking_steps_and_stops() {
+    use crate::functions::util::collation::take_read_ticks;
+    // Audit 2 item 2 (directive 5): the greedy-star matcher takes O(n*m) steps, about 16,767
+    // restarts of 16,001 steps for each 32,767-unit text here, where it was charged the text's
+    // length. Each step past the length is now charged, and XMATCH's and XLOOKUP's scans stop
+    // once the allowance is spent: the work budget's error, not "no match" (`#N/A`).
+    const LIMIT: u64 = 1 << 20;
+    let allowance = LIMIT * COMPARED_TICKS_PER_UNIT;
+    for formula in [
+        r#"=XMATCH("*"&REPT("a",16000)&"b",IF(SEQUENCE(16),REPT("a",32767)),2)"#,
+        r#"=XLOOKUP("*"&REPT("a",16000)&"b",IF(SEQUENCE(16),REPT("a",32767)),SEQUENCE(16),,2)"#,
+    ] {
+        let mut model = model_with_limit(LIMIT);
+        model.set_a1("A1", formula);
+        let _ = take_read_ticks();
+        model.evaluate();
+        let read = take_read_ticks();
+        assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK, "{formula}");
+        // Stopped within one charge interval of the allowance, plus the earlier nodes' texts.
+        assert!(read <= 4 * allowance, "{formula}: {read}");
+    }
+    // A cheap wildcard match under the same limit is unchanged.
+    let mut model = model_with_limit(LIMIT);
+    model.set_a1("A2", r#"=XMATCH("*b?",{"xx";"abc";"b"},2)"#);
+    model.evaluate();
+    assert_eq!(model.get_text_a1("A2"), "2");
+}
+
+#[test]
+fn a_database_call_is_charged_records_times_criteria_cells() {
+    // Audit 2 item 3 (directive 5): a D-function that cannot lift was priced as one unit, so a
+    // DCOUNT over n records and n criteria rows grew as n^2 under no budget. Its scan is now
+    // charged up front: 2,000 records x (2,000 criteria rows + the header match + 1) is about
+    // 4E6 units, past a limit of 2^20, where 20 records and 20 criteria rows are not.
+    let mut model = model_with_limit(1 << 20);
+    model.set_a1("A1", "n");
+    model.set_a1("C1", "n");
+    for row in 2..=2001 {
+        model.set_a1(&format!("A{row}"), &row.to_string());
+        model.set_a1(&format!("C{row}"), &format!(">{row}"));
+    }
+    model.set_a1("E1", "=DCOUNT(A1:A2001,\"n\",C1:C2001)");
+    model.set_a1("E2", "=DCOUNT(A1:A21,\"n\",C1:C21)");
+    model.evaluate();
+    assert_eq!(model.get_error_message_a1("E1"), TOO_MUCH_WORK);
+    // Rows 2..21 hold 2..21; each but 21 exceeds some criterion below it (`>2` .. `>20`).
+    assert_eq!(model.get_text_a1("E2"), "19");
+    // A whole-column database with a small criteria range still computes at the default limit:
+    // the call is charged, not capped as a lifted one is.
+    let mut model = new_empty_model();
+    model.set_a1("A1", "n");
+    for row in 2..=2001 {
+        model.set_a1(&format!("A{row}"), &row.to_string());
+    }
+    model.set_a1("G1", "n");
+    model.set_a1("G2", ">1000");
+    model.set_a1("E3", "=DCOUNT(A:A,\"n\",G1:G2)");
+    model.evaluate();
+    assert_eq!(model.get_text_a1("E3"), "1001");
+}
+
+#[test]
 fn a_formula_past_the_limit_leaves_no_stand_in_in_a_shared_index() {
     // The exact-match lookup index and the criteria index are shared by the formulas of a pass,
     // each under its own budget: a formula that runs out while one is built must not leave keys
@@ -425,4 +487,34 @@ fn a_formula_past_the_limit_leaves_no_stand_in_in_a_shared_index() {
             );
         }
     }
+}
+
+// Dense matrix kernels charge their multiply-adds before they run (findings 2026-11-07 audit
+// item 6): inputs within every size limit whose cubic work is past the budget are refused at
+// once with the budget's error, while a small kernel still computes.
+#[test]
+fn matrix_kernels_charge_their_cubic_work_up_front() {
+    let refused = [
+        // 1000 x 1000 times 1000 x 1000: 1E+9 multiply-adds.
+        "=MMULT(SEQUENCE(1000,1000),SEQUENCE(1000,1000))",
+        // 700³ = 3.4E+8.
+        "=MDETERM(SEQUENCE(700,700))",
+        "=MINVERSE(SEQUENCE(600,600))",
+        // 2,000 points of 400 variables: 3.2E+8 for the QR.
+        "=LINEST(SEQUENCE(2000),SEQUENCE(2000,400))",
+        "=TREND(SEQUENCE(2000),SEQUENCE(2000,400))",
+    ];
+    for formula in refused {
+        let mut model = new_empty_model();
+        model.set_a1("A1", formula);
+        model.evaluate();
+        assert_eq!(model.get_text_a1("A1"), "#VALUE!", "{formula}");
+        assert_eq!(model.get_error_message_a1("A1"), TOO_MUCH_WORK, "{formula}");
+    }
+    let mut model = new_empty_model();
+    model.set_a1("A1", "=MDETERM({2,1;1,3})");
+    model.set_a1("A2", "=INDEX(MMULT({1,2;3,4},{1;1}),2)");
+    model.evaluate();
+    assert_eq!(model.get_text_a1("A1"), "5");
+    assert_eq!(model.get_text_a1("A2"), "7");
 }

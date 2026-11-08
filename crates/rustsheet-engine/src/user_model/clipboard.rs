@@ -142,6 +142,46 @@ impl UserModel {
         Ok(())
     }
 
+    // Recreates the source merge `merge` of a copy- or cut-paste at the target,
+    // translated from the source range's top left corner to the pasted block
+    // `pasted`'s, and appends the undo diffs of what it clears. The covered
+    // cells inside the pasted block keep what the paste wrote: a merged range
+    // keeps its covered content (docs/excel-semantics/xlsx-storage.md "A
+    // merged range keeps the values of its covered cells"; docs/specs/SPEC-0036,
+    // whose paste row is UNVERIFIED). Only cells the merge swallows outside the
+    // block are cleared: it can stick out of it, since the copied range is
+    // clamped to the sheet dimension while a merge always travels whole.
+    //
+    // A translated merge can conflict outside the checked target area (another
+    // merge, an array formula) or fall off the sheet: it is dropped, and the
+    // rest of the paste still lands. merge_cells_keep_styles: the pasted cells
+    // already carry the merged style pattern of the source; stamping the
+    // anchor's style would drop the perimeter borders of non-anchor cells.
+    fn recreate_pasted_merge(
+        &mut self,
+        merge: &MergedCell,
+        pasted: &Area,
+        (source_first_row, source_first_column, _, _): ClipboardTuple,
+        diff_list: &mut Vec<Diff>,
+    ) -> Result<(), String> {
+        let merge_area = Area {
+            sheet: pasted.sheet,
+            row: merge.row + pasted.row - source_first_row,
+            column: merge.column + pasted.column - source_first_column,
+            width: merge.width,
+            height: merge.height,
+        };
+        let mut merge_diffs = self.covered_cells_clear_diffs(&merge_area, Some(pasted))?;
+        if self
+            .model
+            .merge_cells_keep_styles(&merge_area, Some(pasted))
+            .is_ok()
+        {
+            diff_list.append(&mut merge_diffs);
+        }
+        Ok(())
+    }
+
     /// Returns a copy of the selected area
     pub fn copy_to_clipboard(&self) -> Result<Clipboard, String> {
         let selected_area = self.get_selected_view();
@@ -420,27 +460,8 @@ impl UserModel {
                 width: source_last_column - source_first_column + 1,
                 height: source_last_row - source_first_row + 1,
             })?;
-            for m in source_merges {
-                let merge_area = Area {
-                    sheet,
-                    row: m.row + selected_row - source_first_row,
-                    column: m.column + selected_column - source_first_column,
-                    width: m.width,
-                    height: m.height,
-                };
-                // Capture the content and links the merge will clear: a merge
-                // sticking out of the pasted block can swallow cells that were
-                // not part of the paste
-                let mut merge_diffs = self.covered_cells_clear_diffs(&merge_area)?;
-                // A translated merge can conflict outside the checked target
-                // area (another merge, an array formula) or fall off the
-                // sheet: those are dropped, the rest of the cut still lands
-                // merge_cells_keep_styles: the pasted cells already carry the
-                // merged style pattern of the source; stamping the anchor's
-                // style would drop the perimeter borders of non-anchor cells
-                if self.model.merge_cells_keep_styles(&merge_area).is_ok() {
-                    diff_list.append(&mut merge_diffs);
-                }
+            for m in &source_merges {
+                self.recreate_pasted_merge(m, target_area, source_range, &mut diff_list)?;
             }
             // One snapshot per touched sheet (source and target coincide on a
             // same-sheet cut)
@@ -643,28 +664,8 @@ impl UserModel {
             // range is clamped to the sheet dimension), and is recreated whole.
             if !source_merges.is_empty() {
                 let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
-                for m in source_merges {
-                    let merge_area = Area {
-                        sheet,
-                        row: m.row + selected_row - source_first_row,
-                        column: m.column + selected_column - source_first_column,
-                        width: m.width,
-                        height: m.height,
-                    };
-                    // Capture the content and links the merge will clear: a
-                    // merge sticking out of the pasted block can swallow cells
-                    // that were not part of the paste
-                    let mut merge_diffs = self.covered_cells_clear_diffs(&merge_area)?;
-                    // A translated merge can conflict outside the checked
-                    // target area (another merge, an array formula) or fall
-                    // off the sheet: those are skipped, the rest still paste
-                    // merge_cells_keep_styles: the pasted cells already carry
-                    // the merged style pattern of the source; stamping the
-                    // anchor's style would drop the perimeter borders of
-                    // non-anchor cells
-                    if self.model.merge_cells_keep_styles(&merge_area).is_ok() {
-                        diff_list.append(&mut merge_diffs);
-                    }
+                for m in &source_merges {
+                    self.recreate_pasted_merge(m, target_area, source_range, &mut diff_list)?;
                 }
                 let new_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
                 if old_merged_cells != new_merged_cells {

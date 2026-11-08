@@ -864,6 +864,8 @@ pub(super) fn load_sheet<R: Read + std::io::Seek>(
     let cols = load_columns(ws)?;
     let color = load_sheet_color(ws, theme)?;
 
+    // Covered cells keep their content, as Excel's do (xlsx-storage.md "A merged range keeps the
+    // values of its covered cells"; SPEC-0036).
     let merged_cells = load_merge_cells(ws)?;
 
     let links = load_hyperlinks(ws, &settings.hyperlink_rels)?;
