@@ -226,14 +226,8 @@ impl Restart {
 }
 
 /// Everything the evaluation needs besides the workbook itself.
-#[expect(
-    clippy::struct_field_names,
-    reason = "the counters name the evaluate() call they count"
-)]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "independent pass-state flags, not one state machine"
-)]
+#[expect(clippy::struct_excessive_bools, reason = "independent pass flags")]
+#[expect(clippy::struct_field_names, reason = "counters named by evaluation")]
 pub(crate) struct Evaluation {
     /// The dynamic anchors, in the order in which they are evaluated. Kept
     /// across evaluations: the order the restarts arrived at stays, so the

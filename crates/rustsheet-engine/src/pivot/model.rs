@@ -11,8 +11,7 @@
 use bitcode::{Decode, Encode};
 
 use super::filter::{AutoShow, PivotFilter};
-use super::slicer::DateSpan;
-use super::sort::AutoSortScope;
+use super::{slicer::DateSpan, sort::AutoSortScope};
 
 /// `dataField@baseItem` when absent: no base item (MS-OI29500 §18.10.1.22, §18.10.1.44).
 pub const NO_BASE_ITEM: u32 = 1_048_832;
@@ -98,13 +97,9 @@ pub struct PivotGeometry {
     pub column_page_count: u32,
 }
 
-/// The pivot-wide attributes of `pivotTableDefinition` that change its layout or its text.
-/// `Default` is the schema's.
+/// The `pivotTableDefinition` attributes that change its layout or text; `Default` is the schema's.
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "one field per boolean attribute of pivotTableDefinition"
-)]
+#[expect(clippy::struct_excessive_bools, reason = "OOXML attributes")]
 pub struct PivotOptions {
     /// `compact` (default on): row fields share one column.
     pub compact: bool,
@@ -187,10 +182,7 @@ impl Default for PivotOptions {
 
 /// How a pivot shows one cache field.
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "one field per boolean attribute of the OOXML pivotField record"
-)]
+#[expect(clippy::struct_excessive_bools, reason = "OOXML attributes")]
 pub struct PivotField {
     /// The axis the field is on, if any.
     pub axis: Option<Axis>,

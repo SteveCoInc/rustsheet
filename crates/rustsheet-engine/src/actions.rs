@@ -582,7 +582,7 @@ impl Model {
         let legacy = self.cell_has_legacy_marker(sheet, source_row, source_column)?;
         let delta = target_row - source_row;
         let moved = self.moved_text(sheet, (source_row, source_column), delta, kept)?;
-        let formula_or_value = moved.unwrap_or_else(|| {
+        let text = moved.unwrap_or_else(|| {
             source_cell.get_localized_text(
                 &self.workbook.shared_strings,
                 self.locale,
@@ -602,22 +602,11 @@ impl Model {
                     }
                 }
             }
-            self.reenter_array_formula(
-                sheet,
-                (target_row, target_column),
-                (width, height),
-                &formula_or_value,
-            )?;
+            self.reenter_array_formula(sheet, (target_row, target_column), (width, height), &text)?;
         } else {
             let table = self.kept_table_holding(sheet, (source_row, source_column), kept);
             self.parser.set_moved_table(table);
-            let entered = self.reenter_user_input(
-                sheet,
-                target_row,
-                target_column,
-                &formula_or_value,
-                legacy,
-            );
+            let entered = self.reenter_user_input(sheet, target_row, target_column, &text, legacy);
             self.parser.set_moved_table(None);
             entered?;
         }

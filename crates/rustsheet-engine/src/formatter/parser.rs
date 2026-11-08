@@ -1,11 +1,10 @@
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
 #![expect(clippy::match_same_arms, clippy::too_many_lines)]
 // LINT-DEBT-END
-use super::elapsed::takes_second_fraction;
 pub use super::fraction::{Denominator, Fraction};
 use super::lexer::{Compare, Lexer, Token};
 use super::locale_tag::{self, Calendar, DateNames, LocaleTag};
-use super::numerals::Numerals;
+use super::{elapsed::takes_second_fraction, numerals::Numerals};
 use crate::locale::excel_date_names::EN_US;
 
 pub struct Digit {
@@ -96,10 +95,7 @@ pub struct NumberPart {
 /// The most digits a fixed fraction denominator may have; more is `#VALUE!`.
 const MAX_FIXED_DENOMINATOR_DIGITS: usize = 5;
 
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "independent properties of a date section, each set by its own token"
-)]
+#[expect(clippy::struct_excessive_bools, reason = "independent flags")]
 pub struct DatePart {
     pub color: Option<i32>,
     pub condition: Option<(Compare, f64)>,
