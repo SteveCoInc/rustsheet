@@ -382,8 +382,9 @@ impl Model {
         }
         // A criteria array beside the grids broadcasts with them, each element taking its own
         // criterion: `COUNTIF(XLOOKUP({2;9},..,"x"),{">0",">5"})` is 2x2 (probes/
-        // t4742-countif-array-range-arg A40:C40, T-4826; the element values are unprobed, as the
-        // probe's spill is blocked).
+        // t4742-countif-array-range-arg A40:C40, T-4826; probes/t4826-criteria-array-beside-grid
+        // shows the shapes and that every element is `#VALUE!`, so the pairing of grid and
+        // criterion elements is UNVERIFIED).
         let values: Vec<CriteriaGrid> = if per_element.broadcasts_criteria {
             element_args
                 .iter()

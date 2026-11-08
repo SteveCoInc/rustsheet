@@ -143,7 +143,8 @@ probes/getpivotdata-real-pivot. So page fields and hidden items filter the total
 label shows or a number or boolean by value, a field given twice with one item is that item, a pivot with two fields
 on an axis answers its subtotals and inner lines (an inner field alone, an absent tuple and a subtotal the pivot does
 not show are `#REF!`), totals follow the pivot's summation order, a calculated data field answers, a text or blank
-record is skipped by Sum and an error record is the error, an array data_field or field name lifts as an array of
+record is skipped by Sum (a cell whose records hold no number answers 0, as an empty intersection does: UNVERIFIED,
+T-4633) and an error record is the error, an array data_field or field name lifts as an array of
 items does, an error cell of a pivot given as pivot_table picks it (probes/t2085-getpivotdata-items Q!E20:E23), a
 page-field cell above the location picks the pivot, and a pivot collapsed to `#SPILL!` answers as pivots.md
 "GETPIVOTDATA against a pivot collapsed to #SPILL!" says ("the T-2085 section below"; T-4154). It still answers

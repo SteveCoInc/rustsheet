@@ -1832,11 +1832,12 @@ miss's `#N/A` (A13:A14) and `{2;3}` `#VALUE!` twice (A10:A11), all hits with a r
 (A16:A17), all misses with "x" too (A19:A20), a 1x1 `{2}` a 1x1 `#VALUE!` (A22:C22), a 1x2 `{2,3}` a 1x2 result
 (A28:C28), and SUMIF's sum_range, COUNTIFS and AVERAGEIF lift the same way (A31:A38). A scalar lookup is the
 reference it picks: `COUNTIF(XLOOKUP(2,..,"x"),">0")` is 1 (A25). An array criterion beside the grid broadcasts,
-2x2 for `{">0",">5"}` (A40:C40), each element the criteria call over its grid element and its criterion. With
+2x2 for `{">0",">5"}` (A40:C40). With
 room to spill every element is `#VALUE!`, since a hit is a value, not a reference: COUNTIF 2x2, SUMIF 2x2, COUNTIFS
 2x2, and a 2x1 criteria array beside the 2x1 grid a 2x1 (`INDEX(..,2,2)` `#VALUE!`; ROWS and COLUMNS 2x2 and 2x1;
 probes/t4826-criteria-array-beside-grid, excel-graph, 2026-11-08). Matched since T-4826
-(`PerElement::broadcasts_criteria`). A workbook with COUNTIF over `SEQUENCE(2)`, `A1:A2+0` or
+(`PerElement::broadcasts_criteria`, which pairs each grid element with the criterion at its broadcast position;
+since every element is `#VALUE!` here, that pairing is UNVERIFIED: a grid of references would show it). A workbook with COUNTIF over `SEQUENCE(2)`, `A1:A2+0` or
 `SORT(A1:A2)` as its range failed to open on Excel for the web (createSession 501 unsupportedWorkbook), so those
 forms are not probed and no cell says what COUNTIF gives for a computed array as its range (desktop question, M14
 Phase 4). A COUNTIF or SUMIF over an XLOOKUP lifted only by match_mode or search_mode gives the same array of

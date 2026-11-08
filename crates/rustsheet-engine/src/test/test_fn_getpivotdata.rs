@@ -359,9 +359,9 @@ fn every_aggregate_with_no_records_is_zero() {
 
 #[test]
 fn a_text_or_blank_record_is_skipped_by_sum() {
-    // probes/t2085-getpivotdata-items Q!E13, E15: a Sum ignores a text and a blank record; over
-    // only such records it shows blank, which GETPIVOTDATA answers as 0 (as an empty
-    // intersection, DF B6:J6).
+    // probes/t2085-getpivotdata-items Q!E13, E15: a Sum ignores a text and a blank record. Over
+    // only such records the engine answers 0, as for an empty intersection (DF B6:J6); that is
+    // UNVERIFIED (T-4633: what the pivot shows for a cell with no number).
     let mut model = model();
     model.workbook.pivot_caches = vec![cache_of(&[
         ("East", "A", CacheItem::Number(1.0)),
