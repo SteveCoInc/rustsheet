@@ -3,7 +3,7 @@ id: T-5066
 title: "Probe BETA.DIST's cdf on the direct bgrat branch where the Cephes kernel returns an exact 0 or 1 (tiny alpha, large beta)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
