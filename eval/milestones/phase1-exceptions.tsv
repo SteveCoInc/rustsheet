@@ -1,6 +1,7 @@
 # Phase 1 rate exceptions (decision 0134): visibly-off Excel cells whose only open question is
 # desktop Excel evidence, so decision 0039 assigns them to M14 and they never block the Phase 1
-# exit. Each is left out of the Phase 1 rate (report.json `v15_checkpoint`) of the function it
+# exit, and (decision 0359) residue cells that inherit an expert function's open miss, owned by
+# that miss's task. Each is left out of the Phase 1 rate (report.json `v15_checkpoint`) of the function it
 # counts toward. One cell per line, tab-separated: case!Sheet!A1 (as eval/baseline names it), the
 # decision that names the cell as M14-only (four digits), and the open M14 task that owns it. A
 # line hides no cell from eval/baseline or the gate: the cell stays a known failure. Add a line
@@ -25,6 +26,10 @@ ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL26	0188	T-4373
 # IRR.xlsx Two Values!C4 (IRR at an exact zero root: cached 2^-52, the web 0) and COMPLEXs.xlsx K25 (IMCOS, Mac
 # 16.0300's last digit): the engine follows the web (decision 0196); T-1075 items 23 and 24.
 ironcalc-calc/FINANCIAL/IRR.xlsx!Two Values!C4	0196	T-4373
+# IRR.xlsx General!M17 `NPV(L17,A17:F17)`: NPV at IRR's root, a near-zero residue (Excel -3.07e-11, the engine
+# -3.48e-13) that the engine computes right for its rate; the rate differs because L17's IRR takes the fallback path
+# whose fit T-2928 owns (decision 0359: a residue cell that inherits an expert function's open miss).
+ironcalc-calc/FINANCIAL/IRR.xlsx!General!M17	0359	T-2928
 ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!K25	0196	T-4373
 # FORECAST.ETS family (Excel for the web is #N/A on every call) and CELL color/filename/format/parentheses/prefix/
 # protect/width (the web is #VALUE!, as the engine; desktop goldens cache values): decision 0308, T-4207, T-3011.
