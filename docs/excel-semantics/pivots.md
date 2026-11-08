@@ -2861,4 +2861,5 @@ pivot-corpus-closedxml's `TryToLoad/TemplateWithTableSourcePivotTables.xlsx`,
 cell. The rebuilt caches are TemplateWithTableSourcePivotTables's sidecar `cache_fields` against the copy's.
 Status: VERIFIED (excel-graph), for these files. Which items are dropped is UNVERIFIED.
 Implemented in: crates/rustsheet-eval/src/pivot_freshness.rs (check (c) scores each refresh against the sidecar's
-area; T-4972). The engine refreshes none of the 20 (T-4506, T-4677, T-5065).
+area; T-4972). The engine refreshes the 7 over a Table (T-4506), with gaps owned by T-5075 and T-5076; T-4677 and T-5065 own the
+others.

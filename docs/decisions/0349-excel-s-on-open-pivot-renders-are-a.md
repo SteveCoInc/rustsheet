@@ -30,7 +30,8 @@
 - **Consequences:**
   - This adds a gate and weakens none. `make eval-baseline` generates the baseline
     `eval/baseline/pivot-on-open.txt`, and it may only shrink. The cells the engine does not refresh today are
-    known failures with owners (decision 0245): T-4506 owns the 7 loaded pivots over a Table or a name, T-4677
+    known failures with owners (decision 0245). After T-4506's Table refresh, T-5075 and T-5076 own what
+    the 7 loaded pivots over a Table still miss, T-4677
     owns the pivot that meets its own merged cells, and T-5065 owns the 12 pivots over a cache saved without
     records (`saveData="0"`), which the importer does not load.
   - The copies keep the ClosedXML authors' names that their docProps hold, as published upstream, so that each

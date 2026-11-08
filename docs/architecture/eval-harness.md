@@ -327,9 +327,9 @@ the importer's model without a recalculation, so every pivot holds the definitio
   scored. The fetched corpus cannot hold sidecars beside its files, so the vendored gated suite `pivot-on-open`
   holds byte-for-byte copies of the four pivot-corpus-closedxml workbooks with a `refreshOnLoad` cache, with their
   excel-graph sidecars. pivot-corpus-lo has none. On 2026-11-07 its 20 `refreshOnLoad` pivots score 597 cells,
-  and 224 pass: the empty cells. The engine refreshes none of them. 7 read a Table or a name (T-4506), 1 meets its
-  own merged cells (T-4677), and the importer does not load 12, whose caches were saved without records (T-5065), so
-  the others are known failures. In the two corpus suites themselves
+  and 371 pass. The engine refreshes the 7 that read a Table (T-4506); it writes `""` where Excel leaves a value
+  cell blank (T-5075) and misses one `Values` caption (T-5076). 1 meets its own merged cells (T-4677), and the
+  importer does not load 12, whose caches were saved without records (T-5065). The other 225 are known failures. In the two corpus suites themselves
   check (c) is still reported as above.
 
 report.json lists each pivot per case (`pivot_freshness`) and the counts per suite in `fresh_pivot_render`
