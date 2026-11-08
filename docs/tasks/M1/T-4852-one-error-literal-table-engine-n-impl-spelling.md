@@ -45,3 +45,19 @@ Found by the T-4856 duplicate-concept audit (one definition per concept, CLAUDE.
 - Eval delta: one new probe case, 72/72 bit-exact (new coverage); no fixed or regressed cells in
   any suite; Gate A 45,083 points, 0 failing.
 - Follow-up: T-5081 (lower-case `=#spill!`, `=#calc!` and engine-only formula literals, unprobed).
+
+## Landing notes
+- PR #4074. The panel approved 57d3005e (security, design, excel-fidelity; table in the PR body). The queue merged
+  06dacf95 (a `make catch-up`) and then dropped it a second time: #4080 (T-4853) merged ahead of it and conflicts in
+  crates/rustsheet-engine/src/functions/criteria.rs.
+- This head merges origin/main by hand:
+  - criteria.rs keeps main's `boolean_text` beside this PR's `english_criterion_error`, in the import and in
+    `indexed_criterion`; nothing else in it changed;
+  - eval/baseline/probes.txt takes main's side and re-records it with
+    `make eval-baseline NEW_CASES=eval/suites/probes/cases/t4852-error-name-case.case.json`, which adds the new
+    case's line and shows 0 regressions in the cell suites.
+- Locally the roundtrip-calipers ratchet again reports pivot_named_range and pv26 timeouts. CI passed the same suites
+  on #4085, and neither workbook touches this diff, so this is a local cache or load artifact. Do not record it.
+- When the window closed: auto-merge is off, and CI and a re-review of the criteria.rs resolution are pending.
+- Next step: once CI is green, run design and excel-fidelity on `git diff origin/main...HEAD -- crates/rustsheet-engine/src/functions/criteria.rs`
+  (a conflict resolution is not a clean merge), then enqueue.

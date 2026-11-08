@@ -2742,6 +2742,7 @@ C	probes/t4848-sixteenth-digit-ties.case.json	98
 C	probes/t4848-tie-complex-part.case.json	15
 C	probes/t4848-tie-fraction-format.case.json	15
 C	probes/t4851-number-text-whitespace.case.json	100
+C	probes/t4852-error-name-case.case.json	72
 C	probes/t4853-boolean-text-criteria.case.json	22
 C	probes/t4853-boolean-text.case.json	56
 C	probes/t4857-f-kinds.case.json	669
