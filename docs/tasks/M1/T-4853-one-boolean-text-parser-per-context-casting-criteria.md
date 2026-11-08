@@ -3,7 +3,7 @@ id: T-4853
 title: "One boolean-text parser per context (casting, criteria, typed input, xlsx) instead of seven variants"
 milestone: M1
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
