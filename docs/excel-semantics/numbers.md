@@ -2943,6 +2943,35 @@ read an empty argument as 0, and before T-4923 SQRTPI and FACTDOUBLE read the om
 Status: VERIFIED (excel-graph)
 Tasks: T-4873, T-4901, T-4903, T-4912, T-4923
 
+## Which wrappers hand a written-empty branch on as an omission (T-5067)
+Rule: IF, CHOOSE, IFERROR and IFNA give their chosen branch's written emptiness to the function that reads them.
+The ToolPak functions then return `#N/A` and the newer roundings take their default, whatever the wrapper's
+nesting. IFS and SWITCH do not hand it on: they read it as 0. The branch that is actually chosen decides. A blank
+reference or a lookup's blank on the chosen branch stays 0, even when a written-empty branch sits beside it.
+- Handed on: `MROUND(IFNA(,1),1)`, `MROUND(IFNA(NA(),),1)`, `MROUND(IFERROR(1/0,),1)`, `MROUND(CHOOSE(2,1,),1)`,
+  `MROUND(IF(1=1,),1)` (A1:A3, A15, A16). Nesting and parentheses keep it: `MROUND(IF(TRUE,IF(TRUE,)),1)`,
+  `MROUND(IF(FALSE,1,IF(TRUE,)),1)`, `MROUND(IFERROR(IF(TRUE,),1),1)` and `MROUND((IF(TRUE,)),1)` (A11, A28, A29,
+  A12). A LET name bound to one keeps it too: `LET(x,IF(TRUE,),MROUND(x,1))` (A14). Every one of these is `#N/A`.
+- It reaches every reader of a written-empty argument: `SQRTPI(IF(TRUE,))`, `FACTDOUBLE(IF(TRUE,))`,
+  `EDATE(IF(TRUE,),1)`, `SERIESSUM(2,1,1,IF(TRUE,))` and `QUOTIENT(7,IF(TRUE,))` are `#N/A` (A22:A26; QUOTIENT's
+  divisor is `#N/A`, not `#DIV/0!`). `FLOOR.PRECISE(-2.5,IF(TRUE,))` is -3 and `CEILING.MATH(2.675,CHOOSE(1,,2))`
+  is 3, the omitted significance (A20, A21).
+- Not handed on: `MROUND(IFS(TRUE,),1)`, `MROUND(SWITCH(1,1,),1)` and `MROUND(SWITCH(2,1,1,),1)` are 0 (A8:A10),
+  as is an operator over it, `MROUND(IF(TRUE,)+0,1)` (A13).
+- The chosen branch decides. `MROUND(IFERROR(Z1,),1)` and `MROUND(IF(TRUE,Z1,),1)` (Z1 blank),
+  `MROUND(IFERROR(Z1,1),1)`, `MROUND(IF(TRUE,Z1),1)`, `MROUND(IF(TRUE,VLOOKUP("x",C1:D1,2,FALSE)),1)` and
+  `MROUND(XLOOKUP(1,{1},{0},),1)` are all 0 (A4:A7, A27, A32). So the omission is a value of its own in Excel, not
+  our `CalcResult::EmptyArg`, which IFERROR and VLOOKUP also return for a blank.
+- An array condition reads it as 0 per element: `ROWS(MROUND(IF({TRUE;FALSE},,1),1))` is 2, and its elements are
+  0 and 1 (A17:A19). `ISBLANK(IF(TRUE,))` is TRUE (A30), and `MROUND(INDEX(IF(TRUE,),1),1)` is `#VALUE!` (A31).
+Evidence: probes/t5067-written-empty-branch-wrappers Calc!A1:A32 (excel-graph, 2026-11-08). Predictions were not
+committed before the fill.
+Ours: we read every handed-on form as 0, because `Model::is_empty_argument` looks only at the argument node and a LET
+or LAMBDA variable bound to nothing. A17:A19 and A30:A31 already match. T-4912 owns the 17 cells that are off:
+A1:A3, A11, A12, A14:A16, A20:A26, A28 and A29.
+Status: VERIFIED (excel-graph)
+Tasks: T-5067, T-4912
+
 ## An empty significance of the 2010+ roundings is omitted (T-4873)
 Rule: CEILING.MATH, FLOOR.MATH (Excel 2013), CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING (Excel 2010) read a written-empty
 `significance` or `mode` as omitted, so the significance is 1: `CEILING.MATH(2.675,)` 3, `CEILING.MATH(-2.5,)` -2,
@@ -2954,7 +2983,7 @@ and `FLOOR(-2.5,)` `#DIV/0!`, `FLOOR(,)` 0 (H1:H5). A LET value or LAMBDA parame
 A5:A11). The same split as SORT's and TAKE's empty optionals (arrays.md) against the older functions' empty = 0.
 Evidence: probes/t4873-empty-arg-quotient-ceiling Calc!C1:H5, probes/t4873-empty-arg-let-lambda Calc!A5:A11 (excel-graph,
 2026-11-07, T-4873; predictions committed before the fill).
-A written-empty IF/CHOOSE/IFERROR branch as the significance is also omitted (`CEILING.MATH(2.675,IF(TRUE,))` is 3; T-4901, T-4912, see "A written-empty argument of a ToolPak function is #N/A" below).
+A written-empty IF/CHOOSE/IFERROR branch as the significance is also omitted (`CEILING.MATH(2.675,IF(TRUE,))` is 3; T-4901, T-4912, see "A written-empty argument of a ToolPak function is #N/A" and "Which wrappers hand a written-empty branch on as an omission (T-5067)" above).
 Ours: the five go through `numbers_fn_empty_omitted` (mathematical.rs), which keeps an empty argument's default. Before
 T-4873 they read it as 0 (`CEILING.MATH(2.675,)` was 0).
 Status: VERIFIED (excel-graph)
