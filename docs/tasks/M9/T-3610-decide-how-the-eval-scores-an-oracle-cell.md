@@ -3,7 +3,7 @@ id: T-3610
 title: "Decide how the eval scores an oracle cell whose Excel value varies between fills of the same bytes"
 milestone: M9
 lane: harness
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -32,12 +32,15 @@ or requiring N agreeing fills before a value is a target. The task applies the d
 - Raised by the excel-fidelity review of T-3590 (PR #2685), MINOR finding 1.
 
 ## Acceptance criteria
-- [ ] A decision record states the general rule, how a cell is shown to vary (how many fills, by whom, and what
+- [x] A decision record states the general rule, how a cell is shown to vary (how many fills, by whom, and what
       counts as the same bytes), and where such cells are listed. Re-filling until a run matches us is ruled out.
-- [ ] gen-m9 d912671baa1364aa Calc!A76, probes/amordegrc-fraction-state-ai Sheet1!A1, probes/t4618-order-after-active-backward Q!A1 and decision 0112's LN cells are treated per the decision, and
+- [x] gen-m9 d912671baa1364aa Calc!A76, probes/amordegrc-fraction-state-ai Sheet1!A1, probes/t4618-order-after-active-backward Q!A1 and decision 0112's LN cells are treated per the decision, and
       `make eval-baseline` records no regression.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Finding why A76 was 1 on 10-28 (T-3590 ruled out what it could).
 - Changing decision 0112's LN model.
+
+## Outcome
+Decision 0358 (owner ruling, 2026-11-08): a cell a later Excel fill of the same inputs superseded, or that later fills do not reproduce, is scored against that later fill. Spec suites name a `superseded` file (eval/suites/probes, gen-m7, gen-m9 `superseded.tsv`, 55 lines); `runner/prepare.rs` `apply_superseded` scores each line's cell against the same cell of the later golden sidecar, refusing a line whose later case is not a copy (`overrides::same_inputs`) or that cites another cell. The earlier sidecars stay committed. The three variance cells this task listed pass: gen-m9 d912671baa1364aa Calc!A76 (against amordegrc-a76-bisect-a), probes/amordegrc-fraction-state-ai Sheet1!A1 (against -av) and probes/t4618-order-after-active-backward Q!A1 (against t4642-backward-refill). A cell that varies with no reproducing later fill stays a named known failure (decision 0358 item 5). Decision 0112's LN near-ties, whose three fills disagree, stay named known failures (0358 item 5). The general rule, how a cell is shown to be superseded and why re-filling until a run matches is ruled out, is 0358 item 3a.

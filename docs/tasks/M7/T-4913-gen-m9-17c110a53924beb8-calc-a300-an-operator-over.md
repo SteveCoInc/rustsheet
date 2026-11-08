@@ -3,7 +3,7 @@ id: T-4913
 title: "exit_owners.py counts a cell a decision record lists as superseded (decision 0329 item 4) as owned, so unowned-off stops flagging gen-m9/17c110a53924beb8 Calc!A300"
 milestone: M7
 lane: harness
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -36,14 +36,17 @@ task owns them until the owner tools count them as settled:
 - probes/t2625-nested-consumers P!A32
 
 ## Acceptance criteria
-- [ ] scripts/exit_owners.py reads the cells a decision record lists as superseded from one machine-readable place
+- [x] scripts/exit_owners.py reads the cells a decision record lists as superseded from one machine-readable place
       (for example an "Owned cell:"-style line in the decision, or the semantics entry decision 0329 item 3 requires)
       and counts them as owned by that decision in `--unattributed` and `--milestone` reports; the report names the
       decision as the owner.
-- [ ] A unit test in scripts/ covers a superseded cell (owned, not reported) and an unlisted one (still reported).
-- [ ] After `make eval`, `make unowned-off` does not list gen-m9/17c110a53924beb8 Calc!A300.
-- [ ] `make check` green; reviewers approve.
+- [x] A unit test in scripts/ covers a superseded cell (owned, not reported) and an unlisted one (still reported).
+- [x] After `make eval`, `make unowned-off` does not list gen-m9/17c110a53924beb8 Calc!A300.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Removing the F line or changing the engine: decision 0329 keeps the line.
 - Excluding superseded cells from scoring (T-3610).
+
+## Outcome
+Decision 0358 (owner ruling, 2026-11-08): a cell a later Excel fill of the same inputs superseded, or that later fills do not reproduce, is scored against that later fill. Spec suites name a `superseded` file (eval/suites/probes, gen-m7, gen-m9 `superseded.tsv`, 55 lines); `runner/prepare.rs` `apply_superseded` scores each line's cell against the same cell of the later golden sidecar, refusing a line whose later case is not a copy (`overrides::same_inputs`) or that cites another cell. The earlier sidecars stay committed. Every cell this task held passes, so no owner is needed: gen-m9/17c110a53924beb8 Calc!A300, gen-m7/21b4eef18424ce94 Calc!B1505:E1514, and the t2360, t2311 and t2625 A32 cells. `exit_owners.py` needs no change.

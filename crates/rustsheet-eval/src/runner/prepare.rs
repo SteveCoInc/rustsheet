@@ -45,6 +45,9 @@ pub(super) fn prepare(
             Err("a roundtrip suite is run by `rustsheet-eval roundtrip`".into())
         }
     }?;
+    if suite.manifest.kind == SuiteKind::Spec {
+        apply_superseded(suite, case, &mut prepared.expectations)?;
+    }
     let refusal = pin_deviations(suite, case, &mut prepared.expectations)?;
     Ok((prepared, refusal))
 }
@@ -234,6 +237,48 @@ pub(super) fn apply_cached_overrides(
         target.from_graph = evidence.kept_nonzero;
     }
     Ok(expectations)
+}
+
+/// Scores each cell the suite's `superseded` file lists for this case against the later Excel
+/// fill of the same inputs that superseded it (decision 0358, applying decision 0329 item 2 and
+/// T-3610): Excel changed, or the earlier fill did not reproduce, so the later fill is the target.
+/// The earlier sidecar stays committed and unchanged. A line must cite the same cell in a golden
+/// sidecar whose case is a copy of this one ([`overrides::same_inputs`]), and must name a scored
+/// cell, so a stale or mistaken line is an error, as for overrides.
+pub(super) fn apply_superseded(
+    suite: &Suite,
+    case: &CaseFile,
+    expectations: &mut [Expectation],
+) -> Result<(), String> {
+    let Some(file) = &suite.manifest.superseded else {
+        return Ok(());
+    };
+    let path = suite.dir.join(file);
+    let text = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let suites_dir = suite.dir.parent().unwrap_or(&suite.dir);
+    let rel = relative_case_id(suite, case);
+    let lines = overrides::parse_file(&text, "superseded")?;
+    let mut checked: BTreeSet<&str> = BTreeSet::new();
+    for o in lines.iter().filter(|o| o.case == rel) {
+        if (o.sheet.as_str(), o.addr) != (o.evidence_sheet.as_str(), o.evidence_addr) {
+            return Err(format!(
+                "superseded line for {}!{} cites another cell, {}!{}",
+                o.sheet, o.addr, o.evidence_sheet, o.evidence_addr
+            ));
+        }
+        if checked.insert(o.evidence.as_str()) {
+            let refill = suites_dir.join(o.evidence.replace(".oracle.json", ".case.json"));
+            overrides::same_inputs(&case.path, &refill)?;
+        }
+        let evidence = overrides::evidence(o, suites_dir)?;
+        let target = expectations
+            .iter_mut()
+            .find(|e| e.sheet == o.sheet && e.addr == o.addr)
+            .ok_or_else(|| format!("superseded line for unscored cell {}!{}", o.sheet, o.addr))?;
+        target.expected = evidence.value;
+        target.from_graph = evidence.kept_nonzero;
+    }
+    Ok(())
 }
 
 /// Every formula cell of a spec case, as (sheet, cell, formula text).

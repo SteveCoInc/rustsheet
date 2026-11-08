@@ -1025,6 +1025,8 @@ excel-graph, 2026-11-06, over the T-2592 data; `G` is the T-2592 GROUPBY, `V` is
   the refilled cells above are known failures until T-4736 (SUM, COUNT,
   COUNTA, and SUM over a reference body) and T-4738 (the lifted INDEX top-left)
   land. Each of them turns its share of the October cells (t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26; and October-only cells such as gen-m9/e85daedce5c2675e Calc!A35, once a refill confirms each, decision 0329 item 3) into superseded known failures, with the October sidecars kept (decision 0329 item 3).
+  Since decision 0358 the eval scores every superseded cell against its refill (eval/suites/probes, gen-m7 and gen-m9
+  `superseded.tsv`), so these cells pass and are no longer known failures; the October sidecars stay committed.
 Aggregates over nested GROUPBY and PIVOTBY cells (probes/t2594-nested-aggregates, excel-graph, 2026-10-24, T-2594, over the T-2592
 data): (October fills; by 2026-11-06 SUM is `#N/A` and COUNT skips nested cells, see the T-2609 list above) SUM, COUNT and COUNTA flatten a nested cell (SUM 220, COUNT 16, COUNTA 19 over GROUPBY; over PIVOTBY SUM 220, COUNT 16,
 COUNTA 32; `SUM(1,GROUPBY(..),2)` 223; A26:A29). Every other aggregate tried is `#N/A`: MIN, MAX, MINA, MAXA, AVERAGEA, PRODUCT,

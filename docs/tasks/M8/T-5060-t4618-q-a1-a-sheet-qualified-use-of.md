@@ -3,7 +3,7 @@ id: T-5060
 title: "t4618 Q!A1: a sheet-qualified use of an undefined name, P!N, is #NAME? in Excel and 1 ours"
 milestone: M8
 lane: engine
-status: blocked
+status: done
 priority: P1
 size: S
 tier: opus
@@ -24,19 +24,12 @@ depends_on: []
   (docs/excel-semantics names entries).
 
 ## Acceptance criteria
-- [ ] t4618-order-after-active-backward Q!A1 is `#NAME?`; no M8 cell regresses.
-- [ ] `make check` green; reviewers approve.
+- [x] ~~t4618-order-after-active-backward Q!A1 is `#NAME?`~~ (the premise does not reproduce): Q!A1 is scored per
+      decision 0358 against probes/t4642-backward-refill (1) and passes; no M8 cell regresses.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
 
-## Blocked because
-Blocked because: no engine change is evidenced. The cell's `#NAME?` does not reproduce: docs/excel-semantics/syntax.md
-"Which place a loaded use took" (T-4642) records two refills of the same input bytes (sha256 f800e58a…,
-probes/t4642-backward-refill and -refill-b) and five one-variable variants (t4642-qualified-after-active,
--fourth-tab-before, -fourth-tab-after, -qualified-entered, -no-bare-use), all excel-graph 2026-11-07, reading 1 at the
-qualified use, which is what the engine returns. The task's premise, that Excel never falls back for a qualified use,
-is contradicted by that evidence, and making Q!A1 `#NAME?` would move the reproduced cells away from Excel.
-T-3610 decides how a cell whose Excel value varies between fills is scored; this cell's M8 exit row waits on it.
-Unblock when T-3610 lands a scoring rule (then the cell is scored by it, and this task closes with no engine change)
-or when a fresh fill reproduces `#NAME?` with a rule that separates it from the T-4642 refills.
+## Outcome
+Decision 0358 (owner ruling, 2026-11-08): a cell a later Excel fill of the same inputs superseded, or that later fills do not reproduce, is scored against that later fill. Spec suites name a `superseded` file (eval/suites/probes, gen-m7, gen-m9 `superseded.tsv`, 55 lines); `runner/prepare.rs` `apply_superseded` scores each line's cell against the same cell of the later golden sidecar, refusing a line whose later case is not a copy (`overrides::same_inputs`) or that cites another cell. The earlier sidecars stay committed. probes/t4618-order-after-active-backward Q!A1 is scored against the reproduced 2026-11-07 refill (1, as the engine gives) and passes, with no engine change: the 2026-11-06 `#NAME?` does not reproduce (syntax.md "Which place a loaded use took").

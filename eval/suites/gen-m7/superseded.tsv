@@ -1,0 +1,31 @@
+# Cells a later Excel fill of the same inputs superseded (decision 0358). Each is scored against
+# that later fill, not the earlier sidecar, which stays committed and unchanged. Tab-separated:
+# <case path relative to the suite root> <Sheet!A1> <later sidecar, relative to eval/suites> <Sheet!A1>
+# The later case must be a copy of the case (same inputs, overrides::same_inputs) and cite the same
+# cell. A line is added only by a decision record that names the cell (decision 0329 (Excel changed on 2026-11-06; T-4737)).
+21b4eef18424ce94.case.json	Calc!B1505	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!B1505
+21b4eef18424ce94.case.json	Calc!B1506	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!B1506
+21b4eef18424ce94.case.json	Calc!B1510	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!B1510
+21b4eef18424ce94.case.json	Calc!B1512	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!B1512
+21b4eef18424ce94.case.json	Calc!B1513	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!B1513
+21b4eef18424ce94.case.json	Calc!C1505	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!C1505
+21b4eef18424ce94.case.json	Calc!C1507	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!C1507
+21b4eef18424ce94.case.json	Calc!C1508	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!C1508
+21b4eef18424ce94.case.json	Calc!C1509	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!C1509
+21b4eef18424ce94.case.json	Calc!C1510	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!C1510
+21b4eef18424ce94.case.json	Calc!C1511	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!C1511
+21b4eef18424ce94.case.json	Calc!C1514	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!C1514
+21b4eef18424ce94.case.json	Calc!D1505	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!D1505
+21b4eef18424ce94.case.json	Calc!D1507	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!D1507
+21b4eef18424ce94.case.json	Calc!D1509	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!D1509
+21b4eef18424ce94.case.json	Calc!D1510	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!D1510
+21b4eef18424ce94.case.json	Calc!D1511	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!D1511
+21b4eef18424ce94.case.json	Calc!D1513	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!D1513
+21b4eef18424ce94.case.json	Calc!E1505	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!E1505
+21b4eef18424ce94.case.json	Calc!E1506	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!E1506
+21b4eef18424ce94.case.json	Calc!E1507	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!E1507
+21b4eef18424ce94.case.json	Calc!E1509	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!E1509
+21b4eef18424ce94.case.json	Calc!E1510	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!E1510
+21b4eef18424ce94.case.json	Calc!E1511	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!E1511
+21b4eef18424ce94.case.json	Calc!E1512	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!E1512
+21b4eef18424ce94.case.json	Calc!E1513	probes/cases/gen-m7-21b4eef18424ce94-refill-1107.oracle.json	Calc!E1513

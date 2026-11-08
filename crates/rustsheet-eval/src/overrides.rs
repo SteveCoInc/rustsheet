@@ -58,12 +58,21 @@ pub(crate) fn is_inner_relative(path: &str) -> bool {
 /// # Errors
 /// Names the first malformed line.
 pub fn parse(text: &str) -> Result<Vec<CachedOverride>, String> {
+    parse_file(text, "cached_overrides")
+}
+
+/// Parses a file of `cached_overrides` lines (`cached_overrides` itself, or a spec suite's
+/// `superseded` file, decision 0358), naming `what` in its errors.
+///
+/// # Errors
+/// Names the first malformed line.
+pub fn parse_file(text: &str, what: &str) -> Result<Vec<CachedOverride>, String> {
     let mut out = Vec::new();
     for (n, line) in text.lines().enumerate() {
         if line.trim().is_empty() || line.starts_with('#') {
             continue;
         }
-        let bad = |why: &str| format!("cached_overrides line {}: {why}", n + 1);
+        let bad = |why: &str| format!("{what} line {}: {why}", n + 1);
         let fields: Vec<&str> = line.split('\t').collect();
         let [case, cell, evidence, evidence_cell] = fields.as_slice() else {
             return Err(bad("expected 4 tab-separated fields"));
@@ -147,6 +156,39 @@ pub fn evidence(o: &CachedOverride, suites_dir: &Path) -> Result<Evidence, Strin
     })
 }
 
+/// The keys of a spec case that are no input of its workbook: what decision 0329 item 1's copy
+/// rule lets a refill copy change (its description and tags), and what the case asks to score.
+const NON_INPUT_KEYS: [&str; 5] = [
+    "description",
+    "tags",
+    "check",
+    "expected",
+    "expected_source",
+];
+
+/// Checks that the spec case at `refill` is a copy of the spec case at `case`: every key but
+/// [`NON_INPUT_KEYS`] equal, so its fill is Excel's answer for the same inputs (decision 0329
+/// item 1, decision 0358).
+///
+/// # Errors
+/// When either case is unreadable or an input differs.
+pub fn same_inputs(case: &Path, refill: &Path) -> Result<(), String> {
+    let inputs = |path: &Path| -> Result<serde_json::Map<String, serde_json::Value>, String> {
+        let mut value: serde_json::Map<String, serde_json::Value> = read_json(path)?;
+        value.retain(|key, _| !NON_INPUT_KEYS.contains(&key.as_str()));
+        Ok(value)
+    };
+    if inputs(case)? == inputs(refill)? {
+        Ok(())
+    } else {
+        Err(format!(
+            "{} is no copy of {}: a superseded cell needs a refill of the same inputs",
+            refill.display(),
+            case.display()
+        ))
+    }
+}
+
 fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
     serde_json::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))
@@ -180,6 +222,38 @@ mod tests {
         ] {
             assert!(parse(bad).is_err(), "{bad}");
         }
+    }
+
+    /// A superseded cell's later fill must be of the same inputs (decision 0358): only the
+    /// description, tags, check, expected and `expected_source` of the copy may differ.
+    #[test]
+    fn a_refill_must_be_a_copy_of_the_case() {
+        let dir = std::env::temp_dir().join(format!("superseded-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let case = |description: &str, formula: &str| {
+            format!(
+                r#"{{"format":"rustsheet-case/v1","description":"{description}","tags":["M7"],
+                "sheets":[{{"name":"P","cells":{{"A1":"{formula}"}}}}],"expected":{{}}}}"#
+            )
+        };
+        let write = |name: &str, text: String| {
+            let path = dir.join(name);
+            std::fs::write(&path, text).expect("write");
+            path
+        };
+        let original = write("a.case.json", case("October", "=1+1"));
+        let copy = write("b.case.json", case("refill of a", "=1+1"));
+        let other = write("c.case.json", case("October", "=1+2"));
+        assert_eq!(same_inputs(&original, &copy), Ok(()));
+        assert!(same_inputs(&original, &other).is_err());
+        assert!(same_inputs(&original, &dir.join("missing.case.json")).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_superseded_file_names_itself_in_its_errors() {
+        let error = parse_file("a.case.json\tP!A1", "superseded").expect_err("malformed");
+        assert!(error.starts_with("superseded line 1"), "{error}");
     }
 
     #[test]

@@ -1,0 +1,31 @@
+# Cells a later Excel fill of the same inputs superseded (decision 0358). Each is scored against
+# that later fill, not the earlier sidecar, which stays committed and unchanged. Tab-separated:
+# <case path relative to the suite root> <Sheet!A1> <later sidecar, relative to eval/suites> <Sheet!A1>
+# The later case must be a copy of the case (same inputs, overrides::same_inputs) and cite the same
+# cell. A line is added only by a decision record that names the cell (decisions 0329 and 0284 / T-3610).
+t2436/e85daedce5c2675e.case.json	Calc!A31	probes/cases/t2436-e85daedce5c2675e-refill-1107.oracle.json	Calc!A31
+t2436/e85daedce5c2675e.case.json	Calc!A46	probes/cases/t2436-e85daedce5c2675e-refill-1107.oracle.json	Calc!A46
+t2311-pivotby-value-columns-error.case.json	P!C12	probes/cases/t2311-pivotby-value-columns-error-refill-1106.oracle.json	P!C12
+t2360-array-lambda-holidays.case.json	P!C1	probes/cases/t2360-array-lambda-holidays-refill-1106.oracle.json	P!C1
+t2360-array-lambda-holidays.case.json	P!C17	probes/cases/t2360-array-lambda-holidays-refill-1106.oracle.json	P!C17
+t2360-array-lambda-holidays.case.json	P!C25	probes/cases/t2360-array-lambda-holidays-refill-1106.oracle.json	P!C25
+t2360-array-lambda-holidays.case.json	P!C33	probes/cases/t2360-array-lambda-holidays-refill-1106.oracle.json	P!C33
+t2360-array-lambda-holidays.case.json	P!C9	probes/cases/t2360-array-lambda-holidays-refill-1106.oracle.json	P!C9
+t2475-stat-subexpressions.case.json	P!A62	probes/cases/t2475-stat-subexpressions-refill-1106.oracle.json	P!A62
+t2475-stat-subexpressions.case.json	P!A63	probes/cases/t2475-stat-subexpressions-refill-1106.oracle.json	P!A63
+t2475-stat-subexpressions.case.json	P!A64	probes/cases/t2475-stat-subexpressions-refill-1106.oracle.json	P!A64
+t2592-nested-groupby-cells.case.json	P!A6	probes/cases/t2592-nested-groupby-cells-refill-1106.oracle.json	P!A6
+t2592-nested-groupby-cells.case.json	P!A7	probes/cases/t2592-nested-groupby-cells-refill-1106.oracle.json	P!A7
+t2592-nested-groupby-cells.case.json	P!A8	probes/cases/t2592-nested-groupby-cells-refill-1106.oracle.json	P!A8
+t2594-nested-aggregates.case.json	P!A26	probes/cases/t2594-nested-aggregates-refill-1106.oracle.json	P!A26
+t2594-nested-aggregates.case.json	P!A27	probes/cases/t2594-nested-aggregates-refill-1106.oracle.json	P!A27
+t2594-nested-aggregates.case.json	P!A28	probes/cases/t2594-nested-aggregates-refill-1106.oracle.json	P!A28
+t2594-nested-aggregates.case.json	P!A29	probes/cases/t2594-nested-aggregates-refill-1106.oracle.json	P!A29
+t2625-nested-consumers.case.json	P!A13	probes/cases/t2625-nested-consumers-refill-1106.oracle.json	P!A13
+t2625-nested-consumers.case.json	P!A17	probes/cases/t2625-nested-consumers-refill-1106.oracle.json	P!A17
+t2625-nested-consumers.case.json	P!A20	probes/cases/t2625-nested-consumers-refill-1106.oracle.json	P!A20
+t2625-nested-consumers.case.json	P!A25	probes/cases/t2625-nested-consumers-refill-1106.oracle.json	P!A25
+t2625-nested-consumers.case.json	P!A26	probes/cases/t2625-nested-consumers-refill-1106.oracle.json	P!A26
+t2625-nested-consumers.case.json	P!A32	probes/cases/t2625-nested-consumers-refill-1106.oracle.json	P!A32
+t4618-order-after-active-backward.case.json	Q!A1	probes/cases/t4642-backward-refill.oracle.json	Q!A1
+amordegrc-fraction-state-ai.case.json	Sheet1!A1	probes/cases/amordegrc-fraction-state-av.oracle.json	Sheet1!A1

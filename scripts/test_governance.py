@@ -21,6 +21,8 @@ class ProtectedPaths(unittest.TestCase):
             "scripts/tasks.py",
             ".claude/skills/steward/SKILL.md",
             "eval/suites/probes/deviations",
+            # Decision 0358: a superseded line rescores a cell, so it lands only with a decision record.
+            "eval/suites/probes/superseded.tsv",
         ]:
             self.assertTrue(gov.is_protected(path), path)
 
