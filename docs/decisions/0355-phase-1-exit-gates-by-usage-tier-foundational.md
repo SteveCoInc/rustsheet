@@ -106,7 +106,9 @@
      - `tasks.py new` and the planning agents set the key on function tasks.
   8. **Reporting.** The eval report (report.json `usage_gates` and report.md), `make phase1-exit`, the daily
      progress dashboard and the steward's daily status all lead with the two tier gates: rates against the bars,
-     met or not, and the failing functions.
+     met or not, and the failing functions. On the dashboard this is the "Usage tiers" block right after the bottom line
+     (`tools/src/rustsheet_tools/progress_report/usage.py`, T-5094), and in docs/status.md the `**Tier gates:**`
+     line that leads the daily snapshot.
 - **Consequences:**
   - **What Phase 1 needs, measured at b84a7256:**
     - the 32 foundational cells. Their owner tasks are P1 (T-2131, T-4333, T-4419, T-4460, T-4466, T-4826 and
