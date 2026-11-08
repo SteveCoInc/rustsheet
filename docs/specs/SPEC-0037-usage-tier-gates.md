@@ -75,7 +75,10 @@ envelope is a gate tolerance, not a behaviour target.
 
   - **Inside:**
     - a bit-exact pass, or a pinned deviation;
-    - two numbers within `ENVELOPE_DIGITS` of each other;
+    - two numbers within `ENVELOPE_DIGITS` of each other, or within 4 ulp of each other (decision 0088's
+      `NumericUlp`). 4 ulp is inside 12 digits everywhere except for an Excel 0 against a subnormal, where
+      digit-counting has nothing to hold the value to and the two are equal in effect (T-5092, owner ruling
+      2026-11-08);
     - a number within ε (or the absolute floor) of `c.math`;
     - an R3 cell (`Target::Math`) within ε of the math.
   - **WrongType:**

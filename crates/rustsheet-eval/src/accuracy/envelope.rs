@@ -183,7 +183,10 @@ pub enum CellEnvelope {
 /// Classifies scored eval cell `c` against decision 0355's envelope.
 ///
 /// Unlike [`envelope`], a cell needs no math value: without one only the Excel side decides. A
-/// cell the run marked [`Target::Math`] (decision 0188 R3) is held to the math only.
+/// cell the run marked [`Target::Math`] (decision 0188 R3) is held to the math only. Excel's side
+/// is [`within_excel`]: 12 significant digits, or 4 ulp (an Excel 0 against a subnormal the engine
+/// keeps is inside; against 1e-200 it is not), the same test [`envelope`] reads, so the accuracy
+/// check, R1(c), the tier gates, the ratchet and the locks agree.
 #[must_use]
 pub fn cell_envelope(c: &CellResult) -> CellEnvelope {
     match c.verdict {
@@ -393,6 +396,10 @@ mod tests {
         assert_eq!(cell_envelope(&cell), CellEnvelope::Inside);
         let far = eval_cell(n(0.0), &n(1e-300), None);
         assert_eq!(cell_envelope(&far), CellEnvelope::Outside);
+        let farther = eval_cell(n(0.0), &n(1e-200), None);
+        assert_eq!(cell_envelope(&farther), CellEnvelope::Outside);
+        let four_ulp = eval_cell(n(0.0), &n(f64::from_bits(4)), None);
+        assert_eq!(cell_envelope(&four_ulp), CellEnvelope::Inside);
     }
 
     #[test]
