@@ -75,7 +75,10 @@ envelope is a gate tolerance, not a behaviour target.
 
   - **Inside:**
     - a bit-exact pass, or a pinned deviation;
-    - two numbers within `ENVELOPE_DIGITS` of each other;
+    - two numbers within `ENVELOPE_DIGITS` of each other, or within 4 ulp of each other (decision 0088's
+      `NumericUlp`). 4 ulp is inside 12 digits everywhere except for an Excel 0 against a subnormal, where
+      digit-counting has nothing to hold the value to and the two are equal in effect (T-5092, owner ruling
+      2026-11-08);
     - a number within ε (or the absolute floor) of `c.math`;
     - an R3 cell (`Target::Math`) within ε of the math.
   - **WrongType:**
@@ -134,8 +137,19 @@ The JSON schema:
   per-function type bar of 1.0 follows from the pooled 100%.
 - A function with no counted cell is listed with `cells: 0` and `meets: true`. Coverage and the evidence floor
   gate it elsewhere.
-- Rates are `(cells − misses) / cells`.
+- Rates are `(cells − misses) / cells`: `type_rate` counts the wrong types, `envelope_rate` the numbers outside
+  the envelope. A wrong type is a type miss only, never an envelope miss too (owner ruling, 2026-11-08), and the
+  bars read the same two counts.
 - `met` holds when every tier is met.
+- **As built (T-5092, with T-5093's `gate_tiers.rs`):**
+  - `usage_gates.rs` writes the output of `gate_tiers::function_cells` and `gate_tiers::tiers`, the one tier
+    computation the CI tier lock reads too. A cell counts toward its formula's sole non-glue call only, with no
+    evidence-floor fallback, so a pooled count never counts a cell twice; GETPIVOTDATA is out of `functions`
+    (expert has 383);
+  - `failing_functions` lists the functions below a per-function bar. A foundational tier that fails only its
+    pooled envelope bar lists none there;
+  - an added key, `contributors` per tier: the functions with any miss, most first, at most 20, so a reader sees
+    where the pooled misses come from.
 - **report.md** gets a "Usage tiers" section. It has one table row per tier (functions, cells, type rate, envelope
   rate, bars, met), then each failing function with its counts, worst first.
 

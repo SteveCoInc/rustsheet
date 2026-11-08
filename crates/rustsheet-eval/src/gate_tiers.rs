@@ -44,7 +44,7 @@ const HEADER: &str = "# RustSheet usage-tier lock (decision 0355 items 3 and 6).
 const PROBE_SUITES: [&str; 2] = ["probes", "probes-numeric"];
 
 /// The function decision 0354 leaves to Phase 2 with the pivot suites.
-const PIVOT_FUNCTION: &str = "GETPIVOTDATA";
+pub const PIVOT_FUNCTION: &str = "GETPIVOTDATA";
 
 /// Whether the tiers count the cells of `suite`: the probe suites and Gate B's, less the pivot
 /// suites.
@@ -53,8 +53,8 @@ pub fn counts_suite(suite: &str) -> bool {
     (PROBE_SUITES.contains(&suite) || crate::gate_b::counts(suite)) && !is_pivot_suite(suite)
 }
 
-/// One function's (or tier's) counted cells.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+/// One function's (or tier's, or milestone row's) counted cells.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Cells {
     /// Counted cells.
     pub cells: usize,
@@ -68,6 +68,12 @@ impl Cells {
     /// Counts one cell of class `class`.
     pub fn add(&mut self, class: CellEnvelope) {
         self.cells += 1;
+        self.miss(class);
+    }
+
+    /// Counts the miss of class `class` of a cell already in `cells` (a milestone row counts its
+    /// cells first and R1(c)'s misses after, T-5092).
+    pub fn miss(&mut self, class: CellEnvelope) {
         match class {
             CellEnvelope::Inside => {}
             CellEnvelope::Outside => self.outside += 1,
@@ -87,7 +93,9 @@ impl Cells {
     #[must_use]
     pub fn meets(&self, type_num: usize, envelope_num: usize) -> bool {
         let at = |misses: usize, num: usize| {
-            num == 0 || self.cells == 0 || meets_rate(self.cells - misses, self.cells, num)
+            num == 0
+                || self.cells == 0
+                || meets_rate(self.cells.saturating_sub(misses), self.cells, num)
         };
         // Decision 0355 item 3's two measures are separate: a wrong type counts against the type
         // bars only, and the envelope bars count `Outside` cells only.
@@ -607,6 +615,10 @@ mod tests {
             ])
             .met
         );
+        // A wrong type is a type miss only, never an envelope miss too (owner ruling on decision
+        // 0355's two measures): 2 wrong and 1 outside of 2,000 meet both 99.9% bars.
+        assert!(tier(&[("IRR", counts(1_000, 1, 1)), ("RATE", counts(1_000, 1, 0))]).met);
+        assert!(!tier(&[("IRR", counts(1_000, 1, 2)), ("RATE", counts(1_000, 1, 1))]).met);
     }
 
     /// The type and envelope measures are separate (decision 0355 item 3): wrong types fail

@@ -25,9 +25,37 @@ YAML = (
 )
 
 
+def gate_function(name: str, usage: str, cells: int, wrong: int = 0, outside: int = 0) -> dict[str, Any]:
+    """One `usage_gates.functions` row (its rates and `meets` are not read here)."""
+    return {"name": name, "usage": usage, "cells": cells, "wrong_type": wrong, "outside": outside}
+
+
+def usage_gates(*functions: dict[str, Any]) -> dict[str, Any]:
+    """report.json `usage_gates` (SPEC-0037 design 3) with decision 0355's bars; SUM foundational
+    and IRR expert, all right, by default."""
+    rows = list(functions) or [gate_function("SUM", "foundational", 100), gate_function("IRR", "expert", 1000)]
+    bars = {
+        "foundational": ({"type": 1.0, "envelope": 0.9999}, {"type": 1.0, "envelope": 0.0}),
+        "expert": ({"type": 0.999, "envelope": 0.999}, {"type": 0.99, "envelope": 0.99}),
+    }
+    return {
+        "suites": ["probes"],
+        "tiers": [{"usage": u, "pooled_bar": b[0], "function_bar": b[1]} for u, b in bars.items()],
+        "functions": rows,
+        "met": True,
+    }
+
+
+def point(table: str, cls: str = "both", engine: Any = None) -> dict[str, Any]:
+    """An accuracy point of `table` in envelope class `cls`."""
+    standing = "inside" if cls in ("excel", "math", "both") else "known_failure"
+    return {"table": table, "class": cls, "standing": standing, "engine": engine or {"t": "n", "v": 1.0}}
+
+
 def report(**over: Any) -> dict[str, Any]:
     """A report every measured criterion of which is met."""
     base: dict[str, Any] = {
+        "usage_gates": usage_gates(),
         "run": {"commit": "abc12345", "dirty": False, "skipped_suites": []},
         "v15_checkpoint": {
             "phase1_met": True,
@@ -49,7 +77,7 @@ def report(**over: Any) -> dict[str, Any]:
 def accuracy(holds: bool = True, **check: Any) -> dict[str, Any]:
     """The accuracy check's JSON (`rustsheet-eval accuracy --json`), Gate A holding by default."""
     base: dict[str, Any] = {
-        "points": [{"standing": "inside"}, {"standing": "inside"}],
+        "points": [point("SUM"), point("IRR")],
         "stale_known_failures": [],
         "bad_marks": [],
         "bad_exemptions": [],
@@ -109,31 +137,97 @@ class Phase1Exit(unittest.TestCase):
         code, text = self.run_main(report())
         self.assertEqual(code, 0, text)
         self.assertIn("catalog\tmet\t3 Excel functions, 2 in scope, 1 out", text)
-        self.assertIn("gate A\tmet\t2 points, 2 inside, 0 known failures, 0 failing", text)
+        self.assertIn("foundational\tmet\t1 functions, 101 cells (1 accuracy points): type 100.0000%", text)
+        self.assertIn("expert\tmet\t1 functions, 1001 cells (1 accuracy points)", text)
+        self.assertIn(
+            "gate A\tinfo\tmet (information, gates nothing): 2 points, 2 inside, 0 known failures, 0 failing", text
+        )
+        # The tier lines come right after the catalog, the old gates after them (decision 0355).
+        criteria = [ln.split("\t")[0] for ln in text.splitlines()[:6]]
+        self.assertEqual(criteria, ["run", "catalog", "foundational", "expert", "gate A", "function rate"])
         self.assertEqual(text.count("\tmanual\t"), len(phase1_exit.MANUAL_ITEMS))
         self.assertTrue(self.failing(text).startswith("Phase 1 exit: met"))
 
-    def test_gate_a_not_holding_fails_the_exit_with_its_counts(self) -> None:
-        # Decision 0188 R1(a), decision 0268: missing tables and known failures keep Gate A from
-        # holding even though `make check` passes.
+    def test_gate_a_not_holding_is_information_only(self) -> None:
+        # Decision 0355 item 5: Gate A's verdict stays on the line, marked `info`, and gates
+        # nothing; the tier gates read the same points.
         self.accuracy = accuracy(
             holds=False,
-            points=[{"standing": "inside"}, {"standing": "known_failure"}],
+            points=[point("SUM"), point("IRR", "outside")],
             missing_tables=["ACCRINT", "AMORDEGRC"],
         )
         code, text = self.run_main(report())
-        self.assertEqual(code, 1)
+        self.assertEqual(code, 0, text)
         self.assertIn(
-            "gate A\tnot met\t2 points, 1 inside, 1 known failures, 0 failing, 0 list problems; missing tables 2",
+            "gate A\tinfo\tnot met (information, gates nothing): 2 points, 1 inside, 1 known failures, 0 failing, "
+            "0 list problems; missing tables 2",
             text,
         )
-        self.assertEqual(self.failing(text), "Phase 1 exit: not met: gate A")
+        # 1 outside of 1,001 expert cells is 99.9%: met.
+        self.assertIn("expert\tmet\t1 functions, 1001 cells (1 accuracy points): type 100.0000% (0 wrong", text)
+        self.assertIn("envelope 99.9001% (1 outside, bar ≥ 99.9%)", text)
+
+    def test_a_foundational_wrong_type_fails_its_tier(self) -> None:
+        # Decision 0355 item 3: foundational cells are 100% right on type, eval cells and accuracy
+        # points alike; the failing functions are named with their counts.
+        rep = report(usage_gates=usage_gates(gate_function("SUM", "foundational", 100, outside=1),
+                                             gate_function("ABS", "foundational", 50, wrong=1),
+                                             gate_function("IRR", "expert", 1000)))
+        self.accuracy = accuracy(points=[point("SUM", "error_mismatch"), point("IRR")])
+        code, text = self.run_main(rep)
+        self.assertEqual(code, 1)
+        line = next(ln for ln in text.splitlines() if ln.startswith("foundational\t"))
+        self.assertIn("foundational\tnot met\t2 functions, 151 cells (1 accuracy points)", line)
+        # SUM: 1 wrong (the point) and 1 outside; ABS 1 wrong: both below the per-function 100%.
+        self.assertIn("failing (wrong type/outside): SUM 1/1, ABS 1/0;", line)
+        self.assertIn("pooled misses from (wrong type/outside): SUM 1/1, ABS 1/0", line)
+        self.assertEqual(self.failing(text), "Phase 1 exit: not met: foundational")
+
+    def test_the_expert_bars_pooled_and_per_function(self) -> None:
+        # 2 outside of 1,101 pooled is under 99.9%, though IRR meets its own 99%; RATE at 98% fails
+        # its own bar. The failing functions are those below their own bar (gate_tiers.rs).
+        functions = [
+            gate_function("SUM", "foundational", 100),
+            gate_function("IRR", "expert", 1000, outside=1),
+            gate_function("RATE", "expert", 100, wrong=2),
+        ]
+        self.accuracy = accuracy(points=[point("IRR", "outside")])
+        code, text = self.run_main(report(usage_gates=usage_gates(*functions)))
+        self.assertEqual(code, 1)
+        line = next(ln for ln in text.splitlines() if ln.startswith("expert\t"))
+        self.assertIn("expert\tnot met\t2 functions, 1101 cells (1 accuracy points)", line)
+        self.assertIn("failing (wrong type/outside): RATE 2/0;", line)
+        self.assertIn("pooled misses from (wrong type/outside): IRR 0/2, RATE 2/0", line)
+        self.assertTrue(phase1_exit.share_meets(100, 1, 0.99))
+        self.assertFalse(phase1_exit.share_meets(100, 2, 0.99))
+        self.assertTrue(phase1_exit.share_meets(1000, 1, 0.999))
+        self.assertFalse(phase1_exit.share_meets(1000, 2, 0.999))
+        self.assertTrue(phase1_exit.share_meets(10_000, 1, 0.9999))
+        self.assertTrue(phase1_exit.share_meets(0, 0, 1.0))
+        self.assertTrue(phase1_exit.share_meets(10, 9, 0.0), "0 is no bar")
+
+    def test_an_accuracy_point_outside_with_an_error_is_a_wrong_type(self) -> None:
+        self.assertEqual(phase1_exit.point_class(point("X", "outside", {"t": "e", "v": "#NUM!"})), "wrong_type")
+        self.assertEqual(phase1_exit.point_class(point("X", "outside")), "outside")
+        self.assertEqual(phase1_exit.point_class(point("X", "math")), "inside")
+        self.assertIsNone(phase1_exit.point_class(point("X", "table")))
+
+    def test_a_report_without_usage_gates_is_not_measured(self) -> None:
+        rep = report()
+        del rep["usage_gates"]
+        code, text = self.run_main(rep)
+        self.assertEqual(code, 1)
+        self.assertIn("foundational\tn/a\tno usage_gates in the report", text)
+        self.assertEqual(self.failing(text), "Phase 1 exit: not met: foundational, expert")
 
     def test_gate_a_absent_or_older_than_the_report_is_not_measured(self) -> None:
         self.accuracy = None
         code, text = self.run_main(report())
         self.assertEqual(code, 1)
-        self.assertIn("gate A\tn/a\tno accuracy.json", text)
+        self.assertIn("gate A\tinfo\tn/a (information, gates nothing): no accuracy.json", text)
+        # The tier gates need the accuracy points: unmeasured, never met.
+        self.assertIn("foundational\tn/a\tno accuracy.json", text)
+        self.assertEqual(self.failing(text), "Phase 1 exit: not met: foundational, expert")
         acc = Path(self.tmp.name) / "accuracy.json"
         rep = Path(self.tmp.name) / "report.json"
         acc.write_text(json.dumps(accuracy()))
@@ -147,7 +241,8 @@ class Phase1Exit(unittest.TestCase):
         self.accuracy = {"holds": True}
         code, text = self.run_main(report())
         self.assertEqual(code, 1)
-        self.assertIn("gate A\tn/a\taccuracy.json unreadable", text)
+        self.assertIn("gate A\tinfo\tn/a (information, gates nothing): accuracy.json unreadable", text)
+        self.assertIn("expert\tn/a\taccuracy JSON unreadable", text)
 
     def test_a_milestone_row_not_met(self) -> None:
         rows = [{"milestone": m, "exit": m != "M7"} for m in phase1_exit.PHASE1_MILESTONES]
@@ -192,39 +287,41 @@ class Phase1Exit(unittest.TestCase):
             "evidence not met (PV1 4/9 at the floor); owners n/a; layout n/a; corpus render n/a",
         )
 
-    def test_phase1_met_false(self) -> None:
+    def test_phase1_met_false_is_information_only(self) -> None:
         code, text = self.run_main(
             report(v15_checkpoint={"phase1_met": False, "phase1_line": "not met (1/2)"})
         )
-        self.assertEqual(code, 1)
-        self.assertEqual(self.failing(text), "Phase 1 exit: not met: function rate")
+        self.assertEqual(code, 0, text)
+        self.assertIn("function rate\tinfo\tnot met (information, gates nothing): not met (1/2)", text)
 
     def test_the_rate_reads_gate_b_met_not_met_or_not_measured(self) -> None:
-        # Decision 0188 R1(b) (T-3428): Gate B decides the rate; an unmeasured Gate B is `n/a`,
-        # which fails the exit like `not met`, naming the suites the run did not score.
+        # Decision 0188 R1(b) (T-3428): the line still reads Gate B, met, not met or `n/a` with the
+        # suites the run did not score; decision 0355 item 5 makes it information.
         v15 = dict(report()["v15_checkpoint"], gate_b={"measured": True, "met": True, "missing": []})
         code, text = self.run_main(report(v15_checkpoint=v15))
         self.assertEqual(code, 0, text)
-        self.assertIn("function rate\tmet", text)
+        self.assertIn("function rate\tinfo\tmet (information", text)
         v15["gate_b"] = {"measured": True, "met": False, "missing": []}
         code, text = self.run_main(report(v15_checkpoint=v15))
-        self.assertEqual(code, 1)
-        self.assertIn("function rate\tnot met", text)
+        self.assertEqual(code, 0, text)
+        self.assertIn("function rate\tinfo\tnot met (information", text)
         v15["gate_b"] = {"measured": False, "met": False, "missing": ["calipers", "poi"]}
         code, text = self.run_main(report(v15_checkpoint=v15))
-        self.assertEqual(code, 1)
-        self.assertIn("function rate\tn/a\tGate B not measured: the run did not score calipers, poi", text)
-        self.assertEqual(self.failing(text), "Phase 1 exit: not met: function rate")
+        self.assertIn(
+            "function rate\tinfo\tn/a (information, gates nothing): Gate B not measured: the run did not score "
+            "calipers, poi",
+            text,
+        )
         v15["gate_b"] = ["not", "an", "object"]
         code, text = self.run_main(report(v15_checkpoint=v15))
-        self.assertEqual(code, 1)
-        self.assertIn("function rate\tn/a\tGate B unreadable", text)
+        self.assertIn("function rate\tinfo\tn/a (information, gates nothing): Gate B unreadable", text)
+        self.assertTrue(self.failing(text).startswith("Phase 1 exit: met"))
 
-    def test_a_stale_exception_fails_the_rate_even_when_met(self) -> None:
+    def test_a_stale_exception_shows_on_the_rate_line(self) -> None:
         v15 = dict(report()["v15_checkpoint"], stale_exceptions=["gen-m9/x!Calc!A1"])
         code, text = self.run_main(report(v15_checkpoint=v15))
-        self.assertEqual(code, 1)
-        self.assertIn("function rate\tnot met", text)
+        self.assertEqual(code, 0, text)
+        self.assertIn("function rate\tinfo\tnot met", text)
         self.assertIn("1 stale exception lines", text)
 
     def test_a_skipped_suite(self) -> None:
@@ -308,6 +405,11 @@ class Phase1Exit(unittest.TestCase):
         self.assertEqual(doc["overall"], "met")
         self.assertEqual(doc["failing"], [])
         self.assertEqual(doc["lines"][0]["criterion"], "run")
+        # The dashboard reads the tier lines and the `info` lines as ordinary lines (T-5094).
+        by = {ln["criterion"]: ln for ln in doc["lines"]}
+        self.assertEqual((by["foundational"]["verdict"], by["expert"]["verdict"]), ("met", "met"))
+        self.assertEqual((by["gate A"]["verdict"], by["function rate"]["verdict"]), ("info", "info"))
+        self.assertEqual(set(doc), {"overall", "failing", "lines"})
 
 
 if __name__ == "__main__":
