@@ -3,7 +3,7 @@ id: T-5095
 title: "Task usage tiers: usage key, title inference, foundational-first ordering, new --usage (SPEC-0037 step 5)"
 milestone: M0
 lane: quality
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
