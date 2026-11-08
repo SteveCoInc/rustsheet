@@ -135,8 +135,7 @@ def _values_column(
     if kept & dropped:
         msg = f"table {name}: values {sorted(kept & dropped)} are both kept and hidden by the filter"
         raise ValueError(msg)
-    values = "".join(f'<filter val="{_quote(v)}"/>' for v in sorted(kept))
-    return f'<filterColumn colId="{col_id}"><filters>{values}</filters></filterColumn>'
+    return _listed_column(name, col_id, sorted(kept))
 
 
 def _quote(text: str) -> str:

@@ -4,7 +4,7 @@
 use super::{Txn, Undo};
 use crate::error::{EditError, RefError};
 use crate::workbook::engine_rc;
-use rustsheet_engine::types::{CustomFilter, FilterCriterion};
+use rustsheet_engine::types::{CustomFilter, FilterCriterion, Table};
 
 impl Txn<'_> {
     /// Gives the filtered table `table` a values filter on its column `column` (0-based, within
@@ -30,8 +30,7 @@ impl Txn<'_> {
             .ok_or(RefError::OutOfBounds)?;
         let before =
             (self.model.filter_table_column(table, column, &rows)).map_err(EditError::Table)?;
-        self.sheet_op = true;
-        self.undo.push(Undo::TableBefore(Box::new(before)));
+        self.record_table(before);
         Ok(())
     }
 
@@ -104,8 +103,13 @@ impl Txn<'_> {
             .model
             .set_table_filter_criterion(table, column, criterion))
         .map_err(EditError::Table)?;
+        self.record_table(before);
+        Ok(())
+    }
+
+    /// Records `before`, the table as it was, as this edit's undo.
+    fn record_table(&mut self, before: Table) {
         self.sheet_op = true;
         self.undo.push(Undo::TableBefore(Box::new(before)));
-        Ok(())
     }
 }
