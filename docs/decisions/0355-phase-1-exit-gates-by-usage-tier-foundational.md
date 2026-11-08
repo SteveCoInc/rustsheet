@@ -101,8 +101,9 @@
   7. **Task order.** Among ready tasks of the same milestone and priority, a task about a foundational function
      comes before any other.
      - P0, handoffs, re-reviews and campaign stages still come first, as decisions 0023, 0094 and 0095 say.
-     - A task's tier is its `usage:` front-matter key. Without one, it is inferred from the catalog function names
-       in its title.
+     - A task's tier is its `usage:` front-matter key. Without one, it is the tier of the first catalog function
+       its title names, since titles name their subject first (`scripts/task_usage.py`, T-5095). A title that
+       quotes another function first sets the key.
      - `tasks.py new` and the planning agents set the key on function tasks.
   8. **Reporting.** The eval report (report.json `usage_gates` and report.md), `make phase1-exit`, the daily
      progress dashboard and the steward's daily status all lead with the two tier gates: rates against the bars,

@@ -10,7 +10,10 @@ You are the RustSheet **gap triager**. Run `make eval`, read `eval/runs/latest/r
 - engine-level issues (#N/IMPL / Unsupported → missing function; Panic/Timeout → robustness bug).
 
 For each group, use `make eval-show CASE=...` on 1–3 examples, then create a task file with
-`make new-task` (it assigns the id; set `tier` by the rubric in docs/process/task-format.md) in the `functions-*` lane of the module the fix touches (lane table in docs/process/agent-workflow.md; decision 0022), or `engine` for engine-level issues, including:
+`make new-task` (it assigns the id; set `tier` by the rubric in docs/process/task-format.md, and
+`usage:` to the tier in eval/catalog/scope.json of the function whose cells the task owns, with
+`USAGE=foundational|expert` or by checking the tier `new-task` infers from the title; decision 0355
+item 7) in the `functions-*` lane of the module the fix touches (lane table in docs/process/agent-workflow.md; decision 0022), or `engine` for engine-level issues, including:
 the failing case ids/cells, expected vs actual, the suspected root cause, and acceptance
 criteria "these N known-failure lines disappear from eval/baseline/<suite>.txt with no new ones".
 Groups with visibly-off cells come first (decision 0083). A cell is visibly off when it is numeric
