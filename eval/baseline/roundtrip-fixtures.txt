@@ -12,7 +12,7 @@ C	roundtrip-fixtures/external-link-cached-text.xlsx	6937
 C	roundtrip-fixtures/external-link-uncached-lookups.xlsx	10057
 C	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	7357
 C	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	7218
-C	roundtrip-fixtures/merged-covered-formula.xlsx	1053
+C	roundtrip-fixtures/merged-covered-formula.xlsx	1071
 C	roundtrip-fixtures/merged-covered-values.xlsx	1680
 C	roundtrip-fixtures/rich-error-export-formulas.xlsx	8784
 C	roundtrip-fixtures/rich-error-export.xlsx	6923
