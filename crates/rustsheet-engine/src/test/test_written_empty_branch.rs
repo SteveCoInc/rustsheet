@@ -79,14 +79,18 @@ fn a_parameter_read_once_survives_the_probe() {
 }
 
 #[test]
-fn a_wrapper_that_draws_a_random_value_is_not_probed() {
-    // The probe would evaluate the draw a second time, so a wrapper holding one reads its
-    // written-empty branch as a value (numbers.md "Which wrappers hand a written-empty branch on
-    // as an omission", Ours). RANDBETWEEN(1,1) always picks the empty branch, which Excel's one
-    // evaluation would hand on as `#N/A`; without a draw the same form is `#N/A` here too.
+fn a_wrapper_whose_pick_cannot_be_repeated_is_not_probed() {
+    // A KNOWN GAP, not Excel's answer: Excel's one evaluation hands each of A1, A3 and A4 on as an
+    // omission (`#N/A`), and T-5099 flips them. The probe would evaluate the condition a second
+    // time, so a random draw or a call whose body it cannot see (a LET-bound or defined-name
+    // LAMBDA) is not probed and the branch reads as 0 (numbers.md "Which wrappers hand a
+    // written-empty branch on as an omission", Ours). A LAMBDA written in the formula is walked,
+    // so A2 is probed and hands the omission on, as the same form without a call does (A5).
     check(&[
         ("A1", "=MROUND(CHOOSE(RANDBETWEEN(1,1),,5),1)", "0"),
-        ("A2", "=MROUND(CHOOSE(1,,5),1)", "#N/A"),
-        ("A3", "=MROUND(IF(LAMBDA(x,x)(TRUE),,1),1)", "0"),
+        ("A2", "=MROUND(IF(LAMBDA(x,x)(TRUE),,1),1)", "#N/A"),
+        ("A3", "=LET(f,LAMBDA(x,x),MROUND(IF(f(TRUE),,1),1))", "0"),
+        ("A4", "=MROUND(IF(LAMBDA(x,RAND()<2)(1),,1),1)", "0"),
+        ("A5", "=MROUND(CHOOSE(1,,5),1)", "#N/A"),
     ]);
 }

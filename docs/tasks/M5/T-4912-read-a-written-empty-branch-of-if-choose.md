@@ -70,3 +70,7 @@ chosen branch is written empty as an omission, as Excel does, while a formula th
   were held by T-5084 for M7. Unit tests: test/test_written_empty_branch.rs.
 - **Docs:** numbers.md "Which wrappers hand a written-empty branch on as an omission (T-5067)" gains the t4912 rows
   and the new "Ours"; new DEVIATION entry "A written-empty branch probed inside another one's condition".
+- Review follow-up: the task's Context asked for a design without double evaluation; this one evaluates the
+  wrapper's pick twice and so skips wrappers whose pick a second read might not repeat (a random draw, a name call,
+  a defined name). Those forms read as 0, a known gap that T-5099 closes by reading the pick once.
+

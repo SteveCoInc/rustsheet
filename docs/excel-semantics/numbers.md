@@ -2997,18 +2997,20 @@ committed before the fill.
 Evidence: probes/t5067-written-empty-branch-wrappers Calc!A1:A32 (excel-graph, 2026-11-08). Predictions were not
 committed before the fill. probes/t4912-written-empty-branch-readers Calc!A1:A28 (excel-graph, 2026-11-08; no
 predictions committed: each cell is `#N/A`, the default, or the value of the form without the wrapper).
-Ours: implemented (T-4912). `Model::is_empty_argument` (functions/util/empty_args.rs), which every reader of a
+Ours: implemented (T-4912), with the known gap below (T-5099). `Model::is_empty_argument` (functions/util/empty_args.rs), which every reader of a
 written-empty argument and LET's and LAMBDA's binding go through, looks through an IF, CHOOSE, IFERROR or IFNA one of
 whose branches is written empty: it reads the wrapper's condition, index or value by the wrapper's own pick step
 (`Model::pick_step`, and IFERROR's and IFNA's `replaces_error`) and tests the branch picked. That read comes before the
 call reads the argument, so the condition is evaluated twice; a LAMBDA parameter read once is copied first. A
-wrapper that draws a random value (RAND, RANDBETWEEN, RANDARRAY) or calls a LAMBDA, whose body may draw one, is not
-probed, since the two reads could pick differently: its written-empty branch reads as a value, 0, where Excel
-would give `#N/A` whenever its one evaluation picks that branch (`MROUND(IF(RAND()<0.5,,1),1)` is `#N/A` or 1 in
-Excel, 0 or 1 ours). A defined name whose formula draws a random value is not seen and is still probed. Engine
+wrapper that draws a random value (RAND, RANDBETWEEN, RANDARRAY, also inside a LAMBDA written in the formula) or
+holds a call whose body the walk cannot see (a LET-bound or defined-name LAMBDA called by name, a defined name) is not
+probed, since the two reads could pick differently. KNOWN GAP (T-5099): its written-empty branch reads as a value,
+0, where Excel's one evaluation hands the omission on whenever it picks that branch (`MROUND(IF(RAND()<0.5,,1),1)`
+is `#N/A` or 1 in Excel, 0 or 1 ours). Engine
 readings with no cell behind them (UNVERIFIED): an omitted LET or LAMBDA variable in parentheses or under a unary
 plus (`LET(e,,MROUND((e),1))`, `#N/A` ours) and the same variable as a wrapper's branch (`LET(e,,MROUND(IF(TRUE,e),1))`,
-0 ours); an IFERROR or IFNA whose value is a reference to one error cell (`MROUND(IFERROR(Z1,),1)`, 0 ours). Before
+0 ours); an IFERROR or IFNA whose value is a reference to one error cell (`MROUND(IFERROR(Z1,),1)`, 0 ours); T-5099
+probes them. Before
 T-4912 we read every handed-on form as 0. How deeply such probes may nest is limited: "A written-empty branch
 probed inside another one's condition" below.
 Status: VERIFIED (excel-graph)

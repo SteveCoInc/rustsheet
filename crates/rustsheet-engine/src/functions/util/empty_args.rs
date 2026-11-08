@@ -63,11 +63,20 @@ impl Model {
             return false;
         }
         // The probe evaluates what the wrapper picks by, and the call evaluates it again: a random
-        // draw there, or a LAMBDA call whose body may make one, could pick differently the second
-        // time and give a value Excel, which evaluates the wrapper once, cannot (`IF(RAND()<0.5,,1)`
-        // read as 0). Such a wrapper is not probed: its written-empty branch reads as a value, as
-        // before T-4912 (numbers.md "Which wrappers hand a written-empty branch on as an omission").
-        if node.contains_function(&RANDOM_DRAWS) || node.contains_lambda_call() {
+        // draw there, or a call whose body the walk cannot see (a name call, a defined name), could
+        // pick differently the second time and give a value Excel, which evaluates the wrapper once,
+        // cannot (`IF(RAND()<0.5,,1)` read as 0). Such a wrapper is not probed, so its written-empty
+        // branch reads as a value, 0: a known gap until the pick is read once (TODO(T-5099); numbers.md
+        // "Which wrappers hand a written-empty branch on as an omission", Ours). A LAMBDA written in
+        // the formula is walked like any other node.
+        if node.contains_function(&RANDOM_DRAWS)
+            || node.contains_node(|n| {
+                matches!(
+                    n,
+                    Node::NamedFunctionKind { .. } | Node::DefinedNameKind(..)
+                )
+            })
+        {
             return false;
         }
         self.variable_stack.copy_read_once();
