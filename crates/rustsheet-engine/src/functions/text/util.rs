@@ -8,9 +8,9 @@ use super::casefold::{char_offsets, fold_for_match};
 use crate::{
     calc_result::CalcResult,
     cast::{calc_result_to_text, MAX_TEXT_UNITS},
+    decimal_round::cut_to_15_digits,
     expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
     functions::util::near_integer::near_integer_count,
-    number_format::to_excel_precision,
     text::Text,
 };
 
@@ -399,9 +399,9 @@ pub(super) fn substitute_element(
             // #VALUE!, `2147483647-5E-6` reads 2147483646 (probes/t4468-substitute-cap-window,
             // t4468-substitute-cap-sweep; T-4468). Only the cap shows the cut: at ten integer
             // digits it reaches 5E-6, far past the 2^-22 snap, and no instance up there exists.
-            // `to_excel_precision` breaks an exact tie to even, but below 2^31 a double has at
-            // least 22 fraction bits and no tie at the 15th digit can cross an integer.
-            let n = near_integer_count(to_excel_precision(n?, 15));
+            // Below 2^31 a double has at least 22 fraction bits and no tie at the 16th digit can
+            // cross an integer, so the tie rule is moot.
+            let n = near_integer_count(cut_to_15_digits(n?, false));
             if !(1.0..=MAX_SUBSTITUTE_INSTANCE).contains(&n) {
                 return Err(Error::VALUE);
             }
