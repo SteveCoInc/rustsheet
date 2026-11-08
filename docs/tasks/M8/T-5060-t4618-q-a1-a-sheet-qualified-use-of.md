@@ -3,7 +3,7 @@ id: T-5060
 title: "t4618 Q!A1: a sheet-qualified use of an undefined name, P!N, is #NAME? in Excel and 1 ours"
 milestone: M8
 lane: engine
-status: in-progress
+status: blocked
 priority: P1
 size: S
 tier: opus
@@ -29,3 +29,14 @@ depends_on: []
 
 ## Out of scope
 -
+
+## Blocked because
+Blocked because: no engine change is evidenced. The cell's `#NAME?` does not reproduce: docs/excel-semantics/syntax.md
+"Which place a loaded use took" (T-4642) records two refills of the same input bytes (sha256 f800e58a…,
+probes/t4642-backward-refill and -refill-b) and five one-variable variants (t4642-qualified-after-active,
+-fourth-tab-before, -fourth-tab-after, -qualified-entered, -no-bare-use), all excel-graph 2026-11-07, reading 1 at the
+qualified use, which is what the engine returns. The task's premise, that Excel never falls back for a qualified use,
+is contradicted by that evidence, and making Q!A1 `#NAME?` would move the reproduced cells away from Excel.
+T-3610 decides how a cell whose Excel value varies between fills is scored; this cell's M8 exit row waits on it.
+Unblock when T-3610 lands a scoring rule (then the cell is scored by it, and this task closes with no engine change)
+or when a fresh fill reproduces `#NAME?` with a rule that separates it from the T-4642 refills.
