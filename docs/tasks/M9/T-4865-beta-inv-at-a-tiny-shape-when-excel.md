@@ -3,7 +3,7 @@ id: T-4865
 title: "BETA.INV at a tiny shape: when Excel's AS 109 search returns 1 - 2^-53, 2^-53, 1 or a subnormal instead of #NUM!"
 milestone: M9
 lane: functions-stat
-status: todo
+status: blocked
 priority: P2
 size: M
 tier: opus
@@ -50,16 +50,53 @@ separates them is known yet.
   `lower_quantile_underflows`).
 
 ## Acceptance criteria
-- [ ] Every probe, sweep and Gate A cell listed in the three classes above has Excel's value within 15 digits or
+- [x] Every probe, sweep and Gate A cell listed in the three classes above has Excel's value within 15 digits or
       Excel's error, or the task records the rule that would decide it as not found and blocks as time-boxed
-      (decision 0056).
-- [ ] No cell that matches Excel today moves away from it (the class 1 and 2 `#NUM!` points above included).
-- [ ] Any cut chosen by scoring candidates against cells is a fit: decision 0188 R4 guards (hold-out split fixed
-      before scoring, a fresh oracle sweep after the freeze commit, `FITTED` tag, `scripts/check_fitted.py`).
-- [ ] The shape-above-1E5 probe points are filled by the oracle and match.
-- [ ] The rule is in docs/excel-semantics/statistics.md; the Gate A lines that pass are removed.
+      (decision 0056). Not found; blocked (Blocked because).
+- [x] No cell that matches Excel today moves away from it (the class 1 and 2 `#NUM!` points above included). No
+      engine behavior changed.
+- [x] Any cut chosen by scoring candidates against cells is a fit: decision 0188 R4 guards (hold-out split fixed
+      before scoring, a fresh oracle sweep after the freeze commit, `FITTED` tag, `scripts/check_fitted.py`). No cut
+      chosen.
+- [x] The shape-above-1E5 probe points are filled by the oracle and match.
+- [ ] The rule is in docs/excel-semantics/statistics.md; the Gate A lines that pass are removed. The findings are
+      there; no rule and no Gate A line passes yet.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - A DBL_MIN shape (T-4663) and a huge shape's `#NUM!` (T-3862, T-4713).
 - The upper-tail search at a tiny alpha and a large beta (T-4866).
+
+## Blocked because
+Blocked because: time-boxed (decision 0056)
+- Candidates tried (both on the class 1 and 2 cells of accuracy/BETA.INV/s1 and BETAINV/s1: 21 Excel end values, 9
+  Excel `#NUM!`s):
+  1. Excel's kernel next to the end (the route this task named). Excel's BETA.DIST at every iterate of an AS 109 replay
+     (AS R19's acu, the published start clamp to [1E-4, 0.9999], 50-digit cdf and ln B; 1,154 cells,
+     docs/research/t4865/kernel_probe, excel-graph 2026-11-08) is within 3.8E-15 relative of the 50-digit cdf, and the
+     replay on Excel's own values takes the same path and ends at 1 - 2^-53 or 2^-53 at all 30 cells: 21/30 agree with
+     Excel, the 9 `#NUM!`s missed. The kernel does not decide them.
+  2. A step or division budget in that replay. Total step divisions (g /= 3) are at most 714 at every Excel end value
+     and at least 810 at every Excel `#NUM!` (30/30 on this set, a cut found by looking, so a fit with no hold-out), but
+     replays of Excel's normal tiny quantiles reach 38,002 divisions (s1 A82, Excel 5.3E-214) and 7,596 iterations, and
+     at the subnormal-y class (probe A1-A214, sweep) Excel's 1s and `#NUM!`s overlap in iterations, divisions and the
+     most divisions in one step (docs/research/t4865/replay_all.txt). Not adopted: no budget fits all the evidence.
+     The most divisions in one step also overlaps (end values up to 31, `#NUM!` down to 15).
+- What would reopen it: Excel's iterates themselves (not reachable from a cell), a different AS 109 variant whose
+  trajectory reproduces T-2555's tiny-quantile early stops as well (those cells are also on no AS 109 path from this
+  start, statistics.md "BETA.INV at a huge shape is AS 109's Newton search (T-1538)"), or an owner ruling that accepts
+  the classes under decision 0267.
+
+## Outcome
+Research only; no engine behavior changes. Eval delta: +8 passing cells (new case
+probes/t4865-beta-inv-huge-alpha-near-one, 8/8), no regressions.
+- New probe probes/t4865-beta-inv-huge-alpha-near-one (8 cells, excel-graph): the shape-above-1E5 branch of
+  `upper_quantile_near_one` (`BETA.INV(1-1E-12,2E5,0.1)` = 1; `#NUM!` where y underflows, both forms) and the
+  hand-derived bounds row `BETA.INV(1-1E-9,10,0.03,3,5)` = 5 (A5), all matching. Both points this task listed
+  underflow (`#NUM!`, A1, A2), so A7 `BETA.INV(1-1E-12,2E5,0.1)` (y about 3E-126) was added to reach the branch's 1. beta.rs's TODO(T-4865) and the
+  unit test's "needs oracle confirmation" note now cite it.
+- docs/research/t4865: the replay (iteration_counts.py, replay_all.py and its output), the kernel probe generator, case
+  and Excel fill (gen_kernel_probe.py, kernel_probe.*), and the replay on Excel's values (replay_excel_kernel.py).
+- statistics.md "BETA.INV where the quantile rounds to 1 (T-3351)" records both findings and marks the shape above
+  1E5 VERIFIED.
+

@@ -172,3 +172,45 @@ fn dates_with_quote_prefix() {
         *"'2024-01-01"
     );
 }
+
+// `update_cell_with_text` quotes whatever typed input would read as something other than text,
+// by the typed-input reader itself (T-4851): percentages, currencies, dates and times as well as
+// plain numbers, booleans, errors and a leading formula sign.
+#[test]
+fn test_update_cell_with_text_quotes_typed_number_text() {
+    let mut model = new_empty_model();
+    let quoted = [
+        "12", "50%", "$5", "1/2/2020", "10:30", "1e-309", "true", "False", "#REF!", "=A1", "-x",
+    ];
+    for text in quoted {
+        assert!(model.text_needs_quote_prefix(text), "{text}");
+    }
+    // Typed `1e-310` stays text (probes/typed-number-tiny, T-1100), as `1€` does in en-US
+    // (probes/typed-currency-percent-input B23:C26) and #BLOCKED! (SPEC-0003).
+    for text in [
+        "",
+        "hello",
+        "1e-310",
+        "1e-400",
+        "0e309",
+        "1€",
+        "#BLOCKED!",
+        "1.5$",
+    ] {
+        assert!(!model.text_needs_quote_prefix(text), "{text}");
+    }
+    for (column, text) in ["50%", "1/2/2020", "hello"].into_iter().enumerate() {
+        let column = i32::try_from(column).unwrap() + 1;
+        model.update_cell_with_text(0, 1, column, text).unwrap();
+        // Typed back in through its content, a quoted cell stays text.
+        let content = model.get_localized_cell_content(0, 1, column).unwrap();
+        model.set_user_input(0, 2, column, content).unwrap();
+    }
+    model.set_a1("A3", "=ISTEXT(A2)");
+    model.set_a1("B3", "=ISTEXT(B2)");
+    model.set_a1("C3", "=ISTEXT(C2)");
+    model.evaluate();
+    assert_eq!(model.get_text_a1("A3"), *"TRUE");
+    assert_eq!(model.get_text_a1("B3"), *"TRUE");
+    assert_eq!(model.get_text_a1("C3"), *"TRUE");
+}

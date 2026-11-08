@@ -6976,6 +6976,18 @@ Neither shape, p nor the root's distance from the end separates the end values f
 109 as revised (statrs' port: its start, step control and accuracy exponent) on the ported BETA.DIST kernel ends at
 1 - 2^-53 or 2^-53 at most of Excel's `#NUM!` points, so it does not explain them either; the outcome looks decided by
 the rounding of Excel's own Newton steps next to 0 and 1 (T-4865).
+T-4865 ruled the kernel out: Excel's BETA.DIST at every iterate of an AS 109 replay (AS R19's acu, the published start
+clamp to [1E-4, 0.9999], 50-digit cdf and ln B) for the 30 class 1 and 2 cells of accuracy/BETA.INV/s1 and BETAINV/s1
+(1,154 cells, docs/research/t4865/kernel_probe) is within 3.8E-15 relative of the 50-digit cdf, and the replay on
+Excel's own values takes the same trajectory and ends at 1 - 2^-53 or 2^-53 at all 30, Excel's `#NUM!`s included. So
+Excel's value there is not decided by its cdf next to the end. One pattern was seen and not adopted: over those 30
+cells the replay's total count of step divisions (g /= 3) is at most 714 at every Excel end value and at least 810 at
+every Excel `#NUM!`, but replays of Excel's normal tiny quantiles take up to 38,002 (s1 A82, Excel 5.3E-214), and in
+the subnormal-y class Excel's 1s and `#NUM!`s overlap in every replay count, so no division or iteration budget in this
+replay is Excel's (docs/research/t4865/replay_all.txt).
+At a shape above 1E5 the flipped tail's y follows the same rule: `BETA.INV(1-1E-12,2E5,0.1)` = 1 (y about 3E-126), and
+`BETA.INV(1-1E-12,2E5,1E-3)`, `BETA.INV(1-1E-8,1E6,0.01)`, `BETA.INV(1-1E-6,1E6,1E-3)` and both BETAINV forms are
+`#NUM!` (y underflows); `BETA.INV(1-1E-9,10,0.03,3,5)` = 5 (probes/t4865-beta-inv-huge-alpha-near-one, excel-graph).
 Evidence: probes/t3351-beta-inv-p-near-1 (254 cells: alpha 0.5, 2 and 10, beta 1E-3 to 1, p = 1 - 1E-6 to 1 - 1E-16,
 the underflow boundary at beta 0.03 in A197-A214 with the lower-tail mirror in column B and alpha 10 in C197-C204, p
 at or below 1/2 in D197-D210), probes-numeric/t3351-beta-inv-sweep (200 points, seed 3351), probes-numeric/
@@ -6985,9 +6997,10 @@ whatever the true y, and the refinement on the upper tail landed on 1). Since T-
 above 1/2 rounds to 1, the flipped tail is solved on the search's own kernel (`beta.rs` `upper_quantile_near_one`) and
 the answer is 1 - y for a normal y; a y of 0 or a subnormal one stays `#NUM!`, as before (no threshold chosen, so no
 fit). The 8 points above where Excel is 1 at such a y, the two inconsistent classes and the lower-tail mirror stay as
-they were: `#NUM!` (T-4865). At a shape above 1E5 y is T-1538's `beta_lower_crossing` instead; no evidenced cell
-reaches that branch (UNVERIFIED, probe listed in T-4865).
-Status: VERIFIED (excel-graph) for the normal-y rule; the reason for the `#NUM!`s and the shape above 1E5 UNVERIFIED
+they were: `#NUM!` (T-4865). At a shape above 1E5 y is T-1538's `beta_lower_crossing` instead, which matches the
+t4865 probe at all 8 cells.
+Status: VERIFIED (excel-graph) for the normal-y rule and the shape above 1E5; the reason for the `#NUM!`s UNVERIFIED
+(T-4865 blocked, time-boxed)
 Tasks: T-3351, T-4865
 
 ## BINOM.DIST's pmf at k = 0 is #NUM! when p = 1 (T-2435)

@@ -1,0 +1,51 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "0c537240fcae31228677df299e7a382d57be352f20cc0427895ff81e74aa7db3",
+  "definitions": {
+   "BETA.INV": "a9652f0571fdcdd2",
+   "BETAINV": "a9652f0571fdcdd2"
+  },
+  "arguments_sha256": "47aea6874f2f9f2adf471c6504ba74ae66940f30b606bfad2e2f2a6756880826"
+ },
+ "sheets": {},
+ "skipped": {
+  "Calc": {
+   "A1": {
+    "f": "=BETA.INV(1-1E-12,2E5,1E-3)",
+    "why": "no single value"
+   },
+   "A2": {
+    "f": "=BETA.INV(1-1E-8,1E6,0.01)",
+    "why": "no single value"
+   },
+   "A3": {
+    "f": "=BETAINV(1-1E-12,2E5,1E-3)",
+    "why": "no single value"
+   },
+   "A4": {
+    "f": "=BETAINV(1-1E-8,1E6,0.01)",
+    "why": "no single value"
+   },
+   "A5": {
+    "f": "=BETA.INV(1-1E-9,10,0.03,3,5)",
+    "why": "no single value"
+   },
+   "A6": {
+    "f": "=BETA.INV(1-1E-9,10,0.03)",
+    "why": "no single value"
+   },
+   "A7": {
+    "f": "=BETA.INV(1-1E-12,2E5,0.1)",
+    "why": "no single value"
+   },
+   "A8": {
+    "f": "=BETA.INV(1-1E-6,1E6,1E-3)",
+    "why": "no single value"
+   }
+  }
+ }
+}

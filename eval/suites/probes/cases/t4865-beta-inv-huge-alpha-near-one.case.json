@@ -1,0 +1,26 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "BETA.INV and BETAINV at p above 1/2 where alpha is above 1E5 and beta small, so the quantile rounds to 1 and the flipped tail is taken at a shape above 1E5 (beta.rs upper_quantile_near_one's beta_lower_crossing branch), and the hand-derived bounds row BETA.INV(1-1E-9,10,0.03,3,5) of test_fn_beta_dist.rs (T-4865).",
+ "tags": [
+  "M9",
+  "statistical",
+  "beta-inv",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=BETA.INV(1-1E-12,2E5,1E-3)",
+    "A2": "=BETA.INV(1-1E-8,1E6,0.01)",
+    "A3": "=BETAINV(1-1E-12,2E5,1E-3)",
+    "A4": "=BETAINV(1-1E-8,1E6,0.01)",
+    "A5": "=BETA.INV(1-1E-9,10,0.03,3,5)",
+    "A6": "=BETA.INV(1-1E-9,10,0.03)",
+    "A7": "=BETA.INV(1-1E-12,2E5,0.1)",
+    "A8": "=BETA.INV(1-1E-6,1E6,1E-3)"
+   }
+  }
+ ],
+ "expected": {}
+}

@@ -1349,6 +1349,27 @@ Oracle: excel-graph, 2026-10-05.
 Status: VERIFIED
 Tasks: T-0920, T-0140
 
+## Number text trims only the space (T-4851)
+Rule: number-text coercion (`+0`), VALUE and a COUNTIF criterion all trim only the space character (U+0020) around a
+number. Every other whitespace character, leading, trailing or both, leaves the text unread: CHAR(9), CHAR(10),
+CHAR(13), CHAR(11), CHAR(12), CHAR(160), U+2003, U+202F and U+3000 make `+0` and VALUE `#VALUE!`
+(`(CHAR(9)&"1")+0`, `("1"&CHAR(160))+0`, `VALUE("1"&CHAR(10))`), and such a criterion never matches the number 1
+(`COUNTIF(Z1,CHAR(9)&"1")` = 0, also after `=`). A space pad reads (`(" 1")+0` = 1, `COUNTIF(Z1," 1")` = 1,
+`COUNTIF(Z1,"= 1")` = 1), and so does a space before a percent sign (`("1.5 %")+0` = 0.015), where a tab, NBSP or
+the other characters are `#VALUE!`.
+Quirk: after the `>` operator the space behaves the other way. `COUNTIF(Z1,"> 0")` with Z1 = 1 is 0, while
+`COUNTIF(Z1,">"&CHAR(9)&"0")` and the other eight pads are 1 (probe J1:J10); ours matches both.
+Evidence: probes/t4851-number-text-whitespace (100 cells, excel-graph, 2026-11-08): rows 1-10 the ten pads, B:D `+0`
+leading, trailing and both, E:F VALUE, G:H COUNTIF over Z1 = 1, I after `=`, J after `>` against 0, K inside `1.5 %`.
+NUMBERVALUE removes tabs, line feeds and carriage returns anywhere instead (text.md, T-3746), and typed input reads
+its own grammar (`parse_typed_number`).
+Ours: before T-4851 `+0` trimmed every Unicode whitespace character (`cast_number_in` used `str::trim`), so the 27
+non-space `+0` cells read as 1. It now trims the space only, as VALUE (`value_number_text_with`) and criteria
+(`parse_criterion_number`) already did.
+Status: VERIFIED
+Implemented in: cast.rs `Model::cast_number_in`
+Tasks: T-4851
+
 ## Direct text arguments of COUNT coerce like arithmetic
 Rule: a direct text argument of COUNT counts whenever arithmetic would read it as a number: clock text
 (`"10:00"`), date text (`"1/2/2020"`, `"1/1/1900"`), currency, percent, thousands separators,
