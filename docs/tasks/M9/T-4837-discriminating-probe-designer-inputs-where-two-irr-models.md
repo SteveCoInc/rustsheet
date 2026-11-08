@@ -34,12 +34,12 @@ Plan: docs/research/irr-2026-11-07/plan.md (T-4833). Phase 0, item 3; method of 
   then a hill-climb on the flows (`climb`, raising `distance`) from the closest of the rest. `write` emits a
   pending spec case (one `=IRR({flows},guess)` per cell) and a `.predictions.json` with each model's value and
   terminal event per cell. Disagreement means a different type, or a different 15-significant-digit rendering.
-  Inputs keep 15 significant digits and print in shortest round-trip form, so each literal reads back as the
-  same double.
+  Inputs are 15-digit literals written with the shared `accuracy.literal` helpers (`round15`, `text`), so each
+  literal reads back as the same double.
 - Base replica (cap 200) against the RATE driver (hold + run on, cap 200), seed 1: 40 disagreeing inputs from 400
   draws in about 18 s. 33 are `#NUM!` against a number (flat, zero-step or pole events against RATE's hold or
   run on) and 7 are `#NUM!` against `#DIV/0!`.
-- Unit tests (tests/test_fitlab_irr_discriminate.py): literal round trip, the disagreement test, the draw axes,
+- Unit tests (tests/test_fitlab_irr_discriminate.py): the formula reads back as the drawn doubles, the disagreement test, the draw axes,
   and that base against RATE finds at least 20 distinct disagreeing inputs, with the case and predictions files.
   docs/architecture/fit-lab.md documents the tool. No case is committed; filling one is T-4838's.
 - Eval delta: none (tools only).

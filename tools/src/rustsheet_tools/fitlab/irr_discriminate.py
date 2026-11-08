@@ -12,9 +12,10 @@ rules disagree on them, so each oracle cell separates the two. Given two `irr_dr
    value and terminal event per cell, committed before any fill (as docs/research/t4027/predictions.md was).
 
 Two outcomes disagree (`disagree`) when their types differ (a number against an error, or two error codes) or when
-both are numbers whose 15-significant-digit renderings differ. Every flow and guess is drawn with at most 15
-significant digits, so the formula literal reads back as the same double: Excel truncates a literal's digits past
-the 15th (docs/excel-semantics/numbers.md, "15-digit literal parsing").
+both are numbers whose 15-significant-digit renderings differ. Every flow and guess is drawn as a 15-digit
+literal (`accuracy.literal.round15`) and written with `accuracy.literal.text`, so the formula reads back as the
+same double: Excel truncates a literal's digits past the 15th (docs/excel-semantics/numbers.md, "15-digit literal
+parsing").
 
   cd tools && uv run python -m rustsheet_tools.fitlab.irr_discriminate \\
       --a "base, cap 200" --b "rate: hold on flat + run on past d = 1, cap 200" \\
@@ -32,9 +33,9 @@ import random
 from dataclasses import dataclass
 from pathlib import Path
 
+from rustsheet_tools.accuracy.literal import round15, text
 from rustsheet_tools.fitlab.kernels.irr_driver import CANDIDATES, Options, Outcome, irr
 
-DIGITS = 15  # the significant digits a formula literal keeps (numbers.md, "15-digit literal parsing")
 MAX_FLOWS = 120  # long enough for the 21+-flow residual (plan.md section 3, axis 1), short enough to run fast
 CLIMB_STEPS = 40  # hill-climb steps per start
 NEIGHBOURS = 3  # neighbours tried around each disagreeing input
@@ -48,28 +49,12 @@ class Probe:
     guess: float
 
     def formula(self) -> str:
-        return (
-            "=IRR({" + ",".join(literal_text(c) for c in self.flows) + "}," + literal_text(self.guess) + ")"
-        )
-
-
-def literal(x: float) -> float:
-    """`x` with at most 15 significant digits, so its literal reads back as this double."""
-    if x == 0 or not math.isfinite(x):
-        return x
-    return float(f"{x:.{DIGITS}g}")
-
-
-def literal_text(x: float) -> str:
-    """`x` as a formula literal of at most 15 significant digits: the shortest round-trip form (`repr`), never the
-    full binary expansion of a large integer, which Excel would cut to another double."""
-    text = repr(float(x)).replace("e+", "E+").replace("e-", "E-")
-    return text.removesuffix(".0")
+        return f"=IRR({text(self.flows)},{text(self.guess)})"
 
 
 def _signature(value: float | str) -> str:
-    """The outcome as compared: an error code, or a number's 15-significant-digit rendering."""
-    return value if isinstance(value, str) else f"{value:.{DIGITS}g}"
+    """The outcome as compared: an error code, or a number's 15-significant-digit literal."""
+    return value if isinstance(value, str) else text(round15(value))
 
 
 def disagree(a: Outcome, b: Outcome) -> bool:
@@ -117,16 +102,16 @@ def draw(rng: random.Random) -> Probe:
     if rng.random() < 0.2:
         flows[rng.randrange(n)] *= 10.0 ** rng.uniform(5, 15)
     guess = rng.choice([0.1, 0.1, 0.0, rng.uniform(-0.99, 1.0), 10.0 ** rng.uniform(-3, 4), -0.5])
-    return Probe(tuple(literal(c * scale) for c in flows), literal(guess))
+    return Probe(tuple(round15(c * scale) for c in flows), round15(guess))
 
 
 def perturb(rng: random.Random, probe: Probe) -> Probe:
     """A neighbour: one flow, or the guess, moved by a random relative step."""
     flows = list(probe.flows)
     if rng.random() < 0.2:
-        return Probe(probe.flows, literal(probe.guess * (1 + rng.gauss(0, 0.1)) + rng.gauss(0, 1e-3)))
+        return Probe(probe.flows, round15(probe.guess * (1 + rng.gauss(0, 0.1)) + rng.gauss(0, 1e-3)))
     i = rng.randrange(len(flows))
-    flows[i] = literal(
+    flows[i] = round15(
         flows[i] * (1 + rng.gauss(0, 0.05)) if flows[i] else rng.gauss(0, 1) * max(map(abs, flows))
     )
     return Probe(tuple(flows), probe.guess)

@@ -163,9 +163,9 @@ designer takes two `irr_driver.CANDIDATES` and does three things. It draws flows
 axes of docs/research/irr-2026-11-07/plan.md section 3. It walks the neighbourhood of every
 disagreeing input, and hill-climbs on the flows from the closest of the rest. Then it writes a pending
 spec case plus a `.predictions.json` that holds each candidate's value and terminal event per cell,
-before the fill. Two outcomes disagree when their types differ, or when their 15-significant-digit
-renderings do. Every input keeps 15 significant digits, so its literal reads back as the same double
-(numbers.md, "15-digit literal parsing").
+before the fill. Two outcomes disagree when their types differ, or when their 15-digit
+literals (`accuracy.literal.round15`) do. Every input is a 15-digit literal written with
+`accuracy.literal.text`, so it reads back as the same double (numbers.md, "15-digit literal parsing").
 
 ```
 cd tools && uv run python -m rustsheet_tools.fitlab.irr_discriminate \

@@ -6,13 +6,12 @@ import json
 import random
 from pathlib import Path
 
+from rustsheet_tools.accuracy.literal import round15
 from rustsheet_tools.fitlab.irr_discriminate import (
     Probe,
     disagree,
     distance,
     draw,
-    literal,
-    literal_text,
     search,
     write,
 )
@@ -22,18 +21,17 @@ BASE = "base, cap 200"
 RATE = "rate: hold on flat + run on past d = 1, cap 200"
 
 
-def test_literals_keep_15_digits_and_read_back_as_the_same_double() -> None:
+def test_formulas_read_back_as_the_drawn_doubles() -> None:
     rng = random.Random(7)
-    for _ in range(2000):
-        x = literal(rng.uniform(-1, 1) * 10.0 ** rng.uniform(-300, 300))
-        text = literal_text(x)
-        assert float(text) == x
-        mantissa = text.split("E")[0].lstrip("-").replace(".", "").strip("0")
-        assert len(mantissa) <= 15, text
-    # A large number is not printed as its binary expansion, which Excel would cut to 15 digits;
-    # trailing zeros of an integer (`5949622754697460`) are not digits Excel cuts.
-    assert literal_text(literal(1.23456789012345e20)) == "1.23456789012345E+20"
-    assert literal_text(-100.0) == "-100"
+    for _ in range(300):
+        probe = draw(rng)
+        inner = probe.formula().removeprefix("=IRR({").removesuffix(")")
+        flows, guess = inner.split("},")
+        assert tuple(float(t) for t in flows.split(",")) == probe.flows
+        assert float(guess) == probe.guess
+        assert all(
+            len(t.split("E")[0].lstrip("-").replace(".", "").strip("0")) <= 15 for t in flows.split(",")
+        )
 
 
 def test_disagree_compares_types_and_15_digits() -> None:
@@ -54,8 +52,8 @@ def test_draws_have_a_sign_change_axis_and_15_digit_inputs() -> None:
     probes = [draw(rng) for _ in range(300)]
     assert {len(p.flows) for p in probes} >= {2, 21, 120}
     for p in probes:
-        assert all(literal(c) == c for c in p.flows)
-        assert literal(p.guess) == p.guess
+        assert all(round15(c) == c for c in p.flows)
+        assert round15(p.guess) == p.guess
         assert p.formula().startswith("=IRR({")
 
 
