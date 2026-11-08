@@ -45,7 +45,10 @@ use super::{
     shared_strings::{decode_xlsx_escapes, SharedStringTable},
     sheet_data::{read_sheet_data, SheetDataXml, SheetPart},
     tables::load_table,
-    util::{get_attribute, get_color, get_number, get_relationship, parse_cell_number},
+    util::{
+        cell_boolean, get_attribute, get_color, get_number, get_relationship,
+        parse_bool_with_default, parse_cell_number,
+    },
     Relationship,
 };
 
@@ -395,13 +398,13 @@ pub(super) fn get_cell_from_excel(
             "b" => {
                 if let Some(anchor) = anchor_cell {
                     Cell::SpillCell {
-                        v: SpillValue::Boolean(cell_value == Some("1")),
+                        v: SpillValue::Boolean(cell_boolean(cell_value)),
                         s: cell_style,
                         a: anchor,
                     }
                 } else {
                     Cell::BooleanCell {
-                        v: cell_value == Some("1"),
+                        v: cell_boolean(cell_value),
                         s: cell_style,
                     }
                 }
@@ -509,7 +512,7 @@ pub(super) fn get_cell_from_excel(
             },
         };
         match cell_type {
-            "b" => make_cell(FormulaValue::Boolean(cell_value == Some("1"))),
+            "b" => make_cell(FormulaValue::Boolean(cell_boolean(cell_value))),
             "n" => make_cell(FormulaValue::Number(parse_cell_number(cell_value))),
             "e" => {
                 let error_name = cached_error_name(cell_value, rich_error);
@@ -738,8 +741,8 @@ fn get_sheet_view(ws: &XmlNode) -> SheetView {
     }
 
     let sheet_view = sheet_view[0];
-    let is_selected = sheet_view.attribute("tabSelected").unwrap_or("0") == "1";
-    let show_grid_lines = sheet_view.attribute("showGridLines").unwrap_or("1") == "1";
+    let is_selected = parse_bool_with_default(sheet_view.attribute("tabSelected"), false);
+    let show_grid_lines = parse_bool_with_default(sheet_view.attribute("showGridLines"), true);
 
     let pane = sheet_view
         .children()

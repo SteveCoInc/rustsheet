@@ -50,6 +50,7 @@ use super::iso_date::pivot_cache_date_serial;
 use super::package::{
     part_folder_and_rels, part_key, resolve_relative_target, ImportLimits, Package,
 };
+use super::util::xsd_boolean;
 use super::xml::{find_start_attribute, start_attribute};
 use super::{part_relationships, Relationship};
 use crate::error::XlsxError;
@@ -636,10 +637,9 @@ fn cache_item(
             Ok(n) if n.is_finite() => CacheItem::Number(n),
             _ => return skip(format!("bad number {:?}", shown(&v))),
         },
-        "b" => match v.as_str() {
-            "1" | "true" => CacheItem::Boolean(true),
-            "0" | "false" => CacheItem::Boolean(false),
-            _ => return skip(format!("bad boolean {:?}", shown(&v))),
+        "b" => match xsd_boolean(&v) {
+            Some(b) => CacheItem::Boolean(b),
+            None => return skip(format!("bad boolean {:?}", shown(&v))),
         },
         "e" => match get_error_by_english_name(&v) {
             Some(error) => CacheItem::Error(error),

@@ -162,13 +162,13 @@ class Phase1Exit(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("milestone M10\tnot met\tno milestone_exit row", text)
 
-    def test_m16_is_a_phase1_milestone(self) -> None:
-        # Decision 0274: M16 joins Phase 1; its row is T-4127's.
-        self.assertIn("M16", phase1_exit.PHASE1_MILESTONES)
-        rows = [{"milestone": m, "exit": True} for m in phase1_exit.PHASE1_MILESTONES if m != "M16"]
-        code, text = self.run_main(report(milestone_exit=rows))
-        self.assertEqual(code, 1)
-        self.assertIn("milestone M16\tnot met\tno milestone_exit row", text)
+    def test_m16_is_not_a_phase1_milestone(self) -> None:
+        # Decision 0354: M16 moves to Phase 2; a failing M16 row does not hold the Phase 1 exit.
+        self.assertNotIn("M16", phase1_exit.PHASE1_MILESTONES)
+        rows = [{"milestone": m, "exit": True} for m in phase1_exit.PHASE1_MILESTONES]
+        code, text = self.run_main(report(milestone_exit=[*rows, {"milestone": "M16", "exit": False}]))
+        self.assertNotIn("milestone M16", text)
+        self.assertNotIn("milestone M16", self.failing(text))
 
     def test_the_m16_line_names_each_measure(self) -> None:
         m16 = {
@@ -186,15 +186,11 @@ class Phase1Exit(unittest.TestCase):
                 "corpus_render_met": None,
             },
         }
-        rows = [{"milestone": m, "exit": True} for m in phase1_exit.PHASE1_MILESTONES if m != "M16"]
-        code, text = self.run_main(report(milestone_exit=[*rows, m16]))
-        self.assertEqual(code, 1)
-        self.assertIn(
-            "milestone M16\tnot met\texit row not met: gen-pivot not met; pivot-corpus-lo n/a; probes met; "
+        self.assertEqual(
+            phase1_exit.pivot_detail(m16),
+            "gen-pivot not met; pivot-corpus-lo n/a; probes met; "
             "evidence not met (PV1 4/9 at the floor); owners n/a; layout n/a; corpus render n/a",
-            text,
         )
-        self.assertEqual(self.failing(text), "Phase 1 exit: not met: milestone M16")
 
     def test_phase1_met_false(self) -> None:
         code, text = self.run_main(

@@ -10,6 +10,7 @@ use std::sync::Arc;
 use crate::arithmetic::{extended_sum, flush_subnormal};
 use crate::constants::LAST_ROW;
 use crate::expressions::parser::stringify::retarget_unqualified_references;
+use crate::expressions::utils::boolean_text;
 use crate::reference_operators::Picked;
 use crate::types::Cell;
 use crate::{
@@ -46,7 +47,7 @@ fn computed_criterion_holds(condition: &CalcResult) -> bool {
     match condition {
         CalcResult::Boolean(value) => *value,
         CalcResult::Number(value) => *value != 0.0,
-        CalcResult::String(text) => text.eq_ignore_ascii_case("TRUE"),
+        CalcResult::String(text) => boolean_text(text) == Some(true),
         _ => false,
     }
 }

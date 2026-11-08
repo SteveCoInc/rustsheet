@@ -23,6 +23,7 @@ use rustsheet_engine::pivot::{
 };
 
 use super::super::package::ImportLimits;
+use super::super::util::xsd_boolean;
 use super::super::worksheets::parse_range;
 use super::filters::read_filters;
 use super::sort::read_auto_sort;
@@ -636,11 +637,10 @@ fn show_data_as(name: &str) -> Result<ShowDataAs, Skip> {
 /// An `xsd:boolean` attribute: `default` when absent or not a boolean, as Excel's own writer never
 /// leaves one malformed (and `showAll` has always read so, T-4276).
 pub(super) fn flag(element: &BytesStart, name: &str, default: bool) -> Result<bool, Skip> {
-    Ok(match attribute(element, name)?.as_deref() {
-        Some("1" | "true") => true,
-        Some("0" | "false") => false,
-        _ => default,
-    })
+    Ok(attribute(element, name)?
+        .as_deref()
+        .and_then(xsd_boolean)
+        .unwrap_or(default))
 }
 
 /// A numeric attribute nothing computes from yet; `None` when absent or not a number, as

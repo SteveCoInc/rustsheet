@@ -1,0 +1,49 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4853: a TRUE/FALSE text as a COUNTIF criterion. Rows 1-10 the texts of t4853-boolean-text (A): \"TRUE\", \"true\", \"tRuE\", \"FALSE\", \"false\", \"FALſE\", \"falſe\" (U+017F), \" TRUE\", \"TRUE \", \"1\". E COUNTIF over Z1:Z2 = TRUE, FALSE with the text as criterion, F after '='.",
+ "tags": [
+  "M2",
+  "criteria",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "Z1": "=TRUE",
+    "Z2": "=FALSE",
+    "A1": "TRUE",
+    "E1": "=COUNTIF($Z$1:$Z$2,\"TRUE\")",
+    "F1": "=COUNTIF($Z$1:$Z$2,\"=\"&\"TRUE\")",
+    "A2": "true",
+    "E2": "=COUNTIF($Z$1:$Z$2,\"true\")",
+    "F2": "=COUNTIF($Z$1:$Z$2,\"=\"&\"true\")",
+    "A3": "tRuE",
+    "E3": "=COUNTIF($Z$1:$Z$2,\"tRuE\")",
+    "F3": "=COUNTIF($Z$1:$Z$2,\"=\"&\"tRuE\")",
+    "A4": "FALSE",
+    "E4": "=COUNTIF($Z$1:$Z$2,\"FALSE\")",
+    "F4": "=COUNTIF($Z$1:$Z$2,\"=\"&\"FALSE\")",
+    "A5": "false",
+    "E5": "=COUNTIF($Z$1:$Z$2,\"false\")",
+    "F5": "=COUNTIF($Z$1:$Z$2,\"=\"&\"false\")",
+    "A6": "FALſE",
+    "E6": "=COUNTIF($Z$1:$Z$2,\"FALſE\")",
+    "F6": "=COUNTIF($Z$1:$Z$2,\"=\"&\"FALſE\")",
+    "A7": "falſe",
+    "E7": "=COUNTIF($Z$1:$Z$2,\"falſe\")",
+    "F7": "=COUNTIF($Z$1:$Z$2,\"=\"&\"falſe\")",
+    "A8": " TRUE",
+    "E8": "=COUNTIF($Z$1:$Z$2,\" TRUE\")",
+    "F8": "=COUNTIF($Z$1:$Z$2,\"=\"&\" TRUE\")",
+    "A9": "TRUE ",
+    "E9": "=COUNTIF($Z$1:$Z$2,\"TRUE \")",
+    "F9": "=COUNTIF($Z$1:$Z$2,\"=\"&\"TRUE \")",
+    "A10": "'1",
+    "E10": "=COUNTIF($Z$1:$Z$2,\"1\")",
+    "F10": "=COUNTIF($Z$1:$Z$2,\"=\"&\"1\")"
+   }
+  }
+ ],
+ "expected": {}
+}

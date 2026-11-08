@@ -711,7 +711,7 @@ F	roundtrip-poi/51710.xlsx#R1/all	* 228 1ebf79701277ebff
 F	roundtrip-poi/51963.xlsx#R1/all	* 229 783d881e59445c1c
 F	roundtrip-poi/52348.xlsx#R1/all	* 331 cb6b2ec73c4008a8
 F	roundtrip-poi/52425.xlsx#R1/all	* 163 055d2c301b145c52
-F	roundtrip-poi/52575_main.xlsx#R0	* 221 ae22a0d85f904dad
+F	roundtrip-poi/52575_main.xlsx#R0	* 220 e4abec259efb7a81
 F	roundtrip-poi/53101.xlsx#R1/all	* 261 b89837c3efe1dbd5
 F	roundtrip-poi/53105.xlsx#R1/all	* 260 d310c413619bf955
 F	roundtrip-poi/53568.xlsx#R1/all	* 4486 b69ed89e54506236
@@ -722,7 +722,7 @@ F	roundtrip-poi/54607.xlsx#R1/all	* 263 8b7f30dd185acb68
 F	roundtrip-poi/54764-2.xlsx#R0	!EngineError
 F	roundtrip-poi/54764.xlsx#R0	!EngineError
 F	roundtrip-poi/55406_Conditional_formatting_sample.xlsx#R1/all	* 1566 37edae07a3c0c4ba
-F	roundtrip-poi/55640.xlsx#R1/all	* 297 1777e709545f53da
+F	roundtrip-poi/55640.xlsx#R1/all	* 294 369d1b4a58f2f9a7
 F	roundtrip-poi/55923.xlsx#R1/all	* 410 b3a5c7f6bb701ac3
 F	roundtrip-poi/55924.xlsx#R1/all	* 325 b07042f9463a9bc0
 F	roundtrip-poi/55927.xlsx#R1/all	* 322 63788043b80dfd69
@@ -778,9 +778,9 @@ F	roundtrip-poi/Excel_file_with_trash_item.xlsx#R0	* 1 4104e5ce01c743e5
 F	roundtrip-poi/FormulaEvalTestData_Copy.xlsx#R0	* 3 b6eb38c5633c5d01
 F	roundtrip-poi/HeaderFooterComplexFormats.xlsx#R1/all	* 273 285617a571806c49
 F	roundtrip-poi/InlineString.xlsx#R1/all	* 102 342c37b0c237729d
-F	roundtrip-poi/InlineStrings.xlsx#R1/all	* 297 1a3990008847f6e7
+F	roundtrip-poi/InlineStrings.xlsx#R1/all	* 294 8b0c22369ac592e1
 F	roundtrip-poi/LIBRE_OFFICE-116306-0.xlsx#R0	* 1 ac3bcbe7501ca811
-F	roundtrip-poi/MalformedSSTCount.xlsx#R1/all	* 203 c5836959365554f4
+F	roundtrip-poi/MalformedSSTCount.xlsx#R1/all	* 202 a96066e4d906c754
 F	roundtrip-poi/NewlineInFormulas.xlsx#R1/all	* 260 94adcb0aa0fe1c74
 F	roundtrip-poi/SampleSS.strict.xlsx#R1/all	* 4 37f564f63460dbd0
 F	roundtrip-poi/SheetTabColors.xlsx#R1/all	* 256 7fa8da7bd7a67679
@@ -823,7 +823,7 @@ F	roundtrip-poi/link-external-workbook-a.xlsx#R1/all	* 33 1b16383e8b613853
 F	roundtrip-poi/link-external-workbook-b.xlsx#R0	* 4 ae8bef3e867ec041
 F	roundtrip-poi/link-external-workbook-b.xlsx#R1/all	* 33 020d54b21e7cd90e
 F	roundtrip-poi/noSharedStringTable.xlsx#R1/all	* 132 8ba4793fe7ad8d5f
-F	roundtrip-poi/npe.xlsx#R1/all	* 1397 b4b58e4504fdc780
+F	roundtrip-poi/npe.xlsx#R1/all	* 1392 79d161dd6f7a9625
 F	roundtrip-poi/picture.xlsx#R0	* 4 56d2f7965d1ba28b
 F	roundtrip-poi/picture.xlsx#R1/all	* 229 e87d071f3c119f1b
 F	roundtrip-poi/poc-shared-strings.xlsx#R0	!EngineError

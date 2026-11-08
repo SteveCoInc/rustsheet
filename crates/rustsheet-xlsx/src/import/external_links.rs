@@ -11,7 +11,7 @@ use super::{
     package::{part_folder_and_rels, resolve_target, Package},
     part_relationships,
     shared_strings::decode_xlsx_escapes,
-    util::parse_cell_number,
+    util::{cell_boolean, parse_cell_number, xsd_boolean},
     worksheets::parse_cell_reference,
     xml::XmlNode,
     Relationship,
@@ -100,7 +100,7 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
             data_sheets.push(sheet);
         }
         // The fixture shows "1"; "true" is the other xsd:boolean spelling of it.
-        if matches!(sheet_data.attribute("refreshError"), Some("1" | "true"))
+        if sheet_data.attribute("refreshError").and_then(xsd_boolean) == Some(true)
             && !refresh_error_sheets.contains(&sheet)
         {
             refresh_error_sheets.push(sheet);
@@ -138,7 +138,7 @@ fn cached_value(cell_type: Option<&str>, value: &str) -> SpillValue {
         // `_xHHHH_` escapes are decoded as in a shared or inline string, so a cached text the
         // export escaped reads back the same (T-4143; xlsx-storage.md, UNVERIFIED).
         Some("str") => SpillValue::Text(decode_xlsx_escapes(value).into()),
-        Some("b") => SpillValue::Boolean(value == "1"),
+        Some("b") => SpillValue::Boolean(cell_boolean(Some(value))),
         Some("e") => SpillValue::Error(get_error_by_english_name(value).unwrap_or(Error::ERROR)),
         _ => SpillValue::Number(parse_cell_number(Some(value))),
     }
