@@ -158,7 +158,13 @@ pub fn evidence(o: &CachedOverride, suites_dir: &Path) -> Result<Evidence, Strin
 
 /// The keys of a spec case that are no input of its workbook: what decision 0329 item 1's copy
 /// rule lets a refill copy change (its description and tags), and what the case asks to score.
-const NON_INPUT_KEYS: [&str; 5] = ["description", "tags", "check", "expected", "expected_source"];
+const NON_INPUT_KEYS: [&str; 5] = [
+    "description",
+    "tags",
+    "check",
+    "expected",
+    "expected_source",
+];
 
 /// Checks that the spec case at `refill` is a copy of the spec case at `case`: every key but
 /// [`NON_INPUT_KEYS`] equal, so its fill is Excel's answer for the same inputs (decision 0329
