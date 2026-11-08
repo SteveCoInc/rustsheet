@@ -297,7 +297,7 @@ const IRR_FAR_ROOT_BOUND: f64 = 1e7;
 /// docs/research/excel-parity-findings-2026-11-07.md, "Still open"). Since T-4975 it is read only
 /// after every attempt has failed ([`compute_irr`]), so it cannot pre-empt a root a retry finds
 /// (probes-numeric/t3347-irr-r4-fresh A52), and it applies to every input.
-/// FITTED(T-3347, 36 cells, flat zero-step IRR runs past 1E+200 of 27..144 flows, largest |c| 1.3E+4..6.7E+14, guess 0.1; cut bracketed 1.556E+226..6.57E+230 on train)
+/// FITTED(T-4975, 36 cells, every IRR input after all attempts fail; fitted on flat runs of 27..144 flows by T-3347)
 const IRR_FLAT_DIV_ZERO_NPV: f64 = 3e226;
 
 /// The updates of one IRR secant attempt ([`irr_secant`]), for every input: no dependence on the
@@ -309,7 +309,7 @@ const IRR_FLAT_DIV_ZERO_NPV: f64 = 3e226;
 /// P!A25 returns at update 200 itself (update 199 is another grid point). Until T-4975 the 200
 /// applied only inside a training-set box of flows, peak and guess (50 updates outside), so
 /// appending a zero flow turned a root `#NUM!` and t3478-irr-r4-wide A206 was `#NUM!`.
-/// FITTED(T-3408, 80 cells, IRR secant runs of 51..200 steps: 6..54 flows, largest |c| 5.6E-9..2.2E+8, guess -0.99934..9.81E+7; cap 200 = train-score plateau 200..216, no Excel cap)
+/// FITTED(T-4975, 900 cells, every IRR input: 200 updates per attempt, addendum 3 H; first fitted by T-3408 on 6..54 flows)
 const IRR_SECANT_STEPS: usize = 200;
 
 /// The stop's bound on |step| and |NPV| at every update but the last: Microsoft's documented

@@ -46,7 +46,7 @@ const LOG_FORM_RATIO: f64 = 1E-15;
 /// T-3271's cut (`#NUM!` for every cdf of a positive x from 1.85E+76 up) was right at 2 of the 11
 /// points from there up and gave 0 at the 87 below it in the band; the band is right at 72 of the 114
 /// points at a shape from 1E+40 (the 113 probed and gen-m9 A265), against 60.
-/// FITTED(T-3316, 114 cells, shape 1E40..1E200, x/beta 1E-100..1E50)
+/// FITTED(T-4975, 114 cells, shape 1E40..1E200, x/beta 1E-100..1E50; band edges 1E+56 and 1E+77)
 const HUGE_SHAPE_NUM_BAND: std::ops::RangeInclusive<f64> = 1E+56..=1E+77;
 
 /// Whether GAMMA.DIST's computed 0 is Excel's `#NUM!` at a huge shape: a cdf or a density of a

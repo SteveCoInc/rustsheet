@@ -928,7 +928,7 @@ through the date-clock reader VALUE and DATEVALUE use (`parse_date_clock_serial_
 so both cells above come from that one path. The old patterns also took day-first dates (`"22/8/2011 6:35"`,
 which VALUE refuses) and the ISO `T` (`"2023-01-01T14:30:00"`, #VALUE! in VALUE and DATEVALUE, "Date text"
 above); TIMEVALUE now gives #VALUE! for both, as VALUE does. TIMEVALUE of those two shapes is UNVERIFIED
-(not probed for TIMEVALUE itself; TODO(T-4975) probe it).
+(not probed for TIMEVALUE itself; TODO(T-5086) probe it).
 
 ## The 1904 date system: negative serials keep a minus; epoch at 1904-01-01
 Rule: in a 1904 workbook (`<workbookPr date1904="1"/>`), serial 0 is 1904-01-01 (`TEXT(0,"yyyy-mm-dd")` =

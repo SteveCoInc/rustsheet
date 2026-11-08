@@ -23,9 +23,11 @@ secant in d = 1 − v with two retries, which supersedes addendum 2's IRR model)
 Owner ruling (2026-11-07): land all items in **one PR** under this one task, overriding the
 one-task-one-lane and S/M size rules (CLAUDE.md directive 4) for this hand-off only. Second ruling (2026-11-07): trust the research findings as written, and
 fix every one of them in this session (including the addendum and the audit section) rather than
-filing them as separate tasks; T-4976–T-4979 are closed by this PR. Third ruling (2026-11-07):
+filing them as separate tasks; T-4976 and T-4978 are closed by this PR; T-4977 and T-4979 stay open with measurements. Third ruling (2026-11-07):
 a few gated regressions are accepted where the net gain is large (item 8's two t4541 cells; item
-12's 49 cells and one Gate A point), recorded by a decision record rather than reworked. The size
+12's 49 cells and one Gate A point), recorded by a decision record rather than reworked. Fourth ruling (2026-11-08): all of them are
+accepted as measured, including the T-4974 probe cells found after merging main, and decision 0188
+R4's hold-out and fresh sweep are waived for this PR (follow-ups T-5089, T-5090). The size
 field says M because `scripts/tasks.py` refuses L; the real size is L.
 
 ## Context
@@ -68,9 +70,12 @@ this PR closes):
 
 ## Outcome
 One PR lands findings items 1–13, addendum A–D, addendum-2 F/G, addendum-3 H and both audit sections
-(owner rulings above; decision 0351). Measured on the combined branch against main's baseline:
+(owner rulings above; decision 0351). After merging main (which added T-4974's validation probes and
+overlapping T-4328/T-5044/T-4866 work, kept as one definition each): probes 3,163 and gen-m9 428 cells
+fixed against main, 199 regressions recorded (decision 0351, including 131 T-4974 probe cells), Gate A
+0 failing with 43 known failures. Before that merge, against the older main:
 - **Eval:** 2,324 known-failing cells fixed (probes 1,742, gen-m9 479, ironcalc-calc 88, fixtures 15);
-  72 gated cells regress by 1–6 ulp and are recorded under decision 0351 (`update-baseline
+  72 gated cells regress (58 by 1–6 ulp, growth-modes K73 by 11, 13 GROWTH-overflow cells in t4590/t4765 by 260–1022) and are recorded under decision 0351 (`update-baseline
   --allow-regressions`): item 12's LINEST/LOGEST/GROWTH/TREND fits (49), item 8's t4541 K4/K5, and
   ~21 BETA.INV/F.INV/T.INV cells from addendum A–C/G (e.g. `T.INV(0.2,5)`, `F.INV(0.975,3,10)`);
   visible-parity lock raised for probes/stat-argument-modes and t3185-…-kinds-c. Visibly off in scope
@@ -95,5 +100,7 @@ One PR lands findings items 1–13, addendum A–D, addendum-2 F/G, addendum-3 H
   points need Excel's unconverged value), overflow left (BETA.INV/s1 A135). Addendum-2 audit 1–4 done
   (text budget, wildcard and D-function charges, D-function field once, TIMEVALUE on the shared parser:
   ISO `T` and day-first now `#VALUE!`, UNVERIFIED for TIMEVALUE); CELL metadata and UTF-16 skipped.
+- **Follow-ups:** T-5086 (TIMEVALUE probe), T-5087 (ROUND probe), T-5088 (A184), T-5089 (rework the
+  accepted regressions), T-5090 (R4 guards). SPEC-0036's UNVERIFIED UI rows already have T-5045/T-5047.
 - **Open leads:** A184 reproduces in simulation with a double-double reflector dot; t4541 K4/K5 at
   p ≈ 2·DBL_MIN; the CHISQ.INV.RT Q→P switch in (0.9999, 0.9999462]; IRR's DIV/NUM choice.
