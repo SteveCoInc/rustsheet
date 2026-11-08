@@ -3,7 +3,7 @@ id: T-5094
 title: "Usage tiers on the progress dashboard and in the steward's daily status (SPEC-0037 step 4)"
 milestone: M0
 lane: quality
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
