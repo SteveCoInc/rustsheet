@@ -9416,7 +9416,10 @@ equations; Microsoft documents LINEST as a QR since Excel 2003. The structural m
   summed on its own, and each target reflects as `t -= s·v`, the dot `v·t` summed in row order from the head. A data
   column's reflector divides the doubled dot, `s = (2·(v·t))/|v|²`, and R's diagonal is alpha; the constant's
   reflector (the column of ones) multiplies by a stored `2/|v|²` (its diagonal is not used). The two-point
-  `LINEST(A12:A13,B12:B13)` is still exactly 0.5 and -1.5 (linest-modes K134:L134).
+  `LINEST(A12:A13,B12:B13)` is still exactly 0.5 and -1.5 (linest-modes K134:L134). In an identity fit, where y as
+  reflected so far is the pivot column itself, the diagonal is the reflected head instead of alpha: Excel's
+  `LINEST(B2:B9,A2:C9,TRUE,TRUE)` with B among the x columns is exactly 0, 1, 0, 0 (linest-modes K85:N85); the alpha
+  diagonal gives 0.9999999999999999 and an intercept of 1.8E-15.
   T-4975's first model (every reflector `(v·t)·(2/|v|²)`, the reflected pivot head as diagonal) missed one-variable fits
   without a constant by 1 to 1022 ulp: `LOGEST(D2:D9,A2:A9,FALSE)` 1.9295282207785776 (ours ...778), the
   t4590-growth-overflow Slope rows (`GROWTH({1.59162664037792E+91,...},{0.3,0.4,0.5},0.4,FALSE)`
@@ -9424,10 +9427,11 @@ equations; Microsoft documents LINEST as a QR since Excel 2003. The structural m
   alpha diagonal gives Excel's bits on all of them, on ironcalc TREND_GROWTH.xlsx E2:E4 (which no other form tried
   fits), and keep t4222-regression-flag-ranges A51 (`LINEST` slope 1.2000000000000002 where `Σxy/Σx²` = 66/55 rounds
   to 1.2), so Excel's no-constant slope is not `Σxy/Σx²`, correctly rounded or not. Measured on the full eval (T-4975
-  follow-up): +162 / -7 cells against the first model; the same form in the constant's reflector too is +208 / -17
+  follow-up): +157 / -5 cells against the first model with the identity-fit exception (+162 / -7 without it, which
+  moves K85:N85 off); the same form in the constant's reflector too is +208 / -17
   but moves LINEST_LOGEST.xlsx D2:E2 and G2:H2 off Excel's bits; the alpha diagonal alone +90 / -31; the plain
   `Σxy/Σx²` slope special case +39 / -10. Still off: ironcalc TREND_GROWTH.xlsx F2, F3, F6 (`TREND(A2:A6)`, 1 ulp,
-  Excel's bits under the first model), linest-modes K85/L85/N85, growth-modes K169 and t4222 B32.
+  Excel's bits under the first model), growth-modes K169 and t4222 B32.
 - Collinear columns (rest at most 1E-10 of the column's norm, carried over, unprobed: T-2569) are dropped with
   coefficient 0, standard error 0, and the degrees of freedom count only the kept ones.
 - Statistics: ss_resid is the sum of squares of `Qᵀy` past the rank, ss_reg is ss_tot less it (linest-modes K12

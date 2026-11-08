@@ -131,16 +131,22 @@ fn householder_qr(mut columns: Vec<Vec<f64>>, mut y: Vec<f64>, first: Option<usi
                 *value -= scale * vi;
             }
         };
-        // R's diagonal is alpha, the reflected pivot column's exact head; the column itself is
-        // not reflected (a y proportional to it still gives the exact ratio: `LINEST(A12:A13,
-        // B12:B13)` is exactly 0.5, -1.5, linest-modes K134:L134).
+        reflect(&mut columns[pivot][step..]);
+        reflect(&mut y[step..]);
+        // R's diagonal is alpha, the reflected pivot column's exact head, except in an identity
+        // fit: where y (as reflected so far) is the pivot column itself, the reflected head is,
+        // so the ratio is exactly 1 and the others exactly 0 (`LINEST(B2:B9,A2:C9,TRUE,TRUE)`
+        // with B among the x columns: K85:N85 are 0, 1, 0, 0 in Excel, linest-modes).
         let mut row = vec![0.0; columns.len()];
-        row[pivot] = alpha;
+        row[pivot] = if y[step..] == columns[pivot][step..] {
+            columns[pivot][step]
+        } else {
+            alpha
+        };
         for &j in &remaining {
             reflect(&mut columns[j][step..]);
             row[j] = columns[j][step];
         }
-        reflect(&mut y[step..]);
         kept.push(pivot);
         r.push(row);
     }
@@ -620,6 +626,14 @@ mod tests {
             reg.map(|r| r.coeffs),
             Some(vec![19.589_285_714_285_71, -43.339_285_714_285_71])
         );
+        // K85:N85, `LINEST(B2:B9,A2:C9,TRUE,TRUE)`: y is the x column B, an exact identity fit.
+        let b = [2.1, 3.9, 6.2, 7.8, 10.1, 12.2, 13.8, 16.1];
+        let c = [2.0, 1.0, 4.0, 3.0, 6.0, 5.0, 8.0, 7.0];
+        let x: Vec<Vec<f64>> = (0..8)
+            .map(|i| vec![f64::from(u8::try_from(i + 1).unwrap_or(0)), b[i], c[i]])
+            .collect();
+        let reg = linear_regression(&b, &x, 3, true, false);
+        assert_eq!(reg.map(|r| r.coeffs), Some(vec![0.0, 1.0, 0.0, 0.0]));
         // ironcalc-calc LINEST_LOGEST.xlsx D2:E2 (Excel-cached), `LINEST(A2:A6,B2:B6)`.
         let x: Vec<Vec<f64>> = [1.1, 1.9, 3.1, 4.05, 5.0]
             .iter()
