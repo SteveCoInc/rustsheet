@@ -186,8 +186,8 @@ next-task: ## Best ready task in a non-busy lane: make next-task LANE=functions 
 ready-tasks: ## Every task next-task could pick, then "N ready": make ready-tasks TIER=sonnet [LANE=..] (decision 0021)
 	$(PY) scripts/tasks.py ready $(if $(LANE),--lane $(LANE)) $(if $(TIER),--tier $(TIER))
 
-new-task: ## New task file with a collision-free id: make new-task MILESTONE=M1 LANE=engine TITLE="..." [PRIORITY=P1] [SIZE=S] [TIER=opus] (fetches origin; write a literal $ as $$)
-	$(PY) scripts/tasks.py new --milestone "$$MILESTONE" --lane "$$LANE" --title "$$TITLE" $(if $(PRIORITY),--priority $(PRIORITY)) $(if $(SIZE),--size $(SIZE)) $(if $(TIER),--tier $(TIER))
+new-task: ## New task file with a collision-free id: make new-task MILESTONE=M1 LANE=engine TITLE="..." [PRIORITY=P1] [SIZE=S] [TIER=opus] [USAGE=foundational|expert] (fetches origin; write a literal $ as $$)
+	$(PY) scripts/tasks.py new --milestone "$$MILESTONE" --lane "$$LANE" --title "$$TITLE" $(if $(PRIORITY),--priority $(PRIORITY)) $(if $(SIZE),--size $(SIZE)) $(if $(TIER),--tier $(TIER)) $(if $(USAGE),--usage $(USAGE))
 
 new-decision: ## New decision record with a collision-free number: make new-decision TITLE="..." (fetches origin; decision 0029)
 	$(PY) scripts/new_decision.py --title "$$TITLE"

@@ -21,7 +21,7 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Any, Protocol
 
-from rustsheet_tools.progress_report import codebase
+from rustsheet_tools.progress_report import codebase, usage
 from rustsheet_tools.progress_report.markdown import signed, table
 from rustsheet_tools.progress_report.model import (
     COMMIT_SHA,
@@ -144,6 +144,8 @@ def _check_row(row: Any, i: int) -> str:
             count(per, key, f"{where}.campaign.{stage}")
     if "codebase" in row:
         codebase.check_row(row["codebase"], f"{where}.codebase")
+    if "usage" in row:
+        usage.check_row(row["usage"], f"{where}.usage")
     return date
 
 
@@ -219,7 +221,8 @@ def complete_row(
     """The history row of a complete run. Its commit is the report's `run.commit`; only when the
     eval could not read it (null) does the row fall back to `head`, the commit generating the page,
     so the next run can still count the commits since this one. `counts` adds the optional
-    `codebase` object (T-0078); rows from before it have none."""
+    `codebase` object (T-0078); rows from before it have none. A report with the tier gates adds
+    the optional `usage` object (T-5094)."""
     cells = data.attributed_cells()
     numeric, other = VISIBLE
     row: Row = {
@@ -256,6 +259,8 @@ def complete_row(
     }
     if counts is not None:
         row["codebase"] = dict(counts)
+    if data.usage is not None:
+        row["usage"] = usage.row(data.usage)
     return row
 
 

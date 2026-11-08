@@ -555,7 +555,7 @@ passes it through, `A1&""` is `#BUSY!`, and `ERROR.TYPE` is 0 (not 7; confirmed 
 100, since XlsxWriter caches 0 for every formula and a stale cell would be indistinguishable from the bare
 0). `#GETTING_DATA` stored: `ERROR.TYPE` 8, `ISERR` TRUE, `ISNA` FALSE, `TYPE` 16, `IFNA` passes through
 (reported `#N/A`), `&""` is reported `#N/A`; stored `#N/A`: 7, `ISNA` TRUE, `IFNA` gives the fallback.
-The engine-only kinds `#CIRC!`, `#ERROR!` and `#N/IMPL` stored as constants are rejected on load the same way (createSession 501 `unsupportedWorkbook`, excel-graph, 2026-10-08, T-1133; throw-away one-cell cases, no sidecar), so the exporter writes them as `#VALUE!` (`exported_error_literal`, `crates/rustsheet-xlsx/src/export/worksheets.rs`).
+The engine-only kinds `#CIRC!`, `#ERROR!` and `#N/IMPL!` stored as constants are rejected on load the same way (createSession 501 `unsupportedWorkbook`, excel-graph, 2026-10-08, T-1133; throw-away one-cell cases, no sidecar), so the exporter writes them as `#VALUE!` (`exported_error_literal`, `crates/rustsheet-xlsx/src/export/worksheets.rs`).
 Unprobed: `#PYTHON!`, `#EXTERNAL!` stored. The rejected names were re-run as throw-away one-cell cases
 (`A1` = `{"t":"e","v":"<name>","stored":true}`, nothing else), so to reproduce one, write that case.
 Also unprobed: what typing `#BLOCKED!` or `#GETTING_DATA` as cell input gives. SPEC-0003 keeps
@@ -598,12 +598,30 @@ Aggregates over picked cells, direct LAMBDA/blank values and the A variants (pro
 Evidence: probes/error-literals-new2 (S!A1:A15) and probes/error-literals-new (S!A1:A18), both excel-graph 2026-10-06; the eight single-cell
 rejections were run as throw-away one-cell cases (not committed; no value to record);
 probes/error-stored-constants (S!A1:I3, excel-graph 2026-10-06) for the loading stored names, the five
-stored rejections as throw-away one-cell cases (same); the three engine-only stored rejections (`#CIRC!`, `#ERROR!`, `#N/IMPL`) likewise (excel-graph 2026-10-08, T-1133).
+stored rejections as throw-away one-cell cases (same); the three engine-only stored rejections (`#CIRC!`, `#ERROR!`, `#N/IMPL!`) likewise (excel-graph 2026-10-08, T-1133).
 Verified (probes/aggregate-error-precedence-stat-family, 128 cells, excel-graph 2026-10-16, T-1439; A5 #N/A, A6 #VALUE!, A7:A8 #DIV/0! then #NUM!): MEDIAN, GEOMEAN, HARMEAN, SKEW, KURT, VAR, VAR.P, STDEV, STDEV.P, **DEVSQ, AVEDEV and SUMSQ**, PRODUCT, MIN, MAX and AVERAGE all rank errors like SUM: `fn(A5,#DIV/0!)` and `fn(#DIV/0!,A5)` are `#DIV/0!` (a direct error wins either way), `fn(A5,A6)` 7 and `fn(A6,A5)` 3 (leftmost referenced), `fn(A7:A8,#DIV/0!)` 2, `fn({1,#N/A},#DIV/0!)` 2, `fn(A6,{1,#N/A})` 3 and `fn({1,#N/A},A6)` 7. DEVSQ, AVEDEV and SUMSQ returned the first error at once until T-1439 (`ErrorRule::Ranked` for `for_each_value_skip_empty`); the rest already matched.
 An error inside an array ranks with the referenced errors in MIN, MAX, AVERAGE and MEDIAN as in SUM and PRODUCT (coercion.md PRODUCT array entry, T-1287): the leftmost of the referenced, array and direct-LAMBDA errors wins, a direct error beats them all. Probed (probes/aggregate-array-error-vs-ref-error, 40 cells, excel-graph, 2026-10-15, T-1615; A5 #N/A, A6 #VALUE!, A7:A8 #DIV/0! then #NUM!): for SUM, MIN, MAX, AVERAGE and MEDIAN alike `fn(A6,{1,#N/A})` is `#VALUE!` (ERROR.TYPE 3), `fn({1,#N/A},A6)` `#N/A` (7), `fn(A7:A8,{1,#N/A})` `#DIV/0!` (2), `fn({1,#N/A},A7:A8)` `#N/A` and `fn(LAMBDA(x,x),{1,#N/A})` `#VALUE!` (the LAMBDA of T-1604 is just the leftmost). A direct error beats an array error whichever comes first, in all five functions: `fn({1,#N/A},#DIV/0!)`, `fn(#DIV/0!,{1,#N/A})` and `fn({1,#N/A},1/0)` are `#DIV/0!` (D26-D40). Ours returned the array error at once in MIN, MAX and AVERAGE/MEDIAN after a referenced error or a direct LAMBDA (10 cells); fixed in T-1615 by dropping `ArrayErrorRank` and `lambda_held` from the walker: every `Ranked` policy holds an array error like a referenced one. Verified for the rest of the AVERAGE family (probes/aggregate-array-error-vs-ref-error-average-family, 87 cells, excel-graph, 2026-10-15, T-1629): GEOMEAN, HARMEAN, SKEW, KURT, VAR, STDEV, AVERAGEA, MAXA and MINA rank all eight shapes exactly like SUM (3, 7, 2, 7, 3, 2, 2, 2). **A direct LAMBDA is `#VALUE!` in AVERAGEA, MAXA and MINA too**, ranked with the referenced errors (`AVERAGEA(LAMBDA(x,x),2)` and `AVERAGEA(2,LAMBDA(x,x))` 3, `AVERAGEA(LAMBDA(x,x),#DIV/0!)` 2, `AVERAGEA(A5,LAMBDA(x,x))` 7, `AVERAGEA(LAMBDA(x,x),A5)` 3, D73-D87; same for MAXA, MINA). Ours skipped the LAMBDA in the A variants (`CastA` ignored it), so `AVERAGEA(LAMBDA(x,x),{1,#N/A})`, MAXA and MINA gave 7; fixed in T-1629. VARA, VARPA, STDEVA and STDEVPA rank errors exactly like SUM (probes/aggregate-error-precedence-a-variants, 72 cells, excel-graph, 2026-10-16, T-1696): `fn(A5,#DIV/0!)` and `fn({1,#N/A},#DIV/0!)` are `#DIV/0!` (2, a direct error wins), `fn(A5,A6)` 7, `fn(A6,A5)` 3, `fn(A6,{1,#N/A})` 3, `fn({1,#N/A},A6)` 7. `fn(A7:A8,#N/A)` is `#N/A` (7) for these and for SUM, AVERAGE, MEDIAN and DEVSQ: a direct error beats a range whose first error is `#DIV/0!` (T-1439's `fn(A7:A8,#DIV/0!)` could not tell that from "the range's first error wins"). Ours returned the first error at once (`ErrorRule::First`) and now uses `Ranked`.
 Status: VERIFIED
 Tasks: T-0175, T-0177, T-0195, T-0999, T-1010, T-1012, T-1016, T-1020, T-1133, T-1014, T-1222, T-1228, T-1314, T-1315, T-1334, T-1379, T-1439, T-1604, T-1615, T-1629, T-1696
 Implemented in: statistical/variance.rs (`VARA_ARGS`), math_and_trigonometry/sum.rs (`sum_with_last_addition`, reference and array errors held back), product.rs, mathematical.rs (`fold_min_max`) and statistical/count_and_average.rs (`for_each_value`, AVERAGE; reference errors held back, T-1379), functions/criteria.rs (`build_criteria_with`, `#BUSY!` criterion matches nothing); expressions/token.rs (`Error::GETTINGDATA`/`CONNECT`/`BLOCKED`/`FIELD`/`BUSY`, `Error::error_type_code`, `Error::stored_literal`, `get_error_by_english_name`, `get_error_by_name`); rustsheet value.rs (`ErrorKind`); rustsheet-xlsx export/worksheets.rs (`exported_error_literal`)
+
+## Error names are read in any case
+Rule: Excel reads an error name in any letter case wherever it takes one, and keeps the upper-case
+form. Typed as a constant, `#n/a`, `#N/a`, `#ref!`, `#value!`, `#div/0!`, `#name?`, `#num!`, `#null!`,
+`#spill!`, `#calc!`, `#getting_data`, `#Getting_Data` and `#Ref!` are each that error (`ISERROR` TRUE,
+`ISTEXT` FALSE, `ERROR.TYPE` its code; A1:D14). Typed as a formula, `=#n/a`, `=#ref!`, `=#value!`,
+`=#div/0!`, `=#name?`, `=#num!`, `=#null!` and `=#Div/0!` evaluate to the error and `FORMULATEXT` shows
+the upper-case literal (`=#N/A`, `=#DIV/0!`; E1:G8). As a COUNTIF criterion over `#N/A`, `#DIV/0!` and
+`"x"`, `"#n/a"`, `"#N/a"`, `"#N/A"`, `"=#n/a"` and `"#div/0!"` each count 1 and `"<>#n/a"` counts 2
+(I1:I6), so a criterion error name is case-insensitive too.
+Evidence: probes/t4852-error-name-case (excel-graph, 2026-11-08, T-4852).
+Implemented in: expressions/token.rs, one en-US table (`Error::english_literal`, which also spells
+the engine-only `#N/IMPL!`) and one localized table (`localized_names`), read in any case by
+`get_error_by_name` (typed constants), `formula_error_prefix` (the lexer) and
+`english_criterion_error` (criteria.rs). `get_error_by_english_name` reads the stored upper-case
+literal exactly; the `rustsheet` facade's `ErrorKind::from_literal` upper-cases first.
+Unprobed: a lower-case `=#spill!`, `=#calc!` formula literal, and non-ASCII case folding of a
+localized error name (the engine folds with Unicode upper-casing).
 
 ## A typed unary plus stays in the formula text, except on a number literal
 Rule: typed (Graph PATCH), Excel keeps a unary plus in the formula text everywhere except when it is directly followed by

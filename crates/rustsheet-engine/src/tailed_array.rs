@@ -15,7 +15,7 @@
 //! ([`Model::tailed_leaves`]): literals, one-cell references, single-column ranges of one common
 //! span (whole columns, or bounded ranges running past the used area), the value operators and IF
 //! over a condition that is an array. `ROW()` of such a range is a position leaf: its head is its
-//! row numbers and its tail the sentinel `#N/IMPL`, and a tail element that is the sentinel
+//! row numbers and its tail the sentinel `#N/IMPL!`, and a tail element that is the sentinel
 //! leaves the argument to the ordinary reading (SPEC-0020 Amendment 1, T-0491). VLOOKUP, HLOOKUP
 //! and MATCH over such a key, their other arguments fixed (ranges, one-cell references, literals),
 //! are interior nodes too (SPEC-0020 Amendment 2, T-3221): the head's lift leaves a
@@ -54,7 +54,7 @@ const MIN_TAILED_ROWS: i32 = 4096;
 
 /// The tail of a `ROW()` position leaf: an error no tailed operand row can hide, so a tail
 /// element that depends on the row numbers is this error (SPEC-0020 Amendment 1, section 2). A
-/// real `#N/IMPL` in the tail only sends the argument to the ordinary reading.
+/// real `#N/IMPL!` in the tail only sends the argument to the ordinary reading.
 const POSITION_SENTINEL: Error = Error::NIMPL;
 
 /// The whole-column operands of an argument whose head or tail is being evaluated.

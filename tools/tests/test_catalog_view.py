@@ -19,6 +19,7 @@ def test_view_keeps_scope_reason_and_oracle() -> None:
         "milestone": "M2",
         "scope": "in",
         "returns": "number",
+        "usage": "foundational",
         "params": [{"name": "number", "mode": "aggregate", "repeat": 1}],
     }
     assert rows["CALL"]["scope"] == "out" and rows["CALL"]["reason"]
@@ -26,6 +27,8 @@ def test_view_keeps_scope_reason_and_oracle() -> None:
     assert rows["PI"]["v15"] == "exempt" and rows["PI"]["v15_reason"]
     # Gate A's missing-table count reads `returns` (SPEC-0029, T-3379).
     assert rows["UPPER"]["returns"] == "text"
+    # Decision 0355: every function has a usage tier; an entry without `usage:` is expert.
+    assert rows["IRR"]["usage"] == "expert" and rows["TODAY"]["usage"] == "foundational"
 
 
 def test_view_keeps_parameter_modes_and_repeating_groups() -> None:

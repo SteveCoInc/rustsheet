@@ -319,6 +319,11 @@ pub struct RunReport {
     /// knows which suites are generated.
     #[serde(default)]
     pub v15_checkpoint: V15Checkpoint,
+    /// Decision 0355's usage-tier gates, Phase 1's exit measure (SPEC-0037 design 3, T-5092);
+    /// filled by the caller beside `v15_checkpoint`, since both read every cell of the run and
+    /// the Phase 1 exceptions.
+    #[serde(default)]
+    pub usage_gates: crate::usage_gates::UsageGates,
     /// In-scope catalog functions per parity tier ([`attribution::tier_counts`], T-0068).
     #[serde(default)]
     pub tiers: Vec<attribution::TierCount>,
@@ -664,6 +669,7 @@ impl RunReport {
         );
         run_meta::write_markdown(&self.run, &mut md);
         self.write_suites_table(&mut md);
+        crate::usage_gates::write_markdown(&self.usage_gates, &mut md);
         crate::milestone_exit::write_markdown(&self.milestone_exit, &mut md);
         if let Some(line) = self.phase1b_evidence.line() {
             let _ = writeln!(md, "\n{line}");
