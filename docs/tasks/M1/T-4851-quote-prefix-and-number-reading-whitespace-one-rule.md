@@ -3,7 +3,7 @@ id: T-4851
 title: "Quote prefix and number-reading whitespace: one rule for 'this text reads as a number'"
 milestone: M1
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
