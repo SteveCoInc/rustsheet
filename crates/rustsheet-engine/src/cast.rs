@@ -334,7 +334,7 @@ impl Model {
                 self.workbook.settings.date_system,
             )
             .is_ok()
-            || value.to_lowercase().parse::<bool>().is_ok()
+            || boolean_text(value).is_some()
             || get_error_by_name(&value.to_uppercase(), self.language).is_some()
     }
 

@@ -136,21 +136,21 @@ fn get_bool_with_default(node: &XmlNode, s: &str, default: bool) -> bool {
 pub(super) fn parse_bool_with_default(value: Option<&str>, default: bool) -> bool {
     // Not a valid xsd:boolean literal: the schema default rather than a guess (do NOT treat
     // arbitrary non-empty strings as true).
-    value.and_then(xsd_boolean).unwrap_or(default)
+    value
+        .and_then(|value| xsd_boolean(&value.trim().to_ascii_lowercase()))
+        .unwrap_or(default)
 }
 
-/// An `xsd:boolean` literal: `1` or `true` is true, `0` or `false` false, after trimming and in
-/// any ASCII case (the lenient read above); anything else is `None`. Every `xsd:boolean`
-/// attribute the importer reads goes through it (T-4853); a `t="b"` cell's value is
-/// [`cell_boolean`]'s, not this.
+/// An `xsd:boolean` literal, exactly: `1` or `true` is true, `0` or `false` false, anything else
+/// (`TRUE`, padding, `yes`) `None`, as SPEC-0005 reads `date1904` (`"TRUE"` is 1900,
+/// tests/date_system.rs). Every `xsd:boolean` attribute the importer reads goes through it
+/// (T-4853); [`parse_bool_with_default`]'s style attributes first trim and lower-case the value
+/// (the lenient read above), and a `t="b"` cell's value is [`cell_boolean`]'s, not this.
 pub(super) fn xsd_boolean(value: &str) -> Option<bool> {
-    let value = value.trim();
-    if value == "1" || value.eq_ignore_ascii_case("true") {
-        Some(true)
-    } else if value == "0" || value.eq_ignore_ascii_case("false") {
-        Some(false)
-    } else {
-        None
+    match value {
+        "1" | "true" => Some(true),
+        "0" | "false" => Some(false),
+        _ => None,
     }
 }
 
@@ -206,16 +206,10 @@ mod tests {
 
     #[test]
     fn xsd_boolean_and_cell_boolean() {
-        for (text, value) in [
-            ("1", true),
-            ("true", true),
-            (" TRUE ", true),
-            ("0", false),
-            ("false", false),
-        ] {
+        for (text, value) in [("1", true), ("true", true), ("0", false), ("false", false)] {
             assert_eq!(xsd_boolean(text), Some(value), "{text:?}");
         }
-        for text in ["", "yes", "on", "2", "x"] {
+        for text in ["", "yes", "on", "2", "x", "TRUE", " true "] {
             assert_eq!(xsd_boolean(text), None, "{text:?}");
         }
         // A `t="b"` value is 0 or 1 only.
