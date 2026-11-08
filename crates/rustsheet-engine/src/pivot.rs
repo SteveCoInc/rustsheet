@@ -44,6 +44,7 @@ mod slicer;
 mod sort;
 
 pub use added_groups::{group_by_discrete, AddedGroup};
+pub(crate) use calculated::calculated_answer;
 pub use calculated::{
     check_calculated_fields, CalculatedFieldError, MAX_CALCULATED_FIELDS,
     MAX_CALCULATED_FORMULA_CHARS,

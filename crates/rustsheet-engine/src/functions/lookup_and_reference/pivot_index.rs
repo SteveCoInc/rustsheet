@@ -19,7 +19,9 @@ use std::collections::{HashMap, HashSet};
 use crate::expressions::token::Error;
 use crate::model::Model;
 use crate::pivot::layout::{aggregate, record_numbers};
-use crate::pivot::{AxisField, CacheField, CacheItem, PivotCache, PivotTable, BLANK_ITEM};
+use crate::pivot::{
+    calculated_answer, AxisField, CacheField, CacheItem, PivotCache, PivotTable, BLANK_ITEM,
+};
 
 /// The indices of every pivot used in the current evaluation.
 #[derive(Default)]
@@ -381,12 +383,6 @@ impl Model {
                 .get(table.cache as usize)
                 .and_then(|cache| cache.fields.get(data.field as usize))
                 .ok_or(Error::REF)?;
-            // A calculated field has no records to aggregate, so the engine answers `#REF!`.
-            // Excel answers by the field's name or caption (web.md "GETPIVOTDATA on other pivot
-            // shapes (T-2085)", LY G1:G3); implementing that is T-4804.
-            if field.formula.is_some() {
-                return Err(Error::REF);
-            }
             let mut records: Vec<u32> = Vec::new();
             for (tuple, tuple_records) in &index.tuples {
                 if tuple
@@ -398,6 +394,16 @@ impl Model {
                 }
             }
             records.sort_unstable();
+            // A calculated field has no records of its own: its answer is its formula over the
+            // Sums of the fields it names (web.md "GETPIVOTDATA on other pivot shapes (T-2085)",
+            // "Calculated fields", LY G1:G3), whatever the data field's function.
+            if field.formula.is_some() {
+                let cache = workbook
+                    .pivot_caches
+                    .get(table.cache as usize)
+                    .ok_or(Error::REF)?;
+                return calculated_answer(data.field, &cache.fields, &records);
+            }
             aggregate(data.function, &record_numbers(field, &records)?)
         })();
         index.memo.insert(query.clone(), answer.clone());
