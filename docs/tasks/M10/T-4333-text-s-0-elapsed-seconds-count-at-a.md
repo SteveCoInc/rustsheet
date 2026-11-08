@@ -3,7 +3,7 @@ id: T-4333
 title: "TEXT elapsed count before a fraction at a tie where Excel rounds up (45000+0.95/86400 under [s].0 is 3888000001.9)"
 milestone: M10
 lane: functions-text
-status: blocked
+status: done
 priority: P1
 size: M
 tier: opus
@@ -25,8 +25,8 @@ Found by T-4323, which counts with fraction digits from the half-step register, 
   digits, which T-4332's cut now drives at every serial (T-4332 fidelity review, round 2).
 
 ## Acceptance criteria
-- [ ] Those cells, and probes/t4333-count-ulp-scan D1:D4, D7 and E6, pass without moving another cell of the seven t4323 probe cases.
-- [ ] `make check` green; reviewers approve.
+- [x] Those cells, and probes/t4333-count-ulp-scan D1:D4, D7 and E6, pass without moving another cell of the seven t4323 probe cases.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The clock and fraction digits (T-4332's field-by-field cut, T-4370 below serial 1).
@@ -57,3 +57,6 @@ Reopen on a new hypothesis recorded here. Two would be worth testing:
   fraction it formats. A probe of `[s]` beside `.0`, `.00` and `.000` on the same serials would separate the two.
 
 Gap triage 2026-11-06: T-4460 (research) is the oracle sweep that tests both hypotheses. This task waits on it.
+
+## Outcome
+An elapsed count beside fraction digits is the half-step serial `y` times 60, 60 and 24 in that order, each product a double, as many factors as the unit needs, truncated: `[h]` `floor(y*24)`, `[m]` `floor((y*60)*24)`, `[s]` `floor(((y*60)*60)*24)` (`ElapsedBase::count`, formatter/elapsed.rs). It scores all 2,617 count cells of the t4323, t4332, t4333, t4370, t4389 and t4466 probes, the fresh sweep t4466-count-fresh (600, drawn and predicted before its fill for another model) included, with no fitted constant (docs/research/t4466/count_chain.py; number-formats.md "Elapsed counts beside fraction digits"). The 17 count cells this task owned pass (t4323-carry-sweep A37, A49, A83; -carry-ties A27, A31; -fraction-sweep-2 A1, A24, A41, A84; -fraction-sweep-3 A7; -fraction-ties A90; t4333-count-ulp-scan D1:D4, D7, E6). The `General` register beside fraction digits reads the field cut's remainder (t4466-register-fresh 120 of 120), and General's fixed-or-E choice credits each form with the digits it has room for (t4466-count-hypotheses G24).
