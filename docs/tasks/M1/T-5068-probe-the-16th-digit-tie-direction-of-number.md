@@ -33,6 +33,7 @@ t4848-tie-fraction-format). numbers.md "A 16th-digit tie splits by use" still li
 -
 
 ## Outcome
-Probed probes/t5068-tie-number-text-mantissa (15 cells, excel-graph): the scientific mantissa cuts a 16th-digit tie toward
-zero, as the engine already does (no code change; eval delta 0). The other four items cannot be reached by any oracle backend
-(reasons in numbers.md "A 16th-digit tie splits by use"), so they are noted as unreachable and keep their current direction.
+Probed probes/t5068-tie-number-text-mantissa (25 cells, excel-graph). The scientific mantissa cuts a 16th-digit tie toward
+zero (engine already matched). The comma-scaled fraction value also cuts toward zero, so `fraction.rs` now passes
+`tie_away = false` there (was away). Number-cell text, literals, pivot groups and CF Equal are unreachable on excel-graph
+(reasons in numbers.md "A 16th-digit tie splits by use") and keep their current direction. Eval delta: 0 fixed, 0 regressions.
