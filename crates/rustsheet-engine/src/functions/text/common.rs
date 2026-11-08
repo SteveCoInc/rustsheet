@@ -8,7 +8,7 @@
 )]
 // LINT-DEBT-END
 use super::text_kernel::{lambda_argument_error, text_result};
-use super::util::{substitute_element, utf16_len};
+use super::util::{substitute_element, text_budget_error, utf16_len, within_text_budget};
 use crate::cast::value_number_text;
 use crate::{
     calc_result::CalcResult,
@@ -358,21 +358,33 @@ impl Model {
                 Ok(t) => CalcResult::String(t),
                 Err(e) => CalcResult::new_error(e, cell, "Text too long".to_string()),
             },
-            Ok(crate::cast::StringOrArray::Array(arr)) => CalcResult::Array(
-                arr.iter()
-                    .map(|row| {
-                        row.iter()
-                            .map(|n| match crate::cast::array_node_to_text(n) {
-                                Ok(s) => match f(&s) {
+            Ok(crate::cast::StringOrArray::Array(arr)) => {
+                // The element texts share one broadcast text budget, as a lifted LEFT's do
+                // (`within_text_budget`; directive 5, DEVIATION decision 0014): each input is
+                // charged before its transform allocates, so a call over an array of shared
+                // 32767-character texts stops at the cap instead of building one copy each.
+                let mut total = 0usize;
+                let mut rows = Vec::with_capacity(arr.len());
+                for row in &arr {
+                    let mut out = Vec::with_capacity(row.len());
+                    for n in row {
+                        out.push(match crate::cast::array_node_to_text(n) {
+                            Ok(s) => {
+                                if !within_text_budget(&mut total, s.len()) {
+                                    return text_budget_error(cell);
+                                }
+                                match f(&s) {
                                     Ok(t) => crate::expressions::parser::ArrayNode::String(t),
                                     Err(e) => crate::expressions::parser::ArrayNode::Error(e),
-                                },
-                                Err(e) => crate::expressions::parser::ArrayNode::Error(e),
-                            })
-                            .collect()
-                    })
-                    .collect(),
-            ),
+                                }
+                            }
+                            Err(e) => crate::expressions::parser::ArrayNode::Error(e),
+                        });
+                    }
+                    rows.push(out);
+                }
+                CalcResult::Array(rows)
+            }
             Err(e) => e,
         }
     }

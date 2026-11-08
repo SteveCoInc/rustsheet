@@ -7,6 +7,7 @@
 )]
 // LINT-DEBT-END
 use super::aggregate::is_multi_cell;
+use super::math_and_trigonometry::product_step;
 use crate::arithmetic::{extended_quotient, flush_subnormal};
 use crate::{
     calc_result::CalcResult,
@@ -568,10 +569,7 @@ impl Model {
         if values.is_empty() {
             return CalcResult::Number(0.0);
         }
-        let mut result = 1.0;
-        for value in values {
-            result *= value;
-        }
+        let result = values.into_iter().fold(1.0, product_step);
         CalcResult::finite_number_or_num(result, cell)
     }
 

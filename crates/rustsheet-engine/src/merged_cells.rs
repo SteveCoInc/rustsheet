@@ -136,7 +136,7 @@ impl Model {
                 worksheet.links.insert((row, column), link);
             }
         }
-        self.merge_cells_keep_styles(range)?;
+        self.merge_cells_keep_styles(range, None)?;
         for r in row..row + height {
             for c in column..column + width {
                 let mut style = merged_style.clone();
@@ -320,7 +320,15 @@ impl Model {
     // clipboard when recreating a pasted merge: the pasted cells already carry
     // the merged style pattern of the source, and stamping the anchor's style
     // would drop the perimeter borders that live on non-anchor cells.
-    pub(crate) fn merge_cells_keep_styles(&mut self, range: &Area) -> Result<(), String> {
+    // The covered cells inside `kept` (the block a paste just wrote) keep
+    // their content: a merged range keeps what its covered cells hold, as
+    // Excel's does (docs/excel-semantics/xlsx-storage.md "A merged range keeps
+    // the values of its covered cells"; docs/specs/SPEC-0036).
+    pub(crate) fn merge_cells_keep_styles(
+        &mut self,
+        range: &Area,
+        kept: Option<&Area>,
+    ) -> Result<(), String> {
         let Area {
             sheet,
             row,
@@ -335,7 +343,7 @@ impl Model {
         // into the range is reset, so it re-evaluates (to #SPILL!) afterwards.
         for r in row..row + height {
             for c in column..column + width {
-                if r == row && c == column {
+                if (r == row && c == column) || kept.is_some_and(|k| k.contains(r, c)) {
                     continue;
                 }
                 self.prepare_cell_for_user_input(sheet, r, c)?;

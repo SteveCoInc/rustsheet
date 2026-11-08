@@ -18,6 +18,8 @@ T-4177's pivot-export suite (eval/suites/pivot-export) committed T-4734's first 
 
 Owner of these visibly-off cells (decision 0245; T-4177, Excel's refresh dropped the months, the engine kept them):
 - pivot-export/t4177-date-flags-needed.export.json DC!A4:B13, DO!A3:B13, DT!A3:B13, DS!A3:B13, DY!A4:B13, DM!A4:B13, DX!A3:A4, Calc!B16, Calc!B18, Calc!B20
+- pivot-export/t4177-date-flags-needed.export.json Calc!B1:B3, Calc!B5, Calc!B6, Calc!B9, Calc!B11, Calc!B14 (decision 0356:
+  GETPIVOTDATA reads the engine's grouped render since T-4154; they pass once the grouping is dropped)
 
 Owner of these pivot layouts (the `LF` baseline items of eval/baseline/pivot-export.txt, decision 0245; T-4944: each is LocationDiffers: Excel's refreshed area at A3 differs in size, smaller for six and larger for DM!MonthsOnly), each at its anchor:
 - pivot-export/t4177-date-flags-needed.export.json DC!Compact, DO!Outline, DT!Tabular, DS!TabularSubtotals, DY!YearsMonths, DM!MonthsOnly, DX!QuartersByYears (each at A3)

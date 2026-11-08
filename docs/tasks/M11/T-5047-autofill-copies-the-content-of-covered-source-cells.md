@@ -3,7 +3,7 @@ id: T-5047
 title: "Autofill copies the content of covered source cells (SPEC-0036 S3)"
 milestone: M11
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -21,11 +21,14 @@ target covered cell is cleared and gets only style and link. Change: a non-empty
 over covered content is UNVERIFIED and not probeable on excel-graph (SPEC-0036 X9).
 
 ## Acceptance criteria
-- [ ] Fill down and fill right over a merged source with covered content copy it (formulas shifted); undo and redo restore it
+- [x] Fill down and fill right over a merged source with covered content copy it (formulas shifted); undo and redo restore it
       (tests in crates/rustsheet-engine/src/test/user_model/test_autofill_merged_cells.rs; update the module doc).
-- [ ] A covered source is never used as a progression term (test).
-- [ ] docs/excel-semantics/xlsx-storage.md's covered-content entry records the autofill rule as UNVERIFIED (design choice).
-- [ ] `make check` green; reviewers approve.
+- [x] A covered source is never used as a progression term (test).
+- [x] docs/excel-semantics/xlsx-storage.md's covered-content entry records the autofill rule as UNVERIFIED (design choice).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Paste (T-5045).
+
+## Outcome
+Landed by T-4975 (PR #4073, findings item 1): `recreate_pasted_merge` keeps covered content inside the pasted block (S2) and `fill_covered_cell` copies a covered source through `Model::fill_cell` (S3), with engine tests including undo/redo.

@@ -109,6 +109,11 @@ No candidate raises the bit-exact count beyond the |P| < 1E-7 test attempt 1 alr
 counts are in financial.md "IRR's fallback when the secant fails", Fit, attempt 2. No engine change: the owned cells
 stay in eval/baseline/.
 
+## Phase 1 exception (decision 0359)
+- ironcalc-calc/FINANCIAL/IRR.xlsx `General!M17` (`NPV(L17,A17:F17)`, NPV at L17's fallback-path root) is listed in
+  eval/milestones/phase1-exceptions.tsv with this task as owner. When the fit lands and M17 passes, remove the stale
+  line in the same PR.
+
 ## Blocked because: time-boxed (decision 0056)
 - Two attempts. Neither raises the bit-exact count on the owned cells or the sweep. Attempt 1 scored every candidate in
   the Context (Newton in v, r and x; starts at 0, 1 and the guess; stop tests; summation order) and a 1,200-start

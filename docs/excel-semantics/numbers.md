@@ -370,6 +370,11 @@ stripped first, misses at G9, G12:G13, G20:G21, G27:G28 and G42:G44; see "Stored
 to the nearest double", still OPEN). ROUNDUP's own conversion is not probed here (A1928 only checks
 `ROUNDUP(4.90499999999999E-06,8)` = 4.91E-06, the nearest double, as "ROUNDUP adds the unit in binary" gives).
 Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values for ROUND and ROUNDDOWN.
+Since T-4975 (findings 2026-11-07 audit item 6) ROUND and ROUNDDOWN take the model up to its semantic edge, every
+m of at most 15 significant digits (`X87_DECIMAL_DIGITS` = 10^15 in decimal_round.rs), the bound the literals below
+are evidenced at, instead of stopping at the sampled 1,000,000. ROUND's kept digits for 7 to 15 digits are
+UNVERIFIED (inferred from the literal parse, which is the same multiply); a probe of ROUND at 7 to 15 kept digits
+would settle it.
 **Literals and VALUE text of 7 to 18 digits (T-4077).** The model holds for every digit count up to 15 and for a
 positive exponent, with m the digits as written and n the fraction digits less the exponent (`=7.5487209E+1` is
 75487209 × 10^-6 = 75.487209000000007, Lit!A82). Past 15 significant digits the text is cut first, the later digits
@@ -2933,7 +2938,7 @@ argument wins: `QUOTIENT(1/0,)` is `#DIV/0!`, `QUOTIENT(TRUE,)` `#VALUE!` (A9:A1
 empty hands the emptiness on: `LET(e,,QUOTIENT(7,e))`, `LET(e,,QUOTIENT(e,2))`, `LAMBDA(a,b,QUOTIENT(a,b))(7,)` and
 `LET(e,,SERIESSUM(2,e,1,{1,2}))` are `#N/A` (-let-lambda A1:A4). Only the argument as written counts: a formula that
 gives a blank (an IFERROR or VLOOKUP of an empty cell) is read as 0, not `#N/A` (gen-m5/6efa59fc1257c475 Calc!A229,
-gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). MROUND itself reads it so too (`MROUND(VLOOKUP("x",C1:D1,2,FALSE),1)` and `MROUND(5,INDEX(D1:D2,1))` are 0, `CEILING.MATH(2.675,INDEX(D1:D2,1))` 0, `FLOOR.PRECISE(-2.5,INDEX(D1:D2,1))` 0: probes/t4901-mround-blank-let-lambda-roundings A1, A2, A8, A9, excel-graph, 2026-11-07, T-4901). A LET value or LAMBDA parameter left empty is an omission in CEILING.MATH (3, A4:A5) and FLOOR.PRECISE (-3, A6:A7). But a call that returns its own *written-empty* branch hands the omission on: `MROUND(IF(TRUE,),1)`, `MROUND(IF(FALSE,1,),1)`, `MROUND(CHOOSE(1,,2),1)`, `MROUND(IFERROR(,1),1)`, `MROUND(5,IF(TRUE,))` and `QUOTIENT(IF(TRUE,),1)` are `#N/A` and `CEILING.MATH(2.675,IF(TRUE,))` is 3 (A3, A10, A12:A16); `MROUND(IF(FALSE,1),1)` is `#VALUE!` (A11, FALSE). Ours reads the IF/CHOOSE/IFERROR forms as 0 (T-4912). Empty coefficients rank after `x`, `n` and `m`: with the
+gen-m5/74b183ca6fc1d190 Calc!A16 are SERIESSUM's later `#VALUE!` there). MROUND itself reads it so too (`MROUND(VLOOKUP("x",C1:D1,2,FALSE),1)` and `MROUND(5,INDEX(D1:D2,1))` are 0, `CEILING.MATH(2.675,INDEX(D1:D2,1))` 0, `FLOOR.PRECISE(-2.5,INDEX(D1:D2,1))` 0: probes/t4901-mround-blank-let-lambda-roundings A1, A2, A8, A9, excel-graph, 2026-11-07, T-4901). A LET value or LAMBDA parameter left empty is an omission in CEILING.MATH (3, A4:A5) and FLOOR.PRECISE (-3, A6:A7). But a call that returns its own *written-empty* branch hands the omission on: `MROUND(IF(TRUE,),1)`, `MROUND(IF(FALSE,1,),1)`, `MROUND(CHOOSE(1,,2),1)`, `MROUND(IFERROR(,1),1)`, `MROUND(5,IF(TRUE,))` and `QUOTIENT(IF(TRUE,),1)` are `#N/A` and `CEILING.MATH(2.675,IF(TRUE,))` is 3 (A3, A10, A12:A16); `MROUND(IF(FALSE,1),1)` is `#VALUE!` (A11, FALSE). Ours matches since T-4912 ("Which wrappers hand a written-empty branch on as an omission (T-5067)" below). Empty coefficients rank after `x`, `n` and `m`: with the
 coefficients empty, `SERIESSUM(1/0,1,1,)` is `#DIV/0!`, `SERIESSUM(2,"x",1,)` `#VALUE!` and `SERIESSUM(2,1,NA(),)` `#N/A`
 (t4903 B1:B3), and an `m` error that is not `#N/A` also beats them: `SERIESSUM(2,1,1/0,)` is `#DIV/0!`,
 `SERIESSUM(2,1,"x",)` `#VALUE!` (B4:B5; B3 alone could not tell, as empty coefficients are `#N/A` themselves). Ours checks
@@ -2979,11 +2984,54 @@ reference or a lookup's blank on the chosen branch stays 0, even when a written-
   0 and 1 (A17:A19). `ISBLANK(IF(TRUE,))` is TRUE (A30), and `MROUND(INDEX(IF(TRUE,),1),1)` is `#VALUE!` (A31).
 Evidence: probes/t5067-written-empty-branch-wrappers Calc!A1:A32 (excel-graph, 2026-11-08). Predictions were not
 committed before the fill.
-Ours: we read every handed-on form as 0, because `Model::is_empty_argument` looks only at the argument node and a LET
-or LAMBDA variable bound to nothing. A17:A19 and A30:A31 already match. T-4912 owns the 17 cells that are off:
-A1:A3, A11, A12, A14:A16, A20:A26, A28 and A29.
+- Every reader of a written-empty argument takes it (probes/t4912-written-empty-branch-readers, excel-graph,
+  2026-11-08, T-4912). The engineering, complex and parity functions: `DEC2BIN(5,IF(TRUE,))` is "101" (an
+  omitted `places`), `DEC2BIN(IF(TRUE,),4)`, `IMSUB("3+4i",IF(TRUE,))`, `COMPLEX(1,IF(TRUE,))` and
+  `ISEVEN(IF(TRUE,))` are `#N/A` (A1:A5). The dates: `WEEKNUM(45000,IF(TRUE,))` is 11 (type 1),
+  `WORKDAY(45000,5,IF(TRUE,))` 45007 (no holidays), and `NETWORKDAYS(45000,IF(TRUE,))`, `YEARFRAC(45000,IF(TRUE,))`
+  and `WORKDAY(IF(TRUE,),5)` are `#N/A` (A6:A10). An empty number of CEILING.MATH stays 0:
+  `CEILING.MATH(IF(TRUE,),1)` is 0 (A23). A lifted call broadcasts it: `ROWS(QUOTIENT(IF(TRUE,),{2;4}))` is 2 and
+  its second element `#N/A` (A24:A25).
+- A LET name or LAMBDA parameter bound to one is an omitted one: `LET(x,IF(TRUE,),ISOMITTED(x))` and
+  `LAMBDA(a,ISOMITTED(a))(IF(TRUE,))` are TRUE, `LAMBDA(a,MROUND(a,1))(IF(TRUE,))` and
+  `LET(x,IF(TRUE,),y,x,MROUND(y,1))` `#N/A`, `LET(x,IF(TRUE,),x)` 0 (A11:A13, A15, A28). A unary plus keeps it
+  (`MROUND(+IF(TRUE,),1)` is `#N/A`, A16), a product does not (`MROUND(IF(TRUE,,1)*1,1)` is 0, A27).
+- The wrapper's own errors come first: `MROUND(IFNA(1/0,),1)` is `#DIV/0!` (IFNA keeps the error),
+  `MROUND(IF("x",,1),1)` and `MROUND(CHOOSE(3,1,),1)` are `#VALUE!` (A18:A20). A reader inside a wrapper's value is
+  read as usual: `MROUND(IFERROR(MROUND(IF(TRUE,),1),),1)` is `#N/A` (A22).
+Evidence: probes/t5067-written-empty-branch-wrappers Calc!A1:A32 (excel-graph, 2026-11-08). Predictions were not
+committed before the fill. probes/t4912-written-empty-branch-readers Calc!A1:A28 (excel-graph, 2026-11-08; no
+predictions committed: each cell is `#N/A`, the default, or the value of the form without the wrapper).
+Ours: implemented (T-4912), with the known gap below (T-5099). `Model::is_empty_argument` (functions/util/empty_args.rs), which every reader of a
+written-empty argument and LET's and LAMBDA's binding go through, looks through an IF, CHOOSE, IFERROR or IFNA one of
+whose branches is written empty: it reads the wrapper's condition, index or value by the wrapper's own pick step
+(`Model::pick_step`, and IFERROR's and IFNA's `replaces_error`) and tests the branch picked. That read comes before the
+call reads the argument, so the condition is evaluated twice; a LAMBDA parameter read once is copied first. A
+wrapper that draws a random value (RAND, RANDBETWEEN, RANDARRAY, also inside a LAMBDA written in the formula) or
+holds a call whose body the walk cannot see (a LET-bound or defined-name LAMBDA called by name, a defined name) is not
+probed, since the two reads could pick differently. KNOWN GAP (T-5099): its written-empty branch reads as a value,
+0, where Excel's one evaluation hands the omission on whenever it picks that branch (`MROUND(IF(RAND()<0.5,,1),1)`
+is `#N/A` or 1 in Excel, 0 or 1 ours). Engine
+readings with no cell behind them (UNVERIFIED): an omitted LET or LAMBDA variable in parentheses or under a unary
+plus (`LET(e,,MROUND((e),1))`, `#N/A` ours) and the same variable as a wrapper's branch (`LET(e,,MROUND(IF(TRUE,e),1))`,
+0 ours); an IFERROR or IFNA whose value is a reference to one error cell (`MROUND(IFERROR(Z1,),1)`, 0 ours); T-5099
+probes them. Before
+T-4912 we read every handed-on form as 0. How deeply such probes may nest is limited: "A written-empty branch
+probed inside another one's condition" below.
 Status: VERIFIED (excel-graph)
 Tasks: T-5067, T-4912
+
+## A written-empty branch probed inside another one's condition (T-4912)
+Rule: to tell a picked written-empty branch ("Which wrappers hand a written-empty branch on as an omission (T-5067)"
+above) RustSheet evaluates the wrapper's condition, index or IFERROR value once more than Excel does. A reader in
+that condition that has a written-empty wrapper of its own probes again, so each nesting level would double the
+work. Probes nest at most 2 deep (`MAX_OMISSION_PROBES`, functions/util/empty_args.rs). Past that a reader reads only
+the argument as written, so a written-empty branch picked there is 0, not an omission. Excel has no such limit. The
+deepest evidenced form, `MROUND(IFERROR(MROUND(IF(TRUE,),1),),1)` (`#N/A`, probes/t4912-written-empty-branch-readers
+A22), nests 2 and matches.
+Evidence: none needed for the limit (directive 5); the forms it cuts are unprobed.
+Status: DEVIATION (decision 0014)
+Tasks: T-4912
 
 ## An empty significance of the 2010+ roundings is omitted (T-4873)
 Rule: CEILING.MATH, FLOOR.MATH (Excel 2013), CEILING.PRECISE, FLOOR.PRECISE and ISO.CEILING (Excel 2010) read a written-empty
@@ -3102,8 +3150,12 @@ function_num 6 control C5 still multiplies the hidden 3 and 5 to 15) or in rows 
 (Filter!C2, C3; function_num 6 skips filtered rows too, so Filter!C1 is 0). AGGREGATE's PRODUCT
 (function 6) gives 0 the same way under options 1, 4, 5 and 6 (Hide!C10-C12, Filter!C4): an empty
 product is 0 whenever no number is included, never 1.
-Ours: implemented (T-2269); 106 and the AGGREGATE cells share the code path and match.
-Status: VERIFIED
+Ours: implemented (T-2269); 106 and the AGGREGATE cells share the code path and match. Since T-4975 SUBTOTAL 6 and
+106 multiply with PRODUCT's own step (`product_step`: a stored x87 product, a subnormal running product flushed to
+0), not a second plain-`*` loop; no evidence asked for two accumulators (findings 2026-11-07 audit item 6). That
+flush is UNVERIFIED for SUBTOTAL itself: `SUBTOTAL(6,1E-200,1E-120)` went from 1E-320 to 0 with no SUBTOTAL oracle
+cell (probe: T-5087).
+Status: VERIFIED (the T-4975 flush sentence UNVERIFIED)
 Tasks: T-2269, T-2302
 
 ## TEXT of DBL_MAX with a scientific format prints the full 3-digit exponent (T-2106)

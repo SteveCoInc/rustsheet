@@ -1,0 +1,89 @@
+{
+  "format": "rustsheet-case/v1",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe"
+  ],
+  "description": "T-4760: workbook name Rel = =Data!E1 (relative, anchored at A1) used from Calc!A1 and Calc!A3, after insert_column C on Data (Data!<col k><row r> = k*100 + r). Prediction if it does not move (as t4747 rows): A1 401 (Data!E1 = old D1), A3 403. If it shifts to F1: A1 501, A3 503.",
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=Rel",
+        "A3": "=Rel"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A1": 101,
+        "A2": 102,
+        "A3": 103,
+        "A4": 104,
+        "A5": 105,
+        "B1": 201,
+        "B2": 202,
+        "B3": 203,
+        "B4": 204,
+        "B5": 205,
+        "C1": 301,
+        "C2": 302,
+        "C3": 303,
+        "C4": 304,
+        "C5": 305,
+        "D1": 401,
+        "D2": 402,
+        "D3": 403,
+        "D4": 404,
+        "D5": 405,
+        "E1": 501,
+        "E2": 502,
+        "E3": 503,
+        "E4": 504,
+        "E5": 505,
+        "F1": 601,
+        "F2": 602,
+        "F3": 603,
+        "F4": 604,
+        "F5": 605,
+        "G1": 701,
+        "G2": 702,
+        "G3": 703,
+        "G4": 704,
+        "G5": 705,
+        "H1": 801,
+        "H2": 802,
+        "H3": 803,
+        "H4": 804,
+        "H5": 805,
+        "I1": 901,
+        "I2": 902,
+        "I3": 903,
+        "I4": 904,
+        "I5": 905,
+        "J1": 1001,
+        "J2": 1002,
+        "J3": 1003,
+        "J4": 1004,
+        "J5": 1005
+      }
+    }
+  ],
+  "names": {
+    "Rel": "=Data!E1"
+  },
+  "sheet_ops": [
+    {
+      "op": "insert_column",
+      "sheet": "Data",
+      "column": "C"
+    }
+  ],
+  "check": [
+    "Calc!A1",
+    "Calc!A3"
+  ],
+  "expected": {}
+}

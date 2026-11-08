@@ -1832,13 +1832,18 @@ miss's `#N/A` (A13:A14) and `{2;3}` `#VALUE!` twice (A10:A11), all hits with a r
 (A16:A17), all misses with "x" too (A19:A20), a 1x1 `{2}` a 1x1 `#VALUE!` (A22:C22), a 1x2 `{2,3}` a 1x2 result
 (A28:C28), and SUMIF's sum_range, COUNTIFS and AVERAGEIF lift the same way (A31:A38). A scalar lookup is the
 reference it picks: `COUNTIF(XLOOKUP(2,..,"x"),">0")` is 1 (A25). An array criterion beside the grid broadcasts,
-2x2 for `{">0",">5"}` (A40:C40; ours a 2x1, T-4826). A workbook with COUNTIF over `SEQUENCE(2)`, `A1:A2+0` or
+2x2 for `{">0",">5"}` (A40:C40). With
+room to spill every element is `#VALUE!`, since a hit is a value, not a reference: COUNTIF 2x2, SUMIF 2x2, COUNTIFS
+2x2, and a 2x1 criteria array beside the 2x1 grid a 2x1 (`INDEX(..,2,2)` `#VALUE!`; ROWS and COLUMNS 2x2 and 2x1;
+probes/t4826-criteria-array-beside-grid, excel-graph, 2026-11-08). Matched since T-4826
+(`PerElement::broadcasts_criteria`, which pairs each grid element with the criterion at its broadcast position;
+since every element is `#VALUE!` here, that pairing is UNVERIFIED: a grid of references would show it). A workbook with COUNTIF over `SEQUENCE(2)`, `A1:A2+0` or
 `SORT(A1:A2)` as its range failed to open on Excel for the web (createSession 501 unsupportedWorkbook), so those
 forms are not probed and no cell says what COUNTIF gives for a computed array as its range (desktop question, M14
 Phase 4). A COUNTIF or SUMIF over an XLOOKUP lifted only by match_mode or search_mode gives the same array of
 `#VALUE!` as a lookup_value lift (probes/t4863-xlookup-mode-lift-criteria, excel-graph, 2026-11-07, T-4863):
 `COUNTIF(XLOOKUP(2,A1:A3,B1:B3,"x",{0;1}),">0")` is a 2x1 of `#VALUE!`, `{0,1}` a 1x2, `{0}` a scalar `#VALUE!`;
-a range if_not_found does not lift (`COUNTIF(XLOOKUP(9,..,G1:G2),">0")` 2). Ours is a scalar for the mode-only lifts (T-5037). TAKE and DROP keep the shape
+a range if_not_found does not lift (`COUNTIF(XLOOKUP(9,..,G1:G2),">0")` 2). Matched since T-5037 (the static shape broadcasts lookup_value, match_mode and search_mode). TAKE and DROP keep the shape
 and match (A13:C22).
 RANK, RANK.EQ and RANK.AVG over a lifted OFFSET or INDIRECT `ref` (probes/t4801-rank-lifted-offset-indirect, excel-graph,
 2026-11-07, T-4801; Data A1:A3 = 5,8,2, B1:B3 = 9,5,1; 27 probes on the references' own sheet and the same 27 off-sheet,

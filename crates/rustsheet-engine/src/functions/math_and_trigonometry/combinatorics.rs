@@ -28,7 +28,7 @@ impl Model {
     pub(crate) fn fn_factdouble(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         // A LET or LAMBDA omission is the `ToolPak` `#N/A` (`LET(e,,FACTDOUBLE(e))`;
         // probes/t4923-sqrtpi-factdouble-omitted A3, A4; T-4923).
-        let empty = self.empty_arguments::<1>(args);
+        let empty = self.empty_arguments::<1>(args, cell);
         self.lift_call(Function::Factdouble, args, cell, &mut |model, values| {
             let [number] = values else {
                 return CalcResult::new_args_number_error(cell);

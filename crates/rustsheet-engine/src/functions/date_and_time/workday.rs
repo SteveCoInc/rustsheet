@@ -98,7 +98,7 @@ impl Model {
         holidays_at: usize,
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        let empty = self.empty_arguments::<2>(args);
+        let empty = self.empty_arguments::<2>(args, cell);
         let holidays_arg = match self.holidays_arg(args, holidays_at, cell) {
             Ok(arg) => arg,
             Err(error) => return error,

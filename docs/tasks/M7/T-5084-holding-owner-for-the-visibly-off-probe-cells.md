@@ -46,3 +46,9 @@ This task holds the cells that no open task owned at main b84a7256 (2026-11-08).
 ## Out of scope
 - New work on the superseded decision 0329 cells (Excel's later fill is the target, decision 0329).
 - Decision 0358: the decision 0329 superseded cells this task held (gen-m9/e85d A35, t2436/e85d A31, A46, t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26) are scored against their refills and pass.
+
+## Outcome
+- 2026-11-08 (T-4912): the 24 written-empty-branch cells are fixed and leave eval/baseline:
+  probes/t4901-mround-blank-let-lambda-roundings Calc!A3, A10, A12, A13, A14, A15, A16 and
+  probes/t5067-written-empty-branch-wrappers Calc!A1, A2, A3, A11, A12, A14, A15, A16, A20, A21, A22, A23, A24,
+  A25, A26, A28, A29. The t4974 cells stay here; the decision 0329 cells pass under decision 0358.

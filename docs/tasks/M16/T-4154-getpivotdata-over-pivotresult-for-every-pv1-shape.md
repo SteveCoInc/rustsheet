@@ -49,3 +49,11 @@ axis that holds two or more fields (SPEC-0015 unknown 10); a boolean or number i
 
 ## Out of scope
 - Show-as values in GETPIVOTDATA (PV2).
+
+## Progress
+The M6 probe-cell PR moved GETPIVOTDATA onto the `PivotResult` (`pivot_index.rs`, `getpivotdata.rs`). Fixed:
+probes/t4130-pivot-spill-getpivotdata Q!B1:B2, Q!B4, Q!B6; probes/t4170-pivot-date-levels and -manual-groups every
+listed cell; every listed pivot-export cell of t4177-date-levels, -manual-groups, -grouped-cache, -api-items, -api-items-refresh
+and -api-spill-refresh. Decision 0356 hands eight t4177-date-flags-needed cells, which passed only by accident, to
+T-4941. Left: GETPIVOTDATA on a saved render (T-4806).
+

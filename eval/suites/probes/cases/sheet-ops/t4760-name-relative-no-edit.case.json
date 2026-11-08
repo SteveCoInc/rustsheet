@@ -1,0 +1,44 @@
+{
+  "format": "rustsheet-case/v1",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe"
+  ],
+  "description": "T-4760: control for t4747-name-relative-*: workbook name Rel = =Data!A5 (relative; file text anchored at A1) used from Calc!A1 and Calc!A3, no edit (Data!An = n*10). Prediction: A1 50 (Data!A5), A3 70 (Data!A7).",
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=Rel",
+        "A3": "=Rel"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A1": 10,
+        "A2": 20,
+        "A3": 30,
+        "A4": 40,
+        "A5": 50,
+        "A6": 60,
+        "A7": 70,
+        "A8": 80,
+        "A9": 90,
+        "A10": 100,
+        "A11": 110,
+        "A12": 120
+      }
+    }
+  ],
+  "names": {
+    "Rel": "=Data!A5"
+  },
+  "check": [
+    "Calc!A1",
+    "Calc!A3"
+  ],
+  "expected": {}
+}

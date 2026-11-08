@@ -49,3 +49,13 @@ pub struct Area {
     pub width: i32,
     pub height: i32,
 }
+
+impl Area {
+    /// Whether (row, column) is one of the area's cells (its sheet is not compared).
+    pub fn contains(&self, row: i32, column: i32) -> bool {
+        row >= self.row
+            && row < self.row + self.height
+            && column >= self.column
+            && column < self.column + self.width
+    }
+}

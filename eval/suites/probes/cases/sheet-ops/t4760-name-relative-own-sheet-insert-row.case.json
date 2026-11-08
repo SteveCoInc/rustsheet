@@ -1,0 +1,72 @@
+{
+  "format": "rustsheet-case/v1",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe"
+  ],
+  "description": "T-4760: workbook name Rel = =Data!A5 (relative, anchored at A1) used from the edited sheet itself, Data!C2 and Data!C20 (Data!Cn = n*10 elsewhere), after insert_row 4 on Data; C20 moves to C21. Prediction if the name does not move (t4747): C2 50 (Data!C6 = old C5), C21 240 (Data!C25 = old C24). If it shifts to A6: C2 60, C21 250.",
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "C1": 10,
+        "C3": 30,
+        "C4": 40,
+        "C5": 50,
+        "C6": 60,
+        "C7": 70,
+        "C8": 80,
+        "C9": 90,
+        "C10": 100,
+        "C11": 110,
+        "C12": 120,
+        "C13": 130,
+        "C14": 140,
+        "C15": 150,
+        "C16": 160,
+        "C17": 170,
+        "C18": 180,
+        "C19": 190,
+        "C21": 210,
+        "C22": 220,
+        "C23": 230,
+        "C24": 240,
+        "C25": 250,
+        "C26": 260,
+        "C27": 270,
+        "C28": 280,
+        "C29": 290,
+        "C30": 300,
+        "C31": 310,
+        "C32": 320,
+        "C33": 330,
+        "C34": 340,
+        "C35": 350,
+        "C36": 360,
+        "C37": 370,
+        "C38": 380,
+        "C39": 390,
+        "C40": 400,
+        "C2": "=Rel",
+        "C20": "=Rel"
+      }
+    }
+  ],
+  "names": {
+    "Rel": "=Data!A5"
+  },
+  "sheet_ops": [
+    {
+      "op": "insert_row",
+      "sheet": "Data",
+      "row": 4
+    }
+  ],
+  "check": [
+    "Data!C2",
+    "Data!C21"
+  ],
+  "expected": {}
+}

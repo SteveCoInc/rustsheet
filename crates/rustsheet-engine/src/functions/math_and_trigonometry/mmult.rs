@@ -2,6 +2,7 @@
 #![expect(clippy::many_single_char_names)]
 // LINT-DEBT-END
 use super::matrix::coerce_to_f64;
+use crate::area_budget::multiply_add_units;
 use crate::{
     calc_result::CalcResult,
     expressions::{
@@ -114,6 +115,11 @@ impl Model {
         // results above 1,048,576 cells"; T-1786).
         if let Some((error, message)) = check_array_size(m, n) {
             return CalcResult::new_error(error, cell, message);
+        }
+        // The product is m·k·n multiply-adds: a 1024 x 16384 times 16384 x 1024 product is
+        // within the array limit but 1.7E+10 operations, so it is charged before it runs.
+        if let Err(error) = self.spend_work(multiply_add_units(&[m, k, n]), cell) {
+            return error;
         }
 
         let mut result: Vec<Vec<ArrayNode>> = Vec::with_capacity(m);
