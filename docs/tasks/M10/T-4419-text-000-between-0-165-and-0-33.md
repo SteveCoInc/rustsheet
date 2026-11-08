@@ -68,13 +68,18 @@ that band the 2^-72-day offset of T-4389 is exactly half an ulp of the serial.
   [s].000, mm:ss.000 and h:mm:ss.000. Every tie switches at the same n under all five formats, so the decision depends
   only on the value, not on the field path.
 - probes/t4419-band-dense (excel-graph, 1,148 cells): every tie k+0.5 ms, k = 165..328, at n = -16..-10 under s.000.
-  All 164 ties switch exactly once (docs/research/t4419/dense.py). The engine gets 1,035. As a fresh test, the chains
-  found on band-flip score no better: x/(1/24)*60*60*1000 (168 of band-flip's 169) gets 1,085. The best of the families
-  searched in uncommitted runs gets 1,094. Those families were products of 24, 60, 60 and 1000 in any order, with *f or
-  /(1/f), half steps in days and cuts, and directed rounding per step at 53 or 64 bits.
-- struct.py: the threshold sits in the exact-tie frame (slope -1.23 on the tie double's offset), 13.84 x-ulps below the
+  All 164 ties switch exactly once (docs/research/t4419/dense.py). The engine gets 1,035.
+- docs/research/t4419/family_search.py scores every family searched on both probes. The chains found on band-flip
+  score no better on the fresh dense probe: x/(1/24)*60*60*1000 gets 168 of band-flip's 169 but 1,085 of 1,148. The
+  best on dense is x/(1/24)*3600*1000 at 1,094 (166 on band-flip). The best of each family on dense:
+  - ops (24, 60, 60, 1000 in any order, each `*f` or `/(1/f)`): 1,089;
+  - grouped products: 1,094;
+  - directed rounding per step at 53 or 64 bits: 1,094;
+  - a half step in days plus a cut: 1,005.
+- threshold_structure.py: the threshold sits close to the exact-tie frame (slope -1.23 on the tie double's offset,
+  where a purely exact frame would give -1), 13.84 x-ulps below the
   tie on average (sd 0.69). Within runs of k it drifts linearly, then resets.
 - features.py: a constant threshold fits 100 of the 164 tie windows. Rounding errors of doubles built from k, or of the
   products at the tie, add at most 1, so the scatter is per-value arithmetic not yet identified.
-- The owner paused the research on 2026-11-08. These cells stay known failures owned here, and the foundational gate
-  stays unmet until the rule is found.
+- The owner paused the research on 2026-11-08. The task stays `todo` on purpose, as the open owner of these cells:
+  they stay known failures owned here, and the foundational gate stays unmet until the rule is found.
