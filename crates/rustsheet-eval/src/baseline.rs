@@ -295,6 +295,52 @@ impl Delta {
     }
 }
 
+/// One suite's summary lines for `check` and `update-baseline`: its counts, then each
+/// regression and drift item (decision 0355 item 6), at most 25 of each.
+#[must_use]
+pub fn summary(name: &str, old: &Baseline, current: &Baseline, delta: &Delta) -> Vec<String> {
+    let mut lines = vec![format!(
+        "[{name}] known failures {} -> {} ({} -> {} outside the envelope), text {} -> {}, layout {} -> {}  (fixed {}, into envelope {}, drift {}, new-coverage failures {}, REGRESSIONS {}, new cases {}, removed cases {})",
+        old.failing.len(),
+        current.failing.len(),
+        old.outside_items().len(),
+        current.outside_items().len(),
+        old.text_failing.len(),
+        current.text_failing.len(),
+        old.layout_failing.len(),
+        current.layout_failing.len(),
+        delta.fixed.len(),
+        delta.into_envelope.len(),
+        delta.drift.len(),
+        delta.new_failures.len(),
+        delta.regressions.len(),
+        delta.new_cases.len(),
+        delta.removed_cases.len()
+    )];
+    lines.extend(
+        delta
+            .regressions
+            .iter()
+            .take(25)
+            .map(|r| format!("  REGRESSION {r}")),
+    );
+    // Drift is allowed, but each item is shown: the baseline's diff carries all of them.
+    lines.extend(
+        delta
+            .drift
+            .iter()
+            .take(25)
+            .map(|d| format!("  drift {}", d.replacen('\t', " ", 1))),
+    );
+    if delta.drift.len() > 25 {
+        lines.push(format!(
+            "  ... and {} more drift items (the baseline's diff lists them)",
+            delta.drift.len() - 25
+        ));
+    }
+    lines
+}
+
 /// Compares the committed baseline with the current run: values against the envelope, then
 /// displayed text, whose labels carry a `text ` prefix on the item (decision 0070), then pivot
 /// layouts, `layout ` (T-4944). Text and layout are exact: every failure of theirs is outside.

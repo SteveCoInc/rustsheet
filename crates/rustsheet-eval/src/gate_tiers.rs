@@ -382,6 +382,57 @@ pub fn judge(lock: &Lock, tiers: &[Tier], update: Option<bool>) -> (bool, Judgem
     )
 }
 
+/// Holds the run's `tiers` to [`LOCK_PATH`] under `root`, recording them on update (`update`
+/// is whether `--allow-regressions` was given) as [`judge`] allows: whether the gate passes,
+/// and the lines `check` prints.
+///
+/// # Errors
+/// When the lock cannot be read or written.
+pub fn gate(
+    root: &Path,
+    tiers: &[Tier],
+    update: Option<bool>,
+) -> Result<(bool, Vec<String>), LockError> {
+    let lock = Lock::read(root)?;
+    let mut lines = vec![
+        "usage tiers on the vendored gated suites (decision 0355; the full report's tiers are the exit measure):"
+            .to_string(),
+    ];
+    lines.extend(tiers.iter().map(|t| format!("  {}", t.line())));
+    let (holds, judgement) = judge(&lock, tiers, update);
+    lines.extend(judgement.regressions.iter().map(|usage| {
+        format!(
+            "  REGRESSION usage tier {}: {LOCK_PATH} records it met",
+            usage_name(*usage)
+        )
+    }));
+    if !judgement.regressions.is_empty() && update == Some(false) {
+        lines.push("  refusing to record a tier unmet without --allow-regressions".into());
+    }
+    if update.is_none() && judgement.out_of_date && judgement.regressions.is_empty() {
+        lines.push(format!(
+            "  {LOCK_PATH} is out of date: run `make eval-baseline` and commit eval/baseline/"
+        ));
+    }
+    if let Some(next) = &judgement.record {
+        next.write(root)?;
+        lines.push(format!("  updated {LOCK_PATH}: commit it"));
+    } else if update.is_some()
+        && holds
+        && std::fs::read_to_string(root.join(LOCK_PATH))
+            .ok()
+            .as_deref()
+            != Some(lock.render().as_str())
+    {
+        // As for the visible-parity lock: only the tool writes the file, in canonical form.
+        lock.write(root)?;
+        lines.push(format!(
+            "  rewrote {LOCK_PATH} in canonical form: commit it"
+        ));
+    }
+    Ok((holds, lines))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -627,5 +678,28 @@ mod tests {
         assert_eq!(committed.met.len(), 2);
         let text = std::fs::read_to_string(root.join(LOCK_PATH)).unwrap();
         assert_eq!(committed.render(), text);
+    }
+
+    /// The gate on disk: `check` fails a missing lock, `update-baseline` writes it, and a flip
+    /// from met to unmet is refused until `--allow-regressions` records it.
+    #[test]
+    fn the_gate_reads_and_writes_the_lock() {
+        let root = std::env::temp_dir().join(format!("tier-lock-{}", std::process::id()));
+        std::fs::create_dir_all(root.join("eval/baseline")).unwrap();
+        let (holds, lines) = gate(&root, &run(true, false), None).unwrap();
+        assert!(!holds);
+        assert!(lines.iter().any(|l| l.contains("out of date")), "{lines:?}");
+        assert!(gate(&root, &run(true, false), Some(false)).unwrap().0);
+        assert_eq!(Lock::read(&root).unwrap(), lock(true, false));
+        assert!(gate(&root, &run(true, false), None).unwrap().0);
+        let (holds, lines) = gate(&root, &run(false, false), Some(false)).unwrap();
+        assert!(!holds);
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("REGRESSION usage tier foundational")));
+        assert_eq!(Lock::read(&root).unwrap(), lock(true, false));
+        assert!(gate(&root, &run(false, false), Some(true)).unwrap().0);
+        assert_eq!(Lock::read(&root).unwrap(), lock(false, false));
+        std::fs::remove_dir_all(&root).unwrap();
     }
 }

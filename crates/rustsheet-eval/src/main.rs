@@ -521,88 +521,6 @@ fn visible_parity_gate(
     Ok(judgement.holds())
 }
 
-/// Prints one suite's baseline summary: its counts, each regression and the drift items (decision
-/// 0355 item 6), at most 25 of each.
-fn print_delta(name: &str, old: &Baseline, current: &Baseline, delta: &baseline::Delta) {
-    println!(
-        "[{name}] known failures {} -> {} ({} -> {} outside the envelope), text {} -> {}, layout {} -> {}  (fixed {}, into envelope {}, drift {}, new-coverage failures {}, REGRESSIONS {}, new cases {}, removed cases {})",
-        old.failing.len(),
-        current.failing.len(),
-        old.outside_items().len(),
-        current.outside_items().len(),
-        old.text_failing.len(),
-        current.text_failing.len(),
-        old.layout_failing.len(),
-        current.layout_failing.len(),
-        delta.fixed.len(),
-        delta.into_envelope.len(),
-        delta.drift.len(),
-        delta.new_failures.len(),
-        delta.regressions.len(),
-        delta.new_cases.len(),
-        delta.removed_cases.len()
-    );
-    for r in delta.regressions.iter().take(25) {
-        println!("  REGRESSION {r}");
-    }
-    // Drift is allowed, but each item is shown: the baseline's diff carries all of them.
-    for d in delta.drift.iter().take(25) {
-        println!("  drift {}", d.replacen('\t', " ", 1));
-    }
-    if delta.drift.len() > 25 {
-        println!(
-            "  ... and {} more drift items (the baseline's diff lists them)",
-            delta.drift.len() - 25
-        );
-    }
-}
-
-/// Holds the vendored gated suites' usage tiers to [`gate_tiers::LOCK_PATH`], recording them on
-/// update (`allow_regressions` given) as [`gate_tiers::judge`] allows (decision 0355 item 6);
-/// returns whether the gate passes.
-fn tier_gate(
-    root: &Path,
-    tiers: &[gate_tiers::Tier],
-    allow_regressions: Option<bool>,
-) -> Result<bool> {
-    use gate_tiers::{Lock, LOCK_PATH};
-    let lock = Lock::read(root)?;
-    println!("usage tiers on the vendored gated suites (decision 0355; the full report's tiers are the exit measure):");
-    for t in tiers {
-        println!("  {}", t.line());
-    }
-    let (holds, judgement) = gate_tiers::judge(&lock, tiers, allow_regressions);
-    for usage in &judgement.regressions {
-        println!(
-            "  REGRESSION usage tier {}: {LOCK_PATH} records it met",
-            gate_tiers::usage_name(*usage)
-        );
-    }
-    if !judgement.regressions.is_empty() && allow_regressions == Some(false) {
-        println!("  refusing to record a tier unmet without --allow-regressions");
-    }
-    if allow_regressions.is_none() && judgement.out_of_date && judgement.regressions.is_empty() {
-        println!(
-            "  {LOCK_PATH} is out of date: run `make eval-baseline` and commit eval/baseline/"
-        );
-    }
-    if let Some(next) = &judgement.record {
-        next.write(root)?;
-        println!("  updated {LOCK_PATH}: commit it");
-    } else if allow_regressions.is_some()
-        && holds
-        && std::fs::read_to_string(root.join(LOCK_PATH))
-            .ok()
-            .as_deref()
-            != Some(lock.render().as_str())
-    {
-        // As for the visible-parity lock: only the tool writes the file, in canonical form.
-        lock.write(root)?;
-        println!("  rewrote {LOCK_PATH} in canonical form: commit it");
-    }
-    Ok(holds)
-}
-
 /// The baseline gate (`update` `None`) or the baseline ratchet; with `floor`, also the evidence
 /// floor judged from the same run, so `check --evidence-floor` passes exactly when `check` and
 /// `evidence-floor` both pass (T-2761).
@@ -673,7 +591,9 @@ fn cmd_check(
             }
         }
         let delta = baseline::diff(&old, &current);
-        print_delta(name, &old, &current, &delta);
+        for line in baseline::summary(name, &old, &current, &delta) {
+            println!("{line}");
+        }
         match update {
             None => {
                 if delta.is_dirty() {
@@ -705,9 +625,11 @@ fn cmd_check(
         });
         let cells = gate_tiers::function_cells(&catalog, vendored, &milestones.phase1_exceptions);
         let tiers = gate_tiers::tiers(&catalog, &cells);
-        if !tier_gate(root, &tiers, update.map(|u| u.allow_regressions))? {
-            failed = true;
+        let (holds, lines) = gate_tiers::gate(root, &tiers, update.map(|u| u.allow_regressions))?;
+        for line in &lines {
+            println!("{line}");
         }
+        failed |= !holds;
     }
     if let Some(floor_results) = floor_results {
         if !evidence_floor_gate(root, &catalog, &floor_results, false, false)? {
