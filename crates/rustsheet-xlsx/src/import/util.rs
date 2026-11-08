@@ -143,7 +143,7 @@ pub(super) fn parse_bool_with_default(value: Option<&str>, default: bool) -> boo
 
 /// An `xsd:boolean` literal, exactly: `1` or `true` is true, `0` or `false` false, anything else
 /// (`TRUE`, padding, `yes`) `None`, as SPEC-0005 reads `date1904` (`"TRUE"` is 1900,
-/// tests/date_system.rs). Every `xsd:boolean` attribute the importer reads goes through it
+/// `tests/date_system.rs`). Every `xsd:boolean` attribute the importer reads goes through it
 /// (T-4853); [`parse_bool_with_default`]'s style attributes first trim and lower-case the value
 /// (the lenient read above), and a `t="b"` cell's value is [`cell_boolean`]'s, not this.
 pub(super) fn xsd_boolean(value: &str) -> Option<bool> {
