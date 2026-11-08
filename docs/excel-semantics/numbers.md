@@ -970,9 +970,15 @@ IM* parts and fraction digits cut **away from zero**, unlike number text: `COMPL
 "1000000000000030 1/2" and `TEXT(-(1E+15+15.5),"# ?/?")` "-1000000000000020 1/2", while `TEXT(1E+15+25.5,"0")` is
 "1000000000000030" by the shown-place rounding (probes/t4848-tie-fraction-format, 15 cells; excel-graph, 2026-11-08). These
 fraction cells do not tell a cut of the integer part from a cut of the whole value; both give away from zero.
-UNVERIFIED (T-5068): the tie direction of number-cell text and printed literals (`to_excel_precision_str`, toward zero),
-the scientific-format mantissa (toward zero; the probes reach no tie there), comma-scaled fraction values (away, by analogy),
-pivot number-group quotients (toward zero) and conditional-format Equal (it shares `cmp_excel_precision`, away).
+The scientific-format mantissa cuts **toward zero**: `TEXT(1E+15+15,"0.00000000000000E+00")` is "1.00000000000001E+15",
+`1E+15+25` "1.00000000000002E+15", `-(1E+15+15)` "-1.00000000000001E+15", `1E+14+1.5` "1.00000000000001E+14", `1E+14+2.5`
+"1.00000000000002E+14" (away from zero would give ...02, ...03, ...02, ...02, ...03; probes/t5068-tie-number-text-mantissa,
+10 cells, excel-graph, 2026-11-08, T-5068; the engine already matched). UNREACHABLE by any oracle (T-5068): number-cell text
+and printed formula literals (`to_excel_precision_str`: excel-graph's General `text` of `1E+15+15` is "1E+15", with no 16th
+digit, and `Range.Formula` of a value cell is the number), comma-scaled fraction values (`x/1000` is an exact 16-digit tie only
+for x = 500 times an odd number near 1E+17, which needs a multiple of 16 that such x never is), pivot number-group quotients
+(no pivot oracle reads a 16-digit quotient tie) and conditional-format Equal (a CF rule's outcome is a format, which no
+backend returns). These keep today's directions (toward zero, away, toward zero and away) without evidence.
 Status: VERIFIED (the probed operations)
 Implemented in: `cut_to_15_digits` (decimal_round.rs), the one 15-digit cut. It cuts away from zero in `cmp_excel_precision`
 (number_format.rs), the IM* part pre-cut (complex/parse.rs) and fraction digits (formatter/fraction.rs). It cuts toward zero

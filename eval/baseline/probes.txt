@@ -2760,6 +2760,7 @@ C	probes/t4903-empty-arg-quotient-seriessum-lift.case.json	8
 C	probes/t4923-sqrtpi-factdouble-omitted.case.json	13
 C	probes/t4928-iseven-isodd-omitted.case.json	12
 C	probes/t5067-written-empty-branch-wrappers.case.json	32
+C	probes/t5068-tie-number-text-mantissa.case.json	15
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -10263,5 +10264,6 @@ TC	probes/t4767-pivot-record-tuples.case.json	40
 TC	probes/t4767-pivot-slicers.case.json	46
 TC	probes/t4767-pivot-timelines.case.json	40
 TC	probes/t4848-sixteenth-digit-ties.case.json	7
+TC	probes/t5068-tie-number-text-mantissa.case.json	5
 TC	probes/typed-mixed-fraction-number-format.case.json	31
 TF	probes/t4699-pivot-blank-collapsed.case.json	CV4!C3

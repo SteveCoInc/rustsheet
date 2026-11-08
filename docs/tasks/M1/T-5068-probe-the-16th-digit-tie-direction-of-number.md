@@ -3,7 +3,7 @@ id: T-5068
 title: "Probe the 16th-digit tie direction of number-cell text, the scientific mantissa, comma-scaled fractions and pivot number groups (T-4848 follow-up)"
 milestone: M1
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,3 +31,8 @@ t4848-tie-fraction-format). numbers.md "A 16th-digit tie splits by use" still li
 
 ## Out of scope
 -
+
+## Outcome
+Probed probes/t5068-tie-number-text-mantissa (15 cells, excel-graph): the scientific mantissa cuts a 16th-digit tie toward
+zero, as the engine already does (no code change; eval delta 0). The other four items cannot be reached by any oracle backend
+(reasons in numbers.md "A 16th-digit tie splits by use"), so they are noted as unreachable and keep their current direction.
