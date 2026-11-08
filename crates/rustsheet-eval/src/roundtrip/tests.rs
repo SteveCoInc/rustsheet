@@ -264,16 +264,16 @@ fn a_new_loss_in_an_unchanged_case_is_a_regression() {
         item("/b[0]", Verdict::Lost),
     ]);
     let delta = baseline::diff(
-        &baseline(&[&before], BaselineMode::Cells),
-        &baseline(&[&after], BaselineMode::Cells),
+        &by_scenario::baseline(&[&before], BaselineMode::Cells),
+        &by_scenario::baseline(&[&after], BaselineMode::Cells),
     );
     assert_eq!(
         delta.regressions,
-        vec!["rt/a.xlsx\tR0 part /b[0] lost".to_string()]
+        vec!["rt/a.xlsx#R0\tR0 part /b[0] lost".to_string()]
     );
     let fixed = baseline::diff(
-        &baseline(&[&after], BaselineMode::Cells),
-        &baseline(&[&before], BaselineMode::Cells),
+        &by_scenario::baseline(&[&after], BaselineMode::Cells),
+        &by_scenario::baseline(&[&before], BaselineMode::Cells),
     );
     assert_eq!(fixed.fixed.len(), 1);
 }
@@ -309,7 +309,7 @@ fn lossy(checked: usize, lost: &[(&str, usize)]) -> CaseResult {
 }
 
 fn cases(c: &CaseResult) -> Baseline {
-    baseline(&[c], BaselineMode::Cases)
+    by_scenario::baseline(&[c], BaselineMode::Cases)
 }
 
 #[test]
@@ -365,12 +365,12 @@ fn a_round_trip_that_compares_less_or_stops_running_regresses() {
         ..lossy(100, &[])
     };
     for mode in [BaselineMode::Cases, BaselineMode::Cells] {
-        let before = baseline(&[&lossy(100, &[("/a", 1)])], mode);
-        let after = baseline(&[&errored], mode);
+        let before = by_scenario::baseline(&[&lossy(100, &[("/a", 1)])], mode);
+        let after = by_scenario::baseline(&[&errored], mode);
         let delta = diff(&before, &after);
         assert_eq!(
             delta.regressions,
-            vec!["rt/a.xlsx\t!EngineError".to_string()],
+            vec!["rt/a.xlsx#R0\t!EngineError".to_string()],
             "{mode:?}"
         );
     }

@@ -3,7 +3,7 @@ id: T-5046
 title: "Drop the round-trip ratchet's legacy per-case baseline path now every baseline is keyed by scenario"
 milestone: M16
 lane: harness
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -23,12 +23,23 @@ next reader must reason about. `docs/process/quality-gates.md`'s round-trip row 
 less", which decision 0345 made per case and scenario. #4007 promised this follow-up.
 
 ## Acceptance criteria
-- [ ] `roundtrip.rs` judges every baseline per case and scenario; `is_legacy` and the per-case `baseline` (with
+- [x] `roundtrip.rs` judges every baseline per case and scenario; `is_legacy` and the per-case `baseline` (with
       its tests that exist only for the migration) are gone or kept only where a remaining caller needs them,
       and a baseline without `#` keys is refused with a clear error rather than judged per case.
-- [ ] `docs/process/quality-gates.md`'s round-trip row says a case's scenario may not compare less or stop running.
-- [ ] `rustsheet-eval roundtrip --check` passes unchanged on every committed baseline.
-- [ ] `make check` green; reviewers approve.
+- [x] `docs/process/quality-gates.md`'s round-trip row says a case's scenario may not compare less or stop running.
+- [x] `rustsheet-eval roundtrip --check` passes unchanged on every committed baseline.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Changing the cells-mode suites' per-case rule (decision 0345 keeps it).
+
+## Outcome
+- `roundtrip::baseline` (the per-case form) and `by_scenario::is_legacy` are gone. The ratchet writes and judges
+  every round-trip baseline with `by_scenario::baseline`, whose doc now carries the `cells` and `cases` rules.
+- `roundtrip::read_baseline` refuses a committed baseline with a key without `#`, naming the file and the key
+  (`by_scenario::per_case_key`), rather than judging it per case. A unit test covers a `C` key and an `F` key.
+- The tests that compared the old rule with the new one went with it. The round-trip tests now build their
+  baselines per scenario, so their regression keys read `rt/a.xlsx#R0`.
+- `docs/process/quality-gates.md`'s round-trip row says a case's scenario may not compare less or stop running.
+  Decision 0345 gains a Consequences bullet (the governance record for that protected file).
+- `rustsheet-eval roundtrip --check` passes unchanged on every committed round-trip baseline.

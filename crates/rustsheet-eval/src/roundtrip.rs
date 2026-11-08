@@ -525,40 +525,18 @@ fn rates_line(results: &[&CaseResult]) -> String {
     parts.join(", ")
 }
 
-/// The results as a baseline (SPEC-0033 D8). A case that did not run is one `!Status` failure,
-/// as in the cell suites.
-///
-/// - `cells`: a case's checked count is the number of source items it compared, and each failing
-///   item is one known failure.
-/// - `cases`, for the corpora, whose item lists would make a baseline of tens of megabytes: a
-///   failing case is one line, `* <n> <digest>`. n weighs its failing items as [`KeptRate`] does,
-///   with at least 1 for each, and the digest names their set of keys; see [`diff`].
-#[must_use]
-pub fn baseline(results: &[&CaseResult], mode: BaselineMode) -> Baseline {
-    let mut b = Baseline::default();
-    if mode == BaselineMode::None {
-        return b;
+/// The committed round-trip baseline at `path`, refused if a key names no scenario: the
+/// per-case form T-4961 migrated away from (decision 0345, T-5046).
+fn read_baseline(path: &std::path::Path) -> anyhow::Result<Baseline> {
+    let old = Baseline::read(path)?;
+    if let Some(case) = by_scenario::per_case_key(&old) {
+        anyhow::bail!(
+            "{}: key `{case}` names no scenario (`<case>#<scenario>`, decision 0345); \
+             a per-case round-trip baseline is no longer read",
+            path.display()
+        );
     }
-    for r in results {
-        b.checked.insert(r.id.clone(), r.checked);
-        match r.status {
-            CaseStatus::Pass => {}
-            CaseStatus::Fail => {
-                let failing = r.items.iter().filter(|i| !i.verdict.passes());
-                if mode == BaselineMode::Cases {
-                    b.failing.insert((r.id.clone(), case_line(failing)));
-                } else {
-                    for i in failing {
-                        b.failing.insert((r.id.clone(), i.baseline_key()));
-                    }
-                }
-            }
-            other => {
-                b.failing.insert((r.id.clone(), format!("!{other:?}")));
-            }
-        }
-    }
-    b
+    Ok(old)
 }
 
 /// The item of a failing case in a `cases`-mode round-trip baseline, before its count.
@@ -820,9 +798,7 @@ pub fn command(
         let name = &suite.manifest.name;
         let mine: Vec<&CaseResult> = results.iter().filter(|r| &r.suite == name).collect();
         let rate = KeptRate::of(&mine);
-        // Written and judged per case and scenario (T-4961). A committed baseline still in the
-        // per-case form is judged per case once, so the re-record that migrates it accepts no
-        // regression the old rule refused.
+        // Written and judged per case and scenario (T-4961, decision 0345).
         let current = by_scenario::baseline(&mine, suite.manifest.baseline);
         lines.push(format!(
             "[{name}] {} cases ({} not scored), {} items, {}, {} failing",
@@ -836,12 +812,7 @@ pub fn command(
             continue;
         }
         let path = root.join("eval/baseline").join(format!("{name}.txt"));
-        let old = Baseline::read(&path)?;
-        let delta = if by_scenario::is_legacy(&old) {
-            diff(&old, &baseline(&mine, suite.manifest.baseline))
-        } else {
-            diff(&old, &current)
-        };
+        let delta = diff(&read_baseline(&path)?, &current);
         lines.extend(
             delta
                 .regressions

@@ -32,3 +32,7 @@
   - Cells-mode suites (`eval/baseline/<suite>.txt` for the cell suites) keep their per-case rule: there a changed
     checked-cell count really is changed coverage.
   - Baseline files are a little longer: one `C` line per scenario of each case.
+  - Once T-4961 had migrated every committed round-trip baseline, T-5046 removed the migration path:
+    `rustsheet-eval roundtrip` now refuses a baseline with a key without `#` (`by_scenario::per_case_key`) instead
+    of judging it per case, and `roundtrip::baseline` is gone. `docs/process/quality-gates.md`'s round-trip row
+    states the rule per case and scenario.

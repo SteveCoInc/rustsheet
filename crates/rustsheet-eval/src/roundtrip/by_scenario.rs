@@ -10,9 +10,8 @@
 //! checked count. A new scenario is a new key, new coverage. A regression in a scenario whose own
 //! count held stays a regression.
 //!
-//! A committed baseline written before this change has no `#` in its keys. It is judged against
-//! the old per-case form ([`super::baseline`]), so the first re-record that writes the new form
-//! accepts nothing the old rule refused.
+//! T-4961 migrated every committed baseline to this form. A baseline with a key without `#` is
+//! refused, not judged per case (T-5046).
 
 use std::collections::BTreeMap;
 
@@ -28,16 +27,25 @@ fn key(case: &str, scenario: &str) -> String {
     format!("{case}{SEPARATOR}{scenario}")
 }
 
-/// Whether `old` was written per case rather than per scenario: a key without `#`.
+/// The first key of `old` that names no scenario (no `#`), as a baseline written per case
+/// before T-4961 would have, which the ratchet refuses (T-5046).
 #[must_use]
-pub fn is_legacy(old: &Baseline) -> bool {
-    old.checked.keys().any(|case| !case.contains(SEPARATOR))
+pub fn per_case_key(old: &Baseline) -> Option<&str> {
+    (old.checked.keys())
+        .chain(old.failing.iter().map(|(case, _)| case))
+        .find(|case| !case.contains(SEPARATOR))
+        .map(String::as_str)
 }
 
-/// The results as a baseline with one key per case and scenario (module docs). Each key
-/// counts the items its scenario compared. A case that did not run is one `!Status` failure, on
-/// the first scenario it would have run (`R0`). Otherwise [`super::baseline`]'s rules apply per
-/// scenario.
+/// The results as a baseline (SPEC-0033 D8) with one key per case and scenario (module docs).
+/// Each key counts the items its scenario compared. A case that did not run is one `!Status`
+/// failure, as in the cell suites, on the first scenario it would have run (`R0`).
+///
+/// - `cells`: each failing item is one known failure.
+/// - `cases`, for the corpora, whose item lists would make a baseline of tens of megabytes: a
+///   failing scenario is one line, `* <n> <digest>`. n weighs its failing items as
+///   [`super::KeptRate`] does, with at least 1 for each, and the digest names their set of keys;
+///   see [`super::diff`].
 #[must_use]
 pub fn baseline(results: &[&CaseResult], mode: BaselineMode) -> Baseline {
     let mut b = Baseline::default();
@@ -133,14 +141,6 @@ mod tests {
         for mode in [BaselineMode::Cases, BaselineMode::Cells] {
             let before = case(&[("R0", 10)], Vec::new());
             let after = case(&[("R0", 10), ("R1", 12)], vec![item("R0", "/a/b")]);
-            let per_case = diff(
-                &super::super::baseline(&[&before], mode),
-                &super::super::baseline(&[&after], mode),
-            );
-            assert!(
-                per_case.regressions.is_empty(),
-                "the old rule's hole: {per_case:?}"
-            );
             let delta = diff(&baseline(&[&before], mode), &baseline(&[&after], mode));
             assert_eq!(delta.regressions.len(), 1, "{mode:?}: {delta:?}");
             assert!(
@@ -182,11 +182,15 @@ mod tests {
             .failing
             .iter()
             .all(|(c, line)| c == "poi/a.xlsx#R1" && line.starts_with("* 3 ")));
-        assert!(!is_legacy(&b));
-        assert!(is_legacy(&super::super::baseline(
-            &[&r],
-            BaselineMode::Cases
-        )));
+        assert_eq!(per_case_key(&b), None);
+        // A key without its scenario, as the per-case form wrote, is found and so refused.
+        let mut old = b.clone();
+        old.checked.insert("poi/b.xlsx".to_string(), 4);
+        assert_eq!(per_case_key(&old), Some("poi/b.xlsx"));
+        let mut old = b;
+        old.failing
+            .insert(("poi/c.xlsx".to_string(), "!Timeout".to_string()));
+        assert_eq!(per_case_key(&old), Some("poi/c.xlsx"));
     }
 
     #[test]
