@@ -108,6 +108,9 @@ def test_tiny_rate_interest_does_not_cancel() -> None:
         (RRI, (10, 0, 200)),
         (RRI, (1, -100, 200)),
         (RRI, (1e-5, 1, 2)),
+        (DOLLARDE, (1.5, 0)),  # T-4608: from 0 to 1 is #DIV/0!, below 0 #NUM!
+        (DOLLARDE, (1.5, 0.999)),
+        (DOLLARFR, (1.5, -1)),
     ],
 )
 def test_evidenced_domains(definition: Definition, args: Sequence[float]) -> None:
@@ -125,8 +128,6 @@ def test_evidenced_domains(definition: Definition, args: Sequence[float]) -> Non
         (EFFECT, (-0.05, 4)),
         (NOMINAL, (0.05, -4)),
         (RRI, (10, 0, 0)),
-        (DOLLARDE, (1.02, 0)),
-        (DOLLARFR, (1.02, -16)),
     ],
 )
 def test_unprobed_regions_have_no_value(definition: Definition, args: Sequence[float]) -> None:
@@ -142,6 +143,9 @@ def test_dollar_fractions() -> None:
     assert value(DOLLARDE, 123456789.123, 2) == pytest.approx(123456789.61499998, rel=1e-15)
     assert value(DOLLARDE, -1.02, 16) == -1.125
     assert value(DOLLARFR, 3.7, 1) == pytest.approx(3.7, rel=1e-15)
+    # T-4880: D follows the double log10, 10^15 at 1E15+1 and 10^300 at 1E300 (probes/t4608 A82, A27)
+    assert value(DOLLARDE, 1.5, 1e15 + 1) == pytest.approx(1.4999999999999996, rel=1e-15)
+    assert value(DOLLARDE, 1.5, 1e300) == 1.5
 
 
 @pytest.mark.parametrize("definition", ALL, ids=lambda d: d.function)

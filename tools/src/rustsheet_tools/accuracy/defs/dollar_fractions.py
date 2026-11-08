@@ -9,15 +9,19 @@ the eval cells: probes/fin-argument-modes H109, H113 and probes/scalar-lift-open
 `DOLLARDE(2.5,2)` 4.5), and the gen-m9 cells, such as `DOLLARDE(2.5,13)` 5.846153846153847 (D = 100 for F = 13) and
 `DOLLARFR(0.2,12)` 0.024000000000000004 (a few ulps from the math). financial.md "Financial function argument modes"
 and arrays.md list their argument lifting; the table's calls are scalar.
-Not drawn and given no math value (`NoValueError`), as no evidence names Excel's result: a fraction below 1 (Microsoft's
-documentation names `#NUM!` below 0 and `#DIV/0!` from 0 to 1, probes/t4608-dollarde-dollarfr-fraction-edges now does; the table does not draw them yet). A fraction past 1E9 is
-not drawn either: the t4608 probe shows D exact at 10^k + 1 for k up to 12, but a tenth of the math's at 10^15 + 1. Negative
+D is read off the double `log10` of the truncated fraction, as Excel does (probes/t4608-dollarde-dollarfr-fraction-edges,
+T-4880): exact at 10^k + 1 up to k = 12, but 10^15 at `1E15+1` (the double log10 rounds to 15) and 10^300 at 1E300,
+where the next power of ten above the double would be 10^301. A fraction below 0 is `#NUM!` and one from 0 up to but
+not including 1 is `#DIV/0!` (the checks run on the untruncated fraction; the probe's A1:B6), both drawn by the edges;
+fractions past 1E9 are drawn too, up to 1E300.
+Negative
 dollars are drawn with the integer part toward 0, which the table confirms: financial.md "DOLLARDE and DOLLARFR scale
 the fraction by the next power of ten (T-4110)" records it with the table's points.
 """
 
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Callable, Sequence
 
@@ -32,30 +36,31 @@ from rustsheet_tools.accuracy.defs._common import (
     trunc,
 )
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import Definition, MathArg, NoValueError, Param, register
+from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import decimal_literal, log_uniform
 
 MODES_SOURCE = "financial.md#financial-function-argument-modes"
 DOLLAR_SOURCE = "financial.md#dollarde-and-dollarfr-scale-the-fraction-by-the-next-power-of-ten-t-4110"
 LIFT_SOURCE = "arrays.md#scalar-arguments-lift-shapes-element-errors-and-the-analysis-toolpak-range-rule"
-FRACTION_TOP = 10**9  # the draws' largest fraction
+FRACTION_TOP = 10**9  # the log-uniform draws' largest fraction; the edges go to 1E300
 
 
 def next_power_of_ten(n: int) -> int:
-    """D: the smallest power of ten at or above `n` (1 for n <= 1)."""
-    power = 1
-    while power < n:
-        power *= 10
-    return power
+    """D: 10^ceil(log10 n) with Excel's double `log10` (1 for n <= 1): at or above `n` except where the double log10
+    rounds a power of ten plus a few units down (`1E15+1`, T-4880)."""
+    return 10 ** math.ceil(math.log10(float(n))) if n > 1 else 1
 
 
 def _split(args: Sequence[MathArg]) -> tuple[int, mpmath.mpf, int, int]:
     """(i, f, F, D) of a call: the dollar's integer part toward 0 and its fraction, the fraction F and the power of ten
     D at or above it."""
     x, fraction = real_args(args)
+    if fraction < 0:
+        msg = "a fraction below 0: #NUM!"
+        raise DomainError(msg)
     if fraction < 1:
-        msg = "a fraction below 1 (unprobed)"
-        raise NoValueError(msg)
+        msg = "a fraction from 0 up to 1: #DIV/0!"
+        raise DomainError(msg)
     whole = int(fraction)
     i = trunc(x)
     return i, x - i, whole, next_power_of_ten(whole)
@@ -118,6 +123,14 @@ EDGES: tuple[Shape, ...] = (
         rng.choice((1, 10, 100, 1000, 10**6)),
     ],
     lambda rng: [float(rng.randint(0, 10**6)), rng.randint(1, 100)],  # a whole dollar: itself
+    lambda rng: [  # a fraction below 1: #NUM! below 0, #DIV/0! from 0 to 1
+        rng.randint(0, 99) + decimal_literal(rng, 3, -1, 1.0),
+        rng.choice((-1, -0.5, 0, 0.3, 0.5, 0.999)),
+    ],
+    lambda rng: [  # a fraction past 1E9: D from the double log10
+        rng.randint(0, 99) + decimal_literal(rng, 3, -1, 1.0),
+        rng.choice((10**10 + 1, 10**12 + 1, 10**15 - 1, 1e15 + 1, 1e16, 1e300)),
+    ],
     lambda rng: [
         rng.randint(0, 99) + decimal_literal(rng, 4, -1, 1.0),
         rng.choice((9, 11, 99, 101, 999, 1001)),

@@ -3,7 +3,7 @@ id: T-4880
 title: "DOLLARDE/DOLLARFR math definition: model Excel's D at 10^15+1 (lower cut) and 1E300 (10^300), then draw fractions below 1 and past 1E9"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -28,3 +28,9 @@ The Gate A math definition for DOLLARDE and DOLLARFR (tools/src/rustsheet_tools/
 
 ## Out of scope
 -
+
+## Outcome
+`next_power_of_ten` in defs/dollar_fractions.py now uses `10^ceil(log10(float F))`, Excel's D (10^15 at `1E15+1`, 10^300 at
+1E300). Fractions below 0 (`#NUM!`) and from 0 to 1 (`#DIV/0!`) raise `DomainError` instead of `NoValueError`; the edge
+draws now include them and fractions past 1E9 (10^10+1 ... 1E300). The t4608 math sidecar was regenerated: all 138
+numeric cells agree with the oracle (error cells carry no sidecar value). Eval delta: none (no engine change).
