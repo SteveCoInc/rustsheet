@@ -29,8 +29,7 @@ use std::{
     io::{BufReader, Cursor, Read, Seek},
 };
 
-pub(crate) use xml::reference_of;
-use xml::XmlNode;
+pub(crate) use xml::{reference_of, XmlNode};
 
 use rustsheet_engine::{
     expressions::{
@@ -58,7 +57,10 @@ pub use workbook::date_system_from_attribute;
 use call_cap::refuse_too_many_calls;
 use external_links::load_external_books;
 use metadata::load_metadata;
-pub(crate) use package::{part_folder_and_rels, resolve_relative_target, resolve_target, Package};
+pub(crate) use package::{
+    is_rels, part_folder_and_rels, rels_owner_part, resolve_relative_target, resolve_target,
+    zip_entry_names, Package,
+};
 use pivots::{load_pivots, PivotSheet};
 use styles::load_styles;
 use util::get_attribute;
@@ -76,6 +78,12 @@ pub(crate) struct Relationship {
     pub(crate) rel_type: String,
     /// `TargetMode="External"`: the target is outside the package.
     pub(crate) external: bool,
+}
+
+/// The last segment of a relationship type (`…/relationships/drawing` → `drawing`), which names
+/// the kind whatever namespace defines it.
+pub(crate) fn rel_kind(rel_type: &str) -> &str {
+    rel_type.rsplit('/').next().unwrap_or(rel_type)
 }
 
 fn load_relationships<R: Read + Seek>(

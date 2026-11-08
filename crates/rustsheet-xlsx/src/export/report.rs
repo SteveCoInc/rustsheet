@@ -1,22 +1,15 @@
 //! What a save left out of the package, and why (SPEC-0033 D7, SPEC-0034 D4, T-4562).
 //!
-//! The report is coarse until stage 5 (SPEC-0034 D5):
-//! - a regenerated save names each source part of a relationship type the export does not model
-//!   and that it did not keep, one `NotPreserved` entry each, and calcChain as `Policy`;
-//! - a part of a modelled relationship type is assumed written. One the export cannot write (a
-//!   pivot cache `PivotPlan` drops, rich values that are not rich errors) is not reported yet:
-//!   T-4999's ownership matrix compares the output's own inventory;
+//! - a regenerated save names each source part it did not write, with the ownership matrix's
+//!   reason ([`super::ownership`], SPEC-0034 stage 5): a modelled part the output lacks, a part
+//!   whose closure reaches what the export regenerates, a limit, a policy drop, and, until the
+//!   writers of T-5000 onward land, every part the matrix would keep (`NotPreserved`);
 //! - the Patched tier names the calcChain it dropped, and the Verbatim tier drops nothing;
 //! - a source the report cannot inventory within the load's limits gives one `LimitExceeded`
 //!   entry with an empty item, never an empty list that would claim nothing was dropped.
 
-use std::collections::{BTreeSet, HashMap};
-use std::io::Cursor;
-
 use super::SaveTier;
-use crate::import::{
-    part_key, part_relationships, resolve_target, ImportLimits, Package, PartNames,
-};
+use crate::import::{zip_entry_names, ImportLimits, PartNames};
 
 /// What a save wrote and what it left out (SPEC-0034 D4).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -122,190 +115,30 @@ impl DropReason {
     }
 }
 
-/// The last segment of the relationship types whose parts the regenerating export writes from
-/// the model (SPEC-0034 D5.1's `Modelled` row). The full ownership matrix replaces this list in
-/// T-4999.
-const MODELLED: &[&str] = &[
-    "officeDocument",
-    "worksheet",
-    "styles",
-    "sharedStrings",
-    "theme",
-    "sheetMetadata",
-    "rdRichValue",
-    "rdRichValueStructure",
-    "rdRichValueTypes",
-    "table",
-    "pivotCacheDefinition",
-    "pivotCacheRecords",
-    "pivotTable",
-    "externalLink",
-    "core-properties",
-    "extended-properties",
-];
-
-/// The relationship type whose parts no save writes (`Policy`).
-const CALC_CHAIN: &str = "calcChain";
-
-/// The source parts a regenerated save left out: every content part reached by a relationship
-/// type the export does not model, that `kept` (part keys) does not hold, or that no
-/// relationship reaches. `limits` are the ones the workbook was loaded with.
-pub(super) fn regenerated(
-    source: &[u8],
-    kept: &BTreeSet<String>,
-    limits: &ImportLimits,
-) -> Vec<Dropped> {
-    let (entries, kinds) = match inventory(source, limits) {
-        Ok(found) => found,
-        Err(drop) => return vec![drop],
-    };
-    entries
-        .into_iter()
-        .filter_map(|entry| {
-            let key = part_key(&entry);
-            let reason = match kinds.get(&key).map(String::as_str) {
-                Some(CALC_CHAIN) => DropReason::Policy,
-                Some(kind) if MODELLED.contains(&kind) => return None,
-                _ if kept.contains(&key) => return None,
-                _ => DropReason::NotPreserved,
-            };
-            Some(Dropped {
-                item: entry,
-                reason,
-            })
-        })
-        .collect()
-}
-
 /// The calcChain a patched save dropped: the source's, when `output` no longer holds it.
 pub(super) fn patched(source: &[u8], output: &[u8], limits: &ImportLimits) -> Vec<Dropped> {
-    let (entries, kinds) = match inventory(source, limits) {
-        Ok(found) => found,
-        Err(drop) => return vec![drop],
+    let chains = match super::ownership::calc_chains(source, limits) {
+        Ok(chains) => chains,
+        Err(which) => return vec![unreadable(which)],
     };
-    let Some(out) = entry_names(output) else {
+    let Some(out) = zip_entry_names(output) else {
         return vec![unreadable("the saved package")];
     };
     let out = PartNames::new(out.iter().map(String::as_str));
-    entries
+    chains
         .into_iter()
-        .filter(|entry| kinds.get(&part_key(entry)).is_some_and(|k| k == CALC_CHAIN))
         .filter(|entry| out.entry(entry).is_none())
-        .map(|entry| Dropped {
-            item: entry,
-            reason: DropReason::Policy,
-        })
+        .map(|entry| Dropped::new(entry, DropReason::Policy))
         .collect()
-}
-
-/// The source's content parts in entry order (no `.rels`, no `[Content_Types].xml`, no folders),
-/// and each part's key mapped to the last segment of the relationship type that reaches it. The
-/// source is read within `limits`, the load's (directive 5). A `.rels` part that does not parse,
-/// or passes the budget, is skipped: the parts only it reaches then count as unreached, so they are
-/// reported `NotPreserved` unless kept.
-fn inventory(
-    source: &[u8],
-    limits: &ImportLimits,
-) -> Result<(Vec<String>, HashMap<String, String>), Dropped> {
-    let names = entry_names(source).ok_or_else(|| unreadable("the source package"))?;
-    let mut package =
-        Package::new(Cursor::new(source), *limits).map_err(|_| unreadable("the source package"))?;
-    let mut kinds = HashMap::new();
-    for rels in names.iter().filter(|n| is_rels(n)) {
-        let Some(base) = rels_owner_folder(rels) else {
-            continue;
-        };
-        let Ok(relationships) = part_relationships(&mut package, rels) else {
-            continue;
-        };
-        for (_, rel) in relationships {
-            if rel.external {
-                continue;
-            }
-            let kind = rel
-                .rel_type
-                .rsplit('/')
-                .next()
-                .unwrap_or_default()
-                .to_string();
-            kinds
-                .entry(part_key(&resolve_target(&base, &rel.target)))
-                .or_insert(kind);
-        }
-    }
-    let content = names
-        .into_iter()
-        .filter(|n| !n.ends_with('/') && !is_rels(n))
-        .filter(|n| part_key(n) != part_key("[Content_Types].xml"))
-        .collect();
-    Ok((content, kinds))
 }
 
 /// The entry for a package the report could not inventory within the load's limits: an empty
 /// item, so it names no part, and the reason.
-fn unreadable(what: &str) -> Dropped {
+pub(super) fn unreadable(what: &str) -> Dropped {
     Dropped::new(
         "",
         DropReason::LimitExceeded {
             limit: format!("{what} could not be inventoried within the load's limits"),
         },
     )
-}
-
-/// The zip entry names of `bytes`, in directory order.
-fn entry_names(bytes: &[u8]) -> Option<Vec<String>> {
-    let archive = zip::ZipArchive::new(Cursor::new(bytes)).ok()?;
-    archive
-        .file_names()
-        .map(|n| n.map(|n| n.to_string()))
-        .collect::<Result<_, _>>()
-        .ok()
-}
-
-/// The folder a relationships part's targets resolve from: `_rels/.rels` from the root,
-/// `xl/_rels/workbook.xml.rels` from `xl`. `None` for a `.rels` outside a `_rels` folder.
-fn rels_owner_folder(rels: &str) -> Option<String> {
-    let rels = rels.replace('\\', "/");
-    // A `_rels` segment, never a folder that merely ends in `_rels` (`foo_rels/x.rels`).
-    if let Some(rest) = rels.strip_prefix("_rels/") {
-        return (!rest.contains('/')).then(String::new);
-    }
-    let (folder, rest) = rels.rsplit_once("/_rels/")?;
-    if rest.contains('/') {
-        return None;
-    }
-    Some(folder.trim_end_matches('/').to_string())
-}
-
-/// Whether a zip entry is a relationships part (`.rels`, any case: part names match
-/// case-insensitively).
-fn is_rels(name: &str) -> bool {
-    let key = part_key(name);
-    let file = key.rsplit('/').next().unwrap_or_default();
-    // `_rels/.rels` has no extension to `Path`: its whole name is `.rels`.
-    file == ".rels"
-        || std::path::Path::new(file)
-            .extension()
-            .is_some_and(|e| e == "rels")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::rels_owner_folder;
-
-    #[test]
-    fn a_rels_part_resolves_from_the_folder_above_its_rels_segment() {
-        assert_eq!(rels_owner_folder("_rels/.rels").as_deref(), Some(""));
-        assert_eq!(
-            rels_owner_folder("xl/_rels/workbook.xml.rels").as_deref(),
-            Some("xl")
-        );
-        assert_eq!(
-            rels_owner_folder("xl\\worksheets\\_rels\\sheet1.xml.rels").as_deref(),
-            Some("xl/worksheets")
-        );
-        // A folder that only ends in `_rels`, or a `.rels` below a `_rels` subfolder, is none.
-        assert_eq!(rels_owner_folder("foo_rels/x.rels"), None);
-        assert_eq!(rels_owner_folder("xl/_rels/sub/x.rels"), None);
-    }
 }

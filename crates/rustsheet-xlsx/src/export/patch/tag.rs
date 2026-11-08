@@ -4,7 +4,7 @@
 /// Where the value of attribute `name` lies in the start tag `tag` (quotes excluded). Either quote
 /// is read, any whitespace may separate the name from `=` and the value, and a quoted value of
 /// another attribute is skipped, so text such as `x='a count="9"'` never matches `count`.
-pub(super) fn attr_span(tag: &str, name: &str) -> Option<(usize, usize)> {
+pub(in crate::export) fn attr_span(tag: &str, name: &str) -> Option<(usize, usize)> {
     let bytes = tag.as_bytes();
     let mut i = 0;
     let mut after_space = false;

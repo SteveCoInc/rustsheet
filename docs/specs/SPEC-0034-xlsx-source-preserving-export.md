@@ -272,7 +272,9 @@ Notes:
   internal. External targets are kept as written. They are never followed, and never resolved against the file system.
 - **Coupling groups.** Excel ties some sibling parts of a sheet together by shape and id references that no
   relationship records. Each group is kept or dropped as one unit, and so is the union of the groups' closures:
-  - **Legacy drawing group:** the `vmlDrawing` of `<legacyDrawing>`, `comments`, `threadedComment`, every `ctrlProp`
+  - **Legacy drawing group:** the `vmlDrawing` of `<legacyDrawing>` (T-4999 takes every `vmlDrawing` of the sheet,
+    the header and footer one of `<legacyDrawingHF>` included, rather than read the sheet XML to tell them apart: an
+    over-coupling that only drops more together), `comments`, `threadedComment`, every `ctrlProp`
     with the `<controls>` element, the ActiveX `control` parts, the `oleObject`/`package` parts with `<oleObjects>`, and
     the `drawing` holding their `a14:compatExt` shapes. One VML part holds both note shapes and control shapes
     (corpus-bench 17-35). A `<control shapeId>` names a VML `_x0000_s<n>`, and the drawing's `compatExt spid` names the
@@ -430,6 +432,17 @@ point it is hit. That makes the result deterministic.
 | Text scans (sheet-name and range matching in D5.5) | one linear pass per trigger over each kept part or fragment, at most 16 MiB per part. A larger one is treated as matching. | dropped with the trigger's reason |
 
 The fragment reader is the patcher's bounded quick-xml scan: no DOM, and no recursion beyond the depth limit.
+
+Implementation notes (T-4999):
+- The decisions read the source and the saved package within the load's `ImportLimits`. Each read of a package (its
+  relationships, then the probes of its parts) has its own budget, so a save reads at most a small constant number of
+  times `max_uncompressed_bytes`.
+- Each part is probed once, at most 1 MiB of it.
+- Each root's closure is computed once. All units together visit at most 10^6 closure parts, past which every remaining
+  unit is `LimitExceeded { limit: "closure work" }`.
+- A part a probe cannot read makes its unit `LimitExceeded { limit: "part read" }`.
+- The regenerated tier is written to memory before it is copied to the caller's writer, so its own inventory can be
+  read. That is a peak of about twice the output, which the model it is written from already bounds.
 
 **D5.7. Reporting and measurement.**
 - **Report.** Every drop is a SaveReport entry (SPEC-0033 D7, T-4562), so stage 5 needs T-4562 first. Entries are

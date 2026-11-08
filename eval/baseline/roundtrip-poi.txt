@@ -840,7 +840,7 @@ F	roundtrip-poi/table-sample.xlsx#R1/all	* 172 bcc68eee60652b98
 F	roundtrip-poi/template.xlsx#R1/all	* 134 4722ae4a8ec33c5f
 F	roundtrip-poi/testSharedFormulasSetBlank.xlsx#R1/all	* 260 94adcb0aa0fe1c74
 F	roundtrip-poi/unicodeSheetName.xlsx#R1/all	* 100 9fb7e0b8fdf3e510
-F	roundtrip-poi/workbookProtection_workbook_revision_protected.xlsx#R1/all	* 371 ad2c7a839bc25d3b
+F	roundtrip-poi/workbookProtection_workbook_revision_protected.xlsx#R1/all	* 293 fe58bb42a142a212
 F	roundtrip-poi/xlmmacro.xlsm#R1/all	* 182 93ad0bebadb6c235
 F	roundtrip-poi/xlookup.xlsx#R1/all	* 1 50a248930821e1ec
 F	roundtrip-poi/xlsx-corrupted.xlsx#R0	* 1 cf0fb6f1a83dde39

@@ -286,7 +286,7 @@ fn keep_drawing(
         if rel.external || rel.rel_type != CHART_RELATIONSHIP {
             return Err(format!(
                 "it relates to a part of type {}",
-                short_kind(&rel.rel_type)
+                crate::import::rel_kind(&rel.rel_type)
             ));
         }
         let chart_path =
@@ -337,7 +337,7 @@ fn keep_chart(
             kind => {
                 return Err(format!(
                     "a chart relates to a part of type {}",
-                    short_kind(kind)
+                    crate::import::rel_kind(kind)
                 ))
             }
         };
@@ -456,11 +456,6 @@ fn relationship_ids(
         }
     }
     Ok(ids)
-}
-
-/// The last segment of a relationship type, for a log line.
-fn short_kind(kind: &str) -> &str {
-    kind.rsplit('/').next().unwrap_or(kind)
 }
 
 /// The relationships part of the kept part `name`: (id, type, target) each, the ids the source's

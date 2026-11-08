@@ -10,6 +10,7 @@ mod doc_props;
 mod dxfs_styles;
 mod escape;
 mod external_links;
+mod ownership;
 mod patch;
 mod pivot_charts;
 mod pivot_drawings;

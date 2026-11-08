@@ -321,6 +321,63 @@ impl<R: Read> Read for Part<'_, R> {
     }
 }
 
+/// The zip entry names of `bytes`, in directory order.
+pub(crate) fn zip_entry_names(bytes: &[u8]) -> Option<Vec<String>> {
+    let archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).ok()?;
+    archive
+        .file_names()
+        .map(|n| n.map(|n| n.to_string()))
+        .collect::<Result<_, _>>()
+        .ok()
+}
+
+/// The folder a relationships part's targets resolve from: `_rels/.rels` from the root,
+/// `xl/_rels/workbook.xml.rels` from `xl`. `None` for a `.rels` outside a `_rels` folder.
+fn rels_owner_folder(rels: &str) -> Option<String> {
+    let rels = rels.replace('\\', "/");
+    // A `_rels` segment, never a folder that merely ends in `_rels` (`foo_rels/x.rels`).
+    if let Some(rest) = rels.strip_prefix("_rels/") {
+        return (!rest.contains('/')).then(String::new);
+    }
+    let (folder, rest) = rels.rsplit_once("/_rels/")?;
+    if rest.contains('/') {
+        return None;
+    }
+    Some(folder.trim_end_matches('/').to_string())
+}
+
+/// Whether a zip entry is a relationships part (`.rels`, any case: part names match
+/// case-insensitively).
+pub(crate) fn is_rels(name: &str) -> bool {
+    let key = part_key(name);
+    let file = key.rsplit('/').next().unwrap_or_default();
+    // `_rels/.rels` has no extension to `Path`: its whole name is `.rels`.
+    file == ".rels"
+        || std::path::Path::new(file)
+            .extension()
+            .is_some_and(|e| e == "rels")
+}
+
+/// The part a relationships part belongs to: `""` (the package) for `_rels/.rels`,
+/// `xl/workbook.xml` for `xl/_rels/workbook.xml.rels`. `None` for a `.rels` outside a `_rels`
+/// folder or whose name does not end in `.rels`.
+pub(crate) fn rels_owner_part(rels: &str) -> Option<String> {
+    let folder = rels_owner_folder(rels)?;
+    let rels = rels.replace('\\', "/");
+    let file = rels.rsplit('/').next()?;
+    // `.rels` is ASCII, so its byte length is its char length at any case.
+    let owner = file
+        .len()
+        .checked_sub(".rels".len())
+        .filter(|&at| file.is_char_boundary(at) && file[at..].eq_ignore_ascii_case(".rels"))
+        .map(|at| &file[..at])?;
+    Some(match (folder.is_empty(), owner.is_empty()) {
+        (_, true) => String::new(),
+        (true, false) => owner.to_string(),
+        (false, false) => format!("{folder}/{owner}"),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
@@ -495,6 +552,32 @@ mod tests {
                 limit: ImportLimit::TextLength,
                 max: 3
             })
+        );
+    }
+}
+
+#[cfg(test)]
+mod rels_tests {
+    use super::{rels_owner_folder, rels_owner_part};
+
+    #[test]
+    fn a_rels_part_resolves_from_the_folder_above_its_rels_segment() {
+        assert_eq!(rels_owner_folder("_rels/.rels").as_deref(), Some(""));
+        assert_eq!(
+            rels_owner_folder("xl/_rels/workbook.xml.rels").as_deref(),
+            Some("xl")
+        );
+        assert_eq!(
+            rels_owner_folder("xl\\worksheets\\_rels\\sheet1.xml.rels").as_deref(),
+            Some("xl/worksheets")
+        );
+        // A folder that only ends in `_rels`, or a `.rels` below a `_rels` subfolder, is none.
+        assert_eq!(rels_owner_folder("foo_rels/x.rels"), None);
+        assert_eq!(rels_owner_folder("xl/_rels/sub/x.rels"), None);
+        assert_eq!(rels_owner_part("_rels/.rels").as_deref(), Some(""));
+        assert_eq!(
+            rels_owner_part("xl/worksheets/_rels/sheet1.xml.rels").as_deref(),
+            Some("xl/worksheets/sheet1.xml")
         );
     }
 }

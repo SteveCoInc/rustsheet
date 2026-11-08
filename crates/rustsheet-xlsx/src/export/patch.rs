@@ -50,7 +50,7 @@ use strings::{append_strings, count_si, shared_refs};
 mod package;
 mod strings;
 mod styles;
-mod tag;
+pub(super) mod tag;
 #[cfg(test)]
 mod tests;
 
