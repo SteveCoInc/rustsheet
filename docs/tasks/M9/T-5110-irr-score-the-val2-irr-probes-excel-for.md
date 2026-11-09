@@ -28,6 +28,8 @@ Owns: probes/val2-irr-01 and probes/val2-irr-02 (every visibly-off cell of these
   the reverse) and their `ERROR.TYPE` columns; Excel gives 136 + 198 `#DIV/0!` and 122 + 180 `#NUM!` across the two.
 - Related: T-2131, T-2103 (IRR's returned iterate and error order).
 
+- val3 batch, docs/research/probe-handoff-2026-11-09-val3.md (excel-graph fill, 2026-11-09). Owns: probes/val3-irr-01 (every visibly-off cell).
+
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing
       the probe cells, written to the research note of the family.

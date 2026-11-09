@@ -5457,7 +5457,8 @@ splits B23/B24 and B29/B30 especially) until the per-row isolated runs are made 
 - A live 0: `FVSCHEDULE(5916,{-1E+300,1E+300})` (gen-m9/89f0aee953a55a45 A349; probes/val2-fvs-01 Probe!B1). Inside the
   sheet it reads as a number, not an error or a blank: `TYPE` 1, `ISNUMBER` TRUE, `ISERROR` FALSE, `=B1=0` TRUE,
   `SIGN`, `ABS` and `B1-B1` 0, `B1+1` 1, `IFERROR(B1,-17)` 0, `"["&B1&"]"` "[0]" (Probe!B2:B21). `B1/(2^1023)` is
-  `#NUM!` (Probe!B17), but no `=0/(2^1023)` control was probed, so that cell says nothing yet about what B1 carries.
+  `#NUM!` (Probe!B17); the isolated control `=0/(2^1023)` is 0 (val3-fvs-01, below), so B17 means B1 carries
+  something other than a plain 0 or the workbook carries overflow state (open).
   Also 0 (probes/val2-fvs-02): `FVSCHEDULE(-(2^1023),{1,-0.5})` (P!B24), `FVSCHEDULE(1E+300,{1E+10,-0.999999999})`
   (B27), `FVSCHEDULE(2^1023,{1,-1})` (B29), `FVSCHEDULE(2^1023,{1,0})` (B31), `FVSCHEDULE(1,{1E+300,1E+300,-1})` (B35).
 - The overflow cut, one factor (P!B2:B22). `FVSCHEDULE(x,1)` is the exact 2x for x = ±(2^1023-2^971) and
@@ -5475,8 +5476,8 @@ splits B23/B24 and B29/B30 especially) until the per-row isolated runs are made 
   k = 33554433. So overflow of the twice-rounded step is what gives 0 here.
 - `#NUM!`: `FVSCHEDULE(2^1023,{1,-0.5})` (B23, while its negated principal B24 is 0),
   `FVSCHEDULE(FVSCHEDULE(2^1023,1),-0.5)` (B26, though the inner call alone is 0, B4, and a literal 0 principal gives
-  0, `FVSCHEDULE(0,{-1E+300,1E+300})` B37: the overflowed result is not a plain 0 when passed on as an argument, like
-  Probe!B17 of val2-fvs-01), `FVSCHEDULE(2^1023,{-1,1})` (B30, though the exact product is a
+  0, `FVSCHEDULE(0,{-1E+300,1E+300})` B37: either the overflowed result is not a plain 0 when passed on as an argument,
+  or the one-sheet workbook carries overflow state; open), `FVSCHEDULE(2^1023,{-1,1})` (B30, though the exact product is a
   finite 0), `FVSCHEDULE(2^1023,{1,1E-300})` (B32), and `FVSCHEDULE(2^1023,{1,"x"})` (B34: `#NUM!`, not the
   text's `#VALUE!`), while `FVSCHEDULE(2^1023,{1,#N/A})` is `#N/A` (B33): an error element wins over the overflow,
   text does not.
@@ -5485,6 +5486,18 @@ splits B23/B24 and B29/B30 especially) until the per-row isolated runs are made 
   flushed. For B38 and B40 the saved value alone cannot tell 0 from a kept subnormal (decisions 0042, 0089); the
   in-sheet `IFERROR(B=0,"err")` is TRUE in E38 and E40 (a scalar comparison stays exact), which settles them. `FVSCHEDULE(1E-300,{-0.9999999999})` is B38;
   ours keeps the subnormal (1.0000000827404e-310 at B38). Compare "A subnormal divisor is zero" (numbers.md).
+Isolated workbooks (probes/val3-fvs-01..08, excel-graph, 2026-11-09, one case per workbook, observers TYPE,
+ISNUMBER, error code and `+0` in Probe!B2:B5): `=0/(2^1023)` is 0 (val3-fvs-01: a literal 0 divided by 2^1023 is 0, so
+val2-fvs-01 Probe!B17's `#NUM!` means either that B1 carries something other than a plain 0 or that the workbook
+carries overflow state; open, T-5108), `=2^1023` is 8.98846567431158E+307 (val3-fvs-02),
+`=0/8.98846567431158E307` is 0 (val3-fvs-03), `FVSCHEDULE(0,-0.5)` is 0 (val3-fvs-04), and `FVSCHEDULE(2^1023,{-1,1})`
+is a live 0 (val3-fvs-07: TYPE 1, ISNUMBER TRUE, no error), not the `#NUM!` of the same call in the one-sheet
+val2-fvs-02 (B30), which supports the carried-state caveat above. The three isolated workbooks whose only target
+overflows, `FVSCHEDULE(2^1023,{1,0})`, `{1,1E-300}` and `{1,-0.5}` (val3-fvs-05, -06, -08), gave no value: on two
+attempts each, the oracle's canary cell `SQRT(2)` came back `#NUM!` and `rustsheet-oracle fill` refused the workbook
+("canary failed, so this workbook was not recalculated; refusing its values: A4 =SQRT(2): expected
+1.4142135623730951, got #NUM!"). Whether that is state an overflow leaves in the workbook or a Graph session effect is
+open (T-5108).
 Smaller workbooks holding an overflowing FVSCHEDULE do open on excel-graph (val2-fvs-01, and val2-fvs-02 with about
 twenty such calls), unlike the T-3312 attempts of 2026-11-04 (`createSession` 501 FileCorruptTryRepair).
 Ours: `#DIV/0!` for the overflowing calls above except B29 and B35 (`#NUM!`), B30 (0), B34 (`#VALUE!`) and B14:B18

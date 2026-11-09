@@ -301,3 +301,20 @@ No engine fix, newly passing function or Gate B improvement is claimed by val3.
 
 **Results:** pending Excel. Family follow-up lanes remain inverse normal, F.INV,
 the shared HYP/BINOM kernel, FVSCHEDULE, and IRR confirmation.
+
+## Results (2026-11-09, excel-graph)
+Filled with `rustsheet-oracle fill -b excel-graph`, CAL-01 first, each case its own workbook. Not yet scored: the
+per-family owner tasks (T-5107 F.INV, T-5108 FVSCHEDULE, T-5109 HYPGEOMDIST, T-5110 IRR, T-5112 inverse normal) read
+these values against the predictions above.
+
+**CAL-01 passed.** All five anchors equal the same-build predictions (P!B2:B6), and Precision!B2:B4 are
+0.9999999999999998, 1, 1.0000000000000002 with C2:C4 -1, 0, 1, so raw capture keeps the low bits.
+
+**12 of 15 filled.** probes/val3-fvs-05, probes/val3-fvs-06 and probes/val3-fvs-08 stay pending: in each, the
+oracle's own canary sheet reads `SQRT(2)` as `#NUM!` (two attempts), so the fill refuses the workbook. Each of the three
+holds one FVSCHEDULE whose schedule overflows (`{1,0}`, `{1,1E-300}`, `{1,-0.5}` on 2^1023), while probes/val3-fvs-07
+(`{-1,1}`, zero before any overflow) filled normally. One hypothesis, not yet tested: an overflow leaves state that
+breaks later calculation in the same workbook, which is what the isolated FVS design was meant to rule in or out
+(T-5108). The filled FVS values (Probe!B1): val3-fvs-01 `0/(2^1023)` 0, -02 `2^1023` 8.98846567431158E+307,
+-03 0, -04 `FVSCHEDULE(0,-0.5)` 0, -07 `FVSCHEDULE(2^1023,{-1,1})` 0 (each a number, no error); recorded in
+financial.md, "FVSCHEDULE whose running product overflows or underflows".

@@ -53,6 +53,14 @@ Owns: probes/val2-fvs-01, probes/val2-fvs-02 and probes/val2-fvs-03 (every visib
 - The FORMULATEXT cell of fvs-01 is a separate display issue, owned by T-5111.
 - Code: `fn_fvschedule` (functions/financial).
 
+- val3 batch, docs/research/probe-handoff-2026-11-09-val3.md (excel-graph fill, 2026-11-09). Owns: the eight isolated FVS cases probes/val3-fvs-01 to probes/val3-fvs-08.
+  Three stay pending: in probes/val3-fvs-05, probes/val3-fvs-06 and probes/val3-fvs-08 (each holding one overflowing
+  FVSCHEDULE) the oracle's own canary sheet reads `SQRT(2)` as `#NUM!`, twice in a row, so `rustsheet-oracle fill`
+  refuses the workbook; probes/val3-fvs-07, whose schedule zeroes the product before it overflows, filled normally.
+  One hypothesis, not yet tested: an overflow leaves state carried across the workbook (the val2-fvs-02 caveat), or it
+  is a Graph session effect; decide which before treating any one-sheet FVSCHEDULE result as per-call. No log of the
+  refused attempts was kept (2026-11-09, between the fvs-04 and fvs-07 fills, then one retry); rerun to capture one.
+
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing
       the probe cells, written to the research note of the family.

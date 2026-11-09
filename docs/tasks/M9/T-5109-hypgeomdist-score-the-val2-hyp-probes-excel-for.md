@@ -36,6 +36,8 @@ Owns: probes/val2-hyp-01, probes/val2-hyp-02 and probes/val2-hyp-03 (every visib
   `=HYPGEOMDIST(41966,46221,65797,74726)` is 0 in Excel, ours 8.103803254141709e-186; the rest differ in the low bits).
 - Related: T-2481 (HYPGEOM.DIST's pmf formulation).
 
+- val3 batch, docs/research/probe-handoff-2026-11-09-val3.md (excel-graph fill, 2026-11-09). Owns: probes/val3-hyp-01 (no visibly-off cell at the fill).
+
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing
       the probe cells, written to the research note of the family.
