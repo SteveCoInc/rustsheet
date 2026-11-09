@@ -313,5 +313,8 @@ these values against the predictions above.
 **12 of 15 filled.** probes/val3-fvs-05, probes/val3-fvs-06 and probes/val3-fvs-08 stay pending: in each, the
 oracle's own canary sheet reads `SQRT(2)` as `#NUM!` (two attempts), so the fill refuses the workbook. Each of the three
 holds one FVSCHEDULE whose schedule overflows (`{1,0}`, `{1,1E-300}`, `{1,-0.5}` on 2^1023), while probes/val3-fvs-07
-(`{-1,1}`, zero before any overflow) filled normally. Read as evidence that an overflow leaves state that breaks later
-calculation in the same workbook, which is what the isolated FVS design was meant to rule in or out (T-5108).
+(`{-1,1}`, zero before any overflow) filled normally. One hypothesis, not yet tested: an overflow leaves state that
+breaks later calculation in the same workbook, which is what the isolated FVS design was meant to rule in or out
+(T-5108). The filled FVS values (Probe!B1): val3-fvs-01 `0/(2^1023)` 0, -02 `2^1023` 8.98846567431158E+307,
+-03 0, -04 `FVSCHEDULE(0,-0.5)` 0, -07 `FVSCHEDULE(2^1023,{-1,1})` 0 (each a number, no error); recorded in
+financial.md, "FVSCHEDULE whose running product overflows or underflows".
