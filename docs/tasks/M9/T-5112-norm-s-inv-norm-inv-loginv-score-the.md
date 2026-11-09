@@ -29,6 +29,9 @@ Owns: probes/val2-nsi-01, probes/val2-nsi-02 and probes/val2-nsi-03.
   the low bits of the raw cells: compare bits, not the 15-digit display.
 - Also owns the NORM.S.INV anchor of probes/val2-cal-01, P!H8 (low bits). P!H31 (LN near-tie) is CAL-01's noise
   calibration and is expected to vary at one ulp; it needs no owner fix.
+- Already read from NSI-01 block A (not yet scored): D, E, H and I are equal in all 12 rows (NORM.INV and NORMINV with
+  sd 1/SQRT(2), and with the scale moved by 2^20 either way), F equals G (NORM.S.INV and NORM.INV(..,0,1)), B14
+  `(1/SQRT(2))*SQRT(2)` is 1 and B15 `SQRT(0.5)*SQRT(2)` is 1.0000000000000002.
 - Related: T-0925 (inverse normal, AS241).
 
 ## Acceptance criteria

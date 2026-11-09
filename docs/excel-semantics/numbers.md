@@ -621,7 +621,8 @@ Rule (open, excel-graph observations): `*` does not overflow exactly where the b
   give DBL_MAX (H19:H22).
 - A lead, not a rule: each of H10:H17 equals exactly 2^1023·(2-k·2^-51), the second factor times 2^1023 as if the first
   factor were exactly 2^1023; H18 breaks the pattern.
-Not yet modelled (T-5108).
+The `*` cells themselves are not yet modelled (T-5108); FVSCHEDULE's step at the same factors is (financial.md,
+"FVSCHEDULE rounds each step twice").
 Evidence: probes/val2-fvs-02 column H (excel-graph, 2026-11-09).
 Status: OPEN
 Tasks: T-5108

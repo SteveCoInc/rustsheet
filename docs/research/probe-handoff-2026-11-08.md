@@ -58,8 +58,10 @@ until the per-row isolated runs are made (T-4250).
 others, and a subnormal running product is 0 (financial.md, "FVSCHEDULE whose running product overflows or
 underflows"); `*` near DBL_MAX does not overflow where the binary64 product does (numbers.md, "A product at the
 edge of the double range"); FORMULATEXT keeps an exponent literal written `1E+300` (syntax.md).
-HYPGEOMDIST and HYPGEOM.DIST are 0 in all of hyp-02 rows 37 to 50, exactly where Excel's own BINOM.DIST factor at
-p = MAX(x, n-x)/N underflows (statistics.md, "HYPGEOM.DIST of an empty population is 1, and a deep-tail pmf can be 0").
+FVSCHEDULE rounds each step twice, like `*` (financial.md, VERIFIED from FVS-03). HYPGEOMDIST equals a
+conditional-binomial product of Excel's own BINOM.DIST cells on every probed numeric row, with two branches, and its
+hyp-02 zeros (rows 37 to 50) are that product's underflowed factor (statistics.md, "HYPGEOM.DIST of an empty population
+is 1, and a deep-tail pmf can be 0"; an observed fit, scored by T-5109).
 
 **Tier note (no gate changes state):** the fill adds IFERROR, ISNUMBER, ABS and ISERROR to the foundational tier's
 below-bar list (54 wrong type, 26 outside) and IRR, F.INV, F.INV.RT, BETA.DIST, FVSCHEDULE and FINV to the expert
