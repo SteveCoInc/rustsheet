@@ -43,4 +43,7 @@ HYP-03) snap to 0 whenever x and y are within the snap window, so read those pro
 bits are captured, not from the residual columns. The NSI sheets build their inputs from integer limbs and do not
 depend on SUM.
 
+**Owners:** scoring per family is T-5107 (F.INV), T-5108 (FVSCHEDULE), T-5109 (HYPGEOMDIST), T-5110 (IRR) and T-5112
+(inverse normal); T-5111 is the FORMULATEXT spelling.
+
 **Not answered here (desktop only):** FVS-01's live and seeded steps and FVS-02's isolated variants.
