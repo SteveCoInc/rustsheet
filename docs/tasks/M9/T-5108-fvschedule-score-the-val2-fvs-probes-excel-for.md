@@ -28,9 +28,13 @@ Owns: probes/val2-fvs-01, probes/val2-fvs-02 and probes/val2-fvs-03 (every visib
   `#NUM!`; ours is `#DIV/0!` throughout (financial.md, "FVSCHEDULE whose running product overflows"). The desktop live
   and seeded steps and the isolated fvs-02 variants are still open (T-4250).
 - fvs-02: overflow is a live 0 in some calls and `#NUM!` in others (P!B23, B26, B30, B32, B34 `#NUM!`; B4, B5, B24,
-  B27, B29, B31, B35 0); a subnormal running product is 0 (B38:B42). The one-factor cut: B10:B18 are a live 0 and
-  B19:B22 DBL_MAX, the cut between k = 33562623 and 33562624 where `*` turns from `#NUM!` to DBL_MAX (H18, H19);
-  B3 and B7 are ±DBL_MAX where `(2^1023-2^970)*2` is `#NUM!`. Ours: `#DIV/0!` for most overflowing calls, but B29 and
+  B27, B29, B31, B35 0); a subnormal running product is 0 (B38:B42, settled by E38:E42 and G40). The one-factor cut:
+  B10:B18 are a live 0 and B19:B22 DBL_MAX at the sampled k, the cut in (33562623, 33562624] among sampled points,
+  where `*` turns from `#NUM!` to DBL_MAX (H18, H19); B3 and B7 are the exact 2x = ±DBL_MAX where `(2^1023-2^970)*2`
+  is `#NUM!`.
+- Unconfirmed: fvs-02 was filled as one sheet although its protocol allows that only once FVS-01 has shown no carried
+  state, and FVS-01's carried-state steps were not run (desktop only). Treat the 0 against `#NUM!` splits (B23/B24,
+  B29/B30) as possibly carried state until the per-row isolated runs (T-4250) agree. Ours: `#DIV/0!` for most overflowing calls, but B29 and
   B35 `#NUM!`, B30 0, B34 `#VALUE!` and B14:B18 DBL_MAX (financial.md lists them).
   Column H: `*` near DBL_MAX is `#NUM!` where binary64 gives DBL_MAX (H3, H7) and finite where binary64 overflows
   (H10:H17). Column G (k = -1023) carries no information: 2^-1023 is read as 0. See financial.md "FVSCHEDULE whose

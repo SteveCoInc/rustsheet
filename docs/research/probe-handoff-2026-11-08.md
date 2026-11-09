@@ -46,8 +46,13 @@ depend on SUM.
 **Two more fingerprints are unreadable on the web, for the same kind of reason.** FVS-02 column G (`B*2^F` with
 F = -1023) is 0 for every finite B, because 2^-1023 is subnormal and Excel reads it as 0 (numbers.md, "A subnormal
 divisor is zero"), so rows with k = -1023 carry no information there. FVS-03's MOD fingerprint columns (60 cells) are
-all `#NUM!`. Read FVS-03 from its raw C, D and E values instead: in rows 12 to 23 Excel's FVSCHEDULE, `*` product and
-PRODUCT are equal to the bit.
+all `#NUM!` (C, E and G in rows 2 to 9; H, I and J in rows 12 to 23). Read FVS-03 from its raw values instead:
+B, D and F in rows 2 to 9, and C, D and E in rows 12 to 23, where Excel's FVSCHEDULE, `*` product and PRODUCT are
+equal to the bit.
+
+**FVS-02 was filled as one sheet** although its protocol allows that only once FVS-01 has shown no carried state,
+and FVS-01's carried-state steps (desktop) were not run. Its results are therefore unconfirmed as per-call behaviour
+until the per-row isolated runs are made (T-4250).
 
 **New Excel behaviour recorded with this fill:** FVSCHEDULE's overflow is a live 0 in some calls and `#NUM!` in
 others, and a subnormal running product is 0 (financial.md, "FVSCHEDULE whose running product overflows or

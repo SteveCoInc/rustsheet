@@ -5450,32 +5450,39 @@ Tasks: T-3312
 ## FVSCHEDULE whose running product overflows or underflows
 Rule (open, excel-graph observations): an overflowing FVSCHEDULE is not one value. Some calls are a live number 0,
 others `#NUM!`; which one is not yet explained (T-5108 scores the hypotheses).
+Caveat: probe-requests-2026-11-08.md (FVS-02) runs probes/val2-fvs-02 as one workbook only if FVS-01 showed no carried
+state; FVS-01's carried-state steps are desktop-only and were not run, yet val2-fvs-02 was filled as one sheet. So every
+val2-fvs-02 cell below may reflect state carried between cells rather than the call alone (the 0 against `#NUM!`
+splits B23/B24 and B29/B30 especially) until the per-row isolated runs are made (T-4250).
 - A live 0: `FVSCHEDULE(5916,{-1E+300,1E+300})` (gen-m9/89f0aee953a55a45 A349; probes/val2-fvs-01 Probe!B1). Inside the
   sheet it reads as a number, not an error or a blank: `TYPE` 1, `ISNUMBER` TRUE, `ISERROR` FALSE, `=B1=0` TRUE,
   `SIGN`, `ABS` and `B1-B1` 0, `B1+1` 1, `IFERROR(B1,-17)` 0, `"["&B1&"]"` "[0]" (Probe!B2:B21). `B1/(2^1023)` is
   `#NUM!` (Probe!B17), but no `=0/(2^1023)` control was probed, so that cell says nothing yet about what B1 carries.
-  Also 0: `FVSCHEDULE((2^1023),1)` (probes/val2-fvs-02 P!B4, B5), `FVSCHEDULE(-(2^1023),{1,-0.5})` (B24),
-  `FVSCHEDULE(1E+300,{1E+10,-0.999999999})` (B27), `FVSCHEDULE(2^1023,{1,-1})` (B29), `FVSCHEDULE(2^1023,{1,0})`
-  (B31), `FVSCHEDULE(1,{1E+300,1E+300,-1})` (B35).
-- The overflow cut, one factor (probes/val2-fvs-02 P!B2:B22): `FVSCHEDULE(x,1)` is x for x = ±(2^1023-2^971) and
-  ±(2^1023-2^970) = ±DBL_MAX (B2, B3, B6, B7; the `*` form `(2^1023-2^970)*2` is `#NUM!`, numbers.md "A product at the
-  edge of the double range"), and 0 for ±2^1023 and beyond (B4, B5, B8, B9).
-  `FVSCHEDULE((1+k*2^-52)*2^1023,1-k*2^-51)` is a live 0 (C, D and E: ISNUMBER TRUE, no error, `=0` TRUE) for k from
-  1048576 to 33562623 (B10:B18) and DBL_MAX for k = 33562624 and above (B19:B22). So FVSCHEDULE gives 0 where
-  Excel's own `*` on the same factors is finite (H10:H17) and where the binary64 product is a finite DBL_MAX
-  (B14:B18), and the cut falls where `*` turns from `#NUM!` to DBL_MAX (H18, H19).
+  Also 0 (probes/val2-fvs-02): `FVSCHEDULE(-(2^1023),{1,-0.5})` (P!B24), `FVSCHEDULE(1E+300,{1E+10,-0.999999999})`
+  (B27), `FVSCHEDULE(2^1023,{1,-1})` (B29), `FVSCHEDULE(2^1023,{1,0})` (B31), `FVSCHEDULE(1,{1E+300,1E+300,-1})` (B35).
+- The overflow cut, one factor (P!B2:B22). `FVSCHEDULE(x,1)` is the exact 2x for x = ±(2^1023-2^971) and
+  ±(2^1023-2^970), that is ±(DBL_MAX - 1 ulp) and ±DBL_MAX (B2, B3, B6, B7; the `*` form `(2^1023-2^970)*2` is
+  `#NUM!`, numbers.md "A product at the edge of the double range"), and a live 0 for x = ±2^1023 (B4, B8) and
+  ±(2^1023+2^971) (B5, B9), where 2x ≥ 2^1024.
+  `FVSCHEDULE((1+k*2^-52)*2^1023,1-k*2^-51)` is a live 0 (C, D and E: ISNUMBER TRUE, no error, `=0` TRUE) at the
+  sampled k = 1048576, 30000000, 33554431, 33554432, 33554433, 33554434, 33558528, 33562622 and 33562623 (B10:B18), and
+  DBL_MAX at k = 33562624, 33562625, 33562626 and 40000000 (B19:B22); among the sampled points the cut lies in
+  (33562623, 33562624]. So FVSCHEDULE gives 0 where Excel's own `*` on the same factors is finite (H10:H17) and where
+  the binary64 product is a finite DBL_MAX (B14:B18; binary64 overflows for k ≤ 2^25), and the sampled cut falls where
+  `*` turns from `#NUM!` to DBL_MAX (H18, H19).
 - `#NUM!`: `FVSCHEDULE(2^1023,{1,-0.5})` (B23, while its negated principal B24 is 0),
   `FVSCHEDULE(FVSCHEDULE(2^1023,1),-0.5)` (B26), `FVSCHEDULE(2^1023,{-1,1})` (B30, though the exact product is a
   finite 0), `FVSCHEDULE(2^1023,{1,1E-300})` (B32), and `FVSCHEDULE(2^1023,{1,"x"})` (B34: `#NUM!`, not the
   text's `#VALUE!`).
-- Underflow: a running product that falls into the subnormal range is 0: `FVSCHEDULE(1E-300,{-0.9999999999})` (B38),
-  B39, B40 and B42; ours keeps the subnormal (1.0000000827404e-310 at B38). Compare "A subnormal divisor is zero"
-  (numbers.md).
+- Underflow: a running product that falls into the subnormal range is 0. The saved B38:B42 values alone cannot tell 0
+  from a kept subnormal (decisions 0042, 0089); the in-sheet checks settle it: `IFERROR(B=0,"err")` is TRUE in
+  E38:E42 (a scalar comparison stays exact) and `B40*2^F40` is 0 (G40). `FVSCHEDULE(1E-300,{-0.9999999999})` is B38;
+  ours keeps the subnormal (1.0000000827404e-310 at B38). Compare "A subnormal divisor is zero" (numbers.md).
 Smaller workbooks holding an overflowing FVSCHEDULE do open on excel-graph (val2-fvs-01, and val2-fvs-02 with about
 twenty such calls), unlike the T-3312 attempts of 2026-11-04 (`createSession` 501 FileCorruptTryRepair).
 Ours: `#DIV/0!` for the overflowing calls above except B29 and B35 (`#NUM!`), B30 (0), B34 (`#VALUE!`) and B14:B18
-(DBL_MAX); ours matches B2, B3, B6, B7 and B19:B22. Desktop Excel decides the
-live and seeded steps (T-4250, decision 0039).
+(DBL_MAX); ours matches B2, B3, B6, B7 and B19:B22. Desktop Excel decides the live and seeded steps and the isolated
+rows (T-4250, decision 0039).
 Evidence: probes/val2-fvs-01, probes/val2-fvs-02 (excel-graph, 2026-11-09); gen-m9/89f0aee953a55a45 A349; T-3312 oracle
 attempts (2026-11-04).
 Status: OPEN
