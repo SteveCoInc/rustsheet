@@ -30,6 +30,9 @@ Owns: probes/val2-fin-01, probes/val2-fin-02 and probes/val2-fin-03 (every visib
   about 2.7e-11 relative, inside the envelope but not a low-bit difference).
 - Code: the F.INV search (`rg -n 'fn_f_inv' crates/rustsheet-engine/src/functions`); related open owners T-2500, T-2767.
 
+- val3 batch, docs/research/probe-handoff-2026-11-09-val3.md (excel-graph fill, 2026-11-09). Owns: probes/val3-fin-01 and probes/val3-fin-02 (every visibly-off cell).
+  Also the F.INV anchor of probes/val3-cal-01, P!B2 (the same point as val2-cal-01 P!H2).
+
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing
       the probe cells, written to the research note of the family.

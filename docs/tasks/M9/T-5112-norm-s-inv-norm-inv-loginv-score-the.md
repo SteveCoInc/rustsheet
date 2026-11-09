@@ -34,6 +34,8 @@ Owns: probes/val2-nsi-01, probes/val2-nsi-02 and probes/val2-nsi-03.
   `(1/SQRT(2))*SQRT(2)` is 1 and B15 `SQRT(0.5)*SQRT(2)` is 1.0000000000000002.
 - Related: T-0925 (inverse normal, AS241).
 
+- val3 batch, docs/research/probe-handoff-2026-11-09-val3.md (excel-graph fill, 2026-11-09). Owns: probes/val3-nsi-01 and probes/val3-nsi-02 (every visibly-off cell).
+
 ## Acceptance criteria
 - [ ] Every NSI hypothesis in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing the probe
       cells, written to the research note of the family.

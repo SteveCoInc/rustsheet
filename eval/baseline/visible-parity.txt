@@ -200,3 +200,8 @@ probes/val2-hyp-01.case.json	41
 probes/val2-hyp-02.case.json	70
 probes/val2-irr-01.case.json	212
 probes/val2-irr-02.case.json	262
+probes/val3-cal-01.case.json	1
+probes/val3-fin-01.case.json	2424
+probes/val3-fin-02.case.json	52
+probes/val3-irr-01.case.json	4
+probes/val3-nsi-02.case.json	5
