@@ -35,7 +35,7 @@ Sources (financial.md):
   finance 1E+200 over five flows with a negative flow at index 2 is #DIV/0! (T-4116)", found by this table).
 - "NPV and FVSCHEDULE arguments", "FVSCHEDULE with one empty schedule cell is the principal" and "XNPV, XIRR and
   FVSCHEDULE beside their whole data": FVSCHEDULE reads a numeric schedule whole and has no domain on it.
-  "FVSCHEDULE whose running product overflows: excel-graph cannot open it" is OPEN, so a product past the double range
+  "FVSCHEDULE whose running product overflows or underflows" is OPEN, so a product past the double range
   gets no value.
 Not drawn and given no math value (`NoValueError`), as no evidence names Excel's result: a power within a hair of a cut
 of the double range (Excel's double power may be on either side); NPV's power in the subnormal range; an XNPV discount

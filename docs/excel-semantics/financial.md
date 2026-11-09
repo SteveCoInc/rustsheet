@@ -5445,6 +5445,8 @@ Implemented in: `fn_xnpv` (crates/rustsheet-engine/src/functions/financial/mod.r
 (functions/financial/flows.rs).
 Tasks: T-3312
 
+<a id="fvschedule-whose-running-product-overflows-excel-graph-cannot-open-it"></a>
+<!-- Old anchor kept: FVSCHEDULE_OVERFLOW_SOURCE (tools accuracy defs, cashflow_values.py) cites it, and renaming that string would invalidate the MIRR/XNPV/FVSCHEDULE math sidecars. -->
 ## FVSCHEDULE whose running product overflows or underflows
 Rule (open, excel-graph observations): an overflowing FVSCHEDULE is not one value. Some calls are a live number 0,
 others `#NUM!`; which one is not yet explained (T-5108 scores the hypotheses).
