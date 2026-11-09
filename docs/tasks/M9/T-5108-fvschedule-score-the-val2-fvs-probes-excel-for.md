@@ -57,8 +57,9 @@ Owns: probes/val2-fvs-01, probes/val2-fvs-02 and probes/val2-fvs-03 (every visib
   Three stay pending: in probes/val3-fvs-05, probes/val3-fvs-06 and probes/val3-fvs-08 (each holding one overflowing
   FVSCHEDULE) the oracle's own canary sheet reads `SQRT(2)` as `#NUM!`, twice in a row, so `rustsheet-oracle fill`
   refuses the workbook; probes/val3-fvs-07, whose schedule zeroes the product before it overflows, filled normally.
-  That is evidence of state carried across the workbook after an overflow (the val2-fvs-02 caveat): decide how to
-  read those three workbooks before treating any one-sheet FVSCHEDULE result as per-call.
+  One hypothesis, not yet tested: an overflow leaves state carried across the workbook (the val2-fvs-02 caveat), or it
+  is a Graph session effect; decide which before treating any one-sheet FVSCHEDULE result as per-call. No log of the
+  refused attempts was kept (2026-11-09, between the fvs-04 and fvs-07 fills, then one retry); rerun to capture one.
 
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing
