@@ -1,0 +1,56 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "FVS-01: Computed-denominator zero division, the missing independent control for val2-fvs-01 B17. Ordinary zero division predicts B1=0, B2=1, B3=TRUE, B4=0; a standalone power/division exception predicts B1=#NUM!, B2=16, B3=FALSE, B4=6. Do not add a separate 2^1023 formula to this workbook. ONE target call per fresh workbook/session. The only other formulas are observers and ordinary precision canaries; no reciprocal, MOD or subnormal power observers. Excel for the web does not provide control of the server process, so this isolates workbooks, not proven process state. Keep raw results even when they contradict the predictions. Precision!B2:B4 must retain 0.9999999999999998, 1, 1.0000000000000002; C2:C4 must be -1,0,1. Predictions are hypotheses, NOT expected/oracle values. Protocol: docs/research/probe-handoff-2026-11-09-val3.md.",
+ "tags": [
+  "M9",
+  "financial",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Probe",
+   "cells": {
+    "A1": "sole target",
+    "B1": "=0/(2^1023)",
+    "A2": "TYPE",
+    "B2": "=TYPE(B1)",
+    "A3": "ISNUMBER",
+    "B3": "=ISNUMBER(B1)",
+    "A4": "error code, 0 for numbers",
+    "B4": "=IF(ISERROR(B1),ERROR.TYPE(B1),0)",
+    "A5": "identity observer",
+    "B5": "=IFERROR(B1+0,\"error\")"
+   }
+  },
+  {
+   "name": "Precision",
+   "cells": {
+    "A1": "offset",
+    "B1": "raw",
+    "C1": "raw subtraction, not SUM",
+    "A2": -1,
+    "B2": "=1+A2*2^-52",
+    "C2": "=(B2-1)*2^52",
+    "A3": 0,
+    "B3": "=1+A3*2^-52",
+    "C3": "=(B3-1)*2^52",
+    "A4": 1,
+    "B4": "=1+A4*2^-52",
+    "C4": "=(B4-1)*2^52"
+   }
+  }
+ ],
+ "check": [
+  "Probe!B1",
+  "Probe!B2",
+  "Probe!B3",
+  "Probe!B4",
+  "Probe!B5",
+  "Precision!B2",
+  "Precision!C2",
+  "Precision!B3",
+  "Precision!C3",
+  "Precision!B4",
+  "Precision!C4"
+ ]
+}
