@@ -5488,7 +5488,7 @@ splits B23/B24 and B29/B30 especially) until the per-row isolated runs are made 
 Smaller workbooks holding an overflowing FVSCHEDULE do open on excel-graph (val2-fvs-01, and val2-fvs-02 with about
 twenty such calls), unlike the T-3312 attempts of 2026-11-04 (`createSession` 501 FileCorruptTryRepair).
 Ours: `#DIV/0!` for the overflowing calls above except B29 and B35 (`#NUM!`), B30 (0), B34 (`#VALUE!`) and B14:B18
-(DBL_MAX); ours matches B2, B3, B6, B7 and B19:B22. Desktop Excel decides the live and seeded steps and the isolated
+(DBL_MAX); ours matches B2, B3, B6, B7, B19:B22 and B33 (`#N/A`). Desktop Excel decides the live and seeded steps and the isolated
 rows (T-4250, decision 0039).
 Evidence: probes/val2-fvs-01, probes/val2-fvs-02 (excel-graph, 2026-11-09); gen-m9/89f0aee953a55a45 A349; T-3312 oracle
 attempts (2026-11-04).
@@ -5496,13 +5496,18 @@ Status: OPEN
 Tasks: T-4250, T-5108
 
 ## FVSCHEDULE rounds each step twice
-Rule: each step of FVSCHEDULE's running product is Excel's twice-rounded `*` (the exact product rounded to 64 bits,
-then to 53; numbers.md "Division rounds twice", "Other operations"): `FVSCHEDULE(a,r)` equals `a*(1+r)` and
-`PRODUCT(a,1+r)` to the bit. In probes/val2-fvs-03, B equals the `*` form F in rows 2 to 9 (and the negated principal
-D is -B), and C, D and E (FVSCHEDULE, `*`, PRODUCT) are equal to the bit in rows 12 to 23; the operands were chosen so
-that once- and twice-rounded products differ. The one-factor overflow cut of val2-fvs-02 (above) is consistent.
+Rule: inside the double range, each step of FVSCHEDULE's running product is the twice-rounded product (the exact
+product rounded to 64 bits, then to 53; numbers.md "Division rounds twice", "Other operations"), so
+`FVSCHEDULE(a,r)` equals `a*(1+r)` and `PRODUCT(a,1+r)` to the bit there. Near DBL_MAX the two part ways: the
+twice-rounded step that overflows is a live 0 in FVSCHEDULE (val2-fvs-02 P!B10:B17) while Excel's `*` on the same
+factors is finite (H10:H17; "FVSCHEDULE whose running product overflows or underflows" above); PRODUCT near DBL_MAX
+was not probed. In probes/val2-fvs-03, B equals the `*` form F in rows 2 to 9 (and the negated principal D is -B),
+and C, D and E (FVSCHEDULE, `*`, PRODUCT) are equal to the bit in rows 12 to 23. Once- and twice-rounded products
+differ in rows 3, 7 and 12 to 23 only (an exact simulation; rows 2, 4, 5, 6, 8 and 9 agree either way), and Excel is
+the twice-rounded value in every one of them. The one-factor overflow cut of val2-fvs-02 (above) is consistent.
 Ours rounds the step once (val2-fvs-03 B3, B7, D3, D7 and C12:C23 differ in the low bits).
-Evidence: probes/val2-fvs-03 rows 2 to 9 and 12 to 23 (20 discriminating cells; excel-graph, 2026-11-09).
+Evidence: probes/val2-fvs-03 B3, D3, B7, D7 and C12:C23 (16 discriminating FVSCHEDULE cells in 14 rows; excel-graph,
+2026-11-09).
 Status: VERIFIED (excel-graph)
 Tasks: T-5108
 

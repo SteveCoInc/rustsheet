@@ -41,7 +41,8 @@ Owns: probes/val2-fvs-01, probes/val2-fvs-02 and probes/val2-fvs-03 (every visib
   (H10:H17). Column G (k = -1023) carries no information: 2^-1023 is read as 0. See financial.md "FVSCHEDULE whose
   running product overflows or underflows" and numbers.md "A product at the edge of the double range".
 - `B1/(2^1023)` of fvs-01 is `#NUM!`; add a `=0/(2^1023)` control before reading anything into it.
-- Settled here (VERIFIED, financial.md "FVSCHEDULE rounds each step twice"): each step is the twice-rounded `*`; the
+- Settled here (VERIFIED, financial.md "FVSCHEDULE rounds each step twice"): inside the double range each step is the twice-rounded
+  product (equal to `*`); near DBL_MAX FVSCHEDULE and `*` part ways (B10:B17 against H10:H17); the
   fvs-02 one-factor cut is where that product stops overflowing. Implementing it (`arithmetic::extended_product` in
   `fn_fvschedule`) is an implementation task to file.
 - fvs-03: the MOD fingerprint columns are all `#NUM!` (60 cells); read the raw C, D and E values, which are equal to the
