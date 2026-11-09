@@ -610,6 +610,23 @@ tests `overflowing_product_is_num_inside_formulas` and
 `overflowing_sum_and_quotient_are_num_and_a_subnormal_divisor_is_zero`. SUM overflow: the `fn_sum` total check (T-0185).
 Tasks: T-0136, T-0173
 
+## A product at the edge of the double range (`*` near DBL_MAX)
+Rule (open, excel-graph observations): `*` does not overflow exactly where the binary64 product does.
+- `=(2^1023-2^971)*2` is 1.7976931348623155e308 and its negation the negative (probes/val2-fvs-02 P!H2, H6), but
+  `=(2^1023-2^970)*2`, whose binary64 product is DBL_MAX, is `#NUM!` (ERROR.TYPE 6), and so is its negation (H3, H7);
+  ours gives ±1.7976931348623157e308. `(2^1023)*2` and `(2^1023+2^971)*2` are `#NUM!` in both (H4, H5, H8, H9).
+- `=((1+k*2^-52)*2^1023)*(1+(1-k*2^-51))` at the sampled k = 1048576, 30000000, 33554431..33554434, 33558528 and
+  33562622 is finite in Excel (H10:H17; H10 1.7976931344437579e308, H11 1.797693122887274e308, H17
+  1.7976931214651891e308), where ours is `#NUM!`; k = 33562623 is `#NUM!` (H18); the sampled k = 33562624 and above
+  give DBL_MAX (H19:H22).
+- A lead, not a rule: each of H10:H17 equals exactly 2^1023·(2-k·2^-51), the second factor times 2^1023 as if the first
+  factor were exactly 2^1023; H18 breaks the pattern.
+The `*` cells themselves are not yet modelled (T-5108); FVSCHEDULE's step at the same factors is (financial.md,
+"FVSCHEDULE rounds each step twice").
+Evidence: probes/val2-fvs-02 column H (excel-graph, 2026-11-09).
+Status: OPEN
+Tasks: T-5108
+
 ## A subnormal divisor is zero
 Rule: a divisor below the smallest normal double (2.2250738585072014E-308) divides like zero:
 `=1/1E-308`, `=1/(2^-1023)` and `=1/(1E-307/10)` are `#DIV/0!` (ERROR.TYPE 2), while

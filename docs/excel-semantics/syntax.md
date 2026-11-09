@@ -826,6 +826,14 @@ The stored file text keeps them as well (xlsx-storage.md "Written parentheses ar
 Design: SPEC-0007 (a `Group` node).
 Tasks: T-1178, T-1244 (spec for keeping groups in the parse tree), T-1200 (the `@` group that is not the whole operand), T-1340 (the `Group` node), T-1343 (the `@` groups), T-1380 (more shapes), T-1344 (no added parentheses; one printer)
 
+## FORMULATEXT prints an exponent literal written `1E+300` as written
+Rule: a number literal stored as `1E+300` prints back as `1E+300`: `=FVSCHEDULE(5916,{-1E+300,1E+300})` prints as
+written. Ours re-spells it `{-1e300,1e300}`. Whether Excel re-spells a literal stored as `1e300` or `1E300`, and how it
+prints small exponents or a literal outside an array constant, is unprobed (T-5111).
+Evidence: probes/val2-fvs-01 Probe!B3 (excel-graph, 2026-11-09).
+Status: VERIFIED (excel-graph, one cell)
+Tasks: T-5111
+
 ## A formula typed in R1C1 mode reads relative to its cell and shows in A1
 
 - **Behavior:** A formula written into a cell with `Range.formulasR1C1` (R1C1 typed entry) reads

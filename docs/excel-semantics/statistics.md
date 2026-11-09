@@ -7267,6 +7267,16 @@ names sweep, second family"). These are the only probed cells with number_pop = 
   6.403537788576229E-219 (accuracy/HYPGEOMDIST/s1 A93). So it is no fixed underflow threshold on the result; an
   intermediate of Excel's (unpinned, "HYPGEOM.DIST is not exact for small integer arguments") underflows there. Excel is
   kept as the target (decision 0300).
+- Excel's pmf against its own BINOM.DIST factors (probes/val2-hyp-01, probes/val2-hyp-02, excel-graph, 2026-11-09; each
+  row holds x, n, K, N, Excel's `HYPGEOMDIST` in E and the conditional-binomial products built from Excel's own
+  `BINOM.DIST(..,FALSE)` cells). On every row where E is a number (59 of hyp-01, 49 of hyp-02), E equals one of two
+  products bit for bit: K = (H/J)*I, with p = MAX(x, n-x)/N, wherever J = `BINOM.DIST(n,N,p,FALSE)` is not 0 (every
+  hyp-01 row and 27 hyp-02 rows), and Q = (N/P)*O, with p = n/N, where that J is 0 (hyp-02 rows 7 to 14 and 20 to 33).
+  So the deep-tail zeros are the first branch's K being 0 because H underflows: E37:F50 are 0 in all 28 cells (for
+  example `HYPGEOMDIST(37769,41599,59217,67254)`, E37; ours 1.7613284636360493E-167; row 50 is the A95 point above),
+  with H37:H50 and K37:K50 0 and Q37:Q50 numbers (Q37 1.7613284636366138E-167). Where J is 0 as well, H being 0 does
+  not make E 0 (E23 2.695046427587582E-51, E27 0.00020982825889113662, E33 1.1411809907453025E-05). This is an observed
+  fit of two branches on the probed rows, not a confirmed rule: T-5109 scores it against the HYP hypotheses (OPEN).
 - Elsewhere Excel's pmf and cdf are within 1E-10 relative of the math on all 400 points of the two tables, populations up
   to 2147483646 included, and every Excel error in them is a domain error of the Gate A definition (T-4105).
 - Unprobed (an oracle limit, not an Excel value): the excel-graph oracle's calculate request fails on every retry for a

@@ -5445,15 +5445,71 @@ Implemented in: `fn_xnpv` (crates/rustsheet-engine/src/functions/financial/mod.r
 (functions/financial/flows.rs).
 Tasks: T-3312
 
-## FVSCHEDULE whose running product overflows: excel-graph cannot open it
-Rule (unsettled): `FVSCHEDULE(5916,{-1E+300,1E+300})` is 0 on excel-graph inside gen-m9/89f0aee953a55a45 (A349, filled
-2026-10-23 and again 2026-11-04), but every smaller workbook holding an overflowing FVSCHEDULE fails to open there
-(`createSession` 501 FileCorruptTryRepair): the formula alone, beside 58 other formulas, with the case's own Data sheet,
-with the schedule in cells, and `FVSCHEDULE(1,{1E+300,1E+300})`. The 0 is likely a non-finite result the Graph read
-cannot carry. Ours is `#DIV/0!`. Desktop Excel decides it (T-4250, decision 0039).
-Evidence: T-3312 oracle attempts (2026-11-04); gen-m9/89f0aee953a55a45 A349.
+<a id="fvschedule-whose-running-product-overflows-excel-graph-cannot-open-it"></a>
+<!-- Old anchor kept: FVSCHEDULE_OVERFLOW_SOURCE (tools accuracy defs, cashflow_values.py) cites it, and renaming that string would invalidate the MIRR/XNPV/FVSCHEDULE math sidecars. -->
+## FVSCHEDULE whose running product overflows or underflows
+Rule (open, excel-graph observations): an overflowing FVSCHEDULE is not one value. Some calls are a live number 0,
+others `#NUM!`; which one is not yet explained (T-5108 scores the hypotheses).
+Caveat: probe-requests-2026-11-08.md (FVS-02) runs probes/val2-fvs-02 as one workbook only if FVS-01 showed no carried
+state; FVS-01's carried-state steps are desktop-only and were not run, yet val2-fvs-02 was filled as one sheet. So every
+val2-fvs-02 cell below may reflect state carried between cells rather than the call alone (the 0 against `#NUM!`
+splits B23/B24 and B29/B30 especially) until the per-row isolated runs are made (T-4250).
+- A live 0: `FVSCHEDULE(5916,{-1E+300,1E+300})` (gen-m9/89f0aee953a55a45 A349; probes/val2-fvs-01 Probe!B1). Inside the
+  sheet it reads as a number, not an error or a blank: `TYPE` 1, `ISNUMBER` TRUE, `ISERROR` FALSE, `=B1=0` TRUE,
+  `SIGN`, `ABS` and `B1-B1` 0, `B1+1` 1, `IFERROR(B1,-17)` 0, `"["&B1&"]"` "[0]" (Probe!B2:B21). `B1/(2^1023)` is
+  `#NUM!` (Probe!B17), but no `=0/(2^1023)` control was probed, so that cell says nothing yet about what B1 carries.
+  Also 0 (probes/val2-fvs-02): `FVSCHEDULE(-(2^1023),{1,-0.5})` (P!B24), `FVSCHEDULE(1E+300,{1E+10,-0.999999999})`
+  (B27), `FVSCHEDULE(2^1023,{1,-1})` (B29), `FVSCHEDULE(2^1023,{1,0})` (B31), `FVSCHEDULE(1,{1E+300,1E+300,-1})` (B35).
+- The overflow cut, one factor (P!B2:B22). `FVSCHEDULE(x,1)` is the exact 2x for x = ±(2^1023-2^971) and
+  ±(2^1023-2^970), where 2x is ±(DBL_MAX - 1 ulp) and ±DBL_MAX (B2, B3, B6, B7; the `*` form `(2^1023-2^970)*2` is
+  `#NUM!`, numbers.md "A product at the edge of the double range"), and a live 0 for x = ±2^1023 (B4, B8) and
+  ±(2^1023+2^971) (B5, B9), where 2x ≥ 2^1024.
+  `FVSCHEDULE((1+k*2^-52)*2^1023,1-k*2^-51)` is a live 0 (C, D and E: ISNUMBER TRUE, no error, `=0` TRUE) at the
+  sampled k = 1048576, 30000000, 33554431, 33554432, 33554433, 33554434, 33558528, 33562622 and 33562623 (B10:B18), and
+  DBL_MAX at k = 33562624, 33562625, 33562626 and 40000000 (B19:B22); among the sampled points the cut lies in
+  (33562623, 33562624]. So FVSCHEDULE gives 0 where Excel's own `*` on the same factors is finite (H10:H17) and where
+  the binary64 product is a finite DBL_MAX (B14:B18; binary64 overflows for k ≤ 2^25), and the sampled cut falls where
+  `*` turns from `#NUM!` to DBL_MAX (H18, H19). The cut is exactly where the twice-rounded product (64 bits, then 53;
+  see "FVSCHEDULE rounds each step twice" below) stops overflowing: in exact arithmetic it overflows for every sampled
+  k up to 33562623 and gives DBL_MAX from 33562624, while a once-rounded product would already give DBL_MAX from
+  k = 33554433. So overflow of the twice-rounded step is what gives 0 here.
+- `#NUM!`: `FVSCHEDULE(2^1023,{1,-0.5})` (B23, while its negated principal B24 is 0),
+  `FVSCHEDULE(FVSCHEDULE(2^1023,1),-0.5)` (B26, though the inner call alone is 0, B4, and a literal 0 principal gives
+  0, `FVSCHEDULE(0,{-1E+300,1E+300})` B37: the overflowed result is not a plain 0 when passed on as an argument, like
+  Probe!B17 of val2-fvs-01), `FVSCHEDULE(2^1023,{-1,1})` (B30, though the exact product is a
+  finite 0), `FVSCHEDULE(2^1023,{1,1E-300})` (B32), and `FVSCHEDULE(2^1023,{1,"x"})` (B34: `#NUM!`, not the
+  text's `#VALUE!`), while `FVSCHEDULE(2^1023,{1,#N/A})` is `#N/A` (B33): an error element wins over the overflow,
+  text does not.
+- Underflow: a running product that falls into the subnormal range is 0. For B39 and B42 the saved 0 is itself the
+  evidence (the unflushed models predict normal numbers there, about 1E-290 and 7.9E-264), so a step that underflows is
+  flushed. For B38 and B40 the saved value alone cannot tell 0 from a kept subnormal (decisions 0042, 0089); the
+  in-sheet `IFERROR(B=0,"err")` is TRUE in E38 and E40 (a scalar comparison stays exact), which settles them. `FVSCHEDULE(1E-300,{-0.9999999999})` is B38;
+  ours keeps the subnormal (1.0000000827404e-310 at B38). Compare "A subnormal divisor is zero" (numbers.md).
+Smaller workbooks holding an overflowing FVSCHEDULE do open on excel-graph (val2-fvs-01, and val2-fvs-02 with about
+twenty such calls), unlike the T-3312 attempts of 2026-11-04 (`createSession` 501 FileCorruptTryRepair).
+Ours: `#DIV/0!` for the overflowing calls above except B29 and B35 (`#NUM!`), B30 (0), B34 (`#VALUE!`) and B14:B18
+(DBL_MAX); ours matches B2, B3, B6, B7, B19:B22 and B33 (`#N/A`). Desktop Excel decides the live and seeded steps and the isolated
+rows (T-4250, decision 0039).
+Evidence: probes/val2-fvs-01, probes/val2-fvs-02 (excel-graph, 2026-11-09); gen-m9/89f0aee953a55a45 A349; T-3312 oracle
+attempts (2026-11-04).
 Status: OPEN
-Tasks: T-4250
+Tasks: T-4250, T-5108
+
+## FVSCHEDULE rounds each step twice
+Rule: inside the double range, each step of FVSCHEDULE's running product is the twice-rounded product (the exact
+product rounded to 64 bits, then to 53; numbers.md "Division rounds twice", "Other operations"), so
+`FVSCHEDULE(a,r)` equals `a*(1+r)` and `PRODUCT(a,1+r)` to the bit there. Near DBL_MAX the two part ways: the
+twice-rounded step that overflows is a live 0 in FVSCHEDULE (val2-fvs-02 P!B10:B17) while Excel's `*` on the same
+factors is finite (H10:H17; "FVSCHEDULE whose running product overflows or underflows" above); PRODUCT near DBL_MAX
+was not probed. In probes/val2-fvs-03, B equals the `*` form F in rows 2 to 9 (and the negated principal D is -B),
+and C, D and E (FVSCHEDULE, `*`, PRODUCT) are equal to the bit in rows 12 to 23. Once- and twice-rounded products
+differ in rows 3, 7 and 12 to 23 only (an exact simulation; rows 2, 4, 5, 6, 8 and 9 agree either way), and Excel is
+the twice-rounded value in every one of them. The one-factor overflow cut of val2-fvs-02 (above) is consistent.
+Ours rounds the step once (val2-fvs-03 B3, B7, D3, D7 and C12:C23 differ in the low bits).
+Evidence: probes/val2-fvs-03 B3, D3, B7, D7 and C12:C23 (16 discriminating FVSCHEDULE cells in 14 rows; excel-graph,
+2026-11-09).
+Status: VERIFIED (excel-graph)
+Tasks: T-5108
 
 ## FVSCHEDULE with one empty schedule cell is the principal
 Rule: a schedule that is one empty cell is an empty schedule, so FVSCHEDULE returns the principal: `FVSCHEDULE(6527,D1)`
