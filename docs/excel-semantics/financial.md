@@ -5451,9 +5451,15 @@ Rule (unsettled): `FVSCHEDULE(5916,{-1E+300,1E+300})` is 0 on excel-graph inside
 (`createSession` 501 FileCorruptTryRepair): the formula alone, beside 58 other formulas, with the case's own Data sheet,
 with the schedule in cells, and `FVSCHEDULE(1,{1E+300,1E+300})`. The 0 is likely a non-finite result the Graph read
 cannot carry. Ours is `#DIV/0!`. Desktop Excel decides it (T-4250, decision 0039).
-Evidence: T-3312 oracle attempts (2026-11-04); gen-m9/89f0aee953a55a45 A349.
+Web carrier (probes/val2-fvs-01, excel-graph, 2026-11-09; this small workbook did open): the call reads inside the sheet
+as a live number 0, not an error or a blank: `TYPE` 1, `ISNUMBER` TRUE, `ISERROR` FALSE, `=B1=0` TRUE, `SIGN` and `ABS`
+0, `B1-B1` 0, `B1+1` 1, `IFERROR(B1,-17)` 0, `"["&B1&"]"` "[0]" (Probe!B1:B21). The one exception is
+`B1/(2^1023)`, `#NUM!` rather than 0 (Probe!B17), so the carried value may not be a true zero. The neighbouring
+`FVSCHEDULE((2^1023),1)` cells of probes/val2-fvs-02 are 0 too. Ours is `#DIV/0!` in each. Scoring the hypotheses:
+T-5108; the desktop live and seeded steps stay with T-4250.
+Evidence: T-3312 oracle attempts (2026-11-04); gen-m9/89f0aee953a55a45 A349; probes/val2-fvs-01.
 Status: OPEN
-Tasks: T-4250
+Tasks: T-4250, T-5108
 
 ## FVSCHEDULE with one empty schedule cell is the principal
 Rule: a schedule that is one empty cell is an empty schedule, so FVSCHEDULE returns the principal: `FVSCHEDULE(6527,D1)`
