@@ -5457,6 +5457,13 @@ others `#NUM!`; which one is not yet explained (T-5108 scores the hypotheses).
   Also 0: `FVSCHEDULE((2^1023),1)` (probes/val2-fvs-02 P!B4, B5), `FVSCHEDULE(-(2^1023),{1,-0.5})` (B24),
   `FVSCHEDULE(1E+300,{1E+10,-0.999999999})` (B27), `FVSCHEDULE(2^1023,{1,-1})` (B29), `FVSCHEDULE(2^1023,{1,0})`
   (B31), `FVSCHEDULE(1,{1E+300,1E+300,-1})` (B35).
+- The overflow cut, one factor (probes/val2-fvs-02 P!B2:B22): `FVSCHEDULE(x,1)` is x for x = ±(2^1023-2^971) and
+  ±(2^1023-2^970) = ±DBL_MAX (B2, B3, B6, B7; the `*` form `(2^1023-2^970)*2` is `#NUM!`, numbers.md "A product at the
+  edge of the double range"), and 0 for ±2^1023 and beyond (B4, B5, B8, B9).
+  `FVSCHEDULE((1+k*2^-52)*2^1023,1-k*2^-51)` is a live 0 (C, D and E: ISNUMBER TRUE, no error, `=0` TRUE) for k from
+  1048576 to 33562623 (B10:B18) and DBL_MAX for k = 33562624 and above (B19:B22). So FVSCHEDULE gives 0 where
+  Excel's own `*` on the same factors is finite (H10:H17) and where the binary64 product is a finite DBL_MAX
+  (B14:B18), and the cut falls where `*` turns from `#NUM!` to DBL_MAX (H18, H19).
 - `#NUM!`: `FVSCHEDULE(2^1023,{1,-0.5})` (B23, while its negated principal B24 is 0),
   `FVSCHEDULE(FVSCHEDULE(2^1023,1),-0.5)` (B26), `FVSCHEDULE(2^1023,{-1,1})` (B30, though the exact product is a
   finite 0), `FVSCHEDULE(2^1023,{1,1E-300})` (B32), and `FVSCHEDULE(2^1023,{1,"x"})` (B34: `#NUM!`, not the
@@ -5466,7 +5473,8 @@ others `#NUM!`; which one is not yet explained (T-5108 scores the hypotheses).
   (numbers.md).
 Smaller workbooks holding an overflowing FVSCHEDULE do open on excel-graph (val2-fvs-01, and val2-fvs-02 with about
 twenty such calls), unlike the T-3312 attempts of 2026-11-04 (`createSession` 501 FileCorruptTryRepair).
-Ours: `#DIV/0!` for every overflowing call above (B30: 0, B29: `#NUM!`, B34: `#VALUE!`). Desktop Excel decides the
+Ours: `#DIV/0!` for the overflowing calls above except B29 and B35 (`#NUM!`), B30 (0), B34 (`#VALUE!`) and B14:B18
+(DBL_MAX); ours matches B2, B3, B6, B7 and B19:B22. Desktop Excel decides the
 live and seeded steps (T-4250, decision 0039).
 Evidence: probes/val2-fvs-01, probes/val2-fvs-02 (excel-graph, 2026-11-09); gen-m9/89f0aee953a55a45 A349; T-3312 oracle
 attempts (2026-11-04).

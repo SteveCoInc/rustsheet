@@ -17,8 +17,8 @@ does: `=FVSCHEDULE(5916,{-1E+300,1E+300})` prints as written, where ours prints 
 
 ## Context
 - Evidence: probes/val2-fvs-01 Probe!B3 (excel-graph, 2026-11-09): Excel's FORMULATEXT is
-  `=FVSCHEDULE(5916,{-1E+300,1E+300})`; ours `=FVSCHEDULE(5916,{-1e300,1e300})` (syntax.md, "FORMULATEXT writes an
-  exponent literal as `1E+300`").
+  `=FVSCHEDULE(5916,{-1E+300,1E+300})`; ours `=FVSCHEDULE(5916,{-1e300,1e300})` (syntax.md, "FORMULATEXT prints an
+  exponent literal written `1E+300` as written").
 - Unprobed, decide with a small probe before implementing (excel-probe skill): a literal typed as `1e300` or `1E300`,
   a literal outside an array constant, small exponents (`1E-5`), and whether Excel re-spells such a literal at all.
 - Code: the formula stringifier behind FORMULATEXT (`rg -n 'fn_formulatext' crates/rustsheet-engine/src`); search for
