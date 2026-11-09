@@ -7267,6 +7267,13 @@ names sweep, second family"). These are the only probed cells with number_pop = 
   6.403537788576229E-219 (accuracy/HYPGEOMDIST/s1 A93). So it is no fixed underflow threshold on the result; an
   intermediate of Excel's (unpinned, "HYPGEOM.DIST is not exact for small integer arguments") underflows there. Excel is
   kept as the target (decision 0300).
+- More deep-tail zeros, with Excel's own factors beside them (probes/val2-hyp-02 rows 37 to 50, excel-graph,
+  2026-11-09; row 50 is the A95 point above): `HYPGEOMDIST` and `HYPGEOM.DIST(..,FALSE)` are 0 in all 28 cells E37:F50
+  (for example `HYPGEOMDIST(37769,41599,59217,67254)`, E37), where ours gives 1.7613284636360493E-167. In the same rows
+  Excel's `BINOM.DIST(x,successes,p,FALSE)` with p = MAX(x, n-x)/N is 0 (H37:H50), so the conditional-binomial product
+  (H/J)*I is 0 too (K37:K50), while the same product at p = n/N is a number (Q37 1.7613284636366138E-167, Q50
+  8.10380325413829E-186). So Excel's pmf is 0 exactly where its own binomial factor at p = MAX(x, n-x)/N underflows, on
+  every probed row. Scoring that as the rule is T-5109's work (OPEN).
 - Elsewhere Excel's pmf and cdf are within 1E-10 relative of the math on all 400 points of the two tables, populations up
   to 2147483646 included, and every Excel error in them is a domain error of the Gate A definition (T-4105).
 - Unprobed (an oracle limit, not an Excel value): the excel-graph oracle's calculate request fails on every retry for a

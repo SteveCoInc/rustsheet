@@ -44,8 +44,8 @@ bits are captured, not from the residual columns. The NSI sheets build their inp
 depend on SUM.
 
 **Two more fingerprints are unreadable on the web, for the same kind of reason.** FVS-02 column G (`B*2^F` with
-F = -1023) is 0 for every finite B, because 2^-1023 is subnormal and Excel reads it as 0 (numbers.md, "A subnormal
-divisor is zero"), so rows with k = -1023 carry no information there. FVS-03's MOD fingerprint columns (60 cells) are
+F = -1023) is 0 for every finite B, because `^` flushes a subnormal result and `(2^-1023)=0` is TRUE in Excel (numbers.md,
+"EXP is an x87 2^(a*log2 e) evaluation, not correctly rounded (T-1778)": "POWER flushes a subnormal result"), so rows with F = -1023 carry no information there. FVS-03's MOD fingerprint columns (60 cells) are
 all `#NUM!` (C, E and G in rows 2 to 9; H, I and J in rows 12 to 23). Read FVS-03 from its raw values instead:
 B, D and F in rows 2 to 9, and C, D and E in rows 12 to 23, where Excel's FVSCHEDULE, `*` product and PRODUCT are
 equal to the bit.
@@ -58,6 +58,13 @@ until the per-row isolated runs are made (T-4250).
 others, and a subnormal running product is 0 (financial.md, "FVSCHEDULE whose running product overflows or
 underflows"); `*` near DBL_MAX does not overflow where the binary64 product does (numbers.md, "A product at the
 edge of the double range"); FORMULATEXT keeps an exponent literal written `1E+300` (syntax.md).
+HYPGEOMDIST and HYPGEOM.DIST are 0 in all of hyp-02 rows 37 to 50, exactly where Excel's own BINOM.DIST factor at
+p = MAX(x, n-x)/N underflows (statistics.md, "HYPGEOM.DIST of an empty population is 1, and a deep-tail pmf can be 0").
+
+**Tier note (no gate changes state):** the fill adds IFERROR, ISNUMBER, ABS and ISERROR to the foundational tier's
+below-bar list (54 wrong type, 26 outside) and IRR, F.INV, F.INV.RT, BETA.DIST, FVSCHEDULE and FINV to the expert
+tier's; both tiers were already unmet on main. The foundational misses are observers of FVSCHEDULE and HYPGEOMDIST
+cells, so T-5108 and T-5109 own foundational-tier cells too.
 
 **Owners:** scoring per family is T-5107 (F.INV), T-5108 (FVSCHEDULE), T-5109 (HYPGEOMDIST), T-5110 (IRR) and T-5112
 (inverse normal); T-5111 is the FORMULATEXT spelling.

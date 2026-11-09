@@ -25,7 +25,8 @@ Owns: probes/val2-fvs-01, probes/val2-fvs-02 and probes/val2-fvs-03 (every visib
 - No engine change lands until a probe confirms its rule; no fitted special cases (handoff, "What happens next").
 - Web carrier answered (fvs-01): on excel-graph the overflowing `FVSCHEDULE(5916,{-1E+300,1E+300})` reads inside the
   sheet as a live number 0 (TYPE 1, ISNUMBER TRUE, `B1+1` is 1, `"["&B1&"]"` is "[0]"), except `B1/(2^1023)`, which is
-  `#NUM!`; ours is `#DIV/0!` throughout (financial.md, "FVSCHEDULE whose running product overflows"). The desktop live
+  `#NUM!`; ours makes B1 `#DIV/0!` and its observers propagate it (B2, B11, B15 and B22 are right; B4 16, B13 -17,
+  B14 2) (financial.md, "FVSCHEDULE whose running product overflows"). The desktop live
   and seeded steps and the isolated fvs-02 variants are still open (T-4250).
 - fvs-02: overflow is a live 0 in some calls and `#NUM!` in others (P!B23, B26, B30, B32, B34 `#NUM!`; B4, B5, B24,
   B27, B29, B31, B35 0); a subnormal running product is 0 (B38:B42, settled by E38:E42 and G40). The one-factor cut:
