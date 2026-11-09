@@ -25,6 +25,7 @@ Owns: probes/val2-fin-01, probes/val2-fin-02 and probes/val2-fin-03 (every visib
 - No engine change lands until a probe confirms its rule; no fitted special cases (handoff, "What happens next").
 - Off today: 167 cells in fin-01 (F.INV at df 9/3 and 9/1186, BETA.INV twins, BETA.DIST round trips), 39 in fin-02 (the
   exact-iterate kernel columns), 176 in fin-03 (FINV, F.INV.RT, the stop-class columns, 66 Excel `#NUM!`).
+- Also owns the F.INV anchor of probes/val2-cal-01, P!H2 (low bits).
 - Code: the F.INV search (`rg -n 'fn_f_inv' crates/rustsheet-engine/src/functions`); related open owners T-2500, T-2767.
 
 ## Acceptance criteria

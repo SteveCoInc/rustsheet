@@ -5445,19 +5445,29 @@ Implemented in: `fn_xnpv` (crates/rustsheet-engine/src/functions/financial/mod.r
 (functions/financial/flows.rs).
 Tasks: T-3312
 
-## FVSCHEDULE whose running product overflows: excel-graph cannot open it
-Rule (unsettled): `FVSCHEDULE(5916,{-1E+300,1E+300})` is 0 on excel-graph inside gen-m9/89f0aee953a55a45 (A349, filled
-2026-10-23 and again 2026-11-04), but every smaller workbook holding an overflowing FVSCHEDULE fails to open there
-(`createSession` 501 FileCorruptTryRepair): the formula alone, beside 58 other formulas, with the case's own Data sheet,
-with the schedule in cells, and `FVSCHEDULE(1,{1E+300,1E+300})`. The 0 is likely a non-finite result the Graph read
-cannot carry. Ours is `#DIV/0!`. Desktop Excel decides it (T-4250, decision 0039).
-Web carrier (probes/val2-fvs-01, excel-graph, 2026-11-09; this small workbook did open): the call reads inside the sheet
-as a live number 0, not an error or a blank: `TYPE` 1, `ISNUMBER` TRUE, `ISERROR` FALSE, `=B1=0` TRUE, `SIGN` and `ABS`
-0, `B1-B1` 0, `B1+1` 1, `IFERROR(B1,-17)` 0, `"["&B1&"]"` "[0]" (Probe!B1:B21). The one exception is
-`B1/(2^1023)`, `#NUM!` rather than 0 (Probe!B17), so the carried value may not be a true zero. The neighbouring
-`FVSCHEDULE((2^1023),1)` cells of probes/val2-fvs-02 are 0 too. Ours is `#DIV/0!` in each. Scoring the hypotheses:
-T-5108; the desktop live and seeded steps stay with T-4250.
-Evidence: T-3312 oracle attempts (2026-11-04); gen-m9/89f0aee953a55a45 A349; probes/val2-fvs-01.
+## FVSCHEDULE whose running product overflows or underflows
+Rule (open, excel-graph observations): an overflowing FVSCHEDULE is not one value. Some calls are a live number 0,
+others `#NUM!`; which one is not yet explained (T-5108 scores the hypotheses).
+- A live 0: `FVSCHEDULE(5916,{-1E+300,1E+300})` (gen-m9/89f0aee953a55a45 A349; probes/val2-fvs-01 Probe!B1). Inside the
+  sheet it reads as a number, not an error or a blank: `TYPE` 1, `ISNUMBER` TRUE, `ISERROR` FALSE, `=B1=0` TRUE,
+  `SIGN`, `ABS` and `B1-B1` 0, `B1+1` 1, `IFERROR(B1,-17)` 0, `"["&B1&"]"` "[0]" (Probe!B2:B21). `B1/(2^1023)` is
+  `#NUM!` (Probe!B17), but no `=0/(2^1023)` control was probed, so that cell says nothing yet about what B1 carries.
+  Also 0: `FVSCHEDULE((2^1023),1)` (probes/val2-fvs-02 P!B4, B5), `FVSCHEDULE(-(2^1023),{1,-0.5})` (B24),
+  `FVSCHEDULE(1E+300,{1E+10,-0.999999999})` (B27), `FVSCHEDULE(2^1023,{1,-1})` (B29), `FVSCHEDULE(2^1023,{1,0})`
+  (B31), `FVSCHEDULE(1,{1E+300,1E+300,-1})` (B35).
+- `#NUM!`: `FVSCHEDULE(2^1023,{1,-0.5})` (B23, while its negated principal B24 is 0),
+  `FVSCHEDULE(FVSCHEDULE(2^1023,1),-0.5)` (B26), `FVSCHEDULE(2^1023,{-1,1})` (B30, though the exact product is a
+  finite 0), `FVSCHEDULE(2^1023,{1,1E-300})` (B32), and `FVSCHEDULE(2^1023,{1,"x"})` (B34: `#NUM!`, not the
+  text's `#VALUE!`).
+- Underflow: a running product that falls into the subnormal range is 0: `FVSCHEDULE(1E-300,{-0.9999999999})` (B38),
+  B39, B40 and B42; ours keeps the subnormal (1.0000000827404e-310 at B38). Compare "A subnormal divisor is zero"
+  (numbers.md).
+Smaller workbooks holding an overflowing FVSCHEDULE do open on excel-graph (val2-fvs-01, and val2-fvs-02 with about
+twenty such calls), unlike the T-3312 attempts of 2026-11-04 (`createSession` 501 FileCorruptTryRepair).
+Ours: `#DIV/0!` for every overflowing call above (B30: 0, B29: `#NUM!`, B34: `#VALUE!`). Desktop Excel decides the
+live and seeded steps (T-4250, decision 0039).
+Evidence: probes/val2-fvs-01, probes/val2-fvs-02 (excel-graph, 2026-11-09); gen-m9/89f0aee953a55a45 A349; T-3312 oracle
+attempts (2026-11-04).
 Status: OPEN
 Tasks: T-4250, T-5108
 

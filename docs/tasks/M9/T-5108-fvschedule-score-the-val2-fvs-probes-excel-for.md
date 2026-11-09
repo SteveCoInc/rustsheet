@@ -27,8 +27,15 @@ Owns: probes/val2-fvs-01, probes/val2-fvs-02 and probes/val2-fvs-03 (every visib
   sheet as a live number 0 (TYPE 1, ISNUMBER TRUE, `B1+1` is 1, `"["&B1&"]"` is "[0]"), except `B1/(2^1023)`, which is
   `#NUM!`; ours is `#DIV/0!` throughout (financial.md, "FVSCHEDULE whose running product overflows"). The desktop live
   and seeded steps and the isolated fvs-02 variants are still open (T-4250).
-- fvs-02: `FVSCHEDULE((2^1023),1)` and its neighbours are 0 in Excel, ours `#DIV/0!`; fvs-03: the product-difference
-  columns are 0 in Excel where ours differs by 0.03125.
+- fvs-02: overflow is a live 0 in some calls and `#NUM!` in others (P!B23, B26, B30, B32, B34 `#NUM!`; B4, B5, B24,
+  B27, B29, B31, B35 0); a subnormal running product is 0 (B38:B42); ours is `#DIV/0!` for every overflowing call.
+  Column H: `*` near DBL_MAX is `#NUM!` where binary64 gives DBL_MAX (H3, H7) and finite where binary64 overflows
+  (H10:H17). Column G (k = -1023) carries no information: 2^-1023 is read as 0. See financial.md "FVSCHEDULE whose
+  running product overflows or underflows" and numbers.md "A product at the edge of the double range".
+- `B1/(2^1023)` of fvs-01 is `#NUM!`; add a `=0/(2^1023)` control before reading anything into it.
+- fvs-03: the MOD fingerprint columns are all `#NUM!` (60 cells); read the raw C, D and E values, which are equal to the
+  bit in Excel in rows 12 to 23. Ours differs there (the C-D and C-E columns are ±0.03125 to ±0.125, and C12:C23,
+  B3, B7, D3, D7 differ in the low bits).
 - The FORMULATEXT cell of fvs-01 is a separate display issue, owned by T-5111.
 - Code: `fn_fvschedule` (functions/financial).
 

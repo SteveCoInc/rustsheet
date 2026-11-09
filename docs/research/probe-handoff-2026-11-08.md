@@ -34,14 +34,25 @@ CAL-01 first). The suite's two older pending cases (`t0481-curly-quote-names-c`,
 refused again by Graph (`FileCorruptTryRepair`) and stay pending; they are not part of this batch.
 
 **CAL-01.** Every anchor H2:H30, H32, H33 and H37 equals its cached web value bit for bit, so this build reproduces the
-corpus (H1 holds for the web build; repeatability across reopen and desktop-versus-web remain open, as no desktop
-runner was used). The canary does **not** pass as written: column D (`(B-1)*2^52`) gives exactly -3..3, so low bits
+corpus. H1 (desktop equals web) is untested, as no desktop runner was used, and so is repeatability across a cold
+reopen. The canary does **not** pass as written: column D (`(B-1)*2^52`) gives exactly -3..3, so low bits
 survive capture, but columns C and E (`SUM(B,-1)*2^52`, `SUM(1,-B)*2^52`) are 0 in every row. That is the known
 SUM near-zero snap (docs/excel-semantics/numbers.md, "a SUM call snaps wherever it sits"), not a capture loss. The
 consequence for the later sheets is the one CAL-01 names: in-sheet `SUM(x,-y)/x*2^52` residual columns (HYP-01, HYP-02,
 HYP-03) snap to 0 whenever x and y are within the snap window, so read those probes from the raw value cells, whose
 bits are captured, not from the residual columns. The NSI sheets build their inputs from integer limbs and do not
 depend on SUM.
+
+**Two more fingerprints are unreadable on the web, for the same kind of reason.** FVS-02 column G (`B*2^F` with
+F = -1023) is 0 for every finite B, because 2^-1023 is subnormal and Excel reads it as 0 (numbers.md, "A subnormal
+divisor is zero"), so rows with k = -1023 carry no information there. FVS-03's MOD fingerprint columns (60 cells) are
+all `#NUM!`. Read FVS-03 from its raw C, D and E values instead: in rows 12 to 23 Excel's FVSCHEDULE, `*` product and
+PRODUCT are equal to the bit.
+
+**New Excel behaviour recorded with this fill:** FVSCHEDULE's overflow is a live 0 in some calls and `#NUM!` in
+others, and a subnormal running product is 0 (financial.md, "FVSCHEDULE whose running product overflows or
+underflows"); `*` near DBL_MAX does not overflow where the binary64 product does (numbers.md, "A product at the
+edge of the double range"); FORMULATEXT keeps an exponent literal written `1E+300` (syntax.md).
 
 **Owners:** scoring per family is T-5107 (F.INV), T-5108 (FVSCHEDULE), T-5109 (HYPGEOMDIST), T-5110 (IRR) and T-5112
 (inverse normal); T-5111 is the FORMULATEXT spelling.

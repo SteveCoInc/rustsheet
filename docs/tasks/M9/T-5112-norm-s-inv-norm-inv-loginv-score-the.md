@@ -27,6 +27,8 @@ Owns: probes/val2-nsi-01, probes/val2-nsi-02 and probes/val2-nsi-03.
 - No engine change lands until a probe confirms its rule; no fitted special cases (handoff, "What happens next").
 - No cell of these cases is visibly off today (the engine is inside the envelope on all 1,524), so the verdicts rest on
   the low bits of the raw cells: compare bits, not the 15-digit display.
+- Also owns the NORM.S.INV anchor of probes/val2-cal-01, P!H8 (low bits). P!H31 (LN near-tie) is CAL-01's noise
+  calibration and is expected to vary at one ulp; it needs no owner fix.
 - Related: T-0925 (inverse normal, AS241).
 
 ## Acceptance criteria

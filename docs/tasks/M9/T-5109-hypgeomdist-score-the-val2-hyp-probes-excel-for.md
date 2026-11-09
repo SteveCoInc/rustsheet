@@ -26,6 +26,8 @@ Owns: probes/val2-hyp-01, probes/val2-hyp-02 and probes/val2-hyp-03 (every visib
 - Off today: 41 cells in hyp-01 and 70 in hyp-02, almost all `IFERROR(SUM(x,-y)/x*2^52,"err")` residual columns. Those
   columns snap to 0 in Excel whenever x and y are close (CAL-01), so they cannot be read as ulp residuals: compute the
   residuals from the raw value cells, whose bits survive capture. hyp-03 (the factor kernel at the target's p) has no off cell today but is scored here too.
+- Also owns the HYPGEOMDIST and BINOM.DIST anchors of probes/val2-cal-01, P!H12:H14 and P!H16:H19 (H16
+  `=HYPGEOMDIST(41966,46221,65797,74726)` is 0 in Excel, ours 8.103803254141709e-186; the rest differ in the low bits).
 - Related: T-2481 (HYPGEOM.DIST's pmf formulation).
 
 ## Acceptance criteria
