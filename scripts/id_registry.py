@@ -62,7 +62,7 @@ def read(root: Path = ROOT) -> tuple[str, list[str]]:
 
 def kept(claims: list[str]) -> list[str]:
     """The newest KEEP claims, plus the high-water marks they would drop: the highest claim in
-    each task hundred-block (`tasks.next_id` allocates within a milestone's block) and the highest
+    each task hundred-block (ids allocated before decision 0360 grew within milestone blocks) and the highest
     decision number. Ids only grow, so the marks alone keep a pruned id from being handed out
     again, even when its branch was never pushed."""
     newest = claims[-KEEP:]

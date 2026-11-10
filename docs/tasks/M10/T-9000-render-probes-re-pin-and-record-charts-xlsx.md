@@ -1,5 +1,5 @@
 ---
-id: T-5113
+id: T-9000
 title: "Render probes: re-pin and record charts.xlsx once T1's chart writer declares c14 on mc:Choice"
 milestone: M10
 lane: research
@@ -25,6 +25,11 @@ eval/render/refs/graph/charts.refused.json.
   `mc:Choice`, as the Excel Online-saved eval/roundtrip/excel-saved/cases/t4187-pivot-chart-caches.xlsx does) is T1's. This task waits for a corrected file, then pins and records it. Do not patch
   the bytes here: the pinned file must be the writer's own output.
 - Blocked until T1 supplies the corrected workbook.
+
+## Blocked because
+T1 has not supplied a charts.xlsx whose chart parts declare `c14` on `mc:Choice`. The need is met when such a file
+exists: `unzip -p charts.xlsx xl/charts/chart1.xml | grep -c '<mc:Choice Requires="c14" xmlns:c14='` prints 1, and
+`rustsheet-oracle render --probe charts` records a dump.
 
 ## Acceptance criteria
 - [ ] probes.json and SHA256SUMS pin the corrected charts.xlsx, and every chart part declares `c14` on `mc:Choice`.

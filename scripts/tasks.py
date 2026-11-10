@@ -575,20 +575,22 @@ def issue_stats(copies: list[dict[str, object]], today_ids: set[str]) -> dict[st
             "limits": ISSUE_LIMITS}
 
 
-def next_id(milestone: str, tasks: list[dict[str, object]], taken: set[str]) -> str:
-    """Next id after the highest taken one in the hundred-block the milestone uses most
-    (M0 -> T-00xx, M1 -> T-01xx). Ids only grow, so gaps are never reused.
+# The first task id this repository allocates (decision 0360). Another repository's agents file
+# `T-NNNN` tasks below it, so ids from the two never collide. `T-NNNN` names ids up to T-9999.
+ID_FLOOR = 9000
+ID_CEILING = 9999
 
-    A milestone with no tasks, or whose block is full, gets the next id above every taken one.
-    """
-    used = {int(i[2:]) for i in taken}
-    blocks = Counter(int(str(t["id"])[2:]) // 100 for t in tasks if t.get("milestone") == milestone)
-    if blocks:
-        block = blocks.most_common(1)[0][0]
-        n = max((u for u in used if u // 100 == block), default=block * 100) + 1
-        if n < block * 100 + 100:
-            return f"T-{n:04d}"
-    return f"T-{max(used, default=0) + 1:04d}"
+
+def next_id(taken: set[str]) -> str:
+    """Next id above every taken id at or above `ID_FLOOR` (T-9000 when none is). Ids only grow, so
+    gaps are never reused. Past `ID_CEILING` there is no `T-NNNN` id left: refuse rather than write a
+    five-digit id the validators reject (decision 0360)."""
+    used = [n for n in (int(i[2:]) for i in taken) if n >= ID_FLOOR]
+    n = max(used, default=ID_FLOOR - 1) + 1
+    if n > ID_CEILING:
+        msg = f"no task id left: T-{ID_FLOOR}..T-{ID_CEILING} are taken (decision 0360)"
+        raise ValueError(msg)
+    return f"T-{n:04d}"
 
 
 def slug(title: str, default: str = "task") -> str:
@@ -654,7 +656,7 @@ def new_task(tasks: list[dict[str, object]], fetch: bool = True) -> int:
               f"usage one of {list(task_usage.USAGES)}")
         return 2
     taken = {str(t["id"]) for t in tasks} | git_task_ids(fetch)
-    tid, note = reserve_id(lambda claimed: next_id(milestone, tasks, taken | claimed), fetch)
+    tid, note = reserve_id(lambda claimed: next_id(taken | claimed), fetch)
     path = TASKS / milestone / f"{tid}-{slug(title)}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(TEMPLATE.format(id=tid, title=quote(title), milestone=milestone,

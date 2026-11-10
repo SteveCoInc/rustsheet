@@ -108,7 +108,7 @@ class IdRegistry(unittest.TestCase):
     def test_both_allocators_reserve_through_the_registry_past_junk_and_the_other_kind(self) -> None:
         """`make new-task` and `make new-decision` end to end against an origin (the int("T-3543")
         crash of b1bc750 was in this path)."""
-        self.seed("T-0005", "0007", "not a claim", "T-0105", "../../etc", "0003")
+        self.seed("T-0005", "0007", "not a claim", "T-9005", "../../etc", "0003")
         decisions = self.a / "docs" / "decisions"
         decisions.mkdir(parents=True)
         (decisions / "0001-a.md").write_text("x\n")
@@ -118,9 +118,9 @@ class IdRegistry(unittest.TestCase):
                 mock.patch.object(tasks.sys, "argv", argv), mock.patch("builtins.print"):
             self.assertEqual(tasks.new_task([{"id": "T-0002", "milestone": "M0"}], fetch=True), 0)
             self.assertEqual(new_decision.new_decision("A rule", fetch=True), 0)
-        self.assertTrue((self.a / "docs/tasks/M0/T-0006-do-it.md").exists())  # block 00's mark is T-0005
+        self.assertTrue((self.a / "docs/tasks/M0/T-9006-do-it.md").exists())  # the registry's T-9005 is taken
         self.assertEqual(sorted(p.name[:4] for p in decisions.glob("*.md")), ["0001", "0008"])
-        self.assertEqual(id_registry.read(self.b)[1], ["T-0005", "0007", "T-0105", "0003", "T-0006", "0008"])
+        self.assertEqual(id_registry.read(self.b)[1], ["T-0005", "0007", "T-9005", "0003", "T-9006", "0008"])
 
     def test_pruning_keeps_each_blocks_highest_claim(self) -> None:
         with mock.patch.object(id_registry, "KEEP", 2):
