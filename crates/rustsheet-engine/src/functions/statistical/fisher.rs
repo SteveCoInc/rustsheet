@@ -14,7 +14,7 @@ use crate::functions::lift::{div_error, num_error, number_or_error};
 use crate::functions::statistical::beta::beta_dist_density;
 use crate::functions::statistical::bratio::beta_dist_lower_tail;
 use crate::functions::statistical::bratio::{
-    f_closed_or_ported_tails, kernel_tails, l140_overflows,
+    bfrac_past_evidence, branch, f_closed_or_ported_tails, kernel_tails, l140_overflows, Branch,
 };
 use crate::functions::statistical::f_density::excel_f_density;
 use crate::functions::statistical::f_test_tail::f_test_bratio_p;
@@ -26,6 +26,7 @@ use crate::functions::statistical::inverse_beta::{
     as109_search, beta_lower_crossing, f_inverse_cdf, inverse_ln_beta, As109Outcome, As109Problem,
     As109Profile,
 };
+use crate::functions::statistical::large_shape_beta::{f_large_shape_tails, T4119_MIN_SHAPE};
 use crate::functions::statistical::paired::marked_number_error;
 use crate::functions::statistical::special::refine_increasing;
 use crate::functions::statistical::t_dist::sample_var;
@@ -114,7 +115,14 @@ fn f_bup_sum_overflows(df1: f64, df2: f64, x: f64) -> bool {
 fn f_tail(df1: f64, df2: f64, x: f64, upper: bool) -> f64 {
     let (u, v) = f_beta_arguments(df1, df2, x);
     let (a, b) = (df1 / 2.0, df2 / 2.0);
-    let (lower, upper_tail) = f_closed_or_ported_tails(u, v, a, b).unwrap_or_else(|| {
+    let port = || f_closed_or_ported_tails(u, v, a, b);
+    let expansion = || f_large_shape_tails(df1, df2, x);
+    let (lower, upper_tail) = match f_expansion_route(a, b, u, v) {
+        Some(ExpansionRoute::BeforePort) => expansion().or_else(port),
+        Some(ExpansionRoute::AfterPort) => port().or_else(expansion),
+        None => port(),
+    }
+    .unwrap_or_else(|| {
         let (u, v) = f_kernel_arguments(df1, df2, x);
         beta_reg_tails(u, v, a, b)
     });
@@ -122,6 +130,31 @@ fn f_tail(df1: f64, df2: f64, x: f64, upper: bool) -> f64 {
         upper_tail
     } else {
         lower
+    }
+}
+
+/// Where F's tails take the large-shape expansion on the double-double ratio
+/// (`large_shape_beta::f_large_shape_tails`, T-4435).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ExpansionRoute {
+    /// Before the port: bratio would run bfrac with a0 = df2/2 past T-3571's shapes (b0 = df1/2 of 40
+    /// or more), whose prefactor reads the rounded x0 near 1.
+    BeforePort,
+    /// After the port: on L140 bup+bgrat at df2/2 below T-4119's bound, where the port declines past its
+    /// 9 bup terms; the points it takes stay in Excel's arithmetic.
+    AfterPort,
+}
+
+/// [`ExpansionRoute`] for the F call on bratio's (a, b, x, y) = (df1/2, df2/2, u, v); `None` keeps the
+/// port and today's kernels: basym, the closed forms, a shape of 1, and from T-4119's bound up the
+/// double ratio and double density that T-4017's and T-4119's cells track.
+fn f_expansion_route(a: f64, b: f64, u: f64, v: f64) -> Option<ExpansionRoute> {
+    if bfrac_past_evidence(a, b, u, v) {
+        Some(ExpansionRoute::BeforePort)
+    } else if b < T4119_MIN_SHAPE && branch(a, b, u, v) == Some(Branch::L140BupBgrat) {
+        Some(ExpansionRoute::AfterPort)
+    } else {
+        None
     }
 }
 

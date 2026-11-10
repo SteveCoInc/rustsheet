@@ -5585,7 +5585,34 @@ per region:
 - Per decade, the counts within 1E-15 / 1E-14 / 1E-12 relative and the worst cells are in T-4434's Outcome. The case
   adds no `#NUM!` band: T-4044's band is at df1 61 to 79 and df2 1E10, outside both regions.
 
-Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209, T-4053 (df1 = 2; decision 0267).
+**Why the F route was 4.7E-8 off where BETA.DIST was not (T-4435).** `FDIST(1.5,80,1E10)` and T-4214's
+`BETA.DIST(1-q/a,a,40,TRUE)` reach the same branch, bfrac at (a0, b0) = (5E9, 40), but only the F call is swapped by
+bratio (λ < 0). There x0 is the caller's rounded complement near 1, and bfrac's prefactor, Excel's density at x0
+times x0·y0, raises it to the power a0. In T-4214's unswapped orientation x0 is the caller's own double, and y0 = 1 - x0
+is exact. `BETA.DIST(y,40,5E9,TRUE)` is swapped the same way and shows the same 4.67E-8.
+
+Ours since T-4435 (the `accuracy` stage, not Excel's arithmetic):
+- These calls take the large-shape expansion at a of 2000 and up and b up to 200: L140 points past the port's 9 bup
+  terms, and bfrac past a0 = 5000.
+- In that new range nu = a + (b - 1)/2, z = nu |ln x| and the gamma density are formed in double-double, and F's
+  ratio is too. At a non-dyadic a a double nu puts up to 6E-14 into a deep tail (fidelity review).
+- On T-4435's 800-point grid (docs/research/t4435) the points the expansion takes are within 1.8E-15 of the 60-digit
+  math. Before, they were up to 5.2E-8 off.
+- The grid's worst, 1.7E-13, is on L140's port at 9 or fewer bup terms, which keeps Excel's arithmetic. The lower
+  tails with a moderate a0 stay at up to 4.3E-14.
+- The old a >= 1E6, b < 40 region keeps T-4119's arithmetic, which t4017's bit-exact cells track. basym and the
+  closed forms are unchanged.
+- **Where Excel sits at its double floor, the math is not Excel.** On the deep BETA.DIST tails of the t3568-r5-bup
+  probes (a of 2000 to 3000, b below 40), Excel is 0.1 to 2.3 units of |ln tail|·2^-53 off the math. That is as close
+  as a double kernel gets, but its own rounding. Ours was Cephes' fraction, 0.04 to 3 units off, and is now within
+  0.09.
+  - Of the 322 t3568 cells that move, 195 move toward Excel and 122 away.
+  - 14 change class for the worse, and two of those (A223, A359) cross the 13-digit bar. T-4435's Outcome lists them.
+- Six cells now show the gap visibly (decision 0341). On three, Excel is 1.5E-13 to 1.2E-12 off the math (T-4214). On
+  the other three (t3568 A223, A359; t4434 A295), Excel is at its double floor (T-90001).
+
+Evidence: the six t4017 cases; probes-numeric/t4434-huge-shape-outside-large-shape-beta; docs/research/t4435.
+Tasks: T-4017, T-4018, T-3209, T-4053 (df1 = 2; decision 0267), T-4434, T-4435.
 
 ## F-distribution df limit (T-1530)
 Rule: either df above 1E10 (after truncation) makes every F function `#NUM!`: F.DIST (cumulative and pdf), F.DIST.RT,

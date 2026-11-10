@@ -252,3 +252,28 @@ fn deep_tail_quantiles_are_within_fourteen_digits() {
         assert!((x / excel - 1.0).abs() < 1e-14, "{p:e} {df1} {df2}: {x:e}");
     }
 }
+
+/// T-4435's regions, against 40-digit mpmath at the exact ratio (docs/research/t4434/mathref.py):
+/// region 2 (df1 80 to 400, bfrac's calls at a huge df2) was 4.7E-8 to 8.8E-8 off by bfrac
+/// (`FDIST(1.5,80,1E10)`, probes-numeric/t4045-f-dist-rt-zero-cut E3), region 1 (df1 21 to 79 at
+/// df2 1E5 to 1E6, past L140's 9 bup terms) 2E-13 to 1.2E-11 off by Cephes' fraction.
+#[test]
+fn f_tails_at_a_huge_shape_outside_the_old_bounds_follow_the_math() {
+    for (df1, df2, x, reference) in [
+        (80.0, 1e10, 1.5, 0.0025481924241211686),
+        (80.0, 1e10, 1.4, 0.010567980346381957),
+        (200.0, 1e10, 1.5, 5.9245419296008984e-06),
+        (24.0, 1e6, 5.0, 9.72630506010578e-15),
+        (24.0, 1e6, 20.0, 2.4748557825776378e-86),
+        (40.0, 1e6, 1.5, 0.021876418947230438),
+        (24.0, 1e5, 5.0, 9.939500327850076e-15),
+    ] {
+        let got = f_tail(df1, df2, x, true);
+        assert!(
+            (got / reference - 1.0).abs() < 2e-15,
+            "F.DIST.RT({x},{df1},{df2}) = {got} against {reference}"
+        );
+    }
+    let lower = f_tail(80.0, 1e10, 1.5, false);
+    assert!((lower / 0.9974518075758788 - 1.0).abs() < 2e-16, "{lower}");
+}

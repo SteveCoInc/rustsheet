@@ -704,3 +704,22 @@ fn tiny_shapes_are_b_over_a_plus_b() {
         3.494_644_653_249_556e-33_f64.to_bits()
     );
 }
+
+/// BETA.DIST with a small first shape and a huge second one above the mean: bratio swaps to bfrac
+/// with the huge shape as a0, where x0 = fl(1 - x) is a rounded complement near 1. Since T-4435
+/// the large-shape expansion takes those calls (it reads y0); bfrac was 1.6E-12 to 1.9E-9 off the
+/// math (T-4434's sweep). References: 40-digit mpmath (docs/research/t4434/mathref.py).
+#[test]
+fn bfrac_at_a_huge_swapped_a0_takes_the_expansion() {
+    for (x, a, b, reference) in [
+        (9.6e-9, 40.0, 5e9, 0.8927235447339593),
+        (9.6e-7, 40.0, 5e7, 0.8927246139912911),
+        (4.8e-5, 20.0, 5e5, 0.8197931266409659),
+    ] {
+        let got = beta_dist_lower_tail(x, 1.0 - x, a, b);
+        assert!(
+            (got / reference - 1.0).abs() < 2e-15,
+            "BETA.DIST({x},{a},{b},TRUE) = {got} against {reference}"
+        );
+    }
+}
