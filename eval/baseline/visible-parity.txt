@@ -213,3 +213,4 @@ probes/val4-fvs-02.case.json	21
 probes/val4-fvs-03.case.json	6
 probes/val4-fvs-04.case.json	6
 probes/val4-fvs-05.case.json	6
+probes/val4-hyp-03.case.json	21
