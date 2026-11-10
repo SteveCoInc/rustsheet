@@ -69,6 +69,11 @@ Owns: probes/val2-fvs-01, probes/val2-fvs-02 and probes/val2-fvs-03 (every visib
   operands": in val4-fvs-01 `=2^K1`, `=K4^K1`, `=SQRT(2)`, `=EXP(1)` and `=1/3` take it, while `=1.5^2` leaves it.
   financial.md, "FVSCHEDULE whose running product overflows or underflows", lists every candidate and reader. Score
   those against the request's hypotheses.
+- val5 batch, docs/research/probe-request-val5-fvs.md (excel-graph fill, 2026-11-10, one session per case). Owns:
+  probes/val5-fvs-01, probes/val5-fvs-02, probes/val5-fvs-03, probes/val5-fvs-04, probes/val5-order-01 and
+  probes/val5-order-02 (every visibly-off cell). The order cases read the same stale-state question through WEEKNUM:
+  in val5-order-01 both readers B2 and C2 are 2, and in val5-order-02 TwoReaders!B2:C2 are "222222" and
+  TwoWriters!A1 is `#NUM!`. Score them with the FVSCHEDULE readers.
 
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing
