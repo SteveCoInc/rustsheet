@@ -7277,6 +7277,17 @@ names sweep, second family"). These are the only probed cells with number_pop = 
   with H37:H50 and K37:K50 0 and Q37:Q50 numbers (Q37 1.7613284636366138E-167). Where J is 0 as well, H being 0 does
   not make E 0 (E23 2.695046427587582E-51, E27 0.00020982825889113662, E33 1.1411809907453025E-05). This is an observed
   fit of two branches on the probed rows, not a confirmed rule: T-5109 scores it against the HYP hypotheses (OPEN).
+- The first branch's zero reaches ordinary outcomes (probes/val4-hyp-03, excel-graph, 2026-11-10; row layout as above,
+  with E the pmf, P the p = n/N product and T `(E)=0`). Where a numerator factor H or I is below 2.2251E-308 and J is
+  not, E is 0 and T is TRUE on every such row, at any probability:
+  - `HYPGEOMDIST(118963786,119356129,1595899582,1601173435)` (E2, exact pmf 2.831465855970326E-04);
+  - E3, E4 and E8:E13, with pmfs from 1.4E-3 (E11) down to 2.2E-13 (E13);
+  - the ladder E14:E18, with pmfs from 5.2E-21 to 4.6E-133.
+  Where J is flushed as well (rows 5 to 7), E is the p = n/N product P bit for bit (E5 2.8745404856319023E-04). The
+  anchors E19 (1.1527525812809706E-165) and E20 (0) repeat the cached values. So the observed fit predicts these zeros
+  (the frozen `rule_extended` of docs/research/val4-hyp-03-predictions.json). Excel's 0 against a pmf of 2.8E-4 is
+  far beyond decision 0188 R3's 1E-4 relative bound, so whether to follow it is an owner ruling for T-5109 (decision
+  0300). Ours: the math (E2 2.831465855970309E-04, E13 2.227593374051108E-13).
 - Elsewhere Excel's pmf and cdf are within 1E-10 relative of the math on all 400 points of the two tables, populations up
   to 2147483646 included, and every Excel error in them is a domain error of the Gate A definition (T-4105).
 - Unprobed (an oracle limit, not an Excel value): the excel-graph oracle's calculate request fails on every retry for a
