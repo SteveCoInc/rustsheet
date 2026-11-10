@@ -1,0 +1,71 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "val5-order-02: several readers of one precedent, one layout per sheet, each sheet starting (bottom right) with a marker so that it does not depend on the sheet calculated before it. TwoReaders: B2 and C2 read the Sunday marker A2, the Monday marker A1 is above. TwoWriters: C2 (Sunday) and D2 (Monday) read the plain formula B2 after the Tuesday marker F2, and A1 above reads what is left. LoneFar: D2 (Sunday) is the only reader of B2, one cell away from it (C2 `=1` between), after the Tuesday marker F2; A1 reads what is left. ThreeReaders: as TwoReaders with a third reader D2. A reader joins WEEKNUM(2..7,99): 111111 after a Sunday marker (return_type 1), 222222 after a Monday marker (2), 122222 after a Tuesday marker (12) (dates.md \"WEEKNUM's stale `return_type` state\"; the decoding of probes/weeknum-stale-dependency). Raw values only; do not add cells or sheets: where each formula sits is the experiment. No expected values: the case is written to tell four candidate rules apart.",
+ "tags": [
+  "M6",
+  "dates",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "TwoReaders",
+   "cells": {
+    "A1": "=WEEKNUM(100,2)",
+    "A2": "=WEEKNUM(100,1)",
+    "B2": "=WEEKNUM(2+0*A2,99)&WEEKNUM(3,99)&WEEKNUM(4,99)&WEEKNUM(5,99)&WEEKNUM(6,99)&WEEKNUM(7,99)",
+    "C2": "=WEEKNUM(2+0*A2,99)&WEEKNUM(3,99)&WEEKNUM(4,99)&WEEKNUM(5,99)&WEEKNUM(6,99)&WEEKNUM(7,99)"
+   }
+  },
+  {
+   "name": "TwoWriters",
+   "cells": {
+    "A1": "=WEEKNUM(2,99)&WEEKNUM(3,99)&WEEKNUM(4,99)&WEEKNUM(5,99)&WEEKNUM(6,99)&WEEKNUM(7,99)",
+    "B2": "=1+1",
+    "C2": "=B2+WEEKNUM(100,1)",
+    "D2": "=B2+WEEKNUM(100,2)",
+    "F2": "=WEEKNUM(100,12)"
+   }
+  },
+  {
+   "name": "LoneFar",
+   "cells": {
+    "A1": "=WEEKNUM(2,99)&WEEKNUM(3,99)&WEEKNUM(4,99)&WEEKNUM(5,99)&WEEKNUM(6,99)&WEEKNUM(7,99)",
+    "B2": "=1+1",
+    "C2": "=1",
+    "D2": "=B2+WEEKNUM(100,1)",
+    "F2": "=WEEKNUM(100,12)"
+   }
+  },
+  {
+   "name": "ThreeReaders",
+   "cells": {
+    "A1": "=WEEKNUM(100,2)",
+    "A2": "=WEEKNUM(100,1)",
+    "B2": "=WEEKNUM(2+0*A2,99)&WEEKNUM(3,99)&WEEKNUM(4,99)&WEEKNUM(5,99)&WEEKNUM(6,99)&WEEKNUM(7,99)",
+    "C2": "=WEEKNUM(2+0*A2,99)&WEEKNUM(3,99)&WEEKNUM(4,99)&WEEKNUM(5,99)&WEEKNUM(6,99)&WEEKNUM(7,99)",
+    "D2": "=WEEKNUM(2+0*A2,99)&WEEKNUM(3,99)&WEEKNUM(4,99)&WEEKNUM(5,99)&WEEKNUM(6,99)&WEEKNUM(7,99)"
+   }
+  }
+ ],
+ "check": [
+  "TwoReaders!A1",
+  "TwoReaders!A2",
+  "TwoReaders!B2",
+  "TwoReaders!C2",
+  "TwoWriters!A1",
+  "TwoWriters!B2",
+  "TwoWriters!C2",
+  "TwoWriters!D2",
+  "TwoWriters!F2",
+  "LoneFar!A1",
+  "LoneFar!B2",
+  "LoneFar!C2",
+  "LoneFar!D2",
+  "LoneFar!F2",
+  "ThreeReaders!A1",
+  "ThreeReaders!A2",
+  "ThreeReaders!B2",
+  "ThreeReaders!C2",
+  "ThreeReaders!D2"
+ ]
+}

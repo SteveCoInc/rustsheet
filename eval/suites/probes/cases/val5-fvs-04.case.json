@@ -1,0 +1,108 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "val5-fvs-04: the state an overflowing FVSCHEDULE leaves, and dynamic-array formulas. Blocks of four rows on P, run bottom to top: the overflow (in A, or inside the spilling formula in C), a spilling formula in C of the row above (it spills into D), and two `=2^1023` detectors in A; label in H. Where Excel calculates a spilling formula is not known, so sheet Drain (first sheet, calculated last) holds four more detectors. THIS FILL MAY BE REFUSED by the canary if a spilling formula runs after every other cell: keep the workbook then, as below. The spilling formulas are in the check list by their anchor cell only. One workbook per case, each its own session (rustsheet-oracle fill -b excel-graph). Raw values only. Precision!B2:B4 must be 0.9999999999999998, 1, 1.0000000000000002 and C2:C4 -1, 0, 1. Do not add cells, observers or sheets: where each formula sits is the experiment. Predictions are hypotheses, NOT expected values. If the canary refuses a workbook, keep the downloaded bytes and report `rustsheet-eval snapshot` of them. Protocol and frozen predictions: docs/research/r8fvs-carried-overflow-state-2026-11-10.md.",
+ "tags": [
+  "M9",
+  "financial",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Drain",
+   "cells": {
+    "A1": "=2^1023",
+    "A2": "=2^1023",
+    "A3": "=2^1023",
+    "A4": "=2^1023"
+   }
+  },
+  {
+   "name": "P",
+   "cells": {
+    "A1": "=2^1023",
+    "A2": "=2^1023",
+    "C4": "=SEQUENCE(1,2)+FVSCHEDULE(1E+300,1E+300)",
+    "H3": "overflow_in_array",
+    "A5": "=2^1023",
+    "A6": "=2^1023",
+    "A8": "=FVSCHEDULE(1E+300,1E+300)",
+    "C7": "=SEQUENCE(1,2)+SQRT(2)",
+    "H7": "sqrt_in_array",
+    "A9": "=2^1023",
+    "A10": "=2^1023",
+    "A12": "=FVSCHEDULE(1E+300,1E+300)",
+    "C11": "=A12+SEQUENCE(1,2)",
+    "H11": "array_reads_overflow",
+    "A13": "=2^1023",
+    "A14": "=2^1023",
+    "A16": "=FVSCHEDULE(1E+300,1E+300)",
+    "C15": "=SEQUENCE(1,2)/3",
+    "H15": "array_divides",
+    "A17": "=2^1023",
+    "A18": "=2^1023",
+    "A20": "=FVSCHEDULE(1E+300,1E+300)",
+    "C19": "=2^SEQUENCE(1,2)",
+    "H19": "array_power",
+    "A21": "=2^1023",
+    "A22": "=2^1023",
+    "A24": "=FVSCHEDULE(1E+300,1E+300)",
+    "C23": "=SEQUENCE(1,2)",
+    "F23": "=C23+2^1023",
+    "H23": "scalar_reads_array"
+   }
+  },
+  {
+   "name": "Precision",
+   "cells": {
+    "A1": "offset",
+    "B1": "raw",
+    "C1": "raw subtraction, not SUM",
+    "A2": -1,
+    "B2": "=1+A2*2^-52",
+    "C2": "=(B2-1)*2^52",
+    "A3": 0,
+    "B3": "=1+A3*2^-52",
+    "C3": "=(B3-1)*2^52",
+    "A4": 1,
+    "B4": "=1+A4*2^-52",
+    "C4": "=(B4-1)*2^52"
+   }
+  }
+ ],
+ "check": [
+  "Drain!A1",
+  "Drain!A2",
+  "Drain!A3",
+  "Drain!A4",
+  "P!A1",
+  "P!A2",
+  "P!C4",
+  "P!A5",
+  "P!A6",
+  "P!A8",
+  "P!C7",
+  "P!A9",
+  "P!A10",
+  "P!A12",
+  "P!C11",
+  "P!A13",
+  "P!A14",
+  "P!A16",
+  "P!C15",
+  "P!A17",
+  "P!A18",
+  "P!A20",
+  "P!C19",
+  "P!A21",
+  "P!A22",
+  "P!A24",
+  "P!C23",
+  "P!F23",
+  "Precision!B2",
+  "Precision!C2",
+  "Precision!B3",
+  "Precision!C3",
+  "Precision!B4",
+  "Precision!C4"
+ ]
+}
