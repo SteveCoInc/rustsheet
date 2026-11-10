@@ -24,6 +24,9 @@ so statrs' terms lose digits at that size), and `HYPGEOM.DIST(524288,1048576,2^5
 overflows). Probe first (excel-probe skill, one milestone tag): a few wide distributions at populations of 1E9 to
 1E15 and x around the mode, then pick a bounded formulation that matches (a normal or Edgeworth approximation for a
 large spread, or a cdf ratio recurrence from the mode, kept only where it is bit-identical inside the cap).
+- probes-numeric/t1896-hypgeom-cdf-wide (#4123) is still pending. On 2026-11-10 the excel-graph fill failed twice (Graph's `calculate`, or
+  `createSession`, retries exhausted). That is the oracle limit statistics.md records for large HYPGEOM.DIST cdf
+  workbooks. To fill it, split the case into smaller workbooks.
 
 ## Acceptance criteria
 - [ ] A probe case holds Excel's values for HYPGEOM.DIST's cdf at large populations past the cap.
