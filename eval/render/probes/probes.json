@@ -1,0 +1,135 @@
+{
+  "schema": "rustsheet.render-probes/1",
+  "probes": [
+    {
+      "id": "widths-heights",
+      "file": "widths-heights.xlsx",
+      "sha256": "753c44af4625f0ed54e44bd8e3a7087f65c2c45d99c5297066baa416a7c2f057",
+      "sheets": [
+        {
+          "name": "Widths",
+          "range": "A1:T5"
+        },
+        {
+          "name": "Heights",
+          "range": "A1:B19"
+        }
+      ]
+    },
+    {
+      "id": "number-formats",
+      "file": "number-formats.xlsx",
+      "sha256": "5d95fec7b5c36eb5ff24afe6838e71b49436dad35df554f9cacf25aceed6b3ab",
+      "sheets": [
+        {
+          "name": "General",
+          "range": "A1:D19"
+        },
+        {
+          "name": "Codes",
+          "range": "A1:E33"
+        },
+        {
+          "name": "Dates",
+          "range": "A1:B31"
+        },
+        {
+          "name": "Narrow",
+          "range": "A1:H9"
+        }
+      ]
+    },
+    {
+      "id": "alignment-wrap",
+      "file": "alignment-wrap.xlsx",
+      "sha256": "de77ba57f4e1e1ec5098c8d4b941deb204a639ebedf39cbbb01db07a321a24f6",
+      "sheets": [
+        {
+          "name": "Horizontal",
+          "range": "A1:D9"
+        },
+        {
+          "name": "Vertical",
+          "range": "A1:C6"
+        },
+        {
+          "name": "Wrap",
+          "range": "A1:C7"
+        },
+        {
+          "name": "Indent-rotation",
+          "range": "A1:B17"
+        },
+        {
+          "name": "Overflow",
+          "range": "A1:E10"
+        }
+      ]
+    },
+    {
+      "id": "fonts-fills-borders",
+      "file": "fonts-fills-borders.xlsx",
+      "sha256": "90e06e82afccae75b93d62721ea63295fe19f4e1662347f97684542a564499de",
+      "sheets": [
+        {
+          "name": "Fonts",
+          "range": "A1:B27"
+        },
+        {
+          "name": "Fills",
+          "range": "A1:C21"
+        },
+        {
+          "name": "Borders",
+          "range": "A1:D41"
+        }
+      ]
+    },
+    {
+      "id": "merges-frozen",
+      "file": "merges-frozen.xlsx",
+      "sha256": "b78c9b7901078b59bac555b14d78a1383c9d4fdb6d84fbd3c089590ab884b8e3",
+      "sheets": [
+        {
+          "name": "Merges",
+          "range": "A1:H12"
+        },
+        {
+          "name": "Frozen-rows",
+          "range": "A1:F12"
+        },
+        {
+          "name": "Frozen-cols",
+          "range": "A1:F12"
+        },
+        {
+          "name": "Frozen-both",
+          "range": "A1:F12"
+        },
+        {
+          "name": "Display",
+          "range": "A1:B5"
+        }
+      ]
+    },
+    {
+      "id": "charts",
+      "file": "charts.xlsx",
+      "sha256": "f254966247195b1a8ec1631f5024cd7ccca8e4e4625576d0d32df86e088c7114",
+      "sheets": [
+        {
+          "name": "Columns-bars",
+          "range": "A1:V51"
+        },
+        {
+          "name": "Lines-areas",
+          "range": "A1:V34"
+        },
+        {
+          "name": "Pie-scatter-combo",
+          "range": "A1:V34"
+        }
+      ]
+    }
+  ]
+}
