@@ -40,6 +40,14 @@ Owns: probes/val2-hyp-01, probes/val2-hyp-02 and probes/val2-hyp-03 (every visib
 - val4 batch, docs/research/probe-request-val4-hyp.md (excel-graph fill, 2026-11-10; predictions frozen in
   docs/research/val4-hyp-predictions.json). Owns: probes/val4-hyp-01 and probes/val4-hyp-02 (no visibly-off cell at the
   fill).
+- val4 HYP-03, docs/research/probe-request-val4-hyp.md and the case's own description (excel-graph fill, 2026-11-10;
+  predictions frozen in docs/research/val4-hyp-03-predictions.json). Owns: probes/val4-hyp-03 (every visibly-off cell).
+  HYPGEOMDIST and HYPGEOM.DIST(..,FALSE) are 0 at ordinary outcomes wherever H or I is flushed and J is not: P!E2:F4 and
+  E8:F18, pmfs up to 1.4E-3, with T TRUE. On the same rows the cdf HYPGEOM.DIST(..,TRUE) is exactly 1 (U2:V2, U8:V18;
+  math 0.9038 to 1) or exactly 0 (U3:V4 and V5; math about 0.096 to 0.098). Score and rule on the cdf with the pmf. Rows
+  5 to 7, where J is flushed too, are the p = n/N product (statistics.md, "HYPGEOM.DIST of an empty population is 1, and
+  a deep-tail pmf can be 0"). Following Excel's zero at a 2.8E-4 pmf needs the owner ruling of decision 0188 R3 / 0300.
+  The J column's BINOM.DIST cells (P!J2:J4, J8:J10) sit just above DBL_MIN and are off in the low digits.
 
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing
